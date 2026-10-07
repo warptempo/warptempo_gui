@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture is Tango's audio-x-generic,
-     assets/icons/tango/AppIcon.svg, the drawing the caption wears
-     (architect 2026-10-06), rasterised ANTIALIASED by
-     rsvg-convert (librsvg 2.62 on the laptop; a vector, not pixel art) and
-     centred over THE CHROME'S GREY GROUND, #D4D0C8 (architect 2026-10-06):
-     Windows 2000's ButtonFace, the built-in theme's `ground`, the face every
-     chrome surface of the app stands on, so the mask shows a grey shape
-     carrying the drawing. An ADAPTIVE icon, the whole of it: minSdk is 30, so
+     recents card). Its picture is the drawing the caption wears on the
+     chrome's ground (architect 2026-10-06), the chrome Clearlooks since
+     2026-10-07: the Mist set's AppIcon, gnome-icon-theme 2.30's
+     audio-x-generic, assets/icons/mist/AppIcon.svg, rasterised ANTIALIASED
+     by rsvg-convert (librsvg 2.62 on the laptop; a vector, not pixel art)
+     and centered over CLEARLOOKS' GROUND, #EDECEB (architect 2026-10-07:
+     assets/themes/clearlooks.theme's `ground`, the face every chrome
+     surface of the app stands on), so the mask shows a ground-colored
+     shape carrying the drawing. An ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
 
      Two layers per density under res/mipmap-<density>/, BOTH written by
      tools/app_icon/gen_app_icon.sh (which also writes the Linux desktop icon,
      packaging/warptempo_gui.svg, the same drawing verbatim):
-       ic_launcher_background.png  the full 108 dp canvas in solid grey;
+       ic_launcher_background.png  the full 108 dp canvas in the solid
+                                   ground;
        ic_launcher_foreground.png  AppIcon.svg rendered at the 64 dp art size,
                                    centred on a transparent canvas of the
                                    density's full 108 dp.

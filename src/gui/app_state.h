@@ -2626,9 +2626,9 @@ enum class RedesignButton {
     // vocabulary (bare `v`, the revert, is the other) — bare `'` is on the
     // mode's ALLOWLIST while the walk carries a member — so its face composes the mode, that admission's own accessor
     // and the LOCK, which the allowlist does not carry for it (the arm and the
-    // division are at redesign_button_enabled). It wears DialogOkApply, the
-    // sets' view-refresh since 2026-10-07 (icons.h), the glyph the render
-    // player's own Load in place button wears too.
+    // division are at redesign_button_enabled). It wears DialogOkApply
+    // (icons.h names each set's drawing), the glyph the render player's own
+    // Load in place button wears too.
     IconLoadInPlace,
     // THE VIEW GROUP (architect 2026-10-01) — THE ROW'S LAST, FLUSH AT ITS
     // RIGHT EDGE, painted last and winning any overlap (the overflow rule is

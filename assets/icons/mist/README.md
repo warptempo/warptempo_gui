@@ -3,13 +3,15 @@
 The Clearlooks vocabulary's icons, one SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each file named by its
 enumerator: WHAT DEBIAN 6.0 SQUEEZE SHOWS WITH THE "MIST" ICON THEME SELECTED (architect 2026-10-06 and 2026-10-07) —
 Mist's own files (gnome-themes 2.30.2's `icon-themes/Mist`, whose `index.theme` says `Inherits=gnome`) over
-gnome-icon-theme 2.30's drawings, the name `mist` the one squeeze gives the combination. The set is in the bundle and
-nothing reads it yet: the live set is the chrome spec's (`src/gui/chrome_spec.h`'s `icon_set`, today `tango`); a set
-is chosen by its folder's name, so this folder is simply there for the vocabulary that names it.
+gnome-icon-theme 2.30's drawings, the name `mist` the one squeeze gives the combination. The live set is the chrome
+spec's (`src/gui/chrome_spec.h`'s `icon_set`): this folder is clearlooks', the default chrome since 2026-10-07; a set is
+chosen by its folder's name.
 
-THE TWO SOURCES. 57 files are gnome-icon-theme 2.30's drawings TAKEN FROM THE 3.0.0 TARBALL (the 2.30 icons are
-multi-icon Inkscape sheets, `src/*.svg`, one drawing per size slot; 3.0.0 carries 2.30's sheets, redrawn at four of
-these seats, below): each file is one sheet's 48x48 slot EXTRACTED as a standalone 48-unit drawing
+THE TWO SOURCES. 57 files are gnome-icon-theme 2.30's drawings, 55 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
+the release squeeze installs: 3.0.0 carries 2.30's sheets, redrawn at five of these seats (below), and at two of the
+five, DocumentRevert and DialogInformation, the architect ruled squeeze's own drawing back. The 2.30 icons are
+multi-icon Inkscape sheets, `src/*.svg`, one drawing per size slot: each file is one sheet's 48x48 slot EXTRACTED as
+a standalone 48-unit drawing
 — the elements of every visible layer that paint inside the slot's rectangle (each probed alone through rsvg-convert),
 the definitions they reference, the root `width="48" height="48" viewBox="0 0 48 48"`, the drawing translated to the
 origin, written with SVG as the default namespace — and verified against a render of the slot from the sheet itself
@@ -34,18 +36,31 @@ THE EDITS, each in the table's "edited" column, nothing else changed:
   Their extraction's probe was judged on a mask-stripped copy for the same reason (otherwise edit-undo's arrow, painting
   nothing alone, is not kept).
 
-THE TWO SEATS OF 2026-10-07 (architect, ruled for Tango — "the arrows pointing at each other become Load in Place,
-and the clock becomes Revert" — and taken here by the symmetry of the sets): DialogOkApply (Load in Place) wears
-gnome's `view-refresh`, the reload's arrow — the walked version loaded into the editor in place; DocumentRevert
-(Revert) wears gnome's `appointment-new`, the clock with its star — back to the viewed checkpoint in time. Mist
-carries neither name (its scalable folder holds folders and `document-open` only), so both are gnome's drawings by
-inheritance; Load in Place wore Mist's `document-open` and Revert gnome's `document-revert` until then. Both came by
-the road above (3.0.0's slot extracted, maximum difference 0 against the slot render at 72; 2.30.3's slot renders
-identically to 3.0.0's for both, maximum difference 0); `appointment-new`'s extraction is byte-identical to the
-file Toggle History Walk wore until its calendar, below.
+THE ACCEPT AND THE REVERT (architect 2026-10-07 ~17:00, on the GNOME families survey; Tango keeps its reload arrows
+and its clock, a deliberate asymmetry: Windows 2000 is the reference behind Clearlooks and its set may lag): the pair
+rhymes as GNOME's own accept and revert, and the toolbar's second clock is gone, the clock left to History View's
+`document-open-recent`. With them, the NORMAL card's bulb goes back to squeeze's. Mist carries none of the three
+names (its scalable folder holds folders and `document-open` only), so all three are gnome's drawings by inheritance,
+by the road above.
+- DialogOkApply (Load in Place) wears gnome's `emblem-default`, the green orb with the white check — the walked version
+  taken into the editor in place; the one scalable check mark the family draws. 3.0.0's `src/emblem-default.svg` slot,
+  one of the five candidates kept, maximum difference 0 against the slot render at 72; 2.30.3's sheet gives a
+  byte-identical extraction, and 3.12.0's slot renders identically to 3.0.0's (maximum difference 0). No mask; one
+  `<filter>`, the orb's blur, which both renderers draw.
+- DocumentRevert (Revert) wears gnome's `document-revert`, the page with the YELLOW return arrow — back to the viewed
+  checkpoint. TAKEN FROM 2.30.3: 3.0.0's sheet redraws the arrow gray (its slot from 2.30.3's at 72: max 255, mean
+  22.59), and 2.30.3's is the drawing squeeze shows. 2.30.3's `src/paper-sheets.svg` slot, three of the 304
+  candidates kept, maximum difference 0 against the slot render at 72. The ruling asked for EditUndo's mask strip, but
+  nothing the slot keeps references a mask — the survey listed `document-revert` beside the masked drawings because
+  3.0.0's slot renders gray against the yellow shipped PNG, a redraw and not a mask (3.0.0's slot keeps none either):
+  run with the strip, the extraction is byte-identical to the plain one, so the file is the plain extraction,
+  unedited. Two `<filter>`s, two `<use>`s and a clip path, which both renderers draw.
+- DialogInformation (a NORMAL card) wears 2.30.3's BLUE bulb, squeeze's own, in place of 3.0.0's clear one, which
+  nearly vanishes on the ground: 2.30.3's `src/dialog-information.svg` slot, one of the five candidates kept, maximum
+  difference 0 against the slot render at 72.
 
 THE CALENDAR OF 2026-10-07 (architect ~04:45, ruled for both sets, resolving the clock the two history seats then
-shared: Revert keeps `appointment-new`): ShallowHistory (Toggle History Walk) wears gnome's `x-office-calendar`, the
+shared): ShallowHistory (Toggle History Walk) wears gnome's `x-office-calendar`, the
 dated page — the walk through dated commits. Mist carries no such name, so it is gnome's drawing by inheritance, by the
 same road (3.0.0's `src/x-office-calendar.svg` slot extracted, one of the five candidates kept, maximum difference 0
 against the slot render at 72; 2.30.3's slot renders identically to 3.0.0's, maximum difference 0). Its page's "3" is
@@ -65,17 +80,19 @@ REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic`
 MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder. Every other file is worn once: 59 enumerators over 56
 distinct drawings.
 
-THE KNOWN DEPARTURE FROM SQUEEZE'S BYTES (the planner's call, 2026-10-07: 3.0.0 throughout). Squeeze installs
-gnome-icon-theme 2.30.3, whose sheets are not taken; at 53 of the 57 GNOME seats 3.0.0's slot renders identically to
-2.30.3's (rsvg at 72, maximum difference 0), at four it was redrawn in 3.0.0 and the set wears 3.0.0's drawing (max /
-mean channel difference of 3.0.0's slot from 2.30.3's at 72, levels of 255):
+THE KNOWN DEPARTURE FROM SQUEEZE'S BYTES (the planner's call, 2026-10-07: 3.0.0, except where the architect ruled
+squeeze's own). Squeeze installs gnome-icon-theme 2.30.3; at 52 of the 57 GNOME seats 3.0.0's slot renders
+identically to 2.30.3's (rsvg at 72, maximum difference 0), at five it was redrawn in 3.0.0: three wear 3.0.0's
+drawing, the departure, and two wear 2.30.3's, taken from its sheets (max / mean channel difference of 3.0.0's slot
+from 2.30.3's at 72, levels of 255):
 
-| enumerator | slot | max | mean | what changed |
-|---|---|---|---|---|
-| DocumentSave | document-save | 255 | 69.33 | the arrow: 2.30.3's red, 3.0.0's green, the drive redrawn |
-| DialogCancel | process-stop | 248 | 5.71 | a light redraw |
-| TabDetach | preferences-system-windows | 149 | 7.02 | a light redraw |
-| DialogInformation | dialog-information | 255 | 29.77 | 2.30.3's blue bulb is a clear one |
+| enumerator | slot | max | mean | what changed | worn |
+|---|---|---|---|---|---|
+| DocumentSave | document-save | 255 | 69.33 | the arrow: 2.30.3's red, 3.0.0's green, the drive redrawn | 3.0.0 |
+| DialogCancel | process-stop | 248 | 5.71 | a light redraw | 3.0.0 |
+| TabDetach | preferences-system-windows | 149 | 7.02 | a light redraw | 3.0.0 |
+| DocumentRevert | document-revert | 255 | 22.59 | 2.30.3's yellow return arrow is a gray one | 2.30.3 |
+| DialogInformation | dialog-information | 255 | 29.77 | 2.30.3's blue bulb is a clear one | 2.30.3 |
 
 ## The import check (the resvg ruling: a set is checked once, at its import)
 
@@ -83,15 +100,16 @@ All 58 files of the import through the product's own road (a scratch harness ove
 build's resvg 0.48.1) and through rsvg-convert 2.62.4, composited over #D4D0C8, the mean absolute channel difference
 in levels of 255: the median over the 58 is **0.52 at 72 px** (p90 1.20, worst 2.91 HelpWhatsthis) and **1.75 at 33
 px** (p90 3.46, worst 4.61 EditDelete); 1.03 at 48. Against GNOME's own 48-px PNGs in the 3.0.0 tarball, the median is
-1.08 for resvg and 0.62 for rsvg-convert. The two seats changed on 2026-10-07 and DocumentOpen, a byte copy of a
-checked file, were re-checked on a sheet of their own the same way: DialogOkApply's `view-refresh` 0.46 at 72 px and
-1.33 at 33 (1.07 from GNOME's 48-px PNG), DocumentRevert, a byte copy of a checked file, 2.47 and 3.29 (its
-clock numerals, below), DocumentOpen 0.35 and 2.29; ShallowHistory's `x-office-calendar`, the same day's calendar,
+1.08 for resvg and 0.62 for rsvg-convert. DocumentOpen, a byte copy of a checked file, was re-checked on a sheet of
+its own the same way, 0.35 at 72 px and 2.29 at 33; the three seats of 2026-10-07 ~17:00 on a sheet of their own:
+DialogOkApply's `emblem-default` 0.89 at 72 px and 2.19 at 33 (from GNOME's 48-px PNG, pixel-identical in 2.30.3
+and 3.0.0, 2.61 for resvg, 2.37 for rsvg-convert), DocumentRevert's `document-revert` 0.82 and 1.85 (from 2.30.3's 48-px
+PNG, squeeze's own, 1.18 for resvg, 1.08 for rsvg-convert), DialogInformation's blue bulb 0.50 and 1.09 (from 2.30.3's
+PNG 1.53 for resvg, 1.31 for rsvg-convert); ShallowHistory's `x-office-calendar`, the same day's calendar,
 0.77 at 72 px and 2.38 at 33 (1.73 from GNOME's 48-px PNG, rsvg-convert 1.26). Every file draws in both renderers. Where they part, each was looked at
 on the sheet:
-- VcsDiff (`document-open-recent`) and DocumentRevert (`appointment-new`) carry `<text>` clock
-  numerals, which the product's resvg (built without text) skips and rsvg-convert draws faintly (72-px max 94 / 109);
-  GNOME's own PNGs show no numerals either. Kept as they are.
+- VcsDiff (`document-open-recent`) carries `<text>` clock numerals, which the product's resvg (built without text)
+  skips and rsvg-convert draws faintly (72-px max 94); GNOME's own PNG shows no numerals either. Kept as it is.
 - TimelineLift (`system-lock-screen`) and BlackSum (`accessories-calculator`) carry `feBlend` filters reading
   `BackgroundImage`; the two renderers agree within 1.39 and 1.09 levels at 72. Kept.
 - HelpWhatsthis (`help-browser`): both renderers draw the same lifebuoy (2.91 apart) and both sit about 20 levels from
@@ -102,22 +120,31 @@ on the sheet:
 - gnome-icon-theme 3.0.0, `gnome-icon-theme-3.0.0.tar.bz2`
   (https://download.gnome.org/sources/gnome-icon-theme/3.0/), sha256
   `42da7c4ab1521e7beb1c26f5588c35a644ef57585754d8ceec427d9d7f94bb09` (GNOME's own `.sha256sum`).
+- gnome-icon-theme 2.30.3, `gnome-icon-theme-2.30.3.tar.bz2`
+  (https://download.gnome.org/sources/gnome-icon-theme/2.30/), sha256
+  `417e2f9d77843a6dbdcb1f6fa70dd55992aae5621c6ad8a64e5baa3cb893dac7` (GNOME's own `.sha256sum`).
 - gnome-themes 2.30.2, `gnome-themes-2.30.2.tar.bz2` (https://download.gnome.org/sources/gnome-themes/2.30/), sha256
   `b7efbeb429ad19003cc26c468597cef42f5b5570d819af51828efbaa441682d5` (GNOME's own `.sha256sum`); squeeze's package
   gnome-themes 2.30.2-1.
 
 The table's source column names the tarball file and, for a GNOME seat, the slot (its name and its rectangle's
-origin in the sheet's root coordinates); its last column is the shipped file's sha256.
+origin in the sheet's root coordinates; for the three seats of 2026-10-07 ~17:00 the sheet's own sha256 too); its last
+column is the shipped file's sha256.
 
 ## Licence
 
 gnome-icon-theme 3.0.0's `COPYING`, copied here verbatim as `COPYING-gnome-icon-theme-3.0.0`, reads: "GNOME icon theme
-is distributed under the terms of either GNU LGPL v.3 or Creative Commons BY-SA 3.0 license." The set takes the 57
-under the LGPL v3, whose text the tarball ships as `COPYING_LGPL` (here `COPYING_LGPL-gnome-icon-theme-3.0.0`), with
+is distributed under the terms of either GNU LGPL v.3 or Creative Commons BY-SA 3.0 license." The set takes the 55
+files from 3.0.0 under the LGPL v3, whose text the tarball ships as `COPYING_LGPL` (here `COPYING_LGPL-gnome-icon-theme-3.0.0`), with
 the GNU GPL v3 beside it as `COPYING_GPL3-gnome-icon-theme-3.0.0` (the LGPL v3's base text, carried for completeness,
 copied from the GNU text rather than the tarball, which does not ship it); the
 alternative's notice is `COPYING_CCBYSA3` (here `COPYING_CCBYSA3-gnome-icon-theme-3.0.0`), which asks for the
 attribution "GNOME Project". Credit: the tarball's `AUTHORS`, here `AUTHORS-gnome-icon-theme-3.0.0`.
+
+gnome-icon-theme 2.30.3's `COPYING`, copied here verbatim as `COPYING-gnome-icon-theme-2.30.3`, is the text of the GNU
+GPL v2, the tarball's only license statement (no per-file notice: the sheets' `cc:license` is empty; 3.0.0's NEWS
+dates its "new license" to 2.31.0). The two files taken from 2.30.3, DocumentRevert and DialogInformation, are under
+it. Its `AUTHORS` is byte-identical to 3.0.0's.
 
 gnome-themes 2.30.2 is under the GNU LGPL 2.1, its `COPYING` copied here verbatim as `COPYING-gnome-themes-2.30.2`;
 its `AUTHORS` (here `AUTHORS-gnome-themes-2.30.2`) credits "Susan Kare — Mist (aka 'Flat-Blue') icons". The APK
@@ -152,7 +179,7 @@ licence texts) are not read.
 | MusicNote16th | BPM Iterations | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | AudioXWav, AppIcon | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |
 | Mathmode | Toggle Grid Iterations | 3.0.0 `src/paper-sheets.svg`, slot `x-office-spreadsheet` 48x48 at (1500, 354) | — | — | `b4be444999e33cba0652aae7f060f1def713223d158555ca9ceac2d95d8db12d` |
 | PreviewRenderOn | Play Renders | 3.0.0 `src/applications-multimedia.svg`, slot `applications-multimedia` 48x48 at (296, 50) | — | — | `f7b387398baed6508ae4bfef7ec60ce354207bdcbf355a9e57a783a98f33ef80` |
-| DialogOkApply | Load in Place | 3.0.0 `src/navigation-icons.svg`, slot `view-refresh` 48x48 at (616, 50) (Mist carries no `view-refresh`) | — | — | `2371a1d6832ffc8180fc2df0f243455b3722dc1e253a62fc8111a22f98e507d6` |
+| DialogOkApply | Load in Place | 3.0.0 `src/emblem-default.svg` (sheet sha256 `22061a5dbc7fe2c7ab2293ba1c18cc53e6bef745e0285dc5747c566c99c0c48a`, 2.30.3's byte-identical), slot `emblem-default` 48x48 at (296, 50) (Mist carries no `emblem-default`) | — | — | `c4d44a785f118c8716b46ade8e306322d4bff9a47cd09a3ca13561b7a009c293` |
 | VcsDiff | Toggle History View | 3.0.0 `src/clocks.svg`, slot `document-open-recent` 48x48 at (696.062, 355.996) | — | — | `129566f29230db701d06c68dfd99940c88a667fe42f0e6b9b9921f7c8b9ea21d` |
 | ShallowHistory | Toggle History Walk | 3.0.0 `src/x-office-calendar.svg`, slot `x-office-calendar` 48x48 at (296, 50) (Mist carries no `x-office-calendar`) | — | — | `5be1fdbb9349b36520c022200165c9d0d755feb95075e56970006895243820a9` |
 | EditSelect | Toggle Add to Selection | 3.0.0 `src/paper-sheets.svg`, slot `edit-select-all` 48x48 at (1500, 654) | — | — | `245ce65757ef40dce015a3fc99604e0a604678fae2032f74f959a5af06aeaf8d` |
@@ -160,7 +187,7 @@ licence texts) are not read.
 | KeyframeNext | Newer (`.`) | 3.0.0 `src/media-control-icons.svg`, slot `media-seek-forward` 48x48 at (406, 150) | — | — | `f34d18b3587fc220d4e832cf101c98ebad39dcddc14f0ec17610446fc9c942b6` |
 | GoPrevious | Left (the playhead step) | 3.0.0 `src/navigation-icons.svg`, slot `go-previous` 48x48 at (536, 50) | — | — | `3155504fad949f054c6d88a4a550eae714b05763d1d9266188e9ca2ad289f336` |
 | GoNext | Right (the playhead step) | 3.0.0 `src/navigation-icons.svg`, slot `go-next` 48x48 at (776, 50) | — | — | `d047a56474e708c114610291a130460e791531e46f1d0d5c9443a32b2112291c` |
-| DocumentRevert | Revert (`v`, to the viewed checkpoint) | 3.0.0 `src/clocks.svg`, slot `appointment-new` 48x48 at (296.062, 55.9963) (Mist carries no `appointment-new`) | — | — | `806c7ed7e292db3edf5f1a3caec8397706b41e4640db09d6ab92c4543fae395d` |
+| DocumentRevert | Revert (`v`, to the viewed checkpoint) | 2.30.3 `src/paper-sheets.svg` (sheet sha256 `36d3b13179212c51df4c7a07665933295b42aef0800fbf5f80e8bee7225ac570`), slot `document-revert` 48x48 at (1899.9999, 654) (Mist carries no `document-revert`) | — | 2.30.3's slot, 3.0.0 ≠ 2.30.3 (GPL v2); no mask to strip | `3b019e62092065d68a5b366fb68d3c4a784d7895d47761fa9212cbe4854d8628` |
 | MediaSkipBackward | Go to Start | 3.0.0 `src/media-control-icons.svg`, slot `media-skip-backward` 48x48 at (156, 150) | — | — | `36dd7c445acd6380eeed3f1b6b75d620d3e990ba3fe7fe5f2efbdf084a8942c5` |
 | MediaPlaybackStart | Play | 3.0.0 `src/media-control-icons.svg`, slot `media-playback-start` 48x48 at (306, 150) | — | — | `b622e494ee220ca90f417b4332b36121672dade8cc668986fd12b777ff018099` |
 | MediaPlaybackStop | Stop | 3.0.0 `src/media-control-icons.svg`, slot `media-playback-stop` 48x48 at (356, 150) | — | — | `43f78b6cfeb4e7f1ccc9a31e286c5e08fcad6c3b3d0efedfa54283ffc0763765` |
@@ -179,11 +206,11 @@ licence texts) are not read.
 | AudioXWav | a wav row | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | MusicNote16th, AppIcon | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |
 | MediaRepeatSingle | Toggle Repeat One | 3.0.0 `src/media-control-icons.svg`, slot `media-playlist-repeat` 48x48 at (56, 150) | — | — | `7bbc59c69d5f443288e59a23400ee6042727e5a9839e5c4f7be4855d9ead2c9e` |
 | GoParentFolder | Up a Folder | 3.0.0 `src/navigation-icons.svg`, slot `go-up` 48x48 at (366, 50) | GoUp | — | `398b36552f6037180f7be36160d22a4180db0c5d4c5ce6593c65c5fd1e7e396f` |
-| DialogInformation | a NORMAL card | 3.0.0 `src/dialog-information.svg`, slot `dialog-information` 48x48 at (296, 50) | — | 3.0.0 ≠ 2.30.3 | `45c36a6cd363964821c59b0efa5c48de243a0d6142338f53a4590a08890c3650` |
+| DialogInformation | a NORMAL card | 2.30.3 `src/dialog-information.svg` (sheet sha256 `c5512bea2e4eee6f61b34027874ad0eb1a46f00f4e54a3c6a895e23570420c2e`), slot `dialog-information` 48x48 at (296, 50) (Mist carries no `dialog-information`) | — | 2.30.3's slot, 3.0.0 ≠ 2.30.3 (GPL v2) | `ac5c58ad79cecb62f552154ef467db94029ad6361e7c74d4b25de632dea5a08a` |
 | DialogError | a CRITICAL card | 3.0.0 `src/edit-delete.svg`, slot `edit-delete` 48x48 at (296, 49) | — | — | `796aaa833db70a55f292380e601890402871575a87fe501d7038dc57c88b246b` |
 | WindowClose | Close (the render player) | 3.0.0 `src/window-close.svg`, slot `window-close` 48x48 at (296, 50) | — | — | `5ea22cd3007a61f65ceb55dee86a3286579bde37b0f29b22a6b3aa2399060dc1` |
 | EditCopy | Copy Resolved Value | 3.0.0 `src/copy-paste-tasks.svg`, slot `edit-copy` 48x48 at (696, 50) | — | — | `7e7b8a4a65137cd6726f2fe6b3756c007586b23637f512451199092c9de16e97` |
 | HelpWhatsthis | Toggle Tooltips | 3.0.0 `src/help-browser.svg`, slot `help-browser` 48x48 at (13, 37) | — | — | `73dab752241b092c65e22f7345ae6d29354e31cb86530e29d2421fe13b489dfc` |
 | GoJumpDeclaration | Jump to Defining Marker | 3.0.0 `src/navigation-icons.svg`, slot `go-jump` 48x48 at (26, 50) | — | — | `1624ee1168fbc6ddb1dbcaa45c90e7ca2c817f12408b3ed737b67d369e4afbd1` |
 | EditDelete | Delete Folder | 3.0.0 `src/trash.svg`, slot `user-trash` 48x48 at (696, 50) | — | — | `52a0f172d734ee00d7b819644cbe9c878794e8628e462b81bbcd24e69f4f886a` |
-| AppIcon | the caption's icon and the program icon (the chrome grey ground, #D4D0C8) | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | MusicNote16th, AudioXWav | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |
+| AppIcon | the caption's icon and the program icon outside the window (on Clearlooks' ground, #EDECEB: `tools/app_icon/gen_app_icon.sh`) | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | MusicNote16th, AudioXWav | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |

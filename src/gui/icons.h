@@ -97,23 +97,30 @@ enum class Icon {
     Mathmode,            // Toggle Grid Iterations (bare `i`)
     PreviewRenderOn,     // Play Renders
     DialogOkApply,       // Load in Place (the icon row and the render
-                         // player's row) — the sets' view-refresh, the
-                         // reload's arrows: the walked version loaded into
-                         // the editor in place (architect 2026-10-07)
+                         // player's row): the walked version loaded into
+                         // the editor in place. Tango's view-refresh, the
+                         // reload's arrows (architect 2026-10-07); Mist's
+                         // gnome emblem-default, the green check, GNOME's
+                         // accept (architect 2026-10-07 ~17:00). A
+                         // deliberate asymmetry: Windows 2000 is the
+                         // reference behind Clearlooks and its set may lag.
     VcsDiff,             // Toggle History View (`h`)
     ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
                          // the sets' x-office-calendar, the dated page:
                          // the walk through dated commits (architect
-                         // 2026-10-07; the clock is Revert's alone)
+                         // 2026-10-07)
     EditSelect,          // Toggle Add to Selection
     KeyframePrevious,    // Older checkpoint (`,`)
     KeyframeNext,        // Newer checkpoint (`.`)
     GoPrevious,          // Row 8's left arrow (bare Left)
     GoNext,              // Row 8's right arrow (bare Right)
-    DocumentRevert,      // Revert (bare `v`) — the sets' appointment-new,
-                         // the clock: back to the viewed checkpoint in
-                         // time (architect 2026-10-07; worn once since the
-                         // walk took the calendar the same day)
+    DocumentRevert,      // Revert (bare `v`): back to the viewed
+                         // checkpoint. Tango's appointment-new, the clock
+                         // (architect 2026-10-07); Mist's gnome
+                         // document-revert, the page with the yellow return
+                         // arrow, GNOME's revert, rhyming with Load in
+                         // Place's accept (architect 2026-10-07 ~17:00; the
+                         // same asymmetry as DialogOkApply's)
     // ROW 8'S TRANSPORT. PLAY AND STOP ARE ONE BUTTON'S TWO FACES
     // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
     // pause state); the render player's own Play/Pause button wears

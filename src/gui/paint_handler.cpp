@@ -963,9 +963,9 @@ constexpr IconRowDef kIconRowHistoryStepGroup[] = {
     {RedesignButton::HistoryRevert,     icons::Icon::DocumentRevert},
     // THE LOAD IN PLACE (architect 2026-09-01, off the render-entry group):
     // the icon row's press runs the `h` view's own load — the confirmation on
-    // the viewed walk member. It wears DialogOkApply, the sets' view-refresh
-    // since 2026-10-07 (icons.h), the same glyph the render player's Load in
-    // place button wears for the same act.
+    // the viewed walk member. It wears DialogOkApply (icons.h names each
+    // set's drawing), the same glyph the render player's Load in place
+    // button wears for the same act.
     {RedesignButton::IconLoadInPlace,   icons::Icon::DialogOkApply},
 };
 constexpr IconRowDef kIconRowHistoryReadingGroup[] = {
@@ -973,9 +973,8 @@ constexpr IconRowDef kIconRowHistoryReadingGroup[] = {
     // the 2026-09-04 collapse). It wears the LIT state's glyph,
     // SHALLOW-HISTORY, because Git is the walk's default and the lamp reports
     // Session — the sets' x-office-calendar since 2026-10-07 (icons.h), the
-    // dated page: the walk through dated commits, the clock being Revert's
-    // alone. The Git half's deep-history glyph left icons::Icon with that
-    // half.
+    // dated page: the walk through dated commits. The Git half's
+    // deep-history glyph left icons::Icon with that half.
     {RedesignButton::HistoryWalk,       icons::Icon::ShallowHistory},
     {RedesignButton::HistoryCumulative, icons::Icon::BlackSum},
 };
@@ -6464,8 +6463,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // button should get the checkmark glyph then. Close should then get a
         // glyph also, to avoid being the odd one out: window-close.svg". So
         // the LOAD wears DialogOkApply — the very glyph the icon row's
-        // button wears for the same act one surface over (the sets'
-        // view-refresh since 2026-10-07, icons.h) — and CLOSE wears
+        // button wears for the same act one surface over (icons.h names
+        // each set's drawing) — and CLOSE wears
         // WindowClose, Marlett's close X (the
         // notification cards' dismiss was its other reader until the card's X
         // retired, 2026-10-01; a def is a glyph and several buttons are free

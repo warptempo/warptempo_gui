@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# tools/app_icon/gen_app_icon.sh — assets/icons/tango/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
-# (architect 2026-10-06: the drawing the caption wears, Tango's audio-x-generic, byte-identical to Tango 0.8.90's
-# scalable/mimetypes/audio-x-generic.svg — assets/icons/tango/README.md).
-# THE GROUND IS THE CHROME GREY, #D4D0C8 (architect 2026-10-06, on the glass: Windows 2000's ButtonFace, the
-# built-in theme's `ground`, the face every chrome surface of the app stands on), so both outputs carry the chrome's
+# tools/app_icon/gen_app_icon.sh — assets/icons/mist/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
+# THE RULE (architect 2026-10-06, unchanged): the drawing the caption wears, on the chrome's ground. THE CHROME IS
+# CLEARLOOKS since 2026-10-07 (the default chrome; architect 2026-10-07 ~17:00: the program icon follows it), so the
+# drawing is the Mist set's AppIcon, gnome-icon-theme 2.30's audio-x-generic (its 48 slot extracted from 3.0.0's
+# sheet — assets/icons/mist/README.md), and THE GROUND IS CLEARLOOKS', #EDECEB (assets/themes/clearlooks.theme's
+# `ground`, the face every chrome surface of the app stands on under Clearlooks), so both outputs carry the chrome's
 # face behind the drawing. It writes, from the repo root's point of view:
 #   packaging/warptempo_gui.svg     the Linux desktop icon (the .desktop's Icon=warptempo_gui; docs/INSTALL.md
-#                                   installs it into hicolor's scalable/apps): a 48 x 48 document, a grey 48 x 48
-#                                   rect, then AppIcon.svg VERBATIM as a nested <svg> element (its bytes less the
+#                                   installs it into hicolor's scalable/apps): a 48 x 48 document, a ground-colored
+#                                   48 x 48 rect, then AppIcon.svg VERBATIM as a nested <svg> element (its bytes less the
 #                                   XML declaration, which may only open a document) — no surgery on the drawing;
 #   android/app/res/mipmap-<density>/ic_launcher_{foreground,background}.png
 #                                   the Android adaptive icon's two layers (ic_launcher.xml's head holds the
 #                                   per-density table and the safe-zone arithmetic): the foreground the drawing
 #                                   rasterised ANTIALIASED by rsvg-convert (librsvg) at 64 dp square, centred on
-#                                   the transparent 108 dp canvas; the background the 108 dp canvas in solid grey,
-#                                   which the launcher's mask cuts to its shape.
+#                                   the transparent 108 dp canvas; the background the 108 dp canvas in the solid
+#                                   ground, which the launcher's mask cuts to its shape.
 # A ONE-SHOT, NOT A BUILD STEP: the outputs are committed and build_apk.sh only compiles res/. Re-run after any
 # change of AppIcon.svg; never hand-edit an output. Byte-stable: rsvg-convert writes no timestamp and ImageMagick's
 # -strip drops its date chunks. Needs rsvg-convert and ImageMagick 7's magick on PATH.
@@ -24,27 +25,30 @@ set -euo pipefail
 [ $# -eq 0 ] || { echo "usage: bash tools/app_icon/gen_app_icon.sh" >&2; exit 2; }
 cd "$(dirname "$0")/../.."
 
-SRC=assets/icons/tango/AppIcon.svg
+SRC=assets/icons/mist/AppIcon.svg
 OUT_SVG=packaging/warptempo_gui.svg
 RES=android/app/res
-GROUND='#D4D0C8'   # the chrome grey, Windows 2000's ButtonFace (the head)
+GROUND='#EDECEB'   # Clearlooks' ground, assets/themes/clearlooks.theme's `ground` (the head)
 
-# The source's shape as Tango's files have it: line 1 the XML declaration, a 48 x 48 root. Anything else is a hard
-# fail (a different drawing size is a change to this generator).
+# The source's shape: line 1 the XML declaration, a 48 x 48 root (its start tag read whole, on one line as the Mist
+# extractions write it or across lines as Inkscape does). Anything else is a hard fail (a different drawing size is a
+# change to this generator).
 head -n 1 "$SRC" | grep -q '^<?xml ' || { echo "gen_app_icon: $SRC: line 1 is not the XML declaration" >&2; exit 1; }
-grep -q -E '^   width="48(\.0+)?(px)?"$' "$SRC" && grep -q -E '^   height="48(\.0+)?(px)?"$' "$SRC" \
+ROOT=$(tr '\n' ' ' < "$SRC" | grep -o '<svg[[:space:]][^>]*>' | sed -n 1p)
+grep -q -E '[[:space:]]width="48(\.0+)?(px)?"' <<< "$ROOT" && grep -q -E '[[:space:]]height="48(\.0+)?(px)?"' <<< "$ROOT" \
     || { echo "gen_app_icon: $SRC: not a 48 x 48 drawing" >&2; exit 1; }
 
 {
     printf '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">\n'
     printf '  <!-- The program icon outside the window, the Linux desktop icon (the .desktop'"'"'s\n'
-    printf '       Icon=warptempo_gui): the caption'"'"'s AppIcon, Tango'"'"'s audio-x-generic (architect\n'
-    printf '       2026-10-06; its provenance is assets/icons/tango/README.md), on the chrome'"'"'s grey\n'
-    printf '       ground, Windows 2000'"'"'s ButtonFace. GENERATED by tools/app_icon/gen_app_icon.sh from\n'
+    printf '       Icon=warptempo_gui): the caption'"'"'s AppIcon, GNOME'"'"'s audio-x-generic from the Mist\n'
+    printf '       set (its provenance is assets/icons/mist/README.md), on the chrome'"'"'s ground,\n'
+    printf '       Clearlooks'"'"' (architect 2026-10-07). GENERATED by tools/app_icon/gen_app_icon.sh from\n'
     printf '       %s, the ground its own and the drawing verbatim after it:\n' "$SRC"
     printf '       regenerate, never hand-edit. -->\n'
     printf '  <rect fill="%s" width="48" height="48"/>\n' "$GROUND"
     tail -n +2 "$SRC"
+    [ -z "$(tail -c 1 "$SRC")" ] || printf '\n'   # the Mist extractions end without a newline
     printf '</svg>\n'
 } > "$OUT_SVG"
 echo "wrote $OUT_SVG"
