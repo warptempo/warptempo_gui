@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # tools/mockup/themes.py — THE THEME GRAMMAR, read off the app's own source so the tool cannot drift from it.
 #
-# The built-in's 39 values, the twenty named colours, the flat-caption pairs and the built-in's key are all parsed out
+# The built-in's 41 values, the twenty named colours, the flat-caption pairs, the follower pairs and the built-in's
+# key are all parsed out
 # of src/gui/theme_file.h in the working tree on every run (the constants-from-source discipline of
 # tools/palette/common.py's face_metrics). A .theme file is read under the app's own rules (theme_file.cpp's
 # read_theme_file and read_theme_folder's stem checks, the shared scanner's lexical contract in
 # src/parser/settings_file.cpp): LF-terminated role=value lines split at the first '=', no blank line, no comment,
 # no whitespace tolerance, no duplicate; a role the file does not name takes the built-in's value; a caption start
-# named without its gradient end gets the end equal to the start. Every refusal is the app's own sentence.
+# named without its gradient end gets the end equal to the start; a follower pair's leader named without its
+# follower (dk_shadow / flag_outline, removed_flag / invalid_mark) gets the follower equal to it. Every refusal is the app's own sentence.
 import os, re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -39,13 +41,16 @@ def _load():
     pairs = re.findall(r'\{theme_role_index\("(\w+)"\),\s*theme_role_index\("(\w+)"\)\}',
                        _block(src, r'kGuiThemeCaptionGradients\[\] = \{'))
     key = re.search(r'kBuiltinThemeKey = "([^"]+)"', src).group(1)
-    if len(roles) != 39 or len(named) != 20 or len(pairs) != 2:
+    follows = re.findall(r'\{theme_role_index\("(\w+)"\),\s*theme_role_index\("(\w+)"\)\}',
+                         _block(src, r'kGuiThemeFollowers\[\] = \{'))
+    if len(roles) != 41 or len(named) != 20 or len(pairs) != 2 or len(follows) != 2:
         raise SystemExit(f'tools/mockup: {THEME_FILE_H}: read {len(roles)} roles, {len(named)} named colours, '
-                         f'{len(pairs)} caption pairs (expected 39, 20, 2: the source moved)')
-    return roles, named, pairs, key
+                         f'{len(pairs)} caption pairs, {len(follows)} follower pairs (expected 41, 20, 2, 2: the '
+                         f'source moved)')
+    return roles, named, pairs, follows, key
 
 
-ROLE_TABLE, NAMED, CAPTION_PAIRS, BUILTIN_KEY = _load()
+ROLE_TABLE, NAMED, CAPTION_PAIRS, FOLLOWERS, BUILTIN_KEY = _load()
 ROLES = [n for n, _ in ROLE_TABLE]
 
 
@@ -122,6 +127,9 @@ def read_theme(path):
     for start, end in CAPTION_PAIRS:                  # THE FLAT CAPTION (theme_file.h's head)
         if start in named and end not in named:
             words[end] = words[start]
+    for leader, follower in FOLLOWERS:                # THE FOLLOWERS (the same head)
+        if leader in named and follower not in named:
+            words[follower] = words[leader]
     return {n: rgb(w) for n, w in words.items()}
 
 

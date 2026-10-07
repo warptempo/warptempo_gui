@@ -52,6 +52,15 @@ static_assert(std::ranges::all_of(kGuiThemeCaptionGradients,
                                   [](const GuiThemeGradientPair& p) {
     return p.start < kGuiThemeRoleCount && p.end < kGuiThemeRoleCount;
 }));
+// Every follower pair names two roles of the table (theme_file.h's head).
+static_assert(std::ranges::all_of(kGuiThemeFollowers,
+                                  [](const GuiThemeFollower& f) {
+    return f.leader < kGuiThemeRoleCount && f.follower < kGuiThemeRoleCount;
+}));
+// The built-in's outline is its DkShadow, so a file naming neither paints
+// the outline the built-in does.
+static_assert(kGuiThemeRoles[theme_role_index("flag_outline")].builtin ==
+              kGuiThemeRoles[theme_role_index("dk_shadow")].builtin);
 static_assert(is_theme_key_spelling(kBuiltinThemeKey));
 // Every chrome's own theme is a theme key, and the default chrome's is the
 // built-in, so an unset theme under the default chrome always resolves.
@@ -74,7 +83,7 @@ constexpr std::string_view kThemeSuffix = ".theme";
 
 // ONE FILE under the grammar (theme_file.h's head), its stem already judged:
 // the built-in's words, each role the file names overwritten, then THE FLAT
-// CAPTION's rule over what it named.
+// CAPTION's and THE FOLLOWERS' rules over what it named.
 std::expected<GuiThemeWords, std::string> read_theme_file(
         const std::filesystem::path& path) {
     std::ifstream f(path, std::ios::binary);
@@ -106,6 +115,11 @@ std::expected<GuiThemeWords, std::string> read_theme_file(
     // A START WITHOUT ITS END IS A FLAT CAPTION (the head's rule).
     for (const GuiThemeGradientPair& p : kGuiThemeCaptionGradients)
         if (named[p.start] && !named[p.end]) words[p.end] = words[p.start];
+    // A LEADER WITHOUT ITS FOLLOWER IS THE FOLLOWER (the head's rules: the
+    // flag outline its DkShadow, the invalid mark its removed face).
+    for (const GuiThemeFollower& f : kGuiThemeFollowers)
+        if (named[f.leader] && !named[f.follower])
+            words[f.follower] = words[f.leader];
     return words;
 }
 

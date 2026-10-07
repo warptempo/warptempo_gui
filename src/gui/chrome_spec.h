@@ -44,10 +44,11 @@
 //     entry, GtkMenu, the compact list; the tooltip and the cards were
 //     Clearlooks' already: the same one-line card face), AND THE REST OF THE
 //     CHROME since its last part (the trim lane as GTK's scroll bar, the
-//     scrub as GtkScale, row 8 as the status bar and its time fields as
-//     entries, the well's scrolled-window line, the ruler's ticks, the
-//     restored laptop's metacity frame, the flag editor as the focused
-//     entry). The waveform and the flags stay the program's own.
+//     scrub as GtkScale, row 8 as Nautilus's status bar and its time
+//     fields as entries, the well's scrolled-window line, the ruler's
+//     ticks, the restored laptop's metacity frame). The waveform and the
+//     flags stay the program's own, the flag editor with them — the flag
+//     opened under every chrome (architect 2026-10-07 ~05:30).
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colours remain an ordinary theme
 // file. The table is kGuiChromeSpecs below, the live instance
@@ -319,11 +320,11 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
 //   button_border.top 2 and .bottom 2 = 16 tall, aspect_ratio 1.0 = 16
 //   wide, at y 2, each with button_border.left / .right 1 (2 px between
 //   neighbours, an 18-px pitch) and Close's right edge 2 in
-//   (right_titlebar_edge 1 + its border 1); Close's glyph at the
-//   capture's proportion of the box, 16 x 8 / 20 held even = 6 (hpadding
-//   5), not Bmin 7 `max` (16 − Bpad 6 x 2) = 7 — Minimise, Maximise and
-//   Restore keep the 7 (hpadding 4), whose ops lose their window or their
-//   width below it (architect 2026-10-07; caption_icon_size,
+//   (right_titlebar_edge 1 + its border 1); Close's and Minimise's glyphs
+//   at the capture's proportion of the box, 16 x 8 / 20 held even = 6
+//   (hpadding 5), not Bmin 7 `max` (16 − Bpad 6 x 2) = 7 — Maximise and
+//   Restore keep the 7 (hpadding 4), whose ops lose their window below it
+//   (architect 2026-10-07, Minimise at 6 ~05:30; caption_icon_size,
 //   clearlooks_paint.cpp); the menu
 //   button at left_titlebar_edge 1 + border 1 = (2, 2), its 16-px mini
 //   icon centred in its 16 x 16 — FILLING IT, NO MARGIN (the box the icon's

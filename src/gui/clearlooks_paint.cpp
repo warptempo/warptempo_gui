@@ -372,18 +372,22 @@ void glyph_cross(cairo_t* cr, int ox, int oy, int w, int h, int bw, int bh,
 // 16-W box Bmin held it at 7 where the proportion asks 16 x 8 / 20 = 6.4 — so
 // the X takes the proportion, held EVEN as the cross's centre-to-centre lines
 // want: 6, the X on cells 5 .. 10, its outline 4 .. 11, two W from the
-// highlight's column (the capture's three of 20, fitted). THE OTHER THREE
-// GLYPHS KEEP METACITY'S 7, A RECORDED ASYMMETRY (the planner's ruling,
-// 2026-10-07; his verdict named the X alone), because below it their ops
-// lose their window or their width: at 6 Maximise's dark inner frame leaves a
-// 2 x 1 slit of the fill where 7 (and squeeze's 8) leave 4 x 3, Restore's
-// collapses to a solid 2 x 1 bar where 7 leaves its 2 x 1 window, and
-// Minimise's bar falls two W narrower than the Maximise box beside it, where
-// the capture draws the bar and the box the same width (both 8 light cells in
-// the 20 box; at 7 both are 8 cells in the 16).
+// highlight's column (the capture's three of 20, fitted). MINIMISE TAKES THE
+// SAME 6 (architect 2026-10-07 ~05:30, his glass: Minimise "looks too large
+// — it's supposed to signify being tiny"; the capture's bar is 8 of the 20
+// box, the same proportion as the X): its light bar 6 W on cells 5 .. 10,
+// two W narrower than the Maximise box beside it where the capture draws
+// the bar and the box the same width — the bar reading tiny is his call.
+// MAXIMISE AND RESTORE KEEP METACITY'S 7, A RECORDED ASYMMETRY (the
+// planner's ruling, 2026-10-07; his verdicts named the X and the bar),
+// because below it their ops lose their window: at 6 Maximise's dark inner
+// frame leaves a 2 x 1 slit of the fill where 7 (and squeeze's 8) leave
+// 4 x 3, and Restore's collapses to a solid 2 x 1 bar where 7 leaves its
+// 2 x 1 window.
 constexpr double kClCaptionIconOfBox = 8.0 / 20.0;
 int caption_icon_size(int h, ClCaptionGlyph g) {
-    if (g != ClCaptionGlyph::Close) return std::max(7, h - 6 * 2);
+    if (g != ClCaptionGlyph::Close && g != ClCaptionGlyph::Minimize)
+        return std::max(7, h - 6 * 2);
     return 2 * static_cast<int>(std::nearbyint(h * kClCaptionIconOfBox / 2.0));
 }
 
@@ -1166,19 +1170,6 @@ void paint_cl_well_frame(cairo_t* cr, const GuiRect& area) {
     paint_cell_rect(cr, GuiRect{area.x, area.y, area.w, u}, pal.cl_list_frame);
     paint_cell_rect(cr, GuiRect{area.x, area.y + area.h - u, area.w, u},
                     pal.cl_list_frame);
-    cairo_restore(cr);
-}
-
-void paint_cl_statusbar(cairo_t* cr, const GuiRect& lane) {
-    const int top = scaled_px(kBottomRowBorderPx, 1);
-    const int u   = relief_line_px();
-    const GuiPalette& pal = palette();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{lane.x, lane.y, lane.w, top},
-                    pal.cl_separator_dark);
-    paint_cell_rect(cr, GuiRect{lane.x, lane.y + top, lane.w, u},
-                    pal.cl_separator_light);
     cairo_restore(cr);
 }
 

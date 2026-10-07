@@ -26,7 +26,9 @@
 #     (GNOME 2: Clearlooks' tooltip border, shade 0.6 of the tooltip's ground), else unnamed: the built-in's black is
 #     Windows' tooltip border, and no other entry records a frame colour of its own (every Windows entry's raw
 #     WindowFrame is #000000, which no role reads).
-#   THE PROGRAM'S ROLES only where the entry records them: the imported entries and the chosen `warptempo` name none; HIS PRESETS (`warptempo-preset-<n>`, build.py preset_entries over the picker's presets.json, architect
+#   THE PROGRAM'S ROLES only where the entry records them: the imported entries and the chosen `warptempo` name none
+#     but THE GNOME 2 ENTRY `clearlooks`, whose `program_roles` (build.py GNOME2_PROGRAM_ROLES, architect 2026-10-07:
+#     each chrome's theme file names its own program colours) are named whole, the flag outline among them; HIS PRESETS (`warptempo-preset-<n>`, build.py preset_entries over the picker's presets.json, architect
 #     2026-10-04) name their program colours (PRESET_ELEMENT_ROLES below), each resolved through the picker's own theme
 #     (tools/palette/themes/picker.json with the preset's colours applied, render.picker_apply), so every value is the
 #     colour the picker painted: the canvas, the ink and THE OUTLINE (architect 2026-10-05: the picker's Outline
@@ -37,7 +39,7 @@
 #     (architect 2026-10-05: the picker's flag elements follow the product's flag kinds,
 #     keyed by its role names): Warp Flag / Selected Warp Flag onto the warp pair, Phase Reset Flag / Selected Phase
 #     Reset Flag onto the phase-reset pair, Added Flag / Selected Added Flag onto the added pair and Removed Flag /
-#     Selected Removed Flag onto the removed pair (the invalid flag wears it). A PRESET SAVED BEFORE THAT ROUND names
+#     Selected Removed Flag onto the removed pair (whose face is also the invalid mark's, by the follower rule below). A PRESET SAVED BEFORE THAT ROUND names
 #     the old keys (OLD_PRESET_KEYS), read as the picker reads them: its Unselected / Selected Flag onto BOTH the warp
 #     and the phase-reset pair (when he picked, one flag colour painted every authored kind, so this reproduces what the
 #     picker showed him), its Unselected / Selected Invalid Flag onto the removed pair; a new key the preset names
@@ -46,6 +48,10 @@
 #     are never named, the picker having no flag-label element (it shows them fixed white), so a preset records none and
 #     the built-in's apply: the resting label white, as the picker painted it, and each kind's selected label the
 #     built-in's per-kind value (architect 2026-10-07: white on the warp blue, black on the three bright accents).
+#   THE FOLLOWERS (the app's theme-file rules, src/gui/theme_file.h's head): a file naming dk_shadow and not
+#     flag_outline gets the outline equal to its DkShadow, and one naming removed_flag and not invalid_mark gets the
+#     invalid mark equal to its removed face; resolved_roles below applies both — so only `clearlooks`, which names
+#     its own, outlines its flags in anything but its DkShadow, and a preset's X is its removed red.
 #   Before writing, each preset's chrome is checked against the picker: its light roles must equal the chrome the
 #   picker paints for that preset, else a stale catalog (re-run build.py) or a changed picker theme (a ruling).
 #
@@ -90,7 +96,8 @@ ROLE_ORDER = ('ground', 'label', 'hilight', 'light_3d', 'shadow', 'dk_shadow', '
               'waveform_canvas', 'waveform_ink', 'waveform_outline', 'warp_flag', 'warp_flag_selected',
               'phase_reset_flag', 'phase_reset_flag_selected', 'added_flag', 'added_flag_selected', 'removed_flag',
               'removed_flag_selected', 'flag_label', 'warp_label_selected', 'phase_reset_label_selected',
-              'added_label_selected', 'removed_label_selected', 'playhead_stem', 'scanner')
+              'added_label_selected', 'removed_label_selected', 'flag_outline', 'invalid_mark', 'playhead_stem',
+              'scanner')
 # the chrome: theme-file role <- roles.light_roles' name
 CHROME = (('ground', 'ground'), ('label', 'label'), ('hilight', 'bevel_hilight'), ('light_3d', 'bevel_light'),
           ('shadow', 'bevel_shadow'), ('dk_shadow', 'bevel_dkshadow'), ('selected_fill', 'selected_fill'),
@@ -104,6 +111,9 @@ CARD_FRAME = ('card_frame', 'info_frame')
 # the flat caption's pairs (kGuiThemeCaptionGradients, src/gui/theme_file.h): a file naming a start and not its end
 # gets the end equal to the start
 CAPTION_GRADIENTS = (('caption_active', 'caption_active_gradient'), ('caption_inactive', 'caption_inactive_gradient'))
+# the followers (kGuiThemeFollowers, src/gui/theme_file.h): a file naming the leader and not the follower gets the
+# follower equal to the leader
+FOLLOWERS = (('dk_shadow', 'flag_outline'), ('removed_flag', 'invalid_mark'))
 # a preset's picker elements -> the theme-file roles each colours (an older preset's outline is the rule's, below)
 PRESET_ELEMENT_ROLES = (('canvas', ('waveform_canvas',)), ('ink', ('waveform_ink',)),
                         ('waveform_outline', ('waveform_outline',)),
@@ -203,6 +213,7 @@ def file_roles(e, presets, picker):
         out.update({role: e['roles'][src] for role, src in CARD})
     if CARD_FRAME[1] in e['roles']: out[CARD_FRAME[0]] = e['roles'][CARD_FRAME[1]]
     out.update(e.get('engine_tones', {}))
+    out.update(e.get('program_roles', {}))
     if e['key'].startswith(PRESET_PREFIX):
         n = int(e['key'][len(PRESET_PREFIX):])
         if n not in presets: raise SystemExit(f'gen_theme_files: {e["key"]} has no preset {n} in {PRESETS}')
@@ -225,6 +236,8 @@ def resolved_roles(e, presets, picker):
         out.update(named)
         for start, end in CAPTION_GRADIENTS:
             if start in named and end not in named: out[end] = named[start]
+        for leader, follower in FOLLOWERS:
+            if leader in named and follower not in named: out[follower] = named[leader]
     return out
 
 

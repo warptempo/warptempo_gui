@@ -4875,11 +4875,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // the seed grain's end, derived in the block below from the same frame
     // and the same map the paint sample reads.
     int64_t width_samples;
-    // The reset's CLASS, for the ring's colour: the column's RESTING red set
-    // keyed by store index, the set and the index the flag pass reads for
-    // this reset's stem — at rest and through a drag alike, the drag writing
-    // only its proposal, so the ring and the stem share one class throughout.
-    bool red_class = false;
     // THE RESET'S SELECTION BIT, for the ring's colour (architect 2026-09-23:
     // the ring and the stem are one object and brighten together; 2026-10-04:
     // the stem follows its FLAG BOX). It is the bit the flag pass hands this
@@ -4907,7 +4902,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // overlay, reading its `disabled` bool directly (phase resets carry no
         // label cascade).
         if (marker.disabled) return out;
-        red_class = phase_reset_red_flag_set_cached(app).red.count(idx) > 0;
         selected  = app.selected_markers.count(idx) > 0 &&
                     (app.addressed_cell == MarkerCell::Payload ||
                      !marker_paints_iter_cells(app, 'P', idx));
@@ -5010,7 +5004,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     out.valid = true;
     out.x0    = x0;
     out.x1    = x1;
-    out.red   = red_class;
     out.selected = selected;
     return out;
 }
@@ -5046,20 +5039,21 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const double w = band.x1 - band.x0;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE RING IS THE STEM'S COLOUR (architect 2026-08-01; the class rule
-    // 2026-09-17) — "they're one unit", the ring and the stem of the reset it
-    // annotates. It wears what that stem wears: the `removed_flag` face when
-    // the reset is in the column's red set (band.red), the `phase_reset_flag`
-    // face otherwise, each its selected face while the reset's payload box is the
-    // bright one (band.selected; architect 2026-10-04, the stem follows the
-    // box it leaves from). phase_reset_stem_color asks the one ladder rather
-    // than restating it, so ring and stem cannot drift.
+    // THE RING IS THE STEM'S COLOUR (architect 2026-08-01) — "they're one
+    // unit", the ring and the stem of the reset it annotates. It wears what
+    // that stem wears: the `phase_reset_flag` face, invalid or not (an
+    // invalid reset is told by the red X on its flag box, architect
+    // 2026-10-07 ~05:30, and colours no stem), its selected face while the
+    // reset's payload box is the bright one (band.selected; architect
+    // 2026-10-04, the stem follows the box it leaves from).
+    // phase_reset_stem_color asks the one ladder rather than restating it,
+    // so ring and stem cannot drift.
     // DAMAGE: this pass paints live in on_redraw from app state, never from a
     // cached surface, and every change to its colour's inputs misses the flag
     // cache's fingerprint, whose rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
     // repaint; a palette install damages the whole window.
-    const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
+    const GuiColor ring = phase_reset_stem_color(band.selected);
     // BELOW THE STEMS' FLANKS (architect 2026-10-05, fill_stem_flanks): the
     // flanks stand in the well's top lines alone, which the ring no longer
     // enters, so the reset's stem leaves its flanks straight onto the ring's
@@ -5311,7 +5305,7 @@ void GuiPaintHandler::paint_marker_stem_flanks(cairo_t* cr,
     if (band.h <= 0) return;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    set_palette_source(cr, palette().dk_shadow);
+    set_palette_source(cr, palette().flag_outline);
     const double y0 = static_cast<double>(band.y);
     const double y1 = static_cast<double>(band.y + band.h);
     for (const MarkerStem& stem : app.marker_stems) {
@@ -5799,30 +5793,25 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     const GuiRect content = bottom_row_content_area(app);
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) return;
 
-    // THE ROW'S GROUND, the whole lane — its top row included, which under
-    // win2000 carries NO LINE since 2026-10-02 (architect: nothing between
-    // the well and this row; the well's own bottom line is the seam; under
-    // clearlooks the status bar's line, below). The ground erases
+    // THE ROW'S GROUND, the whole lane — its top row included, which carries
+    // NO LINE UNDER EITHER CHROME: the well's own bottom line is the seam —
+    // under win2000 since 2026-10-02 (architect: nothing between the well
+    // and this row), under clearlooks since 2026-10-07 ~05:30 (architect:
+    // "three lines at the bottom, clearly noticeable … the file manager's
+    // main panel is just a one-pixel line all around"), Nautilus's status bar
+    // on his captures 00-17-24 and 00-17-47, where the list's one frame line
+    // stands straight on the status bar's ground. The ground erases
     // whatever render_background laid down, so the strip does not depend on
     // that erase happening to hold the same value. The modal paints on this
-    // ground and lays none of its own (paint_modal_dialog).
+    // ground and lays none of its own (paint_modal_dialog). Under clearlooks
+    // the tool buttons on it stay GtkReliefNone, the icon row's faces
+    // (paint_toolbar_box).
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
         paint_cell_rect(cr, lane, palette().ground);
         cairo_restore(cr);
     }
-    // UNDER CLEARLOOKS ROW 8 IS GTK'S STATUS BAR (architect 2026-10-07, the
-    // painters round's last part; paint_cl_statusbar, clearlooks_paint.h):
-    // the ground with the shade[3] row and its x1.3 row at the top — the
-    // lane's own top row and the one under it — and nothing else, whatever
-    // the row carries: the line is the window's foot's frame, so it stands
-    // under a modal too (the dialog's fields and buttons sit on the ground
-    // below it). The tool buttons on it stay GtkReliefNone, the icon row's
-    // faces (paint_toolbar_box). (Row 8 wore the icon row's toolbar band
-    // from the round's first part until this one.)
-    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
-        paint_cl_statusbar(cr, lane);
 
     // THE ROW YIELDS TO THE MODAL (2026-08-13; the fork and the ruling are at
     // modal_owns_bottom_row just above). The ground above is the ROW'S

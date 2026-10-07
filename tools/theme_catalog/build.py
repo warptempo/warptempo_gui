@@ -433,6 +433,65 @@ GNOME2_DERIVATIONS = {
 }
 
 
+# THE CLEARLOOKS ENTRY'S PROGRAM ROLES (architect 2026-10-07 ~05:30, CL9's question answered: each chrome's theme file
+# names its own program colours, the one built-in staying win2000's): the waveform, the flags, the playhead's stem and
+# the scanner as he picked them on the CL10 sheets (tmp/clearlooks/report_CL10.md) — sheet a's third band (black
+# canvas, the selection blue's spot[1] ink, bg[SELECTED] the lit outline) and its two flags; ONE PAIR FOR WARP AND
+# PHASE RESET (a scene shows one column, report CL10 section 4); sheet d's F1 history pair, the GNOME HIG green and red
+# lit by the engine's 1.3; black labels on every face; the flag outline the canvas's own colour (architect 2026-10-07
+# ~06:10: "otherwise when it reaches the canvas it's noticeable"). Each value is (a gtkrc colour-scheme key or a
+# literal byte, a ge_shade_color factor through cairo or None, the provenance), recorded with the entry
+# (program_roles, provenance.rule.program_roles) and named by gen_theme_files.py in clearlooks.theme.
+GNOME2_HIG_GREEN = '#83A67F'   # the GNOME HIG's palette green (report CL10 section 2)
+GNOME2_HIG_RED = '#C1665A'     # the GNOME HIG's palette red (report CL10 section 2)
+GNOME2_PROGRAM_ROLES = {
+    'waveform_canvas': ('#000000', None, 'black, his pick (CL10a band 3: the canvas under the accent ink)'),
+    'waveform_ink': ('selected_bg_color', 1.05, 'spot[1], the ink (CL10a band 3)'),
+    'waveform_outline': ('selected_bg_color', None, 'bg[SELECTED], the lit outline (CL10a band 3)'),
+    'warp_flag': ('selected_bg_color', None, 'bg[SELECTED], the flag at rest (CL10a)'),
+    'warp_flag_selected': ('selected_bg_color', 1.3, 'the flag selected, the engine\'s 1.3 stop (CL10a)'),
+    'phase_reset_flag': ('selected_bg_color', None, 'the warp flag\'s byte: one pair for both kinds (CL10 section 4)'),
+    'phase_reset_flag_selected': ('selected_bg_color', 1.3, 'the warp flag\'s selected byte (one pair)'),
+    'added_flag': (GNOME2_HIG_GREEN, None, 'the GNOME HIG green (CL10d F1)'),
+    'added_flag_selected': (GNOME2_HIG_GREEN, 1.3, 'the HIG green lit by the engine\'s 1.3 (CL10d F1)'),
+    'removed_flag': (GNOME2_HIG_RED, None, 'the GNOME HIG red (CL10d F1)'),
+    'removed_flag_selected': (GNOME2_HIG_RED, 1.3, 'the HIG red lit by the engine\'s 1.3 (CL10d F1)'),
+    'flag_label': ('fg_color', None, 'black on every resting face'),
+    'warp_label_selected': ('fg_color', None, 'black on the lit face'),
+    'phase_reset_label_selected': ('fg_color', None, 'black on the lit face'),
+    'added_label_selected': ('fg_color', None, 'black on the lit face'),
+    'removed_label_selected': ('fg_color', None, 'black on the lit face'),
+    'invalid_mark': (GNOME2_HIG_RED, None, 'the invalid flag\'s red X: the GNOME HIG red, the removed face\'s own '
+                                           'byte, which reads on the sky-blue flag where the lit E2988E is too pale '
+                                           '(architect 2026-10-07)'),
+    'flag_outline': ('#000000', None, 'the canvas\'s own colour, so the stem\'s flanks vanish where they enter the '
+                                      'well (architect 2026-10-07 ~06:10)'),
+    'playhead_stem': ('#FFFFFF', None, 'white, his ruling (CL10a)'),
+    'scanner': ('#FFFFFF', None, 'white, his ruling (CL10a)'),
+}
+GNOME2_PROGRAM_NOTE = ('the program roles are the architect\'s picks on the CL10 sheets (2026-10-07 ~05:30): the '
+                       'waveform black under the selection blue\'s spot[1] ink, bg[SELECTED] the lit outline; one flag '
+                       'pair for warp and phase reset, bg[SELECTED] lit to its 1.3 shade under black labels; the '
+                       'history\'s GNOME HIG green and red lit to 1.3; the invalid flag\'s red X the HIG red itself; '
+                       'the playhead stem and the scanner white; under '
+                       'Clearlooks the flag outline is the canvas\'s colour, so the stem\'s flanks vanish where they '
+                       'enter the well (architect 2026-10-07 ~06:10)')
+
+
+def gnome2_program_roles(sc):
+    """The colour scheme `sc` (gtkrc key -> '#RRGGBB') -> ({role: '#RRGGBB'}, {role: provenance}) by
+    GNOME2_PROGRAM_ROLES, each shade ge_shade_color through cairo (T.gtk2_shade, T.cairo_byte)."""
+    unit = lambda h: tuple(int(h[i:i + 2], 16) / 255.0 for i in (1, 3, 5))
+    out, why = {}, {}
+    for role, (src, k, prov) in GNOME2_PROGRAM_ROLES.items():
+        literal = src.startswith('#')
+        base = src if literal else sc[src]
+        out[role] = base.upper() if k is None else hx(T.cairo_byte(T.gtk2_shade(unit(base), k)))
+        why[role] = (src if literal else f'gtkrc {src} {base}') + \
+            ('' if k is None else f', ge_shade_color x {k}') + f': {prov}'
+    return out, why
+
+
 def squeeze_file(path):
     """A squeeze image file on the build host, its sha256 checked against the pin -> its path."""
     p = local_file('squeeze_live', path)
@@ -498,6 +557,8 @@ def gnome2_entries():
     if off: raise SystemExit(f'build: the app\'s ramp rule misses the period\'s rows by more than one level: {off}')
     e['engine_tones'] = {role: hx(v) for role, (v, _) in tones.tones.items()}
     e['provenance']['rule']['engine_tones'] = {role: why for role, (_, why) in tones.tones.items()}
+    e['program_roles'], e['provenance']['rule']['program_roles'] = gnome2_program_roles(raw)
+    e['notes'].append(GNOME2_PROGRAM_NOTE)
     print(f'gnome2: {len(tones.tones)} engine tones; the ramp rule off the period by at most '
           f'{max(tones.fit.values())} level(s) ({sum(1 for v in tones.fit.values() if v == 0)} of {len(tones.fit)} ramps exact)')
     return [e]
@@ -1246,6 +1307,16 @@ def checks(entries):
                            'disabled_text': '#A9A5A2', 'title_active': '#86ABD9', 'title_inactive': '#EDECEB'}, cl['roles']
     assert cl['raw']['title_text'] == '#FFFFFF' and cl['provenance']['rule']['computed']['metacity:title_unfocused'] == '#6B6A6A'
     assert cl['flag_rule'] == {'id': 'flat'} and cl['display_tier'] == 'high-colour'
+    # its program roles as he picked them on the CL10 sheets (2026-10-07 ~05:30; the outline ~06:10)
+    assert cl['program_roles'] == {
+        'waveform_canvas': '#000000', 'waveform_ink': '#92B4DF', 'waveform_outline': '#86ABD9',
+        'warp_flag': '#86ABD9', 'warp_flag_selected': '#D2E3F7', 'phase_reset_flag': '#86ABD9',
+        'phase_reset_flag_selected': '#D2E3F7', 'added_flag': '#83A67F', 'added_flag_selected': '#B3CEB0',
+        'removed_flag': '#C1665A', 'removed_flag_selected': '#E2988E', 'flag_label': '#000000',
+        'warp_label_selected': '#000000', 'phase_reset_label_selected': '#000000', 'added_label_selected': '#000000',
+        'removed_label_selected': '#000000', 'invalid_mark': '#C1665A', 'flag_outline': '#000000',
+        'playhead_stem': '#FFFFFF',
+        'scanner': '#FFFFFF'}, cl['program_roles']
     assert by['warptempo']['roles'] == CHOSEN_ROLES and by['warptempo']['display_tier'] == 'high-colour'
     # the preset road at the neutral ground #191919 is the chosen `warptempo` exactly (the picker's default chrome)
     assert preset_roles('#191919') == CHOSEN_ROLES

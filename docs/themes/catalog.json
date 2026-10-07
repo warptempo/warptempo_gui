@@ -8795,6 +8795,28 @@
       "cl_frame_unfocused_bg0650": "metacity draw_ops round_bevel_unfocused, top_height 24: <line> ('shade', ('gtk', 'bg', 'NORMAL'), 0.65)",
       "cl_frame_unfocused_bg0550": "metacity draw_ops round_bevel_unfocused, top_height 24: <rectangle> ('shade', ('gtk', 'bg', 'NORMAL'), 0.55)",
       "cl_frame_unfocused_bg1040": "metacity draw_ops round_bevel_unfocused, top_height 24: <line> ('shade', ('gtk', 'bg', 'NORMAL'), 1.04)"
+     },
+     "program_roles": {
+      "waveform_canvas": "#000000: black, his pick (CL10a band 3: the canvas under the accent ink)",
+      "waveform_ink": "gtkrc selected_bg_color #86ABD9, ge_shade_color x 1.05: spot[1], the ink (CL10a band 3)",
+      "waveform_outline": "gtkrc selected_bg_color #86ABD9: bg[SELECTED], the lit outline (CL10a band 3)",
+      "warp_flag": "gtkrc selected_bg_color #86ABD9: bg[SELECTED], the flag at rest (CL10a)",
+      "warp_flag_selected": "gtkrc selected_bg_color #86ABD9, ge_shade_color x 1.3: the flag selected, the engine's 1.3 stop (CL10a)",
+      "phase_reset_flag": "gtkrc selected_bg_color #86ABD9: the warp flag's byte: one pair for both kinds (CL10 section 4)",
+      "phase_reset_flag_selected": "gtkrc selected_bg_color #86ABD9, ge_shade_color x 1.3: the warp flag's selected byte (one pair)",
+      "added_flag": "#83A67F: the GNOME HIG green (CL10d F1)",
+      "added_flag_selected": "#83A67F, ge_shade_color x 1.3: the HIG green lit by the engine's 1.3 (CL10d F1)",
+      "removed_flag": "#C1665A: the GNOME HIG red (CL10d F1)",
+      "removed_flag_selected": "#C1665A, ge_shade_color x 1.3: the HIG red lit by the engine's 1.3 (CL10d F1)",
+      "flag_label": "gtkrc fg_color #000000: black on every resting face",
+      "warp_label_selected": "gtkrc fg_color #000000: black on the lit face",
+      "phase_reset_label_selected": "gtkrc fg_color #000000: black on the lit face",
+      "added_label_selected": "gtkrc fg_color #000000: black on the lit face",
+      "removed_label_selected": "gtkrc fg_color #000000: black on the lit face",
+      "invalid_mark": "#C1665A: the invalid flag's red X: the GNOME HIG red, the removed face's own byte, which reads on the sky-blue flag where the lit E2988E is too pale (architect 2026-10-07)",
+      "flag_outline": "#000000: the canvas's own colour, so the stem's flanks vanish where they enter the well (architect 2026-10-07 ~06:10)",
+      "playhead_stem": "#FFFFFF: white, his ruling (CL10a)",
+      "scanner": "#FFFFFF: white, his ruling (CL10a)"
      }
     }
    },
@@ -8835,7 +8857,8 @@
     "Debian 6 squeeze's GNOME 2.30 default (GConf: gtk_theme Clearlooks, metacity theme Clearlooks, font_name \"Sans 10\", titlebar_font \"Sans Bold 10\"); the gtkrc sets style = GUMMY, radius 3.0, menubarstyle 2, toolbarstyle 1, reliefstyle 1, colorize_scrollbar TRUE, animation FALSE",
     "the gtkrc is byte-identical to gtk-engines 2.20.0's; 2.20.2's differs only in two Evolution widget_class lines (ETable / ETree); the metacity theme is byte-identical to the gnome-themes 2.30.2 tarball's",
     "the relief quartet is the engine's one-line edge (light, light, dark, dark): Clearlooks draws no two-line Windows edge; the caption is flat in the catalog (metacity's band is a ramp of shades of the one colour)",
-    "the captures (tmp/squeeze/, 2026-10-06/07) show every computed byte as recorded: the inset ring #FBFBFA / #E0DEDD, the tooltip border #BABA45, the insensitive text #A9A5A2, the unfocused title #6B6A6A"
+    "the captures (tmp/squeeze/, 2026-10-06/07) show every computed byte as recorded: the inset ring #FBFBFA / #E0DEDD, the tooltip border #BABA45, the insensitive text #A9A5A2, the unfocused title #6B6A6A",
+    "the program roles are the architect's picks on the CL10 sheets (2026-10-07 ~05:30): the waveform black under the selection blue's spot[1] ink, bg[SELECTED] the lit outline; one flag pair for warp and phase reset, bg[SELECTED] lit to its 1.3 shade under black labels; the history's GNOME HIG green and red lit to 1.3; the invalid flag's red X the HIG red itself; the playhead stem and the scanner white; under Clearlooks the flag outline is the canvas's colour, so the stem's flanks vanish where they enter the well (architect 2026-10-07 ~06:10)"
    ],
    "engine_tones": {
     "cl_caption_edge": "#455D7C",
@@ -9191,6 +9214,28 @@
     "cl_frame_unfocused_bg0650": "#9D9996",
     "cl_frame_unfocused_bg0550": "#85827E",
     "cl_frame_unfocused_bg1040": "#F6F6F5"
+   },
+   "program_roles": {
+    "waveform_canvas": "#000000",
+    "waveform_ink": "#92B4DF",
+    "waveform_outline": "#86ABD9",
+    "warp_flag": "#86ABD9",
+    "warp_flag_selected": "#D2E3F7",
+    "phase_reset_flag": "#86ABD9",
+    "phase_reset_flag_selected": "#D2E3F7",
+    "added_flag": "#83A67F",
+    "added_flag_selected": "#B3CEB0",
+    "removed_flag": "#C1665A",
+    "removed_flag_selected": "#E2988E",
+    "flag_label": "#000000",
+    "warp_label_selected": "#000000",
+    "phase_reset_label_selected": "#000000",
+    "added_label_selected": "#000000",
+    "removed_label_selected": "#000000",
+    "invalid_mark": "#C1665A",
+    "flag_outline": "#000000",
+    "playhead_stem": "#FFFFFF",
+    "scanner": "#FFFFFF"
    }
   },
   {

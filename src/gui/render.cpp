@@ -1573,15 +1573,20 @@ enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
 
 // The resolved paint of ONE marker flag box (the palette block's marker-lane
 // paragraph, render.h, owns the look): its face, its label's ink — or the
-// disabled emboss — and the stem. The OUTLINE is no part of it: every flag's
-// is the theme's DkShadow, selected or not (palette().dk_shadow at each box
-// painter).
+// disabled emboss — the stem, and whether the box carries THE INVALID MARK.
+// The OUTLINE is no part of it: every flag's is the `flag_outline` role,
+// selected or not (palette().flag_outline at each box painter).
 struct FlagFace {
     GuiColor face;
     GuiColor label;
     bool     embossed;    // DISABLED and unselected: THE DISABLED EMBOSS
     GuiColor stem;
     bool     has_stem;
+    // INVALID and not disabled (disabled wins): the red X after the label.
+    // READ BY THE FLAG BOX ALONE — the payload box in the flag pass and the
+    // payload editor's field; a bound cell resolves through the same ladder
+    // and ignores it, the mark being the flag's (render.h).
+    bool     invalid_mark;
 };
 
 // A kind's face, its selected face and the label on that selected face, off
@@ -1610,25 +1615,16 @@ FlagPair flag_pair(GuiFlagKind kind) {
     return {p.warp_flag, p.warp_flag_selected, p.warp_label_selected};
 }
 
-// THE PAIR A BOX WEARS — the ladder's choice of pair, apart from its choice of
-// arm: a disabled box draws its (selected) face from its own kind's pair, an
-// invalid one from the Removed pair, any other from its kind's. The ladder
-// below and the flag editor's ink (render_flag_editor_box) both read it, so
-// the editor's text always takes the selected label of the very pair its
-// face came from (architect 2026-10-07).
-GuiFlagKind worn_flag_kind(GuiFlagKind kind, bool disabled, bool red) {
-    return (red && !disabled) ? GuiFlagKind::Removed : kind;
-}
-
 // THE ONE LADDER for every flag box — both marker columns, their bound cells,
 // the `h` view's diff flags, the editor's riding cells and the editor's own
 // box (architect 2026-10-03, the flat flag; the kinds 2026-10-04): DISABLED
-// wins (the theme's ground, the label embossed, no stem), then INVALID, which
-// WEARS THE REMOVED PAIR (one red for both, the context telling them apart:
-// invalid while authoring, removed in `h`), then the KIND's own pair, the
-// stem in the face. ONE RESTING LABEL, A SELECTED LABEL PER KIND (architect
-// 2026-10-07): `flag_label` on a face, the worn pair's own selected label on
-// a selected one (worn_flag_kind). SELECTION IS A BRIGHTER FACE
+// wins (the theme's ground, the label embossed, no stem, no mark), then
+// INVALID, which WEARS ITS KIND'S PAIR and CARRIES THE INVALID MARK
+// (architect 2026-10-07 ~05:30, retiring the removed pair it wore from
+// 2026-10-04), then the KIND's own pair, the stem in the face. ONE RESTING
+// LABEL, A SELECTED LABEL PER KIND (architect 2026-10-07): `flag_label` on a
+// face, the kind's own selected label on a selected one. SELECTION IS A
+// BRIGHTER FACE
 // (architect 2026-10-03, retiring the white outline): each arm answers
 // `selected` with its pair's selected face; and THE SELECTED DISABLED ARM,
 // PROVISIONAL (the palette block's THE STATES), is Windows 95's highlighted
@@ -1637,23 +1633,23 @@ GuiFlagKind worn_flag_kind(GuiFlagKind kind, bool disabled, bool red) {
 FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red,
                            bool selected) {
     const GuiPalette& p = palette();
+    const FlagPair pair = flag_pair(kind);
     FlagFace f;
     if (disabled) {
-        f.face     = selected
-            ? flag_pair(worn_flag_kind(kind, disabled, red)).selected
-            : p.ground;
-        f.label    = p.shadow;   // the emboss's word ink, or the flat GrayText
-        f.embossed = !selected;  // show_embossed_run on the ground only
-        f.stem     = f.face;
-        f.has_stem = false;      // NO STEM EVER for a disabled marker
+        f.face         = selected ? pair.selected : p.ground;
+        f.label        = p.shadow;  // the emboss's word ink, or the flat GrayText
+        f.embossed     = !selected; // show_embossed_run on the ground only
+        f.stem         = f.face;
+        f.has_stem     = false;     // NO STEM EVER for a disabled marker
+        f.invalid_mark = false;     // disabled wins over invalid
         return f;
     }
-    const FlagPair pair = flag_pair(worn_flag_kind(kind, disabled, red));
-    f.face     = selected ? pair.selected : pair.face;
-    f.label    = selected ? pair.selected_label : p.flag_label;
-    f.embossed = false;
-    f.stem     = f.face;
-    f.has_stem = true;
+    f.face         = selected ? pair.selected : pair.face;
+    f.label        = selected ? pair.selected_label : p.flag_label;
+    f.embossed     = false;
+    f.stem         = f.face;
+    f.has_stem     = true;
+    f.invalid_mark = red;
     return f;
 }
 
@@ -1663,8 +1659,9 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red,
 // bottom rows INSIDE the band across the face's columns and the run's closing
 // column at [x + w, x + w + border_w) when `closes` — and the face between
 // them. The left column is a SEAM a box may share with the box to its left;
-// it takes the one outline colour like the rest, the theme's DkShadow on a
-// flag box and the editor's black frame on the field. The box keeps the
+// it takes the one outline colour like the rest, the flag outline on a flag
+// box and the editor's frame on the field (kFlagEditorFrame's pair of
+// rules, render.h). The box keeps the
 // band's height and its width. Aliased, integer rects, like everything in
 // this lane.
 static void paint_flat_flag_box(cairo_t* cr, const GuiRect& lane, int x, int w,
@@ -1705,6 +1702,37 @@ static void paint_flag_stem_crossing(cairo_t* cr, const GuiRect& lane, int x,
     cairo_restore(cr);
 }
 
+// THE INVALID MARK (the palette block's marker-lane paragraph, render.h;
+// the geometry at marker_flag_invalid_mark_w_px): the red X's square,
+// marker_flag_invalid_glyph_px() on a side, its left column `x` and its
+// foot on `baseline` — two antialiased strokes corner to corner in the
+// `invalid_mark` role (its own, architect 2026-10-07: FF0000 in the
+// built-in, C1665A under Clearlooks; a theme file naming its removed face
+// and not the mark takes its removed face, theme_file.h's head), kMarkerFlagInvalidStrokePx Windows px wide, butt
+// capped, each end inset half a stroke along both axes so the ink stays
+// inside the square. The square's columns are integer (the caller's x is
+// the box's integer column plus the rounded pads and run); the strokes are
+// geometry, antialiased like a glyph.
+static void paint_invalid_mark(cairo_t* cr, int x, double baseline) {
+    const double g  = static_cast<double>(marker_flag_invalid_glyph_px());
+    const double lw = kMarkerFlagInvalidStrokePx * gui_scale_factor();
+    const double i  = lw / 2.0;
+    const double x0 = static_cast<double>(x);
+    const double y0 = baseline - g;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+    cairo_set_line_width(cr, lw);
+    cairo_new_path(cr);
+    cairo_move_to(cr, x0 + i, y0 + i);
+    cairo_line_to(cr, x0 + g - i, y0 + g - i);
+    cairo_move_to(cr, x0 + i, y0 + g - i);
+    cairo_line_to(cr, x0 + g - i, y0 + i);
+    set_palette_source(cr, palette().invalid_mark);
+    cairo_stroke(cr);
+    cairo_restore(cr);
+}
+
 // THE FLAG LABEL — the one body every flag box's text goes through: `run` at
 // (x, baseline) in the face's label ink (the selected label on a selected
 // face), or embossed (show_embossed_run) when the face is disabled and
@@ -1722,13 +1750,14 @@ static void paint_flag_label(cairo_t* cr, const text_shape::ShapedRun& run,
 } // namespace
 
 // The phase-reset lead-in ring's colour (declaration in render.h): the ladder
-// above asked for a LIVE reset's stem on the same class and selection bits the
-// flag pass hands it, so the ring can never pick a colour its stem would not.
+// above asked for a LIVE reset's stem on the selection bit the flag pass hands
+// it (the invalid class colours no stem, so the ring takes no class bit), so
+// the ring can never pick a colour its stem would not.
 // It stands outside the file's anonymous namespace so paint_handler.cpp
 // reaches it; the ladder it calls stays file-local.
-GuiColor phase_reset_stem_color(bool red, bool selected) {
-    return resolve_flag_face(GuiFlagKind::PhaseReset, /*disabled=*/false, red,
-                             selected).stem;
+GuiColor phase_reset_stem_color(bool selected) {
+    return resolve_flag_face(GuiFlagKind::PhaseReset, /*disabled=*/false,
+                             /*red=*/false, selected).stem;
 }
 
 namespace {
@@ -1767,14 +1796,15 @@ static constexpr int kFlagBoxRankNone = 3;
 // cell cannot read one way at rest and another under the editor. The FACE is
 // the caller's — each cell resolves its own through the one ladder, the
 // selected face belonging to the addressed cell alone; the seam column is the
-// flag outline, DkShadow whichever box it divides. A cell carries no stem.
+// flag outline whichever box it divides. A cell carries no stem and no
+// invalid mark (the face's invalid_mark is the flag box's).
 static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
                                   int fill_w, int border_w, int edge_h,
                                   int pad_l, double baseline,
                                   const text_shape::ShapedRun& run,
                                   const FlagFace& face, bool closes) {
     paint_flat_flag_box(cr, lane, seam_x + border_w, fill_w, border_w, edge_h,
-                        closes, palette().dk_shadow, face.face);
+                        closes, palette().flag_outline, face.face);
     paint_flag_label(cr, run, static_cast<double>(seam_x + border_w + pad_l),
                      baseline, face);
 }
@@ -1876,9 +1906,24 @@ void render_flag_boxes_impl(
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, text);
 
+            // The three bits the one ladder reads (resolve_flag_face):
+            // disabled WINS over invalid, and selection is the brighter face
+            // of either. Read here, ahead of the box's width, because THE
+            // INVALID MARK widens the box (render.h's marker-lane paragraph).
+            const bool dis = disabled_of(i);
+            const bool red = red_set.count(i) > 0;
+            const bool sel = selected_set.count(i) > 0;
+            // WHETHER THE FLAG BOX CARRIES THE MARK — the ladder's answer,
+            // selection aside (the mark stands selected or not), so the width
+            // below and the paint read one verdict.
+            const bool marked =
+                resolve_flag_face(kind, dis, red, false).invalid_mark;
+            const int run_w = static_cast<int>(std::nearbyint(run.width_px));
             const int bx = static_cast<int>(std::nearbyint(left_x));
-            const int bw = pad_l + pad_r +
-                static_cast<int>(std::nearbyint(run.width_px));
+            // pad + run + pad, and on an invalid flag THE MARK — one label
+            // pad and the glyph — between the run and the right pad.
+            const int bw = pad_l + run_w + pad_r +
+                           (marked ? marker_flag_invalid_mark_w_px() : 0);
 
             // WHICH OF THIS MARKER'S BOXES THIS PASS PAINTS. Everything LEFT
             // of the edited box stands at rest — nothing moves on that side of
@@ -1941,12 +1986,6 @@ void render_flag_boxes_impl(
                                               : lower_x;
             const int run_end   = bx + bw + cells_span_w + close_w;
 
-            // The three bits the one ladder reads (resolve_flag_face):
-            // disabled WINS over invalid, and selection is the brighter face
-            // of either.
-            const bool dis = disabled_of(i);
-            const bool red = red_set.count(i) > 0;
-            const bool sel = selected_set.count(i) > 0;
             // THE SELECTION IS ONE CELL'S (architect 2026-09-05, "light the
             // colour of only the flag that's clicked"; the brighter face since
             // 2026-10-03): a selected marker shows the selected face on its
@@ -2026,8 +2065,8 @@ void render_flag_boxes_impl(
             // and under a bound field it paints exactly as it does
             // at rest.
             if (pass_paints(MarkerCell::Payload)) {
-                // THE FLAT BOX (paint_flat_flag_box): the outline the theme's
-                // DkShadow, selected or not, and the face the ladder's.
+                // THE FLAT BOX (paint_flat_flag_box): the outline the flag
+                // outline role, selected or not, and the face the ladder's.
                 //
                 // THE LEFT BORDER IS OUTSIDE THE FACE, one column LEFT of the
                 // frame column (the geometry clause and the clip-at-the-left-
@@ -2052,13 +2091,18 @@ void render_flag_boxes_impl(
                 // outline row at its own column, selected or not.
                 paint_flat_flag_box(cr, lane, bx, bw, border_w, edge_h,
                                     pass_closes && !paint_lower,
-                                    palette().dk_shadow, face.face);
+                                    palette().flag_outline, face.face);
                 if (face.has_stem)
                     paint_flag_stem_crossing(cr, lane, bx, edge_h, face.stem);
                 // The label, on the run just measured — same font, same glyphs,
                 // so the box width and the painted text cannot disagree.
                 paint_flag_label(cr, run, static_cast<double>(bx + pad_l),
                                  baseline, face);
+                // THE INVALID MARK one label pad past the run, the box's
+                // right pad after it (the width above).
+                if (face.invalid_mark)
+                    paint_invalid_mark(cr, bx + pad_l + run_w + pad_r,
+                                       baseline);
             }
 
             // THE BOUND CELLS: the flag CONTINUED rightward, twice, in the
@@ -2067,7 +2111,7 @@ void render_flag_boxes_impl(
             // not as a second surface. Each cell resolves its own face,
             // because the selected face is the addressed cell's alone
             // (above). The seam is the flag's own left-border column laid on
-            // each cell's left edge, the DkShadow outline whichever box it
+            // each cell's left edge, the flag outline whichever box it
             // divides: the box to its left is the
             // flag box for the lower cell — painted here whenever the lower
             // is, the payload field suppressing both — and the lower cell for
@@ -2479,7 +2523,8 @@ void render_history_diff_flags(
             // EACH HALF THROUGH THE LIVE LANE'S ONE LADDER (resolve_flag_face,
             // architect 2026-10-03), AS ITS OWN KIND (architect 2026-10-04): a
             // removed half the Removed pair, an added half the Added pair — a
-            // diff line is never the invalid class — the disabled face (the
+            // diff line is never the invalid class, so no half carries the
+            // invalid mark (HistoryDiffFlag's note) — the disabled face (the
             // ground, the label embossed) for a half whose own side disables
             // it, and the selected face on both when the flag is focused or
             // selected. THE LABEL CARRIES THE SIGN too (history_diff_label's
@@ -2499,15 +2544,15 @@ void render_history_diff_flags(
             // outline column, THE SEAM (2026-08-20, standing since
             // 2026-09-02, when the halves were two saturated hues; it stays
             // the anatomy's one seam rule): the added half's own left border,
-            // the DkShadow outline like every column of the box.
+            // the flag outline like every column of the box.
             if (w_removed > 0)
                 paint_flat_flag_box(cr, lane, bx, w_removed, border_w, edge_h,
                                     /*closes=*/w_added == 0,
-                                    palette().dk_shadow, removed_face.face);
+                                    palette().flag_outline, removed_face.face);
             if (w_added > 0)
                 paint_flat_flag_box(
                     cr, lane, bx + w_removed + seam_w, w_added, border_w,
-                    edge_h, /*closes=*/true, palette().dk_shadow,
+                    edge_h, /*closes=*/true, palette().flag_outline,
                     added_face.face);
 
             // THE TWO LABELS, each on its own half through the one label body
@@ -2710,11 +2755,14 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // own right edge and the upper's is past the lower cell, which is the only
 // thing the side decides here; where no cells paint at all the answer is the
 // flag's right edge, unreachable because the open asked (enter_iter_bound_edit)
-// and a keyboard-modal editor freezes the mode bit.
+// and a keyboard-modal editor freezes the mode bit. `marked` is the flag
+// box's INVALID MARK (the caller's ladder answer, FlagFace::invalid_mark):
+// the mark is part of the flag's run, so the cells — and the field that
+// opens on one — stand past it.
 static int committed_cell_seam_off(const AppState& app,
                                    const GuiFont& font, bool phase,
                                    int idx, MarkerCell side,
-                                   bool iteration_on) {
+                                   bool iteration_on, bool marked) {
     const std::vector<GuiWarpMarker>&       mv  = app.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& pmv =
         app.phaseresetmarkers.markers();
@@ -2726,7 +2774,8 @@ static int committed_cell_seam_off(const AppState& app,
                                     : flag_display_text(mv, idx);
     const text_shape::ShapedRun run = text_shape::shape_text_run(font, label);
     const int pads   = marker_flag_pad_left_px() + marker_flag_pad_right_px();
-    const int flag_w = pads + static_cast<int>(std::nearbyint(run.width_px));
+    const int flag_w = pads + static_cast<int>(std::nearbyint(run.width_px)) +
+                       (marked ? marker_flag_invalid_mark_w_px() : 0);
     const IterCellLayout cl = measure_iter_cells(
         font, phase ? phase_iter_cells(pmv, idx, iteration_on)
                     : warp_iter_cells(mv, idx, iteration_on));
@@ -2831,8 +2880,46 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // leave the caret no column to stand in.
     const int caret_px = scaled_px(1.0, 1);
 
+    // THE MARKER'S OWN STATE, through the one ladder (resolve_flag_face) —
+    // for the STEM under the payload field (the payload box's own face), for
+    // the INVALID MARK (the field's width and the bound field's anchor, both
+    // below), and for the cells riding the field's right edge, which keep
+    // their resting anatomy. Read ahead of the box's width, because the mark
+    // widens the flag box.
+    const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
+                           : effective_disabled(mv, idx);
+    // The column's kind, the flag pass's own (render_flags /
+    // render_phase_reset_flags), so the field and the boxes riding it wear
+    // the pair their resting twins wear.
+    const GuiFlagKind kind = phase ? GuiFlagKind::PhaseReset
+                                   : GuiFlagKind::Warp;
+    // The class's red is the COLUMN'S OWN paint cue, the set the resting flag
+    // pass for this column reads, so the field and the boxes riding it carry
+    // the mark their resting twins carry on every column.
+    const bool red_class =
+        phase
+            ? phase_reset_red_flag_set_cached(app).red.count(idx) > 0
+            : warp_red_flag_set_cached(
+                  app, audio.sample_rate(),
+                  static_cast<long>(audio.total_frames())).red.count(idx) > 0;
+    // THE MARKER'S SELECTED FACE — the ladder's SELECTED answer for the
+    // edited marker, its kind's selected face — names the STEM under the
+    // payload field (below), and its invalid_mark says whether the flag box
+    // carries THE INVALID MARK; the field itself wears no face.
+    const FlagFace face =
+        resolve_flag_face(kind, dis, red_class, /*selected=*/true);
+    // THE PAYLOAD FIELD IS THE FLAG BOX OPENED, so it carries the mark after
+    // its text at the resting box's seat (render.h's marker-lane paragraph:
+    // the marker is still invalid while it is edited); a BOUND field is a
+    // cell and carries none, the flag box standing at rest with its own mark
+    // beside it — which is why the bound anchor below reads the mark too.
+    const bool field_marked = payload_kind && face.invalid_mark;
+    const int  mark_w = field_marked ? marker_flag_invalid_mark_w_px() : 0;
+
     const int run_w = static_cast<int>(std::nearbyint(run.width_px));
-    // THE BOX IS ITS TWO PADS AND ITS RUN, AND NO WIDTH RULE BOUNDS IT — not
+    // THE BOX IS ITS TWO PADS AND ITS RUN — AND THE INVALID MARK ON AN INVALID
+    // PAYLOAD FIELD, between the run and the right pad, as on the resting
+    // flag — AND NO WIDTH RULE BOUNDS IT — not
     // the lane, not the window. The LANE-WIDTH CAP that stood here went with
     // the position clamp below (architect 2026-09-06): it was a WIDTH rule
     // kept for a POSITION rule's sake — a box no wider than the lane can
@@ -2842,7 +2929,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // truthful answer the cap existed to avoid giving. Nothing else read it:
     // the text viewport, the view offset and the riding run all derive from
     // `box_w` rather than from the lane.
-    const int box_w = pad_l + run_w + pad_r;
+    const int box_w = pad_l + run_w + pad_r + mark_w;
 
     const std::vector<WarpFrameMapSegment>& map =
         displayed_or_live_target_map(app, audio);
@@ -2896,7 +2983,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const MarkerCell field_cell = suppressed_flag_box(app).cell;
     const int anchor_off =
         bound_kind ? committed_cell_seam_off(app, font, phase, idx,
-                                             field_cell, iteration_on) +
+                                             field_cell, iteration_on,
+                                             face.invalid_mark) +
                          border_w
                    : 0;
 
@@ -2939,9 +3027,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // caret's own width (gui_scale 50) the borrow takes the whole pad and the
     // viewport ends on the box's right edge, the caret's column being the box's
     // last fill column.
+    // On a marked field the viewport ends where the mark's pad begins — the
+    // pad after the run is then the mark's, the same two Windows px as the
+    // right pad, so the borrow is the same.
     const double view_x0 = static_cast<double>(bx + pad_l);
     const int view_pad_r = std::max(pad_r - caret_px, 0);
-    const double view_x1 = static_cast<double>(bx + box_w - view_pad_r);
+    const double view_x1 =
+        static_cast<double>(bx + box_w - mark_w - view_pad_r);
     const double view_w  = view_x1 - view_x0;
 
     // THE MINIMAL-TRAVEL VIEW OFFSET (the field's contract is at
@@ -2985,27 +3077,6 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const double baseline = static_cast<double>(lane.y) +
                             static_cast<double>(marker_flag_baseline_px());
 
-    // THE MARKER'S OWN STATE, through the one ladder (resolve_flag_face) —
-    // for the box, which is the marker's SELECTED face (below), for the STEM
-    // under the payload field (the payload box's own face), and for the cells
-    // riding the field's right edge, which keep their resting anatomy.
-    const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
-                           : effective_disabled(mv, idx);
-    // The column's kind, the flag pass's own (render_flags /
-    // render_phase_reset_flags), so the field and the boxes riding it wear
-    // the pair their resting twins wear.
-    const GuiFlagKind kind = phase ? GuiFlagKind::PhaseReset
-                                   : GuiFlagKind::Warp;
-    // The class's red is the COLUMN'S OWN paint cue, the set the resting flag
-    // pass for this column reads, so the boxes riding the field wear the
-    // removed face (the invalid one) their resting twins wear on every
-    // column.
-    const bool red_class =
-        phase
-            ? phase_reset_red_flag_set_cached(app).red.count(idx) > 0
-            : warp_red_flag_set_cached(
-                  app, audio.sample_rate(),
-                  static_cast<long>(audio.total_frames())).red.count(idx) > 0;
     // THE SELECTION IS THE ADDRESSED CELL'S ALONE (the flag pass's own rule,
     // render_flags). Every box in the riding run below asks the question of
     // its own cell — which answers no on every one of them, each open having
@@ -3016,28 +3087,23 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const MarkerCell bright = idx == app.last_selected_marker
                                   ? app.addressed_cell : MarkerCell::Payload;
     const auto cell_selected = [&](MarkerCell c) { return sel && c == bright; };
-    // THE MARKER'S SELECTED FACE — the ladder's SELECTED answer for the
-    // edited marker, its kind's selected face or `removed_flag_selected` over
-    // an invalid marker — names the STEM under the payload field (below);
-    // the field itself no longer wears it.
-    const FlagFace face =
-        resolve_flag_face(kind, dis, red_class, /*selected=*/true);
-    // THE FIELD TURNS WHITE WHEN OPEN (architect 2026-10-07 ~03:10, reversing
-    // 2026-10-03/04's "the selected flag opened for edit"; both chromes): the
-    // editor takes THE FIELD'S PAIRS, as the dialog fields do — its ground,
-    // its text and caret, and its selected substring each the dialog field's
-    // own under the live chrome: WIN2000 `field_ground` / `field_text` and
-    // the theme's selected pair (Explorer's F2 rename, white under black);
-    // CLEARLOOKS GtkEntry's, base / text and base[SELECTED] under
-    // text[SELECTED] (the field being edited has the focus).
-    const bool gtk_entry =
-        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    // THE FLAG OPENED: A WHITE BOX IN THE FLAG'S OUTLINE, ONE DESIGN UNDER
+    // EVERY CHROME (architect 2026-10-07 ~05:30, retiring the clearlooks
+    // arm's GtkEntry: "it makes it seem like the flag is hiding a text input
+    // behind it"): the theme's FIELD PAIR — `field_ground` under
+    // `field_text`, its text and caret — and the theme's SELECTED PAIR on the
+    // selected substring, the dialog field's own roles, and THE FRAME the
+    // pair of rules at kFlagEditorFrame (render.h): Windows' WindowFrame
+    // black under win2000, the flag outline under clearlooks.
     const GuiPalette& pal = palette();
-    const GuiColor field_ground = gtk_entry ? pal.cl_base : pal.field_ground;
-    const GuiColor field_ink    = gtk_entry ? pal.cl_text : pal.field_text;
-    const GuiColor sel_fill = gtk_entry ? pal.cl_selection : pal.selected_fill;
-    const GuiColor sel_text = gtk_entry ? pal.cl_text_selected
-                                        : pal.selected_text;
+    const GuiColor field_ground = pal.field_ground;
+    const GuiColor field_ink    = pal.field_text;
+    const GuiColor sel_fill     = pal.selected_fill;
+    const GuiColor sel_text     = pal.selected_text;
+    const GuiColor frame =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks
+            ? pal.flag_outline
+            : kFlagEditorFrame;
     // DOES THE FIELD CLOSE THE RUN (architect 2026-09-25: every marker's run
     // ends on ONE outline column on its rightmost box)? Iff nothing rides past
     // it — the UPPER field, the marker's last box by rank, or a payload field
@@ -3053,38 +3119,23 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 : warp_iter_cells(mv, idx, iteration_on);
     const bool ride_cells = ride_text.present;
 
-    // 1. THE BOX IS AN IN-PLACE EDIT FIELD ON THE FLAG'S OWN OUTLINE
-    //    GEOMETRY (the left border column outside the face, the top and
-    //    bottom rows inside the band, the closing column when the field ends
-    //    the run; the palette block's editing paragraph), WHITE (architect
-    //    2026-10-07): WIN2000 Windows' in-place label edit (Explorer's F2
-    //    rename, Acid Pro's track-name editor) — the FLAT box on the field
-    //    ground framed in BLACK (kFlagEditorFrame, Windows' WindowFrame),
-    //    paint_flat_flag_box; CLEARLOOKS GtkEntry FOCUSED (paint_cl_entry:
-    //    the inset ring, the focus colour's border and inner ring, base
-    //    inside, the spec's radius) on the same rect — the flag's height
-    //    and run, not the dialog entry's 23, and no black line. A refused
-    //    Enter recolours nothing (text_editor::refuse selects the whole
-    //    text; the owner's card says why). The pads either side of the text
-    //    are the field's margin strips. The left border column is the flag's
-    //    own for the payload editor and the SEAM column for the bound field
-    //    — "the outline outside the face on its left" either way. Since the
-    //    editor opens on any store index (enter_top_flag_edit), disabled
-    //    included, a disabled marker's field is this same box: an edit field
-    //    is never embossed.
-    if (gtk_entry) {
-        cairo_save(cr);
-        paint_cl_entry(cr,
-                       GuiRect{bx - border_w, lane.y,
-                               border_w + box_w + (ride_cells ? 0 : border_w),
-                               lane.h},
-                       /*focused=*/true, field_ground);
-        cairo_restore(cr);
-    } else {
-        paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
-                            /*closes=*/!ride_cells, kFlagEditorFrame,
-                            field_ground);
-    }
+    // 1. THE BOX IS THE FLAG OPENED, ON THE FLAG'S OWN OUTLINE GEOMETRY (the
+    //    left border column outside the face, the top and bottom rows inside
+    //    the band, the closing column when the field ends the run; the
+    //    palette block's editing paragraph): the FLAT box on the field ground
+    //    in its one-Windows-px frame (`frame` above), paint_flat_flag_box,
+    //    under every chrome — Windows' in-place label edit (Explorer's F2
+    //    rename, Acid Pro's track-name editor). A refused Enter recolours
+    //    nothing (text_editor::refuse selects the whole text; the owner's
+    //    card says why). The pads either side of the text are the field's
+    //    margin strips. The left border column is the flag's own for the
+    //    payload editor and the SEAM column for the bound field — "the
+    //    outline outside the face on its left" either way. Since the editor
+    //    opens on any store index (enter_top_flag_edit), disabled included,
+    //    a disabled marker's field is this same box: an edit field is never
+    //    embossed.
+    paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
+                        /*closes=*/!ride_cells, frame, field_ground);
     // THE STEM FOLLOWS THE PAYLOAD BOX (architect 2026-10-04, "otherwise it
     // looks disconnected"). Under the PAYLOAD field the field IS the payload
     // box opened, and the open seats the axis there (set_single_selection
@@ -3103,12 +3154,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // The caret / selection band: the box interior between the frame's top
     // and bottom rows. A text field's caret spans its whole field, and here
-    // the field IS the box, so this needs no font-extent solve. Under
-    // clearlooks the entry's frame is three lines deep (the inset ring, the
-    // border, the focus ring), so the band stands inside those.
-    const int frame_rows = gtk_entry ? 3 * relief_line_px() : edge_h;
-    const int band_y = lane.y + frame_rows;
-    const int band_h = lane.h - 2 * frame_rows;
+    // the field IS the box, so this needs no font-extent solve.
+    const int band_y = lane.y + edge_h;
+    const int band_h = lane.h - 2 * edge_h;
 
     // Everything from here paints CLIPPED to the text viewport INSIDE THE
     // FRAME, so a scrolled run, its selection and its caret all stop at the
@@ -3219,6 +3267,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     }
 
     cairo_restore(cr);   // the text-viewport clip
+
+    // 5. THE INVALID MARK on an invalid payload field, one label pad past the
+    //    pending run and the right pad after it — the resting flag's seat,
+    //    riding the run as it grows and shrinks (the width above), outside
+    //    the text viewport's clip, which ends at the mark's pad.
+    if (field_marked)
+        paint_invalid_mark(cr, bx + pad_l + run_w + pad_r, baseline);
 
     // THE MARKER'S BOXES TO THE RIGHT OF THE FIELD RIDE ITS EDGE — in the flag
     // pass's own left-to-right order, each wearing its resting anatomy. WHAT
@@ -3361,15 +3416,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         }
         // THE FIELD'S FRAME CLOSES ON ITS OWN RIGHT COLUMN, which is also the
         // first riding cell's seam (the one shared column, its left border):
-        // under win2000 repainted in the frame's colour over the seam the
-        // cell painter just laid, so the black frame is whole on all four
-        // sides and the field reads as one box. Under clearlooks the entry
-        // ends on the field's last column with its own ring, and the riding
-        // cell's seam beside it is the divider, as at rest.
-        if (!gtk_entry) {
+        // repainted in the frame's colour over the seam the cell painter just
+        // laid, so the frame is whole on all four sides and the field reads
+        // as one box — under win2000 the black frame over the flag outline's
+        // seam (the pair of rules at kFlagEditorFrame), under clearlooks the
+        // outline over itself.
+        {
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            set_palette_source(cr, kFlagEditorFrame);
+            set_palette_source(cr, frame);
             cairo_rectangle(cr, run_x0, lane.y, border_w, lane.h);
             cairo_fill(cr);
             cairo_restore(cr);

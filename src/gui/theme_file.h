@@ -29,7 +29,8 @@
 // selected face and a selected label of its own under the one white resting
 // label — the authoring kinds' pairs WINDOWS 2000'S OWN SCHEME BYTES, the
 // history's two Windows' true dark / bright pairs (architect 2026-10-07; the
-// role table's program block).
+// role table's program block) — and the flags' one outline, the scheme's
+// DkShadow (architect 2026-10-07 ~05:30).
 //
 // ONE THEME IS BUILT IN, compiled: `windows-2000-standard` (kBuiltinThemeKey),
 // the role table's values — Windows 2000's own "Windows Standard" scheme, the
@@ -78,16 +79,28 @@
 // line, no comment, no whitespace tolerance, no duplicate), each role a name
 // of the role table and each value THE ONE COLOUR GRAMMAR (theme_colour_word,
 // below). A FILE MAY NAME ONLY SOME ROLES, in any order: every role it does
-// not name takes the built-in's value — WITH ONE RULE OF THE FILE'S OWN, THE
-// FLAT CAPTION (architect 2026-10-05): a file that names a caption's START
+// not name takes the built-in's value — WITH THREE RULES OF THE FILE'S OWN.
+// THE FLAT CAPTION (architect 2026-10-05): a file that names a caption's START
 // (`caption_active` / `caption_inactive`) and not its GRADIENT END
 // (`caption_active_gradient` / `caption_inactive_gradient`) gets the end
 // EQUAL TO THE START — a flat caption, as a theme recording no gradient
 // (Windows 95's, Plus!'s, KDE 3's, CDE's) drew one — never the built-in's end
 // under the file's start, which would be a gradient no one recorded. The
 // pairs are kGuiThemeCaptionGradients below and the rule is applied once, at
-// the file's read (read_theme_file). The stem is the theme's KEY, under the
-// key grammar (is_theme_key_spelling).
+// the file's read (read_theme_file). THE FLAG OUTLINE FOLLOWS DkShadow
+// (architect 2026-10-07 ~05:30, the outline made a role of its own):
+// a file that names `dk_shadow` and not `flag_outline` gets the outline
+// EQUAL TO ITS DkShadow — the outline its own quartet gives a theme that
+// records none, never the built-in's 404040 under another theme's quartet —
+// so every bundled file but `clearlooks` (which names its own) outlines its
+// flags in its DkShadow. THE INVALID MARK FOLLOWS THE REMOVED FACE (architect
+// 2026-10-07, the X made a role of its own): a file that names
+// `removed_flag` and not `invalid_mark` gets the X EQUAL TO ITS REMOVED
+// FACE — his picker presets' removed red carries over to their X — while a
+// file naming neither takes the built-in's FF0000, as the imported themes
+// do. Both pairs are kGuiThemeFollowers below, applied at the same read. The
+// stem is
+// the theme's KEY, under the key grammar (is_theme_key_spelling).
 //
 // EVERY VIOLATION IS THE LAUNCH'S FIRST-ERROR HARD FAIL (NO BACKSTOPS FOR
 // ADVERSARIAL USE: the files are the user's own, so a violation is a hand
@@ -123,7 +136,8 @@ std::string_view effective_theme_key(std::string_view theme);
 
 // THE ROLE TABLE — THE ONE ENUMERATION (architect 2026-10-04), in GuiPalette's
 // order: the chrome's twenty-one (the caption's six since 2026-10-05), then the
-// program's eighteen (the four selected labels since 2026-10-07), then the
+// program's twenty (the four selected labels, the flag outline and the
+// invalid mark since 2026-10-07), then the
 // generated Clearlooks block (2026-10-07; its count is the include's,
 // kGuiThemeRoleCount the whole table's). The reader's arm,
 // the built-in, the files' fill and install_palette (render.cpp) all walk it,
@@ -176,12 +190,33 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // 3A6EA5; PHASE RESET the Teal scheme's ActiveTitle 008080 selected to its
     // GradientActiveTitle 00CCD8 — and the history's two kept as Windows' true
     // dark / bright pairs of the sixteen, ADDED green 008000 / lime 00FF00 and
-    // REMOVED maroon 800000 / red FF0000, which the invalid flag wears too.
+    // REMOVED maroon 800000 / red FF0000 (the invalid flag wears its own
+    // kind's pair and carries the red X, below; render.h's marker-lane
+    // paragraph).
     // EVERY RESTING LABEL WHITE, the ONE `flag_label` (so a
     // file that names flag faces and no labels gets white at rest); THE
     // SELECTED LABEL PER KIND (architect 2026-10-07, replacing the one
     // selected label of 2026-10-04): white on the warp blue, BLACK on the
     // three bright accents, where white would not show.
+    // THE FLAG OUTLINE (architect 2026-10-07 ~05:30: "the stem looks like it
+    // has a lip around it because the border is so light compared to the
+    // well and the tick" — Clearlooks' DkShadow is lighter than its well): a
+    // ROLE OF ITS OWN, every flag box's one-px outline, its stem's flanks and
+    // the clearlooks flag editor's frame (render.h's marker-lane paragraph).
+    // UNDER CLEARLOOKS THE OUTLINE IS THE CANVAS'S COLOUR, so the stem's
+    // flanks vanish where they enter the well (architect 2026-10-07 ~06:10:
+    // "otherwise when it reaches the canvas it's noticeable"; both black,
+    // the clearlooks theme file). The built-in's value is its DkShadow byte,
+    // 404040 — its canvas is black too, but Windows' flags keep their
+    // DkShadow ring, so the win2000 flags are pixel-identical — and a file
+    // naming its DkShadow and not this takes its DkShadow (the head's rule).
+    // THE INVALID MARK (architect 2026-10-07: the X a ROLE OF ITS OWN so it
+    // reads on every flag face): the red X after an invalid flag's label
+    // (paint_invalid_mark, render.cpp). The built-in's is Windows' RED FF0000
+    // — the Removed pair's selected face, about 3.3:1 on the navy warp flag,
+    // where the maroon face would vanish (about 1.3:1); Clearlooks names the
+    // HIG red C1665A (the clearlooks theme file). A file naming its removed
+    // face and not this takes its removed face (the head's rule).
     // THE PLAYHEAD'S STEM AND THE SCANNER BOTH WHITE (architect 2026-10-07:
     // "let's go back to a white scanner") and still TWO roles, so a file may
     // part them — the head is no role at all, WordPad's ruler marker painted
@@ -205,6 +240,8 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"phase_reset_label_selected", &GuiPalette::phase_reset_label_selected, 0x000000},
     {"added_label_selected",       &GuiPalette::added_label_selected,       0x000000},
     {"removed_label_selected",     &GuiPalette::removed_label_selected,     0x000000},
+    {"flag_outline",               &GuiPalette::flag_outline,               0x404040},
+    {"invalid_mark",               &GuiPalette::invalid_mark,               0xFF0000},
     {"playhead_stem",              &GuiPalette::playhead_stem,              0xFFFFFF},
     {"scanner",                    &GuiPalette::scanner,                    0xFFFFFF},
     // THE CLEARLOOKS BLOCK (architect 2026-10-07, the painters round): the
@@ -248,6 +285,19 @@ inline constexpr GuiThemeGradientPair kGuiThemeCaptionGradients[] = {
      theme_role_index("caption_active_gradient")},
     {theme_role_index("caption_inactive"),
      theme_role_index("caption_inactive_gradient")},
+};
+
+// THE FOLLOWERS — the grammar's other two rules of its own (the head): a
+// file naming the LEADER and not the FOLLOWER gets the follower equal to the
+// leader — the flag outline its DkShadow (architect 2026-10-07 ~05:30) and
+// the invalid mark its removed face (architect 2026-10-07).
+struct GuiThemeFollower {
+    std::size_t leader;
+    std::size_t follower;
+};
+inline constexpr GuiThemeFollower kGuiThemeFollowers[] = {
+    {theme_role_index("dk_shadow"), theme_role_index("flag_outline")},
+    {theme_role_index("removed_flag"), theme_role_index("invalid_mark")},
 };
 
 // THE ONE COLOUR GRAMMAR (architect 2026-10-03; every role's since

@@ -7,16 +7,17 @@
 // THE CLEARLOOKS PAINTERS (architect 2026-10-07, the painters round's first
 // part: the top strip; its second: the dialogs' push buttons and entries,
 // the dropdown, the lists; its last: the trim lane as the scroll bar, the
-// scrub as GtkScale, row 8 as the status bar with its entry time fields, the
-// well's frame, the ruler's ticks, the restored laptop's frame, the flag
-// editor) — the chrome spec's clearlooks arm (chrome_spec.h),
+// scrub as GtkScale, row 8's entry time fields, the well's frame, the
+// ruler's ticks, the restored laptop's frame) — the chrome spec's clearlooks
+// arm (chrome_spec.h; the flag editor is the program's own flag opened under
+// every chrome, render_flag_editor_box, architect 2026-10-07 ~05:30),
 // GNOME 2.30's own drawing as Debian 6 squeeze put it on screen: the
 // metacity theme's maximised caption (gnome-themes 2.30.2's Clearlooks
 // metacity-theme-1.xml), and gtk-engines 2.20.2's Clearlooks GUMMY style for
 // the menu bar, the toolbar band, its tool buttons and separators, the push
 // button, the entry, the menu and its items, the list and its selected cell
-// (clearlooks_draw.c, clearlooks_draw_gummy.c), the scroll bar, the scale and
-// the status bar (the same files), the restored window's frame (metacity's
+// (clearlooks_draw.c, clearlooks_draw_gummy.c), the scroll bar and the scale
+// (the same files), the restored window's frame (metacity's
 // `normal` frame style set), his squeeze captures the law
 // (tmp/squeeze/). Every painter here is called from its win2000 sibling's
 // site on the spec's fork (paint_handler.cpp) and reads its lengths from the
@@ -97,8 +98,9 @@ enum class ClCaptionGlyph { Minimize, Maximize, Restore, Close };
 // bevel's at 45 degrees, architect 2026-10-07: clearlooks_paint.cpp's
 // caption-button block, where the radius and the seams are derived) — then
 // the glyph at its icon_size, centred: the capture's proportion of the box
-// under the fit, 6, for Close; metacity's Bmin 7 for Minimise, Maximise and
-// Restore, whose ops lose their window or their width below it (architect
+// under the fit, 6, for Close and Minimise (Minimise at 6 2026-10-07
+// ~05:30: "it's supposed to signify being tiny"); metacity's Bmin 7 for
+// Maximise and Restore, whose ops lose their window below it (architect
 // 2026-10-07; caption_icon_size) — focused, the 0.7 outline under the
 // blend(sel, white, 0.75) shape; unfocused, the blend(fg, bg, 0.45) shape
 // alone. CLOSE'S
@@ -132,8 +134,8 @@ void paint_cl_menubar_item(cairo_t* cr, const GuiRect& lane, int x, int w);
 
 // THE TOOLBAR BAND — clearlooks_gummy_draw_toolbar (toolbarstyle 1, not
 // topmost: it stands under the menu bar) on `band`, the icon row's band
-// (row 8 is GTK's status bar since the round's last part,
-// paint_cl_statusbar): its first row bg x 1.1, the 1.04 | 1.01 / 1.0 | 0.97
+// (row 8 is Nautilus's status bar, the ground alone — paint_bottom_strip):
+// its first row bg x 1.1, the 1.04 | 1.01 / 1.0 | 0.97
 // ramp with its step at the band's middle, its last row shade[3].
 void paint_cl_toolbar_band(cairo_t* cr, const GuiRect& band);
 
@@ -209,8 +211,7 @@ int paint_cl_push_button(cairo_t* cr, const GuiRect& r, bool pressed,
 void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused);
 // The same entry on a caller's base: the time fields' `clock_ground`
 // (paint_time_field — the clock pair is the GNOME entry's base / text under
-// the clearlooks theme, gen_theme_files' CLOCK_FROM_FIELD) and the flag
-// editor's (render_flag_editor_box, the dialog field's pairs). The ring and
+// the clearlooks theme, gen_theme_files' CLOCK_FROM_FIELD). The ring and
 // the border are the entry's own roles.
 void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused,
                     GuiColor base);
@@ -321,15 +322,17 @@ void paint_cl_slider(cairo_t* cr, const GuiRect& body);
 // waveform area `area` (render_canvas, which takes the frame's two lines a
 // side FROM the area under both chromes, waveform_border_px): the OUTER line
 // of each pair is the scrolled window's, the inner one the canvas the
-// window's child begins on — GTK's one line at the base's thickness.
+// window's child begins on — GTK's one line at the base's thickness. THE
+// WELL'S EDGES ARE THAT ONE LINE AND NOTHING ELSE (architect 2026-10-07
+// ~05:30: "Clearlooks is friendlier to flat one-pixel one-colour borders —
+// the file manager's main panel is just a one-pixel line all around"): his
+// Nautilus captures 00-17-24 and 00-17-47 show the list's ground, ONE frame
+// line, then the window's ground above it and the status bar's ground below
+// it — so row 8 under the well draws no line of its own (paint_bottom_strip;
+// the gummy status bar's own two-line frame, clearlooks_gummy_draw_statusbar,
+// which his Music Player capture 23-12-32 shows under its list, is not the
+// file manager's).
 void paint_cl_well_frame(cairo_t* cr, const GuiRect& area);
-
-// ROW 8'S BAND IS GTK'S STATUS BAR — clearlooks_gummy_draw_statusbar ("frame"
-// under the statusbar hint): the row's ground with ONE shade[3] row and its
-// x1.3 row at the band's top — the gummy separator's two tones, the
-// cl_separator pair — and nothing else, on the lane `lane`'s first two rows:
-// its own top row (kBottomRowBorderPx) and one W line under it.
-void paint_cl_statusbar(cairo_t* cr, const GuiRect& lane);
 
 // THE SCRUB'S TROUGH — clearlooks_gummy_draw_scale_trough on `trough`, the
 // kClScaleTroughPx rows across the track (cl_scale_trough_h_px tall), SQUARE

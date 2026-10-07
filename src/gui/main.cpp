@@ -203,10 +203,9 @@ namespace {
 //     area) is the block's bottom edge;
 //   GAP 2 — flexible blank window ground;
 //   THE UNIFIED BOTTOM ROW at the window's foot, its first row plain ground
-//     under win2000 (no line between it and the well since 2026-10-02) — the
-//     win2000 arm's record; under clearlooks its first two rows are GTK's
-//     status bar's line, shade[3] and its x1.3 (architect 2026-10-07,
-//     paint_cl_statusbar).
+//     under both chromes (no line between it and the well: win2000 since
+//     2026-10-02, clearlooks since 2026-10-07 ~05:30, Nautilus's status bar
+//     under its list's one frame line).
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE (on a
