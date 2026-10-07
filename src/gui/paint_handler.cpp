@@ -195,18 +195,58 @@ namespace {
 // ROW 1. The row height itself lives in render.h as kMenuRowHeightPx,
 // because main.cpp's lane table needs it.
 //
+// THE MENU ROW IS EXPLORER'S MENU BAND (architect 2026-10-06), NOT A PLAIN
+// WINDOW'S MENU BAR: the model is tmp/reactos-hover.png's "Default User"
+// window, whose File / Edit / View / Favorites / Tools / Help is browseui's
+// CMenuBand — a TBSTYLE_LIST | TBSTYLE_FLAT toolbar with no image list
+// (shell32/shellmenu/CMenuToolbars.cpp, CreateToolbar and UpdateImageLists)
+// in a band of Explorer's rebar (browseui/internettoolbar.cpp, AddDockItem
+// with ITBBID_MENUBAND) — the rebar whose band the icon row's flat large
+// toolbar is. A plain window's menu.c bar (user32's MENU_DrawMenuItem) is the
+// OTHER FAMILY and is not the model: WordPad, Task Manager, Sound Recorder
+// and Media Player (tmp/reactos-wordpad.png, reactos-sound.png,
+// reactos-media.png) all draw it with the cap on row 5 of the 19, the text
+// 6 px in from the item (MenuCharSize.cx, Tahoma 8's average width) and the
+// first item's text 6 px from the client edge.
+//
 // THE CSS FLOAT MODEL is the ruled layout vocabulary (architect 2026-07-31): a
 // flat button FILLS ITS WHOLE ROW and no margin or inset exists unless the
 // architect states one. An anchor's rectangle therefore spans the full height
 // of the button's row, the whole lane (kMenuRowHeightPx — render.h carries the
-// ruling), flush under the caption, its label padded this much
-// each side, and the icon row's ground begins on the next pixel row. 7
-// WINDOWS PX A SIDE (architect 2026-10-02, the unit's change: the laptop
-// pixel's 10 re-authored to the device width it had on the tablet).
-constexpr double kMenuLabelPadPx   = 7.0;   // per side, sets the button width
+// ruling), flush under the caption, its label padded by the two numbers
+// below, and the icon row's ground begins on the next pixel row.
+//
+// THE PADS ARE EXPLORER'S BUTTON'S, 9 WINDOWS PX LEFT OF THE TEXT AND 7
+// RIGHT OF IT (architect 2026-10-06), so an item is its text + 16. The
+// band's button is comctl32's list-style text button (ReactOS 0.4.16's
+// toolbar.c):
+// TOOLBAR_MeasureButton (l.1760-1763) makes it 2 x SM_CXEDGE + nBitmapWidth
+// + iListGap + the text + szPadding.cx, i.e. 4 + 1 (the width a null image
+// list leaves, l.4960) + DEFLISTGAP 4 (l.219) + the text + DEFPAD_CX 7
+// (l.210) = text + 16; TOOLBAR_DrawButton's text rect (l.1077-1080) insets
+// it SM_CXEDGE 2 and then nBitmapWidth + iListGap + 2 = 7 more, so the text
+// stands 9 from the button's left and the other 7 fall on its right.
+// MEASURED: tmp/reactos-menu2.png's open Edit box spans x 202-235 (34 = 18
+// + 16) round the text at 211 (its pushed ink at 212, less the open push);
+// tmp/reactos-hover.png's pitches File -> Edit -> View -> Favorites
+// 32 / 34 / 38 = advance + 16.
+constexpr double kMenuLabelPadLeftPx  = 9.0;
+constexpr double kMenuLabelPadRightPx = 7.0;
 
-// THE MENU ROW'S BUTTONS, in painted order — flush from the row's left edge and
-// ADJACENT WITH NO GAP, the css float model's default (the architect states a
+// THE BAND'S LEAD, the ground between the window's left edge and the first
+// anchor (architect 2026-10-06): 2 Windows px, THE REBAR'S ETCHED EDGE — the
+// Shadow and Hilight columns at the client's left inside which Explorer's
+// rebar hangs its menu band (this row draws the ground there, not the
+// edge) — so File's button starts where Explorer's does and its text stands
+// 2 + 9 = 11 from the edge (tmp/reactos-hover.png: the client edge x 165,
+// File's text 176; tmp/reactos-menu2.png: the edge 168, the etched pair
+// 168-169, File's button from 170, its text 179). A plain menu.c bar has no
+// lead (nonclient.c's UserDrawCaptionBar hands MENU_DrawMenuBar the inside
+// rect, MENU_MenuBarCalcSize starts at its left).
+constexpr double kMenuBandLeadPx      = 2.0;
+
+// THE MENU ROW'S BUTTONS, in painted order — from the band's lead
+// (kMenuBandLeadPx) and ADJACENT WITH NO GAP, the css float model's default (the architect states a
 // gap where one exists; row 2's 2px invisible separator is the only one in the
 // redesign so far, and row 1 was never given one).
 //
@@ -1149,27 +1189,24 @@ constexpr double kPopupHotkeyGapPx    = 9.0;
 // 275 %, 32 at 400 % — the face's em being the one that stands its "H"
 // exactly that tall.
 //
-// THE SEATS AT THE TABLET'S 275 %: the menu row's 52-row CONTENT band (not
-// its 55-row lane, which carries a face row the label never centres in since
-// 2026-10-05) seats at row floor((52 + 22) / 2) = 37, the dropdown's 47-row
-// item at 34; the answer is independent of the box's y by construction
-// rather than by a tie rule.
+// THE SEATS AT THE TABLET'S 275 %: the dropdown's 47-row item seats at row
+// floor((47 + 22) / 2) = 34; the answer is independent of the box's y by
+// construction rather than by a tie rule.
 //
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
-// rule is not asked. THIRTEEN BOX SEATS (re-grepped 2026-10-05): the
-// caption's title, the menu row's
-// anchors (in the row's CONTENT alone
-// since 2026-10-05, render.h's menu_row_content_h_px, never the taller
-// lane), the row-8 clock (in its time field) and the
+// rule is not asked. TWELVE BOX SEATS (re-grepped 2026-10-06): the
+// caption's title, the row-8 clock (in its time field) and the
 // state line beside it (in the row's content band), the notification
 // card's first line, the dropdown items, the prompt's message, the render player's
 // two time fields, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
-// keyboard's caps, and the folder overlay's rows. FOUR LINE SEATS: the
-// tooltip's two lines, the ruler's labels and, since 2026-10-02, the marker
-// lane's flag labels (below). (The folder overlay's TEXT rows
+// keyboard's caps, and the folder overlay's rows. FIVE LINE SEATS: the
+// tooltip's two lines, the ruler's labels, since 2026-10-02 the marker
+// lane's flag labels (below), and since 2026-10-06 the menu row's anchors —
+// Explorer's menu band draws its text as a line DT_VCENTERed in the band's
+// button, the derivation at paint_menu_row. (The folder overlay's TEXT rows
 // were a fourth, and the one site that forked between the two seats, until
 // they went with the AV Sync Stats panel on 2026-09-30.)
 //
@@ -1484,14 +1521,16 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     //
     // THE LEFT FLOAT'S FACES (architect 2026-10-02, the period menu bar):
     // COLD, nothing is drawn — the label bare on the ground; OPEN, the anchor
-    // whose menu is down is Windows 2000's open menu title (architect
-    // 2026-10-06, ReactOS's non-flat menu bar, menu.c): the ground with a
+    // whose menu is down is Explorer's open menu title (architect
+    // 2026-10-06, the menu band's — the head of kMenuLabelPadLeftPx: CMenuToolbars
+    // marks the item whose submenu is up CHECKED, and comctl32's flat toolbar
+    // draws a checked button so, toolbar.c): the ground with a
     // ONE-LINE SUNKEN BOX round the item's content rect — BDR_SUNKENOUTER,
     // Shadow on the top and left, Hilight on the bottom and right, the
     // status panel's own line (paint_relief_sunken_outer, mitred like every
     // two-tone ring) — and the label in the label role PUSHED IN
-    // kMenuOpenTextShiftPx, one Windows px right and down (menu.c offsets the
-    // open item's text rect by (1, 1); measured on tmp/reactos-menu2.png,
+    // kMenuOpenTextShiftPx, one Windows px right and down (toolbar.c offsets a
+    // checked button's text rect by (1, 1); measured on tmp/reactos-menu2.png,
     // Edit open, against tmp/reactos-hover.png, Edit closed, each from its
     // window's left edge: the E's first column 44 against 43, the cap's top
     // row 28 against 27); DEAD (the history view
@@ -1528,7 +1567,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // same row — where the dropdown hangs. THE LANE IS NOT ITS CONTENT SINCE
     // 2026-10-05: one row of ground stands ABOVE the content (ReactOS:
     // caption, face row, menu) — render.h's kMenuRowHeadPx — so every
-    // label on this row is cap-centred in the CONTENT ALONE
+    // label on this row is seated in the CONTENT ALONE
     // (menu_row_content_rect) rather than the taller lane — the one place
     // this row reads two different heights for two different things.
 
@@ -1550,22 +1589,41 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // and these are the cheapest runs there are.
     const GuiFont font = gui_font(GuiFace::Body);
 
-    const int pad    = scaled_px(kMenuLabelPadPx);
+    const int pad_l  = scaled_px(kMenuLabelPadLeftPx);
+    const int pad_r  = scaled_px(kMenuLabelPadRightPx);
     // THE CONTENT ROWS (the face row's place, above) and the open title's
     // push (the faces' block, above).
     const GuiRect content = menu_row_content_rect(row);
     constexpr int kMenuOpenTextShiftPx = 1;
 
-    // THE WALK: flush from the row's left edge, ADJACENT WITH NO GAP. Row 2
-    // inserts a 2px invisible separator between its adjacent buttons because the
-    // architect stated one there; none is stated here, so none exists (the css
-    // float model's default).
-    int x = row.x;
+    // THE LABEL'S SEAT IS THE BAND'S TEXT SEAT, A LINE, NOT A CAP-CENTRED
+    // BOX (architect 2026-10-06): the band's button is the content's 19 rows
+    // (render.h's kMenuRowHeightPx: the 13-row cell + DEFPAD_CY 6) and
+    // comctl32 draws a list-style button's text DT_LEFT | DT_VCENTER |
+    // DT_SINGLELINE in it (toolbar.c's default dwDTFlags), which stands the
+    // CELL — ascent + descent — at (19 - 13) / 2 = 3 rows, DrawText's integer
+    // division, so the cap's top is 3 + (11 - 8) = row 6 (tmp/reactos-
+    // hover.png: content rows 161-179, cap 167-174). The 3 is authored in
+    // Windows px from the recorded metrics and rounded at the element; the
+    // line takes line_baseline from there. (redesign_baseline's cap-centring,
+    // which every other chrome box keeps, would floor this row's 5.5 to 5 —
+    // a plain menu.c bar's row, the head of kMenuLabelPadLeftPx.)
+    constexpr GuiFaceMetrics kBandFace = gui_face_metrics(GuiFace::Body);
+    constexpr int kMenuBandTextLeadPx =
+        (kMenuRowHeightPx - (kBandFace.ascent + kBandFace.descent)) / 2;
+    const double label_baseline = line_baseline(
+        font, static_cast<double>(content.y + scaled_px(kMenuBandTextLeadPx)));
+
+    // THE WALK: from the band's lead (kMenuBandLeadPx), ADJACENT WITH NO GAP.
+    // Row 2 inserts a 2px invisible separator between its adjacent buttons
+    // because the architect stated one there; none is stated here, so none
+    // exists (the css float model's default).
+    int x = row.x + scaled_px(kMenuBandLeadPx);
     for (const MenuButtonDef& def : kMenuButtons) {
         const text_shape::ShapedRun run =
             text_shape::shape_text_run(font, def.label);
         const int btn_w =
-            static_cast<int>(std::nearbyint(run.width_px)) + 2 * pad;
+            pad_l + static_cast<int>(std::nearbyint(run.width_px)) + pad_r;
 
         // THE PAINTER PUBLISHES THE HIT RECT (the displayed-basis doctrine): the
         // width above exists only here, so the pointer code reads this stash
@@ -1610,18 +1668,10 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
                 cr, GuiRect{x, content.y, btn_w, content.h});
             push = scaled_px(kMenuOpenTextShiftPx, kMenuOpenTextShiftPx);
         }
-        // THE LABEL CENTERS IN THE ANCHOR'S CONTENT, NOT ITS LANE (the face
-        // row block above): Qt's own menu bar centers an item's text in the
-        // item rect, which is where cap-centring puts ours (redesign_baseline),
-        // over the content rows alone so the face row cannot nudge a cap
-        // band that already stood at Windows' own position — the cap's top 5
-        // Windows px under the content's, as ReactOS's WordPad draws its menu
-        // bar (tmp/reactos-wordpad.png, rows 51 and 56).
-        const double label_x = static_cast<double>(x + pad + push);
-        const double label_y =
-            redesign_baseline(font, static_cast<double>(content.y),
-                              static_cast<double>(content.h)) +
-            push;
+        // THE LABEL SEATS IN THE ANCHOR'S CONTENT, NOT ITS LANE (the face
+        // row block above): the band's text seat (label_baseline, above).
+        const double label_x = static_cast<double>(x + pad_l + push);
+        const double label_y = label_baseline + push;
         if (!face.enabled && !open_anchor) {
             show_embossed_run(cr, run, label_x, label_y);
         } else {
@@ -3540,8 +3590,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     const int h = dropdown_h_px(menu);
 
     // FLUSH WITH THE BUTTON IT EMITS FROM ON X, AND WITH THE LANE ON Y.
-    // The x is the anchor's own left edge (architect 2026-08-02, and the
-    // anchors are flush with the lane's left edge anyway). THE Y IS THE MENU
+    // The x is the anchor's own left edge (architect 2026-08-02), the
+    // published rect's, so the band's lead (kMenuBandLeadPx) carries the box
+    // in with the anchor. THE Y IS THE MENU
     // LANE'S FOOT, which since the 2026-09-09 relayout IS the ICON ROW'S
     // FIRST PIXEL, so the box hangs straight onto the toolbar with nothing
     // between — and the anchor's pill IS the lane (render.h's

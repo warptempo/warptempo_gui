@@ -783,21 +783,23 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 1, directly
 // under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). THE
-// CONTENT IS 19 WINDOWS PX, Windows' SM_CYMENU (architect 2026-10-02; it was
-// the kdenlive File item's 30 laptop px until the unit's change): the
-// anchors' box and the labels' box both, where the anchors and their labels
-// stand, cap-centred in it.
+// CONTENT IS 19 WINDOWS PX (architect 2026-10-02; it was the kdenlive File
+// item's 30 laptop px until the unit's change), since 2026-10-06 read as
+// EXPLORER'S MENU BAND's button — the 13-row cell + comctl32's DEFPAD_CY 6
+// (toolbar.c, TOOLBAR_MeasureButton; the band's record at paint_handler.cpp's
+// kMenuLabelPadLeftPx): the anchors' box and the labels' box both, where the
+// anchors and their labels stand, the label's cell centred in it
+// (paint_menu_row: the cap's top on row 6).
 //
 // THE LANE IS ONE WINDOWS PX TALLER THAN THE CONTENT, A ROW OF PLAIN GROUND
 // ABOVE IT, directly under the caption (architect 2026-10-05, Windows 95
 // screenshots measured at 100 % agreeing on a 20-px menu band; the row's
-// place architect 2026-10-06, ReactOS: caption 18, face 1, menu 19 — its
-// WordPad's cap top 5 rows into the content, as ours): the content's 19 is
-// kept exactly — Windows' own SM_CYMENU, and the number this row's rulings
-// and the architect's live judgments were made against — and the extra row
-// is added beside it rather than folded into it, so EVERY LABEL'S CAP BAND
-// STAYS AT ITS PLACE IN THE CONTENT (the painter cap-centres on the CONTENT
-// rows, never the lane's, below). The
+// place architect 2026-10-06, ReactOS: caption 18, face 1, menu 19): the
+// content's 19 is kept exactly — the number this row's rulings and the
+// architect's live judgments were made against — and the extra row is added
+// beside it rather than folded into it, so EVERY LABEL STAYS AT ITS PLACE IN
+// THE CONTENT (the painter seats on the CONTENT rows, never the lane's,
+// below). The
 // ICON ROW stands directly under the lane with no margin, border or line of
 // its own (kdenlive, QEMU and virt-manager draw no border between the
 // menubar and the toolbar, and neither does this row): its ground — the
@@ -830,7 +832,7 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // 52 device rows at the tablet's 275 %, 26 at the laptop's 138 %; the face
 // row 3 at 275 %, 1 at 138 % — lane totals of 55 and 27. TWO ACCESSORS FOR
 // TWO READERS, deliberately: the lane table and the anchor/hit-rect/dropdown
-// geometry read the LANE (menu_row_h_px), the label's cap-centring and the
+// geometry read the LANE (menu_row_h_px), the label's seat and the
 // open box read the CONTENT alone (menu_row_content_rect, paint_menu_row) —
 // the one place the two differ.
 inline constexpr int kMenuRowHeightPx = 19;
