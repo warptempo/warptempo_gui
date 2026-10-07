@@ -151,11 +151,13 @@ namespace {
 // content in the win2000 chrome vocabulary, below it in win95), flush under
 // the caption — render.h's kMenuRowHeightPx and kMenuRowFootPx),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
-// menu row with nothing between, Windows' own menu-bar-plus-toolbar stack
-// folded into one lane — an etched line pair, the toolbar's air, the case,
-// its air, a second etched pair and a foot of ground, 35 Windows px whole
-// (architect 2026-10-05) — and NO BORDER beyond that foot: the trim lane's
-// own first row is the boundary), then FLEXIBLE GAP 1, then
+// menu row with nothing between, a period menu-bar-plus-toolbar stack
+// folded into one lane, the live chrome vocabulary's — win2000's one etched
+// line pair, the 30-px case as the band and 4 px of foot, 36 Windows px
+// whole (architect 2026-10-06), win95's etched pair, the toolbar's air, the
+// case, its air, a second etched pair and a foot of ground, 35 (architect
+// 2026-10-05); render.h's icon-row block — and NO BORDER beyond that foot:
+// the trim lane's own first row is the boundary), then FLEXIBLE GAP 1, then
 // THE CENTERED BLOCK's three: the TRIM lane (trim_lane_h_px(), the
 // miniaturized scroll bar — the dithered track and the window's thumb), the
 // RULER lane
@@ -166,17 +168,18 @@ namespace {
 // (marker_lane_h_px(), the flags, their stems and the playhead's column under
 // them), whose bottom edge is the waveform top. ALL SIX ride the gui_scale
 // axis. The BOTTOM strip is ONE LANE: THE UNIFIED BOTTOM ROW,
-// bottom_row_h_px() tall (the icon row's content height plus a 1px row of
-// ground on top, where its border-top stood) — the clock cell in its time
+// bottom_row_h_px() tall (the icon row's case on the row's own 3-px air,
+// plus a 1px row of ground on top, where its border-top stood) — the clock
+// cell in its time
 // field (the active tab's letter, a pipe
 // and the timestamp, "A | 00:45.115") and THE STATE LINE on the ground
 // beside it (2026-10-03) at the left pad and,
 // flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the marker walk, the four cardinal arrows and the
 // transport three, eight Windows px of ground between two groups (architect
-// 2026-09-29; no separators since 2026-10-02), all at the icon row's toolbar
-// case — sitting ON THE WINDOW'S FOOT with the flexible gap 2 between it and
-// the waveform.
+// 2026-09-29; bare in win95 since 2026-10-02, an etched separator in each in
+// win2000 since 2026-10-06), all at the icon row's toolbar case — sitting ON
+// THE WINDOW'S FOOT with the flexible gap 2 between it and the waveform.
 //
 // THE VERTICAL RULE — THE WAVEFORM IS CENTERED IN THE WINDOW AND HAS A MAXIMUM
 // HEIGHT (the device config's `max_waveform_height`, default 364 Windows px on
@@ -227,62 +230,63 @@ namespace {
 // tablet below exactly).
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-10-05 (the caption's lane added at the top, and again the same day for
-// the menu row's foot and the icon row's etched pairs — the Windows pixel:
+// 2026-10-06 for the live win2000 chrome vocabulary (the caption's lane
+// 2026-10-05; the menu row's face row and the icon row's stack the
+// vocabulary's — render.h's menu-row and icon-row blocks; the Windows pixel:
 // every lane in Windows px, the ruler and the marker lane derived from their
 // faces, the marker lane's air above the box alone since 2026-10-03, its box
 // seated on its label's painted ink with one Windows px of face above and
-// below since 2026-10-05, the rows it gained the waveform's) rather than
-// adjusted, at the
-// templates' default max_waveform_height OF 364 (the laptop pixel's 500
-// re-authored) and at 0, NO MAXIMUM, which both devices run (a device
-// carrying another value moves only W and the gaps). Every lane is its own
-// composite of rounded parts (scaled_px's rule), so the device rows below are
-// read off the lane accessors, never off a Windows total times the factor —
-// in particular the icon lane's two etched pairs are each 2 x relief_line_px(),
-// not scaled_px(2), so they can differ from a naive total at a fractional
-// gui_scale (none of the four scales below hit that case). THE BOTTOM ROW'S
-// CONTENT IS THE ICON ROW'S TOOLBAR BAND (icon_row_content_h_px, shared by
-// construction), so the toolbar air's 5 -> 3 retune on 2026-10-05 shrank the
-// bottom row too, at every scale below.
+// below since 2026-10-05) rather than adjusted, at the templates' default
+// max_waveform_height OF 364 (the laptop pixel's 500 re-authored) and at 0,
+// NO MAXIMUM, which both devices run (a device carrying another value moves
+// only W and the gaps). Every lane is its own composite of rounded parts
+// (scaled_px's rule), so the device rows below are read off the lane
+// accessors, never off a Windows total times the factor — in particular the
+// icon lane's etched pair is 2 x relief_line_px(), not scaled_px(2), so it
+// can differ from a naive total at a fractional gui_scale (none of the
+// scales below hit that case). THE TOP STACK IS 125 WINDOWS PX in either
+// vocabulary (render.h's icon-row block), so at a whole-number scale the
+// trim lane down to the well's top stand on the same rows whichever paints;
+// the laptop's 138 % rounds the win2000 stack one device row taller. THE
+// WELL'S HEIGHT AT THE BASE'S 300 % IS 954 DEVICE ROWS (the rule at
+// centered_leftover_h below). (THE WIN95 STACKS: 169 above and 39 below at
+// 138 %, 375 and 87 at 300 % — a 978-row well — and 500 and 116 at 400 %.)
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
-//   lanes are 25 caption + 27 menu + 46 icon + 22 trim + 26 ruler + 23 marker
-//   = 169 above, of which 98 is the caption and the two toolbar rows above
-//   the gap and 71 the block above the waveform, and 39 below (the bottom
-//   row's 38 content and its 1-px top row); leftover 872.
-//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 120, gap 2 =
-//     250 — 25 caption / 27 menu / 46 icon / 120 blank / 71 block / 502
-//     waveform / 250 blank / 39 row, the waveform spanning y 289..791 about
+//   lanes are 25 caption + 27 menu + 49 icon + 22 trim + 24 ruler + 23 marker
+//   = 170 above, of which 101 is the caption and the two toolbar rows above
+//   the gap and 69 the block above the waveform, and 50 below (the bottom
+//   row's 49 content and its 1-px top row); leftover 860.
+//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 119, gap 2 =
+//     239 — 25 caption / 27 menu / 49 icon / 119 blank / 69 block / 502
+//     waveform / 239 blank / 50 row, the waveform spanning y 289..791 about
 //     the window's midline 540 (the clamp fixes its height and the midpoint
 //     rule its centre, so gap 1 absorbs every row the lanes above it gain or
 //     lose — the caption's 25 among them).
-//     At 0: waveform UNCLAMPED at 872, both gaps 0 (the midpoint rule would
-//     want 540 - 169 - 436 = -65) — 25 / 27 / 46 / 0 / 71 / 872 / 0 / 39.
-//   2304x1440 AT gui_scale 275, THE GLASS HOST (the tablet's WHOLE SURFACE,
+//     At 0: waveform UNCLAMPED at 860, both gaps 0 (the midpoint rule would
+//     want 540 - 170 - 430 = -60) — 25 / 27 / 49 / 0 / 69 / 860 / 0 / 50.
+//   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
-//   MainActivity.java's head — the caption across its top): the lanes are 50
-//   caption + 55 menu + 96 icon + 44 trim + 49 ruler + 51 marker = 345 above
-//   (the ruler's and the marker lane's heights derived from their faces,
-//   ruler_lane_h_px and marker_lane_h_px at render.h) and 79 below (76 + its
-//   3-row top row), leftover 1016.
-//     At 364: waveform CLAMPED at 1001 (the scaled 364), gap 1 = 0 (the
-//     midpoint rule would want 720 - 345 - 500 = -125), gap 2 = 15
-//     — 50 / 55 / 96 / 0 / 144 / 1001 / 15 / 79.
-//     At 0: waveform UNCLAMPED at 1016, both gaps 0 (the rule would want
-//     720 - 345 - 508 = -133) — 50 / 55 / 96 / 0 / 144 / 1016 / 0 / 79.
-//   2304x1440 AT gui_scale 400 (the architect's own tablet value since
-//   2026-10-05; same surface, the scale alone different): the lanes are 72
-//   caption + 80 menu + 140 icon + 64 trim + 72 ruler + 72 marker = 500 above
-//   (292 the caption and the two toolbar rows, 208 the block) and 116 below
-//   (112 + its 4-row top row), leftover 824. 364 Windows px scales to 1456,
-//   past the leftover, so BOTH readings are the same: waveform UNCLAMPED at
-//   824, both gaps 0 (the rule would want 720 - 500 - 412 = -192)
-//   — 72 / 80 / 140 / 0 / 208 / 824 / 0 / 116.
+//   MainActivity.java's head — the caption across its top; the architect's
+//   tablet value since 2026-10-06): the lanes are 54 caption + 60 menu +
+//   108 icon + 48 trim + 51 ruler + 54 marker = 375 above (222 the caption
+//   and the two toolbar rows, 153 the block; the ruler's and the marker
+//   lane's heights derived from their faces, ruler_lane_h_px and
+//   marker_lane_h_px at render.h) and 111 below (108 + its 3-row top row),
+//   leftover 954. 364 Windows px scales to 1092, past the leftover, so BOTH
+//   readings are the same: waveform UNCLAMPED at 954, both gaps 0 (the rule
+//   would want 720 - 375 - 477 = -132) — 54 / 60 / 108 / 0 / 153 / 954 / 0 /
+//   111.
+//   2304x1440 AT gui_scale 400 (same surface, the scale alone different):
+//   the lanes are 72 caption + 80 menu + 144 icon + 64 trim + 68 ruler + 72
+//   marker = 500 above (296 the caption and the two toolbar rows, 204 the
+//   block) and 148 below (144 + its 4-row top row), leftover 792; both
+//   readings UNCLAMPED at 792, both gaps 0 (the rule would want 720 - 500 -
+//   396 = -176) — 72 / 80 / 144 / 0 / 204 / 792 / 0 / 148.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as the worked case the floors
 //   exist for; no host runs this geometry), the same at either value:
-//     leftover 392 -> waveform UNCLAMPED at 392, both gaps 0
-//     — 25 / 27 / 46 / 0 / 71 / 392 / 0 / 39. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = 300 - 169 - 196 = -65), so the
+//     leftover 380 -> waveform UNCLAMPED at 380, both gaps 0
+//     — 25 / 27 / 49 / 0 / 69 / 380 / 0 / 50. Centering is infeasible there (the
+//     midpoint rule would want gap 1 = 300 - 170 - 190 = -60), so the
 //     waveform keeps everything, which is the rule's own floor rather than a
 //     special case.
 //
@@ -359,15 +363,17 @@ namespace {
 // the row's place the live chrome vocabulary's; the anchors and the
 // dropdown's hang point read the lane, the label's cap-centring alone reads
 // the content beside the row), the
-// ICON lane is Windows' own menu-bar-plus-toolbar stack folded into one row —
-// an etched line pair, 3 Windows px of air, the 22-px case, 3 more of air, a
-// second etched pair and 3 of foot air, 35 whole (architect 2026-10-05,
-// render.h's kIconRowHeightPx; NO border of its own beyond that foot — the
-// trim lane's own first row is still the boundary under it), and the UNIFIED
-// BOTTOM ROW is its content — the same air-case-air band, with neither the
-// icon row's etched lines nor its foot air — plus a one-px row of ground on
-// top, the waveform side, where its border-top stood (no line drawn since
-// 2026-10-02).
+// ICON lane is a period menu-bar-plus-toolbar stack folded into one row,
+// the live chrome vocabulary's — win2000's one etched line pair, the 30-px
+// case as the band and 4 Windows px of foot, 36 whole (architect
+// 2026-10-06), win95's etched pair, 3 px of air, the 22-px case, 3 more of
+// air, a second etched pair and 3 of foot, 35 (architect 2026-10-05):
+// render.h's icon-row block, icon_row_h_px; NO border of its own beyond that
+// foot — the trim lane's own first row is still the boundary under it — and
+// the UNIFIED BOTTOM ROW is the same case on the row's own 3-px air above and
+// below (bottom_row_air_px), with neither the icon row's etched lines nor its
+// foot, plus a one-px row of ground on top, the waveform side, where its
+// border-top stood (no line drawn since 2026-10-02).
 constexpr int kTopLaneCount    = 6;
 constexpr int kBottomLaneCount = 1;
 // THE LANE GAP 1 OPENS ABOVE — the first top lane whose inset carries the
@@ -423,7 +429,13 @@ int strip_total_h(bool top_strip) {
     return sum;
 }
 // THE LEFTOVER the waveform and the two flexible gaps share (the vertical rule
-// above): the window less the whole top lane stack and less the bottom row. May
+// above): the window less the whole top lane stack and less the bottom row.
+// THE BASE'S WAVEFORM HEIGHT IS THE RULE EVERY LATER THEME KEEPS (architect
+// 2026-10-06, the ReactOS base settled on mock_TF1): on the tablet's 2304 x
+// 1440 at gui_scale 300 the win2000 lanes leave 1440 − 375 − 111 = 954
+// device rows (318 Windows px; the height was free until the base settled —
+// win95's lanes left 978), and a later chrome vocabulary or theme lays its
+// lanes so this stays 954. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -1862,9 +1874,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
     // modal dialog's armed button, the popup's two
     // item faces plus its press claim, the render player's row press and
-    // scrub drag, and the notification cards' hover. No roster button, dialog
-    // button, band row or scrub handle wears a hover face (architect
-    // 2026-10-02), so none of them owes this edge a clear. The platform-side
+    // scrub drag, the notification cards' hover and the win2000 toolbars'
+    // HOT button (AppState::roster_hot, architect 2026-10-06 — the one hover
+    // face). No dialog button, band row or scrub handle wears a hover face
+    // (architect 2026-10-02), so none of them owes this edge a clear. The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h, and the capability-loss fire
     // site in input_core.cpp).
@@ -1976,6 +1989,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // hover paused has its clock re-armed here (a card a press still holds
         // keeps its bank until the press's own clear, above).
         input_handler.clear_notification_hover();
+        // AND THE HOT TOOLBAR BUTTON: a pointer that has left — or a finger
+        // that has lifted, or a pen whose hover has ended — is on no button.
+        input_handler.set_roster_hot(-1);
     });
 
     // WINDOW-ACTIVATION EDGE -> THE TOOLTIP'S HARD END (architect 2026-09-29;
@@ -2628,7 +2644,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE ROSTER WALK IS NOT MOTION-ONLY. It resolves the tooltip's owner
         // and the armed press's inside bit (recompute_redesign_button_hover;
-        // no button wears a hover face, architect 2026-10-02) from the
+        // and, in win2000, the hot toolbar button) from the
         // pointer's last position against the painter's rects — and those
         // rects move without any pointer event: a live gui_scale commit
         // relays out every rect under a pointer that never moved, and a
@@ -2636,7 +2652,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // owner wrong until the next motion.
         //
         // The fix is to run the ONE walk here as well: a handful of rect
-        // compares, damaging only when the pressed face's inside bit flips.
+        // compares, damaging only when the pressed face's inside bit or the
+        // hot button changes.
         // It runs AFTER the comparator so it reads the freshest published
         // stash.
         //

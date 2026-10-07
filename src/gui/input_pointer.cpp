@@ -7349,14 +7349,31 @@ void GuiInputHandler::finalize_active_drags() {
 // enum's own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; a MODAL's yield leaves a bottom-row member with
 // a zero rect, as do the icon row's overflow rule and its history stand-ins a
-// member that does not stand, and a zero rect contains no point). IT STORES NO HOVER: no
-// roster button wears a hover face (architect 2026-10-02, the frozen design),
-// so the walk answers exactly two readers from the remembered position — the
-// TOOLTIP's wait (the button a resting pointer's hint names, handed to
-// note_tooltip_hover at the tail) and the ARMED CHROME PRESS's inside bit
-// (the pressed face, which is painted, and so pays its strip's damage). The
-// rects are the painter's stashes, so the button a hint names is the painted
-// button and nothing is measured here.
+// member that does not stand, and a zero rect contains no point). It answers
+// three readers from the remembered position — the TOOLTIP's wait (the
+// button a resting pointer's hint names, handed to note_tooltip_hover at the
+// tail), the ARMED CHROME PRESS's inside bit (the pressed face, which is
+// painted, and so pays its strip's damage) and, in the win2000 vocabulary,
+// THE HOT TOOLBAR BUTTON (AppState::roster_hot, the flat toolbar's one
+// hover face, architect 2026-10-06; set_roster_hot pays its damage). The
+// rects are the painter's stashes, so the button a hint names and the button
+// that lights are the painted button and nothing is measured here.
+// THE HOT FACE'S ONE SETTER (AppState::roster_hot): a change damages the
+// old button's published rect and the new one's — the face is painted inside
+// the case and nowhere else, and a stale stash's rect was already damaged by
+// the relayout that moved it.
+void GuiInputHandler::set_roster_hot(int index) {
+    if (index == app.roster_hot) return;
+    const auto damage = [&](int i) {
+        if (i < 0) return;
+        viewport.invalidate_rect(
+            app.redesign_buttons[static_cast<size_t>(i)].rect);
+    };
+    damage(app.roster_hot);
+    damage(index);
+    app.roster_hot = index;
+}
+
 void GuiInputHandler::recompute_redesign_button_hover() {
     // IT REFUSES WHILE THE POINTER IS OUTSIDE THE WINDOW — the same first line
     // and the same reason as recompute_dropdown_hover's, the boundary's other
@@ -7401,6 +7418,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     const bool modal_veil =
         app.prompt.active || modal_dialog_editor_active();
     int  hovered_tip = -1;
+    int  hot         = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         const RedesignButton id = static_cast<RedesignButton>(i);
@@ -7417,6 +7435,15 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         const bool under_pointer = !modal_veil && !under_card &&
                                    rect_contains(f.rect, mx, my) &&
                                    redesign_button_hover_zone(app, id);
+        // THE HOT CANDIDATE: the toolbar button under the pointer on the
+        // same gates — never a menu anchor, the menu row having no hot face
+        // in either vocabulary (paint_menu_row) — and NO keyboard-modal term:
+        // that refusal is the tooltip's dwell, while a button the flag editor
+        // leaves pressable lights as it presses. The rects are disjoint, so
+        // the first is the only one, and the tooltip's break below cannot
+        // pass it by.
+        if (under_pointer && hot < 0 && !redesign_button_is_menu_anchor(id))
+            hot = i;
         // MEMBERSHIP IS THE CONSTANT TABLE'S (2026-09-01): this asks only
         // whether the button HAS a tooltip — a null line 1 — and that is the
         // menu-row exclusion the state-free table owns; the stateful overload
@@ -7428,6 +7455,15 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             break;
         }
     }
+    // THE HOT FACE'S ONE WRITE (AppState::roster_hot): the candidate in the
+    // flat (win2000) toolbar style while no chrome press is armed — comctl32
+    // shows no hot item while a toolbar holds the capture — and none
+    // otherwise, so the win95 vocabulary never stores one.
+    set_roster_hot(kLiveChromeSpec.toolbar_style == GuiToolbarStyle::Flat &&
+                           app.chrome_press.kind ==
+                               AppState::ChromePress::Kind::None
+                       ? hot
+                       : -1);
     // THE ARM'S INSIDE BIT — the feint's chrome half (2026-08-13, the modal
     // arm's press_inside on this surface), maintained here because this walk
     // is the roster's one per-motion-and-per-tick derivation: with a chrome

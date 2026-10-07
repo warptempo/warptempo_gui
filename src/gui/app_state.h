@@ -6923,6 +6923,24 @@ struct AppState {
     };
     ChromePress chrome_press;
 
+    // THE HOT TOOLBAR BUTTON (architect 2026-10-06: Explorer's flat toolbar,
+    // the win2000 vocabulary's — chrome_spec.h's toolbar_style): the roster
+    // index of the icon-row or row-8 button whose published rect holds the
+    // pointer (or the hovering S Pen), -1 for none. It is comctl32's hot
+    // item, the FACE's input and nothing else: the one writer is the roster's
+    // pointer walk (recompute_redesign_button_hover), which damages the old
+    // and the new button's rect when it changes, and the pointer-leave hook
+    // clears it (a pointer that has left is on no button; a finger's lift is
+    // that leave). It is held at -1 WHILE ANY CHROME PRESS IS ARMED —
+    // comctl32's capture: a toolbar holding the mouse shows no hot item
+    // (TOOLBAR_TranslateState's bHot & !bCaptured) — under the walk's own
+    // gates (no veil, no card over it, the hover zone), and it stays -1 in
+    // the win95 vocabulary, whose raised toolbar has no hot face. The
+    // painter adds the enabled term (a disabled button is never hot,
+    // comctl32's own refusal), so the field need not follow the enabled
+    // bits (redesign_button_hot_face).
+    int roster_hot = -1;
+
     // THE HOVER TOOLTIP — THE WHOLE OF ITS STATE, AND THE MODEL'S ONE STATEMENT.
     // THE MODEL IS WINDOWS 95's TOOLTIP CONTROL (architect 2026-10-06):
     // comctl32's TTM_SETDELAYTIME
@@ -9876,9 +9894,9 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // the CLAMPED window dimensions — the same geometry keyboard_slot_band takes
 // its x and width from, so the two cannot disagree about where the band
 // begins. Zero on a degenerate stack, which every consumer already reads as
-// "no room". ON THE TABLET (2304x1440 at gui_scale 275, gap 1 zero) the band
-// runs [201, 1361): under the 50 caption, 55 menu and 96 icon rows, down to
-// the 79-tall bottom row.
+// "no room". ON THE TABLET (2304x1440 at gui_scale 300, gap 1 zero; the
+// win2000 vocabulary's lanes) the band runs [222, 1329): under the 54
+// caption, 60 menu and 108 icon rows, down to the 111-tall bottom row.
 //
 // THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT
 // (architect 2026-08-28: "from the bottom strip up to the middle of the
@@ -16215,6 +16233,12 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
     return a.chrome_press.kind == AppState::ChromePress::Kind::Roster &&
            a.chrome_press.inside &&
            a.chrome_press.index == redesign_button_index(b);
+}
+
+// THE HOT FACE'S SUBJECT (AppState::roster_hot, whose walk owns the gates):
+// the painter's question for a toolbar button, the enabled term its own.
+inline bool redesign_button_hot_face(const AppState& a, RedesignButton b) {
+    return a.roster_hot == redesign_button_index(b);
 }
 
 // THE SHIFT-AUGMENTED BUTTONS — the ONE owner of "this button's chord comes in

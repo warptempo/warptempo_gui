@@ -305,8 +305,12 @@ void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r) {
                       palette().light_3d);
 }
 
-void paint_relief_status_sunken(cairo_t* cr, const GuiRect& r) {
+void paint_relief_sunken_outer(cairo_t* cr, const GuiRect& r) {
     paint_relief_frame(cr, r, palette().shadow, palette().hilight);
+}
+
+void paint_relief_raised_inner(cairo_t* cr, const GuiRect& r) {
+    paint_relief_frame(cr, r, palette().hilight, palette().shadow);
 }
 
 void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
@@ -558,6 +562,15 @@ void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w) {
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     paint_cell_rect(cr, GuiRect{x, y, w, lw}, palette().shadow);
     paint_cell_rect(cr, GuiRect{x, y + lw, w, lw}, palette().hilight);
+    cairo_restore(cr);
+}
+
+void paint_relief_etched_vline(cairo_t* cr, int x, int y, int h) {
+    const int lw = relief_line_px();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{x, y, lw, h}, palette().shadow);
+    paint_cell_rect(cr, GuiRect{x + lw, y, lw, h}, palette().hilight);
     cairo_restore(cr);
 }
 

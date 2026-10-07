@@ -98,7 +98,9 @@ struct TrimRange {
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
 // beside every ground role — never a luminance verdict.
 // STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
-// HOVER FACES: every colour is a solid fill of integer cells. THE ONE
+// HOVER FACES BUT ONE — the win2000 flat toolbars' HOT case, a raised line
+// in the relief quartet (architect 2026-10-06, Explorer's; paint_toolbar_box,
+// paint_handler.cpp): every colour is a solid fill of integer cells. THE ONE
 // EXCEPTION IS THE CAPTION'S GRADIENT (architect 2026-10-05), Windows 98 and
 // 2000's title bar where a theme records a gradient end, by the live chrome
 // vocabulary's road (chrome_spec.h): the win2000 vocabulary's SMOOTH 24-bit
@@ -137,20 +139,25 @@ struct TrimRange {
 // lines a side, and no other role draws a relief line. THE FAMILIES (the
 // painters are paint_relief_soft_raised and its siblings, below), lines given
 // outer then inner, top-left / bottom-right, in the theme's quartet:
-//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a toolbar button,
-//                 a caption button (EDGE_RAISED | BF_SOFT; Windows'
+//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a win95 toolbar
+//                 button, a caption button (EDGE_RAISED | BF_SOFT; Windows'
 //                 DFC_CAPTION, architect 2026-10-05);
-//   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a toolbar button
-//                 checked or pressed, a caption button pressed;
+//   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a win95 toolbar
+//                 button checked or pressed, a caption button pressed;
 //   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow — a push button, the
 //                 scroll-bar thumb, a menu's and a dropdown's frame
 //                 (EDGE_RAISED);
 //   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field, the well
 //                 (EDGE_SUNKEN);
-//   STATUS SUNKEN ONE line, Shadow / Hilight — a status-bar panel, a time
-//                 field (row 8's clock, the render player's two);
+//   SUNKEN OUTER  ONE line, Shadow / Hilight (BDR_SUNKENOUTER) — a
+//                 status-bar panel, a time field (row 8's clock, the render
+//                 player's two), the win2000 open menu title, a win2000 flat
+//                 toolbar button pressed or checked;
+//   RAISED INNER  ONE line, Hilight / Shadow (BDR_RAISEDINNER) — a win2000
+//                 flat toolbar button's hot face (architect 2026-10-06);
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
-//                 the ruler's ticks, a menu separator.
+//                 the ruler's ticks, a menu separator, the icon row's etched
+//                 pairs, the win2000 toolbars' group separators.
 // THE CARD FRAME is no relief: ONE flat line in the `card_frame` role, on
 // all four sides in the win2000 vocabulary and on the bottom and the right
 // only in the win95 one (THE CARD FACE, below).
@@ -190,7 +197,7 @@ struct TrimRange {
 //   clock pair    THE TIME FIELDS (architect 2026-10-04, Windows' status
 //                 bar: ButtonFace / ButtonText; every time field since
 //                 2026-10-05): `clock_ground` fills the field inside its
-//                 STATUS SUNKEN line, which keeps the quartet's Shadow /
+//                 SUNKEN OUTER line, which keeps the quartet's Shadow /
 //                 Hilight, and `clock_text` is its run — row 8's tab letter
 //                 and digits (paint_bottom_row_buttons_and_clock) and the
 //                 render player's position and length (paint_modal_dialog);
@@ -901,85 +908,131 @@ inline int relief_line_px() {
 // the `h` view and nineteen inside it since 2026-10-05, the swap's one owner
 // being kIconRowHistoryStandIns (paint_handler.cpp);
 // icons::kIconCount is a different number, the GLYPH set, which the row does
-// not exhaust). THE TOOLBAR BAND — air, case, air — IS ALSO THE BOTTOM ROW'S
-// CONTENT: that lane delegates its content height to icon_row_content_h_px
-// below, so a retune of the band retunes the bottom row's content with it.
+// not exhaust). THE TOOLBAR CASE IS ALSO ROW 8's (and the render player's row
+// in its lane): both rows read the accessors below, so a retune of the case
+// carries down by construction; row 8's air around it is its own
+// (bottom_row_air_px, below).
 //
-// THE BUTTON IS WINDOWS 95's TOOLBAR BUTTON, AT THE WINDOWS PIXEL (architect
-// 2026-10-02, the AB / AD sets): a CASE 23 wide and 22 tall with the 16 x 16
-// glyph at (3, 3) — three px of case left of and above the glyph, three
-// below it and FOUR right of it, the extra column being Windows' own on the
-// right-hand side. THE CASE IS A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's
-// rule): its width is scaled_px(3) + scaled_px(16) + scaled_px(4) and its
-// height scaled_px(3) + scaled_px(16) + scaled_px(3) — 63 x 60 device px at
-// the tablet's 275 % and 32 x 30 at the laptop's 138 %, the glyph 44 and 22,
-// today's glyph sizes on both devices. THE GLYPH RASTERIZES AT scaled_px(16)
-// (icons::draw_cased, at the case's (3, 3) offset, never centred on the
-// glyph's ink; the press face's shift is one Windows px further right and
-// down).
+// THE CASE IS THE LIVE CHROME VOCABULARY'S (chrome_spec.h's toolbar_case_*
+// fields) and A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): its width
+// is scaled_px(lead) + scaled_px(glyph) + scaled_px(trail x), its height
+// scaled_px(lead) + scaled_px(glyph) + scaled_px(trail y).
+//   WIN2000 (architect 2026-10-06, on mock_TF1 and the ReactOS captures):
+//     WINDOWS' LARGE TOOLBAR CASE, 31 x 30 — three px of case left of and
+//     above the 24-px glyph seat, FOUR right of it and three below, Windows'
+//     own extra column on the right — Explorer's (its button rect is 30 rows,
+//     182-211 of tmp/reactos-hover.png): 93 x 90 device px at 300 %, 43 x 41
+//     at the laptop's 138 %, the glyph 72 and 33. THE PRODUCT'S OWN 16-UNIT
+//     DRAWINGS (icons.h) FILL THE 24-PX SEAT until the Tango road brings its
+//     scalable art.
+//   WIN95 (architect 2026-10-02, the AB / AD sets): WINDOWS 95's TOOLBAR
+//     BUTTON, 23 x 22 with the 16 x 16 glyph at (3, 3), the same lead and
+//     trails: 69 x 66 device px at 300 %, 32 x 30 at 138 %, the glyph 48 and
+//     22.
+// THE GLYPH RASTERIZES AT icon_glyph_px (icons::draw_cased, at the case's
+// (3, 3) offset, never centred on the glyph's ink; the pressed and checked
+// faces' shift is one Windows px further right and down).
 //
-// THE LANE IS WINDOWS' MENU BAR + TOOLBAR STACK, PIXEL FOR PIXEL (architect
-// 2026-10-05, measured on Windows 95 screenshots — their geometry trusted,
-// their colours never sampled): File Manager, Exchange and WordPad agree on
-// an ETCHED LINE PAIR (a Shadow row over a Hilight row, paint_relief_etched_hline,
-// spanning the lane's whole width) under the menu band, then the toolbar's
-// own ground — 2 px, the case, 2 px in File Manager and Exchange; WordPad,
-// which carries a second bar, puts a SECOND etched pair after its toolbar and
-// 3 px of ground before its own next band. This lane folds that whole stack
-// into ONE row since there is no second bar here: TOP ETCHED PAIR, THE
-// TOOLBAR'S OWN AIR ABOVE THE CASE, THE CASE, THE AIR BELOW IT, THE SECOND
-// ETCHED PAIR, then THE FOOT AIR before the trim lane — six terms, each its
-// own rounded part. THE TOOLBAR'S AIR IS WORDPAD'S 3 WINDOWS PX ABOVE AND 3
-// BELOW THE CASE (architect 2026-10-05, superseding the judged picture's 5 /
-// 5 of 2026-10-02 now that the etched pairs carry the separation Windows'
-// screenshots show): kIconRowAirPx, read by both this row's painter and the
-// bottom row's shared content accessor below. THE FOOT AIR, UNCHANGED AT 3
-// (kIconRowFootAirPx), is the ground between the second etched pair and the
-// trim lane's own first row, which is still the boundary — NO BORDER OF ITS
-// OWN (architect 2026-10-01). THE ROW IS MODELLED ON KDENLIVE'S SECOND
-// TOOLBAR, the one under its timeline; the first, sharing the menubar's
-// ground, was left out for space (architect 2026-09-09), so nothing sits
-// between the menu row and this one. THE ETCHED LINES ARE INERT GROUND FOR
-// INPUT, like the air around them (hit nothing, Arrow cursor): painted in
-// paint_icon_row so they repaint with the lane's own damage, in the theme's
-// Shadow and Hilight roles, no new role or literal.
+// THE LANE IS A MENU-BAR-PLUS-TOOLBAR STACK FOLDED INTO ONE ROW, the
+// vocabulary's own, each term its own rounded part:
+//   WIN2000 (architect 2026-10-06, Explorer's and WordPad's stacking in
+//     ReactOS): ONE ETCHED LINE PAIR under the menu row (a Shadow row over a
+//     Hilight row, paint_relief_etched_hline, spanning the lane's width),
+//     THE TOOLBAR BAND — which IS THE CASE, no air above or below it inside
+//     the band (Explorer's band is its buttons' height) — and FOUR Windows px
+//     of ground before the trim lane: 2 + 30 + 4 = 36. NO SECOND ETCHED PAIR.
+//   WIN95 (architect 2026-10-05, measured on Windows 95 screenshots — their
+//     geometry trusted, their colours never sampled): File Manager, Exchange
+//     and WordPad agree on an etched pair under the menu band, then the
+//     toolbar's own ground; WordPad, which carries a second bar, puts a
+//     SECOND etched pair after its toolbar and 3 px of ground before its own
+//     next band. The lane folds that stack with no second bar: TOP ETCHED
+//     PAIR, WORDPAD'S 3 WINDOWS PX OF AIR ABOVE THE CASE, THE CASE, 3 BELOW
+//     IT, THE SECOND ETCHED PAIR, then 3 px of FOOT before the trim lane:
+//     2 + 3 + 22 + 3 + 2 + 3 = 35.
+// THE TOP STACK IS 125 WINDOWS PX UNDER EITHER VOCABULARY (caption 18 + menu
+// 20 + this lane + trim 16 + the ruler + marker 18: win2000's 36 beside the
+// 6-row digit's 17-px ruler, win95's 35 beside the 7-row digit's 18), so the
+// trim lane, the ruler, the playhead's head, the marker lane and the well's
+// top keep their rows whichever vocabulary paints at a whole-number scale
+// (at the laptop's 138 % the rounding stands win2000's trim lane 3 device
+// rows lower and its well's top 1, its stack 170 rows against 169). The
+// foot's last row's
+// neighbour is the trim lane's own first row, still the boundary — NO
+// BORDER OF ITS OWN (architect 2026-10-01). THE ROW IS MODELLED ON KDENLIVE'S
+// SECOND TOOLBAR, the one under its timeline; the first, sharing the
+// menubar's ground, was left out for space (architect 2026-09-09), so nothing
+// sits between the menu row and this one. THE ETCHED LINES, THE SEPARATORS
+// AND THE AIR ARE INERT GROUND FOR INPUT (hit nothing, Arrow cursor): the
+// hit target is the case. They are painted in paint_icon_row so they repaint
+// with the lane's own damage, in the theme's Shadow and Hilight roles, no new
+// role or literal.
 //
-// THE BUTTONS TOUCH WITHIN A GROUP and EIGHT WINDOWS PX OF BARE GROUND stand
-// between two groups, with NO SEPARATOR anywhere (architect 2026-10-02, the
-// Y / Z / AB sets: "the buttons touch", the separators gone): the group
-// boundaries are still redesign_button_opens_icon_group's, which now places
-// the gap alone. The walk is paint_icon_row's (paint_handler.cpp).
+// THE BUTTONS TOUCH WITHIN A GROUP and EIGHT WINDOWS PX stand between two
+// groups (architect 2026-10-02, the Y / Z / AB sets: "the buttons touch"),
+// the group boundaries redesign_button_opens_icon_group's. WHAT STANDS IN A
+// GAP IS THE VOCABULARY'S TOOLBAR STYLE (chrome_spec.h's toolbar_style):
+// win95's bare ground (comctl32's classic toolbar leaves the gap blank), or
+// in win2000 AN ETCHED SEPARATOR in every group gap of BOTH toolbars
+// (architect 2026-10-06, his word; comctl32's TOOLBAR_DrawFlatSeparator,
+// read off tmp/reactos-hover.png, columns 17-18 of Explorer's bar, rows
+// 184-209): a Shadow column at the gap's 8 / 2 − 1 Windows px and a Hilight
+// column beside it, from the band's top + 2 to its bottom − 2, 26 of the 30
+// rows (paint_toolbar_separator, paint_handler.cpp; kToolbarSeparator*
+// below) — and none across the wide ground before the right-aligned groups,
+// which is no group gap. The walks are paint_icon_row's and
+// paint_bottom_row_buttons_and_clock's.
 //
-// THESE NUMBERS LIVE HERE rather than beside the row's walk because a second
-// file reads them: the notification card's glyph box is the toolbar case
-// (notifications.cpp), so each number has one definition.
-inline constexpr int kIconGlyphPx        = 16;   // the glyph, both axes
-inline constexpr int kIconCaseLeadPx     = 3;    // case left of and above the glyph
-inline constexpr int kIconCaseTrailXPx   = 4;    // case right of the glyph
-inline constexpr int kIconCaseTrailYPx   = 3;    // case below the glyph
-inline constexpr int kIconRowAirPx       = 3;    // ground above and below the case, within the toolbar band (WordPad's 3 / 3)
-inline constexpr int kIconRowFootAirPx   = 3;    // ground below the second etched pair, before the trim lane
+// THESE NUMBERS LIVE HERE rather than beside the row's walk because more
+// than one file reads the case: icons.cpp's seat (draw_cased) and
+// paint_handler.cpp's three rows. THE CARD'S GLYPH BOX AND THE FOLDER
+// OVERLAY'S LIST ICON ARE NOT THE CASE (2026-10-06, report_TC's catch: a
+// 24-px glyph would overrun the 17-px list row): each keeps Windows' small
+// 16-px icon under both vocabularies on a constant of its own
+// (notifications.h's kNotificationGlyph*, folder_overlay.h's kRowIcon*).
 inline constexpr int kIconGroupSpacePx   = 8;    // bare ground between two groups
-inline constexpr int kIconCaseWidthPx  =
-    kIconCaseLeadPx + kIconGlyphPx + kIconCaseTrailXPx;
-inline constexpr int kIconCaseHeightPx =
-    kIconCaseLeadPx + kIconGlyphPx + kIconCaseTrailYPx;
-// The lane's authored total: one relief line pair (2 Windows px) above the
-// toolbar band, one below it, and the foot air — 2 + 3 + 22 + 3 + 2 + 3 = 35.
-inline constexpr int kIconRowHeightPx =
-    2 * kReliefLinePx + kIconRowAirPx + kIconCaseHeightPx + kIconRowAirPx +
-    2 * kReliefLinePx + kIconRowFootAirPx;
-static_assert(kIconCaseWidthPx == 23 && kIconCaseHeightPx == 22 &&
-              kIconRowHeightPx == 35);
-inline int icon_glyph_px()        { return scaled_px(kIconGlyphPx); }
-inline int icon_case_lead_px()    { return scaled_px(kIconCaseLeadPx); }
+// THE SEPARATOR'S SEAT in a group gap, in Windows px: its Shadow column's
+// offset from the gap's left edge (comctl32's (left + right) / 2 − 1, so
+// 8 / 2 − 1) and its inset from the band's top and bottom (top + 2,
+// bottom − 2).
+inline constexpr int kToolbarSeparatorXPx = kIconGroupSpacePx / 2 - kReliefLinePx;
+inline constexpr int kToolbarSeparatorInsetYPx = 2;
+// The vocabularies' records, authored: the case and the lane's total.
+constexpr int toolbar_case_authored_w(const ChromeSpec& s) {
+    return s.toolbar_case_lead_px + s.toolbar_glyph_px +
+           s.toolbar_case_trail_x_px;
+}
+constexpr int toolbar_case_authored_h(const ChromeSpec& s) {
+    return s.toolbar_case_lead_px + s.toolbar_glyph_px +
+           s.toolbar_case_trail_y_px;
+}
+constexpr int icon_row_authored_h(const ChromeSpec& s) {
+    return 2 * kReliefLinePx + s.icon_row_air_px +
+           toolbar_case_authored_h(s) + s.icon_row_air_px +
+           (s.icon_row_second_etched_pair ? 2 * kReliefLinePx : 0) +
+           s.icon_row_foot_px;
+}
+static_assert(toolbar_case_authored_w(kChromeSpecWin95) == 23 &&
+              toolbar_case_authored_h(kChromeSpecWin95) == 22 &&
+              icon_row_authored_h(kChromeSpecWin95) == 35);
+static_assert(toolbar_case_authored_w(kChromeSpecWin2000) == 31 &&
+              toolbar_case_authored_h(kChromeSpecWin2000) == 30 &&
+              icon_row_authored_h(kChromeSpecWin2000) == 36);
+inline int icon_glyph_px() {
+    return scaled_px(kLiveChromeSpec.toolbar_glyph_px);
+}
+inline int icon_case_lead_px() {
+    return scaled_px(kLiveChromeSpec.toolbar_case_lead_px);
+}
 inline int icon_case_w_px() {
-    return scaled_px(kIconCaseLeadPx) + scaled_px(kIconGlyphPx) +
-           scaled_px(kIconCaseTrailXPx);
+    return scaled_px(kLiveChromeSpec.toolbar_case_lead_px) +
+           scaled_px(kLiveChromeSpec.toolbar_glyph_px) +
+           scaled_px(kLiveChromeSpec.toolbar_case_trail_x_px);
 }
 inline int icon_case_h_px() {
-    return scaled_px(kIconCaseLeadPx) + scaled_px(kIconGlyphPx) +
-           scaled_px(kIconCaseTrailYPx);
+    return scaled_px(kLiveChromeSpec.toolbar_case_lead_px) +
+           scaled_px(kLiveChromeSpec.toolbar_glyph_px) +
+           scaled_px(kLiveChromeSpec.toolbar_case_trail_y_px);
 }
 inline int icon_group_space_px()  { return scaled_px(kIconGroupSpacePx); }
 // THE ETCHED PAIR'S DEVICE HEIGHT IS TWO ROUNDED RELIEF LINES, NEVER
@@ -988,11 +1041,15 @@ inline int icon_group_space_px()  { return scaled_px(kIconGroupSpacePx); }
 // the lane must reserve exactly that, which can differ from scaled_px(2) at
 // a fractional gui_scale.
 inline int icon_row_etched_pair_px() { return 2 * relief_line_px(); }
+// The ground above and below the case inside the icon row's toolbar band:
+// WordPad's 3 in win95, none in win2000.
+inline int icon_row_air_px() {
+    return scaled_px(kLiveChromeSpec.icon_row_air_px);
+}
 // THE TOOLBAR BAND ALONE — air, case, air — with NO etched line and NO foot
-// air in it: the bottom row's own lane has neither, so this is the one
-// number the two rows share (bottom_row_content_h_px, below).
-inline int icon_row_content_h_px() {
-    return 2 * scaled_px(kIconRowAirPx) + icon_case_h_px();
+// in it: in win2000 the case itself.
+inline int icon_row_band_h_px() {
+    return 2 * icon_row_air_px() + icon_case_h_px();
 }
 // THE CASE'S TOP, AS AN OFFSET FROM THE LANE'S OWN TOP (not the toolbar
 // band's): the top etched pair, then the band's own air — the one expression
@@ -1000,11 +1057,14 @@ inline int icon_row_content_h_px() {
 // hit rects, dropdown anchors, the folder overlay's band, tooltips), so a
 // retune of either term carries everywhere by construction.
 inline int icon_case_top_offset_px() {
-    return icon_row_etched_pair_px() + scaled_px(kIconRowAirPx);
+    return icon_row_etched_pair_px() + icon_row_air_px();
 }
 inline int icon_row_h_px() {
-    return icon_row_etched_pair_px() + icon_row_content_h_px() +
-           icon_row_etched_pair_px() + scaled_px(kIconRowFootAirPx);
+    return icon_row_etched_pair_px() + icon_row_band_h_px() +
+           (kLiveChromeSpec.icon_row_second_etched_pair
+                ? icon_row_etched_pair_px()
+                : 0) +
+           scaled_px(kLiveChromeSpec.icon_row_foot_px);
 }
 
 // A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
@@ -1284,27 +1344,27 @@ int  waveform_max_h_px();
 // strings moved beside them, every interactive surface one contiguous cluster
 // against the waveform.
 //
-// THE ROW IS THE ICON ROW'S HEIGHT SINCE 2026-08-14 (architect, at his live
-// test: "make sure bottom row is same height and metrics (padding, etc.) as
-// main icon row"), and it READS that row's content accessor rather than
-// restating its number — one source, so a retune of the icon row carries down
-// here by construction. Its border is its own (below).
+// THE ROW IS THE ICON ROW'S CASE ON ITS OWN AIR (architect 2026-08-14, at his
+// live test: "make sure bottom row is same height and metrics (padding, etc.)
+// as main icon row"; the air its own field since 2026-10-06): it READS the
+// icon row's case accessors rather than restating them — one source, so a
+// retune of the case carries down here by construction — and its air above
+// and below the case is the vocabulary's bottom_row_air_px (chrome_spec.h),
+// THREE WINDOWS PX in both: WordPad's, which in win95 is the icon row's own
+// band air too, while win2000's icon row has none inside its band (Explorer's
+// band is the case) and row 8 keeps its 3 / 3 (architect 2026-10-06).
+// So the content is 3 + 22 + 3 = 28 Windows px in win95 and 3 + 30 + 3 = 36
+// in win2000. (Its earlier boxes — row 8's kdenlive 26 px transport boxes,
+// then the icon row's 32-laptop-px square, then the five-px-air 32 of
+// 2026-10-02 — are git history.)
 //
-// So the content is the icon row's rule — the toolbar case with three
-// Windows px of ground above and below it (WordPad's air, kIconRowAirPx),
-// 28 Windows px (architect 2026-10-05, carried down from the icon row's own
-// retune). (Its earlier boxes — row 8's kdenlive 26 px transport boxes, then
-// the icon row's 32-laptop-px square, then the five-px-air 32 of 2026-10-02 —
-// are git history.)
-//
-// THE CSS BOX MODEL, ONE TOP ROW: the content is the icon row's 28 and a
-// one-Windows-px row of ground sits OUTSIDE it on top (39 device rows at
-// 138 %, 79 at 275 %, 116 at 400 %), on the WAVEFORM side — where row 8's
-// border-top
-// stood. NO LINE IS DRAWN THERE since
-// 2026-10-02 (architect: nothing between the well and this row, the well's
-// own bottom line being the seam), and the row is kept so nothing on the row
-// moved. IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx).
+// THE CSS BOX MODEL, ONE TOP ROW: a one-Windows-px row of ground sits
+// OUTSIDE the content on top (1 device row at 138 %, 3 at 300 %, 4 at 400 %),
+// on the WAVEFORM side — where row 8's border-top stood. NO LINE IS DRAWN
+// THERE since 2026-10-02 (architect: nothing between the well and this row,
+// the well's own bottom line being the seam), and the row is kept so nothing
+// on the row moved. IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx). The
+// lane is 1 + 28 = 29 Windows px in win95 and 1 + 3 + 30 + 3 = 37 in win2000.
 // bottom_row_content_h_px() is the ground the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Rides
 // gui_scale_factor() like every redesigned row.
@@ -1312,8 +1372,11 @@ inline constexpr int kBottomRowBorderPx = 1;
 inline int bottom_row_border_h_px() {
     return scaled_px(kBottomRowBorderPx, 1);
 }
+inline int bottom_row_air_px() {
+    return scaled_px(kLiveChromeSpec.bottom_row_air_px);
+}
 inline int bottom_row_content_h_px() {
-    return icon_row_content_h_px();
+    return 2 * bottom_row_air_px() + icon_case_h_px();
 }
 inline int bottom_row_h_px() {
     return bottom_row_content_h_px() + bottom_row_border_h_px();
@@ -2139,10 +2202,11 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // diagonals one line.
 //   paint_relief_frame  — one ring, any two colours (the one owner every
 //                         helper below calls).
-//   paint_relief_soft_raised  — SOFT RAISED: a toolbar button at rest, a
-//                         caption button at rest (2026-10-05).
-//   paint_relief_soft_sunken  — SOFT SUNKEN: a toolbar button checked or
-//                         pressed, a caption button pressed.
+//   paint_relief_soft_raised  — SOFT RAISED: a win95 toolbar button at
+//                         rest, a caption button at rest (2026-10-05), an
+//                         on-screen keyboard key.
+//   paint_relief_soft_sunken  — SOFT SUNKEN: a win95 toolbar button checked
+//                         or pressed, a caption button pressed.
 //   paint_relief_plain_raised — PLAIN RAISED: a push button, the scroll-bar
 //                         thumb (the trim lane's), the scrub's thumb, a
 //                         menu's and a dropdown's frame, the restored
@@ -2151,7 +2215,13 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         overlay's band, 2026-10-06), the scrub's channel
 //                         (the well is render_canvas's own fill of the same
 //                         lines, full width).
-//   paint_relief_status_sunken — STATUS SUNKEN, ONE ring: a status-bar panel.
+//   paint_relief_sunken_outer — SUNKEN OUTER, ONE ring (DrawEdge's
+//                         BDR_SUNKENOUTER, Shadow / Hilight): a status-bar
+//                         panel, a time field, the win2000 open menu title,
+//                         a win2000 (flat) toolbar button pressed or checked.
+//   paint_relief_raised_inner — RAISED INNER, ONE ring (BDR_RAISEDINNER,
+//                         Hilight / Shadow): a win2000 (flat) toolbar
+//                         button's HOT face (architect 2026-10-06).
 //   paint_relief_line_frame — one colour all round, square (no mitre
 //                         between one tone and itself): the dialog's
 //                         default-button frame, the list's focus frame and
@@ -2161,10 +2231,13 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //   draws, at paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
-//                         [x, x + w) (the dropdown's separator). (Its
-//                         vertical twin retired 2026-10-02 with the render
-//                         player's separators, its last callers; the ruler's
-//                         etched ticks are painted in place, paint_ruler_row.)
+//                         [x, x + w) (the dropdown's separator, the icon
+//                         row's etched pairs).
+//   paint_relief_etched_vline — its vertical twin: a Shadow line on columns
+//                         [x, x + lw) and a Hilight line right of it, rows
+//                         [y, y + h) (the win2000 toolbars' group
+//                         separators, 2026-10-06; the ruler's etched ticks
+//                         are painted in place, paint_ruler_row).
 // (paint_relief_raised / paint_relief_sunken, the one-line pair of the thin
 // design, are retired, architect 2026-10-02: every caller names its family.)
 // None of them fills the face: a caller fills first and frames after.
@@ -2174,9 +2247,11 @@ void paint_relief_soft_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_soft_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
-void paint_relief_status_sunken(cairo_t* cr, const GuiRect& r);
+void paint_relief_sunken_outer(cairo_t* cr, const GuiRect& r);
+void paint_relief_raised_inner(cairo_t* cr, const GuiRect& r);
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
+void paint_relief_etched_vline(cairo_t* cr, int x, int y, int h);
 // One flat cell rect in `c` — the face fill every relief caller lays first.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // THE CHECKED DITHER (architect 2026-10-02, Windows' checked toolbar button

@@ -2,8 +2,8 @@
 # tools/mockup/scene.py — A SCENE: what one captured screen holds, measured once by hand (tools/mockup/README.md,
 # THE SCENE FORMAT). Lengths are WINDOWS PX at the capture's gui_scale; this tool takes whole-percent scales that are
 # multiples of 100 (one Windows px = a whole number of device px), every row and column landing on a device px.
-# The chrome's own constants (the caption's icon seat and button boxes, the toolbar case's glyph seat) are read off
-# src/gui/render.h on every run, never restated here.
+# The chrome's own constants (the caption's icon seat and button boxes off src/gui/render.h, the win95 toolbar case's
+# glyph seat off src/gui/chrome_spec.h) are read on every run, never restated here.
 import glob, json, os, re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -11,9 +11,15 @@ REPO = os.path.normpath(os.path.join(HERE, '..', '..'))
 SCENES = os.path.join(HERE, 'scenes')
 RENDER_H = os.path.join(REPO, 'src', 'gui', 'render.h')
 
+CHROME_SPEC_H = os.path.join(REPO, 'src', 'gui', 'chrome_spec.h')
+
 _RENDER_CONSTANTS = ('kCaptionHeightPx', 'kCaptionIconXPx', 'kCaptionIconYPx', 'kCaptionIconPx',
                      'kCaptionButtonWPx', 'kCaptionButtonHPx', 'kCaptionButtonInsetPx', 'kCaptionCloseGapPx',
-                     'kIconCaseLeadPx', 'kIconGlyphPx', 'kIconCaseTrailXPx', 'kIconCaseTrailYPx', 'kReliefLinePx')
+                     'kReliefLinePx')
+# THE TOOLBAR CASE is the chrome vocabulary's since 2026-10-06 (chrome_spec.h's ChromeSpec): this tool draws the
+# win95 vocabulary, so its case is kChromeSpecWin95's, read under the names render.h carried before.
+_WIN95_CASE_FIELDS = (('kIconCaseLeadPx', 'toolbar_case_lead_px'), ('kIconGlyphPx', 'toolbar_glyph_px'),
+                      ('kIconCaseTrailXPx', 'toolbar_case_trail_x_px'), ('kIconCaseTrailYPx', 'toolbar_case_trail_y_px'))
 
 
 def render_constants():
@@ -23,6 +29,14 @@ def render_constants():
         m = re.search(r'inline constexpr int ' + k + r'\s*=\s*(\d+);', src)
         if not m:
             raise SystemExit(f'tools/mockup: {RENDER_H}: no `inline constexpr int {k}` (the source moved)')
+        out[k] = int(m.group(1))
+    spec = re.search(r'kChromeSpecWin95\s*=\s*\{(.*?)\n\};', open(CHROME_SPEC_H).read(), re.S)
+    if not spec:
+        raise SystemExit(f'tools/mockup: {CHROME_SPEC_H}: no kChromeSpecWin95 (the source moved)')
+    for k, field in _WIN95_CASE_FIELDS:
+        m = re.search(r'\.' + field + r'\s*=\s*(\d+)\s*,', spec.group(1))
+        if not m:
+            raise SystemExit(f'tools/mockup: {CHROME_SPEC_H}: no kChromeSpecWin95.{field} (the source moved)')
         out[k] = int(m.group(1))
     return out
 

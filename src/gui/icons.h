@@ -21,9 +21,13 @@
 // SOURCE (a `d` string beside its fill, icons.cpp's table, copied VERBATIM —
 // a diff between the table and the file is a transcription bug and nothing
 // else) rather than pixels baked at one scale. THE GLYPH IS DRAWN AT
-// gui_scale LIKE EVERY CHROME LENGTH: the cell is scaled_px(16) device px
-// (icon_glyph_px, render.h), 4 device px a unit at 400 %; one road at every
-// scale (100 % is a curiosity, architect 2026-10-06).
+// gui_scale LIKE EVERY CHROME LENGTH: in a toolbar case the cell fills the
+// live vocabulary's glyph seat (icon_glyph_px, render.h: scaled_px(16) in
+// win95, 4 device px a unit at 400 %; scaled_px(24) in win2000, the large
+// case's seat, 4.5 device px a unit at 300 % — the 16-unit drawings fill it
+// until the Tango road brings art of that size), elsewhere its site's own
+// scaled 16; one road at every scale (100 % is a curiosity, architect
+// 2026-10-06).
 //
 // THE INKS ARE THE DRAWINGS' OWN (architect 2026-10-06): every path wears its
 // file's fill, black included, on every theme — period pixel art, as Windows'
@@ -33,9 +37,10 @@
 // are not drawings of this set (paint_handler.cpp's caption glyph block).
 //
 // THE PLACEMENT IS FIXED: in a toolbar case the cell sits at (3, 3) Windows
-// px from the case's corner (kIconCaseLeadPx, render.h — Windows' own 16-px
-// bitmap seat in its 23 x 22 button), plus the pressed/checked shift
-// (draw_cased below). Nothing is centred on its ink: Windows never did (12 of
+// px from the case's corner (icon_case_lead_px, render.h — Windows' own seat,
+// the 16-px bitmap's in its small 23 x 22 button and the 24-px one's in its
+// large 31 x 30, the live chrome vocabulary's case), filling the seat
+// (icon_glyph_px), plus the pressed/checked shift (draw_cased below). Nothing is centred on its ink: Windows never did (12 of
 // the 15 STD strip cells with odd ink dimensions sit at the fixed offset).
 // The sites with no case — the list rows, the cards, the caption's icon, the
 // player's row — keep their own placements and draw the same cell.
@@ -161,7 +166,7 @@ inline constexpr int kIconCount = 58;
 
 // Draw `icon`'s 16-unit cell onto the square (x, y, size_px, size_px), each
 // path in its own fill, in file order (the table, icons.cpp). The callers pass
-// icon_glyph_px() or their own scaled 16. Cairo state is saved and restored;
+// icon_glyph_px() (a toolbar case's seat) or their own scaled 16. Cairo state is saved and restored;
 // the caller's source, path and matrix survive untouched.
 //
 // A malformed `d` string is a PROGRAMMING ERROR, not a runtime state — the

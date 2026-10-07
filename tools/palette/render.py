@@ -2039,7 +2039,7 @@ def draw_info_glyph(cr, x, y, size):
 
 def card_rect(th):
     """`card` -> the one card's (x0, y0, x1, y1), its glyph's (x, y, size) and its text's (x, baseline), or None: the
-    app's paint_notifications at 275 %, one line. The card is the icon row's content height (icon_row_content_h_px:
+    app's paint_notifications at 275 %, one line. The card is the win95 toolbar band's height (notification_card_h_px:
     the 22-px toolbar case -- 3 + 16 + 3, each rounded -- and 5 px of air a side), its ONE PAD the case's vertical
     margin ((card - case) // 2), the glyph 16 px square at the case's inset ((case - glyph) // 2) inside a case-square
     box one pad in from the left edge, the text one pad past that box, and the text's right air pad + inset; its width

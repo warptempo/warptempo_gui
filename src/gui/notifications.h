@@ -4,7 +4,8 @@
 // RULING WHOLE — the split, the two classes, the inventory of what is and is
 // not notified, and the words on a card). The product's surface for EVENTS:
 // something happened that answers an act, or that the user was not watching.
-// A small card stacked top-right in the icon row's toolbar band, newest on
+// A small card stacked top-right from the icon row (the live chrome
+// vocabulary's card seat, notification_stack_bound), newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans, a class glyph at the left naming the class
 // (icons::Icon::DialogInformation / DialogError), and ONE PAD around both
@@ -761,10 +762,27 @@ inline constexpr int kNotificationMaxLines = 3;
 
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
+// THE CARD'S OWN GLYPH, ITS BOX AND ITS AIR, in Windows px (2026-10-06): the
+// card read the toolbar's case and band until the win2000 toolbars took
+// Windows' LARGE case, and it keeps Windows' SMALL icon under both chrome
+// vocabularies on constants of its own (report_TC's catch) — the 16-px glyph
+// (kNotificationGlyphPx) in a square box three px of box above and below it
+// (kNotificationGlyphLeadPx; 3 + 16 + 3 = 22, the small toolbar case's
+// height) and three px of card above and below the box (kNotificationAirPx),
+// so a one-line card is 3 + 22 + 3 = 28: every length the card had while it
+// was the win95 toolbar band, each a composite of its rounded parts
+// (scaled_px's rule), so the card is the same device px it was under win95.
+inline constexpr int kNotificationGlyphPx     = 16;
+inline constexpr int kNotificationGlyphLeadPx = 3;
+inline constexpr int kNotificationAirPx       = 3;
+// The glyph's square box, device px: lead + glyph + lead.
+int notification_glyph_box_px();
+// The glyph, device px.
+int notification_glyph_px();
+
 // A ONE-LINE card's height, and the height every card's FIRST line occupies:
-// the icon row's content height (the toolbar case plus its five-Windows-px
-// air, one source) — the glyph sits in a box the case's height at the row's
-// own inset,
+// the glyph's box on the card's air above and below it — the glyph sitting
+// at the box's own inset,
 // AT THE FIRST LINE'S HEIGHT WHATEVER THE LINE COUNT (architect 2026-08-30:
 // the text grows downward under the icon, nothing reflows beside it; the X
 // that sat beside the glyph at that height retired 2026-10-01).
@@ -776,8 +794,8 @@ int notification_card_h_px();
 
 // THE CARD'S ONE PAD (architect 2026-08-30): the padding around the glyph
 // and the text is ONE NUMBER, the box's own vertical margin — the
-// centering the card's height already derives from the icon row (32 = 22 +
-// 2 x 5 Windows px). It is read for ALL FIVE of the card's distances: left edge ->
+// centering the card's height already derives from its air (28 = 22 +
+// 2 x 3 Windows px). It is read for ALL FIVE of the card's distances: left edge ->
 // glyph box, glyph box -> text, text -> right edge, top -> box, box ->
 // bottom (six until the X's box retired, 2026-10-01: text -> X box and
 // X box -> right edge became the one text -> right edge). ONE OF THE FIVE
@@ -816,10 +834,12 @@ int notification_card_max_w_px(const AppState& a);
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
 // right-aligned at kPanelPadPx from the window's right edge (architect
 // 2026-08-29; the right one was the icon row's 8 px pad for the cards' first
-// day), from the foot of the icon row's TOP ETCHED PAIR, so a one-line card
-// fills the toolbar band between the two pairs (architect's glass
-// 2026-10-06, the reasoning at the definition), DOWN TO THE SAME kPanelPadPx
-// OF AIR ABOVE THE BOTTOM ROW'S LANE.
+// day), from the live chrome vocabulary's CARD SEAT (chrome_spec.h's
+// card_seat: in win95 the foot of the icon row's TOP ETCHED PAIR, so a
+// one-line card fills the toolbar band between the two pairs, architect's
+// glass 2026-10-06; in win2000 the foot of the band, the card wholly below
+// the toolbar — the reasoning at the definition), DOWN TO THE SAME
+// kPanelPadPx OF AIR ABOVE THE BOTTOM ROW'S LANE.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
 // was "three cards of one line each", which a wrapped card outgrows, and no
@@ -835,8 +855,10 @@ int notification_card_max_w_px(const AppState& a);
 // Viewport::invalidate_notification_stack takes): the painted cards lie
 // inside the room by construction, so it erases what stood and admits what
 // comes without shaping a single glyph off the paint clock. A window with no
-// room between the icon row's top pair and the bottom row answers a zero height and paints nothing — a window with no
-// waveform at all, in the contrived class.
+// room between the card seat (the vocabulary's: the icon row's top pair in
+// win95, its band's foot in win2000) and the bottom row answers a zero
+// height and paints nothing — a window with no waveform at all, in the
+// contrived class.
 GuiRect notification_stack_bound(const AppState& a);
 
 // HOW MANY CARDS THE ROOM HOLDS, and so what a push bumps past (architect
@@ -853,10 +875,10 @@ GuiRect notification_stack_bound(const AppState& a);
 // criticals that will not be bumped.
 //
 // A pure function of the window and the scale, like the room. Re-derived
-// 2026-10-06 with the stack seated on the icon row's top etched pair: in a
-// 1920 x 1080 window at 138 % it is 25 (a 986 px room over 38 + 1, the
-// card's own gap, kNotificationGapPx); on the tablet at 400 % it is 10 (1160
-// over 112 + 4), its window being the whole 2304 x 1440
+// 2026-10-06 for the win2000 vocabulary, the stack seated on the icon row's
+// band's foot: in a 1920 x 1080 window at 138 % it is 23 (a 934 px room over
+// 38 + 1, the card's own gap, kNotificationGapPx); on the tablet at 300 % it
+// is 12 (1116 over 84 + 3), its window being the whole 2304 x 1440
 // panel since the activity went full screen (2026-10-01; the stacks are
 // recorded at main.cpp's vertical-stack owner). Every window this product
 // runs in holds more cards than the architect will ever stack.

@@ -170,7 +170,8 @@ inline constexpr double kRowGapPx = 1.0;
 
 // THE ROW BOX: 17 Windows px (kRowHeightPx — the laptop pixel's 32-px
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
-// first hours), the panel's row gap, the case's glyph. A folder row wears
+// first hours), the panel's row gap, Windows' small 16-px icon (kRowIconPx
+// below). A folder row wears
 // icons::Icon::Folder and a wav row icons::Icon::AudioXWav. (The glyph-less
 // TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
 // which wore the folder glyph because it named a folder, with the player's
@@ -180,17 +181,21 @@ inline constexpr double kRowHeightPx = 17.0;
 inline int button_row_height_px() { return scaled_px(kRowHeightPx, 1); }
 inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
 inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
-inline int row_icon_px()          { return icon_glyph_px(); }
+// THE ROW'S GLYPH IS WINDOWS' SMALL ICON, 16 Windows px, under both chrome
+// vocabularies (2026-10-06): it read the toolbar case's glyph until the
+// win2000 toolbars took Windows' large case, whose 24-px seat would overrun
+// the 17-px row (report_TC's catch), so the list keeps its own.
+inline constexpr double kRowIconPx = 16.0;
+// THE GLYPH'S LEFT PAD INSIDE THE ROW: Windows' small toolbar case's 3-px
+// lead (the glyph at (3, 3) in Windows' case; architect 2026-10-02: until
+// then the case's (22 − 16) / 2 centring inset, which the 17-px row would
+// have shrunk to nothing), its own constant since 2026-10-06 like the glyph.
+// The glyph is CENTRED in the row's height (the painter), and this is not
+// the modal word buttons' text pad, which belongs to a different surface.
+inline constexpr double kRowIconInsetPx = 3.0;
+inline int row_icon_px()          { return scaled_px(kRowIconPx); }
 inline int row_icon_gap_px()      { return scaled_px(kRowIconGapPx); }
-// THE GLYPH'S LEFT PAD INSIDE THE ROW: the toolbar case's 3-px lead
-// (icon_case_lead_px — the glyph at (3, 3) in Windows' case), read rather
-// than restated (architect 2026-10-02: until then the case's (22 − 16) / 2
-// centring inset, which the 17-px row would have shrunk to nothing). The
-// glyph is CENTRED in the row's height (the painter), and this is not the
-// modal word buttons' text pad, which belongs to a different surface.
-inline int row_icon_inset_px() {
-    return icon_case_lead_px();
-}
+inline int row_icon_inset_px()    { return scaled_px(kRowIconInsetPx); }
 
 // (THE BAND OWNS NO LINE AT ALL — the head prose carries the 2026-10-01
 // ruling that nothing marks its top.)

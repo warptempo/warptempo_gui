@@ -73,8 +73,18 @@ def read_constants():
     """Every authored number the geometry reads, from the source as it stands: -> (K, the owners {name: file})."""
     rh, ph, ph_h, ah = _read('render.h'), _read('paint_handler.cpp'), _read('paint_handler.h'), _read('app_state.h')
     K, own = {}, {}
-    for name in ('kMenuRowHeightPx', 'kIconGlyphPx', 'kIconCaseLeadPx', 'kIconCaseTrailXPx', 'kIconCaseTrailYPx',
-                 'kIconRowAirPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
+    # THE TOOLBAR CASE AND ITS AIR are the chrome vocabularies' since 2026-10-06 (src/gui/chrome_spec.h's
+    # ChromeSpec); this geometry is the win95 vocabulary's, read off kChromeSpecWin95 under the old names.
+    cs = _read('chrome_spec.h')
+    m = re.search(r'kChromeSpecWin95\s*=\s*\{(.*?)\n\};', cs, re.S)
+    if not m: raise SystemExit('tablet.py: kChromeSpecWin95 not found in src/gui/chrome_spec.h')
+    for name, field in (('kIconCaseLeadPx', 'toolbar_case_lead_px'), ('kIconGlyphPx', 'toolbar_glyph_px'),
+                        ('kIconCaseTrailXPx', 'toolbar_case_trail_x_px'), ('kIconCaseTrailYPx', 'toolbar_case_trail_y_px'),
+                        ('kIconRowAirPx', 'icon_row_air_px')):
+        f = re.search(r'\.' + field + r'\s*=\s*(\d+)\s*,', m.group(1))
+        if not f: raise SystemExit(f'tablet.py: kChromeSpecWin95.{field} not found in src/gui/chrome_spec.h')
+        K[name] = int(f.group(1)); own[name] = 'chrome_spec.h'
+    for name in ('kMenuRowHeightPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
                  'kMarkerFlagEdgePx', 'kMarkerFlagFacePx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
                  'kPlayheadHeadRows', 'kPlayheadHeadCols',
