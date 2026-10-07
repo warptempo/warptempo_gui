@@ -376,9 +376,9 @@ constexpr MenuButtonDef kMenuButtons[] = {
 // no hover:
 //   REST     — RAISED on the ground, glyph unshifted. EVERY button rests
 //              raised, enabled or disabled: a disabled button keeps its edge
-//              and changes only its glyph (engraved on a toolbar button,
-//              icons::draw_engraved, or its label embossed,
-//              show_embossed_run — Windows' DSS_DISABLED for both).
+//              and changes only its glyph (its disabled face,
+//              icons::draw_disabled, ReactOS's saturate) or its label
+//              (embossed, show_embossed_run — Windows' DSS_DISABLED).
 //   CHECKED  — a toggled-on button (the roster's `selected`, the player's
 //              Repeat One, the keyboard's armed keys): SUNKEN over Windows'
 //              checked face — the ground dithered with Hilight in one device
@@ -442,11 +442,8 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
 //              (TOOLBAR_DrawFrame draws none in a non-interactive state);
 //              a disabled CHECKED button keeps the checker and the shift,
 //              so a dead lamp still reads as lit (the roster's rule at
-//              paint_icon_row). THE GLYPH'S DISABLED FACE IS STILL THE
-//              EMBOSS in this vocabulary (icons::draw_engraved): ReactOS
-//              draws its 32-bpp icons desaturated at 192 / 255
-//              (imagelist.c's ILS_SATURATE), which needs the icon road's
-//              raster — the step that brings the Tango set brings it.
+//              paint_icon_row); the glyph ReactOS's saturate
+//              (icons::draw_disabled).
 // The relief lines MITRE where the Hilight meets the Shadow, the product's
 // rule over DrawEdge's square join (paint_relief_frame).
 ButtonBoxFace paint_toolbar_box(cairo_t* cr, const GuiRect& r, bool lamp,
@@ -624,8 +621,7 @@ AppState::RedesignButtonFace& publish_button_face(
 // it too since 2026-08-14.
 
 // THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id and its content,
-// an ICON of the product's own set (icons.h: the 16-unit cell, drawn at the
-// case's glyph seat). The press claim's chord table (input_pointer.cpp) is the
+// an ICON of the live set (icons.h, drawn at the case's glyph seat). The press claim's chord table (input_pointer.cpp) is the
 // other half; both key off the same ids.
 //
 // WHAT LEADS A BUTTON IS NOT HERE ANY MORE (2026-08-13): the struct carried an
@@ -796,8 +792,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // two boxes, one 2px gap and ONE separator, so the group count moves too
     // (the leader is IconBpm, redesign_button_opens_icon_group).
     //
-    // THE GLYPHS: MusicNote16th, the metronome, for the BPM opener, and
-    // Mathmode, the grid, for the mode lamp (icons.h).
+    // THE GLYPHS: MusicNote16th for the BPM opener and Mathmode for the
+    // mode lamp (icons.h; the drawings are the set README's).
     {RedesignButton::IconBpm,  icons::Icon::MusicNote16th},
     {RedesignButton::IconIter, icons::Icon::Mathmode},
     // FLATTEN CLOSES THE GROUP (architect 2026-09-19), up from the bottom
@@ -822,21 +818,21 @@ constexpr IconRowDef kIconRowButtons[] = {
     // outside the `h` view having been Play renders' own; the two that stay
     // keep his order and Listen still opens the group.
     {RedesignButton::IconListen, icons::Icon::PreviewRenderOn},
-    // The padlock pair, Lock and Unlock. The TABLE entry is the closed lock and the
-    // resolver (redesign_button_icon, above) is what swaps it for the open one
+    // The read-only pair, Lock and Unlock. The TABLE entry is Lock and the
+    // resolver (redesign_button_icon, above) is what swaps it for Unlock
     // on a writable tab — every button goes through that resolver, so this
     // constant is the fallback rather than the painted truth.
     {RedesignButton::IconReadOnly,       icons::Icon::Lock},
     // SETTINGS (architect 2026-09-29), right after the padlock and ahead of
     // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
-    // `;`, the settings prompt, wearing SettingsConfigure (STD_PROPERTIES) —
+    // `;`, the settings prompt, wearing SettingsConfigure —
     // the typed road's pointer spelling, one box and one 2px gap onto the walk
     // and no separator moving.
     {RedesignButton::IconSettings,       icons::Icon::SettingsConfigure},
     // ENABLE TOOLTIPS (architect 2026-09-29, evening), CLOSING the
     // render-entry group behind Settings since 2026-10-01 (architect: help
-    // comes after settings): the bare backslash's LAMP, wearing HelpWhatsthis
-    // (STD_HELP). Dark at every open, and while dark no tooltip shows
+    // comes after settings): the bare backslash's LAMP, wearing
+    // HelpWhatsthis. Dark at every open, and while dark no tooltip shows
     // anywhere; lit, the Qt model as ruled. One box and one 2px gap onto the
     // walk, no separator moving.
     {RedesignButton::IconTooltips,       icons::Icon::HelpWhatsthis},
@@ -1492,8 +1488,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                            active ? pal.caption_active_gradient
                                   : pal.caption_inactive_gradient);
 
-    // THE APP'S ICON at (2, 1), 16 x 16: the set's sixteenth note
-    // (icons.h), no case, at the caption's own placement.
+    // THE APP'S ICON at (2, 1), 16 x 16: the set's AppIcon, Tango's
+    // audio-x-generic (icons.h), no case, at the caption's own placement.
     icons::draw(cr, icons::Icon::AppIcon,
                 static_cast<double>(row.x + scaled_px(kCaptionIconXPx)),
                 static_cast<double>(row.y + scaled_px(kCaptionIconYPx)),
@@ -1997,7 +1993,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // BROUGHT their real disabled derivations with them at the 2026-08-12
     // relayout (Undo/Redo's locked-tab and empty-stack terms, Save's
     // in-flight lockout, Render's source path — redesign_button_enabled's
-    // own arms, painted by this body's generic engraved face with nothing added
+    // own arms, painted by this body's generic disabled face with nothing added
     // here). THE TWO RULED EXCEPTIONS ARE BOTH MODES rather than refusals,
     // which is what the per-press refusals above cannot express: the `h`
     // HISTORY VIEW greys every button in this row whose act it consumes
@@ -2136,14 +2132,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // derived, for reasons recorded there. This painter decides none of
         // the three.
         //
-        // THE FACE IS THE GLYPH'S ALONE, ENGRAVED (architect 2026-10-02, the
-        // AB set; Windows' DSS_DISABLED, icons::draw_engraved): the glyph's
-        // disabled mask in Hilight one Windows px right and down, then in
-        // Shadow at its place, and the box keeps its edge whole in win95 (a
+        // THE FACE IS THE GLYPH'S ALONE (architect 2026-10-02, the AB set):
+        // its disabled face, ReactOS's saturate (icons::draw_disabled,
+        // architect 2026-10-06), and the box keeps its edge whole in win95 (a
         // disabled button keeps its raised edge; win2000's flat case has
         // none to keep, paint_toolbar_box). A dead CHECKED button (the
         // cumulative reading, say) stays checked: the mode cannot change that
-        // state, so hiding it would be a lie, and the engraved glyph says
+        // state, so hiding it would be a lie, and the greyed glyph says
         // "true, but not yours right now".
         // The press face is gated on the live bit rather than trusted: the
         // claim never records a press on a disabled button, but a button can
@@ -2154,8 +2149,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             cr, GuiRect{bx, btn_y, btn_w, btn_h}, face.selected, pressed,
             redesign_button_hot_face(app, def.id), face.enabled);
 
-        // THE GLYPH at the case's (3, 3), each path in its own color from the
-        // icon table — or, dead, engraved.
+        // THE GLYPH at the case's (3, 3), in the drawing's own colours — or,
+        // dead, its disabled face.
         //
         // EVERY BUTTON TAKES THIS ARM since 2026-08-11, when the four view
         // radios' shaped LETTER faces, the only other kind, took glyphs. The
@@ -2186,8 +2181,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         else
             icons::draw_cased_disabled(cr, glyph, bx, btn_y,
                                        static_cast<double>(glyph_px),
-                                       box.shift,
-                                       static_cast<double>(relief_line_px()));
+                                       box.shift);
     };
 
     // THE LEFT GROUPS' WALK: one left-to-right accumulation, every member
@@ -2352,7 +2346,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // EVERYTHING ELSE IS THE ICON ROW'S OWN MODEL (the toolbar style's faces,
 // the case on the row's air): same ground, same faces (paint_toolbar_box),
-// same engraved dead glyph. WHO WEARS THE DEAD FACE HERE, re-derived 2026-09-29 evening — EIGHT
+// same dead glyph. WHO WEARS THE DEAD FACE HERE, re-derived 2026-09-29 evening — EIGHT
 // of the seventeen in the `h` view, where it used to be one: there
 // the derived partition greys the PLAY/STOP button (Space is consumed there),
 // UP and DOWN (bare
@@ -2710,7 +2704,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // ROW IS ADD TO SELECTION (2026-08-18), the sticky-ctrl mode that closes
     // the marker-verb group: it wears the checked face while the mode stands,
     // which is the roster's standing rule for a mode. A checked button a mode
-    // greys keeps its checked face and engraves its glyph, the icon row's own
+    // greys keeps its checked face and greys its glyph, the icon row's own
     // composition.
     const auto paint_button = [&](const TransportRowDef& def, int x) {
         AppState::RedesignButtonFace& face = publish_button_face(
@@ -2743,8 +2737,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         else
             icons::draw_cased_disabled(cr, glyph, x, btn_y,
                                        static_cast<double>(glyph_px),
-                                       box.shift,
-                                       static_cast<double>(relief_line_px()));
+                                       box.shift);
     };
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
@@ -6144,7 +6137,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // their acts, their keys and their hints unchanged.
         // AT THE ROOT THE SLOT IS DELETE (architect 2026-09-29): `tmp/`'s own
         // listing is batch folders, where a load has nothing to name, so the
-        // sixth button deletes — EditDelete, STD_DELETE's X — the
+        // sixth button deletes — EditDelete — the
         // highlighted folder, and its shift press every folder listed; its
         // shift line stands only where "all" is more than the highlighted one.
         // Inside a batch folder the slot is Load in Place, unchanged.
@@ -6861,9 +6854,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE DISABLED RUNG, on the PLAYER's buttons alone (architect
         // 2026-08-30) — every other owner's buttons are always live while
         // their dialog stands and publish enabled=true, and the player's are
-        // all glyph buttons: the glyph ENGRAVED (icons::draw_engraved), the
-        // box keeping its edge, the roster's rule (architect 2026-10-02:
-        // Windows' DSS_DISABLED replaced the disabled mix). The press face is gated on
+        // all glyph buttons: the glyph's disabled face (icons::draw_disabled,
+        // ReactOS's saturate), the box keeping its edge, the roster's rule
+        // (architect 2026-10-02 and 2026-10-06). The press face is gated on
         // the bit rather than trusted — a button can go dead UNDER a hold —
         // while the focus frame is not: a stale focus must stay visible where
         // the keyboard is.
@@ -6885,8 +6878,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // THE GLYPH, the icon row's own draw: the roster's glyph at the
             // toolbar case's (3, 3) — the box is that case
             // (bottom_row_seats), so each glyph stands where row 8's does
-            // (architect 2026-10-05) — each path in its own colour, or
-            // engraved when the button is disabled; draw_cased takes the
+            // (architect 2026-10-05) — in the drawing's own colours, or its
+            // disabled face when the button is disabled; draw_cased takes the
             // case's corner (r.x, r.y), not a (3, 3) glyph origin.
             const int glyph_px  = icon_glyph_px();
             if (enabled)
@@ -6895,8 +6888,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             else
                 icons::draw_cased_disabled(cr, plan[i].icon, r.x, r.y,
                                            static_cast<double>(glyph_px),
-                                           box.shift,
-                                           static_cast<double>(relief_line_px()));
+                                           box.shift);
         } else {
             // CENTRED, Windows' push-button text (kModalBtnMinWidthPx); a
             // label that set its button's width lands on its left pad. A

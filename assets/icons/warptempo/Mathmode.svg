@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Toggle Grid Iterations: a navy window with a two-unit title bar and six black squares in a grid (no Windows 95 original). -->
-  <path fill="#000080" d="M1,2 H15 V14 H1 Z M2,4 V13 H14 V4 Z"/>
-  <path fill="#FFFFFF" d="M2,4 H14 V13 H2 Z"/>
-  <path fill="#000000" d="M3,5 H5 V7 H3 Z M7,5 H9 V7 H7 Z M11,5 H13 V7 H11 Z M3,9 H5 V11 H3 Z M7,9 H9 V11 H7 Z M11,9 H13 V11 H11 Z"/>
-</svg>

@@ -1,198 +1,217 @@
 #pragma once
 
-// THE PRODUCT'S OWN ICON SET AND ITS IN-TREE RENDERER — and the reason no SVG
-// library enters this tree.
+// THE ICON SET AND ITS ONE ROAD (architect 2026-10-06). An Icon is a GLYPH,
+// one per enumerator below, drawn from the live chrome vocabulary's SET
+// (chrome_spec.h's icon_set, kGuiLiveIconSet below): TANGO 0.8.90'S
+// SCALABLE DRAWINGS under BOTH vocabularies — ReactOS's model of a Windows
+// 2000 desktop wearing Tango (Tango's own files only, nothing drawn, no GNOME
+// file, a repeat known by position; the product's own 16-unit Windows 95
+// set was retired the same evening: "I don't anticipate using those because
+// they are 16-pixel icons"). One 48-unit Inkscape file per enumerator under
+// assets/icons/tango/ (its README the mapping, the provenance and the
+// licences), READ AT LAUNCH by the SVG-subset reader (svg_icon.h) straight
+// from the bundle — never copied into the config folder (load_svg_set,
+// below) — and rasterised lazily per (glyph, device px) into an ARGB32
+// surface that a draw copies at an integer device px, no resample. THE INKS
+// ARE THE DRAWINGS' OWN (gradients, strokes and opacities included), never a
+// theme role; a DISABLED glyph is ReactOS's saturate (draw_disabled).
 //
-// THE SET IS OUR OWN, SCALABLE, IN THE WINDOWS 95 TOOLBAR IDIOM (architect
-// 2026-10-06: "the icons go full scalable, our own set"): one drawing per
-// enumerator below, committed as assets/icons/warptempo/<Enumerator>.svg with
-// its provenance in that folder's README. Windows 95 is always the source: an
-// uncontrovertible Microsoft case is always taken (comctl32's toolbar strips,
-// Marlett, Media Player, Sound Recorder, Explorer 95 — redrawn as period
-// reference, never copied bytes); Chicago95's composition only where it
-// agrees with Windows or Windows has no 16-px original; an ORIGINAL is a
-// modern symbol retrofied into the idiom. The README's table names each
-// icon's kind and source.
-//
-// EACH FILE IS A 16-UNIT CELL, ONE UNIT ONE WINDOWS PX (viewBox 0 0 16 16, the
-// toolbar bitmap's own 16-px cell): filled paths only, M L H V C A Z, no
-// transform, no stroke, every fill one of Windows' twenty solids. That is
-// small enough to interpret directly, and interpreting it keeps the icons as
-// SOURCE (a `d` string beside its fill, icons.cpp's table, copied VERBATIM —
-// a diff between the table and the file is a transcription bug and nothing
-// else) rather than pixels baked at one scale. THE GLYPH IS DRAWN AT
-// gui_scale LIKE EVERY CHROME LENGTH: in a toolbar case the cell fills the
-// live vocabulary's glyph seat (icon_glyph_px, render.h: scaled_px(16) in
-// win95, 4 device px a unit at 400 %; scaled_px(24) in win2000, the large
-// case's seat, 4.5 device px a unit at 300 % — the 16-unit drawings fill it
-// until the Tango road brings art of that size), elsewhere its site's own
-// scaled 16; one road at every scale (100 % is a curiosity, architect
-// 2026-10-06).
-//
-// THE INKS ARE THE DRAWINGS' OWN (architect 2026-10-06): every path wears its
-// file's fill, black included, on every theme — period pixel art, as Windows'
-// own toolbar bitmaps were. No path takes a theme role. A DISABLED glyph is
-// the emboss (draw_engraved below), where the theme's roles enter. The
-// window-frame glyphs Windows drew in the button text — the caption's —
-// are not drawings of this set (paint_handler.cpp's caption glyph block).
+// AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
+// (100 % is a curiosity, architect 2026-10-06): in a toolbar case the
+// 48-unit cell fills the live vocabulary's glyph seat (icon_glyph_px,
+// render.h: scaled_px(24) in win2000, the large case's seat, 72 device px at
+// 300 %; scaled_px(16) in win95, the small case's, 48 at 300 %); elsewhere
+// its site's own scaled 16 (the caption's icon, the list rows, the cards —
+// Windows' small icon under both vocabularies). The window-frame glyphs
+// Windows drew in the button text — the caption's — are not drawings of the
+// set (paint_handler.cpp's caption glyph block).
 //
 // THE PLACEMENT IS FIXED: in a toolbar case the cell sits at (3, 3) Windows
-// px from the case's corner (icon_case_lead_px, render.h — Windows' own seat,
-// the 16-px bitmap's in its small 23 x 22 button and the 24-px one's in its
-// large 31 x 30, the live chrome vocabulary's case), filling the seat
-// (icon_glyph_px), plus the pressed/checked shift (draw_cased below). Nothing is centred on its ink: Windows never did (12 of
-// the 15 STD strip cells with odd ink dimensions sit at the fixed offset).
-// The sites with no case — the list rows, the cards, the caption's icon, the
-// player's row — keep their own placements and draw the same cell.
+// px from the case's corner (icon_case_lead_px, render.h — Windows' own
+// seat, the 16-px bitmap's in its small 23 x 22 button and the 24-px one's
+// in its large 31 x 30, the live chrome vocabulary's case), filling the seat
+// (icon_glyph_px), plus the pressed/checked shift (draw_cased below).
+// Nothing is centred on its ink: Windows never did (12 of the 15 STD strip
+// cells with odd ink dimensions sit at the fixed offset). The sites with no
+// case — the list rows, the cards, the caption's icon, the player's row —
+// keep their own placements and draw the same cell.
 //
 // NO CURSOR IS AN ICON: every cursor the product shows is a NAMED
 // CURSOR FROM THE USER'S OWN XCURSOR THEME (architect 2026-08-03), so the
 // platform ships no cursor art and draws none.
 //
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
-// and warptempo_cli must never carry this TU.
+// and warptempo_cli must never carry this TU (nor svg_icon's).
 
-#include "render.h"        // GuiColor, the case geometry
+#include "render.h"        // the case geometry, kLiveChromeSpec
 
 #include <cairo/cairo.h>
 
+#include <iterator>
+#include <optional>
+#include <string>
+#include <string_view>
+
 namespace icons {
 
-// The icon set, one entry per committed drawing (assets/icons/warptempo/,
-// each file named by its enumerator). The enumerator names are the set's
-// file names and nothing more; an Icon is a GLYPH, not a button, so several
-// buttons may wear one, and the glyph a stateful button wears in each state
-// is redesign_button_icon's (paint_handler.cpp). FIVE PAIRS SHARE ONE
-// DRAWING (their two files byte-identical, one table row): DialogCancel and
-// WindowClose, KeyframePrevious and MediaSkipBackward, KeyframeNext and
-// MediaSkipForward, BboxPrev and GoPrevious, BboxNext and GoNext.
+// The glyphs, one per file of the set (assets/icons/<set>/, each file named
+// by its enumerator — kIconNames below). The enumerator names are the set's
+// file names and nothing more; each comment names the ACT the glyph serves,
+// and the set's README names the drawing it wears. An Icon is a GLYPH, not a
+// button, so several buttons may wear one, and the glyph a stateful button
+// wears in each state is redesign_button_icon's (paint_handler.cpp). THE SET
+// MAY WEAR ONE DRAWING FOR SEVERAL GLYPHS, the files byte-identical (the
+// Tango set's four repeats, its README's list).
 enum class Icon {
     // THE ICON ROW'S FIRST GROUP.
-    DocumentSave,        // Save — STD_FILESAVE, the floppy
-    EditUndo,            // Undo — STD_UNDO, one swoop
-    EditRedo,            // Redo — STD_REDOW, the mirror
+    DocumentSave,        // Save
+    EditUndo,            // Undo
+    EditRedo,            // Redo
     MediaRecord,         // Render (and the iteration sweep: the tooltip
-                         // alone forks) — Sound Recorder's maroon dot
+                         // alone forks)
     VcsCommit,           // Save's face in the history view and while the
-                         // checkpoint publishes — Save's floppy with a
-                         // check in its label
+                         // checkpoint publishes
     VcsPull,             // Save's face in the history view while GitHub is
-                         // ahead — the cyan arrow onto a bar
-    // THE VIEW GROUP (bare 1 / 2 / 3): the page family, its arrow leaving
-    // for the source, entering for the target, snapping back to a reset bar
-    // for the phase-reset view.
+                         // ahead
+    // THE VIEW GROUP (bare 1 / 2 / 3): one family of three.
     DocumentExport,      // Source+Warp
     DocumentImport,      // Target+Warp
     ChronometerStart,    // Target+Phase
     // THE MAGNIFIERS.
-    ZoomFitBest,         // Full Zoom Out (bare `0`) — corner brackets
-    ZoomOriginal,        // Center on Focus (bare `c`) — the figure one
-    ZoomInY,             // Toggle Waveform Magnification — the plus
+    ZoomFitBest,         // Full Zoom Out (bare `0`)
+    ZoomOriginal,        // Center on Focus (bare `c`)
+    ZoomInY,             // Toggle Waveform Magnification
     // THE SINGLE-MARKER VERBS.
-    ListAdd,             // Drop Marker (bare `s`) — the plus
-    ListRemove,          // Delete Markers (`Delete`) — the minus
-    ViewHidden,          // Toggle Disabled (`Ctrl+D`) — the red no-sign
-    InsertLink,          // Toggle Inherit (`Ctrl+N`) — the chain
-    Merge,               // Flatten (`Ctrl+F`) — two tracks joining
-    BlackSum,            // Toggle Cumulative (`u`) — the sigma
-    GoJump,              // Toggle Follow (`f`) — an arrow crossing the
-                         // view group's page
-    TimelineLift,        // Toggle Restrict Undo (`z`) — the sheaf: the
-                         // page family's sheet and a second behind it
-                         // under a binder clip
-    MusicNote16th,       // BPM Iterations (Ctrl+B) — the metronome
-    Mathmode,            // Toggle Grid Iterations (bare `i`) — the grid
-    PreviewRenderOn,     // Play Renders — Media Player's window with a play
+    ListAdd,             // Drop Marker (bare `s`)
+    ListRemove,          // Delete Markers (`Delete`)
+    ViewHidden,          // Toggle Disabled (`Ctrl+D`)
+    InsertLink,          // Toggle Inherit (`Ctrl+N`)
+    Merge,               // Flatten (`Ctrl+F`)
+    BlackSum,            // Toggle Cumulative (`u`)
+    GoJump,              // Toggle Follow (`f`)
+    TimelineLift,        // Toggle Restrict Undo (`z`)
+    MusicNote16th,       // BPM Iterations (Ctrl+B)
+    Mathmode,            // Toggle Grid Iterations (bare `i`)
+    PreviewRenderOn,     // Play Renders
     DialogOkApply,       // Load in Place (the icon row and the render
-                         // player's row) — Marlett's check
-    VcsDiff,             // Toggle History View (`h`) — Windows 98's
-                         // History, the folder with the clock
-    ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
-                         // History View's clock on the page family's sheet
-    EditSelect,          // Toggle Add to Selection — the pointer with a plus
-    KeyframePrevious,    // Older checkpoint (`,`) — MediaSkipBackward's
-    KeyframeNext,        // Newer checkpoint (`.`) — MediaSkipForward's
+                         // player's row)
+    VcsDiff,             // Toggle History View (`h`)
+    ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session)
+    EditSelect,          // Toggle Add to Selection
+    KeyframePrevious,    // Older checkpoint (`,`)
+    KeyframeNext,        // Newer checkpoint (`.`)
     GoPrevious,          // Row 8's left arrow (bare Left)
     GoNext,              // Row 8's right arrow (bare Right)
-    DocumentRevert,      // Revert (bare `v`) — the page with a bent arrow
-    // ROW 8'S TRANSPORT: Media Player's glyphs. PLAY AND STOP ARE ONE
-    // BUTTON'S TWO FACES (RedesignButton::TransportPlayStop: bare Space is
-    // one toggle with no pause state); the render player's own Play/Pause
-    // button wears MediaPlaybackPause while live.
+    DocumentRevert,      // Revert (bare `v`)
+    // ROW 8'S TRANSPORT. PLAY AND STOP ARE ONE BUTTON'S TWO FACES
+    // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
+    // pause state); the render player's own Play/Pause button wears
+    // MediaPlaybackPause while live.
     MediaSkipBackward,   // Go to Start (bare Home)
     MediaPlaybackStart,  // Play (the face while stopped)
     MediaPlaybackStop,   // Stop (the face while an audition runs)
     MediaPlaybackPause,  // Pause (the render player's row, while live)
     MediaSkipForward,    // Go to End (bare End)
-    DialogCancel,        // Render's mid-render Cancel face — WindowClose's
+    DialogCancel,        // Render's mid-render Cancel face
     GoDown,              // Row 8's down arrow (bare Down)
     GoUp,                // Row 8's up arrow (bare Up)
     // THE READ-ONLY TOGGLE'S TWO STATES, swapped by redesign_button_icon.
-    Lock,                // Locked: the closed padlock
-    Unlock,              // Unlocked: the open padlock
+    Lock,                // Locked
+    Unlock,              // Unlocked
     // THE MARKER WALK AND THE TAB SWITCH.
-    BboxPrev,            // Previous Marker (Shift+Tab) — GoPrevious's
-    BboxNext,            // Next Marker (Tab) — GoNext's
-    TabDetach,           // Switch Tab (Ctrl+Tab) — two overlapping folder
-                         // tabs of one height, a close-up of the folder's
-                         // tab, the body cropped by the cell
-    SettingsConfigure,   // Settings (bare `;`) — STD_PROPERTIES
+    BboxPrev,            // Previous Marker (Shift+Tab)
+    BboxNext,            // Next Marker (Tab)
+    TabDetach,           // Switch Tab (Ctrl+Tab)
+    SettingsConfigure,   // Settings (bare `;`)
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
-    Folder,              // a folder row — the shell's closed folder, its
-                         // tab angled
-    AudioXWav,           // a wav row — the Wave Sound page
+    Folder,              // a folder row
+    AudioXWav,           // a wav row
     // THE RENDER PLAYER'S ROW.
     MediaRepeatSingle,   // Toggle Repeat One — one glyph in both states,
                          // the lamp carrying the state
-    GoParentFolder,      // Up a Folder — the folder row's folder with
-                         // Explorer 95's VIEW_PARENTFOLDER bent arrow
+    GoParentFolder,      // Up a Folder
     // THE NOTIFICATION CARDS' CLASS GLYPHS (notifications.h).
-    DialogInformation,   // a NORMAL card's glyph — the balloon with an i
-    DialogError,         // a CRITICAL card's glyph — the red disc with an X
-    WindowClose,         // Close (the render player) — Marlett's close
-    EditCopy,            // Copy Resolved Value (Ctrl+C) — STD_COPY
-    HelpWhatsthis,       // Toggle Tooltips (bare backslash) — STD_HELP
-    GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J) — the jump arc
-    EditDelete,          // Delete Folder (the render player) — STD_DELETE
-    AppIcon,             // the caption's icon and the program icon — the
-                         // sixteenth note, in silver
+    DialogInformation,   // a NORMAL card's glyph
+    DialogError,         // a CRITICAL card's glyph
+    WindowClose,         // Close (the render player)
+    EditCopy,            // Copy Resolved Value (Ctrl+C)
+    HelpWhatsthis,       // Toggle Tooltips (bare backslash)
+    GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J)
+    EditDelete,          // Delete Folder (the render player)
+    AppIcon,             // the caption's icon and the program icon outside
+                         // the window (tools/app_icon)
 };
 
-// Roster size, for the once-per-icon diagnostic latch in draw(). Keep it equal
-// to the enumerator count above; a mismatch only costs that icon its latch (the
-// latch is bounds-checked), never correctness. A glyph joining or leaving
-// restates this number.
+// Roster size, for the once-per-icon diagnostic latch in draw() and the
+// names below. Keep it equal to the enumerator count above; a glyph joining
+// or leaving restates this number.
 inline constexpr int kIconCount = 58;
 
-// Draw `icon`'s 16-unit cell onto the square (x, y, size_px, size_px), each
-// path in its own fill, in file order (the table, icons.cpp). The callers pass
-// icon_glyph_px() (a toolbar case's seat) or their own scaled 16. Cairo state is saved and restored;
-// the caller's source, path and matrix survive untouched.
-//
-// A malformed `d` string is a PROGRAMMING ERROR, not a runtime state — the
-// strings are in-tree constants — so a parse failure emits one stderr line and
-// draws nothing. That is deliberately all the machinery there is: a silent
-// fallback would hide a transcription typo forever.
+// THE FILE NAMES, the enumerators spelled in enum order: the set's
+// `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
+// the next launch, which fails it.
+inline constexpr const char* kIconNames[] = {
+    "DocumentSave", "EditUndo", "EditRedo", "MediaRecord", "VcsCommit",
+    "VcsPull", "DocumentExport", "DocumentImport", "ChronometerStart",
+    "ZoomFitBest", "ZoomOriginal", "ZoomInY", "ListAdd", "ListRemove",
+    "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
+    "TimelineLift", "MusicNote16th", "Mathmode", "PreviewRenderOn",
+    "DialogOkApply", "VcsDiff", "ShallowHistory", "EditSelect",
+    "KeyframePrevious", "KeyframeNext", "GoPrevious", "GoNext",
+    "DocumentRevert", "MediaSkipBackward", "MediaPlaybackStart",
+    "MediaPlaybackStop", "MediaPlaybackPause", "MediaSkipForward",
+    "DialogCancel", "GoDown", "GoUp", "Lock", "Unlock", "BboxPrev",
+    "BboxNext", "TabDetach", "SettingsConfigure", "Folder", "AudioXWav",
+    "MediaRepeatSingle", "GoParentFolder", "DialogInformation",
+    "DialogError", "WindowClose", "EditCopy", "HelpWhatsthis",
+    "GoJumpDeclaration", "EditDelete", "AppIcon",
+};
+static_assert(std::size(kIconNames) == kIconCount);
+
+// THE LIVE SET: the live chrome vocabulary's (chrome_spec.h's icon_set, the
+// bundled folder's name).
+inline constexpr std::string_view kGuiLiveIconSet = kLiveChromeSpec.icon_set;
+
+// THE SET'S LOAD, once, in gui_main after the theme read and before
+// the window: `set`'s files fetched from the bundle
+// (GuiPlatform::bundled_icon_files — the repository's assets/icons/<set>/ on
+// the laptop, the APK's icons/<set>/ assets on the tablet; READ IN PLACE,
+// never copied into the config folder as the themes are: his own themes sit
+// beside the bundle there, and nobody authors an icon set on the device),
+// then every enumerator's `<name>.svg` parsed in enum order before any draw
+// (svg_icon::parse; files of other names, the README among them, ignored).
+// THE ERROR
+// ARM'S PRODUCERS: the bundle unreadable (IO), a file missing or outside the
+// subset (a build defect) — "icon set 'tango': EditDelete.svg: element
+// <filter> is outside the icon subset", the first only, which gui_main
+// prints and exits on (the validation doctrine's class (1)).
+std::optional<std::string> load_svg_set(std::string_view set);
+
+// THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale):
+// the cache refills lazily at the new sizes; the parsed drawings stay.
+void drop_rasters();
+
+// Draw `icon`'s cell onto the square (x, y, size_px, size_px): the
+// glyph's live raster at the integer px nearest size_px, copied at the
+// integer device px nearest (x, y) — every caller passes integers. The
+// callers pass icon_glyph_px() (a toolbar case's seat) or their own scaled
+// 16. Cairo state is saved and restored. Cannot fail: the launch's load
+// proved every drawing.
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 
-// THE ENGRAVED GLYPH — a disabled button's face (architect 2026-10-02, the AB
-// set; Windows' DrawState DSS_DISABLED): the glyph's DISABLED MASK painted
-// TWICE — first in the theme's HILIGHT `offset_px` right and down (the caller
-// passes one Windows px, relief_line_px), then in its Shadow at (x, y) — so
-// the dead glyph reads as cut into the face. THE MASK IS WINDOWS 95'S
-// (architect 2026-10-06, the faithful reading of the DSS_DISABLED ruling):
-// its toolbar turned the colour bitmap into a mono mask in which WHITE and
-// the BUTTON FACE (silver) are background and every other pixel is ink, and
-// drew that mask; here it is the union of the drawing's paths whose fill is
-// neither White nor Silver, the White and Silver paths cutting it in file
-// order — so a layered drawing (a black silhouette with white and silver
-// insets: the pages, the padlocks, the metronome) keeps its outlines and
-// insets dead, never a grey slab. THE GLYPH HALF OF THE DISABLED EMBOSS and
-// the set's one disabled face (architect 2026-10-03; the word half is
-// show_embossed_run, render.h, the rule at the palette block). Same square,
-// same validation and the same one-stderr rule as draw above.
-void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
-                   double offset_px);
+// THE DISABLED GLYPH — a dead button's face: REACTOS'S SATURATE (architect
+// 2026-10-06; comctl32's toolbar draws a disabled 32-bpp image with
+// ILS_SATURATE | ILS_ALPHA at 192, imagelist.c's saturate_image):
+// svg_icon::saturated_copy of the live raster, built the first time a
+// disabled face asks and cached beside it, copied at the same seat. UNDER
+// BOTH VOCABULARIES: Windows 95's DSS_DISABLED emboss needed the retired own
+// set's solid inks (its mono mask was the drawing's non-white, non-silver
+// paths), which a Tango drawing's gradients do not have — the win95
+// vocabulary's one disabled-glyph departure, recorded at chrome_spec.h's
+// kChromeSpecWin95. A disabled WORD keeps the emboss (show_embossed_run,
+// render.h).
+void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
+                   double size_px);
 
 // THE CASED GLYPH, a toolbar button's: the cell at the case's fixed (3, 3)
 // Windows px (icon_case_lead_px — Windows' own seat, the head's PLACEMENT)
@@ -204,10 +223,9 @@ void draw_engraved(cairo_t* cr, Icon icon, double x, double y, double size_px,
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
                 double size_px, int button_shift_px);
 
-// draw_cased's DEAD-BUTTON sibling: the same seat and shift, the glyph
-// engraved (draw_engraved, `offset_px` its light copy's offset).
+// draw_cased's DEAD-BUTTON sibling: the same seat and shift, the glyph's
+// disabled face (draw_disabled).
 void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
-                         double size_px, int button_shift_px,
-                         double offset_px);
+                         double size_px, int button_shift_px);
 
 } // namespace icons

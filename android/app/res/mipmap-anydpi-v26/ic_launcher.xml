@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture is the product's own scalable sixteenth note,
-     assets/icons/warptempo/AppIcon.svg, the drawing the caption wears
-     (architect 2026-10-06: the note in silver), rasterised ANTIALIASED by
+     recents card). Its picture is Tango's audio-x-generic,
+     assets/icons/tango/AppIcon.svg, the drawing the caption wears
+     (architect 2026-10-06), rasterised ANTIALIASED by
      rsvg-convert (librsvg 2.62 on the laptop; a vector, not pixel art) and
      centred over THE CAPTION'S NAVY GROUND, #000080 (2026-10-07): Windows
-     95's active caption colour, one of the twenty solids, the bar the note
-     lives on in the app — a silver note on a transparent canvas vanishes on a
-     light launcher, so the mask shows a navy shape carrying the note, the
-     caption in miniature. An ADAPTIVE icon, the whole of it: minSdk is 30, so
+     95's active caption colour, one of the twenty solids, the bar the icon
+     lives on in the app, so the mask shows a navy shape carrying the
+     drawing, the caption in miniature. An ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
 
      Two layers per density under res/mipmap-<density>/, BOTH written by
      tools/app_icon/gen_app_icon.sh (which also writes the Linux desktop icon,
-     packaging/warptempo_gui.svg, the same paths verbatim):
+     packaging/warptempo_gui.svg, the same drawing verbatim):
        ic_launcher_background.png  the full 108 dp canvas in solid navy;
        ic_launcher_foreground.png  AppIcon.svg rendered at the 64 dp art size,
                                    centred on a transparent canvas of the
@@ -21,7 +20,7 @@
 
      THE 66 dp SAFE ZONE: an adaptive foreground's art must sit inside the
      mask's guaranteed-visible inner zone, Android's own 66 dp of the 108 dp
-     canvas. The 16-unit drawing at 64 dp square (4 dp a unit) sits just
+     canvas. The 48-unit drawing at 64 dp square (4/3 dp a unit) sits just
      inside that zone, the same 64 dp at every density (the per-density PNG
      pixel size scales with the density factor f alone):
 
@@ -33,7 +32,7 @@
        xxxhdpi  4    432            256      88
 
      A ONE-SHOT, NOT A BUILD STEP: the PNGs are rendered once on the laptop
-     and committed; a retouch of AppIcon.svg is a re-run of the generator
+     and committed; a change of AppIcon.svg is a re-run of the generator
      (bash tools/app_icon/gen_app_icon.sh, byte-stable), never a build step
      (build_apk.sh only compiles res/). -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">

@@ -20,8 +20,8 @@
 #   - a toolbar case's glyph cell: the background is the case's face (the checkerboard of Hilight cells over the
 #     ground on a lit case, its lattice anchored at the case's corner as paint_button_box anchors it); what is not
 #     background is the glyph — DISABLED when it is the emboss (Hilight and Shadow, or mixes of them and the
-#     ground, in draw_engraved's offset structure: those roles are rewritten, a mix as the same mix), ENABLED
-#     otherwise (the drawing's own inks, kept as captured).
+#     ground, in the retired emboss's offset structure — every capture before 2026-10-06's Tango set: those roles
+#     are rewritten, a mix as the same mix), ENABLED otherwise (the drawing's own inks, kept as captured).
 # THE DITHERS' CELL IS ONE DEVICE PX (since effd544f, render.cpp): the lit case's checker is paint_checker_rect's
 # 2x2 pattern brush of device px, the caption gradient's matrix indexes device columns and rows — both forms are
 # checked against render.cpp at import, so a painter change hard-fails here instead of mis-reading. A capture taken
@@ -256,10 +256,10 @@ class Matcher:
     def glyph_cell(self, case):
         """Recolour a case's interior: the face the target's, the glyph's emboss the target's, an enabled glyph's
         own inks kept. Sets case.disabled: the glyph is the EMBOSS when every pixel of it is the ground, Hilight,
-        Shadow or a mix of two of them AND it has the emboss's structure (draw_engraved: the mask in Shadow at
-        the glyph's place over its copy in Hilight one line right and down, so a Hilight pixel has Shadow one line
-        up and left, and a Shadow pixel has Shadow or Hilight one line down and right — nine in ten of each, for
-        the antialiased edges). An enabled glyph made of the same two greys alone fails the structure."""
+        Shadow or a mix of two of them AND it has the emboss's structure (the retired draw_engraved, every capture
+        before the Tango set: the mask in Shadow at the glyph's place over its copy in Hilight one line right and
+        down, so a Hilight pixel has Shadow one line up and left, and a Shadow pixel has Shadow or Hilight one line
+        down and right — nine in ten of each, for the antialiased edges). An enabled glyph made of the same two greys alone fails the structure."""
         U = self.U
         bg_ct, reg = self.case_background(case, 'CT')
         bg_tt, _ = self.case_background(case, 'TT')

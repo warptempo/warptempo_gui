@@ -137,12 +137,14 @@ set(WARPTEMPO_GUI_SOURCES
     # builds the product's four faces (Nimbus Sans and Tahoma, each in two
     # weights) through FreeType on both platforms.
     src/gui/gui_font_bundled.cpp
-    # GUI-ONLY: the in-tree icon path renderer (an SVG d-string subset over
-    # cairo paths, the product's own Windows 95 set) is a painting concern and exists only here,
-    # so like text_shape.cpp it is deliberately in none of the four shared
-    # per-directory source lists — warptempo_cli must never carry it. It
-    # needs no dependency cairo does not already bring.
+    # GUI-ONLY: the icon set (icons.cpp: the load, the raster cache, the
+    # draws) and the in-tree SVG-subset reader it reads the bundled drawings
+    # through (svg_icon.cpp, over cairo) are a painting concern and exist only
+    # here, so like text_shape.cpp they are deliberately in none of the four
+    # shared per-directory source lists — warptempo_cli must never carry
+    # them. They need no dependency cairo does not already bring.
     src/gui/icons.cpp
+    src/gui/svg_icon.cpp
     src/gui/render.cpp
     src/gui/warpmarkers.cpp
     src/gui/text_editor.cpp
@@ -496,8 +498,13 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # build tree beside this source tree (GuiPlatform::bundled_theme_files,
     # platform_wayland.cpp). The APK packs the same files as assets instead
     # (android/app/build_apk.sh), so the Android branch defines nothing.
+    # THE BUNDLED ICON SETS' SOURCE ON THE LAPTOP (architect 2026-10-06,
+    # icons.h's load_svg_set), for the same reason: the repository's own
+    # assets/icons/, each set a folder read in place
+    # (GuiPlatform::bundled_icon_files); the APK packs them as assets.
     target_compile_definitions(warptempo_gui PRIVATE
-        WARPTEMPO_BUNDLED_THEMES_DIR="${CMAKE_SOURCE_DIR}/assets/themes")
+        WARPTEMPO_BUNDLED_THEMES_DIR="${CMAKE_SOURCE_DIR}/assets/themes"
+        WARPTEMPO_BUNDLED_ICONS_DIR="${CMAKE_SOURCE_DIR}/assets/icons")
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}

@@ -2326,7 +2326,7 @@ enum class RedesignButton {
     // out ("we should card the exit, because it is still one button
     // automatically affecting the other"), and it is refused with the lock's
     // own card now. Its glyph is
-    // MusicNote16th, the metronome (icons.h).
+    // MusicNote16th (icons.h).
     //
     // GRID ITERATION MODE IS A LAMP on bare `i`, reading the live bit its own
     // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
@@ -2458,8 +2458,8 @@ enum class RedesignButton {
     IconListen,
     // THE READ-ONLY TOGGLE (2026-08-14), the padlock's new home: it left the
     // TABS, where it was a per-tab slot, for a roster button that reports THE
-    // ACTIVE TAB's read_only bit — bright closed padlock and a lit lamp when
-    // the tab is locked, the open padlock unlit when it is not.
+    // ACTIVE TAB's read_only bit — Lock's glyph and a lit lamp when the tab
+    // is locked, Unlock's unlit when it is not.
     //
     // THE MOVE IS WHAT MAKES IT ITS CHORD, with no exception: bare `o`
     // toggles the ACTIVE tab's read-only and nothing else, and this button
@@ -2472,8 +2472,8 @@ enum class RedesignButton {
     IconReadOnly,
     // SETTINGS (architect 2026-09-29), right after the padlock and AHEAD of
     // the tooltip lamp (architect 2026-10-01: help comes after settings):
-    // bare `;`, the bare settings prompt, wearing SettingsConfigure
-    // (STD_PROPERTIES). The button IS the key, so it greys exactly where
+    // bare `;`, the bare settings prompt, wearing SettingsConfigure. The
+    // button IS the key, so it greys exactly where
     // `;` refuses — a locked tab (the chord is off read_only_key_blocked's
     // allowlist), grid iterations (the iteration lock's gate inherits that
     // refusal; iteration_lock_greys names it) and the `h` view (off that
@@ -2485,7 +2485,7 @@ enum class RedesignButton {
     IconSettings,
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's LAST
     // since 2026-10-01 (architect: help comes after settings): THE TOOLTIP
-    // LAMP on bare backslash, wearing HelpWhatsthis (STD_HELP). A per-project session lamp in the magnification lamp's
+    // LAMP on bare backslash, wearing HelpWhatsthis. A per-project session lamp in the magnification lamp's
     // family — AppState::show_tooltips, DARK AT EVERY OPEN, outside undo, in no
     // settings vocabulary and not carried by `'` — and while it is DARK NO
     // TOOLTIP SHOWS ANYWHERE: the tooltip model's one wait writer

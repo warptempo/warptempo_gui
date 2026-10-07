@@ -46,11 +46,11 @@ tools/mockup/push.sh --delete <name...>  # the superseded ones off it
   older capture painted them in Windows-px cells, so without the switch its lit cases' checker reads as glyph (the
   emboss on a lit disabled case is then missed, the case taken as enabled and kept as captured — the identity
   still holds, a recolour does not). Every scene below today is such a capture: pass the switch for them.
-- `--icons`: every case the scene lists takes `<Enumerator>.svg` from the folder, rasterised at the app's size
-  (16 units, 4 device px a unit at 400 %), seated at the case's fixed (3, 3) Windows px plus the lit case's one-line
-  shift (icons.h's PLACEMENT), over the case's face in the target theme; a disabled case gets draw_engraved's emboss
-  in the target's Hilight and Shadow. An alternate set (a dark theme's) previews by pointing at another folder with
-  the same enumerator names.
+- `--icons`: every case the scene lists takes `<Enumerator>.svg` from the folder (the product's set:
+  `assets/icons/tango/`), rasterised at the app's glyph seat whatever the drawing's own cell, seated at the case's
+  fixed (3, 3) Windows px plus the lit case's one-line shift (icons.h's PLACEMENT), over the case's face in the
+  target theme; a disabled case gets draw_disabled's saturate (the luminance at 192 / 255). An alternate set
+  previews by pointing at another folder with the same enumerator names.
 
 The last line of every run names the cases found per lane (disabled and lit counts) and the capture pixels no rule
 claimed (left as captured; 0 on the three scenes).

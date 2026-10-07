@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Toggle Disabled: a red disc in a one-unit black ring (diameter 14 at 1,1) with a white X (IDI_ERROR's subject at 16 px; the pick's composition). -->
-  <path fill="#000000" d="M8,1 A7,7 0 0 1 8,15 A7,7 0 0 1 8,1 Z M8,2 A6,6 0 0 0 8,14 A6,6 0 0 0 8,2 Z"/>
-  <path fill="#FF0000" d="M8,2 A6,6 0 0 1 8,14 A6,6 0 0 1 8,2 Z"/>
-  <path fill="#FFFFFF" d="M4.422,5.978 L10.022,11.578 L11.578,10.022 L5.978,4.422 Z M10.022,4.422 L4.422,10.022 L5.978,11.578 L11.578,5.978 Z"/>
-</svg>

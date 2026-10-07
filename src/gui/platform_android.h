@@ -9,6 +9,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -42,7 +43,10 @@
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
-// LAST GREW ON 2026-10-06, by display_width_px (the display's horizontal
+// LAST GREW ON 2026-10-06, twice: by bundled_icon_files (the icon set's SVG
+// files the build ships, read in place at launch: the repository's
+// assets/icons/<set>/ on the laptop, the APK's assets here — icons.h's
+// load_svg_set) and by display_width_px (the display's horizontal
 // resolution, the working column's held width — working_column_frames,
 // app_state.h: the output's current mode on the laptop, the surface here),
 // before that on 2026-10-05 by bundled_theme_files (the theme files the build
@@ -60,11 +64,11 @@
 // pair has TWO consumers since 2026-09-17, the render player while it stands
 // and the car transport while it is closed, forked at main.cpp's hook on the
 // player's mode bit. The
-// TEN
-// consumers (re-greped 2026-10-05: main.cpp, viewport.cpp, theme_file.cpp,
-// paint_handler.h, prompt.h, file_loader.h, input_handler.h,
-// onscreen_keyboard.h, render_player.h, car_transport.h — theme_file.cpp
-// joined with the copy-in) include platform.h and compile against either
+// ELEVEN
+// consumers (re-greped 2026-10-06: main.cpp, viewport.cpp, theme_file.cpp,
+// icons.cpp, paint_handler.h, prompt.h, file_loader.h, input_handler.h,
+// onscreen_keyboard.h, render_player.h, car_transport.h — icons.cpp joined
+// with the icon set's load) include platform.h and compile against either
 // backend unchanged. WHERE A DOOR'S CONTRACT IS THE SEAM'S rather than this backend's,
 // it is stated ONCE at its owner and pointed at from here: the input doors and
 // the capture/cursor policy belong to GuiInputCore (input_core.h), and the
@@ -149,6 +153,13 @@ public:
     // the road device_config_defaults takes.
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_theme_files();
+
+    // THE BUNDLED ICON SET'S FILES, the seam's own member (contract at
+    // platform_wayland.h): this backend answers the APK's `icons/<set>/`
+    // assets — the repository's `assets/icons/<set>/*.svg`, which
+    // build_apk.sh's asset step packs — read through the same manager.
+    static std::expected<std::map<std::string, std::string>, std::string>
+        bundled_icon_files(std::string_view set);
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-only with no system titlebar, so this setter stores

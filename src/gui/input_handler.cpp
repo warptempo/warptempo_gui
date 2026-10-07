@@ -4,6 +4,7 @@
 #include "folder_overlay.h"          // the overlay's wheel context and scroll
 #include "gui_display_context.h"
 #include "paint_handler.h"
+#include "icons.h"                  // drop_rasters on a scale change
 #include "render.h"
 #include "device_config.h"
 #include "settings_io.h"
@@ -4188,6 +4189,9 @@ void GuiInputHandler::apply_gui_scale(int percent) {
                              failure->display);
     }
     set_gui_scale_percent(percent);
+    // THE ICON RASTERS ARE PER DEVICE PX (icons.h): the cache drops and
+    // refills lazily at the new scale's sizes.
+    icons::drop_rasters();
     // THE INPUT CORE'S TOUCH SLOP IS A SCALED LENGTH TOO, and the core sits
     // below the GUI model and cannot resolve it (the contract and the
     // two-call-site inventory are at GuiInputCore::set_touch_slop_px). This is

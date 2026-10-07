@@ -86,14 +86,13 @@ struct TrimRange {
 // (architect 2026-10-04). The app computes no colour.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette(), or the one named literal beside them (the in-place
-// editor's frame, kFlagEditorFrame below), or one of icons.cpp's inks — THE
-// ICON SET'S OWN FILLS (architect 2026-10-06), Windows' solids as each
-// drawing names them: period artwork, not roles, so a glyph is never
-// recoloured by a theme. A DISABLED icon paints none of its own inks: its
-// disabled mask (every ink but White and Silver, Windows' toolbar rule) is
-// Windows' DSS_DISABLED emboss in the theme's roles, the
-// Hilight copy one line right and down, then the Shadow copy in place
-// (icons::draw_engraved). TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
+// editor's frame, kFlagEditorFrame below), or THE ICON SET'S OWN INKS
+// (architect 2026-10-06): the Tango drawings' colours, gradients and
+// opacities as each file names them (icons.h), period artwork, not roles, so
+// a glyph is never recoloured by a theme — the one place an antialiased,
+// translucent picture is copied whole. A DISABLED icon is ReactOS's
+// saturate of that picture (icons::draw_disabled), no role entering.
+// TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
 // beside every ground role — never a luminance verdict.
@@ -238,13 +237,13 @@ struct TrimRange {
 // STATEMENT.
 // THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
 //
-// THE DISABLED EMBOSS — EVERY DISABLED WORD AND GLYPH (architect 2026-10-03,
-// Windows' DrawState DSS_DISABLED): the word or glyph in the theme's HILIGHT
-// one Windows px right and down, then the same word or glyph in Shadow at its
-// place over it (the light copy is Hilight by Windows' own rule, architect
-// 2026-10-04, the separate light-copy role leaving with the dark level). The
-// glyph half is icons::draw_engraved, the word half show_embossed_run
-// (below); nothing else dims — the dims of the kdenlive design (the disabled
+// THE DISABLED EMBOSS — EVERY DISABLED WORD (architect 2026-10-03, Windows'
+// DrawState DSS_DISABLED): the word in the theme's HILIGHT one Windows px
+// right and down, then the same word in Shadow at its place over it (the
+// light copy is Hilight by Windows' own rule, architect 2026-10-04, the
+// separate light-copy role leaving with the dark level), show_embossed_run
+// (below). A disabled GLYPH is ReactOS's saturate since the Tango set
+// (architect 2026-10-06, icons::draw_disabled); nothing else dims — the dims of the kdenlive design (the disabled
 // mix, the accelerator column's and the tooltip line's) retired with the
 // luminance rule the same day. A DROPDOWN'S ACCELERATOR COLUMN takes its
 // item's own ink: the item's label ink, the selected text on a lit row, the
@@ -733,8 +732,8 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     across the whole lane, under the icon and the buttons too (ReactOS's
 //     span), nothing above or below it inside the lane;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
-//     (SM_CXSMICON) at (2, 1) from the lane's top-left, the set's
-//     sixteenth note (icons::draw);
+//     (SM_CXSMICON) at (2, 1) from the lane's top-left, the set's drawing,
+//     Tango's audio-x-generic (icons::draw);
 //   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: the live set's
 //     bold, Tahoma Bold — Nimbus Sans Bold in the win95 set — the caption
 //     font being the body face in bold), its pen at x 20
@@ -922,9 +921,8 @@ inline int relief_line_px() {
 //     above the 24-px glyph seat, FOUR right of it and three below, Windows'
 //     own extra column on the right — Explorer's (its button rect is 30 rows,
 //     182-211 of tmp/reactos-hover.png): 93 x 90 device px at 300 %, 43 x 41
-//     at the laptop's 138 %, the glyph 72 and 33. THE PRODUCT'S OWN 16-UNIT
-//     DRAWINGS (icons.h) FILL THE 24-PX SEAT until the Tango road brings its
-//     scalable art.
+//     at the laptop's 138 %, the glyph 72 and 33 (the Tango set's 48-unit
+//     drawing, icons.h, 1.5 device px a unit at 300 %).
 //   WIN95 (architect 2026-10-02, the AB / AD sets): WINDOWS 95's TOOLBAR
 //     BUTTON, 23 x 22 with the 16 x 16 glyph at (3, 3), the same lead and
 //     trails: 69 x 66 device px at 300 %, 32 x 30 at 138 %, the glyph 48 and
@@ -2273,8 +2271,8 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
 // DSS_DISABLED; the rule at the palette block): `run` painted in the theme's
 // Hilight one Windows px (relief_line_px) right and down, then in its
 // Shadow at (x, baseline) over it — every disabled word in the product goes
-// through here, as every disabled glyph goes through icons::draw_engraved
-// by the same two-pass rule. The run carries its own font (text_shape.h).
+// through here (a disabled glyph is icons::draw_disabled's saturate). The
+// run carries its own font (text_shape.h).
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline);
 

@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Up a Folder: the family's folder (the shell's closed folder as Chicago95 places/folder composes it, its tab the angled trapezoid Windows 95's 32-px folder means — architect 2026-10-06: the outline rises at 45 degrees from the body's corner (0,3) to (2,1), runs the top to (7,1), falls to (9,3) and continues as the body's top line, the yellow face one horizontal unit inside; grey outline, yellow face, white light edge, olive dark edge, black drop shadow; ink 16x14 at (0,1)) carrying Explorer 95's VIEW_PARENTFOLDER bent arrow, one polygon, 8x6 at (4,5) (the arrow Windows' own, the folder the family's — architect 2026-10-06: consistency over accuracy). -->
-  <path fill="#000000" d="M1,14 H16 V15 H1 Z M15,4 H16 V15 H15 Z"/>
-  <path fill="#808080" d="M0,3 L2,1 L7,1 L9,3 L15,3 L15,14 L0,14 Z"/>
-  <path fill="#FFFF00" d="M1,3 L2,2 L7,2 L9,4 L14,4 L14,13 L1,13 Z"/>
-  <path fill="#808000" d="M14,4 H15 V14 H14 Z M1,13 H15 V14 H1 Z"/>
-  <path fill="#FFFFFF" d="M1,4 H14 V5 H1 Z M1,4 H2 V13 H1 Z"/>
-  <path fill="#000000" d="M6.5,5 L9,8 L7,8 L7,10 L12,10 L12,11 L6,11 L6,8 L4,8 Z"/>
-</svg>

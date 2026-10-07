@@ -25,9 +25,9 @@
 //     for Microsoft's Tahoma (docs/engineering/windows95_deviations.md lists
 //     them per vocabulary).
 //   - WIN95: Windows 95's chrome, the look of 2026-10-06's morning, kept
-//     byte-identical as a second vocabulary.
-// Later steps add fields (the icon set) and read the vocabulary off a
-// `chrome=` device key.
+//     byte-identical as a second vocabulary — all but its icons, the Tango
+//     set since that evening (kChromeSpecWin95).
+// A later step reads the vocabulary off a `chrome=` device key.
 
 // THE CAPTION'S GRADIENT (paint_caption_gradient, render.cpp, where each
 // road's rule and reason stand).
@@ -150,12 +150,23 @@ struct ChromeSpec {
     // a field of its own since the icon row's band lost its air.
     int                bottom_row_air_px;
     GuiCardSeat        card_seat;
+    // THE ICON SET the vocabulary wears: a bundled folder under
+    // assets/icons/, read at launch through the subset reader (icons.h's
+    // head). Tango in both since the product's own 16-unit set retired
+    // (architect 2026-10-06); a field still, so a vocabulary names its set.
+    const char*        icon_set;
 };
 
 // WIN95 (architect 2026-10-06): the morning's look, byte-identical — the
 // toolbars Windows 95's small case (23 x 22, the 16-px bitmap at (3, 3)) in
 // soft raised relief, WordPad's 3 / 3 air inside two etched pairs and a 3-px
-// foot (render.h's icon-row block holds the record).
+// foot (render.h's icon-row block holds the record). ITS ICONS ARE NOT THE
+// MORNING'S (architect 2026-10-06 evening, the product's own 16-unit set
+// retired: "I don't anticipate using those because they are 16-pixel
+// icons"): the Tango set at the small case's 16-px seat, its disabled glyph
+// ReactOS's saturate — Windows 95's emboss read the retired drawings' solid
+// inks, which Tango's gradients do not have
+// (docs/engineering/windows95_deviations.md).
 inline constexpr ChromeSpec kChromeSpecWin95 = {
     .face_set                = &kGuiFaceSetWin95,
     .caption_gradient        = GuiCaptionGradient::Dithered15Bit,
@@ -177,6 +188,7 @@ inline constexpr ChromeSpec kChromeSpecWin95 = {
     .icon_row_foot_px        = 3,
     .bottom_row_air_px       = 3,
     .card_seat               = GuiCardSeat::InBand,
+    .icon_set                = "tango",
 };
 
 // WIN2000 (architect 2026-10-06), off the ReactOS captures: the open title's
@@ -191,7 +203,11 @@ inline constexpr ChromeSpec kChromeSpecWin95 = {
 // 24-px seat, trail 4 right and 3 below — in Explorer's flat style, the band
 // the case itself (Explorer's button rect is 30 rows, rows 182-211 of
 // tmp/reactos-hover.png) under ONE etched pair with 4 px of ground before the
-// trim lane, row 8 keeping its own 3 / 3 air (render.h's icon-row block).
+// trim lane, row 8 keeping its own 3 / 3 air (render.h's icon-row block);
+// THE ICONS Tango 0.8.90's scalable drawings, ReactOS's own model of a
+// Windows 2000 desktop dressed in Tango (architect 2026-10-06:
+// assets/icons/tango/, its README the mapping), the disabled glyph
+// ReactOS's saturate.
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .face_set                = &kGuiFaceSetWin2000,
     .caption_gradient        = GuiCaptionGradient::Smooth24Bit,
@@ -213,6 +229,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .icon_row_foot_px        = 4,
     .bottom_row_air_px       = 3,
     .card_seat               = GuiCardSeat::UnderBand,
+    .icon_set                = "tango",
 };
 
 // THE LIVE VOCABULARY: win2000 (architect 2026-10-06). One constexpr for now;

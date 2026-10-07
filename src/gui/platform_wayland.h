@@ -9,6 +9,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // GuiPlatform: the platform abstraction for the GUI's window, event loop,
@@ -90,6 +91,22 @@ public:
     // system's words, which the copy-in carries to the launch's hard fail.
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_theme_files();
+
+    // THE BUNDLED ICON SET'S FILES — the SVG drawings of the set `set`
+    // (assets/icons/<set>/, the Tango set's 58), as a map from FILE NAME
+    // (`<Enumerator>.svg`, no folder) to the file's whole bytes, every file of
+    // the set's folder whose name ends `.svg`. Read by the launch's icon load
+    // alone (icons::load_svg_set, icons.h), IN PLACE: unlike the themes,
+    // nothing is copied into the config folder (nobody authors an icon set on
+    // the device). A PLATFORM FACT for the themes' reason: THIS BACKEND reads
+    // the repository's own `assets/icons/<set>/`, its absolute path compiled
+    // in (WARPTEMPO_BUNDLED_ICONS_DIR, CMakeLists.txt); the Android backend
+    // reads the APK's `icons/<set>/` assets (build_apk.sh packs them). STATIC,
+    // asked before any window exists. THE ERROR ARM'S PRODUCER IS IO, as the
+    // themes': the system's words, which the load carries to the launch's
+    // hard fail.
+    static std::expected<std::map<std::string, std::string>, std::string>
+        bundled_icon_files(std::string_view set);
 
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself

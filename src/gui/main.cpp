@@ -24,6 +24,7 @@
 #include "audio.h"
 #include "device_config.h"
 #include "theme_file.h"
+#include "icons.h"         // the icon set's launch load
 #include "waveform_worker.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -3277,6 +3278,17 @@ int gui_main(const char* argument) {
         return 1;
     }
     if (const std::optional<std::string> err = read_theme_folder()) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+        return 1;
+    }
+    // THE ICON SET IS LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
+    // load_svg_set): the live vocabulary's set read in place from the
+    // bundle and every drawing parsed before the window exists, so no paint
+    // meets a half-loaded set. A file outside the subset is a build defect,
+    // the validation doctrine's class (1): the same road, one line naming the
+    // set, the file and the construct, and no window.
+    if (const std::optional<std::string> err =
+            icons::load_svg_set(icons::kGuiLiveIconSet)) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
     }

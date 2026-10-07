@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Undo, Windows 95's STD_UNDO: the right-triangle arrowhead and ONE smooth swoop, a single cubic whose centreline starts at the arrowhead's tip (2,9.5), control points 10.402,1.098 and 15.781,4.544, ending at 12.55,10.62; the one-unit band is drawn from 1.7 units along it (hidden inside the triangle). -->
-  <path fill="#000080" d="M2,4.5 V9.5 H7 Z"/>
-  <path fill="#000080" d="M2.9,7.958 C4.795,6.26 7.089,4.541 9.659,4.09 C11.199,3.82 12.93,4.19 13.658,5.716 C14.441,7.358 13.79,9.352 12.991,10.855 L12.109,10.385 C12.749,9.181 13.393,7.484 12.755,6.146 C12.227,5.039 10.92,4.884 9.832,5.075 C7.452,5.493 5.318,7.134 3.567,8.703 Z"/>
-</svg>

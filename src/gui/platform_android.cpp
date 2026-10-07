@@ -479,33 +479,35 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     return cfg;
 }
 
-// THE TABLET'S BUNDLE IS THE APK'S `themes/` ASSETS (contract at
-// platform_wayland.h's declaration): build_apk.sh copies the repository's
-// assets/themes/*.theme into the package's assets/themes/, and this lists that
+// THE TABLET'S BUNDLES ARE THE APK'S ASSET DIRECTORIES (contracts at
+// platform_wayland.h's declarations): build_apk.sh copies the repository's
+// assets/themes/*.theme into the package's assets/themes/ and each
+// assets/icons/<set>/*.svg into assets/icons/<set>/, and one reader lists an
 // asset directory (AAssetManager_openDir lists FILES only) and reads every
-// name ending `.theme` whole. The manager is the activity's, off the file-scope
-// pointer android_main parks before gui_main asks (the road
+// name ending `suffix` whole. The manager is the activity's, off the
+// file-scope pointer android_main parks before gui_main asks (the road
 // device_config_defaults takes). THE ERROR ARM'S PRODUCERS: an asset listed
-// but not opened or not read whole (IO on the installed APK), and no
-// activity or manager (breach-only: install_fonts_or_die has already
-// aborted on a missing manager before gui_main runs).
-std::expected<std::map<std::string, std::string>, std::string>
-GuiPlatform::bundled_theme_files() {
+// but not opened or not read whole (IO on the installed APK), a directory
+// that will not list, and no activity or manager (breach-only:
+// install_fonts_or_die has already aborted on a missing manager before
+// gui_main runs).
+static std::expected<std::map<std::string, std::string>, std::string>
+read_asset_dir(const std::string& dir_name, std::string_view suffix) {
     AAssetManager* mgr = (g_android_app && g_android_app->activity)
                              ? g_android_app->activity->assetManager
                              : nullptr;
     if (!mgr) return std::unexpected(std::string("no AAssetManager"));
-    AAssetDir* dir = AAssetManager_openDir(mgr, "themes");
+    AAssetDir* dir = AAssetManager_openDir(mgr, dir_name.c_str());
     if (!dir) {
-        return std::unexpected(
-            std::string("could not list the APK's themes/ assets"));
+        return std::unexpected("could not list the APK's " + dir_name +
+                               "/ assets");
     }
     std::map<std::string, std::string> out;
     std::string failure;
     while (const char* entry = AAssetDir_getNextFileName(dir)) {
         const std::string name = entry;
-        if (!name.ends_with(".theme")) continue;
-        const std::string path = "themes/" + name;
+        if (!name.ends_with(suffix)) continue;
+        const std::string path = dir_name + "/" + name;
         AAsset* asset = AAssetManager_open(mgr, path.c_str(),
                                            AASSET_MODE_STREAMING);
         if (!asset) {
@@ -531,6 +533,19 @@ GuiPlatform::bundled_theme_files() {
     AAssetDir_close(dir);
     if (!failure.empty()) return std::unexpected(std::move(failure));
     return out;
+}
+
+std::expected<std::map<std::string, std::string>, std::string>
+GuiPlatform::bundled_theme_files() {
+    return read_asset_dir("themes", ".theme");
+}
+
+// AAssetManager_openDir answers an EMPTY listing, not a failure, for a
+// directory the APK lacks, so a set missing from the package reaches the
+// load as missing files, the first named — the same hard fail.
+std::expected<std::map<std::string, std::string>, std::string>
+GuiPlatform::bundled_icon_files(std::string_view set) {
+    return read_asset_dir("icons/" + std::string(set), ".svg");
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {

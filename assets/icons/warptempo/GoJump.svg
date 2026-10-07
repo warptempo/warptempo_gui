@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Toggle Follow: the view group's page (black frame 13x15 at (1,0), its face bare — no title line, architect 2026-10-06) with a green arrow crossing it rightwards (the view follows); no cycle, since follow does not loop. -->
-  <path fill="#000000" d="M1,0 H14 V15 H1 Z"/>
-  <path fill="#FFFFFF" d="M2,1 H13 V14 H2 Z"/>
-  <path fill="#008000" d="M3,7 H9 V8 H3 Z M9,5 L12,7.5 L9,10 Z"/>
-</svg>

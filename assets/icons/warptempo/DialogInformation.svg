@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- The NORMAL card: the balloon's outline grey on the light side and black on the shadow side, a grey drop shadow along the right that continues under the point, a blue serif i; the disc radius 6 at (7.5,6.6) so the whole balloon with its light copy and its shadow lies inside the cell (y 0..15.6; planner 2026-10-06: the painter's clip cut its top and tail). -->
-  <path fill="#808080" d="M8.5,1.6 A6,6 0 0 1 8.5,13.6 A6,6 0 0 1 8.5,1.6 Z M6.5,12.6 L11.5,12.6 L9.5,15.6 Z"/>
-  <path fill="#000000" d="M7.5,0.6 A6,6 0 0 1 7.5,12.6 A6,6 0 0 1 7.5,0.6 Z M5.5,11.6 L10.5,11.6 L8.5,14.6 Z"/>
-  <path fill="#808080" d="M6.9,0 A6,6 0 0 1 6.9,12 A6,6 0 0 1 6.9,0 Z M4.9,11 L9.9,11 L7.9,14 Z"/>
-  <path fill="#FFFFFF" d="M7.5,1.6 A5,5 0 0 1 7.5,11.6 A5,5 0 0 1 7.5,1.6 Z M6,11.3 L10,11.3 L8.5,13.3 Z"/>
-  <path fill="#0000FF" d="M6,2 H9 V4 H6 Z M6,5 H9 V9 H6 Z M5,9 H10 V10 H5 Z"/>
-</svg>

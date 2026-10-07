@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Source+Warp: a page with a navy title bar and a maroon arrow leaving to the right, its tail risen from a tick (no Windows 95 original; the pick's composition). -->
-  <path fill="#000000" d="M1,0 H14 V15 H1 Z"/>
-  <path fill="#FFFFFF" d="M2,1 H13 V14 H2 Z"/>
-  <path fill="#000080" d="M3,3 H12 V4 H3 Z"/>
-  <path fill="#800000" d="M5,7 H9 V8 H5 Z M5,5 H6 V8 H5 Z M12,7.5 L9,5 L9,10 Z"/>
-</svg>

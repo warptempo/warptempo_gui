@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Previous Marker / Left: a cyan arrow pointing left, black one-unit outline, 16x14 at (0,1) — tip and tail on the cell's edge columns, equal from the case's visible bevel lines (the architect's pick B, 2026-10-06; no Windows 95 original). -->
-  <path fill="#000000" d="M0,8 L7,1 V5 H16 V11 H7 V15 Z"/>
-  <path fill="#00FFFF" d="M1.414,8 L6,3.414 V6 H15 V10 H6 V12.586 Z"/>
-</svg>

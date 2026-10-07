@@ -661,15 +661,16 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     return cfg;
 }
 
-// THE LAPTOP'S BUNDLE IS THE REPOSITORY'S OWN assets/themes/ (contract at the
-// declaration): the absolute path CMakeLists.txt compiles in, so the build
-// tree's executable reads the files the generator wrote beside the sources it
-// was built from, every regular file whose name ends `.theme`. A folder that
-// cannot be read (the repository moved or deleted under a built executable)
-// or a file that will not open is the error arm, with the system's words.
-std::expected<std::map<std::string, std::string>, std::string>
-GuiPlatform::bundled_theme_files() {
-    const std::filesystem::path folder = WARPTEMPO_BUNDLED_THEMES_DIR;
+// THE LAPTOP'S BUNDLES ARE THE REPOSITORY'S OWN FOLDERS (contract at the
+// declarations): the absolute paths CMakeLists.txt compiles in, so the build
+// tree's executable reads the files beside the sources it was built from.
+// One reader serves both: every regular file of `folder` whose name ends
+// `suffix`, whole. A folder that cannot be read (the repository moved or
+// deleted under a built executable) or a file that will not open is the
+// error arm, with the system's words.
+static std::expected<std::map<std::string, std::string>, std::string>
+read_bundle_folder(const std::filesystem::path& folder,
+                   std::string_view suffix) {
     std::map<std::string, std::string> out;
     std::error_code ec;
     std::filesystem::directory_iterator it(folder, ec);
@@ -680,7 +681,7 @@ GuiPlatform::bundled_theme_files() {
     for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
         if (ec) break;
         const std::string name = it->path().filename().string();
-        if (!name.ends_with(".theme")) continue;
+        if (!name.ends_with(suffix)) continue;
         std::error_code tec;
         if (!it->is_regular_file(tec)) continue;
         std::ifstream f(it->path(), std::ios::binary);
@@ -696,6 +697,19 @@ GuiPlatform::bundled_theme_files() {
                                ec.message());
     }
     return out;
+}
+
+// The themes: assets/themes/, every `.theme`.
+std::expected<std::map<std::string, std::string>, std::string>
+GuiPlatform::bundled_theme_files() {
+    return read_bundle_folder(WARPTEMPO_BUNDLED_THEMES_DIR, ".theme");
+}
+
+// An icon set: assets/icons/<set>/, every `.svg`.
+std::expected<std::map<std::string, std::string>, std::string>
+GuiPlatform::bundled_icon_files(std::string_view set) {
+    return read_bundle_folder(
+        std::filesystem::path(WARPTEMPO_BUNDLED_ICONS_DIR) / set, ".svg");
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {

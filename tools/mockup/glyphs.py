@@ -1,22 +1,17 @@
 #!/usr/bin/env python3
 # tools/mockup/glyphs.py — AN ICON SET'S GLYPHS INTO THE CASES: <Enumerator>.svg rasterised by rsvg-convert at the
-# app's own size (the 16-unit cell at gui_scale: 4 device px a unit at 400 %), seated at the case's fixed
-# (kIconCaseLeadPx, kIconCaseLeadPx) Windows px plus the lit case's one-line shift (icons.h's PLACEMENT,
-# paint_button_box's ButtonBoxFace), over the case's face in the target theme (the checkerboard on a lit case).
-# An enabled glyph is the drawing's own inks; a disabled one is the emboss (icons.cpp's draw_engraved): the disabled
-# mask — every ink path opaque, every White or Silver path cleared, in file order — painted in Hilight one relief
-# line right and down, then in Shadow at the glyph's own place. The mask is rasterised from the same file with its
-# fills rewritten (ink -> black, White / Silver -> white, over white): one minus that picture is the mask, which is
-# the CLEAR operator's arithmetic (a later path's coverage c takes the mask to m(1 - c), or m(1 - c) + c for ink).
-import os, re, subprocess, struct, sys, zlib
+# app's own size (the case's glyph seat at gui_scale, whatever the drawing's own cell: the Tango set's 48 units),
+# seated at the case's fixed (kIconCaseLeadPx, kIconCaseLeadPx) Windows px plus the lit case's one-line shift
+# (icons.h's PLACEMENT, paint_button_box's ButtonBoxFace), over the case's face in the target theme (the checkerboard
+# on a lit case). An enabled glyph is the drawing's own picture; a disabled one is ReactOS's saturate (icons.h's
+# draw_disabled, svg_icon.cpp's saturated_copy): each pixel's colour its .30 R + .59 G + .11 B luminance, its alpha
+# times 192 / 255.
+import os, subprocess, struct, sys, zlib
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'palette'))
 import pngrw                                            # noqa: E402  (the palette tool's PNG reader)
-
-_BACKGROUND_INKS = ('#ffffff', '#c0c0c0', 'white', 'silver')
-
 
 def _png_rgba(data):
     """An 8-bit RGB or RGBA PNG (rsvg-convert's output) held in bytes -> HxWx4 uint8."""
@@ -47,13 +42,6 @@ def _rsvg(svg_text, size, background=None):
     return _png_rgba(r.stdout)
 
 
-def _mask_svg(svg):
-    def fill(m):
-        v = m.group(2).lower()
-        return m.group(1) + ('#FFFFFF' if v in _BACKGROUND_INKS else '#000000') + m.group(3)
-    return re.sub(r'(fill=")([^"]+)(")', fill, svg)
-
-
 class IconSet:
     def __init__(self, folder, size):
         self.folder, self.size = folder, size
@@ -73,13 +61,11 @@ class IconSet:
             self._cache[k] = (a[..., :3], a[..., 3] / 255.0)
         return self._cache[k]
 
-    def mask(self, name):
-        """The disabled mask, float HxW in [0, 1]."""
-        k = ('m', name)
-        if k not in self._cache:
-            a = _rsvg(_mask_svg(open(self.path(name)).read()), self.size, background='white').astype(np.float64)
-            self._cache[k] = 1.0 - a[..., 0] / 255.0
-        return self._cache[k]
+    def saturated(self, name):
+        """(rgb, alpha) of the disabled face: the luminance in every channel, the alpha at 192 / 255."""
+        rgb, a = self.colour(name)
+        lum = rgb[..., 0] * 0.30 + rgb[..., 1] * 0.59 + rgb[..., 2] * 0.11
+        return np.repeat(lum[..., None], 3, axis=2), a * (192.0 / 255.0)
 
 
 def _over(dst, rgb, alpha):
@@ -95,12 +81,6 @@ def draw_into_case(out, case, x0, y0, name, icons, U, lead, TT, background):
     out[iy0:iy0 + bh, ix0:ix0 + bw] = background
     s = U if case.checked else 0
     gx, gy, n = x0 + lead * U + s, y0 + lead * U + s, icons.size
-    if case.disabled:
-        m = icons.mask(name)
-        for dx, ink in ((U, TT['hilight']), (0, TT['shadow'])):
-            reg = out[gy + dx:gy + dx + n, gx + dx:gx + dx + n]
-            reg[:] = _over(reg, np.array(ink, np.float64), m[:reg.shape[0], :reg.shape[1]])
-    else:
-        rgb, a = icons.colour(name)
-        reg = out[gy:gy + n, gx:gx + n]
-        reg[:] = _over(reg, rgb[:reg.shape[0], :reg.shape[1]], a[:reg.shape[0], :reg.shape[1]])
+    rgb, a = icons.saturated(name) if case.disabled else icons.colour(name)
+    reg = out[gy:gy + n, gx:gx + n]
+    reg[:] = _over(reg, rgb[:reg.shape[0], :reg.shape[1]], a[:reg.shape[0], :reg.shape[1]])

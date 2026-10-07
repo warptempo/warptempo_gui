@@ -1,4 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Stop: the transport's 8x8 square at (4,4). -->
-  <path fill="#000000" d="M4,4 H12 V12 H4 Z"/>
-</svg>

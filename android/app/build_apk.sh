@@ -16,8 +16,9 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the four font files          (manifest + res + assets)
-#      and the bundled theme files)
+#   1. assets (the four font files,         (manifest + res + assets)
+#      the bundled theme files and
+#      the icon sets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
 #   4. javac -> d8 (the Java sliver)    8. apksigner sign  9. verify
@@ -114,6 +115,27 @@ shopt -u nullglob
 [ "${#THEME_FILES[@]}" -gt 0 ] || wt_die "no .theme files under $THEME_DIR (tools/theme_catalog/gen_theme_files.py writes them)"
 cp -f "${THEME_FILES[@]}" "$ASSETS/themes/"
 wt_say "assets: ${#THEME_FILES[@]} theme files"
+# THE BUNDLED ICON SETS (architect 2026-10-06): each folder under the
+# repository's assets/icons/ (the Tango set, assets/icons/tango/) copied whole
+# as SVG into the package's assets/icons/<set>/, which aapt2 link's -A packs
+# (deflated) as the APK's `icons/<set>/` asset directory. The app reads them in
+# place at launch, never copying them out (icons.h's load_svg_set;
+# GuiPlatform::bundled_icon_files, platform_android.cpp). An empty set folder is
+# a build defect and stops the script here.
+ICON_ROOT="$APPDIR/../../assets/icons"
+ICON_SETS=0
+for SET_DIR in "$ICON_ROOT"/*/; do
+    SET_NAME="$(basename "$SET_DIR")"
+    shopt -s nullglob
+    SET_FILES=("$SET_DIR"*.svg)
+    shopt -u nullglob
+    [ "${#SET_FILES[@]}" -gt 0 ] || wt_die "no .svg files under $SET_DIR"
+    mkdir -p "$ASSETS/icons/$SET_NAME"
+    cp -f "${SET_FILES[@]}" "$ASSETS/icons/$SET_NAME/"
+    wt_say "assets: icon set $SET_NAME, ${#SET_FILES[@]} files"
+    ICON_SETS=$((ICON_SETS + 1))
+done
+[ "$ICON_SETS" -gt 0 ] || wt_die "no icon set under $ICON_ROOT"
 
 # --- 2/3. configure + build ----------------------------------------------
 bash "$APPDIR/configure.sh"
@@ -156,12 +178,12 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 compile + link ----------------------------------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, the product's own sixteenth note (assets/icons/warptempo/
-# AppIcon.svg, the caption's drawing) over the caption's navy ground, written by
+# layers per density, the caption's drawing (assets/icons/tango/AppIcon.svg,
+# Tango's audio-x-generic) over the caption's navy ground, written by
 # tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
-# comment states the sizes; nothing here renders). Every GUI pixel is painted by cairo, the roster's icons
-# included (the product's own vector set, compiled-in paths, icons.cpp);
-# the app declares no
+# comment states the sizes; nothing here renders). Every GUI pixel is painted
+# by cairo, the roster's icons included (the Tango set's SVG assets above,
+# read through the app's own subset reader, svg_icon.cpp); the app declares no
 # @string, no style, no res/values. aapt2 compile turns the
 # directory into res.zip, which link takes as a positional input.
 # (targetSdk stays 34 rather than opting out of Android 15's edge-to-edge

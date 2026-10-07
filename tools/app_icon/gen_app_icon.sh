@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# tools/app_icon/gen_app_icon.sh — assets/icons/warptempo/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
-# (architect 2026-10-06: the drawing the caption wears, the product's own scalable SIXTEENTH NOTE in silver).
+# tools/app_icon/gen_app_icon.sh — assets/icons/tango/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
+# (architect 2026-10-06: the drawing the caption wears, Tango's audio-x-generic, byte-identical to Tango 0.8.90's
+# scalable/mimetypes/audio-x-generic.svg — assets/icons/tango/README.md).
 # THE GROUND IS NAVY, #000080 (2026-10-07): Windows 95's active caption colour, one of the twenty solids, the bar
-# the note lives on in the app. A silver note on a transparent ground vanishes on a light launcher or desktop, so
-# both outputs carry the caption's ground behind the verbatim paths — the launcher icon is the caption in
-# miniature. It writes, from the repo root's point of view:
+# the icon lives on in the app, so both outputs carry the caption's ground behind the drawing — the launcher icon is
+# the caption in miniature. It writes, from the repo root's point of view:
 #   packaging/warptempo_gui.svg     the Linux desktop icon (the .desktop's Icon=warptempo_gui; docs/INSTALL.md
-#                                   installs it into hicolor's scalable/apps): a navy 16 x 16 rect, then
-#                                   AppIcon.svg's paths verbatim, in a standalone 16 x 16 viewBox;
+#                                   installs it into hicolor's scalable/apps): a 48 x 48 document, a navy 48 x 48
+#                                   rect, then AppIcon.svg VERBATIM as a nested <svg> element (its bytes less the
+#                                   XML declaration, which may only open a document) — no surgery on the drawing;
 #   android/app/res/mipmap-<density>/ic_launcher_{foreground,background}.png
 #                                   the Android adaptive icon's two layers (ic_launcher.xml's head holds the
 #                                   per-density table and the safe-zone arithmetic): the foreground the drawing
-#                                   rasterised ANTIALIASED by rsvg-convert (librsvg; a vector, not pixel art) at
-#                                   64 dp square, centred on the transparent 108 dp canvas; the background the
-#                                   108 dp canvas in solid navy, which the launcher's mask cuts to its shape.
+#                                   rasterised ANTIALIASED by rsvg-convert (librsvg) at 64 dp square, centred on
+#                                   the transparent 108 dp canvas; the background the 108 dp canvas in solid navy,
+#                                   which the launcher's mask cuts to its shape.
 # A ONE-SHOT, NOT A BUILD STEP: the outputs are committed and build_apk.sh only compiles res/. Re-run after any
-# edit to AppIcon.svg; never hand-edit an output. Byte-stable: rsvg-convert writes no timestamp and ImageMagick's
+# change of AppIcon.svg; never hand-edit an output. Byte-stable: rsvg-convert writes no timestamp and ImageMagick's
 # -strip drops its date chunks. Needs rsvg-convert and ImageMagick 7's magick on PATH.
 #
 #   bash tools/app_icon/gen_app_icon.sh
@@ -23,29 +24,27 @@ set -euo pipefail
 [ $# -eq 0 ] || { echo "usage: bash tools/app_icon/gen_app_icon.sh" >&2; exit 2; }
 cd "$(dirname "$0")/../.."
 
-SRC=assets/icons/warptempo/AppIcon.svg
+SRC=assets/icons/tango/AppIcon.svg
 OUT_SVG=packaging/warptempo_gui.svg
 RES=android/app/res
 GROUND='#000080'   # the caption's navy (the head)
 
-# The source's grammar as the icon set authors it: one <svg> line with the 16-unit viewBox, then a comment and
-# <path> lines. Anything else is a hard fail (a new element is a change to this generator; the ground's rect is
-# this generator's own, written below, never read from the source).
-head -n 1 "$SRC" | grep -q 'viewBox="0 0 16 16"' || { echo "gen_app_icon: $SRC: no 16 x 16 viewBox on line 1" >&2; exit 1; }
-if grep -v -E '^<svg |^  <!-- .* -->$|^  <path [^>]*/>$|^</svg>$' "$SRC" | grep -q .; then
-    echo "gen_app_icon: $SRC: a line that is not the svg tag, a one-line comment or a path" >&2; exit 1
-fi
+# The source's shape as Tango's files have it: line 1 the XML declaration, a 48 x 48 root. Anything else is a hard
+# fail (a different drawing size is a change to this generator).
+head -n 1 "$SRC" | grep -q '^<?xml ' || { echo "gen_app_icon: $SRC: line 1 is not the XML declaration" >&2; exit 1; }
+grep -q -E '^   width="48(\.0+)?(px)?"$' "$SRC" && grep -q -E '^   height="48(\.0+)?(px)?"$' "$SRC" \
+    || { echo "gen_app_icon: $SRC: not a 48 x 48 drawing" >&2; exit 1; }
 
 {
-    printf '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">\n'
+    printf '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">\n'
     printf '  <!-- The program icon outside the window, the Linux desktop icon (the .desktop'"'"'s\n'
-    printf '       Icon=warptempo_gui): the caption'"'"'s AppIcon, the product'"'"'s own sixteenth note (architect\n'
-    printf '       2026-10-06; its provenance is assets/icons/warptempo/README.md), on the caption'"'"'s navy\n'
+    printf '       Icon=warptempo_gui): the caption'"'"'s AppIcon, Tango'"'"'s audio-x-generic (architect\n'
+    printf '       2026-10-06; its provenance is assets/icons/tango/README.md), on the caption'"'"'s navy\n'
     printf '       ground. GENERATED by tools/app_icon/gen_app_icon.sh from\n'
-    printf '       %s, the ground its own and the paths verbatim:\n' "$SRC"
+    printf '       %s, the ground its own and the drawing verbatim after it:\n' "$SRC"
     printf '       regenerate, never hand-edit. -->\n'
-    printf '  <rect fill="%s" width="16" height="16"/>\n' "$GROUND"
-    grep -E '^  <path ' "$SRC"
+    printf '  <rect fill="%s" width="48" height="48"/>\n' "$GROUND"
+    tail -n +2 "$SRC"
     printf '</svg>\n'
 } > "$OUT_SVG"
 echo "wrote $OUT_SVG"

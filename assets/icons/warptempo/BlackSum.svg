@@ -1,4 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="128" height="128">
-  <!-- Toggle Cumulative: the AutoSum sigma, one-unit bars and zigzag, a single one-unit serif at each bar's right end (down from the top bar, up from the bottom one — architect 2026-10-06), one unioned shape, 10x11 at (3,2). -->
-  <path fill="#000000" d="M3,2 L13,2 L13,3 L3,3 Z M3,12 L13,12 L13,13 L3,13 Z M3.743,2.236 L9.329,7.5 L3.743,12.764 L3.057,12.036 L7.871,7.5 L3.057,2.964 Z M12,3 H13 V4 H12 Z M12,11 H13 V12 H12 Z"/>
-</svg>
