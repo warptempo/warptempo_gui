@@ -1045,7 +1045,10 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         app.device_config->theme = value;
         (void)persist();
         applied();
-        install_palette(*app.device_config);
+        // THE PROGRAM'S COLORS ARE THE LIVE WORDS, NOT THE `palette` KEY'S
+        // (2026-10-07; render.h's install_palette): a theme change keeps the
+        // color picker's unsaved picks.
+        install_palette(*app.device_config, program_palette_words());
         viewport.kick_waveform_sync();
         viewport.invalidate_all();
         return true;

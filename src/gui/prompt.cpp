@@ -300,6 +300,9 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // down with it; idempotent, so the road that already closed it — the
     // Open project picker's own reopen — pays nothing.
     if (input != nullptr) input->close_picker();
+    // AND A STANDING COLOR PICKER (2026-10-07), the same shape one mode
+    // over — its one close body, idempotent, the live colors kept.
+    if (input != nullptr) input->close_color_picker();
     // AND EVERY STANDING MODAL EDITOR COMES DOWN WITH IT, uncommitted, for the
     // identical reason and on the identical road: the keyboard's Ctrl+Q used
     // to do this itself, editor by editor, and the COMPOSITOR'S CLOSE — which

@@ -178,6 +178,10 @@ set(WARPTEMPO_GUI_SOURCES
     # default palettes and the palettes folder beside the device config,
     # read once at launch and kept in step by the picker's writes. GUI-ONLY.
     src/gui/palette_file.cpp
+    # THE COLOR PICKER (2026-10-07): the in-app picker of the program's
+    # fourteen colors — the card's layout, the color math, the wheel's
+    # raster and the acts. GUI-ONLY.
+    src/gui/color_picker.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
     src/gui/phaseresetmarkers_ops.cpp

@@ -84,8 +84,10 @@
 // UNLIKE THE THEMES, THE MAP IS MAINTAINED AFTER THE LAUNCH BY THE PICKER'S
 // OWN WRITES (the picker is the one writer of the folder): write, rename and
 // remove below each keep the map and the folder in step, so the folder is
-// never re-read. NO CALLER YET BUT THE LAUNCH READ: the in-app picker (the
-// next briefs) is the coming one. None of them touches the device config —
+// never re-read. THE CALLERS: the launch read today; the color picker's
+// presets (Save / Save As, the arc's next segment) are the writers to come —
+// the picker itself (color_picker.h) writes the LIVE WORDS alone
+// (install_program_palette) and no file. None of them touches the device config —
 // the `palette` key is the caller's, which owes its own rewrite when it
 // renames or removes the palette the key names. Each answers nothing on
 // success and the failure's whole line otherwise, which the caller cards
@@ -177,7 +179,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // re-baked and palette_generation bumped, the chrome members untouched — THE
 // CHROME STAYS LAUNCH-BOUND (its theme moves only with install_palette and
 // the `theme` key), the program's colors move live. THE PICKER'S LIVE ROAD
-// (the next brief; no caller yet). THE APPLY SHAPE THE CALLER OWES, after
+// (GuiColorPicker::set_color, color_picker.cpp). THE APPLY SHAPE THE CALLER OWES, after
 // the call, is the settings editor's theme arm's: the synchronous plate
 // rebuild (Viewport::kick_waveform_sync — the plate re-rendered in the new
 // inks, the flag cache rebuilt at its tail, keyed by the generation) and the

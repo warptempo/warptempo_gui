@@ -5,6 +5,7 @@
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 #include "gui_font.h"         // GuiFont, the face owner's face at a scale
 
+#include <array>
 #include <cairo/cairo.h>
 #include <cmath>
 #include <cstdint>
@@ -106,7 +107,12 @@ struct TrimRange {
 // STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
 // HOVER FACES BUT ONE — the flat toolbars' HOT case, a raised line in the
 // relief quartet (architect 2026-10-06, Explorer's; paint_toolbar_box,
-// paint_handler.cpp): every colour is a solid fill of integer cells. THE ONE
+// paint_handler.cpp): every colour is a solid fill of integer cells. THE
+// COLOR PICKER'S WHEEL IS THE ONE PLACE THE PRODUCT PAINTS COLORS THAT ARE
+// NOT ROLES (architect 2026-10-07, by necessity — the wheel IS the color
+// space, as the icons are their own inks: color_picker::paint_wheel, whose
+// head owns the rule; its two swatches and the live colors it installs are
+// the palette's own words). THE ONE
 // EXCEPTION IS THE CAPTION'S GRADIENT (architect 2026-10-05), Windows 98 and
 // 2000's title bar where a theme records a gradient end: a SMOOTH 24-bit
 // ramp, each device column its own rounded colour (architect 2026-10-06,
@@ -352,21 +358,44 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
-// Install every color the device config `cfg` names: THE CHROME'S off the
-// theme (its `theme` key, already through the one grammar, is_theme_key —
+// Install every color: THE CHROME'S off the theme the device config `cfg`
+// names (its `theme` key, already through the one grammar, is_theme_key —
 // the built-in or a file read at launch, theme_file.h — or, with no `theme`
 // line, the live chrome's own, effective_theme_key) and THE PROGRAM'S off
-// the palette (its `palette` key, through is_palette_name — a default or a
-// file read at launch, its unnamed roles the live chrome's default's — or,
-// with no `palette` line, the live chrome's default palette,
-// effective_palette_name, palette_file.h), so this resolves and never
-// refuses. It bumps palette_generation below, the flag cache's fingerprint
-// term, and the plate's two baked inks (waveform_plate_inks) move with it;
-// the settings commit then rebuilds both caches synchronously and damages
-// the window (commit_device_setting's theme arm, settings_editor.cpp).
-// Declared against device_config.h's struct, which render.cpp includes.
+// `program`, THE LIVE WORDS (2026-10-07, the color picker's round): the
+// fourteen program colors as they stand in the process, which the caller
+// hands in explicitly — AT LAUNCH the palette the config's `palette` key
+// names (through is_palette_name — a default or a file read at launch, its
+// unnamed roles the live chrome's default's — or, with no `palette` line,
+// the live chrome's default palette, effective_palette_name, palette_file.h:
+// gui_main resolves it with palette_words and passes it), and AT THE
+// SETTINGS EDITOR'S `theme` COMMIT program_palette_words() below, the words
+// as installed — so a theme change re-installs the chrome and KEEPS THE
+// PICKER'S UNSAVED LIVE PICKS, which a re-read of the `palette` key would
+// have discarded. THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the
+// config's `palette` key is read at launch and at a preset load alone. This
+// resolves and never refuses. It bumps palette_generation below, the flag
+// cache's fingerprint term, and the plate's two baked inks
+// (waveform_plate_inks) move with it; the settings commit then rebuilds both
+// caches synchronously and damages the window (commit_device_setting's
+// theme arm, settings_editor.cpp). Declared against device_config.h's
+// struct, which render.cpp includes; the words type is palette_file.h's.
 struct DeviceConfig;
-void install_palette(const DeviceConfig& cfg);
+void install_palette(const DeviceConfig& cfg,
+                     const std::array<uint32_t, 14>& program);
+
+// THE LIVE WORDS AS INSTALLED — the program's fourteen the install family
+// last wrote (install_palette's `program`, or install_program_palette's
+// `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
+// spelled as its array type here because palette_file.h includes this
+// header). They live beside the installed struct, FILE-SCOPE IN render.cpp
+// AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
+// reopen (gui_main's loop) while the installed palette is not, and the
+// picker's picks are the PROCESS's until a preset is saved (color_picker.h's
+// head) — so a reopen keeps them exactly as a Close does. THREE READERS: the
+// theme commit (above), the color picker (every pick starts from these and
+// writes one word), and the picker's open (the live element's OLD color).
+const std::array<uint32_t, 14>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
 // program's fourteen alone, the picker's live road — is declared in

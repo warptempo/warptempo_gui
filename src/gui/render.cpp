@@ -2639,17 +2639,22 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
+    // THE LIVE WORDS (render.h's program_palette_words): the fourteen as
+    // the install family last wrote them.
+    GuiPaletteWords   g_program_words{};
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
 uint64_t palette_generation() { return g_palette_generation; }
 WaveformPlateInks waveform_plate_inks() { return g_plate_inks; }
+const GuiPaletteWords& program_palette_words() { return g_program_words; }
 
 namespace {
 // THE PROGRAM'S FOURTEEN into the installed struct and the plate's two baked
 // inks off the same words — the install family's shared half (the
 // generation is each member's own bump).
 void fill_program_palette(const GuiPaletteWords& w) {
+    g_program_words = w;
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         g_palette.*(kGuiPaletteRoles[i].member) = hex(w[i]);
     static constexpr std::size_t kInk = palette_role_index("waveform_ink");
@@ -2661,20 +2666,20 @@ void fill_program_palette(const GuiPaletteWords& w) {
 }
 } // namespace
 
-void install_palette(const DeviceConfig& cfg) {
-    // The keys arrived through their one grammars (the config's reader or
-    // the settings editor's commit, is_theme_key and is_palette_name), or
-    // are the live chrome's own (effective_theme_key: the built-in or a
-    // bundled file; effective_palette_name: a compiled default), so neither
-    // lookup has a producer of a miss (theme_words and palette_words assert
-    // it). The chrome's fields are filled off the theme's role table and the
-    // program's off the palette's (theme_file.h, palette_file.h), the two
-    // covering the struct exactly (palette_file.cpp), so a role cannot be
-    // read and not painted.
+void install_palette(const DeviceConfig& cfg, const GuiPaletteWords& program) {
+    // The theme key arrived through its one grammar (the config's reader or
+    // the settings editor's commit, is_theme_key), or is the live chrome's
+    // own (effective_theme_key: the built-in or a bundled file), so the
+    // lookup has no producer of a miss (theme_words asserts it). The
+    // chrome's fields are filled off the theme's role table and the
+    // program's off `program`, THE LIVE WORDS the caller resolved (render.h:
+    // the launch's palette_words of the `palette` key, the theme commit's
+    // program_palette_words), the two tables covering the struct exactly
+    // (palette_file.cpp), so a role cannot be read and not painted.
     const GuiThemeWords& w = theme_words(effective_theme_key(cfg.theme));
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
-    fill_program_palette(palette_words(effective_palette_name(cfg.palette)));
+    fill_program_palette(program);
     ++g_palette_generation;
 }
 

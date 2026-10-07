@@ -1979,6 +1979,15 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // overlay's rows and the modal row's one Cancel button — are a list and a
     // button, and it has no field to name the I-beam for.
     if (app.picker.active) return GuiCursorKind::Arrow;
+    // AND THE COLOR PICKER (2026-10-07), with ONE cue: the I-beam over its
+    // hex field's interior as painted (the dialog field's own rule below),
+    // the Arrow everywhere else — its sliders, its wheel, its swatches and
+    // its buttons carry no cue, and every other zone is behind its veil.
+    if (app.color_picker.active) {
+        const AppState::ColorPicker::Stash& st = app.color_picker.stash;
+        return st.valid && rect_contains(st.hex_inner, x, y)
+                   ? GuiCursorKind::Text : GuiCursorKind::Arrow;
+    }
     // A LIVE EDITOR TEXT DRAG KEEPS THE I-BEAM (architect 2026-09-03: "the
     // cursor in flag editor becomes the pointer during drag-to-highlight — it
     // should remain the i-beam — that's what other editors do"), on the
@@ -2837,6 +2846,9 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // navigates exactly the wheel's two surfaces. A refused frame navigates
     // nothing AND SEATS NOTHING.
     if (wheel_context(f.x, f.y) <= 0) return;
+    // (THE COLOR PICKER refuses the frame one line above, through the
+    // wheel's context, which answers -1 under it, 2026-10-07: its veil
+    // consumes every press off the card, and a pan is no exception.)
     // AND THE FOLDER OVERLAY TAKES NONE EITHER (2026-08-28): the wheel's
     // context answers 4 over the band under EITHER content — the LIST's
     // scroll, a wheel act with no two-finger meaning — and every other
@@ -3121,6 +3133,10 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 // tap places the playhead (a double tap on the empty marker lane creates)
 // and a drag does nothing — the placement pending begins no pan.
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
+    // UNDER THE COLOR PICKER NO TOUCH IS A PAN (2026-10-07): a finger on
+    // the card resolves to a press ON CONTACT — its sliders and its wheel
+    // are drags — and a finger off it meets the veil as a press would.
+    if (app.color_picker.active) return false;
     // THE ZONE YIELDS WHOLE WHILE A MENU STANDS (architect 2026-10-01, "Good,
     // I agree"): with a dropdown open, every touch is the pointer on contact,
     // so the first touch outside the menu is a PRESS AT THE DOWN, reaches the
@@ -3237,7 +3253,8 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // THE RENDER PLAYER'S AND THE PICKER'S VEILS (2026-08-28), restated here
     // for the gesture that skips the press path: a held finger on the band or
     // the waveform under either mode begins no sweep.
-    if (app.render_player.active || app.picker.active) return;
+    if (app.render_player.active || app.picker.active ||
+        app.color_picker.active) return;
     if (keyboard_modal_editor_active()) return;
     if (app.dropdown.open()) return;
     if (app.loading || audio.total_frames() <= 0) return;
@@ -3660,6 +3677,7 @@ bool GuiInputHandler::modal_dialog_stash_current() const {
         app.prompt.active         ? AppState::ModalDialogOwner::Prompt
       : app.render_player.active  ? AppState::ModalDialogOwner::Player
       : app.picker.active         ? AppState::ModalDialogOwner::Picker
+      : app.color_picker.active   ? AppState::ModalDialogOwner::ColorPicker
                                   : AppState::ModalDialogOwner::Editor;
     if (dlg.owner != live) return false;
     return dlg.session == app.modal_dialog_live_session();
@@ -3803,6 +3821,26 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     if (app.picker.active) {
         close_picker();
         return true;
+    }
+    // THE COLOR PICKER'S THREE (2026-10-07; ColorPickerButtonAct): the
+    // painted enabled bit decides (Paste grays on an empty slot), the act
+    // answers for itself.
+    if (app.color_picker.active) {
+        if (!b.enabled) return true;
+        switch (b.color_picker_act) {
+            case AppState::ColorPickerButtonAct::Copy:
+                color_picker.copy_to_slot();
+                return true;
+            case AppState::ColorPickerButtonAct::Paste:
+                color_picker.paste_from_slot();
+                return true;
+            case AppState::ColorPickerButtonAct::Close:
+                close_color_picker();
+                return true;
+            case AppState::ColorPickerButtonAct::None:
+                return false;
+        }
+        return false;
     }
     dispatch_modal_dialog_editor_act(b.editor_ok);
     return true;
@@ -5069,6 +5107,218 @@ void GuiInputHandler::clear_player_scrub_drag() {
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
 }
 
+// -- THE COLOR PICKER'S POINTER BODIES (architect 2026-10-07; the contract
+//    is at the declarations, input_handler.h; the acts are GuiColorPicker's,
+//    color_picker.h) ------------------------------------------------------
+
+namespace {
+// The row of the chooser's list under (x, y) as painted, or -1.
+int color_picker_list_hit(const AppState::ColorPicker::Stash& st, int x,
+                          int y) {
+    if (st.list.w <= 0 || st.list.h <= 0) return -1;
+    for (std::size_t i = 0; i < st.list_items.size(); ++i)
+        if (rect_contains(st.list_items[i], x, y)) return static_cast<int>(i);
+    return -1;
+}
+// The wheel's circles as painted, in the layout shape the reads take.
+color_picker::Layout wheel_layout_of(const AppState::ColorPicker::Stash& st) {
+    color_picker::Layout l;
+    l.wheel   = st.wheel;
+    l.cx      = st.wheel_cx;
+    l.cy      = st.wheel_cy;
+    l.outer_r = st.wheel_outer_r;
+    l.inner_r = st.wheel_inner_r;
+    return l;
+}
+} // namespace
+
+void GuiInputHandler::close_color_picker() { color_picker.close(); }
+
+void GuiInputHandler::set_color_picker_list_open(bool open) {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (cp.chooser_open == open) return;
+    // THE DAMAGE ON BOTH EDGES is the list's area: on the close the painted
+    // list's rect (the stash's, what has to be erased), on the open the
+    // rect the next paint will give it (the layout's — the one live
+    // derivation here, for DAMAGE alone, never for a hit).
+    if (!open) color_picker.damage_card();
+    cp.chooser_open    = open;
+    cp.chooser_hover   = open ? static_cast<int>(cp.role) : -1;
+    cp.chooser_pressed = -1;
+    cp.chooser_press_began_on_item = false;
+    if (open) {
+        const color_picker::Layout l =
+            color_picker::layout(app, gui_font(GuiFace::Body));
+        viewport.invalidate_rect(l.list);
+        color_picker.damage_card();
+    }
+}
+
+void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods) {
+    AppState::ColorPicker& cp = app.color_picker;
+    const AppState::ColorPicker::Stash& st = cp.stash;
+    // PUBLISHED GEOMETRY MAY ONLY SELECT, and only the live session's: an
+    // unpublished or stale stash contains no point (the owner-tag doctrine,
+    // ModalDialogGeometry), so the press is the veil's consumed nothing.
+    if (!st.valid || st.session != cp.session) return;
+
+    // THE LIST FIRST, while it is down (the dropdown's own rank): a press
+    // on a row arms it for the lift, anywhere else closes the list and is
+    // consumed — nothing underneath acts.
+    if (cp.chooser_open) {
+        const int hit = color_picker_list_hit(st, x, y);
+        if (hit >= 0 && !mods.ctrl && !mods.shift && !mods.alt) {
+            cp.chooser_pressed = hit;
+            cp.chooser_press_began_on_item = true;
+            color_picker.damage_card();
+            return;
+        }
+        set_color_picker_list_open(false);
+        return;
+    }
+
+    // A STANDING HEX EDIT ENDS AT ANY PRESS OUTSIDE ITS FIELD — abandoned,
+    // the flag editor's own rule for a press outside its box (the field
+    // shows NEW again); the press then goes on to what it landed on.
+    const bool on_hex = rect_contains(st.hex_field, x, y);
+    if (color_picker.hex_active() && !on_hex) color_picker.hex_cancel();
+
+    // A CHORD ON THE CARD IS A CONSUMED NOTHING (the scrub's rule: the plain
+    // press works, and a modified press on a slider is not an act anyone
+    // spelled); and off the card the veil consumes.
+    if (mods.ctrl || mods.shift || mods.alt) return;
+    if (!rect_contains(st.card, x, y)) return;
+
+    if (on_hex) {
+        color_picker.hex_focus(x);
+        return;
+    }
+    if (rect_contains(st.chooser, x, y)) {
+        set_color_picker_list_open(true);
+        return;
+    }
+    // A SLIDER'S TRACK: the thumb is resolved where it is painted (the
+    // stash's column), the grab offset kept on the thumb and zero off it —
+    // so the thumb jumps to an off-thumb press and keeps its seat under an
+    // on-thumb one — and the first value applies at the press, LIVE.
+    const int half = scrub_handle_box_px() / 2;
+    for (int i = 0; i < color_picker::kChannelCount; ++i) {
+        const AppState::ColorPicker::SliderStash& sl =
+            st.sliders[static_cast<std::size_t>(i)];
+        if (!rect_contains(sl.track, x, y)) continue;
+        const bool on_thumb = sl.thumb_x >= 0 && std::abs(x - sl.thumb_x) <= half;
+        cp.drag = AppState::ColorPicker::Drag{};
+        cp.drag.kind    = AppState::ColorPicker::Drag::Kind::Slider;
+        cp.drag.slider  = i;
+        cp.drag.grab_dx = on_thumb ? x - sl.thumb_x : 0;
+        const color_picker::Channel c = color_picker::channel_at(i);
+        color_picker.set_channel(
+            c, color_picker::slider_value_at(sl.track, x - cp.drag.grab_dx,
+                                             color_picker::channel_max(c)));
+        return;
+    }
+    // THE WHEEL: a press in the ring's annulus takes the hue, a press
+    // inside the triangle takes (s, v) — GtkHSV's own two surfaces; the
+    // square's corners and the gaps between take nothing.
+    if (rect_contains(st.wheel, x, y)) {
+        const color_picker::Layout l = wheel_layout_of(st);
+        if (color_picker::wheel_in_ring(l, x, y)) {
+            cp.drag = AppState::ColorPicker::Drag{};
+            cp.drag.kind = AppState::ColorPicker::Drag::Kind::Hue;
+            color_picker.set_hue(color_picker::wheel_hue_at(l, x, y));
+            return;
+        }
+        if (color_picker::wheel_in_triangle(l, cp.hue_deg, x, y)) {
+            cp.drag = AppState::ColorPicker::Drag{};
+            cp.drag.kind = AppState::ColorPicker::Drag::Kind::Triangle;
+            double s = 0.0, v = 0.0;
+            color_picker::wheel_sv_at(l, cp.hue_deg, x, y, s, v);
+            color_picker.set_sv(s, v);
+            return;
+        }
+        return;
+    }
+    if (rect_contains(st.swatch_old, x, y)) {
+        color_picker.revert_to_old();
+        return;
+    }
+    // THE THREE PUSH BUTTONS, the dialogs' shared arm (the painted enabled
+    // bit decides, the lift dispatches).
+    if (modal_dialog_stash_current()) arm_modal_dialog_press(x, y);
+}
+
+void GuiInputHandler::color_picker_motion(int x, int y, GuiInputState mods) {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (cp.drag.armed()) {
+        if (!mods.primary_button_held) {
+            clear_color_picker_drag();
+            return;
+        }
+        const AppState::ColorPicker::Stash& st = cp.stash;
+        switch (cp.drag.kind) {
+            case AppState::ColorPicker::Drag::Kind::Slider: {
+                const AppState::ColorPicker::SliderStash& sl =
+                    st.sliders[static_cast<std::size_t>(cp.drag.slider)];
+                const color_picker::Channel c =
+                    color_picker::channel_at(cp.drag.slider);
+                color_picker.set_channel(
+                    c, color_picker::slider_value_at(
+                           sl.track, x - cp.drag.grab_dx,
+                           color_picker::channel_max(c)));
+                return;
+            }
+            case AppState::ColorPicker::Drag::Kind::Hue:
+                color_picker.set_hue(
+                    color_picker::wheel_hue_at(wheel_layout_of(st), x, y));
+                return;
+            case AppState::ColorPicker::Drag::Kind::Triangle: {
+                double s = 0.0, v = 0.0;
+                color_picker::wheel_sv_at(wheel_layout_of(st), cp.hue_deg, x, y,
+                                          s, v);
+                color_picker.set_sv(s, v);
+                return;
+            }
+            case AppState::ColorPicker::Drag::Kind::None:
+                return;
+        }
+        return;
+    }
+    if (cp.chooser_open) {
+        const int hit = color_picker_list_hit(cp.stash, x, y);
+        if (hit != cp.chooser_hover) {
+            cp.chooser_hover = hit;
+            color_picker.damage_card();
+        }
+    }
+    update_modal_dialog_hover(x, y);
+    recompute_redesign_button_hover();
+}
+
+void GuiInputHandler::color_picker_release(int x, int y) {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (cp.drag.armed()) {
+        // Every step applied live; the lift only ends the gesture.
+        cp.drag = AppState::ColorPicker::Drag{};
+        return;
+    }
+    if (cp.chooser_open && cp.chooser_press_began_on_item) {
+        const int hit = color_picker_list_hit(cp.stash, x, y);
+        cp.chooser_pressed = -1;
+        cp.chooser_press_began_on_item = false;
+        if (hit >= 0) color_picker.set_role(static_cast<std::size_t>(hit));
+        set_color_picker_list_open(false);
+        return;
+    }
+    dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
+}
+
+void GuiInputHandler::clear_color_picker_drag() {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (!cp.drag.armed()) return;
+    cp.drag = AppState::ColorPicker::Drag{};
+}
+
+
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
     // ANY PRESS IS THE TOOLTIP'S HARD END, above every gate — Windows hides a
@@ -5449,6 +5699,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             modal_dialog_stash_current()) {
             arm_modal_dialog_press(x, y);
         }
+        return;
+    }
+
+    // THE COLOR PICKER'S VEIL (2026-10-07), the two list owners' shape: the
+    // card's controls are its claims (color_picker_press, which reads the
+    // published stash), the live File anchor and the caption pass as above,
+    // and EVERY OTHER PRESS IS CONSUMED. The on-screen keyboard's keys are
+    // claimed above every veil (claim_onscreen_keyboard_press), so the hex
+    // field types on glass.
+    if (app.color_picker.active && !menu_row_press_admitted &&
+        !caption_press_admitted) {
+        if (button != GuiMouseButton::Left) return;
+        color_picker_press(x, y, mods);
         return;
     }
 
@@ -7033,6 +7296,13 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         }
         return;
     }
+    // THE COLOR PICKER'S RELEASE (2026-10-07), its press block's mirror:
+    // the gesture's end, a list row's select, or the dialog buttons' shared
+    // dispatch; every other lift consumed.
+    if (app.color_picker.active) {
+        if (button == GuiMouseButton::Left) color_picker_release(x, y);
+        return;
+    }
     // THE EDITOR DIALOG'S ACT, the same shape over the other surface: the lift
     // on the armed OK / Cancel runs the session's own Enter / Esc through the
     // one modal key route. Above the text-drag branch because the two are
@@ -8052,7 +8322,7 @@ void GuiInputHandler::finish_chrome_press_release(
     // opened mid-hold (bare `l`, Ctrl+O or `'` typed under a held button)
     // takes the same refusal through it.
     if (modal_dialog_editor_active() || app.render_player.active ||
-        app.picker.active) return;
+        app.picker.active || app.color_picker.active) return;
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
         return;
@@ -8589,9 +8859,17 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // 2026-08-07. THE ITEMS GREY DURING A LOAD ALONE (2026-09-24,
     // dropdown_item_enabled): the opener refuses nothing cheap, and the
     // commit arms' refusals answer on the editor's own surfaces.
-    const char* key = kSettingsPopupItems[static_cast<size_t>(armed)].key;
+    const SettingsPopupItem& item =
+        kSettingsPopupItems[static_cast<size_t>(armed)];
     close_dropdown();
-    settings_editor.open_prefilled(key);
+    // THE MENU'S ONE COMMAND ROW (2026-10-07, SettingsPopupAct): Pick Colors
+    // opens the color picker on the half opposite this lift's x; the
+    // opener carries its own refusals.
+    if (item.act == SettingsPopupAct::PickColors) {
+        color_picker.open(x);
+        return true;
+    }
+    settings_editor.open_prefilled(item.key);
     return true;
 }
 
@@ -9534,7 +9812,8 @@ void GuiInputHandler::tick_tooltip() {
 // (that editor raises no veil).
 bool GuiInputHandler::tooltip_dwell_suppressed() const {
     return app.prompt.active || keyboard_modal_editor_active() ||
-           app.render_player.active || app.picker.active;
+           app.render_player.active || app.picker.active ||
+           app.color_picker.active;
 }
 
 // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss hook's
@@ -9595,6 +9874,7 @@ void GuiInputHandler::clear_release_time_press_arms() {
     // with nothing committed — the chrome arm's own rule, on the same edge.
     clear_folder_overlay_press();
     clear_player_scrub_drag();
+    clear_color_picker_drag();
     if (app.chrome_press.kind == AppState::ChromePress::Kind::None &&
         app.modal_dialog_pressed < 0 &&
         app.dropdown.pressed_item < 0 &&
@@ -9916,6 +10196,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     if (app.picker.active) {
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
+        return;
+    }
+    // THE COLOR PICKER'S MOTION (2026-10-07): its gesture's carry, else the
+    // list's hover, the dialog buttons' walk and the roster walk.
+    if (app.color_picker.active) {
+        color_picker_motion(mouse_x, mouse_y, mods);
         return;
     }
     // F2.1: editor-text drag motion. Handled before the dialog-editor branch

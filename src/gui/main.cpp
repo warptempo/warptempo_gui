@@ -2011,6 +2011,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // at the button-lost edge (clear_release_time_press_arms).
         input_handler.clear_folder_overlay_press();
         input_handler.clear_player_scrub_drag();
+        // AND THE COLOR PICKER'S GESTURE (2026-10-07): its slider or wheel
+        // drag has already applied every step, so the drop loses nothing.
+        input_handler.clear_color_picker_drag();
         // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), this hook's hover
         // half: a pointer that has left rests on no card, so every card the
         // hover paused has its clock re-armed here (a card a press still holds
@@ -3372,11 +3375,16 @@ int gui_main(const char* argument) {
     // theme_file.h) — for the chrome's colors, and the palette it names (a
     // default or a file read above) — or, with no `palette` line, THE LIVE
     // CHROME'S DEFAULT PALETTE (effective_palette_name, palette_file.h) — for
-    // the program's, both resolved inside install_palette, so it needs the
-    // chrome set above; installed before the first paint, and again at the
-    // settings editor's `theme` commit (commit_device_setting). Every
-    // painter reads it through palette() (render.h's palette block).
-    install_palette(device_config);
+    // the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here through
+    // palette_words and handed to the install explicitly; the theme commit
+    // re-installs over program_palette_words(), the words as they then
+    // stand, so the color picker's unsaved picks survive it — render.h's
+    // install_palette) — both resolved against the chrome set above;
+    // installed before the first paint, and again at the settings editor's
+    // `theme` commit (commit_device_setting). Every painter reads it through
+    // palette() (render.h's palette block).
+    install_palette(device_config,
+                    palette_words(effective_palette_name(device_config.palette)));
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

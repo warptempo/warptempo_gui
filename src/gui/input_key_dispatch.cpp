@@ -4329,12 +4329,13 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
 // Any text editor consuming printable keys — the TWO single-State dialog
 // editors (the settings prompt and the commit-title editor) plus the top-strip
 // flag editor in ANY of its
-// kinds (the FlagPayload editor takes typed letters too); the five Kinds are
+// kinds (the FlagPayload editor takes typed letters too) plus, since
+// 2026-10-07, the color picker's hex field (PaletteHex); the six Kinds are
 // listed at text_editor::Kind. The platform layer's kLeftClickKey probe: while
 // this is true that key types a normal letter rather than emulating the left
 // button.
 bool GuiInputHandler::any_text_editor_active() const {
-    // The five kinds' one membership, AppState::text_editor_session (the
+    // The six kinds' one membership, AppState::text_editor_session (the
     // settings and commit-title editors and the top-strip editor in every
     // kind).
     return app.text_editor_session() != 0;
@@ -4482,6 +4483,13 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return !mods.ctrl && !mods.shift && !mods.alt &&
                (key == GuiKeys::Up || key == GuiKeys::Down);
     }
+    // THE COLOR PICKER (2026-10-07): with its hex field standing the
+    // editor's own arm below answers (the field's motion, edit and
+    // printable keys repeat as every editor's do); without it nothing
+    // repeats — the card has no ring and no walk, and Esc is one-shot.
+    if (app.color_picker.active && !app.prompt.active &&
+        !text_editor::is_active(app.color_picker.hex_editor))
+        return false;
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
     // blanket stays exactly as it was: a prompt's one-key answers must be
     // one-shot, because a held response key repeating is the destructive shape
@@ -4614,7 +4622,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 
 // The KEYBOARD-MODAL editor key gate, the sibling of read_only_key_blocked's
 // allowlist shape. True when key+mods is not on the allowlist and should be
-// dropped. It serves ALL FIVE editor kinds (text_editor::Kind, re-grepped
+// dropped. It serves ALL SIX editor kinds (text_editor::Kind, re-grepped
 // 2026-09-23) — the settings prompt,
 // the commit-title editor (2026-08-07), the bpm bracket, the ITERATION BOUND
 // editor (2026-09-05) and (architect 2026-07-28) the top-strip flag editor, which this ruling brought
@@ -6855,6 +6863,11 @@ void GuiInputHandler::open_project_picker() {
     // the opener's own shape (the gate lives with the act it refuses) rather
     // than a road anything takes today.
     if (picker_active()) return;
+    // A STANDING COLOR PICKER IS SILENT TOO (2026-10-07; the openers refuse
+    // under each other): the File menu's Open Project row is grayed under
+    // it (dropdown_item_enabled) and its router consumes Ctrl+O, so this arm
+    // is the opener's own shape rather than a road.
+    if (color_picker_active()) return;
     if (app.loading) return;
 
     playback_lifecycle.stop_playback_for_modal_open();
@@ -7084,7 +7097,8 @@ void GuiInputHandler::revert_project(bool question_asked) {
 void GuiInputHandler::history_load_in_place() {
     if (!app.history_mode.active) return;
     if (app.prompt.active || keyboard_modal_editor_active()) return;
-    if (render_player_active() || picker_active()) return;
+    if (render_player_active() || picker_active() || color_picker_active())
+        return;
     if (app.source_audio_path.empty()) return;
     const std::size_t count = app.history_mode.walk_count();
     if (count == 0) return;
@@ -7160,6 +7174,52 @@ void GuiInputHandler::close_picker() {
     app.picker         = AppState::Picker{};
     app.folder_overlay = AppState::FolderOverlay{};
     viewport.invalidate_all();
+}
+
+
+// -- THE COLOR PICKER'S KEY ROUTER (architect 2026-10-07; the contract is at
+//    the declaration) ---------------------------------------------------------
+
+bool GuiInputHandler::route_color_picker_key(GuiKey key, GuiInputState mods) {
+    const bool ctrl  = mods.ctrl;
+    const bool shift = mods.shift;
+    const bool alt   = mods.alt;
+    // WHILE THE HEX FIELD STANDS THE KEYBOARD IS ITS ALONE.
+    if (color_picker.hex_active()) return handle_color_picker_hex_key(key, mods);
+    // CTRL+S SAVES WITH THE PICKER STANDING, the project picker's own arm
+    // (route_picker_key): the save touches no color.
+    if (ctrl && !shift && !alt && key == GuiKeys::S) {
+        save_ops.save_from_key();
+        return true;
+    }
+    // THE ONE FALL-THROUGH: Ctrl+Q to the ordinary quit road, which takes
+    // the picker down at its head (GuiPrompt::request_close).
+    if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
+    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (the unbound-keys
+    // ruling, the two list owners' arm): the router is the whole vocabulary
+    // while the picker stands.
+    if (ctrl || shift || alt) return true;
+    if (key == GuiKeys::Escape) {
+        close_color_picker();
+        return true;
+    }
+    // Every bare key else is a consumed silence: the card has no ring to
+    // walk and no act on a letter.
+    return true;
+}
+
+bool GuiInputHandler::handle_color_picker_hex_key(GuiKey key,
+                                                  GuiInputState mods) {
+    // TAB DOES NOTHING ON THIS CARD (2026-10-07): there is no focus ring —
+    // the pen reaches every control — so the ring walk the shared route
+    // would run on a bare or shifted Tab is refused ahead of it, consumed.
+    if (key == GuiKeys::Tab) return true;
+    return route_modal_editor_key(
+        app.color_picker.hex_editor, key, mods,
+        /*autocomplete=*/{},
+        [this] { color_picker.hex_commit(); },
+        [this] { color_picker.hex_cancel(); },
+        [this] { color_picker.damage_card(); });
 }
 
 // THE PICKER'S KEY ROUTER — the whole plastic vocabulary while a picker
@@ -7319,7 +7379,10 @@ bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
     chord.alt   = it.alt;
     if (it.key == GuiKeys::Q && chord.ctrl && !chord.shift && !chord.alt)
         return true;
-    if (folder_overlay_stands(a) || no_audio) return false;
+    // THE COLOR PICKER GRAYS FILE'S OTHER ROWS AS THE OVERLAY DOES
+    // (2026-10-07): Open Project and Revert are consumed by its router.
+    if (folder_overlay_stands(a) || a.color_picker.active || no_audio)
+        return false;
     if (is_open_project_key(it.key, chord)) return true;
     if (is_revert_project_key(it.key, chord))
         return !a.history_checkpoint_in_flight;

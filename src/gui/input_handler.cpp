@@ -378,6 +378,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
     }
 
+    // THE COLOR PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-10-07),
+    // at the two list owners' rank with their shape — ITS ROUTER IS THE
+    // WHOLE VOCABULARY (route_color_picker_key: while its hex field stands
+    // the keys are that field's alone, else Esc closes, Ctrl+S saves, Ctrl+Q
+    // falls through with the picker closed by the close road, and every
+    // other chord is a consumed silence), and the gesture clause is the
+    // player's own: its slider and wheel drags are members of
+    // any_pointer_gesture_active, and while one stands every key is
+    // swallowed but the drag-modal gate's Ctrl+Q hatch.
+    if (app.color_picker.active) {
+        if (any_pointer_gesture_active(app)) {
+            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
+                notifications.notify(AppState::NotificationClass::Normal,
+                                     kKeysDuringDrag);
+                return;
+            }
+        } else if (route_color_picker_key(key, mods)) {
+            return;
+        }
+    }
+
     // Blank / loading state: only the quit / close-gesture bindings run;
     // everything else no-ops. Dialog can't fire here because dirty is
     // always false in blank state (the only blank state is the transient
@@ -1275,6 +1296,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       2026-08-29 — that key raises a PROMPT there now, rung (c);
     //   ((c5), THE AV SYNC STATS PANEL's own router, was the ninth place
     //       from 2026-09-03 and went with the panel on 2026-09-30.)
+    //   (c6) THE COLOR PICKER (2026-10-07, the ninth place again — one
+    //       router, route_color_picker_key, at the two list owners' rank):
+    //       Esc closes it — or, while its hex field stands, ENDS THAT EDIT
+    //       first, through route_modal_editor_key as every editor's Esc
+    //       does (so that press is (b)'s, and the next one this one's). It
+    //       cannot collide with the other editors: none opens under it and
+    //       its router admits no editor opener; a prompt over it (the next
+    //       segment's Delete question) is rung (c).
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
     //   (e) THE NOTIFICATION STACK, WHOLE (architect 2026-09-01, superseding
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
@@ -3380,6 +3409,10 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     if (folder_overlay_stands(app)) {
         return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;
     }
+    // THE COLOR PICKER SWALLOWS THE WHEEL (2026-10-07): the well under it
+    // is for looking at, and its veil consumes the pointer's acts alike;
+    // the touch pan asks this context too, so a pan dies here with it.
+    if (app.color_picker.active) return -1;
     if (modal_dialog_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
 

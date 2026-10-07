@@ -313,6 +313,7 @@ bool replace_selection(State& s, const std::string& raw) {
     if (s.kind == Kind::BpmBracket)         cap = kMaxPendingCharsBpm;
     if (s.kind == Kind::SettingsAssignment) cap = kMaxPendingCharsSettings;
     if (s.kind == Kind::CommitTitle)       cap = kMaxPendingCharsCommitTitle;
+    if (s.kind == Kind::PaletteHex)        cap = kMaxPendingCharsPaletteHex;
     // ONE KIND, TWO GRAMMARS: the phase-reset column's bound is a sign and one
     // digit, the warp column's a sign, a digit, the point and two decimals.
     // The session's own bit says which — this module cannot see the app to ask

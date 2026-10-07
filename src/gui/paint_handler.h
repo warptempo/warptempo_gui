@@ -932,6 +932,12 @@ private:
     // button claims and click-to-caret read. The full design record is at the
     // definition; the field's sampled chrome is at render.h's kModal* block.
     void paint_modal_dialog(cairo_t* cr);
+    // THE COLOR PICKER'S CARD (2026-10-07; color_picker.h owns the anatomy),
+    // paint_modal_dialog's fifth fork: paints the card on the well and
+    // publishes the modal stash (the card, the hex field, the three
+    // buttons) and the picker's own (AppState::ColorPicker::Stash). Called
+    // from paint_modal_dialog alone, with the live session it stamps.
+    void paint_color_picker(cairo_t* cr, uint64_t live_session);
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — full
     // window width, directly above the bottom row, over the waveform area's

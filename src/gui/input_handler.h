@@ -15,6 +15,7 @@
 #include "selection.h"
 #include "active_views.h"
 #include "ab_audition.h"
+#include "color_picker.h"
 #include "render_player.h"
 #include "notifications.h"
 #include "settings_editor.h"
@@ -702,6 +703,11 @@ struct GuiInputHandler {
     // are — the threshold crossing, the motion arm and the two end roads
     // (release and finalize_active_drags) — all in input_pointer.cpp.
     ValueDragOps             value_drag;
+    // THE COLOR PICKER'S ACTS (2026-10-07, color_picker.h), owned here as
+    // the value drag is and for its reason: four of this handler's own
+    // references, no consumer outside this handler but GuiPrompt's close
+    // road, which reaches it through close_color_picker.
+    GuiColorPicker           color_picker;
     GuiFlagEditor&           flag_editor;
     GuiRendersDir&           renders_dir;
     GuiActiveViews&          active_views;
@@ -876,6 +882,7 @@ struct GuiInputHandler {
           // members beside it: a reference member initialised from another
           // member depends on declaration order, and this one must not.
           value_drag(app_, audio_, viewport_, undo_, target_render_),
+          color_picker(app_, viewport_, notifications_, playback_lifecycle_),
           flag_editor(flag_editor_),
           renders_dir(renders_dir_),
           active_views(active_views_),
@@ -1730,6 +1737,9 @@ struct GuiInputHandler {
     // the player's block below.
     void clear_folder_overlay_press();
     void clear_player_scrub_drag();
+    // THE COLOR PICKER'S GESTURE's hard end (2026-10-07), the same edge and
+    // the same reason; its drag applied every step live, so nothing is lost.
+    void clear_color_picker_drag();
     // THE NOTIFICATION CARDS' POINTER HALVES (2026-08-29; the rule is at
     // notifications.h). The CLAIM ranks above every veil in on_button_press:
     // a press on a published card is consumed whole, and since 2026-10-01
@@ -1831,6 +1841,9 @@ struct GuiInputHandler {
     // picker cluster below, private beside its openers); public for that one
     // caller, exactly as the editors' body above is.
     void close_picker();
+    // THE COLOR PICKER'S ONE CLOSE BODY (2026-10-07): Close, Esc, the close
+    // road's head — GuiColorPicker::close through this handler.
+    void close_color_picker();
 
     // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // — THE DEFECT IS WHY THIS EXISTS, and it is worth stating before the
@@ -2876,6 +2889,48 @@ private:
     // release's re-ask, the touch region begin, the stash's live owner) say
     // what they mean, exactly as render_player_active below does.
     bool picker_active() const { return app.picker.active; }
+
+    // -- THE COLOR PICKER (architect 2026-10-07; the cluster is
+    //    color_picker.h, the acts GuiColorPicker above, the bodies here in
+    //    input_pointer.cpp and input_key_dispatch.cpp) ----------------------
+    //
+    // THE FIFTH ModalDialogOwner, the two list owners' shape one surface
+    // over: its predicate is the mode bit (color_picker_active), its veil
+    // consumes every press outside its card but the live File anchor's and
+    // the caption's, its router is the whole plastic vocabulary while it
+    // stands (route_color_picker_key: Esc closes, Ctrl+S saves, Ctrl+Q falls
+    // through with the picker closed by the close road, every other chord a
+    // consumed silence; while its hex field stands the keyboard is that
+    // field's alone, handle_color_picker_hex_key, Tab doing nothing — the
+    // card has no focus ring), and its one close body is close_color_picker
+    // (Close, Esc, the close road's head). The press router's three bodies:
+    //   color_picker_press — the veil's left press: a list row's arm or the
+    //     list's dismissal while the list is down; a standing hex edit
+    //     abandoned by any press outside its field; then, on the card, the
+    //     hex field's focus, the chooser's open, a slider track's thumb
+    //     seat-and-arm (the scrub's rule), the ring's or the triangle's
+    //     arm, OLD's revert, or a push button's arm through the dialogs'
+    //     shared arm; off the card, consumed. Every target is read from the
+    //     published stash, never derived live.
+    //   color_picker_motion — a live gesture's carry (the slider, the ring,
+    //     the triangle; the button lost ends it), else the list's hover,
+    //     the dialog buttons' walk and the roster's.
+    //   color_picker_release — the gesture's end (already applied), a list
+    //     row's select, or the dialog buttons' shared dispatch.
+    //   clear_color_picker_drag — the gesture's hard end (the pointer-leave
+    //     hook, the button-lost arms).
+    // (close_color_picker and clear_color_picker_drag are declared public
+    // beside close_picker and clear_player_scrub_drag, for GuiPrompt::
+    // request_close and main.cpp's pointer-leave hook.)
+    bool color_picker_active() const { return app.color_picker.active; }
+    void color_picker_press(int x, int y, GuiInputState mods);
+    void color_picker_motion(int x, int y, GuiInputState mods);
+    void color_picker_release(int x, int y);
+    bool route_color_picker_key(GuiKey key, GuiInputState mods);
+    bool handle_color_picker_hex_key(GuiKey key, GuiInputState mods);
+    // The chooser's list: open (the current element lit) or close, damaging
+    // the list's area either way.
+    void set_color_picker_list_open(bool open);
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the settings editor's
     // dialog pattern for the history view's OTHER act. Ctrl+S while the view
