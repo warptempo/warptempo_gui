@@ -1,19 +1,22 @@
 #include "gui_font.h"
 
-// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the two
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the four
 // files handed in once through gui_font_install_bundled — the Linux
 // executable's compiled-in copy (gui_font_embedded.cpp) or the APK's assets —
-// become two FT faces, the live set (gui_font.h's kGuiLiveFaceSet) picks
-// its three uses among them, and no site below the seam learns which device
-// handed the bytes in.
+// become four FT faces, the live set (gui_font.h's gui_live_face_set, the
+// chrome spec's) picks its three uses among them, and no site below the seam
+// learns which device handed the bytes in.
 //
-// THE FACES (Tahoma and Tahoma Bold, TrueType) are FT faces wrapped as cairo
-// font faces — the FT-backed
+// THE FACES (Tahoma, Tahoma Bold, DejaVu Sans and DejaVu Sans Bold, all
+// TrueType) are FT faces wrapped as cairo font faces — the FT-backed
 // shape text_shape requires, since it shapes on the scaled font's own FT
 // face through hb-ft.
 //
 // OUTLINES ONLY, NEVER A STRIKE (architect 2026-10-06; gui_font.h's head).
-// Tahoma carries bitmap strikes (8–16 ppem, the bold 9–13), and FreeType
+// Tahoma carries bitmap strikes (8–16 ppem, the bold 9–13) — DejaVu Sans
+// 2.31 carries none (no EBDT / EBLC table in either file, read 2026-10-07),
+// so both roads below are no-ops on its two faces, run on all four alike —
+// and FreeType
 // reads a strike on two roads, both closed here: (1) SIZE SELECTION — a
 // TrueType face with strikes answers a size request whose ppem ROUNDS to a
 // strike's by SELECTING the strike, scaling even the outline at the strike's
@@ -34,7 +37,11 @@
 // rather than to the bytecode interpreter (the load equals a forced
 // autohint's; Wine Tahoma's glyphs carry no instructions anyway, maxp's
 // maxSizeOfInstructions 0), and every x equals the unhinted outline's
-// exactly. The advances stay
+// exactly. DejaVu's files DO carry bytecode (fpgm, prep, the glyphs'
+// programs — squeeze's hinter of 2010 ran it), and the light target leaves
+// it unrun the same way: the gnome2 set's ink is the light autohinter's,
+// "compromise and approximate with modern HarfBuzz and DejaVu Sans"
+// (architect 2026-10-07). The advances stay
 // unhinted (text_shape's come off hb-ft, which loads its own glyphs
 // unhinted) and both devices measure one set of widths. The vertical
 // metrics are the recorded constants anyway (gui_font.h), so the hinter
@@ -69,19 +76,28 @@ struct OutlineFace {
     double               max_advance_em = 0.0;
 };
 
-// The em per face, in Windows px (gui_face_em_px).
-double g_face_em[kGuiFaceCount] = {};
+// THE GLYPH EACH USE'S EM IS MEASURED ON (gui_font.h's head): the "H" for
+// the two text faces, the "0" for the digits.
+constexpr char32_t kBandGlyph[kGuiFaceCount] = {U'H', U'H', U'0'};
+// Each file's outline ink height of each band glyph, per em, read once at the
+// install (outline_ink_em): index 0 the "H", 1 the "0". The em of a use is
+// the live set's recorded cap over its file's entry (gui_face_em_px), so the
+// install needs no knowledge of which set the chrome will name.
+double g_ink_em[kGuiFontFileCount][2] = {};
 
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
-// The two files' faces, in kGuiFontFiles' order.
+// The four files' faces, in kGuiFontFiles' order.
 OutlineFace           g_outline[kGuiFontFileCount];
 
 std::size_t face_index(GuiFace face) { return static_cast<std::size_t>(face); }
+std::size_t band_index(GuiFace face) {
+    return kBandGlyph[face_index(face)] == U'0' ? 1 : 0;
+}
 
 // The face a use is drawn from: the live set's file for it.
 const OutlineFace& outline_of(GuiFace face) {
-    return g_outline[kGuiLiveFaceSet.file[face_index(face)]];
+    return g_outline[gui_live_face_set().file[face_index(face)]];
 }
 
 // Build one face from a copy of `bytes`. A failure leaves `out`
@@ -101,7 +117,8 @@ void build_outline(OutlineFace& out, const GuiFontBytes& bytes,
     }
     // THE STRIKES HIDDEN FROM SIZE SELECTION (the head's road 1): with the
     // flag clear, a size request never matches a strike, so the size is the
-    // outline's own scale and no strike is ever selected for a load.
+    // outline's own scale and no strike is ever selected for a load. A
+    // NO-OP ON DEJAVU, which has no strike to hide (the head).
     out.ft->face_flags &= ~static_cast<FT_Long>(FT_FACE_FLAG_FIXED_SIZES);
     out.ft->num_fixed_sizes = 0;
     out.max_advance_em = static_cast<double>(out.ft->max_advance_width) /
@@ -145,27 +162,32 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     g_options = cairo_font_options_create();
     cairo_font_options_set_hint_style(g_options, CAIRO_HINT_STYLE_SLIGHT);
     bool ok = true;
-    // BOTH FILES BUILD (gui_font.h's head).
-    for (std::size_t i = 0; i < kGuiFontFileCount; ++i)
+    // EVERY FILE BUILDS (gui_font.h's head), and each file's band inks are
+    // read off its outline.
+    for (std::size_t i = 0; i < kGuiFontFileCount; ++i) {
         build_outline(g_outline[i], files[i], kGuiFontFiles[i]);
-    // THE EMS MATCH THE LIVE SET'S RECORDED METRICS VERTICALLY (gui_font.h):
-    // the recorded cap over the outline's ink height of the same band — the
-    // "H" for the two text faces, the "0" for the digits.
-    const char32_t band_glyph[kGuiFaceCount] = {U'H', U'H', U'0'};
-    for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
-        const double ink = outline_ink_em(outline_of(static_cast<GuiFace>(i)),
-                                          band_glyph[i]);
-        if (ink <= 0.0) { ok = false; continue; }
-        g_face_em[i] =
-            static_cast<double>(kGuiFaceMetrics[i].cap) / ink;
+        g_ink_em[i][0] = outline_ink_em(g_outline[i], U'H');
+        g_ink_em[i][1] = outline_ink_em(g_outline[i], U'0');
     }
+    // THE EMS MATCH THE LIVE SET'S RECORDED METRICS VERTICALLY (gui_font.h),
+    // derived per call from these inks (gui_face_em_px), so the probe asks
+    // it of EVERY SET a chrome spec names: each use's file must carry its
+    // band glyph, whichever chrome the device config later chooses.
+    for (const ChromeSpec* spec : kGuiChromeSpecs)
+        for (std::size_t i = 0; i < kGuiFaceCount; ++i)
+            if (g_ink_em[spec->face_set->file[i]]
+                        [band_index(static_cast<GuiFace>(i))] <= 0.0)
+                ok = false;
     for (const OutlineFace& f : g_outline)
         if (!outline_ft_backed(f)) ok = false;
     return ok;
 }
 
 double gui_face_em_px(GuiFace face) {
-    return g_face_em[face_index(face)];
+    const GuiFaceSet& set = gui_live_face_set();
+    const std::size_t i = face_index(face);
+    return static_cast<double>(set.metrics[i].cap) /
+           g_ink_em[set.file[i]][band_index(face)];
 }
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
@@ -173,7 +195,9 @@ cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
     // points, set_gui_scale_percent): a paint asks for it per run. The hb
     // font text_shape shapes with hangs on this scaled font as cairo user
     // data and dies with it (text_shape.cpp's hb_font_of), so it follows this
-    // cache's key and rebuild without a second cache.
+    // cache's key and rebuild without a second cache. THE SET IS NOT A KEY:
+    // the chrome, and with it the live set, is chosen once before the first
+    // paint (set_live_chrome_spec, gui_main) and never moves.
     struct Cached {
         int                  percent = -1;
         cairo_scaled_font_t* font    = nullptr;
@@ -182,7 +206,7 @@ cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
     Cached& c = cache[face_index(f.face)];
     if (c.percent == f.percent) return c.font;
     if (c.font != nullptr) cairo_scaled_font_destroy(c.font);
-    const double em = g_face_em[face_index(f.face)] * gui_font_scale(f);
+    const double em = gui_face_em_px(f.face) * gui_font_scale(f);
     cairo_matrix_t font_matrix;
     cairo_matrix_t ctm;
     cairo_matrix_init_scale(&font_matrix, em, em);
@@ -194,6 +218,6 @@ cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
 }
 
 double gui_font_advance_bound_px(const GuiFont& f) {
-    return outline_of(f.face).max_advance_em *
-           g_face_em[face_index(f.face)] * gui_font_scale(f);
+    return outline_of(f.face).max_advance_em * gui_face_em_px(f.face) *
+           gui_font_scale(f);
 }

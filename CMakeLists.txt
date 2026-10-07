@@ -523,17 +523,36 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         INTERFACE_INCLUDE_DIRECTORIES ${WARPTEMPO_RESVG_INCLUDE_DIR})
     add_dependencies(warptempo_resvg warptempo_resvg_build)
 
-    # THE PRODUCT'S TWO FONT FILES, COMPILED IN (architect 2026-10-02; Wine
-    # Tahoma alone 2026-10-06; the list and its order are gui_font.h's
-    # kGuiFontFiles, the rule and the mechanism's reasons at
-    # gui_font_embedded.cpp's head). Each file becomes `<name>.inc` in the
-    # build tree — its bytes as a comma-separated list of hex literals, which
-    # that source includes inside an array's braces. Written at CONFIGURE
-    # time, and only when the bytes changed (file(CONFIGURE) leaves an
-    # identical output untouched), and the files are configure dependencies,
-    # so swapping a font re-runs the configure and rebuilds that one object.
+    # THE PRODUCT'S FONT FILES, COMPILED IN (architect 2026-10-02; Wine
+    # Tahoma 2026-10-06, DejaVu Sans beside it 2026-10-07; the rule and the
+    # mechanism's reasons at gui_font_embedded.cpp's head). THE NAMES ARE
+    # READ OUT OF gui_font.h's kGuiFontFiles initializer, the one list, so a
+    # file added there is embedded here with no second spelling (gui_font.h
+    # is a configure dependency for that read). Each file becomes
+    # `<name>.inc` in the build tree — its bytes as a comma-separated list of
+    # hex literals, which that source includes inside an array's braces.
+    # Written at CONFIGURE time, and only when the bytes changed
+    # (file(CONFIGURE) leaves an identical output untouched), and the files
+    # are configure dependencies, so swapping a font re-runs the configure
+    # and rebuilds that one object.
     set(WARPTEMPO_FONT_INC_DIR ${CMAKE_BINARY_DIR}/fonts-generated)
-    foreach(font tahoma.ttf tahomabd.ttf)
+    set(font_list_src ${CMAKE_SOURCE_DIR}/src/gui/gui_font.h)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                 ${font_list_src})
+    file(READ ${font_list_src} font_list_text)
+    string(REGEX MATCH "kGuiFontFiles\\[kGuiFontFileCount\\] = {[^}]*}"
+           font_list_block "${font_list_text}")
+    string(REGEX MATCHALL "\"[^\"]+\"" font_list_quoted
+           "${font_list_block}")
+    set(WARPTEMPO_FONT_FILES)
+    foreach(quoted ${font_list_quoted})
+        string(REPLACE "\"" "" font_name ${quoted})
+        list(APPEND WARPTEMPO_FONT_FILES ${font_name})
+    endforeach()
+    if(NOT WARPTEMPO_FONT_FILES)
+        message(FATAL_ERROR "no font names read from gui_font.h's kGuiFontFiles")
+    endif()
+    foreach(font ${WARPTEMPO_FONT_FILES})
         set(font_src ${CMAKE_SOURCE_DIR}/fonts/${font})
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
                      ${font_src})

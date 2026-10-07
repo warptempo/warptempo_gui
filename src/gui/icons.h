@@ -2,13 +2,13 @@
 
 // THE ICON SET AND ITS ONE ROAD (architect 2026-10-06). An Icon is a GLYPH,
 // one per enumerator below, drawn from the chrome spec's SET (chrome_spec.h's
-// icon_set, kGuiLiveIconSet below): TANGO 0.8.90'S SCALABLE DRAWINGS —
-// ReactOS's model of a Windows 2000 desktop wearing Tango (Tango's own files
-// only, nothing drawn, no GNOME file, a repeat known by position; the set
-// the product drew itself before is git history). One 48-unit Inkscape file
-// per enumerator under
-// assets/icons/tango/ (its README the mapping, the provenance and the
-// licences), PARSED AT LAUNCH through resvg, the one renderer of every set
+// icon_set, gui_live_icon_set below — win2000's TANGO 0.8.90'S SCALABLE
+// DRAWINGS, ReactOS's model of a Windows 2000 desktop wearing Tango (Tango's
+// own files only, nothing drawn, no GNOME file, a repeat known by position;
+// the set the product drew itself before is git history), or clearlooks'
+// MIST, gnome-icon-theme 2.30's drawings under Mist's own folders). One
+// scalable file per enumerator under assets/icons/<set>/ (its README the
+// mapping, the provenance and the licences), PARSED AT LAUNCH through resvg, the one renderer of every set
 // (svg_icon.h: the wrapper, the error rule and why a set is checked at its
 // import), straight from the bundle — never copied into the config folder
 // (load_svg_set, below) — and rasterised lazily per (glyph, device px) into
@@ -26,10 +26,11 @@
 // Windows drew in the button text — the caption's — are not drawings of the
 // set (paint_handler.cpp's caption glyph block).
 //
-// THE PLACEMENT IS FIXED: in a toolbar case the cell sits at (3, 3) Windows
-// px from the case's corner (icon_case_lead_px, render.h — Windows' own
-// seat, the 24-px bitmap's in its large 31 x 30 button as the 16-px one's in
-// its small 23 x 22), filling the seat
+// THE PLACEMENT IS FIXED: in a toolbar case the cell sits at the spec's lead
+// from the case's corner (icon_case_lead_px, render.h — win2000's (3, 3),
+// Windows' own seat, the 24-px bitmap's in its large 31 x 30 button as the
+// 16-px one's in its small 23 x 22; clearlooks' (6, 6), GTK's in its 36 x
+// 36 tool button), filling the seat
 // (icon_glyph_px), plus the pressed/checked shift (draw_cased below).
 // Nothing is centred on its ink: Windows never did (12 of the 15 STD strip
 // cells with odd ink dimensions sit at the fixed offset). The sites with no
@@ -43,7 +44,7 @@
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
 // and warptempo_cli must never carry this TU (nor svg_icon's, nor resvg).
 
-#include "render.h"        // the case geometry, kLiveChromeSpec
+#include "render.h"        // the case geometry, live_chrome_spec()
 
 #include <cairo/cairo.h>
 
@@ -172,12 +173,14 @@ inline constexpr const char* kIconNames[] = {
 };
 static_assert(std::size(kIconNames) == kIconCount);
 
-// THE LIVE SET: the chrome spec's (chrome_spec.h's icon_set, the bundled
-// folder's name).
-inline constexpr std::string_view kGuiLiveIconSet = kLiveChromeSpec.icon_set;
+// THE LIVE SET: the live chrome spec's (chrome_spec.h's icon_set, the
+// bundled folder's name), read after set_live_chrome_spec.
+inline std::string_view gui_live_icon_set() {
+    return live_chrome_spec().icon_set;
+}
 
-// THE SET'S LOAD, once, in gui_main after the theme read and before
-// the window: `set`'s files fetched from the bundle
+// THE SET'S LOAD, once, in gui_main after the device config's read (whose
+// `chrome` names the set) and before the window: `set`'s files fetched from the bundle
 // (GuiPlatform::bundled_icon_files — the repository's assets/icons/<set>/ on
 // the laptop, the APK's icons/<set>/ assets on the tablet; READ IN PLACE,
 // never copied into the config folder as the themes are: his own themes sit
@@ -214,8 +217,8 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                    double size_px);
 
-// THE CASED GLYPH, a toolbar button's: the cell at the case's fixed (3, 3)
-// Windows px (icon_case_lead_px — Windows' own seat, the head's PLACEMENT)
+// THE CASED GLYPH, a toolbar button's: the cell at the case's fixed lead
+// Windows px (icon_case_lead_px — the spec's seat, the head's PLACEMENT)
 // from `case_x`/`case_y`, the case's own top-left corner, plus
 // `button_shift_px`, the button's pressed/checked shift (paint_button_box's
 // `ButtonBoxFace::shift`, one Windows px right and down). Every roster

@@ -764,7 +764,7 @@ private:
     void paint_menu_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
     // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
-    // Windows 95 record at render.h's kCaptionHeightPx): the gradient in the
+    // record at render.h's caption block): the gradient in the
     // caption roles of the window's activation (GuiPlatform::caption_active),
     // the app's icon, the title — "<piece> - Warptempo", or "Warptempo"
     // where no piece is open — in the bold face cut with "..." before the

@@ -92,7 +92,7 @@ private:
 // THE ONE ROAD: shape `utf8` whole with HarfBuzz on `font`'s scaled font's
 // own FT face, through the hb font cached on that scaled font (hb_font_of),
 // and append the glyphs to `run`; each glyph's cluster is its byte index into
-// the string. EVERY GLYPH'S ADVANCE TAKES THE TRACKING (kGuiTrackingPx,
+// the string. EVERY GLYPH'S ADVANCE TAKES THE TRACKING (gui_tracking_px,
 // gui_font.h) after the 26.6 conversion, the last included.
 void append_glyphs(const GuiFont& font, std::string_view utf8,
                    ShapedRun& run) {

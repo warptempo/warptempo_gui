@@ -4,7 +4,9 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "theme_file.h"        // is_theme_key, kThemeGrammarReason
+#include "theme_file.h"        // is_theme_key, kThemeGrammarReason; through
+                               // render.h and gui_font.h, chrome_spec.h's
+                               // is_chrome_key, kChromeGrammarReason
 
 #include <cstddef>
 #include <cstdio>
@@ -18,8 +20,8 @@
 
 namespace {
 
-// The file's key set, in on-disk order — the writer's order AND the required
-// set the shared scanner enforces after the loop (SIX keys; the count's
+// The file's key set, in on-disk order — the writer's order, the required
+// set below its subset (SEVEN keys since 2026-10-07; the count's
 // succession, up to seventeen with the tuning phases of 2026-09-23..27 and
 // nineteen with the colour keys of 2026-10-03..04, is the header's record
 // and git's). THE ORDER IS THE ARCHITECT'S OWN, given
@@ -28,19 +30,35 @@ namespace {
 // 2026-09-13). The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
-// schema paragraph owns that ruling). One list, so a key cannot be written and
-// not demanded (the `.settings` schema keeps the same discipline across two
-// lists because its writer is GUI-side and its reader parser-side;
-// here both halves are in this file, so one list is the honest shape).
+// schema paragraph owns that ruling). The writer's list and the required
+// list stand side by side below, the second the first less its two keys
+// that may be absent (2026-10-07; until then one list served both, so no
+// key could be written and not demanded — the two absent-able keys are the
+// deliberate exception, each saying what its absence means).
 //
-// `theme` IS APPENDED (2026-10-03).
+// `theme` IS APPENDED (2026-10-03); `chrome` STANDS BEFORE IT (2026-10-07),
+// the key whose vocabulary names the theme a file without a `theme` line
+// wears.
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "max_waveform_height",
     "projects_repo",
     "projects_path",
     "last_project",
+    "chrome",
     "theme",
+};
+// THE REQUIRED SET — every key above but the two that may be ABSENT
+// (architect 2026-10-07, the chrome key's round): `chrome`, absent reading
+// as win2000 (the configs written before the key existed load as they
+// were), and `theme`, absent meaning the chrome's own theme. The scanner
+// checks presence against this list and duplicates against every key.
+constexpr const char* kDeviceConfigRequiredKeys[] = {
+    "gui_scale",
+    "max_waveform_height",
+    "projects_repo",
+    "projects_path",
+    "last_project",
 };
 
 } // namespace
@@ -77,6 +95,9 @@ std::filesystem::path device_config_path() {
 std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
+        // AN UNSET THEME WRITES NO LINE (2026-10-07): its one spelling is
+        // the line's absence, so the file keeps following the chrome.
+        if (std::string_view(key) == "theme" && cfg.theme.empty()) continue;
         s += key;
         s += '=';
         const std::string_view k(key);
@@ -96,6 +117,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "last_project") {
             // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
+        } else if (k == "chrome") {
+            // The vocabulary's key verbatim, always written (the default's
+            // too, so a file once rewritten names its chrome).
+            s += cfg.chrome;
         } else if (k == "theme") {
             s += cfg.theme;
         }
@@ -183,9 +208,21 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.last_project = value;
             return {};
         }
+        // THE CHROME (architect 2026-10-07): a vocabulary's key under its one
+        // grammar owner (is_chrome_key, chrome_spec.h); absent, the struct's
+        // win2000 stands.
+        if (key == "chrome") {
+            if (!is_chrome_key(value)) {
+                return bad_value(ln, key, value, kChromeGrammarReason);
+            }
+            out.chrome = value;
+            return {};
+        }
         // THE THEME (2026-10-03): the built-in's key or a theme file's read
         // at launch, under its one grammar owner (is_theme_key, theme_file.h)
         // — which is why gui_main reads the themes folder BEFORE this file.
+        // An EMPTY value is refused like any other non-key: the unset theme
+        // is the line's absence (2026-10-07), which the writer emits.
         if (key == "theme") {
             if (!is_theme_key(value)) {
                 return bad_value(ln, key, value, kThemeGrammarReason);
@@ -195,7 +232,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
         }
         return warptempo_parse::prefix_line_error(
             ln, "unknown key '" + key + "'");
-    }, kDeviceConfigKeys);
+    }, kDeviceConfigRequiredKeys);
     if (!scan) return std::unexpected(std::move(scan.error()));
     return out;
 }

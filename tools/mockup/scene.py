@@ -2,7 +2,8 @@
 # tools/mockup/scene.py — A SCENE: what one captured screen holds, measured once by hand (tools/mockup/README.md,
 # THE SCENE FORMAT). Lengths are WINDOWS PX at the capture's gui_scale; this tool takes whole-percent scales that are
 # multiples of 100 (one Windows px = a whole number of device px), every row and column landing on a device px.
-# The chrome's own constants (the caption's icon seat and button boxes off src/gui/render.h) are read on every run,
+# The chrome's own constants (the caption's icon seat and button boxes off src/gui/chrome_spec.h's win2000 instance,
+# the relief line and the icon size off src/gui/render.h) are read on every run,
 # never restated here; the captures' toolbar case is the one frozen record (below).
 import glob, json, os, re
 
@@ -10,10 +11,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.normpath(os.path.join(HERE, '..', '..'))
 SCENES = os.path.join(HERE, 'scenes')
 RENDER_H = os.path.join(REPO, 'src', 'gui', 'render.h')
+CHROME_SPEC_H = os.path.join(REPO, 'src', 'gui', 'chrome_spec.h')
 
-_RENDER_CONSTANTS = ('kCaptionHeightPx', 'kCaptionIconXPx', 'kCaptionIconYPx', 'kCaptionIconPx',
-                     'kCaptionButtonWPx', 'kCaptionButtonHPx', 'kCaptionButtonInsetPx', 'kCaptionCloseGapPx',
-                     'kReliefLinePx')
+_RENDER_CONSTANTS = ('kCaptionIconPx', 'kReliefLinePx')
+# THE CAPTION'S SEATS ARE THE CHROME SPEC'S SINCE 2026-10-07 (chrome_spec.h's caption_* fields, each vocabulary's own),
+# read off the win2000 instance — Windows' own caption metrics, which the Windows 95 captures share — under the names
+# render.h's constants carried before.
+_SPEC_FIELDS = (('kCaptionHeightPx', 'caption_height_px'), ('kCaptionIconXPx', 'caption_icon_x_px'),
+                ('kCaptionIconYPx', 'caption_icon_y_px'), ('kCaptionButtonWPx', 'caption_button_w_px'),
+                ('kCaptionButtonHPx', 'caption_button_h_px'), ('kCaptionButtonInsetPx', 'caption_button_inset_px'),
+                ('kCaptionCloseGapPx', 'caption_close_gap_px'))
 # THE CAPTURES' TOOLBAR CASE, FROZEN: every scene in scenes/ is a capture of the Windows 95 chrome, Windows 95's small
 # case 23 x 22 (lead 3, the 16-px glyph, trail 4 right and 3 below — kChromeSpecWin95 at e7e0ddf4), which the source no
 # longer carries since the product dropped Windows 95 for Windows 2000 (2026-10-06 evening; chrome_spec.h's
@@ -30,6 +37,15 @@ def render_constants():
         if not m:
             raise SystemExit(f'tools/mockup: {RENDER_H}: no `inline constexpr int {k}` (the source moved)')
         out[k] = int(m.group(1))
+    spec = open(CHROME_SPEC_H).read()
+    m = re.search(r'inline constexpr ChromeSpec kChromeSpecWin2000\s*=\s*\{(.*?)\n\};', spec, re.S)
+    if not m:
+        raise SystemExit(f'tools/mockup: {CHROME_SPEC_H}: no kChromeSpecWin2000 (the source moved)')
+    for k, field in _SPEC_FIELDS:
+        f = re.search(r'\.' + field + r'\s*=\s*(\d+)\s*,', m.group(1))
+        if not f:
+            raise SystemExit(f'tools/mockup: {CHROME_SPEC_H}: no kChromeSpecWin2000.{field} (the source moved)')
+        out[k] = int(f.group(1))
     out.update(_WIN95_CASE)
     return out
 

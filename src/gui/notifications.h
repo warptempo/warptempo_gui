@@ -559,6 +559,15 @@ inline constexpr const char* kCheckpointPublishing =
 inline constexpr const char* kProjectsPathAppliesCard =
     "Projects path applies at the next Open project and the next launch";
 
+// THE CHROME COMMIT'S SENTENCE (architect 2026-10-07): a `chrome=` commit
+// from the settings editor rewrites the device config and changes nothing
+// on screen — the vocabulary's faces, lanes and icon set are built once at
+// launch (set_live_chrome_spec, chrome_spec.h) — so the press says where it
+// applies, the projects path's rule above: one clause, raised only when the
+// config write succeeded (GuiSettingsEditor::commit_device_setting).
+inline constexpr const char* kChromeAppliesCard =
+    "Chrome applies at the next launch";
+
 // THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02) — a
 // proper sub-window whose TARGET span rounds below one output sample, which
 // plan_trim refuses and every orchestrator answers by rendering the FULL,

@@ -1,7 +1,7 @@
 #include "gui_font.h"
 
 // THE LINUX BINARY CARRIES ITS OWN FACES (architect 2026-10-02, "bundle it for
-// both"): the two files under the repository's `fonts/` (gui_font.h's
+// both"): the four files under the repository's `fonts/` (gui_font.h's
 // kGuiFontFiles) are compiled into the executable here, so the laptop depends
 // on no installed font package and asks fontconfig nothing. The Wayland
 // backend hands these to gui_font_install_bundled (gui_font.h) once, at the
@@ -24,6 +24,10 @@
 // FreeType is handed an explicit length, so no terminator is needed, and
 // gui_font_install_bundled copies the bytes it keeps.
 
+// ONE ARRAY PER FILE, IN kGuiFontFiles' ORDER: the font step writes an
+// `.inc` for every name that list spells, and the names here follow it by
+// hand — a file added to the list and not here fails the static_assert's
+// count, a file named here and not there fails the include.
 namespace {
 
 const uint8_t kTahoma[] = {
@@ -32,10 +36,19 @@ const uint8_t kTahoma[] = {
 const uint8_t kTahomaBold[] = {
 #include "tahomabd.ttf.inc"
 };
+const uint8_t kDejaVuSans[] = {
+#include "DejaVuSans.ttf.inc"
+};
+const uint8_t kDejaVuSansBold[] = {
+#include "DejaVuSans-Bold.ttf.inc"
+};
 
 } // namespace
 
+static_assert(kGuiFontFileCount == 4);
 const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount] = {
     {kTahoma, sizeof(kTahoma)},
     {kTahomaBold, sizeof(kTahomaBold)},
+    {kDejaVuSans, sizeof(kDejaVuSans)},
+    {kDejaVuSansBold, sizeof(kDejaVuSansBold)},
 };

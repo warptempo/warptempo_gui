@@ -2397,9 +2397,13 @@ namespace {
 // are: the template's projects_path, device_config_defaults above.)
 
 // LOAD THE PRODUCT'S FACES OUT OF THE APK, or die. The assets are the
-// repository's own two font files (gui_font.h's kGuiFontFiles, in its
-// order; architect 2026-10-02 and 2026-10-06; build_apk.sh's asset step
-// copies them). A
+// repository's own font files — all four, both chrome vocabularies' sets,
+// whichever the config names (gui_font.h's kGuiFontFiles, in its order;
+// architect 2026-10-02, 2026-10-06 and 2026-10-07; build_apk.sh's asset
+// step copies every name that list spells), and the abort below covers
+// each of them. This runs BEFORE gui_main reads the device config's
+// `chrome`, which is why the install measures every set's ems (its probe,
+// gui_font.h). A
 // missing or unreadable asset is a BUILD defect — the packaging step puts every
 // file in and there is no runtime state that removes one — so there is no
 // error arm to design: painting would otherwise silently use cairo's default,
@@ -2407,7 +2411,7 @@ namespace {
 // CALLER'S: gui_font_bundled.cpp keeps its own log-and-answer-false arms.
 //
 // THE INSTALL IS OBSERVED, not assumed: gui_font_install_bundled answers
-// whether each face is FT-backed and the live set's carry their ems' glyphs
+// whether each face is FT-backed and every set's carry their ems' glyphs
 // (its probe, gui_font.h), and false aborts here exactly as a missing asset
 // does — the Wayland backend's GuiPlatform::init asks the same owner the
 // same question of the bytes compiled into its executable.

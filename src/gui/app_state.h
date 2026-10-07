@@ -2154,10 +2154,13 @@ enum class RedesignButton {
     //
     // OPEN PROJECT LEADS THE ROW (architect 2026-10-07: "the first icon
     // should be the open folder icon, to open a project"), Windows' own
-    // standard-toolbar order — Open before Save — IN A GROUP OF ITS OWN, one
-    // button by his word ("just to keep those two together": the act and its
-    // shift twin, no drop-down), the ordinary gap and separator between it
-    // and Save (redesign_button_opens_icon_group). ITS CHORD IS CTRL+O and
+    // standard-toolbar order — Open before Save — ONE BUTTON, the act and its
+    // shift twin ("just to keep those two together", no drop-down), STANDING
+    // IN SAVE'S GROUP, first, then Save, with NO SEPARATOR BETWEEN THEM
+    // (architect 2026-10-07: "separator in the drop-down, no separator in the
+    // toolbar" — the File menu parts Open and Revert from the rows after them,
+    // the toolbar does not part Open from Save;
+    // redesign_button_opens_icon_group). ITS CHORD IS CTRL+O and
     // its act is that key's exactly, the project picker
     // (GuiInputHandler::open_project_picker, the one owner whose body carries
     // every gate; the File menu's Open Project row is the same chord). ITS
@@ -2172,7 +2175,7 @@ enum class RedesignButton {
     // DropdownMenu). Its face is the plain act's (redesign_button_enabled's
     // arm). No lamp: an act, not a mode.
     //
-    // SAVE STANDS ALONE BEHIND IT, A SEPARATOR ON EACH SIDE (architect
+    // SAVE STANDS BEHIND IT WITHOUT A SEPARATOR, AND BEFORE ONE (architect
     // 2026-09-29, after his accidental Save presses at the tablet's 200 %):
     // UNDO opens a group of its own with Redo, Copy Value and Render behind
     // it, so a separator stands between Save and Undo
@@ -3137,8 +3140,9 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // 2026-10-02, the Windows case; the etched separator that stood in that gap
 // retired the same day — the groups' history below still says
 // "separator" for the gap of its day). The row's first group opens on Open
-// Project (since 2026-10-07; on Save before it) and takes no gap, the painter's walk suppressing the gap ahead of its
-// first member rather than this predicate carrying a third state.
+// Project (since 2026-10-07, Save behind it in the same group; on Save
+// before it) and takes no gap, the painter's walk suppressing the gap ahead
+// of its first member rather than this predicate carrying a third state.
 //
 // IT LIVES HERE, BESIDE THE ROSTER, rather than as a column in the painter's
 // table: it was hoisted for the collapse rule (which asked whole groups) and
@@ -3147,8 +3151,10 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // reader now — paint_icon_row's two layout walks (the left groups' and the
 // flush-right view group's).
 //
-// THE EIGHT GROUPS, in painted order: OPEN PROJECT ALONE (its Revert twin with
-// it, one button by the architect's word), SAVE ALONE, then UNDO, REDO, COPY VALUE
+// THE SEVEN GROUPS, in painted order: OPEN PROJECT AND SAVE (Open first, its
+// Revert twin with it, then Save, no separator between — architect
+// 2026-10-07: "separator in the drop-down, no separator in the toolbar"),
+// then UNDO, REDO, COPY VALUE
 // and RENDER (Copy Value up from the bottom row since 2026-09-29, members
 // joining and leaving and no boundary moving), THE
 // VIEWPORT-CLASS GROUP (Full zoom out leading, the
@@ -3165,8 +3171,9 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // ROW'S RIGHT EDGE, THE VIEW GROUP: Source+Warp leading Target+Warp and
 // Target+Phase.
 //
-// EIGHT SINCE 2026-10-07, UP FROM SEVEN (architect): OPEN PROJECT opens the
-// row in a group of its own ahead of Save's.
+// STILL SEVEN SINCE 2026-10-07 (architect): Open Project joined the row in
+// Save's group, first, no separator between them — a member joining, no
+// boundary moving.
 //
 // SEVEN FROM 2026-10-01, UP FROM SIX: the row-1 view bar's three acts came
 // down as the view group, its own separator-led group at the row's right
@@ -3259,12 +3266,10 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // a group of one since then.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
-        // OPEN PROJECT IS A GROUP OF ONE, THE ROW'S FIRST (architect
-        // 2026-10-07: "just to keep those two together" — the button and its
-        // Revert twin, and nothing further), so Save still leads its own
-        // group behind it, one gap and separator between.
+        // OPEN PROJECT LEADS SAVE'S GROUP, THE ROW'S FIRST (architect
+        // 2026-10-07: "separator in the drop-down, no separator in the
+        // toolbar"), so Save is no leader: Open, then Save, touching.
         case RedesignButton::OpenProject:
-        case RedesignButton::Save:
         // UNDO LEADS REDO AND RENDER (architect 2026-09-29): the separator
         // in front of it keeps a finger aimed at Undo off Save at the
         // tablet's 200 %.
@@ -3433,6 +3438,12 @@ struct SettingsPopupItem {
 // together); with `theme_level` and the twelve keys gone into the theme files
 // (architect 2026-10-04) the group is the one row, and the separator went
 // with the reason for it — the device half is one group again.
+//
+// `Chrome` JOINED 2026-10-07 (architect, the second vocabulary), RIGHT
+// BEFORE `Theme` in kDeviceConfigKeys' order — the theme's sibling row, the
+// same editor, refusal and recall, its label its key's name in Title Case;
+// its commit applies at the next launch and says so on a card
+// (commit_device_setting).
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Title",               "title",         false},
     {"Notes",               "notes",         false},
@@ -3442,6 +3453,7 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Max Waveform Height", "max_waveform_height", false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
+    {"Chrome",              "chrome",        false},
     {"Theme",               "theme",         false},
 };
 inline constexpr int kSettingsPopupItemCount =
@@ -3566,6 +3578,12 @@ struct CommandPopupItem {
 // the Navigation menu's "Walk both tabs" row greyed in the `h` view
 // 2026-08-08..15, was the deleted dropdown_item_enabled's first reader, and
 // the predicate returns under that name.)
+// THE SEPARATOR BEFORE QUIT IS THE MENUS' CONVENTION AND THE ARCHITECT'S
+// WORD (2026-10-07: "separator in the drop-down, no separator in the
+// toolbar"): Open Project and Revert, then a line, then the rows after them
+// — while the icon row stands Open Project and Save together in one group
+// with none between (redesign_button_opens_icon_group). The deliberate
+// asymmetry is that ruling.
 inline constexpr CommandPopupItem kFilePopupItems[] = {
     {"Open Project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
     {"Revert",       "Ctrl+Alt+O", GuiKeys::O, true, false, true, false},
@@ -3773,7 +3791,7 @@ inline constexpr DropdownRow dropdown_row(DropdownMenu m, int i) {
 // The open dropdown's painted HEIGHT, derived from its table and the scale
 // alone — no shaping, no paint. Its one non-painter reader is the OPEN EDGE
 // (toggle_dropdown), which has to damage the box on the frame BEFORE the box
-// exists: the settings popup (kSettingsPopupItems' nine rows and a separator)
+// exists: the settings popup (kSettingsPopupItems' ten rows and a separator)
 // hangs past the top strip at every scale, and a redraw is clipped to the
 // damage it was given. The painter calls this too, so the damaged height and the painted
 // height are one expression and cannot drift.
@@ -9821,8 +9839,9 @@ GuiRect top_caption_row_area(const AppState& a);
 // frame exactly when it lies outside the window's [0, width) x [0, height): a
 // press can land there only while the frame stands (maximised, and on the
 // tablet, the client area is the whole surface). A CORNER reaches one caption
-// height (kCaptionHeightPx) past the frame along each of its two edges, as
-// Windows' sizing hit test reached its caption-button size, so a corner is
+// height (caption_row_h_px, the live chrome's) past the frame along each of
+// its two edges, as Windows' sizing hit test reached its caption-button
+// size, so a corner is
 // grabbable from either edge near it. Defined with the lane geometry in
 // main.cpp; read by the press claim (claim_window_frame_press) and the cursor
 // zone map (pointer_cursor_kind). Hit tests are not guards (CLAUDE.md).

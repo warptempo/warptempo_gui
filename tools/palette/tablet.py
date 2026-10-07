@@ -55,6 +55,18 @@ def _num(text, rel, name):
     return float(v) if '.' in v else int(v)
 
 
+def _spec_field(text, instance, field):
+    """`.field = <number>,` inside chrome_spec.h's `inline constexpr ChromeSpec <instance> = {...};` -> the number (int
+    or float as written). The chrome spec's fields carry the lengths a vocabulary varies (architect 2026-10-07); this
+    geometry reads the win2000 instance's, the live default."""
+    m = re.search(r'inline constexpr ChromeSpec ' + re.escape(instance) + r'\s*=\s*\{(.*?)\n\};', text, re.S)
+    if not m: raise SystemExit(f'tablet.py: the chrome spec {instance} not found in src/gui/chrome_spec.h')
+    f = re.search(r'\.' + re.escape(field) + r'\s*=\s*([0-9.]+)\s*,', m.group(1))
+    if not f: raise SystemExit(f'tablet.py: {instance}.{field} not found as a number in src/gui/chrome_spec.h')
+    v = f.group(1)
+    return float(v) if '.' in v else int(v)
+
+
 def _array(text, rel, name):
     m = re.search(re.escape(name) + r'\[[^\]]*\]\s*=\s*\{([^}]*)\}', text)
     if not m: raise SystemExit(f'tablet.py: the array {name} not found in src/gui/{rel}')
@@ -84,7 +96,15 @@ def read_constants():
                     ('kIconRowAirPx', 3)):
         K[name] = v; own[name] = 'tablet.py (the retired win95 case, frozen)'
     K['kMenuLabelPadPx'] = 7; own['kMenuLabelPadPx'] = 'tablet.py (the retired win95 menu pad, frozen)'
-    for name in ('kMenuRowHeightPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
+    # THE LENGTHS THE CHROME SPEC CARRIES SINCE 2026-10-07 (chrome_spec.h, each vocabulary's own), read off the win2000
+    # instance under the names this geometry has always used: the menu row's content, the group gap and the push
+    # button's box and pads (render.h's kMenuRowHeightPx and kIconGroupSpacePx, paint_handler.cpp's kModalBtn* before).
+    cs = _read('chrome_spec.h')
+    for name, field in (('kMenuRowHeightPx', 'menu_row_content_px'), ('kIconGroupSpacePx', 'toolbar_group_gap_px'),
+                        ('kModalBtnBoxPx', 'push_button_box_px'), ('kModalBtnPadLeftPx', 'push_button_pad_left_px'),
+                        ('kModalBtnPadRightPx', 'push_button_pad_right_px')):
+        K[name] = _spec_field(cs, 'kChromeSpecWin2000', field); own[name] = f'chrome_spec.h kChromeSpecWin2000.{field}'
+    for name in ('kTrimLaneHeightPx', 'kTrimArrowButtonPx',
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
                  'kMarkerFlagEdgePx', 'kMarkerFlagFacePx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
                  'kPlayheadHeadRows', 'kPlayheadHeadCols',
@@ -92,8 +112,7 @@ def read_constants():
         K[name] = _num(rh, 'render.h', name); own[name] = 'render.h'
     for name in ('kStatusPanelPadPx', 'kTimeFieldHeightPx', 'kRulerLabelCapTopPx', 'kRulerMajorRisePx',
                  'kRulerMinorsPerStep', 'kRulerMinMinorPitchPx', 'kModalButtonGapPx', 'kModalFieldHeightPx',
-                 'kModalFieldPadXPx', 'kModalFieldWidthPx', 'kModalBtnBoxPx', 'kModalBtnMinWidthPx',
-                 'kModalBtnPadLeftPx', 'kModalBtnPadRightPx', 'kModalFocusFramePx'):
+                 'kModalFieldPadXPx', 'kModalFieldWidthPx', 'kModalBtnMinWidthPx', 'kModalFocusFramePx'):
         K[name] = _num(ph, 'paint_handler.cpp', name); own[name] = 'paint_handler.cpp'
     nh, fo = _read('notifications.h'), _read('folder_overlay.h')
     for name in ('kNotificationMinWidthPx', 'kNotificationMaxWidthPx'):
@@ -281,6 +300,14 @@ def build():
 
     # ---- the buttons (the icon row's walk and the bottom row's right block), the scene's enabled set and toggles
     by_name = {(b['row'], b['button']): b for b in base['buttons']}
+    # OPEN PROJECT (architect 2026-10-07) postdates the capture: scene 1002 measured no case for it. Its seat is its
+    # neighbours' (the walk below places it), its glyph the scene's own drawing of the seat that wears the same
+    # document-open in the app, Load in Place's (icons.h, a repeat by position; glyphs/1002/index.json's
+    # icon_OpenProject names that mask), and its face the live act's: enabled, never selected.
+    if ('icon', 'OpenProject') not in by_name:
+        by_name[('icon', 'OpenProject')] = dict(by_name[('icon', 'IconLoadInPlace')], button='OpenProject',
+                                                icon='DocumentOpen', table_icon='DocumentOpen', selected=False,
+                                                enabled=True)
     def button(rowname, name, x, y_):
         b = by_name.get((rowname, name))
         if b is None: raise SystemExit(f'tablet.py: the app\'s {rowname} row has {name}, scene {SCENE_TAG} has no glyph for it')
@@ -297,8 +324,8 @@ def build():
     left_end = x
     for i, name in enumerate(K['kIconRowViewGroup']): buttons.append(button('icon', name, view_x0 + i * case_w, btn_y))
     if left_end > view_x0 - gap: raise SystemExit('tablet.py: the icon row\'s left walk runs under its view group')
-    row('icon row', 'left walk end (pad + 17 cases + 5 gaps; outside the h view)', '8 + 17 x 23 + 5 x 8', left_end,
-        'paint_handler.cpp paint_icon_row', 1203)
+    row('icon row', 'left walk end (pad + 17 cases + 4 gaps; outside the h view)', '8 + 17 x 23 + 4 x 8', left_end,
+        'paint_handler.cpp paint_icon_row', 1181)
     row('icon row', 'view group from the right (gap + 3 cases + pad)', '8 + 3 x 23 + 8', W - view_x0 + gap,
         'paint_handler.cpp paint_icon_row', 233)
     content = [L['bottom'][0] + bb, L['bottom'][1]]

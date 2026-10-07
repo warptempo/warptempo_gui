@@ -382,10 +382,15 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "projects_repo") return app.projects_repo;
     if (key == "projects_path" && app.device_config != nullptr)
         return app.device_config->projects_path;
-    // THE THEME (2026-10-03), verbatim — the struct holds it as typed and the
-    // file writes it so. The recall is the live value, which is always the
-    // built-in or a theme loaded at launch (its grammar, is_theme_key), so a
-    // recalled `theme=` commits back as an unchanged no-op.
+    // THE CHROME (2026-10-07) AND THE THEME (2026-10-03), verbatim — the
+    // struct holds each as typed and the file writes it so. The recall is
+    // the live value: the chrome a vocabulary's key (is_chrome_key), the
+    // theme the built-in, a theme loaded at launch (is_theme_key) or EMPTY
+    // while the config has no `theme` line (the chrome's own, the empty
+    // commit's meaning) — so a recalled line commits back as an unchanged
+    // no-op either way.
+    if (key == "chrome" && app.device_config != nullptr)
+        return app.device_config->chrome;
     if (key == "theme" && app.device_config != nullptr)
         return app.device_config->theme;
 

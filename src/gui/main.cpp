@@ -143,19 +143,21 @@ namespace {
 // height; the waveform flexes between them UP TO A CLAMP, and TWO FLEXIBLE
 // GAPS center it (the vertical rule below). The TOP strip is SIX lanes since
 // the caption's arrival (architect 2026-10-05; five from the tab row's
-// deletion, 2026-10-01: "a waste of space") — from the window edge inward: THE
+// deletion, 2026-10-01: "a waste of space") — from the window edge inward
+// (every Windows-px length below the live chrome spec's, chrome_spec.h —
+// win2000's figures first, clearlooks' after them, 2026-10-07): THE
 // CAPTION (caption_row_h_px(), the window's own title bar, Windows'
-// 18-px SM_CYCAPTION, at the window top on both devices — render.h's
-// kCaptionHeightPx), the MENU ROW (menu_row_h_px(), row 1 of the kdenlive
-// redesign, Windows' 19-px menu bar — the anchors' box — plus a one-px row
-// of ground above the content (architect 2026-10-05, Windows' measured 20-px
-// band; its place 2026-10-06), flush under the caption — render.h's
-// kMenuRowHeightPx and kMenuRowHeadPx),
+// 18-px SM_CYCAPTION or metacity's 24, at the window top on both devices —
+// render.h's caption block), the MENU ROW (menu_row_h_px(), row 1 of the
+// kdenlive redesign, Windows' 19-px menu bar — the anchors' box — plus a
+// one-px row of ground above the content (architect 2026-10-05, Windows'
+// measured 20-px band; its place 2026-10-06), or GtkMenuBar's 1 + 23 + 1,
+// flush under the caption — render.h's menu-row block),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
 // menu row with nothing between, a period menu-bar-plus-toolbar stack
 // folded into one lane — one etched line pair, the 30-px case as the band
-// and 4 px of foot, 36 Windows px whole (architect 2026-10-06); render.h's
-// icon-row block — and NO BORDER beyond that foot:
+// and 4 px of foot, 36 Windows px whole (architect 2026-10-06), or GTK's
+// 2 + 36 + 2 = 40; render.h's icon-row block — and NO BORDER beyond that foot:
 // the trim lane's own first row is the boundary), then FLEXIBLE GAP 1, then
 // THE CENTERED BLOCK's three: the TRIM lane (trim_lane_h_px(), the
 // miniaturized scroll bar — the dithered track and the window's thumb), the
@@ -167,16 +169,18 @@ namespace {
 // (marker_lane_h_px(), the flags, their stems and the playhead's column under
 // them), whose bottom edge is the waveform top. ALL SIX ride the gui_scale
 // axis. The BOTTOM strip is ONE LANE: THE UNIFIED BOTTOM ROW,
-// bottom_row_h_px() tall (the icon row's case on the row's own 3-px air,
-// plus a 1px row of ground on top, where its border-top stood) — the clock
+// bottom_row_h_px() tall (the icon row's case on the row's own air — 3 px
+// under win2000, 2 under clearlooks — plus a 1px row of ground on top, where
+// its border-top stood) — the clock
 // cell in its time
 // field (the active tab's letter, a pipe
 // and the timestamp, "A | 00:45.115") and THE STATE LINE on the ground
 // beside it (2026-10-03) at the left pad and,
 // flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the marker walk, the four cardinal arrows and the
-// transport three, eight Windows px of ground between two groups (architect
-// 2026-09-29; an etched separator in each since 2026-10-06), all at the icon
+// transport three, the spec's group gap of ground between two groups (eight
+// Windows px under win2000, architect 2026-09-29; an etched separator in
+// each since 2026-10-06), all at the icon
 // row's toolbar case — sitting ON
 // THE WINDOW'S FOOT with the flexible gap 2 between it and the waveform.
 //
@@ -243,9 +247,13 @@ namespace {
 // accessors, never off a Windows total times the factor — in particular the
 // icon lane's etched pair is 2 x relief_line_px(), not scaled_px(2), so it
 // can differ from a naive total at a fractional gui_scale (none of the
-// scales below hit that case). THE TOP STACK IS 125 WINDOWS PX (render.h's
-// icon-row block). THE WELL'S HEIGHT AT THE BASE'S 300 % IS 954 DEVICE ROWS
-// (the rule at centered_leftover_h below).
+// scales below hit that case). THE TOP STACK IS 125 WINDOWS PX UNDER
+// WIN2000 AND 144 UNDER CLEARLOOKS (render.h's icon-row block). THE WELL'S
+// HEIGHT AT THE BASE'S 300 % IS 954 DEVICE ROWS UNDER WIN2000 AND 885 UNDER
+// CLEARLOOKS (the rule at centered_leftover_h below). THE WIN2000 STACKS
+// FIRST (the chrome key's round of 2026-10-07 moved none of them — the
+// accessors re-read at 138 and 300 gave every number below again), the
+// CLEARLOOKS STACKS after them.
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
 //   lanes are 25 caption + 27 menu + 49 icon + 22 trim + 24 ruler + 23 marker
 //   = 170 above, of which 101 is the caption and the two toolbar rows above
@@ -277,6 +285,19 @@ namespace {
 //   block) and 148 below (144 + its 4-row top row), leftover 792; both
 //   readings UNCLAMPED at 792, both gaps 0 (the rule would want 720 - 500 -
 //   396 = -176) — 72 / 80 / 144 / 0 / 204 / 792 / 0 / 148.
+// THE CLEARLOOKS STACKS (2026-10-07; caption 24 + menu 25 + icon 40 + trim
+// 16 + ruler 17 + marker 22 = 144 Windows px above, row 8's 1 + 2 + 36 + 2
+// = 41 below — the marker lane the 17-row cell's box, the ruler the same
+// 6-row digit's):
+//   1920x1080 AT 138 %: the lanes are 33 caption + 34 menu + 55 icon + 22
+//   trim + 24 ruler + 29 marker = 197 above (122 the caption and the two
+//   toolbar rows, 75 the block) and 56 below, leftover 827. At 364: the
+//   waveform CLAMPED at 502, gap 1 = 92, gap 2 = 233 — 33 / 34 / 55 / 92 /
+//   75 / 502 / 233 / 56. At 0: UNCLAMPED at 827, both gaps 0.
+//   2304x1440 AT 300 %: the lanes are 72 caption + 75 menu + 120 icon + 48
+//   trim + 51 ruler + 66 marker = 432 above (267 and 165) and 123 below,
+//   leftover 885; both readings UNCLAMPED at 885, both gaps 0 — 72 / 75 /
+//   120 / 0 / 165 / 885 / 0 / 123.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as the worked case the floors
 //   exist for; no host runs this geometry), the same at either value:
 //     leftover 380 -> waveform UNCLAMPED at 380, both gaps 0
@@ -351,19 +372,20 @@ namespace {
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The CAPTION lane is its 18 Windows
-// px whole (render.h's kCaptionHeightPx: the title bar's ground, its icon, its
-// title and its three buttons inside it), the MENU lane is its anchors' 19
-// Windows px PLUS a one-px row of ground (architect 2026-10-05, Windows'
-// measured 20-px menu band — render.h's kMenuRowHeightPx and kMenuRowHeadPx,
-// the row above the content; the anchors and the dropdown's hang point read
-// the lane, the label's cap-centring alone reads the content under the row),
+// px whole under win2000, 24 under clearlooks (render.h's caption block: the
+// title bar's ground, its icon, its title and its three buttons inside it),
+// the MENU lane is its anchors' 19 Windows px PLUS a one-px row of ground
+// (architect 2026-10-05, Windows' measured 20-px menu band — render.h's
+// menu-row block, the row above the content; clearlooks' 23 between one row
+// above and one below; the anchors and the dropdown's hang point read the
+// lane, the label's seat alone reads the content between the rows),
 // the ICON lane is a period menu-bar-plus-toolbar stack folded into one row
 // — one etched line pair, the 30-px case as the band and 4 Windows px of
-// foot, 36 whole (architect 2026-10-06): render.h's icon-row block,
-// icon_row_h_px; NO border of its own beyond that
-// foot — the trim lane's own first row is still the boundary under it — and
-// the UNIFIED BOTTOM ROW is the same case on the row's own 3-px air above and
-// below (bottom_row_air_px), with neither the icon row's etched lines nor its
+// foot, 36 whole (architect 2026-10-06; clearlooks' 2 + 36 + 2, no pair, no
+// foot): render.h's icon-row block, icon_row_h_px; NO border of its own
+// beyond that foot — the trim lane's own first row is still the boundary
+// under it — and the UNIFIED BOTTOM ROW is the same case on the row's own
+// air above and below (bottom_row_air_px), with neither the icon row's etched lines nor its
 // foot, plus a one-px row of ground on top, the waveform side, where its
 // border-top stood (no line drawn since 2026-10-02).
 constexpr int kTopLaneCount    = 6;
@@ -422,11 +444,18 @@ int strip_total_h(bool top_strip) {
 }
 // THE LEFTOVER the waveform and the two flexible gaps share (the vertical rule
 // above): the window less the whole top lane stack and less the bottom row.
-// THE BASE'S WAVEFORM HEIGHT IS THE RULE EVERY LATER THEME KEEPS (architect
-// 2026-10-06, the ReactOS base settled on mock_TF1): on the tablet's 2304 x
-// 1440 at gui_scale 300 the lanes leave 1440 − 375 − 111 = 954 device rows
-// (318 Windows px; the height was free until the base settled), and a later
-// chrome vocabulary or theme lays its lanes so this stays 954. May
+// EACH VOCABULARY'S WELL IS THE LEFTOVER OF ITS OWN LANES (the planner's
+// design, 2026-10-07, under the architect's free rein; until then "the
+// base's waveform height is the rule every later theme keeps", architect
+// 2026-10-06): a vocabulary lays its lanes at its own period's metrics and
+// the well takes what they leave, no lane squeezed to hold a number. On the
+// tablet's 2304 x 1440 at gui_scale 300 the win2000 lanes leave 1440 − 375 −
+// 111 = 954 device rows (318 Windows px; the ReactOS base settled on
+// mock_TF1, 2026-10-06), the clearlooks lanes 1440 − 432 − 123 = 885 (295
+// Windows px: 19 W more above, GNOME's caption, menu bar, toolbar and the
+// 17-row cell's marker lane, and 4 W more below; report CL1 §3.9, his
+// squeeze captures' 24 / 25 / 40). A THEME moves no lane: the 954 / 885
+// pair holds under every theme of each chrome. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -3275,17 +3304,6 @@ int gui_main(const char* argument) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
     }
-    // THE ICON SET IS LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
-    // load_svg_set): the chrome spec's set read in place from the
-    // bundle and every drawing parsed before the window exists, so no paint
-    // meets a half-loaded set. A file that is not well-formed SVG is a build
-    // defect, the validation doctrine's class (1): the same road, one line
-    // naming the set, the file and resvg's error, and no window.
-    if (const std::optional<std::string> err =
-            icons::load_svg_set(icons::kGuiLiveIconSet)) {
-        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-        return 1;
-    }
     DeviceConfig device_config;
     {
         auto cfg = load_device_config(GuiPlatform::device_config_defaults());
@@ -3294,6 +3312,28 @@ int gui_main(const char* argument) {
             return 1;
         }
         device_config = *cfg;
+    }
+    // THE CHROME IS CHOSEN HERE, ONCE (architect 2026-10-07, chrome_spec.h's
+    // live_chrome_spec): the config's `chrome`, judged by its reader, names
+    // the vocabulary the whole process paints — its face set, its lanes, its
+    // icon set and its theme default — before anything reads the spec: the
+    // icon set's load below, the palette's install, the window and the
+    // first paint. The faces were installed earlier on Android (android_main,
+    // before this function) and need nothing from it: the install measured
+    // every set's ems (gui_font_bundled.cpp), and the face caches are built
+    // at the first paint. A `chrome` commit in Settings writes the file and
+    // takes effect at the next launch (commit_device_setting).
+    set_live_chrome_spec(device_config.chrome);
+    // THE ICON SET IS LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
+    // load_svg_set): the live chrome spec's set read in place from the
+    // bundle and every drawing parsed before the window exists, so no paint
+    // meets a half-loaded set. A file that is not well-formed SVG is a build
+    // defect, the validation doctrine's class (1): the same road, one line
+    // naming the set, the file and resvg's error, and no window.
+    if (const std::optional<std::string> err =
+            icons::load_svg_set(icons::gui_live_icon_set())) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+        return 1;
     }
     // THIS IS THE SCALE'S INIT ROAD ON BOTH BACKENDS, and it runs BEFORE
     // gui.init(): the two pushes here install the scale into the renderer and
@@ -3313,10 +3353,12 @@ int gui_main(const char* argument) {
     // waveform_max_h_px (render.h).
     set_max_waveform_height_px(device_config.max_waveform_height);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the theme the
-    // config names (the built-in or a file read above, 2026-10-04), installed
-    // before the first paint, and again at the settings editor's `theme`
-    // commit (commit_device_setting). Every painter reads it through
-    // palette() (render.h's palette block).
+    // config names (the built-in or a file read above, 2026-10-04) — or, with
+    // no `theme` line, THE LIVE CHROME'S OWN (2026-10-07, effective_theme_key,
+    // theme_file.h: resolved inside install_palette, so it needs the chrome
+    // set above) — installed before the first paint, and again at the
+    // settings editor's `theme` commit (commit_device_setting). Every
+    // painter reads it through palette() (render.h's palette block).
     install_palette(device_config);
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,

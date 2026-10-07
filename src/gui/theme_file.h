@@ -33,9 +33,11 @@
 //
 // ONE THEME IS BUILT IN, compiled: `windows-2000-standard` (kBuiltinThemeKey),
 // the role table's values — Windows 2000's own "Windows Standard" scheme, the
-// chrome's (chrome_spec.h) — AND THE DEVICE CONFIG'S DEFAULT `theme`
-// (kDefaultThemeKey). Every other theme is a FILE, Windows 95's recorded
-// colours (`windows-95-standard`) among them since 2026-10-06.
+// win2000 chrome's (chrome_spec.h) — AND THAT CHROME'S OWN THEME, the one a
+// config with no `theme` line wears under it (effective_theme_key below;
+// under clearlooks the bundled file `clearlooks`, 2026-10-07). Every other
+// theme is a FILE, Windows 95's recorded colours (`windows-95-standard`)
+// among them since 2026-10-06.
 //
 // THE FILES: `<key>.theme` in the `themes/` folder BESIDE THE DEVICE CONFIG
 // (theme_folder_path: device_config_path()'s own folder, on both devices — on
@@ -102,11 +104,22 @@
 // 2026-10-06): Windows 2000's scheme (tools/theme_catalog's
 // `windows-2000-standard`), the chrome's colours.
 inline constexpr const char* kBuiltinThemeKey = "windows-2000-standard";
-// THE DEVICE CONFIG'S DEFAULT `theme` (architect 2026-10-06): the built-in —
-// what a first-run config names (DeviceConfig::theme, whose initializer
-// spells it; theme_file.cpp's static_assert keeps the two in step). Compiled
-// in, so the default always resolves.
-inline constexpr const char* kDefaultThemeKey = kBuiltinThemeKey;
+// THE DEFAULT CHROME'S OWN THEME IS THE BUILT-IN (theme_file.cpp's
+// static_assert on kChromeSpecWin2000.default_theme), so a config naming
+// neither key always resolves to a compiled theme.
+
+// THE THEME THE PALETTE INSTALLS (architect 2026-10-07): the device config's
+// `theme` as written, or — EMPTY, no `theme` line — THE LIVE CHROME'S OWN
+// (chrome_spec.h's default_theme of live_chrome_spec(): win2000's
+// `windows-2000-standard`, clearlooks' `clearlooks`). The live chrome, not
+// the config's `chrome`: a `chrome` commit applies at the next launch, so
+// until then the theme follows what is painted. THE ONE RESOLVER, read by
+// install_palette (render.cpp); the struct keeps the empty value, so the
+// file never pins a chrome's default. A named theme is honoured under
+// either chrome (a Windows theme under clearlooks looks like what it is).
+// Clearlooks' own is a bundled file the copy-in always writes, so the
+// resolved key always passes is_theme_key (theme_words asserts it).
+std::string_view effective_theme_key(std::string_view theme);
 
 // THE ROLE TABLE — THE ONE ENUMERATION (architect 2026-10-04), in GuiPalette's
 // order: the chrome's twenty-one (the caption's six since 2026-10-05), then the

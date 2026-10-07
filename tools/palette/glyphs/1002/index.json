@@ -1,6 +1,26 @@
 {
  "note": "8-bit coverage per ink (P5 PGM, GLYPHxGLYPH device px); composite each ink in order with cairo mask_surface in mix(ink, under, keep), keep = 1 enabled / kRedesignDisabledMix disabled",
  "glyphs": {
+  "icon_OpenProject": {
+   "row": "icon",
+   "button": "OpenProject",
+   "icon": "DocumentOpen",
+   "enabled": true,
+   "inks": [
+    "text"
+   ],
+   "files": {
+    "text": "icon_IconLoadInPlace__text.pgm"
+   },
+   "under": [
+    32,
+    35,
+    38
+   ],
+   "size": 44,
+   "recon_mismatch_px": 3,
+   "recon_max_err": 1
+  },
   "icon_Save": {
    "row": "icon",
    "button": "Save",

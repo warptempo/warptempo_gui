@@ -3,60 +3,66 @@
 // THE ONE FACE OWNER: every text surface names its face here and nowhere
 // else, so the painters never name a font. THE PRODUCT'S FACES ARE ITS OWN
 // (architect 2026-10-02: "the app becomes its own thing; it has its own
-// fonts"): two files under the repository's `fonts/` (fonts/README.md has
-// their provenance and licence), carried by both binaries — compiled into
+// fonts"): four files under the repository's `fonts/` (fonts/README.md has
+// their provenance and licences), carried by both binaries — compiled into
 // the Linux executable (gui_font_embedded.cpp), shipped as the APK's assets
 // on Android — and turned into faces by ONE implementation on both devices,
 // gui_font_bundled.cpp, through FreeType. Neither device asks anything for a
 // face: fontconfig is never consulted on the laptop and the tablet has
 // nothing to consult.
 //
-// ONE FACE SET (architect 2026-10-06, the Windows 2000 pivot: "We can drop
-// Nimbus and the Windows 95 theme as a whole"): a set is one chrome
+// TWO FACE SETS, ONE LIVE (architect 2026-10-06, the Windows 2000 pivot;
+// the second set 2026-10-07 with the clearlooks chrome): a set is one chrome
 // vocabulary's text — which file each of the three uses (GuiFace) is drawn
 // from, its recorded vertical metrics and its tracking (GuiFaceSet below) —
-// and the chrome spec names its set (chrome_spec.h's ChromeSpec). The table
-// stays a table so a later vocabulary's face joins it as a second instance;
-// today the one set, kGuiFaceSetWin2000, is live: WINE TAHOMA as ReactOS
-// 0.4.16 ships it (tahoma.ttf, tahomabd.ttf; TrueType outlines on a
-// Bitstream Vera base), the face the ReactOS captures are set in — its
-// 11-ppem strike equals tmp/reactos.png's menu and title pixels exactly
-// (measured 2026-10-06). The body is Tahoma, the bold (the caption's title
-// alone) Tahoma Bold, the small (the ruler's labels alone) Tahoma at the
-// smaller em.
+// and the chrome spec names its set (chrome_spec.h's ChromeSpec), the
+// device config's `chrome` choosing the live spec once at launch. THE
+// WIN2000 SET, kGuiFaceSetWin2000: WINE TAHOMA as ReactOS 0.4.16 ships it
+// (tahoma.ttf, tahomabd.ttf; TrueType outlines on a Bitstream Vera base),
+// the face the ReactOS captures are set in — its 11-ppem strike equals
+// tmp/reactos.png's menu and title pixels exactly (measured 2026-10-06).
+// THE GNOME2 SET, kGuiFaceSetGnome2: DEJAVU SANS as Debian 6 squeeze ships
+// it (DejaVuSans.ttf, DejaVuSans-Bold.ttf), GNOME 2's Sans 10, the face his
+// squeeze captures are set in. In each set the body is the regular file,
+// the bold (the caption's title alone) the bold file, the small (the
+// ruler's labels alone) the regular file at the smaller em.
 // EVERY FACE DRAWS ITS ANTIALIASED OUTLINE AT EVERY SIZE, NEVER AN EMBEDDED
 // BITMAP STRIKE (architect 2026-10-06; Tahoma carries strikes at 8–16 ppem,
-// its bold at 9–13, and the sheets he judged were outline renders): the
-// install hides the strikes from FreeType and every glyph load passes
-// FT_LOAD_NO_BITMAP (gui_font_bundled.cpp's head). Every run is shaped by
-// HarfBuzz with the face's OWN ADVANCES LESS THE SET'S TRACKING
-// (kGuiTrackingPx below), under SLIGHT hinting (gui_font_bundled.cpp's
-// head), at the DERIVED EM (gui_face_em_px), and painted through
-// cairo_show_glyphs (text_shape.h).
+// its bold at 9–13, and the sheets he judged were outline renders; DejaVu
+// carries none): the install hides the strikes from FreeType and every glyph
+// load passes FT_LOAD_NO_BITMAP (gui_font_bundled.cpp's head). Every run is
+// shaped by HarfBuzz with the face's OWN ADVANCES LESS THE SET'S TRACKING
+// (GuiFaceSet::tracking_px, gui_tracking_px below), under SLIGHT hinting
+// (gui_font_bundled.cpp's head), at the DERIVED EM (gui_face_em_px), and
+// painted through cairo_show_glyphs (text_shape.h).
 //
 // THE VERTICAL METRICS ARE RECORDED CONSTANTS, the ONLY SOURCE OF VERTICAL
-// METRICS (the live set's kGuiFaceMetrics below; architect 2026-10-05, the
+// METRICS (the live set's, gui_face_metrics below; architect 2026-10-05, the
 // constants 2026-10-06): ascent, descent, the line band, the cap band
 // (redesign_baseline, line_baseline), the flag box, the lane heights and the
 // ruler lane are the recorded integers in Windows px times the scale, as
 // unrounded doubles (a font quantity is not a grid point), rounded at the
 // element by the seat that reads them. They are the numbers the period drew
-// at 96 dpi — Tahoma 8's 13-px cell with its 8-row cap — which is why they
-// seat everything (CLAUDE.md's rounding doctrine: every chrome length is a
+// at 96 dpi — Tahoma 8's 13-px cell with its 8-row cap, Sans 10's 17-px
+// cell with its 10-row cap — which is why they seat everything (CLAUDE.md's rounding doctrine: every chrome length is a
 // Windows px).
 //
 // THE EM MATCHES THOSE METRICS VERTICALLY (architect 2026-10-05), derived at
 // the install from the face's own measured ink (gui_face_em_px): the body's
 // is the em at which the body file's "H" stands as tall as the recorded cap,
 // the bold's the bold file's "H" against the same cap, the small's the body
-// file's "0" ink against the recorded digit. Measured 2026-10-06: 11.003,
-// 10.996 and 7.943 Windows px (Tahoma's "H" 1489 of 2048, Tahoma Bold's
-// 1490, Tahoma's "0" 1547 — 8 pt at GDI's 11 ppem, Tahoma's own 8-pt size).
+// file's "0" ink against the recorded digit. Measured 2026-10-06 for the
+// win2000 set: 11.003, 10.996 and 7.943 Windows px (Tahoma's "H" 1489 of
+// 2048, Tahoma Bold's 1490, Tahoma's "0" 1547 — 8 pt at GDI's 11 ppem,
+// Tahoma's own 8-pt size); 2026-10-07 for the gnome2 set: 13.717, 13.717
+// and 7.933 Windows px (DejaVu Sans's and DejaVu Sans Bold's "H" both 1493
+// of 2048, DejaVu Sans's "0" 1549 — the body 3 % over Sans 10's 13.333).
 // The em is vertical alone: horizontally the face is its own, and a taller
 // or deeper glyph ("$", a descender) may poke past a box sized off the
 // recorded rows — accepted (architect 2026-10-05). A FACE'S OWN LINE BOX IS
-// NEVER READ (Tahoma's hhea ascent is 2049 of 2048, above its caps): the
-// recorded metrics seat every run. HORIZONTALLY THE FACE IS ITS OWN: every
+// NEVER READ (Tahoma's hhea ascent is 2049 of 2048, above its caps;
+// DejaVu's 1901 / -483 happens to round to the recorded 13 / 4 at Sans 10,
+// and is not read either): the recorded metrics seat every run. HORIZONTALLY THE FACE IS ITS OWN: every
 // width used for layout is the shaped run's (text_shape), the face's own
 // advances at the live size less the tracking.
 //
@@ -78,14 +84,22 @@
 enum class GuiFace { Body, Bold, Small };
 inline constexpr std::size_t kGuiFaceCount = 3;
 
-// THE TWO FILES, THE INSTALL'S ONE ORDER: the Linux font step
-// (CMakeLists.txt) and the APK's asset step (android/app/build_apk.sh) list
-// the same names, the two backends hand the bytes in in this order, and a
-// set names its files by their index here.
-inline constexpr std::size_t kGuiFontFileCount = 2;
+// THE FOUR FILES, THE INSTALL'S ONE ORDER, EVERY SET'S (architect
+// 2026-10-07, the second vocabulary's pair joining the first's): THIS LIST
+// IS THE ONE PLACE THE NAMES ARE SPELLED — the Linux font step
+// (CMakeLists.txt) and the APK's asset step (android/app/build_apk.sh) each
+// read the quoted names out of this initializer, so a file added here is
+// embedded and packed with no second list; the two backends hand the bytes
+// in in this order, and a set names its files by their index here. Both
+// sets' files are carried whichever chrome a device runs (the `chrome` key
+// is read after the Android backend installs the faces, and the install
+// measures every set's ems at once, gui_font_bundled.cpp).
+inline constexpr std::size_t kGuiFontFileCount = 4;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
-    "tahoma.ttf",                 // 0: the body and the small
-    "tahomabd.ttf",               // 1: the bold
+    "tahoma.ttf",                 // 0: win2000's body and small
+    "tahomabd.ttf",               // 1: win2000's bold
+    "DejaVuSans.ttf",             // 2: gnome2's body and small
+    "DejaVuSans-Bold.ttf",        // 3: gnome2's bold
 };
 
 struct GuiFontBytes {
@@ -100,8 +114,10 @@ struct GuiFontBytes {
 // caller may free or unmap them the moment it returns.
 //
 // THE RETURN IS THE INSTALL OBSERVED, not assumed: true when each of the
-// two files selects as an FT-BACKED cairo face, which is what text_shape
-// requires, and the live set's faces carry the glyph each em is measured on.
+// four files selects as an FT-BACKED cairo face, which is what text_shape
+// requires, and EVERY set's faces (every chrome spec's, kGuiChromeSpecs)
+// carry the glyph each em is measured on — every set, because the install
+// precedes the `chrome` key's read on Android.
 // Its producer is breach-only (the bytes are the repository's own, so a face that fails to
 // build is a build defect), and each caller dies on false.
 bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
@@ -153,18 +169,43 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
     .tracking_px = -0.05,
 };
 
-// THE LIVE SET IS THE CHROME SPEC'S (chrome_spec.h's kLiveChromeSpec), which
-// names its set by address. The include stands here, after the set it names
-// and before the first reader.
+// THE GNOME2 SET (architect 2026-10-07, the planner's design under his free
+// rein), the clearlooks chrome's: DEJAVU SANS AS DEBIAN 6 SQUEEZE SHIPS IT
+// (ttf-dejavu 2.31-1, DejaVuSans.ttf and DejaVuSans-Bold.ttf byte for byte;
+// fonts/README.md) — GNOME 2's "Sans 10" and metacity's "Sans Bold 10" at
+// 96 dpi, the faces his squeeze captures (tmp/squeeze/) are set in.
+//   METRICS: the body and the bold are Sans 10's 17-px cell — ascent 13 +
+//   descent 4, FreeType's rounded line metrics at 13.333 px, the cell his
+//   captures prove three times (the menu bar 25 = 17 + 8, the push button
+//   29 = 17 + 12, the caption 24 = 17 + 7) — with the CAP AT 10 ROWS, the
+//   unhinted outline's 9.72 rounded (squeeze's bytecode hinter drew 9; the
+//   nearer integer to Sans 10's own em is 10, its em 3 % over Sans 10's
+//   where 9's is 7 % under); the small is the same SIX-row digit as the
+//   win2000 set's, a cell all above the baseline, so the ruler lane keeps
+//   its 17 (GNOME has no small face: GTK's ruler drew the widget's own
+//   font, a 9-row digit that would make the lane 20).
+//   TRACKING: none ("compromise and approximate with modern HarfBuzz and
+//   DejaVu Sans": the bytecode look of 2010 is not reproduced, and Pango
+//   tracked nothing; Tahoma's -1/20 was a match to its own strike).
+inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
+    .file        = {2, 3, 2},
+    .metrics     = {{13, 4, 10}, {13, 4, 10}, {6, 0, 6}},
+    .tracking_px = 0.0,
+};
+
+// THE LIVE SET IS THE CHROME SPEC'S (chrome_spec.h's live_chrome_spec(),
+// chosen once at launch by the device config's `chrome`), which names its
+// set by address. The include stands here, after the sets it names and
+// before the first reader.
 #include "chrome_spec.h"
-inline constexpr const GuiFaceSet& kGuiLiveFaceSet = *kLiveChromeSpec.face_set;
+inline const GuiFaceSet& gui_live_face_set() {
+    return *live_chrome_spec().face_set;
+}
 
 // THE LIVE SET'S RECORDED VERTICAL METRICS, per GuiFace — the only vertical
 // metric source (the head).
-inline constexpr const GuiFaceMetrics (&kGuiFaceMetrics)[kGuiFaceCount] =
-    kGuiLiveFaceSet.metrics;
-inline constexpr const GuiFaceMetrics& gui_face_metrics(GuiFace face) {
-    return kGuiFaceMetrics[static_cast<std::size_t>(face)];
+inline const GuiFaceMetrics& gui_face_metrics(GuiFace face) {
+    return gui_live_face_set().metrics[static_cast<std::size_t>(face)];
 }
 
 // The vertical metrics in DEVICE px at the font's scale: the recorded
@@ -183,9 +224,10 @@ inline double gui_font_cap_px(const GuiFont& f) {
 }
 
 // THE FACE'S EM, in Windows px, DERIVED FROM THE RECORDED METRICS: the
-// recorded cap over the use's file's own ink height of the glyph named in
-// the head ("H", or "0" for the small), per em, read off the bundled file at
-// the install.
+// live set's recorded cap over the use's file's own ink height of the glyph
+// named in the head ("H", or "0" for the small), per em, the ink read off
+// the bundled file at the install (every file's, so the em follows whichever
+// set the chrome names).
 double gui_face_em_px(GuiFace face);
 
 // THE FACE'S CAIRO SCALED FONT at this scale (the use's file at its em times
@@ -194,18 +236,17 @@ double gui_face_em_px(GuiFace face);
 // glyph on it.
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f);
 
-// THE LIVE SET'S TRACKING, in WINDOWS PX per glyph (the figure and its
-// measurement at the set above): every advance HarfBuzz returns is
+// THE LIVE SET'S TRACKING (GuiFaceSet::tracking_px), in WINDOWS PX per
+// glyph (the figure and its measurement at each set above): every advance HarfBuzz returns is
 // shortened by it, the last glyph of a run included, so a run's width stays
 // the plain sum of its advances (text_shape.h) and a right-aligned run's
 // right edge stays honest. It scales with the font like every chrome length
 // and is NOT ROUNDED — it is an advance, not a grid point. ONE CONSTANT FOR
 // THE THREE USES (the body, the caption's bold, the ruler's small). The font
 // files themselves are unmodified (fonts/README.md).
-inline constexpr double kGuiTrackingPx = kGuiLiveFaceSet.tracking_px;
 // The tracking in DEVICE px at the font's scale, unrounded.
 inline double gui_tracking_px(const GuiFont& f) {
-    return kGuiTrackingPx * gui_font_scale(f);
+    return gui_live_face_set().tracking_px * gui_font_scale(f);
 }
 
 // AN UPPER BOUND ON ONE GLYPH'S ADVANCE at the font's scale, in device px:
@@ -215,7 +256,7 @@ inline double gui_tracking_px(const GuiFont& f) {
 // untracked figure stays an upper bound.
 double gui_font_advance_bound_px(const GuiFont& f);
 
-// THE LINUX BINARY'S COPY OF THE TWO FILES, in kGuiFontFiles' order,
+// THE LINUX BINARY'S COPY OF THE FOUR FILES, in kGuiFontFiles' order,
 // defined by gui_font_embedded.cpp, which only the Linux target compiles (the
 // APK carries the same files as assets instead).
 extern const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount];

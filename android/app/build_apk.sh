@@ -81,9 +81,10 @@ rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
-# THE PRODUCT'S TWO FONT FILES: Tahoma and Tahoma Bold (architect
-# 2026-10-06; the list and its order are gui_font.h's kGuiFontFiles), copied
-# from the repository's own fonts/
+# THE PRODUCT'S FONT FILES: Tahoma and Tahoma Bold (architect 2026-10-06),
+# DejaVu Sans and DejaVu Sans Bold (2026-10-07), THE NAMES READ OUT OF
+# gui_font.h's kGuiFontFiles initializer, the one list (CMakeLists.txt's
+# font step reads the same), copied from the repository's own fonts/
 # (architect 2026-10-02) -- the very files the Linux executable compiles in,
 # so both devices paint from the same bytes and the build depends on no
 # installed font package. They are what gui_font_bundled.cpp builds the
@@ -95,7 +96,11 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 # The copies land under the build tree, which .gitignore already ignores
 # (`build*/`); the tracked originals are fonts/'s.
 FONT_DIR="$APPDIR/../../fonts"
-for f in tahoma.ttf tahomabd.ttf; do
+FONT_LIST_SRC="$APPDIR/../../src/gui/gui_font.h"
+FONT_FILES=$(sed -n '/kGuiFontFiles\[kGuiFontFileCount\] = {/,/^};/p' "$FONT_LIST_SRC" |
+             grep -o '"[^"]*"' | tr -d '"')
+[ -n "$FONT_FILES" ] || wt_die "no font names read from $FONT_LIST_SRC's kGuiFontFiles"
+for f in $FONT_FILES; do
     [ -f "$FONT_DIR/$f" ] || wt_die "missing $FONT_DIR/$f (the repository's fonts/)"
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"

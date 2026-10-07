@@ -41,10 +41,17 @@ static_assert(std::ranges::all_of(kGuiThemeCaptionGradients,
     return p.start < kGuiThemeRoleCount && p.end < kGuiThemeRoleCount;
 }));
 static_assert(is_theme_key_spelling(kBuiltinThemeKey));
-static_assert(is_theme_key_spelling(kDefaultThemeKey));
-// The device config's default `theme` is kDefaultThemeKey (its initializer
-// spells the key; both templates stamp a default-constructed struct's).
-static_assert(DeviceConfig{}.theme == kDefaultThemeKey);
+// Every chrome's own theme is a theme key, and the default chrome's is the
+// built-in, so an unset theme under the default chrome always resolves.
+static_assert(chrome_specs_all([](const ChromeSpec& c) {
+    return is_theme_key_spelling(c.default_theme);
+}));
+static_assert(std::string_view(kChromeSpecWin2000.default_theme) ==
+              kBuiltinThemeKey);
+// The device config's defaults (both templates stamp a default-constructed
+// struct's): the default chrome, kDefaultChromeKey, and no theme.
+static_assert(DeviceConfig{}.chrome == kDefaultChromeKey);
+static_assert(DeviceConfig{}.theme.empty());
 
 // THE THEMES READ AT LAUNCH, by key — written once by read_theme_folder, read
 // by is_theme_key and theme_words for the process's life. Single-threaded:
@@ -218,6 +225,11 @@ std::optional<std::string> read_theme_folder() {
         g_loaded_themes.emplace(key, *words);
     }
     return std::nullopt;
+}
+
+std::string_view effective_theme_key(std::string_view theme) {
+    return theme.empty() ? std::string_view(live_chrome_spec().default_theme)
+                         : theme;
 }
 
 bool is_theme_key(const std::string& v) {

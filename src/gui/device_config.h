@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Six keys live here and nowhere else:
+// piece (architect 2026-08-27). Seven keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
@@ -21,16 +21,24 @@
 //                            projects (project_model.h owns the model)
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
+//   chrome=<key>             THE CHROME VOCABULARY the process paints:
+//                            `win2000` or `clearlooks` (is_chrome_key,
+//                            chrome_spec.h); MAY BE ABSENT, reading as
+//                            win2000; takes effect at the next launch
 //   theme=<key>              THE THEME every colour is painted in: the
-//                            built-in `windows-2000-standard` (the first
-//                            run's) or a theme file read at launch
-//                            (is_theme_key, theme_file.h)
+//                            built-in `windows-2000-standard` or a theme
+//                            file read at launch (is_theme_key,
+//                            theme_file.h); MAY BE ABSENT — the first run's
+//                            state — meaning the chrome's own theme
+//                            (effective_theme_key, theme_file.h)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // max_waveform_height, 2026-09-13, placed right after gui_scale;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
 // them left 2026-09-27, below; `theme` APPENDED after last_project,
-// 2026-10-03, the colour keys that stood after it for a day gone, below);
+// 2026-10-03, the colour keys that stood after it for a day gone, below;
+// `chrome` placed before `theme`, 2026-10-07, its vocabulary naming the
+// theme an absent `theme` line wears);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -155,8 +163,12 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six
-// keys and each of them exactly once, every key REQUIRED, one canonical spelling per
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven
+// keys and each at most once, every key REQUIRED but `chrome` and `theme`
+// (architect 2026-10-07: `chrome` absent is win2000, so the configs written
+// before the key load unchanged; `theme` absent is the chrome's own theme,
+// the one spelling of that state, which the writer emits by leaving the
+// line out), one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
 // silent fallback to defaults — a fallback would silently discard a value the
@@ -182,7 +194,7 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`,
 // `Max Waveform Height` (since 2026-09-13), `Projects Repository`,
-// `Projects Path` and, since 2026-10-03, `Theme`
+// `Projects Path`, since 2026-10-07 `Chrome` and, since 2026-10-03, `Theme`
 // (kSettingsPopupItems, app_state.h) as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
 // writer under the key's own grammar below. Until that day the path keys
@@ -196,11 +208,12 @@
 // writes — it is the program's own.
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
-// fallbacks: every key is required, so a successful read always assigns all
-// six. THE THEME'S DEFAULT IS ALSO THE TEMPLATES' — both backends stamp a
-// default-constructed struct's `theme` (GuiPlatform::device_config_defaults),
-// so the first-run file of either device names the default theme,
-// `windows-2000-standard`.
+// fallbacks, for the five required keys: a successful read always assigns
+// them. THE TWO ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
+// (2026-10-07): `chrome` "win2000", `theme` empty (no line: the chrome's
+// own). Both backends stamp a default-constructed struct's
+// (GuiPlatform::device_config_defaults), so the first-run file of either
+// device names `chrome=win2000` and no theme, following the chrome.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -211,20 +224,27 @@
 //
 // The members are in the writer's order.
 //
-// THE THEME IS ITS KEY VERBATIM (2026-10-03); the palette resolves it at
-// install (install_palette, render.h).
+// THE CHROME AND THE THEME ARE THEIR KEYS VERBATIM (2026-10-03 / 10-07);
+// the palette resolves the theme at install (install_palette, render.h,
+// through effective_theme_key, theme_file.h), and gui_main installs the
+// chrome once (set_live_chrome_spec, chrome_spec.h).
 struct DeviceConfig {
     int         gui_scale = 138;
     int         max_waveform_height = 364;
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE THEME DEFAULT (architect 2026-10-06): the built-in,
-    // `windows-2000-standard` — Windows 2000's "Windows Standard" scheme,
-    // the chrome's colours, with the program's elements in Windows' twenty
-    // solid colours — kDefaultThemeKey (theme_file.h, whose static_assert
-    // keeps this spelling and that key one).
-    std::string theme = "windows-2000-standard";
+    // THE CHROME DEFAULT (architect 2026-10-07): win2000, kDefaultChromeKey
+    // (chrome_spec.h; theme_file.cpp's static_assert keeps this spelling
+    // and that key one) — what an absent line reads as.
+    std::string chrome = "win2000";
+    // THE THEME, UNSET BY DEFAULT (architect 2026-10-07): empty while the
+    // config has no `theme` line, which RESOLVES AT EACH INSTALL to the live
+    // chrome's own theme (effective_theme_key, theme_file.h:
+    // `windows-2000-standard` under win2000, `clearlooks` under clearlooks)
+    // — never written back, so a later chrome change carries its own
+    // colours; a named theme is honoured under either chrome.
+    std::string theme;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -263,16 +283,18 @@ inline constexpr const char* kDefaultProjectsRepo =
 // which the waveform is the zero height waveform_area's floor answers (the
 // arithmetic and the guard at waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 723
-// Windows px of window at 100 % (692 in the `h` view) the icon row's
-// twenty-one standing buttons in eight groups (twenty in the view, its
-// history stand-ins — architect 2026-10-05) no longer fit, and its
-// flush-right view group covers the groups to its left (the overflow rule at
-// kIconRowViewGroup, paint_handler.cpp). The tablet's 2304-px panel holds the
-// row whole in both states up to 318 % — 2169 device px at 300 % outside the
-// view, 2076 inside it (the arithmetic is at paint_icon_row,
-// paint_handler.cpp, re-derived 2026-10-07 for Open Project's group; the
-// earlier fit ceilings and their succession are git history) — and past it
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: under the
+// win2000 chrome, below 715 Windows px of window at 100 % (684 in the `h`
+// view) the icon row's twenty-one standing buttons in seven groups (twenty
+// in the view, its history stand-ins — architect 2026-10-05) no longer fit,
+// and its flush-right view group covers the groups to its left (the
+// overflow rule at kIconRowViewGroup, paint_handler.cpp). The tablet's
+// 2304-px panel holds the row whole in both states up to 318 % — 2145
+// device px at 300 % outside the view, 2052 inside it (the arithmetic is at
+// paint_icon_row, paint_handler.cpp, re-derived 2026-10-07 for Open Project
+// in Save's group; the earlier fit ceilings and their succession are git
+// history); under the clearlooks chrome's wider cases and gaps (844 and 808
+// Windows px) up to 275 % only, so its 300 % crops — and past it
 // the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
@@ -500,14 +522,14 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE SIX KEY COMMITS, and this is their inventory
-// (re-greped 2026-10-04):
+// THREE CALL SITES CARRY THE SEVEN KEY COMMITS, and this is their inventory
+// (re-greped 2026-10-07):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves four keys —
-// `max_waveform_height=`, `projects_repo=`, `projects_path=` and `theme=`
-// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
+// the settings editor's ONE device-key body, which serves five keys —
+// `max_waveform_height=`, `projects_repo=`, `projects_path=`, `chrome=` and
+// `theme=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the cap's arm joined 2026-09-13, the path arm 2026-09-02, the theme's
-// 2026-10-03); and gui_main's
+// 2026-10-03, the chrome's 2026-10-07); and gui_main's
 // `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value
@@ -521,8 +543,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 275 % and its external files dir's `projects/`;
-// both stamp a max_waveform_height of 364, the default theme (kDefaultThemeKey),
-// kDefaultProjectsRepo and a blank
+// both stamp a max_waveform_height of 364, the default chrome
+// (kDefaultChromeKey) and no theme line, kDefaultProjectsRepo and a blank
 // last_project),
 // so a first run on either device lands a
 // file that is

@@ -2603,11 +2603,12 @@ WaveformPlateInks waveform_plate_inks() { return g_plate_inks; }
 
 void install_palette(const DeviceConfig& cfg) {
     // The key arrived through its one grammar (the config's reader or the
-    // settings editor's commit, is_theme_key), so the lookup has no producer
-    // of a miss (theme_words asserts it). Every field is filled off the role
-    // table, the one enumeration (theme_file.h), so a role cannot be read and
-    // not painted.
-    const GuiThemeWords& w = theme_words(cfg.theme);
+    // settings editor's commit, is_theme_key), or is the live chrome's own
+    // (effective_theme_key: the built-in or a bundled file), so the lookup
+    // has no producer of a miss (theme_words asserts it). Every field is
+    // filled off the role table, the one enumeration (theme_file.h), so a
+    // role cannot be read and not painted.
+    const GuiThemeWords& w = theme_words(effective_theme_key(cfg.theme));
     GuiPalette p{};
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         p.*(kGuiThemeRoles[i].member) = hex(w[i]);

@@ -3,7 +3,8 @@
 #include "input_handler.h"
 #include "render_output_naming.h"
 #include "device_config.h"
-#include "theme_file.h"        // is_theme_key, kThemeGrammarReason
+#include "theme_file.h"        // is_theme_key, kThemeGrammarReason; through
+                               // render.h, chrome_spec.h's is_chrome_key
 #include "settings_io.h"
 #include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
@@ -286,10 +287,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other four editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, since 2026-09-13 max_waveform_height and
-    // since 2026-10-03 theme — take their one direct-set body in commit(),
-    // commit_device_setting, ahead of this router.)
+    // move. (The other five editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since 2026-09-13 max_waveform_height,
+    // since 2026-10-03 theme and since 2026-10-07 chrome — take their one
+    // direct-set body in commit(), commit_device_setting, ahead of this
+    // router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -679,7 +681,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The four device keys other than the scale — one body, ahead of the
+    // 2. The five device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest, max_waveform_height's live relayout included).
     if (commit_device_setting(key, value)) return;
@@ -948,7 +950,9 @@ void GuiSettingsEditor::commit() {
 // THE ONE RECORDED EDGE: the picker's same-project no-op compares NAMES
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
-// project is opened first — a rename-by-hand case, accepted.
+// project is opened first — a rename-by-hand case, accepted. `theme`: at
+// once, the palette repainted whole (its arm). `chrome` (2026-10-07): AT
+// THE NEXT LAUNCH alone, its card saying so (its arm).
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
@@ -1027,8 +1031,16 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // can paint ahead of the next tick (the run loop services the display's
     // events first), which would blit the old flags and plate over the new
     // chrome for a frame — the rebuild here is what makes the swap one frame.
+    // AN EMPTY VALUE UNSETS IT (2026-10-07, the chrome key's round): the
+    // config then carries no `theme` line and the palette is the live
+    // chrome's own (effective_theme_key, theme_file.h) — the one road back
+    // from a named theme to the vocabulary's colours, the written file's
+    // spelling of it being the line's absence (format_device_config_text).
     if (key == "theme") {
-        if (!is_theme_key(value)) { reject(kThemeGrammarReason); return true; }
+        if (!value.empty() && !is_theme_key(value)) {
+            reject(kThemeGrammarReason);
+            return true;
+        }
         if (value == app.device_config->theme) { unchanged(); return true; }
         app.device_config->theme = value;
         (void)persist();
@@ -1036,6 +1048,28 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         install_palette(*app.device_config);
         viewport.kick_waveform_sync();
         viewport.invalidate_all();
+        return true;
+    }
+
+    // THE CHROME (architect 2026-10-07), THE THEME'S ROW'S SIBLING: a
+    // vocabulary's key under its one grammar owner (is_chrome_key,
+    // chrome_spec.h) — any other word the refusal, the refused field and the
+    // card, this body's shape — kept as typed and written at once. THE
+    // SYMMETRY BREAKS AT THE APPLY, where it must: the theme repaints live,
+    // the chrome cannot — its faces, lanes and icon set are built once at
+    // launch (set_live_chrome_spec, gui_main) — so the commit changes
+    // nothing on screen and SAYS WHERE IT APPLIES on its card, the projects
+    // path's rule (kChromeAppliesCard, raised only when the write
+    // succeeded: the next launch reads the file).
+    if (key == "chrome") {
+        if (!is_chrome_key(value)) { reject(kChromeGrammarReason); return true; }
+        if (value == app.device_config->chrome) { unchanged(); return true; }
+        app.device_config->chrome = value;
+        const bool written = persist();
+        applied();
+        if (written)
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kChromeAppliesCard);
         return true;
     }
 

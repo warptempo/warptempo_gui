@@ -71,7 +71,9 @@ GuiRect notification_stack_bound(const AppState& a) {
     const int pad     = folder_overlay::pad_px();
     const int w       = notification_card_max_w_px(a);
     const int x       = a.width - pad - w;
-    static_assert(kLiveChromeSpec.card_seat == GuiCardSeat::UnderBand);
+    static_assert(chrome_specs_all([](const ChromeSpec& s) {
+        return s.card_seat == GuiCardSeat::UnderBand;
+    }));
     const int y       = icons.y + icon_row_etched_pair_px() +
                         icon_row_band_h_px();
     const int floor_y = bottom_row_area(a).y - pad;

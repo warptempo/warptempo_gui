@@ -7482,7 +7482,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // flat toolbar style while no chrome press is armed — comctl32 shows no
     // hot item while a toolbar holds the capture — and none otherwise, so a
     // toolbar style with no hot face would never store one.
-    set_roster_hot(kLiveChromeSpec.toolbar_style == GuiToolbarStyle::Flat &&
+    set_roster_hot(live_chrome_spec().toolbar_style ==
+                               GuiToolbarStyle::Flat &&
                            app.chrome_press.kind ==
                                AppState::ChromePress::Kind::None
                        ? hot
@@ -9200,7 +9201,7 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // band anchored anywhere else would leave a strip of the popup unpainted
     // at one end. It is the LANE and not the anchor's rect because the lane
     // is the one owner of that row: the anchor's published rect is its pill,
-    // which IS the lane (render.h's kMenuRowHeightPx), so the two agree
+    // which IS the lane (render.h's menu-row block), so the two agree
     // exactly. The x is still the anchor's (the
     // dropdown hangs off the thing that opened it, architect 2026-08-02);
     // only this band's y reads the lane, and it damages FULL WIDTH anyway.

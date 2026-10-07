@@ -325,7 +325,8 @@ const GuiPalette& palette();
 
 // Install the palette of the theme the device config `cfg` names (its `theme`
 // key, already through the one grammar, is_theme_key — the built-in or a
-// file read at launch, theme_file.h), so this resolves and never refuses. It
+// file read at launch, theme_file.h — or, with no `theme` line, the live
+// chrome's own, effective_theme_key), so this resolves and never refuses. It
 // bumps palette_generation below, the flag cache's fingerprint term, and the
 // plate's two baked inks (waveform_plate_inks) move with it; the settings
 // commit then rebuilds both caches synchronously and damages the window
@@ -723,48 +724,54 @@ inline constexpr int kPlayheadUnitPx = 6;
 // TITLE BAR, painted by the app on both devices (architect 2026-10-05; the
 // laptop asks labwc for client-side decorations, so labwc draws none, and the
 // tablet's full-screen window has none of its own). THE PERIOD'S CAPTION AT
-// THE WINDOWS PIXEL, every number its own (SM_CYCAPTION and the caption
-// buttons' DrawFrameControl box), measured on the architect's references — a
-// Windows 2000 window and the ReactOS captures (tmp/reactos*.png), whose
-// caption metrics are Windows 2000's (and Windows 95's before it):
-//   THE LANE is 18 Windows px whole (kCaptionHeightPx): the caption's ground
-//     (the active or inactive start-to-end colours, paint_caption_gradient's
-//     smooth ramp), across the whole lane, under the icon and the buttons too
-//     (ReactOS's span), nothing above or below it inside the lane;
+// THE WINDOWS PIXEL, every number the live chrome spec's (chrome_spec.h's
+// caption_* fields; architect 2026-10-07: each vocabulary's own), which
+// records each vocabulary's measured caption — Windows 2000's SM_CYCAPTION
+// and DrawFrameControl box on the ReactOS captures (tmp/reactos*.png), and
+// metacity's maximised Clearlooks frame on the squeeze captures
+// (tmp/squeeze/):
+//   THE LANE is caption_height_px whole (18 Windows px under win2000, 24
+//     under clearlooks): the caption's ground (the active or inactive
+//     start-to-end colours, paint_caption_gradient's smooth ramp), across
+//     the whole lane, under the icon and the buttons too (ReactOS's span),
+//     nothing above or below it inside the lane;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
-//     (SM_CXSMICON) at (2, 1) from the lane's top-left, the set's drawing,
-//     Tango's audio-x-generic (icons::draw);
+//     (SM_CXSMICON, metacity's mini icon alike; kCaptionIconPx) at the
+//     spec's (caption_icon_x_px, caption_icon_y_px) from the lane's
+//     top-left — (2, 1) under win2000, (4, 4) under clearlooks — the set's
+//     drawing (icons::draw);
 //   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: the live set's
-//     bold, Tahoma Bold, the caption font being the body face in bold), its
-//     pen at x 20
-//     (two px past the icon) and its cap band centred in the lane (redesign_baseline), in
-//     the caption's text role, cut before the buttons with Windows' "..."
-//     (paint_caption_row owns the words and the cut);
-//   THE THREE BUTTONS, flush right: each 16 x 14 (kCaptionButtonWPx x
-//     kCaptionButtonHPx) with 2 px of caption above it, Minimise and
-//     Maximise touching, 2 px before Close, and 2 px right of Close
-//     (kCaptionButtonInsetPx, kCaptionCloseGapPx) — Windows' caption
-//     button, DrawFrameControl's DFC_CAPTION: EDGE_RAISED with BF_SOFT, and
+//     bold, the caption font being the body face in bold), its pen at
+//     caption_title_x_px (20, two px past win2000's icon; 25 under
+//     clearlooks, past the menu button's box and metacity's title_border)
+//     and its cap band centred in the lane (redesign_baseline) — which
+//     under clearlooks stands the 17-row cell at y 4 exactly, metacity's
+//     title_border.top (24 − 10 = 14 over two puts the 10-row cap's top on
+//     row 7, the cell's top 13 − 10 = 3 above it), so the seat needs no
+//     field — in the caption's text role, cut before the buttons with
+//     Windows' "..." (paint_caption_row owns the words and the cut);
+//   THE THREE BUTTONS, flush right: each caption_button_w_px x
+//     caption_button_h_px with caption_button_y_px of caption above it,
+//     caption_button_gap_px between Minimise and Maximise,
+//     caption_close_gap_px before Close and caption_button_inset_px right
+//     of Close — win2000: 16 x 14 two px down, Minimise and Maximise
+//     touching, 2 before Close, 2 right of it, Windows' caption button,
+//     DrawFrameControl's DFC_CAPTION: EDGE_RAISED with BF_SOFT, and
 //     EDGE_SUNKEN with BF_SOFT while pressed (paint_button_box's TOOLBAR
 //     family, the SOFT edges; the reference's white outer line and 3DLight
 //     inner one agree), its glyph Marlett's character in the label
 //     (paint_handler.cpp's caption glyph block: Minimise, Maximise and
 //     Restore authored cells — ReactOS's 7-wide Minimise and Restore — and
 //     Close the smooth outline of Marlett's staircase, the cell on its unit
-//     grid at Windows' (3, 2)), sunken and shifted one px while pressed.
-// Every length is a composite of its rounded parts (scaled_px's rule): 50
-// device rows at the tablet's 275 %, 25 at the laptop's 138 %.
-inline constexpr int kCaptionHeightPx      = 18;
-inline constexpr int kCaptionIconXPx       = 2;
-inline constexpr int kCaptionIconYPx       = 1;
-inline constexpr int kCaptionIconPx        = 16;
-inline constexpr int kCaptionTitleXPx      = 20;
-inline constexpr int kCaptionButtonWPx     = 16;
-inline constexpr int kCaptionButtonHPx     = 14;
-inline constexpr int kCaptionButtonInsetPx = 2;
-inline constexpr int kCaptionCloseGapPx    = 2;
+//     grid at Windows' (3, 2)), sunken and shifted one px while pressed;
+//     clearlooks: 20 x 20 at y 2, a 22-px pitch, Close 2 in — metacity's
+//     boxes, worn by Windows' faces until the painters round.
+// Every length is a composite of its rounded parts (scaled_px's rule): the
+// win2000 lane 54 device rows at the tablet's 300 %, 25 at the laptop's
+// 138 %; the clearlooks lane 72 and 33.
+inline constexpr int kCaptionIconPx = 16;
 inline int caption_row_h_px() {
-    return scaled_px(kCaptionHeightPx, 5);
+    return scaled_px(live_chrome_spec().caption_height_px, 5);
 }
 
 // THE CAPTION'S GRADIENT — THE ONE GRADIENT IN THE PRODUCT (architect
@@ -794,29 +801,36 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
                                int frame_px);
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 1, directly
-// under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). THE
-// CONTENT IS 19 WINDOWS PX (architect 2026-10-02; it was the kdenlive File
-// item's 30 laptop px until the unit's change), since 2026-10-06 read as
-// EXPLORER'S MENU BAND's button — the 13-row cell + comctl32's DEFPAD_CY 6
-// (toolbar.c, TOOLBAR_MeasureButton; the band's record at paint_handler.cpp's
-// kMenuLabelPadLeftPx): the anchors' box and the labels' box both, where the
-// anchors and their labels stand, the label's cell centred in it
-// (paint_menu_row: the cap's top on row 6).
-//
-// THE LANE IS ONE WINDOWS PX TALLER THAN THE CONTENT, A ROW OF PLAIN GROUND
-// ABOVE IT, directly under the caption (architect 2026-10-05, Windows 95
-// screenshots measured at 100 % agreeing on a 20-px menu band; the row's
-// place architect 2026-10-06, ReactOS: caption 18, face 1, menu 19): the
-// content's 19 is kept exactly — the number this row's rulings and the
-// architect's live judgments were made against — and the extra row is added
-// beside it rather than folded into it, so EVERY LABEL STAYS AT ITS PLACE IN
-// THE CONTENT (the painter seats on the CONTENT rows, never the lane's,
-// below). The
-// ICON ROW stands directly under the lane with no margin, border or line of
-// its own (kdenlive, QEMU and virt-manager draw no border between the
-// menubar and the toolbar, and neither does this row): its ground — the
-// content ground since 2026-10-01, the icon row's own (paint_menu_row) —
-// runs straight on into the icon row's.
+// under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). ITS
+// THREE TERMS ARE THE LIVE CHROME SPEC'S (chrome_spec.h's menu_row_*
+// fields; architect 2026-10-07, each vocabulary's own), each its own
+// rounded part: A HEAD ROW of plain ground, THE CONTENT — the anchors' box
+// and the labels' box both, where the anchors and their labels stand, the
+// label's cell centred in it (paint_menu_row) — and A FOOT ROW under it.
+//   WIN2000: head 1 + content 19 + foot 0 = 20. THE CONTENT IS 19 WINDOWS
+//   PX (architect 2026-10-02; it was the kdenlive File item's 30 laptop px
+//   until the unit's change), since 2026-10-06 read as EXPLORER'S MENU
+//   BAND's button — the 13-row cell + comctl32's DEFPAD_CY 6 (toolbar.c,
+//   TOOLBAR_MeasureButton; the band's record at paint_handler.cpp's head of
+//   the menu row) — the cap's top on row 6 of the content. THE HEAD ROW
+//   above it, directly under the caption (architect 2026-10-05, Windows 95
+//   screenshots measured at 100 % agreeing on a 20-px menu band; the row's
+//   place architect 2026-10-06, ReactOS: caption 18, face 1, menu 19): the
+//   content's 19 is kept exactly — the number this row's rulings and the
+//   architect's live judgments were made against — and the extra row is
+//   added beside it rather than folded into it, so EVERY LABEL STAYS AT
+//   ITS PLACE IN THE CONTENT (the painter seats on the CONTENT rows, never
+//   the lane's, below).
+//   CLEARLOOKS: head 1 + content 23 + foot 1 = 25, GtkMenuBar — its
+//   ythickness 1 above, the 23-row menu item (the 17-row cell + 2 x 3), its
+//   ythickness 1 below, the row Clearlooks' menubarstyle 2 draws its
+//   shade[3] line on (report CL1 §3.2; his squeeze captures' bar is 25,
+//   gedit rows 329-353) — the cell at content row 3, i.e. the bar's row 4.
+// The ICON ROW stands directly under the lane with no margin of its own
+// (kdenlive, QEMU and virt-manager draw no border between the menubar and
+// the toolbar, and neither does this row): its ground — the content ground
+// since 2026-10-01, the icon row's own (paint_menu_row) — runs straight on
+// into the icon row's.
 //
 // THE ANCHOR IS THE LANE, NOT THE CONTENT (architect 2026-09-09: "make the
 // height of the top row based on the thirty pixels of File/Edit ... this way
@@ -828,39 +842,38 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // and the anchor's foot is the lane's foot, which is where the dropdown and its
 // damage band hang (top_menu_row_area — paint_dropdown and toggle_dropdown
 // read the same accessor), so the popup touches the icon row's first pixel —
-// one row lower than before the face row joined the lane, the dropdown's own
-// unmoved assumption (it hangs off the LANE, never the content).
+// it hangs off the LANE, never the content.
 //
 // FLUSH UNDER THE CAPTION (the window's top edge until the caption's arrival,
-// 2026-10-05), WITH NO AIR ABOVE THE ANCHORS (architect
+// 2026-10-05), WITH NO AIR ABOVE THE ANCHORS beyond the head row (architect
 // 2026-10-01, on the glass: "Let's remove the six pixel padding up at the
 // top. We'll just let the text be pretty close. I think that's going to seem
 // more symmetric — because right now, relative to the curved top, both the
 // clock and the File dropdown look too far down").
 //
-// Both terms size on gui_scale_factor() like every other lane in the tree,
+// Every term sizes on gui_scale_factor() like every other lane in the tree,
 // rounded with std::nearbyint through scaled_px and floored like every other
-// lane metric, EACH ITS OWN ROUNDED PART (the composite rule): the content
-// 52 device rows at the tablet's 275 %, 26 at the laptop's 138 %; the face
-// row 3 at 275 %, 1 at 138 % — lane totals of 55 and 27. TWO ACCESSORS FOR
-// TWO READERS, deliberately: the lane table and the anchor/hit-rect/dropdown
-// geometry read the LANE (menu_row_h_px), the label's seat and the
-// open box read the CONTENT alone (menu_row_content_rect, paint_menu_row) —
-// the one place the two differ.
-inline constexpr int kMenuRowHeightPx = 19;
-// THE FACE ROW above the content, Windows' measured 20-px band less the
-// content's 19 (architect 2026-10-05; its place 2026-10-06, above).
-inline constexpr int kMenuRowHeadPx = 1;
+// lane metric, EACH ITS OWN ROUNDED PART (the composite rule): win2000's
+// content 57 device rows at the tablet's 300 %, 26 at the laptop's 138 %,
+// its head row 3 and 1 — lane totals of 60 and 27; clearlooks' 69 + 3 + 3 =
+// 75 and 32 + 1 + 1 = 34. TWO ACCESSORS FOR TWO READERS, deliberately: the
+// lane table and the anchor/hit-rect/dropdown geometry read the LANE
+// (menu_row_h_px), the label's seat and the open box read the CONTENT alone
+// (menu_row_content_rect, paint_menu_row) — the one place the two differ.
 inline int menu_row_content_h_px() {
-    return scaled_px(kMenuRowHeightPx, 5);
+    return scaled_px(live_chrome_spec().menu_row_content_px, 5);
 }
 inline int menu_row_head_h_px() {
-    return scaled_px(kMenuRowHeadPx, 1);
+    return scaled_px(live_chrome_spec().menu_row_head_px, 1);
+}
+inline int menu_row_foot_h_px() {
+    return scaled_px(live_chrome_spec().menu_row_foot_px);
 }
 inline int menu_row_h_px() {
-    return menu_row_content_h_px() + menu_row_head_h_px();
+    return menu_row_head_h_px() + menu_row_content_h_px() +
+           menu_row_foot_h_px();
 }
-// The content's rows in the menu lane `lane`: under the face row.
+// The content's rows in the menu lane `lane`: under the head row.
 inline GuiRect menu_row_content_rect(const GuiRect& lane) {
     return GuiRect{lane.x, lane.y + menu_row_head_h_px(), lane.w,
                    menu_row_content_h_px()};
@@ -871,9 +884,10 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 // glyph buttons, so the top strip lost the lane's 44 content + 1px border.
 // kToolbarRowHeightPx / kToolbarBorderPx and their accessors went with it;
 // the row's button box and label pads survive as the MODAL DIALOG BUTTONS'
-// own constants — kModalBtnBoxPx and friends, paint_handler.cpp, 23 and 7 / 7
-// Windows px since 2026-10-02 (32 and 9 / 10 laptop px before) —
-// which used to read row 2's. The row's crop record is git history.)
+// own numbers — the chrome spec's push_button_* fields since 2026-10-07
+// (kModalBtnBoxPx and friends, paint_handler.cpp, 23 and 7 / 7 Windows px
+// from 2026-10-02; 32 and 9 / 10 laptop px before) — which used to read row
+// 2's. The row's crop record is git history.)
 
 // THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
 // sunken, status or etched edge in the chrome, and of one cell of the checked
@@ -903,28 +917,34 @@ inline int relief_line_px() {
 // THE CASE IS THE CHROME SPEC'S (chrome_spec.h's toolbar_case_* fields) and
 // A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): its width is
 // scaled_px(lead) + scaled_px(glyph) + scaled_px(trail x), its height
-// scaled_px(lead) + scaled_px(glyph) + scaled_px(trail y). WINDOWS' LARGE
-// TOOLBAR CASE, 31 x 30 (architect 2026-10-06, on mock_TF1 and the ReactOS
-// captures) — three px of case left of and above the 24-px glyph seat, FOUR
-// right of it and three below, Windows' own extra column on the right (the
-// small case's 23 x 22 round a 16-px glyph had the same lead and trails) —
-// Explorer's (its button rect is 30 rows, 182-211 of
+// scaled_px(lead) + scaled_px(glyph) + scaled_px(trail y). WIN2000:
+// WINDOWS' LARGE TOOLBAR CASE, 31 x 30 (architect 2026-10-06, on mock_TF1
+// and the ReactOS captures) — three px of case left of and above the 24-px
+// glyph seat, FOUR right of it and three below, Windows' own extra column on
+// the right (the small case's 23 x 22 round a 16-px glyph had the same lead
+// and trails) — Explorer's (its button rect is 30 rows, 182-211 of
 // tmp/reactos-hover.png): 93 x 90 device px at 300 %, 43 x 41 at the
 // laptop's 138 %, the glyph 72 and 33 (the Tango set's 48-unit drawing,
-// icons.h, 1.5 device px a unit at 300 %).
+// icons.h, 1.5 device px a unit at 300 %). CLEARLOOKS: GTK's 36 x 36 tool
+// button round the same 24-px seat at (6, 6) (chrome_spec.h's instance):
+// 108 x 108 at 300 %, 49 x 49 at 138 % (8 + 33 + 8).
 // THE GLYPH RASTERIZES AT icon_glyph_px (icons::draw_cased, at the case's
-// (3, 3) offset, never centred on the glyph's ink; the pressed and checked
+// lead offset, never centred on the glyph's ink; the pressed and checked
 // faces' shift is one Windows px further right and down).
 //
 // THE LANE IS A MENU-BAR-PLUS-TOOLBAR STACK FOLDED INTO ONE ROW (architect
 // 2026-10-06, Explorer's and WordPad's stacking in ReactOS), each term its
-// own rounded part: ONE ETCHED LINE PAIR under the menu row (a Shadow row
-// over a Hilight row, paint_relief_etched_hline, spanning the lane's width),
-// THE TOOLBAR BAND — which IS THE CASE, no air above or below it inside the
-// band (Explorer's band is its buttons' height; the spec's icon_row_air_px,
-// 0) — and FOUR Windows px of ground before the trim lane (icon_row_foot_px):
-// 2 + 30 + 4 = 36. THE TOP STACK IS 125 WINDOWS PX (caption 18 + menu 20 +
-// this lane 36 + trim 16 + the 6-row digit's 17-px ruler + marker 18). The
+// own rounded part: ONE ETCHED LINE PAIR under the menu row where the spec
+// asks for it (icon_row_etched_pair; a Shadow row over a Hilight row,
+// paint_relief_etched_hline, spanning the lane's width), THE TOOLBAR BAND —
+// the spec's air (icon_row_air_px), the case, the air — and the spec's foot
+// of ground before the trim lane (icon_row_foot_px). WIN2000: 2 + 30 + 4 =
+// 36, the band the case itself (Explorer's band is its buttons' height, air
+// 0); THE TOP STACK IS 125 WINDOWS PX (caption 18 + menu 20 + this lane 36 +
+// trim 16 + the 6-row digit's 17-px ruler + marker 18). CLEARLOOKS: 0 + 2 +
+// 36 + 2 + 0 = 40, GtkToolbar's band (no etched pair: the menu bar's last
+// row is the line; no foot: GTK stacks flush); its top stack 144 (caption
+// 24 + menu 25 + 40 + trim 16 + ruler 17 + the 17-px cell's marker 22). The
 // foot's last row's
 // neighbour is the trim lane's own first row, still the boundary — NO
 // BORDER OF ITS OWN (architect 2026-10-01). THE ROW IS MODELLED ON KDENLIVE'S
@@ -936,19 +956,22 @@ inline int relief_line_px() {
 // with the lane's own damage, in the theme's Shadow and Hilight roles, no new
 // role or literal.
 //
-// THE BUTTONS TOUCH WITHIN A GROUP and EIGHT WINDOWS PX stand between two
-// groups (architect 2026-10-02, the Y / Z / AB sets: "the buttons touch"),
-// the group boundaries redesign_button_opens_icon_group's. IN EVERY GROUP GAP
-// OF BOTH TOOLBARS STANDS AN ETCHED SEPARATOR, the flat toolbar style's
-// (chrome_spec.h's toolbar_style; architect 2026-10-06, his word; comctl32's
-// TOOLBAR_DrawFlatSeparator,
-// read off tmp/reactos-hover.png, columns 17-18 of Explorer's bar, rows
-// 184-209): a Shadow column at the gap's 8 / 2 − 1 Windows px and a Hilight
-// column beside it, from the band's top + 2 to its bottom − 2, 26 of the 30
-// rows (paint_toolbar_separator, paint_handler.cpp; kToolbarSeparator*
-// below) — and none across the wide ground before the right-aligned groups,
-// which is no group gap. The walks are paint_icon_row's and
-// paint_bottom_row_buttons_and_clock's.
+// THE BUTTONS TOUCH WITHIN A GROUP and THE SPEC'S GROUP GAP stands between
+// two groups (toolbar_group_gap_px: 8 Windows px under win2000, architect
+// 2026-10-02, the Y / Z / AB sets: "the buttons touch"; 12 under
+// clearlooks, GtkSeparatorToolItem's space-size), the group boundaries
+// redesign_button_opens_icon_group's. IN EVERY GROUP GAP OF BOTH TOOLBARS
+// STANDS AN ETCHED SEPARATOR, the flat toolbar style's (chrome_spec.h's
+// toolbar_style; architect 2026-10-06, his word): WIN2000 comctl32's
+// TOOLBAR_DrawFlatSeparator, read off tmp/reactos-hover.png, columns 17-18
+// of Explorer's bar, rows 184-209 — a Shadow column at the gap's 8 / 2 − 1
+// Windows px and a Hilight column beside it, from the case's top + 2 to its
+// bottom − 2, 26 of the 30 rows; CLEARLOOKS the pair at 5-6 of the 12, 7
+// rows in at each end, 22 of the 36 (paint_toolbar_separator,
+// paint_handler.cpp, reads toolbar_separator_x_px and
+// toolbar_separator_inset_y_px) — and none across the wide ground before
+// the right-aligned groups, which is no group gap. The walks are
+// paint_icon_row's and paint_bottom_row_buttons_and_clock's.
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because more
 // than one file reads the case: icons.cpp's seat (draw_cased) and
@@ -957,13 +980,6 @@ inline int relief_line_px() {
 // 24-px glyph would overrun the 17-px list row): each keeps Windows' small
 // 16-px icon on a constant of its own
 // (notifications.h's kNotificationGlyph*, folder_overlay.h's kRowIcon*).
-inline constexpr int kIconGroupSpacePx   = 8;    // bare ground between two groups
-// THE SEPARATOR'S SEAT in a group gap, in Windows px: its Shadow column's
-// offset from the gap's left edge (comctl32's (left + right) / 2 − 1, so
-// 8 / 2 − 1) and its inset from the band's top and bottom (top + 2,
-// bottom − 2).
-inline constexpr int kToolbarSeparatorXPx = kIconGroupSpacePx / 2 - kReliefLinePx;
-inline constexpr int kToolbarSeparatorInsetYPx = 2;
 // The spec's record, authored: the case and the lane's total.
 constexpr int toolbar_case_authored_w(const ChromeSpec& s) {
     return s.toolbar_case_lead_px + s.toolbar_glyph_px +
@@ -974,43 +990,50 @@ constexpr int toolbar_case_authored_h(const ChromeSpec& s) {
            s.toolbar_case_trail_y_px;
 }
 constexpr int icon_row_authored_h(const ChromeSpec& s) {
-    return 2 * kReliefLinePx + s.icon_row_air_px +
-           toolbar_case_authored_h(s) + s.icon_row_air_px +
-           s.icon_row_foot_px;
+    return (s.icon_row_etched_pair ? 2 * kReliefLinePx : 0) +
+           s.icon_row_air_px + toolbar_case_authored_h(s) +
+           s.icon_row_air_px + s.icon_row_foot_px;
 }
 static_assert(toolbar_case_authored_w(kChromeSpecWin2000) == 31 &&
               toolbar_case_authored_h(kChromeSpecWin2000) == 30 &&
               icon_row_authored_h(kChromeSpecWin2000) == 36);
+static_assert(toolbar_case_authored_w(kChromeSpecClearlooks) == 36 &&
+              toolbar_case_authored_h(kChromeSpecClearlooks) == 36 &&
+              icon_row_authored_h(kChromeSpecClearlooks) == 40);
 inline int icon_glyph_px() {
-    return scaled_px(kLiveChromeSpec.toolbar_glyph_px);
+    return scaled_px(live_chrome_spec().toolbar_glyph_px);
 }
 inline int icon_case_lead_px() {
-    return scaled_px(kLiveChromeSpec.toolbar_case_lead_px);
+    return scaled_px(live_chrome_spec().toolbar_case_lead_px);
 }
 inline int icon_case_w_px() {
-    return scaled_px(kLiveChromeSpec.toolbar_case_lead_px) +
-           scaled_px(kLiveChromeSpec.toolbar_glyph_px) +
-           scaled_px(kLiveChromeSpec.toolbar_case_trail_x_px);
+    const ChromeSpec& s = live_chrome_spec();
+    return scaled_px(s.toolbar_case_lead_px) + scaled_px(s.toolbar_glyph_px) +
+           scaled_px(s.toolbar_case_trail_x_px);
 }
 inline int icon_case_h_px() {
-    return scaled_px(kLiveChromeSpec.toolbar_case_lead_px) +
-           scaled_px(kLiveChromeSpec.toolbar_glyph_px) +
-           scaled_px(kLiveChromeSpec.toolbar_case_trail_y_px);
+    const ChromeSpec& s = live_chrome_spec();
+    return scaled_px(s.toolbar_case_lead_px) + scaled_px(s.toolbar_glyph_px) +
+           scaled_px(s.toolbar_case_trail_y_px);
 }
-inline int icon_group_space_px()  { return scaled_px(kIconGroupSpacePx); }
+inline int icon_group_space_px() {
+    return scaled_px(live_chrome_spec().toolbar_group_gap_px);
+}
 // THE ETCHED PAIR'S DEVICE HEIGHT IS TWO ROUNDED RELIEF LINES, NEVER
 // scaled_px OF THEIR AUTHORED SUM (the composite rule): paint_relief_etched_hline
 // paints the Shadow row at y and the Hilight row at y + relief_line_px(), so
 // the lane must reserve exactly that, which can differ from scaled_px(2) at
-// a fractional gui_scale.
-inline int icon_row_etched_pair_px() { return 2 * relief_line_px(); }
+// a fractional gui_scale. NONE where the spec asks for no pair (clearlooks).
+inline int icon_row_etched_pair_px() {
+    return live_chrome_spec().icon_row_etched_pair ? 2 * relief_line_px() : 0;
+}
 // The ground above and below the case inside the icon row's toolbar band:
-// none (Explorer's band is the case).
+// none under win2000 (Explorer's band is the case), 2 under clearlooks.
 inline int icon_row_air_px() {
-    return scaled_px(kLiveChromeSpec.icon_row_air_px);
+    return scaled_px(live_chrome_spec().icon_row_air_px);
 }
 // THE TOOLBAR BAND ALONE — air, case, air — with NO etched line and NO foot
-// in it: the case itself while the air is 0.
+// in it.
 inline int icon_row_band_h_px() {
     return 2 * icon_row_air_px() + icon_case_h_px();
 }
@@ -1024,7 +1047,7 @@ inline int icon_case_top_offset_px() {
 }
 inline int icon_row_h_px() {
     return icon_row_etched_pair_px() + icon_row_band_h_px() +
-           scaled_px(kLiveChromeSpec.icon_row_foot_px);
+           scaled_px(live_chrome_spec().icon_row_foot_px);
 }
 
 // A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
@@ -1334,10 +1357,11 @@ int  waveform_max_h_px();
 // as main icon row"; the air its own field since 2026-10-06): it READS the
 // icon row's case accessors rather than restating them — one source, so a
 // retune of the case carries down here by construction — and its air above
-// and below the case is the spec's bottom_row_air_px (chrome_spec.h), THREE
-// WINDOWS PX: WordPad's band air, while the icon row has none inside its
-// band (Explorer's band is the case) and row 8 keeps its 3 / 3 (architect
-// 2026-10-06). So the content is 3 + 30 + 3 = 36 Windows px. (Its earlier
+// and below the case is the spec's bottom_row_air_px (chrome_spec.h): under
+// win2000 THREE WINDOWS PX, WordPad's band air, while the icon row has none
+// inside its band (Explorer's band is the case) and row 8 keeps its 3 / 3
+// (architect 2026-10-06) — the content 3 + 30 + 3 = 36 Windows px; under
+// clearlooks GtkToolbar's 2, the content 2 + 36 + 2 = 40. (Its earlier
 // boxes — row 8's kdenlive 26 px transport boxes,
 // then the icon row's 32-laptop-px square, then the five-px-air 32 of
 // 2026-10-02 — are git history.)
@@ -1347,8 +1371,9 @@ int  waveform_max_h_px();
 // on the WAVEFORM side — where row 8's border-top stood. NO LINE IS DRAWN
 // THERE since 2026-10-02 (architect: nothing between the well and this row,
 // the well's own bottom line being the seam), and the row is kept so nothing
-// on the row moved. IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx). The
-// lane is 1 + 3 + 30 + 3 = 37 Windows px.
+// on the row moved. IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx), both
+// vocabularies'. The lane is 1 + 3 + 30 + 3 = 37 Windows px under win2000,
+// 1 + 2 + 36 + 2 = 41 under clearlooks.
 // bottom_row_content_h_px() is the ground the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Rides
 // gui_scale_factor() like every redesigned row.
@@ -1357,7 +1382,7 @@ inline int bottom_row_border_h_px() {
     return scaled_px(kBottomRowBorderPx, 1);
 }
 inline int bottom_row_air_px() {
-    return scaled_px(kLiveChromeSpec.bottom_row_air_px);
+    return scaled_px(live_chrome_spec().bottom_row_air_px);
 }
 inline int bottom_row_content_h_px() {
     return 2 * bottom_row_air_px() + icon_case_h_px();
@@ -1886,11 +1911,14 @@ inline int playhead_head_half_w_px() {
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
 // from the BODY FACE'S OWN CELL (one line, or two 13-px bands), so the box
 // follows the face instead of a literal that could drift from it; the run
-// loop only needs to know it can never exceed this. 44 Windows px (the
-// laptop pixel's 60 re-authored, architect 2026-10-02) clears the two-line
-// form — 1 + 2 + 13 + 3 + 13 + 2 + 1 = 35 at 100 %, 98 device rows against
-// 121 at 275 % (2026-10-06).
-inline constexpr int     kTooltipDamageHeightPx = 44;
+// loop only needs to know it can never exceed this. 50 Windows px (the
+// laptop pixel's 60 re-authored as 44, architect 2026-10-02; raised
+// 2026-10-07 with the clearlooks chrome) clears the two-line form in both
+// vocabularies — win2000's 1 + 2 + 13 + 3 + 13 + 2 + 1 = 35 at 100 %, and
+// clearlooks' 1 + 4 + 17 + 3 + 17 + 4 + 1 = 47 (its 17-row cell and 4-px
+// pad, chrome_spec.h's tooltip_pad_px) — 141 device rows against 150 at
+// 300 %.
+inline constexpr int     kTooltipDamageHeightPx = 50;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
 }
