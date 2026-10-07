@@ -116,16 +116,17 @@ bool palette_act_enabled(const AppState& app, PaletteAct a) {
 }
 
 std::vector<PaletteMenuRow> palette_menu_rows() {
+    // The acts first (the declaration: the order is their reachability).
     std::vector<PaletteMenuRow> rows;
-    for (std::string& n : palette_names()) {
-        PaletteMenuRow r;
-        r.name = std::move(n);
-        rows.push_back(std::move(r));
-    }
     for (int i = 0; i < kPaletteActCount; ++i) {
         PaletteMenuRow r;
         r.is_act = true;
         r.act    = palette_act_at(i);
+        rows.push_back(std::move(r));
+    }
+    for (std::string& n : palette_names()) {
+        PaletteMenuRow r;
+        r.name = std::move(n);
         rows.push_back(std::move(r));
     }
     return rows;
@@ -410,22 +411,60 @@ Layout layout(const AppState& app, const GuiFont& font) {
         }
     }
 
-    // THE PALETTE MENU, when down: the dropdown's own arithmetic again —
-    // its rows, ONE separator block between the names and the acts, its
-    // width the widest row's label between the popup's two pads (or the
-    // button's, whichever is wider), hung from the button's foot at its
-    // left edge, held inside the window, flipped above the button where it
-    // would run past the window's foot.
+    // THE PALETTE MENU'S BOUND (2026-10-07; the head's THE PALETTE MENU):
+    // the dropdown's own arithmetic — the frame, the item block's margins,
+    // the four acts and ONE separator block are the menu's fixed rows, and
+    // every name costs one item more. The room below the button runs to the
+    // window's foot and the room above it to the window's head; the names
+    // that fit whole in each are what that room leaves after the fixed rows,
+    // and THE CAPACITY is the roomier side's count — computed whether or not
+    // the menu is down, since Save As's refusal reads it with the menu
+    // closed (palette_menu_name_capacity, commit_name).
+    const bool gtk_menu   = popup_is_gtk_menu();
+    const int  border     = popup_border_px();
+    const int  side_b     = gtk_menu ? 0 : border;
+    const int  menu_item_h = popup_item_h_px();
+    const int  menu_mar   = popup_item_margin_y_px();
+    const int  menu_fixed_h = kPaletteActCount * menu_item_h +
+                              popup_sep_block_px() + 2 * menu_mar +
+                              popup_border_top_px() + border;
+    const int  room_below = app.height - (l.menu_button.y + l.menu_button.h);
+    const int  room_above = l.menu_button.y;
+    const auto names_in = [&](int room) {
+        return room > menu_fixed_h ? (room - menu_fixed_h) / menu_item_h : 0;
+    };
+    const int names_below = names_in(room_below);
+    const int names_above = names_in(room_above);
+    l.menu_name_capacity = std::max(names_below, names_above);
+
+    // THE PALETTE MENU, when down: its rows (palette_menu_rows' order, the
+    // acts first), ONE separator block between the acts and the names, its
+    // width the widest painted row's label between the popup's two pads (or
+    // the button's, whichever is wider), at the button's left edge held
+    // inside the window across. DOWN, THE BOUND ABOVE: hung from the
+    // button's foot where every name fits below, else stood on the button's
+    // head where every name fits above, else on the roomier side (below on
+    // a tie) with the names CUT to that side's count — the acts and the
+    // separator always kept, the names' tail dropped. Only the placed rows
+    // are in menu_rows / menu_items, so the painter publishes no row the
+    // window does not show.
     if (app.color_picker.menu_open) {
-        const bool gtk_menu = popup_is_gtk_menu();
-        const int border    = popup_border_px();
-        const int side_b    = gtk_menu ? 0 : border;
-        const int item_h    = popup_item_h_px();
-        const int block_mar = popup_item_margin_y_px();
         const int margin_x  = spec.popup_margin_px;
         const int inset     = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
         const int pad_x     = scaled_px(kPopupPadXPx);
-        const std::vector<PaletteMenuRow> rows = palette_menu_rows();
+        std::vector<PaletteMenuRow> rows = palette_menu_rows();
+        const int names = static_cast<int>(rows.size()) - kPaletteActCount;
+        bool below = true;
+        int  shown = names;
+        if (names <= names_below) {
+            below = true;
+        } else if (names <= names_above) {
+            below = false;
+        } else {
+            below = names_below >= names_above;
+            shown = below ? names_below : names_above;
+        }
+        rows.resize(static_cast<std::size_t>(kPaletteActCount + shown));
         double widest = 0.0;
         for (const PaletteMenuRow& r : rows) {
             const std::string label =
@@ -437,30 +476,32 @@ Layout layout(const AppState& app, const GuiFont& font) {
         const int w = std::min(app.width,
                                std::max(l.menu_button.w,
                                         2 * pad_x + ceil_px(widest)));
-        const int count = static_cast<int>(rows.size());
-        const int h = count * item_h + popup_sep_block_px() + 2 * block_mar +
-                      popup_border_top_px() + border;
+        const int h = menu_fixed_h + shown * menu_item_h;
         int mx = l.menu_button.x;
         if (mx + w > app.width) mx = app.width - w;
         if (mx < 0) mx = 0;
-        int my = l.menu_button.y + l.menu_button.h;
-        if (my + h > app.height && l.menu_button.y - h >= 0)
-            my = l.menu_button.y - h;
+        const int my = below ? l.menu_button.y + l.menu_button.h
+                             : l.menu_button.y - h;
         l.menu = GuiRect{mx, my, w, h};
         l.menu_items.clear();
-        int iy = my + popup_border_top_px() + block_mar;
-        for (int i = 0; i < count; ++i) {
-            if (rows[static_cast<std::size_t>(i)].is_act &&
-                (i == 0 || !rows[static_cast<std::size_t>(i) - 1].is_act)) {
-                l.menu_sep_y = iy;
-                iy += popup_sep_block_px();
-            }
+        int iy = my + popup_border_top_px() + menu_mar;
+        const auto place_row = [&] {
             l.menu_items.push_back(GuiRect{mx + side_b + inset, iy,
-                                           w - 2 * (side_b + inset), item_h});
-            iy += item_h;
-        }
+                                           w - 2 * (side_b + inset),
+                                           menu_item_h});
+            iy += menu_item_h;
+        };
+        for (int i = 0; i < kPaletteActCount; ++i) place_row();
+        l.menu_sep_y = iy;   // the acts' foot: the separator
+        iy += popup_sep_block_px();
+        for (int i = 0; i < shown; ++i) place_row();
+        l.menu_rows = std::move(rows);
     }
     return l;
+}
+
+int palette_menu_name_capacity(const AppState& app, const GuiFont& font) {
+    return layout(app, font).menu_name_capacity;
 }
 
 int slider_thumb_x(const GuiRect& track, int value, int max) {
@@ -1062,6 +1103,13 @@ void GuiColorPicker::commit_name() {
         cp.name_ask = AppState::ColorPicker::NameAsk::None;
         damage_card();
     };
+    if (!rename &&
+        palette_names().size() >=
+            static_cast<std::size_t>(color_picker::palette_menu_name_capacity(
+                app, gui_font(GuiFace::Body)))) {
+        refuse("No room for another palette");   // whatever the name
+        return;
+    }
     if (!is_palette_name_spelling(name)) {
         refuse("Not a name");
         return;

@@ -100,16 +100,27 @@ struct Viewport;
 //     PALETTE MENU (below); then the push buttons Copy, Paste and Close.
 //   THE PALETTE MENU (architect 2026-10-07) — the chooser's list road (the
 //     menu-row popup's painters, the press arms a row, the lift acts and
-//     closes): first EVERY PALETTE'S NAME (palette_names(): the two
-//     defaults, then his files in byte order), a separator, then the four
-//     ACTS "Save", "Save As", "Rename", "Delete" (Title Case, no ellipsis —
-//     kdenlive's convention: nothing here opens a dialog), each with its
-//     truthful enabled bit (palette_act_enabled). It hangs from the button's
-//     foot, its width the widest row's, held inside the window, and flips
-//     above the button when it would run past the window's foot. The lit
-//     row starts on the active preset's name (the chooser's own seat, the
-//     hover seeded at the open) and follows the pointer; a grayed row is
-//     never lit and a press on one is a consumed nothing.
+//     closes): first the four ACTS "Save", "Save As", "Rename", "Delete"
+//     (Title Case, no ellipsis — kdenlive's convention: nothing here opens
+//     a dialog), each with its truthful enabled bit (palette_act_enabled),
+//     a separator, then EVERY PALETTE'S NAME (palette_names(): the two
+//     defaults, then his files in byte order) — the acts first so they are
+//     always the painted rows (palette_menu_rows). Its width is the widest
+//     painted row's, held inside the window across, and THE WINDOW BOUNDS
+//     IT DOWN (2026-10-07): it hangs from the button's foot where every row
+//     fits whole below, else stands on the button's head where every row
+//     fits whole above, else takes the roomier side and CUTS THE NAMES to
+//     the rows that fit whole there — the acts and the separator always
+//     kept, the names' tail dropped, only the placed rows published (ON
+//     SCREEN IS AS PAINTED), nothing hanging past the window (layout).
+//     SAVE AS REFUSES CONSTRUCTIVELY where the menu could not show one more
+//     name in its roomier placement at the current window — "No room for
+//     another palette" (commit_name, reading the layout's own count,
+//     palette_menu_name_capacity) — so the picker never writes a palette
+//     its own menu cannot reach; Rename keeps the count and Delete frees a
+//     row. The lit row starts on the active preset's name (the chooser's
+//     own seat, the hover seeded at the open) and follows the pointer; a
+//     grayed row is never lit and a press on one is a consumed nothing.
 //   THE NAME ASK (Save As, Rename) — THE CARD'S ONE TEXT FIELD WIDENED: for
 //     the length of the ask the hex field's box and the OLD | NEW frame
 //     beside it are ONE FIELD (the same text editor, its Kind PaletteName),
@@ -128,10 +139,12 @@ struct Viewport;
 // on glass whenever a text editor stands (the card's one field is one), directly
 // above row 8, 131 W tall (onscreen_keyboard.h: 2 x 3 of pad + 4 x 29 of key
 // + 3 x 3 of gap; asserted below), and the card keeps kCardMarginPx of air
-// above it. At the tablet (2304 x 1440 at 300 %, the well 885 device rows
-// under clearlooks = 295 W; 954 = 318 W under win2000) the card may be at
-// most 295 − 4 − 131 − 4 = 156 W tall, and IT IS EXACTLY 156 UNDER BOTH
-// CHROMES: edge 2 + pad 6 + chooser 21 + gap 2 + six rows of 15 + gap 4 +
+// above it. At the tablet (2304 x 1440 at 300 %, the well 945 device rows
+// under clearlooks = 315 W, 954 = 318 W under win2000 — main.cpp's lane
+// record) the card may be at most 315 − 4 − 131 − 4 = 176 W tall under
+// clearlooks and 179 under win2000; IT STAYS 156 UNDER BOTH CHROMES (the
+// design as it landed), the spare 20 W under clearlooks and 23 under
+// win2000 left as air above the band: edge 2 + pad 6 + chooser 21 + gap 2 + six rows of 15 + gap 4 +
 // button 23 + pad 6 + edge 2 = 156 (win2000); edge 1 + pad 6 + 21 + 2 + 90
 // + 4 + button 25 + pad 6 + edge 1 = 156 (clearlooks) — every term a whole
 // Windows px, so at 300 % the sum is exact. The laptop (1080 rows at
@@ -240,10 +253,13 @@ constexpr int card_height_wpx(const ChromeSpec& spec) {
            static_cast<int>(spec.push_button_box_px);
 }
 // THE TABLET'S WELL AT 300 % UNDER CLEARLOOKS, the tighter of the two (the
-// head), and the budget it leaves: 295 − 4 − 131 − 4.
-inline constexpr int kTabletWellClearlooksWPx = 295;
-static_assert(card_height_wpx(kChromeSpecClearlooks) ==
-              kTabletWellClearlooksWPx - 2 * kCardMarginPx - kKeyboardBandWPx);
+// head; main.cpp's lane record: 945 device rows), and the budget it leaves,
+// 315 − 4 − 131 − 4 = 176: the card, the band and the two margins stand
+// inside the well, the card at 156 with 20 W to spare.
+inline constexpr int kTabletWellClearlooksWPx = 315;
+static_assert(card_height_wpx(kChromeSpecClearlooks) + 2 * kCardMarginPx +
+                  kKeyboardBandWPx <= kTabletWellClearlooksWPx);
+static_assert(card_height_wpx(kChromeSpecClearlooks) == 156);
 static_assert(card_height_wpx(kChromeSpecWin2000) == 156);
 
 // -- THE CHANNELS -----------------------------------------------------------
@@ -332,12 +348,16 @@ std::string_view active_palette(const AppState& app);
 // defaults cannot be changed) OR while the live words equal the active
 // preset's words (nothing to save — the comparison IS the modified state,
 // no flag keeps it); RENAME and DELETE gray on a default; SAVE AS always
-// live.
+// live (its one name-independent refusal, no room in the menu, is
+// commit_name's card: the bound is the window's, judged at the commit).
 bool palette_act_enabled(const AppState& app, PaletteAct a);
 
-// THE MENU'S ROWS, top to bottom: every palette's name (palette_names()),
-// then the four acts after the one separator. A row is a NAME (its load) or
-// an ACT.
+// THE MENU'S ROWS, top to bottom: the four acts, the one separator, then
+// every palette's name (palette_names()). THE ORDER IS THE ACTS'
+// REACHABILITY (2026-10-07): the acts lead, so hung from the button they
+// are the rows nearest it, and where the window cannot hold every name the
+// layout cuts the names' tail, never an act (layout's bound; the head's THE
+// PALETTE MENU). A row is a NAME (its load) or an ACT.
 struct PaletteMenuRow {
     bool        is_act = false;
     std::string name;                        // a name row's palette
@@ -409,13 +429,25 @@ struct Layout {
     GuiRect menu_button{0, 0, 0, 0};
     GuiRect menu_button_arrow{0, 0, 0, 0};
     GuiRect buttons[3]{};   // Copy, Paste, Close
-    // The palette menu, when down: its box, its rows (palette_menu_rows'
-    // order) and the separator's top row.
+    // The palette menu, when down: its box, THE ROWS IT PLACES (a prefix
+    // of palette_menu_rows: the acts and the names that fit whole, the
+    // head's bound), their rects in that order and the separator's top row.
+    // The painter paints and publishes exactly these.
     GuiRect menu{0, 0, 0, 0};
+    std::vector<PaletteMenuRow> menu_rows;
     std::vector<GuiRect> menu_items;
     int     menu_sep_y = 0;
+    // THE MENU'S NAME CAPACITY, menu down or not: how many name rows fit
+    // whole beside the acts and the separator in the roomier of the two
+    // placements (below the button to the window's foot, above it to the
+    // window's head) at the current window.
+    int     menu_name_capacity = 0;
 };
 Layout layout(const AppState& app, const GuiFont& font);
+// THE ONE COUNT the menu's bound and Save As's refusal share (the head's
+// THE PALETTE MENU): layout's menu_name_capacity, so the judge and the
+// placement cannot disagree.
+int palette_menu_name_capacity(const AppState& app, const GuiFont& font);
 
 // THE SLIDER'S MAPPING (the scrub's shape, render_player_scrub_x_of): the
 // thumb's center travels [track.x + half, track.x + track.w − 1 − half],
@@ -560,16 +592,19 @@ struct GuiColorPicker {
     // (Rename), the whole text selected; the menu is already down.
     void begin_name_ask(AppState::ColorPicker::NameAsk ask);
     // THE NAME ASK'S ENTER. The pending name is judged here, THE ONE JUDGE
-    // (palette_file.h's writers assert what it settles): outside the
-    // name grammar (is_palette_name_spelling) "Not a name"; a default's name,
-    // a default's display name or a loaded file's — another than the one
-    // being renamed — "Name taken" (Save does the overwrite; Save As never
-    // does); each a refusal the product's way, the editor standing. Then
-    // SAVE AS writes the live words under the name and makes it the active
-    // preset (the key written, as a load writes it); RENAME renames the
-    // active file and rewrites the key — the same name a no-op that closes
-    // the ask. An I/O failure closes the ask and cards (class 5: the live
-    // colors and the active preset stand); success closes it.
+    // (palette_file.h's writers assert what it settles): first, for SAVE AS
+    // alone and whatever the name, "No room for another palette" when the
+    // palettes already fill the menu's capacity (palette_menu_name_capacity:
+    // one more name would not show — the head's bound, a class-3 refusal);
+    // outside the name grammar (is_palette_name_spelling) "Not a name"; a
+    // default's name, a default's display name or a loaded file's — another
+    // than the one being renamed — "Name taken" (Save does the overwrite;
+    // Save As never does); each a refusal the product's way, the editor
+    // standing. Then SAVE AS writes the live words under the name and makes
+    // it the active preset (the key written, as a load writes it); RENAME
+    // renames the active file and rewrites the key — the same name a no-op
+    // that closes the ask. An I/O failure closes the ask and cards (class 5:
+    // the live colors and the active preset stand); success closes it.
     void commit_name();
     // DELETE — raise the confirming PROMPT over the standing picker,
     // "Delete '<name>'?" with Delete / Cancel, CANCEL FOCUSED and `d`

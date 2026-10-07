@@ -5176,21 +5176,20 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
     if (cp.menu_open == open) return;
     // THE LIST'S DAMAGE RULE ONE SURFACE OVER (above), and THE LIT ROW
     // STARTS ON THE ACTIVE PRESET'S NAME (color_picker.h's THE PALETTE MENU:
-    // the chooser's hover seed), found in the rows' own order.
+    // the chooser's hover seed), found among the rows the layout places
+    // (none lit when the window's bound cut it).
     if (!open) color_picker.damage_card();
     cp.menu_open    = open;
     cp.menu_hover   = -1;
     cp.menu_pressed = -1;
     cp.menu_press_began_on_item = false;
     if (open) {
-        const std::vector<color_picker::PaletteMenuRow> rows =
-            color_picker::palette_menu_rows();
-        const std::string_view active = color_picker::active_palette(app);
-        for (std::size_t i = 0; i < rows.size(); ++i)
-            if (!rows[i].is_act && rows[i].name == active)
-                cp.menu_hover = static_cast<int>(i);
         const color_picker::Layout l =
             color_picker::layout(app, gui_font(GuiFace::Body));
+        const std::string_view active = color_picker::active_palette(app);
+        for (std::size_t i = 0; i < l.menu_rows.size(); ++i)
+            if (!l.menu_rows[i].is_act && l.menu_rows[i].name == active)
+                cp.menu_hover = static_cast<int>(i);
         viewport.invalidate_rect(l.menu);
         color_picker.damage_card();
     }

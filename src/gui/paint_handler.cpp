@@ -7818,16 +7818,18 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
         cp.stash.list = L.list;
     }
 
-    // THE PALETTE MENU, when down: the same box and rows, its one separator
-    // the dropdown's (etched and inset under win2000, GtkMenu's one row
-    // under clearlooks), each act's enabled bit asked once here
-    // (palette_act_enabled) and published with its row; a grayed row wears
-    // no lit face and its label the emboss (paint_dropdown's rules).
+    // THE PALETTE MENU, when down: the same box and THE ROWS THE LAYOUT
+    // PLACED (the acts and the names that fit whole — color_picker.h's THE
+    // PALETTE MENU, its bound), its one separator the dropdown's (etched and
+    // inset under win2000, GtkMenu's one row under clearlooks), each act's
+    // enabled bit asked once here (palette_act_enabled) and published with
+    // its row; a grayed row wears no lit face and its label the emboss
+    // (paint_dropdown's rules).
     cp.stash.menu = GuiRect{0, 0, 0, 0};
     cp.stash.menu_rows.clear();
     if (cp.menu_open) {
-        const std::vector<color_picker::PaletteMenuRow> rows =
-            color_picker::palette_menu_rows();
+        const std::vector<color_picker::PaletteMenuRow>& rows = L.menu_rows;
+        assert(rows.size() == L.menu_items.size());
         if (cl) paint_cl_menu(cr, L.menu);
         else    paint_popup_chrome(cr, L.menu, PopupFace::Menu);
         if (cl) {
@@ -7841,7 +7843,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
                                       L.menu.w - 2 * sep_inset);
         }
         const int pad_l = scaled_px(kPopupPadXPx);
-        for (std::size_t i = 0; i < rows.size() && i < L.menu_items.size(); ++i) {
+        for (std::size_t i = 0; i < rows.size(); ++i) {
             const color_picker::PaletteMenuRow& row = rows[i];
             const GuiRect& item = L.menu_items[i];
             const bool enabled =
