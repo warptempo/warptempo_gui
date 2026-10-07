@@ -84,12 +84,14 @@
 // UNLIKE THE THEMES, THE MAP IS MAINTAINED AFTER THE LAUNCH BY THE PICKER'S
 // OWN WRITES (the picker is the one writer of the folder): write, rename and
 // remove below each keep the map and the folder in step, so the folder is
-// never re-read. THE CALLERS: the launch read today; the color picker's
-// presets (Save / Save As, the arc's next segment) are the writers to come —
-// the picker itself (color_picker.h) writes the LIVE WORDS alone
-// (install_program_palette) and no file. None of them touches the device config —
-// the `palette` key is the caller's, which owes its own rewrite when it
-// renames or removes the palette the key names. Each answers nothing on
+// never re-read. THE CALLERS (2026-10-07): the launch read, and THE COLOR
+// PICKER'S PRESET ACTS (color_picker.h's THE PRESETS: Save and Save As
+// write, Rename renames, Delete removes — GuiColorPicker::save_palette,
+// commit_name, confirm_delete), its picks themselves writing the LIVE
+// WORDS alone (install_program_palette) and no file. None of the writers
+// below touches the device config — the `palette` key is the caller's,
+// which owes its own rewrite when it renames or removes the palette the
+// key names (GuiColorPicker::write_palette_key). Each answers nothing on
 // success and the failure's whole line otherwise, which the caller cards
 // (the validation doctrine's class 5).
 

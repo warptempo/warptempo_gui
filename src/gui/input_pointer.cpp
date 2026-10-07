@@ -1980,12 +1980,12 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // button, and it has no field to name the I-beam for.
     if (app.picker.active) return GuiCursorKind::Arrow;
     // AND THE COLOR PICKER (2026-10-07), with ONE cue: the I-beam over its
-    // hex field's interior as painted (the dialog field's own rule below),
+    // one field's interior as painted (the dialog field's own rule below),
     // the Arrow everywhere else — its sliders, its wheel, its swatches and
     // its buttons carry no cue, and every other zone is behind its veil.
     if (app.color_picker.active) {
         const AppState::ColorPicker::Stash& st = app.color_picker.stash;
-        return st.valid && rect_contains(st.hex_inner, x, y)
+        return st.valid && rect_contains(st.field_inner, x, y)
                    ? GuiCursorKind::Text : GuiCursorKind::Arrow;
     }
     // A LIVE EDITOR TEXT DRAG KEEPS THE I-BEAM (architect 2026-09-03: "the
@@ -5120,6 +5120,15 @@ int color_picker_list_hit(const AppState::ColorPicker::Stash& st, int x,
         if (rect_contains(st.list_items[i], x, y)) return static_cast<int>(i);
     return -1;
 }
+// The row of the palette menu under (x, y) as painted, or -1.
+int color_picker_menu_hit(const AppState::ColorPicker::Stash& st, int x,
+                          int y) {
+    if (st.menu.w <= 0 || st.menu.h <= 0) return -1;
+    for (std::size_t i = 0; i < st.menu_rows.size(); ++i)
+        if (rect_contains(st.menu_rows[i].rect, x, y))
+            return static_cast<int>(i);
+    return -1;
+}
 // The wheel's circles as painted, in the layout shape the reads take.
 color_picker::Layout wheel_layout_of(const AppState::ColorPicker::Stash& st) {
     color_picker::Layout l;
@@ -5133,6 +5142,14 @@ color_picker::Layout wheel_layout_of(const AppState::ColorPicker::Stash& st) {
 } // namespace
 
 void GuiInputHandler::close_color_picker() { color_picker.close(); }
+
+void GuiInputHandler::confirm_color_picker_delete() {
+    color_picker.confirm_delete();
+}
+
+void GuiInputHandler::cancel_color_picker_delete() {
+    color_picker.cancel_delete();
+}
 
 void GuiInputHandler::set_color_picker_list_open(bool open) {
     AppState::ColorPicker& cp = app.color_picker;
@@ -5154,6 +5171,31 @@ void GuiInputHandler::set_color_picker_list_open(bool open) {
     }
 }
 
+void GuiInputHandler::set_color_picker_menu_open(bool open) {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (cp.menu_open == open) return;
+    // THE LIST'S DAMAGE RULE ONE SURFACE OVER (above), and THE LIT ROW
+    // STARTS ON THE ACTIVE PRESET'S NAME (color_picker.h's THE PALETTE MENU:
+    // the chooser's hover seed), found in the rows' own order.
+    if (!open) color_picker.damage_card();
+    cp.menu_open    = open;
+    cp.menu_hover   = -1;
+    cp.menu_pressed = -1;
+    cp.menu_press_began_on_item = false;
+    if (open) {
+        const std::vector<color_picker::PaletteMenuRow> rows =
+            color_picker::palette_menu_rows();
+        const std::string_view active = color_picker::active_palette(app);
+        for (std::size_t i = 0; i < rows.size(); ++i)
+            if (!rows[i].is_act && rows[i].name == active)
+                cp.menu_hover = static_cast<int>(i);
+        const color_picker::Layout l =
+            color_picker::layout(app, gui_font(GuiFace::Body));
+        viewport.invalidate_rect(l.menu);
+        color_picker.damage_card();
+    }
+}
+
 void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods) {
     AppState::ColorPicker& cp = app.color_picker;
     const AppState::ColorPicker::Stash& st = cp.stash;
@@ -5162,9 +5204,27 @@ void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods) {
     // ModalDialogGeometry), so the press is the veil's consumed nothing.
     if (!st.valid || st.session != cp.session) return;
 
-    // THE LIST FIRST, while it is down (the dropdown's own rank): a press
-    // on a row arms it for the lift, anywhere else closes the list and is
-    // consumed — nothing underneath acts.
+    // THE MENU FIRST, while it is down (the dropdown's own rank): a press
+    // on a live row arms it for the lift, a press on a grayed row is a
+    // consumed nothing with the menu standing (Windows' grayed menu item),
+    // anywhere else closes the menu and is consumed.
+    if (cp.menu_open) {
+        const int hit = color_picker_menu_hit(st, x, y);
+        if (hit >= 0 && !mods.ctrl && !mods.shift && !mods.alt) {
+            if (st.menu_rows[static_cast<std::size_t>(hit)].enabled) {
+                cp.menu_pressed = hit;
+                cp.menu_hover   = hit;
+                cp.menu_press_began_on_item = true;
+                color_picker.damage_card();
+            }
+            return;
+        }
+        set_color_picker_menu_open(false);
+        return;
+    }
+    // THE LIST, while it is down, the same rank: a press on a row arms it
+    // for the lift, anywhere else closes the list and is consumed —
+    // nothing underneath acts.
     if (cp.chooser_open) {
         const int hit = color_picker_list_hit(st, x, y);
         if (hit >= 0 && !mods.ctrl && !mods.shift && !mods.alt) {
@@ -5177,11 +5237,14 @@ void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods) {
         return;
     }
 
-    // A STANDING HEX EDIT ENDS AT ANY PRESS OUTSIDE ITS FIELD — abandoned,
-    // the flag editor's own rule for a press outside its box (the field
-    // shows NEW again); the press then goes on to what it landed on.
-    const bool on_hex = rect_contains(st.hex_field, x, y);
-    if (color_picker.hex_active() && !on_hex) color_picker.hex_cancel();
+    // A STANDING EDIT ENDS AT ANY PRESS OUTSIDE ITS FIELD — the hex field or
+    // the name ask abandoned, the flag editor's own rule for a press outside
+    // its box (the field shows NEW again, or the hex field and the swatches
+    // return); the press then goes on to what it landed on, AS PAINTED: the
+    // frame it was painted from had the buttons gray and no swatches under a
+    // name ask, so a press there arms nothing.
+    const bool on_field = rect_contains(st.field, x, y);
+    if (color_picker.field_active() && !on_field) color_picker.field_cancel();
 
     // A CHORD ON THE CARD IS A CONSUMED NOTHING (the scrub's rule: the plain
     // press works, and a modified press on a slider is not an act anyone
@@ -5189,12 +5252,18 @@ void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods) {
     if (mods.ctrl || mods.shift || mods.alt) return;
     if (!rect_contains(st.card, x, y)) return;
 
-    if (on_hex) {
-        color_picker.hex_focus(x);
+    if (on_field) {
+        color_picker.field_focus(x);
         return;
     }
     if (rect_contains(st.chooser, x, y)) {
         set_color_picker_list_open(true);
+        return;
+    }
+    // THE PALETTE MENU BUTTON drops its menu at the press, the chooser's
+    // road, when it was painted live.
+    if (rect_contains(st.menu_button, x, y)) {
+        if (st.menu_button_enabled) set_color_picker_menu_open(true);
         return;
     }
     // A SLIDER'S TRACK: the thumb is resolved where it is painted (the
@@ -5290,6 +5359,20 @@ void GuiInputHandler::color_picker_motion(int x, int y, GuiInputState mods) {
             color_picker.damage_card();
         }
     }
+    if (cp.menu_open) {
+        // The lit row follows the pointer onto live rows alone (a grayed row
+        // is never lit, the dropdown's gate) and goes dark off the rows —
+        // the chooser's own walk.
+        const int hit = color_picker_menu_hit(cp.stash, x, y);
+        const int lit =
+            hit >= 0 && !cp.stash.menu_rows[static_cast<std::size_t>(hit)].enabled
+                ? -1 : hit;
+        if (lit != cp.menu_hover) {
+            cp.menu_hover = lit;
+            if (cp.menu_pressed >= 0) cp.menu_pressed = lit;
+            color_picker.damage_card();
+        }
+    }
     update_modal_dialog_hover(x, y);
     recompute_redesign_button_hover();
 }
@@ -5299,6 +5382,37 @@ void GuiInputHandler::color_picker_release(int x, int y) {
     if (cp.drag.armed()) {
         // Every step applied live; the lift only ends the gesture.
         cp.drag = AppState::ColorPicker::Drag{};
+        return;
+    }
+    if (cp.menu_open && cp.menu_press_began_on_item) {
+        // THE MENU'S LIFT: the row under it as painted, when live, acts —
+        // the menu closed first, so a Save As's field, a Delete's prompt or
+        // a load's repaint meets the card with nothing floating over it.
+        const int hit = color_picker_menu_hit(cp.stash, x, y);
+        AppState::ColorPicker::MenuRowStash row;
+        if (hit >= 0) row = cp.stash.menu_rows[static_cast<std::size_t>(hit)];
+        set_color_picker_menu_open(false);
+        if (hit < 0 || !row.enabled) return;
+        if (!row.is_act) {
+            color_picker.load_palette(row.name);
+            return;
+        }
+        switch (color_picker::palette_act_at(row.act)) {
+            case color_picker::PaletteAct::Save:
+                color_picker.save_palette();
+                return;
+            case color_picker::PaletteAct::SaveAs:
+                color_picker.begin_name_ask(
+                    AppState::ColorPicker::NameAsk::SaveAs);
+                return;
+            case color_picker::PaletteAct::Rename:
+                color_picker.begin_name_ask(
+                    AppState::ColorPicker::NameAsk::Rename);
+                return;
+            case color_picker::PaletteAct::Delete:
+                color_picker.raise_delete();
+                return;
+        }
         return;
     }
     if (cp.chooser_open && cp.chooser_press_began_on_item) {

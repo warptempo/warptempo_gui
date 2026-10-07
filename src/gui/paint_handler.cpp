@@ -1200,27 +1200,9 @@ constexpr double kPopupSepInsetPx    = 5.0;   // the separator, per side
 // it bound on — is git history.)
 constexpr double kPopupItemMinWidthPx = 176.0;
 
-// THE DROPDOWN'S HORIZONTAL PADS, authored in POPUP-BOX coordinates — from
-// the box's own outer edges, which is how a menu with an accelerator column is
-// easiest to state. EVERY MENU TAKES THEM (architect 2026-08-03): the menus
-// differ in one derived term (whether an accelerator column exists) rather
-// than in their padding.
-//
-//  - THE LABEL PAD AND THE RIGHT PAD ARE ONE NUMBER, 22 WINDOWS PX (architect
-//    2026-10-02, the mirror rule): from the popup's left edge to the label's
-//    pen, and from the popup's right edge to the accelerator's last ink
-//    column (or, on a menu without one, the widest label's) — Windows' popup
-//    reserves its check-mark column on the left and its submenu-arrow column
-//    on the right, the same width, and this product has neither and keeps
-//    their space as plain padding. It is the right margin the kdenlive crop
-//    measured (30 laptop px, re-authored at the unit's change); the crop's
-//    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
-//    mirror.
-//  - THE COLUMN GAP is the guaranteed minimum separation between the widest
-//    label and the widest accelerator, the kdenlive crop's 13 laptop px
-//    re-authored as 9 Windows px (architect 2026-10-02: the gap kept).
-constexpr double kPopupPadXPx         = 22.0;
-constexpr double kPopupHotkeyGapPx    = 9.0;
+// (THE DROPDOWN'S HORIZONTAL PADS, kPopupPadXPx and kPopupHotkeyGapPx, are
+// render.h's since 2026-10-07, beside the vertical metrics: the color
+// picker's palette menu sizes its box off them in its layout.)
 
 // THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
 // the face's own CAP BAND in the box, a half-row tie going toward the TOP
@@ -2598,7 +2580,8 @@ constexpr TransportRowDef kTransportGroup[] = {
 // THE SINGLE-MARKER VERBS (architect 2026-08-18, "move drop/delete/disable/
 // toggle inherit to bottom right row"), the RIGHT BLOCK'S FIRST GROUP: drop
 // (bare `s`, ListAdd's plus), delete (`Delete`, ListRemove's minus), the
-// disable toggle (`Ctrl+D`, ViewHidden's no-sign) and inherit/collapse
+// disable toggle (`Ctrl+D`, ViewHidden's muted speaker in both sets since
+// 2026-10-07: a disabled marker is one the render does not hear) and inherit/collapse
 // (`Ctrl+N`, InsertLink's chain — a pass marker links its tempo to its
 // neighbor). They opened
 // their own separator-led group in the ICON ROW from 2026-08-12 until this
@@ -6187,10 +6170,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const bool picker_up = !prompt_up && !player_up && app.picker.active;
     // THE COLOR PICKER, the fifth owner (2026-10-07): the same rank as the
     // two list owners, none of the three ever live with another, and its
-    // own hex field is no dialog editor — so it forks here, before the
+    // own one field is no dialog editor — so it forks here, before the
     // editor fork, and paints ITS CARD ON THE WELL through
     // paint_color_picker below, which publishes this stash (the card as the
-    // box, the hex field as the field, Copy / Paste / Close as the buttons)
+    // box, its field as the field, Copy / Paste / Close as the buttons)
     // and the picker's own. THIS IS ONE OF THE THREE PLACES THE RANKING IS
     // SPELLED (the other two are named above).
     const bool color_picker_up =
@@ -6234,9 +6217,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // row, so the row's layout below is not its business; the row's ground
     // is already painted bare (paint_bottom_strip's yield).
     if (color_picker_up) {
-        paint_color_picker(cr, live_session);
+        paint_color_picker(cr, live_session, /*veiled=*/false);
         return;
     }
+    // AND UNDER ITS DELETE QUESTION (2026-10-07): the prompt owns the row and
+    // the stash below, and the card still stands on the well, VEILED —
+    // painted, publishing nothing (paint_color_picker's head) — so the
+    // question is asked over the picker it is about.
+    if (prompt_up && app.color_picker.active)
+        paint_color_picker(cr, 0, /*veiled=*/true);
 
     // THE MODAL'S SURFACE IS THE BOTTOM ROW'S CONTENT BAND — the lane's ground
     // is already painted (paint_bottom_strip's chrome runs on
@@ -7396,32 +7385,168 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // THE COLOR PICKER'S CARD ON THE WELL — the anatomy, every length and the
 // budget are at color_picker.h's head; the layout is color_picker::layout,
 // read here and by the press router alike. This body PAINTS and PUBLISHES:
-// the modal stash (the card as `box`, the hex field's interior as `field`,
+// the modal stash (the card as `box`, the one field's interior as `field`,
 // the three push buttons as `buttons`, so the dialogs' shared machinery —
 // the hover walk, the press arm, the lift's dispatch, the tooltip wait, the
 // pressed and disabled faces — serves them unchanged) and the picker's own
 // (AppState::ColorPicker::Stash: the chooser, the list, the sliders' tracks
-// and thumb columns, the hex field's run, the swatches, the wheel's
-// circles). AS PAINTED: everything is republished every run from the same
-// layout the pixels came from.
+// and thumb columns, the field's run, the swatches, the wheel's circles,
+// the palette menu button and its menu's rows with their enabled bits). AS
+// PAINTED: everything is republished every run from the same layout the
+// pixels came from.
+//
+// VEILED (architect 2026-10-07, the palette menu's Delete question): under a
+// prompt the card still paints, so the question stands over the picker it
+// asks about, and publishes NOTHING — the modal stash is the prompt's, the
+// picker's stash goes invalid (a press under the prompt is the prompt's),
+// and no button wears a pressed face (the dialogs' indices name the
+// prompt's buttons then).
 //
 // THE LOOK, both chromes: the GROUND with the PLAIN RAISED two-line edge
 // under win2000 and GTK's one shade[5] line under clearlooks; the wheel
-// (color_picker::paint_wheel, the one non-role painter); the chooser —
+// (color_picker::paint_wheel, the one non-role painter); the chooser and the
+// palette menu button — ONE COMBO DRAWING (paint_picker_combo below):
 // win2000 a sunken field in the field pair with Windows' 16-W drop-down
 // button and Marlett's wedge, clearlooks one gummy button with the engine's
-// wedge, the name at the field's pad; the six slider rows — the label
-// cap-centered in `label`, the slider in the scrub's painters (the channel's
-// four lines and the pointed thumb on a 3 / 4 / 8 seat; GtkScale's trough,
-// its lower part filled, and its thumb), the value's tabular digits
-// right-aligned in `label`; the hex field — the time field's shape in the
-// field pair (sunken outer under win2000, the entry under clearlooks), its
-// run, selection and caret the dialog field's own painting; the swatch pair
-// in a one-line sunken frame (cl_list_frame under clearlooks), each swatch
-// a flat fill of its word; the three push buttons the dialogs' (Paste in
-// the disabled face while the slot is empty); and the chooser's list, when
-// down, the menu-row popup's box and rows.
-void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
+// wedge, the text at the field's pad cut with "..." where it does not fit;
+// the six slider rows — the label cap-centered in `label`, the slider in the
+// scrub's painters (the channel's four lines and the pointed thumb on a
+// 3 / 4 / 8 seat; GtkScale's trough, its lower part filled, and its thumb),
+// the value's tabular digits right-aligned in `label`; the one field — the
+// time field's shape in the field pair (sunken outer under win2000, the
+// entry under clearlooks), its run, selection and caret the dialog field's
+// own painting and its minimal-travel scroll (text_editor::State::
+// view_offset_px), and, under the name ask, the act's word left of it in
+// `label`; the swatch pair in a one-line sunken frame (cl_list_frame under
+// clearlooks), each swatch a flat fill of its word; the three push buttons
+// the dialogs' (the disabled face where their bits say); and the chooser's
+// list or the palette menu, when down, the menu-row popup's box and rows,
+// the menu's separator and grayed rows the dropdown's.
+namespace {
+// THE COMBO'S DOWN WEDGE at (ax, ay), aw x ah: the ink when live, and when
+// grayed THE DISABLED EMBOSS's two copies (show_embossed_run's inks under
+// each chrome) — Windows' inactive scroll-arrow glyph and GTK's insensitive
+// arrow alike.
+void paint_picker_wedge(cairo_t* cr, double ax, double ay, int aw, int ah,
+                        bool enabled, GuiColor ink) {
+    const auto wedge = [&](double x, double y, GuiColor c) {
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+        cairo_new_path(cr);
+        cairo_move_to(cr, x, y);
+        cairo_line_to(cr, x + aw, y);
+        cairo_line_to(cr, x + aw / 2.0, y + ah);
+        cairo_close_path(cr);
+        set_palette_source(cr, c);
+        cairo_fill(cr);
+        cairo_restore(cr);
+    };
+    if (enabled) {
+        wedge(ax, ay, ink);
+        return;
+    }
+    const bool cl =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    const double off = static_cast<double>(relief_line_px());
+    wedge(ax + off, ay + off, cl ? palette().cl_text_insensitive_etch
+                                 : palette().hilight);
+    wedge(ax, ay, cl ? palette().cl_text_insensitive : palette().shadow);
+}
+
+// THE COMBO'S TEXT in `room` from (x, baseline): whole when it fits, else
+// CUT AT A CODEPOINT with Windows' "..." after the longest prefix that fits
+// with it — the caption title's rule (paint_caption_row) — and nothing when
+// even the "..." does not fit. Live in `ink`, grayed in the emboss.
+void show_picker_combo_text(cairo_t* cr, const GuiFont& font, double x,
+                            double baseline, double room,
+                            std::string_view text, bool enabled,
+                            GuiColor ink) {
+    const auto show = [&](const text_shape::ShapedRun& r, double rx) {
+        if (enabled) {
+            set_palette_source(cr, ink);
+            text_shape::show_shaped_run(cr, r, rx, baseline);
+        } else {
+            show_embossed_run(cr, r, rx, baseline);
+        }
+    };
+    text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
+    if (run.width_px <= room) {
+        show(run, x);
+        return;
+    }
+    const text_shape::ShapedRun ellipsis = text_shape::shape_text_run(font, "...");
+    if (ellipsis.width_px > room) return;
+    size_t cut = text.size();
+    while (cut > 0) {
+        do { --cut; } while (cut > 0 &&
+                             (static_cast<unsigned char>(text[cut]) & 0xC0) ==
+                                 0x80);
+        run = text_shape::shape_text_run(font, text.substr(0, cut));
+        if (run.width_px + ellipsis.width_px <= room) break;
+    }
+    show(run, x);
+    show(ellipsis, x + run.width_px);
+}
+} // namespace
+
+// THE CHROME'S COMBO — the chooser's drawing, the palette menu button's too
+// (2026-10-07, the planner's "reuse it"): `r` the whole control, `button`
+// win2000's drop-down button inside it (empty under clearlooks), `open`
+// while its list or menu is down (the button pushed), `enabled` false for
+// the grayed face (win2000's field takes the ground, as a disabled Windows
+// combo's edit does; clearlooks' gummy button its insensitive face; the
+// text and the wedge the emboss).
+static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
+                               const GuiRect& r, const GuiRect& button,
+                               std::string_view text, bool open,
+                               bool enabled) {
+    const ChromeSpec& spec = live_chrome_spec();
+    const bool cl = spec.vocabulary == GuiChromeVocabulary::Clearlooks;
+    const int lw = relief_line_px();
+    const int aw_gap = scaled_px(color_picker::kComboTextGapPx);
+    if (cl) {
+        const int shift = paint_cl_push_button(cr, r, /*pressed=*/open && enabled,
+                                               enabled, /*is_default=*/false);
+        const double tx = r.x + scaled_px(spec.push_button_pad_left_px) + shift;
+        const double ty = redesign_baseline(font, r.y, r.h) + shift;
+        // The engine's wedge, GtkComboBox's arrow, at the right pad.
+        const int aw = scaled_px(color_picker::kComboArrowWPx, 3);
+        const int ah = scaled_px(color_picker::kComboArrowHPx, 2);
+        const double ax = r.x + r.w - scaled_px(spec.push_button_pad_right_px) -
+                          aw + shift;
+        const double ay = r.y + (r.h - ah) / 2 + shift;
+        show_picker_combo_text(cr, font, tx, ty, ax - aw_gap - tx, text,
+                               enabled, palette().cl_push_text);
+        paint_picker_wedge(cr, ax, ay, aw, ah, enabled, palette().cl_push_text);
+        return;
+    }
+    const int fb = 2 * lw;
+    paint_cell_rect(cr, GuiRect{r.x + fb, r.y + fb, r.w - 2 * fb, r.h - 2 * fb},
+                    enabled ? palette().field_ground : palette().ground);
+    paint_relief_plain_sunken(cr, r);
+    cairo_save(cr);
+    cairo_rectangle(cr, r.x + fb, r.y + fb, button.x - (r.x + fb), r.h - 2 * fb);
+    cairo_clip(cr);
+    const double tx = r.x + fb + scaled_px(kModalFieldPadXPx);
+    show_picker_combo_text(cr, font, tx, redesign_baseline(font, r.y, r.h),
+                           button.x - aw_gap - tx, text, enabled,
+                           palette().field_text);
+    cairo_restore(cr);
+    // THE DROP-DOWN BUTTON: Windows' scroll-arrow button, pushed while the
+    // list is down, its wedge Marlett's 7 x 4.
+    const ButtonBoxFace box = paint_button_box(
+        cr, button, /*lamp=*/false, /*pressed=*/open && enabled,
+        ButtonFamily::Push);
+    const int u  = scaled_px(1, 1);
+    const int aw = color_picker::kComboArrowWPx * u;
+    const int ah = color_picker::kComboArrowHPx * u;
+    const double ax = button.x + (button.w - aw) / 2 + box.shift;
+    const double ay = button.y + (button.h - ah) / 2 + box.shift;
+    paint_picker_wedge(cr, ax, ay, aw, ah, enabled, palette().label);
+}
+
+void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
+                                         bool veiled) {
     using color_picker::Channel;
     AppState::ColorPicker&          cp  = app.color_picker;
     AppState::ModalDialogGeometry&  dlg = app.modal_dialog;
@@ -7429,8 +7554,9 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
     const bool cl = spec.vocabulary == GuiChromeVocabulary::Clearlooks;
     const GuiFont font = gui_font(GuiFace::Body);
     const color_picker::Layout L = color_picker::layout(app, font);
-    const int lw = relief_line_px();
-    dlg.owner = AppState::ModalDialogOwner::ColorPicker;
+    const bool asking = text_editor::is_active(cp.field_editor) &&
+                        cp.field_editor.kind == text_editor::Kind::PaletteName;
+    if (!veiled) dlg.owner = AppState::ModalDialogOwner::ColorPicker;
 
     cairo_save(cr);
 
@@ -7448,74 +7574,9 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
     }
 
     // THE CHOOSER.
-    {
-        const std::string_view name = color_picker::role_display_name(cp.role);
-        if (cl) {
-            const int shift = paint_cl_push_button(cr, L.chooser,
-                                                   /*pressed=*/cp.chooser_open,
-                                                   /*enabled=*/true,
-                                                   /*is_default=*/false);
-            const double tx = L.chooser.x + scaled_px(spec.push_button_pad_left_px) +
-                              shift;
-            const double ty = redesign_baseline(font, L.chooser.y, L.chooser.h) +
-                              shift;
-            show_row_text(cr, font, tx, ty, name, palette().cl_push_text);
-            // The engine's wedge, GtkComboBox's arrow, at the right pad.
-            const int aw = scaled_px(color_picker::kComboArrowWPx, 3);
-            const int ah = scaled_px(color_picker::kComboArrowHPx, 2);
-            const double ax = L.chooser.x + L.chooser.w -
-                              scaled_px(spec.push_button_pad_right_px) - aw + shift;
-            const double ay = L.chooser.y + (L.chooser.h - ah) / 2 + shift;
-            cairo_save(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-            cairo_new_path(cr);
-            cairo_move_to(cr, ax, ay);
-            cairo_line_to(cr, ax + aw, ay);
-            cairo_line_to(cr, ax + aw / 2.0, ay + ah);
-            cairo_close_path(cr);
-            set_palette_source(cr, palette().cl_push_text);
-            cairo_fill(cr);
-            cairo_restore(cr);
-        } else {
-            const int fb = 2 * lw;
-            paint_cell_rect(cr, GuiRect{L.chooser.x + fb, L.chooser.y + fb,
-                                        L.chooser.w - 2 * fb, L.chooser.h - 2 * fb},
-                            palette().field_ground);
-            paint_relief_plain_sunken(cr, L.chooser);
-            cairo_save(cr);
-            cairo_rectangle(cr, L.chooser.x + fb, L.chooser.y + fb,
-                            L.chooser_button.x - (L.chooser.x + fb),
-                            L.chooser.h - 2 * fb);
-            cairo_clip(cr);
-            show_row_text(cr, font,
-                          L.chooser.x + fb + scaled_px(kModalFieldPadXPx),
-                          redesign_baseline(font, L.chooser.y, L.chooser.h),
-                          name, palette().field_text);
-            cairo_restore(cr);
-            // THE DROP-DOWN BUTTON: Windows' scroll-arrow button, pushed
-            // while the list is down, its wedge Marlett's 7 x 4.
-            const ButtonBoxFace box = paint_button_box(
-                cr, L.chooser_button, /*lamp=*/false,
-                /*pressed=*/cp.chooser_open, ButtonFamily::Push);
-            const int u  = scaled_px(1, 1);
-            const int aw = color_picker::kComboArrowWPx * u;
-            const int ah = color_picker::kComboArrowHPx * u;
-            const double ax = L.chooser_button.x + (L.chooser_button.w - aw) / 2 +
-                              box.shift;
-            const double ay = L.chooser_button.y + (L.chooser_button.h - ah) / 2 +
-                              box.shift;
-            cairo_save(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-            cairo_new_path(cr);
-            cairo_move_to(cr, ax, ay);
-            cairo_line_to(cr, ax + aw, ay);
-            cairo_line_to(cr, ax + aw / 2.0, ay + ah);
-            cairo_close_path(cr);
-            set_palette_source(cr, palette().label);
-            cairo_fill(cr);
-            cairo_restore(cr);
-        }
-    }
+    paint_picker_combo(cr, font, L.chooser, L.chooser_button,
+                       color_picker::role_display_name(cp.role),
+                       cp.chooser_open, /*enabled=*/true);
 
     // THE SIX SLIDERS.
     for (int i = 0; i < color_picker::kChannelCount; ++i) {
@@ -7559,50 +7620,84 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
             AppState::ColorPicker::SliderStash{row, track, thumb_x};
     }
 
-    // THE HEX FIELD.
+    // THE NAME ASK'S WORD, cap-centered on the button band at the row's
+    // left (color_picker.h's THE NAME ASK).
+    if (asking) {
+        show_row_text(cr, font, L.name_label.x,
+                      redesign_baseline(font, L.name_label.y, L.name_label.h),
+                      color_picker::palette_act_label(
+                          cp.name_ask == AppState::ColorPicker::NameAsk::Rename
+                              ? color_picker::PaletteAct::Rename
+                              : color_picker::PaletteAct::SaveAs),
+                      palette().label);
+    }
+
+    // THE ONE FIELD — the hex field, or the name ask's wide field.
     {
-        const bool editing = text_editor::is_active(cp.hex_editor);
+        text_editor::State& ed = cp.field_editor;
+        const bool editing = text_editor::is_active(ed);
         if (cl) {
-            paint_cl_entry(cr, L.hex_field, /*focused=*/editing);
+            paint_cl_entry(cr, L.field, /*focused=*/editing);
         } else {
-            paint_cell_rect(cr, L.hex_field, palette().field_ground);
-            paint_relief_sunken_outer(cr, L.hex_field);
+            paint_cell_rect(cr, L.field, palette().field_ground);
+            paint_relief_sunken_outer(cr, L.field);
         }
         const std::string shown =
-            editing ? cp.hex_editor.pending : color_picker::hex_spelling(cp.rgb);
+            editing ? ed.pending : color_picker::hex_spelling(cp.rgb);
         const text_shape::ShapedRun run = text_shape::shape_text_run(font, shown);
         const std::vector<double> bx =
             text_shape::byte_offsets_px(run, shown.size());
-        const double tx = L.hex_field.x + scaled_px(spec.time_field_pad_px);
-        const double baseline = redesign_baseline(font, L.hex_field.y, L.hex_field.h);
         const GuiColor ink_text = cl ? palette().cl_text : palette().field_text;
         const GuiColor ink_sel_fill = cl ? palette().cl_selection
                                          : palette().selected_fill;
         const GuiColor ink_sel_text = cl ? palette().cl_text_selected
                                          : palette().selected_text;
+        // THE VIEW: the field's two pads in, scrolled by THE MINIMAL-TRAVEL
+        // RULE (text_editor::State::view_offset_px, the dialog field's four
+        // lines) — the hex spelling always fits, so only a long name ever
+        // travels.
+        const double pad_x    = scaled_px(spec.time_field_pad_px);
+        const int    caret_px = scaled_px(1.0, 1);
+        const double view_x0  = L.field.x + pad_x;
+        const double view_w   = std::max(1.0, L.field.w - 2.0 * pad_x);
+        double vo = 0.0;
+        if (editing) {
+            const int cursor_pos =
+                std::clamp(ed.cursor_pos, 0, static_cast<int>(shown.size()));
+            const double caret_off = bx[static_cast<size_t>(cursor_pos)];
+            const double travel_w  = view_w - static_cast<double>(caret_px);
+            vo = ed.view_offset_px;
+            if (caret_off - vo < 0.0)      vo = caret_off;
+            if (caret_off - vo > travel_w) vo = caret_off - travel_w;
+            const double max_vo =
+                run.width_px + static_cast<double>(caret_px) - view_w;
+            if (vo > max_vo) vo = max_vo;
+            if (vo < 0.0)    vo = 0.0;
+            ed.view_offset_px = vo;
+        }
+        const double tx = view_x0 - vo;
+        const double baseline = redesign_baseline(font, L.field.y, L.field.h);
         const int band_y = static_cast<int>(
             std::nearbyint(baseline - gui_font_ascent_px(font)));
         const int band_h = static_cast<int>(std::nearbyint(gui_font_line_px(font)));
         cairo_save(cr);
-        cairo_rectangle(cr, L.hex_inner.x, L.hex_inner.y, L.hex_inner.w,
-                        L.hex_inner.h);
+        cairo_rectangle(cr, view_x0, L.field_inner.y, view_w, L.field_inner.h);
         cairo_clip(cr);
-        const bool has_sel = editing && text_editor::has_selection(cp.hex_editor);
+        const bool has_sel = editing && text_editor::has_selection(ed);
         if (has_sel) {
             const size_t s0 =
-                static_cast<size_t>(text_editor::selection_start(cp.hex_editor));
+                static_cast<size_t>(text_editor::selection_start(ed));
             const size_t s1 =
-                static_cast<size_t>(text_editor::selection_end(cp.hex_editor));
+                static_cast<size_t>(text_editor::selection_end(ed));
             const int hx0 = static_cast<int>(std::nearbyint(tx + bx[s0]));
             const int hx1 = static_cast<int>(std::nearbyint(tx + bx[s1]));
             const int hw  = hx1 > hx0 ? hx1 - hx0 : 1;
             paint_cell_rect(cr, GuiRect{hx0, band_y, hw, band_h}, ink_sel_fill);
             cairo_save(cr);
-            cairo_rectangle(cr, L.hex_inner.x, L.hex_inner.y,
-                            hx0 - L.hex_inner.x, L.hex_inner.h);
-            cairo_rectangle(cr, hx0 + hw, L.hex_inner.y,
-                            (L.hex_inner.x + L.hex_inner.w) - (hx0 + hw),
-                            L.hex_inner.h);
+            cairo_rectangle(cr, view_x0, L.field_inner.y, hx0 - view_x0,
+                            L.field_inner.h);
+            cairo_rectangle(cr, hx0 + hw, L.field_inner.y,
+                            (view_x0 + view_w) - (hx0 + hw), L.field_inner.h);
             cairo_clip(cr);
             set_palette_source(cr, ink_text);
             text_shape::show_shaped_run(cr, run, tx, baseline);
@@ -7617,10 +7712,9 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
             set_palette_source(cr, ink_text);
             text_shape::show_shaped_run(cr, run, tx, baseline);
         }
-        if (editing && text_editor::cursor_visible_now(cp.hex_editor)) {
-            const int pos = std::clamp(cp.hex_editor.cursor_pos, 0,
+        if (editing && !veiled && text_editor::cursor_visible_now(ed)) {
+            const int pos = std::clamp(ed.cursor_pos, 0,
                                        static_cast<int>(shown.size()));
-            const int caret_px = scaled_px(1.0, 1);
             paint_cell_rect(
                 cr,
                 GuiRect{static_cast<int>(std::nearbyint(tx + bx[static_cast<size_t>(pos)])),
@@ -7628,19 +7722,28 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
                 ink_text);
         }
         cairo_restore(cr);
-        cp.stash.hex_text_origin_x = tx;
-        cp.stash.hex_byte_x        = bx;
+        cp.stash.field_text_origin_x = tx;
+        cp.stash.field_byte_x        = bx;
     }
 
-    // OLD | NEW.
-    {
+    // OLD | NEW (not under the name ask, whose field stands over them).
+    if (!asking) {
         paint_cell_rect(cr, L.swatch_old, hex(cp.old_rgb));
         paint_cell_rect(cr, L.swatch_new, hex(cp.rgb));
         if (cl) paint_relief_line_frame(cr, L.swatch_frame, palette().cl_list_frame);
         else    paint_relief_sunken_outer(cr, L.swatch_frame);
     }
 
-    // THE THREE PUSH BUTTONS, published on the modal stash.
+    // THE PALETTE MENU BUTTON, labeled with the active preset's shown name,
+    // gray while the name ask stands.
+    const bool menu_button_enabled = !asking;
+    paint_picker_combo(
+        cr, font, L.menu_button, L.menu_button_arrow,
+        color_picker::palette_display_name(color_picker::active_palette(app)),
+        cp.menu_open, menu_button_enabled);
+
+    // THE THREE PUSH BUTTONS, published on the modal stash; all three gray
+    // while the name ask stands, Paste while the slot is empty.
     {
         struct Plan {
             const char* label;
@@ -7648,15 +7751,16 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
             bool enabled;
         };
         const Plan plan[3] = {
-            {"Copy",  AppState::ColorPickerButtonAct::Copy,  true},
-            {"Paste", AppState::ColorPickerButtonAct::Paste, cp.slot_full},
-            {"Close", AppState::ColorPickerButtonAct::Close, true},
+            {"Copy",  AppState::ColorPickerButtonAct::Copy,  !asking},
+            {"Paste", AppState::ColorPickerButtonAct::Paste,
+             !asking && cp.slot_full},
+            {"Close", AppState::ColorPickerButtonAct::Close, !asking},
         };
         for (int i = 0; i < 3; ++i) {
             const GuiRect& r = L.buttons[i];
             const bool enabled = plan[i].enabled;
-            const bool armed   = enabled && i == app.modal_dialog_pressed;
-            const bool pressed = enabled &&
+            const bool armed   = !veiled && enabled && i == app.modal_dialog_pressed;
+            const bool pressed = !veiled && enabled &&
                 ((armed && app.modal_dialog_press_inside) ||
                  i == app.modal_dialog_key_pressed);
             const ButtonBoxFace box =
@@ -7673,6 +7777,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
                               cl ? palette().cl_push_text : palette().label);
             else
                 show_row_text_embossed(cr, font, lx, ly, plan[i].label);
+            if (veiled) continue;
             AppState::ModalDialogButton out;
             out.rect             = r;
             out.color_picker_act = plan[i].act;
@@ -7711,24 +7816,85 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session) {
         cp.stash.list = L.list;
     }
 
+    // THE PALETTE MENU, when down: the same box and rows, its one separator
+    // the dropdown's (etched and inset under win2000, GtkMenu's one row
+    // under clearlooks), each act's enabled bit asked once here
+    // (palette_act_enabled) and published with its row; a grayed row wears
+    // no lit face and its label the emboss (paint_dropdown's rules).
+    cp.stash.menu = GuiRect{0, 0, 0, 0};
+    cp.stash.menu_rows.clear();
+    if (cp.menu_open) {
+        const std::vector<color_picker::PaletteMenuRow> rows =
+            color_picker::palette_menu_rows();
+        if (cl) paint_cl_menu(cr, L.menu);
+        else    paint_popup_chrome(cr, L.menu, PopupFace::Menu);
+        if (cl) {
+            paint_cl_menu_separator(cr, L.menu.x,
+                                    L.menu_sep_y + popup_sep_margin_y_px(),
+                                    L.menu.w);
+        } else {
+            const int sep_inset = scaled_px(kPopupSepInsetPx);
+            paint_relief_etched_hline(cr, L.menu.x + sep_inset,
+                                      L.menu_sep_y + popup_sep_margin_y_px(),
+                                      L.menu.w - 2 * sep_inset);
+        }
+        const int pad_l = scaled_px(kPopupPadXPx);
+        for (std::size_t i = 0; i < rows.size() && i < L.menu_items.size(); ++i) {
+            const color_picker::PaletteMenuRow& row = rows[i];
+            const GuiRect& item = L.menu_items[i];
+            const bool enabled =
+                !row.is_act || color_picker::palette_act_enabled(app, row.act);
+            const bool lit = enabled && (cp.menu_pressed == static_cast<int>(i) ||
+                                         cp.menu_hover == static_cast<int>(i));
+            if (lit) {
+                if (cl) paint_cl_menu_item(cr, item);
+                else    paint_cell_rect(cr, item, palette().selected_fill);
+            }
+            const std::string label =
+                row.is_act ? std::string(color_picker::palette_act_label(row.act))
+                           : color_picker::palette_display_name(row.name);
+            const double base = redesign_baseline(font, item.y, item.h);
+            if (enabled)
+                show_row_text(cr, font, L.menu.x + pad_l, base, label,
+                              cl ? (lit ? palette().cl_menuitem_text
+                                        : palette().cl_menu_text)
+                                 : (lit ? palette().selected_text
+                                        : palette().label));
+            else
+                show_row_text_embossed(cr, font, L.menu.x + pad_l, base, label);
+            AppState::ColorPicker::MenuRowStash out;
+            out.rect    = item;
+            out.is_act  = row.is_act;
+            out.act     = static_cast<int>(row.act);
+            out.name    = row.name;
+            out.enabled = enabled;
+            cp.stash.menu_rows.push_back(std::move(out));
+        }
+        cp.stash.menu = L.menu;
+    }
+
     // THE PUBLICATION.
-    cp.stash.valid     = true;
+    cp.stash.valid     = !veiled;
     cp.stash.session   = cp.session;
     cp.stash.card      = L.card;
     cp.stash.chooser   = L.chooser;
-    cp.stash.hex_field = L.hex_field;
-    cp.stash.hex_inner = L.hex_inner;
+    cp.stash.field     = L.field;
+    cp.stash.field_inner = L.field_inner;
     cp.stash.swatch_old = L.swatch_old;
     cp.stash.swatch_new = L.swatch_new;
+    cp.stash.menu_button = L.menu_button;
+    cp.stash.menu_button_enabled = menu_button_enabled;
     cp.stash.wheel     = L.wheel;
     cp.stash.wheel_cx  = L.cx;
     cp.stash.wheel_cy  = L.cy;
     cp.stash.wheel_outer_r = L.outer_r;
     cp.stash.wheel_inner_r = L.inner_r;
-    dlg.box     = L.card;
-    dlg.field   = L.hex_inner;
-    dlg.session = live_session;
-    dlg.valid   = true;
+    if (!veiled) {
+        dlg.box     = L.card;
+        dlg.field   = L.field_inner;
+        dlg.session = live_session;
+        dlg.valid   = true;
+    }
     cairo_restore(cr);
 }
 

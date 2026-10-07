@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 struct GuiNotifications;
 struct GuiPlaybackLifecycle;
@@ -33,11 +34,25 @@ struct Viewport;
 // other press router); the painter and the router both read layout() below,
 // so paint and hit cannot describe different controls.
 //
-// THE PICKS ARE THE SESSION'S (2026-10-07, until the presets land — Save /
-// Save As / the `palette` key, the arc's next segment): every pick writes
-// the live words (render.h's program_palette_words) and installs them, a
-// Close keeps the live colors, and the next launch returns to the named
-// palette. Nothing here touches the device config or the palettes folder.
+// THE PRESETS (architect 2026-10-07, the arc's third segment: "now that we
+// have the keyboard in the app, we can allow the user to give names to the
+// presets", renamable "for organization", Delete behind a confirming
+// prompt, the defaults unchangeable, the chosen preset back at the next
+// launch). Every pick writes the LIVE WORDS (render.h's
+// program_palette_words) and installs them; the presets are NAMED
+// PALETTES (palette_file.h: the two compiled-in defaults and his files) and
+// THE ACTIVE PRESET is the device config's `palette` resolved
+// (effective_palette_name) — NOT A FIELD HERE: the live config is its one
+// truth, read at every paint, so the picker's first open after a launch
+// lands on the config's preset (or the chrome's default) with no seeding to
+// keep in step. THE PALETTE MENU (the bottom row's first button, below)
+// loads a preset, saves the live words over the active file, saves them
+// under a new name, renames the active file or deletes it. A CLOSE KEEPS
+// THE LIVE COLORS, ASKING NOTHING: a palette picked and not saved paints
+// until the process ends, and THE NEXT LAUNCH RETURNS TO THE NAMED PRESET —
+// the menu's Save, lit while the live words differ from the active file's,
+// is the cue (architect 2026-10-07). The picker is the folder's one writer
+// and the `palette` key's one writer (GuiColorPicker's preset acts, below).
 //
 // WHAT IT IS. ONE CARD ON THE WELL, on the half of the window opposite the
 // opening tap (so the well under the other half stays in view while
@@ -75,7 +90,34 @@ struct Viewport;
 //     it the focus (a text editor of Kind::PaletteHex); (i) OLD | NEW, two
 //     equal swatches in a one-line sunken frame, OLD the element's color
 //     when it became the live element, NEW the current, a tap on OLD writing
-//     it back; then the push buttons Copy, Paste and Close.
+//     it back, at its floor; then FOUR BUTTONS — (j) THE PALETTE MENU
+//     BUTTON, the row's remainder, the chrome's
+//     combo (the chooser's own drawing: win2000's sunken field with its
+//     drop-down button, clearlooks' gummy button with the engine's wedge)
+//     labeled with THE ACTIVE PRESET'S NAME (palette_display_name: a
+//     default's in Title Case, a file's verbatim), cut with Windows' "..."
+//     when it does not fit, the caption title's rule; a press drops THE
+//     PALETTE MENU (below); then the push buttons Copy, Paste and Close.
+//   THE PALETTE MENU (architect 2026-10-07) — the chooser's list road (the
+//     menu-row popup's painters, the press arms a row, the lift acts and
+//     closes): first EVERY PALETTE'S NAME (palette_names(): the two
+//     defaults, then his files in byte order), a separator, then the four
+//     ACTS "Save", "Save As", "Rename", "Delete" (Title Case, no ellipsis —
+//     kdenlive's convention: nothing here opens a dialog), each with its
+//     truthful enabled bit (palette_act_enabled). It hangs from the button's
+//     foot, its width the widest row's, held inside the window, and flips
+//     above the button when it would run past the window's foot. The lit
+//     row starts on the active preset's name (the chooser's own seat, the
+//     hover seeded at the open) and follows the pointer; a grayed row is
+//     never lit and a press on one is a consumed nothing.
+//   THE NAME ASK (Save As, Rename) — THE CARD'S ONE TEXT FIELD WIDENED: for
+//     the length of the ask the hex field's box and the OLD | NEW frame
+//     beside it are ONE FIELD (the same text editor, its Kind PaletteName),
+//     the act's own word ("Save As" / "Rename") cap-centered at its left —
+//     the planner's leave, taken: a tooltip does not reach glass — empty
+//     for Save As, prefilled with the active name for Rename, the whole text
+//     selected; the four buttons gray while it stands. Enter commits, Esc
+//     cancels, and a press anywhere else abandons it (the hex field's rule).
 //   WHY THE BOTTOM ROW SPANS THE CARD and is not the right column's tail
 //   (the planner's choice under the brief's leave): the card must stand
 //   clear of the on-screen keyboard's band (THE HEIGHT BUDGET below), and a
@@ -83,7 +125,7 @@ struct Viewport;
 //   cannot; the capture itself puts the swatch pair under the wheel.
 //
 // THE HEIGHT BUDGET (the architect's constraint, 2026-10-07): the band rises
-// on glass whenever a text editor stands (the hex field is one), directly
+// on glass whenever a text editor stands (the card's one field is one), directly
 // above row 8, 131 W tall (onscreen_keyboard.h: 2 x 3 of pad + 4 x 29 of key
 // + 3 x 3 of gap; asserted below), and the card keeps kCardMarginPx of air
 // above it. At the tablet (2304 x 1440 at 300 %, the well 885 device rows
@@ -98,7 +140,28 @@ struct Viewport;
 // THE WIDTH: kCardWidthPx = 376, the tablet's half (768 W) less the margin
 // on both sides; the right column takes what the wheel and the column gap
 // leave, the slider's track what the label and the value cell leave, and
-// the swatch pair what the hex field and the three buttons leave.
+// the palette menu button what the hex field, OLD | NEW at its floor and the
+// three push buttons leave. THE BOTTOM ROW'S ARITHMETIC (architect
+// 2026-10-07): the inner width is 360 W under win2000 (376 less 2 x (edge 2
+// + pad 6)) and 362 under clearlooks (376 less 2 x (1 + 6)); the hex field
+// is its widest spelling `#DDDDDD` plus its two pads — 53 + 6 = 59 W in
+// Tahoma, 60 + 10 = 70 in DejaVu Sans (shaped); the row's five gaps are 6 W
+// each; OLD | NEW its floor, two 20-W swatches inside the frame's two lines
+// = 42; Copy, Paste and Close kPushButtonWidthPx = 50 each; THE MENU BUTTON
+// THE REMAINDER, 360 − 59 − 30 − 42 − 150 = 79 W under win2000 and
+// 362 − 70 − 30 − 42 − 150 = 70 under clearlooks.
+// WHY THE MENU BUTTON IS IN THIS ROW AND NOT THE CHOOSER'S (architect
+// 2026-10-07: the chooser's row first, beside the element combo at the width
+// its longest role name needs, the palette combo the remainder — unless that
+// remainder fell under 70 W under either chrome): the right column is 239 W
+// under win2000 and 241 under clearlooks (the inner width less the 113-W
+// wheel and the 8-W column gap); the element combo for "Selected Phase Reset
+// Flag" is 2 + 5 + 127 + 4 + 16 + 2 = 156 W under win2000 (the field's
+// edges, its pad, the shaped name, the text-to-button gap, the drop-down
+// button) and 6 + 145 + 4 + 7 + 6 = 168 under clearlooks (the gummy pads,
+// the name, the gap, the wedge); with the 6-W gap the palette combo's
+// remainder is 77 W under win2000 but 67 under clearlooks, so the ruled
+// fallback stands: the bottom row, the three push buttons at Windows' 50.
 //
 // EVERY LENGTH IS A WINDOWS PX THROUGH scaled_px, ROUNDED AT THE ELEMENT (the
 // rounding rule): the card is the sum of its rounded parts.
@@ -123,6 +186,10 @@ inline constexpr int kChooserHeightPx = 21;
 inline constexpr int kComboButtonWPx  = 16;
 inline constexpr int kComboArrowWPx   = 7;
 inline constexpr int kComboArrowHPx   = 4;
+// THE COMBO'S TEXT stops this far short of its wedge (win2000: of the
+// drop-down button), where a long name is cut with "..." (2026-10-07, the
+// palette menu button's preset names; GtkComboBox's arrow spacing).
+inline constexpr int kComboTextGapPx  = 4;
 // A SLIDER ROW IS 15 W: GtkScale's slider-width (clearlooks_paint.h's
 // kClScaleSliderWidthPx) and the win2000 thumb's seat here — 3 W above the
 // 4-line channel and 8 below it (the point's 5 and 3 of straight side),
@@ -133,11 +200,18 @@ inline constexpr int kSliderRowPx         = 15;
 inline constexpr int kSliderThumbAbovePx  = 3;
 inline constexpr int kSliderLabelGapPx    = 4;   // the label to the track
 inline constexpr int kSliderValueGapPx    = 4;   // the track to the value cell
-// THE PUSH BUTTONS' WIDTH: Windows' 75 (the dialogs' kModalBtnMinWidthPx),
-// the three words all narrower than it.
-inline constexpr int kPushButtonWidthPx   = 75;
-// THE SWATCH PAIR'S FLOOR: two swatches of at least this inside their frame.
-inline constexpr int kSwatchMinWPx        = 16;
+// COPY, PASTE AND CLOSE'S WIDTH (architect 2026-10-07; the head's
+// arithmetic): WINDOWS' PUSH-BUTTON MINIMUM, 50 W, under the dialogs' 75
+// (kModalBtnMinWidthPx) — the three words fit inside it with their pads
+// (Close, the widest, 30 + 12 in DejaVu Sans) — so the palette menu button
+// beside them takes what the row leaves, its name cut with "..." where it
+// does not fit.
+inline constexpr int kPushButtonWidthPx   = 50;
+// THE SWATCH PAIR'S WIDTH, its floor: two swatches of this inside their
+// frame (the planner's 2 x 20; the head's arithmetic).
+inline constexpr int kSwatchMinWPx        = 20;
+// THE NAME ASK'S WORD to its field (the head): Windows' label-to-control gap.
+inline constexpr int kNameLabelGapPx      = 4;
 // GTK'S RING PROPORTION (the head: 15 of 174), and the SV marker's radius —
 // GtkHSV's circle, drawn here at 3 W (its 6-W diameter, GTK's at 100 %).
 inline constexpr int kRingWidthNum        = 15;
@@ -214,6 +288,53 @@ int channel_value(const AppState::ColorPicker& cp, Channel c);
 // file grammar's, these the user's.
 const char* role_display_name(std::size_t role);
 
+// -- THE PRESETS ---------------------------------------------------------------
+
+// A PALETTE'S SHOWN NAME (the menu button's label, the menu's rows): a
+// default's in Title Case ("Windows 2000", "Clearlooks" — the key is the
+// file grammar's, this the user's, as role_display_name is), a file's name
+// verbatim. Whether `name` is the display name of a default too, case and
+// all — the name ask refuses such a name as taken, so the menu never lists
+// two rows reading alike.
+std::string palette_display_name(std::string_view name);
+bool        is_default_display_name(std::string_view name);
+
+// THE MENU'S FOUR ACTS, in the rows' order (the head).
+enum class PaletteAct { Save, SaveAs, Rename, Delete };
+inline constexpr int kPaletteActCount = 4;
+constexpr PaletteAct palette_act_at(int i) { return static_cast<PaletteAct>(i); }
+constexpr const char* palette_act_label(PaletteAct a) {
+    switch (a) {
+        case PaletteAct::Save:   return "Save";
+        case PaletteAct::SaveAs: return "Save As";
+        case PaletteAct::Rename: return "Rename";
+        case PaletteAct::Delete: return "Delete";
+    }
+    return "";
+}
+// THE ACTIVE PRESET — the live device config's `palette` resolved
+// (effective_palette_name): the name as written, or the live chrome's
+// default palette for no line (the head: no field holds it).
+std::string_view active_palette(const AppState& app);
+// THE ACTS' TRUTHFUL ENABLED BITS (every roster button truthful), asked by
+// the painter once per paint and published as painted; the lift reads the
+// published bit. SAVE gray while the active preset is a default (the
+// defaults cannot be changed) OR while the live words equal the active
+// preset's words (nothing to save — the comparison IS the modified state,
+// no flag keeps it); RENAME and DELETE gray on a default; SAVE AS always
+// live.
+bool palette_act_enabled(const AppState& app, PaletteAct a);
+
+// THE MENU'S ROWS, top to bottom: every palette's name (palette_names()),
+// then the four acts after the one separator. A row is a NAME (its load) or
+// an ACT.
+struct PaletteMenuRow {
+    bool        is_act = false;
+    std::string name;                        // a name row's palette
+    PaletteAct  act    = PaletteAct::Save;   // an act row's act
+};
+std::vector<PaletteMenuRow> palette_menu_rows();
+
 // -- THE COLOR MATH ------------------------------------------------------------
 
 struct Hsv {
@@ -239,7 +360,8 @@ std::optional<uint32_t> parse_hex_color(std::string_view text);
 // -- THE LAYOUT -----------------------------------------------------------------
 
 // EVERY CONTROL'S RECT IN DEVICE PX, a pure function of the window, the
-// scale, the chrome and the state (which half; whether the list is down):
+// scale, the chrome and the state (which half; whether the list or the menu
+// is down; whether the name ask stands):
 // the painter paints it and publishes it, the router reads the publication.
 struct Layout {
     GuiRect card{0, 0, 0, 0};
@@ -262,13 +384,25 @@ struct Layout {
     GuiRect slider_label[kChannelCount]{};
     GuiRect slider_track[kChannelCount]{};
     GuiRect slider_value[kChannelCount]{};
-    // The bottom row.
-    GuiRect hex_field{0, 0, 0, 0};
-    GuiRect hex_inner{0, 0, 0, 0};
+    // The bottom row. `field` / `field_inner` are THE ONE TEXT FIELD — the
+    // hex field, or, while the name ask stands, the wide name field (the
+    // hex field's box through the OLD | NEW frame's right edge, less the
+    // act's word and its gap, `name_label`); the swatches are zero then.
+    GuiRect field{0, 0, 0, 0};
+    GuiRect field_inner{0, 0, 0, 0};
+    GuiRect name_label{0, 0, 0, 0};
     GuiRect swatch_frame{0, 0, 0, 0};
     GuiRect swatch_old{0, 0, 0, 0};
     GuiRect swatch_new{0, 0, 0, 0};
+    // The palette menu button and, under win2000, its drop-down button.
+    GuiRect menu_button{0, 0, 0, 0};
+    GuiRect menu_button_arrow{0, 0, 0, 0};
     GuiRect buttons[3]{};   // Copy, Paste, Close
+    // The palette menu, when down: its box, its rows (palette_menu_rows'
+    // order) and the separator's top row.
+    GuiRect menu{0, 0, 0, 0};
+    std::vector<GuiRect> menu_items;
+    int     menu_sep_y = 0;
 };
 Layout layout(const AppState& app, const GuiFont& font);
 
@@ -338,9 +472,10 @@ struct GuiColorPicker {
     // session, seats OLD and NEW off the live words and damages the window.
     void open(int tap_x);
     // THE ONE CLOSE BODY — Close, Esc, the close road's head
-    // (GuiPrompt::request_close). Abandons a standing hex edit, drops the
-    // gesture and the list, keeps the live colors, keeps `role` and the
-    // slot, damages the window. Idempotent.
+    // (GuiPrompt::request_close). Abandons a standing edit (the hex field or
+    // the name ask), drops the gesture, the list and the menu, keeps the
+    // live colors (the head: no question), keeps `role` and the slot,
+    // damages the window. Idempotent.
     void close();
 
     // THE LIVE ELEMENT: the chooser's pick. OLD becomes the element's
@@ -370,24 +505,95 @@ struct GuiColorPicker {
     void copy_to_slot();
     void paste_from_slot();
 
-    // THE HEX FIELD. focus: enter the editor over `#RRGGBB` with the whole
-    // text selected, so the first keystroke replaces it (Windows' tab into
-    // a field), or, already focused, seat the caret at `tap_x` on the
-    // published run (text_editor::byte_index_from_shaped_x). commit:
-    // Enter's — parse_hex_color applies, else the refusal the product's way
-    // (text_editor::refuse selects the whole text, the card says "Not a
-    // color") with the editor standing. cancel: Esc's — the editor leaves
-    // and the field shows NEW again. A press anywhere else on the card
-    // while the editor stands is the cancel (the flag editor's own rule for
-    // a press outside its box).
-    void hex_focus(int tap_x);
-    void hex_commit();
-    void hex_cancel();
-    bool hex_active() const {
-        return text_editor::is_active(app.color_picker.hex_editor);
+    // THE CARD'S ONE TEXT FIELD (AppState::ColorPicker::field_editor), in
+    // one of two Kinds: PaletteHex, THE HEX FIELD, or PaletteName, THE NAME
+    // ASK (the head). field_focus: with no edit standing, enter the hex
+    // editor over `#RRGGBB` with the whole text selected, so the first
+    // keystroke replaces it (Windows' tab into a field); with either edit
+    // standing, seat the caret at `tap_x` on the published run
+    // (text_editor::byte_index_from_shaped_x). field_commit: Enter's, forked
+    // on the Kind — the hex field's parse_hex_color applies, else the
+    // refusal the product's way (text_editor::refuse selects the whole text,
+    // the card says "Not a color") with the editor standing; the name ask's
+    // body is commit_name below. field_cancel: Esc's — the editor leaves, the
+    // hex field showing NEW again, the name ask's field the hex field and
+    // the swatches again. A press anywhere else on the card while the editor
+    // stands is the cancel (the flag editor's own rule for a press outside
+    // its box).
+    void field_focus(int tap_x);
+    void field_commit();
+    void field_cancel();
+    bool field_active() const {
+        return text_editor::is_active(app.color_picker.field_editor);
+    }
+    bool name_ask_active() const {
+        return field_active() &&
+               app.color_picker.field_editor.kind ==
+                   text_editor::Kind::PaletteName;
     }
 
+    // -- THE PRESETS' ACTS (the head; the menu's rows reach them at the
+    //    lift, color_picker_release) -------------------------------------
+    //
+    // LOAD — a name row's tap: the named palette's words installed live
+    // (palette_words → the apply shape), THE ACTIVE PRESET made `name` (the
+    // `palette` key written, write_palette_key), OLD and NEW reseated off
+    // the live element's new color. A load of the active preset itself is
+    // the same act: the file's words back, the unsaved picks dropped.
+    void load_palette(std::string_view name);
+    // SAVE — write_palette_file(active, the live words); a failure cards.
+    // The act is gray where it would be a no-op or a refusal
+    // (palette_act_enabled), so the press that reaches it always writes.
+    void save_palette();
+    // SAVE AS and RENAME — open THE NAME ASK (the head): the field editor
+    // in Kind PaletteName, empty (Save As) or over the active name
+    // (Rename), the whole text selected; the menu is already down.
+    void begin_name_ask(AppState::ColorPicker::NameAsk ask);
+    // THE NAME ASK'S ENTER. The pending name is judged here, before any
+    // writer is asked, so the writers' own refusals never arise: outside the
+    // name grammar (is_palette_name_spelling) "Not a name"; a default's name,
+    // a default's display name or a loaded file's — another than the one
+    // being renamed — "Name taken" (Save does the overwrite; Save As never
+    // does); each a refusal the product's way, the editor standing. Then
+    // SAVE AS writes the live words under the name and makes it the active
+    // preset (the key written, as a load writes it); RENAME renames the
+    // active file and rewrites the key — the same name a no-op that closes
+    // the ask. An I/O failure closes the ask and cards (class 5: the live
+    // colors and the active preset stand); success closes it.
+    void commit_name();
+    // DELETE — raise the confirming PROMPT over the standing picker,
+    // "Delete '<name>'?" with Delete / Cancel, CANCEL FOCUSED and `d`
+    // Delete's letter: the render player's Delete question exactly
+    // (render_player_delete — a deletion nothing takes back), the name
+    // parked at AppState::ColorPicker::pending_delete. The prompt outranks
+    // the picker (ModalDialogOwner), and its two answers are the two below,
+    // reached through GuiInputHandler.
+    void raise_delete();
+    // The prompt's Delete: remove_palette_file(the parked name); the live
+    // palette falls to THE LIVE CHROME'S DEFAULT, installed live, OLD and
+    // NEW reseated, the `palette` key cleared and persisted — the menu
+    // button then shows the default's name. A failure cards and changes
+    // nothing else. The Cancel drops the parked name and changes nothing.
+    void confirm_delete();
+    void cancel_delete();
+
     // THE DAMAGE OF THE CARD'S OWN CHANGES — the card's rect as painted, the
-    // list's with it (a color change damages the window through set_color).
+    // list's and the menu's with it (a color change damages the window
+    // through set_color).
     void damage_card();
+
+    // THE `palette` KEY'S ONE WRITER (the presets' acts): `name` becomes THE
+    // ACTIVE PRESET — the key's value the name, or EMPTY (NO LINE) when it
+    // is the live chrome's own default palette, the theme key's road back
+    // (device_config.h: absent = the chrome's own); a same-value write never
+    // reaches the writer (the config's no-op rule); otherwise the live
+    // struct takes it and write_device_config persists it, a failure the
+    // diagnostic on stderr and the display on a card, the live value
+    // standing for the session (class 5).
+    void write_palette_key(std::string_view name);
+    // THE PRESETS' APPLY: `words` installed as the live words, the apply
+    // shape set_color runs (the synchronous plate rebuild, the whole
+    // window's damage), and OLD and NEW reseated off the live element's new
+    // word with the memories.
+    void apply_palette_words(const GuiPaletteWords& words);
 };

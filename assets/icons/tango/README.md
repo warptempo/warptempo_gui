@@ -26,6 +26,13 @@ THE CALENDAR OF 2026-10-07 (architect ~04:45, resolving the clock the two histor
 `appointment-new`): ShallowHistory (Toggle History Walk) wears `mimetypes/x-office-calendar`, the dated page — the walk
 through dated commits. Its drawing is a path, with no `<text>` for resvg to skip.
 
+THE MUTED SPEAKER OF 2026-10-07 (architect ~15:45, ruled for both sets: "Agree. Muted"): ViewHidden (Toggle Disabled)
+wears `status/audio-volume-muted`, the speaker with its red cross — a disabled marker is a marker the render does not
+hear; `status/dialog-error`, worn until then, read as delete. The file came from the 0.8.90 tarball (its sha256 above
+verified at the download) and is byte-identical in Debian's 0.9.0 orig. Its import check, on a sheet of its own the
+same way: 0.87 at 72 px and 2.10 at 33 from rsvg-convert. The enumerator keeps its name (the research records under
+`docs/research/` and the mock scenes under `tools/` spell it, so a rename would not be mechanical).
+
 REPEATS, known by position (the files byte-identical): `mimetypes/audio-x-generic` is AppIcon (the caption and the
 program icon), AudioXWav (a wav row) and MusicNote16th (BPM Iterations); `actions/view-refresh` is DialogOkApply
 (Load in Place) and MediaRepeatSingle (Toggle Repeat One); `actions/process-stop` is DialogCancel and WindowClose;
@@ -82,7 +89,7 @@ the SVG files only; this repository carries the texts.
 | ZoomInY | Toggle Waveform Magnification | scalable/actions/system-search.svg | — | `efc8aa5a1610b4ded65618aca577558d0439a7f0dead14d39210b16e8a348ac9` |
 | ListAdd | Drop Marker | scalable/actions/list-add.svg | — | `6d6515bcc6d5f651d1075d7d28d27c2502003577f858d1b7581e3df7878512a7` |
 | ListRemove | Delete Markers | scalable/actions/list-remove.svg | — | `bb93d1ec24513e3c8f41a176678ee5385f56e7bb0e5925ce8bcbdfe1679868a5` |
-| ViewHidden | Toggle Disabled | scalable/status/dialog-error.svg | — | `23f3a8dabf440be7f07e186b07de6d29de0b9088b03cdfaf01f5919135169bc9` |
+| ViewHidden | Toggle Disabled | scalable/status/audio-volume-muted.svg | — | `d14cad8e9b7c671eb94a989fac42135d01502fddf6b2bad79d1afc6222ba95d6` |
 | InsertLink | Toggle Inherit | scalable/emblems/emblem-symbolic-link.svg | — | `55bc9af77c6ceab32208ccd16b05b6d469e105a24dc2767c23089221d1498cbc` |
 | Merge | Flatten (Ctrl+F: "the terms go") | scalable/actions/edit-clear.svg | — | `e91169a5b89351a361035e5fdb2f1da6335e86bc7e8663a87692559d3c4db816` |
 | BlackSum | Toggle Cumulative | scalable/apps/accessories-calculator.svg | — | `83d3adb2358ac8d279a37694b006eaa59a53bf6cc957b8a2cc122cb94690a132` |

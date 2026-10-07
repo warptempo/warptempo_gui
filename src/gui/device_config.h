@@ -24,7 +24,8 @@
 //   chrome=<key>             THE CHROME VOCABULARY the process paints:
 //                            `windows-2000` or `clearlooks` (is_chrome_key,
 //                            chrome_spec.h); MAY BE ABSENT, reading as
-//                            windows-2000; takes effect at the next launch
+//                            clearlooks (kDefaultChromeKey); takes effect
+//                            at the next launch
 //   theme=<key>              THE THEME the chrome is painted in: the
 //                            built-in `windows-2000-standard` or a theme
 //                            file read at launch (is_theme_key,
@@ -172,8 +173,9 @@
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eight
 // keys and each at most once, every key REQUIRED but `chrome`, `theme` and
-// `palette` (architect 2026-10-07: `chrome` absent is windows-2000, so the
-// configs written before the key load unchanged; `theme` absent is the
+// `palette` (architect 2026-10-07: `chrome` absent is clearlooks, the
+// default chrome, so the configs written before the key still load; `theme`
+// absent is the
 // chrome's own theme and `palette` absent the chrome's default palette, the
 // one spelling of each state, which the writer emits by leaving the line
 // out), one canonical spelling per
@@ -206,8 +208,9 @@
 // (kSettingsPopupItems, app_state.h) as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
 // writer under the key's own grammar below. `palette` (2026-10-07) HAS NO
-// SETTINGS ROW: the in-app picker's list of palettes is its chooser (the
-// next brief), which writes the key through the same writer. Until that day the path keys
+// SETTINGS ROW: the color picker's palette menu is its road (color_picker.h's
+// THE PRESETS), which writes the key through the same writer. Until
+// 2026-09-02 the path keys
 // were hand-edited only, and HELP told the user to edit one without
 // telling him to quit first — which mattered, because A HAND EDIT UNDER A
 // RUNNING APP IS CLOBBERED BY THE NEXT IN-APP COMMIT: the live struct is
@@ -220,11 +223,12 @@
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for the five required keys: a successful read always assigns
 // them. THE THREE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
-// (2026-10-07): `chrome` "windows-2000", `theme` and `palette` empty (no
-// line: the chrome's own). Both backends stamp a default-constructed
-// struct's (GuiPlatform::device_config_defaults), so the first-run file of
-// either device names `chrome=windows-2000` and no theme or palette,
-// following the chrome.
+// (2026-10-07): `chrome` "clearlooks" (the default chrome since 16:00 that
+// day), `theme` and `palette` empty (no line: the chrome's own). Both
+// backends stamp a default-constructed struct's
+// (GuiPlatform::device_config_defaults), so the first-run file of either
+// device names `chrome=clearlooks` and no theme or palette, following the
+// chrome.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -246,10 +250,10 @@ struct DeviceConfig {
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE CHROME DEFAULT (architect 2026-10-07): windows-2000,
+    // THE CHROME DEFAULT (architect 2026-10-07 ~16:00): clearlooks,
     // kDefaultChromeKey (chrome_spec.h; theme_file.cpp's static_assert keeps
     // this spelling and that key one) — what an absent line reads as.
-    std::string chrome = "windows-2000";
+    std::string chrome = "clearlooks";
     // THE THEME, UNSET BY DEFAULT (architect 2026-10-07): empty while the
     // config has no `theme` line, which RESOLVES AT EACH INSTALL to the live
     // chrome's own theme (effective_theme_key, theme_file.h:
@@ -543,16 +547,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
-// (re-greped 2026-10-07; `palette` has none yet — the picker, the next
-// brief, will be its writer):
+// FOUR CALL SITES CARRY THE KEY COMMITS, and this is their inventory
+// (re-grepped 2026-10-07):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves five keys —
 // `max_waveform_height=`, `projects_repo=`, `projects_path=`, `chrome=` and
 // `theme=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
 // the cap's arm joined 2026-09-13, the path arm 2026-09-02, the theme's
-// 2026-10-03, the chrome's 2026-10-07); and gui_main's
-// `last_project` write on the success path
+// 2026-10-03, the chrome's 2026-10-07); the color picker's `palette=` write
+// (GuiColorPicker::write_palette_key, color_picker.cpp, 2026-10-07: a load,
+// a Save As, a Rename and a Delete each name the new active preset); and
+// gui_main's `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value
 // actually moved. `last_project` is the one key with no editor: it is the

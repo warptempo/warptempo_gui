@@ -4330,12 +4330,12 @@ bool GuiInputHandler::modal_dialog_editor_active() const {
 // editors (the settings prompt and the commit-title editor) plus the top-strip
 // flag editor in ANY of its
 // kinds (the FlagPayload editor takes typed letters too) plus, since
-// 2026-10-07, the color picker's hex field (PaletteHex); the six Kinds are
+// 2026-10-07, the color picker's one field (PaletteHex, PaletteName); the seven Kinds are
 // listed at text_editor::Kind. The platform layer's kLeftClickKey probe: while
 // this is true that key types a normal letter rather than emulating the left
 // button.
 bool GuiInputHandler::any_text_editor_active() const {
-    // The six kinds' one membership, AppState::text_editor_session (the
+    // The seven kinds' one membership, AppState::text_editor_session (the
     // settings and commit-title editors and the top-strip editor in every
     // kind).
     return app.text_editor_session() != 0;
@@ -4483,12 +4483,12 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return !mods.ctrl && !mods.shift && !mods.alt &&
                (key == GuiKeys::Up || key == GuiKeys::Down);
     }
-    // THE COLOR PICKER (2026-10-07): with its hex field standing the
+    // THE COLOR PICKER (2026-10-07): with its one field standing the
     // editor's own arm below answers (the field's motion, edit and
     // printable keys repeat as every editor's do); without it nothing
     // repeats — the card has no ring and no walk, and Esc is one-shot.
     if (app.color_picker.active && !app.prompt.active &&
-        !text_editor::is_active(app.color_picker.hex_editor))
+        !text_editor::is_active(app.color_picker.field_editor))
         return false;
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
     // blanket stays exactly as it was: a prompt's one-key answers must be
@@ -7184,8 +7184,10 @@ bool GuiInputHandler::route_color_picker_key(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // WHILE THE HEX FIELD STANDS THE KEYBOARD IS ITS ALONE.
-    if (color_picker.hex_active()) return handle_color_picker_hex_key(key, mods);
+    // WHILE THE ONE FIELD STANDS (the hex field or the name ask) THE
+    // KEYBOARD IS ITS ALONE.
+    if (color_picker.field_active())
+        return handle_color_picker_field_key(key, mods);
     // CTRL+S SAVES WITH THE PICKER STANDING, the project picker's own arm
     // (route_picker_key): the save touches no color.
     if (ctrl && !shift && !alt && key == GuiKeys::S) {
@@ -7199,7 +7201,18 @@ bool GuiInputHandler::route_color_picker_key(GuiKey key, GuiInputState mods) {
     // ruling, the two list owners' arm): the router is the whole vocabulary
     // while the picker stands.
     if (ctrl || shift || alt) return true;
+    // ESC CLOSES AN OPEN LIST FIRST (architect 2026-10-07, Windows' and
+    // GTK's own order): the element list or the palette menu comes down and
+    // the picker stands; a second Esc closes the picker.
     if (key == GuiKeys::Escape) {
+        if (app.color_picker.chooser_open) {
+            set_color_picker_list_open(false);
+            return true;
+        }
+        if (app.color_picker.menu_open) {
+            set_color_picker_menu_open(false);
+            return true;
+        }
         close_color_picker();
         return true;
     }
@@ -7208,17 +7221,17 @@ bool GuiInputHandler::route_color_picker_key(GuiKey key, GuiInputState mods) {
     return true;
 }
 
-bool GuiInputHandler::handle_color_picker_hex_key(GuiKey key,
-                                                  GuiInputState mods) {
+bool GuiInputHandler::handle_color_picker_field_key(GuiKey key,
+                                                    GuiInputState mods) {
     // TAB DOES NOTHING ON THIS CARD (2026-10-07): there is no focus ring —
     // the pen reaches every control — so the ring walk the shared route
     // would run on a bare or shifted Tab is refused ahead of it, consumed.
     if (key == GuiKeys::Tab) return true;
     return route_modal_editor_key(
-        app.color_picker.hex_editor, key, mods,
+        app.color_picker.field_editor, key, mods,
         /*autocomplete=*/{},
-        [this] { color_picker.hex_commit(); },
-        [this] { color_picker.hex_cancel(); },
+        [this] { color_picker.field_commit(); },
+        [this] { color_picker.field_cancel(); },
         [this] { color_picker.damage_card(); });
 }
 

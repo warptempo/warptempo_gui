@@ -37,8 +37,7 @@
 //     (tmp/reactos*.png, "get it as accurate to ReactOS as we can"). WHERE
 //     REACTOS DEPARTS FROM WINDOWS 2000 THE PRODUCT FOLLOWS REACTOS, on
 //     purpose and under the Windows 2000 name
-//     (docs/engineering/win2000_deviations.md lists the departures). The
-//     default when the config names no chrome.
+//     (docs/engineering/win2000_deviations.md lists the departures).
 //   CLEARLOOKS — GNOME 2.30's Clearlooks as Debian 6 squeeze drew it
 //     (gtk-engines 2.20.2's GUMMY style under gnome-themes 2.30.2's gtkrc
 //     and metacity theme), his squeeze captures the law (tmp/squeeze/,
@@ -58,7 +57,14 @@
 //     flags stay the program's own, the flag editor with them — the flag
 //     in its selected face under every chrome (architect 2026-10-07
 //     ~09:45). The trim lane's body is the product's own light slider
-//     (paint_cl_slider).
+//     (paint_cl_slider). The default when the config names no chrome.
+// THE TWO ARE NOT PEERS (architect 2026-10-07 ~16:00): CLEARLOOKS IS THE
+// DEVELOPMENT CHROME AND THE EXTERNAL ONE; WINDOWS-2000 IS THE REFERENCE
+// BEHIND IT — the sanity check and the metric base, not intended for
+// external use; its icon set may lag. The table (kGuiChromeSpecs) keeps
+// windows-2000 FIRST all the same: it is the metric base every later
+// vocabulary is fitted to, and the table's order is the defaults' order
+// (palette_file.cpp's assert), not a ranking.
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colours remain an ordinary theme
 // file. The table is kGuiChromeSpecs below, the live instance
@@ -434,6 +440,9 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 // THE TABLE — every vocabulary, the `chrome` key's whole vocabulary in its
 // order (is_chrome_key), the face install's probe walking it
 // (gui_font_install_bundled: every set's faces must carry their band glyphs).
+// WINDOWS-2000 FIRST, THE METRIC BASE (the head), though clearlooks is the
+// default (kDefaultChromeKey below): the order is the base's, not the
+// default's.
 inline constexpr const ChromeSpec* kGuiChromeSpecs[] = {
     &kChromeSpecWin2000,
     &kChromeSpecClearlooks,
@@ -464,10 +473,12 @@ constexpr bool is_chrome_key(std::string_view v) {
 inline constexpr const char* kChromeGrammarReason =
     "must be windows-2000 or clearlooks";
 // THE DEFAULT, a config with no `chrome` line (DeviceConfig::chrome's
-// initializer spells it). `windows-2000` since 2026-10-07 (architect: the
-// term spelled whole); the earlier `win2000` is an unknown word, the launch's
+// initializer spells it): `clearlooks` since 2026-10-07 ~16:00 (architect:
+// the development chrome and the external one, the head). The win2000
+// vocabulary's key is `windows-2000` (architect 2026-10-07: the term
+// spelled whole); the earlier `win2000` is an unknown word, the launch's
 // hard fail.
-inline constexpr const char* kDefaultChromeKey = "windows-2000";
+inline constexpr const char* kDefaultChromeKey = "clearlooks";
 static_assert(is_chrome_key(kDefaultChromeKey));
 
 // THE LIVE SPEC — the one instance the process paints (architect
@@ -480,7 +491,7 @@ static_assert(is_chrome_key(kDefaultChromeKey));
 // then is the default's (warptempo_cli, which paints nothing, never sets
 // it).
 namespace chrome_spec_detail {
-inline const ChromeSpec* g_live = &kChromeSpecWin2000;
+inline const ChromeSpec* g_live = chrome_spec_for_key(kDefaultChromeKey);
 } // namespace chrome_spec_detail
 inline const ChromeSpec& live_chrome_spec() {
     return *chrome_spec_detail::g_live;

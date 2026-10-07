@@ -1,6 +1,7 @@
 #include "color_picker.h"
 
 #include "clearlooks_paint.h"   // cl_scale_thumb_h_px (the thumb's grab height)
+#include "device_config.h"     // the `palette` key's writer (write_device_config)
 #include "notifications.h"
 #include "playback_lifecycle.h"
 #include "text_shape.h"
@@ -52,6 +53,82 @@ static_assert(role_names_follow_the_table());
 const char* role_display_name(std::size_t role) {
     assert(role < kGuiPaletteRoleCount);
     return kRoleNames[role].name;
+}
+
+// -- THE PRESETS ---------------------------------------------------------------
+
+namespace {
+// THE DEFAULTS' SHOWN NAMES, one per default palette in its order (asserted
+// below against kGuiDefaultPalettes, so a default added there names its row
+// here).
+struct DefaultDisplayName {
+    const char* key;
+    const char* name;
+};
+constexpr DefaultDisplayName kDefaultDisplayNames[] = {
+    {"windows-2000", "Windows 2000"},
+    {"clearlooks",   "Clearlooks"},
+};
+static_assert(std::size(kDefaultDisplayNames) == std::size(kGuiDefaultPalettes));
+constexpr bool display_names_follow_the_defaults() {
+    for (std::size_t i = 0; i < std::size(kGuiDefaultPalettes); ++i)
+        if (std::string_view(kDefaultDisplayNames[i].key) !=
+            kGuiDefaultPalettes[i].name)
+            return false;
+    return true;
+}
+static_assert(display_names_follow_the_defaults());
+// The name ask's cap is the name grammar's (text_editor.h).
+static_assert(text_editor::kMaxPendingCharsPaletteName ==
+              static_cast<int>(kPaletteNameMaxBytes));
+} // namespace
+
+std::string palette_display_name(std::string_view name) {
+    for (const DefaultDisplayName& d : kDefaultDisplayNames)
+        if (name == d.key) return std::string(d.name);
+    return std::string(name);
+}
+
+bool is_default_display_name(std::string_view name) {
+    for (const DefaultDisplayName& d : kDefaultDisplayNames)
+        if (name == d.name) return true;
+    return false;
+}
+
+std::string_view active_palette(const AppState& app) {
+    assert(app.device_config != nullptr);
+    return effective_palette_name(app.device_config->palette);
+}
+
+bool palette_act_enabled(const AppState& app, PaletteAct a) {
+    const std::string_view active = active_palette(app);
+    const bool is_default = is_default_palette_name(active);
+    switch (a) {
+        case PaletteAct::Save:
+            return !is_default && program_palette_words() != palette_words(active);
+        case PaletteAct::SaveAs:
+            return true;
+        case PaletteAct::Rename:
+        case PaletteAct::Delete:
+            return !is_default;
+    }
+    return false;
+}
+
+std::vector<PaletteMenuRow> palette_menu_rows() {
+    std::vector<PaletteMenuRow> rows;
+    for (std::string& n : palette_names()) {
+        PaletteMenuRow r;
+        r.name = std::move(n);
+        rows.push_back(std::move(r));
+    }
+    for (int i = 0; i < kPaletteActCount; ++i) {
+        PaletteMenuRow r;
+        r.is_act = true;
+        r.act    = palette_act_at(i);
+        rows.push_back(std::move(r));
+    }
+    return rows;
 }
 
 // -- THE COLOR MATH ------------------------------------------------------------
@@ -255,30 +332,60 @@ Layout layout(const AppState& app, const GuiFont& font) {
         l.slider_value[i] = GuiRect{tx + tw + gap_v, ry, val_w, row_h};
     }
 
-    // THE BOTTOM ROW.
+    // THE BOTTOM ROW (the head's arithmetic): the hex field, OLD | NEW at
+    // its floor, the palette menu button the remainder, then Copy, Paste
+    // and Close at kPushButtonWidthPx, right-flushed.
     const int by = l.inner.y + side + scaled_px(kBlockGapPx);
     const int field_h = scaled_px(spec.time_field_height_px);
     const int field_pad = scaled_px(spec.time_field_pad_px);
     const std::string hex_specimen = "#" + std::string(6, widest_hex_digit(font));
     const int cell_w = ceil_px(text_shape::shape_text_run(font, hex_specimen).width_px);
     const int field_w = cell_w + 2 * field_pad;
-    l.hex_field = GuiRect{l.inner.x, by + (btn_h - field_h) / 2, field_w, field_h};
-    l.hex_inner = GuiRect{l.hex_field.x + lw, l.hex_field.y + lw,
-                          l.hex_field.w - 2 * lw, l.hex_field.h - 2 * lw};
-    const int bw  = scaled_px(kPushButtonWidthPx);
+    const GuiRect hex_field{l.inner.x, by + (btn_h - field_h) / 2, field_w,
+                            field_h};
     const int gap = scaled_px(kControlGapPx);
+    const int swatch_floor = 2 * (scaled_px(kSwatchMinWPx) + lw);
+    const int bw = scaled_px(kPushButtonWidthPx);
     const int close_x = l.inner.x + l.inner.w - bw;
     l.buttons[2] = GuiRect{close_x, by, bw, btn_h};
     l.buttons[1] = GuiRect{close_x - gap - bw, by, bw, btn_h};
     l.buttons[0] = GuiRect{close_x - 2 * (gap + bw), by, bw, btn_h};
-    const int sf_x = l.hex_field.x + l.hex_field.w + gap;
-    const int sf_w = std::max(2 * (scaled_px(kSwatchMinWPx) + lw),
-                              l.buttons[0].x - gap - sf_x);
-    l.swatch_frame = GuiRect{sf_x, by, sf_w, btn_h};
-    const int sw_in_w = sf_w - 2 * lw;
-    l.swatch_old = GuiRect{sf_x + lw, by + lw, sw_in_w / 2, btn_h - 2 * lw};
-    l.swatch_new = GuiRect{l.swatch_old.x + l.swatch_old.w, by + lw,
-                           sw_in_w - sw_in_w / 2, btn_h - 2 * lw};
+    const int menu_x = hex_field.x + hex_field.w + gap + swatch_floor + gap;
+    l.menu_button = GuiRect{menu_x, by,
+                            std::max(1, l.buttons[0].x - gap - menu_x), btn_h};
+    if (!cl) {
+        // The chooser's drop-down button, seated in the menu button's own
+        // sunken field (the chooser's arithmetic above).
+        const int fb  = 2 * lw;
+        const int abw = scaled_px(kComboButtonWPx);
+        l.menu_button_arrow = GuiRect{l.menu_button.x + l.menu_button.w - fb - abw,
+                                      l.menu_button.y + fb, abw,
+                                      l.menu_button.h - 2 * fb};
+    }
+    const int sf_x = hex_field.x + hex_field.w + gap;
+    const int sf_w = l.menu_button.x - gap - sf_x;
+    if (app.color_picker.field_editor.kind == text_editor::Kind::PaletteName &&
+        text_editor::is_active(app.color_picker.field_editor)) {
+        // THE NAME ASK: the act's word at the left, cap-centered on the
+        // button band, then ONE FIELD to OLD | NEW's right edge.
+        const char* word =
+            app.color_picker.name_ask == AppState::ColorPicker::NameAsk::Rename
+                ? palette_act_label(PaletteAct::Rename)
+                : palette_act_label(PaletteAct::SaveAs);
+        const int word_w = ceil_px(text_shape::shape_text_run(font, word).width_px);
+        l.name_label = GuiRect{l.inner.x, by, word_w, btn_h};
+        const int fx = l.inner.x + word_w + scaled_px(kNameLabelGapPx);
+        l.field = GuiRect{fx, hex_field.y, sf_x + sf_w - fx, field_h};
+    } else {
+        l.field = hex_field;
+        l.swatch_frame = GuiRect{sf_x, by, sf_w, btn_h};
+        const int sw_in_w = sf_w - 2 * lw;
+        l.swatch_old = GuiRect{sf_x + lw, by + lw, sw_in_w / 2, btn_h - 2 * lw};
+        l.swatch_new = GuiRect{l.swatch_old.x + l.swatch_old.w, by + lw,
+                               sw_in_w - sw_in_w / 2, btn_h - 2 * lw};
+    }
+    l.field_inner = GuiRect{l.field.x + lw, l.field.y + lw, l.field.w - 2 * lw,
+                            l.field.h - 2 * lw};
 
     // THE LIST, when down: the dropdown's own arithmetic (dropdown_h_px and
     // paint_dropdown, render.h / paint_handler.cpp) under the chooser, flush,
@@ -299,6 +406,57 @@ Layout layout(const AppState& app, const GuiFont& font) {
         for (int i = 0; i < count; ++i) {
             l.list_items[i] = GuiRect{l.list.x + side_b + inset, iy,
                                       l.list.w - 2 * (side_b + inset), item_h};
+            iy += item_h;
+        }
+    }
+
+    // THE PALETTE MENU, when down: the dropdown's own arithmetic again —
+    // its rows, ONE separator block between the names and the acts, its
+    // width the widest row's label between the popup's two pads (or the
+    // button's, whichever is wider), hung from the button's foot at its
+    // left edge, held inside the window, flipped above the button where it
+    // would run past the window's foot.
+    if (app.color_picker.menu_open) {
+        const bool gtk_menu = popup_is_gtk_menu();
+        const int border    = popup_border_px();
+        const int side_b    = gtk_menu ? 0 : border;
+        const int item_h    = popup_item_h_px();
+        const int block_mar = popup_item_margin_y_px();
+        const int margin_x  = spec.popup_margin_px;
+        const int inset     = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
+        const int pad_x     = scaled_px(kPopupPadXPx);
+        const std::vector<PaletteMenuRow> rows = palette_menu_rows();
+        double widest = 0.0;
+        for (const PaletteMenuRow& r : rows) {
+            const std::string label =
+                r.is_act ? std::string(palette_act_label(r.act))
+                         : palette_display_name(r.name);
+            widest = std::max(widest,
+                              text_shape::shape_text_run(font, label).width_px);
+        }
+        const int w = std::min(app.width,
+                               std::max(l.menu_button.w,
+                                        2 * pad_x + ceil_px(widest)));
+        const int count = static_cast<int>(rows.size());
+        const int h = count * item_h + popup_sep_block_px() + 2 * block_mar +
+                      popup_border_top_px() + border;
+        int mx = l.menu_button.x;
+        if (mx + w > app.width) mx = app.width - w;
+        if (mx < 0) mx = 0;
+        int my = l.menu_button.y + l.menu_button.h;
+        if (my + h > app.height && l.menu_button.y - h >= 0)
+            my = l.menu_button.y - h;
+        l.menu = GuiRect{mx, my, w, h};
+        l.menu_items.clear();
+        int iy = my + popup_border_top_px() + block_mar;
+        for (int i = 0; i < count; ++i) {
+            if (rows[static_cast<std::size_t>(i)].is_act &&
+                (i == 0 || !rows[static_cast<std::size_t>(i) - 1].is_act)) {
+                l.menu_sep_y = iy;
+                iy += popup_sep_block_px();
+            }
+            l.menu_items.push_back(GuiRect{mx + side_b + inset, iy,
+                                           w - 2 * (side_b + inset), item_h});
             iy += item_h;
         }
     }
@@ -618,6 +776,12 @@ void GuiColorPicker::open(int tap_x) {
     cp.chooser_hover   = -1;
     cp.chooser_pressed = -1;
     cp.chooser_press_began_on_item = false;
+    cp.menu_open    = false;
+    cp.menu_hover   = -1;
+    cp.menu_pressed = -1;
+    cp.menu_press_began_on_item = false;
+    cp.name_ask = AppState::ColorPicker::NameAsk::None;
+    cp.pending_delete.clear();
     cp.drag = AppState::ColorPicker::Drag{};
     cp.stash = AppState::ColorPicker::Stash{};
     assert(cp.role < kGuiPaletteRoleCount);
@@ -632,13 +796,18 @@ void GuiColorPicker::open(int tap_x) {
 void GuiColorPicker::close() {
     AppState::ColorPicker& cp = app.color_picker;
     if (!cp.active) return;
-    if (hex_active()) text_editor::deactivate(cp.hex_editor);
+    if (field_active()) text_editor::deactivate(cp.field_editor);
+    cp.name_ask = AppState::ColorPicker::NameAsk::None;
     cp.active  = false;
     cp.session = 0;
     cp.chooser_open    = false;
     cp.chooser_hover   = -1;
     cp.chooser_pressed = -1;
     cp.chooser_press_began_on_item = false;
+    cp.menu_open    = false;
+    cp.menu_hover   = -1;
+    cp.menu_pressed = -1;
+    cp.menu_press_began_on_item = false;
     cp.drag  = AppState::ColorPicker::Drag{};
     cp.stash = AppState::ColorPicker::Stash{};
     viewport.invalidate_all();
@@ -753,49 +922,205 @@ void GuiColorPicker::paste_from_slot() {
     set_color(cp.slot_rgb, false);
 }
 
-void GuiColorPicker::hex_focus(int tap_x) {
+void GuiColorPicker::field_focus(int tap_x) {
     AppState::ColorPicker& cp = app.color_picker;
-    if (!hex_active()) {
-        text_editor::enter(cp.hex_editor, /*target=*/0,
+    if (!field_active()) {
+        text_editor::enter(cp.field_editor, /*target=*/0,
                            color_picker::hex_spelling(cp.rgb),
                            text_editor::Kind::PaletteHex);
         // The whole text selected, the caret at its end (enter's seat).
-        cp.hex_editor.selection_anchor = 0;
+        cp.field_editor.selection_anchor = 0;
         damage_card();
         return;
     }
-    if (!cp.stash.hex_byte_x.empty()) {
-        cp.hex_editor.cursor_pos = text_editor::byte_index_from_shaped_x(
-            static_cast<double>(tap_x), cp.stash.hex_text_origin_x,
-            cp.stash.hex_byte_x);
-        cp.hex_editor.selection_anchor = -1;
-        text_editor::touch_blink(cp.hex_editor);
+    if (!cp.stash.field_byte_x.empty()) {
+        cp.field_editor.cursor_pos = text_editor::byte_index_from_shaped_x(
+            static_cast<double>(tap_x), cp.stash.field_text_origin_x,
+            cp.stash.field_byte_x);
+        cp.field_editor.selection_anchor = -1;
+        text_editor::touch_blink(cp.field_editor);
     }
     damage_card();
 }
 
-void GuiColorPicker::hex_commit() {
+void GuiColorPicker::field_commit() {
     AppState::ColorPicker& cp = app.color_picker;
-    if (!hex_active()) return;
+    if (!field_active()) return;
+    if (name_ask_active()) {
+        commit_name();
+        return;
+    }
     const std::optional<uint32_t> rgb =
-        color_picker::parse_hex_color(cp.hex_editor.pending);
+        color_picker::parse_hex_color(cp.field_editor.pending);
     if (!rgb) {
-        text_editor::refuse(cp.hex_editor);
+        text_editor::refuse(cp.field_editor);
         notifications.notify(AppState::NotificationClass::Normal,
                              "Not a color");
         damage_card();
         return;
     }
-    text_editor::deactivate(cp.hex_editor);
+    text_editor::deactivate(cp.field_editor);
     set_color(*rgb, false);
     damage_card();
 }
 
-void GuiColorPicker::hex_cancel() {
+void GuiColorPicker::field_cancel() {
     AppState::ColorPicker& cp = app.color_picker;
-    if (!hex_active()) return;
-    text_editor::deactivate(cp.hex_editor);
+    if (!field_active()) return;
+    text_editor::deactivate(cp.field_editor);
+    cp.name_ask = AppState::ColorPicker::NameAsk::None;
     damage_card();
+}
+
+// -- THE PRESETS' ACTS (the contract is at the declarations) ---------------------
+
+namespace {
+// A writer's failure line on stderr and its one clause on the card (the
+// device config's two-clause shape, write_device_config: the diagnostic
+// whole, the display short).
+void report_palette_failure(GuiNotifications& notifications,
+                            const std::string& line, const char* display) {
+    std::fprintf(stderr, "warptempo_gui: %s\n", line.c_str());
+    notifications.notify(AppState::NotificationClass::Normal, display);
+}
+} // namespace
+
+void GuiColorPicker::write_palette_key(std::string_view name) {
+    DeviceConfig& cfg = *app.device_config;
+    const std::string value =
+        name == live_chrome_spec().default_palette ? std::string()
+                                                   : std::string(name);
+    if (value == cfg.palette) return;
+    cfg.palette = value;
+    const std::optional<GuiFailure> failure = write_device_config(cfg);
+    if (failure) {
+        std::fprintf(stderr, "warptempo_gui: %s\n",
+                     failure->diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal,
+                             failure->display);
+    }
+}
+
+void GuiColorPicker::apply_palette_words(const GuiPaletteWords& words) {
+    AppState::ColorPicker& cp = app.color_picker;
+    install_program_palette(words);
+    viewport.kick_waveform_sync();
+    viewport.invalidate_all();
+    cp.rgb     = words[cp.role];
+    cp.old_rgb = cp.rgb;
+    reseat_memories(cp);
+}
+
+void GuiColorPicker::load_palette(std::string_view name) {
+    assert(is_palette_name(name));
+    const std::string held(name);   // the menu's row may not outlive the call
+    apply_palette_words(palette_words(held));
+    write_palette_key(held);
+}
+
+void GuiColorPicker::save_palette() {
+    const std::string active(color_picker::active_palette(app));
+    if (const std::optional<std::string> failure =
+            write_palette_file(active, program_palette_words())) {
+        report_palette_failure(notifications, *failure,
+                               "Could not save the palette");
+    }
+    damage_card();   // the button's label, the menu's Save once reopened
+}
+
+void GuiColorPicker::begin_name_ask(AppState::ColorPicker::NameAsk ask) {
+    AppState::ColorPicker& cp = app.color_picker;
+    assert(ask != AppState::ColorPicker::NameAsk::None);
+    if (field_active()) text_editor::deactivate(cp.field_editor);
+    const std::string prefill =
+        ask == AppState::ColorPicker::NameAsk::Rename
+            ? std::string(color_picker::active_palette(app))
+            : std::string();
+    text_editor::enter(cp.field_editor, /*target=*/0, prefill,
+                       text_editor::Kind::PaletteName);
+    cp.field_editor.selection_anchor = 0;   // the whole text selected
+    cp.name_ask = ask;
+    // The field widens over OLD | NEW and the buttons gray: the card whole.
+    damage_card();
+}
+
+void GuiColorPicker::commit_name() {
+    AppState::ColorPicker& cp = app.color_picker;
+    const std::string name = cp.field_editor.pending;
+    const std::string active(color_picker::active_palette(app));
+    const bool rename = cp.name_ask == AppState::ColorPicker::NameAsk::Rename;
+    const auto refuse = [&](const char* reason) {
+        text_editor::refuse(cp.field_editor);
+        notifications.notify(AppState::NotificationClass::Normal, reason);
+        damage_card();
+    };
+    const auto end_ask = [&] {
+        text_editor::deactivate(cp.field_editor);
+        cp.name_ask = AppState::ColorPicker::NameAsk::None;
+        damage_card();
+    };
+    if (!is_palette_name_spelling(name)) {
+        refuse("Not a name");
+        return;
+    }
+    if (rename && name == active) {
+        end_ask();   // the same name: the commit's no-op
+        return;
+    }
+    if (is_palette_name(name) || color_picker::is_default_display_name(name)) {
+        refuse("Name taken");
+        return;
+    }
+    end_ask();
+    if (rename) {
+        if (const std::optional<std::string> failure =
+                rename_palette_file(active, name)) {
+            report_palette_failure(notifications, *failure,
+                                   "Could not rename the palette");
+            return;
+        }
+    } else {
+        if (const std::optional<std::string> failure =
+                write_palette_file(name, program_palette_words())) {
+            report_palette_failure(notifications, *failure,
+                                   "Could not save the palette");
+            return;
+        }
+    }
+    write_palette_key(name);
+}
+
+void GuiColorPicker::raise_delete() {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (app.prompt.active) return;
+    const std::string active(color_picker::active_palette(app));
+    assert(!is_default_palette_name(active));
+    cp.pending_delete = active;
+    app.prompt.present("Delete '" + active + "'?",
+                       {'d', '\x1b'},
+                       {"Delete", "Cancel"},
+                       DialogTrigger::DELETE_PALETTE_CONFIRM,
+                       PromptInitialFocus::LastButton);
+    viewport.invalidate_all();
+}
+
+void GuiColorPicker::confirm_delete() {
+    AppState::ColorPicker& cp = app.color_picker;
+    const std::string name = std::move(cp.pending_delete);
+    cp.pending_delete.clear();
+    if (!cp.active || name.empty()) return;
+    if (const std::optional<std::string> failure = remove_palette_file(name)) {
+        report_palette_failure(notifications, *failure,
+                               "Could not delete the palette");
+        return;
+    }
+    const std::string_view fallback = live_chrome_spec().default_palette;
+    apply_palette_words(palette_words(fallback));
+    write_palette_key(fallback);
+}
+
+void GuiColorPicker::cancel_delete() {
+    app.color_picker.pending_delete.clear();
 }
 
 void GuiColorPicker::damage_card() {
@@ -806,4 +1131,5 @@ void GuiColorPicker::damage_card() {
     }
     viewport.invalidate_rect(st.card);
     if (st.list.w > 0 && st.list.h > 0) viewport.invalidate_rect(st.list);
+    if (st.menu.w > 0 && st.menu.h > 0) viewport.invalidate_rect(st.menu);
 }

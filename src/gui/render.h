@@ -184,8 +184,8 @@ struct TrimRange {
 //                 arrow glyph, the playhead head's outline;
 //   the quartet   every relief line, the families unchanged; Hilight also the
 //                 light copy of THE DISABLED EMBOSS (below); Shadow also the
-//                 ruler ticks (the etch's Hilight line beside each) and a
-//                 selected disabled flag's label, DkShadow also the dialog
+//                 ruler ticks (the etch's Hilight line beside each),
+//                 DkShadow also the dialog
 //                 focus frame (the flag outline is the canvas since
 //                 2026-10-07, below);
 //   selected pair a dropdown's lit row, the folder
@@ -373,7 +373,10 @@ const GuiPalette& palette();
 // as installed — so a theme change re-installs the chrome and KEEPS THE
 // PICKER'S UNSAVED LIVE PICKS, which a re-read of the `palette` key would
 // have discarded. THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the
-// config's `palette` key is read at launch and at a preset load alone. This
+// config's `palette` key names THE ACTIVE PRESET (color_picker.h's THE
+// PRESETS) and gives the words at launch alone; a preset's load or Delete
+// installs words, and a load, Save As, Rename or Delete writes the key
+// (GuiColorPicker). This
 // resolves and never refuses. It bumps palette_generation below, the flag
 // cache's fingerprint term, and the plate's two baked inks
 // (waveform_plate_inks) move with it; the settings commit then rebuilds both
@@ -392,9 +395,11 @@ void install_palette(const DeviceConfig& cfg,
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
 // reopen (gui_main's loop) while the installed palette is not, and the
 // picker's picks are the PROCESS's until a preset is saved (color_picker.h's
-// head) — so a reopen keeps them exactly as a Close does. THREE READERS: the
-// theme commit (above), the color picker (every pick starts from these and
-// writes one word), and the picker's open (the live element's OLD color).
+// THE PRESETS) — so a reopen keeps them exactly as a Close does. FOUR
+// READERS: the theme commit (above), the color picker (every pick starts
+// from these and writes one word), the picker's open (the live element's
+// OLD color) and its presets (Save and Save As write these words, and
+// Save's enabled bit compares them with the active preset's).
 const std::array<uint32_t, 14>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
@@ -525,13 +530,13 @@ uint64_t palette_generation();
 //             selected face only when the PAYLOAD is the bright cell and
 //             keeps the marker's resting face (the kind's, or `removed_flag`
 //             on an invalid marker) while a BOUND CELL is the addressed one;
-//   SELECTED DISABLED (architect 2026-10-03, PROVISIONAL, pending his ruling;
-//             a disabled marker is selectable, so its selection must show):
-//             Windows 95's highlighted disabled menu item — the KIND's
-//             selected face, the label FLAT in the theme's Shadow (Windows'
-//             GrayText on the highlight, no emboss), and still NO STEM. It is
-//             the ladder's one arm for the case, so a later ruling changes
-//             that arm alone.
+//   SELECTED DISABLED (architect 2026-10-07 ~15:10, on his tablet shot of a
+//             selected disabled marker vanishing on its D2E3F7 face; a
+//             disabled marker is selectable, so its selection must show): THE
+//             REGULAR SELECTED FLAG — the KIND's selected face under the
+//             regular `flag_label` — and NO STEM: the missing stem is the
+//             whole disabled cue ("a real enabled marker never has a white
+//             stem").
 // A FLAG HAS NO HOVER FACE (architect 2026-09-29): the pointer over a flag says
 // what a press will do through the CURSOR alone (pointer_cursor_kind).
 //
@@ -561,9 +566,9 @@ uint64_t palette_generation();
 // flag's own outline geometry in the canvas's color, its face THE LADDER'S
 // SELECTED ANSWER for the marker (the kind's selected face, the removed
 // pair's over an invalid marker, the kind's selected face over a disabled
-// one), its text and caret the one `flag_label` — AN EDIT FIELD IS
-// NEVER THE DISABLED MENU ITEM (architect 2026-10-07): a disabled marker's
-// field takes the label, never the flat Shadow — the field pads (Windows'
+// one), its text and caret the one `flag_label` — a disabled marker's
+// field is the selected disabled flag, the one label on the kind's selected
+// face like every other — the field pads (Windows'
 // margin strips) either side of the text, and THE
 // SELECTED SUBSTRING THE CHROME'S SELECTED PAIR, `selected_fill` under
 // `selected_text` (Clearlooks' 86ABD9 under white, win2000's Hilight under
@@ -2193,6 +2198,28 @@ inline int popup_item_margin_y_px() {
     return scaled_px(m, m > 0 ? 1 : 0);
 }
 
+// THE DROPDOWN'S HORIZONTAL PADS, authored in POPUP-BOX coordinates — from
+// the box's own outer edges, which is how a menu with an accelerator column is
+// easiest to state. EVERY MENU TAKES THEM (architect 2026-08-03): the menus
+// differ in one derived term (whether an accelerator column exists) rather
+// than in their padding.
+//
+//  - THE LABEL PAD AND THE RIGHT PAD ARE ONE NUMBER, 22 WINDOWS PX (architect
+//    2026-10-02, the mirror rule): from the popup's left edge to the label's
+//    pen, and from the popup's right edge to the accelerator's last ink
+//    column (or, on a menu without one, the widest label's) — Windows' popup
+//    reserves its check-mark column on the left and its submenu-arrow column
+//    on the right, the same width, and this product has neither and keeps
+//    their space as plain padding. It is the right margin the kdenlive crop
+//    measured (30 laptop px, re-authored at the unit's change); the crop's
+//    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
+//    mirror.
+//  - THE COLUMN GAP is the guaranteed minimum separation between the widest
+//    label and the widest accelerator, the kdenlive crop's 13 laptop px
+//    re-authored as 9 Windows px (architect 2026-10-02: the gap kept).
+inline constexpr double kPopupPadXPx      = 22.0;
+inline constexpr double kPopupHotkeyGapPx = 9.0;
+
 
 // Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
 // are confined to [area.y + waveform_inset_px(), area.y + area.h -
@@ -3226,9 +3253,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //              `flag_label`; the stem in the FLAG BOX's face, so
 //              selected only while the payload is the addressed cell
 //              (architect 2026-10-04);
-//              a selected DISABLED cell the kind's selected face under a flat
-//              Shadow label, no stem (provisional). The outline stays the
-//              flag outline.
+//              a selected DISABLED cell the kind's selected face under the
+//              same `flag_label`, no stem (architect 2026-10-07). The outline
+//              stays the flag outline.
 //
 // `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; the
 // phase-reset painter below carries the same parameter for its own hop

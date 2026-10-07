@@ -4154,6 +4154,12 @@ enum class DialogTrigger {
     // `d`, Delete's letter, never the Delete key itself, so a second press of
     // the key that raised the question cannot answer it.
     DELETE_FOLDER_CONFIRM,
+    // THE COLOR PICKER'S DELETE (architect 2026-10-07): "Delete '<palette
+    // name>'?", Delete / Cancel, raised by the palette menu's Delete row over
+    // the standing picker (GuiColorPicker::raise_delete), the name parked at
+    // AppState::ColorPicker::pending_delete — the render player's question
+    // above in every term: CANCEL FOCUSED, `d` the one-key answer.
+    DELETE_PALETTE_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
@@ -6261,20 +6267,22 @@ struct AppState {
     // THE FIFTH OWNER IS THE COLOR PICKER (architect 2026-10-07; the
     // cluster is color_picker.h, the state AppState::ColorPicker below): the
     // in-app picker's CARD ON THE WELL — the element chooser, GNOME 2's hue
-    // ring and SV triangle, six sliders, the hex field, OLD | NEW and the
-    // three push buttons Copy / Paste / Close. Ranked WITH the player and
-    // the project picker, under the prompt (a confirming prompt may stand
-    // over it), and NEVER BESIDE AN EDITOR OTHER THAN ITS OWN HEX FIELD —
+    // ring and SV triangle, six sliders, the hex field, OLD | NEW, the
+    // palette menu button and the three push buttons Copy / Paste / Close.
+    // Ranked WITH the player and the project picker, under the prompt (its
+    // palette menu's Delete question stands over it, DELETE_PALETTE_CONFIRM),
+    // and NEVER BESIDE AN EDITOR OTHER THAN ITS OWN ONE FIELD —
     // its opener refuses under every editor, its router consumes every
     // editor opener, and the three never stand together (each opener
     // refuses under the others: the Settings menu that opens this one is
     // dead under the two list owners, and their own roads are consumed by
     // this one's router and veil). ITS STASH IS THIS ONE'S: the card is the
-    // modal's `box`, the hex field its `field` and the three push buttons
-    // its `buttons` (color_picker_act below), so the hover walk, the press
-    // arm, the lift's dispatch, the tooltip wait and the pressed face are
-    // the dialogs' own; everything else it publishes (the chooser, the
-    // sliders, the swatches, the wheel) is its own stash
+    // modal's `box`, its one field's interior its `field` and the three
+    // push buttons its `buttons` (color_picker_act below), so the hover
+    // walk, the press arm, the lift's dispatch, the tooltip wait and the
+    // pressed face are the dialogs' own; everything else it publishes (the
+    // chooser, the sliders, the swatches, the wheel, the palette menu
+    // button and its menu) is its own stash
     // (ColorPicker::Stash). THE BOTTOM ROW YIELDS TO IT AS TO EVERY OWNER
     // and carries NOTHING — the card holds its own Close — so row 8 is bare
     // ground while it stands (modal_owns_bottom_row, paint_handler.cpp).
@@ -6349,10 +6357,11 @@ struct AppState {
     // vocabulary: what a card button DOES at its lift
     // (dispatch_modal_dialog_button reads it under the ColorPicker owner;
     // the other three vocabularies are zero/false there). The order is the
-    // row's — Close LAST, the escape sentinel as every row has it. PASTE IS
-    // THE ONE BUTTON WITH A DISABLED FACE OUTSIDE THE PLAYER (every button
-    // truthful): it grays while the picker's one-color slot is empty
-    // (ColorPicker::slot_full), the bit published as painted and read by
+    // row's — Close LAST, the escape sentinel as every row has it. THEIR
+    // DISABLED FACE, the one outside the player (every button truthful):
+    // PASTE grays while the picker's one-color slot is empty
+    // (ColorPicker::slot_full), and ALL THREE gray while the name ask
+    // stands (color_picker.h), each bit published as painted and read by
     // the claim like the player's.
     enum class ColorPickerButtonAct { None, Copy, Paste, Close };
     // THE OK BIT IS THE EDITOR DIALOGS' ALONE again (2026-08-29): it is that
@@ -6460,7 +6469,7 @@ struct AppState {
     // owner-tag doctrine above breaks.
     // THE COLOR PICKER (2026-10-07) is the fifth rank, with the two list
     // owners: none of the three stands with another, so its place among
-    // them is free too; its hex field is its own and no dialog editor.
+    // them is free too; its one field is its own and no dialog editor.
     uint64_t modal_dialog_live_session() const {
         if (prompt.active) return prompt.session;
         if (render_player.active) return render_player.session;
@@ -6469,7 +6478,7 @@ struct AppState {
         return dialog_editor_session();
     }
 
-    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SIX editor kinds, 0 when
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SEVEN editor kinds, 0 when
     // none stands — the accessor above widened by the two top-strip kinds it
     // names as deliberate non-members. It exists for
     // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
@@ -6480,8 +6489,9 @@ struct AppState {
     // different number here.
     // At most one editor stands at a time (every opener refuses or ends what
     // was standing), so the fall-through order is free exactly as it is above.
-    // THE COLOR PICKER'S HEX FIELD IS THE SIXTH MEMBER (2026-10-07,
-    // text_editor::Kind::PaletteHex): it owns the keyboard while it stands
+    // THE COLOR PICKER'S ONE FIELD IS THE SIXTH MEMBER (2026-10-07,
+    // text_editor::Kind::PaletteHex, and Kind::PaletteName for its name ask
+    // the same day — one State, so one member): it owns the keyboard while it stands
     // (so the on-screen keyboard rises for it and the keyboard-modal gate
     // holds) and it is NOT a dialog editor — its host is the color picker,
     // a modal owner of its own (ModalDialogOwner::ColorPicker).
@@ -6490,8 +6500,8 @@ struct AppState {
         if (dialog != 0) return dialog;
         if (text_editor::is_active(top_flag_editor))
             return top_flag_editor.session;
-        if (text_editor::is_active(color_picker.hex_editor))
-            return color_picker.hex_editor.session;
+        if (text_editor::is_active(color_picker.field_editor))
+            return color_picker.field_editor.session;
         return 0;
     }
 
@@ -8516,13 +8526,22 @@ struct AppState {
     //   the chooser's list state (`chooser_open`, the hovered, the pressed
     //              and the press-began bits — the menu-row popup's own road
     //              one surface over);
-    //   `hex_editor`  THE HEX FIELD'S TEXT EDITOR (Kind::PaletteHex), a
-    //              member of text_editor_session while it stands;
+    //   the palette menu's state (`menu_open` and its three bits, the same
+    //              road again — color_picker.h's THE PALETTE MENU);
+    //   `field_editor`  THE CARD'S ONE TEXT FIELD'S EDITOR, a member of
+    //              text_editor_session while it stands: Kind::PaletteHex
+    //              for the hex field, Kind::PaletteName for THE NAME ASK,
+    //              `name_ask` saying which act asks (color_picker.h);
+    //   `pending_delete`  the palette the standing Delete prompt names,
+    //              empty otherwise (GuiColorPicker::raise_delete);
     //   `drag`     THE LIVE GESTURE on a slider's thumb, the ring or the
     //              triangle (a member of any_pointer_gesture_active);
     //   `stash`    WHAT WAS PAINTED, the roster model (ColorPicker::Stash).
     // It authors nothing: no undo, no dirty; legal on a read-only tab and in
-    // the `h` view (it changes colors, not state).
+    // the `h` view (it changes colors, not state). THE ACTIVE PRESET IS NOT
+    // HERE: it is the live device config's `palette` resolved
+    // (color_picker::active_palette — the config outlives this struct, which
+    // a reopen rebuilds).
     struct ColorPicker {
         bool        active  = false;
         uint64_t    session = 0;
@@ -8538,7 +8557,14 @@ struct AppState {
         int         chooser_hover   = -1;
         int         chooser_pressed = -1;
         bool        chooser_press_began_on_item = false;
-        text_editor::State hex_editor;
+        bool        menu_open    = false;
+        int         menu_hover   = -1;
+        int         menu_pressed = -1;
+        bool        menu_press_began_on_item = false;
+        text_editor::State field_editor;
+        enum class NameAsk { None, SaveAs, Rename };
+        NameAsk     name_ask = NameAsk::None;
+        std::string pending_delete;
         // THE LIVE GESTURE: which surface the press took, the slider's
         // index when a slider's, and the press's offset from the thumb's
         // center (zero on an off-thumb press, which jumps the thumb — the
@@ -8555,13 +8581,26 @@ struct AppState {
         // THE PUBLISHED GEOMETRY AS PAINTED (ON SCREEN IS AS PAINTED): the
         // press router reads these and never a live derivation. Rewritten
         // by the painter every run; zero/invalid when the picker is not
-        // painted. The card itself, the hex field and the three buttons
-        // are ALSO the modal stash's box, field and buttons
+        // painted. The card itself, the field's interior and the three push
+        // buttons are ALSO the modal stash's box, field and buttons
         // (ModalDialogGeometry) — the dialogs' shared machinery reads those.
+        // The palette menu button is the picker's own (a press drops the
+        // menu, the chooser's road, not a dialog button's lift).
         struct SliderStash {
             GuiRect row{0, 0, 0, 0};     // the whole slider row (label to value)
             GuiRect track{0, 0, 0, 0};   // the track: a press here seats the thumb
             int     thumb_x = -1;        // the thumb's center column as painted
+        };
+        // ONE ROW OF THE PALETTE MENU AS PAINTED: its rect, what it does (a
+        // name's load, or the act's index in color_picker::PaletteAct's
+        // order) and its enabled bit — the lift acts on these, never on a
+        // live re-derivation.
+        struct MenuRowStash {
+            GuiRect     rect{0, 0, 0, 0};
+            bool        is_act  = false;
+            int         act     = 0;
+            std::string name;
+            bool        enabled = true;
         };
         struct Stash {
             bool     valid   = false;
@@ -8571,10 +8610,14 @@ struct AppState {
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
             std::array<GuiRect, kGuiPaletteRoleCount> list_items{};
             std::array<SliderStash, 6> sliders{};
-            GuiRect  hex_field{0, 0, 0, 0};    // the field's outer box
-            GuiRect  hex_inner{0, 0, 0, 0};    // its interior (the I-beam, the caret)
-            double   hex_text_origin_x = 0.0;  // where the shown run's byte 0 paints
-            std::vector<double> hex_byte_x;    // its per-byte pen offsets
+            GuiRect  field{0, 0, 0, 0};        // the one field's outer box
+            GuiRect  field_inner{0, 0, 0, 0};  // its interior (the I-beam, the caret)
+            double   field_text_origin_x = 0.0;  // where the shown run's byte 0 paints
+            std::vector<double> field_byte_x;  // its per-byte pen offsets
+            GuiRect  menu_button{0, 0, 0, 0};  // a press drops the menu
+            bool     menu_button_enabled = false;
+            GuiRect  menu{0, 0, 0, 0};         // zero while the menu is closed
+            std::vector<MenuRowStash> menu_rows;
             GuiRect  swatch_old{0, 0, 0, 0};
             GuiRect  swatch_new{0, 0, 0, 0};
             GuiRect  wheel{0, 0, 0, 0};        // the wheel's square

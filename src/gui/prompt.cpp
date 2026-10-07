@@ -23,7 +23,8 @@ void GuiPrompt::proceed(DialogTrigger t) {
     case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
     case DialogTrigger::PULL_CONFIRM:
     case DialogTrigger::DELETE_FOLDER_CONFIRM:
-        // All four are dispatched directly by activate_response, outside
+    case DialogTrigger::DELETE_PALETTE_CONFIRM:
+        // All five are dispatched directly by activate_response, outside
         // proceed.
         break;
     }
@@ -187,6 +188,27 @@ void GuiPrompt::activate_response(char k) {
             app.prompt.active = false;
             viewport.invalidate_all();
             if (input != nullptr) input->cancel_render_player_delete();
+            return;
+        }
+        return;
+    }
+
+    if (trigger == DialogTrigger::DELETE_PALETTE_CONFIRM) {
+        // THE COLOR PICKER'S DELETE (architect 2026-10-07), the render
+        // player's arm above one surface over: `d` Delete removes the parked
+        // palette through the input handler, Escape drops it. The prompt
+        // closes first either way, so the act runs with the picker standing
+        // on the ordinary modal state.
+        if (k == 'd') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->confirm_color_picker_delete();
+            return;
+        }
+        if (k == '\x1b') {
+            app.prompt.active = false;
+            viewport.invalidate_all();
+            if (input != nullptr) input->cancel_color_picker_delete();
             return;
         }
         return;

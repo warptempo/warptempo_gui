@@ -1624,13 +1624,15 @@ GuiFlagKind worn_flag_kind(GuiFlagKind kind, bool disabled, bool red) {
 // morning of a red X in the kind's pair: one red for both, the context
 // telling them apart — invalid while authoring, removed in `h`), then the
 // KIND's own pair, the stem in the face. ONE LABEL (architect 2026-10-07,
-// his one-label rule): `flag_label` on every enabled face, resting or
-// selected. SELECTION IS A BRIGHTER
+// his one-label rule): `flag_label` on every face but the unselected
+// disabled one's emboss. SELECTION IS A BRIGHTER
 // FACE (architect 2026-10-03, retiring the white outline): each arm answers
-// `selected` with its pair's selected face; and THE SELECTED DISABLED ARM,
-// PROVISIONAL (the palette block's THE STATES), is Windows 95's highlighted
-// disabled menu item: the KIND's selected face under a FLAT label in the
-// theme's Shadow, no emboss, and still no stem.
+// `selected` with its pair's selected face; and THE SELECTED DISABLED ARM
+// (architect 2026-10-07 ~15:10, on his tablet shot of a selected disabled
+// marker vanishing on its D2E3F7 face) is THE REGULAR SELECTED FLAG: the
+// KIND's selected face under the regular `flag_label`, and NO STEM — the
+// missing stem is the whole disabled cue ("a real enabled marker never has
+// a white stem").
 FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red,
                            bool selected) {
     const GuiPalette& p = palette();
@@ -1638,7 +1640,9 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red,
     FlagFace f;
     if (disabled) {
         f.face     = selected ? pair.selected : p.ground;
-        f.label    = p.shadow;   // the emboss's word ink, or the flat GrayText
+        // The emboss on the ground (its word ink the Shadow); the one label
+        // on the selected face.
+        f.label    = selected ? p.flag_label : p.shadow;
         f.embossed = !selected;  // show_embossed_run on the ground only
         f.stem     = f.face;
         f.has_stem = false;      // NO STEM EVER for a disabled marker
@@ -3043,20 +3047,18 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // box: "the current way would require chopping off the connection to the
     // stem … overall a lot less intuitive"): THE LADDER'S SELECTED ANSWER for
     // the edited marker — the kind's selected face, the removed pair's over
-    // an invalid marker, the selected-disabled arm's face over a disabled
-    // one — its `face` the field's fill; the outline the flag's own, the
+    // an invalid marker, the kind's selected face over a disabled one (the
+    // selected-disabled arm) — its `face` the field's fill and its `label`
+    // the text's and the caret's, `flag_label` on every arm the selected
+    // answer has; the outline the flag's own, the
     // canvas's color; and the SELECTED SUBSTRING THE CHROME'S
     // SELECTED PAIR, `selected_fill` under `selected_text` (Clearlooks'
     // 86ABD9 band under white, win2000's Hilight under HilightText) — part of
     // the chrome, as every selection in the product is.
     const FlagFace face =
         resolve_flag_face(kind, dis, red_class, /*selected=*/true);
-    // AN EDIT FIELD IS NEVER THE DISABLED MENU ITEM (architect 2026-10-07):
-    // the text and caret take THE ONE FLAG LABEL on every face (his
-    // one-label rule), never the flat Shadow the selected-disabled arm
-    // answers.
     const GuiPalette& pal = palette();
-    const GuiColor field_ink = pal.flag_label;
+    const GuiColor field_ink = face.label;
     const GuiColor sel_fill  = pal.selected_fill;
     const GuiColor sel_text  = pal.selected_text;
     // DOES THE FIELD CLOSE THE RUN (architect 2026-09-25: every marker's run
@@ -3087,8 +3089,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    editor and the SEAM column for the bound field — "the outline
     //    outside the face on its left" either way. Since the editor opens on
     //    any store index (enter_top_flag_edit), disabled included, a disabled
-    //    marker's field is this same box in the selected-disabled answer: an
-    //    edit field is never embossed.
+    //    marker's field is this same box in the selected-disabled answer —
+    //    the kind's selected face under the one label, never embossed.
     paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
                         /*closes=*/!ride_cells, pal.waveform_canvas,
                         face.face);

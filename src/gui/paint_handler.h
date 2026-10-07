@@ -934,10 +934,12 @@ private:
     void paint_modal_dialog(cairo_t* cr);
     // THE COLOR PICKER'S CARD (2026-10-07; color_picker.h owns the anatomy),
     // paint_modal_dialog's fifth fork: paints the card on the well and
-    // publishes the modal stash (the card, the hex field, the three
+    // publishes the modal stash (the card, the one field, the three push
     // buttons) and the picker's own (AppState::ColorPicker::Stash). Called
-    // from paint_modal_dialog alone, with the live session it stamps.
-    void paint_color_picker(cairo_t* cr, uint64_t live_session);
+    // from paint_modal_dialog alone, with the live session it stamps — or
+    // VEILED, under the prompt its palette menu's Delete raises: painted,
+    // publishing nothing (the definition's head).
+    void paint_color_picker(cairo_t* cr, uint64_t live_session, bool veiled);
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — full
     // window width, directly above the bottom row, over the waveform area's

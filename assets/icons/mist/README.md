@@ -51,6 +51,16 @@ same road (3.0.0's `src/x-office-calendar.svg` slot extracted, one of the five c
 against the slot render at 72; 2.30.3's slot renders identically to 3.0.0's, maximum difference 0). Its page's "3" is
 a path, with no `<text>` for resvg to skip.
 
+THE MUTED SPEAKER OF 2026-10-07 (architect ~15:45, ruled for both sets: "Agree. Muted" — a disabled marker is a
+marker the render does not hear; `dialog-error`'s red sign, worn until then, read as delete and piled color on the
+row's left): ViewHidden (Toggle Disabled) wears gnome's `audio-volume-muted`, the speaker with its gray cross. Mist
+carries no such name, so it is gnome's drawing by inheritance, by the same road (3.0.0's `src/audio-volume.svg`, the
+muted icon's 48 slot — the sheet's fourth speaker, its small column's first band — two of the 59 candidates kept,
+maximum difference 0 against the slot render at 72; 2.30.3's sheet gives a byte-identical extraction and its slot
+renders identically to 3.0.0's, maximum difference 0). Import check on a sheet of its own: 0.50 at 72 px and 1.58 at
+33 from rsvg-convert (from GNOME's 48-px PNG 1.02 for resvg, 0.83 for rsvg-convert); one `<filter>`, the speaker's
+shadow's blur, which both renderers draw. The enumerator keeps its name, as Tango's README says.
+
 REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic` is AppIcon, AudioXWav and
 MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder. Every other file is worn once: 59 enumerators over 56
 distinct drawings.
@@ -133,7 +143,7 @@ licence texts) are not read.
 | ZoomInY | Toggle Waveform Magnification | 3.0.0 `src/zoom.svg`, slot `zoom-in` 48x48 at (296, 50) | — | — | `bdb0f701b7515292fe85d79898bab3365a6b7b51a9b7050c0c30288bd82f46fc` |
 | ListAdd | Drop Marker | 3.0.0 `src/list-add-remove.svg`, slot `list-add` 48x48 at (296, 50) | — | — | `8b85ba35c298e67653a53cfc7a23b4220e47103d1c351da06cbc2b78b14120b4` |
 | ListRemove | Delete Markers | 3.0.0 `src/list-add-remove.svg`, slot `list-remove` 48x48 at (696, 50) | — | — | `52ee707fe8abfed23255f48737ac90d2ee2d9a106c99b18c19d28b940b39d524` |
-| ViewHidden | Toggle Disabled | 3.0.0 `src/dialog-error.svg`, slot `dialog-error` 48x48 at (296, 50) | — | — | `3a325ee86732df0305e2da55932af791c36a28ca14f27d0e10cee721dffbc697` |
+| ViewHidden | Toggle Disabled | 3.0.0 `src/audio-volume.svg`, slot `audio-volume-muted` 48x48 at (696.00037, 350) (Mist carries no `audio-volume-muted`) | — | — | `40309b0d0eeb47ac1927d7bc00d58c5561fcbc00ed5eb4736b4e1c7239a9455e` |
 | InsertLink | Toggle Inherit | 3.0.0 `src/insert-link.svg`, slot `insert-link` 48x48 at (296, 50) | — | — | `e1a734fdd0ec395e9e926b3a0147580eec1109089c264da8cf29a968bba8f4ed` |
 | Merge | Flatten (Ctrl+F: "the terms go") | 3.0.0 `src/edit-clear.svg`, slot `edit-clear` 48x48 at (296, 50) | — | — | `4d493da64903f1f0e6bdc1fb7b688007f05e5d82b3c6684d68f9e61feb9a3d1b` |
 | BlackSum | Toggle Cumulative | 3.0.0 `src/accessories-calculator.svg`, slot `accessories-calculator` 48x48 at (296, 50) | — | — | `a4e2d1df853ecd36b30a2b2345d0d1d7104255b72b121dfa9bc50dba409cd38b` |

@@ -380,8 +380,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
 
     // THE COLOR PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-10-07),
     // at the two list owners' rank with their shape — ITS ROUTER IS THE
-    // WHOLE VOCABULARY (route_color_picker_key: while its hex field stands
-    // the keys are that field's alone, else Esc closes, Ctrl+S saves, Ctrl+Q
+    // WHOLE VOCABULARY (route_color_picker_key: while its one field stands
+    // the keys are that field's alone, else Esc closes an open list or menu
+    // first and the picker at the next press, Ctrl+S saves, Ctrl+Q
     // falls through with the picker closed by the close road, and every
     // other chord is a consumed silence), and the gesture clause is the
     // player's own: its slider and wheel drags are members of
@@ -1298,12 +1299,16 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       from 2026-09-03 and went with the panel on 2026-09-30.)
     //   (c6) THE COLOR PICKER (2026-10-07, the ninth place again — one
     //       router, route_color_picker_key, at the two list owners' rank):
-    //       Esc closes it — or, while its hex field stands, ENDS THAT EDIT
-    //       first, through route_modal_editor_key as every editor's Esc
-    //       does (so that press is (b)'s, and the next one this one's). It
-    //       cannot collide with the other editors: none opens under it and
-    //       its router admits no editor opener; a prompt over it (the next
-    //       segment's Delete question) is rung (c).
+    //       Esc closes it — or, while its element list or palette menu is
+    //       down, CLOSES THAT LIST first (architect 2026-10-07, Windows' and
+    //       GTK's order: a second Esc closes the picker); or, while its one
+    //       field stands (the hex field or the name ask), ENDS THAT EDIT
+    //       first, through
+    //       route_modal_editor_key as every editor's Esc does (so that
+    //       press is (b)'s, and the next one this one's). It cannot collide
+    //       with the other editors: none opens under it and its router
+    //       admits no editor opener; a prompt over it (the palette menu's
+    //       Delete question, DELETE_PALETTE_CONFIRM) is rung (c).
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
     //   (e) THE NOTIFICATION STACK, WHOLE (architect 2026-09-01, superseding
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
