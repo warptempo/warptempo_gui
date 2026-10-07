@@ -12,7 +12,9 @@
 #     quartet (hilight, light_3d, shadow, dk_shadow), the selected pair (a CDE entry's its title_active under colour
 #     set 1's Motif foreground, light_roles' rule) and the field pair.
 #   THE CLOCK PANEL, clock_ground / clock_text = the entry's ground and label: Windows' status bar is ButtonFace /
-#     ButtonText, a mapping by Windows' own rule (the built-in's own two roles are the same pair).
+#     ButtonText, a mapping by Windows' own rule (the built-in's own two roles are the same pair); A GNOME 2 ENTRY'S
+#     its field pair (CLOCK_FROM_FIELD, architect 2026-10-07: GTK has no sunken status panel, and a time shown in a
+#     field is an entry, base / text).
 #   THE CAPTION (architect 2026-10-05), the six caption roles = the entry's recorded title colours (roles.caption_roles,
 #     the one caption mapping: Windows' ActiveTitle / GradientActiveTitle / TitleText and the inactive three, KDE 3's
 #     active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds), A
@@ -20,9 +22,10 @@
 #     the start (a flat caption, src/gui/theme_file.h's head), which resolved_roles below applies too.
 #   THE CARD, card_ground / card_text = the entry's recorded info pair (roles.py: Windows' InfoWindow / InfoText; the
 #     two Windows families record it, KDE 3 and CDE have no tooltip pair, the chosen `warptempo` and the presets carry
-#     none), unnamed where the entry records none. card_frame is never named: the
-#     built-in's black is Windows' tooltip border, and no entry records a frame colour of its own (every Windows entry's
-#     raw WindowFrame is #000000, which no role reads).
+#     none), unnamed where the entry records none. card_frame = the entry's recorded info_frame where it records one
+#     (GNOME 2: Clearlooks' tooltip border, shade 0.6 of the tooltip's ground), else unnamed: the built-in's black is
+#     Windows' tooltip border, and no other entry records a frame colour of its own (every Windows entry's raw
+#     WindowFrame is #000000, which no role reads).
 #   THE PROGRAM'S ROLES only where the entry records them: the imported entries and the chosen `warptempo` name none; HIS PRESETS (`warptempo-preset-<n>`, build.py preset_entries over the picker's presets.json, architect
 #     2026-10-04) name their program colours (PRESET_ELEMENT_ROLES below), each resolved through the picker's own theme
 #     (tools/palette/themes/picker.json with the preset's colours applied, render.picker_apply), so every value is the
@@ -83,8 +86,11 @@ CHROME = (('ground', 'ground'), ('label', 'label'), ('hilight', 'bevel_hilight')
           ('shadow', 'bevel_shadow'), ('dk_shadow', 'bevel_dkshadow'), ('selected_fill', 'selected_fill'),
           ('selected_text', 'selected_text'), ('field_ground', 'field_ground'), ('field_text', 'field_text'),
           ('clock_ground', 'ground'), ('clock_text', 'label'))
-# the card: theme-file role <- the catalog role (named only when the entry records both)
+# the families whose clock panel is the field pair (the head's rule): clock role <- roles.light_roles' name
+CLOCK_FROM_FIELD = {'gnome2': (('clock_ground', 'field_ground'), ('clock_text', 'field_text'))}
+# the card: theme-file role <- the catalog role (named only when the entry records both); its frame named alone
 CARD = (('card_ground', 'info_ground'), ('card_text', 'info_text'))
+CARD_FRAME = ('card_frame', 'info_frame')
 # the flat caption's pairs (kGuiThemeCaptionGradients, src/gui/theme_file.h): a file naming a start and not its end
 # gets the end equal to the start
 CAPTION_GRADIENTS = (('caption_active', 'caption_active_gradient'), ('caption_inactive', 'caption_inactive_gradient'))
@@ -157,9 +163,11 @@ def file_roles(e, presets, picker):
     """One catalog entry -> {theme-file role: '#RRGGBB'} (the head's rule)."""
     light = roles.light_roles(e)
     out = {role: light[src] for role, src in CHROME}
+    out.update({role: light[src] for role, src in CLOCK_FROM_FIELD.get(e['family'], ())})
     out.update(roles.caption_roles(e))
     if all(src in e['roles'] for _, src in CARD):
         out.update({role: e['roles'][src] for role, src in CARD})
+    if CARD_FRAME[1] in e['roles']: out[CARD_FRAME[0]] = e['roles'][CARD_FRAME[1]]
     if e['key'].startswith(PRESET_PREFIX):
         n = int(e['key'][len(PRESET_PREFIX):])
         if n not in presets: raise SystemExit(f'gen_theme_files: {e["key"]} has no preset {n} in {PRESETS}')

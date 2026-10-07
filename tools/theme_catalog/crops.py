@@ -37,7 +37,8 @@
 #
 # THE RENDER ROAD IS BROKEN SINCE 2026-10-06 EVENING: the tablet geometry draws the retired Windows 95 chrome in Nimbus
 # Sans, which left the repository's fonts/ with the Windows 2000 pivot (tools/palette/common.py's head), so a render
-# fails at its font check; --md still runs, and the committed crops stand as rendered before the pivot.
+# fails at its font check; --md still runs, the committed crops stand as rendered before the pivot, and an entry
+# imported since (`clearlooks`, 2026-10-07) has none: its CATALOG.md block says so (write_md).
 #
 #   python3 tools/theme_catalog/crops.py [key ...]      (no keys: every entry)
 #   python3 tools/theme_catalog/crops.py --md           (renders nothing: CATALOG.md rewritten from catalog.json and the
@@ -183,6 +184,8 @@ FAMILY_HEAD = {
     'windows-plus': 'Windows 98 / Plus! desktop themes (the shipped .theme files)',
     'kde3': 'KDE 3.5 colour schemes, as Trinity\'s tdebase carries them (relief by KDE 3\'s own rule at each scheme\'s contrast)',
     'cde': 'CDE palettes (colour set 5 the ground; foreground and shadows by Motif\'s own rule)',
+    'gnome2': 'GNOME 2: Clearlooks as Debian 6 squeeze shipped it (its gtkrc\'s colour scheme; the relief, the tooltip '
+              'border and the unfocused title by the engine\'s and metacity\'s own rules)',
     'warptempo': 'Warptempo: the program\'s own (`warptempo`, the architect\'s pick of the colour loop, and his '
                  'presets saved on the colour picker: chosen, not imported)',
 }
@@ -203,7 +206,8 @@ def write_md(cat, sizes):
          'Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, '
          'imported only"): its colours are the bytes its source records, each with its provenance in '
          '[catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the '
-         'relief at run time (KDE 3, CDE / Motif), that toolkit\'s rule ran once at import and is named. The one '
+         'relief at run time (KDE 3, CDE / Motif, GNOME 2\'s Clearlooks and metacity), that toolkit\'s rule ran once '
+         'at import and is named. The one '
          'family that imports nothing is the program\'s own, Warptempo: `warptempo`, CHOSEN, NOT IMPORTED (the architect\'s pick of the colour '
          'loop, 2026-10-03; its provenance is his ruling), and each `warptempo-preset-<n>`, his Preset <n> saved on '
          'the colour picker, chosen, not imported either (2026-10-04: the preset\'s chrome ground through the '
@@ -216,7 +220,8 @@ def write_md(cat, sizes):
          'lines and the bottom row, transparent between them. THE CROPS SHOW THE RETIRED WINDOWS 95 CHROME in Nimbus '
          'Sans (rendered 2026-10-05 and 06, before the product\'s Windows 2000 pivot of 2026-10-06 evening): the '
          'renderer draws that design and cannot redraw them until it is ported to the live chrome and Wine Tahoma '
-         '(tools/palette/common.py\'s head); a theme\'s colours read true in them. The chrome is the theme\'s as recorded; the waveform pane, '
+         '(tools/palette/common.py\'s head); a theme\'s colours read true in them, and a theme imported since has no '
+         'crop. The chrome is the theme\'s as recorded; the waveform pane, '
          'the flags and the playhead are the program\'s own elements in the theme\'s program colours as the app '
          'resolves them: each program role the theme\'s file names, else the built-in\'s (`windows-2000-standard`: the '
          'lime waveform on black with its green outline, the warp flag purple #800080 and its selected face fuchsia '
@@ -245,8 +250,10 @@ def write_md(cat, sizes):
         L += [f'## {FAMILY_HEAD[fam]}', '', f'{len(es)} entries, darkest ground first.', '']
         for e in es:
             imit = f" — imitates {e['imitates']}" if e.get('imitates') else ''
+            crop = (f"![{e['key']}](crops/{e['key']}.png)" if os.path.exists(os.path.join(CROPS, e['key'] + '.png'))
+                    else 'No crop: imported after the render road broke (above); its colours are its theme file\'s.')
             L += [f"### `{e['key']}`", '', f"**{e['name']}**{imit} · ground {e['roles']['ground']} · {prov_line(e)}", '',
-                  f"Display tier: {e['display_tier']}", '', f"![{e['key']}](crops/{e['key']}.png)", '']
+                  f"Display tier: {e['display_tier']}", '', crop, '']
     open(MD, 'w').write('\n'.join(L) + '\n')
 
 

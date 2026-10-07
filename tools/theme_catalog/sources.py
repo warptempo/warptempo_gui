@@ -91,3 +91,61 @@ def provenance(src, path):
                 'image_sha1': s['image_sha1'], 'sha1': s['sha1'][path], 'url': file_url(src, path)}
     return {'project': s['project'], 'file': path, 'repository': s['repo'], 'commit': s['commit'],
             'url': file_url(src, path)}
+
+
+# ---- THE LOCAL SOURCES (architect 2026-10-07, the Clearlooks vocabulary): files read out of a disc image already on
+# the build host, never fetched (fetch.py reads SOURCES alone). Each is pinned by its own sha256 (build.py checks it:
+# a different byte is a hard fail) and by the image it came from. The Debian 6.0.10 squeeze live image is the ruling
+# system the architect captured (tmp/squeeze/); its filesystem.squashfs is extracted with
+#   unsquashfs -d tmp/squeeze_fs/fs -f tmp/squeeze_fs/live/filesystem.squashfs <path>
+# (tmp/squeeze_fs/README.md), the files read as data, nothing executed. The engine's and metacity's source tarballs
+# are the toolkit rule's citations (toolkit_rules.py's GTK 2 block), read, never parsed, like motif_rules above.
+SQUEEZE_FS = os.path.join(REPO, 'tmp', 'squeeze_fs', 'fs')
+LOCAL_SOURCES = {
+    'squeeze_live': dict(project='Debian 6.0.10 squeeze live (i386, GNOME desktop), the installed system read as data',
+                         image='debian-live-6.0.10-i386-gnome-desktop.iso',
+                         image_sha256='1cc527c3f9d51f6a25b04b56ce9eb1ae1dc967ec5d1468e19030edb34ff32e79',
+                         url='https://cdimage.debian.org/mirror/cdimage/archive/6.0.10-live/i386/iso-hybrid/'
+                             'debian-live-6.0.10-i386-gnome-desktop.iso',
+                         filesystem='live/filesystem.squashfs',
+                         filesystem_sha256='9cc5a7f216ed32d7f72e25651f814833964f49cbe928ffc750c7647858dbb24b',
+                         files={'usr/share/themes/Clearlooks/gtk-2.0/gtkrc':
+                                    ('gtk2-engines 1:2.20.1-1',
+                                     '777f94f58b24f32cbf8d0e9edb176cf171b216e79a3a73fbdbbb13287ddacc6b'),
+                                'usr/share/themes/Clearlooks/metacity-1/metacity-theme-1.xml':
+                                    ('gnome-themes 2.30.2-1',
+                                     '17293715eb7a6b45e1fd3e9554b9497b819deb5f555acb2cf3e78cfc30ca1c4a')}),
+    'gtk2_rules': dict(project='gtk-engines 2.20.2 (GNOME), the Clearlooks engine and its support library',
+                       tarball='gtk-engines-2.20.2.tar.bz2',
+                       tarball_sha256='15b680abca6c773ecb85253521fa100dd3b8549befeecc7595b10209d62d66b5',
+                       url='https://download.gnome.org/sources/gtk-engines/2.20/gtk-engines-2.20.2.tar.bz2',
+                       files=['engines/support/cairo-support.c', 'engines/clearlooks/src/clearlooks_draw.c',
+                              'engines/clearlooks/src/clearlooks_draw_gummy.c',
+                              'engines/clearlooks/src/clearlooks_style.c']),
+    'metacity_rules': dict(project='metacity 2.30.3 (GNOME), the window manager\'s theme parser',
+                           tarball='metacity-2.30.3.tar.bz2',
+                           tarball_sha256='08f887018fa5e447cf184d03bae3fe2c05fdb7583bed6768e3b4d66392fc18dd',
+                           url='https://download.gnome.org/sources/metacity/2.30/metacity-2.30.3.tar.bz2',
+                           files=['src/ui/theme.c']),
+}
+
+
+def local_file(src, path):
+    """Where a local source's file is on the build host (squeeze_live's alone are read)."""
+    assert src == 'squeeze_live', src
+    return os.path.join(SQUEEZE_FS, path)
+
+
+def local_provenance(src, path):
+    """The provenance record of one local source's file: the image (or tarball) it is read out of, with its sha256
+    and URL, and for an image's file its package and its own sha256."""
+    s = LOCAL_SOURCES[src]
+    if 'image' in s:
+        package, sha = s['files'][path]
+        return {'project': s['project'], 'file': path, 'package': package, 'sha256': sha, 'image': s['image'],
+                'image_sha256': s['image_sha256'], 'filesystem': s['filesystem'],
+                'filesystem_sha256': s['filesystem_sha256'], 'url': s['url']}
+    assert path in s['files'], (src, path)
+    return {'project': s['project'], 'file': path, 'tarball': s['tarball'], 'tarball_sha256': s['tarball_sha256'],
+            'url': s['url']}
+

@@ -47,10 +47,10 @@ the statement):
 | `ground`, `label`, `hilight`, `light_3d`, `shadow`, `dk_shadow` | its `ground`, `label` and relief quartet (`bevel_hilight`, `bevel_light`, `bevel_shadow`, `bevel_dkshadow`) |
 | `selected_fill`, `selected_text` | its selected pair; a CDE entry, which records none (Motif selects by inverse video), its `title_active` under colour set 1's Motif foreground |
 | `field_ground`, `field_text` | its field pair |
-| `clock_ground`, `clock_text` | its `ground` and `label` (Windows' status bar is ButtonFace / ButtonText: Windows' own rule) |
-| `card_ground`, `card_text` | its info pair (Windows' InfoWindow / InfoText) where it records one: the two Windows families; KDE 3 and CDE have no tooltip pair |
-| `card_frame` | never named: the built-in's black, Windows' tooltip border (every Windows entry's raw `WindowFrame` is #000000) |
-| `caption_active`, `caption_active_gradient`, `caption_active_text`, `caption_inactive`, `caption_inactive_gradient`, `caption_inactive_text` | its recorded title colours (architect 2026-10-05, `roles.caption_roles`): Windows' ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText, KDE 3's active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds; a gradient end only where the entry records one (the 19 Windows entries with Gradient*Title), the app's flat-caption rule making the end the start otherwise; the chosen `warptempo` and the presets name none |
+| `clock_ground`, `clock_text` | its `ground` and `label` (Windows' status bar is ButtonFace / ButtonText: Windows' own rule); a GNOME 2 entry's its field pair (architect 2026-10-07: GTK has no sunken status panel, a time shown in a field is an entry, base / text; gen_theme_files.py `CLOCK_FROM_FIELD`) |
+| `card_ground`, `card_text` | its info pair (Windows' InfoWindow / InfoText; GNOME 2's tooltip_bg_color / tooltip_fg_color) where it records one: the two Windows families and GNOME 2; KDE 3 and CDE have no tooltip pair |
+| `card_frame` | its `info_frame` where it records one (GNOME 2: Clearlooks' tooltip border, shade 0.6 of the tooltip's ground); else unnamed, the built-in's black, Windows' tooltip border (every Windows entry's raw `WindowFrame` is #000000) |
+| `caption_active`, `caption_active_gradient`, `caption_active_text`, `caption_inactive`, `caption_inactive_gradient`, `caption_inactive_text` | its recorded title colours (architect 2026-10-05, `roles.caption_roles`): Windows' ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText, KDE 3's active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds, GNOME 2's metacity title band (selected_bg_color / bg_color, the focused title's literal #FFFFFF, the unfocused title's blend of fg and bg at 0.45); a gradient end only where the entry records one (the 19 Windows entries with Gradient*Title), the app's flat-caption rule making the end the start otherwise; the chosen `warptempo` and the presets name none |
 | the program's roles | only where the entry records them: a preset's canvas and ink (`waveform_canvas`, `waveform_ink`), `waveform_outline` the picker's "auto" rule over the two (the 50 % linear-light blend of the ink over the canvas, through `tools/palette/render.py`'s own theme), the playhead's head and stem; each flag kind's face and selected face one to one (architect 2026-10-05: the picker's Warp, Phase Reset, Added and Removed Flag pairs keyed by the product's role names; the invalid flag wears the removed pair), and a preset saved before that round by its old keys, the picker's Unselected / Selected Flag onto BOTH the warp and the phase-reset pair and the Unselected / Selected Invalid Flag onto the removed pair (gen_theme_files.py OLD_PRESET_KEYS); the flag labels never (the picker has no flag-label element; it paints both white, as the built-in's are) |
 
 The chrome is the entry AS RECORDED, through ONE light-roles function, `roles.light_roles` (the emboss's light copy
@@ -63,22 +63,30 @@ theme is a hard fail). The dark level (2026-10-03..04: a second, computed row pe
 
 - A THEME IS DRAWN AS ITS OWN DESKTOP DREW IT. Where the source records the bevels (a Windows scheme records all four
   3D colours) the bytes are the record. Where it records only base colours and its toolkit computed the rest at run
-  time (a KDE 3 `.kcsrc`, a CDE `.dp`), build.py runs THAT TOOLKIT'S OWN RULE once, at import
-  (`toolkit_rules.py`: Motif's `CalculateColorsRGB`, KDE 3's `createApplicationPalette` over Qt 3's integer HSV,
-  each ported from the pinned source cited at its function) and the catalog stores the resulting bytes, the rule
-  named in the entry's provenance and described once in the catalog's `rules`. That is part of the import, not a
+  time (a KDE 3 `.kcsrc`, a CDE `.dp`, a GTK 2 gtkrc and its metacity theme), build.py runs THAT TOOLKIT'S OWN RULE
+  once, at import (`toolkit_rules.py`: Motif's `CalculateColorsRGB`, KDE 3's `createApplicationPalette` over Qt 3's
+  integer HSV, GTK 2's shade — the Clearlooks engine's `ge_shade_color` — and metacity's blend in doubles, each value
+  the byte the program paints: through cairo and pixman for the engine, through a GdkColor for GTK and metacity; each
+  ported from the pinned source cited at its function) and the catalog stores the resulting bytes, the rule named in
+  the entry's provenance (a GNOME 2 entry's also each computed value's derivation, `rule.derivations`) and described
+  once in the catalog's `rules`. That is part of the import, not a
   derivation of ours.
 - THE CHROME IS THE THEME'S; THE WAVEFORM PANE, THE FLAGS AND THE PLAYHEAD ARE THE PROGRAM'S OWN ELEMENTS (architect
   2026-10-03), their colours ROLES OF THE THEME FILE beside the chrome's (the built-in's where a file names none:
   `src/gui/theme_file.h`'s role table). The flags are the FLAT Acid flag, outlined in the theme's DkShadow
   and shaded by nothing. Each entry still names the rule its family's desktop shaded a 3D face with (`flag_rule`:
   Windows' Appearance dialog, `windows_dialog`, over shlwapi's 240-scale integer HLS as Wine implements it; KDE 3's;
-  Motif's — `toolkit_rules.flag_bevel`), KEPT for tools/palette's "bevelled" flag style, the record of the design the
+  Motif's; FLAT for GNOME 2, whose Clearlooks draws no one-line bevel round a raised face — `toolkit_rules.flag_bevel`), KEPT for tools/palette's "bevelled" flag style, the record of the design the
   flat flag replaced; the app and the crops read it nowhere. These are the only rules in the tool.
 - EVERY SOURCE IS PINNED (`sources.py`): a repository at a commit, or a file inside a disc image on archive.org (the
   item, the image's SHA-1 and the file's own, which fetch.py checks), and every entry's provenance names the project,
   the file, the URL and the commit (or the image and its SHA-1s). Fetched files live in
-  `tmp/theme_sources/` and are never committed; only the bytes and their provenance are.
+  `tmp/theme_sources/` and are never committed; only the bytes and their provenance are. A LOCAL SOURCE
+  (`LOCAL_SOURCES`, architect 2026-10-07) is a file of a disc image already on the build host, never fetched: the
+  Debian 6.0.10 squeeze live image's Clearlooks gtkrc and metacity theme, extracted into `tmp/squeeze_fs/fs/`
+  (`unsquashfs`, the recipe at `LOCAL_SOURCES`), each pinned by its own sha256 (build.py checks it) beside the image's
+  and the squashfs's sha256 and the image's URL; the engine's and metacity's tarballs, cited for the rule, by their
+  sha256 and URL.
 - NO BACKSTOPS: the inputs are pinned third-party files; a malformed one is a one-line hard fail naming it.
 - A THEME OWNS THE CHROME. The catalog records EVERY raw value its source has, under the source's own key names
   (`raw`), even those no role reads today, so the waveform pane can later inherit from a theme by choice.
@@ -87,14 +95,15 @@ theme is a hard fail). The dark level (2026-10-03..04: a second, computed row pe
 ## An entry
 
 `key` (unique ASCII, lowercase words joined by hyphens behind the family prefix — `windows-`, `plus-`, `kde3-`,
-`cde-`, `warptempo-` — what is typed in Settings), `name` (the source's display name verbatim; a Windows 98
+`cde-`, `warptempo-`; a `gnome2` key is the GTK theme's own name, lowercase, with no prefix, `clearlooks` — what is
+typed in Settings), `name` (the source's display name verbatim; a Windows 98
 theme's file name, a CDE palette's file stem), `family`, `imitates` (optional: a KDE scheme whose name says it imitates
 another desktop), `provenance` (`sources`: one record per source file; `rule`: the toolkit rule's id, its parameters
 and every value it computed), `raw`, `roles`, `flag_rule` (the rule the bevelled flag style takes — kept, read by
 tools/palette's "bevelled" style alone since the flat flag, 2026-10-03: `{"id":
 "windows-dialog"}` for the families `windows`, `windows-plus` and `warptempo` — the architect: "take Windows' rule" —,
-`{"id": "kde3", "contrast": c}` at the scheme's own contrast, `{"id": "motif"}` for `cde`; described in the catalog's
-`rules`), `display_tier` (below), `notes` (every disagreement between sources, every relabelling).
+`{"id": "kde3", "contrast": c}` at the scheme's own contrast, `{"id": "motif"}` for `cde`, `{"id": "flat"}` for
+`gnome2`; described in the catalog's `rules`), `display_tier` (below), `notes` (every disagreement between sources, every relabelling).
 
 ## The display tier (`display_tier`; architect 2026-10-03, late)
 
@@ -108,7 +117,7 @@ the sets are also catalog.json's `display_tiers`, and each entry's CATALOG.md bl
 | `high-colour` | anything else |
 
 Today: `vga` 3 (Windows Storm, Teal, and Red, White, and Blue; build.py asserts the list), `windows-20` 0,
-`high-colour` 96. Windows 98 Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and
+`high-colour` 97. Windows 98 Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and
 its 3DLight DFDFDF (asserted for Windows 98 Standard).
 
 ## Families and sources
@@ -119,10 +128,11 @@ its 3DLight DFDFDF (asserted for Windows 98 Standard).
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows 98 Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
 | `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
+| `gnome2` | the Debian 6.0.10 squeeze live image's own bytes (`LOCAL_SOURCES`): `usr/share/themes/Clearlooks/gtk-2.0/gtkrc` (gtk2-engines 1:2.20.1-1) and `metacity-1/metacity-theme-1.xml` (gnome-themes 2.30.2-1), read by `parse_gtkrc.py`; the rule cited at the gtk-engines 2.20.2 and metacity 2.30.3 tarballs | `clearlooks` ("Clearlooks", architect 2026-10-07: squeeze's GNOME 2.30 default, the second chrome vocabulary's theme): the gtkrc's eight `gtk-color-scheme` colours as recorded and five values by the programs' own rules, each with its derivation (`rule.derivations`): the engine's ONE-LINE EDGE as the relief quartet (light, light, dark, dark) = shade 1.06 / 0.94 of the ground (`clearlooks_draw_inset`, `clearlooks_draw_highlight_and_shade`), the tooltip border (shade 0.6 of its ground), the insensitive text (`darker (@bg_color)`), the unfocused title (metacity's `blend/gtk:fg[NORMAL]/gtk:bg[NORMAL]/0.45`); the focused title's literal #FFFFFF raw. The engine's other tones (its shade table, the gummy ramps, metacity's band) are not catalog values: the Clearlooks painters read them by need. His captures (`tmp/squeeze/`) show every computed byte as recorded |
 | `warptempo` | the architect's ruling of 2026-10-03; his colour-picker presets | `warptempo` (display name `warptempo`, all lowercase, his spelling), CHOSEN, NOT IMPORTED: its roles are the ruled bytes (build.py `CHOSEN_ROLES`), its info pair absent (not ruled); `warptempo-preset-<n>` (display name `Warptempo Preset <n>`), one per preset the colour picker saved (`tools/palette/picker/presets/presets.json`, architect 2026-10-04), CHOSEN, NOT IMPORTED: the preset's chrome ground through the picker's chrome rule, the label and the field text the preset's Label (white when it records none), the selected pair the preset's Selection and Selected Text (#666666 / #FFFFFF when it records none) |
 
-Every family's line in the build: windows 20, windows-plus 16, kde3 25, cde 36, warptempo 3 (with the two presets of
-2026-10-04) — 100 entries (`warptempo-2026-10-03`, the app's look of that morning off render.h, left the catalog
+Every family's line in the build: windows 19, windows-plus 16, kde3 25, cde 36, gnome2 1, warptempo 3 (with the two
+presets of 2026-10-04) — 100 entries (`warptempo-2026-10-03`, the app's look of that morning off render.h, left the catalog
 2026-10-05: "that theme was just testing"). A new copy of presets.json adds its new presets on the next run (a preset's number is never
 reused: the picker only appends). Where the pinned sources cannot be fetched (the cloud: the Trinity mirror lies
 outside its egress), `build.py --presets-only` writes the program's own family (the chosen entry recomputed and
@@ -143,26 +153,27 @@ run writes the same bytes.
 
 ## The role mapping (`roles.py`, the one table)
 
-| role | windows, windows-plus | kde3 | cde | warptempo |
-|---|---|---|---|---|
-| `ground` | `ButtonFace` | `background` | `set5` | `kRedesignContentGround` |
-| `label` | `ButtonText` | `foreground` | `motif:set5.fg` | `kRedesignLabel` |
-| `bevel_hilight` | `ButtonHilight` | `kde3:light` | `motif:set5.ts` | `kReliefHilight` |
-| `bevel_light` | `ButtonLight` | `kde3:midlight` | `motif:set5.ts` | `kRelief3DLight` |
-| `bevel_shadow` | `ButtonShadow` | `kde3:dark` | `motif:set5.bs` | `kReliefShadow` |
-| `bevel_dkshadow` | `ButtonDkShadow` | `kde3:shadow` | `motif:set5.bs` | `kReliefDkShadow` |
-| `selected_fill` | `Hilight` | `selectBackground` | absent | `kRedesignAccent` |
-| `selected_text` | `HilightText` | `selectForeground` | absent | `kRedesignHighlightLabel` |
-| `info_ground` | `InfoWindow` | absent | absent | `kInfoGround` |
-| `info_text` | `InfoText` | absent | absent | `kInfoText` |
-| `field_ground` | `Window` | `windowBackground` | `set4` | `kModalFieldGround` |
-| `field_text` | `WindowText` | `windowForeground` | `motif:set4.fg` | `kRedesignLabel` |
-| `disabled_text` | `GrayText` | `kde3:disabled_foreground` | absent | absent |
-| `title_active` | `ActiveTitle` | `activeBackground` | `set1` | absent |
-| `title_inactive` | `InactiveTitle` | `inactiveBackground` | `set2` | absent |
+| role | windows, windows-plus | kde3 | cde | gnome2 | warptempo |
+|---|---|---|---|---|---|
+| `ground` | `ButtonFace` | `background` | `set5` | `bg_color` | `kRedesignContentGround` |
+| `label` | `ButtonText` | `foreground` | `motif:set5.fg` | `fg_color` | `kRedesignLabel` |
+| `bevel_hilight` | `ButtonHilight` | `kde3:light` | `motif:set5.ts` | `gtk2:inset_light` | `kReliefHilight` |
+| `bevel_light` | `ButtonLight` | `kde3:midlight` | `motif:set5.ts` | `gtk2:inset_light` | `kRelief3DLight` |
+| `bevel_shadow` | `ButtonShadow` | `kde3:dark` | `motif:set5.bs` | `gtk2:inset_dark` | `kReliefShadow` |
+| `bevel_dkshadow` | `ButtonDkShadow` | `kde3:shadow` | `motif:set5.bs` | `gtk2:inset_dark` | `kReliefDkShadow` |
+| `selected_fill` | `Hilight` | `selectBackground` | absent | `selected_bg_color` | `kRedesignAccent` |
+| `selected_text` | `HilightText` | `selectForeground` | absent | `selected_fg_color` | `kRedesignHighlightLabel` |
+| `info_ground` | `InfoWindow` | absent | absent | `tooltip_bg_color` | `kInfoGround` |
+| `info_text` | `InfoText` | absent | absent | `tooltip_fg_color` | `kInfoText` |
+| `info_frame` | absent | absent | absent | `gtk2:tooltip_border` | absent |
+| `field_ground` | `Window` | `windowBackground` | `set4` | `base_color` | `kModalFieldGround` |
+| `field_text` | `WindowText` | `windowForeground` | `motif:set4.fg` | `text_color` | `kRedesignLabel` |
+| `disabled_text` | `GrayText` | `kde3:disabled_foreground` | absent | `gtkrc:fg[INSENSITIVE]` | absent |
+| `title_active` | `ActiveTitle` | `activeBackground` | `set1` | `selected_bg_color` | absent |
+| `title_inactive` | `InactiveTitle` | `inactiveBackground` | `set2` | `bg_color` | absent |
 
 The `warptempo` column is the recorded entry's; the chosen `warptempo` entry and the preset entries map nothing,
-their roles being the ruled or the picker's bytes under the role names themselves. A `kde3:` or `motif:` value is computed by that toolkit's rule at import (`provenance.rule.computed`); every other
+their roles being the ruled or the picker's bytes under the role names themselves. A `kde3:`, `motif:`, `gtk2:`, `gtkrc:` or `metacity:` value is computed by that toolkit's rule at import (`provenance.rule.computed`); every other
 value is a raw key. KDE 3's relief comes from the scheme's `background` (its `buttonBackground` is recorded raw: the
 app has one ground). CDE's colour sets (Motif `ColorObj.c`'s resource defaults, dtsession `SrvPalette.c`, dtwm
 `WmResource.c` / `Dtwm.defs`): 1 the active window frame, 2 the inactive frame, 3 and 7 workspace backdrops, 4 text
@@ -195,7 +206,11 @@ import); Windows' dialog rule gives D4D0C8 -> Hilight EAE8E3 and Rainy Day 8399B
 `flag_rule` is its family's and runs; kde3 has 25 entries; the not-imported lists are exactly the schemes found (a re-pinned source cannot
 change them silently) and each duplicate is role-identical to its twin; the chosen `warptempo` entry
 equals the ruled bytes; the `vga` entries are exactly Windows Storm, Teal and Red, White, and Blue, none is `windows-20`;
-every key is unique and ASCII. The last lines print each family (entries, corroborated, sources), the display
+every key is unique and ASCII; Clearlooks' roles are exactly the squeeze bytes (#EDECEB, #000000, the quartet
+#FBFBFA / #FBFBFA / #E0DEDD / #E0DEDD, #86ABD9 / #FFFFFF, #F5F5B5 / #000000 / #BABA45, #FFFFFF / #1A1A1A, #A9A5A2,
+#86ABD9 / #EDECEB), its unfocused title #6B6A6A, its flag rule flat (`toolkit_rules.py` asserts the engine's shade
+table points shade[3] of #EDECEB = #C4C2BF and spot[1] of #86ABD9 = #92B4DF, and the captured #BABA45, #FBFBFA /
+#E0DEDD and #6B6A6A, at import). The last lines print each family (entries, corroborated, sources), the display
 tiers' counts and the schemes not imported.
 
 ## The crops
@@ -220,4 +235,4 @@ selected label, the outline still DkShadow; architect 2026-10-03, the colour loo
 INVALID, DISABLED (the ground, the label embossed, no stem) and unselected; the playhead head outlined in the label; the disabled menu word
 and buttons engraved over `emboss_hilight`; the trim arrow in the label (`trim_arrow`). The waveform, the flags' face
 and label, the invalid pair and the playhead are the program's colours (above), the icons' fixed inks icons.cpp's.
-99 crops, 5.48 MB (re-rendered 2026-10-05 in each theme's program colours; `windows-2000-standard` added 2026-10-06; `windows-classic` retired and `windows-standard`'s crop renamed `windows-98-standard` the same evening, its colours unchanged). THEY SHOW THE RETIRED WINDOWS 95 CHROME IN NIMBUS SANS: the render road (tools/palette) draws that design and fails at its font check since Nimbus left `fonts/` (crops.py's head); `crops.py --md` still runs. Its head states which roles come from the entry and which are the program's.
+99 crops, 5.48 MB (re-rendered 2026-10-05 in each theme's program colours; `windows-2000-standard` added 2026-10-06; `windows-classic` retired and `windows-standard`'s crop renamed `windows-98-standard` the same evening, its colours unchanged). THEY SHOW THE RETIRED WINDOWS 95 CHROME IN NIMBUS SANS: the render road (tools/palette) draws that design and fails at its font check since Nimbus left `fonts/` (crops.py's head); `crops.py --md` still runs, and `clearlooks` (imported 2026-10-07, after the road broke) has no crop: its CATALOG.md block says so. Its head states which roles come from the entry and which are the program's.

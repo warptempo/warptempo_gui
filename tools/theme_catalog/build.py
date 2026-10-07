@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # tools/theme_catalog/build.py — the fetched sources (fetch.py) -> docs/themes/catalog.json: every entry's recorded
-# bytes with their provenance, the values its own toolkit computed at import (toolkit_rules.py, the rule named), and
+# bytes with their provenance (a fetched file, sources.py SOURCES; or a file of a disc image on the build host,
+# LOCAL_SOURCES: the squeeze image's Clearlooks), the values its own toolkit computed at import (toolkit_rules.py, the
+# rule named), and
 # its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE APP CARRIES IMPORTED THEMES ONLY,
 # NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
 # THE ONE EXCEPTION IS THE PROGRAM'S OWN FAMILY, `warptempo`, and it derives nothing either: `warptempo` is THE
@@ -22,26 +24,30 @@
 # the header -- and carries every imported entry and the not-imported record from the committed catalog.json byte for
 # byte; the checks run on the whole. The full run writes the same bytes where the
 # sources are at hand (both roads build the document through one function, document()).
-import json, os, re, sys
+import hashlib, json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from sources import SOURCES, REPO, local_path, provenance
+from sources import SOURCES, REPO, local_path, provenance, LOCAL_SOURCES, local_file, local_provenance
 sys.path.insert(0, os.path.join(REPO, 'tools', 'palette'))
 import colour as CL      # the picker's chrome rule (windows95_chrome), the one the picker paints with
 from parse_windows import parse_hivedef, parse_hive_colors, parse_hive_schemes, parse_theme
 from parse_kde import parse_kcsrc
 from parse_cde import parse_dp
+from parse_gtkrc import parse_gtkrc, gtkrc_color, expr_text, parse_metacity, metacity_color, frame_piece, draw_ops_flat
 import toolkit_rules as T
 from roles import ROLES, MAPPING, map_roles
 
 OUT = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
-FAMILIES = ('windows', 'windows-plus', 'kde3', 'cde', 'warptempo')
-KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde'}
+FAMILIES = ('windows', 'windows-plus', 'kde3', 'cde', 'gnome2', 'warptempo')
+# a key's prefix per family; GNOME 2's keys are the GTK theme's own name, lowercase (`clearlooks`), as the program's
+# own family's are its own (architect 2026-10-07: the bundled clearlooks.theme)
+KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde', 'gnome2': None}
 # THE FLAGS' RULE per family (architect 2026-10-03, late: a flag's one-line bevel is its theme family's own rule on the
 # flag's face, toolkit_rules.flag_bevel): Windows' Appearance dialog for the Windows families and the program's own
-# ("take Windows' rule"), KDE 3's at the scheme's contrast, Motif's for CDE.
+# ("take Windows' rule"), KDE 3's at the scheme's contrast, Motif's for CDE, FLAT for GNOME 2 (Clearlooks draws no
+# one-line bevel round a raised face: toolkit_rules.flag_bevel states why).
 FLAG_RULE = {'windows': 'windows-dialog', 'windows-plus': 'windows-dialog', 'warptempo': 'windows-dialog',
-             'kde3': 'kde3', 'cde': 'motif'}
+             'kde3': 'kde3', 'cde': 'motif', 'gnome2': 'flat'}
 
 # NOT IMPORTED (architect 2026-10-03, late), each group with its reason; build.py asserts every named scheme exists in
 # its source and, for a duplicate, that its roles equal its twin's, so a re-pinned source cannot change the list
@@ -112,8 +118,8 @@ def display_tier(roles):
 
 def entry(family, key_words, name, prov, raw, computed=None, notes=None, imitates=None, rule=None, flag_rule=None):
     pre, words = KEY_PREFIX[family], slug(key_words)
-    if words.startswith(pre + '-'): words = words[len(pre) + 1:]     # 'Windows Classic' -> windows-classic
-    key = f'{pre}-{words}'
+    if pre and words.startswith(pre + '-'): words = words[len(pre) + 1:]     # 'Windows Classic' -> windows-classic
+    key = f'{pre}-{words}' if pre else words
     raw_hex = {k: hx(v) for k, v in raw.items()}
     values = dict(raw_hex); values.update({k: hx(v) for k, v in (computed or {}).items()})
     e = {'key': key, 'name': name, 'family': family}
@@ -358,6 +364,21 @@ RULES = {
                       'paints two shadows, so the quartet is (ts, ts, bs, bs) (tools/theme_catalog/toolkit_rules.py '
                       'motif_colors)', 'sources': CDE_RULE_SOURCES,
               'colour_sets': list(CDE_SETS), 'colour_set_sources': CDE_SET_SOURCES},
+    'gtk2-clearlooks': {'name': 'GTK 2\'s shade (the Clearlooks engine\'s ge_shade_color = GTK\'s gtk_style_shade = '
+                                'metacity\'s copy: HLS lightness and saturation both x k, clamped, in doubles) and '
+                                'metacity\'s blend (color_composite on 16-bit colours), run on the gtkrc\'s '
+                                'gtk-color-scheme as the engine, GTK and metacity run them, each value the byte the '
+                                'program paints: the engine\'s through cairo 1.8 and pixman (floor of 256 x the double, '
+                                'capped at 255), GTK\'s and metacity\'s through a GdkColor (x 65535 truncated, its top '
+                                'byte); the one-line relief quartet (light, light, dark, dark) = the engine\'s inset pair '
+                                '1.06 / 0.94 of the background (tools/theme_catalog/toolkit_rules.py gtk2_shade, '
+                                'cairo_byte, gdk16, gdk_byte, metacity_blend; each entry\'s provenance.rule.derivations)',
+                        'sources': [local_provenance('gtk2_rules', f) for f in LOCAL_SOURCES['gtk2_rules']['files']]
+                                   + [local_provenance('metacity_rules', 'src/ui/theme.c')]},
+    'flat': {'name': 'no bevel: the flags\' one-line bevel is the face itself on both sides, for a family whose toolkit '
+                     'draws no one-line light / dark bevel round a raised face (GNOME 2: Clearlooks\' gummy button is a '
+                     'four-stop ramp in a 1-px border mixed from the theme\'s shade[6] and the face, '
+                     'clearlooks_gummy_draw_button; tools/theme_catalog/toolkit_rules.py flag_bevel)', 'sources': []},
 }
 
 
@@ -378,6 +399,100 @@ def cde_entries():
         out.append(entry('cde', camel_words(stem), stem, prov, raw, computed, rule=rule))
         out[-1]['corroborated'] = 0
     return out, mono
+
+
+# ------------------------------------------------------------------ GNOME 2 (gnome2)
+# THE CLEARLOOKS ENTRY (architect 2026-10-07: the second chrome vocabulary is Debian 6 squeeze's GNOME 2.30 desktop
+# taken whole, his captures tmp/squeeze/ the law): key `clearlooks`, display name "Clearlooks" (the GTK theme's own
+# name, its index.theme and the metacity theme's <name>), the squeeze defaults (GConf: gtk_theme Clearlooks, metacity
+# theme Clearlooks, font "Sans 10"). Its sources are the squeeze image's own bytes (sources.py LOCAL_SOURCES): the
+# gtkrc of gtk2-engines 1:2.20.1-1 (byte-identical to gtk-engines 2.20.0's; 2.20.2's differs only in two Evolution
+# widget_class lines) and the metacity theme of gnome-themes 2.30.2-1 (byte-identical to the 2.30.2 tarball's). THE
+# ROLES (roles.py MAPPING['gnome2']): the scheme's colours as recorded, and five values each program's own rule computes
+# from them, recorded with their derivation (GNOME2_DERIVATIONS): the engine's one-line edge pair, the tooltip's
+# border, the insensitive text, the unfocused title. The engine's further tones (its shade table, the gummy ramps,
+# metacity's band) are not catalog values: the Clearlooks painters read them by need, each in its own round.
+GNOME2_GTKRC = 'usr/share/themes/Clearlooks/gtk-2.0/gtkrc'
+GNOME2_METACITY = 'usr/share/themes/Clearlooks/metacity-1/metacity-theme-1.xml'
+GNOME2_DERIVATIONS = {
+    'gtk2:inset_light': 'ge_shade_color (bg_color, 1.06) through cairo: the light line of the engine\'s one-line edge '
+                        '(gtk-engines 2.20.2 engines/clearlooks/src/clearlooks_draw.c clearlooks_draw_inset line 63, '
+                        'drawn by the gummy button, entry and scale trough, clearlooks_draw_gummy.c lines 189, 271, 595; '
+                        'clearlooks_draw_highlight_and_shade line 184, a frame\'s inner line, line 1235)',
+    'gtk2:inset_dark': 'ge_shade_color (bg_color, 0.94) through cairo: the dark line of the same edge (clearlooks_draw.c '
+                       'clearlooks_draw_inset line 62; clearlooks_draw_highlight_and_shade line 185)',
+    'gtk2:tooltip_border': 'ge_shade_color (tooltips bg[NORMAL] = tooltip_bg_color, 0.6) through cairo: the tooltip\'s '
+                           '1-px border on all four sides (clearlooks_draw.c clearlooks_draw_tooltip line 1999)',
+    'gtkrc:fg[INSENSITIVE]': 'the default style\'s fg[INSENSITIVE] = darker (@bg_color) = gtk_style_shade (bg_color, '
+                             '0.7) as a GdkColor, drawn through the style\'s fg_gc (clearlooks_style.c '
+                             'clearlooks_style_draw_layout line 1846; the etched copy under it is shade 1.2 of the parent '
+                             'bg)',
+    'metacity:title_unfocused': 'the unfocused title\'s colour, blend/gtk:fg[NORMAL]/gtk:bg[NORMAL]/0.45 (the metacity '
+                                'theme\'s draw_ops title_text_unfocused, the frame style "normal"\'s title piece): '
+                                'fg_color + (bg_color - fg_color) x 0.45 by metacity 2.30 theme.c color_composite',
+}
+
+
+def squeeze_file(path):
+    """A squeeze image file on the build host, its sha256 checked against the pin -> its path."""
+    p = local_file('squeeze_live', path)
+    if not os.path.exists(p):
+        raise SystemExit(f'build: {p} is missing; extract it from the squeeze image (sources.py LOCAL_SOURCES)')
+    got, want = hashlib.sha256(open(p, 'rb').read()).hexdigest(), LOCAL_SOURCES['squeeze_live']['files'][path][1]
+    if got != want: raise SystemExit(f'build: {p} has sha256 {got}, not the pinned {want}')
+    return p
+
+
+def gnome2_entries():
+    g = parse_gtkrc(squeeze_file(GNOME2_GTKRC))
+    m = parse_metacity(squeeze_file(GNOME2_METACITY))
+    sc, default = g['color_scheme'], g['styles']['default']
+    eng = default['engines']['clearlooks']
+    assert eng['style'] == 'GUMMY', eng
+    # the default style's colours as GTK stores them (the gtk:<component>[<state>] colours metacity reads)
+    gtk = {(k[:k.index('[')], k[k.index('[') + 1:-1]): gtkrc_color(v, sc, GNOME2_GTKRC) for k, v in default['colors'].items()}
+    unit = lambda c16: tuple(v / 65535.0 for v in c16)
+    bg = unit(gtk[('bg', 'NORMAL')])
+    tip = g['styles']['tooltips']['colors']
+    assert (tip['bg[NORMAL]'], tip['fg[NORMAL]']) == ('@tooltip_bg_color', '@tooltip_fg_color'), tip
+    tip_bg = unit(gtkrc_color(tip['bg[NORMAL]'], sc))
+    focused = draw_ops_flat(m, frame_piece(m, 'focused', 'title'))
+    unfocused = draw_ops_flat(m, frame_piece(m, 'normal', 'title'))
+    assert focused[-1]['op'] == 'title' and focused[-1]['color'][0] == 'rgb', focused[-1]   # the text over its shadows
+    assert len(unfocused) == 1 and unfocused[0]['op'] == 'title', unfocused
+    raw = dict(sc)
+    raw['title_text'] = focused[-1]['color'][1]
+    computed = {
+        'gtk2:inset_light': T.cairo_byte(T.gtk2_shade(bg, 1.06)),
+        'gtk2:inset_dark': T.cairo_byte(T.gtk2_shade(bg, 0.94)),
+        'gtk2:tooltip_border': T.cairo_byte(T.gtk2_shade(tip_bg, 0.6)),
+        'gtkrc:fg[INSENSITIVE]': T.gdk_byte(gtk[('fg', 'INSENSITIVE')]),
+        'metacity:title_unfocused': T.gdk_byte(metacity_color(unfocused[0]['color'], gtk)),
+    }
+    assert set(computed) == set(GNOME2_DERIVATIONS)
+    styles = ('button', 'menu', 'menu_item', 'entry', 'tooltips')     # the per-style overrides the roles' painters read
+    rule = {'id': 'gtk2-clearlooks',
+            'engine': 'Clearlooks of gtk2-engines 1:2.20.1-1 (squeeze), its arithmetic cited at gtk-engines 2.20.2 '
+                      '(ge_shade_color and clearlooks_draw.c are byte-identical in 2.20.0 and 2.20.2)',
+            'window_manager': 'metacity 1:2.30.1-3 (squeeze), its colour arithmetic cited at metacity 2.30.3 theme.c',
+            'clearlooks': dict(eng),
+            'styles': {n: {'colors': {k: expr_text(v) for k, v in g['styles'][n]['colors'].items()},
+                           'clearlooks': {k: expr_text(v) for k, v in g['styles'][n]['engines'].get('clearlooks', {}).items()}}
+                       for n in styles},
+            'derivations': dict(GNOME2_DERIVATIONS)}
+    prov = [local_provenance('squeeze_live', GNOME2_GTKRC), local_provenance('squeeze_live', GNOME2_METACITY)]
+    notes = ['Debian 6 squeeze\'s GNOME 2.30 default (GConf: gtk_theme Clearlooks, metacity theme Clearlooks, font_name '
+             '"Sans 10", titlebar_font "Sans Bold 10"); the gtkrc sets style = GUMMY, radius 3.0, menubarstyle 2, '
+             'toolbarstyle 1, reliefstyle 1, colorize_scrollbar TRUE, animation FALSE',
+             'the gtkrc is byte-identical to gtk-engines 2.20.0\'s; 2.20.2\'s differs only in two Evolution widget_class '
+             'lines (ETable / ETree); the metacity theme is byte-identical to the gnome-themes 2.30.2 tarball\'s',
+             'the relief quartet is the engine\'s one-line edge (light, light, dark, dark): Clearlooks draws no two-line '
+             'Windows edge; the caption is flat in the catalog (metacity\'s band is a ramp of shades of the one colour)',
+             'the captures (tmp/squeeze/, 2026-10-06/07) show every computed byte as recorded: the inset ring #FBFBFA / '
+             '#E0DEDD, the tooltip border #BABA45, the insensitive text #A9A5A2, the unfocused title #6B6A6A']
+    e = entry('gnome2', 'Clearlooks', 'Clearlooks', prov, raw, computed, notes=notes, rule=rule)
+    e['corroborated'] = 0
+    return [e]
 
 
 # ------------------------------------------------------------------ the app
@@ -546,6 +661,15 @@ def checks(entries):
     assert not [e['key'] for e in entries if e['display_tier'] == 'windows-20']
     assert display_tier(w98['roles']) == 'high-colour' and \
         display_tier({r: v for r, v in w98['roles'].items() if r != 'info_ground'}) == 'vga'
+    # Clearlooks (squeeze): the scheme's bytes and the engine's own shades of them, each as his captures show it
+    cl = by['clearlooks']
+    assert cl['roles'] == {'ground': '#EDECEB', 'label': '#000000', 'bevel_hilight': '#FBFBFA', 'bevel_light': '#FBFBFA',
+                           'bevel_shadow': '#E0DEDD', 'bevel_dkshadow': '#E0DEDD', 'selected_fill': '#86ABD9',
+                           'selected_text': '#FFFFFF', 'info_ground': '#F5F5B5', 'info_text': '#000000',
+                           'info_frame': '#BABA45', 'field_ground': '#FFFFFF', 'field_text': '#1A1A1A',
+                           'disabled_text': '#A9A5A2', 'title_active': '#86ABD9', 'title_inactive': '#EDECEB'}, cl['roles']
+    assert cl['raw']['title_text'] == '#FFFFFF' and cl['provenance']['rule']['computed']['metacity:title_unfocused'] == '#6B6A6A'
+    assert cl['flag_rule'] == {'id': 'flat'} and cl['display_tier'] == 'high-colour'
     assert by['warptempo']['roles'] == CHOSEN_ROLES and by['warptempo']['display_tier'] == 'high-colour'
     # the preset road at the neutral ground #191919 is the chosen `warptempo` exactly (the picker's default chrome)
     assert preset_roles('#191919') == CHOSEN_ROLES
@@ -577,8 +701,9 @@ def document(entries, not_imported):
     return {
         'what': 'The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, '
                 'no derivation). Every colour is a recorded byte with its provenance; where the source records only base '
-                'colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif), that toolkit\'s own rule ran '
-                'once at import and its rule and sources are named in the entry\'s provenance. "raw" holds every value '
+                'colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif, GNOME 2\'s Clearlooks and '
+                'metacity), that toolkit\'s own rule ran once at import and its rule and sources are named in the '
+                'entry\'s provenance. "raw" holds every value '
                 'the source records under its own key names; "roles" the catalog roles (tools/theme_catalog/roles.py); '
                 'a role a source has no word for is absent and the app\'s own value applies. Bytes are #RRGGBB as the '
                 'source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family '
@@ -629,6 +754,7 @@ def main():
     kde, kde_later = kde_entries()
     entries = win + kde
     cde, mono = cde_entries(); entries += cde
+    entries += gnome2_entries()
     entries.append(chosen_entry())
     entries += preset_entries()
     entries, dups = drop_duplicates(entries)

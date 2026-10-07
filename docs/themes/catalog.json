@@ -1,5 +1,5 @@
 {
- "what": "The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, no derivation). Every colour is a recorded byte with its provenance; where the source records only base colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif), that toolkit's own rule ran once at import and its rule and sources are named in the entry's provenance. \"raw\" holds every value the source records under its own key names; \"roles\" the catalog roles (tools/theme_catalog/roles.py); a role a source has no word for is absent and the app's own value applies. Bytes are #RRGGBB as the source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family that imports nothing is the program's own, \"warptempo\": the architect's chosen `warptempo` and his presets saved on the colour picker (`warptempo-preset-<n>`, architect 2026-10-04: the preset's chrome ground through the picker's chrome rule, the roles the picker shows fixed), chosen, not imported (their provenance is his ruling or his preset).",
+ "what": "The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, no derivation). Every colour is a recorded byte with its provenance; where the source records only base colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif, GNOME 2's Clearlooks and metacity), that toolkit's own rule ran once at import and its rule and sources are named in the entry's provenance. \"raw\" holds every value the source records under its own key names; \"roles\" the catalog roles (tools/theme_catalog/roles.py); a role a source has no word for is absent and the app's own value applies. Bytes are #RRGGBB as the source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The one family that imports nothing is the program's own, \"warptempo\": the architect's chosen `warptempo` and his presets saved on the colour picker (`warptempo-preset-<n>`, architect 2026-10-04: the preset's chrome ground through the picker's chrome rule, the roles the picker shows fixed), chosen, not imported (their provenance is his ruling or his preset).",
  "roles": [
   "ground",
   "label",
@@ -11,6 +11,7 @@
   "selected_text",
   "info_ground",
   "info_text",
+  "info_frame",
   "field_ground",
   "field_text",
   "disabled_text",
@@ -128,6 +129,50 @@
      "url": "https://raw.githubusercontent.com/ThomasAdam/cdesktopenv/9b1f60a7135fbe0d549d49735a91d2d9d35707b9/cde/programs/dtwm/Dtwm.defs.src"
     }
    ]
+  },
+  "gtk2-clearlooks": {
+   "name": "GTK 2's shade (the Clearlooks engine's ge_shade_color = GTK's gtk_style_shade = metacity's copy: HLS lightness and saturation both x k, clamped, in doubles) and metacity's blend (color_composite on 16-bit colours), run on the gtkrc's gtk-color-scheme as the engine, GTK and metacity run them, each value the byte the program paints: the engine's through cairo 1.8 and pixman (floor of 256 x the double, capped at 255), GTK's and metacity's through a GdkColor (x 65535 truncated, its top byte); the one-line relief quartet (light, light, dark, dark) = the engine's inset pair 1.06 / 0.94 of the background (tools/theme_catalog/toolkit_rules.py gtk2_shade, cairo_byte, gdk16, gdk_byte, metacity_blend; each entry's provenance.rule.derivations)",
+   "sources": [
+    {
+     "project": "gtk-engines 2.20.2 (GNOME), the Clearlooks engine and its support library",
+     "file": "engines/support/cairo-support.c",
+     "tarball": "gtk-engines-2.20.2.tar.bz2",
+     "tarball_sha256": "15b680abca6c773ecb85253521fa100dd3b8549befeecc7595b10209d62d66b5",
+     "url": "https://download.gnome.org/sources/gtk-engines/2.20/gtk-engines-2.20.2.tar.bz2"
+    },
+    {
+     "project": "gtk-engines 2.20.2 (GNOME), the Clearlooks engine and its support library",
+     "file": "engines/clearlooks/src/clearlooks_draw.c",
+     "tarball": "gtk-engines-2.20.2.tar.bz2",
+     "tarball_sha256": "15b680abca6c773ecb85253521fa100dd3b8549befeecc7595b10209d62d66b5",
+     "url": "https://download.gnome.org/sources/gtk-engines/2.20/gtk-engines-2.20.2.tar.bz2"
+    },
+    {
+     "project": "gtk-engines 2.20.2 (GNOME), the Clearlooks engine and its support library",
+     "file": "engines/clearlooks/src/clearlooks_draw_gummy.c",
+     "tarball": "gtk-engines-2.20.2.tar.bz2",
+     "tarball_sha256": "15b680abca6c773ecb85253521fa100dd3b8549befeecc7595b10209d62d66b5",
+     "url": "https://download.gnome.org/sources/gtk-engines/2.20/gtk-engines-2.20.2.tar.bz2"
+    },
+    {
+     "project": "gtk-engines 2.20.2 (GNOME), the Clearlooks engine and its support library",
+     "file": "engines/clearlooks/src/clearlooks_style.c",
+     "tarball": "gtk-engines-2.20.2.tar.bz2",
+     "tarball_sha256": "15b680abca6c773ecb85253521fa100dd3b8549befeecc7595b10209d62d66b5",
+     "url": "https://download.gnome.org/sources/gtk-engines/2.20/gtk-engines-2.20.2.tar.bz2"
+    },
+    {
+     "project": "metacity 2.30.3 (GNOME), the window manager's theme parser",
+     "file": "src/ui/theme.c",
+     "tarball": "metacity-2.30.3.tar.bz2",
+     "tarball_sha256": "08f887018fa5e447cf184d03bae3fe2c05fdb7583bed6768e3b4d66392fc18dd",
+     "url": "https://download.gnome.org/sources/metacity/2.30/metacity-2.30.3.tar.bz2"
+    }
+   ]
+  },
+  "flat": {
+   "name": "no bevel: the flags' one-line bevel is the face itself on both sides, for a family whose toolkit draws no one-line light / dark bevel round a raised face (GNOME 2: Clearlooks' gummy button is a four-stop ramp in a 1-px border mixed from the theme's shade[6] and the face, clearlooks_gummy_draw_button; tools/theme_catalog/toolkit_rules.py flag_bevel)",
+   "sources": []
   }
  },
  "display_tiers": {
@@ -8298,6 +8343,145 @@
    },
    "display_tier": "high-colour",
    "notes": []
+  },
+  {
+   "key": "clearlooks",
+   "name": "Clearlooks",
+   "family": "gnome2",
+   "provenance": {
+    "sources": [
+     {
+      "project": "Debian 6.0.10 squeeze live (i386, GNOME desktop), the installed system read as data",
+      "file": "usr/share/themes/Clearlooks/gtk-2.0/gtkrc",
+      "package": "gtk2-engines 1:2.20.1-1",
+      "sha256": "777f94f58b24f32cbf8d0e9edb176cf171b216e79a3a73fbdbbb13287ddacc6b",
+      "image": "debian-live-6.0.10-i386-gnome-desktop.iso",
+      "image_sha256": "1cc527c3f9d51f6a25b04b56ce9eb1ae1dc967ec5d1468e19030edb34ff32e79",
+      "filesystem": "live/filesystem.squashfs",
+      "filesystem_sha256": "9cc5a7f216ed32d7f72e25651f814833964f49cbe928ffc750c7647858dbb24b",
+      "url": "https://cdimage.debian.org/mirror/cdimage/archive/6.0.10-live/i386/iso-hybrid/debian-live-6.0.10-i386-gnome-desktop.iso"
+     },
+     {
+      "project": "Debian 6.0.10 squeeze live (i386, GNOME desktop), the installed system read as data",
+      "file": "usr/share/themes/Clearlooks/metacity-1/metacity-theme-1.xml",
+      "package": "gnome-themes 2.30.2-1",
+      "sha256": "17293715eb7a6b45e1fd3e9554b9497b819deb5f555acb2cf3e78cfc30ca1c4a",
+      "image": "debian-live-6.0.10-i386-gnome-desktop.iso",
+      "image_sha256": "1cc527c3f9d51f6a25b04b56ce9eb1ae1dc967ec5d1468e19030edb34ff32e79",
+      "filesystem": "live/filesystem.squashfs",
+      "filesystem_sha256": "9cc5a7f216ed32d7f72e25651f814833964f49cbe928ffc750c7647858dbb24b",
+      "url": "https://cdimage.debian.org/mirror/cdimage/archive/6.0.10-live/i386/iso-hybrid/debian-live-6.0.10-i386-gnome-desktop.iso"
+     }
+    ],
+    "rule": {
+     "id": "gtk2-clearlooks",
+     "engine": "Clearlooks of gtk2-engines 1:2.20.1-1 (squeeze), its arithmetic cited at gtk-engines 2.20.2 (ge_shade_color and clearlooks_draw.c are byte-identical in 2.20.0 and 2.20.2)",
+     "window_manager": "metacity 1:2.30.1-3 (squeeze), its colour arithmetic cited at metacity 2.30.3 theme.c",
+     "clearlooks": {
+      "colorize_scrollbar": "TRUE",
+      "reliefstyle": "1",
+      "menubarstyle": "2",
+      "toolbarstyle": "1",
+      "animation": "FALSE",
+      "radius": "3.0",
+      "style": "GUMMY",
+      "hint": "use-hints"
+     },
+     "styles": {
+      "button": {
+       "colors": {
+        "bg[NORMAL]": "shade (1.04, @bg_color)",
+        "bg[PRELIGHT]": "shade (1.06, @bg_color)",
+        "bg[ACTIVE]": "shade (0.85, @bg_color)"
+       },
+       "clearlooks": {}
+      },
+      "menu": {
+       "colors": {
+        "bg[NORMAL]": "shade (1.08, @bg_color)"
+       },
+       "clearlooks": {
+        "radius": "0.0"
+       }
+      },
+      "menu_item": {
+       "colors": {
+        "fg[PRELIGHT]": "@selected_fg_color"
+       },
+       "clearlooks": {}
+      },
+      "entry": {
+       "colors": {
+        "bg[SELECTED]": "mix (0.4, @selected_bg_color, @base_color)",
+        "fg[SELECTED]": "@text_color"
+       },
+       "clearlooks": {
+        "focus_color": "shade (0.65, @selected_bg_color)"
+       }
+      },
+      "tooltips": {
+       "colors": {
+        "bg[NORMAL]": "@tooltip_bg_color",
+        "fg[NORMAL]": "@tooltip_fg_color"
+       },
+       "clearlooks": {}
+      }
+     },
+     "derivations": {
+      "gtk2:inset_light": "ge_shade_color (bg_color, 1.06) through cairo: the light line of the engine's one-line edge (gtk-engines 2.20.2 engines/clearlooks/src/clearlooks_draw.c clearlooks_draw_inset line 63, drawn by the gummy button, entry and scale trough, clearlooks_draw_gummy.c lines 189, 271, 595; clearlooks_draw_highlight_and_shade line 184, a frame's inner line, line 1235)",
+      "gtk2:inset_dark": "ge_shade_color (bg_color, 0.94) through cairo: the dark line of the same edge (clearlooks_draw.c clearlooks_draw_inset line 62; clearlooks_draw_highlight_and_shade line 185)",
+      "gtk2:tooltip_border": "ge_shade_color (tooltips bg[NORMAL] = tooltip_bg_color, 0.6) through cairo: the tooltip's 1-px border on all four sides (clearlooks_draw.c clearlooks_draw_tooltip line 1999)",
+      "gtkrc:fg[INSENSITIVE]": "the default style's fg[INSENSITIVE] = darker (@bg_color) = gtk_style_shade (bg_color, 0.7) as a GdkColor, drawn through the style's fg_gc (clearlooks_style.c clearlooks_style_draw_layout line 1846; the etched copy under it is shade 1.2 of the parent bg)",
+      "metacity:title_unfocused": "the unfocused title's colour, blend/gtk:fg[NORMAL]/gtk:bg[NORMAL]/0.45 (the metacity theme's draw_ops title_text_unfocused, the frame style \"normal\"'s title piece): fg_color + (bg_color - fg_color) x 0.45 by metacity 2.30 theme.c color_composite"
+     },
+     "computed": {
+      "gtk2:inset_light": "#FBFBFA",
+      "gtk2:inset_dark": "#E0DEDD",
+      "gtk2:tooltip_border": "#BABA45",
+      "gtkrc:fg[INSENSITIVE]": "#A9A5A2",
+      "metacity:title_unfocused": "#6B6A6A"
+     }
+    }
+   },
+   "raw": {
+    "base_color": "#FFFFFF",
+    "fg_color": "#000000",
+    "tooltip_fg_color": "#000000",
+    "selected_bg_color": "#86ABD9",
+    "selected_fg_color": "#FFFFFF",
+    "text_color": "#1A1A1A",
+    "bg_color": "#EDECEB",
+    "tooltip_bg_color": "#F5F5B5",
+    "title_text": "#FFFFFF"
+   },
+   "roles": {
+    "ground": "#EDECEB",
+    "label": "#000000",
+    "bevel_hilight": "#FBFBFA",
+    "bevel_light": "#FBFBFA",
+    "bevel_shadow": "#E0DEDD",
+    "bevel_dkshadow": "#E0DEDD",
+    "selected_fill": "#86ABD9",
+    "selected_text": "#FFFFFF",
+    "info_ground": "#F5F5B5",
+    "info_text": "#000000",
+    "info_frame": "#BABA45",
+    "field_ground": "#FFFFFF",
+    "field_text": "#1A1A1A",
+    "disabled_text": "#A9A5A2",
+    "title_active": "#86ABD9",
+    "title_inactive": "#EDECEB"
+   },
+   "flag_rule": {
+    "id": "flat"
+   },
+   "display_tier": "high-colour",
+   "notes": [
+    "Debian 6 squeeze's GNOME 2.30 default (GConf: gtk_theme Clearlooks, metacity theme Clearlooks, font_name \"Sans 10\", titlebar_font \"Sans Bold 10\"); the gtkrc sets style = GUMMY, radius 3.0, menubarstyle 2, toolbarstyle 1, reliefstyle 1, colorize_scrollbar TRUE, animation FALSE",
+    "the gtkrc is byte-identical to gtk-engines 2.20.0's; 2.20.2's differs only in two Evolution widget_class lines (ETable / ETree); the metacity theme is byte-identical to the gnome-themes 2.30.2 tarball's",
+    "the relief quartet is the engine's one-line edge (light, light, dark, dark): Clearlooks draws no two-line Windows edge; the caption is flat in the catalog (metacity's band is a ramp of shades of the one colour)",
+    "the captures (tmp/squeeze/, 2026-10-06/07) show every computed byte as recorded: the inset ring #FBFBFA / #E0DEDD, the tooltip border #BABA45, the insensitive text #A9A5A2, the unfocused title #6B6A6A"
+   ]
   },
   {
    "key": "warptempo",

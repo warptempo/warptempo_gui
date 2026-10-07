@@ -2,11 +2,15 @@
 # tools/theme_catalog/toolkit_rules.py — THE TOOLKITS' OWN RULES, run once at import (architect 2026-10-03: a theme
 # is drawn as its own desktop drew it; where the source records only base colours and its toolkit computed the
 # rest at run time, the extractor runs THAT toolkit's rule and the catalog stores the bytes, the rule named in the
-# entry's provenance — part of the import, not a derivation of ours). Three toolkits, each ported integer for integer
-# from the pinned source named at its function (sources.py: motif_rules, tde_rules, tqt_rules, wine_rules):
+# entry's provenance — part of the import, not a derivation of ours). Four toolkits, each ported from the pinned
+# source named at its function (sources.py: motif_rules, tde_rules, tqt_rules, wine_rules, gtk2_rules), integer for
+# integer where the source is integer, double for double where it is double:
 #   motif_colors   — Motif's CalculateColorsRGB (CDE's foreground, select colour and shadows);
 #   kde3_palette   — KDE 3's createApplicationPalette over Qt 3's integer HSV (TDE's KDE 3 schemes);
-#   windows_dialog — Windows' Appearance dialog over shlwapi's 240-scale integer HLS.
+#   windows_dialog — Windows' Appearance dialog over shlwapi's 240-scale integer HLS;
+#   gtk2_shade     — GTK 2's shade (the Clearlooks engine's ge_shade_color, GTK's gtk_style_shade, metacity's
+#                    copy of it) in doubles, with gtk2_mix and metacity_blend, and the two roads a double becomes a
+#                    screen byte (cairo_byte: the engine through cairo 1.8 and pixman; gdk16 / gdk_byte: a GdkColor).
 # THE FLAGS' BEVEL (architect 2026-10-03, late): the waveform pane and the flags are the program's own elements, their
 # base colours the program's and their SHADING the theme's, so a flag's one-line bevel is its theme family's own rule
 # applied to the flag's face, as that desktop would have shaded a 3D face of that colour (flag_bevel; the catalog
@@ -207,8 +211,102 @@ def windows_dialog(face):
     return win_hls_to_rgb(H, L + (240 - L + 1) // 2, S), tuple(face), win_hls_to_rgb(H, (2 * L) // 3, S), (0, 0, 0)
 
 
+# ------------------------------------------------------------------ GTK 2 (gtk-engines 2.20.2, GTK 2, metacity 2.30)
+def gtk2_hsb(c):
+    """engines/support/cairo-support.c ge_hsb_from_color, doubles in [0, 1] -> (hue in degrees, saturation,
+    lightness): HLS with lightness (max + min) / 2; a grey (max - min < 0.0001) has hue and saturation 0."""
+    r, g, b = c
+    if r > g: mx, mn = max(r, b), min(g, b)
+    else:     mx, mn = max(g, b), min(r, b)
+    l = (mx + mn) / 2
+    if abs(mx - mn) < 0.0001: return 0.0, 0.0, l
+    s = (mx - mn) / (mx + mn) if l <= 0.5 else (mx - mn) / (2 - mx - mn)
+    d = mx - mn
+    if r == mx: h = (g - b) / d
+    elif g == mx: h = 2 + (b - r) / d
+    else: h = 4 + (r - g) / d
+    h *= 60
+    if h < 0.0: h += 360
+    return h, s, l
+
+
+def _modula(n, d):
+    """cairo-support.c MODULA: ((gint) n % d) + (n - (gint) n), C's truncating cast and remainder."""
+    i = int(n)
+    return (abs(i) % d) * (1 if i >= 0 else -1) + (n - i)
+
+
+def gtk2_rgb(h, s, l):
+    """cairo-support.c ge_color_from_hsb -> doubles (r, g, b); a saturation of 0 is the grey l."""
+    m2 = l * (1 + s) if l <= 0.5 else l + s - l * s
+    m1 = 2 * l - m2
+    out = [l, l, l]
+    for i, m3 in enumerate((h + 120, h, h - 120) if s != 0 else ()):
+        if m3 > 360: m3 = _modula(m3, 360)
+        elif m3 < 0: m3 = 360 - _modula(abs(m3), 360)
+        if m3 < 60: out[i] = m1 + (m2 - m1) * m3 / 60
+        elif m3 < 180: out[i] = m2
+        elif m3 < 240: out[i] = m1 + (m2 - m1) * (240 - m3) / 60
+        else: out[i] = m1
+    return tuple(out)
+
+
+def gtk2_unit(c8):
+    """An 8-bit colour as GTK holds it: gtkrc's "#rrggbb" is a GdkColor of 16-bit channels (each byte replicated,
+    v x 257), which the engine reads as v / 65535.0 (ge_gdk_color_to_cairo) -- exactly the byte over 255."""
+    return tuple(v / 255 for v in c8)
+
+
+def gtk2_shade(c, k):
+    """cairo-support.c ge_shade_color (= GTK 2's gtk_style_shade, gtkstyle.c, and metacity's copy of it, theme.c):
+    a colour of doubles -> the lightness and the saturation both multiplied by k, each clamped to [0, 1], hue kept;
+    k = 1.0 returns the colour unchanged."""
+    if k == 1.0: return tuple(c)
+    h, s, l = gtk2_hsb(c)
+    return gtk2_rgb(h, max(0.0, min(s * k, 1.0)), max(0.0, min(l * k, 1.0)))
+
+
+def gtk2_mix(c1, c2, f):
+    """cairo-support.c ge_mix_color: c1 x (1 - f) + c2 x f, channel by channel (gtkrc's mix (f, a, b) is a x f +
+    b x (1 - f), so it is gtk2_mix(b, a, f))."""
+    return tuple(a * (1 - f) + b * f for a, b in zip(c1, c2))
+
+
+def cairo_byte(c):
+    """A colour of doubles -> the 8-bit pixel the Clearlooks engine paints it as: cairo 1.8 (squeeze's libcairo2
+    1.8.10) turns a source channel into 16 bits as d x 65536 truncated (cairo-color.c _cairo_color_double_to_short,
+    capped at 65535) and pixman 0.16 keeps the top byte of a solid colour, so floor(256 d) capped at 255. The
+    capture is the check: shade(#F5F5B5, 0.6) is #BABA45 on his screen (rounding would say #BABA46), the engine's
+    one-line pair #FBFBFA / #E0DEDD (rounding: #FAFAFA / #DFDEDC)."""
+    return tuple(min(255, int(v * 65536) >> 8) for v in c)
+
+
+def gdk16(c):
+    """A colour of doubles -> the GdkColor GTK's own gtk_style_shade and metacity store: each channel x 65535.0
+    truncated to 16 bits (gtkstyle.c / theme.c: b->red = red * 65535.0)."""
+    return tuple(int(v * 65535.0) for v in c)
+
+
+def gdk_color(c8):
+    """gtkrc's "#rrggbb" as GTK parses it: a GdkColor, each byte replicated into 16 bits (v x 257)."""
+    return tuple(v * 257 for v in c8)
+
+
+def gdk_byte(c16):
+    """A GdkColor -> its 8-bit pixel on a 24-bit TrueColor visual: the top byte of each channel."""
+    return tuple(v >> 8 for v in c16)
+
+
+def metacity_blend(bg16, fg16, alpha):
+    """metacity 2.30 theme.c color_composite, the "blend/<background>/<foreground>/<alpha>" colour of a theme (the
+    FIRST colour is the background, theme.c meta_color_spec_new_from_string): the alpha as a 16-bit integer
+    (alpha x 0xffff truncated), each channel bg + (((fg - bg) x alpha + 0x8000) >> 16) on GdkColors."""
+    a = int(alpha * 0xffff)
+    return tuple(b + (((f - b) * a + 0x8000) >> 16) for b, f in zip(bg16, fg16))
+
+
 # ------------------------------------------------------------------ the flags' bevel
-FLAG_RULES = ('windows-dialog', 'kde3', 'motif')
+FLAG_RULES = ('windows-dialog', 'kde3', 'motif', 'flat')
 
 
 def flag_bevel(rule, face):
@@ -216,7 +314,11 @@ def flag_bevel(rule, face):
     its theme family's own rule, `rule` being a catalog entry's flag_rule — {"id": "windows-dialog"} (the families
     windows, windows-plus and warptempo: windows_dialog's Hilight and Shadow, Windows' BDR_RAISEDINNER pair),
     {"id": "kde3", "contrast": c} (kde3_palette's light and dark at the scheme's contrast), {"id": "motif"} (Motif's
-    top and bottom shadow, motif_pair_8bit). A malformed rule is a one-line fail."""
+    top and bottom shadow, motif_pair_8bit), {"id": "flat"} (the family gnome2: no bevel, the face on both sides --
+    Clearlooks draws no one-line bevel round a raised face: clearlooks_gummy_draw_button, clearlooks_draw_gummy.c, fills
+    the face with a four-stop ramp inside a 1-px border that is a MIX of the theme's shade[6] and the face
+    (clearlooks_set_mixed_color, 0.2) with a translucent highlight along the top and left only, so no light / dark
+    pair of the face exists to record). A malformed rule is a one-line fail."""
     rid = rule.get('id') if isinstance(rule, dict) else None
     if rid == 'windows-dialog' and set(rule) == {'id'}:
         q = windows_dialog(face); return q[0], q[2]
@@ -224,7 +326,10 @@ def flag_bevel(rule, face):
         p = kde3_palette(face, QT_BLACK, rule['contrast']); return p['light'], p['dark']
     if rid == 'motif' and set(rule) == {'id'}:
         ts, bs, _ = motif_pair_8bit(face); return ts, bs
-    raise SystemExit(f'flag rule {rule!r}: one of {{"id": "windows-dialog"}}, {{"id": "kde3", "contrast": c}}, {{"id": "motif"}}')
+    if rid == 'flat' and set(rule) == {'id'}:
+        return tuple(face), tuple(face)
+    raise SystemExit(f'flag rule {rule!r}: one of {{"id": "windows-dialog"}}, {{"id": "kde3", "contrast": c}}, '
+                     f'{{"id": "motif"}}, {{"id": "flat"}}')
 
 
 def motif_pair_8bit(bg8):
@@ -239,3 +344,11 @@ assert motif_pair_8bit((0x30, 0x30, 0x30)) == ((0x98,) * 3, (0x6E,) * 3, 'dark')
 assert motif_pair_8bit((0x41, 0x52, 0x5C)) == ((0xA6, 0xAE, 0xB3), (0x1E, 0x25, 0x2A), 'medium')   # Northern Sky's ground
 assert windows_dialog((0xD4, 0xD0, 0xC8))[0] == (0xEA, 0xE8, 0xE3)          # the XP / 7 dialog's measured Hilight
 assert windows_dialog((0x83, 0x99, 0xB1)) == ((0xC1, 0xCC, 0xD9), (0x83, 0x99, 0xB1), (0x4F, 0x65, 0x7D), (0, 0, 0))   # Rainy Day
+# GTK 2 / Clearlooks (gtk-engines 2.20.2; tmp research CL1's port, checked against his squeeze captures): the engine's
+# shade table at realize, shade[3] of #EDECEB = #C4C2BF and spot[1] of #86ABD9 = #92B4DF, both under either byte road
+_cl = lambda h, k: cairo_byte(gtk2_shade(gtk2_unit(tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))), k))
+assert _cl('EDECEB', 0.82) == (0xC4, 0xC2, 0xBF) and _cl('86ABD9', 1.05) == (0x92, 0xB4, 0xDF)
+assert _cl('F5F5B5', 0.6) == (0xBA, 0xBA, 0x45)                                              # the tooltip's border, as captured
+assert (_cl('EDECEB', 1.06), _cl('EDECEB', 0.94)) == ((0xFB, 0xFB, 0xFA), (0xE0, 0xDE, 0xDD))   # the inset pair, as captured
+assert gdk_byte(metacity_blend(gdk_color((0, 0, 0)), gdk_color((0xED, 0xEC, 0xEB)), 0.45)) == (0x6B, 0x6A, 0x6A)   # metacity's unfocused title
+del _cl
