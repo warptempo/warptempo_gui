@@ -39,7 +39,7 @@
 #     (architect 2026-10-05: the picker's flag elements follow the product's flag kinds,
 #     keyed by its role names): Warp Flag / Selected Warp Flag onto the warp pair, Phase Reset Flag / Selected Phase
 #     Reset Flag onto the phase-reset pair, Added Flag / Selected Added Flag onto the added pair and Removed Flag /
-#     Selected Removed Flag onto the removed pair (whose face is also the invalid mark's, by the follower rule below). A PRESET SAVED BEFORE THAT ROUND names
+#     Selected Removed Flag onto the removed pair (the invalid flag wears it too). A PRESET SAVED BEFORE THAT ROUND names
 #     the old keys (OLD_PRESET_KEYS), read as the picker reads them: its Unselected / Selected Flag onto BOTH the warp
 #     and the phase-reset pair (when he picked, one flag colour painted every authored kind, so this reproduces what the
 #     picker showed him), its Unselected / Selected Invalid Flag onto the removed pair; a new key the preset names
@@ -48,10 +48,9 @@
 #     are never named, the picker having no flag-label element (it shows them fixed white), so a preset records none and
 #     the built-in's apply: the resting label white, as the picker painted it, and each kind's selected label the
 #     built-in's per-kind value (architect 2026-10-07: white on the warp blue, black on the three bright accents).
-#   THE FOLLOWERS (the app's theme-file rules, src/gui/theme_file.h's head): a file naming dk_shadow and not
-#     flag_outline gets the outline equal to its DkShadow, and one naming removed_flag and not invalid_mark gets the
-#     invalid mark equal to its removed face; resolved_roles below applies both — so only `clearlooks`, which names
-#     its own, outlines its flags in anything but its DkShadow, and a preset's X is its removed red.
+#   THE FOLLOWER (the app's theme-file rule, src/gui/theme_file.h's head): a file naming dk_shadow and not
+#     flag_outline gets the outline equal to its DkShadow; resolved_roles below applies it — so only `clearlooks`,
+#     which names its own, outlines its flags in anything but its DkShadow.
 #   Before writing, each preset's chrome is checked against the picker: its light roles must equal the chrome the
 #   picker paints for that preset, else a stale catalog (re-run build.py) or a changed picker theme (a ruling).
 #
@@ -96,8 +95,7 @@ ROLE_ORDER = ('ground', 'label', 'hilight', 'light_3d', 'shadow', 'dk_shadow', '
               'waveform_canvas', 'waveform_ink', 'waveform_outline', 'warp_flag', 'warp_flag_selected',
               'phase_reset_flag', 'phase_reset_flag_selected', 'added_flag', 'added_flag_selected', 'removed_flag',
               'removed_flag_selected', 'flag_label', 'warp_label_selected', 'phase_reset_label_selected',
-              'added_label_selected', 'removed_label_selected', 'flag_outline', 'invalid_mark', 'playhead_stem',
-              'scanner')
+              'added_label_selected', 'removed_label_selected', 'flag_outline', 'playhead_stem', 'scanner')
 # the chrome: theme-file role <- roles.light_roles' name
 CHROME = (('ground', 'ground'), ('label', 'label'), ('hilight', 'bevel_hilight'), ('light_3d', 'bevel_light'),
           ('shadow', 'bevel_shadow'), ('dk_shadow', 'bevel_dkshadow'), ('selected_fill', 'selected_fill'),
@@ -111,9 +109,9 @@ CARD_FRAME = ('card_frame', 'info_frame')
 # the flat caption's pairs (kGuiThemeCaptionGradients, src/gui/theme_file.h): a file naming a start and not its end
 # gets the end equal to the start
 CAPTION_GRADIENTS = (('caption_active', 'caption_active_gradient'), ('caption_inactive', 'caption_inactive_gradient'))
-# the followers (kGuiThemeFollowers, src/gui/theme_file.h): a file naming the leader and not the follower gets the
+# the follower (kGuiThemeFollowers, src/gui/theme_file.h): a file naming the leader and not the follower gets the
 # follower equal to the leader
-FOLLOWERS = (('dk_shadow', 'flag_outline'), ('removed_flag', 'invalid_mark'))
+FOLLOWERS = (('dk_shadow', 'flag_outline'),)
 # a preset's picker elements -> the theme-file roles each colours (an older preset's outline is the rule's, below)
 PRESET_ELEMENT_ROLES = (('canvas', ('waveform_canvas',)), ('ink', ('waveform_ink',)),
                         ('waveform_outline', ('waveform_outline',)),

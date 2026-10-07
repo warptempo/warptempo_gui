@@ -294,18 +294,6 @@
     GuiColor cl_stepper_pressed_highlight_lower_0;
     GuiColor cl_stepper_pressed_highlight_lower_1;
     GuiColor cl_stepper_arrow;
-    GuiColor cl_slider_upper_0;
-    GuiColor cl_slider_upper_1;
-    GuiColor cl_slider_lower_0;
-    GuiColor cl_slider_lower_1;
-    GuiColor cl_slider_ring_top;
-    GuiColor cl_slider_ring_bottom;
-    GuiColor cl_slider_ring_upper_0;
-    GuiColor cl_slider_ring_upper_1;
-    GuiColor cl_slider_ring_lower_0;
-    GuiColor cl_slider_ring_lower_1;
-    GuiColor cl_slider_border;
-    GuiColor cl_slider_grip;
     GuiColor cl_scale_upper_0;
     GuiColor cl_scale_upper_1;
     GuiColor cl_scale_upper_border;

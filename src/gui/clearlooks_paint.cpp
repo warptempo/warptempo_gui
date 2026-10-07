@@ -1121,44 +1121,16 @@ void paint_cl_slider(cairo_t* cr, const GuiRect& body) {
     if (body.w <= 0 || body.h <= 0) return;
     const GuiPalette& pal = palette();
     const int u = relief_line_px();
-    // The step over the slider's gradient from row 1 to row h − 2 (build.py's
-    // pixman_step_row(1, kTrimLaneHeightPx − 2)): the first row whose centre
-    // is at or past its middle.
-    const int sstep = at(body.y, 1 + (kTrimLaneHeightPx - 3 + 1) / 2);
-    const int top = body.y + 2 * u, bot = body.y + body.h - 2 * u;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // The fill inside the ring, the ring's rows and columns, the border.
-    paint_cl_ramp(cr, GuiRect{body.x, top, body.w, sstep - top},
-                  pal.cl_slider_upper_0, pal.cl_slider_upper_1);
-    paint_cl_ramp(cr, GuiRect{body.x, sstep, body.w, bot - sstep},
-                  pal.cl_slider_lower_0, pal.cl_slider_lower_1);
-    for (const int cx : {body.x + u, body.x + body.w - 2 * u}) {
-        paint_cl_ramp(cr, GuiRect{cx, top, u, sstep - top},
-                      pal.cl_slider_ring_upper_0, pal.cl_slider_ring_upper_1);
-        paint_cl_ramp(cr, GuiRect{cx, sstep, u, bot - sstep},
-                      pal.cl_slider_ring_lower_0, pal.cl_slider_ring_lower_1);
-    }
-    paint_cell_rect(cr, GuiRect{body.x + u, body.y + u, body.w - 2 * u, u},
-                    pal.cl_slider_ring_top);
-    paint_cell_rect(cr, GuiRect{body.x + u, bot, body.w - 2 * u, u},
-                    pal.cl_slider_ring_bottom);
-    paint_cell_rect(cr, GuiRect{body.x, body.y, body.w, u}, pal.cl_slider_border);
+    // The ground, then its top row light and its bottom row dark — the gummy
+    // separator's own two roles, reused (the declaration says why that is no
+    // derivation).
+    paint_cell_rect(cr, body, pal.ground);
+    paint_cell_rect(cr, GuiRect{body.x, body.y, body.w, u},
+                    pal.cl_separator_light);
     paint_cell_rect(cr, GuiRect{body.x, body.y + body.h - u, body.w, u},
-                    pal.cl_slider_border);
-    paint_cell_rect(cr, GuiRect{body.x, body.y, u, body.h}, pal.cl_slider_border);
-    paint_cell_rect(cr, GuiRect{body.x + body.w - u, body.y, u, body.h},
-                    pal.cl_slider_border);
-    // THE GRIPS, where the body holds them (the declaration's 13 W).
-    if (body.w >= scaled_px(7 + 2 * 3)) {
-        const int mid = body.x + (body.w - u) / 2;
-        const int gy0 = at(body.y, 5);
-        const int gy1 = body.y + body.h - scaled_px(5);
-        for (const int k : {-1, 0, 1})
-            paint_cell_rect(cr, GuiRect{mid + k * scaled_px(3), gy0, u,
-                                        gy1 - gy0},
-                            pal.cl_slider_grip);
-    }
+                    pal.cl_separator_dark);
     cairo_restore(cr);
 }
 

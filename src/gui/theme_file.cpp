@@ -115,8 +115,8 @@ std::expected<GuiThemeWords, std::string> read_theme_file(
     // A START WITHOUT ITS END IS A FLAT CAPTION (the head's rule).
     for (const GuiThemeGradientPair& p : kGuiThemeCaptionGradients)
         if (named[p.start] && !named[p.end]) words[p.end] = words[p.start];
-    // A LEADER WITHOUT ITS FOLLOWER IS THE FOLLOWER (the head's rules: the
-    // flag outline its DkShadow, the invalid mark its removed face).
+    // A LEADER WITHOUT ITS FOLLOWER IS THE FOLLOWER (the head's rule: the
+    // flag outline its DkShadow).
     for (const GuiThemeFollower& f : kGuiThemeFollowers)
         if (named[f.leader] && !named[f.follower])
             words[f.follower] = words[f.leader];

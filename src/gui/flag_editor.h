@@ -18,6 +18,11 @@ struct GuiTargetRender;
 // iteration bound editor (the warp and phase-reset columns') — the
 // BPM dialog editor, and the
 // BPM-mode enter/exit transitions. Damage is reached through viewport.
+//
+// AN OPEN RECOLOURS NOTHING (architect 2026-10-07 ~09:45, both chromes): the
+// marker-lane editors paint in the flag's own selected face, outline and
+// stem, the selected substring in the chrome's selected pair — the picture
+// is render_flag_editor_box's (render.h's EDITING paragraph owns the look).
 struct GuiFlagEditor {
     AppState&             app;
     GuiAudio&             audio;

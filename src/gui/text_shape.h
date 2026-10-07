@@ -37,8 +37,12 @@
 //   - NO FALLBACK FACE. A codepoint the face does not cover either
 //     shapes to .notdef and paints as the empty box — accepted, in the same
 //     class as the no-bidi exclusion below.
-//   - The current cairo PATH is preserved: cairo_show_glyphs neither reads
-//     nor touches it.
+//   - The current cairo PATH is preserved by show_shaped_run:
+//     cairo_show_glyphs neither reads nor touches it. ITS PATH SIBLING
+//     append_shaped_run_path HAS THE CONTRARY CONTRACT (2026-10-07): it
+//     APPENDS the run's glyph outlines to the current path, which the caller
+//     opened (cairo_new_path) and strokes or fills, so a stroked halo and the
+//     fill over it are the very glyphs show_shaped_run paints.
 //
 // Runs are single-direction LTR horizontal only: y advances are not modelled,
 // and a run's pen walks x alone.
@@ -88,6 +92,16 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 // Paint `run` with its baseline origin at (x, y) in cairo's current source,
 // on the run's own font. Cairo state and the current path are not modified.
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
+
+// APPEND `run`'s glyph outlines to the CURRENT PATH with its baseline origin
+// at (x, y) — the same glyph array and offsets show_shaped_run paints, on the
+// run's own font (cairo_glyph_path) — and leave them there for the caller to
+// stroke or fill (the precondition block above: the contrary contract to
+// show_shaped_run's). Cairo state other than the path is not modified. The
+// one caller is the clearlooks caption's title halo (paint_caption_row,
+// paint_handler.cpp, 2026-10-07).
+void append_shaped_run_path(cairo_t* cr, const ShapedRun& run, double x,
+                            double y);
 
 // (A RUN'S INK EDGES — `InkExtents` / `ink_extents_px`, the run's first and last
 // LIT pixel as against `width_px`'s sum of ADVANCES — stood here from

@@ -1538,10 +1538,19 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // caption's text role. CLEARLOOKS: metacity's title_text draw_ops —
     // CENTRED in the room (x = (3 `max` (room − title)) / 2 focused, 4
     // `max` (room − title) / 2 unfocused: one px apart only where the title
-    // nearly fills it), focused white over FOUR copies in shade (sel, 0.7)
-    // one W px down, right, left and up, unfocused one copy in blend (fg,
-    // bg, 0.45) and nothing under it (the theme's (+1, +1) copy is
-    // commented out). TOO LONG FOR THE ROOM it is CUT AT A CODEPOINT and
+    // nearly fills it), focused white over A HALO in shade (sel, 0.7) —
+    // metacity's four copies one px down, right, left and up, read
+    // scalably (architect 2026-10-07: at 300 % the four axis-shifted
+    // antialiased copies are three device px apart and their union grows
+    // plus-shaped corners on every diagonal edge, the outline "not
+    // continuous … jagged"): THE TITLE'S OWN GLYPH PATH
+    // (text_shape::append_shaped_run_path) STROKED 2 W px wide — one W px
+    // each side of the edge, the copies' reach — with round joins and round
+    // caps, then the title filled over it as before; at 100 % within a pixel
+    // of the four copies, smooth at every scale (a recorded departure,
+    // win2000_deviations.md); unfocused one copy in blend (fg, bg, 0.45) and
+    // nothing under it (the theme's (+1, +1) copy is commented out). TOO
+    // LONG FOR THE ROOM it is CUT AT A CODEPOINT and
     // ends in Windows' "..." (DrawText's end ellipsis; Pango's end
     // ellipsizing under metacity alike), the longest prefix whose own run
     // and the ellipsis's fit; a room too narrow for even the ellipsis paints
@@ -1556,8 +1565,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         scaled_px(spec.caption_title_trail_px) - title_x);
     const double baseline = redesign_baseline(
         font, static_cast<double>(row.y), static_cast<double>(row.h));
-    // One title run at the room's pen (win2000) or centred in it with
-    // metacity's copies (clearlooks), the ellipsis after it when cut.
+    // One title run at the room's pen (win2000) or centred in it over the
+    // halo when focused (clearlooks), the ellipsis after it when cut.
     const auto show_title = [&](const text_shape::ShapedRun& head,
                                 const text_shape::ShapedRun* tail) {
         const double w = head.width_px + (tail ? tail->width_px : 0.0);
@@ -1567,25 +1576,30 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                         : std::max(scaled_px(4) * 1.0,
                                    std::floor((room - w) / 2));
         }
-        const auto show = [&](double dx, double dy) {
-            text_shape::show_shaped_run(cr, head, x + dx, baseline + dy);
-            if (tail)
-                text_shape::show_shaped_run(cr, *tail, x + head.width_px + dx,
-                                            baseline + dy);
-        };
         if (clearlooks && active) {
-            const double o = relief_line_px();
+            // THE HALO: the head's and the tail's glyph outlines as one path,
+            // stroked (the block above).
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+            cairo_new_path(cr);
+            text_shape::append_shaped_run_path(cr, head, x, baseline);
+            if (tail)
+                text_shape::append_shaped_run_path(cr, *tail,
+                                                   x + head.width_px, baseline);
+            cairo_set_line_width(cr, static_cast<double>(scaled_px(2)));
+            cairo_set_line_join(cr, CAIRO_LINE_JOIN_ROUND);
+            cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
             set_palette_source(cr, pal.cl_title_shadow);
-            show(0, o);
-            show(o, 0);
-            show(-o, 0);
-            show(0, -o);
+            cairo_stroke(cr);
+            cairo_restore(cr);
         }
         set_palette_source(cr, !clearlooks ? (active ? pal.caption_active_text
                                                      : pal.caption_inactive_text)
                                : active    ? pal.cl_title_text
                                            : pal.cl_title_unfocused);
-        show(0, 0);
+        text_shape::show_shaped_run(cr, head, x, baseline);
+        if (tail)
+            text_shape::show_shaped_run(cr, *tail, x + head.width_px, baseline);
     };
     text_shape::ShapedRun run = text_shape::shape_text_run(font, title);
     if (run.width_px <= room) {
@@ -4875,6 +4889,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // the seed grain's end, derived in the block below from the same frame
     // and the same map the paint sample reads.
     int64_t width_samples;
+    // The reset's CLASS, for the ring's colour: the column's RESTING red set
+    // keyed by store index, the set and the index the flag pass reads for
+    // this reset's stem — at rest and through a drag alike, the drag writing
+    // only its proposal, so the ring and the stem share one class throughout.
+    bool red_class = false;
     // THE RESET'S SELECTION BIT, for the ring's colour (architect 2026-09-23:
     // the ring and the stem are one object and brighten together; 2026-10-04:
     // the stem follows its FLAG BOX). It is the bit the flag pass hands this
@@ -4902,6 +4921,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // overlay, reading its `disabled` bool directly (phase resets carry no
         // label cascade).
         if (marker.disabled) return out;
+        red_class = phase_reset_red_flag_set_cached(app).red.count(idx) > 0;
         selected  = app.selected_markers.count(idx) > 0 &&
                     (app.addressed_cell == MarkerCell::Payload ||
                      !marker_paints_iter_cells(app, 'P', idx));
@@ -5004,6 +5024,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     out.valid = true;
     out.x0    = x0;
     out.x1    = x1;
+    out.red   = red_class;
     out.selected = selected;
     return out;
 }
@@ -5041,9 +5062,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE RING IS THE STEM'S COLOUR (architect 2026-08-01) — "they're one
     // unit", the ring and the stem of the reset it annotates. It wears what
-    // that stem wears: the `phase_reset_flag` face, invalid or not (an
-    // invalid reset is told by the red X on its flag box, architect
-    // 2026-10-07 ~05:30, and colours no stem), its selected face while the
+    // that stem wears: the `removed_flag` face when the reset is in the
+    // column's red set (band.red; the invalid flag wears the removed pair),
+    // the `phase_reset_flag` face otherwise, each its selected face while the
     // reset's payload box is the bright one (band.selected; architect
     // 2026-10-04, the stem follows the box it leaves from).
     // phase_reset_stem_color asks the one ladder rather than restating it,
@@ -5053,7 +5074,7 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // cache's fingerprint, whose rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
     // repaint; a palette install damages the whole window.
-    const GuiColor ring = phase_reset_stem_color(band.selected);
+    const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
     // BELOW THE STEMS' FLANKS (architect 2026-10-05, fill_stem_flanks): the
     // flanks stand in the well's top lines alone, which the ring no longer
     // enters, so the reset's stem leaves its flanks straight onto the ring's

@@ -48,7 +48,9 @@
 //     fields as entries, the well's scrolled-window line, the ruler's
 //     ticks, the restored laptop's metacity frame). The waveform and the
 //     flags stay the program's own, the flag editor with them — the flag
-//     opened under every chrome (architect 2026-10-07 ~05:30).
+//     in its selected face under every chrome (architect 2026-10-07
+//     ~09:45). The trim lane's body is the product's own light slider
+//     (paint_cl_slider).
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colours remain an ordinary theme
 // file. The table is kGuiChromeSpecs below, the live instance

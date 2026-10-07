@@ -1274,10 +1274,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
     // fallback OR that share their frame with another row of their own store,
     // disabled or not (the caches' contract, warp_frame_map_view.h), painted
-    // INVALID — the kind's own pair with THE INVALID MARK, the red X after
-    // the label inside a box widened by it (resolve_flag_face, render.cpp;
-    // architect 2026-10-07 ~05:30); DISABLED wins over it, a disabled
-    // invalid marker painting the disabled face and no mark.
+    // the INVALID face — the REMOVED pair's `removed_flag` under the one
+    // `flag_label` and a stem in the face (resolve_flag_face, render.cpp;
+    // architect 2026-10-04, again 2026-10-07), its brighter
+    // `removed_flag_selected` under `removed_label_selected` marking a
+    // selected one; DISABLED wins over it, a disabled invalid marker painting
+    // the disabled face.
     // Read from the memoized caches (keyed on the respective store
     // generation), so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag

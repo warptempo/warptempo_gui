@@ -87,9 +87,9 @@ struct TrimRange {
 // NO LEVEL: a dark look is a theme of its own
 // (architect 2026-10-04). The app computes no colour.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
-// one accessor palette(), or the one named literal beside them (the win2000
-// flag editor's frame, kFlagEditorFrame below), or THE ICON SET'S OWN INKS
-// (architect 2026-10-06): the Tango drawings' colours, gradients and
+// one accessor palette() — no named literal stands beside them since
+// 2026-10-07, when the flag editor's black frame went — or THE ICON SET'S
+// OWN INKS (architect 2026-10-06): the Tango drawings' colours, gradients and
 // opacities as each file names them (icons.h), period artwork, not roles, so
 // a glyph is never recoloured by a theme — the one place an antialiased,
 // translucent picture is copied whole. A DISABLED icon is ReactOS's
@@ -182,7 +182,8 @@ struct TrimRange {
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
 //                 band and selected substring of every text field, the flag
-//                 editor's included — ONE PAIR, FOCUSED OR NOT (the 2026-09-02
+//                 editor's included, over the flag's own selected face
+//                 (EDITING, below) — ONE PAIR, FOCUSED OR NOT (the 2026-09-02
 //                 inactive selection face retired, architect 2026-10-03, on
 //                 Windows 95's Network Neighborhood, where a selection keeps
 //                 Hilight / HilightText in a window that has lost the focus);
@@ -191,9 +192,9 @@ struct TrimRange {
 //                 band under the player and the picker, Windows 95's list
 //                 view, its resting names and its glyphs' text-class paths
 //                 in the field text (architect 2026-10-06,
-//                 paint_folder_overlay); THE FLAG EDITOR OPEN under every
-//                 chrome (architect 2026-10-07 ~05:30: the flag opened, a
-//                 white box in the flag's outline; EDITING, below);
+//                 paint_folder_overlay) — but NOT THE FLAG EDITOR, which
+//                 keeps the flag's selected face (architect 2026-10-07
+//                 ~09:45; EDITING, below);
 //   clock pair    THE TIME FIELDS (architect 2026-10-04, Windows' status
 //                 bar: ButtonFace / ButtonText; every time field since
 //                 2026-10-05): `clock_ground` fills the field inside its
@@ -216,9 +217,8 @@ struct TrimRange {
 //                 (paint_window_sizing_frame);
 //   the program's the waveform's canvas, ink and outline (ROW 6, below), the
 //                 flag kinds' faces and selected labels, the one resting
-//                 flag label, the flags' one outline, `flag_outline`, and
-//                 the invalid flag's red X, `invalid_mark` (THE MARKER
-//                 LANE, below), the playhead's stem
+//                 flag label and the flags' one outline, `flag_outline`
+//                 (THE MARKER LANE, below), the playhead's stem
 //                 and the scanner (THE PLAYHEAD, below — the head itself is
 //                 no longer a role: it is WordPad's ruler marker, painted in
 //                 the chrome's own label, hilight, shadow and ground).
@@ -333,7 +333,6 @@ struct GuiPalette {
     GuiColor added_label_selected;
     GuiColor removed_label_selected;
     GuiColor flag_outline;
-    GuiColor invalid_mark;
     GuiColor playhead_stem;
     GuiColor scanner;
     // THE CLEARLOOKS BLOCK (theme_file.h's table, generated; the painters
@@ -367,20 +366,6 @@ void install_palette(const DeviceConfig& cfg);
 // its two inks and keys those directly (waveform_plate_inks).
 uint64_t palette_generation();
 
-// THE IN-PLACE EDITOR'S FRAME UNDER WIN2000 — Windows' WindowFrame, BLACK
-// (architect 2026-10-03, on Explorer's F2 rename and Acid Pro's track-name
-// editor): the flag editor's one-Windows-px frame round its flat white box
-// under the WIN2000 chrome (render_flag_editor_box). A LITERAL, the one
-// colour that is not a theme role: the ruling names black, as Windows 95
-// Standard records its WindowFrame, on every theme, and it stays black
-// whatever the edit's state (a refused Enter recolours nothing, EDITING
-// below). THE PAIR OF RULES (architect 2026-10-07 ~05:30, the editor one
-// design under both chromes): under WIN2000 the frame is this black, which
-// is NOT the flag outline (the built-in's DkShadow 404040); under CLEARLOOKS
-// it is the flag outline role, `flag_outline` — Clearlooks records no
-// WindowFrame, and the editor is the flag opened in its own outline.
-inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
-
 // -- THE TRIM LANE, THE RULER LANE, THE PLAYHEAD -------------------------------
 
 // THE TRIM LANE IS A MINIATURIZED SCROLL BAR (architect 2026-10-02; the
@@ -392,8 +377,9 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // from the press on it to the gesture's end, a motionless press included:
 // Windows draws a held scroll arrow DFCS_PUSHED | DFCS_FLAT — one Shadow line
 // round the face, the glyph one Windows px right and down (render_trim_flags).
-// UNDER CLEARLOOKS the lane is GTK's horizontal scroll bar in its generated
-// cl_ tones (architect 2026-10-07; clearlooks_paint.h's trim block).
+// UNDER CLEARLOOKS the lane is GTK's horizontal scroll bar — its trough and
+// steppers in their generated cl_ tones — round the product's own light body
+// (architect 2026-10-07; clearlooks_paint.h's trim block).
 
 // THE RULER LANE's inks: every timestamp in the LABEL (architect 2026-10-03;
 // "give the same colour to all the numbers", 2026-10-02), and the TICKS
@@ -448,25 +434,6 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // fill_stem_flanks paints them). The bound cells take the same anatomy,
 // each cell's left seam the shared outline column.
 //
-// THE INVALID MARK (architect 2026-10-07 ~05:30, reopening 2026-10-03's "no
-// glyph" at his word: "a red X inside the box, AFTER the label; the flag
-// extends to contain the glyph — just padding on the flag itself"): an
-// invalid flag box carries A RED X after its label, inside the box — a
-// two-stroke antialiased X in its own role, `invalid_mark` (architect
-// 2026-10-07: Windows' red FF0000 in the built-in, Clearlooks' HIG red
-// C1665A — theme_file.h's program block), a square the body face's CAP tall and wide standing on the label's
-// baseline, one label pad after the label's run with the box's right pad
-// after it — and THE BOX WIDENS BY EXACTLY THAT, the pad and the glyph
-// (marker_flag_invalid_mark_w_px; the drawing at paint_invalid_mark,
-// render.cpp). It is part of the FLAG BOX's run for every reader: the box's
-// width, its hit rect, the bound cells riding its right edge, the cull
-// bound (marker_flag_max_width_px), the bound editor's anchor and the
-// payload editor's field, which carries the mark after its text at the same
-// seat (the marker is still invalid while it is edited). A bound cell
-// carries none — the mark is the flag's, beside the label it qualifies.
-// DISABLED WINS (a disabled invalid marker paints the disabled face, no
-// mark), as for every arm of the ladder.
-//
 // EACH KIND HAS ITS OWN PAIR (architect 2026-10-04, reopening 2026-10-03's one
 // flag colour for every kind) — GuiFlagKind, render.cpp: WARP (`warp_flag` /
 // `warp_flag_selected`) and PHASE RESET (`phase_reset_flag` /
@@ -488,18 +455,21 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // unselected):
 //   THE FLAG  the kind's face under `flag_label`, the stem in the face;
 //   INVALID   the red-flag class (warp_red_flag_set_cached and its phase-reset
-//             twin) WEARS ITS KIND'S PAIR, face, selected face, labels and
-//             stem as THE FLAG does, and CARRIES THE INVALID MARK, the red X
-//             after its label (above; architect 2026-10-07 ~05:30, retiring
-//             2026-10-04's invalid flag in the removed pair, so the removed
-//             red belongs to `h` alone);
+//             twin) WEARS THE REMOVED PAIR (architect 2026-10-04; again
+//             2026-10-07 ~09:45, "red face again", after a morning of a red X
+//             in the kind's pair): one red for both, the context telling them
+//             apart — invalid while authoring, removed in `h` —
+//             `removed_flag` under `flag_label`, the stem in that face, no
+//             glyph and no extra width;
 //   DISABLED  the theme's GROUND for the face, the label in THE DISABLED
 //             EMBOSS (above), and NO STEM;
 //   SELECTED  A BRIGHTER FACE, NOTHING WHITE (architect 2026-10-03, the colour
 //             loop's sets BG..BT, retiring the white outline ring of mock
 //             AR02): the selected flag's FACE AND STEM take the selected face
-//             of its kind's pair, invalid or not, and its LABEL that pair's
-//             selected label. The OUTLINE STAYS the one-line flag outline
+//             of its pair — the kind's, or `removed_flag_selected` over an
+//             invalid one ("bright red means selected and error") — and its
+//             LABEL that pair's selected label (`removed_label_selected` over
+//             an invalid one). The OUTLINE STAYS the one-line flag outline
 //             ("it has to be black and stay black; it's the only one that
 //             stays out of the way of the stem"), so every seam column is the
 //             outline whichever box paints it. It is Windows' own selected-icon
@@ -511,8 +481,8 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 //             (architect 2026-10-04, "otherwise it looks disconnected": the
 //             stem belongs to the box it leaves from), so it takes the
 //             selected face only when the PAYLOAD is the bright cell and
-//             keeps the marker's resting face while a BOUND CELL is the
-//             addressed one;
+//             keeps the marker's resting face (the kind's, or `removed_flag`
+//             on an invalid marker) while a BOUND CELL is the addressed one;
 //   SELECTED DISABLED (architect 2026-10-03, PROVISIONAL, pending his ruling;
 //             a disabled marker is selectable, so its selection must show):
 //             Windows 95's highlighted disabled menu item — the KIND's
@@ -535,26 +505,29 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 //
 // THE PHASE-RESET LEAD-IN RING on the waveform wears the colour its reset's
 // stem wears (paint_phase_reset_overlay_ring, through phase_reset_stem_color —
-// architect 2026-09-17): the phase-reset face, invalid or not (the invalid
-// mark is the box's alone), and its selected face while the reset's PAYLOAD
-// is the bright cell
+// architect 2026-09-17): the phase-reset face, or the removed face on a red
+// reset, and the matching selected face while the reset's PAYLOAD is the
+// bright cell
 // (architect 2026-10-04: a reset whose addressed cell is a bound cell keeps
 // its resting stem, and so its resting ring).
 //
-// EDITING IS THE FLAG OPENED: A WHITE BOX IN THE FLAG'S OUTLINE, UNDER EVERY
-// CHROME (architect 2026-10-07 ~05:30, one design under both, retiring the
-// clearlooks arm's GtkEntry — "it makes it seem like the flag is hiding a
-// text input behind it"; the box turned white 2026-10-07 ~03:10, reversing
-// 2026-10-03/04's "the selected flag opened for edit"): over the edited flag
-// or cell a FLAT box of the flag's height and its run's width, on the flag's
-// own outline geometry, on `field_ground` framed ONE Windows px — in black
-// under win2000 (kFlagEditorFrame, Windows' in-place label edit: Explorer's
-// F2 rename, Acid Pro's track-name editor), in `flag_outline` under
-// clearlooks (the pair of rules at kFlagEditorFrame) — its text and caret
-// `field_text`, the selected substring the theme's SELECTED pair, the field
-// pads (Windows' margin strips) either side of the text; an invalid marker's
-// payload field carries THE INVALID MARK after its text, at the resting
-// box's seat (above). THE STEM FOLLOWS THE PAYLOAD
+// EDITING RECOLOURS NOTHING: THE FLAG STAYS IN ITS SELECTED FACE (architect
+// 2026-10-07 ~09:45, one design under both chromes, retiring the morning's
+// white box — "the current way would require chopping off the connection to
+// the stem … overall a lot less intuitive"): over the edited flag or cell
+// the flag's own FLAT box, of the flag's height and its run's width, on the
+// flag's own outline geometry in `flag_outline`, its face THE LADDER'S
+// SELECTED ANSWER for the marker (the kind's selected face, the removed
+// pair's over an invalid marker, the kind's selected face over a disabled
+// one), its text and caret that pair's selected label — AN EDIT FIELD IS
+// NEVER THE DISABLED MENU ITEM (architect 2026-10-07): a disabled marker's
+// field takes the label, never the flat Shadow — the field pads (Windows'
+// margin strips) either side of the text, and THE
+// SELECTED SUBSTRING THE CHROME'S SELECTED PAIR, `selected_fill` under
+// `selected_text` (Clearlooks' 86ABD9 under white, win2000's Hilight under
+// HilightText) — part of the chrome, not a flag colour. THE ACCEPTED CAVEAT
+// (architect 2026-10-07): a flag face at or near the chrome's selection
+// colour hides the selection band. THE STEM FOLLOWS THE PAYLOAD
 // BOX (architect 2026-10-04): the marker's selected face under the PAYLOAD
 // field, which is the payload box opened and the addressed cell; the
 // marker's resting face under a BOUND-CELL field, the flag box standing at
@@ -565,7 +538,7 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // the card is redundant"; the red frame retired from both editors): it
 // SELECTS THE WHOLE TEXT in the selected pair (text_editor::refuse), so the
 // first keystroke replaces it, and the refusing owner's CARD says why. The
-// flag editor's frame stays its one line and the dialog field's edge its
+// flag editor's outline stays the flag's and the dialog field's edge its
 // plain sunken pair. No glyph marks it.
 //
 // THE HISTORY VIEW'S DIFF FLAGS take their own two kinds (architect
@@ -1553,24 +1526,6 @@ inline int marker_flag_pad_left_px() {
 inline int marker_flag_pad_right_px() {
     return scaled_px(kMarkerFlagPadRightPx, 1);
 }
-// THE INVALID MARK'S GEOMETRY (architect 2026-10-07 ~05:30; the rule at the
-// palette block's marker-lane paragraph): a square glyph the BODY FACE'S
-// RECORDED CAP on a side (8 Windows px under both sets, gui_font.h — 24
-// device px at 300 %, 11 at 138 %), rounded at the element, standing on the
-// label's baseline; ONE LABEL PAD before it (the right pad, the pad that
-// follows a label — 2 Windows px) and the box's own right pad after it. The
-// box widens by the pad and the glyph, nothing else: pad_l + run + pad +
-// glyph + pad_r. The strokes are kMarkerFlagInvalidStrokePx wide — the
-// CL10e sheet's 4 device px at 300 % that he judged, 4/3 of a Windows px,
-// a cairo line width and so no grid point — their butt-capped ends inset
-// half a stroke from the square's corners so the ink stays inside it.
-inline constexpr double kMarkerFlagInvalidStrokePx = 4.0 / 3.0;
-inline int marker_flag_invalid_glyph_px() {
-    return scaled_px(gui_face_metrics(GuiFace::Body).cap, 1);
-}
-inline int marker_flag_invalid_mark_w_px() {
-    return marker_flag_pad_right_px() + marker_flag_invalid_glyph_px();
-}
 // THE BOX'S TOP AND BOTTOM OUTLINE ROWS, one Windows px each (architect
 // 2026-10-03, the flat flag; the colours at render.h's palette block): the
 // outline's horizontals, inside the box's rows, so the box keeps its height.
@@ -1818,9 +1773,7 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // would only over-admit culled markers by one column and never save a visible
 // one. The cells' seam columns ARE in it: they stand to the right. So is the
 // run's CLOSING column (2026-09-25), charged ONCE on the flag term, since a
-// run has exactly one whether or not cells follow — and THE INVALID MARK
-// (2026-10-07), charged flat on the flag term like the cells, since any flag
-// may be invalid.
+// run has exactly one whether or not cells follow.
 inline double marker_flag_max_width_px(bool iteration_on) {
     const size_t glyphs = 4 +                                  // `N.NN` base
                           5 * kMaxTempoDeviationTerms +        // `+0.01` each
@@ -1831,8 +1784,7 @@ inline double marker_flag_max_width_px(bool iteration_on) {
     const double glyph_bound = gui_font_advance_bound_px(gui_font(GuiFace::Body));
     const double flag = static_cast<double>(glyphs) * glyph_bound +
                         pads +
-                        static_cast<double>(marker_flag_border_px()) +  // closing
-                        static_cast<double>(marker_flag_invalid_mark_w_px());
+                        static_cast<double>(marker_flag_border_px());  // closing
     if (!iteration_on) return flag;
     const double cell = static_cast<double>(kIterCellGlyphs) * glyph_bound +
                         pads + static_cast<double>(marker_flag_border_px());
@@ -3111,10 +3063,11 @@ struct FlagLaneRects {
 // suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
 // paint-side, so a stem and its flag can never disagree about a column.
 // The published COLOUR is the marker's resolved stem — its FLAG BOX's face:
-// its kind's face, invalid or not, or that kind's selected face while the
-// payload box is the bright one (architect 2026-10-04: the stem follows the
-// box it leaves from, so a selected marker whose addressed cell is a bound
-// cell publishes its resting stem) — and the consumer paints it as published.
+// its kind's face or the removed face (invalid), or the matching selected
+// face while the payload box is the bright one (architect 2026-10-04: the
+// stem follows the box it leaves from, so a selected marker whose addressed
+// cell is a bound cell publishes its resting stem) — and the consumer paints
+// it as published.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -3219,14 +3172,14 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //   Disabled:  the theme's ground for the face, the label in the disabled
 //              emboss, NO STEM. A disabled invalid marker is disabled.
 //   Invalid:   the red set (warp_red_flag_set_cached, or the phase-reset
-//              column's): the kind's own pair as below, and THE INVALID
-//              MARK after the flag box's label, the box widened by it
-//              (the palette block's marker-lane paragraph).
+//              column's): the REMOVED pair's `removed_flag` under
+//              `flag_label`, the stem in the face.
 //   Otherwise: the column's KIND — `warp_flag` on the warp column,
 //              `phase_reset_flag` on the phase-reset column, their cells
 //              alike (architect 2026-10-04) — under `flag_label`, the stem in
 //              the face.
-//   Selected:  the addressed cell's selected face, the kind's, under that
+//   Selected:  the addressed cell's selected face (the kind's, or
+//              `removed_flag_selected` over an invalid one) under that
 //              pair's selected label; the stem in the FLAG BOX's face, so
 //              selected only while the payload is the addressed cell
 //              (architect 2026-10-04);
@@ -3452,21 +3405,19 @@ struct FlagEditorBox {
 // this product's own editor read before the marker-text lane took the payload
 // away.
 //
-// THE BOX IS THE FLAG OPENED: A WHITE BOX IN THE FLAG'S OUTLINE, ONE DESIGN
-// UNDER EVERY CHROME (architect 2026-10-07 ~05:30, retiring the clearlooks
-// arm's GtkEntry; the palette block's editing paragraph) on the flag's own
-// outline geometry — its left border column, its top and bottom rows
-// (marker_flag_edge_h_px) and its closing column — so opening an editor
-// changes the flag's SIZE and nothing about where it stands: a FLAT box on
-// `field_ground` framed ONE Windows px — black under win2000
-// (kFlagEditorFrame, Windows' in-place label edit, Explorer's F2 rename),
-// `flag_outline` under clearlooks (the pair of rules at kFlagEditorFrame) —
-// its text and caret `field_text`, the selected substring in the theme's
-// selected pair, the caret and selection band inside the frame's rows. The
-// pads are the field's margin strips. An INVALID marker's payload field
-// carries THE INVALID MARK after its text at the resting box's seat, the box
-// widened by it as the resting box is (the marker is still invalid while it
-// is edited). Since no field buys a caret column,
+// THE BOX IS THE FLAG ITSELF IN ITS SELECTED FACE, ONE DESIGN UNDER EVERY
+// CHROME (architect 2026-10-07 ~09:45, retiring the morning's white box; the
+// palette block's editing paragraph) on the flag's own outline geometry —
+// its left border column, its top and bottom rows (marker_flag_edge_h_px)
+// and its closing column, all in `flag_outline` — so opening an editor
+// changes the flag's SIZE and nothing about where it stands or how it is
+// coloured: the flat box in the ladder's SELECTED answer for the marker
+// (resolve_flag_face — the removed pair's over an invalid marker, the
+// selected-disabled arm's over a disabled one), its text and caret that
+// answer's label, the selected substring in the CHROME's selected pair
+// (`selected_fill` under `selected_text`), the caret and selection band
+// inside the outline's rows. The pads are the field's margin strips. Since
+// no field buys a caret column,
 // the size only changes where the resting label was capped, the field opening
 // at the committed run's own width and growing only with what is typed past
 // it; the bound cells riding its right edge keep the flag anatomy. A REFUSED
@@ -3551,14 +3502,15 @@ void render_phase_reset_flags(cairo_t* cr,
 // THE COLOUR A LIVE PHASE RESET'S STEM WEARS, for a surface that must wear it
 // too — the lead-in ring (paint_phase_reset_overlay_ring, paint_handler.cpp,
 // architect 2026-09-17). It asks the one ladder (resolve_flag_face,
-// render.cpp) rather than restating it: the `phase_reset_flag` face, invalid
-// or not (the invalid mark is the flag box's alone), its selected face when
-// `selected` (the reset selected AND
+// render.cpp) rather than restating it: the `removed_flag` face when `red`
+// (the column's red set, phase_reset_red_flag_set_cached), the
+// `phase_reset_flag` face otherwise, each its selected face when `selected`
+// (the reset selected AND
 // its payload the bright cell — the bit the flag pass hands the payload box
 // whose face the stem wears, architect 2026-10-04), so the ring and its stem
 // stay one object at rest and selected.
 // No disabled arm, a disabled reset painting neither stem nor ring.
-GuiColor phase_reset_stem_color(bool selected);
+GuiColor phase_reset_stem_color(bool red, bool selected);
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the
@@ -3631,9 +3583,7 @@ struct HistoryDiffFlag {
     // a verdict over the WHOLE resolved store, and a diff half is a line from
     // one side's sidecar with no store around it to resolve against. So a
     // checkpoint's collapsed stack paints as ordinary added/removed halves in
-    // the view and carries the invalid mark (render.h's marker-lane
-    // paragraph) only once its lines are back in the live store — so no
-    // diff half carries the mark.
+    // the view and reddens only once its lines are back in the live store.
     // The disabled axis DOES travel (the two effective bits above, 2026-08-22)
     // because it is a property of the line itself.
 };

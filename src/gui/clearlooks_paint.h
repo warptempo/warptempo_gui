@@ -9,8 +9,9 @@
 // the dropdown, the lists; its last: the trim lane as the scroll bar, the
 // scrub as GtkScale, row 8's entry time fields, the well's frame, the
 // ruler's ticks, the restored laptop's frame) — the chrome spec's clearlooks
-// arm (chrome_spec.h; the flag editor is the program's own flag opened under
-// every chrome, render_flag_editor_box, architect 2026-10-07 ~05:30),
+// arm (chrome_spec.h; the flag editor is the program's own flag in its
+// selected face under every chrome, render_flag_editor_box, architect
+// 2026-10-07 ~09:45),
 // GNOME 2.30's own drawing as Debian 6 squeeze put it on screen: the
 // metacity theme's maximised caption (gnome-themes 2.30.2's Clearlooks
 // metacity-theme-1.xml), and gtk-engines 2.20.2's Clearlooks GUMMY style for
@@ -262,10 +263,12 @@ inline constexpr int kClScaleTroughPx       = 7;
 inline constexpr int kClScaleSliderLengthPx = 23;
 inline constexpr int kClScaleSliderWidthPx  = 15;
 
-// THE TRIM LANE IS GTK'S HORIZONTAL SCROLL BAR (architect 2026-10-07, the
-// painters round's last part; render.h's trim block keeps every rect: the
-// lane, the two caps' 16 x 16 boxes where trim_endcap_rect puts them, the
-// body between them, the hit stash). THE BAR WEARS THE LANE'S 16 W ROWS,
+// THE TRIM LANE IS GTK'S HORIZONTAL SCROLL BAR — ITS TROUGH AND ITS STEPPERS,
+// the body between the caps the product's own light slider (paint_cl_slider
+// below) — (architect 2026-10-07, the painters round's last part; render.h's
+// trim block keeps every rect: the lane, the two caps' 16 x 16 boxes where
+// trim_endcap_rect puts them, the body between them, the hit stash). THE BAR
+// WEARS THE LANE'S 16 W ROWS,
 // Windows' SM_CYHSCROLL, where GTK's is 15 (GtkRange::slider-width and
 // stepper-size 15): one row more of every ramp below, the base's thickness
 // kept (the settled rule: the proportional fit to Windows' layout).
@@ -299,21 +302,21 @@ void paint_cl_trough(cairo_t* cr, const GuiRect& lane);
 void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
                       bool pressed);
 
-// THE BODY IS THE SLIDER — clearlooks_gummy_draw_scrollbar_slider with
-// colorize_scrollbar TRUE on the body rect `body` (render_trim_flags' gap,
-// the bridge): spot[1]'s gummy ramp across the bar, a one-W ring of shade
-// (fill, 1.3) at 0.2 one W inside the border (baked over the ramp's rows),
-// the border and three one-W grip bars in the hue rule's tones (build.py:
-// the fill's saturation against bg's, 0.575, mixed 0.3 for the border) —
-// SQUARE, as the gummy slider is (ge_cairo_stroke_rectangle; his capture
-// 00-17-24's horizontal bar). THE GRIPS stand on the source's rows (5 ..
-// h − 6, both ends full, as the capture draws them), three W apart, the
-// middle one on the body's middle column as painted (a body running past the
-// lane's edge is held just outside it by render_trim_flags, so the grips
-// stay on its visible part) — and only where the body is at least the grip
-// set's 7 W plus, each side, the border, the ring and one W of face (13 W):
-// GTK's min-slider-length 30 keeps its slider longer than its grips, and the
-// product's body is the trim region's own width, so the grips yield instead.
+// THE BODY IS THE PRODUCT'S OWN LIGHT SLIDER, A RECORDED DEPARTURE FROM
+// SQUEEZE'S GUMMY ONE (architect 2026-10-07, the CL15 sheets: "Clearlooks is
+// anonymous enough that we can get away with our own scroll bar") on the
+// body rect `body` (render_trim_flags' gap, the bridge, the kept region
+// between the caps): THE WINDOW GROUND, `ground`, with ONE W px of
+// `cl_separator_light` (FCFCFC, shade (shade[3], 1.3)) along its top row and
+// ONE W px of `cl_separator_dark` (C4C2BF, shade[3]) along its bottom row —
+// NO GRIPS, no ring, no ramp and no border columns at its ends: the caps ride
+// the body's ends, so an end column would never show, and a cap sliding off
+// the window takes the body's end with it (render_trim_flags). The two lines
+// are the gummy separator's own tones, roles already made for
+// paint_cl_toolbar_separator: a role a second painter reads is that tone put
+// down again, not a colour derived here. The trough and the steppers stay
+// GTK's (above). (Gummy's spot[1] slider, its ring and its three grips
+// retired with their twelve generated tones the same day.)
 void paint_cl_slider(cairo_t* cr, const GuiRect& body);
 
 // THE WELL'S FRAME — GtkScrolledWindow's shadow IN under GUMMY

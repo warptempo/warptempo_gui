@@ -983,11 +983,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     // (A tempo step can move a marker in or out of the RED set — a value that
-    // normalizes to the 1.00 fallback — which adds or drops its flag's
-    // invalid mark and so its width; the stem's colour no longer depends on
-    // it (architect 2026-10-07 ~05:30). The flag cache's rebuild on the
-    // store's new generation damages the strip and the waveform together,
-    // maybe_rebuild_flag_cache, so no damage of its own is owed here.)
+    // normalizes to the 1.00 fallback — which turns its flag and its stem to
+    // the removed pair or back (resolve_flag_face, render.cpp). The flag
+    // cache's rebuild on the store's new generation damages the strip and the
+    // waveform together, maybe_rebuild_flag_cache, so the stem's repaint is
+    // owed no damage of its own here.)
     // THE TAIL IS ONE BODY (warp_tempo_write_tail, above — the re-warp, the
     // re-land and the trigger, with the whole argument at its definition): the
     // Up/Down step is a warp authoring gesture reachable off its source home
@@ -1403,11 +1403,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     undo.recompute_dirty();
     viewport.invalidate_top_strip();
     // (A tempo step can move a marker in or out of the RED set — a value that
-    // normalizes to the 1.00 fallback — which adds or drops its flag's
-    // invalid mark and so its width; the stem's colour no longer depends on
-    // it (architect 2026-10-07 ~05:30). The flag cache's rebuild on the
-    // store's new generation damages the strip and the waveform together,
-    // maybe_rebuild_flag_cache, so no damage of its own is owed here.)
+    // normalizes to the 1.00 fallback — which turns its flag and its stem to
+    // the removed pair or back (resolve_flag_face, render.cpp). The flag
+    // cache's rebuild on the store's new generation damages the strip and the
+    // waveform together, maybe_rebuild_flag_cache, so the stem's repaint is
+    // owed no damage of its own here.)
     // Target-view synchronous re-warp tail (the plate must re-warp when authoring
     // off source home), THEN re-land the playhead on the FOCUSED marker's
     // post-step image: the marker lane owns the playhead (the rule is stated in

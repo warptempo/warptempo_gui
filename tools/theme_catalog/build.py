@@ -436,7 +436,8 @@ GNOME2_DERIVATIONS = {
 # THE CLEARLOOKS ENTRY'S PROGRAM ROLES (architect 2026-10-07 ~05:30, CL9's question answered: each chrome's theme file
 # names its own program colours, the one built-in staying win2000's): the waveform, the flags, the playhead's stem and
 # the scanner as he picked them on the CL10 sheets (tmp/clearlooks/report_CL10.md) — sheet a's third band (black
-# canvas, the selection blue's spot[1] ink, bg[SELECTED] the lit outline) and its two flags; ONE PAIR FOR WARP AND
+# canvas, bg[SELECTED] the lit outline) and its two flags, the ink the selection blue's 1.3 stop (architect 2026-10-07
+# ~09:00, spot[1] too dark on black: the selected flag's byte); ONE PAIR FOR WARP AND
 # PHASE RESET (a scene shows one column, report CL10 section 4); sheet d's F1 history pair, the GNOME HIG green and red
 # lit by the engine's 1.3; black labels on every face; the flag outline the canvas's own colour (architect 2026-10-07
 # ~06:10: "otherwise when it reaches the canvas it's noticeable"). Each value is (a gtkrc colour-scheme key or a
@@ -446,7 +447,9 @@ GNOME2_HIG_GREEN = '#83A67F'   # the GNOME HIG's palette green (report CL10 sect
 GNOME2_HIG_RED = '#C1665A'     # the GNOME HIG's palette red (report CL10 section 2)
 GNOME2_PROGRAM_ROLES = {
     'waveform_canvas': ('#000000', None, 'black, his pick (CL10a band 3: the canvas under the accent ink)'),
-    'waveform_ink': ('selected_bg_color', 1.05, 'spot[1], the ink (CL10a band 3)'),
+    'waveform_ink': ('selected_bg_color', 1.3, 'the engine\'s 1.3 stop of bg[SELECTED], the selected flag\'s byte: '
+                                              'spot[1] read too dark on the black canvas (architect 2026-10-07 '
+                                              '~09:00)'),
     'waveform_outline': ('selected_bg_color', None, 'bg[SELECTED], the lit outline (CL10a band 3)'),
     'warp_flag': ('selected_bg_color', None, 'bg[SELECTED], the flag at rest (CL10a)'),
     'warp_flag_selected': ('selected_bg_color', 1.3, 'the flag selected, the engine\'s 1.3 stop (CL10a)'),
@@ -461,18 +464,16 @@ GNOME2_PROGRAM_ROLES = {
     'phase_reset_label_selected': ('fg_color', None, 'black on the lit face'),
     'added_label_selected': ('fg_color', None, 'black on the lit face'),
     'removed_label_selected': ('fg_color', None, 'black on the lit face'),
-    'invalid_mark': (GNOME2_HIG_RED, None, 'the invalid flag\'s red X: the GNOME HIG red, the removed face\'s own '
-                                           'byte, which reads on the sky-blue flag where the lit E2988E is too pale '
-                                           '(architect 2026-10-07)'),
     'flag_outline': ('#000000', None, 'the canvas\'s own colour, so the stem\'s flanks vanish where they enter the '
                                       'well (architect 2026-10-07 ~06:10)'),
     'playhead_stem': ('#FFFFFF', None, 'white, his ruling (CL10a)'),
     'scanner': ('#FFFFFF', None, 'white, his ruling (CL10a)'),
 }
 GNOME2_PROGRAM_NOTE = ('the program roles are the architect\'s picks on the CL10 sheets (2026-10-07 ~05:30): the '
-                       'waveform black under the selection blue\'s spot[1] ink, bg[SELECTED] the lit outline; one flag '
-                       'pair for warp and phase reset, bg[SELECTED] lit to its 1.3 shade under black labels; the '
-                       'history\'s GNOME HIG green and red lit to 1.3; the invalid flag\'s red X the HIG red itself; '
+                       'waveform black under the selection blue lit to its 1.3 shade, the selected flag\'s byte '
+                       '(architect 2026-10-07 ~09:00: spot[1] too dark on black), bg[SELECTED] the lit outline; one '
+                       'flag pair for warp and phase reset, bg[SELECTED] lit to its 1.3 shade under black labels; the '
+                       'history\'s GNOME HIG green and red lit to 1.3, the invalid flag wearing the red pair; '
                        'the playhead stem and the scanner white; under '
                        'Clearlooks the flag outline is the canvas\'s colour, so the stem\'s flanks vanish where they '
                        'enter the well (architect 2026-10-07 ~06:10)')
@@ -987,32 +988,10 @@ def engine_tones(g, m, gtk, sc, geo):
     t.add('cl_stepper_arrow', T.gdk_byte(gtk[('fg', 'NORMAL')]),
           'clearlooks_draw_arrow: fg[state] (fg[NORMAL] = fg[ACTIVE] = fg_color), the normal arrow')
     assert gtk[('fg', 'NORMAL')] == gtk[('fg', 'ACTIVE')]
-    # THE SLIDER (clearlooks_gummy_draw_scrollbar_slider, colorize_scrollbar TRUE: scrollbar.color = spot[1]): the
-    # gummy ramp from row 1 to row th - 2 over the rows 1 .. th - 2, a one-px ring shade (fill, 1.3) at 0.2 on rows 1
-    # and th - 2 and columns 1 and w - 2 (baked over the ramp's rows), the border and the three grip bars by the hue
-    # rule: the fill's saturation and brightness against bg's (ge_hsb_from_color), shade 0.475 when both are near
-    # bg's else 0.575, a further 0.85 for a coloured fill of hue in (25, 195); the grips that shade, the border it
-    # mixed 0.3 with the fill (has_color)
-    fill = SP[1]
-    hf, sf, bf = T.gtk2_hsb(fill)
-    hb_, sb_, bb_ = T.gtk2_hsb(bg)
-    handles = sh(fill, 0.475 if (abs(sf - sb_) < 0.30 and abs(bf - bb_) < 0.20) else 0.575)
-    if 25 < hf < 195: handles = sh(handles, 0.85)
-    rule = f'clearlooks_gummy_draw_scrollbar_slider (spot[1], colorize_scrollbar) across the {th}-row bar'
-    ramp = {r: T.pixman_vertical_ramp_row(gummy(fill, False), 1, th - 2, r) for r in range(1, th - 1)}
-    sstep = T.pixman_step_row(1, th - 2)
-    t.ramp('cl_slider_upper', [ramp[r] for r in range(2, sstep)], 0, sstep - 3, rule + f': the fill, rows 2..{sstep - 1}')
-    t.ramp('cl_slider_lower', [ramp[r] for r in range(sstep, th - 2)], 0, th - 3 - sstep,
-           rule + f': the fill, rows {sstep}..{th - 3}')
-    ring = lambda r: T.cairo_solid_over(sh(fill, 1.3), 0.2, ramp[r])
-    t.add('cl_slider_ring_top', ring(1), rule + ': the 0.2 ring over row 1')
-    t.add('cl_slider_ring_bottom', ring(th - 2), rule + f': the 0.2 ring over row {th - 2}')
-    t.ramp('cl_slider_ring_upper', [ring(r) for r in range(2, sstep)], 0, sstep - 3,
-           rule + f': the 0.2 ring down columns 1 and w - 2, rows 2..{sstep - 1}')
-    t.ramp('cl_slider_ring_lower', [ring(r) for r in range(sstep, th - 2)], 0, th - 3 - sstep,
-           rule + f': the 0.2 ring down columns 1 and w - 2, rows {sstep}..{th - 3}')
-    t.add('cl_slider_border', cb(mix(handles, fill, 0.3)), rule + ': the border, the hue rule\'s shade mixed 0.3')
-    t.add('cl_slider_grip', cb(handles), rule + ': the three grip bars, the hue rule\'s shade')
+    # THE SLIDER IS THE PRODUCT'S OWN (architect 2026-10-07, the CL15 sheets: "Clearlooks is anonymous enough that we
+    # can get away with our own scroll bar"): the window ground between the gummy separator's two lines, roles already
+    # made above (cl_separator_light along its top row, cl_separator_dark along its bottom), so it adds no tone here —
+    # gummy's spot[1] slider and its twelve tones retired with their painter (paint_cl_slider, clearlooks_paint.h).
 
     # THE SCRUB = GtkScale (the "scale" style: hint scale, the default style's slider-length 23, slider-width 15,
     # trough-side-details 1) at geo['scale_*']: THE TROUGH TROUGH_SIZE rows tall (clearlooks_gummy_draw_scale_trough):
@@ -1307,14 +1286,14 @@ def checks(entries):
                            'disabled_text': '#A9A5A2', 'title_active': '#86ABD9', 'title_inactive': '#EDECEB'}, cl['roles']
     assert cl['raw']['title_text'] == '#FFFFFF' and cl['provenance']['rule']['computed']['metacity:title_unfocused'] == '#6B6A6A'
     assert cl['flag_rule'] == {'id': 'flat'} and cl['display_tier'] == 'high-colour'
-    # its program roles as he picked them on the CL10 sheets (2026-10-07 ~05:30; the outline ~06:10)
+    # its program roles as he picked them on the CL10 sheets (2026-10-07 ~05:30; the outline ~06:10; the ink ~09:00)
     assert cl['program_roles'] == {
-        'waveform_canvas': '#000000', 'waveform_ink': '#92B4DF', 'waveform_outline': '#86ABD9',
+        'waveform_canvas': '#000000', 'waveform_ink': '#D2E3F7', 'waveform_outline': '#86ABD9',
         'warp_flag': '#86ABD9', 'warp_flag_selected': '#D2E3F7', 'phase_reset_flag': '#86ABD9',
         'phase_reset_flag_selected': '#D2E3F7', 'added_flag': '#83A67F', 'added_flag_selected': '#B3CEB0',
         'removed_flag': '#C1665A', 'removed_flag_selected': '#E2988E', 'flag_label': '#000000',
         'warp_label_selected': '#000000', 'phase_reset_label_selected': '#000000', 'added_label_selected': '#000000',
-        'removed_label_selected': '#000000', 'invalid_mark': '#C1665A', 'flag_outline': '#000000',
+        'removed_label_selected': '#000000', 'flag_outline': '#000000',
         'playhead_stem': '#FFFFFF',
         'scanner': '#FFFFFF'}, cl['program_roles']
     assert by['warptempo']['roles'] == CHOSEN_ROLES and by['warptempo']['display_tier'] == 'high-colour'

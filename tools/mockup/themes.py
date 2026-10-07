@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # tools/mockup/themes.py — THE THEME GRAMMAR, read off the app's own source so the tool cannot drift from it.
 #
-# The built-in's 41 values, the twenty named colours, the flat-caption pairs, the follower pairs and the built-in's
+# The built-in's 40 values, the twenty named colours, the flat-caption pairs, the follower pair and the built-in's
 # key are all parsed out
 # of src/gui/theme_file.h in the working tree on every run (the constants-from-source discipline of
 # tools/palette/common.py's face_metrics). A .theme file is read under the app's own rules (theme_file.cpp's
 # read_theme_file and read_theme_folder's stem checks, the shared scanner's lexical contract in
 # src/parser/settings_file.cpp): LF-terminated role=value lines split at the first '=', no blank line, no comment,
 # no whitespace tolerance, no duplicate; a role the file does not name takes the built-in's value; a caption start
-# named without its gradient end gets the end equal to the start; a follower pair's leader named without its
-# follower (dk_shadow / flag_outline, removed_flag / invalid_mark) gets the follower equal to it. Every refusal is the app's own sentence.
+# named without its gradient end gets the end equal to the start; the follower pair's leader named without its
+# follower (dk_shadow / flag_outline) gets the follower equal to it. Every refusal is the app's own sentence.
 import os, re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -43,9 +43,9 @@ def _load():
     key = re.search(r'kBuiltinThemeKey = "([^"]+)"', src).group(1)
     follows = re.findall(r'\{theme_role_index\("(\w+)"\),\s*theme_role_index\("(\w+)"\)\}',
                          _block(src, r'kGuiThemeFollowers\[\] = \{'))
-    if len(roles) != 41 or len(named) != 20 or len(pairs) != 2 or len(follows) != 2:
+    if len(roles) != 40 or len(named) != 20 or len(pairs) != 2 or len(follows) != 1:
         raise SystemExit(f'tools/mockup: {THEME_FILE_H}: read {len(roles)} roles, {len(named)} named colours, '
-                         f'{len(pairs)} caption pairs, {len(follows)} follower pairs (expected 41, 20, 2, 2: the '
+                         f'{len(pairs)} caption pairs, {len(follows)} follower pairs (expected 40, 20, 2, 1: the '
                          f'source moved)')
     return roles, named, pairs, follows, key
 
