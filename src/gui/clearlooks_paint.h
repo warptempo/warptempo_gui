@@ -5,11 +5,13 @@
 #include <cairo.h>
 
 // THE CLEARLOOKS PAINTERS (architect 2026-10-07, the painters round's first
-// part: the top strip) — the chrome spec's clearlooks arm (chrome_spec.h),
+// part: the top strip; its second: the dialogs' push buttons and entries,
+// the dropdown, the lists) — the chrome spec's clearlooks arm (chrome_spec.h),
 // GNOME 2.30's own drawing as Debian 6 squeeze put it on screen: the
 // metacity theme's maximised caption (gnome-themes 2.30.2's Clearlooks
 // metacity-theme-1.xml), and gtk-engines 2.20.2's Clearlooks GUMMY style for
-// the menu bar, the toolbar band, its tool buttons and separators
+// the menu bar, the toolbar band, its tool buttons and separators, the push
+// button, the entry, the menu and its items, the list and its selected cell
 // (clearlooks_draw.c, clearlooks_draw_gummy.c), his squeeze captures the law
 // (tmp/squeeze/). Every painter here is called from its win2000 sibling's
 // site on the spec's fork (paint_handler.cpp) and reads its lengths from the
@@ -146,3 +148,77 @@ void paint_cl_toolbar_separator(cairo_t* cr, int gap_x, int case_y,
 // Answers the glyph's shift in device px.
 int paint_cl_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
                          bool pressed, bool hot, bool enabled);
+
+// -- THE DIALOGS, THE DROPDOWN AND THE LIST (the painters round's second
+//    part, 2026-10-07) --------------------------------------------------------
+
+// ONE PUSH BUTTON — clearlooks_gummy_draw_button on the "button" style
+// (xthickness 3, reliefstyle 1) on the dialog button's box `r`, its W
+// height the spec's push_button_box_px:
+//   NORMAL   — bg[NORMAL] (1.04): the two shadow rings of the parent's bg
+//              (0.97, 0.93), the gummy ramp, the border mix (shade[6], fill,
+//              0.2) of the button style's table, the baked 0.4 top-left
+//              highlight.
+//   PRESSED  — bg[ACTIVE] (0.85): the parent's inset ring, the ramp, the
+//              baked inner shadow over its first three rows and columns, the
+//              border; the label one W px right and down.
+//   DISABLED — bg[INSENSITIVE]: the inset ring, the disabled ramp (1.04 |
+//              1.01 / 0.99 | 0.96), the button style's shade[4] border, the
+//              highlight; the label the caller's insensitive pair.
+//   DEFAULT  — `is_default` (the button Enter answers — the button the
+//              Windows arm frames in DkShadow): ONE ring mix (parentbg,
+//              spot[1], 0.5) for the two shadow rings and the border mix
+//              (spot[2], fill, 0.2); pressed, the inset over that ring and the
+//              spot border; a disabled button is never drawn default (the
+//              engine's `is_default && !disabled`).
+// NO HOT FACE: the dialog buttons have no hover (the toolbars' HOT case is
+// the one hover face, the head) and GTK's focus ring is not drawn (the
+// product draws no focus ring: the default face is the cue). Answers the
+// label's shift in device px.
+int paint_cl_push_button(cairo_t* cr, const GuiRect& r, bool pressed,
+                         bool enabled, bool is_default);
+
+// ONE ENTRY — clearlooks_gummy_draw_entry on the "entry" style (xthickness
+// 3) on the dialog field's box `r`: the parent's inset ring at radius + 1,
+// base[NORMAL] inside at radius − 1; UNFOCUSED the shade[6] border at the
+// radius and the inner shadow (shade (border, 0.92) at 0.18, baked over
+// base) along the top and the left; FOCUSED (the field the caret is in) the
+// entry style's focus_color border and the inner ring mix (base, shade
+// (focus_color, 1.61), 0.5). The text, the selection and the caret are the
+// caller's, in cl_text, cl_selection / cl_selection_unfocused under
+// cl_text_selected (GtkEntry's own pairs) and cl_text.
+void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused);
+
+// THE DROPDOWN'S BOX — GtkMenu under the "menu" style: its ground
+// (bg[NORMAL] 1.08 of bg) and clearlooks_draw_menu_frame's one shade[5]
+// line round it, THE TOP LINE ONE ROW ABOVE `box`, on the menu row's last
+// row: GTK's menu covers the menu bar's foot and the open title's (his
+// capture 23-22-06), and the box's published rect, every hit rect, stays
+// where the menu row ends (paint_dropdown; the open and the close damage
+// the top strip, so that row is repainted with the box). The items stand
+// against the frame (x / ythickness 0) and a lit one covers it.
+void paint_cl_menu(cairo_t* cr, const GuiRect& box);
+
+// THE LIT MENU ITEM — clearlooks_gummy_draw_menuitem on the item's box:
+// spot[1]'s gummy ramp over the item's whole height inside a one-W spot[2]
+// border at the menu's radius 0, square. The label over it is the caller's,
+// in cl_menuitem_text.
+void paint_cl_menu_item(cairo_t* cr, const GuiRect& item);
+
+// THE SEPARATOR ITEM'S LINE — clearlooks_draw_menu_item_separator: ONE
+// shade[5] row, no light line, at device row `y` across [x, x + w).
+void paint_cl_menu_separator(cairo_t* cr, int x, int y, int w);
+
+// THE LIST'S FIELD — a GtkTreeView in a GtkScrolledWindow, shadow IN, under
+// GUMMY (clearlooks_style_draw_shadow's "scrolled_window" arm; his compact
+// view, 00-17-47): base[NORMAL] on `surf` inside ONE square shade[5] line on
+// its outer rows and columns (folder_overlay::content_rect spends the one
+// line).
+void paint_cl_list(cairo_t* cr, const GuiRect& surf);
+
+// A SELECTED ROW — clearlooks_gummy_draw_selected_cell on the row's box:
+// the gummy ramp of base[SELECTED] while the list has the focus, of
+// base[ACTIVE] (shade (sel, 0.9)) while it has not, over the row's whole
+// height, no border, square. The name over it is the caller's, in
+// cl_text_selected.
+void paint_cl_selected_cell(cairo_t* cr, const GuiRect& r, bool focused);

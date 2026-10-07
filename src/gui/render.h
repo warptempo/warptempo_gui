@@ -2047,28 +2047,47 @@ inline int tooltip_hover_slop_px() {
 // an etched pair (two lines) with 3 Windows px of ground above and below it —
 // 8 in all, Windows' separator item (the planner's reading of the Windows
 // shots; the laptop pixel's 2 would have been 1).
-inline constexpr int kPopupItemHeightPx = 17;
+// UNDER CLEARLOOKS IT IS GTKMENU (architect 2026-10-07, the painters round's
+// second part; paint_cl_menu, clearlooks_paint.h): ONE shade[5] line a side,
+// its TOP LINE ON THE MENU ROW'S LAST ROW — above the box, so the box adds
+// no top frame row (popup_border_top_px) and no hit rect moves — no margin
+// (the menu style's x / ythickness 0: the items against the frame, a lit one
+// covering it), the items 19 Windows px (the spec's popup_item_height_px),
+// and the separator item 7: ONE shade[5] row with the same 3 above and below
+// (separator-height 7). The item's height and the margin are the spec's;
+// the frame's and the separator's line counts are the vocabulary's drawing.
 inline constexpr int kPopupSepMarginYPx = 3;   // above and below the separator
-// The item block's own margin inside the frame, top AND bottom (the
-// horizontal one is the painter's kPopupItemInsetPx, the same one px).
-inline constexpr int kPopupItemMarginYPx = 1;
-// THE FRAME IS THE PLAIN RAISED EDGE, two relief lines a side, so its
-// thickness is relief_line_px's twice — read, not a second number.
+inline bool popup_is_gtk_menu() {
+    return live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+}
+// THE FRAME'S LINES a side — Windows' plain raised edge two relief lines,
+// GtkMenu's frame one — read, not a second number.
 inline int popup_border_px() {
-    return 2 * relief_line_px();
+    return (popup_is_gtk_menu() ? 1 : 2) * relief_line_px();
+}
+// The rows the frame spends at the box's TOP: the whole frame under Windows,
+// none under Clearlooks (its top line stands on the menu row above the box).
+inline int popup_border_top_px() {
+    return popup_is_gtk_menu() ? 0 : popup_border_px();
 }
 inline int popup_item_h_px() {
-    return scaled_px(kPopupItemHeightPx, 5);
+    return scaled_px(live_chrome_spec().popup_item_height_px, 5);
 }
 inline int popup_sep_margin_y_px() {
     return scaled_px(kPopupSepMarginYPx, 0);
 }
-// A separator's whole block: its margin, the etched pair, its margin.
+// A separator's whole block: its margin, its line(s) — the etched pair, or
+// GtkMenu's one row — its margin.
 inline int popup_sep_block_px() {
-    return 2 * popup_sep_margin_y_px() + 2 * relief_line_px();
+    return 2 * popup_sep_margin_y_px() +
+           (popup_is_gtk_menu() ? 1 : 2) * relief_line_px();
 }
+// The item block's own margin inside the frame, top AND bottom (the
+// horizontal one, the same spec field, is the painter's item inset): the
+// spec's popup_margin_px, floored at one device px where it is not zero.
 inline int popup_item_margin_y_px() {
-    return scaled_px(kPopupItemMarginYPx, 1);
+    const int m = live_chrome_spec().popup_margin_px;
+    return scaled_px(m, m > 0 ? 1 : 0);
 }
 
 

@@ -39,10 +39,13 @@
 //     instance's head). THE TOP STRIP IS CLEARLOOKS' OWN DRAWING since the
 //     painters round's first part (2026-10-07: the metacity caption, the
 //     menu bar, the toolbar band and its gummy buttons, the separators,
-//     GTK's insensitive icon — clearlooks_paint.h); the rest of the chrome
-//     (the dialogs, the trim lane, the scrub, the cards, the restored
-//     laptop's frame) still draws Windows' faces in Clearlooks' lengths
-//     until the round's later parts teach each one its branch.
+//     GTK's insensitive icon — clearlooks_paint.h), AND THE DIALOGS, THE
+//     DROPDOWN AND THE LISTS since its second part (the push button, the
+//     entry, GtkMenu, the compact list; the tooltip and the cards were
+//     Clearlooks' already: the same one-line card face); the rest of the
+//     chrome (the trim lane, the scrub, the restored laptop's frame) still
+//     draws Windows' faces in Clearlooks' lengths until the round's last
+//     part teaches each one its branch.
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colours remain an ordinary theme
 // file. The table is kGuiChromeSpecs below, the live instance
@@ -59,7 +62,8 @@
 // WHICH PERIOD DESKTOP DRAWS THE CHROME — the painters' one switch where
 // the two draw an element differently (the head): the caption's band,
 // title and buttons, the menu bar and its open title, the toolbar band,
-// the disabled words' emboss.
+// the disabled words' emboss, the dialogs' push buttons and fields, the
+// dropdown, the lists.
 enum class GuiChromeVocabulary {
     Win2000,
     Clearlooks,
@@ -180,6 +184,12 @@ struct ChromeSpec {
     // THE TOOLTIP'S PAD inside its frame, each way (paint_popup_chrome's
     // tooltip arm, kTooltipLineGapPx beside it).
     int                tooltip_pad_px;
+    // THE DROPDOWN, in Windows px (render.h's dropdown block, where the
+    // frame and the separator's rule stand; dropdown_h_px sums them): an
+    // item's height, and the menu's own margin between its frame and the
+    // items, each way (the item block's top and bottom, the item's sides).
+    int                popup_item_height_px;
+    int                popup_margin_px;
     GuiCardSeat        card_seat;
     // THE CORNERS' RADIUS in Windows px, scaled like any length and drawn
     // antialiased (clearlooks_paint.cpp: the gummy button, the open menu
@@ -207,7 +217,8 @@ struct ChromeSpec {
 // 8 px apart round comctl32's etched separator at (8 / 2 − 1) from the
 // band's top + 2 to its bottom − 2 (render.h's icon-row block); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
-// (tmp/reactos-tooltips.png); THE ICONS Tango 0.8.90's scalable drawings,
+// (tmp/reactos-tooltips.png); THE DROPDOWN Windows' popup menu, 17-px items
+// one px inside the frame; THE ICONS Tango 0.8.90's scalable drawings,
 // ReactOS's own model of a Windows 2000 desktop dressed in Tango (architect
 // 2026-10-06: assets/icons/tango/, its README the mapping), the disabled
 // glyph ReactOS's saturate.
@@ -249,6 +260,8 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,
     .tooltip_pad_px               = 2,
+    .popup_item_height_px         = 17,
+    .popup_margin_px              = 1,
     .card_seat                    = GuiCardSeat::UnderBand,
     .corner_radius_px             = 0,
     .disabled_glyph               = GuiDisabledGlyph::ReactOSSaturate,
@@ -301,7 +314,10 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
 //   THE PUSH BUTTON the cell 13 + 2 x (xthickness 3 + focus-line-width 1 +
 //   focus-padding 1 + inner-border 1) = 25 (his file chooser's Open, 29 at
 //   the 17 cell), the label 6 px in each way; THE TOOLTIP the tooltips
-//   style's 4-px pad.
+//   style's 4-px pad; THE DROPDOWN GtkMenu under the "menu" style
+//   (x/ythickness 0: no margin, the items against the frame) with the
+//   menu_item style's items, the cell 13 + 2 x ythickness 3 = 19 (23 at
+//   the 17 cell on his capture 23-22-06).
 //   THE DRAWING: the gummy toolbar style (GtkReliefNone), radius 3 on the
 //   gummy boxes (the gtkrc's `radius = 3.0`), GTK's insensitive icon, the
 //   icons "mist" (gnome-icon-theme 2.30's drawings under Mist's own
@@ -344,6 +360,8 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .push_button_pad_left_px      = 6.0,
     .push_button_pad_right_px     = 6.0,
     .tooltip_pad_px               = 4,
+    .popup_item_height_px         = 19,
+    .popup_margin_px              = 0,
     .card_seat                    = GuiCardSeat::UnderBand,
     .corner_radius_px             = 3,
     .disabled_glyph               = GuiDisabledGlyph::GtkSaturatePixelate,

@@ -538,9 +538,20 @@ def clearlooks_geometry():
     band, row8 = 2 * i('icon_row_air_px') + case_h, 2 * i('bottom_row_air_px') + case_h
     if band != row8: raise SystemExit(f'build: the icon row\'s band ({band}) and row 8\'s ({row8}) differ; the one set of '
                                       'toolbar tones paints both (clearlooks_paint.cpp)')
+    # the push button's height is a double on the spec (push_button_box_px); a whole W px here
+    push_h = float(f['push_button_box_px'])
+    if push_h != int(push_h): raise SystemExit(f'build: push_button_box_px {push_h} is not a whole W px')
+    # THE TWO LENGTHS THE SPEC DOES NOT CARRY (both vocabularies' own, one constant at its owner): the dialog
+    # field's height (paint_handler.cpp kModalFieldHeightPx: Windows' 23, GTK's entry at the 13-row cell, 13 + 2 x
+    # (ythickness 3 + inner-border 2)) and the list row (folder_overlay.h kRowHeightPx)
+    const = lambda path, name: float(re.search(name + r'\s*=\s*([0-9.]+)', open(path).read()).group(1))
+    entry_h = const(os.path.join(REPO, 'src', 'gui', 'paint_handler.cpp'), 'kModalFieldHeightPx')
+    row_h = const(os.path.join(REPO, 'src', 'gui', 'folder_overlay.h'), 'kRowHeightPx')
+    assert entry_h == int(entry_h) and row_h == int(row_h), (entry_h, row_h)
     return {'caption_h': i('caption_height_px'), 'cbtn_w': i('caption_button_w_px'), 'cbtn_h': i('caption_button_h_px'),
             'menu_head': i('menu_row_head_px'), 'menu_content': i('menu_row_content_px'),
-            'menu_foot': i('menu_row_foot_px'), 'case_h': case_h, 'band_h': band}
+            'menu_foot': i('menu_row_foot_px'), 'case_h': case_h, 'band_h': band, 'push_h': int(push_h),
+            'entry_h': int(entry_h), 'row_h': int(row_h), 'menu_item_h': i('popup_item_height_px')}
 
 
 def mc_eval(expr, env):
@@ -642,6 +653,8 @@ def engine_tones(g, m, gtk, sc, geo):
     sh, mix = T.gtk2_shade, T.gtk2_mix
     style_bg = lambda style, state: unit(gtkrc_color(g['styles'][style]['colors'].get(
         f'bg[{state}]', g['styles']['default']['colors'][f'bg[{state}]']), sc))
+    style_c16 = lambda style, comp, state: gtkrc_color(g['styles'][style]['colors'].get(
+        f'{comp}[{state}]', g['styles']['default']['colors'][f'{comp}[{state}]']), sc)
     bg, sel = unit(gtk[('bg', 'NORMAL')]), unit(gtk[('bg', 'SELECTED')])
     SH = [sh(bg, k) for k in (1.15, 0.95, 0.896, 0.82, 0.7, 0.665, 0.475, 0.45, 0.4)]   # clearlooks_style_realize
     SP = [sh(sel, k) for k in (1.25, 1.05, 0.65)]
@@ -736,41 +749,130 @@ def engine_tones(g, m, gtk, sc, geo):
     t.add('cl_button_ring_inner', cb(sh(pbg, 0.93)), 'gummy button, reliefstyle 1: the inner ring, shade (parentbg, 0.93)')
     t.add('cl_button_inset_dark', cb(sh(pbg, 0.94)), 'clearlooks_draw_inset: its top-left half, shade (parentbg, 0.94)')
     t.add('cl_button_inset_light', cb(sh(pbg, 1.06)), 'clearlooks_draw_inset: its bottom-right half, shade (parentbg, 1.06)')
-    y0, y1 = 2, ch - 2
-    step = T.pixman_step_row(y0, y1)
-    for state, style_state, active, disabled in TOOL_BUTTON_STATES:
-        fill = style_bg('button', style_state)
+    # ONE GUMMY FACE (clearlooks_gummy_draw_button's fill, border and highlight or inner shadow) on a box `h` rows
+    # tall: the ramp over its rows 2 .. h - 3 with its step where pixman put it, the border, and then either the
+    # top-left highlight (not active) or the pressed inner shadow (active), each baked over the ramp's rows
+    def gummy_face(prefix, h, fill, active, disabled, border, rule):
+        y0, y1 = 2, h - 2
+        step = T.pixman_step_row(y0, y1)
+        assert step == y0 + (y1 - y0 + 1) // 2, (h, step)     # the painter's step (clearlooks_paint.cpp paint_gummy)
         ramp = {r: T.pixman_vertical_ramp_row(gummy(fill, disabled), y0, y1, r) for r in range(y0, y1)}
-        rule = f'gummy button {state} (bg[{style_state}] of the button style)'
         first = 5 if active else 2
-        segs = ((first, step - 1), (step, ch - 3))
+        segs = ((first, step - 1), (step, h - 3))
         for name, (a, b) in zip(('upper', 'lower'), segs):
-            t.ramp(f'cl_button_{state}_{name}', [ramp[r] for r in range(a, b + 1)], 0, b - a,
+            t.ramp(f'{prefix}_{name}', [ramp[r] for r in range(a, b + 1)], 0, b - a,
                    f'{rule}: its ramp, rows {a}..{b}')
-        t.add(f'cl_button_{state}_border', cb(BSH[4]) if disabled else cb(mix(BSH[6], fill, 0.2)),
-              rule + (': the border, the button style\'s shade[4]' if disabled
-                      else ': the border, mix (the button style\'s shade[6], fill, 0.2)'))
+        t.add(f'{prefix}_border', border[0], rule + border[1])
         if not active:                                     # the top-left highlight, shade (fill, 1.3) at 0.4
             hi = sh(fill, 1.3)
             over = lambda r: T.cairo_solid_over(hi, 0.4, ramp[r])
-            t.add(f'cl_button_{state}_highlight_row', over(y0), rule + ': the top-left highlight over its first row')
-            for name, (a, b) in zip(('upper', 'lower'), ((6, step - 1), (step, ch - 6))):
-                t.ramp(f'cl_button_{state}_highlight_{name}', [over(r) for r in range(a, b + 1)], 0, b - a,
+            t.add(f'{prefix}_highlight_row', over(y0), rule + ': the top-left highlight over its first row')
+            for name, (a, b) in zip(('upper', 'lower'), ((6, step - 1), (step, h - 6))):
+                t.ramp(f'{prefix}_highlight_{name}', [over(r) for r in range(a, b + 1)], 0, b - a,
                        rule + f': the top-left highlight down its left column, rows {a}..{b}')
-            continue
+            return
         shadow = cb(sh(fill, 0.92))                         # the pressed shadow, 0.58 -> 0 over three px
         alpha = [T.pixman_alpha_ramp_alpha(0.58, 2, 5, k) for k in (2, 3, 4)]
         under = {k: T.pixman_over(shadow, alpha[k - 2], ramp[k]) for k in (2, 3, 4)}
         for k in (2, 3, 4):
-            t.add(f'cl_button_{state}_shadow_row{k - 2}', under[k], rule + f': the inner shadow\'s row {k} over the ramp')
+            t.add(f'{prefix}_shadow_row{k - 2}', under[k], rule + f': the inner shadow\'s row {k} over the ramp')
         for c in (2, 3, 4):
             for name, (a, b) in zip(('upper', 'lower'), segs):
-                t.ramp(f'cl_button_{state}_shadow_col{c - 2}_{name}',
+                t.ramp(f'{prefix}_shadow_col{c - 2}_{name}',
                        [T.pixman_over(shadow, alpha[c - 2], ramp[r]) for r in range(a, b + 1)], 0, b - a,
                        rule + f': the inner shadow\'s column {c} over the ramp, rows {a}..{b}')
             for k in (2, 3, 4):
-                t.add(f'cl_button_{state}_shadow_corner{k - 2}{c - 2}', T.pixman_over(shadow, alpha[c - 2], under[k]),
+                t.add(f'{prefix}_shadow_corner{k - 2}{c - 2}', T.pixman_over(shadow, alpha[c - 2], under[k]),
                       rule + f': the inner shadow\'s column {c} over its row {k}')
+
+    border_of = lambda fill, disabled: ((cb(BSH[4]), ': the border, the button style\'s shade[4]') if disabled else
+                                        (cb(mix(BSH[6], fill, 0.2)),
+                                         ': the border, mix (the button style\'s shade[6], fill, 0.2)'))
+    for state, style_state, active, disabled in TOOL_BUTTON_STATES:
+        fill = style_bg('button', style_state)
+        gummy_face(f'cl_button_{state}', ch, fill, active, disabled, border_of(fill, disabled),
+                   f'gummy button {state} (bg[{style_state}] of the button style)')
+
+    # THE PUSH BUTTON (clearlooks_gummy_draw_button on the "button" style, reliefstyle 1) at the spec's push button
+    # height: NORMAL (bg[NORMAL] 1.04, the two shadow rings, the highlight), PRESSED (bg[ACTIVE] 0.85, the inset ring,
+    # the inner shadow), DISABLED (bg[INSENSITIVE], the disabled ramp, the inset ring, the highlight, the shade[4]
+    # border); THE DEFAULT BUTTON (is_default) one ring mix (parentbg, spot[1], 0.5) and the border mix (spot[2],
+    # fill, 0.2) — pressed, the inset over its ring and that border. The rings and the inset are the tool button's
+    # (the same parentbg). The label fg[NORMAL] of the button style.
+    ph = geo['push_h']
+    for state, style_state, active, disabled in PUSH_BUTTON_STATES:
+        fill = style_bg('button', style_state)
+        gummy_face(f'cl_push_{state}', ph, fill, active, disabled, border_of(fill, disabled),
+                   f'gummy push button {state} at {ph} rows (bg[{style_state}] of the button style)')
+    t.add('cl_push_default_ring', cb(mix(pbg, SP[1], 0.5)),
+          'gummy push button, is_default: its one ring, mix (parentbg, spot[1], 0.5)')
+    for state, style_state in (('normal', 'NORMAL'), ('pressed', 'ACTIVE')):
+        t.add(f'cl_push_{state}_default_border', cb(mix(SP[2], style_bg('button', style_state), 0.2)),
+              f'gummy push button {state}, is_default: the border, mix (spot[2], bg[{style_state}], 0.2)')
+    t.add('cl_push_text', T.gdk_byte(style_c16('button', 'fg', 'NORMAL')), 'the button style\'s fg[NORMAL]')
+
+    # THE ENTRY (clearlooks_gummy_draw_entry, the "entry" style: xthickness 3, its focus_color) at the dialog field's
+    # height: the inset ring is the tool button's (draw_inset on the same parentbg); base[NORMAL] inside; unfocused the
+    # shade[6] border and the 0.18 inner shadow baked over base; focused the focus_color border and its inner ring.
+    # THE TEXT AND THE SELECTION are GtkEntry's own (gtkentry.c draws the selection in base[SELECTED] under
+    # text[SELECTED] while the entry has the focus, base[ACTIVE] under text[ACTIVE] while it has not; the entry
+    # style's bg[SELECTED] / fg[SELECTED] are its progress bar's); the list's rows read the same base and text.
+    base = unit(gtk[('base', 'NORMAL')])
+    assert gtk[('text', 'SELECTED')] == gtk[('text', 'ACTIVE')]
+    t.add('cl_base', T.gdk_byte(gtk[('base', 'NORMAL')]), 'base[NORMAL] (the entry\'s and the list\'s ground)')
+    t.add('cl_text', T.gdk_byte(gtk[('text', 'NORMAL')]), 'text[NORMAL] (the entry\'s and the list\'s text)')
+    t.add('cl_text_selected', T.gdk_byte(gtk[('text', 'SELECTED')]),
+          'text[SELECTED] = text[ACTIVE] (a selection\'s text, focused or not)')
+    t.add('cl_selection', T.gdk_byte(gtk[('base', 'SELECTED')]), 'base[SELECTED] (GtkEntry\'s selection, focused)')
+    t.add('cl_selection_unfocused', T.gdk_byte(gtk[('base', 'ACTIVE')]),
+          'base[ACTIVE] (GtkEntry\'s selection, unfocused)')
+    eh = geo['entry_h']
+    ent = g['styles']['entry']
+    assert 'bg[NORMAL]' not in ent['colors'], ent                  # the entry's shade table is the window's
+    focus = unit(gtkrc_color(ent['engines']['clearlooks']['focus_color'], sc))
+    t.add('cl_entry_border', cb(SH[6]), 'gummy entry: the border, shade[6]')
+    t.add('cl_entry_shadow', T.cairo_solid_over(sh(SH[6], 0.92), 0.18, cb(base)),
+          'gummy entry, unfocused: the inner shadow, shade (border, 0.92) at 0.18 over base')
+    t.add('cl_entry_focus_border', cb(focus), 'gummy entry, focused: the border, the entry style\'s focus_color')
+    t.add('cl_entry_focus_ring', cb(mix(base, sh(focus, 1.61), 0.5)),
+          'gummy entry, focused: the inner ring, mix (base, shade (focus_color, 1.61), 0.5)')
+    assert eh >= 8, eh
+
+    # THE DROPDOWN (the "menu" style: bg 1.08, x/ythickness 0, radius 0): its ground, clearlooks_draw_menu_frame's
+    # shade[5] of THE MENU STYLE'S table, the separator item's one shade[5] row
+    # (clearlooks_draw_menu_item_separator), and the lit item (clearlooks_gummy_draw_menuitem: spot[1]'s gummy ramp
+    # over the item's whole height in a spot[2] border at the menu's radius 0) at the spec's item height
+    menu_bg = style_bg('menu', 'NORMAL')
+    t.add('cl_menu_ground', T.gdk_byte(style_c16('menu', 'bg', 'NORMAL')), 'the menu style\'s bg[NORMAL], shade (bg, 1.08)')
+    t.add('cl_menu_frame', cb(sh(menu_bg, 0.665)), 'clearlooks_draw_menu_frame: the menu style\'s shade[5]')
+    t.add('cl_menu_separator', cb(sh(menu_bg, 0.665)),
+          'clearlooks_draw_menu_item_separator: the menu style\'s shade[5], one row')
+    t.add('cl_menu_text', T.gdk_byte(style_c16('menu_item', 'fg', 'NORMAL')), 'the menu_item style\'s fg[NORMAL]')
+    mi = geo['menu_item_h']
+    rows = {r: T.pixman_vertical_ramp_row(gummy(SP[1], False), 0, mi, r) for r in range(mi)}
+    step = T.pixman_step_row(0, mi)
+    assert step == (mi + 1) // 2, step
+    rule = f'clearlooks_gummy_draw_menuitem: spot[1]\'s gummy ramp over the {mi}-row item'
+    t.ramp('cl_menuitem_upper', [rows[r] for r in range(1, step)], 0, step - 2, rule + ' (above the step)')
+    t.ramp('cl_menuitem_lower', [rows[r] for r in range(step, mi - 1)], 0, mi - 2 - step, rule + ' (below it)')
+    t.add('cl_menuitem_border', cb(SP[2]), 'clearlooks_gummy_draw_menuitem: the border, spot[2]')
+    t.add('cl_menuitem_text', T.gdk_byte(style_c16('menu_item', 'fg', 'PRELIGHT')),
+          'the menu_item style\'s fg[PRELIGHT] (selected_fg_color)')
+
+    # THE LIST (a GtkTreeView in a GtkScrolledWindow, shadow IN): the scrolled window's one shade[5] line
+    # (clearlooks_style_draw_shadow's "scrolled_window" arm, GUMMY), base[NORMAL] inside, the selected row
+    # clearlooks_gummy_draw_selected_cell — the gummy ramp of base[SELECTED] with the focus, of base[ACTIVE] without,
+    # over the row's whole height, no border
+    t.add('cl_list_frame', cb(SH[5]), 'the scrolled window\'s shadow IN: one shade[5] line')
+    rh = geo['row_h']
+    step = T.pixman_step_row(0, rh)
+    assert step == (rh + 1) // 2, step
+    for name, state in (('selected', 'SELECTED'), ('selected_unfocused', 'ACTIVE')):
+        fill = unit(gtk[('base', state)])
+        rows = [T.pixman_vertical_ramp_row(gummy(fill, False), 0, rh, r) for r in range(rh)]
+        rule = f'clearlooks_gummy_draw_selected_cell: base[{state}]\'s gummy ramp over the {rh}-row row'
+        t.ramp(f'cl_list_{name}_upper', rows, 0, step - 1, rule + ' (above the step)')
+        t.ramp(f'cl_list_{name}_lower', rows, step, rh - 1, rule + ' (below it)')
     return t
 
 
@@ -782,6 +884,10 @@ CAPTION_BUTTON_STATES = (('focused', 'button_bg'), ('pressed', 'button_bg_presse
 # The tool button's drawn states: (role prefix, the GTK state whose bg fills it, active (shadow IN), insensitive).
 TOOL_BUTTON_STATES = (('hot', 'PRELIGHT', False, False), ('pressed', 'ACTIVE', True, False),
                       ('hot_checked', 'PRELIGHT', True, False), ('dead_checked', 'INSENSITIVE', True, True))
+# The push button's drawn states (the same tuple): the product's dialog buttons have no hover face (the toolbars' HOT
+# case is the one hover face, clearlooks_paint.h's head), so no prelit state is recorded.
+PUSH_BUTTON_STATES = (('normal', 'NORMAL', False, False), ('pressed', 'ACTIVE', True, False),
+                      ('disabled', 'INSENSITIVE', False, True))
 
 
 def caption_button_line_role(state, op):

@@ -1167,10 +1167,14 @@ constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
 //
 // THE ITEM'S INSET: the highlight box stands one Windows px inside the frame
 // on every side — the margin Windows leaves between a popup's edge and its
-// lit row — so the published item rect is the frame's interior less that px.
+// lit row — so the published item rect is the frame's interior less that px
+// (the spec's popup_margin_px, which the vertical margin reads too; under
+// Clearlooks 0 and the item covers the frame's sides, GtkMenu's xthickness
+// 0 — paint_dropdown).
 // THE SEPARATOR'S INSET: its etched pair runs 5 Windows px in from the popup's
-// edge each side (the laptop pixel's 7 re-authored at the unit's change).
-constexpr double kPopupItemInsetPx   = 1.0;   // the highlight box, per side
+// edge each side (the laptop pixel's 7 re-authored at the unit's change);
+// GtkMenu's one row runs the box's whole width (separator-height 7, its
+// horizontal-padding 0).
 constexpr double kPopupSepInsetPx    = 5.0;   // the separator, per side
 
 // THE MINIMUM ITEM WIDTH — the tab-min-width pattern, and the reason a menu of
@@ -3120,7 +3124,15 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     //          no bevel: the relief's mitre, paint_relief_frame, is not drawn
     //          here) — the tooltip and every notification card, whose words
     //          their painters set in `card_text`. A card keeps its own height
-    //          rule: the line is drawn on its outer rows.
+    //          rule: the line is drawn on its outer rows. THE SAME FACE IS
+    //          CLEARLOOKS' (architect 2026-10-07): clearlooks_draw_tooltip
+    //          fills the tooltips style's bg and strokes ONE square line of
+    //          shade (bg, 0.6) on all four sides — the card pair and
+    //          card_frame the clearlooks theme records (#F5F5B5 / #BABA45,
+    //          his capture 23-22-06) — so the INFO face has no fork; only
+    //          its pad is the spec's (tooltip_pad_px).
+    // (The MENU face is Windows' alone: under Clearlooks the dropdown is
+    // GtkMenu's box, paint_cl_menu, chosen at paint_dropdown.)
     if (face == PopupFace::Menu) {
         paint_cell_rect(cr, r, palette().ground);
         paint_relief_plain_raised(cr, r);
@@ -3634,7 +3646,11 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // ground inside the PLAIN RAISED two-line frame, square
     // (paint_popup_chrome), one Windows px of ground margin inside it, its
     // separators ETCHED; the highlighted row a FLAT FILL in the theme's
-    // selected pair (render.h's palette block).
+    // selected pair (render.h's palette block). UNDER CLEARLOOKS GTK's menu
+    // (architect 2026-10-07; render.h's dropdown block, clearlooks_paint.h):
+    // the menu style's ground in one shade[5] line whose top covers the menu
+    // row's last row, the lit item spot[1]'s gummy ramp in its spot[2]
+    // border, the separator one shade[5] row.
     //
     // NO ICONS, NO CHECKBOXES, NO SUBMENU ARROWS, by ruling — the crops reserve
     // all three columns and this product has none of them, exactly as the tabs
@@ -3689,11 +3705,17 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     cairo_save(cr);
     const GuiFont font = gui_font(GuiFace::Body);
 
+    // UNDER CLEARLOOKS GTKMENU'S BOX (render.h's dropdown block): no margin,
+    // the items against the frame and covering its sides, the separator the
+    // box's whole width.
+    const bool gtk_menu = popup_is_gtk_menu();
     const int border    = popup_border_px();
+    const int side      = gtk_menu ? 0 : border;
     const int item_h    = popup_item_h_px();
     const int block_mar = popup_item_margin_y_px();
-    const int inset     = scaled_px(kPopupItemInsetPx, 1);
-    const int sep_inset = scaled_px(kPopupSepInsetPx);
+    const int margin_x  = live_chrome_spec().popup_margin_px;
+    const int inset     = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
+    const int sep_inset = gtk_menu ? 0 : scaled_px(kPopupSepInsetPx);
     const int sep_mar   = popup_sep_margin_y_px();
     const int sep_block = popup_sep_block_px();   // margin, etched pair, margin
 
@@ -3736,7 +3758,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     const int pad_l    = scaled_px(kPopupPadXPx);
     const int gap      = scaled_px(kPopupHotkeyGapPx);
     const int pad_r    = pad_l;
-    const int chrome_w = 2 * inset + 2 * border;
+    const int chrome_w = 2 * inset + 2 * side;
     const int content_w =
         pad_l + static_cast<int>(std::nearbyint(widest)) +
         (has_hotkeys ? gap + static_cast<int>(std::nearbyint(widest_hot)) : 0) +
@@ -3773,7 +3795,8 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     if (x < 0) x = 0;
     app.dropdown.rect = GuiRect{x, y, w, h};
 
-    paint_popup_chrome(cr, app.dropdown.rect, PopupFace::Menu);
+    if (gtk_menu) paint_cl_menu(cr, app.dropdown.rect);
+    else          paint_popup_chrome(cr, app.dropdown.rect, PopupFace::Menu);
 
     // THE ITEMS' ENABLED VERDICTS (architect 2026-09-24, the truthful menus),
     // asked once per paint of the one owner (dropdown_item_enabled); the
@@ -3793,8 +3816,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     }
 
     // The item block opens BELOW the frame by its own one-px margin, and
-    // closes with the same margin above the bottom frame.
-    int iy = y + border + block_mar;
+    // closes with the same margin above the bottom frame (under Clearlooks
+    // at the box's top: its frame's top line stands above it).
+    int iy = y + popup_border_top_px() + block_mar;
     for (int i = 0; i < count; ++i) {
         const DropdownRow row = dropdown_row(menu, i);
         if (row.separator_before) {
@@ -3802,8 +3826,11 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             // separator), inset horizontally: its Shadow line and its Hilight
             // line under it, with the block's own vertical margin above and
             // below the pair (popup_sep_block_px, dropdown_h_px's sum).
-            paint_relief_etched_hline(cr, x + sep_inset, iy + sep_mar,
-                                      w - 2 * sep_inset);
+            if (gtk_menu)
+                paint_cl_menu_separator(cr, x, iy + sep_mar, w);
+            else
+                paint_relief_etched_hline(cr, x + sep_inset, iy + sep_mar,
+                                          w - 2 * sep_inset);
             iy += sep_block;
         }
         // ITEMS TOUCH — zero vertical gap between adjacent ones — and each
@@ -3813,7 +3840,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // that box, so the clickable area is exactly the area that lights; the
         // press claim reads it (dropdown.item_rects), and the label and the
         // accelerator are placed from the popup's own edges, not from it.
-        const GuiRect item{x + border + inset, iy, item_w, item_h};
+        const GuiRect item{x + side + inset, iy, item_w, item_h};
         app.dropdown.item_rects[static_cast<size_t>(i)] = item;
 
         // THE HIGHLIGHTED ROW (architect 2026-10-02, the Windows highlight):
@@ -3833,7 +3860,12 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // in ink alone.
         const bool lit = enabled[i] && (app.dropdown.pressed_item == i ||
                                         app.dropdown.hovered_item == i);
-        if (lit) paint_cell_rect(cr, item, palette().selected_fill);
+        // UNDER CLEARLOOKS the lit item is clearlooks_gummy_draw_menuitem
+        // (paint_cl_menu_item), the same item box, the same gate.
+        if (lit) {
+            if (gtk_menu) paint_cl_menu_item(cr, item);
+            else          paint_cell_rect(cr, item, palette().selected_fill);
+        }
 
         // LEFT-ALIGNED AT THE ONE INDENT, measured from the POPUP box's own left
         // edge in every menu, and vertically centred by the shared solver. On
@@ -3854,8 +3886,13 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
                 show_embossed_run(cr, r, rx, base);
                 return;
             }
-            set_palette_source(cr, lit ? palette().selected_text
-                                       : palette().label);
+            // (Clearlooks: the menu_item style's fg[PRELIGHT] on the lit
+            // item, its fg[NORMAL] on the menu's ground — GTK's insensitive
+            // pair is the emboss's own arm, show_embossed_run.)
+            set_palette_source(cr, gtk_menu ? (lit ? palette().cl_menuitem_text
+                                                   : palette().cl_menu_text)
+                                            : (lit ? palette().selected_text
+                                                   : palette().label));
             text_shape::show_shaped_run(cr, r, rx, base);
         };
         show_row_run(runs[i], static_cast<double>(x + pad_l));
@@ -6737,9 +6774,34 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // commit posts (the owner's own sentence, GuiFlagEditor::notifications
         // and the settings editor's equivalent) says why. The flag editor
         // takes the same rule (render_flag_editor_box).
+        // UNDER CLEARLOOKS THE FIELD IS GTK'S ENTRY (architect 2026-10-07;
+        // paint_cl_entry, clearlooks_paint.h): the inset ring, base inside
+        // the shade[6] border with its inner shadow, FOCUSED the focus
+        // colour's border and inner ring — the one place the field's focus
+        // shows beside the caret, GTK's own — its ring and border the same
+        // two lines the sunken edge spends (field_inner), its 23 rows GTK's
+        // entry at the 13-row cell (13 + 2 x (ythickness 3 + inner-border
+        // 2)), Windows' 23 too. Its text, selection and caret take GtkEntry's
+        // pairs: text[NORMAL]; base[SELECTED] under text[SELECTED] while the
+        // field has the focus, base[ACTIVE] under text[ACTIVE] while it has
+        // not.
         const bool field_focused = app.modal_dialog_focus < 0;
-        paint_cell_rect(cr, field_inner, palette().field_ground);
-        paint_relief_plain_sunken(cr, field_outer);
+        const bool gtk_entry =
+            spec.vocabulary == GuiChromeVocabulary::Clearlooks;
+        const GuiColor ink_text = gtk_entry ? palette().cl_text
+                                            : palette().field_text;
+        const GuiColor ink_sel_fill =
+            !gtk_entry      ? palette().selected_fill
+            : field_focused ? palette().cl_selection
+                            : palette().cl_selection_unfocused;
+        const GuiColor ink_sel_text = gtk_entry ? palette().cl_text_selected
+                                                : palette().selected_text;
+        if (gtk_entry) {
+            paint_cl_entry(cr, field_outer, field_focused);
+        } else {
+            paint_cell_rect(cr, field_inner, palette().field_ground);
+            paint_relief_plain_sunken(cr, field_outer);
+        }
 
         const text_shape::ShapedRun run =
             text_shape::shape_text_run(font, ed->pending);
@@ -6851,7 +6913,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            set_palette_source(cr, palette().selected_fill);
+            set_palette_source(cr, ink_sel_fill);
             cairo_rectangle(cr, hx0, band_y, hw, band_h);
             cairo_fill(cr);
             cairo_restore(cr);
@@ -6868,17 +6930,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             cairo_rectangle(cr, hx0, band_y + band_h, hw,
                             fy1 - (band_y + band_h));
             cairo_clip(cr);
-            set_palette_source(cr, palette().field_text);
+            set_palette_source(cr, ink_text);
             text_shape::show_shaped_run(cr, run, tx, baseline);
             cairo_restore(cr);
             cairo_save(cr);
             cairo_rectangle(cr, hx0, band_y, hw, band_h);
             cairo_clip(cr);
-            set_palette_source(cr, palette().selected_text);
+            set_palette_source(cr, ink_sel_text);
             text_shape::show_shaped_run(cr, run, tx, baseline);
             cairo_restore(cr);
         } else {
-            set_palette_source(cr, palette().field_text);
+            set_palette_source(cr, ink_text);
             text_shape::show_shaped_run(cr, run, tx, baseline);
         }
         // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
@@ -6900,7 +6962,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             cairo_save(cr);
             cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
             // THE CARET IS ITS FIELD'S TEXT (architect 2026-10-03).
-            set_palette_source(cr, palette().field_text);
+            set_palette_source(cr, ink_text);
             cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
                             band_y, caret_px, band_h);
             cairo_fill(cr);
@@ -6975,7 +7037,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             ((armed && app.modal_dialog_press_inside) ||
              static_cast<int>(i) == app.modal_dialog_key_pressed);
         const bool focused = static_cast<int>(i) == app.modal_dialog_focus;
-        if (focused)
+        // UNDER CLEARLOOKS A WORD BUTTON IS GTK'S PUSH BUTTON (architect
+        // 2026-10-07; paint_cl_push_button, clearlooks_paint.h): rest,
+        // pressed and disabled as clearlooks_gummy_draw_button draws them,
+        // and THE FOCUS IS GTK'S DEFAULT BUTTON — its spot ring and border
+        // inside the box — in place of Windows' DkShadow frame outside it
+        // (the reserved band stays ground); the label in the button style's
+        // fg, the insensitive pair when disabled.
+        const bool gtk_push =
+            !player_up && spec.vocabulary == GuiChromeVocabulary::Clearlooks;
+        if (focused && !gtk_push)
             paint_relief_line_frame(
                 cr, GuiRect{r.x - ring, r.y - ring, r.w + 2 * ring,
                             r.h + 2 * ring},
@@ -6986,6 +7057,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const ButtonBoxFace box =
             player_up
                 ? paint_toolbar_box(cr, r, plan[i].lit, pressed, hot, enabled)
+            : gtk_push
+                ? ButtonBoxFace{paint_cl_push_button(cr, r, pressed, enabled,
+                                                     focused)}
                 : paint_button_box(cr, r, plan[i].lit, pressed,
                                    ButtonFamily::Push);
         if (plan[i].glyph) {
@@ -7016,7 +7090,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 static_cast<double>(box.shift);
             if (enabled)
                 show_row_text(cr, font, lx, ly, plan[i].label,
-                              palette().label);
+                              gtk_push ? palette().cl_push_text
+                                       : palette().label);
             else
                 show_row_text_embossed(cr, font, lx, ly, plan[i].label);
         }
@@ -7317,8 +7392,23 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // CLIP, because a scrolled listing's first and last rows straddle the
     // content's edges and must not paint into the waveform above, the bottom
     // row below, or the band's own edge.
-    paint_cell_rect(cr, surf, palette().field_ground);
-    paint_relief_plain_sunken(cr, surf);
+    // UNDER CLEARLOOKS GTK'S COMPACT LIST (architect 2026-10-07: "no
+    // alternating rows, simple white, more like compact view"; his capture
+    // 00-17-47): base inside the scrolled window's one shade[5] line
+    // (paint_cl_list), a lit row clearlooks_gummy_draw_selected_cell —
+    // base[SELECTED]'s gummy ramp while the ring stands on the list,
+    // base[ACTIVE]'s while it does not, GTK's own focused and unfocused
+    // selection, which is the list's focus cue in place of Windows' frame
+    // (paint_cl_selected_cell) — the names in text[NORMAL], text[SELECTED]
+    // on a lit row.
+    const bool gtk_list =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    if (gtk_list) {
+        paint_cl_list(cr, surf);
+    } else {
+        paint_cell_rect(cr, surf, palette().field_ground);
+        paint_relief_plain_sunken(cr, surf);
+    }
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
     // SAME RECT (folder_overlay.h) — the surface inside its edge — so paint
     // and hit agree about every pixel at any scroll offset. The surface stays
@@ -7364,11 +7454,15 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             // press arm promising it — is the flat selected fill; a row that
             // is neither takes NO FILL and the band's field shows through it.
             const bool lit = pressed || highlighted;
-            if (lit) paint_cell_rect(cr, r, pal.selected_fill);
+            if (lit) {
+                if (gtk_list) paint_cl_selected_cell(cr, r, ov.list_focused);
+                else          paint_cell_rect(cr, r, pal.selected_fill);
+            }
             // THE LIST'S FOCUS: the focus frame one line outside the
             // highlighted row while the modal ring stands on the list (the
             // block above); the rows' one-Windows-px gap and pad hold it.
-            if (highlighted && ov.list_focused) {
+            // (Clearlooks: the selected cell's focused ramp says it.)
+            if (highlighted && ov.list_focused && !gtk_list) {
                 const int fl = relief_line_px();
                 paint_relief_line_frame(
                     cr, GuiRect{r.x - fl, r.y - fl, r.w + 2 * fl, r.h + 2 * fl},
@@ -7415,7 +7509,10 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            set_palette_source(cr, lit ? pal.selected_text : pal.field_text);
+            set_palette_source(cr, gtk_list ? (lit ? pal.cl_text_selected
+                                                   : pal.cl_text)
+                                            : (lit ? pal.selected_text
+                                                   : pal.field_text));
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);

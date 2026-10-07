@@ -1,6 +1,8 @@
 #include "clearlooks_paint.h"
 
 #include "chrome_spec.h"
+// kRowHeightPx: the list row the selected cell's tones are recorded at.
+#include "folder_overlay.h"
 
 #include <algorithm>
 #include <array>
@@ -335,26 +337,75 @@ const ClGummyFace kClHot{false, CL_R(hot, upper_0), CL_R(hot, upper_1),
 const ClGummyFace kClPressed     = CL_ACTIVE_FACE(pressed);
 const ClGummyFace kClHotChecked  = CL_ACTIVE_FACE(hot_checked);
 const ClGummyFace kClDeadChecked = CL_ACTIVE_FACE(dead_checked);
+#undef CL_R
+// The push button's faces (build.py PUSH_BUTTON_STATES), the same layout
+// under cl_push_<state>_.
+#define CL_R(p, s) &GuiPalette::cl_push_##p##_##s
+#define CL_HIGHLIT_FACE(p)                                                  \
+    ClGummyFace{false, CL_R(p, upper_0), CL_R(p, upper_1), CL_R(p, lower_0),\
+                CL_R(p, lower_1), CL_R(p, border), CL_R(p, highlight_row),  \
+                CL_R(p, highlight_upper_0), CL_R(p, highlight_upper_1),     \
+                CL_R(p, highlight_lower_0), CL_R(p, highlight_lower_1),     \
+                {}, {}, {}}
+const ClGummyFace kClPushNormal   = CL_HIGHLIT_FACE(normal);
+const ClGummyFace kClPushPressed  = CL_ACTIVE_FACE(pressed);
+const ClGummyFace kClPushDisabled = CL_HIGHLIT_FACE(disabled);
+#undef CL_HIGHLIT_FACE
 #undef CL_ACTIVE_FACE
 #undef CL_COL
 #undef CL_R
 
-// clearlooks_gummy_draw_button on the case `r` (the header's faces), its W
-// rows from the spec: the gummy ramp over the case's rows 2 .. h − 3 with its
-// step where pixman put it (row 2 + (n + 1) / 2, n = h − 4 rows; build.py's
-// pixman_step_row), every one-W ring, line and shadow row a relief line.
-void paint_gummy(cairo_t* cr, const GuiRect& r, const ClGummyFace& f) {
+// THE RING ROUND A GUMMY BUTTON (clearlooks_gummy_draw_button's first
+// block): reliefstyle 1's two SHADOW rings of the parent's bg (a resting,
+// sensitive, non-default button), the default button's ONE ring mix
+// (parentbg, spot[1], 0.5), or clearlooks_draw_inset's ring (a pressed or a
+// disabled button, and a pressed default one over its ring).
+enum class ClRing { Shadow, Default, Inset };
+
+// clearlooks_draw_inset on `r` at `radius` (device px): the ring's top-left
+// half dark, its bottom-right half light, split along the diagonal through
+// the box's middle (the engine's own clip polygons). Antialiased.
+void paint_inset_ring(cairo_t* cr, const GuiRect& r, double radius) {
+    const double du = relief_line_px();
+    const double m  = std::min(r.w, r.h);
+    for (int half = 0; half < 2; ++half) {
+        cairo_save(cr);
+        cairo_new_path(cr);
+        cairo_move_to(cr, r.x, r.y + r.h);
+        cairo_line_to(cr, r.x + m / 2, r.y + r.h - m / 2);
+        cairo_line_to(cr, r.x + r.w - m / 2, r.y + m / 2);
+        cairo_line_to(cr, r.x + r.w, r.y);
+        if (half == 0) cairo_line_to(cr, r.x, r.y);
+        else           cairo_line_to(cr, r.x + r.w, r.y + r.h);
+        cairo_close_path(cr);
+        cairo_clip(cr);
+        rounded_path(cr, r.x + du / 2, r.y + du / 2, r.w - du, r.h - du,
+                     radius, kAll);
+        stroke_role(cr, half == 0 ? &GuiPalette::cl_button_inset_dark
+                                  : &GuiPalette::cl_button_inset_light);
+        cairo_restore(cr);
+    }
+}
+
+// clearlooks_gummy_draw_button on the box `r` (the header's faces), `h_w`
+// its W rows (the tool case's or the push button's, from the spec — the rows
+// the import recorded the face's tones at): the ring (ClRing above), the
+// gummy ramp over the box's rows 2 .. h − 3 with its step where pixman put
+// it (row 2 + (n + 1) / 2, n = h − 4 rows; build.py's pixman_step_row), the
+// border (`border`, or the face's own when null), then the highlight or the
+// inner shadow; every one-W ring, line and shadow row a relief line.
+void paint_gummy(cairo_t* cr, const GuiRect& r, int h_w, const ClGummyFace& f,
+                 ClRing ring, Role border = nullptr) {
     const ChromeSpec& spec = live_chrome_spec();
     const int    u   = relief_line_px();
     const double du  = u;
     const double rad = scaled_px(spec.corner_radius_px);
-    const int    h_w = spec.toolbar_case_lead_px + spec.toolbar_glyph_px +
-                       spec.toolbar_case_trail_y_px;
     const int step   = at(r.y, 2 + (h_w - 4 + 1) / 2);
     const int bottom = r.y + r.h - 2 * u;      // the ramp's last row's end
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    if (!f.active) {
+    switch (ring) {
+    case ClRing::Shadow:
         // reliefstyle 1's two rings of the parent's bg, radius + 1.
         rounded_path(cr, r.x + du / 2, r.y + du / 2, r.w - du, r.h - du,
                      rad + du, kAll);
@@ -362,28 +413,16 @@ void paint_gummy(cairo_t* cr, const GuiRect& r, const ClGummyFace& f) {
         rounded_path(cr, r.x + 1.5 * du, r.y + 1.5 * du, r.w - 2 * du,
                      r.h - 2 * du, rad + du, kAll);
         stroke_role(cr, &GuiPalette::cl_button_ring_inner);
-    } else {
-        // clearlooks_draw_inset: the ring's top-left half dark, its
-        // bottom-right half light, split along the diagonal through the
-        // box's middle (the engine's own clip polygons).
-        const double m = std::min(r.w, r.h);
-        for (int half = 0; half < 2; ++half) {
-            cairo_save(cr);
-            cairo_new_path(cr);
-            cairo_move_to(cr, r.x, r.y + r.h);
-            cairo_line_to(cr, r.x + m / 2, r.y + r.h - m / 2);
-            cairo_line_to(cr, r.x + r.w - m / 2, r.y + m / 2);
-            cairo_line_to(cr, r.x + r.w, r.y);
-            if (half == 0) cairo_line_to(cr, r.x, r.y);
-            else           cairo_line_to(cr, r.x + r.w, r.y + r.h);
-            cairo_close_path(cr);
-            cairo_clip(cr);
-            rounded_path(cr, r.x + du / 2, r.y + du / 2, r.w - du, r.h - du,
-                         rad + du, kAll);
-            stroke_role(cr, half == 0 ? &GuiPalette::cl_button_inset_dark
-                                      : &GuiPalette::cl_button_inset_light);
-            cairo_restore(cr);
-        }
+        break;
+    case ClRing::Default:
+        // is_default's one ring, radius + 1, on the outer rows.
+        rounded_path(cr, r.x + du / 2, r.y + du / 2, r.w - du, r.h - du,
+                     rad + du, kAll);
+        stroke_role(cr, &GuiPalette::cl_push_default_ring);
+        break;
+    case ClRing::Inset:
+        paint_inset_ring(cr, r, rad + du);
+        break;
     }
     // THE FILL, clipped to its rounded rect: the ramp, then (active) the
     // inner shadow's rows, columns and corners over it.
@@ -420,7 +459,7 @@ void paint_gummy(cairo_t* cr, const GuiRect& r, const ClGummyFace& f) {
     // THE BORDER.
     rounded_path(cr, r.x + 1.5 * du, r.y + 1.5 * du, r.w - 3 * du,
                  r.h - 3 * du, rad, kAll);
-    stroke_role(cr, f.border);
+    stroke_role(cr, border != nullptr ? border : f.border);
     if (!f.active) {
         // THE TOP-LEFT HIGHLIGHT (clearlooks_draw_top_left_highlight on the
         // fill's rect): up the left column, round the top-left corner and
@@ -602,14 +641,166 @@ void paint_cl_toolbar_separator(cairo_t* cr, int gap_x, int case_y,
 
 int paint_cl_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
                          bool pressed, bool hot, bool enabled) {
-    const int u = relief_line_px();
+    const ChromeSpec& spec = live_chrome_spec();
+    const int u   = relief_line_px();
+    const int h_w = spec.toolbar_case_lead_px + spec.toolbar_glyph_px +
+                    spec.toolbar_case_trail_y_px;
     if (!enabled) {
         if (!lamp) return 0;
-        paint_gummy(cr, r, kClDeadChecked);
+        paint_gummy(cr, r, h_w, kClDeadChecked, ClRing::Inset);
         return u;
     }
-    if (pressed)      paint_gummy(cr, r, kClPressed);
-    else if (lamp)    paint_gummy(cr, r, hot ? kClHotChecked : kClPressed);
-    else if (hot)     paint_gummy(cr, r, kClHot);
+    if (pressed)
+        paint_gummy(cr, r, h_w, kClPressed, ClRing::Inset);
+    else if (lamp)
+        paint_gummy(cr, r, h_w, hot ? kClHotChecked : kClPressed,
+                    ClRing::Inset);
+    else if (hot)
+        paint_gummy(cr, r, h_w, kClHot, ClRing::Shadow);
     return (pressed || lamp) ? u : 0;
+}
+
+int paint_cl_push_button(cairo_t* cr, const GuiRect& r, bool pressed,
+                         bool enabled, bool is_default) {
+    const int h_w = static_cast<int>(live_chrome_spec().push_button_box_px);
+    if (!enabled) {
+        paint_gummy(cr, r, h_w, kClPushDisabled, ClRing::Inset);
+        return 0;
+    }
+    if (pressed) {
+        paint_gummy(cr, r, h_w, kClPushPressed, ClRing::Inset,
+                    is_default ? &GuiPalette::cl_push_pressed_default_border
+                               : nullptr);
+        return relief_line_px();
+    }
+    if (is_default)
+        paint_gummy(cr, r, h_w, kClPushNormal, ClRing::Default,
+                    &GuiPalette::cl_push_normal_default_border);
+    else
+        paint_gummy(cr, r, h_w, kClPushNormal, ClRing::Shadow);
+    return 0;
+}
+
+void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused) {
+    const double du  = relief_line_px();
+    const double rad = scaled_px(live_chrome_spec().corner_radius_px);
+    const double ri  = std::max(0.0, rad - du);   // MAX (0, radius − 1)
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    paint_inset_ring(cr, r, rad + du);
+    rounded_path(cr, r.x + 2 * du, r.y + 2 * du, r.w - 4 * du, r.h - 4 * du,
+                 ri, kAll);
+    set_palette_source(cr, palette().cl_base);
+    cairo_fill(cr);
+    if (focused) {
+        rounded_path(cr, r.x + 2.5 * du, r.y + 2.5 * du, r.w - 5 * du,
+                     r.h - 5 * du, ri, kAll);
+        stroke_role(cr, &GuiPalette::cl_entry_focus_ring);
+    } else {
+        // Up the left column from the bottom less the radius, round the
+        // top-left corner, along the top row to the right less the radius.
+        cairo_save(cr);
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+        cairo_new_path(cr);
+        cairo_move_to(cr, r.x + 2.5 * du, r.y + r.h - rad);
+        if (ri > 0.0)
+            cairo_arc(cr, r.x + 2.5 * du + ri, r.y + 2.5 * du + ri, ri, M_PI,
+                      M_PI * 1.5);
+        else
+            cairo_line_to(cr, r.x + 2.5 * du, r.y + 2.5 * du);
+        cairo_line_to(cr, r.x + r.w - rad, r.y + 2.5 * du);
+        stroke_role(cr, &GuiPalette::cl_entry_shadow);
+        cairo_restore(cr);
+    }
+    rounded_path(cr, r.x + 1.5 * du, r.y + 1.5 * du, r.w - 3 * du,
+                 r.h - 3 * du, rad, kAll);
+    stroke_role(cr, focused ? &GuiPalette::cl_entry_focus_border
+                            : &GuiPalette::cl_entry_border);
+    cairo_restore(cr);
+}
+
+void paint_cl_menu(cairo_t* cr, const GuiRect& box) {
+    const int u = relief_line_px();
+    const GuiPalette& pal = palette();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, box, pal.cl_menu_ground);
+    paint_cell_rect(cr, GuiRect{box.x, box.y - u, box.w, u}, pal.cl_menu_frame);
+    paint_cell_rect(cr, GuiRect{box.x, box.y, u, box.h}, pal.cl_menu_frame);
+    paint_cell_rect(cr, GuiRect{box.x + box.w - u, box.y, u, box.h},
+                    pal.cl_menu_frame);
+    paint_cell_rect(cr, GuiRect{box.x, box.y + box.h - u, box.w, u},
+                    pal.cl_menu_frame);
+    cairo_restore(cr);
+}
+
+void paint_cl_menu_item(cairo_t* cr, const GuiRect& item) {
+    const int u = relief_line_px();
+    const int h_w = live_chrome_spec().popup_item_height_px;
+    const GuiPalette& pal = palette();
+    // The step where pixman put it over the item's own rows (build.py:
+    // row (n + 1) / 2 of the n-row item).
+    const int step = at(item.y, (h_w + 1) / 2);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cl_ramp(cr, GuiRect{item.x, item.y + u, item.w, step - item.y - u},
+                  pal.cl_menuitem_upper_0, pal.cl_menuitem_upper_1);
+    paint_cl_ramp(cr, GuiRect{item.x, step, item.w, item.y + item.h - u - step},
+                  pal.cl_menuitem_lower_0, pal.cl_menuitem_lower_1);
+    paint_cell_rect(cr, GuiRect{item.x, item.y, item.w, u},
+                    pal.cl_menuitem_border);
+    paint_cell_rect(cr, GuiRect{item.x, item.y + item.h - u, item.w, u},
+                    pal.cl_menuitem_border);
+    paint_cell_rect(cr, GuiRect{item.x, item.y, u, item.h},
+                    pal.cl_menuitem_border);
+    paint_cell_rect(cr, GuiRect{item.x + item.w - u, item.y, u, item.h},
+                    pal.cl_menuitem_border);
+    cairo_restore(cr);
+}
+
+void paint_cl_menu_separator(cairo_t* cr, int x, int y, int w) {
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{x, y, w, relief_line_px()},
+                    palette().cl_menu_separator);
+    cairo_restore(cr);
+}
+
+void paint_cl_list(cairo_t* cr, const GuiRect& surf) {
+    const int u = std::min({relief_line_px(), surf.w, surf.h});
+    const GuiPalette& pal = palette();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, surf, pal.cl_base);
+    paint_cell_rect(cr, GuiRect{surf.x, surf.y, surf.w, u}, pal.cl_list_frame);
+    paint_cell_rect(cr, GuiRect{surf.x, surf.y, u, surf.h}, pal.cl_list_frame);
+    paint_cell_rect(cr, GuiRect{surf.x, surf.y + surf.h - u, surf.w, u},
+                    pal.cl_list_frame);
+    paint_cell_rect(cr, GuiRect{surf.x + surf.w - u, surf.y, u, surf.h},
+                    pal.cl_list_frame);
+    cairo_restore(cr);
+}
+
+void paint_cl_selected_cell(cairo_t* cr, const GuiRect& r, bool focused) {
+    // The step where pixman put it over the row (build.py: row (n + 1) / 2
+    // of the n-row row, the list row's own W height).
+    const int h_w = static_cast<int>(folder_overlay::kRowHeightPx);
+    const int step = at(r.y, (h_w + 1) / 2);
+    const GuiPalette& pal = palette();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    if (focused) {
+        paint_cl_ramp(cr, GuiRect{r.x, r.y, r.w, step - r.y},
+                      pal.cl_list_selected_upper_0, pal.cl_list_selected_upper_1);
+        paint_cl_ramp(cr, GuiRect{r.x, step, r.w, r.y + r.h - step},
+                      pal.cl_list_selected_lower_0, pal.cl_list_selected_lower_1);
+    } else {
+        paint_cl_ramp(cr, GuiRect{r.x, r.y, r.w, step - r.y},
+                      pal.cl_list_selected_unfocused_upper_0,
+                      pal.cl_list_selected_unfocused_upper_1);
+        paint_cl_ramp(cr, GuiRect{r.x, step, r.w, r.y + r.h - step},
+                      pal.cl_list_selected_unfocused_lower_0,
+                      pal.cl_list_selected_unfocused_lower_1);
+    }
+    cairo_restore(cr);
 }

@@ -158,15 +158,13 @@ struct GuiFaceSet {
 //   lane and box keeps its 13; the small is a SIX-row digit, a cell all
 //   above the baseline: WordPad's ruler digits, which stand 6 rows beside
 //   the 22-px icons at 100 % (architect 2026-10-06).
-//   TRACKING: -1/20 Windows px per glyph (architect 2026-10-06): Wine
-//   Tahoma's outline letters, measured against Tahoma 8's strike drawn x3,
-//   run 0.146 device px per glyph wider at 300 % (0.049 W), so its letters
-//   are pulled together by that much: -0.07 device px at the laptop's
-//   138 %, -0.14 at the tablet's 275 %, -0.15 at 300 %.
+//   TRACKING: none (architect 2026-10-07: "we're not matching font widths,
+//   only the heights"): the recorded metrics match the period's heights and
+//   the widths are the live face's own advances, as the gnome2 set's are.
 inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
     .file        = {0, 1, 0},
     .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}},
-    .tracking_px = -0.05,
+    .tracking_px = 0.0,
 };
 
 // THE GNOME2 SET (architect 2026-10-07, the planner's design under his free
@@ -191,7 +189,7 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
 //   the cell is re-derived at 13 (chrome_spec.h's clearlooks instance).
 //   TRACKING: none ("compromise and approximate with modern HarfBuzz and
 //   DejaVu Sans": the bytecode look of 2010 is not reproduced, and Pango
-//   tracked nothing; Tahoma's -1/20 was a match to its own strike).
+//   tracked nothing; the heights are matched, never the widths).
 inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
     .file        = {2, 3, 2},
     .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}},
@@ -242,7 +240,9 @@ double gui_face_em_px(GuiFace face);
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f);
 
 // THE LIVE SET'S TRACKING (GuiFaceSet::tracking_px), in WINDOWS PX per
-// glyph (the figure and its measurement at each set above): every advance HarfBuzz returns is
+// glyph (the figure and its reason at each set above; both sets 0 since
+// 2026-10-07, the architect's heights-only rule — the mechanism stays, one
+// number per set): every advance HarfBuzz returns is
 // shortened by it, the last glyph of a run included, so a run's width stays
 // the plain sum of its advances (text_shape.h) and a right-aligned run's
 // right edge stays honest. It scales with the font like every chrome length
@@ -257,7 +257,7 @@ inline double gui_tracking_px(const GuiFont& f) {
 // AN UPPER BOUND ON ONE GLYPH'S ADVANCE at the font's scale, in device px:
 // the use's file's widest (its hhea maximum) at its em. A cull bound
 // over-estimates by design; no layout reads this. The tracking is not
-// subtracted: being negative, it only shortens a real advance, so the
+// subtracted: zero or negative, it never lengthens a real advance, so the
 // untracked figure stays an upper bound.
 double gui_font_advance_bound_px(const GuiFont& f);
 
