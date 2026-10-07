@@ -7,7 +7,7 @@
 #   push.sh --delete <name...>   each superseded sheet removed from /sdcard/Download (a base name, no path) and the
 #                                media scanner told, so Gallery drops it
 set -euo pipefail
-DEVICE=192.168.1.87:5555
+DEVICE=${WARPTEMPO_ADB_DEVICE:-192.168.1.87:5555}
 DEST=/sdcard/Download
 SCAN=android.intent.action.MEDIA_SCANNER_SCAN_FILE
 
