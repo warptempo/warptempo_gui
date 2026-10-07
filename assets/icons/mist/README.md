@@ -7,8 +7,8 @@ gnome-icon-theme 2.30's drawings, the name `mist` the one squeeze gives the comb
 nothing reads it yet: the live set is the chrome spec's (`src/gui/chrome_spec.h`'s `icon_set`, today `tango`); a set
 is chosen by its folder's name, so this folder is simply there for the vocabulary that names it.
 
-THE TWO SOURCES. 56 files are gnome-icon-theme 2.30's drawings TAKEN FROM THE 3.0.0 TARBALL (the 2.30 icons are
-multi-icon Inkscape sheets, `src/*.svg`, one drawing per size slot; 3.0.0 carries 2.30's sheets, redrawn at five of
+THE TWO SOURCES. 57 files are gnome-icon-theme 2.30's drawings TAKEN FROM THE 3.0.0 TARBALL (the 2.30 icons are
+multi-icon Inkscape sheets, `src/*.svg`, one drawing per size slot; 3.0.0 carries 2.30's sheets, redrawn at four of
 these seats, below): each file is one sheet's 48x48 slot EXTRACTED as a standalone 48-unit drawing
 — the elements of every visible layer that paint inside the slot's rectangle (each probed alone through rsvg-convert),
 the definitions they reference, the root `width="48" height="48" viewBox="0 0 48 48"`, the drawing translated to the
@@ -16,13 +16,12 @@ origin, written with SVG as the default namespace — and verified against a ren
 (rsvg-convert at 72 px: maximum channel difference 0 on 52 of the 53 distinct drawings, 5 levels of 255 on EditDelete's
 user-trash; EditUndo's and EditRedo's judged on mask-stripped copies, below).
 Every layer, not only the icon's own: zoom.svg draws part of zoom-original's and zoom-fit-best's pictures from the
-zoom-in layer, and the slot shows them. 3 files are Mist's own scalable drawings, copied from the gnome-themes tarball
+zoom-in layer, and the slot shows them. 2 files are Mist's own scalable drawings, copied from the gnome-themes tarball
 (byte-identical to the copies squeeze installs under `/usr/share/icons/Mist/scalable/`): `Folder` = Mist's
-`places/folder.svg`, and `DialogOkApply` (Load in Place) and `DocumentOpen` (Open Project, the icon row's first
-button since 2026-10-07) = Mist's `actions/document-open.svg` — the only three of the 59 seats Mist changes, over two
-drawings (it carries nine names, every one a blue folder; the wav row, Up a Folder and every other toolbar and row 8
-seat inherit from gnome). Mist's drawings fill the 48 canvas edge to edge where GNOME's keep 3–4 units of margin, so
-its folder reads larger at the same seat.
+`places/folder.svg` and `DocumentOpen` (Open Project, the icon row's first button since 2026-10-07) = Mist's
+`actions/document-open.svg` — the only two of the 59 seats Mist changes (it carries nine names, every one a blue
+folder; the wav row, Up a Folder and every other toolbar and row 8 seat inherit from gnome). Mist's drawings fill the
+48 canvas edge to edge where GNOME's keep 3–4 units of margin, so its folder reads larger at the same seat.
 
 THE EDITS, each in the table's "edited" column, nothing else changed:
 - Mist's files: their `xmlns:s` namespace URI carries a stray space (`http://inkscape.sourceforge.net/DTD/s
@@ -35,41 +34,50 @@ THE EDITS, each in the table's "edited" column, nothing else changed:
   Their extraction's probe was judged on a mask-stripped copy for the same reason (otherwise edit-undo's arrow, painting
   nothing alone, is not kept).
 
+THE TWO SEATS OF 2026-10-07 (architect, ruled for Tango — "the arrows pointing at each other become Load in Place,
+and the clock becomes Revert" — and taken here by the symmetry of the sets): DialogOkApply (Load in Place) wears
+gnome's `view-refresh`, the reload's arrow — the walked version loaded into the editor in place; DocumentRevert
+(Revert) wears gnome's `appointment-new`, the clock with its star — back to the viewed checkpoint in time. Mist
+carries neither name (its scalable folder holds folders and `document-open` only), so both are gnome's drawings by
+inheritance; Load in Place wore Mist's `document-open` and Revert gnome's `document-revert` until then. Both came by
+the road above (3.0.0's slot extracted, maximum difference 0 against the slot render at 72; 2.30.3's slot renders
+identically to 3.0.0's for both, maximum difference 0); `appointment-new`'s extraction is byte-identical to
+ShallowHistory's file.
+
 REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic` is AppIcon, AudioXWav and
-MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder; Mist's `document-open` is DialogOkApply and DocumentOpen
-(architect 2026-10-07), the second file copied byte for byte from the first. Every other file is worn once: 59
-enumerators over 55 distinct drawings.
+MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder; gnome's `appointment-new` is ShallowHistory (Toggle History
+Walk) and DocumentRevert (Revert). Every other file is worn once: 59 enumerators over 55 distinct drawings.
 
 THE KNOWN DEPARTURE FROM SQUEEZE'S BYTES (the planner's call, 2026-10-07: 3.0.0 throughout). Squeeze installs
-gnome-icon-theme 2.30.3, whose sheets are not taken; at 53 of the 56 GNOME seats 3.0.0's slot renders identically to
-2.30.3's (rsvg at 72, maximum difference 0), at five it was redrawn in 3.0.0 and the set wears 3.0.0's drawing (max /
+gnome-icon-theme 2.30.3, whose sheets are not taken; at 53 of the 57 GNOME seats 3.0.0's slot renders identically to
+2.30.3's (rsvg at 72, maximum difference 0), at four it was redrawn in 3.0.0 and the set wears 3.0.0's drawing (max /
 mean channel difference of 3.0.0's slot from 2.30.3's at 72, levels of 255):
 
 | enumerator | slot | max | mean | what changed |
 |---|---|---|---|---|
 | DocumentSave | document-save | 255 | 69.33 | the arrow: 2.30.3's red, 3.0.0's green, the drive redrawn |
 | DialogCancel | process-stop | 248 | 5.71 | a light redraw |
-| DocumentRevert | document-revert | 255 | 18.65 | 2.30.3's yellow arrow is a grey one on the page |
 | TabDetach | preferences-system-windows | 149 | 7.02 | a light redraw |
 | DialogInformation | dialog-information | 255 | 29.77 | 2.30.3's blue bulb is a clear one |
 
 ## The import check (the resvg ruling: a set is checked once, at its import)
 
-All 58 files of the import (DocumentOpen, a byte copy of DialogOkApply added 2026-10-07, needed no check of its own)
-through the product's own road (a scratch harness over `src/gui/svg_icon.cpp` and the build's resvg
-0.48.1) and through rsvg-convert 2.62.4, composited over #D4D0C8, the mean absolute channel difference in levels of
-255: the median over the 58 is **0.52 at 72 px** (p90 1.20, worst 2.91 HelpWhatsthis) and **1.75 at 33 px** (p90 3.46,
-worst 4.61 EditDelete); 1.03 at 48. Against GNOME's own 48-px PNGs in the 3.0.0 tarball, the median is 1.08 for resvg
-and 0.62 for rsvg-convert. Every file draws in both renderers. Where they part, each was looked at on the sheet:
-- VcsDiff (`document-open-recent`) and ShallowHistory (`appointment-new`) carry `<text>` clock numerals, which the
-  product's resvg (built without text) skips and rsvg-convert draws faintly (72-px max 94 / 109); GNOME's own PNGs show
-  no numerals either. Kept as they are.
+All 58 files of the import through the product's own road (a scratch harness over `src/gui/svg_icon.cpp` and the
+build's resvg 0.48.1) and through rsvg-convert 2.62.4, composited over #D4D0C8, the mean absolute channel difference
+in levels of 255: the median over the 58 is **0.52 at 72 px** (p90 1.20, worst 2.91 HelpWhatsthis) and **1.75 at 33
+px** (p90 3.46, worst 4.61 EditDelete); 1.03 at 48. Against GNOME's own 48-px PNGs in the 3.0.0 tarball, the median is
+1.08 for resvg and 0.62 for rsvg-convert. The two seats changed on 2026-10-07 and DocumentOpen, a byte copy of a
+checked file, were re-checked on a sheet of their own the same way: DialogOkApply's `view-refresh` 0.46 at 72 px and
+1.33 at 33 (1.07 from GNOME's 48-px PNG), DocumentRevert, a byte copy of ShallowHistory, 2.47 and 3.29 (its clock
+numerals, below), DocumentOpen 0.35 and 2.29. Every file draws in both renderers. Where they part, each was looked at
+on the sheet:
+- VcsDiff (`document-open-recent`), ShallowHistory and DocumentRevert (`appointment-new`) carry `<text>` clock
+  numerals, which the product's resvg (built without text) skips and rsvg-convert draws faintly (72-px max 94 / 109);
+  GNOME's own PNGs show no numerals either. Kept as they are.
 - TimelineLift (`system-lock-screen`) and BlackSum (`accessories-calculator`) carry `feBlend` filters reading
   `BackgroundImage`; the two renderers agree within 1.39 and 1.09 levels at 72. Kept.
 - HelpWhatsthis (`help-browser`): both renderers draw the same lifebuoy (2.91 apart) and both sit about 20 levels from
   GNOME's shipped PNG, whose ring is shaded differently; no mask is involved. Kept.
-- DocumentRevert: 3.0.0's own shipped PNG still shows the yellow arrow (9.6 levels from the slot render); the SVG
-  drawing is 3.0.0's redraw, the departure above.
 
 ## Provenance
 
@@ -86,7 +94,7 @@ origin in the sheet's root coordinates); its last column is the shipped file's s
 ## Licence
 
 gnome-icon-theme 3.0.0's `COPYING`, copied here verbatim as `COPYING-gnome-icon-theme-3.0.0`, reads: "GNOME icon theme
-is distributed under the terms of either GNU LGPL v.3 or Creative Commons BY-SA 3.0 license." The set takes the 56
+is distributed under the terms of either GNU LGPL v.3 or Creative Commons BY-SA 3.0 license." The set takes the 57
 under the LGPL v3, whose text the tarball ships as `COPYING_LGPL` (here `COPYING_LGPL-gnome-icon-theme-3.0.0`), with
 the GNU GPL v3 beside it as `COPYING_GPL3-gnome-icon-theme-3.0.0` (the LGPL v3's base text, carried for completeness,
 copied from the GNU text rather than the tarball, which does not ship it); the
@@ -102,7 +110,7 @@ licence texts) are not read.
 
 | enumerator | act | source | repeats with | edited at import | sha256 |
 |---|---|---|---|---|---|
-| DocumentOpen | Open Project (Revert its shift twin) | Mist `icon-themes/Mist/scalable/actions/document-open.svg` | DialogOkApply | namespace repair (original `d38c3d84a0af9e73eaa1422e6caa891dc007291996e8fbd421829bd366a811f5`) | `c64e047996ec536473723c38049d7a098c9350be449ccd2a8bbe6de98e91d3a9` |
+| DocumentOpen | Open Project (Revert its shift twin) | Mist `icon-themes/Mist/scalable/actions/document-open.svg` | — | namespace repair (original `d38c3d84a0af9e73eaa1422e6caa891dc007291996e8fbd421829bd366a811f5`) | `c64e047996ec536473723c38049d7a098c9350be449ccd2a8bbe6de98e91d3a9` |
 | DocumentSave | Save | 3.0.0 `src/cabinets.svg`, slot `document-save` 48x48 at (696, 50) | — | 3.0.0 ≠ 2.30.3 | `f676db4d816fdc09804ca0e9c2c231133f03a470ee154b446cba7990a831e127` |
 | EditUndo | Undo | 3.0.0 `src/edit-undo-redo.svg`, slot `edit-undo` 48x48 at (16, 300) | — | masks stripped | `09403be09074eb05905bc06835aadb46aba648a9a46c1dd64ad0edf0a5e1953b` |
 | EditRedo | Redo | 3.0.0 `src/edit-undo-redo.svg`, slot `edit-redo` 48x48 at (76, 300) | — | masks stripped | `508b572c05cf1a1784cff2c4af843848ecc0129b7dad19f6dd81de3481402de9` |
@@ -126,15 +134,15 @@ licence texts) are not read.
 | MusicNote16th | BPM Iterations | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | AudioXWav, AppIcon | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |
 | Mathmode | Toggle Grid Iterations | 3.0.0 `src/paper-sheets.svg`, slot `x-office-spreadsheet` 48x48 at (1500, 354) | — | — | `b4be444999e33cba0652aae7f060f1def713223d158555ca9ceac2d95d8db12d` |
 | PreviewRenderOn | Play Renders | 3.0.0 `src/applications-multimedia.svg`, slot `applications-multimedia` 48x48 at (296, 50) | — | — | `f7b387398baed6508ae4bfef7ec60ce354207bdcbf355a9e57a783a98f33ef80` |
-| DialogOkApply | Load in Place | Mist `icon-themes/Mist/scalable/actions/document-open.svg` | DocumentOpen | namespace repair (original `d38c3d84a0af9e73eaa1422e6caa891dc007291996e8fbd421829bd366a811f5`) | `c64e047996ec536473723c38049d7a098c9350be449ccd2a8bbe6de98e91d3a9` |
+| DialogOkApply | Load in Place | 3.0.0 `src/navigation-icons.svg`, slot `view-refresh` 48x48 at (616, 50) (Mist carries no `view-refresh`) | — | — | `2371a1d6832ffc8180fc2df0f243455b3722dc1e253a62fc8111a22f98e507d6` |
 | VcsDiff | Toggle History View | 3.0.0 `src/clocks.svg`, slot `document-open-recent` 48x48 at (696.062, 355.996) | — | — | `129566f29230db701d06c68dfd99940c88a667fe42f0e6b9b9921f7c8b9ea21d` |
-| ShallowHistory | Toggle History Walk | 3.0.0 `src/clocks.svg`, slot `appointment-new` 48x48 at (296.062, 55.9963) | — | — | `806c7ed7e292db3edf5f1a3caec8397706b41e4640db09d6ab92c4543fae395d` |
+| ShallowHistory | Toggle History Walk | 3.0.0 `src/clocks.svg`, slot `appointment-new` 48x48 at (296.062, 55.9963) | DocumentRevert | — | `806c7ed7e292db3edf5f1a3caec8397706b41e4640db09d6ab92c4543fae395d` |
 | EditSelect | Toggle Add to Selection | 3.0.0 `src/paper-sheets.svg`, slot `edit-select-all` 48x48 at (1500, 654) | — | — | `245ce65757ef40dce015a3fc99604e0a604678fae2032f74f959a5af06aeaf8d` |
 | KeyframePrevious | Older (`,`) | 3.0.0 `src/media-control-icons.svg`, slot `media-seek-backward` 48x48 at (206, 150) | — | — | `2ca7796acc08333c3995f99fa6bfdb55198f2b11a8360d6ce6afa8e8ddc1e278` |
 | KeyframeNext | Newer (`.`) | 3.0.0 `src/media-control-icons.svg`, slot `media-seek-forward` 48x48 at (406, 150) | — | — | `f34d18b3587fc220d4e832cf101c98ebad39dcddc14f0ec17610446fc9c942b6` |
 | GoPrevious | Left (the playhead step) | 3.0.0 `src/navigation-icons.svg`, slot `go-previous` 48x48 at (536, 50) | — | — | `3155504fad949f054c6d88a4a550eae714b05763d1d9266188e9ca2ad289f336` |
 | GoNext | Right (the playhead step) | 3.0.0 `src/navigation-icons.svg`, slot `go-next` 48x48 at (776, 50) | — | — | `d047a56474e708c114610291a130460e791531e46f1d0d5c9443a32b2112291c` |
-| DocumentRevert | Revert (`v`, to the viewed checkpoint) | 3.0.0 `src/paper-sheets.svg`, slot `document-revert` 48x48 at (1900, 654) | — | 3.0.0 ≠ 2.30.3 | `0b27fd824bd26b63d3864790386697f34489062b01c0d6dc10c340451c042486` |
+| DocumentRevert | Revert (`v`, to the viewed checkpoint) | 3.0.0 `src/clocks.svg`, slot `appointment-new` 48x48 at (296.062, 55.9963) (Mist carries no `appointment-new`) | ShallowHistory | — | `806c7ed7e292db3edf5f1a3caec8397706b41e4640db09d6ab92c4543fae395d` |
 | MediaSkipBackward | Go to Start | 3.0.0 `src/media-control-icons.svg`, slot `media-skip-backward` 48x48 at (156, 150) | — | — | `36dd7c445acd6380eeed3f1b6b75d620d3e990ba3fe7fe5f2efbdf084a8942c5` |
 | MediaPlaybackStart | Play | 3.0.0 `src/media-control-icons.svg`, slot `media-playback-start` 48x48 at (306, 150) | — | — | `b622e494ee220ca90f417b4332b36121672dade8cc668986fd12b777ff018099` |
 | MediaPlaybackStop | Stop | 3.0.0 `src/media-control-icons.svg`, slot `media-playback-stop` 48x48 at (356, 150) | — | — | `43f78b6cfeb4e7f1ccc9a31e286c5e08fcad6c3b3d0efedfa54283ffc0763765` |

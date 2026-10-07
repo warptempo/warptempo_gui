@@ -66,8 +66,7 @@ namespace icons {
 enum class Icon {
     // THE ICON ROW'S FIRST GROUP.
     DocumentOpen,        // Open Project (and its shift twin, Revert) — the
-                         // sets' document-open, DialogOkApply's drawing
-                         // repeated by position (architect 2026-10-07)
+                         // sets' document-open (architect 2026-10-07)
     DocumentSave,        // Save
     EditUndo,            // Undo
     EditRedo,            // Redo
@@ -98,15 +97,21 @@ enum class Icon {
     Mathmode,            // Toggle Grid Iterations (bare `i`)
     PreviewRenderOn,     // Play Renders
     DialogOkApply,       // Load in Place (the icon row and the render
-                         // player's row)
+                         // player's row) — the sets' view-refresh, the
+                         // reload's arrows: the walked version loaded into
+                         // the editor in place (architect 2026-10-07)
     VcsDiff,             // Toggle History View (`h`)
-    ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session)
+    ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
+                         // the sets' appointment-new, DocumentRevert's
+                         // drawing repeated by position (2026-10-07)
     EditSelect,          // Toggle Add to Selection
     KeyframePrevious,    // Older checkpoint (`,`)
     KeyframeNext,        // Newer checkpoint (`.`)
     GoPrevious,          // Row 8's left arrow (bare Left)
     GoNext,              // Row 8's right arrow (bare Right)
-    DocumentRevert,      // Revert (bare `v`)
+    DocumentRevert,      // Revert (bare `v`) — the sets' appointment-new,
+                         // the clock: back to the viewed checkpoint in
+                         // time (architect 2026-10-07)
     // ROW 8'S TRANSPORT. PLAY AND STOP ARE ONE BUTTON'S TWO FACES
     // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
     // pause state); the render player's own Play/Pause button wears

@@ -723,8 +723,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // the toolbar": the File menu's line parts Open and Revert from Quit,
     // the toolbar's Open and Save touch; redesign_button_opens_icon_group),
     // then Undo's group behind its separator as before. It wears
-    // DocumentOpen, the sets' document-open, the drawing Load in Place wears
-    // (a repeat by position, icons.h).
+    // DocumentOpen, the sets' document-open (icons.h).
     {RedesignButton::OpenProject, icons::Icon::DocumentOpen},
     {RedesignButton::Save,       icons::Icon::DocumentSave},
     {RedesignButton::Undo,       icons::Icon::EditUndo},
@@ -958,9 +957,9 @@ constexpr IconRowDef kIconRowHistoryStepGroup[] = {
     {RedesignButton::HistoryRevert,     icons::Icon::DocumentRevert},
     // THE LOAD IN PLACE (architect 2026-09-01, off the render-entry group):
     // the icon row's press runs the `h` view's own load — the confirmation on
-    // the viewed walk member. It keeps DIALOG-OK-APPLY, the checkmark, which
-    // is why the render player's Load in place button took that same glyph
-    // the same day.
+    // the viewed walk member. It wears DialogOkApply, the sets' view-refresh
+    // since 2026-10-07 (icons.h), the same glyph the render player's Load in
+    // place button wears for the same act.
     {RedesignButton::IconLoadInPlace,   icons::Icon::DialogOkApply},
 };
 constexpr IconRowDef kIconRowHistoryReadingGroup[] = {
@@ -6332,8 +6331,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // row's Load in place moving to the history group): "the media player
         // button should get the checkmark glyph then. Close should then get a
         // glyph also, to avoid being the odd one out: window-close.svg". So
-        // the LOAD wears DialogOkApply — the very checkmark the icon row's
-        // button wears for the same act one surface over — and CLOSE wears
+        // the LOAD wears DialogOkApply — the very glyph the icon row's
+        // button wears for the same act one surface over (the sets'
+        // view-refresh since 2026-10-07, icons.h) — and CLOSE wears
         // WindowClose, Marlett's close X (the
         // notification cards' dismiss was its other reader until the card's X
         // retired, 2026-10-01; a def is a glyph and several buttons are free
