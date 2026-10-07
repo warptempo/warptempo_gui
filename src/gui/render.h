@@ -1330,9 +1330,9 @@ inline int trim_lane_h_px() {
 int ruler_lane_h_px();
 
 // THE MARKER LANE'S HEIGHT IS DERIVED FROM THE FLAG BOX, NOT AUTHORED
-// (architect 2026-10-02, the AC / AD sets' rule, tools/palette's flag_seat;
-// the box re-ruled on the body face's whole cell 2026-10-05): the flag box
-// is its top edge band (marker_flag_edge_h_px), ONE WINDOWS PX OF FACE, the
+// (architect 2026-10-02, the AC / AD sets' rule; the box re-ruled on the
+// body face's whole cell 2026-10-05): the flag box is its top edge band
+// (marker_flag_edge_h_px), ONE WINDOWS PX OF FACE, the
 // body face's recorded CELL (its ascent above the baseline, its descent from
 // the baseline's row down), ONE WINDOWS PX OF FACE and its bottom edge band,
 // every term a whole device row —
@@ -1903,8 +1903,7 @@ inline constexpr int kTrimArrowGlyphHPx = 7;
 // px, its diagonals true diagonals, smooth at 400 % as the trim lane's
 // scroll arrows and the caption's Close X are — no longer one integer
 // rectangle per cell. THE BITMAP BELOW STAYS AS THE MEASURE: it is the
-// marker's pixel form at 100 %, the mock tool reads its silhouette
-// (tools/palette/tablet.py), and the outlines are derived from it by one
+// marker's pixel form at 100 %, and the outlines are derived from it by one
 // rule, checked against it at compile time (playhead_head_glyph_is_rings).
 // THE RINGS: ring k (k = 0 the silhouette, 1 the bevel's outer edge, 2 the
 // face) is the pentagon

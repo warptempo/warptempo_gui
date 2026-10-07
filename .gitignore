@@ -21,10 +21,6 @@ docs/references/*.pdf
 
 # tools
 tools/build/
-# tools/palette: renders, and the private fontconfig the renderer writes
-tools/palette/out/
-tools/palette/fonts.conf
-tools/palette/fccache/
 
 # android cross-compiled dep sysroot: reproducible from android/deps/ scripts;
 # kept out of the public repo so no GPL/LGPL binary-distribution obligations

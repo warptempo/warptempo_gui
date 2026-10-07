@@ -31,7 +31,7 @@ wears `status/audio-volume-muted`, the speaker with its red cross — a disabled
 hear; `status/dialog-error`, worn until then, read as delete. The file came from the 0.8.90 tarball (its sha256 above
 verified at the download) and is byte-identical in Debian's 0.9.0 orig. Its import check, on a sheet of its own the
 same way: 0.87 at 72 px and 2.10 at 33 from rsvg-convert. The enumerator keeps its name (the research records under
-`docs/research/` and the mock scenes under `tools/` spell it, so a rename would not be mechanical).
+`docs/research/` spell it, so a rename would not be mechanical).
 
 REPEATS, known by position (the files byte-identical): `mimetypes/audio-x-generic` is AppIcon (the caption and the
 program icon), AudioXWav (a wav row) and MusicNote16th (BPM Iterations); `actions/view-refresh` is DialogOkApply

@@ -19,7 +19,7 @@
 #     the one caption mapping: Windows' ActiveTitle / GradientActiveTitle / TitleText and the inactive three, KDE 3's
 #     active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds), A
 #     GRADIENT END ONLY WHERE THE ENTRY RECORDS ONE: no end line otherwise, and the app's theme-file rule makes the end
-#     the start (a flat caption, src/gui/theme_file.h's head), which resolved_roles below applies too.
+#     the start (a flat caption, src/gui/theme_file.h's head).
 #   THE CARD, card_ground / card_text = the entry's recorded info pair (roles.py: Windows' InfoWindow / InfoText; the
 #     two Windows families record it, KDE 3 and CDE have no tooltip pair), unnamed where the entry records none. card_frame = the entry's recorded info_frame where it records one
 #     (GNOME 2: Clearlooks' tooltip border, shade 0.6 of the tooltip's ground), else unnamed: the built-in's black is
@@ -27,9 +27,8 @@
 #     WindowFrame is #000000, which no role reads).
 #   NO PROGRAM ROLE (architect 2026-10-07): the program's colors are no theme's — they are THE PALETTE's, a file type of
 #     its own with two compiled defaults (src/gui/palette_file.h) — so a file names chrome roles only, and the app
-#     refuses a theme file naming a program role. `warptempo` and his picker presets, the entries that named them,
-#     left the catalog the same day ("it'll still be in the git history"), and this script imports nothing from
-#     tools/palette.
+#     refuses a theme file naming a program role. `warptempo` and the presets of his retired picker tool, the entries
+#     that named them, left the catalog the same day ("it'll still be in the git history").
 #
 #   THE CLEARLOOKS PAINTERS' TONES (architect 2026-10-07, the painters round): a GNOME 2 entry's `engine_tones`
 #     (build.py engine_tones: the Clearlooks engine's and metacity's own arithmetic at the product's geometry), every
@@ -73,9 +72,6 @@ CLOCK_FROM_FIELD = {'gnome2': (('clock_ground', 'field_ground'), ('clock_text', 
 # the card: theme-file role <- the catalog role (named only when the entry records both); its frame named alone
 CARD = (('card_ground', 'info_ground'), ('card_text', 'info_text'))
 CARD_FRAME = ('card_frame', 'info_frame')
-# the flat caption's pairs (kGuiThemeCaptionGradients, src/gui/theme_file.h): a file naming a start and not its end
-# gets the end equal to the start
-CAPTION_GRADIENTS = (('caption_active', 'caption_active_gradient'), ('caption_inactive', 'caption_inactive_gradient'))
 ROW = r'\{"([a-z0-9_]+)",\s*&GuiPalette::\w+,\s*0x([0-9A-Fa-f]{6})\}'
 
 
@@ -124,19 +120,6 @@ def file_roles(e):
         out.update({role: e['roles'][src] for role, src in CARD})
     if CARD_FRAME[1] in e['roles']: out[CARD_FRAME[0]] = e['roles'][CARD_FRAME[1]]
     out.update(e.get('engine_tones', {}))
-    return out
-
-
-def resolved_roles(e):
-    """One catalog entry -> every role's '#RRGGBB' as the app resolves its theme (theme_file.h's head): the built-in's
-    values, overwritten by the roles the entry's file names; the built-in itself, which has no file, its own values.
-    Read by crops.py, so a crop paints what the app paints."""
-    out = dict(role_table())
-    if e['key'] != BUILTIN:
-        named = file_roles(e)
-        out.update(named)
-        for start, end in CAPTION_GRADIENTS:
-            if start in named and end not in named: out[end] = named[start]
     return out
 
 

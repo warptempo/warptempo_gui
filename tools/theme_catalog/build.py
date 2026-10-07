@@ -6,8 +6,8 @@
 # its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE APP CARRIES IMPORTED THEMES ONLY,
 # NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
 # THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's colors are the palette's, compiled in
-# (src/gui/palette_file.h), and the program's own family of chosen entries (`warptempo` and his picker presets) left
-# the catalog the same day ("it'll still be in the git history").
+# (src/gui/palette_file.h), and the program's own family of chosen entries (`warptempo` and the presets of his
+# retired picker tool) left the catalog the same day ("it'll still be in the git history").
 # NOT IMPORTED (architect 2026-10-03, late; NOT_IMPORTED below, each with its reason, recorded in the catalog): the
 # schemes no independent source records as Windows', the usability schemes, the KDE schemes KDE 3.5 did not ship, and
 # the role-identical duplicates. The

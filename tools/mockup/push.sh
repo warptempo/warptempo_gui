@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# tools/mockup/push.sh — mock-ups onto the tablet's /sdcard/Download, where Samsung Gallery shows them byte for byte
-# (the Display-P3 chunk save_png writes). The planner runs it; the coder never does.
+# tools/mockup/push.sh — sheets onto the tablet's /sdcard/Download, where Samsung Gallery shows a PNG byte for byte
+# when it carries the Display-P3 iCCP chunk and nothing else. The planner runs it; the coder never does.
 #   push.sh <png...>             each file in NAME ORDER: pushed, touched there (Gallery orders by the file's time),
 #                                announced to the media scanner, then two seconds before the next, so the sheets
 #                                land in Gallery in their names' order

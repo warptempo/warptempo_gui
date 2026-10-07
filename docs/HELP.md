@@ -42,6 +42,10 @@ Save is the unsaved-work mark: it lights when the markers or the piece's setting
 
 A piece's checkpoints are git commits in the projects repository. The tablet authors and commits (Save and Commit, in the history view), GitHub is the hub, and the laptop pulls. The history view walks the checkpoints and shows each as a diff of flags, from which a difference can be reverted or a whole checkpoint loaded in place; the mechanics are in [`INSTALL.md`](INSTALL.md)'s Daily use.
 
+### Colors
+
+The window wears two sets of colors. The chrome (the title bar, the menus, the buttons, the fields and the cards), drawn as Windows 2000 or as GNOME 2's Clearlooks as the Settings menu's Chrome row chooses, is painted in a theme, one of the period desktop themes the program carries ([the theme catalog](themes/CATALOG.md) names them), chosen by name in the Settings menu's Theme row and never edited in the program. The program's own elements (the waveform's canvas, its ink and its outline, the flags of every kind with their selected faces, the flag label, the playhead's stem and the scanner) are painted in a palette, picked live with Pick Colors at the foot of the Settings menu. Choose an element by name, then set its color on the hue ring and its triangle, on the Hue, Saturation, Value, Red, Green and Blue sliders, or in the hex field; the window repaints as you go, NEW shows the color beside OLD, the one the element had when you chose it, and a tap on OLD takes it back. Copy and Paste carry a color from one element to another. Palettes are kept as named presets in the menu at the foot of the picker: choosing a name loads it, Save writes the colors into the current preset, Save As keeps them under a new name, Rename renames the current preset, and Delete removes it after asking. Each chrome has a default palette of its own that cannot be changed; Save As starts a preset from it. Closing the picker keeps the colors on screen without asking, but only what was saved is kept: the next launch returns to the chosen preset as last saved.
+
 ## A working method
 
 How a movement actually gets authored, in the order that works:

@@ -3,9 +3,9 @@
 # which value the source's own toolkit computed at import, toolkit_rules.py) fills each catalog role, per family.
 # A role a family has no word for is ABSENT from its row and from every entry of it: the built-in theme's value applies,
 # never a guess. The flags, the red, the waveform ink and canvas are not catalog roles (a theme owns the chrome).
-# The app-specific roles are drawn from these catalog roles, not stored (architect 2026-10-03, late; crops.py
-# theme_for): the ruler label <- label, the ruler ticks and the playhead head <- bevel_shadow, the flag outline <-
-# bevel_dkshadow; the flags' shading is the entry's flag_rule (build.py FLAG_RULE).
+# The app-specific roles are drawn from these catalog roles, not stored (architect 2026-10-03, late): the ruler label
+# <- label, the ruler ticks and the playhead head <- bevel_shadow; the flags' shading is the entry's flag_rule (build.py
+# FLAG_RULE).
 #
 # A value names a key of the entry's VALUES: its raw keys as the source spells them, or a computed key
 # "<rule>:<name>" (kde3:light, motif:set5.ts, ...), the rule named in the entry's provenance.
@@ -83,8 +83,8 @@ for _fam, _row in MAPPING.items():
 
 # THE CHROME AS RECORDED, the one light-roles function (the dark level retired 2026-10-04: a dark look is a theme he
 # designs): one catalog entry -> {name: '#RRGGBB'} over LIGHT_ROLES, read by gen_theme_files.py (the bundled theme
-# files) and crops.py (the crops), so the app's file and the crop read one function. Its names are the renderer's
-# (tools/palette): the ground, the label and the relief quartet as recorded; the emboss's light copy the recorded
+# files; the frozen crops, docs/themes/crops/, were rendered through it too), whose CHROME maps its names onto the
+# theme file's roles: the ground, the label and the relief quartet as recorded; the emboss's light copy the recorded
 # Hilight (Windows' DSS_DISABLED; the app's emboss reads Hilight, render.h's palette block); the selected pair the
 # entry's selected_fill / selected_text, or for a CDE entry, which records none (Motif selects by inverse video), its
 # title_active under colour set 1's own Motif foreground; the field pair the entry's, recorded on every entry. The
