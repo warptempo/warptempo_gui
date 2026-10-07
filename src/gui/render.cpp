@@ -1719,9 +1719,9 @@ static void paint_flag_label(cairo_t* cr, const text_shape::ShapedRun& run,
 
 } // namespace
 
-// The phase-reset lead-in ring's colour (declaration in render.h): the ladder
+// The phase-reset lead-in ring's color (declaration in render.h): the ladder
 // above asked for a LIVE reset's stem on the same class and selection bits the
-// flag pass hands it, so the ring can never pick a colour its stem would not.
+// flag pass hands it, so the ring can never pick a color its stem would not.
 // It stands outside the file's anonymous namespace so paint_handler.cpp
 // reaches it; the ladder it calls stays file-local.
 GuiColor phase_reset_stem_color(bool red, bool selected) {
@@ -3081,8 +3081,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    left border column outside the face, the top and bottom rows inside
     //    the band and the closing column when the field ends the run, all in
     //    the flag outline, the face between them `face.face` (above) — so
-    //    opening the editor recolours nothing and the stem stays joined to
-    //    its box. A refused Enter recolours nothing either
+    //    opening the editor recolors nothing and the stem stays joined to
+    //    its box. A refused Enter recolors nothing either
     //    (text_editor::refuse selects the whole text; the owner's card says
     //    why). The pads either side of the text are the field's margin
     //    strips. The left border column is the flag's own for the payload
@@ -3128,7 +3128,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // 2. The selection highlight, then 3. the text — THE CHROME'S SELECTED
     //    PAIR over the selected face's own label, `field_ink` (architect
     //    2026-10-03, set BX; 2026-10-07 ~09:45). A flag face at or near the
-    //    chrome's selection colour hides the band (the editing paragraph's
+    //    chrome's selection color hides the band (the editing paragraph's
     //    accepted caveat).
     //
     //    THE SELECTED SUBSTRING IS THE WHOLE RUN RE-SHOWN UNDER A CLIP, never

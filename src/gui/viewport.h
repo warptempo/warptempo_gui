@@ -285,7 +285,9 @@ struct Viewport {
     void     kick_waveform_sync_if_gain_changed(uint64_t prior_hash);
 
     // THE MARKER DRAG RELEASE'S SEAM (2026-09-14; the rule
-    // is at MarkerDragOps::commit_drag's tail).
+    // is at MarkerDragOps::commit_drag's tail), and the color picker's for a
+    // pick that leaves the plate's inks alone (2026-10-07; the apply shape at
+    // install_program_palette's declaration, palette_file.h).
     // refresh_flag_cache: the FLAG CACHE ALONE, synchronously — the same
     // fingerprint-guarded GuiPaintHandler::maybe_rebuild_flag_cache the
     // synchronous plate rebuild's tail and the tick run, with no plate render.

@@ -137,8 +137,8 @@ struct Viewport;
 // Windows px, so at 300 % the sum is exact. The laptop (1080 rows at
 // 138 %, the well far taller in W) shows the same card with more air.
 //
-// THE WIDTH: kCardWidthPx = 376, the tablet's half (768 W) less the margin
-// on both sides; the right column takes what the wheel and the column gap
+// THE WIDTH: kCardWidthPx = 376, the tablet's half (384 W of its 768) less
+// the margin on both sides (384 − 2 x 4); the right column takes what the wheel and the column gap
 // leave, the slider's track what the label and the value cell leave, and
 // the palette menu button what the hex field, OLD | NEW at its floor and the
 // three push buttons leave. THE BOTTOM ROW'S ARITHMETIC (architect
@@ -183,9 +183,14 @@ inline constexpr int kChooserHeightPx = 21;
 // THE WIN2000 COMBO'S DROP-DOWN BUTTON: Windows' SM_CXVSCROLL 16, and its
 // arrow Marlett's 7 x 4 wedge. Under clearlooks the whole combo is one
 // gummy button and the wedge is the engine's own, drawn at the same size.
+// Both arms round each side AT THE ELEMENT through scaled_px's floored
+// form, floored at a 3 x 2 device-px wedge so a small scale cannot zero the
+// triangle (paint_picker_combo, paint_handler.cpp).
 inline constexpr int kComboButtonWPx  = 16;
 inline constexpr int kComboArrowWPx   = 7;
 inline constexpr int kComboArrowHPx   = 4;
+inline constexpr int kComboArrowMinWPx = 3;
+inline constexpr int kComboArrowMinHPx = 2;
 // THE COMBO'S TEXT stops this far short of its wedge (win2000: of the
 // drop-down button), where a long name is cut with "..." (2026-10-07, the
 // palette menu button's preset names; GtkComboBox's arrow spacing).
@@ -249,6 +254,11 @@ static_assert(card_height_wpx(kChromeSpecWin2000) == 156);
 // converts to (GuiColorPicker::set_channel).
 enum class Channel { Hue, Saturation, Value, Red, Green, Blue };
 inline constexpr int kChannelCount = 6;
+// The picker's stash spells the count as a literal (app_state.h includes
+// no picker header); pinned here.
+static_assert(std::tuple_size_v<decltype(AppState::ColorPicker::Stash::sliders)> ==
+                  kChannelCount,
+              "AppState::ColorPicker::Stash::sliders must hold kChannelCount");
 constexpr Channel channel_at(int i) { return static_cast<Channel>(i); }
 constexpr int channel_index(Channel c) { return static_cast<int>(c); }
 // The row's label (Title Case) and the slider's top value: 360 degrees, 100
@@ -367,8 +377,9 @@ struct Layout {
     GuiRect card{0, 0, 0, 0};
     GuiRect inner{0, 0, 0, 0};
     int     edge_px = 0;
-    // The wheel's square and its circles (device px, the center at pixel
-    // centers of the square's middle).
+    // The wheel's square and its circles (device px, the center at the
+    // square's exact middle, x + side / 2 — a pixel center for an odd side,
+    // 339 at 300 %, a pixel boundary for an even one, 158 at 138 %).
     GuiRect wheel{0, 0, 0, 0};
     double  cx = 0.0, cy = 0.0, outer_r = 0.0, inner_r = 0.0;
     // The chooser: the whole combo and, under win2000, its drop-down button.
@@ -482,9 +493,8 @@ struct GuiColorPicker {
     // current color; the memories re-seat from its bytes.
     void set_role(std::size_t role);
     // THE ONE WRITER OF NEW (AppState::ColorPicker::rgb): writes the live
-    // words' word for the live element, installs them
-    // (install_program_palette), runs the apply shape — the synchronous
-    // plate rebuild and the whole window's damage — and keeps the HSV
+    // words' word for the live element, installs them through the apply
+    // shape (install_live_words), and keeps the HSV
     // memories: `from_hsv` true means an HSV control wrote the bytes and
     // the memories already hold what it meant (so a quantized round trip
     // cannot move the slider under the hand); false means an RGB source
@@ -549,8 +559,8 @@ struct GuiColorPicker {
     // in Kind PaletteName, empty (Save As) or over the active name
     // (Rename), the whole text selected; the menu is already down.
     void begin_name_ask(AppState::ColorPicker::NameAsk ask);
-    // THE NAME ASK'S ENTER. The pending name is judged here, before any
-    // writer is asked, so the writers' own refusals never arise: outside the
+    // THE NAME ASK'S ENTER. The pending name is judged here, THE ONE JUDGE
+    // (palette_file.h's writers assert what it settles): outside the
     // name grammar (is_palette_name_spelling) "Not a name"; a default's name,
     // a default's display name or a loaded file's — another than the one
     // being renamed — "Name taken" (Save does the overwrite; Save As never
@@ -591,9 +601,13 @@ struct GuiColorPicker {
     // diagnostic on stderr and the display on a card, the live value
     // standing for the session (class 5).
     void write_palette_key(std::string_view name);
-    // THE PRESETS' APPLY: `words` installed as the live words, the apply
-    // shape set_color runs (the synchronous plate rebuild, the whole
-    // window's damage), and OLD and NEW reseated off the live element's new
-    // word with the memories.
+    // THE PRESETS' APPLY: `words` installed as the live words through the
+    // apply shape set_color runs (install_live_words), and OLD and NEW
+    // reseated off the live element's new word with the memories.
     void apply_palette_words(const GuiPaletteWords& words);
+    // THE APPLY SHAPE'S ONE ROAD (2026-10-07): `words` installed and the
+    // apply shape run, both as install_program_palette's declaration states
+    // them (palette_file.h). Its two callers are set_color and
+    // apply_palette_words.
+    void install_live_words(const GuiPaletteWords& words);
 };

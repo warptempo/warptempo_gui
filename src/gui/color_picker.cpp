@@ -833,16 +833,11 @@ void GuiColorPicker::set_color(uint32_t rgb, bool from_hsv) {
         damage_card();
         return;
     }
-    // THE LIVE APPLY (palette_file.h's install_program_palette states the
-    // shape): the live words with one word rewritten, installed, the plate
-    // rebuilt synchronously in its inks and the flag cache with it, the
-    // whole window damaged — the swap is one frame, the card repainting
-    // with the window.
+    // THE LIVE APPLY: the live words with one word rewritten, through the
+    // apply shape's one road (install_live_words).
     GuiPaletteWords words = program_palette_words();
     words[cp.role] = rgb;
-    install_program_palette(words);
-    viewport.kick_waveform_sync();
-    viewport.invalidate_all();
+    install_live_words(words);
 }
 
 int color_picker::channel_value(const AppState::ColorPicker& cp, Channel c) {
@@ -1001,11 +996,19 @@ void GuiColorPicker::write_palette_key(std::string_view name) {
     }
 }
 
+void GuiColorPicker::install_live_words(const GuiPaletteWords& words) {
+    // The shape and why it is enough are at install_program_palette's
+    // declaration (palette_file.h).
+    const WaveformPlateInks before = waveform_plate_inks();
+    install_program_palette(words);
+    if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
+    else                                 viewport.refresh_flag_cache();
+    viewport.invalidate_all();
+}
+
 void GuiColorPicker::apply_palette_words(const GuiPaletteWords& words) {
     AppState::ColorPicker& cp = app.color_picker;
-    install_program_palette(words);
-    viewport.kick_waveform_sync();
-    viewport.invalidate_all();
+    install_live_words(words);
     cp.rgb     = words[cp.role];
     cp.old_rgb = cp.rgb;
     reseat_memories(cp);
@@ -1092,7 +1095,9 @@ void GuiColorPicker::commit_name() {
 
 void GuiColorPicker::raise_delete() {
     AppState::ColorPicker& cp = app.color_picker;
-    if (app.prompt.active) return;
+    // The menu's lift is its one road, and a standing prompt claims every
+    // release first (on_button_release), so no prompt stands here.
+    assert(!app.prompt.active);
     const std::string active(color_picker::active_palette(app));
     assert(!is_default_palette_name(active));
     cp.pending_delete = active;
@@ -1108,7 +1113,11 @@ void GuiColorPicker::confirm_delete() {
     AppState::ColorPicker& cp = app.color_picker;
     const std::string name = std::move(cp.pending_delete);
     cp.pending_delete.clear();
-    if (!cp.active || name.empty()) return;
+    // The prompt's Delete is its one road: raise_delete parked the name
+    // before presenting it, and the picker cannot close beneath a standing
+    // prompt (the prompt outranks its every close road, and
+    // GuiPrompt::request_close returns while a prompt stands).
+    assert(cp.active && !name.empty());
     if (const std::optional<std::string> failure = remove_palette_file(name)) {
         report_palette_failure(notifications, *failure,
                                "Could not delete the palette");

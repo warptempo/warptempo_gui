@@ -391,7 +391,7 @@ void install_palette(const DeviceConfig& cfg,
 // last wrote (install_palette's `program`, or install_program_palette's
 // `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
 // spelled as its array type here because palette_file.h includes this
-// header). They live beside the installed struct, FILE-SCOPE IN render.cpp
+// header, which static_asserts the 14 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
 // reopen (gui_main's loop) while the installed palette is not, and the
 // picker's picks are the PROCESS's until a preset is saved (color_picker.h's
@@ -558,7 +558,7 @@ uint64_t palette_generation();
 // (architect 2026-10-04: a reset whose addressed cell is a bound cell keeps
 // its resting stem, and so its resting ring).
 //
-// EDITING RECOLOURS NOTHING: THE FLAG STAYS IN ITS SELECTED FACE (architect
+// EDITING RECOLORS NOTHING: THE FLAG STAYS IN ITS SELECTED FACE (architect
 // 2026-10-07 ~09:45, one design under both chromes, retiring the morning's
 // white box — "the current way would require chopping off the connection to
 // the stem … overall a lot less intuitive"): over the edited flag or cell
@@ -572,9 +572,9 @@ uint64_t palette_generation();
 // margin strips) either side of the text, and THE
 // SELECTED SUBSTRING THE CHROME'S SELECTED PAIR, `selected_fill` under
 // `selected_text` (Clearlooks' 86ABD9 under white, win2000's Hilight under
-// HilightText) — part of the chrome, not a flag colour. THE ACCEPTED CAVEAT
+// HilightText) — part of the chrome, not a flag color. THE ACCEPTED CAVEAT
 // (architect 2026-10-07): a flag face at or near the chrome's selection
-// colour hides the selection band. THE STEM FOLLOWS THE PAYLOAD
+// color hides the selection band. THE STEM FOLLOWS THE PAYLOAD
 // BOX (architect 2026-10-04): the marker's selected face under the PAYLOAD
 // field, which is the payload box opened and the addressed cell; the
 // marker's resting face under a BOUND-CELL field, the flag box standing at
@@ -3481,7 +3481,7 @@ struct FlagEditorBox {
 // its left border column, its top and bottom rows (marker_flag_edge_h_px)
 // and its closing column, all in the canvas's color — so opening an editor
 // changes the flag's SIZE and nothing about where it stands or how it is
-// coloured: the flat box in the ladder's SELECTED answer for the marker
+// colored: the flat box in the ladder's SELECTED answer for the marker
 // (resolve_flag_face — the removed pair's over an invalid marker, the
 // selected-disabled arm's over a disabled one), its text and caret that
 // answer's label, the selected substring in the CHROME's selected pair

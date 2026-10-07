@@ -163,14 +163,6 @@ std::string palette_file_text(const GuiPaletteWords& words) {
     return s;
 }
 
-// THE PICKER'S REFUSALS, worded for its card.
-std::string default_refusal(std::string_view name, const char* act) {
-    return std::string(name) + " is a default palette and cannot be " + act;
-}
-constexpr const char* kNameRefusal =
-    "a palette name must be 1 to 40 printable ASCII characters, with no "
-    "leading or trailing space and no '/'";
-
 } // namespace
 
 std::string_view effective_palette_name(std::string_view palette) {
@@ -272,9 +264,9 @@ GuiPaletteWords palette_words(std::string_view name) {
 
 std::optional<std::string> write_palette_file(std::string_view name,
                                               const GuiPaletteWords& words) {
-    if (!is_palette_name_spelling(name)) return std::string(kNameRefusal);
-    if (is_default_palette_name(name))
-        return default_refusal(name, "saved over");
+    // The names are the picker's to judge (the declaration).
+    assert(is_palette_name_spelling(name));
+    assert(!is_default_palette_name(name));
     const std::filesystem::path folder = palette_folder_path();
     // The launch read the config through the same resolver, and the
     // environment does not change under the process.
@@ -297,16 +289,12 @@ std::optional<std::string> write_palette_file(std::string_view name,
 
 std::optional<std::string> rename_palette_file(std::string_view old_name,
                                                std::string_view new_name) {
-    if (is_default_palette_name(old_name))
-        return default_refusal(old_name, "renamed");
+    // The names are the picker's to judge (the declaration).
     const auto it = g_loaded_palettes.find(old_name);
     assert(it != g_loaded_palettes.end());
-    if (new_name == old_name) return std::nullopt;
-    if (!is_palette_name_spelling(new_name)) return std::string(kNameRefusal);
-    if (is_default_palette_name(new_name))
-        return default_refusal(new_name, "saved over");
-    if (g_loaded_palettes.contains(new_name))
-        return "a palette named " + std::string(new_name) + " already exists";
+    assert(new_name != old_name);
+    assert(is_palette_name_spelling(new_name));
+    assert(!is_palette_name(new_name));   // neither a default's nor taken
     const std::filesystem::path folder = palette_folder_path();
     assert(!folder.empty());
     const std::filesystem::path from = palette_file_path(folder, old_name);
@@ -324,8 +312,8 @@ std::optional<std::string> rename_palette_file(std::string_view old_name,
 }
 
 std::optional<std::string> remove_palette_file(std::string_view name) {
-    if (is_default_palette_name(name))
-        return default_refusal(name, "deleted");
+    // The name is the picker's to judge (the declaration): a loaded file's,
+    // never a default's (which the map does not hold).
     const auto it = g_loaded_palettes.find(name);
     assert(it != g_loaded_palettes.end());
     const std::filesystem::path folder = palette_folder_path();

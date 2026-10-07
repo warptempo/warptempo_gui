@@ -7509,8 +7509,10 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
         const double tx = r.x + scaled_px(spec.push_button_pad_left_px) + shift;
         const double ty = redesign_baseline(font, r.y, r.h) + shift;
         // The engine's wedge, GtkComboBox's arrow, at the right pad.
-        const int aw = scaled_px(color_picker::kComboArrowWPx, 3);
-        const int ah = scaled_px(color_picker::kComboArrowHPx, 2);
+        const int aw = scaled_px(color_picker::kComboArrowWPx,
+                                 color_picker::kComboArrowMinWPx);
+        const int ah = scaled_px(color_picker::kComboArrowHPx,
+                                 color_picker::kComboArrowMinHPx);
         const double ax = r.x + r.w - scaled_px(spec.push_button_pad_right_px) -
                           aw + shift;
         const double ay = r.y + (r.h - ah) / 2 + shift;
@@ -7536,9 +7538,10 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
     const ButtonBoxFace box = paint_button_box(
         cr, button, /*lamp=*/false, /*pressed=*/open && enabled,
         ButtonFamily::Push);
-    const int u  = scaled_px(1, 1);
-    const int aw = color_picker::kComboArrowWPx * u;
-    const int ah = color_picker::kComboArrowHPx * u;
+    const int aw = scaled_px(color_picker::kComboArrowWPx,
+                             color_picker::kComboArrowMinWPx);
+    const int ah = scaled_px(color_picker::kComboArrowHPx,
+                             color_picker::kComboArrowMinHPx);
     const double ax = button.x + (button.w - aw) / 2 + box.shift;
     const double ay = button.y + (button.h - ah) / 2 + box.shift;
     paint_picker_wedge(cr, ax, ay, aw, ah, enabled, palette().label);

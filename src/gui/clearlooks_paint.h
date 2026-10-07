@@ -316,7 +316,7 @@ void paint_cl_trough(cairo_t* cr, const GuiRect& lane);
 // engine tones). THE ARROW stays the engine's own, kept by ruling
 // (clearlooks_draw_normal_arrow, its chevron filled in fg) at GtkRange's
 // arrow-scaling 0.5 of the 16-W box — 8 W, so the engine's 8-wide,
-// 4.75-tall wedge, its line half-width 0.75 — centred on the box, pointing
+// 4.75-tall wedge, its line half-width 0.75 — centered on the box, pointing
 // left on the begin cap and right on the end cap; GTK displaces no arrow
 // (GtkRange::arrow-displacement 0): pressed, only the face changes. NO
 // HOVER FACE (the one hover face is the toolbars').
@@ -335,7 +335,7 @@ void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
 // the window takes the body's end with it (render_trim_flags). The two lines
 // are the gummy separator's own tones, roles already made for
 // paint_cl_toolbar_separator: a role a second painter reads is that tone put
-// down again, not a colour derived here. The trough stays GTK's (above); the
+// down again, not a color derived here. The trough stays GTK's (above); the
 // caps wear the same two tones (paint_cl_stepper, since the evening). (Gummy's
 // spot[1] slider, its ring and its three grips retired with their twelve
 // generated tones the same day.)

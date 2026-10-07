@@ -8609,7 +8609,7 @@ struct AppState {
             GuiRect  chooser{0, 0, 0, 0};      // the combo: a press toggles the list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
             std::array<GuiRect, kGuiPaletteRoleCount> list_items{};
-            std::array<SliderStash, 6> sliders{};
+            std::array<SliderStash, 6> sliders{};   // color_picker::kChannelCount (static_asserted there)
             GuiRect  field{0, 0, 0, 0};        // the one field's outer box
             GuiRect  field_inner{0, 0, 0, 0};  // its interior (the I-beam, the caret)
             double   field_text_origin_x = 0.0;  // where the shown run's byte 0 paints

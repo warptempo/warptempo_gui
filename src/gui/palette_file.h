@@ -9,6 +9,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 // THE PALETTE FILES (architect 2026-10-07) — the PROGRAM'S colors, a file
@@ -41,8 +42,9 @@
 // named by its ChromeSpec's `default_palette` (chrome_spec.h): `windows-2000`
 // and `clearlooks` — the role table's two value columns below. A DEFAULT IS
 // NOT A FILE AND TAKES NO FILE (the built-in theme's rule): a file bearing a
-// default's name is the read's hard fail, and the maintenance API below
-// refuses to write, rename or remove one. Nothing is bundled or copied in for
+// default's name is the read's hard fail, and the picker never asks the
+// maintenance API below to write, rename or remove one (its writers assert
+// it). Nothing is bundled or copied in for
 // palettes; the folder holds his own files alone.
 //
 // THE FILES: `<name>.palette` in the `palettes/` folder BESIDE THE DEVICE
@@ -165,6 +167,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // palette_words answers, what install_program_palette (render.h) takes and
 // what write_palette_file writes.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
+// render.h spells this type as `std::array<uint32_t, 14>` (install_palette,
+// program_palette_words), since this header includes it; the literal is
+// pinned to the table here.
+static_assert(std::is_same_v<GuiPaletteWords,
+                             std::remove_cvref_t<decltype(program_palette_words())>>,
+              "render.h's std::array<uint32_t, 14> must be GuiPaletteWords");
 
 // The index of the role named `name` in the table, or kGuiPaletteRoleCount —
 // the reader's one lookup, and install_palette's for the plate's two baked
@@ -181,11 +189,17 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // re-baked and palette_generation bumped, the chrome members untouched — THE
 // CHROME STAYS LAUNCH-BOUND (its theme moves only with install_palette and
 // the `theme` key), the program's colors move live. THE PICKER'S LIVE ROAD
-// (GuiColorPicker::set_color, color_picker.cpp). THE APPLY SHAPE THE CALLER OWES, after
-// the call, is the settings editor's theme arm's: the synchronous plate
-// rebuild (Viewport::kick_waveform_sync — the plate re-rendered in the new
-// inks, the flag cache rebuilt at its tail, keyed by the generation) and the
-// whole window damaged (Viewport::invalidate_all), so the swap is one frame.
+// (GuiColorPicker::install_live_words, color_picker.h). THE APPLY SHAPE THE
+// CALLER OWES, after the call: the caller kicks the waveform when the plate
+// inks changed and otherwise refreshes the flag cache alone, then
+// invalidates the whole window — the waveform_plate_inks pair read before
+// and after the install; when it moved, the synchronous plate rebuild
+// (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
+// flag cache rebuilt at its tail, keyed by the generation); when it did not
+// (a flag, the stem, the label, the scanner: no plate render), the flag
+// cache alone, synchronously (Viewport::refresh_flag_cache, so a frame
+// callback served before the tick cannot blit flags in the old colors); then
+// Viewport::invalidate_all, so the swap is one frame.
 // WHY THAT IS ENOUGH (re-grepped 2026-10-07): the fourteen bake into two
 // cached things alone — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,
@@ -213,7 +227,8 @@ inline constexpr GuiDefaultPalette kGuiDefaultPalettes[] = {
 
 // THE NAME GRAMMAR (the head): 1 to 40 bytes of printable ASCII, no leading
 // or trailing space, no '/'. A file whose stem breaks it is the launch's
-// hard fail; a name the picker would save under it is the writer's refusal.
+// hard fail; a name the picker would save under it is the name ask's refusal
+// (the writers' block below).
 inline constexpr std::size_t kPaletteNameMaxBytes = 40;
 constexpr bool is_palette_name_spelling(std::string_view v) {
     if (v.empty() || v.size() > kPaletteNameMaxBytes) return false;
@@ -271,19 +286,24 @@ GuiPaletteWords palette_words(std::string_view name);
 
 // THE PICKER'S WRITES (the head: each keeps the map and the folder in step,
 // none touches the device config, each answers the failure's whole line).
+// THE NAMES ARE JUDGED ONCE, BY THE PICKER, BEFORE ANY WRITER IS ASKED
+// (2026-10-07, THE TYPE RULE): its acts gray Save, Rename and Delete under a
+// default (color_picker::palette_act_enabled) and its name ask refuses a bad
+// spelling or a taken name on the card in the product's words
+// (GuiColorPicker::commit_name) — so every name a writer receives already
+// holds, the writers ASSERT their name preconditions (a breach is a program
+// bug) and their one error arm is I/O.
 //
 // write_palette_file: create or overwrite `<name>.palette` with all fourteen
 // roles, uppercase `#RRGGBB` in the table's order, through the atomic writer
 // (atomic_write_string_to_path), the folder created on the first write.
-// Refuses a name outside the grammar and a default's name.
+// Precondition: `name` in the grammar and no default's.
 std::optional<std::string> write_palette_file(std::string_view name,
                                               const GuiPaletteWords& words);
-// rename_palette_file: `old_name`, a loaded file's (the picker lists only
-// what exists: a miss is a program bug, asserted), becomes `new_name`.
-// Refuses a default's name on either side, a new name outside the grammar
-// and a new name already taken; the same name twice is a no-op.
+// rename_palette_file: `old_name`, a loaded file's, becomes `new_name`.
+// Precondition: `new_name` differs, is in the grammar and is no palette's
+// yet (neither a default's nor a loaded file's).
 std::optional<std::string> rename_palette_file(std::string_view old_name,
                                                std::string_view new_name);
-// remove_palette_file: delete a loaded file's `<name>.palette` (a miss is a
-// program bug, asserted). Refuses a default's name.
+// remove_palette_file: delete a loaded file's `<name>.palette`.
 std::optional<std::string> remove_palette_file(std::string_view name);
