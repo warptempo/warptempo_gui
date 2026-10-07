@@ -20,30 +20,38 @@ adb obeys `ANDROID_SERIAL` on every command, so with it exported a plain `adb �
 
 ### Packages
 
-The program needs a C++23 compiler (GCC 12+ or Clang 16+), CMake 3.20+, pkg-config, fftw3, and for the GUI wayland-scanner, cairo (with cairo-ft), HarfBuzz, wayland-client, wayland-cursor, wayland-protocols, libxkbcommon, JACK and libgit2. JACK can be jackd2 or PipeWire's JACK. The headless `warptempo_cli` needs only the first four. libgit2 can be left out with `-DWARPTEMPO_GUI_GIT=OFF` for a build that only paints (the git road then reports no repository); the two devices build with it on. Where the distribution's compiler is older than GCC 12 (Ubuntu 22.04 ships GCC 11), install `g++-12` or later and configure with `-DCMAKE_CXX_COMPILER=g++-12` added.
+The program needs a C++23 compiler (GCC 12+ or Clang 16+), CMake 3.20+, pkg-config, fftw3, and for the GUI wayland-scanner, cairo (with cairo-ft), HarfBuzz, wayland-client, wayland-cursor, wayland-protocols, libxkbcommon, JACK, libgit2 and Rust (rustup with its stable toolchain). JACK can be jackd2 or PipeWire's JACK. Rust builds the icon renderer, resvg, which the GUI build downloads from its pinned source and compiles into `build/resvg/` on first build (about 20 s; nothing goes to `~/.cargo`); every host that builds the GUI needs it, a `-DWARPTEMPO_GUI_GIT=OFF` host included. The headless `warptempo_cli` needs only the first four. libgit2 can be left out with `-DWARPTEMPO_GUI_GIT=OFF` for a build that only paints (the git road then reports no repository); the two devices build with it on. Where the distribution's compiler is older than GCC 12 (Ubuntu 22.04 ships GCC 11), install `g++-12` or later and configure with `-DCMAKE_CXX_COMPILER=g++-12` added.
 
 ```bash
 # Arch (the host it is developed on):
 sudo pacman -S --needed base-devel cmake pkgconf git fftw cairo harfbuzz \
-    wayland wayland-protocols libxkbcommon pipewire-jack libgit2
+    wayland wayland-protocols libxkbcommon pipewire-jack libgit2 rustup
+rustup default stable
 
 # Debian / Ubuntu (libwayland-dev carries wayland-scanner):
 sudo apt install build-essential cmake pkg-config git libfftw3-dev \
     libcairo2-dev libharfbuzz-dev libwayland-dev wayland-protocols \
     libxkbcommon-dev libjack-jackd2-dev libgit2-dev
+# then Rust, from https://rustup.rs (the distribution's cargo may be too old):
+#   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Fedora:
 sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config git fftw-devel \
     cairo-devel harfbuzz-devel wayland-devel wayland-protocols-devel \
-    libxkbcommon-devel pipewire-jack-audio-connection-kit-devel libgit2-devel
+    libxkbcommon-devel pipewire-jack-audio-connection-kit-devel libgit2-devel \
+    rustup
+rustup-init   # then: rustup default stable
 ```
 
 The tablet side adds adb and the Android build's host tools; its fonts — Tahoma and Tahoma Bold (ReactOS's Wine Tahoma) — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
 
 ```bash
 sudo pacman -S --needed android-tools meson ninja zip unzip
-pacman -Q git libgit2 android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip
+rustup target add aarch64-linux-android   # the APK's resvg
+pacman -Q git libgit2 rustup android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip
 # every line shows a version; "was not found" names a package still to install
+rustup target list --installed
+# lists aarch64-linux-android
 ```
 
 The GUI needs a Wayland compositor that offers server-side decorations (xdg-decoration); it exits at startup without one. labwc, the other wlroots compositors (sway, Hyprland) and KDE Plasma offer it; GNOME does not. There is no X11 backend. Under WSL2 the CLI builds and runs from the Debian / Ubuntu packages; the GUI does not (WSLg routes audio through PulseAudio and the program has no non-JACK path). macOS is not supported.
@@ -96,7 +104,7 @@ A theme file is `<key>.theme` in the `themes/` folder beside the config (`~/.con
 
 Every theme but the built-in ships with the program as a theme file: the catalog's imported themes, `warptempo` and the colour picker's presets (`warptempo-preset-<n>`), generated into the repository's `assets/themes/` (`tools/theme_catalog/gen_theme_files.py`). EVERY LAUNCH COPIES THEM INTO `themes/` before reading it, on the laptop from the repository's `assets/themes/` (the folder of the repository it was built from, read as it stands at each launch), on the tablet from the APK (a regenerated set reaches the tablet with the next APK). The bundled files win for their own names: a bundled file edited by hand is overwritten at the next launch. Your own themes take other names (copy a bundled file to a new name and edit that); a file of any other name is never touched. A launch that cannot copy them (the repository moved after the build, a full disk) stops at startup, naming what failed.
 
-The icons ship with the program too but are never copied: the Tango drawings are read at every launch straight from the repository's `assets/icons/tango/` on the laptop (as it stands at each launch) and from the APK on the tablet. A launch that cannot read them, or that finds a drawing outside what the program's reader understands, stops at startup with one line naming the set, the file and what is wrong.
+The icons ship with the program too but are never copied: the Tango drawings are read at every launch straight from the repository's `assets/icons/tango/` on the laptop (as it stands at each launch) and from the APK on the tablet. A launch that cannot read them, or that finds a file that is not well-formed SVG, stops at startup with one line naming the set, the file and what is wrong.
 
 The first run writes it: on the laptop `gui_scale=138`, `max_waveform_height=364`, `projects_repo=github.com/warptempo/warptempo_projects`, `projects_path=$HOME/.warptempo/warptempo_projects/projects` (spelled out as an absolute path), `last_project=` blank, then `theme=windows-2000-standard`. That `projects_path` is the example layout this file assumes: the projects clone at `~/.warptempo/warptempo_projects`, beside this repository. The clone is wherever `projects_path` says, one folder up. Change every key but `last_project` in the app (the Settings menu); the theme repaints at once, among the built-in and the theme files read at launch. A hand edit is for when the program is not running (it rewrites the whole file at every commit), and a line that breaks the grammar stops the program at startup, naming the line.
 
@@ -159,11 +167,12 @@ bash android/toolchain/bootstrap.sh
 
 ### The prebuilt libraries
 
-The APK links fftw, freetype, harfbuzz, pixman, cairo and git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) statically from `android/prebuilt/`, which is not in the repository.
+The APK links fftw, freetype, harfbuzz, pixman, cairo, git (OpenSSL 3.6.4's libcrypto under libssh2 1.11.1 under libgit2 1.9.7) and resvg 0.48.1 (the icon renderer, built with Rust) statically from `android/prebuilt/`, which is not in the repository. `THIRD_PARTY.md` lists each with its licence.
 
 ```bash
-ls android/prebuilt/arm64-v8a/lib/libgit2.a
-# present: skip the next line. Missing: build them all (about 12 minutes)
+ls android/prebuilt/arm64-v8a/lib/libgit2.a android/prebuilt/arm64-v8a/lib/libresvg.a
+# both present: skip the next lines. libresvg.a alone missing: bash android/deps/85_resvg.sh
+# (about 20 s), then bash android/deps/smoke/build_smoke.sh. Both missing: build them all (about 12 minutes)
 bash android/deps/build_all.sh
 ```
 

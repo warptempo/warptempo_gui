@@ -183,7 +183,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
 # comment states the sizes; nothing here renders). Every GUI pixel is painted
 # by cairo, the roster's icons included (the Tango set's SVG assets above,
-# read through the app's own subset reader, svg_icon.cpp); the app declares no
+# rasterised by resvg, svg_icon.cpp, and copied by cairo); the app declares no
 # @string, no style, no res/values. aapt2 compile turns the
 # directory into res.zip, which link takes as a positional input.
 # (targetSdk stays 34 rather than opting out of Android 15's edge-to-edge

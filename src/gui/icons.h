@@ -8,10 +8,12 @@
 // the product drew itself before is git history). One 48-unit Inkscape file
 // per enumerator under
 // assets/icons/tango/ (its README the mapping, the provenance and the
-// licences), READ AT LAUNCH by the SVG-subset reader (svg_icon.h) straight
-// from the bundle — never copied into the config folder (load_svg_set,
-// below) — and rasterised lazily per (glyph, device px) into an ARGB32
-// surface that a draw copies at an integer device px, no resample. THE INKS
+// licences), PARSED AT LAUNCH through resvg, the one renderer of every set
+// (svg_icon.h: the wrapper, the error rule and why a set is checked at its
+// import), straight from the bundle — never copied into the config folder
+// (load_svg_set, below) — and rasterised lazily per (glyph, device px) into
+// an ARGB32 surface that a draw copies at an integer device px, no
+// resample. THE INKS
 // ARE THE DRAWINGS' OWN (gradients, strokes and opacities included), never a
 // theme role; a DISABLED glyph is ReactOS's saturate (draw_disabled).
 //
@@ -39,7 +41,7 @@
 // platform ships no cursor art and draws none.
 //
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
-// and warptempo_cli must never carry this TU (nor svg_icon's).
+// and warptempo_cli must never carry this TU (nor svg_icon's, nor resvg).
 
 #include "render.h"        // the case geometry, kLiveChromeSpec
 
@@ -178,11 +180,12 @@ inline constexpr std::string_view kGuiLiveIconSet = kLiveChromeSpec.icon_set;
 // beside the bundle there, and nobody authors an icon set on the device),
 // then every enumerator's `<name>.svg` parsed in enum order before any draw
 // (svg_icon::parse; files of other names, the README among them, ignored).
-// THE ERROR
-// ARM'S PRODUCERS: the bundle unreadable (IO), a file missing or outside the
-// subset (a build defect) — "icon set 'tango': EditDelete.svg: element
-// <filter> is outside the icon subset", the first only, which gui_main
-// prints and exits on (the validation doctrine's class (1)).
+// THE ERROR ARM'S PRODUCERS: the bundle unreadable (IO), a file missing or
+// not well-formed SVG (a build defect) — "icon set 'tango': EditDelete.svg:
+// not well-formed SVG (resvg error 7)", the first only, which gui_main
+// prints and exits on (the validation doctrine's class (1)). A construct
+// resvg does not draw passes the load: the set's import sheet is that check
+// (svg_icon.h's error rule).
 std::optional<std::string> load_svg_set(std::string_view set);
 
 // THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale):
@@ -194,7 +197,7 @@ void drop_rasters();
 // integer device px nearest (x, y) — every caller passes integers. The
 // callers pass icon_glyph_px() (a toolbar case's seat) or their own scaled
 // 16. Cairo state is saved and restored. Cannot fail: the launch's load
-// proved every drawing.
+// parsed every drawing.
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 
 // THE DISABLED GLYPH — a dead button's face: REACTOS'S SATURATE (architect

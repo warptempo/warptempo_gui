@@ -6,10 +6,12 @@ Tango's own files only, nothing drawn, no GNOME file), the chrome spec's set (`s
 the set the product drew itself before is git history.
 
 Every file is a 48-unit Inkscape drawing COPIED BYTE FOR BYTE from Tango's `scalable/` tree: never edit one (an edit
-breaks the provenance below). The program reads the files AT LAUNCH, in place, through its SVG-subset reader
-(`src/gui/svg_icon.h`; the subset is `svg_icon.cpp`'s tables) — on the laptop from this folder, on the tablet from
-the APK's `icons/tango/` assets (`android/app/build_apk.sh`) — and a file outside the subset fails the launch, naming
-the file and the construct. Files of other names in this folder (this README, the licence texts) are not read.
+breaks the provenance below). The program parses the files AT LAUNCH, in place, through resvg (`src/gui/svg_icon.h`)
+— on the laptop from this folder, on the tablet from the APK's `icons/tango/` assets (`android/app/build_apk.sh`) —
+and a file that is not well-formed SVG fails the launch, naming the file. A construct resvg does not draw is skipped
+silently, so the set was checked at its import on a sheet against rsvg-convert (resvg sits 0.5 levels of 255 from it
+at 72 px, the median over the 58 files). Files of other names in this folder (this README, the licence texts) are not
+read.
 
 REPEATS, known by position (the files byte-identical): `mimetypes/audio-x-generic` is AppIcon (the caption and the
 program icon), AudioXWav (a wav row) and MusicNote16th (BPM Iterations); `actions/view-refresh` is DocumentRevert

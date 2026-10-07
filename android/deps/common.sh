@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Shared bits for the eight dependency builds. Source it, never execute it.
+# Shared bits for the nine dependency builds. Source it, never execute it.
 #
 # Source tarballs are pinned by SHA-256. Provenance for each pin is recorded in
-# android/NOTES.md; seven of the eight are cross-checked against an independent
+# android/NOTES.md; eight of the nine are cross-checked against an independent
 # publisher (Arch PKGBUILD / Debian .dsc).
 
 set -u
@@ -59,6 +59,17 @@ LIBGIT2_VER=1.9.7
 LIBGIT2_TAR=libgit2-$LIBGIT2_VER.tar.gz
 LIBGIT2_URL=https://github.com/libgit2/libgit2/archive/refs/tags/v$LIBGIT2_VER.tar.gz
 LIBGIT2_SHA256=1a4fbe7589e814777ae76b64734ad80f4ecad22cd33a22682a2aaea4ae5375e7
+
+# The icon renderer (src/gui/svg_icon.cpp): resvg's C API, pure Rust, built by
+# cargo from GitHub's tag archive, cached under a versioned name as libgit2's
+# is. Arch's resvg PKGBUILD sha256sums for the same URL matches the file. THE
+# ONE PIN FOR BOTH DEVICES: the laptop's CMakeLists.txt reads RESVG_VER and
+# RESVG_SHA256 from these lines, so a version step is an edit here alone. The
+# tarball's Cargo.lock pins every crate by its checksum.
+RESVG_VER=0.48.1
+RESVG_TAR=resvg-$RESVG_VER.tar.gz
+RESVG_URL=https://github.com/linebender/resvg/archive/refs/tags/v$RESVG_VER.tar.gz
+RESVG_SHA256=40dafea6b4b9d01e9d28b6d49f1e912daf3e9055676ad9179a5a2db6e7386945
 
 # --- helpers --------------------------------------------------------------
 WT_SRCDIR="$WT_WORK/src"

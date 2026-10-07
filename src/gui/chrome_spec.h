@@ -77,8 +77,7 @@ struct ChromeSpec {
     int                bottom_row_air_px;
     GuiCardSeat        card_seat;
     // THE ICON SET the vocabulary wears: a bundled folder under
-    // assets/icons/, read at launch through the subset reader (icons.h's
-    // head).
+    // assets/icons/, parsed at launch through resvg (icons.h's head).
     const char*        icon_set;
 };
 

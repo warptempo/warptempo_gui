@@ -138,11 +138,13 @@ set(WARPTEMPO_GUI_SOURCES
     # FreeType on both platforms.
     src/gui/gui_font_bundled.cpp
     # GUI-ONLY: the icon set (icons.cpp: the load, the raster cache, the
-    # draws) and the in-tree SVG-subset reader it reads the bundled drawings
-    # through (svg_icon.cpp, over cairo) are a painting concern and exist only
-    # here, so like text_shape.cpp they are deliberately in none of the four
-    # shared per-directory source lists — warptempo_cli must never carry
-    # them. They need no dependency cairo does not already bring.
+    # draws) and the wrapper over resvg it reads the bundled drawings through
+    # (svg_icon.cpp, the one file that includes <resvg.h>) are a painting
+    # concern and exist only here, so like text_shape.cpp they are
+    # deliberately in none of the four shared per-directory source lists —
+    # warptempo_cli must never carry them, nor resvg. resvg is found in each
+    # platform branch below: built here from the pinned source on Linux, the
+    # cross-built static one (android/deps/85_resvg.sh) on Android.
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
     src/gui/render.cpp
@@ -265,6 +267,12 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # which lets cairo-ft and harfbuzz carry it transitively — because the
     # static link needs its archive named explicitly inside the group below.
     pkg_check_modules(WT_ANDROID_GFX REQUIRED cairo cairo-ft harfbuzz freetype2)
+    # The icon renderer (svg_icon.cpp): resvg's C API, static, its resvg.pc
+    # written by android/deps/85_resvg.sh (upstream ships none without
+    # cargo-c). Its STATIC_LDFLAGS carry the Rust archive's native-static-libs
+    # (-llog -lunwind -ldl -lm -lc), all the NDK's own: DT_NEEDED gains
+    # nothing the seven do not already name.
+    pkg_check_modules(WT_ANDROID_RESVG REQUIRED resvg)
     # The history view's git (git_repo.cpp), as on Linux: libgit2 with its SSH
     # transport. Static like everything here; libgit2.pc's Requires.private
     # names libssh2, whose own .pc names libcrypto, so --static (the
@@ -319,6 +327,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         ${WARPTEMPO_GLUE_DIR}
         ${FFTW3_INCLUDE_DIRS}
         ${WT_ANDROID_GFX_INCLUDE_DIRS}
+        ${WT_ANDROID_RESVG_INCLUDE_DIRS}
         ${WARPTEMPO_GIT_INCLUDE_DIRS}
     )
     # -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ IS LOAD-BEARING and is
@@ -341,6 +350,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         -Wl,--no-undefined
         -Wl,--start-group
         ${WT_ANDROID_GFX_STATIC_LDFLAGS}
+        ${WT_ANDROID_RESVG_STATIC_LDFLAGS}
         ${WARPTEMPO_GIT_LIBRARIES}
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}
@@ -433,6 +443,86 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         set(WARPTEMPO_GIT_LIBRARIES ${LIBGIT2_LIBRARIES})
     endif()
 
+    # THE ICON RENDERER (svg_icon.cpp): resvg's C API, BUILT HERE FROM THE
+    # TABLET'S PINNED SOURCE (architect 2026-10-06: one renderer, the same
+    # pinned source on both devices, never a distro package). The pin is
+    # android/deps/common.sh's RESVG_VER / RESVG_URL / RESVG_SHA256, read from
+    # those lines, so the two devices cannot drift apart; that file is a
+    # configure dependency. Everything lands under ${CMAKE_BINARY_DIR}/resvg:
+    # the tarball (its sha256 checked), the source, cargo's CARGO_HOME (the
+    # crates the build compiles, downloaded from crates.io and pinned by
+    # checksum in the tarball's Cargo.lock; never ~/.cargo) and the target
+    # dir. The cargo invocation is 85_resvg.sh's: the crate's static archive
+    # alone, the production profile, no default features, raster-images on
+    # (that script's head owns each choice). It runs once per build tree; a
+    # new pin re-runs it.
+    find_program(WARPTEMPO_CARGO cargo)
+    if(NOT WARPTEMPO_CARGO)
+        message(FATAL_ERROR
+            "cargo not found: the GUI builds its icon renderer, resvg, with "
+            "Rust. Install rustup and its stable toolchain (docs/INSTALL.md).")
+    endif()
+    set(WARPTEMPO_RESVG_PIN_FILE ${CMAKE_SOURCE_DIR}/android/deps/common.sh)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                 ${WARPTEMPO_RESVG_PIN_FILE})
+    file(STRINGS ${WARPTEMPO_RESVG_PIN_FILE} resvg_pin_lines
+         REGEX "^RESVG_(VER|URL|SHA256)=")
+    foreach(line IN LISTS resvg_pin_lines)
+        if(line MATCHES "^RESVG_(VER|URL|SHA256)=([^ \t#]+)")
+            set(WARPTEMPO_RESVG_${CMAKE_MATCH_1} ${CMAKE_MATCH_2})
+        endif()
+    endforeach()
+    if(NOT WARPTEMPO_RESVG_VER OR NOT WARPTEMPO_RESVG_URL OR
+       NOT WARPTEMPO_RESVG_SHA256)
+        message(FATAL_ERROR
+            "no RESVG_VER / RESVG_URL / RESVG_SHA256 in ${WARPTEMPO_RESVG_PIN_FILE}")
+    endif()
+    string(REPLACE "\$RESVG_VER" "${WARPTEMPO_RESVG_VER}"
+           WARPTEMPO_RESVG_URL "${WARPTEMPO_RESVG_URL}")
+    set(WARPTEMPO_RESVG_DIR ${CMAKE_BINARY_DIR}/resvg)
+    set(WARPTEMPO_RESVG_LIB ${WARPTEMPO_RESVG_DIR}/lib/libresvg.a)
+    set(WARPTEMPO_RESVG_INCLUDE_DIR ${WARPTEMPO_RESVG_DIR}/include)
+    # MAKEFLAGS is unset for cargo, which then schedules its own jobs: handed
+    # make's jobserver, it warns on every first build.
+    set(WARPTEMPO_RESVG_CARGO
+        ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS
+        CARGO_HOME=${WARPTEMPO_RESVG_DIR}/cargo-home ${WARPTEMPO_CARGO})
+    include(ExternalProject)
+    ExternalProject_Add(warptempo_resvg_build
+        URL ${WARPTEMPO_RESVG_URL}
+        URL_HASH SHA256=${WARPTEMPO_RESVG_SHA256}
+        DOWNLOAD_NAME resvg-${WARPTEMPO_RESVG_VER}.tar.gz
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        PREFIX ${WARPTEMPO_RESVG_DIR}
+        SOURCE_DIR ${WARPTEMPO_RESVG_DIR}/resvg-${WARPTEMPO_RESVG_VER}
+        BUILD_IN_SOURCE TRUE
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ${WARPTEMPO_RESVG_CARGO} rustc --locked
+                --profile production -p resvg-capi
+                --no-default-features --features raster-images
+                --crate-type staticlib
+                --target-dir ${WARPTEMPO_RESVG_DIR}/target
+        INSTALL_COMMAND ${CMAKE_COMMAND} -E copy
+                <SOURCE_DIR>/crates/c-api/resvg.h ${WARPTEMPO_RESVG_INCLUDE_DIR}/
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${WARPTEMPO_RESVG_DIR}/target/production/libresvg.a
+                ${WARPTEMPO_RESVG_DIR}/lib/
+        BUILD_BYPRODUCTS ${WARPTEMPO_RESVG_LIB})
+    # The include directory exists before the build fills it: an imported
+    # target's include directory must exist at generate time.
+    file(MAKE_DIRECTORY ${WARPTEMPO_RESVG_INCLUDE_DIR}
+                        ${WARPTEMPO_RESVG_DIR}/lib)
+    # The archive's native-static-libs on glibc (rustc's own list:
+    # -lgcc_s -lutil -lrt -lpthread -lm -ldl -lc) need nothing new: rt,
+    # pthread, dl and m are on the GUI's link line below, gcc_s and c come
+    # with g++'s driver, and util is inside libc since glibc 2.34. The
+    # binary's DT_NEEDED is what it was.
+    add_library(warptempo_resvg STATIC IMPORTED)
+    set_target_properties(warptempo_resvg PROPERTIES
+        IMPORTED_LOCATION ${WARPTEMPO_RESVG_LIB}
+        INTERFACE_INCLUDE_DIRECTORIES ${WARPTEMPO_RESVG_INCLUDE_DIR})
+    add_dependencies(warptempo_resvg warptempo_resvg_build)
+
     # THE PRODUCT'S TWO FONT FILES, COMPILED IN (architect 2026-10-02; Wine
     # Tahoma alone 2026-10-06; the list and its order are gui_font.h's
     # kGuiFontFiles, the rule and the mechanism's reasons at
@@ -516,6 +606,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${CAIRO_FT_LIBRARIES}
         ${JACK_LIBRARIES}
         ${WARPTEMPO_GIT_LIBRARIES}
+        warptempo_resvg
         pthread
         dl
         m

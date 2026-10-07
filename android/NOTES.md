@@ -29,7 +29,7 @@ package was used, so no system-wide config changed.
 | Source + build trees | — | `~/.local/android/work` |
 | Generated meson cross file | — | `~/.local/android/meson/android-aarch64.ini` |
 | Generated pkg-config wrapper | — | `~/.local/android/bin/pkg-config-android` |
-| **Dependency sysroot** | — | **`android/prebuilt/arm64-v8a` (in-repo, gitignored; 11 MB, 42 MB since the git stack joined, §14)** |
+| **Dependency sysroot** | — | **`android/prebuilt/arm64-v8a` (in-repo, gitignored; 11 MB, 42 MB since the git stack joined, §14, 53 MB since resvg, §15)** |
 
 **NDK r29 is the newest STABLE NDK.** The SDK repository manifest lists
 `ndk;30.0.14904198` and `ndk;30.0.15729638` under a "stable" channel ref, but
@@ -78,8 +78,9 @@ android/deps/
   60_openssl.sh          OpenSSL 3.6.4 (libcrypto for libssh2; §14)
   70_libssh2.sh          libssh2 1.11.1 over OpenSSL
   80_libgit2.sh          libgit2 1.9.7 over libssh2
-  build_all.sh           the eight in dependency order, then the smoke TU
-  smoke/smoke.cpp        one TU including all eight headers
+  85_resvg.sh            resvg 0.48.1's C API (the icon renderer; cargo; §15)
+  build_all.sh           the nine in dependency order, then the smoke TU
+  smoke/smoke.cpp        one TU including all nine headers
   smoke/build_smoke.sh   compile+link at two API levels, then the 16 KB check
 
 android/prebuilt/arm64-v8a/   include/ lib/ lib/pkgconfig/ lib/cmake/  (the output)
@@ -235,6 +236,7 @@ job, confirmed on a real link that pulls in all five static libraries. The
 | `openssl-3.6.4.tar.gz` | `9bffaa1a…333ef` | github.com/openssl/openssl releases | upstream `.sha256` file AND Arch `openssl` PKGBUILD sha256sums ✔ |
 | `libssh2-1.11.1.tar.gz` | `d9ec76cb…58f7` | libssh2.org | Debian `libssh2_1.11.1-6.dsc` (`.orig.tar.gz`, 1093012 bytes) ✔ |
 | `libgit2-1.9.7.tar.gz` | `1a4fbe75…75e7` | github.com/libgit2 tag archive (`v1.9.7.tar.gz`) | Arch `libgit2` PKGBUILD b2sum ✔ |
+| `resvg-0.48.1.tar.gz` | `40dafea6…6945` | github.com/linebender/resvg tag archive (`v0.48.1.tar.gz`) | Arch `resvg` PKGBUILD sha256sums ✔ (its crates: the tarball's `Cargo.lock`, one checksum per crate, §15) |
 
 **DEVIATION — cairo and pixman do not come from cairographics.org.** That host
 is unreachable from this machine (DNS resolves to 131.252.210.176, every HTTPS
@@ -1670,3 +1672,67 @@ the arc's end. The app also needs the INTERNET permission (the manifest carries
 it since this arc; without it the process is outside the inet group and every
 socket fails with EACCES), a placed clone and the deploy key in
 `files/warptempo_gui/` (git_repo.h).
+
+## 15. The icon renderer — resvg (2026-10-06)
+
+ONE RENDERER FOR EVERY ICON SET (architect 2026-10-06): resvg's C API, the
+in-tree SVG-subset reader retired. `src/gui/svg_icon.cpp` is the one file that
+includes `<resvg.h>`; its head owns the wrapper and the launch's error rule.
+
+### 15.1 Pin and provenance
+
+`resvg-0.48.1.tar.gz`, GitHub's tag archive (§6's row), sha256
+`40dafea6b4b9d01e9d28b6d49f1e912daf3e9055676ad9179a5a2db6e7386945`, the same
+value Arch's `resvg` PKGBUILD records for the same URL. Licence Apache-2.0 OR
+MIT (`LICENSE-APACHE`, `LICENSE-MIT` in the tarball); its 37 crates, each MIT /
+Apache-2.0 / BSD-2 / BSD-3 / Zlib / 0BSD / Unlicense, are listed with their
+licences in the root `THIRD_PARTY.md`. No crate in the feature set compiles C.
+
+THE ONE PIN FOR BOTH DEVICES: `common.sh`'s `RESVG_VER` / `RESVG_URL` /
+`RESVG_SHA256`. The laptop's `CMakeLists.txt` reads those three lines and builds
+the same tarball with the same cargo invocation into `build/resvg/` (an
+ExternalProject; CARGO_HOME `build/resvg/cargo-home`), so the two devices cannot
+drift. GitHub also publishes a release asset `resvg-0.48.1.tar.xz` (13 MB,
+sha256 `13ed5a2b…294c`) with every crate vendored; it is not used, because the
+tag archive is the one an independent publisher cross-checks and `Cargo.lock`
+already pins each crate by checksum.
+
+### 15.2 The choices
+
+`85_resvg.sh`'s head owns each: `cargo rustc --crate-type staticlib` (the
+archive alone, so cargo links nothing and no NDK tool is involved; no
+cargo-ndk), `--profile production` (the workspace's LTO profile),
+`--no-default-features --features raster-images` (no text, no svgz, embedded
+images on), `--locked`, CARGO_HOME `$WT_WORK/cargo` (never `~/.cargo`), and a
+hand-written `resvg.pc` (upstream ships one only through cargo-c) whose
+`Libs.private` is the archive's own `native-static-libs` read back from rustc:
+`-ldl -llog -lunwind -ldl -lm -lc`, all the NDK's. Needs rustup's stable
+toolchain with the `aarch64-linux-android` target (rustc 1.99.0 here).
+
+### 15.3 Build time and sizes (this laptop, 2026-10-06)
+
+| Step | Wall time | Archive |
+|---|---|---|
+| `85_resvg.sh` (crates already downloaded) | 19 s | `libresvg.a` 11.4 MB |
+| the laptop's ExternalProject, first build | 23 s | `libresvg.a` 10.8 MB |
+
+THE PRODUCT, linked in a scratch build of the same tree: the stripped
+`libwarptempo_gui.so` is 16,192,544 bytes, 1.45 MB over the morning's APK
+build of an older tree (14,741,928), report TL having measured resvg's own
+share at 1.40 MB. DT_NEEDED is UNCHANGED, the seven (`liblog` was already one),
+and every LOAD segment is `align 2**14`.
+
+### 15.4 The smoke link
+
+`smoke.cpp` includes `<resvg.h>`, parses a 4 x 4 SVG from bytes, renders it
+and checks a pixel; `build_smoke.sh` adds `resvg` to its pkg-config list.
+DT_NEEDED of the smoke `.so` is bionic's three plus `liblog.so`, which the
+Rust archive's native-static-libs name (no resvg object calls it; the product
+links it anyway), so the smoke allowlist names four.
+
+### 15.5 What is NOT verified
+
+Nothing has run on the device: the APK is the planner's. The arm64 renders
+were not compared pixel for pixel with the laptop's (resvg's README claims
+identical output across platforms; tiny-skia has per-architecture SIMD
+pipelines, so the claim is the project's, unchecked here).

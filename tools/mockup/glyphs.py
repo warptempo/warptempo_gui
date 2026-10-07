@@ -5,7 +5,9 @@
 # (icons.h's PLACEMENT, paint_button_box's ButtonBoxFace), over the case's face in the target theme (the checkerboard
 # on a lit case). An enabled glyph is the drawing's own picture; a disabled one is ReactOS's saturate (icons.h's
 # draw_disabled, svg_icon.cpp's saturated_copy): each pixel's colour its .30 R + .59 G + .11 B luminance, its alpha
-# times 192 / 255.
+# times 192 / 255. rsvg-convert is the reference a set is checked against at its import; the product rasterises through
+# resvg (src/gui/svg_icon.h), a median 0.5 levels of 255 from rsvg at 72 px and 1.6 at 33 over the Tango set, its
+# thinnest strokes a shade softer at the laptop's size.
 import os, subprocess, struct, sys, zlib
 import numpy as np
 

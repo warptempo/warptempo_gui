@@ -4,7 +4,7 @@
 // static archives and pkg-config all agreeing).
 //
 // It is never run -- the device may not even be present. What it proves is that
-// the eight libraries resolve against each other and against bionic.
+// the nine libraries resolve against each other and against bionic.
 
 #include <cairo.h>
 #include <cairo-ft.h>
@@ -15,6 +15,7 @@
 #include <hb-ft.h>
 #include <git2.h>
 #include <libssh2.h>
+#include <resvg.h>
 
 #include <cstdio>
 
@@ -72,9 +73,27 @@ extern "C" int warptempo_android_smoke(void) {
     git_libgit2_shutdown();
     if ((features & GIT_FEATURE_SSH) == 0 || (features & GIT_FEATURE_THREADS) == 0) return 8;
 
-    std::printf("cairo %s / harfbuzz %s / freetype ok / fftw %p / libgit2 %d.%d.%d / libssh2 %s\n",
+    // resvg, the icon road's whole use (svg_icon.cpp): a parse from bytes,
+    // the size, one render into a caller's RGBA buffer, the frees. Linking it
+    // proves the Rust archive's std and its native-static-libs resolve
+    // against the NDK beside the C++ runtime.
+    static const char kSvg[] =
+        "<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'>"
+        "<rect width='4' height='4' fill='#000'/></svg>";
+    resvg_options *opt = resvg_options_create();
+    resvg_render_tree *tree = nullptr;
+    const int32_t parsed = resvg_parse_tree_from_data(kSvg, sizeof kSvg - 1, opt, &tree);
+    resvg_options_destroy(opt);
+    if (parsed != RESVG_OK) return 9;
+    unsigned char pixels[4 * 4 * 4] = {};
+    const resvg_size size = resvg_get_image_size(tree);
+    resvg_render(tree, resvg_transform_identity(), 4, 4, reinterpret_cast<char *>(pixels));
+    resvg_tree_destroy(tree);
+    if (size.width != 4.0f || pixels[3] != 255) return 10;
+
+    std::printf("cairo %s / harfbuzz %s / freetype ok / fftw %p / libgit2 %d.%d.%d / libssh2 %s / resvg %s\n",
                 cairo_version_string(), hb_version_string(),
                 static_cast<const void *>(kFaceEntryPoints), major, minor, rev,
-                libssh2_version(0));
+                libssh2_version(0), RESVG_VERSION);
     return 0;
 }

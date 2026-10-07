@@ -7,6 +7,7 @@
 #   fftw3 (independent)
 #   openssl (libcrypto) -> libssh2 -> libgit2   (the history view's git;
 #                                                independent of the five above)
+#   resvg (independent: the icon renderer, pure Rust, built by cargo)
 # The freetype<->harfbuzz cycle is real, but the freetype pass-2 rebuild only
 # improves autohinting for complex scripts (Arabic, Indic). This product paints
 # 12pt Latin, so pass 2 is deliberately skipped and the order stays linear.
@@ -24,6 +25,7 @@ bash "$here/50_cairo.sh"
 bash "$here/60_openssl.sh"
 bash "$here/70_libssh2.sh"
 bash "$here/80_libgit2.sh"
+bash "$here/85_resvg.sh"
 bash "$here/smoke/build_smoke.sh"
 
 . "$here/common.sh"

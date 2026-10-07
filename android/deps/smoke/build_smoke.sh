@@ -6,11 +6,11 @@
 # place the alignment is observable (a static archive has no LOAD segments; the
 # property is created at link time and NDK r28+ makes it the default).
 #
-# The output never runs. A clean link is the claim: eight libraries, their
+# The output never runs. A clean link is the claim: nine libraries, their
 # headers and bionic all agree -- under -Wl,--no-undefined, as the product
 # links, so an unresolved symbol is a failure here rather than at dlopen. Then
 # the ed25519 check (the deploy key's type must be linked in) and DT_NEEDED
-# (nothing beyond bionic: the git stack adds no shared library).
+# (nothing beyond bionic and liblog: no dependency adds a library to ship).
 set -euo pipefail
 . "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../toolchain" && pwd)/00_env.sh"
 
@@ -19,11 +19,11 @@ mkdir -p "$out"
 src="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/smoke.cpp"
 
 pc="$WT_PKGCONFIG_WRAPPER"
-cflags="$("$pc" --cflags cairo cairo-ft harfbuzz freetype2 fftw3 libgit2 libssh2)"
+cflags="$("$pc" --cflags cairo cairo-ft harfbuzz freetype2 fftw3 libgit2 libssh2 resvg)"
 # --static: the staging prefix is static-only, so the Libs.private chains
 # (cairo -> pixman -> freetype -> m; libgit2 -> libssh2 -> libcrypto) must
-# come through.
-libs="$("$pc" --static --libs cairo cairo-ft harfbuzz freetype2 fftw3 libgit2 libssh2)"
+# come through, resvg's among them (the Rust archive's native-static-libs).
+libs="$("$pc" --static --libs cairo cairo-ft harfbuzz freetype2 fftw3 libgit2 libssh2 resvg)"
 # fftw3_threads ships no .pc upstream (Makefile.am installs only fftw3.pc), which
 # is exactly why the product finds it with find_library. Name it by hand.
 libs="$libs -lfftw3_threads"
@@ -53,10 +53,13 @@ for api in "$WT_API" "$WT_TARGET_SDK"; do
         *" _libssh2_ed25519_sign"*) wt_say "ed25519 linked in at API $api" ;;
         *) wt_warn "no _libssh2_ed25519_sign in $so"; fail=1 ;;
     esac
-    # EXACTLY bionic's three (NOTES.md §2): the git stack and every other
-    # dependency are static, so anything else here is a library to ship.
-    if wt_check_dt_needed "$so" libc.so libdl.so libm.so; then
-        wt_say "DT_NEEDED is exactly libc libdl libm at API $api"
+    # EXACTLY bionic's three (NOTES.md §2) and liblog: the git stack and
+    # every other dependency are static, so anything else here is a library
+    # to ship. liblog is the platform's, named by resvg's native-static-libs
+    # (the Rust std's list for the target; no resvg object calls it), and the
+    # product links it for its own logging (its seven, build_apk.sh).
+    if wt_check_dt_needed "$so" libc.so libdl.so libm.so liblog.so; then
+        wt_say "DT_NEEDED is exactly libc libdl libm liblog at API $api"
     else
         fail=1
     fi
