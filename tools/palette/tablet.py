@@ -76,17 +76,21 @@ def read_constants():
     # THE TOOLBAR CASE AND ITS AIR are THE RETIRED WIN95 VOCABULARY'S, FROZEN HERE (2026-10-06 evening: the product
     # dropped Windows 95 for Windows 2000 and its source carries only the large case, chrome_spec.h's
     # kChromeSpecWin2000): this geometry is scene 1002's design, Windows 95's small case 23 x 22 (lead 3, the 16-px
-    # glyph, trail 4 right and 3 below) on WordPad's 3-px air, as kChromeSpecWin95 recorded it at e7e0ddf4.
+    # glyph, trail 4 right and 3 below) on WordPad's 3-px air, as kChromeSpecWin95 recorded it at e7e0ddf4. THE MENU
+    # LABEL'S PAD likewise: the win95 menu row padded each side by one kMenuLabelPadPx = 7 (paint_handler.cpp at
+    # 010adfb1); the source now carries Explorer's menu band's asymmetric pair (kMenuLabelPadLeftPx /
+    # kMenuLabelPadRightPx, 2026-10-06), which is not the design this scene draws, so the retired number is frozen here.
     for name, v in (('kIconCaseLeadPx', 3), ('kIconGlyphPx', 16), ('kIconCaseTrailXPx', 4), ('kIconCaseTrailYPx', 3),
                     ('kIconRowAirPx', 3)):
         K[name] = v; own[name] = 'tablet.py (the retired win95 case, frozen)'
+    K['kMenuLabelPadPx'] = 7; own['kMenuLabelPadPx'] = 'tablet.py (the retired win95 menu pad, frozen)'
     for name in ('kMenuRowHeightPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
                  'kMarkerFlagEdgePx', 'kMarkerFlagFacePx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',
                  'kPlayheadHeadRows', 'kPlayheadHeadCols',
                  'kPlayheadUnitPx', 'kTrimArrowGlyphWPx', 'kTrimArrowGlyphHPx'):
         K[name] = _num(rh, 'render.h', name); own[name] = 'render.h'
-    for name in ('kMenuLabelPadPx', 'kStatusPanelPadPx', 'kTimeFieldHeightPx', 'kRulerLabelCapTopPx', 'kRulerMajorRisePx',
+    for name in ('kStatusPanelPadPx', 'kTimeFieldHeightPx', 'kRulerLabelCapTopPx', 'kRulerMajorRisePx',
                  'kRulerMinorsPerStep', 'kRulerMinMinorPitchPx', 'kModalButtonGapPx', 'kModalFieldHeightPx',
                  'kModalFieldPadXPx', 'kModalFieldWidthPx', 'kModalBtnBoxPx', 'kModalBtnMinWidthPx',
                  'kModalBtnPadLeftPx', 'kModalBtnPadRightPx', 'kModalFocusFramePx'):

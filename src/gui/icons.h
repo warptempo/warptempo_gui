@@ -142,9 +142,9 @@ enum class Icon {
                          // the window (tools/app_icon)
 };
 
-// Roster size, for the once-per-icon diagnostic latch in draw() and the
-// names below. Keep it equal to the enumerator count above; a glyph joining
-// or leaving restates this number.
+// Roster size, the names' and the load's count (load_svg_set parses one
+// document per enumerator). Keep it equal to the enumerator count above; a
+// glyph joining or leaving restates this number.
 inline constexpr int kIconCount = 58;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's

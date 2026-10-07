@@ -480,14 +480,22 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
         const int stride = cairo_image_surface_get_stride(img.surface);
         const double s[3] = {start.r * 255.0, start.g * 255.0, start.b * 255.0};
         const double e[3] = {end.r * 255.0, end.g * 255.0, end.b * 255.0};
-        // One row of rounded ramp words, then every row a copy of it.
+        // One row of rounded ramp words, then every row a copy of it. Each
+        // level rounds by std::nearbyint, the tree's one rounding (a level
+        // is not a grid point; this is symmetry with svg_icon's
+        // saturated_copy, not a pixel). It parts from std::lround only on an
+        // exact half, which takes the even level: no bundled theme's pair,
+        // nor the built-in's, lands on one at the two devices' full-width
+        // captions (1920 and 2304 device px), so those ramps are unchanged;
+        // other widths (the restored laptop's) can meet one, one level apart.
         std::vector<uint32_t> row(static_cast<size_t>(r.w));
         for (int x = 0; x < r.w; ++x) {
             const double t = r.w > 1 ? static_cast<double>(x) / (r.w - 1)
                                      : 0.0;
             uint32_t word = UINT32_C(0xFF000000);
             for (int c = 0; c < 3; ++c) {
-                const long v = std::lround(s[c] + (e[c] - s[c]) * t);
+                const long v = static_cast<long>(
+                    std::nearbyint(s[c] + (e[c] - s[c]) * t));
                 word |= static_cast<uint32_t>(std::clamp(v, 0L, 255L))
                         << (16 - 8 * c);
             }

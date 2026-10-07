@@ -2397,7 +2397,7 @@ namespace {
 // are: the template's projects_path, device_config_defaults above.)
 
 // LOAD THE PRODUCT'S FACES OUT OF THE APK, or die. The assets are the
-// repository's own four font files (gui_font.h's kGuiFontFiles, in its
+// repository's own two font files (gui_font.h's kGuiFontFiles, in its
 // order; architect 2026-10-02 and 2026-10-06; build_apk.sh's asset step
 // copies them). A
 // missing or unreadable asset is a BUILD defect — the packaging step puts every

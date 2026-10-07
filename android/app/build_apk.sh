@@ -16,7 +16,7 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the four font files,         (manifest + res + assets)
+#   1. assets (the two font files,          (manifest + res + assets)
 #      the bundled theme files and
 #      the icon sets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in

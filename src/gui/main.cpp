@@ -540,18 +540,19 @@ GuiRect waveform_area(const AppState& a) {
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
-    // the vocabulary reaches it: the seven lanes are 154 Windows px at 100 %,
-    // the top strip's 125 plus the bottom row's 29 (lane by lane through
+    // the vocabulary reaches it: the seven lanes are 162 Windows px at 100 %,
+    // the top strip's 125 plus the bottom row's 37 (lane by lane through
     // scaled_px and each lane from its rounded parts, which is not one
-    // multiply of the sum). At 350 % they take 538 device px (63 caption +
-    // 70 menu + 122 icon + 56 trim + 62 ruler + 65 marker = 438 above, and 100
-    // row), leaving a 1080-tall window 542; at 400 %, the value the ceiling
-    // was raised to try, 616 (500 + 116), leaving the tablet's 1440 rows 824;
-    // and they pass 1440 near 935 %, short of the 1000 % ceiling (architect
+    // multiply of the sum). At 350 % they take 567 device px (63 caption +
+    // 70 menu + 126 icon + 56 trim + 59 ruler + 65 marker = 439 above, and 128
+    // row), leaving a 1080-tall window 513; at 400 %, the value the ceiling
+    // was raised to try, 648 (500 + 148), leaving the tablet's 1440 rows 792
+    // (the stack record at the lane table above); and they pass 1440 at
+    // 887 % (1111 + 330 = 1441), short of the 1000 % ceiling (architect
     // 2026-10-05), so the top of the vocabulary lands on this floor. (The
     // hosts run far below it: the laptop is 138 % on 1080, where the seven
-    // lanes take 208, and the tablet 275 % on its 1440-tall surface, where
-    // they take 424.) The guard
+    // lanes take 220, and the tablet 300 % on its 1440-tall surface, where
+    // they take 486.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If

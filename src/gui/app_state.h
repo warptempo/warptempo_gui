@@ -12236,8 +12236,9 @@ inline bool any_tab_read_only(const AppState& a) {
 //   * THE VIEW GROUP'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10
 //     (architect, that morning, while they were the row-1 view bar): bare
 //     1/2/3 are refused under the lamp, so the three wear the icon row's own
-//     disabled face (2026-10-01) — the glyph engraved, the selected view's
-//     checked face still saying where you stand — and the KEY's card
+//     disabled face (2026-10-01) — the glyph saturated
+//     (icons::draw_disabled), the selected view's checked face still saying
+//     where you stand — and the KEY's card
 //     carries the sentence.
 inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     if (!a.iteration_mode_enabled) return false;
@@ -15137,11 +15138,11 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // A `false` HERE WEARS THE ICON ROW'S DISABLED FACE (2026-10-01, the
         // three having come down from row 1 to the icon row's view group):
-        // the glyph engraved, as on every dead button of that row
-        // (paint_icon_row), the selected view's checked face still saying
-        // where you stand; the hint names the act and the grey is the
-        // message. The repaint is the roster's per-tick comparator (main.cpp),
-        // no damage call anywhere here.
+        // the glyph saturated (icons::draw_disabled), as on every dead
+        // button of that row (paint_icon_row), the selected view's checked
+        // face still saying where you stand; the hint names the act and the
+        // grey is the message. The repaint is the roster's per-tick
+        // comparator (main.cpp), no damage call anywhere here.
         // The selector key's own card is what says it in words and the lit
         // Grid Iterations lamp beside it is what says why.
         //
@@ -15662,7 +15663,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // since 2026-10-05 (from 2026-08-18 it also composed DISABLED +
         // SELECTED on every frame outside it, which the shared face
         // expressions handle: a dead checked button stays checked, its glyph
-        // engraved).
+        // saturated (icons::draw_disabled)).
         //
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
         // loading piece, so `false` is already this arm's answer there.
@@ -17730,7 +17731,8 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // answers at all", which carries NO ENABLED TERM: a disabled button still
 // explains itself through its TOOLTIP (architect 2026-08-07). Its one reader
 // is the roster's pointer walk (recompute_redesign_button_hover), for the
-// tooltip's owner; no button wears a hover face (architect 2026-10-02).
+// tooltip's owner and the hot toolbar button (AppState::roster_hot, the one
+// hover face, 2026-10-06).
 //
 // AN OPEN DROPDOWN OWNS THE POINTER, AND NO ROSTER BUTTON IS IN THE ZONE UNDER
 // IT: a HINT under an open menu would break the two-floating-surfaces rule,
