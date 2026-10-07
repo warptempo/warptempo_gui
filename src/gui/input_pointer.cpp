@@ -197,6 +197,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // retired magnification pair's ladder end in the same shape; the same pause holds
     // for the Restrict-undo lamp's verdict and the other tab's lock. The
     // held KEY's own wall is silent at the dispatch arm (input_handler.cpp).
+    // OPEN PROJECT (architect 2026-10-07), the row's first button, a group
+    // of its own: Ctrl+O, the project picker, the File menu row's own chord.
+    // It admits SHIFT — Revert, the one translated twin (the lift's chord
+    // build below) — and nothing else; a one-shot act, no radio, no repeat.
+    {RedesignButton::OpenProject, GuiKeys::O,  true,  false, false, false},   // Ctrl+O (+Shift: Ctrl+Alt+O)
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false},   // Ctrl+S
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false,  true},   // Ctrl+Shift+Z
@@ -7363,7 +7368,7 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE ROSTER'S POINTER WALK over the whole roster (row 1's three menu
-// anchors, the icon row's twenty-six and the bottom row's seventeen: the
+// anchors, the icon row's twenty-seven and the bottom row's seventeen: the
 // enum's own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; a MODAL's yield leaves a bottom-row member with
 // a zero rect, as do the icon row's overflow rule and its history stand-ins a
@@ -8187,6 +8192,19 @@ void GuiInputHandler::finish_chrome_press_release(
                       (arm.ctrl && redesign_button_ctrl_admits(tc.id));
         chord.shift = tc.shift || arm.shift || held_to_shift;
         chord.alt   = tc.alt;
+        // OPEN PROJECT'S TWIN TRANSLATES (architect 2026-10-07), the roster's
+        // one exception to "a modified press spells its button's own key
+        // under those modifiers": its shifted press — a carried Shift or the
+        // long press, exactly as on every shift-admitting button — runs FILE →
+        // REVERT, whose chord is Ctrl+Alt+O with no shift (is_revert_project_key,
+        // gui_input.h, unchanged; Ctrl+Shift+O binds nothing). So the shift
+        // becomes alt here and the keyboard's spelling stays as it is: the
+        // icon's twin is the icon road's. The act's own prompt guards it and
+        // its refusals card at revert_project, the menu row's road.
+        if (tc.id == RedesignButton::OpenProject && chord.shift) {
+            chord.shift = false;
+            chord.alt   = true;
+        }
         // A LIFT THAT SPELLS CTRL+C UNDER A STANDING MARKER-LANE EDITOR IS
         // REFUSED ON THE EDITOR'S OWN SWALLOW CARD (architect 2026-09-29): the
         // flag editor, in every kind, raises no veil, so the roster stays

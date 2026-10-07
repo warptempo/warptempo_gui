@@ -1956,10 +1956,10 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus),
-// row 4's TWENTY-SIX
-// view / mode / action buttons (the deleted toolbar row's four lead them since
-// the 2026-08-12 relayout, COPY VALUE between Redo and Render since
-// 2026-09-29; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
+// row 4's TWENTY-SEVEN
+// view / mode / action buttons (OPEN PROJECT leading them since 2026-10-07,
+// the deleted toolbar row's four behind it since the 2026-08-12 relayout,
+// COPY VALUE between Redo and Render since 2026-09-29; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS follow since 2026-08-18, with LOAD IN PLACE at their tail since
 // 2026-09-01 — the six behind the opener standing in two greyed authoring
 // groups' slots, and only in the `h` view, since 2026-10-05
@@ -1984,8 +1984,8 @@ struct TrimBarPressSeed {
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
 // below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped against kDropdownMenus and the chord table (43 chord rows + 3
-// anchors = 46 = kRedesignButtonCount, re-counted 2026-10-01; the count's
+// re-greped against kDropdownMenus and the chord table (44 chord rows + 3
+// anchors = 47 = kRedesignButtonCount, re-counted 2026-10-07; the count's
 // own statement is at kRedesignButtonCount below);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
@@ -2089,9 +2089,11 @@ enum class RedesignButton {
     // the bottom row's TransportSwitchTab button; the paired march keeps
     // Ctrl+Shift+Tab, Switch Tab's shifted press and the walk's ctrl-shift
     // press.)
-    // Row 4, the icon row, in painted order: the toolbar four (the deleted
-    // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP since the
-    // 2026-08-12 grand relayout dissolved that lane — same chords, same face
+    // Row 4, the icon row, in painted order: OPEN PROJECT alone at its head
+    // (architect 2026-10-07, below), then the toolbar four (the deleted
+    // row 2's Save / Undo / Redo / Render, the row's FIRST GROUP from the
+    // 2026-08-12 grand relayout dissolving that lane until Open Project took
+    // the head — same chords, same face
     // machinery, the FACE now a glyph in the toolbar case and the old labels
     // living on as the tooltips; COPY VALUE between Redo and Render since
     // 2026-09-29), THE VIEWPORT-CLASS GROUP — the Show trim
@@ -2150,12 +2152,32 @@ enum class RedesignButton {
     // PLACEMENT since 2026-10-06: the opener is right-anchored
     // (kIconRowHistoryOpener, paint_handler.cpp).
     //
-    // SAVE STANDS ALONE BEHIND A SEPARATOR (architect 2026-09-29, after his
-    // accidental Save presses at the tablet's 200 %): UNDO opens a group of
-    // its own with Redo, Copy Value and Render behind it, so the row's first
-    // separator stands between Save and Undo
+    // OPEN PROJECT LEADS THE ROW (architect 2026-10-07: "the first icon
+    // should be the open folder icon, to open a project"), Windows' own
+    // standard-toolbar order — Open before Save — IN A GROUP OF ITS OWN, one
+    // button by his word ("just to keep those two together": the act and its
+    // shift twin, no drop-down), the ordinary gap and separator between it
+    // and Save (redesign_button_opens_icon_group). ITS CHORD IS CTRL+O and
+    // its act is that key's exactly, the project picker
+    // (GuiInputHandler::open_project_picker, the one owner whose body carries
+    // every gate; the File menu's Open Project row is the same chord). ITS
+    // SHIFT TWIN IS FILE → REVERT (architect 2026-10-07): the shift-click and
+    // the long press dispatch Ctrl+Alt+O, the one translated twin on the
+    // roster (the lift's chord build, finish_chrome_press_release, states the
+    // exception; the key keeps its unshifted spelling, is_revert_project_key).
+    // It wears document-open, the drawing Load in Place already wears
+    // (icons.h, repeated by position). OPEN AND REVERT ARE THE TWO COMMANDS
+    // WITH BOTH A MENU ROW AND AN ICON-ROW ROAD, the architect's ruling
+    // against the no-second-road doctrine's default (recorded at
+    // DropdownMenu). Its face is the plain act's (redesign_button_enabled's
+    // arm). No lamp: an act, not a mode.
+    //
+    // SAVE STANDS ALONE BEHIND IT, A SEPARATOR ON EACH SIDE (architect
+    // 2026-09-29, after his accidental Save presses at the tablet's 200 %):
+    // UNDO opens a group of its own with Redo, Copy Value and Render behind
+    // it, so a separator stands between Save and Undo
     // (redesign_button_opens_icon_group).
-    Save, Undo, Redo,
+    OpenProject, Save, Undo, Redo,
     // THE COPY VALUE BUTTON (architect 2026-08-29) — BETWEEN REDO AND RENDER
     // since 2026-09-29 (architect: kdenlive's own order, Save | Undo, Redo,
     // Copy, …), inside Undo's group; it stood at the bottom row's verb group's
@@ -2994,17 +3016,17 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-01, when
-// the tab row was deleted with its two tabs):
-// THREE in row 1 (the menu anchors), TWENTY-SIX in row 4 and
-// SEVENTEEN in the bottom row — 46. Of
-// those, FORTY-THREE carry a chord in kToolbarChords
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-07, when
+// Open Project joined the icon row):
+// THREE in row 1 (the menu anchors), TWENTY-SEVEN in row 4 and
+// SEVENTEEN in the bottom row — 47. Of
+// those, FORTY-FOUR carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 46;
+inline constexpr int kRedesignButtonCount = 47;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3114,8 +3136,8 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // bare ground ahead of a leader, the members of a group touching (architect
 // 2026-10-02, the Windows case; the etched separator that stood in that gap
 // retired the same day — the groups' history below still says
-// "separator" for the gap of its day). The row's first group opens on Save
-// and takes no gap, the painter's walk suppressing the gap ahead of its
+// "separator" for the gap of its day). The row's first group opens on Open
+// Project (since 2026-10-07; on Save before it) and takes no gap, the painter's walk suppressing the gap ahead of its
 // first member rather than this predicate carrying a third state.
 //
 // IT LIVES HERE, BESIDE THE ROSTER, rather than as a column in the painter's
@@ -3125,7 +3147,8 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // reader now — paint_icon_row's two layout walks (the left groups' and the
 // flush-right view group's).
 //
-// THE SEVEN GROUPS, in painted order: SAVE ALONE, then UNDO, REDO, COPY VALUE
+// THE EIGHT GROUPS, in painted order: OPEN PROJECT ALONE (its Revert twin with
+// it, one button by the architect's word), SAVE ALONE, then UNDO, REDO, COPY VALUE
 // and RENDER (Copy Value up from the bottom row since 2026-09-29, members
 // joining and leaving and no boundary moving), THE
 // VIEWPORT-CLASS GROUP (Full zoom out leading, the
@@ -3142,7 +3165,10 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // ROW'S RIGHT EDGE, THE VIEW GROUP: Source+Warp leading Target+Warp and
 // Target+Phase.
 //
-// SEVEN SINCE 2026-10-01, UP FROM SIX: the row-1 view bar's three acts came
+// EIGHT SINCE 2026-10-07, UP FROM SEVEN (architect): OPEN PROJECT opens the
+// row in a group of its own ahead of Save's.
+//
+// SEVEN FROM 2026-10-01, UP FROM SIX: the row-1 view bar's three acts came
 // down as the view group, its own separator-led group at the row's right
 // end (paint_icon_row places it and states the overflow rule).
 //
@@ -3233,10 +3259,15 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // a group of one since then.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
+        // OPEN PROJECT IS A GROUP OF ONE, THE ROW'S FIRST (architect
+        // 2026-10-07: "just to keep those two together" — the button and its
+        // Revert twin, and nothing further), so Save still leads its own
+        // group behind it, one gap and separator between.
+        case RedesignButton::OpenProject:
         case RedesignButton::Save:
         // UNDO LEADS REDO AND RENDER (architect 2026-09-29): the separator
-        // in front of it keeps a finger aimed at Undo off Save, the row's
-        // first button, at the tablet's 200 %.
+        // in front of it keeps a finger aimed at Undo off Save at the
+        // tablet's 200 %.
         case RedesignButton::Undo:
         // THE ZOOM GROUP'S LEADER: Full zoom out, since the stepped zoom
         // buttons in front of it were removed 2026-09-25 (the lead moved onto
@@ -3289,9 +3320,13 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // when the roster carried all seven (2026-08-15), the propagate commands
 // arrived in Edit as the icon row's copy / paste buttons left it
 // (2026-08-20), and the Iterations and Help anchors went for their buttons
-// (2026-09-04, 2026-09-09). The menu row is File / Edit / Settings, SETTINGS
-// PAINTING LAST (architect 2026-08-03; the enum order is the painted order,
-// RedesignButton's own rule).
+// (2026-09-04, 2026-09-09). THE ONE RULED EXCEPTION IS FILE'S OPEN PROJECT
+// AND REVERT (architect 2026-10-07): the icon row's first button is Open
+// Project, its shift twin Revert, and both rows stay in File — Windows' own
+// File → Open beside the toolbar's Open, the period convention the chrome is
+// taken from (RedesignButton::OpenProject). The menu row is File / Edit /
+// Settings, SETTINGS PAINTING LAST (architect 2026-08-03; the enum order is
+// the painted order, RedesignButton's own rule).
 enum class DropdownMenu { None, File, Edit, Settings };
 
 // EVERY MENU THERE IS, in one place, so the routes that must walk them all —
@@ -3465,15 +3500,20 @@ struct CommandPopupItem {
 // Cancel-alone row), **Revert** right
 // after it (architect 2026-09-13, Ctrl+Alt+O: reopen the CURRENT project to its
 // last saved state, discarding unsaved changes and the undo history —
-// GuiInputHandler::revert_project; on the tablet this row is the act's only
-// road, dispatching the chord through on_key with no key pressed), then
+// GuiInputHandler::revert_project; on the tablet this row dispatches the
+// chord through on_key with no key pressed, and since 2026-10-07 the icon
+// row's Open Project button's shifted press and long press are its second
+// glass road), then
 // **Quit** (architect 2026-08-13, the
 // standard home for it and where kdenlive keeps it — and the answer to the
 // act-at-release conversion that day: row 1 paints two faces and nothing on a
 // press, so a Quit BUTTON acting at the lift read as broken, where a menu
 // item's own pressed face is the feedback; row 1 took no third face for it).
 // Save and Render stay the
-// icon row's, and the menu is deliberately minimal. The separator parts the
+// icon row's, and the menu is deliberately minimal. OPEN PROJECT AND REVERT
+// ARE ALSO THE ICON ROW'S FIRST BUTTON since 2026-10-07 (its plain and its
+// shifted press, RedesignButton::OpenProject), the doctrine's one ruled
+// exception (DropdownMenu). The separator parts the
 // two categories, the two acts on the project from an exit, exactly as
 // kdenlive's own File menu does.
 //
@@ -14758,6 +14798,28 @@ inline bool redesign_button_enabled(const AppState& a,
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
+            return true;
+        // OPEN PROJECT (architect 2026-10-07) MIRRORS THE FILE MENU'S OPEN
+        // PROJECT ROW, the same chord's face (dropdown_item_enabled: dead under
+        // the folder overlay and with no audio, live otherwise), and both
+        // read the opener's gates (open_project_picker): A LOAD greys it at
+        // the head of this body (the opener's own `app.loading` return, and
+        // on_key's head gate before it); A STANDING PICKER greys it there too
+        // (folder_overlay_stands — the picker's veil consumes the press, and
+        // the opener's already-open arm is silent, so a second press over the
+        // picker is a no-op: grey), as does the render player, whose router
+        // consumes Ctrl+O; the `h` view leaves it lit (Ctrl+O is on its
+        // allowlist, the derived partition above). THE MODALS ARE NO TERM:
+        // a prompt veils the chrome and no roster face greys under one, and
+        // under an editor the chord answers with its card ("Close the editor
+        // first"), which is not a no-op — so the face stays lit, as the key
+        // road does. Neither lock drops Ctrl+O (read_only_key_blocked admits
+        // it, the iteration lock inheriting the admission). ITS SHIFT TWIN,
+        // REVERT, ADDS NOTHING HERE under the twin rule: the plain act is
+        // live wherever the roster is, and Revert's own refusals (a
+        // publishing checkpoint, the folder checks) card at revert_project.
+        case RedesignButton::OpenProject:
+            return true;
         // THE WALK, UNDER THE TWIN RULE (architect 2026-09-26): its
         // ctrl-click is Ctrl+Tab, the same tab switch, whose arm
         // (handle_tab_switch_keys) has no refusal in any state the roster is
@@ -16035,6 +16097,8 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
+        // OPEN PROJECT (2026-10-07): an act that completes, no lamp.
+        case RedesignButton::OpenProject:
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -16392,8 +16456,18 @@ inline bool redesign_button_hot_face(const AppState& a, RedesignButton b) {
 // neither road replaces the other: this predicate is
 // about the modified press on a button, and says nothing about which chords
 // may also own a button.)
+// (OPEN PROJECT JOINED 2026-10-07 with FILE → REVERT (architect): the
+// shift-click and the long press reopen the current project from disk, the
+// act's own unsaved-work question guarding it, which is why a twin may carry
+// it. IT IS THE ONE TWIN THAT TRANSLATES: the button's row is Ctrl+O and its
+// shifted lift dispatches CTRL+ALT+O, Revert's chord, rather than
+// Ctrl+Shift+O, which binds nothing — the keyboard keeps Revert's unshifted
+// spelling (is_revert_project_key) and the icon's twin is the icon road's
+// alone. The exception is stated at the lift's chord build
+// (finish_chrome_press_release, input_pointer.cpp).)
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
-    return b == RedesignButton::Render ||
+    return b == RedesignButton::OpenProject ||
+           b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
            b == RedesignButton::HistoryOlder ||
            b == RedesignButton::HistoryNewer ||
@@ -16432,7 +16506,9 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // shifted press the march; PCManFM-Qt's tabs), so those two chords have TWO
 // POINTER ROADS each: a consequence of the grammar, not a second listing, and
 // the menu rule (a command with an icon-row road is not also in the menu) is
-// untouched.
+// untouched. (THE ONE RULED TRANSLATION is Open Project's shifted press,
+// which dispatches Revert's Ctrl+Alt+O — architect 2026-10-07, recorded at
+// redesign_button_shift_admits.)
 //
 // ON GLASS THE CTRL IS THE S PEN'S SIDE BUTTON (architect 2026-09-25; the
 // Ctrl bit's sampling is platform_android.cpp's on_motion_event): held on a
@@ -16688,6 +16764,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:   return {nullptr, nullptr};
+        // OPEN PROJECT (architect 2026-10-07): the act's name and its chord
+        // as every row writes them; its second line names the shift twin,
+        // Revert, by the File menu row's own word.
+        case RedesignButton::OpenProject:
+            return {"Open Project (Ctrl+O)", "Press Shift to revert."};
         case RedesignButton::Save:       return {"Save (Ctrl+S)", nullptr};
         case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
         case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};

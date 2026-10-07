@@ -6774,10 +6774,12 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 
 // The Open project picker's opener. Every guard returns without touching
 // playback (a refused open never interrupts a listening session); the shared
-// modal stop runs only once the picker is definitely opening. TWO ROADS REACH
-// IT and both are the same chord: Ctrl+O's own dispatch arm in on_key, and
+// modal stop runs only once the picker is definitely opening. THREE ROADS
+// REACH IT and all are the same chord: Ctrl+O's own dispatch arm in on_key,
 // the File menu's Open project row, whose release dispatches that chord
-// through on_key with the popup already closed. The guards below serve both —
+// through on_key with the popup already closed, and since 2026-10-07 the icon
+// row's Open Project button, whose lift dispatches it the same way (its face
+// mirrors the row's, redesign_button_enabled). The guards below serve both —
 // the `h` view's, which the key road also meets one gate earlier at
 // history_mode_key_blocked, and the modal and loading refusals, which the key
 // road meets earlier still.

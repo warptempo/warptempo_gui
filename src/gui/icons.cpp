@@ -14,13 +14,13 @@ namespace {
 
 // -- The loaded set and its rasters -------------------------------------------
 //
-// THE SET: the 58 parsed drawings, in enum order, loaded once by
+// THE SET: the 59 parsed drawings, in enum order, loaded once by
 // load_svg_set before the window exists and never changed after.
 //
 // THE CACHE: per (glyph, device px) the LIVE raster and, the first time a
 // disabled face asks, its SATURATED copy — two sizes per scale in use (the
 // toolbar seat, icon_glyph_px, and the small icon's scaled 16 of the
-// caption, the cards and the list rows), so at most 4 x 58 surfaces. Main
+// caption, the cards and the list rows), so at most 4 x 59 surfaces. Main
 // thread only: every draw is the painter's.
 struct SurfaceDeleter {
     void operator()(cairo_surface_t* s) const { cairo_surface_destroy(s); }

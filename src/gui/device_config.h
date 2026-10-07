@@ -263,16 +263,17 @@ inline constexpr const char* kDefaultProjectsRepo =
 // which the waveform is the zero height waveform_area's floor answers (the
 // arithmetic and the guard at waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 524
-// Windows px of window at 100 % (501 in the `h` view) the icon row's twenty
-// standing buttons in seven groups (nineteen in the view, its history
-// stand-ins — architect 2026-10-05, so the row fits the tablet at 400 %) no
-// longer fit, and its flush-right view group covers the groups to its left
-// (the overflow rule at kIconRowViewGroup, paint_handler.cpp). The tablet's
-// 2304-px panel holds the row whole in both states up to 440 % — 2096 device
-// px at 400 % outside the view, 2004 inside it (the arithmetic is at
-// paint_icon_row, paint_handler.cpp; the earlier fit ceilings and their
-// succession are git history) — and past it the overflow rule answers. The
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 723
+// Windows px of window at 100 % (692 in the `h` view) the icon row's
+// twenty-one standing buttons in eight groups (twenty in the view, its
+// history stand-ins — architect 2026-10-05) no longer fit, and its
+// flush-right view group covers the groups to its left (the overflow rule at
+// kIconRowViewGroup, paint_handler.cpp). The tablet's 2304-px panel holds the
+// row whole in both states up to 318 % — 2169 device px at 300 % outside the
+// view, 2076 inside it (the arithmetic is at paint_icon_row,
+// paint_handler.cpp, re-derived 2026-10-07 for Open Project's group; the
+// earlier fit ceilings and their succession are git history) — and past it
+// the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
 // kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A

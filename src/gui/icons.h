@@ -60,10 +60,13 @@ namespace icons {
 // and the set's README names the drawing it wears. An Icon is a GLYPH, not a
 // button, so several buttons may wear one, and the glyph a stateful button
 // wears in each state is redesign_button_icon's (paint_handler.cpp). THE SET
-// MAY WEAR ONE DRAWING FOR SEVERAL GLYPHS, the files byte-identical (the
-// Tango set's four repeats, its README's list).
+// MAY WEAR ONE DRAWING FOR SEVERAL GLYPHS, the files byte-identical (each
+// set's README lists its repeats).
 enum class Icon {
     // THE ICON ROW'S FIRST GROUP.
+    DocumentOpen,        // Open Project (and its shift twin, Revert) — the
+                         // sets' document-open, DialogOkApply's drawing
+                         // repeated by position (architect 2026-10-07)
     DocumentSave,        // Save
     EditUndo,            // Undo
     EditRedo,            // Redo
@@ -145,13 +148,14 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 58;
+inline constexpr int kIconCount = 59;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
 // the next launch, which fails it.
 inline constexpr const char* kIconNames[] = {
-    "DocumentSave", "EditUndo", "EditRedo", "MediaRecord", "VcsCommit",
+    "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
+    "VcsCommit",
     "VcsPull", "DocumentExport", "DocumentImport", "ChronometerStart",
     "ZoomFitBest", "ZoomOriginal", "ZoomInY", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",

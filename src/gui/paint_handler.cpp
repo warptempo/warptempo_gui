@@ -676,8 +676,9 @@ struct IconRowDef {
     icons::Icon    icon;
 };
 constexpr IconRowDef kIconRowButtons[] = {
-    // THE TOOLBAR GROUP — the row's FIRST since the 2026-08-12 grand
-    // relayout dissolved row 2 (architect: the labeled lane goes, "the icon
+    // THE TOOLBAR GROUP — the row's FIRST from the 2026-08-12 grand relayout
+    // until Open Project's group took the head (2026-10-07, below), the
+    // relayout having dissolved row 2 (architect: the labeled lane goes, "the icon
     // to represent all those various meanings"): Save, Undo, Redo and Render at
     // the row's left, the SAME chords, gates, disabled derivations and
     // stateful faces the labeled buttons carried — only the FACE is a glyph
@@ -689,6 +690,14 @@ constexpr IconRowDef kIconRowButtons[] = {
     // Save presses at the tablet's 200 %): Save alone, then a separator, then
     // Undo leading Redo and Render (redesign_button_opens_icon_group) — one
     // separator slot onto the walk where a 2px gap stood.
+    //
+    // OPEN PROJECT LEADS THEM ALL (architect 2026-10-07), A GROUP OF ONE BY
+    // HIS WORD — "just to keep those two together", the button and its shift
+    // twin, Revert, and nothing further: no drop-down — the ordinary gap and
+    // separator behind it, then Save's group as before. It wears
+    // DocumentOpen, the sets' document-open, the drawing Load in Place wears
+    // (a repeat by position, icons.h).
+    {RedesignButton::OpenProject, icons::Icon::DocumentOpen},
     {RedesignButton::Save,       icons::Icon::DocumentSave},
     {RedesignButton::Undo,       icons::Icon::EditUndo},
     {RedesignButton::Redo,       icons::Icon::EditRedo},
@@ -903,7 +912,7 @@ constexpr IconRowDef kIconRowButtons[] = {
 // own back and forward stand), then Revert and Load in Place; THE ITERATION
 // GROUP'S THREE take the two reading lamps, the walk source and the
 // cumulative reading, so that group stands one case narrower in the view
-// and the render-entry group right of it sits one case (23 Windows px)
+// and the render-entry group right of it sits one case (31 Windows px)
 // further left there than outside. The history opener and the view group
 // are right-anchored and do not move (kIconRowHistoryOpener).
 //
@@ -955,7 +964,7 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // short of view_x0, and the left groups' limit stands one gap further left
 // again (paint_icon_row). THE REASON IS THE PEN: while the opener closed the
 // left walk, the stand-in swap's one-case-narrower iteration group put its x
-// 23 Windows px further left inside the view than outside, so the button
+// 31 Windows px further left inside the view than outside, so the button
 // that toggles the view moved out from under the pen at its own press;
 // anchored to the lane's right edge, which no state moves, it stands at one x
 // in both. It paints whole beside the view group under the same overflow
@@ -990,12 +999,12 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the opener and
 // the view group cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
-// walks). The row fits whole down to 524 Windows px of window at 100 %
-// outside the `h` view and 501 inside it (the width math at paint_icon_row,
-// re-derived 2026-10-06 for the opener's seat and unchanged: the move trades
-// one case and one gap of the left walk for the same two on the right), so neither
-// host reaches the rule at its scale: the tablet's 2304 device px hold the
-// row in both states up to 440 % and the laptop's 1920 up to 365 %.
+// walks). The row fits whole down to 723 Windows px of window at 100 %
+// outside the `h` view and 692 inside it (the width math at paint_icon_row,
+// its one statement, re-derived 2026-10-07 for Open Project's group), so
+// neither host reaches the rule at its scale: the tablet's 2304 device px
+// hold the row in both states up to 318 % and the laptop's 1920 up to
+// 264 %.
 constexpr IconRowDef kIconRowViewGroup[] = {
     {RedesignButton::ViewSW, icons::Icon::DocumentExport},
     {RedesignButton::ViewTW, icons::Icon::DocumentImport},
@@ -1815,12 +1824,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // thumb, and where gap 1 opens it is simply the ground meeting the gap's
     // window ground of the same value), and groups of toolbar cases touching
     // within a group, eight px of ground between groups with an etched
-    // separator in each (the roster block above) — TWENTY members in SEVEN
-    // groups outside the `h` view and NINETEEN in seven inside it (the width
-    // math below is the count's one statement), RE-COUNTED off the roster
-    // enum, the painter's tables and the divider owner rather than adjusted:
-    // the toolbar four (Save / Undo /
-    // Redo / Render, the deleted row 2's, leading the row — SAVE ALONE and
+    // separator in each (the roster block above) — TWENTY-ONE members in
+    // EIGHT groups outside the `h` view and TWENTY in eight inside it (the
+    // width math below is the count's one statement), RE-COUNTED off the
+    // roster enum, the painter's tables and the divider owner rather than
+    // adjusted: OPEN PROJECT alone at the row's head (architect 2026-10-07, a
+    // group of one, its Revert twin with it), then the toolbar four (Save / Undo /
+    // Redo / Render, the deleted row 2's — SAVE ALONE and
     // then the other three in a group of their own since 2026-09-29) with COPY
     // VALUE between Redo and Render in that group (up from the bottom row,
     // 2026-09-29 evening; EDIT FLAG stood behind Render for that evening's
@@ -1868,39 +1878,40 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // right-anchored seat and for the large case): in Windows px, the 8-px
     // pad + 31-px cases touching (render.h's icon-row block) + an 8-px gap
     // between groups (groups minus one of them — the opener's and the view
-    // group's own included). Outside the `h` view the LEFT WALK is sixteen
-    // members in five groups from the left pad,
-    //   8 + 16·31 + (5−1)·8 = 536,
-    // and inside it fifteen in five (the iteration group's three slots
+    // group's own included). Outside the `h` view the LEFT WALK is seventeen
+    // members in six groups from the left pad,
+    //   8 + 17·31 + (6−1)·8 = 575,
+    // and inside it sixteen in six (the iteration group's three slots
     // holding the two reading lamps),
-    //   8 + 15·31 + 32 = 505;
+    //   8 + 16·31 + 40 = 544;
     // the RIGHT-ANCHORED span from the right edge — the opener's gap and
     // case, the view group's gap and three cases, and the 8-px lead-out — is
     //   8 + 31 + 8 + 3·31 + 8 = 148,
     // so the row holds every group, with the full gap on both sides of the
-    // opener's, in any window at least 536 + 148 = 684 Windows px wide
-    // outside the view and 505 + 148 = 653 inside it — the tablet's 768
-    // Windows px at 300 % holding it with 84 to spare.
+    // opener's, in any window at least 575 + 148 = 723 Windows px wide
+    // outside the view and 544 + 148 = 692 inside it — the tablet's 768
+    // Windows px at 300 % holding it with 45 to spare.
     //
     // THE DEVICE WIDTHS are taken off THE PAINTED WALKS, not off 684·factor:
     // every element is its own scaled_px (render.h's composite rule), so the
-    // device width is 2·[8s] + N·([3s] + [Gs] + [4s]) + 6·[8s] with each
+    // device width is 2·[8s] + N·([3s] + [Gs] + [4s]) + 7·[8s] with each
     // bracket a banker's rounding, G the glyph seat and N the members
-    // standing (20 outside, 19 inside). The laptop's 138 % paints
-    // 743 + 205 = 948 of its 1920 (700 + 205 = 905 in the view); the
-    // tablet's 300 % 1608 + 444 = 2052 of its 2304 (1515 + 444 = 1959 in the
-    // view), clearing the panel by 252. THE FIT CEILINGS, every scale below
+    // standing (21 outside, 20 inside). The laptop's 138 % paints
+    // 797 + 205 = 1002 of its 1920 (754 + 205 = 959 in the view); the
+    // tablet's 300 % 1725 + 444 = 2169 of its 2304 (1632 + 444 = 2076 in the
+    // view), clearing the panel by 135. THE FIT CEILINGS, every scale below
     // each one fitting too: the tablet's 2304 holds the row in both states up
-    // to 337 % (the view's own up to 352 %), the laptop's 1920 up to 281 %
-    // (293 %) — so above the tablet's 300 % cap (architect 2026-10-06) the
-    // view group's overflow rule would cover the left groups' tail (2736
+    // to 318 % (the view's own up to 335 %), the laptop's 1920 up to 264 %
+    // (281 %) — so above the tablet's 300 % cap (architect 2026-10-06) the
+    // view group's overflow rule would cover the left groups' tail (2892
     // wanted at 400 %). The row's width succession is in git history; a
     // roster move restates these numbers.
     //
     // THE MARGIN IS THE THING TO WATCH on this row: every further member costs
     // a case and a NEW GROUP a further 8 — at the tablet's 300 %,
-    // 93 and 24 device px: room for TWO more members outside the view (2052 +
-    // 2·93 = 2238 of 2304), a third cropping under the view group (2331).
+    // 93 and 24 device px: room for ONE more member outside the view (2169 +
+    // 93 = 2262 of 2304, or 2286 in a new group), a second cropping under the
+    // view group (2355).
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.

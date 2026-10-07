@@ -10,13 +10,15 @@ breaks the provenance below). The program parses the files AT LAUNCH, in place, 
 — on the laptop from this folder, on the tablet from the APK's `icons/tango/` assets (`android/app/build_apk.sh`) —
 and a file that is not well-formed SVG fails the launch, naming the file. A construct resvg does not draw is skipped
 silently, so the set was checked at its import on a sheet against rsvg-convert (resvg sits 0.5 levels of 255 from it
-at 72 px, the median over the 58 files). Files of other names in this folder (this README, the licence texts) are not
-read.
+at 72 px, the median over the 58 files; DocumentOpen, which joined on 2026-10-07 as a byte copy of DialogOkApply,
+needed no check of its own). Files of other names in this folder (this README, the licence texts) are not read.
 
 REPEATS, known by position (the files byte-identical): `mimetypes/audio-x-generic` is AppIcon (the caption and the
 program icon), AudioXWav (a wav row) and MusicNote16th (BPM Iterations); `actions/view-refresh` is DocumentRevert
 and MediaRepeatSingle; `actions/process-stop` is DialogCancel and WindowClose; `actions/go-up` is GoUp and
-GoParentFolder. Every other file is worn once: 58 enumerators over 53 distinct drawings.
+GoParentFolder; `actions/document-open` is DialogOkApply (Load in Place) and DocumentOpen (Open Project, the icon
+row's first button — architect 2026-10-07), the second file copied byte for byte from the first. Every other file is
+worn once: 59 enumerators over 53 distinct drawings.
 
 ## Provenance
 
@@ -54,6 +56,7 @@ the SVG files only; this repository carries the texts.
 
 | enumerator | act | Tango file | repeats with | sha256 |
 |---|---|---|---|---|
+| DocumentOpen | Open Project (Revert its shift twin) | scalable/actions/document-open.svg | DialogOkApply | `16d5d4ac93a43413602fb93624b3a664c04d0fe3fd0066dd60c7121f14815549` |
 | DocumentSave | Save | scalable/actions/document-save.svg | — | `1f6449445b659c35880150969eee3c728e463ccc2d2151abbad77294021cc24f` |
 | EditUndo | Undo | scalable/actions/edit-undo.svg | — | `9c81f5f14aa7a1457faf14ecd1bfc255ed16cef15a661b5f30d23f0d385450c9` |
 | EditRedo | Redo | scalable/actions/edit-redo.svg | — | `68299b630e813ac2218465c9df40d54b47100f7c66ea445e374f3216225a5a55` |
@@ -77,7 +80,7 @@ the SVG files only; this repository carries the texts.
 | MusicNote16th | BPM Iterations | scalable/mimetypes/audio-x-generic.svg | AppIcon, AudioXWav | `d7619127acfe25edf59eca10be48776bf33d3a2dfa3a4dba9923032cc5dbc05f` |
 | Mathmode | Toggle Grid Iterations | scalable/mimetypes/x-office-spreadsheet.svg | — | `71408450477d1b3e76b08fbb1f22b06c6b4f289bb2b8e04ecde3b33b91bdeb2b` |
 | PreviewRenderOn | Play Renders | scalable/categories/applications-multimedia.svg | — | `97f2b4c4b59293d0a6a0dd02e6e8973e3c5b5ca6c5e11be4355f4d89c3abc3c1` |
-| DialogOkApply | Load in Place | scalable/actions/document-open.svg | — | `16d5d4ac93a43413602fb93624b3a664c04d0fe3fd0066dd60c7121f14815549` |
+| DialogOkApply | Load in Place | scalable/actions/document-open.svg | DocumentOpen | `16d5d4ac93a43413602fb93624b3a664c04d0fe3fd0066dd60c7121f14815549` |
 | VcsDiff | Toggle History View | scalable/status/image-loading.svg | — | `877fcc4feef211429cb1ebde25949a24a55db8808e317bde3cb22a54e4011001` |
 | ShallowHistory | Toggle History Walk | scalable/actions/appointment-new.svg | — | `a450debfdd4e8e0563c0d51edf208079a227f62735ebb27cc1baa89f11bf8d66` |
 | EditSelect | Toggle Add to Selection | scalable/actions/edit-select-all.svg | — | `5699524dbb79821a707d238b4f18a32deca10a66e7c899fb0efb93ee4a449e2a` |

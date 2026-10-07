@@ -16,15 +16,16 @@ origin, written with SVG as the default namespace — and verified against a ren
 (rsvg-convert at 72 px: maximum channel difference 0 on 52 of the 53 distinct drawings, 5 levels of 255 on EditDelete's
 user-trash; EditUndo's and EditRedo's judged on mask-stripped copies, below).
 Every layer, not only the icon's own: zoom.svg draws part of zoom-original's and zoom-fit-best's pictures from the
-zoom-in layer, and the slot shows them. 2 files are Mist's own scalable drawings, copied from the gnome-themes tarball
+zoom-in layer, and the slot shows them. 3 files are Mist's own scalable drawings, copied from the gnome-themes tarball
 (byte-identical to the copies squeeze installs under `/usr/share/icons/Mist/scalable/`): `Folder` = Mist's
-`places/folder.svg`, `DialogOkApply` (Load in Place) = Mist's `actions/document-open.svg` — the only two of the 58
-seats Mist changes (it carries nine names, every one a blue folder; the wav row, Up a Folder and every toolbar and row
-8 seat inherit from gnome). Mist's drawings fill the 48 canvas edge to edge where GNOME's keep 3–4 units of margin, so
+`places/folder.svg`, and `DialogOkApply` (Load in Place) and `DocumentOpen` (Open Project, the icon row's first
+button since 2026-10-07) = Mist's `actions/document-open.svg` — the only three of the 59 seats Mist changes, over two
+drawings (it carries nine names, every one a blue folder; the wav row, Up a Folder and every other toolbar and row 8
+seat inherit from gnome). Mist's drawings fill the 48 canvas edge to edge where GNOME's keep 3–4 units of margin, so
 its folder reads larger at the same seat.
 
 THE EDITS, each in the table's "edited" column, nothing else changed:
-- Mist's two files: their `xmlns:s` namespace URI carries a stray space (`http://inkscape.sourceforge.net/DTD/s
+- Mist's files: their `xmlns:s` namespace URI carries a stray space (`http://inkscape.sourceforge.net/DTD/s
   odipodi-0.dtd`), which librsvg refuses as an invalid URI; the space is removed (`…/DTD/sodipodi-0.dtd`), one byte.
   resvg parses the original too and draws it identically (the 72-px rasters byte-equal); the repair is for the import
   check's reference renderer. The table gives the original's sha256 beside the shipped file's.
@@ -35,8 +36,9 @@ THE EDITS, each in the table's "edited" column, nothing else changed:
   nothing alone, is not kept).
 
 REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic` is AppIcon, AudioXWav and
-MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder. Every other file is worn once: 58 enumerators over 55
-distinct drawings.
+MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder; Mist's `document-open` is DialogOkApply and DocumentOpen
+(architect 2026-10-07), the second file copied byte for byte from the first. Every other file is worn once: 59
+enumerators over 55 distinct drawings.
 
 THE KNOWN DEPARTURE FROM SQUEEZE'S BYTES (the planner's call, 2026-10-07: 3.0.0 throughout). Squeeze installs
 gnome-icon-theme 2.30.3, whose sheets are not taken; at 53 of the 56 GNOME seats 3.0.0's slot renders identically to
@@ -53,7 +55,8 @@ mean channel difference of 3.0.0's slot from 2.30.3's at 72, levels of 255):
 
 ## The import check (the resvg ruling: a set is checked once, at its import)
 
-All 58 files through the product's own road (a scratch harness over `src/gui/svg_icon.cpp` and the build's resvg
+All 58 files of the import (DocumentOpen, a byte copy of DialogOkApply added 2026-10-07, needed no check of its own)
+through the product's own road (a scratch harness over `src/gui/svg_icon.cpp` and the build's resvg
 0.48.1) and through rsvg-convert 2.62.4, composited over #D4D0C8, the mean absolute channel difference in levels of
 255: the median over the 58 is **0.52 at 72 px** (p90 1.20, worst 2.91 HelpWhatsthis) and **1.75 at 33 px** (p90 3.46,
 worst 4.61 EditDelete); 1.03 at 48. Against GNOME's own 48-px PNGs in the 3.0.0 tarball, the median is 1.08 for resvg
@@ -99,6 +102,7 @@ licence texts) are not read.
 
 | enumerator | act | source | repeats with | edited at import | sha256 |
 |---|---|---|---|---|---|
+| DocumentOpen | Open Project (Revert its shift twin) | Mist `icon-themes/Mist/scalable/actions/document-open.svg` | DialogOkApply | namespace repair (original `d38c3d84a0af9e73eaa1422e6caa891dc007291996e8fbd421829bd366a811f5`) | `c64e047996ec536473723c38049d7a098c9350be449ccd2a8bbe6de98e91d3a9` |
 | DocumentSave | Save | 3.0.0 `src/cabinets.svg`, slot `document-save` 48x48 at (696, 50) | — | 3.0.0 ≠ 2.30.3 | `f676db4d816fdc09804ca0e9c2c231133f03a470ee154b446cba7990a831e127` |
 | EditUndo | Undo | 3.0.0 `src/edit-undo-redo.svg`, slot `edit-undo` 48x48 at (16, 300) | — | masks stripped | `09403be09074eb05905bc06835aadb46aba648a9a46c1dd64ad0edf0a5e1953b` |
 | EditRedo | Redo | 3.0.0 `src/edit-undo-redo.svg`, slot `edit-redo` 48x48 at (76, 300) | — | masks stripped | `508b572c05cf1a1784cff2c4af843848ecc0129b7dad19f6dd81de3481402de9` |
@@ -122,7 +126,7 @@ licence texts) are not read.
 | MusicNote16th | BPM Iterations | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | AudioXWav, AppIcon | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |
 | Mathmode | Toggle Grid Iterations | 3.0.0 `src/paper-sheets.svg`, slot `x-office-spreadsheet` 48x48 at (1500, 354) | — | — | `b4be444999e33cba0652aae7f060f1def713223d158555ca9ceac2d95d8db12d` |
 | PreviewRenderOn | Play Renders | 3.0.0 `src/applications-multimedia.svg`, slot `applications-multimedia` 48x48 at (296, 50) | — | — | `f7b387398baed6508ae4bfef7ec60ce354207bdcbf355a9e57a783a98f33ef80` |
-| DialogOkApply | Load in Place | Mist `icon-themes/Mist/scalable/actions/document-open.svg` | — | namespace repair (original `d38c3d84a0af9e73eaa1422e6caa891dc007291996e8fbd421829bd366a811f5`) | `c64e047996ec536473723c38049d7a098c9350be449ccd2a8bbe6de98e91d3a9` |
+| DialogOkApply | Load in Place | Mist `icon-themes/Mist/scalable/actions/document-open.svg` | DocumentOpen | namespace repair (original `d38c3d84a0af9e73eaa1422e6caa891dc007291996e8fbd421829bd366a811f5`) | `c64e047996ec536473723c38049d7a098c9350be449ccd2a8bbe6de98e91d3a9` |
 | VcsDiff | Toggle History View | 3.0.0 `src/clocks.svg`, slot `document-open-recent` 48x48 at (696.062, 355.996) | — | — | `129566f29230db701d06c68dfd99940c88a667fe42f0e6b9b9921f7c8b9ea21d` |
 | ShallowHistory | Toggle History Walk | 3.0.0 `src/clocks.svg`, slot `appointment-new` 48x48 at (296.062, 55.9963) | — | — | `806c7ed7e292db3edf5f1a3caec8397706b41e4640db09d6ab92c4543fae395d` |
 | EditSelect | Toggle Add to Selection | 3.0.0 `src/paper-sheets.svg`, slot `edit-select-all` 48x48 at (1500, 654) | — | — | `245ce65757ef40dce015a3fc99604e0a604678fae2032f74f959a5af06aeaf8d` |

@@ -889,10 +889,10 @@ inline int relief_line_px() {
 }
 
 // Authored pixel geometry of the ICON ROW — the top strip's lane 2, directly
-// under the MENU ROW with nothing between (row 4 of the redesign: TWENTY-SIX
+// under the MENU ROW with nothing between (row 4 of the redesign: TWENTY-SEVEN
 // view/mode/action buttons — the kIconRowButtons, kIconRowViewGroup and
-// history stand-in tables are the count's one authority; twenty stand outside
-// the `h` view and nineteen inside it since 2026-10-05, the swap's one owner
+// history stand-in tables are the count's one authority; twenty-one stand
+// outside the `h` view and twenty inside it, the swap's one owner
 // being kIconRowHistoryStandIns (paint_handler.cpp);
 // icons::kIconCount is a different number, the GLYPH set, which the row does
 // not exhaust). THE TOOLBAR CASE IS ALSO ROW 8's (and the render player's row

@@ -1420,7 +1420,7 @@ struct GuiInputHandler {
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
     // three menu anchors,
-    // row 4's twenty-six (the
+    // row 4's twenty-seven (OPEN PROJECT leading since 2026-10-07, the
     // toolbar four included since the 2026-08-12 relayout, COPY VALUE
     // between Redo and Render since 2026-09-29, Full zoom out
     // leading the zoom group (Center left it for the bottom row 2026-09-29),
@@ -2849,7 +2849,10 @@ private:
     // kills one. Legal on a read-only tab, under the iteration lock and in the
     // `h` view (the three allowlists admit is_revert_project_key); unreachable
     // under the two list owners, whose routers consume the chord and the
-    // File menu's Revert row with it.
+    // File menu's Revert row with it. THE ICON ROW'S OPEN PROJECT BUTTON
+    // reaches it too, by its shifted press (architect 2026-10-07: the lift
+    // dispatches this chord, finish_chrome_press_release), its face the plain
+    // act's, so these refusals card from that road as from the key.
     //
     // `question_asked` IS THE PULL'S RELOAD (architect 2026-09-27): its own
     // prompt already asked whether to discard the session, so the revert

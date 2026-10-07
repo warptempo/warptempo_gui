@@ -986,7 +986,10 @@ static_assert(chord_is_bound(GuiKeys::L, GuiInputState{}, false) &&
               "`l` binds bare only — the render player — and none of the "
               "seven modifier combinations spells anything");
 // `o` carries three neighbours — bare the read-only toggle, Ctrl the picker,
-// Ctrl+Alt File → Revert — and no shifted spelling of any of them.
+// Ctrl+Alt File → Revert — and no shifted spelling of any of them. (Open
+// Project's icon-row button reaches Revert by a shift press, the button's
+// lift turning it into this alt — the icon road's twin, never a keyboard
+// spelling; architect 2026-10-07, at finish_chrome_press_release.)
 static_assert(chord_is_bound(GuiKeys::O,
                              GuiInputState{true, false, true}, false) &&
                   chord_is_bound(GuiKeys::O,
@@ -1141,7 +1144,8 @@ inline bool is_ab_audition_key(GuiKey key, GuiInputState mods) {
 // because the picker authors nothing) — and the same one-owner reason. The act
 // is GuiInputHandler::open_project_picker, whose own body carries the gates
 // (the modal refusals, the `h` view, the loading state); the File menu's Open
-// row dispatches this very chord through on_key like every other command row.
+// row dispatches this very chord through on_key like every other command row,
+// and so, since 2026-10-07, does the icon row's Open Project button.
 inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::O && mods.ctrl && !mods.shift && !mods.alt;
 }
@@ -1159,7 +1163,11 @@ inline bool is_open_project_key(GuiKey key, GuiInputState mods) {
 // beside Ctrl+O). The act is GuiInputHandler::revert_project, whose body
 // carries its own refusals; the File menu's Revert row dispatches this chord
 // through on_key like every other command row, which is also the tablet's
-// road to it. Not repeat-eligible, so a held chord reverts once.
+// road to it. Not repeat-eligible, so a held chord reverts once. SINCE
+// 2026-10-07 THE ICON ROW'S OPEN PROJECT BUTTON IS A THIRD ROAD, its shifted
+// press (architect): the button's lift turns its shift into this chord's alt
+// (finish_chrome_press_release), so the spelling here stays shift-free — the
+// icon's twin is the icon road's, and Ctrl+Shift+O binds nothing.
 inline bool is_revert_project_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::O && mods.ctrl && !mods.shift && mods.alt;
 }
