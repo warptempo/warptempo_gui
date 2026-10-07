@@ -1,6 +1,7 @@
 #include "render.h"
 #include "app_state.h"
 #include "audio.h"
+#include "clearlooks_paint.h"
 #include "device_config.h"
 #include "gui_display_context.h"
 #include "gui_font.h"
@@ -170,9 +171,17 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     // a marker's between its flanks (fill_stem_flanks, 2026-10-05),
     // and no vertical crosses the bottom ones. An area too short to carry both
     // borders draws neither rather than overlapping them.
+    // UNDER CLEARLOOKS THE WELL IS GTK'S SCROLLED WINDOW (architect
+    // 2026-10-07, the painters round's last part; paint_cl_well_frame,
+    // clearlooks_paint.h): the outer line of each pair its one shade[5]
+    // line, the inner the canvas laid above — the same thickness taken from
+    // the area, so nothing that reads waveform_border_px moves.
     const int border = waveform_border_px();
     const int lw     = relief_line_px();
-    if (h > 2 * border) {
+    if (h > 2 * border &&
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
+        paint_cl_well_frame(cr, GuiRect{x, y, w, h});
+    } else if (h > 2 * border) {
         paint_cell_rect(cr, GuiRect{x, y, w, lw}, palette().shadow);
         paint_cell_rect(cr, GuiRect{x, y + lw, w, border - lw},
                         palette().dk_shadow);
@@ -521,9 +530,26 @@ int window_frame_px() {
 }
 
 void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
-                               int frame_px) {
+                               int frame_px, bool focused) {
     if (frame_px <= 0 || surface_w <= 0 || surface_h <= 0) return;
     const int f = frame_px;
+    // UNDER CLEARLOOKS metacity's `normal` frame (paint_cl_window_frame,
+    // clearlooks_paint.h, where the agreement of the two geometries and the
+    // one departure stand), painted on the band alone: the client area is
+    // the app's, whose caption lane draws the title bar's lower rows with
+    // the same painter (paint_caption_row).
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
+        cairo_save(cr);
+        cairo_rectangle(cr, 0, 0, surface_w, surface_h);
+        cairo_rectangle(cr, f, f, surface_w - 2 * f, surface_h - 2 * f);
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+        cairo_clip(cr);
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+        paint_cl_window_frame(cr, 0, 0, surface_w, surface_h, f,
+                              caption_row_h_px(), focused);
+        cairo_restore(cr);
+        return;
+    }
     // The ground across the band, then the window's raised edge on its outer
     // two lines.
     paint_cell_rect(cr, GuiRect{0, 0, surface_w, f}, palette().ground);
@@ -1169,10 +1195,20 @@ void render_trim_flags(cairo_t* cr,
     // THE TRACK, the whole lane: the ground, then the checked dither, its
     // phase at the lane's top-left so every lane height dithers alike
     // (architect 2026-10-02, the AC set).
+    // UNDER CLEARLOOKS the lane is GTK's horizontal scroll bar (architect
+    // 2026-10-07, the painters round's last part; clearlooks_paint.h's trim
+    // block): the trough here, the slider for the body and the steppers for
+    // the caps below, on the very rects and with the same publication.
+    const bool gtk_bar =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
-    paint_cell_rect(cr, lane, palette().ground);
-    paint_checker_rect(cr, lane, lane_x, lane_y, palette().hilight,
-                       palette().ground);
+    if (gtk_bar) {
+        paint_cl_trough(cr, lane);
+    } else {
+        paint_cell_rect(cr, lane, palette().ground);
+        paint_checker_rect(cr, lane, lane_x, lane_y, palette().hilight,
+                           palette().ground);
+    }
 
     // THE BODY — the thumb between its two arrow buttons, the ground under a
     // PLAIN RAISED edge, the lane's full height (Windows' scroll-bar thumb;
@@ -1194,8 +1230,12 @@ void render_trim_flags(cairo_t* cr,
     if (body_hi > body_lo) {
         const GuiRect body{lane_x + body_lo, lane_y, body_hi - body_lo,
                            lane_h};
-        paint_cell_rect(cr, body, palette().ground);
-        paint_relief_plain_raised(cr, body);
+        if (gtk_bar) {
+            paint_cl_slider(cr, body);
+        } else {
+            paint_cell_rect(cr, body, palette().ground);
+            paint_relief_plain_raised(cr, body);
+        }
     }
 
     // THE TWO ARROW BUTTONS, from the ONE rect owner (trim_endcap_rect: the
@@ -1225,14 +1265,22 @@ void render_trim_flags(cairo_t* cr,
     };
     const GuiRect begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
     if (lane_cut(begin_r).w > 0) {
-        paint_trim_arrow_button(cr, begin_r, /*points_left=*/true,
-                                pressed == TrimPressedCap::Begin);
+        if (gtk_bar)
+            paint_cl_stepper(cr, begin_r, /*points_left=*/true,
+                             pressed == TrimPressedCap::Begin);
+        else
+            paint_trim_arrow_button(cr, begin_r, /*points_left=*/true,
+                                    pressed == TrimPressedCap::Begin);
         if (out_hit) out_hit->begin = {true, lane_cut(begin_r)};
     }
     const GuiRect end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
     if (lane_cut(end_r).w > 0) {
-        paint_trim_arrow_button(cr, end_r, /*points_left=*/false,
-                                pressed == TrimPressedCap::End);
+        if (gtk_bar)
+            paint_cl_stepper(cr, end_r, /*points_left=*/false,
+                             pressed == TrimPressedCap::End);
+        else
+            paint_trim_arrow_button(cr, end_r, /*points_left=*/false,
+                                    pressed == TrimPressedCap::End);
         if (out_hit) out_hit->end = {true, lane_cut(end_r)};
     }
 
@@ -2968,24 +3016,28 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const MarkerCell bright = idx == app.last_selected_marker
                                   ? app.addressed_cell : MarkerCell::Payload;
     const auto cell_selected = [&](MarkerCell c) { return sel && c == bright; };
-    // THE FIELD IS THE SELECTED FLAG OPENED FOR EDIT (architect 2026-10-03,
-    // set BX): the ladder's SELECTED answer for the edited marker — its
-    // kind's selected face, or `removed_flag_selected` over an invalid marker
-    // (a disabled marker's the provisional selected-disabled arm's face, an
-    // edit field never being embossed); under the payload field its stem is
-    // in that face (below).
+    // THE MARKER'S SELECTED FACE — the ladder's SELECTED answer for the
+    // edited marker, its kind's selected face or `removed_flag_selected` over
+    // an invalid marker — names the STEM under the payload field (below);
+    // the field itself no longer wears it.
     const FlagFace face =
         resolve_flag_face(kind, dis, red_class, /*selected=*/true);
-    // THE FIELD'S INK — its text and its caret — IS THE SELECTED LABEL OF THE
-    // PAIR ITS FACE CAME FROM (architect 2026-10-07, the selected label per
-    // kind): the kind's own, or `removed_label_selected` over an invalid
-    // marker, through the ladder's own choice of pair (worn_flag_kind), so the
-    // ink and the face cannot disagree. Read off the pair rather than
-    // `face.label`, which for a disabled marker is the provisional arm's flat
-    // Shadow — an edit field is never that menu item, its ink always the
-    // label of its face.
-    const GuiColor field_ink =
-        flag_pair(worn_flag_kind(kind, dis, red_class)).selected_label;
+    // THE FIELD TURNS WHITE WHEN OPEN (architect 2026-10-07 ~03:10, reversing
+    // 2026-10-03/04's "the selected flag opened for edit"; both chromes): the
+    // editor takes THE FIELD'S PAIRS, as the dialog fields do — its ground,
+    // its text and caret, and its selected substring each the dialog field's
+    // own under the live chrome: WIN2000 `field_ground` / `field_text` and
+    // the theme's selected pair (Explorer's F2 rename, white under black);
+    // CLEARLOOKS GtkEntry's, base / text and base[SELECTED] under
+    // text[SELECTED] (the field being edited has the focus).
+    const bool gtk_entry =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    const GuiPalette& pal = palette();
+    const GuiColor field_ground = gtk_entry ? pal.cl_base : pal.field_ground;
+    const GuiColor field_ink    = gtk_entry ? pal.cl_text : pal.field_text;
+    const GuiColor sel_fill = gtk_entry ? pal.cl_selection : pal.selected_fill;
+    const GuiColor sel_text = gtk_entry ? pal.cl_text_selected
+                                        : pal.selected_text;
     // DOES THE FIELD CLOSE THE RUN (architect 2026-09-25: every marker's run
     // ends on ONE outline column on its rightmost box)? Iff nothing rides past
     // it — the UPPER field, the marker's last box by rank, or a payload field
@@ -3001,24 +3053,38 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 : warp_iter_cells(mv, idx, iteration_on);
     const bool ride_cells = ride_text.present;
 
-    // 1. THE BOX IS WINDOWS 95's IN-PLACE LABEL EDIT (architect 2026-10-03,
-    //    Explorer's F2 rename, Acid Pro's track-name editor; the palette
-    //    block's editing paragraph): a FLAT box on the flag's own outline
-    //    geometry (paint_flat_flag_box — the left border column outside the
-    //    face, the top and bottom rows inside the band, the closing column
-    //    when the field ends the run) framed in BLACK (kFlagEditorFrame,
-    //    Windows' WindowFrame), its face the marker's SELECTED face (`face`,
-    //    above; the field pair plays no part). A refused Enter recolours
-    //    nothing (text_editor::refuse selects the whole text; the owner's
-    //    card says why). The pads either side of the text are Windows' field
-    //    margin strips. The left border column is the flag's own for the
-    //    payload editor and the SEAM column for the bound field — "the
-    //    outline outside the face on its left" either way. Since the editor
-    //    opens on any store index (enter_top_flag_edit), disabled included, a
-    //    disabled marker's field is this same box: an edit field is never
-    //    embossed.
-    paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
-                        /*closes=*/!ride_cells, kFlagEditorFrame, face.face);
+    // 1. THE BOX IS AN IN-PLACE EDIT FIELD ON THE FLAG'S OWN OUTLINE
+    //    GEOMETRY (the left border column outside the face, the top and
+    //    bottom rows inside the band, the closing column when the field ends
+    //    the run; the palette block's editing paragraph), WHITE (architect
+    //    2026-10-07): WIN2000 Windows' in-place label edit (Explorer's F2
+    //    rename, Acid Pro's track-name editor) — the FLAT box on the field
+    //    ground framed in BLACK (kFlagEditorFrame, Windows' WindowFrame),
+    //    paint_flat_flag_box; CLEARLOOKS GtkEntry FOCUSED (paint_cl_entry:
+    //    the inset ring, the focus colour's border and inner ring, base
+    //    inside, the spec's radius) on the same rect — the flag's height
+    //    and run, not the dialog entry's 23, and no black line. A refused
+    //    Enter recolours nothing (text_editor::refuse selects the whole
+    //    text; the owner's card says why). The pads either side of the text
+    //    are the field's margin strips. The left border column is the flag's
+    //    own for the payload editor and the SEAM column for the bound field
+    //    — "the outline outside the face on its left" either way. Since the
+    //    editor opens on any store index (enter_top_flag_edit), disabled
+    //    included, a disabled marker's field is this same box: an edit field
+    //    is never embossed.
+    if (gtk_entry) {
+        cairo_save(cr);
+        paint_cl_entry(cr,
+                       GuiRect{bx - border_w, lane.y,
+                               border_w + box_w + (ride_cells ? 0 : border_w),
+                               lane.h},
+                       /*focused=*/true, field_ground);
+        cairo_restore(cr);
+    } else {
+        paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
+                            /*closes=*/!ride_cells, kFlagEditorFrame,
+                            field_ground);
+    }
     // THE STEM FOLLOWS THE PAYLOAD BOX (architect 2026-10-04, "otherwise it
     // looks disconnected"). Under the PAYLOAD field the field IS the payload
     // box opened, and the open seats the axis there (set_single_selection
@@ -3037,9 +3103,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // The caret / selection band: the box interior between the frame's top
     // and bottom rows. A text field's caret spans its whole field, and here
-    // the field IS the box, so this needs no font-extent solve.
-    const int band_y = lane.y + edge_h;
-    const int band_h = lane.h - 2 * edge_h;
+    // the field IS the box, so this needs no font-extent solve. Under
+    // clearlooks the entry's frame is three lines deep (the inset ring, the
+    // border, the focus ring), so the band stands inside those.
+    const int frame_rows = gtk_entry ? 3 * relief_line_px() : edge_h;
+    const int band_y = lane.y + frame_rows;
+    const int band_h = lane.h - 2 * frame_rows;
 
     // Everything from here paints CLIPPED to the text viewport INSIDE THE
     // FRAME, so a scrolled run, its selection and its caret all stop at the
@@ -3089,7 +3158,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     if (has_sel) {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        set_palette_source(cr, palette().selected_fill);
+        set_palette_source(cr, sel_fill);
         cairo_rectangle(cr, ix0, band_y, band_w, band_h);
         cairo_fill(cr);
         cairo_restore(cr);
@@ -3127,7 +3196,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         cairo_save(cr);
         cairo_rectangle(cr, ix0, band_y, band_w, band_h);
         cairo_clip(cr);
-        set_palette_source(cr, palette().selected_text);
+        set_palette_source(cr, sel_text);
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
         cairo_restore(cr);
     }
@@ -3292,15 +3361,19 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         }
         // THE FIELD'S FRAME CLOSES ON ITS OWN RIGHT COLUMN, which is also the
         // first riding cell's seam (the one shared column, its left border):
-        // repainted in the frame's colour over the seam the cell painter just
-        // laid, so the black frame is whole on all four sides and the field
-        // reads as one box.
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        set_palette_source(cr, kFlagEditorFrame);
-        cairo_rectangle(cr, run_x0, lane.y, border_w, lane.h);
-        cairo_fill(cr);
-        cairo_restore(cr);
+        // under win2000 repainted in the frame's colour over the seam the
+        // cell painter just laid, so the black frame is whole on all four
+        // sides and the field reads as one box. Under clearlooks the entry
+        // ends on the field's last column with its own ring, and the riding
+        // cell's seam beside it is the divider, as at rest.
+        if (!gtk_entry) {
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            set_palette_source(cr, kFlagEditorFrame);
+            cairo_rectangle(cr, run_x0, lane.y, border_w, lane.h);
+            cairo_fill(cr);
+            cairo_restore(cr);
+        }
     }
 
     cairo_restore(cr);   // the font state

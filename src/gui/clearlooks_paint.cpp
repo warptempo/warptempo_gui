@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <span>
 
 namespace {
 
@@ -66,137 +65,182 @@ void stroke_role(cairo_t* cr, Role role) {
     cairo_stroke(cr);
 }
 
-// -- THE CAPTION BUTTONS' DRAW OPS (metacity-theme-1.xml's button_bg family) --
+// -- THE CAPTION BUTTONS' BOXES (metacity-theme-1.xml's button_bg family) ----
 //
-// One op of a button_bg draw_ops in the box's W px, w x h the box: a <line>
-// of width 1 (inclusive cells x1..x2 by y1..y2) in `a`, or a vertical
-// <gradient> over those cells from `a` at its first row to `b` at its last
-// (paint_cl_ramp). The four tables below are the XML's ops in its order,
-// their coordinates its expressions (width -> w, height -> h, its integer
-// division), each colour the role tools/theme_catalog names for it (build.py
-// caption_button_line_role: the state and the shade factor x 1000; a
-// gradient its state and its index).
-struct ClCaptionOp {
-    bool ramp;
-    int  x1, y1, x2, y2;
-    Role a;
-    Role b;
+// metacity draws each button_bg as one-px <line>s and vertical <gradient>s
+// whose ends step in by a cell a row — a staircase of three concentric rings
+// round a filled middle: THE HALO (the outer ring, cell rows 0 / h − 1 and
+// columns 0 / w − 1 — the top and bottom its two lines, the sides the
+// gradient `ramp0` down columns 0 and w − 1), THE BORDER (ring 1, one shade
+// all round) and THE INNER BEVEL (ring 2, a tone a side), round THE FILL
+// (the upper and lower gradients). Pressed, the halo is its bottom-right half
+// alone (the bottom line and the right column's gradient), the bevel the
+// inner shadow's top, left and bottom, the fill reaching the right ring.
+// THE SCALABLE CHROME (architect 2026-10-07, his glass verdict on P1's cell
+// rects: "pixelated" at 300 %; clearlooks_paint.h's head, rule 4) DRAWS THE
+// RINGS AS THE ARCS THE STAIRCASE STEPS ALONG: each ring an antialiased
+// annulus between two rounded rects one W apart, the corners concentric
+// about the point FOUR W in from the box's corner — the radius at which the
+// art's three diagonal cells stand inside their rings (the halo's (1, 1) at
+// 3.5 W from it, the border's (2, 2) at 2.1, the bevel's (3, 2) / (2, 3) at
+// 1.6), so the halo's outer edge is radius 4, the border's 3, the bevel's 2
+// and the fill's 1. The art's other corner cells (the in-between tones at the
+// staircase's steps, metacity's hand antialiasing) are the arcs' own
+// antialiasing and carry no role (build.py CAPTION_BUTTON_DRAWN). Each ring's
+// sides take its lines' tones: across the top rows the top's, down the side
+// rows the sides', across the bottom rows the bottom's — the corners split
+// at the third row from each end, where the art's straight runs begin.
+struct ClCbtnFace {
+    bool pressed;
+    Role halo_top, halo_side0, halo_side1, halo_bottom;
+    Role border;
+    Role bevel_top, bevel_left, bevel_right, bevel_bottom;   // null: the fill
+    Role upper0, upper1, lower0, lower1;   // pressed: one gradient, upper only
 };
+#define CB(s, r) &GuiPalette::cl_cbtn_##s##_##r
+const ClCbtnFace kCbtnFocused{false, CB(focused, s0980), CB(focused, ramp0_0),
+    CB(focused, ramp0_1), CB(focused, s1060), CB(focused, s0600),
+    CB(focused, s1180), CB(focused, s1100), CB(focused, s1000),
+    CB(focused, s0920), CB(focused, ramp1_0), CB(focused, ramp1_1),
+    CB(focused, ramp2_0), CB(focused, ramp2_1)};
+const ClCbtnFace kCbtnUnfocused{false, CB(unfocused, s0910),
+    CB(unfocused, ramp0_0), CB(unfocused, ramp0_1), CB(unfocused, s0960),
+    CB(unfocused, s0600), CB(unfocused, s1200), CB(unfocused, s1100),
+    CB(unfocused, s1050), CB(unfocused, s0970), CB(unfocused, ramp1_0),
+    CB(unfocused, ramp1_1), CB(unfocused, ramp2_0), CB(unfocused, ramp2_1)};
+// Pressed: the halo's top-right corner the gradient down column w − 2's first
+// row (ramp0), its right side the gradient down column w − 1 (ramp1).
+const ClCbtnFace kCbtnPressed{true, CB(pressed, ramp0_0), CB(pressed, ramp1_0),
+    CB(pressed, ramp1_1), CB(pressed, s1000), CB(pressed, s0550),
+    CB(pressed, s0900), CB(pressed, s0850), nullptr, CB(pressed, s0900),
+    CB(pressed, ramp2_0), CB(pressed, ramp2_1), nullptr, nullptr};
+const ClCbtnFace kCbtnUnfocusedPressed{true, CB(unfocused_pressed, ramp0_0),
+    CB(unfocused_pressed, ramp1_0), CB(unfocused_pressed, ramp1_1),
+    CB(unfocused_pressed, s1050), CB(unfocused_pressed, s0550),
+    CB(unfocused_pressed, s0800), CB(unfocused_pressed, s0750), nullptr,
+    CB(unfocused_pressed, s0850), CB(unfocused_pressed, ramp2_0),
+    CB(unfocused_pressed, ramp2_1), nullptr, nullptr};
+#undef CB
 
-// metacity draw_ops "button_bg", in its order
-std::array<ClCaptionOp, 29> cl_cbtn_focused_ops(int w, int h) {
-    return {{
-        {true, 0, 3, 0 + w - 1, 3 + h - 6 - 1, &GuiPalette::cl_cbtn_focused_ramp0_0, &GuiPalette::cl_cbtn_focused_ramp0_1},
-        {false, 2, 0, w - 3, 0, &GuiPalette::cl_cbtn_focused_s1000, nullptr},
-        {false, 1, 1, w - 2, 1, &GuiPalette::cl_cbtn_focused_s0990, nullptr},
-        {false, 0, 2, w - 1, 2, &GuiPalette::cl_cbtn_focused_s0990, nullptr},
-        {false, 3, 0, w - 4, 0, &GuiPalette::cl_cbtn_focused_s0980, nullptr},
-        {false, 2, 1, w - 3, 1, &GuiPalette::cl_cbtn_focused_s0910, nullptr},
-        {false, 1, 2, w - 2, 2, &GuiPalette::cl_cbtn_focused_s0900, nullptr},
-        {false, 2, h - 1, w - 3, h - 1, &GuiPalette::cl_cbtn_focused_s1030, nullptr},
-        {false, 1, h - 2, w - 2, h - 2, &GuiPalette::cl_cbtn_focused_s1000, nullptr},
-        {false, 0, h - 3, w - 1, h - 3, &GuiPalette::cl_cbtn_focused_s1010, nullptr},
-        {false, 3, h - 1, w - 4, h - 1, &GuiPalette::cl_cbtn_focused_s1060, nullptr},
-        {false, 2, h - 2, w - 3, h - 2, &GuiPalette::cl_cbtn_focused_s1020, nullptr},
-        {false, 1, h - 3, w - 2, h - 3, &GuiPalette::cl_cbtn_focused_s1030, nullptr},
-        {false, 3, 1, w - 4, 1, &GuiPalette::cl_cbtn_focused_s0600, nullptr},
-        {false, 3, h - 2, w - 4, h - 2, &GuiPalette::cl_cbtn_focused_s0600, nullptr},
-        {false, 1, 3, 1, h - 4, &GuiPalette::cl_cbtn_focused_s0600, nullptr},
-        {false, w - 2, 3, w - 2, h - 4, &GuiPalette::cl_cbtn_focused_s0600, nullptr},
-        {false, 2, 2, w - 3, 2, &GuiPalette::cl_cbtn_focused_s0600, nullptr},
-        {false, 2, h - 3, w - 3, h - 3, &GuiPalette::cl_cbtn_focused_s0600, nullptr},
-        {false, 3, 2, w - 4, 2, &GuiPalette::cl_cbtn_focused_s1020, nullptr},
-        {false, 2, 3, 2, h - 4, &GuiPalette::cl_cbtn_focused_s1000, nullptr},
-        {false, w - 3, 3, w - 3, h - 4, &GuiPalette::cl_cbtn_focused_s0900, nullptr},
-        {false, 4, 2, w - 5, 2, &GuiPalette::cl_cbtn_focused_s1180, nullptr},
-        {false, 2, 4, 2, h - 5, &GuiPalette::cl_cbtn_focused_s1100, nullptr},
-        {false, w - 3, 4, w - 3, h - 5, &GuiPalette::cl_cbtn_focused_s1000, nullptr},
-        {true, 3, 3, 3 + w - 6 - 1, 3 + h / 2 - 1 - 1, &GuiPalette::cl_cbtn_focused_ramp1_0, &GuiPalette::cl_cbtn_focused_ramp1_1},
-        {true, 3, h / 2, 3 + w - 6 - 1, h / 2 + h / 2 - 2 - 1, &GuiPalette::cl_cbtn_focused_ramp2_0, &GuiPalette::cl_cbtn_focused_ramp2_1},
-        {false, 3, h - 3, w - 4, h - 3, &GuiPalette::cl_cbtn_focused_s0840, nullptr},
-        {false, 4, h - 3, w - 5, h - 3, &GuiPalette::cl_cbtn_focused_s0920, nullptr},
-    }};
+// The rounded rect `k` W in from the box `b`, its corners concentric about
+// the point four W in (radius 4 − k), as a path.
+void cbtn_ring_path(cairo_t* cr, const GuiRect& b, int k) {
+    const double u = relief_line_px();
+    const double s = static_cast<double>(scaled_px(100)) / 100.0;
+    rounded_path(cr, b.x + k * u, b.y + k * u, b.w - 2 * k * u,
+                 b.h - 2 * k * u, std::max(0.0, (4 - k) * s), kAll);
 }
-// metacity draw_ops "button_bg_pressed", in its order
-std::array<ClCaptionOp, 14> cl_cbtn_pressed_ops(int w, int h) {
-    return {{
-        {true, w - 2, 2, w - 2 + 1 - 1, 2 + h - 4 - 1, &GuiPalette::cl_cbtn_pressed_ramp0_0, &GuiPalette::cl_cbtn_pressed_ramp0_1},
-        {true, w - 1, 3, w - 1 + 1 - 1, 3 + h - 6 - 1, &GuiPalette::cl_cbtn_pressed_ramp1_0, &GuiPalette::cl_cbtn_pressed_ramp1_1},
-        {false, 2, h - 2, w - 3, h - 2, &GuiPalette::cl_cbtn_pressed_s1000, nullptr},
-        {false, 3, h - 1, w - 4, h - 1, &GuiPalette::cl_cbtn_pressed_s1000, nullptr},
-        {false, 3, 1, w - 4, 1, &GuiPalette::cl_cbtn_pressed_s0550, nullptr},
-        {false, 3, h - 2, w - 4, h - 2, &GuiPalette::cl_cbtn_pressed_s0550, nullptr},
-        {false, 1, 3, 1, h - 4, &GuiPalette::cl_cbtn_pressed_s0550, nullptr},
-        {false, w - 2, 3, w - 2, h - 4, &GuiPalette::cl_cbtn_pressed_s0550, nullptr},
-        {false, 2, 2, w - 3, 2, &GuiPalette::cl_cbtn_pressed_s0550, nullptr},
-        {false, 2, h - 3, w - 3, h - 3, &GuiPalette::cl_cbtn_pressed_s0550, nullptr},
-        {false, 3, 2, w - 4, 2, &GuiPalette::cl_cbtn_pressed_s0900, nullptr},
-        {false, 2, 3, 2, h - 4, &GuiPalette::cl_cbtn_pressed_s0850, nullptr},
-        {true, 3, 3, 3 + w - 5 - 1, 3 + h - 6 - 1, &GuiPalette::cl_cbtn_pressed_ramp2_0, &GuiPalette::cl_cbtn_pressed_ramp2_1},
-        {false, 3, h - 3, w - 4, h - 3, &GuiPalette::cl_cbtn_pressed_s0900, nullptr},
-    }};
-}
-// metacity draw_ops "button_bg_unfocused", in its order
-std::array<ClCaptionOp, 29> cl_cbtn_unfocused_ops(int w, int h) {
-    return {{
-        {true, 0, 3, 0 + w - 1, 3 + h - 6 - 1, &GuiPalette::cl_cbtn_unfocused_ramp0_0, &GuiPalette::cl_cbtn_unfocused_ramp0_1},
-        {false, 2, 0, w - 3, 0, &GuiPalette::cl_cbtn_unfocused_s0930, nullptr},
-        {false, 1, 1, w - 2, 1, &GuiPalette::cl_cbtn_unfocused_s0920, nullptr},
-        {false, 0, 2, w - 1, 2, &GuiPalette::cl_cbtn_unfocused_s0920, nullptr},
-        {false, 3, 0, w - 4, 0, &GuiPalette::cl_cbtn_unfocused_s0910, nullptr},
-        {false, 2, 1, w - 3, 1, &GuiPalette::cl_cbtn_unfocused_s0870, nullptr},
-        {false, 1, 2, w - 2, 2, &GuiPalette::cl_cbtn_unfocused_s0860, nullptr},
-        {false, 2, h - 1, w - 3, h - 1, &GuiPalette::cl_cbtn_unfocused_s0945, nullptr},
-        {false, 1, h - 2, w - 2, h - 2, &GuiPalette::cl_cbtn_unfocused_s0930, nullptr},
-        {false, 0, h - 3, w - 1, h - 3, &GuiPalette::cl_cbtn_unfocused_s0935, nullptr},
-        {false, 3, h - 1, w - 4, h - 1, &GuiPalette::cl_cbtn_unfocused_s0960, nullptr},
-        {false, 2, h - 2, w - 3, h - 2, &GuiPalette::cl_cbtn_unfocused_s0940, nullptr},
-        {false, 1, h - 3, w - 2, h - 3, &GuiPalette::cl_cbtn_unfocused_s0950, nullptr},
-        {false, 3, 1, w - 4, 1, &GuiPalette::cl_cbtn_unfocused_s0600, nullptr},
-        {false, 3, h - 2, w - 4, h - 2, &GuiPalette::cl_cbtn_unfocused_s0600, nullptr},
-        {false, 1, 3, 1, h - 4, &GuiPalette::cl_cbtn_unfocused_s0600, nullptr},
-        {false, w - 2, 3, w - 2, h - 4, &GuiPalette::cl_cbtn_unfocused_s0600, nullptr},
-        {false, 2, 2, w - 3, 2, &GuiPalette::cl_cbtn_unfocused_s0600, nullptr},
-        {false, 2, h - 3, w - 3, h - 3, &GuiPalette::cl_cbtn_unfocused_s0600, nullptr},
-        {false, 3, 2, w - 4, 2, &GuiPalette::cl_cbtn_unfocused_s1020, nullptr},
-        {false, 2, 3, 2, h - 4, &GuiPalette::cl_cbtn_unfocused_s1000, nullptr},
-        {false, w - 3, 3, w - 3, h - 4, &GuiPalette::cl_cbtn_unfocused_s0950, nullptr},
-        {false, 4, 2, w - 5, 2, &GuiPalette::cl_cbtn_unfocused_s1200, nullptr},
-        {false, 2, 4, 2, h - 5, &GuiPalette::cl_cbtn_unfocused_s1100, nullptr},
-        {false, w - 3, 4, w - 3, h - 5, &GuiPalette::cl_cbtn_unfocused_s1050, nullptr},
-        {true, 3, 3, 3 + w - 6 - 1, 3 + h / 2 - 1 - 1, &GuiPalette::cl_cbtn_unfocused_ramp1_0, &GuiPalette::cl_cbtn_unfocused_ramp1_1},
-        {true, 3, h / 2, 3 + w - 6 - 1, h / 2 + h / 2 - 2 - 1, &GuiPalette::cl_cbtn_unfocused_ramp2_0, &GuiPalette::cl_cbtn_unfocused_ramp2_1},
-        {false, 3, h - 3, w - 4, h - 3, &GuiPalette::cl_cbtn_unfocused_s0890, nullptr},
-        {false, 4, h - 3, w - 5, h - 3, &GuiPalette::cl_cbtn_unfocused_s0970, nullptr},
-    }};
-}
-// metacity draw_ops "button_bg_unfocused_pressed", in its order
-std::array<ClCaptionOp, 14> cl_cbtn_unfocused_pressed_ops(int w, int h) {
-    return {{
-        {true, w - 2, 2, w - 2 + 1 - 1, 2 + h - 4 - 1, &GuiPalette::cl_cbtn_unfocused_pressed_ramp0_0, &GuiPalette::cl_cbtn_unfocused_pressed_ramp0_1},
-        {true, w - 1, 3, w - 1 + 1 - 1, 3 + h - 6 - 1, &GuiPalette::cl_cbtn_unfocused_pressed_ramp1_0, &GuiPalette::cl_cbtn_unfocused_pressed_ramp1_1},
-        {false, 2, h - 2, w - 3, h - 2, &GuiPalette::cl_cbtn_unfocused_pressed_s1050, nullptr},
-        {false, 3, h - 1, w - 4, h - 1, &GuiPalette::cl_cbtn_unfocused_pressed_s1050, nullptr},
-        {false, 3, 1, w - 4, 1, &GuiPalette::cl_cbtn_unfocused_pressed_s0550, nullptr},
-        {false, 3, h - 2, w - 4, h - 2, &GuiPalette::cl_cbtn_unfocused_pressed_s0550, nullptr},
-        {false, 1, 3, 1, h - 4, &GuiPalette::cl_cbtn_unfocused_pressed_s0550, nullptr},
-        {false, w - 2, 3, w - 2, h - 4, &GuiPalette::cl_cbtn_unfocused_pressed_s0550, nullptr},
-        {false, 2, 2, w - 3, 2, &GuiPalette::cl_cbtn_unfocused_pressed_s0550, nullptr},
-        {false, 2, h - 3, w - 3, h - 3, &GuiPalette::cl_cbtn_unfocused_pressed_s0550, nullptr},
-        {false, 3, 2, w - 4, 2, &GuiPalette::cl_cbtn_unfocused_pressed_s0800, nullptr},
-        {false, 2, 3, 2, h - 4, &GuiPalette::cl_cbtn_unfocused_pressed_s0750, nullptr},
-        {true, 3, 3, 3 + w - 5 - 1, 3 + h - 6 - 1, &GuiPalette::cl_cbtn_unfocused_pressed_ramp2_0, &GuiPalette::cl_cbtn_unfocused_pressed_ramp2_1},
-        {false, 3, h - 3, w - 4, h - 3, &GuiPalette::cl_cbtn_unfocused_pressed_s0850, nullptr},
-    }};
-}
-
-void paint_cl_ops(cairo_t* cr, std::span<const ClCaptionOp> ops, int ox,
-                  int oy) {
-    for (const ClCaptionOp& op : ops) {
-        const GuiRect r = cells(ox, oy, op.x1, op.y1, op.x2, op.y2);
-        if (op.ramp) paint_cl_ramp(cr, r, tone(op.a), tone(op.b));
-        else         paint_cell_rect(cr, r, tone(op.a));
+// The annulus of ring `k` (between the rounded rects k and k + 1) as the
+// clip.
+void cbtn_ring_clip(cairo_t* cr, const GuiRect& b, int k) {
+    cbtn_ring_path(cr, b, k);            // a new path: the outer edge
+    const double u = relief_line_px();
+    const double s = static_cast<double>(scaled_px(100)) / 100.0;
+    const double x = b.x + (k + 1) * u, y = b.y + (k + 1) * u;
+    const double w = b.w - 2 * (k + 1) * u, h = b.h - 2 * (k + 1) * u;
+    const double r = std::max(0.0, (3 - k) * s);
+    cairo_new_sub_path(cr);              // the inner edge
+    if (r <= 0.0) {
+        cairo_rectangle(cr, x, y, w, h);
+    } else {
+        cairo_arc(cr, x + w - r, y + r, r, M_PI * 1.5, M_PI * 2);
+        cairo_arc(cr, x + w - r, y + h - r, r, 0, M_PI * 0.5);
+        cairo_arc(cr, x + r, y + h - r, r, M_PI * 0.5, M_PI);
+        cairo_arc(cr, x + r, y + r, r, M_PI, M_PI * 1.5);
+        cairo_close_path(cr);
     }
+    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+    cairo_clip(cr);
+    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+}
+// One ring's sides under its clip: the top rows [0, 3) in `top`, the rows
+// between a ramp from `side0` to `side1` (or `side0` flat when `side1` is
+// null), the bottom rows [h − 3, h) in `bottom` — the columns [x0, x1).
+void cbtn_ring_sides(cairo_t* cr, const GuiRect& b, int x0, int x1, Role top,
+                     Role side0, Role side1, Role bottom) {
+    const int u  = relief_line_px();
+    const int y3 = b.y + 3 * u, yb = b.y + b.h - 3 * u;
+    paint_cell_rect(cr, GuiRect{x0, b.y, x1 - x0, y3 - b.y}, tone(top));
+    if (side1) paint_cl_ramp(cr, GuiRect{x0, y3, x1 - x0, yb - y3}, tone(side0),
+                             tone(side1));
+    else       paint_cell_rect(cr, GuiRect{x0, y3, x1 - x0, yb - y3}, tone(side0));
+    paint_cell_rect(cr, GuiRect{x0, yb, x1 - x0, b.y + b.h - yb}, tone(bottom));
+}
+
+void paint_cbtn_box(cairo_t* cr, const GuiRect& b, const ClCbtnFace& f) {
+    const int u = relief_line_px();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    // THE FILL, inside ring 2: the upper and lower gradients over the rows
+    // from ring 3 to the middle and from the middle down (metacity's
+    // top_height / 2 arithmetic, h / 2); pressed, the one gradient. Its rect
+    // reaches into ring 2, which is painted over it, so the pressed fill
+    // shows through ring 2's right side.
+    {
+        cairo_save(cr);
+        cairo_new_path(cr);
+        cbtn_ring_path(cr, b, 2);
+        cairo_clip(cr);
+        const int x0 = b.x + 2 * u, x1 = b.x + b.w - 2 * u;
+        const int y0 = b.y + 2 * u, y1 = b.y + b.h - 2 * u;
+        if (f.pressed) {
+            paint_cl_ramp(cr, GuiRect{x0, y0, x1 - x0, y1 - y0}, tone(f.upper0),
+                          tone(f.upper1));
+        } else {
+            const int mid = at(b.y, live_chrome_spec().caption_button_h_px / 2);
+            paint_cl_ramp(cr, GuiRect{x0, y0, x1 - x0, mid - y0}, tone(f.upper0),
+                          tone(f.upper1));
+            paint_cl_ramp(cr, GuiRect{x0, mid, x1 - x0, y1 - mid},
+                          tone(f.lower0), tone(f.lower1));
+        }
+        cairo_restore(cr);
+    }
+    // THE INNER BEVEL, ring 2: the left and right columns, then the top and
+    // bottom rows over them (the art's corner cells take the top's and the
+    // bottom's tones).
+    {
+        cairo_save(cr);
+        cbtn_ring_clip(cr, b, 2);
+        const int x0 = b.x + 2 * u, x1 = b.x + b.w - 2 * u;
+        const int y0 = b.y + 2 * u, y1 = b.y + b.h - 2 * u;
+        const int mid = b.x + b.w / 2;
+        paint_cell_rect(cr, GuiRect{x0, y0, mid - x0, y1 - y0}, tone(f.bevel_left));
+        if (f.bevel_right)
+            paint_cell_rect(cr, GuiRect{mid, y0, x1 - mid, y1 - y0},
+                            tone(f.bevel_right));
+        paint_cell_rect(cr, GuiRect{x0, y0, x1 - x0, u}, tone(f.bevel_top));
+        paint_cell_rect(cr, GuiRect{x0, y1 - u, x1 - x0, u}, tone(f.bevel_bottom));
+        cairo_restore(cr);
+    }
+    // THE BORDER, ring 1, one tone.
+    {
+        cairo_save(cr);
+        cbtn_ring_clip(cr, b, 1);
+        paint_cell_rect(cr, b, tone(f.border));
+        cairo_restore(cr);
+    }
+    // THE HALO, ring 0: its top, its sides' gradient and its bottom;
+    // pressed, its bottom-right half alone (the inset's own split, along the
+    // diagonal from the bottom-left corner to the top-right).
+    {
+        cairo_save(cr);
+        cbtn_ring_clip(cr, b, 0);
+        if (f.pressed) {
+            const double m = std::min(b.w, b.h);
+            cairo_new_path(cr);
+            cairo_move_to(cr, b.x, b.y + b.h);
+            cairo_line_to(cr, b.x + m / 2, b.y + b.h - m / 2);
+            cairo_line_to(cr, b.x + b.w - m / 2, b.y + m / 2);
+            cairo_line_to(cr, b.x + b.w, b.y);
+            cairo_line_to(cr, b.x + b.w, b.y + b.h);
+            cairo_close_path(cr);
+            cairo_clip(cr);
+        }
+        cbtn_ring_sides(cr, b, b.x, b.x + b.w, f.halo_top, f.halo_side0,
+                        f.halo_side1, f.halo_bottom);
+        cairo_restore(cr);
+    }
+    cairo_restore(cr);
 }
 
 // -- THE CAPTION GLYPHS (metacity-theme-1.xml's *_button_icon draw_ops) ------
@@ -543,16 +587,10 @@ void paint_cl_caption_button(cairo_t* cr, const GuiRect& b,
     const int w = spec.caption_button_w_px;
     const int h = spec.caption_button_h_px;
     cairo_save(cr);
+    paint_cbtn_box(cr, b, focused ? (pressed ? kCbtnPressed : kCbtnFocused)
+                                  : (pressed ? kCbtnUnfocusedPressed
+                                             : kCbtnUnfocused));
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (focused) {
-        if (pressed) paint_cl_ops(cr, cl_cbtn_pressed_ops(w, h), b.x, b.y);
-        else         paint_cl_ops(cr, cl_cbtn_focused_ops(w, h), b.x, b.y);
-    } else {
-        if (pressed)
-            paint_cl_ops(cr, cl_cbtn_unfocused_pressed_ops(w, h), b.x, b.y);
-        else
-            paint_cl_ops(cr, cl_cbtn_unfocused_ops(w, h), b.x, b.y);
-    }
     paint_caption_glyph(cr, b.x, b.y, w, h, glyph, focused && enabled);
     cairo_restore(cr);
 }
@@ -682,6 +720,11 @@ int paint_cl_push_button(cairo_t* cr, const GuiRect& r, bool pressed,
 }
 
 void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused) {
+    paint_cl_entry(cr, r, focused, palette().cl_base);
+}
+
+void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused,
+                    GuiColor base) {
     const double du  = relief_line_px();
     const double rad = scaled_px(live_chrome_spec().corner_radius_px);
     const double ri  = std::max(0.0, rad - du);   // MAX (0, radius − 1)
@@ -690,7 +733,7 @@ void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused) {
     paint_inset_ring(cr, r, rad + du);
     rounded_path(cr, r.x + 2 * du, r.y + 2 * du, r.w - 4 * du, r.h - 4 * du,
                  ri, kAll);
-    set_palette_source(cr, palette().cl_base);
+    set_palette_source(cr, base);
     cairo_fill(cr);
     if (focused) {
         rounded_path(cr, r.x + 2.5 * du, r.y + 2.5 * du, r.w - 5 * du,
@@ -801,6 +844,548 @@ void paint_cl_selected_cell(cairo_t* cr, const GuiRect& r, bool focused) {
         paint_cl_ramp(cr, GuiRect{r.x, step, r.w, r.y + r.h - step},
                       pal.cl_list_selected_unfocused_lower_0,
                       pal.cl_list_selected_unfocused_lower_1);
+    }
+    cairo_restore(cr);
+}
+
+// -- THE LANES, THE SCRUB, THE STATUS BAR AND THE FRAME (the painters round's
+//    last part, 2026-10-07; the rules at the declarations) ---------------------
+
+static_assert(kChromeSpecClearlooks.scrub_handle_box_px ==
+                  kClScaleSliderLengthPx,
+              "GTK's scrub grab is the slider itself: the spec's box is "
+              "slider-length");
+
+void paint_cl_trough(cairo_t* cr, const GuiRect& lane) {
+    if (lane.w <= 0 || lane.h <= 0) return;
+    const int u = relief_line_px();
+    const GuiPalette& pal = palette();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, lane, pal.cl_trough_fill);
+    // The shadow's two graded rows (W rows 1 and 2), the one ramp rule.
+    paint_cl_ramp(cr, GuiRect{lane.x, lane.y + u, lane.w,
+                              at(lane.y, 3) - (lane.y + u)},
+                  pal.cl_trough_shadow_0, pal.cl_trough_shadow_1);
+    paint_cell_rect(cr, GuiRect{lane.x, lane.y, lane.w, u},
+                    pal.cl_trough_border);
+    paint_cell_rect(cr, GuiRect{lane.x, lane.y + lane.h - u, lane.w, u},
+                    pal.cl_trough_border);
+    cairo_restore(cr);
+}
+
+namespace {
+
+// THE STEPPER'S STEP — the row where pixman put the gummy ramp's step over
+// the bar's rows (build.py's pixman_step_row(0, kTrimLaneHeightPx)):
+// (n + 1) / 2 of the n-row gradient from row 0, the lane's 16 giving 8.
+int stepper_step_w() { return (kTrimLaneHeightPx + 1) / 2; }
+
+// clearlooks_draw_normal_arrow's chevron at (0, 0) pointing DOWN, in device
+// px for an arrow box `box_w` W px wide (the engine's width and height both
+// GtkRange's arrow-scaling 0.5 of the stepper, truncated to whole px), `s`
+// device px a W px.
+void normal_arrow_path(cairo_t* cr, int box_w, double s) {
+    const double h  = box_w;
+    const double aw = std::min(h * 2.0 + std::max(1.0, std::ceil(h * 2.0 / 6.0 * 2.0) / 2.0) / 2.0,
+                               static_cast<double>(box_w));
+    const double l2 = std::max(1.0, std::ceil(aw / 6.0 * 2.0) / 2.0) / 2.0;
+    const double ah = aw / 2.0 + l2;
+    const double dy = -ah / 2.0;
+    cairo_new_path(cr);
+    cairo_move_to(cr, -aw / 2.0 * s, (dy + l2) * s);
+    cairo_line_to(cr, (-aw / 2.0 + l2) * s, dy * s);
+    cairo_arc_negative(cr, 0.0, (dy + ah - 2 * l2 - 2 * l2 * std::sqrt(2.0)) * s,
+                       2 * l2 * s, M_PI_2 + M_PI_4, M_PI_4);
+    cairo_line_to(cr, (aw / 2.0 - l2) * s, dy * s);
+    cairo_line_to(cr, aw / 2.0 * s, (dy + l2) * s);
+    cairo_line_to(cr, 0.0, (dy + ah) * s);
+    cairo_close_path(cr);
+}
+
+} // namespace
+
+void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
+                      bool pressed) {
+    if (b.w <= 0 || b.h <= 0) return;
+    const GuiPalette& pal = palette();
+    const int    u   = relief_line_px();
+    const double du  = u;
+    const double rad = std::min<double>(scaled_px(live_chrome_spec().corner_radius_px),
+                                        std::min(b.w - 2 * du, b.h - 2 * du) / 2.0);
+    const unsigned corners = points_left ? (kTL | kBL) : (kTR | kBR);
+    const auto R = [pressed](Role normal, Role down) {
+        return palette().*(pressed ? down : normal);
+    };
+    const int step = at(b.y, stepper_step_w());
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    // THE FILL, clipped to its rounded rect one W in: the gummy ramp's two
+    // segments over the rows 1 .. h − 2.
+    cairo_save(cr);
+    rounded_path(cr, b.x + du, b.y + du, b.w - 2 * du, b.h - 2 * du, rad,
+                 corners);
+    cairo_clip(cr);
+    paint_cl_ramp(cr, GuiRect{b.x, b.y + u, b.w, step - b.y - u},
+                  R(&GuiPalette::cl_stepper_normal_upper_0,
+                    &GuiPalette::cl_stepper_pressed_upper_0),
+                  R(&GuiPalette::cl_stepper_normal_upper_1,
+                    &GuiPalette::cl_stepper_pressed_upper_1));
+    paint_cl_ramp(cr, GuiRect{b.x, step, b.w, b.y + b.h - u - step},
+                  R(&GuiPalette::cl_stepper_normal_lower_0,
+                    &GuiPalette::cl_stepper_pressed_lower_0),
+                  R(&GuiPalette::cl_stepper_normal_lower_1,
+                    &GuiPalette::cl_stepper_pressed_lower_1));
+    // THE TOP-LEFT HIGHLIGHT (draw_top_left_highlight on the fill's rect):
+    // up column 1 from the bottom (less the radius on a rounded bottom-left),
+    // round a rounded top-left, along row 1 to the right (less the radius on
+    // a rounded top-right), in its row's baked tone; then the column's
+    // straight part over it, its two baked segments recorded over the whole
+    // column (rows 2 .. h − 2) and cut to the part this stepper draws.
+    const double left = b.x + 1.5 * du, top = b.y + 1.5 * du;
+    const double bottom = b.y + b.h - du - ((corners & kBL) ? rad : 0.0);
+    const double right  = b.x + b.w - du - ((corners & kTR) ? rad : 0.0);
+    cairo_save(cr);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+    cairo_new_path(cr);
+    cairo_move_to(cr, left, bottom);
+    if (corners & kTL)
+        cairo_arc(cr, left + rad, top + rad, rad, M_PI, M_PI * 1.5);
+    else
+        cairo_line_to(cr, left, top);
+    cairo_line_to(cr, right, top);
+    cairo_set_line_width(cr, du);
+    set_palette_source(cr, R(&GuiPalette::cl_stepper_normal_highlight_row,
+                             &GuiPalette::cl_stepper_pressed_highlight_row));
+    cairo_stroke(cr);
+    cairo_restore(cr);
+    {
+        const int ctop = (corners & kTL)
+                             ? static_cast<int>(std::ceil(top + rad))
+                             : b.y + 2 * u;
+        const int cbot = static_cast<int>(std::floor(bottom));
+        cairo_save(cr);
+        cairo_rectangle(cr, b.x + u, ctop, u, std::max(0, cbot - ctop));
+        cairo_clip(cr);
+        paint_cl_ramp(cr, GuiRect{b.x + u, b.y + 2 * u, u, step - b.y - 2 * u},
+                      R(&GuiPalette::cl_stepper_normal_highlight_upper_0,
+                        &GuiPalette::cl_stepper_pressed_highlight_upper_0),
+                      R(&GuiPalette::cl_stepper_normal_highlight_upper_1,
+                        &GuiPalette::cl_stepper_pressed_highlight_upper_1));
+        paint_cl_ramp(cr, GuiRect{b.x + u, step, u, b.y + b.h - u - step},
+                      R(&GuiPalette::cl_stepper_normal_highlight_lower_0,
+                        &GuiPalette::cl_stepper_pressed_highlight_lower_0),
+                      R(&GuiPalette::cl_stepper_normal_highlight_lower_1,
+                        &GuiPalette::cl_stepper_pressed_highlight_lower_1));
+        cairo_restore(cr);
+    }
+    cairo_restore(cr);   // the fill's clip
+    // THE BORDER, the outer ring at the radius.
+    rounded_path(cr, b.x + du / 2, b.y + du / 2, b.w - du, b.h - du, rad,
+                 corners);
+    cairo_set_line_width(cr, du);
+    set_palette_source(cr, R(&GuiPalette::cl_stepper_normal_border,
+                             &GuiPalette::cl_stepper_pressed_border));
+    cairo_stroke(cr);
+    // THE ARROW, centred on the box, the engine's rotation for its
+    // direction.
+    const double s = static_cast<double>(scaled_px(100)) / 100.0;
+    cairo_save(cr);
+    cairo_translate(cr, b.x + b.w / 2.0, b.y + b.h / 2.0);
+    cairo_rotate(cr, points_left ? M_PI_2 : -M_PI_2);
+    normal_arrow_path(cr, kTrimLaneHeightPx / 2, s);
+    set_palette_source(cr, pal.cl_stepper_arrow);
+    cairo_fill(cr);
+    cairo_restore(cr);
+    cairo_restore(cr);
+}
+
+void paint_cl_slider(cairo_t* cr, const GuiRect& body) {
+    if (body.w <= 0 || body.h <= 0) return;
+    const GuiPalette& pal = palette();
+    const int u = relief_line_px();
+    // The step over the slider's gradient from row 1 to row h − 2 (build.py's
+    // pixman_step_row(1, kTrimLaneHeightPx − 2)): the first row whose centre
+    // is at or past its middle.
+    const int sstep = at(body.y, 1 + (kTrimLaneHeightPx - 3 + 1) / 2);
+    const int top = body.y + 2 * u, bot = body.y + body.h - 2 * u;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // The fill inside the ring, the ring's rows and columns, the border.
+    paint_cl_ramp(cr, GuiRect{body.x, top, body.w, sstep - top},
+                  pal.cl_slider_upper_0, pal.cl_slider_upper_1);
+    paint_cl_ramp(cr, GuiRect{body.x, sstep, body.w, bot - sstep},
+                  pal.cl_slider_lower_0, pal.cl_slider_lower_1);
+    for (const int cx : {body.x + u, body.x + body.w - 2 * u}) {
+        paint_cl_ramp(cr, GuiRect{cx, top, u, sstep - top},
+                      pal.cl_slider_ring_upper_0, pal.cl_slider_ring_upper_1);
+        paint_cl_ramp(cr, GuiRect{cx, sstep, u, bot - sstep},
+                      pal.cl_slider_ring_lower_0, pal.cl_slider_ring_lower_1);
+    }
+    paint_cell_rect(cr, GuiRect{body.x + u, body.y + u, body.w - 2 * u, u},
+                    pal.cl_slider_ring_top);
+    paint_cell_rect(cr, GuiRect{body.x + u, bot, body.w - 2 * u, u},
+                    pal.cl_slider_ring_bottom);
+    paint_cell_rect(cr, GuiRect{body.x, body.y, body.w, u}, pal.cl_slider_border);
+    paint_cell_rect(cr, GuiRect{body.x, body.y + body.h - u, body.w, u},
+                    pal.cl_slider_border);
+    paint_cell_rect(cr, GuiRect{body.x, body.y, u, body.h}, pal.cl_slider_border);
+    paint_cell_rect(cr, GuiRect{body.x + body.w - u, body.y, u, body.h},
+                    pal.cl_slider_border);
+    // THE GRIPS, where the body holds them (the declaration's 13 W).
+    if (body.w >= scaled_px(7 + 2 * 3)) {
+        const int mid = body.x + (body.w - u) / 2;
+        const int gy0 = at(body.y, 5);
+        const int gy1 = body.y + body.h - scaled_px(5);
+        for (const int k : {-1, 0, 1})
+            paint_cell_rect(cr, GuiRect{mid + k * scaled_px(3), gy0, u,
+                                        gy1 - gy0},
+                            pal.cl_slider_grip);
+    }
+    cairo_restore(cr);
+}
+
+void paint_cl_well_frame(cairo_t* cr, const GuiRect& area) {
+    const int u = relief_line_px();
+    const GuiPalette& pal = palette();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{area.x, area.y, area.w, u}, pal.cl_list_frame);
+    paint_cell_rect(cr, GuiRect{area.x, area.y + area.h - u, area.w, u},
+                    pal.cl_list_frame);
+    cairo_restore(cr);
+}
+
+void paint_cl_statusbar(cairo_t* cr, const GuiRect& lane) {
+    const int top = scaled_px(kBottomRowBorderPx, 1);
+    const int u   = relief_line_px();
+    const GuiPalette& pal = palette();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{lane.x, lane.y, lane.w, top},
+                    pal.cl_separator_dark);
+    paint_cell_rect(cr, GuiRect{lane.x, lane.y + top, lane.w, u},
+                    pal.cl_separator_light);
+    cairo_restore(cr);
+}
+
+namespace {
+
+// THE SCALE TROUGH'S ROWS, top to bottom from its top `y`: the inset ring,
+// the border, the ramp's kClScaleTroughPx − 4 rows, the border, the ring —
+// each one-W line a relief line, the ramp's rows one rounded part.
+struct ScaleTroughRows {
+    int ring_top, border_top, ramp_top, ramp_bottom, border_bottom, ring_bottom,
+        end;
+};
+ScaleTroughRows scale_trough_rows(int y) {
+    const int u = relief_line_px();
+    ScaleTroughRows r{};
+    r.ring_top      = y;
+    r.border_top    = y + u;
+    r.ramp_top      = y + 2 * u;
+    r.ramp_bottom   = r.ramp_top + scaled_px(kClScaleTroughPx - 4);
+    r.border_bottom = r.ramp_bottom;
+    r.ring_bottom   = r.border_bottom + u;
+    r.end           = r.ring_bottom + u;
+    return r;
+}
+// The thumb's rows above and below the trough (GTK centres the 7 in the 15).
+int scale_thumb_margin_px() {
+    return scaled_px((kClScaleSliderWidthPx - kClScaleTroughPx) / 2);
+}
+// The slider's radius in the engine (clearlooks_gummy_draw_slider's literal
+// 2.5, and its highlight's 2.0), in W px.
+constexpr double kClScaleSliderRadiusPx    = 2.5;
+constexpr double kClScaleHighlightRadiusPx = 2.0;
+
+// One part of the scale's trough on [x0, x1) (the declaration's anatomy).
+void scale_trough_part(cairo_t* cr, int x0, int x1, int y, bool lower) {
+    if (x1 <= x0) return;
+    const int u = relief_line_px();
+    const ScaleTroughRows r = scale_trough_rows(y);
+    const GuiPalette& pal = palette();
+    const GuiColor border = lower ? pal.cl_scale_lower_border
+                                  : pal.cl_scale_upper_border;
+    cairo_save(cr);
+    cairo_rectangle(cr, x0, y, x1 - x0, r.end - y);
+    cairo_clip(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    paint_inset_ring(cr, GuiRect{x0, y, x1 - x0, r.end - y}, 0.0);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    const int iw = x1 - x0 - 2 * u;
+    paint_cell_rect(cr, GuiRect{x0 + u, r.border_top, iw, u}, border);
+    paint_cell_rect(cr, GuiRect{x0 + u, r.border_bottom, iw, u}, border);
+    paint_cell_rect(cr, GuiRect{x0 + u, r.ramp_top, u, r.ramp_bottom - r.ramp_top},
+                    border);
+    paint_cell_rect(cr, GuiRect{x1 - 2 * u, r.ramp_top, u,
+                                r.ramp_bottom - r.ramp_top},
+                    border);
+    paint_cl_ramp(cr, GuiRect{x0 + 2 * u, r.ramp_top, x1 - x0 - 4 * u,
+                              r.ramp_bottom - r.ramp_top},
+                  lower ? pal.cl_scale_lower_0 : pal.cl_scale_upper_0,
+                  lower ? pal.cl_scale_lower_1 : pal.cl_scale_upper_1);
+    cairo_restore(cr);
+}
+
+} // namespace
+
+int cl_scale_trough_h_px() {
+    const ScaleTroughRows r = scale_trough_rows(0);
+    return r.end;
+}
+int cl_scale_thumb_w_px() { return scaled_px(kClScaleSliderLengthPx); }
+int cl_scale_thumb_h_px() {
+    return 2 * scale_thumb_margin_px() + cl_scale_trough_h_px();
+}
+
+void paint_cl_scale_trough(cairo_t* cr, const GuiRect& trough, int split) {
+    const int s = std::clamp(split, trough.x, trough.x + trough.w);
+    scale_trough_part(cr, trough.x, s, trough.y, /*lower=*/true);
+    scale_trough_part(cr, s, trough.x + trough.w, trough.y, /*lower=*/false);
+}
+
+void paint_cl_scale_thumb(cairo_t* cr, const GuiRect& box) {
+    if (box.w <= 0 || box.h <= 0) return;
+    const GuiPalette& pal = palette();
+    const int    u   = relief_line_px();
+    const double du  = u;
+    const double s   = static_cast<double>(scaled_px(100)) / 100.0;
+    const int    r3  = scaled_px(3);
+    const int    right = box.x + box.w, bottom = box.y + box.h;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // THE SHADOW (draw_shadow at the button's radius 3): its last column from
+    // row 3 down to the corner, baked over the ground and, across the
+    // trough's rows, over each of them; the corner's arc; its last row.
+    const GuiRect col{right - u, box.y + r3, u, bottom - r3 - (box.y + r3)};
+    paint_cell_rect(cr, col, pal.cl_scale_shadow);
+    const ScaleTroughRows tr = scale_trough_rows(box.y + scale_thumb_margin_px());
+    paint_cell_rect(cr, GuiRect{col.x, tr.ring_top, u, u},
+                    pal.cl_scale_shadow_inset_dark);
+    paint_cell_rect(cr, GuiRect{col.x, tr.border_top, u, u},
+                    pal.cl_scale_shadow_border);
+    paint_cl_ramp(cr, GuiRect{col.x, tr.ramp_top, u, tr.ramp_bottom - tr.ramp_top},
+                  pal.cl_scale_shadow_ramp_0, pal.cl_scale_shadow_ramp_1);
+    paint_cell_rect(cr, GuiRect{col.x, tr.border_bottom, u, u},
+                    pal.cl_scale_shadow_border);
+    paint_cell_rect(cr, GuiRect{col.x, tr.ring_bottom, u, u},
+                    pal.cl_scale_shadow_inset_light);
+    paint_cell_rect(cr, GuiRect{box.x + r3, bottom - u, right - r3 - (box.x + r3), u},
+                    pal.cl_scale_shadow);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+    cairo_new_path(cr);
+    cairo_arc(cr, right - r3, bottom - r3, r3 - du / 2, 0.0, M_PI_2);
+    cairo_set_line_width(cr, du);
+    set_palette_source(cr, pal.cl_scale_shadow);
+    cairo_stroke(cr);
+    // THE SLIDER one W in: its rows 0 .. h_s − 1 are the box's 1 .. h − 2.
+    const GuiRect sl{box.x + u, box.y + u, box.w - 2 * u, box.h - 2 * u};
+    const int hs   = kClScaleSliderWidthPx - 2;            // its W rows
+    const int step = at(sl.y, 1 + (hs - 3 + 1) / 2);       // pixman_step_row(1, hs − 2)
+    const double rad = kClScaleSliderRadiusPx * s;
+    cairo_save(cr);
+    rounded_path(cr, sl.x + du, sl.y + du, sl.w - 2 * du, sl.h - 2 * du,
+                 std::max(0.0, rad - du), kAll);
+    cairo_clip(cr);
+    paint_cl_ramp(cr, GuiRect{sl.x, sl.y + u, sl.w, step - sl.y - u},
+                  pal.cl_scale_thumb_upper_0, pal.cl_scale_thumb_upper_1);
+    paint_cl_ramp(cr, GuiRect{sl.x, step, sl.w, sl.y + sl.h - u - step},
+                  pal.cl_scale_thumb_lower_0, pal.cl_scale_thumb_lower_1);
+    cairo_restore(cr);
+    rounded_path(cr, sl.x + du / 2, sl.y + du / 2, sl.w - du, sl.h - du, rad,
+                 kAll);
+    set_palette_source(cr, pal.cl_scale_thumb_border);
+    cairo_stroke(cr);
+    // THE GRIPS (the engine's columns: w_s / 2 − 3 and two more three W
+    // apart, an even slider shifting one W right and drawing two; rows 4 ..
+    // h_s − 5, both ends full as his capture draws them).
+    {
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        const int ws    = kClScaleSliderLengthPx - 2;
+        const int shift = ws % 2 == 0 ? 1 : 0;
+        const int gy0 = at(sl.y, 4), gy1 = at(sl.y, hs - 4);
+        for (int i = 0, bx = ws / 2 - 3 + shift; i < 3 - shift; ++i, bx += 3)
+            paint_cell_rect(cr, GuiRect{at(sl.x, bx), gy0, u, gy1 - gy0},
+                            pal.cl_scale_thumb_grip);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    }
+    // THE TOP-LEFT HIGHLIGHT at radius 2 on the fill's rect: row 1 and the
+    // column's arc in the row's tone, the column's straight part its two
+    // baked segments (rows 3 .. h_s − 4).
+    {
+        const double hr = kClScaleHighlightRadiusPx * s;
+        const double left = sl.x + 1.5 * du, top = sl.y + 1.5 * du;
+        const double lbottom = sl.y + sl.h - du - hr;
+        const double lright  = sl.x + sl.w - du - hr;
+        cairo_save(cr);
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+        cairo_new_path(cr);
+        cairo_move_to(cr, left, top + hr);
+        cairo_arc(cr, left + hr, top + hr, hr, M_PI, M_PI * 1.5);
+        cairo_line_to(cr, lright, top);
+        cairo_set_line_width(cr, du);
+        set_palette_source(cr, pal.cl_scale_thumb_highlight_row);
+        cairo_stroke(cr);
+        cairo_restore(cr);
+        // The two segments over the rows the import recorded them at (3 ..
+        // step − 1, step .. h_s − 4), cut to the straight part the arc
+        // leaves.
+        const int ctop = static_cast<int>(std::ceil(top + hr));
+        const int cbot = static_cast<int>(std::floor(lbottom));
+        const int r3s  = at(sl.y, 3);
+        const int rend = at(sl.y, hs - 3);
+        cairo_save(cr);
+        cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+        cairo_rectangle(cr, sl.x + u, ctop, u, std::max(0, cbot - ctop));
+        cairo_clip(cr);
+        paint_cl_ramp(cr, GuiRect{sl.x + u, r3s, u, step - r3s},
+                      pal.cl_scale_thumb_highlight_upper_0,
+                      pal.cl_scale_thumb_highlight_upper_1);
+        paint_cl_ramp(cr, GuiRect{sl.x + u, step, u, rend - step},
+                      pal.cl_scale_thumb_highlight_lower_0,
+                      pal.cl_scale_thumb_highlight_lower_1);
+        cairo_restore(cr);
+    }
+    cairo_restore(cr);
+}
+
+void paint_cl_window_frame(cairo_t* cr, int ox, int oy, int surface_w,
+                           int surface_h, int frame_px, int caption_h,
+                           bool focused) {
+    if (surface_w <= 0 || surface_h <= 0 || frame_px <= 0) return;
+    const GuiPalette& pal = palette();
+    const int u = relief_line_px();
+    const int f = frame_px;
+    const int W = surface_w, H = surface_h;
+    // THE TITLE BAR'S ROWS in device px (the declaration's mapping): the
+    // band's are metacity's rows 0 and 1 (one-W lines) and 2 .. 3 (the
+    // band's ground, f − 2u); the caption lane's row k is metacity's
+    // kWindowFramePx + k, at the lane's top plus scaled_px(k) (P1's band
+    // painter's own mapping) — so the gradients' split (metacity's
+    // top_height / 2) and the foot (top_height − 1) land on the rows the
+    // caption painter's at() puts them on, and `title_end`, one past the
+    // foot, is the lane's foot.
+    const int T_w       = kWindowFramePx + live_chrome_spec().caption_height_px;
+    const int title_end = f + caption_h;
+    const int split     = f + scaled_px(T_w / 2 - kWindowFramePx);
+    const int foot      = f + scaled_px(T_w - 1 - kWindowFramePx);
+    const auto fill = [&](int x0, int y0, int x1, int y1, GuiColor c) {
+        paint_cell_rect(cr, GuiRect{ox + x0, oy + y0, x1 - x0, y1 - y0}, c);
+    };
+    const auto ramp = [&](int x0, int y0, int x1, int y1, GuiColor a,
+                          GuiColor b) {
+        paint_cl_ramp(cr, GuiRect{ox + x0, oy + y0, x1 - x0, y1 - y0}, a, b);
+    };
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // window_bg.
+    fill(0, 0, W, H, pal.ground);
+    if (focused) {
+        // bevel: the 3d frame below the title (0.88 right and bottom-inner,
+        // 1.2 left-inner), the title's light row 1.18 and its side lines
+        // (1.1 left, 0.95 right), the two gradients, the 0.7 foot, the 0.55
+        // title outline and the 0.45 border outline below it.
+        fill(u, H - 2 * u, W - u, H - u, pal.cl_frame_focused_bg0880);
+        fill(W - 2 * u, title_end, W - u, H - u, pal.cl_frame_focused_bg0880);
+        fill(u, title_end, 2 * u, H - u, pal.cl_frame_focused_bg1200);
+        ramp(2 * u, 2 * u, W - 2 * u, split, pal.cl_frame_focused_ramp1_0,
+             pal.cl_frame_focused_ramp1_1);
+        ramp(2 * u, split, W - 2 * u, foot, pal.cl_frame_focused_ramp0_0,
+             pal.cl_frame_focused_ramp0_1);
+        fill(u, u, W - u, 2 * u, pal.cl_frame_focused_sel1180);
+        fill(u, 2 * u, 2 * u, foot, pal.cl_frame_focused_sel1100);
+        fill(W - 2 * u, 2 * u, W - u, foot, pal.cl_frame_focused_sel0950);
+        fill(u, foot, W - u, title_end, pal.cl_frame_focused_sel0700);
+        fill(0, 0, W, u, pal.cl_frame_focused_sel0550);
+        fill(0, 0, u, foot, pal.cl_frame_focused_sel0550);
+        fill(W - u, 0, W, foot, pal.cl_frame_focused_sel0550);
+        fill(0, foot, u, H, pal.cl_frame_focused_bg0450);
+        fill(W - u, foot, W, H, pal.cl_frame_focused_bg0450);
+        fill(u, H - u, W - u, H, pal.cl_frame_focused_bg0450);
+    } else {
+        // bevel_unfocused: the 0.88 right and bottom-inner lines, the 1.05
+        // light row, the 1.03 left line, the gradients, the 0.65 foot, and
+        // the 0.55 outline round the whole window.
+        fill(u, H - 2 * u, W - u, H - u, pal.cl_frame_unfocused_bg0880);
+        fill(W - 2 * u, 2 * u, W - u, H - u, pal.cl_frame_unfocused_bg0880);
+        fill(u, u, W - u, 2 * u, pal.cl_frame_unfocused_bg1050);
+        fill(u, 2 * u, 2 * u, H - u, pal.cl_frame_unfocused_bg1030);
+        ramp(2 * u, 2 * u, W - 2 * u, split, pal.cl_frame_unfocused_ramp1_0,
+             pal.cl_frame_unfocused_ramp1_1);
+        ramp(2 * u, split, W - 2 * u, foot, pal.cl_frame_unfocused_ramp0_0,
+             pal.cl_frame_unfocused_ramp0_1);
+        fill(u, foot, W - u, title_end, pal.cl_frame_unfocused_bg0650);
+        fill(0, 0, W, u, pal.cl_frame_unfocused_bg0550);
+        fill(0, H - u, W, H, pal.cl_frame_unfocused_bg0550);
+        fill(0, 0, u, H, pal.cl_frame_unfocused_bg0550);
+        fill(W - u, 0, W, H, pal.cl_frame_unfocused_bg0550);
+    }
+    // THE ROUNDED TOP CORNERS (the declaration): the cut cleared, then the
+    // outline's arc at 4.5 W and the highlight's at 3.5 W about the centre
+    // five W in, each one W wide, antialiased.
+    const double s  = static_cast<double>(scaled_px(100)) / 100.0;
+    const double du = u;
+    const double c  = 5.0 * s;
+    const GuiColor dark = focused ? pal.cl_frame_focused_sel0600
+                                  : pal.cl_frame_unfocused_bg0550;
+    const GuiColor hl_left  = focused ? pal.cl_frame_focused_sel1180
+                                      : pal.cl_frame_unfocused_bg1050;
+    const GuiColor hl_top_r = focused ? pal.cl_frame_focused_sel1160
+                                      : pal.cl_frame_unfocused_bg1040;
+    const GuiColor hl_side_r = focused ? pal.cl_frame_focused_sel0980
+                                       : pal.cl_frame_unfocused_bg0880;
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_BUTT);
+    cairo_set_line_width(cr, du);
+    for (const bool left : {true, false}) {
+        // The corner's centre, and the corner's quarter in cairo's angles.
+        const double cx = left ? ox + c : ox + W - c;
+        const double cy = oy + c;
+        const double a0 = left ? M_PI : M_PI * 1.5;
+        const double a1 = a0 + M_PI_2;
+        // The box the corner's cells stand in, five W square — wholly in
+        // the band (every arc point has a coordinate under kWindowFramePx),
+        // so the caption lane's own call draws none of it. The frame's lines
+        // and the gradient already stand there; the cut clears everything
+        // outside the circle of radius 5 W, and the arcs antialias over the
+        // frame's own tones.
+        const double bx = left ? ox : ox + W - c;
+        cairo_save(cr);
+        cairo_rectangle(cr, bx, oy, c, c);
+        cairo_clip(cr);
+        cairo_new_path(cr);
+        cairo_rectangle(cr, bx, oy, c, c);
+        cairo_new_sub_path(cr);
+        cairo_arc(cr, cx, cy, c, 0.0, 2 * M_PI);
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+        cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+        cairo_fill(cr);
+        cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+        cairo_new_path(cr);
+        cairo_arc(cr, cx, cy, c - du / 2, a0, a1);
+        set_palette_source(cr, dark);
+        cairo_stroke(cr);
+        if (left) {
+            cairo_new_path(cr);
+            cairo_arc(cr, cx, cy, c - 1.5 * du, a0, a1);
+            set_palette_source(cr, hl_left);
+            cairo_stroke(cr);
+        } else {
+            // The top-right's two tones meet on the diagonal: the top's from
+            // the top to 45 degrees, the side's from there down.
+            cairo_new_path(cr);
+            cairo_arc(cr, cx, cy, c - 1.5 * du, a0, a0 + M_PI_4);
+            set_palette_source(cr, hl_top_r);
+            cairo_stroke(cr);
+            cairo_new_path(cr);
+            cairo_arc(cr, cx, cy, c - 1.5 * du, a0 + M_PI_4, a1);
+            set_palette_source(cr, hl_side_r);
+            cairo_stroke(cr);
+        }
+        cairo_restore(cr);
     }
     cairo_restore(cr);
 }

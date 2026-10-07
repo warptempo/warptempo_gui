@@ -535,9 +535,9 @@ def clearlooks_geometry():
     f = dict(re.findall(r'\.(\w+)\s*=\s*([^,\n]+),', body))
     i = lambda k: int(f[k])
     case_h = i('toolbar_case_lead_px') + i('toolbar_glyph_px') + i('toolbar_case_trail_y_px')
-    band, row8 = 2 * i('icon_row_air_px') + case_h, 2 * i('bottom_row_air_px') + case_h
-    if band != row8: raise SystemExit(f'build: the icon row\'s band ({band}) and row 8\'s ({row8}) differ; the one set of '
-                                      'toolbar tones paints both (clearlooks_paint.cpp)')
+    # the icon row's band (row 8 is GTK's status bar since the painters round's last part, its line the separator's
+    # pair, so the toolbar tones are the icon row's alone)
+    band = 2 * i('icon_row_air_px') + case_h
     # the push button's height is a double on the spec (push_button_box_px); a whole W px here
     push_h = float(f['push_button_box_px'])
     if push_h != int(push_h): raise SystemExit(f'build: push_button_box_px {push_h} is not a whole W px')
@@ -548,10 +548,21 @@ def clearlooks_geometry():
     entry_h = const(os.path.join(REPO, 'src', 'gui', 'paint_handler.cpp'), 'kModalFieldHeightPx')
     row_h = const(os.path.join(REPO, 'src', 'gui', 'folder_overlay.h'), 'kRowHeightPx')
     assert entry_h == int(entry_h) and row_h == int(row_h), (entry_h, row_h)
+    # THE PAINTERS ROUND'S LAST PART'S LENGTHS: the trim lane's height (render.h kTrimLaneHeightPx, Windows' 16, the
+    # scroll bar's thickness), the restored laptop's sizing frame (render.h kWindowFramePx, the band metacity's title
+    # bar starts in) and GtkScale's three (clearlooks_paint.h: TROUGH_SIZE, slider-length and slider-width)
+    render_h = os.path.join(REPO, 'src', 'gui', 'render.h')
+    cl_h = os.path.join(REPO, 'src', 'gui', 'clearlooks_paint.h')
+    trim_h, frame_w = const(render_h, 'kTrimLaneHeightPx'), const(render_h, 'kWindowFramePx')
+    scale = {k: const(cl_h, n) for k, n in (('trough', 'kClScaleTroughPx'), ('len', 'kClScaleSliderLengthPx'),
+                                            ('wid', 'kClScaleSliderWidthPx'))}
+    assert all(v == int(v) for v in (trim_h, frame_w, *scale.values())), (trim_h, frame_w, scale)
     return {'caption_h': i('caption_height_px'), 'cbtn_w': i('caption_button_w_px'), 'cbtn_h': i('caption_button_h_px'),
             'menu_head': i('menu_row_head_px'), 'menu_content': i('menu_row_content_px'),
             'menu_foot': i('menu_row_foot_px'), 'case_h': case_h, 'band_h': band, 'push_h': int(push_h),
-            'entry_h': int(entry_h), 'row_h': int(row_h), 'menu_item_h': i('popup_item_height_px')}
+            'entry_h': int(entry_h), 'row_h': int(row_h), 'menu_item_h': i('popup_item_height_px'),
+            'trim_h': int(trim_h), 'frame_w': int(frame_w), 'scale_trough': int(scale['trough']),
+            'scale_len': int(scale['len']), 'scale_wid': int(scale['wid'])}
 
 
 def mc_eval(expr, env):
@@ -692,7 +703,8 @@ def engine_tones(g, m, gtk, sc, geo):
             rule = f'metacity draw_ops {ops_name}'
             if op['op'] == 'line':
                 role = caption_button_line_role(state, op)
-                if role not in t.tones: t.add(role, mc_byte(op['color'], gtk), f'{rule}: <line> {op["color"]}')
+                if role not in t.tones and role[len(f'cl_cbtn_{state}_'):] in CAPTION_BUTTON_DRAWN[state]:
+                    t.add(role, mc_byte(op['color'], gtk), f'{rule}: <line> {op["color"]}')
             else:
                 gh = mc_eval(op['height'], dict(width=bw, height=bh))
                 rows = T.metacity_vertical_gradient_rows(*(metacity_color(c, gtk) for c in op['colors']), gh)
@@ -873,6 +885,157 @@ def engine_tones(g, m, gtk, sc, geo):
         rule = f'clearlooks_gummy_draw_selected_cell: base[{state}]\'s gummy ramp over the {rh}-row row'
         t.ramp(f'cl_list_{name}_upper', rows, 0, step - 1, rule + ' (above the step)')
         t.ramp(f'cl_list_{name}_lower', rows, step, rh - 1, rule + ' (below it)')
+
+    # THE TRIM LANE = GTK'S HORIZONTAL SCROLL BAR (the painters round's last part; the GtkRange style properties of the
+    # default style, slider-width / stepper-size 15, trough-border 0, colorize_scrollbar TRUE) at the lane's own
+    # thickness, Windows' 16 (geo['trim_h']): every ramp below runs across those 16 rows.
+    th = geo['trim_h']
+    # THE TROUGH (clearlooks_draw_scrollbar_trough, the classic one gummy keeps, its vertical frame's axes exchanged):
+    # shade[2] inside a one-px shade[5] rectangle, the 0.95 -> 1.0 shadow a linear gradient from row 1 to row 3 over
+    # the fill's rows 1..4 — rows 1 and 2 are the gradient's (their centres at 1/4 and 3/4 of it), row 3 on is shade[2]
+    t.add('cl_trough_fill', cb(SH[2]), 'clearlooks_draw_scrollbar_trough: the fill, shade[2]')
+    t.add('cl_trough_border', cb(SH[5]), 'clearlooks_draw_scrollbar_trough: the border, shade[5]')
+    shadow_stops = [(0.0, sh(SH[2], 0.95)), (1.0, SH[2])]
+    srows = [T.pixman_vertical_ramp_row(shadow_stops, 1, 3, r) for r in range(1, 4)]
+    assert srows[2] == tuple(T._cairo_short(v) >> 8 for v in SH[2]), srows          # row 3 is the fill's own byte
+    t.ramp('cl_trough_shadow', srows[:2], 0, 1,
+           'clearlooks_draw_scrollbar_trough: the shadow, shade (shade[2], 0.95) -> shade[2] from row 1 to row 3, '
+           'its rows 1..2')
+    # THE STEPPERS (clearlooks_gummy_draw_scrollbar_stepper, the bar horizontal): bg[state]'s gummy ramp from row 0 to
+    # row th over the fill's rows 1 .. th - 2, the top-left highlight (shade (fill, 1.3) at 0.4, gummy's constants)
+    # along row 1 and down column 1, the border mix (shade[7], fill, 0.2) (colorize_scrollbar: has_color). RESTING
+    # bg[NORMAL]; PRESSED bg[ACTIVE] = shade (0.9, bg), the default style's (the scrollbar style overrides no colour) —
+    # his capture 00-12-13's pressed up stepper. No prelight (the product draws one hover face, the toolbars').
+    step = T.pixman_step_row(0, th)
+    for state, style_state in (('normal', 'NORMAL'), ('pressed', 'ACTIVE')):
+        fill = style_bg('scrollbar', style_state)
+        ramp = {r: T.pixman_vertical_ramp_row(gummy(fill, False), 0, th, r) for r in range(1, th - 1)}
+        rule = f'clearlooks_gummy_draw_scrollbar_stepper {state} (bg[{style_state}]) across the {th}-row bar'
+        t.ramp(f'cl_stepper_{state}_upper', [ramp[r] for r in range(1, step)], 0, step - 2, rule + ', rows 1..'
+               f'{step - 1}')
+        t.ramp(f'cl_stepper_{state}_lower', [ramp[r] for r in range(step, th - 1)], 0, th - 2 - step,
+               rule + f', rows {step}..{th - 2}')
+        t.add(f'cl_stepper_{state}_border', cb(mix(SH[7], fill, 0.2)), rule + ': the border, mix (shade[7], fill, 0.2)')
+        hi = sh(fill, 1.3)
+        over = lambda r: T.cairo_solid_over(hi, 0.4, ramp[r])
+        t.add(f'cl_stepper_{state}_highlight_row', over(1), rule + ': the top-left highlight over its row 1')
+        t.ramp(f'cl_stepper_{state}_highlight_upper', [over(r) for r in range(2, step)], 0, step - 3,
+               rule + f': the top-left highlight down its column 1, rows 2..{step - 1}')
+        t.ramp(f'cl_stepper_{state}_highlight_lower', [over(r) for r in range(step, th - 1)], 0, th - 2 - step,
+               rule + f': the top-left highlight down its column 1, rows {step}..{th - 2}')
+    t.add('cl_stepper_arrow', T.gdk_byte(gtk[('fg', 'NORMAL')]),
+          'clearlooks_draw_arrow: fg[state] (fg[NORMAL] = fg[ACTIVE] = fg_color), the normal arrow')
+    assert gtk[('fg', 'NORMAL')] == gtk[('fg', 'ACTIVE')]
+    # THE SLIDER (clearlooks_gummy_draw_scrollbar_slider, colorize_scrollbar TRUE: scrollbar.color = spot[1]): the
+    # gummy ramp from row 1 to row th - 2 over the rows 1 .. th - 2, a one-px ring shade (fill, 1.3) at 0.2 on rows 1
+    # and th - 2 and columns 1 and w - 2 (baked over the ramp's rows), the border and the three grip bars by the hue
+    # rule: the fill's saturation and brightness against bg's (ge_hsb_from_color), shade 0.475 when both are near
+    # bg's else 0.575, a further 0.85 for a coloured fill of hue in (25, 195); the grips that shade, the border it
+    # mixed 0.3 with the fill (has_color)
+    fill = SP[1]
+    hf, sf, bf = T.gtk2_hsb(fill)
+    hb_, sb_, bb_ = T.gtk2_hsb(bg)
+    handles = sh(fill, 0.475 if (abs(sf - sb_) < 0.30 and abs(bf - bb_) < 0.20) else 0.575)
+    if 25 < hf < 195: handles = sh(handles, 0.85)
+    rule = f'clearlooks_gummy_draw_scrollbar_slider (spot[1], colorize_scrollbar) across the {th}-row bar'
+    ramp = {r: T.pixman_vertical_ramp_row(gummy(fill, False), 1, th - 2, r) for r in range(1, th - 1)}
+    sstep = T.pixman_step_row(1, th - 2)
+    t.ramp('cl_slider_upper', [ramp[r] for r in range(2, sstep)], 0, sstep - 3, rule + f': the fill, rows 2..{sstep - 1}')
+    t.ramp('cl_slider_lower', [ramp[r] for r in range(sstep, th - 2)], 0, th - 3 - sstep,
+           rule + f': the fill, rows {sstep}..{th - 3}')
+    ring = lambda r: T.cairo_solid_over(sh(fill, 1.3), 0.2, ramp[r])
+    t.add('cl_slider_ring_top', ring(1), rule + ': the 0.2 ring over row 1')
+    t.add('cl_slider_ring_bottom', ring(th - 2), rule + f': the 0.2 ring over row {th - 2}')
+    t.ramp('cl_slider_ring_upper', [ring(r) for r in range(2, sstep)], 0, sstep - 3,
+           rule + f': the 0.2 ring down columns 1 and w - 2, rows 2..{sstep - 1}')
+    t.ramp('cl_slider_ring_lower', [ring(r) for r in range(sstep, th - 2)], 0, th - 3 - sstep,
+           rule + f': the 0.2 ring down columns 1 and w - 2, rows {sstep}..{th - 3}')
+    t.add('cl_slider_border', cb(mix(handles, fill, 0.3)), rule + ': the border, the hue rule\'s shade mixed 0.3')
+    t.add('cl_slider_grip', cb(handles), rule + ': the three grip bars, the hue rule\'s shade')
+
+    # THE SCRUB = GtkScale (the "scale" style: hint scale, the default style's slider-length 23, slider-width 15,
+    # trough-side-details 1) at geo['scale_*']: THE TROUGH TROUGH_SIZE rows tall (clearlooks_gummy_draw_scale_trough):
+    # draw_inset's ring (the tool button's inset tones, the same parentbg), then the gradient's rect at (1, 1) inside
+    # a one-px inner rectangle of mix (border, fill, 0.2); the gradient from row 0.5 to row (TROUGH_SIZE - 2) + 1 over
+    # the rows 1 .. TROUGH_SIZE - 2, of which the rows inside the border, 2 .. TROUGH_SIZE - 3, show. THE UPPER part
+    # (right of the thumb) fill shade (parentbg, 0.896) under the "in" ramp 0.95 -> 1.05, border shade[6]; THE LOWER
+    # (trough-lower, left of the thumb's centre) spot[1] under the "out" ramp 1.1 -> 0.9, border spot[2].
+    st_ = geo['scale_trough']
+    for name, fill, border, (k0, k1) in (('upper', sh(bg, 0.896), SH[6], (0.95, 1.05)),
+                                         ('lower', SP[1], SP[2], (1.1, 0.9))):
+        rows = [T.pixman_vertical_ramp_row([(0.0, sh(fill, k0)), (1.0, sh(fill, k1))], 0.5, st_ - 2 + 1.0, r)
+                for r in range(2, st_ - 2)]
+        rule = (f'clearlooks_gummy_draw_scale_trough {name} (trough-{name}): {k0} -> {k1} of its fill over the '
+                f'{st_}-row trough')
+        t.ramp(f'cl_scale_{name}', rows, 0, len(rows) - 1, rule + f', rows 2..{st_ - 3}')
+        t.add(f'cl_scale_{name}_border', cb(mix(border, fill, 0.2)), rule + ': the border, mix (border, fill, 0.2)')
+        if name == 'upper': upper_rows, upper_border = rows, cb(mix(border, fill, 0.2))
+    # THE THUMB (clearlooks_gummy_draw_slider_button, slider-length x slider-width): draw_shadow — shade (shade[6],
+    # 0.92) at 0.1 down its last column and along its last row, round the bottom-right corner at radius 3 — then
+    # clearlooks_gummy_draw_slider inset 1 on bg[NORMAL]: the gummy ramp from row 1 to row h - 2 of the slider, the
+    # border mix (shade[7], fill, 0.2) at radius 2.5, three shade[7] grip bars, the top-left highlight at radius 2.
+    # THE SHADOW IS BAKED over what it crosses: the ground above and below the trough, and the upper trough's rows
+    # (the thumb's right edge always stands right of its centre, over trough-upper): the inset ring's dark top row,
+    # the border, the "in" ramp's rows and the inset ring's light bottom row.
+    sw = sh(SH[6], 0.92)
+    shadow = lambda dst: T.cairo_solid_over(sw, 0.1, dst)
+    t.add('cl_scale_shadow', shadow(cb(bg)), 'clearlooks_draw_shadow: shade (shade[6], 0.92) at 0.1 over bg')
+    t.add('cl_scale_shadow_inset_dark', shadow(cb(sh(bg, 0.94))), 'the thumb\'s shadow over the trough\'s inset row 0')
+    t.add('cl_scale_shadow_border', shadow(upper_border), 'the thumb\'s shadow over the upper trough\'s border rows')
+    t.ramp('cl_scale_shadow_ramp', [shadow(r) for r in upper_rows], 0, len(upper_rows) - 1,
+           'the thumb\'s shadow over the upper trough\'s ramp rows')
+    t.add('cl_scale_shadow_inset_light', shadow(cb(sh(bg, 1.06))), 'the thumb\'s shadow over the trough\'s inset row '
+          f'{st_ - 1}')
+    sh_h = geo['scale_wid'] - 2                                             # the slider inside the button, inset 1
+    rule = f'clearlooks_gummy_draw_slider (bg[NORMAL]) on the {geo["scale_len"] - 2} x {sh_h} slider'
+    ramp = {r: T.pixman_vertical_ramp_row(gummy(bg, False), 1, sh_h - 2, r) for r in range(1, sh_h - 1)}
+    kstep = T.pixman_step_row(1, sh_h - 2)
+    t.ramp('cl_scale_thumb_upper', [ramp[r] for r in range(1, kstep)], 0, kstep - 2, rule + f': rows 1..{kstep - 1}')
+    t.ramp('cl_scale_thumb_lower', [ramp[r] for r in range(kstep, sh_h - 1)], 0, sh_h - 2 - kstep,
+           rule + f': rows {kstep}..{sh_h - 2}')
+    t.add('cl_scale_thumb_border', cb(mix(SH[7], bg, 0.2)), rule + ': the border, mix (shade[7], fill, 0.2)')
+    t.add('cl_scale_thumb_grip', cb(SH[7]), rule + ': the grip bars, shade[7]')
+    over = lambda r: T.cairo_solid_over(sh(bg, 1.3), 0.4, ramp[r])
+    t.add('cl_scale_thumb_highlight_row', over(1), rule + ': the top-left highlight over its row 1')
+    t.ramp('cl_scale_thumb_highlight_upper', [over(r) for r in range(3, kstep)], 0, kstep - 4,
+           rule + f': the top-left highlight down its column 1, rows 3..{kstep - 1}')
+    t.ramp('cl_scale_thumb_highlight_lower', [over(r) for r in range(kstep, sh_h - 3)], 0, sh_h - 4 - kstep,
+           rule + f': the top-left highlight down its column 1, rows {kstep}..{sh_h - 4}')
+
+    # THE RESTORED LAPTOP'S FRAME (gnome-themes 2.30.2's Clearlooks metacity theme, the frame style set `normal`:
+    # `focused` = round_bevel, `normal` = round_bevel_unfocused, on the `normal` geometry, left / right / bottom 4)
+    # with the title bar THE SIZING FRAME'S TOP BAND AND THE CAPTION LANE TOGETHER, top_height = kWindowFramePx +
+    # caption_height_px, title_height = top_height - 7 (title_border 4 + 3): each <line> and <rectangle> a role named
+    # by its shade (cl_frame_<state>_<sel|bg><factor x 1000>), each <gradient> a ramp; THE CORNER ART's cells are
+    # drawn as arcs (clearlooks_paint.h's frame painter): its dark cells' tone and its highlight's, the 0.73 / 0.68
+    # in-between cells being the antialiasing the arc's edge does itself.
+    TT = geo['frame_w'] + geo['caption_h']
+    fenv = dict(top_height=TT, title_height=TT - 7, width=64, height=64)
+    def frame_role(state, c):
+        assert c[0] == 'shade' and c[1][0] == 'gtk' and c[1][1] == 'bg', c
+        return f'cl_frame_{state}_{"sel" if c[1][2] == "SELECTED" else "bg"}{int(round(c[2] * 1000)):04d}'
+    for state, ops_name in (('focused', 'round_bevel'), ('unfocused', 'round_bevel_unfocused')):
+        n = 0
+        for op in draw_ops_flat(m, ops_name):
+            rule = f'metacity draw_ops {ops_name}, top_height {TT}'
+            if op['op'] in ('line', 'rectangle'):
+                if op['op'] == 'rectangle' and op.get('filled') == 'true':
+                    assert op['color'] == ('gtk', 'bg', 'NORMAL'), op          # window_bg: the ground role
+                    continue
+                if op['color'][0] == 'shade' and round(op['color'][2], 2) in (0.73, 0.68):
+                    continue                                                   # the corner art's in-between cells
+                if op['op'] == 'line' and op['y1'] == op['y2'] == 'title_height + 5':
+                    assert (op['x1'], op['x2']) == ('2', 'width - 3'), op       # under the lower gradient, x 2 .. w - 3
+                    continue
+                role = frame_role(state, op['color'])
+                if role not in t.tones: t.add(role, mc_byte(op['color'], gtk), f'{rule}: <{op["op"]}> {op["color"]}')
+            elif op['op'] == 'gradient':
+                gh = mc_eval(op['height'], fenv)
+                rows = T.metacity_vertical_gradient_rows(*(metacity_color(c, gtk) for c in op['colors']), gh)
+                t.ramp(f'cl_frame_{state}_ramp{n}', rows, 0, gh - 1, f'{rule}: <gradient> {n}, {gh} rows')
+                n += 1
+            else:
+                raise SystemExit(f'build: metacity op <{op["op"]}> in {ops_name} is not one the frame painter draws')
     return t
 
 
@@ -881,6 +1044,18 @@ def engine_tones(g, m, gtk, sc, geo):
 # role prefixes.
 CAPTION_BUTTON_STATES = (('focused', 'button_bg'), ('pressed', 'button_bg_pressed'),
                          ('unfocused', 'button_bg_unfocused'), ('unfocused_pressed', 'button_bg_unfocused_pressed'))
+# THE LINES THE CAPTION BUTTON PAINTER DRAWS (architect 2026-10-07, his glass verdict on the pixelated boxes:
+# clearlooks_paint.cpp's paint_cl_caption_button draws each button_bg as concentric antialiased rounded rings —
+# the halo, the border, the inner bevel — and its fills): per state, the shade factors x 1000 of the lines whose
+# tones it paints, the halo's top and bottom, the border, the inner ring's sides; the staircase's corner cells (the
+# art's hand antialiasing between those lines) are the arcs' own antialiasing and are not roles. The gradients are
+# every one of them.
+CAPTION_BUTTON_DRAWN = {
+    'focused': {'s0980', 's1060', 's0600', 's1180', 's1100', 's1000', 's0920'},
+    'unfocused': {'s0910', 's0960', 's0600', 's1200', 's1100', 's1050', 's0970'},
+    'pressed': {'s1000', 's0550', 's0900', 's0850'},
+    'unfocused_pressed': {'s1050', 's0550', 's0800', 's0750', 's0850'},
+}
 # The tool button's drawn states: (role prefix, the GTK state whose bg fills it, active (shadow IN), insensitive).
 TOOL_BUTTON_STATES = (('hot', 'PRELIGHT', False, False), ('pressed', 'ACTIVE', True, False),
                       ('hot_checked', 'PRELIGHT', True, False), ('dead_checked', 'INSENSITIVE', True, True))

@@ -788,6 +788,12 @@ private:
     bool has_initial_configure_ = false;
     // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading; see window_activated().
     bool window_activated_ = false;
+    // THE ACTIVATION FLIPPED in the configure now being applied: under
+    // clearlooks a restored window's sizing frame wears the activation
+    // (metacity's focused and unfocused frames, paint_window_sizing_frame),
+    // so the surface configure repaints the whole surface for it — the app's
+    // activation hook damages the caption lane alone, its own area.
+    bool pending_activation_flip_ = false;
     // XDG_TOPLEVEL_STATE_MAXIMIZED: read by xdg_toplevel.configure into the
     // pending half, applied with the size at xdg_surface.configure.
     bool pending_maximized_ = false;

@@ -1596,7 +1596,9 @@ void GuiPlatform::paint_one_frame() {
         cairo_save(cr);
         cairo_rectangle(cr, d.x, d.y, d.w, d.h);
         cairo_clip(cr);
-        if (f > 0) paint_window_sizing_frame(cr, width_, height_, f);
+        if (f > 0)
+            paint_window_sizing_frame(cr, width_, height_, f,
+                                      window_activated_);
         const int cx0 = std::max(d.x, f);
         const int cy0 = std::max(d.y, f);
         const int cx1 = std::min(d.x + d.w, width_ - f);
@@ -2123,6 +2125,7 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         frame_px_ = frame;
         input_.set_surface_width(client_w());
         queue_full_surface_damage();
+        pending_activation_flip_ = false;
         if (on_resize_) on_resize_(client_w(), client_h());
         paint_one_frame();
         return;
@@ -2143,12 +2146,17 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         input_.set_surface_width(client_w());
         queue_full_surface_damage();
         if (on_resize_) on_resize_(client_w(), client_h());
-    } else if (maximized_changed || damage_.empty()) {
+    } else if (maximized_changed || damage_.empty() ||
+               (pending_activation_flip_ && frame_px_ > 0 &&
+                live_chrome_spec().vocabulary ==
+                    GuiChromeVocabulary::Clearlooks)) {
         // No size change — still schedule a paint so the compositor's
         // reconfigure (an activation or maximize state change: the caption's
-        // roles, the Maximise / Restore glyph) gets honored.
+        // roles, the Maximise / Restore glyph; under clearlooks a restored
+        // window's frame, pending_activation_flip_) gets honored.
         queue_full_surface_damage();
     }
+    pending_activation_flip_ = false;
 
     if (!frame_callback_) schedule_frame_callback();
 }
@@ -2183,6 +2191,7 @@ void GuiPlatform::on_toplevel_configure(int32_t width, int32_t height,
     // change; the hook's contract is the edge, and it is stated at its setter.
     if (activated != window_activated_) {
         window_activated_ = activated;
+        pending_activation_flip_ = true;
         if (activation_changed_hook_) activation_changed_hook_();
     }
 }

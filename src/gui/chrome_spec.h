@@ -42,10 +42,12 @@
 //     GTK's insensitive icon — clearlooks_paint.h), AND THE DIALOGS, THE
 //     DROPDOWN AND THE LISTS since its second part (the push button, the
 //     entry, GtkMenu, the compact list; the tooltip and the cards were
-//     Clearlooks' already: the same one-line card face); the rest of the
-//     chrome (the trim lane, the scrub, the restored laptop's frame) still
-//     draws Windows' faces in Clearlooks' lengths until the round's last
-//     part teaches each one its branch.
+//     Clearlooks' already: the same one-line card face), AND THE REST OF THE
+//     CHROME since its last part (the trim lane as GTK's scroll bar, the
+//     scrub as GtkScale, row 8 as the status bar and its time fields as
+//     entries, the well's scrolled-window line, the ruler's ticks, the
+//     restored laptop's metacity frame, the flag editor as the focused
+//     entry). The waveform and the flags stay the program's own.
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colours remain an ordinary theme
 // file. The table is kGuiChromeSpecs below, the live instance
@@ -63,7 +65,9 @@
 // the two draw an element differently (the head): the caption's band,
 // title and buttons, the menu bar and its open title, the toolbar band,
 // the disabled words' emboss, the dialogs' push buttons and fields, the
-// dropdown, the lists.
+// dropdown, the lists, the trim lane, the scrub, row 8's band and time
+// fields, the well's frame, the ruler's ticks, the restored laptop's frame
+// and the flag editor.
 enum class GuiChromeVocabulary {
     Win2000,
     Clearlooks,
@@ -184,6 +188,32 @@ struct ChromeSpec {
     // THE TOOLTIP'S PAD inside its frame, each way (paint_popup_chrome's
     // tooltip arm, kTooltipLineGapPx beside it).
     int                tooltip_pad_px;
+    // THE TIME FIELD — row 8's clock and the render player's position and
+    // length (paint_handler.cpp's time-field block, time_field_rect: the
+    // field is centred in its row's content band, its reserved cell this pad
+    // in from its frame each way, so the field's width, the state line's
+    // start and the clock's damage box all read them): the field's height
+    // and the pad. WIN2000 Windows' one-line sunken field, 17 tall with the
+    // cell 3 px in (architect 2026-10-05, measured on his ACID Pro 3.0 and
+    // Vegas Audio captures; the record stays at paint_handler.cpp's
+    // kTimeFieldHeightPx and kStatusPanelPadPx, which assert these two).
+    // CLEARLOOKS GTK's entry (architect 2026-10-07: a time shown in a field
+    // is an entry): gtkentry.c's size_request at the 13-row cell, 13 + 2 x
+    // (the entry style's ythickness 3 + GtkEntry::inner-border 2) = 23, the
+    // dialog fields' own height (kModalFieldHeightPx); its text stands
+    // xthickness 3 + inner-border 2 = 5 in from the entry's outer edge
+    // (gtkentry.c's text area: the frame's thickness, then the inner
+    // border).
+    double             time_field_height_px;
+    double             time_field_pad_px;
+    // THE SCRUB THUMB'S GRAB BOX — the box the press router takes as the
+    // thumb's grab band and the mapping insets the track by half of at each
+    // end (render.h's scrub block, scrub_handle_box_px). WIN2000 14 (the
+    // laptop pixel's 20 re-authored, architect 2026-10-02), the 11-px
+    // trackbar thumb widened to it; CLEARLOOKS GTK's grab is the slider
+    // itself, GtkScale::slider-length 23 (clearlooks_paint.h's
+    // kClScaleSliderLengthPx).
+    double             scrub_handle_box_px;
     // THE DROPDOWN, in Windows px (render.h's dropdown block, where the
     // frame and the separator's rule stand; dropdown_h_px sums them): an
     // item's height, and the menu's own margin between its frame and the
@@ -260,6 +290,9 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,
     .tooltip_pad_px               = 2,
+    .time_field_height_px         = 17.0,
+    .time_field_pad_px            = 3.0,
+    .scrub_handle_box_px          = 14.0,
     .popup_item_height_px         = 17,
     .popup_margin_px              = 1,
     .card_seat                    = GuiCardSeat::UnderBand,
@@ -318,6 +351,10 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
 //   (x/ythickness 0: no margin, the items against the frame) with the
 //   menu_item style's items, the cell 13 + 2 x ythickness 3 = 19 (23 at
 //   the 17 cell on his capture 23-22-06).
+//   THE TIME FIELD GtkEntry at the cell, 13 + 2 x (3 + 2) = 23 (his 27 at
+//   the 17 cell, the Customize dialog's entry), its text xthickness 3 +
+//   inner-border 2 = 5 in; THE SCRUB'S GRAB GtkScale's slider, slider-length
+//   23 (the default style's).
 //   THE DRAWING: the gummy toolbar style (GtkReliefNone), radius 3 on the
 //   gummy boxes (the gtkrc's `radius = 3.0`), GTK's insensitive icon, the
 //   icons "mist" (gnome-icon-theme 2.30's drawings under Mist's own
@@ -360,6 +397,9 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .push_button_pad_left_px      = 6.0,
     .push_button_pad_right_px     = 6.0,
     .tooltip_pad_px               = 4,
+    .time_field_height_px         = 23.0,
+    .time_field_pad_px            = 5.0,
+    .scrub_handle_box_px          = 23.0,
     .popup_item_height_px         = 19,
     .popup_margin_px              = 0,
     .card_seat                    = GuiCardSeat::UnderBand,

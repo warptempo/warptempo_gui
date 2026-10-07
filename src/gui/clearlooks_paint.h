@@ -6,13 +6,18 @@
 
 // THE CLEARLOOKS PAINTERS (architect 2026-10-07, the painters round's first
 // part: the top strip; its second: the dialogs' push buttons and entries,
-// the dropdown, the lists) — the chrome spec's clearlooks arm (chrome_spec.h),
+// the dropdown, the lists; its last: the trim lane as the scroll bar, the
+// scrub as GtkScale, row 8 as the status bar with its entry time fields, the
+// well's frame, the ruler's ticks, the restored laptop's frame, the flag
+// editor) — the chrome spec's clearlooks arm (chrome_spec.h),
 // GNOME 2.30's own drawing as Debian 6 squeeze put it on screen: the
 // metacity theme's maximised caption (gnome-themes 2.30.2's Clearlooks
 // metacity-theme-1.xml), and gtk-engines 2.20.2's Clearlooks GUMMY style for
 // the menu bar, the toolbar band, its tool buttons and separators, the push
 // button, the entry, the menu and its items, the list and its selected cell
-// (clearlooks_draw.c, clearlooks_draw_gummy.c), his squeeze captures the law
+// (clearlooks_draw.c, clearlooks_draw_gummy.c), the scroll bar, the scale and
+// the status bar (the same files), the restored window's frame (metacity's
+// `normal` frame style set), his squeeze captures the law
 // (tmp/squeeze/). Every painter here is called from its win2000 sibling's
 // site on the spec's fork (paint_handler.cpp) and reads its lengths from the
 // live spec, so a length changed at the instance moves the drawing with no
@@ -83,8 +88,13 @@ enum class ClCaptionGlyph { Minimize, Maximize, Restore, Close };
 // ONE CAPTION BUTTON on its box `b` (caption_button_rects, its W size the
 // spec's caption_button_w_px x caption_button_h_px): metacity's button_bg
 // (focused) / button_bg_unfocused, or their _pressed sets while `pressed`,
-// op for op in the theme's order (each line a role, each gradient a ramp
-// between two), then the glyph at metacity's icon_size = Bmin 7 `max`
+// DRAWN AS THE CONCENTRIC ANTIALIASED RINGS ITS STAIRCASE OF LINES STEPS
+// ALONG (architect 2026-10-07, his glass verdict on the cell rects: "the
+// caption buttons' boxes are pixelated"; the head's rule 4) — the halo, the
+// border and the inner bevel about the point four W in, round the fill's
+// gradients, each line's tone a role and each gradient a ramp between two
+// (clearlooks_paint.cpp's caption-button block, where the radius is
+// derived) — then the glyph at metacity's icon_size = Bmin 7 `max`
 // (height − Bpad 6 x 2), centred — focused, the 0.7 outline under the
 // blend(sel, white, 0.75) shape; unfocused, the blend(fg, bg, 0.45) shape
 // alone. CLOSE'S DIAGONALS are antialiased strokes from pixel centre to
@@ -113,9 +123,10 @@ void paint_cl_menubar(cairo_t* cr, const GuiRect& lane);
 void paint_cl_menubar_item(cairo_t* cr, const GuiRect& lane, int x, int w);
 
 // THE TOOLBAR BAND — clearlooks_gummy_draw_toolbar (toolbarstyle 1, not
-// topmost: it stands under the menu bar) on `band`, the icon row's band and
-// row 8's: its first row bg x 1.1, the 1.04 | 1.01 / 1.0 | 0.97 ramp with
-// its step at the band's middle, its last row shade[3].
+// topmost: it stands under the menu bar) on `band`, the icon row's band
+// (row 8 is GTK's status bar since the round's last part,
+// paint_cl_statusbar): its first row bg x 1.1, the 1.04 | 1.01 / 1.0 | 0.97
+// ramp with its step at the band's middle, its last row shade[3].
 void paint_cl_toolbar_band(cairo_t* cr, const GuiRect& band);
 
 // THE GROUP GAP'S SEPARATOR — clearlooks_gummy_draw_separator, vertical, in
@@ -188,6 +199,13 @@ int paint_cl_push_button(cairo_t* cr, const GuiRect& r, bool pressed,
 // caller's, in cl_text, cl_selection / cl_selection_unfocused under
 // cl_text_selected (GtkEntry's own pairs) and cl_text.
 void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused);
+// The same entry on a caller's base: the time fields' `clock_ground`
+// (paint_time_field — the clock pair is the GNOME entry's base / text under
+// the clearlooks theme, gen_theme_files' CLOCK_FROM_FIELD) and the flag
+// editor's (render_flag_editor_box, the dialog field's pairs). The ring and
+// the border are the entry's own roles.
+void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused,
+                    GuiColor base);
 
 // THE DROPDOWN'S BOX — GtkMenu under the "menu" style: its ground
 // (bg[NORMAL] 1.08 of bg) and clearlooks_draw_menu_frame's one shade[5]
@@ -222,3 +240,147 @@ void paint_cl_list(cairo_t* cr, const GuiRect& surf);
 // height, no border, square. The name over it is the caller's, in
 // cl_text_selected.
 void paint_cl_selected_cell(cairo_t* cr, const GuiRect& r, bool focused);
+
+// -- THE LANES, THE SCRUB, THE STATUS BAR AND THE FRAME (the painters round's
+//    last part, 2026-10-07) ----------------------------------------------------
+
+// GTKSCALE'S LENGTHS (the default style's GtkScale::slider-length 23 and
+// GtkRange::slider-width 15; clearlooks_draw_gummy.c's TROUGH_SIZE 7), in
+// Windows px — the scrub's drawing under clearlooks (paint_cl_scale_trough,
+// paint_cl_scale_thumb below). The thumb's grab box is the spec's
+// scrub_handle_box_px, the same 23 (asserted in clearlooks_paint.cpp).
+inline constexpr int kClScaleTroughPx       = 7;
+inline constexpr int kClScaleSliderLengthPx = 23;
+inline constexpr int kClScaleSliderWidthPx  = 15;
+
+// THE TRIM LANE IS GTK'S HORIZONTAL SCROLL BAR (architect 2026-10-07, the
+// painters round's last part; render.h's trim block keeps every rect: the
+// lane, the two caps' 16 x 16 boxes where trim_endcap_rect puts them, the
+// body between them, the hit stash). THE BAR WEARS THE LANE'S 16 W ROWS,
+// Windows' SM_CYHSCROLL, where GTK's is 15 (GtkRange::slider-width and
+// stepper-size 15): one row more of every ramp below, the base's thickness
+// kept (the settled rule: the proportional fit to Windows' layout).
+//
+// THE TROUGH — clearlooks_draw_scrollbar_trough (gummy keeps the classic
+// one), its vertical frame's axes exchanged: across the lane `lane`
+// shade[2], its first and last rows the shade[5] border, and under the top
+// border the shadow — a linear gradient shade (shade[2], 0.95) -> shade[2]
+// from row 1 to row 3 whose rows 1 and 2 show (row 3 on is the fill, the
+// source's own arithmetic; build.py records the two rows). NO END COLUMNS:
+// GTK's trough ends under its steppers (trough-under-steppers), and the
+// lane's ends are the window's, past which the bar runs on as its body does
+// (render_trim_flags' OFF SCREEN rule) — so the border is the two rows.
+void paint_cl_trough(cairo_t* cr, const GuiRect& lane);
+
+// ONE STEPPER — clearlooks_gummy_draw_scrollbar_stepper on a trim cap's box
+// `b` (trim_endcap_rect's 16 x 16): bg[NORMAL]'s gummy ramp across the
+// bar's rows (pressed, bg[ACTIVE] = shade (0.9, bg), the default style's —
+// his capture 00-12-13's pressed stepper), its two OUTER corners rounded at
+// the spec's radius (the begin cap's left ones, the end cap's right: GTK's
+// stepper A and D, the corners at the bar's ends), the top-left highlight
+// baked (gummy's shade 1.3 at 0.4), the border mix (shade[7], fill, 0.2)
+// (colorize_scrollbar's has_color); THE ARROW the engine's own
+// (clearlooks_draw_normal_arrow, its chevron filled in fg) at GtkRange's
+// arrow-scaling 0.5 of the 16-W box — 8 W, so the engine's 8-wide, 4.75-tall
+// wedge, its line half-width 0.75 — centred on the box, pointing left on
+// the begin cap and right on the end cap. GTK displaces no arrow
+// (GtkRange::arrow-displacement 0): pressed, only the face changes. NO
+// HOVER FACE (the prelit stepper is not drawn: the one hover face is the
+// toolbars').
+void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
+                      bool pressed);
+
+// THE BODY IS THE SLIDER — clearlooks_gummy_draw_scrollbar_slider with
+// colorize_scrollbar TRUE on the body rect `body` (render_trim_flags' gap,
+// the bridge): spot[1]'s gummy ramp across the bar, a one-W ring of shade
+// (fill, 1.3) at 0.2 one W inside the border (baked over the ramp's rows),
+// the border and three one-W grip bars in the hue rule's tones (build.py:
+// the fill's saturation against bg's, 0.575, mixed 0.3 for the border) —
+// SQUARE, as the gummy slider is (ge_cairo_stroke_rectangle; his capture
+// 00-17-24's horizontal bar). THE GRIPS stand on the source's rows (5 ..
+// h − 6, both ends full, as the capture draws them), three W apart, the
+// middle one on the body's middle column as painted (a body running past the
+// lane's edge is held just outside it by render_trim_flags, so the grips
+// stay on its visible part) — and only where the body is at least the grip
+// set's 7 W plus, each side, the border, the ring and one W of face (13 W):
+// GTK's min-slider-length 30 keeps its slider longer than its grips, and the
+// product's body is the trim region's own width, so the grips yield instead.
+void paint_cl_slider(cairo_t* cr, const GuiRect& body);
+
+// THE WELL'S FRAME — GtkScrolledWindow's shadow IN under GUMMY
+// (clearlooks_style_draw_shadow's "scrolled_window" arm, P2's list frame:
+// ONE shade[5] line, cl_list_frame) on the well's top and bottom rows of the
+// waveform area `area` (render_canvas, which takes the frame's two lines a
+// side FROM the area under both chromes, waveform_border_px): the OUTER line
+// of each pair is the scrolled window's, the inner one the canvas the
+// window's child begins on — GTK's one line at the base's thickness.
+void paint_cl_well_frame(cairo_t* cr, const GuiRect& area);
+
+// ROW 8'S BAND IS GTK'S STATUS BAR — clearlooks_gummy_draw_statusbar ("frame"
+// under the statusbar hint): the row's ground with ONE shade[3] row and its
+// x1.3 row at the band's top — the gummy separator's two tones, the
+// cl_separator pair — and nothing else, on the lane `lane`'s first two rows:
+// its own top row (kBottomRowBorderPx) and one W line under it.
+void paint_cl_statusbar(cairo_t* cr, const GuiRect& lane);
+
+// THE SCRUB'S TROUGH — clearlooks_gummy_draw_scale_trough on `trough`, the
+// kClScaleTroughPx rows across the track (cl_scale_trough_h_px tall), SQUARE
+// (the scale passes radius 0): THE UPPER PART right of `split` (the thumb's
+// centre column; the track's left edge when no thumb stands) draw_inset's
+// ring (shade 0.94 / 1.06 of the window's bg, split on the diagonal — P2's
+// inset ring), a one-W border mix (shade[6], fill, 0.2) inside it, and the
+// fill shade (bg, 0.896) under the "in" ramp 0.95 -> 1.05; THE LOWER PART
+// left of it (GtkScale::trough-side-details, "trough-lower" — the volume
+// slider's blue) the same in spot[1] under the "out" ramp 1.1 -> 0.9 inside
+// mix (spot[2], spot[1], 0.2). Each part closes its own ends, as GTK's two
+// boxes do, the thumb covering the seam.
+void paint_cl_scale_trough(cairo_t* cr, const GuiRect& trough, int split);
+
+// THE SCRUB'S THUMB — clearlooks_gummy_draw_slider_button on `box`, the
+// slider-length x slider-width box (cl_scale_thumb_w_px x _h_px) centred on
+// the trough (4 rows above it, its 7, 4 below; GTK centres the trough in the
+// range's height): draw_shadow's stroke down the box's last column and along
+// its last row, round the bottom-right corner at the slider's radius 3, its
+// 0.1 alpha baked over what it crosses (the ground, and the upper trough's
+// rows — the inset ring, the border, the ramp); then
+// clearlooks_gummy_draw_slider one W in: bg's gummy ramp, the border mix
+// (shade[7], fill, 0.2) at THE SOURCE'S RADIUS 2.5 (kClScaleSliderRadiusPx,
+// the engine's own literal — the spec's 3 is the gtkrc's), three shade[7]
+// grip bars on the engine's columns, the top-left highlight at radius 2,
+// baked. No prelight (the one hover face is the toolbars').
+void paint_cl_scale_thumb(cairo_t* cr, const GuiRect& box);
+int  cl_scale_trough_h_px();
+// (cl_scale_thumb_w_px / cl_scale_thumb_h_px are declared in render.h's
+// scrub block, beside the accessor that reads the height.)
+
+// THE RESTORED LAPTOP'S FRAME — metacity's `normal` frame style set
+// (gnome-themes 2.30.2's Clearlooks: `focused` = round_bevel, `normal` =
+// round_bevel_unfocused, on the `normal` geometry) painted on the whole
+// surface, `surface_w` x `surface_h` device px with its origin at (ox, oy),
+// the sizing frame `frame_px` thick (platform_wayland.cpp's frame_px_,
+// window_frame_px), the caption lane `caption_h` device rows under its top
+// band. THE GEOMETRY AGREES WHERE IT CAN: metacity's left, right and bottom
+// widths are 4, the platform's frame is 4 (Windows' SM_CXSIZEFRAME), so the
+// band is as before; METACITY HAS NO TOP BAND — its title bar is the frame's
+// top — so the platform's 4-W top band and the caption lane under it are ONE
+// TITLE BAR, top_height 4 + 20 = 24 (squeeze's own at Sans 10, by
+// coincidence of the two cells), title_height 17, every title op at its
+// metacity row: the band's rows 0 .. 3 metacity's 0 .. 3, the caption
+// lane's rows 0 .. 19 its 4 .. 23. The frame's width is a hit length the
+// platform owns (window_frame_edges_at): nothing moves. THE ROUNDED TOP
+// CORNERS: metacity cuts them (rounded_top_left / _right, its radius-5
+// shape) and draws the corner art inside the cut — corners_outline_* (five
+// cells a corner: three dark on the diagonal, two in-between) and
+// corners_highlight* (four cells one W further in) — whose cells trace a
+// quarter circle centred five W in from each edge: drawn AS THAT ARC, one
+// antialiased W-px stroke of the outline's dark tone at radius 4.5 W (the
+// cut's edge less half a line) and one of the highlight's at 3.5 W (on the
+// top-right, its two tones meeting at 45 degrees, as the art's two pairs
+// do), the surface CLEARED outside the cut (the ARGB surface's own shape,
+// metacity's mask); the art's in-between cells are the antialiasing the arcs
+// do themselves. The caption lane's own painter calls this with its origin
+// at the lane less the frame (paint_caption_row) so the two halves of the
+// title bar are one picture.
+void paint_cl_window_frame(cairo_t* cr, int ox, int oy, int surface_w,
+                           int surface_h, int frame_px, int caption_h,
+                           bool focused);

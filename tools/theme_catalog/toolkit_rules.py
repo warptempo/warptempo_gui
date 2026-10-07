@@ -329,10 +329,12 @@ def pixman_vertical_ramp_row(stops, y0, y1, row):
     `stops` [(offset, (r, g, b) doubles)], as pixman 0.16 samples it at pixel row `row`'s centre -> the 8-bit pixel
     (pixman-linear-gradient.c: t = ((b x v) >> 16) + off with b = 2^32 / dy, the walker's 8-bit interpolation with
     stepper ((1 << 24) + w / 2) / w and the PAD extend; the stops' channels cairo's 16-bit shorts' top bytes,
-    unpremultiplied). Opaque stops only (alpha 1)."""
-    dy = (y1 - y0) * 65536
+    unpremultiplied). Opaque stops only (alpha 1). The ends may be fractional (GtkScale's trough gradient runs from
+    0.5 to height + 1): cairo hands pixman each as its nearest 16.16 fixed value, exact for whole px."""
+    fy0, fy1 = _fixed_16_16(y0), _fixed_16_16(y1)
+    dy = fy1 - fy0
     b = (1 << 32) // dy
-    off = (-b * (y0 * 65536)) >> 16
+    off = (-b * fy0) >> 16
     t = ((b * (row * 65536 + 32768)) >> 16) + off
     st = [(_fixed_16_16(o), tuple(_cairo_short(v) >> 8 for v in c)) for o, c in stops]
     n = 0

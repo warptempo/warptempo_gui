@@ -189,8 +189,9 @@ struct TrimRange {
 //                 band under the player and the picker, Windows 95's list
 //                 view, its resting names and its glyphs' text-class paths
 //                 in the field text (architect 2026-10-06,
-//                 paint_folder_overlay); the flag editor is the selected flag
-//                 opened for edit and takes no field colour (EDITING, below);
+//                 paint_folder_overlay); THE FLAG EDITOR OPEN (architect
+//                 2026-10-07: the field turns white when open; EDITING,
+//                 below);
 //   clock pair    THE TIME FIELDS (architect 2026-10-04, Windows' status
 //                 bar: ButtonFace / ButtonText; every time field since
 //                 2026-10-05): `clock_ground` fills the field inside its
@@ -198,6 +199,8 @@ struct TrimRange {
 //                 Hilight, and `clock_text` is its run — row 8's tab letter
 //                 and digits (paint_bottom_row_buttons_and_clock) and the
 //                 render player's position and length (paint_modal_dialog);
+//                 under clearlooks the base / text of GTK's entry, which
+//                 the time field is there (architect 2026-10-07);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
 //   caption six   THE CAPTION (architect 2026-10-05, the window's title
@@ -227,7 +230,9 @@ struct TrimRange {
 // owning its corners whole — a flat line, not a bevel, so the relief's mitre
 // is not drawn on it (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE
 // RULE'S ONE STATEMENT.
-// THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
+// THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas);
+// under clearlooks GtkScrolledWindow's one shade[5] line on the pair's outer
+// row (paint_cl_well_frame, architect 2026-10-07).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD (architect 2026-10-03, Windows'
 // DrawState DSS_DISABLED): the word in the theme's HILIGHT one Windows px
@@ -358,11 +363,13 @@ uint64_t palette_generation();
 
 // THE IN-PLACE EDITOR'S FRAME — Windows' WindowFrame, BLACK (architect
 // 2026-10-03, on Explorer's F2 rename and Acid Pro's track-name editor): the
-// flag editor's one-Windows-px frame round its flat box (render_flag_editor_box).
-// A LITERAL, the one colour that is not a theme role: the ruling names black,
-// as Windows 95 Standard records its WindowFrame, on every theme, and it
-// stays black whatever the edit's state (a refused Enter recolours nothing,
-// EDITING below; the flag editor stays as it is, architect 2026-10-04).
+// flag editor's one-Windows-px frame round its flat white box under the
+// WIN2000 chrome (render_flag_editor_box; under clearlooks the editor is
+// GTK's entry, its frame the entry's own — architect 2026-10-07). A LITERAL,
+// the one colour that is not a theme role: the ruling names black, as
+// Windows 95 Standard records its WindowFrame, on every theme, and it stays
+// black whatever the edit's state (a refused Enter recolours nothing,
+// EDITING below).
 inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 
 // -- THE TRIM LANE, THE RULER LANE, THE PLAYHEAD -------------------------------
@@ -376,6 +383,8 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // from the press on it to the gesture's end, a motionless press included:
 // Windows draws a held scroll arrow DFCS_PUSHED | DFCS_FLAT — one Shadow line
 // round the face, the glyph one Windows px right and down (render_trim_flags).
+// UNDER CLEARLOOKS the lane is GTK's horizontal scroll bar in its generated
+// cl_ tones (architect 2026-10-07; clearlooks_paint.h's trim block).
 
 // THE RULER LANE's inks: every timestamp in the LABEL (architect 2026-10-03;
 // "give the same colour to all the numbers", 2026-10-02), and the TICKS
@@ -497,27 +506,31 @@ inline constexpr GuiColor kFlagEditorFrame = hex(0x000000);
 // (architect 2026-10-04: a reset whose addressed cell is a bound cell keeps
 // its resting stem, and so its resting ring).
 //
-// EDITING IS WINDOWS 95's IN-PLACE LABEL EDIT (architect 2026-10-03, Explorer's
-// F2 rename, Acid Pro's track-name editor): over the edited flag or cell a FLAT
-// box of the flag's height and its run's width — THE SELECTED FLAG OPENED FOR
-// EDIT (architect 2026-10-03, set BX) — its BACKGROUND the edited marker's
-// SELECTED FACE (its kind's, or `removed_flag_selected` over an invalid
-// marker), framed ONE Windows px in black (kFlagEditorFrame), its TEXT
-// and caret THE SELECTED LABEL OF THE PAIR THAT FACE COMES FROM (its kind's,
-// or `removed_label_selected` over an invalid marker), the selected substring
-// in the theme's SELECTED pair, Windows' field margin strips (the pads) kept.
-// THE STEM FOLLOWS THE PAYLOAD BOX (architect 2026-10-04): the selected face
-// under the PAYLOAD field, which is the payload box opened and the addressed
-// cell; the marker's resting face under a BOUND-CELL field, the flag box
-// standing at rest beside it (render_flag_editor_box). The field pair plays no
-// part in it; the bound-cell editor is the same editor.
+// EDITING IS AN IN-PLACE EDIT FIELD THAT TURNS WHITE WHEN OPEN (architect
+// 2026-10-07 ~03:10, reversing 2026-10-03/04's "the selected flag opened for
+// edit"): over the edited flag or cell a box of the flag's height and its
+// run's width, on the flag's own outline geometry, wearing THE DIALOG FIELD'S
+// PAIRS under the live chrome — WIN2000 Windows' in-place label edit
+// (Explorer's F2 rename, Acid Pro's track-name editor): the FLAT box on
+// `field_ground` framed ONE Windows px in black (kFlagEditorFrame), its text
+// and caret `field_text`, the selected substring the theme's SELECTED pair;
+// CLEARLOOKS GtkEntry FOCUSED (paint_cl_entry: the inset ring, the focus
+// colour's border and inner ring, base inside, the spec's radius) at the
+// flag's height, its text, caret and selection GtkEntry's pairs — the field
+// pads (Windows' margin strips) kept under both. THE STEM FOLLOWS THE PAYLOAD
+// BOX (architect 2026-10-04): the marker's selected face under the PAYLOAD
+// field, which is the payload box opened and the addressed cell; the
+// marker's resting face under a BOUND-CELL field, the flag box standing at
+// rest beside it (render_flag_editor_box). The bound-cell editor is the same
+// editor.
 //
 // A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it
 // SELECTS THE WHOLE TEXT in the selected pair (text_editor::refuse), so the
 // first keystroke replaces it, and the refusing owner's CARD says why. The
-// flag editor's frame stays its one black line and the dialog field's edge
-// its plain sunken pair. No glyph marks it.
+// flag editor's frame stays what it is (win2000's one black line,
+// clearlooks' focused entry) and the dialog field's edge its plain sunken
+// pair. No glyph marks it.
 //
 // THE HISTORY VIEW'S DIFF FLAGS take their own two kinds (architect
 // 2026-10-04): an ADDED half the `added_flag` pair, a REMOVED half the
@@ -814,11 +827,16 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
 // corners are the resize handles (window_frame_edges_at, app_state.h). THE
 // THICKNESS IS A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): two
 // relief lines and two Windows px of ground, window_frame_px — 5 device px at
-// the laptop's 138 % (1 + 1 + 3), 12 at 275 % (3 + 3 + 6).
+// the laptop's 138 % (1 + 1 + 3), 12 at 275 % (3 + 3 + 6). UNDER CLEARLOOKS
+// (architect 2026-10-07, the painters round's last part) the band is
+// metacity's restored frame, focused or not as the caption is (`focused`,
+// the window's activation; paint_cl_window_frame, clearlooks_paint.h, the
+// title bar's top rows in this band and its lower ones the caption lane's),
+// on the same thickness: the width is a hit length the platform owns.
 inline constexpr int kWindowFramePx = 4;
 int  window_frame_px();
 void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
-                               int frame_px);
+                               int frame_px, bool focused);
 
 // Authored pixel geometry of the MENU ROW — the top strip's lane 1, directly
 // under THE CAPTION (the kdenlive menu bar, row 1 of the redesign). ITS
@@ -1121,6 +1139,10 @@ inline int icon_row_h_px() {
 // NO PLAYED EXTENT AND NOTHING THAT READS THE WINDOW'S FOCUS: the channel is
 // lines on the ground, the position is the thumb. The painter is
 // paint_modal_dialog's player branch; the press is claim_player_scrub_press.
+// UNDER CLEARLOOKS THE SCRUB IS GtkScale (architect 2026-10-07; below and
+// clearlooks_paint.h's scale painters): GTK fills the lower part
+// (trough-side-details), so there the played extent is drawn, the
+// period's own.
 inline constexpr int    kScrubChannelLines = 4;
 inline constexpr double kScrubThumbWidthPx = 11.0;
 inline constexpr double kScrubThumbAbovePx = 8.0;
@@ -1137,17 +1159,29 @@ inline int scrub_thumb_point_px() { return scaled_px(kScrubThumbPointPx, 1); }
 // outside the pentagon painted.
 void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 //
-// THE HANDLE'S BOX IS THE GRAB, NOT THE PICTURE: a 14 Windows px box (the
-// laptop pixel's 20 re-authored, architect 2026-10-02), the ONE owner of
+// THE HANDLE'S BOX IS THE GRAB, NOT THE PICTURE: the chrome spec's
+// scrub_handle_box_px (chrome_spec.h, where both values' sources stand: 14
+// Windows px under win2000, the painted thumb's 11 widened to it; GTK's 23
+// under clearlooks, the slider itself), and this accessor the ONE owner of
 // that length for its readers — the MAPPING insets the track by half of it at
 // each end (the thumb's centre is the frame's position;
 // render_player_scrub_x_of, app_state.h) and the press router takes it as THE
-// THUMB'S GRAB BAND, the painted thumb's 11 widened to it. Floored at 2 so
-// the half-box inset is never zero and the band never degenerates.
-inline constexpr double kScrubHandleBoxPx = 14.0;
+// THUMB'S GRAB BAND. Floored at 2 so the half-box inset is never zero and the
+// band never degenerates.
 inline int scrub_handle_box_px() {
-    return scaled_px(kScrubHandleBoxPx, 2);
+    return scaled_px(live_chrome_spec().scrub_handle_box_px, 2);
 }
+// UNDER CLEARLOOKS THE SCRUB IS GtkScale (architect 2026-10-07, the painters
+// round's last part; the trough, the lower part and the thumb at
+// paint_cl_scale_trough / paint_cl_scale_thumb, clearlooks_paint.h): the
+// thumb is the slider-length x slider-width box centred on the trough — 4 +
+// 7 + 4 rows, GTK centring the 7-row trough in the range's 15 — its two
+// lengths in device px defined in clearlooks_paint.cpp beside their painter.
+// scrub_thumb_h_px (below) reads the height on the clearlooks arm, so the
+// press router's band (render_player_scrub_handle_hit) is the painted
+// thumb's rows under either chrome.
+int cl_scale_thumb_w_px();
+int cl_scale_thumb_h_px();
 
 // ROW 5's THREE LANES — the TRIM lane, the RULER lane and the MARKER lane,
 // stacked in that order under the icon row (the order is main.cpp's lane
@@ -1169,7 +1203,13 @@ inline int scrub_handle_box_px() {
 // RECT for paint and for every hit reader — the arrow buttons
 // (trim_endcap_rect takes the lane rect's y/h), the bridge's y-gate and the
 // framing double-click band — so paint and hit move together by
-// construction. 44 device rows at 275 %, 22 at 138 %.
+// construction. 44 device rows at 275 %, 22 at 138 %. UNDER CLEARLOOKS
+// (architect 2026-10-07, the painters round's last part) the same lane, the
+// same caps' rects and the same body are GTK'S HORIZONTAL SCROLL BAR — the
+// trough, the steppers and the slider (clearlooks_paint.h's trim block, where
+// the bar wears this 16 for GTK's 15) — and the trim bar still stands
+// outside the well, above the ruler, as his capture 00-17-24's bar stands
+// outside the list's frame.
 inline constexpr int kTrimLaneHeightPx   = 16;
 // THE RULER LANE'S HEIGHT IS DERIVED FROM THE LABEL FACE, NOT AUTHORED AND
 // SCALED (architect 2026-10-02). The lane stacks, from its top:
@@ -1385,20 +1425,22 @@ int  waveform_max_h_px();
 // win2000 THREE WINDOWS PX, WordPad's band air, while the icon row has none
 // inside its band (Explorer's band is the case) and row 8 keeps its 3 / 3
 // (architect 2026-10-06) — the content 3 + 30 + 3 = 36 Windows px; under
-// clearlooks GtkToolbar's 2, the content 2 + 32 + 2 = 36, painted as
-// Clearlooks' toolbar band while the row's own tenants stand
-// (paint_bottom_strip). (Its earlier
+// clearlooks GtkToolbar's 2, the content 2 + 32 + 2 = 36, the row GTK's
+// STATUS BAR (architect 2026-10-07, the painters round's last part:
+// paint_cl_statusbar on its first two rows, paint_bottom_strip). (Its earlier
 // boxes — row 8's kdenlive 26 px transport boxes,
 // then the icon row's 32-laptop-px square, then the five-px-air 32 of
 // 2026-10-02 — are git history.)
 //
 // THE CSS BOX MODEL, ONE TOP ROW: a one-Windows-px row of ground sits
 // OUTSIDE the content on top (1 device row at 138 %, 3 at 300 %, 4 at 400 %),
-// on the WAVEFORM side — where row 8's border-top stood. NO LINE IS DRAWN
-// THERE since 2026-10-02 (architect: nothing between the well and this row,
-// the well's own bottom line being the seam), and the row is kept so nothing
-// on the row moved. IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx), both
-// vocabularies'. The lane is 1 + 3 + 30 + 3 = 37 Windows px under win2000,
+// on the WAVEFORM side — where row 8's border-top stood. UNDER WIN2000 NO
+// LINE IS DRAWN THERE since 2026-10-02 (architect: nothing between the well
+// and this row, the well's own bottom line being the seam), and the row is
+// kept so nothing on the row moved; UNDER CLEARLOOKS it is the status bar's
+// shade[3] row, the content's first row its x1.3 row (architect 2026-10-07,
+// paint_cl_statusbar). IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx),
+// both vocabularies'. The lane is 1 + 3 + 30 + 3 = 37 Windows px under win2000,
 // 1 + 2 + 32 + 2 = 37 under clearlooks.
 // bottom_row_content_h_px() is the ground the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Rides
@@ -1541,13 +1583,17 @@ inline int scrub_channel_h_px() {
     return kScrubChannelLines * relief_line_px();
 }
 inline int scrub_thumb_h_px() {
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
+        return cl_scale_thumb_h_px();
     return scrub_thumb_above_px() + scrub_channel_h_px() +
            scrub_thumb_below_px();
 }
 // THE WELL'S BORDER, taken FROM the waveform area at its top and its bottom:
 // the PLAIN SUNKEN edge's TWO relief lines a side (the colours and the order
 // at the row-6 palette block), so 6 device rows on the tablet, 2 on the
-// laptop, and still two lines at 50 %.
+// laptop, and still two lines at 50 %. Under clearlooks the same two rows a
+// side, the outer GTK's scrolled-window line and the inner the canvas
+// (paint_cl_well_frame, architect 2026-10-07).
 inline int waveform_border_px() {
     return 2 * relief_line_px();
 }
@@ -1740,7 +1786,8 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // (kTrimLaneHeightPx, the same 16) — the ground under the plain raised edge
 // and an arrow glyph in the label, no hover face, and from the press on it to
 // the gesture's end the PRESSED scroll arrow (render_trim_flags; the palette
-// block's trim paragraph).
+// block's trim paragraph) — under clearlooks GTK's stepper on the same box,
+// the engine's arrow (paint_cl_stepper).
 // THE BEGIN BUTTON'S LEFT EDGE STANDS ON THE BEGIN COLUMN and its arrow
 // points LEFT; THE END BUTTON'S RIGHT EDGE STANDS ON THE END COLUMN and its
 // arrow points RIGHT; the thumb's BODY runs between the two buttons' inner
@@ -1774,7 +1821,8 @@ inline int trim_arrow_button_w_px() {
 // below the glyph). Antialiased (the lane paints aliased; the triangle alone
 // takes cairo's default). At 400 % (u 4): 16 x 28 in the 64 x 64 case, at
 // (+24, +18); at 138 % (u 1): 4 x 7 in 22 x 22 at (+9, +7). The arrows have
-// no disabled face: the trim lane has no state that greys them.
+// no disabled face: the trim lane has no state that greys them. (The
+// win2000 arm's; clearlooks draws the engine's chevron, paint_cl_stepper.)
 inline constexpr int kTrimArrowGlyphWPx = 4;
 inline constexpr int kTrimArrowGlyphHPx = 7;
 
@@ -2238,7 +2286,8 @@ struct FlagHitRect {
 //
 // render_canvas ALSO owns THE WELL — the waveform area's two-line border at
 // its top and its bottom (waveform_border_px; the colours at the row-6
-// palette block), taken FROM the area, not added to it, so no lane or column
+// palette block; under clearlooks paint_cl_well_frame's one line on the
+// outer row of each pair), taken FROM the area, not added to it, so no lane or column
 // arithmetic moves and the CONTENT band shrinks by those rows at each end
 // (waveform_content_rect below). Top and bottom only; the area's sides are the
 // window edges (and the inert right gutter), which need no rule.
@@ -2906,9 +2955,12 @@ struct TrimBarHit {
 };
 
 // Draws the WHOLE TRIM LANE (architect 2026-10-02, the AC set; the geometry
-// at kTrimLaneHeightPx): Windows 95's scroll bar, miniaturized. All
-// pixel-bound integer fills, no stroke and no antialiasing anywhere in this
-// lane. The lane band is the `trim_bar` PARAMETER — the caller passes
+// at kTrimLaneHeightPx): Windows 95's scroll bar, miniaturized — under
+// clearlooks GTK's (architect 2026-10-07: the trough, the slider for the
+// body and the steppers for the caps, clearlooks_paint.h; every rect, the
+// order and the publication below the same). All pixel-bound integer fills,
+// no stroke and no antialiasing anywhere in the win2000 lane (the clearlooks
+// steppers' corners and arrows are antialiased, the renderer's). The lane band is the `trim_bar` PARAMETER — the caller passes
 // top_trim_row_area(app) (top-strip lane 2), and the band painted in is
 // published as TrimBarHit::lane, the y-gate both trim hits read, so paint and
 // hit take the band as one value and cannot drift; nothing in here re-derives
@@ -3340,16 +3392,19 @@ struct FlagEditorBox {
 // this product's own editor read before the marker-text lane took the payload
 // away.
 //
-// THE BOX IS WINDOWS 95's IN-PLACE LABEL EDIT (architect 2026-10-03,
-// Explorer's F2 rename; the palette block's editing paragraph): a FLAT box
-// framed ONE Windows px in black (kFlagEditorFrame) on its left border column,
-// its top and bottom rows (marker_flag_edge_h_px) and its closing column — the
-// flag's own outline geometry, so opening an editor changes the flag's SIZE
-// and nothing about where it stands — on the edited marker's SELECTED FACE
-// (the selected flag opened for edit, architect 2026-10-03: the field pair
-// plays no part), its text and caret the selected label of that face's pair,
-// the selected substring in the theme's selected pair, the pads Windows' field
-// margin strips. Since no field buys a caret column,
+// THE BOX IS AN IN-PLACE EDIT FIELD THAT TURNS WHITE WHEN OPEN (architect
+// 2026-10-07, reversing 2026-10-03's "the selected flag opened for edit"; the
+// palette block's editing paragraph) on the flag's own outline geometry — its
+// left border column, its top and bottom rows (marker_flag_edge_h_px) and its
+// closing column — so opening an editor changes the flag's SIZE and nothing
+// about where it stands: WIN2000 Windows' in-place label edit (Explorer's F2
+// rename), a FLAT box on `field_ground` framed ONE Windows px in black
+// (kFlagEditorFrame), its text and caret `field_text`, the selected substring
+// in the theme's selected pair; CLEARLOOKS GtkEntry focused on the same rect
+// (paint_cl_entry), the flag's height and not the dialog entry's 23, its
+// text, caret and selection GtkEntry's pairs, the caret and selection band
+// inside the entry's three frame lines. The pads are the field's margin
+// strips under both. Since no field buys a caret column,
 // the size only changes where the resting label was capped, the field opening
 // at the committed run's own width and growing only with what is typed past
 // it; the bound cells riding its right edge keep the flag anatomy. A REFUSED

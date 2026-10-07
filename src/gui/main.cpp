@@ -171,7 +171,8 @@ namespace {
 // axis. The BOTTOM strip is ONE LANE: THE UNIFIED BOTTOM ROW,
 // bottom_row_h_px() tall (the icon row's case on the row's own air — 3 px
 // under win2000, 2 under clearlooks — plus a 1px row of ground on top, where
-// its border-top stood) — the clock
+// its border-top stood; under clearlooks that row and the next are GTK's
+// status bar's line, architect 2026-10-07) — the clock
 // cell in its time
 // field (the active tab's letter, a pipe
 // and the timestamp, "A | 00:45.115") and THE STATE LINE on the ground
@@ -202,7 +203,10 @@ namespace {
 //     area) is the block's bottom edge;
 //   GAP 2 — flexible blank window ground;
 //   THE UNIFIED BOTTOM ROW at the window's foot, its first row plain ground
-//     (no line between it and the well since 2026-10-02).
+//     under win2000 (no line between it and the well since 2026-10-02) — the
+//     win2000 arm's record; under clearlooks its first two rows are GTK's
+//     status bar's line, shade[3] and its x1.3 (architect 2026-10-07,
+//     paint_cl_statusbar).
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE (on a
@@ -1256,8 +1260,8 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // painter last drew it, at the lane's left pad (AppState::clock_cell_rect,
 // whose stash contract is at the field). Narrow by construction: on_redraw
 // clips to the damage region, so paint_bottom_strip runs but its buttons, the
-// clock field's two vertical lines and the whole state line — a field pad
-// (kStatusPanelPadPx) right of the field — fall outside the
+// clock field's two vertical lines and the whole state line — a control
+// spacing (kStatusTextGapPx) right of the field — fall outside the
 // clip and cost nothing (the field's top and bottom lines and the ground
 // round them cross the box and are repainted identically under it), which is what makes this
 // affordable at the pre-paint hook's per-frame cadence. The

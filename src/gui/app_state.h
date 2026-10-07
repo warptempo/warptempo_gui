@@ -9755,12 +9755,14 @@ inline int64_t render_player_position(const AppState& a,
 // and the pixel the handle paints at answer the same frame. Banker's rounding
 // onto the cells, like every grid conversion.
 //
-// IT OWNS THE INSET, and the inset is the THUMB'S GRAB BOX (the 14 Windows px
-// kScrubHandleBoxPx, render.h's scrub block): the thumb's CENTRE — which is
-// what names the frame — runs from half a box in to half a box short of the
-// end, so the 11-px thumb (architect 2026-10-02; Windows' pointed trackbar
-// thumb since 2026-10-06), narrower than
-// the box, never hangs off either end of its channel. The USABLE SPAN is the
+// IT OWNS THE INSET, and the inset is the THUMB'S GRAB BOX (the chrome
+// spec's scrub_handle_box_px through render.h's scrub_handle_box_px: 14
+// Windows px under win2000, 23 under clearlooks): the thumb's CENTRE — which
+// is what names the frame — runs from half a box in to half a box short of
+// the end, so the thumb — win2000's 11-px pointed trackbar thumb (architect
+// 2026-10-02; Windows' since 2026-10-06), narrower than the box, or
+// clearlooks' 23-px GtkScale slider, the box itself (2026-10-07) — never
+// hangs off either end of its channel. The USABLE SPAN is the
 // item less that box; an item too
 // narrow to hold one seats the centre at the left inset and answers frame 0,
 // the same cold answer a zero item gives.
@@ -9777,20 +9779,22 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
     const double t = static_cast<double>(f) / static_cast<double>(frames);
     return x0 + static_cast<int>(std::nearbyint(t * span));
 }
-// THE THUMB'S GRAB BAND — its own 14 Windows px box (2026-08-28, when the
-// scrub became a Breeze slider), and its ONE reader is the press router,
-// which asks it whether a press TAKES the thumb where it stands (the band) or
-// makes it JUMP to the press (the rest of the item, architect 2026-10-02);
-// the painted thumb is narrower (11 Windows px, paint_scrub_thumb) and wears
-// no hover face.
+// THE THUMB'S GRAB BAND — its own box (2026-08-28, when the scrub became a
+// Breeze slider; the spec's scrub_handle_box_px since 2026-10-07), and its
+// ONE reader is the press router, which asks it whether a press TAKES the
+// thumb where it stands (the band) or makes it JUMP to the press (the rest of
+// the item, architect 2026-10-02); the painted thumb is win2000's narrower
+// 11 Windows px (paint_scrub_thumb) or clearlooks' slider the box's own 23,
+// and wears no hover face.
 // `handle_x` is the handle's painted centre — the position's own column, or
 // the drag's carried one while a drag stands.
 //
 // THE BAND IS THE THUMB'S BOX WIDENED TO THE HANDLE'S (architect
 // 2026-10-02): the painted thumb's own rows (scrub_thumb_h_px, centred in the
-// track's band exactly as the painter centres it) by kScrubHandleBoxPx's
-// columns centred on that column (render.h — the grab, not the picture: the
-// 11-px thumb is painted inside it), HALF-OPEN on both axes like every other
+// track's band exactly as the painter centres it) by the grab box's columns
+// centred on that column (render.h's scrub_handle_box_px — the grab, not the
+// picture: win2000's 11-px thumb is painted inside it), HALF-OPEN on both
+// axes like every other
 // pixel-cell test in the product (a pixel x covers [x, x+1), containing_pixel's
 // rule). A press outside it but on the item makes the thumb JUMP there
 // (claim_player_scrub_press); the track rect stays the press router's OUTER

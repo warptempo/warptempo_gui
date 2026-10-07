@@ -1475,12 +1475,27 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE GROUND: the active roles while the window has the focus, the
     // inactive ones without it (GuiPlatform::caption_active — always active
     // on the tablet), through the one gradient painter — UNDER CLEARLOOKS
-    // metacity's maximised bevel, focused or not (paint_cl_caption_band).
+    // metacity's maximised bevel, focused or not (paint_cl_caption_band), and
+    // on a RESTORED laptop window its restored frame's title bar
+    // (paint_cl_window_frame, architect 2026-10-07, the painters round's last
+    // part), whose top rows stand in the sizing frame's band: the lane is
+    // that title bar's rows 4 .. 23, painted by the same painter with its
+    // origin at the surface's (the lane less the frame) and cut to the lane,
+    // so the band the platform paints and this lane are one picture.
     const GuiPalette& pal = palette();
     const bool active = gui.caption_active();
     const bool clearlooks =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
-    if (clearlooks)
+    const int frame = gui.window_maximized() ? 0 : window_frame_px();
+    if (clearlooks && frame > 0) {
+        cairo_save(cr);
+        cairo_rectangle(cr, row.x, row.y, row.w, row.h);
+        cairo_clip(cr);
+        paint_cl_window_frame(cr, row.x - frame, row.y - frame,
+                              row.w + 2 * frame, row.h + 4 * frame, frame,
+                              row.h, active);
+        cairo_restore(cr);
+    } else if (clearlooks)
         paint_cl_caption_band(cr, row, active);
     else
         paint_caption_gradient(cr, row,
@@ -2639,19 +2654,31 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
 // no wider.
+//
+// UNDER CLEARLOOKS THE FIELD IS GTK'S ENTRY (architect 2026-10-07, the
+// painters round's last part: a time shown in a field is an entry) — the
+// entry unfocused (paint_time_field), 23 Windows px tall at the 13-row cell
+// and its text 5 in (the chrome spec's time_field_height_px and
+// time_field_pad_px, where both sources stand) — and everything else above
+// holds: the face, the tabular digits, the fixed width, the right-aligned
+// run, the centring.
 constexpr const char* kTimeShape = "DD:DD.DDD";
 
 // The tab letters row 8's clock leads with (AppState::active_tab_view's two
 // values) — the set the letter slot is measured over.
 constexpr std::string_view kClockTabLetters = "AB";
 
-// THE FIELD'S HEIGHT, 17 WINDOWS PX (architect 2026-10-05): ACID Pro 3.0's
-// time fields run rows 716..732 of his lossless capture and Vegas Audio's
-// 484..500 — one line, three px of face, the 9-px digits, three px of face,
-// one line. One element, rounded once (scaled_px): 23 device px at 138 %, 47
-// at 275 %, 68 at 400 %, against the body face's recorded cap band of
-// 12.42, 24.75 and 36.
+// THE FIELD'S HEIGHT, 17 WINDOWS PX UNDER WIN2000 (architect 2026-10-05):
+// ACID Pro 3.0's time fields run rows 716..732 of his lossless capture and
+// Vegas Audio's 484..500 — one line, three px of face, the 9-px digits,
+// three px of face, one line. One element, rounded once (scaled_px): 23
+// device px at 138 %, 47 at 275 %, 68 at 400 %, against the body face's
+// recorded cap band of 12.42, 24.75 and 36. THE LAYOUT READS THE CHROME
+// SPEC'S time_field_height_px (time_field_h_px below; chrome_spec.h, where
+// clearlooks' 23, GTK's entry, stands — architect 2026-10-07), which this
+// record pins for win2000.
 constexpr double kTimeFieldHeightPx = 17.0;
+static_assert(kChromeSpecWin2000.time_field_height_px == kTimeFieldHeightPx);
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
 // (architect 2026-10-05): ACID's adjacent fields stand three Windows px of
@@ -2664,13 +2691,41 @@ constexpr double kTimeFieldGapPx = 3.0;
 // scrub and clock is the roster's group space.)
 
 // THE FIELD'S HORIZONTAL PAD (architect 2026-10-02, Windows' status bar; the
-// field's own name since 2026-10-05): the reserved cell stands 3 Windows px
-// in from the field's line on each side (the laptop pixel's 4 re-authored at
-// the unit's change). With row 8's clock cell at the lane's 8 px pad, its
-// field's left line stands 5 px in from the window's edge. (The second
-// panel, the state's, and its 2-px SB_SETPARTS gap, kStatusPanelGapPx,
-// retired 2026-10-03: the state is a line on the row's ground.)
+// field's own name since 2026-10-05): under win2000 the reserved cell stands
+// 3 Windows px in from the field's line on each side (the laptop pixel's 4
+// re-authored at the unit's change). With row 8's clock cell at the lane's
+// 8 px pad, its field's left line stands 5 px in from the window's edge.
+// (The second panel, the state's, and its 2-px SB_SETPARTS gap,
+// kStatusPanelGapPx, retired 2026-10-03: the state is a line on the row's
+// ground.) EACH ENTRY'S OWN PAD (architect 2026-10-07): the layout reads the
+// chrome spec's time_field_pad_px (time_field_pad_px below), this record
+// win2000's and GTK's 5 clearlooks' (xthickness 3 + GtkEntry::inner-border
+// 2, gtkentry.c) — so under clearlooks the run's right end and the field's
+// width move by the pads' difference and nothing else does.
 constexpr double kStatusPanelPadPx = 3.0;
+static_assert(kChromeSpecWin2000.time_field_pad_px == kStatusPanelPadPx);
+
+// THE STATE LINE'S GAP — ONE CONTROL SPACING past the clock field's right
+// edge under both chromes (architect 2026-10-07 ~03:15, reversing the
+// "matching the field" rule of 2026-10-06: "an input field and the field
+// next to it naturally have different distances"): 6 Windows px — Windows'
+// 4 dialog units between a control and its label (4 x 1.5 px at 8-pt MS
+// Sans Serif's 6-px dialog-unit width = 6), and the GNOME HIG 2's (gnome-
+// devel-docs 2.30.1, hig/C/hig-ch-layout.xml: "Spacing and Alignment",
+// line 505, "leave space between user interface components in increments
+// of 6 pixels", and the text labels' table, line 631, a label "6 pixels to
+// the left of and vertically center aligned with textfield control"). The
+// field's own pad stays inside it; the line's right clip keeps its own rule
+// (paint_bottom_row_buttons_and_clock).
+constexpr double kStatusTextGapPx = 6.0;
+
+// The live spec's two lengths, each rounded once (scaled_px).
+static int time_field_h_px() {
+    return scaled_px(live_chrome_spec().time_field_height_px);
+}
+static int time_field_pad_px() {
+    return scaled_px(live_chrome_spec().time_field_pad_px);
+}
 
 // The time fields' metrics, MEMOISED ON THE SCALE — thirteen tiny shaping
 // passes (ten digits, the two letters and the specimen) that answer the same
@@ -2747,14 +2802,23 @@ static BottomRowSeats bottom_row_seats(const GuiRect& content) {
 // in the content band [band_y, band_y + band_h).
 static GuiRect time_field_rect(int cell_x, double cell_w, int band_y,
                                int band_h) {
-    const int pad = scaled_px(kStatusPanelPadPx);
-    const int h   = scaled_px(kTimeFieldHeightPx);
+    const int pad = time_field_pad_px();
+    const int h   = time_field_h_px();
     return GuiRect{cell_x - pad, band_y + (band_h - h) / 2,
                    static_cast<int>(std::ceil(cell_w)) + 2 * pad, h};
 }
 
-// ONE TIME FIELD'S FACE: the ground, then the one-line sunken edge.
+// ONE TIME FIELD'S FACE: the ground, then the one-line sunken edge. UNDER
+// CLEARLOOKS GTK'S ENTRY (architect 2026-10-07; paint_cl_entry,
+// clearlooks_paint.h), UNFOCUSED and enabled — the inset ring, the shade[6]
+// border, the inner shadow — on `clock_ground`, the clock pair being the
+// entry's base / text under the clearlooks theme (gen_theme_files'
+// CLOCK_FROM_FIELD); the digits stay the caller's, in `clock_text`.
 static void paint_time_field(cairo_t* cr, const GuiRect& field) {
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
+        paint_cl_entry(cr, field, /*focused=*/false, palette().clock_ground);
+        return;
+    }
     paint_cell_rect(cr, field, palette().clock_ground);
     paint_relief_sunken_outer(cr, field);
 }
@@ -2847,11 +2911,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // time field (kTimeFieldHeightPx, 2026-10-05) — its cell the widest
     // `A | 00:00.000` in the body face, Tahoma's ~91.5 px at 138 %
     // (2026-10-06, its 13 glyphs tracked, ceiled to 92) — spanning 7..107,
-    // the state line from one field pad past it (2026-10-06), 111, clipped
-    // one group space short of the block at 1134 (~1023 px); at the tablet's
-    // 300 % 17·93 + 3·24 = 1653, starting at 2304 − 24 − 1653 = 627, the
-    // field (its cell ~199) spanning about 15..232, the state line about
-    // 241..603 (~362 device px). THE ROW CARRIES NO
+    // the state line one control spacing past it (kStatusTextGapPx,
+    // 2026-10-07), 115, clipped one group space short of the block at 1134
+    // (~1019 px); at the tablet's 300 % 17·93 + 3·24 = 1653, starting at
+    // 2304 − 24 − 1653 = 627, the field (its cell ~199) spanning about
+    // 15..232, the state line about 250..603 (~353 device px) — under win2000
+    // (clearlooks' 32-W cases and 5-W field pads move both). THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 1000 ceiling: the block reaches the field's
@@ -2943,13 +3008,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //   THE CLOCK'S FIELD: time_field_rect round the reserved cell,
         //   centred in the content band, painted by paint_time_field. Its
         //   width is fixed (the cell's), so the state line never moves.
-        //   THE STATE LINE: on the row's ground, no panel, starting
-        //   kStatusPanelPadPx (3 Windows px) right of the field's right line
-        //   (architect 2026-10-06, "matching the field"): THE SAME NUMBER
-        //   the field's own run stands inside that line, so the time's run
-        //   ends and the state's starts the same 3 px from the field's outer
-        //   edge, inside and out. It stood one group space (8) out until that
-        //   ruling. Its
+        //   THE STATE LINE: on the row's ground, no panel, starting ONE
+        //   CONTROL SPACING right of the field's right line under both
+        //   chromes (kStatusTextGapPx, 6 Windows px — architect 2026-10-07,
+        //   reversing 2026-10-06's "matching the field": "an input field and
+        //   the field next to it naturally have different distances"). Its
         //   RIGHT CLIP KEEPS ITS OWN RULE, one group space short of the right
         //   block — that edge faces a button group, not the field; a window
         //   too narrow to leave that span positive paints no state text — the
@@ -2958,15 +3021,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // cell ± 1 px over the content rows) CROSSES THE FIELD'S TOP AND
         // BOTTOM LINES and the ground above and below them, which a tick
         // repaints identically under its clip; the field's two vertical lines
-        // and the whole state line — which starts a field pad right of the
-        // field, past the box's one px of slack — fall outside it. Every state change damages the lane whole
+        // and the whole state line — which starts a control spacing right of
+        // the field, past the box's one px of slack — fall outside it. Every
+        // state change damages the lane whole
         // (Viewport::invalidate_status_cell_area), which repaints the field
         // and the line.
         const GuiRect clock_field =
             time_field_rect(cell_x, cell_w, content_y, content_h);
         paint_time_field(cr, clock_field);
         const int state_x =
-            clock_field.x + clock_field.w + scaled_px(kStatusPanelPadPx);
+            clock_field.x + clock_field.w + scaled_px(kStatusTextGapPx);
         const int state_w = (right_block_x - group_gap) - state_x;
         // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the
         // period field's 3 px of face above and below its digits, by the one
@@ -4212,6 +4276,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     cairo_save(cr);
     cairo_rectangle(cr, lane.x, lane.y, wave_w, tick_bottom - lane.y);
     cairo_clip(cr);
+    const bool gtk_ticks =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     for (int64_t k = k_first; ; ++k) {
         const double step_ms = static_cast<double>(k) * static_cast<double>(step);
         if (step_ms > end_ms) break;
@@ -4238,12 +4304,19 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // Hilight immediately to its RIGHT over exactly the tick's own
             // rows, drawn right after it, so the labels, the head, the flags
             // and the stems cover the pair wherever they cover the tick.
+            // UNDER CLEARLOOKS THE PAIR IS THE GNOME SEPARATOR'S (architect
+            // 2026-10-07, the painters round's last part; CL1 §3.8):
+            // clearlooks_gummy_draw_separator's shade[3] column and its x1.3
+            // beside it, the toolbar separator's two roles, on the same
+            // columns.
             const int tick_top = major ? major_top : minor_top;
             if (tick_on_lane) {
-                set_palette_source(cr, palette().shadow);
+                set_palette_source(cr, gtk_ticks ? palette().cl_separator_dark
+                                                 : palette().shadow);
                 fill_waveform_line(cr, lane.x, wave_w, col, tick_top,
                                    tick_bottom);
-                set_palette_source(cr, palette().hilight);
+                set_palette_source(cr, gtk_ticks ? palette().cl_separator_light
+                                                 : palette().hilight);
                 fill_waveform_line(cr, lane.x, wave_w,
                                    col + waveform_line_px(), tick_top,
                                    tick_bottom);
@@ -5620,9 +5693,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     const GuiRect content = bottom_row_content_area(app);
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) return;
 
-    // THE ROW'S GROUND, the whole lane — its top row included, which carries
-    // NO LINE since 2026-10-02 (architect: nothing between the well and this
-    // row; the well's own bottom line is the seam). The ground erases
+    // THE ROW'S GROUND, the whole lane — its top row included, which under
+    // win2000 carries NO LINE since 2026-10-02 (architect: nothing between
+    // the well and this row; the well's own bottom line is the seam; under
+    // clearlooks the status bar's line, below). The ground erases
     // whatever render_background laid down, so the strip does not depend on
     // that erase happening to hold the same value. The modal paints on this
     // ground and lays none of its own (paint_modal_dialog).
@@ -5632,14 +5706,17 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
         paint_cell_rect(cr, lane, palette().ground);
         cairo_restore(cr);
     }
-    // UNDER CLEARLOOKS ROW 8 IS A TOOLBAR TOO (the icon row's band painter,
-    // paint_cl_toolbar_band, on the content under the row's one top row of
-    // ground) — while its own tenants stand: a modal yields the lane and
-    // paints on the plain ground (paint_modal_dialog), no toolbar under a
-    // dialog's fields.
-    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks &&
-        !modal_owns_bottom_row(app))
-        paint_cl_toolbar_band(cr, content);
+    // UNDER CLEARLOOKS ROW 8 IS GTK'S STATUS BAR (architect 2026-10-07, the
+    // painters round's last part; paint_cl_statusbar, clearlooks_paint.h):
+    // the ground with the shade[3] row and its x1.3 row at the top — the
+    // lane's own top row and the one under it — and nothing else, whatever
+    // the row carries: the line is the window's foot's frame, so it stands
+    // under a modal too (the dialog's fields and buttons sit on the ground
+    // below it). The tool buttons on it stay GtkReliefNone, the icon row's
+    // faces (paint_toolbar_box). (Row 8 wore the icon row's toolbar band
+    // from the round's first part until this one.)
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
+        paint_cl_statusbar(cr, lane);
 
     // THE ROW YIELDS TO THE MODAL (2026-08-13; the fork and the ruling are at
     // modal_owns_bottom_row just above). The ground above is the ROW'S
@@ -6516,7 +6593,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const GuiFont cfont = gui_font(GuiFace::Body);
         const double cell_w =
             time_field_metrics(cfont).time_w;
-        const int field_pad = scaled_px(kStatusPanelPadPx);
+        const int field_pad = time_field_pad_px();
         const int field_w   =
             static_cast<int>(std::ceil(cell_w)) + 2 * field_pad;
         const int field_gap = scaled_px(kTimeFieldGapPx);
@@ -6581,34 +6658,55 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // THE THUMB'S ROWS, CENTRED IN THE TRACK'S BAND, and THE CHANNEL
             // at its seat inside them: the thumb is its rows above the
             // channel, the channel's own four lines and its rows below, each
-            // part rounded on its own.
+            // part rounded on its own. UNDER CLEARLOOKS GtkScale (architect
+            // 2026-10-07, the painters round's last part; clearlooks_paint.h's
+            // scale painters): the 7-row trough with the thumb's 4 rows above
+            // and below it, the lower part left of the thumb's centre in the
+            // selection's blue, the slider-length x slider-width thumb.
+            const bool gtk_scale =
+                live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
             const int channel_h = scrub_channel_h_px();
             const int above     = scrub_thumb_above_px();
             const int thumb_h   = scrub_thumb_h_px();
             const int thumb_y   = track.y + (track.h - thumb_h) / 2;
-            // THE CHANNEL: PLAIN SUNKEN on a rect four lines tall, so the
-            // edge's two rings are the whole of it — Shadow, DkShadow,
-            // 3DLight, Hilight top to bottom — across the track's width,
-            // nothing inside and nothing filled.
-            paint_relief_plain_sunken(
-                cr, GuiRect{track.x, thumb_y + above, track.w, channel_h});
+            // THE THUMB'S COLUMN, when a thumb stands: the drag's carried x
+            // while the thumb is being dragged (the sound continues where it
+            // was and the seek commits at the release), the item position's
+            // own otherwise.
+            const int hx = rp.frames <= 0 ? -1
+                         : rp.scrub.armed ? rp.scrub.marker_x
+                                          : render_player_scrub_x_of(app, pos);
+            if (gtk_scale) {
+                // THE TROUGH across the track, its lower part up to the
+                // thumb's centre (none with no item: no thumb stands).
+                paint_cl_scale_trough(
+                    cr,
+                    GuiRect{track.x, thumb_y + (thumb_h - cl_scale_trough_h_px()) / 2,
+                            track.w, cl_scale_trough_h_px()},
+                    hx >= 0 ? hx : track.x);
+            } else {
+                // THE CHANNEL: PLAIN SUNKEN on a rect four lines tall, so the
+                // edge's two rings are the whole of it — Shadow, DkShadow,
+                // 3DLight, Hilight top to bottom — across the track's width,
+                // nothing inside and nothing filled.
+                paint_relief_plain_sunken(
+                    cr, GuiRect{track.x, thumb_y + above, track.w, channel_h});
+            }
             if (rp.frames > 0) {
-                // THE THUMB'S COLUMN: the drag's carried x while the thumb is
-                // being dragged (the sound continues where it was and the
-                // seek commits at the release), the item position's own
-                // otherwise.
-                const int hx = rp.scrub.armed
-                                   ? rp.scrub.marker_x
-                                   : render_player_scrub_x_of(app, pos);
                 // THE THUMB — Windows' pointed trackbar thumb (render.h's
                 // scrub block), centred on the column, its point down toward
-                // the channel's bottom. No hover face: the grab band
-                // (scrub_handle_box_px) is the press's business and the
-                // cursor its cue.
-                const int thumb_w = scrub_thumb_w_px();
+                // the channel's bottom; under clearlooks GtkScale's slider
+                // (paint_cl_scale_thumb), centred on the column likewise. No
+                // hover face: the grab band (scrub_handle_box_px) is the
+                // press's business and the cursor its cue.
+                const int thumb_w =
+                    gtk_scale ? cl_scale_thumb_w_px() : scrub_thumb_w_px();
                 const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
                                     thumb_h};
-                paint_scrub_thumb(cr, thumb);
+                if (gtk_scale)
+                    paint_cl_scale_thumb(cr, thumb);
+                else
+                    paint_scrub_thumb(cr, thumb);
                 // THE COLUMN IS PUBLISHED AS PAINTED (the field's rule,
                 // AppState::ModalDialogGeometry::scrub_thumb_x): a clip that
                 // covers the track drew the whole slider, so this column is
