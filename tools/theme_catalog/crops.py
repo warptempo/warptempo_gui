@@ -35,6 +35,10 @@
 # state line) beside its last two button groups. THE WINDOWS FOLLOW THE TABLET GEOMETRY (tablet.SCENE; regions()). Written as an RGBA PNG (an indexed one with a tRNS chunk when the crop has at most 256 colours), each with
 # the renderer's Display-P3 iCCP chunk (the bytes are what the glass shows).
 #
+# THE RENDER ROAD IS BROKEN SINCE 2026-10-06 EVENING: the tablet geometry draws the retired Windows 95 chrome in Nimbus
+# Sans, which left the repository's fonts/ with the Windows 2000 pivot (tools/palette/common.py's head), so a render
+# fails at its font check; --md still runs, and the committed crops stand as rendered before the pivot.
+#
 #   python3 tools/theme_catalog/crops.py [key ...]      (no keys: every entry)
 #   python3 tools/theme_catalog/crops.py --md           (renders nothing: CATALOG.md rewritten from catalog.json and the
 #                                                        crops of keys no longer in it deleted, the others untouched)
@@ -202,13 +206,16 @@ def write_md(cat, sizes):
          'the colour picker, chosen, not imported either (2026-10-04: the preset\'s chrome ground through the '
          'picker\'s chrome rule, the roles the picker shows fixed). The KEY is the name of the theme\'s file, '
          '`<key>.theme`, bundled with the app and copied into its `themes/` folder at every launch '
-         '(`windows-95-standard` is the one built-in theme and takes no file), and what to type in Settings\' Theme '
+         '(`windows-2000-standard` is the one built-in theme and takes no file), and what to type in Settings\' Theme '
          'row to pick it. Each crop is the app rendered in the theme (tools/palette in its tablet '
          'geometry: the tablet\'s 2304 x 1440 at gui_scale 275, every length derived from the app\'s own constants; '
          'cropped, never scaled; tools/theme_catalog/crops.py): the top strip in two halves over the well\'s bottom '
-         'lines and the bottom row, transparent between them. The chrome is the theme\'s as recorded; the waveform pane, '
+         'lines and the bottom row, transparent between them. THE CROPS SHOW THE RETIRED WINDOWS 95 CHROME in Nimbus '
+         'Sans (rendered 2026-10-05 and 06, before the product\'s Windows 2000 pivot of 2026-10-06 evening): the '
+         'renderer draws that design and cannot redraw them until it is ported to the live chrome and Wine Tahoma '
+         '(tools/palette/common.py\'s head); a theme\'s colours read true in them. The chrome is the theme\'s as recorded; the waveform pane, '
          'the flags and the playhead are the program\'s own elements in the theme\'s program colours as the app '
-         'resolves them: each program role the theme\'s file names, else the built-in\'s (`windows-95-standard`: the '
+         'resolves them: each program role the theme\'s file names, else the built-in\'s (`windows-2000-standard`: the '
          'lime waveform on black with its green outline, the warp flag purple #800080 and its selected face fuchsia '
          '#FF00FF, the phase-reset flag teal #008080 and its selected face aqua #00FFFF, the history\'s added flag '
          'green #008000 and its selected face lime #00FF00, the invalid flag maroon #800000 and its selected face red '

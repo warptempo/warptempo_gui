@@ -1623,186 +1623,6 @@
    ]
   },
   {
-   "key": "windows-standard",
-   "name": "Windows Standard",
-   "family": "windows",
-   "provenance": {
-    "sources": [
-     {
-      "project": "windows10-classic-themes (Ziv Kedem): the Windows XP (WEPOS 2009) classic schemes saved from Display Properties as .theme files",
-      "file": "classic.theme",
-      "repository": "zkedem/windows10-classic-themes",
-      "commit": "f126b0b138cb215f7fd5dfa5ab854edcde94ab72",
-      "url": "https://raw.githubusercontent.com/zkedem/windows10-classic-themes/f126b0b138cb215f7fd5dfa5ab854edcde94ab72/classic.theme"
-     },
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "ReactOS Classic"
-     },
-     {
-      "project": "1j01/98, desktop/Themes/Windows Official: the Windows 98 / Plus! desktop themes",
-      "file": "desktop/Themes/Windows Official/Windows Default.theme",
-      "repository": "1j01/98",
-      "commit": "5245105214cee90ab984fc15bece6c92db15ca7d",
-      "url": "https://raw.githubusercontent.com/1j01/98/5245105214cee90ab984fc15bece6c92db15ca7d/desktop/Themes/Windows%20Official/Windows%20Default.theme"
-     }
-    ]
-   },
-   "raw": {
-    "ActiveTitle": "#000080",
-    "Background": "#3A6EA5",
-    "Hilight": "#000080",
-    "HilightText": "#FFFFFF",
-    "TitleText": "#FFFFFF",
-    "Window": "#FFFFFF",
-    "WindowText": "#000000",
-    "Scrollbar": "#C0C0C0",
-    "InactiveTitle": "#808080",
-    "Menu": "#C0C0C0",
-    "WindowFrame": "#000000",
-    "MenuText": "#000000",
-    "ActiveBorder": "#C0C0C0",
-    "InactiveBorder": "#C0C0C0",
-    "AppWorkspace": "#808080",
-    "ButtonFace": "#C0C0C0",
-    "ButtonShadow": "#808080",
-    "GrayText": "#808080",
-    "ButtonText": "#000000",
-    "InactiveTitleText": "#C0C0C0",
-    "ButtonHilight": "#FFFFFF",
-    "ButtonDkShadow": "#000000",
-    "ButtonLight": "#C0C0C0",
-    "InfoText": "#000000",
-    "InfoWindow": "#FFFFE1",
-    "GradientActiveTitle": "#1084D0",
-    "GradientInactiveTitle": "#B5B5B5",
-    "ButtonAlternateFace": "#C0C0C0",
-    "HotTrackingColor": "#000080",
-    "MenuHilight": "#000080",
-    "MenuBar": "#C0C0C0"
-   },
-   "roles": {
-    "ground": "#C0C0C0",
-    "label": "#000000",
-    "bevel_hilight": "#FFFFFF",
-    "bevel_light": "#C0C0C0",
-    "bevel_shadow": "#808080",
-    "bevel_dkshadow": "#000000",
-    "selected_fill": "#000080",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#FFFFE1",
-    "info_text": "#000000",
-    "field_ground": "#FFFFFF",
-    "field_text": "#000000",
-    "disabled_text": "#808080",
-    "title_active": "#000080",
-    "title_inactive": "#808080"
-   },
-   "flag_rule": {
-    "id": "windows-dialog"
-   },
-   "display_tier": "high-colour",
-   "notes": [
-    "xp_classic_zkedem classic.theme carries DisplayName \"Windows Classic\" over these bytes (its two labels swapped against XP's dialog); the entry is named by its bytes",
-    "ReactOS records it as \"ReactOS Classic\"",
-    "Windows 98's Windows Default.theme records the same bytes, but for Background #008080 (here #3A6EA5)"
-   ]
-  },
-  {
-   "key": "windows-classic",
-   "name": "Windows Classic",
-   "family": "windows",
-   "provenance": {
-    "sources": [
-     {
-      "project": "windows10-classic-themes (Ziv Kedem): the Windows XP (WEPOS 2009) classic schemes saved from Display Properties as .theme files",
-      "file": "standard.theme",
-      "repository": "zkedem/windows10-classic-themes",
-      "commit": "f126b0b138cb215f7fd5dfa5ab854edcde94ab72",
-      "url": "https://raw.githubusercontent.com/zkedem/windows10-classic-themes/f126b0b138cb215f7fd5dfa5ab854edcde94ab72/standard.theme"
-     },
-     {
-      "project": "1j01/98, desktop/Themes/classicthemes8 (windows8themes.ms): the classic schemes as Windows 8 .theme files",
-      "file": "desktop/Themes/classicthemes8/Themes/winxp_classic8.theme",
-      "repository": "1j01/98",
-      "commit": "5245105214cee90ab984fc15bece6c92db15ca7d",
-      "url": "https://raw.githubusercontent.com/1j01/98/5245105214cee90ab984fc15bece6c92db15ca7d/desktop/Themes/classicthemes8/Themes/winxp_classic8.theme"
-     },
-     {
-      "project": "ReactOS",
-      "file": "boot/bootdata/hivedef.inf",
-      "repository": "reactos/reactos",
-      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
-      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
-      "scheme": "ReactOS Standard"
-     }
-    ]
-   },
-   "raw": {
-    "ActiveTitle": "#0A246A",
-    "Background": "#3A6EA5",
-    "Hilight": "#0A246A",
-    "HilightText": "#FFFFFF",
-    "TitleText": "#FFFFFF",
-    "Window": "#FFFFFF",
-    "WindowText": "#000000",
-    "Scrollbar": "#D4D0C8",
-    "InactiveTitle": "#808080",
-    "Menu": "#D4D0C8",
-    "WindowFrame": "#000000",
-    "MenuText": "#000000",
-    "ActiveBorder": "#D4D0C8",
-    "InactiveBorder": "#D4D0C8",
-    "AppWorkspace": "#808080",
-    "ButtonFace": "#D4D0C8",
-    "ButtonShadow": "#808080",
-    "GrayText": "#808080",
-    "ButtonText": "#000000",
-    "InactiveTitleText": "#D4D0C8",
-    "ButtonHilight": "#FFFFFF",
-    "ButtonDkShadow": "#404040",
-    "ButtonLight": "#D4D0C8",
-    "InfoText": "#000000",
-    "InfoWindow": "#FFFFE1",
-    "GradientActiveTitle": "#A6CAF0",
-    "GradientInactiveTitle": "#C0C0C0",
-    "ButtonAlternateFace": "#B5B5B5",
-    "HotTrackingColor": "#000080",
-    "MenuHilight": "#316AC5",
-    "MenuBar": "#ECE9D8"
-   },
-   "roles": {
-    "ground": "#D4D0C8",
-    "label": "#000000",
-    "bevel_hilight": "#FFFFFF",
-    "bevel_light": "#D4D0C8",
-    "bevel_shadow": "#808080",
-    "bevel_dkshadow": "#404040",
-    "selected_fill": "#0A246A",
-    "selected_text": "#FFFFFF",
-    "info_ground": "#FFFFE1",
-    "info_text": "#000000",
-    "field_ground": "#FFFFFF",
-    "field_text": "#000000",
-    "disabled_text": "#808080",
-    "title_active": "#0A246A",
-    "title_inactive": "#808080"
-   },
-   "flag_rule": {
-    "id": "windows-dialog"
-   },
-   "display_tier": "high-colour",
-   "notes": [
-    "xp_classic_zkedem standard.theme carries DisplayName \"Windows Standard\" over these bytes (its two labels swapped against XP's dialog); the entry is named by its bytes",
-    "xp_classic_8 desktop/Themes/classicthemes8/Themes/winxp_classic8.theme names it \"Windows XP Classic\"",
-    "ReactOS records it as \"ReactOS Standard\", differing on MenuBar #D4D0C8 (here #ECE9D8), MenuHilight #0A246A (here #316AC5)"
-   ]
-  },
-  {
    "key": "windows-95-standard",
    "name": "Windows 95 Standard",
    "family": "windows",
@@ -1878,7 +1698,108 @@
    },
    "display_tier": "high-colour",
    "notes": [
-    "the sources disagree on ButtonLight (COLOR_3DLIGHT): the Windows 95 retail captures show DFDFDF; Windows 98's Windows Default.theme and the Windows 2000 / XP \"Windows Standard\" record C0C0C0 (the face), and the early Windows 95 beta captures draw no 3DLight line. The entry is the retail Windows 95 picture."
+    "the sources disagree on ButtonLight (COLOR_3DLIGHT): the Windows 95 retail captures show DFDFDF; Windows 98's Windows Default.theme and windows-98-standard's records (Windows 2000's and XP's \"Windows Classic\") record C0C0C0 (the face), and the early Windows 95 beta captures draw no 3DLight line. The entry is the retail Windows 95 picture, a flat caption (no Gradient keys)."
+   ]
+  },
+  {
+   "key": "windows-98-standard",
+   "name": "Windows 98 Standard",
+   "family": "windows",
+   "provenance": {
+    "sources": [
+     {
+      "project": "windows10-classic-themes (Ziv Kedem): the Windows XP (WEPOS 2009) classic schemes saved from Display Properties as .theme files",
+      "file": "classic.theme",
+      "repository": "zkedem/windows10-classic-themes",
+      "commit": "f126b0b138cb215f7fd5dfa5ab854edcde94ab72",
+      "url": "https://raw.githubusercontent.com/zkedem/windows10-classic-themes/f126b0b138cb215f7fd5dfa5ab854edcde94ab72/classic.theme"
+     },
+     {
+      "project": "Windows 2000 Professional SP3 (Microsoft), the setup's default-user hive, read as data from the retail disc image",
+      "file": "I386/HIVEDEF.INF",
+      "item": "win_2000_professional_sp3_english_202605",
+      "image": "Windows2000ProfessionalSP3.iso",
+      "image_sha1": "51b9a010af4b6243ff1ccbc4b4fb41725240f17c",
+      "sha1": "4cd963825ea971ae1d667c593071c1d62964d050",
+      "url": "https://archive.org/download/win_2000_professional_sp3_english_202605/Windows2000ProfessionalSP3.iso/I386%2FHIVEDEF.INF",
+      "scheme": "Windows Classic"
+     },
+     {
+      "project": "ReactOS",
+      "file": "boot/bootdata/hivedef.inf",
+      "repository": "reactos/reactos",
+      "commit": "d004b2c119ef54a8cd292801d35654cec49195ca",
+      "url": "https://raw.githubusercontent.com/reactos/reactos/d004b2c119ef54a8cd292801d35654cec49195ca/boot/bootdata/hivedef.inf",
+      "scheme": "ReactOS Classic"
+     },
+     {
+      "project": "1j01/98, desktop/Themes/Windows Official: the Windows 98 / Plus! desktop themes",
+      "file": "desktop/Themes/Windows Official/Windows Default.theme",
+      "repository": "1j01/98",
+      "commit": "5245105214cee90ab984fc15bece6c92db15ca7d",
+      "url": "https://raw.githubusercontent.com/1j01/98/5245105214cee90ab984fc15bece6c92db15ca7d/desktop/Themes/Windows%20Official/Windows%20Default.theme"
+     }
+    ]
+   },
+   "raw": {
+    "ActiveTitle": "#000080",
+    "Background": "#3A6EA5",
+    "Hilight": "#000080",
+    "HilightText": "#FFFFFF",
+    "TitleText": "#FFFFFF",
+    "Window": "#FFFFFF",
+    "WindowText": "#000000",
+    "Scrollbar": "#C0C0C0",
+    "InactiveTitle": "#808080",
+    "Menu": "#C0C0C0",
+    "WindowFrame": "#000000",
+    "MenuText": "#000000",
+    "ActiveBorder": "#C0C0C0",
+    "InactiveBorder": "#C0C0C0",
+    "AppWorkspace": "#808080",
+    "ButtonFace": "#C0C0C0",
+    "ButtonShadow": "#808080",
+    "GrayText": "#808080",
+    "ButtonText": "#000000",
+    "InactiveTitleText": "#C0C0C0",
+    "ButtonHilight": "#FFFFFF",
+    "ButtonDkShadow": "#000000",
+    "ButtonLight": "#C0C0C0",
+    "InfoText": "#000000",
+    "InfoWindow": "#FFFFE1",
+    "GradientActiveTitle": "#1084D0",
+    "GradientInactiveTitle": "#B5B5B5",
+    "ButtonAlternateFace": "#C0C0C0",
+    "HotTrackingColor": "#000080",
+    "MenuHilight": "#000080",
+    "MenuBar": "#C0C0C0"
+   },
+   "roles": {
+    "ground": "#C0C0C0",
+    "label": "#000000",
+    "bevel_hilight": "#FFFFFF",
+    "bevel_light": "#C0C0C0",
+    "bevel_shadow": "#808080",
+    "bevel_dkshadow": "#000000",
+    "selected_fill": "#000080",
+    "selected_text": "#FFFFFF",
+    "info_ground": "#FFFFE1",
+    "info_text": "#000000",
+    "field_ground": "#FFFFFF",
+    "field_text": "#000000",
+    "disabled_text": "#808080",
+    "title_active": "#000080",
+    "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
+   "display_tier": "high-colour",
+   "notes": [
+    "xp_classic_zkedem classic.theme names it \"Windows Classic\"",
+    "Windows 2000's setup hive names it \"Windows Classic\" (Appearance\\Schemes)",
+    "ReactOS records it as \"ReactOS Classic\"",
+    "Windows 98's Windows Default.theme (its default scheme) records the same bytes, but for Background #008080 (here #3A6EA5), and no Gradient key (the caption's two ends are Windows 2000's and XP's records of the scheme)"
    ]
   },
   {
@@ -1895,6 +1816,30 @@
       "image_sha1": "51b9a010af4b6243ff1ccbc4b4fb41725240f17c",
       "sha1": "4cd963825ea971ae1d667c593071c1d62964d050",
       "url": "https://archive.org/download/win_2000_professional_sp3_english_202605/Windows2000ProfessionalSP3.iso/I386%2FHIVEDEF.INF"
+     },
+     {
+      "project": "Windows 2000 Professional SP3 (Microsoft), the setup's default-user hive, read as data from the retail disc image",
+      "file": "I386/HIVEDEF.INF",
+      "item": "win_2000_professional_sp3_english_202605",
+      "image": "Windows2000ProfessionalSP3.iso",
+      "image_sha1": "51b9a010af4b6243ff1ccbc4b4fb41725240f17c",
+      "sha1": "4cd963825ea971ae1d667c593071c1d62964d050",
+      "url": "https://archive.org/download/win_2000_professional_sp3_english_202605/Windows2000ProfessionalSP3.iso/I386%2FHIVEDEF.INF",
+      "scheme": "Windows Standard"
+     },
+     {
+      "project": "windows10-classic-themes (Ziv Kedem): the Windows XP (WEPOS 2009) classic schemes saved from Display Properties as .theme files",
+      "file": "standard.theme",
+      "repository": "zkedem/windows10-classic-themes",
+      "commit": "f126b0b138cb215f7fd5dfa5ab854edcde94ab72",
+      "url": "https://raw.githubusercontent.com/zkedem/windows10-classic-themes/f126b0b138cb215f7fd5dfa5ab854edcde94ab72/standard.theme"
+     },
+     {
+      "project": "1j01/98, desktop/Themes/classicthemes8 (windows8themes.ms): the classic schemes as Windows 8 .theme files",
+      "file": "desktop/Themes/classicthemes8/Themes/winxp_classic8.theme",
+      "repository": "1j01/98",
+      "commit": "5245105214cee90ab984fc15bece6c92db15ca7d",
+      "url": "https://raw.githubusercontent.com/1j01/98/5245105214cee90ab984fc15bece6c92db15ca7d/desktop/Themes/classicthemes8/Themes/winxp_classic8.theme"
      },
      {
       "project": "ReactOS",
@@ -1959,9 +1904,11 @@
    },
    "display_tier": "high-colour",
    "notes": [
-    "Windows 2000's default scheme as its own setup hive records it (HKCU \"Control Panel\\Colors\"); the hive names the scheme \"Windows Standard\" (Appearance\\Schemes)",
-    "ReactOS records it as \"ReactOS Standard\"",
-    "role-identical to windows-classic (whose bytes zkedem's standard.theme labels \"Windows Standard\" and classicthemes8 \"Windows XP Classic\"); kept as its own entry for the Windows 2000 provenance (architect 2026-10-06)"
+    "Windows 2000's default scheme as its own setup hive records it (HKCU \"Control Panel\\Colors\")",
+    "Windows 2000's setup hive names it \"Windows Standard\" (Appearance\\Schemes)",
+    "xp_classic_zkedem standard.theme names it \"Windows Standard\"",
+    "xp_classic_8 desktop/Themes/classicthemes8/Themes/winxp_classic8.theme names it \"Windows XP Classic\"",
+    "ReactOS records it as \"ReactOS Standard\""
    ]
   },
   {

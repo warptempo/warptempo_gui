@@ -38,7 +38,7 @@ sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config git fftw-devel \
     libxkbcommon-devel pipewire-jack-audio-connection-kit-devel libgit2-devel
 ```
 
-The tablet side adds adb and the Android build's host tools; its fonts — Tahoma and Tahoma Bold (ReactOS's Wine Tahoma, the live face) and Nimbus Sans Regular and Bold — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
+The tablet side adds adb and the Android build's host tools; its fonts — Tahoma and Tahoma Bold (ReactOS's Wine Tahoma) — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
 
 ```bash
 sudo pacman -S --needed android-tools meson ninja zip unzip
@@ -58,7 +58,7 @@ cmake --build build -j$(nproc)
 
 Leave `CMAKE_BUILD_TYPE` unset: the flags `-O3 -march=native -ffp-contract=off` are always on, and asserts stay live. A debug build goes in its own folder (`cmake -B build-debug -S . -DCMAKE_BUILD_TYPE=Debug`), never over `build/`. `-march=native` makes the binary fit this CPU alone, so build on the machine that runs it; `-ffp-contract=off` is what keeps a rebuilt binary rendering byte for byte what the last one did. What can still move the bytes, by a least significant bit here and there, is an upgrade of glibc or FFTW underneath: after one, re-render anything you mean to compare against. The CLI is opt-in; on a headless host with none of the GUI's packages, configure with `-DWARPTEMPO_BUILD_GUI=OFF -DWARPTEMPO_BUILD_CLI=ON`.
 
-There is no `make install`. The binary is self-contained; to put it on `$PATH` and register it with the application launcher (the `.desktop` names the project's own icon, `warptempo_gui`, the caption's drawing — Tango's audio file — on the caption's navy, installed into the hicolor theme beside it):
+There is no `make install`. The binary is self-contained; to put it on `$PATH` and register it with the application launcher (the `.desktop` names the project's own icon, `warptempo_gui`, the caption's drawing — Tango's audio file — on the chrome's grey, installed into the hicolor theme beside it):
 
 ```bash
 install -Dm755 build/warptempo_gui ~/.local/bin/warptempo_gui
@@ -85,12 +85,12 @@ The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/war
 
 | Key | What it is |
 |---|---|
-| `gui_scale=` | the interface's scale, an integer percent in [50, 1000]: device pixels per Windows 95 pixel (100 is Windows' own size; the laptop runs 138, the tablet 275) |
-| `max_waveform_height=` | the waveform's cap in unscaled (Windows 95) pixels, [0, 9999]; `0` removes it |
+| `gui_scale=` | the interface's scale, an integer percent in [50, 1000]: device pixels per Windows pixel (96 dpi) (100 is Windows' own size; the laptop runs 138, the tablet 275) |
+| `max_waveform_height=` | the waveform's cap in unscaled (Windows) pixels, [0, 9999]; `0` removes it |
 | `projects_repo=` | the projects repository the history view commits to |
 | `projects_path=` | the absolute folder whose subfolders are the projects |
 | `last_project=` | the folder name opened last, written by the program at every open |
-| `theme=` | the theme every colour is painted in: `windows-2000-standard` (the default: Windows 2000's own colours, a bundled theme file), `windows-95-standard` (the one built in) or the key of any other theme file (the bundled ones are listed, with a picture of each, in `docs/themes/CATALOG.md`) |
+| `theme=` | the theme every colour is painted in: `windows-2000-standard` (the default and the one built in: Windows 2000's own colours) or the key of any theme file (`windows-95-standard`, Windows 95's colours, among them) (the bundled ones are listed, with a picture of each, in `docs/themes/CATALOG.md`) |
 
 A theme file is `<key>.theme` in the `themes/` folder beside the config (`~/.config/warptempo_gui/themes/` on the laptop, `files/warptempo_gui/themes/` in the tablet app's private folder), read once at launch; the key is lowercase letters and digits joined by single hyphens. Each line is `role=value` (no blank lines, no comments), the value `#rrggbb` or one of Windows' twenty always-solid colours by name (`black`, `maroon`, `green`, `olive`, `navy`, `purple`, `teal`, `silver`, `gray`, `red`, `lime`, `yellow`, `blue`, `fuchsia`, `aqua`, `white`, `moneygreen`, `skyblue`, `cream`, `medgray`); a file may name only some roles, and every other role keeps the built-in's colour (the roles and the built-in's values are the role table in `src/gui/theme_file.h`). A file that breaks the grammar stops the program at startup, naming the file and the line.
 
@@ -257,7 +257,7 @@ adb shell run-as com.warptempo.gui cat /data/user/0/com.warptempo.gui/files/warp
 #   projects_repo=github.com/warptempo/warptempo_projects
 #   projects_path=/storage/emulated/0/Android/data/com.warptempo.gui/files/projects
 #   last_project=<the piece open>
-#   theme=windows-2000-standard   (the default; or the built-in windows-95-standard, or a theme file's key)
+#   theme=windows-2000-standard   (the default and the built-in; or a theme file's key)
 # /storage/emulated/0 and /sdcard are one folder; the tablet's clone is its files/ folder.
 ```
 

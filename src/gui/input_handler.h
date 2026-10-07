@@ -1447,7 +1447,7 @@ struct GuiInputHandler {
     // painted columns (paint_icon_row).
     // It re-resolves the cursor's last position against the painter's stashed
     // rects for its three readers — the tooltip's wait, the armed chrome
-    // press's inside bit and the win2000 toolbars' hot button (the one hover
+    // press's inside bit and the flat toolbars' hot button (the one hover
     // face, architect 2026-10-06; AppState::roster_hot) — and is called from
     // on_motion's no-gesture tail, its modal branches and the run loop's
     // TICK; it REFUSES OUTRIGHT while the pointer is outside the window (its
@@ -1460,6 +1460,10 @@ struct GuiInputHandler {
     // change. Called by the walk above and, with -1, by the pointer-leave
     // hook (main.cpp).
     void set_roster_hot(int index);
+    // THE PLAYER'S HOT BUTTON'S ONE SETTER (AppState::player_hot): stores the
+    // index with the standing dialog's session and damages the dialog's box
+    // on a change.
+    void set_player_hot(int index);
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole

@@ -4,9 +4,11 @@
 #
 # IMPORT THIS BEFORE `import cairo` ANYWHERE: it points fontconfig at the tool's own fonts.conf,
 # which lists ONLY the repository's fonts/ directory, so cairo's toy face "Nimbus Sans" can
-# resolve to nothing but fonts/NimbusSans-Regular.otf — the app's face (gui_font.h, architect
-# 2026-10-06), the one this tool paints every row in. Its VERTICAL metrics are the recorded
-# constants (face_metrics below), as in the app.
+# resolve to nothing but fonts/NimbusSans-Regular.otf — the retired win95 set's face, the one this
+# tool paints every row in. THAT FILE LEFT THE REPOSITORY ON 2026-10-06 (the product dropped Windows
+# 95 and Nimbus for Windows 2000 and Wine Tahoma, gui_font.h): verify_fonts() fails, and so does
+# every render that draws text, until the tool is ported to Tahoma. Its VERTICAL metrics are the
+# retired set's recorded constants (face_metrics below).
 # verify_fonts() proves the resolution (fontconfig's own match, glyph ids against HarfBuzz on the
 # file, and the face's metrics as measured 2026-10-06) and the renderer calls it on every run.
 import os, sys, ctypes
@@ -125,32 +127,25 @@ def line_baseline(family, size_px, line_y):
 
 SANS_PX = 12.0 * 96.0 / 72.0 * SCALE        # the probe size, 32 px
 
-# ------------------------------------------------------------------ the recorded vertical metrics (gui_font.h)
-# The app's vertical metrics at every scale are recorded constants (a face set's metrics, architect 2026-10-06): read
-# here off that owner in the working tree, so the tool cannot drift from it — each face's ascent / descent and its cap
-# band, in Windows px. THE WIN95 SET'S (kGuiFaceSetWin95): this tool draws Nimbus Sans, that set's face; its three rows
-# are in GuiFace's order, Body, Bold, Small.
-_FACE_METRICS = {}
+# ------------------------------------------------------------------ the recorded vertical metrics (frozen)
+# The app's vertical metrics at every scale are recorded constants (a face set's metrics, architect 2026-10-06). THIS
+# TOOL DRAWS THE RETIRED WIN95 SET (Nimbus Sans; kGuiFaceSetWin95 at e7e0ddf4, dropped from the product with Windows 95
+# on 2026-10-06 evening), so its rows are frozen here — each face's ascent / descent and its cap band, in Windows px,
+# in GuiFace's order, Body, Bold, Small. NIMBUS SANS LEFT THE REPOSITORY'S fonts/ WITH IT: verify_fonts() and every
+# text draw fail until the tool is ported to the live set (Wine Tahoma, gui_font.h's kGuiFaceSetWin2000).
+_FACE_METRICS = {'Body': {'ascent': 11, 'descent': 2, 'cap': 9}, 'Bold': {'ascent': 11, 'descent': 2, 'cap': 9},
+                 'Small': {'ascent': 7, 'descent': 0, 'cap': 7}}
 def face_metrics(face):
-    """face 'Body' | 'Bold' | 'Small' -> {'ascent', 'descent', 'cap'} in Windows px, kGuiFaceSetWin95's row."""
-    if not _FACE_METRICS:
-        import re
-        src = open(os.path.join(REPO, 'src', 'gui', 'gui_font.h')).read()
-        rows = re.search(r'kGuiFaceSetWin95 = \{.*?\.metrics\s*=\s*\{(\{\d+, \d+, \d+\}, \{\d+, \d+, \d+\}, '
-                         r'\{\d+, \d+, \d+\})\}', src, re.S).group(1)
-        for name, (asc, desc, cap) in zip(('Body', 'Bold', 'Small'), re.findall(r'\{(\d+), (\d+), (\d+)\}', rows)):
-            _FACE_METRICS[name] = {'ascent': int(asc), 'descent': int(desc), 'cap': int(cap)}
+    """face 'Body' | 'Bold' | 'Small' -> {'ascent', 'descent', 'cap'} in Windows px, the retired win95 set's row."""
     return _FACE_METRICS[face]
 
+# NIMBUS'S UNSCALED INK HEIGHT PER EM of each band glyph, frozen with the face (fontTools' control box of HEAD
+# e7e0ddf4's fonts/NimbusSans-Regular.otf: "H" 0..729, "0" -23..723 of 1000, measured 2026-10-06).
+_NIMBUS_INK_EM = {'H': 729 / 1000, '0': 746 / 1000}
 def face_em(face, band_char):
-    """The face's em in Windows px (gui_face_em_px): the recorded cap over Nimbus's unscaled ink height
-    of `band_char` per em ("H" for the body, "0" for the digits) — the outline's control box, as FreeType's
-    FT_LOAD_NO_SCALE metrics read it off the CFF outline."""
-    from fontTools.ttLib import TTFont
-    from fontTools.pens.boundsPen import ControlBoundsPen
-    f = TTFont(SANS_FILE); gs = f.getGlyphSet(); pen = ControlBoundsPen(gs)
-    gs[f.getBestCmap()[ord(band_char)]].draw(pen); _, y_min, _, y_max = pen.bounds
-    return face_metrics(face)['cap'] / ((y_max - y_min) / f['head'].unitsPerEm)
+    """The face's em in Windows px (gui_face_em_px's rule): the recorded cap over Nimbus's unscaled ink height of
+    `band_char` per em ("H" for the body, "0" for the digits), the retired set's frozen record (above)."""
+    return face_metrics(face)['cap'] / _NIMBUS_INK_EM[band_char]
 
 def verify_fonts(verbose=False):
     """Fail loudly unless the family resolves to the repository's file. Three proofs:

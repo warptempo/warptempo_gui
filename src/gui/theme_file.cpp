@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdio>
 #include <expected>
 #include <fstream>
 #include <iterator>
@@ -116,6 +117,35 @@ std::optional<std::string> copy_in_bundled_themes() {
         return "could not create the themes folder '" + folder.string() +
                "': " + ec.message();
     }
+    // THE APP'S OWN FORMER COPY OF THE BUILT-IN'S NAME IS DELETED (planner,
+    // 2026-10-06): the bundle is the only writer of that name — a file a user
+    // authors under it is the read's hard fail below, so he never does — and
+    // the copy-in never deletes what the bundle stops carrying, so a rename
+    // of the built-in leaves the earlier bundle's file of the new name behind
+    // on every device that ran the earlier build (the 2026-10-06 rename from
+    // windows-95-standard to windows-2000-standard did: the bundle carried
+    // windows-2000-standard.theme until then). By the two-category rule a
+    // state the app itself wrote must load, so the copy-in removes it with one
+    // advisory line (the validation doctrine's class 5) before the read, and
+    // the read's refusal of that name stays the rule. Keyed on
+    // kBuiltinThemeKey, it covers any later rename alike; it is the one place
+    // the app cleans up after its own earlier self, and no other migration
+    // exists. A removal that fails is the copy-in's failure, the same road.
+    {
+        const std::filesystem::path stale =
+            folder /
+            (std::string(kBuiltinThemeKey) + std::string(kThemeSuffix));
+        if (std::filesystem::remove(stale, ec)) {
+            std::fprintf(stderr,
+                         "warptempo_gui: removed '%s', an earlier build's "
+                         "copy of the built-in theme's name\n",
+                         stale.string().c_str());
+        }
+        if (ec) {
+            return "could not remove '" + stale.string() + "': " +
+                   ec.message();
+        }
+    }
     for (const auto& [name, bytes] : *bundle) {
         const std::filesystem::path p = folder / name;
         // A file already holding the bundle's bytes is left as it is — the
@@ -180,8 +210,8 @@ std::optional<std::string> read_theme_folder() {
                           "hyphens";
         }
         if (key == kBuiltinThemeKey) {
-            return head + "windows-95-standard is the built-in theme and "
-                          "takes no file";
+            return head + kBuiltinThemeKey +
+                   " is the built-in theme and takes no file";
         }
         auto words = read_theme_file(p);
         if (!words) return head + words.error();

@@ -1,13 +1,12 @@
 #pragma once
 
 // THE ICON SET AND ITS ONE ROAD (architect 2026-10-06). An Icon is a GLYPH,
-// one per enumerator below, drawn from the live chrome vocabulary's SET
-// (chrome_spec.h's icon_set, kGuiLiveIconSet below): TANGO 0.8.90'S
-// SCALABLE DRAWINGS under BOTH vocabularies — ReactOS's model of a Windows
-// 2000 desktop wearing Tango (Tango's own files only, nothing drawn, no GNOME
-// file, a repeat known by position; the product's own 16-unit Windows 95
-// set was retired the same evening: "I don't anticipate using those because
-// they are 16-pixel icons"). One 48-unit Inkscape file per enumerator under
+// one per enumerator below, drawn from the chrome spec's SET (chrome_spec.h's
+// icon_set, kGuiLiveIconSet below): TANGO 0.8.90'S SCALABLE DRAWINGS —
+// ReactOS's model of a Windows 2000 desktop wearing Tango (Tango's own files
+// only, nothing drawn, no GNOME file, a repeat known by position; the set
+// the product drew itself before is git history). One 48-unit Inkscape file
+// per enumerator under
 // assets/icons/tango/ (its README the mapping, the provenance and the
 // licences), READ AT LAUNCH by the SVG-subset reader (svg_icon.h) straight
 // from the bundle — never copied into the config folder (load_svg_set,
@@ -18,18 +17,17 @@
 //
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in a toolbar case the
-// 48-unit cell fills the live vocabulary's glyph seat (icon_glyph_px,
-// render.h: scaled_px(24) in win2000, the large case's seat, 72 device px at
-// 300 %; scaled_px(16) in win95, the small case's, 48 at 300 %); elsewhere
+// 48-unit cell fills the case's glyph seat (icon_glyph_px, render.h:
+// scaled_px(24), the large case's seat, 72 device px at 300 %); elsewhere
 // its site's own scaled 16 (the caption's icon, the list rows, the cards —
-// Windows' small icon under both vocabularies). The window-frame glyphs
+// Windows' small icon). The window-frame glyphs
 // Windows drew in the button text — the caption's — are not drawings of the
 // set (paint_handler.cpp's caption glyph block).
 //
 // THE PLACEMENT IS FIXED: in a toolbar case the cell sits at (3, 3) Windows
 // px from the case's corner (icon_case_lead_px, render.h — Windows' own
-// seat, the 16-px bitmap's in its small 23 x 22 button and the 24-px one's
-// in its large 31 x 30, the live chrome vocabulary's case), filling the seat
+// seat, the 24-px bitmap's in its large 31 x 30 button as the 16-px one's in
+// its small 23 x 22), filling the seat
 // (icon_glyph_px), plus the pressed/checked shift (draw_cased below).
 // Nothing is centred on its ink: Windows never did (12 of the 15 STD strip
 // cells with odd ink dimensions sit at the fixed offset). The sites with no
@@ -168,8 +166,8 @@ inline constexpr const char* kIconNames[] = {
 };
 static_assert(std::size(kIconNames) == kIconCount);
 
-// THE LIVE SET: the live chrome vocabulary's (chrome_spec.h's icon_set, the
-// bundled folder's name).
+// THE LIVE SET: the chrome spec's (chrome_spec.h's icon_set, the bundled
+// folder's name).
 inline constexpr std::string_view kGuiLiveIconSet = kLiveChromeSpec.icon_set;
 
 // THE SET'S LOAD, once, in gui_main after the theme read and before
@@ -203,13 +201,9 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // 2026-10-06; comctl32's toolbar draws a disabled 32-bpp image with
 // ILS_SATURATE | ILS_ALPHA at 192, imagelist.c's saturate_image):
 // svg_icon::saturated_copy of the live raster, built the first time a
-// disabled face asks and cached beside it, copied at the same seat. UNDER
-// BOTH VOCABULARIES: Windows 95's DSS_DISABLED emboss needed the retired own
-// set's solid inks (its mono mask was the drawing's non-white, non-silver
-// paths), which a Tango drawing's gradients do not have — the win95
-// vocabulary's one disabled-glyph departure, recorded at chrome_spec.h's
-// kChromeSpecWin95. A disabled WORD keeps the emboss (show_embossed_run,
-// render.h).
+// disabled face asks and cached beside it, copied at the same seat. A
+// disabled WORD keeps Windows' DSS_DISABLED emboss (show_embossed_run,
+// render.h), whose mono mask a Tango drawing's gradients cannot give.
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                    double size_px);
 

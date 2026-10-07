@@ -181,9 +181,9 @@ inline constexpr double kRowHeightPx = 17.0;
 inline int button_row_height_px() { return scaled_px(kRowHeightPx, 1); }
 inline int button_row_gap_px()    { return scaled_px(kRowGapPx, 1); }
 inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
-// THE ROW'S GLYPH IS WINDOWS' SMALL ICON, 16 Windows px, under both chrome
-// vocabularies (2026-10-06): it read the toolbar case's glyph until the
-// win2000 toolbars took Windows' large case, whose 24-px seat would overrun
+// THE ROW'S GLYPH IS WINDOWS' SMALL ICON, 16 Windows px (2026-10-06): it
+// read the toolbar case's glyph until the toolbars took Windows' large
+// case, whose 24-px seat would overrun
 // the 17-px row (report_TC's catch), so the list keeps its own.
 inline constexpr double kRowIconPx = 16.0;
 // THE GLYPH'S LEFT PAD INSIDE THE ROW: Windows' small toolbar case's 3-px

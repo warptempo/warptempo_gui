@@ -65,9 +65,7 @@ private:
 // own FT face and append the glyphs to `run`; each glyph's cluster is its
 // byte index into the string. EVERY GLYPH'S ADVANCE TAKES THE TRACKING
 // (kGuiTrackingPx, gui_font.h) after the 26.6 conversion, the last
-// included, and A MATH SIGN'S Y OFFSET TAKES ITS LIFT onto the hyphen's axis
-// (gui_sign_lift_px, gui_font.h: matched by glyph id after substitution,
-// HarfBuzz's up-positive sense, the advance untouched).
+// included.
 //
 // The hb font is built per call, and stays that way deliberately: the
 // build is a face wrap plus a scale read, and a cache would have to be
@@ -102,8 +100,7 @@ void append_glyphs(const GuiFont& font, std::string_view utf8,
         // The byte index this glyph's cluster starts at (see ShapedGlyph).
         glyph.cluster      = infos[i].cluster;
         glyph.x_offset_px  = positions[i].x_offset / k26Dot6;
-        glyph.y_offset_px  = positions[i].y_offset / k26Dot6 +
-                             gui_sign_lift_px(font, glyph.glyph_index);
+        glyph.y_offset_px  = positions[i].y_offset / k26Dot6;
         glyph.x_advance_px = positions[i].x_advance / k26Dot6 + tracking;
         run.width_px += glyph.x_advance_px;
         run.glyphs.push_back(glyph);

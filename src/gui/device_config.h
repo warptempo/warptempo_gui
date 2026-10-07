@@ -22,9 +22,9 @@
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
 //   theme=<key>              THE THEME every colour is painted in: the
-//                            built-in `windows-95-standard` or a theme file
-//                            read at launch (is_theme_key, theme_file.h);
-//                            first run `windows-2000-standard`
+//                            built-in `windows-2000-standard` (the first
+//                            run's) or a theme file read at launch
+//                            (is_theme_key, theme_file.h)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // max_waveform_height, 2026-09-13, placed right after gui_scale;
@@ -219,12 +219,11 @@ struct DeviceConfig {
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE THEME DEFAULT (architect 2026-10-06): Windows 2000's "Windows
-    // Standard" scheme, the bundled `windows-2000-standard` file, the live
-    // win2000 chrome vocabulary's colours, with the built-in's program
-    // elements in Windows' twenty solid colours — kDefaultThemeKey
-    // (theme_file.h, whose static_assert keeps this spelling and that key
-    // one).
+    // THE THEME DEFAULT (architect 2026-10-06): the built-in,
+    // `windows-2000-standard` — Windows 2000's "Windows Standard" scheme,
+    // the chrome's colours, with the program's elements in Windows' twenty
+    // solid colours — kDefaultThemeKey (theme_file.h, whose static_assert
+    // keeps this spelling and that key one).
     std::string theme = "windows-2000-standard";
 };
 

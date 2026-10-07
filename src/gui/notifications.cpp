@@ -53,19 +53,13 @@ GuiRect notification_stack_bound(const AppState& a) {
     // AND THE FOOT. The right and the foot are the panel's own kPanelPadPx
     // (architect 2026-08-29, the foot joining 2026-08-30; the right margin
     // was the icon row's 8 px pad for the cards' first day, which read wider
-    // than the air above them). THE TOP IS THE VOCABULARY'S CARD SEAT
-    // (chrome_spec.h's card_seat). IN WIN95 THE ICON ROW'S TOP ETCHED PAIR
-    // (architect's glass 2026-10-06, his 090908 capture at 400 %: the card's
-    // frame covered the pair's Hilight line, one Windows px high, because the
-    // 1-px air under the menu row predated the pair): the stack starts on
-    // the pair's foot, so a ONE-LINE CARD — notification_card_h_px, 28
-    // Windows px, the win95 toolbar band's own height — FILLS THE BAND
-    // EXACTLY BETWEEN THE TWO PAIRS, both lines whole, as a tooltip clears
-    // the chrome it sits on. IN WIN2000 THE BAND'S FOOT (the planner's
-    // interim, 2026-10-06): the band is the 30-px case, which no card fills,
-    // so the stack starts on the case's last row's neighbour, the card
-    // wholly below the toolbar — on the lane's 4-px foot and down over the
-    // block.
+    // than the air above them). THE TOP IS THE SPEC'S CARD SEAT
+    // (chrome_spec.h's card_seat), THE BAND'S FOOT (the planner's interim,
+    // 2026-10-06): the band is the 30-px case, which no card fills, so the
+    // stack starts on the case's last row's neighbour, the card wholly below
+    // the toolbar — on the lane's 4-px foot and down over the block — and
+    // never over the etched pair's lines (architect's glass 2026-10-06: a
+    // card's frame laid over the pair's Hilight line reads as a fault).
     // The card's INTERNAL pad is a different number and a different concept —
     // notification_pad_px(), the chrome inside the box rather than the box's
     // placement.
@@ -77,10 +71,9 @@ GuiRect notification_stack_bound(const AppState& a) {
     const int pad     = folder_overlay::pad_px();
     const int w       = notification_card_max_w_px(a);
     const int x       = a.width - pad - w;
+    static_assert(kLiveChromeSpec.card_seat == GuiCardSeat::UnderBand);
     const int y       = icons.y + icon_row_etched_pair_px() +
-                        (kLiveChromeSpec.card_seat == GuiCardSeat::UnderBand
-                             ? icon_row_band_h_px()
-                             : 0);
+                        icon_row_band_h_px();
     const int floor_y = bottom_row_area(a).y - pad;
     return GuiRect{x, y, w, std::max(0, floor_y - y)};
 }

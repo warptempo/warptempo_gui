@@ -81,21 +81,21 @@ rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
-# THE PRODUCT'S FOUR FONT FILES: Nimbus Sans Regular and Bold, Tahoma and
-# Tahoma Bold (architect 2026-10-06; the list and its order are gui_font.h's
-# kGuiFontFiles), copied from the repository's own fonts/
+# THE PRODUCT'S TWO FONT FILES: Tahoma and Tahoma Bold (architect
+# 2026-10-06; the list and its order are gui_font.h's kGuiFontFiles), copied
+# from the repository's own fonts/
 # (architect 2026-10-02) -- the very files the Linux executable compiles in,
 # so both devices paint from the same bytes and the build depends on no
 # installed font package. They are what gui_font_bundled.cpp builds the
 # product's faces from, and android_main ABORTS if one is missing -- a font
 # that failed to install would otherwise paint silently in cairo's default
-# face. They are stored (-0 otf -0 ttf at aapt2 link) so
+# face. They are stored (-0 ttf at aapt2 link) so
 # AAsset_getBuffer hands FreeType a pointer straight into the mapped APK.
 #
 # The copies land under the build tree, which .gitignore already ignores
 # (`build*/`); the tracked originals are fonts/'s.
 FONT_DIR="$APPDIR/../../fonts"
-for f in NimbusSans-Regular.otf NimbusSans-Bold.otf tahoma.ttf tahomabd.ttf; do
+for f in tahoma.ttf tahomabd.ttf; do
     [ -f "$FONT_DIR/$f" ] || wt_die "missing $FONT_DIR/$f (the repository's fonts/)"
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
@@ -208,7 +208,6 @@ wt_say "aapt2 link"
     --target-sdk-version "$WT_TARGET_SDK" \
     --version-code 1 \
     --version-name "2.0" \
-    -0 otf \
     -0 ttf \
     --auto-add-overlay \
     "$PKGDIR/res.zip"

@@ -6924,7 +6924,7 @@ struct AppState {
     ChromePress chrome_press;
 
     // THE HOT TOOLBAR BUTTON (architect 2026-10-06: Explorer's flat toolbar,
-    // the win2000 vocabulary's — chrome_spec.h's toolbar_style): the roster
+    // chrome_spec.h's toolbar_style): the roster
     // index of the icon-row or row-8 button whose published rect holds the
     // pointer (or the hovering S Pen), -1 for none. It is comctl32's hot
     // item, the FACE's input and nothing else: the one writer is the roster's
@@ -6934,12 +6934,22 @@ struct AppState {
     // that leave). It is held at -1 WHILE ANY CHROME PRESS IS ARMED —
     // comctl32's capture: a toolbar holding the mouse shows no hot item
     // (TOOLBAR_TranslateState's bHot & !bCaptured) — under the walk's own
-    // gates (no veil, no card over it, the hover zone), and it stays -1 in
-    // the win95 vocabulary, whose raised toolbar has no hot face. The
+    // gates (no veil, no card over it, the hover zone). The
     // painter adds the enabled term (a disabled button is never hot,
     // comctl32's own refusal), so the field need not follow the enabled
     // bits (redesign_button_hot_face).
     int roster_hot = -1;
+    // THE RENDER PLAYER'S HOT BUTTON (architect 2026-10-06: the player's row
+    // is a flat toolbar too, ReactOS's Media Player's): the index into
+    // modal_dialog.buttons of the player button under the pointer (or the
+    // hovering S Pen), -1 for none, and the dialog session it was read from,
+    // so a stale index never lights another surface's button. The one writer
+    // is the dialog's pointer walk (update_modal_dialog_hover, through
+    // set_player_hot), held at -1 while a dialog press is armed (comctl32's
+    // capture, as roster_hot); the pointer-leave hook clears it. The painter
+    // adds the enabled term.
+    int      player_hot         = -1;
+    uint64_t player_hot_session = 0;
 
     // THE HOVER TOOLTIP — THE WHOLE OF ITS STATE, AND THE MODEL'S ONE STATEMENT.
     // THE MODEL IS WINDOWS 95's TOOLTIP CONTROL (architect 2026-10-06):
@@ -6952,7 +6962,7 @@ struct AppState {
     //     and restarts only when a motion carries it MORE than the hover slop
     //     from that anchor on either axis (re-anchoring there), so a hovering
     //     pen's jitter cannot starve it — the slop a recorded departure
-    //     (windows95_deviations.md). A change of owner with no motion (a
+    //     (win2000_deviations.md). A change of owner with no motion (a
     //     relayout, a surface closing under a resting pointer) re-anchors and
     //     starts nothing: the wait is a resting pointer's.
     //   * THE RESHOW (TTDT_RESHOW, kTooltipReshowMs, 100): an ARRIVAL with
@@ -9690,7 +9700,8 @@ inline int64_t render_player_position(const AppState& a,
 // IT OWNS THE INSET, and the inset is the THUMB'S GRAB BOX (the 14 Windows px
 // kScrubHandleBoxPx, render.h's scrub block): the thumb's CENTRE — which is
 // what names the frame — runs from half a box in to half a box short of the
-// end, so Sound Recorder's 11-px thumb (architect 2026-10-02), narrower than
+// end, so the 11-px thumb (architect 2026-10-02; Windows' pointed trackbar
+// thumb since 2026-10-06), narrower than
 // the box, never hangs off either end of its channel. The USABLE SPAN is the
 // item less that box; an item too
 // narrow to hold one seats the centre at the left inset and answers frame 0,
@@ -9712,7 +9723,7 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // scrub became a Breeze slider), and its ONE reader is the press router,
 // which asks it whether a press TAKES the thumb where it stands (the band) or
 // makes it JUMP to the press (the rest of the item, architect 2026-10-02);
-// the painted thumb is narrower (11 Windows px, paint_modal_dialog) and wears
+// the painted thumb is narrower (11 Windows px, paint_scrub_thumb) and wears
 // no hover face.
 // `handle_x` is the handle's painted centre — the position's own column, or
 // the drag's carried one while a drag stands.
@@ -9894,8 +9905,8 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // the CLAMPED window dimensions — the same geometry keyboard_slot_band takes
 // its x and width from, so the two cannot disagree about where the band
 // begins. Zero on a degenerate stack, which every consumer already reads as
-// "no room". ON THE TABLET (2304x1440 at gui_scale 300, gap 1 zero; the
-// win2000 vocabulary's lanes) the band runs [222, 1329): under the 54
+// "no room". ON THE TABLET (2304x1440 at gui_scale 300, gap 1 zero) the
+// band runs [222, 1329): under the 54
 // caption, 60 menu and 108 icon rows, down to the 111-tall bottom row.
 //
 // THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT

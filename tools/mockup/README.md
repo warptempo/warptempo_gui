@@ -28,8 +28,11 @@ tools/mockup/push.sh --delete <name...>  # the superseded ones off it
   scene's `capture_path`. The scene is the one in `scenes/` naming that capture unless `--scene` says otherwise
   (a scene used on another capture is a stderr note, a size mismatch a hard fail).
 - `--capture-theme`: the theme the capture was painted in, what the matcher keys on. `builtin` (the default) is
-  `windows-95-standard`, its 36 values READ FROM `src/gui/theme_file.h` on every run, so the tool cannot drift from
-  the app.
+  `windows-2000-standard` since 2026-10-06 evening, its 36 values READ FROM `src/gui/theme_file.h` on every run, so
+  the tool cannot drift from the app. A capture painted in the earlier built-in, `windows-95-standard`, names that
+  file: `--capture-theme assets/themes/windows-95-standard.theme`. Every scene in `scenes/` is a capture of the
+  Windows 95 chrome, its small 23 x 22 toolbar case frozen in scene.py (the product dropped that chrome for Windows
+  2000's on 2026-10-06; a Windows 2000 capture's large case has no scene field yet).
 - `--theme`: the target, a `.theme` file in the app's own grammar (themes.py): `role=value` lines, `#rrggbb` or one
   of the twenty names, a role not named takes the built-in's value, a caption start without its end is a flat
   caption; anything the app refuses is refused in the app's words (first error only).

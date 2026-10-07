@@ -2,8 +2,8 @@
 
 The product's icons, one SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each file named by its enumerator:
 TANGO 0.8.90'S SCALABLE DRAWINGS, the model ReactOS follows on its Windows 2000 desktop (architect 2026-10-06:
-Tango's own files only, nothing drawn, no GNOME file). Both chrome vocabularies wear this set
-(`src/gui/chrome_spec.h`'s `icon_set`); the product's own 16-unit Windows 95 set was retired the same evening.
+Tango's own files only, nothing drawn, no GNOME file), the chrome spec's set (`src/gui/chrome_spec.h`'s `icon_set`);
+the set the product drew itself before is git history.
 
 Every file is a 48-unit Inkscape drawing COPIED BYTE FOR BYTE from Tango's `scalable/` tree: never edit one (an edit
 breaks the provenance below). The program reads the files AT LAUNCH, in place, through its SVG-subset reader
@@ -79,10 +79,10 @@ the SVG files only; this repository carries the texts.
 | VcsDiff | Toggle History View | scalable/status/image-loading.svg | — | `877fcc4feef211429cb1ebde25949a24a55db8808e317bde3cb22a54e4011001` |
 | ShallowHistory | Toggle History Walk | scalable/actions/appointment-new.svg | — | `a450debfdd4e8e0563c0d51edf208079a227f62735ebb27cc1baa89f11bf8d66` |
 | EditSelect | Toggle Add to Selection | scalable/actions/edit-select-all.svg | — | `5699524dbb79821a707d238b4f18a32deca10a66e7c899fb0efb93ee4a449e2a` |
-| KeyframePrevious | Older (`,`) | scalable/actions/go-previous.svg | — | `75269150414f9bdfb0eee741ad36209c500d27c0b2d8462b134e0cf7b6d8f7d8` |
-| KeyframeNext | Newer (`.`) | scalable/actions/go-next.svg | — | `e7e79d37fb27d42437e0449affe7b8effbc3391e4450f53f0f88602049f7b30c` |
-| GoPrevious | Left (the playhead step) | scalable/actions/media-seek-backward.svg | — | `cbd686518c8ce0a9bb3b46535dacb18a0764ea68fbc477056df075c5721d7c1e` |
-| GoNext | Right (the playhead step) | scalable/actions/media-seek-forward.svg | — | `1c93a0c5ecc19c7bec6df68aa8b6da2022042cb1be470b299a96e6b966c582a4` |
+| KeyframePrevious | Older (`,`) | scalable/actions/media-seek-backward.svg | — | `cbd686518c8ce0a9bb3b46535dacb18a0764ea68fbc477056df075c5721d7c1e` |
+| KeyframeNext | Newer (`.`) | scalable/actions/media-seek-forward.svg | — | `1c93a0c5ecc19c7bec6df68aa8b6da2022042cb1be470b299a96e6b966c582a4` |
+| GoPrevious | Left (the playhead step) | scalable/actions/go-previous.svg | — | `75269150414f9bdfb0eee741ad36209c500d27c0b2d8462b134e0cf7b6d8f7d8` |
+| GoNext | Right (the playhead step) | scalable/actions/go-next.svg | — | `e7e79d37fb27d42437e0449affe7b8effbc3391e4450f53f0f88602049f7b30c` |
 | DocumentRevert | Revert (`v`, to the viewed checkpoint) | scalable/actions/view-refresh.svg | MediaRepeatSingle | `a43596670cfced66e14bd9ee984288a9d69490f0f08953ad13f2a6bf5e4d70fb` |
 | MediaSkipBackward | Go to Start | scalable/actions/media-skip-backward.svg | — | `4c399158deade1c6210108b50b58cce29d01be84bf3400f9d80960159517bb75` |
 | MediaPlaybackStart | Play | scalable/actions/media-playback-start.svg | — | `b09e773d2a7982eb3c9c2e59115f7b9f7cae4b78abfb59baf8c752cc5626c028` |
@@ -109,4 +109,4 @@ the SVG files only; this repository carries the texts.
 | HelpWhatsthis | Toggle Tooltips | scalable/apps/help-browser.svg | — | `f1c955b657a686bc7acc433a597db25c0b733f2678b67b8f26d2946cda543d00` |
 | GoJumpDeclaration | Jump to Defining Marker | scalable/actions/go-jump.svg | — | `da4e4493791e6e53325c72f67e61c4ef21d148edda740256beb48c7e72f062f6` |
 | EditDelete | Delete Folder | scalable/actions/edit-delete.svg | — | `406e8c8eba860fec81d84fd9fb4b956bfd2e8f1a1432ed3f46c9cd61b3a8b728` |
-| AppIcon | the caption's icon and the program icon (navy ground) | scalable/mimetypes/audio-x-generic.svg | AudioXWav, MusicNote16th | `d7619127acfe25edf59eca10be48776bf33d3a2dfa3a4dba9923032cc5dbc05f` |
+| AppIcon | the caption's icon and the program icon (the chrome grey ground, #D4D0C8) | scalable/mimetypes/audio-x-generic.svg | AudioXWav, MusicNote16th | `d7619127acfe25edf59eca10be48776bf33d3a2dfa3a4dba9923032cc5dbc05f` |

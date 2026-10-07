@@ -3,10 +3,9 @@
 // THE SVG-SUBSET READER (architect 2026-10-06: "we definitely want that
 // capability") — a bundled icon set's drawings, read at launch and drawn
 // through cairo on both devices, scalable and antialiased. A small in-tree
-// reader rather than an SVG library, for the reason icons.h's head gives the
-// own set: the drawings stay SOURCE, and the subset is exactly what the
-// bundled files spell (Tango 0.8.90's 48-unit Inkscape files, the win2000
-// vocabulary's set, assets/icons/tango/).
+// reader rather than an SVG library: the drawings stay SOURCE, and the
+// subset is exactly what the bundled files spell (Tango 0.8.90's 48-unit
+// Inkscape files, the chrome spec's set, assets/icons/tango/).
 //
 // THE SUBSET is svg_icon.cpp's tables, each row with its rule: the XML an
 // Inkscape file of the period writes (one declaration, comments, double-quoted

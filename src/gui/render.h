@@ -78,11 +78,11 @@ struct TrimRange {
 // outline, each flag kind's face and selected face, the flag labels, the
 // playhead's stem and the scanner). The roles, their order and THE BUILT-IN's values
 // are the role table (kGuiThemeRoles, theme_file.h); the active theme is the
-// device config's `theme` — the one built-in, `windows-95-standard`, or a
-// `<key>.theme` file read at launch from the `themes/` folder beside the
-// device config, the bundled `windows-2000-standard` the default since
-// 2026-10-06 (theme_file.h's head: the grammar, a file naming only some
-// roles, the hard fail). There is NO LEVEL: a dark look is a theme of its own
+// device config's `theme` — the one built-in and the default,
+// `windows-2000-standard` (since 2026-10-06), or a `<key>.theme` file read at
+// launch from the `themes/` folder beside the device config (theme_file.h's
+// head: the grammar, a file naming only some roles, the hard fail). There is
+// NO LEVEL: a dark look is a theme of its own
 // (architect 2026-10-04). The app computes no colour.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette(), or the one named literal beside them (the in-place
@@ -97,15 +97,13 @@ struct TrimRange {
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
 // beside every ground role — never a luminance verdict.
 // STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
-// HOVER FACES BUT ONE — the win2000 flat toolbars' HOT case, a raised line
-// in the relief quartet (architect 2026-10-06, Explorer's; paint_toolbar_box,
+// HOVER FACES BUT ONE — the flat toolbars' HOT case, a raised line in the
+// relief quartet (architect 2026-10-06, Explorer's; paint_toolbar_box,
 // paint_handler.cpp): every colour is a solid fill of integer cells. THE ONE
 // EXCEPTION IS THE CAPTION'S GRADIENT (architect 2026-10-05), Windows 98 and
-// 2000's title bar where a theme records a gradient end, by the live chrome
-// vocabulary's road (chrome_spec.h): the win2000 vocabulary's SMOOTH 24-bit
+// 2000's title bar where a theme records a gradient end: a SMOOTH 24-bit
 // ramp, each device column its own rounded colour (architect 2026-10-06,
-// ReactOS's caption as captured), or the win95 vocabulary's 15-bit high
-// colour under an ordered dither — still solid cells, nothing blended at
+// ReactOS's caption as captured) — still solid cells, nothing blended at
 // paint time (paint_caption_gradient, the rule's one owner).
 // A DITHER'S CELL IS ONE DEVICE PX (architect 2026-10-06, the whole chrome
 // made scalable: "all colours used are period-authentic; dithering gets
@@ -113,9 +111,8 @@ struct TrimRange {
 // dither — no blended colour is ever computed in its place — but its cell is
 // the panel's own pixel, the period technique at native resolution, so at
 // 400 % the pattern is four times finer than a 96-dpi screen's and the eye
-// blends it as it blended the original. THE DITHERS are the checked face
-// (paint_checker_rect) and, in the win95 vocabulary, the caption's gradient
-// (paint_caption_gradient).
+// blends it as it blended the original. THE ONE DITHER is the checked face
+// and the trim track's checker (paint_checker_rect, Windows' pattern brush).
 // THIS PARAGRAPH IS THE RULE'S ONE STATEMENT; every other chrome length stays
 // in Windows px (scaled_px).
 //
@@ -138,11 +135,12 @@ struct TrimRange {
 // lines a side, and no other role draws a relief line. THE FAMILIES (the
 // painters are paint_relief_soft_raised and its siblings, below), lines given
 // outer then inner, top-left / bottom-right, in the theme's quartet:
-//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a win95 toolbar
-//                 button, a caption button (EDGE_RAISED | BF_SOFT; Windows'
-//                 DFC_CAPTION, architect 2026-10-05);
-//   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a win95 toolbar
-//                 button checked or pressed, a caption button pressed;
+//   SOFT RAISED   Hilight / DkShadow, 3DLight / Shadow — a caption button
+//                 (EDGE_RAISED | BF_SOFT; Windows' DFC_CAPTION, architect
+//                 2026-10-05), an on-screen keyboard key, the scrub's
+//                 pointed thumb (paint_scrub_thumb, 2026-10-06);
+//   SOFT SUNKEN   DkShadow / Hilight, Shadow / 3DLight — a caption button
+//                 pressed, a keyboard key checked or pressed;
 //   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow — a push button, the
 //                 scroll-bar thumb, a menu's and a dropdown's frame
 //                 (EDGE_RAISED);
@@ -150,16 +148,15 @@ struct TrimRange {
 //                 (EDGE_SUNKEN);
 //   SUNKEN OUTER  ONE line, Shadow / Hilight (BDR_SUNKENOUTER) — a
 //                 status-bar panel, a time field (row 8's clock, the render
-//                 player's two), the win2000 open menu title, a win2000 flat
-//                 toolbar button pressed or checked;
-//   RAISED INNER  ONE line, Hilight / Shadow (BDR_RAISEDINNER) — a win2000
-//                 flat toolbar button's hot face (architect 2026-10-06);
+//                 player's two), the open menu title, a flat toolbar button
+//                 pressed or checked;
+//   RAISED INNER  ONE line, Hilight / Shadow (BDR_RAISEDINNER) — a flat
+//                 toolbar button's hot face (architect 2026-10-06);
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
 //                 the ruler's ticks, a menu separator, the icon row's etched
-//                 pairs, the win2000 toolbars' group separators.
-// THE CARD FRAME is no relief: ONE flat line in the `card_frame` role, on
-// all four sides in the win2000 vocabulary and on the bottom and the right
-// only in the win95 one (THE CARD FACE, below).
+//                 pair, the toolbars' group separators.
+// THE CARD FRAME is no relief: ONE flat line in the `card_frame` role on all
+// four sides (THE CARD FACE, below).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
 // ground in one-device-px cells (paint_checker_rect, below; the dither rule
 // above).
@@ -178,7 +175,7 @@ struct TrimRange {
 //                 selected disabled flag's label, DkShadow also the flag
 //                 outline (on every flag, selected or not) and the dialog
 //                 focus frame;
-//   selected pair a dropdown's lit row, the open menu anchor, the folder
+//   selected pair a dropdown's lit row, the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
 //                 band and selected substring of every text field, the flag
@@ -222,19 +219,13 @@ struct TrimRange {
 // second line: Windows' ink, no dims), and every notification card stand on
 // `card_ground` under `card_text` with a THIN LINE of `card_frame`, ONE
 // Windows px (relief_line_px) and no relief line — the built-in's #FFFFE1
-// (InfoWindow) under black (InfoText) — WHERE THE LIVE CHROME VOCABULARY
-// DRAWS IT (chrome_spec.h's card_frame): WIN2000 (architect 2026-10-06; the
-// cards take the tooltip's look, his word) on ALL FOUR SIDES, ReactOS's
-// tooltip on tmp/reactos-tooltips.png ("Views": WS_BORDER, black all round);
-// WIN95 (architect 2026-10-06) on the BOTTOM AND THE RIGHT ONLY, the top and
-// left rows being the face, read off the one Windows 95 capture there is,
-// ToastyTech's win95toolbar.png (Explorer's "Up One Level" tooltip: black at
-// the bottom row and the right column, the two meeting at both far corners,
-// the top row and the left column the yellow). Either way the line is
-// painted as square cell rects on the face, owning its corners whole — a
-// flat line, not a bevel, so the relief's mitre is not drawn on it
-// (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE RULE'S ONE
-// STATEMENT.
+// (InfoWindow) under black (InfoText) — on ALL FOUR SIDES (architect
+// 2026-10-06; the cards take the tooltip's look, his word), ReactOS's
+// tooltip on tmp/reactos-tooltips.png ("Views": WS_BORDER, black all round),
+// Windows 2000's. The line is painted as square cell rects on the face,
+// owning its corners whole — a flat line, not a bevel, so the relief's mitre
+// is not drawn on it (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE
+// RULE'S ONE STATEMENT.
 // THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD (architect 2026-10-03, Windows'
@@ -268,8 +259,8 @@ struct TrimRange {
 // set_waveform_source for the waveform's one cairo fill, the canvas
 // (render_canvas). Each is a plain hand-over; the plate's own pixels are
 // written as words (argb32_opaque_word), not through cairo, as are the
-// caption gradient's (paint_caption_gradient) and the checked dither's tile
-// (paint_checker_rect).
+// caption gradient's ramp (paint_caption_gradient) and the checked dither's
+// tile (paint_checker_rect).
 void set_palette_source(cairo_t* cr, GuiColor c);
 void set_waveform_source(cairo_t* cr, GuiColor c);
 
@@ -722,21 +713,18 @@ inline constexpr int kPlayheadUnitPx = 6;
 // tablet's full-screen window has none of its own). THE PERIOD'S CAPTION AT
 // THE WINDOWS PIXEL, every number its own (SM_CYCAPTION and the caption
 // buttons' DrawFrameControl box), measured on the architect's references — a
-// Windows 2000 window, whose caption metrics are Windows 95's, and the
-// ReactOS captures (tmp/reactos*.png), whose are Windows 2000's; the two
-// chrome vocabularies (chrome_spec.h) differ in the ground's ramp and the
-// glyphs alone:
+// Windows 2000 window and the ReactOS captures (tmp/reactos*.png), whose
+// caption metrics are Windows 2000's (and Windows 95's before it):
 //   THE LANE is 18 Windows px whole (kCaptionHeightPx): the caption's ground
-//     (the active or inactive start-to-end colours, paint_caption_gradient:
-//     the win2000 vocabulary's smooth ramp, the win95 one's dithered),
-//     across the whole lane, under the icon and the buttons too (ReactOS's
-//     span), nothing above or below it inside the lane;
+//     (the active or inactive start-to-end colours, paint_caption_gradient's
+//     smooth ramp), across the whole lane, under the icon and the buttons too
+//     (ReactOS's span), nothing above or below it inside the lane;
 //   THE ICON, the app's own (icons::Icon::AppIcon — the launcher's), 16 x 16
 //     (SM_CXSMICON) at (2, 1) from the lane's top-left, the set's drawing,
 //     Tango's audio-x-generic (icons::draw);
 //   THE TITLE in THE BOLD FACE (GuiFace::Bold, gui_font.h: the live set's
-//     bold, Tahoma Bold — Nimbus Sans Bold in the win95 set — the caption
-//     font being the body face in bold), its pen at x 20
+//     bold, Tahoma Bold, the caption font being the body face in bold), its
+//     pen at x 20
 //     (two px past the icon) and its cap band centred in the lane (redesign_baseline), in
 //     the caption's text role, cut before the buttons with Windows' "..."
 //     (paint_caption_row owns the words and the cut);
@@ -749,11 +737,9 @@ inline constexpr int kPlayheadUnitPx = 6;
 //     family, the SOFT edges; the reference's white outer line and 3DLight
 //     inner one agree), its glyph Marlett's character in the label
 //     (paint_handler.cpp's caption glyph block: Minimise, Maximise and
-//     Restore authored cells — ReactOS's 7-wide Minimise and Restore in the
-//     win2000 vocabulary, Windows' 6-wide in the win95 one — and Close the
-//     smooth outline of Marlett's staircase in win2000, two 45-degree bars
-//     in win95, the cell on its unit grid at Windows' (3, 2)), sunken and
-//     shifted one px while pressed.
+//     Restore authored cells — ReactOS's 7-wide Minimise and Restore — and
+//     Close the smooth outline of Marlett's staircase, the cell on its unit
+//     grid at Windows' (3, 2)), sunken and shifted one px while pressed.
 // Every length is a composite of its rounded parts (scaled_px's rule): 50
 // device rows at the tablet's 275 %, 25 at the laptop's 138 %.
 inline constexpr int kCaptionHeightPx      = 18;
@@ -772,12 +758,9 @@ inline int caption_row_h_px() {
 // THE CAPTION'S GRADIENT — THE ONE GRADIENT IN THE PRODUCT (architect
 // 2026-10-05; the palette head's exception), its rule and reason at the
 // definition (render.cpp): `start` at the left of `r`, `end` at its right,
-// linear per channel across the width, by the live chrome vocabulary's road
-// (chrome_spec.h's caption_gradient): win2000 each device column's rounded
-// 24-bit colour (architect 2026-10-06), win95 quantised to 15-bit high colour
-// under Windows' 4 x 4 ordered dither in one-device-px cells (the palette
-// head's dither rule); a flat caption (end equal to start) is one solid fill
-// of the exact colour. Opaque.
+// linear per channel across the width, each device column's rounded 24-bit
+// colour (architect 2026-10-06); a flat caption (end equal to start) is one
+// solid fill of the exact colour. Opaque.
 void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
                             GuiColor end);
 
@@ -806,19 +789,15 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // stand, cap-centred in it.
 //
 // THE LANE IS ONE WINDOWS PX TALLER THAN THE CONTENT, A ROW OF PLAIN GROUND
-// BESIDE IT (architect 2026-10-05, Windows 95 screenshots measured at 100 % —
-// File Manager, Exchange and WordPad agree on a 20-px menu band under the
-// 18-px caption): the content's 19 is kept exactly — Windows' own SM_CYMENU,
-// and the number this row's rulings and the architect's live judgments were
-// made against — and the extra row is added beside it rather than folded
-// into it, so EVERY LABEL'S CAP BAND STAYS AT ITS PLACE IN THE CONTENT (the
-// painter cap-centres on the CONTENT rows, never the lane's, below). WHERE
-// THE ROW STANDS IS THE LIVE CHROME VOCABULARY'S (kLiveChromeSpec.
-// menu_face_row, chrome_spec.h): ABOVE the content, directly under the
-// caption, in WIN2000 (architect 2026-10-06; ReactOS: caption 18, face 1,
-// menu 19 — its WordPad's cap top 5 rows into the content, as ours); BELOW
-// it, a foot, in WIN95. The lane's 20 and so every lane below it are the
-// same in both. The
+// ABOVE IT, directly under the caption (architect 2026-10-05, Windows 95
+// screenshots measured at 100 % agreeing on a 20-px menu band; the row's
+// place architect 2026-10-06, ReactOS: caption 18, face 1, menu 19 — its
+// WordPad's cap top 5 rows into the content, as ours): the content's 19 is
+// kept exactly — Windows' own SM_CYMENU, and the number this row's rulings
+// and the architect's live judgments were made against — and the extra row
+// is added beside it rather than folded into it, so EVERY LABEL'S CAP BAND
+// STAYS AT ITS PLACE IN THE CONTENT (the painter cap-centres on the CONTENT
+// rows, never the lane's, below). The
 // ICON ROW stands directly under the lane with no margin, border or line of
 // its own (kdenlive, QEMU and virt-manager draw no border between the
 // menubar and the toolbar, and neither does this row): its ground — the
@@ -830,10 +809,9 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // the dropdown will touch the first row, as it does in kdenlive"; the number
 // Windows' menu bar's since 2026-10-02, the face row added 2026-10-05): each
 // anchor's rectangle fills the LANE top to bottom and IS the anchor's
-// published hit rect and, in the win95 vocabulary, the open anchor's
-// highlight (paint_menu_row; win2000's sunken box stands round the content
-// rows alone, as ReactOS's does round its 19-row item), and
-// the anchor's foot is the lane's foot, which is where the dropdown and its
+// published hit rect (paint_menu_row; the open anchor's sunken box stands
+// round the content rows alone, as ReactOS's does round its 19-row item),
+// and the anchor's foot is the lane's foot, which is where the dropdown and its
 // damage band hang (top_menu_row_area — paint_dropdown and toggle_dropdown
 // read the same accessor), so the popup touches the icon row's first pixel —
 // one row lower than before the face row joined the lane, the dropdown's own
@@ -852,30 +830,26 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // 52 device rows at the tablet's 275 %, 26 at the laptop's 138 %; the face
 // row 3 at 275 %, 1 at 138 % — lane totals of 55 and 27. TWO ACCESSORS FOR
 // TWO READERS, deliberately: the lane table and the anchor/hit-rect/dropdown
-// geometry read the LANE (menu_row_h_px), the label's cap-centring and
-// win2000's open box read the CONTENT alone (menu_row_content_rect,
-// paint_menu_row) — the one place the two now differ.
+// geometry read the LANE (menu_row_h_px), the label's cap-centring and the
+// open box read the CONTENT alone (menu_row_content_rect, paint_menu_row) —
+// the one place the two differ.
 inline constexpr int kMenuRowHeightPx = 19;
-// THE FACE ROW, Windows' measured 20-px band less the content's 19 (architect
-// 2026-10-05): the foot under the content in win95, the row above it in
-// win2000 (the place above).
-inline constexpr int kMenuRowFootPx = 1;
+// THE FACE ROW above the content, Windows' measured 20-px band less the
+// content's 19 (architect 2026-10-05; its place 2026-10-06, above).
+inline constexpr int kMenuRowHeadPx = 1;
 inline int menu_row_content_h_px() {
     return scaled_px(kMenuRowHeightPx, 5);
 }
-inline int menu_row_foot_h_px() {
-    return scaled_px(kMenuRowFootPx, 1);
+inline int menu_row_head_h_px() {
+    return scaled_px(kMenuRowHeadPx, 1);
 }
 inline int menu_row_h_px() {
-    return menu_row_content_h_px() + menu_row_foot_h_px();
+    return menu_row_content_h_px() + menu_row_head_h_px();
 }
-// The content's rows in the menu lane `lane`: under the face row in win2000,
-// at the lane's top in win95 (kLiveChromeSpec.menu_face_row).
+// The content's rows in the menu lane `lane`: under the face row.
 inline GuiRect menu_row_content_rect(const GuiRect& lane) {
-    const int top = kLiveChromeSpec.menu_face_row == GuiMenuFaceRow::Head
-                        ? menu_row_foot_h_px()
-                        : 0;
-    return GuiRect{lane.x, lane.y + top, lane.w, menu_row_content_h_px()};
+    return GuiRect{lane.x, lane.y + menu_row_head_h_px(), lane.w,
+                   menu_row_content_h_px()};
 }
 // (THE TOOLBAR ROW IS DELETED — 2026-08-12, the grand relayout's roster
 // commit: the labeled Save / Undo / Redo / Render lane, row 2 of the redesign
@@ -893,8 +867,8 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 // to an edge; the grammar is at the palette head): 3 device px at the
 // tablet's 275 %, 1 at the laptop's 138 %, floored at 1 so it never vanishes
 // at 50 %. The relief helpers (paint_relief_soft_raised and its siblings)
-// paint every line at it; the icon row's two etched pairs below are two
-// lines apiece.
+// paint every line at it; the icon row's etched pair below is two
+// lines.
 inline constexpr int kReliefLinePx = 1;
 inline int relief_line_px() {
     return scaled_px(kReliefLinePx, 1);
@@ -912,49 +886,31 @@ inline int relief_line_px() {
 // carries down by construction; row 8's air around it is its own
 // (bottom_row_air_px, below).
 //
-// THE CASE IS THE LIVE CHROME VOCABULARY'S (chrome_spec.h's toolbar_case_*
-// fields) and A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): its width
-// is scaled_px(lead) + scaled_px(glyph) + scaled_px(trail x), its height
-// scaled_px(lead) + scaled_px(glyph) + scaled_px(trail y).
-//   WIN2000 (architect 2026-10-06, on mock_TF1 and the ReactOS captures):
-//     WINDOWS' LARGE TOOLBAR CASE, 31 x 30 — three px of case left of and
-//     above the 24-px glyph seat, FOUR right of it and three below, Windows'
-//     own extra column on the right — Explorer's (its button rect is 30 rows,
-//     182-211 of tmp/reactos-hover.png): 93 x 90 device px at 300 %, 43 x 41
-//     at the laptop's 138 %, the glyph 72 and 33 (the Tango set's 48-unit
-//     drawing, icons.h, 1.5 device px a unit at 300 %).
-//   WIN95 (architect 2026-10-02, the AB / AD sets): WINDOWS 95's TOOLBAR
-//     BUTTON, 23 x 22 with the 16 x 16 glyph at (3, 3), the same lead and
-//     trails: 69 x 66 device px at 300 %, 32 x 30 at 138 %, the glyph 48 and
-//     22.
+// THE CASE IS THE CHROME SPEC'S (chrome_spec.h's toolbar_case_* fields) and
+// A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): its width is
+// scaled_px(lead) + scaled_px(glyph) + scaled_px(trail x), its height
+// scaled_px(lead) + scaled_px(glyph) + scaled_px(trail y). WINDOWS' LARGE
+// TOOLBAR CASE, 31 x 30 (architect 2026-10-06, on mock_TF1 and the ReactOS
+// captures) — three px of case left of and above the 24-px glyph seat, FOUR
+// right of it and three below, Windows' own extra column on the right (the
+// small case's 23 x 22 round a 16-px glyph had the same lead and trails) —
+// Explorer's (its button rect is 30 rows, 182-211 of
+// tmp/reactos-hover.png): 93 x 90 device px at 300 %, 43 x 41 at the
+// laptop's 138 %, the glyph 72 and 33 (the Tango set's 48-unit drawing,
+// icons.h, 1.5 device px a unit at 300 %).
 // THE GLYPH RASTERIZES AT icon_glyph_px (icons::draw_cased, at the case's
 // (3, 3) offset, never centred on the glyph's ink; the pressed and checked
 // faces' shift is one Windows px further right and down).
 //
-// THE LANE IS A MENU-BAR-PLUS-TOOLBAR STACK FOLDED INTO ONE ROW, the
-// vocabulary's own, each term its own rounded part:
-//   WIN2000 (architect 2026-10-06, Explorer's and WordPad's stacking in
-//     ReactOS): ONE ETCHED LINE PAIR under the menu row (a Shadow row over a
-//     Hilight row, paint_relief_etched_hline, spanning the lane's width),
-//     THE TOOLBAR BAND — which IS THE CASE, no air above or below it inside
-//     the band (Explorer's band is its buttons' height) — and FOUR Windows px
-//     of ground before the trim lane: 2 + 30 + 4 = 36. NO SECOND ETCHED PAIR.
-//   WIN95 (architect 2026-10-05, measured on Windows 95 screenshots — their
-//     geometry trusted, their colours never sampled): File Manager, Exchange
-//     and WordPad agree on an etched pair under the menu band, then the
-//     toolbar's own ground; WordPad, which carries a second bar, puts a
-//     SECOND etched pair after its toolbar and 3 px of ground before its own
-//     next band. The lane folds that stack with no second bar: TOP ETCHED
-//     PAIR, WORDPAD'S 3 WINDOWS PX OF AIR ABOVE THE CASE, THE CASE, 3 BELOW
-//     IT, THE SECOND ETCHED PAIR, then 3 px of FOOT before the trim lane:
-//     2 + 3 + 22 + 3 + 2 + 3 = 35.
-// THE TOP STACK IS 125 WINDOWS PX UNDER EITHER VOCABULARY (caption 18 + menu
-// 20 + this lane + trim 16 + the ruler + marker 18: win2000's 36 beside the
-// 6-row digit's 17-px ruler, win95's 35 beside the 7-row digit's 18), so the
-// trim lane, the ruler, the playhead's head, the marker lane and the well's
-// top keep their rows whichever vocabulary paints at a whole-number scale
-// (at the laptop's 138 % the rounding stands win2000's trim lane 3 device
-// rows lower and its well's top 1, its stack 170 rows against 169). The
+// THE LANE IS A MENU-BAR-PLUS-TOOLBAR STACK FOLDED INTO ONE ROW (architect
+// 2026-10-06, Explorer's and WordPad's stacking in ReactOS), each term its
+// own rounded part: ONE ETCHED LINE PAIR under the menu row (a Shadow row
+// over a Hilight row, paint_relief_etched_hline, spanning the lane's width),
+// THE TOOLBAR BAND — which IS THE CASE, no air above or below it inside the
+// band (Explorer's band is its buttons' height; the spec's icon_row_air_px,
+// 0) — and FOUR Windows px of ground before the trim lane (icon_row_foot_px):
+// 2 + 30 + 4 = 36. THE TOP STACK IS 125 WINDOWS PX (caption 18 + menu 20 +
+// this lane 36 + trim 16 + the 6-row digit's 17-px ruler + marker 18). The
 // foot's last row's
 // neighbour is the trim lane's own first row, still the boundary — NO
 // BORDER OF ITS OWN (architect 2026-10-01). THE ROW IS MODELLED ON KDENLIVE'S
@@ -968,11 +924,10 @@ inline int relief_line_px() {
 //
 // THE BUTTONS TOUCH WITHIN A GROUP and EIGHT WINDOWS PX stand between two
 // groups (architect 2026-10-02, the Y / Z / AB sets: "the buttons touch"),
-// the group boundaries redesign_button_opens_icon_group's. WHAT STANDS IN A
-// GAP IS THE VOCABULARY'S TOOLBAR STYLE (chrome_spec.h's toolbar_style):
-// win95's bare ground (comctl32's classic toolbar leaves the gap blank), or
-// in win2000 AN ETCHED SEPARATOR in every group gap of BOTH toolbars
-// (architect 2026-10-06, his word; comctl32's TOOLBAR_DrawFlatSeparator,
+// the group boundaries redesign_button_opens_icon_group's. IN EVERY GROUP GAP
+// OF BOTH TOOLBARS STANDS AN ETCHED SEPARATOR, the flat toolbar style's
+// (chrome_spec.h's toolbar_style; architect 2026-10-06, his word; comctl32's
+// TOOLBAR_DrawFlatSeparator,
 // read off tmp/reactos-hover.png, columns 17-18 of Explorer's bar, rows
 // 184-209): a Shadow column at the gap's 8 / 2 − 1 Windows px and a Hilight
 // column beside it, from the band's top + 2 to its bottom − 2, 26 of the 30
@@ -986,7 +941,7 @@ inline int relief_line_px() {
 // paint_handler.cpp's three rows. THE CARD'S GLYPH BOX AND THE FOLDER
 // OVERLAY'S LIST ICON ARE NOT THE CASE (2026-10-06, report_TC's catch: a
 // 24-px glyph would overrun the 17-px list row): each keeps Windows' small
-// 16-px icon under both vocabularies on a constant of its own
+// 16-px icon on a constant of its own
 // (notifications.h's kNotificationGlyph*, folder_overlay.h's kRowIcon*).
 inline constexpr int kIconGroupSpacePx   = 8;    // bare ground between two groups
 // THE SEPARATOR'S SEAT in a group gap, in Windows px: its Shadow column's
@@ -995,7 +950,7 @@ inline constexpr int kIconGroupSpacePx   = 8;    // bare ground between two grou
 // bottom − 2).
 inline constexpr int kToolbarSeparatorXPx = kIconGroupSpacePx / 2 - kReliefLinePx;
 inline constexpr int kToolbarSeparatorInsetYPx = 2;
-// The vocabularies' records, authored: the case and the lane's total.
+// The spec's record, authored: the case and the lane's total.
 constexpr int toolbar_case_authored_w(const ChromeSpec& s) {
     return s.toolbar_case_lead_px + s.toolbar_glyph_px +
            s.toolbar_case_trail_x_px;
@@ -1007,12 +962,8 @@ constexpr int toolbar_case_authored_h(const ChromeSpec& s) {
 constexpr int icon_row_authored_h(const ChromeSpec& s) {
     return 2 * kReliefLinePx + s.icon_row_air_px +
            toolbar_case_authored_h(s) + s.icon_row_air_px +
-           (s.icon_row_second_etched_pair ? 2 * kReliefLinePx : 0) +
            s.icon_row_foot_px;
 }
-static_assert(toolbar_case_authored_w(kChromeSpecWin95) == 23 &&
-              toolbar_case_authored_h(kChromeSpecWin95) == 22 &&
-              icon_row_authored_h(kChromeSpecWin95) == 35);
 static_assert(toolbar_case_authored_w(kChromeSpecWin2000) == 31 &&
               toolbar_case_authored_h(kChromeSpecWin2000) == 30 &&
               icon_row_authored_h(kChromeSpecWin2000) == 36);
@@ -1040,12 +991,12 @@ inline int icon_group_space_px()  { return scaled_px(kIconGroupSpacePx); }
 // a fractional gui_scale.
 inline int icon_row_etched_pair_px() { return 2 * relief_line_px(); }
 // The ground above and below the case inside the icon row's toolbar band:
-// WordPad's 3 in win95, none in win2000.
+// none (Explorer's band is the case).
 inline int icon_row_air_px() {
     return scaled_px(kLiveChromeSpec.icon_row_air_px);
 }
 // THE TOOLBAR BAND ALONE — air, case, air — with NO etched line and NO foot
-// in it: in win2000 the case itself.
+// in it: the case itself while the air is 0.
 inline int icon_row_band_h_px() {
     return 2 * icon_row_air_px() + icon_case_h_px();
 }
@@ -1059,9 +1010,6 @@ inline int icon_case_top_offset_px() {
 }
 inline int icon_row_h_px() {
     return icon_row_etched_pair_px() + icon_row_band_h_px() +
-           (kLiveChromeSpec.icon_row_second_etched_pair
-                ? icon_row_etched_pair_px()
-                : 0) +
            scaled_px(kLiveChromeSpec.icon_row_foot_px);
 }
 
@@ -1069,11 +1017,11 @@ inline int icon_row_h_px() {
 // its box is the relief at relief_line_px, below, and no corner in the
 // chrome is rounded.
 
-// -- THE PLAY-SCRUB: SOUND RECORDER'S SLIDER (architect 2026-10-02) ----------
+// -- THE PLAY-SCRUB (architect 2026-10-02; the thumb 2026-10-06) -------------
 //
-// The render player's modal row carries the transport's scrub, and its look is
-// Windows 95 Sound Recorder's trackbar, nothing filled ("Sound Recorder
-// doesn't fill it"):
+// The render player's modal row carries the transport's scrub: Sound
+// Recorder's channel, nothing filled ("Sound Recorder doesn't fill it"),
+// under WINDOWS' TRACKBAR THUMB:
 //   THE CHANNEL — the PLAIN SUNKEN edge collapsed to its lines, NO INTERIOR:
 //     kScrubChannelLines relief lines tall, top to bottom Shadow, DkShadow,
 //     3DLight, Hilight (the edge's two rings on a rect four lines tall, its
@@ -1081,11 +1029,34 @@ inline int icon_row_h_px() {
 //     centred in the buttons' band (row 8's toolbar case band since
 //     2026-10-05, bottom_row_seats in paint_handler.cpp). Its height is the sum of its rounded
 //     lines, 4 × relief_line_px (12 device rows at 275 %, 4 at 138 %).
-//   THE THUMB — kScrubThumbWidthPx wide, PLAIN RAISED with the ground for its
-//     face, centred on the position and standing on the channel with
-//     kScrubThumbAbovePx rows above it and kScrubThumbBelowPx below — 8 + 4 +
-//     9 = 21 Windows px, Sound Recorder's 11 × 21, the height the sum of its
-//     rounded parts (59 device rows at 275 %, 27 at 138 %).
+//   THE THUMB — WINDOWS' POINTED TRACKBAR THUMB (TBS_BOTTOM; architect
+//     2026-10-06, the source ReactOS's own, measured at 100 % on
+//     tmp/reactos-media.png, mplay32's position slider, and confirmed on
+//     tmp/reactos-audio.png, the Device volume slider disabled): a
+//     rectangle kScrubThumbWidthPx = 11 wide whose bottom ends in a
+//     downward point kScrubThumbPointPx = 5 rows tall, the tip a single
+//     DkShadow pixel under the middle column (mplay32: columns 96..106,
+//     rows 99..121, straight sides rows 99..116, the point 117..121, the
+//     tip at (101, 121); the disabled one 199..209 by rows 212..232, its
+//     straight sides 16 rows — comctl32 sizes the straight part to the
+//     control, the width and the point never). ITS EDGE IS THE SOFT RAISED
+//     PAIR on the pentagon (EDGE_RAISED | BF_SOFT): the outer line Hilight
+//     on the top, the left and the left diagonal, DkShadow on the right and
+//     the right diagonal; the inner line 3DLight (the face's own colour in
+//     Windows 2000 Standard, invisible on the capture) and Shadow; the face
+//     the ground (the disabled capture's face is the Hilight checker — the
+//     scrub has no disabled state: with no item there is no thumb). DRAWN
+//     SCALABLE (paint_scrub_thumb, render.cpp): the pentagon's rings in
+//     device px, antialiased, the light and dark halves MITRED at the
+//     top-right corner along the 45-degree diagonal (paint_relief_frame's
+//     rule) and meeting at the tip on the axis, as the playhead's head does.
+//     Its height stays THE SCRUB'S SEAT, kScrubThumbAbovePx rows above the
+//     channel, the channel's four lines and kScrubThumbBelowPx below — 8 +
+//     4 + 9 = 21 Windows px, the volume slider's 16 + 5 (mplay32's taller
+//     control draws 18 + 5 = 23; the seat was kept rather than the channel
+//     moved), the straight part over the channel and the point below it,
+//     toward the channel's bottom: 59 device rows at 275 %, 63 at 300 %, 27
+//     at 138 %, each part rounded on its own.
 // NO PLAYED EXTENT AND NOTHING THAT READS THE WINDOW'S FOCUS: the channel is
 // lines on the ground, the position is the thumb. The painter is
 // paint_modal_dialog's player branch; the press is claim_player_scrub_press.
@@ -1093,11 +1064,17 @@ inline constexpr int    kScrubChannelLines = 4;
 inline constexpr double kScrubThumbWidthPx = 11.0;
 inline constexpr double kScrubThumbAbovePx = 8.0;
 inline constexpr double kScrubThumbBelowPx = 9.0;
+inline constexpr double kScrubThumbPointPx = 5.0;
 // The thumb's width floors at five device px — its two relief rings a side
-// and one column of face — and its two overhangs at one row each.
+// and one column of face — its two overhangs and its point at one row each.
 inline int scrub_thumb_w_px()     { return scaled_px(kScrubThumbWidthPx, 5); }
 inline int scrub_thumb_above_px() { return scaled_px(kScrubThumbAbovePx, 1); }
 inline int scrub_thumb_below_px() { return scaled_px(kScrubThumbBelowPx, 1); }
+inline int scrub_thumb_point_px() { return scaled_px(kScrubThumbPointPx, 1); }
+// THE THUMB ON ITS BOX `box` (scrub_thumb_w_px by scrub_thumb_h_px), the
+// rule above: the pentagon's soft raised edge and its ground face, nothing
+// outside the pentagon painted.
+void paint_scrub_thumb(cairo_t* cr, const GuiRect& box);
 //
 // THE HANDLE'S BOX IS THE GRAB, NOT THE PICTURE: a 14 Windows px box (the
 // laptop pixel's 20 re-authored, architect 2026-10-02), the ONE owner of
@@ -1146,17 +1123,14 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 // readers — the painter's baseline and this height (ruler_label_baseline_px,
 // paint_handler.cpp) — so the two cannot disagree. The face is THE SMALL
 // FACE (gui_font.h, architect 2026-10-05), whose recorded cell is all cap —
-// the live win2000 set's 6-row digit, WordPad's ruler's (ascent 6, cap 6,
-// descent 0; the win95 set's is Small Fonts' 7) — times the scale at every
-// scale: 4 + 6 + 7 = 17 Windows px at 100 %;
+// a 6-row digit, WordPad's ruler's (ascent 6, cap 6, descent 0) — times the
+// scale at every scale: 4 + 6 + 7 = 17 Windows px at 100 %;
 //   400 % (k = 4): pad 16, ascent 24, baseline row 40, cap ink rows
 //     16..39: lane 40 + 28 = 68.
 //   275 % (the tablet): pad 11, ascent 16.5 -> 16 (the tie to even),
 //     baseline row 27, cap ink rows 11..26: lane 27 + 19 = 46.
 //   138 % (the laptop): pad 6, ascent 8.28 -> 8, baseline row 14, ink
 //     rows 6..13: lane 14 + 10 = 24.
-// (The win95 set's 7-row digit: 18 Windows px at 100 %, lanes 72, 49 and
-// 26.)
 // The major ticks' rise above the marker lane is the painter's own and does
 // not enter the lane.
 //
@@ -1213,10 +1187,9 @@ int ruler_lane_h_px();
 // marker_lane_rows, paint_handler.cpp), not the label's ink (architect
 // 2026-10-05) — THE FLAG IS 1 + 1 + 11 + 2 + 1 + 1 = 17 WINDOWS PX, the
 // period's one-line field (kTimeFieldHeightPx, the list row), so the
-// label's caps — 8 rows in the live win2000 set — get 4 Windows px above
-// them (the cell's top rows, the row "^" climbs into, and the face) and 3
-// below (the descent and the face); the win95 set's 9-row caps get 3 and 3,
-// centred. The label sits on the cell's baseline at every scale, and a
+// label's caps — Tahoma's 8 rows — get 4 Windows px above them (the cell's
+// top rows, the row "^" climbs into, and the face) and 3 below (the descent
+// and the face). The label sits on the cell's baseline at every scale, and a
 // glyph poking past the cell or the box is accepted (gui_font.h). The
 // ascent and the descent are each rounded on their own (scaled_px), the box
 // the sum of its rounded parts. Every row the box gains or saves is THE
@@ -1347,12 +1320,11 @@ int  waveform_max_h_px();
 // as main icon row"; the air its own field since 2026-10-06): it READS the
 // icon row's case accessors rather than restating them — one source, so a
 // retune of the case carries down here by construction — and its air above
-// and below the case is the vocabulary's bottom_row_air_px (chrome_spec.h),
-// THREE WINDOWS PX in both: WordPad's, which in win95 is the icon row's own
-// band air too, while win2000's icon row has none inside its band (Explorer's
-// band is the case) and row 8 keeps its 3 / 3 (architect 2026-10-06).
-// So the content is 3 + 22 + 3 = 28 Windows px in win95 and 3 + 30 + 3 = 36
-// in win2000. (Its earlier boxes — row 8's kdenlive 26 px transport boxes,
+// and below the case is the spec's bottom_row_air_px (chrome_spec.h), THREE
+// WINDOWS PX: WordPad's band air, while the icon row has none inside its
+// band (Explorer's band is the case) and row 8 keeps its 3 / 3 (architect
+// 2026-10-06). So the content is 3 + 30 + 3 = 36 Windows px. (Its earlier
+// boxes — row 8's kdenlive 26 px transport boxes,
 // then the icon row's 32-laptop-px square, then the five-px-air 32 of
 // 2026-10-02 — are git history.)
 //
@@ -1362,7 +1334,7 @@ int  waveform_max_h_px();
 // THERE since 2026-10-02 (architect: nothing between the well and this row,
 // the well's own bottom line being the seam), and the row is kept so nothing
 // on the row moved. IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx). The
-// lane is 1 + 28 = 29 Windows px in win95 and 1 + 3 + 30 + 3 = 37 in win2000.
+// lane is 1 + 3 + 30 + 3 = 37 Windows px.
 // bottom_row_content_h_px() is the ground the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Rides
 // gui_scale_factor() like every redesigned row.
@@ -1902,9 +1874,8 @@ inline int playhead_head_half_w_px() {
 // follows the face instead of a literal that could drift from it; the run
 // loop only needs to know it can never exceed this. 44 Windows px (the
 // laptop pixel's 60 re-authored, architect 2026-10-02) clears the two-line
-// form in either chrome vocabulary — win2000's 1 + 2 + 13 + 3 + 13 + 2 + 1 =
-// 35 at 100 %, 98 device rows against 121 at 275 % (win95's 33 and 92;
-// 2026-10-06).
+// form — 1 + 2 + 13 + 3 + 13 + 2 + 1 = 35 at 100 %, 98 device rows against
+// 121 at 275 % (2026-10-06).
 inline constexpr int     kTooltipDamageHeightPx = 44;
 inline int tooltip_damage_h_px() {
     return scaled_px(kTooltipDamageHeightPx, 5);
@@ -1958,8 +1929,8 @@ inline constexpr int64_t kTooltipReshowMs = 100;
 inline constexpr int64_t kTooltipAutoPopMs = 5000;
 
 // THE HOVER SLOP (architect 2026-09-29: the wait counts from STILLNESS WITH
-// HYSTERESIS) — A RECORDED DEPARTURE from Windows 95
-// (docs/engineering/windows95_deviations.md): the wait re-anchors, restarting
+// HYSTERESIS) — A RECORDED DEPARTURE from Windows
+// (docs/engineering/win2000_deviations.md): the wait re-anchors, restarting
 // (on a spent button re-anchoring alone), and a standing box's life restarts,
 // only when the pointer moves MORE than this from where it was anchored on
 // EITHER axis, so a hovering pen's jitter can neither starve the wait nor
@@ -2200,40 +2171,39 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // diagonals one line.
 //   paint_relief_frame  — one ring, any two colours (the one owner every
 //                         helper below calls).
-//   paint_relief_soft_raised  — SOFT RAISED: a win95 toolbar button at
-//                         rest, a caption button at rest (2026-10-05), an
-//                         on-screen keyboard key.
-//   paint_relief_soft_sunken  — SOFT SUNKEN: a win95 toolbar button checked
-//                         or pressed, a caption button pressed.
+//   paint_relief_soft_raised  — SOFT RAISED: a caption button at rest
+//                         (2026-10-05), an on-screen keyboard key.
+//   paint_relief_soft_sunken  — SOFT SUNKEN: a caption button pressed, a
+//                         keyboard key checked or pressed.
 //   paint_relief_plain_raised — PLAIN RAISED: a push button, the scroll-bar
-//                         thumb (the trim lane's), the scrub's thumb, a
-//                         menu's and a dropdown's frame, the restored
-//                         window's sizing frame.
+//                         thumb (the trim lane's), a menu's and a
+//                         dropdown's frame, the restored window's sizing
+//                         frame. (The scrub's pointed thumb draws its own
+//                         soft raised pentagon, paint_scrub_thumb.)
 //   paint_relief_plain_sunken — PLAIN SUNKEN: a field, the list (the folder
 //                         overlay's band, 2026-10-06), the scrub's channel
 //                         (the well is render_canvas's own fill of the same
 //                         lines, full width).
 //   paint_relief_sunken_outer — SUNKEN OUTER, ONE ring (DrawEdge's
 //                         BDR_SUNKENOUTER, Shadow / Hilight): a status-bar
-//                         panel, a time field, the win2000 open menu title,
-//                         a win2000 (flat) toolbar button pressed or checked.
+//                         panel, a time field, the open menu title, a flat
+//                         toolbar button pressed or checked.
 //   paint_relief_raised_inner — RAISED INNER, ONE ring (BDR_RAISEDINNER,
-//                         Hilight / Shadow): a win2000 (flat) toolbar
-//                         button's HOT face (architect 2026-10-06).
+//                         Hilight / Shadow): a flat toolbar button's HOT
+//                         face (architect 2026-10-06).
 //   paint_relief_line_frame — one colour all round, square (no mitre
 //                         between one tone and itself): the dialog's
 //                         default-button frame, the list's focus frame and
 //                         the trim lane's pressed arrow button.
 //   (The CARD FRAME — the tooltip's and the cards' — is no relief: its
-//   lines in `card_frame`, square, on the sides the live chrome vocabulary
-//   draws, at paint_popup_chrome.)
+//   lines in `card_frame`, square, on all four sides, at paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
 //                         [x, x + w) (the dropdown's separator, the icon
-//                         row's etched pairs).
+//                         row's etched pair).
 //   paint_relief_etched_vline — its vertical twin: a Shadow line on columns
 //                         [x, x + lw) and a Hilight line right of it, rows
-//                         [y, y + h) (the win2000 toolbars' group
+//                         [y, y + h) (the toolbars' group
 //                         separators, 2026-10-06; the ruler's etched ticks
 //                         are painted in place, paint_ruler_row).
 // (paint_relief_raised / paint_relief_sunken, the one-line pair of the thin

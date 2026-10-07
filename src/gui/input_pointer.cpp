@@ -3370,11 +3370,12 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 }
 
 // THE DIALOG BUTTONS' POINTER WALK, run on every motion under a standing
-// dialog. IT STORES NO HOVER: no dialog button wears a hover face (architect
-// 2026-10-02, the frozen design), so the walk answers two readers — the
-// armed button's inside bit with the feint (below), whose pressed face and
-// focus frame are painted and damage the stashed box, and this surface's
-// tooltip wait (the tail).
+// dialog. It answers three readers — the armed button's inside bit with the
+// feint (below), whose pressed face and focus frame are painted and damage
+// the stashed box; THE RENDER PLAYER'S HOT BUTTON (AppState::player_hot,
+// architect 2026-10-06: the player's row is a flat toolbar, the one dialog
+// surface with a hover face; no other dialog button wears one, the frozen
+// design of 2026-10-02); and this surface's tooltip wait (the tail).
 //
 // IT TRACKS AN ARMED BUTTON — THE FEINT (architect 2026-08-13,
 // SUPERSEDING this walk's own "sliding off cancels, and sliding back on does
@@ -3399,6 +3400,14 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);
     }
+    // THE PLAYER'S HOT BUTTON: the hit on the player's row while no dialog
+    // press is armed (comctl32 shows no hot item under capture), else none.
+    set_player_hot(app.modal_dialog.valid &&
+                           app.modal_dialog.owner ==
+                               AppState::ModalDialogOwner::Player &&
+                           armed < 0
+                       ? hit
+                       : -1);
     // AND IT OWNS THIS SURFACE'S TOOLTIP WAIT (2026-08-13, when the modal
     // buttons took hints instead of bracketed accelerators): the same writer
     // and the same tick the roster's walk uses, keyed on the Dialog half of
@@ -3412,6 +3421,15 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // and dies with it (the rule is at AppState::RedesignTooltip).
     note_tooltip_hover({AppState::RedesignTooltip::Surface::Dialog, hit,
                         app.modal_dialog.owner, app.modal_dialog.session});
+}
+
+void GuiInputHandler::set_player_hot(int index) {
+    const uint64_t session = index >= 0 ? app.modal_dialog.session : 0;
+    if (index == app.player_hot && session == app.player_hot_session) return;
+    app.player_hot         = index;
+    app.player_hot_session = session;
+    if (app.modal_dialog.valid)
+        viewport.invalidate_rect(app.modal_dialog.box);
 }
 
 // THE ARM'S HARD END — the pointer-leave / capability-loss hook (main.cpp),
@@ -7353,8 +7371,8 @@ void GuiInputHandler::finalize_active_drags() {
 // three readers from the remembered position — the TOOLTIP's wait (the
 // button a resting pointer's hint names, handed to note_tooltip_hover at the
 // tail), the ARMED CHROME PRESS's inside bit (the pressed face, which is
-// painted, and so pays its strip's damage) and, in the win2000 vocabulary,
-// THE HOT TOOLBAR BUTTON (AppState::roster_hot, the flat toolbar's one
+// painted, and so pays its strip's damage) and THE HOT TOOLBAR BUTTON
+// (AppState::roster_hot, the flat toolbar's one
 // hover face, architect 2026-10-06; set_roster_hot pays its damage). The
 // rects are the painter's stashes, so the button a hint names and the button
 // that lights are the painted button and nothing is measured here.
@@ -7437,7 +7455,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
                                    redesign_button_hover_zone(app, id);
         // THE HOT CANDIDATE: the toolbar button under the pointer on the
         // same gates — never a menu anchor, the menu row having no hot face
-        // in either vocabulary (paint_menu_row) — and NO keyboard-modal term:
+        // (paint_menu_row) — and NO keyboard-modal term:
         // that refusal is the tooltip's dwell, while a button the flag editor
         // leaves pressable lights as it presses. The rects are disjoint, so
         // the first is the only one, and the tooltip's break below cannot
@@ -7456,9 +7474,9 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         }
     }
     // THE HOT FACE'S ONE WRITE (AppState::roster_hot): the candidate in the
-    // flat (win2000) toolbar style while no chrome press is armed — comctl32
-    // shows no hot item while a toolbar holds the capture — and none
-    // otherwise, so the win95 vocabulary never stores one.
+    // flat toolbar style while no chrome press is armed — comctl32 shows no
+    // hot item while a toolbar holds the capture — and none otherwise, so a
+    // toolbar style with no hot face would never store one.
     set_roster_hot(kLiveChromeSpec.toolbar_style == GuiToolbarStyle::Flat &&
                            app.chrome_press.kind ==
                                AppState::ChromePress::Kind::None

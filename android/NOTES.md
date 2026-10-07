@@ -321,7 +321,7 @@ means exactly what a first run means.
    panel shows up here long before it shows up in text), and two harfbuzz-shaped
    lines at a fixed 48 px — one in the sans, one in the monospace (Liberation
    Sans and Liberation Mono when the spike ran; the product's face and its
-   Bold, from the repository's `fonts/` — Nimbus Sans since
+   Bold, from the repository's `fonts/` — Wine Tahoma since
    2026-10-06).
 2. **Live touch echo** — a ring + dot per active finger labelled with its POINTER
    ID and coordinates, tracked by id (never by index).
@@ -749,8 +749,8 @@ Two things the backend does that are not on the Wayland side at all:
   see 10.4.
 
 Font install failure is a **hard abort**, not a fallback: `install_fonts_or_die`
-opens the font assets — the four files of gui_font.h's kGuiFontFiles (Nimbus
-Sans Regular and Bold, Tahoma and Tahoma Bold since 2026-10-06),
+opens the font assets — the two files of gui_font.h's kGuiFontFiles (Tahoma
+and Tahoma Bold since 2026-10-06, Nimbus Sans beside them that day's morning),
 copied by `build_apk.sh` from the repository's `fonts/` (since 2026-10-02;
 Liberation from the host's package before) — installs them, and the install
 ANSWERS whether each face is FT-backed and carries its em's glyph (the probe moved from this

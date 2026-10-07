@@ -1,7 +1,7 @@
 #include "gui_font.h"
 
 // THE LINUX BINARY CARRIES ITS OWN FACES (architect 2026-10-02, "bundle it for
-// both"): the four files under the repository's `fonts/` (gui_font.h's
+// both"): the two files under the repository's `fonts/` (gui_font.h's
 // kGuiFontFiles) are compiled into the executable here, so the laptop depends
 // on no installed font package and asks fontconfig nothing. The Wayland
 // backend hands these to gui_font_install_bundled (gui_font.h) once, at the
@@ -26,12 +26,6 @@
 
 namespace {
 
-const uint8_t kNimbusRegular[] = {
-#include "NimbusSans-Regular.otf.inc"
-};
-const uint8_t kNimbusBold[] = {
-#include "NimbusSans-Bold.otf.inc"
-};
 const uint8_t kTahoma[] = {
 #include "tahoma.ttf.inc"
 };
@@ -42,8 +36,6 @@ const uint8_t kTahomaBold[] = {
 } // namespace
 
 const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount] = {
-    {kNimbusRegular, sizeof(kNimbusRegular)},
-    {kNimbusBold, sizeof(kNimbusBold)},
     {kTahoma, sizeof(kTahoma)},
     {kTahomaBold, sizeof(kTahomaBold)},
 };

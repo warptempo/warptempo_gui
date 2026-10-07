@@ -28,7 +28,7 @@ sys.path.insert(0, HERE)
 from sources import SOURCES, REPO, local_path, provenance
 sys.path.insert(0, os.path.join(REPO, 'tools', 'palette'))
 import colour as CL      # the picker's chrome rule (windows95_chrome), the one the picker paints with
-from parse_windows import parse_hivedef, parse_hive_colors, parse_theme
+from parse_windows import parse_hivedef, parse_hive_colors, parse_hive_schemes, parse_theme
 from parse_kde import parse_kcsrc
 from parse_cde import parse_dp
 import toolkit_rules as T
@@ -172,10 +172,14 @@ def windows_entries():
             if dn != name: notes.append(f'{src} {f} names it "{dn}"')
         return provs, n_ok
 
-    # ReactOS's 23 schemes. Its "ReactOS Standard" and "ReactOS Classic" are Windows Classic and Windows Standard
-    # under ReactOS names (byte-equal on every role key below); they are folded into those two entries, not doubled.
-    # A scheme no second source corroborates is NOT IMPORTED (REACTOS_ONLY names each and why).
-    folded = {'ReactOS Standard': 'Windows Classic', 'ReactOS Classic': 'Windows Standard'}
+    # THE THREE RELEASES' DEFAULT SCHEMES (architect 2026-10-06, "just make it accurate"): one entry per distinct byte
+    # set, keyed by the release whose default scheme the bytes are — windows-95-standard, windows-98-standard,
+    # windows-2000-standard — every source's own label for the bytes in the entry's notes, as the source spells it.
+    # ReactOS's "ReactOS Standard" and "ReactOS Classic" are Windows 2000's own "Windows Standard" and "Windows
+    # Classic" (its hive's Appearance\Schemes names, byte-equal on every role key) under ReactOS names: folded into the
+    # 2000 and 98 entries, not doubled. A hivedef.inf scheme no second source corroborates is NOT IMPORTED
+    # (REACTOS_ONLY names each and why).
+    folded = {'ReactOS Standard': 'Windows 2000 Standard', 'ReactOS Classic': 'Windows 98 Standard'}
     ros_only = {}
     for name, cols in ros.items():
         if name in folded: continue
@@ -190,40 +194,33 @@ def windows_entries():
 
     # Windows schemes ReactOS lacks, from the two XP records (each corroborating the other).
     zk = {xp_name(dn): (f, dn, cols) for src, f, dn, cols in seconds if src == 'xp_classic_zkedem'}
-    # zkedem's standard.theme ("Windows Standard") holds Windows Classic's bytes (D4D0C8) and its classic.theme
-    # ("Windows Classic") Windows Standard's (C0C0C0): its labels are swapped against XP's Appearance dialog, as
-    # classicthemes8's "Windows XP Classic" (D4D0C8) and Windows 98's Default.theme (C0C0C0) show. The entries go by
-    # the bytes.
-    swap = {'Windows Classic': 'Windows Standard', 'Windows Standard': 'Windows Classic'}
-    for name in ('Desert', 'Spruce', 'Windows Standard', 'Windows Classic'):
-        zname = swap.get(name, name)
-        f, dn, cols = zk[zname]
+    for name in ('Desert', 'Spruce'):
+        f, dn, cols = zk[name]
         notes = []
-        if name in swap: notes.append(f'xp_classic_zkedem {f} carries DisplayName "{dn}" over these bytes (its two '
-                                      f'labels swapped against XP\'s dialog); the entry is named by its bytes')
         cands = [c for c in by_name.get(name, []) if c[0] != 'xp_classic_zkedem']
-        if name == 'Windows Classic': cands += [c for c in seconds if c[2] == 'Windows XP Classic']
         provs, n_ok = corroborate(name, cols, cands, notes)
-        rname = {v: k for k, v in folded.items()}.get(name)
-        if rname:
-            d = diff_keys(cols, ros[rname])
-            assert not set(d) & role_keys, (name, d)
-            n_ok += 1; provs.append(provenance('reactos', hv) | {'scheme': rname})
-            notes.append(f'ReactOS records it as "{rname}"' + ('' if not d else ', differing on ' + ', '.join(
-                f'{k} {hx(ros[rname][k])} (here {hx(cols[k])})' for k in d)))
-        if name == 'Windows Standard':
-            f98, c98 = w98['Windows Default']
-            d = diff_keys(cols, c98)
-            assert not set(d) & role_keys, d
-            n_ok += 1; provs.append(provenance('win98_themes', f98))
-            notes.append('Windows 98\'s Windows Default.theme records the same bytes' + ('' if not d else ', but for ' + ', '.join(
-                f'{k} {hx(c98[k])} (here {hx(cols[k])})' for k in d)))
         out.append(entry('windows', name, name, [provenance('xp_classic_zkedem', f)] + provs, cols, notes=notes))
         out[-1]['corroborated'] = n_ok
-    by_key = {e['key']: e for e in out}
-    for name, (twin, _) in REACTOS_ONLY.items():     # "role-identical": the roles the twin entry maps, byte for byte
-        if twin and map_roles('windows', {k: hx(v) for k, v in ros_only[name].items()}) != by_key[twin]['roles']:
-            raise SystemExit(f'build: ReactOS {name} is not role-identical to {twin}')
+
+    hv2k = 'I386/HIVEDEF.INF'
+    w2k_schemes = parse_hive_schemes(local_path('win2000_hivedef', hv2k))
+
+    def folded_in(name, cols, provs, notes):
+        """The ReactOS scheme folded into `name`: -> its provenance appended, its label and any raw difference noted."""
+        rname = {v: k for k, v in folded.items()}[name]
+        d = diff_keys(cols, ros[rname])
+        assert not set(d) & role_keys, (name, d)
+        provs.append(provenance('reactos', hv) | {'scheme': rname})
+        notes.append(f'ReactOS records it as "{rname}"' + ('' if not d else ', differing on ' + ', '.join(
+            f'{k} {hx(ros[rname][k])} (here {hx(cols[k])})' for k in d)))
+
+    def w2k_scheme(scheme, cols, provs, notes):
+        r"""Windows 2000's own Appearance\Schemes value `scheme`: -> its provenance appended, its label noted."""
+        d = diff_keys(cols, w2k_schemes[scheme])
+        assert not set(d) & role_keys, (scheme, d)
+        provs.append(provenance('win2000_hivedef', hv2k) | {'scheme': scheme})
+        notes.append(f'Windows 2000\'s setup hive names it "{scheme}" (Appearance\\Schemes)' + ('' if not d else
+                     ', differing on ' + ', '.join(f'{k} {hx(w2k_schemes[scheme][k])} (here {hx(cols[k])})' for k in d)))
 
     # WINDOWS 95 STANDARD, hand-recorded: the retail picture.
     f98, c98 = w98['Windows Default']
@@ -236,32 +233,56 @@ def windows_entries():
          'frame\'s outer top line is DFDFDF, COLOR_3DLIGHT; face C0C0C0, Hilight FFFFFF, Shadow 808080, DkShadow 000000'},
         provenance('win98_themes', f98) | {'keys': 'every other key'}], cols, notes=[
         'the sources disagree on ButtonLight (COLOR_3DLIGHT): the Windows 95 retail captures show DFDFDF; Windows 98\'s '
-        'Windows Default.theme and the Windows 2000 / XP "Windows Standard" record C0C0C0 (the face), and the early '
-        'Windows 95 beta captures draw no 3DLight line. The entry is the retail Windows 95 picture.']))
+        'Windows Default.theme and windows-98-standard\'s records (Windows 2000\'s and XP\'s "Windows Classic") record '
+        'C0C0C0 (the face), and the early Windows 95 beta captures draw no 3DLight line. The entry is the retail '
+        'Windows 95 picture, a flat caption (no Gradient keys).']))
     out[-1]['corroborated'] = 0
 
-    # WINDOWS 2000 STANDARD (architect 2026-10-06, the `win2000` chrome vocabulary's theme): Windows 2000's own default
-    # colours, its setup hive's HKCU "Control Panel\Colors" (the hive's Appearance\Schemes blob "Windows Standard"
-    # carries the same 29), read off the retail disc image (sources.py win2000_hivedef). ReactOS's "ReactOS Standard"
-    # scheme corroborates it on every role key (ReactOS ships Windows 2000's scheme under its own name). Its bytes are
-    # the catalog's `windows-classic` entry's on every role (asserted in checks): that entry is named by the reading
-    # above that zkedem's two labels are swapped, while Windows 2000's own hive names these bytes "Windows Standard";
-    # both entries stand, this one carrying the Windows 2000 provenance the chrome vocabulary is named for.
-    hv2k = 'I386/HIVEDEF.INF'
-    cols = parse_hive_colors(local_path('win2000_hivedef', hv2k))
-    notes = ['Windows 2000\'s default scheme as its own setup hive records it (HKCU "Control Panel\\Colors"); the hive '
-             'names the scheme "Windows Standard" (Appearance\\Schemes)']
-    d = diff_keys(cols, ros['ReactOS Standard'])
+    # WINDOWS 98 STANDARD: Windows 98's default scheme, the C0C0C0 face under the navy-to-#1084D0 gradient caption.
+    # Its bytes are XP's saved scheme (zkedem's classic.theme, saved from WEPOS 2009's Display Properties, DisplayName
+    # "Windows Classic"); Windows 2000's own hive records them byte for byte as its "Windows Classic" scheme, ReactOS as
+    # "ReactOS Classic", and Windows 98's Windows Default.theme on every key it records but the desktop's Background
+    # (its .theme carries no Gradient key). Role by role it is windows-95-standard but for the 3DLight (C0C0C0, the
+    # face, against Windows 95's retail DFDFDF) and the caption's two gradient ends (#1084D0 and #B5B5B5, where
+    # Windows 95 drew a flat caption).
+    f, dn, cols = zk['Windows Classic']
+    notes = [f'xp_classic_zkedem {f} names it "{dn}"']
+    provs, n_ok = [], 0
+    w2k_scheme('Windows Classic', cols, provs, notes); n_ok += 1
+    folded_in('Windows 98 Standard', cols, provs, notes); n_ok += 1
+    d = diff_keys(cols, c98)
     assert not set(d) & role_keys, d
-    notes.append('ReactOS records it as "ReactOS Standard"' + ('' if not d else ', differing on ' + ', '.join(
-        f'{k} {hx(ros["ReactOS Standard"][k])} (here {hx(cols[k])})' for k in d)))
-    notes.append('role-identical to windows-classic (whose bytes zkedem\'s standard.theme labels "Windows Standard" and '
-                 'classicthemes8 "Windows XP Classic"); kept as its own entry for the Windows 2000 provenance (architect '
-                 '2026-10-06)')
-    out.append(entry('windows', 'Windows 2000 Standard', 'Windows 2000 Standard',
-                     [provenance('win2000_hivedef', hv2k), provenance('reactos', hv) | {'scheme': 'ReactOS Standard'}],
+    assert not any(k.startswith('Gradient') for k in c98), f98
+    provs.append(provenance('win98_themes', f98)); n_ok += 1
+    notes.append('Windows 98\'s Windows Default.theme (its default scheme) records the same bytes' + ('' if not d else
+                 ', but for ' + ', '.join(f'{k} {hx(c98[k])} (here {hx(cols[k])})' for k in d)) +
+                 ', and no Gradient key (the caption\'s two ends are Windows 2000\'s and XP\'s records of the scheme)')
+    out.append(entry('windows', 'Windows 98 Standard', 'Windows 98 Standard', [provenance('xp_classic_zkedem', f)] + provs,
                      cols, notes=notes))
-    out[-1]['corroborated'] = 1
+    out[-1]['corroborated'] = n_ok
+
+    # WINDOWS 2000 STANDARD (architect 2026-10-06, the chrome's theme and the compiled built-in): Windows 2000's own
+    # default colours, its setup hive's HKCU "Control Panel\Colors", read off the retail disc image (sources.py
+    # win2000_hivedef); the hive's Appearance\Schemes value "Windows Standard" carries the same 29. XP's saved scheme
+    # (zkedem's standard.theme, DisplayName "Windows Standard"), classicthemes8's "Windows XP Classic" and ReactOS's
+    # "ReactOS Standard" corroborate it on every role key.
+    cols = parse_hive_colors(local_path('win2000_hivedef', hv2k))
+    notes = ['Windows 2000\'s default scheme as its own setup hive records it (HKCU "Control Panel\\Colors")']
+    provs, n_ok = [], 0
+    w2k_scheme('Windows Standard', {('AppWorkspace' if k == 'AppWorkSpace' else k): v for k, v in cols.items()},
+               provs, notes)
+    zf, zdn, zcols = zk['Windows Standard']
+    cands = [('xp_classic_zkedem', zf, zdn, zcols)] + [c for c in seconds if c[2] == 'Windows XP Classic']
+    p2, n2 = corroborate('Windows 2000 Standard', cols, cands, notes)
+    provs += p2; n_ok += n2
+    folded_in('Windows 2000 Standard', cols, provs, notes); n_ok += 1
+    out.append(entry('windows', 'Windows 2000 Standard', 'Windows 2000 Standard', [provenance('win2000_hivedef', hv2k)]
+                     + provs, cols, notes=notes))
+    out[-1]['corroborated'] = n_ok
+    by_key = {e['key']: e for e in out}
+    for name, (twin, _) in REACTOS_ONLY.items():     # "role-identical": the roles the twin entry maps, byte for byte
+        if twin and map_roles('windows', {k: hx(v) for k, v in ros_only[name].items()}) != by_key[twin]['roles']:
+            raise SystemExit(f'build: ReactOS {name} is not role-identical to {twin}')
 
     # THE WINDOWS 98 / PLUS! DESKTOP THEMES (one source each: 1j01/98's copies of the shipped files).
     dup = 'Copy of Dangerous Creatures (256 color)'
@@ -503,23 +524,28 @@ def checks(entries):
         T.flag_bevel(e['flag_rule'], (0x8A, 0x5E, 0xAC))
     assert T.windows_dialog((0xD4, 0xD0, 0xC8))[0] == (0xEA, 0xE8, 0xE3)
     assert T.windows_dialog((0x83, 0x99, 0xB1)) == ((0xC1, 0xCC, 0xD9), (0x83, 0x99, 0xB1), (0x4F, 0x65, 0x7D), (0, 0, 0))
-    # Windows 2000 Standard is the hive's bytes (the `win2000` vocabulary's theme, report: the chrome roles of the
-    # ReactOS captures) and role-identical to windows-classic (windows_entries' note)
+    # Windows 2000 Standard is the hive's bytes (the chrome's theme and the built-in: the chrome roles of the ReactOS
+    # captures); Windows 98 Standard is Windows 95 Standard's roles but for the 3DLight, under a gradient caption
     w2k = by['windows-2000-standard']['roles']
     assert [w2k[x] for x in ('ground', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow', 'selected_fill',
                              'info_ground', 'title_active', 'title_inactive')] == \
         ['#D4D0C8', '#FFFFFF', '#D4D0C8', '#808080', '#404040', '#0A246A', '#FFFFE1', '#0A246A', '#808080']
-    assert w2k == by['windows-classic']['roles']
+    w98 = by['windows-98-standard']
+    assert {r: v for r, v in w98['roles'].items() if w95[r] != v} == {'bevel_light': '#C0C0C0'}
+    assert (w98['raw']['GradientActiveTitle'], w98['raw']['GradientInactiveTitle']) == ('#1084D0', '#B5B5B5')
+    assert 'GradientActiveTitle' not in by['windows-95-standard']['raw']
+    for gone in ('windows-classic', 'windows-standard'): assert gone not in by, gone
     for d in DUPLICATES: assert d not in by, d
     assert sum(1 for e in entries if e['family'] == 'kde3') == KDE3_ENTRIES
     assert len(KDE_NOT_35['tde_kcs']) == 21
     # the display tiers: Windows Storm, Teal and Red, White, and Blue are the only `vga` entries, none `windows-20`
-    # (Windows Standard misses `vga` only by its tooltip ground #FFFFE1, Windows 95 Standard by that and its 3DLight #DFDFDF)
+    # (Windows 98 Standard misses `vga` only by its tooltip ground #FFFFE1, Windows 95 Standard by that and its 3DLight
+    # #DFDFDF)
     assert sorted(e['key'] for e in entries if e['display_tier'] == 'vga') == \
         ['windows-red-white-and-blue', 'windows-storm', 'windows-teal']
     assert not [e['key'] for e in entries if e['display_tier'] == 'windows-20']
-    assert display_tier(by['windows-standard']['roles']) == 'high-colour' and \
-        display_tier({r: v for r, v in by['windows-standard']['roles'].items() if r != 'info_ground'}) == 'vga'
+    assert display_tier(w98['roles']) == 'high-colour' and \
+        display_tier({r: v for r, v in w98['roles'].items() if r != 'info_ground'}) == 'vga'
     assert by['warptempo']['roles'] == CHOSEN_ROLES and by['warptempo']['display_tier'] == 'high-colour'
     # the preset road at the neutral ground #191919 is the chosen `warptempo` exactly (the picker's default chrome)
     assert preset_roles('#191919') == CHOSEN_ROLES

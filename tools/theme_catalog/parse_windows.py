@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # tools/theme_catalog/parse_windows.py — the Windows scheme formats: ReactOS's hivedef.inf "New Schemes", a Windows
-# setup hive's own default colours (its HKCU "Control Panel\Colors" lines) and a .theme file's [Control Panel\Colors]. Both come out under Windows' own key names (the .theme spelling, which is
+# setup hive's own default colours (its HKCU "Control Panel\Colors" lines) and its Appearance\Schemes values, and a
+# .theme file's [Control Panel\Colors]. All come out under Windows' own key names (the .theme spelling, which is
 # also the name the registry's Control Panel\Colors uses), each value an (r, g, b) byte triple. A malformed file is a
 # one-line hard fail naming it (NO BACKSTOPS: the inputs are pinned third-party files).
 import re
@@ -49,6 +50,44 @@ def parse_hive_colors(path):
         cols[k] = rgb
     if not cols: die(path, 'no Control Panel\\Colors lines')
     return cols
+
+
+# A Windows NT setup hive's Appearance\Schemes value (REG_BINARY, flags 0x00030001): the SCHEMEDATA the Display
+# Properties dialog stores — SHORT version, WORD pad, NONCLIENTMETRICSW (500 bytes), LOGFONTW lfIconTitle (92 bytes),
+# then COLORREF rgb[29] (COLOR_SCROLLBAR .. COLOR_GRADIENTINACTIVECAPTION, 0x00BBGGRR): 4 + 500 + 92 + 116 = 712 bytes.
+SCHEME_RGB_OFFSET = 4 + 500 + 92
+SCHEME_COLOURS = 29
+SCHEME_BYTES = SCHEME_RGB_OFFSET + 4 * SCHEME_COLOURS
+
+
+def parse_hive_schemes(path):
+    """-> {scheme name: {key: rgb}}: a Windows setup hive's (HIVEDEF.INF) `HKCU,"Control Panel\\Appearance\\Schemes",
+    "%NAME%",0x00030001,<hex bytes>` values (continued with trailing backslashes), each named by its [Strings] entry,
+    every blob SCHEME_BYTES long, its colour array read under COLOR_NAMES' first 29 keys. Read as latin-1."""
+    txt = open(path, encoding='latin-1').read()
+    strings = dict(re.findall(r'^(\w+)="([^"]*)"\s*$', txt, re.M))
+    lines = txt.splitlines()
+    out = {}
+    i = 0
+    while i < len(lines):
+        m = re.match(r'^HKCU,"Control Panel\\Appearance\\Schemes","%(\w+)%",0x00030001,(.*)$', lines[i])
+        i += 1
+        if not m: continue
+        body = m.group(2)
+        while body.rstrip().endswith('\\'):
+            if i >= len(lines): die(path, f'scheme {m.group(1)} runs past the end of the file')
+            body = body.rstrip()[:-1] + lines[i]; i += 1
+        if not re.fullmatch(r'\s*[0-9a-fA-F]{2}(\s*,\s*[0-9a-fA-F]{2})*\s*', body):
+            die(path, f'scheme {m.group(1)}: unreadable bytes')
+        bs = bytes(int(x, 16) for x in body.split(','))
+        if len(bs) != SCHEME_BYTES: die(path, f'scheme {m.group(1)} is {len(bs)} bytes, not {SCHEME_BYTES}')
+        if m.group(1) not in strings: die(path, f'scheme {m.group(1)} has no [Strings] name')
+        name = strings[m.group(1)]
+        if name in out: die(path, f'scheme {name!r} recorded twice')
+        o = SCHEME_RGB_OFFSET
+        out[name] = {COLOR_NAMES[j]: tuple(bs[o + 4 * j:o + 4 * j + 3]) for j in range(SCHEME_COLOURS)}
+    if not out: die(path, 'no Appearance\\Schemes values')
+    return out
 
 
 def parse_theme(path):

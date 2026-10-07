@@ -43,7 +43,10 @@ python3 tools/palette/extract.py <dir>/tablet_base_<tag>.png --first-label M:SS.
 ## Dependencies
 
 - Python 3, numpy, pycairo >= 1.29 (cairo with its FreeType and fontconfig backends).
-- The repository's `fonts/` (Nimbus Sans, the app's face): the tool's private `fonts.conf` lists only that directory.
+- The repository's `fonts/` (Nimbus Sans, the retired win95 set's face): the tool's private `fonts.conf` lists only
+  that directory. NIMBUS SANS LEFT `fonts/` ON 2026-10-06 (the product dropped Windows 95 and Nimbus for Windows 2000
+  and Wine Tahoma), so every render that draws text fails at the font check until the tool is ported; the tablet
+  geometry's toolbar case and the face's metrics are the retired win95 numbers, frozen in `tablet.py` and `common.py`.
 - HarfBuzz through ctypes: `libharfbuzz.so.0`, loaded when `common.py` is imported. When it is absent the tool exits
   at import with one line naming the library; there is no fallback shaper, because the text must be shaped exactly as
   the app shapes it. `verify_fonts()` also loads `libfontconfig.so.1` (the library cairo itself resolves faces with).

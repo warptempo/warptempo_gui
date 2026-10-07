@@ -2,8 +2,9 @@
 # tools/theme_catalog/gen_theme_files.py — docs/themes/catalog.json -> assets/themes/<key>.theme, THE BUNDLED THEME
 # FILES (architect 2026-10-04: every theme but the one built-in ships as a file bundled with the app; 2026-10-05: the
 # app copies the bundle into its themes/ folder at every launch, src/gui/theme_file.h's head). One file per catalog
-# entry EXCEPT `windows-95-standard`, the compiled built-in (a file of that name is the launch's hard fail), so the
-# folder holds exactly the catalog's other entries and nothing else: a stale file is deleted.
+# entry EXCEPT `windows-2000-standard`, the compiled built-in since 2026-10-06 (a file of that name is the launch's
+# hard fail; `windows-95-standard` is an ordinary file), so the folder holds exactly the catalog's other entries and
+# nothing else: a stale file is deleted.
 #
 # A FILE NAMES THE ROLES THE ENTRY RECORDS (the grammar, theme_file.h's head: `role=value` lines; a role a file does
 # not name takes the built-in's value), each value the entry's recorded byte, nothing derived:
@@ -64,7 +65,7 @@ CATALOG = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
 OUT = os.path.join(REPO, 'assets', 'themes')
 THEME_FILE_H = os.path.join(REPO, 'src', 'gui', 'theme_file.h')
 PICKER_THEME = os.path.join(PALETTE, 'themes', 'picker.json')
-BUILTIN = 'windows-95-standard'
+BUILTIN = 'windows-2000-standard'
 SUFFIX = '.theme'
 
 # THE ROLE TABLE'S ORDER (kGuiThemeRoles), checked against the header at every run
@@ -196,6 +197,14 @@ def main():
     entries = json.load(open(CATALOG))['entries']
     if BUILTIN not in [e['key'] for e in entries]: raise SystemExit(f'gen_theme_files: no {BUILTIN} in the catalog')
     presets, picker = inputs()
+    # THE BUILT-IN IS ITS CATALOG ENTRY: the role table's values (kGuiThemeRoles) are the bytes the entry's file would
+    # name, the roles it names not taking the table's own values back (card_frame and the program's roles)
+    builtin = next(e for e in entries if e['key'] == BUILTIN)
+    table = dict(role_table())
+    named = file_roles(builtin, presets, picker)
+    if {r: table[r] for r in named} != named:
+        raise SystemExit(f'gen_theme_files: {THEME_FILE_H}\'s built-in is not {BUILTIN}\'s bytes: '
+                         f'{ {r: (table[r], v) for r, v in named.items() if table[r] != v} }')
     os.makedirs(OUT, exist_ok=True)
     want = {}
     for e in entries:

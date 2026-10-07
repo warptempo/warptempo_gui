@@ -16,25 +16,24 @@
 // A THEME IS A VALUE FOR EVERY ROLE. The roles are the role table below —
 // THE ONE ENUMERATION: its name (what a theme file spells), the GuiPalette
 // field it fills (render.h, whose palette block owns what each role paints)
-// and THE BUILT-IN's value. The chrome's roles are Windows 95 Standard's
-// recorded chrome (the catalog entry `windows-95-standard`'s light row:
-// ButtonFace, ButtonText, the relief quartet, Hilight / HilightText, Window /
-// WindowText; Windows' status bar's ButtonFace / ButtonText for the clock
-// panel; Windows' InfoWindow / InfoText and its tooltip's black border for
-// the cards; Windows 95's ActiveTitle / TitleText and InactiveTitle /
-// InactiveTitleText for the caption, each with its gradient end equal to its
-// start — Windows 95 drew a flat caption), and the program's roles are the
-// planner's picks from Windows'
+// and THE BUILT-IN's value. The chrome's roles are Windows 2000 Standard's
+// recorded chrome (architect 2026-10-06, the Windows 2000 pivot; the catalog
+// entry `windows-2000-standard`'s bytes, its setup hive's Control
+// Panel\Colors: ButtonFace, ButtonText, the relief quartet, Hilight /
+// HilightText, Window / WindowText; Windows' status bar's ButtonFace /
+// ButtonText for the clock panel; Windows' InfoWindow / InfoText and its
+// tooltip's black border for the cards; ActiveTitle / GradientActiveTitle /
+// TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText for
+// the caption), and the program's roles are the planner's picks from Windows'
 // twenty solid colours (the architect's delegation, 2026-10-04: "the default
 // theme is just a fallback"), each flag kind a face and a selected face of the
 // VGA sixteen under white labels (the role table's program block).
 //
-// ONE THEME IS BUILT IN, compiled: `windows-95-standard` (kBuiltinThemeKey),
-// the role table's values. Every other theme is a FILE — THE DEVICE CONFIG'S
-// DEFAULT `theme` among them since 2026-10-06 (kDefaultThemeKey): the bundled
-// `windows-2000-standard`, Windows 2000's own "Windows Standard" scheme, the
-// live win2000 chrome vocabulary's (chrome_spec.h), with the built-in's
-// program roles.
+// ONE THEME IS BUILT IN, compiled: `windows-2000-standard` (kBuiltinThemeKey),
+// the role table's values — Windows 2000's own "Windows Standard" scheme, the
+// chrome's (chrome_spec.h) — AND THE DEVICE CONFIG'S DEFAULT `theme`
+// (kDefaultThemeKey). Every other theme is a FILE, Windows 95's recorded
+// colours (`windows-95-standard`) among them since 2026-10-06.
 //
 // THE FILES: `<key>.theme` in the `themes/` folder BESIDE THE DEVICE CONFIG
 // (theme_folder_path: device_config_path()'s own folder, on both devices — on
@@ -58,7 +57,10 @@
 // creating the folder, overwriting a file of the same name: THE BUNDLE WINS
 // FOR ITS OWN NAMES, so a bundled name edited by hand is overwritten at the
 // next launch, and HIS OWN FILES TAKE OTHER NAMES — a file of any other name
-// is never touched. Then the folder is read once as above, so a bundled file
+// is never touched — SAVE ONE: a file bearing the BUILT-IN'S name is deleted
+// by the copy-in with one advisory line, the app's own former copy left by a
+// rename of the built-in (the reason at copy_in_bundled_themes,
+// theme_file.cpp). Then the folder is read once as above, so a bundled file
 // is read exactly like his own. THE SOURCE IS PER DEVICE, behind the seam
 // (GuiPlatform::bundled_theme_files): on the laptop the repository's
 // `assets/themes/`, its absolute path compiled in (the laptop runs from its
@@ -94,16 +96,15 @@
 // taken whole or the program does not start. The files are taken in name
 // order, so the first error is the same one on every launch.
 
-// The built-in's key — the one theme compiled into the program.
-inline constexpr const char* kBuiltinThemeKey = "windows-95-standard";
-// THE DEVICE CONFIG'S DEFAULT `theme` (architect 2026-10-06): the bundled
-// file of Windows 2000's scheme (tools/theme_catalog's
-// `windows-2000-standard`), the win2000 chrome vocabulary's colours — what a
-// first-run config names (DeviceConfig::theme, whose initializer spells it;
-// theme_file.cpp's static_assert keeps the two in step). A bundled file is
-// copied in before the one read at every launch, so the default always
-// resolves.
-inline constexpr const char* kDefaultThemeKey = "windows-2000-standard";
+// The built-in's key — the one theme compiled into the program (architect
+// 2026-10-06): Windows 2000's scheme (tools/theme_catalog's
+// `windows-2000-standard`), the chrome's colours.
+inline constexpr const char* kBuiltinThemeKey = "windows-2000-standard";
+// THE DEVICE CONFIG'S DEFAULT `theme` (architect 2026-10-06): the built-in —
+// what a first-run config names (DeviceConfig::theme, whose initializer
+// spells it; theme_file.cpp's static_assert keeps the two in step). Compiled
+// in, so the default always resolves.
+inline constexpr const char* kDefaultThemeKey = kBuiltinThemeKey;
 
 // THE ROLE TABLE — THE ONE ENUMERATION (architect 2026-10-04), in GuiPalette's
 // order: the chrome's twenty-one (the caption's six since 2026-10-05), then the
@@ -117,18 +118,18 @@ struct GuiThemeRole {
     uint32_t             builtin;   // 0xRRGGBB, the built-in theme's value
 };
 inline constexpr GuiThemeRole kGuiThemeRoles[] = {
-    // THE CHROME — Windows 95 Standard as recorded.
-    {"ground",                    &GuiPalette::ground,                    0xC0C0C0},
+    // THE CHROME — Windows 2000 Standard as recorded.
+    {"ground",                    &GuiPalette::ground,                    0xD4D0C8},
     {"label",                     &GuiPalette::label,                     0x000000},
     {"hilight",                   &GuiPalette::hilight,                   0xFFFFFF},
-    {"light_3d",                  &GuiPalette::light_3d,                  0xDFDFDF},
+    {"light_3d",                  &GuiPalette::light_3d,                  0xD4D0C8},
     {"shadow",                    &GuiPalette::shadow,                    0x808080},
-    {"dk_shadow",                 &GuiPalette::dk_shadow,                 0x000000},
-    {"selected_fill",             &GuiPalette::selected_fill,             0x000080},
+    {"dk_shadow",                 &GuiPalette::dk_shadow,                 0x404040},
+    {"selected_fill",             &GuiPalette::selected_fill,             0x0A246A},
     {"selected_text",             &GuiPalette::selected_text,             0xFFFFFF},
     {"field_ground",              &GuiPalette::field_ground,              0xFFFFFF},
     {"field_text",                &GuiPalette::field_text,                0x000000},
-    {"clock_ground",              &GuiPalette::clock_ground,              0xC0C0C0},
+    {"clock_ground",              &GuiPalette::clock_ground,              0xD4D0C8},
     {"clock_text",                &GuiPalette::clock_text,                0x000000},
     {"card_ground",               &GuiPalette::card_ground,               0xFFFFE1},
     {"card_text",                 &GuiPalette::card_text,                 0x000000},
@@ -138,14 +139,15 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // always active, GuiPlatform::caption_active), each a START at the left,
     // a GRADIENT END at the right and the title's TEXT — Windows' ActiveTitle
     // / GradientActiveTitle / TitleText and InactiveTitle /
-    // GradientInactiveTitle / InactiveTitleText. The built-in is Windows 95's
-    // flat navy caption under white and its flat grey one under silver.
-    {"caption_active",            &GuiPalette::caption_active,            0x000080},
-    {"caption_active_gradient",   &GuiPalette::caption_active_gradient,   0x000080},
+    // GradientInactiveTitle / InactiveTitleText. The built-in is Windows
+    // 2000's navy-to-sky-blue caption under white and its grey-to-silver one
+    // under the face's colour.
+    {"caption_active",            &GuiPalette::caption_active,            0x0A246A},
+    {"caption_active_gradient",   &GuiPalette::caption_active_gradient,   0xA6CAF0},
     {"caption_active_text",       &GuiPalette::caption_active_text,       0xFFFFFF},
     {"caption_inactive",          &GuiPalette::caption_inactive,          0x808080},
-    {"caption_inactive_gradient", &GuiPalette::caption_inactive_gradient, 0x808080},
-    {"caption_inactive_text",     &GuiPalette::caption_inactive_text,     0xC0C0C0},
+    {"caption_inactive_gradient", &GuiPalette::caption_inactive_gradient, 0xC0C0C0},
+    {"caption_inactive_text",     &GuiPalette::caption_inactive_text,     0xD4D0C8},
     // THE PROGRAM'S OWN ELEMENTS — Windows' twenty solid colours: the canvas
     // black under Sound Recorder's lime trace (measured on his Windows 98
     // screenshot 2026-10-05), the lit outline green; each flag kind a dark
@@ -277,9 +279,10 @@ std::filesystem::path theme_folder_path();
 // THE LAUNCH'S COPY-IN (gui_main, first, before read_theme_folder): every
 // bundled `.theme` file written into the themes folder under the rule above,
 // the folder created, a file already holding the bundle's bytes left as it
-// is. Answers nothing on success (or when the config home does not resolve:
-// there is no folder, and the config's load refuses with its own line) and
-// the failure's whole line otherwise — FATAL at the caller.
+// is, and a file of the built-in's name deleted first. Answers nothing on
+// success (or when the config home does not resolve: there is no folder, and
+// the config's load refuses with its own line) and the failure's whole line
+// otherwise — FATAL at the caller.
 std::optional<std::string> copy_in_bundled_themes();
 
 // THE LAUNCH'S ONE READ of the themes folder (gui_main, before the device
@@ -296,7 +299,7 @@ std::optional<std::string> read_theme_folder();
 // fallback theme.
 bool is_theme_key(const std::string& v);
 inline constexpr const char* kThemeGrammarReason =
-    "must be windows-95-standard or a theme file's key read at launch";
+    "must be windows-2000-standard or a theme file's key read at launch";
 
 // The words of the theme `key` names — the built-in's or a loaded file's.
 // Precondition: is_theme_key(key), every caller's value having come through

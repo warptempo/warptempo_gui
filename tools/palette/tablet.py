@@ -7,7 +7,7 @@
 #   * a length is scaled_px (render.h): std::nearbyint(windows_px x 2.75), ROUNDED AT THE ELEMENT; a composite is the
 #     sum of its rounded parts (the case = lead + glyph + trail), never one rounding of the sum. Python's round() is
 #     round-half-even, std::nearbyint's default mode;
-#   * the text is Nimbus Sans (gui_font.h, architect 2026-10-06) through common.py's road (cairo + FreeType,
+#   * the text is Nimbus Sans (the retired win95 set's face, gone from fonts/ since 2026-10-06 evening) through common.py's road (cairo + FreeType,
 #     SLIGHT, hint metrics on; HarfBuzz shaping on the same file) at the em that matches each face's recorded
 #     metrics vertically (common.face_em: 12.35 Windows px for the body, 9.38 for the small) x 2.75, an
 #     unrounded double; every VERTICAL metric is the recorded one (kGuiFaceMetrics: the body's ascent 11 /
@@ -73,17 +73,13 @@ def read_constants():
     """Every authored number the geometry reads, from the source as it stands: -> (K, the owners {name: file})."""
     rh, ph, ph_h, ah = _read('render.h'), _read('paint_handler.cpp'), _read('paint_handler.h'), _read('app_state.h')
     K, own = {}, {}
-    # THE TOOLBAR CASE AND ITS AIR are the chrome vocabularies' since 2026-10-06 (src/gui/chrome_spec.h's
-    # ChromeSpec); this geometry is the win95 vocabulary's, read off kChromeSpecWin95 under the old names.
-    cs = _read('chrome_spec.h')
-    m = re.search(r'kChromeSpecWin95\s*=\s*\{(.*?)\n\};', cs, re.S)
-    if not m: raise SystemExit('tablet.py: kChromeSpecWin95 not found in src/gui/chrome_spec.h')
-    for name, field in (('kIconCaseLeadPx', 'toolbar_case_lead_px'), ('kIconGlyphPx', 'toolbar_glyph_px'),
-                        ('kIconCaseTrailXPx', 'toolbar_case_trail_x_px'), ('kIconCaseTrailYPx', 'toolbar_case_trail_y_px'),
-                        ('kIconRowAirPx', 'icon_row_air_px')):
-        f = re.search(r'\.' + field + r'\s*=\s*(\d+)\s*,', m.group(1))
-        if not f: raise SystemExit(f'tablet.py: kChromeSpecWin95.{field} not found in src/gui/chrome_spec.h')
-        K[name] = int(f.group(1)); own[name] = 'chrome_spec.h'
+    # THE TOOLBAR CASE AND ITS AIR are THE RETIRED WIN95 VOCABULARY'S, FROZEN HERE (2026-10-06 evening: the product
+    # dropped Windows 95 for Windows 2000 and its source carries only the large case, chrome_spec.h's
+    # kChromeSpecWin2000): this geometry is scene 1002's design, Windows 95's small case 23 x 22 (lead 3, the 16-px
+    # glyph, trail 4 right and 3 below) on WordPad's 3-px air, as kChromeSpecWin95 recorded it at e7e0ddf4.
+    for name, v in (('kIconCaseLeadPx', 3), ('kIconGlyphPx', 16), ('kIconCaseTrailXPx', 4), ('kIconCaseTrailYPx', 3),
+                    ('kIconRowAirPx', 3)):
+        K[name] = v; own[name] = 'tablet.py (the retired win95 case, frozen)'
     for name in ('kMenuRowHeightPx', 'kIconGroupSpacePx', 'kTrimLaneHeightPx', 'kTrimArrowButtonPx',
                  'kRulerBaselineToMarkerPx', 'kMarkerLaneAirPx', 'kMarkerFlagPadLeftPx', 'kMarkerFlagPadRightPx',
                  'kMarkerFlagEdgePx', 'kMarkerFlagFacePx', 'kMarkerFlagBorderPx', 'kReliefLinePx', 'kBottomRowBorderPx',

@@ -1,14 +1,14 @@
 #include "gui_font.h"
 
-// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the four
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the two
 // files handed in once through gui_font_install_bundled — the Linux
 // executable's compiled-in copy (gui_font_embedded.cpp) or the APK's assets —
-// become four FT faces, the live set (gui_font.h's kGuiLiveFaceSet) picks
+// become two FT faces, the live set (gui_font.h's kGuiLiveFaceSet) picks
 // its three uses among them, and no site below the seam learns which device
 // handed the bytes in.
 //
-// THE FACES (Nimbus Sans Regular and Bold, OpenType CFF; Tahoma and Tahoma
-// Bold, TrueType) are FT faces wrapped as cairo font faces — the FT-backed
+// THE FACES (Tahoma and Tahoma Bold, TrueType) are FT faces wrapped as cairo
+// font faces — the FT-backed
 // shape text_shape requires, since it shapes on the scaled font's own FT
 // face through hb-ft.
 //
@@ -24,20 +24,17 @@
 // is the outline's own scale; (2) GLYPH LOADING — every load road passes
 // FT_LOAD_NO_BITMAP: cairo's, as the cairo face's load flags; hb-ft's, set
 // on each hb font (text_shape.cpp); the install's measurement loads take
-// FT_LOAD_NO_SCALE, which implies it. Nimbus carries no strikes, so neither
-// changes a pixel the win95 set paints.
+// FT_LOAD_NO_SCALE, which implies it.
 //
 // THE PRODUCT'S HINTER IS SLIGHT (architect 2026-10-02, kept 2026-10-06):
 // cairo's SLIGHT is FreeType's light target, which grid-fits the VERTICAL
-// direction alone. What runs depends on the outline format (measured
-// 2026-10-06, FreeType 2.14): for Nimbus's CFF, the face's own hints through
-// FreeType's CFF engine, a light hinter by declaration, every x within 1/64
-// px of the unhinted outline; for Tahoma's TrueType, the AUTOHINTER in its
-// light mode — FreeType's TrueType driver does not hint lightly, so it hands
-// the light target to the autohinter rather than to the bytecode
-// interpreter (the load equals a forced autohint's; Wine Tahoma's glyphs
-// carry no instructions anyway, maxp's maxSizeOfInstructions 0), and every x
-// equals the unhinted outline's exactly. Either way the advances stay
+// direction alone. For Tahoma's TrueType that is the AUTOHINTER in its light
+// mode (measured 2026-10-06, FreeType 2.14) — FreeType's TrueType driver
+// does not hint lightly, so it hands the light target to the autohinter
+// rather than to the bytecode interpreter (the load equals a forced
+// autohint's; Wine Tahoma's glyphs carry no instructions anyway, maxp's
+// maxSizeOfInstructions 0), and every x equals the unhinted outline's
+// exactly. The advances stay
 // unhinted (text_shape's come off hb-ft, which loads its own glyphs
 // unhinted) and both devices measure one set of widths. The vertical
 // metrics are the recorded constants anyway (gui_font.h), so the hinter
@@ -75,12 +72,9 @@ struct OutlineFace {
 // The em per face, in Windows px (gui_face_em_px).
 double g_face_em[kGuiFaceCount] = {};
 
-// The four math signs' glyph ids and lifts per face (gui_sign_axis).
-GuiSignAxis g_sign_axis[kGuiFaceCount] = {};
-
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
-// The four files' faces, in kGuiFontFiles' order.
+// The two files' faces, in kGuiFontFiles' order.
 OutlineFace           g_outline[kGuiFontFileCount];
 
 std::size_t face_index(GuiFace face) { return static_cast<std::size_t>(face); }
@@ -133,38 +127,6 @@ double outline_ink_em(const OutlineFace& f, char32_t cp) {
            static_cast<double>(f.ft->units_per_EM);
 }
 
-// THE OUTLINE'S INK CENTRE OF ONE GLYPH, in font units up from the baseline,
-// off the same unscaled, unhinted bounding box as outline_ink_em; `gid` 0
-// when the face lacks the glyph.
-struct InkCentre {
-    FT_UInt gid    = 0;
-    double  centre = 0.0;
-};
-InkCentre outline_ink_centre(const OutlineFace& f, char32_t cp) {
-    if (f.ft == nullptr) return {};
-    const FT_UInt gid = FT_Get_Char_Index(f.ft, cp);
-    if (gid == 0 || FT_Load_Glyph(f.ft, gid, FT_LOAD_NO_SCALE) != 0) return {};
-    const FT_Glyph_Metrics& m = f.ft->glyph->metrics;
-    return {gid, static_cast<double>(m.horiBearingY) -
-                     static_cast<double>(m.height) / 2.0};
-}
-
-// THE SIGN AXIS OF ONE FACE (gui_font.h, gui_sign_axis): each math sign's
-// lift is the hyphen's ink centre less its own, per em. False when the face
-// lacks the hyphen or a sign.
-bool measure_sign_axis(const OutlineFace& f, GuiSignAxis& out) {
-    const InkCentre hyphen = outline_ink_centre(f, U'-');
-    if (hyphen.gid == 0) return false;
-    for (std::size_t i = 0; i < kGuiSignCount; ++i) {
-        const InkCentre sign = outline_ink_centre(f, kGuiMathSigns[i]);
-        if (sign.gid == 0) return false;
-        out.signs[i].glyph   = sign.gid;
-        out.signs[i].lift_em = (hyphen.centre - sign.centre) /
-                               static_cast<double>(f.ft->units_per_EM);
-    }
-    return true;
-}
-
 bool outline_ft_backed(const OutlineFace& f) {
     return f.face != nullptr &&
            cairo_font_face_get_type(f.face) == CAIRO_FONT_TYPE_FT;
@@ -183,7 +145,7 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     g_options = cairo_font_options_create();
     cairo_font_options_set_hint_style(g_options, CAIRO_HINT_STYLE_SLIGHT);
     bool ok = true;
-    // ALL FOUR FILES BUILD, whichever set is live (gui_font.h's head).
+    // BOTH FILES BUILD (gui_font.h's head).
     for (std::size_t i = 0; i < kGuiFontFileCount; ++i)
         build_outline(g_outline[i], files[i], kGuiFontFiles[i]);
     // THE EMS MATCH THE LIVE SET'S RECORDED METRICS VERTICALLY (gui_font.h):
@@ -196,12 +158,6 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
         if (ink <= 0.0) { ok = false; continue; }
         g_face_em[i] =
             static_cast<double>(kGuiFaceMetrics[i].cap) / ink;
-        // THE FOUR MATH SIGNS' LIFTS ONTO THE HYPHEN'S AXIS (gui_font.h),
-        // where the set lifts them; otherwise every lift stays 0.
-        if (kGuiLiveFaceSet.sign_lift &&
-            !measure_sign_axis(outline_of(static_cast<GuiFace>(i)),
-                               g_sign_axis[i]))
-            ok = false;
     }
     for (const OutlineFace& f : g_outline)
         if (!outline_ft_backed(f)) ok = false;
@@ -210,10 +166,6 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
 
 double gui_face_em_px(GuiFace face) {
     return g_face_em[face_index(face)];
-}
-
-const GuiSignAxis& gui_sign_axis(GuiFace face) {
-    return g_sign_axis[face_index(face)];
 }
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {

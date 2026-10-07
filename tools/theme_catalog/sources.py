@@ -21,9 +21,9 @@ SOURCES = {
     # ---- the colour data
     'reactos': dict(host=GH, project='ReactOS', repo='reactos/reactos',
                     commit='d004b2c119ef54a8cd292801d35654cec49195ca', files=['boot/bootdata/hivedef.inf']),
-    # Windows 2000's own default-user hive (architect 2026-10-06, the `win2000` chrome vocabulary): its
-    # [Control Panel\Colors] is Windows 2000's default scheme, "Windows Standard" (the hive's Appearance\Schemes blob
-    # of that name carries the same 29 colours).
+    # Windows 2000's own default-user hive (architect 2026-10-06, the Windows 2000 chrome): its
+    # [Control Panel\Colors] is Windows 2000's default scheme, "Windows Standard" (the hive's Appearance\Schemes value
+    # of that name carries the same 29 colours); its "Windows Classic" value corroborates windows-98-standard.
     'win2000_hivedef': dict(host=IA, project='Windows 2000 Professional SP3 (Microsoft), the setup\'s default-user '
                             'hive, read as data from the retail disc image',
                             item='win_2000_professional_sp3_english_202605', image='Windows2000ProfessionalSP3.iso',

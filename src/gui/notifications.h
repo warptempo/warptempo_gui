@@ -14,8 +14,7 @@
 // so it matches the air the eye sees left of the text, 2026-10-01), ON THE
 // CARD FACE — the tooltip's look, the theme's `card_ground` under
 // `card_text` with a thin `card_frame` line, one Windows px, on all four
-// sides in the win2000 chrome vocabulary and on its bottom and right in
-// win95 (architect 2026-10-04, the sides 2026-10-06; render.h's palette
+// sides (architect 2026-10-04, the sides 2026-10-06; render.h's palette
 // block, THE CARD FACE): the
 // tooltip's own box (paint_popup_chrome), square, with no drop shadow
 // (architect 2026-10-02). THE WHOLE CARD IS ONE BUTTON (architect
@@ -709,9 +708,8 @@ inline std::string lowercase_initial(std::string_view s) {
 // keeps the number it was measured at. NOR DID THE FACES' CHANGES: under
 // the body face at the recorded Windows metrics less the tracking
 // (gui_font.h; 2026-10-06) the pair shapes through the live chokepoint to
-// 118.7 and 116.1 Windows px in the live set's Tahoma (128 and 125 in the
-// win95 set's Nimbus) at every gui_scale, which with the 40 px of chrome
-// below is 159 and 156 (168 and 165), all under the floor, which still
+// 118.7 and 116.1 Windows px in Tahoma at every gui_scale, which with the
+// 40 px of chrome below is 159 and 156, both under the floor, which still
 // answers for both (measured 2026-10-06). AUTHORED (WINDOWS) PX, so the
 // relation holds at every gui_scale — the sentence and the floor scale together
 // through scaled_px.
@@ -763,15 +761,14 @@ inline constexpr int kNotificationMaxLines = 3;
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
 // THE CARD'S OWN GLYPH, ITS BOX AND ITS AIR, in Windows px (2026-10-06): the
-// card read the toolbar's case and band until the win2000 toolbars took
-// Windows' LARGE case, and it keeps Windows' SMALL icon under both chrome
-// vocabularies on constants of its own (report_TC's catch) — the 16-px glyph
-// (kNotificationGlyphPx) in a square box three px of box above and below it
-// (kNotificationGlyphLeadPx; 3 + 16 + 3 = 22, the small toolbar case's
-// height) and three px of card above and below the box (kNotificationAirPx),
-// so a one-line card is 3 + 22 + 3 = 28: every length the card had while it
-// was the win95 toolbar band, each a composite of its rounded parts
-// (scaled_px's rule), so the card is the same device px it was under win95.
+// card read the toolbar's case and band until the toolbars took Windows'
+// LARGE case, and it keeps Windows' SMALL icon on constants of its own
+// (report_TC's catch) — the 16-px glyph (kNotificationGlyphPx) in a square
+// box three px of box above and below it (kNotificationGlyphLeadPx;
+// 3 + 16 + 3 = 22, the small toolbar case's height) and three px of card
+// above and below the box (kNotificationAirPx), so a one-line card is
+// 3 + 22 + 3 = 28: every length the card had while it read Windows' small
+// toolbar band, each a composite of its rounded parts (scaled_px's rule).
 inline constexpr int kNotificationGlyphPx     = 16;
 inline constexpr int kNotificationGlyphLeadPx = 3;
 inline constexpr int kNotificationAirPx       = 3;
@@ -834,11 +831,9 @@ int notification_card_max_w_px(const AppState& a);
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
 // right-aligned at kPanelPadPx from the window's right edge (architect
 // 2026-08-29; the right one was the icon row's 8 px pad for the cards' first
-// day), from the live chrome vocabulary's CARD SEAT (chrome_spec.h's
-// card_seat: in win95 the foot of the icon row's TOP ETCHED PAIR, so a
-// one-line card fills the toolbar band between the two pairs, architect's
-// glass 2026-10-06; in win2000 the foot of the band, the card wholly below
-// the toolbar — the reasoning at the definition), DOWN TO THE SAME
+// day), from the chrome spec's CARD SEAT (chrome_spec.h's card_seat: the
+// foot of the icon row's band, the card wholly below the toolbar — the
+// reasoning at the definition), DOWN TO THE SAME
 // kPanelPadPx OF AIR ABOVE THE BOTTOM ROW'S LANE.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
@@ -855,8 +850,8 @@ int notification_card_max_w_px(const AppState& a);
 // Viewport::invalidate_notification_stack takes): the painted cards lie
 // inside the room by construction, so it erases what stood and admits what
 // comes without shaping a single glyph off the paint clock. A window with no
-// room between the card seat (the vocabulary's: the icon row's top pair in
-// win95, its band's foot in win2000) and the bottom row answers a zero
+// room between the card seat (the icon row's band's foot) and the bottom
+// row answers a zero
 // height and paints nothing — a window with no waveform at all, in the
 // contrived class.
 GuiRect notification_stack_bound(const AppState& a);
@@ -875,8 +870,8 @@ GuiRect notification_stack_bound(const AppState& a);
 // criticals that will not be bumped.
 //
 // A pure function of the window and the scale, like the room. Re-derived
-// 2026-10-06 for the win2000 vocabulary, the stack seated on the icon row's
-// band's foot: in a 1920 x 1080 window at 138 % it is 23 (a 934 px room over
+// 2026-10-06, the stack seated on the icon row's band's foot: in a
+// 1920 x 1080 window at 138 % it is 23 (a 934 px room over
 // 38 + 1, the card's own gap, kNotificationGapPx); on the tablet at 300 % it
 // is 12 (1116 over 84 + 3), its window being the whole 2304 x 1440
 // panel since the activity went full screen (2026-10-01; the stacks are

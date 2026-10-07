@@ -144,20 +144,18 @@ namespace {
 // GAPS center it (the vertical rule below). The TOP strip is SIX lanes since
 // the caption's arrival (architect 2026-10-05; five from the tab row's
 // deletion, 2026-10-01: "a waste of space") — from the window edge inward: THE
-// CAPTION (caption_row_h_px(), the window's own title bar, Windows 95's
+// CAPTION (caption_row_h_px(), the window's own title bar, Windows'
 // 18-px SM_CYCAPTION, at the window top on both devices — render.h's
 // kCaptionHeightPx), the MENU ROW (menu_row_h_px(), row 1 of the kdenlive
 // redesign, Windows' 19-px menu bar — the anchors' box — plus a one-px row
-// of ground (architect 2026-10-05, Windows' measured 20-px band; above the
-// content in the win2000 chrome vocabulary, below it in win95), flush under
-// the caption — render.h's kMenuRowHeightPx and kMenuRowFootPx),
+// of ground above the content (architect 2026-10-05, Windows' measured 20-px
+// band; its place 2026-10-06), flush under the caption — render.h's
+// kMenuRowHeightPx and kMenuRowHeadPx),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
 // menu row with nothing between, a period menu-bar-plus-toolbar stack
-// folded into one lane, the live chrome vocabulary's — win2000's one etched
-// line pair, the 30-px case as the band and 4 px of foot, 36 Windows px
-// whole (architect 2026-10-06), win95's etched pair, the toolbar's air, the
-// case, its air, a second etched pair and a foot of ground, 35 (architect
-// 2026-10-05); render.h's icon-row block — and NO BORDER beyond that foot:
+// folded into one lane — one etched line pair, the 30-px case as the band
+// and 4 px of foot, 36 Windows px whole (architect 2026-10-06); render.h's
+// icon-row block — and NO BORDER beyond that foot:
 // the trim lane's own first row is the boundary), then FLEXIBLE GAP 1, then
 // THE CENTERED BLOCK's three: the TRIM lane (trim_lane_h_px(), the
 // miniaturized scroll bar — the dithered track and the window's thumb), the
@@ -178,8 +176,8 @@ namespace {
 // flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the marker walk, the four cardinal arrows and the
 // transport three, eight Windows px of ground between two groups (architect
-// 2026-09-29; bare in win95 since 2026-10-02, an etched separator in each in
-// win2000 since 2026-10-06), all at the icon row's toolbar case — sitting ON
+// 2026-09-29; an etched separator in each since 2026-10-06), all at the icon
+// row's toolbar case — sitting ON
 // THE WINDOW'S FOOT with the flexible gap 2 between it and the waveform.
 //
 // THE VERTICAL RULE — THE WAVEFORM IS CENTERED IN THE WINDOW AND HAS A MAXIMUM
@@ -231,9 +229,9 @@ namespace {
 // tablet below exactly).
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-10-06 for the live win2000 chrome vocabulary (the caption's lane
-// 2026-10-05; the menu row's face row and the icon row's stack the
-// vocabulary's — render.h's menu-row and icon-row blocks; the Windows pixel:
+// 2026-10-06 for the Windows 2000 chrome (the caption's lane 2026-10-05; the
+// menu row's face row and the icon row's stack — render.h's menu-row and
+// icon-row blocks; the Windows pixel:
 // every lane in Windows px, the ruler and the marker lane derived from their
 // faces, the marker lane's air above the box alone since 2026-10-03, its box
 // seated on its label's painted ink with one Windows px of face above and
@@ -245,13 +243,9 @@ namespace {
 // accessors, never off a Windows total times the factor — in particular the
 // icon lane's etched pair is 2 x relief_line_px(), not scaled_px(2), so it
 // can differ from a naive total at a fractional gui_scale (none of the
-// scales below hit that case). THE TOP STACK IS 125 WINDOWS PX in either
-// vocabulary (render.h's icon-row block), so at a whole-number scale the
-// trim lane down to the well's top stand on the same rows whichever paints;
-// the laptop's 138 % rounds the win2000 stack one device row taller. THE
-// WELL'S HEIGHT AT THE BASE'S 300 % IS 954 DEVICE ROWS (the rule at
-// centered_leftover_h below). (THE WIN95 STACKS: 169 above and 39 below at
-// 138 %, 375 and 87 at 300 % — a 978-row well — and 500 and 116 at 400 %.)
+// scales below hit that case). THE TOP STACK IS 125 WINDOWS PX (render.h's
+// icon-row block). THE WELL'S HEIGHT AT THE BASE'S 300 % IS 954 DEVICE ROWS
+// (the rule at centered_leftover_h below).
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
 //   lanes are 25 caption + 27 menu + 49 icon + 22 trim + 24 ruler + 23 marker
 //   = 170 above, of which 101 is the caption and the two toolbar rows above
@@ -360,16 +354,13 @@ namespace {
 // px whole (render.h's kCaptionHeightPx: the title bar's ground, its icon, its
 // title and its three buttons inside it), the MENU lane is its anchors' 19
 // Windows px PLUS a one-px row of ground (architect 2026-10-05, Windows'
-// measured 20-px menu band — render.h's kMenuRowHeightPx and kMenuRowFootPx,
-// the row's place the live chrome vocabulary's; the anchors and the
-// dropdown's hang point read the lane, the label's cap-centring alone reads
-// the content beside the row), the
-// ICON lane is a period menu-bar-plus-toolbar stack folded into one row,
-// the live chrome vocabulary's — win2000's one etched line pair, the 30-px
-// case as the band and 4 Windows px of foot, 36 whole (architect
-// 2026-10-06), win95's etched pair, 3 px of air, the 22-px case, 3 more of
-// air, a second etched pair and 3 of foot, 35 (architect 2026-10-05):
-// render.h's icon-row block, icon_row_h_px; NO border of its own beyond that
+// measured 20-px menu band — render.h's kMenuRowHeightPx and kMenuRowHeadPx,
+// the row above the content; the anchors and the dropdown's hang point read
+// the lane, the label's cap-centring alone reads the content under the row),
+// the ICON lane is a period menu-bar-plus-toolbar stack folded into one row
+// — one etched line pair, the 30-px case as the band and 4 Windows px of
+// foot, 36 whole (architect 2026-10-06): render.h's icon-row block,
+// icon_row_h_px; NO border of its own beyond that
 // foot — the trim lane's own first row is still the boundary under it — and
 // the UNIFIED BOTTOM ROW is the same case on the row's own 3-px air above and
 // below (bottom_row_air_px), with neither the icon row's etched lines nor its
@@ -433,10 +424,9 @@ int strip_total_h(bool top_strip) {
 // above): the window less the whole top lane stack and less the bottom row.
 // THE BASE'S WAVEFORM HEIGHT IS THE RULE EVERY LATER THEME KEEPS (architect
 // 2026-10-06, the ReactOS base settled on mock_TF1): on the tablet's 2304 x
-// 1440 at gui_scale 300 the win2000 lanes leave 1440 − 375 − 111 = 954
-// device rows (318 Windows px; the height was free until the base settled —
-// win95's lanes left 978), and a later chrome vocabulary or theme lays its
-// lanes so this stays 954. May
+// 1440 at gui_scale 300 the lanes leave 1440 − 375 − 111 = 954 device rows
+// (318 Windows px; the height was free until the base settled), and a later
+// chrome vocabulary or theme lays its lanes so this stays 954. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -1875,10 +1865,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
     // modal dialog's armed button, the popup's two
     // item faces plus its press claim, the render player's row press and
-    // scrub drag, the notification cards' hover and the win2000 toolbars'
-    // HOT button (AppState::roster_hot, architect 2026-10-06 — the one hover
-    // face). No dialog button, band row or scrub handle wears a hover face
-    // (architect 2026-10-02), so none of them owes this edge a clear. The platform-side
+    // scrub drag, the notification cards' hover and the flat toolbars'
+    // HOT buttons (AppState::roster_hot and player_hot, architect
+    // 2026-10-06 — the one hover face). No other dialog button, band row or
+    // scrub handle wears a hover face (architect 2026-10-02), so none of
+    // them owes this edge a clear. The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h, and the capability-loss fire
     // site in input_core.cpp).
@@ -1990,9 +1981,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // hover paused has its clock re-armed here (a card a press still holds
         // keeps its bank until the press's own clear, above).
         input_handler.clear_notification_hover();
-        // AND THE HOT TOOLBAR BUTTON: a pointer that has left — or a finger
-        // that has lifted, or a pen whose hover has ended — is on no button.
+        // AND THE HOT TOOLBAR BUTTONS, the roster's and the render player's:
+        // a pointer that has left — or a finger that has lifted, or a pen
+        // whose hover has ended — is on no button.
         input_handler.set_roster_hot(-1);
+        input_handler.set_player_hot(-1);
     });
 
     // WINDOW-ACTIVATION EDGE -> THE TOOLTIP'S HARD END (architect 2026-09-29;
@@ -2645,7 +2638,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE ROSTER WALK IS NOT MOTION-ONLY. It resolves the tooltip's owner
         // and the armed press's inside bit (recompute_redesign_button_hover;
-        // and, in win2000, the hot toolbar button) from the
+        // and the hot toolbar button) from the
         // pointer's last position against the painter's rects — and those
         // rects move without any pointer event: a live gui_scale commit
         // relays out every rect under a pointer that never moved, and a
@@ -3282,7 +3275,7 @@ int gui_main(const char* argument) {
         return 1;
     }
     // THE ICON SET IS LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
-    // load_svg_set): the live vocabulary's set read in place from the
+    // load_svg_set): the chrome spec's set read in place from the
     // bundle and every drawing parsed before the window exists, so no paint
     // meets a half-loaded set. A file outside the subset is a build defect,
     // the validation doctrine's class (1): the same road, one line naming the

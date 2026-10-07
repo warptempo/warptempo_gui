@@ -195,9 +195,9 @@ bool load_fonts(Spike& s) {
         return AAsset_getBuffer(*slot);
     };
 
-    const void* sans_bytes = open("NimbusSans-Regular.otf", &s.sans_asset);
+    const void* sans_bytes = open("tahoma.ttf", &s.sans_asset);
     if (!sans_bytes) return false;
-    const void* bold_bytes = open("NimbusSans-Bold.otf", &s.bold_asset);
+    const void* bold_bytes = open("tahomabd.ttf", &s.bold_asset);
     if (!bold_bytes) return false;
 
     // The AAssets stay open for the process's life: FT_New_Memory_Face does not
