@@ -75,6 +75,49 @@ struct GuiInputHandler;
 //    tab refuses it with the lock's own card, while items 1 and 2 above —
 //    the device keys and the band — commit on a locked tab. The opener
 //    refuses nothing; the account is at GuiSettingsEditor::open.
+//
+// THE CHOICE EDITOR (architect 2026-10-07 evening: "a drop-down for chrome
+// and theme at the very least"; the design the planner's, delegated) STANDS
+// BESIDE THE TEXT EDITOR: a Settings row whose key's domain is a SHORT
+// CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — today the
+// Chrome row alone; Theme joins by one table entry when its catalog fits a
+// list) opens THE SAME BOTTOM-ROW EDITOR — the same text_editor session
+// underneath, so the modal rank, OK and Cancel, the focus ring, the playback
+// stop and every closer are the text editor's — with its row's word as the
+// label ("Chrome: ") and, WHERE THE FIELD STANDS, THE CHROME'S COMBO BOX
+// showing the shown value: the color picker's combo drawing
+// (paint_picker_combo, a second reader) at the field's seat and its 23-W
+// height. THE BUFFER IS KEPT AT `<key>=<shown value>`, so EVERY COMMIT IS THE
+// TEXT ROAD'S — commit() and commit_device_setting, the one road: the
+// grammar, the config write, the next-launch card and the unchanged value's
+// quiet no-op are untouched. THE ROADS:
+//   * A PRESS ON THE COMBO DROPS ITS LIST UPWARD over the well (the row is
+//     the window's foot; Windows' combo and GTK's open above when no room
+//     lies below) — the picker list's painter and geometry
+//     (paint_combo_list, combo_list_box), as wide as the combo, the domain in
+//     its source's order, the shown row lit at the open and the hover then
+//     following the pointer (the picker's chooser's rule); the combo takes
+//     no hover face. The press gives the combo the focus back from a button.
+//   * WHILE THE LIST IS DOWN IT OWNS THE POINTER (the dropdown's ONE PRESS,
+//     ONE ACT): a press on a row ARMS it and THE LIFT ON THAT ROW SELECTS AND
+//     COMMITS — the act at the lift, as the picker's list and every menu row
+//     act — closing the editor as Enter does; a press anywhere else closes
+//     the list and is consumed, the combo standing.
+//   * KEYS, with the combo focused: Up / Down walk the shown value, list
+//     down or not (Windows' combo moves its selection without dropping), no
+//     wrap; Enter commits the shown value (the list closing with it); Esc
+//     closes a dropped list, and a second Esc is the editor's own Esc. Tab
+//     closes the list and walks the ring as ever. NOTHING ELSE REACHES THE
+//     BUFFER: there is nothing to type, so no key edits the line, and the
+//     modal contract's Ctrl+S and Ctrl+Q keep their own road.
+//   * THE ON-SCREEN KEYBOARD DOES NOT RISE for a choice editor (its standing
+//     predicate, onscreen_keyboard::stands), and the caret's blink tick
+//     sleeps (main.cpp): there is no caret.
+// The state is AppState::SettingsChoice, live only while this editor stands
+// (settings_choice_live); the geometry is the modal stash's combo and list,
+// as painted (ModalDialogGeometry), which the press, the lift and the hover
+// read (input_pointer.cpp's choice bodies); the keys are
+// handle_settings_choice_key (input_key_dispatch.cpp).
 struct GuiSettingsEditor {
     AppState&             app;
     GuiAudio&             audio;
@@ -135,10 +178,24 @@ struct GuiSettingsEditor {
     // Ctrl+S would write and there is no second serializer. The cursor rests at
     // the end of the line, ready to be edited or replaced; an unknown or
     // unrecallable key opens with the bare `<key>=` so the surface still tells
-    // the user which key they picked.
+    // the user which key they picked. A CHOICE ROW'S KEY (settings_choice_item,
+    // app_state.h) opens the CHOICE EDITOR on the same seeded line, the combo
+    // showing the live value (the head).
     void open_prefilled(const char* key);
     void exit_no_commit();
     void commit();
+    // THE CHOICE EDITOR'S ACTS (the head), each a no-op unless a choice
+    // editor stands. choice_show seats the shown value (clamped to the
+    // domain, the line rewritten, a dropped list's lit row following);
+    // choice_step moves it by one; set_choice_list_open drops or closes the
+    // list; choice_hover and choice_arm_row are the list's lit and pressed
+    // rows; choice_commit selects a row and commits it through commit().
+    void choice_show(int index);
+    void choice_step(int delta);
+    void set_choice_list_open(bool open);
+    void choice_hover(int row);
+    void choice_arm_row(int row);
+    void choice_commit(int index);
     // The value completion, run on BARE TAB in the field and by open_prefilled:
     // when any settable key is typed with an empty
     // value side (e.g. `notes=`, `gui_scale=`, `tab_a_trim_begin=`),

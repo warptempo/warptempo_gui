@@ -5747,7 +5747,13 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
         return &app.commit_title_editor;
     }
     if (text_editor::is_active(app.settings_editor)) {
-        prefix = kSettingsEditorPrefix;
+        // A CHOICE EDITOR'S LABEL IS ITS ROW'S (2026-10-07 evening): the
+        // menu row's own word ("Chrome") in the dialogs' `<word>: ` form, the
+        // combo beside it carrying no key to read; the text editor keeps
+        // "Setting: " before its `key=value` line.
+        prefix = app.settings_choice_live()
+                     ? std::string(app.settings_choice_row().label) + ": "
+                     : std::string(kSettingsEditorPrefix);
         return &app.settings_editor;
     }
     if (text_editor::is_active(app.top_flag_editor) &&
@@ -5972,6 +5978,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   click-to-caret, byte-identical editing — and a refused Enter selects the
 //   whole text, the edge unchanged, its owner's card saying why (architect
 //   2026-10-03; render.h's palette block, A REFUSED ENTER RECOLOURS NOTHING).
+//   THE SETTINGS CHOICE EDITOR (2026-10-07 evening) is the one editor whose
+//   field is a COMBO: its row's word as the label, the chrome's combo at the
+//   field's seat, its list dropping upward (paint_settings_choice; the
+//   design at GuiSettingsEditor's head).
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
@@ -6170,6 +6180,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.scrub   = GuiRect{0, 0, 0, 0};
     dlg.clock   = GuiRect{0, 0, 0, 0};
     dlg.scrub_thumb_x = -1;
+    dlg.combo      = GuiRect{0, 0, 0, 0};
+    dlg.combo_list = GuiRect{0, 0, 0, 0};
+    dlg.combo_list_items.clear();
     dlg.buttons.clear();
     app.dialog_editor_text = AppState::DialogEditorText{};
 
@@ -7008,224 +7021,234 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                         static_cast<double>(btn_h)),
                       prefix.c_str(), palette().label);
 
-        // THE FIELD CHROME (architect 2026-10-02, the Windows text field): a
-        // PLAIN SUNKEN edge (EDGE_SUNKEN, two relief lines) on the theme's
-        // FIELD ground (architect 2026-10-03; the flag editor is the selected
-        // flag opened for edit and keeps no field pair), square. No outline
-        // says hover or focus: a
-        // FOCUSED FIELD SHOWS ITS CARET and nothing else, the caret painting
-        // only while the ring has not stepped onto a button (below).
-        //
-        // FOCUS IS `modal_dialog_focus < 0` and needs no term of its own: on
-        // an editor dialog -1 IS the field, the ring's own meaning for it
-        // (AppState::modal_dialog_focus), which includes the open, where the
-        // user is there to type.
-        //
-        // A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red
-        // outline and the card is redundant"; the red frame retired from both
-        // editors): the edge stays its plain sunken pair and the face the
-        // field ground, the whole text is selected (text_editor::refuse) so
-        // the first keystroke replaces it, and the reason card the refusing
-        // commit posts (the owner's own sentence, GuiFlagEditor::notifications
-        // and the settings editor's equivalent) says why. The flag editor
-        // takes the same rule (render_flag_editor_box).
-        // UNDER CLEARLOOKS THE FIELD IS GTK'S ENTRY (architect 2026-10-07;
-        // paint_cl_entry, clearlooks_paint.h): the inset ring, base inside
-        // the shade[6] border with its inner shadow, FOCUSED the focus
-        // colour's border and inner ring — the one place the field's focus
-        // shows beside the caret, GTK's own — its ring and border the same
-        // two lines the sunken edge spends (field_inner), its 23 rows GTK's
-        // entry at the 13-row cell (13 + 2 x (ythickness 3 + inner-border
-        // 2)), Windows' 23 too. Its text, selection and caret take GtkEntry's
-        // pairs: text[NORMAL]; base[SELECTED] under text[SELECTED] while the
-        // field has the focus, base[ACTIVE] under text[ACTIVE] while it has
-        // not.
-        const bool field_focused = app.modal_dialog_focus < 0;
-        const bool gtk_entry =
-            spec.vocabulary == GuiChromeVocabulary::Clearlooks;
-        const GuiColor ink_text = gtk_entry ? palette().cl_text
-                                            : palette().field_text;
-        const GuiColor ink_sel_fill =
-            !gtk_entry      ? palette().selected_fill
-            : field_focused ? palette().cl_selection
-                            : palette().cl_selection_unfocused;
-        const GuiColor ink_sel_text = gtk_entry ? palette().cl_text_selected
-                                                : palette().selected_text;
-        if (gtk_entry) {
-            paint_cl_entry(cr, field_outer, field_focused);
+        // THE CHOICE EDITOR'S COMBO STANDS WHERE THE FIELD STANDS
+        // (2026-10-07 evening; GuiSettingsEditor's head): field_outer's seat
+        // and size — THE FIELD'S 23 W, not the picker chooser's 21, the
+        // field's cell being the row's — and no text field, no caret, no
+        // click-to-caret publication (dialog_editor_text stays invalid, so
+        // the field claim and the I-beam find nothing).
+        if (app.settings_choice_live()) {
+            paint_settings_choice(cr, font, field_outer);
         } else {
-            paint_cell_rect(cr, field_inner, palette().field_ground);
-            paint_relief_plain_sunken(cr, field_outer);
-        }
+            // THE FIELD CHROME (architect 2026-10-02, the Windows text field): a
+            // PLAIN SUNKEN edge (EDGE_SUNKEN, two relief lines) on the theme's
+            // FIELD ground (architect 2026-10-03; the flag editor is the selected
+            // flag opened for edit and keeps no field pair), square. No outline
+            // says hover or focus: a
+            // FOCUSED FIELD SHOWS ITS CARET and nothing else, the caret painting
+            // only while the ring has not stepped onto a button (below).
+            //
+            // FOCUS IS `modal_dialog_focus < 0` and needs no term of its own: on
+            // an editor dialog -1 IS the field, the ring's own meaning for it
+            // (AppState::modal_dialog_focus), which includes the open, where the
+            // user is there to type.
+            //
+            // A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red
+            // outline and the card is redundant"; the red frame retired from both
+            // editors): the edge stays its plain sunken pair and the face the
+            // field ground, the whole text is selected (text_editor::refuse) so
+            // the first keystroke replaces it, and the reason card the refusing
+            // commit posts (the owner's own sentence, GuiFlagEditor::notifications
+            // and the settings editor's equivalent) says why. The flag editor
+            // takes the same rule (render_flag_editor_box).
+            // UNDER CLEARLOOKS THE FIELD IS GTK'S ENTRY (architect 2026-10-07;
+            // paint_cl_entry, clearlooks_paint.h): the inset ring, base inside
+            // the shade[6] border with its inner shadow, FOCUSED the focus
+            // colour's border and inner ring — the one place the field's focus
+            // shows beside the caret, GTK's own — its ring and border the same
+            // two lines the sunken edge spends (field_inner), its 23 rows GTK's
+            // entry at the 13-row cell (13 + 2 x (ythickness 3 + inner-border
+            // 2)), Windows' 23 too. Its text, selection and caret take GtkEntry's
+            // pairs: text[NORMAL]; base[SELECTED] under text[SELECTED] while the
+            // field has the focus, base[ACTIVE] under text[ACTIVE] while it has
+            // not.
+            const bool field_focused = app.modal_dialog_focus < 0;
+            const bool gtk_entry =
+                spec.vocabulary == GuiChromeVocabulary::Clearlooks;
+            const GuiColor ink_text = gtk_entry ? palette().cl_text
+                                                : palette().field_text;
+            const GuiColor ink_sel_fill =
+                !gtk_entry      ? palette().selected_fill
+                : field_focused ? palette().cl_selection
+                                : palette().cl_selection_unfocused;
+            const GuiColor ink_sel_text = gtk_entry ? palette().cl_text_selected
+                                                    : palette().selected_text;
+            if (gtk_entry) {
+                paint_cl_entry(cr, field_outer, field_focused);
+            } else {
+                paint_cell_rect(cr, field_inner, palette().field_ground);
+                paint_relief_plain_sunken(cr, field_outer);
+            }
 
-        const text_shape::ShapedRun run =
-            text_shape::shape_text_run(font, ed->pending);
-        const std::vector<double> bx_off =
-            text_shape::byte_offsets_px(run, ed->pending.size());
+            const text_shape::ShapedRun run =
+                text_shape::shape_text_run(font, ed->pending);
+            const std::vector<double> bx_off =
+                text_shape::byte_offsets_px(run, ed->pending.size());
 
-        // THE FIELD SCROLLS HORIZONTALLY (architect 2026-08-13, at his live
-        // test — `notes=` Tab recalls a long value and "the text field has no
-        // viewport scroll... it should allow me to, just like in a regular
-        // text editor, use left and right or home and end to go to the end of
-        // the string"). The standing "the dialog editors do not scroll"
-        // accepted cost, recorded here and at kModalFieldWidthPx, is RETIRED
-        // BY THAT RULING: the caret and the editing always worked, only the
-        // VIEW never followed, so a caret walked past the right pad went on
-        // editing text nobody could see.
-        //
-        // The mechanism is the FLAG EDITOR'S, called not copied in the only
-        // sense a painter can call one — the same state field
-        // (text_editor::State::view_offset_px, whose contract and whose
-        // minimal-travel rule live at that declaration) and the same four
-        // lines of arithmetic, which is what keeps the two surfaces' scrolling
-        // identical. Scroll only as far as the caret demands, in whichever
-        // direction it left the window, then clamp to the run's own travel: a
-        // caret walking right pushes the view right one glyph at a time and
-        // walking back left pulls it back the same way, never jumping and
-        // never showing blank space past the end of the text.
-        //
-        // ITS HOME IS THE EDITOR SESSION, not this painter and not the modal
-        // stash, and that is the deliberate choice: the offset must survive
-        // frame to frame (recomputing it from nothing each paint would jitter
-        // a caret resting mid-string) and must die with the edit. enter() and
-        // deactivate() already zero it, so it RESETS when a dialog opens and
-        // when it closes, with no reset site of its own to keep in step — and
-        // since each of the three dialog editors owns its own State, a change
-        // of the stash's owner is structurally a change of offset too. A
-        // prompt has no field and writes none.
-        //
-        // The caret's own column is RESERVED at the right edge, so the travel
-        // is measured against (view_w - caret) rather than view_w: a caret at
-        // end-of-text stops with its column inside the field instead of half
-        // past it.
-        const double pad_x    = scaled_px(kModalFieldPadXPx);
-        const int    caret_px = scaled_px(1.0, 1);
-        const double view_x0  = static_cast<double>(field_inner.x) + pad_x;
-        const double view_w   =
-            std::max(1.0, static_cast<double>(field_inner.w) - 2.0 * pad_x);
-        const int cursor_pos = std::clamp(
-            ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
-        const double caret_off = bx_off[static_cast<size_t>(cursor_pos)];
-        const double travel_w  = view_w - static_cast<double>(caret_px);
-        double vo = ed->view_offset_px;
-        if (caret_off - vo < 0.0)      vo = caret_off;
-        if (caret_off - vo > travel_w) vo = caret_off - travel_w;
-        const double max_vo =
-            run.width_px + static_cast<double>(caret_px) - view_w;
-        if (vo > max_vo) vo = max_vo;
-        if (vo < 0.0)    vo = 0.0;
-        ed->view_offset_px = vo;
+            // THE FIELD SCROLLS HORIZONTALLY (architect 2026-08-13, at his live
+            // test — `notes=` Tab recalls a long value and "the text field has no
+            // viewport scroll... it should allow me to, just like in a regular
+            // text editor, use left and right or home and end to go to the end of
+            // the string"). The standing "the dialog editors do not scroll"
+            // accepted cost, recorded here and at kModalFieldWidthPx, is RETIRED
+            // BY THAT RULING: the caret and the editing always worked, only the
+            // VIEW never followed, so a caret walked past the right pad went on
+            // editing text nobody could see.
+            //
+            // The mechanism is the FLAG EDITOR'S, called not copied in the only
+            // sense a painter can call one — the same state field
+            // (text_editor::State::view_offset_px, whose contract and whose
+            // minimal-travel rule live at that declaration) and the same four
+            // lines of arithmetic, which is what keeps the two surfaces' scrolling
+            // identical. Scroll only as far as the caret demands, in whichever
+            // direction it left the window, then clamp to the run's own travel: a
+            // caret walking right pushes the view right one glyph at a time and
+            // walking back left pulls it back the same way, never jumping and
+            // never showing blank space past the end of the text.
+            //
+            // ITS HOME IS THE EDITOR SESSION, not this painter and not the modal
+            // stash, and that is the deliberate choice: the offset must survive
+            // frame to frame (recomputing it from nothing each paint would jitter
+            // a caret resting mid-string) and must die with the edit. enter() and
+            // deactivate() already zero it, so it RESETS when a dialog opens and
+            // when it closes, with no reset site of its own to keep in step — and
+            // since each of the three dialog editors owns its own State, a change
+            // of the stash's owner is structurally a change of offset too. A
+            // prompt has no field and writes none.
+            //
+            // The caret's own column is RESERVED at the right edge, so the travel
+            // is measured against (view_w - caret) rather than view_w: a caret at
+            // end-of-text stops with its column inside the field instead of half
+            // past it.
+            const double pad_x    = scaled_px(kModalFieldPadXPx);
+            const int    caret_px = scaled_px(1.0, 1);
+            const double view_x0  = static_cast<double>(field_inner.x) + pad_x;
+            const double view_w   =
+                std::max(1.0, static_cast<double>(field_inner.w) - 2.0 * pad_x);
+            const int cursor_pos = std::clamp(
+                ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
+            const double caret_off = bx_off[static_cast<size_t>(cursor_pos)];
+            const double travel_w  = view_w - static_cast<double>(caret_px);
+            double vo = ed->view_offset_px;
+            if (caret_off - vo < 0.0)      vo = caret_off;
+            if (caret_off - vo > travel_w) vo = caret_off - travel_w;
+            const double max_vo =
+                run.width_px + static_cast<double>(caret_px) - view_w;
+            if (vo > max_vo) vo = max_vo;
+            if (vo < 0.0)    vo = 0.0;
+            ed->view_offset_px = vo;
 
-        const double tx = view_x0 - vo;
+            const double tx = view_x0 - vo;
 
-        // PUBLISH the click-to-caret geometry: origin at pending's byte 0,
-        // the same shape as FlagEditorBox's pair, so editor_byte_index_at
-        // searches this exactly as it searches the flag editor's. IT CARRIES
-        // THE SCROLL OFFSET, which is the whole reason it is an origin and not
-        // a pad: byte 0 is where byte 0 PAINTS, so a click, the F2.1 text drag
-        // and the double-click's word select all land on the byte under the
-        // pointer however far the field has travelled — the same rule, and the
-        // same one origin, the flag editor's scrolled box has always followed.
-        AppState::DialogEditorText& out = app.dialog_editor_text;
-        out.valid         = true;
-        out.text_origin_x = tx;
-        out.byte_x        = bx_off;
+            // PUBLISH the click-to-caret geometry: origin at pending's byte 0,
+            // the same shape as FlagEditorBox's pair, so editor_byte_index_at
+            // searches this exactly as it searches the flag editor's. IT CARRIES
+            // THE SCROLL OFFSET, which is the whole reason it is an origin and not
+            // a pad: byte 0 is where byte 0 PAINTS, so a click, the F2.1 text drag
+            // and the double-click's word select all land on the byte under the
+            // pointer however far the field has travelled — the same rule, and the
+            // same one origin, the flag editor's scrolled box has always followed.
+            AppState::DialogEditorText& out = app.dialog_editor_text;
+            out.valid         = true;
+            out.text_origin_x = tx;
+            out.byte_x        = bx_off;
 
-        const int band_y =
-            static_cast<int>(std::nearbyint(baseline -
-                                            gui_font_ascent_px(font)));
-        const int band_h =
-            static_cast<int>(std::nearbyint(gui_font_line_px(font)));
+            const int band_y =
+                static_cast<int>(std::nearbyint(baseline -
+                                                gui_font_ascent_px(font)));
+            const int band_h =
+                static_cast<int>(std::nearbyint(gui_font_line_px(font)));
 
-        // Everything from here paints CLIPPED TO THE TEXT VIEWPORT — the band
-        // between the pads, not the whole interior — so scrolled-out glyphs,
-        // the selection highlight and the caret all stop where the ink is
-        // allowed to start instead of bleeding into the pad the border needs.
-        // It is the clip that hides the overflow, and the PUBLISHED byte
-        // geometry above stays the painter's UNCLIPPED truth: a click outside
-        // the visible run still resolves through the nearest-boundary search,
-        // exactly as it did before the field travelled.
-        cairo_save(cr);
-        cairo_rectangle(cr, view_x0, static_cast<double>(field_inner.y),
-                        view_w, static_cast<double>(field_inner.h));
-        cairo_clip(cr);
-
-        const bool   has_sel = text_editor::has_selection(*ed);
-        const size_t s0 = static_cast<size_t>(text_editor::selection_start(*ed));
-        const size_t s1 = static_cast<size_t>(text_editor::selection_end(*ed));
-        // THE SELECTION IS THE THEME'S SELECTED PAIR OVER THE FIELD PAIR
-        // (architect 2026-10-03, unified fields; render.h's palette block) —
-        // the selected fill behind the selected substring, the selected text
-        // for its glyphs, the field text for the rest: the flag editor's
-        // marker-lane box paints the same four. ONE INK PER PIXEL, the flag
-        // editor's rule (render_flag_editor_box): with a selection standing,
-        // the field-text run is clipped to the band's complement and the
-        // selected run to the band, two disjoint regions, so every
-        // antialiased edge blends against exactly the ground it sits on.
-        if (has_sel) {
-            const int hx0 = static_cast<int>(std::nearbyint(tx + bx_off[s0]));
-            const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
-            const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
+            // Everything from here paints CLIPPED TO THE TEXT VIEWPORT — the band
+            // between the pads, not the whole interior — so scrolled-out glyphs,
+            // the selection highlight and the caret all stop where the ink is
+            // allowed to start instead of bleeding into the pad the border needs.
+            // It is the clip that hides the overflow, and the PUBLISHED byte
+            // geometry above stays the painter's UNCLIPPED truth: a click outside
+            // the visible run still resolves through the nearest-boundary search,
+            // exactly as it did before the field travelled.
             cairo_save(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            set_palette_source(cr, ink_sel_fill);
-            cairo_rectangle(cr, hx0, band_y, hw, band_h);
-            cairo_fill(cr);
-            cairo_restore(cr);
-            // The complement: the columns left and right of the band, and the
-            // rows above and below it (the band is the face's line, not the
-            // field's interior), as one clip path.
-            cairo_save(cr);
-            const double fy0 = static_cast<double>(field_inner.y);
-            const double fy1 = static_cast<double>(field_inner.y + field_inner.h);
-            cairo_rectangle(cr, view_x0, fy0, hx0 - view_x0, fy1 - fy0);
-            cairo_rectangle(cr, hx0 + hw, fy0,
-                            (view_x0 + view_w) - (hx0 + hw), fy1 - fy0);
-            cairo_rectangle(cr, hx0, fy0, hw, band_y - fy0);
-            cairo_rectangle(cr, hx0, band_y + band_h, hw,
-                            fy1 - (band_y + band_h));
+            cairo_rectangle(cr, view_x0, static_cast<double>(field_inner.y),
+                            view_w, static_cast<double>(field_inner.h));
             cairo_clip(cr);
-            set_palette_source(cr, ink_text);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-            cairo_restore(cr);
-            cairo_save(cr);
-            cairo_rectangle(cr, hx0, band_y, hw, band_h);
-            cairo_clip(cr);
-            set_palette_source(cr, ink_sel_text);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-            cairo_restore(cr);
-        } else {
-            set_palette_source(cr, ink_text);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-        }
-        // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
-        // IT (architect 2026-08-13, at his live test: "the blinking caret, the
-        // I-beam, continues to blink in the text field even though it has lost
-        // focus"). `field_focused` is the ring's own -1, resolved above, so
-        // this needs no term of its own; the caret is the field's ONE focus
-        // cue (architect 2026-10-02). THE SELECTION HIGHLIGHT IS
-        // DELIBERATELY NOT GATED: it is buffer STATE, not focus, and it must
-        // still be visible when the user walks back onto the field to act on
-        // it. The blink's TICK carries the same gate (main.cpp), so an
-        // unfocused field wakes the loop for nothing either.
-        if (field_focused && text_editor::cursor_visible_now(*ed)) {
-            // The caret's column is the one the scroll arithmetic RESERVED
-            // above, so the two cannot disagree about how wide it is: the
-            // travel stops with exactly this many pixels of room left at the
-            // right pad, and the caret fills exactly them.
-            const double caret_x = tx + caret_off;
-            cairo_save(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-            // THE CARET IS ITS FIELD'S TEXT (architect 2026-10-03).
-            set_palette_source(cr, ink_text);
-            cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
-                            band_y, caret_px, band_h);
-            cairo_fill(cr);
-            cairo_restore(cr);
-        }
-        cairo_restore(cr);   // the field clip
 
-        dlg.field = field_inner;
+            const bool   has_sel = text_editor::has_selection(*ed);
+            const size_t s0 = static_cast<size_t>(text_editor::selection_start(*ed));
+            const size_t s1 = static_cast<size_t>(text_editor::selection_end(*ed));
+            // THE SELECTION IS THE THEME'S SELECTED PAIR OVER THE FIELD PAIR
+            // (architect 2026-10-03, unified fields; render.h's palette block) —
+            // the selected fill behind the selected substring, the selected text
+            // for its glyphs, the field text for the rest: the flag editor's
+            // marker-lane box paints the same four. ONE INK PER PIXEL, the flag
+            // editor's rule (render_flag_editor_box): with a selection standing,
+            // the field-text run is clipped to the band's complement and the
+            // selected run to the band, two disjoint regions, so every
+            // antialiased edge blends against exactly the ground it sits on.
+            if (has_sel) {
+                const int hx0 = static_cast<int>(std::nearbyint(tx + bx_off[s0]));
+                const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
+                const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
+                cairo_save(cr);
+                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                set_palette_source(cr, ink_sel_fill);
+                cairo_rectangle(cr, hx0, band_y, hw, band_h);
+                cairo_fill(cr);
+                cairo_restore(cr);
+                // The complement: the columns left and right of the band, and the
+                // rows above and below it (the band is the face's line, not the
+                // field's interior), as one clip path.
+                cairo_save(cr);
+                const double fy0 = static_cast<double>(field_inner.y);
+                const double fy1 = static_cast<double>(field_inner.y + field_inner.h);
+                cairo_rectangle(cr, view_x0, fy0, hx0 - view_x0, fy1 - fy0);
+                cairo_rectangle(cr, hx0 + hw, fy0,
+                                (view_x0 + view_w) - (hx0 + hw), fy1 - fy0);
+                cairo_rectangle(cr, hx0, fy0, hw, band_y - fy0);
+                cairo_rectangle(cr, hx0, band_y + band_h, hw,
+                                fy1 - (band_y + band_h));
+                cairo_clip(cr);
+                set_palette_source(cr, ink_text);
+                text_shape::show_shaped_run(cr, run, tx, baseline);
+                cairo_restore(cr);
+                cairo_save(cr);
+                cairo_rectangle(cr, hx0, band_y, hw, band_h);
+                cairo_clip(cr);
+                set_palette_source(cr, ink_sel_text);
+                text_shape::show_shaped_run(cr, run, tx, baseline);
+                cairo_restore(cr);
+            } else {
+                set_palette_source(cr, ink_text);
+                text_shape::show_shaped_run(cr, run, tx, baseline);
+            }
+            // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
+            // IT (architect 2026-08-13, at his live test: "the blinking caret, the
+            // I-beam, continues to blink in the text field even though it has lost
+            // focus"). `field_focused` is the ring's own -1, resolved above, so
+            // this needs no term of its own; the caret is the field's ONE focus
+            // cue (architect 2026-10-02). THE SELECTION HIGHLIGHT IS
+            // DELIBERATELY NOT GATED: it is buffer STATE, not focus, and it must
+            // still be visible when the user walks back onto the field to act on
+            // it. The blink's TICK carries the same gate (main.cpp), so an
+            // unfocused field wakes the loop for nothing either.
+            if (field_focused && text_editor::cursor_visible_now(*ed)) {
+                // The caret's column is the one the scroll arithmetic RESERVED
+                // above, so the two cannot disagree about how wide it is: the
+                // travel stops with exactly this many pixels of room left at the
+                // right pad, and the caret fills exactly them.
+                const double caret_x = tx + caret_off;
+                cairo_save(cr);
+                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                // THE CARET IS ITS FIELD'S TEXT (architect 2026-10-03).
+                set_palette_source(cr, ink_text);
+                cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
+                                band_y, caret_px, band_h);
+                cairo_fill(cr);
+                cairo_restore(cr);
+            }
+            cairo_restore(cr);   // the field clip
+
+            dlg.field = field_inner;
+        }
     }
 
     // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28, the
@@ -7515,7 +7538,9 @@ void show_picker_combo_text(cairo_t* cr, const GuiFont& font, double x,
 } // namespace
 
 // THE CHROME'S COMBO — the chooser's drawing, the palette menu button's too
-// (2026-10-07, the planner's "reuse it"): `r` the whole control, `button`
+// (2026-10-07, the planner's "reuse it"), and since that evening the
+// settings editor's CHOICE COMBO's, a reader outside the picker
+// (paint_settings_choice): `r` the whole control, `button`
 // win2000's drop-down button inside it (empty under clearlooks), `open`
 // while its list or menu is down (the button pushed), `enabled` false for
 // the grayed face (win2000's field takes the ground, as a disabled Windows
@@ -7571,6 +7596,71 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
     const double ax = button.x + (button.w - aw) / 2 + box.shift;
     const double ay = button.y + (button.h - ah) / 2 + box.shift;
     paint_picker_wedge(cr, ax, ay, aw, ah, enabled, palette().label);
+}
+
+// THE COMBO'S LIST — ONE PAINTER, TWO READERS (2026-10-07 evening, lifted
+// from the picker's chooser for the settings editor's choice editor, its
+// second reader): the dropdown's box (paint_dropdown's composition — GtkMenu
+// under clearlooks, the popup's Menu face under win2000) at `box`, then
+// `count` rows at combo_list_item (color_picker.h), each LIT — the selected
+// pair, GtkMenu's prelight under clearlooks — when it is the pressed row or
+// the hovered one, its label at the popup's left pad. Every row is live (no
+// grayed row: both lists' domains are wholly choosable).
+void GuiPaintHandler::paint_combo_list(
+        cairo_t* cr, const GuiFont& font, const GuiRect& box, int count,
+        int pressed, int hover,
+        const char* (*label_of)(const AppState&, int)) {
+    const bool cl =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    if (cl) paint_cl_menu(cr, box);
+    else    paint_popup_chrome(cr, box, PopupFace::Menu);
+    const int pad_l = scaled_px(kPopupPadXPx);
+    for (int i = 0; i < count; ++i) {
+        const GuiRect item = color_picker::combo_list_item(box, i);
+        const bool lit = pressed == i || hover == i;
+        if (lit) {
+            if (cl) paint_cl_menu_item(cr, item);
+            else    paint_cell_rect(cr, item, palette().selected_fill);
+        }
+        show_row_text(cr, font, box.x + pad_l,
+                      redesign_baseline(font, item.y, item.h),
+                      label_of(app, i),
+                      cl ? (lit ? palette().cl_menuitem_text
+                                : palette().cl_menu_text)
+                         : (lit ? palette().selected_text
+                                : palette().label));
+    }
+}
+
+// THE SETTINGS EDITOR'S CHOICE COMBO (the design at GuiSettingsEditor's
+// head, settings_editor.h): THE PICKER'S COMBO DRAWING, paint_picker_combo
+// read from outside the picker, at the dialog field's seat and size — the field's
+// 23-W cell, not the picker's 21: the combo stands where the field stands,
+// in the row's cell (paint_modal_dialog's caller says so) — showing the
+// shown choice, its button pushed while the list is down. No hover face on
+// the combo (the picker's chooser takes none). The list, when down, is
+// paint_combo_list's at combo_list_box UPWARD, the shown row seeded lit at
+// the open and the hover following the pointer (the chooser's rule). Both
+// rects publish into the modal stash, the press road's only geometry.
+void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
+                                            const GuiRect& combo) {
+    const AppState::SettingsChoice& ch = app.settings_choice;
+    AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    paint_picker_combo(cr, font, combo, color_picker::combo_drop_button(combo),
+                       app.settings_choice_value(ch.shown), ch.list_open,
+                       /*enabled=*/true);
+    dlg.combo = combo;
+    if (!ch.list_open) return;
+    const int n = app.settings_choice_count();
+    const GuiRect box = color_picker::combo_list_box(combo, n, /*upward=*/true);
+    paint_combo_list(cr, font, box, n, ch.list_pressed, ch.list_hover,
+                     [](const AppState& a, int i) {
+                         return a.settings_choice_value(i);
+                     });
+    dlg.combo_list = box;
+    dlg.combo_list_items.clear();
+    for (int i = 0; i < n; ++i)
+        dlg.combo_list_items.push_back(color_picker::combo_list_item(box, i));
 }
 
 void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
@@ -7821,26 +7911,15 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     cp.stash.list = GuiRect{0, 0, 0, 0};
     cp.stash.list_items = {};
     if (cp.chooser_open) {
-        if (cl) paint_cl_menu(cr, L.list);
-        else    paint_popup_chrome(cr, L.list, PopupFace::Menu);
-        const int pad_l = scaled_px(kPopupPadXPx);
-        for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i) {
-            const GuiRect& item = L.list_items[i];
-            const bool lit = cp.chooser_pressed == static_cast<int>(i) ||
-                             cp.chooser_hover == static_cast<int>(i);
-            if (lit) {
-                if (cl) paint_cl_menu_item(cr, item);
-                else    paint_cell_rect(cr, item, palette().selected_fill);
-            }
-            show_row_text(cr, font, L.list.x + pad_l,
-                          redesign_baseline(font, item.y, item.h),
-                          color_picker::role_display_name(i),
-                          cl ? (lit ? palette().cl_menuitem_text
-                                    : palette().cl_menu_text)
-                             : (lit ? palette().selected_text
-                                    : palette().label));
-            cp.stash.list_items[i] = item;
-        }
+        paint_combo_list(cr, font, L.list,
+                         static_cast<int>(kGuiPaletteRoleCount),
+                         cp.chooser_pressed, cp.chooser_hover,
+                         [](const AppState&, int i) {
+                             return color_picker::role_display_name(
+                                 static_cast<std::size_t>(i));
+                         });
+        for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
+            cp.stash.list_items[i] = L.list_items[i];
         cp.stash.list = L.list;
     }
 

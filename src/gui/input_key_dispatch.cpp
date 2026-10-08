@@ -9259,9 +9259,48 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // every second Tab — and an unknown key) are exactly the Tabs that step.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
+    if (app.settings_choice_live()) return handle_settings_choice_key(key, mods);
     return route_modal_editor_key(
         app.settings_editor, key, mods,
         [this] { return settings_editor.autocomplete_value(); },
+        [this] { settings_editor.commit(); },
+        [this] { settings_editor.exit_no_commit(); },
+        [this] { viewport.invalidate_modal_dialog_area(); });
+}
+
+// THE CHOICE EDITOR'S KEYS (the contract at the declaration; the design at
+// GuiSettingsEditor's head). The combo holds the focus where the field would
+// (the ring's -1), so the arrows and Enter are its only while it does; a
+// button's focus leaves every key to the shared route, whose wall admits the
+// ring and the modal contract's three commands and swallows the rest.
+bool GuiInputHandler::handle_settings_choice_key(GuiKey key,
+                                                 GuiInputState mods) {
+    const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
+    const bool on_combo = modal_dialog_focus_live() < 0;
+    if (bare && key == GuiKeys::Escape && app.settings_choice.list_open) {
+        settings_editor.set_choice_list_open(false);
+        return true;
+    }
+    const bool tab = modal_ring_tab_shape(key, mods) != ModalRingTab::None;
+    if (tab) settings_editor.set_choice_list_open(false);
+    if (on_combo && !tab) {
+        if (bare && (key == GuiKeys::Up || key == GuiKeys::Down)) {
+            settings_editor.choice_step(key == GuiKeys::Down ? 1 : -1);
+            return true;
+        }
+        if (bare && (key == GuiKeys::Return || key == GuiKeys::KpEnter)) {
+            settings_editor.choice_commit(app.settings_choice.shown);
+            return true;
+        }
+        const bool ctrl_only = mods.ctrl && !mods.shift && !mods.alt;
+        const bool passes = (bare && key == GuiKeys::Escape) ||
+                            (ctrl_only && (key == GuiKeys::S ||
+                                           key == GuiKeys::Q));
+        if (!passes) return true;   // nothing to type: a consumed nothing
+    }
+    return route_modal_editor_key(
+        app.settings_editor, key, mods,
+        /*autocomplete=*/nullptr,
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { viewport.invalidate_modal_dialog_area(); });

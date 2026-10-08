@@ -2735,7 +2735,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         }
         // Same shape for the settings prompt (a dialog editor); the
         // modal's own owner is the bottom row's lane.
-        if (text_editor::is_active(app.settings_editor)) {
+        // A CHOICE EDITOR HAS NO CARET (settings_editor.h's head), so its
+        // blink wakes nothing.
+        if (text_editor::is_active(app.settings_editor) &&
+            !app.settings_choice_live()) {
             const bool now_visible =
                 dialog_field_focused &&
                 text_editor::cursor_visible_now(app.settings_editor);

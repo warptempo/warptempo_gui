@@ -22,7 +22,7 @@
 //   chrome=<key>             THE CHROME VOCABULARY the process paints:
 //                            `windows-2000` or `clearlooks` (is_chrome_key,
 //                            chrome_spec.h); MAY BE ABSENT, reading as
-//                            clearlooks (kDefaultChromeKey); takes effect
+//                            windows-2000 (kDefaultChromeKey); takes effect
 //                            at the next launch
 //   theme=<key>              THE THEME the chrome is painted in: the
 //                            built-in `windows-2000-standard` or a theme
@@ -174,7 +174,7 @@
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven
 // keys and each at most once, every key REQUIRED but `chrome`, `theme` and
-// `palette` (architect 2026-10-07: `chrome` absent is clearlooks, the
+// `palette` (architect 2026-10-07: `chrome` absent is windows-2000, the
 // default chrome, so the configs written before the key still load; `theme`
 // absent is the
 // chrome's own theme and `palette` absent the chrome's default palette, the
@@ -223,11 +223,11 @@
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for the four required keys: a successful read always assigns
 // them. THE THREE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
-// (2026-10-07): `chrome` "clearlooks" (the default chrome since 16:00 that
-// day), `theme` and `palette` empty (no line: the chrome's own). Both
-// backends stamp a default-constructed struct's
+// (2026-10-07): `chrome` "windows-2000" (the default chrome, architect
+// 2026-10-07 ~22:45), `theme` and `palette` empty (no line: the chrome's
+// own). Both backends stamp a default-constructed struct's
 // (GuiPlatform::device_config_defaults), so the first-run file of either
-// device names `chrome=clearlooks` and no theme or palette, following the
+// device names `chrome=windows-2000` and no theme or palette, following the
 // chrome.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
@@ -249,10 +249,10 @@ struct DeviceConfig {
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE CHROME DEFAULT (architect 2026-10-07 ~16:00): clearlooks,
+    // THE CHROME DEFAULT (architect 2026-10-07 ~22:45): windows-2000,
     // kDefaultChromeKey (chrome_spec.h; theme_file.cpp's static_assert keeps
     // this spelling and that key one) — what an absent line reads as.
-    std::string chrome = "clearlooks";
+    std::string chrome = "windows-2000";
     // THE THEME, UNSET BY DEFAULT (architect 2026-10-07): empty while the
     // config has no `theme` line, which RESOLVES AT EACH INSTALL to the live
     // chrome's own theme (effective_theme_key, theme_file.h:

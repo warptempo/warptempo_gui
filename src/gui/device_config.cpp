@@ -50,8 +50,8 @@ constexpr const char* kDeviceConfigKeys[] = {
     "palette",
 };
 // THE REQUIRED SET — every key above but the three that may be ABSENT
-// (architect 2026-10-07): `chrome`, absent reading as clearlooks (the
-// default chrome since 2026-10-07 ~16:00, kDefaultChromeKey; a config
+// (architect 2026-10-07): `chrome`, absent reading as windows-2000 (the
+// default chrome since 2026-10-07 ~22:45, kDefaultChromeKey; a config
 // written before the key existed loads, in the default chrome), `theme`,
 // absent meaning the chrome's own theme, and `palette`, absent meaning the
 // chrome's default palette. The scanner
@@ -197,7 +197,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
         }
         // THE CHROME (architect 2026-10-07): a vocabulary's key under its one
         // grammar owner (is_chrome_key, chrome_spec.h); absent, the struct's
-        // clearlooks stands (kDefaultChromeKey).
+        // windows-2000 stands (kDefaultChromeKey).
         if (key == "chrome") {
             if (!is_chrome_key(value)) {
                 return bad_value(ln, key, value, kChromeGrammarReason);

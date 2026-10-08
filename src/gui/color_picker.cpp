@@ -270,6 +270,32 @@ char widest_hex_digit(const GuiFont& font) {
 }
 } // namespace
 
+GuiRect combo_drop_button(const GuiRect& r) {
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
+        return GuiRect{0, 0, 0, 0};
+    const int fb = 2 * relief_line_px();   // the sunken field's two lines
+    const int bw = scaled_px(kComboButtonWPx);
+    return GuiRect{r.x + r.w - fb - bw, r.y + fb, bw, r.h - 2 * fb};
+}
+
+GuiRect combo_list_box(const GuiRect& combo, int count, bool upward) {
+    const int h = count * popup_item_h_px() + 2 * popup_item_margin_y_px() +
+                  popup_border_top_px() + popup_border_px();
+    const int y = upward ? combo.y - h : combo.y + combo.h;
+    return GuiRect{combo.x, y, combo.w, h};
+}
+
+GuiRect combo_list_item(const GuiRect& box, int i) {
+    const int side_b = popup_is_gtk_menu() ? 0 : popup_border_px();
+    const int margin_x = live_chrome_spec().popup_margin_px;
+    const int inset = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
+    const int item_h = popup_item_h_px();
+    return GuiRect{box.x + side_b + inset,
+                   box.y + popup_border_top_px() + popup_item_margin_y_px() +
+                       i * item_h,
+                   box.w - 2 * (side_b + inset), item_h};
+}
+
 Layout layout(const AppState& app, const GuiFont& font) {
     Layout l;
     const ChromeSpec& spec = live_chrome_spec();
@@ -306,12 +332,7 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int col_x = l.inner.x + side + scaled_px(kColumnGapPx);
     const int col_w = l.inner.x + l.inner.w - col_x;
     l.chooser = GuiRect{col_x, l.inner.y, col_w, chooser_h};
-    if (!cl) {
-        const int fb = 2 * lw;   // the sunken field's two lines
-        const int bw = scaled_px(kComboButtonWPx);
-        l.chooser_button = GuiRect{l.chooser.x + l.chooser.w - fb - bw,
-                                   l.chooser.y + fb, bw, chooser_h - 2 * fb};
-    }
+    l.chooser_button = combo_drop_button(l.chooser);
     double label_w = 0.0;
     for (int i = 0; i < kChannelCount; ++i)
         label_w = std::max(label_w,
@@ -354,15 +375,9 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int menu_x = hex_field.x + hex_field.w + gap + swatch_floor + gap;
     l.menu_button = GuiRect{menu_x, by,
                             std::max(1, l.buttons[0].x - gap - menu_x), btn_h};
-    if (!cl) {
-        // The chooser's drop-down button, seated in the menu button's own
-        // sunken field (the chooser's arithmetic above).
-        const int fb  = 2 * lw;
-        const int abw = scaled_px(kComboButtonWPx);
-        l.menu_button_arrow = GuiRect{l.menu_button.x + l.menu_button.w - fb - abw,
-                                      l.menu_button.y + fb, abw,
-                                      l.menu_button.h - 2 * fb};
-    }
+    // The chooser's drop-down button, seated in the menu button's own
+    // sunken field.
+    l.menu_button_arrow = combo_drop_button(l.menu_button);
     const int sf_x = hex_field.x + hex_field.w + gap;
     const int sf_w = l.menu_button.x - gap - sf_x;
     if (app.color_picker.field_editor.kind == text_editor::Kind::PaletteName &&
@@ -388,27 +403,13 @@ Layout layout(const AppState& app, const GuiFont& font) {
     l.field_inner = GuiRect{l.field.x + lw, l.field.y + lw, l.field.w - 2 * lw,
                             l.field.h - 2 * lw};
 
-    // THE LIST, when down: the dropdown's own arithmetic (dropdown_h_px and
-    // paint_dropdown, render.h / paint_handler.cpp) under the chooser, flush,
-    // the chooser's width.
+    // THE LIST, when down: the combo's list (combo_list_box, the dropdown's
+    // own arithmetic) under the chooser, flush, the chooser's width.
     if (app.color_picker.chooser_open) {
-        const bool gtk_menu = popup_is_gtk_menu();
-        const int border    = popup_border_px();
-        const int side_b    = gtk_menu ? 0 : border;
-        const int item_h    = popup_item_h_px();
-        const int block_mar = popup_item_margin_y_px();
-        const int margin_x  = spec.popup_margin_px;
-        const int inset     = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
-        const int count     = static_cast<int>(kGuiPaletteRoleCount);
-        const int h = count * item_h + 2 * block_mar + popup_border_top_px() +
-                      border;
-        l.list = GuiRect{l.chooser.x, l.chooser.y + l.chooser.h, l.chooser.w, h};
-        int iy = l.list.y + popup_border_top_px() + block_mar;
-        for (int i = 0; i < count; ++i) {
-            l.list_items[i] = GuiRect{l.list.x + side_b + inset, iy,
-                                      l.list.w - 2 * (side_b + inset), item_h};
-            iy += item_h;
-        }
+        const int count = static_cast<int>(kGuiPaletteRoleCount);
+        l.list = combo_list_box(l.chooser, count, /*upward=*/false);
+        for (int i = 0; i < count; ++i)
+            l.list_items[i] = combo_list_item(l.list, i);
     }
 
     // THE PALETTE MENU'S BOUND (2026-10-07; the head's THE PALETTE MENU):

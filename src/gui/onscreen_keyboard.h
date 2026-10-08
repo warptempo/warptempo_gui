@@ -462,9 +462,11 @@ inline int surface_height_px() {
 
 // -- Standing ----------------------------------------------------------------
 
-// DOES THE SURFACE STAND? Two terms: the PLATFORM must want a painted
+// DOES THE SURFACE STAND? Three terms: the PLATFORM must want a painted
 // keyboard (false forever on Wayland — the ruling is at that backend's
-// wants_onscreen_keyboard), and one of the editors must own the keyboard.
+// wants_onscreen_keyboard), one of the editors must own the keyboard, and
+// that editor must not be the settings CHOICE editor (the third term's
+// record is at the predicate).
 // EVERY paint site and EVERY hit site in the product asks this and nothing
 // else, which is what makes the laptop build's behaviour identical by
 // construction rather than by care.
@@ -494,8 +496,15 @@ inline int surface_height_px() {
 // So the second term is false whenever the overlay stands, and this
 // predicate cannot answer true over the band without a producer this record
 // would have to name.
+//
+// THE THIRD TERM IS THE CHOICE EDITOR'S (2026-10-07 evening): the settings
+// editor standing as a CHOICE editor (settings_editor.h's head) is a text
+// editor session with nothing to type — its combo is chosen, not typed —
+// so the band does not rise for it, and the well stays in view under the
+// list it drops.
 inline bool stands(const AppState& a, const GuiPlatform& gui) {
-    return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0;
+    return gui.wants_onscreen_keyboard() && a.text_editor_session() != 0 &&
+           !a.settings_choice_live();
 }
 
 // -- The surface's rect ------------------------------------------------------

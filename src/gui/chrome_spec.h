@@ -58,14 +58,14 @@
 //     in its selected face under every chrome (architect 2026-10-07
 //     ~09:45). The trim lane's bar is the product's own: the light slider
 //     for the body and the caps in step with it (paint_cl_slider,
-//     paint_cl_stepper). The default when the config names no chrome.
-// THE TWO ARE NOT PEERS (architect 2026-10-07 ~16:00): CLEARLOOKS IS THE
-// DEVELOPMENT CHROME AND THE EXTERNAL ONE; WINDOWS-2000 IS THE REFERENCE
-// BEHIND IT — the sanity check and the metric base, not intended for
-// external use; its icon set may lag. The table (kGuiChromeSpecs) keeps
-// windows-2000 FIRST all the same: it is the metric base every later
-// vocabulary is fitted to, and the table's order is the defaults' order
-// (palette_file.cpp's assert), not a ranking.
+//     paint_cl_stepper).
+// WINDOWS-2000 IS THE DEFAULT AND THE METRIC BASE; CLEARLOOKS IS THE SECOND
+// VOCABULARY (architect 2026-10-07 ~22:45, reversing the ~16:00 ruling that
+// had made clearlooks the default: "we could revert the default theme to
+// Windows 2000; I just need to work out a good color palette", the color
+// picker's purpose). The table (kGuiChromeSpecs) keeps windows-2000 FIRST:
+// it is the metric base every later vocabulary is fitted to, and the
+// table's order is the defaults' order (palette_file.cpp's assert).
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colours remain an ordinary theme
 // file. The table is kGuiChromeSpecs below, the live instance
@@ -441,9 +441,9 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 // THE TABLE — every vocabulary, the `chrome` key's whole vocabulary in its
 // order (is_chrome_key), the face install's probe walking it
 // (gui_font_install_bundled: every set's faces must carry their band glyphs).
-// WINDOWS-2000 FIRST, THE METRIC BASE (the head), though clearlooks is the
-// default (kDefaultChromeKey below): the order is the base's, not the
-// default's.
+// WINDOWS-2000 FIRST, THE METRIC BASE AND THE DEFAULT (the head;
+// kDefaultChromeKey below). The Settings menu's Chrome row lists the keys in
+// this order (its choice editor, kChromeChoiceSource, app_state.h).
 inline constexpr const ChromeSpec* kGuiChromeSpecs[] = {
     &kChromeSpecWin2000,
     &kChromeSpecClearlooks,
@@ -474,12 +474,12 @@ constexpr bool is_chrome_key(std::string_view v) {
 inline constexpr const char* kChromeGrammarReason =
     "must be windows-2000 or clearlooks";
 // THE DEFAULT, a config with no `chrome` line (DeviceConfig::chrome's
-// initializer spells it): `clearlooks` since 2026-10-07 ~16:00 (architect:
-// the development chrome and the external one, the head). The win2000
-// vocabulary's key is `windows-2000` (architect 2026-10-07: the term
-// spelled whole); the earlier `win2000` is an unknown word, the launch's
-// hard fail.
-inline constexpr const char* kDefaultChromeKey = "clearlooks";
+// initializer spells it), and what the first run stamps: `windows-2000`
+// (architect 2026-10-07 ~22:45, the head; clearlooks was the default from
+// ~16:00 that day until then). The win2000 vocabulary's key is
+// `windows-2000` (architect 2026-10-07: the term spelled whole); the
+// earlier `win2000` is an unknown word, the launch's hard fail.
+inline constexpr const char* kDefaultChromeKey = "windows-2000";
 static_assert(is_chrome_key(kDefaultChromeKey));
 
 // THE LIVE SPEC — the one instance the process paints (architect

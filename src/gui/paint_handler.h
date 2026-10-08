@@ -940,6 +940,18 @@ private:
     // VEILED, under the prompt its palette menu's Delete raises: painted,
     // publishing nothing (the definition's head).
     void paint_color_picker(cairo_t* cr, uint64_t live_session, bool veiled);
+    // THE SETTINGS EDITOR'S CHOICE COMBO (2026-10-07 evening; the design at
+    // GuiSettingsEditor's head): the chrome's combo at `combo` — the dialog
+    // field's seat — showing the live choice, and its list above it while
+    // down; publishes both into the modal stash. Called from
+    // paint_modal_dialog's editor branch alone, in place of the text field.
+    void paint_settings_choice(cairo_t* cr, const GuiFont& font,
+                               const GuiRect& combo);
+    // THE COMBO'S LIST — one painter, two readers: the picker's chooser and
+    // the settings choice editor (the definition's head).
+    void paint_combo_list(cairo_t* cr, const GuiFont& font, const GuiRect& box,
+                          int count, int pressed, int hover,
+                          const char* (*label_of)(const AppState&, int));
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — full
     // window width, directly above the bottom row, over the waveform area's

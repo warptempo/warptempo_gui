@@ -3394,11 +3394,38 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // the settings editor with `key`, PickColors opens the picker and its `key`
 // is unread (nullptr).
 enum class SettingsPopupAct { EditKey, PickColors };
+// THE ROW'S EDITOR (architect 2026-10-07 evening: "a drop-down for chrome
+// and theme at the very least"): an EditKey row opens the settings editor
+// in one of two KINDS. TEXT is the `key=value` line in the sunken field,
+// every key's editor until that evening and still all but one's. CHOICE is
+// for a key whose domain is A SHORT CLOSED LIST: the same bottom-row editor
+// with the chrome's COMBO BOX where the field stands, its list dropping
+// UPWARD over the well (the design at GuiSettingsEditor's head,
+// settings_editor.h). A CHOICE row names its DOMAIN'S SOURCE — the count
+// and the i-th value, in the order the list shows them — so a domain is
+// read from its own owner and never copied into this table; a TEXT row
+// names none (static_asserted below).
+enum class SettingsEditorKind { Text, Choice };
+struct SettingsChoiceSource {
+    int         (*count)();
+    const char* (*value)(int);
+};
+// THE CHROME'S DOMAIN: the chrome table (kGuiChromeSpecs, chrome_spec.h),
+// its two keys in the table's order — windows-2000 then clearlooks, the
+// base first.
+inline constexpr SettingsChoiceSource kChromeChoiceSource{
+    +[]() -> int { return static_cast<int>(std::size(kGuiChromeSpecs)); },
+    +[](int i) -> const char* {
+        return kGuiChromeSpecs[static_cast<std::size_t>(i)]->key;
+    },
+};
 struct SettingsPopupItem {
-    const char*      label;
-    const char*      key;
-    bool             separator_before;
-    SettingsPopupAct act = SettingsPopupAct::EditKey;
+    const char*                 label;
+    const char*                 key;
+    bool                        separator_before;
+    SettingsPopupAct            act     = SettingsPopupAct::EditKey;
+    SettingsEditorKind          editor  = SettingsEditorKind::Text;
+    const SettingsChoiceSource* choices = nullptr;
 };
 // (THE "Font size" ITEM LEFT WITH ITS KEY — row 7, 2026-08-01. "Playback speed"
 // was the widest label from then until 2026-08-26; only the item count and the
@@ -3457,6 +3484,18 @@ struct SettingsPopupItem {
 // `palette` (2026-10-07, the seventh device key) HAS NO ROW: the in-app
 // color picker is its chooser, so the device half stays these five.
 //
+// `Chrome` IS THE ONE CHOICE ROW (architect 2026-10-07 evening; the editor
+// kinds above): its domain the chrome table, its commit the text road's
+// (commit_device_setting), so its refusal-free value, the config write and
+// the next-launch card are unchanged. `Theme` STAYS TEXT FOR NOW: its
+// domain is the built-in plus every bundled theme file, ninety-odd keys —
+// more than a list without a scroll bar can show (the product's lists carry
+// none; the palette menu cuts to the rows that fit, color_picker.h). WHEN THE
+// CATALOG IS PRUNED to a list that fits, Theme becomes a choice row by ONE
+// TABLE EDIT plus ONE ITEMS SOURCE — a SettingsChoiceSource over the
+// built-in and the theme keys read at launch (theme_file.h) — and nothing
+// in the editor, its painter or its press road changes.
+//
 // `Pick Colors` IS THE MENU'S ONE COMMAND ROW (architect 2026-10-07: the
 // in-app color picker, "a full-fledged part of the project"), the LAST row
 // behind its own separator — a command parting from the keys above it —
@@ -3474,12 +3513,35 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI Scale",           "gui_scale",     true},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
-    {"Chrome",              "chrome",        false},
+    {"Chrome",              "chrome",        false, SettingsPopupAct::EditKey,
+     SettingsEditorKind::Choice, &kChromeChoiceSource},
     {"Theme",               "theme",         false},
     {"Pick Colors",         nullptr,         true, SettingsPopupAct::PickColors},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
+// A CHOICE ROW NAMES ITS SOURCE AND NO OTHER ROW DOES (the editor kinds'
+// rule, above), and a choice row edits a key.
+static_assert([] {
+    for (const SettingsPopupItem& it : kSettingsPopupItems) {
+        const bool choice = it.editor == SettingsEditorKind::Choice;
+        if (choice != (it.choices != nullptr)) return false;
+        if (choice && (it.act != SettingsPopupAct::EditKey || it.key == nullptr))
+            return false;
+    }
+    return true;
+}());
+// THE CHOICE ROW FOR A KEY, or nullptr when the key's row is a text row
+// (or the key has no row) — the settings editor's opener asks it
+// (GuiSettingsEditor::open_prefilled).
+inline constexpr const SettingsPopupItem* settings_choice_item(
+        std::string_view key) {
+    for (const SettingsPopupItem& it : kSettingsPopupItems)
+        if (it.editor == SettingsEditorKind::Choice && it.key != nullptr &&
+            key == it.key)
+            return &it;
+    return nullptr;
+}
 
 // THE COMMAND MENU'S ITEMS — the row type a menu of COMMANDS uses (the settings
 // menu is the other kind, a list of keys to edit). It carries the row's LABEL,
@@ -6427,6 +6489,17 @@ struct AppState {
         // tick ahead. A frame whose clip does not cover the track carries
         // the last painted column (paint_modal_dialog's player branch).
         int                            scrub_thumb_x = -1;
+        // THE SETTINGS EDITOR'S CHOICE COMBO (2026-10-07 evening), zero under
+        // every other owner and under the text editor: the combo standing
+        // where the field stands (a press drops its list) and, while the
+        // list is down, the list's box and its rows in the domain's order.
+        // The press, the lift and the hover read these and never a live
+        // derivation (ON SCREEN IS AS PAINTED; GuiSettingsEditor's head),
+        // under the owner-tag doctrine above; the modal's damage covers the
+        // published list (Viewport::invalidate_modal_dialog_area).
+        GuiRect                        combo{0, 0, 0, 0};
+        GuiRect                        combo_list{0, 0, 0, 0};
+        std::vector<GuiRect>           combo_list_items;
         std::vector<ModalDialogButton> buttons;
     };
     ModalDialogGeometry modal_dialog;
@@ -6509,7 +6582,8 @@ struct AppState {
     // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
     //
     // The painted keyboard (onscreen_keyboard.h) stands while any of the five
-    // editor kinds does, on a backend that asks for one, and it holds NOTHING
+    // editor kinds does (the settings choice editor excepted, stands()), on a
+    // backend that asks for one, and it holds NOTHING
     // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
     // arm and the PAGE (letters, symbols 1/2, symbols 2/2; plasma-keyboard's
     // three, onscreen_keyboard.h) — and both are SESSION-SCOPED: `lamp_session`
@@ -8431,6 +8505,44 @@ struct AppState {
     // flag editor swallowing all keys while active).
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
+    // THE SETTINGS EDITOR AS A CHOICE EDITOR (architect 2026-10-07 evening;
+    // the design at GuiSettingsEditor's head, settings_editor.h). It RIDES
+    // the text editor above, which stands as it always does — the modal
+    // rank, the session, OK and Cancel, the focus ring, the commit and every
+    // closer are its — with `pending` kept at `<key>=<shown value>`, so the
+    // commit is the text road's byte for byte. Its fields:
+    //   `active`  the open editor is a choice editor — MEANINGFUL ONLY WHILE
+    //             `settings_editor` stands (settings_choice_live): the
+    //             opener resets this struct and seeds it, and no closer
+    //             owes it a reset;
+    //   `item`    its kSettingsPopupItems row (the label and the domain);
+    //   `shown`   the domain index the combo shows, which Up / Down and a
+    //             list row move and Enter commits;
+    //   the list's state — `list_open`, the hovered and pressed rows and the
+    //             press-began bit, the color picker's chooser's own four.
+    struct SettingsChoice {
+        bool active       = false;
+        int  item         = -1;
+        int  shown        = 0;
+        bool list_open    = false;
+        int  list_hover   = -1;
+        int  list_pressed = -1;
+        bool list_press_began_on_item = false;
+    };
+    SettingsChoice settings_choice;
+    bool settings_choice_live() const {
+        return settings_choice.active && text_editor::is_active(settings_editor);
+    }
+    // The live choice's row and its domain (precondition: settings_choice_live).
+    const SettingsPopupItem& settings_choice_row() const {
+        return kSettingsPopupItems[static_cast<std::size_t>(settings_choice.item)];
+    }
+    int settings_choice_count() const {
+        return settings_choice_row().choices->count();
+    }
+    const char* settings_choice_value(int i) const {
+        return settings_choice_row().choices->value(i);
+    }
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07), the fourth dialog
     // modal and the `h` history view's own: Ctrl+S while the view stands

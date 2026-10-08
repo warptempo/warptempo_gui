@@ -3180,6 +3180,12 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // claims its own rect only and is never a mode, so a drag beside a card
     // pans (the clause below yields under the card alone).
     if (app.dropdown.open()) return false;
+    // AND WHILE THE SETTINGS CHOICE EDITOR'S LIST IS DOWN (2026-10-07
+    // evening), for the dropdown's reason: it is a popup hanging over the
+    // well, so its row's press must arm at the down and a touch elsewhere
+    // must close it as a press does (claim_settings_choice_press).
+    if (app.settings_choice_live() && app.settings_choice.list_open)
+        return false;
     // THE ZONE YIELDS UNDER A NOTIFICATION CARD (2026-08-29), for the
     // keyboard clause's reason below: the cards stack over the waveform's
     // upper right, the whole waveform is the pan zone, and a finger landing
@@ -5476,6 +5482,68 @@ void GuiInputHandler::clear_color_picker_drag() {
     cp.drag = AppState::ColorPicker::Drag{};
 }
 
+// -- THE SETTINGS CHOICE EDITOR'S POINTER BODIES (2026-10-07 evening; the
+//    contract at the declarations, input_handler.h; the design and the acts
+//    at GuiSettingsEditor, settings_editor.h) -----------------------------
+
+namespace {
+// The dropped list's row under (x, y) as painted, or -1.
+int settings_choice_list_hit(const AppState::ModalDialogGeometry& dlg, int x,
+                             int y) {
+    if (dlg.combo_list.w <= 0 || dlg.combo_list.h <= 0) return -1;
+    for (std::size_t i = 0; i < dlg.combo_list_items.size(); ++i)
+        if (rect_contains(dlg.combo_list_items[i], x, y))
+            return static_cast<int>(i);
+    return -1;
+}
+} // namespace
+
+bool GuiInputHandler::claim_settings_choice_press(GuiMouseButton button,
+                                                  int x, int y,
+                                                  GuiInputState mods) {
+    if (!app.settings_choice_live()) return false;
+    const bool plain_left = button == GuiMouseButton::Left && !mods.ctrl &&
+                            !mods.shift && !mods.alt;
+    // PUBLISHED GEOMETRY MAY ONLY SELECT, and only the live session's (the
+    // owner-tag doctrine, ModalDialogGeometry): a stale stash holds no row
+    // and no combo.
+    const bool current = modal_dialog_stash_current();
+    if (app.settings_choice.list_open) {
+        const int hit = current ? settings_choice_list_hit(app.modal_dialog, x, y)
+                                : -1;
+        if (plain_left && hit >= 0) settings_editor.choice_arm_row(hit);
+        else                        settings_editor.set_choice_list_open(false);
+        return true;
+    }
+    if (plain_left && current && rect_contains(app.modal_dialog.combo, x, y)) {
+        // THE COMBO TAKES THE FOCUS BACK AT THE PRESS, the field's own rule
+        // (return_modal_focus_to_field), then drops its list.
+        (void)return_modal_focus_to_field();
+        settings_editor.set_choice_list_open(true);
+        return true;
+    }
+    return false;
+}
+
+bool GuiInputHandler::finish_settings_choice_release(int x, int y) {
+    if (!app.settings_choice_live()) return false;
+    const AppState::SettingsChoice& ch = app.settings_choice;
+    if (!ch.list_open || !ch.list_press_began_on_item) return false;
+    const int hit = modal_dialog_stash_current()
+                        ? settings_choice_list_hit(app.modal_dialog, x, y)
+                        : -1;
+    if (hit >= 0) settings_editor.choice_commit(hit);
+    else          settings_editor.set_choice_list_open(false);
+    return true;
+}
+
+void GuiInputHandler::settings_choice_motion(int x, int y) {
+    if (!app.settings_choice_live() || !app.settings_choice.list_open) return;
+    settings_editor.choice_hover(
+        modal_dialog_stash_current()
+            ? settings_choice_list_hit(app.modal_dialog, x, y) : -1);
+}
+
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
@@ -5935,6 +6003,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // (The claim needs no modal_dialog_editor_active term of its own and lost
     // the one it carried: the prompt gate above has already returned, so a
     // CURRENT stash here is an editor's by construction.)
+    // THE SETTINGS CHOICE EDITOR'S COMBO AND ITS LIST (2026-10-07 evening),
+    // ahead of the buttons: a dropped list owns every press (the dropdown's
+    // ONE PRESS, ONE ACT — even one on OK or Cancel only closes it), and
+    // the combo's press drops it. Anything else goes on to the claims below.
+    if (claim_settings_choice_press(button, x, y, mods)) return;
     if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
         !mods.alt && modal_dialog_stash_current()) {
         if (arm_modal_dialog_press(x, y)) return;
@@ -7495,6 +7568,12 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // mutually exclusive by construction (a press on a button never reaches
     // the field claim), and above the four editor swallows below, which is
     // where an unarmed release still ends.
+    // THE SETTINGS CHOICE EDITOR'S ROW LIFT (2026-10-07 evening), its press
+    // claim's mirror: the armed list row's lift selects and commits, or
+    // closes the list off the row. Ahead of the dialog's buttons, which no
+    // press armed while the list was down.
+    if (button == GuiMouseButton::Left && finish_settings_choice_release(x, y))
+        return;
     if (button == GuiMouseButton::Left && modal_dialog_editor_active()) {
         if (dispatch_modal_dialog_button(take_modal_dialog_release(x, y)))
             return;
@@ -10481,7 +10560,8 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // swallowed): the dialog buttons' walk, then the roster walk, whose
         // veil term refuses the whole roster since the modal-trap
         // reach-through's retirement, so no roster hint starts under the
-        // pointer.
+        // pointer. A choice editor's dropped list takes its hover first.
+        settings_choice_motion(mouse_x, mouse_y);
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;

@@ -159,6 +159,12 @@ void Viewport::invalidate_status_cell_area() {
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
+    // THE CHOICE EDITOR'S DROPPED LIST AS PAINTED (2026-10-07 evening): it
+    // stands over the well above the row, so every repaint and every closer
+    // of the modal covers it too — a list closed by the editor's own close
+    // leaves no pixels behind.
+    const GuiRect list = app.modal_dialog.combo_list;
+    if (list.w > 0 && list.h > 0) invalidate_rect(list);
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
     // published rect and the band it can hang into, the show edge's own pair
     // (tooltip_hang_bands), one of which holds the recomposed box whole.

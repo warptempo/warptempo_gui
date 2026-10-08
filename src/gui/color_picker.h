@@ -208,6 +208,24 @@ inline constexpr int kComboArrowMinHPx = 2;
 // drop-down button), where a long name is cut with "..." (2026-10-07, the
 // palette menu button's preset names; GtkComboBox's arrow spacing).
 inline constexpr int kComboTextGapPx  = 4;
+// THE CHROME'S COMBO AND ITS LIST — GEOMETRY SHARED BY TWO READERS
+// (2026-10-07 evening): the picker's chooser and palette menu button, and
+// the settings editor's CHOICE EDITOR (settings_editor.h's head), whose
+// combo is this drawing at the dialog field's seat and whose list is this
+// list opened UPWARD. Device px, rounded at the element.
+//   combo_drop_button — win2000's drop-down button inside the combo `r`
+//     (kComboButtonWPx wide, inside the sunken field's two lines), and the
+//     zero rect under clearlooks, whose whole combo is one gummy button.
+//   combo_list_box — the list of `count` rows hung from `combo`, its width,
+//     flush: below its foot (the chooser's) or, `upward`, standing on its
+//     head (the choice editor's: the row is the window's foot, and Windows'
+//     and GTK's combos both open above when no room lies below). The
+//     dropdown's own arithmetic (dropdown_h_px, render.h): the frame, the
+//     item block's two margins, `count` rows.
+//   combo_list_item — the box's row `i`, the dropdown's item rect.
+GuiRect combo_drop_button(const GuiRect& r);
+GuiRect combo_list_box(const GuiRect& combo, int count, bool upward);
+GuiRect combo_list_item(const GuiRect& box, int i);
 // A SLIDER ROW IS 15 W: GtkScale's slider-width (clearlooks_paint.h's
 // kClScaleSliderWidthPx) and the win2000 thumb's seat here — 3 W above the
 // 4-line channel and 8 below it (the point's 5 and 3 of straight side),

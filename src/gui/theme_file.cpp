@@ -53,8 +53,8 @@ static_assert(std::ranges::all_of(kGuiThemeCaptionGradients,
     return p.start < kGuiThemeRoleCount && p.end < kGuiThemeRoleCount;
 }));
 static_assert(is_theme_key_spelling(kBuiltinThemeKey));
-// Every chrome's own theme is a theme key, and win2000's is the built-in;
-// clearlooks' (the default chrome's since 2026-10-07) is a bundled file,
+// Every chrome's own theme is a theme key, and win2000's (the default
+// chrome's) is the built-in; clearlooks' is a bundled file,
 // copied in at every launch, so an unset theme under either chrome always
 // resolves.
 static_assert(chrome_specs_all([](const ChromeSpec& c) {

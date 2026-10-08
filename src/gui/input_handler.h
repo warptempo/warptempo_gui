@@ -2726,6 +2726,30 @@ private:
     // ring when it did not advance; the typed-`=` trigger it wore for part of
     // that day is reverted with the ruling).
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
+    // THE CHOICE EDITOR'S KEYS (2026-10-07 evening; settings_editor.h's
+    // head), handle_settings_editor_key's fork while a choice editor stands:
+    // Esc closes a dropped list; with the combo focused Up / Down walk the
+    // shown value and Enter commits it; Tab (the list closing), Esc and the
+    // modal contract's Ctrl+S / Ctrl+Q take the shared route with no
+    // completion, as does every key while a button holds the focus; any
+    // other key with the combo focused is a consumed nothing — no key edits
+    // the line.
+    bool handle_settings_choice_key(GuiKey key, GuiInputState mods);
+    // THE CHOICE EDITOR'S POINTER (input_pointer.cpp, the bodies beside the
+    // color picker's; every target read from the modal stash as painted):
+    //   claim_settings_choice_press — a dropped list owns every press: a
+    //     plain left press on a row arms it, any other press closes the list,
+    //     consumed; with the list closed, a plain left press on the combo
+    //     takes the focus back and drops the list. False for every other
+    //     press, which goes on to the dialog's own claims and its veil.
+    //   finish_settings_choice_release — the armed row's lift: on that row
+    //     it selects and commits (choice_commit), elsewhere it closes the
+    //     list. False when no row was armed.
+    //   settings_choice_motion — a dropped list's hover follows the pointer.
+    bool claim_settings_choice_press(GuiMouseButton button, int x, int y,
+                                     GuiInputState mods);
+    bool finish_settings_choice_release(int x, int y);
+    void settings_choice_motion(int x, int y);
 
     // -- THE PICKER (architect 2026-08-28; bodies in
     //    input_key_dispatch.cpp) ---------------------------------------------

@@ -10,10 +10,13 @@
 #include "target_render.h"
 #include "text_editor.h"
 #include "undo.h"
+#include "color_picker.h"      // combo_list_box: the choice list's open damage
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
 
+#include <algorithm>
+#include <cassert>
 #include <cctype>
 #include <cstdio>
 #include <filesystem>
@@ -132,7 +135,97 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
         static_cast<int>(app.settings_editor.pending.size());
     app.settings_editor.selection_anchor = -1;
     (void)autocomplete_value();
+    // A CHOICE ROW'S KEY OPENS THE CHOICE EDITOR (the head): the recall
+    // above has seeded `<key>=<live value>` exactly as for a text row, and
+    // the combo shows that value's place in the domain. The live value is
+    // always in the domain — the config's reader judged it under the key's
+    // one grammar owner, whose vocabulary the domain is.
+    if (const SettingsPopupItem* row = settings_choice_item(key)) {
+        AppState::SettingsChoice& ch = app.settings_choice;
+        ch.active = true;
+        ch.item   = static_cast<int>(row - kSettingsPopupItems);
+        const std::string& pending = app.settings_editor.pending;
+        const std::string live = pending.substr(pending.find('=') + 1);
+        ch.shown = -1;
+        for (int i = 0; i < row->choices->count(); ++i)
+            if (live == row->choices->value(i)) ch.shown = i;
+        assert(ch.shown >= 0);
+    }
     viewport.invalidate_modal_dialog_area();
+}
+
+// THE CHOICE EDITOR'S ACTS (the head). The shown value is written into the
+// line as `<key>=<value>`, so every road that commits the line — Enter, OK,
+// a list row — commits it through commit() and commit_device_setting
+// unchanged.
+void GuiSettingsEditor::choice_show(int index) {
+    if (!app.settings_choice_live()) return;
+    AppState::SettingsChoice& ch = app.settings_choice;
+    const int n = app.settings_choice_count();
+    // NO WRAP: an end stays an end (Windows' combo stops there), though a
+    // list hovered elsewhere still takes its lit row back to the shown one.
+    index = std::clamp(index, 0, n - 1);
+    const bool hover_moves = ch.list_open && ch.list_hover != index;
+    if (ch.list_open) ch.list_hover = index;
+    const bool shown_moves = index != ch.shown;
+    if (shown_moves) {
+        ch.shown = index;
+        text_editor::State& ed = app.settings_editor;
+        ed.pending = std::string(app.settings_choice_row().key) + "=" +
+                     app.settings_choice_value(index);
+        ed.cursor_pos       = static_cast<int>(ed.pending.size());
+        ed.selection_anchor = -1;
+    }
+    if (hover_moves || shown_moves) viewport.invalidate_modal_dialog_area();
+}
+
+void GuiSettingsEditor::choice_step(int delta) {
+    if (!app.settings_choice_live()) return;
+    choice_show(app.settings_choice.shown + delta);
+}
+
+void GuiSettingsEditor::set_choice_list_open(bool open) {
+    if (!app.settings_choice_live()) return;
+    AppState::SettingsChoice& ch = app.settings_choice;
+    if (ch.list_open == open) return;
+    // THE CLOSE'S DAMAGE is the modal's, which covers the list as painted
+    // (Viewport::invalidate_modal_dialog_area); THE OPEN'S is the rect the
+    // next paint will give the list — derived from the combo AS PAINTED, for
+    // damage alone, never for a hit.
+    viewport.invalidate_modal_dialog_area();
+    ch.list_open    = open;
+    ch.list_hover   = open ? ch.shown : -1;
+    ch.list_pressed = -1;
+    ch.list_press_began_on_item = false;
+    if (open) {
+        viewport.invalidate_rect(color_picker::combo_list_box(
+            app.modal_dialog.combo, app.settings_choice_count(),
+            /*upward=*/true));
+    }
+}
+
+void GuiSettingsEditor::choice_hover(int row) {
+    if (!app.settings_choice_live()) return;
+    AppState::SettingsChoice& ch = app.settings_choice;
+    if (!ch.list_open || row == ch.list_hover) return;
+    ch.list_hover = row;
+    viewport.invalidate_modal_dialog_area();
+}
+
+void GuiSettingsEditor::choice_arm_row(int row) {
+    if (!app.settings_choice_live()) return;
+    AppState::SettingsChoice& ch = app.settings_choice;
+    if (!ch.list_open) return;
+    ch.list_pressed = row;
+    ch.list_press_began_on_item = true;
+    viewport.invalidate_modal_dialog_area();
+}
+
+void GuiSettingsEditor::choice_commit(int index) {
+    if (!app.settings_choice_live()) return;
+    set_choice_list_open(false);
+    choice_show(index);
+    commit();
 }
 
 // The one opener, and it carries no read-only decision at all: the lock
@@ -220,6 +313,9 @@ void GuiSettingsEditor::open() {
     // caller-side stop would have made a refused open kill a live audition and
     // open nothing.
     playback_lifecycle.stop_playback_for_modal_open();
+    // EVERY OPEN IS A TEXT EDITOR UNTIL open_prefilled SAYS OTHERWISE: the
+    // choice state of an earlier session dies here, the one reset it owes.
+    app.settings_choice = AppState::SettingsChoice{};
     text_editor::enter(app.settings_editor,
                        /*target=*/0,
                        /*initial_pending=*/"",
