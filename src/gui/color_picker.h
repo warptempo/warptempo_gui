@@ -258,10 +258,13 @@ struct Viewport;
 // icon row and row 8 (unless a list of the card's is down, or the card
 // itself covers the press — the card and its lists are what paint there),
 // AND A PLAIN PRESS ON A FLAG IN THE MARKER LANE outside the card, which is
-// THE MARKER CLICK'S SELECT ALONE — the flag single-selected and its
-// pressed cell addressed, nothing else: no playhead land, no playback stop,
-// no drag, no double-tap editor, no value step (the veil in
-// on_button_press, input_pointer.cpp, the rule's site). Everything else off
+// THE MARKER CLICK'S SELECT ALONE (run_marker_select_alone) — the selection
+// a plain click makes as the Add to Selection lamp rules it (architect
+// 2026-10-08 ~23:00: dark, that flag alone; lit, the payload's membership
+// toggle) and the pressed cell addressed, nothing else: no playhead land,
+// no playback stop, no drag, no double-tap editor, no value step, no undo
+// entry, no render (the veil in on_button_press, input_pointer.cpp, the
+// rule's site). Everything else off
 // the card is the veil's consumed nothing.
 //
 // THE WIDTH: kCardWidthPx = 376, the tablet's half (384 W of its 768) less

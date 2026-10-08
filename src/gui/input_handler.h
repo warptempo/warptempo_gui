@@ -2162,6 +2162,26 @@ struct GuiInputHandler {
     // plain arm and run_flag_cell_wheel. Definition in input_pointer.cpp.
     void run_marker_plain_select(int hit, MarkerCell cell);
 
+    // WHETHER A PLAIN PRESS ON CELL `cell` OF A FLAG IS THE MEMBERSHIP
+    // TOGGLE — the Add to Selection lamp's fold (architect 2026-08-18; it
+    // stops at the payload box, 2026-09-19), the term's one spelling: read by
+    // run_marker_click_act's `toggle` and by run_marker_select_alone.
+    bool plain_marker_press_toggles(MarkerCell cell) const {
+        return app.add_to_selection && cell == MarkerCell::Payload;
+    }
+
+    // THE PLAIN CLICK'S SELECTION ALONE (2026-10-08 ~21:20 / ~23:00) — a
+    // plain press on a flag through the color picker's veil: the selection
+    // fork the plain click runs AS THE ADD TO SELECTION LAMP RULES IT
+    // (plain_marker_press_toggles: the membership toggle on the payload
+    // with the lamp lit, Selection::toggle_selection_membership; else the
+    // single select, Selection::set_single_selection), then the addressed
+    // cell `cell` — and NOTHING ELSE the click does: no playback stop, no
+    // playhead land, no arm, no double-click seed or consume. ONE caller,
+    // the color picker's veil in on_button_press. Definition in
+    // input_pointer.cpp.
+    void run_marker_select_alone(int hit, MarkerCell cell);
+
     // THE PLAIN WHEEL OVER A FLAG CELL (architect 2026-09-14): on_wheel's
     // context 5. A standing marker-lane editor closes as an outside press
     // closes it; then the flag under (x, y) is SELECTED exactly as a plain

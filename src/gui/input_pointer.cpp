@@ -4027,6 +4027,27 @@ void GuiInputHandler::run_marker_plain_select(int hit, MarkerCell cell) {
     }
 }
 
+// THE PLAIN CLICK'S SELECTION ALONE (2026-10-08 ~21:20; the lamp honored
+// ~23:00, "exactly what a plain click does with the button on") — contract
+// at the declaration (input_handler.h). The fork is the plain click's own,
+// its decision term the one plain_marker_press_toggles and its two bodies
+// the Selection owner's mutators, so the picker's press and the click
+// cannot rule a flag differently; the stop and the land the click runs
+// beside them are left out. A toggle that removes the last member leaves
+// the selection empty, as the click's does. SELECTION IS VIEW STATE: no
+// sidecar write, no undo entry, no render.
+void GuiInputHandler::run_marker_select_alone(int hit, MarkerCell cell) {
+    if (hit < 0) return;
+    if (plain_marker_press_toggles(cell))
+        selection.toggle_selection_membership(hit);
+    else
+        selection.set_single_selection(hit);
+    if (app.addressed_cell != cell) {
+        app.addressed_cell = cell;
+        viewport.invalidate_top_strip();
+    }
+}
+
 // THE PLAIN WHEEL OVER A FLAG CELL (architect 2026-09-14) — contract at the
 // declaration (input_handler.h). Reached from on_wheel's context 5, which
 // wheel_context answers over a flag cell of the live marker lane (never in the
@@ -4184,8 +4205,7 @@ void GuiInputHandler::run_marker_click_act(int hit, int x, int y, bool shift,
     // `ctrl` is already true — and ctrl+shift never reaches this owner at all
     // (the ctrl call site is ctrl-EXACT, and the plain/shift one passes
     // ctrl=false), so this term reads on the mode's arm alone.
-    const bool toggle = ctrl || (app.add_to_selection && !shift &&
-                                 cell == MarkerCell::Payload);
+    const bool toggle = ctrl || (!shift && plain_marker_press_toggles(cell));
     // THE PAYLOAD IS THE MEMBERSHIP SURFACE, and this is the whole of that
     // rule (the head of this body argues it): a MODIFIED press — the toggle
     // on either of its producers, or the shift range — landing on any box but
@@ -6193,11 +6213,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // affecting"): with no list of the card's down, a plain left press on a
     // flag of the marker lane outside the card — the flag's hit rects as the
     // painter published them (hit_test_flag, ON SCREEN IS AS PAINTED) — is
-    // THE MARKER CLICK'S SELECT ALONE: the flag single-selected as a plain
-    // click selects it (the selected one stays selected, set_single_selection)
-    // and the cell it landed on addressed, as the plain click addresses it
-    // (run_marker_plain_select's two Selection clauses), so the flag and its
-    // stem take the selected pair live under the colors being picked. NOTHING
+    // THE MARKER CLICK'S SELECT ALONE (run_marker_select_alone): the
+    // selection a plain click makes AS THE ADD TO SELECTION LAMP RULES IT
+    // (architect 2026-10-08 ~23:00) — the lamp dark, that flag alone (the
+    // selected one stays selected); lit, the payload's membership toggle —
+    // and the cell it landed on addressed, as the plain click addresses it,
+    // so the flags and their stems take the selected pair live under the
+    // colors being picked. NOTHING
     // ELSE: no playback stop and no playhead land (the plain click's other
     // two clauses), no marker drag (nothing is armed, so a motion past the
     // click slop is the picker's motion and moves nothing), no flag editor on
@@ -6205,9 +6227,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // lift is the picker's (color_picker_release, which finds nothing armed).
     // SELECTION IS VIEW STATE: nothing in the sidecar changes, no undo entry
     // is made and nothing renders — the selection only addresses what a
-    // later act (row 8's verbs, on under the picker) would act on. The
-    // Add to Selection lamp is not consulted: the press is the plain select,
-    // no membership toggle. A standing edit of the card's field ends at it,
+    // later act (row 8's verbs, on under the picker) would act on. A
+    // standing edit of the card's field ends at it,
     // as at every press outside the field. Not in the `h` view, whose flags
     // are the diff's under their own press router.
     if (app.color_picker.active && !menu_row_press_admitted &&
@@ -6230,12 +6251,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             const int hit = hit_test_flag(app, audio, x, y);
             if (hit >= 0) {
                 if (color_picker.field_active()) color_picker.field_cancel();
-                const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
-                selection.set_single_selection(hit);
-                if (app.addressed_cell != cell) {
-                    app.addressed_cell = cell;
-                    viewport.invalidate_top_strip();
-                }
+                run_marker_select_alone(hit,
+                                        hit_test_flag_cell(app, audio, x, y));
                 return;
             }
         }
