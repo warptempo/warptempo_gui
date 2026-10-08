@@ -8606,7 +8606,7 @@ struct AppState {
 
     // -- THE COLOR PICKER'S WHOLE STATE (architect 2026-10-07) -----------
     //
-    // THE IN-APP PICKER OF THE PROGRAM'S FOURTEEN COLORS (kGuiPaletteRoles,
+    // THE IN-APP PICKER OF THE PROGRAM'S FIFTEEN COLORS (kGuiPaletteRoles,
     // palette_file.h) — a slim card on the well, chrome-branded, the FIFTH
     // ModalDialogOwner (its rank and its modal shape are at
     // ModalDialogOwner). Everything about the card that is not pixels is in

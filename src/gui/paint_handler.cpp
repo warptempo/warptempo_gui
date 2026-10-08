@@ -5333,9 +5333,9 @@ void GuiPaintHandler::paint_marker_stem_flanks(cairo_t* cr,
     if (band.h <= 0) return;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // The flags' outline, carried down: THE CANVAS'S COLOR under every
-    // chrome (architect 2026-10-07, render.h's marker-lane paragraph).
-    set_palette_source(cr, palette().waveform_canvas);
+    // The flags' outline, carried down: the palette's `flag_outline` under
+    // every chrome (architect 2026-10-08, render.h's marker-lane paragraph).
+    set_palette_source(cr, palette().flag_outline);
     const double y0 = static_cast<double>(band.y);
     const double y1 = static_cast<double>(band.y + band.h);
     for (const MarkerStem& stem : app.marker_stems) {

@@ -55,7 +55,7 @@
 // 2026-10-04), in GuiPalette's order: the Windows chrome's twenty-one (the
 // caption's six since 2026-10-05), then the generated Clearlooks block
 // (2026-10-07; its count is the include's, kGuiThemeRoleCount the whole
-// table's). The program's fourteen left for the palette's own table
+// table's). The program's roles left for the palette's own table
 // 2026-10-07 (kGuiPaletteRoles, palette_file.h). The two themes and
 // install_palette (render.cpp) walk it, so a role cannot be valued and not
 // painted. What each role paints is render.h's palette block (THE MAPPING).

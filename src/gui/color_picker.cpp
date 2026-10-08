@@ -36,6 +36,7 @@ constexpr RoleName kRoleNames[] = {
     {"added_flag_selected",       "Selected Added Flag"},
     {"removed_flag",              "Removed Flag"},
     {"removed_flag_selected",     "Selected Removed Flag"},
+    {"flag_outline",              "Flag Outline"},
     {"flag_label",                "Flag Label"},
     {"playhead_stem",             "Playhead Stem"},
     {"scanner",                   "Scanner"},

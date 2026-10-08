@@ -1575,8 +1575,8 @@ enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
 // The resolved paint of ONE marker flag box (the palette block's marker-lane
 // paragraph, render.h, owns the look): its face, its label's ink — or the
 // disabled emboss — and the stem. The OUTLINE is no part of it: every flag's
-// is the canvas's color, selected or not, under every chrome
-// (palette().waveform_canvas at each box painter; architect 2026-10-07).
+// is the palette's one `flag_outline`, selected or not, under every chrome
+// (palette().flag_outline at each box painter; architect 2026-10-08).
 struct FlagFace {
     GuiColor face;
     GuiColor label;
@@ -1771,7 +1771,7 @@ static void paint_iter_bound_cell(cairo_t* cr, const GuiRect& lane, int seam_x,
                                   const text_shape::ShapedRun& run,
                                   const FlagFace& face, bool closes) {
     paint_flat_flag_box(cr, lane, seam_x + border_w, fill_w, border_w, edge_h,
-                        closes, palette().waveform_canvas, face.face);
+                        closes, palette().flag_outline, face.face);
     paint_flag_label(cr, run, static_cast<double>(seam_x + border_w + pad_l),
                      baseline, face);
 }
@@ -2023,8 +2023,8 @@ void render_flag_boxes_impl(
             // and under a bound field it paints exactly as it does
             // at rest.
             if (pass_paints(MarkerCell::Payload)) {
-                // THE FLAT BOX (paint_flat_flag_box): the outline the
-                // canvas's color, selected or not, and the face the ladder's.
+                // THE FLAT BOX (paint_flat_flag_box): the outline
+                // `flag_outline`, selected or not, and the face the ladder's.
                 //
                 // THE LEFT BORDER IS OUTSIDE THE FACE, one column LEFT of the
                 // frame column (the geometry clause and the clip-at-the-left-
@@ -2049,7 +2049,7 @@ void render_flag_boxes_impl(
                 // outline row at its own column, selected or not.
                 paint_flat_flag_box(cr, lane, bx, bw, border_w, edge_h,
                                     pass_closes && !paint_lower,
-                                    palette().waveform_canvas, face.face);
+                                    palette().flag_outline, face.face);
                 if (face.has_stem)
                     paint_flag_stem_crossing(cr, lane, bx, edge_h, face.stem);
                 // The label, on the run just measured — same font, same glyphs,
@@ -2501,12 +2501,12 @@ void render_history_diff_flags(
             if (w_removed > 0)
                 paint_flat_flag_box(cr, lane, bx, w_removed, border_w, edge_h,
                                     /*closes=*/w_added == 0,
-                                    palette().waveform_canvas,
+                                    palette().flag_outline,
                                     removed_face.face);
             if (w_added > 0)
                 paint_flat_flag_box(
                     cr, lane, bx + w_removed + seam_w, w_added, border_w,
-                    edge_h, /*closes=*/true, palette().waveform_canvas,
+                    edge_h, /*closes=*/true, palette().flag_outline,
                     added_face.face);
 
             // THE TWO LABELS, each on its own half through the one label body
@@ -2625,7 +2625,7 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the fourteen as
+    // THE LIVE WORDS (render.h's program_palette_words): the fifteen as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
 } // namespace
@@ -2636,7 +2636,7 @@ WaveformPlateInks waveform_plate_inks() { return g_plate_inks; }
 const GuiPaletteWords& program_palette_words() { return g_program_words; }
 
 namespace {
-// THE PROGRAM'S FOURTEEN into the installed struct and the plate's two baked
+// THE PROGRAM'S FIFTEEN into the installed struct and the plate's two baked
 // inks off the same words — the install family's shared half (the
 // generation is each member's own bump).
 void fill_program_palette(const GuiPaletteWords& w) {
@@ -3029,8 +3029,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // an invalid marker, the kind's selected face over a disabled one (the
     // selected-disabled arm) — its `face` the field's fill and its `label`
     // the text's and the caret's, `flag_label` on every arm the selected
-    // answer has; the outline the flag's own, the
-    // canvas's color; and the SELECTED SUBSTRING THE CHROME'S
+    // answer has; the outline the flag's own, `flag_outline`; and the
+    // SELECTED SUBSTRING THE CHROME'S
     // SELECTED PAIR, `selected_fill` under `selected_text` (Clearlooks'
     // 86ABD9 band under white, win2000's Hilight under HilightText) — part of
     // the chrome, as every selection in the product is.
@@ -3071,7 +3071,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    marker's field is this same box in the selected-disabled answer —
     //    the kind's selected face under the one label, never embossed.
     paint_flat_flag_box(cr, lane, bx, box_w, border_w, edge_h,
-                        /*closes=*/!ride_cells, pal.waveform_canvas,
+                        /*closes=*/!ride_cells, pal.flag_outline,
                         face.face);
     // THE STEM FOLLOWS THE PAYLOAD BOX (architect 2026-10-04, "otherwise it
     // looks disconnected"). Under the PAYLOAD field the field IS the payload

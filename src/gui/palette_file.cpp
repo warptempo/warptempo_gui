@@ -23,7 +23,7 @@
 namespace {
 
 // The role table names each role once, so the reader's lookup is a
-// bijection (fourteen names: the pairwise form is cheap here).
+// bijection (fifteen names: the pairwise form is cheap here).
 constexpr bool palette_role_names_unique() {
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         for (std::size_t j = i + 1; j < kGuiPaletteRoleCount; ++j)
@@ -86,19 +86,12 @@ const GuiDefaultPalette* default_palette_for(std::string_view name) {
     return nullptr;
 }
 
-// ONE FILE'S ROLES as it names them: a word and whether the file names it.
-// The unnamed roles resolve at palette_words, against the live chrome's
-// default (palette_file.h's head).
-struct PaletteFileRoles {
-    GuiPaletteWords                         words{};
-    std::array<bool, kGuiPaletteRoleCount>  named{};
-};
-
 // THE PALETTES READ AT LAUNCH AND MAINTAINED BY THE PICKER'S WRITES, by
-// name — read by is_palette_name, palette_words and palette_names.
+// name, each its fifteen words (a file names every role, palette_file.h's
+// head) — read by is_palette_name, palette_words and palette_names.
 // Single-threaded: the read precedes every reader, and only the GUI thread
 // reads or writes it.
-std::map<std::string, PaletteFileRoles, std::less<>> g_loaded_palettes;
+std::map<std::string, GuiPaletteWords, std::less<>> g_loaded_palettes;
 
 constexpr std::string_view kPaletteSuffix = ".palette";
 
@@ -109,13 +102,15 @@ std::filesystem::path palette_file_path(const std::filesystem::path& folder,
 
 // ONE FILE under the grammar (palette_file.h's head), its stem already
 // judged.
-std::expected<PaletteFileRoles, std::string> read_palette_file(
+std::expected<GuiPaletteWords, std::string> read_palette_file(
         const std::filesystem::path& path) {
     std::ifstream f(path, std::ios::binary);
     if (!f) return std::unexpected(std::string("could not open the file"));
-    PaletteFileRoles out;
+    GuiPaletteWords                        out{};
+    std::array<bool, kGuiPaletteRoleCount> named{};
     auto scan = warptempo_settings::scan_key_value_file(
-        f, [&out](int ln, const std::string& role, const std::string& value)
+        f, [&out, &named](int ln, const std::string& role,
+                          const std::string& value)
                   -> std::expected<void, std::string> {
         const std::size_t i = palette_role_index(role);
         if (i == kGuiPaletteRoleCount) {
@@ -129,12 +124,21 @@ std::expected<PaletteFileRoles, std::string> read_palette_file(
                     "': must be #rrggbb or one of the twenty Windows color "
                     "names");
         }
-        out.words[i] = *w;
-        out.named[i] = true;
+        out[i]   = *w;
+        named[i] = true;
         return {};
-        // NO ROLE IS REQUIRED: a file may name only some (the head).
     }, std::span<const char* const>{});
     if (!scan) return std::unexpected(std::move(scan.error()));
+    // EVERY ROLE IS REQUIRED (the head: the picker writes all fifteen), the
+    // first missing one in the table's order named — a file from before
+    // `flag_outline` became a role fails on it.
+    for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i) {
+        if (!named[i]) {
+            return std::unexpected("missing role '" +
+                                   std::string(kGuiPaletteRoles[i].name) +
+                                   "'");
+        }
+    }
     return out;
 }
 
@@ -214,9 +218,9 @@ std::optional<std::string> read_palette_folder() {
         if (is_default_palette_name(name)) {
             return head + name + " is a default palette and takes no file";
         }
-        auto roles = read_palette_file(p);
-        if (!roles) return head + roles.error();
-        g_loaded_palettes.emplace(name, *roles);
+        auto words = read_palette_file(p);
+        if (!words) return head + words.error();
+        g_loaded_palettes.emplace(name, *words);
     }
     return std::nullopt;
 }
@@ -226,7 +230,7 @@ std::vector<std::string> palette_names() {
     out.reserve(std::size(kGuiDefaultPalettes) + g_loaded_palettes.size());
     for (const GuiDefaultPalette& d : kGuiDefaultPalettes)
         out.emplace_back(d.name);
-    for (const auto& [name, roles] : g_loaded_palettes) out.push_back(name);
+    for (const auto& [name, words] : g_loaded_palettes) out.push_back(name);
     return out;
 }
 
@@ -241,15 +245,7 @@ GuiPaletteWords palette_words(std::string_view name) {
     // Every caller's name came through is_palette_name: a miss is a program
     // bug.
     assert(it != g_loaded_palettes.end());
-    // A ROLE THE FILE DOES NOT NAME TAKES THE LIVE CHROME'S DEFAULT (the
-    // head), resolved here, after the chrome's choice.
-    const GuiDefaultPalette* base =
-        default_palette_for(live_chrome_spec().default_palette);
-    assert(base != nullptr);
-    GuiPaletteWords w = default_words(*base);
-    for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
-        if (it->second.named[i]) w[i] = it->second.words[i];
-    return w;
+    return it->second;
 }
 
 std::optional<std::string> write_palette_file(std::string_view name,
@@ -270,10 +266,7 @@ std::optional<std::string> write_palette_file(std::string_view name,
     const std::filesystem::path p = palette_file_path(folder, name);
     if (!atomic_write_string_to_path(p.string(), palette_file_text(words)))
         return "could not write the palette file '" + p.string() + "'";
-    PaletteFileRoles roles;
-    roles.words = words;
-    roles.named.fill(true);
-    g_loaded_palettes.insert_or_assign(std::string(name), roles);
+    g_loaded_palettes.insert_or_assign(std::string(name), words);
     return std::nullopt;
 }
 
@@ -295,9 +288,9 @@ std::optional<std::string> rename_palette_file(std::string_view old_name,
         return "could not rename the palette file '" + from.string() +
                "': " + ec.message();
     }
-    const PaletteFileRoles roles = it->second;
+    const GuiPaletteWords words = it->second;
     g_loaded_palettes.erase(it);
-    g_loaded_palettes.emplace(std::string(new_name), roles);
+    g_loaded_palettes.emplace(std::string(new_name), words);
     return std::nullopt;
 }
 

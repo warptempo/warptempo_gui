@@ -20,7 +20,7 @@ struct GuiPlaybackLifecycle;
 struct Viewport;
 
 // THE COLOR PICKER (architect 2026-10-07, the picker arc's second segment) —
-// the in-app picker of the program's fourteen colors (kGuiPaletteRoles,
+// the in-app picker of the program's fifteen colors (kGuiPaletteRoles,
 // palette_file.h): "a very slimmed down version … a full-fledged part of the
 // project … branded with the chrome … not an afterthought". This header is
 // the cluster's ONE OWNER of everything that is not pixels or a press body:
@@ -76,9 +76,22 @@ struct Viewport;
 //     +240, turning with the hue.
 //   THE RIGHT COLUMN — (a) THE ELEMENT CHOOSER, the chrome's combo box
 //     showing the live element's name (role_display_name) with the arrow
-//     button; a press drops its list — fourteen rows in kGuiPaletteRoles'
+//     button; a press drops its list — fifteen rows in kGuiPaletteRoles'
 //     order, the menu-row popup's painters and press road — and a tap on a
-//     row selects. (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
+//     row selects. THE LIST IS NOT BOUNDED (no scrolling list, by ruling):
+//     it hangs whole from the chooser's foot (combo_list_box), every row
+//     in reach at both hosts (re-derived 2026-10-08, fifteen rows, device
+//     px): at the tablet's 300 % the list is 15 x 51 + 2 x 3 + 6 + 6 = 783
+//     rows under win2000 (261 W), hung at the well's top + 12 + 6 + 18 + 63
+//     = 99, its foot at 882 of the well's 954; and 15 x 57 + 3 = 858 rows
+//     under clearlooks (286 W), hung at 12 + 3 + 18 + 63 = 96, its foot at
+//     954 — 9 rows (3 W) past the well's 945 onto row 8's top, inside the
+//     window, the popup covering the row there as every dropdown covers
+//     what it hangs over (paint_modal_dialog's fork; the list's damage is
+//     its own rect). At the laptop's 138 % the list is 15 x 23 + 2 + 2 + 2
+//     = 351 under win2000 (foot at 45 + 351 = 396 of the well's 860) and
+//     15 x 26 + 1 = 391 under clearlooks (foot at 44 + 391 = 435 of 852).
+//     (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
 //     Value 0–100, Red / Green / Blue 0–255: the label at the left (one
 //     width for all six, measured from the widest), the slider in the
 //     chrome's own scrub painters (win2000 the channel and Windows' pointed
@@ -425,7 +438,7 @@ struct Layout {
     // The chooser: the whole combo and, under win2000, its drop-down button.
     GuiRect chooser{0, 0, 0, 0};
     GuiRect chooser_button{0, 0, 0, 0};
-    // The list, when down: its box and its fourteen rows.
+    // The list, when down: its box and its fifteen rows.
     GuiRect list{0, 0, 0, 0};
     GuiRect list_items[kGuiPaletteRoleCount]{};
     // The six slider rows: the row, the label's seat, the track (the thumb's

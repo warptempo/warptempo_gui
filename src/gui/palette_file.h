@@ -33,13 +33,22 @@
 // thing ("chrome means anything the accent color can highlight": the
 // playhead's head, WordPad's ruler marker in the chrome's roles, and the flag
 // editor's selection band, the chrome's selected pair). So the palette is
-// exactly the FOURTEEN roles below: the waveform's canvas, ink and lit
-// outline, the four flag kinds' faces and selected faces, the one flag label,
-// the playhead's stem and the scanner. THE FLAG OUTLINE IS NO ROLE: it is
-// always the canvas (architect 2026-10-07: "otherwise it will poke out when
-// going into the canvas"; render.h's marker-lane paragraph), and THE FLAG
-// LABEL IS ONE for every face, resting and selected (his one-label rule of
-// the morning; the four per-kind selected labels retired the same day).
+// exactly the FIFTEEN roles below: the waveform's canvas, ink and lit
+// outline, the four flag kinds' faces and selected faces, the one flag
+// outline, the one flag label, the playhead's stem and the scanner.
+// THE FLAG OUTLINE IS A ROLE, `flag_outline` (architect 2026-10-08 ~02:30,
+// on mock_IM2: "today is the only correct one"): its GEOMETRY is exactly
+// today's — the one-W ring round the flag box and its flanks beside the stem
+// down the well's top lines, stopping just before the canvas, where the
+// outline merges into it (render.h's marker-lane paragraph) — and only its
+// COLOR is his to pick, since an outline that is always the canvas is "odd
+// when the canvas is anything but black": over a light canvas he may give it
+// one of the well frame's tones, so the flag's connection to the canvas
+// reads seamless. BOTH DEFAULT PALETTES GIVE IT THEIR CANVAS'S BYTES, so the
+// defaults paint exactly as the outline-is-the-canvas rule of 2026-10-07 did
+// ("otherwise it will poke out when going into the canvas"). THE FLAG LABEL
+// IS ONE for every face, resting and selected (his one-label rule of
+// 2026-10-07; the four per-kind selected labels retired the same day).
 //
 // THE TWO DEFAULT PALETTES ARE COMPILED IN, one per chrome vocabulary, each
 // named by its ChromeSpec's `default_palette` (chrome_spec.h): `windows-2000`
@@ -55,14 +64,16 @@
 // contract exactly (the shared scanner,
 // warptempo_settings::scan_key_value_file: LF-terminated `role=value` lines,
 // split at the first '=', no blank line, no comment, no whitespace
-// tolerance, no duplicate), each role one of the fourteen and each value THE
-// ONE COLOR GRAMMAR (theme_colour_word, theme_file.h). A FILE MAY NAME ONLY
-// SOME ROLES: a role it does not name takes THE LIVE CHROME'S DEFAULT
-// PALETTE'S value, resolved when the words are asked for (palette_words),
-// never at the read — the read precedes the chrome's choice — and never
-// `windows-2000`'s under clearlooks, which would mix two vocabularies' grays
-// in one well. No follower and no caption rule: every role stands alone.
-// The picker writes all fourteen, so only a hand-written file names some.
+// tolerance, no duplicate), each role one of the fifteen and each value THE
+// ONE COLOR GRAMMAR (theme_colour_word, theme_file.h). A FILE NAMES EXACTLY
+// THE FIFTEEN (architect 2026-10-08, the outline's role): the picker writes
+// all fifteen, so a file missing a role is a state the GUI can never
+// produce — the read's first-error hard fail naming the first missing role
+// in the table's order (the two-category rule). A file written before the
+// outline became a role names fourteen and fails on `flag_outline`; the
+// planner adds that line to the presets on his devices at the install that
+// brings the role (no migration). No follower and no caption rule: every
+// role stands alone.
 //
 // THE NAME GRAMMAR (is_palette_name_spelling): the stem is the name
 // verbatim, case-sensitive, 1 to 40 bytes of printable ASCII (0x20..0x7E),
@@ -81,7 +92,8 @@
 // MISSING FOLDER IS NO FILES. EVERY VIOLATION IS THE LAUNCH'S FIRST-ERROR
 // HARD FAIL (NO BACKSTOPS FOR ADVERSARIAL USE: a violation is a hand edit) —
 // an unknown role (a chrome role named in a palette file included), a
-// malformed value, a duplicate role, a name outside the grammar, a file named
+// malformed value, a duplicate role, a missing role, a name outside the
+// grammar, a file named
 // for a default, an unreadable folder or file — the blunt terminal line
 // naming the file and the line and no window, the device config's road.
 //
@@ -121,7 +133,8 @@ struct GuiPaletteRole {
 // and the history's two Windows' true dark / bright pairs of the sixteen,
 // ADDED green 008000 / lime 00FF00 and REMOVED maroon 800000 / red FF0000,
 // which the invalid flag wears too (render.h's marker-lane paragraph). THE
-// ONE FLAG LABEL WHITE on every face, resting and selected — so white stands
+// FLAG OUTLINE THE CANVAS'S BLACK (the head: the 2026-10-07 look kept as the
+// default). THE ONE FLAG LABEL WHITE on every face, resting and selected — so white stands
 // on the bright accents 00CCD8, 00FF00 and FF0000 too, at WCAG contrasts of
 // 2.0, 1.4 and 4.0 to 1 where the retired per-kind black labels gave 10.6,
 // 15.3 and 5.3 (his one-label rule, 2026-10-07: the label is one color; the
@@ -143,10 +156,15 @@ struct GuiPaletteRole {
 // rest, its 1.3 stop selected (CL10a); the history's pair sheet d's F1, THE
 // GNOME HIG's palette green 83A67F and red C1665A at rest, each lit by the
 // engine's 1.3 when selected (B3CEB0, E2988E), the invalid flag wearing the
-// red pair; the flag label fg_color, BLACK on every face; the playhead's stem
-// and the scanner WHITE, his ruling (CL10a). Under clearlooks the flag
-// outline was the canvas already, so the one outline rule changes nothing
-// there.
+// red pair; the flag outline the canvas's BLACK (the head); the flag label
+// fg_color, BLACK on every face; the playhead's stem and the scanner WHITE,
+// his ruling (CL10a).
+//
+// THE TABLE'S ORDER IS THE PICKER'S CHOOSER (color_picker.cpp's kRoleNames):
+// the waveform's three, the four kinds' pairs, then THE TWO FLAG ROLES EVERY
+// KIND SHARES — the outline that rings each face and the label that stands
+// on it, side by side in the chooser ("Flag Outline", "Flag Label") — then
+// the two lines that cross the well.
 inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"waveform_canvas",           &GuiPalette::waveform_canvas,           0x000000, 0x000000},
     {"waveform_ink",              &GuiPalette::waveform_ink,              0x00FF00, 0xD2E3F7},
@@ -159,6 +177,7 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"added_flag_selected",       &GuiPalette::added_flag_selected,       0x00FF00, 0xB3CEB0},
     {"removed_flag",              &GuiPalette::removed_flag,              0x800000, 0xC1665A},
     {"removed_flag_selected",     &GuiPalette::removed_flag_selected,     0xFF0000, 0xE2988E},
+    {"flag_outline",              &GuiPalette::flag_outline,              0x000000, 0x000000},
     {"flag_label",                &GuiPalette::flag_label,                0xFFFFFF, 0x000000},
     {"playhead_stem",             &GuiPalette::playhead_stem,             0xFFFFFF, 0xFFFFFF},
     {"scanner",                   &GuiPalette::scanner,                   0xFFFFFF, 0xFFFFFF},
@@ -169,12 +188,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // palette_words answers, what install_program_palette (render.h) takes and
 // what write_palette_file writes.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
-// render.h spells this type as `std::array<uint32_t, 14>` (install_palette,
+// render.h spells this type as `std::array<uint32_t, 15>` (install_palette,
 // program_palette_words), since this header includes it; the literal is
 // pinned to the table here.
 static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
-              "render.h's std::array<uint32_t, 14> must be GuiPaletteWords");
+              "render.h's std::array<uint32_t, 15> must be GuiPaletteWords");
 
 // The index of the role named `name` in the table, or kGuiPaletteRoleCount —
 // the reader's one lookup, and install_palette's for the plate's two baked
@@ -185,7 +204,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
     return kGuiPaletteRoleCount;
 }
 
-// INSTALL THE PROGRAM'S FOURTEEN ALONE (2026-10-07; the install family's
+// INSTALL THE PROGRAM'S FIFTEEN ALONE (2026-10-07; the install family's
 // second member, defined in render.cpp beside install_palette, render.h):
 // `words` written into GuiPalette's program members, the plate's two inks
 // re-baked and palette_generation bumped, the chrome members untouched — THE
@@ -198,11 +217,11 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // and after the install; when it moved, the synchronous plate rebuild
 // (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
 // flag cache rebuilt at its tail, keyed by the generation); when it did not
-// (a flag, the stem, the label, the scanner: no plate render), the flag
-// cache alone, synchronously (Viewport::refresh_flag_cache, so a frame
+// (a flag, its outline, the stem, the label, the scanner: no plate render),
+// the flag cache alone, synchronously (Viewport::refresh_flag_cache, so a frame
 // callback served before the tick cannot blit flags in the old colors); then
 // Viewport::invalidate_all, so the swap is one frame.
-// WHY THAT IS ENOUGH (re-grepped 2026-10-07): the fourteen bake into two
+// WHY THAT IS ENOUGH (re-grepped 2026-10-08): the fifteen bake into two
 // cached things alone — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,
 // keyed by the generation (FlagCache::fp_palette_generation), whose rebuild
@@ -279,10 +298,9 @@ inline constexpr const char* kPaletteGrammarReason =
     "launch";
 
 // The words of the palette `name` names — a default's column, or a loaded
-// file's roles over THE LIVE CHROME'S DEFAULT for every role the file does
-// not name (the head). Precondition: is_palette_name(name), and the live
-// chrome already chosen (set_live_chrome_spec), so this resolves and never
-// refuses (install_palette; the picker).
+// file's fifteen (a file names every role, the head). Precondition:
+// is_palette_name(name), so this resolves and never refuses (install_palette;
+// the picker).
 GuiPaletteWords palette_words(std::string_view name);
 
 // THE PICKER'S WRITES (the head: each keeps the map and the folder in step,
@@ -295,7 +313,7 @@ GuiPaletteWords palette_words(std::string_view name);
 // holds, the writers ASSERT their name preconditions (a breach is a program
 // bug) and their one error arm is I/O.
 //
-// write_palette_file: create or overwrite `<name>.palette` with all fourteen
+// write_palette_file: create or overwrite `<name>.palette` with all fifteen
 // roles, uppercase `#RRGGBB` in the table's order, through the atomic writer
 // (atomic_write_string_to_path), the folder created on the first write.
 // Precondition: `name` in the grammar and no default's.
