@@ -246,8 +246,10 @@ public:
     // the tablet's full-screen window: it is ALWAYS MAXIMISED and cannot be
     // restored (the caption's Maximise / Restore shows Restore, greyed, and
     // its double tap does nothing), its caption is ALWAYS ACTIVE (no other
-    // window shares the screen with it), it has no frame and no drag — the
-    // move and resize verbs and the maximise toggle do nothing, and the
+    // window shares the screen with it), it has no sizing frame and no drag
+    // (under cde dtwm's frame stands round it, painted and inert,
+    // frame_px_) — the move and resize verbs and the maximise toggle do
+    // nothing, and the
     // caption never calls them where window_restorable() is false. MINIMISE
     // SENDS THE TASK TO THE BACKGROUND (Activity.moveTaskToBack(true) over
     // JNI, the Home button's own road): the window goes, the process and its
@@ -560,12 +562,30 @@ private:
     // the window is and what every rect that crosses the seam is measured in.
     // An app window's frame is the whole display by construction on modern
     // Android, and with both system bars hidden (MainActivity.java's head)
-    // nothing sits over any of it, so this backend reads no content rect,
-    // subtracts no inset, adds no origin at the blit and none at the touch
-    // decode, and paints no band — the GUI's coordinates are the surface's
-    // and the panel's, the Wayland build's shape exactly.
+    // nothing sits over any of it, so this backend reads no content rect and
+    // subtracts no system inset — the GUI's coordinates are the surface's and
+    // the panel's, the Wayland build's shape exactly, LESS THE FRAME below.
     int  width_  = 0;
     int  height_ = 0;
+    // THE WINDOW'S FRAME IN DEVICE PX (architect 2026-10-08 ~17:45, "the dtwm
+    // frame as in the original, on the tablet too"): the Wayland backend's
+    // frame_px_ on this always-maximised window — 0 unless the live chrome
+    // keeps its frame while maximised (the spec's window_frame_maximized,
+    // cde's dtwm frame), then render.h's window_frame_px(), taken at each
+    // adoption. THE CLIENT AREA is the surface inset by it on every side and
+    // IT IS THE GUI'S WHOLE GEOMETRY, as on the laptop: the size on_resize
+    // carries and width() / height() answer, the origin of every touch and
+    // pen position handed to the core (the surface position less the
+    // frame), of every damage rect the GUI declares, and of the on_redraw
+    // context (translated by the frame) — the band painted here
+    // (paint_window_sizing_frame), the backbuffer and the post staying the
+    // surface's.
+    int  frame_px_ = 0;
+    int  client_w() const { return width_  - 2 * frame_px_; }
+    int  client_h() const { return height_ - 2 * frame_px_; }
+    // One rect of SURFACE damage, coalesced (invalidate_region's body, the
+    // GUI's client rect offset by the frame; the adoption's whole surface).
+    void invalidate_surface_rect(int x, int y, int w, int h);
     bool should_exit_ = false;
     // The run-stop request, cleared at the head of every run() (platform.h).
     bool run_stop_requested_ = false;

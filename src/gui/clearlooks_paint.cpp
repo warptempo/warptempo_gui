@@ -1057,6 +1057,11 @@ void paint_cl_chevron(cairo_t* cr, const GuiRect& b, double turn, int bar_w) {
     cairo_restore(cr);
 }
 
+// THE BAR'S WIDTH in W, the clearlooks spec's scroll_bar_px (the one source,
+// chrome_spec.h; 2026-10-08): the gummy steppers' and slider's columns are
+// authored across it.
+constexpr int kClScrollBarW = kChromeSpecClearlooks.scroll_bar_px;
+
 // ONE TRIM CAP (the rule at paint_cl_stepper): the ring's ramp runs down the
 // cap, its outer corners the bar's ends, its inner edge where it meets the
 // body.
@@ -1101,16 +1106,16 @@ void paint_cl_cap(cairo_t* cr, const GuiRect& b, bool left, bool pressed) {
     paint_cell_rect(cr, GuiRect{left ? b.x + b.w - u : b.x, b.y, u, b.h},
                     pal.cl_separator_dark);
     cairo_restore(cr);
-    paint_cl_chevron(cr, b, left ? M_PI_2 : -M_PI_2, kTrimLaneHeightPx);
+    paint_cl_chevron(cr, b, left ? M_PI_2 : -M_PI_2, kClScrollBarW);
 }
 
 // THE LIST BAR'S STEPS ACROSS ITS WIDTH (build.py's pixman_step_row): the
 // stepper's ramp from column 0 to the width, the slider's from column 1 to
 // the width less 2 — W column 8 of the 16 both.
 constexpr int kListStepperStepW =
-    clearlooks_derive::pixman_step_row(0, kPopupScrollBarWPx);
+    clearlooks_derive::pixman_step_row(0, kClScrollBarW);
 constexpr int kListSliderStepW =
-    clearlooks_derive::pixman_step_row(1, kPopupScrollBarWPx - 2);
+    clearlooks_derive::pixman_step_row(1, kClScrollBarW - 2);
 
 // A ramp across `r`'s columns from W column `c0` of a box at `ox` to the
 // step column, then from it to W column `c1` (exclusive) — two recorded
@@ -1136,7 +1141,7 @@ void paint_cl_scrollbar_stepper(cairo_t* cr, const GuiRect& b, bool points_up,
     const GuiPalette& pal = palette();
     const int    u   = relief_line_px();
     const double du  = u;
-    const int    W   = kPopupScrollBarWPx;
+    const int    W   = kClScrollBarW;
     const double rad = std::min<double>(scaled_px(live_chrome_spec().corner_radius_px),
                                         std::min(b.w - 2 * du, b.h - 2 * du) / 2.0);
     const unsigned corners = points_up ? (kTL | kTR) : (kBL | kBR);
@@ -1210,7 +1215,7 @@ void paint_cl_scrollbar_stepper(cairo_t* cr, const GuiRect& b, bool points_up,
                              pal.cl_scrollbar_stepper_pressed_border));
     cairo_stroke(cr);
     cairo_restore(cr);
-    paint_cl_chevron(cr, b, points_up ? M_PI : 0.0, kPopupScrollBarWPx);
+    paint_cl_chevron(cr, b, points_up ? M_PI : 0.0, kClScrollBarW);
 }
 
 void paint_cl_scroll_trough_v(cairo_t* cr, const GuiRect& bar) {
@@ -1235,7 +1240,7 @@ void paint_cl_scrollbar_slider(cairo_t* cr, const GuiRect& body) {
     if (body.w <= 0 || body.h <= 0) return;
     const GuiPalette& pal = palette();
     const int u = relief_line_px();
-    const int W = kPopupScrollBarWPx;
+    const int W = kClScrollBarW;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     // THE FILL: the gummy ramp's two segments across W columns 1 .. W − 2.

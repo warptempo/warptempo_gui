@@ -91,10 +91,12 @@ void paint_cde_caption_box(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
 // each A RAISED ONE-W RING ROUND THE FACE (the bar's two inner rows and the
 // squares' inner cells the title colour), centred in the box by integer
 // division of Windows px and rounded at the element; a DISABLED glyph (the
-// tablet's Maximize, which cannot restore) keeps its ring in the inactive
-// frame's tones on the active colour — dtwm greys no button, the window
-// menu's verb greys instead (dropdown_item_enabled's Window arm). Drawn
-// after the box.
+// tablet's Maximize, which cannot restore) is the same bar through MOTIF'S
+// INSENSITIVE STIPPLE (architect 2026-10-08 ~17:45: every disabled glyph the
+// stipple; render.h's stipple pair), the box's face showing through every
+// other device px — dtwm greys no button of its own, the product's truthful
+// rule greys this one, and the window menu's verb greys with it
+// (dropdown_item_enabled's Window arm). Drawn after the box.
 void paint_cde_caption_glyph(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
                              bool active, bool enabled);
 
@@ -116,7 +118,8 @@ void paint_cde_slider(cairo_t* cr, const GuiRect& body, bool horizontal);
 // inner column, its upper edge the TOP SHADOW, its lower edge and its base
 // the BOTTOM SHADOW, the face the body; the right arrow's base light; up's
 // left edge light, right edge and base dark; down's base and left edge
-// light) on the cap's box `b` (the trim lane's 16 x 16, the popup bar's):
+// light) on the cap's box `b` (the trim lane's 13 x 13, the popup bar's —
+// the spec's scroll_bar_px, CDE's own 13 since 2026-10-08):
 // the triangle fills the box's rows inside the trough's ring and its
 // columns less one W of trough at the side the slider stands on (the
 // capture's one trough pixel between arrow and slider), the three edges
@@ -136,22 +139,33 @@ void paint_cde_arrow(cairo_t* cr, const GuiRect& b, CdeArrowDir dir,
 void paint_cde_scale_trough(cairo_t* cr, const GuiRect& trough);
 void paint_cde_scale_slider(cairo_t* cr, const GuiRect& box);
 
-// -- THE RESTORED LAPTOP'S FRAME -----------------------------------------------
+// -- THE WINDOW'S FRAME ---------------------------------------------------------
 
 // DTWM'S RESIZE FRAME on the surface's outer `frame_px` band (render.h's
-// sizing-frame block: the platform's 4-W hit length, which nothing moves):
-// the notepad capture's 5 — 2 light + 2 face + 1 dark on the top and left,
-// 2 dark + 2 face + 1 light on the bottom and right (rows 0-4 and 396-400:
-// an outer RAISED two-px ring, two px of the frame's face, an inner SUNKEN
-// one-px ring) — FITTED TO 4 as 1 + 2 + 1 under the one-W ruling: the
-// outer ring one line, two W of face, the inner ring one line; in the
-// active title colour and its set's tones while `focused`, the body and
-// the inactive ring's tones otherwise (Solaris's inactive frame IS the
-// body). THE CORNER PIECES (dtwm's 22-W ticks where the lines break) are
-// PHASE 2 ("the laptop sizing frame polish", the brief) and are not drawn.
-// HIDDEN ON THE TABLET (architect 2026-10-08 ~15:00, his ruling: the app
-// fills the glass, "anachronism ok to fit the screen and the Win95
-// metrics"): the tablet's window is maximized and this is never called
-// there, as Windows' frame is not.
+// sizing-frame block, window_frame_px: 5 Windows px under cde, the band
+// outside the app's geometry on EVERY window — architect 2026-10-08 ~17:45,
+// "the dtwm frame as in the original, on the tablet too", reversing the
+// ~15:00 ruling that had hidden it on the tablet; the maximized laptop's and
+// the tablet's band stand as the restored window's does, the spec's
+// window_frame_maximized): the notepad capture's 5 (rows 0-4 and 396-400) —
+// AN OUTER RAISED SHADOW TWO LINES THICK, TWO W OF THE FRAME'S FACE, AN INNER
+// SUNKEN SHADOW ONE LINE THICK (2 light + 2 face + 1 dark on the top and
+// left, 2 dark + 2 face + 1 light on the bottom and right), every ring
+// mitred; in the active title colour and its set's tones while `focused`,
+// the body and the inactive ring's tones otherwise (Solaris's inactive frame
+// IS the body; the tablet's window is always focused). WITH DTWM'S CORNER
+// PIECES (architect 2026-10-08 ~17:45, mock_frame_01, "mock 1 is good"):
+// each of the eight runs carries a GROOVE — one line of the bottom shadow,
+// then one of the top shadow — whose seam stands the CORNER'S LENGTH from
+// the run's outer corner: dtwm's corner is the frame plus the title bar, 5 +
+// 19 = 24 px on the capture (the ticks at x 23 / 24 on the top run, x 576 /
+// 577 at its right end, y 23 / 24 and 376 / 377 on the sides), 5 + 17 = 22
+// W here (frame_px + caption_row_h_px(), 66 device px at 300 %) — the dark
+// line across the band from the outer shadow's second line to the inner
+// shadow (exclusive), the light one from the same line through the inner
+// shadow, the outermost line unbroken, the dark line on the lower x or y of
+// the seam at every corner (the capture's own, all eight measured). The hit
+// test is not the picture's: window_frame_edges_at's corners reach a caption
+// height along the band as before.
 void paint_cde_window_frame(cairo_t* cr, int surface_w, int surface_h,
                             int frame_px, bool focused);

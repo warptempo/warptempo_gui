@@ -122,6 +122,9 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
         case GuiDisabledGlyph::GtkSaturatePixelate:
             f.disabled.reset(svg_icon::saturated_pixelated_copy(source));
             break;
+        case GuiDisabledGlyph::MotifStipple:
+            f.disabled.reset(svg_icon::stippled_copy(source));
+            break;
         }
         svg_icon::convert_to_display(f.disabled.get());
     }

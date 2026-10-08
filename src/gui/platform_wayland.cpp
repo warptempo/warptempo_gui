@@ -2080,7 +2080,9 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     };
     // THE MAXIMISED STATE AND THE FRAME IT DECIDES land with the size
     // (frame_px_, the header): no frame while maximised, else Windows 95's
-    // four px. THE RESTORED SIZE (architect 2026-10-05: a Restore must look
+    // four px — under cde dtwm's five on every window, maximised too (the
+    // spec's window_frame_maximized, render.h's sizing-frame block). THE
+    // RESTORED SIZE (architect 2026-10-05: a Restore must look
     // like a restore) is remembered here, its one owner, as the WHOLE
     // SURFACE, frame included, like init()'s request: it starts as that
     // request (1400 x 800), every SIZED configure while not maximised
@@ -2091,7 +2093,10 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     // current size.
     const bool maximized_changed = pending_maximized_ != window_maximized_;
     window_maximized_ = pending_maximized_;
-    const int frame = window_maximized_ ? 0 : window_frame_px();
+    const int frame =
+        (window_maximized_ && !live_chrome_spec().window_frame_maximized)
+            ? 0
+            : window_frame_px();
     int want_w = pending_w_, want_h = pending_h_;
     if (!window_maximized_) {
         if (want_w > 0 && want_h > 0) {

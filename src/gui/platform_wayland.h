@@ -801,7 +801,9 @@ private:
     int  restored_w_ = 0;
     int  restored_h_ = 0;
     // THE SIZING FRAME'S THICKNESS IN DEVICE PX (architect 2026-10-05): 0
-    // while maximised, else render.h's window_frame_px() (four Windows px), taken
+    // while maximised, else render.h's window_frame_px() (four Windows px;
+    // under cde dtwm's five, standing while maximised too — the spec's
+    // window_frame_maximized, architect 2026-10-08), taken
     // at each configure (a gui_scale commit while restored reaches it at the
     // next configure). THE CLIENT AREA is the surface inset by it on every
     // side, and IT IS THE APP'S WHOLE GEOMETRY: the size on_resize carries,

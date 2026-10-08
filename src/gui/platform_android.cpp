@@ -2,6 +2,7 @@
 
 #include "gui_font.h"
 #include "gui_main.h"
+#include "render.h"   // window_frame_px, paint_window_sizing_frame
 
 #include <android/asset_manager.h>
 #include <android/configuration.h>
@@ -43,10 +44,12 @@
 // THE ANDROID BACKEND. What is here is class A of the seam — the mechanics:
 // the glue's lifecycle, the ALooper run loop, the cairo -> ANativeWindow blit,
 // the AMotionEvent decode and this platform's stubs. THE WINDOW IT PRESENTS TO
-// THE GUI IS THE WHOLE SURFACE: the activity is full screen with both system
-// bars hidden (MainActivity.java's head, architect 2026-10-01), so a surface
-// pixel, a window pixel and a touch coordinate are one grid (the rule is at
-// width_, platform_android.h). The POLICY (the touch
+// THE GUI IS THE WHOLE SURFACE LESS THE CHROME'S FRAME: the activity is full
+// screen with both system bars hidden (MainActivity.java's head, architect
+// 2026-10-01), so a surface pixel, a window pixel and a touch coordinate are
+// one grid (the rule is at width_, platform_android.h), the GUI's offset from
+// it by the frame a chrome keeps on its maximised window (frame_px_, cde's
+// dtwm frame since 2026-10-08), 0 under the other two. The POLICY (the touch
 // state machine, the key-repeat synthesis, the logical pointer, the notional-x
 // bookkeeping, the containment conversion) is in GuiInputCore and is shared
 // verbatim with the Wayland backend; every input event decoded below is handed
@@ -554,7 +557,7 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // cold answer until a window is adopted below.
     width_  = width;
     height_ = height;
-    input_.set_surface_width(width_);
+    input_.set_surface_width(client_w());
 
     // THE KEY-REPEAT CADENCE IS HARD-CODED HERE (architect ruling 2026-08-23).
     // Android advertises no repeat rate to a native activity — there is no
@@ -791,29 +794,34 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // nothing. Only a real move owes the resize callback (which force-ends
     // every pointer gesture, closes the dropdown and rebuilds the layout) and
     // the one startup line.
+    // THE FRAME (frame_px_, the header), taken at every adoption: a frame
+    // that came or went moves the client area as a size change does.
+    const int frame =
+        live_chrome_spec().window_frame_maximized ? window_frame_px() : 0;
     const bool moved = (surf_w != width_ || surf_h != height_ ||
-                        !has_initial_configure_);
+                        frame != frame_px_ || !has_initial_configure_);
 
-    width_  = surf_w;
-    height_ = surf_h;
+    width_    = surf_w;
+    height_   = surf_h;
+    frame_px_ = frame;
     ensure_backbuffer(width_, height_);
-    input_.set_surface_width(width_);
+    input_.set_surface_width(client_w());
     has_initial_configure_ = true;
 
     if (moved) {
         if (fire_resize) {
-            if (on_resize_) on_resize_(width_, height_);
+            if (on_resize_) on_resize_(client_w(), client_h());
         } else {
             initial_resize_owed_ = true;
         }
         std::fprintf(stderr,
-                     "warptempo_gui: window %dx%d, tick %d ms\n",
-                     width_, height_, playback_tick_ms_);
+                     "warptempo_gui: window %dx%d, frame %d, tick %d ms\n",
+                     width_, height_, frame_px_, playback_tick_ms_);
     }
     // FULL DAMAGE ON EVERY ADOPTION, moved or not: the window hands back
     // buffers whose content is a lost frame's, so the first post after any
-    // adoption has to carry the whole picture.
-    invalidate_region(0, 0, width_, height_);
+    // adoption has to carry the whole picture — the frame's band with it.
+    invalidate_surface_rect(0, 0, width_, height_);
 }
 
 /*
@@ -828,7 +836,7 @@ void GuiPlatform::adopt_window(bool fire_resize) {
 void GuiPlatform::deliver_owed_resize() {
     if (!initial_resize_owed_) return;
     initial_resize_owed_ = false;
-    if (on_resize_) on_resize_(width_, height_);
+    if (on_resize_) on_resize_(client_w(), client_h());
 }
 
 void GuiPlatform::ensure_backbuffer(int w, int h) {
@@ -854,8 +862,9 @@ void GuiPlatform::destroy_backbuffer() {
     back_h_ = 0;
 }
 
-int GuiPlatform::width()  const { return width_; }
-int GuiPlatform::height() const { return height_; }
+// The CLIENT area's (frame_px_, the header): the GUI's geometry.
+int GuiPlatform::width()  const { return client_w(); }
+int GuiPlatform::height() const { return client_h(); }
 // The surface is the display (the contract at the header).
 int GuiPlatform::display_width_px() const { return width_; }
 
@@ -970,7 +979,7 @@ void GuiPlatform::redeliver_geometry() {
     // so a set never receives its cold size twice.
     if (!window_ || width_ <= 0 || height_ <= 0) return;
     initial_resize_owed_ = false;
-    if (on_resize_) on_resize_(width_, height_);
+    if (on_resize_) on_resize_(client_w(), client_h());
 }
 
 void GuiPlatform::request_exit() {
@@ -996,6 +1005,13 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     // Never called from inside the paint loop (the hazard and the supported
     // pre-paint route are stated at that loop, paint_one_frame).
 
+    // THE GUI DECLARES CLIENT RECTS; the list holds surface rects, the frame
+    // added back (frame_px_, the header).
+    invalidate_surface_rect(x + frame_px_, y + frame_px_, w, h);
+}
+
+void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
+    if (w <= 0 || h <= 0) return;
     // Each surviving rect costs one on_redraw call downstream, so the damage
     // signal uses the same containment coalescing the Wayland backend uses.
     // THERE IS NO PER-BUFFER LIST HERE: the backbuffer is persistent, so the
@@ -1044,13 +1060,34 @@ void GuiPlatform::paint_one_frame() {
     // production, and anything that needs to declare damage around a frame
     // does it BEFORE this loop through the pre-paint hook above, or from
     // ordinary event/tick code after the frame.
+    // THE FRAME AND THE CLIENT AREA (frame_px_, the header), the Wayland
+    // backend's walk: each surface rect paints the frame's band (a no-op
+    // wherever the rect misses it, the clip cutting it) and hands the GUI
+    // the rect's part inside the client area, in client coordinates, on a
+    // context translated by the frame and clipped to that part. With no
+    // frame both are the surface's.
+    const int f = frame_px_;
     int lo_x = width_, lo_y = height_, hi_x = 0, hi_y = 0;
     cairo_t* cr = cairo_create(back_);
     for (const DamageRect& d : damage_) {
         cairo_save(cr);
         cairo_rectangle(cr, d.x, d.y, d.w, d.h);
         cairo_clip(cr);
-        if (on_redraw_) on_redraw_(cr, d.x, d.y, d.w, d.h);
+        // The frame's colors the caption's: always active here
+        // (caption_active, the header).
+        if (f > 0)
+            paint_window_sizing_frame(cr, width_, height_, f,
+                                      caption_active());
+        const int cx0 = std::max(d.x, f);
+        const int cy0 = std::max(d.y, f);
+        const int cx1 = std::min(d.x + d.w, width_ - f);
+        const int cy1 = std::min(d.y + d.h, height_ - f);
+        if (on_redraw_ && cx1 > cx0 && cy1 > cy0) {
+            cairo_rectangle(cr, cx0, cy0, cx1 - cx0, cy1 - cy0);
+            cairo_clip(cr);
+            cairo_translate(cr, f, f);
+            on_redraw_(cr, cx0 - f, cy0 - f, cx1 - cx0, cy1 - cy0);
+        }
         cairo_restore(cr);
         lo_x = std::min(lo_x, d.x);
         lo_y = std::min(lo_y, d.y);
@@ -1607,7 +1644,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // a panel pixel (setBuffersGeometry(0,0) takes the window's own size), and
     // the window the GUI sees is the whole surface (width_'s rule), so an
     // AMotionEvent's coordinate — measured from the window's own corner — is
-    // the GUI's with no factor and no offset. These two lambdas are every
+    // the GUI's with no factor and no offset but the frame's (frame_px_,
+    // the header: 0 but under a chrome whose frame stands on the maximised
+    // window). These two lambdas are every
     // coordinate this backend hands the core (the key path carries none, the
     // pen's hover actions below take the same two, scrolls are dropped, and
     // the capture doors take GUI coordinates that never reach the window at
@@ -1617,11 +1656,13 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     // They are handed over FRACTIONAL because that is what the panel reports
     // and what the core's one containment conversion expects
     // (GuiInputCore::containing_pixel).
+    // LESS THE FRAME (frame_px_, the header): the core's coordinates are the
+    // client area's, a position on the frame's band lying outside it.
     auto px = [&](size_t i) {
-        return static_cast<double>(AMotionEvent_getX(event, i));
+        return static_cast<double>(AMotionEvent_getX(event, i)) - frame_px_;
     };
     auto py = [&](size_t i) {
-        return static_cast<double>(AMotionEvent_getY(event, i));
+        return static_cast<double>(AMotionEvent_getY(event, i)) - frame_px_;
     };
 
     // THE PEN, read per event (the three amendments' platform half; the

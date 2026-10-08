@@ -230,12 +230,15 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // ILS_SATURATE | ILS_ALPHA at 192, imagelist.c's saturate_image,
 // svg_icon::saturated_copy), clearlooks GTK 2'S INSENSITIVE ICON
 // (2026-10-07; gdk_pixbuf_saturate_and_pixelate (0.8, TRUE),
-// svg_icon::saturated_pixelated_copy, its checker one device px a cell) —
+// svg_icon::saturated_pixelated_copy, its checker one device px a cell),
+// cde MOTIF'S INSENSITIVE STIPPLE (2026-10-08; svg_icon::stippled_copy, every
+// other device px of the drawing dropped) —
 // of the live raster, built the first time a disabled face asks and cached
 // beside it (one rule per process: the chrome is chosen once), copied at
 // the same seat. A
 // disabled WORD keeps Windows' DSS_DISABLED emboss (show_embossed_run,
-// render.h), whose mono mask a Tango drawing's gradients cannot give.
+// render.h), whose mono mask a Tango drawing's gradients cannot give — under
+// cde the word takes the same stipple as the glyph.
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                    double size_px);
 

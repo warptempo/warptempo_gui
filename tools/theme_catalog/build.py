@@ -547,16 +547,16 @@ def clearlooks_geometry():
     entry_h = const(os.path.join(REPO, 'src', 'gui', 'paint_handler.cpp'), 'kModalFieldHeightPx')
     row_h = const(os.path.join(REPO, 'src', 'gui', 'folder_overlay.h'), 'kRowHeightPx')
     assert entry_h == int(entry_h) and row_h == int(row_h), (entry_h, row_h)
-    # THE PAINTERS ROUND'S LAST PART'S LENGTHS: the trim lane's height (render.h kTrimLaneHeightPx, Windows' 16, the
-    # scroll bar's thickness), the restored laptop's sizing frame (render.h kWindowFramePx, the band metacity's title
-    # bar starts in) and GtkScale's three (clearlooks_paint.h: TROUGH_SIZE, slider-length and slider-width)
+    # THE PAINTERS ROUND'S LAST PART'S LENGTHS: the trim lane's height (the spec's scroll_bar_px, the base's 16 GTK's
+    # 15 wears, the scroll bar's thickness — one source since 2026-10-08), the restored laptop's sizing frame
+    # (render.h kWindowFramePx, the band metacity's title bar starts in) and GtkScale's three (clearlooks_paint.h:
+    # TROUGH_SIZE, slider-length and slider-width)
     render_h = os.path.join(REPO, 'src', 'gui', 'render.h')
     cl_h = os.path.join(REPO, 'src', 'gui', 'clearlooks_paint.h')
-    trim_h, frame_w = const(render_h, 'kTrimLaneHeightPx'), const(render_h, 'kWindowFramePx')
-    # the popup lists' vertical scroll bar's width (render.h kPopupScrollBarWPx, the base's 16): its gummy steppers'
-    # and slider's tones run across it (2026-10-08)
-    list_bar_w = const(render_h, 'kPopupScrollBarWPx')
-    assert list_bar_w == int(list_bar_w), list_bar_w
+    trim_h, frame_w = i('scroll_bar_px'), const(render_h, 'kWindowFramePx')
+    # the popup lists' vertical scroll bar's width (the same scroll_bar_px): its gummy steppers' and slider's tones
+    # run across it (2026-10-08)
+    list_bar_w = i('scroll_bar_px')
     scale = {k: const(cl_h, n) for k, n in (('trough', 'kClScaleTroughPx'), ('len', 'kClScaleSliderLengthPx'),
                                             ('wid', 'kClScaleSliderWidthPx'))}
     assert all(v == int(v) for v in (trim_h, frame_w, *scale.values())), (trim_h, frame_w, scale)

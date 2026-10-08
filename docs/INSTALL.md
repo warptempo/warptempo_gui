@@ -93,7 +93,7 @@ The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/war
 
 | Key | What it is |
 |---|---|
-| `gui_scale=` | the interface's scale, an integer percent in [50, 1000]: device pixels per Windows pixel (96 dpi) (100 is Windows' own size; the laptop runs 138, the tablet 275) |
+| `gui_scale=` | the interface's scale, an integer percent in [50, 1000]: device pixels per Windows pixel (96 dpi) (100 is Windows' own size; the laptop runs 138, the tablet 300) |
 | `projects_repo=` | the projects repository the history view commits to |
 | `projects_path=` | the absolute folder whose subfolders are the projects |
 | `last_project=` | the folder name opened last, written by the program at every open |

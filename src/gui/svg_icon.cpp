@@ -102,6 +102,26 @@ cairo_surface_t* saturated_copy(cairo_surface_t* live) {
     return out;
 }
 
+cairo_surface_t* stippled_copy(cairo_surface_t* live) {
+    cairo_surface_flush(live);
+    const int w = cairo_image_surface_get_width(live);
+    const int h = cairo_image_surface_get_height(live);
+    cairo_surface_t* out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+    cairo_surface_flush(out);
+    const unsigned char* src = cairo_image_surface_get_data(live);
+    unsigned char* dst = cairo_image_surface_get_data(out);
+    const int src_stride = cairo_image_surface_get_stride(live);
+    const int dst_stride = cairo_image_surface_get_stride(out);
+    for (int y = 0; y < h; ++y) {
+        const auto* srow = reinterpret_cast<const uint32_t*>(src + y * src_stride);
+        auto* drow = reinterpret_cast<uint32_t*>(dst + y * dst_stride);
+        for (int x = 0; x < w; ++x)
+            drow[x] = (x + y) % 2 == 0 ? srow[x] : 0u;
+    }
+    cairo_surface_mark_dirty(out);
+    return out;
+}
+
 cairo_surface_t* saturated_pixelated_copy(cairo_surface_t* live) {
     cairo_surface_flush(live);
     const int w = cairo_image_surface_get_width(live);

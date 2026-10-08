@@ -375,6 +375,41 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
     cairo_surface_destroy(tile);
 }
 
+void paint_stipple_begin(cairo_t* cr, const GuiRect& bounds) {
+    // The rule at the declaration.
+    cairo_save(cr);
+    cairo_rectangle(cr, bounds.x, bounds.y, std::max(0, bounds.w),
+                    std::max(0, bounds.h));
+    cairo_clip(cr);
+    cairo_push_group(cr);
+}
+
+void paint_stipple_end(cairo_t* cr, int phase_x, int phase_y) {
+    // THE MASK, Motif's 50 % stipple at one device px a cell: a 2 x 2 A8
+    // tile, opaque at (0, 0) and (1, 1), repeated, nearest, its origin at the
+    // phase — the paint_checker_rect brush's lattice, as an alpha mask.
+    cairo_pop_group_to_source(cr);
+    cairo_surface_t* tile = cairo_image_surface_create(CAIRO_FORMAT_A8, 2, 2);
+    cairo_surface_flush(tile);
+    unsigned char* data = cairo_image_surface_get_data(tile);
+    const int stride = cairo_image_surface_get_stride(tile);
+    for (int y = 0; y < 2; ++y)
+        for (int x = 0; x < 2; ++x)
+            data[y * stride + x] = (x + y) % 2 == 0 ? 0xFF : 0x00;
+    cairo_surface_mark_dirty(tile);
+    cairo_pattern_t* mask = cairo_pattern_create_for_surface(tile);
+    cairo_pattern_set_extend(mask, CAIRO_EXTEND_REPEAT);
+    cairo_pattern_set_filter(mask, CAIRO_FILTER_NEAREST);
+    cairo_matrix_t to_tile;
+    cairo_matrix_init_translate(&to_tile, -static_cast<double>(phase_x),
+                                -static_cast<double>(phase_y));
+    cairo_pattern_set_matrix(mask, &to_tile);
+    cairo_mask(cr, mask);
+    cairo_pattern_destroy(mask);
+    cairo_surface_destroy(tile);
+    cairo_restore(cr);
+}
+
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
     paint_square_ring(cr, r, c, c);
 }
@@ -549,7 +584,10 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
 // -- THE SIZING FRAME (architect 2026-10-05; the rule at the declaration) ----
 
 int window_frame_px() {
-    return 2 * relief_line_px() +
+    // The spec's relief lines round Windows' two W of face (the
+    // declaration): 2 + 2 under win2000 and clearlooks, dtwm's 3 + 2 under
+    // cde.
+    return live_chrome_spec().window_frame_lines * relief_line_px() +
            scaled_px(kWindowFramePx - 2 * kReliefLinePx, 0);
 }
 
@@ -1153,7 +1191,7 @@ namespace {
 // popup lists' up and down (paint_popup_scroll_bar, below).
 enum class ScrollArrowDir { Left, Right, Up, Down };
 
-// ONE ARROW BUTTON (the rule at kTrimArrowButtonPx and kTrimArrowGlyphWPx,
+// ONE ARROW BUTTON (the rule at trim_arrow_button_w_px and kTrimArrowGlyphWPx,
 // render.h): the ground under the plain raised edge, then the scroll arrow
 // as ONE FILLED TRIANGLE in the theme's LABEL (a chrome glyph on a chrome
 // face, architect 2026-10-03; a triangle since 2026-10-06), antialiased,
@@ -1261,8 +1299,8 @@ void render_trim_flags(cairo_t* cr,
     const bool gtk_bar =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     // UNDER CDE the lane is Motif's horizontal XmScrollBar (2026-10-08;
-    // cde_paint.h's scroll-bar block, the notepad capture's bar at the
-    // base's 16 for CDE's 13): the sunken select-colour trough, the raised
+    // cde_paint.h's scroll-bar block, the notepad capture's bar at CDE's
+    // own 13, the spec's scroll_bar_px): the sunken select-colour trough, the raised
     // slider inside its ring for the body, the beveled triangles for the
     // caps — on the very rects and with the same publication.
     const bool motif_bar =
@@ -2836,6 +2874,24 @@ void install_true_colors(bool on) {
 
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline) {
+    // UNDER CDE Motif's stipple of the label (render.h's declaration): the
+    // run's cell — its ascent above the baseline — anchors the phase, and a
+    // margin of an ascent round the run bounds the group (a glyph poking
+    // past its cell is kept whole).
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        const int asc = std::max(
+            1, static_cast<int>(std::nearbyint(gui_font_ascent_px(run.font))));
+        const int px = static_cast<int>(std::nearbyint(x));
+        const int top = static_cast<int>(std::nearbyint(baseline)) - asc;
+        paint_stipple_begin(
+            cr, GuiRect{px - asc, top - asc,
+                        static_cast<int>(std::ceil(run.width_px)) + 2 * asc,
+                        3 * asc});
+        set_palette_source(cr, palette().label);
+        text_shape::show_shaped_run(cr, run, x, baseline);
+        paint_stipple_end(cr, px, top);
+        return;
+    }
     // Under clearlooks GTK's own insensitive text, the same two copies in
     // the engine's two tones (render.h's declaration).
     const bool clearlooks =

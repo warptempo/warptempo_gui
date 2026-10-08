@@ -75,14 +75,28 @@
 //     dtcalc used Motif's canonical 2), corners mitred like every two-tone
 //     ring; THE MENU BAR 27 W (ruling 2); NO CLOSE BUTTON, close in the
 //     window menu (ruling 3, dtwm's three buttons); GO SANS for Lucida
-//     (ruling 4, kGuiFaceSetCde). The frame is HIDDEN on the tablet and the
-//     focus ring NOT DRAWN (his rulings of ~15:00: "anachronism ok to fit
-//     the screen and the Win95 metrics"). The painters are cde_paint.h's
-//     (the Motif bevels on Windows' one-line families, the caption's four
-//     boxes, the scroll bar, the scale, the frame), the colors the Solaris
+//     (ruling 4, kGuiFaceSetCde). THE FULL DTWM FRAME ON EVERY WINDOW, the
+//     tablet's and the maximized laptop's too (architect 2026-10-08 ~17:45,
+//     reversing the ~15:00 "hidden" on his glass pass of phase 1:
+//     window_frame_maximized below), THE RULER BEHIND THE FLAGS
+//     (ruler_behind_flags), CDE'S OWN 13-W SCROLL BAR (scroll_bar_px) and
+//     MOTIF'S INSENSITIVE STIPPLE for every disabled word and glyph
+//     (GuiDisabledGlyph::MotifStipple; his rulings of ~17:30–18:00); the
+//     focus ring NOT DRAWN (~15:00: "anachronism ok to fit the screen and
+//     the Win95 metrics"). The painters are cde_paint.h's (the Motif bevels
+//     on Windows' one-line families, the caption's four boxes, the scroll
+//     bar, the scale, the frame, the stipple), the colors the Solaris
 //     scheme (theme_file.h's kGuiThemeCde, derived from Solyaris.dp's four
 //     sets by Motif's own rule, cde_derive.h); the instance's head below
 //     records every length against its capture.
+// A LATER VOCABULARY'S ELEMENT MAY BE SMALLER THAN THE BASE'S, NEVER LARGER
+// WITHOUT HIS RULING (architect 2026-10-08 ~17:45, beside the proportional
+// fit: "ok to make larger elements smaller, as the Clearlooks icon casings
+// were; making them larger than Windows' metric when the historical frame
+// wants the space is done only after consideration"): where a source draws
+// an element smaller than Windows' metric the vocabulary takes the source's
+// own (cde's 13-W scroll bar for the base's 16, scroll_bar_px), and where a
+// source draws it larger the base's metric stands until he rules otherwise.
 // WINDOWS-2000 IS THE DEFAULT AND THE METRIC BASE; CLEARLOOKS IS THE SECOND
 // VOCABULARY AND CDE THE THIRD (architect 2026-10-07 ~22:45, reversing the ~16:00 ruling that
 // had made clearlooks the default: "we could revert the default theme to
@@ -171,6 +185,14 @@ enum class GuiDisabledGlyph {
     ReactOSSaturate,
     // GTK 2's insensitive icon: gdk_pixbuf_saturate_and_pixelate (0.8, TRUE).
     GtkSaturatePixelate,
+    // MOTIF'S INSENSITIVE STIPPLE (architect 2026-10-08 ~17:45, "stippling
+    // for the font and the sliders and anything else authentic"): the
+    // drawing through Motif's 50 % stipple — every other pixel of it kept,
+    // the rest the ground showing through (dtcalc's greyed D E F keys) — at
+    // ONE DEVICE PX A CELL, phase at the drawing's top-left, no color blended
+    // (svg_icon::stippled_copy; the words' and the other glyphs' twin is
+    // render.h's stipple pair, paint_stipple_begin / paint_stipple_end).
+    MotifStipple,
 };
 
 struct ChromeSpec {
@@ -258,11 +280,31 @@ struct ChromeSpec {
     // seat's rule at paint_handler.cpp's ruler_label_baseline_px): how far
     // under the lane's top the labels' CAP TOP lands, and the rows from
     // their baseline to the marker lane. The base's 4 and 7 (the lane 4 + 6
-    // + 7 = 17); CDE's 0 and 5 (2026-10-08: the lane 11, absorbing the 6 W
-    // its caption, menu bar and band stand taller than the base's — the
-    // settled rule's "differences absorbed by the ruler lane").
+    // + 7 = 17), clearlooks' the same; UNREAD under cde, whose ruler stands
+    // behind the flags (ruler_behind_flags below; 0 and 0 there).
     int                ruler_label_cap_top_px;
     int                ruler_baseline_to_marker_px;
+    // THE RULER BEHIND THE FLAGS (architect 2026-10-08 ~17:30, his glass
+    // pass of cde's phase 1: "the ticks reduced and the timestamp pushed
+    // down; the flags remain as they are, but the ticks and the timestamp
+    // hide behind the flags (they are not really that useful)"): when true
+    // the ruler lane is `ruler_lane_px` W — THE LEFTOVER OF THE LANE TABLE,
+    // what the vocabulary's other lanes and its frame leave of the base's
+    // stack so the well keeps its rows (render.h's chrome_stack_authored_h
+    // proves the sum) — its ticks short, hanging from its top, its timestamps drawn at
+    // the marker lane's rows behind the flags and the playhead's head at its
+    // top (paint_ruler_row's arm); the two terms above unread. False (the
+    // base's ruler): the lane derives from the label face, ruler_lane_px
+    // unread (0).
+    bool               ruler_behind_flags;
+    int                ruler_lane_px;
+    // THE SCROLL BAR'S THICKNESS in Windows px — the trim lane's height, its
+    // two arrow caps' square and the popup lists' vertical bar's width
+    // (render.h's trim and popup scroll blocks), one source (2026-10-08):
+    // Windows' SM_CXVSCROLL 16 under win2000, the base's 16 worn for GTK's
+    // 15 under clearlooks, CDE's own 13 (the smaller-element rule at the
+    // head).
+    int                scroll_bar_px;
     // ROW 8'S OWN AIR above and below its case (render.h's bottom-row block).
     int                bottom_row_air_px;
     // THE PUSH BUTTON — the dialogs' word buttons (paint_handler.cpp's
@@ -299,6 +341,18 @@ struct ChromeSpec {
     int                corner_radius_px;
     // A DEAD BUTTON'S GLYPH (GuiDisabledGlyph above).
     GuiDisabledGlyph   disabled_glyph;
+    // THE WINDOW'S FRAME (render.h's sizing-frame block, window_frame_px):
+    // the relief lines of its composite — Windows' two-line raised edge
+    // under win2000 and clearlooks, dtwm's two-line outer shadow and
+    // one-line inner one under cde — round the 2-W face; and whether it
+    // stands while the window is maximized too: Windows hides its sizing
+    // frame then, dtwm keeps its frame on every window (architect 2026-10-08
+    // ~17:45: "the dtwm frame as in the original, on the tablet too"), so
+    // under cde both platforms keep the band outside the app's geometry on
+    // the maximized window and the tablet's (platform_wayland.h's frame_px_,
+    // platform_android.h's).
+    int                window_frame_lines;
+    bool               window_frame_maximized;
     // THE ICON SET the vocabulary wears: a bundled folder under
     // assets/icons/, parsed at launch through resvg (icons.h's head).
     const char*        icon_set;
@@ -361,6 +415,9 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .icon_row_foot_px             = 4,
     .ruler_label_cap_top_px       = 4,
     .ruler_baseline_to_marker_px  = 7,
+    .ruler_behind_flags           = false,
+    .ruler_lane_px                = 0,
+    .scroll_bar_px                = 16,
     .bottom_row_air_px            = 3,
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 7.0,
@@ -371,6 +428,8 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .popup_margin_px              = 1,
     .corner_radius_px             = 0,
     .disabled_glyph               = GuiDisabledGlyph::ReactOSSaturate,
+    .window_frame_lines           = 2,
+    .window_frame_maximized       = false,
     .icon_set                     = "tango",
 };
 
@@ -474,6 +533,9 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .icon_row_foot_px             = 0,
     .ruler_label_cap_top_px       = 4,
     .ruler_baseline_to_marker_px  = 7,
+    .ruler_behind_flags           = false,
+    .ruler_lane_px                = 0,
+    .scroll_bar_px                = 16,
     .bottom_row_air_px            = 2,
     .push_button_box_px           = 25.0,
     .push_button_pad_left_px      = 6.0,
@@ -484,6 +546,8 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .popup_margin_px              = 0,
     .corner_radius_px             = 3,
     .disabled_glyph               = GuiDisabledGlyph::GtkSaturatePixelate,
+    .window_frame_lines           = 2,
+    .window_frame_maximized       = false,
     .icon_set                     = "mist",
 };
 
@@ -517,21 +581,27 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   button), its glyph unmoved.
 //   THE MENU ROW Motif's menu bar, 29 px on N (row 24 ts, 25-51 face, 52
 //   bs; the cap's top on face row 9 = margins 6 + (ascent 13 − cap 10)):
-//   head 1 (the ts row) + content 25 (the base cell 13 + Motif's 2 + 2 + 2
-//   above and below: the RowColumn's margin, the cascade's shadow and its
-//   margin, the capture's own 6) + foot 1 (the bs row) = 27 (ruling 2; the
-//   band's own bevel is the two rows, paint_menu_row's cde arm). THE PADS
-//   read off N's text cells (the mnemonic underlines, row 46, are the
-//   cells' extents): File's cell starts 10 px past the bar's ts column,
-//   Help's ends 10 before its bs column, and between File's cell end and
-//   Edit's cell start lie 14 px — so the RowColumn margin m + the cascade's
-//   pad p = 10 and 2 p + the spacing s = 14: p is Motif's cascade pad, its
-//   default marginWidth 2 + shadow 2 = 4 (the armed box hugs the word, as
-//   CDE's does), leaving m = 6 (menu_band_lead_px) and s = 6
-//   (menu_item_spacing_px); the open title a RAISED one-W box over the
-//   content rows, the label unpushed (Motif's armed cascade; the "Web
-//   Browser" row of desktop_full_cde15solaris9.png is the armed face at
-//   1 px).
+//   head 1 (the ts row) + content 25 (the base cell 13 + 6 above and below:
+//   the RowColumn's marginHeight 3, the cascade's one-px shadow and its
+//   marginHeight 2) + foot 1 (the bs row) = 27 (ruling 2; the band's own
+//   bevel is the two rows, paint_menu_row's cde arm). THE PADS (re-read
+//   2026-10-08 ~18:00, his ruling 5: "make it a little more accurate")
+//   off N's text cells (the mnemonic underlines, row 46, are the cells'
+//   extents): File's cell starts at x 16, 11 px past the bar's ts column
+//   (x 5), and between File's cell end (x 41) and Edit's cell start (x 55)
+//   lie 14 px — so the lead L (the bar's shadow and the RowColumn's
+//   marginWidth) + the cascade's pad p = 11 and 2 p + the spacing s = 14.
+//   No guidebook capture shows a menu-bar title armed (all 53 scanned for a
+//   one-px raised box in the menu bars), so the split is Motif's own
+//   arithmetic, the one that also gives the 6 rows above: the RowColumn's
+//   marginWidth 3 (L = 1 + 3 = 4, menu_band_lead_px) and a menu bar's
+//   spacing 0 (menu_item_spacing_px: the armed boxes touch), the cascade's
+//   pad 7 = its one-px shadow + its marginWidth 6 (menu_label_pad_left_px /
+//   _right_px) — every margin kept as the px constant Motif's resources
+//   gave it (the settled rule). The open title a RAISED one-W box
+//   over the content rows, the label unpushed (Motif's armed cascade; the
+//   "Web Browser" row of desktop_full_cde15solaris9.png is the armed face
+//   at 1 px).
 //   THE TOOLBARS the base's 31 x 30 case round the 24-W seat (F: dtfile's
 //   icon at rest has no box, the glyph on the body) in MotifFlat, the
 //   groups 8 apart round the etched separator at Windows' seat (3 in, 2
@@ -540,9 +610,19 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   puts its separator under the toolbar, F rows 107-108, 1 bs + 1 ts;
 //   GuiEtchedPairSeat::Foot) and no further foot: 36, Windows' lane;
 //   row 8 the base's 3 / 3 air (1 + 3 + 30 + 3 = 37).
-//   THE RULER LANE 11 (ruler_label_cap_top_px 0, ruler_baseline_to_marker_
-//   px 5): the top stack 17 + 27 + 36 + 16 + 11 + 18 = 125, the base's, so
-//   the well keeps 954 device rows at 300 % (main.cpp's lane table).
+//   THE FRAME dtwm's 5 on all four sides (N rows 0-4 / 396-400: 2 light +
+//   2 face + 1 dark on the top and left, mirrored on the bottom and right;
+//   window_frame_lines 3 round the 2-W face) on every window
+//   (window_frame_maximized), outside the app's geometry, with dtwm's
+//   CORNER PIECES (cde_paint.h's frame block). THE SCROLL BAR 13
+//   (scroll_bar_px; N rows 383-395 and report §3: the 1-px trough ring, the
+//   11-px slider and arrows inside it) — the trim lane and the popup bar.
+//   THE RULER LANE 4, BEHIND THE FLAGS (ruler_behind_flags; architect
+//   2026-10-08 ~17:30): the lane table's leftover — the frame's 5 + 5 and
+//   the stack 17 + 27 + 36 + 13 + 4 + 18 above the well with row 8's 37
+//   below it sum to the base's 125 + 37 (render.h's static_assert), so the
+//   well keeps 954 device rows at 300 % (main.cpp's lane table); its two
+//   label terms unread.
 //   THE PUSH BUTTON Motif's XmPushButton on O: 25 tall (Cancel rows
 //   340-364 = 1 + 23 + 1 round the 15-row cell + 8) = 23 at the base cell,
 //   the dialog field's own height; its pad 6 (File Encoding's box x 136-237
@@ -554,10 +634,12 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   cde_paint.h). THE DROPDOWN Motif's pulldown: items 19 (the cell 13 +
 //   2 x (marginHeight 2 + the 1-W shadow), no capture shows one open —
 //   derived), no margin inside the one-W raised frame (the RowColumn's 0).
-//   NO ROUNDED CORNER; the disabled glyph ReactOS's saturate (the base's
-//   rule kept: CDE's 50 % stipple is recorded, not adopted — the
-//   deviations doc); THE ICONS Tango's ("for internal testing", the
-//   architect: the GNOME set may follow).
+//   NO ROUNDED CORNER; every disabled glyph and word MOTIF'S 50 % STIPPLE
+//   at one device px a cell (architect 2026-10-08 ~17:45: "a combination of
+//   period-authentic (no color blend) and modern (no pixelation)";
+//   GuiDisabledGlyph::MotifStipple, render.h's stipple pair); THE ICONS
+//   Tango's ("for internal testing", the architect: the GNOME set may
+//   follow).
 inline constexpr ChromeSpec kChromeSpecCde = {
     .key                          = "cde",
     .display_name                 = "CDE",
@@ -578,10 +660,10 @@ inline constexpr ChromeSpec kChromeSpecCde = {
     .menu_row_head_px             = 1,
     .menu_row_content_px          = 25,
     .menu_row_foot_px             = 1,
-    .menu_label_pad_left_px       = 4.0,
-    .menu_label_pad_right_px      = 4.0,
-    .menu_band_lead_px            = 6.0,
-    .menu_item_spacing_px         = 6.0,
+    .menu_label_pad_left_px       = 7.0,
+    .menu_label_pad_right_px      = 7.0,
+    .menu_band_lead_px            = 4.0,
+    .menu_item_spacing_px         = 0.0,
     .toolbar_case_lead_px         = 3,
     .toolbar_glyph_px             = 24,
     .toolbar_case_trail_x_px      = 4,
@@ -594,7 +676,10 @@ inline constexpr ChromeSpec kChromeSpecCde = {
     .icon_row_air_px              = 2,
     .icon_row_foot_px             = 0,
     .ruler_label_cap_top_px       = 0,
-    .ruler_baseline_to_marker_px  = 5,
+    .ruler_baseline_to_marker_px  = 0,
+    .ruler_behind_flags           = true,
+    .ruler_lane_px                = 4,
+    .scroll_bar_px                = 13,
     .bottom_row_air_px            = 3,
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 6.0,
@@ -604,7 +689,9 @@ inline constexpr ChromeSpec kChromeSpecCde = {
     .popup_item_height_px         = 19,
     .popup_margin_px              = 0,
     .corner_radius_px             = 0,
-    .disabled_glyph               = GuiDisabledGlyph::ReactOSSaturate,
+    .disabled_glyph               = GuiDisabledGlyph::MotifStipple,
+    .window_frame_lines           = 3,
+    .window_frame_maximized       = true,
     .icon_set                     = "tango",
 };
 

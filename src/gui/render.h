@@ -534,7 +534,7 @@ void install_true_colors(bool on);
 // -- THE TRIM LANE, THE RULER LANE, THE PLAYHEAD -------------------------------
 
 // THE TRIM LANE IS A MINIATURIZED SCROLL BAR (architect 2026-10-02; the
-// geometry at kTrimLaneHeightPx and render_trim_flags) and takes no colour of
+// geometry at trim_lane_h_px and render_trim_flags) and takes no colour of
 // its own: its track is the CHECKED dither (Hilight over the ground), its
 // thumb's body and its two arrow buttons plain raised boxes on the ground, and
 // THE ARROW GLYPH THE LABEL (architect 2026-10-03: a chrome glyph on a chrome
@@ -1017,7 +1017,17 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
 // metacity's restored frame, focused or not as the caption is (`focused`,
 // the window's activation; paint_cl_window_frame, clearlooks_paint.h, the
 // title bar's top rows in this band and its lower ones the caption lane's),
-// on the same thickness: the width is a hit length the platform owns.
+// on the same thickness: the width is a hit length the platform owns. UNDER
+// CDE (architect 2026-10-08 ~17:45, "the dtwm frame as in the original, on
+// the tablet too") the band is DTWM'S FRAME, 5 Windows px — the spec's
+// window_frame_lines 3 (two of the outer shadow, one of the inner) round the
+// same 2 W of face, 15 device px at 300 %, 6 at 138 % (paint_cde_window_frame,
+// cde_paint.h, its corner pieces with it) — and it stands on EVERY window,
+// the maximized laptop's and the tablet's too (the spec's
+// window_frame_maximized; both platforms' frame_px_), its colors following
+// the activation as the restored window's do; the hit test is unchanged
+// (window_frame_edges_at), its band answering a resize only while the window
+// is restored (claim_window_frame_press).
 inline constexpr int kWindowFramePx = 4;
 int  window_frame_px();
 void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
@@ -1421,7 +1431,7 @@ int cl_scale_thumb_h_px();
 // device px cells, phase anchored at the lane's top-left); the THUMB is the
 // kept region: a 16 x 16 Windows-px ARROW BUTTON at each bound — Windows'
 // scroll-bar arrow buttons, the begin's pointing left and the end's right
-// (architect 2026-10-03, the rule at kTrimArrowButtonPx) — and between their
+// (architect 2026-10-03, the rule at trim_arrow_button_w_px) — and between their
 // inner edges THE BODY, a PLAIN RAISED box on the ground the lane's full
 // height with no grip (the painter is render_trim_flags). The lane is ONE
 // RECT for paint and for every hit reader — the arrow buttons
@@ -1433,8 +1443,13 @@ int cl_scale_thumb_h_px();
 // trough, the caps and the slider (clearlooks_paint.h's trim block, where
 // the bar wears this 16 for GTK's 15) — and the trim bar still stands
 // outside the well, above the ruler, as his capture 00-17-24's bar stands
-// outside the list's frame.
-inline constexpr int kTrimLaneHeightPx   = 16;
+// outside the list's frame. THE HEIGHT IS THE CHROME SPEC'S scroll_bar_px
+// (2026-10-08, one source for the lane, its caps and the popup lists' bar):
+// Windows' 16 under win2000 and clearlooks, CDE's own 13 under cde
+// (architect 2026-10-08 ~17:45: "the canonical scroll bar seems smaller than
+// the one we have … make them historically accurate"; the smaller-element
+// rule at chrome_spec.h's head) — the 3 W it saves the ruler lane's
+// (ruler_behind_flags).
 // THE RULER LANE'S HEIGHT IS DERIVED FROM THE LABEL FACE, NOT AUTHORED AND
 // SCALED (architect 2026-10-02). The lane stacks, from its top:
 //
@@ -1491,10 +1506,23 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 // (THE TWO AUTHORED TERMS — the cap top's 4 and the baseline-to-marker 7 —
 // ARE THE CHROME SPEC'S since 2026-10-08, ruler_label_cap_top_px and
 // ruler_baseline_to_marker_px: the base's 4 / 7 under win2000 and
-// clearlooks, cde's 0 / 5 — its lane 0 + 6 + 5 = 11, the 6 W its taller
-// caption, menu bar and band cost, absorbed here by the settled rule.)
+// clearlooks.)
+//
+// THE RULER BEHIND THE FLAGS — CDE (architect 2026-10-08 ~17:30, his glass
+// pass: "the ticks reduced and the timestamp pushed down; the flags remain
+// as they are, but the ticks and the timestamp hide behind the flags (they
+// are not really that useful)"; the spec's ruler_behind_flags): the lane is
+// NOT derived from the face but is the LANE TABLE'S LEFTOVER, the spec's
+// ruler_lane_px, 4 W — what dtwm's frame and cde's other lanes leave of the
+// base's stack (chrome_stack_authored_h below proves it), 12 device rows at
+// 300 % — carrying the ticks, every one 3 W short (kRulerBehindTickPx)
+// hanging from its top, and the playhead's head, its top on the lane's top;
+// the labels stand at the MARKER LANE'S rows, behind the flags, their cap
+// band centred on the flag label's (paint_ruler_row's arm). The head reaches
+// 4 W down into the marker lane, where a flag under it covers its lower
+// rows; the marker lane's 18 W and its hits are the base's.
 inline int trim_lane_h_px() {
-    return scaled_px(kTrimLaneHeightPx, 3);
+    return scaled_px(live_chrome_spec().scroll_bar_px, 3);
 }
 // Defined in paint_handler.cpp beside the label seat it reads; the rule is
 // the block above.
@@ -1702,6 +1730,48 @@ inline constexpr int kMarkerFlagEdgePx = 1;
 inline int marker_flag_edge_h_px() {
     return scaled_px(kMarkerFlagEdgePx, 1);
 }
+
+// THE WHOLE STACK IN WINDOWS PX — every lane a vocabulary lays above and
+// below the well, and the frame's two sides where the frame stands on the
+// maximised window (2026-10-08): the caption, the menu row's three terms,
+// the icon row (icon_row_authored_h), the scroll bar's trim lane, the ruler
+// (its authored leftover when it stands behind the flags, else the label
+// face's seat: the cap top, the small face's ascent, the rows to the marker
+// lane), the marker lane (its air, the flag box's edges and faces round the
+// body face's cell) and row 8 (its top row, its air and the case). At 300 %
+// every term is a whole multiple of 3 device px, so two stacks equal here
+// leave the tablet's well the same rows.
+constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
+    const GuiFaceMetrics& body =
+        s.face_set->metrics[static_cast<std::size_t>(GuiFace::Body)];
+    const GuiFaceMetrics& small =
+        s.face_set->metrics[static_cast<std::size_t>(GuiFace::Small)];
+    const int frame = s.window_frame_maximized
+        ? 2 * (s.window_frame_lines * kReliefLinePx + kWindowFramePx -
+               2 * kReliefLinePx)
+        : 0;
+    const int ruler = s.ruler_behind_flags
+        ? s.ruler_lane_px
+        : s.ruler_label_cap_top_px + small.ascent +
+              s.ruler_baseline_to_marker_px;
+    const int marker = kMarkerLaneAirPx + 2 * kMarkerFlagEdgePx +
+                       2 * kMarkerFlagFacePx + body.ascent + body.descent;
+    const int row8 = kBottomRowBorderPx + 2 * s.bottom_row_air_px +
+                     toolbar_case_authored_h(s);
+    return frame + s.caption_height_px + s.menu_row_head_px +
+           s.menu_row_content_px + s.menu_row_foot_px +
+           icon_row_authored_h(s) + s.scroll_bar_px + ruler + marker + row8;
+}
+// THE BASE'S STACK, 125 above and 37 below; clearlooks' its own 3 W taller
+// (the leftover of its own lanes, main.cpp's rule); CDE'S THE BASE'S
+// EXACTLY — ITS RULER LANE THE LEFTOVER (architect 2026-10-08 ~17:30–17:45):
+// the frame's 5 + 5 and its 17 / 27 / 36 / 13 / 18 / 37 leave the ruler 4
+// of the base's 162, so the tablet's well keeps its 954 rows (318 W) under
+// every chrome but clearlooks' 945.
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 162);
+static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 165);
+static_assert(chrome_stack_authored_h(kChromeSpecCde) ==
+              chrome_stack_authored_h(kChromeSpecWin2000));
 // THE 1px LEFT BORDER (architect 2026-08-02), full box height, in the flag
 // outline's color (`flag_outline`, render.h's palette block). The
 // geometry clause that makes it a BORDER and not a wider
@@ -1961,8 +2031,10 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // THE TRIM CAPS ARE WINDOWS' SCROLL-BAR ARROW BUTTONS (architect 2026-10-03:
 // "the arrows are truthful: the left arrow is the begin, the right one the
 // end"): a 16 x 16 Windows-px PLAIN RAISED button at each end of the thumb —
-// 16 wide here, the one owner of the width, and the trim lane's full height
-// (kTrimLaneHeightPx, the same 16) — the ground under the plain raised edge
+// square on the trim lane's full height, both the chrome spec's
+// scroll_bar_px (16 under win2000 and clearlooks, 13 under cde, Motif's
+// beveled arrow in it), read here, the one owner of the width — the ground
+// under the plain raised edge
 // and an arrow glyph in the label, no hover face, and from the press on it to
 // the gesture's end the PRESSED scroll arrow (render_trim_flags; the palette
 // block's trim paragraph) — under clearlooks the light bar's own cap on the
@@ -1981,10 +2053,10 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // window edge by its edge's thickness — a cap off screen is simply off
 // screen. THE BUTTON IS THE TARGET: its painted rect is the hit band, with no
 // tolerance added. 44 x 44 device px at 275 %, 22 x 22 at 138 %, 8 x 8 at
-// 50 %, floored at 3 as the lane is so the two stay square.
-inline constexpr int kTrimArrowButtonPx = 16;
+// 50 % (under cde 39 x 39 at 300 %, 18 x 18 at 138 %), floored at 3 as the
+// lane is so the two stay square.
 inline int trim_arrow_button_w_px() {
-    return scaled_px(kTrimArrowButtonPx, 3);
+    return scaled_px(live_chrome_spec().scroll_bar_px, 3);
 }
 // THE ARROW GLYPH, Windows' scroll arrow: its pixel form is four columns
 // 1, 3, 5 and 7 Windows rows tall from the tip, each centred on the middle
@@ -2406,7 +2478,8 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    have the scroll bar inside, and we can use the canonical scroll bar" —
 //    the departure from GTK recorded at paint_cl_scroll_trough_v and in
 //    docs/engineering/win2000_deviations.md). 16 W WIDE (Windows'
-//    SM_CXVSCROLL; the trim lane's own 16, GTK's 15 wearing the base's 16),
+//    SM_CXVSCROLL; the trim lane's own 16, GTK's 15 wearing the base's 16;
+//    CDE's own 13 under cde, 2026-10-08 — the spec's scroll_bar_px, below),
 //    INSIDE THE FRAME AND FLUSH ON ITS RIGHT LINE: Windows' list box has no
 //    margin, so under win2000 THE BAR TOUCHES THE FRAME, taking the item
 //    block's one-W ground margin's place on that side and running over the
@@ -2414,7 +2487,7 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    frame's lines to the frame's lines (under clearlooks there is no margin
 //    and the bar stands between the frame's lines as well). The items end at
 //    the bar's left edge less the margin, inside their margin as ever
-//    (popup_item_rect). TWO ARROW BUTTONS 16 x 16 W at the bar's ends, up on
+//    (popup_item_rect). TWO ARROW BUTTONS square on the bar's width at its ends, up on
 //    top and down at the bottom (each half the bar where the bar is shorter
 //    than two, Windows' own halving); the TRACK between them; the THUMB's
 //    length the track's times shown / total, FLOORED under win2000 AT 8 W
@@ -2450,12 +2523,13 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    before: a row arms, outside closes.
 //  * THE DAMAGE: a scroll, an arrow's pressed face and the thumb drag repaint
 //    the whole box.
-inline constexpr int kPopupScrollBarWPx      = 16;
 inline constexpr int kPopupScrollThumbMinPx  = 8;
 inline constexpr int kPopupScrollThumbMinClPx = 30;
 inline constexpr int kPopupWheelRows         = 3;
+// THE WIDTH IS THE CHROME SPEC'S scroll_bar_px (2026-10-08): the 16 above
+// under win2000 and clearlooks, CDE's own 13 under cde, Motif's bar turned.
 inline int popup_scroll_bar_w_px() {
-    return scaled_px(kPopupScrollBarWPx, 3);
+    return scaled_px(live_chrome_spec().scroll_bar_px, 3);
 }
 // The live chrome's thumb floor, device px (the picture bullet).
 inline int popup_scroll_thumb_min_px() {
@@ -2919,14 +2993,38 @@ void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
                         int phase_y, GuiColor lit, GuiColor ground);
 
+// MOTIF'S INSENSITIVE STIPPLE, THE PAIR (architect 2026-10-08 ~17:45, the cde
+// vocabulary: "stippling for the font and the sliders and anything else
+// authentic … a combination of period-authentic (no color blend) and modern
+// (no pixelation)"): Motif draws an insensitive label's ink through its 50 %
+// stipple bitmap, every other pixel of the letter dropped and the ground
+// showing through (dtcalc's greyed D E F keys, tmp/research/cde_solaris/
+// answers/cde_q1b_stipple_closeup.png); the product draws it by THE DITHER
+// RULE above — square cells ONE DEVICE PX on a side, the pixel at (phase_x,
+// phase_y) kept and its neighbours alternating, phase at the element's
+// top-left, nothing blended (the antialiased edges of what is kept are the
+// renderer's). Whatever the caller paints between the two calls, inside
+// `bounds` (a clip that keeps the group small), is laid down through the
+// checker: paint_stipple_begin saves the state, clips to `bounds` and opens
+// a group; paint_stipple_end composites the group through the 2 x 2 mask
+// (kept / dropped / dropped / kept) and restores the state. The disabled
+// WORD under cde (show_embossed_run's cde arm) and the disabled glyphs the
+// painters draw themselves (the caption's, the menu's check mark, the
+// combo's wedge) come here; a disabled ICON is the raster twin,
+// svg_icon::stippled_copy (GuiDisabledGlyph::MotifStipple).
+void paint_stipple_begin(cairo_t* cr, const GuiRect& bounds);
+void paint_stipple_end(cairo_t* cr, int phase_x, int phase_y);
+
 // THE DISABLED EMBOSS, THE WORD HALF (architect 2026-10-03, Windows' DrawState
 // DSS_DISABLED; the rule at the palette block): `run` painted in the theme's
 // Hilight one Windows px (relief_line_px) right and down, then in its
 // Shadow at (x, baseline) over it — every disabled word in the product goes
-// through here (a disabled glyph is icons::draw_disabled's saturate). The
+// through here (a disabled glyph is icons::draw_disabled's). The
 // run carries its own font (text_shape.h). Under clearlooks GTK's insensitive
 // text: the etch cl_text_insensitive_etch at (+1, +1), cl_text_insensitive
-// over it (the palette block).
+// over it (the palette block). UNDER CDE MOTIF'S INSENSITIVE STIPPLE
+// (architect 2026-10-08 ~17:45): the run once, in the label, through the
+// stipple pair above, its phase at the run's pen x and its cell's top.
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline);
 
@@ -3452,7 +3550,8 @@ double displayed_trim_ms(int64_t frame,
 // overlap: at two buttons' width and above each stands on its own column
 // with the body (possibly empty) between them.
 //
-// THE RECT IS THE BUTTON, trim_arrow_button_w_px() wide (16 Windows px) over
+// THE RECT IS THE BUTTON, trim_arrow_button_w_px() wide (the spec's
+// scroll_bar_px: 16 Windows px, 13 under cde) over
 // the trim lane `row`'s whole height (the same 16), and it is THE HIT BAND
 // AS IT IS — no tolerance inflates it (architect 2026-10-03: the button is
 // the target). `is_begin` picks which bound's button. The rect may lie part
@@ -3503,7 +3602,7 @@ struct TrimBarHit {
 };
 
 // Draws the WHOLE TRIM LANE (architect 2026-10-02, the AC set; the geometry
-// at kTrimLaneHeightPx): Windows 95's scroll bar, miniaturized — under
+// at trim_lane_h_px): Windows 95's scroll bar, miniaturized — under
 // clearlooks GTK's trough round the light bar (architect 2026-10-07: the
 // trough, the slider for the body and the caps in step with it,
 // clearlooks_paint.h; every rect, the order and the publication below the
@@ -3530,7 +3629,7 @@ struct TrimBarHit {
 // as the window running on rather than ending at the view. It is the one "this is the
 // trim window" signal and its body the grab of the pair (bridge) drag.
 // THE TWO ARROW BUTTONS ARE THE CAPS (architect 2026-10-03; the rule at
-// kTrimArrowButtonPx): each bound's button, on the rect
+// trim_arrow_button_w_px): each bound's button, on the rect
 // trim_endcap_rect places — EDGE-ANCHORED on the bound columns, the begin's
 // LEFT edge on its column, the end's RIGHT edge on its own, and in the
 // NARROW case the end's standing right of the begin's — the ground under a

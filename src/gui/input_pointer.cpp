@@ -1970,8 +1970,11 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // claimed above every veil (claim_window_frame_press) — on the hover
     // alone: a live gesture crossing the frame keeps its own cue, the arms
     // below answering it.
+    // A MAXIMISED WINDOW'S FRAME (cde's dtwm frame, standing there too,
+    // 2026-10-08) sizes nothing: the arrow, its press a consumed nothing.
     if (const unsigned edges = window_frame_edges_at(app, x, y);
         edges != 0 && !any_pointer_gesture_active(app)) {
+        if (gui.window_maximized()) return GuiCursorKind::Arrow;
         const bool top    = (edges & kGuiWindowEdgeTop) != 0;
         const bool bottom = (edges & kGuiWindowEdgeBottom) != 0;
         const bool left   = (edges & kGuiWindowEdgeLeft) != 0;
@@ -4884,9 +4887,10 @@ bool GuiInputHandler::claim_window_frame_press(GuiMouseButton button, int x,
     const unsigned edges = window_frame_edges_at(app, x, y);
     if (edges == 0) return false;
     // Consumed from here, whatever the button and the modifiers: the
-    // window's own chrome binds the bare left press alone.
+    // window's own chrome binds the bare left press alone, and a maximised
+    // window's frame (cde's, which stands there too) binds nothing.
     if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
-        !mods.alt)
+        !mods.alt && !gui.window_maximized())
         gui.begin_window_resize(edges);
     return true;
 }

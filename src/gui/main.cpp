@@ -88,7 +88,7 @@ namespace {
 
 // No pointer grab tolerance survives (the marker stems' grab constant died
 // with their pointer surface, 2026-08-12, and the trim endcaps' when the caps
-// became their painted arrow buttons, 2026-10-03, kTrimArrowButtonPx in
+// became their painted arrow buttons, 2026-10-03, trim_arrow_button_w_px in
 // render.h), so nothing of that family is file-local here.
 
 // Samples-per-pixel is a continuous function of the zoom level (a real-valued
@@ -209,7 +209,9 @@ namespace {
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE (on a
 // restored laptop window, the client area inside the sizing frame, which the
-// backend keeps out of the app's geometry, platform_wayland.cpp). The title bar
+// backend keeps out of the app's geometry, platform_wayland.cpp — and under
+// cde on every window, the tablet's too, dtwm's frame standing round it,
+// 2026-10-08). The title bar
 // is the app's own top lane since 2026-10-05 (labwc draws none: the window asks
 // for client-side decorations), so it is counted like every lane above the gap
 // and needs no arithmetic of its own (the rule's first reasoning, "the labwc
@@ -296,19 +298,31 @@ namespace {
 //   this geometry): leftover 380 -> the waveform 380, both gaps 0 — 25 /
 //   27 / 49 / 0 / 69 / 380 / 0 / 50 (the midpoint rule would want gap 1 =
 //   300 - 170 - 190 = -60).
-// THE CDE STACKS (2026-10-08, chrome_spec.h's cde instance: caption 17 +
-// menu 27 + icon 36 + trim 16 + ruler 11 + marker 18 = 125 Windows px
-// above, THE BASE'S OWN TOTAL — dtwm's and Motif's taller caption, menu bar
-// and band cost 6 W, which the ruler lane absorbs (its cap top 0, its
-// baseline-to-marker 5; render.h's ruler block); row 8 the base's 37):
-//   1920x1080 AT 138 %: the lanes are 23 caption + 36 menu (1 + 34 + 1,
-//   the content's 34.5 rounding to even) + 49 icon (0 + 3 + 41 + 3 + the
-//   foot pair 2) + 22 trim + 15 ruler (0 + 8 + 7) + 23 marker = 168 above
-//   (108 the caption and the two toolbar rows, 60 the block) and 50 below,
-//   leftover 862: the waveform 862, both gaps 0.
-//   2304x1440 AT 300 %: the lanes are 51 caption + 81 menu + 108 icon + 48
-//   trim + 33 ruler + 54 marker = 375 above (240 and 135) and 111 below,
-//   leftover 954: the waveform 954, both gaps 0 — the base's well exactly.
+// THE CDE STACKS (2026-10-08 ~17:45, chrome_spec.h's cde instance and the
+// architect's mock_frame_01, "mock 1 is good"): DTWM'S FRAME, 5 Windows px,
+// stands round the app on every window (the spec's window_frame_maximized)
+// OUTSIDE ITS GEOMETRY, as the restored laptop's sizing frame always did
+// (the platforms' frame_px_), so the app's height and width are the
+// surface's less the frame's two sides, and inside it caption 17 + menu 27
+// + icon 36 + trim 13 (CDE's own scroll bar) + ruler 4 + marker 18 = 115
+// Windows px above and row 8's 37 below: the frame's 10 and these 152 are
+// THE BASE'S 162 EXACTLY — THE RULER LANE IS THE LEFTOVER (its 4 the
+// remainder; it stands behind the flags, render.h's chrome_stack_authored_h
+// proving the sum). The whole 480 W of the tablet's 1440 rows, top to
+// bottom: frame 5 | caption 17 | menu 27 | icon 36 | trim 13 | ruler 4 |
+// marker 18 | well 318 | row 8 37 | frame 5.
+//   1920x1080 AT 138 %, MAXIMISED (the frame 6 = 1 + 1 + 3 + 1; the app
+//   1908 x 1068): the lanes are 23 caption + 36 menu (1 + 34 + 1, the
+//   content's 34.5 rounding to even) + 49 icon (0 + 3 + 41 + 3 + the foot
+//   pair 2) + 18 trim + 6 ruler + 23 marker = 155 above (108 the caption and
+//   the two toolbar rows, 47 the block) and 50 below, leftover 863: the
+//   waveform 863, both gaps 0.
+//   2304x1440 AT 300 % (the frame 15 = 3 + 3 + 6 + 3; the app 2274 x 1410):
+//   the lanes are 51 caption + 81 menu + 108 icon + 39 trim + 12 ruler + 54
+//   marker = 345 above (240 and 105) and 111 below, leftover 954: the
+//   waveform 954, both gaps 0 — the base's well exactly (rows 360-1313 of
+//   the surface, the mock's), its width the app's 2274 floored to the grid
+//   step, 2272 (a 2-px chrome gutter at its right, waveform_area's rule).
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers

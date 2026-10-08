@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 // THE CDE PAINTERS' BODIES (the rules at cde_paint.h's head and at each
 // declaration; every length the chrome spec's, every tone a role).
@@ -99,13 +100,16 @@ void paint_cde_caption_glyph(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
     const int gy = b.y + scaled_px((spec.caption_button_h_px - gh) / 2);
     const GuiRect g{gx, gy, scaled_px(gw, 2 * relief_line_px()),
                     scaled_px(gh, 2 * relief_line_px())};
-    FrameTones t = caption_tones(active);
-    if (!enabled) {
-        // The inactive ring's tones on the active face (the declaration).
-        t.ts = palette().cde_inactive_ts;
-        t.bs = palette().cde_inactive_bs;
+    const FrameTones t = caption_tones(active);
+    if (enabled) {
+        raised_bar(cr, g, t);
+        return;
     }
+    // Motif's stipple of the bar (the declaration), its phase at the bar's
+    // top-left, the box's face showing through the dropped half.
+    paint_stipple_begin(cr, g);
     raised_bar(cr, g, t);
+    paint_stipple_end(cr, g.x, g.y);
 }
 
 // -- THE SCROLL BAR ------------------------------------------------------------
@@ -223,25 +227,68 @@ void paint_cde_scale_slider(cairo_t* cr, const GuiRect& box) {
     paint_cde_raised(cr, box);
 }
 
-// -- THE RESTORED LAPTOP'S FRAME -----------------------------------------------
+// -- THE WINDOW'S FRAME ---------------------------------------------------------
 
 void paint_cde_window_frame(cairo_t* cr, int surface_w, int surface_h,
                             int frame_px, bool focused) {
     if (frame_px <= 0 || surface_w <= 0 || surface_h <= 0) return;
     const int f  = frame_px;
+    const int w  = surface_w;
+    const int h  = surface_h;
     const int lw = relief_line_px();
     const FrameTones t = caption_tones(focused);
     // The face across the band.
-    paint_cell_rect(cr, GuiRect{0, 0, surface_w, f}, t.face);
-    paint_cell_rect(cr, GuiRect{0, surface_h - f, surface_w, f}, t.face);
-    paint_cell_rect(cr, GuiRect{0, f, f, surface_h - 2 * f}, t.face);
-    paint_cell_rect(cr, GuiRect{surface_w - f, f, f, surface_h - 2 * f},
-                    t.face);
-    // The outer raised ring on the surface's edge, the inner sunken ring on
-    // the band's inner edge.
-    ring(cr, GuiRect{0, 0, surface_w, surface_h}, t.ts, t.bs);
+    paint_cell_rect(cr, GuiRect{0, 0, w, f}, t.face);
+    paint_cell_rect(cr, GuiRect{0, h - f, w, f}, t.face);
+    paint_cell_rect(cr, GuiRect{0, f, f, h - 2 * f}, t.face);
+    paint_cell_rect(cr, GuiRect{w - f, f, f, h - 2 * f}, t.face);
+    // THE OUTER SHADOW, two lines on the surface's edge (two concentric
+    // one-line rings, each mitred, so the two tones meet on one diagonal),
+    // and THE INNER SHADOW, one sunken line on the band's inner edge.
+    const GuiRect outer{0, 0, w, h};
+    ring(cr, outer, t.ts, t.bs);
+    ring(cr, inner(outer), t.ts, t.bs);
     const int in = f - lw;
-    if (in > 0 && surface_w > 2 * in && surface_h > 2 * in)
-        ring(cr, GuiRect{in, in, surface_w - 2 * in, surface_h - 2 * in},
-             t.bs, t.ts);
+    if (in > 0 && w > 2 * in && h > 2 * in)
+        ring(cr, GuiRect{in, in, w - 2 * in, h - 2 * in}, t.bs, t.ts);
+    // THE CORNER PIECES (the declaration): on each of the eight runs a
+    // groove, a dark line then a light one, whose seam stands `L` from the
+    // run's corner — the frame plus the caption lane, dtwm's corner — the
+    // dark line across the band from the outer shadow's second line to the
+    // inner shadow, the light one to the band's inner edge, the outermost
+    // line unbroken.
+    const int L = f + caption_row_h_px();
+    if (w < 2 * (L + lw) || h < 2 * (L + lw)) return;
+    const int dark_lo = lw, dark_hi = f - lw;   // depth into the band
+    const int light_lo = lw, light_hi = f;
+    // The top and bottom runs: a seam column `sx`, the depth measured down
+    // from the top edge or up from the bottom one.
+    const auto horizontal = [&](int sx, bool top) {
+        const auto rows = [&](int lo, int hi) {
+            return top ? std::pair{lo, hi - lo} : std::pair{h - hi, hi - lo};
+        };
+        const auto [dy, dh] = rows(dark_lo, dark_hi);
+        const auto [ly, lh] = rows(light_lo, light_hi);
+        paint_cell_rect(cr, GuiRect{sx - lw, dy, lw, dh}, t.bs);
+        paint_cell_rect(cr, GuiRect{sx, ly, lw, lh}, t.ts);
+    };
+    // The left and right runs: a seam row `sy`, the depth measured in from
+    // the left edge or from the right one.
+    const auto vertical = [&](int sy, bool left) {
+        const auto cols = [&](int lo, int hi) {
+            return left ? std::pair{lo, hi - lo} : std::pair{w - hi, hi - lo};
+        };
+        const auto [dx, dw] = cols(dark_lo, dark_hi);
+        const auto [lx, lwid] = cols(light_lo, light_hi);
+        paint_cell_rect(cr, GuiRect{dx, sy - lw, dw, lw}, t.bs);
+        paint_cell_rect(cr, GuiRect{lx, sy, lwid, lw}, t.ts);
+    };
+    horizontal(L, true);
+    horizontal(w - L, true);
+    horizontal(L, false);
+    horizontal(w - L, false);
+    vertical(L, true);
+    vertical(h - L, true);
+    vertical(L, false);
+    vertical(h - L, false);
 }

@@ -599,7 +599,7 @@ constexpr Geometry geometry_of(const ChromeSpec& s) {
         case_h, 2 * s.icon_row_air_px + case_h, static_cast<int>(s.push_button_box_px),
         kListRowPx, s.popup_item_height_px, kWindowFramePx,
         kClScaleTroughPx, kClScaleSliderLengthPx, kClScaleSliderWidthPx,
-        kPopupScrollBarWPx};
+        s.scroll_bar_px};
 }
 
 // -- THE EMITTER -----------------------------------------------------------------

@@ -206,7 +206,7 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // surface (stems pointer-inert, 2026-08-12 — the record is at the retired
 // hit_test_marker_stem's site below), and the trim endcaps' went when the
 // caps became their painted arrow buttons (architect 2026-10-03,
-// kTrimArrowButtonPx in render.h).
+// trim_arrow_button_w_px in render.h).
 // The rule it carried outlives it and belongs to nothing in particular: a grab
 // tolerance is NOT a spacing gap. Markers may sit arbitrarily close, overlap
 // exactly, and cross during gestures; ordering degeneracy collapses at the
@@ -9637,12 +9637,33 @@ inline bool color_picker_list_at(const AppState& a, int x, int y) {
 // menu (color_picker_list_at). Every one paints ABOVE the notification cards
 // (paint_notifications runs before paint_dropdown and paint_modal_dialog), so
 // a card under one is hidden there and notification_card_at yields to this
-// one predicate — the popups' published boxes the truth, no state of its
-// own.
+// one predicate's family (floater_above_cards_at, below) — the popups'
+// published boxes the truth, no state of its own.
 inline bool list_popup_at(const AppState& a, int x, int y) {
     if (a.dropdown.open() && rect_contains(a.dropdown.rect, x, y)) return true;
     if (rect_contains(a.modal_dialog.combo_list, x, y)) return true;
     return color_picker_list_at(a, x, y);
+}
+
+// THE COLOR PICKER'S CARD UNDER A POINT (2026-10-08): the card as the
+// painter last published it (ColorPicker::Stash's `card`), under the live
+// session — it paints with the modal surfaces, ABOVE the notification cards,
+// so a notification card under it is hidden there exactly as under a list
+// popup (floater_above_cards_at below).
+inline bool color_picker_card_at(const AppState& a, int x, int y) {
+    const AppState::ColorPicker& cp = a.color_picker;
+    const AppState::ColorPicker::Stash& st = cp.stash;
+    if (!cp.active || !st.valid || st.session != cp.session) return false;
+    return rect_contains(st.card, x, y);
+}
+
+// EVERY POINTER-OWNING SURFACE THAT PAINTS ABOVE THE NOTIFICATION CARDS
+// UNDER A POINT (2026-10-08, ON SCREEN IS AS PAINTED): the list popups
+// (list_popup_at) and the color picker's card (color_picker_card_at), the
+// one predicate notification_card_at yields to — the published boxes the
+// truth, no state of its own.
+inline bool floater_above_cards_at(const AppState& a, int x, int y) {
+    return list_popup_at(a, x, y) || color_picker_card_at(a, x, y);
 }
 
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
@@ -10333,7 +10354,10 @@ GuiRect top_caption_row_area(const AppState& a);
 // positions relative to that area (platform_wayland.cpp) — so a point is on the
 // frame exactly when it lies outside the window's [0, width) x [0, height): a
 // press can land there only while the frame stands (maximised, and on the
-// tablet, the client area is the whole surface). A CORNER reaches one caption
+// tablet, the client area is the whole surface — save under cde, whose dtwm
+// frame stands on every window, 2026-10-08: the band is then answered here
+// too and its press and hover take no resize while the window is maximised,
+// claim_window_frame_press and pointer_cursor_kind). A CORNER reaches one caption
 // height (caption_row_h_px, the live chrome's) past the frame along each of
 // its two edges, as Windows' sizing hit test reached its caption-button
 // size, so a corner is
@@ -18519,7 +18543,7 @@ enum class TrimHit { None, Begin, End };
 // last DREW, never the store's pair, so a press between a trim write and its
 // repaint grabs the cap on screen. Each bound's cap is its SCROLL-BAR ARROW
 // BUTTON at that end of the trim lane's thumb (architect 2026-10-03; the rule
-// at kTrimArrowButtonPx, render.h): a trim_arrow_button_w_px() square at the
+// at trim_arrow_button_w_px, render.h): a trim_arrow_button_w_px() square at the
 // lane's full height, EDGE-ANCHORED on the bound's painted column — the begin
 // button's LEFT edge on it, the end button's RIGHT edge on it, or in the
 // narrow case edge to edge right of the begin's — from trim_endcap_rect, the

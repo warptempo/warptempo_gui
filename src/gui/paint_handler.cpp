@@ -4005,7 +4005,9 @@ void fill_menu_check(cairo_t* cr, int gx, int gy, int u, GuiColor ink) {
 }
 
 // The mark in the check-mark column of `item` (the published item box),
-// the label's pen at `pen_x`, in `ink` — or embossed when `!enabled`.
+// the label's pen at `pen_x`, in `ink` — or embossed when `!enabled`, and
+// under cde Motif's stipple of the ink (render.h's stipple pair, the
+// check's cell its bounds and its phase).
 void paint_menu_check(cairo_t* cr, const GuiRect& item, int pen_x,
                       bool enabled, GuiColor ink) {
     const int u    = scaled_px(1, 1);
@@ -4016,6 +4018,13 @@ void paint_menu_check(cairo_t* cr, const GuiRect& item, int pen_x,
                                   (item.h - cell) / 2.0));
     if (enabled) {
         fill_menu_check(cr, gx, gy, u, ink);
+        return;
+    }
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        paint_stipple_begin(cr, GuiRect{gx - u, gy - u, cell + 2 * u,
+                                        cell + 2 * u});
+        fill_menu_check(cr, gx, gy, u, ink);
+        paint_stipple_end(cr, gx, gy);
         return;
     }
     const bool clearlooks =
@@ -4400,6 +4409,10 @@ constexpr double kRulerMinMinorPitchPx = 9.0;
 // How far a MAJOR tick rises above the marker lane. Minors rise none. 3
 // Windows px (the laptop pixel's 4 re-authored, architect 2026-10-02).
 constexpr double kRulerMajorRisePx     = 3.0;
+// THE TICK'S LENGTH BEHIND THE FLAGS (the spec's ruler_behind_flags, cde;
+// architect 2026-10-08 ~17:30, mock_frame_01's 3 W): every tick, major and
+// minor alike, hanging from the ruler lane's top.
+constexpr double kRulerBehindTickPx    = 3.0;
 
 // The smallest ladder rung whose minors clear the minimum pitch. Falls back to
 // the coarsest rung when even that crowds (an absurd zoom-out), which is the
@@ -4465,8 +4478,13 @@ int ruler_label_baseline_px(const GuiFont& font) {
 // painter's seat reads, so the digits and the ground beneath them are one
 // measurement. Cheap enough to answer per query.
 int ruler_lane_h_px() {
+    // THE RULER BEHIND THE FLAGS (the spec's ruler_behind_flags, cde): the
+    // lane is its authored leftover, nothing seated in it but the ticks and
+    // the head's top (paint_ruler_row's arm).
+    const ChromeSpec& spec = live_chrome_spec();
+    if (spec.ruler_behind_flags) return scaled_px(spec.ruler_lane_px);
     return ruler_label_baseline_px(gui_font(GuiFace::Small)) +
-           scaled_px(live_chrome_spec().ruler_baseline_to_marker_px);
+           scaled_px(spec.ruler_baseline_to_marker_px);
 }
 
 // THE MARKER LANE'S DERIVED ROWS (the rule and its scales at render.h's
@@ -4555,9 +4573,23 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // ladder's own kRulerMinorsPerStep; only its expression as a duration is
     // gone.)
 
+    // THE RULER BEHIND THE FLAGS (architect 2026-10-08 ~17:30, the spec's
+    // ruler_behind_flags — cde; mock_frame_01, "mock 1 is good"): "the ticks
+    // reduced and the timestamp pushed down; the flags remain as they are,
+    // but the ticks and the timestamp hide behind the flags". EVERY TICK,
+    // major and minor alike, is kRulerBehindTickPx SHORT, hanging from the
+    // lane's top (the trim lane's bottom line), etched as ever; THE LABELS
+    // stand at the MARKER LANE'S rows, their small face's cap band centred on
+    // the flags' label cap band (the body face's, marker_flag_baseline_px),
+    // painted here, before the flag blit, so a flag covers whatever label it
+    // stands on and nothing moves; THE HEAD stands at the lane's top over
+    // ticks and labels (the head block below). The walk, the comb, the
+    // labels' text and their slide at the edges are the base's.
+    const bool behind = live_chrome_spec().ruler_behind_flags;
     const int tick_bottom = marker.y + marker.h;         // the waveform top
     const int minor_top   = marker.y;                    // no rise
     const int major_top   = marker.y - scaled_px(kRulerMajorRisePx);
+    const int behind_tick_bottom = lane.y + scaled_px(kRulerBehindTickPx);
 
     const GuiFont font = gui_font(GuiFace::Small);
     // THE LABEL IS A LINE, not a box, AT THE SMALL FACE
@@ -4567,8 +4599,21 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // height also reads (ruler_label_baseline_px). THE SEAT IS ANCHORED TO THE
     // LANE'S TOP, never centred in it or hung from its bottom: the lane's
     // height below the baseline is the spec's ruler_baseline_to_marker_px (render.h).
+    // BEHIND THE FLAGS the seat is the flags' own: the flag label's baseline
+    // (the box's top, its air above, the box's baseline) less half the two
+    // faces' cap difference, so the two cap bands share their centre.
+    const auto behind_baseline = [&] {
+        const double flag_baseline = static_cast<double>(
+            marker.y + marker_lane_air_px() + marker_flag_baseline_px());
+        const double body_cap =
+            std::nearbyint(gui_font_cap_px(gui_font(GuiFace::Body)));
+        const double small_cap = std::nearbyint(gui_font_cap_px(font));
+        return flag_baseline -
+               std::nearbyint((body_cap - small_cap) / 2.0);
+    };
     const double baseline =
-        static_cast<double>(lane.y + ruler_label_baseline_px(font));
+        behind ? behind_baseline()
+               : static_cast<double>(lane.y + ruler_label_baseline_px(font));
 
     // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
     // shimmer at working zoom: the minor ticks visibly stepped at different
@@ -4670,17 +4715,20 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // clearlooks_gummy_draw_separator's shade[3] column and its x1.3
             // beside it, the toolbar separator's two roles, on the same
             // columns.
-            const int tick_top = major ? major_top : minor_top;
+            const int tick_top = behind ? lane.y
+                               : major  ? major_top
+                                        : minor_top;
+            const int tick_end = behind ? behind_tick_bottom : tick_bottom;
             if (tick_on_lane) {
                 set_palette_source(cr, gtk_ticks ? palette().cl_separator_dark
                                                  : palette().shadow);
                 fill_waveform_line(cr, lane.x, wave_w, col, tick_top,
-                                   tick_bottom);
+                                   tick_end);
                 set_palette_source(cr, gtk_ticks ? palette().cl_separator_light
                                                  : palette().hilight);
                 fill_waveform_line(cr, lane.x, wave_w,
                                    col + waveform_line_px(), tick_top,
-                                   tick_bottom);
+                                   tick_end);
             }
             if (!major) continue;
             // The label starts past its major tick's own width plus 2 Windows
@@ -4812,8 +4860,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // sit flush on the ruler lane's bottom (ruler_baseline_to_marker_px's
             // old rule); the move is this one term, so a playhead's damage
             // rect must include it (below).
-            const int    head_bottom = marker.y + marker_lane_air_px();
-            const int    head_top    = head_bottom - rows;
+            // BEHIND THE FLAGS (the arm above) the head's top is the
+            // ruler lane's own, the mock's seat: it stands over the short
+            // ticks and reaches down into the marker lane over the labels,
+            // a flag standing under it covering its lower rows as the
+            // flags cover everything this pass lays down.
+            const int    head_top    = behind ? lane.y
+                                              : marker.y + marker_lane_air_px() -
+                                                    rows;
             // THE STEM PAINTS FIRST AND THE HEAD OVER IT — THE TIP SHOWS WHOLE
             // (architect 2026-10-07, off his capture of the hidden tip): the
             // band's last row is the marker lane's first, and the marker-lane
@@ -7804,7 +7858,8 @@ namespace {
 // THE COMBO'S DOWN WEDGE at (ax, ay), aw x ah: the ink when live, and when
 // grayed THE DISABLED EMBOSS's two copies (show_embossed_run's inks under
 // each chrome) — Windows' inactive scroll-arrow glyph and GTK's insensitive
-// arrow alike.
+// arrow alike — and under cde the ink through Motif's stipple (render.h's
+// stipple pair, the wedge's box its bounds and its phase).
 void paint_picker_wedge(cairo_t* cr, double ax, double ay, int aw, int ah,
                         bool enabled, GuiColor ink) {
     const auto wedge = [&](double x, double y, GuiColor c) {
@@ -7821,6 +7876,14 @@ void paint_picker_wedge(cairo_t* cr, double ax, double ay, int aw, int ah,
     };
     if (enabled) {
         wedge(ax, ay, ink);
+        return;
+    }
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        const int x0 = static_cast<int>(std::floor(ax));
+        const int y0 = static_cast<int>(std::floor(ay));
+        paint_stipple_begin(cr, GuiRect{x0 - 1, y0 - 1, aw + 3, ah + 3});
+        wedge(ax, ay, ink);
+        paint_stipple_end(cr, x0, y0);
         return;
     }
     const bool cl =

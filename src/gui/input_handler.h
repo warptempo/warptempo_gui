@@ -1788,7 +1788,10 @@ struct GuiInputHandler {
     // CLAIM takes a LEFT press with no modifier (any other press there is a
     // consumed nothing). THE FRAME'S ranks above every veil, the on-screen
     // keyboard's neighbour (a restored window resizes "always"): it hands the
-    // press to the compositor's resize at the frame's edges. THE CAPTION'S
+    // press to the compositor's resize at the frame's edges — on a RESTORED
+    // window only, a frame that stands on the maximised window (cde's dtwm
+    // frame, 2026-10-08: the laptop maximised, the tablet always) taking its
+    // press as a consumed nothing, its hover the arrow. THE CAPTION'S
     // ranks where the File menu's Quit is reachable — below the prompt's
     // veil, the open dropdown's close and every dialog editor's swallow, but
     // admitted through the render player's and the picker's veils as their

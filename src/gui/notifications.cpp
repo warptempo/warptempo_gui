@@ -107,11 +107,12 @@ bool notification_visible(const AppState& a, uint64_t id) {
 }
 
 uint64_t notification_card_at(const AppState& a, int x, int y) {
-    // A CARD UNDER A LIST POPUP IS HIDDEN THERE (list_popup_at, app_state.h:
-    // the menu row's drop-down, the settings choice editor's list, the color
-    // picker's element list and palette menu — each painting above the
-    // cards), so the press, the hover and the cursor reach the popup.
-    if (list_popup_at(a, x, y)) return 0;
+    // A CARD UNDER A LIST POPUP OR THE COLOR PICKER'S CARD IS HIDDEN THERE
+    // (floater_above_cards_at, app_state.h: the menu row's drop-down, the
+    // settings choice editor's list, the color picker's element list, its
+    // palette menu and its card — each painting above the cards), so the
+    // press, the hover and the cursor reach the surface on top.
+    if (floater_above_cards_at(a, x, y)) return 0;
     for (const AppState::NotificationPainted& p : a.notifications.painted) {
         if (!rect_contains(p.rect, x, y)) continue;
         // THE PUBLICATION SELECTS, THE LIVE STACK DECIDES: the rects were
