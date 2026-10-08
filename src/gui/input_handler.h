@@ -2165,7 +2165,9 @@ struct GuiInputHandler {
     // WHETHER A PLAIN PRESS ON CELL `cell` OF A FLAG IS THE MEMBERSHIP
     // TOGGLE — the Add to Selection lamp's fold (architect 2026-08-18; it
     // stops at the payload box, 2026-09-19), the term's one spelling: read by
-    // run_marker_click_act's `toggle` and by run_marker_select_alone.
+    // run_marker_click_act's `toggle`, by run_marker_select_alone and by
+    // pointer_cursor_kind's flag arm (2026-10-09), so the cue promises what
+    // the press does.
     bool plain_marker_press_toggles(MarkerCell cell) const {
         return app.add_to_selection && cell == MarkerCell::Payload;
     }

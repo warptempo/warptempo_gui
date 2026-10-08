@@ -1633,11 +1633,21 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     // Never called from inside the paint loop (the hazard and the supported
     // pre-paint route are stated at that loop, paint_one_frame).
 
+    // The app declares CLIENT-area rects; the lists hold surface rects, the
+    // frame added back (frame_px_, the header).
+    invalidate_surface_rect(x + frame_px_, y + frame_px_, w, h);
+}
+
+void GuiPlatform::invalidate_surface() {
+    invalidate_surface_rect(0, 0, width_, height_);
+}
+
+void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
+    if (w <= 0 || h <= 0) return;
     // Each surviving rect costs one on_redraw call downstream, so the
     // global damage signal and every per-buffer pending list use the same
-    // containment coalescing. The app declares CLIENT-area rects; the lists
-    // hold surface rects, the frame added back (frame_px_, the header).
-    const DamageRect nr{x + frame_px_, y + frame_px_, w, h};
+    // containment coalescing.
+    const DamageRect nr{x, y, w, h};
     if (!append_coalesced_rect(damage_, nr)) return;
     for (int i = 0; i < kShmBufferCount; ++i) {
         append_coalesced_rect(shm_buffers_[i].pending, nr);

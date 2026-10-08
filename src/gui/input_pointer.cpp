@@ -2385,7 +2385,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             // sticky ctrl stands, a plain press on a flag's PAYLOAD takes
             // the membership-toggle branch, which acts at the press and arms
             // NOTHING (run_marker_click_act's `toggle` term, this file), so no
-            // crossing can begin a drag of either axis there. That is
+            // crossing can begin a drag of either axis there — the cue reading
+            // the press's own predicate, plain_marker_press_toggles
+            // (2026-10-09: the inline copy folded), so the two cannot rule a
+            // cell apart. That is
             // true whatever the value drag posture says, so the term is ranked
             // first and outside it: the Arrow is what a point arming nothing
             // wears everywhere in this map, and a box still promising the
@@ -2415,7 +2418,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             // Payload over the whole of one (hit_test_flag_cell, app_state.cpp)
             // and the lamp's Arrow covers that view exactly as it did.
             const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
-            if (app.add_to_selection && cell == MarkerCell::Payload)
+            if (plain_marker_press_toggles(cell))
                 return GuiCursorKind::Arrow;
             if (value_drag_posture(app)) {
                 return value_drag_target(app, audio, flag_hit, cell)
@@ -5995,11 +5998,24 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const AppState::Dropdown& pop = app.dropdown;
         // WALKED, NOT NAMED (the anchor membership is derived from the menu
         // list — app_state.h — so a menu added later needs no edit here).
+        // THE ANCHOR EXEMPTION IS THE APPLICATION PULL-DOWNS' ALONE
+        // (2026-10-09): with the caption's WINDOW MENU open
+        // (dropdown_hangs_from_caption) no anchor is consulted — the menu
+        // hangs from the caption's lane, so its first rows overlay the menu
+        // row (its first item 18..37 W from the client's top against the row's
+        // 17..44 W, File from x = 4 W, at 300 % and at 138 % alike), and a
+        // press there is the menu's (dropdown_item_at); a press on an anchor
+        // outside it dismisses, as any press outside its items does. The
+        // hover switch in on_motion refuses the window menu for the same
+        // reason: dtwm's menu never slides onto an application's menu bar.
         bool on_menu_button = false;
-        for (const DropdownMenu m : kDropdownMenus) {
-            if (redesign_button_hit(app, dropdown_anchor_button(m), x, y)) {
-                on_menu_button = true;
-                break;
+        if (!dropdown_hangs_from_caption(pop.menu)) {
+            for (const DropdownMenu m : kDropdownMenus) {
+                if (redesign_button_hit(app, dropdown_anchor_button(m), x,
+                                        y)) {
+                    on_menu_button = true;
+                    break;
+                }
             }
         }
         if (!on_menu_button) {

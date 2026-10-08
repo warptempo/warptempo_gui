@@ -663,22 +663,21 @@ Layout layout(const AppState& app, const GuiFont& font) {
             l.list_items[i] = combo_list_item(l.list, i);
     }
 
-    // THE PRESET MENU, when down: its rows (preset_menu_rows' order, the
-    // acts first) with A SEPARATOR BLOCK BEFORE EACH ROW THAT OPENS A GROUP
-    // (his files', the built-ins', the catalog's schemes') — each a scroll row of its own, so the
-    // menu has a scroll row more than it has rows per separator — placed
-    // and scrolled by the popup lists' rule (render.h's
-    // popup scroll block): hung from the button's foot or standing on its
-    // head, the shown scroll rows — every row from the top whose heights,
-    // a separator at its own, fit the box's room — laid from the item
-    // block's top. Its width is the widest row's label between THE
-    // DROP-DOWN INSET on both sides (combo_text_inset_px's rule, 2026-10-09:
-    // the preset menu is a drop-down, not a menu-row pull-down), plus the
-    // bar when it scrolls, or the button's, whichever is wider, at the button's left edge held inside
-    // the window across — measured over every row, so a scroll never
-    // changes it. Every row is in menu_rows; a row scrolled out of view
-    // carries the zero rect, so the painter publishes no row the window does
-    // not show.
+    // THE PRESET MENU, when down: its rows (preset_menu_rows' order, the acts
+    // first) with A SEPARATOR BLOCK BEFORE EACH ROW THAT OPENS A GROUP (his
+    // files', the built-ins', the catalog's schemes') — each a scroll row of
+    // its own, so the menu has a scroll row more than it has rows per separator
+    // — placed and scrolled by the popup lists' rule (render.h's popup scroll
+    // block): hung from the button's foot or standing on its head, the shown
+    // scroll rows — every row from the top whose heights, a separator at its
+    // own, fit the box's room — laid from the item block's top. Its width is
+    // the widest row's label between THE DROP-DOWN INSET on both sides
+    // (combo_text_inset_px's rule, 2026-10-09: the preset menu is a drop-down,
+    // not a menu-row pull-down), plus the bar when it scrolls, or the button's,
+    // whichever is wider, at the button's left edge held inside the window
+    // across — measured over every row, so a scroll never changes it. Every row
+    // is in menu_rows; a row scrolled out of view carries the zero rect, so the
+    // painter publishes no row the window does not show.
     if (app.color_picker.menu_open) {
         const int pad_x       = combo_text_inset_px();
         const int menu_item_h = popup_item_h_px();
@@ -1367,11 +1366,21 @@ void GuiColorPicker::install_live_words(
     // declaration (palette_file.h) and, for the chrome, install_chrome_pick's
     // (render.h).
     const WaveformPlateInks before = waveform_plate_inks();
+    const std::optional<GuiChromePick> chrome_before = live_chrome_pick();
     install_program_palette(words);
     install_chrome_pick(scheme);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
-    viewport.invalidate_all();
+    // A CHANGED TWELVE DAMAGES THE WHOLE SURFACE (2026-10-09): the window's
+    // sizing frame — the restored laptop's, cde's dtwm band on both devices —
+    // paints in the chrome's roles outside the client area, which
+    // invalidate_all never reaches, so a scheme load, a chrome element's
+    // pick, its Paste or its OLD tap would leave the band in the previous
+    // colors (platform.h's two damage calls). THE FIFTEEN NEED NO MORE THAN
+    // THE CLIENT: the palette's colors paint in the well and on what enters
+    // it, never on the frame.
+    if (scheme != chrome_before) viewport.invalidate_surface();
+    else                         viewport.invalidate_all();
 }
 
 void GuiColorPicker::apply_live_words(

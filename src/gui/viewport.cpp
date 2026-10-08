@@ -896,6 +896,10 @@ void Viewport::invalidate_all() {
     gui.invalidate_region(0, 0, app.width, app.height);
 }
 
+void Viewport::invalidate_surface() {
+    gui.invalidate_surface();
+}
+
 // THE NUDGE HOLDS ITS SUBJECT'S COLUMN WHILE THE HOLD POSTURE STANDS
 // (architect 2026-09-17 for the hold — "I like to see every delta when
 // nudging" — and 2026-09-23 for what chooses it). A Left/Right step that MOVED

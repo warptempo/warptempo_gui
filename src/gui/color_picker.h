@@ -153,22 +153,22 @@ struct Viewport;
 //     convention: nothing here opens a dialog), each with its truthful
 //     enabled bit (preset_act_enabled), then, each group behind a
 //     separator, HIS FILES OF THE SCOPE'S KIND (byte order) and ITS
-//     BUILT-INS (preset_menu_rows owns the order) — the acts first so they
-//     lead at the head (architect 2026-10-08 ~11:10). Its width is the
-//     widest row's between THE DROP-DOWN INSET on both sides
-//     (combo_text_inset_px's rule, 2026-10-09: a drop-down, its rows at the
-//     scope and element lists' inset, never the menu row's 22-W pads), and
-//     the scroll bar's when it scrolls, held inside the window across. IT IS ONE OF THE THREE LIST POPUPS (render.h's
-//     popup scroll block, the rule's one owner, architect 2026-10-08): hung
-//     from the button's foot or standing on its head by the window's room,
-//     and SCROLLING when its rows outgrow it — the acts and the separators
-//     ordinary rows that scroll with the names, none pinned, the scroll at
-//     the head at each open; the shown rows and the bar published as painted
-//     (layout). Every preset Save As writes is reachable, so the act
-//     refuses no name for room. The lit row starts on the active preset's
-//     name (the chooser's own seat, the hover seeded at the open) and
-//     follows the pointer; a grayed row is never lit and a press on one is
-//     a consumed nothing.
+//     BUILT-INS (preset_menu_rows owns the order) — the acts first so they lead
+//     at the head (architect 2026-10-08 ~11:10). Its width is the widest row's
+//     between THE DROP-DOWN INSET on both sides (combo_text_inset_px's rule,
+//     2026-10-09: a drop-down, its rows at the scope and element lists' inset,
+//     never the menu row's 22-W pads), and the scroll bar's when it scrolls,
+//     held inside the window across. IT IS ONE OF THE THREE LIST POPUPS
+//     (render.h's popup scroll block, the rule's one owner, architect
+//     2026-10-08): hung from the button's foot or standing on its head by the
+//     window's room, and SCROLLING when its rows outgrow it — the acts and the
+//     separators ordinary rows that scroll with the names, none pinned, the
+//     scroll at the head at each open; the shown rows and the bar published as
+//     painted (layout). Every preset Save As writes is reachable, so the act
+//     refuses no name for room. The lit row starts on the active preset's name
+//     (the chooser's own seat, the hover seeded at the open) and follows the
+//     pointer; a grayed row is never lit and a press on one is a consumed
+//     nothing.
 //   THE NAME ASK (Save As, Rename) — THE CARD'S ONE TEXT FIELD WIDENED: for
 //     the length of the ask the hex field's box and the OLD | NEW frame
 //     beside it are ONE FIELD (the same text editor, its Kind PaletteName),
@@ -727,8 +727,9 @@ struct Layout {
     GuiRect inner{0, 0, 0, 0};
     int     edge_px = 0;
     // The wheel's square and its circles (device px, the center at the
-    // square's exact middle, x + side / 2 — a pixel center for an odd side,
-    // 339 at 300 %, a pixel boundary for an even one, 158 at 138 %).
+    // square's exact middle, x + side / 2 — the side kWheelBlockWPx's 92 W,
+    // the top block being taller: a pixel boundary for an even side, 276 at
+    // 300 %, a pixel center for an odd one, 127 at 138 %).
     GuiRect wheel{0, 0, 0, 0};
     double  cx = 0.0, cy = 0.0, outer_r = 0.0, inner_r = 0.0;
     // The chooser row: the scope combo and the element chooser, each the
@@ -1013,7 +1014,10 @@ struct GuiColorPicker {
     // fifteen installed (install_program_palette, palette_file.h) and the
     // scheme's keys (install_chrome_pick, render.h), then the apply shape
     // run once, as install_program_palette's declaration states it. Its two
-    // callers are set_color and apply_live_words.
+    // callers are set_color and apply_live_words. ITS DAMAGE (2026-10-09): a
+    // changed twelve the whole surface, the window's sizing frame with it
+    // (Viewport::invalidate_surface, platform.h's two damage calls); the
+    // fifteen alone the client (invalidate_all) — the rule at the body.
     void install_live_words(const GuiPaletteWords& words,
                             const std::optional<GuiChromePick>& scheme);
 };

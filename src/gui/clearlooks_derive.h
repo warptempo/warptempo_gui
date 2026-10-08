@@ -13,13 +13,14 @@
 #include <string_view>
 
 // CLEARLOOKS DERIVES ITS TONES FROM THE TWELVE CHROME KEYS (architect
-// 2026-10-08 ~11:00 / ~12:10). ONE THEME SYNTAX UNDER EVERY CHROME: the
-// twelve keys a palette may carry (kGuiChromeLines, palette_file.h) draw
-// under clearlooks too, and this header is THE ONE DERIVATION there, as
-// chrome_derive.h is under windows-2000. "Clearlooks takes ONE caption
-// color and derives its gradient from it": THE TITLE END KEYS ARE IGNORED
-// ("the second one just gets ignored if the theme doesn't support it");
-// every other key is read.
+// 2026-10-08 ~11:00 / ~12:10). ONE THEME SYNTAX UNDER EVERY CHROME: a
+// scheme's twelve keys (kGuiChromeLines — a SCHEME's alone since the split
+// of 2026-10-08, a palette carrying one the read's hard fail; palette_file.h's
+// head owns both grammars) draw under clearlooks too, and this header is
+// THE ONE DERIVATION there, as chrome_derive.h is under windows-2000.
+// "Clearlooks takes ONE caption color and derives its gradient from it":
+// THE TITLE END KEYS ARE IGNORED ("the second one just gets ignored if the
+// theme doesn't support it"); every other key is read.
 //
 // THE ARITHMETIC IS SQUEEZE'S OWN, RUN IN THE APP: the 350 `cl_` roles
 // (theme_clearlooks_roles.inc) are the Clearlooks engine's and metacity's

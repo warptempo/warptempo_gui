@@ -58,9 +58,10 @@
 //     tones PROVEN by cde_derive.h's port of Motif's own rule.
 // The imported catalog's other entries (Windows 95's and 98's schemes, the
 // Plus! themes, KDE 3's, CDE's) stay in the catalog as the tool's RECORD;
-// what ships of them is their twelve chrome keys alone, as the palette's
-// BUILT-IN SCHEMES (architect 2026-10-08 ~11:00, palette_file.h's head), no
-// theme of theirs compiled here.
+// what ships of them is their twelve chrome keys alone, as the BUILT-IN
+// SCHEMES (architect 2026-10-08 ~11:00; a preset kind of their own since the
+// split of 2026-10-08, palette_file.h's head), no theme of theirs compiled
+// here.
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15): Windows'
 // scheme bytes and GTK's gtkrc colors are what those systems put into an
 // sRGB frame buffer, as the captures show them; the tablet converts each at

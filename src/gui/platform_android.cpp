@@ -1010,6 +1010,10 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     invalidate_surface_rect(x + frame_px_, y + frame_px_, w, h);
 }
 
+void GuiPlatform::invalidate_surface() {
+    invalidate_surface_rect(0, 0, width_, height_);
+}
+
 void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
     // Each surviving rect costs one on_redraw call downstream, so the damage

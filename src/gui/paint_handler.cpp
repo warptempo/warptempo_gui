@@ -8252,12 +8252,20 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
                       palette().label);
     }
 
-    // THE ONE FIELD — the hex field, or the name ask's wide field.
+    // THE ONE FIELD — the hex field, or the name ask's wide field. UNDER CDE
+    // it is Motif's text field like its siblings (paint_cde_field, 2026-10-09:
+    // the picker's combos, the dialog fields, the folder lists): its one-W
+    // ring in the FIELD'S own shadows, never the body's, so a pick of the
+    // Field key re-shades it — the ring as wide as the Windows arm's one
+    // sunken-outer line, so the text pad and the caret sit alike under all
+    // three.
     {
         text_editor::State& ed = cp.field_editor;
         const bool editing = text_editor::is_active(ed);
         if (cl) {
             paint_cl_entry(cr, L.field, /*focused=*/editing);
+        } else if (cde) {
+            paint_cde_field(cr, L.field, palette().field_ground);
         } else {
             paint_cell_rect(cr, L.field, palette().field_ground);
             paint_relief_sunken_outer(cr, L.field);

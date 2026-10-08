@@ -38,9 +38,12 @@
 // THE COMPILED THEME STAYS EXACTLY ITS RECORDED BYTES: Windows 2000
 // Standard's gray face is HAND-SET by Microsoft (D4D0C8's Hilight FFFFFF and
 // Shadow 808080 are not the rule's EAE8E3 and 978E7B, asserted below), so the
-// knob derives only when the palette CARRIES THE BLOCK; a palette without it
-// — the chrome's own built-in scheme among them, palette_file.h's head —
-// leaves the compiled theme untouched. A user who picked D4D0C8 in Windows
+// knob derives only when THE ACTIVE SCHEME CARRIES THE KEYS — a scheme file,
+// or a built-in other than the chrome's own; THE CHROME'S OWN SCHEME carries
+// none under its chrome (scheme_record) and leaves the compiled theme
+// untouched. The keys are a SCHEME's alone since the split (2026-10-08): a
+// palette carrying any of them is the read's hard fail (palette_file.h's
+// head, the owner of both grammars). A user who picked D4D0C8 in Windows
 // 2000's own dialog lost Standard's white Hilight too.
 //
 // THE RULE (Windows' Appearance dialog on a picked 3D face): convert the face

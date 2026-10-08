@@ -11,8 +11,10 @@
 
 // CDE DERIVES ITS TONES FROM THE TWELVE CHROME KEYS (2026-10-08, the cde
 // vocabulary; ONE THEME SYNTAX UNDER EVERY CHROME, architect 2026-10-08
-// ~11:00 / ~12:10): the twelve keys a palette may carry (kGuiChromeLines,
-// palette_file.h) draw under cde as under the other two, and this header is
+// ~11:00 / ~12:10): a scheme's twelve keys (kGuiChromeLines — a SCHEME's
+// alone since the split of 2026-10-08, a palette carrying one the read's
+// hard fail; palette_file.h's head owns both grammars) draw under cde as
+// under the other two, and this header is
 // THE ONE DERIVATION there — MOTIF'S OWN: lib/Xm/Color.c's CalculateColorsRGB
 // (XmGetColors), the rule dtsession runs on every colour set's background
 // to make its foreground, its select colour and its two shadows, PORTED

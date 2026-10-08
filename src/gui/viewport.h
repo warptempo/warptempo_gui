@@ -635,6 +635,11 @@ struct Viewport {
     // at all.)
     void invalidate_top_strip();
     void invalidate_all();
+    // THE WHOLE SURFACE, the window's sizing frame with it (2026-10-09;
+    // GuiPlatform::invalidate_surface, the rule at platform.h): a live
+    // chrome pick's damage alone (GuiColorPicker::install_live_words) — every
+    // other caller's change paints inside the client, invalidate_all's area.
+    void invalidate_surface();
 
     // Damage ONE arbitrary rect. The FLOATING SURFACES' entry (the shift
     // tooltip and the menu row's dropdown): both hang outside the strip that

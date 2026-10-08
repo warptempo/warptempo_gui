@@ -46,6 +46,17 @@
 // PLAYBACK DOES NOT SURVIVE: it is per project, shut down and re-inited with
 // the set, so a reopen costs one AAudio stream start (its one transient), the
 // accepted price.
+//
+// THE TWO DAMAGE CALLS (2026-10-09): invalidate_region takes a CLIENT rect —
+// the GUI's whole geometry, the window's band outside it — so no GUI damage
+// ever reaches the sizing frame (the restored laptop's, cde's dtwm band on
+// both devices); invalidate_surface damages the WHOLE SURFACE, the band with
+// it. The band paints in the chrome's roles, so the one GUI event that
+// changes them with the window standing — a live chrome pick, the color
+// picker's install of the twelve (GuiColorPicker::install_live_words) — asks
+// for it; every other repaint of the band rides the backend's own full damage
+// (a configure, its activation flip included, or a window adoption). Both
+// backends implement the pair alike.
 #ifdef __ANDROID__
 #include "platform_android.h"
 #else
