@@ -496,10 +496,17 @@ Layout layout(const AppState& app, const GuiFont& font) {
                    scaled_px(kComboArrowWPx, kComboArrowMinWPx) +
                    scaled_px(spec.push_button_pad_right_px);
         } else {
-            // the sunken field's lines (one under cde, combo_drop_button)
+            // THE FACE IS SYMMETRIC (architect 2026-10-08 ~22:25, on his cde
+            // glass: "the Chrome versus Waveform picker is short on the
+            // right-hand side"): the sunken field's lines (one under cde,
+            // combo_drop_button), then THE DIALOG FIELD'S PAD ON BOTH SIDES
+            // of the shaped name — the 5 W the text has on its left, the same
+            // 5 W after it before the drop-down button's edge — never the
+            // 4-W text gap, which left the name one W nearer the button than
+            // the field's edge and set the face by the list's arithmetic.
             const int fb =
                 (spec.vocabulary == GuiChromeVocabulary::Cde ? 1 : 2) * lw;
-            face = fb + scaled_px(kModalFieldPadXPx) + t + text_gap +
+            face = fb + 2 * scaled_px(kModalFieldPadXPx) + t +
                    scaled_px(kComboButtonWPx) + fb;
         }
         const int list = scaled_px(kPopupPadXPx) + t + text_gap +

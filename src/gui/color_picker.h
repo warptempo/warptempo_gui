@@ -275,27 +275,34 @@ struct Viewport;
 // by the list's own ruling: the popup's 22-W left pad, the name, the same
 // 4-W gap and the frame's lines), the element chooser measured over BOTH
 // scopes' names so no scope cuts a name, the two 6 W apart (kControlGapPx).
+// THE SCOPE COMBO'S FACE IS SYMMETRIC under win2000 and cde (architect
+// 2026-10-08 ~22:25, "short on the right-hand side"): the dialog field's
+// 5-W pad on BOTH sides of the name, where the 4-W text gap had stood on
+// its right — the layout measures the live shaped run (combo_w, the one
+// shaping chokepoint), so the face, not the estimate, was what fell short;
+// the element chooser, the column's rest, keeps the 4-W rule with room to
+// spare.
 // The names' widths at the base's cap (2026-10-08, the faces' advances
 // summed and rounded up; the layout measures the shaped runs live, so a
 // kerned pair may take a W off): "Waveform" 50 W in Tahoma, 57 in DejaVu
 // Sans, 51 in Go; "Selected Phase Reset Flag" 127, 145 and 136 —
-//   win2000: the scope max(2 + 5 + 50 + 4 + 16 + 2 = 79, 22 + 50 + 4 + 2 =
-//     78) = 79, the chooser max(2 + 5 + 127 + 4 + 16 + 2 = 156, 22 + 127 +
-//     4 + 2 = 155) = 156; the row 79 + 6 + 156 = 241 of the inner 360, so
-//     the block could be 360 − 8 − 241 = 111 W;
+//   win2000: the scope max(2 + 5 + 50 + 5 + 16 + 2 = 80, 22 + 50 + 4 + 2 =
+//     78) = 80, the chooser max(2 + 5 + 127 + 4 + 16 + 2 = 156, 22 + 127 +
+//     4 + 2 = 155) = 156; the row 80 + 6 + 156 = 242 of the inner 360, so
+//     the block could be 360 − 8 − 242 = 110 W;
 //   clearlooks: the scope max(6 + 57 + 4 + 7 + 6 = 80, 22 + 57 + 4 + 1 =
 //     84) = 84, the chooser max(6 + 145 + 4 + 7 + 6 = 168, 22 + 145 + 4 + 1
 //     = 172) = 172; the row 84 + 6 + 172 = 262 of the inner 362, so the
 //     block could be 362 − 8 − 262 = 92 W;
-//   cde: the scope max(1 + 5 + 51 + 4 + 16 + 1 = 78, 22 + 51 + 4 + 1 = 78)
-//     = 78, the chooser max(1 + 5 + 136 + 4 + 16 + 1 = 163, 22 + 136 + 4 +
-//     1 = 163) = 163; the row 78 + 6 + 163 = 247 of the inner 362, so the
-//     block could be 362 − 8 − 247 = 107 W.
+//   cde: the scope max(1 + 5 + 51 + 5 + 16 + 1 = 79, 22 + 51 + 4 + 1 = 78)
+//     = 79, the chooser max(1 + 5 + 136 + 4 + 16 + 1 = 163, 22 + 136 + 4 +
+//     1 = 163) = 163; the row 79 + 6 + 163 = 248 of the inner 362, so the
+//     block could be 362 − 8 − 248 = 106 W.
 // The tightest, clearlooks', is THE block: 92 W under every chrome, the
 // right column 360 − 92 − 8 = 260 W under win2000 (the element chooser
-// 260 − 79 − 6 = 175, 19 W of slack) and 362 − 100 = 262 under clearlooks
-// (the chooser its 172 exactly) and cde (the chooser 262 − 78 − 6 = 178,
-// 15 W of slack). The wheel is the 92-W square (the top block, 21 + 6 + 6 x
+// 260 − 80 − 6 = 174, 18 W of slack) and 362 − 100 = 262 under clearlooks
+// (the chooser its 172 exactly) and cde (the chooser 262 − 79 − 6 = 177,
+// 14 W of slack). The wheel is the 92-W square (the top block, 21 + 6 + 6 x
 // 17 = 129 W, is the taller), centered in the block: its 37 W of air split
 // 55 device rows above and 56 below at 300 % (the centering's floor). The
 // slider's track
