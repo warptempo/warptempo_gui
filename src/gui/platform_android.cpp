@@ -1761,6 +1761,9 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // withdrawn out of range before the platform reports any hover
             // leaves the pointer resting at the lift until the pen's next
             // report or the next contact — a mouse resting where it clicked.
+            // AND THE HOT FACE WAITS FOR MOTION after such a lift (architect
+            // 2026-10-07): the UP arm arms the GUI's latch (set_pen_lift_hook;
+            // the rule at GuiInputHandler::arm_pen_hot_latch).
             //
             // A HOVER ABOVE THE GUI'S PLANE IS NOT A POINTER (architect
             // 2026-09-27: every pen hover effect acts only within the plane,
@@ -1935,6 +1938,11 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                 if (pen_stays) {
                     input_.pointer_focus_at(px(index), py(index));
                     pen_hovering_ = true;
+                    // The GUI's hot-face latch arms here, before the lift's
+                    // delivery (set_pen_lift_hook).
+                    if (pen_lift_hook_)
+                        pen_lift_hook_(containing_pixel(px(index)),
+                                       containing_pixel(py(index)));
                 }
                 pen_lift_keeps_anchor_ = keep_seat;
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
@@ -2032,6 +2040,9 @@ void GuiPlatform::end_pen_hover() {
 // descent. The phase in which they were device keys is closed and the keys
 // struck (device_config.h's record); a retune is a recompile of these two
 // lines.
+// (The pen's one other distance, the hot face's re-arm after a lift, is a
+// chrome length in Windows px and so lives at the GUI's latch, which owns the
+// scale: kPenHotRearmPx, input_handler.h.)
 constexpr float kPenPlaneEnter = 85.0f;
 constexpr float kPenPlaneExit  = 100.0f;
 
@@ -2099,6 +2110,10 @@ bool GuiPlatform::pen_report_in_plane(const AInputEvent* event, int32_t masked,
 
 void GuiPlatform::set_pen_zoom_anchor_release_hook(std::function<void()> cb) {
     pen_zoom_anchor_release_hook_ = std::move(cb);
+}
+
+void GuiPlatform::set_pen_lift_hook(std::function<void(int x, int y)> cb) {
+    pen_lift_hook_ = std::move(cb);
 }
 
 void GuiPlatform::release_pen_zoom_anchor() {

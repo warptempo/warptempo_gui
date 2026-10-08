@@ -361,6 +361,18 @@ public:
     // RETAINED seat, so a fire that meets a live gesture's seat is inert.
     void set_pen_zoom_anchor_release_hook(std::function<void()> cb);
 
+    // THE PEN'S LIFT HOOK (architect 2026-10-07, after a pen lift the hot face
+    // waits for motion): fired (null-safe) with the lift's pixel at the pen's
+    // lift off an EMPTY glass — the one lift the pointer survives
+    // (pointer_focus_at; the rule at on_motion_event's hover arm) — BEFORE
+    // the lift's own delivery, so the release and the restore motion it
+    // carries already meet the GUI's latch
+    // (GuiInputHandler::arm_pen_hot_latch, which owns the rule and its
+    // clearing roads). Nothing else fires it: a finger never hovers, a pen
+    // lifting beside another contact is no hover, and the Wayland twin never
+    // fires, so a mouse can never arm the latch.
+    void set_pen_lift_hook(std::function<void(int x, int y)> cb);
+
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site
     // inventory are all at GuiInputCore::set_touch_slop_px, input_core.h.
@@ -597,6 +609,8 @@ private:
     // own touch_up and false everywhere else.
     bool pen_lift_keeps_anchor_ = false;
     std::function<void()> pen_zoom_anchor_release_hook_;
+    // set_pen_lift_hook's callback; fired from the UP arm's pen_stays alone.
+    std::function<void(int x, int y)> pen_lift_hook_;
 
     // THE FIRST on_resize_ FIRE IS OWED RATHER THAN MADE. init() adopts a
     // window that already exists (android_main waits for it), which is BEFORE

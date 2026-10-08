@@ -1685,6 +1685,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (GuiPlatform::pen_lift_keeps_zoom_anchor), not a hook.
     gui.set_pen_zoom_anchor_release_hook(
         [&]() { input_handler.release_pen_zoom_anchor(); });
+    // THE PEN'S LIFT ARMS THE HOT-FACE LATCH (architect 2026-10-07; the rule
+    // at GuiInputHandler::pen_hot_latch_, the producer at
+    // GuiPlatform::set_pen_lift_hook, platform_android.h; the Wayland backend
+    // accepts it and never fires it).
+    gui.set_pen_lift_hook(
+        [&](int x, int y) { input_handler.arm_pen_hot_latch(x, y); });
 
     auto invalidate_modal_dialog_area = [&]() { viewport.invalidate_modal_dialog_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
@@ -2008,6 +2014,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // whose hover has ended — is on no button.
         input_handler.set_roster_hot(-1);
         input_handler.set_player_hot(-1);
+        // AND THE PEN'S HOT-FACE LATCH (GuiInputHandler::pen_hot_latch_):
+        // every leave clears it, the next down's among them.
+        input_handler.clear_pen_hot_latch();
     });
 
     // WINDOW-ACTIVATION EDGE -> THE TOOLTIP'S HARD END (architect 2026-09-29;

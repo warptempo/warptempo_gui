@@ -345,6 +345,12 @@ public:
     // compiles against either backend unchanged.
     bool pen_lift_keeps_zoom_anchor() const { return false; }
     void set_pen_zoom_anchor_release_hook(std::function<void()> /*cb*/) {}
+    // THE PEN'S LIFT HOOK (architect 2026-10-07; the contract at
+    // platform_android.h's declaration, the latch it arms at
+    // GuiInputHandler::arm_pen_hot_latch): accepted and never fired — a
+    // mouse's release is no pen lift, so the laptop's hot face is unchanged
+    // by construction.
+    void set_pen_lift_hook(std::function<void(int x, int y)> /*cb*/) {}
 
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site

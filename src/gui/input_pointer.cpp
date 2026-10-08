@@ -7982,6 +7982,14 @@ void GuiInputHandler::set_roster_hot(int index) {
     app.roster_hot = index;
 }
 
+void GuiInputHandler::arm_pen_hot_latch(int x, int y) {
+    pen_hot_latch_ = PenHotLatch{true, x, y};
+}
+
+void GuiInputHandler::clear_pen_hot_latch() {
+    pen_hot_latch_.armed = false;
+}
+
 void GuiInputHandler::recompute_redesign_button_hover() {
     // IT REFUSES WHILE THE POINTER IS OUTSIDE THE WINDOW — the same first line
     // and the same reason as recompute_dropdown_hover's, the boundary's other
@@ -8072,10 +8080,14 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // is armed — comctl32 shows no hot item while a toolbar holds the
     // capture, and GTK prelights no other button under a grab — and none
     // otherwise, so a toolbar style with no hot face would never store one.
+    // AND NONE WHILE THE PEN'S HOT-FACE LATCH STANDS (pen_hot_latch_, the
+    // rule at its declaration, architect 2026-10-07): after a pen lift the
+    // tapped button reads at rest until the pen moves off the lift point.
     set_roster_hot(toolbar_style_has_hot_face(
                            live_chrome_spec().toolbar_style) &&
                            app.chrome_press.kind ==
-                               AppState::ChromePress::Kind::None
+                               AppState::ChromePress::Kind::None &&
+                           !pen_hot_latch_.armed
                        ? hot
                        : -1);
     // THE ARM'S INSIDE BIT — the feint's chrome half (2026-08-13, the modal
@@ -10324,6 +10336,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     app.pointer_in_window = true;
+    // THE PEN'S HOT-FACE LATCH CLEARS ON MOTION OFF THE LIFT POINT
+    // (pen_hot_latch_, the rule at its declaration), here above every branch
+    // so the walk this motion runs already re-lights the button under it.
+    if (pen_hot_latch_.armed &&
+        std::max(std::abs(mouse_x - pen_hot_latch_.x),
+                 std::abs(mouse_y - pen_hot_latch_.y)) >=
+            scaled_px(kPenHotRearmPx))
+        pen_hot_latch_.armed = false;
     // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE,
     // and it sits at the very TOP because every branch below returns: an open
     // dropdown takes the motion whole, a modal branch returns, each live gesture

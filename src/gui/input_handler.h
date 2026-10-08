@@ -1478,6 +1478,12 @@ struct GuiInputHandler {
     // index with the standing dialog's session and damages the dialog's box
     // on a change.
     void set_player_hot(int index);
+    // THE PEN'S HOT-FACE LATCH, its two doors (the rule at pen_hot_latch_
+    // below): ARMED by the platform's pen lift hook (main.cpp;
+    // GuiPlatform::set_pen_lift_hook) with the lift's pixel, CLEARED by the
+    // pointer-leave hook (main.cpp); the motion's clear is on_motion's own.
+    void arm_pen_hot_latch(int x, int y);
+    void clear_pen_hot_latch();
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
     // popup state the menus share (AppState::Dropdown). toggle_ is the whole
@@ -2992,6 +2998,49 @@ private:
     // Saved and restored around each span (BottomRowChordScope,
     // input_pointer.cpp), never cleared.
     bool bottom_row_chord_in_flight_ = false;
+
+    // AFTER A PEN LIFT THE HOT FACE WAITS FOR MOTION (architect 2026-10-07,
+    // on the glass under Windows 2000: a tapped toggle stayed in its
+    // hot-checked face until the pen moved away — "withholding the color
+    // change until the pen moves away makes it too slow"; the new state must
+    // read right after the tap). The pen's lift keeps the pointer where it
+    // lifted (the rule at platform_android.cpp's hover arm), and a pen held
+    // still over the button it just tapped is not a pointer arriving on it:
+    // while this latch stands the roster walk's one hot write answers -1
+    // (recompute_redesign_button_hover), so the tapped button reads in its
+    // RESTING face — the checker of a checked toggle, the lit radio's
+    // checked face, a plain act's flat rest. A TIMER WOULD NOT DO: expiring
+    // with the pen still hovering in place, it would re-light the very face
+    // it withheld; the latch is a DISTANCE, as the plane's own hysteresis is.
+    //   ARMED only by the Android backend's pen lift off an empty glass
+    //   (GuiPlatform::set_pen_lift_hook, before the lift's delivery, so the
+    //   release and the restore motion already meet it) — never by a mouse
+    //   (the Wayland twin never fires) or a finger (it never hovers).
+    //   CLEARED (a) by a motion at least kPenHotRearmPx from the lift point,
+    //   Chebyshev, the drag gate's own metric (on_motion's prologue) — the
+    //   same walk then re-lights the button under the pen as usual; (b) by
+    //   every leave (the pointer-leave hook, main.cpp): a HOVER_EXIT, a
+    //   report above the plane, focus loss — and THE NEXT DOWN, which is one
+    //   of them: the latch stands only while the pen's hover does, and every
+    //   first down ends that hover through its leave (end_pen_hover).
+    // THE TOOLTIP'S WAIT IS UNTOUCHED: the walk still names the button under
+    // the pointer to note_tooltip_hover, so a hint ripens exactly as without
+    // the latch (and the tapped button itself stays spent, the rule at
+    // AppState::RedesignTooltip). THE LATCH IS THE POINTER'S, NOT A
+    // CHROME'S: under clearlooks it withholds GTK's prelight the same way,
+    // and it covers every roster button, toggle or not. NOT IN ITS SCOPE: the
+    // render player's hot button (update_modal_dialog_hover, set_player_hot)
+    // and the menu row, which has no hot face.
+    struct PenHotLatch {
+        bool armed = false;
+        int  x     = 0;   // the lift's pixel
+        int  y     = 0;
+    };
+    PenHotLatch pen_hot_latch_;
+    // THE RE-ARM DISTANCE, in WINDOWS PX (a chrome length, converted through
+    // scaled_px at the compare: 9 device px at 300, 4 at 138): above the S
+    // Pen's resting jitter, below a deliberate move (architect 2026-10-07).
+    static constexpr double kPenHotRearmPx = 3.0;
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the settings editor's
     // dialog pattern for the history view's OTHER act. Ctrl+S while the view
