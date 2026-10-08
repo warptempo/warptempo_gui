@@ -162,6 +162,12 @@ void paint_cl_toolbar_separator(cairo_t* cr, int gap_x, int case_y,
 //              and down (GtkButton::child-displacement 1).
 //   HOT AND CHECKED — GTK's prelit active toggle: the active button in
 //              bg[PRELIGHT].
+//   PRESSED AND CHECKED — the active button it already wears, the prelight
+//              gone (2026-10-07 evening, the view group's lit radio arming):
+//              GTK 2.20's gtk_toggle_button_update_state sets PRELIGHT only
+//              while the button is not held down (no indicator drawn) and
+//              the held toggle ACTIVE and depressed, so the press reads as
+//              the resting checked face.
 //   DEAD     — nothing (GTK paints no box for an insensitive relief-none
 //              button); DEAD AND CHECKED the insensitive active toggle GTK
 //              does paint: the disabled ramp (1.04 | 1.01 / 0.99 | 0.96 of

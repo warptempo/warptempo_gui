@@ -89,8 +89,22 @@ struct ToolbarChord {
     // MODIFIER LINE must appear exactly where a modified press does something —
     // a static_assert beside that table enforces it. One fact, two readers.)
     //
-    // RADIO: this button reports a state it can only ever turn ON, so a press
-    // while it is already selected is a CONSUMED NOTHING. THE ICON ROW'S VIEW
+    // RADIO: this button reports a state it can only ever turn ON, so a LIFT
+    // on it while it is already selected is a CONSUMED NOTHING — AT THE LIFT
+    // ALONE since 2026-10-07 evening: the press ARMS like every enabled
+    // button's (arm_redesign_press), the hold paints the pressed face over
+    // the lit one (the toolbar case's CHECKED AND PRESSED, paint_toolbar_box),
+    // and only the lift's act is the nothing (finish_chrome_press_release).
+    // THE CLAIM'S OWN CONSUME IS GONE for the pen's sake (architect
+    // 2026-10-07 ~22:15, on the tablet: "it blinks: goes dark for a moment,
+    // goes back to white", at the down and again at the lift — "a
+    // radio-button issue — the toggles don't do that"): the pen's HOVER_EXIT
+    // before the tip's down and the touch translation's leave at the lift
+    // each drop the hot face (main.cpp's leave hook), and with no arm
+    // holding it off (the hover walk keeps hot at −1 only while a chrome
+    // press is armed) the down's synthesized entry motion and the lift's
+    // HOVER_ENTER lit it again around each drop. Armed, the selected radio
+    // reads press, release, hover exactly as a toggle does. THE ICON ROW'S VIEW
     // GROUP is the flag's one user since the tab pair's deletion
     // (2026-10-01); the walk lamp, read-only, history and
     // Cumulative are TOGGLES and press through in both directions, which is why
@@ -102,14 +116,14 @@ struct ToolbarChord {
     // GENERIC throughout — keyed on the flag plus the lamp, with no id list
     // anywhere.)
     //
-    // THE VIEW GROUP'S THREE ARE RADIOS for the FACE: their chords are the
-    // ABSOLUTE selectors, which are IDEMPOTENT — on_key's own handler
+    // THE VIEW GROUP'S THREE ARE RADIOS for the LIFT'S SILENCE: their chords
+    // are the ABSOLUTE selectors, which are IDEMPOTENT — on_key's own handler
     // already makes a press on the current combination a no-op, so dispatching
-    // would be harmless rather than wrong. The flag is set anyway, and for the
-    // FACE: the icon row's crops give a selected face and a click face and
-    // nothing that is both (the click fill wins while held, paint_icon_row),
-    // so consuming at the claim keeps a pressed interior from ever painting
-    // over the current view's lit button, as if a press there acted.
+    // would be harmless rather than wrong. The flag keeps the lift on the lit
+    // button a plain consumed nothing, the radio's own reading, rather than
+    // leaning on the act's idempotence. (It once kept the CLAIM too, for a
+    // face the bitmap crops could not show — a pressed interior over a lit
+    // button; the faces are painted now and compose the two, paint_toolbar_box.)
     bool           radio;
     // (EVERY ROW PAINTS A PRESSED INTERIOR — the icon row's and the bottom
     // row's click face — so there is no click-face column: the tab row's two
@@ -8261,7 +8275,8 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
 // refusal is still a consumed nothing, which is what the band claims want).
 //
 // THE PRESS DISPATCHES NOTHING. It applies the refusals that were always
-// press-time — the shift admission, the disabled consume, the radio consume —
+// press-time — the shift admission and the disabled consume (the radio's
+// consume is the LIFT's alone since 2026-10-07 evening, the `radio` column) —
 // and then ARMS: the index, the PRESS-TIME SHIFT (the release deliberately
 // does not re-read modifiers, the modal release's own rule — the
 // shift-admitting buttons must see the shift held at the press), and the
@@ -8341,14 +8356,10 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
             app.redesign_buttons[static_cast<size_t>(
                 redesign_button_index(tc.id))];
         if (!face.enabled) return true;
-        // A RADIO ALREADY SELECTED HAS NOTHING TO SWITCH TO, and its chord is a
-        // TOGGLE — dispatching would switch AWAY from what the user just
-        // clicked. So the press is a consumed nothing, which also makes "no
-        // button was hit" and "the selected half was hit" the same silent
-        // outcome. Toggles (iteration, read-only) are NOT radios and press through
-        // in both directions. The selected bit is the painted one too, the
-        // radio's lit half being what the screen shows.
-        if (tc.radio && face.selected) return true;
+        // A RADIO ALREADY SELECTED ARMS LIKE ANY OTHER BUTTON (2026-10-07
+        // evening): its consume is the lift's (the `radio` column says why the
+        // claim's went — the pen's blink), and it repeats nothing (no view
+        // group row carries `repeats`).
         // THE ARM. The pressed face paints from it on the very next frame
         // (redesign_button_pressed_face — Roster kind, inside true, and the
         // row's click_face column deciding whether a pressed interior exists
@@ -8551,7 +8562,10 @@ void GuiInputHandler::finish_chrome_press_release(
         // enabled bit and
         // the radio rule ON THE PAINTED FACE, never the live predicates
         // (architect 2026-09-24, strictly as-painted: the lift asks what the
-        // screen shows). The press arms and damages the strip, so by the lift
+        // screen shows). THE RADIO RULE IS NO RE-ASK BUT THE CONSUME ITSELF
+        // since 2026-10-07 evening: the press on a lit radio armed and held
+        // the pressed face, and this lift is where it becomes the consumed
+        // nothing (the `radio` column's account). The press arms and damages the strip, so by the lift
         // the painted bits are at most one frame old, and the per-tick
         // comparator carries any drift under the hold onto the face. A face
         // painted grey is a consumed nothing; a face painted live dispatches,

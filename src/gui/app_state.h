@@ -2638,8 +2638,8 @@ enum class RedesignButton {
     // switcher reborn — unchanged in meaning and dispatch, its three labelled
     // buttons gone and the acts wearing the architect's 2026-08-11 glyphs
     // (icons.h). A RADIO OF THREE: the lit button is the
-    // current view and a press on it is the consumed nothing (the `radio`
-    // column, kToolbarChords). LIVE in the `h` view (the three are on the
+    // current view and a press on it is the consumed nothing at its lift
+    // (the `radio` column, kToolbarChords). LIVE in the `h` view (the three are on the
     // mode's allowlist) and on a locked tab (navigation); DEAD under the grid
     // iterations lamp (iteration_lock_greys).
     ViewSW, ViewTW, ViewTP,
@@ -6836,8 +6836,9 @@ struct AppState {
     // states its own class and points here. EVERY CLICKABLE CHROME SURFACE
     // ACTS AT THE LIFT with slide-away cancel — the model the dropdown items
     // always had and the modal dialog buttons took first — and a press-time
-    // refusal (the modifier admissions, a painted-dead face, the radio
-    // consume) arms nothing and paints nothing. WHAT STAYS AT THE PRESS, by
+    // refusal (the modifier admissions, a painted-dead face) arms nothing
+    // and paints nothing (the lit radio's consume is a LIFT refusal since
+    // 2026-10-07 evening: its press arms and paints). WHAT STAYS AT THE PRESS, by
     // ruling: (1) the dropdown ANCHORS' toggle (below); (2) EVERY DISMISSAL —
     // the open dropdown's press-anywhere close, the flag editor's
     // outside-press close, the veil's consumption —
@@ -16245,9 +16246,10 @@ inline bool redesign_button_enabled(const AppState& a,
 // Each reads
 // THE SAME live fact its chord flips, so a lit button and the state it reports
 // can never drift. Three readers: the painter (which stashes what it painted),
-// the press claim's RADIO refusal (a radio button already selected is a consumed
-// nothing — the two reasons that can make it so are at the flag's declaration,
-// input_pointer.cpp), and main.cpp's staleness comparator.
+// the lift's RADIO refusal (a radio button already selected is a consumed
+// nothing at its lift, its press arming as any button's — the account is at
+// the flag's declaration, input_pointer.cpp), and main.cpp's staleness
+// comparator.
 //
 // MOMENTARY BY DESIGN, and therefore false here: Copy, Paste, Listen,
 // Load-in-place —
@@ -18114,9 +18116,9 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // carry:
 //
 // SELECTED BUTTONS DO HOVER (for the tooltip), so the icon row's toggles — the Cumulative one included — and
-// its view group's three radios are hoverable in both states, and a radio's already-selected press is refused in the ACTION (the
-// chord table's `radio` flag, whose users are the view group's three), not in
-// its hoverability.
+// its view group's three radios are hoverable in both states, and a radio's already-selected press is refused in the ACTION — at
+// its lift (the chord table's `radio` flag, whose users are the view group's
+// three) — not in its hoverability.
 //
 // AND redesign_button_hoverable — this zone AND the enabled term, one call —
 // IS DELETED, found caller-less at the 2026-08-13 resolver sweep and dead

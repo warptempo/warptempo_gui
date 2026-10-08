@@ -1634,7 +1634,7 @@ struct GuiInputHandler {
     // AppState::ChromePress).
     // arm_redesign_press is every chord-bearing band claim's press half:
     // hit-test the painter-published rects against the chord table and, on a
-    // hit, apply the button's shift / enabled / radio refusals, then ARM —
+    // hit, apply the button's shift / enabled refusals, then ARM —
     // press-time shift carried with the arm — dispatching NOTHING. Returns
     // true when a rect claimed the press (a refusal still claims it, a refusal
     // being a consumed nothing). The three buttons
@@ -1654,7 +1654,9 @@ struct GuiInputHandler {
     // gates — the modal veil FIRST, for every kind alike, then the roster's own
     // shift admission under the CARRIED shift, then the enabled bit and the
     // radio rule ON THE PAINTED FACE (architect 2026-09-24, strictly
-    // as-painted; never the live predicates) — then run the act: the painted
+    // as-painted; never the live predicates — the radio's consume is this
+    // half's alone since 2026-10-07 evening, the `radio` column of
+    // kToolbarChords) — then run the act: the painted
     // Cancel glyph's cancel act, else the chord through on_key, a face
     // painted live dispatching and its act answering for itself. A lift
     // anywhere else, or a

@@ -483,7 +483,15 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
 //              CHECKED AND HOT drops the checker (toolbar.c draws the pattern
 //              only on a checked button that is not hot), the line and the
 //              shift kept; CHECKED AND PRESSED keeps it (the capture holds
-//              no hot item).
+//              no hot item), so a checked button under a press paints its
+//              resting checked face — the reading of toolbar.c's
+//              TOOLBAR_DrawButton (no ReactOS source tree on hand to
+//              re-verify, 2026-10-07 evening): CDIS_CHECKED lays the pattern
+//              (unless CDIS_HOT), TOOLBAR_DrawFrame sinks the edge for
+//              CDIS_SELECTED or CDIS_CHECKED, the image offset for either,
+//              so the two states compose rather than one winning. The view
+//              group's lit radio shows exactly this through its hold since
+//              its press arms (the `radio` column, kToolbarChords).
 //   DISABLED — never hot and never pressed, so NO EDGE AT ALL
 //              (TOOLBAR_DrawFrame draws none in a non-interactive state);
 //              a disabled CHECKED button keeps the checker and the shift,
@@ -1020,8 +1028,9 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // redesign_button_opens_icon_group), and the row's 8px pad as the lead-out
 // from the lane's right edge. THE ROW'S FACES, and a RADIO OF THREE: the
 // lit button is the current view (redesign_button_selected reads the live
-// combination) and a press on it is the consumed nothing (the `radio` column,
-// kToolbarChords).
+// combination) and a press on it is the consumed nothing at its lift (the
+// `radio` column, kToolbarChords), the hold showing the pressed face over the
+// lit one (paint_toolbar_box's CHECKED AND PRESSED).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
 // CANNOT HOLD EVERY GROUP, THE VIEW GROUP WINS — and since 2026-10-06 the
