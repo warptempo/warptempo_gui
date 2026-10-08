@@ -2162,10 +2162,18 @@ inline bool popup_is_gtk_menu() {
 inline int popup_border_px() {
     return (popup_is_gtk_menu() ? 1 : 2) * relief_line_px();
 }
-// The rows the frame spends at the box's TOP: the whole frame under Windows,
-// none under Clearlooks (its top line stands on the menu row above the box).
-inline int popup_border_top_px() {
-    return popup_is_gtk_menu() ? 0 : popup_border_px();
+// The rows the frame spends at the box's TOP: the whole frame under Windows;
+// under Clearlooks none for a box HANGING from what opened it (its top line
+// stands on that row's last row, above the box), and its one line for a box
+// STANDING on its opener's head (`upward`: the settings choice editor's list,
+// the palette menu's upper placement), where no row of the opener lies above
+// to carry it (2026-10-08, his capture _033145: the line painted one row
+// above an upward box fell outside every damage rect the box owns — the open
+// invalidates the box, the close the published box — so it was clipped away
+// and never shown; standing, the box carries its own top line, and its
+// height, its hit rows and its damage all count it).
+inline int popup_border_top_px(bool upward) {
+    return (popup_is_gtk_menu() && !upward) ? 0 : popup_border_px();
 }
 inline int popup_item_h_px() {
     return scaled_px(live_chrome_spec().popup_item_height_px, 5);

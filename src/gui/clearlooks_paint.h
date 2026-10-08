@@ -232,9 +232,13 @@ void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused,
 // row: GTK's menu covers the menu bar's foot and the open title's (his
 // capture 23-22-06), and the box's published rect, every hit rect, stays
 // where the menu row ends (paint_dropdown; the open and the close damage
-// the top strip, so that row is repainted with the box). The items stand
-// against the frame (x / ythickness 0) and a lit one covers it.
-void paint_cl_menu(cairo_t* cr, const GuiRect& box);
+// the top strip, so that row is repainted with the box). An `upward` box —
+// a list standing on its combo's head (combo_list_box, color_picker.h) —
+// carries the top line on its OWN first row instead (2026-10-08:
+// popup_border_top_px's rule; nothing above it is repainted with the box).
+// The items stand against the frame (x / ythickness 0) and a lit one covers
+// it.
+void paint_cl_menu(cairo_t* cr, const GuiRect& box, bool upward);
 
 // THE LIT MENU ITEM — clearlooks_gummy_draw_menuitem on the item's box:
 // spot[1]'s gummy ramp over the item's whole height inside a one-W spot[2]

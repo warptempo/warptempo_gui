@@ -277,21 +277,31 @@ GuiRect combo_drop_button(const GuiRect& r) {
 // shows 1 W inside the box on each side while the menu's grey frame stands
 // on the box's edge. Flush with the ring is GTK's; the ring is not
 // subtracted here.
+//
+// AN UPWARD BOX CARRIES ITS OWN TOP LINE (2026-10-08, his capture _033145,
+// the palette menu standing on its button with its top line missing — and
+// the choice editor's capture _010753 the same, the gap hidden there as
+// black over the well): under clearlooks the hanging box's top line stands
+// one row above it, on its opener's foot, which the opener's own repaint
+// carries; standing on the combo's head there is no such row, the line fell
+// outside every rect the box damages and was clipped away. So the upward box
+// is one line taller and its rows start below that line
+// (popup_border_top_px(upward), render.h), under win2000 nothing changing.
 GuiRect combo_list_box(const GuiRect& combo, int count, bool upward) {
     const int h = count * popup_item_h_px() + 2 * popup_item_margin_y_px() +
-                  popup_border_top_px() + popup_border_px();
+                  popup_border_top_px(upward) + popup_border_px();
     const int y = upward ? combo.y - h : combo.y + combo.h;
     return GuiRect{combo.x, y, combo.w, h};
 }
 
-GuiRect combo_list_item(const GuiRect& box, int i) {
+GuiRect combo_list_item(const GuiRect& box, int i, bool upward) {
     const int side_b = popup_is_gtk_menu() ? 0 : popup_border_px();
     const int margin_x = live_chrome_spec().popup_margin_px;
     const int inset = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
     const int item_h = popup_item_h_px();
     return GuiRect{box.x + side_b + inset,
-                   box.y + popup_border_top_px() + popup_item_margin_y_px() +
-                       i * item_h,
+                   box.y + popup_border_top_px(upward) +
+                       popup_item_margin_y_px() + i * item_h,
                    box.w - 2 * (side_b + inset), item_h};
 }
 
@@ -408,7 +418,7 @@ Layout layout(const AppState& app, const GuiFont& font) {
         const int count = static_cast<int>(kGuiPaletteRoleCount);
         l.list = combo_list_box(l.chooser, count, /*upward=*/false);
         for (int i = 0; i < count; ++i)
-            l.list_items[i] = combo_list_item(l.list, i);
+            l.list_items[i] = combo_list_item(l.list, i, /*upward=*/false);
     }
 
     // THE PALETTE MENU'S BOUND (2026-10-07; the head's THE PALETTE MENU):
@@ -419,22 +429,27 @@ Layout layout(const AppState& app, const GuiFont& font) {
     // that fit whole in each are what that room leaves after the fixed rows,
     // and THE CAPACITY is the roomier side's count — computed whether or not
     // the menu is down, since Save As's refusal reads it with the menu
-    // closed (palette_menu_name_capacity, commit_name).
+    // closed (palette_menu_name_capacity, commit_name). Each side's fixed
+    // rows carry that placement's own top frame (popup_border_top_px: the
+    // standing menu, under clearlooks, its own top line — 2026-10-08,
+    // combo_list_box's rule).
     const bool gtk_menu   = popup_is_gtk_menu();
     const int  border     = popup_border_px();
     const int  side_b     = gtk_menu ? 0 : border;
     const int  menu_item_h = popup_item_h_px();
     const int  menu_mar   = popup_item_margin_y_px();
-    const int  menu_fixed_h = kPaletteActCount * menu_item_h +
-                              popup_sep_block_px() + 2 * menu_mar +
-                              popup_border_top_px() + border;
+    const auto menu_fixed_h = [&](bool upward) {
+        return kPaletteActCount * menu_item_h + popup_sep_block_px() +
+               2 * menu_mar + popup_border_top_px(upward) + border;
+    };
     const int  room_below = app.height - (l.menu_button.y + l.menu_button.h);
     const int  room_above = l.menu_button.y;
-    const auto names_in = [&](int room) {
-        return room > menu_fixed_h ? (room - menu_fixed_h) / menu_item_h : 0;
+    const auto names_in = [&](int room, bool upward) {
+        const int fixed = menu_fixed_h(upward);
+        return room > fixed ? (room - fixed) / menu_item_h : 0;
     };
-    const int names_below = names_in(room_below);
-    const int names_above = names_in(room_above);
+    const int names_below = names_in(room_below, /*upward=*/false);
+    const int names_above = names_in(room_above, /*upward=*/true);
     l.menu_name_capacity = std::max(names_below, names_above);
 
     // THE PALETTE MENU, when down: its rows (palette_menu_rows' order, the
@@ -476,15 +491,16 @@ Layout layout(const AppState& app, const GuiFont& font) {
         const int w = std::min(app.width,
                                std::max(l.menu_button.w,
                                         2 * pad_x + ceil_px(widest)));
-        const int h = menu_fixed_h + shown * menu_item_h;
+        const int h = menu_fixed_h(!below) + shown * menu_item_h;
         int mx = l.menu_button.x;
         if (mx + w > app.width) mx = app.width - w;
         if (mx < 0) mx = 0;
         const int my = below ? l.menu_button.y + l.menu_button.h
                              : l.menu_button.y - h;
         l.menu = GuiRect{mx, my, w, h};
+        l.menu_upward = !below;
         l.menu_items.clear();
-        int iy = my + popup_border_top_px() + menu_mar;
+        int iy = my + popup_border_top_px(/*upward=*/!below) + menu_mar;
         const auto place_row = [&] {
             l.menu_items.push_back(GuiRect{mx + side_b + inset, iy,
                                            w - 2 * (side_b + inset),

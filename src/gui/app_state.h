@@ -3907,7 +3907,7 @@ inline int dropdown_h_px(DropdownMenu m) {
     return count * popup_item_h_px() +
            separators * popup_sep_block_px() +
            2 * popup_item_margin_y_px() +
-           popup_border_top_px() + popup_border_px();
+           popup_border_top_px(/*upward=*/false) + popup_border_px();
 }
 
 // Double-click window and positional slack (architect-tunable). Two motionless

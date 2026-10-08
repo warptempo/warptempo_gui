@@ -953,7 +953,7 @@ private:
     // THE COMBO'S LIST — one painter, two readers: the picker's chooser and
     // the settings choice editor (the definition's head).
     void paint_combo_list(cairo_t* cr, const GuiFont& font, const GuiRect& box,
-                          int count, int pressed, int hover,
+                          bool upward, int count, int pressed, int hover,
                           const char* (*label_of)(const AppState&, int));
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — full

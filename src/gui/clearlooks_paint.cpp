@@ -879,13 +879,14 @@ void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused,
     cairo_restore(cr);
 }
 
-void paint_cl_menu(cairo_t* cr, const GuiRect& box) {
+void paint_cl_menu(cairo_t* cr, const GuiRect& box, bool upward) {
     const int u = relief_line_px();
     const GuiPalette& pal = palette();
+    const int top_y = upward ? box.y : box.y - u;   // the header's rule
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     paint_cell_rect(cr, box, pal.cl_menu_ground);
-    paint_cell_rect(cr, GuiRect{box.x, box.y - u, box.w, u}, pal.cl_menu_frame);
+    paint_cell_rect(cr, GuiRect{box.x, top_y, box.w, u}, pal.cl_menu_frame);
     paint_cell_rect(cr, GuiRect{box.x, box.y, u, box.h}, pal.cl_menu_frame);
     paint_cell_rect(cr, GuiRect{box.x + box.w - u, box.y, u, box.h},
                     pal.cl_menu_frame);

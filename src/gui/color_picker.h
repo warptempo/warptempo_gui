@@ -234,11 +234,14 @@ inline constexpr int kComboTextGapPx  = 4;
 //     head (the choice editor's: the row is the window's foot, and Windows'
 //     and GTK's combos both open above when no room lies below). The
 //     dropdown's own arithmetic (dropdown_h_px, render.h): the frame, the
-//     item block's two margins, `count` rows.
-//   combo_list_item — the box's row `i`, the dropdown's item rect.
+//     item block's two margins, `count` rows — an UPWARD box under
+//     clearlooks one line taller, carrying its own top line (2026-10-08,
+//     popup_border_top_px; the definition says why).
+//   combo_list_item — the box's row `i`, the dropdown's item rect, `upward`
+//     the box's own (its rows start under the line it carries).
 GuiRect combo_drop_button(const GuiRect& r);
 GuiRect combo_list_box(const GuiRect& combo, int count, bool upward);
-GuiRect combo_list_item(const GuiRect& box, int i);
+GuiRect combo_list_item(const GuiRect& box, int i, bool upward);
 // A SLIDER ROW IS 15 W: GtkScale's slider-width (clearlooks_paint.h's
 // kClScaleSliderWidthPx) and the win2000 thumb's seat here — 3 W above the
 // 4-line channel and 8 below it (the point's 5 and 3 of straight side),
@@ -475,6 +478,10 @@ struct Layout {
     std::vector<PaletteMenuRow> menu_rows;
     std::vector<GuiRect> menu_items;
     int     menu_sep_y = 0;
+    // Whether the menu stands on the button's head (the upper placement),
+    // the box then carrying its own top line under clearlooks (2026-10-08,
+    // combo_list_box's rule; the painter reads it).
+    bool    menu_upward = false;
     // THE MENU'S NAME CAPACITY, menu down or not: how many name rows fit
     // whole beside the acts and the separator in the roomier of the two
     // placements (below the button to the window's foot, above it to the

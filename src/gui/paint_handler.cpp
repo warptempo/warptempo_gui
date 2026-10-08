@@ -4059,7 +4059,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     if (x < 0) x = 0;
     app.dropdown.rect = GuiRect{x, y, w, h};
 
-    if (gtk_menu) paint_cl_menu(cr, app.dropdown.rect);
+    if (gtk_menu) paint_cl_menu(cr, app.dropdown.rect, /*upward=*/false);
     else          paint_popup_chrome(cr, app.dropdown.rect, PopupFace::Menu);
 
     // THE ITEMS' ENABLED VERDICTS (architect 2026-09-24, the truthful menus),
@@ -4082,7 +4082,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // The item block opens BELOW the frame by its own one-px margin, and
     // closes with the same margin above the bottom frame (under Clearlooks
     // at the box's top: its frame's top line stands above it).
-    int iy = y + popup_border_top_px() + block_mar;
+    int iy = y + popup_border_top_px(/*upward=*/false) + block_mar;
     for (int i = 0; i < count; ++i) {
         const DropdownRow row = dropdown_row(menu, i);
         if (row.separator_before) {
@@ -7752,16 +7752,16 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
 // the hovered one, its label at the popup's left pad. Every row is live (no
 // grayed row: both lists' domains are wholly choosable).
 void GuiPaintHandler::paint_combo_list(
-        cairo_t* cr, const GuiFont& font, const GuiRect& box, int count,
-        int pressed, int hover,
+        cairo_t* cr, const GuiFont& font, const GuiRect& box, bool upward,
+        int count, int pressed, int hover,
         const char* (*label_of)(const AppState&, int)) {
     const bool cl =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
-    if (cl) paint_cl_menu(cr, box);
+    if (cl) paint_cl_menu(cr, box, upward);
     else    paint_popup_chrome(cr, box, PopupFace::Menu);
     const int pad_l = scaled_px(kPopupPadXPx);
     for (int i = 0; i < count; ++i) {
-        const GuiRect item = color_picker::combo_list_item(box, i);
+        const GuiRect item = color_picker::combo_list_item(box, i, upward);
         const bool lit = pressed == i || hover == i;
         if (lit) {
             if (cl) paint_cl_menu_item(cr, item);
@@ -7798,14 +7798,16 @@ void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
     if (!ch.list_open) return;
     const int n = app.settings_choice_count();
     const GuiRect box = color_picker::combo_list_box(combo, n, /*upward=*/true);
-    paint_combo_list(cr, font, box, n, ch.list_pressed, ch.list_hover,
+    paint_combo_list(cr, font, box, /*upward=*/true, n, ch.list_pressed,
+                     ch.list_hover,
                      [](const AppState& a, int i) {
                          return a.settings_choice_label(i);
                      });
     dlg.combo_list = box;
     dlg.combo_list_items.clear();
     for (int i = 0; i < n; ++i)
-        dlg.combo_list_items.push_back(color_picker::combo_list_item(box, i));
+        dlg.combo_list_items.push_back(
+            color_picker::combo_list_item(box, i, /*upward=*/true));
 }
 
 void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
@@ -8056,7 +8058,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     cp.stash.list = GuiRect{0, 0, 0, 0};
     cp.stash.list_items = {};
     if (cp.chooser_open) {
-        paint_combo_list(cr, font, L.list,
+        paint_combo_list(cr, font, L.list, /*upward=*/false,
                          static_cast<int>(kGuiPaletteRoleCount),
                          cp.chooser_pressed, cp.chooser_hover,
                          [](const AppState&, int i) {
@@ -8080,7 +8082,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     if (cp.menu_open) {
         const std::vector<color_picker::PaletteMenuRow>& rows = L.menu_rows;
         assert(rows.size() == L.menu_items.size());
-        if (cl) paint_cl_menu(cr, L.menu);
+        if (cl) paint_cl_menu(cr, L.menu, /*upward=*/L.menu_upward);
         else    paint_popup_chrome(cr, L.menu, PopupFace::Menu);
         if (cl) {
             paint_cl_menu_separator(cr, L.menu.x,
