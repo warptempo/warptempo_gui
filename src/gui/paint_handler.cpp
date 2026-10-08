@@ -3822,6 +3822,70 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     cairo_restore(cr);
 }
 
+namespace {
+// WINDOWS' MENU CHECK MARK (architect 2026-10-08, the "True Colors" row:
+// dropdown_item_checked) — Marlett's check, the glyph DrawFrameControl's
+// DFCS_MENUCHECK puts in a popup's check-mark column, a 7 x 7 staircase
+// whose rows are (6, 1) / (5, 2) / (0, 1)(4, 3) / (0, 2)(3, 3) / (0, 5) /
+// (1, 3) / (2, 1) as (x, width) runs. DRAWN AS THE STAIRCASE'S SMOOTH HULL,
+// the caption's Close X's road (paint_caption_close_outline): the polygon
+// through the runs' outer corners and the notch where the two arms' inner
+// edges meet, in the cell's Windows px on the unit grid u, one path, one
+// antialiased fill. The column is the popup's left pad (kPopupPadXPx, the
+// space Windows reserves for this mark), the cell centred in it between the
+// item box's left edge and the label's pen and centred on the item's
+// height. Its ink is the row's label ink; a disabled row embosses it as the
+// label is (Hilight one relief line right and down, Shadow in place —
+// show_embossed_run's two tones). UNDER CLEARLOOKS the same glyph: GTK's
+// check menu item draws the engine's boxed checkbox, whose white well and
+// border are tones the generated Clearlooks block does not carry, so the
+// period mark stands in (a semblance).
+struct MenuCheckPoint {
+    double x, y;
+};
+constexpr int kMenuCheckCellPx = 7;
+constexpr MenuCheckPoint kMenuCheckOutline[] = {
+    {0, 2}, {1, 2}, {2.5, 3.5}, {6, 0}, {7, 0},
+    {7, 3}, {3, 7}, {2, 7}, {0, 5}};
+
+void fill_menu_check(cairo_t* cr, int gx, int gy, int u, GuiColor ink) {
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    for (const MenuCheckPoint& p : kMenuCheckOutline)
+        cairo_line_to(cr, gx + p.x * u, gy + p.y * u);
+    cairo_close_path(cr);
+    set_palette_source(cr, ink);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+// The mark in the check-mark column of `item` (the published item box),
+// the label's pen at `pen_x`, in `ink` — or embossed when `!enabled`.
+void paint_menu_check(cairo_t* cr, const GuiRect& item, int pen_x,
+                      bool enabled, GuiColor ink) {
+    const int u    = scaled_px(1, 1);
+    const int cell = kMenuCheckCellPx * u;
+    const int gx   = item.x + static_cast<int>(std::nearbyint(
+                                  (pen_x - item.x - cell) / 2.0));
+    const int gy   = item.y + static_cast<int>(std::nearbyint(
+                                  (item.h - cell) / 2.0));
+    if (enabled) {
+        fill_menu_check(cr, gx, gy, u, ink);
+        return;
+    }
+    const bool clearlooks =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    const int off = relief_line_px();
+    fill_menu_check(cr, gx + off, gy + off, u,
+                    clearlooks ? palette().cl_text_insensitive_etch
+                               : palette().hilight);
+    fill_menu_check(cr, gx, gy, u,
+                    clearlooks ? palette().cl_text_insensitive
+                               : palette().shadow);
+}
+} // namespace
+
 void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // THE MENU ROW'S DROPDOWN — ONE painter for EVERY menu, hanging flush under
     // the button that emits it at ZERO margin: its top edge is the BUTTON's
@@ -3846,7 +3910,12 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // NO ICONS, NO CHECKBOXES, NO SUBMENU ARROWS, by ruling — the crops reserve
     // all three columns and this product has none of them, exactly as the tabs
     // dropped theirs. What the columns' SPACE becomes is the labels' left INDENT
-    // and the accelerator's right margin.
+    // and the accelerator's right margin. ONE CHECK MARK STANDS IN THAT INDENT
+    // SINCE 2026-10-08 (architect, the "True Colors" row; paint_menu_check):
+    // the ruling's reason is that a badge restates what the picture shows,
+    // and the sRGB conversion's state is the one state the picture cannot
+    // show — the mark is Windows' own, in the column Windows reserved for
+    // it, and no row but that one has a state (dropdown_item_checked).
     //
     // THE CHECKBOX HALF OF THAT RULING WAS TESTED ON 2026-08-27 AND HELD, and
     // it has no producer at all again since 2026-09-04: the ITERATIONS menu's
@@ -4071,22 +4140,26 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // (show_embossed_run) — one disabled rule for the menu anchors and
         // the menus (architect 2026-10-03, Windows' DSS_DISABLED). A disabled
         // row is never lit (the gate above).
+        // (Clearlooks: the menu_item style's fg[PRELIGHT] on the lit item,
+        // its fg[NORMAL] on the menu's ground — GTK's insensitive pair is
+        // the emboss's own arm, show_embossed_run.)
+        const GuiColor row_ink =
+            gtk_menu ? (lit ? palette().cl_menuitem_text
+                            : palette().cl_menu_text)
+                     : (lit ? palette().selected_text : palette().label);
         const auto show_row_run = [&](const text_shape::ShapedRun& r,
                                       double rx) {
             if (!enabled[i]) {
                 show_embossed_run(cr, r, rx, base);
                 return;
             }
-            // (Clearlooks: the menu_item style's fg[PRELIGHT] on the lit
-            // item, its fg[NORMAL] on the menu's ground — GTK's insensitive
-            // pair is the emboss's own arm, show_embossed_run.)
-            set_palette_source(cr, gtk_menu ? (lit ? palette().cl_menuitem_text
-                                                   : palette().cl_menu_text)
-                                            : (lit ? palette().selected_text
-                                                   : palette().label));
+            set_palette_source(cr, row_ink);
             text_shape::show_shaped_run(cr, r, rx, base);
         };
         show_row_run(runs[i], static_cast<double>(x + pad_l));
+        // THE CHECK MARK (paint_menu_check), in the label's ink.
+        if (dropdown_item_checked(menu, i))
+            paint_menu_check(cr, item, x + pad_l, enabled[i], row_ink);
 
         // THE ACCELERATOR COLUMN is RIGHT-ALIGNED to the popup's own right
         // margin, not to the item box's: the margin is a fact about the box,

@@ -456,15 +456,17 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
 // OPAQUE AND NOTHING BLENDED AT PAINT TIME: each cell is one opaque rounded
 // ramp value, written as words into an image (argb32_opaque_word's road, the
 // plate's precedent) and laid on the caption whole. The image is kept
-// between paints and rebuilt only when the caption's size or either colour
-// moves (the picture reads nothing else; a gui_scale change moves the size),
-// since the top strip's damage repaints the caption often and its ramp
-// seldom changes.
+// between paints and rebuilt only when the caption's size, either colour or
+// the conversion state moves (the picture reads nothing else; a gui_scale
+// change moves the size; True Colors flips the conversion,
+// install_true_colors), since the top strip's damage repaints the caption
+// often and its ramp seldom changes.
 namespace {
 struct CaptionGradientImage {
     cairo_surface_t* surface = nullptr;
     int              w = 0, h = 0;
     uint32_t         start = 0, end = 0;
+    bool             converted = false;   // display_transform::active()
 };
 CaptionGradientImage g_caption_gradient;
 } // namespace
@@ -479,12 +481,14 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
         return;
     }
     CaptionGradientImage& img = g_caption_gradient;
+    const bool converted = display_transform::active();
     if (!img.surface || img.w != r.w || img.h != r.h ||
-        img.start != start_word || img.end != end_word) {
+        img.start != start_word || img.end != end_word ||
+        img.converted != converted) {
         if (img.surface) cairo_surface_destroy(img.surface);
         img = CaptionGradientImage{
             cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h), r.w,
-            r.h, start_word, end_word};
+            r.h, start_word, end_word, converted};
         cairo_surface_flush(img.surface);
         unsigned char* data = cairo_image_surface_get_data(img.surface);
         const int stride = cairo_image_surface_get_stride(img.surface);
@@ -723,12 +727,11 @@ void render_waveform(cairo_surface_t* dest,
     // the `waveform_ink` role), worn by the dark lamp's raw bar and by both lit
     // bars' fills, and the inner bar's outline (the `waveform_outline` role;
     // built always, written only when lit).
-    // Each converted for the window at this, the plate's entry
-    // (display_color; display_transform.h's head).
-    const uint32_t ink_word =
-        argb32_opaque_word(display_color(hex(inks.ink_rgb)));
-    const uint32_t outline_word =
-        argb32_opaque_word(display_color(hex(inks.outline_rgb)));
+    // Each is already the window's word (WaveformPlateInks, converted on the
+    // GUI thread by waveform_plate_inks; display_transform.h's head), so the
+    // worker reads no switch.
+    const uint32_t ink_word     = argb32_opaque_word(hex(inks.ink_rgb));
+    const uint32_t outline_word = argb32_opaque_word(hex(inks.outline_rgb));
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -2645,7 +2648,12 @@ namespace {
 
 const GuiPalette& palette() { return g_palette; }
 uint64_t palette_generation() { return g_palette_generation; }
-WaveformPlateInks waveform_plate_inks() { return g_plate_inks; }
+WaveformPlateInks waveform_plate_inks() {
+    // The window's words (the struct's declaration, render.h).
+    return WaveformPlateInks{display_transform::display_rgb(g_plate_inks.ink_rgb),
+                             display_transform::display_rgb(
+                                 g_plate_inks.outline_rgb)};
+}
 const GuiPaletteWords& program_palette_words() { return g_program_words; }
 
 namespace {
@@ -2683,6 +2691,13 @@ void install_program_palette(const GuiPaletteWords& words) {
     // The contract and the apply shape the caller owes are at the
     // declaration (palette_file.h).
     fill_program_palette(words);
+    ++g_palette_generation;
+}
+
+void install_true_colors(bool on) {
+    // The contract, the caches it rebuilds and the apply shape the caller
+    // owes are at the declaration (render.h).
+    display_transform::set_true_colors(on);
     ++g_palette_generation;
 }
 

@@ -69,6 +69,8 @@
 // and the painters convert each to the Display-P3 triple that presents it as
 // a browser does (display_transform.h's head), so the bytes this file copies
 // to the window are the converted ones — the copy itself stays byte for byte.
+// (While the Settings menu's True Colors is unchecked, for a screenshot, the
+// painters convert nothing and the bytes are the authored sRGB ones.)
 
 // ---------------------------------------------------------------------------
 // The logcat sink for the GUI's own diagnostics
@@ -728,8 +730,9 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // it), so the panel receives them as it receives a gallery viewer's
     // P3-tagged image. THOSE BYTES ARE ALREADY P3 (architect 2026-10-08):
     // every authored color is sRGB and the painters convert it at their entry
-    // while window_is_display_p3() holds (display_transform.h's head), so a
-    // hex shows here as the browser shows it. A REFUSAL IS REPORTED AND NOT
+    // while window_is_display_p3() holds and True Colors is on
+    // (display_transform.h's head), so a hex shows here as the browser shows
+    // it. A REFUSAL IS REPORTED AND NOT
     // FATAL, as the geometry's is: the layer then stays sRGB, the flag reads
     // false and nothing is converted — the laptop's case, whose Wayland
     // surface stays untagged sRGB. API 28; minSdk is 30.

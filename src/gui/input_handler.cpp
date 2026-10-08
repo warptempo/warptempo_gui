@@ -4248,6 +4248,16 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     paint_handler.on_resize(app.width, app.height);
 }
 
+void GuiInputHandler::toggle_true_colors() {
+    // The apply shape is at install_true_colors' declaration (render.h).
+    const WaveformPlateInks before = waveform_plate_inks();
+    install_true_colors(!display_transform::true_colors());
+    icons::drop_rasters();
+    if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
+    else                                 viewport.refresh_flag_cache();
+    viewport.invalidate_all();
+}
+
 void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     // The contract — sole writer, band resolved by tab, damage only when the
     // named band is the active one, history-less — is at the declaration

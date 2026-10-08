@@ -3804,6 +3804,15 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
+    // TRUE COLORS' ONE ACT (architect 2026-10-08 ~05:35; the ruling at
+    // display_transform.h's head): the Settings menu's "True Colors" row's
+    // release flips the conversion's process-lifetime bit through
+    // install_true_colors and runs the apply shape its declaration owes
+    // (render.h): the icon rasters dropped, the plate kicked when its inks
+    // moved and the flag cache refreshed otherwise, the whole window
+    // invalidated. It cards nothing: the row's check mark is the state.
+    void toggle_true_colors();
+
     // The read-only bit's one setter (2026-09-04, after the two roads
     // had drifted apart on damage). Two roads write the
     // bit: bare `o` on the active tab, which the icon row's Lock button

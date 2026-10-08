@@ -614,16 +614,21 @@ void wheel_sv_at(const Layout& l, double hue_deg, int x, int y, double& s,
 namespace {
 // THE TWO CACHED RASTERS (the head's rule: the ring once per size, the
 // triangle once per size and hue), ARGB32 premultiplied, the wheel's square.
+// Each also keys THE CONVERSION STATE its pixels were premultiplied under
+// (display_transform::active(), `converted`), so a flip of True Colors
+// (install_true_colors, render.h) rebuilds both.
 struct RingCache {
     cairo_surface_t* surf  = nullptr;
     int              side  = -1;
     int              ring  = -1;
+    bool             converted = false;
 };
 struct TriangleCache {
     cairo_surface_t* surf  = nullptr;
     int              side  = -1;
     int              ring  = -1;
     double           hue   = -1.0;
+    bool             converted = false;
 };
 RingCache     g_ring;
 TriangleCache g_triangle;
@@ -668,6 +673,7 @@ void render_ring(RingCache& c, int side, int ring) {
     c.surf = fresh_surface(side);
     c.side = side;
     c.ring = ring;
+    c.converted = display_transform::active();
     cairo_surface_flush(c.surf);
     unsigned char* data = cairo_image_surface_get_data(c.surf);
     const int stride = cairo_image_surface_get_stride(c.surf);
@@ -696,6 +702,7 @@ void render_triangle(TriangleCache& c, int side, int ring, double hue_deg) {
     c.side = side;
     c.ring = ring;
     c.hue  = hue_deg;
+    c.converted = display_transform::active();
     cairo_surface_flush(c.surf);
     unsigned char* data = cairo_image_surface_get_data(c.surf);
     const int stride = cairo_image_surface_get_stride(c.surf);
@@ -751,10 +758,13 @@ void paint_wheel(cairo_t* cr, const Layout& l, double hue_deg, double s,
     const int side = l.wheel.w;
     if (side <= 0) return;
     const int ring = static_cast<int>(std::nearbyint(l.outer_r - l.inner_r));
-    if (g_ring.surf == nullptr || g_ring.side != side || g_ring.ring != ring)
+    const bool converted = display_transform::active();
+    if (g_ring.surf == nullptr || g_ring.side != side || g_ring.ring != ring ||
+        g_ring.converted != converted)
         render_ring(g_ring, side, ring);
     if (g_triangle.surf == nullptr || g_triangle.side != side ||
-        g_triangle.ring != ring || g_triangle.hue != hue_deg)
+        g_triangle.ring != ring || g_triangle.hue != hue_deg ||
+        g_triangle.converted != converted)
         render_triangle(g_triangle, side, ring, hue_deg);
 
     cairo_save(cr);

@@ -3388,12 +3388,14 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // the popup's own geometry (item count). The keys are the canonical spellings
 // the settings editor takes, so the prefill goes through the ordinary recall
 // serializer with nothing translated on the way.
-// THE ROW'S ACT (2026-10-07): the menu carries ONE COMMAND ROW beside its
-// keys — "Pick Colors", the color picker's opener (GuiColorPicker::open; the
-// only road to it, no chord) — so a row says which it is: EditKey prefills
-// the settings editor with `key`, PickColors opens the picker and its `key`
-// is unread (nullptr).
-enum class SettingsPopupAct { EditKey, PickColors };
+// THE ROW'S ACT (2026-10-07): the menu carries COMMAND ROWS beside its keys
+// — "Pick Colors", the color picker's opener (GuiColorPicker::open; the
+// only road to it, no chord), and since 2026-10-08 "True Colors", the
+// conversion's toggle (GuiInputHandler::toggle_true_colors) — so a row says
+// which it is: EditKey prefills the settings editor with `key`, PickColors
+// opens the picker, TrueColors flips the bit, and a command row's `key` is
+// unread (nullptr).
+enum class SettingsPopupAct { EditKey, PickColors, TrueColors };
 // THE ROW'S EDITOR (architect 2026-10-07 evening: "a drop-down for chrome
 // and theme at the very least"): an EditKey row opens the settings editor
 // in one of two KINDS. TEXT is the `key=value` line in the sunken field,
@@ -3491,15 +3493,26 @@ struct SettingsPopupItem {
 // (commit_device_setting), so its refusal-free value, the config write and
 // the next-launch card are unchanged.
 //
-// `Pick Colors` IS THE MENU'S ONE COMMAND ROW (architect 2026-10-07: the
-// in-app color picker, "a full-fledged part of the project"), the LAST row
-// behind its own separator — a command parting from the keys above it —
-// Title Case and no ellipsis (kdenlive's convention). Its release opens the
-// color picker on the half of the window opposite the lift's x
-// (GuiColorPicker::open), refusing as the project picker's opener refuses;
-// it grays as every Settings row does, during a load alone
-// (dropdown_item_enabled), and the whole anchor is dead under the two list
-// owners, the `h` view and the color picker itself (menu_anchor_live).
+// `Pick Colors` IS THE MENU'S FIRST COMMAND ROW (architect 2026-10-07: the
+// in-app color picker, "a full-fledged part of the project"), behind its own
+// separator — a command parting from the keys above it — Title Case and no
+// ellipsis (kdenlive's convention). Its release opens the color picker on
+// the half of the window opposite the lift's x (GuiColorPicker::open),
+// refusing as the project picker's opener refuses; it grays as every
+// Settings row does, during a load alone (dropdown_item_enabled), and the
+// whole anchor is dead under the two list owners, the `h` view and the
+// color picker itself (menu_anchor_live).
+//
+// `True Colors` IS THE LAST ROW (architect 2026-10-08 ~05:35, his "show true
+// colors / sRGB color conversion", Windows' own "True Color" word): the sRGB
+// conversion's toggle, CHECKED while it is on — at every launch — and
+// unchecked by a press only for a screenshot whose bytes are the colors as
+// typed (the ruling at display_transform.h's head). A command row in the
+// same group as Pick Colors, no separator between them. Its state is
+// Windows' menu check mark in the popup's check-mark column
+// (dropdown_item_checked; the dropdown painter); its release flips the bit
+// (GuiInputHandler::toggle_true_colors) and cards nothing; it grays as every
+// Settings row does.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Title",               "title",         false},
     {"Notes",               "notes",         false},
@@ -3511,6 +3524,7 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Chrome",              "chrome",        false, SettingsPopupAct::EditKey,
      SettingsEditorKind::Choice, &kChromeChoiceSource},
     {"Pick Colors",         nullptr,         true, SettingsPopupAct::PickColors},
+    {"True Colors",         nullptr,         false, SettingsPopupAct::TrueColors},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
@@ -3866,10 +3880,22 @@ inline constexpr DropdownRow dropdown_row(DropdownMenu m, int i) {
     return {it.label, nullptr, it.separator_before};
 }
 
+// IS THIS ROW CHECKED — the one menu row with a state, Settings' "True
+// Colors" (architect 2026-10-08), answers the live bit
+// (display_transform::true_colors); every other row of every menu answers
+// false. The dropdown painter draws Windows' menu check mark on a true
+// answer; the act is the row's release.
+inline bool dropdown_item_checked(DropdownMenu m, int i) {
+    if (m != DropdownMenu::Settings) return false;
+    return kSettingsPopupItems[static_cast<size_t>(i)].act ==
+               SettingsPopupAct::TrueColors &&
+           display_transform::true_colors();
+}
+
 // The open dropdown's painted HEIGHT, derived from its table and the scale
 // alone — no shaping, no paint. Its one non-painter reader is the OPEN EDGE
 // (toggle_dropdown), which has to damage the box on the frame BEFORE the box
-// exists: the settings popup (kSettingsPopupItems' eleven rows and two separators)
+// exists: the settings popup (kSettingsPopupItems' rows and separators)
 // hangs past the top strip at every scale, and a redraw is clipped to the
 // damage it was given. The painter calls this too, so the damaged height and the painted
 // height are one expression and cannot drift.

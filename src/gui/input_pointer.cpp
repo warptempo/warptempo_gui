@@ -9218,11 +9218,17 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     const SettingsPopupItem& item =
         kSettingsPopupItems[static_cast<size_t>(armed)];
     close_dropdown();
-    // THE MENU'S ONE COMMAND ROW (2026-10-07, SettingsPopupAct): Pick Colors
+    // THE MENU'S COMMAND ROWS (2026-10-07, SettingsPopupAct): Pick Colors
     // opens the color picker on the half opposite this lift's x; the
     // opener carries its own refusals.
     if (item.act == SettingsPopupAct::PickColors) {
         color_picker.open(x);
+        return true;
+    }
+    // TRUE COLORS (2026-10-08): the conversion's toggle, its apply shape
+    // whole at its one act.
+    if (item.act == SettingsPopupAct::TrueColors) {
+        toggle_true_colors();
         return true;
     }
     settings_editor.open_prefilled(item.key);

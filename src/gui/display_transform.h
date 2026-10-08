@@ -19,10 +19,12 @@
 // set_palette_source and set_waveform_source (render.cpp — every role paint,
 // the text's ink included, and every row of paint_cl_ramp, which goes through
 // paint_cell_rect); the words the painters write by hand (render.cpp:
-// paint_checker_rect's two cells, paint_caption_gradient's ramp, the
-// waveform plate's two inks in render_waveform); the icon rasters
-// (icons.cpp, through svg_icon::convert_to_display); the color picker's ring
-// and triangle (color_picker.cpp's premultiplied). THE CONVERSION IS AT THE
+// paint_checker_rect's two cells, paint_caption_gradient's ramp, and the
+// waveform plate's two inks, converted on the GUI thread as
+// waveform_plate_inks hands them to the job, so the worker writes them
+// as they come); the icon rasters (icons.cpp, through
+// svg_icon::convert_to_display); the color picker's ring and triangle
+// (color_picker.cpp's premultiplied). THE CONVERSION IS AT THE
 // SOURCE, never a frame-level pass: the window buffer is copied byte for
 // byte, every flat color is exact, and an antialiased edge or a ramp's
 // in-between level is the renderer's blend of converted colors (render.h's
@@ -62,10 +64,30 @@
 // the panel showed) can be converted once to the sRGB byte that presents the
 // same color — kP3ToSrgb above is its matrix, the curve the same.
 //
-// THE SWITCH (set_active) is GuiPlatform::window_is_display_p3, read once by
-// gui_main right after the window exists and before any painter or worker
-// thread runs, so the plain flag needs no synchronisation; nothing ever
-// changes it after.
+// THE SWITCH (active) IS TWO BITS, both true for the transform to run:
+//   * THE WINDOW'S SPACE (set_window_display_p3) — GuiPlatform::
+//     window_is_display_p3, read once by gui_main right after the window
+//     exists and before any painter or worker thread runs; nothing changes it
+//     after.
+//   * TRUE COLORS (set_true_colors; architect 2026-10-08 ~05:35) — the
+//     Settings menu's "True Colors" row, CHECKED, TRUE AT EVERY LAUNCH ("the
+//     default is on, not something off by default") and no device key: with
+//     the conversion on, a screenshot holds the converted P3 bytes, so a hex
+//     read off it in GIMP is not the authored one ("I won't be able to
+//     round-trip"); app screenshots are "only for occasional documentation
+//     or sharing, not design", so he unchecks it for the capture alone. While
+//     it is FALSE nothing converts: the raw sRGB bytes go to the P3 layer, a
+//     capture round-trips byte for byte, and the glass reads oversaturated
+//     meanwhile. On the laptop the row is present and acts (symmetry), and
+//     changes nothing: there is no conversion to turn off. PROCESS-LIFETIME
+//     STATE, FILE-SCOPE HERE AND NOT ON AppState, which gui_main rebuilds at
+//     every project reopen while the window and its caches stand (the live
+//     palette words' reason, render.h's program_palette_words). Its one
+//     writer is install_true_colors (render.h), which owes the rebuild of
+//     every cached converted pixel.
+// BOTH ARE PLAIN FLAGS READ ON THE GUI THREAD ALONE: every reader above runs
+// there (the waveform worker is handed the plate's inks already converted),
+// so the flip between two frames needs no synchronisation.
 //
 // GUI-ONLY: warptempo_cli paints nothing and never includes this header.
 
@@ -195,10 +217,13 @@ inline uint32_t srgb_word_from_p3(uint32_t p3) {
     return transform_word(kP3ToSrgb, p3);
 }
 
-// THE SWITCH (the head).
-inline bool g_active = false;
-inline void set_active(bool on) { g_active = on; }
-inline bool active() { return g_active; }
+// THE SWITCH'S TWO BITS (the head).
+inline bool g_window_display_p3 = false;
+inline bool g_true_colors       = true;
+inline void set_window_display_p3(bool on) { g_window_display_p3 = on; }
+inline void set_true_colors(bool on) { g_true_colors = on; }
+inline bool true_colors() { return g_true_colors; }
+inline bool active() { return g_window_display_p3 && g_true_colors; }
 
 // An sRGB 0xRRGGBB as the window takes it: converted on a P3 window, the
 // word itself otherwise.

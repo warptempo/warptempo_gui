@@ -209,8 +209,11 @@ inline std::string_view gui_live_icon_set() {
 // (svg_icon.h's error rule).
 std::optional<std::string> load_svg_set(std::string_view set);
 
-// THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale):
-// the cache refills lazily at the new sizes; the parsed drawings stay.
+// THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale)
+// and on a flip of True Colors (GuiInputHandler::toggle_true_colors — the
+// rasters are converted for the window as they are made, svg_icon.h): the
+// cache refills lazily at the new sizes and in the new conversion; the
+// parsed drawings stay.
 void drop_rasters();
 
 // Draw `icon`'s cell onto the square (x, y, size_px, size_px): the

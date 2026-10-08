@@ -1349,8 +1349,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         window_up = true;
         // THE WINDOW'S COLOR SPACE, read once, here: after init() adopted the
         // window and before any painter or worker thread runs
-        // (display_transform.h's head, architect 2026-10-08).
-        display_transform::set_active(gui.window_is_display_p3());
+        // (display_transform.h's head, architect 2026-10-08). True Colors,
+        // the switch's other bit, starts true and is never reset here: it
+        // is the process's (install_true_colors).
+        display_transform::set_window_display_p3(gui.window_is_display_p3());
     }
 
     // -- Viewport + invalidation helpers ------------------------------------

@@ -429,6 +429,25 @@ const std::array<uint32_t, 15>& program_palette_words();
 // (waveform_plate_inks).
 uint64_t palette_generation();
 
+// THE INSTALL FAMILY'S THIRD MEMBER, TRUE COLORS (architect 2026-10-08
+// ~05:35; the rule and the ruling at display_transform.h's head): the
+// Settings menu's "True Colors" row writes the switch's process-lifetime
+// bit (display_transform::set_true_colors) and bumps palette_generation, as
+// every color the window is handed moves with it. EVERY CACHED CONVERTED
+// PIXEL IS REBUILT, re-grepped 2026-10-08 against the head's list of
+// converting sites: the flag cache by the generation bumped here; the
+// waveform plate by its inks' fingerprint (waveform_plate_inks hands the
+// window's words); the caption ramp and the color picker's ring and
+// triangle by the conversion state in their own cache keys
+// (paint_caption_gradient, color_picker.cpp's RingCache / TriangleCache);
+// the checker's tile is built per fill and keeps nothing. THE APPLY SHAPE THE
+// CALLER OWES, after the call (GuiInputHandler::toggle_true_colors): the
+// icon rasters dropped (icons::drop_rasters — they convert at raster time
+// and key on the device px alone), the plate kicked when its inks moved and
+// the flag cache refreshed otherwise (install_program_palette's shape,
+// palette_file.h), then the whole window invalidated — every color changes.
+void install_true_colors(bool on);
+
 // -- THE TRIM LANE, THE RULER LANE, THE PLAYHEAD -------------------------------
 
 // THE TRIM LANE IS A MINIATURIZED SCROLL BAR (architect 2026-10-02; the
@@ -656,7 +675,12 @@ uint64_t palette_generation();
 
 // THE PLATE'S TWO BAKED INKS, as words: the fingerprint field and the job
 // field that carry the active ink and outline to the worker (the worker reads
-// no live state), set by install_palette.
+// no live state), set by the install family. THE WORDS ARE THE WINDOW'S
+// (architect 2026-10-08, display_transform.h's head): waveform_plate_inks
+// hands the two roles through display_transform::display_rgb on the GUI
+// thread, so the plate writes them as they come, and a flip of True Colors
+// (install_true_colors) moves the fingerprint exactly when it moves a
+// colored ink — a gray ink converts to itself and re-renders nothing.
 struct WaveformPlateInks {
     uint32_t ink_rgb     = 0;
     uint32_t outline_rgb = 0;
@@ -2591,8 +2615,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // use sees the pixels.
 //
 // THE INKS ARE PASSED, `inks` (WaveformPlateInks, the job's snapshot of the
-// `waveform_ink` and `waveform_outline` roles — the worker reads no live
-// state): the plate paints in the ink with the lamp dark, and lit both bars in
+// `waveform_ink` and `waveform_outline` roles AS THE WINDOW TAKES THEM —
+// already converted, waveform_plate_inks; the worker reads no live state): the plate paints in the ink with the lamp dark, and lit both bars in
 // the ink with the inner's outline in the outline (row 6) — it
 // is trim-agnostic, and the out-of-trim dim that
 // once masked a second color through this alpha is retired, the trim bar
