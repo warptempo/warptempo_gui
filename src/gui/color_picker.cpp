@@ -397,30 +397,35 @@ GuiRect combo_drop_button(const GuiRect& r) {
     return GuiRect{r.x + r.w - fb - bw, r.y + fb, bw, r.h - 2 * fb};
 }
 
-// A COMBO LIST IS NOT A MENU (2026-10-08 ~23:55, under his symmetry ask of
-// ~23:45 on the cde glass, "all others are symmetrical with padding on left
-// and right"): Windows' own combo lists — ReactOS WordPad's font combo —
-// inset their text a few px with no check-mark column and run the combo's
-// width with the air at the right; the 22-W pad (kPopupPadXPx, render.h) is
-// THE MENU'S, its check column, and stays with the menus (the menu row's
-// pull-downs and the picker's preset menu, which has acts). So a combo's
-// list sets its names at THE FACE'S OWN TEXT INSET (combo_text_inset_px:
-// the field's edge and the dialog field's 5-W pad, or under clearlooks the
-// gummy button's left pad), the name in every row standing directly under
-// the name on the face, and its MINIMUM WIDTH IS THAT INSET ON BOTH SIDES OF
-// ITS WIDEST NAME — inset + name + inset, the frame inside the insets as the
-// face's edge is inside its own. The list is the combo's width (flush,
-// below), so the combo is the wider of its face and that minimum (layout's
-// combo_w; the element chooser's width the head's THE WIDTH proves), and
-// the air to the right of a row's name is the face's own. Readers: the
-// picker's scope list and element list, and the settings editor's choice
-// list, paint_combo_list's three.
+// ONE DROP-DOWN PADDING UNDER EVERY CHROME — THIS COMMENT IS THE RULE'S
+// ONE OWNER (architect 2026-10-09 ~00:30, on three tablet captures, of the
+// menus' 22-W pads on the picker's preset menu: "a classic padding style,
+// but generally used in roomier interfaces; the picker is relegated to
+// small space" — ruled: STANDARDIZE
+// ALL THREE TO WINDOWS' DROP-DOWN PADDING, APPROXIMATELY, UNDER EVERY
+// CHROME, the padding one number "especially on the left"). Windows' own
+// combo lists — ReactOS WordPad's font combo — inset their text a few px
+// with no check-mark column; the combo's text stands inside the sunken
+// field's two lines and the dialog field's 5-W pad (kModalFieldPadXPx).
+// That is THE DROP-DOWN INSET, kComboTextInsetPx = 2 + 5 = 7 W, ONE NUMBER
+// UNDER EVERY CHROME — under clearlooks too, though its gummy button's own
+// pad is 6, and under cde, though its field is one line (the planner's
+// reading of "approximately Windows' padding"). It is:
+//   THE FACE'S TEXT INSET, from the combo's outer left edge to the name
+//     (paint_picker_combo; the layout's combo_w, whose face is symmetric
+//     about the name under win2000 and cde);
+//   EVERY DROP-DOWN LIST'S ROW INSET, ON BOTH SIDES OF ITS WIDEST NAME — a
+//     list's minimum width is inset + name + inset, the name in every row
+//     standing directly under the name on the face — for THE SCOPE LIST, THE
+//     ELEMENT LIST, THE PRESET MENU (its acts, his files and the built-ins
+//     alike; the layout's and the painter's pad) and THE SETTINGS EDITOR'S
+//     CHOICE LIST, which reads the same painters (paint_combo_list).
+// THE SEPARATORS are the one per-chrome difference among them
+// (paint_popup_separator's three kinds). The element chooser's width stays
+// the column's remainder (the head's THE WIDTH). The menus' 22-W pads
+// (kPopupPadXPx, render.h) are the menu row's pull-downs' alone.
 int combo_text_inset_px() {
-    const GuiChromeVocabulary v = live_chrome_spec().vocabulary;
-    if (v == GuiChromeVocabulary::Clearlooks)
-        return scaled_px(live_chrome_spec().push_button_pad_left_px);
-    return (v == GuiChromeVocabulary::Cde ? 1 : 2) * relief_line_px() +
-           scaled_px(kModalFieldPadXPx);
+    return scaled_px(kComboTextInsetPx);
 }
 
 // THE LIST IS EXACTLY THE COMBO'S OUTER BOX WIDE, FLUSH AT BOTH EDGES,
@@ -516,28 +521,27 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int text_gap = scaled_px(kComboTextGapPx);
     const auto combo_w = [&](double text_w) {
         const int t = ceil_px(text_w);
+        const int inset = combo_text_inset_px();
         int face = 0;
         if (spec.vocabulary == GuiChromeVocabulary::Clearlooks) {
-            face = scaled_px(spec.push_button_pad_left_px) + t + text_gap +
+            // The inset, the name, then GtkComboBox's own right side: the
+            // text gap, the wedge and the gummy button's right pad.
+            face = inset + t + text_gap +
                    scaled_px(kComboArrowWPx, kComboArrowMinWPx) +
                    scaled_px(spec.push_button_pad_right_px);
         } else {
             // THE FACE IS SYMMETRIC (architect 2026-10-08 ~22:25, on his cde
             // glass: "the Chrome versus Waveform picker is short on the
-            // right-hand side"): the sunken field's lines (one under cde,
-            // combo_drop_button), then THE DIALOG FIELD'S PAD ON BOTH SIDES
-            // of the shaped name — the 5 W the text has on its left, the same
-            // 5 W after it before the drop-down button's edge — never the
-            // 4-W text gap, which left the name one W nearer the button than
-            // the field's edge and set the face by the list's arithmetic.
-            const int fb =
-                (spec.vocabulary == GuiChromeVocabulary::Cde ? 1 : 2) * lw;
-            face = fb + 2 * scaled_px(kModalFieldPadXPx) + t +
-                   scaled_px(kComboButtonWPx) + fb;
+            // right-hand side"): the drop-down inset from the outer edge to
+            // the name, and the same air inside the field's edge after it
+            // before the drop-down button's edge (the inset less the field's
+            // lines, one under cde — combo_drop_button), then the button and
+            // the field's edge: 2 x inset + name + button.
+            face = 2 * inset + t + scaled_px(kComboButtonWPx);
         }
-        // THE LIST'S MINIMUM (combo_list's rule): the face's text inset on
-        // both sides of the name — never the menu's 22-W pads.
-        const int list = 2 * combo_text_inset_px() + t;
+        // THE LIST'S MINIMUM (combo_text_inset_px's rule): the inset on
+        // both sides of the name.
+        const int list = 2 * inset + t;
         return std::max(face, list);
     };
     double scope_text = 0.0;
@@ -581,13 +585,15 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int val_w = ceil_px(text_shape::shape_text_run(font, digits).width_px);
     const int gap_l = scaled_px(kSliderLabelGapPx);
     const int gap_v = scaled_px(kSliderValueGapPx);
+    const int pad_v = scaled_px(kSliderValuePadPx);   // the cell to the column's edge
     const int rows_y = l.inner.y + chooser_h + gap;
     for (int i = 0; i < kChannelCount; ++i) {
         const int ry = rows_y + i * row_h;
         l.slider_row[i]   = GuiRect{col_x, ry, col_w, row_h};
         l.slider_label[i] = GuiRect{col_x, ry, lab_w, row_h};
         const int tx = col_x + lab_w + gap_l;
-        const int tw = std::max(1, col_w - lab_w - gap_l - gap_v - val_w);
+        const int tw =
+            std::max(1, col_w - lab_w - gap_l - gap_v - val_w - pad_v);
         l.slider_track[i] = GuiRect{tx, ry, tw, row_h};
         l.slider_value[i] = GuiRect{tx + tw + gap_v, ry, val_w, row_h};
     }
@@ -665,15 +671,16 @@ Layout layout(const AppState& app, const GuiFont& font) {
     // popup scroll block): hung from the button's foot or standing on its
     // head, the shown scroll rows — every row from the top whose heights,
     // a separator at its own, fit the box's room — laid from the item
-    // block's top. Its width is the widest row's label between the popup's
-    // two pads, plus the bar when it scrolls (kPopupPadXPx), or the
-    // button's, whichever is wider, at the button's left edge held inside
+    // block's top. Its width is the widest row's label between THE
+    // DROP-DOWN INSET on both sides (combo_text_inset_px's rule, 2026-10-09:
+    // the preset menu is a drop-down, not a menu-row pull-down), plus the
+    // bar when it scrolls, or the button's, whichever is wider, at the button's left edge held inside
     // the window across — measured over every row, so a scroll never
     // changes it. Every row is in menu_rows; a row scrolled out of view
     // carries the zero rect, so the painter publishes no row the window does
     // not show.
     if (app.color_picker.menu_open) {
-        const int pad_x       = scaled_px(kPopupPadXPx);
+        const int pad_x       = combo_text_inset_px();
         const int menu_item_h = popup_item_h_px();
         std::vector<PresetMenuRow> rows =
             preset_menu_rows(app.color_picker.scope);

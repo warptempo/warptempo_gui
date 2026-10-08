@@ -1284,8 +1284,9 @@ static void paint_popup_separator(cairo_t* cr, int x0, int x1, bool at_bar,
 constexpr double kPopupItemMinWidthPx = 176.0;
 
 // (THE DROPDOWN'S HORIZONTAL PADS, kPopupPadXPx and kPopupHotkeyGapPx, are
-// render.h's since 2026-10-07, beside the vertical metrics: the color
-// picker's preset menu sizes its box off them in its layout.)
+// render.h's since 2026-10-07, beside the vertical metrics; the menu row's
+// pull-downs alone take them — the color picker's drop-downs take
+// color_picker::combo_text_inset_px, 2026-10-09.)
 
 // THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
 // the face's own CAP BAND in the box, a half-row tie going toward the TOP
@@ -8077,11 +8078,11 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
 // then the SHOWN rows at combo_list_item (color_picker.h; the popup lists'
 // scroll, render.h's popup scroll block), each LIT — the selected pair,
 // GtkMenu's prelight under clearlooks — when it is the pressed row or the
-// hovered one, its label at the popup's left pad; then the scroll bar when
-// it stands. Every row is live (no grayed row: both lists' domains are
-// wholly choosable). ITS LABELS STAND AT THE FACE'S TEXT INSET
-// (color_picker::combo_text_inset_px, 2026-10-08 ~23:55: a combo list is
-// not a menu — combo_list's rule), each row's name under the face's.
+// hovered one; then the scroll bar when it stands. Every row is live (no
+// grayed row: both lists' domains are wholly choosable). ITS LABELS STAND AT
+// THE DROP-DOWN INSET (color_picker::combo_text_inset_px, the one padding
+// rule of every drop-down under every chrome, 2026-10-09), each row's name
+// under the face's.
 void GuiPaintHandler::paint_combo_list(
         cairo_t* cr, const GuiFont& font, const color_picker::ComboList& list,
         int pressed, int hover, PopupScrollPart held,
@@ -8439,7 +8440,10 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     // popup lists' scroll, render.h), its separators — one before each
     // group — the pull-downs' own (paint_popup_separator: etched and inset
     // under win2000, GtkMenu's one row under clearlooks, Motif's across the
-    // pane inside its shadow under cde) where each is in view, each act's enabled bit asked once here
+    // pane inside its shadow under cde) where each is in view — the one
+    // per-chrome difference among the drop-downs — every label at THE
+    // DROP-DOWN INSET (color_picker::combo_text_inset_px, 2026-10-09, the
+    // scope and element lists' own), each act's enabled bit asked once here
     // (preset_act_enabled) and published with its row; a grayed row wears
     // no lit face and its label the emboss (paint_dropdown's rules); then the
     // scroll bar when it stands. EVERY ROW IS PUBLISHED, a row scrolled out
@@ -8462,7 +8466,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
             paint_popup_separator(cr, L.menu.x, sep_r, at_bar,
                                   sep_y + popup_sep_margin_y_px());
         }
-        const int pad_l = scaled_px(kPopupPadXPx);
+        const int pad_l = color_picker::combo_text_inset_px();
         for (std::size_t i = 0; i < rows.size(); ++i) {
             const color_picker::PresetMenuRow& row = rows[i];
             const GuiRect& item = L.menu_items[i];

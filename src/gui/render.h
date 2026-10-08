@@ -2466,9 +2466,9 @@ inline int popup_item_margin_y_px() {
 
 // THE DROPDOWN'S HORIZONTAL PADS, authored in POPUP-BOX coordinates — from
 // the box's own outer edges, which is how a menu with an accelerator column is
-// easiest to state. EVERY MENU TAKES THEM (architect 2026-08-03): the menus
-// differ in one derived term (whether an accelerator column exists) rather
-// than in their padding.
+// easiest to state. EVERY MENU ROW PULL-DOWN TAKES THEM (architect
+// 2026-08-03): the pull-downs differ in one derived term (whether an
+// accelerator column exists) rather than in their padding.
 //
 //  - THE LABEL PAD AND THE RIGHT PAD ARE ONE NUMBER, 22 WINDOWS PX (architect
 //    2026-10-02, the mirror rule): from the popup's left edge to the label's
@@ -2479,17 +2479,19 @@ inline int popup_item_margin_y_px() {
 //    their space as plain padding. It is the right margin the kdenlive crop
 //    measured (30 laptop px, re-authored at the unit's change); the crop's
 //    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
-//    mirror. THEY ARE THE MENUS' (the pull-downs, the picker's preset menu):
-//    a COMBO'S LIST is not a menu and insets its names at the combo face's
-//    own text inset on both sides (color_picker::combo_list's rule,
-//    2026-10-08).
+//    mirror. THEY ARE THE MENU ROW'S PULL-DOWNS' ALONE: every DROP-DOWN —
+//    the picker's scope and element lists, ITS PRESET MENU, the settings
+//    editor's choice list — takes THE DROP-DOWN INSET on both sides, one
+//    number under every chrome (color_picker::combo_text_inset_px, the
+//    rule's one owner, architect 2026-10-09).
 //  - THE COLUMN GAP is the guaranteed minimum separation between the widest
 //    label and the widest accelerator, the kdenlive crop's 13 laptop px
 //    re-authored as 9 Windows px (architect 2026-10-02: the gap kept).
 //  - A LIST STANDING A SCROLL BAR (the scroll block below, 2026-10-08)
-//    keeps the label pad from its left edge and measures the right pad to
-//    the BAR'S LEFT EDGE: the preset menu, whose width is its labels', widens
-//    by the bar so the labels keep both pads.
+//    keeps its left pad from its left edge and measures the right pad to
+//    the BAR'S LEFT EDGE: the picker's preset menu, whose width is its
+//    labels' between the drop-down inset's two pads, widens by the bar so
+//    the labels keep both.
 inline constexpr double kPopupPadXPx      = 22.0;
 inline constexpr double kPopupHotkeyGapPx = 9.0;
 
@@ -2561,10 +2563,12 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    (popup_scroll_bar); a track too short for the floor shows no thumb, as
 //    Windows shows none. Each chrome draws it in its own scroll bar's
 //    vocabulary (paint_popup_scroll_bar, beside the trim bar's painters).
-//  * THE WIDTH: a box whose width is its labels' (the preset menu) widens by
-//    the bar (kPopupPadXPx's last term); a combo's list stays the combo's own
-//    width (the flush ruling at color_picker::combo_list) with the bar
-//    inside it — its labels are a closed domain the combo already fits.
+//  * THE WIDTH: a box whose width is its labels' (the preset menu, its pads
+//    the drop-down inset, color_picker::combo_text_inset_px) widens by the
+//    bar (the pads block's last term, beside kPopupPadXPx); a combo's list
+//    stays the combo's own width (the flush ruling at color_picker::combo_list)
+//    with the bar inside it — its labels are a closed domain the combo
+//    already fits.
 //  * THE INPUT — the pointer, the pen and one finger alike, every zone the
 //    PUBLISHED bar's (ON SCREEN IS AS PAINTED; popup_scroll_hit): a press on
 //    an ARROW scrolls ONE ROW and wears the pressed face until the lift — ONE
