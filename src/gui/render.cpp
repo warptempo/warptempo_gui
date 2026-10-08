@@ -327,14 +327,15 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
     // THE TILE, Windows' pattern brush: 2 x 2 device px, lit at (0, 0) and
     // (1, 1), the ground at the other two — both cells theme roles handed in,
     // written as words (argb32_opaque_word), so every pixel the fill lays is
-    // one of the two and the fill is opaque.
+    // one of the two and the fill is opaque; each cell's authored color
+    // converted for the window (display_color, the painter's entry).
     cairo_surface_t* tile =
         cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 2, 2);
     cairo_surface_flush(tile);
     unsigned char* data = cairo_image_surface_get_data(tile);
     const int stride = cairo_image_surface_get_stride(tile);
-    const uint32_t lit_word    = argb32_opaque_word(lit);
-    const uint32_t ground_word = argb32_opaque_word(ground);
+    const uint32_t lit_word    = argb32_opaque_word(display_color(lit));
+    const uint32_t ground_word = argb32_opaque_word(display_color(ground));
     for (int y = 0; y < 2; ++y) {
         uint32_t* row = reinterpret_cast<uint32_t*>(data + y * stride);
         for (int x = 0; x < 2; ++x)
@@ -497,18 +498,24 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
         // lands on one at the two devices' full-width
         // captions (1920 and 2304 device px), so those ramps are unchanged;
         // other widths (the restored laptop's) can meet one, one level apart.
+        // THE RAMP IS sRGB LEVELS, as ReactOS wrote them into its own
+        // (sRGB) frame buffer: each column's rounded level is an authored
+        // color like any other and is converted for the window at the
+        // painter's entry (display_transform::display_rgb), never the two
+        // ends converted and the ramp run between them.
         std::vector<uint32_t> row(static_cast<size_t>(r.w));
         for (int x = 0; x < r.w; ++x) {
             const double t = r.w > 1 ? static_cast<double>(x) / (r.w - 1)
                                      : 0.0;
-            uint32_t word = UINT32_C(0xFF000000);
+            uint32_t rgb = 0;
             for (int c = 0; c < 3; ++c) {
                 const long v = static_cast<long>(
                     std::nearbyint(s[c] + (e[c] - s[c]) * t));
-                word |= static_cast<uint32_t>(std::clamp(v, 0L, 255L))
-                        << (16 - 8 * c);
+                rgb |= static_cast<uint32_t>(std::clamp(v, 0L, 255L))
+                       << (16 - 8 * c);
             }
-            row[static_cast<size_t>(x)] = word;
+            row[static_cast<size_t>(x)] =
+                UINT32_C(0xFF000000) | display_transform::display_rgb(rgb);
         }
         for (int y = 0; y < r.h; ++y)
             std::memcpy(data + y * stride, row.data(),
@@ -716,8 +723,12 @@ void render_waveform(cairo_surface_t* dest,
     // the `waveform_ink` role), worn by the dark lamp's raw bar and by both lit
     // bars' fills, and the inner bar's outline (the `waveform_outline` role;
     // built always, written only when lit).
-    const uint32_t ink_word     = argb32_opaque_word(hex(inks.ink_rgb));
-    const uint32_t outline_word = argb32_opaque_word(hex(inks.outline_rgb));
+    // Each converted for the window at this, the plate's entry
+    // (display_color; display_transform.h's head).
+    const uint32_t ink_word =
+        argb32_opaque_word(display_color(hex(inks.ink_rgb)));
+    const uint32_t outline_word =
+        argb32_opaque_word(display_color(hex(inks.outline_rgb)));
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -2611,10 +2622,12 @@ double gui_scale_factor()  {
 // render.h) ---------------------------------------------------------------
 
 void set_palette_source(cairo_t* cr, GuiColor c) {
-    cairo_set_source_rgb(cr, c.r, c.g, c.b);
+    const GuiColor d = display_color(c);
+    cairo_set_source_rgb(cr, d.r, d.g, d.b);
 }
 void set_waveform_source(cairo_t* cr, GuiColor c) {
-    cairo_set_source_rgb(cr, c.r, c.g, c.b);
+    const GuiColor d = display_color(c);
+    cairo_set_source_rgb(cr, d.r, d.g, d.b);
 }
 
 // -- The active palette (the contract is at its declaration, render.h) -----

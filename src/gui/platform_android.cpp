@@ -63,7 +63,12 @@
 // layer tagged DISPLAY_P3 and composed by the hardware composer against this
 // app's V0_SRGB, so the difference is Samsung's display hardware treating a
 // P3-tagged layer its own way, in closed code. Tagging this window P3 hands
-// the app to the hardware exactly as the viewer is handed.
+// the app to the hardware exactly as the viewer is handed. THE MEASUREMENT
+// STANDS (the hardware honors a P3-tagged layer); what the app hands it
+// changed on 2026-10-08 ~05:15: every authored color is an sRGB byte triple,
+// and the painters convert each to the Display-P3 triple that presents it as
+// a browser does (display_transform.h's head), so the bytes this file copies
+// to the window are the converted ones — the copy itself stays byte for byte.
 
 // ---------------------------------------------------------------------------
 // The logcat sink for the GUI's own diagnostics
@@ -718,18 +723,19 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     }
 
     // THE WINDOW IS A DISPLAY-P3 LAYER (architect 2026-10-02; the measurement
-    // is at this file's head). The app's bytes are handed over untouched
-    // under the DISPLAY_P3 tag (the manifest's colorMode makes the compositor
-    // honour it), so the panel receives them as it receives a gallery
-    // viewer's P3-tagged image — and every colour is taken as Display-P3
-    // bytes (render.h's palette head, 2026-10-02): a theme role's byte is
-    // what this panel shows. A REFUSAL IS REPORTED
-    // AND NOT FATAL, as the geometry's is: the layer then stays sRGB and the
-    // colours read a
-    // little differently, as they do on the laptop, whose Wayland surface
-    // stays untagged sRGB. API 28; minSdk is 30.
+    // is at this file's head). The app's bytes are handed over under the
+    // DISPLAY_P3 tag (the manifest's colorMode makes the compositor honor
+    // it), so the panel receives them as it receives a gallery viewer's
+    // P3-tagged image. THOSE BYTES ARE ALREADY P3 (architect 2026-10-08):
+    // every authored color is sRGB and the painters convert it at their entry
+    // while window_is_display_p3() holds (display_transform.h's head), so a
+    // hex shows here as the browser shows it. A REFUSAL IS REPORTED AND NOT
+    // FATAL, as the geometry's is: the layer then stays sRGB, the flag reads
+    // false and nothing is converted — the laptop's case, whose Wayland
+    // surface stays untagged sRGB. API 28; minSdk is 30.
     const int32_t space_rc =
         ANativeWindow_setBuffersDataSpace(window_, ADATASPACE_DISPLAY_P3);
+    window_display_p3_ = space_rc == 0;
     if (space_rc != 0) {
         std::fprintf(stderr,
                      "warptempo_gui: ANativeWindow_setBuffersDataSpace"

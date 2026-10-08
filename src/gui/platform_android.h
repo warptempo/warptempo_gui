@@ -227,6 +227,14 @@ public:
     // the first load.
     int display_width_px() const;
 
+    // THE WINDOW'S COLOR SPACE (contract at platform_wayland.h, which owns
+    // it): true once adopt_window's ADATASPACE_DISPLAY_P3 tag was accepted,
+    // false if it was refused (the layer then stays sRGB and nothing is
+    // converted). init() adopts the live window, so the answer stands by the
+    // time gui_main reads it; every later adoption asks the same of the same
+    // panel.
+    bool window_is_display_p3() const { return window_display_p3_; }
+
     // WINDOW ACTIVATION (keyboard focus), driven by APP_CMD_GAINED_FOCUS /
     // APP_CMD_LOST_FOCUS. FALSE UNTIL THE FIRST GAINED_FOCUS, the same honest
     // cold answer the Wayland backend gives before its first configure; the
@@ -523,6 +531,8 @@ private:
     // means painting is suspended.
     struct android_app*   app_    = nullptr;
     struct ANativeWindow* window_ = nullptr;
+    // The last adoption's DISPLAY_P3 tag accepted (window_is_display_p3).
+    bool                  window_display_p3_ = false;
 
     // -- Damage accumulator --
     // Set by invalidate_region() at any time; consumed by the next paint pass

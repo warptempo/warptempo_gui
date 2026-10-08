@@ -76,4 +76,14 @@ cairo_surface_t* saturated_copy(cairo_surface_t* live);
 // native resolution), its phase the raster's own corner as the pixbuf's.
 cairo_surface_t* saturated_pixelated_copy(cairo_surface_t* live);
 
+// THE WINDOW'S COPY (architect 2026-10-08, display_transform.h's head): an
+// icon's own inks are sRGB, as every authored color, so on the tablet's
+// Display-P3 window each pixel of a raster is converted IN PLACE once, at
+// raster time — cairo's premultiplied word un-premultiplied, converted and
+// premultiplied again (display_transform::display_premultiplied, which keeps
+// a neutral's word whole); off a P3 window it touches nothing. The disabled
+// copies above are derived from the UNCONVERTED raster (their arithmetic is
+// the period's, on sRGB bytes) and converted after (icons.cpp).
+void convert_to_display(cairo_surface_t* s);
+
 } // namespace svg_icon

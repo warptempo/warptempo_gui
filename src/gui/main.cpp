@@ -1347,6 +1347,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             return {1, {}};
         }
         window_up = true;
+        // THE WINDOW'S COLOR SPACE, read once, here: after init() adopted the
+        // window and before any painter or worker thread runs
+        // (display_transform.h's head, architect 2026-10-08).
+        display_transform::set_active(gui.window_is_display_p3());
     }
 
     // -- Viewport + invalidation helpers ------------------------------------

@@ -74,6 +74,12 @@
 // planner adds that line to the presets on his devices at the install that
 // brings the role (no migration). No follower and no caption rule: every
 // role stands alone.
+// A FILE'S BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
+// color's: the hex he lifts from a screenshot or types into the picker, and
+// the tablet converts it at the painter's entry (display_transform.h's head).
+// Presets picked by eye before that day (a hex then the P3 byte the panel
+// showed) are converted once by the planner through the inverse stated
+// there.
 //
 // THE NAME GRAMMAR (is_palette_name_spelling): the stem is the name
 // verbatim, case-sensitive, 1 to 40 bytes of printable ASCII (0x20..0x7E),

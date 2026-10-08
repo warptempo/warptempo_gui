@@ -632,13 +632,33 @@ cairo_surface_t* fresh_surface(int side) {
     cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, side, side);
     return s;
 }
+// One wheel pixel: the straight sRGB color `c` at coverage `cov`, premultiplied.
+// ON A P3 WINDOW (display_transform.h's head, architect 2026-10-08) the
+// straight color is taken to its bytes, converted for the window, and then
+// premultiplied by the coverage, so the wheel shows each hue as the browser
+// shows the same sRGB hex; off one, the word is the direct premultiply as
+// it always was.
 inline uint32_t premultiplied(const Rgb& c, double cov) {
+    const uint32_t a = static_cast<uint32_t>(
+        std::clamp(std::nearbyint(cov * 255.0), 0.0, 255.0));
+    if (display_transform::active()) {
+        const auto byte = [](double u) {
+            return static_cast<uint32_t>(
+                std::clamp(std::nearbyint(u * 255.0), 0.0, 255.0));
+        };
+        const uint32_t p3 = display_transform::p3_word_from_srgb(
+            (byte(c.r) << 16) | (byte(c.g) << 8) | byte(c.b));
+        const auto pm = [&](int shift) {
+            return static_cast<uint32_t>(std::nearbyint(
+                       static_cast<double>((p3 >> shift) & 0xFF) * cov))
+                   << shift;
+        };
+        return (a << 24) | pm(16) | pm(8) | pm(0);
+    }
     const auto ch = [&](double u) {
         return static_cast<uint32_t>(
             std::clamp(std::nearbyint(u * cov * 255.0), 0.0, 255.0));
     };
-    const uint32_t a = static_cast<uint32_t>(
-        std::clamp(std::nearbyint(cov * 255.0), 0.0, 255.0));
     return (a << 24) | (ch(c.r) << 16) | (ch(c.g) << 8) | ch(c.b);
 }
 inline double coverage(double d) { return std::clamp(d + 0.5, 0.0, 1.0); }

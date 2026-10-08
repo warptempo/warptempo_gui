@@ -50,6 +50,10 @@
 // The imported catalog's other entries (Windows 95's and 98's schemes, the
 // Plus! themes, KDE 3's, CDE's) stay in the catalog as the tool's RECORD
 // and ship nowhere (tools/theme_catalog/README.md).
+// EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15): Windows'
+// scheme bytes and GTK's gtkrc colors are what those systems put into an
+// sRGB frame buffer, as the captures show them; the tablet converts each at
+// the painter's entry (display_transform.h's head), the laptop none.
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
 // 2026-10-04), in GuiPalette's order: the Windows chrome's twenty-one (the
@@ -172,7 +176,8 @@ const GuiThemeWords& chrome_theme_words(const ChromeSpec& spec);
 //   THE FOUR WINDOWS RESERVES under Delphi VCL's names (Graphics.pas's
 //   clMoneyGreen, clSkyBlue, clCream, clMedGray, without the `cl`):
 //   moneygreen #C0DCC0, skyblue #A6CAF0, cream #FFFBF0, medgray #A0A0A4.
-// The word is the value's 0xRRGGBB; nothing else is a colour.
+// The word is the value's 0xRRGGBB, an sRGB triple (display_transform.h's
+// head); nothing else is a colour.
 struct NamedThemeColour {
     const char* name;
     uint32_t    rgb;

@@ -1,6 +1,7 @@
 #include "icons.h"
 
 #include "platform.h"   // GuiPlatform::bundled_icon_files
+#include "display_transform.h"
 #include "svg_icon.h"
 
 #include <array>
@@ -42,15 +43,18 @@ std::optional<LoadedSet>& loaded_set() {
     return set;
 }
 
-// The glyph's faces at `px`, the live one rasterised on a miss. Asked only
-// after the launch's load (gui_main fails before any window otherwise).
+// The glyph's faces at `px`, the live one rasterised on a miss and converted
+// for the window (svg_icon::convert_to_display). Asked only after the
+// launch's load (gui_main fails before any window otherwise).
 Faces& faces_for(Icon icon, int px) {
     LoadedSet& set = *loaded_set();
     const int index = static_cast<int>(icon);
     Faces& f = set.rasters[{index, px}];
-    if (!f.live)
+    if (!f.live) {
         f.live.reset(svg_icon::rasterise(set.docs[static_cast<size_t>(index)],
                                          px));
+        svg_icon::convert_to_display(f.live.get());
+    }
     return f;
 }
 
@@ -99,14 +103,27 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
     if (px <= 0) return;
     Faces& f = faces_for(icon, px);
     if (!f.disabled) {
+        // THE DISABLED FACE IS DERIVED FROM THE sRGB RASTER (svg_icon.h's
+        // convert_to_display): on a P3 window the live face is already
+        // converted, so the derivation takes a fresh render of the same tree,
+        // and its result is converted after — ReactOS's grays pass whole,
+        // GTK's tinted pixels convert like any ink.
+        Surface fresh;
+        cairo_surface_t* source = f.live.get();
+        if (display_transform::active()) {
+            fresh.reset(svg_icon::rasterise(
+                loaded_set()->docs[static_cast<size_t>(icon)], px));
+            source = fresh.get();
+        }
         switch (live_chrome_spec().disabled_glyph) {
         case GuiDisabledGlyph::ReactOSSaturate:
-            f.disabled.reset(svg_icon::saturated_copy(f.live.get()));
+            f.disabled.reset(svg_icon::saturated_copy(source));
             break;
         case GuiDisabledGlyph::GtkSaturatePixelate:
-            f.disabled.reset(svg_icon::saturated_pixelated_copy(f.live.get()));
+            f.disabled.reset(svg_icon::saturated_pixelated_copy(source));
             break;
         }
+        svg_icon::convert_to_display(f.disabled.get());
     }
     paint_raster(cr, f.disabled.get(), x, y);
 }

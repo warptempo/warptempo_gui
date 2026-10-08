@@ -4,6 +4,7 @@
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 #include "gui_font.h"         // GuiFont, the face owner's face at a scale
+#include "display_transform.h" // display_color's transform (sRGB -> the window's space)
 
 #include <array>
 #include <cairo/cairo.h>
@@ -54,6 +55,22 @@ inline constexpr GuiColor hex(uint32_t rgb) {
         static_cast<double>((rgb >>  8) & 0xFF) / 255.0,
         static_cast<double>( rgb        & 0xFF) / 255.0,
     };
+}
+
+// An authored (sRGB) color as the window takes it — THE PAINTER'S ENTRY's
+// one GuiColor road (the rule, the math and every site that runs it are at
+// display_transform.h's head, architect 2026-10-08): on the tablet's
+// Display-P3 window the byte triple converted to the P3 triple that presents
+// the same color, elsewhere the color itself. Every authored color is a
+// byte triple, so each channel is read as its byte (std::nearbyint).
+inline GuiColor display_color(GuiColor srgb) {
+    if (!display_transform::active()) return srgb;
+    const auto byte = [](double u) {
+        return static_cast<uint32_t>(
+            std::clamp(std::nearbyint(u * 255.0), 0.0, 255.0));
+    };
+    return hex(display_transform::p3_word_from_srgb(
+        (byte(srgb.r) << 16) | (byte(srgb.g) << 8) | byte(srgb.b)));
 }
 
 // Trim boundaries in domain-frame samples (source-frame in source view,
@@ -129,13 +146,17 @@ struct TrimRange {
 // THIS PARAGRAPH IS THE RULE'S ONE STATEMENT; every other chrome length stays
 // in Windows px (scaled_px).
 //
-// A HEX HERE IS A DISPLAY-P3 BYTE TRIPLE AND IS WHAT THE TABLET SHOWS
-// (architect 2026-10-02). The tablet's window is a Display-P3 layer
-// (GuiPlatform::adopt_window, platform_android.cpp), so the panel takes the
-// bytes as P3 coordinates as-is — a theme's byte included; the
-// laptop's untagged sRGB surface shows the same bytes a little differently,
-// which is accepted (the laptop is for debug testing). No colour is converted
-// anywhere between a byte and cairo.
+// A HEX HERE IS AN sRGB BYTE TRIPLE, AS EVERY SCREENSHOT AND SCHEME FILE
+// RECORDS IT (architect 2026-10-08 ~05:15: "if I open that image in the web
+// browser, it would have the identical color on the GUI") — a palette role, a
+// chrome role, the picker's hex, a catalog theme's byte. The tablet's window
+// is a Display-P3 layer (GuiPlatform::adopt_window, platform_android.cpp), so
+// THE TABLET CONVERTS sRGB -> DISPLAY-P3 AT THE PAINTER'S ENTRY
+// (display_color; the math and every converting site at
+// display_transform.h's head) and the panel presents the color the browser
+// presents; the laptop's untagged sRGB surface takes the bytes as they are.
+// From 2026-10-02 until this ruling the bytes went to the P3 layer
+// unconverted, a hex then being a P3 triple.
 //
 // THE GRAMMAR IS WINDOWS 95's DrawEdge, AT THE WINDOWS PIXEL (architect
 // 2026-10-02): every raised or sunken edge is TWO lines a side, each one
@@ -290,10 +311,13 @@ struct TrimRange {
 // site calls cairo_set_source_rgb itself (re-grepped 2026-10-03: none outside
 // render.cpp's two bodies): set_palette_source for the chrome and
 // set_waveform_source for the waveform's one cairo fill, the canvas
-// (render_canvas). Each is a plain hand-over; the plate's own pixels are
-// written as words (argb32_opaque_word), not through cairo, as are the
-// caption gradient's ramp (paint_caption_gradient) and the checked dither's
-// tile (paint_checker_rect).
+// (render_canvas). Each converts the authored sRGB color for the window
+// (display_color, the painter's entry) and hands it over; the plate's own
+// pixels are written as words (argb32_opaque_word), not through cairo, as
+// are the caption gradient's ramp (paint_caption_gradient) and the checked
+// dither's tile (paint_checker_rect), each converting at its own entry. TEXT
+// takes its ink from the source these set: no glyph road sets a color of its
+// own (text_shape.cpp draws in the current source).
 void set_palette_source(cairo_t* cr, GuiColor c);
 void set_waveform_source(cairo_t* cr, GuiColor c);
 
@@ -2489,8 +2513,10 @@ struct WaveformBasis {
 // The channel bytes round with std::nearbyint, the project's rule — vacuous for
 // the exact n/255 hex palette, decisive only if a mixed colour ever ties. The
 // one word owner for every image the painters write as words: the plate
-// (render_waveform), the caption's gradient (paint_caption_gradient) and the
-// checked dither's tile (paint_checker_rect).
+// (render_waveform) and the checked dither's tile (paint_checker_rect), each
+// handing it the color already converted for the window (display_color), and
+// the caption's gradient (paint_caption_gradient), which keys its cache on
+// the authored words and writes its converted ramp itself.
 inline uint32_t argb32_opaque_word(GuiColor c) {
     return (UINT32_C(255) << 24) |
            (static_cast<uint32_t>(std::nearbyint(c.r * 255.0)) << 16) |

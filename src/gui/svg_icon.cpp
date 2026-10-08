@@ -1,5 +1,7 @@
 #include "svg_icon.h"
 
+#include "display_transform.h"
+
 #include <resvg.h>
 
 #include <algorithm>
@@ -144,6 +146,21 @@ cairo_surface_t* saturated_pixelated_copy(cairo_surface_t* live) {
     }
     cairo_surface_mark_dirty(out);
     return out;
+}
+
+void convert_to_display(cairo_surface_t* s) {
+    if (!display_transform::active()) return;
+    cairo_surface_flush(s);
+    const int w = cairo_image_surface_get_width(s);
+    const int h = cairo_image_surface_get_height(s);
+    unsigned char* data = cairo_image_surface_get_data(s);
+    const int stride = cairo_image_surface_get_stride(s);
+    for (int y = 0; y < h; ++y) {
+        auto* row = reinterpret_cast<uint32_t*>(data + y * stride);
+        for (int x = 0; x < w; ++x)
+            row[x] = display_transform::display_premultiplied(row[x]);
+    }
+    cairo_surface_mark_dirty(s);
 }
 
 } // namespace svg_icon

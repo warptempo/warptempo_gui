@@ -298,7 +298,12 @@ static_assert(card_height_wpx(kChromeSpecWin2000) == 156);
 // THE SIX SLIDERS, in the rows' order. H S V and R G B are two spellings of
 // one color: THE RGB BYTES ARE THE TRUTH (the color is bytes), HSV is
 // derived from them, and a drag on an HSV slider writes the bytes it
-// converts to (GuiColorPicker::set_channel).
+// converts to (GuiColorPicker::set_channel). THE BYTES ARE sRGB (architect
+// 2026-10-08 ~05:15, display_transform.h's head): the hex field shows and
+// takes the sRGB hex a screenshot or a browser's picker gives, and the
+// tablet converts at the painter's entry, so the color on the glass is the
+// one the browser shows for the same hex — "nothing on the picker is added
+// or changed".
 enum class Channel { Hue, Saturation, Value, Red, Green, Blue };
 inline constexpr int kChannelCount = 6;
 // The picker's stash spells the count as a literal (app_state.h includes
@@ -509,7 +514,10 @@ void   wheel_sv_at(const Layout& l, double hue_deg, int x, int y, double& s,
 // renderer's edge, as a glyph's). Then THE MARKERS: on the ring a radial
 // line across its width at the live hue, on the triangle a small ring at
 // (s, v), each black or white by gtk_intensity of the color under it —
-// GTK's own rule.
+// GTK's own rule. THE FIELDS ARE sRGB: on the tablet's P3 window each
+// pixel's straight color is converted before its coverage premultiply
+// (color_picker.cpp's premultiplied; display_transform.h's head), so the
+// wheel shows each hue as the browser shows the same hex.
 void paint_wheel(cairo_t* cr, const Layout& l, double hue_deg, double s,
                  double v, uint32_t rgb);
 

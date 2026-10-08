@@ -221,6 +221,13 @@ public:
     // unrotated at scale 1, where the mode's pixels are the surface's.
     int display_width_px() const;
 
+    // THE WINDOW'S COLOR SPACE, the seam's own member (architect 2026-10-08,
+    // display_transform.h's head): true when the window is a Display-P3 layer,
+    // so the painters convert every authored sRGB color at their entry. Here
+    // false: the Wayland surface is untagged sRGB and takes the bytes as they
+    // are. gui_main reads it once, right after init().
+    bool window_is_display_p3() const { return false; }
+
     // WINDOW ACTIVATION (keyboard focus), straight off xdg_toplevel.configure's
     // state array: true while the compositor lists XDG_TOPLEVEL_STATE_ACTIVATED.
     // Its one consumer is the activation EDGE below (the tooltip's hard end,

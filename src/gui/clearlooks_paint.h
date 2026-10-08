@@ -70,7 +70,10 @@
 // THE ONE RAMP RULE (rule 2 above): `r` filled top to bottom, device row i
 // of r.h in round(top + (bottom − top)·i/(r.h − 1)) per channel (std::
 // nearbyint, the tree's one rounding), each row one opaque cell rect, so a
-// clip cuts it like any fill. Cannot fail.
+// clip cuts it like any fill. The levels are sRGB, the period's own; each
+// row is an authored color handed to paint_cell_rect and so converted for
+// the window at the painter's entry (display_transform.h's head), the ramp
+// never run between converted ends. Cannot fail.
 void paint_cl_ramp(cairo_t* cr, const GuiRect& r, GuiColor top,
                    GuiColor bottom);
 
