@@ -8019,7 +8019,7 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
     if (cl) {
         const int shift = paint_cl_push_button(cr, r, /*pressed=*/open && enabled,
                                                enabled, /*is_default=*/false);
-        const double tx = r.x + scaled_px(spec.push_button_pad_left_px) + shift;
+        const double tx = r.x + color_picker::combo_text_inset_px() + shift;
         const double ty = redesign_baseline(font, r.y, r.h) + shift;
         // The engine's wedge, GtkComboBox's arrow, at the right pad.
         const int aw = scaled_px(color_picker::kComboArrowWPx,
@@ -8051,7 +8051,7 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
     cairo_save(cr);
     cairo_rectangle(cr, r.x + fb, r.y + fb, button.x - (r.x + fb), r.h - 2 * fb);
     cairo_clip(cr);
-    const double tx = r.x + fb + scaled_px(kModalFieldPadXPx);
+    const double tx = r.x + color_picker::combo_text_inset_px();
     show_picker_combo_text(cr, font, tx, redesign_baseline(font, r.y, r.h),
                            button.x - aw_gap - tx, text, enabled,
                            palette().field_text);
@@ -8079,7 +8079,9 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
 // GtkMenu's prelight under clearlooks — when it is the pressed row or the
 // hovered one, its label at the popup's left pad; then the scroll bar when
 // it stands. Every row is live (no grayed row: both lists' domains are
-// wholly choosable).
+// wholly choosable). ITS LABELS STAND AT THE FACE'S TEXT INSET
+// (color_picker::combo_text_inset_px, 2026-10-08 ~23:55: a combo list is
+// not a menu — combo_list's rule), each row's name under the face's.
 void GuiPaintHandler::paint_combo_list(
         cairo_t* cr, const GuiFont& font, const color_picker::ComboList& list,
         int pressed, int hover, PopupScrollPart held,
@@ -8088,7 +8090,7 @@ void GuiPaintHandler::paint_combo_list(
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     if (cl) paint_cl_menu(cr, list.box, list.upward);
     else    paint_popup_chrome(cr, list.box, PopupFace::Menu);
-    const int pad_l = scaled_px(kPopupPadXPx);
+    const int pad_l = color_picker::combo_text_inset_px();
     for (int i = 0; i < list.count; ++i) {
         const GuiRect item = color_picker::combo_list_item(list, i);
         if (item.w <= 0 || item.h <= 0) continue;   // scrolled out of view

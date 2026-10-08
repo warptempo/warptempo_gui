@@ -2479,7 +2479,10 @@ inline int popup_item_margin_y_px() {
 //    their space as plain padding. It is the right margin the kdenlive crop
 //    measured (30 laptop px, re-authored at the unit's change); the crop's
 //    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
-//    mirror.
+//    mirror. THEY ARE THE MENUS' (the pull-downs, the picker's preset menu):
+//    a COMBO'S LIST is not a menu and insets its names at the combo face's
+//    own text inset on both sides (color_picker::combo_list's rule,
+//    2026-10-08).
 //  - THE COLUMN GAP is the guaranteed minimum separation between the widest
 //    label and the widest accelerator, the kdenlive crop's 13 laptop px
 //    re-authored as 9 Windows px (architect 2026-10-02: the gap kept).

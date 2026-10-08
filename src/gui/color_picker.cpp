@@ -397,6 +397,32 @@ GuiRect combo_drop_button(const GuiRect& r) {
     return GuiRect{r.x + r.w - fb - bw, r.y + fb, bw, r.h - 2 * fb};
 }
 
+// A COMBO LIST IS NOT A MENU (2026-10-08 ~23:55, under his symmetry ask of
+// ~23:45 on the cde glass, "all others are symmetrical with padding on left
+// and right"): Windows' own combo lists — ReactOS WordPad's font combo —
+// inset their text a few px with no check-mark column and run the combo's
+// width with the air at the right; the 22-W pad (kPopupPadXPx, render.h) is
+// THE MENU'S, its check column, and stays with the menus (the menu row's
+// pull-downs and the picker's preset menu, which has acts). So a combo's
+// list sets its names at THE FACE'S OWN TEXT INSET (combo_text_inset_px:
+// the field's edge and the dialog field's 5-W pad, or under clearlooks the
+// gummy button's left pad), the name in every row standing directly under
+// the name on the face, and its MINIMUM WIDTH IS THAT INSET ON BOTH SIDES OF
+// ITS WIDEST NAME — inset + name + inset, the frame inside the insets as the
+// face's edge is inside its own. The list is the combo's width (flush,
+// below), so the combo is the wider of its face and that minimum (layout's
+// combo_w; the element chooser's width the head's THE WIDTH proves), and
+// the air to the right of a row's name is the face's own. Readers: the
+// picker's scope list and element list, and the settings editor's choice
+// list, paint_combo_list's three.
+int combo_text_inset_px() {
+    const GuiChromeVocabulary v = live_chrome_spec().vocabulary;
+    if (v == GuiChromeVocabulary::Clearlooks)
+        return scaled_px(live_chrome_spec().push_button_pad_left_px);
+    return (v == GuiChromeVocabulary::Cde ? 1 : 2) * relief_line_px() +
+           scaled_px(kModalFieldPadXPx);
+}
+
 // THE LIST IS EXACTLY THE COMBO'S OUTER BOX WIDE, FLUSH AT BOTH EDGES,
 // under both chromes (architect 2026-10-08, on his clearlooks capture: "the
 // drop-down looks longer than the button you press"): Windows' ComboLBox
@@ -509,8 +535,9 @@ Layout layout(const AppState& app, const GuiFont& font) {
             face = fb + 2 * scaled_px(kModalFieldPadXPx) + t +
                    scaled_px(kComboButtonWPx) + fb;
         }
-        const int list = scaled_px(kPopupPadXPx) + t + text_gap +
-                         popup_border_px();
+        // THE LIST'S MINIMUM (combo_list's rule): the face's text inset on
+        // both sides of the name — never the menu's 22-W pads.
+        const int list = 2 * combo_text_inset_px() + t;
         return std::max(face, list);
     };
     double scope_text = 0.0;
