@@ -874,6 +874,16 @@ constexpr GuiThemeWords derive_clearlooks_chrome(const GuiThemeWords& compiled, 
     e.put({"caption_inactive"}, pick.inactive_start());
     e.put({"caption_inactive_gradient"}, pick.inactive_start());
     e.put({"caption_inactive_text"}, pick.inactive_text());
+    // THE CDE BLOCK (theme_file.h, 2026-10-08): seven roles no Clearlooks
+    // painter reads, CARRIED from the compiled theme, as the Windows
+    // derivation carries the cl_ block.
+    e.put({"cde_select"}, compiled[e.index()]);
+    e.put({"cde_field_ts"}, compiled[e.index()]);
+    e.put({"cde_field_bs"}, compiled[e.index()]);
+    e.put({"cde_title_ts"}, compiled[e.index()]);
+    e.put({"cde_title_bs"}, compiled[e.index()]);
+    e.put({"cde_inactive_ts"}, compiled[e.index()]);
+    e.put({"cde_inactive_bs"}, compiled[e.index()]);
 
     // THE CAPTION (metacity: the maximised frame's bevel, the title, the
     // buttons and their glyphs; GDK's byte road)

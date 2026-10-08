@@ -20,13 +20,14 @@
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
 //   chrome=<key>             THE CHROME VOCABULARY the process paints:
-//                            `windows-2000` or `clearlooks` (is_chrome_key,
-//                            chrome_spec.h); MAY BE ABSENT, reading as
-//                            windows-2000 (kDefaultChromeKey); takes effect
-//                            at the next launch; the chrome's colors are
-//                            its own, compiled in (theme_file.h)
+//                            `windows-2000`, `clearlooks` or `cde`
+//                            (is_chrome_key, chrome_spec.h); MAY BE ABSENT,
+//                            reading as windows-2000 (kDefaultChromeKey);
+//                            takes effect at the next launch; the chrome's
+//                            colors are its own, compiled in (theme_file.h)
 //   palette=<name>           THE PALETTE the program is painted in: a
-//                            default (`windows-2000`, `clearlooks`) or a
+//                            built-in scheme (`windows-2000-standard`,
+//                            `clearlooks`, `solaris`, the catalog's) or a
 //                            palette file read at launch (is_palette_name,
 //                            palette_file.h); MAY BE ABSENT — the first
 //                            run's state — meaning the chrome's default

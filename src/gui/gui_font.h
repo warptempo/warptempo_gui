@@ -3,7 +3,7 @@
 // THE ONE FACE OWNER: every text surface names its face here and nowhere
 // else, so the painters never name a font. THE PRODUCT'S FACES ARE ITS OWN
 // (architect 2026-10-02: "the app becomes its own thing; it has its own
-// fonts"): four files under the repository's `fonts/` (fonts/README.md has
+// fonts"): six files under the repository's `fonts/` (fonts/README.md has
 // their provenance and licences), carried by both binaries — compiled into
 // the Linux executable (gui_font_embedded.cpp), shipped as the APK's assets
 // on Android — and turned into faces by ONE implementation on both devices,
@@ -11,8 +11,9 @@
 // face: fontconfig is never consulted on the laptop and the tablet has
 // nothing to consult.
 //
-// TWO FACE SETS, ONE LIVE (architect 2026-10-06, the Windows 2000 pivot;
-// the second set 2026-10-07 with the clearlooks chrome): a set is one chrome
+// THREE FACE SETS, ONE LIVE (architect 2026-10-06, the Windows 2000 pivot;
+// the second set 2026-10-07 with the clearlooks chrome; the third,
+// kGuiFaceSetCde — Go Sans — 2026-10-08 with the cde chrome): a set is one chrome
 // vocabulary's text — which file each of the three uses (GuiFace) is drawn
 // from, its recorded vertical metrics and its tracking (GuiFaceSet below) —
 // and the chrome spec names its set (chrome_spec.h's ChromeSpec), the
@@ -84,8 +85,9 @@
 enum class GuiFace { Body, Bold, Small };
 inline constexpr std::size_t kGuiFaceCount = 3;
 
-// THE FOUR FILES, THE INSTALL'S ONE ORDER, EVERY SET'S (architect
-// 2026-10-07, the second vocabulary's pair joining the first's): THIS LIST
+// THE SIX FILES, THE INSTALL'S ONE ORDER, EVERY SET'S (architect
+// 2026-10-07, the second vocabulary's pair joining the first's; 2026-10-08
+// the third's, Go): THIS LIST
 // IS THE ONE PLACE THE NAMES ARE SPELLED — the Linux font step
 // (CMakeLists.txt) and the APK's asset step (android/app/build_apk.sh) each
 // read the quoted names out of this initializer, so a file added here is
@@ -94,12 +96,14 @@ inline constexpr std::size_t kGuiFaceCount = 3;
 // sets' files are carried whichever chrome a device runs (the `chrome` key
 // is read after the Android backend installs the faces, and the install
 // measures every set's ems at once, gui_font_bundled.cpp).
-inline constexpr std::size_t kGuiFontFileCount = 4;
+inline constexpr std::size_t kGuiFontFileCount = 6;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "tahoma.ttf",                 // 0: win2000's body and small
     "tahomabd.ttf",               // 1: win2000's bold
     "DejaVuSans.ttf",             // 2: gnome2's body and small
     "DejaVuSans-Bold.ttf",        // 3: gnome2's bold
+    "Go-Regular.ttf",             // 4: cde's body and small
+    "Go-Bold.ttf",                // 5: cde's bold
 };
 
 struct GuiFontBytes {
@@ -114,7 +118,7 @@ struct GuiFontBytes {
 // caller may free or unmap them the moment it returns.
 //
 // THE RETURN IS THE INSTALL OBSERVED, not assumed: true when each of the
-// four files selects as an FT-BACKED cairo face, which is what text_shape
+// six files selects as an FT-BACKED cairo face, which is what text_shape
 // requires, and EVERY set's faces (every chrome spec's, kGuiChromeSpecs)
 // carry the glyph each em is measured on — every set, because the install
 // precedes the `chrome` key's read on Android.
@@ -196,6 +200,35 @@ inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
     .tracking_px = 0.0,
 };
 
+// THE CDE SET (architect 2026-10-08, ruling 4 of the CDE arc: "excellent
+// choice"), the cde chrome's: GO SANS — Go Regular and Go Bold, Bigelow &
+// Holmes' 2016 faces for the Go project (fonts/README.md; the Go project's
+// BSD-3-style license) — THE LUCIDA STAND-IN. Solaris 9's CDE set its
+// chrome in B&H Lucida Sans, a 14-px bitmap strike at 75 dpi (cap 10 in a
+// 15-row cell; tmp/research/cde_solaris/report.md §4), which is proprietary
+// and a strike besides (NO BITMAP FONTS, the head); Go is the only open face
+// by Lucida's own designers, in its humanist proportions.
+//   METRICS: THE BASE'S CELL, {11, 2, 8} for the body and the bold — the
+//   settled rule for every later vocabulary, period authentic except for
+//   the proportional fit to Windows' layout (CLAUDE.md's chrome row): Go
+//   Regular drawn to a cap of 8 W px, its em derived at the install off its
+//   own "H" (1480 of 2048, 0.723 em, read 2026-10-08 off the file through
+//   FreeType) — about 11.07 W px — the bold file's "H" the same height; the
+//   small face the same SIX-row digit as the other sets' (its em about 8.10
+//   off the "0", 1517 of 2048), so the ruler's digits are the base's. CDE's
+//   own cap 10 / cell 15 is NOT reproduced.
+//   THE BOLD USE (the caption's title alone) names the bold file so the set
+//   is whole, but UNDER cde THE TITLE IS SET IN THE BODY FACE: dtwm draws
+//   the title in the interface font, the same medium face as the menus (the
+//   notepad capture, title cap 10 at 1-px stems; paint_caption_row's cde
+//   arm) — nothing reads the bold while cde is live.
+//   TRACKING: none (the heights-only rule, as the other two sets).
+inline constexpr GuiFaceSet kGuiFaceSetCde = {
+    .file        = {4, 5, 4},
+    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}},
+    .tracking_px = 0.0,
+};
+
 // THE LIVE SET IS THE CHROME SPEC'S (chrome_spec.h's live_chrome_spec(),
 // chosen once at launch by the device config's `chrome`), which names its
 // set by address. The include stands here, after the sets it names and
@@ -261,7 +294,7 @@ inline double gui_tracking_px(const GuiFont& f) {
 // untracked figure stays an upper bound.
 double gui_font_advance_bound_px(const GuiFont& f);
 
-// THE LINUX BINARY'S COPY OF THE FOUR FILES, in kGuiFontFiles' order,
+// THE LINUX BINARY'S COPY OF THE SIX FILES, in kGuiFontFiles' order,
 // defined by gui_font_embedded.cpp, which only the Linux target compiles (the
 // APK carries the same files as assets instead).
 extern const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount];

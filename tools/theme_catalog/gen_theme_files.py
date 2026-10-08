@@ -31,8 +31,11 @@
 #     shade 0.6 of the tooltip's ground), else unnamed: Windows 2000's black is Windows' tooltip border, and no other
 #     entry records a frame colour of its own (every Windows entry's raw WindowFrame is #000000, which no role reads).
 #   NO PROGRAM ROLE (architect 2026-10-07): the program's colors are THE PALETTE's (src/gui/palette_file.h).
-#   A ROLE THE ENTRY DOES NOT NAME takes Windows 2000's byte (the table's column): none of Clearlooks' does, once the
-#     flat caption has filled its two gradient ends.
+#   A ROLE THE ENTRY DOES NOT NAME takes Windows 2000's byte (the table's column): none of Clearlooks' Windows
+#     roles does, once the flat caption has filled its two gradient ends; THE CDE BLOCK (the cde_ roles, hand-set in
+#     theme_file.h for the cde chrome, 2026-10-08) takes its column byte that way, carried unread under Clearlooks as
+#     the cl_ block is under Windows 2000. The cde chrome's own theme is no output of this script (theme_file.h's
+#     kGuiThemeCdeValues, proven by cde_derive.h).
 #
 #   THE CLEARLOOKS PAINTERS' TONES (architect 2026-10-07, the painters round): the GNOME 2 entry's `engine_tones`
 #     (build.py engine_tones: the Clearlooks engine's and metacity's own arithmetic at the product's geometry), every
@@ -112,8 +115,10 @@ def role_table():
 
 
 def role_table_names():
-    """kGuiThemeRoles' hand-written names in order (the Clearlooks block apart)."""
-    return tuple(n for n, _ in role_table() if not n.startswith('cl_'))
+    """kGuiThemeRoles' Windows names in order (the Clearlooks block and the hand-set CDE block apart: the cde_
+    roles take their column byte in the Clearlooks theme, carried unread like the cl_ roles under Windows 2000 —
+    compiled_theme walks the whole table, so they land in the values include in the table's order)."""
+    return tuple(n for n, _ in role_table() if not n.startswith('cl_') and not n.startswith('cde_'))
 
 
 def clearlooks_tones(entries):

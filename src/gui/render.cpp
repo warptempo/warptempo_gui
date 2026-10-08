@@ -2,6 +2,7 @@
 #include "app_state.h"
 #include "audio.h"
 #include "clearlooks_paint.h"
+#include "cde_paint.h"
 #include "gui_display_context.h"
 #include "gui_font.h"
 #include "text_shape.h"
@@ -177,11 +178,22 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     // clearlooks_paint.h): the outer line of each pair its one shade[5]
     // line, the inner the canvas laid above — the same thickness taken from
     // the area, so nothing that reads waveform_border_px moves.
+    // UNDER CDE THE WELL IS A MOTIF TEXT WIDGET'S ONE-W SHADOW (2026-10-08;
+    // dtpad's text area on the notepad capture, row 54 the field's bottom
+    // shadow over the cream, the bevel one px at the ruling): the OUTER
+    // line of each pair the sunken ring in the body's tones — the bottom
+    // shadow on top, the top shadow at the bottom — and the inner line the
+    // canvas, Clearlooks' shape in Motif's tones; the same thickness taken
+    // from the area, so nothing that reads waveform_border_px moves.
     const int border = waveform_border_px();
     const int lw     = relief_line_px();
     if (h > 2 * border &&
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
         paint_cl_well_frame(cr, GuiRect{x, y, w, h});
+    } else if (h > 2 * border &&
+               live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        paint_cell_rect(cr, GuiRect{x, y, w, lw}, palette().shadow);
+        paint_cell_rect(cr, GuiRect{x, y + h - lw, w, lw}, palette().hilight);
     } else if (h > 2 * border) {
         paint_cell_rect(cr, GuiRect{x, y, w, lw}, palette().shadow);
         paint_cell_rect(cr, GuiRect{x, y + lw, w, border - lw},
@@ -560,6 +572,13 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
         paint_cl_window_frame(cr, 0, 0, surface_w, surface_h, f,
                               caption_row_h_px(), focused);
         cairo_restore(cr);
+        return;
+    }
+    // UNDER CDE dtwm's frame (paint_cde_window_frame, cde_paint.h: the
+    // frame's colour following the activation, its two rings), on the band
+    // alone.
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        paint_cde_window_frame(cr, surface_w, surface_h, f, focused);
         return;
     }
     // The ground across the band, then the window's raised edge on its outer
@@ -1241,9 +1260,18 @@ void render_trim_flags(cairo_t* cr,
     // rects and with the same publication.
     const bool gtk_bar =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    // UNDER CDE the lane is Motif's horizontal XmScrollBar (2026-10-08;
+    // cde_paint.h's scroll-bar block, the notepad capture's bar at the
+    // base's 16 for CDE's 13): the sunken select-colour trough, the raised
+    // slider inside its ring for the body, the beveled triangles for the
+    // caps — on the very rects and with the same publication.
+    const bool motif_bar =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde;
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
     if (gtk_bar) {
         paint_cl_trough(cr, lane);
+    } else if (motif_bar) {
+        paint_cde_trough(cr, lane);
     } else {
         paint_cell_rect(cr, lane, palette().ground);
         paint_checker_rect(cr, lane, lane_x, lane_y, palette().hilight,
@@ -1272,6 +1300,8 @@ void render_trim_flags(cairo_t* cr,
                            lane_h};
         if (gtk_bar) {
             paint_cl_slider(cr, body);
+        } else if (motif_bar) {
+            paint_cde_slider(cr, body, /*horizontal=*/true);
         } else {
             paint_cell_rect(cr, body, palette().ground);
             paint_relief_plain_raised(cr, body);
@@ -1308,6 +1338,9 @@ void render_trim_flags(cairo_t* cr,
         if (gtk_bar)
             paint_cl_stepper(cr, begin_r, /*points_left=*/true,
                              pressed == TrimPressedCap::Begin);
+        else if (motif_bar)
+            paint_cde_arrow(cr, begin_r, CdeArrowDir::Left,
+                            pressed == TrimPressedCap::Begin);
         else
             paint_trim_arrow_button(cr, begin_r, ScrollArrowDir::Left,
                                     pressed == TrimPressedCap::Begin);
@@ -1318,6 +1351,9 @@ void render_trim_flags(cairo_t* cr,
         if (gtk_bar)
             paint_cl_stepper(cr, end_r, /*points_left=*/false,
                              pressed == TrimPressedCap::End);
+        else if (motif_bar)
+            paint_cde_arrow(cr, end_r, CdeArrowDir::Right,
+                            pressed == TrimPressedCap::End);
         else
             paint_trim_arrow_button(cr, end_r, ScrollArrowDir::Right,
                                     pressed == TrimPressedCap::End);
@@ -1367,6 +1403,14 @@ void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
         }
         paint_cl_scrollbar_stepper(cr, b.up, /*points_up=*/true, up_held);
         paint_cl_scrollbar_stepper(cr, b.down, /*points_up=*/false, down_held);
+    } else if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        // MOTIF'S VERTICAL XmScrollBar (2026-10-08; the Open dialog
+        // capture's list bar, x 400-412): the trim lane's trough, slider and
+        // arrows turned upright, on the bar's rects.
+        paint_cde_trough(cr, b.bar);
+        if (b.thumb.h > 0) paint_cde_slider(cr, b.thumb, /*horizontal=*/false);
+        paint_cde_arrow(cr, b.up, CdeArrowDir::Up, up_held);
+        paint_cde_arrow(cr, b.down, CdeArrowDir::Down, down_held);
     } else {
         paint_cell_rect(cr, b.track, palette().ground);
         paint_checker_rect(cr, b.track, b.bar.x, b.bar.y, palette().hilight,

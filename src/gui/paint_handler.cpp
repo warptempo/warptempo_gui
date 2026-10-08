@@ -3,6 +3,7 @@
 #include "notifications.h"
 #include "chrome_spec.h"
 #include "clearlooks_paint.h"
+#include "cde_paint.h"
 #include "color_picker.h"
 
 #include "gui_font.h"
@@ -442,6 +443,25 @@ struct ButtonBoxFace {
 ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
                                bool pressed, ButtonFamily family) {
     const bool down = lamp || pressed;
+    // UNDER CDE BOTH FAMILIES ARE MOTIF'S ONE-W BEVEL (2026-10-08,
+    // cde_paint.h's head): the body under one raised line at rest, one
+    // sunken line pressed or checked, the CHECKED face the select colour
+    // inside it (XmNselectColor's armed toggle, no dither), the glyph or
+    // label one W px right and down while down — the dialogs' push buttons
+    // (the Open dialog capture's 1-px buttons) and the on-screen keyboard's
+    // keys alike; the caption's boxes are cde_paint.h's own.
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        paint_cell_rect(cr, r, palette().ground);
+        if (lamp) {
+            const int lw = relief_line_px();
+            paint_cell_rect(cr, GuiRect{r.x + lw, r.y + lw, r.w - 2 * lw,
+                                        r.h - 2 * lw},
+                            palette().cde_select);
+        }
+        if (down) paint_cde_sunken(cr, r);
+        else      paint_cde_raised(cr, r);
+        return ButtonBoxFace{down ? relief_line_px() : 0};
+    }
     paint_cell_rect(cr, r, palette().ground);
     if (lamp && !pressed)
         paint_checker_rect(cr, r, r.x, r.y, palette().hilight,
@@ -520,6 +540,12 @@ ButtonBoxFace paint_toolbar_box(cairo_t* cr, const GuiRect& r, bool lamp,
     case GuiToolbarStyle::GtkReliefNone:
         return ButtonBoxFace{
             paint_cl_tool_button(cr, r, lamp, pressed, hot, enabled)};
+    case GuiToolbarStyle::MotifFlat:
+        // MOTIF'S FLAT TOOLBAR (chrome_spec.h's MotifFlat; paint_cde_tool_
+        // button): no hot face at all, so `hot` is unread; the DISABLED
+        // departure above holds (a dead checked button keeps its sunken
+        // line and its select fill).
+        return ButtonBoxFace{paint_cde_tool_button(cr, r, lamp, pressed)};
     case GuiToolbarStyle::Flat:
         break;
     }
@@ -555,6 +581,7 @@ void paint_toolbar_separator(cairo_t* cr, int gap_x, int band_y, int band_h) {
         paint_cl_toolbar_separator(cr, gap_x, band_y, band_h);
         return;
     case GuiToolbarStyle::Flat:
+    case GuiToolbarStyle::MotifFlat:   // Motif's etched pair is Windows'
         break;
     }
     const int inset = scaled_px(spec.toolbar_separator_inset_y_px);
@@ -1467,6 +1494,16 @@ std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
     const int w   = scaled_px(spec.caption_button_w_px, 1);
     const int h   = scaled_px(spec.caption_button_h_px, 1);
     const int y   = lane.y + scaled_px(spec.caption_button_y_px);
+    // UNDER CDE dtwm's three (chrome_spec.h's cde head; architect
+    // 2026-10-08, ruling 3): THE CLOSE SLOT IS THE WINDOW-MENU BUTTON at the
+    // lane's left edge, Minimize and Maximize touching at its right, no
+    // inset and no gap (the notepad capture: x 5-23, 558-576, 577-595 of
+    // the 601-wide frame).
+    if (spec.vocabulary == GuiChromeVocabulary::Cde) {
+        const int mx = lane.x + lane.w - w;
+        return {GuiRect{mx - w, y, w, h}, GuiRect{mx, y, w, h},
+                GuiRect{lane.x, y, w, h}};
+    }
     const int cx  = lane.x + lane.w - scaled_px(spec.caption_button_inset_px) - w;
     const int mx  = cx - scaled_px(spec.caption_close_gap_px) - w;
     const int nx  = mx - scaled_px(spec.caption_button_gap_px) - w;
@@ -1498,8 +1535,32 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     const bool active = gui.caption_active();
     const bool clearlooks =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    const bool cde =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde;
     const int frame = gui.window_maximized() ? 0 : window_frame_px();
-    if (clearlooks && frame > 0) {
+    // THE WINDOW'S STATE AS PAINTED (AppState::caption_window): what the
+    // window menu's verbs are judged on (dropdown_item_enabled's Window arm,
+    // 2026-10-08), written with the buttons' faces below.
+    app.caption_window.maximized  = gui.window_maximized();
+    app.caption_window.restorable = gui.window_restorable();
+    const std::array<GuiRect, kCaptionButtonCount> rects =
+        caption_button_rects(row);
+    if (cde) {
+        // DTWM'S TITLE BAR (cde_paint.h's caption block; chrome_spec.h's cde
+        // head): the title box between the window-menu button and Minimize,
+        // the lane's whole height, raised in the frame's tones — then the
+        // title CENTERED in it, in THE BODY FACE (dtwm's title is the
+        // interface font, the menus' medium face: kGuiFaceSetCde), in the
+        // caption's text role; NO ICON (dtwm draws none). The three buttons
+        // below. Too long for the room it is cut at a codepoint and ends in
+        // "..." (the title's rule below, shared).
+        const GuiRect& menu_b = rects[static_cast<size_t>(GuiCaptionButton::Close)];
+        const GuiRect& min_b  = rects[static_cast<size_t>(GuiCaptionButton::Minimize)];
+        const GuiRect title_box{menu_b.x + menu_b.w, row.y,
+                                min_b.x - (menu_b.x + menu_b.w), row.h};
+        paint_cde_caption_box(cr, title_box, CdeCaptionBox::Title, active,
+                              /*pressed=*/false);
+    } else if (clearlooks && frame > 0) {
         cairo_save(cr);
         cairo_rectangle(cr, row.x, row.y, row.w, row.h);
         cairo_clip(cr);
@@ -1521,13 +1582,11 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // 16 x 16: the set's AppIcon (icons.h), no case, at the caption's own
     // placement.
     const ChromeSpec& spec = live_chrome_spec();
-    icons::draw(cr, icons::Icon::AppIcon,
-                static_cast<double>(row.x + scaled_px(spec.caption_icon_x_px)),
-                static_cast<double>(row.y + scaled_px(spec.caption_icon_y_px)),
-                static_cast<double>(scaled_px(kCaptionIconPx, 1)));
-
-    const std::array<GuiRect, kCaptionButtonCount> rects =
-        caption_button_rects(row);
+    if (!cde)
+        icons::draw(cr, icons::Icon::AppIcon,
+                    static_cast<double>(row.x + scaled_px(spec.caption_icon_x_px)),
+                    static_cast<double>(row.y + scaled_px(spec.caption_icon_y_px)),
+                    static_cast<double>(scaled_px(kCaptionIconPx, 1)));
 
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
@@ -1560,7 +1619,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // ellipsizing under metacity alike), the longest prefix whose own run
     // and the ellipsis's fit; a room too narrow for even the ellipsis paints
     // no title.
-    const GuiFont font = gui_font(GuiFace::Bold);
+    // THE FACE: the set's bold; under cde the body (the cde arm above).
+    const GuiFont font = gui_font(cde ? GuiFace::Body : GuiFace::Bold);
     const std::string title = app.project_name.empty()
                                   ? std::string("Warptempo")
                                   : app.project_name + " - Warptempo";
@@ -1580,6 +1640,10 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
             x += active ? std::floor(std::max(scaled_px(3) * 1.0, room - w) / 2)
                         : std::max(scaled_px(4) * 1.0,
                                    std::floor((room - w) / 2));
+        } else if (cde) {
+            // dtwm centres the title in its box (the notepad capture's
+            // "Text Editor - (UNTITLED)" at x 205-300 of the 24-557 box).
+            x += std::floor(std::max(0.0, room - w) / 2);
         }
         if (clearlooks && active) {
             // THE HALO: the head's and the tail's glyph outlines as one path,
@@ -1652,6 +1716,24 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
                 : gui.window_maximized()         ? ClCaptionGlyph::Restore
                                                  : ClCaptionGlyph::Maximize;
             paint_cl_caption_button(cr, b, g, active, pushed, face.enabled);
+            continue;
+        }
+        if (cde) {
+            // DTWM'S BUTTONS (cde_paint.h's caption block): the Close slot
+            // is the window-menu button, which stands PRESSED (sunken) while
+            // its menu is down, as dtwm arms it; Minimize and Maximize sink
+            // under a press. Maximize keeps dtwm's one glyph whatever the
+            // window's state (dtwm has no Restore glyph: Restore is the
+            // menu's verb), greyed where the window cannot be restored.
+            const CdeCaptionBox which =
+                id == GuiCaptionButton::Minimize ? CdeCaptionBox::Minimize
+                : id == GuiCaptionButton::Close  ? CdeCaptionBox::WindowMenu
+                                                 : CdeCaptionBox::Maximize;
+            const bool menu_down = id == GuiCaptionButton::Close &&
+                                   app.dropdown.open() &&
+                                   app.dropdown.menu == DropdownMenu::Window;
+            paint_cde_caption_box(cr, b, which, active, pushed || menu_down);
+            paint_cde_caption_glyph(cr, b, which, active, face.enabled);
             continue;
         }
         const ButtonBoxFace box =
@@ -1735,6 +1817,8 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // last row (paint_cl_menubar), focused or not alike.
     const bool clearlooks =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    const bool cde =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde;
     if (clearlooks) {
         paint_cl_menubar(cr, row);
     } else {
@@ -1743,6 +1827,12 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         cairo_rectangle(cr, row.x, row.y, row.w, row.h);
         cairo_fill(cr);
     }
+    // UNDER CDE THE BAR IS MOTIF'S MENU BAR, A RAISED ONE-W PANEL
+    // (2026-10-08; chrome_spec.h's cde head, the notepad capture's rows 24
+    // and 52): the head row the top shadow, the foot row the bottom shadow,
+    // its left and right columns the same ring — the lane's own bevel on the
+    // body, mitred like every ring.
+    if (cde) paint_cde_raised(cr, row);
 
     // THE SHAPING CHOKEPOINT (text_shape.h): each label is MEASURED and PAINTED
     // from the one ShapedRun, so a button's width and its glyphs come from the
@@ -1789,6 +1879,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // because the architect stated one there; none is stated here, so none
     // exists (the css float model's default).
     int x = row.x + scaled_px(spec.menu_band_lead_px);
+    // THE SPACING between two anchors (menu_item_spacing_px: Motif's
+    // RowColumn spacing under cde, none under the other two).
+    const int spacing = scaled_px(spec.menu_item_spacing_px);
     for (const MenuButtonDef& def : kMenuButtons) {
         const text_shape::ShapedRun run =
             text_shape::shape_text_run(font, def.label);
@@ -1831,15 +1924,21 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // input_pointer.cpp; this reads only the published bit).
         const bool open_anchor =
             app.dropdown.open() &&
+            !dropdown_hangs_from_caption(app.dropdown.menu) &&
             def.id == dropdown_anchor_button(app.dropdown.menu);
         // UNDER CLEARLOOKS the open title is GTK's prelit menu bar item
         // (paint_cl_menubar_item: spot[1]'s gummy ramp in its spot[2]
         // border, the top corners round, one row taller than the item) under
         // the label in selected_fg, NOT pushed; the dead label is GTK's
-        // insensitive text (show_embossed_run's clearlooks arm).
+        // insensitive text (show_embossed_run's clearlooks arm). UNDER CDE
+        // Motif's ARMED CASCADE (2026-10-08): a RAISED one-W box in the body
+        // round the content rows, the label unpushed (the desktop_full
+        // capture's armed "Web Browser" row, the same face).
         int push = 0;
         if (open_anchor && clearlooks) {
             paint_cl_menubar_item(cr, row, x, btn_w);
+        } else if (open_anchor && cde) {
+            paint_cde_raised(cr, GuiRect{x, content.y, btn_w, content.h});
         } else if (open_anchor) {
             paint_relief_sunken_outer(
                 cr, GuiRect{x, content.y, btn_w, content.h});
@@ -1858,7 +1957,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             text_shape::show_shaped_run(cr, run, label_x, label_y);
         }
 
-        x += btn_w;
+        x += btn_w + spacing;
     }
 
     cairo_restore(cr);
@@ -2162,7 +2261,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // foot below it in this instance, so the band is the lane.
     if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
         paint_cl_toolbar_band(cr, GuiRect{lane.x,
-                                          lane.y + icon_row_etched_pair_px(),
+                                          lane.y + icon_row_etched_head_px(),
                                           lane.w, icon_row_band_h_px()});
 
     // THE ETCHED LINE PAIR, Windows' own menubar/toolbar separator
@@ -2170,9 +2269,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the lane's whole width like Windows' own and painted over the ground
     // fill above. Inert ground for input, like the foot below the case.
     // ONLY WHERE THE SPEC ASKS FOR IT (icon_row_etched_pair, 2026-10-07):
-    // clearlooks has none, the menu bar's own last row being its line.
-    if (live_chrome_spec().icon_row_etched_pair)
+    // clearlooks has none, the menu bar's own last row being its line; CDE
+    // seats it at the lane's FOOT, under the band (2026-10-08, dtfile's
+    // separator under its toolbar; GuiEtchedPairSeat::Foot) — Motif's
+    // SHADOW_ETCHED_IN, the same two lines.
+    switch (live_chrome_spec().icon_row_etched_pair) {
+    case GuiEtchedPairSeat::Head:
         paint_relief_etched_hline(cr, lane.x, lane.y, lane.w);
+        break;
+    case GuiEtchedPairSeat::Foot:
+        paint_relief_etched_hline(cr, lane.x,
+                                  lane.y + icon_row_band_h_px(), lane.w);
+        break;
+    case GuiEtchedPairSeat::None:
+        break;
+    }
 
     // (NO FONT IS SELECTED HERE, and that is the row's own fact since
     // 2026-08-11: this lane paints geometry and icons only. A text face was
@@ -3342,6 +3453,17 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     //          its pad is the spec's (tooltip_pad_px).
     // (The MENU face is Windows' alone: under Clearlooks the dropdown is
     // GtkMenu's box, paint_cl_menu, chosen at paint_dropdown.)
+    // UNDER CDE BOTH FACES ARE A MOTIF PANEL (2026-10-08): the ground (the
+    // card's, the body under the Solaris scheme) under one raised line in
+    // the body's tones — Motif's pulldown pane for the menu, and for the
+    // cards and the tooltip, which CDE has no element for, the same raised
+    // panel (the deviations doc); no flat frame line.
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        paint_cell_rect(cr, r, face == PopupFace::Menu ? palette().ground
+                                                       : palette().card_ground);
+        paint_cde_raised(cr, r);
+        return;
+    }
     if (face == PopupFace::Menu) {
         paint_cell_rect(cr, r, palette().ground);
         paint_relief_plain_raised(cr, r);
@@ -3979,9 +4101,14 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
 
     const DropdownMenu menu = app.dropdown.menu;
     const int count = dropdown_item_count(menu);
+    // THE ANCHOR: the menu row's button, or THE CAPTION'S WINDOW-MENU BUTTON
+    // for the window menu (dropdown_hangs_from_caption, 2026-10-08: the cde
+    // caption's Close slot, as painted — AppState::caption_buttons).
     const GuiRect& btn =
-        app.redesign_buttons[redesign_button_index(
-            dropdown_anchor_button(menu))].rect;
+        dropdown_hangs_from_caption(menu)
+            ? app.caption_buttons[static_cast<size_t>(GuiCaptionButton::Close)].rect
+            : app.redesign_buttons[redesign_button_index(
+                  dropdown_anchor_button(menu))].rect;
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
@@ -3989,15 +4116,20 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
 
     // UNDER CLEARLOOKS GTKMENU'S BOX (render.h's dropdown block): no margin,
     // the items against the frame and covering its sides, the separator the
-    // box's whole width.
+    // box's whole width. UNDER CDE MOTIF'S PULLDOWN (render.h's dropdown
+    // block, 2026-10-08): the one-W raised frame, the items inside it at the
+    // spec's zero margin, the separator the pane's whole inner width.
     const bool gtk_menu = popup_is_gtk_menu();
+    const bool motif_menu =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde;
     const int border    = popup_border_px();
     const int side      = gtk_menu ? 0 : border;
     const int item_h    = popup_item_h_px();
     const int block_mar = popup_item_margin_y_px();
     const int margin_x  = live_chrome_spec().popup_margin_px;
     const int inset     = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
-    const int sep_inset = gtk_menu ? 0 : scaled_px(kPopupSepInsetPx);
+    const int sep_inset = (gtk_menu || motif_menu) ? 0
+                                                   : scaled_px(kPopupSepInsetPx);
     const int sep_mar   = popup_sep_margin_y_px();
     const int sep_block = popup_sep_block_px();   // margin, etched pair, margin
 
@@ -4070,9 +4202,8 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // covered that margin strip while the menu was up, the ruled look and
     // not a leak. What he stated then is what this reads now — "the menu
     // row's bottom edge", the whole lane's — with the anchor keeping the x.
-    const GuiRect menu_lane = top_menu_row_area(app);
     int x = btn.x;
-    int y = menu_lane.y + menu_lane.h;   // flush: zero margin under the LANE
+    int y = dropdown_hang_y(app, menu);   // flush: zero margin under the LANE
     if (x + w > app.width) x = app.width - w;
     if (x < 0) x = 0;
     app.dropdown.rect = GuiRect{x, y, w, h};
@@ -4144,9 +4275,12 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
                                         app.dropdown.hovered_item == i);
         // UNDER CLEARLOOKS the lit item is clearlooks_gummy_draw_menuitem
         // (paint_cl_menu_item), the same item box, the same gate.
+        // UNDER CDE the lit item is Motif's ARMED menu item: a raised one-W
+        // box in the body, its label unchanged (render.h's dropdown block).
         if (lit) {
-            if (gtk_menu) paint_cl_menu_item(cr, item);
-            else          paint_cell_rect(cr, item, palette().selected_fill);
+            if (gtk_menu)        paint_cl_menu_item(cr, item);
+            else if (motif_menu) paint_cde_raised(cr, item);
+            else                 paint_cell_rect(cr, item, palette().selected_fill);
         }
 
         // LEFT-ALIGNED AT THE ONE INDENT, measured from the POPUP box's own left
@@ -4168,7 +4302,8 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         const GuiColor row_ink =
             gtk_menu ? (lit ? palette().cl_menuitem_text
                             : palette().cl_menu_text)
-                     : (lit ? palette().selected_text : palette().label);
+                     : (lit && !motif_menu ? palette().selected_text
+                                           : palette().label);
         const auto show_row_run = [&](const text_shape::ShapedRun& r,
                                       double rx) {
             if (!enabled[i]) {
@@ -4250,16 +4385,18 @@ constexpr double kRulerMinMinorPitchPx = 9.0;
 // top, so its cap top sits nearbyint(ascent) - nearbyint(cap) under it, and
 // the pad that lands the cap top at this row is
 //
-//     pad = max(0, scaled_px(4) - (nearbyint(ascent) - nearbyint(cap)))
+//     pad = max(0, scaled_px(cap top) - (nearbyint(ascent) - nearbyint(cap)))
 //
 // of the label's own face, THE SMALL FACE (gui_font(GuiFace::Small)), both
 // metrics its recorded ones (gui_font.h). Its cell is all cap — ascent 6,
-// cap 6, WordPad's ruler digit — so the pad is scaled_px(4) itself at every
-// scale (2026-10-05); the rule stays general because the face's
-// ascent-minus-cap is the face's to change. The rule's one implementation is
+// cap 6, WordPad's ruler digit — so the pad is scaled_px(cap top) itself at
+// every scale (2026-10-05); the rule stays general because the face's
+// ascent-minus-cap is the face's to change. THE CAP TOP IS THE CHROME
+// SPEC'S (ruler_label_cap_top_px, 2026-10-08: the base's 4; cde's 0, the
+// digits against the trim lane, the ruler lane absorbing the 6 W its taller
+// top strip costs). The rule's one implementation is
 // ruler_label_baseline_px below; the lane's height under the labels is
 // ruler_lane_h_px's arithmetic (render.h).
-constexpr double kRulerLabelCapTopPx   = 4.0;
 // How far a MAJOR tick rises above the marker lane. Minors rise none. 3
 // Windows px (the laptop pixel's 4 re-authored, architect 2026-10-02).
 constexpr double kRulerMajorRisePx     = 3.0;
@@ -4303,7 +4440,7 @@ std::string ruler_label_text(int64_t ms, int64_t step_ms) {
 }
 
 // THE LABELS' BASELINE, in device rows under the ruler lane's top: the
-// derived pad of kRulerLabelCapTopPx's rule, then line_baseline's ascent. ONE
+// derived pad of the cap top's rule, then line_baseline's ascent. ONE
 // SEAT FOR ITS TWO READERS, the painter (paint_ruler_row) and the lane's own
 // height (ruler_lane_h_px), each handing in the label face at its painted
 // size, so the digits and the ground beneath them are one measurement and
@@ -4313,21 +4450,23 @@ int ruler_label_baseline_px(const GuiFont& font) {
         static_cast<int>(std::nearbyint(gui_font_ascent_px(font))) -
         static_cast<int>(std::nearbyint(gui_font_cap_px(font)));
     const int pad =
-        std::max(0, scaled_px(kRulerLabelCapTopPx) - ascent_to_cap);
+        std::max(0, scaled_px(live_chrome_spec().ruler_label_cap_top_px) -
+                        ascent_to_cap);
     return static_cast<int>(line_baseline(font, static_cast<double>(pad)));
 }
 
 } // namespace
 
 // THE RULER LANE'S DERIVED HEIGHT (the rule and its scales at the
-// declaration, render.h): the labels' baseline, then kRulerBaselineToMarkerPx
-// authored rows to the marker lane. Read at LAYOUT, outside any paint, off
+// declaration, render.h): the labels' baseline, then the spec's
+// ruler_baseline_to_marker_px authored rows to the marker lane (the base's
+// 7; cde's 5). Read at LAYOUT, outside any paint, off
 // the small face's recorded metrics (gui_font.h), the very numbers the
 // painter's seat reads, so the digits and the ground beneath them are one
 // measurement. Cheap enough to answer per query.
 int ruler_lane_h_px() {
     return ruler_label_baseline_px(gui_font(GuiFace::Small)) +
-           scaled_px(kRulerBaselineToMarkerPx);
+           scaled_px(live_chrome_spec().ruler_baseline_to_marker_px);
 }
 
 // THE MARKER LANE'S DERIVED ROWS (the rule and its scales at render.h's
@@ -4423,11 +4562,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const GuiFont font = gui_font(GuiFace::Small);
     // THE LABEL IS A LINE, not a box, AT THE SMALL FACE
     // (gui_font.h): the seat is line_baseline's ascent off a top pad DERIVED so the cap top
-    // lands kRulerLabelCapTopPx authored rows under the lane's top (the rule
+    // lands the spec's cap top (ruler_label_cap_top_px) authored rows under the lane's top (the rule
     // and its three scales at that constant), through the one seat the lane's
     // height also reads (ruler_label_baseline_px). THE SEAT IS ANCHORED TO THE
     // LANE'S TOP, never centred in it or hung from its bottom: the lane's
-    // height below the baseline is kRulerBaselineToMarkerPx's (render.h).
+    // height below the baseline is the spec's ruler_baseline_to_marker_px (render.h).
     const double baseline =
         static_cast<double>(lane.y + ruler_label_baseline_px(font));
 
@@ -4593,7 +4732,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // still stands whole: the box painter below takes only its own band
     // (marker_flag_box_band), never the lane's air, so the head's tip and a
     // flag's top edge meet without either covering the other. THE SEAT TERM
-    // IS UNCHANGED BY THE GLYPH'S OWN HEIGHT (kRulerBaselineToMarkerPx,
+    // IS UNCHANGED BY THE GLYPH'S OWN HEIGHT (ruler_baseline_to_marker_px,
     // render.h, states the new height's effect on how the head's top sits
     // against the digits at each scale — a small gap at 138 %, a two-row
     // overlap at 275 %, flush at 400 %, every case within his "a little
@@ -4670,7 +4809,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // px of air above the flag box (marker_lane_air_px) — touching
             // the box's top edge, so the band spans the ruler lane's last
             // (rows - 1) rows plus that one marker-lane row. The seat used to
-            // sit flush on the ruler lane's bottom (kRulerBaselineToMarkerPx's
+            // sit flush on the ruler lane's bottom (ruler_baseline_to_marker_px's
             // old rule); the move is this one term, so a playhead's damage
             // rect must include it (below).
             const int    head_bottom = marker.y + marker_lane_air_px();
@@ -6987,6 +7126,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // selection's blue, the slider-length x slider-width thumb.
             const bool gtk_scale =
                 live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+            // UNDER CDE XmScale (2026-10-08; cde_paint.h's scale block): the
+            // sunken select-colour trough over the thumb's whole rows across
+            // the track, the raised slider one W inside it at the thumb's
+            // box, the Windows thumb's width.
+            const bool motif_scale =
+                live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde;
             const int channel_h = scrub_channel_h_px();
             const int above     = scrub_thumb_above_px();
             const int thumb_h   = scrub_thumb_h_px();
@@ -7006,6 +7151,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     GuiRect{track.x, thumb_y + (thumb_h - cl_scale_trough_h_px()) / 2,
                             track.w, cl_scale_trough_h_px()},
                     hx >= 0 ? hx : track.x);
+            } else if (motif_scale) {
+                paint_cde_scale_trough(
+                    cr, GuiRect{track.x, thumb_y, track.w, thumb_h});
             } else {
                 // THE CHANNEL: PLAIN SUNKEN on a rect four lines tall, so the
                 // edge's two rings are the whole of it — Shadow, DkShadow,
@@ -7025,10 +7173,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     gtk_scale ? cl_scale_thumb_w_px() : scrub_thumb_w_px();
                 const GuiRect thumb{hx - thumb_w / 2, thumb_y, thumb_w,
                                     thumb_h};
-                if (gtk_scale)
+                if (gtk_scale) {
                     paint_cl_scale_thumb(cr, thumb);
-                else
+                } else if (motif_scale) {
+                    const int lw = relief_line_px();
+                    paint_cde_scale_slider(
+                        cr, GuiRect{thumb.x, thumb.y + lw, thumb.w,
+                                    thumb.h - 2 * lw});
+                } else {
                     paint_scrub_thumb(cr, thumb);
+                }
                 // THE COLUMN IS PUBLISHED AS PAINTED (the field's rule,
                 // AppState::ModalDialogGeometry::scrub_thumb_x): a clip that
                 // covers the track drew the whole slider, so this column is
@@ -7231,6 +7385,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const bool field_focused = app.modal_dialog_focus < 0;
             const bool gtk_entry =
                 spec.vocabulary == GuiChromeVocabulary::Clearlooks;
+            // UNDER CDE THE FIELD IS MOTIF'S TEXT FIELD (2026-10-08;
+            // paint_cde_field): the cream under one sunken line in set 4's
+            // own shadows, the field's whole box (the two lines the Windows
+            // edge spends, one of them the ring, the other the cream), no
+            // focus ring (his ruling); its text, selection and caret the
+            // Windows pairs, the selection the inverted pair.
+            const bool motif_field = spec.vocabulary == GuiChromeVocabulary::Cde;
             const GuiColor ink_text = gtk_entry ? palette().cl_text
                                                 : palette().field_text;
             const GuiColor ink_sel_fill =
@@ -7241,6 +7402,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                                     : palette().selected_text;
             if (gtk_entry) {
                 paint_cl_entry(cr, field_outer, field_focused);
+            } else if (motif_field) {
+                paint_cde_field(cr, field_outer, palette().field_ground);
             } else {
                 paint_cell_rect(cr, field_inner, palette().field_ground);
                 paint_relief_plain_sunken(cr, field_outer);
@@ -7616,8 +7779,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // and no button wears a pressed face (the dialogs' indices name the
 // prompt's buttons then).
 //
-// THE LOOK, both chromes: the GROUND with the PLAIN RAISED two-line edge
-// under win2000 and GTK's one shade[5] line under clearlooks; the wheel
+// THE LOOK, every chrome: the GROUND with the PLAIN RAISED two-line edge
+// under win2000, GTK's one shade[5] line under clearlooks and Motif's
+// one-W raised panel under cde (2026-10-08); the wheel
 // (color_picker::paint_wheel, the one non-role painter); the chooser and the
 // palette menu button — ONE COMBO DRAWING (paint_picker_combo below):
 // win2000 a sunken field in the field pair with Windows' 16-W drop-down
@@ -7738,10 +7902,20 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
         paint_picker_wedge(cr, ax, ay, aw, ah, enabled, palette().cl_push_text);
         return;
     }
-    const int fb = 2 * lw;
-    paint_cell_rect(cr, GuiRect{r.x + fb, r.y + fb, r.w - 2 * fb, r.h - 2 * fb},
-                    enabled ? palette().field_ground : palette().ground);
-    paint_relief_plain_sunken(cr, r);
+    // UNDER CDE the combo's field is Motif's text field (paint_cde_field,
+    // one W of ring; the drop button Motif's one-W button through
+    // paint_button_box's cde arm), the Windows shape otherwise kept —
+    // XmComboBox is the same field-and-arrow (2026-10-08).
+    const bool cde = spec.vocabulary == GuiChromeVocabulary::Cde;
+    const int fb = (cde ? 1 : 2) * lw;
+    if (cde) {
+        paint_cde_field(cr, r, enabled ? palette().field_ground
+                                       : palette().ground);
+    } else {
+        paint_cell_rect(cr, GuiRect{r.x + fb, r.y + fb, r.w - 2 * fb, r.h - 2 * fb},
+                        enabled ? palette().field_ground : palette().ground);
+        paint_relief_plain_sunken(cr, r);
+    }
     cairo_save(cr);
     cairo_rectangle(cr, r.x + fb, r.y + fb, button.x - (r.x + fb), r.h - 2 * fb);
     cairo_clip(cr);
@@ -7845,7 +8019,8 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     AppState::ColorPicker&          cp  = app.color_picker;
     AppState::ModalDialogGeometry&  dlg = app.modal_dialog;
     const ChromeSpec& spec = live_chrome_spec();
-    const bool cl = spec.vocabulary == GuiChromeVocabulary::Clearlooks;
+    const bool cl  = spec.vocabulary == GuiChromeVocabulary::Clearlooks;
+    const bool cde = spec.vocabulary == GuiChromeVocabulary::Cde;
     const GuiFont font = gui_font(GuiFace::Body);
     const color_picker::Layout L = color_picker::layout(app, font);
     const bool asking = text_editor::is_active(cp.field_editor) &&
@@ -7856,8 +8031,9 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
 
     // THE CARD.
     paint_cell_rect(cr, L.card, palette().ground);
-    if (cl) paint_relief_line_frame(cr, L.card, palette().cl_list_frame);
-    else    paint_relief_plain_raised(cr, L.card);
+    if (cl)       paint_relief_line_frame(cr, L.card, palette().cl_list_frame);
+    else if (cde) paint_cde_raised(cr, L.card);   // a Motif panel, one W
+    else          paint_relief_plain_raised(cr, L.card);
 
     // THE WHEEL.
     {
@@ -7892,6 +8068,14 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
                 cr, GuiRect{track.x, ty + (th - trough_h) / 2, track.w, trough_h},
                 thumb_x);
             paint_cl_scale_thumb(cr, GuiRect{thumb_x - tw / 2, ty, tw, th});
+        } else if (cde) {
+            // XmScale (cde_paint.h's scale block): the trough over the
+            // row's whole rows, the slider one W inside it.
+            const int lw = relief_line_px();
+            const int tw = scrub_thumb_w_px();
+            paint_cde_scale_trough(cr, GuiRect{track.x, row.y, track.w, row.h});
+            paint_cde_scale_slider(
+                cr, GuiRect{thumb_x - tw / 2, row.y + lw, tw, row.h - 2 * lw});
         } else {
             const int above = scaled_px(color_picker::kSliderThumbAbovePx, 1);
             const int channel_h = scrub_channel_h_px();
@@ -8457,6 +8641,13 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     if (gtk_list) {
         paint_cl_list(cr, surf);
+    } else if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+        // UNDER CDE XmList (2026-10-08; the Open dialog capture's lists):
+        // the cream under one sunken line in set 4's shadows
+        // (paint_cde_field; content_rect spends the one line), the lit row
+        // the inverted pair, Windows' arm below — black under cream, the
+        // capture's own.
+        paint_cde_field(cr, surf, palette().field_ground);
     } else {
         paint_cell_rect(cr, surf, palette().field_ground);
         paint_relief_plain_sunken(cr, surf);
@@ -8897,7 +9088,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      top stands 3 rows below the labels' baseline (no overlap), at
         //      275 % it rises 2 rows into the digits' own ink, and at 400 %
         //      it lands exactly on the baseline (render.h's
-        //      kRulerBaselineToMarkerPx block) — and the cursor's column
+        //      ruler_baseline_to_marker_px block) — and the cursor's column
         //      through the marker lane, under the flags, painted BEFORE the
         //      head so the tip shows whole (architect 2026-10-07; the
         //      reasoning is at that block in paint_ruler_row).

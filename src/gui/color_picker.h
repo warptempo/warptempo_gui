@@ -297,7 +297,7 @@ inline constexpr int kKeyboardBandWPx =
 static_assert(kKeyboardBandWPx == 131);
 // THE CARD'S HEIGHT IN W PX under each chrome (the head's sums).
 constexpr int card_height_wpx(const ChromeSpec& spec) {
-    const int edge = spec.vocabulary == GuiChromeVocabulary::Clearlooks ? 1 : 2;
+    const int edge = spec.vocabulary == GuiChromeVocabulary::Win2000 ? 2 : 1;
     return 2 * edge + 2 * kCardPadPx + kChooserHeightPx + kChooserGapPx +
            6 * kSliderRowPx + kBlockGapPx +
            static_cast<int>(spec.push_button_box_px);

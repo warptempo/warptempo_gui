@@ -152,6 +152,8 @@ set(WARPTEMPO_GUI_SOURCES
     # of the top strip's painters (clearlooks_paint.h). GUI-only like every
     # painting concern.
     src/gui/clearlooks_paint.cpp
+    # THE CDE PAINTERS (2026-10-08): the chrome spec's cde arm (cde_paint.h).
+    src/gui/cde_paint.cpp
     src/gui/warpmarkers.cpp
     src/gui/text_editor.cpp
     src/gui/phaseresetmarkers.cpp

@@ -338,7 +338,11 @@ char widest_hex_digit(const GuiFont& font) {
 GuiRect combo_drop_button(const GuiRect& r) {
     if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
         return GuiRect{0, 0, 0, 0};
-    const int fb = 2 * relief_line_px();   // the sunken field's two lines
+    // the sunken field's two lines (one under cde, Motif's text field —
+    // paint_picker_combo's cde arm, 2026-10-08)
+    const int fb =
+        (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde ? 1 : 2) *
+        relief_line_px();
     const int bw = scaled_px(kComboButtonWPx);
     return GuiRect{r.x + r.w - fb - bw, r.y + fb, bw, r.h - 2 * fb};
 }
@@ -399,9 +403,11 @@ GuiRect combo_list_item(const ComboList& l, int i) {
 Layout layout(const AppState& app, const GuiFont& font) {
     Layout l;
     const ChromeSpec& spec = live_chrome_spec();
-    const bool cl = spec.vocabulary == GuiChromeVocabulary::Clearlooks;
+    // The card's edge: Windows' two lines, GTK's one, Motif's one (the
+    // panel's one-W bevel, 2026-10-08).
     const int lw      = relief_line_px();
-    const int edge    = cl ? lw : 2 * lw;
+    const int edge    = spec.vocabulary == GuiChromeVocabulary::Win2000
+                            ? 2 * lw : lw;
     const int pad     = scaled_px(kCardPadPx);
     const int margin  = scaled_px(kCardMarginPx);
     const int chooser_h = scaled_px(kChooserHeightPx);

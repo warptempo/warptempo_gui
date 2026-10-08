@@ -1,21 +1,22 @@
 #include "gui_font.h"
 
-// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the four
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the six
 // files handed in once through gui_font_install_bundled — the Linux
 // executable's compiled-in copy (gui_font_embedded.cpp) or the APK's assets —
-// become four FT faces, the live set (gui_font.h's gui_live_face_set, the
+// become six FT faces, the live set (gui_font.h's gui_live_face_set, the
 // chrome spec's) picks its three uses among them, and no site below the seam
 // learns which device handed the bytes in.
 //
-// THE FACES (Tahoma, Tahoma Bold, DejaVu Sans and DejaVu Sans Bold, all
-// TrueType) are FT faces wrapped as cairo font faces — the FT-backed
+// THE FACES (Tahoma, Tahoma Bold, DejaVu Sans, DejaVu Sans Bold, Go Regular
+// and Go Bold, all TrueType) are FT faces wrapped as cairo font faces — the FT-backed
 // shape text_shape requires, since it shapes on the scaled font's own FT
 // face through hb-ft.
 //
 // OUTLINES ONLY, NEVER A STRIKE (architect 2026-10-06; gui_font.h's head).
 // Tahoma carries bitmap strikes (8–16 ppem, the bold 9–13) — DejaVu Sans
 // 2.31 carries none (no EBDT / EBLC table in either file, read 2026-10-07),
-// so both roads below are no-ops on its two faces, run on all four alike —
+// nor does Go (2026-10-08), so both roads below are no-ops on those four
+// faces, run on all six alike —
 // and FreeType
 // reads a strike on two roads, both closed here: (1) SIZE SELECTION — a
 // TrueType face with strikes answers a size request whose ppem ROUNDS to a
@@ -90,7 +91,7 @@ double g_ink_em[kGuiFontFileCount][2] = {};
 
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
-// The four files' faces, in kGuiFontFiles' order.
+// The six files' faces, in kGuiFontFiles' order.
 OutlineFace           g_outline[kGuiFontFileCount];
 
 std::size_t face_index(GuiFace face) { return static_cast<std::size_t>(face); }

@@ -2137,12 +2137,13 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         if (on_resize_) on_resize_(client_w(), client_h());
     } else if (maximized_changed || damage_.empty() ||
                (pending_activation_flip_ && frame_px_ > 0 &&
-                live_chrome_spec().vocabulary ==
-                    GuiChromeVocabulary::Clearlooks)) {
+                live_chrome_spec().vocabulary !=
+                    GuiChromeVocabulary::Win2000)) {
         // No size change — still schedule a paint so the compositor's
         // reconfigure (an activation or maximize state change: the caption's
-        // roles, the Maximise / Restore glyph; under clearlooks a restored
-        // window's frame, pending_activation_flip_) gets honored.
+        // roles, the Maximise / Restore glyph; under clearlooks and cde a
+        // restored window's frame, which follows the activation,
+        // pending_activation_flip_) gets honored.
         queue_full_surface_damage();
     }
     pending_activation_flip_ = false;

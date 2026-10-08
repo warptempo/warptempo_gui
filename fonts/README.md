@@ -1,6 +1,6 @@
 # The product's faces
 
-These four files are the product's faces on both devices (the rules at `src/gui/gui_font.h`, the one face owner). The Linux build compiles all four into `warptempo_gui`; the APK carries them as its assets. Both read the names from one list, `kGuiFontFiles` in `gui_font.h`. Neither device asks the system for a font. Each face is drawn as its antialiased outline at every scale, at the em that matches each use's recorded vertical metrics (`GuiFaceSet` in `gui_font.h`). The files' own line metrics are never read, and their embedded bitmap strikes are never drawn.
+These six files are the product's faces on both devices (the rules at `src/gui/gui_font.h`, the one face owner). The Linux build compiles all six into `warptempo_gui`; the APK carries them as its assets. Both read the names from one list, `kGuiFontFiles` in `gui_font.h`. Neither device asks the system for a font. Each face is drawn as its antialiased outline at every scale, at the em that matches each use's recorded vertical metrics (`GuiFaceSet` in `gui_font.h`). The files' own line metrics are never read, and their embedded bitmap strikes are never drawn.
 
 | File | Face | Format | sha256 |
 |---|---|---|---|
@@ -8,17 +8,20 @@ These four files are the product's faces on both devices (the rules at `src/gui/
 | `tahomabd.ttf` | Tahoma Bold (Wine Tahoma Bold), version 0.021 | TrueType, strikes 9–13 ppem (never drawn) | `9ebca12d00d3722d92150a4089c1e44a79e6764425fa250835f67b3db3115b0e` |
 | `DejaVuSans.ttf` | DejaVu Sans Book, version 2.31 | TrueType, no strikes | `2d12064604cb0380ead9061bc8aa77d1bdd6509bb82502ee45af16b0d2e63b80` |
 | `DejaVuSans-Bold.ttf` | DejaVu Sans Bold, version 2.31 | TrueType, no strikes | `9ef42492773bdf4964a766d9a8727f0769d0eb92a5de80371c04ff542b8fc753` |
+| `Go-Regular.ttf` | Go Regular (Bigelow & Holmes, 2016) | TrueType, no strikes | `197d9f3703b4c00af609178876a8d73e396f64fe438b2c871778566632374be3` |
+| `Go-Bold.ttf` | Go Bold (Bigelow & Holmes, 2016) | TrueType, no strikes | `c18494baa7ea35b8dbfac3861787d360b9c0ab91232562371a09e6fbf09aaa40` |
 
 ## The face set
 
-A face set is one chrome vocabulary's text: which file each of the three uses is drawn from, its recorded metrics (ascent, descent, cap in Windows px) and its tracking (`GuiFaceSet` in `gui_font.h`). The chrome spec names its set (`ChromeSpec` in `src/gui/chrome_spec.h`), and the device config's `chrome` key chooses the spec at launch. There are two sets. Windows 2000's dates from the Windows 2000 pivot (architect 2026-10-06; Nimbus Sans, the Windows 95 vocabulary's face, was dropped then and stands in git history). GNOME 2's came with the clearlooks chrome (2026-10-07).
+A face set is one chrome vocabulary's text: which file each of the three uses is drawn from, its recorded metrics (ascent, descent, cap in Windows px) and its tracking (`GuiFaceSet` in `gui_font.h`). The chrome spec names its set (`ChromeSpec` in `src/gui/chrome_spec.h`), and the device config's `chrome` key chooses the spec at launch. There are three sets. Windows 2000's dates from the Windows 2000 pivot (architect 2026-10-06; Nimbus Sans, the Windows 95 vocabulary's face, was dropped then and stands in git history). GNOME 2's came with the clearlooks chrome (2026-10-07). CDE's came with the cde chrome (2026-10-08).
 
 | Set | Chrome | Body | Bold (the caption's title) | Small (the ruler's labels) | Metrics body / bold / small | Tracking per glyph |
 |---|---|---|---|---|---|---|
-| **win2000** | `win2000` | `tahoma.ttf` | `tahomabd.ttf` | `tahoma.ttf` | {11, 2, 8} / {11, 2, 8} / {6, 0, 6} | none |
+| **win2000** | `windows-2000` | `tahoma.ttf` | `tahomabd.ttf` | `tahoma.ttf` | {11, 2, 8} / {11, 2, 8} / {6, 0, 6} | none |
 | **gnome2** | `clearlooks` | `DejaVuSans.ttf` | `DejaVuSans-Bold.ttf` | `DejaVuSans.ttf` | {11, 2, 8} / {11, 2, 8} / {6, 0, 6} | none |
+| **cde** | `cde` | `Go-Regular.ttf` | `Go-Bold.ttf` (unread: dtwm's title is the medium face, which the cde caption uses) | `Go-Regular.ttf` | {11, 2, 8} / {11, 2, 8} / {6, 0, 6} | none |
 
-The ems are worked out from the files at the install (`src/gui/gui_font_bundled.cpp`), for every set at once, because Android installs the faces before it reads the config. The win2000 body, bold and small come to 11.003, 10.996 and 7.943 Windows px. The gnome2 ones come to 13.717, 13.717 and 7.933. A retune swaps a file; only the comments that quote these numbers need working out again.
+The ems are worked out from the files at the install (`src/gui/gui_font_bundled.cpp`), for every set at once, because Android installs the faces before it reads the config. The win2000 body, bold and small come to 11.003, 10.996 and 7.943 Windows px. The gnome2 ones come to 13.717, 13.717 and 7.933. The cde ones come to about 11.07, 11.07 and 8.10 (Go's "H" is 1480 of 2048 in both files, its "0" 1517, read through FreeType 2026-10-08; the install derives the exact figure). A retune swaps a file; only the comments that quote these numbers need working out again.
 
 ## Provenance and licences
 
@@ -35,3 +38,9 @@ The product ships the files unmodified under their own name ("Tahoma", as ReactO
 The licence that travels with them is the package's own copyright file, `/usr/share/doc/ttf-dejavu/copyright`, copied verbatim as `LICENSE-DejaVu-ttf-dejavu.txt`. It states the Bitstream Vera Fonts licence, and it says the DejaVu changes are in the public domain.
 
 The product ships the files unmodified under their own name ("DejaVu Sans"), with no tracking. Their hhea ascender and descender (1901 / −483 of 2048) happen to round to the recorded 13 / 4 at Sans 10, but the product does not read them: the recorded metrics are the only vertical metric source. The files carry TrueType bytecode, which the product's light hinting does not run (`src/gui/gui_font_bundled.cpp`).
+
+**Go Sans** (`Go-Regular.ttf`, `Go-Bold.ttf`): the Go project's fonts, designed by Bigelow & Holmes for Go in 2016 — the Lucida designers' own open humanist sans, which is why they stand in for Lucida Sans, the face Solaris 9's CDE set its chrome in (a proprietary 14-px bitmap strike; `tmp/research/cde_solaris/report.md` §4; architect 2026-10-08, "excellent choice"). The files are `font/gofont/ttfs/Go-Regular.ttf` and `Go-Bold.ttf` of https://github.com/golang/image (the `golang.org/x/image` module), byte-identical to the module's copies (their `name` table says "Go" / "Regular" and "Go" / "Bold").
+
+The licence that travels with them is the module's own `font/gofont/ttfs/README`, copied verbatim as `LICENSE-Go-fonts.txt`: a BSD-3-style licence (redistribution and use, with or without modification, under the three conditions; copyright 2016 Bigelow & Holmes Inc.).
+
+The product ships the files unmodified under their own name ("Go"), with no tracking. Their own line metrics are not read: the recorded metrics are the only vertical metric source (`src/gui/gui_font.h`). The files carry no bitmap strikes.

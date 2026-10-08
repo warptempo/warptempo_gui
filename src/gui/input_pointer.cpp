@@ -4904,6 +4904,21 @@ bool GuiInputHandler::claim_caption_press(
         // AS PAINTED: a button painted disabled (the tablet's Restore) takes
         // its press as a consumed nothing, as a greyed roster button does.
         if (!app.caption_buttons[static_cast<size_t>(b)].enabled) return true;
+        // UNDER CDE THE CLOSE SLOT IS THE WINDOW-MENU BUTTON (2026-10-08,
+        // ruling 3; caption_button_rects' cde arm): it ACTS AT THE PRESS,
+        // as the menu row's anchors do — the toggle's open half, the drag
+        // into the menu and the lift on a verb being the one gesture (the
+        // anchor press's record at the row-1 band claim) — and claims the
+        // held button for the popup when a menu came up. A press while the
+        // menu stands never arrives here: the open dropdown's claim, ranked
+        // above, closes it (a press outside its items dismisses).
+        if (static_cast<GuiCaptionButton>(b) == GuiCaptionButton::Close &&
+            live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
+            toggle_dropdown(DropdownMenu::Window);
+            app.dropdown.press_began_on_item = app.dropdown.open();
+            viewport.invalidate_rect(top_caption_row_area(app));
+            return true;
+        }
         app.chrome_press = AppState::ChromePress{
             .kind     = AppState::ChromePress::Kind::Caption,
             .index    = b,
@@ -4949,6 +4964,9 @@ void GuiInputHandler::finish_caption_release(const AppState::ChromePress& arm,
     switch (static_cast<GuiCaptionButton>(arm.index)) {
     case GuiCaptionButton::Minimize: gui.minimize_window();         return;
     case GuiCaptionButton::Maximize: gui.toggle_window_maximized(); return;
+    // (Under cde the Close slot is the window-menu button, which acts at
+    // the press and arms nothing — claim_caption_press — so this arm is
+    // the other two vocabularies' Close.)
     case GuiCaptionButton::Close:    on_window_close();             return;
     }
 }
@@ -9307,6 +9325,24 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     if (armed < 0) return true;   // nothing was lit; consumed, menu stays up
     const DropdownMenu menu = app.dropdown.menu;
     app.dropdown.pressed_item = -1;
+    // THE WINDOW MENU'S VERB (2026-10-08, kWindowPopupItems): close first,
+    // then the caption's own act for the verb — Restore and Maximize the
+    // maximized toggle (each greyed where it does not apply), Minimize the
+    // platform's, Close the one close road (on_window_close: the dirty
+    // prompt, the gesture end), exactly what the caption's buttons dispatch
+    // at their lift.
+    if (menu == DropdownMenu::Window) {
+        const WindowPopupVerb verb =
+            kWindowPopupItems[static_cast<size_t>(armed)].verb;
+        close_dropdown();
+        switch (verb) {
+            case WindowPopupVerb::Restore:
+            case WindowPopupVerb::Maximize: gui.toggle_window_maximized(); break;
+            case WindowPopupVerb::Minimize: gui.minimize_window();         break;
+            case WindowPopupVerb::Close:    on_window_close();             break;
+        }
+        return true;
+    }
     // CLOSE FIRST, THEN ACT — the popup is gone before anything the item does
     // runs, so a modal it opens never overlaps the menu even for a frame, and a
     // COMMAND it dispatches is not swallowed by the popup's own keyboard gate.
@@ -9963,9 +9999,15 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // close and that ruling, when no route reached this term at all; it was
     // File-exempt like this on 2026-09-02, when the panel stopped at row 1's
     // foot.)
-    if (!app.redesign_buttons[static_cast<size_t>(
-             redesign_button_index(dropdown_anchor_button(menu)))].enabled)
-        return;
+    // THE WINDOW MENU'S ANCHOR IS THE CAPTION'S BUTTON (2026-10-08,
+    // dropdown_hangs_from_caption): its painted bit, never a roster face.
+    const bool anchor_live =
+        dropdown_hangs_from_caption(menu)
+            ? app.caption_buttons[static_cast<size_t>(GuiCaptionButton::Close)]
+                  .enabled
+            : app.redesign_buttons[static_cast<size_t>(
+                  redesign_button_index(dropdown_anchor_button(menu)))].enabled;
+    if (!anchor_live) return;
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
     // (the gesture that opened it, closing it), and a press on ANOTHER menu's
     // button switches — the close below runs first, damaging the box that is
@@ -10044,12 +10086,10 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // exactly. The x is still the anchor's (the
     // dropdown hangs off the thing that opened it, architect 2026-08-02);
     // only this band's y reads the lane, and it damages FULL WIDTH anyway.
-    {
-        const GuiRect menu_lane = top_menu_row_area(app);
-        viewport.invalidate_rect(
-            GuiRect{0, menu_lane.y + menu_lane.h, app.width,
-                    dropdown_h_px(menu)});
-    }
+    // (The window menu hangs from the CAPTION lane's foot instead,
+    // dropdown_hang_y's one expression for both readers.)
+    viewport.invalidate_rect(
+        GuiRect{0, dropdown_hang_y(app, menu), app.width, dropdown_h_px(menu)});
     // THE TOOLTIP GOES DOWN ON THE OPEN EDGE, A HARD END (a menu opening
     // hides the tip at once) — the two floating surfaces cannot coexist
     // (paint_handler.h states the pair), and this is the one line that makes
@@ -10648,7 +10688,11 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // press claim (pressed_item / press_began_on_item) out from under the
         // held button, so the coming release acted on a menu the press never
         // touched. The ordinary unheld hover-switch is unchanged.
-        if (!mods.primary_button_held) {
+        // THE WINDOW MENU SWITCHES TO NO ROW-1 MENU (2026-10-08): it hangs
+        // from the caption, not the menu row, and dtwm's menu does not slide
+        // onto an application's menu bar; its press-and-drag stays its own.
+        if (!mods.primary_button_held &&
+            !dropdown_hangs_from_caption(app.dropdown.menu)) {
             for (const DropdownMenu m : kDropdownMenus) {
                 if (m == app.dropdown.menu) continue;
                 if (!redesign_button_hit(app, dropdown_anchor_button(m),

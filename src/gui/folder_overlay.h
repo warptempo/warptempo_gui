@@ -264,12 +264,13 @@ inline GuiRect surface_rect(const AppState& a) {
 // over it or be pressed through it.
 // UNDER CLEARLOOKS THE EDGE IS ONE LINE (architect 2026-10-07): the
 // scrolled window's shadow IN, one shade[5] line (paint_cl_list,
-// clearlooks_paint.h).
+// clearlooks_paint.h); UNDER CDE one line too, XmList's one-W shadow
+// (paint_cde_field, 2026-10-08).
 inline GuiRect content_rect(const AppState& a) {
     const GuiRect s  = surface_rect(a);
     const int     lw =
-        (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks
-             ? 1 : 2) * relief_line_px();
+        (live_chrome_spec().vocabulary == GuiChromeVocabulary::Win2000
+             ? 2 : 1) * relief_line_px();
     if (s.w <= 2 * lw || s.h <= 2 * lw) return GuiRect{s.x, s.y, 0, 0};
     return GuiRect{s.x + lw, s.y + lw, s.w - 2 * lw, s.h - 2 * lw};
 }

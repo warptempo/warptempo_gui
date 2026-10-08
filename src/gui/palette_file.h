@@ -64,10 +64,12 @@
 // IS ONE for every face, resting and selected (his one-label rule of
 // 2026-10-07; the four per-kind selected labels retired the same day).
 //
-// THE TWO DEFAULT PALETTES ARE COMPILED IN, one per chrome vocabulary, each
+// THE DEFAULT PALETTES ARE COMPILED IN, one per chrome vocabulary, each
 // named by its ChromeSpec's `default_palette` (chrome_spec.h):
-// `windows-2000-standard` and `clearlooks` — the role table's two value
-// columns below, THE PROGRAM'S FIFTEEN whenever the active preset is not a
+// `windows-2000-standard`, `clearlooks` and `solaris` — the role table's two
+// value columns below (the cde chrome's `solaris` takes Windows 2000's
+// column until he authors its own, 2026-10-08), THE PROGRAM'S FIFTEEN
+// whenever the active preset is not a
 // file — and each name is ITS CHROME'S OWN BUILT-IN SCHEME's (below).
 //
 // THE BUILT-IN SCHEMES (architect 2026-10-08 ~11:00–11:10: "the catalog's
@@ -374,6 +376,11 @@ struct GuiDefaultPalette {
 inline constexpr GuiDefaultPalette kGuiDefaultPalettes[] = {
     {"windows-2000-standard", &GuiPaletteRole::windows_2000},
     {"clearlooks",   &GuiPaletteRole::clearlooks},
+    // CDE'S DEFAULT PALETTE IS WINDOWS 2000'S COLUMN (2026-10-08, the cde
+    // arc's brief: the fifteen program roles the base's — the waveform lime
+    // on black and the rest — "until he authors one in the picker"; the
+    // recipe unchanged, a third column joining this table when he does).
+    {"solaris",      &GuiPaletteRole::windows_2000},
 };
 
 // THE NAME GRAMMAR (the head): 1 to 40 bytes of printable ASCII, no leading
@@ -402,6 +409,17 @@ struct GuiChromeScheme {
 };
 inline constexpr GuiChromeScheme kGuiChromeSchemes[] = {
 #include "chrome_schemes.inc"
+    // THE SOLARIS SCHEME, HAND-SET AFTER THE GENERATED ROWS (2026-10-08): the
+    // cde chrome's own built-in, no catalog entry (Sun's Default.dp is not in
+    // cdesktopenv; theme_file.h's kGuiThemeCde head owns its provenance —
+    // NsCDE's Solyaris.dp transcription, the captures the law) — its twelve
+    // keys the compiled theme's words key for key (palette_file.cpp's
+    // defaults_are_their_chromes_schemes proves it): the body and black, the
+    // flat title under white, the inactive three the body under black, the
+    // inverted list selection, set 4's cream under black. The display name
+    // follows the generator's rule for a CDE entry ("CDE Solaris"; "KDE 3
+    // Solaris" is TDE's own transcription of the same palette).
+    {"solaris", "CDE Solaris", {0xAEB2C3, 0x000000, 0xB24D7A, 0xB24D7A, 0xFFFFFF, 0xAEB2C3, 0xAEB2C3, 0x000000, 0x000000, 0xFFF7E9, 0xFFF7E9, 0x000000}},
 };
 
 // The built-in scheme keyed `name`, byte for byte, or nullptr.
@@ -446,7 +464,8 @@ std::vector<std::string> palette_file_names();
 bool is_palette_name(std::string_view name);
 inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in scheme's key (windows-2000-standard, clearlooks, "
-    "windows-rainy-day, ...) or the name of a palette file read at launch";
+    "solaris, windows-rainy-day, ...) or the name of a palette file read at "
+    "launch";
 
 // The palette `name` names — for a BUILT-IN, the live chrome's default
 // palette's fifteen (a built-in carries no program colors, the head) and the

@@ -362,6 +362,19 @@ struct GuiPalette {
     GuiColor caption_inactive;           // COLOR_INACTIVECAPTION
     GuiColor caption_inactive_gradient;  // COLOR_GRADIENTINACTIVECAPTION
     GuiColor caption_inactive_text;      // COLOR_INACTIVECAPTIONTEXT
+    // THE CDE BLOCK (theme_file.h's table, hand-set; 2026-10-08): the tones
+    // the Motif painters put down beyond Windows' twenty-one — colour set
+    // 2's SELECT (the troughs, the checked face), the text field's own
+    // shadows (set 4's, round the cream) and the title's (set 1's, round the
+    // caption's four boxes and the active frame) — each Motif's arithmetic
+    // on its set's background (cde_derive.h); unread by the other painters.
+    GuiColor cde_select;
+    GuiColor cde_field_ts;
+    GuiColor cde_field_bs;
+    GuiColor cde_title_ts;
+    GuiColor cde_title_bs;
+    GuiColor cde_inactive_ts;
+    GuiColor cde_inactive_bs;
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
     // palette_file.h).
     GuiColor waveform_canvas;
@@ -925,9 +938,13 @@ inline constexpr int kPlayheadUnitPx = 6;
 // records each vocabulary's measured caption — Windows 2000's SM_CYCAPTION
 // and DrawFrameControl box on the ReactOS captures (tmp/reactos*.png), and
 // metacity's maximised Clearlooks frame on the squeeze captures
-// (tmp/squeeze/):
+// (tmp/squeeze/), and dtwm's title bar on the Solaris 9 captures
+// (tmp/research/cde_solaris/dl/shots/; UNDER CDE, 2026-10-08, the lane is
+// dtwm's four raised boxes — the window-menu button, the title box, Minimize
+// and Maximize — 17 Windows px, the title centred in the medium face, no
+// icon, no Close: cde_paint.h's caption block, chrome_spec.h's cde head):
 //   THE LANE is caption_height_px whole (18 Windows px under win2000, 20
-//     under clearlooks): the caption's ground across the whole lane, under
+//     under clearlooks, 17 under cde): the caption's ground across the whole lane, under
 //     the icon and the buttons too — win2000 the active or inactive
 //     start-to-end colours, paint_caption_gradient's smooth ramp
 //     (ReactOS's span), nothing above or below it inside the lane;
@@ -1219,7 +1236,8 @@ constexpr int toolbar_case_authored_h(const ChromeSpec& s) {
            s.toolbar_case_trail_y_px;
 }
 constexpr int icon_row_authored_h(const ChromeSpec& s) {
-    return (s.icon_row_etched_pair ? 2 * kReliefLinePx : 0) +
+    return (s.icon_row_etched_pair != GuiEtchedPairSeat::None
+                ? 2 * kReliefLinePx : 0) +
            s.icon_row_air_px + toolbar_case_authored_h(s) +
            s.icon_row_air_px + s.icon_row_foot_px;
 }
@@ -1229,6 +1247,11 @@ static_assert(toolbar_case_authored_w(kChromeSpecWin2000) == 31 &&
 static_assert(toolbar_case_authored_w(kChromeSpecClearlooks) == 32 &&
               toolbar_case_authored_h(kChromeSpecClearlooks) == 32 &&
               icon_row_authored_h(kChromeSpecClearlooks) == 36);
+// CDE: the base's case in Motif's band — 2 air + 30 + 2 air + the etched
+// pair at the foot = 36 (chrome_spec.h's cde instance).
+static_assert(toolbar_case_authored_w(kChromeSpecCde) == 31 &&
+              toolbar_case_authored_h(kChromeSpecCde) == 30 &&
+              icon_row_authored_h(kChromeSpecCde) == 36);
 inline int icon_glyph_px() {
     return scaled_px(live_chrome_spec().toolbar_glyph_px);
 }
@@ -1253,8 +1276,21 @@ inline int icon_group_space_px() {
 // paints the Shadow row at y and the Hilight row at y + relief_line_px(), so
 // the lane must reserve exactly that, which can differ from scaled_px(2) at
 // a fractional gui_scale. NONE where the spec asks for no pair (clearlooks).
+// TWO SEATS (GuiEtchedPairSeat, 2026-10-08): the HEAD pair stands above the
+// band (win2000), the FOOT pair under it (cde, dtfile's separator under its
+// toolbar); each accessor answers its seat's rows and the lane carries
+// whichever stands.
 inline int icon_row_etched_pair_px() {
-    return live_chrome_spec().icon_row_etched_pair ? 2 * relief_line_px() : 0;
+    return live_chrome_spec().icon_row_etched_pair != GuiEtchedPairSeat::None
+               ? 2 * relief_line_px() : 0;
+}
+inline int icon_row_etched_head_px() {
+    return live_chrome_spec().icon_row_etched_pair == GuiEtchedPairSeat::Head
+               ? 2 * relief_line_px() : 0;
+}
+inline int icon_row_etched_foot_px() {
+    return live_chrome_spec().icon_row_etched_pair == GuiEtchedPairSeat::Foot
+               ? 2 * relief_line_px() : 0;
 }
 // The ground above and below the case inside the icon row's toolbar band:
 // none under win2000 (Explorer's band is the case), 2 under clearlooks.
@@ -1272,10 +1308,11 @@ inline int icon_row_band_h_px() {
 // hit rects, dropdown anchors, the folder overlay's band, tooltips), so a
 // retune of either term carries everywhere by construction.
 inline int icon_case_top_offset_px() {
-    return icon_row_etched_pair_px() + icon_row_air_px();
+    return icon_row_etched_head_px() + icon_row_air_px();
 }
 inline int icon_row_h_px() {
-    return icon_row_etched_pair_px() + icon_row_band_h_px() +
+    return icon_row_etched_head_px() + icon_row_band_h_px() +
+           icon_row_etched_foot_px() +
            scaled_px(live_chrome_spec().icon_row_foot_px);
 }
 
@@ -1401,9 +1438,9 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 // THE RULER LANE'S HEIGHT IS DERIVED FROM THE LABEL FACE, NOT AUTHORED AND
 // SCALED (architect 2026-10-02). The lane stacks, from its top:
 //
-//     lane = pad + nearbyint(ascent) + scaled_px(kRulerBaselineToMarkerPx)
+//     lane = pad + nearbyint(ascent) + scaled_px(ruler_baseline_to_marker_px)
 //
-// — the labels' line seated so their CAP TOP lands kRulerLabelCapTopPx (4)
+// — the labels' line seated so their CAP TOP lands the spec's ruler_label_cap_top_px (the base's 4)
 // Windows px under the lane's top (the pad, derived from the face's own
 // ascent and cap height; paint_handler.cpp owns the rule), the face's ascent
 // to the baseline (line_baseline), then SEVEN WINDOWS PX from the baseline to
@@ -1451,7 +1488,11 @@ inline constexpr int kTrimLaneHeightPx   = 16;
 // paint_handler.cpp), and the glyph's top row sits 19 / 28 / 44 device rows
 // down from the ruler lane's own top respectively — never within 18 rows of
 // its ceiling, let alone past it.
-inline constexpr int kRulerBaselineToMarkerPx = 7;
+// (THE TWO AUTHORED TERMS — the cap top's 4 and the baseline-to-marker 7 —
+// ARE THE CHROME SPEC'S since 2026-10-08, ruler_label_cap_top_px and
+// ruler_baseline_to_marker_px: the base's 4 / 7 under win2000 and
+// clearlooks, cde's 0 / 5 — its lane 0 + 6 + 5 = 11, the 6 W its taller
+// caption, menu bar and band cost, absorbed here by the settled rule.)
 inline int trim_lane_h_px() {
     return scaled_px(kTrimLaneHeightPx, 3);
 }
@@ -1969,7 +2010,7 @@ inline constexpr int kTrimArrowGlyphHPx = 7;
 // Windows-px marker measured from a Windows 95 screenshot — geometry only,
 // its own colours were never trusted (below) — seated tip-down ONE WINDOWS
 // PX INTO THE MARKER LANE exactly as before (the seat rule is
-// kRulerBaselineToMarkerPx's; the move itself did not change, only the
+// ruler_baseline_to_marker_px's; the move itself did not change, only the
 // shape that is moved). The composite's height and width are the quantum
 // u = scaled_px(1, 1) SUMMED OVER THE GLYPH'S OWN ROWS AND COLUMNS
 // (kPlayheadHeadRows * u tall, kPlayheadHeadCols * u wide) — never a single
@@ -2037,7 +2078,7 @@ inline constexpr int kTrimArrowGlyphHPx = 7;
 // kPlayheadHeadHeightPx = 8, does NOT equal the new 8u at every scale: 8, 24
 // and 32 device px at 138 / 275 / 400 % against the old 11, 22 and 32 — the
 // two agree only at 400 %. The seat arithmetic this forces is at
-// kRulerBaselineToMarkerPx's paragraph above; it still holds his two
+// ruler_baseline_to_marker_px's paragraph above; it still holds his two
 // constraints (the tip never enters the flag box, the head's top never
 // rises into the trim lane) at every one of the three.
 //
@@ -2241,14 +2282,24 @@ inline int tooltip_hover_slop_px() {
 // and the separator item 7: ONE shade[5] row with the same 3 above and below
 // (separator-height 7). The item's height and the margin are the spec's;
 // the frame's and the separator's line counts are the vocabulary's drawing.
+// UNDER CDE IT IS MOTIF'S PULLDOWN (2026-10-08; paint_dropdown's cde arm):
+// ONE raised line a side in the body's ts / bs (the pane's shadow at the
+// 1-W ruling), no margin inside it (the spec's popup_margin_px 0, Motif's
+// pulldown RowColumn), the items 19 (the spec's), THE LIT ITEM A RAISED
+// ONE-W BOX IN THE BODY with its label unchanged (Motif's armed menu item;
+// the desktop_full capture's "Web Browser" row), the separator the etched
+// pair at the item's full width (XmSeparatorGadget spans the pane) with the
+// same 3 above and below.
 inline constexpr int kPopupSepMarginYPx = 3;   // above and below the separator
 inline bool popup_is_gtk_menu() {
     return live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
 }
 // THE FRAME'S LINES a side — Windows' plain raised edge two relief lines,
-// GtkMenu's frame one — read, not a second number.
+// GtkMenu's frame one, Motif's pulldown one (its raised shadow at the 1-W
+// ruling, 2026-10-08) — read, not a second number.
 inline int popup_border_px() {
-    return (popup_is_gtk_menu() ? 1 : 2) * relief_line_px();
+    return (live_chrome_spec().vocabulary == GuiChromeVocabulary::Win2000
+                ? 2 : 1) * relief_line_px();
 }
 // The rows the frame spends at the box's TOP: the whole frame under Windows;
 // under Clearlooks none for a box HANGING from what opened it (its top line

@@ -27,7 +27,7 @@
 // docs/engineering/win2000_deviations.md), and prose may say win2000 for the
 // vocabulary; only a KEY is spelled whole.
 //
-// TWO VOCABULARIES, ONE LIVE, CHOSEN AT LAUNCH (the `chrome` device key,
+// THREE VOCABULARIES, ONE LIVE, CHOSEN AT LAUNCH (the `chrome` device key,
 // architect 2026-10-07, the planner's design under his free rein:
 // "authenticity wherever possible; the most Clearlooks assets; Windows
 // 2000's metrics the tie-break"):
@@ -61,8 +61,30 @@
 //     ~09:45). The trim lane's bar is the product's own: the light slider
 //     for the body and the caps in step with it (paint_cl_slider,
 //     paint_cl_stepper).
+//   CDE (the key `cde`; architect 2026-10-08 ~12:50, "let's dive right into
+//     the CDE build-out", his rulings of ~14:10 on the three bevel sheets
+//     and of ~15:00) — SOLARIS 9's CDE 1.5, dtwm and Motif as the
+//     guidebookgallery captures show them (tmp/research/cde_solaris/
+//     report.md, its dl/shots/ the law: one capture px = one Solaris px),
+//     under THE SETTLED RULE FOR EVERY LATER VOCABULARY: period authentic
+//     except for the proportional fit to Windows' layout — the base's cell
+//     and seat, every Motif height re-derived at the 13-row cell by Motif's
+//     own arithmetic, the differences absorbed by the ruler lane, line
+//     weights as the sources give them, what cannot be made to fit
+//     scratched. BEVELS ONE W (ruling 1: CDE's authentic weight — only
+//     dtcalc used Motif's canonical 2), corners mitred like every two-tone
+//     ring; THE MENU BAR 27 W (ruling 2); NO CLOSE BUTTON, close in the
+//     window menu (ruling 3, dtwm's three buttons); GO SANS for Lucida
+//     (ruling 4, kGuiFaceSetCde). The frame is HIDDEN on the tablet and the
+//     focus ring NOT DRAWN (his rulings of ~15:00: "anachronism ok to fit
+//     the screen and the Win95 metrics"). The painters are cde_paint.h's
+//     (the Motif bevels on Windows' one-line families, the caption's four
+//     boxes, the scroll bar, the scale, the frame), the colors the Solaris
+//     scheme (theme_file.h's kGuiThemeCde, derived from Solyaris.dp's four
+//     sets by Motif's own rule, cde_derive.h); the instance's head below
+//     records every length against its capture.
 // WINDOWS-2000 IS THE DEFAULT AND THE METRIC BASE; CLEARLOOKS IS THE SECOND
-// VOCABULARY (architect 2026-10-07 ~22:45, reversing the ~16:00 ruling that
+// VOCABULARY AND CDE THE THIRD (architect 2026-10-07 ~22:45, reversing the ~16:00 ruling that
 // had made clearlooks the default: "we could revert the default theme to
 // Windows 2000; I just need to work out a good color palette", the color
 // picker's purpose). The table (kGuiChromeSpecs) keeps windows-2000 FIRST:
@@ -83,22 +105,28 @@
 // branch of a later round says otherwise.
 
 // WHICH PERIOD DESKTOP DRAWS THE CHROME — the painters' one switch where
-// the two draw an element differently (the head): the caption's band,
+// the vocabularies draw an element differently (the head): the caption's band,
 // title and buttons, the menu bar and its open title, the toolbar band,
 // the disabled words' emboss, the dialogs' push buttons and fields, the
 // dropdown, the lists, the trim lane, the scrub, row 8's band and time
 // fields, the well's frame, the ruler's ticks, the restored laptop's frame
-// and the flag editor.
+// and the flag editor. A PAINTER THAT FORKS ON `== Clearlooks` ALONE draws
+// its Windows arm under cde too, deliberately, where Windows' drawing in the
+// Solaris scheme's roles IS Motif's (the etched lines, the emboss, the
+// one-line sunken time field, the inverted list selection): the cde arm is
+// added only where Motif draws otherwise (2026-10-08).
 enum class GuiChromeVocabulary {
     Win2000,
     Clearlooks,
+    Cde,
 };
 
 // THE ROSTER'S TWO TOOLBARS' FACES — the icon row's and row 8's cases and
 // the render player's row (paint_toolbar_box, paint_handler.cpp, where the
 // faces stand), and the separator in their group gaps
-// (paint_toolbar_separator). Both styles have a HOT face, the one hover
-// face the product draws (toolbar_style_has_hot_face).
+// (paint_toolbar_separator). The first two styles have a HOT face, the one
+// hover face the product draws (toolbar_style_has_hot_face); Motif's has
+// none.
 enum class GuiToolbarStyle {
     // Explorer's FLAT toolbar (comctl32's TBSTYLE_FLAT as ReactOS 0.4.16's
     // toolbar.c draws it): no edge at rest, one raised line on the HOT case,
@@ -112,10 +140,29 @@ enum class GuiToolbarStyle {
     // and down, GtkButton::child-displacement), and the gummy separator in
     // every group gap (clearlooks_gummy_draw_separator).
     GtkReliefNone,
+    // MOTIF'S FLAT TOOLBAR (2026-10-08, the cde vocabulary): dtfile's icon
+    // buttons as the file manager capture draws them — nothing at rest (the
+    // glyph on the body), ONE sunken line pressed (Motif's armed shadow at
+    // the 1-W ruling) with the glyph one W px right and down, the SELECT
+    // COLOR inside one sunken line checked (XmNselectColor, the armed toggle's
+    // fill — dtcalc's Scientific option, the front panel's buttons), the
+    // glyph unshifted; NO HOT FACE — Motif has no hover (a recorded
+    // departure from the one-hover-face rule, docs/engineering/
+    // win2000_deviations.md: the rule allows one, cde takes none); an
+    // ETCHED SEPARATOR in every group gap, Motif's XmSeparator
+    // SHADOW_ETCHED_IN (1 bs + 1 ts), seated as Windows' is.
+    MotifFlat,
 };
 constexpr bool toolbar_style_has_hot_face(GuiToolbarStyle s) {
     return s == GuiToolbarStyle::Flat || s == GuiToolbarStyle::GtkReliefNone;
 }
+
+// WHERE THE ICON ROW'S ONE ETCHED PAIR STANDS (render.h's icon-row block;
+// 2026-10-08, the seat an enumeration since the cde vocabulary): under the
+// menu row at the lane's HEAD (Windows' menubar / toolbar separator), at
+// the lane's FOOT under the band (dtfile's separator under its toolbar), or
+// nowhere (GTK: the menu bar's last row is the line).
+enum class GuiEtchedPairSeat { None, Head, Foot };
 
 // THE DISABLED GLYPH'S RULE (icons::draw_disabled, svg_icon.h): a dead
 // button's drawing as its desktop greyed it.
@@ -178,6 +225,11 @@ struct ChromeSpec {
     double             menu_label_pad_left_px;
     double             menu_label_pad_right_px;
     double             menu_band_lead_px;
+    // THE GROUND BETWEEN TWO ANCHORS, outside both their boxes (2026-10-08:
+    // Motif's XmRowColumn spacing between its cascade buttons, which the
+    // armed title's box does not include); none under the first two
+    // vocabularies, whose anchors touch.
+    double             menu_item_spacing_px;
     // THE TOOLBAR CASE of the icon row and row 8, in Windows px (render.h's
     // icon-row block, where the case's rule and its rounding stand): the
     // case left of and above the glyph, the glyph's square seat, the case
@@ -194,13 +246,23 @@ struct ChromeSpec {
     int                toolbar_group_gap_px;
     int                toolbar_separator_x_px;
     int                toolbar_separator_inset_y_px;
-    // THE ICON ROW'S STACK (render.h's icon-row block): whether ONE ETCHED
-    // PAIR heads the lane under the menu row, the ground above and below the
-    // case inside the toolbar band, and the ground between the band and the
-    // trim lane.
-    bool               icon_row_etched_pair;
+    // THE ICON ROW'S STACK (render.h's icon-row block): where its ONE ETCHED
+    // PAIR stands (GuiEtchedPairSeat: at the lane's head under the menu row,
+    // at its foot under the band, or nowhere), the ground above and below
+    // the case inside the toolbar band, and the ground between the band (or
+    // the foot pair) and the trim lane.
+    GuiEtchedPairSeat  icon_row_etched_pair;
     int                icon_row_air_px;
     int                icon_row_foot_px;
+    // THE RULER LANE'S TWO AUTHORED TERMS (render.h's ruler block; the
+    // seat's rule at paint_handler.cpp's ruler_label_baseline_px): how far
+    // under the lane's top the labels' CAP TOP lands, and the rows from
+    // their baseline to the marker lane. The base's 4 and 7 (the lane 4 + 6
+    // + 7 = 17); CDE's 0 and 5 (2026-10-08: the lane 11, absorbing the 6 W
+    // its caption, menu bar and band stand taller than the base's — the
+    // settled rule's "differences absorbed by the ruler lane").
+    int                ruler_label_cap_top_px;
+    int                ruler_baseline_to_marker_px;
     // ROW 8'S OWN AIR above and below its case (render.h's bottom-row block).
     int                bottom_row_air_px;
     // THE PUSH BUTTON — the dialogs' word buttons (paint_handler.cpp's
@@ -285,6 +347,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .menu_label_pad_left_px       = 9.0,
     .menu_label_pad_right_px      = 7.0,
     .menu_band_lead_px            = 2.0,
+    .menu_item_spacing_px         = 0.0,
     .toolbar_case_lead_px         = 3,
     .toolbar_glyph_px             = 24,
     .toolbar_case_trail_x_px      = 4,
@@ -293,9 +356,11 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .toolbar_group_gap_px         = 8,
     .toolbar_separator_x_px       = 8 / 2 - 1,
     .toolbar_separator_inset_y_px = 2,
-    .icon_row_etched_pair         = true,
+    .icon_row_etched_pair         = GuiEtchedPairSeat::Head,
     .icon_row_air_px              = 0,
     .icon_row_foot_px             = 4,
+    .ruler_label_cap_top_px       = 4,
+    .ruler_baseline_to_marker_px  = 7,
     .bottom_row_air_px            = 3,
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 7.0,
@@ -395,6 +460,7 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .menu_label_pad_left_px       = 5.0,
     .menu_label_pad_right_px      = 5.0,
     .menu_band_lead_px            = 1.0,
+    .menu_item_spacing_px         = 0.0,
     .toolbar_case_lead_px         = 4,
     .toolbar_glyph_px             = 24,
     .toolbar_case_trail_x_px      = 4,
@@ -403,9 +469,11 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .toolbar_group_gap_px         = 12,
     .toolbar_separator_x_px       = 5,
     .toolbar_separator_inset_y_px = 6,
-    .icon_row_etched_pair         = false,
+    .icon_row_etched_pair         = GuiEtchedPairSeat::None,
     .icon_row_air_px              = 2,
     .icon_row_foot_px             = 0,
+    .ruler_label_cap_top_px       = 4,
+    .ruler_baseline_to_marker_px  = 7,
     .bottom_row_air_px            = 2,
     .push_button_box_px           = 25.0,
     .push_button_pad_left_px      = 6.0,
@@ -419,15 +487,138 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .icon_set                     = "mist",
 };
 
+// CDE (architect 2026-10-08; tmp/research/cde_solaris/report.md §3 and the
+// coder's own measurements on its dl/shots/, named per line — "N" the
+// notepad capture applications_office_notepad_cde15solaris9.png, "O" the
+// Open dialog interface_dialogs_openfile_cde15solaris9.png, "F" the file
+// manager system_managers_filemanager_cde15solaris9.png; capture px are
+// Solaris px at 75 dpi, so every HEIGHT is re-derived at the base's 13-row
+// cell by Motif's arithmetic and every MARGIN is kept as the px constant
+// Motif's resources gave it — the settled rule).
+//   THE CAPTION dtwm's title bar, 19 px on N (rows 5-23: 1 ts + 17 + 1 bs,
+//   the 17 the 15-row cell + 2) = 17 W at the base cell (1 + 13 + 2 + 1),
+//   FOUR RAISED ONE-W BOXES side by side, the lane's whole height, each its
+//   own ts / bs ring in colour set 1's tones (N rows 5 / 23 and the columns
+//   at x 5, 23, 24, 557, 558, 576, 577, 595: the window-menu button at the
+//   left, the title box, Minimize, Maximize at the right, all 19 x 19 =
+//   17 x 17 here) — caption_button_w / h 17 at y 0, inset 0, no gaps, no
+//   Close box (ruling 3: the Close slot IS the window-menu button at the
+//   lane's left, caption_button_rects' cde arm; its menu carries the
+//   verbs); NO ICON (dtwm draws none; the seat fields unread); the title
+//   CENTERED in the title box, in the medium face (kGuiFaceSetCde), from
+//   its ts column (caption_title_x_px 18 = the menu button's 17 + the box's
+//   line) to one line before Minimize's box (caption_title_trail_px 1).
+//   THE GLYPHS dtwm's raised bars, read off N: the menu button's bar 11 x
+//   4 at (4, 7) of its 19 (x 9-19, y 12-15), Minimize's square 4 x 4 at
+//   (7, 7) (x 565-568), Maximize's square 11 x 11 at (4, 4) (x 581-591,
+//   y 9-19), each a raised one-px ring round the face — fitted to the
+//   17-box as 10 x 4, 4 x 4 and 10 x 10, centred by integer division
+//   (cde_paint.h's caption block); pressed, a box sinks (dtwm's armed
+//   button), its glyph unmoved.
+//   THE MENU ROW Motif's menu bar, 29 px on N (row 24 ts, 25-51 face, 52
+//   bs; the cap's top on face row 9 = margins 6 + (ascent 13 − cap 10)):
+//   head 1 (the ts row) + content 25 (the base cell 13 + Motif's 2 + 2 + 2
+//   above and below: the RowColumn's margin, the cascade's shadow and its
+//   margin, the capture's own 6) + foot 1 (the bs row) = 27 (ruling 2; the
+//   band's own bevel is the two rows, paint_menu_row's cde arm). THE PADS
+//   read off N's text cells (the mnemonic underlines, row 46, are the
+//   cells' extents): File's cell starts 10 px past the bar's ts column,
+//   Help's ends 10 before its bs column, and between File's cell end and
+//   Edit's cell start lie 14 px — so the RowColumn margin m + the cascade's
+//   pad p = 10 and 2 p + the spacing s = 14: p is Motif's cascade pad, its
+//   default marginWidth 2 + shadow 2 = 4 (the armed box hugs the word, as
+//   CDE's does), leaving m = 6 (menu_band_lead_px) and s = 6
+//   (menu_item_spacing_px); the open title a RAISED one-W box over the
+//   content rows, the label unpushed (Motif's armed cascade; the "Web
+//   Browser" row of desktop_full_cde15solaris9.png is the armed face at
+//   1 px).
+//   THE TOOLBARS the base's 31 x 30 case round the 24-W seat (F: dtfile's
+//   icon at rest has no box, the glyph on the body) in MotifFlat, the
+//   groups 8 apart round the etched separator at Windows' seat (3 in, 2
+//   from each end: Motif's SHADOW_ETCHED_IN pair, the same two lines); the
+//   band 2 air + 30 + 2 air = 34 with THE ETCHED PAIR AT ITS FOOT (dtfile
+//   puts its separator under the toolbar, F rows 107-108, 1 bs + 1 ts;
+//   GuiEtchedPairSeat::Foot) and no further foot: 36, Windows' lane;
+//   row 8 the base's 3 / 3 air (1 + 3 + 30 + 3 = 37).
+//   THE RULER LANE 11 (ruler_label_cap_top_px 0, ruler_baseline_to_marker_
+//   px 5): the top stack 17 + 27 + 36 + 16 + 11 + 18 = 125, the base's, so
+//   the well keeps 954 device rows at 300 % (main.cpp's lane table).
+//   THE PUSH BUTTON Motif's XmPushButton on O: 25 tall (Cancel rows
+//   340-364 = 1 + 23 + 1 round the 15-row cell + 8) = 23 at the base cell,
+//   the dialog field's own height; its pad 6 (File Encoding's box x 136-237
+//   against its ink 143-231: 7 to the ink less the F's 1-2 px bearing);
+//   the default button's extra ring (O's OK, two px outside) NOT DRAWN.
+//   THE TOOLTIP a Motif panel at the card's 2-W pad (CDE has no tooltip:
+//   the cards and the tip take a raised panel in the body, black text).
+//   THE SCRUB'S GRAB the base's 14, the slider drawn 11 wide (the scale,
+//   cde_paint.h). THE DROPDOWN Motif's pulldown: items 19 (the cell 13 +
+//   2 x (marginHeight 2 + the 1-W shadow), no capture shows one open —
+//   derived), no margin inside the one-W raised frame (the RowColumn's 0).
+//   NO ROUNDED CORNER; the disabled glyph ReactOS's saturate (the base's
+//   rule kept: CDE's 50 % stipple is recorded, not adopted — the
+//   deviations doc); THE ICONS Tango's ("for internal testing", the
+//   architect: the GNOME set may follow).
+inline constexpr ChromeSpec kChromeSpecCde = {
+    .key                          = "cde",
+    .display_name                 = "CDE",
+    .vocabulary                   = GuiChromeVocabulary::Cde,
+    .default_palette              = "solaris",
+    .face_set                     = &kGuiFaceSetCde,
+    .caption_height_px            = 17,
+    .caption_icon_x_px            = 0,
+    .caption_icon_y_px            = 0,
+    .caption_title_x_px           = 18,
+    .caption_button_w_px          = 17,
+    .caption_button_h_px          = 17,
+    .caption_button_y_px          = 0,
+    .caption_button_inset_px      = 0,
+    .caption_button_gap_px        = 0,
+    .caption_close_gap_px         = 0,
+    .caption_title_trail_px       = 1,
+    .menu_row_head_px             = 1,
+    .menu_row_content_px          = 25,
+    .menu_row_foot_px             = 1,
+    .menu_label_pad_left_px       = 4.0,
+    .menu_label_pad_right_px      = 4.0,
+    .menu_band_lead_px            = 6.0,
+    .menu_item_spacing_px         = 6.0,
+    .toolbar_case_lead_px         = 3,
+    .toolbar_glyph_px             = 24,
+    .toolbar_case_trail_x_px      = 4,
+    .toolbar_case_trail_y_px      = 3,
+    .toolbar_style                = GuiToolbarStyle::MotifFlat,
+    .toolbar_group_gap_px         = 8,
+    .toolbar_separator_x_px       = 8 / 2 - 1,
+    .toolbar_separator_inset_y_px = 2,
+    .icon_row_etched_pair         = GuiEtchedPairSeat::Foot,
+    .icon_row_air_px              = 2,
+    .icon_row_foot_px             = 0,
+    .ruler_label_cap_top_px       = 0,
+    .ruler_baseline_to_marker_px  = 5,
+    .bottom_row_air_px            = 3,
+    .push_button_box_px           = 23.0,
+    .push_button_pad_left_px      = 6.0,
+    .push_button_pad_right_px     = 6.0,
+    .tooltip_pad_px               = 2,
+    .scrub_handle_box_px          = 14.0,
+    .popup_item_height_px         = 19,
+    .popup_margin_px              = 0,
+    .corner_radius_px             = 0,
+    .disabled_glyph               = GuiDisabledGlyph::ReactOSSaturate,
+    .icon_set                     = "tango",
+};
+
 // THE TABLE — every vocabulary, the `chrome` key's whole vocabulary in its
 // order (is_chrome_key), the face install's probe walking it
 // (gui_font_install_bundled: every set's faces must carry their band glyphs).
 // WINDOWS-2000 FIRST, THE METRIC BASE AND THE DEFAULT (the head;
-// kDefaultChromeKey below). The Settings menu's Chrome row lists the keys in
+// kDefaultChromeKey below), then the vocabularies in their arrival's order.
+// The Settings menu's Chrome row lists the keys in
 // this order (its choice editor, kChromeChoiceSource, app_state.h).
 inline constexpr const ChromeSpec* kGuiChromeSpecs[] = {
     &kChromeSpecWin2000,
     &kChromeSpecClearlooks,
+    &kChromeSpecCde,
 };
 
 // A PREDICATE OVER EVERY INSTANCE — a static_assert that must hold for every
@@ -453,7 +644,7 @@ constexpr bool is_chrome_key(std::string_view v) {
     return chrome_spec_for_key(v) != nullptr;
 }
 inline constexpr const char* kChromeGrammarReason =
-    "must be windows-2000 or clearlooks";
+    "must be windows-2000, clearlooks or cde";
 // THE DEFAULT, a config with no `chrome` line (DeviceConfig::chrome's
 // initializer spells it), and what the first run stamps: `windows-2000`
 // (architect 2026-10-07 ~22:45, the head; clearlooks was the default from

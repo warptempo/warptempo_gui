@@ -7403,6 +7403,25 @@ void card_clipboard_refusal(GuiNotifications& notifications, const char* verb) {
 bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
                            DropdownMenu menu, int item) {
     if (item < 0 || item >= dropdown_item_count(menu)) return false;
+    // THE WINDOW MENU'S VERBS (2026-10-08, the cde caption's window-menu
+    // button; kWindowPopupItems): judged on the window's state AS PAINTED
+    // (AppState::caption_window, the caption painter's) — Restore while
+    // maximized and restorable, Maximize while restored and restorable (the
+    // tablet, which cannot restore, greys both — the truthful rule), Minimize
+    // and Close always (the caption's own two acts' states).
+    if (menu == DropdownMenu::Window) {
+        switch (static_cast<WindowPopupVerb>(item)) {
+            case WindowPopupVerb::Restore:
+                return a.caption_window.maximized && a.caption_window.restorable;
+            case WindowPopupVerb::Minimize:
+                return true;
+            case WindowPopupVerb::Maximize:
+                return !a.caption_window.maximized && a.caption_window.restorable;
+            case WindowPopupVerb::Close:
+                return true;
+        }
+        return false;
+    }
     const bool no_audio = no_audio_to_dispatch_on(a, audio.total_frames());
     if (!dropdown_is_command_menu(menu)) return !no_audio;
     const CommandPopupItem& it = command_popup_item(menu, item);

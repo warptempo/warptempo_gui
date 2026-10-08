@@ -296,6 +296,19 @@ namespace {
 //   this geometry): leftover 380 -> the waveform 380, both gaps 0 — 25 /
 //   27 / 49 / 0 / 69 / 380 / 0 / 50 (the midpoint rule would want gap 1 =
 //   300 - 170 - 190 = -60).
+// THE CDE STACKS (2026-10-08, chrome_spec.h's cde instance: caption 17 +
+// menu 27 + icon 36 + trim 16 + ruler 11 + marker 18 = 125 Windows px
+// above, THE BASE'S OWN TOTAL — dtwm's and Motif's taller caption, menu bar
+// and band cost 6 W, which the ruler lane absorbs (its cap top 0, its
+// baseline-to-marker 5; render.h's ruler block); row 8 the base's 37):
+//   1920x1080 AT 138 %: the lanes are 23 caption + 36 menu (1 + 34 + 1,
+//   the content's 34.5 rounding to even) + 49 icon (0 + 3 + 41 + 3 + the
+//   foot pair 2) + 22 trim + 15 ruler (0 + 8 + 7) + 23 marker = 168 above
+//   (108 the caption and the two toolbar rows, 60 the block) and 50 below,
+//   leftover 862: the waveform 862, both gaps 0.
+//   2304x1440 AT 300 %: the lanes are 51 caption + 81 menu + 108 icon + 48
+//   trim + 33 ruler + 54 marker = 375 above (240 and 135) and 111 below,
+//   leftover 954: the waveform 954, both gaps 0 — the base's well exactly.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -328,7 +341,7 @@ namespace {
 // ruler lane's bottom rows — ONE of which, its tip row, is now the marker
 // lane's own first row (architect 2026-10-05, paint_ruler_row), a reach into
 // the neighbour lane's air rather than its box, recorded at the seat's own
-// rule (kRulerBaselineToMarkerPx, render.h). Every OTHER seam — the window
+// rule (ruler_baseline_to_marker_px, render.h). Every OTHER seam — the window
 // top|caption seam,
 // caption|menu, menu|icon (tight and borderless), icon|trim (GAP 1's band;
 // where gap 1 is zero the trim
