@@ -78,9 +78,8 @@ int paint_cde_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
 
 // -- THE CAPTION ---------------------------------------------------------------
 
-void paint_cde_caption_box(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
+void paint_cde_caption_box(cairo_t* cr, const GuiRect& b,
                            bool active, bool pressed) {
-    (void)which;
     const FrameTones t = caption_tones(active);
     paint_cell_rect(cr, b, t.face);
     if (pressed) ring(cr, b, t.bs, t.ts);

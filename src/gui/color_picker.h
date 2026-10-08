@@ -358,7 +358,7 @@ inline constexpr int kCardWidthPx     = 376;  // the tablet's half less two marg
 // starts at one x.
 inline constexpr int kWheelBlockWPx   = 92;
 inline constexpr int kColumnGapPx     = 8;    // the wheel's block to the right column
-// THE CHOOSER IS 21 W TALL UNDER BOTH CHROMES: Windows' combo box at the
+// THE CHOOSER IS 21 W TALL UNDER EVERY CHROME: Windows' combo box at the
 // 8-pt font (its edit's 13 cell + 2 x 2 of edge + 2 x 2 of pad), and GTK's
 // combo button re-derived at the 13 cell with the focus terms zeroed, 13 +
 // 2 x (xthickness 3 + inner-border 1) = 21 — the tool button's own

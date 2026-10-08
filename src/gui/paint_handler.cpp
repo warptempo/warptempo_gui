@@ -1593,8 +1593,7 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         const GuiRect& min_b  = rects[static_cast<size_t>(GuiCaptionButton::Minimize)];
         const GuiRect title_box{menu_b.x + menu_b.w, row.y,
                                 min_b.x - (menu_b.x + menu_b.w), row.h};
-        paint_cde_caption_box(cr, title_box, CdeCaptionBox::Title, active,
-                              /*pressed=*/false);
+        paint_cde_caption_box(cr, title_box, active, /*pressed=*/false);
     } else if (clearlooks && frame > 0) {
         cairo_save(cr);
         cairo_rectangle(cr, row.x, row.y, row.w, row.h);
@@ -1767,7 +1766,7 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
             const bool menu_down = id == GuiCaptionButton::Close &&
                                    app.dropdown.open() &&
                                    app.dropdown.menu == DropdownMenu::Window;
-            paint_cde_caption_box(cr, b, which, active, pushed || menu_down);
+            paint_cde_caption_box(cr, b, active, pushed || menu_down);
             paint_cde_caption_glyph(cr, b, which, active, face.enabled);
             continue;
         }
@@ -1914,9 +1913,6 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // because the architect stated one there; none is stated here, so none
     // exists (the css float model's default).
     int x = row.x + scaled_px(spec.menu_band_lead_px);
-    // THE SPACING between two anchors (menu_item_spacing_px: Motif's
-    // RowColumn spacing under cde, none under the other two).
-    const int spacing = scaled_px(spec.menu_item_spacing_px);
     for (const MenuButtonDef& def : kMenuButtons) {
         const text_shape::ShapedRun run =
             text_shape::shape_text_run(font, def.label);
@@ -1998,7 +1994,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
             text_shape::show_shaped_run(cr, run, label_x, label_y);
         }
 
-        x += btn_w + spacing;
+        x += btn_w;
     }
 
     cairo_restore(cr);
@@ -2900,7 +2896,7 @@ constexpr const char* kTimeShape = "DD:DD.DDD";
 // values) — the set the letter slot is measured over.
 constexpr std::string_view kClockTabLetters = "AB";
 
-// THE FIELD'S HEIGHT IS THE DIALOG FIELD'S, 23 WINDOWS PX UNDER BOTH CHROMES
+// THE FIELD'S HEIGHT IS THE DIALOG FIELD'S, 23 WINDOWS PX UNDER EVERY CHROME
 // (architect 2026-10-08, on his history-mode capture: the clock "is squished
 // into a tiny box, from back when we were trying to save space; it doesn't
 // work as the other fields do — in the Settings editor the fields look like
@@ -2932,7 +2928,7 @@ constexpr double kTimeFieldGapPx = 3.0;
 // scrub and clock is the roster's group space.)
 
 // THE FIELD'S HORIZONTAL PAD IS THE DIALOG FIELD'S TOO, 5 WINDOWS PX UNDER
-// BOTH CHROMES (architect 2026-10-08, with the height above; the name is the
+// EVERY CHROME (architect 2026-10-08, with the height above; the name is the
 // status-bar panel's of 2026-10-02, the field's own since 2026-10-05): the
 // reserved cell stands this far in from the field's outer edge on each side
 // — the dialog field's text inset (kModalFieldPadXPx, render.h, the one
@@ -3286,7 +3282,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //   centred in the content band, painted by paint_time_field. Its
         //   width is fixed (the cell's), so the state line never moves.
         //   THE STATE LINE: on the row's ground, no panel, ITS FIRST INK ONE
-        //   FIELD PAD right of the field's right line under both chromes
+        //   FIELD PAD right of the field's right line under every chrome
         //   (architect 2026-10-08, the air the field stands in from the
         //   lane's left edge, kStatusPanelPadPx's block): the clip starts
         //   there and the run's origin stands its own left bearing short of

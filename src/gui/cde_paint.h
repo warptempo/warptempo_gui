@@ -99,8 +99,8 @@ int paint_cde_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
 // mode makes the inactive frame the body). A PRESSED button sinks (dtwm's
 // armed button: the ring swapped), its glyph unmoved.
 enum class CdeCaptionBox { WindowMenu, Title, Minimize, Maximize };
-void paint_cde_caption_box(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
-                           bool active, bool pressed);
+void paint_cde_caption_box(cairo_t* cr, const GuiRect& b, bool active,
+                           bool pressed);
 // THE GLYPHS — dtwm's raised bars, read off the notepad capture in the
 // 19-px button and fitted to the 17-W box (the spec's head): the window
 // menu's bar 10 x 4, Minimize's square 4 x 4, Maximize's square 10 x 10,

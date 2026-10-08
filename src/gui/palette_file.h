@@ -141,9 +141,11 @@
 // organization", so it admits capitals, spaces and punctuation; ASCII
 // still, TEXT BEING ASCII IN GRAMMARS. The '/' is the one byte a file name
 // cannot hold; the suffix is always appended, so no name reaches outside
-// the folder. TWO NAME SPACES, ONE PER FOLDER (2026-10-08 ~18:15): a scheme
-// file may not take a built-in scheme's key or display name, a palette file
-// not a default palette's, and a palette and a scheme may share a name.
+// the folder. TWO NAME SPACES, ONE PER FOLDER (2026-10-08 ~18:15): a built-in's
+// KEY is refused by the launch read (a file named for one is the hard fail
+// below), a built-in's DISPLAY NAME by the picker's name commit
+// (commit_name, which also refuses a taken file name) — a hand-placed file
+// bearing a display name loads; and a palette and a scheme may share a name.
 //
 // THE FOLDERS ARE READ ONCE AT LAUNCH (read_palette_folder,
 // read_scheme_folder, gui_main, before the device config, so its `palette`
@@ -153,7 +155,7 @@
 // LAUNCH'S FIRST-ERROR HARD FAIL (NO BACKSTOPS FOR ADVERSARIAL USE: a
 // violation is a hand edit) — an unknown role (the other kind's key named
 // in a file included), a malformed value, a duplicate role, a missing role
-// or block key, a name outside the grammar, a file named for a built-in,
+// or block key, a name outside the grammar, a file named for a built-in's key,
 // an unreadable folder or file — the blunt terminal line naming the file and
 // the line and no window, the device config's road.
 //

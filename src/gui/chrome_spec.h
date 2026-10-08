@@ -249,11 +249,6 @@ struct ChromeSpec {
     double             menu_label_pad_left_px;
     double             menu_label_pad_right_px;
     double             menu_band_lead_px;
-    // THE GROUND BETWEEN TWO ANCHORS, outside both their boxes (2026-10-08:
-    // Motif's XmRowColumn spacing between its cascade buttons, which the
-    // armed title's box does not include); none under the first two
-    // vocabularies, whose anchors touch.
-    double             menu_item_spacing_px;
     // THE TOOLBAR CASE of the icon row and row 8, in Windows px (render.h's
     // icon-row block, where the case's rule and its rounding stand): the
     // case left of and above the glyph, the glyph's square seat, the case
@@ -318,7 +313,7 @@ struct ChromeSpec {
     // tooltip arm, kTooltipLineGapPx beside it).
     int                tooltip_pad_px;
     // (THE TIME FIELD'S HEIGHT AND PAD left the spec 2026-10-08: every time
-    // field is the dialog field, one shape under both chromes —
+    // field is the dialog field, one shape under every chrome —
     // kModalFieldHeightPx and kModalFieldPadXPx, render.h.)
     // THE SCRUB THUMB'S GRAB BOX — the box the press router takes as the
     // thumb's grab band and the mapping insets the track by half of at each
@@ -403,7 +398,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .menu_label_pad_left_px       = 9.0,
     .menu_label_pad_right_px      = 7.0,
     .menu_band_lead_px            = 2.0,
-    .menu_item_spacing_px         = 0.0,
     .toolbar_case_lead_px         = 3,
     .toolbar_glyph_px             = 24,
     .toolbar_case_trail_x_px      = 4,
@@ -490,7 +484,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
 //   menu_item style's items, the cell 13 + 2 x ythickness 3 = 19 (23 at
 //   the 17 cell on his capture 23-22-06).
 //   THE ENTRY (every dialog field and time field — render.h's
-//   kModalFieldHeightPx, not a spec field, the two chromes agreeing) GTK's at
+//   kModalFieldHeightPx, not a spec field, the three chromes agreeing) GTK's at
 //   the cell, 13 + 2 x (3 + 2) = 23 (his 27 at the 17 cell, the Customize
 //   dialog's entry), its text xthickness 3 + inner-border 2 = 5 in; THE
 //   SCRUB'S GRAB GtkScale's slider, slider-length 23 (the default style's).
@@ -521,7 +515,6 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .menu_label_pad_left_px       = 5.0,
     .menu_label_pad_right_px      = 5.0,
     .menu_band_lead_px            = 1.0,
-    .menu_item_spacing_px         = 0.0,
     .toolbar_case_lead_px         = 4,
     .toolbar_glyph_px             = 24,
     .toolbar_case_trail_x_px      = 4,
@@ -595,8 +588,8 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   marginWidth) + the cascade's pad p = 11 and 2 p + the spacing s = 14.
 //   The split is Motif's own arithmetic, the one that also gives the 6
 //   rows above: the RowColumn's marginWidth 3 (L = 1 + 3 = 4,
-//   menu_band_lead_px) and a menu bar's spacing 0 (menu_item_spacing_px:
-//   the armed boxes touch), the cascade's pad 7 = its one-px shadow + its
+//   menu_band_lead_px) and a menu bar's spacing 0 (the
+//   armed boxes touch), the cascade's pad 7 = its one-px shadow + its
 //   marginWidth 6 (menu_label_pad_left_px / _right_px) — every margin kept
 //   as the px constant Motif's resources gave it (the settled rule) — and
 //   THE NEDIT CAPTURE OF 2026-10-08 CONFIRMS IT (tmp/Screenshot_2026-10-08_
@@ -679,7 +672,6 @@ inline constexpr ChromeSpec kChromeSpecCde = {
     .menu_label_pad_left_px       = 7.0,
     .menu_label_pad_right_px      = 7.0,
     .menu_band_lead_px            = 4.0,
-    .menu_item_spacing_px         = 0.0,
     .toolbar_case_lead_px         = 3,
     .toolbar_glyph_px             = 24,
     .toolbar_case_trail_x_px      = 4,

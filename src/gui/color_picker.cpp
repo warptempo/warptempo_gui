@@ -429,7 +429,7 @@ int combo_text_inset_px() {
 }
 
 // THE LIST IS EXACTLY THE COMBO'S OUTER BOX WIDE, FLUSH AT BOTH EDGES,
-// under both chromes (architect 2026-10-08, on his clearlooks capture: "the
+// under every chrome (architect 2026-10-08, on his clearlooks capture: "the
 // drop-down looks longer than the button you press"): Windows' ComboLBox
 // takes the combo's own width (CB_SETDROPPEDWIDTH's default), its frame
 // flush with the combo's sunken edge, and GTK 2.20's GtkComboBox sizes its
@@ -1487,6 +1487,13 @@ void GuiColorPicker::commit_name() {
     } else if (chrome) {
         // THE KEYS ON SCREEN (the declaration): the live scheme, or the
         // chrome's own built-in's twelve, installed live with the write.
+        // Save As from the chrome's own scheme installs the built-in's
+        // twelve live, so under windows-2000 the hand-set relief quartet
+        // (Hilight FFFFFF, Shadow 808080) becomes the derivation's EAE8E3 /
+        // 978E7B: accepted (architect 2026-10-08: Windows' hand-set 3D set
+        // against a scheme file's derived set "not a problem ... creating
+        // variation is the point"); a save writes the scheme as the screen
+        // shows it.
         const bool own = !live_chrome_pick().has_value();
         const GuiChromePick pick = color_picker::live_scheme_keys();
         failure = write_scheme_file(name, pick);

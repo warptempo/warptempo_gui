@@ -1131,7 +1131,7 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 // from 2026-10-02; 32 and 9 / 10 laptop px before) — which used to read row
 // 2's. The row's crop record is git history.)
 
-// THE DIALOG FIELD — ONE SHAPE UNDER BOTH CHROMES: every text field of the
+// THE DIALOG FIELD — ONE SHAPE UNDER EVERY CHROME: every text field of the
 // modal dialogs (paint_modal_dialog's editor arm, the choice editor's combo
 // at its seat), the color picker's hex field and, since 2026-10-08, every
 // TIME FIELD (row 8's clock and the render player's position and length,
@@ -2535,7 +2535,7 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    and the element list, each opening with its shown value lit — scrolls
 //    that row into view at the open (popup_scroll_reveal).
 //  * THE PICTURE IS A VERTICAL SCROLL BAR INSIDE THE LIST, AT ITS RIGHT, UNDER
-//    BOTH CHROMES (architect 2026-10-08, his ReactOS WordPad font-combo
+//    EVERY CHROME (architect 2026-10-08, his ReactOS WordPad font-combo
 //    capture: "exactly as we would expect, just a scroll bar on the side"; and
 //    of squeeze's GtkComboBox scroll ARROWS top and bottom: "I'd much rather
 //    have the scroll bar inside, and we can use the canonical scroll bar" —
@@ -2555,7 +2555,7 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    than two, Windows' own halving); the TRACK between them; the THUMB's
 //    length the track's times shown / total, FLOORED under win2000 AT 8 W
 //    (kPopupScrollThumbMinPx: half SM_CYVTHUMB's 16, THE PRODUCT'S CHOICE —
-//    no source for Windows 2000's own minimum thumb is at hand) and under
+//    cde takes the same 8 W floor, popup_scroll_thumb_min_px; no source for Windows 2000's own minimum thumb is at hand) and under
 //    clearlooks AT 30 W (kPopupScrollThumbMinClPx: squeeze's gtkrc's
 //    GtkScrollbar::min-slider-length 30, a length along the bar, kept as GTK
 //    gives it — the base's 16-W width is the thickness alone; 2026-10-08),
@@ -2581,7 +2581,7 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    (any_pointer_gesture_active, its motion claimed wherever it goes), whose
 //    lift ends it and selects nothing. THE LAPTOP'S WHEEL over a scrolling
 //    list scrolls kPopupWheelRows a notch (Windows' default wheel lines,
-//    applied to both chromes for symmetry; GTK's page / 10 not reproduced),
+//    applied to every chrome for symmetry; GTK's page / 10 not reproduced),
 //    the modified wheel a swallowed nothing. The choice editor's Up / Down
 //    keep the lit row in view, a step past the shown block scrolling by one
 //    row (popup_scroll_reveal). A press anywhere else is the popup's own, as

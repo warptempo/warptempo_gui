@@ -44,7 +44,10 @@
 // untouched. The keys are a SCHEME's alone since the split (2026-10-08): a
 // palette carrying any of them is the read's hard fail (palette_file.h's
 // head, the owner of both grammars). A user who picked D4D0C8 in Windows
-// 2000's own dialog lost Standard's white Hilight too.
+// 2000's own dialog lost Standard's white Hilight too, and a Save As of the
+// chrome's own scheme installs the derived quartet live: accepted (architect
+// 2026-10-08, "Windows is not really the target; creating variation is the
+// point").
 //
 // THE RULE (Windows' Appearance dialog on a picked 3D face): convert the face
 // to shlwapi's 240-scale integer HLS; HILIGHT keeps the hue and the
