@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <vector>
 
@@ -7991,7 +7992,13 @@ void GuiInputHandler::set_roster_hot(int index) {
 }
 
 void GuiInputHandler::arm_pen_hot_latch(int x, int y) {
-    pen_hot_latch_ = PenHotLatch{true, x, y};
+    // Armed and unanchored (the rule at pen_hot_latch_): the hook fires after
+    // the lift's own delivery, whose restore motion walked the roster
+    // unlatched, so this re-walk withdraws the hot face that motion lit
+    // before the frame paints.
+    pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
+                                 .lift_x = x, .lift_y = y, .x = 0, .y = 0};
+    recompute_redesign_button_hover();
 }
 
 void GuiInputHandler::clear_pen_hot_latch() {
@@ -8092,7 +8099,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // otherwise, so a toolbar style with no hot face would never store one.
     // AND NONE WHILE THE PEN'S HOT-FACE LATCH STANDS (pen_hot_latch_, the
     // rule at its declaration, architect 2026-10-07): after a pen lift the
-    // tapped button reads at rest until the pen moves off the lift point.
+    // tapped button reads at rest until the pen moves off its anchor.
     set_roster_hot(toolbar_style_has_hot_face(
                            live_chrome_spec().toolbar_style) &&
                            app.chrome_press.kind ==
@@ -10342,14 +10349,31 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
     app.pointer_in_window = true;
-    // THE PEN'S HOT-FACE LATCH CLEARS ON MOTION OFF THE LIFT POINT
-    // (pen_hot_latch_, the rule at its declaration), here above every branch
-    // so the walk this motion runs already re-lights the button under it.
-    if (pen_hot_latch_.armed &&
-        std::max(std::abs(mouse_x - pen_hot_latch_.x),
-                 std::abs(mouse_y - pen_hot_latch_.y)) >=
-            scaled_px(kPenHotRearmPx))
+    // THE PEN'S HOT-FACE LATCH ANCHORS AT THE FIRST HOVER REPORT AND CLEARS
+    // ON MOTION OFF THAT ANCHOR (pen_hot_latch_, the rule at its
+    // declaration), here above every branch so the walk this motion runs
+    // already re-lights the button under it. The latch arms after the lift's
+    // own delivery, so the first motion met here unanchored is the pen's
+    // first hover report: it sets the anchor and clears nothing.
+    if (pen_hot_latch_.armed && !pen_hot_latch_.anchored) {
+        pen_hot_latch_.anchored = true;
+        pen_hot_latch_.x = mouse_x;
+        pen_hot_latch_.y = mouse_y;
+        // DIAGNOSTIC (architect 2026-10-08, class 5: advisory, never fatal;
+        // logcat's warptempo:I on the tablet): the hover sensor's offset from
+        // the contact point, read off his next taps to retune
+        // kPenHotRearmPx or retire this line with data.
+        std::fprintf(stderr,
+                     "warptempo_gui: pen hover anchor %+d,%+d device px "
+                     "from the lift\n",
+                     mouse_x - pen_hot_latch_.lift_x,
+                     mouse_y - pen_hot_latch_.lift_y);
+    } else if (pen_hot_latch_.armed &&
+               std::max(std::abs(mouse_x - pen_hot_latch_.x),
+                        std::abs(mouse_y - pen_hot_latch_.y)) >=
+                   scaled_px(kPenHotRearmPx)) {
         pen_hot_latch_.armed = false;
+    }
     // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE,
     // and it sits at the very TOP because every branch below returns: an open
     // dropdown takes the motion whole, a modal branch returns, each live gesture

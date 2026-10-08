@@ -1480,8 +1480,11 @@ struct GuiInputHandler {
     void set_player_hot(int index);
     // THE PEN'S HOT-FACE LATCH, its two doors (the rule at pen_hot_latch_
     // below): ARMED by the platform's pen lift hook (main.cpp;
-    // GuiPlatform::set_pen_lift_hook) with the lift's pixel, CLEARED by the
-    // pointer-leave hook (main.cpp); the motion's clear is on_motion's own.
+    // GuiPlatform::set_pen_lift_hook) with the lift's pixel, after the lift's
+    // own delivery, UNANCHORED — the arm re-walks the roster so the hot face
+    // the lift's restore motion lit is withdrawn before the frame paints;
+    // CLEARED by the pointer-leave hook (main.cpp); the anchoring and the
+    // motion's clear are on_motion's own.
     void arm_pen_hot_latch(int x, int y);
     void clear_pen_hot_latch();
 
@@ -3018,10 +3021,25 @@ private:
     // with the pen still hovering in place, it would re-light the very face
     // it withheld; the latch is a DISTANCE, as the plane's own hysteresis is.
     //   ARMED only by the Android backend's pen lift off an empty glass
-    //   (GuiPlatform::set_pen_lift_hook, before the lift's delivery, so the
-    //   release and the restore motion already meet it) — never by a mouse
-    //   (the Wayland twin never fires) or a finger (it never hovers).
-    //   CLEARED (a) by a motion at least kPenHotRearmPx from the lift point,
+    //   (GuiPlatform::set_pen_lift_hook) — never by a mouse (the Wayland twin
+    //   never fires) or a finger (it never hovers). IT ARMS AFTER THE LIFT'S
+    //   OWN DELIVERY (architect 2026-10-08): the release and the restore
+    //   motion at the lift run first, unlatched, and the arm then re-walks
+    //   the roster (recompute_redesign_button_hover), withdrawing the hot face
+    //   that motion lit before any frame paints — so no motion of the lift's
+    //   own ever reaches the latch, and the first one that does is the pen's
+    //   first hover report.
+    //   ANCHORED AT THE FIRST HOVER REPORT, NOT AT THE LIFT (architect
+    //   2026-10-08, his glass pass: "as soon as I lift it blinks bright, then
+    //   goes back to being dark, sunken"): the S Pen's hover coordinates are
+    //   not its contact coordinates — the first HOVER report after the tip
+    //   lifts lands several device px off the touch point (the contact patch
+    //   against the hover sensor's centroid, the tilt, the lift's own sideways
+    //   motion), so a compare against the lift point cleared the latch on
+    //   that first report, a move never made. The first motion on_motion meets
+    //   while the latch is armed and unanchored SETS the anchor and clears
+    //   nothing; every later motion compares against it.
+    //   CLEARED (a) by a motion at least kPenHotRearmPx from the anchor,
     //   Chebyshev, the drag gate's own metric (on_motion's prologue) — the
     //   same walk then re-lights the button under the pen as usual; (b) by
     //   every leave (the pointer-leave hook, main.cpp): a HOVER_EXIT, a
@@ -3037,14 +3055,22 @@ private:
     // render player's hot button (update_modal_dialog_hover, set_player_hot)
     // and the menu row, which has no hot face.
     struct PenHotLatch {
-        bool armed = false;
-        int  x     = 0;   // the lift's pixel
-        int  y     = 0;
+        bool armed    = false;
+        bool anchored = false;  // set by the first hover report after the arm
+        int  lift_x   = 0;      // the lift's pixel (the diagnostic's origin)
+        int  lift_y   = 0;
+        int  x        = 0;      // the anchor: the first hover report's pixel
+        int  y        = 0;
     };
     PenHotLatch pen_hot_latch_;
     // THE RE-ARM DISTANCE, in WINDOWS PX (a chrome length, converted through
     // scaled_px at the compare: 9 device px at 300, 4 at 138): above the S
     // Pen's resting jitter, below a deliberate move (architect 2026-10-07).
+    // MEASURED FROM THE ANCHOR, THE PEN'S FIRST HOVER REPORT AFTER THE LIFT,
+    // never from the lift point (architect 2026-10-08): the hover sensor's
+    // first report lands several device px off the contact point, so a
+    // distance from the lift cleared the latch on a move never made — "as
+    // soon as I lift it blinks bright, then goes back to being dark, sunken".
     static constexpr double kPenHotRearmPx = 3.0;
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the settings editor's

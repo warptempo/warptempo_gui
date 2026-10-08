@@ -1932,11 +1932,6 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                 if (pen_stays) {
                     input_.pointer_focus_at(px(index), py(index));
                     pen_hovering_ = true;
-                    // The GUI's hot-face latch arms here, before the lift's
-                    // delivery (set_pen_lift_hook).
-                    if (pen_lift_hook_)
-                        pen_lift_hook_(containing_pixel(px(index)),
-                                       containing_pixel(py(index)));
                 }
                 pen_lift_keeps_anchor_ = keep_seat;
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
@@ -1955,6 +1950,15 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                     pen_on_glass_ = false;
                     input_.touch_frame();
                     set_pen_ctrl(false);
+                    // THE GUI'S HOT-FACE LATCH ARMS LAST, AFTER EVERYTHING
+                    // THE LIFT DELIVERS (architect 2026-10-08;
+                    // set_pen_lift_hook): the release, the restore motion at
+                    // the lift and the Ctrl bit's drop have all run, so the
+                    // next motion the GUI sees is the pen's first hover
+                    // report — the latch's anchor.
+                    if (pen_stays && pen_lift_hook_)
+                        pen_lift_hook_(containing_pixel(px(index)),
+                                       containing_pixel(py(index)));
                     return;
                 }
             }
