@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdarg>
 #include <cstdint>
+#include <cstdio>
 #include <utility>
 
 uint64_t gui_monotonic_us() {
@@ -12,6 +14,21 @@ uint64_t gui_monotonic_us() {
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return static_cast<uint64_t>(ts.tv_sec) * 1'000'000ull +
            static_cast<uint64_t>(ts.tv_nsec) / 1000ull;
+}
+
+// DIAGNOSTIC (architect 2026-10-08, class 5; the contract at the
+// declaration): one fprintf per line, so a line never splits.
+void gui_pen_trace(const char* fmt, ...) {
+    char msg[128];
+    va_list ap;
+    va_start(ap, fmt);
+    std::vsnprintf(msg, sizeof msg, fmt, ap);
+    va_end(ap);
+    const uint64_t us = gui_monotonic_us();
+    std::fprintf(stderr, "warptempo_gui: pen-trace %llu.%llu ms %s\n",
+                 static_cast<unsigned long long>(us / 1000ull),
+                 static_cast<unsigned long long>((us % 1000ull) / 100ull),
+                 msg);
 }
 
 namespace {
@@ -572,6 +589,9 @@ void GuiInputCore::maybe_fire_repeat() {
 // ---------------------------------------------------------------------------
 
 void GuiInputCore::pointer_enter(double x, double y) {
+    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
+    gui_pen_trace("core pointer_enter (%d,%d)", containing_pixel(x),
+                  containing_pixel(y));
     pointer_focus_at(x, y);
     // Synthesize a motion delivery so consumers register the pointer
     // as present at the entry coordinates. Matches how most clients
@@ -582,6 +602,10 @@ void GuiInputCore::pointer_enter(double x, double y) {
 void GuiInputCore::pointer_focus_at(double x, double y) {
     // The enter's focus and position, and nothing delivered (the contract and
     // its one caller are at the declaration).
+    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
+    gui_pen_trace("core pointer_focus_at (%d,%d) focused_was=%d",
+                  containing_pixel(x), containing_pixel(y),
+                  pointer_focused_ ? 1 : 0);
     pointer_focused_ = true;
     pointer_x_ = containing_pixel(x);
     pointer_y_ = containing_pixel(y);
@@ -594,6 +618,10 @@ void GuiInputCore::pointer_focus_at(double x, double y) {
 }
 
 void GuiInputCore::pointer_leave() {
+    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace): on Android
+    // the one caller is GuiPlatform::end_pen_hover, whose own line precedes.
+    gui_pen_trace("core pointer_leave focused_was=%d",
+                  pointer_focused_ ? 1 : 0);
     pointer_focused_ = false;
     // Fire the leave hook: no motion arrives WHILE the pointer stays outside, so
     // without this a redesigned row's button would keep its lit face for that
@@ -709,6 +737,8 @@ void GuiInputCore::pointer_capability_lost() {
     // re-guard.
     // OrdinaryLeave, the leave's own reason: every consumer reads the two
     // edges the same (architect 2026-10-01; GuiPointerLeaveReason).
+    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
+    gui_pen_trace("core pointer_capability_lost");
     if (pointer_left_hook_)
         pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
     end_left_hold_source(/*physical=*/true);
@@ -1345,7 +1375,19 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     // (the fork and its whole rationale are at end_touch_left_hold). Everything
     // below is shared verbatim: whichever end it was, the finger is no longer
     // the pointer, and the fork below answers where the pointer now IS.
-    if (!end_touch_left_hold(clean_release)) return;
+    if (!end_touch_left_hold(clean_release)) {
+        // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
+        gui_pen_trace("core translation end clean=%d: suppressed "
+                      "(sibling held)",
+                      clean_release ? 1 : 0);
+        return;
+    }
+    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace): the fork the
+    // lines below take, read before they run.
+    gui_pen_trace("core translation end: focus fork = %s+%s (%d,%d)",
+                  clean_release ? "release" : "lost-motion",
+                  pointer_focused_ ? "motion" : "leave", pointer_x_,
+                  pointer_y_);
     // THE END FORKS ON PHYSICAL POINTER FOCUS (the cursor-residue
     // fix): a resolved touch drives the GUI's remembered
     // position to the finger, and the loop-settled cursor owner applies the

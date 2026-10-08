@@ -1473,7 +1473,9 @@ struct GuiInputHandler {
     // index (-1 for none) and damages the old and the new button's rect on a
     // change. Called by the walk above and, with -1, by the pointer-leave
     // hook (main.cpp).
-    void set_roster_hot(int index);
+    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace): trace_source
+    // names the writer on the pen trace's change line, and decides nothing.
+    void set_roster_hot(int index, const char* trace_source = "walk");
     // THE PLAYER'S HOT BUTTON'S ONE SETTER (AppState::player_hot): stores the
     // index with the standing dialog's session and damages the dialog's box
     // on a change.

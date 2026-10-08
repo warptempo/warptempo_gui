@@ -1970,6 +1970,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // restore motion's arm — pointer_focus_at.) Every other effect here
     // reads every reason alike.
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
+        // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
+        gui_pen_trace("gui leave hook (%s)",
+                      reason == GuiPointerLeaveReason::TouchLift
+                          ? "TouchLift" : "OrdinaryLeave");
         app.pointer_in_window = false;
         using TooltipHoverEnd = GuiInputHandler::TooltipHoverEnd;
         input_handler.end_tooltip_hover(
@@ -2011,7 +2015,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // AND THE HOT TOOLBAR BUTTONS, the roster's and the render player's:
         // a pointer that has left — or a finger that has lifted, or a pen
         // whose hover has ended — is on no button.
-        input_handler.set_roster_hot(-1);
+        input_handler.set_roster_hot(-1, "leave hook");
         input_handler.set_player_hot(-1);
         // AND THE PEN'S HOT-FACE LATCH (GuiInputHandler::pen_hot_latch_):
         // every leave clears it, the next down's among them.
