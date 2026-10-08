@@ -21,7 +21,9 @@ struct Viewport;
 
 // THE COLOR PICKER (architect 2026-10-07, the picker arc's second segment) —
 // the in-app picker of the program's fifteen colors (kGuiPaletteRoles,
-// palette_file.h): "a very slimmed down version … a full-fledged part of the
+// palette_file.h) and, under windows-2000, of THE CHROME KNOB's two, the
+// chrome's ground and its text (architect 2026-10-08 ~09:40,
+// chrome_derive.h): "a very slimmed down version … a full-fledged part of the
 // project … branded with the chrome … not an afterthought". This header is
 // the cluster's ONE OWNER of everything that is not pixels or a press body:
 // the lengths, the layout, the color math, the wheel's raster and the acts
@@ -38,19 +40,20 @@ struct Viewport;
 // have the keyboard in the app, we can allow the user to give names to the
 // presets", renamable "for organization", Delete behind a confirming
 // prompt, the defaults unchangeable, the chosen preset back at the next
-// launch). Every pick writes the LIVE WORDS (render.h's
-// program_palette_words) and installs them; the presets are NAMED
+// launch). Every pick writes THE LIVE PALETTE (palette_file.h's
+// live_palette_record: render.h's program_palette_words and
+// live_chrome_pick) and installs it; the presets are NAMED
 // PALETTES (palette_file.h: the two compiled-in defaults and his files) and
 // THE ACTIVE PRESET is the device config's `palette` resolved
 // (effective_palette_name) — NOT A FIELD HERE: the live config is its one
 // truth, read at every paint, so the picker's first open after a launch
 // lands on the config's preset (or the chrome's default) with no seeding to
 // keep in step. THE PALETTE MENU (the bottom row's first button, below)
-// loads a preset, saves the live words over the active file, saves them
+// loads a preset, saves the live palette over the active file, saves it
 // under a new name, renames the active file or deletes it. A CLOSE KEEPS
 // THE LIVE COLORS, ASKING NOTHING: a palette picked and not saved paints
 // until the process ends, and THE NEXT LAUNCH RETURNS TO THE NAMED PRESET —
-// the menu's Save, lit while the live words differ from the active file's,
+// the menu's Save, lit while the live palette differs from the active file's,
 // is the cue (architect 2026-10-07). The picker is the folder's one writer
 // and the `palette` key's one writer (GuiColorPicker's preset acts, below).
 //
@@ -75,22 +78,26 @@ struct Viewport;
 //     triangle's corners the pure hue, white at +120 degrees and black at
 //     +240, turning with the hue.
 //   THE RIGHT COLUMN — (a) THE ELEMENT CHOOSER, the chrome's combo box
-//     showing the live element's name (role_display_name) with the arrow
-//     button; a press drops its list — fifteen rows in kGuiPaletteRoles'
-//     order, the menu-row popup's painters and press road — and a tap on a
-//     row selects. THE LIST IS NOT BOUNDED (no scrolling list, by ruling):
-//     it hangs whole from the chooser's foot (combo_list_box), every row
-//     in reach at both hosts (re-derived 2026-10-08, fifteen rows, device
-//     px): at the tablet's 300 % the list is 15 x 51 + 2 x 3 + 6 + 6 = 783
-//     rows under win2000 (261 W), hung at the well's top + 12 + 6 + 18 + 63
-//     = 99, its foot at 882 of the well's 954; and 15 x 57 + 3 = 858 rows
-//     under clearlooks (286 W), hung at 12 + 3 + 18 + 63 = 96, its foot at
-//     954 — 9 rows (3 W) past the well's 945 onto row 8's top, inside the
-//     window, the popup covering the row there as every dropdown covers
-//     what it hangs over (paint_modal_dialog's fork; the list's damage is
-//     its own rect). At the laptop's 138 % the list is 15 x 23 + 2 + 2 + 2
-//     = 351 under win2000 (foot at 45 + 351 = 396 of the well's 860) and
-//     15 x 26 + 1 = 391 under clearlooks (foot at 44 + 391 = 435 of 852).
+//     showing the live element's name (element_display_name) with the arrow
+//     button; a press drops its list — THE LIVE CHROME'S ELEMENTS (element_at:
+//     under windows-2000 "Chrome" and "Chrome Text" at the top, then the
+//     fifteen in kGuiPaletteRoles' order — seventeen rows; under clearlooks
+//     the fifteen), the menu-row popup's painters and press road — and a tap
+//     on a row selects. THE LIST IS NOT BOUNDED (no scrolling list, by
+//     ruling): it hangs whole from the chooser's foot (combo_list_box),
+//     every row in reach at both hosts (re-derived 2026-10-08 with the
+//     knob's two rows, device px): at the tablet's 300 % the list is
+//     17 x 51 + 2 x 3 + 6 + 6 = 885 rows under win2000 (295 W), hung at the
+//     well's top + 12 + 6 + 18 + 63 = 99, its foot at 984 — 30 rows (10 W)
+//     past the well's 954 onto row 8 (111 rows), inside the window; and
+//     15 x 57 + 3 = 858 rows under clearlooks (286 W), hung at 12 + 3 + 18
+//     + 63 = 96, its foot at 954 — 9 rows (3 W) past the well's 945 onto
+//     row 8's top; under either, the popup covers the row there as every
+//     dropdown covers what it hangs over (paint_modal_dialog's fork; the
+//     list's damage is its own rect). At the laptop's 138 % the list is
+//     17 x 23 + 2 + 2 + 2 = 397 under win2000 (foot at 45 + 397 = 442 of
+//     the well's 860) and 15 x 26 + 1 = 391 under clearlooks (foot at 44 +
+//     391 = 435 of 852).
 //     (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
 //     Value 0–100, Red / Green / Blue 0–255: the label at the left (one
 //     width for all six, measured from the widest), the slider in the
@@ -348,17 +355,46 @@ constexpr int channel_max(Channel c) {
 // (the thumb's column, the digits) and by the acts.
 int channel_value(const AppState::ColorPicker& cp, Channel c);
 
-// THE CHOOSER'S NAMES, one per role of kGuiPaletteRoles in its order, Title
-// Case (the planner's list, 2026-10-07): the role table's names are the
-// file grammar's, these the user's.
-const char* role_display_name(std::size_t role);
+// -- THE ELEMENTS (the chooser's list) -------------------------------------------
+
+// THE CHOOSER'S LIST (architect 2026-10-08 ~09:40, the chrome knob): under
+// windows-2000 THE KNOB'S TWO AT THE TOP — "Chrome", the ground, and
+// "Chrome Text", its text (his 2026-10-04 order: the chrome first, then the
+// canvas, the ink …) — then the fifteen program roles in kGuiPaletteRoles'
+// order; under clearlooks the fifteen alone (the knob is not offered there,
+// chrome_derive.h's head). The list is the live chrome's, fixed for the
+// process (the chrome changes at a launch). An element is a chrome line or
+// a program role; `role` is the line's index in kGuiChromeLines or the
+// role's in kGuiPaletteRoles.
+inline constexpr std::size_t kMaxElementCount =
+    kGuiChromeLineCount + kGuiPaletteRoleCount;
+static_assert(std::tuple_size_v<decltype(AppState::ColorPicker::Stash::list_items)> ==
+                  kMaxElementCount,
+              "AppState::ColorPicker::Stash::list_items must hold kMaxElementCount");
+struct Element {
+    bool        chrome = false;   // a chrome knob's line, else a program role
+    std::size_t role   = 0;
+};
+// Whether the live chrome offers the knob (windows-2000).
+bool        chrome_elements_offered();
+std::size_t element_count();
+Element     element_at(std::size_t e);
+// THE CHOOSER'S NAMES, Title Case (the planner's list, 2026-10-07; the
+// knob's two 2026-10-08): the role table's names are the file grammar's,
+// these the user's.
+const char* element_display_name(std::size_t e);
+// THE ELEMENT'S LIVE COLOR: a program role's live word, or the live chrome
+// pick's — and for a chrome element never picked (no knob in the live
+// palette) the live chrome's COMPILED ground or text, so OLD shows what the
+// chrome wears.
+uint32_t    element_color(std::size_t e);
 
 // -- THE PRESETS ---------------------------------------------------------------
 
 // A PALETTE'S SHOWN NAME (the menu button's label, the menu's rows): a
 // default's in Title Case, its vocabulary's ChromeSpec::display_name
 // ("Windows 2000", "Clearlooks" — the key is the file grammar's, this the
-// user's, as role_display_name is; the Settings editor's Chrome combo shows
+// user's, as element_display_name is; the Settings editor's Chrome combo shows
 // the same names from the same field), a file's name
 // verbatim. Whether `name` is the display name of a default too, case and
 // all — the name ask refuses such a name as taken, so the menu never lists
@@ -386,9 +422,9 @@ std::string_view active_palette(const AppState& app);
 // THE ACTS' TRUTHFUL ENABLED BITS (every roster button truthful), asked by
 // the painter once per paint and published as painted; the lift reads the
 // published bit. SAVE gray while the active preset is a default (the
-// defaults cannot be changed) OR while the live words equal the active
-// preset's words (nothing to save — the comparison IS the modified state,
-// no flag keeps it); RENAME and DELETE gray on a default; SAVE AS always
+// defaults cannot be changed) OR while the live palette equals the active
+// preset's, its chrome knob included (nothing to save — the comparison IS
+// the modified state, no flag keeps it); RENAME and DELETE gray on a default; SAVE AS always
 // live (its one name-independent refusal, no room in the menu, is
 // commit_name's card: the bound is the window's, judged at the commit).
 bool palette_act_enabled(const AppState& app, PaletteAct a);
@@ -446,9 +482,9 @@ struct Layout {
     // The chooser: the whole combo and, under win2000, its drop-down button.
     GuiRect chooser{0, 0, 0, 0};
     GuiRect chooser_button{0, 0, 0, 0};
-    // The list, when down: its box and its fifteen rows.
+    // The list, when down: its box and its rows (element_count of them).
     GuiRect list{0, 0, 0, 0};
-    GuiRect list_items[kGuiPaletteRoleCount]{};
+    GuiRect list_items[kMaxElementCount]{};
     // The six slider rows: the row, the label's seat, the track (the thumb's
     // center travels its inset span, scrub_handle_box_px / 2 in at each end)
     // and the value cell.
@@ -560,7 +596,7 @@ struct GuiColorPicker {
     // as it stood), though the Settings anchor is dead in the view and no
     // chord exists, so no road reaches it there today. Past every refusal
     // it stops playback for the modal open as every modal does, mints the
-    // session, seats OLD and NEW off the live words and damages the window.
+    // session, seats OLD and NEW off the live palette and damages the window.
     void open(int tap_x);
     // THE ONE CLOSE BODY — Close, Esc, the close road's head
     // (GuiPrompt::request_close). Abandons a standing edit (the hex field or
@@ -571,10 +607,14 @@ struct GuiColorPicker {
 
     // THE LIVE ELEMENT: the chooser's pick. OLD becomes the element's
     // current color; the memories re-seat from its bytes.
-    void set_role(std::size_t role);
+    void set_element(std::size_t element);
     // THE ONE WRITER OF NEW (AppState::ColorPicker::rgb): writes the live
-    // words' word for the live element, installs them through the apply
-    // shape (install_live_words), and keeps the HSV
+    // palette's word for the live element — a program role's, or a chrome
+    // line's, where THE FIRST PICK OF EITHER CHROME ELEMENT CREATES BOTH
+    // (architect 2026-10-08): a first pick of Chrome seeds Chrome Text by
+    // chrome_derive::default_text, a first pick of Chrome Text keeps the
+    // compiled ground — installs it through the apply shape
+    // (install_live_words), and keeps the HSV
     // memories: `from_hsv` true means an HSV control wrote the bytes and
     // the memories already hold what it meant (so a quantized round trip
     // cannot move the slider under the hand); false means an RGB source
@@ -631,13 +671,15 @@ struct GuiColorPicker {
     // -- THE PRESETS' ACTS (the head; the menu's rows reach them at the
     //    lift, color_picker_release) -------------------------------------
     //
-    // LOAD — a name row's tap: the named palette's words installed live
-    // (palette_words → the apply shape), THE ACTIVE PRESET made `name` (the
+    // LOAD — a name row's tap: the named palette installed live, its chrome
+    // knob or its absence with it, so a default brings the compiled chrome
+    // back (palette_record → the apply shape), THE ACTIVE PRESET made `name` (the
     // `palette` key written, write_palette_key), OLD and NEW reseated off
     // the live element's new color. A load of the active preset itself is
     // the same act: the file's words back, the unsaved picks dropped.
     void load_palette(std::string_view name);
-    // SAVE — write_palette_file(active, the live words); a failure cards.
+    // SAVE — write_palette_file(active, the live palette, its chrome lines
+    // when it carries them); a failure cards.
     // The act is gray where it would be a no-op or a refusal
     // (palette_act_enabled), so the press that reaches it always writes.
     void save_palette();
@@ -654,7 +696,7 @@ struct GuiColorPicker {
     // default's name, a default's display name or a loaded file's — another
     // than the one being renamed — "Name taken" (Save does the overwrite;
     // Save As never does); each a refusal the product's way, the editor
-    // standing. Then SAVE AS writes the live words under the name and makes
+    // standing. Then SAVE AS writes the live palette under the name and makes
     // it the active preset (the key written, as a load writes it); RENAME
     // renames the active file and rewrites the key — the same name a no-op
     // that closes the ask. An I/O failure closes the ask and cards (class 5:
@@ -690,13 +732,14 @@ struct GuiColorPicker {
     // diagnostic on stderr and the display on a card, the live value
     // standing for the session (class 5).
     void write_palette_key(std::string_view name);
-    // THE PRESETS' APPLY: `words` installed as the live words through the
-    // apply shape set_color runs (install_live_words), and OLD and NEW
-    // reseated off the live element's new word with the memories.
-    void apply_palette_words(const GuiPaletteWords& words);
-    // THE APPLY SHAPE'S ONE ROAD (2026-10-07): `words` installed and the
-    // apply shape run, both as install_program_palette's declaration states
-    // them (palette_file.h). Its two callers are set_color and
-    // apply_palette_words.
-    void install_live_words(const GuiPaletteWords& words);
+    // THE PRESETS' APPLY: `record` installed as the live palette through
+    // the apply shape set_color runs (install_live_words), and OLD and NEW
+    // reseated off the live element's new color with the memories.
+    void apply_palette_record(const GuiPaletteRecord& record);
+    // THE APPLY SHAPE'S ONE ROAD (2026-10-07; the knob 2026-10-08): the
+    // record's fifteen installed (install_program_palette, palette_file.h)
+    // and its chrome knob (install_chrome_pick, render.h), then the apply
+    // shape run once, as install_program_palette's declaration states it.
+    // Its two callers are set_color and apply_palette_record.
+    void install_live_words(const GuiPaletteRecord& record);
 };

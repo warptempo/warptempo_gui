@@ -12,7 +12,6 @@ Every entry below is a desktop theme of the era IMPORTED, not designed (architec
 
 Display tier: high-colour
 
-![windows-rainy-day](crops/windows-rainy-day.png)
 
 ### `windows-plum`
 
@@ -20,7 +19,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-plum](crops/windows-plum.png)
 
 ### `windows-eggplant`
 
@@ -28,7 +26,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-eggplant](crops/windows-eggplant.png)
 
 ### `windows-lilac`
 
@@ -36,7 +33,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-lilac](crops/windows-lilac.png)
 
 ### `windows-slate`
 
@@ -44,7 +40,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-slate](crops/windows-slate.png)
 
 ### `windows-marine`
 
@@ -52,7 +47,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-marine](crops/windows-marine.png)
 
 ### `windows-rose`
 
@@ -60,7 +54,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-rose](crops/windows-rose.png)
 
 ### `windows-brick`
 
@@ -68,7 +61,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-brick](crops/windows-brick.png)
 
 ### `windows-spruce`
 
@@ -76,7 +68,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-spruce](crops/windows-spruce.png)
 
 ### `windows-storm`
 
@@ -84,7 +75,6 @@ Display tier: high-colour
 
 Display tier: vga
 
-![windows-storm](crops/windows-storm.png)
 
 ### `windows-teal`
 
@@ -92,7 +82,6 @@ Display tier: vga
 
 Display tier: vga
 
-![windows-teal](crops/windows-teal.png)
 
 ### `windows-red-white-and-blue`
 
@@ -100,7 +89,6 @@ Display tier: vga
 
 Display tier: vga
 
-![windows-red-white-and-blue](crops/windows-red-white-and-blue.png)
 
 ### `windows-95-standard`
 
@@ -108,7 +96,6 @@ Display tier: vga
 
 Display tier: high-colour
 
-![windows-95-standard](crops/windows-95-standard.png)
 
 ### `windows-98-standard`
 
@@ -116,7 +103,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-98-standard](crops/windows-98-standard.png)
 
 ### `windows-desert`
 
@@ -124,7 +110,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-desert](crops/windows-desert.png)
 
 ### `windows-2000-standard`
 
@@ -132,7 +117,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-2000-standard](crops/windows-2000-standard.png)
 
 ### `windows-pumpkin`
 
@@ -140,7 +124,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-pumpkin](crops/windows-pumpkin.png)
 
 ### `windows-maple`
 
@@ -148,7 +131,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-maple](crops/windows-maple.png)
 
 ### `windows-wheat`
 
@@ -156,7 +138,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![windows-wheat](crops/windows-wheat.png)
 
 ## Windows 98 / Plus! desktop themes (the shipped .theme files)
 
@@ -168,7 +149,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-underwater](crops/plus-underwater.png)
 
 ### `plus-dangerous-creatures`
 
@@ -176,7 +156,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-dangerous-creatures](crops/plus-dangerous-creatures.png)
 
 ### `plus-mystery`
 
@@ -184,7 +163,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-mystery](crops/plus-mystery.png)
 
 ### `plus-travel`
 
@@ -192,7 +170,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-travel](crops/plus-travel.png)
 
 ### `plus-space`
 
@@ -200,7 +177,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-space](crops/plus-space.png)
 
 ### `plus-the-60s-usa`
 
@@ -208,7 +184,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-the-60s-usa](crops/plus-the-60s-usa.png)
 
 ### `plus-science`
 
@@ -216,7 +191,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-science](crops/plus-science.png)
 
 ### `plus-more-windows`
 
@@ -224,7 +198,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-more-windows](crops/plus-more-windows.png)
 
 ### `plus-jungle`
 
@@ -232,7 +205,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-jungle](crops/plus-jungle.png)
 
 ### `plus-leonardo-da-vinci`
 
@@ -240,7 +212,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-leonardo-da-vinci](crops/plus-leonardo-da-vinci.png)
 
 ### `plus-baseball`
 
@@ -248,7 +219,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-baseball](crops/plus-baseball.png)
 
 ### `plus-inside-your-computer`
 
@@ -256,7 +226,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-inside-your-computer](crops/plus-inside-your-computer.png)
 
 ### `plus-windows-98`
 
@@ -264,7 +233,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-windows-98](crops/plus-windows-98.png)
 
 ### `plus-nature`
 
@@ -272,7 +240,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-nature](crops/plus-nature.png)
 
 ### `plus-the-golden-era`
 
@@ -280,7 +247,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-the-golden-era](crops/plus-the-golden-era.png)
 
 ### `plus-sports`
 
@@ -288,7 +254,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![plus-sports](crops/plus-sports.png)
 
 ## KDE 3.5 colour schemes, as Trinity's tdebase carries them (relief by KDE 3's own rule at each scheme's contrast)
 
@@ -300,7 +265,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-dark-blue](crops/kde3-dark-blue.png)
 
 ### `kde3-digital-cde`
 
@@ -308,7 +272,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-digital-cde](crops/kde3-digital-cde.png)
 
 ### `kde3-cde`
 
@@ -316,7 +279,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-cde](crops/kde3-cde.png)
 
 ### `kde3-next`
 
@@ -324,7 +286,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-next](crops/kde3-next.png)
 
 ### `kde3-atlas-green`
 
@@ -332,7 +293,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-atlas-green](crops/kde3-atlas-green.png)
 
 ### `kde3-solaris`
 
@@ -340,7 +300,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-solaris](crops/kde3-solaris.png)
 
 ### `kde3-blue-slate`
 
@@ -348,7 +307,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-blue-slate](crops/kde3-blue-slate.png)
 
 ### `kde3-kde-1`
 
@@ -356,7 +314,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-kde-1](crops/kde3-kde-1.png)
 
 ### `kde3-storm`
 
@@ -364,7 +321,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-storm](crops/kde3-storm.png)
 
 ### `kde3-redmond-95`
 
@@ -372,7 +328,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-redmond-95](crops/kde3-redmond-95.png)
 
 ### `kde3-point-reyes-green`
 
@@ -380,7 +335,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-point-reyes-green](crops/kde3-point-reyes-green.png)
 
 ### `kde3-desert-red`
 
@@ -388,7 +342,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-desert-red](crops/kde3-desert-red.png)
 
 ### `kde3-redmond-2000`
 
@@ -396,7 +349,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-redmond-2000](crops/kde3-redmond-2000.png)
 
 ### `kde3-system`
 
@@ -404,7 +356,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-system](crops/kde3-system.png)
 
 ### `kde3-pale-gray`
 
@@ -412,7 +363,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-pale-gray](crops/kde3-pale-gray.png)
 
 ### `kde3-beos`
 
@@ -420,7 +370,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-beos](crops/kde3-beos.png)
 
 ### `kde3-pumpkin`
 
@@ -428,7 +377,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-pumpkin](crops/kde3-pumpkin.png)
 
 ### `kde3-kde-2`
 
@@ -436,7 +384,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-kde-2](crops/kde3-kde-2.png)
 
 ### `kde3-media-peach`
 
@@ -444,7 +391,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-media-peach](crops/kde3-media-peach.png)
 
 ### `kde3-evex`
 
@@ -452,7 +398,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-evex](crops/kde3-evex.png)
 
 ### `kde3-keramik-white`
 
@@ -460,7 +405,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-keramik-white](crops/kde3-keramik-white.png)
 
 ### `kde3-keramik`
 
@@ -468,7 +412,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-keramik](crops/kde3-keramik.png)
 
 ### `kde3-keramik-emerald`
 
@@ -476,7 +419,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-keramik-emerald](crops/kde3-keramik-emerald.png)
 
 ### `kde3-redmond-xp`
 
@@ -484,7 +426,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-redmond-xp](crops/kde3-redmond-xp.png)
 
 ### `kde3-plastik`
 
@@ -492,7 +433,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![kde3-plastik](crops/kde3-plastik.png)
 
 ## CDE palettes (colour set 5 the ground; foreground and shadows by Motif's own rule)
 
@@ -504,7 +444,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-northern-sky](crops/cde-northern-sky.png)
 
 ### `cde-cinnamon`
 
@@ -512,7 +451,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-cinnamon](crops/cde-cinnamon.png)
 
 ### `cde-cabernet`
 
@@ -520,7 +458,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-cabernet](crops/cde-cabernet.png)
 
 ### `cde-neptune`
 
@@ -528,7 +465,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-neptune](crops/cde-neptune.png)
 
 ### `cde-golden`
 
@@ -536,7 +472,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-golden](crops/cde-golden.png)
 
 ### `cde-south-west`
 
@@ -544,7 +479,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-south-west](crops/cde-south-west.png)
 
 ### `cde-mustard`
 
@@ -552,7 +486,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-mustard](crops/cde-mustard.png)
 
 ### `cde-charcoal`
 
@@ -560,7 +493,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-charcoal](crops/cde-charcoal.png)
 
 ### `cde-urchin`
 
@@ -568,7 +500,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-urchin](crops/cde-urchin.png)
 
 ### `cde-sand`
 
@@ -576,7 +507,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-sand](crops/cde-sand.png)
 
 ### `cde-camouflage`
 
@@ -584,7 +514,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-camouflage](crops/cde-camouflage.png)
 
 ### `cde-sky-red`
 
@@ -592,7 +521,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-sky-red](crops/cde-sky-red.png)
 
 ### `cde-arizona`
 
@@ -600,7 +528,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-arizona](crops/cde-arizona.png)
 
 ### `cde-beige-rose`
 
@@ -608,7 +535,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-beige-rose](crops/cde-beige-rose.png)
 
 ### `cde-tundra`
 
@@ -616,7 +542,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-tundra](crops/cde-tundra.png)
 
 ### `cde-clay`
 
@@ -624,7 +549,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-clay](crops/cde-clay.png)
 
 ### `cde-crimson`
 
@@ -632,7 +556,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-crimson](crops/cde-crimson.png)
 
 ### `cde-alpine`
 
@@ -640,7 +563,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-alpine](crops/cde-alpine.png)
 
 ### `cde-pbnj`
 
@@ -648,7 +570,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-pbnj](crops/cde-pbnj.png)
 
 ### `cde-santa-fe`
 
@@ -656,7 +577,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-santa-fe](crops/cde-santa-fe.png)
 
 ### `cde-nutmeg`
 
@@ -664,7 +584,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-nutmeg](crops/cde-nutmeg.png)
 
 ### `cde-lilac`
 
@@ -672,7 +591,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-lilac](crops/cde-lilac.png)
 
 ### `cde-chocolate`
 
@@ -680,7 +598,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-chocolate](crops/cde-chocolate.png)
 
 ### `cde-dark-gold`
 
@@ -688,7 +605,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-dark-gold](crops/cde-dark-gold.png)
 
 ### `cde-grass`
 
@@ -696,7 +612,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-grass](crops/cde-grass.png)
 
 ### `cde-delphinium`
 
@@ -704,7 +619,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-delphinium](crops/cde-delphinium.png)
 
 ### `cde-desert`
 
@@ -712,7 +626,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-desert](crops/cde-desert.png)
 
 ### `cde-default`
 
@@ -720,7 +633,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-default](crops/cde-default.png)
 
 ### `cde-savannah`
 
@@ -728,7 +640,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-savannah](crops/cde-savannah.png)
 
 ### `cde-orchid`
 
@@ -736,7 +647,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-orchid](crops/cde-orchid.png)
 
 ### `cde-sea-foam`
 
@@ -744,7 +654,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-sea-foam](crops/cde-sea-foam.png)
 
 ### `cde-gray-scale`
 
@@ -752,7 +661,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-gray-scale](crops/cde-gray-scale.png)
 
 ### `cde-olive`
 
@@ -760,7 +668,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-olive](crops/cde-olive.png)
 
 ### `cde-soft-blue`
 
@@ -768,7 +675,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-soft-blue](crops/cde-soft-blue.png)
 
 ### `cde-wheat`
 
@@ -776,7 +682,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-wheat](crops/cde-wheat.png)
 
 ### `cde-summer`
 
@@ -784,7 +689,6 @@ Display tier: high-colour
 
 Display tier: high-colour
 
-![cde-summer](crops/cde-summer.png)
 
 ## GNOME 2: Clearlooks as Debian 6 squeeze shipped it (its gtkrc's colour scheme; the relief, the tooltip border and the unfocused title by the engine's and metacity's own rules)
 

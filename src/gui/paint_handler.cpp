@@ -7840,7 +7840,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
 
     // THE CHOOSER.
     paint_picker_combo(cr, font, L.chooser, L.chooser_button,
-                       color_picker::role_display_name(cp.role),
+                       color_picker::element_display_name(cp.element),
                        cp.chooser_open, /*enabled=*/true);
 
     // THE SIX SLIDERS.
@@ -8058,14 +8058,15 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     cp.stash.list = GuiRect{0, 0, 0, 0};
     cp.stash.list_items = {};
     if (cp.chooser_open) {
+        const std::size_t count = color_picker::element_count();
         paint_combo_list(cr, font, L.list, /*upward=*/false,
-                         static_cast<int>(kGuiPaletteRoleCount),
+                         static_cast<int>(count),
                          cp.chooser_pressed, cp.chooser_hover,
                          [](const AppState&, int i) {
-                             return color_picker::role_display_name(
+                             return color_picker::element_display_name(
                                  static_cast<std::size_t>(i));
                          });
-        for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
+        for (std::size_t i = 0; i < count; ++i)
             cp.stash.list_items[i] = L.list_items[i];
         cp.stash.list = L.list;
     }

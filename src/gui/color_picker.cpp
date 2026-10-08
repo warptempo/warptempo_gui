@@ -1,5 +1,6 @@
 #include "color_picker.h"
 
+#include "chrome_derive.h"     // the chrome knob: default_text
 #include "clearlooks_paint.h"   // cl_scale_thumb_h_px (the thumb's grab height)
 #include "device_config.h"     // the `palette` key's writer (write_device_config)
 #include "notifications.h"
@@ -15,7 +16,7 @@
 
 namespace color_picker {
 
-// -- THE CHOOSER'S NAMES ---------------------------------------------------------
+// -- THE ELEMENTS ------------------------------------------------------------------
 
 namespace {
 // One per role of kGuiPaletteRoles, in its order (asserted below against
@@ -49,11 +50,57 @@ constexpr bool role_names_follow_the_table() {
     return true;
 }
 static_assert(role_names_follow_the_table());
+// The chrome knob's two, in kGuiChromeLines' order (asserted the same way).
+constexpr RoleName kChromeNames[] = {
+    {"chrome_ground", "Chrome"},
+    {"chrome_text",   "Chrome Text"},
+};
+static_assert(std::size(kChromeNames) == kGuiChromeLineCount);
+constexpr bool chrome_names_follow_the_lines() {
+    for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
+        if (std::string_view(kChromeNames[i].role) != kGuiChromeLines[i])
+            return false;
+    return true;
+}
+static_assert(chrome_names_follow_the_lines());
+
+// The compiled theme's word for a chrome role (the knob's OLD when never
+// picked).
+uint32_t compiled_chrome_word(std::string_view role) {
+    const std::size_t i = theme_role_index(role);
+    assert(i < kGuiThemeRoleCount);
+    return chrome_theme_words(live_chrome_spec())[i];
+}
 } // namespace
 
-const char* role_display_name(std::size_t role) {
-    assert(role < kGuiPaletteRoleCount);
-    return kRoleNames[role].name;
+bool chrome_elements_offered() {
+    return live_chrome_spec().vocabulary == GuiChromeVocabulary::Win2000;
+}
+
+std::size_t element_count() {
+    return (chrome_elements_offered() ? kGuiChromeLineCount : 0) +
+           kGuiPaletteRoleCount;
+}
+
+Element element_at(std::size_t e) {
+    assert(e < element_count());
+    const std::size_t lead = chrome_elements_offered() ? kGuiChromeLineCount : 0;
+    if (e < lead) return Element{true, e};
+    return Element{false, e - lead};
+}
+
+const char* element_display_name(std::size_t e) {
+    const Element el = element_at(e);
+    return el.chrome ? kChromeNames[el.role].name : kRoleNames[el.role].name;
+}
+
+uint32_t element_color(std::size_t e) {
+    const Element el = element_at(e);
+    if (!el.chrome) return program_palette_words()[el.role];
+    const std::optional<GuiChromePick>& pick = live_chrome_pick();
+    if (el.role == 0)
+        return pick ? pick->ground : compiled_chrome_word("ground");
+    return pick ? pick->text : compiled_chrome_word("label");
 }
 
 // -- THE PRESETS ---------------------------------------------------------------
@@ -90,7 +137,7 @@ bool palette_act_enabled(const AppState& app, PaletteAct a) {
     const bool is_default = is_default_palette_name(active);
     switch (a) {
         case PaletteAct::Save:
-            return !is_default && program_palette_words() != palette_words(active);
+            return !is_default && live_palette_record() != palette_record(active);
         case PaletteAct::SaveAs:
             return true;
         case PaletteAct::Rename:
@@ -415,7 +462,7 @@ Layout layout(const AppState& app, const GuiFont& font) {
     // THE LIST, when down: the combo's list (combo_list_box, the dropdown's
     // own arithmetic) under the chooser, flush, the chooser's width.
     if (app.color_picker.chooser_open) {
-        const int count = static_cast<int>(kGuiPaletteRoleCount);
+        const int count = static_cast<int>(element_count());
         l.list = combo_list_box(l.chooser, count, /*upward=*/false);
         for (int i = 0; i < count; ++i)
             l.list_items[i] = combo_list_item(l.list, i, /*upward=*/false);
@@ -871,8 +918,8 @@ void GuiColorPicker::open(int tap_x) {
     cp.pending_delete.clear();
     cp.drag = AppState::ColorPicker::Drag{};
     cp.stash = AppState::ColorPicker::Stash{};
-    assert(cp.role < kGuiPaletteRoleCount);
-    cp.rgb     = program_palette_words()[cp.role];
+    assert(cp.element < color_picker::element_count());
+    cp.rgb     = color_picker::element_color(cp.element);
     cp.old_rgb = cp.rgb;
     reseat_memories(cp);
     // A modal OPEN damages the whole window (the card's rect does not exist
@@ -900,11 +947,11 @@ void GuiColorPicker::close() {
     viewport.invalidate_all();
 }
 
-void GuiColorPicker::set_role(std::size_t role) {
+void GuiColorPicker::set_element(std::size_t element) {
     AppState::ColorPicker& cp = app.color_picker;
-    assert(role < kGuiPaletteRoleCount);
-    cp.role    = role;
-    cp.rgb     = program_palette_words()[role];
+    assert(element < color_picker::element_count());
+    cp.element = element;
+    cp.rgb     = color_picker::element_color(element);
     cp.old_rgb = cp.rgb;
     reseat_memories(cp);
     damage_card();
@@ -920,11 +967,24 @@ void GuiColorPicker::set_color(uint32_t rgb, bool from_hsv) {
         damage_card();
         return;
     }
-    // THE LIVE APPLY: the live words with one word rewritten, through the
-    // apply shape's one road (install_live_words).
-    GuiPaletteWords words = program_palette_words();
-    words[cp.role] = rgb;
-    install_live_words(words);
+    // THE LIVE APPLY: the live palette with one word rewritten, through the
+    // apply shape's one road (install_live_words). A chrome element's FIRST
+    // pick creates the knob whole (the declaration): the ground's seeds the
+    // text by Windows' lightness (chrome_derive::default_text), the text's
+    // keeps the compiled ground.
+    GuiPaletteRecord record = live_palette_record();
+    const color_picker::Element el = color_picker::element_at(cp.element);
+    if (!el.chrome) {
+        record.words[el.role] = rgb;
+    } else if (el.role == 0) {
+        if (record.chrome) record.chrome->ground = rgb;
+        else record.chrome = GuiChromePick{rgb, chrome_derive::default_text(rgb)};
+    } else {
+        if (record.chrome) record.chrome->text = rgb;
+        else record.chrome = GuiChromePick{
+                 color_picker::element_color(0), rgb};
+    }
+    install_live_words(record);
 }
 
 int color_picker::channel_value(const AppState::ColorPicker& cp, Channel c) {
@@ -1094,20 +1154,22 @@ void GuiColorPicker::write_palette_key(std::string_view name) {
     }
 }
 
-void GuiColorPicker::install_live_words(const GuiPaletteWords& words) {
+void GuiColorPicker::install_live_words(const GuiPaletteRecord& record) {
     // The shape and why it is enough are at install_program_palette's
-    // declaration (palette_file.h).
+    // declaration (palette_file.h) and, for the chrome, install_chrome_pick's
+    // (render.h).
     const WaveformPlateInks before = waveform_plate_inks();
-    install_program_palette(words);
+    install_program_palette(record.words);
+    install_chrome_pick(record.chrome);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
     viewport.invalidate_all();
 }
 
-void GuiColorPicker::apply_palette_words(const GuiPaletteWords& words) {
+void GuiColorPicker::apply_palette_record(const GuiPaletteRecord& record) {
     AppState::ColorPicker& cp = app.color_picker;
-    install_live_words(words);
-    cp.rgb     = words[cp.role];
+    install_live_words(record);
+    cp.rgb     = color_picker::element_color(cp.element);
     cp.old_rgb = cp.rgb;
     reseat_memories(cp);
 }
@@ -1115,14 +1177,14 @@ void GuiColorPicker::apply_palette_words(const GuiPaletteWords& words) {
 void GuiColorPicker::load_palette(std::string_view name) {
     assert(is_palette_name(name));
     const std::string held(name);   // the menu's row may not outlive the call
-    apply_palette_words(palette_words(held));
+    apply_palette_record(palette_record(held));
     write_palette_key(held);
 }
 
 void GuiColorPicker::save_palette() {
     const std::string active(color_picker::active_palette(app));
     if (const std::optional<std::string> failure =
-            write_palette_file(active, program_palette_words())) {
+            write_palette_file(active, live_palette_record())) {
         report_palette_failure(notifications, *failure,
                                "Could not save the palette");
     }
@@ -1189,7 +1251,7 @@ void GuiColorPicker::commit_name() {
         }
     } else {
         if (const std::optional<std::string> failure =
-                write_palette_file(name, program_palette_words())) {
+                write_palette_file(name, live_palette_record())) {
             report_palette_failure(notifications, *failure,
                                    "Could not save the palette");
             return;
@@ -1229,7 +1291,7 @@ void GuiColorPicker::confirm_delete() {
         return;
     }
     const std::string_view fallback = live_chrome_spec().default_palette;
-    apply_palette_words(palette_words(fallback));
+    apply_palette_record(palette_record(fallback));
     write_palette_key(fallback);
 }
 

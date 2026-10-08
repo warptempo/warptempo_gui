@@ -3349,12 +3349,17 @@ int gui_main(const char* argument) {
     // default or a file read above) — or, with no `palette` line, THE LIVE
     // CHROME'S DEFAULT PALETTE (effective_palette_name, palette_file.h) — for
     // the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here through
-    // palette_words and handed to the install explicitly — render.h's
-    // install_palette) — both resolved against the chrome set above;
+    // palette_record and handed to the install explicitly — render.h's
+    // install_palette), with the same palette's CHROME KNOB when it carries
+    // one (2026-10-08, derived over the compiled theme under windows-2000,
+    // chrome_derive.h) — both resolved against the chrome set above;
     // installed once, before the first paint. Every painter reads it through
     // palette() (render.h's palette block).
-    install_palette(
-        palette_words(effective_palette_name(device_config.palette)));
+    {
+        const GuiPaletteRecord seed =
+            palette_record(effective_palette_name(device_config.palette));
+        install_palette(seed.words, seed.chrome);
+    }
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

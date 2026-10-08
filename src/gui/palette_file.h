@@ -26,14 +26,22 @@
 // the chrome members off the theme's role table (kGuiThemeRoles) and the
 // program members off this file's (kGuiPaletteRoles), so every painter reads
 // palette() as before and no painter knows which source a color came from.
+// THE CHROME KNOB (architect 2026-10-08 ~09:40, chrome_derive.h's head):
+// under windows-2000 a palette may also pick the chrome's GROUND and its
+// TEXT, two optional lines, and every other chrome shade is then derived
+// from them as Windows' Appearance dialog derived it — the one road by
+// which a palette moves the chrome (install_palette with its `chrome`,
+// install_chrome_pick live); a palette without them leaves the compiled
+// theme exactly its recorded bytes.
 //
 // THE PALETTE'S RULE (architect 2026-10-07 ~10:00): A COLOR THE PROGRAM
 // DRAWS IN THE WELL, OR ON A THING THAT ENTERS THE WELL, IS THE PALETTE'S; a
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // playhead's head, WordPad's ruler marker in the chrome's roles, and the flag
-// editor's selection band, the chrome's selected pair). So the palette is
-// exactly the FIFTEEN roles below: the waveform's canvas, ink and lit
+// editor's selection band, the chrome's selected pair). So the palette's
+// program roles are exactly the FIFTEEN below (the chrome knob's two lines
+// stand beside them, the chrome's, not the program's): the waveform's canvas, ink and lit
 // outline, the four flag kinds' faces and selected faces, the one flag
 // outline, the one flag label, the playhead's stem and the scanner.
 // THE FLAG OUTLINE IS A ROLE, `flag_outline` (architect 2026-10-08 ~02:30,
@@ -69,7 +77,19 @@
 // THE FIFTEEN (architect 2026-10-08, the outline's role): the picker writes
 // all fifteen, so a file missing a role is a state the GUI can never
 // produce — the read's first-error hard fail naming the first missing role
-// in the table's order (the two-category rule). A file written before the
+// in the table's order (the two-category rule). BESIDE THEM, TWO OPTIONAL
+// CHROME LINES (architect 2026-10-08 ~09:40, the chrome knob):
+// `chrome_ground=` and `chrome_text=` (kGuiChromeLines), in the same color
+// grammar, BOTH PRESENT OR BOTH ABSENT — the picker's first pick of either
+// chrome element creates both (GuiColorPicker::set_color), so one alone is a
+// state the GUI never writes: the read's first-error hard fail naming the
+// missing one. Absent, the live chrome's compiled theme stands untouched. The
+// picker writes them iff the preset carries them, first in the file (the
+// chooser's order: chrome first). THEY ARE HONORED UNDER WINDOWS-2000 AND
+// CARRIED, UNREAD, UNDER CLEARLOOKS until its own derivation lands — NOT a
+// hard fail there: a palette saved with them under windows-2000 stands in
+// the folder when the Settings chrome row switches to clearlooks, a state
+// the GUI constructs (chrome_derive.h's head says the rest). A file written before the
 // outline became a role names fourteen and fails on `flag_outline`; the
 // planner adds that line to the presets on his devices at the install that
 // brings the role (no migration). No follower and no caption rule: every
@@ -97,8 +117,9 @@
 // the first error is the same file on every launch) into a live map. A
 // MISSING FOLDER IS NO FILES. EVERY VIOLATION IS THE LAUNCH'S FIRST-ERROR
 // HARD FAIL (NO BACKSTOPS FOR ADVERSARIAL USE: a violation is a hand edit) —
-// an unknown role (a chrome role named in a palette file included), a
-// malformed value, a duplicate role, a missing role, a name outside the
+// an unknown role (a chrome role named in a palette file included: the
+// chrome lines are the knob's two alone), a malformed value, a duplicate
+// role, a missing role, one chrome line without the other, a name outside the
 // grammar, a file named
 // for a default, an unreadable folder or file — the blunt terminal line
 // naming the file and the line and no window, the device config's road.
@@ -110,7 +131,7 @@
 // PICKER'S PRESET ACTS (color_picker.h's THE PRESETS: Save and Save As
 // write, Rename renames, Delete removes — GuiColorPicker::save_palette,
 // commit_name, confirm_delete), its picks themselves writing the LIVE
-// WORDS alone (install_program_palette) and no file. None of the writers
+// PALETTE alone (install_program_palette, install_chrome_pick) and no file. None of the writers
 // below touches the device config — the `palette` key is the caller's,
 // which owes its own rewrite when it renames or removes the palette the
 // key names (GuiColorPicker::write_palette_key). Each answers nothing on
@@ -190,9 +211,8 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
-// ONE PALETTE'S VALUES, as words in the role table's order — what
-// palette_words answers, what install_program_palette (render.h) takes and
-// what write_palette_file writes.
+// ONE PALETTE'S PROGRAM VALUES, as words in the role table's order — what
+// install_program_palette takes and a GuiPaletteRecord carries.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
 // render.h spells this type as `std::array<uint32_t, 15>` (install_palette,
 // program_palette_words), since this header includes it; the literal is
@@ -200,6 +220,28 @@ using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
 static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
               "render.h's std::array<uint32_t, 15> must be GuiPaletteWords");
+
+// THE CHROME KNOB'S TWO LINES (the head; architect 2026-10-08 ~09:40), in
+// the file's and the chooser's order: the ground, then its text —
+// GuiChromePick's two members (render.h).
+inline constexpr const char* kGuiChromeLines[] = {"chrome_ground", "chrome_text"};
+inline constexpr std::size_t kGuiChromeLineCount = std::size(kGuiChromeLines);
+
+// ONE PALETTE WHOLE: its fifteen words and its optional chrome knob — what
+// palette_record answers, what write_palette_file writes and what the
+// picker's live road installs (GuiColorPicker::install_live_words).
+struct GuiPaletteRecord {
+    GuiPaletteWords              words{};
+    std::optional<GuiChromePick> chrome;
+    bool operator==(const GuiPaletteRecord&) const = default;
+};
+
+// THE LIVE PALETTE — the install family's two live halves (render.h's
+// program_palette_words and live_chrome_pick) as one record: what Save
+// writes and what Save's enabled bit compares.
+inline GuiPaletteRecord live_palette_record() {
+    return GuiPaletteRecord{program_palette_words(), live_chrome_pick()};
+}
 
 // The index of the role named `name` in the table, or kGuiPaletteRoleCount —
 // the reader's one lookup, and install_palette's for the plate's two baked
@@ -214,9 +256,12 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // second member, defined in render.cpp beside install_palette, render.h):
 // `words` written into GuiPalette's program members, the plate's two inks
 // re-baked and palette_generation bumped, the chrome members untouched — THE
-// CHROME STAYS LAUNCH-BOUND (its compiled theme moves only with the chrome,
-// at launch, install_palette), the program's colors move live. THE PICKER'S LIVE ROAD
-// (GuiColorPicker::install_live_words, color_picker.h). THE APPLY SHAPE THE
+// COMPILED CHROME STAYS LAUNCH-BOUND (it moves only with the chrome, at
+// launch, install_palette), the program's colors move live, and so does the
+// chrome knob, through its own member beside this one (install_chrome_pick,
+// render.h, 2026-10-08). THE PICKER'S LIVE ROAD
+// (GuiColorPicker::install_live_words, color_picker.h, which calls both and
+// then runs this shape once). THE APPLY SHAPE THE
 // CALLER OWES, after the call: the caller kicks the waveform when the plate
 // inks changed and otherwise refreshes the flag cache alone, then
 // invalidates the whole window — the waveform_plate_inks pair read before
@@ -303,11 +348,11 @@ inline constexpr const char* kPaletteGrammarReason =
     "must be windows-2000, clearlooks or the name of a palette file read at "
     "launch";
 
-// The words of the palette `name` names — a default's column, or a loaded
-// file's fifteen (a file names every role, the head). Precondition:
-// is_palette_name(name), so this resolves and never refuses (install_palette;
-// the picker).
-GuiPaletteWords palette_words(std::string_view name);
+// The palette `name` names — a default's column with no chrome knob, or a
+// loaded file's fifteen (a file names every role, the head) and its chrome
+// lines when it carries them. Precondition: is_palette_name(name), so this
+// resolves and never refuses (install_palette; the picker).
+GuiPaletteRecord palette_record(std::string_view name);
 
 // THE PICKER'S WRITES (the head: each keeps the map and the folder in step,
 // none touches the device config, each answers the failure's whole line).
@@ -319,12 +364,13 @@ GuiPaletteWords palette_words(std::string_view name);
 // holds, the writers ASSERT their name preconditions (a breach is a program
 // bug) and their one error arm is I/O.
 //
-// write_palette_file: create or overwrite `<name>.palette` with all fifteen
-// roles, uppercase `#RRGGBB` in the table's order, through the atomic writer
+// write_palette_file: create or overwrite `<name>.palette` with the record's
+// two chrome lines when it carries them, then all fifteen roles, uppercase
+// `#RRGGBB` in the table's order, through the atomic writer
 // (atomic_write_string_to_path), the folder created on the first write.
 // Precondition: `name` in the grammar and no default's.
 std::optional<std::string> write_palette_file(std::string_view name,
-                                              const GuiPaletteWords& words);
+                                              const GuiPaletteRecord& record);
 // rename_palette_file: `old_name`, a loaded file's, becomes `new_name`.
 // Precondition: `new_name` differs, is in the grammar and is no palette's
 // yet (neither a default's nor a loaded file's).

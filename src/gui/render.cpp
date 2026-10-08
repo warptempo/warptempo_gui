@@ -6,7 +6,8 @@
 #include "gui_font.h"
 #include "text_shape.h"
 #include "theme_file.h"
-#include "palette_file.h"   // kGuiPaletteRoles, palette_words, effective_palette_name
+#include "palette_file.h"   // kGuiPaletteRoles, effective_palette_name
+#include "chrome_derive.h"  // live_chrome_words (the chrome knob)
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -2644,6 +2645,9 @@ namespace {
     // THE LIVE WORDS (render.h's program_palette_words): the fifteen as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
+    // THE LIVE CHROME PICK (render.h's live_chrome_pick): the knob as the
+    // install family last wrote it.
+    std::optional<GuiChromePick> g_chrome_pick;
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
@@ -2655,6 +2659,7 @@ WaveformPlateInks waveform_plate_inks() {
                                  g_plate_inks.outline_rgb)};
 }
 const GuiPaletteWords& program_palette_words() { return g_program_words; }
+const std::optional<GuiChromePick>& live_chrome_pick() { return g_chrome_pick; }
 
 namespace {
 // THE PROGRAM'S FIFTEEN into the installed struct and the plate's two baked
@@ -2671,19 +2676,34 @@ void fill_program_palette(const GuiPaletteWords& w) {
                   kOutline < kGuiPaletteRoleCount);
     g_plate_inks = WaveformPlateInks{w[kInk], w[kOutline]};
 }
-} // namespace
-
-void install_palette(const GuiPaletteWords& program) {
-    // The chrome's fields are filled off the live chrome's compiled theme
-    // (chrome_theme_words, theme_file.h, which never misses) and the
-    // program's off `program`, THE LIVE WORDS the caller resolved (render.h:
-    // the launch's palette_words of the `palette` key), the two tables
-    // covering the struct exactly (palette_file.cpp), so a role cannot be
-    // valued and not painted.
-    const GuiThemeWords& w = chrome_theme_words(live_chrome_spec());
+// THE CHROME'S MEMBERS off the live chrome's words with the knob
+// (live_chrome_words, chrome_derive.h: the compiled theme, the knob derived
+// over it under windows-2000) — the install family's other shared half.
+void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
+    g_chrome_pick = chrome;
+    const GuiThemeWords w = live_chrome_words(live_chrome_spec(), chrome);
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
+}
+} // namespace
+
+void install_palette(const GuiPaletteWords& program,
+                     const std::optional<GuiChromePick>& chrome) {
+    // The chrome's fields are filled off the live chrome's compiled theme
+    // with the palette's knob (live_chrome_words, chrome_derive.h, which
+    // never misses) and the program's off `program`, THE LIVE WORDS the
+    // caller resolved (render.h: the launch's palette_record of the
+    // `palette` key), the two tables covering the struct exactly
+    // (palette_file.cpp), so a role cannot be valued and not painted.
+    fill_chrome_palette(chrome);
     fill_program_palette(program);
+    ++g_palette_generation;
+}
+
+void install_chrome_pick(const std::optional<GuiChromePick>& chrome) {
+    // The contract is at the declaration (render.h); the apply shape is the
+    // caller's (GuiColorPicker::install_live_words).
+    fill_chrome_palette(chrome);
     ++g_palette_generation;
 }
 

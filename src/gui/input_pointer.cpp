@@ -5224,7 +5224,7 @@ void GuiInputHandler::set_color_picker_list_open(bool open) {
     // derivation here, for DAMAGE alone, never for a hit).
     if (!open) color_picker.damage_card();
     cp.chooser_open    = open;
-    cp.chooser_hover   = open ? static_cast<int>(cp.role) : -1;
+    cp.chooser_hover   = open ? static_cast<int>(cp.element) : -1;
     cp.chooser_pressed = -1;
     cp.chooser_press_began_on_item = false;
     if (open) {
@@ -5520,7 +5520,7 @@ void GuiInputHandler::color_picker_release(int x, int y) {
         const int hit = color_picker_list_hit(cp.stash, x, y);
         cp.chooser_pressed = -1;
         cp.chooser_press_began_on_item = false;
-        if (hit >= 0) color_picker.set_role(static_cast<std::size_t>(hit));
+        if (hit >= 0) color_picker.set_element(static_cast<std::size_t>(hit));
         set_color_picker_list_open(false);
         return;
     }

@@ -35,8 +35,11 @@
 // files, no Settings row — THE CHROME CHOSEN IS ITS COLORS (kGuiChromeThemes
 // below, resolved by the chrome's key, chrome_theme_words). The architect's
 // workshop for colors is THE PALETTE (palette_file.h: named presets saved
-// and loaded in the app); a look made official becomes A NEW CHROME VARIANT,
-// its theme compiled in beside these two:
+// and loaded in the app), whose CHROME KNOB may pick windows-2000's ground
+// and text, every other chrome shade derived over this compiled theme by
+// Windows' own rule (architect 2026-10-08 ~09:40, chrome_derive.h — the
+// compiled words themselves never change); a look made official becomes A
+// NEW CHROME VARIANT, its theme compiled in beside these two:
 //   `windows-2000` wears WINDOWS 2000's "Windows Standard" scheme
 //     (tools/theme_catalog's `windows-2000-standard`): THE ROLE TABLE'S
 //     VALUE COLUMN, hand-recorded, the generator checking it against its
@@ -109,6 +112,14 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
 #include "theme_clearlooks_roles.inc"
 };
 inline constexpr std::size_t kGuiThemeRoleCount = std::size(kGuiThemeRoles);
+
+// The index of the role named `name` in the table, or kGuiThemeRoleCount —
+// the chrome knob's lookup (chrome_derive.h, evaluated at compile time).
+constexpr std::size_t theme_role_index(std::string_view name) {
+    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
+        if (name == kGuiThemeRoles[i].name) return i;
+    return kGuiThemeRoleCount;
+}
 
 // ONE THEME'S VALUES, as words in the role table's order — what
 // install_palette reads.

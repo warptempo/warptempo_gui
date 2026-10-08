@@ -108,7 +108,11 @@ struct TrimRange {
 // `palettes/` folder beside it — or, with no `palette` line, the live
 // chrome's default palette. There is NO LEVEL (architect 2026-10-04): a
 // dark look, like any look made official, would be a chrome variant of its
-// own (2026-10-08). The app computes no color.
+// own (2026-10-08). The app computes no color but one family: THE CHROME
+// KNOB (architect 2026-10-08 ~09:40, chrome_derive.h's head) — a palette
+// that picks the chrome's ground and text under windows-2000 has every other
+// chrome shade derived by Windows' own Appearance-dialog rule, as Windows
+// itself computed it.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — no named literal stands beside them since
 // 2026-10-07, when the flag editor's black frame went — or THE ICON SET'S
@@ -377,20 +381,33 @@ struct GuiPalette {
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
 // state in render.cpp, written by the install family below alone:
 // install_palette at its ONE application point, gui_main's startup, before
-// the window exists; and install_program_palette, the picker's live road. Before the first install it is construction state
+// the window exists; and install_program_palette and install_chrome_pick,
+// the picker's live road. Before the first install it is construction state
 // (black), never painted.
 const GuiPalette& palette();
 
+// THE CHROME KNOB'S PICK (architect 2026-10-08 ~09:40): the palette's two
+// picked chrome elements, the ground (Windows' 3D Objects) and its text,
+// present together or not at all — palette_file.h owns their file grammar
+// (`chrome_ground` / `chrome_text`), chrome_derive.h the derivation of every
+// other chrome shade from them.
+struct GuiChromePick {
+    uint32_t ground = 0;   // 0xRRGGBB, sRGB
+    uint32_t text   = 0;   // 0xRRGGBB, sRGB
+    constexpr bool operator==(const GuiChromePick&) const = default;
+};
+
 // Install every color: THE CHROME'S off THE LIVE CHROME'S COMPILED THEME
 // (chrome_theme_words(live_chrome_spec()), theme_file.h — so the chrome is
-// set first, set_live_chrome_spec) and THE PROGRAM'S off `program`, THE
+// set first, set_live_chrome_spec), the palette's chrome knob derived over
+// it (`chrome` below), and THE PROGRAM'S off `program`, THE
 // LIVE WORDS (2026-10-07, the color picker's round): the fifteen program
 // colors as they stand in the process, which the caller hands in
 // explicitly — AT LAUNCH the palette the config's `palette` key names
 // (through is_palette_name — a default or a file read at launch — or, with
 // no `palette` line, the live chrome's default palette,
 // effective_palette_name, palette_file.h: gui_main resolves it with
-// palette_words and passes it).
+// palette_record and passes its two halves).
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
 // `palette` key names THE ACTIVE PRESET (color_picker.h's THE PRESETS) and
 // gives the words at launch alone; a preset's load or Delete installs
@@ -398,8 +415,30 @@ const GuiPalette& palette();
 // (GuiColorPicker). This resolves and never refuses. It bumps
 // palette_generation below, the flag cache's fingerprint term, and the
 // plate's two baked inks (waveform_plate_inks) move with it. The words type
-// is palette_file.h's.
-void install_palette(const std::array<uint32_t, 15>& program);
+// is palette_file.h's. `chrome` is the same palette's CHROME KNOB, its two
+// optional chrome lines (GuiChromePick above), derived over the compiled
+// theme under windows-2000 (live_chrome_words, chrome_derive.h).
+void install_palette(const std::array<uint32_t, 15>& program,
+                     const std::optional<GuiChromePick>& chrome);
+
+// THE INSTALL FAMILY'S CHROME MEMBER (2026-10-08, the chrome knob): the
+// chrome's members rewritten off live_chrome_words(live chrome, `chrome`)
+// (chrome_derive.h — the compiled theme, with the knob derived over it under
+// windows-2000) and palette_generation bumped, the program's fifteen
+// untouched. THE PICKER'S LIVE ROAD beside install_program_palette
+// (GuiColorPicker::install_live_words, which runs that member's apply shape
+// after both). Why that shape is enough for the chrome: the chrome's colors
+// bake into one cached thing, the flag cache (a disabled flag's ground),
+// keyed by the generation; the caption's ramp image keys its two words
+// itself (paint_caption_gradient); every other chrome painter reads
+// palette() each frame (re-grepped 2026-10-08).
+void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
+
+// THE LIVE CHROME PICK AS INSTALLED — the knob the install family last wrote
+// (install_palette's or install_chrome_pick's `chrome`), carried as given
+// under either chrome; with program_palette_words, THE LIVE PALETTE
+// (palette_file.h's live_palette_record), file-scope for the same reason.
+const std::optional<GuiChromePick>& live_chrome_pick();
 
 // THE LIVE WORDS AS INSTALLED — the program's fifteen the install family
 // last wrote (install_palette's `program`, or install_program_palette's

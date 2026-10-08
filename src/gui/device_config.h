@@ -244,7 +244,8 @@
 // installs the chrome once (set_live_chrome_spec, chrome_spec.h), and the
 // install resolves the palette (install_palette, render.h, through
 // effective_palette_name, palette_file.h) and takes the chrome's colors from
-// its compiled theme (chrome_theme_words, theme_file.h).
+// its compiled theme (chrome_theme_words, theme_file.h), with the palette's
+// chrome knob derived over it under windows-2000 (chrome_derive.h).
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;

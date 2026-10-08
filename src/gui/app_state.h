@@ -8636,7 +8636,8 @@ struct AppState {
     // -- THE COLOR PICKER'S WHOLE STATE (architect 2026-10-07) -----------
     //
     // THE IN-APP PICKER OF THE PROGRAM'S FIFTEEN COLORS (kGuiPaletteRoles,
-    // palette_file.h) — a slim card on the well, chrome-branded, the FIFTH
+    // palette_file.h) AND, UNDER WINDOWS-2000, THE CHROME KNOB'S TWO
+    // (chrome_derive.h) — a slim card on the well, chrome-branded, the FIFTH
     // ModalDialogOwner (its rank and its modal shape are at
     // ModalDialogOwner). Everything about the card that is not pixels is in
     // color_picker.h — the lengths, the layout, the color math, the wheel's
@@ -8646,18 +8647,22 @@ struct AppState {
     //   `active` / `session`  the mode bit and its modal session id from the
     //              one counter (text_editor::next_session_id), minted at
     //              every open (GuiColorPicker::open);
-    //   `role`     THE LIVE ELEMENT, an index into kGuiPaletteRoles. KEPT
-    //              ACROSS OPENS: the first open lands on Canvas (index 0),
-    //              a later open returns to the element last picked — the
-    //              picker remembers where the work was (the planner's
-    //              reading of "the first open lands on Canvas");
+    //   `element`  THE LIVE ELEMENT, an index into the chooser's list
+    //              (color_picker::element_at: under windows-2000 Chrome and
+    //              Chrome Text, then kGuiPaletteRoles; under clearlooks the
+    //              roles alone — the list is the chrome's, fixed for the
+    //              process). KEPT ACROSS OPENS: the first open lands on the
+    //              list's first row (Chrome under windows-2000, Canvas under
+    //              clearlooks), a later open returns to the element last
+    //              picked — the picker remembers where the work was;
     //   `old_rgb`  OLD — the live element's color WHEN IT BECAME the live
     //              element (the open, or the chooser's change); a tap on the
     //              OLD swatch writes it back, live;
-    //   `rgb`      NEW — a mirror of program_palette_words()[role], the
-    //              truth (render.h); ONE WRITER, GuiColorPicker::set_color,
-    //              which writes the live words, installs them and keeps
-    //              this in step;
+    //   `rgb`      NEW — a mirror of the live element's live color
+    //              (color_picker::element_color: program_palette_words or
+    //              the live chrome pick, render.h), the truth; ONE
+    //              WRITER, GuiColorPicker::set_color, which writes the live
+    //              palette, installs it and keeps this in step;
     //   `hue_deg`, `sat`  THE HSV MEMORIES: the hue in degrees [0, 360) and
     //              the saturation [0, 1] the HSV controls last wrote or the
     //              bytes last gave — GtkHSV's own behavior, so a gray keeps
@@ -8692,7 +8697,7 @@ struct AppState {
     struct ColorPicker {
         bool        active  = false;
         uint64_t    session = 0;
-        std::size_t role    = 0;
+        std::size_t element = 0;
         uint32_t    old_rgb = 0;
         uint32_t    rgb     = 0;
         double      hue_deg = 0.0;
@@ -8759,7 +8764,10 @@ struct AppState {
             GuiRect  card{0, 0, 0, 0};
             GuiRect  chooser{0, 0, 0, 0};      // the combo: a press toggles the list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
-            std::array<GuiRect, kGuiPaletteRoleCount> list_items{};
+            // The list's rows, the chooser's most (the knob's two and the
+            // fifteen; color_picker::kMaxElementCount, asserted there).
+            std::array<GuiRect, kGuiChromeLineCount + kGuiPaletteRoleCount>
+                     list_items{};
             std::array<SliderStash, 6> sliders{};   // color_picker::kChannelCount (static_asserted there)
             GuiRect  field{0, 0, 0, 0};        // the one field's outer box
             GuiRect  field_inner{0, 0, 0, 0};  // its interior (the I-beam, the caret)
