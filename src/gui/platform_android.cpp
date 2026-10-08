@@ -1462,8 +1462,6 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
                 // has already taken a standing tooltip box down, focus loss
                 // being its hard end) is delivered here, and the pen's Ctrl
                 // bit drops.
-                // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-                gui_pen_trace("android focus lost");
                 end_pen_hover();
                 set_pen_ctrl(false);
                 // AND THE PEN'S RETAINED ZOOM ANCHOR DIES WITH IT (release
@@ -1773,22 +1771,6 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // is a fresh enter. Neither the exit nor a report
             // above the plane touches the retained zoom anchor.
             if (!pen_present) return;
-            // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace): the
-            // report as classified and the door the lines below take.
-            gui_pen_trace(
-                "android %s %s d=%.0f (%d,%d) -> %s",
-                masked == AMOTION_EVENT_ACTION_HOVER_ENTER  ? "HOVER_ENTER"
-                : masked == AMOTION_EVENT_ACTION_HOVER_MOVE ? "HOVER_MOVE"
-                                                            : "HOVER_EXIT",
-                pen_in_plane ? "in-plane" : "above-plane",
-                static_cast<double>(AMotionEvent_getAxisValue(
-                    event, AMOTION_EVENT_AXIS_DISTANCE, pen_index)),
-                containing_pixel(px(pen_index)),
-                containing_pixel(py(pen_index)),
-                !pen_in_plane                    ? "end_pen_hover"
-                : input_.touch_contact_active() ? "dropped (contact)"
-                : !pen_hovering_                ? "pointer_enter"
-                                                : "pointer_motion");
             if (!pen_in_plane) {   // a HOVER_EXIT, or a hover above the plane
                 end_pen_hover();
                 set_pen_ctrl(false);
@@ -1818,12 +1800,6 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // the tooltip all go) and the bit drops. It leaves the retained
             // anchor alone: released high up and pressed again before
             // re-entering the plane, the anchor stands.
-            // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-            if (pen_present)
-                gui_pen_trace("android %s %s",
-                              masked == AMOTION_EVENT_ACTION_BUTTON_PRESS
-                                  ? "BUTTON_PRESS" : "BUTTON_RELEASE",
-                              pen_in_plane ? "in-plane" : "above-plane");
             if (pen_present && !pen_in_plane) {
                 end_pen_hover();
                 set_pen_ctrl(false);
@@ -1863,19 +1839,6 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // answer above (b).
             {
                 const bool finger_down = index < count && !is_pen(index);
-                // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-                if (pen_present || pen_hovering_)
-                    gui_pen_trace("android %s tool=%s (%d,%d) hovering=%d "
-                                  "contact=%d",
-                                  masked == AMOTION_EVENT_ACTION_DOWN
-                                      ? "DOWN" : "POINTER_DOWN",
-                                  finger_down ? "finger" : "stylus",
-                                  index < count
-                                      ? containing_pixel(px(index)) : -1,
-                                  index < count
-                                      ? containing_pixel(py(index)) : -1,
-                                  pen_hovering_ ? 1 : 0,
-                                  input_.touch_contact_active() ? 1 : 0);
                 if (!input_.touch_contact_active()) {
                     end_pen_hover();
                     if (finger_down) set_pen_ctrl(false);
@@ -1966,21 +1929,11 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                 // and the hover that follows continues as a motion.
                 const bool pen_stays = pen_lift &&
                                        masked == AMOTION_EVENT_ACTION_UP;
-                // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-                if (pen_lift)
-                    gui_pen_trace("android %s tool=stylus (%d,%d) pen_stays=%d",
-                                  masked == AMOTION_EVENT_ACTION_UP
-                                      ? "UP" : "POINTER_UP",
-                                  containing_pixel(px(index)),
-                                  containing_pixel(py(index)),
-                                  pen_stays ? 1 : 0);
                 if (pen_stays) {
                     input_.pointer_focus_at(px(index), py(index));
                     pen_hovering_ = true;
                 }
                 pen_lift_keeps_anchor_ = keep_seat;
-                // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-                if (pen_lift) gui_pen_trace("android touch_up");
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
                 pen_lift_keeps_anchor_ = false;
                 // THE PEN'S LIFT DROPS THE CTRL BIT, after the lift's own
@@ -2002,16 +1955,15 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                     // set_pen_lift_hook): the release, the restore motion at
                     // the lift and the Ctrl bit's drop have all run, so the
                     // next motion the GUI sees is the pen's first hover
-                    // report — the latch's anchor.
-                    if (pen_stays && pen_lift_hook_) {
-                        // DIAGNOSTIC (architect 2026-10-08, class 5;
-                        // gui_pen_trace).
-                        gui_pen_trace("android pen_lift_hook (%d,%d)",
-                                      containing_pixel(px(index)),
-                                      containing_pixel(py(index)));
+                    // report — the latch's anchor. Traced on his glass
+                    // (2026-10-08): UP, pointer_focus_at, touch_up (the
+                    // release and the restore motion), the arm, then the
+                    // first HOVER_ENTER at the lift point itself; the hover
+                    // point then drifts along the pen's axis as the tip rises
+                    // (the measurement at kPenHotRearmPx).
+                    if (pen_stays && pen_lift_hook_)
                         pen_lift_hook_(containing_pixel(px(index)),
                                        containing_pixel(py(index)));
-                    }
                     return;
                 }
             }
@@ -2032,10 +1984,6 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // the Ctrl clear (pen_report_in_plane's transitions: the
             // predicate sets it out only on a cancel that still carries the
             // pen, and this one may not).
-            // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-            if (pen_present || pen_hovering_)
-                gui_pen_trace("android CANCEL hovering=%d",
-                              pen_hovering_ ? 1 : 0);
             input_.touch_cancel();
             set_pen_ctrl(false);
             pen_on_glass_ = false;
@@ -2067,9 +2015,6 @@ void GuiPlatform::set_pen_ctrl(bool held) {
 }
 
 void GuiPlatform::end_pen_hover() {
-    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace): every caller
-    // prints its own line first, so the caller reads off the line above.
-    gui_pen_trace("android end_pen_hover hovering=%d", pen_hovering_ ? 1 : 0);
     if (!pen_hovering_) return;
     pen_hovering_ = false;
     // The ordinary leave: the pen has left the tool as a mouse leaving the

@@ -237,14 +237,6 @@ inline constexpr double kDefaultTouchSlopPx = 6.0;
 // it, so no second reading of the same clock can drift from this one.
 uint64_t gui_monotonic_us();
 
-// DIAGNOSTIC (architect 2026-10-08, class 5: advisory stderr, never fatal;
-// logcat's warptempo:I on the tablet): THE PEN-LIFT TRACE, one line per event
-// prefixed `warptempo_gui: pen-trace` and stamped in ms off gui_monotonic_us,
-// so the order and the gaps of the pen's lift (the platform's events, the
-// core's pointer doors, the hot-face latch, the roster's hot face) read off
-// his taps. It decides nothing; removed once the blink's cause is read.
-void gui_pen_trace(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
-
 class GuiInputCore {
 public:
     using KeyCallback          = std::function<void(GuiKey key, GuiInputState mods)>;

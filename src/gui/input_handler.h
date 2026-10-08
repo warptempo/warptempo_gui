@@ -1473,9 +1473,7 @@ struct GuiInputHandler {
     // index (-1 for none) and damages the old and the new button's rect on a
     // change. Called by the walk above and, with -1, by the pointer-leave
     // hook (main.cpp).
-    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace): trace_source
-    // names the writer on the pen trace's change line, and decides nothing.
-    void set_roster_hot(int index, const char* trace_source = "walk");
+    void set_roster_hot(int index);
     // THE PLAYER'S HOT BUTTON'S ONE SETTER (AppState::player_hot): stores the
     // index with the standing dialog's session and damages the dialog's box
     // on a change.
@@ -3032,15 +3030,15 @@ private:
     //   own ever reaches the latch, and the first one that does is the pen's
     //   first hover report.
     //   ANCHORED AT THE FIRST HOVER REPORT, NOT AT THE LIFT (architect
-    //   2026-10-08, his glass pass: "as soon as I lift it blinks bright, then
-    //   goes back to being dark, sunken"): the S Pen's hover coordinates are
-    //   not its contact coordinates — the first HOVER report after the tip
-    //   lifts lands several device px off the touch point (the contact patch
-    //   against the hover sensor's centroid, the tilt, the lift's own sideways
-    //   motion), so a compare against the lift point cleared the latch on
-    //   that first report, a move never made. The first motion on_motion meets
-    //   while the latch is armed and unanchored SETS the anchor and clears
-    //   nothing; every later motion compares against it.
+    //   2026-10-08): the S Pen's hover coordinates are the hover sensor's,
+    //   not the contact's, so the latch compares hover against hover. The
+    //   first motion on_motion meets while the latch is armed and unanchored
+    //   SETS the anchor and clears nothing; every later motion compares
+    //   against it. Traced on his glass (2026-10-08, four taps): that first
+    //   report lands on the lift point itself (+0,+0, once +0,-1); the blink
+    //   he saw ("as soon as I lift it blinks bright, then goes back to being
+    //   dark, sunken") was the hover point's DRIFT as the tip rises, ~200 ms
+    //   after the lift — the distance's measurement is at kPenHotRearmPx.
     //   CLEARED (a) by a motion at least kPenHotRearmPx from the anchor,
     //   Chebyshev, the drag gate's own metric (on_motion's prologue) — the
     //   same walk then re-lights the button under the pen as usual; (b) by
@@ -3059,21 +3057,32 @@ private:
     struct PenHotLatch {
         bool armed    = false;
         bool anchored = false;  // set by the first hover report after the arm
-        int  lift_x   = 0;      // the lift's pixel (the diagnostic's origin)
+        int  lift_x   = 0;      // the lift's pixel, as the hook reports it
         int  lift_y   = 0;
         int  x        = 0;      // the anchor: the first hover report's pixel
         int  y        = 0;
     };
     PenHotLatch pen_hot_latch_;
-    // THE RE-ARM DISTANCE, in WINDOWS PX (a chrome length, converted through
-    // scaled_px at the compare: 9 device px at 300, 4 at 138): above the S
-    // Pen's resting jitter, below a deliberate move (architect 2026-10-07).
-    // MEASURED FROM THE ANCHOR, THE PEN'S FIRST HOVER REPORT AFTER THE LIFT,
-    // never from the lift point (architect 2026-10-08): the hover sensor's
-    // first report lands several device px off the contact point, so a
-    // distance from the lift cleared the latch on a move never made — "as
-    // soon as I lift it blinks bright, then goes back to being dark, sunken".
-    static constexpr double kPenHotRearmPx = 3.0;
+    // THE RE-ARM DISTANCE, 12 WINDOWS PX (architect 2026-10-08, retuned on
+    // measured data from 3): 36 device px at 300, 17 at 138, converted
+    // through scaled_px at the compare and MEASURED FROM THE ANCHOR, the
+    // pen's first hover report after the lift (the rule at pen_hot_latch_).
+    // THE MEASUREMENT (his four deliberate taps, traced off logcat,
+    // 2026-10-08): the first hover report lands on the lift point, and then,
+    // with his hand still, the hover point DRIFTS as the reported distance
+    // above the glass rises from 0 to ~75 — sliding along the pen's axis by
+    // up to ~30 device px (one tap: (1639,187) to (1635,159) at d=76), then
+    // settling ~15 px off the tap point as d levels at ~30-40. Every tap
+    // crossed the old 9 px ~200 ms after the lift and the hot face came back:
+    // the blink. THE DRIFT IS THE PEN'S GEOMETRY — the hover point slides
+    // along the pen's axis as the tip rises — NOT THE HAND. 12 W sits above
+    // that drift (peak ~30, settled ~15) and well below a deliberate move to
+    // the neighboring button, a case width (31 W, 93 px). Authored in Windows
+    // px as every chrome length, though the drift is physical: the tablet is
+    // the one pen device. The blink shows only where the rest and hot faces
+    // differ (a checked toggle's checker against the hot face); a plain face
+    // and its hot face differ by the raised line alone under Windows 2000.
+    static constexpr double kPenHotRearmPx = 12.0;
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the settings editor's
     // dialog pattern for the history view's OTHER act. Ctrl+S while the view

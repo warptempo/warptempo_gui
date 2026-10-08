@@ -7978,11 +7978,8 @@ void GuiInputHandler::finalize_active_drags() {
 // old button's published rect and the new one's — the face is painted inside
 // the case and nowhere else, and a stale stash's rect was already damaged by
 // the relayout that moved it.
-void GuiInputHandler::set_roster_hot(int index, const char* trace_source) {
+void GuiInputHandler::set_roster_hot(int index) {
     if (index == app.roster_hot) return;
-    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-    gui_pen_trace("gui roster_hot %d -> %d (%s)", app.roster_hot, index,
-                  trace_source);
     const auto damage = [&](int i) {
         if (i < 0) return;
         viewport.invalidate_rect(
@@ -8000,17 +7997,10 @@ void GuiInputHandler::arm_pen_hot_latch(int x, int y) {
     // before the frame paints.
     pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
                                  .lift_x = x, .lift_y = y, .x = 0, .y = 0};
-    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-    gui_pen_trace("gui latch armed lift (%d,%d) roster_hot=%d", x, y,
-                  app.roster_hot);
     recompute_redesign_button_hover();
 }
 
 void GuiInputHandler::clear_pen_hot_latch() {
-    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-    gui_pen_trace("gui latch cleared by leave (was armed=%d anchored=%d)",
-                  pen_hot_latch_.armed ? 1 : 0,
-                  pen_hot_latch_.anchored ? 1 : 0);
     pen_hot_latch_.armed = false;
 }
 
@@ -8109,23 +8099,13 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // AND NONE WHILE THE PEN'S HOT-FACE LATCH STANDS (pen_hot_latch_, the
     // rule at its declaration, architect 2026-10-07): after a pen lift the
     // tapped button reads at rest until the pen moves off its anchor.
-    // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace): the term
-    // that produced the write below, read off the same three terms.
-    const char* const roster_hot_trace_term =
-        !toolbar_style_has_hot_face(live_chrome_spec().toolbar_style)
-            ? "walk: style has no hot face"
-        : app.chrome_press.kind != AppState::ChromePress::Kind::None
-            ? "walk: chrome press armed"
-        : pen_hot_latch_.armed ? "walk: latch armed"
-        : "walk: candidate";
     set_roster_hot(toolbar_style_has_hot_face(
                            live_chrome_spec().toolbar_style) &&
                            app.chrome_press.kind ==
                                AppState::ChromePress::Kind::None &&
                            !pen_hot_latch_.armed
                        ? hot
-                       : -1,
-                   roster_hot_trace_term);
+                       : -1);
     // THE ARM'S INSIDE BIT — the feint's chrome half (2026-08-13, the modal
     // arm's press_inside on this surface), maintained here because this walk
     // is the roster's one per-motion-and-per-tick derivation: with a chrome
@@ -10378,21 +10358,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         pen_hot_latch_.anchored = true;
         pen_hot_latch_.x = mouse_x;
         pen_hot_latch_.y = mouse_y;
-        // DIAGNOSTIC (architect 2026-10-08, class 5: advisory, never fatal;
-        // logcat's warptempo:I on the tablet; gui_pen_trace): the hover
-        // sensor's offset from the contact point, in device px.
-        gui_pen_trace("gui latch anchored (%+d,%+d) at (%d,%d)",
-                      mouse_x - pen_hot_latch_.lift_x,
-                      mouse_y - pen_hot_latch_.lift_y, mouse_x, mouse_y);
     } else if (pen_hot_latch_.armed &&
                std::max(std::abs(mouse_x - pen_hot_latch_.x),
                         std::abs(mouse_y - pen_hot_latch_.y)) >=
                    scaled_px(kPenHotRearmPx)) {
-        // DIAGNOSTIC (architect 2026-10-08, class 5; gui_pen_trace).
-        gui_pen_trace("gui latch cleared by motion (%d device px) at (%d,%d)",
-                      std::max(std::abs(mouse_x - pen_hot_latch_.x),
-                               std::abs(mouse_y - pen_hot_latch_.y)),
-                      mouse_x, mouse_y);
         pen_hot_latch_.armed = false;
     }
     // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE,
