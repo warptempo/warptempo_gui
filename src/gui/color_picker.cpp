@@ -349,11 +349,11 @@ std::optional<uint32_t> parse_hex_color(std::string_view text) {
 // -- THE LAYOUT -----------------------------------------------------------------
 
 namespace {
-// THE TOP BLOCK'S HEIGHT IN W PX (the head's sums), the wheel's side at
-// most (THE WIDTH: the wheel takes what the chooser row leaves).
+// THE TOP BLOCK'S HEIGHT IN W PX (the head's sums): the wheel's side is
+// the smaller of it and kWheelBlockWPx (THE GRID).
 constexpr int kTopBlockWPx =
-    kChooserHeightPx + kChooserGapPx + kChannelCount * kSliderRowPx;
-static_assert(kTopBlockWPx == 113);
+    kChooserHeightPx + kControlGapPx + kChannelCount * kSliderRowPx;
+static_assert(kTopBlockWPx == 129);
 
 // The widest shaped width of a set of specimens, ceiled to a whole column
 // (the modal's own round-up rule: a measured width that places something
@@ -456,32 +456,37 @@ Layout layout(const AppState& app, const GuiFont& font) {
     // The card's edge: Windows' two lines, GTK's one, Motif's one (the
     // panel's one-W bevel, 2026-10-08).
     const int lw      = relief_line_px();
-    const int edge    = spec.vocabulary == GuiChromeVocabulary::Win2000
-                            ? 2 * lw : lw;
+    const int edge    = card_edge_wpx(spec) * lw;
     const int pad     = scaled_px(kCardPadPx);
     const int margin  = scaled_px(kCardMarginPx);
+    const int gap     = scaled_px(kControlGapPx);   // THE ONE GAP (THE GRID)
     const int chooser_h = scaled_px(kChooserHeightPx);
     const int row_h   = scaled_px(kSliderRowPx, 1);
     const int btn_h   = scaled_px(spec.push_button_box_px);
-    const int block_h = chooser_h + scaled_px(kChooserGapPx) +
-                        kChannelCount * row_h;
-    const int inner_h = block_h + scaled_px(kBlockGapPx) + btn_h;
+    // THE BOTTOM BAND (card_bottom_band_wpx): the push button's height, or
+    // under cde the taller band the one card height leaves, the row
+    // centered in it.
+    const int band_h  = scaled_px(card_bottom_band_wpx(spec));
+    const int block_h = chooser_h + gap + kChannelCount * row_h;
+    const int inner_h = block_h + gap + band_h;
     const int card_w  = scaled_px(kCardWidthPx);
     const int card_h  = 2 * edge + 2 * pad + inner_h;
 
-    const GuiRect well = waveform_area(app);
+    // THE SEAT (the head): the foot kCardMarginPx above the on-screen
+    // keyboard's band — its rect whether or not it stands, the one rule on
+    // both devices — and the card rising from there.
+    const GuiRect band = onscreen_keyboard::surface_rect(app);
     l.edge_px = edge;
     l.card = GuiRect{app.color_picker.on_right ? app.width - margin - card_w
                                                : margin,
-                     well.y + margin, card_w, card_h};
+                     band.y - margin - card_h, card_w, card_h};
     l.inner = GuiRect{l.card.x + edge + pad, l.card.y + edge + pad,
                       card_w - 2 * (edge + pad), inner_h};
 
-    // THE CHOOSER ROW SETS THE RIGHT COLUMN (the head's THE WIDTH): each
-    // combo as wide as its widest row needs, face or flush list, the
-    // element chooser over both scopes' names; the column the wider of the
-    // row and what the top block's square leaves; the wheel the rest, at
-    // most the block's height, centered on it.
+    // THE ONE COLUMN SPLIT (the head's THE GRID): the wheel's block
+    // kWheelBlockWPx under every chrome, the right column kColumnGapPx past
+    // it to the inner right edge; the scope combo as wide as its widest row
+    // needs (face or flush list), the element chooser the column's rest.
     const int text_gap = scaled_px(kComboTextGapPx);
     const auto combo_w = [&](double text_w) {
         const int t = ceil_px(text_w);
@@ -506,24 +511,18 @@ Layout layout(const AppState& app, const GuiFont& font) {
         scope_text = std::max(scope_text,
                               text_shape::shape_text_run(
                                   font, scope_display_name(scope_at(i))).width_px);
-    double element_text = 0.0;
-    for (std::size_t e = 0; e < element_count(); ++e)
-        element_text = std::max(element_text,
-                                text_shape::shape_text_run(
-                                    font, element_display_name(e)).width_px);
     const int scope_w   = combo_w(scope_text);
-    const int pair_gap  = scaled_px(kControlGapPx);
-    const int col_gap   = scaled_px(kColumnGapPx);
-    const int col_w     = std::max(l.inner.w - block_h - col_gap,
-                                   scope_w + pair_gap + combo_w(element_text));
-    const int side      = std::max(1, std::min(block_h,
-                                               l.inner.w - col_gap - col_w));
-    const int col_x     = l.inner.x + l.inner.w - col_w;
+    const int pair_gap  = gap;
+    const int wheel_w   = scaled_px(kWheelBlockWPx);
+    const int col_x     = l.inner.x + wheel_w + scaled_px(kColumnGapPx);
+    const int col_w     = l.inner.x + l.inner.w - col_x;
+    const int side      = std::max(1, std::min(wheel_w, block_h));
 
-    // THE WHEEL, the left column, centered on the top block. The ring's
-    // width is GTK's proportion of the side as laid (the head: side x 15 /
-    // 174), rounded at the element.
-    l.wheel   = GuiRect{l.inner.x, l.inner.y + (block_h - side) / 2, side, side};
+    // THE WHEEL, the left column, centered in its block on both axes. The
+    // ring's width is GTK's proportion of the side as laid (the head: side x
+    // 15 / 174), rounded at the element.
+    l.wheel   = GuiRect{l.inner.x + (wheel_w - side) / 2,
+                        l.inner.y + (block_h - side) / 2, side, side};
     l.cx      = l.wheel.x + side / 2.0;
     l.cy      = l.wheel.y + side / 2.0;
     l.outer_r = side / 2.0;
@@ -548,7 +547,7 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int val_w = ceil_px(text_shape::shape_text_run(font, digits).width_px);
     const int gap_l = scaled_px(kSliderLabelGapPx);
     const int gap_v = scaled_px(kSliderValueGapPx);
-    const int rows_y = l.inner.y + chooser_h + scaled_px(kChooserGapPx);
+    const int rows_y = l.inner.y + chooser_h + gap;
     for (int i = 0; i < kChannelCount; ++i) {
         const int ry = rows_y + i * row_h;
         l.slider_row[i]   = GuiRect{col_x, ry, col_w, row_h};
@@ -561,8 +560,10 @@ Layout layout(const AppState& app, const GuiFont& font) {
 
     // THE BOTTOM ROW (the head's arithmetic): the hex field, OLD | NEW at
     // its floor, the preset button the remainder, then Copy, Paste
-    // and Close at kPushButtonWidthPx, right-flushed.
-    const int by = l.inner.y + block_h + scaled_px(kBlockGapPx);
+    // and Close at kPushButtonWidthPx, right-flushed — the row's boxes
+    // centered in the bottom band (flush with it where the band is the
+    // button's height).
+    const int by = l.inner.y + block_h + gap + (band_h - btn_h) / 2;
     const int field_h = scaled_px(kModalFieldHeightPx);   // the dialog field's (render.h)
     const int field_pad = scaled_px(kModalFieldPadXPx);
     const std::string hex_specimen = "#" + std::string(6, widest_hex_digit(font));
@@ -570,7 +571,6 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int field_w = cell_w + 2 * field_pad;
     const GuiRect hex_field{l.inner.x, by + (btn_h - field_h) / 2, field_w,
                             field_h};
-    const int gap = scaled_px(kControlGapPx);
     const int swatch_floor = 2 * (scaled_px(kSwatchMinWPx) + lw);
     const int bw = scaled_px(kPushButtonWidthPx);
     const int close_x = l.inner.x + l.inner.w - bw;

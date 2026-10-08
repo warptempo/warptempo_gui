@@ -1230,8 +1230,42 @@ constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
 // THE SEPARATOR'S INSET: its etched pair runs 5 Windows px in from the popup's
 // edge each side (the laptop pixel's 7 re-authored at the unit's change);
 // GtkMenu's one row runs the box's whole width (separator-height 7, its
-// horizontal-padding 0).
+// horizontal-padding 0); Motif's runs the pane inside its shadow.
 constexpr double kPopupSepInsetPx    = 5.0;   // the separator, per side
+
+// THE POPUP SEPARATOR — ONE PAINTER PER VOCABULARY, EVERY POPUP MENU'S
+// (2026-10-08 ~21:20: the menu row's pull-downs, paint_dropdown, and the
+// color picker's preset menu, paint_color_picker, read it alike — under cde
+// the preset menu had kept Windows' inset kind while the pull-downs ran
+// Motif's). `x0` is the box's left edge and `x1` its right edge, or the
+// scroll bar's left edge while a bar stands (`at_bar`); `y` the pair's top
+// row, below the block's margin (popup_sep_margin_y_px).
+//   win2000: Windows' etched pair, kPopupSepInsetPx in from the box's edge
+//     each side (from the bar's edge while it stands);
+//   clearlooks: GtkMenu's one row the box's whole width (to the bar);
+//   cde: Motif's XmSeparatorGadget, the etched pair across the pane INSIDE
+//     ITS SHADOW — the item's full width, the frame's line in from the box's
+//     edge on each side (to the bar's edge while it stands, the bar
+//     standing inside the frame) — render.h's dropdown block.
+static void paint_popup_separator(cairo_t* cr, int x0, int x1, bool at_bar,
+                                  int y) {
+    switch (live_chrome_spec().vocabulary) {
+        case GuiChromeVocabulary::Clearlooks:
+            paint_cl_menu_separator(cr, x0, y, x1 - x0);
+            return;
+        case GuiChromeVocabulary::Cde: {
+            const int border = popup_border_px();
+            const int l = x0 + border;
+            const int r = at_bar ? x1 : x1 - border;
+            paint_relief_etched_hline(cr, l, y, r - l);
+            return;
+        }
+        case GuiChromeVocabulary::Win2000:
+            break;
+    }
+    const int inset = scaled_px(kPopupSepInsetPx);
+    paint_relief_etched_hline(cr, x0 + inset, y, x1 - x0 - 2 * inset);
+}
 
 // THE MINIMUM ITEM WIDTH — the tab-min-width pattern, and the reason a menu of
 // short labels still reads as a menu. THE VALUE IS AUTHORED, NOT DERIVED: the
@@ -4143,8 +4177,6 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     const int block_mar = popup_item_margin_y_px();
     const int margin_x  = live_chrome_spec().popup_margin_px;
     const int inset     = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
-    const int sep_inset = (gtk_menu || motif_menu) ? 0
-                                                   : scaled_px(kPopupSepInsetPx);
     const int sep_mar   = popup_sep_margin_y_px();
     const int sep_block = popup_sep_block_px();   // margin, etched pair, margin
 
@@ -4255,12 +4287,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             // THE SEPARATOR IS ETCHED (architect 2026-10-02, Windows' menu
             // separator), inset horizontally: its Shadow line and its Hilight
             // line under it, with the block's own vertical margin above and
-            // below the pair (popup_sep_block_px, dropdown_h_px's sum).
-            if (gtk_menu)
-                paint_cl_menu_separator(cr, x, iy + sep_mar, w);
-            else
-                paint_relief_etched_hline(cr, x + sep_inset, iy + sep_mar,
-                                          w - 2 * sep_inset);
+            // below the pair (popup_sep_block_px, dropdown_h_px's sum) — the
+            // vocabulary's own painter (paint_popup_separator).
+            paint_popup_separator(cr, x, x + w, /*at_bar=*/false, iy + sep_mar);
             iy += sep_block;
         }
         // ITEMS TOUCH — zero vertical gap between adjacent ones — and each
@@ -7849,7 +7878,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // -- GuiPaintHandler::paint_color_picker (architect 2026-10-07) ---------------
 //
 // THE COLOR PICKER'S CARD ON THE WELL — the anatomy, every length and the
-// budget are at color_picker.h's head; the layout is color_picker::layout,
+// seat are at color_picker.h's head; the layout is color_picker::layout,
 // read here and by the press router alike. This body PAINTS and PUBLISHES:
 // the modal stash (the card as `box`, the one field's interior as `field`,
 // the three push buttons as `buttons`, so the dialogs' shared machinery —
@@ -7880,7 +7909,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // wedge, the text at the field's pad cut with "..." where it does not fit;
 // the six slider rows — the label cap-centered in `label`, the slider in the
 // scrub's painters (the channel's four lines and the pointed thumb on a
-// 3 / 4 / 8 seat; GtkScale's trough, its lower part filled, and its thumb),
+// 4 / 4 / 9 seat filling the row; GtkScale's trough, its lower part filled,
+// and its thumb, and XmScale's trough and slider, both 15 W centered in the
+// row),
 // the value's tabular digits right-aligned in `label`; the one field — the
 // dialog field's size (kModalFieldHeightPx, render.h) in the field pair
 // (sunken outer under win2000, the entry under clearlooks), its run, selection and caret the dialog field's
@@ -8175,13 +8206,15 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
                 thumb_x);
             paint_cl_scale_thumb(cr, GuiRect{thumb_x - tw / 2, ty, tw, th});
         } else if (cde) {
-            // XmScale (cde_paint.h's scale block): the trough over the
-            // row's whole rows, the slider one W inside it.
+            // XmScale (cde_paint.h's scale block): the 15-W trough
+            // centered in the row (kScaleSeatPx), the slider one W inside it.
             const int lw = relief_line_px();
             const int tw = scrub_thumb_w_px();
-            paint_cde_scale_trough(cr, GuiRect{track.x, row.y, track.w, row.h});
+            const int seat = scaled_px(color_picker::kScaleSeatPx, 1);
+            const int sy = row.y + (row.h - seat) / 2;
+            paint_cde_scale_trough(cr, GuiRect{track.x, sy, track.w, seat});
             paint_cde_scale_slider(
-                cr, GuiRect{thumb_x - tw / 2, row.y + lw, tw, row.h - 2 * lw});
+                cr, GuiRect{thumb_x - tw / 2, sy + lw, tw, seat - 2 * lw});
         } else {
             const int above = scaled_px(color_picker::kSliderThumbAbovePx, 1);
             const int channel_h = scrub_channel_h_px();
@@ -8402,8 +8435,9 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     // THE PRESET MENU, when down: the same box and THE ROWS THE LAYOUT
     // SHOWS (the scroll's block — color_picker.h's THE PRESET MENU; the
     // popup lists' scroll, render.h), its separators — one before each
-    // group — the dropdown's (etched and inset under win2000, GtkMenu's one
-    // row under clearlooks) where each is in view, each act's enabled bit asked once here
+    // group — the pull-downs' own (paint_popup_separator: etched and inset
+    // under win2000, GtkMenu's one row under clearlooks, Motif's across the
+    // pane inside its shadow under cde) where each is in view, each act's enabled bit asked once here
     // (preset_act_enabled) and published with its row; a grayed row wears
     // no lit face and its label the emboss (paint_dropdown's rules); then the
     // scroll bar when it stands. EVERY ROW IS PUBLISHED, a row scrolled out
@@ -8417,21 +8451,14 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
         assert(rows.size() == L.menu_items.size());
         if (cl) paint_cl_menu(cr, L.menu, /*upward=*/L.menu_upward);
         else    paint_popup_chrome(cr, L.menu, PopupFace::Menu);
+        // The pull-downs' separator, the vocabulary's own
+        // (paint_popup_separator), from the box's left edge to its right
+        // edge — the bar's left edge while the bar stands.
         for (const int sep_y : L.menu_sep_ys) {
-            const int sep_r = L.menu_bar.present ? L.menu_bar.bar.x
-                                                 : L.menu.x + L.menu.w;
-            if (cl) {
-                paint_cl_menu_separator(cr, L.menu.x,
-                                        sep_y + popup_sep_margin_y_px(),
-                                        sep_r - L.menu.x);
-            } else {
-                // Inset from the box's left and from its right edge — the
-                // bar's left edge while the bar stands.
-                const int sep_inset = scaled_px(kPopupSepInsetPx);
-                paint_relief_etched_hline(cr, L.menu.x + sep_inset,
-                                          sep_y + popup_sep_margin_y_px(),
-                                          sep_r - L.menu.x - 2 * sep_inset);
-            }
+            const bool at_bar = L.menu_bar.present;
+            const int sep_r = at_bar ? L.menu_bar.bar.x : L.menu.x + L.menu.w;
+            paint_popup_separator(cr, L.menu.x, sep_r, at_bar,
+                                  sep_y + popup_sep_margin_y_px());
         }
         const int pad_l = scaled_px(kPopupPadXPx);
         for (std::size_t i = 0; i < rows.size(); ++i) {

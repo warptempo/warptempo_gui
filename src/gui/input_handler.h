@@ -2961,7 +2961,10 @@ private:
     // caption's and — the two button rows staying on under it for the
     // pointer (row 8 since 2026-10-07 evening, the icon row since
     // 2026-10-08; modal_owns_bottom_row, paint_handler.cpp) — THE ICON ROW'S
-    // AND ROW 8'S while neither its list nor its menu is down, its router is
+    // AND ROW 8'S while neither its list nor its menu is down and the card
+    // does not cover the press, and a plain press on a flag outside the
+    // card, the marker click's select alone (2026-10-08 ~21:20; the veil in
+    // on_button_press, color_picker.h's head), its router is
     // the whole
     // plastic vocabulary while it
     // stands (route_color_picker_key: Esc closes an open list or menu first
@@ -2984,7 +2987,8 @@ private:
     //     ring's or the triangle's arm, OLD's revert, or a push button's arm
     //     through the dialogs' shared arm; off the card, consumed (a press
     //     on the icon row or row 8 never reaches it unless a popup is down —
-    //     the veil hands it to the rows' own claim). Every target is read
+    //     the veil hands it to the rows' own claim — nor a plain press on a
+    //     flag, the veil's select). Every target is read
     //     from the
     //     published stash, never derived live.
     //   color_picker_motion — a scroll hold's carry (the thumb's drag), a

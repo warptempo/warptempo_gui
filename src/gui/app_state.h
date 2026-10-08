@@ -6430,7 +6430,11 @@ struct AppState {
     // disabled under the picker also needs to be updated"): the icon row
     // and row 8 stay painted and acting under it for the pointer and the
     // pen, while the picker veils THE WELL, THE MENU ROW and THE KEYBOARD —
-    // the asymmetry is recorded at modal_owns_bottom_row (paint_handler.cpp).
+    // the asymmetry is recorded at modal_owns_bottom_row (paint_handler.cpp)
+    // — save ONE PRESS: a plain press on a flag outside the card is the
+    // marker click's select alone (2026-10-08 ~21:20; the list of what
+    // reaches through the card is color_picker.h's head, the road the veil
+    // in on_button_press).
     enum class ModalDialogOwner {
         None, Prompt, Editor, Player, Picker, ColorPicker
     };

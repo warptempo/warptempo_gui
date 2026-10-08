@@ -2002,7 +2002,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // its buttons carry no cue, every other zone is behind its veil, and
     // THE TWO BUTTON ROWS, on under it (row 8 since 2026-10-07 evening, the
     // icon row since 2026-10-08), wear the Arrow they wear without it (a
-    // button carries no cue anywhere).
+    // button carries no cue anywhere), and so do the flags, whose press
+    // under it selects and drags nothing (2026-10-08 ~21:20, the veil in
+    // on_button_press).
     if (app.color_picker.active) {
         const AppState::ColorPicker::Stash& st = app.color_picker.stash;
         return st.valid && rect_contains(st.field_inner, x, y)
@@ -6082,8 +6084,15 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // (color_picker_list_at, app_state.h — the list's box or the menu's,
     // its bar inside it) is admitted by neither exemption and reaches the
     // picker's veil below, whose claim (color_picker_press) answers it as the
-    // popup's; a press outside the box meets the exemptions as ever.
-    const bool press_in_picker_list = color_picker_list_at(app, x, y);
+    // popup's; a press outside the box meets the exemptions as ever. AND SO
+    // DOES THE CARD ITSELF (2026-10-08 ~21:40, color_picker.h's THE SEAT):
+    // the card rises from above the keyboard's band and, in a window short
+    // enough, over the top strip's lanes on its half, and where it stands
+    // the pixel is the card's (color_picker_card_at, as published). On the
+    // two devices it stays inside the well, so this term is the rule's
+    // statement there rather than a road anyone walks.
+    const bool press_in_picker_list =
+        color_picker_list_at(app, x, y) || color_picker_card_at(app, x, y);
     const bool menu_row_press_admitted =
         !press_in_picker_list && press_on_live_menu_anchor(app, x, y);
     // AND THE CAPTION (architect 2026-10-05): the window's title bar is
@@ -6170,17 +6179,66 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // its live File anchor passes above, and its other anchors are dead
     // under the picker (menu_anchor_live) — and neither it nor the caption
     // passes where a list of the card's hangs over them: the two exemptions
-    // are computed after the list's box (press_in_picker_list, above).
+    // are computed after the list's box (press_in_picker_list, above). NOR
+    // DOES A ROW THE CARD COVERS (2026-10-08 ~21:40, the card's seat rising
+    // from above the keyboard's band, color_picker.h's THE SEAT): a press on
+    // the card is the card's wherever it stands, so no roster button under
+    // it is reached through it — none is on the two devices, where the card
+    // stays inside the well, and row 8 never is (the card's foot stands
+    // above the band, which stands on row 8).
+    //
+    // AND A PLAIN PRESS ON A FLAG (architect 2026-10-08 ~21:20: "pick flags
+    // so I can toggle, test the selected flag without having to close the
+    // picker and reopen it … I understand that selecting flags can be render
+    // affecting"): with no list of the card's down, a plain left press on a
+    // flag of the marker lane outside the card — the flag's hit rects as the
+    // painter published them (hit_test_flag, ON SCREEN IS AS PAINTED) — is
+    // THE MARKER CLICK'S SELECT ALONE: the flag single-selected as a plain
+    // click selects it (the selected one stays selected, set_single_selection)
+    // and the cell it landed on addressed, as the plain click addresses it
+    // (run_marker_plain_select's two Selection clauses), so the flag and its
+    // stem take the selected pair live under the colors being picked. NOTHING
+    // ELSE: no playback stop and no playhead land (the plain click's other
+    // two clauses), no marker drag (nothing is armed, so a motion past the
+    // click slop is the picker's motion and moves nothing), no flag editor on
+    // a double tap (no candidate is seeded or consumed), no value step; the
+    // lift is the picker's (color_picker_release, which finds nothing armed).
+    // SELECTION IS VIEW STATE: nothing in the sidecar changes, no undo entry
+    // is made and nothing renders — the selection only addresses what a
+    // later act (row 8's verbs, on under the picker) would act on. The
+    // Add to Selection lamp is not consulted: the press is the plain select,
+    // no membership toggle. A standing edit of the card's field ends at it,
+    // as at every press outside the field. Not in the `h` view, whose flags
+    // are the diff's under their own press router.
     if (app.color_picker.active && !menu_row_press_admitted &&
         !caption_press_admitted) {
+        const bool list_down =
+            app.color_picker.chooser_open || app.color_picker.menu_open;
+        const bool on_card = color_picker_card_at(app, x, y);
         if ((rect_contains(top_icon_row_area(app), x, y) ||
              rect_contains(bottom_row_area(app), x, y)) &&
-            !app.color_picker.chooser_open && !app.color_picker.menu_open) {
+            !list_down && !on_card) {
             if (color_picker.field_active()) color_picker.field_cancel();
             claim_button_row_press();
             return;
         }
         if (button != GuiMouseButton::Left) return;
+        if (!list_down && !on_card && !mods.ctrl && !mods.shift && !mods.alt &&
+            !app.history_mode.active && !app.loading &&
+            audio.total_frames() > 0 &&
+            rect_contains(top_strip_area(app), x, y)) {
+            const int hit = hit_test_flag(app, audio, x, y);
+            if (hit >= 0) {
+                if (color_picker.field_active()) color_picker.field_cancel();
+                const MarkerCell cell = hit_test_flag_cell(app, audio, x, y);
+                selection.set_single_selection(hit);
+                if (app.addressed_cell != cell) {
+                    app.addressed_cell = cell;
+                    viewport.invalidate_top_strip();
+                }
+                return;
+            }
+        }
         color_picker_press(x, y, mods, dc_at_press);
         return;
     }

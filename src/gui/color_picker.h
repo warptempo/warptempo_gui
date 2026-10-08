@@ -3,7 +3,7 @@
 #include "app_state.h"
 #include "gui_font.h"
 #include "gui_input.h"
-#include "onscreen_keyboard.h"   // the band's constants: the card's height budget
+#include "onscreen_keyboard.h"   // the band: the card's seat (surface_rect) and its constants
 #include "palette_file.h"
 #include "render.h"
 
@@ -79,16 +79,19 @@ struct Viewport;
 //
 // WHAT IT IS. ONE CARD ON THE WELL, on the half of the window opposite the
 // opening tap (so the well under the other half stays in view while
-// picking), standing from the well's top edge with kCardMarginPx of air
-// from the window's side and the well's top: the GROUND with a PLAIN RAISED
-// two-line edge under win2000 (a floating palette's edge, DrawEdge
-// EDGE_RAISED, mitred as every relief) and under clearlooks GTK's one
-// shade[5] line on four sides (cl_list_frame, the well's own tone); 6 W of
+// picking), kCardMarginPx of air from the window's side, ITS FOOT
+// kCardMarginPx above the on-screen keyboard's band and the card rising
+// from there (THE SEAT below): the GROUND with a PLAIN RAISED two-line edge
+// under win2000 (a floating palette's edge, DrawEdge EDGE_RAISED, mitred as
+// every relief), under clearlooks GTK's one shade[5] line on four sides
+// (cl_list_frame, the well's own tone) and under cde Motif's one-W raised
+// panel; 6 W of
 // inner pad; NO caption and no title (slim). Inside it, left to right and
-// top to bottom:
+// top to bottom, ON ONE GRID (THE GRID below):
 //   THE WHEEL (left) — GNOME 2's own, GtkHSV's hue RING with the SV
-//     TRIANGLE inside it, in a square whose side is the top block's height
-//     or less (centered on it: THE WIDTH below, 2026-10-08 ~18:15),
+//     TRIANGLE inside it, in a square whose side is the wheel block's
+//     width (kWheelBlockWPx) or the top block's height, the smaller,
+//     centered in its block on both axes (THE GRID below),
 //     proportioned off his capture (tmp/squeeze/Screenshot_2026-10-07_
 //     07-48-13.png, measured 2026-10-07 at 100 %: the ring's outer diameter
 //     174 px, its width 15 — gtk_hsv_set_metrics (174, 15), GTK's own
@@ -99,8 +102,8 @@ struct Viewport;
 //     triangle's corners the pure hue, white at +120 degrees and black at
 //     +240, turning with the hue.
 //   THE RIGHT COLUMN — (a) THE CHOOSER ROW, two of the chrome's combo
-//     boxes side by side (2026-10-08 ~18:15; THE WIDTH below has the
-//     arithmetic): THE SCOPE COMBO at the left, showing "Chrome" or
+//     boxes side by side (2026-10-08 ~18:15; THE GRID and THE WIDTH below
+//     have the arithmetic): THE SCOPE COMBO at the left, showing "Chrome" or
 //     "Waveform" (scope_display_name), then THE ELEMENT CHOOSER showing the
 //     live element's name (element_display_name), each with its arrow
 //     button; a press on either drops ITS list — the scope's two rows, or
@@ -115,17 +118,19 @@ struct Viewport;
 //     shown row scrolled into view at the open (re-derived 2026-10-08 with
 //     the scope, device px): at the tablet's 300 % the fifteen rows under
 //     win2000 are 15 x 51 + 2 x 3 + 6 + 6 = 783 below a chooser whose foot
-//     stands at about 474 of the 1440 rows, and under clearlooks
-//     15 x 57 + 3 = 858 below about 480, so the list hangs whole on the
+//     stands at 402 + 6 + 18 + 63 = 489 of the 1440 rows (THE SEAT's top
+//     row), and under clearlooks 15 x 57 + 3 = 858 below 402 + 3 + 18 + 63
+//     = 486, so the list hangs whole on the
 //     tablet as on the laptop (15 x 23 + 6 = 351 at 138 %); the scope's two
 //     rows hang whole anywhere.
 //     (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
-//     Value 0–100, Red / Green / Blue 0–255: the label at the left (one
-//     width for all six, measured from the widest), the slider in the
-//     chrome's own scrub painters (win2000 the channel and Windows' pointed
-//     thumb, clearlooks GtkScale's trough with its lower part filled and
-//     its thumb), the value's digits at the right in a fixed cell of
-//     tabular digits.
+//     Value 0–100, Red / Green / Blue 0–255, at ONE PITCH (kSliderRowPx):
+//     the label at the column's left edge (one width for all six, measured
+//     from the widest), the slider in the chrome's own scrub painters
+//     (win2000 the channel and Windows' pointed thumb, clearlooks
+//     GtkScale's trough with its lower part filled and its thumb, cde
+//     XmScale's trough and slider), the value's digits right-aligned to the
+//     column's right edge in a fixed cell of tabular digits.
 //   THE BOTTOM ROW, under both — (h) THE HEX FIELD, a sunken field at the
 //     dialog field's size (kModalFieldHeightPx and its pad, render.h — the
 //     time fields' too since 2026-10-08) in the field pair showing
@@ -171,69 +176,141 @@ struct Viewport;
 //     selected; the four buttons gray while it stands. Enter commits, Esc
 //     cancels, and a press anywhere else abandons it (the hex field's rule).
 //   WHY THE BOTTOM ROW SPANS THE CARD and is not the right column's tail
-//   (the planner's choice under the brief's leave): the card must stand
-//   clear of the on-screen keyboard's band (THE HEIGHT BUDGET below), and a
-//   right column of chooser + six sliders + field + swatches + buttons
-//   cannot; the capture itself puts the swatch pair under the wheel.
+//   (the planner's choice under the brief's leave): a right column of
+//   chooser + six sliders + field + swatches + buttons cannot hold the
+//   bottom row's six items in its width, and stacking them would grow the
+//   card while the wheel's block stood empty under the wheel; the capture
+//   itself puts the swatch pair under the wheel.
 //
-// THE HEIGHT BUDGET (the architect's constraint, 2026-10-07): the band rises
-// on glass whenever a text editor stands (the card's one field is one), directly
-// above row 8, 131 W tall (onscreen_keyboard.h: 2 x 3 of pad + 4 x 29 of key
-// + 3 x 3 of gap; asserted below), and the card keeps kCardMarginPx of air
-// above it. At the tablet (2304 x 1440 at 300 %, the well 945 device rows
-// under clearlooks = 315 W, 954 = 318 W under win2000 — main.cpp's lane
-// record) the card may be at most 315 − 4 − 131 − 4 = 176 W tall under
-// clearlooks and 179 under win2000; IT STAYS 156 UNDER BOTH CHROMES (the
-// design as it landed), the spare 20 W under clearlooks and 23 under
-// win2000 left as air above the band: edge 2 + pad 6 + chooser 21 + gap 2 + six rows of 15 + gap 4 +
-// button 23 + pad 6 + edge 2 = 156 (win2000); edge 1 + pad 6 + 21 + 2 + 90
-// + 4 + button 25 + pad 6 + edge 1 = 156 (clearlooks) — every term a whole
-// Windows px, so at 300 % the sum is exact. The laptop (1080 rows at
-// 138 %, the well far taller in W) shows the same card with more air.
+// THE GRID (architect 2026-10-08 ~21:20, on his cde and windows-2000
+// captures: "the alignment of the drop-downs is off … the first drop-down
+// to the right of the picker varies according to each theme; make it a
+// little more standardized and things fit into a grid more neatly; check
+// the spacing above and below the drop-downs, the sliders, it seems
+// inconsistent"). Three rules:
+//   ONE COLUMN SPLIT UNDER EVERY CHROME — the wheel's block is ONE width,
+//     kWheelBlockWPx, the same under every chrome, and the right column
+//     starts kColumnGapPx past it, so the scope combo's left edge stands
+//     the same W count from the card's left edge under every chrome: 2 + 6
+//     + 92 + 8 = 108 W under win2000, 1 + 6 + 92 + 8 = 107 under clearlooks
+//     and cde — the 1-W difference is the card's edge (Windows' two lines,
+//     GTK's and Motif's one), accepted. The block is the LARGEST that lets
+//     the widest chooser row fit under the tightest chrome (THE WIDTH
+//     below). The scope combo keeps its measured width and THE ELEMENT
+//     CHOOSER SPANS TO THE COLUMN'S RIGHT EDGE, absorbing the slack the
+//     roomier chromes leave.
+//   THE RIGHT COLUMN'S INNER GRID — the slider labels' left edge is the
+//     combos' (the column's x); the value cells' right edge the element
+//     chooser's (the column's right edge); the six tracks between, one left
+//     edge for all (the widest label + kSliderLabelGapPx) and one right
+//     edge (the value cell − kSliderValueGapPx). The bottom row spans the
+//     card (WHY THE BOTTOM ROW SPANS THE CARD above).
+//   ONE VERTICAL RHYTHM — ONE GAP, kControlGapPx (6 W), between every
+//     block: the pad above the chooser row (kCardPadPx is the same 6), the
+//     chooser row to the first slider, the last slider to the bottom row,
+//     the bottom row to the pad below; and the six slider rows at ONE PITCH,
+//     kSliderRowPx = 17 W under every chrome (THE SEAT below says why 17).
+//
+// THE SEAT (architect 2026-10-08 ~21:40, replacing the height budget of
+// 2026-10-07: "the card can start from a little bit above the keyboard and
+// just go up; it's okay if it covers up some of that screen" — he works one
+// view at a time, and what the card covers comes back at its Close). THE
+// CARD'S FOOT IS ANCHORED: its bottom edge stands kCardMarginPx above the
+// on-screen keyboard's band — the band's top, row 8's top less the band's
+// 131 W (onscreen_keyboard::surface_rect; 2 x 3 of pad + 4 x 29 of key + 3
+// x 3 of gap, asserted below) — ONE RULE ON BOTH DEVICES, though the
+// laptop's band never rises, so the hex field types on glass with the card
+// in full view. The card rises from there: over the well and, were it
+// taller than the well, over the top strip's lanes on its half, covered
+// while it stands (a press there is the card's, the veil's rule). THE CARD
+// IS ONE HEIGHT, kCardHeightWPx = 174 W UNDER EVERY CHROME: edge + pad 6 +
+// chooser 21 + gap 6 + six rows of 17 + gap 6 + the bottom band + pad 6 +
+// edge, the band the push button's height — 2 + 6 + 21 + 6 + 102 + 6 + 23 +
+// 6 + 2 = 174 (win2000) and 1 + 6 + 21 + 6 + 102 + 6 + 25 + 6 + 1 = 174
+// (clearlooks); CDE'S 23-W BUTTON WOULD MAKE ITS CARD 172, AND IT IS 174
+// ANYWAY: its bottom band is 25 W (card_bottom_band_wpx: kCardHeightWPx
+// less the rest), the field, the swatch frame and the buttons centered in
+// it, 1 W of air above them and 1 below. Every term a whole Windows px, so
+// at 300 % the sum is exact. WHY 17 (the planner's call, stated to him):
+// the largest pitch at which the card still stands wholly inside the well
+// on the tablet under every chrome, so the marker lane — its flags on BOTH
+// halves, which a press through the picker selects (THE PRESS THROUGH THE
+// CARD below) — stays in view; at 300 % row 8's top is 1329 (win2000 and
+// clearlooks), the band's top 1329 − 393 = 936, the card's foot 924 and its
+// TOP ROW 924 − 522 = 402, 27 rows under the win2000 well's top (375) and 18
+// under clearlooks' (384); under cde (the surface's rows, dtwm's frame
+// outside the app) row 8's top 1314, the card's top 387, 27 under the
+// well's 360. At the laptop's 138 % (1920 x 1080 maximized) the band is
+// 180 rows, the margin 6 and the card 235 under every chrome (2 + 8 + 29 +
+// 8 + 6 x 23 + 8 + 32 + 8 + 2 under win2000; 1 + 8 + 29 + 8 + 138 + 8 + 34
+// + 8 + 1 under clearlooks and cde, 25 W rounding to 34), so its top row is
+// 1030 − 180 − 6 − 235 = 609 under win2000 and 1028 − 421 = 607 under
+// clearlooks, far below the well's top. A pitch of 21, the chooser's own
+// height, would make the right column seven equal rows and the card 198,
+// but at 300 % its top row would be 330, inside the marker lane (321–375)
+// over the flags on its half.
+//
+// THE PRESS THROUGH THE CARD (architect 2026-10-08 ~21:20: "pick flags so I
+// can toggle, test the selected flag without having to close the picker and
+// reopen it"). While the picker stands, what reaches past it: the
+// on-screen keyboard's keys (claimed above every veil), the caption and
+// the live File anchor (unless a list of the card's hangs over them), the
+// icon row and row 8 (unless a list of the card's is down, or the card
+// itself covers the press — the card and its lists are what paint there),
+// AND A PLAIN PRESS ON A FLAG IN THE MARKER LANE outside the card, which is
+// THE MARKER CLICK'S SELECT ALONE — the flag single-selected and its
+// pressed cell addressed, nothing else: no playhead land, no playback stop,
+// no drag, no double-tap editor, no value step (the veil in
+// on_button_press, input_pointer.cpp, the rule's site). Everything else off
+// the card is the veil's consumed nothing.
 //
 // THE WIDTH: kCardWidthPx = 376, the tablet's half (384 W of its 768) less
-// the margin on both sides (384 − 2 x 4). THE CHOOSER ROW SETS THE RIGHT
-// COLUMN (2026-10-08 ~18:15, the scope beside the element chooser — the
-// planner's seat, where nothing else moves): each of its two combos is as
-// wide as its widest row needs, FACE OR LIST, whichever is wider (the face:
-// the field's edges and pad, the shaped name, the 4-W text gap, the
-// drop-down button — under clearlooks the gummy pads and the wedge; the
-// list, flush with the combo by the list's own ruling: the popup's 22-W
-// left pad, the name, the same 4-W gap and the frame's lines), the element
-// chooser measured over BOTH scopes' names so the split never moves with
-// the scope, the two 6 W apart (kControlGapPx, the bottom row's gap); the
-// right column is the wider of that row and what the 113-W top block and
-// the 8-W column gap leave, and THE WHEEL TAKES WHAT THE COLUMN LEAVES, at
-// most the top block's height, centered on it — so no name is cut and the
-// card keeps its height (THE HEIGHT BUDGET above). The names' widths at
-// the base's cap (2026-10-08, the faces' advances summed and rounded up;
-// the layout measures the shaped runs live, so a kerned pair may take a W
-// off): "Waveform" 50 W in Tahoma, 57 in DejaVu Sans, 51 in Go; "Selected
-// Phase Reset Flag" 127, 145 and 136 —
+// the margin on both sides (384 − 2 x 4). THE WHEEL BLOCK, kWheelBlockWPx =
+// 92, is derived from the chooser row (2026-10-08 ~18:15, the scope beside
+// the element chooser — the planner's seat, where nothing else moves; the
+// one split ~21:20): each of its two combos needs as much as its widest
+// row, FACE OR LIST, whichever is wider (the face: the field's edges and
+// pad, the shaped name, the 4-W text gap, the drop-down button — under
+// clearlooks the gummy pads and the wedge; the list, flush with the combo
+// by the list's own ruling: the popup's 22-W left pad, the name, the same
+// 4-W gap and the frame's lines), the element chooser measured over BOTH
+// scopes' names so no scope cuts a name, the two 6 W apart (kControlGapPx).
+// The names' widths at the base's cap (2026-10-08, the faces' advances
+// summed and rounded up; the layout measures the shaped runs live, so a
+// kerned pair may take a W off): "Waveform" 50 W in Tahoma, 57 in DejaVu
+// Sans, 51 in Go; "Selected Phase Reset Flag" 127, 145 and 136 —
 //   win2000: the scope max(2 + 5 + 50 + 4 + 16 + 2 = 79, 22 + 50 + 4 + 2 =
 //     78) = 79, the chooser max(2 + 5 + 127 + 4 + 16 + 2 = 156, 22 + 127 +
-//     4 + 2 = 155) = 156; the row 79 + 6 + 156 = 241 over the 239 the
-//     wheel left, so the wheel is 360 − 8 − 241 = 111 W;
+//     4 + 2 = 155) = 156; the row 79 + 6 + 156 = 241 of the inner 360, so
+//     the block could be 360 − 8 − 241 = 111 W;
 //   clearlooks: the scope max(6 + 57 + 4 + 7 + 6 = 80, 22 + 57 + 4 + 1 =
 //     84) = 84, the chooser max(6 + 145 + 4 + 7 + 6 = 168, 22 + 145 + 4 + 1
-//     = 172) = 172; the row 84 + 6 + 172 = 262, the wheel 362 − 8 − 262 =
-//     92 W;
+//     = 172) = 172; the row 84 + 6 + 172 = 262 of the inner 362, so the
+//     block could be 362 − 8 − 262 = 92 W;
 //   cde: the scope max(1 + 5 + 51 + 4 + 16 + 1 = 78, 22 + 51 + 4 + 1 = 78)
 //     = 78, the chooser max(1 + 5 + 136 + 4 + 16 + 1 = 163, 22 + 136 + 4 +
-//     1 = 163) = 163; the row 78 + 6 + 163 = 247, the wheel 362 − 8 − 247 =
-//     107 W.
-// The slider's track takes what the label and the value cell leave, and
-// the preset button what the hex field, OLD | NEW at its floor and the
-// three push buttons leave. THE BOTTOM ROW'S ARITHMETIC (architect
-// 2026-10-07): the inner width is 360 W under win2000 (376 less 2 x (edge 2
-// + pad 6)) and 362 under clearlooks (376 less 2 x (1 + 6)); the hex field
-// is its widest spelling `#DDDDDD` plus its two pads — 53 + 10 = 63 W in
-// Tahoma, 60 + 10 = 70 in DejaVu Sans (shaped; the dialog field's 5-W pad
-// under both, 2026-10-08); the row's five gaps are 6 W
-// each; OLD | NEW its floor, two 20-W swatches inside the frame's two lines
-// = 42; Copy, Paste and Close kPushButtonWidthPx = 50 each; THE PRESET
-// BUTTON THE REMAINDER, 360 − 63 − 30 − 42 − 150 = 75 W under win2000 and
-// 362 − 70 − 30 − 42 − 150 = 70 under clearlooks.
+//     1 = 163) = 163; the row 78 + 6 + 163 = 247 of the inner 362, so the
+//     block could be 362 − 8 − 247 = 107 W.
+// The tightest, clearlooks', is THE block: 92 W under every chrome, the
+// right column 360 − 92 − 8 = 260 W under win2000 (the element chooser
+// 260 − 79 − 6 = 175, 19 W of slack) and 362 − 100 = 262 under clearlooks
+// (the chooser its 172 exactly) and cde (the chooser 262 − 78 − 6 = 178,
+// 15 W of slack). The wheel is the 92-W square (the top block, 21 + 6 + 6 x
+// 17 = 129 W, is the taller), centered in the block: its 37 W of air split
+// 55 device rows above and 56 below at 300 % (the centering's floor). The
+// slider's track
+// takes what the label and the value cell leave, and the preset button what
+// the hex field, OLD | NEW at its floor and the three push buttons leave.
+// THE BOTTOM ROW'S ARITHMETIC (architect 2026-10-07): the inner width is
+// 360 W under win2000 (376 less 2 x (edge 2 + pad 6)) and 362 under
+// clearlooks and cde (376 less 2 x (1 + 6)); the hex field is its widest
+// spelling `#DDDDDD` plus its two pads — 53 + 10 = 63 W in Tahoma, 60 + 10 =
+// 70 in DejaVu Sans (shaped; the dialog field's 5-W pad under every chrome,
+// 2026-10-08); the row's five gaps are 6 W each; OLD | NEW its floor, two
+// 20-W swatches inside the frame's two lines = 42; Copy, Paste and Close
+// kPushButtonWidthPx = 50 each; THE PRESET BUTTON THE REMAINDER, 360 − 63 −
+// 30 − 42 − 150 = 75 W under win2000 and 362 − 70 − 30 − 42 − 150 = 70 under
+// clearlooks.
 // WHY THE PRESET BUTTON IS IN THIS ROW AND NOT THE CHOOSER'S (architect
 // 2026-10-07: the chooser's row first, beside the element combo at the width
 // its longest role name needs, the preset combo the remainder — unless that
@@ -247,13 +324,20 @@ struct Viewport;
 // rounding rule): the card is the sum of its rounded parts.
 namespace color_picker {
 
-inline constexpr int kCardMarginPx    = 4;    // from the window's side and the well's top
-inline constexpr int kCardPadPx       = 6;    // inside the edge
+inline constexpr int kCardMarginPx    = 4;    // from the window's side and above the keyboard's band
+// THE ONE GAP (the head's THE GRID, 2026-10-08 ~21:20): between every
+// block — the chooser row, the slider rows, the bottom row — and between
+// the chooser row's two combos and the bottom row's items; the card's pad
+// is the same number, so the pad above the chooser row and below the
+// bottom row reads as the same rhythm.
+inline constexpr int kControlGapPx    = 6;
+inline constexpr int kCardPadPx       = kControlGapPx;   // inside the edge
 inline constexpr int kCardWidthPx     = 376;  // the tablet's half less two margins
-inline constexpr int kColumnGapPx     = 8;    // the wheel to the right column
-inline constexpr int kChooserGapPx    = 2;    // the chooser to the first slider row
-inline constexpr int kBlockGapPx      = 4;    // the top block to the bottom row
-inline constexpr int kControlGapPx    = 6;    // between the bottom row's items
+// THE WHEEL'S BLOCK, ONE WIDTH UNDER EVERY CHROME (the head's THE GRID and
+// THE WIDTH: the largest that fits clearlooks' 262-W chooser row in its
+// 362-W inner width, 362 − 8 − 262), so the right column starts at one x.
+inline constexpr int kWheelBlockWPx   = 92;
+inline constexpr int kColumnGapPx     = 8;    // the wheel's block to the right column
 // THE CHOOSER IS 21 W TALL UNDER BOTH CHROMES: Windows' combo box at the
 // 8-pt font (its edit's 13 cell + 2 x 2 of edge + 2 x 2 of pad), and GTK's
 // combo button re-derived at the 13 cell with the focus terms zeroed, 13 +
@@ -307,14 +391,19 @@ struct ComboList {
 GuiRect   combo_drop_button(const GuiRect& r);
 ComboList combo_list(const GuiRect& combo, int count, int window_h, int top);
 GuiRect   combo_list_item(const ComboList& l, int i);
-// A SLIDER ROW IS 15 W: GtkScale's slider-width (clearlooks_paint.h's
-// kClScaleSliderWidthPx) and the win2000 thumb's seat here — 3 W above the
-// 4-line channel and 8 below it (the point's 5 and 3 of straight side),
-// the player's 8 / 4 / 9 seat shortened to the row (comctl32 sizes the
-// straight part to the control, never the point); six rows stand flush, the
-// thumbs filling their rows.
-inline constexpr int kSliderRowPx         = 15;
-inline constexpr int kSliderThumbAbovePx  = 3;
+// A SLIDER ROW IS 17 W, ONE PITCH UNDER EVERY CHROME (the head's THE GRID
+// and THE SEAT, 2026-10-08 ~21:20 / ~21:40); six rows stand flush. The
+// win2000 thumb fills its row — 4 W above the 4-line channel and 9 below it
+// (the point's 5 and 4 of straight side), the player's 8 / 4 / 9 seat with
+// its 9 below kept and its top shortened to the row (comctl32 sizes the
+// straight part to the control, never the point). The scales of the other
+// two are 15 W, centered in the row with 1 W above and below: GtkScale's
+// slider-width (clearlooks_paint.h's kClScaleSliderWidthPx, which its
+// painters size) and XmScale's trough (cde_paint.h's scale block: the
+// Audio capture's volume scale, 15 px across), kScaleSeatPx.
+inline constexpr int kSliderRowPx         = 17;
+inline constexpr int kSliderThumbAbovePx  = 4;
+inline constexpr int kScaleSeatPx         = 15;
 inline constexpr int kSliderLabelGapPx    = 4;   // the label to the track
 inline constexpr int kSliderValueGapPx    = 4;   // the track to the value cell
 // COPY, PASTE AND CLOSE'S WIDTH (architect 2026-10-07; the head's
@@ -335,7 +424,7 @@ inline constexpr int kRingWidthNum        = 15;
 inline constexpr int kRingWidthDen        = 174;
 inline constexpr int kSvMarkerRadiusPx    = 3;
 
-// THE BAND'S HEIGHT IN W PX (the head's budget), derived from the keyboard's
+// THE BAND'S HEIGHT IN W PX (the head's THE SEAT), derived from the keyboard's
 // own constants so the arithmetic above cannot drift from them.
 inline constexpr int kKeyboardBandWPx =
     static_cast<int>(2 * onscreen_keyboard::kPadPx +
@@ -344,22 +433,34 @@ inline constexpr int kKeyboardBandWPx =
                      (onscreen_keyboard::kRowCount - 1) *
                          onscreen_keyboard::kKeyGapPx);
 static_assert(kKeyboardBandWPx == 131);
-// THE CARD'S HEIGHT IN W PX under each chrome (the head's sums).
-constexpr int card_height_wpx(const ChromeSpec& spec) {
-    const int edge = spec.vocabulary == GuiChromeVocabulary::Win2000 ? 2 : 1;
-    return 2 * edge + 2 * kCardPadPx + kChooserHeightPx + kChooserGapPx +
-           6 * kSliderRowPx + kBlockGapPx +
-           static_cast<int>(spec.push_button_box_px);
+// THE CARD'S HEIGHT IN W PX, ONE UNDER EVERY CHROME (the head's THE SEAT),
+// and each chrome's BOTTOM BAND, the card's remainder under the top block:
+// the push button's height where it ties (win2000 23, clearlooks 25), a
+// taller band with the row centered in it where the chrome's button is
+// shorter (cde: 25 for its 23-W button).
+inline constexpr int kCardHeightWPx = 174;
+constexpr int card_edge_wpx(const ChromeSpec& spec) {
+    return spec.vocabulary == GuiChromeVocabulary::Win2000 ? 2 : 1;
 }
-// THE TABLET'S WELL AT 300 % UNDER CLEARLOOKS, the tighter of the two (the
-// head; main.cpp's lane record: 945 device rows), and the budget it leaves,
-// 315 − 4 − 131 − 4 = 176: the card, the band and the two margins stand
-// inside the well, the card at 156 with 20 W to spare.
+constexpr int card_bottom_band_wpx(const ChromeSpec& spec) {
+    return kCardHeightWPx - 2 * card_edge_wpx(spec) - 2 * kCardPadPx -
+           kChooserHeightPx - kControlGapPx - 6 * kSliderRowPx -
+           kControlGapPx;
+}
+static_assert(card_bottom_band_wpx(kChromeSpecWin2000) ==
+              static_cast<int>(kChromeSpecWin2000.push_button_box_px));
+static_assert(card_bottom_band_wpx(kChromeSpecClearlooks) ==
+              static_cast<int>(kChromeSpecClearlooks.push_button_box_px));
+static_assert(card_bottom_band_wpx(kChromeSpecCde) == 25 &&
+              kChromeSpecCde.push_button_box_px == 23.0);
+// WHY 17 (the head's THE SEAT): the card, its margin above the band, the
+// band and the margin under the well's top stand inside the tablet's
+// tightest well at 300 % (clearlooks', main.cpp's lane record: 945 device
+// rows = 315 W) — 174 + 4 + 131 + 4 = 313 — so the marker lane above the
+// well stays in view on both halves.
 inline constexpr int kTabletWellClearlooksWPx = 315;
-static_assert(card_height_wpx(kChromeSpecClearlooks) + 2 * kCardMarginPx +
-                  kKeyboardBandWPx <= kTabletWellClearlooksWPx);
-static_assert(card_height_wpx(kChromeSpecClearlooks) == 156);
-static_assert(card_height_wpx(kChromeSpecWin2000) == 156);
+static_assert(kCardHeightWPx + 2 * kCardMarginPx + kKeyboardBandWPx <=
+              kTabletWellClearlooksWPx);
 
 // -- THE CHANNELS -----------------------------------------------------------
 

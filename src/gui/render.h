@@ -2416,8 +2416,10 @@ inline int tooltip_hover_slop_px() {
 // pane's 515-754; paint_cde_armed) — the window menu's and the picker's
 // preset menu's alike; a menu-row pull-down's top line ON the bar's bottom
 // shadow (dropdown_hang_y); the separator the etched
-// pair at the item's full width (XmSeparatorGadget spans the pane) with the
-// same 3 above and below.
+// pair at the item's full width, inside the frame's line (XmSeparatorGadget
+// spans the pane inside its shadow) with the same 3 above and below — every
+// popup menu's, the preset menu's too (paint_popup_separator,
+// paint_handler.cpp, 2026-10-08).
 inline constexpr int kPopupSepMarginYPx = 3;   // above and below the separator
 inline bool popup_is_gtk_menu() {
     return live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
