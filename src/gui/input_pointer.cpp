@@ -1982,7 +1982,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // AND THE COLOR PICKER (2026-10-07), with ONE cue: the I-beam over its
     // one field's interior as painted (the dialog field's own rule below),
     // the Arrow everywhere else — its sliders, its wheel, its swatches and
-    // its buttons carry no cue, and every other zone is behind its veil.
+    // its buttons carry no cue, every other zone is behind its veil, and
+    // ROW 8, on under it since 2026-10-07 evening, wears the Arrow it wears
+    // without it (a button carries no cue anywhere).
     if (app.color_picker.active) {
         const AppState::ColorPicker::Stash& st = app.color_picker.stash;
         return st.valid && rect_contains(st.field_inner, x, y)
@@ -3135,7 +3137,9 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // UNDER THE COLOR PICKER NO TOUCH IS A PAN (2026-10-07): a finger on
     // the card resolves to a press ON CONTACT — its sliders and its wheel
-    // are drags — and a finger off it meets the veil as a press would.
+    // are drags — and a finger off it meets the veil as a press would (on
+    // row 8, the row's own claim, as without the picker — row 8 was never
+    // on the pan zone).
     if (app.color_picker.active) return false;
     // THE ZONE YIELDS WHOLE WHILE A MENU STANDS (architect 2026-10-01, "Good,
     // I agree"): with a dropdown open, every touch is the pointer on contact,
@@ -3491,6 +3495,22 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // THE OWNER IS STAMPED WITH THE STASH THE HIT WAS READ FROM (its owner
     // tag and session), so the wait belongs to this painted surface alone
     // and dies with it (the rule is at AppState::RedesignTooltip).
+    // A ROSTER OWNER IS THE ROSTER WALK'S (2026-10-07 evening): with no
+    // dialog button under the pointer and a roster wait or box standing,
+    // this walk hands nothing — every caller runs the roster walk right
+    // after this one, and that walk answers for its own owner (under the
+    // color picker it finds row 8's hint there, row 8 staying on under the
+    // card — the one surface where both walks find buttons; under every
+    // other dialog its veil or the no-wait rule hands "none" itself).
+    // Without this, the dialog walk's "none" would restart the row's wait
+    // at every motion and no row-8 hint would ever ripen.
+    const AppState::RedesignTooltip& t = app.redesign_tooltip;
+    if (hit < 0 &&
+        ((t.hovered.surface == AppState::RedesignTooltip::Surface::Roster &&
+          t.hovered.index >= 0) ||
+         (t.visible &&
+          t.owner.surface == AppState::RedesignTooltip::Surface::Roster)))
+        return;
     note_tooltip_hover({AppState::RedesignTooltip::Surface::Dialog, hit,
                         app.modal_dialog.owner, app.modal_dialog.session});
 }
@@ -5112,6 +5132,17 @@ void GuiInputHandler::clear_player_scrub_drag() {
 //    color_picker.h) ------------------------------------------------------
 
 namespace {
+// THE BOTTOM ROW'S CHORD SPAN (GuiInputHandler::bottom_row_chord_in_flight_,
+// whose declaration carries the rule): set for one row-8 button's dispatch,
+// the previous value restored at the scope's end.
+struct BottomRowChordScope {
+    bool& flag;
+    bool  was;
+    BottomRowChordScope(bool& flag_, bool row8) : flag(flag_), was(flag_) {
+        flag = row8;
+    }
+    ~BottomRowChordScope() { flag = was; }
+};
 // The row of the chooser's list under (x, y) as painted, or -1.
 int color_picker_list_hit(const AppState::ColorPicker::Stash& st, int x,
                           int y) {
@@ -5767,6 +5798,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // editors' swallow below (claim_caption_press).
     const bool caption_press_admitted =
         rect_contains(top_caption_row_area(app), x, y);
+    // ROW 8'S CLAIM, ONE BODY for its own band claim below and for the color
+    // picker's veil, which lets row 8 through (architect 2026-10-07 evening).
+    const auto claim_bottom_row_press = [&] {
+        if (chrome_band_modifiers_refused(app, x, y, mods)) return;
+        if (button == GuiMouseButton::Left) arm_redesign_press(x, y, mods);
+    };
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
     // confirmation is a prompt and paints over it — and above everything
@@ -5818,11 +5855,27 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // THE COLOR PICKER'S VEIL (2026-10-07), the two list owners' shape: the
     // card's controls are its claims (color_picker_press, which reads the
     // published stash), the live File anchor and the caption pass as above,
-    // and EVERY OTHER PRESS IS CONSUMED. The on-screen keyboard's keys are
-    // claimed above every veil (claim_onscreen_keyboard_press), so the hex
-    // field types on glass.
+    // and EVERY OTHER PRESS IS CONSUMED but ROW 8'S. The on-screen keyboard's
+    // keys are claimed above every veil (claim_onscreen_keyboard_press), so
+    // the hex field types on glass.
+    // ROW 8 PASSES (architect 2026-10-07 evening, "a different type of
+    // modal" — the asymmetry at modal_owns_bottom_row, paint_handler.cpp):
+    // a press on the row reaches the row's own claim, AS PAINTED, unless the
+    // card's element list or palette menu is down — a popup owns the
+    // pointer whole (the dropdown's ONE PRESS, ONE ACT), and where it hangs
+    // over the row the pixel the user sees is the popup's, so the press is
+    // color_picker_press's (a row's arm on its rows, the popup's dismissal
+    // anywhere else). A standing edit ends at the row's press as at every
+    // press outside its field (color_picker_press's rule), so the lift's
+    // chord meets no keyboard-modal field.
     if (app.color_picker.active && !menu_row_press_admitted &&
         !caption_press_admitted) {
+        if (rect_contains(bottom_row_area(app), x, y) &&
+            !app.color_picker.chooser_open && !app.color_picker.menu_open) {
+            if (color_picker.field_active()) color_picker.field_cancel();
+            claim_bottom_row_press();
+            return;
+        }
         if (button != GuiMouseButton::Left) return;
         color_picker_press(x, y, mods);
         return;
@@ -6197,13 +6250,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // all, and ABOVE it lies GAP 2's blank window ground — outside every band
     // here and falling through to the tail's consumed nothing, as window ground
     // by the vertical rule (main.cpp).
-    {
-        const GuiRect bottom_row = bottom_row_area(app);
-        if (rect_contains(bottom_row, x, y)) {
-            if (chrome_band_modifiers_refused(app, x, y, mods)) return;
-            if (button == GuiMouseButton::Left) arm_redesign_press(x, y, mods);
-            return;
-        }
+    // (THE BODY IS claim_bottom_row_press, above the veils: the color
+    // picker's veil reaches it too.)
+    if (rect_contains(bottom_row_area(app), x, y)) {
+        claim_bottom_row_press();
+        return;
     }
     if (app.loading || audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
@@ -7411,9 +7462,17 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     }
     // THE COLOR PICKER'S RELEASE (2026-10-07), its press block's mirror:
     // the gesture's end, a list row's select, or the dialog buttons' shared
-    // dispatch; every other lift consumed.
+    // dispatch; every other lift consumed — but ROW 8'S (architect
+    // 2026-10-07 evening): a roster arm under the picker is a row-8 arm by
+    // construction (the press router admits no other), and its lift is the
+    // chrome act's own body, which re-asks every gate.
     if (app.color_picker.active) {
-        if (button == GuiMouseButton::Left) color_picker_release(x, y);
+        if (button != GuiMouseButton::Left) return;
+        if (chrome.kind == AppState::ChromePress::Kind::Roster) {
+            finish_chrome_press_release(chrome, x, y);
+            return;
+        }
+        color_picker_release(x, y);
         return;
     }
     // THE EDITOR DIALOG'S ACT, the same shape over the other surface: the lift
@@ -7870,7 +7929,10 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // THE FOLDER OVERLAY'S TWO OWNERS ARE DELIBERATELY NOT TERMS HERE
     // (2026-09-03 evening): the menu row stands above the band with the FILE
     // ANCHOR LIVE, its press exempted from both veils; under them the hint is
-    // refused by the no-wait rule (tooltip_dwell_suppressed) alone.
+    // refused by the no-wait rule (tooltip_dwell_suppressed) alone. NOR IS
+    // THE COLOR PICKER (2026-10-07 evening): row 8 stays on under it, so its
+    // veil is the hover zone's term (redesign_button_hover_zone, row 8 alone
+    // and none of it under the card's list or menu), not this blanket.
     const bool modal_veil =
         app.prompt.active || modal_dialog_editor_active();
     int  hovered_tip = -1;
@@ -8043,10 +8105,16 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // -1 through the no-wait rule alone, and the "surface stands" arm is what
     // keeps the player's and the picker's button hints alive: handing "none" to the writer there would stop the dialog's wait
     // on every tick.
+    // THE COLOR PICKER'S CARD IS A DIALOG SURFACE LIVE TOO (2026-10-07):
+    // color_picker_motion runs the dialog buttons' walk for its Copy / Paste
+    // / Close, so its wait stands here as the overlay owners' does — and
+    // since 2026-10-07 evening the roster walk finds row 8's hints beside it
+    // (the two walks' handshake is at update_modal_dialog_hover's tail).
     if (hovered_tip < 0) {
         AppState::RedesignTooltip& t = app.redesign_tooltip;
         const bool dialog_surface_live =
-            modal_veil || folder_overlay_stands(app);
+            modal_veil || folder_overlay_stands(app) ||
+            app.color_picker.active;
         const auto dialog_owner_dead =
             [&](const AppState::RedesignTooltip::Owner& o) {
                 return o.surface == AppState::RedesignTooltip::Surface::Dialog &&
@@ -8339,7 +8407,11 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
             chord.shift = tc.shift || mods.shift;
             chord.alt   = tc.alt;
             // The fixed beat, never the hold delay: the schedule's rule at
-            // the tick's repeat body below.
+            // the tick's repeat body below. A ROW-8 BUTTON'S PROBE is the
+            // pointer's own under the color picker (bottom_row_chord_in_flight_).
+            const BottomRowChordScope row8_chord(
+                bottom_row_chord_in_flight_,
+                redesign_button_in_transport_row(tc.id));
             if (repeat_eligible(tc.key, chord))
                 app.chrome_press.repeat_due_ms = now + kHoldBeatMs;
         }
@@ -8433,9 +8505,17 @@ void GuiInputHandler::finish_chrome_press_release(
     // PICKER's, whose release blocks return above this call the same way; the
     // term below is the editor OPENED MID-HOLD's, and any of the three
     // opened mid-hold (bare `l`, Ctrl+O or `'` typed under a held button)
-    // takes the same refusal through it.
+    // takes the same refusal through it. THE COLOR PICKER REFUSES EVERY ARM
+    // BUT ROW 8'S (architect 2026-10-07 evening, row 8 on under it — the
+    // asymmetry at modal_owns_bottom_row, paint_handler.cpp): its release
+    // block hands this body a roster arm, which its press router admits on
+    // row 8 alone.
+    const bool row8_arm =
+        arm.kind == AppState::ChromePress::Kind::Roster &&
+        redesign_button_in_transport_row(
+            static_cast<RedesignButton>(arm.index));
     if (modal_dialog_editor_active() || app.render_player.active ||
-        app.picker.active || app.color_picker.active) return;
+        app.picker.active || (app.color_picker.active && !row8_arm)) return;
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
         return;
@@ -8665,6 +8745,10 @@ void GuiInputHandler::finish_chrome_press_release(
                                  modal_editor_swallow_card(tc.key, chord));
             return;
         }
+        // A ROW-8 LIFT'S CHORD is the pointer's own under the color picker
+        // (bottom_row_chord_in_flight_).
+        const BottomRowChordScope row8_chord(bottom_row_chord_in_flight_,
+                                             row8_arm);
         on_key(tc.key, chord);
         return;
     }
@@ -8767,6 +8851,11 @@ void GuiInputHandler::tick_chrome_press_repeat() {
                       (arm.ctrl && redesign_button_ctrl_admits(tc.id));
         chord.shift = tc.shift || arm.shift;
         chord.alt   = tc.alt;
+        // A ROW-8 BUTTON'S FIRE — its probe and its dispatch — is the
+        // pointer's own under the color picker (bottom_row_chord_in_flight_).
+        const BottomRowChordScope row8_chord(
+            bottom_row_chord_in_flight_,
+            redesign_button_in_transport_row(tc.id));
         if (!repeat_eligible(tc.key, chord)) {
             arm.repeat_due_ms = 0;
             return;
@@ -9922,11 +10011,16 @@ void GuiInputHandler::tick_tooltip() {
 // because each takes the keyboard whole; the pointer-transparent FLAG editor is
 // a term through keyboard_modal_editor_active for the same reason, and it is
 // the case the walk's veil cannot see: the roster stays hoverable under one
-// (that editor raises no veil).
+// (that editor raises no veil). THE COLOR PICKER IS NOT A TERM, though it
+// takes the keyboard whole (architect 2026-10-07 evening): row 8 stays on
+// under it for the pointer, its tooltips included (modal_owns_bottom_row,
+// paint_handler.cpp), and the hint names the act the pointer reaches; its
+// veil over the top strip is the hover zone's term
+// (redesign_button_hover_zone), and its one field, while it stands, is a
+// term here through keyboard_modal_editor_active.
 bool GuiInputHandler::tooltip_dwell_suppressed() const {
     return app.prompt.active || keyboard_modal_editor_active() ||
-           app.render_player.active || app.picker.active ||
-           app.color_picker.active;
+           app.render_player.active || app.picker.active;
 }
 
 // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss hook's

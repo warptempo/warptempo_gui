@@ -2903,8 +2903,11 @@ private:
     //
     // THE FIFTH ModalDialogOwner, the two list owners' shape one surface
     // over: its predicate is the mode bit (color_picker_active), its veil
-    // consumes every press outside its card but the live File anchor's and
-    // the caption's, its router is the whole plastic vocabulary while it
+    // consumes every press outside its card but the live File anchor's, the
+    // caption's and — since 2026-10-07 evening, row 8 staying on under it
+    // for the pointer (modal_owns_bottom_row, paint_handler.cpp) — ROW 8'S
+    // while neither its list nor its menu is down, its router is the whole
+    // plastic vocabulary while it
     // stands (route_color_picker_key: Esc closes an open list or menu first
     // and the picker at the next press, Ctrl+S saves, Ctrl+Q falls
     // through with the picker closed by the close road, every other chord a
@@ -2921,14 +2924,17 @@ private:
     //     chooser's open, the palette menu button's open (when painted
     //     live), a slider track's thumb seat-and-arm (the scrub's rule), the
     //     ring's or the triangle's arm, OLD's revert, or a push button's arm
-    //     through the dialogs' shared arm; off the card, consumed. Every
-    //     target is read from the published stash, never derived live.
+    //     through the dialogs' shared arm; off the card, consumed (row 8's
+    //     press never reaches it unless a popup is down — the veil hands
+    //     it to the row's own claim). Every target is read from the
+    //     published stash, never derived live.
     //   color_picker_motion — a live gesture's carry (the slider, the ring,
     //     the triangle; the button lost ends it), else the list's and the
     //     menu's hover, the dialog buttons' walk and the roster's.
     //   color_picker_release — the gesture's end (already applied), a menu
     //     row's act (GuiColorPicker's preset acts) or a list row's select,
-    //     or the dialog buttons' shared dispatch.
+    //     or the dialog buttons' shared dispatch (a row-8 arm's lift goes to
+    //     finish_chrome_press_release instead, on_button_release's block).
     //   clear_color_picker_drag — the gesture's hard end (the pointer-leave
     //     hook, the button-lost arms).
     // (close_color_picker and clear_color_picker_drag are declared public
@@ -2946,6 +2952,20 @@ private:
     // The palette menu: open (the active preset's name lit) or close, the
     // list's damage rule.
     void set_color_picker_menu_open(bool open);
+    // THE BOTTOM ROW'S CHORD IN FLIGHT (architect 2026-10-07 evening: row 8
+    // stays on under the color picker, the asymmetry recorded at
+    // modal_owns_bottom_row, paint_handler.cpp): true for the span of one
+    // ROW-8 button's own dispatch — its lift's chord
+    // (finish_chrome_press_release), each fire of its hold-repeat
+    // (tick_chrome_press_repeat) and the arm's eligibility probe
+    // (arm_redesign_press) — and false everywhere else. Its TWO READERS are
+    // the color picker's key layer: on_key's router block and
+    // repeat_eligible's picker arm, which let the chord through as the
+    // pointer's own, so the row's act and its hold-repeat run exactly as
+    // without the picker while every PHYSICAL key stays the picker's.
+    // Saved and restored around each span (BottomRowChordScope,
+    // input_pointer.cpp), never cleared.
+    bool bottom_row_chord_in_flight_ = false;
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the settings editor's
     // dialog pattern for the history view's OTHER act. Ctrl+S while the view
@@ -3663,16 +3683,6 @@ private:
     // set_gui_scale_percent, not through here). It is the ONE such applier since
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
-
-    // THE WAVEFORM CAP'S LIVE RELAYOUT (the device config's
-    // `max_waveform_height`, architect 2026-09-13): install the AUTHORED value
-    // into the renderer (set_max_waveform_height_px, render.h — 0 meaning no
-    // maximum), then apply_gui_scale's own tail — full-window invalidate and
-    // the resize-path rebuild, whose viewport re-clamp and plate rebuild follow
-    // the new waveform area. It ASSIGNS AND PERSISTS NOTHING: its sole caller,
-    // the settings editor's device-key body (commit_device_setting), has
-    // already written the live struct and the file and gated the no-op case.
-    void apply_max_waveform_height(int authored_px);
 
     // The read-only bit's one setter (2026-09-04, after the two roads
     // had drifted apart on damage). Two roads write the

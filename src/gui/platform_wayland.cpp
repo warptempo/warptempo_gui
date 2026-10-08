@@ -646,12 +646,6 @@ GuiPlatform::~GuiPlatform() {
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale    = 138;
-    // The waveform cap's authored 364 Windows px — kWaveformMaxHeightPx's 500
-    // laptop px, the value the key replaced (is_max_waveform_height,
-    // device_config.h), re-authored at the unit's change (architect
-    // 2026-10-02: 502 device px at 138 %); the same on both templates,
-    // gui_scale doing the rest.
-    cfg.max_waveform_height = 364;
     if (const char* home = std::getenv("HOME"); home && home[0]) {
         cfg.projects_path =
             std::string(home) + "/.warptempo/warptempo_projects/projects";

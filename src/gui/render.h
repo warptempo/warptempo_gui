@@ -1395,57 +1395,6 @@ inline GuiRect marker_flag_box_band(GuiRect lane) {
     return GuiRect{lane.x, lane.y + air, lane.w, marker_flag_box_h_px()};
 }
 
-// THE WAVEFORM'S MAXIMUM HEIGHT — THE DEVICE CONFIG'S `max_waveform_height`
-// since 2026-09-13 (architect: a per-device key in AUTHORED px — Windows px
-// since 2026-10-02, the templates' 500 laptop px re-authored as 364 — 0
-// meaning no maximum; the range owner is is_max_waveform_height,
-// device_config.h). Until that day it was this file's
-// constant kWaveformMaxHeightPx = 500, a RULED RETUNABLE (architect 2026-08-12,
-// the seventh glass ruling): on tall monitors the natural (leftover) waveform is so
-// tall that reaching the ruler and the flag lane "feels cumbersome", so the
-// waveform CLAMPS at this height and the leftover becomes BLANK WINDOW GROUND.
-// WHERE THAT GROUND SITS IS THE RELAYOUT'S COMMIT B (architect-dictated
-// 2026-08-12 at session close): TWO flexible gaps, one under the MENU ROW and
-// one above the UNIFIED BOTTOM ROW, sized so THE WAVEFORM'S VERTICAL MIDPOINT
-// IS THE WINDOW'S ("the labwc titlebar above and the panel below offset each
-// other" — his own reasoning, so the centering is within the app surface with
-// no titlebar arithmetic). The stack is MENU ROW / ICON ROW / gap 1 / THE
-// CENTERED BLOCK
-// (trim, ruler, markers, then the WAVEFORM with its
-// own thick bottom border as the block's bottom edge) / gap 2 / THE UNIFIED
-// BOTTOM ROW at the window foot. (The ruling's first hours put the whole
-// flexible space between the icon row and the trim lane; the row unification
-// later that day moved it to the window's foot, under the bottom row, and
-// commit B split it in two around the block.)
-//
-// THE DEFAULT IS 364 WINDOWS PX (550 -> 500 laptop px at commit B, the same
-// dictation; re-authored in the Windows unit 2026-10-02). The architect's
-// standing bracket: "bigger than the height on the Pi, smaller than the
-// waveform height on my external monitor"; the accessor scales the value
-// with gui_scale by construction. On the 1920x1080 laptop the leftover
-// is well over the default, so the waveform CLAMPS at it and the two gaps
-// take the rest, while a 1024x600 SHORT WINDOW's leftover is under it,
-// UNCLAMPED, the centering infeasible and both gaps floored at 0. The
-// figures — every lane, both gaps, each worked window — are main.cpp's
-// vertical block, the one owner, re-derived there from the lane table and
-// not restated here.
-// A SCALED length riding
-// gui_scale like every authored height, so the clamp keeps pace with the
-// lanes it is measured against. The ONE application point is the
-// strip/waveform geometry owner (the two flex gaps / strip_row_rect /
-// waveform_area, main.cpp); no consumer reads this accessor directly.
-//
-// THE PLUMBING IS gui_scale's: the configured AUTHORED value is file-scope
-// state in render.cpp installed by set_max_waveform_height_px at the scale's
-// own two application points — gui_main's startup read of the device config,
-// beside set_gui_scale_percent and before the window exists, and the settings
-// editor's `max_waveform_height=` commit (commit_device_setting, whose
-// relayout is GuiInputHandler::apply_max_waveform_height). waveform_max_h_px
-// is the ONE reader, and it answers INT_MAX — "unbounded", which the clamp's
-// min passes straight through — for the key's 0.
-void set_max_waveform_height_px(int authored_px);
-int  waveform_max_h_px();
-
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
 // strip's ONLY lane since the relayout's commit B): the clock in its time

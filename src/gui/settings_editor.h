@@ -26,18 +26,20 @@ struct GuiInputHandler;
 // FIVE editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect) projects_path,
-// which had been hand-edited only, and since 2026-09-13
-// max_waveform_height, and since 2026-10-03 theme (its level and the twelve
+// which had been hand-edited only, since 2026-10-03 theme and since
+// 2026-10-07 chrome (theme's level and the twelve
 // program colour keys, editable 2026-10-03..04, left with their keys; the
-// config's key last_project is the program's own and has no editor; the hold delay's
+// config's key last_project is the program's own and has no editor; the
+// waveform's height cap, editable 2026-09-13..10-07, left with its key, the
+// waveform being the lanes' leftover; the hold delay's
 // key, editable for its
 // one-day tuning phase 2026-09-29, is struck, the value hard-coded as
 // kHoldDelayMs; `audio_player`, once
 // the third editable device key, retired whole 2026-08-28 with the in-app
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
-// 1. The device keys other than the scale — max_waveform_height,
-//    projects_repo, projects_path and theme — in ONE body,
+// 1. The device keys other than the scale — projects_repo, projects_path,
+//    chrome and theme — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
@@ -45,8 +47,7 @@ struct GuiInputHandler;
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; max_waveform_height is in force at once, the body handing it to
-//    apply_max_waveform_height for the live relayout; the theme is in
+//    card; the chrome at the next launch, its card saying so; the theme is in
 //    force at once, the body installing the palette, rebuilding the plate
 //    and the flags before the next paint and damaging the window
 //    (install_palette, render.h). gui_scale, the one other
@@ -161,8 +162,8 @@ struct GuiSettingsEditor {
     bool autocomplete_value();
 
 private:
-    // THE DEVICE KEYS' COMMIT — `max_waveform_height=`, `projects_repo=`,
-    // `projects_path=` and `theme=` — in one body (the head's
+    // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
+    // `chrome=` and `theme=` — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the

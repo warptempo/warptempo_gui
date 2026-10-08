@@ -147,7 +147,7 @@ std::string format_settings_text(
 // recall that answered nothing for them would break the menu rows and the Tab
 // completion together. What they recall is byte-identical to what the device
 // config file carries, through that file's own serializers
-// (format_gui_scale_percent and format_max_waveform_height, device_config.h)
+// (format_gui_scale_percent, device_config.h)
 // or verbatim for the two
 // free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`) and
 // `theme` (since 2026-10-03, held as typed): the same "recall

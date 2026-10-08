@@ -59,12 +59,14 @@
 // creating the folder, overwriting a file of the same name: THE BUNDLE WINS
 // FOR ITS OWN NAMES, so a bundled name edited by hand is overwritten at the
 // next launch, and HIS OWN FILES TAKE OTHER NAMES — a file of any other name
-// is never touched — SAVE THE APP'S OWN FORMER COPIES: a file bearing the
-// BUILT-IN'S name, or the name of a file an earlier bundle carried and this
-// one does not (kRetiredBundledThemeKeys below), is deleted by the copy-in
-// with one advisory line (the reason at copy_in_bundled_themes,
-// theme_file.cpp). Then the folder is read once as above, so a bundled file
-// is read exactly like his own. THE SOURCE IS PER DEVICE, behind the seam
+// is never touched. THE COPY-IN ONLY WRITES (architect 2026-10-07 evening,
+// closed_questions.md): a file an earlier bundle carried and this one does
+// not, or one bearing the BUILT-IN'S name, gets no launch-time cleanup — it
+// is the read's ordinary first-error refusal naming it; both installs were
+// cleaned of every such file by fd06c381 (2026-10-07), whose copy-in still
+// deleted them, and a later retirement is cleaned by hand at the install.
+// Then the folder is read once as above, so a bundled file is read exactly
+// like his own. THE SOURCE IS PER DEVICE, behind the seam
 // (GuiPlatform::bundled_theme_files): on the laptop the repository's
 // `assets/themes/`, its absolute path compiled in (the laptop runs from its
 // build tree); on the tablet the APK's `themes/` assets, which build_apk.sh
@@ -112,20 +114,6 @@ inline constexpr const char* kBuiltinThemeKey = "windows-2000-standard";
 // THE DEFAULT CHROME'S OWN THEME IS THE BUILT-IN (theme_file.cpp's
 // static_assert on kChromeSpecWin2000.default_theme), so a config naming
 // neither key always resolves to a compiled theme.
-
-// THE APP'S OWN FORMER BUNDLED NAMES (planner, 2026-10-07): the keys an
-// earlier bundle carried and this one does not — `warptempo` and his two
-// picker presets, dropped with the program roles they named (a file of
-// theirs left in the folder would be the read's hard fail on every device
-// that ran the earlier build). The copy-in deletes each with one advisory
-// line, as it deletes a file of the built-in's name (copy_in_bundled_themes,
-// theme_file.cpp); the bundle was always their only writer, so no file of
-// his is lost.
-inline constexpr const char* kRetiredBundledThemeKeys[] = {
-    "warptempo",
-    "warptempo-preset-1",
-    "warptempo-preset-2",
-};
 
 // THE THEME THE PALETTE INSTALLS (architect 2026-10-07): the device config's
 // `theme` as written, or — EMPTY, no `theme` line — THE LIVE CHROME'S OWN
@@ -297,7 +285,7 @@ std::filesystem::path theme_folder_path();
 // THE LAUNCH'S COPY-IN (gui_main, first, before read_theme_folder): every
 // bundled `.theme` file written into the themes folder under the rule above,
 // the folder created, a file already holding the bundle's bytes left as it
-// is, and a file of the built-in's name deleted first. Answers nothing on
+// is, nothing deleted. Answers nothing on
 // success (or when the config home does not resolve: there is no folder, and
 // the config's load refuses with its own line) and the failure's whole line
 // otherwise — FATAL at the caller.

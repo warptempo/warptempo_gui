@@ -269,7 +269,7 @@ namespace {
 // site states its own class and points here.
 //
 //   * A CONTROL'S NAME IS TITLE CASE — a dropdown item ("Open Project",
-//     "Paste Phase Reset State", "Max Waveform Height"), a modal row's WORD button ("Copy to
+//     "Paste Phase Reset State", "Projects Repository"), a modal row's WORD button ("Copy to
 //     Clipboard"), a panel's title, and A TOOLTIP THAT NAMES A GLYPH BUTTON'S
 //     ACT ("Drop Marker (S)", "Go to Start (Home)", "Toggle Grid Iterations (I)").
 //     The evidence is kdenlive's own: the Title Case hover on an icon button
@@ -2958,8 +2958,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-10-07, history_mode_hides_button): a member hidden there publishes
     // an empty rect, the block is measured over the members that stand, and
     // a group hidden whole takes its gap with it; every other button on this
-    // row publishes a real rect on every frame, except under a modal, where
-    // the row yields whole (paint_bottom_strip).
+    // row publishes a real rect on every frame, except under a modal that
+    // owns the row — every one but the color picker (modal_owns_bottom_row)
+    // — where the row yields whole (paint_bottom_strip).
     //
     // THE NUMBERS, re-derived whenever a group gains or loses a box (each case
     // moves the block by one case width, 31 Windows px): the cases touch
@@ -3227,7 +3228,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // (plain_save_actionable, app_state.h).
         // THE ROW YIELDS WHOLE TO A MODAL,
         // so the field and the line are hidden while a prompt, a dialog editor, the
-        // render player or the picker stands
+        // render player or the picker stands — not the color picker, which
+        // leaves the row standing (modal_owns_bottom_row)
         // (architect-accepted at the fold; the
         // one-day status BAR painted through a modal, that being what a
         // separate lane buys). It is why the render player's
@@ -5752,14 +5754,27 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // (the fourth, the same day: its Cancel-alone row) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
+//
+// THE COLOR PICKER IS ABSENT TOO, the fifth ModalDialogOwner and the one
+// that leaves the row standing (architect 2026-10-07 evening, "a different
+// type of modal"): its surface is the card on the well, so ROW 8 STAYS
+// PAINTED AND ACTING under it exactly as without it — the clock, the state
+// line and every roster button with its truthful enabling, its hot face,
+// its tooltip and its press-and-lift. THE DELIBERATE ASYMMETRY, recorded
+// here: under the color picker row 8 is ON for the POINTER AND THE PEN
+// ALONE — the KEYBOARD STAYS THE PICKER'S (its router consumes every key,
+// on_key, so the hex field types on glass), and THE WELL AND THE TOP STRIP
+// STAY BEHIND ITS VEIL (a press there is the card's or consumed, the top
+// strip's buttons gray). A row-8 lift's chord passes the picker's key layer
+// as the pointer's own (GuiInputHandler::bottom_row_chord_in_flight_); the
+// card's palette menu and element list, drawn last, cover the row where
+// they hang over it, and a press there is theirs (the press router's veil).
+// A PROMPT over the picker (the palette Delete question) owns the row as
+// every prompt does.
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
     if (app.render_player.active) return true;
     if (app.picker.active) return true;
-    // THE COLOR PICKER (2026-10-07, the fifth owner): the row yields whole
-    // and carries NOTHING — the card on the well holds its own Close — so
-    // row 8 is bare ground while it stands (ModalDialogOwner, app_state.h).
-    if (app.color_picker.active) return true;
     std::string prefix;
     return dialog_editor_to_paint(app, prefix) != nullptr;
 }
@@ -6213,8 +6228,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
 
     // THE COLOR PICKER'S FORK: its surface is the card on the well, not the
-    // row, so the row's layout below is not its business; the row's ground
-    // is already painted bare (paint_bottom_strip's yield).
+    // row, so the row's layout below is not its business — the row stays
+    // painted under it as without it (modal_owns_bottom_row's asymmetry),
+    // and the card, painted after the row, covers it only where its palette
+    // menu or element list hangs over it.
     if (color_picker_up) {
         paint_color_picker(cr, live_session, /*veiled=*/false);
         return;

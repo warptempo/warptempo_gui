@@ -287,11 +287,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other five editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, since 2026-09-13 max_waveform_height,
-    // since 2026-10-03 theme and since 2026-10-07 chrome — take their one
-    // direct-set body in commit(), commit_device_setting, ahead of this
-    // router.)
+    // move. (The other four editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since 2026-10-03 theme and since 2026-10-07
+    // chrome — take their one direct-set body in commit(),
+    // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -681,9 +680,9 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The five device keys other than the scale — one body, ahead of the
+    // 2. The four device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
-    //    rest, max_waveform_height's live relayout included).
+    //    rest).
     if (commit_device_setting(key, value)) return;
 
     // 3a. GUI-kind keys. Every key that can appear in a `.settings` file is
@@ -921,20 +920,13 @@ void GuiSettingsEditor::commit() {
 // display, the strictness ruling's shape for a press whose result nothing
 // paints.
 //
-// max_waveform_height JOINED 2026-09-13 (architect) as the body's one INTEGER
-// key: the same grammar-then-no-op-then-write shape over an int, its grammar
-// the scale's road (parse_authored_frame, then is_max_waveform_height) and its
-// refusal the same composer, and the one key here that CHANGES THE SCREEN AT
-// THE COMMIT — past the write it hands the value to
-// GuiInputHandler::apply_max_waveform_height, the live relayout (install,
-// whole-window damage, the resize path). Not a path key, so no Tab completion.
+// THE BODY'S INTEGER ARMS CAME AND WENT: the waveform's height cap
+// (2026-09-13..10-07, its live relayout with it — the waveform is the
+// lanes' leftover since, main.cpp's vertical rule) and the hold delay's key
+// for its one-day tuning phase (architect 2026-09-29, the value hard-coded
+// as kHoldDelayMs, gui_input.h), each struck with its Settings row.
 //
-// THE HOLD DELAY'S KEY was the body's second integer arm for its one-day
-// tuning phase (architect 2026-09-29), struck with its Settings row when the
-// value was hard-coded (kHoldDelayMs, gui_input.h).
-//
-// WHEN EACH IS IN FORCE. `max_waveform_height`: at once, by that relayout.
-// `projects_repo`: at once — every reader reads
+// WHEN EACH IS IN FORCE. `projects_repo`: at once — every reader reads
 // `app.projects_repo`, the live field, whose source moved 2026-08-27 and whose
 // readers did not (an empty value simply never matches any remote, which
 // disables the GitHub recheck). `projects_path`: FOR THE NEXT OPEN PROJECT AND THE
@@ -994,26 +986,6 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.settings_editor);
     };
-
-    if (key == "max_waveform_height") {
-        int64_t v64 = 0;
-        if (!parse_authored_frame(value, v64) ||
-            !is_max_waveform_height(v64)) {
-            reject(kMaxWaveformHeightGrammarReason);
-            return true;
-        }
-        // Range-checked above, so the narrowing to int is exact.
-        const int v = static_cast<int>(v64);
-        if (v == app.device_config->max_waveform_height) {
-            unchanged();
-            return true;
-        }
-        app.device_config->max_waveform_height = v;
-        (void)persist();
-        applied();
-        input->apply_max_waveform_height(v);
-        return true;
-    }
 
     // THE THEME (architect 2026-10-03; the themes 2026-10-04, theme_file.h):
     // the built-in's key or the key of a theme file READ AT LAUNCH, under its
@@ -1215,9 +1187,8 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, max_waveform_height,
-    // projects_repo, projects_path — gui_scale and the last three
-    // the device config's — per-tab trim / read_only)
+    // gui_scale, projects_repo, projects_path, chrome, theme — gui_scale
+    // and the last four the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).

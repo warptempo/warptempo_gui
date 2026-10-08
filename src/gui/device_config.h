@@ -10,11 +10,9 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Eight keys live here and nowhere else:
+// piece (architect 2026-08-27). Seven keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
-//   max_waveform_height=<px> the waveform's maximum height in AUTHORED px,
-//                            an integer [0, 9999], 0 meaning no maximum
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
 //                            GitHub recheck's corpus; free text, may be blank
 //   projects_path=<path>     the ABSOLUTE folder whose subfolders are the
@@ -40,7 +38,6 @@
 //                            palette (effective_palette_name)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
-// max_waveform_height, 2026-09-13, placed right after gui_scale;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
 // them left 2026-09-27, below; `theme` APPENDED after last_project,
 // 2026-10-03, the colour keys that stood after it for a day gone, below;
@@ -69,11 +66,15 @@
 // approval 2026-08-27, the fifth grant on settings_file.{h,cpp}); and what
 // was opened last is what lets the tablet, which has no command line, open
 // the right piece without a picker
-// at startup. `max_waveform_height` JOINED 2026-09-13 (architect): the waveform's cap had
-// been the render.h constant kWaveformMaxHeightPx = 500 since commit B, and
-// how tall a waveform wants to be is a fact about the PANEL — a tall external
-// monitor and the tablet's panel answer differently — so the cap became
-// a key of this file, both templates stamping the old constant's 500.
+// at startup. THE WAVEFORM'S HEIGHT CAP CAME AND WENT 2026-09-13..10-07
+// (architect): a key in authored px right after gui_scale, with a Settings
+// row of its own, until the architect ruled the waveform's height THE
+// LANES' LEFTOVER, NOTHING ELSE (2026-10-07 evening). NO TOLERANCE FOR A
+// RETIRED KEY (the same ruling, closed_questions.md): the two installs'
+// configs are hand-edited at the install — by the planner, the program not
+// running — so a config still carrying a retired key meets the ordinary
+// unknown-key first-error refusal naming its line, with no migration and no
+// special arm.
 // THE WAVEFORM PICTURE'S KEYS came and went (architect): the leveler's
 // `waveform_gain_*` joined 2026-09-23 and the expander's `waveform_expander_*`
 // 2026-09-24 for a tuning phase, eleven at the end, and all eleven LEFT
@@ -135,7 +136,7 @@
 // the key is unknown-key fatal, no migration.
 // THE HOLD DELAY'S KEY CAME AND WENT 2026-09-29 (architect), a one-day
 // tuning phase: the two holds (the chrome shift long press and the touch
-// region hold) read it, placed right after max_waveform_height with a
+// region hold) read it, placed after the scale with a
 // Settings row of its own, until the architect closed the phase on the
 // glass the same day on 300 ms, now constexpr (kHoldDelayMs, gui_input.h);
 // the key was `hold_delay_ms`, [100, 2000] ms. A config still carrying it is
@@ -171,7 +172,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eight
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven
 // keys and each at most once, every key REQUIRED but `chrome`, `theme` and
 // `palette` (architect 2026-10-07: `chrome` absent is clearlooks, the
 // default chrome, so the configs written before the key still load; `theme`
@@ -202,8 +203,7 @@
 // The chokepoints are the callers inventory at write_device_config below.
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
-// Settings dropdown carries `GUI Scale`,
-// `Max Waveform Height` (since 2026-09-13), `Projects Repository`,
+// Settings dropdown carries `GUI Scale`, `Projects Repository`,
 // `Projects Path`, since 2026-10-07 `Chrome` and, since 2026-10-03, `Theme`
 // (kSettingsPopupItems, app_state.h) as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
@@ -221,7 +221,7 @@
 // writes — it is the program's own.
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
-// fallbacks, for the five required keys: a successful read always assigns
+// fallbacks, for the four required keys: a successful read always assigns
 // them. THE THREE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
 // (2026-10-07): `chrome` "clearlooks" (the default chrome since 16:00 that
 // day), `theme` and `palette` empty (no line: the chrome's own). Both
@@ -246,7 +246,6 @@
 // once (set_live_chrome_spec, chrome_spec.h).
 struct DeviceConfig {
     int         gui_scale = 138;
-    int         max_waveform_height = 364;
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
@@ -329,25 +328,10 @@ inline constexpr bool is_gui_scale_percent(int64_t v) {
     return v >= 50 && v <= 1000;
 }
 
-// THE max_waveform_height RANGE — the ONE owner (architect 2026-09-13), asked
-// by this file's reader and by the settings editor's commit
-// (commit_device_setting, settings_editor.cpp), exactly as the scale's two
-// askers ask is_gui_scale_percent. The value is AUTHORED px riding gui_scale
-// through scaled_px (waveform_max_h_px, render.h — the one reader of the
-// installed value). 0 MEANS NO MAXIMUM: the waveform takes the whole leftover
-// and both flex gaps floor at 0, exactly as on any window whose leftover is
-// under the cap. 9999 is the ceiling because it is the widest spelling the
-// four-digit field admits; no panel reaches it, and a scale is a vocabulary.
-inline constexpr bool is_max_waveform_height(int64_t v) {
-    return v >= 0 && v <= 9999;
-}
-
-// The scale's and the cap's reasons, spelled once for their two readers each
-// (the config reader's `bad_value` line and the settings editor's card).
+// The scale's reason, spelled once for its two readers (the config reader's
+// `bad_value` line and the settings editor's card).
 inline constexpr const char* kGuiScaleGrammarReason =
     "must be an integer in [50, 1000] in canonical spelling";
-inline constexpr const char* kMaxWaveformHeightGrammarReason =
-    "must be an integer in [0, 9999] in canonical spelling";
 
 // THE ASCII WHITESPACE SET this file's grammars refuse at a value's edges —
 // all six of it, spelled as a byte set rather than asked of the locale, which
@@ -498,11 +482,6 @@ inline bool is_last_project_name(const std::string& v) {
 // so recall and file can never diverge.
 std::string format_gui_scale_percent(int percent);
 
-// The canonical on-disk spelling of the waveform cap — plain digits, the same
-// `%d` shape, THE ONE SERIALIZER for the value: this file's writer and the
-// settings editor's recall (recall_gui_setting_value) both call it.
-std::string format_max_waveform_height(int authored_px);
-
 // The resolved config path, or an EMPTY path when neither XDG_CONFIG_HOME nor
 // HOME is set (the loader turns that into its own fatal line; the writer
 // reports the failure and writes nothing).
@@ -550,11 +529,10 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // FOUR CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-07):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves five keys —
-// `max_waveform_height=`, `projects_repo=`, `projects_path=`, `chrome=` and
-// `theme=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
-// the cap's arm joined 2026-09-13, the path arm 2026-09-02, the theme's
-// 2026-10-03, the chrome's 2026-10-07); the color picker's `palette=` write
+// the settings editor's ONE device-key body, which serves four keys —
+// `projects_repo=`, `projects_path=`, `chrome=` and `theme=`
+// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the path
+// arm joined 2026-09-02, the theme's 2026-10-03, the chrome's 2026-10-07); the color picker's `palette=` write
 // (GuiColorPicker::write_palette_key, color_picker.cpp, 2026-10-07: a load,
 // a Save As, a Rename and a Delete each name the new active preset); and
 // gui_main's `last_project` write on the success path
@@ -570,8 +548,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 275 % and its external files dir's `projects/`;
-// both stamp a max_waveform_height of 364, the default chrome
-// (kDefaultChromeKey) and no theme or palette line, kDefaultProjectsRepo and
+// both stamp the default chrome (kDefaultChromeKey) and no theme or palette line, kDefaultProjectsRepo and
 // a blank
 // last_project),
 // so a first run on either device lands a

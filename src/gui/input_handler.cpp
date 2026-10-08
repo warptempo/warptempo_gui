@@ -388,7 +388,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // player's own: its slider and wheel drags are members of
     // any_pointer_gesture_active, and while one stands every key is
     // swallowed but the drag-modal gate's Ctrl+Q hatch.
-    if (app.color_picker.active) {
+    // ROW 8'S OWN CHORD PASSES (architect 2026-10-07 evening): a row-8
+    // button's lift or hold-repeat fire under the picker is the POINTER's
+    // dispatch, not a key, and the row stays on under the picker
+    // (modal_owns_bottom_row's asymmetry, paint_handler.cpp), so it skips
+    // this block and meets every other gate as without the picker
+    // (bottom_row_chord_in_flight_).
+    if (app.color_picker.active && !bottom_row_chord_in_flight_) {
         if (any_pointer_gesture_active(app)) {
             if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
                 notifications.notify(AppState::NotificationClass::Normal,
@@ -4238,15 +4244,6 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // set_gui_scale_percent:
     // drag_moved_threshold_px() reads the value that call just installed.
     gui.set_touch_slop_px(drag_moved_threshold_px());
-    viewport.invalidate_all();
-    paint_handler.on_resize(app.width, app.height);
-}
-
-void GuiInputHandler::apply_max_waveform_height(int authored_px) {
-    // The contract is at the declaration (input_handler.h). The waveform's
-    // height moves every strip boundary below gap 1 with it, so the tail is
-    // the scale's: the whole window, then the resize path.
-    set_max_waveform_height_px(authored_px);
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
 }

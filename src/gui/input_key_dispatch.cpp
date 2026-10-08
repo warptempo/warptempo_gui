@@ -4487,7 +4487,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // editor's own arm below answers (the field's motion, edit and
     // printable keys repeat as every editor's do); without it nothing
     // repeats — the card has no ring and no walk, and Esc is one-shot.
+    // A ROW-8 BUTTON'S HOLD IS NOT A KEY (architect 2026-10-07 evening, row
+    // 8 on under the picker): its probe and its fires skip this arm
+    // (bottom_row_chord_in_flight_) and are judged as without the picker.
     if (app.color_picker.active && !app.prompt.active &&
+        !bottom_row_chord_in_flight_ &&
         !text_editor::is_active(app.color_picker.field_editor))
         return false;
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that

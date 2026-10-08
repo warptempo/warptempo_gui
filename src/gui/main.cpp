@@ -141,8 +141,8 @@ namespace {
 // view-anchor math), so it cannot be main-private.
 //
 // Per-strip lane stacks with per-lane heights. Top and bottom strips DIFFER in
-// height; the waveform flexes between them UP TO A CLAMP, and TWO FLEXIBLE
-// GAPS center it (the vertical rule below). The TOP strip is SIX lanes since
+// height; the waveform takes what they leave, and TWO FLEXIBLE GAPS stand
+// either side of it, both 0 (the vertical rule below). The TOP strip is SIX lanes since
 // the caption's arrival (architect 2026-10-05; five from the tab row's
 // deletion, 2026-10-01: "a waste of space") — from the window edge inward
 // (every Windows-px length below the live chrome spec's, chrome_spec.h —
@@ -186,11 +186,10 @@ namespace {
 // row's toolbar case — sitting ON
 // THE WINDOW'S FOOT with the flexible gap 2 between it and the waveform.
 //
-// THE VERTICAL RULE — THE WAVEFORM IS CENTERED IN THE WINDOW AND HAS A MAXIMUM
-// HEIGHT (the device config's `max_waveform_height`, default 364 Windows px on
-// both templates, 0 meaning no maximum, read through waveform_max_h_px at
-// render.h),
-// AND THE CAPTION, THE MENU ROW AND THE ICON ROW STAND AT THE WINDOW'S TOP
+// THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
+// (architect 2026-10-07 evening: the maximum height it carried — a render.h
+// constant from 2026-08-12, a device-config key from 2026-09-13 — is
+// retired whole), AND THE CAPTION, THE MENU ROW AND THE ICON ROW STAND AT THE WINDOW'S TOP
 // WITH THE FLEXIBLE BAND UNDER THEM (architect 2026-09-09, the
 // menubar-over-toolbar shape of kdenlive, QEMU and virt-manager; the caption
 // above them 2026-10-05, Windows' title bar over its menu bar). The window
@@ -224,17 +223,19 @@ namespace {
 //              = centered_leftover_h; the waveform's own borders are INSIDE
 //                its area, so the block's thick bottom border is not a term
 //                here (counting it would double it),
-//   W        = min(waveform_max_h_px(), max(0, leftover))  = waveform_clamped_h,
+//   W        = max(0, leftover)                            = waveform_h,
 //   gap 1    = max(0, win_h/2 - (the top lanes whole) - W/2)
 //              = top_flex_gap,
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
-// WHEN CENTERING IS INFEASIBLE the gaps floor at 0 and the WAVEFORM absorbs the
-// shortfall — one clean formula, no second constant: on a short window the
-// leftover is under the clamp, so W takes all of it and both gaps are 0 (the
-// 1024x600 short window below exactly). A window tall enough for the clamp but
-// too shallow to center it (the top block being taller than the bottom strip)
-// rests gap 1 at 0 and puts the remainder in gap 2, top-heavy and harmless (the
-// tablet below exactly).
+// WITH THE WAVEFORM THE WHOLE LEFTOVER, BOTH GAPS ARE ZERO ON EVERY WINDOW
+// (2026-10-07 evening): gap 1's midpoint term comes to half the bottom row
+// less half the top stack, negative under both chromes at every scale (125
+// or 128 Windows px above against row 8's 37 below), so it floors at 0, and
+// gap 2 is the leftover's remainder after W, 0. The centering is infeasible
+// by construction and the waveform takes the whole leftover, which is the
+// rule's own floor rather than a special case; the two gaps' derivations
+// stand, answering 0, and every consumer below still reads its lane through
+// them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
 // 2026-10-06 for the Windows 2000 chrome (the caption's lane 2026-10-05; the
@@ -243,10 +244,8 @@ namespace {
 // every lane in Windows px, the ruler and the marker lane derived from their
 // faces, the marker lane's air above the box alone since 2026-10-03, its box
 // seated on its label's painted ink with one Windows px of face above and
-// below since 2026-10-05) rather than adjusted, at the templates' default
-// max_waveform_height OF 364 (the laptop pixel's 500 re-authored) and at 0,
-// NO MAXIMUM, which both devices run (a device carrying another value moves
-// only W and the gaps). Every lane is its own composite of rounded parts
+// below since 2026-10-05) rather than adjusted, the waveform the whole
+// leftover and both gaps 0 in every stack (the rule above). Every lane is its own composite of rounded parts
 // (scaled_px's rule), so the device rows below are read off the lane
 // accessors, never off a Windows total times the factor — in particular the
 // icon lane's etched pair is 2 x relief_line_px(), not scaled_px(2), so it
@@ -262,15 +261,9 @@ namespace {
 //   lanes are 25 caption + 27 menu + 49 icon + 22 trim + 24 ruler + 23 marker
 //   = 170 above, of which 101 is the caption and the two toolbar rows above
 //   the gap and 69 the block above the waveform, and 50 below (the bottom
-//   row's 49 content and its 1-px top row); leftover 860.
-//     At 364: waveform CLAMPED at 502 (the scaled 364), gap 1 = 119, gap 2 =
-//     239 — 25 caption / 27 menu / 49 icon / 119 blank / 69 block / 502
-//     waveform / 239 blank / 50 row, the waveform spanning y 289..791 about
-//     the window's midline 540 (the clamp fixes its height and the midpoint
-//     rule its centre, so gap 1 absorbs every row the lanes above it gain or
-//     lose — the caption's 25 among them).
-//     At 0: waveform UNCLAMPED at 860, both gaps 0 (the midpoint rule would
-//     want 540 - 170 - 430 = -60) — 25 / 27 / 49 / 0 / 69 / 860 / 0 / 50.
+//   row's 49 content and its 1-px top row); leftover 860: the waveform 860,
+//   both gaps 0 (the midpoint rule would want 540 - 170 - 430 = -60) — 25
+//   caption / 27 menu / 49 icon / 0 / 69 block / 860 waveform / 0 / 50 row.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — the caption across its top; the architect's
@@ -279,16 +272,14 @@ namespace {
 //   and the two toolbar rows, 153 the block; the ruler's and the marker
 //   lane's heights derived from their faces, ruler_lane_h_px and
 //   marker_lane_h_px at render.h) and 111 below (108 + its 3-row top row),
-//   leftover 954. 364 Windows px scales to 1092, past the leftover, so BOTH
-//   readings are the same: waveform UNCLAMPED at 954, both gaps 0 (the rule
-//   would want 720 - 375 - 477 = -132) — 54 / 60 / 108 / 0 / 153 / 954 / 0 /
-//   111.
+//   leftover 954: the waveform 954, both gaps 0 (the rule would want 720 -
+//   375 - 477 = -132) — 54 / 60 / 108 / 0 / 153 / 954 / 0 / 111.
 //   2304x1440 AT gui_scale 400 (same surface, the scale alone different):
 //   the lanes are 72 caption + 80 menu + 144 icon + 64 trim + 68 ruler + 72
 //   marker = 500 above (296 the caption and the two toolbar rows, 204 the
-//   block) and 148 below (144 + its 4-row top row), leftover 792; both
-//   readings UNCLAMPED at 792, both gaps 0 (the rule would want 720 - 500 -
-//   396 = -176) — 72 / 80 / 144 / 0 / 204 / 792 / 0 / 148.
+//   block) and 148 below (144 + its 4-row top row), leftover 792: the
+//   waveform 792, both gaps 0 (the rule would want 720 - 500 - 396 = -176)
+//   — 72 / 80 / 144 / 0 / 204 / 792 / 0 / 148.
 // THE CLEARLOOKS STACKS (2026-10-07, at Windows' proportions — the 13-row
 // cell and the 32-W case, chrome_spec.h's instance; caption 20 + menu 21 +
 // icon 36 + trim 16 + ruler 17 + marker 18 = 128 Windows px above, row 8's
@@ -296,20 +287,16 @@ namespace {
 // the cells being the same):
 //   1920x1080 AT 138 %: the lanes are 28 caption + 28 menu + 51 icon + 22
 //   trim + 24 ruler + 23 marker = 176 above (107 the caption and the two
-//   toolbar rows, 69 the block) and 52 below, leftover 852. At 364: the
-//   waveform CLAMPED at 502, gap 1 = 113, gap 2 = 237 — 28 / 28 / 51 / 113 /
-//   69 / 502 / 237 / 52. At 0: UNCLAMPED at 852, both gaps 0.
+//   toolbar rows, 69 the block) and 52 below, leftover 852: the waveform
+//   852, both gaps 0.
 //   2304x1440 AT 300 %: the lanes are 60 caption + 63 menu + 108 icon + 48
 //   trim + 51 ruler + 54 marker = 384 above (231 and 153) and 111 below,
-//   leftover 945; both readings UNCLAMPED at 945, both gaps 0 — 60 / 63 /
-//   108 / 0 / 153 / 945 / 0 / 111.
-//   1024x600 AT 138 %, A SHORT WINDOW (kept as the worked case the floors
-//   exist for; no host runs this geometry), the same at either value:
-//     leftover 380 -> waveform UNCLAMPED at 380, both gaps 0
-//     — 25 / 27 / 49 / 0 / 69 / 380 / 0 / 50. Centering is infeasible there (the
-//     midpoint rule would want gap 1 = 300 - 170 - 190 = -60), so the
-//     waveform keeps everything, which is the rule's own floor rather than a
-//     special case.
+//   leftover 945: the waveform 945, both gaps 0 — 60 / 63 / 108 / 0 / 153 /
+//   945 / 0 / 111.
+//   1024x600 AT 138 %, A SHORT WINDOW (kept as a worked case; no host runs
+//   this geometry): leftover 380 -> the waveform 380, both gaps 0 — 25 /
+//   27 / 49 / 0 / 69 / 380 / 0 / 50 (the midpoint rule would want gap 1 =
+//   300 - 170 - 190 = -60).
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -468,17 +455,13 @@ int centered_leftover_h(int win_h) {
     return win_h - strip_total_h(/*top_strip=*/true)
                  - strip_total_h(/*top_strip=*/false);
 }
-// THE WAVEFORM'S HEIGHT: the leftover, CLAMPED at the maximum (the seventh
-// glass ruling's clamp, the device config's `max_waveform_height` through
-// waveform_max_h_px at render.h — default 364 Windows px, and 0 answering INT_MAX so the
-// leftover always wins). The floor at 0 is
-// what keeps a degenerate window's negative leftover out of the gap arithmetic
-// below; waveform_area's own guard answers the rect.
-int waveform_clamped_h(int win_h) {
+// THE WAVEFORM'S HEIGHT: THE LEFTOVER, NOTHING ELSE (architect 2026-10-07
+// evening, the maximum retired). The floor at 0 is what keeps a degenerate
+// window's negative leftover out of the gap arithmetic below;
+// waveform_area's own guard answers the rect.
+int waveform_h(int win_h) {
     const int leftover = centered_leftover_h(win_h);
-    if (leftover <= 0) return 0;
-    const int cap = waveform_max_h_px();
-    return leftover < cap ? leftover : cap;
+    return leftover > 0 ? leftover : 0;
 }
 // GAP 1 — the flexible band BETWEEN THE ICON ROW AND THE TRIM LANE (the
 // vertical rule above carries the ruling): whatever it takes to put the
@@ -488,15 +471,14 @@ int waveform_clamped_h(int win_h) {
 // stack it opens.
 int top_flex_gap(int win_h) {
     const int gap = win_h / 2 - strip_total_h(/*top_strip=*/true)
-                              - waveform_clamped_h(win_h) / 2;
+                              - waveform_h(win_h) / 2;
     return gap > 0 ? gap : 0;
 }
 // GAP 2 — the flexible blank band between the waveform's bottom border and the
 // UNIFIED BOTTOM ROW, the bottom strip's one lane:
 // the REMAINDER of the leftover, which
-// is what makes the stack add up to the window exactly. Zero whenever the
-// waveform took the whole leftover (every window short of the clamp — the
-// 1024x600 case worked at the vertical block above). IT IS THE BAND THAT
+// is what makes the stack add up to the window exactly. Zero, the waveform
+// taking the whole leftover (the vertical rule above). IT IS THE BAND THAT
 // ABSORBED THE STATUS BAR AND GOT IT BACK (2026-08-29, both edges in one day):
 // the bar entered the bottom lane table and the leftover this reads shrank by
 // its 33, all of which came out of this band on a window with room, and the
@@ -510,7 +492,7 @@ int top_flex_gap(int win_h) {
 // lane, the row unification moved it whole to the window's foot below the
 // bottom row, and commit B split it in two around the block.)
 int bottom_flex_gap(int win_h) {
-    const int gap = centered_leftover_h(win_h) - waveform_clamped_h(win_h)
+    const int gap = centered_leftover_h(win_h) - waveform_h(win_h)
                                                - top_flex_gap(win_h);
     return gap > 0 ? gap : 0;
 }
@@ -532,8 +514,7 @@ int top_strip_h(const AppState& a) {
 // above it): it is the distance from the waveform bottom to the window bottom,
 // which is what every consumer actually asks of it — the blank band is
 // repainted in the window ground, and waveform_area's h - top - bottom
-// arithmetic yields the CLAMPED, CENTERED waveform height with no second
-// expression.
+// arithmetic yields the waveform height with no second expression.
 int bottom_strip_h(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
@@ -550,10 +531,11 @@ GuiRect waveform_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
     // BOTH strip heights INCLUDE their flexible gap (commit B's two-gap
-    // centering), so the h - top - bot arithmetic below yields the CLAMPED
-    // waveform height — min(leftover, the scaled max_waveform_height) wherever the
-    // leftover is non-negative — and the y lands the waveform flush under the
-    // marker lane with no second expression of the vertical rule here.
+    // centering, both gaps 0 since the waveform became the whole leftover),
+    // so the h - top - bot arithmetic below yields the waveform height — the
+    // leftover wherever it is non-negative — and the y lands the waveform
+    // flush under the marker lane with no second expression of the vertical
+    // rule here.
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not
@@ -3362,13 +3344,6 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE WAVEFORM CAP RIDES THE SAME ROAD (the device config's
-    // `max_waveform_height`, 2026-09-13): installed here before the first
-    // configure so the first layout is already the configured one, and live
-    // at the settings editor's commit (commit_device_setting then
-    // GuiInputHandler::apply_max_waveform_height). The one reader is
-    // waveform_max_h_px (render.h).
-    set_max_waveform_height_px(device_config.max_waveform_height);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the theme the
     // config names (the built-in or a file read above, 2026-10-04) — or, with
     // no `theme` line, THE LIVE CHROME'S OWN (2026-10-07, effective_theme_key,
@@ -3432,8 +3407,7 @@ int gui_main(const char* argument) {
     // a REOPEN (the Open project picker's, or File → Revert's naming the
     // project already open) — and the outcome carries which. WHAT IS
     // PER-PROCESS BESIDES THESE, by inventory: the two signal dispositions,
-    // the renderer's file-scope scale (set_gui_scale_percent), waveform cap
-    // (set_max_waveform_height_px), the text
+    // the renderer's file-scope scale (set_gui_scale_percent), the text
     // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),
     // the bottom row's clock metrics memo (keyed on the text size, not the
     // piece), the modal session-id counter (text_editor::next_session_id —

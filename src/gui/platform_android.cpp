@@ -451,12 +451,6 @@ GuiPlatform::~GuiPlatform() {
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
     cfg.gui_scale     = 275;
-    // The waveform cap's authored 364 Windows px, the laptop template's value
-    // (at 275 % it scales to 1001, under the 1063 px leftover the five top
-    // lanes and the bottom row leave on the full-screen 1440-tall surface, so
-    // the waveform clamps there with 62 rows of gap 2; the tablet's own config
-    // runs 0, no maximum — main.cpp's record).
-    cfg.max_waveform_height = 364;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;

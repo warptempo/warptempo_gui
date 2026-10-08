@@ -53,13 +53,6 @@ static_assert(std::ranges::all_of(kGuiThemeCaptionGradients,
     return p.start < kGuiThemeRoleCount && p.end < kGuiThemeRoleCount;
 }));
 static_assert(is_theme_key_spelling(kBuiltinThemeKey));
-// Every retired bundled key is a key and never the built-in's (the copy-in
-// deletes both, theme_file.h).
-static_assert(std::ranges::all_of(kRetiredBundledThemeKeys,
-                                  [](const char* k) {
-    return is_theme_key_spelling(k) &&
-           std::string_view(k) != kBuiltinThemeKey;
-}));
 // Every chrome's own theme is a theme key, and win2000's is the built-in;
 // clearlooks' (the default chrome's since 2026-10-07) is a bundled file,
 // copied in at every launch, so an unset theme under either chrome always
@@ -145,51 +138,14 @@ std::optional<std::string> copy_in_bundled_themes() {
         return "could not create the themes folder '" + folder.string() +
                "': " + ec.message();
     }
-    // THE APP'S OWN FORMER COPY OF THE BUILT-IN'S NAME IS DELETED (planner,
-    // 2026-10-06): the bundle is the only writer of that name — a file a user
-    // authors under it is the read's hard fail below, so he never does — and
-    // the copy-in never deletes what the bundle stops carrying, so a rename
-    // of the built-in leaves the earlier bundle's file of the new name behind
-    // on every device that ran the earlier build (the 2026-10-06 rename from
-    // windows-95-standard to windows-2000-standard did: the bundle carried
-    // windows-2000-standard.theme until then). By the two-category rule a
-    // state the app itself wrote must load, so the copy-in removes it with one
-    // advisory line (the validation doctrine's class 5) before the read, and
-    // the read's refusal of that name stays the rule. Keyed on
-    // kBuiltinThemeKey, it covers any later rename alike. THE SAME ROAD TAKES
-    // THE RETIRED BUNDLED NAMES (planner 2026-10-07, kRetiredBundledThemeKeys,
-    // theme_file.h): `warptempo` and the two picker presets, which the bundle
-    // stopped carrying with the program roles they named, so a copy an
-    // earlier build wrote would now be the read's hard fail — a state the app
-    // wrote, which must load. This block is the one place the app cleans up
-    // after its own earlier self, and no other migration exists. A removal
-    // that fails is the copy-in's failure, the same road.
-    {
-        const auto remove_stale = [&](std::string_view key, const char* what)
-                -> std::optional<std::string> {
-            const std::filesystem::path stale =
-                folder / (std::string(key) + std::string(kThemeSuffix));
-            if (std::filesystem::remove(stale, ec)) {
-                std::fprintf(stderr,
-                             "warptempo_gui: removed '%s', %s\n",
-                             stale.string().c_str(), what);
-            }
-            if (ec) {
-                return "could not remove '" + stale.string() + "': " +
-                       ec.message();
-            }
-            return std::nullopt;
-        };
-        if (auto err = remove_stale(kBuiltinThemeKey,
-                                    "an earlier build's copy of the built-in "
-                                    "theme's name"))
-            return err;
-        for (const char* key : kRetiredBundledThemeKeys) {
-            if (auto err = remove_stale(key,
-                                        "a theme an earlier build bundled"))
-                return err;
-        }
-    }
+    // NO LAUNCH-TIME CLEANUP OF A FORMER BUNDLE'S FILES (architect 2026-10-07
+    // evening, closed_questions.md): the copy-in only writes, the bundle
+    // winning for its own names, and never deletes a file a bundle stopped
+    // carrying or one bearing the built-in's name — such a file is the
+    // read's ordinary first-error refusal below, its name in the line. Both
+    // installs are clean of every such file (each ran fd06c381, 2026-10-07,
+    // whose copy-in still deleted them), and a later retirement is cleaned
+    // by hand at the install, the planner's job.
     for (const auto& [name, bytes] : *bundle) {
         const std::filesystem::path p = folder / name;
         // A file already holding the bundle's bytes is left as it is — the

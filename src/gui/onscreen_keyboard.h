@@ -618,8 +618,9 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 //
 // The band is a full-width lane flush on the bottom row's top edge, so what it
 // hides off the waveform is always a BOTTOM SLICE and the answer is a rect. A
-// band that reaches no higher than the waveform's own bottom (a tall window
-// whose flexible gap 2 is deeper than the surface) subtracts nothing; a band
+// band that reaches no higher than the waveform's own bottom subtracts
+// nothing (no window builds one since the waveform became the lanes' whole
+// leftover, 2026-10-07: gap 2 is 0, so the band always overlaps it); a band
 // that swallows the waveform whole answers a ZERO-HEIGHT rect, and it is the
 // CLIP rather than the gate that makes that case paint nothing (rects_intersect
 // can still answer true for an empty rect an exposure straddles — it compares

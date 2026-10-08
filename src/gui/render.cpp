@@ -2608,23 +2608,6 @@ double gui_scale_factor()  {
     return static_cast<double>(g_gui_scale_percent) / 100.0;
 }
 
-namespace {
-    // The waveform's configured maximum height in AUTHORED px — the device
-    // config's `max_waveform_height`, 0 meaning no maximum. Installed by
-    // set_max_waveform_height_px at the scale's two application points (the
-    // contract is at the declaration, render.h). 500 is construction state,
-    // the templates' value; startup installs the config's before any read.
-    int    g_max_waveform_height_px = 500;
-} // namespace
-
-void set_max_waveform_height_px(int authored_px) {
-    g_max_waveform_height_px = authored_px;
-}
-int waveform_max_h_px() {
-    if (g_max_waveform_height_px <= 0) return std::numeric_limits<int>::max();
-    return scaled_px(g_max_waveform_height_px, 1);
-}
-
 // -- The palette's chokepoints (the contract is at their declaration,
 // render.h) ---------------------------------------------------------------
 

@@ -3423,12 +3423,11 @@ struct SettingsPopupItem {
 // 2026-09-14), the picture's gain varying over source time since (the
 // continuous curve derived from the source since 2026-09-23).
 //
-// THE DEVICE HALF OPENS WITH FOUR: `GUI Scale`, then `Max Waveform Height` right
-// after it in kDeviceConfigKeys' order (architect 2026-09-13; it commits
-// through commit_device_setting and relays out live; `Hold Delay` stood
-// right after it for the hold delay's one-day tuning phase, 2026-09-29, and
-// left with its key when the value was hard-coded), then the two
-// gesture-less device keys `Projects Repository` and `Projects Path`
+// THE DEVICE HALF OPENS WITH THREE: `GUI Scale` (the waveform's height cap
+// stood right after it 2026-09-13..10-07, and `Hold Delay` after that for
+// the hold delay's one-day tuning phase, 2026-09-29, each row leaving with
+// its key), then
+// the two gesture-less device keys `Projects Repository` and `Projects Path`
 // (architect 2026-09-02), each opening the settings editor
 // prefilled through the ordinary recall serializer (recall_gui_setting_value
 // answers all of them off the live struct) and committing through the device
@@ -3455,8 +3454,8 @@ struct SettingsPopupItem {
 // its commit applies at the next launch and says so on a card
 // (commit_device_setting).
 //
-// `palette` (2026-10-07, the eighth device key) HAS NO ROW: the in-app
-// color picker is its chooser, so the device half stays these six.
+// `palette` (2026-10-07, the seventh device key) HAS NO ROW: the in-app
+// color picker is its chooser, so the device half stays these five.
 //
 // `Pick Colors` IS THE MENU'S ONE COMMAND ROW (architect 2026-10-07: the
 // in-app color picker, "a full-fledged part of the project"), the LAST row
@@ -3473,7 +3472,6 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"URL",                 "url",           false},
     {"Cover",               "cover",         false},
     {"GUI Scale",           "gui_scale",     true},
-    {"Max Waveform Height", "max_waveform_height", false},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
     {"Chrome",              "chrome",        false},
@@ -6283,9 +6281,12 @@ struct AppState {
     // pressed face are the dialogs' own; everything else it publishes (the
     // chooser, the sliders, the swatches, the wheel, the palette menu
     // button and its menu) is its own stash
-    // (ColorPicker::Stash). THE BOTTOM ROW YIELDS TO IT AS TO EVERY OWNER
-    // and carries NOTHING — the card holds its own Close — so row 8 is bare
-    // ground while it stands (modal_owns_bottom_row, paint_handler.cpp).
+    // (ColorPicker::Stash). IT IS THE ONE OWNER THE BOTTOM ROW DOES NOT
+    // YIELD TO (architect 2026-10-07 evening, "a different type of modal"):
+    // row 8 stays painted and acting under it for the pointer and the pen,
+    // while the keyboard stays the picker's and the well and the top strip
+    // stay behind its veil — the asymmetry is recorded at
+    // modal_owns_bottom_row (paint_handler.cpp).
     enum class ModalDialogOwner {
         None, Prompt, Editor, Player, Picker, ColorPicker
     };
@@ -14984,8 +14985,11 @@ inline bool redesign_button_enabled(const AppState& a,
     // AND THE COLOR PICKER GRAYS IT THE SAME WAY (2026-10-07): its veil
     // consumes every press outside its card but the live File anchor's and
     // the caption's (the two list owners' exemptions), and this line is the
-    // face that says so.
-    if (a.color_picker.active) return false;
+    // face that says so — FOR THE TOP STRIP: ROW 8 STAYS ON under it
+    // (architect 2026-10-07 evening, the asymmetry at modal_owns_bottom_row,
+    // paint_handler.cpp), so its seventeen fall through to their own arms.
+    if (a.color_picker.active && !redesign_button_in_transport_row(b))
+        return false;
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -18091,8 +18095,19 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // which this term is what makes structural. Row 1 needs no exemption: it
 // holds the anchors alone, and an ANCHOR's open frame is the painter's own
 // open condition (paint_menu_row), not this term.
-inline bool redesign_button_hover_zone(const AppState& a, RedesignButton) {
-    return !a.dropdown.open();
+//
+// AND UNDER THE COLOR PICKER ONLY ROW 8 IS IN THE ZONE, and none of it while
+// the card's element list or palette menu is down (architect 2026-10-07
+// evening, row 8 on under the picker — modal_owns_bottom_row,
+// paint_handler.cpp): the top strip is behind the picker's veil, and a
+// popup of the card owns the pointer as the dropdown does (a press anywhere
+// off its rows puts it away, color_picker_press).
+inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
+    if (a.dropdown.open()) return false;
+    if (a.color_picker.active)
+        return redesign_button_in_transport_row(b) &&
+               !a.color_picker.chooser_open && !a.color_picker.menu_open;
+    return true;
 }
 
 // TWO NOTES THE ZONE KEEPS, both about the terms it deliberately does NOT
