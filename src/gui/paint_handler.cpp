@@ -492,16 +492,25 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
 //              rather than one winning. The view
 //              group's lit radio shows exactly this through its hold since
 //              its press arms (the `radio` column, kToolbarChords).
-//   DISABLED — never hot and never pressed, so NO EDGE AT ALL, a
-//              disabled CHECKED button included (TOOLBAR_DrawFrame's
-//              `pressed_look = !non_interactive_state && (CDIS_SELECTED ||
-//              CDIS_CHECKED)`, CDIS_DISABLED being non-interactive — the
-//              source read 2026-10-07 late evening); that button keeps the
-//              checker (the pattern asks CDIS_HOT alone) and the shift, so a
-//              dead lamp still reads as lit (the roster's rule at
-//              paint_icon_row) — the view group's lit radio under the color
-//              picker's veil; the glyph ReactOS's saturate
-//              (icons::draw_disabled).
+//   DISABLED — never hot and never pressed, so no edge at rest; the
+//              glyph ReactOS's saturate (icons::draw_disabled). A disabled
+//              CHECKED button keeps its WHOLE checked face — the checker,
+//              the sunken line and the shift — so a dead lamp still reads as
+//              lit (the roster's rule at paint_icon_row), the disabled state
+//              only saturating the glyph. THE PRODUCT'S DEPARTURE (architect
+//              2026-10-08, "okay to proceed", on the view group greyed: the
+//              checker without the edge read as "a different color but not
+//              sunken" — a checked button that loses its edge when disabled
+//              no longer reads as checked; docs/engineering/
+//              win2000_deviations.md): ReactOS's toolbar.c drops the edge on
+//              a disabled checked button (TOOLBAR_DrawFrame's `pressed_look =
+//              !non_interactive_state && (CDIS_SELECTED || CDIS_CHECKED)`,
+//              CDIS_DISABLED being non-interactive — the source read
+//              2026-10-07 late evening) and keeps the checker (the pattern
+//              asks CDIS_HOT alone); here the checked face is the checker
+//              INSIDE the sunken line whatever the enabled bit. The two
+//              chromes agree: Clearlooks already paints an insensitive
+//              active toggle sunken, GTK's own rule (paint_cl_tool_button).
 // The relief lines MITRE where the Hilight meets the Shadow, the product's
 // rule over DrawEdge's square join (paint_relief_frame).
 ButtonBoxFace paint_toolbar_box(cairo_t* cr, const GuiRect& r, bool lamp,
@@ -521,7 +530,7 @@ ButtonBoxFace paint_toolbar_box(cairo_t* cr, const GuiRect& r, bool lamp,
                            GuiRect{r.x + 2 * lw, r.y + 2 * lw, r.w - 4 * lw,
                                    r.h - 4 * lw},
                            r.x, r.y, palette().hilight, palette().ground);
-    if (enabled && (pressed || lamp))
+    if (pressed || lamp)   // enabled or not: the DISABLED departure above
         paint_relief_sunken_outer(cr, r);
     else if (hot_face)
         paint_relief_raised_inner(cr, r);
@@ -5779,17 +5788,24 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // type of modal"): its surface is the card on the well, so ROW 8 STAYS
 // PAINTED AND ACTING under it exactly as without it — the clock, the state
 // line and every roster button with its truthful enabling, its hot face,
-// its tooltip and its press-and-lift. THE DELIBERATE ASYMMETRY, recorded
-// here: under the color picker row 8 is ON for the POINTER AND THE PEN
-// ALONE — the KEYBOARD STAYS THE PICKER'S (its router consumes every key,
-// on_key, so the hex field types on glass), and THE WELL AND THE TOP STRIP
-// STAY BEHIND ITS VEIL (a press there is the card's or consumed, the top
-// strip's buttons gray). A row-8 lift's chord passes the picker's key layer
-// as the pointer's own (GuiInputHandler::bottom_row_chord_in_flight_); the
-// card's palette menu and element list, drawn last, cover the row where
-// they hang over it, and a press there is theirs (the press router's veil).
-// A PROMPT over the picker (the palette Delete question) owns the row as
-// every prompt does.
+// its tooltip, its press-and-lift and its hold-repeat — AND SO DOES THE
+// ICON ROW (architect 2026-10-08, "the fact that the top row is disabled
+// under the picker also needs to be updated"). THE DELIBERATE ASYMMETRY,
+// recorded here: under the color picker THE TWO BUTTON ROWS ARE ON for the
+// POINTER AND THE PEN ALONE, and the picker veils THE WELL, THE MENU ROW and
+// THE KEYBOARD — the keyboard stays the picker's (its router consumes every
+// key, on_key, so the hex field types on glass), a press on the well is the
+// card's or consumed, and the menu row is the list owners' (its Edit and
+// Settings anchors dead, File live for Quit, the caption passing). Each
+// button grays only where its own act refuses under the picker — the
+// openers of another list owner or an editor (redesign_button_enabled's
+// color picker terms) — never wholesale. A roster lift's chord passes the
+// picker's key layer as the pointer's own
+// (GuiInputHandler::roster_chord_in_flight_); the card's palette menu and
+// element list, drawn last, cover a row where they hang over it, and while
+// either is down the press is theirs (the press router's veil). A PROMPT
+// over the picker (the palette Delete question) owns the row as every
+// prompt does.
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
     if (app.render_player.active) return true;

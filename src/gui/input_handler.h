@@ -2936,9 +2936,11 @@ private:
     // THE FIFTH ModalDialogOwner, the two list owners' shape one surface
     // over: its predicate is the mode bit (color_picker_active), its veil
     // consumes every press outside its card but the live File anchor's, the
-    // caption's and — since 2026-10-07 evening, row 8 staying on under it
-    // for the pointer (modal_owns_bottom_row, paint_handler.cpp) — ROW 8'S
-    // while neither its list nor its menu is down, its router is the whole
+    // caption's and — the two button rows staying on under it for the
+    // pointer (row 8 since 2026-10-07 evening, the icon row since
+    // 2026-10-08; modal_owns_bottom_row, paint_handler.cpp) — THE ICON ROW'S
+    // AND ROW 8'S while neither its list nor its menu is down, its router is
+    // the whole
     // plastic vocabulary while it
     // stands (route_color_picker_key: Esc closes an open list or menu first
     // and the picker at the next press, Ctrl+S saves, Ctrl+Q falls
@@ -2956,17 +2958,18 @@ private:
     //     chooser's open, the palette menu button's open (when painted
     //     live), a slider track's thumb seat-and-arm (the scrub's rule), the
     //     ring's or the triangle's arm, OLD's revert, or a push button's arm
-    //     through the dialogs' shared arm; off the card, consumed (row 8's
-    //     press never reaches it unless a popup is down — the veil hands
-    //     it to the row's own claim). Every target is read from the
+    //     through the dialogs' shared arm; off the card, consumed (a press
+    //     on the icon row or row 8 never reaches it unless a popup is down —
+    //     the veil hands it to the rows' own claim). Every target is read
+    //     from the
     //     published stash, never derived live.
     //   color_picker_motion — a live gesture's carry (the slider, the ring,
     //     the triangle; the button lost ends it), else the list's and the
     //     menu's hover, the dialog buttons' walk and the roster's.
     //   color_picker_release — the gesture's end (already applied), a menu
     //     row's act (GuiColorPicker's preset acts) or a list row's select,
-    //     or the dialog buttons' shared dispatch (a row-8 arm's lift goes to
-    //     finish_chrome_press_release instead, on_button_release's block).
+    //     or the dialog buttons' shared dispatch (a roster arm's lift goes
+    //     to finish_chrome_press_release instead, on_button_release's block).
     //   clear_color_picker_drag — the gesture's hard end (the pointer-leave
     //     hook, the button-lost arms).
     // (close_color_picker and clear_color_picker_drag are declared public
@@ -2984,20 +2987,22 @@ private:
     // The palette menu: open (the active preset's name lit) or close, the
     // list's damage rule.
     void set_color_picker_menu_open(bool open);
-    // THE BOTTOM ROW'S CHORD IN FLIGHT (architect 2026-10-07 evening: row 8
-    // stays on under the color picker, the asymmetry recorded at
-    // modal_owns_bottom_row, paint_handler.cpp): true for the span of one
-    // ROW-8 button's own dispatch — its lift's chord
-    // (finish_chrome_press_release), each fire of its hold-repeat
-    // (tick_chrome_press_repeat) and the arm's eligibility probe
-    // (arm_redesign_press) — and false everywhere else. Its TWO READERS are
-    // the color picker's key layer: on_key's router block and
-    // repeat_eligible's picker arm, which let the chord through as the
-    // pointer's own, so the row's act and its hold-repeat run exactly as
-    // without the picker while every PHYSICAL key stays the picker's.
-    // Saved and restored around each span (BottomRowChordScope,
+    // THE ROSTER'S CHORD IN FLIGHT (architect 2026-10-07 evening for row 8,
+    // 2026-10-08 for the icon row: the two button rows stay on under the
+    // color picker, the asymmetry recorded at modal_owns_bottom_row,
+    // paint_handler.cpp): true for the span of one ROSTER button's own
+    // dispatch — its lift's chord (finish_chrome_press_release), each fire
+    // of its hold-repeat (tick_chrome_press_repeat) and the arm's
+    // eligibility probe (arm_redesign_press) — and false everywhere else.
+    // Its TWO READERS are the color picker's key layer: on_key's router
+    // block and repeat_eligible's picker arm, which let the chord through as
+    // the pointer's own, so the button's act and its hold-repeat run exactly
+    // as without the picker while every PHYSICAL key stays the picker's.
+    // (Set for every roster dispatch, picker or not: both readers ask the
+    // picker's bit first, so outside it the flag answers nothing.)
+    // Saved and restored around each span (RosterChordScope,
     // input_pointer.cpp), never cleared.
-    bool bottom_row_chord_in_flight_ = false;
+    bool roster_chord_in_flight_ = false;
 
     // AFTER A PEN LIFT THE HOT FACE WAITS FOR MOTION (architect 2026-10-07,
     // on the glass under Windows 2000: a tapped toggle stayed in its

@@ -74,7 +74,8 @@ struct GuiInputHandler;
 //    keys, not the surface): an engine key IS the piece, so a locked active
 //    tab refuses it with the lock's own card, while items 1 and 2 above —
 //    the device keys and the band — commit on a locked tab. The opener
-//    refuses nothing; the account is at GuiSettingsEditor::open.
+//    refuses no lock (only a standing color picker, 2026-10-08); the
+//    account is at GuiSettingsEditor::open.
 //
 // THE CHOICE EDITOR (architect 2026-10-07 evening: "a drop-down for chrome
 // and theme at the very least"; the design the planner's, delegated) STANDS

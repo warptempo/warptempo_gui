@@ -1371,6 +1371,12 @@ void GuiRenderPlayer::tick() {
 bool GuiRenderPlayer::open() {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.active) return false;
+    // A STANDING COLOR PICKER IS SILENT (2026-10-08; the list owners'
+    // openers refuse under each other): the picker's router consumes `l`
+    // and `'`, and the icon row's Listen button, acting under the picker
+    // since 2026-10-08, is grayed there on this refusal
+    // (redesign_button_enabled).
+    if (app.color_picker.active) return false;
     if (app.source_audio_path.empty()) return false;
     // A RENDER RUN REFUSES THE OPEN (architect 2026-09-15): the player's close
     // and its Up re-express the view through unload_item, whose target-view

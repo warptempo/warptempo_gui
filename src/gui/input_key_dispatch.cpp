@@ -3036,6 +3036,13 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 void GuiInputHandler::open_history_commit_editor() {
     if (!app.history_mode.active) return;
     if (text_editor::is_active(app.commit_title_editor)) return;
+    // A STANDING COLOR PICKER IS SILENT (2026-10-08; the openers refuse under
+    // each other), the WHOLE act and not only its title editor: the
+    // picker's router answers Ctrl+S as the plain disk save
+    // (route_color_picker_key), so what reaches here under it is the icon
+    // row's Save button in the view, acting under the picker since
+    // 2026-10-08 and grayed there on this refusal (redesign_button_enabled).
+    if (app.color_picker.active) return;
     // THERE MUST BE A CLONE TO COMMIT INTO, and that is this act's outermost
     // premise (architect 2026-09-04): a visit standing on the LOCAL fallback
     // opened without a bootstrapped remote walk, so there is no repository this
@@ -4487,11 +4494,12 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // editor's own arm below answers (the field's motion, edit and
     // printable keys repeat as every editor's do); without it nothing
     // repeats — the card has no ring and no walk, and Esc is one-shot.
-    // A ROW-8 BUTTON'S HOLD IS NOT A KEY (architect 2026-10-07 evening, row
-    // 8 on under the picker): its probe and its fires skip this arm
-    // (bottom_row_chord_in_flight_) and are judged as without the picker.
+    // A ROSTER BUTTON'S HOLD IS NOT A KEY (architect 2026-10-07 evening for
+    // row 8, 2026-10-08 for the icon row, both on under the picker): its
+    // probe and its fires skip this arm (roster_chord_in_flight_) and are
+    // judged as without the picker.
     if (app.color_picker.active && !app.prompt.active &&
-        !bottom_row_chord_in_flight_ &&
+        !roster_chord_in_flight_ &&
         !text_editor::is_active(app.color_picker.field_editor))
         return false;
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
@@ -6869,8 +6877,10 @@ void GuiInputHandler::open_project_picker() {
     if (picker_active()) return;
     // A STANDING COLOR PICKER IS SILENT TOO (2026-10-07; the openers refuse
     // under each other): the File menu's Open Project row is grayed under
-    // it (dropdown_item_enabled) and its router consumes Ctrl+O, so this arm
-    // is the opener's own shape rather than a road.
+    // it (dropdown_item_enabled), its router consumes Ctrl+O, and the icon
+    // row's Open Project button — acting under the picker since 2026-10-08
+    // — is grayed there on this refusal (redesign_button_enabled), so this
+    // arm is the opener's own shape rather than a road.
     if (color_picker_active()) return;
     if (app.loading) return;
 
@@ -7778,6 +7788,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // never rests without its editor (the mode's only exits are the editor's
     // own: Esc, and Enter's dispatch tail).
     if (key == GuiKeys::B && ctrl && !shift && !alt) {
+        // A STANDING COLOR PICKER IS SILENT (2026-10-08; the openers refuse
+        // under each other): the bpm editor is a modal surface, and the
+        // picker's router owns every key. The picker's router consumes
+        // Ctrl+B itself; what reaches here under it is the icon row's BPM
+        // Iterations button, acting under the picker since 2026-10-08 and
+        // grayed there on this refusal (redesign_button_enabled).
+        if (color_picker_active()) return true;
         // EVERY ARM OF THIS GATE NAMES THE RULE IT BROKE (architect
         // 2026-08-30, the strictness ruling). The ladder is ten tests deep and
         // its whole answer used to be one indistinguishable non-response — the

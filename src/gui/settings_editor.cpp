@@ -123,7 +123,9 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     // whole, so whatever that one owner decides is what this route gets, and
     // the is_active test on the next line is the belt that turns an open which
     // did not take into this route's silent return — the seed never runs.
-    // Since 2026-09-04 the opener refuses nothing, the read-only decision
+    // Since 2026-09-04 the opener refuses nothing but a standing editor and
+    // (2026-10-08) a standing color picker — whose Settings menu is dead, so
+    // this route never meets it — the read-only decision
     // having moved to the key's own commit arm (the account is at open()), so
     // a locked tab's menu click raises the editor like any other and the
     // commit says the lock's sentence where the key is the piece's.
@@ -305,6 +307,11 @@ void GuiSettingsEditor::open() {
     // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole
     // answer — a second `;` asks for what is already there.
     if (text_editor::is_active(app.settings_editor)) return;
+    // A STANDING COLOR PICKER IS SILENT (2026-10-08; the openers refuse under
+    // each other): the picker's router consumes `;`, and the icon row's
+    // Settings button, acting under the picker since 2026-10-08, is grayed
+    // there on this refusal (redesign_button_enabled).
+    if (app.color_picker.active) return;
     // THE MODAL PLAYBACK STOP IS THE OPENER'S, past the return above — the
     // `h` view's own load raise takes the same shape ("playback halts only
     // when the modal actually opens, so a refused open leaves a listening

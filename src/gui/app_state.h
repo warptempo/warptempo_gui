@@ -6340,22 +6340,26 @@ struct AppState {
     // palette menu's Delete question stands over it, DELETE_PALETTE_CONFIRM),
     // and NEVER BESIDE AN EDITOR OTHER THAN ITS OWN ONE FIELD —
     // its opener refuses under every editor, its router consumes every
-    // editor opener, and the three never stand together (each opener
+    // editor opener's key, and the three never stand together (each opener
     // refuses under the others: the Settings menu that opens this one is
-    // dead under the two list owners, and their own roads are consumed by
-    // this one's router and veil). ITS STASH IS THIS ONE'S: the card is the
+    // dead under the two list owners, their keys are consumed by this one's
+    // router, and the icon-row buttons that would open them or an editor —
+    // acting under this one since 2026-10-08 — refuse in their openers'
+    // bodies and gray, redesign_button_enabled). ITS STASH IS THIS ONE'S: the
+    // card is the
     // modal's `box`, its one field's interior its `field` and the three
     // push buttons its `buttons` (color_picker_act below), so the hover
     // walk, the press arm, the lift's dispatch, the tooltip wait and the
     // pressed face are the dialogs' own; everything else it publishes (the
     // chooser, the sliders, the swatches, the wheel, the palette menu
     // button and its menu) is its own stash
-    // (ColorPicker::Stash). IT IS THE ONE OWNER THE BOTTOM ROW DOES NOT
-    // YIELD TO (architect 2026-10-07 evening, "a different type of modal"):
-    // row 8 stays painted and acting under it for the pointer and the pen,
-    // while the keyboard stays the picker's and the well and the top strip
-    // stay behind its veil — the asymmetry is recorded at
-    // modal_owns_bottom_row (paint_handler.cpp).
+    // (ColorPicker::Stash). IT IS THE ONE OWNER THE BUTTON ROWS DO NOT
+    // YIELD TO (architect 2026-10-07 evening for row 8, "a different type of
+    // modal"; 2026-10-08 for the icon row, "the fact that the top row is
+    // disabled under the picker also needs to be updated"): the icon row
+    // and row 8 stay painted and acting under it for the pointer and the
+    // pen, while the picker veils THE WELL, THE MENU ROW and THE KEYBOARD —
+    // the asymmetry is recorded at modal_owns_bottom_row (paint_handler.cpp).
     enum class ModalDialogOwner {
         None, Prompt, Editor, Player, Picker, ColorPicker
     };
@@ -15108,14 +15112,18 @@ inline bool redesign_button_enabled(const AppState& a,
     // and File alone stayed lit under it, which is the shape this ruling
     // restores.)
     if (folder_overlay_stands(a)) return false;
-    // AND THE COLOR PICKER GRAYS IT THE SAME WAY (2026-10-07): its veil
-    // consumes every press outside its card but the live File anchor's and
-    // the caption's (the two list owners' exemptions), and this line is the
-    // face that says so — FOR THE TOP STRIP: ROW 8 STAYS ON under it
-    // (architect 2026-10-07 evening, the asymmetry at modal_owns_bottom_row,
-    // paint_handler.cpp), so its seventeen fall through to their own arms.
-    if (a.color_picker.active && !redesign_button_in_transport_row(b))
-        return false;
+    // THE COLOR PICKER GRAYS NOTHING WHOLESALE (architect 2026-10-07 evening
+    // for row 8, 2026-10-08 for the icon row): the two button rows stay on
+    // under it, painted and acting as without it (the asymmetry at
+    // modal_owns_bottom_row, paint_handler.cpp), so every button answers at
+    // its own arm. THE ACTS THE PICKER MAKES A NO-OP are the openers of
+    // another list owner or an editor, which refuse under it as the openers
+    // refuse under each other — each carries its own `color_picker.active`
+    // term below: Open Project, Save inside the `h` view, Listen, Settings,
+    // BPM Iterations and Load in Place (re-derived 2026-10-08 by reading
+    // every icon-row act's body; no row-8 act opens anything). The menu
+    // anchors answered above (menu_anchor_live: Edit and Settings dead under
+    // the picker, File live for Quit).
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -15219,8 +15227,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // REVERT, ADDS NOTHING HERE under the twin rule: the plain act is
         // live wherever the roster is, and Revert's own refusals (a
         // publishing checkpoint, the folder checks) card at revert_project.
+        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the opener refuses
+        // under it (open_project_picker's color picker arm), and the File
+        // menu's two rows this button carries, Open Project and Revert, are
+        // both grayed under it (dropdown_item_enabled), so neither half acts.
         case RedesignButton::OpenProject:
-            return true;
+            return !a.color_picker.active;
         // THE WALK, UNDER THE TWIN RULE (architect 2026-09-26): its
         // ctrl-click is Ctrl+Tab, the same tab switch, whose arm
         // (handle_tab_switch_keys) has no refusal in any state the roster is
@@ -15337,8 +15349,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // panel on 2026-09-30, and the face reads the plain act alone. The
         // per-tick roster comparator (main.cpp) carries the run's start and
         // end onto the face.
+        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the player is a
+        // list owner, and its opener refuses under the picker
+        // (GuiRenderPlayer::open).
         case RedesignButton::IconListen:
-            return !load_in_place_render_blocked(a);
+            return !load_in_place_render_blocked(a) && !a.color_picker.active;
         // THE READ-ONLY TOGGLE MIRRORED NOTHING UNTIL 2026-09-10 (2026-08-14):
         // bare `o` was always meaningful on a loaded piece — it locks a
         // writable tab and unlocks a locked one — so there was nothing to
@@ -15554,9 +15569,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // admissions and this button is in the lock's membership, so the face
         // greys with the lamp and wears the lock's card. THE LOCK RANKS FIRST
         // here as it does at the key, ahead of the sweep's own ten sentences.
+        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the act opens the
+        // flag's BPM editor, a keyboard-modal editor the picker's router
+        // would starve, so the Ctrl+B arm refuses under the picker
+        // (handle_mode_keys).
         case RedesignButton::IconBpm:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
+                   !a.color_picker.active &&
                    bpm_sweep_open_actionable(a, audio);
         // THE SETTINGS BUTTON (architect 2026-09-29) IS BARE `;` AND GREYS
         // EXACTLY WHERE THE KEY REFUSES: `;` is off read_only_key_blocked's
@@ -15564,13 +15584,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // tab"), the iteration gate inherits that refusal (the membership
         // predicate names it), and the `h` view consumes it through the
         // derived partition at the head of this body. The opener itself
-        // (GuiSettingsEditor::open) refuses nothing past those gates — an
-        // editor already standing is the veil's, whose press never reaches
-        // this button. It is NOT the menu row's Settings anchor, whose rows
-        // open on a locked tab; that anchor answers at the head of this body.
+        // (GuiSettingsEditor::open) refuses nothing past those gates but a
+        // standing color picker (below) — an editor already standing is the
+        // veil's, whose press never reaches this button. It is NOT the menu
+        // row's Settings anchor, whose rows open on a locked tab; that anchor
+        // answers at the head of this body.
+        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the settings
+        // editor is a dialog editor, and its opener refuses under the picker
+        // (GuiSettingsEditor::open).
         case RedesignButton::IconSettings:
             return !active_view_state(a).read_only &&
-                   !iteration_lock_greys(a, b);
+                   !iteration_lock_greys(a, b) &&
+                   !a.color_picker.active;
         // FLATTEN READS ONE PREDICATE AND NOTHING ELSE (2026-09-19):
         // tempo_flatten_actionable composes BOTH LOCKS itself, so this arm
         // asks neither separately — the rule against a face restating an
@@ -16179,10 +16204,14 @@ inline bool redesign_button_enabled(const AppState& a,
         //     inside the view and the one that cards. So this term is the
         //     face's own mirror of that gate — the read-only arm above said it
         //     for this button until the move.
+        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the load's
+        // confirmation refuses to rise under the picker
+        // (history_load_in_place's list-owner arm).
         case RedesignButton::IconLoadInPlace:
             return a.history_mode.active &&
                    a.history_mode.walk_count() > 0 &&
-                   !active_view_state(a).read_only;
+                   !active_view_state(a).read_only &&
+                   !a.color_picker.active;
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -16255,14 +16284,22 @@ inline bool redesign_button_enabled(const AppState& a,
         // 2026-10-05, SAVE IS THE DIRTY MARK): plain_save_actionable, the
         // one predicate the keys read too (the ruling and its trade-off are
         // there).
+        //
+        // AND IN THE VIEW A STANDING COLOR PICKER GRAYS IT (2026-10-08): the
+        // Save-and-Commit act asks its title on a dialog editor, so the act
+        // refuses whole under the picker (open_history_commit_editor's
+        // color picker arm) — the picker's own Ctrl+S being the plain disk
+        // save (route_color_picker_key), never this act. Outside the view
+        // the button is that plain save and acts under the picker.
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty() &&
                    !a.history_checkpoint_in_flight &&
                    (!a.history_mode.active
                         ? plain_save_actionable(a)
-                        : (history_checkpoint_actionable(a) ||
-                           history_pull_actionable(a) ||
-                           history_github_recheck_actionable(a)));
+                        : (!a.color_picker.active &&
+                           (history_checkpoint_actionable(a) ||
+                            history_pull_actionable(a) ||
+                            history_github_recheck_actionable(a))));
         // UNDO'S AND REDO'S THIRD TERM IS THE RESTRICT-UNDO-TO-CURRENT-VIEW
         // LAMP (architect 2026-09-04; its question the view since 2026-09-22),
         // and it is the truthful-button rule's own shape: with the lamp lit
@@ -18223,16 +18260,17 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // holds the anchors alone, and an ANCHOR's open frame is the painter's own
 // open condition (paint_menu_row), not this term.
 //
-// AND UNDER THE COLOR PICKER ONLY ROW 8 IS IN THE ZONE, and none of it while
-// the card's element list or palette menu is down (architect 2026-10-07
-// evening, row 8 on under the picker — modal_owns_bottom_row,
-// paint_handler.cpp): the top strip is behind the picker's veil, and a
-// popup of the card owns the pointer as the dropdown does (a press anywhere
-// off its rows puts it away, color_picker_press).
+// AND UNDER THE COLOR PICKER THE TWO BUTTON ROWS ARE IN THE ZONE — the icon
+// row and row 8, never the menu row's anchors — and none of them while the
+// card's element list or palette menu is down (architect 2026-10-07 evening
+// for row 8, 2026-10-08 for the icon row, both on under the picker —
+// modal_owns_bottom_row, paint_handler.cpp): the menu row is behind the
+// picker's veil, and a popup of the card owns the pointer as the dropdown
+// does (a press anywhere off its rows puts it away, color_picker_press).
 inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
     if (a.dropdown.open()) return false;
     if (a.color_picker.active)
-        return redesign_button_in_transport_row(b) &&
+        return !redesign_button_is_menu_anchor(b) &&
                !a.color_picker.chooser_open && !a.color_picker.menu_open;
     return true;
 }

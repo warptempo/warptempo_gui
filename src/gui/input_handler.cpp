@@ -388,13 +388,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // player's own: its slider and wheel drags are members of
     // any_pointer_gesture_active, and while one stands every key is
     // swallowed but the drag-modal gate's Ctrl+Q hatch.
-    // ROW 8'S OWN CHORD PASSES (architect 2026-10-07 evening): a row-8
-    // button's lift or hold-repeat fire under the picker is the POINTER's
-    // dispatch, not a key, and the row stays on under the picker
-    // (modal_owns_bottom_row's asymmetry, paint_handler.cpp), so it skips
-    // this block and meets every other gate as without the picker
-    // (bottom_row_chord_in_flight_).
-    if (app.color_picker.active && !bottom_row_chord_in_flight_) {
+    // A ROSTER BUTTON'S OWN CHORD PASSES (architect 2026-10-07 evening for
+    // row 8, 2026-10-08 for the icon row): a button's lift or hold-repeat
+    // fire under the picker is the POINTER's dispatch, not a key, and the two
+    // button rows stay on under the picker (modal_owns_bottom_row's
+    // asymmetry, paint_handler.cpp), so it skips this block and meets every
+    // other gate as without the picker (roster_chord_in_flight_).
+    if (app.color_picker.active && !roster_chord_in_flight_) {
         if (any_pointer_gesture_active(app)) {
             if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
                 notifications.notify(AppState::NotificationClass::Normal,
