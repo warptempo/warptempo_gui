@@ -572,20 +572,25 @@ void GuiInputCore::maybe_fire_repeat() {
 // ---------------------------------------------------------------------------
 
 void GuiInputCore::pointer_enter(double x, double y) {
+    pointer_focus_at(x, y);
+    // Synthesize a motion delivery so consumers register the pointer
+    // as present at the entry coordinates. Matches how most clients
+    // treat enter — the first "the pointer is here" notification.
+    deliver_motion(pointer_x_, pointer_y_);
+}
+
+void GuiInputCore::pointer_focus_at(double x, double y) {
+    // The enter's focus and position, and nothing delivered (the contract and
+    // its one caller are at the declaration).
     pointer_focused_ = true;
     pointer_x_ = containing_pixel(x);
     pointer_y_ = containing_pixel(y);
     // AN ABSOLUTE POSITION IS THE TRUTH COMING BACK: whatever a past capture left
     // virtual is superseded here, so cursor kinds are recorded again — before the
-    // synthesized motion below, whose whole job is to re-derive one. Guarded on
+    // enter's synthesized motion, whose whole job is to re-derive one. Guarded on
     // !pointer_captured_ because a lock's own virtual travel outranks a stray
     // enter (the lock keeps the pointer on this surface, so it should not arrive).
     if (!pointer_captured_) pointer_position_unknown_ = false;
-
-    // Synthesize a motion delivery so consumers register the pointer
-    // as present at the entry coordinates. Matches how most clients
-    // treat enter — the first "the pointer is here" notification.
-    deliver_motion(pointer_x_, pointer_y_);
 }
 
 void GuiInputCore::pointer_leave() {
@@ -1350,7 +1355,10 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     // pointer — its lift, or a hard end taking it away — means
     // the unified pointer is now wherever the MOUSE is:
     //   * physical pointer FOCUSED (pointer_enter / pointer_leave, which touch
-    //     never writes) — synthesize an ordinary MOTION at its last
+    //     never writes, and the Android pen's lift through pointer_focus_at —
+    //     the pen goes on hovering where it lifted, architect 2026-10-07, so
+    //     its lift is no leave and the position below is the lift's) —
+    //     synthesize an ordinary MOTION at its last
     //     platform-tracked position (pointer_x_/pointer_y_, the physical
     //     pointer's own
     //     fields under the recorded split; after a touch-armed capture the
@@ -1370,7 +1378,7 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     //     TouchLift, the hard end OrdinaryLeave. The hover tooltip is the
     //     consumer that tells them apart — a lift is a release under a
     //     pointer that has not moved, so the wait's button, its anchor and
-    //     its spent state stand across it and the S Pen hovering back on that
+    //     its spent state stand across it and a later hover on that
     //     button starts no wait until it has left it (the rule is at
     //     AppState::RedesignTooltip) — while a contact
     //     the window system took ends the tooltip's hover as a mouse leaving

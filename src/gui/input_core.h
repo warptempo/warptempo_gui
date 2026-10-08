@@ -175,11 +175,13 @@ enum GuiWindowEdge : unsigned {
 //     respect but one: THE CONTACT LIFTING IS NOT THE POINTER GOING AWAY for
 //     the hover tooltip (architect 2026-09-29), which keeps its button, its
 //     slop anchor, its seen position and the button's spent state across it
-//     exactly as it keeps them across a mouse's release, so after a tap the
-//     S Pen's hover starts no wait on that button until it has left it and
-//     arrived again — Windows' rule after a click (2026-10-06; the rule is at
+//     exactly as it keeps them across a mouse's release, so a later hover
+//     starts no wait on that button until it has left it and arrived again —
+//     Windows' rule after a click (2026-10-06; the rule is at
 //     AppState::RedesignTooltip). Every other consumer reads it as it reads
-//     OrdinaryLeave.
+//     OrdinaryLeave. (The S Pen's lift off an empty glass takes no leave at
+//     all since 2026-10-07: the Android backend focuses the pointer at the
+//     lift, so the fork's restore arm runs — pointer_focus_at.)
 // The distinction is read in one place, main.cpp's hook body, by exactly one
 // consumer: the tooltip's leave (end_tooltip_hover), which the contact's lift
 // (TouchLift) makes no leave at all, OrdinaryLeave being its hard end. Every
@@ -342,6 +344,21 @@ public:
     void forget_keyboard_state();
 
     void pointer_enter(double x, double y);
+    // THE CONTACT'S INSTRUMENT STAYS AS THE POINTER (architect 2026-10-07,
+    // the S Pen's lift): pointer_enter's focus and position with NO motion
+    // delivered, called by a backend immediately before the touch_up of the
+    // LAST contact when that contact's instrument goes on hovering where it
+    // lifted — the Android pen, whose lift is no leave (the rule is at the
+    // Android backend's hover arm). Nothing is delivered because the
+    // translation is still live (a motion now would carry its held button).
+    // The lift's own translation end then reads the pointer as focused and
+    // takes the focus fork's restore arm — the release, then an ordinary
+    // MOTION at this position instead of the leave
+    // (deliver_touch_translation_end) — so the hot face under the pen
+    // survives the lift; an end that delivers nothing (a nav gesture, the
+    // region, the caret) leaves the pointer resting here for the backend's
+    // next hover report, a motion.
+    void pointer_focus_at(double x, double y);
     // Always the ordinary leave (OrdinaryLeave: every Wayland call and the
     // Android pen's hover ending); TouchLift is
     // deliver_touch_translation_end's alone and does not come through here
@@ -1646,7 +1663,10 @@ private:
     // deliver_touch_translation_end reads pointer_focused_ —
     // and pointer_x_/pointer_y_ on the focused arm — because the translation's
     // END is a MOUSE question ("is the mouse resting in the window, and
-    // where"), not a touch delivery to gate.
+    // where"), not a touch delivery to gate. (The Android pen answers it as
+    // the mouse would: the backend's pointer_focus_at at the pen's lift is
+    // a pointer door, the pen going on as the hovering pointer, not a touch
+    // write — architect 2026-10-07.)
     //
     // ANY CONTACT DOWN PAUSES THE FOLLOW CHASE — the one thing outside this
     // layer that reads the phase machine, through touch_contact_active()

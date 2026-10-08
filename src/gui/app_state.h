@@ -3404,19 +3404,26 @@ enum class SettingsPopupAct { EditKey, PickColors };
 // settings_editor.h). A CHOICE row names its DOMAIN'S SOURCE — the count
 // and the i-th value, in the order the list shows them — so a domain is
 // read from its own owner and never copied into this table; a TEXT row
-// names none (static_asserted below).
+// names none (static_asserted below). THE VALUE IS WHAT THE COMMIT WRITES,
+// THE LABEL WHAT THE COMBO AND ITS LIST SHOW (TEXT: names Title Case) — both
+// read from the domain's owner.
 enum class SettingsEditorKind { Text, Choice };
 struct SettingsChoiceSource {
     int         (*count)();
     const char* (*value)(int);
+    const char* (*label)(int);
 };
 // THE CHROME'S DOMAIN: the chrome table (kGuiChromeSpecs, chrome_spec.h),
 // its two keys in the table's order — windows-2000 then clearlooks, the
-// base first.
+// base first — shown by their display names, the ones the color picker's
+// palette menu shows (ChromeSpec::display_name, architect 2026-10-07).
 inline constexpr SettingsChoiceSource kChromeChoiceSource{
     +[]() -> int { return static_cast<int>(std::size(kGuiChromeSpecs)); },
     +[](int i) -> const char* {
         return kGuiChromeSpecs[static_cast<std::size_t>(i)]->key;
+    },
+    +[](int i) -> const char* {
+        return kGuiChromeSpecs[static_cast<std::size_t>(i)]->display_name;
     },
 };
 struct SettingsPopupItem {
@@ -7231,15 +7238,18 @@ struct AppState {
     //     product and are not terms (a press of either still spends, as a
     //     click of any button hides Windows' hint).
     //   * A TRANSLATED CONTACT'S LIFT IS NOT THE POINTER GOING AWAY (architect
-    //     2026-09-29): the touch translation ends a finger's or the S Pen's
-    //     contact with a release and then a leave (TouchLift), and that leave
-    //     keeps the wait's button, its anchor and the seen position at the
-    //     lift point (GuiInputHandler::end_tooltip_hover), and with the button
-    //     its spent state: the tap's press spent it, so the pen's hover on
-    //     that button starts no wait however it moves, and the hint comes back
-    //     only once the hover leaves the button and arrives again — exactly
-    //     Windows' rule on a mouse after a click; a re-entry onto another
-    //     button is an arrival. Every other leave forgets them.
+    //     2026-09-29): the touch translation ends a contact with a release and
+    //     then a leave (TouchLift), and that leave keeps the wait's button,
+    //     its anchor and the seen position at the lift point
+    //     (GuiInputHandler::end_tooltip_hover), and with the button its spent
+    //     state: the tap's press spent it, so a hover on that button starts
+    //     no wait however it moves, and the hint comes back only once the
+    //     hover leaves the button and arrives again — exactly Windows' rule on
+    //     a mouse after a click; a re-entry onto another button is an arrival.
+    //     Every other leave forgets them. THE S PEN'S LIFT OFF AN EMPTY GLASS
+    //     takes no leave at all (architect 2026-10-07): the pen stays the
+    //     pointer at its lift and the translation ends with a motion there,
+    //     which is that same mouse after its click, spent button and all.
     // No timer object and no callback: GuiInputHandler::tick_tooltip reads the
     // two deadlines on the run loop's existing tick and damages once per edge;
     // note_tooltip_hover is the one writer of the wait.
@@ -8542,6 +8552,9 @@ struct AppState {
     }
     const char* settings_choice_value(int i) const {
         return settings_choice_row().choices->value(i);
+    }
+    const char* settings_choice_label(int i) const {
+        return settings_choice_row().choices->label(i);
     }
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07), the fourth dialog

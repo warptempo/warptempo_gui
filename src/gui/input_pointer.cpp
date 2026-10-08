@@ -9947,11 +9947,14 @@ void GuiInputHandler::hide_shift_tooltip() {
 // the contact (note_tooltip_hover's held arm), so both stand at the lift
 // point with the seen position beside them — the state a mouse's release
 // leaves — and so does `spent`, the tap's press having spent the button.
-// The S Pen hovering back into the plane then arrives as an enter whose walk
-// is the model's own: on the same button it starts no wait however far it
-// moves (the button is spent until the hover leaves it), and onto another
-// button it is an arrival. A finger has no hover after its lift, and its
-// next contact's entry motion already reads held, so nothing changes for it.
+// A hover that follows (the S Pen's after a lift that left a finger on the
+// glass) arrives as an enter whose walk is the model's own: on the same
+// button it starts no wait however far it moves (the button is spent until
+// the hover leaves it), and onto another button it is an arrival. The pen's
+// lift off an empty glass never comes here (architect 2026-10-07): the pen
+// stays the pointer and the translation ends with a motion at the lift, the
+// mouse's own case. A finger has no hover after its lift, and its next
+// contact's entry motion already reads held, so nothing changes for it.
 // THE HARD LEAVE forgets the spent button with the hovered one: leaving the
 // window or the plane is leaving the tool.
 void GuiInputHandler::end_tooltip_hover(TooltipHoverEnd end) {

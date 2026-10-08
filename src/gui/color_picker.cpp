@@ -58,40 +58,24 @@ const char* role_display_name(std::size_t role) {
 // -- THE PRESETS ---------------------------------------------------------------
 
 namespace {
-// THE DEFAULTS' SHOWN NAMES, one per default palette in its order (asserted
-// below against kGuiDefaultPalettes, so a default added there names its row
-// here).
-struct DefaultDisplayName {
-    const char* key;
-    const char* name;
-};
-constexpr DefaultDisplayName kDefaultDisplayNames[] = {
-    {"windows-2000", "Windows 2000"},
-    {"clearlooks",   "Clearlooks"},
-};
-static_assert(std::size(kDefaultDisplayNames) == std::size(kGuiDefaultPalettes));
-constexpr bool display_names_follow_the_defaults() {
-    for (std::size_t i = 0; i < std::size(kGuiDefaultPalettes); ++i)
-        if (std::string_view(kDefaultDisplayNames[i].key) !=
-            kGuiDefaultPalettes[i].name)
-            return false;
-    return true;
-}
-static_assert(display_names_follow_the_defaults());
 // The name ask's cap is the name grammar's (text_editor.h).
 static_assert(text_editor::kMaxPendingCharsPaletteName ==
               static_cast<int>(kPaletteNameMaxBytes));
 } // namespace
 
+// A DEFAULT PALETTE IS SHOWN BY ITS VOCABULARY'S NAME (ChromeSpec::
+// display_name, the one source the Settings editor's Chrome combo reads too;
+// every default palette is one vocabulary's, palette_file.cpp's
+// defaults_follow_the_vocabularies).
 std::string palette_display_name(std::string_view name) {
-    for (const DefaultDisplayName& d : kDefaultDisplayNames)
-        if (name == d.key) return std::string(d.name);
+    for (const ChromeSpec* s : kGuiChromeSpecs)
+        if (name == s->default_palette) return std::string(s->display_name);
     return std::string(name);
 }
 
 bool is_default_display_name(std::string_view name) {
-    for (const DefaultDisplayName& d : kDefaultDisplayNames)
-        if (name == d.name) return true;
+    for (const ChromeSpec* s : kGuiChromeSpecs)
+        if (name == s->display_name) return true;
     return false;
 }
 

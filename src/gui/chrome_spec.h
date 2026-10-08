@@ -136,6 +136,12 @@ struct ChromeSpec {
     // THE VOCABULARY'S NAME, the `chrome` device key's value that chooses it
     // (is_chrome_key below).
     const char*        key;
+    // THE VOCABULARY'S SHOWN NAME, Title Case (TEXT: names Title Case): the
+    // one source of every place the user reads a vocabulary's name — the
+    // Settings editor's Chrome combo and its list (kChromeChoiceSource) and
+    // the color picker's name for the vocabulary's default palette
+    // (palette_display_name); the key stays the file grammar's.
+    const char*        display_name;
     // THE PAINTERS' SWITCH (GuiChromeVocabulary above).
     GuiChromeVocabulary vocabulary;
     // THE THEME A CONFIG WITH NO `theme` LINE WEARS under this chrome
@@ -278,6 +284,7 @@ struct ChromeSpec {
 // glyph ReactOS's saturate.
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .key                          = "windows-2000",
+    .display_name                 = "Windows 2000",
     .vocabulary                   = GuiChromeVocabulary::Win2000,
     .default_theme                = "windows-2000-standard",
     .default_palette              = "windows-2000",
@@ -390,6 +397,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
 //   folders, assets/icons/mist/).
 inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .key                          = "clearlooks",
+    .display_name                 = "Clearlooks",
     .vocabulary                   = GuiChromeVocabulary::Clearlooks,
     .default_theme                = "clearlooks",
     .default_palette              = "clearlooks",

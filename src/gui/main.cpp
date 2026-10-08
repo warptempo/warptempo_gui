@@ -1958,9 +1958,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // LEAVE FOR THE TOOLTIP at all (architect 2026-09-29): it is the release
     // of a press that already hard-ended the hint and spent its button, so
     // the wait's button, its anchor, the seen position and the spent state
-    // stand at the lift point as a mouse's release leaves them, and the S Pen
-    // hovering back on that button starts no wait until it has left it
-    // (end_tooltip_hover). Every other effect here
+    // stand at the lift point as a mouse's release leaves them, and a later
+    // hover on that button starts no wait until it has left it
+    // (end_tooltip_hover). (The S Pen's lift off an empty glass never reaches
+    // this body since 2026-10-07: the pen stays the pointer at its lift, the
+    // restore motion's arm — pointer_focus_at.) Every other effect here
     // reads every reason alike.
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
         app.pointer_in_window = false;

@@ -556,8 +556,10 @@ private:
     // Latest focus reading; see window_activated().
     bool window_activated_ = false;
     // THE S PEN IS HOVERING AS THE POINTER (2026-09-25): true between the
-    // pen's translated HOVER_ENTER (the core's pointer_enter) and the edge
-    // that ends it — HOVER_EXIT, a hover report or hovering button edge
+    // pen's translated HOVER_ENTER (the core's pointer_enter) — or the pen's
+    // lift off an empty glass, which is that enter (pointer_focus_at; the
+    // rule at on_motion_event's hover arm, architect 2026-10-07) — and the
+    // edge that ends it — HOVER_EXIT, a hover report or hovering button edge
     // above the GUI's plane (pen_report_in_plane), ANY first contact down (the pen's tip or a
     // finger), or focus loss, each delivering the core's pointer_leave. What
     // makes the doors sequence sanely is that one owner: a hover never

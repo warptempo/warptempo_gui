@@ -1731,10 +1731,36 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // before the tip's DOWN, and ANY first down below — the pen's or
             // a finger's — ends a hover that still stands, so the touch
             // translation's synthesized
-            // entry motion never meets a pointer already in and its lift's
-            // translation end takes the leave arm (no mouse is resting); the
-            // pen's lift back into hover is a fresh HOVER_ENTER. The EXIT
+            // entry motion never meets a pointer already in. The EXIT
             // drops the Ctrl bit — the pen has left the glass's reach.
+            //
+            // THE PEN'S LIFT IS NOT A LEAVE (architect 2026-10-07, his S Pen
+            // on a Windows 2000 toggle: "it blinks the bright color for an
+            // instant as I release or just after; my pen still near the
+            // screen: it is sunken and the color is dark"). A tip leaving the
+            // glass is in the plane by the latch's own rule (a contact report
+            // is IN), so the pen goes on being the pointer where it lifted:
+            // when its up leaves the glass EMPTY (ACTION_UP — the last
+            // contact) the UP arm focuses the core's pointer at the lift
+            // BEFORE the up (pointer_focus_at, which delivers nothing while
+            // the contact is still translated) and the hover stands from that
+            // moment (pen_hovering_), so the lift's translation end takes the
+            // core's focus fork — the release, then a MOTION at the lift
+            // instead of the leave (deliver_touch_translation_end) — and the
+            // hot face under the pen survives; the HOVER_ENTER the platform
+            // sends after the up is then a MOTION here, not an enter. The
+            // leave was the blink: comctl32's hot face over a checked button
+            // drops the pattern, so a leave between the lift and the
+            // re-entry painted the checker for a frame or more. THE HOVER
+            // STILL ENDS where it always did — a HOVER_EXIT, a report above
+            // the plane, a first down, focus loss — through end_pen_hover's
+            // ordinary leave. A pen lifting while another contact stays on
+            // the glass is no hover (hovers are dropped under a contact): its
+            // end takes the leave as before and its next hover is an enter;
+            // so does every finger's lift (a finger never hovers). A pen
+            // withdrawn out of range before the platform reports any hover
+            // leaves the pointer resting at the lift until the pen's next
+            // report or the next contact — a mouse resting where it clicked.
             //
             // A HOVER ABOVE THE GUI'S PLANE IS NOT A POINTER (architect
             // 2026-09-27: every pen hover effect acts only within the plane,
@@ -1789,8 +1815,10 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // or a finger (the hover arm's sequencing): HOVER NEVER OVERLAPS A
             // TRANSLATED CONTACT, so the touch below is the only pointer the
             // core is translating, its synthesized entry motion never meets a
-            // pointer already in, and its lift's translation end takes the
-            // leave arm rather than restoring the stale hover point. A hover
+            // pointer already in, and its lift's translation end never
+            // restores the stale hover point (it takes the leave, or — the
+            // pen's own lift off an empty glass — the pointer the UP arm
+            // focuses at the lift itself). A hover
             // stands only while nothing is on the glass (hover motion is
             // dropped under a contact), so ending it here unconditionally is
             // ending it at the first down. WHEN THE FIRST DOWN IS A FINGER,
@@ -1897,6 +1925,17 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                 const bool pen_lift  = is_pen(index);
                 const bool keep_seat =
                     pen_lift && pen_ctrl_ && !pen_stroke_shared_;
+                // THE PEN'S LIFT OFF AN EMPTY GLASS IS ITS HOVER'S ENTER
+                // (architect 2026-10-07; the rule at the hover arm): the
+                // pointer is focused at the lift before the up, so the
+                // translation end restores a motion here instead of leaving,
+                // and the hover that follows continues as a motion.
+                const bool pen_stays = pen_lift &&
+                                       masked == AMOTION_EVENT_ACTION_UP;
+                if (pen_stays) {
+                    input_.pointer_focus_at(px(index), py(index));
+                    pen_hovering_ = true;
+                }
                 pen_lift_keeps_anchor_ = keep_seat;
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
                 pen_lift_keeps_anchor_ = false;

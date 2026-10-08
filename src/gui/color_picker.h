@@ -335,8 +335,10 @@ const char* role_display_name(std::size_t role);
 // -- THE PRESETS ---------------------------------------------------------------
 
 // A PALETTE'S SHOWN NAME (the menu button's label, the menu's rows): a
-// default's in Title Case ("Windows 2000", "Clearlooks" — the key is the
-// file grammar's, this the user's, as role_display_name is), a file's name
+// default's in Title Case, its vocabulary's ChromeSpec::display_name
+// ("Windows 2000", "Clearlooks" — the key is the file grammar's, this the
+// user's, as role_display_name is; the Settings editor's Chrome combo shows
+// the same names from the same field), a file's name
 // verbatim. Whether `name` is the display name of a default too, case and
 // all — the name ask refuses such a name as taken, so the menu never lists
 // two rows reading alike.

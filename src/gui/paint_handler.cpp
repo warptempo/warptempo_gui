@@ -484,19 +484,23 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
 //              only on a checked button that is not hot), the line and the
 //              shift kept; CHECKED AND PRESSED keeps it (the capture holds
 //              no hot item), so a checked button under a press paints its
-//              resting checked face — the reading of toolbar.c's
-//              TOOLBAR_DrawButton (no ReactOS source tree on hand to
-//              re-verify, 2026-10-07 evening): CDIS_CHECKED lays the pattern
-//              (unless CDIS_HOT), TOOLBAR_DrawFrame sinks the edge for
-//              CDIS_SELECTED or CDIS_CHECKED, the image offset for either,
-//              so the two states compose rather than one winning. The view
+//              resting checked face — ReactOS's toolbar.c, read at its
+//              master 2026-10-07 late evening: TOOLBAR_DrawButton lays the
+//              pattern on CDIS_CHECKED unless CDIS_HOT, TOOLBAR_DrawFrame
+//              sinks the edge (BDR_SUNKENOUTER on a flat toolbar) for
+//              CDIS_SELECTED or CDIS_CHECKED, so the two states compose
+//              rather than one winning. The view
 //              group's lit radio shows exactly this through its hold since
 //              its press arms (the `radio` column, kToolbarChords).
-//   DISABLED — never hot and never pressed, so NO EDGE AT ALL
-//              (TOOLBAR_DrawFrame draws none in a non-interactive state);
-//              a disabled CHECKED button keeps the checker and the shift,
-//              so a dead lamp still reads as lit (the roster's rule at
-//              paint_icon_row); the glyph ReactOS's saturate
+//   DISABLED — never hot and never pressed, so NO EDGE AT ALL, a
+//              disabled CHECKED button included (TOOLBAR_DrawFrame's
+//              `pressed_look = !non_interactive_state && (CDIS_SELECTED ||
+//              CDIS_CHECKED)`, CDIS_DISABLED being non-interactive — the
+//              source read 2026-10-07 late evening); that button keeps the
+//              checker (the pattern asks CDIS_HOT alone) and the shift, so a
+//              dead lamp still reads as lit (the roster's rule at
+//              paint_icon_row) — the view group's lit radio under the color
+//              picker's veil; the glyph ReactOS's saturate
 //              (icons::draw_disabled).
 // The relief lines MITRE where the Hilight meets the Shadow, the product's
 // rule over DrawEdge's square join (paint_relief_frame).
@@ -7647,7 +7651,7 @@ void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
     const AppState::SettingsChoice& ch = app.settings_choice;
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     paint_picker_combo(cr, font, combo, color_picker::combo_drop_button(combo),
-                       app.settings_choice_value(ch.shown), ch.list_open,
+                       app.settings_choice_label(ch.shown), ch.list_open,
                        /*enabled=*/true);
     dlg.combo = combo;
     if (!ch.list_open) return;
@@ -7655,7 +7659,7 @@ void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
     const GuiRect box = color_picker::combo_list_box(combo, n, /*upward=*/true);
     paint_combo_list(cr, font, box, n, ch.list_pressed, ch.list_hover,
                      [](const AppState& a, int i) {
-                         return a.settings_choice_value(i);
+                         return a.settings_choice_label(i);
                      });
     dlg.combo_list = box;
     dlg.combo_list_items.clear();
