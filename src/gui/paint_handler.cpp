@@ -8083,9 +8083,9 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
 
     // THE PALETTE MENU, when down: the same box and THE ROWS THE LAYOUT
     // SHOWS (the scroll's block — color_picker.h's THE PALETTE MENU; the
-    // popup lists' scroll, render.h), its one separator the dropdown's
-    // (etched and inset under win2000, GtkMenu's one row under clearlooks)
-    // where it is in view, each act's enabled bit asked once here
+    // popup lists' scroll, render.h), its separators — one before each
+    // group — the dropdown's (etched and inset under win2000, GtkMenu's one
+    // row under clearlooks) where each is in view, each act's enabled bit asked once here
     // (palette_act_enabled) and published with its row; a grayed row wears
     // no lit face and its label the emboss (paint_dropdown's rules); then the
     // scroll bar when it stands. EVERY ROW IS PUBLISHED, a row scrolled out
@@ -8099,19 +8099,19 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
         assert(rows.size() == L.menu_items.size());
         if (cl) paint_cl_menu(cr, L.menu, /*upward=*/L.menu_upward);
         else    paint_popup_chrome(cr, L.menu, PopupFace::Menu);
-        if (L.menu_sep_y >= 0) {
+        for (const int sep_y : L.menu_sep_ys) {
             const int sep_r = L.menu_bar.present ? L.menu_bar.bar.x
                                                  : L.menu.x + L.menu.w;
             if (cl) {
                 paint_cl_menu_separator(cr, L.menu.x,
-                                        L.menu_sep_y + popup_sep_margin_y_px(),
+                                        sep_y + popup_sep_margin_y_px(),
                                         sep_r - L.menu.x);
             } else {
                 // Inset from the box's left and from its right edge — the
                 // bar's left edge while the bar stands.
                 const int sep_inset = scaled_px(kPopupSepInsetPx);
                 paint_relief_etched_hline(cr, L.menu.x + sep_inset,
-                                          L.menu_sep_y + popup_sep_margin_y_px(),
+                                          sep_y + popup_sep_margin_y_px(),
                                           sep_r - L.menu.x - 2 * sep_inset);
             }
         }

@@ -19,8 +19,9 @@
 // palette a config with no `palette` line takes.
 //
 // THE NAME IS `windows-2000` (architect 2026-10-07): the `chrome` key's
-// value and the default palette's name (its compiled theme is the catalog
-// entry `windows-2000-standard`, the scheme's word beside it). C++
+// value (its compiled theme is the catalog entry `windows-2000-standard`,
+// the scheme's word beside it, which also names its default palette since
+// 2026-10-08, the built-in schemes' keys being the catalog's). C++
 // IDENTIFIERS AND FILE NAMES KEEP `Win2000` / `win2000` AS THE ABBREVIATION
 // (kChromeSpecWin2000, GuiChromeVocabulary::Win2000,
 // docs/engineering/win2000_deviations.md), and prose may say win2000 for the
@@ -131,16 +132,19 @@ struct ChromeSpec {
     const char*        key;
     // THE VOCABULARY'S SHOWN NAME, Title Case (TEXT: names Title Case): the
     // one source of every place the user reads a vocabulary's name — the
-    // Settings editor's Chrome combo and its list (kChromeChoiceSource) and
-    // the color picker's name for the vocabulary's default palette
-    // (palette_display_name); the key stays the file grammar's.
+    // Settings editor's Chrome combo and its list (kChromeChoiceSource); the
+    // key stays the file grammar's. (The color picker names a palette by the
+    // built-in scheme's own display name, palette_file.h's kGuiChromeSchemes.)
     const char*        display_name;
     // THE PAINTERS' SWITCH (GuiChromeVocabulary above).
     GuiChromeVocabulary vocabulary;
     // THE PALETTE A CONFIG WITH NO `palette` LINE TAKES under this chrome
     // (effective_palette_name, palette_file.h; architect 2026-10-07): the
-    // vocabulary's own program colors, a compiled default palette, and the
-    // base every role a palette file leaves unnamed takes.
+    // vocabulary's own program colors, a compiled default palette — the
+    // fifteen every built-in takes at a launch — named by THE CHROME'S OWN
+    // BUILT-IN SCHEME'S KEY (2026-10-08 ~11:10: the catalog key verbatim,
+    // `windows-2000-standard`; palette_file.h's head), which carries no
+    // chrome block under this chrome.
     const char*        default_palette;
     // The vocabulary's text: the faces, their metrics and tracking (gui_font.h).
     const GuiFaceSet*  face_set;
@@ -278,7 +282,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .key                          = "windows-2000",
     .display_name                 = "Windows 2000",
     .vocabulary                   = GuiChromeVocabulary::Win2000,
-    .default_palette              = "windows-2000",
+    .default_palette              = "windows-2000-standard",
     .face_set                     = &kGuiFaceSetWin2000,
     .caption_height_px            = 18,
     .caption_icon_x_px            = 2,

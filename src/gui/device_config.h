@@ -258,7 +258,7 @@ struct DeviceConfig {
     // THE PALETTE, UNSET BY DEFAULT (architect 2026-10-07): empty while the
     // config has no `palette` line, which RESOLVES AT EACH INSTALL to the
     // live chrome's default palette (effective_palette_name, palette_file.h:
-    // `windows-2000` or `clearlooks`) — never written back; a named palette
+    // `windows-2000-standard` or `clearlooks`) — never written back; a named palette
     // is honored under either chrome.
     std::string palette;
 };

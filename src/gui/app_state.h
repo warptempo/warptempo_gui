@@ -3417,8 +3417,8 @@ struct SettingsChoiceSource {
 };
 // THE CHROME'S DOMAIN: the chrome table (kGuiChromeSpecs, chrome_spec.h),
 // its two keys in the table's order — windows-2000 then clearlooks, the
-// base first — shown by their display names, the ones the color picker's
-// palette menu shows (ChromeSpec::display_name, architect 2026-10-07).
+// base first — shown by their display names (ChromeSpec::display_name,
+// architect 2026-10-07).
 inline constexpr SettingsChoiceSource kChromeChoiceSource{
     +[]() -> int { return static_cast<int>(std::size(kGuiChromeSpecs)); },
     +[](int i) -> const char* {
@@ -8777,7 +8777,7 @@ struct AppState {
             GuiRect  card{0, 0, 0, 0};
             GuiRect  chooser{0, 0, 0, 0};      // the combo: a press toggles the list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
-            // The list's rows, the chooser's most (the knob's two and the
+            // The list's rows, the chooser's most (the knob's twelve and the
             // fifteen; color_picker::kMaxElementCount, asserted there), by
             // element index — the zero rect for a row scrolled out of view —
             // and its scroll bar (absent while every row shows).

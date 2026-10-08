@@ -35,10 +35,12 @@
 // files, no Settings row — THE CHROME CHOSEN IS ITS COLORS (kGuiChromeThemes
 // below, resolved by the chrome's key, chrome_theme_words). The architect's
 // workshop for colors is THE PALETTE (palette_file.h: named presets saved
-// and loaded in the app), whose CHROME KNOB may pick windows-2000's ground
-// and text, every other chrome shade derived over this compiled theme by
-// Windows' own rule (architect 2026-10-08 ~09:40, chrome_derive.h — the
-// compiled words themselves never change); a look made official becomes A
+// and loaded in the app), whose CHROME KNOB may carry the chrome's twelve
+// keys, honored over this compiled theme under windows-2000 with the 3D set
+// derived from the ground by Windows' own rule (architect 2026-10-08,
+// chrome_derive.h — the compiled words themselves never change), and whose
+// BUILT-IN SCHEMES are the catalog's entries transcribed to those keys
+// (palette_file.h's kGuiChromeSchemes, generated); a look made official becomes A
 // NEW CHROME VARIANT, its theme compiled in beside these two:
 //   `windows-2000` wears WINDOWS 2000's "Windows Standard" scheme
 //     (tools/theme_catalog's `windows-2000-standard`): THE ROLE TABLE'S
@@ -51,8 +53,10 @@
 //     (the generator's head) — never hand-edited; a change is the catalog,
 //     then the generator, then the build, the outputs committed together.
 // The imported catalog's other entries (Windows 95's and 98's schemes, the
-// Plus! themes, KDE 3's, CDE's) stay in the catalog as the tool's RECORD
-// and ship nowhere (tools/theme_catalog/README.md).
+// Plus! themes, KDE 3's, CDE's) stay in the catalog as the tool's RECORD;
+// what ships of them is their twelve chrome keys alone, as the palette's
+// BUILT-IN SCHEMES (architect 2026-10-08 ~11:00, palette_file.h's head), no
+// theme of theirs compiled here.
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15): Windows'
 // scheme bytes and GTK's gtkrc colors are what those systems put into an
 // sRGB frame buffer, as the captures show them; the tablet converts each at

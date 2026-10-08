@@ -13,19 +13,32 @@
 // THE CHROME KNOB (architect 2026-10-08 ~09:40: "I should not make these
 // decisions — defer to whatever the Windows designers used … the Windows 95
 // picker was great because everything was predefined and I just turned a
-// knob for the chrome and everything followed"). UNDER WINDOWS-2000 THE
-// PALETTE MAY PICK TWO CHROME ELEMENTS — "Chrome", the ground (Windows'
-// Appearance dialog's 3D Objects), and "Chrome Text", its text (3D Objects'
-// font color) — the palette file's `chrome_ground` / `chrome_text` lines
-// (palette_file.h owns the grammar), and EVERY OTHER CHROME SHADE IS DERIVED
-// FROM THEM AS WINDOWS DERIVED IT. This header is the derivation's one owner.
+// knob for the chrome and everything followed"; RECAST ~11:00, below). A
+// PALETTE MAY CARRY THE CHROME'S TWELVE KEYS (palette_file.h owns the
+// grammar, kGuiChromeLines): the ground and its text, the caption's start,
+// end and text, the inactive caption's three (optional, following the
+// active ones while absent), the selection's fill and text, the field's
+// ground and text. This header is THE ONE DERIVATION over them and every
+// role's mapping.
+//
+// "A DERIVATION IS ALWAYS ON A SCALE" (architect 2026-10-08 ~11:00): THE
+// 3D SET — Hilight, Shadow, 3DLight, DkShadow — derived from the ground by
+// Windows' Appearance-dialog rule IS THE ONLY DERIVATION. "WE SHOULD NEVER
+// HAVE A TOGGLE": a white-or-black caption text, a white selected text, a
+// caption following the ground — anything that would be a switch — is a
+// PICKED KEY instead ("the only thing we need to determine for the user is
+// the chrome, which is too complicated to do by hand; everything else the
+// user can do, there is a handy Copy / Paste in the picker"). The morning's
+// derivation of the caption and the selection from the ground, and of the
+// text's black-or-white default, is retired (closed_questions.md).
 //
 // THE COMPILED THEME STAYS EXACTLY ITS RECORDED BYTES: Windows 2000
 // Standard's gray face is HAND-SET by Microsoft (D4D0C8's Hilight FFFFFF and
 // Shadow 808080 are not the rule's EAE8E3 and 978E7B, asserted below), so the
-// knob derives only when the palette CARRIES the chrome lines; a palette
-// without them leaves the compiled theme untouched. A user who picked D4D0C8
-// in Windows 2000's own dialog lost Standard's white Hilight too.
+// knob derives only when the palette CARRIES THE BLOCK; a palette without it
+// — the chrome's own built-in scheme among them, palette_file.h's head —
+// leaves the compiled theme untouched. A user who picked D4D0C8 in Windows
+// 2000's own dialog lost Standard's white Hilight too.
 //
 // THE RULE (Windows' Appearance dialog on a picked 3D face): convert the face
 // to shlwapi's 240-scale integer HLS; HILIGHT keeps the hue and the
@@ -43,7 +56,8 @@
 // tool has run since 2026-10-03.
 //
 // THE PER-ROLE TABLE (kKnobRoles below; Windows' 21 chrome roles, each
-// decided — the build proves every one is listed once, derived or fixed):
+// decided — the build proves every one is listed once, derived or fixed;
+// palette_file.cpp proves each key moves the role its picker OLD reads):
 //   ground, light_3d, clock_ground       = Chrome (3D Objects; 3DLight = the
 //                                          face, the status panel the face,
 //                                          as in all 35 recorded schemes)
@@ -52,39 +66,35 @@
 //   shadow                               = the rule's Shadow
 //   dk_shadow                            = black (the dialog's; Standard's
 //                                          404040 is hand-set)
-//   selected_fill / selected_text        = the rule's Shadow / white
-//   caption_active / _gradient / _text   = Shadow / Hilight / white
-//   caption_inactive / _gradient / _text = Shadow / Shadow / Chrome
-//   field pair, card trio                = FIXED, the compiled theme's
-//                                          (Windows' Window and ToolTip
-//                                          elements, white field and
-//                                          FFFFE1 tooltip in every stock
-//                                          scheme; the card frame is the
-//                                          tooltip's own black border, not
-//                                          DkShadow — Standard records
+//   caption_active / _gradient / _text   = Title / Title End / Title Text
+//   caption_inactive / _gradient / _text = Inactive Title / Inactive Title
+//                                          End / Inactive Title Text, each
+//                                          FOLLOWING its active key while
+//                                          absent (GuiChromePick's accessors)
+//   selected_fill / selected_text        = Selection / Selection Text — A
+//                                          PLAIN FIELD, no coupling with the
+//                                          caption
+//   field_ground / field_text            = Field / Field Text
+//   card trio                            = FIXED, the compiled theme's
+//                                          (Windows' ToolTip element, no key
+//                                          of the twelve; the card frame is
+//                                          the tooltip's own black border,
+//                                          not DkShadow — Standard records
 //                                          000000 beside its 404040)
-// THE CAPTION AND THE SELECTION FOLLOW THE GROUND AS THE DESIGNERS' OWN DARK
-// SCHEMES DID (the ruling): Rainy Day's face 8399B1 derives Shadow 4F657D,
-// its recorded ActiveTitle and its recorded Hilight exactly (asserted
-// below); Slate's and Eggplant's within 1–4. The active caption's END is the
-// derived Hilight — the designers' ends are brighter hand-picked tones
-// (Rainy Day's 80B4D0) and no rule fits them, so Hilight is the derived
-// STAND-IN, said plainly. The INACTIVE caption is flat at Shadow under the
-// face: Windows 95 Standard's own structure (808080 flat under its C0C0C0
-// face), the face being the inactive title text of 11 of the 35 recorded
-// schemes, every Standard among them. The caption's text and the selected
-// text are WHITE, fixed, not picked: every designers' dark scheme's.
-// THE CLEARLOOKS BLOCK (cl_ roles) is carried from the compiled theme, unread
-// by the win2000 painters.
+// A CHROME WITHOUT A GRADIENT would take the title's start alone; Windows
+// 2000's caption paints both ends. THE CLEARLOOKS BLOCK (cl_ roles) is
+// carried from the compiled theme, unread by the win2000 painters.
 //
-// UNDER CLEARLOOKS THE KNOB IS NOT OFFERED (its derivation is GTK's shade
-// table, not yet ported): the picker's chooser lists no chrome element there
-// (color_picker::chrome_elements_offered), and a palette carrying chrome
-// lines LOADS, ITS LINES CARRIED AND UNREAD — live_chrome_words answers the
-// compiled theme — because a palette saved under windows-2000 stands in the
-// folder when the Settings chrome row switches to clearlooks, a state the GUI
-// constructs and so one that must load (the two-category rule). Save and
-// Save As there keep the lines the active preset carries.
+// UNDER CLEARLOOKS THE KNOB IS NOT OFFERED (its derivation — the start
+// alone, its own ramp — is GTK's shade table, a later brief): the picker's
+// chooser lists no chrome element there (color_picker::
+// chrome_elements_offered), and a palette carrying the block LOADS, ITS
+// KEYS CARRIED AND UNREAD — live_chrome_words answers the compiled theme —
+// because a palette saved under windows-2000 stands in the folder when the
+// Settings chrome row switches to clearlooks, a state the GUI constructs and
+// so one that must load (the two-category rule); a built-in scheme chosen
+// there is carried the same way. Save and Save As there keep the block the
+// live palette carries.
 namespace chrome_derive {
 
 // -- WINDOWS' 240-SCALE HLS (Wine dlls/shlwapi/ordinal.c) ----------------------
@@ -169,18 +179,14 @@ constexpr Quartet windows_dialog(uint32_t face) {
                    0x000000u};
 }
 
-// THE TEXT'S ONE DEFAULT (architect 2026-10-08, the brief's ruling): the
-// first pick of either chrome element creates BOTH lines, and a first pick of
-// the ground seeds the text BLACK where the ground's HLS lightness is at
-// least half the 240 scale and WHITE below it — once, at that pick; the text
-// is his from then on.
-constexpr uint32_t default_text(uint32_t ground) {
-    return rgb_to_hls(ground).l >= 120 ? 0x000000u : 0xFFFFFFu;
-}
-
 // -- THE PER-ROLE TABLE (the head) ---------------------------------------------
 
-enum class Source { Chrome, ChromeText, Hilight, Shadow, Black, White };
+enum class Source {
+    Chrome, ChromeText, Hilight, Shadow, Black,
+    TitleStart, TitleEnd, TitleText,
+    InactiveTitleStart, InactiveTitleEnd, InactiveTitleText,
+    Selection, SelectionText, Field, FieldText,
+};
 struct KnobRole {
     const char* role;
     Source      source;
@@ -192,21 +198,23 @@ inline constexpr KnobRole kKnobRoles[] = {
     {"light_3d",                  Source::Chrome},
     {"shadow",                    Source::Shadow},
     {"dk_shadow",                 Source::Black},
-    {"selected_fill",             Source::Shadow},
-    {"selected_text",             Source::White},
+    {"selected_fill",             Source::Selection},
+    {"selected_text",             Source::SelectionText},
+    {"field_ground",              Source::Field},
+    {"field_text",                Source::FieldText},
     {"clock_ground",              Source::Chrome},
     {"clock_text",                Source::ChromeText},
-    {"caption_active",            Source::Shadow},
-    {"caption_active_gradient",   Source::Hilight},
-    {"caption_active_text",       Source::White},
-    {"caption_inactive",          Source::Shadow},
-    {"caption_inactive_gradient", Source::Shadow},
-    {"caption_inactive_text",     Source::Chrome},
+    {"caption_active",            Source::TitleStart},
+    {"caption_active_gradient",   Source::TitleEnd},
+    {"caption_active_text",       Source::TitleText},
+    {"caption_inactive",          Source::InactiveTitleStart},
+    {"caption_inactive_gradient", Source::InactiveTitleEnd},
+    {"caption_inactive_text",     Source::InactiveTitleText},
 };
-// THE FIXED ROLES: Windows' Window and ToolTip elements, the compiled
-// theme's bytes kept (the head).
+// THE FIXED ROLES: Windows' ToolTip element, the compiled theme's bytes
+// kept (the head).
 inline constexpr const char* kKnobFixedRoles[] = {
-    "field_ground", "field_text", "card_ground", "card_text", "card_frame",
+    "card_ground", "card_text", "card_frame",
 };
 
 // Each derived role's index in the theme's role table, found once.
@@ -241,22 +249,32 @@ constexpr bool every_windows_role_decided() {
 static_assert(every_windows_role_decided());
 
 // THE DERIVATION: `compiled` (the windows-2000 compiled theme) with every
-// derived role written over from `ground` and `text`.
+// derived role written over from the pick's keys and the 3D set the rule
+// derives from its ground.
 constexpr GuiThemeWords derive_windows_chrome(const GuiThemeWords& compiled,
-                                              uint32_t ground, uint32_t text) {
-    const Quartet q = windows_dialog(ground);
+                                              const GuiChromePick& pick) {
+    const Quartet q = windows_dialog(pick.ground);
     GuiThemeWords w = compiled;
     for (std::size_t i = 0; i < std::size(kKnobRoles); ++i) {
         uint32_t v = 0;
         switch (kKnobRoles[i].source) {
-            case Source::Chrome:     v = ground & 0xFFFFFFu; break;
-            case Source::ChromeText: v = text & 0xFFFFFFu;   break;
-            case Source::Hilight:    v = q.hilight;          break;
-            case Source::Shadow:     v = q.shadow;           break;
-            case Source::Black:      v = 0x000000u;          break;
-            case Source::White:      v = 0xFFFFFFu;          break;
+            case Source::Chrome:             v = pick.ground;            break;
+            case Source::ChromeText:         v = pick.text;              break;
+            case Source::Hilight:            v = q.hilight;              break;
+            case Source::Shadow:             v = q.shadow;               break;
+            case Source::Black:              v = 0x000000u;              break;
+            case Source::TitleStart:         v = pick.title_start;       break;
+            case Source::TitleEnd:           v = pick.title_end;         break;
+            case Source::TitleText:          v = pick.title_text;        break;
+            case Source::InactiveTitleStart: v = pick.inactive_start();  break;
+            case Source::InactiveTitleEnd:   v = pick.inactive_end();    break;
+            case Source::InactiveTitleText:  v = pick.inactive_text();   break;
+            case Source::Selection:          v = pick.selection;         break;
+            case Source::SelectionText:      v = pick.selection_text;    break;
+            case Source::Field:              v = pick.field;             break;
+            case Source::FieldText:          v = pick.field_text;        break;
         }
-        w[kKnobRoleIndex[i]] = v;
+        w[kKnobRoleIndex[i]] = v & 0xFFFFFFu;
     }
     return w;
 }
@@ -280,32 +298,48 @@ static_assert(windows_dialog(0xD4D0C8).shadow == 0x978E7B);
 // Northern Sky's ground (CDE), the picker's test case: 98ABB6 / 2C363D.
 static_assert(windows_dialog(0x41525C).hilight == 0x98ABB6);
 static_assert(windows_dialog(0x41525C).shadow == 0x2C363D);
-// RAINY DAY WHOLE: the derived selection and active caption start are its
-// recorded Hilight and ActiveTitle, 4F657D.
+// RAINY DAY WHOLE, as its catalog entry records it (ButtonFace 8399B1,
+// ActiveTitle 4F657D → GradientActiveTitle 80B4D0 under TitleText FFFFFF,
+// InactiveTitle 808080 → B0BCD0 under C1CCD9, Hilight 4F657D under FFFFFF,
+// Window FFFFFF / WindowText 000000): every key lands on its role, the
+// derived Hilight and Shadow are its recorded ButtonHilight C1CCD9 and
+// ButtonShadow 4F657D, and the card stays the compiled theme's.
+inline constexpr GuiChromePick kRainyDayPick{
+    0x8399B1, 0x000000, 0x4F657D, 0x80B4D0, 0xFFFFFF,
+    0x808080, 0xB0BCD0, 0xC1CCD9,
+    0x4F657D, 0xFFFFFF, 0xFFFFFF, 0x000000};
 inline constexpr GuiThemeWords kRainyDayCheck =
-    derive_windows_chrome(kGuiThemeWin2000, 0x8399B1, 0x000000);
+    derive_windows_chrome(kGuiThemeWin2000, kRainyDayPick);
+static_assert(kRainyDayCheck[theme_role_index("hilight")] == 0xC1CCD9);
+static_assert(kRainyDayCheck[theme_role_index("shadow")] == 0x4F657D);
 static_assert(kRainyDayCheck[theme_role_index("selected_fill")] == 0x4F657D);
 static_assert(kRainyDayCheck[theme_role_index("caption_active")] == 0x4F657D);
-static_assert(kRainyDayCheck[theme_role_index("caption_active_gradient")] == 0xC1CCD9);
+static_assert(kRainyDayCheck[theme_role_index("caption_active_gradient")] == 0x80B4D0);
+static_assert(kRainyDayCheck[theme_role_index("caption_inactive_text")] == 0xC1CCD9);
 static_assert(kRainyDayCheck[theme_role_index("card_frame")] == 0x000000);
-static_assert(kRainyDayCheck[theme_role_index("field_ground")] == 0xFFFFFF);
-// The text's default: black on Rainy Day's face (L 145), white on Northern
-// Sky's (L 75).
-static_assert(default_text(0x8399B1) == 0x000000);
-static_assert(default_text(0x41525C) == 0xFFFFFF);
+static_assert(kRainyDayCheck[theme_role_index("card_ground")] == 0xFFFFE1);
+// THE INACTIVE CAPTION FOLLOWS while unpicked.
+static_assert([] {
+    GuiChromePick p = kRainyDayPick;
+    p.inactive_title_start.reset();
+    p.inactive_title_text.reset();
+    const GuiThemeWords w = derive_windows_chrome(kGuiThemeWin2000, p);
+    return w[theme_role_index("caption_inactive")] == 0x4F657D &&
+           w[theme_role_index("caption_inactive_gradient")] == 0xB0BCD0 &&
+           w[theme_role_index("caption_inactive_text")] == 0xFFFFFF;
+}());
 
 } // namespace chrome_derive
 
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install reads
 // (install_palette / install_chrome_pick, render.cpp): the live chrome's
-// compiled theme, with the knob derived over it when the palette picks the
-// chrome AND the chrome is windows-2000 (the head: under clearlooks the
-// lines are carried and unread).
+// compiled theme, with the knob derived over it when the palette carries the
+// block AND the chrome is windows-2000 (the head: under clearlooks the keys
+// are carried and unread).
 inline GuiThemeWords live_chrome_words(const ChromeSpec& spec,
                                        const std::optional<GuiChromePick>& pick) {
     const GuiThemeWords& compiled = chrome_theme_words(spec);
     if (!pick || spec.vocabulary != GuiChromeVocabulary::Win2000)
         return compiled;
-    return chrome_derive::derive_windows_chrome(compiled, pick->ground,
-                                                pick->text);
+    return chrome_derive::derive_windows_chrome(compiled, *pick);
 }

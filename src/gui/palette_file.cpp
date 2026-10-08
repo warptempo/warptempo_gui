@@ -6,6 +6,7 @@
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 #include "theme_file.h"        // theme_colour_word (THE ONE COLOR GRAMMAR),
                                // kGuiThemeRoles (the chrome's members)
+#include "chrome_derive.h"     // derive_windows_chrome: the keys' mapping check
 
 #include <algorithm>
 #include <array>
@@ -33,13 +34,64 @@ constexpr bool palette_role_names_unique() {
     return true;
 }
 static_assert(palette_role_names_unique());
-// The chrome knob's two lines are no program role's name, so the reader's
+// The chrome knob's twelve keys are no program role's name, so the reader's
 // two lookups cannot both claim a line.
-static_assert(std::ranges::none_of(kGuiChromeLines, [](const char* c) {
-    return palette_role_index(c) < kGuiPaletteRoleCount;
+static_assert(std::ranges::none_of(kGuiChromeLines, [](const GuiChromeLine& c) {
+    return palette_role_index(c.key) < kGuiPaletteRoleCount;
 }));
-static_assert(kGuiChromeLineCount == 2 &&
-              std::string_view(kGuiChromeLines[0]) != kGuiChromeLines[1]);
+
+// THE KEYS' TABLE IS WELL FORMED (palette_file.h's kGuiChromeLines): the keys
+// distinct; each a block key (a word, no follow) or an inactive key (an
+// optional, following an EARLIER block key); each compiled role a chrome
+// role; and the block is nine, the inactive caption three.
+constexpr bool chrome_lines_well_formed() {
+    std::size_t block = 0;
+    for (std::size_t i = 0; i < kGuiChromeLineCount; ++i) {
+        const GuiChromeLine& l = kGuiChromeLines[i];
+        for (std::size_t j = i + 1; j < kGuiChromeLineCount; ++j)
+            if (std::string_view(l.key) == kGuiChromeLines[j].key) return false;
+        if (theme_role_index(l.compiled_role) >= kGuiThemeRoleCount) return false;
+        if ((l.word != nullptr) == (l.optional != nullptr)) return false;
+        if (l.word != nullptr) {
+            if (l.follows != kGuiChromeNoFollow) return false;
+            ++block;
+        } else if (l.follows >= i || !is_chrome_block_line(l.follows)) {
+            return false;
+        }
+    }
+    return block == 9 && kGuiChromeLineCount == 12;
+}
+static_assert(chrome_lines_well_formed());
+
+// THE PICKER SHOWS WHAT THE DERIVATION PAINTS: for a pick whose twelve words
+// are all distinct, each key's compiled role in the derived chrome
+// (chrome_derive::derive_windows_chrome) holds exactly that key's word — so
+// the role a key's OLD reads while no block stands (compiled_role) is the
+// role the key moves once one does. Then an inactive key absent: its role
+// holds the followed key's word.
+constexpr GuiChromePick distinct_pick() {
+    GuiChromePick p;
+    for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
+        set_chrome_line_word(p, i, 0x100000u + static_cast<uint32_t>(i));
+    return p;
+}
+constexpr bool keys_map_onto_their_roles(const GuiChromePick& p) {
+    const GuiThemeWords w =
+        chrome_derive::derive_windows_chrome(kGuiThemeWin2000, p);
+    for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
+        if (w[theme_role_index(kGuiChromeLines[i].compiled_role)] !=
+            chrome_line_word(p, i))
+            return false;
+    return true;
+}
+static_assert(keys_map_onto_their_roles(distinct_pick()));
+static_assert(keys_map_onto_their_roles([] {
+    GuiChromePick p = distinct_pick();
+    p.inactive_title_start.reset();
+    p.inactive_title_end.reset();
+    p.inactive_title_text.reset();
+    return p;
+}()));
 
 // THE TWO TABLES COVER GuiPalette EXACTLY (install_palette fills it off
 // both, render.cpp): the program's members are distinct, none of them is a
@@ -60,7 +112,8 @@ static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount) * sizeof(GuiColor));
 
 // EVERY VOCABULARY NAMES A DEFAULT PALETTE, IN THE DEFAULTS' ORDER, and every
-// default belongs to one vocabulary (palette_names lists them in this order).
+// default belongs to one vocabulary (the palette menu lists them in this
+// order, color_picker::palette_menu_rows).
 constexpr bool defaults_follow_the_vocabularies() {
     if (std::size(kGuiChromeSpecs) != std::size(kGuiDefaultPalettes))
         return false;
@@ -71,6 +124,47 @@ constexpr bool defaults_follow_the_vocabularies() {
     return true;
 }
 static_assert(defaults_follow_the_vocabularies());
+
+// EACH DEFAULT IS ITS CHROME'S OWN BUILT-IN SCHEME, AND THAT SCHEME IS THE
+// CHROME'S COMPILED THEME KEY FOR KEY (the generator's transcription and the
+// hand-recorded / generated themes agree): so the scheme that carries no
+// block under its own chrome (palette_record) is no loss of a word.
+constexpr bool defaults_are_their_chromes_schemes() {
+    for (std::size_t c = 0; c < std::size(kGuiChromeThemes); ++c) {
+        const GuiChromeScheme* b = builtin_scheme(kGuiDefaultPalettes[c].name);
+        if (b == nullptr) return false;
+        if (std::string_view(kGuiChromeThemes[c].chrome) !=
+            kGuiChromeSpecs[c]->key)
+            return false;
+        const GuiThemeWords& w = *kGuiChromeThemes[c].words;
+        for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
+            if (w[theme_role_index(kGuiChromeLines[i].compiled_role)] !=
+                chrome_line_word(b->chrome, i))
+                return false;
+    }
+    return true;
+}
+static_assert(defaults_are_their_chromes_schemes());
+
+// THE BUILT-INS' KEYS AND DISPLAY NAMES ARE UNIQUE (the generator checks the
+// same), the keys in the name grammar, and every scheme records its inactive
+// caption (the struct's comment).
+constexpr bool builtins_well_formed() {
+    for (std::size_t i = 0; i < std::size(kGuiChromeSchemes); ++i) {
+        const GuiChromeScheme& a = kGuiChromeSchemes[i];
+        if (!is_palette_name_spelling(a.key)) return false;
+        if (!a.chrome.inactive_title_start || !a.chrome.inactive_title_end ||
+            !a.chrome.inactive_title_text)
+            return false;
+        for (std::size_t j = i + 1; j < std::size(kGuiChromeSchemes); ++j)
+            if (std::string_view(a.key) == kGuiChromeSchemes[j].key ||
+                std::string_view(a.display_name) ==
+                    kGuiChromeSchemes[j].display_name)
+                return false;
+    }
+    return true;
+}
+static_assert(builtins_well_formed());
 static_assert(std::ranges::all_of(kGuiDefaultPalettes,
                                   [](const GuiDefaultPalette& d) {
     return is_palette_name_spelling(d.name);
@@ -96,7 +190,7 @@ const GuiDefaultPalette* default_palette_for(std::string_view name) {
 // THE PALETTES READ AT LAUNCH AND MAINTAINED BY THE PICKER'S WRITES, by
 // name, each its fifteen words (a file names every role, palette_file.h's
 // head) and its chrome knob when it carries one — read by is_palette_name,
-// palette_record and palette_names. Single-threaded: the read precedes
+// palette_record and palette_file_names. Single-threaded: the read precedes
 // every reader, and only the GUI thread reads or writes it.
 std::map<std::string, GuiPaletteRecord, std::less<>> g_loaded_palettes;
 
@@ -115,15 +209,15 @@ std::expected<GuiPaletteRecord, std::string> read_palette_file(
     if (!f) return std::unexpected(std::string("could not open the file"));
     GuiPaletteWords                        out{};
     std::array<bool, kGuiPaletteRoleCount> named{};
-    std::array<uint32_t, kGuiChromeLineCount> chrome{};
-    std::array<bool, kGuiChromeLineCount>     chrome_named{};
+    GuiChromePick                          chrome{};
+    std::array<bool, kGuiChromeLineCount>  chrome_named{};
     auto scan = warptempo_settings::scan_key_value_file(
         f, [&](int ln, const std::string& role, const std::string& value)
                   -> std::expected<void, std::string> {
         const std::size_t i = palette_role_index(role);
         std::size_t c = kGuiChromeLineCount;
         for (std::size_t k = 0; k < kGuiChromeLineCount; ++k)
-            if (role == kGuiChromeLines[k]) c = k;
+            if (role == kGuiChromeLines[k].key) c = k;
         if (i == kGuiPaletteRoleCount && c == kGuiChromeLineCount) {
             return warptempo_parse::prefix_line_error(
                 ln, "unknown role '" + role + "'");
@@ -136,7 +230,7 @@ std::expected<GuiPaletteRecord, std::string> read_palette_file(
                     "names");
         }
         if (c < kGuiChromeLineCount) {
-            chrome[c]       = *w;
+            set_chrome_line_word(chrome, c, *w);
             chrome_named[c] = true;
             return {};
         }
@@ -155,23 +249,27 @@ std::expected<GuiPaletteRecord, std::string> read_palette_file(
                                    "'");
         }
     }
-    // THE CHROME LINES COME AS A PAIR (the head): one alone names the other
-    // as missing.
+    // THE CHROME BLOCK COMES WHOLE (the head): any chrome key — a block key
+    // or an inactive one — requires all nine of the block, the first missing
+    // in the table's order named; the inactive keys stand as read (each
+    // optional, the unread ones following the active caption).
     GuiPaletteRecord record{out, std::nullopt};
-    if (chrome_named[0] || chrome_named[1]) {
+    if (std::ranges::any_of(chrome_named, [](bool b) { return b; })) {
         for (std::size_t k = 0; k < kGuiChromeLineCount; ++k) {
-            if (!chrome_named[k]) {
+            if (is_chrome_block_line(k) && !chrome_named[k]) {
                 return std::unexpected("missing role '" +
-                                       std::string(kGuiChromeLines[k]) + "'");
+                                       std::string(kGuiChromeLines[k].key) +
+                                       "'");
             }
         }
-        record.chrome = GuiChromePick{chrome[0], chrome[1]};
+        record.chrome = chrome;
     }
     return record;
 }
 
-// The text write_palette_file puts down: the chrome lines when the record
-// carries them, then every role, uppercase #RRGGBB, LF.
+// The text write_palette_file puts down: the chrome keys when the record
+// carries the block (the nine and each picked inactive key, in the table's
+// order), then every role, uppercase #RRGGBB, LF.
 std::string palette_file_text(const GuiPaletteRecord& record) {
     std::string s;
     const auto line = [&s](const char* role, uint32_t word) {
@@ -184,8 +282,13 @@ std::string palette_file_text(const GuiPaletteRecord& record) {
         s += '\n';
     };
     if (record.chrome) {
-        line(kGuiChromeLines[0], record.chrome->ground);
-        line(kGuiChromeLines[1], record.chrome->text);
+        for (std::size_t k = 0; k < kGuiChromeLineCount; ++k) {
+            const GuiChromeLine& l = kGuiChromeLines[k];
+            if (l.word != nullptr) line(l.key, (*record.chrome).*(l.word));
+            else if (const std::optional<uint32_t>& v =
+                         (*record.chrome).*(l.optional))
+                line(l.key, *v);
+        }
     }
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         line(kGuiPaletteRoles[i].name, record.words[i]);
@@ -250,8 +353,8 @@ std::optional<std::string> read_palette_folder() {
                           "printable ASCII characters with no leading or "
                           "trailing space";
         }
-        if (is_default_palette_name(name)) {
-            return head + name + " is a default palette and takes no file";
+        if (is_builtin_palette_name(name)) {
+            return head + name + " is a built-in palette and takes no file";
         }
         auto record = read_palette_file(p);
         if (!record) return head + record.error();
@@ -260,22 +363,28 @@ std::optional<std::string> read_palette_folder() {
     return std::nullopt;
 }
 
-std::vector<std::string> palette_names() {
+std::vector<std::string> palette_file_names() {
     std::vector<std::string> out;
-    out.reserve(std::size(kGuiDefaultPalettes) + g_loaded_palettes.size());
-    for (const GuiDefaultPalette& d : kGuiDefaultPalettes)
-        out.emplace_back(d.name);
+    out.reserve(g_loaded_palettes.size());
     for (const auto& [name, record] : g_loaded_palettes) out.push_back(name);
     return out;
 }
 
 bool is_palette_name(std::string_view name) {
-    return is_default_palette_name(name) || g_loaded_palettes.contains(name);
+    return is_builtin_palette_name(name) || g_loaded_palettes.contains(name);
 }
 
 GuiPaletteRecord palette_record(std::string_view name) {
-    if (const GuiDefaultPalette* d = default_palette_for(name))
-        return GuiPaletteRecord{default_words(*d), std::nullopt};
+    // A BUILT-IN (the declaration): the live chrome's default fifteen, and
+    // the scheme's keys unless it is the live chrome's own.
+    if (const GuiChromeScheme* b = builtin_scheme(name)) {
+        const std::string_view own = live_chrome_spec().default_palette;
+        const GuiDefaultPalette* d = default_palette_for(own);
+        assert(d != nullptr);   // defaults_follow_the_vocabularies
+        GuiPaletteRecord r{default_words(*d), std::nullopt};
+        if (name != own) r.chrome = b->chrome;
+        return r;
+    }
     const auto it = g_loaded_palettes.find(name);
     // Every caller's name came through is_palette_name: a miss is a program
     // bug.
@@ -287,7 +396,7 @@ std::optional<std::string> write_palette_file(std::string_view name,
                                               const GuiPaletteRecord& record) {
     // The names are the picker's to judge (the declaration).
     assert(is_palette_name_spelling(name));
-    assert(!is_default_palette_name(name));
+    assert(!is_builtin_palette_name(name));
     const std::filesystem::path folder = palette_folder_path();
     // The launch read the config through the same resolver, and the
     // environment does not change under the process.
@@ -312,7 +421,7 @@ std::optional<std::string> rename_palette_file(std::string_view old_name,
     assert(it != g_loaded_palettes.end());
     assert(new_name != old_name);
     assert(is_palette_name_spelling(new_name));
-    assert(!is_palette_name(new_name));   // neither a default's nor taken
+    assert(!is_palette_name(new_name));   // neither a built-in's nor taken
     const std::filesystem::path folder = palette_folder_path();
     assert(!folder.empty());
     const std::filesystem::path from = palette_file_path(folder, old_name);
@@ -331,7 +440,7 @@ std::optional<std::string> rename_palette_file(std::string_view old_name,
 
 std::optional<std::string> remove_palette_file(std::string_view name) {
     // The name is the picker's to judge (the declaration): a loaded file's,
-    // never a default's (which the map does not hold).
+    // never a built-in's (which the map does not hold).
     const auto it = g_loaded_palettes.find(name);
     assert(it != g_loaded_palettes.end());
     const std::filesystem::path folder = palette_folder_path();

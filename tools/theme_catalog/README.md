@@ -32,9 +32,14 @@ The app compiles in ONE THEME PER CHROME and nothing else (`src/gui/theme_file.h
 the table in its order, never hand-edited. The same run writes the role table's generated Clearlooks block,
 `src/gui/theme_clearlooks_roles.inc` and `theme_clearlooks_members.inc`. A catalog change is `build.py`, then
 `gen_theme_files.py` and `catalog_md.py`, then the build, the outputs committed together; the output is byte-stable
-(the role table's order, uppercase hex, LF, no timestamp). The other 95 entries ship nowhere: the bundled theme files
+(the role table's order, uppercase hex, LF, no timestamp). No other entry ships as a theme: the bundled theme files
 (`assets/themes/<key>.theme`, copied into the app's `themes/` folder at every launch and chosen by the `theme` device
-key, 2026-10-04..10-08) retired with the key, the git history keeping them. A compiled theme takes the CHROME roles
+key, 2026-10-04..10-08) retired with the key, the git history keeping them. WHAT SHIPS OF EVERY ENTRY (architect
+2026-10-08 ~11:00, all 97, the two chromes' own among them) is its TWELVE CHROME KEYS — ground and text, the caption's
+start, end and text, the inactive caption's three, the selection pair, the field pair — as the palette's BUILT-IN
+SCHEMES: `gen_theme_files.py` transcribes them into the generated `src/gui/chrome_schemes.inc` (`kGuiChromeSchemes`,
+`src/gui/palette_file.h`; the transcription's rules and the display names are the generator's head; never
+hand-edited). A compiled theme takes the CHROME roles
 THE ENTRY RECORDS, each the recorded byte; a role it does not name takes Windows 2000's value, and a caption start
 recorded without its gradient end makes the end the start, a FLAT CAPTION (the generator's head is the statement); it
 names no program role (2026-10-07):

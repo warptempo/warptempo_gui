@@ -3349,13 +3349,14 @@ int gui_main(const char* argument) {
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE LIVE
     // CHROME'S COMPILED THEME for the chrome's colors (2026-10-08,
     // chrome_theme_words, theme_file.h), and the palette the config names (a
-    // default or a file read above) — or, with no `palette` line, THE LIVE
+    // built-in or a file read above) — or, with no `palette` line, THE LIVE
     // CHROME'S DEFAULT PALETTE (effective_palette_name, palette_file.h) — for
     // the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here through
     // palette_record and handed to the install explicitly — render.h's
     // install_palette), with the same palette's CHROME KNOB when it carries
     // one (2026-10-08, derived over the compiled theme under windows-2000,
-    // chrome_derive.h) — both resolved against the chrome set above;
+    // chrome_derive.h; a built-in's fifteen the chrome's default's,
+    // palette_record) — both resolved against the chrome set above;
     // installed once, before the first paint. Every painter reads it through
     // palette() (render.h's palette block).
     {

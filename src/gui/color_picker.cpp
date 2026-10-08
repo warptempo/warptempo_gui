@@ -1,11 +1,11 @@
 #include "color_picker.h"
 
-#include "chrome_derive.h"     // the chrome knob: default_text
 #include "clearlooks_paint.h"   // cl_scale_thumb_h_px (the thumb's grab height)
 #include "device_config.h"     // the `palette` key's writer (write_device_config)
 #include "notifications.h"
 #include "playback_lifecycle.h"
 #include "text_shape.h"
+#include "theme_file.h"         // the compiled chrome's words (a key's OLD, the block's seed)
 #include "viewport.h"
 
 #include <algorithm>
@@ -50,22 +50,33 @@ constexpr bool role_names_follow_the_table() {
     return true;
 }
 static_assert(role_names_follow_the_table());
-// The chrome knob's two, in kGuiChromeLines' order (asserted the same way).
+// The chrome knob's twelve, in kGuiChromeLines' order (asserted the same
+// way; the names his, architect 2026-10-08 ~11:00).
 constexpr RoleName kChromeNames[] = {
-    {"chrome_ground", "Chrome"},
-    {"chrome_text",   "Chrome Text"},
+    {"chrome_ground",               "Chrome"},
+    {"chrome_text",                 "Chrome Text"},
+    {"chrome_title_start",          "Title"},
+    {"chrome_title_end",            "Title End"},
+    {"chrome_title_text",           "Title Text"},
+    {"chrome_inactive_title_start", "Inactive Title"},
+    {"chrome_inactive_title_end",   "Inactive Title End"},
+    {"chrome_inactive_title_text",  "Inactive Title Text"},
+    {"chrome_selection",            "Selection"},
+    {"chrome_selection_text",       "Selection Text"},
+    {"chrome_field",                "Field"},
+    {"chrome_field_text",           "Field Text"},
 };
 static_assert(std::size(kChromeNames) == kGuiChromeLineCount);
 constexpr bool chrome_names_follow_the_lines() {
     for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
-        if (std::string_view(kChromeNames[i].role) != kGuiChromeLines[i])
+        if (std::string_view(kChromeNames[i].role) != kGuiChromeLines[i].key)
             return false;
     return true;
 }
 static_assert(chrome_names_follow_the_lines());
 
-// The compiled theme's word for a chrome role (the knob's OLD when never
-// picked).
+// The compiled theme's word for a chrome role (a key's OLD while no block
+// stands, and the seed of the block its first pick creates).
 uint32_t compiled_chrome_word(std::string_view role) {
     const std::size_t i = theme_role_index(role);
     assert(i < kGuiThemeRoleCount);
@@ -98,9 +109,17 @@ uint32_t element_color(std::size_t e) {
     const Element el = element_at(e);
     if (!el.chrome) return program_palette_words()[el.role];
     const std::optional<GuiChromePick>& pick = live_chrome_pick();
-    if (el.role == 0)
-        return pick ? pick->ground : compiled_chrome_word("ground");
-    return pick ? pick->text : compiled_chrome_word("label");
+    return pick ? chrome_line_word(*pick, el.role)
+                : compiled_chrome_word(kGuiChromeLines[el.role].compiled_role);
+}
+
+GuiChromePick compiled_chrome_pick() {
+    GuiChromePick p;
+    for (std::size_t k = 0; k < kGuiChromeLineCount; ++k)
+        if (is_chrome_block_line(k))
+            set_chrome_line_word(p, k,
+                                 compiled_chrome_word(kGuiChromeLines[k].compiled_role));
+    return p;
 }
 
 // -- THE PRESETS ---------------------------------------------------------------
@@ -111,19 +130,17 @@ static_assert(text_editor::kMaxPendingCharsPaletteName ==
               static_cast<int>(kPaletteNameMaxBytes));
 } // namespace
 
-// A DEFAULT PALETTE IS SHOWN BY ITS VOCABULARY'S NAME (ChromeSpec::
-// display_name, the one source the Settings editor's Chrome combo reads too;
-// every default palette is one vocabulary's, palette_file.cpp's
-// defaults_follow_the_vocabularies).
+// A BUILT-IN IS SHOWN BY ITS GENERATED DISPLAY NAME (kGuiChromeSchemes,
+// palette_file.h), a file by its name.
 std::string palette_display_name(std::string_view name) {
-    for (const ChromeSpec* s : kGuiChromeSpecs)
-        if (name == s->default_palette) return std::string(s->display_name);
+    if (const GuiChromeScheme* b = builtin_scheme(name))
+        return std::string(b->display_name);
     return std::string(name);
 }
 
-bool is_default_display_name(std::string_view name) {
-    for (const ChromeSpec* s : kGuiChromeSpecs)
-        if (name == s->display_name) return true;
+bool is_builtin_display_name(std::string_view name) {
+    for (const GuiChromeScheme& b : kGuiChromeSchemes)
+        if (name == b.display_name) return true;
     return false;
 }
 
@@ -134,15 +151,15 @@ std::string_view active_palette(const AppState& app) {
 
 bool palette_act_enabled(const AppState& app, PaletteAct a) {
     const std::string_view active = active_palette(app);
-    const bool is_default = is_default_palette_name(active);
+    const bool builtin = is_builtin_palette_name(active);
     switch (a) {
         case PaletteAct::Save:
-            return !is_default && live_palette_record() != palette_record(active);
+            return !builtin && live_palette_record() != palette_record(active);
         case PaletteAct::SaveAs:
             return true;
         case PaletteAct::Rename:
         case PaletteAct::Delete:
-            return !is_default;
+            return !builtin;
     }
     return false;
 }
@@ -156,10 +173,34 @@ std::vector<PaletteMenuRow> palette_menu_rows() {
         r.act    = palette_act_at(i);
         rows.push_back(std::move(r));
     }
-    for (std::string& n : palette_names()) {
+    // A group opens on a separator; an empty group is never shown, so with
+    // no file the built-ins follow the acts across ONE separator.
+    const auto add_name = [&rows](std::string name, bool opens_group) {
         PaletteMenuRow r;
-        r.name = std::move(n);
+        r.name             = std::move(name);
+        r.separator_before = opens_group;
         rows.push_back(std::move(r));
+    };
+    bool first = true;
+    for (std::string& n : palette_file_names()) {
+        add_name(std::move(n), first);
+        first = false;
+    }
+    // The built-ins: the chromes' own defaults first, in the vocabularies'
+    // order, then every other scheme in the catalog's.
+    first = true;
+    for (const GuiDefaultPalette& d : kGuiDefaultPalettes) {
+        add_name(d.name, first);
+        first = false;
+    }
+    for (const GuiChromeScheme& b : kGuiChromeSchemes) {
+        const std::string_view key = b.key;
+        if (std::ranges::any_of(kGuiDefaultPalettes,
+                                [key](const GuiDefaultPalette& d) {
+                                    return key == d.name;
+                                }))
+            continue;
+        add_name(std::string(key), false);
     }
     return rows;
 }
@@ -478,9 +519,10 @@ Layout layout(const AppState& app, const GuiFont& font) {
     }
 
     // THE PALETTE MENU, when down: its rows (palette_menu_rows' order, the
-    // acts first) with ONE separator block between the acts and the names —
-    // a scroll row of its own, so the menu has one scroll row more than it
-    // has rows — placed and scrolled by the popup lists' rule (render.h's
+    // acts first) with A SEPARATOR BLOCK BEFORE EACH ROW THAT OPENS A GROUP
+    // (his files', the built-ins') — each a scroll row of its own, so the
+    // menu has a scroll row more than it has rows per separator — placed
+    // and scrolled by the popup lists' rule (render.h's
     // popup scroll block): hung from the button's foot or standing on its
     // head, the shown scroll rows [top, top + visible) laid from the item
     // block's top. Its width is the widest row's label between the popup's
@@ -494,9 +536,20 @@ Layout layout(const AppState& app, const GuiFont& font) {
         const int pad_x       = scaled_px(kPopupPadXPx);
         const int menu_item_h = popup_item_h_px();
         std::vector<PaletteMenuRow> rows = palette_menu_rows();
-        const int n     = static_cast<int>(rows.size());
-        const int total = n + 1;   // the separator's scroll row
-        const int content_h = n * menu_item_h + popup_sep_block_px();
+        const int n    = static_cast<int>(rows.size());
+        const int seps = static_cast<int>(std::ranges::count_if(
+            rows, [](const PaletteMenuRow& r) { return r.separator_before; }));
+        // The scroll rows in order: each a row's index, or -1 for the
+        // separator that opens the next row's group.
+        std::vector<int> scroll_rows;
+        scroll_rows.reserve(static_cast<std::size_t>(n + seps));
+        for (int i = 0; i < n; ++i) {
+            if (rows[static_cast<std::size_t>(i)].separator_before)
+                scroll_rows.push_back(-1);
+            scroll_rows.push_back(i);
+        }
+        const int total = static_cast<int>(scroll_rows.size());
+        const int content_h = n * menu_item_h + seps * popup_sep_block_px();
         const PopupListPlacement p =
             place_popup_list(l.menu_button, app.height, total, content_h);
         double widest = 0.0;
@@ -519,17 +572,17 @@ Layout layout(const AppState& app, const GuiFont& font) {
         l.menu_bar = popup_scroll_bar(l.menu, p.upward, total, p.visible,
                                       app.color_picker.menu_scroll.top);
         l.menu_items.assign(rows.size(), GuiRect{0, 0, 0, 0});
-        l.menu_sep_y = -1;
+        l.menu_sep_ys.clear();
         int iy = p.y + popup_border_top_px(p.upward) + popup_item_margin_y_px();
         const int first = l.menu_bar.top;
         for (int sr = first; sr < first + l.menu_bar.visible && sr < total;
              ++sr) {
-            if (sr == kPaletteActCount) {
-                l.menu_sep_y = iy;   // the acts' foot: the separator
+            const int row = scroll_rows[static_cast<std::size_t>(sr)];
+            if (row < 0) {
+                l.menu_sep_ys.push_back(iy);   // a group's head: its separator
                 iy += popup_sep_block_px();
                 continue;
             }
-            const int row = sr < kPaletteActCount ? sr : sr - 1;
             l.menu_items[static_cast<std::size_t>(row)] =
                 popup_item_rect(l.menu, iy, l.menu_bar.present);
             iy += menu_item_h;
@@ -945,20 +998,15 @@ void GuiColorPicker::set_color(uint32_t rgb, bool from_hsv) {
     }
     // THE LIVE APPLY: the live palette with one word rewritten, through the
     // apply shape's one road (install_live_words). A chrome element's FIRST
-    // pick creates the knob whole (the declaration): the ground's seeds the
-    // text by Windows' lightness (chrome_derive::default_text), the text's
-    // keeps the compiled ground.
+    // pick creates the block whole (the declaration): the nine from the
+    // live chrome's compiled words, then the picked key written.
     GuiPaletteRecord record = live_palette_record();
     const color_picker::Element el = color_picker::element_at(cp.element);
     if (!el.chrome) {
         record.words[el.role] = rgb;
-    } else if (el.role == 0) {
-        if (record.chrome) record.chrome->ground = rgb;
-        else record.chrome = GuiChromePick{rgb, chrome_derive::default_text(rgb)};
     } else {
-        if (record.chrome) record.chrome->text = rgb;
-        else record.chrome = GuiChromePick{
-                 color_picker::element_color(0), rgb};
+        if (!record.chrome) record.chrome = color_picker::compiled_chrome_pick();
+        set_chrome_line_word(*record.chrome, el.role, rgb);
     }
     install_live_words(record);
 }
@@ -1153,7 +1201,11 @@ void GuiColorPicker::apply_palette_record(const GuiPaletteRecord& record) {
 void GuiColorPicker::load_palette(std::string_view name) {
     assert(is_palette_name(name));
     const std::string held(name);   // the menu's row may not outlive the call
-    apply_palette_record(palette_record(held));
+    GuiPaletteRecord record = palette_record(held);
+    // A BUILT-IN IS CHROME-ONLY (palette_file.h's head): the live fifteen
+    // stand.
+    if (is_builtin_palette_name(held)) record.words = program_palette_words();
+    apply_palette_record(record);
     write_palette_key(held);
 }
 
@@ -1206,7 +1258,7 @@ void GuiColorPicker::commit_name() {
         end_ask();   // the same name: the commit's no-op
         return;
     }
-    if (is_palette_name(name) || color_picker::is_default_display_name(name)) {
+    if (is_palette_name(name) || color_picker::is_builtin_display_name(name)) {
         refuse("Name taken");
         return;
     }
@@ -1235,7 +1287,7 @@ void GuiColorPicker::raise_delete() {
     // release first (on_button_release), so no prompt stands here.
     assert(!app.prompt.active);
     const std::string active(color_picker::active_palette(app));
-    assert(!is_default_palette_name(active));
+    assert(!is_builtin_palette_name(active));
     cp.pending_delete = active;
     app.prompt.present("Delete '" + active + "'?",
                        {'d', '\x1b'},

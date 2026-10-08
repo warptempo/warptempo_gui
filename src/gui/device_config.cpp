@@ -198,7 +198,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.chrome = value;
             return {};
         }
-        // THE PALETTE (2026-10-07): a default's name or a palette file's read
+        // THE PALETTE (2026-10-07): a built-in's key or a palette file's read
         // at launch, under its one grammar owner (is_palette_name,
         // palette_file.h) — which is why gui_main reads the palettes folder
         // BEFORE this file. An EMPTY value is refused like any other
