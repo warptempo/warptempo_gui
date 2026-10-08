@@ -593,17 +593,31 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   (x 5), and between File's cell end (x 41) and Edit's cell start (x 55)
 //   lie 14 px — so the lead L (the bar's shadow and the RowColumn's
 //   marginWidth) + the cascade's pad p = 11 and 2 p + the spacing s = 14.
-//   No guidebook capture shows a menu-bar title armed (all 53 scanned for a
-//   one-px raised box in the menu bars), so the split is Motif's own
-//   arithmetic, the one that also gives the 6 rows above: the RowColumn's
-//   marginWidth 3 (L = 1 + 3 = 4, menu_band_lead_px) and a menu bar's
-//   spacing 0 (menu_item_spacing_px: the armed boxes touch), the cascade's
-//   pad 7 = its one-px shadow + its marginWidth 6 (menu_label_pad_left_px /
-//   _right_px) — every margin kept as the px constant Motif's resources
-//   gave it (the settled rule). The open title a RAISED one-W box
-//   over the content rows, the label unpushed (Motif's armed cascade; the
-//   "Web Browser" row of desktop_full_cde15solaris9.png is the armed face
-//   at 1 px).
+//   The split is Motif's own arithmetic, the one that also gives the 6
+//   rows above: the RowColumn's marginWidth 3 (L = 1 + 3 = 4,
+//   menu_band_lead_px) and a menu bar's spacing 0 (menu_item_spacing_px:
+//   the armed boxes touch), the cascade's pad 7 = its one-px shadow + its
+//   marginWidth 6 (menu_label_pad_left_px / _right_px) — every margin kept
+//   as the px constant Motif's resources gave it (the settled rule) — and
+//   THE NEDIT CAPTURE OF 2026-10-08 CONFIRMS IT (tmp/Screenshot_2026-10-08_
+//   10-14-22.png, a real Motif application under NsCDE's Solaris palette,
+//   its "File" title armed, re-measured): the bar's ts column x 510, the
+//   armed box from x 514 (L 4), "File"'s ink 521-545 inside the box's
+//   514-552 (7 a side), "Edit"'s ink from 560 (the next box flush at 553,
+//   spacing 0). THE OPEN TITLE IS THAT ARMED BOX ETCHED IN: Motif's
+//   XmNenableEtchedInMenu, which CDE's sys.resources sets True, draws the
+//   armed cascade SUNKEN — a one-W ring, the bottom shadow on its top row
+//   and left column, the top shadow on its bottom row and right column —
+//   round the SELECT COLOR (XmNselectColor, cde_select; the capture's
+//   3E7C8E is its body 4992A7 at 85 %), the label unpushed in the label
+//   color (paint_cde_armed); THE BOX SPANS THE BAR'S BODY ROWS EXACTLY,
+//   the content rows between the head's top shadow and the foot's bottom
+//   shadow (the capture's 274-296 under the bar's 273 / 297, no body row
+//   above or below it — the capture's relation kept over the RowColumn
+//   margin the height's arithmetic counts, the bar's 27 unchanged), and
+//   the anchor's whole width. Its pull-down hangs with its
+//   top shadow ON the bar's bottom shadow, its left edge flush with the
+//   box's (dropdown_hang_y), the armed item the same etched-in face.
 //   THE TOOLBARS the base's 31 x 30 case round the 24-W seat (F: dtfile's
 //   icon at rest has no box, the glyph on the body) in MotifFlat, the
 //   groups 8 apart round the etched separator at Windows' seat (3 in, 2

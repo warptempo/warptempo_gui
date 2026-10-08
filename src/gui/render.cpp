@@ -1298,18 +1298,40 @@ void render_trim_flags(cairo_t* cr,
     // rects and with the same publication.
     const bool gtk_bar =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
-    // UNDER CDE the lane is Motif's horizontal XmScrollBar (2026-10-08;
+    // UNDER CDE the trim bar is Motif's horizontal XmScrollBar (2026-10-08;
     // cde_paint.h's scroll-bar block, the notepad capture's bar at CDE's
     // own 13, the spec's scroll_bar_px): the sunken select-colour trough, the raised
     // slider inside its ring for the body, the beveled triangles for the
-    // caps — on the very rects and with the same publication.
+    // caps — on the very rects and with the same publication. THE BAR IS
+    // ONE SUNKEN RECTANGLE ON THE LANE'S BODY (architect 2026-10-08 ~19:05,
+    // off the notepad capture's rows 383-395: "today's caps lack that
+    // frame"): the trough's ring and its select fill span the trim bar
+    // alone — the begin cap's outer edge to the end cap's, the interval the
+    // two trim_endcap_rects span, round the two arrows and the slider, the
+    // narrow case's two touching caps included — and the lane outside it is
+    // the body, flat, no ring, the bar's own extent the cue of what is kept
+    // (the select fill no longer runs across the trimmed-off columns). A cap
+    // sliding off the lane's edge takes its side of the ring with it under
+    // the clip, as the body's edge does (below); a side lying farther off
+    // than two relief lines is held there, outside the clip, so the rect
+    // stays in cairo's range at any zoom; a window wholly off one side
+    // paints the body alone.
     const bool motif_bar =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde;
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
+    const int btn_w = trim_arrow_button_w_px();
+    const int run = 2 * relief_line_px();
+    const GuiRect begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
+    const GuiRect end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
     if (gtk_bar) {
         paint_cl_trough(cr, lane);
     } else if (motif_bar) {
-        paint_cde_trough(cr, lane);
+        paint_cell_rect(cr, lane, palette().ground);
+        const int bar_lo = std::max(begin_r.x - lane_x, -run);
+        const int bar_hi = std::min(end_r.x + end_r.w - lane_x, lane_w + run);
+        if (bar_hi > bar_lo)
+            paint_cde_trough(cr, GuiRect{lane_x + bar_lo, lane_y,
+                                         bar_hi - bar_lo, lane_h});
     } else {
         paint_cell_rect(cr, lane, palette().ground);
         paint_checker_rect(cr, lane, lane_x, lane_y, palette().hilight,
@@ -1328,9 +1350,7 @@ void render_trim_flags(cairo_t* cr,
     // lines) is held there, outside the clip, which keeps the rect's
     // coordinates in cairo's range at any zoom; a window wholly off one side
     // paints no body.
-    const int btn_w = trim_arrow_button_w_px();
     const TrimBridgeGap gap = trim_bridge_gap(bc, ec, btn_w);
-    const int run = 2 * relief_line_px();
     const int body_lo = std::max(gap.lo, -run);
     const int body_hi = std::min(gap.hi, lane_w + run);
     if (body_hi > body_lo) {
@@ -1347,7 +1367,8 @@ void render_trim_flags(cairo_t* cr,
     }
 
     // THE TWO ARROW BUTTONS, from the ONE rect owner (trim_endcap_rect: the
-    // edge anchoring and the narrow rule), painted over the body and
+    // edge anchoring and the narrow rule; the rects above, which the cde
+    // trough's span reads too), painted over the body and
     // published for the hit as painted — each cut to the lane's painted
     // width, the clip the pixels take, so a button overrunning the lane
     // claims its visible columns alone and the inert gutter claims nothing.
@@ -1361,7 +1382,8 @@ void render_trim_flags(cairo_t* cr,
     // a button is ever unclickable, and no unpainted one answers.
     // A TRIM WINDOW WHOLLY OFF ONE SIDE PAINTS NOTHING AND GETS NO CUE
     // (architect 2026-10-06): no button, no body, an empty bridge. The
-    // dithered lane already says "everything in view is trimmed off", no
+    // dithered lane (under cde the bare body, no trough) already says
+    // "everything in view is trimmed off", no
     // period idiom shows which side the window lies on, and the framing
     // double-click brings it back.
     const auto lane_cut = [&](GuiRect r) {
@@ -1371,7 +1393,6 @@ void render_trim_flags(cairo_t* cr,
         r.w = std::max(0, hi - lo);
         return r;
     };
-    const GuiRect begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
     if (lane_cut(begin_r).w > 0) {
         if (gtk_bar)
             paint_cl_stepper(cr, begin_r, /*points_left=*/true,
@@ -1384,7 +1405,6 @@ void render_trim_flags(cairo_t* cr,
                                     pressed == TrimPressedCap::Begin);
         if (out_hit) out_hit->begin = {true, lane_cut(begin_r)};
     }
-    const GuiRect end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
     if (lane_cut(end_r).w > 0) {
         if (gtk_bar)
             paint_cl_stepper(cr, end_r, /*points_left=*/false,

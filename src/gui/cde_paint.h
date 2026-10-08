@@ -33,10 +33,11 @@
 // caption's set-1 boxes, the text field's set-4 ring, the inactive frame's)
 // and the shapes Windows never drew (Motif's beveled arrow, the select-
 // colour trough, the scale's slider, dtwm's frame and glyphs). The select
-// colour (cde_select, the trough and the checked face), the field's two
-// shadows, the title's two and the inactive frame's two are the CDE block
-// of roles (theme_file.h); NO HOVER FACE anywhere — Motif has none (the
-// deviations doc records the one-hover-face rule's unused allowance).
+// colour (cde_select, the trough, the checked face and the armed menu
+// entry), the field's two shadows, the title's two and the inactive
+// frame's two are the CDE block of roles (theme_file.h); NO HOVER FACE
+// anywhere — Motif has none (the deviations doc records the one-hover-face
+// rule's unused allowance).
 //
 // EVERY COLOUR OPAQUE, NO GRADIENT, NO ROUNDED CORNER, NO BLEND: Motif's
 // drawing is solid cells; the antialiasing is the renderer's on the mitres
@@ -49,6 +50,21 @@
 // scheme, named for the readers here.
 void paint_cde_raised(cairo_t* cr, const GuiRect& r);
 void paint_cde_sunken(cairo_t* cr, const GuiRect& r);
+
+// THE ARMED MENU ENTRY (2026-10-08, the NEdit capture
+// tmp/Screenshot_2026-10-08_10-14-22.png, a real Motif application under
+// NsCDE's Solaris palette): Motif draws an armed cascade button or menu item
+// ETCHED IN when XmNenableEtchedInMenu is True, which CDE's sys.resources
+// sets — a SUNKEN one-W ring (the bottom shadow on its top row and left
+// column, the top shadow on its bottom row and right column) round THE
+// SELECT COLOR (XmNselectColor, cde_select: the capture's 3E7C8E is its body
+// 4992A7 at 85 %, the arithmetic cde_derive.h proves), the label unpushed in
+// the label color. The capture's "File" title armed: the box columns 514-552
+// over the bar's body rows 274-296, the ring at 274 / 514 dark and 296 / 552
+// light, the fill 3E7C8E inside; its "New" item armed: rows 308-330 across
+// the pane's inner width (515-754), the same ring and fill. Filled whole,
+// then the ring.
+void paint_cde_armed(cairo_t* cr, const GuiRect& r);
 
 // THE TEXT FIELD — XmTextField / XmText on the Open dialog capture (x 20,
 // rows 58-82: its top row and left column set 4's bottom shadow 99948B, its
@@ -105,9 +121,14 @@ void paint_cde_caption_glyph(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
 // THE TROUGH — XmScrollBar on the notepad capture (rows 383-395: a sunken
 // one-px ring, the bottom shadow on its top and left, the top shadow on its
 // bottom and right, THE SELECT COLOUR 9397A5 inside — XmNtroughColor is the
-// set's select): the ring on `lane` and cde_select inside it. The arrows
-// and the slider stand inside the ring (below), on the lane's inner rows.
-void paint_cde_trough(cairo_t* cr, const GuiRect& lane);
+// set's select): the ring on `bar` and cde_select inside it. THE RECT IS
+// THE WHOLE BAR'S, ITS ARROWS INCLUDED (architect 2026-10-08 ~19:05, off the
+// notepad capture: "today's caps lack that frame") — the popup list's bar
+// end to end, and on the trim lane the trim bar alone, the begin cap's
+// outer edge to the end cap's, ONE SUNKEN RECTANGLE on the lane's body
+// (render_trim_flags). The arrows and the slider stand inside the ring
+// (below), on the bar's inner rows.
+void paint_cde_trough(cairo_t* cr, const GuiRect& bar);
 // THE SLIDER — the raised box in the body, one W inside the trough's ring
 // on the lane's axis (`horizontal`: inset on top and bottom, the ends the
 // caller's — the trim lane's body runs to its caps; a vertical bar's inset
@@ -119,16 +140,28 @@ void paint_cde_slider(cairo_t* cr, const GuiRect& body, bool horizontal);
 // the BOTTOM SHADOW, the face the body; the right arrow's base light; up's
 // left edge light, right edge and base dark; down's base and left edge
 // light) on the cap's box `b` (the trim lane's 13 x 13, the popup bar's —
-// the spec's scroll_bar_px, CDE's own 13 since 2026-10-08):
-// the triangle fills the box's rows inside the trough's ring and its
-// columns less one W of trough at the side the slider stands on (the
-// capture's one trough pixel between arrow and slider), the three edges
-// one W wide inside it, the dark ones laid first so the apex and the light
-// base corner stay light as the pixel art has them. PRESSED the face sinks
-// (the edge tones swapped, dtwm's armed arrow); no shift.
+// the spec's scroll_bar_px, CDE's own 13 since 2026-10-08), THE CAP STANDING
+// AT THE BAR'S END INSIDE THE TROUGH'S RING (2026-10-08 ~19:05, the
+// architect off the notepad capture: the trough's rect is the whole bar's,
+// paint_cde_trough): the triangle's box is the cap less one W on every side
+// — the ring's line on the bar's end and its two long sides, and one W of
+// trough at the side the slider stands on (the capture's one trough pixel
+// between arrow and slider) — 11 x 11 in the 13 (the notepad's left arrow
+// x 6-16 inside the ring at x 5, the trough at 17, the slider from 18; the
+// Open dialog's up arrow rows 173-183 under the ring's row 172, the trough
+// at 184); the three edges one W wide inside it, the dark ones laid first
+// so the apex and the light base corner stay light as the pixel art has
+// them. PRESSED the face sinks (the edge tones swapped, dtwm's armed
+// arrow); no shift.
 enum class CdeArrowDir { Left, Right, Up, Down };
 void paint_cde_arrow(cairo_t* cr, const GuiRect& b, CdeArrowDir dir,
                      bool pressed);
+// THE SAME TRIANGLE IN EXACTLY THE BOX `t` (its base one side of the box,
+// its apex the middle of the opposite side, the edges and tones as above) —
+// paint_cde_arrow's own drawing, and the playhead's head under cde
+// (render.h's playhead head block: Motif's down arrow, 9 x 9 W).
+void paint_cde_arrow_triangle(cairo_t* cr, const GuiRect& t, CdeArrowDir dir,
+                              bool pressed);
 
 // -- THE SCALE (the scrub, the picker's sliders) -------------------------------
 

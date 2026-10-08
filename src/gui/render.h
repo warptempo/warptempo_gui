@@ -567,7 +567,9 @@ void install_true_colors(bool on);
 // painted in four of the CHROME's own roles: the glyph's outline in LABEL
 // (COLOR_BTNTEXT, the role Windows maps a toolbar or ruler bitmap's black
 // to), its bevel in HILIGHT and SHADOW, and its interior in GROUND — a
-// raised chip on the chrome, not a flat silhouette. NO HOLD LAMP (architect
+// raised chip on the chrome, not a flat silhouette (UNDER CDE Motif's
+// beveled down arrow instead, 2026-10-08 — the head block's cde arm,
+// kPlayheadHeadMotifBaseUnits). NO HOLD LAMP (architect
 // 2026-10-05): the glyph paints the same face whether or not
 // AppState::camera_hold stands. THE STEM is the `playhead_stem` role, UNIFORM from the head
 // to the canvas's foot (its contrast over the chrome and the canvas is the
@@ -1522,11 +1524,13 @@ int cl_scale_thumb_h_px();
 // ruler_lane_px, 4 W — what dtwm's frame and cde's other lanes leave of the
 // base's stack (chrome_stack_authored_h below proves it), 12 device rows at
 // 300 % — carrying the ticks, every one 3 W short (kRulerBehindTickPx)
-// hanging from its top, and the playhead's head, its top on the lane's top;
-// the labels stand at the MARKER LANE'S rows, behind the flags, their cap
-// band centred on the flag label's (paint_ruler_row's arm). The head reaches
-// 4 W down into the marker lane, where a flag under it covers its lower
-// rows; the marker lane's 18 W and its hits are the base's.
+// hanging from its top, and the playhead's head, its band on the lane's
+// top — Motif's down arrow one W of body below it (the head block's cde
+// arm, 2026-10-08); the labels stand at the MARKER LANE'S rows, behind the
+// flags, their cap band centred on the flag label's (paint_ruler_row's
+// arm). The head's 10 W reach 6 W down into the marker lane, where a flag
+// under it covers its lower rows; the marker lane's 18 W and its hits are
+// the base's.
 inline int trim_lane_h_px() {
     return scaled_px(live_chrome_spec().scroll_bar_px, 3);
 }
@@ -2203,6 +2207,42 @@ inline constexpr bool playhead_head_glyph_is_rings() {
 static_assert(playhead_head_glyph_is_rings(),
               "kPlayheadHeadGlyph must be the rasterized rings of the "
               "pentagon rule (render.h's head paragraph)");
+// UNDER CDE THE HEAD IS MOTIF'S BEVELED DOWN ARROW (architect 2026-10-08
+// ~19:00-20:05, his glass pass: "more triangular", "as close as possible to
+// the source — whether it's the calendar arrows or the scrollbar"): the
+// triangle XmeDrawArrow draws (paint_cde_arrow_triangle, the trim caps' own),
+// pointing DOWN at the playhead, IN THE CHROME'S TONES — the face the body,
+// the three edges one W wide, the base and the left edge the top shadow
+// (HILIGHT under the Solaris scheme), the right edge the bottom shadow
+// (SHADOW) — and NO OUTLINE (the Windows glyph's K ring is Windows'; the
+// Motif arrow has none). THE PROPORTION IS THE SOURCES' SQUARE: dtcm's
+// "Today" arrows (tmp/cde15solaris9-1-1.png) 11 px across the base and 11
+// from the base to the apex, the notepad bar's arrows 11 x 11 (rows
+// 384-394) — base = height, the apex on the base's midline. THE SIZE IS HIS
+// PICK "c" of the proportional sheet (~20:05, squares 7-12 W): BASE 9 W,
+// HEIGHT 9 W, under ONE W OF BODY above it (his "slight gap above") — the
+// base's top row the ruler lane's top + 1 W, the apex's last row lane top
+// + 10 W, clear of the timestamp digits behind the flags (at 300 % their
+// cap top stands on the lane's row 33 by the recorded metrics — the lane's
+// 12, the air's 3, the flag's 3 + 3 + 33 to its baseline, less 3 to centre
+// the small cap's 18 on the body's 24 — and the head's last row is its
+// row 29). Each length is a count of the head's quantum u, as the Windows
+// glyph's are, so the base's nine units centre on the stem's columns with
+// no remainder (the middle unit the stem's, an odd count) — the base
+// equalling the Windows glyph's width is the fit's coincidence, not a rule.
+// The gap's row is painted the body across the base's width, so a tick
+// under the head does not show above it; the head's band is the gap and the
+// triangle, its half-width beyond the stem four units: the two bounds below
+// answer by vocabulary, the painter, its cull and its clip reading them.
+inline constexpr int kPlayheadHeadMotifBaseUnits   = 9;
+inline constexpr int kPlayheadHeadMotifHeightUnits = 9;
+inline constexpr int kPlayheadHeadMotifGapUnits    = 1;
+static_assert(kPlayheadHeadMotifBaseUnits % 2 == 1,
+              "the Motif head's base must be an odd count of units, its "
+              "middle unit the stem's");
+inline bool playhead_head_is_motif() {
+    return live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde;
+}
 // THE ONE QUANTUM, shared by every glyph unit and identical to the stem's
 // own width by construction (both are scaled_px(1, 1)) — named here for the
 // painter rather than read as waveform_line_px() twice over, so the two
@@ -2217,6 +2257,9 @@ inline int playhead_head_unit_px() {
 // beyond the quantum's own: the glyph cannot collapse at any gui_scale in
 // [50, 1000].
 inline int playhead_head_h_px() {
+    if (playhead_head_is_motif())
+        return (kPlayheadHeadMotifGapUnits + kPlayheadHeadMotifHeightUnits) *
+               playhead_head_unit_px();
     return kPlayheadHeadRows * playhead_head_unit_px();
 }
 // THE GLYPH'S HALF-WIDTH BEYOND THE STEM, in device px: the four columns
@@ -2226,6 +2269,8 @@ inline int playhead_head_h_px() {
 // (the widest row's half) still covers every row, and the drawn rings lie
 // inside the bitmap's box, their antialiased edges included.
 inline int playhead_head_half_w_px() {
+    if (playhead_head_is_motif())
+        return (kPlayheadHeadMotifBaseUnits - 1) / 2 * playhead_head_unit_px();
     return (kPlayheadHeadCols - 1) / 2 * playhead_head_unit_px();
 }
 
@@ -2363,9 +2408,14 @@ inline int tooltip_hover_slop_px() {
 // UNDER CDE IT IS MOTIF'S PULLDOWN (2026-10-08; paint_dropdown's cde arm):
 // ONE raised line a side in the body's ts / bs (the pane's shadow at the
 // 1-W ruling), no margin inside it (the spec's popup_margin_px 0, Motif's
-// pulldown RowColumn), the items 19 (the spec's), THE LIT ITEM A RAISED
-// ONE-W BOX IN THE BODY with its label unchanged (Motif's armed menu item;
-// the desktop_full capture's "Web Browser" row), the separator the etched
+// pulldown RowColumn), the items 19 (the spec's), THE LIT ITEM MOTIF'S ARMED
+// MENU ITEM ETCHED IN — the select color in a sunken one-W box over the
+// whole item, the pane's inner width, its label unchanged (enableEtchedInMenu,
+// which CDE's sys.resources sets; the NEdit capture of 2026-10-08,
+// tmp/Screenshot_2026-10-08_10-14-22.png, its "New" row 308-330 across the
+// pane's 515-754; paint_cde_armed) — the window menu's and the picker's
+// preset menu's alike; a menu-row pull-down's top line ON the bar's bottom
+// shadow (dropdown_hang_y); the separator the etched
 // pair at the item's full width (XmSeparatorGadget spans the pane) with the
 // same 3 above and below.
 inline constexpr int kPopupSepMarginYPx = 3;   // above and below the separator

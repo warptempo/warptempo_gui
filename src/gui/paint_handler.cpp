@@ -1931,14 +1931,20 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // border, the top corners round, one row taller than the item) under
         // the label in selected_fg, NOT pushed; the dead label is GTK's
         // insensitive text (show_embossed_run's clearlooks arm). UNDER CDE
-        // Motif's ARMED CASCADE (2026-10-08): a RAISED one-W box in the body
-        // round the content rows, the label unpushed (the desktop_full
-        // capture's armed "Web Browser" row, the same face).
+        // Motif's ARMED CASCADE ETCHED IN (2026-10-08, the NEdit capture
+        // tmp/Screenshot_2026-10-08_10-14-22.png; paint_cde_armed): a SUNKEN
+        // one-W box round the select color, the label unpushed in the label
+        // color, over THE BAR'S BODY ROWS EXACTLY — the content rows, every
+        // row between the bar's own top-shadow head and its bottom-shadow
+        // foot (the capture's 274-296 under the bar's 273 / 297) — and the
+        // anchor's whole width, its pads and its label (the capture's "File"
+        // 514-552: the 7-W pads round the ink at 521-545, the 4-W lead from
+        // the bar's column 510).
         int push = 0;
         if (open_anchor && clearlooks) {
             paint_cl_menubar_item(cr, row, x, btn_w);
         } else if (open_anchor && cde) {
-            paint_cde_raised(cr, GuiRect{x, content.y, btn_w, content.h});
+            paint_cde_armed(cr, GuiRect{x, content.y, btn_w, content.h});
         } else if (open_anchor) {
             paint_relief_sunken_outer(
                 cr, GuiRect{x, content.y, btn_w, content.h});
@@ -4212,6 +4218,8 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // not a leak. What he stated then is what this reads now — "the menu
     // row's bottom edge", the whole lane's — with the anchor keeping the x.
     int x = btn.x;
+    // (Under cde the pane's top shadow lies ON the bar's bottom shadow, one
+    // line up — dropdown_hang_y, the NEdit capture.)
     int y = dropdown_hang_y(app, menu);   // flush: zero margin under the LANE
     if (x + w > app.width) x = app.width - w;
     if (x < 0) x = 0;
@@ -4284,11 +4292,13 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
                                         app.dropdown.hovered_item == i);
         // UNDER CLEARLOOKS the lit item is clearlooks_gummy_draw_menuitem
         // (paint_cl_menu_item), the same item box, the same gate.
-        // UNDER CDE the lit item is Motif's ARMED menu item: a raised one-W
-        // box in the body, its label unchanged (render.h's dropdown block).
+        // UNDER CDE the lit item is Motif's ARMED menu item etched in
+        // (paint_cde_armed): the select color in a sunken one-W box over
+        // the whole item box, the pane's inner width, its label unchanged
+        // (render.h's dropdown block) — the window menu's alike.
         if (lit) {
             if (gtk_menu)        paint_cl_menu_item(cr, item);
-            else if (motif_menu) paint_cde_raised(cr, item);
+            else if (motif_menu) paint_cde_armed(cr, item);
             else                 paint_cell_rect(cr, item, palette().selected_fill);
         }
 
@@ -4771,6 +4781,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // chrome is scalable) — the silhouette, the bevel's outer edge and the
     // face, the rings render.h derives from the bitmap — antialiased, its
     // diagonals smooth at every scale: a bevelled chip in four chrome roles.
+    // UNDER CDE IT IS MOTIF'S BEVELED DOWN ARROW (architect 2026-10-08;
+    // render.h's head block, kPlayheadHeadMotifBaseUnits): 9 x 9 W under
+    // one W of body, in the chrome's tones, no outline — through the same
+    // band accessors, cull and clip.
     //
     // TIP-DOWN ONE WINDOWS PX INTO THE MARKER LANE (architect 2026-10-05,
     // moved down from flush on the ruler lane's own bottom row, architect
@@ -4860,11 +4874,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // sit flush on the ruler lane's bottom (ruler_baseline_to_marker_px's
             // old rule); the move is this one term, so a playhead's damage
             // rect must include it (below).
-            // BEHIND THE FLAGS (the arm above) the head's top is the
-            // ruler lane's own, the mock's seat: it stands over the short
-            // ticks and reaches down into the marker lane over the labels,
-            // a flag standing under it covering its lower rows as the
-            // flags cover everything this pass lays down.
+            // BEHIND THE FLAGS (the arm above) the head's band starts on
+            // the ruler lane's own top (cde's Motif arrow one W of body
+            // below it, inside the band), the mock's seat: it stands over
+            // the short ticks and reaches down into the marker lane over
+            // the labels, a flag standing under it covering its lower rows
+            // as the flags cover everything this pass lays down.
             const int    head_top    = behind ? lane.y
                                               : marker.y + marker_lane_air_px() -
                                                     rows;
@@ -4927,37 +4942,57 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             cairo_save(cr);
             cairo_rectangle(cr, lane.x, head_top, wave_w, rows);
             cairo_clip(cr);
-            cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-            cairo_push_group(cr);
-            cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
-            cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
-            // K: the outline, ring 0 with ring 1 cut out.
-            cairo_new_path(cr);
-            ring(0.0);
-            ring(1.0);
-            set_palette_source(cr, palette().label);
-            cairo_fill(cr);
-            // W: the bevel's top and left, ring 1's top-left half less ring 2.
-            cairo_new_path(cr);
-            poly({{1.0, 1.0}, {7.0, 1.0}, {7.0, 2.0}, {2.0, 2.0}, {2.0, 4.0},
-                  {4.5, 6.0}, {4.5, 7.0}, {1.0, 4.0}});
-            set_palette_source(cr, palette().hilight);
-            cairo_fill(cr);
-            // S: the bevel's right, the top-right corner and the tip's right
-            // half.
-            cairo_new_path(cr);
-            poly({{7.0, 1.0}, {8.0, 1.0}, {8.0, 4.0}, {4.5, 7.0}, {4.5, 6.0},
-                  {7.0, 4.0}});
-            set_palette_source(cr, palette().shadow);
-            cairo_fill(cr);
-            // '.': the face, ring 2.
-            cairo_new_path(cr);
-            ring(2.0);
-            set_palette_source(cr, palette().ground);
-            cairo_fill(cr);
-            cairo_pop_group_to_source(cr);
-            cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-            cairo_paint(cr);
+            // UNDER CDE MOTIF'S BEVELED DOWN ARROW (render.h's head block,
+            // kPlayheadHeadMotifBaseUnits): the gap's units of body across
+            // the base's width, then the triangle in its square of units
+            // under it, its base's middle unit the stem's column — drawn by
+            // the trim caps' own painter (paint_cde_arrow_triangle), in the
+            // chrome's tones, no outline.
+            if (playhead_head_is_motif()) {
+                const int base_w = kPlayheadHeadMotifBaseUnits * u;
+                const int gap_h  = kPlayheadHeadMotifGapUnits * u;
+                const int tri_h  = kPlayheadHeadMotifHeightUnits * u;
+                const int tx = lane.x + col -
+                               (kPlayheadHeadMotifBaseUnits - 1) / 2 * u;
+                paint_cell_rect(cr, GuiRect{tx, head_top, base_w, gap_h},
+                                palette().ground);
+                paint_cde_arrow_triangle(
+                    cr, GuiRect{tx, head_top + gap_h, base_w, tri_h},
+                    CdeArrowDir::Down, /*pressed=*/false);
+            } else {
+                cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+                cairo_push_group(cr);
+                cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
+                cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+                // K: the outline, ring 0 with ring 1 cut out.
+                cairo_new_path(cr);
+                ring(0.0);
+                ring(1.0);
+                set_palette_source(cr, palette().label);
+                cairo_fill(cr);
+                // W: the bevel's top and left, ring 1's top-left half less
+                // ring 2.
+                cairo_new_path(cr);
+                poly({{1.0, 1.0}, {7.0, 1.0}, {7.0, 2.0}, {2.0, 2.0},
+                      {2.0, 4.0}, {4.5, 6.0}, {4.5, 7.0}, {1.0, 4.0}});
+                set_palette_source(cr, palette().hilight);
+                cairo_fill(cr);
+                // S: the bevel's right, the top-right corner and the tip's
+                // right half.
+                cairo_new_path(cr);
+                poly({{7.0, 1.0}, {8.0, 1.0}, {8.0, 4.0}, {4.5, 7.0},
+                      {4.5, 6.0}, {7.0, 4.0}});
+                set_palette_source(cr, palette().shadow);
+                cairo_fill(cr);
+                // '.': the face, ring 2.
+                cairo_new_path(cr);
+                ring(2.0);
+                set_palette_source(cr, palette().ground);
+                cairo_fill(cr);
+                cairo_pop_group_to_source(cr);
+                cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+                cairo_paint(cr);
+            }
             cairo_restore(cr);
         }
     }
@@ -8408,9 +8443,12 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
             const bool lit = enabled && (cp.menu_pressed == static_cast<int>(i) ||
                                          cp.menu_hover == static_cast<int>(i));
             if (shown) {
+                // Under cde the armed menu item etched in (paint_dropdown's
+                // rule, paint_cde_armed), the label unchanged.
                 if (lit) {
-                    if (cl) paint_cl_menu_item(cr, item);
-                    else    paint_cell_rect(cr, item, palette().selected_fill);
+                    if (cl)       paint_cl_menu_item(cr, item);
+                    else if (cde) paint_cde_armed(cr, item);
+                    else paint_cell_rect(cr, item, palette().selected_fill);
                 }
                 const std::string label =
                     row.is_act
@@ -8421,8 +8459,8 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
                     show_row_text(cr, font, L.menu.x + pad_l, base, label,
                                   cl ? (lit ? palette().cl_menuitem_text
                                             : palette().cl_menu_text)
-                                     : (lit ? palette().selected_text
-                                            : palette().label));
+                                     : (lit && !cde ? palette().selected_text
+                                                    : palette().label));
                 else
                     show_row_text_embossed(cr, font, L.menu.x + pad_l, base,
                                            label);

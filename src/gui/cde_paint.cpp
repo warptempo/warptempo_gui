@@ -56,6 +56,11 @@ void paint_cde_sunken(cairo_t* cr, const GuiRect& r) {
     ring(cr, r, palette().shadow, palette().hilight);
 }
 
+void paint_cde_armed(cairo_t* cr, const GuiRect& r) {
+    paint_cell_rect(cr, r, palette().cde_select);
+    paint_cde_sunken(cr, r);
+}
+
 void paint_cde_field(cairo_t* cr, const GuiRect& r, GuiColor ground) {
     paint_cell_rect(cr, r, ground);
     ring(cr, r, palette().cde_field_bs, palette().cde_field_ts);
@@ -114,9 +119,9 @@ void paint_cde_caption_glyph(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
 
 // -- THE SCROLL BAR ------------------------------------------------------------
 
-void paint_cde_trough(cairo_t* cr, const GuiRect& lane) {
-    paint_cell_rect(cr, lane, palette().cde_select);
-    paint_cde_sunken(cr, lane);
+void paint_cde_trough(cairo_t* cr, const GuiRect& bar) {
+    paint_cell_rect(cr, bar, palette().cde_select);
+    paint_cde_sunken(cr, bar);
 }
 
 void paint_cde_slider(cairo_t* cr, const GuiRect& body, bool horizontal) {
@@ -131,24 +136,15 @@ void paint_cde_slider(cairo_t* cr, const GuiRect& body, bool horizontal) {
 
 void paint_cde_arrow(cairo_t* cr, const GuiRect& b, CdeArrowDir dir,
                      bool pressed) {
+    // THE TRIANGLE'S BOX (the declaration): the cap less one W on every
+    // side — the trough's ring on the bar's end and its two long sides, one
+    // W of trough at the slider's side — whichever way the arrow points.
+    paint_cde_arrow_triangle(cr, inner(b), dir, pressed);
+}
+
+void paint_cde_arrow_triangle(cairo_t* cr, const GuiRect& t, CdeArrowDir dir,
+                              bool pressed) {
     const int lw = relief_line_px();
-    // THE TRIANGLE'S BOX: inside the trough's ring across the lane, and
-    // one W of trough left at the slider's side along it.
-    GuiRect t{0, 0, 0, 0};
-    switch (dir) {
-        case CdeArrowDir::Left:
-            t = GuiRect{b.x, b.y + lw, b.w - lw, b.h - 2 * lw};
-            break;
-        case CdeArrowDir::Right:
-            t = GuiRect{b.x + lw, b.y + lw, b.w - lw, b.h - 2 * lw};
-            break;
-        case CdeArrowDir::Up:
-            t = GuiRect{b.x + lw, b.y, b.w - 2 * lw, b.h - lw};
-            break;
-        case CdeArrowDir::Down:
-            t = GuiRect{b.x + lw, b.y + lw, b.w - 2 * lw, b.h - lw};
-            break;
-    }
     if (t.w <= 0 || t.h <= 0) return;
     const double x0 = t.x, y0 = t.y, x1 = t.x + t.w, y1 = t.y + t.h;
     const double xm = x0 + t.w / 2.0, ym = y0 + t.h / 2.0;

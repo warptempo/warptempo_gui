@@ -10389,11 +10389,27 @@ GuiRect top_menu_row_area(const AppState& a);
 // LANE'S FOOT for the window menu (2026-10-08; dropdown_hangs_from_caption)
 // — the ONE expression the painter's box and the open edge's damage both
 // read (paint_dropdown, toggle_dropdown), so the damaged band and the
-// painted box start on the same row.
+// painted box start on the same row. UNDER CDE A MENU-ROW PULL-DOWN STANDS
+// ONE LINE HIGHER, ITS TOP SHADOW ON THE BAR'S BOTTOM SHADOW (2026-10-08,
+// the NEdit capture tmp/Screenshot_2026-10-08_10-14-22.png: the "File"
+// pull-down's light top row is the bar's dark row 297 across the pull-down's
+// columns 514-755, the bar's row staying dark left and right of it, the
+// pane's left column under the armed box's left column) — Motif posts the
+// pulldown's shell flush on the bar's last row, so the pane's ring replaces
+// that row with no body row between; the box keeps its height, so its
+// items start on the lane's foot. The window menu keeps the caption's foot
+// (no capture shows dtwm's posted).
 inline int dropdown_hang_y(const AppState& a, DropdownMenu m) {
-    const GuiRect lane = dropdown_hangs_from_caption(m) ? top_caption_row_area(a)
-                                                        : top_menu_row_area(a);
-    return lane.y + lane.h;
+    if (dropdown_hangs_from_caption(m)) {
+        const GuiRect lane = top_caption_row_area(a);
+        return lane.y + lane.h;
+    }
+    const GuiRect lane = top_menu_row_area(a);
+    const int on_bar_foot =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde
+            ? relief_line_px()
+            : 0;
+    return lane.y + lane.h - on_bar_foot;
 }
 GuiRect top_icon_row_area(const AppState& a);
 // GAP 1's band — the flexible band BETWEEN THE ICON ROW AND THE TRIM LANE (the
