@@ -16,8 +16,8 @@
 // decisions — defer to whatever the Windows designers used … the Windows 95
 // picker was great because everything was predefined and I just turned a
 // knob for the chrome and everything followed"; RECAST ~11:00, below). A
-// PALETTE MAY CARRY THE CHROME'S TWELVE KEYS (palette_file.h owns the
-// grammar, kGuiChromeLines): the ground and its text, the caption's start,
+// SCHEME IS THE CHROME'S TWELVE KEYS (a preset kind of its own since
+// 2026-10-08 ~18:15; palette_file.h owns the grammar, kGuiChromeLines): the ground and its text, the caption's start,
 // end and text, the inactive caption's three (optional, following the
 // active ones while absent), the selection's fill and text, the field's
 // ground and text. This header is THE WINDOWS-2000 DERIVATION over them and
@@ -332,8 +332,8 @@ static_assert([] {
 
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install reads
 // (install_palette / install_chrome_pick, render.cpp): the live chrome's
-// compiled theme, with the knob derived over it when the palette carries the
-// block — Windows' dialog rule under windows-2000 (above), GTK's and
+// compiled theme, with the knob derived over it when the live scheme
+// carries the keys — Windows' dialog rule under windows-2000 (above), GTK's and
 // metacity's arithmetic under clearlooks (clearlooks_derive.h), Motif's
 // XmGetColors under cde (cde_derive.h, 2026-10-08).
 inline GuiThemeWords live_chrome_words(const ChromeSpec& spec,

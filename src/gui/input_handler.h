@@ -1024,7 +1024,7 @@ struct GuiInputHandler {
     int wheel_context(int x, int y) const;
     // THE SCROLLING POPUP LIST UNDER (x, y), as published (render.h's popup
     // scroll block): 1 the settings choice editor's list, 2 the color
-    // picker's element list, 3 its palette menu — each only while it is
+    // picker's element list, 3 its preset menu — each only while it is
     // down and its bar stands — else 0. wheel_context's context 6 and
     // on_wheel's arm both read it, so the two cannot disagree.
     int popup_list_wheel_hit(int x, int y) const;
@@ -1759,7 +1759,7 @@ struct GuiInputHandler {
     void clear_color_picker_drag();
     // THE POPUP LISTS' SCROLL HOLDS' end (2026-10-08; render.h's popup scroll
     // block): the held arrow's face and the thumb's drag of the choice
-    // editor's list, the picker's element list and its palette menu, dropped
+    // editor's list, the picker's element list and its preset menu, dropped
     // on the same three edges and at each hold's own lift
     // (color_picker_release, finish_settings_choice_release) — every row
     // already scrolled live, so nothing is lost; each box it frees damaged.
@@ -1872,7 +1872,7 @@ struct GuiInputHandler {
     // road's head — GuiColorPicker::close through this handler.
     void close_color_picker();
     // THE COLOR PICKER DELETE'S TWO ANSWERS (architect 2026-10-07), called
-    // by GuiPrompt when DELETE_PALETTE_CONFIRM answers — GuiColorPicker's
+    // by GuiPrompt when DELETE_PRESET_CONFIRM answers — GuiColorPicker's
     // confirm_delete and cancel_delete through this handler, the render
     // player Delete's pair one surface over. The raise is
     // GuiColorPicker::raise_delete.
@@ -2974,12 +2974,12 @@ private:
     // Esc, the close road's head). The press router's three bodies:
     //   color_picker_press — the veil's left press: the scroll bar's (an
     //     arrow, a page, the thumb's drag — render.h's popup scroll block),
-    //     a palette menu row's arm (a grayed row a consumed nothing) or the
+    //     a preset menu row's arm (a grayed row a consumed nothing) or the
     //     menu's dismissal while the menu is down; the bar's, a list row's
     //     arm or the list's dismissal while the list is down; a standing edit abandoned by any press
     //     outside its field; then, on the card, the field's focus (a
-    //     double press on a standing edit its word select), the
-    //     chooser's open, the palette menu button's open (when painted
+    //     double press on a standing edit its word select), the scope
+    //     combo's or the element chooser's list open, the preset button's open (when painted
     //     live), a slider track's thumb seat-and-arm (the scrub's rule), the
     //     ring's or the triangle's arm, OLD's revert, or a push button's arm
     //     through the dialogs' shared arm; off the card, consumed (a press
@@ -2993,7 +2993,8 @@ private:
     //     dialog buttons' walk and the roster's.
     //   color_picker_release — the gesture's end (already applied), a scroll
     //     hold's end, a menu row's act (GuiColorPicker's preset acts) or a
-    //     list row's select,
+    //     list row's select (the scope's set_scope or the element's
+    //     set_element),
     //     or the dialog buttons' shared dispatch (a roster arm's lift goes
     //     to finish_chrome_press_release instead, on_button_release's block).
     //   clear_color_picker_drag — the gesture's hard end (the pointer-leave
@@ -3008,10 +3009,11 @@ private:
     void color_picker_release(int x, int y);
     bool route_color_picker_key(GuiKey key, GuiInputState mods);
     bool handle_color_picker_field_key(GuiKey key, GuiInputState mods);
-    // The chooser's list: open (the current element lit) or close, damaging
-    // the list's area either way.
-    void set_color_picker_list_open(bool open);
-    // The palette menu: open (the active preset's name lit) or close, the
+    // The chooser row's list: open (`scope` the scope combo's, its live
+    // scope lit, else the element chooser's, the live element lit) or
+    // close, damaging the list's area either way.
+    void set_color_picker_list_open(bool open, bool scope = false);
+    // The preset menu: open (the active preset's name lit) or close, the
     // list's damage rule.
     void set_color_picker_menu_open(bool open);
     // THE ROSTER'S CHORD IN FLIGHT (architect 2026-10-07 evening for row 8,

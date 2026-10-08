@@ -2841,10 +2841,11 @@ void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
 void install_palette(const GuiPaletteWords& program,
                      const std::optional<GuiChromePick>& chrome) {
     // The chrome's fields are filled off the live chrome's compiled theme
-    // with the palette's knob (live_chrome_words, chrome_derive.h, which
+    // with the scheme's keys (live_chrome_words, chrome_derive.h, which
     // never misses) and the program's off `program`, THE LIVE WORDS the
     // caller resolved (render.h: the launch's palette_record of the
-    // `palette` key), the two tables covering the struct exactly
+    // `palette` key, beside the scheme_record of the `scheme` key), the two
+    // tables covering the struct exactly
     // (palette_file.cpp), so a role cannot be valued and not painted.
     fill_chrome_palette(chrome);
     fill_program_palette(program);

@@ -907,7 +907,7 @@ bool notification_visible(const AppState& a, uint64_t id);
 // POPUP'S PUBLISHED BOX OR THE COLOR PICKER'S CARD yields to it (2026-10-08,
 // floater_above_cards_at, app_state.h: the menu row's drop-down, the
 // settings choice editor's list, the color picker's element list, its
-// palette menu and its card — the pointer-owning surfaces that paint above
+// preset menu and its card — the pointer-owning surfaces that paint above
 // the cards), so every reader agrees on the z-order in one place too.
 //
 // THE READERS ARE THE CARD'S OPACITY, re-greped at this declaration: the

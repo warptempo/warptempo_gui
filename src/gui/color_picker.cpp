@@ -1,7 +1,7 @@
 #include "color_picker.h"
 
 #include "clearlooks_paint.h"   // cl_scale_thumb_h_px (the thumb's grab height)
-#include "device_config.h"     // the `palette` key's writer (write_device_config)
+#include "device_config.h"     // the `palette` and `scheme` keys' writer (write_device_config)
 #include "notifications.h"
 #include "playback_lifecycle.h"
 #include "text_shape.h"
@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdio>
 #include <numbers>
+#include <utility>
 
 namespace color_picker {
 
@@ -50,7 +51,7 @@ constexpr bool role_names_follow_the_table() {
     return true;
 }
 static_assert(role_names_follow_the_table());
-// The chrome knob's twelve, in kGuiChromeLines' order (asserted the same
+// The scheme's twelve, in kGuiChromeLines' order (asserted the same
 // way; the names his, architect 2026-10-08 ~11:00).
 constexpr RoleName kChromeNames[] = {
     {"chrome_ground",               "Chrome"},
@@ -92,6 +93,24 @@ Element element_at(std::size_t e) {
     return Element{false, e - kGuiChromeLineCount};
 }
 
+Scope element_scope(std::size_t e) {
+    return element_at(e).chrome ? Scope::Chrome : Scope::Waveform;
+}
+
+std::size_t scope_element_count(Scope s) {
+    return s == Scope::Chrome ? kGuiChromeLineCount : kGuiPaletteRoleCount;
+}
+
+std::size_t scope_element_at(Scope s, std::size_t i) {
+    assert(i < scope_element_count(s));
+    return s == Scope::Chrome ? i : kGuiChromeLineCount + i;
+}
+
+std::size_t element_row(std::size_t e) {
+    const Element el = element_at(e);
+    return el.role;
+}
+
 const char* element_display_name(std::size_t e) {
     const Element el = element_at(e);
     return el.chrome ? kChromeNames[el.role].name : kRoleNames[el.role].name;
@@ -103,6 +122,15 @@ uint32_t element_color(std::size_t e) {
     const std::optional<GuiChromePick>& pick = live_chrome_pick();
     return pick ? chrome_line_word(*pick, el.role)
                 : compiled_chrome_word(kGuiChromeLines[el.role].compiled_role);
+}
+
+GuiChromePick live_scheme_keys() {
+    if (const std::optional<GuiChromePick>& live = live_chrome_pick())
+        return *live;
+    const GuiChromeScheme* own =
+        builtin_scheme(live_chrome_spec().default_palette);
+    assert(own != nullptr);   // defaults_are_their_chromes_schemes
+    return own->chrome;
 }
 
 GuiChromePick compiled_chrome_pick() {
@@ -123,76 +151,102 @@ static_assert(text_editor::kMaxPendingCharsPaletteName ==
 } // namespace
 
 // A BUILT-IN IS SHOWN BY ITS GENERATED DISPLAY NAME (kGuiChromeSchemes,
-// palette_file.h), a file by its name.
-std::string palette_display_name(std::string_view name) {
-    if (const GuiChromeScheme* b = builtin_scheme(name))
-        return std::string(b->display_name);
+// palette_file.h — a default palette by its chrome's own scheme's, the
+// same word), a file by its name.
+std::string preset_display_name(Scope s, std::string_view name) {
+    if (is_builtin_preset(s, name))
+        return std::string(builtin_scheme(name)->display_name);
     return std::string(name);
 }
 
-bool is_builtin_display_name(std::string_view name) {
-    for (const GuiChromeScheme& b : kGuiChromeSchemes)
-        if (name == b.display_name) return true;
+bool is_builtin_display_name(Scope s, std::string_view name) {
+    if (s == Scope::Chrome) {
+        for (const GuiChromeScheme& b : kGuiChromeSchemes)
+            if (name == b.display_name) return true;
+        return false;
+    }
+    for (const GuiDefaultPalette& d : kGuiDefaultPalettes)
+        if (name == builtin_scheme(d.name)->display_name) return true;
     return false;
 }
 
-std::string_view active_palette(const AppState& app) {
-    assert(app.device_config != nullptr);
-    return effective_palette_name(app.device_config->palette);
+bool is_builtin_preset(Scope s, std::string_view name) {
+    return s == Scope::Chrome ? is_builtin_scheme_name(name)
+                              : is_builtin_palette_name(name);
 }
 
-bool palette_act_enabled(const AppState& app, PaletteAct a) {
-    const std::string_view active = active_palette(app);
-    const bool builtin = is_builtin_palette_name(active);
+bool is_preset_name(Scope s, std::string_view name) {
+    return s == Scope::Chrome ? is_scheme_name(name) : is_palette_name(name);
+}
+
+std::string_view active_preset(const AppState& app, Scope s) {
+    assert(app.device_config != nullptr);
+    return s == Scope::Chrome
+               ? effective_scheme_name(app.device_config->scheme)
+               : effective_palette_name(app.device_config->palette);
+}
+
+bool preset_act_enabled(const AppState& app, PresetAct a) {
+    const Scope scope = app.color_picker.scope;
+    const std::string_view active = active_preset(app, scope);
+    const bool builtin = is_builtin_preset(scope, active);
     switch (a) {
-        case PaletteAct::Save:
-            return !builtin && live_palette_record() != palette_record(active);
-        case PaletteAct::SaveAs:
+        case PresetAct::Save:
+            if (builtin) return false;
+            return scope == Scope::Chrome
+                       ? live_chrome_pick() != scheme_record(active)
+                       : program_palette_words() != palette_record(active);
+        case PresetAct::SaveAs:
             return true;
-        case PaletteAct::Rename:
-        case PaletteAct::Delete:
+        case PresetAct::Rename:
+        case PresetAct::Delete:
             return !builtin;
     }
     return false;
 }
 
-std::vector<PaletteMenuRow> palette_menu_rows() {
+std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
     // The acts first (the declaration: the order is their reachability).
-    std::vector<PaletteMenuRow> rows;
-    for (int i = 0; i < kPaletteActCount; ++i) {
-        PaletteMenuRow r;
+    std::vector<PresetMenuRow> rows;
+    for (int i = 0; i < kPresetActCount; ++i) {
+        PresetMenuRow r;
         r.is_act = true;
-        r.act    = palette_act_at(i);
+        r.act    = preset_act_at(i);
         rows.push_back(std::move(r));
     }
     // A group opens on a separator; an empty group is never shown, so with
     // no file the built-ins follow the acts across ONE separator.
     const auto add_name = [&rows](std::string name, bool opens_group) {
-        PaletteMenuRow r;
+        PresetMenuRow r;
         r.name             = std::move(name);
         r.separator_before = opens_group;
         rows.push_back(std::move(r));
     };
     bool first = true;
-    for (std::string& n : palette_file_names()) {
+    for (std::string& n : s == Scope::Chrome ? scheme_file_names()
+                                             : palette_file_names()) {
         add_name(std::move(n), first);
         first = false;
     }
-    // The built-ins: the chromes' own defaults first, in the vocabularies'
-    // order, then every other scheme in the catalog's.
+    // The built-ins. Under Waveform the live chrome's default palette alone.
+    if (s == Scope::Waveform) {
+        add_name(std::string(live_chrome_spec().default_palette), true);
+        return rows;
+    }
+    // Under Chrome the chromes' own schemes first, in the vocabularies'
+    // order, then — behind their own separator (architect 2026-10-08
+    // ~19:30) — every other scheme in the catalog's.
     first = true;
     for (const GuiDefaultPalette& d : kGuiDefaultPalettes) {
         add_name(d.name, first);
         first = false;
     }
+    first = true;
     for (const GuiChromeScheme& b : kGuiChromeSchemes) {
         const std::string_view key = b.key;
-        if (std::ranges::any_of(kGuiDefaultPalettes,
-                                [key](const GuiDefaultPalette& d) {
-                                    return key == d.name;
-                                }))
-            continue;
-        add_name(std::string(key), false);
+        if (is_builtin_palette_name(key)) continue;   // a chrome's own, above
+        add_name(std::string(key), first);
+        first = false;
     }
     return rows;
 }
@@ -295,15 +349,11 @@ std::optional<uint32_t> parse_hex_color(std::string_view text) {
 // -- THE LAYOUT -----------------------------------------------------------------
 
 namespace {
-// THE WHEEL'S SIDE IN W PX, the top block's height (the head's sums), and
-// the ring's width from GTK's proportion, rounded to a whole Windows px and
-// scaled like any length.
-constexpr int kWheelSideWPx =
+// THE TOP BLOCK'S HEIGHT IN W PX (the head's sums), the wheel's side at
+// most (THE WIDTH: the wheel takes what the chooser row leaves).
+constexpr int kTopBlockWPx =
     kChooserHeightPx + kChooserGapPx + kChannelCount * kSliderRowPx;
-static_assert(kWheelSideWPx == 113);
-constexpr int kRingWidthWPx =
-    (kWheelSideWPx * kRingWidthNum + kRingWidthDen / 2) / kRingWidthDen;
-static_assert(kRingWidthWPx == 10);
+static_assert(kTopBlockWPx == 113);
 
 // The widest shaped width of a set of specimens, ceiled to a whole column
 // (the modal's own round-up rule: a measured width that places something
@@ -363,7 +413,7 @@ GuiRect combo_drop_button(const GuiRect& r) {
 // subtracted here.
 //
 // AN UPWARD BOX CARRIES ITS OWN TOP LINE (2026-10-08, his capture _033145,
-// the palette menu standing on its button with its top line missing — and
+// the preset menu standing on its button with its top line missing — and
 // the choice editor's capture _010753 the same, the gap hidden there as
 // black over the well): under clearlooks the hanging box's top line stands
 // one row above it, on its opener's foot, which the opener's own repaint
@@ -413,9 +463,9 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int chooser_h = scaled_px(kChooserHeightPx);
     const int row_h   = scaled_px(kSliderRowPx, 1);
     const int btn_h   = scaled_px(spec.push_button_box_px);
-    const int side    = chooser_h + scaled_px(kChooserGapPx) +
+    const int block_h = chooser_h + scaled_px(kChooserGapPx) +
                         kChannelCount * row_h;
-    const int inner_h = side + scaled_px(kBlockGapPx) + btn_h;
+    const int inner_h = block_h + scaled_px(kBlockGapPx) + btn_h;
     const int card_w  = scaled_px(kCardWidthPx);
     const int card_h  = 2 * edge + 2 * pad + inner_h;
 
@@ -427,17 +477,66 @@ Layout layout(const AppState& app, const GuiFont& font) {
     l.inner = GuiRect{l.card.x + edge + pad, l.card.y + edge + pad,
                       card_w - 2 * (edge + pad), inner_h};
 
-    // THE WHEEL, the left column whole.
-    l.wheel   = GuiRect{l.inner.x, l.inner.y, side, side};
+    // THE CHOOSER ROW SETS THE RIGHT COLUMN (the head's THE WIDTH): each
+    // combo as wide as its widest row needs, face or flush list, the
+    // element chooser over both scopes' names; the column the wider of the
+    // row and what the top block's square leaves; the wheel the rest, at
+    // most the block's height, centered on it.
+    const int text_gap = scaled_px(kComboTextGapPx);
+    const auto combo_w = [&](double text_w) {
+        const int t = ceil_px(text_w);
+        int face = 0;
+        if (spec.vocabulary == GuiChromeVocabulary::Clearlooks) {
+            face = scaled_px(spec.push_button_pad_left_px) + t + text_gap +
+                   scaled_px(kComboArrowWPx, kComboArrowMinWPx) +
+                   scaled_px(spec.push_button_pad_right_px);
+        } else {
+            // the sunken field's lines (one under cde, combo_drop_button)
+            const int fb =
+                (spec.vocabulary == GuiChromeVocabulary::Cde ? 1 : 2) * lw;
+            face = fb + scaled_px(kModalFieldPadXPx) + t + text_gap +
+                   scaled_px(kComboButtonWPx) + fb;
+        }
+        const int list = scaled_px(kPopupPadXPx) + t + text_gap +
+                         popup_border_px();
+        return std::max(face, list);
+    };
+    double scope_text = 0.0;
+    for (int i = 0; i < kScopeCount; ++i)
+        scope_text = std::max(scope_text,
+                              text_shape::shape_text_run(
+                                  font, scope_display_name(scope_at(i))).width_px);
+    double element_text = 0.0;
+    for (std::size_t e = 0; e < element_count(); ++e)
+        element_text = std::max(element_text,
+                                text_shape::shape_text_run(
+                                    font, element_display_name(e)).width_px);
+    const int scope_w   = combo_w(scope_text);
+    const int pair_gap  = scaled_px(kControlGapPx);
+    const int col_gap   = scaled_px(kColumnGapPx);
+    const int col_w     = std::max(l.inner.w - block_h - col_gap,
+                                   scope_w + pair_gap + combo_w(element_text));
+    const int side      = std::max(1, std::min(block_h,
+                                               l.inner.w - col_gap - col_w));
+    const int col_x     = l.inner.x + l.inner.w - col_w;
+
+    // THE WHEEL, the left column, centered on the top block. The ring's
+    // width is GTK's proportion of the side as laid (the head: side x 15 /
+    // 174), rounded at the element.
+    l.wheel   = GuiRect{l.inner.x, l.inner.y + (block_h - side) / 2, side, side};
     l.cx      = l.wheel.x + side / 2.0;
     l.cy      = l.wheel.y + side / 2.0;
     l.outer_r = side / 2.0;
-    l.inner_r = l.outer_r - scaled_px(kRingWidthWPx, 1);
+    l.inner_r = l.outer_r -
+                std::max(1.0, std::nearbyint(static_cast<double>(side) *
+                                             kRingWidthNum / kRingWidthDen));
 
-    // THE RIGHT COLUMN.
-    const int col_x = l.inner.x + side + scaled_px(kColumnGapPx);
-    const int col_w = l.inner.x + l.inner.w - col_x;
-    l.chooser = GuiRect{col_x, l.inner.y, col_w, chooser_h};
+    // THE RIGHT COLUMN: the chooser row (the scope, then the element
+    // chooser, the remainder), then the six slider rows.
+    l.scope = GuiRect{col_x, l.inner.y, scope_w, chooser_h};
+    l.scope_button = combo_drop_button(l.scope);
+    l.chooser = GuiRect{col_x + scope_w + pair_gap, l.inner.y,
+                        col_w - scope_w - pair_gap, chooser_h};
     l.chooser_button = combo_drop_button(l.chooser);
     double label_w = 0.0;
     for (int i = 0; i < kChannelCount; ++i)
@@ -461,9 +560,9 @@ Layout layout(const AppState& app, const GuiFont& font) {
     }
 
     // THE BOTTOM ROW (the head's arithmetic): the hex field, OLD | NEW at
-    // its floor, the palette menu button the remainder, then Copy, Paste
+    // its floor, the preset button the remainder, then Copy, Paste
     // and Close at kPushButtonWidthPx, right-flushed.
-    const int by = l.inner.y + side + scaled_px(kBlockGapPx);
+    const int by = l.inner.y + block_h + scaled_px(kBlockGapPx);
     const int field_h = scaled_px(kModalFieldHeightPx);   // the dialog field's (render.h)
     const int field_pad = scaled_px(kModalFieldPadXPx);
     const std::string hex_specimen = "#" + std::string(6, widest_hex_digit(font));
@@ -481,7 +580,7 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int menu_x = hex_field.x + hex_field.w + gap + swatch_floor + gap;
     l.menu_button = GuiRect{menu_x, by,
                             std::max(1, l.buttons[0].x - gap - menu_x), btn_h};
-    // The chooser's drop-down button, seated in the menu button's own
+    // The combo's drop-down button, seated in the preset button's own
     // sunken field.
     l.menu_button_arrow = combo_drop_button(l.menu_button);
     const int sf_x = hex_field.x + hex_field.w + gap;
@@ -492,8 +591,8 @@ Layout layout(const AppState& app, const GuiFont& font) {
         // button band, then ONE FIELD to OLD | NEW's right edge.
         const char* word =
             app.color_picker.name_ask == AppState::ColorPicker::NameAsk::Rename
-                ? palette_act_label(PaletteAct::Rename)
-                : palette_act_label(PaletteAct::SaveAs);
+                ? preset_act_label(PresetAct::Rename)
+                : preset_act_label(PresetAct::SaveAs);
         const int word_w = ceil_px(text_shape::shape_text_run(font, word).width_px);
         l.name_label = GuiRect{l.inner.x, by, word_w, btn_h};
         const int fx = l.inner.x + word_w + scaled_px(kNameLabelGapPx);
@@ -510,18 +609,23 @@ Layout layout(const AppState& app, const GuiFont& font) {
                             l.field.h - 2 * lw};
 
     // THE LIST, when down: the combo's list (combo_list, the popup lists'
-    // placement and scroll) from the chooser, the chooser's width.
+    // placement and scroll) from the combo that dropped it, its width — the
+    // scope's two rows, or the scope's elements.
     if (app.color_picker.chooser_open) {
-        const int count = static_cast<int>(element_count());
-        l.list = combo_list(l.chooser, count, app.height,
-                            app.color_picker.chooser_scroll.top);
+        const bool scope_list = app.color_picker.chooser_scope;
+        const int count =
+            scope_list ? kScopeCount
+                       : static_cast<int>(
+                             scope_element_count(app.color_picker.scope));
+        l.list = combo_list(scope_list ? l.scope : l.chooser, count,
+                            app.height, app.color_picker.chooser_scroll.top);
         for (int i = 0; i < count; ++i)
             l.list_items[i] = combo_list_item(l.list, i);
     }
 
-    // THE PALETTE MENU, when down: its rows (palette_menu_rows' order, the
+    // THE PRESET MENU, when down: its rows (preset_menu_rows' order, the
     // acts first) with A SEPARATOR BLOCK BEFORE EACH ROW THAT OPENS A GROUP
-    // (his files', the built-ins') — each a scroll row of its own, so the
+    // (his files', the built-ins', the catalog's schemes') — each a scroll row of its own, so the
     // menu has a scroll row more than it has rows per separator — placed
     // and scrolled by the popup lists' rule (render.h's
     // popup scroll block): hung from the button's foot or standing on its
@@ -537,10 +641,11 @@ Layout layout(const AppState& app, const GuiFont& font) {
     if (app.color_picker.menu_open) {
         const int pad_x       = scaled_px(kPopupPadXPx);
         const int menu_item_h = popup_item_h_px();
-        std::vector<PaletteMenuRow> rows = palette_menu_rows();
+        std::vector<PresetMenuRow> rows =
+            preset_menu_rows(app.color_picker.scope);
         const int n    = static_cast<int>(rows.size());
         const int seps = static_cast<int>(std::ranges::count_if(
-            rows, [](const PaletteMenuRow& r) { return r.separator_before; }));
+            rows, [](const PresetMenuRow& r) { return r.separator_before; }));
         // The scroll rows in order: each a row's index, or -1 for the
         // separator that opens the next row's group.
         std::vector<int> scroll_rows;
@@ -559,10 +664,10 @@ Layout layout(const AppState& app, const GuiFont& font) {
         const PopupListPlacement p =
             place_popup_list(l.menu_button, app.height, content_h);
         double widest = 0.0;
-        for (const PaletteMenuRow& r : rows) {
+        for (const PresetMenuRow& r : rows) {
             const std::string label =
-                r.is_act ? std::string(palette_act_label(r.act))
-                         : palette_display_name(r.name);
+                r.is_act ? std::string(preset_act_label(r.act))
+                         : preset_display_name(app.color_picker.scope, r.name);
             widest = std::max(widest,
                               text_shape::shape_text_run(font, label).width_px);
         }
@@ -938,7 +1043,14 @@ void GuiColorPicker::open(int tap_x) {
     cp.active   = true;
     cp.session  = text_editor::next_session_id();
     cp.on_right = tap_x < 0 || tap_x < app.width / 2;
+    // THE SCOPE AT EVERY OPEN IS WAVEFORM (the declaration): a chrome
+    // element kept from the last session is parked for the Chrome scope.
+    cp.scope = AppState::ColorPicker::Scope::Waveform;
+    if (color_picker::element_scope(cp.element) != cp.scope)
+        std::swap(cp.element, cp.parked_element);
+    assert(color_picker::element_scope(cp.element) == cp.scope);
     cp.chooser_open    = false;
+    cp.chooser_scope   = false;
     cp.chooser_hover   = -1;
     cp.chooser_pressed = -1;
     cp.chooser_press_began_on_item = false;
@@ -969,6 +1081,7 @@ void GuiColorPicker::close() {
     cp.active  = false;
     cp.session = 0;
     cp.chooser_open    = false;
+    cp.chooser_scope   = false;
     cp.chooser_hover   = -1;
     cp.chooser_pressed = -1;
     cp.chooser_press_began_on_item = false;
@@ -983,9 +1096,18 @@ void GuiColorPicker::close() {
     viewport.invalidate_all();
 }
 
+void GuiColorPicker::set_scope(color_picker::Scope scope) {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (scope == cp.scope) return;
+    cp.scope = scope;
+    std::swap(cp.element, cp.parked_element);
+    set_element(cp.element);
+}
+
 void GuiColorPicker::set_element(std::size_t element) {
     AppState::ColorPicker& cp = app.color_picker;
     assert(element < color_picker::element_count());
+    assert(color_picker::element_scope(element) == cp.scope);
     cp.element = element;
     cp.rgb     = color_picker::element_color(element);
     cp.old_rgb = cp.rgb;
@@ -1003,19 +1125,21 @@ void GuiColorPicker::set_color(uint32_t rgb, bool from_hsv) {
         damage_card();
         return;
     }
-    // THE LIVE APPLY: the live palette with one word rewritten, through the
-    // apply shape's one road (install_live_words). A chrome element's FIRST
-    // pick creates the block whole (the declaration): the nine from the
-    // live chrome's compiled words, then the picked key written.
-    GuiPaletteRecord record = live_palette_record();
+    // THE LIVE APPLY: the live words with one rewritten, through the apply
+    // shape's one road (install_live_words). A chrome element's FIRST pick
+    // over the chrome's own scheme creates the block whole (the
+    // declaration): the nine from the live chrome's compiled words, then the
+    // picked key written.
+    GuiPaletteWords words = program_palette_words();
+    std::optional<GuiChromePick> scheme = live_chrome_pick();
     const color_picker::Element el = color_picker::element_at(cp.element);
     if (!el.chrome) {
-        record.words[el.role] = rgb;
+        words[el.role] = rgb;
     } else {
-        if (!record.chrome) record.chrome = color_picker::compiled_chrome_pick();
-        set_chrome_line_word(*record.chrome, el.role, rgb);
+        if (!scheme) scheme = color_picker::compiled_chrome_pick();
+        set_chrome_line_word(*scheme, el.role, rgb);
     }
-    install_live_words(record);
+    install_live_words(words, scheme);
 }
 
 int color_picker::channel_value(const AppState::ColorPicker& cp, Channel c) {
@@ -1162,20 +1286,30 @@ namespace {
 // A writer's failure line on stderr and its one clause on the card (the
 // device config's two-clause shape, write_device_config: the diagnostic
 // whole, the display short).
-void report_palette_failure(GuiNotifications& notifications,
-                            const std::string& line, const char* display) {
+void report_preset_failure(GuiNotifications& notifications,
+                           const std::string& line, const char* display) {
     std::fprintf(stderr, "warptempo_gui: %s\n", line.c_str());
     notifications.notify(AppState::NotificationClass::Normal, display);
 }
+// The card's clause for the scope's kind ("Could not save the scheme").
+const char* failure_words(color_picker::Scope s, const char* palette,
+                          const char* scheme) {
+    return s == color_picker::Scope::Chrome ? scheme : palette;
+}
 } // namespace
 
-void GuiColorPicker::write_palette_key(std::string_view name) {
+void GuiColorPicker::write_preset_key(std::string_view name) {
     DeviceConfig& cfg = *app.device_config;
+    std::string& key = app.color_picker.scope == color_picker::Scope::Chrome
+                           ? cfg.scheme
+                           : cfg.palette;
+    // The chrome's own scheme and its default palette share one word
+    // (palette_file.h's head), so one test serves both kinds.
     const std::string value =
         name == live_chrome_spec().default_palette ? std::string()
                                                    : std::string(name);
-    if (value == cfg.palette) return;
-    cfg.palette = value;
+    if (value == key) return;
+    key = value;
     const std::optional<GuiFailure> failure = write_device_config(cfg);
     if (failure) {
         std::fprintf(stderr, "warptempo_gui: %s\n",
@@ -1185,43 +1319,58 @@ void GuiColorPicker::write_palette_key(std::string_view name) {
     }
 }
 
-void GuiColorPicker::install_live_words(const GuiPaletteRecord& record) {
+void GuiColorPicker::install_live_words(
+        const GuiPaletteWords& words,
+        const std::optional<GuiChromePick>& scheme) {
     // The shape and why it is enough are at install_program_palette's
     // declaration (palette_file.h) and, for the chrome, install_chrome_pick's
     // (render.h).
     const WaveformPlateInks before = waveform_plate_inks();
-    install_program_palette(record.words);
-    install_chrome_pick(record.chrome);
+    install_program_palette(words);
+    install_chrome_pick(scheme);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
     viewport.invalidate_all();
 }
 
-void GuiColorPicker::apply_palette_record(const GuiPaletteRecord& record) {
+void GuiColorPicker::apply_live_words(
+        const GuiPaletteWords& words,
+        const std::optional<GuiChromePick>& scheme) {
     AppState::ColorPicker& cp = app.color_picker;
-    install_live_words(record);
+    install_live_words(words, scheme);
     cp.rgb     = color_picker::element_color(cp.element);
     cp.old_rgb = cp.rgb;
     reseat_memories(cp);
 }
 
-void GuiColorPicker::load_palette(std::string_view name) {
-    assert(is_palette_name(name));
+void GuiColorPicker::load_preset(std::string_view name) {
+    const color_picker::Scope scope = app.color_picker.scope;
+    assert(color_picker::is_preset_name(scope, name));
     const std::string held(name);   // the menu's row may not outlive the call
-    GuiPaletteRecord record = palette_record(held);
-    // A BUILT-IN IS CHROME-ONLY (palette_file.h's head): the live fifteen
-    // stand.
-    if (is_builtin_palette_name(held)) record.words = program_palette_words();
-    apply_palette_record(record);
-    write_palette_key(held);
+    // ONE KIND MOVES (the declaration): the other kind's live words stand.
+    if (scope == color_picker::Scope::Chrome)
+        apply_live_words(program_palette_words(), scheme_record(held));
+    else
+        apply_live_words(palette_record(held), live_chrome_pick());
+    write_preset_key(held);
 }
 
-void GuiColorPicker::save_palette() {
-    const std::string active(color_picker::active_palette(app));
-    if (const std::optional<std::string> failure =
-            write_palette_file(active, live_palette_record())) {
-        report_palette_failure(notifications, *failure,
-                               "Could not save the palette");
+void GuiColorPicker::save_preset() {
+    const color_picker::Scope scope = app.color_picker.scope;
+    const std::string active(color_picker::active_preset(app, scope));
+    std::optional<std::string> failure;
+    if (scope == color_picker::Scope::Chrome) {
+        // A file's load always seats its keys (scheme_record), and Save is
+        // gray on a built-in, so a live scheme stands here.
+        assert(live_chrome_pick().has_value());
+        failure = write_scheme_file(active, *live_chrome_pick());
+    } else {
+        failure = write_palette_file(active, program_palette_words());
+    }
+    if (failure) {
+        report_preset_failure(notifications, *failure,
+                              failure_words(scope, "Could not save the palette",
+                                            "Could not save the scheme"));
     }
     damage_card();   // the button's label, the menu's Save once reopened
 }
@@ -1232,7 +1381,7 @@ void GuiColorPicker::begin_name_ask(AppState::ColorPicker::NameAsk ask) {
     if (field_active()) text_editor::deactivate(cp.field_editor);
     const std::string prefill =
         ask == AppState::ColorPicker::NameAsk::Rename
-            ? std::string(color_picker::active_palette(app))
+            ? std::string(color_picker::active_preset(app, cp.scope))
             : std::string();
     text_editor::enter(cp.field_editor, /*target=*/0, prefill,
                        text_editor::Kind::PaletteName);
@@ -1244,8 +1393,10 @@ void GuiColorPicker::begin_name_ask(AppState::ColorPicker::NameAsk ask) {
 
 void GuiColorPicker::commit_name() {
     AppState::ColorPicker& cp = app.color_picker;
+    const color_picker::Scope scope = cp.scope;
+    const bool chrome = scope == color_picker::Scope::Chrome;
     const std::string name = cp.field_editor.pending;
-    const std::string active(color_picker::active_palette(app));
+    const std::string active(color_picker::active_preset(app, scope));
     const bool rename = cp.name_ask == AppState::ColorPicker::NameAsk::Rename;
     const auto refuse = [&](const char* reason) {
         text_editor::refuse(cp.field_editor);
@@ -1265,27 +1416,41 @@ void GuiColorPicker::commit_name() {
         end_ask();   // the same name: the commit's no-op
         return;
     }
-    if (is_palette_name(name) || color_picker::is_builtin_display_name(name)) {
+    // THE SCOPE'S KIND'S NAME SPACE (the declaration: two folders).
+    if (color_picker::is_preset_name(scope, name) ||
+        color_picker::is_builtin_display_name(scope, name)) {
         refuse("Name taken");
         return;
     }
     end_ask();
+    std::optional<std::string> failure;
     if (rename) {
-        if (const std::optional<std::string> failure =
-                rename_palette_file(active, name)) {
-            report_palette_failure(notifications, *failure,
-                                   "Could not rename the palette");
+        failure = chrome ? rename_scheme_file(active, name)
+                         : rename_palette_file(active, name);
+        if (failure) {
+            report_preset_failure(
+                notifications, *failure,
+                failure_words(scope, "Could not rename the palette",
+                              "Could not rename the scheme"));
             return;
         }
+    } else if (chrome) {
+        // THE KEYS ON SCREEN (the declaration): the live scheme, or the
+        // chrome's own built-in's twelve, installed live with the write.
+        const bool own = !live_chrome_pick().has_value();
+        const GuiChromePick pick = color_picker::live_scheme_keys();
+        failure = write_scheme_file(name, pick);
+        if (!failure && own) apply_live_words(program_palette_words(), pick);
     } else {
-        if (const std::optional<std::string> failure =
-                write_palette_file(name, live_palette_record())) {
-            report_palette_failure(notifications, *failure,
-                                   "Could not save the palette");
-            return;
-        }
+        failure = write_palette_file(name, program_palette_words());
     }
-    write_palette_key(name);
+    if (failure) {
+        report_preset_failure(notifications, *failure,
+                              failure_words(scope, "Could not save the palette",
+                                            "Could not save the scheme"));
+        return;
+    }
+    write_preset_key(name);
 }
 
 void GuiColorPicker::raise_delete() {
@@ -1293,34 +1458,44 @@ void GuiColorPicker::raise_delete() {
     // The menu's lift is its one road, and a standing prompt claims every
     // release first (on_button_release), so no prompt stands here.
     assert(!app.prompt.active);
-    const std::string active(color_picker::active_palette(app));
-    assert(!is_builtin_palette_name(active));
+    const std::string active(color_picker::active_preset(app, cp.scope));
+    assert(!color_picker::is_builtin_preset(cp.scope, active));
     cp.pending_delete = active;
     app.prompt.present("Delete '" + active + "'?",
                        {'d', '\x1b'},
                        {"Delete", "Cancel"},
-                       DialogTrigger::DELETE_PALETTE_CONFIRM,
+                       DialogTrigger::DELETE_PRESET_CONFIRM,
                        PromptInitialFocus::LastButton);
     viewport.invalidate_all();
 }
 
 void GuiColorPicker::confirm_delete() {
     AppState::ColorPicker& cp = app.color_picker;
+    const color_picker::Scope scope = cp.scope;
     const std::string name = std::move(cp.pending_delete);
     cp.pending_delete.clear();
     // The prompt's Delete is its one road: raise_delete parked the name
     // before presenting it, and the picker cannot close beneath a standing
     // prompt (the prompt outranks its every close road, and
-    // GuiPrompt::request_close returns while a prompt stands).
+    // GuiPrompt::request_close returns while a prompt stands), so the scope
+    // is the one the question was raised under.
     assert(cp.active && !name.empty());
-    if (const std::optional<std::string> failure = remove_palette_file(name)) {
-        report_palette_failure(notifications, *failure,
-                               "Could not delete the palette");
+    const bool chrome = scope == color_picker::Scope::Chrome;
+    if (const std::optional<std::string> failure =
+            chrome ? remove_scheme_file(name) : remove_palette_file(name)) {
+        report_preset_failure(notifications, *failure,
+                              failure_words(scope,
+                                            "Could not delete the palette",
+                                            "Could not delete the scheme"));
         return;
     }
+    // THE LIVE CHROME'S OWN of the scope's kind (the declaration).
     const std::string_view fallback = live_chrome_spec().default_palette;
-    apply_palette_record(palette_record(fallback));
-    write_palette_key(fallback);
+    if (chrome)
+        apply_live_words(program_palette_words(), scheme_record(fallback));
+    else
+        apply_live_words(palette_record(fallback), live_chrome_pick());
+    write_preset_key(fallback);
 }
 
 void GuiColorPicker::cancel_delete() {

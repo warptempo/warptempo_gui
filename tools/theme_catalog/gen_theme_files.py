@@ -47,7 +47,7 @@
 # THE BUILT-IN SCHEMES (architect 2026-10-08 ~11:00: "the catalog's schemes are transcribed to the used keys and
 # compiled in"; "anything beyond the keys we use is extraneous"): EVERY catalog entry, in the catalog's order, written
 # as src/gui/chrome_schemes.inc — the rows of kGuiChromeSchemes (src/gui/palette_file.h, which owns what a scheme is
-# and does) — each its key verbatim (the `palette` device key's word for it), its DISPLAY NAME and THE TWELVE CHROME
+# and does) — each its key verbatim (the `scheme` device key's word for it), its DISPLAY NAME and THE TWELVE CHROME
 # KEYS (kGuiChromeLines, palette_file.h, in that order), each the entry's recorded byte under the rules above, nothing
 # derived: ground = the entry's ground, text = its label (roles.light_roles); THE TITLE = caption_active, its END
 # caption_active_gradient where the entry records one, else THE START (the flat caption), its TEXT

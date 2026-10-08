@@ -7216,7 +7216,8 @@ bool GuiInputHandler::route_color_picker_key(GuiKey key, GuiInputState mods) {
     // while the picker stands.
     if (ctrl || shift || alt) return true;
     // ESC CLOSES AN OPEN LIST FIRST (architect 2026-10-07, Windows' and
-    // GTK's own order): the element list or the palette menu comes down and
+    // GTK's own order): the chooser row's list (the scope's or the
+    // elements') or the preset menu comes down and
     // the picker stands; a second Esc closes the picker.
     if (key == GuiKeys::Escape) {
         if (app.color_picker.chooser_open) {

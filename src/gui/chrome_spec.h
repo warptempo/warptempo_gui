@@ -202,18 +202,20 @@ struct ChromeSpec {
     // THE VOCABULARY'S SHOWN NAME, Title Case (TEXT: names Title Case): the
     // one source of every place the user reads a vocabulary's name — the
     // Settings editor's Chrome combo and its list (kChromeChoiceSource); the
-    // key stays the file grammar's. (The color picker names a palette by the
-    // built-in scheme's own display name, palette_file.h's kGuiChromeSchemes.)
+    // key stays the file grammar's. (The color picker names a built-in
+    // scheme, and a default palette, by the built-in scheme's own display
+    // name, palette_file.h's kGuiChromeSchemes.)
     const char*        display_name;
     // THE PAINTERS' SWITCH (GuiChromeVocabulary above).
     GuiChromeVocabulary vocabulary;
     // THE PALETTE A CONFIG WITH NO `palette` LINE TAKES under this chrome
     // (effective_palette_name, palette_file.h; architect 2026-10-07): the
-    // vocabulary's own program colors, a compiled default palette — the
-    // fifteen every built-in takes at a launch — named by THE CHROME'S OWN
-    // BUILT-IN SCHEME'S KEY (2026-10-08 ~11:10: the catalog key verbatim,
-    // `windows-2000-standard`; palette_file.h's head), which carries no
-    // chrome block under this chrome.
+    // vocabulary's own program colors, a compiled default palette, named by
+    // THE CHROME'S OWN BUILT-IN SCHEME'S KEY (2026-10-08 ~11:10: the catalog
+    // key verbatim, `windows-2000-standard`; palette_file.h's head) — and so
+    // ALSO THE SCHEME A CONFIG WITH NO `scheme` LINE TAKES
+    // (effective_scheme_name, 2026-10-08 ~18:15), which carries no keys
+    // under this chrome: the compiled theme exactly.
     const char*        default_palette;
     // The vocabulary's text: the faces, their metrics and tracking (gui_font.h).
     const GuiFaceSet*  face_set;

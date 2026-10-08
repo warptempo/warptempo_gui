@@ -943,7 +943,7 @@ private:
     // publishes the modal stash (the card, the one field, the three push
     // buttons) and the picker's own (AppState::ColorPicker::Stash). Called
     // from paint_modal_dialog alone, with the live session it stamps — or
-    // VEILED, under the prompt its palette menu's Delete raises: painted,
+    // VEILED, under the prompt its preset menu's Delete raises: painted,
     // publishing nothing (the definition's head).
     void paint_color_picker(cairo_t* cr, uint64_t live_session, bool veiled);
     // THE SETTINGS EDITOR'S CHOICE COMBO (2026-10-07 evening; the design at

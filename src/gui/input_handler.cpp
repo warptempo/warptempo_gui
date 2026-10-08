@@ -1305,7 +1305,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       from 2026-09-03 and went with the panel on 2026-09-30.)
     //   (c6) THE COLOR PICKER (2026-10-07, the ninth place again — one
     //       router, route_color_picker_key, at the two list owners' rank):
-    //       Esc closes it — or, while its element list or palette menu is
+    //       Esc closes it — or, while its element list or preset menu is
     //       down, CLOSES THAT LIST first (architect 2026-10-07, Windows' and
     //       GTK's order: a second Esc closes the picker); or, while its one
     //       field stands (the hex field or the name ask), ENDS THAT EDIT
@@ -1313,8 +1313,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       route_modal_editor_key as every editor's Esc does (so that
     //       press is (b)'s, and the next one this one's). It cannot collide
     //       with the other editors: none opens under it and its router
-    //       admits no editor opener; a prompt over it (the palette menu's
-    //       Delete question, DELETE_PALETTE_CONFIRM) is rung (c).
+    //       admits no editor opener; a prompt over it (the preset menu's
+    //       Delete question, DELETE_PRESET_CONFIRM) is rung (c).
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
     //   (e) THE NOTIFICATION STACK, WHOLE (architect 2026-09-01, superseding
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
@@ -3414,7 +3414,7 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // A SCROLLING POPUP LIST'S WHEEL (2026-10-08; render.h's popup scroll
     // block) — context 6, kPopupWheelRows a notch — over the published box
     // of a list that is down and scrolls: the choice editor's list or the
-    // color picker's element list or palette menu. Ranked above the two
+    // color picker's element list or preset menu. Ranked above the two
     // swallows below (the picker's and the dialog editor's), whose surfaces
     // these lists float over; a list that shows every row takes no wheel and
     // falls to them.

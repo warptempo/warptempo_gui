@@ -5210,7 +5210,7 @@ int color_picker_list_hit(const AppState::ColorPicker::Stash& st, int x,
         if (rect_contains(st.list_items[i], x, y)) return static_cast<int>(i);
     return -1;
 }
-// The row of the palette menu under (x, y) as painted, or -1.
+// The row of the preset menu under (x, y) as painted, or -1.
 int color_picker_menu_hit(const AppState::ColorPicker::Stash& st, int x,
                           int y) {
     if (st.menu.w <= 0 || st.menu.h <= 0) return -1;
@@ -5273,7 +5273,7 @@ void GuiInputHandler::cancel_color_picker_delete() {
     color_picker.cancel_delete();
 }
 
-void GuiInputHandler::set_color_picker_list_open(bool open) {
+void GuiInputHandler::set_color_picker_list_open(bool open, bool scope) {
     AppState::ColorPicker& cp = app.color_picker;
     if (cp.chooser_open == open) return;
     // THE DAMAGE ON BOTH EDGES is the list's area: on the close the painted
@@ -5283,17 +5283,22 @@ void GuiInputHandler::set_color_picker_list_open(bool open) {
     // THE SCROLL STARTS AT THE HEAD, the shown element scrolled into view
     // (render.h's popup scroll block: a combo's one exception) — the
     // layout's shown count, derived here for that seat alone.
+    // THE LIT ROW is the combo's shown one: the live scope's row in the
+    // scope's list, the live element's in the elements'.
     if (!open) color_picker.damage_card();
+    const int shown =
+        scope ? color_picker::scope_index(cp.scope)
+              : static_cast<int>(color_picker::element_row(cp.element));
     cp.chooser_open    = open;
-    cp.chooser_hover   = open ? static_cast<int>(cp.element) : -1;
+    cp.chooser_scope   = open && scope;
+    cp.chooser_hover   = open ? shown : -1;
     cp.chooser_pressed = -1;
     cp.chooser_press_began_on_item = false;
     cp.chooser_scroll  = PopupScroll{};
     if (open) {
         const color_picker::Layout l =
             color_picker::layout(app, gui_font(GuiFace::Body));
-        cp.chooser_scroll.top = popup_scroll_reveal(
-            l.list.bar, 0, static_cast<int>(cp.element));
+        cp.chooser_scroll.top = popup_scroll_reveal(l.list.bar, 0, shown);
         viewport.invalidate_rect(l.list.box);
         color_picker.damage_card();
     }
@@ -5303,7 +5308,7 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
     AppState::ColorPicker& cp = app.color_picker;
     if (cp.menu_open == open) return;
     // THE LIST'S DAMAGE RULE ONE SURFACE OVER (above), and THE LIT ROW
-    // STARTS ON THE ACTIVE PRESET'S NAME (color_picker.h's THE PALETTE MENU:
+    // STARTS ON THE ACTIVE PRESET'S NAME (color_picker.h's THE PRESET MENU:
     // the chooser's hover seed), found among the menu's rows — THE SCROLL
     // AT THE HEAD, the acts in view (render.h's popup scroll block: the
     // menu is no combo, so its lit name may lie below the shown rows).
@@ -5316,7 +5321,8 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
     if (open) {
         const color_picker::Layout l =
             color_picker::layout(app, gui_font(GuiFace::Body));
-        const std::string_view active = color_picker::active_palette(app);
+        const std::string_view active =
+            color_picker::active_preset(app, cp.scope);
         for (std::size_t i = 0; i < l.menu_rows.size(); ++i)
             if (!l.menu_rows[i].is_act && l.menu_rows[i].name == active)
                 cp.menu_hover = static_cast<int>(i);
@@ -5419,11 +5425,15 @@ void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods,
         cp.field_caret_press = seats_caret;
         return;
     }
+    if (rect_contains(st.scope, x, y)) {
+        set_color_picker_list_open(true, /*scope=*/true);
+        return;
+    }
     if (rect_contains(st.chooser, x, y)) {
         set_color_picker_list_open(true);
         return;
     }
-    // THE PALETTE MENU BUTTON drops its menu at the press, the chooser's
+    // THE PRESET BUTTON drops its menu at the press, the chooser's
     // road, when it was painted live.
     if (rect_contains(st.menu_button, x, y)) {
         if (st.menu_button_enabled) set_color_picker_menu_open(true);
@@ -5588,33 +5598,42 @@ void GuiInputHandler::color_picker_release(int x, int y) {
         set_color_picker_menu_open(false);
         if (hit < 0 || !row.enabled) return;
         if (!row.is_act) {
-            color_picker.load_palette(row.name);
+            color_picker.load_preset(row.name);
             return;
         }
-        switch (color_picker::palette_act_at(row.act)) {
-            case color_picker::PaletteAct::Save:
-                color_picker.save_palette();
+        switch (color_picker::preset_act_at(row.act)) {
+            case color_picker::PresetAct::Save:
+                color_picker.save_preset();
                 return;
-            case color_picker::PaletteAct::SaveAs:
+            case color_picker::PresetAct::SaveAs:
                 color_picker.begin_name_ask(
                     AppState::ColorPicker::NameAsk::SaveAs);
                 return;
-            case color_picker::PaletteAct::Rename:
+            case color_picker::PresetAct::Rename:
                 color_picker.begin_name_ask(
                     AppState::ColorPicker::NameAsk::Rename);
                 return;
-            case color_picker::PaletteAct::Delete:
+            case color_picker::PresetAct::Delete:
                 color_picker.raise_delete();
                 return;
         }
         return;
     }
     if (cp.chooser_open && cp.chooser_press_began_on_item) {
+        // THE ROW'S LIFT selects in the list that is down: a scope (its
+        // element seated, set_scope) or one of the scope's elements.
         const int hit = color_picker_list_hit(cp.stash, x, y);
+        const bool scope_list = cp.chooser_scope;
         cp.chooser_pressed = -1;
         cp.chooser_press_began_on_item = false;
-        if (hit >= 0) color_picker.set_element(static_cast<std::size_t>(hit));
         set_color_picker_list_open(false);
+        if (hit >= 0) {
+            if (scope_list)
+                color_picker.set_scope(color_picker::scope_at(hit));
+            else
+                color_picker.set_element(color_picker::scope_element_at(
+                    cp.scope, static_cast<std::size_t>(hit)));
+        }
         return;
     }
     dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
@@ -6055,9 +6074,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // should have swallowed the press whole.
     //
     // A COLOR PICKER LIST'S BOX OUTRANKS BOTH EXEMPTIONS (2026-10-08, ON
-    // SCREEN IS AS PAINTED): the card's element list and its palette menu
+    // SCREEN IS AS PAINTED): the card's element list and its preset menu
     // scroll and may hang up over the menu row and the caption (an upward
-    // palette menu at the tablet's 300 % reaches the caption's rows), and
+    // preset menu at the tablet's 300 % reaches the caption's rows), and
     // the popup is what paints there (paint_modal_dialog after the caption).
     // So while one is down a press inside its published box
     // (color_picker_list_at, app_state.h — the list's box or the menu's,
@@ -6141,7 +6160,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // the top row is disabled under the picker also needs to be updated" —
     // the asymmetry at modal_owns_bottom_row, paint_handler.cpp): a press on
     // either row reaches the rows' own claim, AS PAINTED, unless the card's
-    // element list or palette menu is down — a popup owns the pointer whole
+    // element list or preset menu is down — a popup owns the pointer whole
     // (the dropdown's ONE PRESS, ONE ACT), and where it hangs over a row the
     // pixel the user sees is the popup's, so the press is
     // color_picker_press's (a row's arm on its rows, the popup's dismissal
@@ -8043,7 +8062,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // marker drag, which joined this body 2026-08-28 through their own hard-end
 // clears — THE COLOR PICKER'S GESTURE, and THE THREE POPUP LISTS' SCROLL
 // HOLDS (2026-10-08: the choice editor's list, the picker's element list and
-// its palette menu, clear_popup_scroll_holds). WHAT EACH LEAVES DIFFERS AND
+// its preset menu, clear_popup_scroll_holds). WHAT EACH LEAVES DIFFERS AND
 // EACH ARM SAYS SO: the drags COMMIT what stands, the pendings and the
 // player's arms commit NOTHING (a force-end is not a click — the standing
 // abnormal-end rule), and the picker's gesture and the scroll holds have

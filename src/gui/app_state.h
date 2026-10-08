@@ -4281,12 +4281,12 @@ enum class DialogTrigger {
     // `d`, Delete's letter, never the Delete key itself, so a second press of
     // the key that raised the question cannot answer it.
     DELETE_FOLDER_CONFIRM,
-    // THE COLOR PICKER'S DELETE (architect 2026-10-07): "Delete '<palette
-    // name>'?", Delete / Cancel, raised by the palette menu's Delete row over
+    // THE COLOR PICKER'S DELETE (architect 2026-10-07): "Delete '<preset
+    // name>'?", Delete / Cancel, raised by the preset menu's Delete row over
     // the standing picker (GuiColorPicker::raise_delete), the name parked at
     // AppState::ColorPicker::pending_delete — the render player's question
     // above in every term: CANCEL FOCUSED, `d` the one-key answer.
-    DELETE_PALETTE_CONFIRM,
+    DELETE_PRESET_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
@@ -6406,9 +6406,9 @@ struct AppState {
     // cluster is color_picker.h, the state AppState::ColorPicker below): the
     // in-app picker's CARD ON THE WELL — the element chooser, GNOME 2's hue
     // ring and SV triangle, six sliders, the hex field, OLD | NEW, the
-    // palette menu button and the three push buttons Copy / Paste / Close.
+    // preset button and the three push buttons Copy / Paste / Close.
     // Ranked WITH the player and the project picker, under the prompt (its
-    // palette menu's Delete question stands over it, DELETE_PALETTE_CONFIRM),
+    // preset menu's Delete question stands over it, DELETE_PRESET_CONFIRM),
     // and NEVER BESIDE AN EDITOR OTHER THAN ITS OWN ONE FIELD —
     // its opener refuses under every editor, its router consumes every
     // editor opener's key, and the three never stand together (each opener
@@ -6422,7 +6422,7 @@ struct AppState {
     // push buttons its `buttons` (color_picker_act below), so the hover
     // walk, the press arm, the lift's dispatch, the tooltip wait and the
     // pressed face are the dialogs' own; everything else it publishes (the
-    // chooser, the sliders, the swatches, the wheel, the palette menu
+    // chooser, the sliders, the swatches, the wheel, the preset menu
     // button and its menu) is its own stash
     // (ColorPicker::Stash). IT IS THE ONE OWNER THE BUTTON ROWS DO NOT
     // YIELD TO (architect 2026-10-07 evening for row 8, "a different type of
@@ -8702,8 +8702,9 @@ struct AppState {
     // -- THE COLOR PICKER'S WHOLE STATE (architect 2026-10-07) -----------
     //
     // THE IN-APP PICKER OF THE PROGRAM'S FIFTEEN COLORS (kGuiPaletteRoles,
-    // palette_file.h) AND, UNDER EITHER CHROME, THE CHROME KNOB'S TWELVE
-    // (chrome_derive.h) — a slim card on the well, chrome-branded, the FIFTH
+    // palette_file.h: a PALETTE) AND, UNDER EVERY CHROME, THE CHROME'S
+    // TWELVE KEYS (kGuiChromeLines: a SCHEME; chrome_derive.h), ONE KIND AT
+    // A TIME BY ITS SCOPE — a slim card on the well, chrome-branded, the FIFTH
     // ModalDialogOwner (its rank and its modal shape are at
     // ModalDialogOwner). Everything about the card that is not pixels is in
     // color_picker.h — the lengths, the layout, the color math, the wheel's
@@ -8713,12 +8714,19 @@ struct AppState {
     //   `active` / `session`  the mode bit and its modal session id from the
     //              one counter (text_editor::next_session_id), minted at
     //              every open (GuiColorPicker::open);
-    //   `element`  THE LIVE ELEMENT, an index into the chooser's list
-    //              (color_picker::element_at: the knob's twelve keys, then
-    //              kGuiPaletteRoles — the same list under either chrome).
-    //              KEPT ACROSS OPENS: the first open lands on the list's
-    //              first row (Chrome), a later open returns to the element last
-    //              picked — the picker remembers where the work was;
+    //   `scope`    THE SCOPE (2026-10-08 ~18:15, color_picker.h's THE
+    //              SCOPE): Chrome or Waveform, which kind the element
+    //              chooser lists and the preset button works on; set to
+    //              Waveform at every open (GuiColorPicker::open);
+    //   `element`  THE LIVE ELEMENT, an index into the elements' one space
+    //              (color_picker::element_at: the scheme's twelve keys, then
+    //              kGuiPaletteRoles), always one of the scope's;
+    //   `parked_element`  THE OTHER SCOPE'S live element, swapped with
+    //              `element` at a scope's change (GuiColorPicker::set_scope).
+    //              BOTH KEPT ACROSS OPENS: the first open lands on the
+    //              Waveform scope's first row (Canvas) with Chrome parked on
+    //              its first (Chrome), a later open returns to the elements
+    //              last picked — the picker remembers where the work was;
     //   `old_rgb`  OLD — the live element's color WHEN IT BECAME the live
     //              element (the open, or the chooser's change); a tap on the
     //              OLD swatch writes it back, live;
@@ -8726,7 +8734,7 @@ struct AppState {
     //              (color_picker::element_color: program_palette_words or
     //              the live chrome pick, render.h), the truth; ONE
     //              WRITER, GuiColorPicker::set_color, which writes the live
-    //              palette, installs it and keeps this in step;
+    //              words, installs them and keeps this in step;
     //   `hue_deg`, `sat`  THE HSV MEMORIES: the hue in degrees [0, 360) and
     //              the saturation [0, 1] the HSV controls last wrote or the
     //              bytes last gave — GtkHSV's own behavior, so a gray keeps
@@ -8739,33 +8747,40 @@ struct AppState {
     //              first Copy, and Paste grays while it is;
     //   `on_right` WHICH HALF the card stands on: the half opposite the
     //              opening tap's x (a keyboard open has no tap: the right);
-    //   the chooser's list state (`chooser_open`, the hovered, the pressed
-    //              and the press-began bits — the menu-row popup's own road
-    //              one surface over — and `chooser_scroll`, its scroll,
-    //              render.h's popup scroll block);
-    //   the palette menu's state (`menu_open` and its three bits, the same
-    //              road again — color_picker.h's THE PALETTE MENU — and
+    //   the chooser row's list state (`chooser_open`, the hovered, the
+    //              pressed and the press-began bits — the menu-row popup's
+    //              own road one surface over — and `chooser_scroll`, its
+    //              scroll, render.h's popup scroll block), ONE LIST FOR THE
+    //              ROW'S TWO COMBOS, `chooser_scope` saying whose is down
+    //              (the scope's two rows, else the scope's elements;
+    //              color_picker.h's THE RIGHT COLUMN);
+    //   the preset menu's state (`menu_open` and its three bits, the same
+    //              road again — color_picker.h's THE PRESET MENU — and
     //              `menu_scroll`); the hovered and pressed rows of both are
-    //              INDEXES INTO THE WHOLE LIST (the element, the menu row),
-    //              never into the shown block, so a scroll moves no lit row;
+    //              INDEXES INTO THE WHOLE LIST (the list's row, the menu
+    //              row), never into the shown block, so a scroll moves no
+    //              lit row;
     //   `field_editor`  THE CARD'S ONE TEXT FIELD'S EDITOR, a member of
     //              text_editor_session while it stands: Kind::PaletteHex
     //              for the hex field, Kind::PaletteName for THE NAME ASK,
     //              `name_ask` saying which act asks (color_picker.h);
-    //   `pending_delete`  the palette the standing Delete prompt names,
-    //              empty otherwise (GuiColorPicker::raise_delete);
+    //   `pending_delete`  the preset of the scope's kind the standing Delete
+    //              prompt names, empty otherwise (GuiColorPicker::raise_delete);
     //   `drag`     THE LIVE GESTURE on a slider's thumb, the ring or the
     //              triangle (a member of any_pointer_gesture_active);
     //   `stash`    WHAT WAS PAINTED, the roster model (ColorPicker::Stash).
     // It authors nothing: no undo, no dirty; legal on a read-only tab and in
-    // the `h` view (it changes colors, not state). THE ACTIVE PRESET IS NOT
-    // HERE: it is the live device config's `palette` resolved
-    // (color_picker::active_palette — the config outlives this struct, which
+    // the `h` view (it changes colors, not state). THE ACTIVE PRESETS ARE NOT
+    // HERE: each is the live device config's `scheme` or `palette` resolved
+    // (color_picker::active_preset — the config outlives this struct, which
     // a reopen rebuilds).
     struct ColorPicker {
         bool        active  = false;
         uint64_t    session = 0;
-        std::size_t element = 0;
+        enum class Scope { Chrome, Waveform };
+        Scope       scope   = Scope::Waveform;
+        std::size_t element = kGuiChromeLineCount;   // Canvas, Waveform's first
+        std::size_t parked_element = 0;              // Chrome, Chrome's first
         uint32_t    old_rgb = 0;
         uint32_t    rgb     = 0;
         double      hue_deg = 0.0;
@@ -8774,6 +8789,7 @@ struct AppState {
         uint32_t    slot_rgb  = 0;
         bool        on_right  = true;
         bool        chooser_open    = false;
+        bool        chooser_scope   = false;   // the list down is the scope's
         int         chooser_hover   = -1;
         int         chooser_pressed = -1;
         bool        chooser_press_began_on_item = false;
@@ -8810,15 +8826,15 @@ struct AppState {
         // painted. The card itself, the field's interior and the three push
         // buttons are ALSO the modal stash's box, field and buttons
         // (ModalDialogGeometry) — the dialogs' shared machinery reads those.
-        // The palette menu button is the picker's own (a press drops the
+        // The preset button is the picker's own (a press drops the
         // menu, the chooser's road, not a dialog button's lift).
         struct SliderStash {
             GuiRect row{0, 0, 0, 0};     // the whole slider row (label to value)
             GuiRect track{0, 0, 0, 0};   // the track: a press here seats the thumb
             int     thumb_x = -1;        // the thumb's center column as painted
         };
-        // ONE ROW OF THE PALETTE MENU AS PAINTED: its rect, what it does (a
-        // name's load, or the act's index in color_picker::PaletteAct's
+        // ONE ROW OF THE PRESET MENU AS PAINTED: its rect, what it does (a
+        // name's load, or the act's index in color_picker::PresetAct's
         // order) and its enabled bit — the lift acts on these, never on a
         // live re-derivation.
         struct MenuRowStash {
@@ -8832,13 +8848,15 @@ struct AppState {
             bool     valid   = false;
             uint64_t session = 0;
             GuiRect  card{0, 0, 0, 0};
-            GuiRect  chooser{0, 0, 0, 0};      // the combo: a press toggles the list
+            GuiRect  scope{0, 0, 0, 0};        // the scope combo: a press drops its list
+            GuiRect  chooser{0, 0, 0, 0};      // the element combo: a press drops its list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
-            // The list's rows, the chooser's every one (the knob's twelve and the
-            // fifteen; color_picker::kElementCount, asserted there), by
-            // element index — the zero rect for a row scrolled out of view —
-            // and its scroll bar (absent while every row shows).
-            std::array<GuiRect, kGuiChromeLineCount + kGuiPaletteRoleCount>
+            // The list's rows, the dropped list's every one (the scope's
+            // two, or the scope's elements — at most the fifteen,
+            // color_picker::kListRowMax, asserted there), by row — the zero
+            // rect for a row scrolled out of view, and past the list's
+            // count — and its scroll bar (absent while every row shows).
+            std::array<GuiRect, std::max(kGuiChromeLineCount, kGuiPaletteRoleCount)>
                      list_items{};
             PopupScrollBar list_bar;
             std::array<SliderStash, 6> sliders{};   // color_picker::kChannelCount (static_asserted there)
@@ -9613,7 +9631,7 @@ struct AppState {
 };
 
 // THE COLOR PICKER'S OPEN LIST UNDER A POINT (2026-10-08): the card's element
-// list or its palette menu, whichever is down, as the painter last published
+// list or its preset menu, whichever is down, as the painter last published
 // it (ColorPicker::Stash's `list` and `menu` — each zeroed by every live
 // paint while its list is up, and the whole stash by the picker's open and
 // close, paint_color_picker) — read under the live session, as every stash
@@ -9633,8 +9651,8 @@ inline bool color_picker_list_at(const AppState& a, int x, int y) {
 // PAINTED): the menu row's drop-down (AppState::Dropdown's rect while it is
 // open), the settings choice editor's list (ModalDialogGeometry's
 // `combo_list`, zeroed at every paint_modal_dialog run and written only while
-// the list is painted down) and the color picker's element list and palette
-// menu (color_picker_list_at). Every one paints ABOVE the notification cards
+// the list is painted down) and the color picker's chooser-row list and
+// preset menu (color_picker_list_at). Every one paints ABOVE the notification cards
 // (paint_notifications runs before paint_dropdown and paint_modal_dialog), so
 // a card under one is hidden there and notification_card_at yields to this
 // one predicate's family (floater_above_cards_at, below) — the popups'
@@ -18438,7 +18456,7 @@ static_assert(redesign_button_modifier_hint_agrees(),
 //
 // AND UNDER THE COLOR PICKER THE TWO BUTTON ROWS ARE IN THE ZONE — the icon
 // row and row 8, never the menu row's anchors — and none of them while the
-// card's element list or palette menu is down (architect 2026-10-07 evening
+// card's element list or preset menu is down (architect 2026-10-07 evening
 // for row 8, 2026-10-08 for the icon row, both on under the picker —
 // modal_owns_bottom_row, paint_handler.cpp): the menu row is behind the
 // picker's veil, and a popup of the card owns the pointer as the dropdown

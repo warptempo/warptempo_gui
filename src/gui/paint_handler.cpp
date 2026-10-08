@@ -1251,7 +1251,7 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 
 // (THE DROPDOWN'S HORIZONTAL PADS, kPopupPadXPx and kPopupHotkeyGapPx, are
 // render.h's since 2026-10-07, beside the vertical metrics: the color
-// picker's palette menu sizes its box off them in its layout.)
+// picker's preset menu sizes its box off them in its layout.)
 
 // THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
 // the face's own CAP BAND in the box, a half-row tie going toward the TOP
@@ -6089,7 +6089,7 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // openers of another list owner or an editor (redesign_button_enabled's
 // color picker terms) — never wholesale. A roster lift's chord passes the
 // picker's key layer as the pointer's own
-// (GuiInputHandler::roster_chord_in_flight_); the card's palette menu and
+// (GuiInputHandler::roster_chord_in_flight_); the card's preset menu and
 // element list, drawn last, cover a row where they hang over it, and while
 // either is down the press is theirs (the press router's veil). A PROMPT
 // over the picker (the palette Delete question) owns the row as every
@@ -6570,8 +6570,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // THE COLOR PICKER'S FORK: its surface is the card on the well, not the
     // row, so the row's layout below is not its business — the row stays
     // painted under it as without it (modal_owns_bottom_row's asymmetry),
-    // and the card, painted after the row, covers it only where its palette
-    // menu or element list hangs over it.
+    // and the card, painted after the row, covers it only where its preset
+    // menu or chooser-row list hangs over it.
     if (color_picker_up) {
         paint_color_picker(cr, live_session, /*veiled=*/false);
         return;
@@ -7820,13 +7820,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // the three push buttons as `buttons`, so the dialogs' shared machinery —
 // the hover walk, the press arm, the lift's dispatch, the tooltip wait, the
 // pressed and disabled faces — serves them unchanged) and the picker's own
-// (AppState::ColorPicker::Stash: the chooser, the list, the sliders' tracks
+// (AppState::ColorPicker::Stash: the scope combo and the element chooser,
+// the chooser row's list, the sliders' tracks
 // and thumb columns, the field's run, the swatches, the wheel's circles,
-// the palette menu button and its menu's rows with their enabled bits). AS
+// the preset button and its menu's rows with their enabled bits). AS
 // PAINTED: everything is republished every run from the same layout the
 // pixels came from.
 //
-// VEILED (architect 2026-10-07, the palette menu's Delete question): under a
+// VEILED (architect 2026-10-07, the preset menu's Delete question): under a
 // prompt the card still paints, so the question stands over the picker it
 // asks about, and publishes NOTHING — the modal stash is the prompt's, the
 // picker's stash goes invalid (a press under the prompt is the prompt's),
@@ -7836,8 +7837,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // THE LOOK, every chrome: the GROUND with the PLAIN RAISED two-line edge
 // under win2000, GTK's one shade[5] line under clearlooks and Motif's
 // one-W raised panel under cde (2026-10-08); the wheel
-// (color_picker::paint_wheel, the one non-role painter); the chooser and the
-// palette menu button — ONE COMBO DRAWING (paint_picker_combo below):
+// (color_picker::paint_wheel, the one non-role painter); the scope combo,
+// the element chooser and the preset button — ONE COMBO DRAWING
+// (paint_picker_combo below):
 // win2000 a sunken field in the field pair with Windows' 16-W drop-down
 // button and Marlett's wedge, clearlooks one gummy button with the engine's
 // wedge, the text at the field's pad cut with "..." where it does not fit;
@@ -7852,7 +7854,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // `label`; the swatch pair in a one-line sunken frame (cl_list_frame under
 // clearlooks), each swatch a flat fill of its word; the three push buttons
 // the dialogs' (the disabled face where their bits say); and the chooser's
-// list or the palette menu, when down, the menu-row popup's box and rows,
+// list or the preset menu, when down, the menu-row popup's box and rows,
 // the menu's separator and grayed rows the dropdown's.
 namespace {
 // THE COMBO'S DOWN WEDGE at (ax, ay), aw x ah: the ink when live, and when
@@ -7930,8 +7932,9 @@ void show_picker_combo_text(cairo_t* cr, const GuiFont& font, double x,
 }
 } // namespace
 
-// THE CHROME'S COMBO — the chooser's drawing, the palette menu button's too
-// (2026-10-07, the planner's "reuse it"), and since that evening the
+// THE CHROME'S COMBO — the chooser's drawing, the preset button's too
+// (2026-10-07, the planner's "reuse it"), the scope combo's (2026-10-08),
+// and since 2026-10-07 evening the
 // settings editor's CHOICE COMBO's, a reader outside the picker
 // (paint_settings_choice): `r` the whole control, `button`
 // win2000's drop-down button inside it (empty under clearlooks), `open`
@@ -8106,10 +8109,15 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
         color_picker::paint_wheel(cr, L, cp.hue_deg, cp.sat, v, cp.rgb);
     }
 
-    // THE CHOOSER.
+    // THE CHOOSER ROW: the scope combo, then the element chooser, each
+    // pushed while its own list is down (the row's one list,
+    // `chooser_scope` saying whose).
+    paint_picker_combo(cr, font, L.scope, L.scope_button,
+                       color_picker::scope_display_name(cp.scope),
+                       cp.chooser_open && cp.chooser_scope, /*enabled=*/true);
     paint_picker_combo(cr, font, L.chooser, L.chooser_button,
                        color_picker::element_display_name(cp.element),
-                       cp.chooser_open, /*enabled=*/true);
+                       cp.chooser_open && !cp.chooser_scope, /*enabled=*/true);
 
     // THE SIX SLIDERS.
     for (int i = 0; i < color_picker::kChannelCount; ++i) {
@@ -8166,10 +8174,10 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     if (asking) {
         show_row_text(cr, font, L.name_label.x,
                       redesign_baseline(font, L.name_label.y, L.name_label.h),
-                      color_picker::palette_act_label(
+                      color_picker::preset_act_label(
                           cp.name_ask == AppState::ColorPicker::NameAsk::Rename
-                              ? color_picker::PaletteAct::Rename
-                              : color_picker::PaletteAct::SaveAs),
+                              ? color_picker::PresetAct::Rename
+                              : color_picker::PresetAct::SaveAs),
                       palette().label);
     }
 
@@ -8275,12 +8283,13 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
         else    paint_relief_sunken_outer(cr, L.swatch_frame);
     }
 
-    // THE PALETTE MENU BUTTON, labeled with the active preset's shown name,
+    // THE PRESET BUTTON, labeled with the active preset's shown name,
     // gray while the name ask stands.
     const bool menu_button_enabled = !asking;
     paint_picker_combo(
         cr, font, L.menu_button, L.menu_button_arrow,
-        color_picker::palette_display_name(color_picker::active_palette(app)),
+        color_picker::preset_display_name(
+            cp.scope, color_picker::active_preset(app, cp.scope)),
         cp.menu_open, menu_button_enabled);
 
     // THE THREE PUSH BUTTONS, published on the modal stash; all three gray
@@ -8335,25 +8344,32 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     cp.stash.list_items = {};
     cp.stash.list_bar = PopupScrollBar{};
     if (cp.chooser_open) {
-        const std::size_t count = color_picker::element_count();
+        const auto label_of =
+            cp.chooser_scope
+                ? +[](const AppState&, int i) {
+                      return color_picker::scope_display_name(
+                          color_picker::scope_at(i));
+                  }
+                : +[](const AppState& a, int i) {
+                      return color_picker::element_display_name(
+                          color_picker::scope_element_at(
+                              a.color_picker.scope,
+                              static_cast<std::size_t>(i)));
+                  };
         paint_combo_list(cr, font, L.list, cp.chooser_pressed,
-                         cp.chooser_hover, cp.chooser_scroll.held,
-                         [](const AppState&, int i) {
-                             return color_picker::element_display_name(
-                                 static_cast<std::size_t>(i));
-                         });
-        for (std::size_t i = 0; i < count; ++i)
-            cp.stash.list_items[i] = L.list_items[i];
+                         cp.chooser_hover, cp.chooser_scroll.held, label_of);
+        for (int i = 0; i < L.list.count; ++i)
+            cp.stash.list_items[static_cast<std::size_t>(i)] = L.list_items[i];
         cp.stash.list = L.list.box;
         cp.stash.list_bar = L.list.bar;
     }
 
-    // THE PALETTE MENU, when down: the same box and THE ROWS THE LAYOUT
-    // SHOWS (the scroll's block — color_picker.h's THE PALETTE MENU; the
+    // THE PRESET MENU, when down: the same box and THE ROWS THE LAYOUT
+    // SHOWS (the scroll's block — color_picker.h's THE PRESET MENU; the
     // popup lists' scroll, render.h), its separators — one before each
     // group — the dropdown's (etched and inset under win2000, GtkMenu's one
     // row under clearlooks) where each is in view, each act's enabled bit asked once here
-    // (palette_act_enabled) and published with its row; a grayed row wears
+    // (preset_act_enabled) and published with its row; a grayed row wears
     // no lit face and its label the emboss (paint_dropdown's rules); then the
     // scroll bar when it stands. EVERY ROW IS PUBLISHED, a row scrolled out
     // of view with the zero rect, so the lit and pressed indexes are the
@@ -8362,7 +8378,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     cp.stash.menu_rows.clear();
     cp.stash.menu_bar = PopupScrollBar{};
     if (cp.menu_open) {
-        const std::vector<color_picker::PaletteMenuRow>& rows = L.menu_rows;
+        const std::vector<color_picker::PresetMenuRow>& rows = L.menu_rows;
         assert(rows.size() == L.menu_items.size());
         if (cl) paint_cl_menu(cr, L.menu, /*upward=*/L.menu_upward);
         else    paint_popup_chrome(cr, L.menu, PopupFace::Menu);
@@ -8384,10 +8400,10 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
         }
         const int pad_l = scaled_px(kPopupPadXPx);
         for (std::size_t i = 0; i < rows.size(); ++i) {
-            const color_picker::PaletteMenuRow& row = rows[i];
+            const color_picker::PresetMenuRow& row = rows[i];
             const GuiRect& item = L.menu_items[i];
             const bool enabled =
-                !row.is_act || color_picker::palette_act_enabled(app, row.act);
+                !row.is_act || color_picker::preset_act_enabled(app, row.act);
             const bool shown = item.w > 0 && item.h > 0;
             const bool lit = enabled && (cp.menu_pressed == static_cast<int>(i) ||
                                          cp.menu_hover == static_cast<int>(i));
@@ -8398,8 +8414,8 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
                 }
                 const std::string label =
                     row.is_act
-                        ? std::string(color_picker::palette_act_label(row.act))
-                        : color_picker::palette_display_name(row.name);
+                        ? std::string(color_picker::preset_act_label(row.act))
+                        : color_picker::preset_display_name(cp.scope, row.name);
                 const double base = redesign_baseline(font, item.y, item.h);
                 if (enabled)
                     show_row_text(cr, font, L.menu.x + pad_l, base, label,
@@ -8428,6 +8444,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     cp.stash.valid     = !veiled;
     cp.stash.session   = cp.session;
     cp.stash.card      = L.card;
+    cp.stash.scope     = L.scope;
     cp.stash.chooser   = L.chooser;
     cp.stash.field     = L.field;
     cp.stash.field_inner = L.field_inner;

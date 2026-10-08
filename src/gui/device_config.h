@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Six keys live here and nowhere else:
+// piece (architect 2026-08-27). Seven keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -25,13 +25,20 @@
 //                            reading as windows-2000 (kDefaultChromeKey);
 //                            takes effect at the next launch; the chrome's
 //                            colors are its own, compiled in (theme_file.h)
-//   palette=<name>           THE PALETTE the program is painted in: a
-//                            built-in scheme (`windows-2000-standard`,
-//                            `clearlooks`, `solaris`, the catalog's) or a
-//                            palette file read at launch (is_palette_name,
-//                            palette_file.h); MAY BE ABSENT — the first
-//                            run's state — meaning the chrome's default
-//                            palette (effective_palette_name)
+//   scheme=<name>            THE SCHEME the chrome is painted in, its twelve
+//                            keys derived over the compiled theme: a built-in
+//                            scheme (`windows-2000-standard`, `clearlooks`,
+//                            `solaris`, the catalog's) or a scheme file read
+//                            at launch (is_scheme_name, palette_file.h); MAY
+//                            BE ABSENT — the first run's state — meaning the
+//                            chrome's own scheme, the compiled theme exactly
+//                            (effective_scheme_name)
+//   palette=<name>           THE PALETTE the program is painted in: a default
+//                            palette (`windows-2000-standard`, `clearlooks`,
+//                            `solaris`) or a palette file read at launch
+//                            (is_palette_name, palette_file.h); MAY BE ABSENT
+//                            — the first run's state — meaning the chrome's
+//                            default palette (effective_palette_name)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
@@ -39,7 +46,9 @@
 // 2026-10-03, the colour keys that stood after it for a day gone, below;
 // `chrome` placed before `theme`, 2026-10-07, and `palette` APPENDED after
 // `theme` the same day, the program's colors' own file type; `theme` gone
-// 2026-10-08, below);
+// 2026-10-08, below; `scheme` placed between `chrome` and `palette`
+// 2026-10-08 ~18:15, the chrome's colors after the chrome and before the
+// program's);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -161,8 +170,8 @@
 // read at launch from a themes folder beside this file (the imported
 // catalog shipped as bundled files, copied in at every launch), absent the
 // chrome's own, with a Settings row; every chrome's colors are compiled in
-// since (theme_file.h), and THE PALETTE (palette_file.h) is the colors'
-// workshop. A config still carrying `theme=` is unknown-key fatal, no
+// since (theme_file.h), and THE SCHEME AND THE PALETTE (palette_file.h)
+// are the colors' workshop. A config still carrying `theme=` is unknown-key fatal, no
 // migration (neither install's carried one).
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
@@ -177,11 +186,12 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six
-// keys and each at most once, every key REQUIRED but `chrome` and `palette`
-// (architect 2026-10-07: `chrome` absent is windows-2000, the default
-// chrome, so the configs written before the key still load; `palette`
-// absent is the chrome's default palette, the one spelling of that state,
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven
+// keys and each at most once, every key REQUIRED but `chrome`, `scheme` and
+// `palette` (architect 2026-10-07: `chrome` absent is windows-2000, the
+// default chrome, so the configs written before the key still load;
+// `palette` absent is the chrome's default palette and `scheme` absent
+// (2026-10-08) the chrome's own scheme, each the one spelling of that state,
 // which the writer emits by leaving the line out), one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -210,9 +220,10 @@
 // `Projects Path` and, since 2026-10-07, `Chrome` (`Theme` stood after it
 // 2026-10-03..10-08; kSettingsPopupItems, app_state.h) as rows that open the
 // settings editor prefilled, and the editor commits each through this file's
-// writer under the key's own grammar below. `palette` (2026-10-07) HAS NO
-// SETTINGS ROW: the color picker's palette menu is its road (color_picker.h's
-// THE PRESETS), which writes the key through the same writer. Until
+// writer under the key's own grammar below. `palette` (2026-10-07) and
+// `scheme` (2026-10-08) HAVE NO SETTINGS ROW: the color picker's preset menu
+// is their road (color_picker.h's THE PRESETS), which writes each key
+// through the same writer. Until
 // 2026-09-02 the path keys
 // were hand-edited only, and HELP told the user to edit one without
 // telling him to quit first — which mattered, because A HAND EDIT UNDER A
@@ -225,12 +236,13 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for the four required keys: a successful read always assigns
-// them. THE TWO ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
-// (2026-10-07): `chrome` "windows-2000" (the default chrome, architect
-// 2026-10-07 ~22:45), `palette` empty (no line: the chrome's own). Both
-// backends stamp a default-constructed struct's
-// (GuiPlatform::device_config_defaults), so the first-run file of either
-// device names `chrome=windows-2000` and no palette, following the chrome.
+// them. THE THREE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
+// (2026-10-07; the scheme 2026-10-08): `chrome` "windows-2000" (the default
+// chrome, architect 2026-10-07 ~22:45), `scheme` and `palette` empty (no
+// line: the chrome's own). Both backends stamp a default-constructed
+// struct's (GuiPlatform::device_config_defaults), so the first-run file of
+// either device names `chrome=windows-2000` and no scheme or palette,
+// following the chrome.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -241,13 +253,14 @@
 //
 // The members are in the writer's order.
 //
-// THE CHROME AND THE PALETTE ARE THEIR KEYS VERBATIM (2026-10-07); gui_main
-// installs the chrome once (set_live_chrome_spec, chrome_spec.h), and the
-// install resolves the palette (install_palette, render.h, through
-// effective_palette_name, palette_file.h) and takes the chrome's colors from
-// its compiled theme (chrome_theme_words, theme_file.h), with the palette's
-// chrome knob derived over it by the live chrome's derivation
-// (live_chrome_words, chrome_derive.h).
+// THE CHROME, THE SCHEME AND THE PALETTE ARE THEIR KEYS VERBATIM
+// (2026-10-07; the scheme 2026-10-08); gui_main installs the chrome once
+// (set_live_chrome_spec, chrome_spec.h), and the install resolves the
+// palette and the scheme (install_palette, render.h, through
+// effective_palette_name and effective_scheme_name, palette_file.h) and
+// takes the chrome's colors from its compiled theme (chrome_theme_words,
+// theme_file.h), with the scheme's twelve keys derived over it by the live
+// chrome's derivation (live_chrome_words, chrome_derive.h).
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;
@@ -257,11 +270,18 @@ struct DeviceConfig {
     // kDefaultChromeKey (chrome_spec.h; theme_file.cpp's static_assert keeps
     // this spelling and that key one) — what an absent line reads as.
     std::string chrome = "windows-2000";
+    // THE SCHEME, UNSET BY DEFAULT (2026-10-08 ~18:15): empty while the
+    // config has no `scheme` line, which RESOLVES AT EACH INSTALL to the live
+    // chrome's own scheme (effective_scheme_name, palette_file.h:
+    // `windows-2000-standard`, `clearlooks` or `solaris`, the compiled theme
+    // exactly) — never written back; a named scheme is honored under every
+    // chrome.
+    std::string scheme;
     // THE PALETTE, UNSET BY DEFAULT (architect 2026-10-07): empty while the
     // config has no `palette` line, which RESOLVES AT EACH INSTALL to the
     // live chrome's default palette (effective_palette_name, palette_file.h:
-    // `windows-2000-standard` or `clearlooks`) — never written back; a named palette
-    // is honored under either chrome.
+    // `windows-2000-standard`, `clearlooks` or `solaris`) — never written
+    // back; a named palette is honored under every chrome.
     std::string palette;
 };
 
@@ -407,9 +427,10 @@ inline bool is_projects_repo(const std::string& v) {
     return true;
 }
 
-// (THE palette GRAMMAR is palette_file.h's is_palette_name and
-// kPaletteGrammarReason, with THE ONE COLOUR GRAMMAR every palette role's
-// value takes, theme_file.h's theme_colour_word. The `theme_level` grammar
+// (THE palette AND scheme GRAMMARS are palette_file.h's is_palette_name and
+// kPaletteGrammarReason, is_scheme_name and kSchemeGrammarReason, with THE
+// ONE COLOUR GRAMMAR every palette role's and scheme key's value takes,
+// theme_file.h's theme_colour_word. The `theme_level` grammar
 // and the program color grammar of the twelve keys left with those keys
 // 2026-10-04, the colour grammar moving whole to the theme files; the
 // `theme` key's own grammar left with the key 2026-10-08.)
@@ -530,9 +551,10 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // `projects_repo=`, `projects_path=` and `chrome=`
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the path
 // arm joined 2026-09-02, the chrome's 2026-10-07; the theme's stood
-// 2026-10-03..10-08); the color picker's `palette=` write
-// (GuiColorPicker::write_palette_key, color_picker.cpp, 2026-10-07: a load,
-// a Save As, a Rename and a Delete each name the new active preset); and
+// 2026-10-03..10-08); the color picker's `palette=` and `scheme=` write
+// (GuiColorPicker::write_preset_key, color_picker.cpp, 2026-10-07; the
+// scheme's 2026-10-08: a load, a Save As, a Rename and a Delete each name
+// the new active preset of the picker's scope); and
 // gui_main's `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value
@@ -546,7 +568,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 275 % and its external files dir's `projects/`;
-// both stamp the default chrome (kDefaultChromeKey) and no palette line, kDefaultProjectsRepo and
+// both stamp the default chrome (kDefaultChromeKey) and no scheme or palette line, kDefaultProjectsRepo and
 // a blank
 // last_project),
 // so a first run on either device lands a

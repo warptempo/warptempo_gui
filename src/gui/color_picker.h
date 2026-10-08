@@ -7,6 +7,7 @@
 #include "palette_file.h"
 #include "render.h"
 
+#include <algorithm>
 #include <cairo.h>
 #include <cstddef>
 #include <cstdint>
@@ -21,9 +22,9 @@ struct Viewport;
 
 // THE COLOR PICKER (architect 2026-10-07, the picker arc's second segment) —
 // the in-app picker of the program's fifteen colors (kGuiPaletteRoles,
-// palette_file.h) and, under either chrome, of THE CHROME KNOB's twelve keys
-// (architect 2026-10-08, kGuiChromeLines, palette_file.h; chrome_derive.h,
-// clearlooks_derive.h): "a very slimmed down version … a full-fledged part
+// palette_file.h: A PALETTE) and, under every chrome, of the chrome's twelve
+// keys (architect 2026-10-08, kGuiChromeLines, palette_file.h: A SCHEME;
+// chrome_derive.h, clearlooks_derive.h, cde_derive.h): "a very slimmed down version … a full-fledged part
 // of the project … branded with the chrome … not an afterthought". This header is
 // the cluster's ONE OWNER of everything that is not pixels or a press body:
 // the lengths, the layout, the color math, the wheel's raster and the acts
@@ -36,26 +37,45 @@ struct Viewport;
 // other press router); the painter and the router both read layout() below,
 // so paint and hit cannot describe different controls.
 //
+// THE SCOPE (architect 2026-10-08 ~18:15: "saving a waveform theme requires
+// saving the entire chrome theme as well … one more drop-down that shows
+// what you're picking, whether it's the waveform or the chrome"): ONE
+// DROP-DOWN OF TWO ROWS, "Chrome" and "Waveform" (his words), choosing which
+// of the two preset kinds the picker works on (palette_file.h's head: a
+// SCHEME, the chrome's twelve keys, and a PALETTE, the program's fifteen).
+// The scope sets THE ELEMENT CHOOSER'S ROWS — the twelve under Chrome, the
+// fifteen under Waveform, never a mixed list — and THE PRESET BUTTON: its
+// label (the scope's active preset) and its menu's rows (its kind's files
+// and built-ins), the four acts acting on that kind alone. OLD | NEW, Copy /
+// Paste, the hex field and the wheel are the scope's live element's, with
+// no scope of their own. THE SCOPE AT EVERY OPEN IS WAVEFORM — the common
+// case: he authors the waveform's colors — and each scope keeps its own
+// live element across a switch and a close (AppState::ColorPicker's
+// `element` and `parked_element`). Esc and Close are unchanged.
+//
 // THE PRESETS (architect 2026-10-07, the arc's third segment: "now that we
 // have the keyboard in the app, we can allow the user to give names to the
 // presets", renamable "for organization", Delete behind a confirming
 // prompt, the built-ins unchangeable, the chosen preset back at the next
-// launch). Every pick writes THE LIVE PALETTE (palette_file.h's
-// live_palette_record: render.h's program_palette_words and
-// live_chrome_pick) and installs it; the presets are NAMED
-// PALETTES (palette_file.h: the compiled-in built-ins and his files) and
-// THE ACTIVE PRESET is the device config's `palette` resolved
-// (effective_palette_name) — NOT A FIELD HERE: the live config is its one
+// launch; two kinds since 2026-10-08 ~18:15). Every pick writes THE LIVE
+// WORDS — the live palette (render.h's program_palette_words) or the live
+// scheme (render.h's live_chrome_pick) — and installs them; the presets are
+// NAMED PALETTES AND SCHEMES (palette_file.h: the compiled-in built-ins and
+// his files) and EACH SCOPE'S ACTIVE PRESET is the device config's
+// `palette` or `scheme` resolved (effective_palette_name,
+// effective_scheme_name) — NOT A FIELD HERE: the live config is its one
 // truth, read at every paint, so the picker's first open after a launch
-// lands on the config's preset (or the chrome's default) with no seeding to
-// keep in step. THE PALETTE MENU (the bottom row's first button, below)
-// loads a preset, saves the live palette over the active file, saves it
-// under a new name, renames the active file or deletes it. A CLOSE KEEPS
-// THE LIVE COLORS, ASKING NOTHING: a palette picked and not saved paints
-// until the process ends, and THE NEXT LAUNCH RETURNS TO THE NAMED PRESET —
-// the menu's Save, lit while the live palette differs from the active file's,
-// is the cue (architect 2026-10-07). The picker is the folder's one writer
-// and the `palette` key's one writer (GuiColorPicker's preset acts, below).
+// lands on the config's presets (or the chrome's own) with no seeding to
+// keep in step. THE PRESET MENU (the bottom row's preset button, below)
+// loads a preset of the scope's kind, saves the live words of that kind over
+// the active file, saves them under a new name, renames the active file or
+// deletes it. A CLOSE KEEPS BOTH KINDS' LIVE COLORS, ASKING NOTHING: a
+// palette or a scheme picked and not saved paints until the process ends,
+// and THE NEXT LAUNCH RETURNS TO THE TWO NAMED PRESETS — the menu's Save,
+// lit while the scope's live words differ from its active file's, is the
+// cue (architect 2026-10-07). The picker is the two folders' one writer and
+// the `palette` and `scheme` keys' one writer (GuiColorPicker's preset acts,
+// below).
 //
 // WHAT IT IS. ONE CARD ON THE WELL, on the half of the window opposite the
 // opening tap (so the well under the other half stays in view while
@@ -67,7 +87,8 @@ struct Viewport;
 // inner pad; NO caption and no title (slim). Inside it, left to right and
 // top to bottom:
 //   THE WHEEL (left) — GNOME 2's own, GtkHSV's hue RING with the SV
-//     TRIANGLE inside it, in a square whose side is the top block's height,
+//     TRIANGLE inside it, in a square whose side is the top block's height
+//     or less (centered on it: THE WIDTH below, 2026-10-08 ~18:15),
 //     proportioned off his capture (tmp/squeeze/Screenshot_2026-10-07_
 //     07-48-13.png, measured 2026-10-07 at 100 %: the ring's outer diameter
 //     174 px, its width 15 — gtk_hsv_set_metrics (174, 15), GTK's own
@@ -77,24 +98,27 @@ struct Viewport;
 //     (GtkHSV's angle; the capture's red at the right, yellow above it); the
 //     triangle's corners the pure hue, white at +120 degrees and black at
 //     +240, turning with the hue.
-//   THE RIGHT COLUMN — (a) THE ELEMENT CHOOSER, the chrome's combo box
-//     showing the live element's name (element_display_name) with the arrow
-//     button; a press drops its list — THE ELEMENTS (element_at: the chrome
-//     knob's twelve at the top, "Chrome" first, then the fifteen in
-//     kGuiPaletteRoles' order — 27 rows under either chrome), the menu-row
-//     popup's painters and press road
-//     — and a tap on a row selects. IT IS ONE OF THE THREE LIST POPUPS,
-//     placed by the window and SCROLLING when its rows outgrow the room
+//   THE RIGHT COLUMN — (a) THE CHOOSER ROW, two of the chrome's combo
+//     boxes side by side (2026-10-08 ~18:15; THE WIDTH below has the
+//     arithmetic): THE SCOPE COMBO at the left, showing "Chrome" or
+//     "Waveform" (scope_display_name), then THE ELEMENT CHOOSER showing the
+//     live element's name (element_display_name), each with its arrow
+//     button; a press on either drops ITS list — the scope's two rows, or
+//     THE SCOPE'S ELEMENTS (scope_element_at: under Chrome the twelve in
+//     kGuiChromeLines' order, "Chrome" first; under Waveform the fifteen in
+//     kGuiPaletteRoles' order) — the menu-row popup's painters and press
+//     road, and a tap on a row selects. THE TWO SHARE ONE LIST: one is down
+//     at a time (AppState::ColorPicker's `chooser_scope` says whose), so the
+//     chooser row is ONE OF THE THREE LIST POPUPS whichever combo dropped
+//     it, placed by the window and SCROLLING when its rows outgrow the room
 //     (render.h's popup scroll block, the rule's one owner; combo_list), its
 //     shown row scrolled into view at the open (re-derived 2026-10-08 with
-//     the knob's twelve, device px): at the tablet's 300 % the 27 rows under
-//     win2000 are 27 x 51 + 2 x 3 + 6 + 6 = 1395, more than the window holds
-//     below the chooser, so the list scrolls there, and under clearlooks
-//     (re-derived the same day, the knob offered there too) 27 x 57 + 3 =
-//     1542, scrolling the same way. At the laptop's 138 % the list hangs
-//     whole: 27 x 23 + 2 + 2 + 2 = 627 under win2000 (foot at 45 + 627 =
-//     672 of the well's 860) and 27 x 26 + 1 = 703 under clearlooks (foot
-//     at 44 + 703 = 747 of 852).
+//     the scope, device px): at the tablet's 300 % the fifteen rows under
+//     win2000 are 15 x 51 + 2 x 3 + 6 + 6 = 783 below a chooser whose foot
+//     stands at about 474 of the 1440 rows, and under clearlooks
+//     15 x 57 + 3 = 858 below about 480, so the list hangs whole on the
+//     tablet as on the laptop (15 x 23 + 6 = 351 at 138 %); the scope's two
+//     rows hang whole anywhere.
 //     (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
 //     Value 0–100, Red / Green / Blue 0–255: the label at the left (one
 //     width for all six, measured from the widest), the slider in the
@@ -109,23 +133,23 @@ struct Viewport;
 //     it the focus (a text editor of Kind::PaletteHex); (i) OLD | NEW, two
 //     equal swatches in a one-line sunken frame, OLD the element's color
 //     when it became the live element, NEW the current, a tap on OLD writing
-//     it back, at its floor; then FOUR BUTTONS — (j) THE PALETTE MENU
-//     BUTTON, the row's remainder, the chrome's
+//     it back, at its floor; then FOUR BUTTONS — (j) THE PRESET BUTTON,
+//     the row's remainder, the chrome's
 //     combo (the chooser's own drawing: win2000's sunken field with its
 //     drop-down button, clearlooks' gummy button with the engine's wedge)
-//     labeled with THE ACTIVE PRESET'S NAME (palette_display_name: a
+//     labeled with THE SCOPE'S ACTIVE PRESET'S NAME (preset_display_name: a
 //     built-in's in Title Case, a file's verbatim), cut with Windows' "..."
 //     when it does not fit, the caption title's rule; a press drops THE
-//     PALETTE MENU (below); then the push buttons Copy, Paste and Close.
-//   THE PALETTE MENU (architect 2026-10-07) — the chooser's list road (the
-//     menu-row popup's painters, the press arms a row, the lift acts and
-//     closes): first the four ACTS "Save", "Save As", "Rename", "Delete"
-//     (Title Case, no ellipsis — kdenlive's convention: nothing here opens
-//     a dialog), each with its truthful enabled bit (palette_act_enabled),
-//     then, each group behind a separator, HIS FILES (byte order) and THE
-//     BUILT-IN SCHEMES (the chromes' two defaults, then the catalog's
-//     others; palette_file.h's head) — the acts first so they lead at the
-//     head (palette_menu_rows, architect 2026-10-08 ~11:10). Its width is the widest row's between
+//     PRESET MENU (below); then the push buttons Copy, Paste and Close.
+//   THE PRESET MENU (architect 2026-10-07; per scope 2026-10-08) — the
+//     chooser's list road (the menu-row popup's painters, the press arms a
+//     row, the lift acts and closes): first the four ACTS "Save", "Save
+//     As", "Rename", "Delete" (Title Case, no ellipsis — kdenlive's
+//     convention: nothing here opens a dialog), each with its truthful
+//     enabled bit (preset_act_enabled), then, each group behind a
+//     separator, HIS FILES OF THE SCOPE'S KIND (byte order) and ITS
+//     BUILT-INS (preset_menu_rows owns the order) — the acts first so they
+//     lead at the head (architect 2026-10-08 ~11:10). Its width is the widest row's between
 //     the popup's pads (and the scroll bar's, when it scrolls), held inside
 //     the window across. IT IS ONE OF THE THREE LIST POPUPS (render.h's
 //     popup scroll block, the rule's one owner, architect 2026-10-08): hung
@@ -133,7 +157,7 @@ struct Viewport;
 //     and SCROLLING when its rows outgrow it — the acts and the separators
 //     ordinary rows that scroll with the names, none pinned, the scroll at
 //     the head at each open; the shown rows and the bar published as painted
-//     (layout). Every palette Save As writes is reachable, so the act
+//     (layout). Every preset Save As writes is reachable, so the act
 //     refuses no name for room. The lit row starts on the active preset's
 //     name (the chooser's own seat, the hover seeded at the open) and
 //     follows the pointer; a grayed row is never lit and a press on one is
@@ -168,9 +192,38 @@ struct Viewport;
 // 138 %, the well far taller in W) shows the same card with more air.
 //
 // THE WIDTH: kCardWidthPx = 376, the tablet's half (384 W of its 768) less
-// the margin on both sides (384 − 2 x 4); the right column takes what the wheel and the column gap
-// leave, the slider's track what the label and the value cell leave, and
-// the palette menu button what the hex field, OLD | NEW at its floor and the
+// the margin on both sides (384 − 2 x 4). THE CHOOSER ROW SETS THE RIGHT
+// COLUMN (2026-10-08 ~18:15, the scope beside the element chooser — the
+// planner's seat, where nothing else moves): each of its two combos is as
+// wide as its widest row needs, FACE OR LIST, whichever is wider (the face:
+// the field's edges and pad, the shaped name, the 4-W text gap, the
+// drop-down button — under clearlooks the gummy pads and the wedge; the
+// list, flush with the combo by the list's own ruling: the popup's 22-W
+// left pad, the name, the same 4-W gap and the frame's lines), the element
+// chooser measured over BOTH scopes' names so the split never moves with
+// the scope, the two 6 W apart (kControlGapPx, the bottom row's gap); the
+// right column is the wider of that row and what the 113-W top block and
+// the 8-W column gap leave, and THE WHEEL TAKES WHAT THE COLUMN LEAVES, at
+// most the top block's height, centered on it — so no name is cut and the
+// card keeps its height (THE HEIGHT BUDGET above). The names' widths at
+// the base's cap (2026-10-08, the faces' advances summed and rounded up;
+// the layout measures the shaped runs live, so a kerned pair may take a W
+// off): "Waveform" 50 W in Tahoma, 57 in DejaVu Sans, 51 in Go; "Selected
+// Phase Reset Flag" 127, 145 and 136 —
+//   win2000: the scope max(2 + 5 + 50 + 4 + 16 + 2 = 79, 22 + 50 + 4 + 2 =
+//     78) = 79, the chooser max(2 + 5 + 127 + 4 + 16 + 2 = 156, 22 + 127 +
+//     4 + 2 = 155) = 156; the row 79 + 6 + 156 = 241 over the 239 the
+//     wheel left, so the wheel is 360 − 8 − 241 = 111 W;
+//   clearlooks: the scope max(6 + 57 + 4 + 7 + 6 = 80, 22 + 57 + 4 + 1 =
+//     84) = 84, the chooser max(6 + 145 + 4 + 7 + 6 = 168, 22 + 145 + 4 + 1
+//     = 172) = 172; the row 84 + 6 + 172 = 262, the wheel 362 − 8 − 262 =
+//     92 W;
+//   cde: the scope max(1 + 5 + 51 + 4 + 16 + 1 = 78, 22 + 51 + 4 + 1 = 78)
+//     = 78, the chooser max(1 + 5 + 136 + 4 + 16 + 1 = 163, 22 + 136 + 4 +
+//     1 = 163) = 163; the row 78 + 6 + 163 = 247, the wheel 362 − 8 − 247 =
+//     107 W.
+// The slider's track takes what the label and the value cell leave, and
+// the preset button what the hex field, OLD | NEW at its floor and the
 // three push buttons leave. THE BOTTOM ROW'S ARITHMETIC (architect
 // 2026-10-07): the inner width is 360 W under win2000 (376 less 2 x (edge 2
 // + pad 6)) and 362 under clearlooks (376 less 2 x (1 + 6)); the hex field
@@ -178,21 +231,17 @@ struct Viewport;
 // Tahoma, 60 + 10 = 70 in DejaVu Sans (shaped; the dialog field's 5-W pad
 // under both, 2026-10-08); the row's five gaps are 6 W
 // each; OLD | NEW its floor, two 20-W swatches inside the frame's two lines
-// = 42; Copy, Paste and Close kPushButtonWidthPx = 50 each; THE MENU BUTTON
-// THE REMAINDER, 360 − 63 − 30 − 42 − 150 = 75 W under win2000 and
+// = 42; Copy, Paste and Close kPushButtonWidthPx = 50 each; THE PRESET
+// BUTTON THE REMAINDER, 360 − 63 − 30 − 42 − 150 = 75 W under win2000 and
 // 362 − 70 − 30 − 42 − 150 = 70 under clearlooks.
-// WHY THE MENU BUTTON IS IN THIS ROW AND NOT THE CHOOSER'S (architect
+// WHY THE PRESET BUTTON IS IN THIS ROW AND NOT THE CHOOSER'S (architect
 // 2026-10-07: the chooser's row first, beside the element combo at the width
-// its longest role name needs, the palette combo the remainder — unless that
-// remainder fell under 70 W under either chrome): the right column is 239 W
-// under win2000 and 241 under clearlooks (the inner width less the 113-W
-// wheel and the 8-W column gap); the element combo for "Selected Phase Reset
-// Flag" is 2 + 5 + 127 + 4 + 16 + 2 = 156 W under win2000 (the field's
-// edges, its pad, the shaped name, the text-to-button gap, the drop-down
-// button) and 6 + 145 + 4 + 7 + 6 = 168 under clearlooks (the gummy pads,
-// the name, the gap, the wedge); with the 6-W gap the palette combo's
-// remainder is 77 W under win2000 but 67 under clearlooks, so the ruled
-// fallback stands: the bottom row, the three push buttons at Windows' 50.
+// its longest role name needs, the preset combo the remainder — unless that
+// remainder fell under 70 W under either chrome): the element combo for
+// "Selected Phase Reset Flag" alone left the preset combo 77 W under
+// win2000 but 67 under clearlooks, so the ruled fallback stood — the bottom
+// row, the three push buttons at Windows' 50 — and the scope took the
+// chooser row's other seat (THE WIDTH above).
 //
 // EVERY LENGTH IS A WINDOWS PX THROUGH scaled_px, ROUNDED AT THE ELEMENT (the
 // rounding rule): the card is the sum of its rounded parts.
@@ -224,10 +273,10 @@ inline constexpr int kComboArrowMinWPx = 3;
 inline constexpr int kComboArrowMinHPx = 2;
 // THE COMBO'S TEXT stops this far short of its wedge (win2000: of the
 // drop-down button), where a long name is cut with "..." (2026-10-07, the
-// palette menu button's preset names; GtkComboBox's arrow spacing).
+// preset button's preset names; GtkComboBox's arrow spacing).
 inline constexpr int kComboTextGapPx  = 4;
 // THE CHROME'S COMBO AND ITS LIST — GEOMETRY SHARED BY TWO READERS
-// (2026-10-07 evening): the picker's chooser and palette menu button, and
+// (2026-10-07 evening): the picker's chooser and preset button, and
 // the settings editor's CHOICE EDITOR (settings_editor.h's head), whose
 // combo is this drawing at the dialog field's seat and whose list is this
 // list. Device px, rounded at the element.
@@ -271,7 +320,7 @@ inline constexpr int kSliderValueGapPx    = 4;   // the track to the value cell
 // COPY, PASTE AND CLOSE'S WIDTH (architect 2026-10-07; the head's
 // arithmetic): WINDOWS' PUSH-BUTTON MINIMUM, 50 W, under the dialogs' 75
 // (kModalBtnMinWidthPx) — the three words fit inside it with their pads
-// (Close, the widest, 30 + 12 in DejaVu Sans) — so the palette menu button
+// (Close, the widest, 30 + 12 in DejaVu Sans) — so the preset button
 // beside them takes what the row leaves, its name cut with "..." where it
 // does not fit.
 inline constexpr int kPushButtonWidthPx   = 50;
@@ -364,102 +413,145 @@ constexpr int channel_max(Channel c) {
 // (the thumb's column, the digits) and by the acts.
 int channel_value(const AppState::ColorPicker& cp, Channel c);
 
-// -- THE ELEMENTS (the chooser's list) -------------------------------------------
+// -- THE SCOPE AND THE ELEMENTS (the chooser row's two lists) -----------------
 
-// THE CHOOSER'S LIST (architect 2026-10-08, the chrome knob; its twelve
-// ~11:00; under clearlooks too since ~12:10): THE KNOB'S TWELVE AT THE TOP
-// in kGuiChromeLines' order — "Chrome", "Chrome Text", "Title", "Title End",
-// "Title Text", the three "Inactive" ones, "Selection", "Selection Text",
-// "Field", "Field Text" (his 2026-10-04 order: the chrome first, then the
-// canvas, the ink …) — then the fifteen program roles in kGuiPaletteRoles'
-// order, THE SAME LIST UNDER EITHER CHROME (one theme syntax: under
-// clearlooks "Title End" and "Inactive Title End" are listed and ignored,
-// clearlooks_derive.h's head — their OLD shows the key's own word). An
-// element is a chrome key or a program role; `role` is the key's index in
-// kGuiChromeLines or the role's in kGuiPaletteRoles.
+// THE SCOPE'S TWO ROWS (the head's THE SCOPE), in the list's order: his
+// words, "Chrome" then "Waveform" — the chrome's elements lead, as they led
+// the single list of 2026-10-08 ~11:00.
+using Scope = AppState::ColorPicker::Scope;
+inline constexpr int kScopeCount = 2;
+constexpr Scope scope_at(int i) {
+    return i == 0 ? Scope::Chrome : Scope::Waveform;
+}
+constexpr int scope_index(Scope s) { return s == Scope::Chrome ? 0 : 1; }
+constexpr const char* scope_display_name(Scope s) {
+    return s == Scope::Chrome ? "Chrome" : "Waveform";
+}
+
+// THE ELEMENTS (architect 2026-10-08, the chrome knob; its twelve ~11:00;
+// under every chrome since ~12:10; by scope since ~18:15): one index space
+// over both kinds — THE SCHEME'S TWELVE first, in kGuiChromeLines' order —
+// "Chrome", "Chrome Text", "Title", "Title End", "Title Text", the three
+// "Inactive" ones, "Selection", "Selection Text", "Field", "Field Text" —
+// then THE PALETTE'S FIFTEEN in kGuiPaletteRoles' order; THE CHOOSER LISTS
+// THE LIVE SCOPE'S ALONE (scope_element_at), the same rows under every
+// chrome (one scheme syntax: under clearlooks "Title End" and "Inactive
+// Title End" are listed and ignored, clearlooks_derive.h's head — their OLD
+// shows the key's own word). An element is a chrome key or a program role;
+// `role` is the key's index in kGuiChromeLines or the role's in
+// kGuiPaletteRoles.
 inline constexpr std::size_t kElementCount =
     kGuiChromeLineCount + kGuiPaletteRoleCount;
+// THE LONGER SCOPE'S ROW COUNT, the chooser list's rows at most.
+inline constexpr std::size_t kListRowMax =
+    std::max(kGuiChromeLineCount, kGuiPaletteRoleCount);
 static_assert(std::tuple_size_v<decltype(AppState::ColorPicker::Stash::list_items)> ==
-                  kElementCount,
-              "AppState::ColorPicker::Stash::list_items must hold kElementCount");
+                  kListRowMax,
+              "AppState::ColorPicker::Stash::list_items must hold kListRowMax");
+static_assert(kScopeCount <= static_cast<int>(kListRowMax));
 struct Element {
-    bool        chrome = false;   // a chrome knob's key, else a program role
+    bool        chrome = false;   // a scheme's key, else a program role
     std::size_t role   = 0;
 };
 std::size_t element_count();
 Element     element_at(std::size_t e);
+// The scope an element belongs to, the scope's row count, and its row `i`
+// as an element index (row ↔ element, the chooser's list).
+Scope       element_scope(std::size_t e);
+std::size_t scope_element_count(Scope s);
+std::size_t scope_element_at(Scope s, std::size_t i);
+std::size_t element_row(std::size_t e);
 // THE CHOOSER'S NAMES, Title Case (the planner's list, 2026-10-07; the
 // knob's twelve, his, 2026-10-08): the role table's names are the file grammar's,
 // these the user's.
 const char* element_display_name(std::size_t e);
-// THE ELEMENT'S LIVE COLOR: a program role's live word, or the live chrome
-// pick's key — an inactive key never picked showing the active key it
-// follows — and with no block in the live palette the live chrome's
-// COMPILED word of the key's role (kGuiChromeLines' compiled_role), so OLD
-// shows what the chrome wears.
+// THE ELEMENT'S LIVE COLOR: a program role's live word, or the live scheme's
+// key — an inactive key never picked showing the active key it follows —
+// and with no keys in the live scheme the live chrome's COMPILED word of the
+// key's role (kGuiChromeLines' compiled_role), so OLD shows what the chrome
+// wears.
 uint32_t    element_color(std::size_t e);
-// THE BLOCK A FIRST PICK CREATES (GuiColorPicker::set_color): the nine block
-// keys from the live chrome's compiled words, the inactive three absent.
+// THE BLOCK A FIRST PICK CREATES (GuiColorPicker::set_color): the nine
+// block keys from the live chrome's compiled words, the inactive three
+// absent.
 GuiChromePick compiled_chrome_pick();
+// THE KEYS OF THE SCHEME ON SCREEN, what Save As writes (palette_file.h's
+// write_scheme_file: written as the screen shows it, 2026-10-08): the live
+// pick, or — the live chrome's own scheme standing, which carries no keys
+// live — that built-in's twelve, its inactive three among them.
+GuiChromePick live_scheme_keys();
 
 // -- THE PRESETS ---------------------------------------------------------------
 
-// A PALETTE'S SHOWN NAME (the menu button's label, the menu's rows): a
-// built-in's generated display name ("Windows 2000 Standard", "Clearlooks",
-// "CDE Northern Sky" — the key is the file grammar's, this the user's, as
-// element_display_name is), a file's name verbatim. Whether `name` is a
-// built-in's display name, case and all — the name ask refuses such a name
-// as taken, so the menu never lists two rows reading alike.
-std::string palette_display_name(std::string_view name);
-bool        is_builtin_display_name(std::string_view name);
+// A PRESET'S SHOWN NAME of the scope's kind (the preset button's label, the
+// menu's rows): a built-in's generated display name ("Windows 2000
+// Standard", "Clearlooks", "CDE Northern Sky" — the key is the file
+// grammar's, this the user's, as element_display_name is; a default palette
+// shown by its chrome's own scheme's), a file's name verbatim. Whether
+// `name` is a built-in's display name of the scope's kind, case and all —
+// the name ask refuses such a name as taken, so the menu never lists two
+// rows reading alike.
+std::string preset_display_name(Scope s, std::string_view name);
+bool        is_builtin_display_name(Scope s, std::string_view name);
+// Whether `name` is a built-in of the scope's kind (a default palette, or
+// any built-in scheme), and whether it names a preset of that kind at all.
+bool        is_builtin_preset(Scope s, std::string_view name);
+bool        is_preset_name(Scope s, std::string_view name);
 
 // THE MENU'S FOUR ACTS, in the rows' order (the head).
-enum class PaletteAct { Save, SaveAs, Rename, Delete };
-inline constexpr int kPaletteActCount = 4;
-constexpr PaletteAct palette_act_at(int i) { return static_cast<PaletteAct>(i); }
-constexpr const char* palette_act_label(PaletteAct a) {
+enum class PresetAct { Save, SaveAs, Rename, Delete };
+inline constexpr int kPresetActCount = 4;
+constexpr PresetAct preset_act_at(int i) { return static_cast<PresetAct>(i); }
+constexpr const char* preset_act_label(PresetAct a) {
     switch (a) {
-        case PaletteAct::Save:   return "Save";
-        case PaletteAct::SaveAs: return "Save As";
-        case PaletteAct::Rename: return "Rename";
-        case PaletteAct::Delete: return "Delete";
+        case PresetAct::Save:   return "Save";
+        case PresetAct::SaveAs: return "Save As";
+        case PresetAct::Rename: return "Rename";
+        case PresetAct::Delete: return "Delete";
     }
     return "";
 }
-// THE ACTIVE PRESET — the live device config's `palette` resolved
-// (effective_palette_name): the name as written, or the live chrome's
-// default palette for no line (the head: no field holds it).
-std::string_view active_palette(const AppState& app);
-// THE ACTS' TRUTHFUL ENABLED BITS (every roster button truthful), asked by
-// the painter once per paint and published as painted; the lift reads the
-// published bit. SAVE gray while the active preset is a built-in (the
-// built-ins cannot be changed) OR while the live palette equals the active
-// preset's, its chrome knob included (nothing to save — the comparison IS
-// the modified state, no flag keeps it); RENAME and DELETE gray on a
-// built-in; SAVE AS always live (every refusal it has is the name's, judged
-// at commit_name).
-bool palette_act_enabled(const AppState& app, PaletteAct a);
+// THE SCOPE'S ACTIVE PRESET — the live device config's `scheme` or
+// `palette` resolved (effective_scheme_name, effective_palette_name): the
+// name as written, or the live chrome's own for no line (the head: no field
+// holds it).
+std::string_view active_preset(const AppState& app, Scope s);
+// THE ACTS' TRUTHFUL ENABLED BITS for the live scope (every roster button
+// truthful), asked by the painter once per paint and published as painted;
+// the lift reads the published bit. SAVE gray while the active preset is a
+// built-in (the built-ins cannot be changed) OR while the scope's live words
+// equal the active preset's (nothing to save — the comparison IS the
+// modified state, no flag keeps it); RENAME and DELETE gray on a built-in;
+// SAVE AS always live (every refusal it has is the name's, judged at
+// commit_name).
+bool preset_act_enabled(const AppState& app, PresetAct a);
 
-// THE MENU'S ROWS, top to bottom (architect 2026-10-08 ~11:10): the four
-// acts — a separator — HIS FILES (palette_file_names(), byte order) — a
-// separator — THE BUILT-INS (the chromes' own defaults first, in the
-// vocabularies' order, then every other scheme of kGuiChromeSchemes in the
-// catalog's). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY GROUP IS NOT
-// SHOWN: with no file, ONE separator stands between the acts and the
-// built-ins — a Windows menu never shows an empty group between two
-// separators. Each separator is a scroll row of its own in the layout
-// (layout's palette menu). THE ORDER IS THE ACTS' REACHABILITY
-// (2026-10-07): the acts lead, so hung from the button they are the rows
-// nearest it, and a menu that scrolls opens at its head with the acts in
-// view (the head's THE PALETTE MENU). A row is a NAME (its load) or an ACT;
-// `separator_before` marks the row that opens a group.
-struct PaletteMenuRow {
+// THE MENU'S ROWS for the scope, top to bottom (architect 2026-10-08
+// ~11:10; per scope ~18:15; the defaults' separator ~19:30): the four acts
+// — a separator — HIS FILES OF THE KIND (byte order) — a separator — THE
+// BUILT-INS: under Waveform THE CHROME'S DEFAULT PALETTE ALONE (the live
+// chrome's; the other chromes' defaults are their own chromes' — the
+// `palette` key still names them, palette_file.h); under Chrome THE THREE
+// CHROMES' OWN SCHEMES in the vocabularies' order (windows-2000-standard,
+// clearlooks, solaris) — A SEPARATOR ("just put a separator after the
+// default color themes", architect 2026-10-08 ~19:30) — then THE CATALOG'S
+// OTHER 95 in the catalog's order (its 97 less the two chromes' own it
+// holds, windows-2000-standard and clearlooks, listed above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
+// GROUP IS NOT SHOWN: with no file, ONE separator stands between the acts
+// and the built-ins — a Windows menu never shows an empty group between two
+// separators; the defaults' group is never empty. Each separator is a scroll
+// row of its own in the layout (layout's preset menu). THE ORDER IS THE
+// ACTS' REACHABILITY (2026-10-07): the acts lead, so hung from the button
+// they are the rows nearest it, and a menu that scrolls opens at its head
+// with the acts in view (the head's THE PRESET MENU). A row is a NAME (its
+// load) or an ACT; `separator_before` marks the row that opens a group.
+struct PresetMenuRow {
     bool        is_act = false;
-    std::string name;                        // a name row's palette
-    PaletteAct  act    = PaletteAct::Save;   // an act row's act
-    bool        separator_before = false;    // the row opens a group
+    std::string name;                       // a name row's preset
+    PresetAct   act    = PresetAct::Save;   // an act row's act
+    bool        separator_before = false;   // the row opens a group
 };
-std::vector<PaletteMenuRow> palette_menu_rows();
+std::vector<PresetMenuRow> preset_menu_rows(Scope s);
 
 // -- THE COLOR MATH ------------------------------------------------------------
 
@@ -498,14 +590,18 @@ struct Layout {
     // 339 at 300 %, a pixel boundary for an even one, 158 at 138 %).
     GuiRect wheel{0, 0, 0, 0};
     double  cx = 0.0, cy = 0.0, outer_r = 0.0, inner_r = 0.0;
-    // The chooser: the whole combo and, under win2000, its drop-down button.
+    // The chooser row: the scope combo and the element chooser, each the
+    // whole combo and, under win2000 and cde, its drop-down button.
+    GuiRect scope{0, 0, 0, 0};
+    GuiRect scope_button{0, 0, 0, 0};
     GuiRect chooser{0, 0, 0, 0};
     GuiRect chooser_button{0, 0, 0, 0};
-    // The list, when down: its placement (the box, the side, the bar) and
-    // its rows by element index — the zero rect for a row scrolled out of
-    // view (combo_list_item).
+    // The chooser row's list, when down (the scope's or the elements',
+    // AppState::ColorPicker's `chooser_scope`): its placement (the box, the
+    // side, the bar) and its rows by row — the zero rect for a row scrolled
+    // out of view (combo_list_item).
     ComboList list;
-    GuiRect list_items[kElementCount]{};
+    GuiRect list_items[kListRowMax]{};
     // The six slider rows: the row, the label's seat, the track (the thumb's
     // center travels its inset span, scrub_handle_box_px / 2 in at each end)
     // and the value cell.
@@ -523,18 +619,18 @@ struct Layout {
     GuiRect swatch_frame{0, 0, 0, 0};
     GuiRect swatch_old{0, 0, 0, 0};
     GuiRect swatch_new{0, 0, 0, 0};
-    // The palette menu button and, under win2000, its drop-down button.
+    // The preset button and, under win2000 and cde, its drop-down button.
     GuiRect menu_button{0, 0, 0, 0};
     GuiRect menu_button_arrow{0, 0, 0, 0};
     GuiRect buttons[3]{};   // Copy, Paste, Close
-    // The palette menu, when down: its box, EVERY ROW (palette_menu_rows)
+    // The preset menu, when down: its box, EVERY ROW (preset_menu_rows)
     // with its rect in the same order — the zero rect for a row scrolled out
     // of view — each separator's top row IN VIEW (a separator scrolled out
     // is not listed) and the bar (render.h's popup scroll block: its scroll
     // rows are the rows with a separator before each group). The painter
     // paints and publishes exactly these.
     GuiRect menu{0, 0, 0, 0};
-    std::vector<PaletteMenuRow> menu_rows;
+    std::vector<PresetMenuRow> menu_rows;
     std::vector<GuiRect> menu_items;
     std::vector<int> menu_sep_ys;
     PopupScrollBar menu_bar;
@@ -611,7 +707,10 @@ struct GuiColorPicker {
     // as it stood), though the Settings anchor is dead in the view and no
     // chord exists, so no road reaches it there today. Past every refusal
     // it stops playback for the modal open as every modal does, mints the
-    // session, seats OLD and NEW off the live palette and damages the window.
+    // session, SETS THE SCOPE TO WAVEFORM (the head's THE SCOPE: the
+    // waveform's colors the common case; a live element of the chrome's
+    // parked for the Chrome scope), seats OLD and NEW off the live words and
+    // damages the window.
     void open(int tap_x);
     // THE ONE CLOSE BODY — Close, Esc, the close road's head
     // (GuiPrompt::request_close). Abandons a standing edit (the hex field or
@@ -620,17 +719,22 @@ struct GuiColorPicker {
     // damages the window. Idempotent.
     void close();
 
-    // THE LIVE ELEMENT: the chooser's pick. OLD becomes the element's
-    // current color; the memories re-seat from its bytes.
+    // THE SCOPE: the scope combo's pick. The two scopes' live elements
+    // trade places (the head: each scope keeps its own), and the new
+    // element seats OLD and NEW as set_element does; the same scope is a
+    // no-op. The preset button follows from the scope at the next paint.
+    void set_scope(color_picker::Scope scope);
+    // THE LIVE ELEMENT: the chooser's pick, one of the scope's. OLD becomes
+    // the element's current color; the memories re-seat from its bytes.
     void set_element(std::size_t element);
     // THE ONE WRITER OF NEW (AppState::ColorPicker::rgb): writes the live
-    // palette's word for the live element — a program role's, or a chrome
-    // key's, where THE FIRST PICK OF ANY CHROME ELEMENT CREATES THE BLOCK
-    // (architect 2026-10-08 ~11:00): its nine from the live chrome's
-    // compiled words (color_picker::compiled_chrome_pick), then the picked
-    // key written — an inactive key becoming picked, its two siblings still
-    // following — installs it through the apply shape
-    // (install_live_words), and keeps the HSV
+    // word for the live element — a program role's in the live palette, or
+    // a key's in the live scheme, where THE FIRST PICK OF ANY CHROME ELEMENT
+    // OVER THE CHROME'S OWN SCHEME CREATES THE BLOCK (architect 2026-10-08
+    // ~11:00): its nine from the live chrome's compiled words
+    // (color_picker::compiled_chrome_pick), then the picked key written — an
+    // inactive key becoming picked, its two siblings still following —
+    // installs it through the apply shape (install_live_words), and keeps the HSV
     // memories: `from_hsv` true means an HSV control wrote the bytes and
     // the memories already hold what it meant (so a quantized round trip
     // cannot move the slider under the hand); false means an RGB source
@@ -685,52 +789,62 @@ struct GuiColorPicker {
     }
 
     // -- THE PRESETS' ACTS (the head; the menu's rows reach them at the
-    //    lift, color_picker_release) -------------------------------------
+    //    lift, color_picker_release). EACH ACTS ON THE LIVE SCOPE'S KIND
+    //    ALONE — a scheme's keys or a palette's fifteen, the other kind's
+    //    live words and key untouched (2026-10-08 ~18:15) -----------------
     //
-    // LOAD — a name row's tap: the named palette installed live, its chrome
-    // block or its absence with it (palette_record → the apply shape) — A
-    // BUILT-IN CHROME-ONLY, its twelve keys installed and the live fifteen
-    // standing (palette_file.h's head), the live chrome's own scheme
-    // bringing the compiled chrome back — THE ACTIVE PRESET made `name` (the
-    // `palette` key written, write_palette_key), OLD and NEW reseated off
-    // the live element's new color. A load of the active preset itself is
-    // the same act: the file's words back, the unsaved picks dropped.
-    void load_palette(std::string_view name);
-    // SAVE — write_palette_file(active, the live palette, its chrome block
-    // when it carries one); a failure cards.
-    // The act is gray where it would be a no-op or a refusal
-    // (palette_act_enabled), so the press that reaches it always writes.
-    void save_palette();
+    // LOAD — a name row's tap: the named preset installed live (Chrome:
+    // scheme_record's keys, or none for the live chrome's own scheme, the
+    // compiled chrome back; Waveform: palette_record's fifteen) through the
+    // apply shape, THE SCOPE'S ACTIVE PRESET made `name` (its key written,
+    // write_preset_key), OLD and NEW reseated off the live element's new
+    // color. A load of the active preset itself is the same act: the file's
+    // words back, the unsaved picks dropped.
+    void load_preset(std::string_view name);
+    // SAVE — the scope's live words over the active file (write_scheme_file
+    // with the live scheme, which a file's load always seats, or
+    // write_palette_file with the live fifteen); a failure cards. The act is
+    // gray where it would be a no-op or a refusal (preset_act_enabled), so
+    // the press that reaches it always writes.
+    void save_preset();
     // SAVE AS and RENAME — open THE NAME ASK (the head): the field editor
     // in Kind PaletteName, empty (Save As) or over the active name
     // (Rename), the whole text selected; the menu is already down.
     void begin_name_ask(AppState::ColorPicker::NameAsk ask);
     // THE NAME ASK'S ENTER. The pending name is judged here, THE ONE JUDGE
-    // (palette_file.h's writers assert what it settles): outside the name
-    // grammar (is_palette_name_spelling) "Not a name"; a
-    // built-in's key, a built-in's display name or a loaded file's — another
-    // than the one being renamed — "Name taken" (Save does the overwrite;
-    // Save As never does); each a refusal the product's way, the editor
-    // standing. Then SAVE AS writes the live palette under the name and makes
-    // it the active preset (the key written, as a load writes it); RENAME
-    // renames the active file and rewrites the key — the same name a no-op
-    // that closes the ask. An I/O failure closes the ask and cards (class 5:
-    // the live colors and the active preset stand); success closes it.
+    // (palette_file.h's writers assert what it settles), against THE
+    // SCOPE'S KIND'S NAME SPACE (palette_file.h's head: two folders): outside
+    // the name grammar (is_palette_name_spelling) "Not a name"; a built-in's
+    // key or display name of the kind, or a loaded file's of the kind —
+    // another than the one being renamed — "Name taken" (Save does the
+    // overwrite; Save As never does); each a refusal the product's way, the
+    // editor standing. Then SAVE AS writes the scope's live words under the
+    // name — for a scheme the keys on screen (color_picker::live_scheme_keys:
+    // while the live chrome's own stands, which carries no keys live, its
+    // built-in's twelve, installed live with the write so the active file
+    // and the live scheme are one record) — and makes it the scope's active
+    // preset (the key written, as a load
+    // writes it); RENAME renames the active file and rewrites the key — the
+    // same name a no-op that closes the ask. An I/O failure closes the ask
+    // and cards (class 5: the live colors and the active preset stand);
+    // success closes it.
     void commit_name();
     // DELETE — raise the confirming PROMPT over the standing picker,
     // "Delete '<name>'?" with Delete / Cancel, CANCEL FOCUSED and `d`
     // Delete's letter: the render player's Delete question exactly
     // (render_player_delete — a deletion nothing takes back), the name
-    // parked at AppState::ColorPicker::pending_delete. The prompt outranks
+    // parked at AppState::ColorPicker::pending_delete (the scope cannot move
+    // under the prompt, which outranks the picker). The prompt outranks
     // the picker (ModalDialogOwner), and its two answers are the two below,
     // reached through GuiInputHandler.
     void raise_delete();
-    // The prompt's Delete: remove_palette_file(the parked name); the live
-    // palette falls to THE LIVE CHROME'S DEFAULT — its default fifteen and
-    // its compiled chrome, the next launch's picture — installed live, OLD and
-    // NEW reseated, the `palette` key cleared and persisted — the menu
-    // button then shows the default's name. A failure cards and changes
-    // nothing else. The Cancel drops the parked name and changes nothing.
+    // The prompt's Delete: the parked file of the scope's kind removed; the
+    // scope's live words fall to THE LIVE CHROME'S OWN — its compiled
+    // chrome (Chrome) or its default fifteen (Waveform), the next launch's
+    // picture — installed live, OLD and NEW reseated, the scope's key
+    // cleared and persisted — the preset button then shows the chrome's own
+    // name. A failure cards and changes nothing else. The Cancel drops the
+    // parked name and changes nothing.
     void confirm_delete();
     void cancel_delete();
 
@@ -739,23 +853,26 @@ struct GuiColorPicker {
     // through set_color).
     void damage_card();
 
-    // THE `palette` KEY'S ONE WRITER (the presets' acts): `name` becomes THE
-    // ACTIVE PRESET — the key's value the name, or EMPTY (NO LINE) when it
-    // is the live chrome's own default palette (device_config.h: absent =
-    // the chrome's own); a same-value write never
-    // reaches the writer (the config's no-op rule); otherwise the live
-    // struct takes it and write_device_config persists it, a failure the
-    // diagnostic on stderr and the display on a card, the live value
-    // standing for the session (class 5).
-    void write_palette_key(std::string_view name);
-    // THE PRESETS' APPLY: `record` installed as the live palette through
-    // the apply shape set_color runs (install_live_words), and OLD and NEW
-    // reseated off the live element's new color with the memories.
-    void apply_palette_record(const GuiPaletteRecord& record);
-    // THE APPLY SHAPE'S ONE ROAD (2026-10-07; the knob 2026-10-08): the
-    // record's fifteen installed (install_program_palette, palette_file.h)
-    // and its chrome knob (install_chrome_pick, render.h), then the apply
-    // shape run once, as install_program_palette's declaration states it.
-    // Its two callers are set_color and apply_palette_record.
-    void install_live_words(const GuiPaletteRecord& record);
+    // THE `scheme` AND `palette` KEYS' ONE WRITER (the presets' acts): `name`
+    // becomes THE LIVE SCOPE'S ACTIVE PRESET — its key's value the name, or
+    // EMPTY (NO LINE) when it is the live chrome's own (device_config.h:
+    // absent = the chrome's own); a same-value write never reaches the
+    // writer (the config's no-op rule); otherwise the live struct takes it
+    // and write_device_config persists it, a failure the diagnostic on
+    // stderr and the display on a card, the live value standing for the
+    // session (class 5).
+    void write_preset_key(std::string_view name);
+    // THE PRESETS' APPLY: the two kinds' live words installed through the
+    // apply shape set_color runs (install_live_words) — the acts pass the
+    // other kind's live words through unchanged — and OLD and NEW reseated
+    // off the live element's new color with the memories.
+    void apply_live_words(const GuiPaletteWords& words,
+                          const std::optional<GuiChromePick>& scheme);
+    // THE APPLY SHAPE'S ONE ROAD (2026-10-07; the scheme 2026-10-08): the
+    // fifteen installed (install_program_palette, palette_file.h) and the
+    // scheme's keys (install_chrome_pick, render.h), then the apply shape
+    // run once, as install_program_palette's declaration states it. Its two
+    // callers are set_color and apply_live_words.
+    void install_live_words(const GuiPaletteWords& words,
+                            const std::optional<GuiChromePick>& scheme);
 };

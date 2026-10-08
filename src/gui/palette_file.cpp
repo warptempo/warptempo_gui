@@ -1,6 +1,6 @@
 #include "palette_file.h"
 
-#include "device_config.h"     // device_config_path, DeviceConfig (the default)
+#include "device_config.h"     // device_config_path, DeviceConfig (the defaults)
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "settings_io.h"       // atomic_write_string_to_path
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
@@ -34,8 +34,9 @@ constexpr bool palette_role_names_unique() {
     return true;
 }
 static_assert(palette_role_names_unique());
-// The chrome knob's twelve keys are no program role's name, so the reader's
-// two lookups cannot both claim a line.
+// The scheme's twelve keys are no program role's name, so each kind's reader
+// refuses the other kind's key as an unknown role (palette_file.h's head:
+// a palette file carrying a chrome key is no longer the GUI's).
 static_assert(std::ranges::none_of(kGuiChromeLines, [](const GuiChromeLine& c) {
     return palette_role_index(c.key) < kGuiPaletteRoleCount;
 }));
@@ -139,8 +140,8 @@ static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount) * sizeof(GuiColor));
 
 // EVERY VOCABULARY NAMES A DEFAULT PALETTE, IN THE DEFAULTS' ORDER, and every
-// default belongs to one vocabulary (the palette menu lists them in this
-// order, color_picker::palette_menu_rows).
+// default belongs to one vocabulary (the preset menu's built-in schemes lead
+// with them in this order, color_picker::preset_menu_rows).
 constexpr bool defaults_follow_the_vocabularies() {
     if (std::size(kGuiChromeSpecs) != std::size(kGuiDefaultPalettes))
         return false;
@@ -155,7 +156,7 @@ static_assert(defaults_follow_the_vocabularies());
 // EACH DEFAULT IS ITS CHROME'S OWN BUILT-IN SCHEME, AND THAT SCHEME IS THE
 // CHROME'S COMPILED THEME KEY FOR KEY (the generator's transcription and the
 // hand-recorded / generated themes agree): so the scheme that carries no
-// block under its own chrome (palette_record) is no loss of a word.
+// keys under its own chrome (scheme_record) is no loss of a word.
 constexpr bool defaults_are_their_chromes_schemes() {
     for (std::size_t c = 0; c < std::size(kGuiChromeThemes); ++c) {
         const GuiChromeScheme* b = builtin_scheme(kGuiDefaultPalettes[c].name);
@@ -197,8 +198,9 @@ static_assert(std::ranges::all_of(kGuiDefaultPalettes,
     return is_palette_name_spelling(d.name);
 }));
 // The device config's default (both templates stamp a default-constructed
-// struct's): no palette, the live chrome's own.
+// struct's): no palette and no scheme, the live chrome's own.
 static_assert(DeviceConfig{}.palette.empty());
+static_assert(DeviceConfig{}.scheme.empty());
 
 // A DEFAULT'S WORDS, its column of the role table.
 constexpr GuiPaletteWords default_words(const GuiDefaultPalette& d) {
@@ -208,44 +210,61 @@ constexpr GuiPaletteWords default_words(const GuiDefaultPalette& d) {
     return w;
 }
 
-const GuiDefaultPalette* default_palette_for(std::string_view name) {
-    for (const GuiDefaultPalette& d : kGuiDefaultPalettes)
-        if (name == d.name) return &d;
-    return nullptr;
+// The index of the scheme key named `key` in kGuiChromeLines, or
+// kGuiChromeLineCount.
+constexpr std::size_t chrome_line_index(std::string_view key) {
+    for (std::size_t k = 0; k < kGuiChromeLineCount; ++k)
+        if (key == kGuiChromeLines[k].key) return k;
+    return kGuiChromeLineCount;
 }
 
-// THE PALETTES READ AT LAUNCH AND MAINTAINED BY THE PICKER'S WRITES, by
-// name, each its fifteen words (a file names every role, palette_file.h's
-// head) and its chrome knob when it carries one — read by is_palette_name,
-// palette_record and palette_file_names. Single-threaded: the read precedes
-// every reader, and only the GUI thread reads or writes it.
-std::map<std::string, GuiPaletteRecord, std::less<>> g_loaded_palettes;
+// ONE KIND OF PRESET FILE (the head: palettes and schemes, two folders, two
+// maps) — its folder's name, its suffix, the noun its lines say, the
+// built-in test its file names must miss and THE LOADED MAP, by name,
+// maintained by the picker's writes. Single-threaded: the launch read
+// precedes every reader, and only the GUI thread reads or writes it.
+template <class Record>
+struct PresetKind {
+    const char*      folder;
+    std::string_view suffix;
+    const char*      noun;
+    bool (*is_builtin)(std::string_view);
+    std::map<std::string, Record, std::less<>> loaded;
+};
+PresetKind<GuiPaletteWords> g_palettes{
+    "palettes", ".palette", "palette",
+    [](std::string_view n) { return is_builtin_palette_name(n); }, {}};
+PresetKind<GuiChromePick> g_schemes{
+    "schemes", ".scheme", "scheme",
+    [](std::string_view n) { return is_builtin_scheme_name(n); }, {}};
 
-constexpr std::string_view kPaletteSuffix = ".palette";
-
-std::filesystem::path palette_file_path(const std::filesystem::path& folder,
-                                        std::string_view name) {
-    return folder / (std::string(name) + std::string(kPaletteSuffix));
+template <class Record>
+std::filesystem::path kind_folder_path(const PresetKind<Record>& kind) {
+    const std::filesystem::path cfg = device_config_path();
+    if (cfg.empty()) return {};
+    return cfg.parent_path() / kind.folder;
 }
 
-// ONE FILE under the grammar (palette_file.h's head), its stem already
-// judged.
-std::expected<GuiPaletteRecord, std::string> read_palette_file(
+template <class Record>
+std::filesystem::path kind_file_path(const PresetKind<Record>& kind,
+                                     const std::filesystem::path& folder,
+                                     std::string_view name) {
+    return folder / (std::string(name) + std::string(kind.suffix));
+}
+
+// ONE PALETTE FILE under the grammar (palette_file.h's head), its stem
+// already judged: exactly the fifteen, a scheme's key an unknown role.
+std::expected<GuiPaletteWords, std::string> read_palette_file(
         const std::filesystem::path& path) {
     std::ifstream f(path, std::ios::binary);
     if (!f) return std::unexpected(std::string("could not open the file"));
     GuiPaletteWords                        out{};
     std::array<bool, kGuiPaletteRoleCount> named{};
-    GuiChromePick                          chrome{};
-    std::array<bool, kGuiChromeLineCount>  chrome_named{};
     auto scan = warptempo_settings::scan_key_value_file(
         f, [&](int ln, const std::string& role, const std::string& value)
                   -> std::expected<void, std::string> {
         const std::size_t i = palette_role_index(role);
-        std::size_t c = kGuiChromeLineCount;
-        for (std::size_t k = 0; k < kGuiChromeLineCount; ++k)
-            if (role == kGuiChromeLines[k].key) c = k;
-        if (i == kGuiPaletteRoleCount && c == kGuiChromeLineCount) {
+        if (i == kGuiPaletteRoleCount) {
             return warptempo_parse::prefix_line_error(
                 ln, "unknown role '" + role + "'");
         }
@@ -255,11 +274,6 @@ std::expected<GuiPaletteRecord, std::string> read_palette_file(
                 ln, "role '" + role + "' has invalid value '" + value +
                     "': must be #rrggbb or one of the twenty Windows color "
                     "names");
-        }
-        if (c < kGuiChromeLineCount) {
-            set_chrome_line_word(chrome, c, *w);
-            chrome_named[c] = true;
-            return {};
         }
         out[i]   = *w;
         named[i] = true;
@@ -276,50 +290,214 @@ std::expected<GuiPaletteRecord, std::string> read_palette_file(
                                    "'");
         }
     }
-    // THE CHROME BLOCK COMES WHOLE (the head): any chrome key — a block key
-    // or an inactive one — requires all nine of the block, the first missing
-    // in the table's order named; the inactive keys stand as read (each
-    // optional, the unread ones following the active caption).
-    GuiPaletteRecord record{out, std::nullopt};
-    if (std::ranges::any_of(chrome_named, [](bool b) { return b; })) {
-        for (std::size_t k = 0; k < kGuiChromeLineCount; ++k) {
-            if (is_chrome_block_line(k) && !chrome_named[k]) {
-                return std::unexpected("missing role '" +
-                                       std::string(kGuiChromeLines[k].key) +
-                                       "'");
-            }
-        }
-        record.chrome = chrome;
-    }
-    return record;
+    return out;
 }
 
-// The text write_palette_file puts down: the chrome keys when the record
-// carries the block (the nine and each picked inactive key, in the table's
-// order), then every role, uppercase #RRGGBB, LF.
-std::string palette_file_text(const GuiPaletteRecord& record) {
-    std::string s;
-    const auto line = [&s](const char* role, uint32_t word) {
-        char hex[8];
-        std::snprintf(hex, sizeof(hex), "#%06X",
-                      static_cast<unsigned>(word & 0xFFFFFFu));
-        s += role;
-        s += '=';
-        s += hex;
-        s += '\n';
-    };
-    if (record.chrome) {
-        for (std::size_t k = 0; k < kGuiChromeLineCount; ++k) {
-            const GuiChromeLine& l = kGuiChromeLines[k];
-            if (l.word != nullptr) line(l.key, (*record.chrome).*(l.word));
-            else if (const std::optional<uint32_t>& v =
-                         (*record.chrome).*(l.optional))
-                line(l.key, *v);
+// ONE SCHEME FILE under the grammar (the head), its stem already judged: the
+// nine block keys required, the first missing one in the table's order
+// named; the inactive keys each optional (the unread ones following the
+// active caption); a program role an unknown role.
+std::expected<GuiChromePick, std::string> read_scheme_file(
+        const std::filesystem::path& path) {
+    std::ifstream f(path, std::ios::binary);
+    if (!f) return std::unexpected(std::string("could not open the file"));
+    GuiChromePick                         pick{};
+    std::array<bool, kGuiChromeLineCount> named{};
+    auto scan = warptempo_settings::scan_key_value_file(
+        f, [&](int ln, const std::string& role, const std::string& value)
+                  -> std::expected<void, std::string> {
+        const std::size_t c = chrome_line_index(role);
+        if (c == kGuiChromeLineCount) {
+            return warptempo_parse::prefix_line_error(
+                ln, "unknown role '" + role + "'");
+        }
+        const std::optional<uint32_t> w = theme_colour_word(value);
+        if (!w) {
+            return warptempo_parse::prefix_line_error(
+                ln, "role '" + role + "' has invalid value '" + value +
+                    "': must be #rrggbb or one of the twenty Windows color "
+                    "names");
+        }
+        set_chrome_line_word(pick, c, *w);
+        named[c] = true;
+        return {};
+    }, std::span<const char* const>{});
+    if (!scan) return std::unexpected(std::move(scan.error()));
+    for (std::size_t k = 0; k < kGuiChromeLineCount; ++k) {
+        if (is_chrome_block_line(k) && !named[k]) {
+            return std::unexpected("missing role '" +
+                                   std::string(kGuiChromeLines[k].key) +
+                                   "'");
         }
     }
+    return pick;
+}
+
+// One `role=#RRGGBB` line, uppercase, LF.
+void put_line(std::string& s, const char* role, uint32_t word) {
+    char hex[8];
+    std::snprintf(hex, sizeof(hex), "#%06X",
+                  static_cast<unsigned>(word & 0xFFFFFFu));
+    s += role;
+    s += '=';
+    s += hex;
+    s += '\n';
+}
+
+// The text write_palette_file puts down: every role in the table's order.
+std::string palette_file_text(const GuiPaletteWords& words) {
+    std::string s;
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
-        line(kGuiPaletteRoles[i].name, record.words[i]);
+        put_line(s, kGuiPaletteRoles[i].name, words[i]);
     return s;
+}
+
+// The text write_scheme_file puts down: the nine and each picked inactive
+// key, in the table's order.
+std::string scheme_file_text(const GuiChromePick& pick) {
+    std::string s;
+    for (std::size_t k = 0; k < kGuiChromeLineCount; ++k) {
+        const GuiChromeLine& l = kGuiChromeLines[k];
+        if (l.word != nullptr) put_line(s, l.key, pick.*(l.word));
+        else if (const std::optional<uint32_t>& v = pick.*(l.optional))
+            put_line(s, l.key, *v);
+    }
+    return s;
+}
+
+// THE LAUNCH'S READ OF ONE FOLDER (the declarations): the names first,
+// sorted, so the first error is the same file on every launch; each stem
+// judged, then the file under its kind's reader.
+template <class Record, class Reader>
+std::optional<std::string> read_kind_folder(PresetKind<Record>& kind,
+                                            Reader read_file) {
+    const std::filesystem::path folder = kind_folder_path(kind);
+    if (folder.empty()) return std::nullopt;
+    std::error_code ec;
+    if (!std::filesystem::exists(folder, ec)) {
+        // A MISSING FOLDER IS NO FILES; a failed query is the next call's
+        // failure, said with the system's words.
+        if (!ec) return std::nullopt;
+    }
+    const std::string unreadable = "could not read the " +
+                                   std::string(kind.folder) + " folder '" +
+                                   folder.string() + "': ";
+    std::vector<std::filesystem::path> files;
+    std::filesystem::directory_iterator it(folder, ec);
+    if (ec) return unreadable + ec.message();
+    for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
+        if (ec) break;
+        const std::string name = it->path().filename().string();
+        if (name.size() <= kind.suffix.size() || !name.ends_with(kind.suffix))
+            continue;
+        std::error_code fec;
+        if (!it->is_regular_file(fec)) continue;
+        files.push_back(it->path());
+    }
+    if (ec) return unreadable + ec.message();
+    std::sort(files.begin(), files.end());
+
+    for (const std::filesystem::path& p : files) {
+        const std::string file = p.filename().string();
+        const std::string name =
+            file.substr(0, file.size() - kind.suffix.size());
+        const std::string head = "invalid " + std::string(kind.noun) +
+                                 " file '" + p.string() + "': ";
+        if (!is_palette_name_spelling(name)) {
+            return head + "the name must be <name>" + std::string(kind.suffix) +
+                   ", the name 1 to 40 printable ASCII characters with no "
+                   "leading or trailing space";
+        }
+        if (kind.is_builtin(name)) {
+            return head + name + " is a built-in " + kind.noun +
+                   " and takes no file";
+        }
+        auto record = read_file(p);
+        if (!record) return head + record.error();
+        kind.loaded.emplace(name, *record);
+    }
+    return std::nullopt;
+}
+
+template <class Record>
+std::vector<std::string> kind_file_names(const PresetKind<Record>& kind) {
+    std::vector<std::string> out;
+    out.reserve(kind.loaded.size());
+    for (const auto& [name, record] : kind.loaded) out.push_back(name);
+    return out;
+}
+
+template <class Record>
+std::optional<std::string> write_kind_file(PresetKind<Record>& kind,
+                                           std::string_view name,
+                                           const std::string& text,
+                                           const Record& record) {
+    // The names are the picker's to judge (the declarations).
+    assert(is_palette_name_spelling(name));
+    assert(!kind.is_builtin(name));
+    const std::filesystem::path folder = kind_folder_path(kind);
+    // The launch read the config through the same resolver, and the
+    // environment does not change under the process.
+    assert(!folder.empty());
+    std::error_code ec;
+    std::filesystem::create_directories(folder, ec);
+    if (ec) {
+        return "could not create the " + std::string(kind.folder) +
+               " folder '" + folder.string() + "': " + ec.message();
+    }
+    const std::filesystem::path p = kind_file_path(kind, folder, name);
+    if (!atomic_write_string_to_path(p.string(), text))
+        return "could not write the " + std::string(kind.noun) + " file '" +
+               p.string() + "'";
+    kind.loaded.insert_or_assign(std::string(name), record);
+    return std::nullopt;
+}
+
+template <class Record>
+std::optional<std::string> rename_kind_file(PresetKind<Record>& kind,
+                                            std::string_view old_name,
+                                            std::string_view new_name) {
+    // The names are the picker's to judge (the declarations).
+    const auto it = kind.loaded.find(old_name);
+    assert(it != kind.loaded.end());
+    assert(new_name != old_name);
+    assert(is_palette_name_spelling(new_name));
+    // neither a built-in's nor taken
+    assert(!kind.is_builtin(new_name) && !kind.loaded.contains(new_name));
+    const std::filesystem::path folder = kind_folder_path(kind);
+    assert(!folder.empty());
+    const std::filesystem::path from = kind_file_path(kind, folder, old_name);
+    const std::filesystem::path to   = kind_file_path(kind, folder, new_name);
+    std::error_code ec;
+    std::filesystem::rename(from, to, ec);
+    if (ec) {
+        return "could not rename the " + std::string(kind.noun) + " file '" +
+               from.string() + "': " + ec.message();
+    }
+    const Record record = it->second;
+    kind.loaded.erase(it);
+    kind.loaded.emplace(std::string(new_name), record);
+    return std::nullopt;
+}
+
+template <class Record>
+std::optional<std::string> remove_kind_file(PresetKind<Record>& kind,
+                                            std::string_view name) {
+    // The name is the picker's to judge (the declarations): a loaded
+    // file's, never a built-in's (which the map does not hold).
+    const auto it = kind.loaded.find(name);
+    assert(it != kind.loaded.end());
+    const std::filesystem::path folder = kind_folder_path(kind);
+    assert(!folder.empty());
+    const std::filesystem::path p = kind_file_path(kind, folder, name);
+    std::error_code ec;
+    std::filesystem::remove(p, ec);
+    if (ec) {
+        return "could not delete the " + std::string(kind.noun) + " file '" +
+               p.string() + "': " + ec.message();
+    }
+    kind.loaded.erase(it);
+    return std::nullopt;
 }
 
 } // namespace
@@ -330,155 +508,93 @@ std::string_view effective_palette_name(std::string_view palette) {
                : palette;
 }
 
+std::string_view effective_scheme_name(std::string_view scheme) {
+    // The chrome's own scheme shares its default palette's word (the head).
+    return scheme.empty()
+               ? std::string_view(live_chrome_spec().default_palette)
+               : scheme;
+}
+
 std::filesystem::path palette_folder_path() {
-    const std::filesystem::path cfg = device_config_path();
-    if (cfg.empty()) return {};
-    return cfg.parent_path() / "palettes";
+    return kind_folder_path(g_palettes);
+}
+
+std::filesystem::path scheme_folder_path() {
+    return kind_folder_path(g_schemes);
 }
 
 std::optional<std::string> read_palette_folder() {
-    const std::filesystem::path folder = palette_folder_path();
-    if (folder.empty()) return std::nullopt;
-    std::error_code ec;
-    if (!std::filesystem::exists(folder, ec)) {
-        // A MISSING FOLDER IS NO FILES; a failed query is the next call's
-        // failure, said with the system's words.
-        if (!ec) return std::nullopt;
-    }
-    // THE NAMES FIRST, SORTED, so the first error is the same file on every
-    // launch.
-    std::vector<std::filesystem::path> files;
-    std::filesystem::directory_iterator it(folder, ec);
-    if (ec) {
-        return "could not read the palettes folder '" + folder.string() +
-               "': " + ec.message();
-    }
-    for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
-        if (ec) break;
-        const std::string name = it->path().filename().string();
-        if (name.size() <= kPaletteSuffix.size() ||
-            !name.ends_with(kPaletteSuffix))
-            continue;
-        std::error_code fec;
-        if (!it->is_regular_file(fec)) continue;
-        files.push_back(it->path());
-    }
-    if (ec) {
-        return "could not read the palettes folder '" + folder.string() +
-               "': " + ec.message();
-    }
-    std::sort(files.begin(), files.end());
+    return read_kind_folder(g_palettes, read_palette_file);
+}
 
-    for (const std::filesystem::path& p : files) {
-        const std::string file = p.filename().string();
-        const std::string name =
-            file.substr(0, file.size() - kPaletteSuffix.size());
-        const std::string head =
-            "invalid palette file '" + p.string() + "': ";
-        if (!is_palette_name_spelling(name)) {
-            return head + "the name must be <name>.palette, the name 1 to 40 "
-                          "printable ASCII characters with no leading or "
-                          "trailing space";
-        }
-        if (is_builtin_palette_name(name)) {
-            return head + name + " is a built-in palette and takes no file";
-        }
-        auto record = read_palette_file(p);
-        if (!record) return head + record.error();
-        g_loaded_palettes.emplace(name, *record);
-    }
-    return std::nullopt;
+std::optional<std::string> read_scheme_folder() {
+    return read_kind_folder(g_schemes, read_scheme_file);
 }
 
 std::vector<std::string> palette_file_names() {
-    std::vector<std::string> out;
-    out.reserve(g_loaded_palettes.size());
-    for (const auto& [name, record] : g_loaded_palettes) out.push_back(name);
-    return out;
+    return kind_file_names(g_palettes);
+}
+
+std::vector<std::string> scheme_file_names() {
+    return kind_file_names(g_schemes);
 }
 
 bool is_palette_name(std::string_view name) {
-    return is_builtin_palette_name(name) || g_loaded_palettes.contains(name);
+    return is_builtin_palette_name(name) || g_palettes.loaded.contains(name);
 }
 
-GuiPaletteRecord palette_record(std::string_view name) {
-    // A BUILT-IN (the declaration): the live chrome's default fifteen, and
-    // the scheme's keys unless it is the live chrome's own.
-    if (const GuiChromeScheme* b = builtin_scheme(name)) {
-        const std::string_view own = live_chrome_spec().default_palette;
-        const GuiDefaultPalette* d = default_palette_for(own);
-        assert(d != nullptr);   // defaults_follow_the_vocabularies
-        GuiPaletteRecord r{default_words(*d), std::nullopt};
-        if (name != own) r.chrome = b->chrome;
-        return r;
-    }
-    const auto it = g_loaded_palettes.find(name);
+bool is_scheme_name(std::string_view name) {
+    return is_builtin_scheme_name(name) || g_schemes.loaded.contains(name);
+}
+
+GuiPaletteWords palette_record(std::string_view name) {
+    if (const GuiDefaultPalette* d = default_palette(name))
+        return default_words(*d);
+    const auto it = g_palettes.loaded.find(name);
     // Every caller's name came through is_palette_name: a miss is a program
     // bug.
-    assert(it != g_loaded_palettes.end());
+    assert(it != g_palettes.loaded.end());
+    return it->second;
+}
+
+std::optional<GuiChromePick> scheme_record(std::string_view name) {
+    // A BUILT-IN (the declaration): its twelve, unless it is the live
+    // chrome's own scheme, which carries none.
+    if (const GuiChromeScheme* b = builtin_scheme(name)) {
+        if (name == live_chrome_spec().default_palette) return std::nullopt;
+        return b->chrome;
+    }
+    const auto it = g_schemes.loaded.find(name);
+    // Every caller's name came through is_scheme_name: a miss is a program
+    // bug.
+    assert(it != g_schemes.loaded.end());
     return it->second;
 }
 
 std::optional<std::string> write_palette_file(std::string_view name,
-                                              const GuiPaletteRecord& record) {
-    // The names are the picker's to judge (the declaration).
-    assert(is_palette_name_spelling(name));
-    assert(!is_builtin_palette_name(name));
-    const std::filesystem::path folder = palette_folder_path();
-    // The launch read the config through the same resolver, and the
-    // environment does not change under the process.
-    assert(!folder.empty());
-    std::error_code ec;
-    std::filesystem::create_directories(folder, ec);
-    if (ec) {
-        return "could not create the palettes folder '" + folder.string() +
-               "': " + ec.message();
-    }
-    const std::filesystem::path p = palette_file_path(folder, name);
-    if (!atomic_write_string_to_path(p.string(), palette_file_text(record)))
-        return "could not write the palette file '" + p.string() + "'";
-    g_loaded_palettes.insert_or_assign(std::string(name), record);
-    return std::nullopt;
+                                              const GuiPaletteWords& words) {
+    return write_kind_file(g_palettes, name, palette_file_text(words), words);
+}
+
+std::optional<std::string> write_scheme_file(std::string_view name,
+                                             const GuiChromePick& pick) {
+    return write_kind_file(g_schemes, name, scheme_file_text(pick), pick);
 }
 
 std::optional<std::string> rename_palette_file(std::string_view old_name,
                                                std::string_view new_name) {
-    // The names are the picker's to judge (the declaration).
-    const auto it = g_loaded_palettes.find(old_name);
-    assert(it != g_loaded_palettes.end());
-    assert(new_name != old_name);
-    assert(is_palette_name_spelling(new_name));
-    assert(!is_palette_name(new_name));   // neither a built-in's nor taken
-    const std::filesystem::path folder = palette_folder_path();
-    assert(!folder.empty());
-    const std::filesystem::path from = palette_file_path(folder, old_name);
-    const std::filesystem::path to   = palette_file_path(folder, new_name);
-    std::error_code ec;
-    std::filesystem::rename(from, to, ec);
-    if (ec) {
-        return "could not rename the palette file '" + from.string() +
-               "': " + ec.message();
-    }
-    const GuiPaletteRecord record = it->second;
-    g_loaded_palettes.erase(it);
-    g_loaded_palettes.emplace(std::string(new_name), record);
-    return std::nullopt;
+    return rename_kind_file(g_palettes, old_name, new_name);
+}
+
+std::optional<std::string> rename_scheme_file(std::string_view old_name,
+                                              std::string_view new_name) {
+    return rename_kind_file(g_schemes, old_name, new_name);
 }
 
 std::optional<std::string> remove_palette_file(std::string_view name) {
-    // The name is the picker's to judge (the declaration): a loaded file's,
-    // never a built-in's (which the map does not hold).
-    const auto it = g_loaded_palettes.find(name);
-    assert(it != g_loaded_palettes.end());
-    const std::filesystem::path folder = palette_folder_path();
-    assert(!folder.empty());
-    const std::filesystem::path p = palette_file_path(folder, name);
-    std::error_code ec;
-    std::filesystem::remove(p, ec);
-    if (ec) {
-        return "could not delete the palette file '" + p.string() + "': " +
-               ec.message();
-    }
-    g_loaded_palettes.erase(it);
-    return std::nullopt;
+    return remove_kind_file(g_palettes, name);
+}
+
+std::optional<std::string> remove_scheme_file(std::string_view name) {
+    return remove_kind_file(g_schemes, name);
 }

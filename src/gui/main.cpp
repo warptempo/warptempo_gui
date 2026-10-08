@@ -23,7 +23,7 @@
 #include "history_prefetch.h"
 #include "audio.h"
 #include "device_config.h"
-#include "palette_file.h"  // the palettes folder's launch read
+#include "palette_file.h"  // the palettes and schemes folders' launch reads
 #include "icons.h"         // the icon set's launch load
 #include "waveform_worker.h"
 #include "file_loader.h"
@@ -3321,17 +3321,20 @@ int gui_main(const char* argument) {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     //
-    // THE PALETTES FOLDER IS READ FIRST, ONCE (architect 2026-10-07,
-    // palette_file.h): the config's `palette` key is judged against the two
-    // compiled defaults and the files loaded here, so they precede the
-    // config's reader. Its failure is the config's own road — a bad palette
-    // file is a hand edit, the same adversarial class — one blunt line
-    // naming the file and no window. Nothing is copied in: the folder holds
-    // his own palettes alone. (The chrome's colors are compiled in:
-    // theme_file.h.)
-    if (const std::optional<std::string> err = read_palette_folder()) {
-        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-        return 1;
+    // THE PALETTES AND SCHEMES FOLDERS ARE READ FIRST, ONCE (architect
+    // 2026-10-07; the schemes 2026-10-08, palette_file.h): the config's
+    // `palette` and `scheme` keys are judged against the compiled built-ins
+    // and the files loaded here, so they precede the config's reader. A
+    // failure is the config's own road — a bad file is a hand edit, the same
+    // adversarial class — one blunt line naming the file and no window.
+    // Nothing is copied in: each folder holds his own presets alone. (The
+    // chrome's own colors are compiled in: theme_file.h.)
+    for (std::optional<std::string> (*read)() :
+         {read_palette_folder, read_scheme_folder}) {
+        if (const std::optional<std::string> err = read()) {
+            std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+            return 1;
+        }
     }
     DeviceConfig device_config;
     {
@@ -3376,25 +3379,23 @@ int gui_main(const char* argument) {
     set_gui_scale_percent(device_config.gui_scale);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE LIVE
     // CHROME'S COMPILED THEME for the chrome's colors (2026-10-08,
-    // chrome_theme_words, theme_file.h), and the palette the config names (a
-    // built-in or a file read above) — or, with no `palette` line, THE LIVE
-    // CHROME'S DEFAULT PALETTE (effective_palette_name, palette_file.h) — for
-    // the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here through
+    // chrome_theme_words, theme_file.h) with THE SCHEME the config names (a
+    // built-in or a file read above; 2026-10-08 ~18:15) — its twelve keys
+    // derived over the compiled theme by the live chrome's own derivation,
+    // live_chrome_words: Windows' Appearance-dialog rule under windows-2000,
+    // chrome_derive.h, the Clearlooks engine's arithmetic under clearlooks,
+    // clearlooks_derive.h, Motif's under cde, cde_derive.h — or, with no
+    // `scheme` line, THE LIVE CHROME'S OWN SCHEME, the compiled theme exactly
+    // (effective_scheme_name, scheme_record); and the palette the config
+    // names (a default or a file read above) — or, with no `palette` line,
+    // THE LIVE CHROME'S DEFAULT PALETTE (effective_palette_name) — for the
+    // program's, THE LIVE WORDS' SEED (2026-10-07: resolved here through
     // palette_record and handed to the install explicitly — render.h's
-    // install_palette), with the same palette's CHROME KNOB when it carries
-    // one (2026-10-08, derived over the compiled theme by the live chrome's
-    // own derivation, live_chrome_words: Windows' Appearance-dialog rule
-    // under windows-2000, chrome_derive.h, and the Clearlooks engine's
-    // arithmetic under clearlooks, clearlooks_derive.h; a built-in's fifteen
-    // the chrome's default's, palette_record) — both resolved against the
-    // chrome set above;
+    // install_palette) — both resolved against the chrome set above;
     // installed once, before the first paint. Every painter reads it through
     // palette() (render.h's palette block).
-    {
-        const GuiPaletteRecord seed =
-            palette_record(effective_palette_name(device_config.palette));
-        install_palette(seed.words, seed.chrome);
-    }
+    install_palette(palette_record(effective_palette_name(device_config.palette)),
+                    scheme_record(effective_scheme_name(device_config.scheme)));
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

@@ -4,7 +4,7 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "palette_file.h"      // is_palette_name, kPaletteGrammarReason;
+#include "palette_file.h"      // is_palette_name, is_scheme_name and their reasons;
                                // through render.h and gui_font.h,
                                // chrome_spec.h's is_chrome_key,
                                // kChromeGrammarReason
@@ -31,27 +31,30 @@ namespace {
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). The writer's list and the required
-// list stand side by side below, the second the first less its two keys
+// list stand side by side below, the second the first less its three keys
 // that may be absent (2026-10-07; until then one list served both, so no
 // key could be written and not demanded — the absent-able keys are the
 // deliberate exception, each saying what its absence means).
 //
-// `chrome` FOLLOWS last_project (2026-10-07) and `palette` FOLLOWS IT
-// (2026-10-07), the program's colors after the chrome's. (`theme` stood
-// between them 2026-10-03..10-08, the header's record.)
+// `chrome` FOLLOWS last_project (2026-10-07), `scheme` FOLLOWS IT
+// (2026-10-08 ~18:15), the chrome's colors after the chrome, and `palette`
+// FOLLOWS THAT (2026-10-07), the program's colors after the chrome's.
+// (`theme` stood after `chrome` 2026-10-03..10-08, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
     "projects_path",
     "last_project",
     "chrome",
+    "scheme",
     "palette",
 };
-// THE REQUIRED SET — every key above but the two that may be ABSENT
+// THE REQUIRED SET — every key above but the three that may be ABSENT
 // (architect 2026-10-07): `chrome`, absent reading as windows-2000 (the
 // default chrome since 2026-10-07 ~22:45, kDefaultChromeKey; a config
-// written before the key existed loads, in the default chrome), and
-// `palette`, absent meaning the chrome's default palette. The scanner
+// written before the key existed loads, in the default chrome), `scheme`
+// (2026-10-08), absent meaning the chrome's own scheme, and `palette`,
+// absent meaning the chrome's default palette. The scanner
 // checks presence against this list and duplicates against every key.
 constexpr const char* kDeviceConfigRequiredKeys[] = {
     "gui_scale",
@@ -88,9 +91,12 @@ std::filesystem::path device_config_path() {
 std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
-        // AN UNSET PALETTE WRITES NO LINE (2026-10-07): its one spelling is
-        // the line's absence, so the file keeps following the chrome.
+        // AN UNSET PALETTE OR SCHEME WRITES NO LINE (2026-10-07; the scheme
+        // 2026-10-08): its one spelling is the line's absence, so the file
+        // keeps following the chrome.
         if (std::string_view(key) == "palette" && cfg.palette.empty())
+            continue;
+        if (std::string_view(key) == "scheme" && cfg.scheme.empty())
             continue;
         s += key;
         s += '=';
@@ -113,6 +119,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The vocabulary's key verbatim, always written (the default's
             // too, so a file once rewritten names its chrome).
             s += cfg.chrome;
+        } else if (k == "scheme") {
+            // The name verbatim (printable ASCII, palette_file.h's grammar).
+            s += cfg.scheme;
         } else if (k == "palette") {
             // The name verbatim (printable ASCII, palette_file.h's grammar).
             s += cfg.palette;
@@ -198,11 +207,19 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.chrome = value;
             return {};
         }
-        // THE PALETTE (2026-10-07): a built-in's key or a palette file's read
-        // at launch, under its one grammar owner (is_palette_name,
-        // palette_file.h) — which is why gui_main reads the palettes folder
-        // BEFORE this file. An EMPTY value is refused like any other
-        // non-name: the unset palette is the line's absence.
+        // THE SCHEME (2026-10-08) AND THE PALETTE (2026-10-07): a built-in's
+        // key or a file's read at launch, each under its one grammar owner
+        // (is_scheme_name, is_palette_name, palette_file.h) — which is why
+        // gui_main reads the two folders BEFORE this file. An EMPTY value is
+        // refused like any other non-name: the unset key is the line's
+        // absence.
+        if (key == "scheme") {
+            if (!is_scheme_name(value)) {
+                return bad_value(ln, key, value, kSchemeGrammarReason);
+            }
+            out.scheme = value;
+            return {};
+        }
         if (key == "palette") {
             if (!is_palette_name(value)) {
                 return bad_value(ln, key, value, kPaletteGrammarReason);
