@@ -334,7 +334,7 @@ public:
     // GuiInputHandler::arm_pen_hot_latch): accepted and never fired — a
     // mouse's release is no pen lift, so the laptop's hot face is unchanged
     // by construction.
-    void set_pen_lift_hook(std::function<void(int x, int y)> /*cb*/) {}
+    void set_pen_lift_hook(std::function<void()> /*cb*/) {}
 
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
     // gate pushed down. Contract, uses, twin-gate invariant and the two-call-site

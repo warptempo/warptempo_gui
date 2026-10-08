@@ -8680,6 +8680,10 @@ struct AppState {
         int         menu_pressed = -1;
         bool        menu_press_began_on_item = false;
         text_editor::State field_editor;
+        // A PLAIN PRESS SEATED THE FIELD'S CARET (2026-10-08): set by
+        // color_picker_press's caret arm, read and cleared by the release,
+        // which seeds the double tap's candidate from it (the rule there).
+        bool        field_caret_press = false;
         enum class NameAsk { None, SaveAs, Rename };
         NameAsk     name_ask = NameAsk::None;
         std::string pending_delete;

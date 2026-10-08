@@ -5248,9 +5248,11 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
     }
 }
 
-void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods) {
+void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods,
+                                         const DoubleClickCandidate& dc_at_press) {
     AppState::ColorPicker& cp = app.color_picker;
     const AppState::ColorPicker::Stash& st = cp.stash;
+    cp.field_caret_press = false;   // only the caret arm below sets it
     // PUBLISHED GEOMETRY MAY ONLY SELECT, and only the live session's: an
     // unpublished or stale stash contains no point (the owner-tag doctrine,
     // ModalDialogGeometry), so the press is the veil's consumed nothing.
@@ -5305,7 +5307,28 @@ void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods) {
     if (!rect_contains(st.card, x, y)) return;
 
     if (on_field) {
+        // THE DOUBLE TAP SELECTS (architect 2026-10-08: "double-tapping the
+        // hex field doesn't allow me to select it as I would expect with an
+        // input field"): every editor's road (the dialog editors' press arm,
+        // editor_double_press_at and select_word_at) on the card's one
+        // field, the hex field and the name ask alike — a second press
+        // inside the double-click window and slack of the candidate a
+        // caret-seating press's lift seeded (color_picker_release) selects
+        // the run under it. On glass the press arrives at the down (a down
+        // outside every dialog editor's field and off the pan zone is the
+        // pointer's at once, input_core.cpp), so the double tap is this
+        // same pair of presses. The OPEN keeps its own face: the first
+        // press enters with the whole text selected (field_focus) and seeds
+        // nothing, its selection standing. No drag by words: the card's
+        // field has no drag road.
+        if (color_picker.field_active() &&
+            editor_double_press_at(dc_at_press, x, y)) {
+            color_picker.field_select_word(x);
+            return;
+        }
+        const bool seats_caret = color_picker.field_active();
         color_picker.field_focus(x);
+        cp.field_caret_press = seats_caret;
         return;
     }
     if (rect_contains(st.chooser, x, y)) {
@@ -5431,6 +5454,21 @@ void GuiInputHandler::color_picker_motion(int x, int y, GuiInputState mods) {
 
 void GuiInputHandler::color_picker_release(int x, int y) {
     AppState::ColorPicker& cp = app.color_picker;
+    // THE DOUBLE TAP'S SEED (2026-10-08; the press arm's rule): the lift of
+    // a press that seated the field's caret seeds the editor-text candidate
+    // while the edit stands with no selection — the dialog editors' own
+    // release rule — and the second press reads it.
+    if (cp.field_caret_press) {
+        cp.field_caret_press = false;
+        if (color_picker.field_active() &&
+            !text_editor::has_selection(cp.field_editor)) {
+            app.double_click = DoubleClickCandidate{
+                .surface = DoubleClickSurface::EditorText,
+                .time_ms = monotonic_ms(), .press_x = x, .press_y = y,
+                .target = -1};
+        }
+        return;
+    }
     if (cp.drag.armed()) {
         // Every step applied live; the lift only ends the gesture.
         cp.drag = AppState::ColorPicker::Drag{};
@@ -5968,7 +6006,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             return;
         }
         if (button != GuiMouseButton::Left) return;
-        color_picker_press(x, y, mods);
+        color_picker_press(x, y, mods, dc_at_press);
         return;
     }
 
@@ -7990,13 +8028,13 @@ void GuiInputHandler::set_roster_hot(int index) {
     app.roster_hot = index;
 }
 
-void GuiInputHandler::arm_pen_hot_latch(int x, int y) {
+void GuiInputHandler::arm_pen_hot_latch() {
     // Armed and unanchored (the rule at pen_hot_latch_): the hook fires after
     // the lift's own delivery, whose restore motion walked the roster
     // unlatched, so this re-walk withdraws the hot face that motion lit
     // before the frame paints.
     pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
-                                 .lift_x = x, .lift_y = y, .x = 0, .y = 0};
+                                 .x = 0, .y = 0};
     recompute_redesign_button_hover();
 }
 

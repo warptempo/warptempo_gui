@@ -84,8 +84,8 @@ inline int icon_row_pad_x() {
 // pointer path never measures one — the painter publishes the field's own
 // click-to-caret origin (AppState::DialogEditorText), so the mapped
 // geometry IS the painted one rather than a re-derivation that could drift.
-constexpr const char* kSettingsEditorPrefix = "Setting: ";
-constexpr const char* kBpmEditorPrefix      = "BPM: ";
+constexpr const char* kSettingsEditorPrefix = "Setting:";
+constexpr const char* kBpmEditorPrefix      = "BPM:";
 // The OPEN PROJECT prompt's label (File → Open project, 2026-08-27) — ONE WAY TO SHOW
 // (The Open project prompt's `Open: <projects_path>/` label and the `h`
 // view's `Load: ` label stood here until 2026-08-28, when both prompts lost
@@ -93,9 +93,10 @@ constexpr const char* kBpmEditorPrefix      = "BPM: ";
 // — architect 2026-08-28; the picker's row is Cancel alone since 2026-08-29 and
 // wears no label.)
 // The `h` history view's COMMIT-TITLE editor (2026-08-07), whose buffer is the
-// message the checkpoint commit will carry. One trailing space, like every
-// prefix here that names a subject rather than a path.
-constexpr const char* kCommitTitleEditorPrefix = "Commit: ";
+// message the checkpoint commit will carry. NO TRAILING SPACE on any label
+// here (2026-10-08): the air after the colon is the editor row's one gap
+// (paint_modal_dialog's editor arm), never a space inside the label.
+constexpr const char* kCommitTitleEditorPrefix = "Commit:";
 
 // THE `h` HISTORY MODE'S ONE BRACKET SPELLING — the sign, then the payload
 // DIRECTLY AGAINST IT, no space (architect 2026-08-05, superseding the arc's

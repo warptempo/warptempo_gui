@@ -5761,11 +5761,11 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
     }
     if (text_editor::is_active(app.settings_editor)) {
         // A CHOICE EDITOR'S LABEL IS ITS ROW'S (2026-10-07 evening): the
-        // menu row's own word ("Chrome") in the dialogs' `<word>: ` form, the
+        // menu row's own word ("Chrome") in the dialogs' `<word>:` form, the
         // combo beside it carrying no key to read; the text editor keeps
-        // "Setting: " before its `key=value` line.
+        // "Setting:" before its `key=value` line.
         prefix = app.settings_choice_live()
-                     ? std::string(app.settings_choice_row().label) + ": "
+                     ? std::string(app.settings_choice_row().label) + ":"
                      : std::string(kSettingsEditorPrefix);
         return &app.settings_editor;
     }
@@ -6045,10 +6045,11 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   kModalFieldHeightPx 31 — editor.png's field, borders included (y=5..35),
 //                          vertically centred in the row's content band.
 //   kModalFieldPadXPx 7  — its border-to-ink inset (x=86..92).
-//   (the label-to-field gap is NOT a constant of its own since 2026-08-29:
-//    the architect ruled it EQUAL TO THE WINDOW-EDGE → LABEL PAD, so both
-//    are `pad`, icon_row_pad_x, read twice — the crop's own 11 is retired,
-//    two numbers for one visual gap being the drift.)
+//   (the label-to-field gap is NOT a constant of its own: since 2026-10-08
+//    it is kModalButtonGapPx, the editor row's ONE GAP — label → field,
+//    field → OK, OK → Cancel; the rule at the editor arm. From 2026-08-29
+//    it was the window-edge pad read twice, which with the label's trailing
+//    space read wider than the field's other end.)
 //   kModalFieldWidthPx 520 — AUTHORED, not sampled (the crop's field width is
 //                          its dialog's layout, not a rule): wide enough for
 //                          every render-entry id and settings line met in
@@ -6086,6 +6087,10 @@ namespace {
 // on the tablet — the gap 8 as 6, the field 31 as 23, its pad 7 as 5, its
 // width 520 as 378 and its 40-px floor as 29, the button box 32 as 23, its
 // pads 9 and 10 as 7 and 7.
+// THE GAP, 6 W, IS ALSO WINDOWS' OWN: 4 dialog units between related
+// controls and between command buttons, at MS Sans Serif 8's 1.5-px
+// horizontal unit — and since 2026-10-08 the editor row's ONE GAP (label →
+// field → OK → Cancel; the rule at paint_modal_dialog's editor arm).
 constexpr double kModalButtonGapPx    = 6.0;
 constexpr double kModalFieldHeightPx  = 23.0;   // includes its sunken edge
 constexpr double kModalFieldPadXPx    = 5.0;
@@ -6631,7 +6636,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     // The row reads left to right from its own left pad: a PROMPT is its
     // message, one pad, then the buttons in painted order; an EDITOR is its
-    // label, the field, one pad, then the buttons. The right-aligned cluster
+    // label, the field and the buttons with the button gap between each
+    // (the one-gap rule at the editor arm, 2026-10-08). The right-aligned cluster
     // of hours earlier is retired with the reserved right-pad ring that
     // anchored it.
     //
@@ -6659,9 +6665,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     // THE FOCUS FRAME IS RESERVED, NOT PAINTED, on both ends of the cluster —
     // one frame line inside the right pad so the last button's cannot touch
-    // the window edge, one inside the left clearance so the first button's
-    // cannot touch the message or the field. Between neighbours the 8px gap
-    // absorbs both (kModalFocusFramePx). (The player's row is row 8's and
+    // the window edge, one inside a prompt's left clearance so the first
+    // button's cannot touch the message. Between neighbours the 6-W gap
+    // absorbs both (kModalFocusFramePx), and since 2026-10-08 between an
+    // editor's field and its OK too (the editor arm). (The player's row is row 8's and
     // reserves no ring at its right pad — its branch below.) So the focus can
     // move anywhere on the row without reflowing it, which is the whole point
     // of reserving.
@@ -6670,8 +6677,29 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int buttons_x_max = std::max(cx0, cx1 - ring - buttons_w);
     // Centred in the content band on every owner's row but the player's,
     // which takes row 8's case seat (above).
-    const int btn_y = player_up ? seats.case_y
-                                : content.y + (content.h - btn_h) / 2;
+    // EVERY CONTROL ON A DIALOG ROW IS CENTRED ON THE ROW'S VERTICAL CENTRE
+    // (architect 2026-10-08, on the editor row: "they don't look quite
+    // aligned vertically") — the push buttons here, an editor's field and
+    // the choice editor's combo at the editor arm below — through this one
+    // expression, so two controls of one height share their rows exactly
+    // and a shorter one stands centred on the taller (clearlooks' 23-W
+    // entry beside GTK's 25-W button, 1 W either side; where two heights
+    // differ by an odd count of device px the floor leaves the odd row
+    // below, the same for every control). UNDER
+    // WIN2000 THE FIELD AND THE BUTTON ARE BOTH 23 W (Windows' 14 dialog
+    // units, kModalBtnMinWidthPx's block and kModalFieldHeightPx) and their
+    // boxes coincide row for row; the button only READS 1 W shorter at the
+    // top (and narrower at the left) because a raised push button's outer
+    // top-left line is 3DLight, which the Windows Standard scheme sets equal
+    // to the face (render.h's palette block), while the sunken field's outer
+    // top-left line is Shadow — Windows 2000's own push button beside its
+    // own edit box, measured on his tablet capture (2026-10-08, 300 %: the
+    // field's box y 1351–1419, OK's visible edge from 1354, its 3DLight
+    // rows 1351–1353 on the ground).
+    const auto row_centred_y = [&](int h) {
+        return content.y + (content.h - h) / 2;
+    };
+    const int btn_y = player_up ? seats.case_y : row_centred_y(btn_h);
     int buttons_x0 = cx0;   // set by whichever branch runs, below
 
     if (prompt_up) {
@@ -6995,16 +7023,30 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // The field's frame is the PLAIN SUNKEN edge, two relief lines (the
         // chrome below).
         const int fbord = 2 * relief_line_px();
-        // THE LABEL → FIELD GAP IS THE ROW'S OWN PAD (architect 2026-08-29):
-        // the air between the window edge and the label, and the air between
-        // the label and the field, are ONE number read twice — the separately
-        // sampled 11 that stood here is retired. Every dialog editor's label
-        // ("Setting:", "BPM:", the commit title's)
-        // reads it.
-        const int fx    = cx0 + label_w + pad;
+        // THE EDITOR ROW HAS ONE GAP (architect 2026-10-08: "make sure the
+        // spacing from the word Setting: to the input box is even — it looks
+        // like there's more space there"): the label → field, the field →
+        // OK and the OK → Cancel air are ALL `bgap`, kModalButtonGapPx's 6 W
+        // — Windows' 4 dialog units between related controls and between
+        // command buttons at MS Sans Serif 8's 1.5-px horizontal unit (the
+        // Windows layout guidelines; their 3-DLU label-to-control figure,
+        // 4.5 px, is not taken, the ruling being one gap). The label is
+        // measured WITHOUT A TRAILING SPACE (every prefix is `<word>:`,
+        // paint_handler.h), so the air after the colon is this gap alone —
+        // until this day it was the row's pad PLUS the prefix's space, 17 W
+        // of air at the label against 10 W at the field's other end. The
+        // field → OK gap carries no reserved ring: the focus frame's one line
+        // spends itself inside the gap, as it does between two buttons
+        // (kModalFocusFramePx). Both chromes, and the choice editor alike —
+        // its combo takes the field's seat. UNDER WIN2000 THE BUTTONS' AIR
+        // READS 1 W WIDER than the label's: a raised push button's outer
+        // top-left line is 3DLight, which the Windows Standard scheme sets
+        // equal to the face, so its left edge shows 1 W inside its box (the
+        // same reading as the vertical one at btn_y, below).
+        const int fx    = cx0 + label_w + bgap;
         // The room a field may take before the buttons would have to give:
-        // the cluster's cap, less its reserved left ring and the pad.
-        const int field_room = (buttons_x_max - ring - pad) - fx;
+        // the cluster's cap, less the gap.
+        const int field_room = (buttons_x_max - bgap) - fx;
         const int field_w = std::max(std::min(scaled_px(kModalFieldWidthPx),
                                               field_room),
                                      scaled_px(kModalFieldMinWidthPx, 1));
@@ -7012,9 +7054,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // too narrow for label + field + buttons), and the cap is what stops
         // it there — the buttons stay whole and the field is the surface that
         // has already given everything it can.
-        buttons_x0 = std::min(fx + field_w + pad + ring, buttons_x_max);
+        buttons_x0 = std::min(fx + field_w + bgap, buttons_x_max);
         const int field_h = scaled_px(kModalFieldHeightPx);
-        const int field_y = content.y + (content.h - field_h) / 2;
+        const int field_y = row_centred_y(field_h);
         const GuiRect field_outer{fx, field_y, field_w, field_h};
         const GuiRect field_inner{fx + fbord, field_y + fbord,
                                   field_w - 2 * fbord, field_h - 2 * fbord};

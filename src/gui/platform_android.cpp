@@ -1961,9 +1961,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                     // first HOVER_ENTER at the lift point itself; the hover
                     // point then drifts along the pen's axis as the tip rises
                     // (the measurement at kPenHotRearmPx).
-                    if (pen_stays && pen_lift_hook_)
-                        pen_lift_hook_(containing_pixel(px(index)),
-                                       containing_pixel(py(index)));
+                    if (pen_stays && pen_lift_hook_) pen_lift_hook_();
                     return;
                 }
             }
@@ -2115,7 +2113,7 @@ void GuiPlatform::set_pen_zoom_anchor_release_hook(std::function<void()> cb) {
     pen_zoom_anchor_release_hook_ = std::move(cb);
 }
 
-void GuiPlatform::set_pen_lift_hook(std::function<void(int x, int y)> cb) {
+void GuiPlatform::set_pen_lift_hook(std::function<void()> cb) {
     pen_lift_hook_ = std::move(cb);
 }
 

@@ -263,6 +263,20 @@ GuiRect combo_drop_button(const GuiRect& r) {
     return GuiRect{r.x + r.w - fb - bw, r.y + fb, bw, r.h - 2 * fb};
 }
 
+// THE LIST IS EXACTLY THE COMBO'S OUTER BOX WIDE, FLUSH AT BOTH EDGES,
+// under both chromes (architect 2026-10-08, on his clearlooks capture: "the
+// drop-down looks longer than the button you press"): Windows' ComboLBox
+// takes the combo's own width (CB_SETDROPPEDWIDTH's default), its frame
+// flush with the combo's sunken edge, and GTK 2.20's GtkComboBox sizes its
+// popup menu to the widget's ALLOCATION width (gtk_combo_box_menu_popup),
+// which is the gummy button's whole box. Measured on that capture
+// (2026-10-08, 300 %): list and combo both x 199–1332. What reads wider
+// under clearlooks is the button's own 1-W INSET RING — the outermost line
+// of its box, inside its xthickness, in a tone near the ground (224 on the
+// left, 251 on the right over a 237 ground) — so the combo's dark border
+// shows 1 W inside the box on each side while the menu's grey frame stands
+// on the box's edge. Flush with the ring is GTK's; the ring is not
+// subtracted here.
 GuiRect combo_list_box(const GuiRect& combo, int count, bool upward) {
     const int h = count * popup_item_h_px() + 2 * popup_item_margin_y_px() +
                   popup_border_top_px() + popup_border_px();
@@ -962,6 +976,17 @@ void GuiColorPicker::field_focus(int tap_x) {
         cp.field_editor.selection_anchor = -1;
         text_editor::touch_blink(cp.field_editor);
     }
+    damage_card();
+}
+
+void GuiColorPicker::field_select_word(int tap_x) {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (!field_active() || cp.stash.field_byte_x.empty()) return;
+    text_editor::select_word_at(
+        cp.field_editor,
+        text_editor::byte_index_from_shaped_x(static_cast<double>(tap_x),
+                                              cp.stash.field_text_origin_x,
+                                              cp.stash.field_byte_x));
     damage_card();
 }
 

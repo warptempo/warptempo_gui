@@ -596,6 +596,12 @@ struct GuiColorPicker {
     // stands is the cancel (the flag editor's own rule for a press outside
     // its box).
     void field_focus(int tap_x);
+    // field_select_word: THE DOUBLE TAP on a standing edit (2026-10-08) —
+    // the run of the tapped character's class under `tap_x`, every editor's
+    // own select_word_at (text_editor.h): `#RRGGBB`'s six digits, the `#`
+    // being punctuation, or the name ask's word. The pointer's road to it
+    // is color_picker_press's field arm.
+    void field_select_word(int tap_x);
     void field_commit();
     void field_cancel();
     bool field_active() const {

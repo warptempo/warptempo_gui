@@ -1688,8 +1688,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // at GuiInputHandler::pen_hot_latch_, the producer at
     // GuiPlatform::set_pen_lift_hook, platform_android.h; the Wayland backend
     // accepts it and never fires it).
-    gui.set_pen_lift_hook(
-        [&](int x, int y) { input_handler.arm_pen_hot_latch(x, y); });
+    gui.set_pen_lift_hook([&]() { input_handler.arm_pen_hot_latch(); });
 
     auto invalidate_modal_dialog_area = [&]() { viewport.invalidate_modal_dialog_area(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };

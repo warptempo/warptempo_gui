@@ -1480,12 +1480,12 @@ struct GuiInputHandler {
     void set_player_hot(int index);
     // THE PEN'S HOT-FACE LATCH, its two doors (the rule at pen_hot_latch_
     // below): ARMED by the platform's pen lift hook (main.cpp;
-    // GuiPlatform::set_pen_lift_hook) with the lift's pixel, after the lift's
+    // GuiPlatform::set_pen_lift_hook), after the lift's
     // own delivery, UNANCHORED — the arm re-walks the roster so the hot face
     // the lift's restore motion lit is withdrawn before the frame paints;
     // CLEARED by the pointer-leave hook (main.cpp); the anchoring and the
     // motion's clear are on_motion's own.
-    void arm_pen_hot_latch(int x, int y);
+    void arm_pen_hot_latch();
     void clear_pen_hot_latch();
 
     // THE MENU ROW'S DROPDOWNS — two state writers and one hover, over the ONE
@@ -2957,7 +2957,8 @@ private:
     //     arm (a grayed row a consumed nothing) or the menu's dismissal
     //     while the menu is down; a list row's arm or the list's dismissal
     //     while the list is down; a standing edit abandoned by any press
-    //     outside its field; then, on the card, the field's focus, the
+    //     outside its field; then, on the card, the field's focus (a
+    //     double press on a standing edit its word select), the
     //     chooser's open, the palette menu button's open (when painted
     //     live), a slider track's thumb seat-and-arm (the scrub's rule), the
     //     ring's or the triangle's arm, OLD's revert, or a push button's arm
@@ -2979,7 +2980,8 @@ private:
     // beside close_picker and clear_player_scrub_drag, for GuiPrompt::
     // request_close and main.cpp's pointer-leave hook.)
     bool color_picker_active() const { return app.color_picker.active; }
-    void color_picker_press(int x, int y, GuiInputState mods);
+    void color_picker_press(int x, int y, GuiInputState mods,
+                            const DoubleClickCandidate& dc_at_press);
     void color_picker_motion(int x, int y, GuiInputState mods);
     void color_picker_release(int x, int y);
     bool route_color_picker_key(GuiKey key, GuiInputState mods);
@@ -3054,11 +3056,12 @@ private:
     // and it covers every roster button, toggle or not. NOT IN ITS SCOPE: the
     // render player's hot button (update_modal_dialog_hover, set_player_hot)
     // and the menu row, which has no hot face.
+    // THE LIFT'S OWN PIXEL IS NOT KEPT (2026-10-08): the anchor is the
+    // hover's, so the hook carries no coordinates and the latch none of
+    // the contact's.
     struct PenHotLatch {
         bool armed    = false;
         bool anchored = false;  // set by the first hover report after the arm
-        int  lift_x   = 0;      // the lift's pixel, as the hook reports it
-        int  lift_y   = 0;
         int  x        = 0;      // the anchor: the first hover report's pixel
         int  y        = 0;
     };
