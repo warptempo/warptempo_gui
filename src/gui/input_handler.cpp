@@ -3411,6 +3411,14 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // list out from under the arm the lift re-hits. Its rank against the
     // editor and loading tests below is free (all three refuse).
     if (any_pointer_gesture_active(app)) return -1;
+    // A SCROLLING POPUP LIST'S WHEEL (2026-10-08; render.h's popup scroll
+    // block) — context 6, kPopupWheelRows a notch — over the published box
+    // of a list that is down and scrolls: the choice editor's list or the
+    // color picker's element list or palette menu. Ranked above the two
+    // swallows below (the picker's and the dialog editor's), whose surfaces
+    // these lists float over; a list that shows every row takes no wheel and
+    // falls to them.
+    if (popup_list_wheel_hit(x, y) != 0) return 6;
     // THE FOLDER OVERLAY'S WHEEL (2026-08-28): live over the BAND alone —
     // context 4, the list's one-row-per-detent scroll — and swallowed
     // everywhere else, the veil's own answer for the wheel under the player
@@ -3495,6 +3503,22 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     return 0;
 }
 
+int GuiInputHandler::popup_list_wheel_hit(int x, int y) const {
+    if (app.settings_choice_live() && app.settings_choice.list_open &&
+        modal_dialog_stash_current() &&
+        app.modal_dialog.combo_list_bar.present &&
+        rect_contains(app.modal_dialog.combo_list, x, y))
+        return 1;
+    const AppState::ColorPicker& cp = app.color_picker;
+    const AppState::ColorPicker::Stash& st = cp.stash;
+    if (!cp.active || !st.valid || st.session != cp.session) return 0;
+    if (cp.chooser_open && st.list_bar.present && rect_contains(st.list, x, y))
+        return 2;
+    if (cp.menu_open && st.menu_bar.present && rect_contains(st.menu, x, y))
+        return 3;
+    return 0;
+}
+
 // Coalesced wheel entry point. The platform delivers one of these per
 // pointer frame carrying the net detent count (>= 1), instead of pumping a
 // WheelUp/WheelDown through on_button_press once per detent. The gating —
@@ -3541,6 +3565,38 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
             viewport.invalidate_rect(folder_overlay::surface_rect(app));
         }
         return;
+    }
+    // ctx 6 — A SCROLLING POPUP LIST (2026-10-08; render.h's popup scroll
+    // block): the PLAIN wheel scrolls the list under the pointer
+    // kPopupWheelRows rows a notch, down the later rows, against its
+    // published bar; every MODIFIED wheel is a swallowed no-op, the
+    // overlay's rule.
+    if (ctx == 6) {
+        if (mods.ctrl || mods.shift || mods.alt) return;
+        const int rows = (dir == GuiMouseButton::WheelDown ? count : -count) *
+                         kPopupWheelRows;
+        switch (popup_list_wheel_hit(x, y)) {
+            case 1:
+                if (popup_scroll_wheel_rows(app.settings_choice.list_scroll,
+                                            app.modal_dialog.combo_list_bar,
+                                            rows))
+                    viewport.invalidate_modal_dialog_area();
+                return;
+            case 2:
+                if (popup_scroll_wheel_rows(app.color_picker.chooser_scroll,
+                                            app.color_picker.stash.list_bar,
+                                            rows))
+                    color_picker.damage_card();
+                return;
+            case 3:
+                if (popup_scroll_wheel_rows(app.color_picker.menu_scroll,
+                                            app.color_picker.stash.menu_bar,
+                                            rows))
+                    color_picker.damage_card();
+                return;
+            default:
+                return;
+        }
     }
     // ctx 5 — A FLAG CELL (architect 2026-09-14): the PLAIN wheel selects the
     // flag under the pointer and steps that cell (run_flag_cell_wheel); every

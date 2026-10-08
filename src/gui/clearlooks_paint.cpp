@@ -668,6 +668,22 @@ void paint_cl_ramp(cairo_t* cr, const GuiRect& r, GuiColor top,
     }
 }
 
+void paint_cl_ramp_across(cairo_t* cr, const GuiRect& r, GuiColor left,
+                          GuiColor right) {
+    if (r.w <= 0 || r.h <= 0) return;
+    for (int i = 0; i < r.w; ++i) {
+        const double t = r.w > 1 ? static_cast<double>(i) / (r.w - 1) : 0.0;
+        const auto level = [t](double s, double e) {
+            return std::clamp(std::nearbyint((s + (e - s) * t) * 255.0), 0.0,
+                              255.0) / 255.0;
+        };
+        paint_cell_rect(cr, GuiRect{r.x + i, r.y, 1, r.h},
+                        GuiColor{level(left.r, right.r),
+                                 level(left.g, right.g),
+                                 level(left.b, right.b)});
+    }
+}
+
 void paint_cl_caption_band(cairo_t* cr, const GuiRect& lane, bool focused) {
     const int H = live_chrome_spec().caption_height_px;
     const auto rows = [&](int a, int b) {     // W rows [a, b) of the band
@@ -1018,32 +1034,55 @@ void normal_arrow_path(cairo_t* cr, int box_w, double s) {
 
 } // namespace
 
-void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
-                      bool pressed) {
+namespace {
+
+// ONE CAP, IN EITHER AXIS (the trim caps' left and right, the popup bar's up
+// and down — the rules at paint_cl_stepper and paint_cl_stepper_v): the ring's
+// ramp runs down a horizontal bar's cap and across a vertical bar's, its
+// outer corners the bar's ends, its inner edge where it meets the body.
+enum class CapDir { Left, Right, Up, Down };
+void paint_cl_cap(cairo_t* cr, const GuiRect& b, CapDir dir, bool pressed) {
     if (b.w <= 0 || b.h <= 0) return;
     const GuiPalette& pal = palette();
     const int    u   = relief_line_px();
     const double du  = u;
     const double rad = std::min<double>(scaled_px(live_chrome_spec().corner_radius_px),
                                         std::min(b.w, b.h) / 2.0);
-    const unsigned corners = points_left ? (kTL | kBL) : (kTR | kBR);
+    const bool across = dir == CapDir::Left || dir == CapDir::Right;
+    unsigned corners = 0;
+    switch (dir) {
+        case CapDir::Left:  corners = kTL | kBL; break;
+        case CapDir::Right: corners = kTR | kBR; break;
+        case CapDir::Up:    corners = kTL | kTR; break;
+        case CapDir::Down:  corners = kBL | kBR; break;
+    }
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
     // THE RING, the box inside its outer rounded path: the one ramp from the
-    // bar's light tone (row 0) to its dark tone (row r) over the first
-    // kClCapRampPx rows, then the dark tone flat to the bottom row (the
-    // body's dark line continued) — the turn ends inside the corner's arc,
-    // so the straight outer column is one tone (the step-j ruling at
-    // kClCapRampPx). The clip's arcs are the renderer's antialiasing.
+    // bar's light tone to its dark tone over the first kClCapRampPx rows (a
+    // horizontal bar's cap) or columns (a vertical bar's), then the dark
+    // tone flat to the far side (the body's dark line continued) — the turn
+    // ends inside the corner's arc, so the straight outer side is one tone
+    // (the step-j ruling at kClCapRampPx). The clip's arcs are the
+    // renderer's antialiasing.
     cairo_save(cr);
     rounded_path(cr, b.x, b.y, b.w, b.h, rad, corners);
     cairo_clip(cr);
-    const int ramp_rows = std::min(scaled_px(kClCapRampPx) + 1, b.h);
-    paint_cl_ramp(cr, GuiRect{b.x, b.y, b.w, ramp_rows},
-                  pal.cl_separator_light, pal.cl_separator_dark);
-    if (ramp_rows < b.h)
-        paint_cell_rect(cr, GuiRect{b.x, b.y + ramp_rows, b.w, b.h - ramp_rows},
-                        pal.cl_separator_dark);
+    if (across) {
+        const int ramp_rows = std::min(scaled_px(kClCapRampPx) + 1, b.h);
+        paint_cl_ramp(cr, GuiRect{b.x, b.y, b.w, ramp_rows},
+                      pal.cl_separator_light, pal.cl_separator_dark);
+        if (ramp_rows < b.h)
+            paint_cell_rect(cr, GuiRect{b.x, b.y + ramp_rows, b.w, b.h - ramp_rows},
+                            pal.cl_separator_dark);
+    } else {
+        const int ramp_cols = std::min(scaled_px(kClCapRampPx) + 1, b.w);
+        paint_cl_ramp_across(cr, GuiRect{b.x, b.y, ramp_cols, b.h},
+                             pal.cl_separator_light, pal.cl_separator_dark);
+        if (ramp_cols < b.w)
+            paint_cell_rect(cr, GuiRect{b.x + ramp_cols, b.y, b.w - ramp_cols, b.h},
+                            pal.cl_separator_dark);
+    }
     cairo_restore(cr);
     // THE FACE, one W in, its rounded corners concentric with the ring's:
     // the ground at rest, bg[ACTIVE] pressed.
@@ -1054,21 +1093,78 @@ void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
     paint_cell_rect(cr, GuiRect{b.x + u, b.y + u, b.w - 2 * u, b.h - 2 * u},
                     pressed ? pal.cl_stepper_pressed_face : pal.ground);
     cairo_restore(cr);
-    // THE INNER EDGE: one W of the dark tone down the column where the cap
-    // meets the body, the lane's whole height (the begin cap's right column,
-    // the end cap's left).
-    paint_cell_rect(cr, GuiRect{points_left ? b.x + b.w - u : b.x, b.y, u, b.h},
-                    pal.cl_separator_dark);
+    // THE INNER EDGE: one W of the dark tone where the cap meets the body,
+    // the bar's whole thickness (the begin cap's right column, the end cap's
+    // left; the up stepper's bottom row, the down stepper's top).
+    GuiRect edge{0, 0, 0, 0};
+    switch (dir) {
+        case CapDir::Left:  edge = GuiRect{b.x + b.w - u, b.y, u, b.h}; break;
+        case CapDir::Right: edge = GuiRect{b.x, b.y, u, b.h}; break;
+        case CapDir::Up:    edge = GuiRect{b.x, b.y + b.h - u, b.w, u}; break;
+        case CapDir::Down:  edge = GuiRect{b.x, b.y, b.w, u}; break;
+    }
+    paint_cell_rect(cr, edge, pal.cl_separator_dark);
     // THE ARROW, centred on the box, the engine's rotation for its
-    // direction.
+    // direction (the path points down).
+    double turn = 0.0;
+    switch (dir) {
+        case CapDir::Left:  turn = M_PI_2; break;
+        case CapDir::Right: turn = -M_PI_2; break;
+        case CapDir::Up:    turn = M_PI; break;
+        case CapDir::Down:  turn = 0.0; break;
+    }
     const double s = static_cast<double>(scaled_px(100)) / 100.0;
     cairo_save(cr);
     cairo_translate(cr, b.x + b.w / 2.0, b.y + b.h / 2.0);
-    cairo_rotate(cr, points_left ? M_PI_2 : -M_PI_2);
+    cairo_rotate(cr, turn);
     normal_arrow_path(cr, kTrimLaneHeightPx / 2, s);
     set_palette_source(cr, pal.cl_stepper_arrow);
     cairo_fill(cr);
     cairo_restore(cr);
+    cairo_restore(cr);
+}
+
+} // namespace
+
+void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
+                      bool pressed) {
+    paint_cl_cap(cr, b, points_left ? CapDir::Left : CapDir::Right, pressed);
+}
+
+void paint_cl_stepper_v(cairo_t* cr, const GuiRect& b, bool points_up,
+                        bool pressed) {
+    paint_cl_cap(cr, b, points_up ? CapDir::Up : CapDir::Down, pressed);
+}
+
+void paint_cl_scroll_trough_v(cairo_t* cr, const GuiRect& bar) {
+    if (bar.w <= 0 || bar.h <= 0) return;
+    const int u = relief_line_px();
+    const GuiPalette& pal = palette();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, bar, pal.cl_trough_fill);
+    // The shadow's two graded columns (W columns 1 and 2), the one ramp rule
+    // turned.
+    paint_cl_ramp_across(cr, GuiRect{bar.x + u, bar.y,
+                                     at(bar.x, 3) - (bar.x + u), bar.h},
+                         pal.cl_trough_shadow_0, pal.cl_trough_shadow_1);
+    paint_cell_rect(cr, GuiRect{bar.x, bar.y, u, bar.h}, pal.cl_trough_border);
+    paint_cell_rect(cr, GuiRect{bar.x + bar.w - u, bar.y, u, bar.h},
+                    pal.cl_trough_border);
+    cairo_restore(cr);
+}
+
+void paint_cl_slider_v(cairo_t* cr, const GuiRect& body) {
+    if (body.w <= 0 || body.h <= 0) return;
+    const GuiPalette& pal = palette();
+    const int u = relief_line_px();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, body, pal.ground);
+    paint_cell_rect(cr, GuiRect{body.x, body.y, u, body.h},
+                    pal.cl_separator_light);
+    paint_cell_rect(cr, GuiRect{body.x + body.w - u, body.y, u, body.h},
+                    pal.cl_separator_dark);
     cairo_restore(cr);
 }
 

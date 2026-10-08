@@ -6287,6 +6287,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.combo      = GuiRect{0, 0, 0, 0};
     dlg.combo_list = GuiRect{0, 0, 0, 0};
     dlg.combo_list_items.clear();
+    dlg.combo_list_bar = PopupScrollBar{};
     dlg.buttons.clear();
     app.dialog_editor_text = AppState::DialogEditorText{};
 
@@ -7746,28 +7747,31 @@ static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
 // THE COMBO'S LIST — ONE PAINTER, TWO READERS (2026-10-07 evening, lifted
 // from the picker's chooser for the settings editor's choice editor, its
 // second reader): the dropdown's box (paint_dropdown's composition — GtkMenu
-// under clearlooks, the popup's Menu face under win2000) at `box`, then
-// `count` rows at combo_list_item (color_picker.h), each LIT — the selected
-// pair, GtkMenu's prelight under clearlooks — when it is the pressed row or
-// the hovered one, its label at the popup's left pad. Every row is live (no
-// grayed row: both lists' domains are wholly choosable).
+// under clearlooks, the popup's Menu face under win2000) at the placed box,
+// then the SHOWN rows at combo_list_item (color_picker.h; the popup lists'
+// scroll, render.h's popup scroll block), each LIT — the selected pair,
+// GtkMenu's prelight under clearlooks — when it is the pressed row or the
+// hovered one, its label at the popup's left pad; then the scroll bar when
+// it stands. Every row is live (no grayed row: both lists' domains are
+// wholly choosable).
 void GuiPaintHandler::paint_combo_list(
-        cairo_t* cr, const GuiFont& font, const GuiRect& box, bool upward,
-        int count, int pressed, int hover,
+        cairo_t* cr, const GuiFont& font, const color_picker::ComboList& list,
+        int pressed, int hover, PopupScrollPart held,
         const char* (*label_of)(const AppState&, int)) {
     const bool cl =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
-    if (cl) paint_cl_menu(cr, box, upward);
-    else    paint_popup_chrome(cr, box, PopupFace::Menu);
+    if (cl) paint_cl_menu(cr, list.box, list.upward);
+    else    paint_popup_chrome(cr, list.box, PopupFace::Menu);
     const int pad_l = scaled_px(kPopupPadXPx);
-    for (int i = 0; i < count; ++i) {
-        const GuiRect item = color_picker::combo_list_item(box, i, upward);
+    for (int i = 0; i < list.count; ++i) {
+        const GuiRect item = color_picker::combo_list_item(list, i);
+        if (item.w <= 0 || item.h <= 0) continue;   // scrolled out of view
         const bool lit = pressed == i || hover == i;
         if (lit) {
             if (cl) paint_cl_menu_item(cr, item);
             else    paint_cell_rect(cr, item, palette().selected_fill);
         }
-        show_row_text(cr, font, box.x + pad_l,
+        show_row_text(cr, font, list.box.x + pad_l,
                       redesign_baseline(font, item.y, item.h),
                       label_of(app, i),
                       cl ? (lit ? palette().cl_menuitem_text
@@ -7775,6 +7779,7 @@ void GuiPaintHandler::paint_combo_list(
                          : (lit ? palette().selected_text
                                 : palette().label));
     }
+    paint_popup_scroll_bar(cr, list.bar, held);
 }
 
 // THE SETTINGS EDITOR'S CHOICE COMBO (the design at GuiSettingsEditor's
@@ -7784,9 +7789,12 @@ void GuiPaintHandler::paint_combo_list(
 // in the row's cell (paint_modal_dialog's caller says so) — showing the
 // shown choice, its button pushed while the list is down. No hover face on
 // the combo (the picker's chooser takes none). The list, when down, is
-// paint_combo_list's at combo_list_box UPWARD, the shown row seeded lit at
-// the open and the hover following the pointer (the chooser's rule). Both
-// rects publish into the modal stash, the press road's only geometry.
+// paint_combo_list's at combo_list — standing on the combo's head, the row
+// being the window's foot, and scrolling by the popup lists' rule — the
+// shown row seeded lit at the open and the hover following the pointer (the
+// chooser's rule). The combo, the list, its rows (the zero rect for a row
+// scrolled out of view) and its bar publish into the modal stash, the press
+// road's only geometry.
 void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
                                             const GuiRect& combo) {
     const AppState::SettingsChoice& ch = app.settings_choice;
@@ -7797,17 +7805,18 @@ void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
     dlg.combo = combo;
     if (!ch.list_open) return;
     const int n = app.settings_choice_count();
-    const GuiRect box = color_picker::combo_list_box(combo, n, /*upward=*/true);
-    paint_combo_list(cr, font, box, /*upward=*/true, n, ch.list_pressed,
-                     ch.list_hover,
+    const color_picker::ComboList list =
+        color_picker::combo_list(combo, n, app.height, ch.list_scroll.top);
+    paint_combo_list(cr, font, list, ch.list_pressed, ch.list_hover,
+                     ch.list_scroll.held,
                      [](const AppState& a, int i) {
                          return a.settings_choice_label(i);
                      });
-    dlg.combo_list = box;
+    dlg.combo_list = list.box;
+    dlg.combo_list_bar = list.bar;
     dlg.combo_list_items.clear();
     for (int i = 0; i < n; ++i)
-        dlg.combo_list_items.push_back(
-            color_picker::combo_list_item(box, i, /*upward=*/true));
+        dlg.combo_list_items.push_back(color_picker::combo_list_item(list, i));
 }
 
 void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
@@ -8057,43 +8066,54 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
     // the chooser.
     cp.stash.list = GuiRect{0, 0, 0, 0};
     cp.stash.list_items = {};
+    cp.stash.list_bar = PopupScrollBar{};
     if (cp.chooser_open) {
         const std::size_t count = color_picker::element_count();
-        paint_combo_list(cr, font, L.list, /*upward=*/false,
-                         static_cast<int>(count),
-                         cp.chooser_pressed, cp.chooser_hover,
+        paint_combo_list(cr, font, L.list, cp.chooser_pressed,
+                         cp.chooser_hover, cp.chooser_scroll.held,
                          [](const AppState&, int i) {
                              return color_picker::element_display_name(
                                  static_cast<std::size_t>(i));
                          });
         for (std::size_t i = 0; i < count; ++i)
             cp.stash.list_items[i] = L.list_items[i];
-        cp.stash.list = L.list;
+        cp.stash.list = L.list.box;
+        cp.stash.list_bar = L.list.bar;
     }
 
     // THE PALETTE MENU, when down: the same box and THE ROWS THE LAYOUT
-    // PLACED (the acts and the names that fit whole — color_picker.h's THE
-    // PALETTE MENU, its bound), its one separator the dropdown's (etched and
-    // inset under win2000, GtkMenu's one row under clearlooks), each act's
-    // enabled bit asked once here (palette_act_enabled) and published with
-    // its row; a grayed row wears no lit face and its label the emboss
-    // (paint_dropdown's rules).
+    // SHOWS (the scroll's block — color_picker.h's THE PALETTE MENU; the
+    // popup lists' scroll, render.h), its one separator the dropdown's
+    // (etched and inset under win2000, GtkMenu's one row under clearlooks)
+    // where it is in view, each act's enabled bit asked once here
+    // (palette_act_enabled) and published with its row; a grayed row wears
+    // no lit face and its label the emboss (paint_dropdown's rules); then the
+    // scroll bar when it stands. EVERY ROW IS PUBLISHED, a row scrolled out
+    // of view with the zero rect, so the lit and pressed indexes are the
+    // menu's own.
     cp.stash.menu = GuiRect{0, 0, 0, 0};
     cp.stash.menu_rows.clear();
+    cp.stash.menu_bar = PopupScrollBar{};
     if (cp.menu_open) {
         const std::vector<color_picker::PaletteMenuRow>& rows = L.menu_rows;
         assert(rows.size() == L.menu_items.size());
         if (cl) paint_cl_menu(cr, L.menu, /*upward=*/L.menu_upward);
         else    paint_popup_chrome(cr, L.menu, PopupFace::Menu);
-        if (cl) {
-            paint_cl_menu_separator(cr, L.menu.x,
-                                    L.menu_sep_y + popup_sep_margin_y_px(),
-                                    L.menu.w);
-        } else {
-            const int sep_inset = scaled_px(kPopupSepInsetPx);
-            paint_relief_etched_hline(cr, L.menu.x + sep_inset,
-                                      L.menu_sep_y + popup_sep_margin_y_px(),
-                                      L.menu.w - 2 * sep_inset);
+        if (L.menu_sep_y >= 0) {
+            const int sep_r = L.menu_bar.present ? L.menu_bar.bar.x
+                                                 : L.menu.x + L.menu.w;
+            if (cl) {
+                paint_cl_menu_separator(cr, L.menu.x,
+                                        L.menu_sep_y + popup_sep_margin_y_px(),
+                                        sep_r - L.menu.x);
+            } else {
+                // Inset from the box's left and from its right edge — the
+                // bar's left edge while the bar stands.
+                const int sep_inset = scaled_px(kPopupSepInsetPx);
+                paint_relief_etched_hline(cr, L.menu.x + sep_inset,
+                                          L.menu_sep_y + popup_sep_margin_y_px(),
+                                          sep_r - L.menu.x - 2 * sep_inset);
+            }
         }
         const int pad_l = scaled_px(kPopupPadXPx);
         for (std::size_t i = 0; i < rows.size(); ++i) {
@@ -8101,24 +8121,29 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
             const GuiRect& item = L.menu_items[i];
             const bool enabled =
                 !row.is_act || color_picker::palette_act_enabled(app, row.act);
+            const bool shown = item.w > 0 && item.h > 0;
             const bool lit = enabled && (cp.menu_pressed == static_cast<int>(i) ||
                                          cp.menu_hover == static_cast<int>(i));
-            if (lit) {
-                if (cl) paint_cl_menu_item(cr, item);
-                else    paint_cell_rect(cr, item, palette().selected_fill);
+            if (shown) {
+                if (lit) {
+                    if (cl) paint_cl_menu_item(cr, item);
+                    else    paint_cell_rect(cr, item, palette().selected_fill);
+                }
+                const std::string label =
+                    row.is_act
+                        ? std::string(color_picker::palette_act_label(row.act))
+                        : color_picker::palette_display_name(row.name);
+                const double base = redesign_baseline(font, item.y, item.h);
+                if (enabled)
+                    show_row_text(cr, font, L.menu.x + pad_l, base, label,
+                                  cl ? (lit ? palette().cl_menuitem_text
+                                            : palette().cl_menu_text)
+                                     : (lit ? palette().selected_text
+                                            : palette().label));
+                else
+                    show_row_text_embossed(cr, font, L.menu.x + pad_l, base,
+                                           label);
             }
-            const std::string label =
-                row.is_act ? std::string(color_picker::palette_act_label(row.act))
-                           : color_picker::palette_display_name(row.name);
-            const double base = redesign_baseline(font, item.y, item.h);
-            if (enabled)
-                show_row_text(cr, font, L.menu.x + pad_l, base, label,
-                              cl ? (lit ? palette().cl_menuitem_text
-                                        : palette().cl_menu_text)
-                                 : (lit ? palette().selected_text
-                                        : palette().label));
-            else
-                show_row_text_embossed(cr, font, L.menu.x + pad_l, base, label);
             AppState::ColorPicker::MenuRowStash out;
             out.rect    = item;
             out.is_act  = row.is_act;
@@ -8127,7 +8152,9 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
             out.enabled = enabled;
             cp.stash.menu_rows.push_back(std::move(out));
         }
+        paint_popup_scroll_bar(cr, L.menu_bar, cp.menu_scroll.held);
         cp.stash.menu = L.menu;
+        cp.stash.menu_bar = L.menu_bar;
     }
 
     // THE PUBLICATION.

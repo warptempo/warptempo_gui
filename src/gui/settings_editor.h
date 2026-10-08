@@ -93,18 +93,24 @@ struct GuiInputHandler;
 //   * A PRESS ON THE COMBO DROPS ITS LIST UPWARD over the well (the row is
 //     the window's foot; Windows' combo and GTK's open above when no room
 //     lies below) — the picker list's painter and geometry
-//     (paint_combo_list, combo_list_box), as wide as the combo, the domain in
+//     (paint_combo_list, combo_list), as wide as the combo, the domain in
 //     its source's order, the shown row lit at the open and the hover then
 //     following the pointer (the picker's chooser's rule); the combo takes
 //     no hover face. The press gives the combo the focus back from a button.
+//     IT IS ONE OF THE THREE LIST POPUPS (render.h's popup scroll block, the
+//     rule's one owner, 2026-10-08): placed by the window's room and
+//     SCROLLING when its rows outgrow it, its scroll bar inside it at its
+//     right, the shown row scrolled into view at the open.
 //   * WHILE THE LIST IS DOWN IT OWNS THE POINTER (the dropdown's ONE PRESS,
-//     ONE ACT): a press on a row ARMS it and THE LIFT ON THAT ROW SELECTS AND
+//     ONE ACT): a press on its scroll bar scrolls (the scroll block's input),
+//     a press on a row ARMS it and THE LIFT ON THAT ROW SELECTS AND
 //     COMMITS — the act at the lift, as the picker's list and every menu row
 //     act — closing the editor as Enter does; a press anywhere else closes
 //     the list and is consumed, the combo standing.
 //   * KEYS, with the combo focused: Up / Down walk the shown value, list
 //     down or not (Windows' combo moves its selection without dropping), no
-//     wrap; Enter commits the shown value (the list closing with it); Esc
+//     wrap, a dropped list keeping the lit row in view; Enter commits the
+//     shown value (the list closing with it); Esc
 //     closes a dropped list, and a second Esc is the editor's own Esc. Tab
 //     closes the list and walks the ring as ever. NOTHING ELSE REACHES THE
 //     BUFFER: there is nothing to type, so no key edits the line, and the

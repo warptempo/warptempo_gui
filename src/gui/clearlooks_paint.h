@@ -76,6 +76,13 @@
 // never run between converted ends. Cannot fail.
 void paint_cl_ramp(cairo_t* cr, const GuiRect& r, GuiColor top,
                    GuiColor bottom);
+// THE SAME RAMP TURNED (2026-10-08, the popup lists' vertical scroll bar,
+// whose drawing is the trim lane's with the axes exchanged): `r` filled left
+// to right, device column i of r.w in round(left + (right − left)·i/(r.w − 1))
+// per channel, each column one opaque cell rect — rule 2 across instead of
+// down, nothing else changed.
+void paint_cl_ramp_across(cairo_t* cr, const GuiRect& r, GuiColor left,
+                          GuiColor right);
 
 // THE CAPTION'S BAND — metacity's `bevel_maximized` (focused, shades of
 // bg[SELECTED]) or `bevel_maximized_unfocused` (shades of bg[NORMAL]) on the
@@ -233,7 +240,7 @@ void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused,
 // capture 23-22-06), and the box's published rect, every hit rect, stays
 // where the menu row ends (paint_dropdown; the open and the close damage
 // the top strip, so that row is repainted with the box). An `upward` box —
-// a list standing on its combo's head (combo_list_box, color_picker.h) —
+// a list standing on its combo's head (combo_list, color_picker.h) —
 // carries the top line on its OWN first row instead (2026-10-08:
 // popup_border_top_px's rule; nothing above it is repainted with the box).
 // The items stand against the frame (x / ythickness 0) and a lit one covers
@@ -369,6 +376,42 @@ void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
 // spot[1] slider, its ring and its three grips retired with their twelve
 // generated tones the same day.)
 void paint_cl_slider(cairo_t* cr, const GuiRect& body);
+
+// THE POPUP LISTS' VERTICAL SCROLL BAR (architect 2026-10-08; the rule and
+// the geometry at render.h's popup scroll block, the dispatch
+// paint_popup_scroll_bar) — THE TRIM LANE'S BAR ABOVE WITH THE AXES
+// EXCHANGED, every tone the same role, the bar the base's 16 W wide. A
+// RECORDED DEPARTURE FROM GTK (architect 2026-10-08, on squeeze's Country
+// combo, tmp/Screenshot_2026-10-08_05-20-01.png): GtkComboBox's overflowing
+// popup scrolls with a scroll ARROW at its top and its bottom, which he
+// rejects — "I'd much rather have the scroll bar inside, and we can use the
+// canonical scroll bar" — so a Clearlooks list wears the scroll bar GTK's
+// own scrolled lists wear, inside its frame at its right
+// (docs/engineering/win2000_deviations.md).
+//   THE TROUGH (paint_cl_scroll_trough_v) on the bar `bar`: cl_trough_fill,
+//     its first and last COLUMNS the cl_trough_border, and right of the left
+//     border the shadow's two graded columns (W columns 1 and 2, the
+//     horizontal trough's two rows turned); no end rows, the steppers
+//     covering the bar's ends as GTK's do.
+//   THE STEPPERS (paint_cl_stepper_v) on the arrow boxes, the cap above
+//     turned: the ring the one ramp ACROSS from cl_separator_light (the
+//     slider's light column continued) to cl_separator_dark over the box's
+//     first kClCapRampPx COLUMNS, the dark tone flat to its right column;
+//     the OUTER corners rounded (the up stepper's top two, the down
+//     stepper's bottom two); the face the ground at rest and
+//     cl_stepper_pressed_face pressed (the capture 00-12-13's pressed
+//     stepper the law); the INNER EDGE one W of the dark tone along the row
+//     where the stepper meets the track (the up stepper's bottom row, the
+//     down stepper's top); the engine's chevron pointing up and down. No
+//     hover face.
+//   THE SLIDER (paint_cl_slider_v) on the thumb `body`: THE PRODUCT'S OWN
+//     LIGHT SLIDER turned (paint_cl_slider's ruling) — the ground, one W of
+//     cl_separator_light down its LEFT column and one of cl_separator_dark
+//     down its RIGHT; no grips, no ring, no end rows.
+void paint_cl_scroll_trough_v(cairo_t* cr, const GuiRect& bar);
+void paint_cl_stepper_v(cairo_t* cr, const GuiRect& b, bool points_up,
+                        bool pressed);
+void paint_cl_slider_v(cairo_t* cr, const GuiRect& body);
 
 // THE WELL'S FRAME — GtkScrolledWindow's shadow IN under GUMMY
 // (clearlooks_style_draw_shadow's "scrolled_window" arm, P2's list frame:

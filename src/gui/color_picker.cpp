@@ -334,22 +334,30 @@ GuiRect combo_drop_button(const GuiRect& r) {
 // outside every rect the box damages and was clipped away. So the upward box
 // is one line taller and its rows start below that line
 // (popup_border_top_px(upward), render.h), under win2000 nothing changing.
-GuiRect combo_list_box(const GuiRect& combo, int count, bool upward) {
-    const int h = count * popup_item_h_px() + 2 * popup_item_margin_y_px() +
-                  popup_border_top_px(upward) + popup_border_px();
-    const int y = upward ? combo.y - h : combo.y + combo.h;
-    return GuiRect{combo.x, y, combo.w, h};
+//
+// THE SIDE AND THE SCROLL ARE THE POPUP LISTS' (render.h's popup scroll
+// block, 2026-10-08): place_popup_list picks the side and the shown count,
+// and the bar stands inside the box at its right — the box keeping the
+// combo's width (the flush ruling above), the rows ending at the bar.
+ComboList combo_list(const GuiRect& combo, int count, int window_h, int top) {
+    ComboList l;
+    const PopupListPlacement p =
+        place_popup_list(combo, window_h, count, count * popup_item_h_px());
+    l.box    = GuiRect{combo.x, p.y, combo.w, p.h};
+    l.upward = p.upward;
+    l.count  = count;
+    l.bar    = popup_scroll_bar(l.box, p.upward, count, p.visible, top);
+    return l;
 }
 
-GuiRect combo_list_item(const GuiRect& box, int i, bool upward) {
-    const int side_b = popup_is_gtk_menu() ? 0 : popup_border_px();
-    const int margin_x = live_chrome_spec().popup_margin_px;
-    const int inset = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
-    const int item_h = popup_item_h_px();
-    return GuiRect{box.x + side_b + inset,
-                   box.y + popup_border_top_px(upward) +
-                       popup_item_margin_y_px() + i * item_h,
-                   box.w - 2 * (side_b + inset), item_h};
+GuiRect combo_list_item(const ComboList& l, int i) {
+    if (i < l.bar.top || i >= l.bar.top + l.bar.visible || i >= l.count)
+        return GuiRect{0, 0, 0, 0};
+    return popup_item_rect(l.box,
+                           l.box.y + popup_border_top_px(l.upward) +
+                               popup_item_margin_y_px() +
+                               (i - l.bar.top) * popup_item_h_px(),
+                           l.bar.present);
 }
 
 Layout layout(const AppState& app, const GuiFont& font) {
@@ -459,74 +467,38 @@ Layout layout(const AppState& app, const GuiFont& font) {
     l.field_inner = GuiRect{l.field.x + lw, l.field.y + lw, l.field.w - 2 * lw,
                             l.field.h - 2 * lw};
 
-    // THE LIST, when down: the combo's list (combo_list_box, the dropdown's
-    // own arithmetic) under the chooser, flush, the chooser's width.
+    // THE LIST, when down: the combo's list (combo_list, the popup lists'
+    // placement and scroll) from the chooser, the chooser's width.
     if (app.color_picker.chooser_open) {
         const int count = static_cast<int>(element_count());
-        l.list = combo_list_box(l.chooser, count, /*upward=*/false);
+        l.list = combo_list(l.chooser, count, app.height,
+                            app.color_picker.chooser_scroll.top);
         for (int i = 0; i < count; ++i)
-            l.list_items[i] = combo_list_item(l.list, i, /*upward=*/false);
+            l.list_items[i] = combo_list_item(l.list, i);
     }
 
-    // THE PALETTE MENU'S BOUND (2026-10-07; the head's THE PALETTE MENU):
-    // the dropdown's own arithmetic — the frame, the item block's margins,
-    // the four acts and ONE separator block are the menu's fixed rows, and
-    // every name costs one item more. The room below the button runs to the
-    // window's foot and the room above it to the window's head; the names
-    // that fit whole in each are what that room leaves after the fixed rows,
-    // and THE CAPACITY is the roomier side's count — computed whether or not
-    // the menu is down, since Save As's refusal reads it with the menu
-    // closed (palette_menu_name_capacity, commit_name). Each side's fixed
-    // rows carry that placement's own top frame (popup_border_top_px: the
-    // standing menu, under clearlooks, its own top line — 2026-10-08,
-    // combo_list_box's rule).
-    const bool gtk_menu   = popup_is_gtk_menu();
-    const int  border     = popup_border_px();
-    const int  side_b     = gtk_menu ? 0 : border;
-    const int  menu_item_h = popup_item_h_px();
-    const int  menu_mar   = popup_item_margin_y_px();
-    const auto menu_fixed_h = [&](bool upward) {
-        return kPaletteActCount * menu_item_h + popup_sep_block_px() +
-               2 * menu_mar + popup_border_top_px(upward) + border;
-    };
-    const int  room_below = app.height - (l.menu_button.y + l.menu_button.h);
-    const int  room_above = l.menu_button.y;
-    const auto names_in = [&](int room, bool upward) {
-        const int fixed = menu_fixed_h(upward);
-        return room > fixed ? (room - fixed) / menu_item_h : 0;
-    };
-    const int names_below = names_in(room_below, /*upward=*/false);
-    const int names_above = names_in(room_above, /*upward=*/true);
-    l.menu_name_capacity = std::max(names_below, names_above);
-
     // THE PALETTE MENU, when down: its rows (palette_menu_rows' order, the
-    // acts first), ONE separator block between the acts and the names, its
-    // width the widest painted row's label between the popup's two pads (or
-    // the button's, whichever is wider), at the button's left edge held
-    // inside the window across. DOWN, THE BOUND ABOVE: hung from the
-    // button's foot where every name fits below, else stood on the button's
-    // head where every name fits above, else on the roomier side (below on
-    // a tie) with the names CUT to that side's count — the acts and the
-    // separator always kept, the names' tail dropped. Only the placed rows
-    // are in menu_rows / menu_items, so the painter publishes no row the
-    // window does not show.
+    // acts first) with ONE separator block between the acts and the names —
+    // a scroll row of its own, so the menu has one scroll row more than it
+    // has rows — placed and scrolled by the popup lists' rule (render.h's
+    // popup scroll block): hung from the button's foot or standing on its
+    // head, the shown scroll rows [top, top + visible) laid from the item
+    // block's top. Its width is the widest row's label between the popup's
+    // two pads, plus the bar when it scrolls (kPopupPadXPx), or the
+    // button's, whichever is wider, at the button's left edge held inside
+    // the window across — measured over every row, so a scroll never
+    // changes it. Every row is in menu_rows; a row scrolled out of view
+    // carries the zero rect, so the painter publishes no row the window does
+    // not show.
     if (app.color_picker.menu_open) {
-        const int margin_x  = spec.popup_margin_px;
-        const int inset     = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
-        const int pad_x     = scaled_px(kPopupPadXPx);
+        const int pad_x       = scaled_px(kPopupPadXPx);
+        const int menu_item_h = popup_item_h_px();
         std::vector<PaletteMenuRow> rows = palette_menu_rows();
-        const int names = static_cast<int>(rows.size()) - kPaletteActCount;
-        bool below = true;
-        int  shown = names;
-        if (names <= names_below) {
-            below = true;
-        } else if (names <= names_above) {
-            below = false;
-        } else {
-            below = names_below >= names_above;
-            shown = below ? names_below : names_above;
-        }
-        rows.resize(static_cast<std::size_t>(kPaletteActCount + shown));
+        const int n     = static_cast<int>(rows.size());
+        const int total = n + 1;   // the separator's scroll row
+        const int content_h = n * menu_item_h + popup_sep_block_px();
+        const PopupListPlacement p =
+            place_popup_list(l.menu_button, app.height, total, content_h);
         double widest = 0.0;
         for (const PaletteMenuRow& r : rows) {
             const std::string label =
@@ -535,36 +507,36 @@ Layout layout(const AppState& app, const GuiFont& font) {
             widest = std::max(widest,
                               text_shape::shape_text_run(font, label).width_px);
         }
+        const int bar_w = p.scrolls ? popup_scroll_bar_w_px() : 0;
         const int w = std::min(app.width,
                                std::max(l.menu_button.w,
-                                        2 * pad_x + ceil_px(widest)));
-        const int h = menu_fixed_h(!below) + shown * menu_item_h;
+                                        2 * pad_x + ceil_px(widest) + bar_w));
         int mx = l.menu_button.x;
         if (mx + w > app.width) mx = app.width - w;
         if (mx < 0) mx = 0;
-        const int my = below ? l.menu_button.y + l.menu_button.h
-                             : l.menu_button.y - h;
-        l.menu = GuiRect{mx, my, w, h};
-        l.menu_upward = !below;
-        l.menu_items.clear();
-        int iy = my + popup_border_top_px(/*upward=*/!below) + menu_mar;
-        const auto place_row = [&] {
-            l.menu_items.push_back(GuiRect{mx + side_b + inset, iy,
-                                           w - 2 * (side_b + inset),
-                                           menu_item_h});
+        l.menu = GuiRect{mx, p.y, w, p.h};
+        l.menu_upward = p.upward;
+        l.menu_bar = popup_scroll_bar(l.menu, p.upward, total, p.visible,
+                                      app.color_picker.menu_scroll.top);
+        l.menu_items.assign(rows.size(), GuiRect{0, 0, 0, 0});
+        l.menu_sep_y = -1;
+        int iy = p.y + popup_border_top_px(p.upward) + popup_item_margin_y_px();
+        const int first = l.menu_bar.top;
+        for (int sr = first; sr < first + l.menu_bar.visible && sr < total;
+             ++sr) {
+            if (sr == kPaletteActCount) {
+                l.menu_sep_y = iy;   // the acts' foot: the separator
+                iy += popup_sep_block_px();
+                continue;
+            }
+            const int row = sr < kPaletteActCount ? sr : sr - 1;
+            l.menu_items[static_cast<std::size_t>(row)] =
+                popup_item_rect(l.menu, iy, l.menu_bar.present);
             iy += menu_item_h;
-        };
-        for (int i = 0; i < kPaletteActCount; ++i) place_row();
-        l.menu_sep_y = iy;   // the acts' foot: the separator
-        iy += popup_sep_block_px();
-        for (int i = 0; i < shown; ++i) place_row();
+        }
         l.menu_rows = std::move(rows);
     }
     return l;
-}
-
-int palette_menu_name_capacity(const AppState& app, const GuiFont& font) {
-    return layout(app, font).menu_name_capacity;
 }
 
 int slider_thumb_x(const GuiRect& track, int value, int max) {
@@ -914,6 +886,8 @@ void GuiColorPicker::open(int tap_x) {
     cp.menu_hover   = -1;
     cp.menu_pressed = -1;
     cp.menu_press_began_on_item = false;
+    cp.chooser_scroll = PopupScroll{};
+    cp.menu_scroll    = PopupScroll{};
     cp.name_ask = AppState::ColorPicker::NameAsk::None;
     cp.pending_delete.clear();
     cp.drag = AppState::ColorPicker::Drag{};
@@ -942,6 +916,8 @@ void GuiColorPicker::close() {
     cp.menu_hover   = -1;
     cp.menu_pressed = -1;
     cp.menu_press_began_on_item = false;
+    cp.chooser_scroll = PopupScroll{};
+    cp.menu_scroll    = PopupScroll{};
     cp.drag  = AppState::ColorPicker::Drag{};
     cp.stash = AppState::ColorPicker::Stash{};
     viewport.invalidate_all();
@@ -1222,13 +1198,6 @@ void GuiColorPicker::commit_name() {
         cp.name_ask = AppState::ColorPicker::NameAsk::None;
         damage_card();
     };
-    if (!rename &&
-        palette_names().size() >=
-            static_cast<std::size_t>(color_picker::palette_menu_name_capacity(
-                app, gui_font(GuiFace::Body)))) {
-        refuse("No room for another palette");   // whatever the name
-        return;
-    }
     if (!is_palette_name_spelling(name)) {
         refuse("Not a name");
         return;

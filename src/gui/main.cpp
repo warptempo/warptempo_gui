@@ -2008,6 +2008,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // AND THE COLOR PICKER'S GESTURE (2026-10-07): its slider or wheel
         // drag has already applied every step, so the drop loses nothing.
         input_handler.clear_color_picker_drag();
+        // AND THE POPUP LISTS' SCROLL HOLDS (2026-10-08): every row already
+        // scrolled, the held arrow's face and the thumb's drag dropped.
+        input_handler.clear_popup_scroll_holds();
         // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), this hook's hover
         // half: a pointer that has left rests on no card, so every card the
         // hover paused has its clock re-armed here (a card a press still holds

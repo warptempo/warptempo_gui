@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+namespace color_picker { struct ComboList; }
+
 class GuiWaveformWorker;
 struct GuiTargetRender;
 
@@ -951,9 +953,12 @@ private:
     void paint_settings_choice(cairo_t* cr, const GuiFont& font,
                                const GuiRect& combo);
     // THE COMBO'S LIST — one painter, two readers: the picker's chooser and
-    // the settings choice editor (the definition's head).
-    void paint_combo_list(cairo_t* cr, const GuiFont& font, const GuiRect& box,
-                          bool upward, int count, int pressed, int hover,
+    // the settings choice editor (the definition's head), its rows and its
+    // scroll bar as color_picker::combo_list placed them, `held` the bar's
+    // held part.
+    void paint_combo_list(cairo_t* cr, const GuiFont& font,
+                          const color_picker::ComboList& list, int pressed,
+                          int hover, PopupScrollPart held,
                           const char* (*label_of)(const AppState&, int));
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — full

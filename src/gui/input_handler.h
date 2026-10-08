@@ -1022,6 +1022,12 @@ struct GuiInputHandler {
     // completed-detent gate and the platform's per-frame sub-detent accumulator
     // probe both consult it so the two surfaces can never drift.
     int wheel_context(int x, int y) const;
+    // THE SCROLLING POPUP LIST UNDER (x, y), as published (render.h's popup
+    // scroll block): 1 the settings choice editor's list, 2 the color
+    // picker's element list, 3 its palette menu — each only while it is
+    // down and its bar stands — else 0. wheel_context's context 6 and
+    // on_wheel's arm both read it, so the two cannot disagree.
+    int popup_list_wheel_hit(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; the phone
@@ -1751,6 +1757,13 @@ struct GuiInputHandler {
     // THE COLOR PICKER'S GESTURE's hard end (2026-10-07), the same edge and
     // the same reason; its drag applied every step live, so nothing is lost.
     void clear_color_picker_drag();
+    // THE POPUP LISTS' SCROLL HOLDS' end (2026-10-08; render.h's popup scroll
+    // block): the held arrow's face and the thumb's drag of the choice
+    // editor's list, the picker's element list and its palette menu, dropped
+    // on the same three edges and at each hold's own lift
+    // (color_picker_release, finish_settings_choice_release) — every row
+    // already scrolled live, so nothing is lost; each box it frees damaged.
+    void clear_popup_scroll_holds();
     // THE NOTIFICATION CARDS' POINTER HALVES (2026-08-29; the rule is at
     // notifications.h). The CLAIM ranks above every veil in on_button_press:
     // a press on a published card is consumed whole, and since 2026-10-01
@@ -2746,15 +2759,18 @@ private:
     bool handle_settings_choice_key(GuiKey key, GuiInputState mods);
     // THE CHOICE EDITOR'S POINTER (input_pointer.cpp, the bodies beside the
     // color picker's; every target read from the modal stash as painted):
-    //   claim_settings_choice_press — a dropped list owns every press: a
+    //   claim_settings_choice_press — a dropped list owns every press: one
+    //     on its scroll bar is the bar's (render.h's popup scroll block), a
     //     plain left press on a row arms it, any other press closes the list,
     //     consumed; with the list closed, a plain left press on the combo
     //     takes the focus back and drops the list. False for every other
     //     press, which goes on to the dialog's own claims and its veil.
-    //   finish_settings_choice_release — the armed row's lift: on that row
-    //     it selects and commits (choice_commit), elsewhere it closes the
-    //     list. False when no row was armed.
-    //   settings_choice_motion — a dropped list's hover follows the pointer.
+    //   finish_settings_choice_release — a scroll hold's lift ends it,
+    //     selecting nothing; the armed row's lift: on that row it selects
+    //     and commits (choice_commit), elsewhere it closes the list. False
+    //     when neither stood.
+    //   settings_choice_motion — a scroll hold's carry (the thumb's drag),
+    //     else a dropped list's hover follows the pointer.
     bool claim_settings_choice_press(GuiMouseButton button, int x, int y,
                                      GuiInputState mods);
     bool finish_settings_choice_release(int x, int y);
@@ -2953,10 +2969,11 @@ private:
     // handle_color_picker_field_key, Tab doing nothing — the card has no
     // focus ring), and its one close body is close_color_picker (Close,
     // Esc, the close road's head). The press router's three bodies:
-    //   color_picker_press — the veil's left press: a palette menu row's
-    //     arm (a grayed row a consumed nothing) or the menu's dismissal
-    //     while the menu is down; a list row's arm or the list's dismissal
-    //     while the list is down; a standing edit abandoned by any press
+    //   color_picker_press — the veil's left press: the scroll bar's (an
+    //     arrow, a page, the thumb's drag — render.h's popup scroll block),
+    //     a palette menu row's arm (a grayed row a consumed nothing) or the
+    //     menu's dismissal while the menu is down; the bar's, a list row's
+    //     arm or the list's dismissal while the list is down; a standing edit abandoned by any press
     //     outside its field; then, on the card, the field's focus (a
     //     double press on a standing edit its word select), the
     //     chooser's open, the palette menu button's open (when painted
@@ -2967,11 +2984,13 @@ private:
     //     the veil hands it to the rows' own claim). Every target is read
     //     from the
     //     published stash, never derived live.
-    //   color_picker_motion — a live gesture's carry (the slider, the ring,
-    //     the triangle; the button lost ends it), else the list's and the
-    //     menu's hover, the dialog buttons' walk and the roster's.
-    //   color_picker_release — the gesture's end (already applied), a menu
-    //     row's act (GuiColorPicker's preset acts) or a list row's select,
+    //   color_picker_motion — a scroll hold's carry (the thumb's drag), a
+    //     live gesture's carry (the slider, the ring, the triangle; the
+    //     button lost ends it), else the list's and the menu's hover, the
+    //     dialog buttons' walk and the roster's.
+    //   color_picker_release — the gesture's end (already applied), a scroll
+    //     hold's end, a menu row's act (GuiColorPicker's preset acts) or a
+    //     list row's select,
     //     or the dialog buttons' shared dispatch (a roster arm's lift goes
     //     to finish_chrome_press_release instead, on_button_release's block).
     //   clear_color_picker_drag — the gesture's hard end (the pointer-leave

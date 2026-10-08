@@ -2862,7 +2862,11 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // outside-both-areas 0 that handle_wheel itself no-ops on — the gesture
     // navigates exactly the wheel's two surfaces. A refused frame navigates
     // nothing AND SEATS NOTHING.
-    if (wheel_context(f.x, f.y) <= 0) return;
+    // AND A SCROLLING POPUP LIST'S CONTEXT 6 TAKES NONE (2026-10-08): the
+    // list's scroll is a wheel act with no two-finger meaning, and the
+    // waveform behind the list is veiled (render.h's popup scroll block).
+    const int nav_ctx = wheel_context(f.x, f.y);
+    if (nav_ctx <= 0 || nav_ctx == 6) return;
     // (THE COLOR PICKER refuses the frame one line above, through the
     // wheel's context, which answers -1 under it, 2026-10-07: its veil
     // consumes every press off the card, and a pan is no exception.)
@@ -5193,6 +5197,38 @@ int color_picker_menu_hit(const AppState::ColorPicker::Stash& st, int x,
             return static_cast<int>(i);
     return -1;
 }
+// THE POPUP LISTS' SCROLL BAR UNDER THE POINTER (render.h's popup scroll
+// block, the rule's one owner; ONE BODY for the three lists): a press on the
+// PUBLISHED bar `bar` is the bar's whatever its modifiers — a plain one
+// scrolls a row (an arrow, held for its pressed face until the lift), a page
+// (the track) or starts the thumb's drag (the press's offset on the thumb
+// kept); a modified one is a consumed nothing. Returns whether the press was
+// on the bar; the caller damages the box.
+bool popup_scroll_press(PopupScroll& sc, const PopupScrollBar& bar, int x,
+                        int y, bool plain) {
+    if (!bar.present || !rect_contains(bar.bar, x, y)) return false;
+    if (!plain) return true;
+    const PopupScrollPart part = popup_scroll_hit(bar, x, y);
+    sc.top = popup_scroll_step(bar, part);
+    sc.held = PopupScrollPart::None;
+    if (part == PopupScrollPart::Up || part == PopupScrollPart::Down)
+        sc.held = part;
+    if (part == PopupScrollPart::Thumb) {
+        sc.held    = PopupScrollPart::Thumb;
+        sc.grab_dy = y - bar.thumb.y;
+    }
+    return true;
+}
+// The thumb drag's carry: the rows follow the thumb under the pointer's row
+// less the grab (popup_scroll_top_at_thumb on the published bar). Returns
+// whether the shown rows moved.
+bool popup_scroll_drag(PopupScroll& sc, const PopupScrollBar& bar, int y) {
+    if (sc.held != PopupScrollPart::Thumb) return false;
+    const int top = popup_scroll_top_at_thumb(bar, y - sc.grab_dy);
+    if (top == sc.top) return false;
+    sc.top = top;
+    return true;
+}
 // The wheel's circles as painted, in the layout shape the reads take.
 color_picker::Layout wheel_layout_of(const AppState::ColorPicker::Stash& st) {
     color_picker::Layout l;
@@ -5222,15 +5258,22 @@ void GuiInputHandler::set_color_picker_list_open(bool open) {
     // list's rect (the stash's, what has to be erased), on the open the
     // rect the next paint will give it (the layout's — the one live
     // derivation here, for DAMAGE alone, never for a hit).
+    // THE SCROLL STARTS AT THE HEAD, the shown element scrolled into view
+    // (render.h's popup scroll block: a combo's one exception) — the
+    // layout's shown count, derived here for that seat alone.
     if (!open) color_picker.damage_card();
     cp.chooser_open    = open;
     cp.chooser_hover   = open ? static_cast<int>(cp.element) : -1;
     cp.chooser_pressed = -1;
     cp.chooser_press_began_on_item = false;
+    cp.chooser_scroll  = PopupScroll{};
     if (open) {
         const color_picker::Layout l =
             color_picker::layout(app, gui_font(GuiFace::Body));
-        viewport.invalidate_rect(l.list);
+        cp.chooser_scroll.top = popup_scroll_reveal(
+            0, static_cast<int>(cp.element), l.list.bar.total,
+            l.list.bar.visible);
+        viewport.invalidate_rect(l.list.box);
         color_picker.damage_card();
     }
 }
@@ -5240,13 +5283,15 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
     if (cp.menu_open == open) return;
     // THE LIST'S DAMAGE RULE ONE SURFACE OVER (above), and THE LIT ROW
     // STARTS ON THE ACTIVE PRESET'S NAME (color_picker.h's THE PALETTE MENU:
-    // the chooser's hover seed), found among the rows the layout places
-    // (none lit when the window's bound cut it).
+    // the chooser's hover seed), found among the menu's rows — THE SCROLL
+    // AT THE HEAD, the acts in view (render.h's popup scroll block: the
+    // menu is no combo, so its lit name may lie below the shown rows).
     if (!open) color_picker.damage_card();
     cp.menu_open    = open;
     cp.menu_hover   = -1;
     cp.menu_pressed = -1;
     cp.menu_press_began_on_item = false;
+    cp.menu_scroll  = PopupScroll{};
     if (open) {
         const color_picker::Layout l =
             color_picker::layout(app, gui_font(GuiFace::Body));
@@ -5273,9 +5318,16 @@ void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods,
     // on a live row arms it for the lift, a press on a grayed row is a
     // consumed nothing with the menu standing (Windows' grayed menu item),
     // anywhere else closes the menu and is consumed.
+    const bool plain = !mods.ctrl && !mods.shift && !mods.alt;
     if (cp.menu_open) {
+        // ITS SCROLL BAR FIRST (render.h's popup scroll block): a press on
+        // the bar scrolls and keeps the menu down.
+        if (popup_scroll_press(cp.menu_scroll, st.menu_bar, x, y, plain)) {
+            color_picker.damage_card();
+            return;
+        }
         const int hit = color_picker_menu_hit(st, x, y);
-        if (hit >= 0 && !mods.ctrl && !mods.shift && !mods.alt) {
+        if (hit >= 0 && plain) {
             if (st.menu_rows[static_cast<std::size_t>(hit)].enabled) {
                 cp.menu_pressed = hit;
                 cp.menu_hover   = hit;
@@ -5291,8 +5343,12 @@ void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods,
     // for the lift, anywhere else closes the list and is consumed —
     // nothing underneath acts.
     if (cp.chooser_open) {
+        if (popup_scroll_press(cp.chooser_scroll, st.list_bar, x, y, plain)) {
+            color_picker.damage_card();
+            return;
+        }
         const int hit = color_picker_list_hit(st, x, y);
-        if (hit >= 0 && !mods.ctrl && !mods.shift && !mods.alt) {
+        if (hit >= 0 && plain) {
             cp.chooser_pressed = hit;
             cp.chooser_press_began_on_item = true;
             color_picker.damage_card();
@@ -5404,6 +5460,16 @@ void GuiInputHandler::color_picker_press(int x, int y, GuiInputState mods,
 
 void GuiInputHandler::color_picker_motion(int x, int y, GuiInputState mods) {
     AppState::ColorPicker& cp = app.color_picker;
+    // A HELD SCROLL PART owns the motion (render.h's popup scroll block): the
+    // thumb's drag carries the rows, a held arrow keeps its face to the
+    // lift; the button lost has already ended either (on_motion's head,
+    // clear_release_time_press_arms).
+    if (cp.menu_scroll.live() || cp.chooser_scroll.live()) {
+        if (popup_scroll_drag(cp.menu_scroll, cp.stash.menu_bar, y) ||
+            popup_scroll_drag(cp.chooser_scroll, cp.stash.list_bar, y))
+            color_picker.damage_card();
+        return;
+    }
     if (cp.drag.armed()) {
         if (!mods.primary_button_held) {
             clear_color_picker_drag();
@@ -5485,6 +5551,12 @@ void GuiInputHandler::color_picker_release(int x, int y) {
         cp.drag = AppState::ColorPicker::Drag{};
         return;
     }
+    // A SCROLL PART'S LIFT ends its hold and selects nothing (render.h's
+    // popup scroll block): the arrow's face comes up, the thumb's drag ends.
+    if (cp.menu_scroll.live() || cp.chooser_scroll.live()) {
+        clear_popup_scroll_holds();
+        return;
+    }
     if (cp.menu_open && cp.menu_press_began_on_item) {
         // THE MENU'S LIFT: the row under it as painted, when live, acts —
         // the menu closed first, so a Save As's field, a Delete's prompt or
@@ -5533,6 +5605,20 @@ void GuiInputHandler::clear_color_picker_drag() {
     cp.drag = AppState::ColorPicker::Drag{};
 }
 
+void GuiInputHandler::clear_popup_scroll_holds() {
+    AppState::ColorPicker& cp = app.color_picker;
+    if (cp.menu_scroll.live() || cp.chooser_scroll.live()) {
+        cp.menu_scroll.held    = PopupScrollPart::None;
+        cp.chooser_scroll.held = PopupScrollPart::None;
+        color_picker.damage_card();
+    }
+    PopupScroll& ls = app.settings_choice.list_scroll;
+    if (ls.live()) {
+        ls.held = PopupScrollPart::None;
+        viewport.invalidate_modal_dialog_area();
+    }
+}
+
 // -- THE SETTINGS CHOICE EDITOR'S POINTER BODIES (2026-10-07 evening; the
 //    contract at the declarations, input_handler.h; the design and the acts
 //    at GuiSettingsEditor, settings_editor.h) -----------------------------
@@ -5560,6 +5646,15 @@ bool GuiInputHandler::claim_settings_choice_press(GuiMouseButton button,
     // and no combo.
     const bool current = modal_dialog_stash_current();
     if (app.settings_choice.list_open) {
+        // ITS SCROLL BAR FIRST (render.h's popup scroll block), as painted:
+        // a press on it scrolls and keeps the list down.
+        if (current &&
+            popup_scroll_press(app.settings_choice.list_scroll,
+                               app.modal_dialog.combo_list_bar, x, y,
+                               plain_left)) {
+            viewport.invalidate_modal_dialog_area();
+            return true;
+        }
         const int hit = current ? settings_choice_list_hit(app.modal_dialog, x, y)
                                 : -1;
         if (plain_left && hit >= 0) settings_editor.choice_arm_row(hit);
@@ -5579,6 +5674,12 @@ bool GuiInputHandler::claim_settings_choice_press(GuiMouseButton button,
 bool GuiInputHandler::finish_settings_choice_release(int x, int y) {
     if (!app.settings_choice_live()) return false;
     const AppState::SettingsChoice& ch = app.settings_choice;
+    // A SCROLL PART'S LIFT ends its hold and selects nothing (render.h's
+    // popup scroll block).
+    if (ch.list_scroll.live()) {
+        clear_popup_scroll_holds();
+        return true;
+    }
     if (!ch.list_open || !ch.list_press_began_on_item) return false;
     const int hit = modal_dialog_stash_current()
                         ? settings_choice_list_hit(app.modal_dialog, x, y)
@@ -5590,6 +5691,14 @@ bool GuiInputHandler::finish_settings_choice_release(int x, int y) {
 
 void GuiInputHandler::settings_choice_motion(int x, int y) {
     if (!app.settings_choice_live() || !app.settings_choice.list_open) return;
+    // A HELD SCROLL PART owns the motion (the picker's rule, its button-lost
+    // end at on_motion's head).
+    if (app.settings_choice.list_scroll.live()) {
+        if (popup_scroll_drag(app.settings_choice.list_scroll,
+                              app.modal_dialog.combo_list_bar, y))
+            viewport.invalidate_modal_dialog_area();
+        return;
+    }
     settings_editor.choice_hover(
         modal_dialog_stash_current()
             ? settings_choice_list_hit(app.modal_dialog, x, y) : -1);
@@ -7889,16 +7998,20 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // ITS MEMBERSHIP IS any_pointer_gesture_active's, EXACTLY (re-grepped
 // 2026-09-16): the two lists must agree, because a caller's whole promise is
 // that what follows lands on a gesture-free state, and that predicate is what
-// "gesture-free" means to the keyboard, the wheel and the cursor. THE ELEVEN,
-// in this body's order: the editor text drag, the marker reposition drag, THE
-// VALUE DRAG (2026-09-10, the flag's vertical one), the
+// "gesture-free" means to the keyboard, the wheel and the cursor. THE
+// FIFTEEN, in this body's order: the editor text drag, the marker reposition
+// drag, THE VALUE DRAG (2026-09-10, the flag's vertical one), the
 // trim drag, the sweep (region_drag), the nav drag (scroll_drag),
-// the three pendings (marker press, trim, deferred click) and THE RENDER
+// the three pendings (marker press, trim, deferred click), THE RENDER
 // PLAYER'S TWO ARMS — the folder overlay's row press and the play-scrub's
 // marker drag, which joined this body 2026-08-28 through their own hard-end
-// clears. WHAT EACH LEAVES DIFFERS AND EACH ARM SAYS SO: the drags COMMIT what
-// stands, the pendings and the player's arms commit NOTHING (a force-end is
-// not a click — the standing abnormal-end rule).
+// clears — THE COLOR PICKER'S GESTURE, and THE THREE POPUP LISTS' SCROLL
+// HOLDS (2026-10-08: the choice editor's list, the picker's element list and
+// its palette menu, clear_popup_scroll_holds). WHAT EACH LEAVES DIFFERS AND
+// EACH ARM SAYS SO: the drags COMMIT what stands, the pendings and the
+// player's arms commit NOTHING (a force-end is not a click — the standing
+// abnormal-end rule), and the picker's gesture and the scroll holds have
+// applied every step live.
 // NO CALLER OWES THE CURSOR ANYTHING, and the three that used to are the reason
 // the model changed: every one of them does MORE after this returns — the two
 // prompt routes raise the unsaved-work box (which the zone map answers with the
@@ -8001,6 +8114,12 @@ void GuiInputHandler::finalize_active_drags() {
     // hook's caller does not, which is why the damage lives in the clears.
     clear_folder_overlay_press();
     clear_player_scrub_drag();
+    // THE COLOR PICKER'S GESTURE (its slider or wheel drag applied every step
+    // live) and THE POPUP LISTS' SCROLL HOLDS (2026-10-08: an arrow's face,
+    // the thumb's drag, every row already scrolled) end with nothing to
+    // commit.
+    clear_color_picker_drag();
+    clear_popup_scroll_holds();
     // A force-end is not a clean click sequence, so no candidate may survive to
     // pair with a later click (the standing rule at every non-release gesture
     // end) — and neither may the trim bar's press record, which would otherwise
@@ -10257,6 +10376,7 @@ void GuiInputHandler::clear_release_time_press_arms() {
     clear_folder_overlay_press();
     clear_player_scrub_drag();
     clear_color_picker_drag();
+    clear_popup_scroll_holds();
     if (app.chrome_press.kind == AppState::ChromePress::Kind::None &&
         app.modal_dialog_pressed < 0 &&
         app.dropdown.pressed_item < 0 &&

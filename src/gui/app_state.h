@@ -6521,9 +6521,13 @@ struct AppState {
         // derivation (ON SCREEN IS AS PAINTED; GuiSettingsEditor's head),
         // under the owner-tag doctrine above; the modal's damage covers the
         // published list (Viewport::invalidate_modal_dialog_area).
+        // The list's rows are by domain index, the zero rect for a row
+        // scrolled out of view, and its scroll bar is published with it
+        // (render.h's popup scroll block; absent while every row shows).
         GuiRect                        combo{0, 0, 0, 0};
         GuiRect                        combo_list{0, 0, 0, 0};
         std::vector<GuiRect>           combo_list_items;
+        PopupScrollBar                 combo_list_bar;
         std::vector<ModalDialogButton> buttons;
     };
     ModalDialogGeometry modal_dialog;
@@ -8549,7 +8553,9 @@ struct AppState {
     //   `shown`   the domain index the combo shows, which Up / Down and a
     //             list row move and Enter commits;
     //   the list's state — `list_open`, the hovered and pressed rows and the
-    //             press-began bit, the color picker's chooser's own four.
+    //             press-began bit, the color picker's chooser's own four —
+    //             and `list_scroll`, its scroll (render.h's popup scroll
+    //             block), reset with the list at each open.
     struct SettingsChoice {
         bool active       = false;
         int  item         = -1;
@@ -8558,6 +8564,7 @@ struct AppState {
         int  list_hover   = -1;
         int  list_pressed = -1;
         bool list_press_began_on_item = false;
+        PopupScroll list_scroll;
     };
     SettingsChoice settings_choice;
     bool settings_choice_live() const {
@@ -8677,9 +8684,13 @@ struct AppState {
     //              opening tap's x (a keyboard open has no tap: the right);
     //   the chooser's list state (`chooser_open`, the hovered, the pressed
     //              and the press-began bits — the menu-row popup's own road
-    //              one surface over);
+    //              one surface over — and `chooser_scroll`, its scroll,
+    //              render.h's popup scroll block);
     //   the palette menu's state (`menu_open` and its three bits, the same
-    //              road again — color_picker.h's THE PALETTE MENU);
+    //              road again — color_picker.h's THE PALETTE MENU — and
+    //              `menu_scroll`); the hovered and pressed rows of both are
+    //              INDEXES INTO THE WHOLE LIST (the element, the menu row),
+    //              never into the shown block, so a scroll moves no lit row;
     //   `field_editor`  THE CARD'S ONE TEXT FIELD'S EDITOR, a member of
     //              text_editor_session while it stands: Kind::PaletteHex
     //              for the hex field, Kind::PaletteName for THE NAME ASK,
@@ -8713,6 +8724,8 @@ struct AppState {
         int         menu_hover   = -1;
         int         menu_pressed = -1;
         bool        menu_press_began_on_item = false;
+        PopupScroll chooser_scroll;
+        PopupScroll menu_scroll;
         text_editor::State field_editor;
         // A PLAIN PRESS SEATED THE FIELD'S CARET (2026-10-08): set by
         // color_picker_press's caret arm, read and cleared by the release,
@@ -8765,9 +8778,12 @@ struct AppState {
             GuiRect  chooser{0, 0, 0, 0};      // the combo: a press toggles the list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
             // The list's rows, the chooser's most (the knob's two and the
-            // fifteen; color_picker::kMaxElementCount, asserted there).
+            // fifteen; color_picker::kMaxElementCount, asserted there), by
+            // element index — the zero rect for a row scrolled out of view —
+            // and its scroll bar (absent while every row shows).
             std::array<GuiRect, kGuiChromeLineCount + kGuiPaletteRoleCount>
                      list_items{};
+            PopupScrollBar list_bar;
             std::array<SliderStash, 6> sliders{};   // color_picker::kChannelCount (static_asserted there)
             GuiRect  field{0, 0, 0, 0};        // the one field's outer box
             GuiRect  field_inner{0, 0, 0, 0};  // its interior (the I-beam, the caret)
@@ -8776,7 +8792,10 @@ struct AppState {
             GuiRect  menu_button{0, 0, 0, 0};  // a press drops the menu
             bool     menu_button_enabled = false;
             GuiRect  menu{0, 0, 0, 0};         // zero while the menu is closed
+            // Every row of the menu, by row index (a row scrolled out of
+            // view with the zero rect), and its scroll bar.
             std::vector<MenuRowStash> menu_rows;
+            PopupScrollBar menu_bar;
             GuiRect  swatch_old{0, 0, 0, 0};
             GuiRect  swatch_new{0, 0, 0, 0};
             GuiRect  wheel{0, 0, 0, 0};        // the wheel's square
@@ -10508,12 +10527,13 @@ inline int64_t snap_authored_frame(double frame) {
 // Nothing ASYNCHRONOUS asks this question now.)
 // THE FORCE-END FINALIZER IS NOT A CONSUMER EITHER — it asks this question
 // nowhere — but it is the one body whose MEMBERSHIP must equal this one:
-// finalize_active_drags (input_pointer.cpp) ends all ELEVEN members (the
-// VALUE DRAG joined 2026-09-10; re-greped 2026-09-16), because
+// finalize_active_drags (input_pointer.cpp) ends all FIFTEEN members (the
+// VALUE DRAG joined 2026-09-10; the color picker's gesture and the three
+// popup lists' scroll holds 2026-10-08), because
 // its callers' whole promise is that a resize, a WM close or the Ctrl+Q hatch
 // lands on a state this predicate calls free. The two lists are grepped
 // against each other whenever either grows; the finalizer's own head comment
-// spells its eleven in its own order.
+// spells its fifteen in its own order.
 // THE DISPLAYED-BASIS FREEZE IS NOT A CONSUMER AT ALL: displayed_basis_frozen
 // (beside the basis owners, below) tests a SUBSET of these members under its
 // own derivation — the absolute painted-subject drags, the two pendings that
@@ -10533,7 +10553,10 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.pending_trim_drag.active ||
            app.folder_overlay.press.armed ||
            app.render_player.scrub.armed ||
-           app.color_picker.drag.armed();
+           app.color_picker.drag.armed() ||
+           app.color_picker.chooser_scroll.live() ||
+           app.color_picker.menu_scroll.live() ||
+           app.settings_choice.list_scroll.live();
 }
 
 // THE HOME-VIEW BINDING, NARROWED TO THE WARP COLUMN (architect 2026-08-30):

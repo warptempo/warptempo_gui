@@ -9,7 +9,7 @@
 #include "target_render.h"
 #include "text_editor.h"
 #include "undo.h"
-#include "color_picker.h"      // combo_list_box: the choice list's open damage
+#include "color_picker.h"      // combo_list: the choice list's open damage and seat
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -168,6 +168,16 @@ void GuiSettingsEditor::choice_show(int index) {
     index = std::clamp(index, 0, n - 1);
     const bool hover_moves = ch.list_open && ch.list_hover != index;
     if (ch.list_open) ch.list_hover = index;
+    // THE LIT ROW KEPT IN VIEW (render.h's popup scroll block): a step past
+    // the shown block scrolls it by one row, against the list as painted.
+    bool scroll_moves = false;
+    const PopupScrollBar& bar = app.modal_dialog.combo_list_bar;
+    if (ch.list_open && bar.present) {
+        const int top = popup_scroll_reveal(ch.list_scroll.top, index,
+                                            bar.total, bar.visible);
+        scroll_moves = top != ch.list_scroll.top;
+        ch.list_scroll.top = top;
+    }
     const bool shown_moves = index != ch.shown;
     if (shown_moves) {
         ch.shown = index;
@@ -177,7 +187,8 @@ void GuiSettingsEditor::choice_show(int index) {
         ed.cursor_pos       = static_cast<int>(ed.pending.size());
         ed.selection_anchor = -1;
     }
-    if (hover_moves || shown_moves) viewport.invalidate_modal_dialog_area();
+    if (hover_moves || shown_moves || scroll_moves)
+        viewport.invalidate_modal_dialog_area();
 }
 
 void GuiSettingsEditor::choice_step(int delta) {
@@ -192,16 +203,22 @@ void GuiSettingsEditor::set_choice_list_open(bool open) {
     // THE CLOSE'S DAMAGE is the modal's, which covers the list as painted
     // (Viewport::invalidate_modal_dialog_area); THE OPEN'S is the rect the
     // next paint will give the list — derived from the combo AS PAINTED, for
-    // damage alone, never for a hit.
+    // damage and the scroll's seat alone, never for a hit. THE SCROLL STARTS
+    // AT THE HEAD with the shown value scrolled into view (render.h's popup
+    // scroll block: a combo's one exception).
     viewport.invalidate_modal_dialog_area();
     ch.list_open    = open;
     ch.list_hover   = open ? ch.shown : -1;
     ch.list_pressed = -1;
     ch.list_press_began_on_item = false;
+    ch.list_scroll  = PopupScroll{};
     if (open) {
-        viewport.invalidate_rect(color_picker::combo_list_box(
-            app.modal_dialog.combo, app.settings_choice_count(),
-            /*upward=*/true));
+        const color_picker::ComboList l = color_picker::combo_list(
+            app.modal_dialog.combo, app.settings_choice_count(), app.height,
+            /*top=*/0);
+        ch.list_scroll.top = popup_scroll_reveal(0, ch.shown, l.bar.total,
+                                                 l.bar.visible);
+        viewport.invalidate_rect(l.box);
     }
 }
 

@@ -1130,17 +1130,23 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x,
 
 namespace {
 
+// THE SCROLL ARROW'S DIRECTION: the trim caps' left and right, and the
+// popup lists' up and down (paint_popup_scroll_bar, below).
+enum class ScrollArrowDir { Left, Right, Up, Down };
+
 // ONE ARROW BUTTON (the rule at kTrimArrowButtonPx and kTrimArrowGlyphWPx,
 // render.h): the ground under the plain raised edge, then the scroll arrow
 // as ONE FILLED TRIANGLE in the theme's LABEL (a chrome glyph on a chrome
 // face, architect 2026-10-03; a triangle since 2026-10-06), antialiased,
 // centred in device px (an odd difference flooring toward the top-left), its
-// tip LEFT on the begin button and RIGHT on the end button. PRESSED (a
-// single-bound grab holds it, render_trim_flags' declaration): the ground
-// under one Shadow ring instead of the raised edge, the glyph one Windows px
-// right and down. The caller's clip (the lane's) cuts a button that overruns
-// the lane.
-void paint_trim_arrow_button(cairo_t* cr, const GuiRect& b, bool points_left,
+// tip LEFT on the begin button and RIGHT on the end button — and, TURNED, UP
+// and DOWN on a popup list's scroll bar (2026-10-08, the glyph's 4 x 7 then
+// 7 wide and 4 tall). PRESSED (a single-bound grab holds it,
+// render_trim_flags' declaration; a popup arrow's press until its lift):
+// the ground under one Shadow ring instead of the raised edge, the glyph one
+// Windows px right and down. The caller's clip (the lane's) cuts a button
+// that overruns the lane.
+void paint_trim_arrow_button(cairo_t* cr, const GuiRect& b, ScrollArrowDir dir,
                              bool pressed) {
     paint_cell_rect(cr, b, palette().ground);
     if (pressed)
@@ -1148,19 +1154,37 @@ void paint_trim_arrow_button(cairo_t* cr, const GuiRect& b, bool points_left,
     else
         paint_relief_plain_raised(cr, b);
     const int u = scaled_px(1, 1);
-    const int glyph_w = kTrimArrowGlyphWPx * u;
-    const int glyph_h = kTrimArrowGlyphHPx * u;
+    const bool across = dir == ScrollArrowDir::Left || dir == ScrollArrowDir::Right;
+    const int glyph_w = (across ? kTrimArrowGlyphWPx : kTrimArrowGlyphHPx) * u;
+    const int glyph_h = (across ? kTrimArrowGlyphHPx : kTrimArrowGlyphWPx) * u;
     const int push = pressed ? relief_line_px() : 0;
     const double gx = b.x + (b.w - glyph_w) / 2 + push;
     const double gy = b.y + (b.h - glyph_h) / 2 + push;
-    const double tip_x  = points_left ? gx : gx + glyph_w;
-    const double base_x = points_left ? gx + glyph_w : gx;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
     cairo_new_path(cr);
-    cairo_move_to(cr, tip_x, gy + glyph_h / 2.0);
-    cairo_line_to(cr, base_x, gy);
-    cairo_line_to(cr, base_x, gy + glyph_h);
+    switch (dir) {
+        case ScrollArrowDir::Left:
+            cairo_move_to(cr, gx, gy + glyph_h / 2.0);
+            cairo_line_to(cr, gx + glyph_w, gy);
+            cairo_line_to(cr, gx + glyph_w, gy + glyph_h);
+            break;
+        case ScrollArrowDir::Right:
+            cairo_move_to(cr, gx + glyph_w, gy + glyph_h / 2.0);
+            cairo_line_to(cr, gx, gy);
+            cairo_line_to(cr, gx, gy + glyph_h);
+            break;
+        case ScrollArrowDir::Up:
+            cairo_move_to(cr, gx + glyph_w / 2.0, gy);
+            cairo_line_to(cr, gx, gy + glyph_h);
+            cairo_line_to(cr, gx + glyph_w, gy + glyph_h);
+            break;
+        case ScrollArrowDir::Down:
+            cairo_move_to(cr, gx + glyph_w / 2.0, gy + glyph_h);
+            cairo_line_to(cr, gx, gy);
+            cairo_line_to(cr, gx + glyph_w, gy);
+            break;
+    }
     cairo_close_path(cr);
     set_palette_source(cr, palette().label);
     cairo_fill(cr);
@@ -1285,7 +1309,7 @@ void render_trim_flags(cairo_t* cr,
             paint_cl_stepper(cr, begin_r, /*points_left=*/true,
                              pressed == TrimPressedCap::Begin);
         else
-            paint_trim_arrow_button(cr, begin_r, /*points_left=*/true,
+            paint_trim_arrow_button(cr, begin_r, ScrollArrowDir::Left,
                                     pressed == TrimPressedCap::Begin);
         if (out_hit) out_hit->begin = {true, lane_cut(begin_r)};
     }
@@ -1295,7 +1319,7 @@ void render_trim_flags(cairo_t* cr,
             paint_cl_stepper(cr, end_r, /*points_left=*/false,
                              pressed == TrimPressedCap::End);
         else
-            paint_trim_arrow_button(cr, end_r, /*points_left=*/false,
+            paint_trim_arrow_button(cr, end_r, ScrollArrowDir::Right,
                                     pressed == TrimPressedCap::End);
         if (out_hit) out_hit->end = {true, lane_cut(end_r)};
     }
@@ -1310,6 +1334,40 @@ void render_trim_flags(cairo_t* cr,
         out_hit->bridge_hi = lane_x + std::min(gap.hi, lane_w);
     }
 
+    cairo_restore(cr);
+}
+
+// THE POPUP LIST'S SCROLL BAR (the rule and the geometry at render.h's popup
+// scroll block; the picture at the declaration): the trim lane's vocabulary
+// turned upright — under win2000 the track's checker, the plain raised thumb
+// and the two plain raised arrow buttons (paint_trim_arrow_button, up and
+// down, pressed while `held` names one); under clearlooks the vertical
+// trough, the light slider turned and the two steppers turned
+// (clearlooks_paint.h's vertical block). Painted over the list box's ground,
+// after its frame, beside its rows.
+void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
+                            PopupScrollPart held) {
+    if (!b.present || b.bar.w <= 0 || b.bar.h <= 0) return;
+    const bool up_held   = held == PopupScrollPart::Up;
+    const bool down_held = held == PopupScrollPart::Down;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
+        paint_cl_scroll_trough_v(cr, b.bar);
+        if (b.thumb.h > 0) paint_cl_slider_v(cr, b.thumb);
+        paint_cl_stepper_v(cr, b.up, /*points_up=*/true, up_held);
+        paint_cl_stepper_v(cr, b.down, /*points_up=*/false, down_held);
+    } else {
+        paint_cell_rect(cr, b.track, palette().ground);
+        paint_checker_rect(cr, b.track, b.bar.x, b.bar.y, palette().hilight,
+                           palette().ground);
+        if (b.thumb.h > 0) {
+            paint_cell_rect(cr, b.thumb, palette().ground);
+            paint_relief_plain_raised(cr, b.thumb);
+        }
+        paint_trim_arrow_button(cr, b.up, ScrollArrowDir::Up, up_held);
+        paint_trim_arrow_button(cr, b.down, ScrollArrowDir::Down, down_held);
+    }
     cairo_restore(cr);
 }
 

@@ -83,10 +83,12 @@ struct Viewport;
 //     under windows-2000 "Chrome" and "Chrome Text" at the top, then the
 //     fifteen in kGuiPaletteRoles' order — seventeen rows; under clearlooks
 //     the fifteen), the menu-row popup's painters and press road — and a tap
-//     on a row selects. THE LIST IS NOT BOUNDED (no scrolling list, by
-//     ruling): it hangs whole from the chooser's foot (combo_list_box),
-//     every row in reach at both hosts (re-derived 2026-10-08 with the
-//     knob's two rows, device px): at the tablet's 300 % the list is
+//     on a row selects. IT IS ONE OF THE THREE LIST POPUPS, placed by the
+//     window and SCROLLING when its rows outgrow the room (render.h's popup
+//     scroll block, the rule's one owner; combo_list), its shown row
+//     scrolled into view at the open. In practice it hangs whole from the
+//     chooser's foot, every row in reach at both hosts (re-derived
+//     2026-10-08 with the knob's two rows, device px): at the tablet's 300 % the list is
 //     17 x 51 + 2 x 3 + 6 + 6 = 885 rows under win2000 (295 W), hung at the
 //     well's top + 12 + 6 + 18 + 63 = 99, its foot at 984 — 30 rows (10 W)
 //     past the well's 954 onto row 8 (111 rows), inside the window; and
@@ -124,23 +126,20 @@ struct Viewport;
 //     (Title Case, no ellipsis — kdenlive's convention: nothing here opens
 //     a dialog), each with its truthful enabled bit (palette_act_enabled),
 //     a separator, then EVERY PALETTE'S NAME (palette_names(): the two
-//     defaults, then his files in byte order) — the acts first so they are
-//     always the painted rows (palette_menu_rows). Its width is the widest
-//     painted row's, held inside the window across, and THE WINDOW BOUNDS
-//     IT DOWN (2026-10-07): it hangs from the button's foot where every row
-//     fits whole below, else stands on the button's head where every row
-//     fits whole above, else takes the roomier side and CUTS THE NAMES to
-//     the rows that fit whole there — the acts and the separator always
-//     kept, the names' tail dropped, only the placed rows published (ON
-//     SCREEN IS AS PAINTED), nothing hanging past the window (layout).
-//     SAVE AS REFUSES CONSTRUCTIVELY where the menu could not show one more
-//     name in its roomier placement at the current window — "No room for
-//     another palette" (commit_name, reading the layout's own count,
-//     palette_menu_name_capacity) — so the picker never writes a palette
-//     its own menu cannot reach; Rename keeps the count and Delete frees a
-//     row. The lit row starts on the active preset's name (the chooser's
-//     own seat, the hover seeded at the open) and follows the pointer; a
-//     grayed row is never lit and a press on one is a consumed nothing.
+//     defaults, then his files in byte order) — the acts first so they lead
+//     at the head (palette_menu_rows). Its width is the widest row's between
+//     the popup's pads (and the scroll bar's, when it scrolls), held inside
+//     the window across. IT IS ONE OF THE THREE LIST POPUPS (render.h's
+//     popup scroll block, the rule's one owner, architect 2026-10-08): hung
+//     from the button's foot or standing on its head by the window's room,
+//     and SCROLLING when its rows outgrow it — the acts and the separator
+//     ordinary rows that scroll with the names, none pinned, the scroll at
+//     the head at each open; the shown rows and the bar published as painted
+//     (layout). Every palette Save As writes is reachable, so the act
+//     refuses no name for room. The lit row starts on the active preset's
+//     name (the chooser's own seat, the hover seeded at the open) and
+//     follows the pointer; a grayed row is never lit and a press on one is
+//     a consumed nothing.
 //   THE NAME ASK (Save As, Rename) — THE CARD'S ONE TEXT FIELD WIDENED: for
 //     the length of the ask the hex field's box and the OLD | NEW frame
 //     beside it are ONE FIELD (the same text editor, its Kind PaletteName),
@@ -232,23 +231,34 @@ inline constexpr int kComboTextGapPx  = 4;
 // (2026-10-07 evening): the picker's chooser and palette menu button, and
 // the settings editor's CHOICE EDITOR (settings_editor.h's head), whose
 // combo is this drawing at the dialog field's seat and whose list is this
-// list opened UPWARD. Device px, rounded at the element.
+// list. Device px, rounded at the element.
 //   combo_drop_button — win2000's drop-down button inside the combo `r`
 //     (kComboButtonWPx wide, inside the sunken field's two lines), and the
 //     zero rect under clearlooks, whose whole combo is one gummy button.
-//   combo_list_box — the list of `count` rows hung from `combo`, its width,
-//     flush: below its foot (the chooser's) or, `upward`, standing on its
-//     head (the choice editor's: the row is the window's foot, and Windows'
-//     and GTK's combos both open above when no room lies below). The
-//     dropdown's own arithmetic (dropdown_h_px, render.h): the frame, the
-//     item block's two margins, `count` rows — an UPWARD box under
-//     clearlooks one line taller, carrying its own top line (2026-10-08,
-//     popup_border_top_px; the definition says why).
-//   combo_list_item — the box's row `i`, the dropdown's item rect, `upward`
-//     the box's own (its rows start under the line it carries).
-GuiRect combo_drop_button(const GuiRect& r);
-GuiRect combo_list_box(const GuiRect& combo, int count, bool upward);
-GuiRect combo_list_item(const GuiRect& box, int i, bool upward);
+//   combo_list — the list of `count` rows dropped from `combo`, its width,
+//     flush (the definition's ruling), placed and scrolled by the popup
+//     lists' rule (render.h's popup scroll block, place_popup_list): below
+//     the combo's foot where every row fits (the chooser's), else standing
+//     on its head (the choice editor's: the row is the window's foot, and
+//     Windows' and GTK's combos both open above when no room lies below),
+//     else the roomier side scrolled. The dropdown's own arithmetic
+//     (dropdown_h_px, render.h): the frame, the item block's two margins, the
+//     shown rows — an UPWARD box under clearlooks one line taller, carrying
+//     its own top line (2026-10-08, popup_border_top_px; the definition says
+//     why). `top` is the popup's scroll; the result's `bar` carries the
+//     clamped top and the shown count whether or not it is present.
+//   combo_list_item — row `i` of the domain as placed: the dropdown's item
+//     rect (popup_item_rect, short of the bar when one stands), or the zero
+//     rect for a row scrolled out of view.
+struct ComboList {
+    GuiRect        box{0, 0, 0, 0};
+    bool           upward = false;
+    int            count  = 0;
+    PopupScrollBar bar;
+};
+GuiRect   combo_drop_button(const GuiRect& r);
+ComboList combo_list(const GuiRect& combo, int count, int window_h, int top);
+GuiRect   combo_list_item(const ComboList& l, int i);
 // A SLIDER ROW IS 15 W: GtkScale's slider-width (clearlooks_paint.h's
 // kClScaleSliderWidthPx) and the win2000 thumb's seat here — 3 W above the
 // 4-line channel and 8 below it (the point's 5 and 3 of straight side),
@@ -424,17 +434,18 @@ std::string_view active_palette(const AppState& app);
 // published bit. SAVE gray while the active preset is a default (the
 // defaults cannot be changed) OR while the live palette equals the active
 // preset's, its chrome knob included (nothing to save — the comparison IS
-// the modified state, no flag keeps it); RENAME and DELETE gray on a default; SAVE AS always
-// live (its one name-independent refusal, no room in the menu, is
-// commit_name's card: the bound is the window's, judged at the commit).
+// the modified state, no flag keeps it); RENAME and DELETE gray on a
+// default; SAVE AS always live (every refusal it has is the name's, judged
+// at commit_name).
 bool palette_act_enabled(const AppState& app, PaletteAct a);
 
-// THE MENU'S ROWS, top to bottom: the four acts, the one separator, then
-// every palette's name (palette_names()). THE ORDER IS THE ACTS'
+// THE MENU'S ROWS, top to bottom: the four acts, then every palette's name
+// (palette_names()) — the one separator stands between them, a scroll row
+// of its own in the layout (layout's palette menu). THE ORDER IS THE ACTS'
 // REACHABILITY (2026-10-07): the acts lead, so hung from the button they
-// are the rows nearest it, and where the window cannot hold every name the
-// layout cuts the names' tail, never an act (layout's bound; the head's THE
-// PALETTE MENU). A row is a NAME (its load) or an ACT.
+// are the rows nearest it, and a menu that scrolls opens at its head with
+// the acts in view (the head's THE PALETTE MENU). A row is a NAME (its
+// load) or an ACT.
 struct PaletteMenuRow {
     bool        is_act = false;
     std::string name;                        // a name row's palette
@@ -482,8 +493,10 @@ struct Layout {
     // The chooser: the whole combo and, under win2000, its drop-down button.
     GuiRect chooser{0, 0, 0, 0};
     GuiRect chooser_button{0, 0, 0, 0};
-    // The list, when down: its box and its rows (element_count of them).
-    GuiRect list{0, 0, 0, 0};
+    // The list, when down: its placement (the box, the side, the bar) and
+    // its rows by element index — the zero rect for a row scrolled out of
+    // view (combo_list_item).
+    ComboList list;
     GuiRect list_items[kMaxElementCount]{};
     // The six slider rows: the row, the label's seat, the track (the thumb's
     // center travels its inset span, scrub_handle_box_px / 2 in at each end)
@@ -506,29 +519,23 @@ struct Layout {
     GuiRect menu_button{0, 0, 0, 0};
     GuiRect menu_button_arrow{0, 0, 0, 0};
     GuiRect buttons[3]{};   // Copy, Paste, Close
-    // The palette menu, when down: its box, THE ROWS IT PLACES (a prefix
-    // of palette_menu_rows: the acts and the names that fit whole, the
-    // head's bound), their rects in that order and the separator's top row.
-    // The painter paints and publishes exactly these.
+    // The palette menu, when down: its box, EVERY ROW (palette_menu_rows)
+    // with its rect in the same order — the zero rect for a row scrolled out
+    // of view — the separator's top row (-1 while it is scrolled out) and
+    // the bar (render.h's popup scroll block: its scroll rows are the rows
+    // with the separator between the acts and the names). The painter
+    // paints and publishes exactly these.
     GuiRect menu{0, 0, 0, 0};
     std::vector<PaletteMenuRow> menu_rows;
     std::vector<GuiRect> menu_items;
-    int     menu_sep_y = 0;
+    int     menu_sep_y = -1;
+    PopupScrollBar menu_bar;
     // Whether the menu stands on the button's head (the upper placement),
     // the box then carrying its own top line under clearlooks (2026-10-08,
-    // combo_list_box's rule; the painter reads it).
+    // combo_list's rule; the painter reads it).
     bool    menu_upward = false;
-    // THE MENU'S NAME CAPACITY, menu down or not: how many name rows fit
-    // whole beside the acts and the separator in the roomier of the two
-    // placements (below the button to the window's foot, above it to the
-    // window's head) at the current window.
-    int     menu_name_capacity = 0;
 };
 Layout layout(const AppState& app, const GuiFont& font);
-// THE ONE COUNT the menu's bound and Save As's refusal share (the head's
-// THE PALETTE MENU): layout's menu_name_capacity, so the judge and the
-// placement cannot disagree.
-int palette_menu_name_capacity(const AppState& app, const GuiFont& font);
 
 // THE SLIDER'S MAPPING (the scrub's shape, render_player_scrub_x_of): the
 // thumb's center travels [track.x + half, track.x + track.w − 1 − half],
@@ -688,11 +695,8 @@ struct GuiColorPicker {
     // (Rename), the whole text selected; the menu is already down.
     void begin_name_ask(AppState::ColorPicker::NameAsk ask);
     // THE NAME ASK'S ENTER. The pending name is judged here, THE ONE JUDGE
-    // (palette_file.h's writers assert what it settles): first, for SAVE AS
-    // alone and whatever the name, "No room for another palette" when the
-    // palettes already fill the menu's capacity (palette_menu_name_capacity:
-    // one more name would not show — the head's bound, a class-3 refusal);
-    // outside the name grammar (is_palette_name_spelling) "Not a name"; a
+    // (palette_file.h's writers assert what it settles): outside the name
+    // grammar (is_palette_name_spelling) "Not a name"; a
     // default's name, a default's display name or a loaded file's — another
     // than the one being renamed — "Name taken" (Save does the overwrite;
     // Save As never does); each a refusal the product's way, the editor
