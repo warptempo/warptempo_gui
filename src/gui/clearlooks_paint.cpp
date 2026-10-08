@@ -1028,19 +1028,21 @@ void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
     const unsigned corners = points_left ? (kTL | kBL) : (kTR | kBR);
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    // THE RING, the box inside its outer rounded path: the bar's light line
-    // along the top row and its dark line along the bottom row, flat (the
-    // body's own two rows continued), and between them the one ramp from
-    // the light tone to the dark — the outer curve lit at the top, shaded
-    // at the bottom. The clip's arcs are the renderer's antialiasing.
+    // THE RING, the box inside its outer rounded path: the one ramp from the
+    // bar's light tone (row 0) to its dark tone (row r) over the first
+    // kClCapRampPx rows, then the dark tone flat to the bottom row (the
+    // body's dark line continued) — the turn ends inside the corner's arc,
+    // so the straight outer column is one tone (the step-j ruling at
+    // kClCapRampPx). The clip's arcs are the renderer's antialiasing.
     cairo_save(cr);
     rounded_path(cr, b.x, b.y, b.w, b.h, rad, corners);
     cairo_clip(cr);
-    paint_cell_rect(cr, GuiRect{b.x, b.y, b.w, u}, pal.cl_separator_light);
-    paint_cell_rect(cr, GuiRect{b.x, b.y + b.h - u, b.w, u},
-                    pal.cl_separator_dark);
-    paint_cl_ramp(cr, GuiRect{b.x, b.y + u, b.w, b.h - 2 * u},
+    const int ramp_rows = std::min(scaled_px(kClCapRampPx) + 1, b.h);
+    paint_cl_ramp(cr, GuiRect{b.x, b.y, b.w, ramp_rows},
                   pal.cl_separator_light, pal.cl_separator_dark);
+    if (ramp_rows < b.h)
+        paint_cell_rect(cr, GuiRect{b.x, b.y + ramp_rows, b.w, b.h - ramp_rows},
+                        pal.cl_separator_dark);
     cairo_restore(cr);
     // THE FACE, one W in, its rounded corners concentric with the ring's:
     // the ground at rest, bg[ACTIVE] pressed.

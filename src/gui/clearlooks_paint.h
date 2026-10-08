@@ -263,6 +263,15 @@ inline constexpr int kClScaleTroughPx       = 7;
 inline constexpr int kClScaleSliderLengthPx = 23;
 inline constexpr int kClScaleSliderWidthPx  = 15;
 
+// THE TRIM CAP'S RAMP LENGTH, in Windows px: the ring of each cap
+// (paint_cl_stepper below) turns from the light tone to the dark over its
+// first kClCapRampPx rows and is the dark tone flat below them — 15 % of the
+// 16-W box (architect 2026-10-07 evening, the TC2 sheet's step j: "the ramp
+// starts in the top row and ends early", so the whole turn falls inside the
+// outer corner's arc and the straight outer column carries no gradient).
+// Converted at the element (scaled_px): 2 rows at 100, 3 at 138, 7 at 300.
+inline constexpr double kClCapRampPx = 2.4;
+
 // THE TRIM LANE IS GTK'S HORIZONTAL SCROLL BAR — ITS TROUGH — round the
 // product's own light bar: the body between the caps the light slider
 // (paint_cl_slider below) and the caps in step with it (paint_cl_stepper
@@ -295,13 +304,20 @@ void paint_cl_trough(cairo_t* cr, const GuiRect& lane);
 // some contrast between the trim end cap and the body, at least in the top
 // part — we don't want it to blur together either"; the TC1 sheet's variant
 // c) on a trim cap's box `b` (trim_endcap_rect's 16 x 16): THE RING, one W
-// wide, is the bar's own two tones — `cl_separator_light` along the top row
-// (the body's light line continued) and `cl_separator_dark` along the
-// bottom row (its dark line continued), the sides between them THE ONE RAMP
-// from the light to the dark (paint_cl_ramp, rule 2 of the head) — so its two
+// wide, is the bar's own two tones — THE ONE RAMP from `cl_separator_light`
+// (the body's light line continued) to `cl_separator_dark` (its dark line
+// continued) over the box's first kClCapRampPx rows, its first row the
+// light tone itself (paint_cl_ramp, rule 2 of the head), and every row
+// below the ramp the dark tone flat, the bottom row included — so its two
 // OUTER corners, rounded at the spec's radius (the begin cap's left ones, the
 // end cap's right: GTK's stepper A and D, the corners at the bar's ends),
-// start light and darken down the curve; THE FACE inside, its corners
+// start light and darken along the curve. THE RAMP ENDS EARLY (architect
+// 2026-10-07 evening, the TC2 sheet's step j): a ramp over the whole height
+// drew the eye at any distance and made the straight outer column read
+// SLANTED, the begin cap's left line leaning right from bottom to top — the
+// gradient down a straight column is the lean; ended inside the corner's
+// arc, the darkening runs along the curve "up and to the right" and the
+// straight column is one tone. THE FACE inside, its corners
 // concentric, is the window ground at rest (the bar's own, a button in the
 // bevel, not a gummy box on it) and `cl_stepper_pressed_face` pressed —
 // bg[ACTIVE] of the scrollbar style, the default style's shade (0.9,
