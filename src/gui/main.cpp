@@ -23,7 +23,6 @@
 #include "history_prefetch.h"
 #include "audio.h"
 #include "device_config.h"
-#include "theme_file.h"
 #include "palette_file.h"  // the palettes folder's launch read
 #include "icons.h"         // the icon set's launch load
 #include "waveform_worker.h"
@@ -446,8 +445,8 @@ int strip_total_h(bool top_strip) {
 // mock_TF1, 2026-10-06), the clearlooks lanes 1440 − 384 − 111 = 945 (315
 // Windows px: 3 W more above, metacity's caption, GtkMenuBar and the
 // toolbar band at the base's 13-row cell and a 32-W case, and the same 37
-// below; chrome_spec.h's instance). A THEME moves no lane: the 954 / 945
-// pair holds under every theme of each chrome. May
+// below; chrome_spec.h's instance). A COLOR moves no lane: the 954 / 945
+// pair holds under every palette of each chrome. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -3260,9 +3259,8 @@ int gui_main(const char* argument) {
     // (NO colors.conf LOAD HERE ANY MORE. The colors were 23 mutable globals
     // filled from ~/.config/warptempo_gui/colors.conf by load_color_config()
     // at exactly this point; that system retired 2026-08-02. The palette is
-    // installed below from the device config's `theme` (install_palette, after
-    // the themes folder and the config are read); the record is at the
-    // palette block, render.h.)
+    // installed below, after the config is read and the chrome chosen
+    // (install_palette); the record is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
     // Its keys (kDeviceConfigKeys, device_config.cpp) describe the MACHINE,
@@ -3287,32 +3285,14 @@ int gui_main(const char* argument) {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     //
-    // THE THEMES FOLDER IS READ FIRST, ONCE (architect 2026-10-04,
-    // theme_file.h): the config's `theme` key is judged against the built-in
-    // and the files loaded here, so the files must be in hand before the
-    // config's reader runs. Its failure is the config's own road — a bad
-    // theme file is a hand edit, the same adversarial class — one blunt line
-    // naming the file and no window. AHEAD OF THE READ, THE BUNDLED FILES ARE
-    // COPIED IN (architect 2026-10-05, theme_file.h): every theme file this
-    // build ships — the repository's assets/themes/ on the laptop, the APK's
-    // assets on the tablet — written into the folder, the bundle winning for
-    // its own names and his files of other names untouched, so the one read
-    // below takes the bundled files exactly as his own. A copy-in that cannot
-    // read the bundle or write the folder takes the same road: one line, no
-    // window.
-    if (const std::optional<std::string> err = copy_in_bundled_themes()) {
-        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-        return 1;
-    }
-    if (const std::optional<std::string> err = read_theme_folder()) {
-        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-        return 1;
-    }
-    // THE PALETTES FOLDER IS READ NEXT, ONCE (architect 2026-10-07,
+    // THE PALETTES FOLDER IS READ FIRST, ONCE (architect 2026-10-07,
     // palette_file.h): the config's `palette` key is judged against the two
-    // compiled defaults and the files loaded here, so they too precede the
-    // config's reader; the same road for a bad file — one line, no window.
-    // Nothing is copied in: the folder holds his own palettes alone.
+    // compiled defaults and the files loaded here, so they precede the
+    // config's reader. Its failure is the config's own road — a bad palette
+    // file is a hand edit, the same adversarial class — one blunt line
+    // naming the file and no window. Nothing is copied in: the folder holds
+    // his own palettes alone. (The chrome's colors are compiled in:
+    // theme_file.h.)
     if (const std::optional<std::string> err = read_palette_folder()) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
@@ -3329,7 +3309,7 @@ int gui_main(const char* argument) {
     // THE CHROME IS CHOSEN HERE, ONCE (architect 2026-10-07, chrome_spec.h's
     // live_chrome_spec): the config's `chrome`, judged by its reader, names
     // the vocabulary the whole process paints — its face set, its lanes, its
-    // icon set and its theme default — before anything reads the spec: the
+    // icon set and its compiled theme — before anything reads the spec: the
     // icon set's load below, the palette's install, the window and the
     // first paint. The faces were installed earlier on Android (android_main,
     // before this function) and need nothing from it: the install measured
@@ -3358,22 +3338,18 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the theme the
-    // config names (the built-in or a file read above, 2026-10-04) — or, with
-    // no `theme` line, THE LIVE CHROME'S OWN (2026-10-07, effective_theme_key,
-    // theme_file.h) — for the chrome's colors, and the palette it names (a
+    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE LIVE
+    // CHROME'S COMPILED THEME for the chrome's colors (2026-10-08,
+    // chrome_theme_words, theme_file.h), and the palette the config names (a
     // default or a file read above) — or, with no `palette` line, THE LIVE
     // CHROME'S DEFAULT PALETTE (effective_palette_name, palette_file.h) — for
     // the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here through
-    // palette_words and handed to the install explicitly; the theme commit
-    // re-installs over program_palette_words(), the words as they then
-    // stand, so the color picker's unsaved picks survive it — render.h's
+    // palette_words and handed to the install explicitly — render.h's
     // install_palette) — both resolved against the chrome set above;
-    // installed before the first paint, and again at the settings editor's
-    // `theme` commit (commit_device_setting). Every painter reads it through
+    // installed once, before the first paint. Every painter reads it through
     // palette() (render.h's palette block).
-    install_palette(device_config,
-                    palette_words(effective_palette_name(device_config.palette)));
+    install_palette(
+        palette_words(effective_palette_name(device_config.palette)));
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

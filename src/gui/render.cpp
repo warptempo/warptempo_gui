@@ -2,7 +2,6 @@
 #include "app_state.h"
 #include "audio.h"
 #include "clearlooks_paint.h"
-#include "device_config.h"
 #include "gui_display_context.h"
 #include "gui_font.h"
 #include "text_shape.h"
@@ -449,9 +448,9 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
 // ("Dithering is performed in 16-, 8-, 4-, and 1-bpp mode", GradientFill's
 // documentation). The cell is the device px, the scalable chrome's.
 //
-// A FLAT CAPTION (end equal to start — every theme that records no gradient
-// end, theme_file.h's flat-caption rule) IS ONE SOLID FILL OF THE EXACT
-// COLOUR.
+// A FLAT CAPTION (end equal to start — a theme that records no gradient
+// end, the generator's flat-caption rule, tools/theme_catalog/
+// gen_theme_files.py) IS ONE SOLID FILL OF THE EXACT COLOUR.
 //
 // OPAQUE AND NOTHING BLENDED AT PAINT TIME: each cell is one opaque rounded
 // ramp value, written as words into an image (argb32_opaque_word's road, the
@@ -494,8 +493,8 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
         // level rounds by std::nearbyint, the tree's one rounding (a level
         // is not a grid point; this is symmetry with svg_icon's
         // saturated_copy, not a pixel). It parts from std::lround only on an
-        // exact half, which takes the even level: no bundled theme's pair,
-        // nor the built-in's, lands on one at the two devices' full-width
+        // exact half, which takes the even level: no compiled theme's pair
+        // lands on one at the two devices' full-width
         // captions (1920 and 2304 device px), so those ramps are unchanged;
         // other widths (the restored laptop's) can meet one, one level apart.
         std::vector<uint32_t> row(static_cast<size_t>(r.w));
@@ -2621,8 +2620,8 @@ void set_waveform_source(cairo_t* cr, GuiColor c) {
 // -- The active palette (the contract is at its declaration, render.h) -----
 
 namespace {
-    // Construction state, never painted: gui_main installs the device
-    // config's palette before the window exists (the gui_scale shape).
+    // Construction state, never painted: gui_main installs the palette
+    // before the window exists (the gui_scale shape).
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
@@ -2653,17 +2652,14 @@ void fill_program_palette(const GuiPaletteWords& w) {
 }
 } // namespace
 
-void install_palette(const DeviceConfig& cfg, const GuiPaletteWords& program) {
-    // The theme key arrived through its one grammar (the config's reader or
-    // the settings editor's commit, is_theme_key), or is the live chrome's
-    // own (effective_theme_key: the built-in or a bundled file), so the
-    // lookup has no producer of a miss (theme_words asserts it). The
-    // chrome's fields are filled off the theme's role table and the
+void install_palette(const GuiPaletteWords& program) {
+    // The chrome's fields are filled off the live chrome's compiled theme
+    // (chrome_theme_words, theme_file.h, which never misses) and the
     // program's off `program`, THE LIVE WORDS the caller resolved (render.h:
-    // the launch's palette_words of the `palette` key, the theme commit's
-    // program_palette_words), the two tables covering the struct exactly
-    // (palette_file.cpp), so a role cannot be read and not painted.
-    const GuiThemeWords& w = theme_words(effective_theme_key(cfg.theme));
+    // the launch's palette_words of the `palette` key), the two tables
+    // covering the struct exactly (palette_file.cpp), so a role cannot be
+    // valued and not painted.
+    const GuiThemeWords& w = chrome_theme_words(live_chrome_spec());
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
     fill_program_palette(program);

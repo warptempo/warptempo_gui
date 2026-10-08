@@ -3,8 +3,9 @@
 # THE RULE (architect 2026-10-06, unchanged): the drawing the caption wears, on the chrome's ground. THE CHROME IS
 # CLEARLOOKS since 2026-10-07 (the default chrome; architect 2026-10-07 ~17:00: the program icon follows it), so the
 # drawing is the Mist set's AppIcon, gnome-icon-theme 2.30's audio-x-generic (its 48 slot extracted from 3.0.0's
-# sheet — assets/icons/mist/README.md), and THE GROUND IS CLEARLOOKS', #EDECEB (assets/themes/clearlooks.theme's
-# `ground`, the face every chrome surface of the app stands on under Clearlooks), so both outputs carry the chrome's
+# sheet — assets/icons/mist/README.md), and THE GROUND IS CLEARLOOKS', #EDECEB (the compiled Clearlooks theme's
+# `ground`, src/gui/theme_clearlooks_values.inc, the face every chrome surface of the app stands on under
+# Clearlooks), so both outputs carry the chrome's
 # face behind the drawing. It writes, from the repo root's point of view:
 #   packaging/warptempo_gui.svg     the Linux desktop icon (the .desktop's Icon=warptempo_gui; docs/INSTALL.md
 #                                   installs it into hicolor's scalable/apps): a 48 x 48 document, a ground-colored
@@ -28,7 +29,7 @@ cd "$(dirname "$0")/../.."
 SRC=assets/icons/mist/AppIcon.svg
 OUT_SVG=packaging/warptempo_gui.svg
 RES=android/app/res
-GROUND='#EDECEB'   # Clearlooks' ground, assets/themes/clearlooks.theme's `ground` (the head)
+GROUND='#EDECEB'   # Clearlooks' ground, the compiled theme's `ground` (the head)
 
 # The source's shape: line 1 the XML declaration, a 48 x 48 root (its start tag read whole, on one line as the Mist
 # extractions write it or across lines as Inkscape does). Anything else is a hard fail (a different drawing size is a

@@ -655,13 +655,14 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     return cfg;
 }
 
-// THE LAPTOP'S BUNDLES ARE THE REPOSITORY'S OWN FOLDERS (contract at the
-// declarations): the absolute paths CMakeLists.txt compiles in, so the build
+// THE LAPTOP'S ICON BUNDLE IS THE REPOSITORY'S OWN FOLDER (contract at the
+// declaration): the absolute path CMakeLists.txt compiles in, so the build
 // tree's executable reads the files beside the sources it was built from.
-// One reader serves both: every regular file of `folder` whose name ends
-// `suffix`, whole. A folder that cannot be read (the repository moved or
-// deleted under a built executable) or a file that will not open is the
-// error arm, with the system's words.
+// The reader: every regular file of `folder` whose name ends `suffix`,
+// whole. A folder
+// that cannot be read (the repository moved or deleted under a built
+// executable) or a file that will not open is the error arm, with the
+// system's words.
 static std::expected<std::map<std::string, std::string>, std::string>
 read_bundle_folder(const std::filesystem::path& folder,
                    std::string_view suffix) {
@@ -691,12 +692,6 @@ read_bundle_folder(const std::filesystem::path& folder,
                                ec.message());
     }
     return out;
-}
-
-// The themes: assets/themes/, every `.theme`.
-std::expected<std::map<std::string, std::string>, std::string>
-GuiPlatform::bundled_theme_files() {
-    return read_bundle_folder(WARPTEMPO_BUNDLED_THEMES_DIR, ".theme");
 }
 
 // An icon set: assets/icons/<set>/, every `.svg`.

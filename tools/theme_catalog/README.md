@@ -1,10 +1,15 @@
-# tools/theme_catalog — the imported themes, their provenance, their bundled files and their crops
+# tools/theme_catalog — the imported themes, their provenance, the compiled chrome themes and the crops
 
-THE APP CARRIES IMPORTED THEMES ONLY, NO DERIVATION (architect 2026-10-03: "no derived, imported only; derivation
+THE CATALOG RECORDS IMPORTED THEMES ONLY, NO DERIVATION (architect 2026-10-03: "no derived, imported only; derivation
 stays in git history"; "I don't want to be designing my own theme"). This tool turns the era's own theme files into
-`docs/themes/catalog.json` — every colour a recorded byte with its provenance — writes each entry as a THEME FILE the
-app bundles (`assets/themes/<key>.theme`), and lists them in `docs/themes/CATALOG.md` beside a crop of the app in
-each (`docs/themes/crops/`, frozen since 2026-10-07), which is how a theme is chosen. THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's own colors (the waveform, the flags, the
+`docs/themes/catalog.json` — every colour a recorded byte with its provenance — and lists them in
+`docs/themes/CATALOG.md` beside a crop of the app in each (`docs/themes/crops/`, frozen since 2026-10-07). THE
+CATALOG IS A RECORD AND THE SOURCE OF EACH CHROME'S COMPILED BYTES, NOT A SHIPPED SET (architect 2026-10-08: "okay to
+retire the color theme catalog"; "we just need hard-coded chromes"): no theme file ships and the app reads none, no
+device key or Settings row chooses one; each chrome vocabulary wears its own theme, compiled in (`src/gui/theme_file.h`),
+and `gen_theme_files.py` writes Clearlooks' as a generated include. The architect's workshop for colors is the app's
+PALETTES (named presets picked in the app); a look made official becomes a new chrome variant, its theme compiled in
+the same way from a catalog entry. THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's own colors (the waveform, the flags, the
 playhead's stem and the scanner) are no theme's but the app's PALETTES, compiled in (`src/gui/palette_file.h`), and
 the program's own family of chosen entries (`warptempo` and the presets of his retired picker tool) left the catalog
 with them ("it'll still be in the git history"). A standalone utility: no link path from any product target, no CMake,
@@ -14,21 +19,25 @@ Python 3 alone.
 python3 tools/theme_catalog/fetch.py [--refresh]   # the pinned sources -> tmp/theme_sources/ (git-ignored)
 python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json (runs the checks, prints the families)
 python3 tools/theme_catalog/build.py --check-only  # no sources: the checks on the committed catalog, nothing written
-python3 tools/theme_catalog/gen_theme_files.py     # -> assets/themes/<key>.theme, the app's bundled files (committed)
+python3 tools/theme_catalog/gen_theme_files.py     # -> src/gui/theme_clearlooks_{roles,members,values}.inc (committed)
 python3 tools/theme_catalog/catalog_md.py          # -> docs/themes/CATALOG.md (the frozen crops listed, stale ones deleted)
 ```
 
-## The bundled theme files (architect 2026-10-04, 2026-10-05)
+## The compiled themes (architect 2026-10-04; compiled in since 2026-10-08)
 
-Every theme but the app's one compiled built-in, `windows-2000-standard` (since 2026-10-06; `windows-95-standard` is a file since), SHIPS WITH THE APP AS A FILE: `gen_theme_files.py`
-writes `assets/themes/<key>.theme` for every catalog entry but that one (a file of the built-in's name is the app's
-launch hard fail), and deletes any other file there, so the folder is exactly the catalog's; the app copies the folder
-into its own `themes/` at every launch and then reads it (`src/gui/theme_file.h`'s head: the bundle wins for its own
-names, his own files take other names; the laptop reads the repository's folder, the APK carries it as assets). A
-catalog change is `build.py`, then `gen_theme_files.py` and `catalog_md.py`, the outputs committed together; the output is
-byte-stable (the role table's order, uppercase `#RRGGBB`, LF, no timestamp). A file names the CHROME roles THE ENTRY
-RECORDS, each the recorded byte, and every role it does not name takes the built-in's value in the app (the
-generator's head is the statement); it names no program role, which the app refuses in a theme file (2026-10-07):
+The app compiles in ONE THEME PER CHROME and nothing else (`src/gui/theme_file.h`'s head, `kGuiChromeThemes`):
+`windows-2000-standard` for the `windows-2000` chrome, HAND-RECORDED as the role table's value column
+(`kGuiThemeRoles`), which `gen_theme_files.py` checks against the entry at every run; and `clearlooks` for the
+`clearlooks` chrome, GENERATED WHOLE by `gen_theme_files.py` into `src/gui/theme_clearlooks_values.inc` — every role of
+the table in its order, never hand-edited. The same run writes the role table's generated Clearlooks block,
+`src/gui/theme_clearlooks_roles.inc` and `theme_clearlooks_members.inc`. A catalog change is `build.py`, then
+`gen_theme_files.py` and `catalog_md.py`, then the build, the outputs committed together; the output is byte-stable
+(the role table's order, uppercase hex, LF, no timestamp). The other 95 entries ship nowhere: the bundled theme files
+(`assets/themes/<key>.theme`, copied into the app's `themes/` folder at every launch and chosen by the `theme` device
+key, 2026-10-04..10-08) retired with the key, the git history keeping them. A compiled theme takes the CHROME roles
+THE ENTRY RECORDS, each the recorded byte; a role it does not name takes Windows 2000's value, and a caption start
+recorded without its gradient end makes the end the start, a FLAT CAPTION (the generator's head is the statement); it
+names no program role (2026-10-07):
 
 | app role | from the entry |
 |---|---|
@@ -37,12 +46,13 @@ generator's head is the statement); it names no program role, which the app refu
 | `field_ground`, `field_text` | its field pair |
 | `clock_ground`, `clock_text` | its `ground` and `label` (Windows' status bar is ButtonFace / ButtonText: Windows' own rule); a GNOME 2 entry's its field pair (architect 2026-10-07: GTK has no sunken status panel, a time shown in a field is an entry, base / text; gen_theme_files.py `CLOCK_FROM_FIELD`) |
 | `card_ground`, `card_text` | its info pair (Windows' InfoWindow / InfoText; GNOME 2's tooltip_bg_color / tooltip_fg_color) where it records one: the two Windows families and GNOME 2; KDE 3 and CDE have no tooltip pair |
-| `card_frame` | its `info_frame` where it records one (GNOME 2: Clearlooks' tooltip border, shade 0.6 of the tooltip's ground); else unnamed, the built-in's black, Windows' tooltip border (every Windows entry's raw `WindowFrame` is #000000) |
-| `caption_active`, `caption_active_gradient`, `caption_active_text`, `caption_inactive`, `caption_inactive_gradient`, `caption_inactive_text` | its recorded title colours (architect 2026-10-05, `roles.caption_roles`): Windows' ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText, KDE 3's active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds, GNOME 2's metacity title band (selected_bg_color / bg_color, the focused title's literal #FFFFFF, the unfocused title's blend of fg and bg at 0.45); a gradient end only where the entry records one (the 19 Windows entries with Gradient*Title), the app's flat-caption rule making the end the start otherwise |
-| the Clearlooks painters' `cl_` roles | a GNOME 2 entry's `engine_tones` whole (architect 2026-10-07, the painters round): build.py `engine_tones` runs the Clearlooks engine's and metacity's own arithmetic — the shades, the pixman / metacity gradient rows (a ramp recorded as its first and last painted rows), the translucent strokes composited by pixman's OVER — at the product's geometry read off `src/gui/chrome_spec.h`'s clearlooks instance; gen_theme_files.py also writes them as the role table's generated Clearlooks block, `src/gui/theme_clearlooks_roles.inc` and `theme_clearlooks_members.inc` (never hand-edited) |
+| `card_frame` | its `info_frame` where it records one (GNOME 2: Clearlooks' tooltip border, shade 0.6 of the tooltip's ground); else unnamed, Windows 2000's black, Windows' tooltip border (every Windows entry's raw `WindowFrame` is #000000) |
+| `caption_active`, `caption_active_gradient`, `caption_active_text`, `caption_inactive`, `caption_inactive_gradient`, `caption_inactive_text` | its recorded title colours (architect 2026-10-05, `roles.caption_roles`): Windows' ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText, KDE 3's active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds, GNOME 2's metacity title band (selected_bg_color / bg_color, the focused title's literal #FFFFFF, the unfocused title's blend of fg and bg at 0.45); a gradient end only where the entry records one (the 19 Windows entries with Gradient*Title), the generator's flat-caption rule making the end the start otherwise |
+| the Clearlooks painters' `cl_` roles | a GNOME 2 entry's `engine_tones` whole (architect 2026-10-07, the painters round): build.py `engine_tones` runs the Clearlooks engine's and metacity's own arithmetic — the shades, the pixman / metacity gradient rows (a ramp recorded as its first and last painted rows), the translucent strokes composited by pixman's OVER — at the product's geometry read off `src/gui/chrome_spec.h`'s clearlooks instance; gen_theme_files.py also writes them as the role table's generated Clearlooks block, `src/gui/theme_clearlooks_roles.inc` and `theme_clearlooks_members.inc`, beside the compiled Clearlooks theme (never hand-edited) |
 
 The chrome is the entry AS RECORDED, through ONE light-roles function, `roles.light_roles` (the emboss's light copy
-the recorded Hilight), which the frozen crops were rendered through too, so a file and its crop show one chrome. The dark level (2026-10-03..04: a second, computed row per entry) was dropped with the app's
+the recorded Hilight), which the frozen crops were rendered through too, so a compiled theme and its crop show one
+chrome. The dark level (2026-10-03..04: a second, computed row per entry) was dropped with the app's
 `theme_level` (architect 2026-10-04: a dark look is a theme he designs).
 
 ## The contract
@@ -75,13 +85,12 @@ the recorded Hilight), which the frozen crops were rendered through too, so a fi
 - NO BACKSTOPS: the inputs are pinned third-party files; a malformed one is a one-line hard fail naming it.
 - A THEME OWNS THE CHROME. The catalog records EVERY raw value its source has, under the source's own key names
   (`raw`), even those no role reads today, so the waveform pane can later inherit from a theme by choice.
-- A role a source has no word for is ABSENT, its theme file does not name it, and the built-in's value applies; nothing is guessed.
+- A role a source has no word for is ABSENT, the entry does not name it, and Windows 2000's value applies; nothing is guessed.
 
 ## An entry
 
 `key` (unique ASCII, lowercase words joined by hyphens behind the family prefix — `windows-`, `plus-`, `kde3-`,
-`cde-`; a `gnome2` key is the GTK theme's own name, lowercase, with no prefix, `clearlooks` — what is
-typed in Settings), `name` (the source's display name verbatim; a Windows 98
+`cde-`; a `gnome2` key is the GTK theme's own name, lowercase, with no prefix, `clearlooks`), `name` (the source's display name verbatim; a Windows 98
 theme's file name, a CDE palette's file stem), `family`, `imitates` (optional: a KDE scheme whose name says it imitates
 another desktop), `provenance` (`sources`: one record per source file; `rule`: the toolkit rule's id, its parameters
 and every value it computed), `raw`, `roles`, `flag_rule` (the rule the bevelled flag style took — kept as a record, read by
@@ -191,11 +200,11 @@ it on 2026-10-05 and 06 in the tablet's geometry (the tablet's 2304 x 1440 at gu
 the top strip's left half and its right half over the same rows (the menu down to 7 canvas rows under the well's top
 lines), and the well's two bottom lines over the bottom row, its status panel and state line beside its last two
 button groups, stacked 1152 px wide (697 rows; `windows-2000-standard`'s, rendered a day later, 663) with a 4-row
-fully transparent gap between them, each with the Display-P3 iCCP chunk. On each: the entry's chrome as recorded (`roles.light_roles`, the bundled file's own chrome), the well's
+fully transparent gap between them, each with the Display-P3 iCCP chunk. On each: the entry's chrome as recorded (`roles.light_roles`), the well's
 two-line plain sunken edge, the flat flags left to right editing, selected, invalid, disabled and unselected, the
 disabled words and glyphs engraved over the Hilight; the program's elements in the colors of their day. THEY SHOW THE
 RETIRED WINDOWS 95 CHROME IN NIMBUS SANS: the render road broke at the Windows 2000 pivot (Nimbus left `fonts/`) and
 retired with the mock-up renderer on 2026-10-07 (the git history keeps both and the script that drove them); THE
-CROPS ARE FROZEN AS LAST RENDERED and never re-rendered, what he picks from by key, a theme's colors reading true in
-them. `catalog_md.py` lists them and deletes a crop whose key has left the catalog; `clearlooks` (imported 2026-10-07)
+CROPS ARE FROZEN AS LAST RENDERED and never re-rendered, the record of each entry's look, a theme's colors reading true
+in them. `catalog_md.py` lists them and deletes a crop whose key has left the catalog; `clearlooks` (imported 2026-10-07)
 has none, and its CATALOG.md block says so.

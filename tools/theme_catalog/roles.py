@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/theme_catalog/roles.py — THE ROLE MAPPING, the one table (architect 2026-10-03): which recorded value (or
 # which value the source's own toolkit computed at import, toolkit_rules.py) fills each catalog role, per family.
-# A role a family has no word for is ABSENT from its row and from every entry of it: the built-in theme's value applies,
+# A role a family has no word for is ABSENT from its row and from every entry of it: Windows 2000's value applies,
 # never a guess. The flags, the red, the waveform ink and canvas are not catalog roles (a theme owns the chrome).
 # The app-specific roles are drawn from these catalog roles, not stored (architect 2026-10-03, late): the ruler label
 # <- label, the ruler ticks and the playhead head <- bevel_shadow; the flags' shading is the entry's flag_rule (build.py
@@ -82,9 +82,9 @@ for _fam, _row in MAPPING.items():
 
 
 # THE CHROME AS RECORDED, the one light-roles function (the dark level retired 2026-10-04: a dark look is a theme he
-# designs): one catalog entry -> {name: '#RRGGBB'} over LIGHT_ROLES, read by gen_theme_files.py (the bundled theme
-# files; the frozen crops, docs/themes/crops/, were rendered through it too), whose CHROME maps its names onto the
-# theme file's roles: the ground, the label and the relief quartet as recorded; the emboss's light copy the recorded
+# designs): one catalog entry -> {name: '#RRGGBB'} over LIGHT_ROLES, read by gen_theme_files.py (the compiled
+# themes; the frozen crops, docs/themes/crops/, were rendered through it too), whose CHROME maps its names onto the
+# app's roles: the ground, the label and the relief quartet as recorded; the emboss's light copy the recorded
 # Hilight (Windows' DSS_DISABLED; the app's emboss reads Hilight, render.h's palette block); the selected pair the
 # entry's selected_fill / selected_text, or for a CDE entry, which records none (Motif selects by inverse video), its
 # title_active under colour set 1's own Motif foreground; the field pair the entry's, recorded on every entry. The
@@ -94,7 +94,7 @@ LIGHT_ROLES = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow'
                'selected_fill', 'selected_text', 'field_ground', 'field_text')
 
 
-# THE CAPTION AS RECORDED (architect 2026-10-05): one catalog entry -> {theme-file role: '#RRGGBB'} for the app's six
+# THE CAPTION AS RECORDED (architect 2026-10-05): one catalog entry -> {app role: '#RRGGBB'} for the app's six
 # caption roles (src/gui/theme_file.h), read by gen_theme_files.py. Each family names its own title colours, a value
 # being a key of the entry's VALUES (its raw keys, or its toolkit rule's computed keys): Windows' ActiveTitle /
 # GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText; KDE 3's
@@ -105,8 +105,8 @@ LIGHT_ROLES = ('ground', 'label', 'bevel_hilight', 'bevel_light', 'bevel_shadow'
 # blend of fg and bg at 0.45 (draw_ops title_text / title_text_unfocused). NO DERIVATION:
 # a gradient end is named only where the entry records one (the 19 Windows entries that carry Gradient*Title; Windows
 # 95 Standard, the Plus! themes, KDE 3, CDE and GNOME 2 record none: metacity's band is a ramp of shades of its one
-# colour, which the Windows caption painter draws flat), and the app's theme-file rule then makes the end the start,
-# a flat caption. KDE 3's activeBlend / inactiveBlend are not read: a KDE 3 window decoration's own choice,
+# colour, which the Windows caption painter draws flat), and gen_theme_files.py's flat-caption rule then makes the end
+# the start, a flat caption. KDE 3's activeBlend / inactiveBlend are not read: a KDE 3 window decoration's own choice,
 # not the scheme's caption.
 CAPTION = {
     'windows': (('caption_active', 'ActiveTitle'), ('caption_active_gradient', 'GradientActiveTitle'),
@@ -123,7 +123,7 @@ CAPTION['gnome2'] = (('caption_active', 'selected_bg_color'), ('caption_active_t
 
 
 def caption_roles(e):
-    """One catalog entry -> {theme-file role: '#RRGGBB'} for the caption (the rule above): each mapped value the entry
+    """One catalog entry -> {app role: '#RRGGBB'} for the caption (the rule above): each mapped value the entry
     records; a Windows entry without the Gradient keys (Windows 95 Standard, the Plus! themes) names no end."""
     row = CAPTION.get(e['family'])
     if row is None: return {}

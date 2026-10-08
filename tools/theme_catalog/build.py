@@ -3,8 +3,11 @@
 # bytes with their provenance (a fetched file, sources.py SOURCES; or a file of a disc image on the build host,
 # LOCAL_SOURCES: the squeeze image's Clearlooks), the values its own toolkit computed at import (toolkit_rules.py, the
 # rule named), and
-# its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE APP CARRIES IMPORTED THEMES ONLY,
-# NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has no word for stays absent.
+# its catalog roles (roles.py), the family rule its flags take (flag_rule) and its display tier (display_tier). THE CATALOG
+# RECORDS IMPORTED THEMES ONLY, NO DERIVATION (architect 2026-10-03): nothing here invents a colour; a role a source has
+# no word for stays absent. THE CATALOG IS A RECORD, NOT A SHIPPED SET (architect 2026-10-08): no theme file ships; the
+# app compiles in each chrome's own theme, Windows 2000's and Clearlooks', whose bytes it is the source of
+# (gen_theme_files.py).
 # THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's colors are the palette's, compiled in
 # (src/gui/palette_file.h), and the program's own family of chosen entries (`warptempo` and the presets of his
 # retired picker tool) left the catalog the same day ("it'll still be in the git history").
@@ -33,7 +36,7 @@ from roles import ROLES, MAPPING, map_roles
 OUT = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
 FAMILIES = ('windows', 'windows-plus', 'kde3', 'cde', 'gnome2')
 # a key's prefix per family; GNOME 2's keys are the GTK theme's own name, lowercase (`clearlooks`; architect
-# 2026-10-07: the bundled clearlooks.theme)
+# 2026-10-07: the compiled Clearlooks theme)
 KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde', 'gnome2': None}
 # THE FLAGS' RULE per family (architect 2026-10-03, late: a flag's one-line bevel is its theme family's own rule on the
 # flag's face, toolkit_rules.flag_bevel): Windows' Appearance dialog for the Windows families and the program's own
@@ -516,7 +519,7 @@ def gnome2_entries():
 #     palette head). Over a ramp the composite is itself a ramp's ends, per row or per column.
 # The role names are the C++ painters' (clearlooks_paint.cpp reads each by name; a renamed tone is a compile error
 # there), and they are written into the clearlooks entry's `engine_tones`, which gen_theme_files.py carries into
-# assets/themes/clearlooks.theme and the two generated includes.
+# the generated includes (the role table's Clearlooks block and the compiled Clearlooks theme).
 CHROME_SPEC_H = os.path.join(REPO, 'src', 'gui', 'chrome_spec.h')
 
 
@@ -1054,7 +1057,7 @@ def checks(entries):
         T.flag_bevel(e['flag_rule'], (0x8A, 0x5E, 0xAC))
     assert T.windows_dialog((0xD4, 0xD0, 0xC8))[0] == (0xEA, 0xE8, 0xE3)
     assert T.windows_dialog((0x83, 0x99, 0xB1)) == ((0xC1, 0xCC, 0xD9), (0x83, 0x99, 0xB1), (0x4F, 0x65, 0x7D), (0, 0, 0))
-    # Windows 2000 Standard is the hive's bytes (the chrome's theme and the built-in: the chrome roles of the ReactOS
+    # Windows 2000 Standard is the hive's bytes (the windows-2000 chrome's compiled theme: the chrome roles of the ReactOS
     # captures); Windows 98 Standard is Windows 95 Standard's roles but for the 3DLight, under a gradient caption
     w2k = by['windows-2000-standard']['roles']
     assert [w2k[x] for x in ('ground', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow', 'selected_fill',

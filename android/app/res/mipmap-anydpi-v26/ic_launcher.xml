@@ -6,7 +6,8 @@
      audio-x-generic, assets/icons/mist/AppIcon.svg, rasterised ANTIALIASED
      by rsvg-convert (librsvg 2.62 on the laptop; a vector, not pixel art)
      and centered over CLEARLOOKS' GROUND, #EDECEB (architect 2026-10-07:
-     assets/themes/clearlooks.theme's `ground`, the face every chrome
+     the compiled Clearlooks theme's `ground`,
+     src/gui/theme_clearlooks_values.inc, the face every chrome
      surface of the app stands on), so the mask shows a ground-colored
      shape carrying the drawing. An ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.

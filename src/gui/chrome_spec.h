@@ -13,17 +13,18 @@
 // THE CHROME SPEC (architect 2026-10-06): the choices of the period desktop
 // the chrome follows, for the elements a later vocabulary may draw
 // differently — read by the chokepoint that paints each element, never a
-// literal at the painter. The colors stay the theme's (theme_file.h) and
-// the palette's (palette_file.h); the spec chooses shapes, seats and faces,
-// and names the theme a config with no `theme` line wears and the palette a
-// config with no `palette` line takes.
+// literal at the painter. The colors stay the chrome's compiled theme's
+// (theme_file.h's kGuiChromeThemes, by this spec's key) and the palette's
+// (palette_file.h); the spec chooses shapes, seats and faces, and names the
+// palette a config with no `palette` line takes.
 //
 // THE NAME IS `windows-2000` (architect 2026-10-07): the `chrome` key's
-// value, the default palette's name and, with its scheme's word, the
-// built-in theme's (`windows-2000-standard`). C++ IDENTIFIERS AND FILE NAMES
-// KEEP `Win2000` / `win2000` AS THE ABBREVIATION (kChromeSpecWin2000,
-// GuiChromeVocabulary::Win2000, docs/engineering/win2000_deviations.md), and
-// prose may say win2000 for the vocabulary; only a KEY is spelled whole.
+// value and the default palette's name (its compiled theme is the catalog
+// entry `windows-2000-standard`, the scheme's word beside it). C++
+// IDENTIFIERS AND FILE NAMES KEEP `Win2000` / `win2000` AS THE ABBREVIATION
+// (kChromeSpecWin2000, GuiChromeVocabulary::Win2000,
+// docs/engineering/win2000_deviations.md), and prose may say win2000 for the
+// vocabulary; only a KEY is spelled whole.
 //
 // TWO VOCABULARIES, ONE LIVE, CHOSEN AT LAUNCH (the `chrome` device key,
 // architect 2026-10-07, the planner's design under his free rein:
@@ -67,8 +68,9 @@
 // it is the metric base every later vocabulary is fitted to, and the
 // table's order is the defaults' order (palette_file.cpp's assert).
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
-// dropped (it stands in git history); its colours remain an ordinary theme
-// file. The table is kGuiChromeSpecs below, the live instance
+// dropped (it stands in git history); its colors remain in the theme
+// catalog's record (`windows-95-standard`, tools/theme_catalog). The table is
+// kGuiChromeSpecs below, the live instance
 // live_chrome_spec(), set once by set_live_chrome_spec before the first
 // paint. WHERE THE TWO DRAW DIFFERENTLY THE PAINTER FORKS ON THE SPEC'S
 // `vocabulary` (or on the toolbar style or the disabled glyph, where that
@@ -144,9 +146,6 @@ struct ChromeSpec {
     const char*        display_name;
     // THE PAINTERS' SWITCH (GuiChromeVocabulary above).
     GuiChromeVocabulary vocabulary;
-    // THE THEME A CONFIG WITH NO `theme` LINE WEARS under this chrome
-    // (effective_theme_key, theme_file.h): the vocabulary's own colours.
-    const char*        default_theme;
     // THE PALETTE A CONFIG WITH NO `palette` LINE TAKES under this chrome
     // (effective_palette_name, palette_file.h; architect 2026-10-07): the
     // vocabulary's own program colors, a compiled default palette, and the
@@ -286,7 +285,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .key                          = "windows-2000",
     .display_name                 = "Windows 2000",
     .vocabulary                   = GuiChromeVocabulary::Win2000,
-    .default_theme                = "windows-2000-standard",
     .default_palette              = "windows-2000",
     .face_set                     = &kGuiFaceSetWin2000,
     .caption_height_px            = 18,
@@ -399,7 +397,6 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .key                          = "clearlooks",
     .display_name                 = "Clearlooks",
     .vocabulary                   = GuiChromeVocabulary::Clearlooks,
-    .default_theme                = "clearlooks",
     .default_palette              = "clearlooks",
     .face_set                     = &kGuiFaceSetGnome2,
     .caption_height_px            = 20,

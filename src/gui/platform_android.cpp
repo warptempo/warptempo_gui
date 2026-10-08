@@ -469,11 +469,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     return cfg;
 }
 
-// THE TABLET'S BUNDLES ARE THE APK'S ASSET DIRECTORIES (contracts at
-// platform_wayland.h's declarations): build_apk.sh copies the repository's
-// assets/themes/*.theme into the package's assets/themes/ and each
-// assets/icons/<set>/*.svg into assets/icons/<set>/, and one reader lists an
-// asset directory (AAssetManager_openDir lists FILES only) and reads every
+// THE TABLET'S ICON BUNDLES ARE THE APK'S ASSET DIRECTORIES (contract at
+// platform_wayland.h's declaration): build_apk.sh copies each of the
+// repository's assets/icons/<set>/*.svg into assets/icons/<set>/, and one
+// reader lists an asset directory (AAssetManager_openDir lists FILES only) and reads every
 // name ending `suffix` whole. The manager is the activity's, off the
 // file-scope pointer android_main parks before gui_main asks (the road
 // device_config_defaults takes). THE ERROR ARM'S PRODUCERS: an asset listed
@@ -523,11 +522,6 @@ read_asset_dir(const std::string& dir_name, std::string_view suffix) {
     AAssetDir_close(dir);
     if (!failure.empty()) return std::unexpected(std::move(failure));
     return out;
-}
-
-std::expected<std::map<std::string, std::string>, std::string>
-GuiPlatform::bundled_theme_files() {
-    return read_asset_dir("themes", ".theme");
 }
 
 // AAssetManager_openDir answers an EMPTY listing, not a failure, for a

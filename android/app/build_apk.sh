@@ -16,8 +16,7 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the two font files,          (manifest + res + assets)
-#      the bundled theme files and
+#   1. assets (the two font files and       (manifest + res + assets)
 #      the icon sets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
@@ -105,21 +104,6 @@ for f in $FONT_FILES; do
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done
-# THE BUNDLED THEME FILES (architect 2026-10-05): the repository's generated
-# assets/themes/*.theme (tools/theme_catalog/gen_theme_files.py), every one,
-# into the package's assets/themes/, which aapt2 link's -A packs as the APK's
-# `themes/` asset directory. The app copies them into its own themes/ folder at
-# every launch before reading it (theme_file.h; GuiPlatform::
-# bundled_theme_files lists and reads them, platform_android.cpp). An empty
-# folder is a build defect and stops the script here, as a missing face does.
-THEME_DIR="$APPDIR/../../assets/themes"
-mkdir -p "$ASSETS/themes"
-shopt -s nullglob
-THEME_FILES=("$THEME_DIR"/*.theme)
-shopt -u nullglob
-[ "${#THEME_FILES[@]}" -gt 0 ] || wt_die "no .theme files under $THEME_DIR (tools/theme_catalog/gen_theme_files.py writes them)"
-cp -f "${THEME_FILES[@]}" "$ASSETS/themes/"
-wt_say "assets: ${#THEME_FILES[@]} theme files"
 # THE BUNDLED ICON SETS (architect 2026-10-06): each folder under the
 # repository's assets/icons/ (the Tango set, assets/icons/tango/) copied whole
 # as SVG into the package's assets/icons/<set>/, which aapt2 link's -A packs

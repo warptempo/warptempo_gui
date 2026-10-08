@@ -12,17 +12,20 @@
 #include <type_traits>
 #include <vector>
 
-// THE PALETTE FILES (architect 2026-10-07) — the PROGRAM'S colors, a file
-// type of their own beside the chrome's theme files (theme_file.h).
+// THE PALETTE FILES (architect 2026-10-07) — the PROGRAM'S colors, the one
+// color file type the app reads (the chrome's colors are compiled in,
+// theme_file.h).
 //
-// TWO FILE TYPES, TWO SOURCES FOR ONE STRUCT (architect 2026-10-07): the
-// CHROME THEME (the `theme` device key: the built-in and the bundled catalog
-// files, never edited in the app) colors the chrome, and THE PALETTE colors
-// the program, picked in the app and saved as NAMED presets. GuiPalette
-// (render.h) keeps every member; install_palette (render.h) fills the chrome
-// members off the theme's role table (kGuiThemeRoles) and the program members
-// off this file's (kGuiPaletteRoles), so every painter reads palette() as
-// before and no painter knows which file a color came from.
+// TWO SOURCES FOR ONE STRUCT (architect 2026-10-07; 2026-10-08): THE LIVE
+// CHROME'S COMPILED THEME (theme_file.h's kGuiChromeThemes, never edited in
+// the app) colors the chrome, and THE PALETTE colors the program, picked in
+// the app and saved as NAMED presets — the architect's workshop, "save and
+// load a handful of themes at a time before we hard code them" (2026-10-08;
+// a look made official becomes a chrome variant, its colors compiled in).
+// GuiPalette (render.h) keeps every member; install_palette (render.h) fills
+// the chrome members off the theme's role table (kGuiThemeRoles) and the
+// program members off this file's (kGuiPaletteRoles), so every painter reads
+// palette() as before and no painter knows which source a color came from.
 //
 // THE PALETTE'S RULE (architect 2026-10-07 ~10:00): A COLOR THE PROGRAM
 // DRAWS IN THE WELL, OR ON A THING THAT ENTERS THE WELL, IS THE PALETTE'S; a
@@ -41,15 +44,15 @@
 // THE TWO DEFAULT PALETTES ARE COMPILED IN, one per chrome vocabulary, each
 // named by its ChromeSpec's `default_palette` (chrome_spec.h): `windows-2000`
 // and `clearlooks` — the role table's two value columns below. A DEFAULT IS
-// NOT A FILE AND TAKES NO FILE (the built-in theme's rule): a file bearing a
+// NOT A FILE AND TAKES NO FILE: a file bearing a
 // default's name is the read's hard fail, and the picker never asks the
 // maintenance API below to write, rename or remove one (its writers assert
 // it). Nothing is bundled or copied in for
 // palettes; the folder holds his own files alone.
 //
 // THE FILES: `<name>.palette` in the `palettes/` folder BESIDE THE DEVICE
-// CONFIG (palette_folder_path, as theme_folder_path is). THE GRAMMAR is the
-// theme file's lexical contract exactly (the shared scanner,
+// CONFIG (palette_folder_path). THE GRAMMAR is the device config's lexical
+// contract exactly (the shared scanner,
 // warptempo_settings::scan_key_value_file: LF-terminated `role=value` lines,
 // split at the first '=', no blank line, no comment, no whitespace
 // tolerance, no duplicate), each role one of the fourteen and each value THE
@@ -63,27 +66,26 @@
 //
 // THE NAME GRAMMAR (is_palette_name_spelling): the stem is the name
 // verbatim, case-sensitive, 1 to 40 bytes of printable ASCII (0x20..0x7E),
-// no leading or trailing space and no '/'. WIDER THAN THE THEME KEY'S
-// hyphen grammar on purpose: a theme key is a catalog's machine key, a
-// palette name is TYPED by him through the on-screen keyboard "for
+// no leading or trailing space and no '/'. WIDER THAN A CATALOG KEY'S
+// hyphen grammar on purpose: a catalog key is a machine key, a palette name
+// is TYPED by him through the on-screen keyboard "for
 // organization", so it admits capitals, spaces and punctuation; ASCII
 // still, TEXT BEING ASCII IN GRAMMARS. The '/' is the one byte a file name
 // cannot hold; the suffix is always appended, so no name reaches outside
 // the folder.
 //
-// THE FOLDER IS READ ONCE AT LAUNCH (read_palette_folder, gui_main, after
-// read_theme_folder and before the device config, so the config's `palette`
-// key is judged against what loaded; the names taken in sorted order, so
+// THE FOLDER IS READ ONCE AT LAUNCH (read_palette_folder, gui_main, before
+// the device config, so the config's `palette` key is judged against what
+// loaded; the names taken in sorted order, so
 // the first error is the same file on every launch) into a live map. A
 // MISSING FOLDER IS NO FILES. EVERY VIOLATION IS THE LAUNCH'S FIRST-ERROR
 // HARD FAIL (NO BACKSTOPS FOR ADVERSARIAL USE: a violation is a hand edit) —
 // an unknown role (a chrome role named in a palette file included), a
 // malformed value, a duplicate role, a name outside the grammar, a file named
 // for a default, an unreadable folder or file — the blunt terminal line
-// naming the file and the line and no window, the theme read's road and
-// words.
+// naming the file and the line and no window, the device config's road.
 //
-// UNLIKE THE THEMES, THE MAP IS MAINTAINED AFTER THE LAUNCH BY THE PICKER'S
+// THE MAP IS MAINTAINED AFTER THE LAUNCH BY THE PICKER'S
 // OWN WRITES (the picker is the one writer of the folder): write, rename and
 // remove below each keep the map and the folder in step, so the folder is
 // never re-read. THE CALLERS (2026-10-07): the launch read, and THE COLOR
@@ -187,8 +189,8 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // second member, defined in render.cpp beside install_palette, render.h):
 // `words` written into GuiPalette's program members, the plate's two inks
 // re-baked and palette_generation bumped, the chrome members untouched — THE
-// CHROME STAYS LAUNCH-BOUND (its theme moves only with install_palette and
-// the `theme` key), the program's colors move live. THE PICKER'S LIVE ROAD
+// CHROME STAYS LAUNCH-BOUND (its compiled theme moves only with the chrome,
+// at launch, install_palette), the program's colors move live. THE PICKER'S LIVE ROAD
 // (GuiColorPicker::install_live_words, color_picker.h). THE APPLY SHAPE THE
 // CALLER OWES, after the call: the caller kicks the waveform when the plate
 // inks changed and otherwise refreshes the flag cache alone, then
@@ -248,8 +250,7 @@ constexpr bool is_default_palette_name(std::string_view name) {
 // THE PALETTE THE INSTALL TAKES (architect 2026-10-07): the device config's
 // `palette` as written, or — EMPTY, no `palette` line — THE LIVE CHROME'S
 // DEFAULT PALETTE (chrome_spec.h's default_palette of live_chrome_spec():
-// `windows-2000` or `clearlooks`), the theme's own shape
-// (effective_theme_key). The struct keeps the empty value, so the file
+// `windows-2000` or `clearlooks`). The struct keeps the empty value, so the file
 // never pins a vocabulary's default.
 std::string_view effective_palette_name(std::string_view palette);
 
@@ -258,8 +259,8 @@ std::string_view effective_palette_name(std::string_view palette);
 // then refuses with its own line).
 std::filesystem::path palette_folder_path();
 
-// THE LAUNCH'S ONE READ of the palettes folder (gui_main, after
-// read_theme_folder, before the device config is read): every `*.palette`
+// THE LAUNCH'S ONE READ of the palettes folder (gui_main, before the device
+// config is read): every `*.palette`
 // regular file parsed under the grammar above into the live map. Answers
 // nothing on success and the first error's whole line otherwise, the file
 // named — FATAL at the caller. Called once per process.

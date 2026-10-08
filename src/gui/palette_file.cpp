@@ -49,16 +49,6 @@ constexpr bool palette_members_disjoint() {
     return true;
 }
 static_assert(palette_members_disjoint());
-// A program role's name is never a chrome role's either, so a role named in
-// the wrong file type is an unknown role in both readers. (Its own constant
-// expression: 14 x 362 name comparisons stay far inside clang's step budget,
-// theme_file.cpp's role_names_unique has the measure.)
-constexpr bool palette_names_not_chrome() {
-    for (const GuiPaletteRole& r : kGuiPaletteRoles)
-        if (theme_role_index(r.name) != kGuiThemeRoleCount) return false;
-    return true;
-}
-static_assert(palette_names_not_chrome());
 static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount) * sizeof(GuiColor));
 

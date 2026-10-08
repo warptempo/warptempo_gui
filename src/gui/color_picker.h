@@ -649,8 +649,8 @@ struct GuiColorPicker {
 
     // THE `palette` KEY'S ONE WRITER (the presets' acts): `name` becomes THE
     // ACTIVE PRESET — the key's value the name, or EMPTY (NO LINE) when it
-    // is the live chrome's own default palette, the theme key's road back
-    // (device_config.h: absent = the chrome's own); a same-value write never
+    // is the live chrome's own default palette (device_config.h: absent =
+    // the chrome's own); a same-value write never
     // reaches the writer (the config's no-op rule); otherwise the live
     // struct takes it and write_device_config persists it, a failure the
     // diagnostic on stderr and the display on a card, the live value

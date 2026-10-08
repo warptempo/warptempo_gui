@@ -72,39 +72,23 @@ public:
     // exists — gui_main resolves the config ahead of init().
     static DeviceConfig device_config_defaults();
 
-    // THE BUNDLED THEME FILES — the `.theme` files that ship WITH THIS BUILD
-    // of the program (the generated `assets/themes/`, every catalog theme but
-    // the compiled built-in; tools/theme_catalog/gen_theme_files.py), as a
-    // map from FILE NAME (`<key>.theme`, no folder) to the file's whole
-    // bytes. Read by the launch's copy-in alone (copy_in_bundled_themes,
-    // theme_file.h, whose head states the rule), which writes each into the
-    // themes folder before the folder is read. A PLATFORM FACT and on the
-    // seam for that reason: where the bundle lives is the backend's answer —
-    // THIS BACKEND reads the repository's own `assets/themes/`, its absolute
-    // path compiled in (WARPTEMPO_BUNDLED_THEMES_DIR, CMakeLists.txt: the
-    // laptop runs from its build tree beside the repository), every regular
-    // file whose name ends `.theme`; the Android backend reads the APK's
-    // `themes/` assets (build_apk.sh packs them). STATIC because it is asked
-    // before any window exists, like the template above. THE ERROR ARM'S
-    // PRODUCER IS IO (here: the folder or a file unreadable, the repository
-    // moved after the build; on the tablet an asset that will not open): the
-    // system's words, which the copy-in carries to the launch's hard fail.
-    static std::expected<std::map<std::string, std::string>, std::string>
-        bundled_theme_files();
-
     // THE BUNDLED ICON SET'S FILES — the SVG drawings of the set `set`
     // (assets/icons/<set>/, the Tango set's 59), as a map from FILE NAME
     // (`<Enumerator>.svg`, no folder) to the file's whole bytes, every file of
     // the set's folder whose name ends `.svg`. Read by the launch's icon load
-    // alone (icons::load_svg_set, icons.h), IN PLACE: unlike the themes,
-    // nothing is copied into the config folder (nobody authors an icon set on
-    // the device). A PLATFORM FACT for the themes' reason: THIS BACKEND reads
-    // the repository's own `assets/icons/<set>/`, its absolute path compiled
-    // in (WARPTEMPO_BUNDLED_ICONS_DIR, CMakeLists.txt); the Android backend
-    // reads the APK's `icons/<set>/` assets (build_apk.sh packs them). STATIC,
-    // asked before any window exists. THE ERROR ARM'S PRODUCER IS IO, as the
-    // themes': the system's words, which the load carries to the launch's
-    // hard fail.
+    // alone (icons::load_svg_set, icons.h), IN PLACE: nothing is copied into
+    // the config folder (nobody authors an icon set on the device). A
+    // PLATFORM FACT and on the seam for that reason: where the bundle lives
+    // is the backend's answer — THIS BACKEND reads the repository's own
+    // `assets/icons/<set>/`, its absolute path compiled in
+    // (WARPTEMPO_BUNDLED_ICONS_DIR, CMakeLists.txt: the laptop runs the
+    // executable from its build tree beside the repository); the Android
+    // backend reads the APK's `icons/<set>/` assets (build_apk.sh packs
+    // them). STATIC, asked before any window exists, like the template
+    // above. THE ERROR ARM'S PRODUCER IS IO (here: the folder or a file
+    // unreadable, the repository moved after the build; on the tablet an
+    // asset that will not open): the system's words, which the load carries
+    // to the launch's hard fail.
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files(std::string_view set);
 

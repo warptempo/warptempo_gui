@@ -197,8 +197,8 @@ inline std::string_view gui_live_icon_set() {
 // `chrome` names the set) and before the window: `set`'s files fetched from the bundle
 // (GuiPlatform::bundled_icon_files — the repository's assets/icons/<set>/ on
 // the laptop, the APK's icons/<set>/ assets on the tablet; READ IN PLACE,
-// never copied into the config folder as the themes are: his own themes sit
-// beside the bundle there, and nobody authors an icon set on the device),
+// never copied into the config folder: nobody authors an icon set on the
+// device),
 // then every enumerator's `<name>.svg` parsed in enum order before any draw
 // (svg_icon::parse; files of other names, the README among them, ignored).
 // THE ERROR ARM'S PRODUCERS: the bundle unreadable (IO), a file missing or

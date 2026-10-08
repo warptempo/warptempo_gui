@@ -173,9 +173,10 @@ struct WaveformCache {
     int       fp_line_px = -1;
     // THE TWO BAKED INKS the live pixels were written in (the `waveform_ink`
     // and `waveform_outline` roles, waveform_plate_inks, render.h): the plate
-    // writes their words, so a `theme` commit that moves either re-renders it
-    // BY FIELD, keyed directly like the line width (architect 2026-10-03; the
-    // roles of a theme since 2026-10-04).
+    // writes their words, so an install that moves either (the color
+    // picker's live words, install_program_palette, palette_file.h)
+    // re-renders it BY FIELD, keyed directly like the line width (architect
+    // 2026-10-03; palette roles since 2026-10-07).
     WaveformPlateInks fp_inks{};
     // THE GAIN FIELD the live pixels were rendered under — the derived
     // curve's version where the picture is magnified, 0 where the gate answers
@@ -336,10 +337,11 @@ struct FlagCache {
     // fingerprint unchanged across a scale commit and blit the old flags.)
     int       fp_gui_scale_percent   = -1;
     // THE PALETTE THESE PIXELS WERE PAINTED IN (palette_generation(),
-    // render.h — architect 2026-10-03; the theme's roles since 2026-10-04):
-    // every flag pixel is a palette colour (the kind's face, its label, the
-    // outline, the ground of a disabled box), so a `theme` commit re-renders
-    // the surface BY FIELD, the scale's shape. (The KIND needs no field of
+    // render.h — architect 2026-10-03; the palette's roles since
+    // 2026-10-07): every flag pixel is a palette colour (the kind's face, its
+    // label, the outline, the ground of a disabled box), so an install (the
+    // color picker's live words, install_program_palette) re-renders the
+    // surface BY FIELD, the scale's shape. (The KIND needs no field of
     // its own: it is the column, which fp_active_markers_view keys, or the
     // diff half, which the history fields key.)
     uint64_t  fp_palette_generation  = 0;

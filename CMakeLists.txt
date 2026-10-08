@@ -170,8 +170,8 @@ set(WARPTEMPO_GUI_SOURCES
     # by construction: warptempo_cli never read any of them, and the file
     # describes the panel in front of the user rather than the piece.
     src/gui/device_config.cpp
-    # THE THEME FILES (2026-10-04): the role table, the one built-in theme and
-    # the themes folder beside the device config, read once at launch.
+    # THE CHROME'S COLORS (2026-10-04; compiled in since 2026-10-08): the
+    # role table and each chrome's compiled theme, no files.
     # GUI-ONLY like the config: the CLI paints nothing.
     src/gui/theme_file.cpp
     # THE PALETTE FILES (2026-10-07): the program's role table, the two
@@ -612,18 +612,14 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${JACK_INCLUDE_DIRS}
         ${WARPTEMPO_GIT_INCLUDE_DIRS}
     )
-    # THE BUNDLED THEME FILES' SOURCE ON THE LAPTOP (architect 2026-10-05,
-    # theme_file.h's copy-in): the repository's own assets/themes/, its
-    # absolute path compiled in, since the laptop runs the executable from its
-    # build tree beside this source tree (GuiPlatform::bundled_theme_files,
-    # platform_wayland.cpp). The APK packs the same files as assets instead
-    # (android/app/build_apk.sh), so the Android branch defines nothing.
     # THE BUNDLED ICON SETS' SOURCE ON THE LAPTOP (architect 2026-10-06,
-    # icons.h's load_svg_set), for the same reason: the repository's own
-    # assets/icons/, each set a folder read in place
-    # (GuiPlatform::bundled_icon_files); the APK packs them as assets.
+    # icons.h's load_svg_set): the repository's own assets/icons/, its
+    # absolute path compiled in, since the laptop runs the executable from its
+    # build tree beside this source tree, each set a folder read in place
+    # (GuiPlatform::bundled_icon_files, platform_wayland.cpp). The APK packs
+    # the same files as assets instead (android/app/build_apk.sh), so the
+    # Android branch defines nothing.
     target_compile_definitions(warptempo_gui PRIVATE
-        WARPTEMPO_BUNDLED_THEMES_DIR="${CMAKE_SOURCE_DIR}/assets/themes"
         WARPTEMPO_BUNDLED_ICONS_DIR="${CMAKE_SOURCE_DIR}/assets/icons")
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}

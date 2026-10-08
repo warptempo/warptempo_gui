@@ -3472,36 +3472,24 @@ struct SettingsPopupItem {
 // which moved `GUI Scale` from the first row to the device group's head, the
 // group keeping kDeviceConfigKeys' own order.
 //
-// `Theme` JOINED 2026-10-03 (architect: the theme is a device key with a
-// Settings row), after `Projects Path` in kDeviceConfigKeys' order, the last
-// row of the device group. Its label is its key's name in Title Case. It
-// stood at the head of a SECOND GROUP behind its own separator while the
-// colour rows were fourteen (2026-10-03..04: the theme, its level and the
-// twelve program colours, a group longer than the rest of the device half
-// together); with `theme_level` and the twelve keys gone into the theme files
-// (architect 2026-10-04) the group is the one row, and the separator went
-// with the reason for it — the device half is one group again.
+// `Theme` STOOD 2026-10-03..10-08 (architect: the theme was a device key
+// with a Settings row), the last row of the device group, a text row whose
+// domain — the built-in plus ninety-odd bundled theme files — no list
+// could show; it LEFT WITH ITS KEY when every chrome's colors were compiled
+// in (architect 2026-10-08, theme_file.h).
 //
-// `Chrome` JOINED 2026-10-07 (architect, the second vocabulary), RIGHT
-// BEFORE `Theme` in kDeviceConfigKeys' order — the theme's sibling row, the
-// same editor, refusal and recall, its label its key's name in Title Case;
-// its commit applies at the next launch and says so on a card
+// `Chrome` JOINED 2026-10-07 (architect, the second vocabulary), the last row
+// of the device group in kDeviceConfigKeys' order, its label its key's name
+// in Title Case; its commit applies at the next launch and says so on a card
 // (commit_device_setting).
 //
-// `palette` (2026-10-07, the seventh device key) HAS NO ROW: the in-app
-// color picker is its chooser, so the device half stays these five.
+// `palette` (2026-10-07, the sixth device key) HAS NO ROW: the in-app
+// color picker is its chooser, so the device half stays these four.
 //
 // `Chrome` IS THE ONE CHOICE ROW (architect 2026-10-07 evening; the editor
 // kinds above): its domain the chrome table, its commit the text road's
 // (commit_device_setting), so its refusal-free value, the config write and
-// the next-launch card are unchanged. `Theme` STAYS TEXT FOR NOW: its
-// domain is the built-in plus every bundled theme file, ninety-odd keys —
-// more than a list without a scroll bar can show (the product's lists carry
-// none; the palette menu cuts to the rows that fit, color_picker.h). WHEN THE
-// CATALOG IS PRUNED to a list that fits, Theme becomes a choice row by ONE
-// TABLE EDIT plus ONE ITEMS SOURCE — a SettingsChoiceSource over the
-// built-in and the theme keys read at launch (theme_file.h) — and nothing
-// in the editor, its painter or its press road changes.
+// the next-launch card are unchanged.
 //
 // `Pick Colors` IS THE MENU'S ONE COMMAND ROW (architect 2026-10-07: the
 // in-app color picker, "a full-fledged part of the project"), the LAST row
@@ -3522,7 +3510,6 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Projects Path",       "projects_path", false},
     {"Chrome",              "chrome",        false, SettingsPopupAct::EditKey,
      SettingsEditorKind::Choice, &kChromeChoiceSource},
-    {"Theme",               "theme",         false},
     {"Pick Colors",         nullptr,         true, SettingsPopupAct::PickColors},
 };
 inline constexpr int kSettingsPopupItemCount =

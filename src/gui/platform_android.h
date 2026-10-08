@@ -43,16 +43,17 @@
 // the platform can answer; and the reopen loop's three (request_run_stop,
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
-// LAST GREW ON 2026-10-06, twice: by bundled_icon_files (the icon set's SVG
+// LAST SHRANK ON 2026-10-08 (the theme files' member, below) and LAST GREW ON
+// 2026-10-06, twice: by bundled_icon_files (the icon set's SVG
 // files the build ships, read in place at launch: the repository's
 // assets/icons/<set>/ on the laptop, the APK's assets here — icons.h's
 // load_svg_set) and by display_width_px (the display's horizontal
 // resolution, the working column's held width — working_column_frames,
 // app_state.h: the output's current mode on the laptop, the surface here),
-// before that on 2026-10-05 by bundled_theme_files (the theme files the build
-// ships: the repository's assets/themes/ on the laptop, the APK's assets
-// here — the copy-in at launch, theme_file.h), and before that on
-// 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
+// before that on 2026-10-05 by the bundled theme files' member (the theme
+// files the build shipped, copied in at launch; it left 2026-10-08 with the
+// files, every chrome's colors compiled in since, theme_file.h), and before
+// that on 2026-08-28, twice, by the car's pair (gui_media.h carries their vocabulary;
 // the contracts are at platform_wayland.h's two declarations, the JNI road at
 // this backend's definitions and MainActivity.java): set_on_media_command, the
 // hook the loop fires with each head-unit button the Java sliver's
@@ -63,12 +64,12 @@
 // session's metadata and playback state, whose Wayland body is empty; that
 // pair has TWO consumers since 2026-09-17, the render player while it stands
 // and the car transport while it is closed, forked at main.cpp's hook on the
-// player's mode bit. The
-// ELEVEN
-// consumers (re-greped 2026-10-06: main.cpp, viewport.cpp, theme_file.cpp,
-// icons.cpp, paint_handler.h, prompt.h, file_loader.h, input_handler.h,
+// player's mode bit. The TEN
+// consumers (re-grepped 2026-10-08: main.cpp, viewport.cpp, icons.cpp,
+// paint_handler.h, prompt.h, file_loader.h, input_handler.h,
 // onscreen_keyboard.h, render_player.h, car_transport.h — icons.cpp joined
-// with the icon set's load) include platform.h and compile against either
+// with the icon set's load, theme_file.cpp left with the theme files)
+// include platform.h and compile against either
 // backend unchanged. WHERE A DOOR'S CONTRACT IS THE SEAM'S rather than this backend's,
 // it is stated ONCE at its owner and pointed at from here: the input doors and
 // the capture/cursor policy belong to GuiInputCore (input_core.h), and the
@@ -144,20 +145,13 @@ public:
     // the cache home it has always set.
     static DeviceConfig device_config_defaults();
 
-    // THE BUNDLED THEME FILES, the seam's own member (contract at
-    // platform_wayland.h, which owns it): this backend answers the APK's
-    // `themes/` assets — the repository's `assets/themes/*.theme`, which
+    // THE BUNDLED ICON SET'S FILES, the seam's own member (contract at
+    // platform_wayland.h): this backend answers the APK's `icons/<set>/`
+    // assets — the repository's `assets/icons/<set>/*.svg`, which
     // build_apk.sh's asset step packs — listed and read through the
     // activity's AAssetManager, reached off the backend's one file-scope
     // pointer (g_android_app), which android_main parks before gui_main asks,
     // the road device_config_defaults takes.
-    static std::expected<std::map<std::string, std::string>, std::string>
-        bundled_theme_files();
-
-    // THE BUNDLED ICON SET'S FILES, the seam's own member (contract at
-    // platform_wayland.h): this backend answers the APK's `icons/<set>/`
-    // assets — the repository's `assets/icons/<set>/*.svg`, which
-    // build_apk.sh's asset step packs — read through the same manager.
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files(std::string_view set);
 

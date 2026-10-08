@@ -23,11 +23,11 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// FIVE editable ones the per-device config carries — gui_scale and
+// FOUR editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect) projects_path,
-// which had been hand-edited only, since 2026-10-03 theme and since
-// 2026-10-07 chrome (theme's level and the twelve
+// which had been hand-edited only, and since 2026-10-07 chrome (theme,
+// editable 2026-10-03..10-08, its level and the twelve
 // program colour keys, editable 2026-10-03..04, left with their keys; the
 // config's key last_project is the program's own and has no editor; the
 // waveform's height cap, editable 2026-09-13..10-07, left with its key, the
@@ -38,8 +38,8 @@ struct GuiInputHandler;
 // the third editable device key, retired whole 2026-08-28 with the in-app
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
-// 1. The device keys other than the scale — projects_repo, projects_path,
-//    chrome and theme — in ONE body,
+// 1. The device keys other than the scale — projects_repo, projects_path
+//    and chrome — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
@@ -47,10 +47,8 @@ struct GuiInputHandler;
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; the chrome at the next launch, its card saying so; the theme is in
-//    force at once, the body installing the palette, rebuilding the plate
-//    and the flags before the next paint and damaging the window
-//    (install_palette, render.h). gui_scale, the one other
+//    card; the chrome at the next launch, its card saying so. gui_scale, the
+//    one other
 //    editable device key, stays in the GUI-kind router
 //    below because it HAS a chokepoint (apply_gui_scale) and the router's job
 //    is to reach one.
@@ -81,8 +79,8 @@ struct GuiInputHandler;
 // and theme at the very least"; the design the planner's, delegated) STANDS
 // BESIDE THE TEXT EDITOR: a Settings row whose key's domain is a SHORT
 // CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — today the
-// Chrome row alone; Theme joins by one table entry when its catalog fits a
-// list) opens THE SAME BOTTOM-ROW EDITOR — the same text_editor session
+// Chrome row alone, the theme having left with its key 2026-10-08) opens
+// THE SAME BOTTOM-ROW EDITOR — the same text_editor session
 // underneath, so the modal rank, OK and Cancel, the focus ring, the playback
 // stop and every closer are the text editor's — with its row's word as the
 // label ("Chrome: ") and, WHERE THE FIELD STANDS, THE CHROME'S COMBO BOX
@@ -220,8 +218,8 @@ struct GuiSettingsEditor {
     bool autocomplete_value();
 
 private:
-    // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `chrome=` and `theme=` — in one body (the head's
+    // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=` and
+    // `chrome=` — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the

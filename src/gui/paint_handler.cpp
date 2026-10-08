@@ -5701,8 +5701,8 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 //
 // THE SCANNER IS THE MOVING STEM, and it HAS ITS OWN ROLE, `scanner`
 // (architect 2026-10-05), apart from the resting cursor's `playhead_stem`;
-// the built-in paints both white (architect 2026-10-07: "let's go back to a
-// white scanner"), and a theme may still part them.
+// both default palettes paint both white (architect 2026-10-07: "let's go
+// back to a white scanner"), and a palette may still part them.
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (the ruling is at paint_ruler_row's head block — render_playhead is shared
