@@ -1,7 +1,7 @@
 #include "notifications.h"
 
 #include "folder_overlay.h"   // kPanelPadPx, the panel's air (one constant read)
-#include "paint_handler.h"    // the icon row's lane and its etched pair
+#include "paint_handler.h"    // the lane table and relief_line_px
 
 #include <algorithm>
 #include <utility>
@@ -48,17 +48,25 @@ int notification_card_max_w_px(const AppState& a) {
 }
 
 GuiRect notification_stack_bound(const AppState& a) {
-    const GuiRect icons = top_icon_row_area(a);
-    // THE STACK'S MARGINS: THE ETCHED PAIR ABOVE, kPanelPadPx AT THE RIGHT
+    // THE STACK'S MARGINS: THE SCROLL BAR'S TOP ABOVE, kPanelPadPx AT THE RIGHT
     // AND THE FOOT. The right and the foot are the panel's own kPanelPadPx
     // (architect 2026-08-29, the foot joining 2026-08-30; the right margin
     // was the icon row's 8 px pad for the cards' first day, which read wider
-    // than the air above them). THE TOP IS THE SPEC'S CARD SEAT
-    // (chrome_spec.h's card_seat), THE BAND'S FOOT (the planner's interim,
-    // 2026-10-06): the band is the 30-px case, which no card fills, so the
-    // stack starts on the case's last row's neighbour, the card wholly below
-    // the toolbar — on the lane's 4-px foot and down over the block — and
-    // never over the etched pair's lines (architect's glass 2026-10-06: a
+    // than the air above them). THE TOP IS ONE RULE FOR EVERY VOCABULARY,
+    // READ OFF THE LIVE LANE TABLE (architect 2026-10-08: "it looks like
+    // absolute positioning where it should be relative to the elements";
+    // the card "starting at the scroll bar"): THE TRIM LANE'S FIRST ROW LESS
+    // ONE RELIEF LINE, so the card's one-line frame (relief_line_px, the
+    // INFO face's, paint_popup_chrome) ends exactly where the scroll bar
+    // begins and the card's ground starts on the bar's own first row. It
+    // is anchored on the trim lane and not on the icon row, so whatever
+    // the icon row puts below its cases — win2000's 4-W foot of ground,
+    // clearlooks' toolbar shadow line (its foot 0, the trim lane flush
+    // under it, so the frame lies on that line), gap 1 should it ever open
+    // — the card meets the bar the same way under every chrome and at every
+    // scale. No chrome spec field: no vocabulary needs another anchor (the
+    // note among ChromeSpec's fields). The frame never reaches
+    // the etched pair above the band (architect's glass 2026-10-06: a
     // card's frame laid over the pair's Hilight line reads as a fault).
     // The card's INTERNAL pad is a different number and a different concept —
     // notification_pad_px(), the chrome inside the box rather than the box's
@@ -71,11 +79,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     const int pad     = folder_overlay::pad_px();
     const int w       = notification_card_max_w_px(a);
     const int x       = a.width - pad - w;
-    static_assert(chrome_specs_all([](const ChromeSpec& s) {
-        return s.card_seat == GuiCardSeat::UnderBand;
-    }));
-    const int y       = icons.y + icon_row_etched_pair_px() +
-                        icon_row_band_h_px();
+    const int y       = top_trim_row_area(a).y - relief_line_px();
     const int floor_y = bottom_row_area(a).y - pad;
     return GuiRect{x, y, w, std::max(0, floor_y - y)};
 }

@@ -3596,7 +3596,11 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // STACK — AppState::Notifications::cards, newest first, every one of them on
 // screen since the queue retired 2026-08-30 — painted top-right, right-aligned
 // at kPanelPadPx from the window's edge, its first card at the chrome spec's
-// card seat — wholly under the toolbar band (the margins at
+// card seat — one relief line above the trim lane's first row, read off the
+// live lane table, so the card's frame ends where the scroll bar begins
+// under every chrome (architect 2026-10-08: "it looks like absolute
+// positioning where it should be relative to the elements"; the rule and
+// the margins at
 // notification_stack_bound) — growing
 // DOWN over whatever lies there (the icon row's empty right, the thin lanes,
 // the waveform), the cards kNotificationGapPx apart (the card's own 1 px
@@ -6204,8 +6208,10 @@ constexpr double kModalBtnMinWidthPx  = 75.0;
 // DkShadow line OUTSIDE its raised box (architect 2026-10-02, the planner's
 // reading of the Windows default-button frame; the face at the button walk
 // below). RESERVED FOR EVERY BUTTON AND PAINTED FOR ONE, which is what makes
-// moving the focus reflow nothing: the cluster's right anchor and the
-// content's right bound both spend it, and the buttons themselves never move.
+// moving the focus reflow nothing: the cluster's right anchor spends it, the
+// row's one 6-W gap absorbs it on the cluster's left (a prompt's message, an
+// editor's field — 2026-10-08) as between two buttons, and the buttons
+// themselves never move.
 // THE RENDER PLAYER'S RIGHT PAIR SPENDS NONE (architect 2026-10-05): it ends
 // at row 8's right pad (bottom_row_seats), so its frame paints in the pad.
 // One relief line (relief_line_px), so it fits at every scale by
@@ -6380,10 +6386,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     cairo_save(cr);
     const GuiFont font = gui_font(GuiFace::Body);
 
-    // The row's own left/right margin — the modal sits on the same pad the
-    // tenants it displaced sit on, which since 2026-08-14 is literally the
-    // same accessor they read (icon_row_pad_x, paint_handler.h).
-    const int pad   = icon_row_pad_x();
     const int bgap  = scaled_px(kModalButtonGapPx);
     // The deleted toolbar row's button box, owned by the dialog since the
     // 2026-08-12 relayout (the spec's push_button_box_px — the record at the
@@ -6708,9 +6710,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //    Everything should be just flushed left"). --
     //
     // The row reads left to right from its own left pad: a PROMPT is its
-    // message, one pad, then the buttons in painted order; an EDITOR is its
-    // label, the field and the buttons with the button gap between each
-    // (the one-gap rule at the editor arm, 2026-10-08). The right-aligned cluster
+    // message and the buttons in painted order, an EDITOR its label, the
+    // field and the buttons, the button gap between each (the one-gap rule
+    // at the editor arm, 2026-10-08; the prompt's at its arm, the same day).
+    // The right-aligned cluster
     // of hours earlier is retired with the reserved right-pad ring that
     // anchored it.
     //
@@ -6738,10 +6741,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //
     // THE FOCUS FRAME IS RESERVED, NOT PAINTED, on both ends of the cluster —
     // one frame line inside the right pad so the last button's cannot touch
-    // the window edge, one inside a prompt's left clearance so the first
-    // button's cannot touch the message. Between neighbours the 6-W gap
-    // absorbs both (kModalFocusFramePx), and since 2026-10-08 between an
-    // editor's field and its OK too (the editor arm). (The player's row is row 8's and
+    // the window edge. Between neighbours the 6-W gap absorbs both
+    // (kModalFocusFramePx), and since 2026-10-08 between an editor's field
+    // and its OK and between a prompt's message and its first button too
+    // (the two arms). (The player's row is row 8's and
     // reserves no ring at its right pad — its branch below.) So the focus can
     // move anywhere on the row without reflowing it, which is the whole point
     // of reserving.
@@ -6789,9 +6792,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // runs this branch (idempotent).
         app.prompt.painted = true;
         dlg.owner = AppState::ModalDialogOwner::Prompt;
-        // THE MESSAGE SETS WHERE THE BUTTONS START — one pad of clearance
-        // plus the reserved ring past its ink — up to the cap, which is where
-        // an over-long message stops pushing and starts CLIPPING instead.
+        // THE MESSAGE SETS WHERE THE BUTTONS START — the row's ONE GAP past
+        // its ink — up to the cap, which is where an over-long message stops
+        // pushing and starts CLIPPING instead.
+        // THE PROMPT ROW HAS THE EDITOR ROW'S ONE GAP (architect 2026-10-08):
+        // the message → first button air is `bgap`, kModalButtonGapPx's 6 W,
+        // the same 6 W that stands between two of its buttons and on every
+        // gap of the editor row (the rule at the editor arm) — Windows' 4
+        // dialog units. The focus frame's one line spends itself inside the
+        // gap, as it does between two buttons (kModalFocusFramePx). Until
+        // this day it was the row's pad plus the reserved ring, 9 W.
         // Shaped once here and shown from the run: the width is needed for the
         // layout, and re-shaping it to paint would measure the same string
         // twice.
@@ -6802,8 +6812,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // cluster inside the message's last column. The round-up rule again
         // (the buttons' widths above, the clock cell's damage box).
         const int msg_w = static_cast<int>(std::ceil(msg.width_px));
-        buttons_x0 = std::min(cx0 + msg_w + pad + ring, buttons_x_max);
-        const int msg_clip = std::max(0, (buttons_x0 - ring - pad) - cx0);
+        buttons_x0 = std::min(cx0 + msg_w + bgap, buttons_x_max);
+        const int msg_clip = std::max(0, (buttons_x0 - bgap) - cx0);
         cairo_save(cr);
         cairo_rectangle(cr, cx0, content.y, msg_clip, content.h);
         cairo_clip(cr);

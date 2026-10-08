@@ -840,9 +840,10 @@ int notification_card_max_w_px(const AppState& a);
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
 // right-aligned at kPanelPadPx from the window's right edge (architect
 // 2026-08-29; the right one was the icon row's 8 px pad for the cards' first
-// day), from the chrome spec's CARD SEAT (chrome_spec.h's card_seat: the
-// foot of the icon row's band, the card wholly below the toolbar — the
-// reasoning at the definition), DOWN TO THE SAME
+// day), from THE CARD SEAT — one relief line above the trim lane's first
+// row, read off the live lane table, so the card's frame ends where the
+// scroll bar begins under every chrome (architect 2026-10-08; the
+// reasoning at the definition) — DOWN TO THE SAME
 // kPanelPadPx OF AIR ABOVE THE BOTTOM ROW'S LANE.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
@@ -859,7 +860,7 @@ int notification_card_max_w_px(const AppState& a);
 // Viewport::invalidate_notification_stack takes): the painted cards lie
 // inside the room by construction, so it erases what stood and admits what
 // comes without shaping a single glyph off the paint clock. A window with no
-// room between the card seat (the icon row's band's foot) and the bottom
+// room between the card seat (one line above the trim lane) and the bottom
 // row answers a zero
 // height and paints nothing — a window with no waveform at all, in the
 // contrived class.
@@ -879,10 +880,10 @@ GuiRect notification_stack_bound(const AppState& a);
 // criticals that will not be bumped.
 //
 // A pure function of the window and the scale, like the room. Re-derived
-// 2026-10-06, the stack seated on the icon row's band's foot: in a
-// 1920 x 1080 window at 138 % it is 23 (a 934 px room over
+// 2026-10-08 under win2000, the stack seated one line above the trim lane:
+// in a 1920 x 1080 window at 138 % it is 23 (a 929 px room over
 // 38 + 1, the card's own gap, kNotificationGapPx); on the tablet at 300 % it
-// is 12 (1116 over 84 + 3), its window being the whole 2304 x 1440
+// is 12 (1107 over 84 + 3), its window being the whole 2304 x 1440
 // panel since the activity went full screen (2026-10-01; the stacks are
 // recorded at main.cpp's vertical-stack owner). Every window this product
 // runs in holds more cards than the architect will ever stack.

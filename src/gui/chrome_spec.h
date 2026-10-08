@@ -125,15 +125,6 @@ enum class GuiDisabledGlyph {
     GtkSaturatePixelate,
 };
 
-// WHERE THE NOTIFICATION CARDS' STACK STARTS against the icon row's band
-// (notification_stack_bound, notifications.cpp). One seat today, both
-// instances', asserted there over every instance like the toolbar style.
-enum class GuiCardSeat {
-    // On the band's foot, the card wholly below the toolbar (the planner's
-    // interim, 2026-10-06: the band is the 30-px case and holds no card).
-    UnderBand,
-};
-
 struct ChromeSpec {
     // THE VOCABULARY'S NAME, the `chrome` device key's value that chooses it
     // (is_chrome_key below).
@@ -249,7 +240,9 @@ struct ChromeSpec {
     // items, each way (the item block's top and bottom, the item's sides).
     int                popup_item_height_px;
     int                popup_margin_px;
-    GuiCardSeat        card_seat;
+    // (THE NOTIFICATION CARDS' SEAT IS NO FIELD: ONE RULE FOR EVERY
+    // VOCABULARY, read off the live lane table at the trim lane's top —
+    // notification_stack_bound, notifications.cpp; architect 2026-10-08.)
     // THE CORNERS' RADIUS in Windows px, scaled like any length and drawn
     // antialiased (clearlooks_paint.cpp: the gummy button, the open menu
     // title): 0 is a square corner, every box of win2000's.
@@ -325,7 +318,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .scrub_handle_box_px          = 14.0,
     .popup_item_height_px         = 17,
     .popup_margin_px              = 1,
-    .card_seat                    = GuiCardSeat::UnderBand,
     .corner_radius_px             = 0,
     .disabled_glyph               = GuiDisabledGlyph::ReactOSSaturate,
     .icon_set                     = "tango",
@@ -437,7 +429,6 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .scrub_handle_box_px          = 23.0,
     .popup_item_height_px         = 19,
     .popup_margin_px              = 0,
-    .card_seat                    = GuiCardSeat::UnderBand,
     .corner_radius_px             = 3,
     .disabled_glyph               = GuiDisabledGlyph::GtkSaturatePixelate,
     .icon_set                     = "mist",
@@ -454,9 +445,9 @@ inline constexpr const ChromeSpec* kGuiChromeSpecs[] = {
     &kChromeSpecClearlooks,
 };
 
-// A PREDICATE OVER EVERY INSTANCE — the static_asserts of the painters that
-// draw one value of an enumerated field (the toolbar style, the card seat)
-// ask it, so a second value in any instance names every site to teach.
+// A PREDICATE OVER EVERY INSTANCE — a static_assert that must hold for every
+// vocabulary asks it (re-grepped 2026-10-08: the caption glyph cell's fit,
+// paint_handler.cpp), so an instance that breaks it names the site.
 template <typename Pred>
 constexpr bool chrome_specs_all(Pred pred) {
     for (const ChromeSpec* s : kGuiChromeSpecs)
