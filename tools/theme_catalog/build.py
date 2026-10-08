@@ -553,6 +553,10 @@ def clearlooks_geometry():
     render_h = os.path.join(REPO, 'src', 'gui', 'render.h')
     cl_h = os.path.join(REPO, 'src', 'gui', 'clearlooks_paint.h')
     trim_h, frame_w = const(render_h, 'kTrimLaneHeightPx'), const(render_h, 'kWindowFramePx')
+    # the popup lists' vertical scroll bar's width (render.h kPopupScrollBarWPx, the base's 16): its gummy steppers'
+    # and slider's tones run across it (2026-10-08)
+    list_bar_w = const(render_h, 'kPopupScrollBarWPx')
+    assert list_bar_w == int(list_bar_w), list_bar_w
     scale = {k: const(cl_h, n) for k, n in (('trough', 'kClScaleTroughPx'), ('len', 'kClScaleSliderLengthPx'),
                                             ('wid', 'kClScaleSliderWidthPx'))}
     assert all(v == int(v) for v in (trim_h, frame_w, *scale.values())), (trim_h, frame_w, scale)
@@ -561,7 +565,7 @@ def clearlooks_geometry():
             'menu_foot': i('menu_row_foot_px'), 'case_h': case_h, 'band_h': band, 'push_h': int(push_h),
             'entry_h': int(entry_h), 'row_h': int(row_h), 'menu_item_h': i('popup_item_height_px'),
             'trim_h': int(trim_h), 'frame_w': int(frame_w), 'scale_trough': int(scale['trough']),
-            'scale_len': int(scale['len']), 'scale_wid': int(scale['wid'])}
+            'scale_len': int(scale['len']), 'scale_wid': int(scale['wid']), 'list_bar_w': int(list_bar_w)}
 
 
 def mc_eval(expr, env):
@@ -908,8 +912,9 @@ def engine_tones(g, m, gtk, sc, geo):
     # sides to cl_separator_dark along the bottom (roles made above, so the ring adds none) — the face the window ground
     # at rest, the inner edge the dark tone; THE PRESSED FACE bg[ACTIVE] of the scrollbar style (the default style's
     # shade (0.9, @bg_color); the scrollbar style overrides no colour — his capture 00-12-13's pressed stepper), flat
-    # under the ring. The gummy stepper's twenty tones (its ramp, its border mix and its baked highlight, resting and
-    # pressed) retired with its drawing the same evening. The arrow stays the engine's.
+    # under the ring. The gummy stepper's tones (its ramp, its border mix and its baked highlight, resting and
+    # pressed) left the trim lane with its drawing the same evening; they stand again, across the bar, for the popup
+    # lists' vertical scroll bar (below, 2026-10-08). The arrow stays the engine's.
     t.add('cl_stepper_pressed_face', cb(style_bg('scrollbar', 'ACTIVE')),
           'the pressed cap\'s face: bg[ACTIVE] of the scrollbar style (the default style\'s shade (0.9, @bg_color)), flat')
     t.add('cl_stepper_arrow', T.gdk_byte(gtk[('fg', 'NORMAL')]),
@@ -918,7 +923,61 @@ def engine_tones(g, m, gtk, sc, geo):
     # THE SLIDER IS THE PRODUCT'S OWN (architect 2026-10-07, the CL15 sheets: "Clearlooks is anonymous enough that we
     # can get away with our own scroll bar"): the window ground between the gummy separator's two lines, roles already
     # made above (cl_separator_light along its top row, cl_separator_dark along its bottom), so it adds no tone here —
-    # gummy's spot[1] slider and its twelve tones retired with their painter (paint_cl_slider, clearlooks_paint.h).
+    # gummy's spot[1] slider and its tones left the trim lane with their painter (paint_cl_slider, clearlooks_paint.h);
+    # they stand again for the popup lists' vertical bar (below, 2026-10-08).
+
+    # THE POPUP LISTS' VERTICAL SCROLL BAR = SQUEEZE'S OWN GUMMY GtkScrollbar (architect 2026-10-08 ~12:50: "I had
+    # asked you to use the official Clearlooks scroll bar, the normal one in the squeeze folder — this is the one from
+    # the trim bar, it doesn't work here"; paint_cl_scrollbar_stepper / paint_cl_scrollbar_slider, clearlooks_paint.h;
+    # his captures 00-17-24, Nautilus' list bar, and 00-12-13, a pressed stepper, reproduced byte for byte at GTK's 15)
+    # at the base's width (geo['list_bar_w'], 16): every ramp below runs ACROSS the bar, left to right. The trough is
+    # the trim lane's (cl_trough_*, above), the arrow cl_stepper_arrow. THE TRIM LANE KEEPS ITS OWN CAPS AND LIGHT
+    # SLIDER (their ruling stands; it is not the list).
+    lw = geo['list_bar_w']
+    # THE STEPPERS (clearlooks_gummy_draw_scrollbar_stepper, the bar vertical): bg[state]'s gummy ramp from column 0 to
+    # column lw over the fill's columns 1 .. lw - 2 (each segment recorded over the fill's whole run), the border mix
+    # (shade[7], fill, 0.2) (colorize_scrollbar: has_color), the top-left highlight shade (fill, 1.3) at 0.4 (gummy's
+    # constants) down column 1 and along row 1, baked over the ramp's columns — so the highlight's column is its
+    # row's first tone. RESTING bg[NORMAL]; PRESSED bg[ACTIVE] = shade (0.9, bg) (the scrollbar style overrides no
+    # colour). No prelight (the product draws one hover face, the toolbars').
+    step = T.pixman_step_row(0, lw)
+    for state, style_state in (('normal', 'NORMAL'), ('pressed', 'ACTIVE')):
+        fill = style_bg('scrollbar', style_state)
+        ramp = {c: T.pixman_vertical_ramp_row(gummy(fill, False), 0, lw, c) for c in range(1, lw - 1)}
+        hi = sh(fill, 1.3)
+        over = {c: T.cairo_solid_over(hi, 0.4, ramp[c]) for c in ramp}
+        rule = f'clearlooks_gummy_draw_scrollbar_stepper {state} (bg[{style_state}]) across the {lw}-column bar'
+        for name, (a, b) in (('left', (1, step - 1)), ('right', (step, lw - 2))):
+            t.ramp(f'cl_scrollbar_stepper_{state}_{name}', [ramp[c] for c in range(a, b + 1)], 0, b - a,
+                   rule + f', columns {a}..{b}')
+        t.add(f'cl_scrollbar_stepper_{state}_border', cb(mix(SH[7], fill, 0.2)),
+              rule + ': the border, mix (shade[7], fill, 0.2)')
+        for name, (a, b) in (('left', (1, step - 1)), ('right', (step, lw - 2))):
+            t.ramp(f'cl_scrollbar_stepper_{state}_highlight_{name}', [over[c] for c in range(a, b + 1)], 0, b - a,
+                   rule + f': the top-left highlight over the ramp, columns {a}..{b}')
+    # THE SLIDER (clearlooks_gummy_draw_scrollbar_slider, colorize_scrollbar TRUE: the fill spot[1]): its border and
+    # grips from the fill by the engine's test — shade (fill, 0.475) when the fill's saturation and brightness lie
+    # within 0.30 and 0.20 of bg[NORMAL]'s, else 0.575, then 0.85 more when the fill's hue lies between 25 and 195 —
+    # the grips that shade, the border it mixed 0.3 toward the fill; the gummy ramp across from column 1 to column
+    # lw - 2 over the fill's columns 1 .. lw - 2; the highlight shade (fill, 1.3) at 0.2 one px in on all four sides,
+    # baked over the ramp's columns (its two columns the row's end tones).
+    fill = SP[1]
+    hue_s, sat_s, bri_s = T.gtk2_hsb(fill)
+    _, sat_b, bri_b = T.gtk2_hsb(bg)
+    border = sh(fill, 0.475 if abs(sat_s - sat_b) < 0.30 and abs(bri_s - bri_b) < 0.20 else 0.575)
+    if 25 < hue_s < 195: border = sh(border, 0.85)
+    handles, border = border, mix(border, fill, 0.3)
+    ramp = {c: T.pixman_vertical_ramp_row(gummy(fill, False), 1, lw - 2, c) for c in range(1, lw - 1)}
+    over = {c: T.cairo_solid_over(sh(fill, 1.3), 0.2, ramp[c]) for c in ramp}
+    sstep = T.pixman_step_row(1, lw - 2)
+    rule = f'clearlooks_gummy_draw_scrollbar_slider (spot[1]) across the {lw}-column bar'
+    for name, (a, b) in (('left', (1, sstep - 1)), ('right', (sstep, lw - 2))):
+        t.ramp(f'cl_scrollbar_slider_{name}', [ramp[c] for c in range(a, b + 1)], 0, b - a, rule + f', columns {a}..{b}')
+    for name, (a, b) in (('left', (1, sstep - 1)), ('right', (sstep, lw - 2))):
+        t.ramp(f'cl_scrollbar_slider_highlight_{name}', [over[c] for c in range(a, b + 1)], 0, b - a,
+               rule + f': the highlight over the ramp, columns {a}..{b}')
+    t.add('cl_scrollbar_slider_border', cb(border), rule + ': the border, the fill\'s shade mixed 0.3 toward the fill')
+    t.add('cl_scrollbar_slider_grip', cb(handles), rule + ': the three grips, the fill\'s shade')
 
     # THE SCRUB = GtkScale (the "scale" style: hint scale, the default style's slider-length 23, slider-width 15,
     # trough-side-details 1) at geo['scale_*']: THE TROUGH TROUGH_SIZE rows tall (clearlooks_gummy_draw_scale_trough):

@@ -1338,13 +1338,15 @@ void render_trim_flags(cairo_t* cr,
 }
 
 // THE POPUP LIST'S SCROLL BAR (the rule and the geometry at render.h's popup
-// scroll block; the picture at the declaration): the trim lane's vocabulary
-// turned upright — under win2000 the track's checker, the plain raised thumb
-// and the two plain raised arrow buttons (paint_trim_arrow_button, up and
-// down, pressed while `held` names one); under clearlooks the vertical
-// trough, the light slider turned and the two steppers turned
-// (clearlooks_paint.h's vertical block). Painted over the list box's ground,
-// after its frame, beside its rows.
+// scroll block; the picture at the declaration): under win2000 the trim
+// lane's vocabulary turned upright — the track's checker, the plain raised
+// thumb and the two plain raised arrow buttons (paint_trim_arrow_button, up
+// and down, pressed while `held` names one); under clearlooks squeeze's
+// gummy GtkScrollbar (clearlooks_paint.h's vertical block, 2026-10-08): the
+// classic trough 2 W short of each end (trough-under-steppers), the gummy
+// slider — one W longer at an end it touches, the engine's junction, under
+// the stepper drawn after it — then the two gummy steppers. Painted over the
+// list box's ground, after its frame, beside its rows.
 void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
                             PopupScrollPart held) {
     if (!b.present || b.bar.w <= 0 || b.bar.h <= 0) return;
@@ -1353,10 +1355,18 @@ void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
-        paint_cl_scroll_trough_v(cr, b.bar);
-        if (b.thumb.h > 0) paint_cl_slider_v(cr, b.thumb);
-        paint_cl_stepper_v(cr, b.up, /*points_up=*/true, up_held);
-        paint_cl_stepper_v(cr, b.down, /*points_up=*/false, down_held);
+        const int u = relief_line_px();
+        const int shrink = scaled_px(2);
+        paint_cl_scroll_trough_v(cr, GuiRect{b.bar.x, b.bar.y + shrink, b.bar.w,
+                                             b.bar.h - 2 * shrink});
+        if (b.thumb.h > 0) {
+            GuiRect slider = b.thumb;
+            if (slider.y == b.track.y) { slider.y -= u; slider.h += u; }
+            if (b.thumb.y + b.thumb.h == b.track.y + b.track.h) slider.h += u;
+            paint_cl_scrollbar_slider(cr, slider);
+        }
+        paint_cl_scrollbar_stepper(cr, b.up, /*points_up=*/true, up_held);
+        paint_cl_scrollbar_stepper(cr, b.down, /*points_up=*/false, down_held);
     } else {
         paint_cell_rect(cr, b.track, palette().ground);
         paint_checker_rect(cr, b.track, b.bar.x, b.bar.y, palette().hilight,

@@ -5271,8 +5271,7 @@ void GuiInputHandler::set_color_picker_list_open(bool open) {
         const color_picker::Layout l =
             color_picker::layout(app, gui_font(GuiFace::Body));
         cp.chooser_scroll.top = popup_scroll_reveal(
-            0, static_cast<int>(cp.element), l.list.bar.total,
-            l.list.bar.visible);
+            l.list.bar, 0, static_cast<int>(cp.element));
         viewport.invalidate_rect(l.list.box);
         color_picker.damage_card();
     }

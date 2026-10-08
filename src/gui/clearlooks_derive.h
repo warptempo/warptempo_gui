@@ -21,7 +21,7 @@
 // ("the second one just gets ignored if the theme doesn't support it");
 // every other key is read.
 //
-// THE ARITHMETIC IS SQUEEZE'S OWN, RUN IN THE APP: the 322 `cl_` roles
+// THE ARITHMETIC IS SQUEEZE'S OWN, RUN IN THE APP: the 350 `cl_` roles
 // (theme_clearlooks_roles.inc) are the Clearlooks engine's and metacity's
 // arithmetic on the gtkrc's scheme colors and the metacity theme's draw ops,
 // which tools/theme_catalog/build.py's `engine_tones` ran once to record
@@ -589,6 +589,7 @@ struct Geometry {
     int menu_head, menu_content, menu_foot;
     int case_h, band_h, push_h, row_h, menu_item_h, frame_w;
     int scale_trough, scale_len, scale_wid;
+    int list_bar_w;
 };
 constexpr Geometry geometry_of(const ChromeSpec& s) {
     const int case_h = s.toolbar_case_lead_px + s.toolbar_glyph_px + s.toolbar_case_trail_y_px;
@@ -597,7 +598,8 @@ constexpr Geometry geometry_of(const ChromeSpec& s) {
         s.menu_row_head_px, s.menu_row_content_px, s.menu_row_foot_px,
         case_h, 2 * s.icon_row_air_px + case_h, static_cast<int>(s.push_button_box_px),
         kListRowPx, s.popup_item_height_px, kWindowFramePx,
-        kClScaleTroughPx, kClScaleSliderLengthPx, kClScaleSliderWidthPx};
+        kClScaleTroughPx, kClScaleSliderLengthPx, kClScaleSliderWidthPx,
+        kPopupScrollBarWPx};
 }
 
 // -- THE EMITTER -----------------------------------------------------------------
@@ -1036,6 +1038,44 @@ constexpr GuiThemeWords derive_clearlooks_chrome(const GuiThemeWords& compiled, 
         e.ramp({"cl_trough_shadow"}, pixman_vertical_ramp_row(st, 1, 3, 1), pixman_vertical_ramp_row(st, 1, 3, 2));
         e.put({"cl_stepper_pressed_face"}, cairo_byte(unit(bg_active16)));   // the scrollbar style's bg[ACTIVE]
         e.put({"cl_stepper_arrow"}, gdk_byte(fg_normal16));
+    }
+
+    // THE POPUP LISTS' VERTICAL SCROLL BAR = squeeze's gummy GtkScrollbar
+    // across geo.list_bar_w: the steppers (resting bg[NORMAL], pressed the
+    // scrollbar style's bg[ACTIVE]) and the spot[1] slider
+    {
+        const int lw = geo.list_bar_w;
+        const int step = pixman_step_row(0, lw);
+        const D3 fills[2] = {bg, unit(bg_active16)};
+        const std::string_view states[2] = {"_normal", "_pressed"};
+        for (int k = 0; k < 2; ++k) {
+            const Stops g = gummy(fills[k], false);
+            const auto ramp = [&](int c) { return pixman_vertical_ramp_row(g, 0, lw, c); };
+            const D3 hi = gtk2_shade(fills[k], 1.3);
+            const auto over = [&](int c) { return cairo_solid_over(hi, 0.4, ramp(c)); };
+            e.ramp({"cl_scrollbar_stepper", states[k], "_left"}, ramp(1), ramp(step - 1));
+            e.ramp({"cl_scrollbar_stepper", states[k], "_right"}, ramp(step), ramp(lw - 2));
+            e.put({"cl_scrollbar_stepper", states[k], "_border"}, cairo_byte(gtk2_mix(SH[7], fills[k], 0.2)));
+            e.ramp({"cl_scrollbar_stepper", states[k], "_highlight_left"}, over(1), over(step - 1));
+            e.ramp({"cl_scrollbar_stepper", states[k], "_highlight_right"}, over(step), over(lw - 2));
+        }
+        const D3 fill = SP[1];
+        const Hsb hs = gtk2_hsb(fill), hb = gtk2_hsb(bg);
+        D3 border = gtk2_shade(fill, dabs(hs.s - hb.s) < 0.30 && dabs(hs.l - hb.l) < 0.20 ? 0.475 : 0.575);
+        if (hs.h > 25 && hs.h < 195) border = gtk2_shade(border, 0.85);
+        const D3 handles = border;
+        border = gtk2_mix(border, fill, 0.3);
+        const Stops g = gummy(fill, false);
+        const auto ramp = [&](int c) { return pixman_vertical_ramp_row(g, 1, lw - 2, c); };
+        const D3 hi = gtk2_shade(fill, 1.3);
+        const auto over = [&](int c) { return cairo_solid_over(hi, 0.2, ramp(c)); };
+        const int sstep = pixman_step_row(1, lw - 2);
+        e.ramp({"cl_scrollbar_slider_left"}, ramp(1), ramp(sstep - 1));
+        e.ramp({"cl_scrollbar_slider_right"}, ramp(sstep), ramp(lw - 2));
+        e.ramp({"cl_scrollbar_slider_highlight_left"}, over(1), over(sstep - 1));
+        e.ramp({"cl_scrollbar_slider_highlight_right"}, over(sstep), over(lw - 2));
+        e.put({"cl_scrollbar_slider_border"}, cairo_byte(border));
+        e.put({"cl_scrollbar_slider_grip"}, cairo_byte(handles));
     }
 
     // THE SCRUB = GtkScale: the trough's two parts, the thumb's shadow, the thumb

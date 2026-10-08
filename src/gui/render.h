@@ -2303,16 +2303,28 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    box ever passes the window.
 //  * THE ROWS SCROLL BY ROW, EVERY ROW ALIKE (Windows' list box scrolls
 //    everything): the palette menu's four acts and its separators are ordinary
-//    rows that scroll with the names, none pinned. The visible count is the
-//    most whole ITEM rows the room holds, and the block shows the rows
-//    [top, top + visible) from its top — a separator among them being shorter
-//    than an item, the block's foot then shows the ground. THE STATE is
-//    PopupScroll, one per popup: the top row and the bar's held part. IT IS
-//    RESET TO THE HEAD AT EACH OPEN (a reopened list starts at its head, the
-//    palette menu's acts first), with ONE EXCEPTION, Windows' combo's own: a
-//    COMBO's list — the choice editor's and the element list, each opening
-//    with its shown value lit — scrolls that row into view at the open
-//    (popup_scroll_reveal).
+//    rows that scroll with the names, none pinned. THE BOX'S ROOM is the most
+//    whole ITEM rows that fit on its side (place_popup_list), and THE SHOWN
+//    ROWS ARE EVERY ROW FROM THE TOP WHOSE SUMMED HEIGHTS FIT IN THAT ROOM,
+//    each row at its own height — a separator counted at its separator
+//    block's (architect 2026-10-08 ~12:50, his palette-menu captures
+//    _061454 and _062506: "it omits some lines when you first open it; as
+//    soon as you start scrolling they show up properly and take up the
+//    entire space" — the shown count had been the room's item count, so the
+//    separators in view left ground at the foot). So the block is always
+//    full to within less than one item: the only ground at its foot is the
+//    remainder no further row fits. THE ONE FUNCTION is popup_scroll_shown;
+//    every reader of the shown count follows it — the item rects, the page
+//    step (Windows' list box with mixed heights pages by the rows shown,
+//    SB_PAGE), the reveal, the thumb's proportion (shown / total at the
+//    current top) — and THE LAST TOP is the least top from which every
+//    remaining row fits (popup_scroll_max_top, from the heights, not total
+//    less shown). THE STATE is PopupScroll, one per popup: the top row and
+//    the bar's held part. IT IS RESET TO THE HEAD AT EACH OPEN (a reopened
+//    list starts at its head, the palette menu's acts first), with ONE
+//    EXCEPTION, Windows' combo's own: a COMBO's list — the choice editor's
+//    and the element list, each opening with its shown value lit — scrolls
+//    that row into view at the open (popup_scroll_reveal).
 //  * THE PICTURE IS A VERTICAL SCROLL BAR INSIDE THE LIST, AT ITS RIGHT, UNDER
 //    BOTH CHROMES (architect 2026-10-08, his ReactOS WordPad font-combo
 //    capture: "exactly as we would expect, just a scroll bar on the side"; and
@@ -2331,14 +2343,16 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    (popup_item_rect). TWO ARROW BUTTONS 16 x 16 W at the bar's ends, up on
 //    top and down at the bottom (each half the bar where the bar is shorter
 //    than two, Windows' own halving); the TRACK between them; the THUMB's
-//    length the track's times visible / total, FLOORED AT 8 W
+//    length the track's times shown / total, FLOORED under win2000 AT 8 W
 //    (kPopupScrollThumbMinPx: half SM_CYVTHUMB's 16, THE PRODUCT'S CHOICE —
-//    no source for Windows 2000's own minimum thumb is at hand), its seat
-//    (track − thumb) x top / (total − visible) — both by
-//    nearbyint (popup_scroll_bar); a track too short for the floor shows no
-//    thumb, as Windows shows none. Each chrome draws it in its own scroll
-//    bar's vocabulary (paint_popup_scroll_bar, beside the trim bar's
-//    painters).
+//    no source for Windows 2000's own minimum thumb is at hand) and under
+//    clearlooks AT 30 W (kPopupScrollThumbMinClPx: squeeze's gtkrc's
+//    GtkScrollbar::min-slider-length 30, a length along the bar, kept as GTK
+//    gives it — the base's 16-W width is the thickness alone; 2026-10-08),
+//    its seat (track − thumb) x top / the last top — both by nearbyint
+//    (popup_scroll_bar); a track too short for the floor shows no thumb, as
+//    Windows shows none. Each chrome draws it in its own scroll bar's
+//    vocabulary (paint_popup_scroll_bar, beside the trim bar's painters).
 //  * THE WIDTH: a box whose width is its labels' (the palette menu) widens by
 //    the bar (kPopupPadXPx's last term); a combo's list stays the combo's own
 //    width (the flush ruling at color_picker::combo_list) with the bar
@@ -2348,7 +2362,7 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    an ARROW scrolls ONE ROW and wears the pressed face until the lift — ONE
 //    STEP A PRESS, NO AUTOREPEAT, the product's simplification of Windows'
 //    held repeat; a press on the TRACK above or below the thumb scrolls ONE
-//    PAGE (the visible count) toward the press; a press on the THUMB starts
+//    PAGE (the shown count) toward the press; a press on the THUMB starts
 //    A THUMB DRAG, the thumb following the pointer with the press's offset on
 //    it kept and the rows following the thumb live (Windows' tracking, GTK's
 //    too; popup_scroll_top_at_thumb) — a live gesture
@@ -2364,9 +2378,16 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    the whole box.
 inline constexpr int kPopupScrollBarWPx      = 16;
 inline constexpr int kPopupScrollThumbMinPx  = 8;
+inline constexpr int kPopupScrollThumbMinClPx = 30;
 inline constexpr int kPopupWheelRows         = 3;
 inline int popup_scroll_bar_w_px() {
     return scaled_px(kPopupScrollBarWPx, 3);
+}
+// The live chrome's thumb floor, device px (the picture bullet).
+inline int popup_scroll_thumb_min_px() {
+    return live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks
+               ? scaled_px(kPopupScrollThumbMinClPx, 1)
+               : scaled_px(kPopupScrollThumbMinPx, 1);
 }
 // The bar's parts — a held part (an arrow's pressed face, the thumb's drag)
 // or a press's zone (the two arrows, the track's two pages, the thumb).
@@ -2381,33 +2402,22 @@ struct PopupScroll {
     int             grab_dy = 0;
     bool live() const { return held != PopupScrollPart::None; }
 };
-inline int popup_scroll_max_top(int total, int visible) {
-    return std::max(0, total - visible);
-}
-inline int popup_scroll_clamp(int top, int total, int visible) {
-    return std::clamp(top, 0, popup_scroll_max_top(total, visible));
-}
-// The top that shows row `row`: unchanged when it already shows, else the
-// least travel that does (one row per step past the block's edge).
-inline int popup_scroll_reveal(int top, int row, int total, int visible) {
-    if (row < top) top = row;
-    else if (row >= top + visible) top = row - visible + 1;
-    return popup_scroll_clamp(top, total, visible);
-}
-// THE PLACEMENT (the block's first bullet) of `total` rows whose heights sum
-// to `content_h`, against `opener` in a window `window_h` tall: the side,
-// the visible count (`total` when nothing scrolls), the box's rows y and h
-// (its frame's lines, the item block's two margins and the shown rows —
-// visible x the item height when it scrolls). The columns are the caller's.
+// THE PLACEMENT (the block's first bullet) of rows whose heights sum to
+// `content_h`, against `opener` in a window `window_h` tall: the side, the
+// ROOM the rows stand in (device px: `content_h` when nothing scrolls, else
+// the most whole item rows that fit on that side, at least one), the box's
+// rows y and h (its frame's lines, the item block's two margins and the
+// room). Which rows show in the room is the scroll's (popup_scroll_shown);
+// the columns are the caller's.
 struct PopupListPlacement {
     bool upward  = false;
     bool scrolls = false;
-    int  visible = 0;
+    int  room_h  = 0;
     int  y       = 0;
     int  h       = 0;
 };
 inline PopupListPlacement place_popup_list(const GuiRect& opener, int window_h,
-                                           int total, int content_h) {
+                                           int content_h) {
     const int item_h  = popup_item_h_px();
     const int margins = 2 * popup_item_margin_y_px();
     const auto frame = [&](bool upward) {
@@ -2416,7 +2426,7 @@ inline PopupListPlacement place_popup_list(const GuiRect& opener, int window_h,
     const int room_below = window_h - (opener.y + opener.h);
     const int room_above = opener.y;
     PopupListPlacement p;
-    p.visible = total;
+    p.room_h = content_h;
     if (frame(false) + content_h <= room_below) {
         p.upward = false;
     } else if (frame(true) + content_h <= room_above) {
@@ -2425,10 +2435,10 @@ inline PopupListPlacement place_popup_list(const GuiRect& opener, int window_h,
         const int below = (room_below - frame(false)) / item_h;
         const int above = (room_above - frame(true)) / item_h;
         p.upward  = above > below;
-        p.visible = std::clamp(std::max(below, above), 1, std::max(1, total));
-        p.scrolls = p.visible < total;
+        p.room_h  = std::min(content_h, std::max(1, std::max(below, above)) * item_h);
+        p.scrolls = p.room_h < content_h;
     }
-    p.h = frame(p.upward) + (p.scrolls ? p.visible * item_h : content_h);
+    p.h = frame(p.upward) + p.room_h;
     p.y = p.upward ? opener.y - p.h : opener.y + opener.h;
     return p;
 }
@@ -2447,28 +2457,78 @@ inline GuiRect popup_item_rect(const GuiRect& box, int y, bool bar) {
     return GuiRect{left, y, right - left, popup_item_h_px()};
 }
 // THE BAR OF A PLACED LIST (the block's picture bullet), device px: absent
-// (`present` false, every rect zero) when every row shows; `top` the clamped
-// first row; the bar, its two arrows, the track between and the thumb (zero
-// where the track is too short for its floor). Published with the box, so
-// every press reads it as painted.
+// (`present` false, every rect zero) when every row shows; the rows' own
+// heights (`row_h`, in their order) and the `room` they stand in, so every
+// count below is popup_scroll_shown's; `top` the clamped first row,
+// `max_top` the last top, `visible` the rows shown from `top`; the bar, its
+// two arrows, the track between and the thumb (zero where the track is too
+// short for its floor). Published with the box, so every press reads it as
+// painted.
 struct PopupScrollBar {
-    bool    present = false;
-    int     total   = 0;
-    int     visible = 0;
-    int     top     = 0;
+    bool             present = false;
+    int              total   = 0;
+    int              visible = 0;
+    int              top     = 0;
+    int              max_top = 0;
+    int              room    = 0;
+    std::vector<int> row_h;
     GuiRect bar{0, 0, 0, 0};
     GuiRect up{0, 0, 0, 0};
     GuiRect down{0, 0, 0, 0};
     GuiRect track{0, 0, 0, 0};
     GuiRect thumb{0, 0, 0, 0};
 };
+// THE ONE COUNT (the rows bullet): the rows from `top` whose summed heights
+// fit in `room`, at least one while any row remains.
+inline int popup_rows_fitting(const std::vector<int>& row_h, int room, int top) {
+    const int total = static_cast<int>(row_h.size());
+    int n = 0, used = 0;
+    for (int i = std::max(0, top); i < total; ++i) {
+        used += row_h[static_cast<std::size_t>(i)];
+        if (used > room && n > 0) break;
+        ++n;
+        if (used >= room) break;
+    }
+    return n;
+}
+// THE LAST TOP: the least top from which every remaining row fits.
+inline int popup_rows_max_top(const std::vector<int>& row_h, int room) {
+    int top = static_cast<int>(row_h.size());
+    int used = 0;
+    while (top > 0 && used + row_h[static_cast<std::size_t>(top - 1)] <= room) {
+        used += row_h[static_cast<std::size_t>(top - 1)];
+        --top;
+    }
+    return top;
+}
+inline int popup_scroll_clamp(const PopupScrollBar& b, int top) {
+    return std::clamp(top, 0, b.max_top);
+}
+// The rows `b` shows from `top` (clamped).
+inline int popup_scroll_shown(const PopupScrollBar& b, int top) {
+    return popup_rows_fitting(b.row_h, b.room, popup_scroll_clamp(b, top));
+}
+// The top that shows row `row`: unchanged when it already shows, else the
+// least travel that does (one row per step past the block's edge).
+inline int popup_scroll_reveal(const PopupScrollBar& b, int top, int row) {
+    top = popup_scroll_clamp(b, top);
+    if (row < top) return popup_scroll_clamp(b, row);
+    while (top < b.max_top && row >= top + popup_scroll_shown(b, top)) ++top;
+    return top;
+}
+// The bar over `row_h` (every row's height, device px, in order) in the
+// `room` of a box placed upward or not, its first row `top`.
 inline PopupScrollBar popup_scroll_bar(const GuiRect& box, bool upward,
-                                       int total, int visible, int top) {
+                                       std::vector<int> row_h, int room,
+                                       int top) {
     PopupScrollBar b;
-    b.total   = total;
-    b.visible = visible;
-    b.top     = popup_scroll_clamp(top, total, visible);
-    if (visible >= total) return b;
+    b.total   = static_cast<int>(row_h.size());
+    b.room    = room;
+    b.row_h   = std::move(row_h);
+    b.max_top = popup_rows_max_top(b.row_h, room);
+    b.top     = popup_scroll_clamp(b, top);
+    b.visible = popup_scroll_shown(b, b.top);
+    if (b.max_top == 0) return b;
     b.present = true;
     const int border = popup_border_px();
     const int top_b  = popup_border_top_px(upward);
@@ -2480,13 +2540,12 @@ inline PopupScrollBar popup_scroll_bar(const GuiRect& box, bool upward,
     b.down  = GuiRect{b.bar.x, b.bar.y + b.bar.h - ah, bw, ah};
     b.track = GuiRect{b.bar.x, b.up.y + ah, bw, b.down.y - (b.up.y + ah)};
     const int len = std::max(
-        scaled_px(kPopupScrollThumbMinPx, 1),
+        popup_scroll_thumb_min_px(),
         static_cast<int>(std::nearbyint(static_cast<double>(b.track.h) *
-                                        visible / total)));
+                                        b.visible / b.total)));
     if (len <= b.track.h) {
-        const int max_top = popup_scroll_max_top(total, visible);
         const int seat = static_cast<int>(std::nearbyint(
-            static_cast<double>(b.track.h - len) * b.top / max_top));
+            static_cast<double>(b.track.h - len) * b.top / b.max_top));
         b.thumb = GuiRect{b.bar.x, b.track.y + seat, bw, len};
     }
     return b;
@@ -2503,7 +2562,8 @@ inline PopupScrollPart popup_scroll_hit(const PopupScrollBar& b, int x, int y) {
     return y < b.thumb.y ? PopupScrollPart::PageUp : PopupScrollPart::PageDown;
 }
 // THE TOP A PRESS ON `part` SCROLLS TO: a row for an arrow, a page (the
-// visible count) for the track, clamped; the thumb and None leave it.
+// shown count at the published top, Windows' SB_PAGE) for the track,
+// clamped; the thumb and None leave it.
 inline int popup_scroll_step(const PopupScrollBar& b, PopupScrollPart part) {
     int d = 0;
     switch (part) {
@@ -2514,16 +2574,16 @@ inline int popup_scroll_step(const PopupScrollBar& b, PopupScrollPart part) {
         case PopupScrollPart::None:
         case PopupScrollPart::Thumb:    break;
     }
-    return popup_scroll_clamp(b.top + d, b.total, b.visible);
+    return popup_scroll_clamp(b, b.top + d);
 }
 // THE WHEEL'S SCROLL: `rows` (the notches times kPopupWheelRows, down the
 // later rows) from the state's own top — so notches arriving between two
-// paints add up — clamped against the published bar's counts, written to
-// `sc`; whether it moved the shown rows.
+// paints add up — clamped against the published bar, written to `sc`;
+// whether it moved the shown rows.
 inline bool popup_scroll_wheel_rows(PopupScroll& sc, const PopupScrollBar& b,
                                     int rows) {
-    const int from = popup_scroll_clamp(sc.top, b.total, b.visible);
-    const int top  = popup_scroll_clamp(from + rows, b.total, b.visible);
+    const int from = popup_scroll_clamp(b, sc.top);
+    const int top  = popup_scroll_clamp(b, from + rows);
     if (top == from) return false;
     sc.top = top;
     return true;
@@ -2531,11 +2591,11 @@ inline bool popup_scroll_wheel_rows(PopupScroll& sc, const PopupScrollBar& b,
 // THE TOP THE THUMB'S DRAG SHOWS with the thumb's top at `thumb_y`: the
 // seat's inverse, by nearbyint, clamped.
 inline int popup_scroll_top_at_thumb(const PopupScrollBar& b, int thumb_y) {
-    const int room    = b.track.h - b.thumb.h;
-    const int max_top = popup_scroll_max_top(b.total, b.visible);
+    const int room = b.track.h - b.thumb.h;
     if (!b.present || b.thumb.h <= 0 || room <= 0) return b.top;
     const double t = static_cast<double>(thumb_y - b.track.y) / room;
-    return std::clamp(static_cast<int>(std::nearbyint(t * max_top)), 0, max_top);
+    return std::clamp(static_cast<int>(std::nearbyint(t * b.max_top)), 0,
+                      b.max_top);
 }
 // THE BAR'S PICTURE (defined in render.cpp beside the trim bar's painters):
 // under win2000 Windows' vertical scroll bar — the track the trim track's
@@ -2543,9 +2603,10 @@ inline int popup_scroll_top_at_thumb(const PopupScrollBar& b, int thumb_y) {
 // bar's top-left), the thumb a PLAIN RAISED box on the ground with no grip,
 // the two arrows the trim caps' buttons turned (plain raised, the scroll
 // arrow pointing up and down, the pressed face the caps' while `held` names
-// one); under clearlooks GTK's vertical scroll bar in the trim lane's
-// vocabulary with the axes exchanged (clearlooks_paint.h's vertical trim
-// block). No hover face under either.
+// one); under clearlooks squeeze's own gummy GtkScrollbar — the classic
+// trough, the gummy steppers and the spot[1] gummy slider with its grips
+// (clearlooks_paint.h's vertical block, 2026-10-08; the trim lane keeps its
+// own caps and light slider). No hover face under either.
 void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
                             PopupScrollPart held);
 

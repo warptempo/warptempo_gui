@@ -173,8 +173,7 @@ void GuiSettingsEditor::choice_show(int index) {
     bool scroll_moves = false;
     const PopupScrollBar& bar = app.modal_dialog.combo_list_bar;
     if (ch.list_open && bar.present) {
-        const int top = popup_scroll_reveal(ch.list_scroll.top, index,
-                                            bar.total, bar.visible);
+        const int top = popup_scroll_reveal(bar, ch.list_scroll.top, index);
         scroll_moves = top != ch.list_scroll.top;
         ch.list_scroll.top = top;
     }
@@ -216,8 +215,7 @@ void GuiSettingsEditor::set_choice_list_open(bool open) {
         const color_picker::ComboList l = color_picker::combo_list(
             app.modal_dialog.combo, app.settings_choice_count(), app.height,
             /*top=*/0);
-        ch.list_scroll.top = popup_scroll_reveal(0, ch.shown, l.bar.total,
-                                                 l.bar.visible);
+        ch.list_scroll.top = popup_scroll_reveal(l.bar, 0, ch.shown);
         viewport.invalidate_rect(l.box);
     }
 }

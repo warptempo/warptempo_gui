@@ -347,9 +347,9 @@ void paint_cl_trough(cairo_t* cr, const GuiRect& lane);
 // light line at the top so the cap reads as a button against the body (the
 // sheet's variant e, without it, blurred into the body at rest). Every
 // tone a role: the ring's two are reused by the light bar's own ruling
-// (paint_cl_slider), the pressed face the one tone added, the gummy
-// stepper's twenty generated tones retired with its drawing (build.py's
-// engine tones). THE ARROW stays the engine's own, kept by ruling
+// (paint_cl_slider), the pressed face the one tone added (the gummy
+// stepper's own tones are the popup lists' bar's, paint_cl_scrollbar_stepper
+// below, not the trim lane's). THE ARROW stays the engine's own, kept by ruling
 // (clearlooks_draw_normal_arrow, its chevron filled in fg) at GtkRange's
 // arrow-scaling 0.5 of the 16-W box — 8 W, so the engine's 8-wide,
 // 4.75-tall wedge, its line half-width 0.75 — centered on the box, pointing
@@ -373,45 +373,72 @@ void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
 // paint_cl_toolbar_separator: a role a second painter reads is that tone put
 // down again, not a color derived here. The trough stays GTK's (above); the
 // caps wear the same two tones (paint_cl_stepper, since the evening). (Gummy's
-// spot[1] slider, its ring and its three grips retired with their twelve
-// generated tones the same day.)
+// spot[1] slider, its ring and its three grips are the popup lists' bar's —
+// paint_cl_scrollbar_slider below, 2026-10-08 — never the trim lane's.)
 void paint_cl_slider(cairo_t* cr, const GuiRect& body);
 
 // THE POPUP LISTS' VERTICAL SCROLL BAR (architect 2026-10-08; the rule and
 // the geometry at render.h's popup scroll block, the dispatch
-// paint_popup_scroll_bar) — THE TRIM LANE'S BAR ABOVE WITH THE AXES
-// EXCHANGED, every tone the same role, the bar the base's 16 W wide. A
-// RECORDED DEPARTURE FROM GTK (architect 2026-10-08, on squeeze's Country
-// combo, tmp/Screenshot_2026-10-08_05-20-01.png): GtkComboBox's overflowing
-// popup scrolls with a scroll ARROW at its top and its bottom, which he
-// rejects — "I'd much rather have the scroll bar inside, and we can use the
-// canonical scroll bar" — so a Clearlooks list wears the scroll bar GTK's
-// own scrolled lists wear, inside its frame at its right
-// (docs/engineering/win2000_deviations.md).
-//   THE TROUGH (paint_cl_scroll_trough_v) on the bar `bar`: cl_trough_fill,
-//     its first and last COLUMNS the cl_trough_border, and right of the left
+// paint_popup_scroll_bar) — SQUEEZE'S OWN GUMMY GtkScrollbar AS THE ENGINE
+// DRAWS IT (architect 2026-10-08 ~12:50, reversing the morning's trim-lane
+// bar turned upright: "I had asked you to use the official Clearlooks scroll
+// bar, the normal one in the squeeze folder — this is the one from the trim
+// bar, it doesn't work here"; his captures 00-17-24, Nautilus' list bar, and
+// 00-12-13, a pressed stepper, the law, reproduced byte for byte at GTK's 15
+// by build.py's arithmetic), at the base's 16 W wide; THE TRIM LANE KEEPS
+// ITS OWN CAPS AND LIGHT SLIDER (above; their ruling stands). A RECORDED
+// DEPARTURE FROM GTK (architect 2026-10-08, on squeeze's Country combo,
+// tmp/Screenshot_2026-10-08_05-20-01.png): GtkComboBox's overflowing popup
+// scrolls with a scroll ARROW at its top and its bottom, which he rejects —
+// "I'd much rather have the scroll bar inside, and we can use the canonical
+// scroll bar" — so a Clearlooks list wears the scroll bar GTK's own
+// scrolled lists wear, inside its frame at its right
+// (docs/engineering/win2000_deviations.md). Every ramp runs ACROSS the bar,
+// left to right, each tone a role (build.py's engine_tones, the
+// cl_scrollbar_* block), interpolated by the one rule (paint_cl_ramp_across).
+//   THE TROUGH (paint_cl_scroll_trough_v) on `bar`: clearlooks_draw_
+//     scrollbar_trough, the classic one gummy keeps — cl_trough_fill, its
+//     first and last COLUMNS the cl_trough_border, and right of the left
 //     border the shadow's two graded columns (W columns 1 and 2, the
-//     horizontal trough's two rows turned); no end rows, the steppers
-//     covering the bar's ends as GTK's do.
-//   THE STEPPERS (paint_cl_stepper_v) on the arrow boxes, the cap above
-//     turned: the ring the one ramp ACROSS from cl_separator_light (the
-//     slider's light column continued) to cl_separator_dark over the box's
-//     first kClCapRampPx COLUMNS, the dark tone flat to its right column;
-//     the OUTER corners rounded (the up stepper's top two, the down
-//     stepper's bottom two); the face the ground at rest and
-//     cl_stepper_pressed_face pressed (the capture 00-12-13's pressed
-//     stepper the law); the INNER EDGE one W of the dark tone along the row
-//     where the stepper meets the track (the up stepper's bottom row, the
-//     down stepper's top); the engine's chevron pointing up and down. No
-//     hover face.
-//   THE SLIDER (paint_cl_slider_v) on the thumb `body`: THE PRODUCT'S OWN
-//     LIGHT SLIDER turned (paint_cl_slider's ruling) — the ground, one W of
-//     cl_separator_light down its LEFT column and one of cl_separator_dark
-//     down its RIGHT; no grips, no ring, no end rows.
+//     horizontal trough's two rows turned); no end rows. The caller hands it
+//     the bar less 2 W at each end, the engine's own shrink under its
+//     steppers (trough-under-steppers), so the steppers' rounded outer
+//     corners show the list's ground behind them, as GTK's show the window's.
+//   THE STEPPERS (paint_cl_scrollbar_stepper) on the arrow boxes —
+//     clearlooks_gummy_draw_scrollbar_stepper: the fill inside the box one W
+//     in, bg[state]'s gummy ramp across (`_left` over W columns 1 .. step − 1,
+//     `_right` over step .. 14, the step at column 8 where pixman put it);
+//     the top-left highlight, shade (fill, 1.3) at 0.4 baked over the ramp
+//     (draw_top_left_highlight): down W column 1 in its first tone, round a
+//     rounded top-left corner and along W row 1 across the ramp's columns;
+//     the border mix (shade[7], fill, 0.2) one W round the box; the OUTER
+//     corners rounded at the spec's radius (the up stepper's top two, the
+//     down stepper's bottom two, GTK's steppers A and D). RESTING bg[NORMAL],
+//     PRESSED the scrollbar style's bg[ACTIVE] (the capture 00-12-13's
+//     pressed stepper); no prelight (the one hover face is the toolbars'),
+//     and GTK displaces no arrow. THE ARROW the engine's chevron in fg, the
+//     trim caps' own (GtkRange's arrow-scaling 0.5 of the 16-W box).
+//   THE SLIDER (paint_cl_scrollbar_slider) on the thumb's painted rect —
+//     clearlooks_gummy_draw_scrollbar_slider with colorize_scrollbar TRUE:
+//     spot[1]'s gummy ramp across the fill (W columns 1 .. 14, the step at
+//     column 8), the highlight shade (fill, 1.3) at 0.2 baked over the ramp
+//     ONE W IN ON ALL FOUR SIDES (has_color's stroked rectangle: its top and
+//     bottom rows the baked ramp, its left and right columns the ramp's end
+//     tones), the border one W round it square, and THE THREE GRIPS, one W
+//     each in the grip tone, across W columns 5 .. 10 (the engine's 5 to
+//     height − 6, both ends whole as his capture draws them) at W rows
+//     L / 2 − 4, + 3 and + 6 of its length L. THE JUNCTION (the engine's
+//     CL_JUNCTION_BEGIN / END): a slider touching an end of the track runs
+//     one W on under that stepper, whose border row, drawn after it, covers
+//     the slider's own — so a slider at the head shows its highlight row
+//     straight under the stepper's border, never a doubled line (the caller
+//     extends the rect; paint_popup_scroll_bar).
+//   GtkScrollbar::min-slider-length 30 floors the thumb
+//     (kPopupScrollThumbMinClPx, render.h).
 void paint_cl_scroll_trough_v(cairo_t* cr, const GuiRect& bar);
-void paint_cl_stepper_v(cairo_t* cr, const GuiRect& b, bool points_up,
-                        bool pressed);
-void paint_cl_slider_v(cairo_t* cr, const GuiRect& body);
+void paint_cl_scrollbar_stepper(cairo_t* cr, const GuiRect& b, bool points_up,
+                                bool pressed);
+void paint_cl_scrollbar_slider(cairo_t* cr, const GuiRect& body);
 
 // THE WELL'S FRAME — GtkScrolledWindow's shadow IN under GUMMY
 // (clearlooks_style_draw_shadow's "scrolled_window" arm, P2's list frame:

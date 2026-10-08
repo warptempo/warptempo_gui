@@ -239,7 +239,7 @@ inline constexpr int kComboTextGapPx  = 4;
 //     Windows' and GTK's combos both open above when no room lies below),
 //     else the roomier side scrolled. The dropdown's own arithmetic
 //     (dropdown_h_px, render.h): the frame, the item block's two margins, the
-//     shown rows — an UPWARD box under clearlooks one line taller, carrying
+//     rows' room — an UPWARD box under clearlooks one line taller, carrying
 //     its own top line (2026-10-08, popup_border_top_px; the definition says
 //     why). `top` is the popup's scroll; the result's `bar` carries the
 //     clamped top and the shown count whether or not it is present.

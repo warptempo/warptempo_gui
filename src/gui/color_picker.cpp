@@ -375,11 +375,14 @@ GuiRect combo_drop_button(const GuiRect& r) {
 ComboList combo_list(const GuiRect& combo, int count, int window_h, int top) {
     ComboList l;
     const PopupListPlacement p =
-        place_popup_list(combo, window_h, count, count * popup_item_h_px());
+        place_popup_list(combo, window_h, count * popup_item_h_px());
     l.box    = GuiRect{combo.x, p.y, combo.w, p.h};
     l.upward = p.upward;
     l.count  = count;
-    l.bar    = popup_scroll_bar(l.box, p.upward, count, p.visible, top);
+    l.bar    = popup_scroll_bar(
+        l.box, p.upward,
+        std::vector<int>(static_cast<std::size_t>(count), popup_item_h_px()),
+        p.room_h, top);
     return l;
 }
 
@@ -516,7 +519,8 @@ Layout layout(const AppState& app, const GuiFont& font) {
     // menu has a scroll row more than it has rows per separator — placed
     // and scrolled by the popup lists' rule (render.h's
     // popup scroll block): hung from the button's foot or standing on its
-    // head, the shown scroll rows [top, top + visible) laid from the item
+    // head, the shown scroll rows — every row from the top whose heights,
+    // a separator at its own, fit the box's room — laid from the item
     // block's top. Its width is the widest row's label between the popup's
     // two pads, plus the bar when it scrolls (kPopupPadXPx), or the
     // button's, whichever is wider, at the button's left edge held inside
@@ -541,9 +545,13 @@ Layout layout(const AppState& app, const GuiFont& font) {
             scroll_rows.push_back(i);
         }
         const int total = static_cast<int>(scroll_rows.size());
+        std::vector<int> row_h;
+        row_h.reserve(scroll_rows.size());
+        for (const int row : scroll_rows)
+            row_h.push_back(row < 0 ? popup_sep_block_px() : menu_item_h);
         const int content_h = n * menu_item_h + seps * popup_sep_block_px();
         const PopupListPlacement p =
-            place_popup_list(l.menu_button, app.height, total, content_h);
+            place_popup_list(l.menu_button, app.height, content_h);
         double widest = 0.0;
         for (const PaletteMenuRow& r : rows) {
             const std::string label =
@@ -561,7 +569,8 @@ Layout layout(const AppState& app, const GuiFont& font) {
         if (mx < 0) mx = 0;
         l.menu = GuiRect{mx, p.y, w, p.h};
         l.menu_upward = p.upward;
-        l.menu_bar = popup_scroll_bar(l.menu, p.upward, total, p.visible,
+        l.menu_bar = popup_scroll_bar(l.menu, p.upward, std::move(row_h),
+                                      p.room_h,
                                       app.color_picker.menu_scroll.top);
         l.menu_items.assign(rows.size(), GuiRect{0, 0, 0, 0});
         l.menu_sep_ys.clear();
