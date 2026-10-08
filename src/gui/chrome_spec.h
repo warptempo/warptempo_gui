@@ -211,25 +211,9 @@ struct ChromeSpec {
     // THE TOOLTIP'S PAD inside its frame, each way (paint_popup_chrome's
     // tooltip arm, kTooltipLineGapPx beside it).
     int                tooltip_pad_px;
-    // THE TIME FIELD — row 8's clock and the render player's position and
-    // length (paint_handler.cpp's time-field block, time_field_rect: the
-    // field is centred in its row's content band, its reserved cell this pad
-    // in from its frame each way, so the field's width, the state line's
-    // start and the clock's damage box all read them): the field's height
-    // and the pad. WIN2000 Windows' one-line sunken field round Tahoma's
-    // digits, 16 tall with the cell 3 px in (architect 2026-10-07, "cater to
-    // Tahoma": ACID Pro 3.0's and Vegas Audio's 17 was measured round MS Sans
-    // Serif's 9-row digits; the record stays at paint_handler.cpp's
-    // kTimeFieldHeightPx and kStatusPanelPadPx, which assert these two).
-    // CLEARLOOKS GTK's entry (architect 2026-10-07: a time shown in a field
-    // is an entry): gtkentry.c's size_request at the 13-row cell, 13 + 2 x
-    // (the entry style's ythickness 3 + GtkEntry::inner-border 2) = 23, the
-    // dialog fields' own height (kModalFieldHeightPx); its text stands
-    // xthickness 3 + inner-border 2 = 5 in from the entry's outer edge
-    // (gtkentry.c's text area: the frame's thickness, then the inner
-    // border).
-    double             time_field_height_px;
-    double             time_field_pad_px;
+    // (THE TIME FIELD'S HEIGHT AND PAD left the spec 2026-10-08: every time
+    // field is the dialog field, one shape under both chromes —
+    // kModalFieldHeightPx and kModalFieldPadXPx, render.h.)
     // THE SCRUB THUMB'S GRAB BOX — the box the press router takes as the
     // thumb's grab band and the mapping insets the track by half of at each
     // end (render.h's scrub block, scrub_handle_box_px). WIN2000 14 (the
@@ -317,8 +301,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,
     .tooltip_pad_px               = 2,
-    .time_field_height_px         = 16.0,
-    .time_field_pad_px            = 3.0,
     .scrub_handle_box_px          = 14.0,
     .popup_item_height_px         = 17,
     .popup_margin_px              = 1,
@@ -381,10 +363,11 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
 //   (x/ythickness 0: no margin, the items against the frame) with the
 //   menu_item style's items, the cell 13 + 2 x ythickness 3 = 19 (23 at
 //   the 17 cell on his capture 23-22-06).
-//   THE TIME FIELD GtkEntry at the cell, 13 + 2 x (3 + 2) = 23 (his 27 at
-//   the 17 cell, the Customize dialog's entry), its text xthickness 3 +
-//   inner-border 2 = 5 in; THE SCRUB'S GRAB GtkScale's slider, slider-length
-//   23 (the default style's).
+//   THE ENTRY (every dialog field and time field — render.h's
+//   kModalFieldHeightPx, not a spec field, the two chromes agreeing) GTK's at
+//   the cell, 13 + 2 x (3 + 2) = 23 (his 27 at the 17 cell, the Customize
+//   dialog's entry), its text xthickness 3 + inner-border 2 = 5 in; THE
+//   SCRUB'S GRAB GtkScale's slider, slider-length 23 (the default style's).
 //   THE DRAWING: the gummy toolbar style (GtkReliefNone), radius 3 on the
 //   gummy boxes (the gtkrc's `radius = 3.0`), GTK's insensitive icon, the
 //   icons "mist" (gnome-icon-theme 2.30's drawings under Mist's own
@@ -428,8 +411,6 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .push_button_pad_left_px      = 6.0,
     .push_button_pad_right_px     = 6.0,
     .tooltip_pad_px               = 4,
-    .time_field_height_px         = 23.0,
-    .time_field_pad_px            = 5.0,
     .scrub_handle_box_px          = 23.0,
     .popup_item_height_px         = 19,
     .popup_margin_px              = 0,

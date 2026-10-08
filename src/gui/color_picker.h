@@ -102,8 +102,10 @@ struct Viewport;
 //     thumb, clearlooks GtkScale's trough with its lower part filled and
 //     its thumb), the value's digits at the right in a fixed cell of
 //     tabular digits.
-//   THE BOTTOM ROW, under both — (h) THE HEX FIELD, a sunken field in the
-//     time field's shape and the field pair showing `#RRGGBB`; a tap gives
+//   THE BOTTOM ROW, under both — (h) THE HEX FIELD, a sunken field at the
+//     dialog field's size (kModalFieldHeightPx and its pad, render.h — the
+//     time fields' too since 2026-10-08) in the field pair showing
+//     `#RRGGBB`; a tap gives
 //     it the focus (a text editor of Kind::PaletteHex); (i) OLD | NEW, two
 //     equal swatches in a one-line sunken frame, OLD the element's color
 //     when it became the live element, NEW the current, a tap on OLD writing
@@ -172,11 +174,12 @@ struct Viewport;
 // three push buttons leave. THE BOTTOM ROW'S ARITHMETIC (architect
 // 2026-10-07): the inner width is 360 W under win2000 (376 less 2 x (edge 2
 // + pad 6)) and 362 under clearlooks (376 less 2 x (1 + 6)); the hex field
-// is its widest spelling `#DDDDDD` plus its two pads — 53 + 6 = 59 W in
-// Tahoma, 60 + 10 = 70 in DejaVu Sans (shaped); the row's five gaps are 6 W
+// is its widest spelling `#DDDDDD` plus its two pads — 53 + 10 = 63 W in
+// Tahoma, 60 + 10 = 70 in DejaVu Sans (shaped; the dialog field's 5-W pad
+// under both, 2026-10-08); the row's five gaps are 6 W
 // each; OLD | NEW its floor, two 20-W swatches inside the frame's two lines
 // = 42; Copy, Paste and Close kPushButtonWidthPx = 50 each; THE MENU BUTTON
-// THE REMAINDER, 360 − 59 − 30 − 42 − 150 = 79 W under win2000 and
+// THE REMAINDER, 360 − 63 − 30 − 42 − 150 = 75 W under win2000 and
 // 362 − 70 − 30 − 42 − 150 = 70 under clearlooks.
 // WHY THE MENU BUTTON IS IN THIS ROW AND NOT THE CHOOSER'S (architect
 // 2026-10-07: the chooser's row first, beside the element combo at the width

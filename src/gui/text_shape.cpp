@@ -185,8 +185,17 @@ void append_shaped_run_path(cairo_t* cr, const ShapedRun& run, double x,
     cairo_restore(cr);
 }
 
-// (ink_extents_px retired 2026-08-31 with its one consumer, row 8's sans state
-// cell — the record is at the declaration's old place in text_shape.h.)
+double ink_left_px(const ShapedRun& run) {
+    // The contract is at the declaration: the paint's own placement at pen
+    // origin (0, 0), measured on the run's own font.
+    if (run.glyphs.empty()) return 0.0;
+    const std::vector<cairo_glyph_t> placed = placed_glyphs_of(run, 0.0, 0.0);
+    cairo_text_extents_t ext;
+    cairo_scaled_font_glyph_extents(gui_outline_scaled_font(run.font),
+                                    placed.data(),
+                                    static_cast<int>(placed.size()), &ext);
+    return ext.x_bearing;
+}
 
 std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {
     // byte_count + 1 boundaries; the contract (including the

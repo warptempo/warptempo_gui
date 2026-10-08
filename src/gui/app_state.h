@@ -6909,8 +6909,9 @@ struct AppState {
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's
     // centre; the row unification merged that row and the status line into
-    // the one bottom row a day later; the cell sits at the lane's left pad
-    // since 2026-09-29, in its time field since 2026-10-05). It is a PAINTER
+    // the one bottom row a day later; the cell sits at the row's left since
+    // 2026-09-29, in its time field since 2026-10-05, the field one field pad
+    // in from the lane's edge since 2026-10-08). It is a PAINTER
     // STASH in the roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
     // a SHAPED specimen in the live face (time_field_metrics,
@@ -9552,6 +9553,39 @@ struct AppState {
     };
     RenderPlayer render_player;
 };
+
+// THE COLOR PICKER'S OPEN LIST UNDER A POINT (2026-10-08): the card's element
+// list or its palette menu, whichever is down, as the painter last published
+// it (ColorPicker::Stash's `list` and `menu` — each zeroed by every live
+// paint while its list is up, and the whole stash by the picker's open and
+// close, paint_color_picker) — read under the live session, as every stash
+// reader reads it. The bar stands inside the box (render.h's popup scroll
+// block). Readers: the color picker's veil (on_button_press,
+// input_pointer.cpp), where the box outranks the caption's and the menu
+// row's exemptions, and list_popup_at below.
+inline bool color_picker_list_at(const AppState& a, int x, int y) {
+    const AppState::ColorPicker& cp = a.color_picker;
+    const AppState::ColorPicker::Stash& st = cp.stash;
+    if (!cp.active || !st.valid || st.session != cp.session) return false;
+    return (cp.chooser_open && rect_contains(st.list, x, y)) ||
+           (cp.menu_open && rect_contains(st.menu, x, y));
+}
+
+// EVERY LIST POPUP'S PUBLISHED BOX UNDER A POINT (2026-10-08, ON SCREEN IS AS
+// PAINTED): the menu row's drop-down (AppState::Dropdown's rect while it is
+// open), the settings choice editor's list (ModalDialogGeometry's
+// `combo_list`, zeroed at every paint_modal_dialog run and written only while
+// the list is painted down) and the color picker's element list and palette
+// menu (color_picker_list_at). Every one paints ABOVE the notification cards
+// (paint_notifications runs before paint_dropdown and paint_modal_dialog), so
+// a card under one is hidden there and notification_card_at yields to this
+// one predicate — the popups' published boxes the truth, no state of its
+// own.
+inline bool list_popup_at(const AppState& a, int x, int y) {
+    if (a.dropdown.open() && rect_contains(a.dropdown.rect, x, y)) return true;
+    if (rect_contains(a.modal_dialog.combo_list, x, y)) return true;
+    return color_picker_list_at(a, x, y);
+}
 
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
 // cannot be half-standing: the band exists exactly while it has an OWNER.

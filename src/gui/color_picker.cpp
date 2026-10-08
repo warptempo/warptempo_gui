@@ -458,8 +458,8 @@ Layout layout(const AppState& app, const GuiFont& font) {
     // its floor, the palette menu button the remainder, then Copy, Paste
     // and Close at kPushButtonWidthPx, right-flushed.
     const int by = l.inner.y + side + scaled_px(kBlockGapPx);
-    const int field_h = scaled_px(spec.time_field_height_px);
-    const int field_pad = scaled_px(spec.time_field_pad_px);
+    const int field_h = scaled_px(kModalFieldHeightPx);   // the dialog field's (render.h)
+    const int field_pad = scaled_px(kModalFieldPadXPx);
     const std::string hex_specimen = "#" + std::string(6, widest_hex_digit(font));
     const int cell_w = ceil_px(text_shape::shape_text_run(font, hex_specimen).width_px);
     const int field_w = cell_w + 2 * field_pad;

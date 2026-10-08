@@ -6031,13 +6031,26 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // defect — with it, ANY coordinate was exempt while a menu stood, so a
     // press on the overlay's modal row armed a button under a popup that
     // should have swallowed the press whole.
+    //
+    // A COLOR PICKER LIST'S BOX OUTRANKS BOTH EXEMPTIONS (2026-10-08, ON
+    // SCREEN IS AS PAINTED): the card's element list and its palette menu
+    // scroll and may hang up over the menu row and the caption (an upward
+    // palette menu at the tablet's 300 % reaches the caption's rows), and
+    // the popup is what paints there (paint_modal_dialog after the caption).
+    // So while one is down a press inside its published box
+    // (color_picker_list_at, app_state.h — the list's box or the menu's,
+    // its bar inside it) is admitted by neither exemption and reaches the
+    // picker's veil below, whose claim (color_picker_press) answers it as the
+    // popup's; a press outside the box meets the exemptions as ever.
+    const bool press_in_picker_list = color_picker_list_at(app, x, y);
     const bool menu_row_press_admitted =
-        press_on_live_menu_anchor(app, x, y);
+        !press_in_picker_list && press_on_live_menu_anchor(app, x, y);
     // AND THE CAPTION (architect 2026-10-05): the window's title bar is
     // reachable wherever the File menu's Quit is, so the two veils let it
     // through beside the live anchor; the claim stands under the dialog
     // editors' swallow below (claim_caption_press).
     const bool caption_press_admitted =
+        !press_in_picker_list &&
         rect_contains(top_caption_row_area(app), x, y);
     // THE BUTTON ROWS' CLAIM — the icon row's and row 8's — ONE BODY for
     // their own band claims below and for the color picker's veil, which
@@ -6114,7 +6127,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // press outside its field (color_picker_press's rule), so the lift's
     // chord meets no keyboard-modal field. The menu row is not among them:
     // its live File anchor passes above, and its other anchors are dead
-    // under the picker (menu_anchor_live).
+    // under the picker (menu_anchor_live) — and neither it nor the caption
+    // passes where a list of the card's hangs over them: the two exemptions
+    // are computed after the list's box (press_in_picker_list, above).
     if (app.color_picker.active && !menu_row_press_admitted &&
         !caption_press_admitted) {
         if ((rect_contains(top_icon_row_area(app), x, y) ||

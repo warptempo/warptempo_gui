@@ -739,8 +739,9 @@ GuiRect top_marker_row_area(const AppState& a) {
 // 2026-08-12, rows 8
 // and 9 merged; the succession is at the bottom row's geometry block,
 // render.h), with GAP 2's blank window ground between it
-// and the waveform: the clock at the left pad in a time field (architect
-// 2026-10-02, Windows' status bar; 2026-10-05, the period's field) with THE
+// and the waveform: the clock at the left in a time field (architect
+// 2026-10-02, Windows' status bar; 2026-10-05, the period's field;
+// 2026-10-08, the dialog field's size in symmetric air) with THE
 // STATE LINE on the
 // ground right of it (architect 2026-10-03), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
@@ -1238,11 +1239,11 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // Viewport::invalidate_modal_dialog_area's lane.)
 
 // THE CLOCK'S RECT — the unified bottom row's reserved cell as the
-// painter last drew it, at the lane's left pad (AppState::clock_cell_rect,
+// painter last drew it, inside its field at the lane's left (AppState::clock_cell_rect,
 // whose stash contract is at the field). Narrow by construction: on_redraw
 // clips to the damage region, so paint_bottom_strip runs but its buttons, the
-// clock field's two vertical lines and the whole state line — a control
-// spacing (kStatusTextGapPx) right of the field — fall outside the
+// clock field's two vertical lines and the whole state line — a field pad
+// (kStatusPanelPadPx, paint_handler.cpp) right of the field — fall outside the
 // clip and cost nothing (the field's top and bottom lines and the ground
 // round them cross the box and are repainted identically under it), which is what makes this
 // affordable at the pre-paint hook's per-frame cadence. The
@@ -3354,9 +3355,12 @@ int gui_main(const char* argument) {
     // the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here through
     // palette_record and handed to the install explicitly — render.h's
     // install_palette), with the same palette's CHROME KNOB when it carries
-    // one (2026-10-08, derived over the compiled theme under windows-2000,
-    // chrome_derive.h; a built-in's fifteen the chrome's default's,
-    // palette_record) — both resolved against the chrome set above;
+    // one (2026-10-08, derived over the compiled theme by the live chrome's
+    // own derivation, live_chrome_words: Windows' Appearance-dialog rule
+    // under windows-2000, chrome_derive.h, and the Clearlooks engine's
+    // arithmetic under clearlooks, clearlooks_derive.h; a built-in's fifteen
+    // the chrome's default's, palette_record) — both resolved against the
+    // chrome set above;
     // installed once, before the first paint. Every painter reads it through
     // palette() (render.h's palette block).
     {

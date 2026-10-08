@@ -104,8 +104,9 @@ static void show_row_text_embossed(cairo_t* cr, const GuiFont& font,
 // the small face; and 2026-10-03, taking the panel away again). The lower
 // left is ONE FIELD AND A LINE, the Vegas / ACID pattern: the clock in its
 // time field, the state on the row's ground beside it at the normal face,
-// left-aligned a group space past the panel and clipped a group space short
-// of the right block — painted by paint_bottom_row_buttons_and_clock, the
+// its first ink one field pad past the field (2026-10-08) and clipped a
+// group space short of the right block — painted by
+// paint_bottom_row_buttons_and_clock, the
 // ruling this block and that painter's own.
 //
 // STATE, NOT EVENTS: what is true right now, replaced as it changes, with NO
@@ -2437,12 +2438,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // RIGHT (architect 2026-09-29, for the right-handed tablet: the most-used
 // buttons at the bottom right):
 //
-//   THE CLOCK at the lane's left pad — the tab letter and the timestamp in
-//   a TIME FIELD (architect 2026-10-02 for Windows' status bar, 2026-10-05
-//   for the field's face, height and fixed width, all at kTimeFieldHeightPx
-//   below), with THE STATE LINE on
-//   the ground beside it at the normal face, clipped one group space short
-//   of the right block (architect 2026-10-03);
+//   THE CLOCK one field pad in from the lane's left edge — the tab letter
+//   and the timestamp in a TIME FIELD (architect 2026-10-02 for Windows'
+//   status bar, 2026-10-05 for the field's face and fixed width, 2026-10-08
+//   for the dialog field's height and pad and the symmetric air, all at
+//   kTimeFieldHeightPx below), with THE STATE LINE on the ground one field
+//   pad past it at the normal face, clipped one group space short of the
+//   right block (architect 2026-10-03);
 //
 //   and, FLUSH AT THE RIGHT MARGIN, four groups, eight Windows px of
 //   ground between two of them with an etched separator in each (architect
@@ -2690,13 +2692,20 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // and Vegas Audio screenshots and Windows' Sound Recorder): a period time
 // field is a ONE-LINE SUNKEN field — paint_relief_sunken_outer, the theme's
 // Shadow top and left and Hilight bottom and right, over `clock_ground` under
-// its digits in `clock_text` — kTimeFieldHeightPx tall, VERTICALLY CENTRED in
-// its row's content band (a half-row tie toward the top, the cap rule's own),
-// its run in THE BODY FACE (gui_font.h; no period field used a monospace
-// face, ACID's big clock included), its cap band centred in the field by
-// redesign_baseline: the recorded digits with the field's face split about
-// them, a half-row tie toward the top — Tahoma's 8 rows with 3 Windows px of
-// face above and 3 below at 100 %. The digits are TABULAR — Tahoma's every
+// its digits in `clock_text` — THE DIALOG FIELD'S SIZE since 2026-10-08
+// (kTimeFieldHeightPx tall, its cell kStatusPanelPadPx in, both below),
+// VERTICALLY CENTRED in its row's content band (a half-row tie toward the
+// top, the cap rule's own), its run in THE BODY FACE (gui_font.h; no period
+// field used a monospace face, ACID's big clock included), its cap band
+// centred in the field by redesign_baseline: the recorded digits with the
+// field's face split about them, a half-row tie toward the top — Tahoma's 8
+// rows with 6 Windows px of face above and 7 below at 100 %. THE COLORS STAY
+// THE TIME FIELD'S OWN (architect 2026-10-08, taking the dialog field's size
+// and not its pair: the field pair's white ground under black "reads like an
+// input field"; the time fields on his ACID 3 and Vegas captures stand
+// sunken on the chrome color) — `clock_ground` / `clock_text` (render.h's
+// palette block), the field's size alone shared.
+// The digits are TABULAR — Tahoma's every
 // digit 0.545 em less the one tracking (gui_tracking_px, gui_font.h, which every
 // glyph takes alike), with no kerning between the digits, the colon and the
 // point — so the colon and the point stand still as the time runs.
@@ -2728,37 +2737,37 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 //
 // UNDER CLEARLOOKS THE FIELD IS GTK'S ENTRY (architect 2026-10-07, the
 // painters round's last part: a time shown in a field is an entry) — the
-// entry unfocused (paint_time_field), 23 Windows px tall at the 13-row cell
-// and its text 5 in (the chrome spec's time_field_height_px and
-// time_field_pad_px, where both sources stand) — and everything else above
-// holds: the face, the tabular digits, the fixed width, the right-aligned
-// run, the centring.
+// entry unfocused (paint_time_field), at the same dialog-field height and pad
+// (GTK's entry is where the 23 and the 5 stand under clearlooks, render.h's
+// kModalFieldHeightPx) — and everything else above holds: the face, the
+// tabular digits, the fixed width, the right-aligned run, the centring, the
+// row's symmetric air.
 constexpr const char* kTimeShape = "DD:DD.DDD";
 
 // The tab letters row 8's clock leads with (AppState::active_tab_view's two
 // values) — the set the letter slot is measured over.
 constexpr std::string_view kClockTabLetters = "AB";
 
-// THE FIELD'S HEIGHT, 16 WINDOWS PX UNDER WIN2000 (architect 2026-10-07:
-// "cater to Tahoma; ACID was MS Sans Serif") — one line, three px of face,
-// TAHOMA'S 8-ROW DIGITS (gui_font.h's recorded cap), three px of face, one
-// line: 1 + 3 + 8 + 3 + 1 = 16, the digits standing 3 and 3 with no
-// half-row tie (17 left them 3 and 4). The period's own fields were measured
-// round MS Sans Serif's 9-row digits (architect 2026-10-05: ACID Pro 3.0's
-// time fields run rows 716..732 of his lossless capture and Vegas Audio's
-// 484..500, 17 = 1 + 3 + 9 + 3 + 1); the face is Tahoma's, so the field
-// keeps their lines and their face round its own digits. One element,
-// rounded once (scaled_px): 16 device rows at 100 %, 22 at 138 %, 48 at
-// 300 %, against the body face's cap of 8, 11.04 and 24 — 3 and 3, 9 and 9
-// device rows of face at 100 and 300 %; at 138 % the 20 rows inside the
-// lines leave the cap a tie, taken toward the top as the cap rule takes
-// every one (3.96 above, 5 below). Row 8's clock and the render player's two
-// fields take it alike. THE LAYOUT READS THE CHROME SPEC'S
-// time_field_height_px (time_field_h_px below; chrome_spec.h, where
-// clearlooks' 23, GTK's entry, stands — architect 2026-10-07), which this
-// record pins for win2000.
-constexpr double kTimeFieldHeightPx = 16.0;
-static_assert(kChromeSpecWin2000.time_field_height_px == kTimeFieldHeightPx);
+// THE FIELD'S HEIGHT IS THE DIALOG FIELD'S, 23 WINDOWS PX UNDER BOTH CHROMES
+// (architect 2026-10-08, on his history-mode capture: the clock "is squished
+// into a tiny box, from back when we were trying to save space; it doesn't
+// work as the other fields do — in the Settings editor the fields look like
+// normal sizing, the same size as the OK / Cancel buttons; in history mode
+// we have a lot of space down there now"). It reverses win2000's 16 of
+// 2026-10-07 ("cater to Tahoma": one line, three px of face round Tahoma's
+// 8-row digits, one line), itself cut from the 17 measured round MS Sans
+// Serif's 9-row digits on ACID Pro 3.0 and Vegas Audio (2026-10-05); the
+// field keeps their look — the one-line sunken edge and the time field's own
+// pair on the chrome — at the dialog field's size (kModalFieldHeightPx,
+// render.h, the one source; clearlooks' GTK entry was 23 already). One
+// element, rounded once (scaled_px): 23 device rows at 100 %, 32 at 138 %,
+// 69 at 300 %, the body face's cap band of 8, 11.04 and 24 centred in it.
+// Row 8's content band (bottom_row_air_px, the case, the air again: 36 W
+// under win2000) holds it with room, so the row's height does not change.
+// Row 8's clock and the render player's two fields take it alike (the
+// player's row is row 8's), and the color picker's hex field reads the same
+// constant.
+constexpr double kTimeFieldHeightPx = kModalFieldHeightPx;
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
 // (architect 2026-10-05): ACID's adjacent fields stand three Windows px of
@@ -2770,41 +2779,38 @@ constexpr double kTimeFieldGapPx = 3.0;
 // render player's separators, their last reader: the air round the player's
 // scrub and clock is the roster's group space.)
 
-// THE FIELD'S HORIZONTAL PAD (architect 2026-10-02, Windows' status bar; the
-// field's own name since 2026-10-05): under win2000 the reserved cell stands
-// 3 Windows px in from the field's line on each side (the laptop pixel's 4
-// re-authored at the unit's change). With row 8's clock cell at the lane's
-// 8 px pad, its field's left line stands 5 px in from the window's edge.
-// (The second panel, the state's, and its 2-px SB_SETPARTS gap,
-// kStatusPanelGapPx, retired 2026-10-03: the state is a line on the row's
-// ground.) EACH ENTRY'S OWN PAD (architect 2026-10-07): the layout reads the
-// chrome spec's time_field_pad_px (time_field_pad_px below), this record
-// win2000's and GTK's 5 clearlooks' (xthickness 3 + GtkEntry::inner-border
-// 2, gtkentry.c) — so under clearlooks the run's right end and the field's
-// width move by the pads' difference and nothing else does.
-constexpr double kStatusPanelPadPx = 3.0;
-static_assert(kChromeSpecWin2000.time_field_pad_px == kStatusPanelPadPx);
+// THE FIELD'S HORIZONTAL PAD IS THE DIALOG FIELD'S TOO, 5 WINDOWS PX UNDER
+// BOTH CHROMES (architect 2026-10-08, with the height above; the name is the
+// status-bar panel's of 2026-10-02, the field's own since 2026-10-05): the
+// reserved cell stands this far in from the field's outer edge on each side
+// — the dialog field's text inset (kModalFieldPadXPx, render.h, the one
+// source), where win2000 stood 3 from 2026-10-02 (Windows' status bar) and
+// clearlooks 5 (GTK's entry) from 2026-10-07. (The second panel, the
+// state's, and its 2-px SB_SETPARTS gap, kStatusPanelGapPx, retired
+// 2026-10-03: the state is a line on the row's ground.)
+//
+// AND IT IS ROW 8'S AIR ROUND THE CLOCK'S FIELD, ONE NUMBER BOTH SIDES
+// (architect 2026-10-08: "the distance from the well's vertical left edge to
+// the timestamp field should be symmetrical to the distance from the field to
+// the text outside it"): the field's left line stands this pad in from the
+// lane's left edge — the well's, the two sharing the window's column — and
+// the state line's FIRST INK stands this pad past the field's right line
+// (its origin pulled back by the run's own left bearing, ink_left_px,
+// text_shape.h), so the field stands in the same air outside as its digits
+// stand inside it. The clock's field no longer starts at the lane's 8-W pad
+// (bottom_row_seats' left_x, the margin mirror of the right block's pad,
+// 2026-09-29), which stays the modal row's and the render player's start.
+// (THE STATE LINE'S GAP, kStatusTextGapPx — one control spacing, 6 W,
+// Windows' 4 dialog units and the GNOME HIG 2's 6 px, architect 2026-10-07
+// ~03:15 — retired with this rule.)
+constexpr double kStatusPanelPadPx = kModalFieldPadXPx;
 
-// THE STATE LINE'S GAP — ONE CONTROL SPACING past the clock field's right
-// edge under both chromes (architect 2026-10-07 ~03:15, reversing the
-// "matching the field" rule of 2026-10-06: "an input field and the field
-// next to it naturally have different distances"): 6 Windows px — Windows'
-// 4 dialog units between a control and its label (4 x 1.5 px at 8-pt MS
-// Sans Serif's 6-px dialog-unit width = 6), and the GNOME HIG 2's (gnome-
-// devel-docs 2.30.1, hig/C/hig-ch-layout.xml: "Spacing and Alignment",
-// line 505, "leave space between user interface components in increments
-// of 6 pixels", and the text labels' table, line 631, a label "6 pixels to
-// the left of and vertically center aligned with textfield control"). The
-// field's own pad stays inside it; the line's right clip keeps its own rule
-// (paint_bottom_row_buttons_and_clock).
-constexpr double kStatusTextGapPx = 6.0;
-
-// The live spec's two lengths, each rounded once (scaled_px).
+// The two lengths, each rounded once (scaled_px).
 static int time_field_h_px() {
-    return scaled_px(live_chrome_spec().time_field_height_px);
+    return scaled_px(kTimeFieldHeightPx);
 }
 static int time_field_pad_px() {
-    return scaled_px(live_chrome_spec().time_field_pad_px);
+    return scaled_px(kStatusPanelPadPx);
 }
 
 // The time fields' metrics, MEMOISED ON THE SCALE — thirteen tiny shaping
@@ -2852,8 +2858,9 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
 // (architect 2026-10-05, on his 350 % screenshots, the player's Close 4 px
 // left of and 2 rows under row 8's last button): both painters take their
 // edges from this one owner, so the shared edges cannot drift. The LEFT PAD
-// is where the left-aligned run starts (row 8's clock cell, the player's
-// transport), the RIGHT PAD where the right-aligned block ends (row 8's
+// is where the player's left-aligned transport starts and the modal row's
+// content (row 8's clock field stands its own air in instead since
+// 2026-10-08, kStatusPanelPadPx's block), the RIGHT PAD where the right-aligned block ends (row 8's
 // transport three, the player's Load in place · Close) — the lane's one pad
 // (icon_row_pad_x) from each edge, with no other reserve: a focused player
 // button's frame (kModalFocusFramePx) paints in the pad's first line rather
@@ -2865,7 +2872,7 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
 // runs is each row's own: row 8's state line, the player's scrub, which
 // fills it.
 struct BottomRowSeats {
-    int left_x  = 0;   // the left pad: the left-aligned run's first column
+    int left_x  = 0;   // the left pad: the player's and the modal row's first column
     int right_x = 0;   // the right pad: one past the right block's last column
     int case_y  = 0;   // the case's top: the content's top plus the row's air
     int case_w  = 0;   // the toolbar case, both rows' every button
@@ -2964,9 +2971,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     };
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
-    // layout: the most-used buttons at the bottom right): the CLOCK at the
-    // lane's left pad in its time field with THE STATE LINE on the ground
-    // behind it (since 2026-10-03; the block at the clock below) — then THE
+    // layout: the most-used buttons at the bottom right): the CLOCK in its
+    // time field, one field pad in from the lane's left edge, with THE STATE
+    // LINE on the ground one field pad past it (since 2026-10-03, the
+    // symmetric air since 2026-10-08; the block at the clock below) — then THE
     // RIGHT BLOCK,
     // anchored at the right margin — the MARKER-VERB GROUP (its six counted
     // off kMarkerVerbGroup), the group gap, the MARKER-WALK GROUP (Previous
@@ -2992,30 +3000,32 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // group six since 2026-09-29 evening). In device px, off the painted
     // walk: 17·43 + 3·11 = 764 at the
     // laptop's 138 %, starting at 1920 − 11 − 764 = 1145, and the clock's
-    // time field (kTimeFieldHeightPx, 2026-10-05) — its cell the widest
-    // `A | 00:00.000` in the body face, Tahoma's ~91.5 px at 138 %
-    // (2026-10-06, its 13 glyphs tracked, ceiled to 92) — spanning 7..107,
-    // the state line one control spacing past it (kStatusTextGapPx,
-    // 2026-10-07), 115, clipped one group space short of the block at 1134
-    // (~1019 px); at the tablet's 300 % 17·93 + 3·24 = 1653, starting at
-    // 2304 − 24 − 1653 = 627, the field (its cell ~199) spanning about
-    // 15..232, the state line about 250..603 (~353 device px) — under win2000.
-    // IN THE `h` VIEW (the hide, 2026-10-07) the block is 1 verb + 4 walk +
-    // 2 arrows + 2 transport = 9 cases and three gaps, 9·31 + 3·8 = 303
-    // Windows px: 9·43 + 3·11 = 420 at the laptop's 138 %, starting at 1489,
-    // the state line 115..1478 (~1363 px); 9·93 + 3·24 = 909 at the tablet's
-    // 300 %, starting at 1371, the state line about 250..1347 (~1097 device
-    // px, 744 more than outside the view). UNDER CLEARLOOKS (32-W cases,
-    // 12-W gaps; its 5-W field pads and the DejaVu cell move the field and
-    // so the line's left end) the block is 17·32 + 3·12 = 580 Windows px
+    // time field (kTimeFieldHeightPx, the dialog field's since 2026-10-08) —
+    // its cell the widest `A | 00:00.000` in the body face, Tahoma's ~91.5 px
+    // at 138 % (2026-10-06, its 13 glyphs tracked, ceiled to 92), its pads 7
+    // (5 W) — spanning 7..113, the state line's ink one pad past it
+    // (kStatusPanelPadPx's symmetric air, 2026-10-08), 120, clipped one group
+    // space short of the block at 1134 (~1014 px); at the tablet's 300 %
+    // 17·93 + 3·24 = 1653, starting at 2304 − 24 − 1653 = 627, the field (its
+    // cell ~199, its pads 15) spanning about 15..244, the state line about
+    // 259..603 (~344 device px) — under win2000. IN THE `h` VIEW (the hide,
+    // 2026-10-07) the block is 1 verb + 4 walk + 2 arrows + 2 transport = 9
+    // cases and three gaps, 9·31 + 3·8 = 303 Windows px: 9·43 + 3·11 = 420
+    // at the laptop's 138 %, starting at 1489, the state line 120..1478
+    // (~1358 px); 9·93 + 3·24 = 909 at the tablet's 300 %, starting at 1371,
+    // the state line about 259..1347 (~1088 device px, 744 more than outside
+    // the view). UNDER CLEARLOOKS (32-W cases, 12-W gaps; the DejaVu cell
+    // moves the field's right line and so the line's left end) the block is
+    // 17·32 + 3·12 = 580 Windows px
     // outside the view — 816 device px at 138 %, 1740 at 300 % — and 9·32 +
     // 36 = 324 inside it, 456 and 972. THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window or a
     // scale driven toward the 1000 ceiling: under win2000 the block reaches
-    // the field's right edge once the window falls below about 636 Windows
-    // px (8 − 3 + ~66 + 6 + 551 + 8), 388 in the view (303 for 551) — the
-    // tablet's 2304 at 400 % would be 576, where it does outside the view.
+    // the state line's start once the window falls below about 645 Windows
+    // px (5 + ~76 of field + 5 + 551 + 8), 397 in the view (303 for 551) —
+    // the tablet's 2304 at 400 % would be 576, where it does outside the
+    // view.
     // THE STATE LINE CANNOT PUSH ANYTHING: it is
     // clipped one group space short of the block, so a long line is cut
     // rather than colliding.
@@ -3107,15 +3117,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const std::string sep = " | ";
         const double sep_w = text_shape::shape_text_run(font, sep).width_px;
         const double cell_w = tm.letter_w + sep_w + tm.time_w;
-        // THE CELL STARTS AT THE LANE'S LEFT PAD (architect 2026-09-29, the
-        // transport having moved to the row's right end). THE AIR IS A MARGIN
-        // MIRROR: the row's last button keeps one lane pad from the lane's
-        // right edge, and the clock keeps the same pad from its left, so the
-        // row's two ends read alike — the rule the retired separator →
-        // digits offset carried while the cell sat behind a separator, which
-        // at a bare margin is the pad itself. It is also where the modal row's
-        // prompt message starts.
-        const int cell_x = seats.left_x;
+        // THE FIELD STANDS ONE FIELD PAD IN FROM THE LANE'S LEFT EDGE — the
+        // well's (architect 2026-10-08, the symmetric air at
+        // kStatusPanelPadPx's block): its left line `air` in, its cell
+        // another pad inside that line, the same `air` again from its right
+        // line to the state line's first ink. (From 2026-09-29 the cell
+        // started at the lane's 8-W pad, the right block's margin mirrored;
+        // that pad, bottom_row_seats' left_x, stays the modal row's start.)
+        const int air    = time_field_pad_px();
+        const int cell_x = content.x + air + air;
         // THE LEFT OF THE ROW IS ONE FIELD AND A LINE (architect 2026-10-02
         // for the panel, 2026-10-03 for the line, 2026-10-05 for the field's
         // height and face) — the Vegas / ACID pattern: a time in a sunken
@@ -3123,11 +3133,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //   THE CLOCK'S FIELD: time_field_rect round the reserved cell,
         //   centred in the content band, painted by paint_time_field. Its
         //   width is fixed (the cell's), so the state line never moves.
-        //   THE STATE LINE: on the row's ground, no panel, starting ONE
-        //   CONTROL SPACING right of the field's right line under both
-        //   chromes (kStatusTextGapPx, 6 Windows px — architect 2026-10-07,
-        //   reversing 2026-10-06's "matching the field": "an input field and
-        //   the field next to it naturally have different distances"). Its
+        //   THE STATE LINE: on the row's ground, no panel, ITS FIRST INK ONE
+        //   FIELD PAD right of the field's right line under both chromes
+        //   (architect 2026-10-08, the air the field stands in from the
+        //   lane's left edge, kStatusPanelPadPx's block): the clip starts
+        //   there and the run's origin stands its own left bearing short of
+        //   it (ink_left_px, text_shape.h), so a glyph with a wide bearing
+        //   reads no farther off than one with a narrow one. Its
         //   RIGHT CLIP KEEPS ITS OWN RULE, one group space short of the right
         //   block — that edge faces a button group, not the field; a window
         //   too narrow to leave that span positive paints no state text — the
@@ -3136,20 +3148,18 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // cell ± 1 px over the content rows) CROSSES THE FIELD'S TOP AND
         // BOTTOM LINES and the ground above and below them, which a tick
         // repaints identically under its clip; the field's two vertical lines
-        // and the whole state line — which starts a control spacing right of
-        // the field, past the box's one px of slack — fall outside it. Every
+        // and the whole state line — which starts a field pad right of the
+        // field, past the box's one px of slack — fall outside it. Every
         // state change damages the lane whole
         // (Viewport::invalidate_status_cell_area), which repaints the field
         // and the line.
         const GuiRect clock_field =
             time_field_rect(cell_x, cell_w, content_y, content_h);
         paint_time_field(cr, clock_field);
-        const int state_x =
-            clock_field.x + clock_field.w + scaled_px(kStatusTextGapPx);
+        const int state_x = clock_field.x + clock_field.w + air;
         const int state_w = (right_block_x - group_gap) - state_x;
-        // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the
-        // period field's 3 px of face above and below its digits, by the one
-        // box solver; the field is symmetric about its own lines, so the cap
+        // THE BASELINE CENTRES THE FACE'S CAP BAND IN THE FIELD — the face
+        // split above and below its digits by the one box solver; the field is symmetric about its own lines, so the cap
         // band sits centred inside them too. THE STATE LINE TAKES IT TOO (the
         // ONE BASELINE block below).
         const double baseline =
@@ -3217,8 +3227,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     ground.
         //   * THE STATE — THE BODY FACE (gui_font(GuiFace::Body)) in the
         //     theme's label, painted straight on the row's
-        //     ground as the menu row's words are, LEFT-ALIGNED a control
-        //     spacing past the clock's field, ON THE CLOCK'S OWN BASELINE
+        //     ground as the menu row's words are, ITS FIRST INK one field
+        //     pad past the clock's field, ON THE CLOCK'S OWN BASELINE
         //     (architect 2026-10-07, his tablet capture under clearlooks: the
         //     walk line "is a little bit lower down" — "whichever one is
         //     right, the other should be centred to behave like it", and the
@@ -3284,12 +3294,20 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                                     run_x - letter_run.width_px, baseline);
         text_shape::show_shaped_run(cr, time_run, run_x, baseline);
         if (state_w > 0 && !state.empty()) {
-            // The clock's face on THE CLOCK'S BASELINE (the block above).
+            // The clock's face on THE CLOCK'S BASELINE (the block above), its
+            // FIRST INK at the clip's left edge: the origin stands the run's
+            // own left bearing short of state_x (the symmetric air above).
+            const text_shape::ShapedRun state_run =
+                text_shape::shape_text_run(font, state);
             cairo_save(cr);
             cairo_rectangle(cr, state_x, lane.y, state_w, lane.h);
             cairo_clip(cr);
-            show_row_text(cr, font, static_cast<double>(state_x), baseline,
-                          state, palette().label);
+            set_palette_source(cr, palette().label);
+            text_shape::show_shaped_run(
+                cr, state_run,
+                static_cast<double>(state_x) -
+                    text_shape::ink_left_px(state_run),
+                baseline);
             cairo_restore(cr);
         }
     }
@@ -5895,8 +5913,8 @@ static bool modal_owns_bottom_row(AppState& app) {
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
-    // into ONE lane on the WINDOW'S FOOT): the monospace clock in its status
-    // panel and THE STATE LINE on the ground beside it at the left pad, and —
+    // into ONE lane on the WINDOW'S FOOT): the clock in its time field and
+    // THE STATE LINE on the ground beside it at the left, and —
     // flush right — the MARKER-VERB GROUP, the marker walk, the four cardinal
     // arrows and the transport three, eight Windows px of bare ground between
     // two groups (architect 2026-09-29 for the groups, 2026-10-02 for the
@@ -6169,8 +6187,10 @@ namespace {
 // horizontal unit — and since 2026-10-08 the editor row's ONE GAP (label →
 // field → OK → Cancel; the rule at paint_modal_dialog's editor arm).
 constexpr double kModalButtonGapPx    = 6.0;
-constexpr double kModalFieldHeightPx  = 23.0;   // includes its sunken edge
-constexpr double kModalFieldPadXPx    = 5.0;
+// (THE FIELD'S HEIGHT AND PAD, kModalFieldHeightPx 23 and kModalFieldPadXPx
+// 5, are render.h's since 2026-10-08: the time fields and the color picker's
+// hex field take them too, so their one source is where every reader sees
+// it.)
 constexpr double kModalFieldWidthPx   = 378.0;  // authored; see the block above
 constexpr double kModalFieldMinWidthPx = 29.0;  // the field's floor
 // THE DIALOG BUTTONS' BOX — the deleted toolbar row's own anatomy, OWNED here
@@ -7607,8 +7627,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // scrub's painters (the channel's four lines and the pointed thumb on a
 // 3 / 4 / 8 seat; GtkScale's trough, its lower part filled, and its thumb),
 // the value's tabular digits right-aligned in `label`; the one field — the
-// time field's shape in the field pair (sunken outer under win2000, the
-// entry under clearlooks), its run, selection and caret the dialog field's
+// dialog field's size (kModalFieldHeightPx, render.h) in the field pair
+// (sunken outer under win2000, the entry under clearlooks), its run, selection and caret the dialog field's
 // own painting and its minimal-travel scroll (text_editor::State::
 // view_offset_px), and, under the name ask, the act's word left of it in
 // `label`; the swatch pair in a one-line sunken frame (cl_list_frame under
@@ -7930,7 +7950,7 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
         // RULE (text_editor::State::view_offset_px, the dialog field's four
         // lines) — the hex spelling always fits, so only a long name ever
         // travels.
-        const double pad_x    = scaled_px(spec.time_field_pad_px);
+        const double pad_x    = scaled_px(kModalFieldPadXPx);
         const int    caret_px = scaled_px(1.0, 1);
         const double view_x0  = L.field.x + pad_x;
         const double view_w   = std::max(1.0, L.field.w - 2.0 * pad_x);

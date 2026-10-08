@@ -109,11 +109,16 @@ struct TrimRange {
 // `palettes/` folder beside it — or, with no `palette` line, the live
 // chrome's default palette. There is NO LEVEL (architect 2026-10-04): a
 // dark look, like any look made official, would be a chrome variant of its
-// own (2026-10-08). The app computes no color but one family: THE CHROME
-// KNOB'S 3D SET (architect 2026-10-08, chrome_derive.h's head) — a palette
-// that carries the chrome's twelve keys under windows-2000 has the relief
-// quartet derived from its ground by Windows' own Appearance-dialog rule,
-// as Windows itself computed it; every other chrome shade is a picked key.
+// own (2026-10-08). The app computes no color but THE CHROME KNOB'S
+// DERIVATION, each chrome's own and only over a palette that carries the
+// chrome's twelve keys (architect 2026-10-08; live_chrome_words picks the
+// vocabulary's): under windows-2000 the relief quartet derived from the
+// ground by Windows' own Appearance-dialog rule, as Windows itself computed
+// it, every other chrome role a picked key (chrome_derive.h's head); under
+// clearlooks every engine tone — the `cl_*` block — derived from the keys
+// by the Clearlooks engine's and metacity's own arithmetic, ported and
+// proven byte-exact against squeeze's recorded bytes (clearlooks_derive.h's
+// head). With no keys, the chrome's compiled theme stands as recorded.
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — no named literal stands beside them since
 // 2026-10-07, when the flag editor's black frame went — or THE ICON SET'S
@@ -1090,6 +1095,24 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 // (kModalBtnBoxPx and friends, paint_handler.cpp, 23 and 7 / 7 Windows px
 // from 2026-10-02; 32 and 9 / 10 laptop px before) — which used to read row
 // 2's. The row's crop record is git history.)
+
+// THE DIALOG FIELD — ONE SHAPE UNDER BOTH CHROMES: every text field of the
+// modal dialogs (paint_modal_dialog's editor arm, the choice editor's combo
+// at its seat), the color picker's hex field and, since 2026-10-08, every
+// TIME FIELD (row 8's clock and the render player's position and length,
+// paint_handler.cpp's time-field block — architect 2026-10-08: the clock
+// "is squished into a tiny box … in the Settings editor the fields look like
+// normal sizing, the same size as the OK / Cancel buttons") is this tall,
+// its edge included, with its text this far in from its outer edge. The two
+// chromes' sources agree, so the numbers are not the chrome spec's: WIN2000
+// Windows' 14-dialog-unit edit box beside its 14-unit push button, 23 W (the
+// laptop pixel's 31 re-authored at the unit's change, 2026-10-02, the pad's
+// 7 as 5 — paint_handler.cpp's kModal* block keeps the sampled record);
+// CLEARLOOKS GTK's entry at the 13-row cell, gtkentry.c's size_request
+// 13 + 2 x (the entry style's ythickness 3 + GtkEntry::inner-border 2) = 23,
+// its text xthickness 3 + inner-border 2 = 5 in.
+inline constexpr double kModalFieldHeightPx = 23.0;
+inline constexpr double kModalFieldPadXPx   = 5.0;
 
 // THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
 // sunken, status or etched edge in the chrome, and of one cell of the checked

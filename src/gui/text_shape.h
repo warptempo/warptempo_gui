@@ -103,20 +103,24 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 void append_shaped_run_path(cairo_t* cr, const ShapedRun& run, double x,
                             double y);
 
-// (A RUN'S INK EDGES — `InkExtents` / `ink_extents_px`, the run's first and last
-// LIT pixel as against `width_px`'s sum of ADVANCES — stood here from
-// 2026-08-30 to 2026-08-31 for ONE consumer: row 8's sans STATE CELL, which sat
-// a measured gap right of the monospace clock and read about two pixels wider
-// than the separator-to-clock gap beside it, the two runs' side bearings both
-// falling inside the air. It retired with that cell when the state text joined
-// the clock's own run (2026-08-31); since 2026-10-03 the state stands on the
-// row's ground a group space past the clock's field, placed off the field's
-// line rather than against the clock's ink, so still no bearings to correct
-// (paint_bottom_row_buttons_and_clock). Nothing else
-// ever asked for ink: every other layout here wants a reserved CELL, which is
-// `width_px`'s job. A layout that needs equal air again reinstates this from
-// git — the walk was show_shaped_run's glyph array at pen origin 0 through
-// cairo_scaled_font_glyph_extents.)
+// A RUN'S FIRST INK, in pixels from the run's pen origin to the left edge of
+// its first lit pixel — the left side bearing of the run as cairo will paint
+// it (negative where a glyph overhangs its origin), as against the origin
+// `width_px` measures from; an empty run answers 0. Measured through cairo's
+// own glyph extents (cairo_scaled_font_glyph_extents) on the run's OWN
+// positioned glyphs on its own scaled font, so it is the ink show_shaped_run
+// puts down — the chokepoint's one-run property, said of ink.
+//
+// ITS ONE CONSUMER is row 8's STATE LINE (architect 2026-10-08): its first
+// ink stands one field pad past the clock's field, the same air the field
+// stands in from the lane's edge (paint_bottom_row_buttons_and_clock), so
+// the line's origin is pulled back by this bearing — a placement off the
+// origin would read wider by whatever bearing the line's first glyph
+// carries. Every other layout wants a reserved CELL, which is `width_px`'s
+// job. (A two-edged InkExtents stood here 2026-08-30 .. 31 for the state
+// cell then butted against the monospace clock; only the left edge has a
+// reader now.)
+double ink_left_px(const ShapedRun& run);
 
 // THE BYTE ADDRESS OF A SHAPED RUN: `byte_count + 1` pen offsets, in pixels
 // from the run's origin, one per byte BOUNDARY of the shaped string — index 0
