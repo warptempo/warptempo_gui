@@ -6830,7 +6830,10 @@ struct AppState {
     //   POINTER PRESS on a button (architect 2026-10-03, Windows' rule:
     //   arm_modal_dialog_press, at the press; the rule is at
     //   modal_dialog_pressed). A press's assignment REPLACES whatever focus
-    //   the dialog had, of either strength.
+    //   the dialog had, of either strength. THE COLOR PICKER'S BUTTONS ARE
+    //   THE ONE EXCEPTION (2026-10-08): the card has no ring, so its presses
+    //   assign none and the index stays -1 under it (the rule at
+    //   arm_modal_dialog_press).
     //   ACTIVE is reached only by a DELIBERATE KEYBOARD WALK — Tab, its two
     //   reverse spellings, Left, Right — so its one producer is
     //   route_modal_dialog_focus_key's walk, which sets it on every landing.

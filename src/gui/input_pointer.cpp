@@ -3629,7 +3629,18 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // player button and the unadmitted shift above) arms nothing and moves
     // nothing. A slide off the held button leaves the focus here and fires
     // nothing; a release away leaves the button passively focused.
-    if (app.modal_dialog_focus != hit || app.modal_dialog_focus_active) {
+    // THE COLOR PICKER'S PRESS TAKES NO FOCUS (2026-10-08, the architect's
+    // report of typing that stopped reaching the field): the card HAS NO
+    // FOCUS RING (handle_color_picker_field_key refuses the Tab family) and
+    // paints none, so a focus its Copy, Paste or Close took would be
+    // invisible — and route_modal_editor_key's wall swallows every key but
+    // Esc while the focus is on a button, so a Save As, a Rename or a hex
+    // edit opened after a press on Copy or Paste typed nothing until a
+    // reopen minted a new session. Its index stays -1 for the picker's whole
+    // session; a prompt raised over the card (Delete's) is the prompt's own
+    // stash and takes the focus as every prompt does.
+    if (app.modal_dialog.owner != AppState::ModalDialogOwner::ColorPicker &&
+        (app.modal_dialog_focus != hit || app.modal_dialog_focus_active)) {
         // MOVING THE FOCUS CANCELS THE KEYBOARD ARM, the rule's second site
         // (AppState::modal_dialog_key_pressed): the two arms can stand
         // together — a pointer hold while the keyboard presses the focused

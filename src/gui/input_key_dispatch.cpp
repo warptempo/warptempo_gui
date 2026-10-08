@@ -7240,7 +7240,13 @@ bool GuiInputHandler::handle_color_picker_field_key(GuiKey key,
     // TAB DOES NOTHING ON THIS CARD (2026-10-07): there is no focus ring —
     // the pen reaches every control — so the ring walk the shared route
     // would run on a bare or shifted Tab is refused ahead of it, consumed.
-    if (key == GuiKeys::Tab) return true;
+    // THE WHOLE FAMILY, IsoLeftTab with it (2026-10-08): Shift+Tab on the
+    // laptop's keyboard arrives as that keysym, which the ring reads as its
+    // reverse walk, and an invisible focus parked on Close would leave the
+    // field typing nothing (the press's half of the rule is at
+    // arm_modal_dialog_press). With both refused the focus index never
+    // leaves -1 under the picker.
+    if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) return true;
     return route_modal_editor_key(
         app.color_picker.field_editor, key, mods,
         /*autocomplete=*/{},
