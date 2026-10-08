@@ -8643,7 +8643,7 @@ struct AppState {
     // -- THE COLOR PICKER'S WHOLE STATE (architect 2026-10-07) -----------
     //
     // THE IN-APP PICKER OF THE PROGRAM'S FIFTEEN COLORS (kGuiPaletteRoles,
-    // palette_file.h) AND, UNDER WINDOWS-2000, THE CHROME KNOB'S TWO
+    // palette_file.h) AND, UNDER EITHER CHROME, THE CHROME KNOB'S TWELVE
     // (chrome_derive.h) — a slim card on the well, chrome-branded, the FIFTH
     // ModalDialogOwner (its rank and its modal shape are at
     // ModalDialogOwner). Everything about the card that is not pixels is in
@@ -8655,12 +8655,10 @@ struct AppState {
     //              one counter (text_editor::next_session_id), minted at
     //              every open (GuiColorPicker::open);
     //   `element`  THE LIVE ELEMENT, an index into the chooser's list
-    //              (color_picker::element_at: under windows-2000 Chrome and
-    //              Chrome Text, then kGuiPaletteRoles; under clearlooks the
-    //              roles alone — the list is the chrome's, fixed for the
-    //              process). KEPT ACROSS OPENS: the first open lands on the
-    //              list's first row (Chrome under windows-2000, Canvas under
-    //              clearlooks), a later open returns to the element last
+    //              (color_picker::element_at: the knob's twelve keys, then
+    //              kGuiPaletteRoles — the same list under either chrome).
+    //              KEPT ACROSS OPENS: the first open lands on the list's
+    //              first row (Chrome), a later open returns to the element last
     //              picked — the picker remembers where the work was;
     //   `old_rgb`  OLD — the live element's color WHEN IT BECAME the live
     //              element (the open, or the chooser's change); a tap on the
@@ -8777,8 +8775,8 @@ struct AppState {
             GuiRect  card{0, 0, 0, 0};
             GuiRect  chooser{0, 0, 0, 0};      // the combo: a press toggles the list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
-            // The list's rows, the chooser's most (the knob's twelve and the
-            // fifteen; color_picker::kMaxElementCount, asserted there), by
+            // The list's rows, the chooser's every one (the knob's twelve and the
+            // fifteen; color_picker::kElementCount, asserted there), by
             // element index — the zero rect for a row scrolled out of view —
             // and its scroll bar (absent while every row shows).
             std::array<GuiRect, kGuiChromeLineCount + kGuiPaletteRoleCount>

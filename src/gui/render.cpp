@@ -2736,7 +2736,8 @@ void fill_program_palette(const GuiPaletteWords& w) {
 }
 // THE CHROME'S MEMBERS off the live chrome's words with the knob
 // (live_chrome_words, chrome_derive.h: the compiled theme, the knob derived
-// over it under windows-2000) — the install family's other shared half.
+// over it by the live chrome's derivation) — the install family's other
+// shared half.
 void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
     g_chrome_pick = chrome;
     const GuiThemeWords w = live_chrome_words(live_chrome_spec(), chrome);

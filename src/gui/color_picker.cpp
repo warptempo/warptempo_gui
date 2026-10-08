@@ -84,20 +84,12 @@ uint32_t compiled_chrome_word(std::string_view role) {
 }
 } // namespace
 
-bool chrome_elements_offered() {
-    return live_chrome_spec().vocabulary == GuiChromeVocabulary::Win2000;
-}
-
-std::size_t element_count() {
-    return (chrome_elements_offered() ? kGuiChromeLineCount : 0) +
-           kGuiPaletteRoleCount;
-}
+std::size_t element_count() { return kElementCount; }
 
 Element element_at(std::size_t e) {
     assert(e < element_count());
-    const std::size_t lead = chrome_elements_offered() ? kGuiChromeLineCount : 0;
-    if (e < lead) return Element{true, e};
-    return Element{false, e - lead};
+    if (e < kGuiChromeLineCount) return Element{true, e};
+    return Element{false, e - kGuiChromeLineCount};
 }
 
 const char* element_display_name(std::size_t e) {

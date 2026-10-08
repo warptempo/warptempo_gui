@@ -30,13 +30,15 @@
 // a palette may also carry THE CHROME'S TWELVE KEYS (kGuiChromeLines below:
 // the ground and its text, the caption's start, end and text, the inactive
 // caption's three, the selection's fill and text, the field's ground and
-// text), honored under windows-2000, where the 3D set alone is derived
-// from the ground as Windows' Appearance dialog derived it — the one road by
-// which a palette moves the chrome (install_palette with its `chrome`,
-// install_chrome_pick live); a palette without them leaves the compiled
-// theme exactly its recorded bytes. ONE THEME SYNTAX UNDER EVERY CHROME: the
-// same twelve keys apply to any chrome (under clearlooks they are carried,
-// unread, until its own derivation lands).
+// text) — the one road by which a palette moves the chrome (install_palette
+// with its `chrome`, install_chrome_pick live); a palette without them leaves
+// the compiled theme exactly its recorded bytes. ONE THEME SYNTAX UNDER
+// EVERY CHROME (architect 2026-10-08 ~11:00 / ~12:10): the same twelve keys
+// draw under both, each chrome deriving the rest its own way — under
+// windows-2000 the 3D set alone, from the ground, as Windows' Appearance
+// dialog derived it (chrome_derive.h); under clearlooks every tone, by GTK's
+// and metacity's own arithmetic, the two title ends ignored
+// (clearlooks_derive.h).
 //
 // THE PALETTE'S RULE (architect 2026-10-07 ~10:00): A COLOR THE PROGRAM
 // DRAWS IN THE WELL, OR ON A THING THAT ENTERS THE WELL, IS THE PALETTE'S; a
@@ -112,13 +114,11 @@
 // the block's first key. Absent, the live chrome's compiled theme stands
 // untouched. The picker writes the keys iff the preset carries the block,
 // FIRST IN THE FILE IN THE TABLE'S ORDER (the chooser's order: chrome
-// first), an unpicked inactive key left out. THEY ARE HONORED UNDER
-// WINDOWS-2000 AND CARRIED, UNREAD, UNDER CLEARLOOKS until its own
-// derivation lands — NOT a hard fail there: a palette saved with them under
-// windows-2000 stands in the folder when the Settings chrome row switches to
-// clearlooks, a state the GUI constructs (chrome_derive.h's head says the
-// rest). A preset written while the knob was two keys (`chrome_ground`,
-// `chrome_text`, 2026-10-08 ~09:40 to ~11:00) fails on
+// first), an unpicked inactive key left out. THEY ARE HONORED UNDER EITHER
+// CHROME, whichever saved them: a palette saved under windows-2000 stands in
+// the folder when the Settings chrome row switches to clearlooks, and draws
+// there by clearlooks' derivation. A preset written while the knob was two
+// keys (`chrome_ground`, `chrome_text`, 2026-10-08 ~09:40 to ~11:00) fails on
 // `chrome_title_start`, the block's first missing key; the planner edits
 // the presets on his devices at the install (no migration), as for a file
 // written before the outline became a role, which names fourteen and fails

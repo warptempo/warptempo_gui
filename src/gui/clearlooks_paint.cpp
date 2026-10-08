@@ -3,10 +3,16 @@
 #include "chrome_spec.h"
 // kRowHeightPx: the list row the selected cell's tones are recorded at.
 #include "folder_overlay.h"
+#include "clearlooks_derive.h"   // kListRowPx, the derivation's copy of it
 
 #include <algorithm>
 #include <array>
 #include <cmath>
+
+// THE DERIVATION'S LIST ROW IS THE OVERLAY'S (clearlooks_derive.h's
+// kListRowPx: that header cannot include folder_overlay.h).
+static_assert(clearlooks_derive::kListRowPx ==
+              static_cast<int>(folder_overlay::kRowHeightPx));
 
 namespace {
 

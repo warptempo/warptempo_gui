@@ -21,9 +21,10 @@ struct Viewport;
 
 // THE COLOR PICKER (architect 2026-10-07, the picker arc's second segment) —
 // the in-app picker of the program's fifteen colors (kGuiPaletteRoles,
-// palette_file.h) and, under windows-2000, of THE CHROME KNOB's twelve keys
-// (architect 2026-10-08, kGuiChromeLines, palette_file.h; chrome_derive.h): "a very slimmed down version … a full-fledged part of the
-// project … branded with the chrome … not an afterthought". This header is
+// palette_file.h) and, under either chrome, of THE CHROME KNOB's twelve keys
+// (architect 2026-10-08, kGuiChromeLines, palette_file.h; chrome_derive.h,
+// clearlooks_derive.h): "a very slimmed down version … a full-fledged part
+// of the project … branded with the chrome … not an afterthought". This header is
 // the cluster's ONE OWNER of everything that is not pixels or a press body:
 // the lengths, the layout, the color math, the wheel's raster and the acts
 // (GuiColorPicker, below). The state is AppState::ColorPicker (app_state.h,
@@ -78,25 +79,22 @@ struct Viewport;
 //     +240, turning with the hue.
 //   THE RIGHT COLUMN — (a) THE ELEMENT CHOOSER, the chrome's combo box
 //     showing the live element's name (element_display_name) with the arrow
-//     button; a press drops its list — THE LIVE CHROME'S ELEMENTS (element_at:
-//     under windows-2000 the chrome knob's twelve at the top, "Chrome"
-//     first, then the fifteen in kGuiPaletteRoles' order — 27 rows; under
-//     clearlooks the fifteen), the menu-row popup's painters and press road
+//     button; a press drops its list — THE ELEMENTS (element_at: the chrome
+//     knob's twelve at the top, "Chrome" first, then the fifteen in
+//     kGuiPaletteRoles' order — 27 rows under either chrome), the menu-row
+//     popup's painters and press road
 //     — and a tap on a row selects. IT IS ONE OF THE THREE LIST POPUPS,
 //     placed by the window and SCROLLING when its rows outgrow the room
 //     (render.h's popup scroll block, the rule's one owner; combo_list), its
 //     shown row scrolled into view at the open (re-derived 2026-10-08 with
 //     the knob's twelve, device px): at the tablet's 300 % the 27 rows under
 //     win2000 are 27 x 51 + 2 x 3 + 6 + 6 = 1395, more than the window holds
-//     below the chooser, so the list scrolls there; under clearlooks the
-//     fifteen are 15 x 57 + 3 = 858 rows (286 W), hung at the well's top +
-//     12 + 3 + 18 + 63 = 96, its foot at 954 — 9 rows (3 W) past the well's
-//     945 onto row 8's top, the popup covering the row there as every
-//     dropdown covers what it hangs over (paint_modal_dialog's fork; the
-//     list's damage is its own rect). At the laptop's 138 % the list hangs
+//     below the chooser, so the list scrolls there, and under clearlooks
+//     (re-derived the same day, the knob offered there too) 27 x 57 + 3 =
+//     1542, scrolling the same way. At the laptop's 138 % the list hangs
 //     whole: 27 x 23 + 2 + 2 + 2 = 627 under win2000 (foot at 45 + 627 =
-//     672 of the well's 860) and 15 x 26 + 1 = 391 under clearlooks (foot
-//     at 44 + 391 = 435 of 852).
+//     672 of the well's 860) and 27 x 26 + 1 = 703 under clearlooks (foot
+//     at 44 + 703 = 747 of 852).
 //     (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
 //     Value 0–100, Red / Green / Blue 0–255: the label at the left (one
 //     width for all six, measured from the widest), the slider in the
@@ -366,27 +364,25 @@ int channel_value(const AppState::ColorPicker& cp, Channel c);
 // -- THE ELEMENTS (the chooser's list) -------------------------------------------
 
 // THE CHOOSER'S LIST (architect 2026-10-08, the chrome knob; its twelve
-// ~11:00): under windows-2000 THE KNOB'S TWELVE AT THE TOP in
-// kGuiChromeLines' order — "Chrome", "Chrome Text", "Title", "Title End",
+// ~11:00; under clearlooks too since ~12:10): THE KNOB'S TWELVE AT THE TOP
+// in kGuiChromeLines' order — "Chrome", "Chrome Text", "Title", "Title End",
 // "Title Text", the three "Inactive" ones, "Selection", "Selection Text",
 // "Field", "Field Text" (his 2026-10-04 order: the chrome first, then the
 // canvas, the ink …) — then the fifteen program roles in kGuiPaletteRoles'
-// order; under clearlooks the fifteen alone (the knob is not offered there,
-// chrome_derive.h's head). The list is the live chrome's, fixed for the
-// process (the chrome changes at a launch). An element is a chrome key or
-// a program role; `role` is the key's index in kGuiChromeLines or the
-// role's in kGuiPaletteRoles.
-inline constexpr std::size_t kMaxElementCount =
+// order, THE SAME LIST UNDER EITHER CHROME (one theme syntax: under
+// clearlooks "Title End" and "Inactive Title End" are listed and ignored,
+// clearlooks_derive.h's head — their OLD shows the key's own word). An
+// element is a chrome key or a program role; `role` is the key's index in
+// kGuiChromeLines or the role's in kGuiPaletteRoles.
+inline constexpr std::size_t kElementCount =
     kGuiChromeLineCount + kGuiPaletteRoleCount;
 static_assert(std::tuple_size_v<decltype(AppState::ColorPicker::Stash::list_items)> ==
-                  kMaxElementCount,
-              "AppState::ColorPicker::Stash::list_items must hold kMaxElementCount");
+                  kElementCount,
+              "AppState::ColorPicker::Stash::list_items must hold kElementCount");
 struct Element {
     bool        chrome = false;   // a chrome knob's key, else a program role
     std::size_t role   = 0;
 };
-// Whether the live chrome offers the knob (windows-2000).
-bool        chrome_elements_offered();
 std::size_t element_count();
 Element     element_at(std::size_t e);
 // THE CHOOSER'S NAMES, Title Case (the planner's list, 2026-10-07; the
@@ -506,7 +502,7 @@ struct Layout {
     // its rows by element index — the zero rect for a row scrolled out of
     // view (combo_list_item).
     ComboList list;
-    GuiRect list_items[kMaxElementCount]{};
+    GuiRect list_items[kElementCount]{};
     // The six slider rows: the row, the label's seat, the track (the thumb's
     // center travels its inset span, scrub_handle_box_px / 2 in at each end)
     // and the value cell.

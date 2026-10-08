@@ -30,7 +30,11 @@ The app compiles in ONE THEME PER CHROME and nothing else (`src/gui/theme_file.h
 (`kGuiThemeRoles`), which `gen_theme_files.py` checks against the entry at every run; and `clearlooks` for the
 `clearlooks` chrome, GENERATED WHOLE by `gen_theme_files.py` into `src/gui/theme_clearlooks_values.inc` — every role of
 the table in its order, never hand-edited. The same run writes the role table's generated Clearlooks block,
-`src/gui/theme_clearlooks_roles.inc` and `theme_clearlooks_members.inc`. A catalog change is `build.py`, then
+`src/gui/theme_clearlooks_roles.inc` and `theme_clearlooks_members.inc`. `build.py`'s `engine_tones` arithmetic
+NOW LIVES IN THE APP TOO (architect 2026-10-08, the twelve chrome keys under clearlooks): `src/gui/clearlooks_derive.h`
+ports it step for step and runs it over a palette's picked keys, and its static_assert — squeeze's own inputs
+reproducing `theme_clearlooks_values.inc` byte for byte — is the two copies' agreement, so a change to
+`engine_tones` (or to the geometry it reads) is a change there too. A catalog change is `build.py`, then
 `gen_theme_files.py` and `catalog_md.py`, then the build, the outputs committed together; the output is byte-stable
 (the role table's order, uppercase hex, LF, no timestamp). No other entry ships as a theme: the bundled theme files
 (`assets/themes/<key>.theme`, copied into the app's `themes/` folder at every launch and chosen by the `theme` device

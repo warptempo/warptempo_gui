@@ -2,6 +2,7 @@
 
 #include "theme_file.h"   // GuiThemeWords, the role table, the compiled themes;
                           // through render.h, GuiChromePick and ChromeSpec
+#include "clearlooks_derive.h"  // derive_clearlooks_chrome (the resolver)
 
 #include <array>
 #include <cstddef>
@@ -18,8 +19,9 @@
 // grammar, kGuiChromeLines): the ground and its text, the caption's start,
 // end and text, the inactive caption's three (optional, following the
 // active ones while absent), the selection's fill and text, the field's
-// ground and text. This header is THE ONE DERIVATION over them and every
-// role's mapping.
+// ground and text. This header is THE WINDOWS-2000 DERIVATION over them and
+// every Windows role's mapping there (clearlooks' is clearlooks_derive.h,
+// below).
 //
 // "A DERIVATION IS ALWAYS ON A SCALE" (architect 2026-10-08 ~11:00): THE
 // 3D SET — Hilight, Shadow, 3DLight, DkShadow — derived from the ground by
@@ -85,16 +87,11 @@
 // 2000's caption paints both ends. THE CLEARLOOKS BLOCK (cl_ roles) is
 // carried from the compiled theme, unread by the win2000 painters.
 //
-// UNDER CLEARLOOKS THE KNOB IS NOT OFFERED (its derivation — the start
-// alone, its own ramp — is GTK's shade table, a later brief): the picker's
-// chooser lists no chrome element there (color_picker::
-// chrome_elements_offered), and a palette carrying the block LOADS, ITS
-// KEYS CARRIED AND UNREAD — live_chrome_words answers the compiled theme —
-// because a palette saved under windows-2000 stands in the folder when the
-// Settings chrome row switches to clearlooks, a state the GUI constructs and
-// so one that must load (the two-category rule); a built-in scheme chosen
-// there is carried the same way. Save and Save As there keep the block the
-// live palette carries.
+// UNDER CLEARLOOKS THE SAME TWELVE KEYS DRAW (architect 2026-10-08 ~12:10,
+// ONE THEME SYNTAX UNDER EVERY CHROME): their derivation there is GTK's and
+// metacity's own arithmetic, ported whole — clearlooks_derive.h, whose head
+// owns its mapping (the title end ignored, the frame off the title) and its
+// proof. live_chrome_words below picks the vocabulary's derivation.
 namespace chrome_derive {
 
 // -- WINDOWS' 240-SCALE HLS (Wine dlls/shlwapi/ordinal.c) ----------------------
@@ -334,12 +331,18 @@ static_assert([] {
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install reads
 // (install_palette / install_chrome_pick, render.cpp): the live chrome's
 // compiled theme, with the knob derived over it when the palette carries the
-// block AND the chrome is windows-2000 (the head: under clearlooks the keys
-// are carried and unread).
+// block — Windows' dialog rule under windows-2000 (above), GTK's and
+// metacity's arithmetic under clearlooks (clearlooks_derive.h).
 inline GuiThemeWords live_chrome_words(const ChromeSpec& spec,
                                        const std::optional<GuiChromePick>& pick) {
     const GuiThemeWords& compiled = chrome_theme_words(spec);
-    if (!pick || spec.vocabulary != GuiChromeVocabulary::Win2000)
-        return compiled;
-    return chrome_derive::derive_windows_chrome(compiled, *pick);
+    if (!pick) return compiled;
+    switch (spec.vocabulary) {
+        case GuiChromeVocabulary::Win2000:
+            return chrome_derive::derive_windows_chrome(compiled, *pick);
+        case GuiChromeVocabulary::Clearlooks:
+            return clearlooks_derive::derive_clearlooks_chrome(
+                compiled, *pick, clearlooks_derive::kGeometry);
+    }
+    return compiled;
 }

@@ -391,10 +391,11 @@ const GuiPalette& palette();
 // ground-and-text pick of ~09:40): the palette's TWELVE chrome keys —
 // palette_file.h owns their file grammar (kGuiChromeLines: the nine of the
 // block, present together or not at all, and the three inactive, each
-// optional), chrome_derive.h the one derivation over them (the 3D set from
-// the ground) and every role's mapping. "WE SHOULD NEVER HAVE A TOGGLE": the
-// caption's text and the selection's are picked words, never a rule's
-// white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
+// optional), chrome_derive.h the derivation under windows-2000 (the 3D set
+// from the ground) and clearlooks_derive.h the one under clearlooks (GTK's
+// and metacity's arithmetic, the title end ignored), each with its mapping.
+// "WE SHOULD NEVER HAVE A TOGGLE": the caption's text and the selection's
+// are picked words, never a rule's white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
 // absent ("on the tablet I'm not even going to fill them out; there is no
 // inactive state there") — the inactive_* accessors below resolve them.
 struct GuiChromePick {
@@ -441,15 +442,15 @@ struct GuiChromePick {
 // palette_generation below, the flag cache's fingerprint term, and the
 // plate's two baked inks (waveform_plate_inks) move with it. The words type
 // is palette_file.h's. `chrome` is the same palette's CHROME KNOB, its
-// optional chrome block (GuiChromePick above), derived over the compiled
-// theme under windows-2000 (live_chrome_words, chrome_derive.h).
+// optional chrome block (GuiChromePick above), derived over the live
+// chrome's compiled theme (live_chrome_words, chrome_derive.h).
 void install_palette(const std::array<uint32_t, 15>& program,
                      const std::optional<GuiChromePick>& chrome);
 
 // THE INSTALL FAMILY'S CHROME MEMBER (2026-10-08, the chrome knob): the
 // chrome's members rewritten off live_chrome_words(live chrome, `chrome`)
-// (chrome_derive.h — the compiled theme, with the knob derived over it under
-// windows-2000) and palette_generation bumped, the program's fifteen
+// (chrome_derive.h — the compiled theme, with the knob derived over it by
+// the live chrome's derivation) and palette_generation bumped, the program's fifteen
 // untouched. THE PICKER'S LIVE ROAD beside install_program_palette
 // (GuiColorPicker::install_live_words, which runs that member's apply shape
 // after both). Why that shape is enough for the chrome: the chrome's colors
