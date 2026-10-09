@@ -154,6 +154,18 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_restore(cr);
 }
 
+namespace {
+// ONE CANVAS LINE ACROSS THE AREA on area-local row `row`, `t` device rows
+// thick, as an aliased rect appended to the current path and cut to the
+// area's rows: rows [row − t / 2, row − t / 2 + t). The grid's and the
+// center lines' one row rule (render_canvas, render_center_lines).
+void canvas_hline(cairo_t* cr, const GuiRect& area, int row, int t) {
+    const int top = std::max(area.y, area.y + row - t / 2);
+    const int bot = std::min(area.y + area.h, area.y + row - t / 2 + t);
+    if (bot > top) cairo_rectangle(cr, area.x, top, area.w, bot - top);
+}
+} // namespace
+
 void render_canvas(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     cairo_save(cr);
@@ -165,14 +177,15 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
     cairo_rectangle(cr, area.x, area.y, area.w, area.h);
     cairo_fill(cr);
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
-    // horizontal grid, then the center lines — every one
-    // t = waveform_line_px() thick, ONE DEVICE PX ("on waveform → unscaled",
-    // the class's one inventory), each an aliased integer rect inside the
-    // area. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the rule and its
-    // reason at render.h's row-6 canvas paragraph).
+    // horizontal grid alone — t = waveform_line_px() thick, ONE DEVICE PX
+    // ("on waveform → unscaled", the class's one inventory), each an aliased
+    // integer rect inside the area. THE CENTER LINES STAND OVER THE WAVEFORM
+    // (architect 2026-10-10 ~00:40), render_center_lines below, a pass after
+    // the plate's blit. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the
+    // rule and its reason at render.h's row-6 canvas paragraph).
     const int t = waveform_line_px();
-    // THE HORIZONTAL GRID AND THE CENTER LINES per channel, on the plate's
-    // own bands (waveform_channel_band): a line on a row r covers rows
+    // THE HORIZONTAL GRID per channel, on the plate's own bands
+    // (waveform_channel_band): a line on a row r covers rows
     // [r − t / 2, r − t / 2 + t) — the row r itself at one device px — the
     // zero row being the row the plate's bars straddle; the k-th grid line
     // stands t · nearbyint(k · (H / t) / 4) = nearbyint(k · H / 4) device rows
@@ -181,9 +194,7 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
     // whole (no inset, architect 2026-10-09), so H is half a band, the band
     // the canvas's halved and floored height.
     const auto hline = [&](int row) {
-        const int top = std::max(area.y, area.y + row - t / 2);
-        const int bot = std::min(area.y + area.h, area.y + row - t / 2 + t);
-        if (bot > top) cairo_rectangle(cr, area.x, top, area.w, bot - top);
+        canvas_hline(cr, area, row, t);
     };
     for (int ch = 0; ch < 2; ++ch) {
         const WaveformChannelBand band = waveform_channel_band(area.h, ch);
@@ -199,11 +210,27 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
     }
     set_waveform_source(cr, pal.grid);
     cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+void render_center_lines(cairo_t* cr, const GuiRect& area) {
+    if (area.w <= 0 || area.h <= 0) return;
+    // THE CENTER LINE per channel ON ITS ZERO ROW, OVER THE WAVEFORM'S INK
+    // (architect 2026-10-10 ~00:40: "it's supposed to be visible over the
+    // waveform. Otherwise, in a project like this with tape hiss, there's
+    // never enough zero that the red line would become visible ever"; the
+    // order at render.h's row-6 canvas paragraph): one device px, the grid's
+    // row rule (canvas_hline), in the palette's `center`, the channels'
+    // bands the plate's own (waveform_channel_band), so it stands on the row
+    // the plate's bars straddle.
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    const int t = waveform_line_px();
     for (int ch = 0; ch < 2; ++ch) {
         const WaveformChannelBand band = waveform_channel_band(area.h, ch);
-        if (band.h > 0) hline(band.zero_row());
+        if (band.h > 0) canvas_hline(cr, area, band.zero_row(), t);
     }
-    set_waveform_source(cr, pal.center);
+    set_waveform_source(cr, palette().center);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -1615,22 +1642,28 @@ struct FlagFace {
 // dots) and for history blue only for + and red only for −"). THE TABLE,
 // the ladder read top to bottom, the first matching row wins:
 //   flag                     triangle  dots (program_spec.h's phases)  label
-//   DISABLED (any kind)      ground    none                            emboss
-//   INVALID (any live kind)  cue red   red alone                       red pair
-//   WARP, PHASE RESET        cue red   red and blue, alternating       light
-//   history ADDED            blue      blue alone (the range end's)    light
-//   history REMOVED          cue red   red alone (the range start's)   light
+//                                                                      rest / selected
+//   DISABLED (any kind)      ground    none                            emboss / white
+//   INVALID (any live kind)  cue red   red alone                       dim / bright red
+//   WARP, PHASE RESET        cue red   red and blue, alternating       light / white
+//   history ADDED            blue      blue alone (the range end's)    light / white
+//   history REMOVED          cue red   red alone (the range start's)   light / white
 // The red is the palette's `cue`, the blue its `range`; THE DOTS' ROWS, counted
 // from the canvas's first row, are the red's ≡ 7 and the blue's ≡ 3 (mod 8),
 // blue first from the top — the capture's absolute red y ≡ 3 / blue y ≡ 7
 // re-counted from Cool Edit's canvas top at y = 108 ≡ 4 (mod 8)
 // (program_spec.h's dot fields, the derivation's owner); "light" the panel's
-// `ce_hilight` at rest; the red pair `invalid_label` at rest and
+// `ce_hilight`, "white" the chrome's `selected_text` (FFFFFF under Windows
+// 2000 Standard), every label on the panel's face with no fill in either
+// state; the red pair `invalid_label` at rest and
 // `invalid_label_selected` selected ("keeps red for the text, even
 // unselected — dimmer unselected, brighter selected"). THE TRIANGLE AND THE
 // DOTS NEVER CHANGE WITH SELECTION (Cool Edit's never do): the label
-// carries the selection, on the chrome's selection fill. A `h`-view half is
-// never the invalid class (HistoryDiffFlag's note), so `red` is false there.
+// carries the selection — ITS TEXT ALONE, the chrome's `selected_text` on
+// the panel's face, no fill (architect 2026-10-09 ~23:30: "clicking on a
+// flag to select it makes the text turn white. That's it"), the invalid
+// label its bright red the same way. A `h`-view half is never the invalid
+// class (HistoryDiffFlag's note), so `red` is false there.
 FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
     const GuiPalette& p = palette();
     if (disabled) return FlagFace{p.ground, false, false, false};
@@ -1646,8 +1679,8 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run, its
 // face box [x0, x1) in window x (the text at x0 plus the pad quantum), and
-// its look — the chrome's selected pair, the disabled emboss, or the panel's
-// light tone.
+// its look — the chrome's selected text on the face, the disabled emboss, or
+// the panel's light tone.
 struct CueSegment {
     bool                  present  = false;
     text_shape::ShapedRun run;
@@ -1658,15 +1691,12 @@ struct CueSegment {
 };
 // ONE CUE, laid out: its marker (or diff flag) index, its column in window
 // x, the triangle's resolved face and whether its dots paint, and its label's
-// up-to-three segments in their left-to-right order. `join_selected` lights
-// the selected segments as ONE box over the gap between them (the history's
-// changed pair, one item).
+// up-to-three segments in their left-to-right order.
 struct CueDraw {
     int                       index = -1;
     int                       col   = 0;
     FlagFace                  face{};
     std::array<CueSegment, 3> seg{};
-    bool                      join_selected = false;
     // Whether segments 1 and 2 are the marker's bound cells (the live lanes)
     // or plain halves of one item (the history's pair, whose label publishes
     // no cell boundary: no bracket lives in a commit).
@@ -1677,7 +1707,9 @@ struct CueDraw {
 // the states; the lengths program_spec.h's), shared by both marker columns
 // and the `h` view's lane: the labels RIGHT TO LEFT, each on its opaque face
 // box and cut at the next triangle's left edge where the next column stands
-// past the overlap lead; then the triangles LEFT TO RIGHT; then the
+// past the overlap lead — a selected segment its text in the chrome's
+// selected text on that face, no fill of its own (2026-10-09 ~23:30); then
+// the triangles LEFT TO RIGHT; then the
 // publication — one FlagHitRect per cue (its label box as painted and its
 // triangle, both clipped to the waveform's columns), and one MarkerStem per
 // cue whose dots paint and whose column is a waveform column. `lane` is the
@@ -1733,32 +1765,22 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         cairo_save(cr);
         cairo_rectangle(cr, a, lane.y, b - a, fill_h);
         cairo_clip(cr);
+        // THE OPAQUE FACE BOX, the overlap rule's, under every segment
+        // whatever its state: A SELECTED SEGMENT TAKES NO FILL (architect
+        // 2026-10-09 ~23:30, render.h's SELECTED row), its text alone
+        // changing color.
         paint_cell_rect(cr, GuiRect{a, lane.y, b - a, fill_h}, pal.face);
-        if (c.join_selected) {
-            int sa = 0, sb = 0;
-            bool any = false;
-            for (const CueSegment& s : c.seg) {
-                if (!s.present || !s.selected) continue;
-                if (!any) sa = s.x0;
-                sb = s.x1;
-                any = true;
-            }
-            if (any)
-                paint_cell_rect(cr, GuiRect{sa, lane.y, sb - sa, fill_h},
-                                pal.selected_fill);
-        }
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
-            if (s.selected && !c.join_selected)
-                paint_cell_rect(cr, GuiRect{s.x0, lane.y, s.x1 - s.x0, fill_h},
-                                pal.selected_fill);
             const double tx = static_cast<double>(
                 s.x0 + kProgramSpec.cue_fill_pad * u);
             if (s.embossed && !s.selected) {
                 show_embossed_run(cr, s.run, tx, base);
             } else {
                 // The label's ink (resolve_flag_face's table): an invalid
-                // cue's red pair, else the selected text or the light tone.
+                // cue's red pair, else the chrome's selected text on the
+                // face or the light tone — a selected disabled segment the
+                // selected text too, so its selection shows.
                 const bool inv = c.face.invalid_label;
                 set_palette_source(cr, s.selected
                                            ? (inv ? pal.invalid_label_selected
@@ -2215,8 +2237,8 @@ void render_history_diff_flags(
             c.col   = static_cast<int>(std::nearbyint(left_x));
             // THE TWO HALVES AS TWO SEGMENTS (the removed then the added),
             // their box layout the live lane's one (cue_segment_boxes), the
-            // segment slots 0 and 1; a selected flag lights both halves and
-            // the gap between as ONE box (join_selected).
+            // segment slots 0 and 1; a selected flag's two halves both turn
+            // the selected text, no fill (render.h's SELECTED row).
             text_shape::ShapedRun run_removed;
             text_shape::ShapedRun run_added;
             if (f.removed)
@@ -2229,7 +2251,6 @@ void render_history_diff_flags(
                 static_cast<int>(std::nearbyint(run_added.width_px)), 0};
             const CueSegmentBoxes boxes = cue_segment_boxes(widths, present);
             const bool pair = f.removed && f.added;
-            c.join_selected      = true;
             c.segments_are_cells = false;
 
             // THE DISABLED AXIS, ONE EFFECTIVE BIT PER COMMIT SIDE (architect
@@ -2779,25 +2800,36 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                                 field_box.w - 2 * u, field_box.h - 2 * u},
                     field_fill);
 
-    // THE TEXT VIEWPORT, THE CARET AND THE SELECTION BAND ARE ONE SET OF ROWS:
-    // THE FIELD'S WHOLE INNER HEIGHT, inside the outline (2026-10-09, the
-    // field the whole lane since ~21:00) — so a descender or a history
-    // bracket below the lane's centred baseline paints whole (rows 12 .. 14
-    // of the 17 at 100 %, 36 .. 42 of the 51 at 300 %, render.h's descent
-    // assert), and THE CARET AND THE
-    // SELECTION SPAN THE FIELD as Windows' single-line edit control fills its
-    // client height with the selection, a selected glyph's descender staying
-    // in the selection pair, never handed to the field text below a band
-    // that ends on the baseline. Authored rows, so no font-extent solve.
-    const int band_y = lane.y + u;
-    const int band_h = fill_h - 2 * u;
+    // TWO SETS OF ROWS. THE TEXT VIEWPORT IS THE FIELD'S WHOLE INNER HEIGHT,
+    // inside the outline (2026-10-09, the field the whole lane since ~21:00)
+    // — so a descender or a history bracket below the lane's centred
+    // baseline paints whole (rows 12 .. 14 of the 17 at 100 %, 36 .. 42 of
+    // the 51 at 300 %, render.h's descent assert). THE CARET AND THE
+    // SELECTION BAND ARE THE TEXT'S LINE BOX (architect 2026-10-09 ~23:30,
+    // render.h's EDITING paragraph): the program face's recorded ascent above
+    // the baseline and its descent below it, the dialog field's own band rule
+    // (paint_modal_dialog) — Windows' edit control fills its line with the
+    // selection, and this field round a smaller line leaves rows of field
+    // above and below the band. THE BAND KEEPS THE TEXT'S BASELINE rather
+    // than centring in the field: the cap band is the lane's centred one, so
+    // the line box stands where the text's own ascent and descent put it —
+    // at 100 % rows 2 .. 13 of the inner 1 .. 15, at 138 % rows 1 .. 17 of
+    // 1 .. 20, at 300 % 6 .. 41 of 3 .. 47, at 360 % 8 .. 50 of 4 .. 58 (a
+    // centred box would stand one row lower at 138 % and 300 %, two at 360 %).
+    // Each term rounded at the element (nearbyint), as the dialog field's.
+    const int view_y = lane.y + u;
+    const int view_h = fill_h - 2 * u;
+    const int band_y = static_cast<int>(
+        std::nearbyint(baseline - gui_font_ascent_px(font)));
+    const int band_h =
+        static_cast<int>(std::nearbyint(gui_font_line_px(font)));
 
     // Everything from here paints CLIPPED to the text viewport INSIDE THE
     // FIELD, so a scrolled run, its selection and its caret all stop at the
     // pads instead of bleeding over the box edge into the neighboring labels.
     cairo_save(cr);
-    cairo_rectangle(cr, view_x0, static_cast<double>(band_y),
-                    view_w, static_cast<double>(band_h));
+    cairo_rectangle(cr, view_x0, static_cast<double>(view_y),
+                    view_w, static_cast<double>(view_h));
     cairo_clip(cr);
 
     // 2. The selection highlight, then 3. the text — THE CHROME'S SELECTED
@@ -2818,9 +2850,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    text viewport and the selected run to the band, two disjoint regions
     //    whose union is the whole viewport, so no pixel is painted by both
     //    inks and every edge pixel antialiases against exactly the ground it
-    //    sits on. The band spans the viewport's whole height (the rows block
-    //    above), so the complement is the columns left and right of it. With
-    //    no selection the run paints unclipped inside the viewport.
+    //    sits on. The band is the line box inside the taller viewport (the
+    //    rows block above), so the complement is the columns left and right
+    //    of it AND the rows above and below it — the dialog field's
+    //    complement (paint_modal_dialog). With no selection the run paints
+    //    unclipped inside the viewport.
     //
     //    Both edges come from byte_x, so the highlight cannot drift off the
     //    glyphs it marks however proportional they are.
@@ -2854,22 +2888,19 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     } else {
         cairo_save(cr);
         // The band's complement inside the viewport, as ONE clip path: the
-        // columns left of the band and the columns right of it. A part with
-        // nothing in it is left out rather than added empty — an empty
-        // rectangle is a no-op in a fill but not obviously so in a clip path,
-        // and a selection that fills the viewport is meant to leave the
-        // field-text run nothing at all.
-        const double band_x0 = static_cast<double>(ix0);
-        const double band_x1 = static_cast<double>(ix0 + band_w);
-        if (band_x0 > view_x0) {
-            cairo_rectangle(cr, view_x0, static_cast<double>(band_y),
-                            band_x0 - view_x0, static_cast<double>(band_h));
-        }
-        if (view_x0 + view_w > band_x1) {
-            cairo_rectangle(cr, band_x1, static_cast<double>(band_y),
-                            (view_x0 + view_w) - band_x1,
-                            static_cast<double>(band_h));
-        }
+        // viewport with the band cut out of it (even-odd), so the columns
+        // left and right of the band and the rows above and below it — the
+        // outer viewport clip still bounding a band that runs past the
+        // viewport's side. A selection that fills the viewport's width
+        // leaves the field-text run the rows above and below the band
+        // alone, where a selected glyph's deeper ink takes the field text.
+        cairo_rectangle(cr, view_x0, static_cast<double>(view_y), view_w,
+                        static_cast<double>(view_h));
+        cairo_rectangle(cr, static_cast<double>(ix0),
+                        static_cast<double>(band_y),
+                        static_cast<double>(band_w),
+                        static_cast<double>(band_h));
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
         cairo_clip(cr);
         text_shape::show_shaped_run(cr, run, text_origin_x, baseline);
         cairo_restore(cr);

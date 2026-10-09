@@ -2480,9 +2480,14 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // "DD:DD.DDD" (kTimeShape) and, on row 8, the widest TAB LETTER in the
 // letter's slot (kClockTabLetters) — shaped through the one chokepoint at the
 // live size, so nothing is trusted to the face. The field is that cell plus
-// the field's pad either side (kProgramSpec.field_pad_px, 8 W, Cool Edit's
-// own inset), its width ceiled — and ROW 8'S CLOCK at least the mock's 85 W
-// (kProgramSpec.field_min_w_px), which Tahoma's cell fills.
+// the field's pad either side — THE DIALOG FIELD'S 5 W (kModalFieldPadXPx,
+// architect 2026-10-10 ~00:30: the time field "in line with the text box
+// used for the regular text boxes for typing"; time_field_pad_px below) —
+// its width ceiled, and ROW 8'S CLOCK at least the mock's 85 W
+// (kProgramSpec.field_min_w_px). At 300 % the floor sets the clock's width
+// in all three faces (Tahoma's cell about 201 device px, 201 + 2 · 15
+// against the floor's 255), the cell centered in it (below); the render
+// player's two fields take no floor and are their cell and the two pads.
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2521,13 +2526,18 @@ constexpr const char* kTimeShape = "DD:DD.DDD";
 constexpr std::string_view kClockTabLetters = "AB";
 
 // THE FIELD'S HEIGHT, ITS PAD AND ROW 8'S CLOCK'S LEAST WIDTH, each one
-// element rounded once (scaled_px; program_spec.h owns the numbers): 17 W
-// tall (51 device rows at 300 %, 23 at 138 %), 8 W of pad.
+// element rounded once (scaled_px): 17 W tall (51 device rows at 300 %, 23
+// at 138 %; program_spec.h's field_h_px) and THE DIALOG FIELD'S PAD,
+// kModalFieldPadXPx's 5 W (render.h; 15 device px at 300 %, 7 at 138 %, 18
+// at 360 %) — the time field's pad IS the regular typing field's (architect
+// 2026-10-10 ~00:30, "bring the timestamp in line with the text box used for
+// the regular text boxes for typing"; program_spec.h's time-field
+// paragraph), one constant at both fields.
 static int time_field_h_px() {
     return scaled_px(kProgramSpec.field_h_px);
 }
 static int time_field_pad_px() {
-    return scaled_px(kProgramSpec.field_pad_px);
+    return scaled_px(kModalFieldPadXPx);
 }
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
@@ -2590,8 +2600,9 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
 // where the modal rows' right-aligned clusters end — the lane's one pad
 // (icon_row_pad_x) from each edge; CASES_RIGHT is where row 8's last case
 // ends (the right block packed against the lane's edge, its last end bar
-// and the four W of face before it — 2026-10-09), where the player's right
-// pair ends too. Every BUTTON on either row is THE PROGRAM'S CASE (render.h's
+// and the group's air before it — 2026-10-09; that air 5 W since
+// 2026-10-10 ~00:30, program_spec.h's group fields), where the player's
+// right pair ends too. Every BUTTON on either row is THE PROGRAM'S CASE (render.h's
 // program block) at the row's four W of face under the content's top
 // (row8_air_above_px); the faces are paint_roster_case's on both rows. What
 // lies between the two runs is each row's own: row 8's state line, the
@@ -2643,8 +2654,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int glyph_px  = icon_glyph_px();
     const int btn_y     = seats.case_y;
     // COOL EDIT'S GROUP (program_spec.h, METRICS §5.2): the gripper, its
-    // face, the cases abutting, the face, the end bar; two W of face before
-    // the first group and between two.
+    // air, the cases abutting, the same air, the end bar — the air the
+    // product's symmetric 5 W (architect 2026-10-10 ~00:30, the group fields'
+    // paragraph); two W of face before the first group and between two.
     const int group_gap = scaled_px(kProgramSpec.row8_group_gap_px);
     const int grip_w    = ce_gripper_w_px();
     const int grip_face = scaled_px(kProgramSpec.gripper_to_case_px);
@@ -2708,8 +2720,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     //
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
     // case; the case 23 since 2026-10-09 ~10:25, the verbs seven since
-    // Open Text Editor joined that evening): a group of n is 5 + 6 + 23n + 4
-    // + 6 = 23n + 21, so the block is the 7 verbs' 182, the walk's 113, the
+    // Open Text Editor joined that evening, the air 5 / 5 since 2026-10-10
+    // ~00:30 — Cool Edit's 6 / 4 before it, the same sum): a group of n is
+    // 5 + 5 + 23n + 5 + 6 = 23n + 21, so the block is the 7 verbs' 182, the walk's 113, the
     // arrows' 113 and the transport's 90 with three gaps of 2, 504 W — on the
     // tablet's 768 at 300 % starting at W 264, the clock's group W 2..107
     // (Tahoma's ~66-W cell in the 85-W field), the state line's first ink at
@@ -2811,8 +2824,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double sep_w = text_shape::shape_text_run(font, sep).width_px;
         const double cell_w = tm.time_w + sep_w + tm.letter_w;
         // THE CLOCK'S GROUP: two W of face in from the lane's left edge, the
-        // gripper, its face, the field (its widest string and its pads, at
-        // least the mock's 85 W), four W of face, the end bar.
+        // gripper, the group's 5-W air, the field (its widest string and its
+        // pads, at least the mock's 85 W), the same air, the end bar.
         const int group_x = content.x + group_gap;
         paint_ce_gripper(cr, group_x, btn_y, btn_h);
         const int field_x = group_x + grip_w + grip_face;
@@ -7882,13 +7895,21 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // the canvas's frame and the column's margins then take the panel's face
     // and the frame's ring (paint_canvas_column_frame, above), and the
     // waveform area its own `waveform_canvas` ground with the horizontal grid
-    // and the center lines over it (render_canvas, render.h's row-6 canvas
-    // paragraph). Unconditional and
+    // over it (render_canvas, render.h's row-6 canvas paragraph). Unconditional and
     // ahead of every content branch, so a cold frame (loading, no audio, or a
     // null plate before the first worker publish) shows canvas where the
     // waveform will be rather than a chrome-colored hole. The outer clip already
     // bounds this to the exposed rect, so the full-rect fill costs nothing off
     // the damage.
+    //
+    // THE CENTER LINES PAINT WHENEVER THE GRID DOES (the canvas's picture is
+    // one thing: the canvas, the grid, the ink if any, the center lines —
+    // render.h's row-6 canvas paragraph): with audio loaded they paint over
+    // the plate in the branch below (its blit skipped on a null plate, the
+    // lines still painted there); with none — no source, or a load running,
+    // the branch's own condition `plate_branch` — they paint here, directly
+    // over the canvas and its grid, under the same keyboard clip.
+    const bool plate_branch = audio.total_frames() > 0 && !app.loading;
     {
         paint_canvas_column_frame(cr, app);
         const GuiRect canvas = waveform_area(app);
@@ -7909,6 +7930,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             cairo_clip(cr);
         }
         render_canvas(cr, canvas);
+        if (!plate_branch) render_center_lines(cr, canvas);
         if (band_cuts) cairo_restore(cr);
     }
 
@@ -7969,7 +7991,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
     }
 
-    if (audio.total_frames() > 0 && !app.loading) {
+    if (plate_branch) {
         const GuiRect area       = waveform_area(app);
         const GuiRect top_strip  = top_strip_area(app);
         const GuiRect exposed{x, y, w, h};
@@ -8016,17 +8038,22 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      rect (above, unconditional).
         //   2. paint_canvas_column_frame — the panel's face from the canvas's
         //      top frame row through the column's foot and the canvas's
-        //      frame ring — then render_canvas — the waveform area's ground,
-        //      the horizontal grid and the center lines (above,
-        //      unconditional; 2026-10-09; no vertical grid, render.h's row-6
-        //      canvas paragraph).
+        //      frame ring — then render_canvas — the waveform area's ground
+        //      and the horizontal grid (above, unconditional; 2026-10-09; no
+        //      vertical grid, render.h's row-6 canvas paragraph) — and, on a
+        //      frame with no audio loaded (no source, or a load running:
+        //      !plate_branch), THE CENTER LINES straight over it
+        //      (render_center_lines), so the grid never stands without them.
         //   3. the two redesigned top button rows and the
         //      unified bottom row (its chrome, buttons, clock AND state cell
         //      in one painter),
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).
-        //   4. waveform plate -> phase-reset overlay ring.
+        //   4. waveform plate -> THE CENTER LINES over the ink
+        //      (render_center_lines, architect 2026-10-10 ~00:40; with audio
+        //      loaded they paint here and not at step 2, a null plate's frame
+        //      included) -> phase-reset overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the column's air and the
         //      trim lane: Cool Edit's view bar and its span (2026-10-09; no
         //      cursor mark in the bar, ~14:30).
@@ -8094,6 +8121,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, wave_paint)) {
             paint_waveform_plate(cr, area);
+            // THE CENTER LINES OVER THE INK (architect 2026-10-10 ~00:40;
+            // render_center_lines, render.h's row-6 canvas paragraph): each
+            // channel's zero row, one device px in `center`, right after the
+            // blit and under every dot, ring and line that follows.
+            render_center_lines(cr, area);
             // The overlay band's dotted ring — the phase-reset overlay's whole
             // visual — over the plate and under the stems and the cursor's
             // dots: its left side is the focused reset's own stem, which

@@ -54,9 +54,19 @@
 // captures (a provenance-clean capture of the real OS beats ReactOS wherever
 // they differ, 2026-10-09), every height its source derives from the text
 // cell RE-DERIVED AT THE BASE'S 13-ROW CELL by the source's own arithmetic,
-// the base's 24-W icon seat, the height differences the well's (its own
-// lanes' leftover, main.cpp's lane table), line weights as the sources give
-// them, what cannot be made to fit scratched, not forced.
+// the base's 24-W icon seat, line weights as the sources give them, what
+// cannot be made to fit scratched, not forced.
+// A TALLER CHROME SIMPLY TAKES ITS ROWS FROM THE CANVAS (architect
+// 2026-10-09 ~23:30: "because we're dropping the other chromes, I think we
+// can drop the rule about the waveform height has to always be the same …
+// perhaps more preferable would just be to let the waveform get a little
+// smaller"): the well is each chrome's own leftover (main.cpp's lane table,
+// centered_leftover_h), so a vocabulary whose caption or menu row stands
+// taller than Windows 2000's shows that many rows less canvas; the
+// program's lanes — the band, the canvas column's, row 8 — never flex to
+// absorb a chrome's height, and nothing is clipped. (Every vocabulary's
+// height differences packed into the ruler lane or its separators, so all
+// wells stood equal, 2026-10-07 to 2026-10-09.)
 // A LATER VOCABULARY'S ELEMENT MAY BE SMALLER THAN THE BASE'S, NEVER LARGER
 // WITHOUT HIS RULING (architect 2026-10-08 ~17:45, beside the proportional
 // fit: "ok to make larger elements smaller …; making them larger than

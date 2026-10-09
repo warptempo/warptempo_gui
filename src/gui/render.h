@@ -240,8 +240,8 @@ struct TrimRange {
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
 //                 band and selected substring of every text field, the flag
-//                 editor's included, and THE SELECTED CUE'S LABEL — its fill
-//                 and its text (THE MARKER LANE, below) — ONE
+//                 editor's included, and THE SELECTED CUE'S LABEL — its text
+//                 alone, on the panel's face (THE MARKER LANE, below) — ONE
 //                 PAIR, FOCUSED OR NOT (the 2026-09-02
 //                 inactive selection face retired, architect 2026-10-03, on
 //                 Windows 95's Network Neighborhood, where a selection keeps
@@ -275,7 +275,8 @@ struct TrimRange {
 //                 (ROW 6, below; the ink also the view bar's span, its
 //                 bevels derived from it); THE CANVAS'S TWO LINES, Cool
 //                 Edit's — `grid` under the waveform and `center` on each
-//                 channel's zero (ROW 6); THE CUES' TWO COLORS, Cool Edit's —
+//                 channel's zero, over it (ROW 6); THE CUES' TWO COLORS,
+//                 Cool Edit's —
 //                 `cue` the red and `range` the blue, the triangles and
 //                 their dots — and THE INVALID LABEL'S PAIR,
 //                 `invalid_label` at rest and `invalid_label_selected`
@@ -334,8 +335,8 @@ struct TrimRange {
 // EVERY COLOUR THIS PRODUCT HANDS CAIRO GOES THROUGH ONE OF THESE TWO, and no
 // site calls cairo_set_source_rgb itself (re-grepped 2026-10-03: none outside
 // render.cpp's two bodies): set_palette_source for the chrome and
-// set_waveform_source for the waveform's one cairo fill, the canvas
-// (render_canvas). Each converts the authored sRGB color for the window
+// set_waveform_source for the canvas's cairo fills, its ground and grid
+// (render_canvas) and its center lines (render_center_lines). Each converts the authored sRGB color for the window
 // (display_color, the painter's entry) and hands it over; the plate's own
 // pixels are written as words (argb32_opaque_word), not through cairo, as
 // are the caption gradient's ramp (paint_caption_gradient) and the checked
@@ -711,9 +712,10 @@ void install_true_colors(bool on);
 // THE OVERLAP RULE (architect 2026-10-09, settled on the five overlap
 // captures of NOTES.md set 2): the labels paint RIGHT TO LEFT, each on an
 // OPAQUE FACE BOX over its own extent (THE WHOLE LANE'S ROWS, 0 .. 16 — the
-// selected box's and the press target's rows, so the label is one geometry
-// at rest and selected, 2026-10-09 ~21:00; from one quantum before its text
-// to one past its last segment's), and a label is CLIPPED AT THE
+// press target's rows, so the label is one geometry at rest and selected,
+// 2026-10-09 ~21:00, a selected label taking no fill of its own, ~23:30;
+// from one quantum before its text to one past its last segment's), and a
+// label is CLIPPED AT THE
 // NEXT TRIANGLE'S LEFT EDGE (the next column less four quanta) when the next
 // marker stands more than the six-quantum lead to its right; within the
 // lead it is not clipped and overprints; then the triangles paint LEFT TO
@@ -729,26 +731,35 @@ void install_true_colors(bool on);
 //             IN BOTH STATES (architect 2026-10-09 ~12:00: "keeps red for the
 //             text, even unselected — dimmer unselected, brighter
 //             selected") — `invalid_label` at rest, `invalid_label_selected`
-//             on the chrome's selection fill when selected;
+//             when selected, on the panel's face in both;
 //   DISABLED  the theme's GROUND on the triangle, the label in THE DISABLED
 //             EMBOSS (above), and NO DOTS;
-//   SELECTED  THE LABEL IN THE CHROME'S SELECTED PAIR (architect 2026-10-09,
-//             the mock's selected cue): `selected_text` on a `selected_fill`
-//             box over THE WHOLE LANE, rows 0 .. 16 (architect 2026-10-09
-//             ~21:00, "the text box should take up the whole marker lane …
-//             right now it's too small to click"), the triangles painting
-//             over it where they meet — from one
-//             quantum before the text to one past its end, the text not
-//             moving, its cap band centred in that box as at rest
-//             (cue_baseline_px, 2026-10-09 ~21:45) (an invalid cue's
-//             text the bright red on that fill); THE TRIANGLE KEEPS ITS
-//             COLOR. SELECTION IS ONE SEGMENT'S (architect 2026-09-05):
-//             the ADDRESSED cell's segment wears it — the payload for every
-//             selected marker but the focus, whose addressed cell is
-//             AppState::addressed_cell;
+//   SELECTED  THE LABEL'S TEXT IN THE CHROME'S `selected_text` ON THE
+//             PANEL'S FACE, NO FILL (architect 2026-10-09 ~23:30: "when I
+//             clicked on a flag and it was selected, the text would go
+//             white, not navy blue background"; "clicking on a flag to
+//             select it makes the text turn white. That's it. That's the
+//             only thing") — FFFFFF under Windows 2000 Standard against the
+//             light tone at rest; the segment's resting face box (the
+//             overlap rule's, below) stays as it is, the text not moving,
+//             its cap band centred in the lane as at rest (cue_baseline_px,
+//             2026-10-09 ~21:45) (an invalid cue's text its bright red);
+//             THE TRIANGLE KEEPS ITS COLOR, and the playhead stands on the
+//             marker where the selection landed it. THE PRESS TARGET STAYS
+//             THE WHOLE LANE, rows 0 .. 16 (architect 2026-10-09 ~21:00, "the
+//             text box should take up the whole marker lane … right now it's
+//             too small to click"): the box is geometry, not paint. THE
+//             EDITOR is where the selected pair's fill appears: it opens with
+//             the whole text selected, white on the selection fill inside
+//             its field (EDITING, below). SELECTION IS ONE SEGMENT'S
+//             (architect 2026-09-05): the ADDRESSED cell's segment wears it
+//             — the payload for every selected marker but the focus, whose
+//             addressed cell is AppState::addressed_cell; the history's
+//             changed pair, one item, turns both halves at once;
 //   SELECTED DISABLED (architect 2026-10-07 ~15:10: a disabled marker is
-//             selectable, so its selection must show): the selected label
-//             over the disabled triangle, no dots.
+//             selectable, so its selection must show): the selected label —
+//             its text in `selected_text` on the face in place of the
+//             emboss, no fill — over the disabled triangle, no dots.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29): the pointer over a cue says
 // what a press will do through the CURSOR alone (pointer_cursor_kind).
 //
@@ -773,11 +784,26 @@ void install_true_colors(bool on);
 // at the segment's own seat and baseline — the cap band centred in the
 // field, which is the lane (cue_baseline_px, 2026-10-09 ~21:45) — with one
 // quantum of pad either side of its run, its descenders inside the field
-// (the text's clip the field's inner rows), THE CARET AND THE SELECTION BAND SPANNING THE
-// FIELD'S WHOLE INNER ROWS, 1 .. 15 (2026-10-09: Windows' single-line edit
-// control fills its client height with the selection, so a selected
-// substring's descenders stay in the selection pair), the field growing and
-// shrinking with what is typed, the
+// (the text's clip the field's inner rows), THE CARET AND THE SELECTION BAND
+// THE TEXT'S LINE BOX (architect 2026-10-09 ~23:30: "in Windows highlighted
+// text does take up the entire [height] — no white shows through on top and
+// the bottom, only on the sides. Although it feels like here the font is
+// small enough that we should be able to show a little white at the top and
+// the bottom"): the program face's recorded ascent above the baseline and
+// its descent below it (gui_face_metrics, 10 + 2 W), the dialog field's own
+// band rule (paint_modal_dialog) — Windows fills the line, and the 17-W
+// field round a 12-W line leaves rows of field above and below it. At 100 %
+// the band on lane rows 2 .. 13 inside the inner rows 1 .. 15, one row of
+// field above and two below; at 300 % rows 6 .. 41 inside 3 .. 47, three
+// above and six below. THE BAND FOLLOWS THE TEXT, NOT THE FIELD'S CENTRE: the
+// cap band is centred in the lane, and the line box stands half a W higher
+// round it (its ascent 3 W over the cap, its descent 2 under the baseline),
+// so where the two disagree — by a row at 138 % and 300 %, by two at 360 % —
+// the band keeps its baseline, the white showing what it shows. A selected
+// glyph's ink past the band (a descender deeper than the recorded 2 W)
+// takes the field text, the field ink's clip the band's complement in both
+// its columns and its rows. The field grows and
+// shrinks with what is typed, the
 // segments to its right riding its edge in their resting look; and THE
 // SELECTED SUBSTRING IN THE CHROME'S SELECTED PAIR, `selected_text` on
 // `selected_fill`, the ordinary highlight. AN INVALID MARKER'S FIELD TEXT
@@ -790,8 +816,10 @@ void install_true_colors(bool on);
 // avoid this problem" — the selected look of the resting label could not
 // carry a band of its own pair. THE BOX PAINTS OVER THE LANE, the triangle
 // and any neighbouring label ("it may overlap with the flag and other
-// elements, that's fine"). Outside the editor the selected label stays
-// white on the selection fill with no box.
+// elements, that's fine"). Outside the editor the selected label is its
+// white text on the panel's face, no fill and no box (SELECTED, above); the
+// open editor shows its whole text selected, white on the selection fill
+// inside the field — "a fully highlighted white text editor".
 //
 // A REFUSED ENTER RECOLORS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it
@@ -808,9 +836,9 @@ void install_true_colors(bool on);
 // spelling, `[+]` before an added line's payload and `[-]` before a removed
 // one's (architect 2026-08-05; history_diff_label, paint_handler.h, the same
 // sign row 8's walk line spells), a changed pair's label its two halves as
-// two segments. The view's focus or selection lights the whole label, both
-// halves and the gap between them, as one selected box
-// (render_history_diff_flags).
+// two segments. The view's focus or selection turns the whole label, both
+// halves, the selected text on the face, no fill — the live lane's SELECTED
+// row (render_history_diff_flags).
 
 // -- ROW 6: THE WAVEFORM ---------------------------------------------------------
 //
@@ -839,14 +867,26 @@ void install_true_colors(bool on);
 // palette head's canvas-frame paragraph; the frame rows are lanes of their
 // own and its columns the column's margins, main.cpp's lane table and
 // waveform_area), so every column mapping, hit test and damage box reads the
-// interior. UNDER THE WAVEFORM, in render_canvas's one pass, in this order:
-// the `waveform_canvas` fill; THE HORIZONTAL GRID — per channel, a `grid`
-// line one device px tall ("on waveform → unscaled", architect 2026-10-09
-// ~14:25, waveform_line_px's rule) at the channel's zero row ± nearbyint(k ·
-// H / 4) device rows for k = 1, 2, 3, H the channel's half height (its zero
-// row to its band's edge; the k = 4 line would stand on the band's edge and
-// is not drawn), the canvas's full width; THE CENTER LINE per channel on its
-// zero row, one device px, in `center`, over the grid.
+// interior. THE ORDER, bottom to top: UNDER THE WAVEFORM, in render_canvas's
+// one pass, the `waveform_canvas` fill and THE HORIZONTAL GRID — per
+// channel, a `grid` line one device px tall ("on waveform → unscaled",
+// architect 2026-10-09 ~14:25, waveform_line_px's rule) at the channel's
+// zero row ± nearbyint(k · H / 4) device rows for k = 1, 2, 3, H the
+// channel's half height (its zero row to its band's edge; the k = 4 line
+// would stand on the band's edge and is not drawn), the canvas's full width,
+// Cool Edit's grid under the ink; then THE WAVEFORM'S PLATE; then THE CENTER
+// LINE per channel on its zero row, one device px, in `center`, OVER THE INK
+// (architect 2026-10-10 ~00:40: "it's supposed to be visible over the
+// waveform. Otherwise, in a project like this with tape hiss, there's never
+// enough zero that the red line would become visible ever";
+// render_center_lines, a live pass after the plate's blit, the plate baking
+// its two inks alone); then the lead-in ring, the dots, the scanner and the
+// zoom anchor (on_redraw's paint order). THE PICTURE IS ONE THING — the
+// canvas, the grid, the ink if any, the center lines — SO THE CENTER LINES
+// PAINT WHENEVER THE GRID DOES: over the plate while audio is loaded (a null
+// plate's frame included, its blit skipped), and with none loaded — no
+// source, or a load running — directly over the canvas and its grid, right
+// after render_canvas (on_redraw's `plate_branch`).
 // NO VERTICAL GRID (architect 2026-10-09 ~18:40: Cool Edit's verticals on
 // the ruler's major ticks, drawn that afternoon, were "solid versus the
 // markers dotted, they compete" — "drop them"). HIS PRINCIPLE, recorded
@@ -854,8 +894,11 @@ void install_true_colors(bool on);
 // accuracy is lower priority than usability" — Cool Edit's rule yields
 // where usability says so, while "truthfulness applies to the way we
 // interact" (an invisible hit box is untruthful; on screen is as painted).
-// A recorded departure from Cool Edit (win2000_deviations.md).
-// The waveform's plate is blitted over all of it, ink over every line. Each
+// A recorded departure from Cool Edit (win2000_deviations.md), as THE CENTER
+// LINE OVER THE INK is (the mock of record drew it under the waveform with
+// the grid).
+// The waveform's plate is blitted over the ground and the grid, the ink over
+// every grid line, the center lines over the ink. Each
 // channel's band and zero row are the plate's own (waveform_channel_band
 // below), so the lines stand where the plate's zero is. THE CHANNELS FILL THE
 // CANVAS (architect 2026-10-09, "remove", the mock of record's channels top
@@ -1197,17 +1240,18 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 
 // THE DIALOG FIELD — ONE SHAPE UNDER EVERY CHROME: every text field of the
 // modal dialogs (paint_modal_dialog's editor arm, the choice editor's combo
-// at its seat), the color picker's hex field and, since 2026-10-08, every
-// TIME FIELD (row 8's clock and the render player's position and length,
-// paint_handler.cpp's time-field block — architect 2026-10-08: the clock
-// "is squished into a tiny box … in the Settings editor the fields look like
-// normal sizing, the same size as the OK / Cancel buttons") is this tall,
-// its edge included, with its text this far in from its outer edge — not a
-// chrome spec field, a field to be made only when a later vocabulary's
-// differs. WIN2000 Windows'
-// 14-dialog-unit edit box beside its 14-unit push button, 23 W (the laptop
-// pixel's 31 re-authored at the unit's change, 2026-10-02, the pad's 7 as 5
-// — paint_handler.cpp's kModal* block keeps the sampled record).
+// at its seat) and the color picker's hex field is this tall, its edge
+// included, with its text this far in from its outer edge — not a chrome
+// spec field, a field to be made only when a later vocabulary's differs.
+// WIN2000 Windows' 14-dialog-unit edit box beside its 14-unit push button,
+// 23 W (the laptop pixel's 31 re-authored at the unit's change, 2026-10-02,
+// the pad's 7 as 5 — paint_handler.cpp's kModal* block keeps the sampled
+// record). THE TIME FIELDS — row 8's clock and the render player's position
+// and length, Cool Edit's dark field 17 W tall since 2026-10-09
+// (program_spec.h) — TAKE THIS PAD (architect 2026-10-10 ~00:30, "bring the
+// timestamp in line with the text box used for the regular text boxes for
+// typing"; paint_handler.cpp's time_field_pad_px), their height their own.
+// (They took the whole shape, the height too, 2026-10-08 to 2026-10-09.)
 inline constexpr double kModalFieldHeightPx = 23.0;
 inline constexpr double kModalFieldPadXPx   = 5.0;
 
@@ -1596,7 +1640,12 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // case (the band's own, read from its accessors above so the rows cannot
 // drift apart) and five W of face: 32 W, the lane 38 under every chrome.
 // Its groups — the grippers, the end bars, the dark time field — are
-// paint_bottom_row_buttons_and_clock's walk (cool_edit_paint.h draws them).
+// paint_bottom_row_buttons_and_clock's walk (cool_edit_paint.h draws them):
+// each group the gripper, 5 W of face, its cases or the time field, 5 W of
+// face and the end bar — the product's symmetric air where Cool Edit's
+// movable panes measure 6 and 4 (architect 2026-10-10 ~00:30,
+// program_spec.h's group fields) — and the time field's pads the dialog
+// field's 5 W (kModalFieldPadXPx above).
 // The dock bar is the program's under a modal too; the modal surfaces
 // (prompts, the dialog editors, the picker's Cancel, the render player)
 // stand in the content band below it (paint_bottom_strip).
@@ -1700,7 +1749,7 @@ inline int scrub_thumb_h_px() {
 // its left side is the reset's stem), the lit plate's inner OUTLINE,
 // an erosion at distance 1 (outline_bar, render.cpp, the width riding the
 // plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
-// (render_canvas). EVERYTHING OFF THE CANVAS keeps THE PROGRAM'S QUANTUM u =
+// (render_canvas, render_center_lines). EVERYTHING OFF THE CANVAS keeps THE PROGRAM'S QUANTUM u =
 // scaled_px(1, 1) (program_line_px, cue_unit_px): the cues' triangles and the
 // playhead's head (paint_ce_cue_triangle) and the ruler's ticks
 // (paint_ruler_row, fill_waveform_line's `t`).
@@ -2523,11 +2572,17 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 //
 // render_canvas ALSO owns THE CANVAS'S LINES UNDER THE WAVEFORM (architect
 // 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, each
-// channel's horizontal grid and its center line, the channels' bands the
-// plate's own (waveform_channel_band) — no vertical grid. The canvas's frame
-// round the area is paint_canvas_column_frame's (paint_handler.cpp).
+// channel's horizontal grid, the channels' bands the plate's own
+// (waveform_channel_band) — no vertical grid. render_center_lines owns THE
+// CENTER LINES, OVER THE WAVEFORM (architect 2026-10-10 ~00:40): each
+// channel's zero row, one device px in `center`, painted live after the
+// plate's blit and before the dots (on_redraw's paint order) — the canvas's
+// lines stay these two painters' and the plate keeps baking its two inks
+// alone (WaveformPlateInks). The canvas's frame round the area is
+// paint_canvas_column_frame's (paint_handler.cpp).
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(cairo_t* cr, const GuiRect& area);
+void render_center_lines(cairo_t* cr, const GuiRect& area);
 
 // THE RELIEF HELPERS — the chrome's one painter family for the Windows-95
 // edge grammar (architect 2026-10-02; the grammar and the family table at the

@@ -117,6 +117,17 @@ struct ProgramSpec {
     // the gripper to the first case and from the last case to the END BAR,
     // whose six columns are a light column, this much face, a mid and a dark
     // column (its top row light and its bottom row mid).
+    // THE GROUP'S AIR IS THE PRODUCT'S OWN SYMMETRIC 5 W, the gripper to the
+    // first case and the last case to the end bar alike (architect 2026-10-10
+    // ~00:30, on the measurement sheet tmp/mocks/cool_edit/
+    // sheet_ROW8_SPACING.jpg: "those grippers are there because the elements
+    // can be moved in Cool Edit Pro's GUI. We won't allow that here. So let's
+    // go 5 / 5 on the gripper spacing"): Cool Edit's grippers are the handles
+    // of panes it lets the user drag, which the product never allows, so the
+    // air round the cases is a usability choice and not a measurement — his
+    // rule, usability over accuracy (render.h's row-6 canvas paragraph). Cool
+    // Edit's measured 6 and 4 (METRICS §5.2's chain) are the source departed
+    // from; the group's width is unchanged, 6 + 4 = 5 + 5.
     int  row8_group_gap_px;
     int  gripper_cols;
     int  gripper_reach_px;
@@ -124,15 +135,21 @@ struct ProgramSpec {
     int  case_to_end_bar_px;
     int  end_bar_face_px;
     // THE DARK TIME FIELD (METRICS §5.4: 72 x 17, its TL line, its ground,
-    // its BR line; the mocked field 85 wide round the clock's cell with 8 of
-    // pad): its height, ROW 8'S CLOCK'S least width (the mock's 85; the
-    // render player's two fields are their cell and pads alone), and the pad
-    // from its outer edge to the reserved cell on each side. Every time field
+    // its BR line; the mocked field 85 wide round the clock's cell): its
+    // height and ROW 8'S CLOCK'S least width (the mock's 85; the render
+    // player's two fields are their cell and pads alone). Every time field
     // takes the shape: row 8's clock and the render player's position and
-    // length.
+    // length. THE PAD from its outer edge to the reserved cell on each side
+    // IS NO FIELD HERE: it is THE DIALOG FIELD'S, kModalFieldPadXPx's 5 W
+    // (render.h), the regular typing field's (architect 2026-10-10 ~00:30:
+    // "bring the timestamp in line with the text box used for the regular
+    // text boxes for typing. Don't worry about Cool Edit's spacing there —
+    // some of the reason for the spacing is that there's six boxes crammed
+    // next to each other"), read at the time field (paint_handler.cpp's
+    // time_field_pad_px). Cool Edit's Begin / End / Length field, whose ink
+    // stands 10 and 12 W in, set the 8 W of 2026-10-09.
     double field_h_px;
     double field_min_w_px;
-    double field_pad_px;
     // THE STATE LINE'S AIR: its first ink this far past the time-field
     // group's end bar (the field's own symmetric air of 2026-10-08, the end
     // bar now standing between the field and the line).
@@ -258,12 +275,11 @@ inline constexpr ProgramSpec kProgramSpec = {
     .row8_group_gap_px  = 2,
     .gripper_cols       = 5,
     .gripper_reach_px   = 2,
-    .gripper_to_case_px = 6,
-    .case_to_end_bar_px = 4,
+    .gripper_to_case_px = 5,
+    .case_to_end_bar_px = 5,
     .end_bar_face_px    = 3,
     .field_h_px         = 17.0,
     .field_min_w_px     = 85.0,
-    .field_pad_px       = 8.0,
     .state_air_px       = 5.0,
     .column_air_px         = 5,
     .column_margin_px      = 6,
@@ -332,6 +348,10 @@ static_assert(program_case_authored_px(kProgramSpec) == 23);
 static_assert(program_band_authored_h(kProgramSpec) == 33);
 static_assert(program_dock_bar_authored_h(kProgramSpec) == 6);
 static_assert(program_row8_authored_h(kProgramSpec) == 32);
+// ROW 8'S GROUP AIR IS SYMMETRIC (architect 2026-10-10 ~00:30, the fields'
+// paragraph above): the gripper's air and the end bar's are one length.
+static_assert(kProgramSpec.gripper_to_case_px ==
+              kProgramSpec.case_to_end_bar_px);
 static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
 static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);
