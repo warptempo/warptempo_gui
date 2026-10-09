@@ -3371,16 +3371,21 @@ int gui_main(const char* argument) {
     }
     // THE CHROME IS CHOSEN HERE, ONCE (architect 2026-10-07, chrome_spec.h's
     // live_chrome_spec): the config's `chrome`, judged by its reader, names
-    // the vocabulary the whole process paints — its face set, its lanes, its
+    // the vocabulary the whole process paints — its lanes, its
     // icon set (unless the config's `icons` names another) and its compiled
     // theme — before anything reads the spec: the
     // icon set's load below, the palette's install, the window and the
-    // first paint. The faces were installed earlier on Android (android_main,
-    // before this function) and need nothing from it: the install measured
-    // every set's ems (gui_font_bundled.cpp), and the face caches are built
-    // at the first paint. A `chrome` commit in Settings writes the file and
+    // first paint. A `chrome` commit in Settings writes the file and
     // takes effect at the next launch (commit_device_setting).
     set_live_chrome_spec(device_config.chrome);
+    // THE FACE IS CHOSEN BESIDE IT (architect 2026-10-09 ~21:20, gui_font.h's
+    // gui_live_face_set): the config's `font`, judged by its reader, tahoma
+    // with no line, under every chrome. The faces were installed earlier on
+    // Android (android_main, before this function) and need nothing from
+    // it: the install measured every set's ems (gui_font_bundled.cpp), and
+    // the face caches are built at the first paint. A `font` commit in
+    // Settings moves it again, live (commit_device_setting).
+    set_live_font(device_config.font);
     // THE ICON SET IS CHOSEN BESIDE IT, ONCE (architect 2026-10-10, icons.h's
     // gui_live_icon_set): the config's `icons`, judged by its reader, or
     // with no line the live chrome's own set. An `icons` commit in Settings
@@ -3478,8 +3483,8 @@ int gui_main(const char* argument) {
     // the renderer's file-scope scale (set_gui_scale_percent), the text
     // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),
     // the bottom row's clock metrics memo (keyed on the text size and the
-    // live face set, not the piece), the live scheme's face tag (gui_font.h,
-    // installed with the palette), the modal session-id counter (text_editor::next_session_id —
+    // live face set, not the piece), the live face set (gui_font.h's
+    // set_live_font, the `font` key's), the modal session-id counter (text_editor::next_session_id —
     // monotonic for the process, so no id repeats across reopens), the strict
     // load's scratch serial (history_diff.cpp), and on Android the glue
     // pointer g_android_app and the stdio routing. Every other static in the

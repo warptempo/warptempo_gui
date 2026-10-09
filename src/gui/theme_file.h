@@ -35,8 +35,8 @@
 // below, resolved by the chrome's key, chrome_theme_words). The architect's
 // workshop for colors is TWO KINDS OF NAMED PRESET, saved and loaded in the
 // app (palette_file.h's head, the owner): A SCHEME — THE CHROME'S TWELVE
-// KEYS and its face tag, `schemes/<name>.scheme` under the `scheme` device
-// key — derived over this compiled theme by the live chrome's own
+// KEYS, `schemes/<name>.scheme` under the `scheme` device key (no face: the
+// face is the `font` key's, gui_font.h) — derived over this compiled theme by the live chrome's own
 // derivation (under windows-2000 the 3D set from the ground by Windows' own
 // rule, chrome_derive.h; the compiled words themselves never change), its
 // BUILT-INS the catalog's entries transcribed to those keys (palette_file.h's

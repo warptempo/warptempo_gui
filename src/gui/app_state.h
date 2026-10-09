@@ -3485,6 +3485,22 @@ inline constexpr SettingsChoiceSource kIconSetChoiceSource{
         return icons::kIconSetDisplayNames[static_cast<std::size_t>(i)];
     },
 };
+// THE FONT'S DOMAIN (architect 2026-10-09 ~21:20, "the font is its own
+// drop-down"): the face sets the `font` key names (kGuiFontKeys, gui_font.h)
+// in their order — Tahoma, FreeSans, Liberation Sans, each named by its
+// files (architect 2026-10-10 ~00:40) — shown by their display names
+// (kGuiFontDisplayNames). The combo shows the config's
+// `font`, tahoma when it has no line (recall_gui_setting_value,
+// settings_io.cpp) — the live face.
+inline constexpr SettingsChoiceSource kFontChoiceSource{
+    +[]() -> int { return static_cast<int>(std::size(kGuiFontKeys)); },
+    +[](int i) -> const char* {
+        return kGuiFontKeys[static_cast<std::size_t>(i)];
+    },
+    +[](int i) -> const char* {
+        return kGuiFontDisplayNames[static_cast<std::size_t>(i)];
+    },
+};
 struct SettingsPopupItem {
     const char*                 label;
     const char*                 key;
@@ -3555,10 +3571,18 @@ struct SettingsPopupItem {
 // (commit_device_setting): a pick of the chrome's own set writes no line,
 // the next launch applies it and a card says so.
 //
-// `Chrome` AND `Icons` ARE THE CHOICE ROWS (architect 2026-10-07 evening;
-// the editor kinds above): each domain its owner's table, each commit the
-// text road's (commit_device_setting), so the refusal-free value, the
-// config write and the next-launch card are the text road's.
+// `Font` JOINED 2026-10-09 ~21:20 (architect: "the font is its own
+// drop-down … it doesn't really make sense picking a font via palette or
+// even in the palette picker"), RIGHT AFTER Icons, `font` being the last
+// key — its domain the face sets (kFontChoiceSource), its commit the text
+// road's (commit_device_setting) with its own two differences: a pick
+// always writes the line ("no default setting because it's a drop-down"),
+// and it applies LIVE, no card.
+//
+// `Chrome`, `Icons` AND `Font` ARE THE CHOICE ROWS (architect 2026-10-07
+// evening; the editor kinds above): each domain its owner's table, each
+// commit the text road's (commit_device_setting), so the refusal-free
+// value and the config write are the text road's.
 //
 // `Pick Colors` IS THE MENU'S FIRST COMMAND ROW (architect 2026-10-07: the
 // in-app color picker, "a full-fledged part of the project"), behind its own
@@ -3592,7 +3616,9 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
      SettingsEditorKind::Choice, &kChromeChoiceSource},
     {"Icons",               "icons",         false, SettingsPopupAct::EditKey,
      SettingsEditorKind::Choice, &kIconSetChoiceSource},
-    {"Pick Colors",         nullptr,         true, SettingsPopupAct::PickColors},
+    {"Font",                "font",          false, SettingsPopupAct::EditKey,
+     SettingsEditorKind::Choice, &kFontChoiceSource},
+    {"Pick Colors",        nullptr,         true, SettingsPopupAct::PickColors},
     {"True Colors",         nullptr,         false, SettingsPopupAct::TrueColors},
 };
 inline constexpr int kSettingsPopupItemCount =

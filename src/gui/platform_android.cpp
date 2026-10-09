@@ -2498,12 +2498,12 @@ namespace {
 
 // LOAD THE PRODUCT'S FACES OUT OF THE APK, or die. The assets are the
 // repository's own font files — every one, every face set's (gui_font.h's
-// kGuiFaceSets), whichever chrome and scheme the config names (gui_font.h's
+// kGuiFaceSets), whichever face the config's `font` names (gui_font.h's
 // kGuiFontFiles, in its order; architect 2026-10-02 to 2026-10-09; build_apk.sh's asset
 // step copies every name that list spells), and the abort below covers
 // each of them. This runs BEFORE gui_main reads the device config's
-// `chrome`, which is why the install measures every set's ems (its probe,
-// gui_font.h). A
+// `font`, and a Settings pick moves the face live, which is why the install
+// measures every set's ems (its probe, gui_font.h). A
 // missing or unreadable asset is a BUILD defect — the packaging step puts every
 // file in and there is no runtime state that removes one — so there is no
 // error arm to design: painting would otherwise silently use cairo's default,

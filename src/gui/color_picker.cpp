@@ -1349,16 +1349,8 @@ void GuiColorPicker::install_live_words(
     // NEED NO MORE THAN THE CLIENT: they paint in the program's panels, the
     // well and what enters it, never on the frame.
     // Neither kind touches an icon: every glyph wears its drawing's own inks
-    // (icons.h's head).
-    // A CHANGED FACE TAG RIDES THE SAME BRANCH (2026-10-09: the face follows
-    // the scheme, GuiChromePick::face, live under the windows chrome —
-    // gui_live_face_set, gui_font.h): the tag is part of the pick, so a scheme
-    // whose tag differs is a changed pick, the whole surface is damaged, and
-    // every text is shaped afresh at the next paint — the scaled fonts and
-    // the time-field memo key the live set, the lanes cannot move
-    // (gui_font.h's same_lanes), and nothing else holds a shaped run or a
-    // width across frames (the flag cache rebuilds on the generation the
-    // install bumps; re-grepped 2026-10-09).
+    // (icons.h's head). Neither moves the face: a scheme carries none
+    // (2026-10-09 ~21:20; the `font` key's, gui_font.h).
     if (scheme != chrome_before) {
         viewport.invalidate_surface();
     } else {

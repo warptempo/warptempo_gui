@@ -1419,8 +1419,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
-    // piece is open. THE BOLD FACE (gui_font.h: Tahoma Bold, or FreeSans
-    // Bold under a scheme tagged MS Sans Serif) through the shaping
+    // piece is open. THE BOLD FACE (gui_font.h: the `font` key's set's bold —
+    // Tahoma Bold, FreeSans Bold or Liberation Sans Bold) through the shaping
     // chokepoint, its cap band centred in the lane — Tahoma Bold's 8-row cap
     // on rows 5..12 of the 18 at 100 %, ReactOS's own seat on its captures
     // (2026-10-06). THE ROOM runs from the spec's caption_title_x_px to its
@@ -2540,7 +2540,7 @@ constexpr double kTimeFieldGapPx = 3.0;
 // The time fields' metrics, MEMOISED ON THE SCALE AND THE LIVE FACE SET —
 // thirteen tiny shaping passes (ten digits, the two letters and the
 // specimen) that answer the same thing on every frame until the scale moves
-// or the live scheme's face tag swaps the set under the windows chrome
+// or a Settings pick of the `font` key swaps the set live
 // (gui_live_face_set, gui_font.h, 2026-10-09; the widths are the live
 // face's own).
 // Single-threaded paint state; the waveform worker never reaches this file's

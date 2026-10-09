@@ -9,7 +9,8 @@ Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. Th
 code: `fonts/README.md`, `assets/icons/tango/README.md` and `assets/icons/mist/README.md` carry their provenance and
 licence texts. The faces are compiled into `warptempo_gui` (and packed into the APK), among
 them GNU FreeFont's FreeSans and FreeSans Bold (20120503; GPL-3.0-or-later with the font exception, the texts in
-`fonts/LICENSE-FreeFont.txt`, since 2026-10-09); the repository distributes no binary.
+`fonts/LICENSE-FreeFont.txt`, since 2026-10-09) and Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font
+License 1.1, the text in `fonts/LICENSE-Liberation-OFL.txt`, since 2026-10-09); the repository distributes no binary.
 
 ## Both devices
 

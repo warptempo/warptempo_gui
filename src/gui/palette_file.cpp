@@ -156,23 +156,16 @@ constexpr bool own_schemes_are_their_chromes_themes() {
 }
 static_assert(own_schemes_are_their_chromes_themes());
 
-// EACH CHROME'S OWN SCHEME NAMES TAHOMA (2026-10-09): the chrome's own
-// scheme installs no pick, whose face is Tahoma (fill_chrome_palette,
-// render.cpp), so its built-in's tag must say the same — windows-2000-
-// standard's source names Tahoma.
-static_assert(std::ranges::all_of(kGuiChromeSpecs, [](const ChromeSpec* s) {
-    return builtin_scheme(s->own_scheme)->chrome.face == GuiSchemeFace::Tahoma;
-}));
-// WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S TWELVE IN MS SANS SERIF
-// (the catalog's windows-me-standard; the generator asserts the same).
+// WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S TWELVE (the catalog's
+// windows-me-standard, kept as an entry under Me's name; the generator
+// asserts the same): Me's one difference from 2000 was its font, MS Sans
+// Serif, which a scheme does not carry — the face is the `font` device
+// key's, a Settings matter (architect 2026-10-09 ~21:20, gui_font.h).
 static_assert([] {
     const GuiChromeScheme* me = builtin_scheme("windows-me-standard");
     const GuiChromeScheme* w2k = builtin_scheme("windows-2000-standard");
     if (me == nullptr || w2k == nullptr) return false;
-    GuiChromePick twelve = me->chrome;
-    twelve.face = w2k->chrome.face;
-    return twelve == w2k->chrome &&
-           me->chrome.face == GuiSchemeFace::MsSansSerif;
+    return me->chrome == w2k->chrome;
 }());
 
 // THE BUILT-INS' KEYS AND DISPLAY NAMES ARE UNIQUE (the generator checks the
@@ -320,7 +313,8 @@ std::expected<GuiPaletteWords, std::string> read_palette_file(
 // ONE SCHEME FILE under the grammar (the head), its stem already judged: the
 // nine block keys required, the first missing one in the table's order
 // named; the inactive keys each optional (the unread ones following the
-// active caption); a program role an unknown role.
+// active caption); a program role, or a `font` line (a scheme carries no
+// face since 2026-10-09 ~21:20), an unknown role.
 std::expected<GuiChromePick, std::string> read_scheme_file(
         const std::filesystem::path& path) {
     std::ifstream f(path, std::ios::binary);
@@ -330,19 +324,6 @@ std::expected<GuiChromePick, std::string> read_scheme_file(
     auto scan = warptempo_settings::scan_key_value_file(
         f, [&](int ln, const std::string& role, const std::string& value)
                   -> std::expected<void, std::string> {
-        // THE OPTIONAL FONT LINE (palette_file.h's kGuiSchemeFontKey): one
-        // of the two words, the scanner refusing a second line.
-        if (role == kGuiSchemeFontKey) {
-            const std::optional<GuiSchemeFace> face =
-                scheme_font_of_word(value);
-            if (!face) {
-                return warptempo_parse::prefix_line_error(
-                    ln, "font has invalid value '" + value +
-                        "': must be tahoma or ms-sans-serif");
-            }
-            pick.face = *face;
-            return {};
-        }
         const std::size_t c = chrome_line_index(role);
         if (c == kGuiChromeLineCount) {
             return warptempo_parse::prefix_line_error(
@@ -390,8 +371,7 @@ std::string palette_file_text(const GuiPaletteWords& words) {
 }
 
 // The text write_scheme_file puts down: the nine and each picked inactive
-// key, in the table's order, then the font line when the pick's tag is MS
-// Sans Serif (palette_file.h's kGuiSchemeFontKey: absent is tahoma).
+// key, in the table's order.
 std::string scheme_file_text(const GuiChromePick& pick) {
     std::string s;
     for (std::size_t k = 0; k < kGuiChromeLineCount; ++k) {
@@ -399,12 +379,6 @@ std::string scheme_file_text(const GuiChromePick& pick) {
         if (l.word != nullptr) put_line(s, l.key, pick.*(l.word));
         else if (const std::optional<uint32_t>& v = pick.*(l.optional))
             put_line(s, l.key, *v);
-    }
-    if (pick.face != GuiSchemeFace::Tahoma) {
-        s += kGuiSchemeFontKey;
-        s += '=';
-        s += scheme_font_word(pick.face);
-        s += '\n';
     }
     return s;
 }

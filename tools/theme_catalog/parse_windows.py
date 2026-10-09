@@ -153,11 +153,11 @@ def parse_theme(path):
     return (dn.group(1).strip() if dn else None), cols
 
 
-# THE SCHEMES' MENU FONTS (architect 2026-10-09: the face follows the scheme, as a Windows Appearance scheme carries
-# its font): each source's NONCLIENTMETRICS records five LOGFONTs — the caption, the small caption, the MENU, the status
-# bar and the message box — and the scheme's face tag is read off the MENU font, the face of the chrome's body text
-# (the menus, the status line, the dialogs' words), which is what the product's body face sets; the caption's face
-# (Tahoma bold in Windows 2000's Brick, Times New Roman in its Rose) is the title's alone and not read. The face name is
+# THE SCHEMES' MENU FONTS (2026-10-09, read for the catalog's font record — build.py's font_record, a record alone
+# since ~21:20, when the scheme's face retired for the app's `font` device key): each source's NONCLIENTMETRICS records
+# five LOGFONTs — the caption, the small caption, the MENU, the status bar and the message box — and the record is read
+# off the MENU font, the face of the chrome's body text (the menus, the status line, the dialogs' words); the
+# caption's face (Tahoma bold in Windows 2000's Brick, Times New Roman in its Rose) is the title's alone and not read. The face name is
 # the LOGFONT's lfFaceName up to its first NUL (the bytes past it are the dialog's leftovers).
 #   Windows 2000's hive (SCHEMEDATA, parse_hive_schemes): NONCLIENTMETRICSW after the 4-byte header — cbSize and five
 #     ints (24 bytes), lfCaptionFont (LOGFONTW, 92: 28 bytes of fields, then WCHAR lfFaceName[32]), two ints,

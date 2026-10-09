@@ -23,10 +23,10 @@
 //     the `palette` device key.
 //   A SCHEME — THE CHROME'S TWELVE KEYS (kGuiChromeLines below), Windows'
 //     own word for a set of chrome colors (the Appearance dialog's
-//     "scheme"), AND ITS FACE TAG (architect 2026-10-09: the face follows
-//     the scheme, as a Windows scheme carries its font — Tahoma or MS Sans
-//     Serif, which the windows chrome wears live, gui_font.h's
-//     gui_live_face_set): `schemes/<name>.scheme`, the `scheme` device key.
+//     "scheme"), and NO FACE (architect 2026-10-09 ~21:20: "the scheme's
+//     default font should stop being honored — it should only be honored
+//     from the font picker"; the face is the device config's `font` key,
+//     gui_font.h): `schemes/<name>.scheme`, the `scheme` device key.
 // The two are independent: loading, saving, renaming or deleting one never
 // touches the other, and either applies under any chrome.
 //
@@ -130,11 +130,11 @@
 //     fail (the picker writes all nine); THE INACTIVE CAPTION'S THREE EACH
 //     OPTIONAL, written once that element has been picked, and absent
 //     FOLLOWING the active caption's (GuiChromePick's accessors); a program
-//     role in a scheme file is an unknown role. THE FONT LINE IS OPTIONAL
-//     (kGuiSchemeFontKey below: `font=tahoma` or `font=ms-sans-serif`,
-//     absent tahoma, any other word the hard fail). The picker writes the
-//     keys in the table's order (the chooser's order), an unpicked inactive
-//     key left out, then the font line when the tag is MS Sans Serif. A
+//     role in a scheme file is an unknown role, and so is a `font` line (the
+//     scheme's optional font line of 2026-10-09 retired the same night with
+//     the scheme's face, no migration — the planner edits the devices'
+//     files). The picker writes the keys in the table's order (the chooser's
+//     order), an unpicked inactive key left out. A
 //     SCHEME IS HONORED UNDER EVERY CHROME, whichever saved it: a scheme
 //     saved under one chrome stands in the folder when the Settings chrome
 //     row switches to another, and draws there by that chrome's derivation.
@@ -294,36 +294,6 @@ inline constexpr GuiChromeLine kGuiChromeLines[] = {
 };
 inline constexpr std::size_t kGuiChromeLineCount = std::size(kGuiChromeLines);
 
-// THE SCHEME'S FONT LINE (architect 2026-10-09: the face follows the
-// scheme): `font=tahoma` or `font=ms-sans-serif`, OPTIONAL — absent is
-// tahoma — after the keys, the pick's face tag (GuiChromePick::face,
-// render.h; GuiSchemeFace, gui_font.h). Any other word is the read's hard
-// fail (the two-category rule: the picker writes only these two); in a
-// palette file the line is an unknown role, the read's hard fail as any
-// chrome line is. The picker writes it when the pick's tag is MS Sans Serif
-// and leaves it out otherwise, as it leaves out an unpicked inactive key
-// (write_scheme_file below) — so a scheme saved from Windows 2000 Standard
-// keeps the twelve-line form it always had.
-inline constexpr const char* kGuiSchemeFontKey = "font";
-struct GuiSchemeFontWord {
-    GuiSchemeFace face;
-    const char*   word;
-};
-inline constexpr GuiSchemeFontWord kGuiSchemeFontWords[] = {
-    {GuiSchemeFace::Tahoma,      "tahoma"},
-    {GuiSchemeFace::MsSansSerif, "ms-sans-serif"},
-};
-constexpr std::optional<GuiSchemeFace> scheme_font_of_word(std::string_view w) {
-    for (const GuiSchemeFontWord& f : kGuiSchemeFontWords)
-        if (w == f.word) return f.face;
-    return std::nullopt;
-}
-constexpr const char* scheme_font_word(GuiSchemeFace face) {
-    for (const GuiSchemeFontWord& f : kGuiSchemeFontWords)
-        if (f.face == face) return f.word;
-    return "tahoma";
-}
-
 // Whether the key is one of the block's nine (else an inactive key).
 constexpr bool is_chrome_block_line(std::size_t line) {
     return kGuiChromeLines[line].word != nullptr;
@@ -438,10 +408,9 @@ constexpr bool is_palette_name_spelling(std::string_view v) {
 // display name ("Windows Rainy Day", "CDE Northern Sky" — the family's word,
 // then the catalog name in Title Case; the generator's head) and the twelve
 // keys' words, every inactive key present (a scheme records its inactive
-// caption, flat where it records no end), with THE FACE TAG its source
-// names (2026-10-09; the generator's head: the menu font a Windows source
-// records — Tahoma for Tahoma, MS Sans Serif for every other face — and
-// Tahoma, inert, for a family whose source names no Windows font).
+// caption, flat where it records no end). No face: a scheme carries none
+// (2026-10-09 ~21:20, the head; the catalog keeps each source's font as
+// its record).
 struct GuiChromeScheme {
     const char*   key;
     const char*   display_name;
@@ -554,10 +523,7 @@ std::optional<GuiChromePick> scheme_record(std::string_view name);
 // unchanged). The picker hands this writer the live scheme's keys
 // (color_picker::live_scheme_keys: the live pick, or the live chrome's own
 // built-in's twelve while it stands, which carries none live). The reader
-// takes both forms (read_scheme_file). THE FONT LINE follows the keys when
-// the pick's face tag is MS Sans Serif — the scheme's own tag, written under
-// whichever chrome saves it, as its keys are (a scheme is honored under
-// every chrome; only the windows chrome reads the tag).
+// takes both forms (read_scheme_file).
 std::optional<std::string> write_palette_file(std::string_view name,
                                               const GuiPaletteWords& words);
 std::optional<std::string> write_scheme_file(std::string_view name,

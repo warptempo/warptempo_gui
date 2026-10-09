@@ -398,6 +398,13 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
         return std::string(
             icons::effective_icon_set(app.device_config->icons, *chrome));
     }
+    // THE FONT (2026-10-09 ~21:20), verbatim — the struct holds it as typed
+    // (tahoma when the file has no line, the struct's default) and the file
+    // writes it so; it is the live face (gui_live_face_set), so the Font
+    // row's combo shows the face on screen and a recalled line commits back
+    // as an unchanged no-op.
+    if (key == "font" && app.device_config != nullptr)
+        return app.device_config->font;
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

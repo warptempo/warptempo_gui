@@ -142,8 +142,9 @@ def write_md(cat):
         if fam in FAMILY_NOTE: L += [FAMILY_NOTE[fam], '']
         for e in es:
             imit = f" — imitates {e['imitates']}" if e.get('imitates') else ''
-            # the face tag (architect 2026-10-09: the face follows the scheme), a Windows entry's alone: the tag and
-            # the menu font its source names
+            # the font record (build.py's font_record), a Windows entry's alone: the face class and the menu font its
+            # source names — the catalog's record, no face the app reads (its face is the `font` device key since
+            # 2026-10-09 ~21:20, src/gui/gui_font.h)
             face = (f" · Face: {e['font']['face']} (the source's menu font: {e['font']['named']})"
                     if 'font' in e else '')
             L += [f"### `{e['key']}`", '', f"**{e['name']}**{imit} · ground {e['roles']['ground']} · {prov_line(e)}", '',

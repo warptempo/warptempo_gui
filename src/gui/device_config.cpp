@@ -4,11 +4,10 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "palette_file.h"      // is_palette_name, is_scheme_name and their reasons;
-                               // through render.h and gui_font.h,
-                               // chrome_spec.h's is_chrome_key,
-                               // kChromeGrammarReason
+#include "palette_file.h"      // is_palette_name, is_scheme_name and their reasons
+#include "chrome_spec.h"       // is_chrome_key, kChromeGrammarReason
 #include "icons.h"             // is_icon_set_key, kIconSetGrammarReason
+#include "gui_font.h"          // is_font_key, kFontGrammarReason
 
 #include <cstddef>
 #include <cstdio>
@@ -23,7 +22,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, the required
-// set below its subset (EIGHT keys since 2026-10-10, `icons` appended;
+// set below its subset (NINE keys since 2026-10-09 ~21:20, `font`
+// appended; eight 2026-10-10, `icons` appended;
 // seven 2026-10-08, `theme` gone; the
 // count's succession, up to seventeen with the tuning phases of
 // 2026-09-23..27 and nineteen with the colour keys of 2026-10-03..04, is the
@@ -33,7 +33,7 @@ namespace {
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). The writer's list and the required
-// list stand side by side below, the second the first less its four keys
+// list stand side by side below, the second the first less its five keys
 // that may be absent (2026-10-07; until then one list served both, so no
 // key could be written and not demanded — the absent-able keys are the
 // deliberate exception, each saying what its absence means).
@@ -41,7 +41,8 @@ namespace {
 // `chrome` FOLLOWS last_project (2026-10-07), `scheme` FOLLOWS IT
 // (2026-10-08 ~18:15), the chrome's colors after the chrome, and `palette`
 // FOLLOWS THAT (2026-10-07), the program's colors after the chrome's;
-// `icons` is APPENDED after it (2026-10-10).
+// `icons` is APPENDED after it (2026-10-10), and `font` after that
+// (2026-10-09 ~21:20).
 // (`theme` stood after `chrome` 2026-10-03..10-08, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
@@ -52,15 +53,18 @@ constexpr const char* kDeviceConfigKeys[] = {
     "scheme",
     "palette",
     "icons",
+    "font",
 };
-// THE REQUIRED SET — every key above but the four that may be ABSENT
+// THE REQUIRED SET — every key above but the five that may be ABSENT
 // (architect 2026-10-07): `chrome`, absent reading as windows-2000 (the
 // default chrome since 2026-10-07 ~22:45, kDefaultChromeKey; a config
 // written before the key existed loads, in the default chrome), `scheme`
 // (2026-10-08), absent meaning the chrome's own scheme, `palette`,
 // absent meaning the default palette (Cool Edit's "Default" under every
-// chrome, 2026-10-09), and `icons` (2026-10-10),
-// absent meaning the chrome's own icon set. The scanner
+// chrome, 2026-10-09), `icons` (2026-10-10),
+// absent meaning the chrome's own icon set, and `font` (2026-10-09),
+// absent reading as tahoma (kDefaultFontKey), so the configs written before
+// the key load. The scanner
 // checks presence against this list and duplicates against every key.
 constexpr const char* kDeviceConfigRequiredKeys[] = {
     "gui_scale",
@@ -68,6 +72,8 @@ constexpr const char* kDeviceConfigRequiredKeys[] = {
     "projects_path",
     "last_project",
 };
+// The struct's font default is the grammar owner's (gui_font.h).
+static_assert(DeviceConfig{}.font == kDefaultFontKey);
 
 } // namespace
 
@@ -137,6 +143,11 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "icons") {
             // A bundled set's key verbatim (is_icon_set_key, icons.h).
             s += cfg.icons;
+        } else if (k == "font") {
+            // The face's key verbatim, always written (the default's too,
+            // the chrome's rule: "no default setting because it's a
+            // drop-down", architect 2026-10-09).
+            s += cfg.font;
         }
         s += '\n';
     }
@@ -249,6 +260,16 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, icons::kIconSetGrammarReason);
             }
             out.icons = value;
+            return {};
+        }
+        // THE FONT (architect 2026-10-09 ~21:20): a face's key under its one
+        // grammar owner (is_font_key, gui_font.h); absent, the struct's
+        // tahoma stands (kDefaultFontKey).
+        if (key == "font") {
+            if (!is_font_key(value)) {
+                return bad_value(ln, key, value, kFontGrammarReason);
+            }
+            out.font = value;
             return {};
         }
         return warptempo_parse::prefix_line_error(

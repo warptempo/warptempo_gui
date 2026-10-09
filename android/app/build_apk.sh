@@ -16,7 +16,7 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the four font files and      (manifest + res + assets)
+#   1. assets (the six font files and       (manifest + res + assets)
 #      the icon sets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
@@ -81,7 +81,8 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
 # THE PRODUCT'S FONT FILES: Tahoma and Tahoma Bold (architect 2026-10-06),
-# FreeSans and FreeSans Bold (2026-10-09, OpenType CFF), THE NAMES READ OUT OF
+# FreeSans and FreeSans Bold (2026-10-09, OpenType CFF), Liberation Sans and
+# Liberation Sans Bold (2026-10-09, TrueType), THE NAMES READ OUT OF
 # gui_font.h's kGuiFontFiles initializer, the one list (CMakeLists.txt's
 # font step reads the same), copied from the repository's own fonts/
 # (architect 2026-10-02) -- the very files the Linux executable compiles in,

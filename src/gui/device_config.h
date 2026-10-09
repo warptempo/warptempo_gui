@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Eight keys live here and nowhere else:
+// piece (architect 2026-08-27). Nine keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -52,6 +52,14 @@
 //                            windows-2000; effective_icon_set); takes
 //                            effect at the next
 //                            launch, the chrome's rule (architect 2026-10-10)
+//   font=<key>               THE FACE every text is set in, named by its
+//                            files: `tahoma`, `free-sans` or `liberation-sans`
+//                            (is_font_key, gui_font.h; any other word the
+//                            launch's hard fail); MAY BE ABSENT, reading as
+//                            tahoma (kDefaultFontKey) — but always written,
+//                            the chrome's rule ("no default setting because
+//                            it's a drop-down", architect 2026-10-09);
+//                            applied LIVE at a Settings pick (gui_live_face_set)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
@@ -61,7 +69,8 @@
 // `theme` the same day, the program's colors' own file type; `theme` gone
 // 2026-10-08, below; `scheme` placed between `chrome` and `palette`
 // 2026-10-08 ~18:15, the chrome's colors after the chrome and before the
-// program's; `icons` APPENDED after `palette` 2026-10-10);
+// program's; `icons` APPENDED after `palette` 2026-10-10, and `font`
+// APPENDED after `icons` 2026-10-09 ~21:20);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -199,14 +208,15 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eight
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nine
 // keys and each at most once, every key REQUIRED but `chrome`, `scheme`,
-// `palette` and `icons` (architect 2026-10-07: `chrome` absent is
+// `palette`, `icons` and `font` (architect 2026-10-07: `chrome` absent is
 // windows-2000, the default chrome, so the configs written before the key
-// still load; `palette` absent is the chrome's default palette, `scheme`
-// absent (2026-10-08) the chrome's own scheme and `icons` absent
-// (2026-10-10) the chrome's own icon set, each the one spelling of that
-// state, which the writer emits by leaving the line out), one canonical spelling per
+// still load, and `font` absent (2026-10-09) is tahoma for the same reason —
+// the writer names both always; `palette` absent is the chrome's default
+// palette, `scheme` absent (2026-10-08) the chrome's own scheme and `icons`
+// absent (2026-10-10) the chrome's own icon set, each the one spelling of
+// that state, which the writer emits by leaving the line out), one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
 // silent fallback to defaults — a fallback would silently discard a value the
@@ -232,11 +242,12 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`, `Projects Repository`,
 // `Projects Path`, since 2026-10-07 `Chrome` (`Theme` stood after it
-// 2026-10-03..10-08) and since 2026-10-10 `Icons` (kSettingsPopupItems,
+// 2026-10-03..10-08), since 2026-10-10 `Icons` and since 2026-10-09 ~21:20
+// `Font` (kSettingsPopupItems,
 // app_state.h) as rows that open the settings editor prefilled, and the
 // editor commits each through this file's writer under the key's own
 // grammar below. (The Icons row stands after Chrome, not in the writer's
-// order: it is the chrome's companion.) `palette` (2026-10-07) and
+// order: it is the chrome's companion; Font follows Icons.) `palette` (2026-10-07) and
 // `scheme` (2026-10-08) HAVE NO SETTINGS ROW: the color picker's preset menu
 // is their road (color_picker.h's THE PRESETS), which writes each key
 // through the same writer. Until
@@ -252,14 +263,15 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for the four required keys: a successful read always assigns
-// them. THE FOUR ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
-// (2026-10-07; the scheme 2026-10-08, the icons 2026-10-10): `chrome`
-// "windows-2000" (the default chrome, architect 2026-10-07 ~22:45),
+// them. THE FIVE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
+// (2026-10-07; the scheme 2026-10-08, the icons 2026-10-10, the font
+// 2026-10-09): `chrome` "windows-2000" (the default chrome, architect
+// 2026-10-07 ~22:45), `font` "tahoma" (kDefaultFontKey),
 // `scheme`, `palette` and `icons` empty (no line: the chrome's own). Both
 // backends stamp a default-constructed struct's
 // (GuiPlatform::device_config_defaults), so the first-run file of either
-// device names `chrome=windows-2000` and no scheme, palette or icons line,
-// following the chrome.
+// device names `chrome=windows-2000` and `font=tahoma` and no scheme,
+// palette or icons line, following the chrome.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -279,7 +291,9 @@
 // theme_file.h), with the scheme's twelve keys derived over it by the live
 // chrome's derivation (live_chrome_words, chrome_derive.h). THE ICON SET IS
 // ITS KEY VERBATIM TOO (2026-10-10): gui_main installs it once beside the
-// chrome (set_live_icon_set, icons.h), before the set's load.
+// chrome (set_live_icon_set, icons.h), before the set's load. SO IS THE
+// FONT (2026-10-09): gui_main installs it beside the chrome (set_live_font,
+// gui_font.h), and the Settings row's commit installs it again live.
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;
@@ -307,6 +321,10 @@ struct DeviceConfig {
     // never written back; a named set is honored under every chrome
     // (set_live_icon_set, gui_main).
     std::string icons;
+    // THE FONT DEFAULT (architect 2026-10-09 ~21:20): tahoma,
+    // kDefaultFontKey (gui_font.h) — what an absent line reads as, and
+    // always written, the chrome's rule.
+    std::string font = "tahoma";
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -567,12 +585,13 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // struct they were handed rather than composing one from AppState's fields.
 //
 // FOUR CALL SITES CARRY THE KEY COMMITS, and this is their inventory
-// (re-grepped 2026-10-10):
+// (re-grepped 2026-10-10; the font arm added 2026-10-09 ~21:20):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves four keys —
-// `projects_repo=`, `projects_path=`, `chrome=` and `icons=`
+// the settings editor's ONE device-key body, which serves five keys —
+// `projects_repo=`, `projects_path=`, `chrome=`, `icons=` and `font=`
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the path
-// arm joined 2026-09-02, the chrome's 2026-10-07, the icons' 2026-10-10;
+// arm joined 2026-09-02, the chrome's 2026-10-07, the icons' 2026-10-10,
+// the font's 2026-10-09;
 // the theme's stood 2026-10-03..10-08); the color picker's `palette=` and `scheme=` write
 // (GuiColorPicker::write_preset_key, color_picker.cpp, 2026-10-07; the
 // scheme's 2026-10-08: a load, a Save As, a Rename and a Delete each name
@@ -590,7 +609,8 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 275 % and its external files dir's `projects/`;
-// both stamp the default chrome (kDefaultChromeKey) and no scheme, palette or icons line, kDefaultProjectsRepo and
+// both stamp the default chrome (kDefaultChromeKey), the default font
+// (kDefaultFontKey) and no scheme, palette or icons line, kDefaultProjectsRepo and
 // a blank
 // last_project),
 // so a first run on either device lands a

@@ -23,11 +23,11 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// FIVE editable ones the per-device config carries — gui_scale and
+// SIX editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect) projects_path,
-// which had been hand-edited only, since 2026-10-07 chrome and since
-// 2026-10-10 icons (theme,
+// which had been hand-edited only, since 2026-10-07 chrome, since
+// 2026-10-10 icons and since 2026-10-09 ~21:20 font (theme,
 // editable 2026-10-03..10-08, its level and the twelve
 // program colour keys, editable 2026-10-03..04, left with their keys; the
 // config's key last_project is the program's own and has no editor; the
@@ -40,7 +40,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    chrome and icons — in ONE body,
+//    chrome, icons and font — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
@@ -49,7 +49,8 @@ struct GuiInputHandler;
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
 //    card; the chrome and the icon set at the next launch, each card saying
-//    so. gui_scale, the
+//    so; the font at once, live, no card (the screen is the answer).
+//    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
 //    below because it HAS a chokepoint (apply_gui_scale) and the router's job
@@ -81,8 +82,8 @@ struct GuiInputHandler;
 // and theme at the very least"; the design the planner's, delegated) STANDS
 // BESIDE THE TEXT EDITOR: a Settings row whose key's domain is a SHORT
 // CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — today the
-// Chrome row and, since 2026-10-10, the Icons row, the theme having left
-// with its key 2026-10-08) opens
+// Chrome row, since 2026-10-10 the Icons row and since 2026-10-09 ~21:20 the
+// Font row, the theme having left with its key 2026-10-08) opens
 // THE SAME BOTTOM-ROW EDITOR — the same text_editor session
 // underneath, so the modal rank, OK and Cancel, the focus ring, the playback
 // stop and every closer are the text editor's — with its row's word as the
@@ -228,7 +229,7 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `chrome=` and `icons=` — in one body (the head's
+    // `chrome=`, `icons=` and `font=` — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the

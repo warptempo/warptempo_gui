@@ -1,9 +1,3 @@
-// THE ONE INCLUDE OUTSIDE THE GUARD: a ChromeSpec names a face set, so the
-// sets (gui_font.h) come first; gui_font.h in turn includes this header after
-// its sets and before its live block, which reads live_chrome_spec(). With
-// the guard below the include, either header may be included first.
-#include "gui_font.h"
-
 #ifndef WARPTEMPO_GUI_CHROME_SPEC_H
 #define WARPTEMPO_GUI_CHROME_SPEC_H
 
@@ -15,8 +9,11 @@
 // differently — read by the chokepoint that paints each element, never a
 // literal at the painter. The colors stay the chrome's compiled theme's
 // (theme_file.h's kGuiChromeThemes, by this spec's key) and the palette's
-// (palette_file.h); the spec chooses shapes, seats and faces, and names the
-// scheme a config with no `scheme` line takes.
+// (palette_file.h); the spec chooses shapes and seats, and names the
+// scheme a config with no `scheme` line takes. It names NO FACE: the face
+// is the device config's `font` key alone, under every chrome (architect
+// 2026-10-09 ~21:20, "the font is its own drop-down"; gui_font.h's
+// gui_live_face_set).
 //
 // THE CHROME ENDS AT THE MENU ROW (architect 2026-10-09 ~06:55, "chrome
 // means chrome, the program is Cool Edit"): the chrome is the caption, the
@@ -117,10 +114,8 @@ struct ChromeSpec {
     // Cool Edit's one "Default" under every chrome (2026-10-09,
     // palette_file.h's head).
     const char*        own_scheme;
-    // The vocabulary's text: the faces, their metrics and tracking (gui_font.h)
-    // — its OWN set; under windows-2000 the live scheme's face tag may choose
-    // the MS Sans Serif set in its place (gui_live_face_set, 2026-10-09).
-    const GuiFaceSet*  face_set;
+    // (THE VOCABULARY'S FACE SET left the spec 2026-10-09: the `font` device
+    // key names the face under every chrome, gui_font.h.)
     // THE CAPTION, the top strip's lane 0, in Windows px (render.h's caption
     // block, where every element's rule stands): the lane's height; the
     // icon's seat (its size is the small icon's, kCaptionIconPx); the
@@ -227,7 +222,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .display_name                 = "Windows 2000",
     .vocabulary                   = GuiChromeVocabulary::Win2000,
     .own_scheme                   = "windows-2000-standard",
-    .face_set                     = &kGuiFaceSetWin2000,
     .caption_height_px            = 18,
     .caption_icon_x_px            = 2,
     .caption_icon_y_px            = 1,
@@ -260,8 +254,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
 };
 
 // THE TABLE — every vocabulary, the `chrome` key's whole vocabulary in its
-// order (is_chrome_key), the face install's probe walking it
-// (gui_font_install_bundled: every set's faces must carry their band glyphs).
+// order (is_chrome_key).
 // WINDOWS-2000 FIRST, THE METRIC BASE AND THE DEFAULT (the head;
 // kDefaultChromeKey below), then a later vocabulary in its arrival's order
 // (Windows XP next, 2026-10-09). The Settings menu's Chrome row lists the
@@ -309,8 +302,8 @@ static_assert(is_chrome_key(kDefaultChromeKey));
 // (set_live_chrome_spec, gui_main, right after the config's read and before
 // the icon set's load, the window and the first paint, exactly as the scale
 // is installed), and never moved — a Settings commit of `chrome` writes the
-// file and takes effect at the next launch, because the faces' caches, the
-// icon set and the lane memos are built on it. Construction state until
+// file and takes effect at the next launch, because the icon set and the
+// lane memos are built on it. Construction state until
 // then is the default's (warptempo_cli, which paints nothing, never sets
 // it).
 namespace chrome_spec_detail {

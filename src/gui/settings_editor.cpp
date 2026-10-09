@@ -5,6 +5,7 @@
 #include "device_config.h"
 #include "chrome_spec.h"       // is_chrome_key, kChromeGrammarReason
 #include "icons.h"             // is_icon_set_key, kIconSetGrammarReason
+#include "gui_font.h"          // is_font_key, kFontGrammarReason, set_live_font
 #include "settings_io.h"
 #include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
@@ -261,7 +262,7 @@ void GuiSettingsEditor::choice_commit(int index) {
 // is that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
 // the selected text every other refusal there leaves, while commit_device_setting's
-// four keys and the `gui_scale` arm commit regardless. So every Settings
+// five keys and the `gui_scale` arm commit regardless. So every Settings
 // dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
 // URL, Cover) say the lock's sentence when they commit.
 //
@@ -405,9 +406,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other four editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, since 2026-10-07 chrome and since
-    // 2026-10-10 icons — take their one direct-set body in commit(),
+    // move. (The other five editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since 2026-10-07 chrome, since
+    // 2026-10-10 icons and since 2026-10-09 font — take their one
+    // direct-set body in commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
@@ -798,7 +800,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The four device keys other than the scale — one body, ahead of the
+    // 2. The five device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -1062,7 +1064,8 @@ void GuiSettingsEditor::commit() {
 // project's own name reads as "already open" until a relaunch or a different
 // project is opened first — a rename-by-hand case, accepted. `chrome`
 // (2026-10-07) and `icons` (2026-10-10): AT THE NEXT LAUNCH alone, each
-// card saying so (their arms).
+// card saying so (their arms). `font` (2026-10-09 ~21:20): AT ONCE, live,
+// no card (its arm).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08 and left with its key.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
@@ -1153,6 +1156,32 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         if (written)
             notifications.notify(AppState::NotificationClass::Normal,
                                  kIconsAppliesCard);
+        return true;
+    }
+
+    // THE FONT (architect 2026-10-09 ~21:20: "the font is its own
+    // drop-down"): a face's key under its one grammar owner (is_font_key,
+    // gui_font.h), kept as typed and ALWAYS WRITTEN — the default's word too,
+    // the chrome's rule, "no default setting because it's a drop-down" — and,
+    // unlike the chrome and the icon set, APPLIED LIVE: the live set moves
+    // (set_live_font), every cache that holds a face keys the set
+    // (gui_live_face_set's comment, gui_font.h; the flag cache by its
+    // fp_face_set, refreshed here synchronously as the color picker's
+    // install refreshes it, so no frame served before the tick blits the
+    // labels in the old face), the sets record one cell so no lane moves
+    // (same_lanes), and the whole window is damaged, every lane's text
+    // redrawn in the new face. So no card: the screen is the answer. A
+    // failed write keeps the live face for the session, the card saying the
+    // persist failed.
+    if (key == "font") {
+        if (!is_font_key(value)) { reject(kFontGrammarReason); return true; }
+        if (value == app.device_config->font) { unchanged(); return true; }
+        app.device_config->font = value;
+        set_live_font(value);
+        (void)persist();
+        applied();
+        viewport.refresh_flag_cache();
+        viewport.invalidate_all();
         return true;
     }
 
@@ -1295,8 +1324,8 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, chrome, icons — gui_scale
-    // and the last four the device config's — per-tab trim / read_only)
+    // gui_scale, projects_repo, projects_path, chrome, icons, font — gui_scale
+    // and the last five the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).

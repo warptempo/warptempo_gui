@@ -574,6 +574,8 @@ inline constexpr const char* kChromeAppliesCard =
 // sentence's shape, raised only when the config write succeeded.
 inline constexpr const char* kIconsAppliesCard =
     "Icons apply at the next launch";
+// (A `font=` commit raises no such card: the face moves live, the screen
+// its answer — commit_device_setting's font arm, 2026-10-09.)
 
 // THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02) — a
 // proper sub-window whose TARGET span rounds below one output sample, which

@@ -341,6 +341,12 @@ struct FlagCache {
     // its own: it is the column, which fp_active_markers_view keys, or the
     // diff half, which the history fields key.)
     uint64_t  fp_palette_generation  = 0;
+    // THE FACE THESE PIXELS' LABELS WERE SHAPED IN (gui_live_face_set,
+    // gui_font.h — architect 2026-10-09 ~21:20): the cue labels are text
+    // in the live set's program face, and a Settings pick of the `font` key
+    // swaps the set live, so the surface re-renders BY FIELD, the scale's
+    // shape.
+    const GuiFaceSet* fp_face_set = nullptr;
 
     long long fp_warp_generation    = -1;
     long long fp_phase_reset_generation   = -1;
@@ -534,7 +540,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (25 fields, RE-DERIVED 2026-09-23 off the compare in
+    // (27 fields, RE-DERIVED 2026-10-09 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -545,6 +551,11 @@ struct GuiPaintHandler {
     //     every flag dimension rides gui_scale, so the axis is keyed BY FIELD
     //     rather than left to ride whichever strip dimension happens to move
     //     with it (2026-08-29);
+    //   - THE PALETTE AND THE FACE, two read live: fp_palette_generation
+    //     (render.h's palette_generation — every flag pixel a palette color,
+    //     2026-10-03) and fp_face_set (gui_font.h's gui_live_face_set — the
+    //     labels' face, which the `font` key's Settings pick swaps live,
+    //     2026-10-09);
     //   - MARKER-DRIVEN, five read live from app state: fp_warp_generation,
     //     fp_phase_reset_generation, fp_drag_overlay_hash,
     //     fp_selection_hash, fp_active_markers_view;

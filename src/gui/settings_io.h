@@ -149,8 +149,10 @@ std::string format_settings_text(
 // config file carries, through that file's own serializers
 // (format_gui_scale_percent, device_config.h)
 // or verbatim for the two
-// free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`) and
-// `chrome` (since 2026-10-07, held as typed): the same "recall
+// free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`),
+// `chrome` (since 2026-10-07, held as typed) and `font` (since 2026-10-09,
+// held as typed, tahoma with no line — the file's next write names it):
+// the same "recall
 // and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file — BUT `icons`
 // (2026-10-10), which recalls THE EFFECTIVE SET, the chrome's own where the

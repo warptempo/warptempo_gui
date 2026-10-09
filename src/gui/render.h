@@ -4,6 +4,7 @@
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 #include "gui_font.h"         // GuiFont, the face owner's face at a scale
+#include "chrome_spec.h"      // live_chrome_spec(), the live chrome's lengths
 #include "program_spec.h"     // kProgramSpec, the program's lengths (the band, row 8)
 #include "display_transform.h" // display_color's transform (sRGB -> the window's space)
 
@@ -450,15 +451,10 @@ GuiColor surface_text(GuiSurface surface);
 // are picked words, never a rule's white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
 // absent ("on the tablet I'm not even going to fill them out; there is no
 // inactive state there") — the inactive_* accessors below resolve them.
-// BESIDE THE TWELVE, THE SCHEME'S FACE TAG (architect 2026-10-09: the face
-// follows the scheme, as a Windows Appearance scheme carries its font;
-// GuiSchemeFace, gui_font.h): a built-in's read from its source, a file's
-// from its optional `font` line, Tahoma for the chrome's own scheme (no
-// pick, which windows-2000-standard's own tag equals — palette_file.cpp's
-// check); the installed pick's tag is the live tag (fill_chrome_palette,
-// render.cpp), which chooses the windows chrome's face set
-// (gui_live_face_set). Part of the pick's equality, so a tag that moves is
-// a change the picker's Save sees.
+// A SCHEME CARRIES NO FACE (architect 2026-10-09 ~21:20: "the scheme's
+// default font should stop being honored — it should only be honored from
+// the font picker"): the face is the device config's `font` key alone
+// (gui_font.h's gui_live_face_set).
 struct GuiChromePick {
     uint32_t                ground         = 0;   // 0xRRGGBB, sRGB, each
     uint32_t                text           = 0;
@@ -472,7 +468,6 @@ struct GuiChromePick {
     uint32_t                selection_text = 0;
     uint32_t                field          = 0;
     uint32_t                field_text     = 0;
-    GuiSchemeFace           face           = GuiSchemeFace::Tahoma;
     constexpr uint32_t inactive_start() const {
         return inactive_title_start.value_or(title_start);
     }
@@ -523,10 +518,6 @@ void install_palette(const std::array<uint32_t, 12>& program,
 // itself (paint_caption_gradient); no icon raster carries a role (icons.h's
 // head); every other chrome painter reads palette() each frame (re-checked
 // 2026-10-09).
-// THE PICK'S FACE TAG installs with it (fill_chrome_palette,
-// set_live_scheme_face — under the windows chrome the face moves live; the
-// caller's whole-surface damage on a changed pick covers it, its own
-// comment at GuiColorPicker::install_live_words).
 void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
 
 // THE LIVE CHROME PICK AS INSTALLED — the knob the install family last wrote
@@ -1479,8 +1470,11 @@ constexpr bool ruler_digit_rows_hold(const GuiFaceSet& set) {
            m.ascent == m.height &&
            kProgramSpec.ruler_baseline_px == 1 + m.height;
 }
-static_assert(ruler_digit_rows_hold(kGuiFaceSetWin2000) &&
-              ruler_digit_rows_hold(kGuiFaceSetMsSansSerif));
+static_assert([] {
+    for (const GuiFaceSet* s : kGuiFaceSets)
+        if (!ruler_digit_rows_hold(*s)) return false;
+    return true;
+}());
 // THE CUE LABEL'S ROWS AT 100 % (cue_baseline_px's rule over the lane's
 // authored 17 and the program face's recorded cap 7 — the program face is
 // measured by its cap in every set, gui_font.h's kGuiProgramFaceMetrics):

@@ -1146,6 +1146,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // while this cache lives.
     const GuiHistoryWalkSource history_source = app.history_mode.source;
     const std::size_t        history_local_index = app.history_mode.local_index;
+    // THE LIVE FACE SET (2026-10-09 ~21:20): the labels' face, which the
+    // `font` key's Settings pick swaps live (FlagCache::fp_face_set).
+    const GuiFaceSet* const  face_set = &gui_live_face_set();
 
     const bool matches =
         flag_cache.surface &&
@@ -1155,6 +1158,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_area_h                  == surface_h &&
         flag_cache.fp_gui_scale_percent       == gui_scale &&
         flag_cache.fp_palette_generation      == pal_gen &&
+        flag_cache.fp_face_set                == face_set &&
         flag_cache.fp_target                  == is_target &&
         flag_cache.fp_warp_frame_map_hash            == warp_frame_map_hash &&
         flag_cache.fp_warp_generation   == warp_gen &&
@@ -1367,6 +1371,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_area_h                  = surface_h;
     flag_cache.fp_gui_scale_percent       = gui_scale;
     flag_cache.fp_palette_generation      = pal_gen;
+    flag_cache.fp_face_set                = face_set;
     flag_cache.fp_target                  = is_target;
     flag_cache.fp_warp_frame_map_hash            = warp_frame_map_hash;
     flag_cache.fp_warp_generation   = warp_gen;

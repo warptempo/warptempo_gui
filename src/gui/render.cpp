@@ -2382,13 +2382,10 @@ void fill_program_palette(const GuiPaletteWords& w) {
 // THE CHROME'S MEMBERS off the live chrome's words with the knob
 // (live_chrome_words, chrome_derive.h: the compiled theme, the knob derived
 // over it by the live chrome's derivation) — the install family's other
-// shared half — AND THE LIVE SCHEME'S FACE TAG with them (2026-10-09; the
-// chrome's own scheme, no pick, is Tahoma): the one writer of
-// set_live_scheme_face, so the face the windows chrome wears is always the
-// installed scheme's (gui_live_face_set, gui_font.h).
+// shared half. No face moves with it: a scheme carries none (2026-10-09
+// ~21:20; the `font` key's, gui_font.h).
 void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
     g_chrome_pick = chrome;
-    set_live_scheme_face(chrome ? chrome->face : GuiSchemeFace::Tahoma);
     const GuiThemeWords w = live_chrome_words(live_chrome_spec(), chrome);
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
