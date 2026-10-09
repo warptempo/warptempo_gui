@@ -180,19 +180,22 @@ struct ProgramSpec {
     int  ruler_baseline_px;
     // THE MARKER LANE (architect 2026-10-09 ~16:50 / ~21:00, 17 rows where
     // Cool Edit's has 11, METRICS §4.2 — the six the ruler gave): this many W
-    // rows above the cue's triangle (row 0 the air, the label's cap on rows
-    // 1 .. 7, Cool Edit's seat kept), then the triangle's cue_triangle_rows
+    // rows above the cue's triangle, then the triangle's cue_triangle_rows
     // quanta on rows 12 .. 16 ("the triangle height is okay right now"), its
-    // apex on the lane's last row; the label's baseline the top of this lane
-    // row (8); THE LABEL'S BOX — the selected fill, the resting face box, the
-    // press target and the flag editor's field — this many rows from the
-    // lane's top, THE WHOLE LANE (rows 0 .. 16: "the text box should take up
-    // the whole marker lane … right now it's too small to click"; render.h's
-    // cue_fill_h_px reads the lane's own composite, so the box is the lane at
-    // every scale).
+    // apex on the lane's last row; THE LABEL'S BOX — the selected fill, the
+    // resting face box, the press target and the flag editor's field — this
+    // many rows from the lane's top, THE WHOLE LANE (rows 0 .. 16: "the text
+    // box should take up the whole marker lane … right now it's too small to
+    // click"; render.h's cue_fill_h_px reads the lane's own composite, so the
+    // box is the lane at every scale); THE LABEL'S CAP BAND CENTRED IN THAT
+    // BOX (architect 2026-10-09 ~21:45, "it should be centered vertically"):
+    // no authored baseline row — render.h's cue_baseline_px derives it from
+    // the lane's height and the program face's cap by the product's box rule
+    // (redesign_baseline), at 100 % the cap 7 on rows 5 .. 11 and the
+    // baseline the top of row 12, the descenders over the triangle's rows
+    // beside it (render.h's asserts, where the face is in scope).
     int  cue_above_triangle_px;
     int  cue_triangle_rows;
-    int  cue_baseline_px;
     int  cue_fill_px;
     // THE CUE'S HORIZONTAL LENGTHS, IN QUANTA from the marker's column
     // (the head): the label's first column past the column (Cool Edit's
@@ -273,7 +276,6 @@ inline constexpr ProgramSpec kProgramSpec = {
     .ruler_baseline_px     = 7,
     .cue_above_triangle_px = 12,
     .cue_triangle_rows     = 5,
-    .cue_baseline_px       = 8,
     .cue_fill_px           = 17,
     .cue_label_lead        = 6,
     .cue_fill_lead         = 5,
@@ -354,12 +356,10 @@ static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
               kProgramSpec.ruler_baseline_px);
 static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.cue_triangle_rows ==
               kProgramSpec.ruler_baseline_px - 1);
-// THE CUE'S ROWS (METRICS §4.2's seat, the product's lane): the label's cap
-// (7, rows 1 .. 7, the baseline the top of row 8) above the triangle (rows
-// 12 .. 16) with rows 8 .. 11 between for the descenders and the brackets
-// (render.h's assert reads the program face's recorded descent against
-// them); the label's box the whole lane.
-static_assert(kProgramSpec.cue_baseline_px - 7 == 1);
+// THE CUE'S ROWS (the product's lane): the triangle on rows 12 .. 16, the
+// label's box the whole lane, the label's cap band centred in it (render.h's
+// asserts read the program face's recorded cap and descent against the
+// lane: the cap on rows 5 .. 11, the descent ending above the last row).
 static_assert(kProgramSpec.cue_fill_px ==
               program_marker_lane_authored_h(kProgramSpec));
 static_assert(kProgramSpec.cue_label_lead >

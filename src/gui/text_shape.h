@@ -22,7 +22,8 @@
 // the live face set's file for the use, outlines only), on that font's OWN
 // FreeType face (hb-ft), full GPOS/GSUB, its own advances less the tracking
 // (gui_tracking_px, gui_font.h), the four math signs set onto the hyphen's
-// axis where the live set lifts them (gui_sign_lift_px, gui_font.h) — and
+// axis and the pipe onto the digits' band where the live set lifts them
+// (gui_sign_lift_px, gui_font.h) — and
 // painted
 // through cairo_show_glyphs on the same scaled font. The run is seated on a
 // baseline the caller hands in, which its seat derived from the face's

@@ -109,9 +109,10 @@ FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
 // The eight files' faces, in kGuiFontFiles' order.
 OutlineFace           g_outline[kGuiFontFileCount];
-// Each file's math signs' glyph ids and lifts onto its hyphen's axis
-// (gui_sign_axis), and whether the file carries the five glyphs they are
-// measured on; read once at the install for every file.
+// Each file's five lifted marks' glyph ids and lifts — the math signs onto
+// its hyphen's axis, the pipe onto its digits' band (gui_sign_axis) — and
+// whether the file carries the seven glyphs they are measured on; read once
+// at the install for every file.
 GuiSignAxis           g_sign_axis[kGuiFontFileCount];
 bool                  g_sign_axis_ok[kGuiFontFileCount] = {};
 
@@ -185,17 +186,26 @@ InkCentre outline_ink_centre(const OutlineFace& f, char32_t cp) {
                      static_cast<double>(m.height) / 2.0};
 }
 
-// THE SIGN AXIS OF ONE FILE (gui_font.h, gui_sign_axis): each math sign's
-// lift is the hyphen's ink centre less its own, per em. False when the face
-// lacks the hyphen or a sign.
+// THE SIGN AXIS OF ONE FILE (gui_font.h, kGuiLiftedSigns, gui_sign_axis):
+// each mark's lift is its target's ink centre less its own, per em — the
+// hyphen's for the four math signs, the "0"'s (the digit measure's glyph,
+// the digits' band) for the pipe (2026-10-09 ~21:20). Every mark is
+// measured for every file whichever sets lift it; the set's flags choose at
+// the reader. False when the face lacks a target or a mark.
 bool measure_sign_axis(const OutlineFace& f, GuiSignAxis& out) {
     const InkCentre hyphen = outline_ink_centre(f, U'-');
-    if (hyphen.gid == 0) return false;
+    const InkCentre digit =
+        outline_ink_centre(f, gui_measure_glyph(GuiFaceMeasure::Digit));
+    if (hyphen.gid == 0 || digit.gid == 0) return false;
     for (std::size_t i = 0; i < kGuiSignCount; ++i) {
-        const InkCentre sign = outline_ink_centre(f, kGuiMathSigns[i]);
+        const GuiLiftedSign& mark = kGuiLiftedSigns[i];
+        const InkCentre sign = outline_ink_centre(f, mark.codepoint);
         if (sign.gid == 0) return false;
+        const double target = mark.target == GuiSignTarget::HyphenAxis
+                                  ? hyphen.centre
+                                  : digit.centre;
         out.signs[i].glyph   = sign.gid;
-        out.signs[i].lift_em = (hyphen.centre - sign.centre) /
+        out.signs[i].lift_em = (target - sign.centre) /
                                static_cast<double>(f.ft->units_per_EM);
     }
     return true;
@@ -234,9 +244,9 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     // derived per call from these inks (gui_face_em_px), so the probe asks
     // it of EVERY SET (kGuiFaceSets): each use's file must carry its
     // measure's glyph — and, for an x-height measure, the "H" its cap band
-    // derives from (gui_font_cap_px) — and in a set that lifts its signs the
-    // five its axis is measured on, whichever chrome the device config later
-    // chooses.
+    // derives from (gui_font_cap_px) — and in a set that lifts its signs or
+    // its pipe the seven its axis is measured on, whichever chrome the device
+    // config later chooses.
     for (const GuiFaceSet* set : kGuiFaceSets)
         for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
             const double* ink = g_ink_em[set->file[i]];
@@ -245,7 +255,9 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
             if (m == GuiFaceMeasure::XHeight &&
                 ink[measure_index(GuiFaceMeasure::Cap)] <= 0.0)
                 ok = false;
-            if (set->sign_lift && !g_sign_axis_ok[set->file[i]]) ok = false;
+            if ((set->sign_lift || set->pipe_lift) &&
+                !g_sign_axis_ok[set->file[i]])
+                ok = false;
         }
     for (const OutlineFace& f : g_outline)
         if (!outline_ft_backed(f)) ok = false;
@@ -274,7 +286,9 @@ double gui_font_cap_px(const GuiFont& f) {
 const GuiSignAxis& gui_sign_axis(GuiFace face) {
     static const GuiSignAxis kLevel{};
     const GuiFaceSet& set = gui_live_face_set();
-    return set.sign_lift ? g_sign_axis[set.file[face_index(face)]] : kLevel;
+    return set.sign_lift || set.pipe_lift
+               ? g_sign_axis[set.file[face_index(face)]]
+               : kLevel;
 }
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {

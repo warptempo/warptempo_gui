@@ -184,8 +184,8 @@ namespace {
 // bottom_row_h_px() tall — COOL EDIT'S DOCK BAR (6 W) over ITS ROW 8 (4 W of
 // face, the band's case, 5 W of face: 32), 38 under every chrome (architect
 // 2026-10-09; program_spec.h) — the clock in its dark time field inside its
-// own group (the active tab's letter, a pipe and the timestamp,
-// "A | 00:45.115") and THE STATE LINE on the face beside it (2026-10-03),
+// own group (the timestamp, a pipe and the active tab's letter,
+// "00:45.115 | A") and THE STATE LINE on the face beside it (2026-10-03),
 // and, packed against the right edge, the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
 // walk, the four cardinal arrows and the transport three, each Cool Edit's
@@ -1350,9 +1350,9 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // STATE CELL, whose own owner is Viewport::invalidate_status_cell_area and
 // whose rect is the lane WHOLE — see the record just above.
 //
-// THE TAB LETTER IS INSIDE THIS CELL (architect 2026-10-01): row 8's run is
-// `A | ` then the timestamp, so a per-second tick repaints letter and digits
-// together. (The cell reserved one more cell for the dirty `*` until the mark
+// THE TAB LETTER IS INSIDE THIS CELL (architect 2026-10-01; last since
+// 2026-10-09 ~21:20): row 8's cell is the timestamp then ` | A`, so a
+// per-second tick repaints digits and letter together. (The cell reserved one more cell for the dirty `*` until the mark
 // retired, architect 2026-10-05, Save's grey being the mark.)
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE

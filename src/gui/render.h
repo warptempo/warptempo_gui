@@ -723,11 +723,13 @@ void install_true_colors(bool on);
 // `ce_cue_shadow`;
 // THE LABEL — the marker's one label in the program face at cap 7, in the
 // panel's light tone `ce_hilight`, no shadow, starting six quanta right of
-// the column, its cap on rows 1 .. 7 (baseline the top of row 8), its
-// descenders and the history's brackets reaching into rows 8 .. 11 above
-// the triangle's rows 12 .. 16 — THE LANE 17 W, the product's own (architect
-// 2026-10-09 ~16:50 / ~21:00, Cool Edit's 11 grown by the six the ruler
-// gave; program_spec.h's marker-lane fields); and THE STEM —
+// the column, ITS CAP BAND CENTRED IN THE LANE (architect 2026-10-09
+// ~21:45, "it should be centered vertically"; cue_baseline_px, the box
+// rule): at 100 % the cap on rows 5 .. 11, the baseline the top of row 12,
+// its descenders and the history's brackets reaching into rows 12 .. 14
+// beside the triangle's rows 12 .. 16 — THE LANE 17 W, the product's own
+// (architect 2026-10-09 ~16:50 / ~21:00, Cool Edit's 11 grown by the six the
+// ruler gave; program_spec.h's marker-lane fields); and THE STEM —
 // DOTS ONE DEVICE PX SQUARE on the canvas's device rows (2026-10-09 ~14:25,
 // "on waveform → unscaled"), the canvas alone (no dot
 // in the lane or on the frame row; paint_marker_stems). No box, no outline,
@@ -784,7 +786,8 @@ void install_true_colors(bool on);
 //             right now it's too small to click"), the triangles painting
 //             over it where they meet — from one
 //             quantum before the text to one past its end, the text not
-//             moving (an invalid cue's
+//             moving, its cap band centred in that box as at rest
+//             (cue_baseline_px, 2026-10-09 ~21:45) (an invalid cue's
 //             text the bright red on that fill); THE TRIANGLE KEEPS ITS
 //             COLOR. SELECTION IS ONE SEGMENT'S (architect 2026-09-05):
 //             the ADDRESSED cell's segment wears it — the payload for every
@@ -814,9 +817,10 @@ void install_true_colors(bool on);
 // with A ONE-QUANTUM OUTLINE in `field_text`, over the edited segment's box
 // on THE WHOLE LANE'S ROWS 0 .. 16, the selected box's (the outline on rows
 // 0 and 16 and one quantum outside the pads; 2026-10-09 ~21:00), the text
-// at the segment's own seat and baseline with one quantum of pad either
-// side of its run, its descenders inside the field (the text's clip the
-// field's inner rows), THE CARET AND THE SELECTION BAND SPANNING THE
+// at the segment's own seat and baseline — the cap band centred in the
+// field, which is the lane (cue_baseline_px, 2026-10-09 ~21:45) — with one
+// quantum of pad either side of its run, its descenders inside the field
+// (the text's clip the field's inner rows), THE CARET AND THE SELECTION BAND SPANNING THE
 // FIELD'S WHOLE INNER ROWS, 1 .. 15 (2026-10-09: Windows' single-line edit
 // control fills its client height with the selection, so a selected
 // substring's descenders stay in the selection pair), the field growing and
@@ -1522,19 +1526,36 @@ inline int cue_above_triangle_h_px() {
 inline int marker_lane_h_px() {
     return cue_above_triangle_h_px() + cue_triangle_h_px();
 }
-// The label's baseline and THE LABEL BOX'S ROWS — the selected fill, the
-// resting face box, the published press target and the flag editor's field
-// — under the marker lane's top (program_spec.h's marker lane fields). THE
-// BOX IS THE WHOLE LANE (architect 2026-10-09 ~21:00), so its height is the
-// lane's own composite, never a second rounding of the same 17 W: at 138 %
-// scaled_px(17) is 23 against the lane's 17 + 5 = 22, at 360 % 61 against
-// 43 + 20 = 63 (cue_fill_px equals the lane's authored height, program_spec.h's
-// assert).
-inline int cue_baseline_px() {
-    return scaled_px(kProgramSpec.cue_baseline_px);
-}
+// THE LABEL BOX'S ROWS — the selected fill, the resting face box, the
+// published press target and the flag editor's field — under the marker
+// lane's top (program_spec.h's marker lane fields). THE BOX IS THE WHOLE
+// LANE (architect 2026-10-09 ~21:00), so its height is the lane's own
+// composite, never a second rounding of the same 17 W: at 138 % scaled_px(17)
+// is 23 against the lane's 17 + 5 = 22, at 360 % 61 against 43 + 20 = 63
+// (cue_fill_px equals the lane's authored height, program_spec.h's assert).
 inline int cue_fill_h_px() {
     return marker_lane_h_px();
+}
+// THE BOX SEAT'S ONE SOLVER (paint_handler.cpp, where its rule and its other
+// callers stand): the baseline that centres `font`'s cap band in the box
+// [box_y, box_y + box_h), a half-row tie toward the top.
+double redesign_baseline(const GuiFont& font, double box_y, double box_h);
+// THE CUE LABEL'S BASELINE under the marker lane's top — THE PROGRAM FACE'S
+// CAP BAND CENTRED IN THE LABEL'S BOX, THE WHOLE LANE (architect 2026-10-09
+// ~21:45, "it should be centered vertically"), by the product's one rule for
+// a label in a box (redesign_baseline: floor((h + cap) / 2)), so the seat is
+// DERIVED from the lane's composite height and the face's cap at the live
+// scale, never an authored row scaled on its own (scaled_px(12) would stand
+// 17 at 138 % against the centred 15, and 43 at 360 % against 44). Every
+// label segment — the resting label, the bound cells, the history's two
+// halves — and the flag editor's text ride it. THE ROWS: at 100 % the cap 7
+// on rows 5 .. 11 of the 17, the baseline the top of row 12; at 300 % (lane
+// 51, cap 21) the baseline 36, the cap on rows 15 .. 35; at 360 % (lane 63,
+// cap 25.2) 44, the cap from 18.8; at 138 % (lane 22, cap 9.66) 15.
+inline int cue_baseline_px() {
+    return static_cast<int>(redesign_baseline(
+        gui_font(GuiFace::Program), 0.0,
+        static_cast<double>(marker_lane_h_px())));
 }
 // THE RULER'S DIGITS ARE THE SMALL FACE'S SIX ROWS UNDER ONE W OF AIR
 // (program_spec.h's ruler fields), in every face set (gui_font.h: every
@@ -1551,13 +1572,28 @@ static_assert(ruler_digit_rows_hold(kGuiFaceSetWin2000) &&
               ruler_digit_rows_hold(kGuiFaceSetGnome2) &&
               ruler_digit_rows_hold(kGuiFaceSetCde) &&
               ruler_digit_rows_hold(kGuiFaceSetMsSansSerif));
-// THE CUE LABEL'S RECORDED DESCENT STANDS CLEAR OF THE TRIANGLE: the program
-// face's baseline plus its recorded descent above the triangle's first row,
-// with two rows to spare for the glyphs that overshoot the record — "g" and
-// the history's brackets reach about 2.4 W under the baseline in Tahoma and
-// FreeSans, rows 8 .. 10 (the descender check, 2026-10-09 ~21:00).
-static_assert(kProgramSpec.cue_baseline_px + kGuiProgramFaceMetrics.descent +
-                  2 <= kProgramSpec.cue_above_triangle_px);
+// THE CUE LABEL'S ROWS AT 100 % (cue_baseline_px's rule over the lane's
+// authored 17 and the program face's recorded cap 7 — the program face is
+// measured by its cap in every set, gui_font.h's kGuiProgramFaceMetrics):
+// the baseline the top of row 12, the cap on rows 5 .. 11. THE DESCENT ENDS
+// ABOVE THE LANE'S LAST ROW — the box's outline row: the baseline plus the
+// recorded descent plus two rows to spare for the glyphs that overshoot the
+// record stand within rows 12 .. 15. Measured 2026-10-09 off the files'
+// outlines through FreeType, the deepest glyphs a label can carry reach
+// 0.288 of the cap under the baseline in Tahoma ("y"; "g" 0.285, "(" 0.257,
+// "[" 0.181), 0.299 in FreeSans ("g", "y"; its brackets 0.291) — 2.0 / 2.1 W
+// at 100 %, rows 12 .. 14; at 300 % (cap 21) 6.0 / 6.3 device rows under
+// the baseline 36, ending on row 42 of the 51, five rows above the outline's
+// three (48 .. 50); at 360 % (cap 25.2) 7.3 / 7.5 under 44, ending on row 51
+// of the 63, the outline 59 .. 62.
+constexpr int kCueLabelBaselineAt100 =
+    (program_marker_lane_authored_h(kProgramSpec) +
+     kGuiProgramFaceMetrics.height) / 2;
+static_assert(kGuiProgramFaceMetrics.measure == GuiFaceMeasure::Cap);
+static_assert(kCueLabelBaselineAt100 == 12);
+static_assert(kCueLabelBaselineAt100 - kGuiProgramFaceMetrics.height == 5);
+static_assert(kCueLabelBaselineAt100 + kGuiProgramFaceMetrics.descent + 2 <=
+              program_marker_lane_authored_h(kProgramSpec) - 1);
 // THE TRIANGLE'S PAINTED COLUMNS round its stem column `col` — the cue's and
 // the playhead head's one extent, read off the painter's own vertices
 // (paint_ce_cue_triangle, architect 2026-10-09 ~14:35, centred on the

@@ -17,7 +17,8 @@
 // kGuiFaceSetMsSansSerif — FreeSans, the MS Sans Serif stand-in —
 // 2026-10-09): a set is one desktop's text — which file each of the three
 // uses (GuiFace) is drawn from, its recorded vertical metrics, its tracking
-// and whether its math signs are lifted (GuiFaceSet below) — and the chrome
+// and whether its math signs and its pipe are lifted (GuiFaceSet below) —
+// and the chrome
 // spec names its own set (chrome_spec.h's ChromeSpec), the device config's
 // `chrome` choosing the live spec once at launch; UNDER THE WINDOWS CHROME
 // THE LIVE SCHEME'S FACE TAG may choose the MS Sans Serif set in its place
@@ -100,16 +101,20 @@
 // width used for layout is the shaped run's (text_shape), the face's own
 // advances at the live size less the tracking.
 //
-// THE FOUR MATH SIGNS ARE WHERE THE FACE DRAWS THEM, EXCEPT IN A SET THAT
-// LIFTS THEM (GuiFaceSet::sign_lift; gui_sign_axis below). Tahoma, DejaVu
-// and Go do not lift: Tahoma already draws the five on one axis — its
-// 11-ppem strike centres "-", "+", "<", ">" and "=" all on row 3 of the
-// 8-row cap, and its outlines agree to a few units (the hyphen 566..730 of
-// 2048, centre 648; "+" and "=" centred at 652, "<" ">" at 654; the bold
-// within one unit) — so a derived lift would come to under 0.003 em, a
-// tenth of a device px at 400 %, nothing for a mechanism to correct. THE
-// MS SANS SERIF SET LIFTS (architect 2026-10-09: FreeSans is Nimbus's outlines, and
-// the lift deleted with Nimbus on 2026-10-06 returns with them).
+// THE FOUR MATH SIGNS AND THE PIPE ARE WHERE THE FACE DRAWS THEM, EXCEPT
+// IN A SET THAT LIFTS THEM (GuiFaceSet::sign_lift and pipe_lift;
+// gui_sign_axis below). THE SIGNS: Tahoma, DejaVu and Go do not lift them —
+// Tahoma already draws the five on one axis: its 11-ppem strike centres
+// "-", "+", "<", ">" and "=" all on row 3 of the 8-row cap, and its
+// outlines agree to a few units (the hyphen 566..730 of 2048, centre 648;
+// "+" and "=" centred at 652, "<" ">" at 654; the bold within one unit) —
+// so a derived lift would come to under 0.003 em, a tenth of a device px at
+// 400 %, nothing for a mechanism to correct. THE MS SANS SERIF SET LIFTS
+// THEM (architect 2026-10-09: FreeSans is Nimbus's outlines, and the lift
+// deleted with Nimbus on 2026-10-06 returns with them). THE PIPE (architect
+// 2026-10-09 ~21:20, "the pipe should be even"): both Windows sets lift it
+// onto the digits' band, Tahoma's hanging a whole W low of it (the
+// numbers at the sign paragraph below); DejaVu and Go do not.
 
 #include <cairo/cairo.h>
 
@@ -159,8 +164,9 @@ struct GuiFontBytes {
 // THE RETURN IS THE INSTALL OBSERVED, not assumed: true when each of the
 // eight files selects as an FT-BACKED cairo face, which is what text_shape
 // requires, and EVERY set's faces (kGuiFaceSets below) carry the glyph each
-// em is measured on and, in a set that lifts its signs, the hyphen and the
-// four signs its axis is measured on — every set, because the install
+// em is measured on and, in a set that lifts its signs or its pipe, the
+// hyphen, the "0" and the five marks its axis is measured on — every set,
+// because the install
 // precedes the `chrome` key's read on Android.
 // Its producer is breach-only (the bytes are the repository's own, so a face that fails to
 // build is a build defect), and each caller dies on false.
@@ -229,12 +235,14 @@ inline constexpr GuiFaceMetrics kGuiProgramFaceMetrics = {
 // its order), the kGuiFontFiles index the use is drawn from and its recorded
 // metrics; the tracking in Windows px per glyph; whether the four math signs
 // are set onto the hyphen's axis (gui_sign_axis below; true for the MS
-// Sans Serif set alone, 2026-10-09).
+// Sans Serif set alone, 2026-10-09); whether the pipe is set onto the
+// digits' band (true for the two Windows sets, 2026-10-09 ~21:20).
 struct GuiFaceSet {
     std::size_t    file[kGuiFaceCount]    = {};
     GuiFaceMetrics metrics[kGuiFaceCount] = {};
     double         tracking_px            = 0.0;
     bool           sign_lift              = false;
+    bool           pipe_lift              = false;
 };
 
 // THE WIN2000 SET (architect 2026-10-06), the chrome spec's, live: Wine Tahoma.
@@ -247,6 +255,10 @@ struct GuiFaceSet {
 //   TRACKING: none (architect 2026-10-07: "we're not matching font widths,
 //   only the heights"): the recorded metrics match the period's heights and
 //   the widths are the live face's own advances, as the gnome2 set's are.
+//   SIGNS: where Tahoma draws them (the head). THE PIPE: LIFTED onto the
+//   digits' band (gui_sign_axis below; architect 2026-10-09 ~21:20) — its
+//   bar hangs 1.08 W low of the "0" at the body's em, 3.25 device px at
+//   300 %, past the quarter W the ruling allowed as even.
 inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
     .file        = {0, 1, 0, 0},
     .metrics     = {{11, 2, 8, GuiFaceMeasure::Cap},
@@ -254,6 +266,7 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
                     {6, 0, 6, GuiFaceMeasure::Digit},
                     kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
+    .pipe_lift   = true,
 };
 
 // THE GNOME2 SET (architect 2026-10-07, the planner's design under his free
@@ -372,7 +385,10 @@ inline constexpr GuiFaceSet kGuiFaceSetCde = {
 //   kerning, "no manual kerning — let the spacing be set by the font",
 //   architect 2026-10-09).
 //   SIGNS: LIFTED onto the hyphen's axis (gui_sign_axis below; architect
-//   2026-10-09, the lift returning with Nimbus's outlines).
+//   2026-10-09, the lift returning with Nimbus's outlines). THE PIPE:
+//   LIFTED onto the digits' band (architect 2026-10-09 ~21:20, "we have
+//   sign lift for the plus sign in FreeSans. We should do that for the pipe
+//   as well").
 inline constexpr GuiFaceSet kGuiFaceSetMsSansSerif = {
     .file        = {6, 7, 6, 6},
     .metrics     = {{11, 2, 6, GuiFaceMeasure::XHeight},
@@ -381,6 +397,7 @@ inline constexpr GuiFaceSet kGuiFaceSetMsSansSerif = {
                     kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
     .sign_lift   = true,
+    .pipe_lift   = true,
 };
 
 // EVERY SET THE OWNER DEFINES (2026-10-09), the install's probe walking it
@@ -493,15 +510,38 @@ double gui_font_cap_px(const GuiFont& f);
 // follows whichever set the chrome and the scheme name).
 double gui_face_em_px(GuiFace face);
 
-// THE FOUR MATH SIGNS SIT ON THE HYPHEN'S AXIS IN A SET THAT LIFTS THEM
-// (GuiFaceSet::sign_lift; architect 2026-10-06, "as MS Sans Serif had
-// them", deleted with Nimbus that evening, RETURNED 2026-10-09 with
-// FreeSans, whose outlines are Nimbus's): "+" (U+002B), "=" (U+003D), "<"
-// (U+003C) and ">" (U+003E) each rise by the hyphen's ink centre less its
-// own, in every use of the set and every run; the hyphen and every other
-// glyph stay where the face drew them. One rule: the period's faces put the
-// five marks on ONE axis, and the lift seats a face's signs there.
-//   THE MS SANS SERIF SET: MS Sans Serif centred all five at 0.389 of its 9-row cap,
+// FIVE MARKS ON ONE RULE, EACH SEATED ON ITS TARGET IN A SET THAT LIFTS IT
+// (kGuiLiftedSigns, one table, one reader): a mark rises by its target's
+// ink centre less its own, in every use of the set and every run; the
+// targets and every other glyph stay where the face drew them.
+//   THE FOUR MATH SIGNS SIT ON THE HYPHEN'S AXIS IN A SET THAT LIFTS THEM
+//   (GuiFaceSet::sign_lift; architect 2026-10-06, "as MS Sans Serif had
+//   them", deleted with Nimbus that evening, RETURNED 2026-10-09 with
+//   FreeSans, whose outlines are Nimbus's): "+" (U+002B), "=" (U+003D), "<"
+//   (U+003C) and ">" (U+003E) take the hyphen's ink centre. The period's
+//   faces put the hyphen and the signs on ONE axis, and the lift seats a
+//   face's signs there.
+//   THE PIPE SITS ON THE DIGITS' BAND IN A SET THAT LIFTS IT
+//   (GuiFaceSet::pipe_lift; architect 2026-10-09 ~21:20, "the pipe should
+//   be even", row 8's clock setting it between the timestamp and the tab
+//   letter): "|" (U+007C) takes the "0"'s ink centre, so its overhang above
+//   and below the digits beside it is the same — a bar on the hyphen's axis
+//   would hang low. Both faces draw it as a descender-to-ascender bar
+//   centred well under the digits: TAHOMA'S -483..1565 of 2048 (centre
+//   541) against its "0"'s -31..1516 (742.5) and its hyphen's 648 — a lift
+//   of 0.0984 em, 1.08 W at the body's em (11.003 W), 3.25 device px at
+//   300 % and 3.90 at 360, the small's 0.78 W (2.34 / 2.81 px), the bold's
+//   -392..1555 (581.5) against 745 a lift of 0.0798 em (2.63 / 3.16 px);
+//   FREESANS'S -212..729 of 1000 (258.5) against its "0"'s -23..709 (343)
+//   and its hyphen's 276 — 0.0845 em, 0.97 W at the body's x-height em
+//   (11.450 W), 2.90 device px at 300 % and 3.48 at 360, the small's 0.69 W
+//   (2.08 / 2.49 px), the bold's -200..729 (264.5) against 350.5 0.086 em
+//   (2.87 / 3.44 px) — read 2026-10-09 off the files through FreeType. Both
+//   Windows sets lift it, Tahoma's being far past the quarter W the ruling
+//   allowed as already even; DejaVu's (Vera's bar, Tahoma's own bounds,
+//   0.100 em) and Go's (0.048 em) stand where the faces drew them, the other
+//   chromes taking no parity work in the Cool Edit arc.
+//   THE MS SANS SERIF SET'S SIGNS: MS Sans Serif centred all five at 0.389 of its 9-row cap,
 //   while FreeSans keeps its hyphen near there (240..312 of 1000, centre 276,
 //   0.379 of its 729-unit cap) but draws the four signs on Helvetica's math
 //   axis, 0.318 ("+" -10..474, "=" 111..353, "<" ">" -9..474), so its plus
@@ -511,37 +551,56 @@ double gui_face_em_px(GuiFace face);
 //   FreeType, EQUAL TO THE FIGURES RECORDED FOR NIMBUS SANS on 2026-10-06 to
 //   the unit; at 300 % the body's plus rises 1.51 device px at its
 //   x-height em (2026-10-09), the small's 1.08.
-//   The sets that do not lift (Tahoma, DejaVu, Go) answer every lift 0: the
-//   head records why Tahoma needs none.
+//   A set that does not lift a mark answers its lift 0: the head records
+//   why Tahoma's signs need none, and which sets lift the pipe.
 // THE LIFTS ARE DERIVED at the install, like the em, from each file's own
 // unscaled outline bounds (gui_font_bundled.cpp), in em units, for every
-// file; a set's use reads its file's when the set lifts. THE MATCH IS BY
-// GLYPH ID after substitution (text_shape compares a shaped glyph's id
-// against `glyph`), never by codepoint: a cluster is not a glyph. The lift
-// moves the ink alone — every advance, the run's width and the tracking are
-// untouched.
-inline constexpr std::size_t kGuiSignCount = 4;
-inline constexpr char32_t kGuiMathSigns[kGuiSignCount] = {U'+', U'=', U'<',
-                                                          U'>'};
+// file and every mark; a set's use reads its file's for the marks the set
+// lifts. THE MATCH IS BY GLYPH ID after substitution (text_shape compares a
+// shaped glyph's id against `glyph`), never by codepoint: a cluster is not
+// a glyph. The lift moves the ink alone — every advance, the run's width
+// and the tracking are untouched.
+enum class GuiSignTarget { HyphenAxis, DigitBand };
+struct GuiLiftedSign {
+    char32_t      codepoint;
+    GuiSignTarget target;   // whose ink centre the mark is seated on
+};
+inline constexpr std::size_t kGuiSignCount = 5;
+inline constexpr GuiLiftedSign kGuiLiftedSigns[kGuiSignCount] = {
+    {U'+', GuiSignTarget::HyphenAxis},
+    {U'=', GuiSignTarget::HyphenAxis},
+    {U'<', GuiSignTarget::HyphenAxis},
+    {U'>', GuiSignTarget::HyphenAxis},
+    {U'|', GuiSignTarget::DigitBand},
+};
+// Whether `set` lifts the marks seated on `target`.
+constexpr bool gui_face_set_lifts(const GuiFaceSet& set, GuiSignTarget target) {
+    return target == GuiSignTarget::HyphenAxis ? set.sign_lift : set.pipe_lift;
+}
 struct GuiSignLift {
-    unsigned glyph   = 0;    // the face's glyph id for the sign
+    unsigned glyph   = 0;    // the face's glyph id for the mark
     double   lift_em = 0.0;  // up-positive, in em
 };
 struct GuiSignAxis {
-    GuiSignLift signs[kGuiSignCount] = {};
+    GuiSignLift signs[kGuiSignCount] = {};  // in kGuiLiftedSigns' order
 };
 // The live set's axis for `face`: its file's measured lifts where the set
-// lifts its signs, else every lift 0 (and every glyph id 0, which a lift of
-// 0 makes harmless however a run's glyph ids compare).
+// lifts any mark, else every lift 0 (and every glyph id 0, which a lift of
+// 0 makes harmless however a run's glyph ids compare). The per-mark choice
+// is the reader's (gui_sign_lift_px).
 const GuiSignAxis& gui_sign_axis(GuiFace face);
 
 // The lift of one shaped glyph in DEVICE px at the font's scale, HarfBuzz's
-// sense (up-positive), unrounded: the sign's lift times the em times the
-// scale, 0 for every glyph that is not one of the four signs and for every
-// glyph of a set that does not lift. text_shape's one reader.
+// sense (up-positive), unrounded: the mark's lift times the em times the
+// scale, 0 for every glyph that is not one of the five marks and for every
+// mark the live set does not lift. text_shape's one reader.
 inline double gui_sign_lift_px(const GuiFont& f, unsigned glyph) {
-    for (const GuiSignLift& s : gui_sign_axis(f.face).signs) {
-        if (s.lift_em != 0.0 && s.glyph == glyph)
+    const GuiFaceSet&  set  = gui_live_face_set();
+    const GuiSignAxis& axis = gui_sign_axis(f.face);
+    for (std::size_t i = 0; i < kGuiSignCount; ++i) {
+        const GuiSignLift& s = axis.signs[i];
+        if (s.lift_em != 0.0 && s.glyph == glyph &&
+            gui_face_set_lifts(set, kGuiLiftedSigns[i].target))
             return s.lift_em * gui_face_em_px(f.face) * gui_font_scale(f);
     }
     return 0.0;

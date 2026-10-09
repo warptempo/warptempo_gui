@@ -34,7 +34,7 @@ Phase resets are a separate collection of markers, authored in target view alone
 
 ### Two tabs, three views
 
-The two tabs, A and B, are two viewpoints (viewport, zoom, playhead and trim) over one shared set of markers, so one can sit at a definition while the other sits at its reference. The active tab's letter leads the clock at the bottom left (`A | 00:45.115`), and Switch Tab in the bottom row flips to the other one. The three views are source + warp, where warp markers are placed; target + warp, where tempos are judged; and target + phase reset, where the transients are protected.
+The two tabs, A and B, are two viewpoints (viewport, zoom, playhead and trim) over one shared set of markers, so one can sit at a definition while the other sits at its reference. The active tab's letter ends the clock at the bottom left (`00:45.115 | A`), and Switch Tab in the bottom row flips to the other one. The three views are source + warp, where warp markers are placed; target + warp, where tempos are judged; and target + phase reset, where the transients are protected.
 
 Save is the unsaved-work mark: it lights when the markers or the piece's settings block (the scale, the BPM and the rest) change, and is dimmed again once saved or undone back to the saved state. The tabs' viewpoints, their trims and their read-only locks never light it; they are written with the next save of such a change, and a trim or lock changed on its own is not kept.
 

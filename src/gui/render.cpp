@@ -2902,8 +2902,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // THE TEXT VIEWPORT, THE CARET AND THE SELECTION BAND ARE ONE SET OF ROWS:
     // THE FIELD'S WHOLE INNER HEIGHT, inside the outline (2026-10-09, the
     // field the whole lane since ~21:00) — so a descender or a history
-    // bracket below the baseline paints whole (rows 8 .. 10 of the lane at
-    // the program face, render.h's descent assert), and THE CARET AND THE
+    // bracket below the lane's centred baseline paints whole (rows 12 .. 14
+    // of the 17 at 100 %, 36 .. 42 of the 51 at 300 %, render.h's descent
+    // assert), and THE CARET AND THE
     // SELECTION SPAN THE FIELD as Windows' single-line edit control fills its
     // client height with the selection, a selected glyph's descender staying
     // in the selection pair, never handed to the field text below a band

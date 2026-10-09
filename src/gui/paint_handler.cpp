@@ -1224,18 +1224,22 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // card's first line, the dropdown items, the prompt's message, the render player's
 // two time fields, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
-// keyboard's caps, the folder overlay's rows, and the menu row's anchors
+// keyboard's caps, the folder overlay's rows, the menu row's anchors
 // under windows-2000 (the plain menu bar's seat, a capture of the real OS
-// beating ReactOS's band, architect 2026-10-09 ~17:40). TWO LINE SEATS: the
+// beating ReactOS's band, architect 2026-10-09 ~17:40), and the cues'
+// labels in the marker lane (2026-10-09 ~21:45, below). TWO LINE SEATS: the
 // tooltip's two lines and the menu row's anchors under clearlooks and cde —
 // GTK's and Motif's arithmetic stand the cell as a line in the item, the
 // derivation at paint_menu_row.
 //
-// THE CANVAS COLUMN'S TEXT TAKES NEITHER SEAT (2026-10-09, the program is
-// Cool Edit): the ruler's digits and the cues' labels stand on AUTHORED
-// BASELINE ROWS of their lanes — program_spec.h's ruler_baseline_px (the
-// architect's row under one W of air, 2026-10-09 ~21:00) and
-// cue_baseline_px (Cool Edit's measured row) — so neither solver is asked.
+// THE CANVAS COLUMN'S TEXT: THE RULER'S DIGITS TAKE NEITHER SEAT
+// (2026-10-09, the program is Cool Edit): they stand on an AUTHORED
+// BASELINE ROW of their lane — program_spec.h's ruler_baseline_px (the
+// architect's row under one W of air, 2026-10-09 ~21:00). THE CUES' LABELS
+// TAKE THE BOX SEAT (architect 2026-10-09 ~21:45, "it should be centered
+// vertically"): the program face's cap band centred in the whole marker
+// lane, their box (render.h's cue_baseline_px, this solver's one caller
+// outside this file — hence its external linkage, declared in render.h).
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
 // corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
@@ -1250,10 +1254,12 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop, which is what levels it with OK
 // and Cancel at every scale (the reasoning is at the modal's own site).
+} // namespace
 double redesign_baseline(const GuiFont& font, double box_y,
                          double box_h) {
     return box_y + std::floor((box_h + gui_font_cap_px(font)) * 0.5);
 }
+namespace {
 
 // THE BASELINE FOR A LINE — a band that IS the face's ascent plus its descent,
 // with no margins to centre anything in, so the seat is the ascent and the
@@ -2722,10 +2728,10 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // own inset), its width ceiled — and ROW 8'S CLOCK at least the mock's 85 W
 // (kProgramSpec.field_min_w_px), which Tahoma's cell fills.
 //
-// THE RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect 2026-10-05, the
-// period's ACID / Vegas fields): it ENDS AT THE RESERVED CELL'S RIGHT EDGE,
-// so nothing moves as the time changes — the purpose of the rule, which the
-// fixed cell keeps. THE CELL STANDS CENTERED IN THE FIELD (architect
+// A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
+// 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
+// CELL'S RIGHT EDGE, so nothing moves as the time changes — the purpose of
+// the rule, which the fixed cell keeps (row 8's composition below). THE CELL STANDS CENTERED IN THE FIELD (architect
 // 2026-10-09, his tablet captures: under Tahoma row 8's clock sits on the
 // 85-W floor and the run, ending at the right pad, stood 28 device px from
 // the left line and 22 from the right at 300 %): where the cell plus its pads
@@ -2733,13 +2739,16 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // floor wins, the cell's right edge stands the pad PLUS HALF THE FLOOR'S
 // SURPLUS in from the right line, so the ink is centered whatever the face.
 // The render player's two fields take no floor, so their cell's right edge
-// is the right pad. On row 8 the pipe and the digits are ONE RUN, ` | ` and
-// the timestamp, ending there, and the tab letter is painted RIGHT-ALIGNED
-// AGAINST THAT RUN'S START: switching tab moves at most the letter's own left
-// edge and nothing else — no letter's kerning can reach the pipe, the two
-// being shaped apart. (Tahoma's A is 0.600 em and its B 0.589, less the
-// tracking, measured 2026-10-06; the slot is the widest, so where they
-// differ the narrower letter stands right-aligned in A's room.)
+// is the right pad. On row 8 THE DIGITS AND THE PIPE ARE ONE RUN, the
+// timestamp and ` | `, STARTING AT THE CELL'S LEFT EDGE — the digits are
+// tabular, so the run is the specimen's width plus the separator's at every
+// time and the pipe never moves as the time runs — and the tab
+// letter is painted LEFT-ALIGNED IN ITS SLOT at that run's end, the cell's
+// last part (architect 2026-10-09 ~21:20): switching tab moves at most the
+// letter's own right edge and nothing else — no letter's kerning can reach
+// the pipe, the two being shaped apart. (Tahoma's A is 0.600 em and its B
+// 0.589, less the tracking, measured 2026-10-06; the slot is the widest, so
+// where they differ the narrower letter stands left-aligned in A's room.)
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
@@ -2751,7 +2760,7 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // is scratched, "the little one is fine", architect 2026-10-09.)
 constexpr const char* kTimeShape = "DD:DD.DDD";
 
-// The tab letters row 8's clock leads with (AppState::active_tab_view's two
+// The tab letters row 8's clock ends with (AppState::active_tab_view's two
 // values) — the set the letter slot is measured over.
 constexpr std::string_view kClockTabLetters = "AB";
 
@@ -2783,7 +2792,7 @@ constexpr double kTimeFieldGapPx = 3.0;
 //
 // THE CELLS ARE ADVANCES: `time_w` is the specimen's advance sum and
 // `letter_w` the widest letter's, so no glyph ever walks; row 8's cell is
-// letter_w + the shaped ` | ` + time_w, each player field's time_w, and each
+// time_w + the shaped ` | ` + letter_w, each player field's time_w, and each
 // cell is its field's damage box too.
 struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
@@ -3028,18 +3037,23 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const GuiFont font = gui_font(GuiFace::Body);
         const TimeFieldMetrics& tm =
             time_field_metrics(font);
-        // THE ACTIVE TAB'S LETTER LEADS THE CELL (architect 2026-10-01, the
-        // tab row deleted as "a waste of space"): `A | 00:45.115` — the
-        // letter, a space, the LITERAL pipe, a space, then the timestamp. THE
-        // RESERVED CELL IS THE WIDEST LETTER'S SLOT, THE ` | ` AND THE
-        // DIGITS' SPECIMEN, so it is ONE WIDTH ON EVERY TAB AND AT EVERY TIME;
-        // the ` | ` and the digits end at the cell's right edge and the letter
-        // stands right-aligned against them (the right-alignment rule at
-        // kTimeShape's block), so no tab switch moves the pipe or the
-        // digits.
+        // THE ACTIVE TAB'S LETTER ENDS THE CELL (the tab row deleted
+        // 2026-10-01 as "a waste of space", the letter moving here; the order
+        // architect 2026-10-09 ~21:20, "let's try putting the timestamp
+        // first, and then the pipe, and then the tab letter"): `00:45.115 | A`
+        // — the timestamp, a space, the LITERAL pipe, a space, then the
+        // letter. With the letter leading, its left side bearing stood at the
+        // field's left pad and the digits' at the right, and the two pads read
+        // unequal ("the spacing does bother me"); with the digits leading and
+        // the letter last, the letter's bearing sits at the right pad. THE
+        // RESERVED CELL IS THE DIGITS' SPECIMEN, THE ` | ` AND THE WIDEST
+        // LETTER'S SLOT, so it is ONE WIDTH ON EVERY TAB AND AT EVERY TIME;
+        // the digits and the ` | ` start at the cell's left edge and the
+        // letter stands left-aligned after them (kTimeShape's block), so no
+        // tab switch moves the pipe or the digits.
         const std::string sep = " | ";
         const double sep_w = text_shape::shape_text_run(font, sep).width_px;
-        const double cell_w = tm.letter_w + sep_w + tm.time_w;
+        const double cell_w = tm.time_w + sep_w + tm.letter_w;
         // THE CLOCK'S GROUP: two W of face in from the lane's left edge, the
         // gripper, its face, the field (its widest string and its pads, at
         // least the mock's 85 W), four W of face, the end bar.
@@ -3071,16 +3085,17 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double baseline =
             redesign_baseline(font, static_cast<double>(clock_field.y),
                               static_cast<double>(clock_field.h));
-        // THE RUN'S END: the reserved cell's right edge, the cell CENTERED in
-        // the field (kTimeShape's block, architect 2026-10-09) — the right
-        // pad plus half the floor's surplus where the 85-W floor wins, the
-        // right pad alone where the cell fills the field.
+        // THE CELL'S RIGHT EDGE, the cell CENTERED in the field (kTimeShape's
+        // block, architect 2026-10-09) — the right pad plus half the floor's
+        // surplus where the 85-W floor wins, the right pad alone where the
+        // cell fills the field; its left edge, where the digits start, the
+        // ceiled cell short of it.
         const int cell_ceil = static_cast<int>(std::ceil(cell_w));
         const int surplus =
             std::max(0, field_w - (cell_ceil + 2 * time_field_pad_px()));
-        const int run_end =
+        const int cell_end =
             field_x + field_w - time_field_pad_px() - surplus / 2;
-        const int cell_x = run_end - cell_ceil;
+        const int cell_x = cell_end - cell_ceil;
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // app_state.h — the stash contract is at the field). One pixel of slack
@@ -3088,8 +3103,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // may sit a hair outside it, and the band is the row's content height,
         // which contains the field and so the baseline's ink by construction.
         // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the run's
-        // end above is the cell's right edge and so is this box's, so the
-        // damage can never miss the painted digits. CEIL, NOT nearbyint:
+        // start above is the cell's left edge and so is this box's, so the
+        // damage can never miss the painted digits or the letter. CEIL, NOT nearbyint:
         // cell_w is a fractional advance sum and this is a DAMAGE box, which
         // may be a hair too wide but never a hair too narrow.
         app.clock_cell_rect = GuiRect{
@@ -3166,19 +3181,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             // class (it is the only feedback on the loading frame).
             state = app.queue_progress_text;
         }
-        // THE CLOCK, UNCLIPPED AND RIGHT-ALIGNED — ` | ` and the digits as
-        // one run ending at the cell's right edge, then the tab letter ending
-        // where that run starts, so the pipe and the digits stand still
-        // whatever the letter.
+        // THE CLOCK, UNCLIPPED, IN THE FIXED CELL — the digits and ` | ` as
+        // one run starting at the cell's left edge, then the tab letter
+        // starting where that run ends, so the digits and the pipe stand
+        // still whatever the letter.
         const text_shape::ShapedRun time_run =
-            text_shape::shape_text_run(font, sep + format_timestamp(seconds));
+            text_shape::shape_text_run(font, format_timestamp(seconds) + sep);
         const text_shape::ShapedRun letter_run = text_shape::shape_text_run(
             font, std::string(1, app.active_tab_view));
-        const double run_x = static_cast<double>(run_end) - time_run.width_px;
+        const double run_x = static_cast<double>(cell_x);
         set_palette_source(cr, hex(kCeFieldText));
-        text_shape::show_shaped_run(cr, letter_run,
-                                    run_x - letter_run.width_px, baseline);
         text_shape::show_shaped_run(cr, time_run, run_x, baseline);
+        text_shape::show_shaped_run(cr, letter_run,
+                                    run_x + time_run.width_px, baseline);
         if (state_w > 0 && !state.empty()) {
             // The clock's face on THE CLOCK'S BASELINE (the block above), its
             // FIRST INK at the clip's left edge: the origin stands the run's
@@ -5477,8 +5492,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // a lit button and its read-only toggle shows the lock, so letters would
     // restate what that row says in its own vocabulary. THE A / B LETTER IS
     // HERE, though, since 2026-10-01: the tab row that showed it is deleted,
-    // and the letter leads the clock cell (paint_bottom_row_buttons_and_clock
-    // owns the rule). The row carries no dirty mark: Save's grey is the mark
+    // and the letter ends the clock cell, after the timestamp and the pipe
+    // (paint_bottom_row_buttons_and_clock owns the rule). The row carries no dirty mark: Save's grey is the mark
     // (architect 2026-10-05, plain_save_actionable).
     //
     // The row paints on EVERY frame class (loading, blank, loaded) like the

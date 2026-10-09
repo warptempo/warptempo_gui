@@ -2105,7 +2105,7 @@ enum class RedesignButton {
     File, Edit, Settings,
     // (THE TAB ROW — row 3, the A / B tabs TabA and TabB — IS DELETED
     // (architect 2026-10-01: "a waste of space"). The active tab's letter is
-    // the bottom row's clock cell ("A | 00:45.115",
+    // the bottom row's clock cell ("00:45.115 | A",
     // paint_bottom_row_buttons_and_clock), and the switch keeps Ctrl+Tab and
     // the bottom row's TransportSwitchTab button; the paired march keeps
     // Ctrl+Shift+Tab, Switch Tab's shifted press and the walk's ctrl-shift
