@@ -3187,8 +3187,9 @@ private:
     // the blink. THE DRIFT IS THE PEN'S GEOMETRY — the hover point slides
     // along the pen's axis as the tip rises — NOT THE HAND. 12 W sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
-    // the neighboring button, a case width (27 W, 81 px, the program's case
-    // since 2026-10-09), and below a move to
+    // the neighboring button, a case width (23 W, 69 px at 300 % and 84 at
+    // 360 %, the program's case round Cool Edit's 20-W seat since
+    // 2026-10-09), and below a move to
     // the next lit row, a popup row (17 W under Windows 2000, 19 under
     // clearlooks and cde — ChromeSpec::popup_item_height_px), so one row's
     // deliberate step rearms. Authored in Windows px as every chrome length,

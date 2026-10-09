@@ -1,0 +1,27 @@
+In exactly this style, same line weight and palette, add a second sheet with
+cells for these actions the original set lacks, each cell labeled with its
+name:
+
+save and commit - a diskette with a small git commit mark
+pull - a diskette receiving from a cloud
+revert to checkpoint - a document with an arrow turning back
+load in place - a document dropping into a frame
+copy resolved value - two overlapping pages, one with a number
+source with warp - a metronome passing through an open door, inward
+target with warp - a metronome passing through an open door, outward
+target with phase resets - a clapperboard
+toggle history view - two documents side by side with differing lines
+toggle history walk - footprints along a timeline
+older checkpoint - a document with an arrow pointing left
+newer checkpoint - a document with an arrow pointing right
+toggle inherit - two chain links
+toggle cumulative - a sum sign over a waveform
+toggle add to selection - a dotted selection box with a plus
+jump to defining marker - an arrow jumping to a marker flag
+toggle follow - an eye following a waveform
+toggle restrict undo to current view - a dotted frame around an undo arrow
+toggle grid iterations - a grid of small cells
+switch tab - two tabs with the back one coming forward
+information card - a speech card with the letter i
+error card - a speech card with an exclamation mark
+program icon - a waveform mark in a square

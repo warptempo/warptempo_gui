@@ -508,9 +508,9 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   11-px slider and arrows inside it) — the trim lane and the popup bar.
 //   THE RULER LANE 4, BEHIND THE FLAGS (ruler_behind_flags; architect
 //   2026-10-08 ~17:30): the lane table's leftover — the frame's 5 + 5 and
-//   the stack 17 + 27 + the program's band 37 + 13 + 4 + 18 above the well
-//   with the program's dock bar and row 8, 42, below it sum to the base's
-//   126 + 42 (render.h's static_assert), so the well keeps the base's 936
+//   the stack 17 + 27 + the program's band 33 + 13 + 4 + 18 above the well
+//   with the program's dock bar and row 8, 38, below it sum to the base's
+//   122 + 38 (render.h's static_assert), so the well keeps the base's 960
 //   device rows at 300 % (main.cpp's lane table); its two label terms
 //   unread. (3 for the morning of 2026-10-09, while Motif's toolbar form
 //   took a row of it.)

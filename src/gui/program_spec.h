@@ -13,16 +13,21 @@
 // its colors are the palette's Face role and the tones Cool Edit derives
 // from it (cool_edit_derive.h) beside the painter's own constants.
 //
-// THE PROPORTIONAL FIT: Cool Edit's measurements (tmp/research/cool_edit/
-// METRICS.md, one capture px = one W) are taken at Cool Edit's own W
-// UNSCALED, with ONE exception — the button case. Cool Edit's 23-W case
-// stands round a 20-px bitmap; the product's glyph seat is the base's 24 W
-// (the large toolbar glyph every icon set is drawn for), so the case is 27
-// (1 highlight + 24 + 1 shadow + 1 black) and the band round it 37 where
-// Cool Edit's is 33 (its 3 + 23 + 2 face rows become 3 + 27 + 2). Every
-// other length — the lines, the panes' face margins, the grooves, the
-// grippers, the end bars, the dock bar, the dark time field — is Cool
-// Edit's own number.
+// NO PROPORTIONAL FIT (architect 2026-10-09 ~10:25, "I'd like to see it at
+// 20"): every one of Cool Edit's measurements (tmp/research/cool_edit/
+// METRICS.md, one capture px = one W) is taken at Cool Edit's own W
+// UNSCALED, THE BUTTON CASE INCLUDED — its 20-W glyph seat, the case 23 (1
+// highlight + 20 + 1 shadow + 1 black), the band round it 33 (2 head lines
+// + 3 face + 23 + 2 face + 3 foot lines) and row 8 32 (4 + 23 + 5), the
+// cases' pitch 23. THE REASON: the program is Cool Edit, not a chrome — the
+// 24-W seat is ReactOS's large toolbar glyph, the base's seat for a chrome
+// vocabulary (chrome_spec.h's head, where it stays the chrome's rule), and
+// the program takes no chrome's toolbar; the icon sets are scalable and
+// Gemini's redraws resolution-free, so a glyph loses nothing at 20. THE
+// SIZE ON THE GLASS is gui_scale's (300 x 24 / 20 = 360 puts the glyph at
+// the 72 device px the 24-W seat drew at 300; the device's choice, never
+// this header's). (The 24-W seat round a 27-W case, a 37-W band and a 36-W
+// row 8 stood for the morning of 2026-10-09; git history.)
 //
 // THIS BRIEF BUILT THE TWO LANES THE ROSTER STANDS IN — THE TOOLBAR BAND
 // (the top strip's lane 2) and ROW 8 under its DOCK BAR (the bottom strip's
@@ -43,7 +48,7 @@ struct ProgramSpec {
     // the roster's and the render player's hot face is never lit, the hover
     // walks storing none (input_pointer.cpp's two writes read this).
     bool case_hot_face;
-    // THE TOOLBAR BAND (METRICS §1.1, the case 27 for 23): two lines at its
+    // THE TOOLBAR BAND (METRICS §1.1, Cool Edit's 33 whole): two lines at its
     // head (the dark outline, then the panes' top light line), the face above
     // the case, the case, the face below it, three lines at its foot (the
     // panes' bottom mid line, the dark outline, the light line that is also
@@ -63,8 +68,8 @@ struct ProgramSpec {
     // light, its right column mid.
     int  dock_bar_face_px;
     // ROW 8 (METRICS §5.1 at one button row: Cool Edit's 55 rows hold two
-    // rows of 23 cases; the product's one row of 27): the face above the
-    // case and below it.
+    // rows of 23 cases; the product's one row of the same 23): the face
+    // above the case and below it.
     int  row8_air_above_px;
     int  row8_air_below_px;
     // ROW 8'S GROUPS (METRICS §5.2): the face before the first group and
@@ -99,7 +104,7 @@ struct ProgramSpec {
 
 inline constexpr ProgramSpec kProgramSpec = {
     .case_light_px      = 1,
-    .glyph_px           = 24,
+    .glyph_px           = 20,
     .case_shadow_px     = 1,
     .case_outer_px      = 1,
     .case_hot_face      = false,
@@ -141,9 +146,9 @@ constexpr int program_row8_authored_h(const ProgramSpec& p) {
     return p.row8_air_above_px + program_case_authored_px(p) +
            p.row8_air_below_px;
 }
-static_assert(program_case_authored_px(kProgramSpec) == 27);
-static_assert(program_band_authored_h(kProgramSpec) == 37);
+static_assert(program_case_authored_px(kProgramSpec) == 23);
+static_assert(program_band_authored_h(kProgramSpec) == 33);
 static_assert(program_dock_bar_authored_h(kProgramSpec) == 6);
-static_assert(program_row8_authored_h(kProgramSpec) == 36);
+static_assert(program_row8_authored_h(kProgramSpec) == 32);
 
 #endif // WARPTEMPO_GUI_PROGRAM_SPEC_H

@@ -48,18 +48,19 @@
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in the program's case the
 // drawing's square cell (Tango's 48 units; Breeze's 24, its own 24-px
-// seat, so 1 unit is 1 W and a 1-unit stroke 3 device px at 300 %) fills
-// the case's glyph seat (icon_glyph_px, render.h:
-// scaled_px(24), the base's large seat, 72 device px at 300 %); elsewhere
-// its site's own scaled 16 (the caption's icon, the list rows, the cards —
-// Windows' small icon). The window-frame glyphs
+// seat, so 1 unit is 20/24 W and a 1-unit stroke 2.5 device px at 300 %)
+// fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20),
+// Cool Edit's own seat since 2026-10-09 ~10:25, program_spec.h's head — 60
+// device px at 300 %, 72 at 360); elsewhere its site's own scaled 16 (the
+// caption's icon, the list rows, the cards — Windows' small icon). The
+// window-frame glyphs
 // Windows drew in the button text — the caption's — are not drawings of the
 // set (paint_handler.cpp's caption glyph block).
 //
 // THE PLACEMENT IS FIXED: in the program's case the cell sits at the case's
 // highlight line from its corner (icon_case_lead_px, render.h — Cool Edit's
-// (+1, +1), its 20-px bitmap's seat in its 23-W case, the product's 24-W
-// seat in its 27-W one, architect 2026-10-09), filling the seat
+// (+1, +1), its 20-px bitmap's seat in its 23-W case, the product's 20-W
+// seat in the same 23, architect 2026-10-09), filling the seat
 // (icon_glyph_px), plus the pressed/checked shift (draw_cased below).
 // Nothing is centred on its ink: Windows never did (12 of the 15 STD strip
 // cells with odd ink dimensions sit at the fixed offset). The sites with no

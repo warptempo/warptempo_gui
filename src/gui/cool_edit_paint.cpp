@@ -3,7 +3,6 @@
 #include "text_shape.h"
 
 #include <cmath>
-#include <vector>
 
 // The rules are at the declarations (cool_edit_paint.h); the construction is
 // the approved mock's (tmp/mocks/cool_edit/mock_ce.py), each W of it a
@@ -29,39 +28,26 @@ uint32_t lerp_word(uint32_t a, uint32_t b, double t) {
     return out;
 }
 
-// THE FACE RAMP AT `n` DEVICE ROWS: the 20 stops resampled linearly at the
-// rows' centres (the mock's interp), memoised on n — the paint is
-// single-threaded and a scale holds one seat height.
-const std::vector<uint32_t>& face_ramp(int n) {
-    static int cached_n = -1;
-    static std::vector<uint32_t> rows;
-    if (n == cached_n) return rows;
-    rows.assign(static_cast<std::size_t>(n > 0 ? n : 0), 0);
-    const int m = static_cast<int>(kCeFaceRamp.size());
-    for (int i = 0; i < n; ++i) {
-        double t = (i + 0.5) / n * m - 0.5;
-        t = t < 0.0 ? 0.0 : (t > m - 1.0 ? m - 1.0 : t);
-        const int a = static_cast<int>(std::floor(t));
-        const int b = a + 1 < m ? a + 1 : m - 1;
-        rows[static_cast<std::size_t>(i)] =
-            lerp_word(kCeFaceRamp[static_cast<std::size_t>(a)],
-                      kCeFaceRamp[static_cast<std::size_t>(b)], t - a);
-    }
-    cached_n = n;
-    return rows;
-}
-
 // The shadow ramp's tone at step i of n (its two ends exact).
 uint32_t shadow_at(int i, int n) {
     const double t = n > 1 ? static_cast<double>(i) / (n - 1) : 0.0;
     return lerp_word(kCeCaseShadowFirst, kCeCaseShadowLast, t);
 }
 
-// The seat's face: the ramp row by row over the g x g square at (x, y).
+// The seat's face over the g x g square at (x, y): stop i on the seat's W
+// row i, its device rows the rounded edges i·g/20 to (i+1)·g/20 (the
+// ramp's rule, cool_edit_paint.h).
 void paint_face_ramp(cairo_t* cr, int x, int y, int g) {
-    const std::vector<uint32_t>& ramp = face_ramp(g);
-    for (int i = 0; i < g; ++i)
-        cell(cr, x, y + i, g, 1, ramp[static_cast<std::size_t>(i)]);
+    const int m = static_cast<int>(kCeFaceRamp.size());
+    for (int i = 0; i < m; ++i) {
+        const int y0 = static_cast<int>(
+            std::nearbyint(static_cast<double>(i) * g / m));
+        const int y1 = static_cast<int>(
+            std::nearbyint(static_cast<double>(i + 1) * g / m));
+        if (y1 > y0)
+            cell(cr, x, y + y0, g, y1 - y0,
+                 kCeFaceRamp[static_cast<std::size_t>(i)]);
+    }
 }
 
 } // namespace

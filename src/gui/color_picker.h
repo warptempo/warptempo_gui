@@ -118,9 +118,9 @@ struct Viewport;
 //     shown row scrolled into view at the open (re-derived 2026-10-08 with
 //     the scope, device px): at the tablet's 300 % the fifteen rows under
 //     win2000 are 15 x 51 + 2 x 3 + 6 + 6 = 783 below a chooser whose foot
-//     stands at 402 + 6 + 18 + 63 = 489 of the 1440 rows (THE SEAT's top
-//     row), and under clearlooks 15 x 57 + 3 = 858 below 402 + 3 + 18 + 63
-//     = 486, so the list hangs whole on the
+//     stands at 399 + 6 + 18 + 63 = 486 of the 1440 rows (THE SEAT's top
+//     row), and under clearlooks 15 x 57 + 3 = 858 below 399 + 3 + 18 + 63
+//     = 483, so the list hangs whole on the
 //     tablet as on the laptop (15 x 23 + 6 = 351 at 138 %); the scope's two
 //     rows hang whole anywhere.
 //     (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
@@ -239,20 +239,20 @@ struct Viewport;
 // the largest pitch at which the card still stands wholly inside the well
 // on the tablet under every chrome, so the marker lane — its flags on BOTH
 // halves, which a press through the picker selects (THE PRESS THROUGH THE
-// CARD below) — stays in view; at 300 % row 8's top is 1329 (win2000 and
-// clearlooks), the band's top 1329 − 393 = 936, the card's foot 924 and its
-// TOP ROW 924 − 522 = 402, 27 rows under the win2000 well's top (375) and 18
-// under clearlooks' (384); under cde (the surface's rows, dtwm's frame
-// outside the app) row 8's top 1314, the card's top 387, 27 under the
-// well's 360. At the laptop's 138 % (1920 x 1080 maximized) the band is
-// 180 rows, the margin 6 and the card 235 under every chrome (2 + 8 + 29 +
-// 8 + 6 x 23 + 8 + 32 + 8 + 2 under win2000; 1 + 8 + 29 + 8 + 138 + 8 + 34
-// + 8 + 1 under clearlooks and cde, 25 W rounding to 34), so its top row is
-// 1030 − 180 − 6 − 235 = 609 under win2000 and 1028 − 421 = 607 under
-// clearlooks, far below the well's top. A pitch of 21, the chooser's own
-// height, would make the right column seven equal rows and the card 198,
-// but at 300 % its top row would be 330, inside the marker lane (321–375)
-// over the flags on its half.
+// CARD below) — stays in view; at 300 % row 8's top (its dock bar's) is
+// 1326 (win2000 and clearlooks; the program's lanes since 2026-10-09,
+// main.cpp's lane record), the band's top 1326 − 393 = 933, the card's foot
+// 921 and its TOP ROW 921 − 522 = 399, 33 rows under the win2000 well's top
+// (366) and 24 under clearlooks' (375); under cde (the surface's rows,
+// dtwm's frame outside the app) row 8's top 1311, the card's top 384, 33
+// under the well's 351. At the laptop's 138 % (1920 x 1080 maximized) the
+// band is 180 rows, the margin 6 and the card 235 under every chrome (2 + 8
+// + 29 + 8 + 6 x 23 + 8 + 32 + 8 + 2 under win2000; 1 + 8 + 29 + 8 + 138 +
+// 8 + 34 + 8 + 1 under clearlooks and cde, 25 W rounding to 34), so its top
+// row is 1029 − 180 − 6 − 235 = 608 under win2000 and clearlooks, far below
+// the well's top. A pitch of 21, the chooser's own height, would make the
+// right column seven equal rows and the card 198, but at 300 % its top row
+// would be 327, inside the marker lane (312–366) over the flags on its half.
 //
 // THE PRESS THROUGH THE CARD (architect 2026-10-08 ~21:20: "pick flags so I
 // can toggle, test the selected flag without having to close the picker and
@@ -495,10 +495,10 @@ static_assert(card_bottom_band_wpx(kChromeSpecCde) == 25 &&
               kChromeSpecCde.push_button_box_px == 23.0);
 // WHY 17 (the head's THE SEAT): the card, its margin above the band, the
 // band and the margin under the well's top stand inside the tablet's
-// tightest well at 300 % (clearlooks', main.cpp's lane record: 945 device
-// rows = 315 W) — 174 + 4 + 131 + 4 = 313 — so the marker lane above the
-// well stays in view on both halves.
-inline constexpr int kTabletWellClearlooksWPx = 315;
+// tightest well at 300 % (clearlooks', main.cpp's lane record: 951 device
+// rows = 317 W since the program's lanes, 2026-10-09) — 174 + 4 + 131 + 4 =
+// 313 — so the marker lane above the well stays in view on both halves.
+inline constexpr int kTabletWellClearlooksWPx = 317;
 static_assert(kCardHeightWPx + 2 * kCardMarginPx + kKeyboardBandWPx <=
               kTabletWellClearlooksWPx);
 

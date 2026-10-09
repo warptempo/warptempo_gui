@@ -31,16 +31,19 @@
 // -- THE CASE'S CONSTANTS (METRICS §1.3–1.5; 0xRRGGBB, sRGB) -----------------
 
 // THE FACE RAMP — the 20 interior rows' median bytes over ten buttons
-// (METRICS §1.4 (b)), resampled at paint to the case's glyph seat: linear
-// between the stops at the device rows' centres (the mock's interp), each
-// channel rounded (std::nearbyint), so the 20 measured rows stretch over the
-// 24-W seat at every scale.
+// (METRICS §1.4 (b)), ONE STOP PER W ROW OF THE 20-W GLYPH SEAT, never
+// resampled (architect 2026-10-09 ~10:25, the seat Cool Edit's own 20):
+// stop i fills the seat's W row i, whose device rows are
+// [nearbyint(i·g/20), nearbyint((i+1)·g/20)) of the seat's g, so the rows
+// tile the seat exactly at every scale, each stop a flat band of its bytes.
 inline constexpr std::array<uint32_t, 20> kCeFaceRamp = {
     0xFEFEFE, 0xF9FEFE, 0xF9FAFC, 0xF2F3F6, 0xEBECEE,
     0xE4E5E7, 0xDEDFE1, 0xDDDEE0, 0xD7D8DA, 0xD1D1D3,
     0xCACACB, 0xC4C5C6, 0xC2C3C4, 0xBABBBD, 0xB5B6B7,
     0xAEAFB0, 0xA9A9AB, 0xA7A7A8, 0x9FA0A1, 0x989899,
 };
+static_assert(kCeFaceRamp.size() ==
+              static_cast<std::size_t>(kProgramSpec.glyph_px));
 // THE HIGHLIGHT — the case's top row and left column, Cool Edit's FEFEFF …
 // FDFEFF … FCFEFF authored as its one middle tone (the brief's ruling; the
 // three differ by one level).

@@ -183,7 +183,8 @@ inline int pad_px()               { return scaled_px(kPanelPadPx, 1); }
 // THE ROW'S GLYPH IS WINDOWS' SMALL ICON, 16 Windows px (2026-10-06): it
 // read the toolbar case's glyph until the toolbars took Windows' large
 // case, whose 24-px seat would overrun
-// the 17-px row (report_TC's catch), so the list keeps its own.
+// the 17-px row (report_TC's catch), so the list keeps its own — as the
+// program's case's 20-W seat (2026-10-09, program_spec.h) would too.
 inline constexpr double kRowIconPx = 16.0;
 // THE GLYPH'S LEFT PAD INSIDE THE ROW: Windows' small toolbar case's 3-px
 // lead (the glyph at (3, 3) in Windows' case; architect 2026-10-02: until

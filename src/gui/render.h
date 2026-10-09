@@ -1253,18 +1253,19 @@ inline int relief_line_px() {
 // IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader takes the accessors
 // below, so the three rows cannot drift apart.
 //
-// THE CASE (Cool Edit's §1.3 at the base's 24-W seat): one highlight line,
-// the glyph, one shadow line, one black line — 27 W square, the buttons
-// abutting at that pitch; A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's
-// rule), each line one relief line and the glyph scaled_px(24): 81 device
-// px at 300 %, 36 at the laptop's 138 %. The glyph rasterizes at
+// THE CASE (Cool Edit's §1.3 whole, its own 20-W seat since 2026-10-09
+// ~10:25): one highlight line, the glyph, one shadow line, one black line —
+// 23 W square, the buttons abutting at that pitch; A COMPOSITE OF ITS
+// ROUNDED PARTS (scaled_px's rule), each line one relief line and the glyph
+// scaled_px(20): 69 device px at 300 %, 84 at 360 % (the glyph 72, the
+// lines 4 each), 31 at the laptop's 138 %. The glyph rasterizes at
 // icon_glyph_px (icons::draw_cased) at the case's first line in from its
 // corner, one line further right and down while pressed or checked
 // (cool_edit_paint.h's faces).
 //
 // THE BAND (Cool Edit's §1.1): the dark outline, the panes' top light line,
 // three W of face, the case, two W of face, the panes' bottom mid line, the
-// dark outline, the light line — 37 W, the lane whole, UNDER EVERY CHROME.
+// dark outline, the light line — 33 W, the lane whole, UNDER EVERY CHROME.
 // Its panes and grooves are paint_icon_row's walk (cool_edit_paint.h draws
 // them). The hit target is the case; the lines, the faces, the grooves and
 // the recess are inert ground for input.
@@ -1502,10 +1503,10 @@ int cl_scale_thumb_h_px();
 // as they are, but the ticks and the timestamp hide behind the flags (they
 // are not really that useful)"; the spec's ruler_behind_flags): the lane is
 // NOT derived from the face but is the LANE TABLE'S LEFTOVER, the spec's
-// ruler_lane_px, 3 W — what dtwm's frame and cde's other lanes leave of the
-// base's stack (chrome_stack_authored_h below proves it; 4 W until the
-// toolbar's raised form took a row, 2026-10-09), 9 device rows at 300 %, 4
-// at 138 % — carrying the ticks, every one 3 W short (kRulerBehindTickPx),
+// ruler_lane_px, 4 W — what dtwm's frame and cde's other lanes leave of the
+// base's stack (chrome_stack_authored_h below proves it; 3 W for the
+// morning of 2026-10-09, while the toolbar's raised form took a row), 12
+// device rows at 300 %, 6 at 138 % — carrying the ticks, every one 3 W short (kRulerBehindTickPx),
 // the lane's whole height, hanging from its top, and the playhead's head, its band on the lane's
 // top — Motif's down arrow one W of body below it (the head block's cde
 // arm, 2026-10-08); the labels stand at the MARKER LANE'S rows, behind the
@@ -1626,7 +1627,7 @@ inline GuiRect marker_flag_box_band(GuiRect lane) {
 // — a light row, three W of face, a mid row, a dark row (Cool Edit's
 // y = 915..920), 6 W — then THE ROW's content, four W of face, the program's
 // case (the band's own, read from its accessors above so the rows cannot
-// drift apart) and five W of face: 36 W, the lane 42 under every chrome.
+// drift apart) and five W of face: 32 W, the lane 38 under every chrome.
 // Its groups — the grippers, the end bars, the dark time field — are
 // paint_bottom_row_buttons_and_clock's walk (cool_edit_paint.h draws them).
 // The dock bar is the program's under a modal too; the modal surfaces
@@ -1717,12 +1718,12 @@ inline int marker_flag_edge_h_px() {
 // THE WHOLE STACK IN WINDOWS PX — every lane a vocabulary lays above and
 // below the well, and the frame's two sides where the frame stands on the
 // maximised window (2026-10-08): the caption, the menu row's three terms,
-// the program's band (program_spec.h, 37 under every chrome), the scroll
+// the program's band (program_spec.h, 33 under every chrome), the scroll
 // bar's trim lane, the ruler (its authored leftover when it stands behind
 // the flags, else the label face's seat: the cap top, the small face's
 // ascent, the rows to the marker lane), the marker lane (its air, the flag
 // box's edges and faces round the body face's cell) and the program's dock
-// bar and row 8 (6 + 36 under every chrome). At 300 %
+// bar and row 8 (6 + 32 under every chrome). At 300 %
 // every term is a whole multiple of 3 device px, so two stacks equal here
 // leave the tablet's well the same rows.
 constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
@@ -1747,15 +1748,16 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
            program_band_authored_h(kProgramSpec) + s.scroll_bar_px + ruler +
            marker + row8;
 }
-// THE BASE'S STACK, 126 above and 42 below (2026-10-09: the program's band
-// 37 where Explorer's lane was 36, its dock bar and row 8 42 where row 8 was
-// 37); clearlooks' its own 3 W taller (the leftover of its own lanes,
-// main.cpp's rule); CDE'S THE BASE'S EXACTLY — ITS RULER LANE THE LEFTOVER
-// (architect 2026-10-08 ~17:30–17:45): the frame's 5 + 5 and its 17 / 27 /
-// 37 / 13 / 18 / 42 leave the ruler 4 of the base's 168, so the tablet's
-// well is 936 rows (312 W) under every chrome but clearlooks' 927.
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 168);
-static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 171);
+// THE BASE'S STACK, 122 above and 38 below (2026-10-09: the program's band
+// 33 and its dock bar and row 8 38, Cool Edit's own round its 20-W seat,
+// program_spec.h); clearlooks' its own 3 W taller (the leftover of its own
+// lanes, main.cpp's rule); CDE'S THE BASE'S EXACTLY — ITS RULER LANE THE
+// LEFTOVER (architect 2026-10-08 ~17:30–17:45): the frame's 5 + 5 and its
+// 17 / 27 / 33 / 13 / 18 / 38 leave the ruler 4 of the base's 160, so the
+// tablet's well at 300 % is 960 rows (320 W) under every chrome but
+// clearlooks' 951.
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 160);
+static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 163);
 static_assert(chrome_stack_authored_h(kChromeSpecCde) ==
               chrome_stack_authored_h(kChromeSpecWin2000));
 // THE 1px LEFT BORDER (architect 2026-08-02), full box height, in the flag

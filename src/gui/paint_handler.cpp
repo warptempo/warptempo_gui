@@ -2092,25 +2092,26 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // stays deleted; the walk below is a left-to-right accumulation whose two
     // forks are the stand-in table's and the hide's.
     //
-    // THE WIDTH MATH, RE-DERIVED for the program's band (2026-10-09): in
-    // Windows px, the band's dark left edge column, then per pane its light
-    // column + 5 of face + its cases at 27 + 4 of face + its mid column and
-    // the dark column after it (27n + 12); the right-anchored pair the same
-    // from the band's dark right edge column. Outside the `h` view the LEFT
-    // WALK is seventeen members in five panes,
-    //   1 + 17·27 + 5·12 = 520,
-    // and inside it ten in five, 1 + 10·27 + 60 = 331; the RIGHT-ANCHORED
+    // THE WIDTH MATH, RE-DERIVED for the program's band (2026-10-09, the
+    // case Cool Edit's own 23 round its 20-W seat): in Windows px, the
+    // band's dark left edge column, then per pane its light column + 5 of
+    // face + its cases at 23 + 4 of face + its mid column and the dark
+    // column after it (23n + 12); the right-anchored pair the same from the
+    // band's dark right edge column. Outside the `h` view the LEFT WALK is
+    // seventeen members in five panes,
+    //   1 + 17·23 + 5·12 = 452,
+    // and inside it ten in five, 1 + 10·23 + 60 = 291; the RIGHT-ANCHORED
     // span — the edge column, the view group's pane (3 cases), its dark
     // column, the history opener's pane, the dark column the left panes stop
     // at — is
-    //   1 + 92 + 1 + 38 + 1 = 133,
-    // so the band holds every pane in any window at least 653 Windows px
-    // wide outside the view (464 inside it) — the tablet's 768 at 300 %
-    // with a recess of 115 between, the mock's. IN DEVICE PX, off the
-    // painted walk (each line one relief line, each face and the glyph its
-    // own scaled_px): at the tablet's 300 % 1560 + 399 of its 2304; at the
-    // laptop's 138 % (lines 1, faces 7 and 6, cases 36) 693 + 177 of its
-    // 1920. A roster move restates these numbers.
+    //   1 + 80 + 1 + 34 + 1 = 117,
+    // so the band holds every pane in any window at least 569 Windows px
+    // wide outside the view (408 inside it) — the tablet's 768 at 300 %
+    // with a recess of 199 between. IN DEVICE PX, off the painted walk (each
+    // line one relief line, each face and the glyph its own scaled_px): at
+    // the tablet's 300 % (cases 69) 1356 + 351 of its 2304; at the laptop's
+    // 138 % (lines 1, faces 7 and 6, cases 31) 608 + 157 of its 1920. A
+    // roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -2489,10 +2490,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // THE BUTTONS ARE THE BAND'S (the unification's point — "the same size as
 // the other icon buttons", bigger finger targets without stealing waveform
-// height): the program's 27-W case round its 24-W seat — read from the
-// band's own accessors (render.h's program block) so the rows cannot drift
-// apart — on THE ROW'S OWN FACE, four W above the case and five below
-// (Cool Edit's row 8 at one button row, program_spec.h): 36 W under the
+// height): the program's 23-W case round Cool Edit's 20-W seat — read from
+// the band's own accessors (render.h's program block) so the rows cannot
+// drift apart — on THE ROW'S OWN FACE, four W above the case and five below
+// (Cool Edit's row 8 at one button row, program_spec.h): 32 W under the
 // 6-W dock bar. (Row 8's kdenlive transport metrics, its 26-px boxes and
 // its ruled separators; Explorer's flat case with WordPad's air and the
 // etched separators, 2026-10-06 to 2026-10-09 — git history.)
@@ -2908,18 +2909,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (paint_bottom_strip).
     //
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
-    // case): a group of n is 5 + 6 + 27n + 4 + 6 = 27n + 21, so the block is
-    // the 6 verbs' 183, the walk's 129, the arrows' 129 and the transport's
-    // 102 with three gaps of 2, 549 W — on the tablet's 768 at 300 %
-    // starting at W 219, the clock's group W 2..107 (Tahoma's ~66-W cell in
-    // the 85-W field), the state line's first ink at W 113, clipped at W 217
-    // (~104 W of line, the mock's free stretch). IN THE `h` VIEW (the hide,
-    // 2026-10-07) the block is 1 verb + 4 walk + 2 arrows + 2 transport in
-    // four groups, 48 + 129 + 75 + 75 + 6 = 333 W, the line's room 320 W.
-    // THE ROW CARRIES NO COLLISION RULE — none of the redesign does — and
-    // the crop-at-the-floor allowance recorded at kMinWindowWidthPx covers a
-    // narrow window: the block reaches the clock's group once the window
-    // falls below about 2 + 106 + 549 = 657 W outside the view. THE STATE
+    // case; the case 23 since 2026-10-09 ~10:25): a group of n is 5 + 6 +
+    // 23n + 4 + 6 = 23n + 21, so the block is the 6 verbs' 159, the walk's
+    // 113, the arrows' 113 and the transport's 90 with three gaps of 2, 481
+    // W — on the tablet's 768 at 300 % starting at W 287, the clock's group
+    // W 2..107 (Tahoma's ~66-W cell in the 85-W field), the state line's
+    // first ink at W 113, clipped at W 285 (~172 W of line). IN THE `h`
+    // VIEW (the hide, 2026-10-07) the block is 1 verb + 4 walk + 2 arrows +
+    // 2 transport in four groups, 44 + 113 + 67 + 67 + 6 = 297 W, the line's
+    // room 356 W. THE ROW CARRIES NO COLLISION RULE — none of the redesign
+    // does — and the crop-at-the-floor allowance recorded at
+    // kMinWindowWidthPx covers a narrow window: the block reaches the
+    // clock's group once the window falls below about 2 + 106 + 481 = 589 W
+    // outside the view. THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.
     int right_block_x = content.x + content.w;
@@ -6186,8 +6188,8 @@ constexpr double kModalBtnMinWidthPx  = 75.0;
 // THE RENDER PLAYER'S RIGHT PAIR SPENDS NONE (architect 2026-10-05): it ends
 // where row 8's last case ends (bottom_row_seats), so its frame paints in
 // the face beyond it. One relief line (relief_line_px), so it fits at every
-// scale by construction: the vertical margin is (36 − 23) / 2 Windows px
-// under win2000 and (36 − 25) / 2 under clearlooks (row 8's content round
+// scale by construction: the vertical margin is (32 − 23) / 2 Windows px
+// under win2000 and (32 − 25) / 2 under clearlooks (row 8's content round
 // the spec's push button) against its 1,
 // and the 6-px inter-button gap absorbs one frame from each neighbour.
 constexpr double kModalFocusFramePx   = 1.0;
@@ -6832,7 +6834,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    except the scrub. THE BOXES ARE ROW 8'S CASES (architect
         //    2026-10-05, bottom_row_seats; the program's since 2026-10-09):
         //    each box wears the roster's face (paint_roster_case; the walk
-        //    below) on the program's 27-W case at row 8's seat, the roster's
+        //    below) on the program's 23-W case at row 8's seat, the roster's
         //    glyph at its (+1, +1) lines, the row on the panel's face (the
         //    player is the program's tenant of the row, paint_bottom_strip).
         //    Sound Recorder stays the model for the scrub's channel, the
