@@ -79,14 +79,17 @@ inline constexpr uint32_t kCeFieldText = 0xEFF0F0;
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
 // (§3); THE RULER'S TICKS AND DIGITS, E0E0E0 (§4.4, face-independent in all
 // five presets), the digits' (+1, +1) SHADOW black (§4.4 and §6: "≈ black,
-// observed down to 0D0708", darker than the panel labels' dark tone); THE
-// PLAYHEAD'S YELLOW, FFFF00 (Cool Edit's Curs, §4.3) — the head, its dots in
-// the canvas and in the view bar — and the view bar's dots' other color,
-// black (§3: FFFF00 and 000000 alternating).
+// observed down to 0D0708", darker than the panel labels' dark tone); and
+// the view bar's playhead dots' other color, black (§3: the playhead's
+// color and 000000 alternating). THE PLAYHEAD'S OWN COLOR — the head, its
+// dots in the canvas and in the view bar — is the palette's `playhead_stem`
+// since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 its default in every
+// palette (palette_file.h's role table), as the cues' two colors are the
+// palette's `cue` and `range`; the triangles' shadow is the derived
+// `ce_cue_shadow`.
 inline constexpr uint32_t kCeViewBarField   = 0x000000;
 inline constexpr uint32_t kCeRulerTick      = 0xE0E0E0;
 inline constexpr uint32_t kCeRulerShadow    = 0x000000;
-inline constexpr uint32_t kCePlayhead       = 0xFFFF00;
 inline constexpr uint32_t kCeViewBarDot     = 0x000000;
 
 // -- THE CASE ------------------------------------------------------------------

@@ -27,10 +27,9 @@
 // kFlagBottomLiftPx now lives in render.h so the strip lane geometry in
 // main.cpp and the stem blit in paint_handler.cpp reference the same value.
 
-// playhead_half_px() is the half-width of the playhead column's reach; it lives
-// in render.h as a single inline accessor shared by this TU's cull and
-// main.cpp's invalidation, with its provenance and its authored value stated at
-// the definition.
+// The playhead's reach — its cull here and main.cpp's damage box — is the
+// head's painted columns, cue_triangle_half_w_px and
+// cue_triangle_reach_right_px (render.h), the one extent both read.
 
 // THE NUMERIC RUN — the derived base and its whole deviation chain — is
 // warp_tempo_run (warpmarkers.h), which both flag composers below and the
@@ -171,9 +170,10 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
     // the canvas ends — the PLAIN SUNKEN edge's horizontals, full width: on
     // top a Shadow line then a DkShadow line, at the bottom a 3DLight line
     // then a Hilight line, each one relief line. waveform_content_rect reads
-    // the same thickness; the stems cross the top lines (waveform_stem_band),
-    // a marker's between its flanks (fill_stem_flanks, 2026-10-05),
-    // and no vertical crosses the bottom ones. An area too short to carry both
+    // the same thickness; the zoom anchor's stem alone crosses the top lines
+    // (waveform_stem_band), the cues' and the playhead's dots keeping to the
+    // canvas (2026-10-09), and no vertical crosses the bottom ones. An area
+    // too short to carry both
     // borders draws neither rather than overlapping them.
     // UNDER CLEARLOOKS THE WELL IS GTK'S SCROLLED WINDOW (architect
     // 2026-10-07, the painters round's last part; paint_cl_well_frame,
@@ -1017,11 +1017,16 @@ void render_playhead(cairo_t* cr,
     // clipped just past the area edge still gets here, and the column gate
     // below decides whether any pixel lands. This keeps the playhead's visual
     // center aligned with its true frame position rather than snapping it
-    // inward at the rightmost samples. The bound is the column's own reach
-    // (playhead_half_px), unchanged by the triangle's retirement — the cull is
-    // stated in the same half-width the invalidation uses.
-    if (playhead_pixel_x < -static_cast<double>(playhead_half_px())) return;
-    if (playhead_pixel_x > static_cast<double>(area.w - 1 + playhead_half_px())) return;
+    // inward at the rightmost samples. The bound is the head's painted reach
+    // (cue_triangle_half_w_px / cue_triangle_reach_right_px, render.h) — the
+    // cull is stated in the same columns the damage box takes
+    // (playhead_invalidate_rect, main.cpp).
+    if (playhead_pixel_x <
+        -static_cast<double>(cue_triangle_reach_right_px()))
+        return;
+    if (playhead_pixel_x >
+        static_cast<double>(area.w - 1 + cue_triangle_half_w_px()))
+        return;
 
     // THE COLUMN IS THE NEAREST LATTICE POINT WHILE THE PLATE'S BAR IN IT IS A
     // CELL, AND THE HALF-COLUMN BIAS THAT LEAVES IS ACCEPTED (architect
@@ -1080,7 +1085,8 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     // the dim tunable grey #686a6c this drew in. The affordance is
     // deliberately no longer "less loud than a marker stem": it is a position
     // line during a gesture, and the product's position lines are this one
-    // colour.
+    // colour — since 2026-10-09 the playhead's head-and-dots role, Cool
+    // Edit's Curs yellow by default, the anchor's line solid in it.
     // The stems' band, as every stem (waveform_stem_band, architect
     // 2026-10-02): through the well's top lines to the canvas's foot.
     const GuiRect band = waveform_stem_band(area);
@@ -1302,10 +1308,11 @@ void render_trim_flags(cairo_t* cr,
                                     field_h - lw},
                         pal.ce_span_shadow);
         // THE PLAYHEAD OVER THE SPAN (METRICS §3): a one-quantum dotted
-        // column on the playhead's column, FFFF00 and black alternating per
-        // quantum row of the field, the yellow on the odd rows (Cool Edit's
-        // 86, 88, … under its span's top row 85), and only where the column
-        // stands on the span.
+        // column on the playhead's column, the playhead's color (the
+        // palette's `playhead_stem`, Cool Edit's FFFF00 by default) and black
+        // alternating per quantum row of the field, the playhead's on the odd
+        // rows (Cool Edit's 86, 88, … under its span's top row 85), and only
+        // where the column stands on the span.
         if (playhead_col >= span_lo && playhead_col < span_hi &&
             playhead_col >= 0 && playhead_col < lane_w) {
             const int px = lane_x + playhead_col;
@@ -1314,8 +1321,8 @@ void render_trim_flags(cairo_t* cr,
                 const int y = field_y + k * lw;
                 const int h = std::min(lw, field_y + field_h - y);
                 paint_cell_rect(cr, GuiRect{px, y, dw, h},
-                                hex(k % 2 == 1 ? kCePlayhead
-                                               : kCeViewBarDot));
+                                k % 2 == 1 ? pal.playhead_stem
+                                           : hex(kCeViewBarDot));
             }
         }
     }
@@ -1436,11 +1443,10 @@ bool clip_hit_rect_to_waveform_columns(FlagHitRect& r, int x0, int w) {
 // THE STEM STASH IS GATED TO THE WAVEFORM'S COLUMNS [0, w), both edges: the
 // flag iterator admits a marker whose flag reaches into [0, w) from either
 // side — one left of column 0 whose right-running box hangs into view, one at
-// grid point w for its border alone — but only a marker whose own column is a
-// real waveform column publishes a stem. The stem painter and the playhead's
-// suppression decider (playhead_stem_suppressed) read only real columns, so an
-// off-surface entry can neither paint nor hide a coincident playhead's stem.
-// `col` is the marker's column relative to x0. The one spelling for both lane
+// grid point w for its triangle's left half alone — but only a marker whose
+// own column is a real waveform column publishes a stem. The stem painter
+// (paint_marker_stems) reads only real columns, so an off-surface entry
+// paints no dot. `col` is the marker's column relative to x0. The one spelling for both lane
 // producers (render_flag_boxes_impl, render_history_diff_flags).
 bool stem_column_on_waveform(int col, int w) {
     return col >= 0 && col < w;
@@ -1684,47 +1690,59 @@ static CueSegmentBoxes cue_segment_boxes(const int (&w)[3],
     return b;
 }
 
-// THE FLAG'S KIND (architect 2026-10-04, reopening 2026-10-03's one flag
-// colour for every kind): which of the theme's four flag pairs a box wears —
-// WARP and PHASE RESET, co-equal, the authoring columns' flags by their
-// column, and the `h` view's ADDED and REMOVED diff halves. The palette
-// block's marker-lane paragraph (render.h) owns the look.
+// THE FLAG'S KIND: WARP and PHASE RESET, co-equal, the authoring columns'
+// cues by their column, and the `h` view's ADDED and REMOVED diff halves.
+// Since 2026-10-09 ~11:50 the kind no longer colors a cue apart from the
+// history's two halves: warp against phase reset reads from the label alone
+// (his one-label rule). The palette block's marker-lane paragraph (render.h)
+// owns the look.
 enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
 
-// The resolved paint of ONE cue's triangle and dots (the palette block's
-// marker-lane paragraph, render.h, owns the look): the face and whether the
-// dots paint. The label's look is the segment's own (selected, embossed or
-// the panel's light tone), never the triangle's.
+// The resolved paint of ONE cue (the palette block's marker-lane paragraph,
+// render.h, owns the look): the triangle's color, which of the two dot
+// colors stand on its stem (no dots at all on a disabled cue), and whether
+// its label wears the invalid pair. The label's other looks are the
+// segment's own (selected, embossed or the panel's light tone).
 struct FlagFace {
-    GuiColor face;
-    bool     has_stem;
+    GuiColor triangle;
+    bool     cue_dots;
+    bool     range_dots;
+    bool     invalid_label;
 };
 
-// A kind's resting face, off the palette's roles (the selected faces are
-// read by no cue since 2026-10-09, the triangle never changing when
-// selected).
-GuiColor flag_kind_face(GuiFlagKind kind) {
-    const GuiPalette& p = palette();
-    switch (kind) {
-        case GuiFlagKind::Warp:       return p.warp_flag;
-        case GuiFlagKind::PhaseReset: return p.phase_reset_flag;
-        case GuiFlagKind::Added:      return p.added_flag;
-        case GuiFlagKind::Removed:    return p.removed_flag;
-    }
-    return p.warp_flag;
-}
-
-// THE ONE LADDER for every cue — both marker columns and the `h` view's diff
-// flags (architect 2026-10-03; the kinds 2026-10-04; Cool Edit's cue
-// 2026-10-09): DISABLED wins (the theme's ground on the triangle, no dots),
-// then INVALID, which WEARS THE REMOVED FACE (architect 2026-10-04, and again
-// 2026-10-07: one red for both, the context telling them apart — invalid
-// while authoring, removed in `h`), then the KIND's own face, the dots in
-// it. Selected or not alike: Cool Edit's cue never changes when selected
-// (architect 2026-10-09; the label carries the selection).
+// THE ONE RESOLVER for every cue — both marker columns and the `h` view's
+// diff flags (architect 2026-10-09 ~11:50–12:00, Cool Edit's two cue colors:
+// "red+blue for warp and phase, red only for invalid (half the amount of
+// dots) and for history blue only for + and red only for −"). THE TABLE,
+// the ladder read top to bottom, the first matching row wins:
+//   flag                     triangle  dots (program_spec.h's phases)  label
+//   DISABLED (any kind)      ground    none                            emboss
+//   INVALID (any live kind)  cue red   red alone                       red pair
+//   WARP, PHASE RESET        cue red   red and blue, alternating       light
+//   history ADDED            blue      blue alone (the range end's)    light
+//   history REMOVED          cue red   red alone (the range start's)   light
+// The red is the palette's `cue`, the blue its `range`; THE DOTS' ROWS, counted
+// from the canvas's first row, are the red's ≡ 7 and the blue's ≡ 3 (mod 8),
+// blue first from the top — the capture's absolute red y ≡ 3 / blue y ≡ 7
+// re-counted from Cool Edit's canvas top at y = 108 ≡ 4 (mod 8)
+// (program_spec.h's dot fields, the derivation's owner); "light" the panel's
+// `ce_hilight` at rest; the red pair `invalid_label` at rest and
+// `invalid_label_selected` selected ("keeps red for the text, even
+// unselected — dimmer unselected, brighter selected"). THE TRIANGLE AND THE
+// DOTS NEVER CHANGE WITH SELECTION (Cool Edit's never do): the label
+// carries the selection, on the chrome's selection fill. A `h`-view half is
+// never the invalid class (HistoryDiffFlag's note), so `red` is false there.
 FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
-    if (disabled) return FlagFace{palette().ground, false};
-    return FlagFace{flag_kind_face(red ? GuiFlagKind::Removed : kind), true};
+    const GuiPalette& p = palette();
+    if (disabled) return FlagFace{p.ground, false, false, false};
+    if (red)      return FlagFace{p.cue, true, false, true};
+    switch (kind) {
+        case GuiFlagKind::Warp:
+        case GuiFlagKind::PhaseReset: return FlagFace{p.cue, true, true, false};
+        case GuiFlagKind::Added:      return FlagFace{p.range, false, true, false};
+        case GuiFlagKind::Removed:    return FlagFace{p.cue, true, false, false};
+    }
+    return FlagFace{p.cue, true, true, false};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run, its
@@ -1840,8 +1858,14 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             if (s.embossed && !s.selected) {
                 show_embossed_run(cr, s.run, tx, base);
             } else {
-                set_palette_source(cr, s.selected ? pal.selected_text
-                                                  : pal.ce_hilight);
+                // The label's ink (resolve_flag_face's table): an invalid
+                // cue's red pair, else the selected text or the light tone.
+                const bool inv = c.face.invalid_label;
+                set_palette_source(cr, s.selected
+                                           ? (inv ? pal.invalid_label_selected
+                                                  : pal.selected_text)
+                                           : (inv ? pal.invalid_label
+                                                  : pal.ce_hilight));
                 text_shape::show_shaped_run(cr, s.run, tx, base);
             }
         }
@@ -1850,7 +1874,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
 
     // THE TRIANGLES, LEFT TO RIGHT, over every label.
     for (const CueDraw& c : cues)
-        paint_ce_cue_triangle(cr, c.col, tri_top, c.face.face);
+        paint_ce_cue_triangle(cr, c.col, tri_top, c.face.triangle);
 
     // THE PUBLICATION, left to right.
     for (int i = 0; i < n; ++i) {
@@ -1887,7 +1911,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             FlagHitRect tri;
             tri.x = static_cast<double>(c.col - half);
             tri.y = static_cast<double>(tri_top);
-            tri.w = static_cast<double>(2 * half + 2 * u);
+            tri.w = static_cast<double>(half + cue_triangle_reach_right_px());
             tri.h = static_cast<double>(tri_h);
             if (clip_hit_rect_to_waveform_columns(tri, x0, w)) {
                 r.tri_x = tri.x;
@@ -1897,23 +1921,25 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             }
             if (label_on || r.tri_w > 0.0) out_hit_rects->push_back(r);
         }
-        if (out_stems && c.face.has_stem &&
+        if (out_stems && (c.face.cue_dots || c.face.range_dots) &&
             stem_column_on_waveform(c.col - x0, w))
             out_stems->push_back(MarkerStem{c.index, static_cast<double>(c.col),
-                                            c.face.face});
+                                            c.face.cue_dots,
+                                            c.face.range_dots});
     }
 }
 
 } // namespace
 
-// The phase-reset lead-in ring's color (declaration in render.h): the ladder
-// above asked for a LIVE reset's face on the same class bit the flag pass
-// hands it, so the ring can never pick a color its dots would not. It
-// stands outside the file's anonymous namespace so paint_handler.cpp reaches
-// it; the ladder it calls stays file-local.
+// The phase-reset lead-in ring's color (declaration in render.h): the
+// resolver above asked for a LIVE reset's TRIANGLE on the same class bit the
+// flag pass hands it, so the ring can never pick a color its cue would not
+// (the cue's red, valid or invalid, since 2026-10-09). It stands outside the
+// file's anonymous namespace so paint_handler.cpp reaches it; the resolver
+// it calls stays file-local.
 GuiColor phase_reset_stem_color(bool red) {
     return resolve_flag_face(GuiFlagKind::PhaseReset, /*disabled=*/false, red)
-        .face;
+        .triangle;
 }
 
 namespace {
@@ -2336,12 +2362,14 @@ void render_history_diff_flags(
                 seg.embossed = s == 0 ? removed_disabled : added_disabled;
             }
 
-            // THE TRIANGLE AND THE DOTS through the live lane's one ladder
+            // THE TRIANGLE AND THE DOTS through the live lane's one resolver
             // (resolve_flag_face), AS THE KIND OF THE HALF THE DOTS LEAVE
             // FROM (architect 2026-10-04): the removed half's on a changed
-            // pair or a removed-only flag, the added half's on an added-only
-            // one — a diff line is never the invalid class (HistoryDiffFlag's
-            // note). THE DOTS READ THE DISABLED AXIS (architect 2026-08-22):
+            // pair or a removed-only flag (the red, its dots red alone), the
+            // added half's on an added-only one (the blue, its dots blue
+            // alone; 2026-10-09) — a diff line is never the invalid class
+            // (HistoryDiffFlag's note). THE DOTS READ THE DISABLED AXIS
+            // (architect 2026-08-22):
             // a SINGLE half whose one side is disabled publishes none, the
             // live lane's rule; A CHANGED PAIR ALWAYS KEEPS ITS DOTS, its
             // triangle the removed face: the pair is a live EDIT being
@@ -2394,7 +2422,7 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the sixteen as
+    // THE LIVE WORDS (render.h's program_palette_words): the ten as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
     // THE LIVE CHROME PICK (render.h's live_chrome_pick): the knob as the
@@ -2435,7 +2463,7 @@ const GuiPaletteWords& program_palette_words() { return g_program_words; }
 const std::optional<GuiChromePick>& live_chrome_pick() { return g_chrome_pick; }
 
 namespace {
-// THE PROGRAM'S SIXTEEN into the installed struct and the plate's two baked
+// THE PROGRAM'S TEN into the installed struct and the plate's two baked
 // inks off the same words — the install family's shared half (the
 // generation is each member's own bump).
 void fill_program_palette(const GuiPaletteWords& w) {
@@ -2822,23 +2850,41 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // THE MARKER'S OWN STATE for the segments riding the field's right edge,
     // which keep their resting look: the disabled emboss, a tie follower's
-    // cells embossed (2026-09-19), else the panel's light tone.
+    // cells embossed (2026-09-19), else the panel's light tone, or an invalid
+    // marker's dim red (below).
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
+    // THE MARKER'S INVALID CLASS, off the same memoized red-flag set the flag
+    // pass reads for this column (the flag cache's rebuild,
+    // waveform_cache.cpp), so the field and the resting label agree on it;
+    // DISABLED WINS, as in the flag pass (resolve_flag_face).
+    const bool red =
+        !dis &&
+        (phase ? phase_reset_red_flag_set_cached(app).red.count(idx) > 0
+               : warp_red_flag_set_cached(
+                     app, audio.sample_rate(),
+                     static_cast<long>(audio.total_frames()))
+                         .red.count(idx) > 0);
     // THE FIELD IS WINDOWS' EDIT FIELD (architect 2026-10-09 ~12:15,
     // reversing 2026-10-07 ~09:45's "the flag in its selected face, no box
     // and no frame"): the chrome's FIELD PAIR — `field_ground` under
     // `field_text` (white under black under Windows 2000; every chrome's own
-    // pair, read as roles) — on every state of the marker, disabled and
-    // invalid included (the triangle carries the state). WHY: the field pair
-    // is the legibility guarantee ("when you're looking very closely at a
-    // label it has to be legible"), and THE SELECTED SUBSTRING takes the
-    // chrome's SELECTED PAIR, `selected_text` on `selected_fill`, the
-    // ordinary highlight — the pair that exists "precisely to avoid this
-    // problem" — part of the chrome, as every selection in the product is.
+    // pair, read as roles) — on every state of the marker, disabled included
+    // (the triangle carries the state). WHY: the field pair is the
+    // legibility guarantee ("when you're looking very closely at a label it
+    // has to be legible"), and THE SELECTED SUBSTRING takes the chrome's
+    // SELECTED PAIR, `selected_text` on `selected_fill`, the ordinary
+    // highlight — the pair that exists "precisely to avoid this problem" —
+    // part of the chrome, as every selection in the product is. AN INVALID
+    // MARKER'S TEXT IS ITS LABEL'S BRIGHT RED (architect 2026-10-09 ~12:00:
+    // the invalid label "keeps red for the text, even unselected — dimmer
+    // unselected, brighter selected"; the open editor is the cue in its
+    // selected look): `invalid_label_selected` on the field's ground, the
+    // caret with it, the selected substring still the selected pair.
     const GuiPalette& pal = palette();
     const GuiColor field_fill = pal.field_ground;
-    const GuiColor field_ink  = pal.field_text;
+    const GuiColor field_ink  = red ? pal.invalid_label_selected
+                                    : pal.field_text;
     const GuiColor sel_fill   = pal.selected_fill;
     const GuiColor sel_text   = pal.selected_text;
     const int  field_rank = flag_box_rank(field_cell);
@@ -2861,7 +2907,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    any store index (enter_top_flag_edit), disabled included, a disabled
     //    marker's field is this same box, never embossed.
     const GuiRect field_box{bx - u, lane.y, box_w + 2 * u, fill_h};
-    paint_cell_rect(cr, field_box, field_ink);
+    paint_cell_rect(cr, field_box, pal.field_text);
     paint_cell_rect(cr, GuiRect{field_box.x + u, field_box.y + u,
                                 field_box.w - 2 * u, field_box.h - 2 * u},
                     field_fill);
@@ -2999,7 +3045,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // only by what is typed.
     //
     // Each segment wears its resting look — its box in the panel face, the
-    // text in the panel's light tone or the disabled emboss — and none takes
+    // text in the panel's light tone, an invalid marker's dim red or the
+    // disabled emboss — and none takes
     // the selected look while the field stands, each open having seated the
     // selection axis on the cell it edits.
     //
@@ -3070,7 +3117,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             if (cell_dis) {
                 show_embossed_run(cr, seg_run, tx, baseline);
             } else {
-                set_palette_source(cr, pal.ce_hilight);
+                // The resting label's ink: an invalid marker's dim red, else
+                // the panel's light tone (resolve_flag_face's table).
+                set_palette_source(cr, red ? pal.invalid_label
+                                           : pal.ce_hilight);
                 text_shape::show_shaped_run(cr, seg_run, tx, baseline);
             }
             cursor_x = x0 + w;

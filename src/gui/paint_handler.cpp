@@ -4362,7 +4362,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09, the mock of record; METRICS §4.3; render.h's playhead
     // paragraph): the cue's own 9-7-5-3-1 quanta (paint_ce_cue_triangle) in
-    // Cool Edit's yellow FFFF00 with the `ce_cue_shadow` column one quantum
+    // the palette's `playhead_stem` (Cool Edit's Curs yellow FFFF00 by
+    // default, 2026-10-09) with the `ce_cue_shadow` column one quantum
     // right of each row, ON THE GROUND'S ROWS 12 .. 16, its apex — the
     // playhead's column, one quantum wide — on the ground's bottom row. It is
     // OPAQUE over the ticks and digits the walk above laid down. NO SNAP, NO
@@ -4386,17 +4387,18 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const double cursor_px = playhead_pixel_x(
             app, static_cast<int64_t>(basis.vp_start), basis.spp);
         const int col   = static_cast<int>(std::nearbyint(cursor_px));
-        const int u     = cue_unit_px();
-        const int reach = cue_triangle_half_w_px();   // the widest row's half
         const int rows  = cue_triangle_h_px();
-        // The reach right is the widest row's half, the apex's own quantum
-        // and the shadow's.
-        if (col + reach + 2 * u - 1 >= 0 && col - reach <= wave_w - 1) {
+        // The head's painted columns [col − left, col + right) (render.h's
+        // one extent, the damage box's too).
+        const int left  = cue_triangle_half_w_px();
+        const int right = cue_triangle_reach_right_px();
+        if (col + right - 1 >= 0 && col - left <= wave_w - 1) {
             const int head_top = ground_bottom - rows;
             cairo_save(cr);
             cairo_rectangle(cr, lane.x, head_top, wave_w, rows);
             cairo_clip(cr);
-            paint_ce_cue_triangle(cr, lane.x + col, head_top, hex(kCePlayhead));
+            paint_ce_cue_triangle(cr, lane.x + col, head_top,
+                                  palette().playhead_stem);
             cairo_restore(cr);
         }
     }
@@ -4774,14 +4776,14 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const double w = band.x1 - band.x0;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE RING IS THE STEM'S COLOR (architect 2026-08-01) — "they're one
-    // unit", the ring and the dotted stem of the reset it annotates. It wears
-    // what those dots wear: the `removed_flag` face when the reset is in the
-    // column's red set (band.red; the invalid flag wears the removed face),
-    // the `phase_reset_flag` face otherwise — resting whether the reset is
-    // selected or not, as the cue's triangle and dots are since 2026-10-09.
-    // phase_reset_stem_color asks the one ladder rather than restating it,
-    // so ring and stem cannot drift.
+    // THE RING IS THE CUE'S COLOR (architect 2026-08-01) — "they're one
+    // unit", the ring and the cue of the reset it annotates. A solid ring
+    // cannot alternate as the dots do, so it wears the cue's TRIANGLE: the
+    // red `cue` since 2026-10-09 ~11:50, for a valid reset and an invalid
+    // one alike (band.red still asks the class, the triangle answering the
+    // same red to both) — resting whether the reset is selected or not, as
+    // the triangle is. phase_reset_stem_color asks the one resolver rather
+    // than restating it, so ring and cue cannot drift.
     // DAMAGE: this pass paints live in on_redraw from app state, never from a
     // cached surface, and every change to its color's inputs misses the flag
     // cache's fingerprint, whose rebuild damages the waveform with the strip
@@ -4969,27 +4971,32 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
-// what stems and in what colour (a selected marker's stem brightening with its
-// flag, architect 2026-09-23) — is at the declaration.
+// what stems and in which of the two cue colors — is at the declaration.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
 // store: the stem stands on its cue's APEX COLUMN, and that column was
 // already resolved by the pass that painted the cue, on the displayed basis
 // those pixels were laid out against. So the DragOverlay substitution, the
-// source->target map walk, the per-marker cull and the color ladder all happen
+// source->target map walk, the per-marker cull and the color resolver all happen
 // exactly once, in the painter, and a stem can never land a pixel away from its
 // own triangle. Disabled markers are simply absent from the stash.
 //
-// THE STEM IS COOL EDIT'S DOTTED COLUMN (architect 2026-10-09; METRICS §4.2;
-// render.h's marker-lane paragraph): one-quantum dots in the triangle's face
-// on the CANVAS'S quantum rows ≡ 3 (mod 4) from the canvas's top row
+// THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS TWO CUE COLORS (architect
+// 2026-10-09, METRICS §4.2; the two colors ~11:50; render.h's marker-lane
+// paragraph): one-quantum dots on the CANVAS'S quantum rows from its top row
 // (fill_dotted_waveform_line, waveform_content_rect) — none on the well's
-// frame rows and none in the lane — the playhead's dots on rows ≡ 1, so the
-// two interleave on one column. (The solid stem through the well's top lines
-// between its flanks stood 2026-10-02 to 2026-10-09; git history.)
+// frame rows and none in the lane — THE RED (`cue`) on rows ≡ cue_dot_phase
+// and THE BLUE (`range`) on rows ≡ range_dot_phase (mod cue_dot_period,
+// program_spec.h), each where the stash says the cue wears it
+// (resolve_flag_face's table: a warp or phase-reset cue both, alternating
+// one dot every four rows; an invalid one and the history's removed half
+// the red alone, the added half the blue alone) — the playhead's dots on
+// rows ≡ 1 of 4, so neither color shares a row with them. (The solid stem
+// through the well's top lines between its flanks stood 2026-10-02 to
+// 2026-10-09; git history.)
 //
 // Z-ORDER (architect 2026-09-23): the stems paint UNDER the playhead's dots,
-// which follow this pass; on a shared column the two phases never touch.
+// which follow this pass; on a shared column the phases never touch.
 // The full sequence is the paint-order block in on_redraw.
 void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
@@ -4997,10 +5004,11 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 
     // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
     // refused commit recolors nothing, so no paint-time override stands
-    // here — the stash's color is the marker's resolved face, the whole
-    // answer.
+    // here — the stash's two bits are the marker's resolved class, the
+    // whole answer, and the colors the palette's two live roles.
     cairo_save(cr);
     const GuiRect band = waveform_content_rect(area);
+    const ProgramSpec& ps = kProgramSpec;
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
@@ -5010,10 +5018,18 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
         // dots' waveform_line_px() width at the right edge.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
-        set_palette_source(cr, stem.color);
-        fill_dotted_waveform_line(cr, area.x, area.w, col, band.y,
-                                  band.y + band.h, kProgramSpec.dot_period,
-                                  kProgramSpec.cue_dot_phase);
+        if (stem.cue_dots) {
+            set_palette_source(cr, palette().cue);
+            fill_dotted_waveform_line(cr, area.x, area.w, col, band.y,
+                                      band.y + band.h, ps.cue_dot_period,
+                                      ps.cue_dot_phase);
+        }
+        if (stem.range_dots) {
+            set_palette_source(cr, palette().range);
+            fill_dotted_waveform_line(cr, area.x, area.w, col, band.y,
+                                      band.y + band.h, ps.cue_dot_period,
+                                      ps.range_dot_phase);
+        }
     }
     cairo_restore(cr);
 }
@@ -5106,13 +5122,6 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     render_strip_anchor_stem(cr, area, col);
 }
 
-// (THE PLAYHEAD'S STEM YIELDED WHOLE TO A COINCIDENT MARKER'S STEM —
-// playhead_stem_suppressed, 2026-08-01 to 2026-10-09. Retired with the solid
-// stems (architect 2026-10-09: the playhead "may stand on a marker's column —
-// no snap, no avoidance"): the cue's dots and the playhead's interleave on
-// one column, rows ≡ 3 and ≡ 1 of 4, so neither covers the other and there
-// is nothing left to arbitrate. Git history.)
-
 // -- GuiPaintHandler::paint_playheads ------------------------------------
 
 void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
@@ -5133,16 +5142,17 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form at the resting cursor column whatever the selection is doing —
     // since 2026-10-09 COOL EDIT'S DOTTED COLUMN (render.h's playhead
-    // paragraph): one-quantum dots in kCePlayhead on the canvas's quantum rows
-    // ≡ 1 (mod 4), the cues' dots on rows ≡ 3, so a playhead on a marker's
-    // column interleaves with its dots and neither yields (the coincident
-    // suppression is retired). It paints AFTER paint_marker_stems (architect
-    // 2026-09-23) and before the scanner.
+    // paragraph): one-quantum dots in the palette's `playhead_stem` (Cool
+    // Edit's Curs yellow by default) on the canvas's quantum rows ≡ 1
+    // (mod 4), the cues' dots on rows ≡ 3, so a playhead on a marker's
+    // column interleaves with its dots and neither yields. It paints AFTER
+    // paint_marker_stems (architect 2026-09-23) and before the scanner.
     //
     // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
     // runs, this cursor included.
-    render_playhead(cr, area, px_x, hex(kCePlayhead), PlayheadForm::Dotted);
+    render_playhead(cr, area, px_x, palette().playhead_stem,
+                    PlayheadForm::Dotted);
 }
 
 // -- GuiPaintHandler::paint_scanner --------------------------------------

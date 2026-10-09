@@ -1236,13 +1236,18 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // invalidates what comes out; the tick's offscreen fallback in this file reads
 // only the WIDTH, as an emptiness test. Both are the narrow-on-plate shape,
 // reserved for the two per-frame scanner sites (the rule and the per-site table
-// are at playhead_pixel_x, app_state.h). The half-width is playhead_half_px()'s
-// to own — render.h states its authored value, its provenance, and the recorded
-// mismatch against the wider head.
+// are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
+// (2026-10-09, ON SCREEN IS AS PAINTED): the columns [col − 4u, col + 6u) the
+// yellow triangle and its shadow cover (cue_triangle_half_w_px and
+// cue_triangle_reach_right_px, render.h, the painter's own extent) — 30 device
+// px at 300 %, 40 at 360 %, 10 at 138 % — which also holds the one-quantum
+// line of the scanner and the dots, so a move repaints every column the head
+// stood on and no shadow column is left behind.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     const int col = static_cast<int>(std::nearbyint(px_x));
-    const int x0 = std::max(area.x, col - playhead_half_px());
-    const int x1 = std::min(area.x + area.w, col + playhead_half_px() + 1);
+    const int x0 = std::max(area.x, col - cue_triangle_half_w_px());
+    const int x1 = std::min(area.x + area.w,
+                            col + cue_triangle_reach_right_px());
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's dots inside the waveform AND

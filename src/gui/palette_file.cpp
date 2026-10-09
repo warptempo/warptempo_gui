@@ -25,7 +25,7 @@
 namespace {
 
 // The role table names each role once, so the reader's lookup is a
-// bijection (fifteen names: the pairwise form is cheap here).
+// bijection (ten names: the pairwise form is cheap here).
 constexpr bool palette_role_names_unique() {
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         for (std::size_t j = i + 1; j < kGuiPaletteRoleCount; ++j)
@@ -293,7 +293,8 @@ std::filesystem::path kind_file_path(const PresetKind<Record>& kind,
 }
 
 // ONE PALETTE FILE under the grammar (palette_file.h's head), its stem
-// already judged: exactly the fifteen, a scheme's key an unknown role.
+// already judged: exactly the ten, a scheme's key or a retired role an
+// unknown role.
 std::expected<GuiPaletteWords, std::string> read_palette_file(
         const std::filesystem::path& path) {
     std::ifstream f(path, std::ios::binary);
@@ -320,9 +321,9 @@ std::expected<GuiPaletteWords, std::string> read_palette_file(
         return {};
     }, std::span<const char* const>{});
     if (!scan) return std::unexpected(std::move(scan.error()));
-    // EVERY ROLE IS REQUIRED (the head: the picker writes all fifteen), the
-    // first missing one in the table's order named — a file from before
-    // `flag_outline` became a role fails on it.
+    // EVERY ROLE IS REQUIRED (the head: the picker writes all ten), the
+    // first missing one in the table's order named. (A file from before the
+    // ten, 2026-10-09, fails earlier, on its first retired line.)
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i) {
         if (!named[i]) {
             return std::unexpected("missing role '" +

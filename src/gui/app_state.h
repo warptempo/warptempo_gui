@@ -8736,7 +8736,7 @@ struct AppState {
 
     // -- THE COLOR PICKER'S WHOLE STATE (architect 2026-10-07) -----------
     //
-    // THE IN-APP PICKER OF THE PROGRAM'S FIFTEEN COLORS (kGuiPaletteRoles,
+    // THE IN-APP PICKER OF THE PROGRAM'S TEN COLORS (kGuiPaletteRoles,
     // palette_file.h: a PALETTE) AND, UNDER EVERY CHROME, THE CHROME'S
     // TWELVE KEYS (kGuiChromeLines: a SCHEME; chrome_derive.h), ONE KIND AT
     // A TIME BY ITS SCOPE — a slim card on the well, chrome-branded, the FIFTH
@@ -8887,7 +8887,7 @@ struct AppState {
             GuiRect  chooser{0, 0, 0, 0};      // the element combo: a press drops its list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
             // The list's rows, the dropped list's every one (the scope's
-            // two, or the scope's elements — at most the fifteen,
+            // two, or the scope's elements — at most the chrome's twelve,
             // color_picker::kListRowMax, asserted there), by row — the zero
             // rect for a row scrolled out of view, and past the list's
             // count — and its scroll bar (absent while every row shows).

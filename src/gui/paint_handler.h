@@ -741,7 +741,7 @@ private:
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
     // THE RULER LANE (top lane 5): Cool Edit's flipped ruler — its ground and
     // bottom line, the timestamp ladder's ticks and digits and the playhead's
-    // yellow head — and the MARKER LANE'S panel face under the cues the flag
+    // head (the `playhead_stem` role) — and the MARKER LANE'S panel face under the cues the flag
     // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
     // every pan/zoom along with the strip content it is painted beside.
     void paint_ruler_row(cairo_t* cr);
@@ -867,14 +867,15 @@ private:
     // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
     // of the active column stems, always, as COOL EDIT'S DOTTED COLUMN since
-    // 2026-10-09: one-quantum dots in its cue's triangle face on the canvas's
-    // quantum rows ≡ 3 (mod 4), the canvas alone (render.h's marker-lane
-    // paragraph); a DISABLED marker stems never. The face is the kind's
-    // resting one whether the marker is selected or not (the cue never
-    // changes when selected); it is resolved in the painter
-    // (resolve_flag_face) and published in the stash. The stems paint under
-    // the playhead's dots (architect 2026-09-23), which stand on rows ≡ 1, so
-    // a playhead on a marker's column interleaves with it.
+    // 2026-10-09, in its TWO CUE COLORS since ~11:50: one-quantum dots on the
+    // canvas's quantum rows, the blue `range` on rows ≡ 3 and the red `cue`
+    // on rows ≡ 7 (mod 8), each where the cue wears it, the canvas alone
+    // (render.h's marker-lane paragraph); a DISABLED marker stems never.
+    // Which colors stand is the cue's class whether the marker is selected
+    // or not (the cue never changes when selected); it is resolved in the
+    // painter (resolve_flag_face) and published in the stash. The stems paint
+    // under the playhead's dots (architect 2026-09-23), which stand on rows
+    // ≡ 1 (mod 4), so a playhead on a marker's column interleaves with it.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
     // than walking the store: the stem stands on its cue's apex column, and
@@ -884,12 +885,13 @@ private:
     // part.
     //
     // NO PAINT-TIME COLOR OVERRIDE (architect 2026-10-03): the stem paints
-    // the stash's color. The open flag editor's refusal recolors nothing.
+    // the stash's class. The open flag editor's refusal recolors nothing.
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
     // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's, its dots
-    // over the view bar render_trim_flags'): Cool Edit's dotted yellow column
-    // on the canvas's quantum rows ≡ 1 (mod 4), painted after the marker
-    // stems, whose dots stand between its own.
+    // over the view bar render_trim_flags'): Cool Edit's dotted column in the
+    // palette's `playhead_stem` (its Curs yellow by default) on the canvas's
+    // quantum rows ≡ 1 (mod 4), painted after the marker stems, whose dots
+    // stand between its own.
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_marker_stems and paint_playheads: the scanner draws OVER the stems

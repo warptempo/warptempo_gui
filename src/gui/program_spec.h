@@ -161,13 +161,27 @@ struct ProgramSpec {
     int  cue_fill_pad;
     int  cue_segment_gap;
     int  cue_overlap_lead;
-    // THE CANVAS DOTS (METRICS §4.2, §4.3): a dot one quantum square every
-    // this many quanta down the canvas, the cues' on rows ≡ the cue phase
-    // and the playhead's on rows ≡ its own, so the two interleave on one
-    // column.
+    // THE CANVAS DOTS (METRICS §4.2, §4.3), one quantum square, counted in
+    // quanta from the canvas's first row: THE PLAYHEAD'S every `dot_period`
+    // rows on its phase; A CUE'S TWO COLORS each every `cue_dot_period` rows
+    // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
+    // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
+    // 3, so a point cue's two alternate one dot every `dot_period` rows, BLUE
+    // FIRST FROM THE TOP, and a one-color stem has half the dots (render.cpp's
+    // resolve_flag_face owns which a flag wears). THE PHASES ARE THE
+    // CAPTURE'S, RE-COUNTED FROM THE CANVAS'S TOP (the captures are the law,
+    // 2026-10-09): METRICS gives the red at capture y ≡ 3 and the blue at
+    // y ≡ 7 (mod 8), absolute rows, and Cool Edit's canvas starts at y = 108
+    // ≡ 4 (mod 8), so from its own first row the red stands on rows ≡ 7 and
+    // the blue on rows ≡ 3 (its first dot, y = 111, canvas row 3, is blue);
+    // the playhead's y ≡ 1 (mod 4) is canvas row ≡ 1 either way, 108 being
+    // ≡ 0 (mod 4). Every cue row is the playhead's period off the playhead's
+    // phase, so the two never share a row on one column.
     int  dot_period;
-    int  cue_dot_phase;
     int  playhead_dot_phase;
+    int  cue_dot_period;
+    int  cue_dot_phase;
+    int  range_dot_phase;
 };
 
 inline constexpr ProgramSpec kProgramSpec = {
@@ -211,8 +225,10 @@ inline constexpr ProgramSpec kProgramSpec = {
     .cue_segment_gap       = 4,
     .cue_overlap_lead      = 6,
     .dot_period            = 4,
-    .cue_dot_phase         = 3,
     .playhead_dot_phase    = 1,
+    .cue_dot_period        = 8,
+    .cue_dot_phase         = 7,
+    .range_dot_phase       = 3,
 };
 
 // THE AUTHORED TOTALS, the lane table's record (render.h's
@@ -268,7 +284,14 @@ static_assert(kProgramSpec.cue_label_lead >
               (2 * kProgramSpec.cue_triangle_rows - 1) / 2 + 1);
 static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.cue_triangle_rows ==
               kProgramSpec.ruler_baseline_px);
-static_assert(kProgramSpec.cue_dot_phase != kProgramSpec.playhead_dot_phase);
+// The cue's two colors alternate one dot every playhead period, and neither
+// shares a row with the playhead's dots.
+static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);
+static_assert((kProgramSpec.range_dot_phase - kProgramSpec.cue_dot_phase +
+               kProgramSpec.cue_dot_period) % kProgramSpec.cue_dot_period ==
+              kProgramSpec.dot_period);
+static_assert(kProgramSpec.cue_dot_phase % kProgramSpec.dot_period !=
+              kProgramSpec.playhead_dot_phase);
 // The label's text stands one pad quantum inside its fill: the fill's lead
 // and pad are the label's lead (render.cpp's cue_segment_boxes).
 static_assert(kProgramSpec.cue_label_lead ==
