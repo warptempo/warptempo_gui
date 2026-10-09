@@ -136,10 +136,9 @@ struct TrimRange {
 // OWN INKS (architect 2026-10-06): the Tango and Mist drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
-// one place an antialiased, translucent picture is copied whole. THE ONE
-// EXCEPTION IS A BOUND DRAWING (2026-10-10, the Breeze set): monochrome,
-// painting in `currentColor`, it wears the text role of the surface it
-// stands on (surface_text above; icons.h's head). A DISABLED icon is
+// one place an antialiased, translucent picture is copied whole, no glyph
+// ever wearing a role (the bound monochrome set that wore its surface's
+// text role left 2026-10-09, icons.h's head). A DISABLED icon is
 // ReactOS's saturate of that picture under every chrome (icons::draw_disabled,
 // the program case's dead glyph), no role entering.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
@@ -452,36 +451,25 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
-// THE SURFACES A GLYPH STANDS ON AND THEIR TEXT ROLES (2026-10-10): each
+// THE SURFACES WHOSE TEXT ROLE DEPENDS ON THE CHROME (2026-10-10): each
 // surface's recorded text color under the live chrome — "text over a fill
-// is the theme's recorded pair" — read by the words painted there and by a
-// BOUND icon drawing standing there (icons.h's head: Breeze's glyphs wear
-// it). The one owner of the choice, so a word and a glyph on one surface
-// never part:
-//   Face             the label (Windows' ButtonText; GTK's fg, the knob's
-//                    text; Motif's set-2 foreground) — the chrome's face
-//   ProgramCase      THE PROGRAM'S BUTTON CASE (2026-10-09, the program is
-//                    Cool Edit): its constant glyph ink, black on the case's
-//                    light ramp under every chrome and palette
-//                    (cool_edit_paint.h's kCeCaseInk) — the band, row 8 and
-//                    the render player's row, every cased glyph
+// is the theme's recorded pair" — read by the words painted there, the one
+// owner of the choice between the Windows roles and the Clearlooks block
+// (no glyph reads it since 2026-10-09: the icons wear their own inks,
+// icons.h's head):
 //   CaptionActive    the caption's text, active and inactive — Windows'
 //   CaptionInactive  CaptionText pair under windows-2000 and cde, metacity's
 //                    title text and unfocused title under clearlooks
 //                    (cl_title_text, cl_title_unfocused); the title
-//                    (paint_caption_row) and the caption's AppIcon
-//   Card             the card's text (InfoText) — the notification cards
+//                    (paint_caption_row)
 //   ListRow          the list's text pair, resting and lit — the field's
 //   ListRowLit       text and the selection's under windows-2000 and cde,
 //                    GTK's text[NORMAL] and text[SELECTED] under clearlooks
 //                    (cl_text, cl_text_selected); the folder overlay's and
-//                    the project picker's rows (paint_folder_overlay)
+//                    the project picker's row names (paint_folder_overlay)
 enum class GuiSurface {
-    Face,
-    ProgramCase,
     CaptionActive,
     CaptionInactive,
-    Card,
     ListRow,
     ListRowLit,
 };
@@ -569,9 +557,9 @@ void install_palette(const std::array<uint32_t, 12>& program,
 // after both). Why that shape is enough for the chrome: the chrome's colors
 // bake into one cached thing, the flag cache (a disabled flag's ground),
 // keyed by the generation; the caption's ramp image keys its two words
-// itself (paint_caption_gradient); a bound icon's rasters key their color
-// and the caller drops them (icons::drop_bound_faces, 2026-10-10); every
-// other chrome painter reads palette() each frame (re-grepped 2026-10-10).
+// itself (paint_caption_gradient); no icon raster carries a role (icons.h's
+// head); every other chrome painter reads palette() each frame (re-checked
+// 2026-10-09).
 // THE PICK'S FACE TAG installs with it (fill_chrome_palette,
 // set_live_scheme_face — under the windows chrome the face moves live; the
 // caller's whole-surface damage on a changed pick covers it, its own
@@ -874,16 +862,21 @@ void install_true_colors(bool on);
 // own and its columns the column's margins, main.cpp's lane table and
 // waveform_area), so every column mapping, hit test and damage box reads the
 // interior. UNDER THE WAVEFORM, in render_canvas's one pass, in this order:
-// the `waveform_canvas` fill; THE VERTICAL GRID — a `grid` line one device px
-// wide ("on waveform → unscaled", architect 2026-10-09 ~14:25,
-// waveform_line_px's rule) on every column the ruler stands a MAJOR tick on
-// (the ruler's own columns, paint_ruler_row's comb, the tick's left device
-// column), the canvas's full height; THE HORIZONTAL GRID — per channel, a
-// `grid` line one device px tall at the channel's zero row ± nearbyint(k · H
-// / 4) device rows for k = 1, 2, 3, H the channel's half height (its zero row
-// to its band's edge; the k = 4 line would stand on the band's edge and is
-// not drawn), the canvas's full width; THE CENTER LINE per channel on its
+// the `waveform_canvas` fill; THE HORIZONTAL GRID — per channel, a `grid`
+// line one device px tall ("on waveform → unscaled", architect 2026-10-09
+// ~14:25, waveform_line_px's rule) at the channel's zero row ± nearbyint(k ·
+// H / 4) device rows for k = 1, 2, 3, H the channel's half height (its zero
+// row to its band's edge; the k = 4 line would stand on the band's edge and
+// is not drawn), the canvas's full width; THE CENTER LINE per channel on its
 // zero row, one device px, in `center`, over the grid.
+// NO VERTICAL GRID (architect 2026-10-09 ~18:40: Cool Edit's verticals on
+// the ruler's major ticks, drawn that afternoon, were "solid versus the
+// markers dotted, they compete" — "drop them"). HIS PRINCIPLE, recorded
+// here: "accuracy is what applies to the conversion from Cool Edit Pro, and
+// accuracy is lower priority than usability" — Cool Edit's rule yields
+// where usability says so, while "truthfulness applies to the way we
+// interact" (an invisible hit box is untruthful; on screen is as painted).
+// A recorded departure from Cool Edit (win2000_deviations.md).
 // The waveform's plate is blitted over all of it, ink over every line. Each
 // channel's band and zero row are the plate's own (waveform_channel_band
 // below), so the lines stand where the plate's zero is. THE CHANNELS FILL THE
@@ -2593,15 +2586,12 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // plate yet) included.
 //
 // render_canvas ALSO owns THE CANVAS'S LINES UNDER THE WAVEFORM (architect
-// 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, the
-// vertical grid on `grid_cols` (columns of the area, the ruler's major ticks;
-// empty on a frame with no displayed basis), then each channel's horizontal
-// grid and its center line, the channels' bands the plate's own
-// (waveform_channel_band). The canvas's frame round the area is
-// paint_canvas_column_frame's (paint_handler.cpp).
+// 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, each
+// channel's horizontal grid and its center line, the channels' bands the
+// plate's own (waveform_channel_band) — no vertical grid. The canvas's frame
+// round the area is paint_canvas_column_frame's (paint_handler.cpp).
 void render_background(cairo_t* cr, int x, int y, int w, int h);
-void render_canvas(cairo_t* cr, const GuiRect& area,
-                   const std::vector<int>& grid_cols);
+void render_canvas(cairo_t* cr, const GuiRect& area);
 
 // THE RELIEF HELPERS — the chrome's one painter family for the Windows-95
 // edge grammar (architect 2026-10-02; the grammar and the family table at the
@@ -2710,8 +2700,8 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline);
 
 
-// THE WAVEFORM AREA IS THE CANVAS: the plate blit, the canvas's verticals,
-// the lead-in ring and the zoom anchor's stem each span it whole (row 6's
+// THE WAVEFORM AREA IS THE CANVAS: the plate blit, the canvas's lines, the
+// lead-in ring and the zoom anchor's stem each span it whole (row 6's
 // canvas paragraph).
 //
 // ONE CHANNEL'S BAND, area-local rows: the plate's (render_waveform_to_cache_

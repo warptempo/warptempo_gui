@@ -91,10 +91,6 @@ inline constexpr uint32_t kCeCaseOuter = 0x000000;
 inline constexpr uint32_t kCeRingOuter = 0x000000;
 inline constexpr uint32_t kCeRingMid   = 0x808080;
 inline constexpr uint32_t kCeRingLight = 0xF8F8F8;
-// THE GLYPH INK ON THE CASE — a BOUND icon drawing's color there (render.h's
-// GuiSurface::ProgramCase; Breeze's monochrome glyphs): black, the case's
-// face being Cool Edit's light ramp under every palette.
-inline constexpr uint32_t kCeCaseInk = 0x000000;
 // THE TIME FIELD'S DIGITS (METRICS §5.4, ≈EFF0F0 on the default scheme).
 inline constexpr uint32_t kCeFieldText = 0xEFF0F0;
 

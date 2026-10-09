@@ -216,9 +216,10 @@
 // brighter selected"), and THE SCANNER WHITE (architect 2026-10-07: "let's
 // go back to a white scanner") — THE PLAYHEAD AND THE SCANNER still TWO
 // roles, so a palette may part them. `grid` paints the quarter lines of each
-// channel's half and the verticals on the ruler's major ticks, `center` each
-// channel's center line over the grid (render_canvas, render.h's row-6
-// block); Cool Edit's boundary line (Bndy) is not drawn and has no role. A
+// channel's half — the horizontals alone, Cool Edit's verticals not drawn
+// (architect 2026-10-09 ~18:40) — and `center` each channel's center line
+// over the grid (render_canvas, render.h's row-6 block); Cool Edit's
+// boundary line (Bndy) is not drawn and has no role. A
 // PALETTE FILE NAMES EVERY ROLE: a file without one is the read's hard fail
 // (the two-category rule: the picker writes all twelve).
 //

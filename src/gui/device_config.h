@@ -42,8 +42,10 @@
 //                            palette, Cool Edit's "Default", under every
 //                            chrome (effective_palette_name, 2026-10-09)
 //   icons=<set>              THE ICON SET the glyphs are drawn from: a
-//                            bundled set's key, `tango`, `mist` or `breeze`
-//                            (is_icon_set_key, icons.h); MAY BE ABSENT — the
+//                            bundled set's key, `tango` or `mist`
+//                            (is_icon_set_key, icons.h; `breeze` left with
+//                            its set 2026-10-09, an old line the ordinary
+//                            unknown-value refusal); MAY BE ABSENT — the
 //                            first run's state — meaning the chrome's own
 //                            set (ChromeSpec::icon_set: Tango under
 //                            windows-2000 and cde, Mist under clearlooks;

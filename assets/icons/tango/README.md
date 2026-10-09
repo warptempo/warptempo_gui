@@ -36,7 +36,10 @@ same way: 0.87 at 72 px and 2.10 at 33 from rsvg-convert. The enumerator keeps i
 REPEATS, known by position (the files byte-identical): `mimetypes/audio-x-generic` is AppIcon (the caption and the
 program icon), AudioXWav (a wav row) and MusicNote16th (BPM Iterations); `actions/view-refresh` is DialogOkApply
 (Load in Place) and MediaRepeatSingle (Toggle Repeat One); `actions/process-stop` is DialogCancel and WindowClose;
-`actions/go-up` is GoUp and GoParentFolder. Every other file is worn once: 59 enumerators over 54 distinct drawings.
+`actions/go-up` is GoUp and GoParentFolder; `apps/accessories-text-editor` is Unlock (Toggle Read-Only, unlocked) and
+AccessoriesTextEditor (Open Text Editor, architect 2026-10-09: the bare Enter's act as a button, its drawing a byte copy
+of the file Unlock already wore and was checked as). Every other file is worn once: 60 enumerators over 54 distinct
+drawings.
 
 ## Provenance
 
@@ -116,7 +119,7 @@ the SVG files only; this repository carries the texts.
 | GoDown | Down (the value ladder) | scalable/actions/go-down.svg | — | `4f18bfddfeb4888870ab3cc309ed46418fbb555945508ddbfbb664a0d513f07d` |
 | GoUp | Up (the value ladder) | scalable/actions/go-up.svg | GoParentFolder | `7d51d4af61813049ee8cf2d3091099404048a3477e5366e646b19627179cce95` |
 | Lock | Toggle Read-Only, locked | scalable/emblems/emblem-readonly.svg | — | `aabc9fc74cd88ae80669f85f66b66ba980c13769d87b70a36e6b79d07c340382` |
-| Unlock | Toggle Read-Only, unlocked | scalable/apps/accessories-text-editor.svg | — | `ab79ede7f8b2c1de4b229d3e17c300f270c712c7ddd8a9e9fb1f7b472a26fc89` |
+| Unlock | Toggle Read-Only, unlocked | scalable/apps/accessories-text-editor.svg | AccessoriesTextEditor | `ab79ede7f8b2c1de4b229d3e17c300f270c712c7ddd8a9e9fb1f7b472a26fc89` |
 | BboxPrev | Previous Marker (Shift+Tab) | scalable/actions/go-first.svg | — | `465eba822a18240e059c1ad6d68c120ca9dfe134692b160897597bff9b2712f5` |
 | BboxNext | Next Marker (Tab) | scalable/actions/go-last.svg | — | `5a24d27249a5b557c4be774e322a642a299c0908412d52b6de847e2f2c8a9d82` |
 | TabDetach | Switch Tab | scalable/apps/preferences-system-windows.svg | — | `e7e3bb63358211734430c132fc00064540ca4dd74b6b2e7ea1bc5cbdfdea2c14` |
@@ -131,5 +134,6 @@ the SVG files only; this repository carries the texts.
 | EditCopy | Copy Resolved Value | scalable/actions/edit-copy.svg | — | `ed87900f9236c019d0285632ae9634e4c9ed6c51e28d870361966f33a47bf644` |
 | HelpWhatsthis | Toggle Tooltips | scalable/apps/help-browser.svg | — | `f1c955b657a686bc7acc433a597db25c0b733f2678b67b8f26d2946cda543d00` |
 | GoJumpDeclaration | Jump to Defining Marker | scalable/actions/go-jump.svg | — | `da4e4493791e6e53325c72f67e61c4ef21d148edda740256beb48c7e72f062f6` |
+| AccessoriesTextEditor | Open Text Editor | scalable/apps/accessories-text-editor.svg | Unlock | `ab79ede7f8b2c1de4b229d3e17c300f270c712c7ddd8a9e9fb1f7b472a26fc89` |
 | EditDelete | Delete Folder | scalable/actions/edit-delete.svg | — | `406e8c8eba860fec81d84fd9fb4b956bfd2e8f1a1432ed3f46c9cd61b3a8b728` |
 | AppIcon | the caption's icon and the program icon (the chrome grey ground, #D4D0C8) | scalable/mimetypes/audio-x-generic.svg | AudioXWav, MusicNote16th | `d7619127acfe25edf59eca10be48776bf33d3a2dfa3a4dba9923032cc5dbc05f` |

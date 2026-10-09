@@ -1986,10 +1986,9 @@ struct TrimBarPressSeed {
 // 2026-09-01 — the six behind the opener standing in two greyed authoring
 // groups' slots, and only in the `h` view, since 2026-10-05
 // (kIconRowHistoryStandIns, paint_handler.cpp) — and THE VIEW GROUP'S THREE
-// close the row flush right since 2026-10-01), then the bottom row's SEVENTEEN (re-counted 2026-09-29 evening,
-// when Edit Flag and Copy Value went up and Jump to Defining Marker joined;
-// Edit Flag was deleted later that evening) —
-// the transport three, the MARKER-VERB GROUP'S SIX (kMarkerVerbGroup,
+// close the row flush right since 2026-10-01), then the bottom row's
+// EIGHTEEN (re-counted 2026-10-09, when Open Text Editor joined) —
+// the transport three, the MARKER-VERB GROUP'S SEVEN (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S FOUR
 // (2026-08-15; Previous Marker, Next Marker, Center and Switch Tab since
 // 2026-09-29) and the four cardinal arrows, in enum order; the row PAINTS the transport three last, at its
@@ -2006,8 +2005,8 @@ struct TrimBarPressSeed {
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
 // below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped against kDropdownMenus and the chord table (44 chord rows + 3
-// anchors = 47 = kRedesignButtonCount, re-counted 2026-10-07; the count's
+// re-greped against kDropdownMenus and the chord table (45 chord rows + 3
+// anchors = 48 = kRedesignButtonCount, re-counted 2026-10-09; the count's
 // own statement is at kRedesignButtonCount below);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
@@ -2862,7 +2861,7 @@ enum class RedesignButton {
     // names the button, not the lane it sits in.
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // JUMP TO DEFINING MARKER (architect 2026-09-29) — the verb group's FIFTH
-    // member, after Toggle Inherit and ahead of Add to Selection, wearing
+    // member, after Toggle Inherit and ahead of Open Text Editor, wearing
     // GoJumpDeclaration's jump arc. ITS CHORD IS CTRL+J (Shift+J until that
     // day, when it rode Copy Value's shift-click and long press; Shift+J binds
     // nothing now), and its act is that key's exactly — the existing jump
@@ -2879,9 +2878,30 @@ enum class RedesignButton {
     // allowlist, so the derived partition greys the button there. It admits
     // no modifier and does not repeat (a jump has one destination).
     IconJumpToDefiningMarker,
-    // ADD TO SELECTION — the verb group's SIXTH and last member since
-    // 2026-09-29, Jump to Defining Marker standing immediately ahead of it
-    // (every arrival in the group's history landed ahead of it; the count's
+    // OPEN TEXT EDITOR (architect 2026-10-09: "resurrect the Open Text Editor
+    // button. It should go between jump to defining marker and toggle add to
+    // selection and the shortcut of course is enter") — the verb group's
+    // SIXTH member, wearing the sets' accessories-text-editor
+    // (icons::Icon::AccessoriesTextEditor). ITS CHORD IS BARE Return and its
+    // act is that key's exactly — the addressed cell's editor opened on the
+    // focused marker (the Return arm, input_handler.cpp), the payload's
+    // canonical-line editor by default and a bound cell's editor where one is
+    // addressed. WHY IT EXISTS (his reason, 2026-10-09): THE GLASS HAS NO
+    // ENTER KEY off the on-screen keyboard, which stands only while an editor
+    // does, so with no editor open the tablet's one road to Return was the
+    // double tap on the flag. (The Edit Flag button, the same chord on a
+    // button, stood 2026-08-27 to 2026-09-29 and was deleted for the double
+    // tap; this is its return under its act's own name.) ITS FACE GREYS WHERE
+    // RETURN WOULD NOT OPEN AN EDITOR — the lock, the iteration lock off a
+    // bound axis, flag_editor_open_actionable and a standing text editor,
+    // where Return is that editor's commit (its arm in redesign_button_enabled
+    // says why each); the `h` view refuses Return at its allowlist, so the
+    // derived partition greys it and the view does not paint it. NO LAMP (an
+    // act), NO REPEAT (an opener), NO MODIFIER ADMITTED.
+    IconOpenTextEditor,
+    // ADD TO SELECTION — the verb group's SEVENTH and last member since
+    // 2026-10-09, Open Text Editor standing immediately ahead of it (every
+    // arrival in the group's history landed ahead of it; the count's
     // succession is in git history),
     // seated by the
     // architect himself (2026-08-18: "add group selection icon ('Add to
@@ -3043,17 +3063,17 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-07, when
-// Open Project joined the icon row):
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-09, when
+// Open Text Editor joined the bottom row's verb group):
 // THREE in row 1 (the menu anchors), TWENTY-SEVEN in row 4 and
-// SEVENTEEN in the bottom row — 47. Of
-// those, FORTY-FOUR carry a chord in kToolbarChords
+// EIGHTEEN in the bottom row — 48. Of
+// those, FORTY-FIVE carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 48;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3073,9 +3093,10 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     return i;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — SEVENTEEN since 2026-09-29 evening: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — EIGHTEEN since 2026-10-09: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
-// row on 2026-08-18, JUMP TO DEFINING MARKER (2026-09-29), ADD TO SELECTION
+// row on 2026-08-18, JUMP TO DEFINING MARKER (2026-09-29), OPEN TEXT EDITOR
+// (2026-10-09), ADD TO SELECTION
 // (the EDIT FLAG BUTTON, 2026-08-27, and the COPY VALUE button, 2026-08-29,
 // were members until 2026-09-29, when both went up to the icon row — Edit
 // Flag to be deleted the same evening; the MARKER MEASURE stood among them from 2026-08-19 until the
@@ -3096,7 +3117,7 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
-// with the bottom row's own rect for these seventeen. THE CONSUMERS, re-grepped
+// with the bottom row's own rect for these eighteen. THE CONSUMERS, re-grepped
 // 2026-08-29 rather than inherited: the pointer walk's pressed-face damage
 // (recompute_redesign_button_hover), the click
 // face's arm and its erase (arm_redesign_press / take_chrome_press), the
@@ -3121,6 +3142,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::IconMarkerDisable:
         case RedesignButton::IconMarkerInherit:
         case RedesignButton::IconJumpToDefiningMarker:
+        case RedesignButton::IconOpenTextEditor:
         case RedesignButton::IconAddToSelection:
         case RedesignButton::TransportWalkPrevious:
         case RedesignButton::TransportWalk:
@@ -3469,7 +3491,7 @@ inline constexpr SettingsChoiceSource kChromeChoiceSource{
     },
 };
 // THE ICON SET'S DOMAIN (architect 2026-10-10): the bundled sets
-// (kIconSetKeys, icons.h) in their order — Tango, Mist, Breeze — shown by
+// (kIconSetKeys, icons.h) in their order — Tango, Mist — shown by
 // their display names (kIconSetDisplayNames). The combo shows THE
 // EFFECTIVE SET, the chrome's own when the config has no `icons` line
 // (recall_gui_setting_value, settings_io.cpp).
@@ -12889,14 +12911,15 @@ inline bool any_tab_read_only(const AppState& a) {
 //
 // THE MEMBERS FALL IN THREE GROUPS, as the keyboard gate's own admissions do:
 // the marker verbs, History, the padlock, BPM iterations, Settings and the
-// view group's three GREY OUTRIGHT under a lit lamp; Up/Down grey UNLESS A
-// BOUND CELL (Lower or Upper) IS ADDRESSED, the gate's bound-axis admission;
+// view group's three GREY OUTRIGHT under a lit lamp; Up/Down and Open Text
+// Editor grey UNLESS A BOUND CELL (Lower or Upper) IS ADDRESSED, the gate's
+// bound-axis admission;
 // Left/Right follow the lane (horizontal_arrow_step_lock_admits).
 //
 // IT IS THE ITERATION HALF ALONE, deliberately, and every reader composes its
 // own read-only half:
 //   * most of the members' read-only half is the tab's bare bit (the marker
-//     verbs, Up/Down);
+//     verbs, Up/Down, Open Text Editor);
 //   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the
 //     Toggle History View button (a locked tab reads history exactly as a
 //     writable one does), the view group's three (bare 1/2/3 are on
@@ -13045,17 +13068,17 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // under a lit lamp and the lamp cannot be lit while any tab is locked
         // — so they are back in the never-grey group at their enabled arm and
         // this membership has no per-tab member at all.)
-        // THE VERTICAL PAIR FORKS ON THE ADDRESSED AXIS, exactly as the
-        // keyboard gate's own bound-axis test does: with Lower or Upper
-        // addressed the press reaches the bound cells — the mode's one
-        // authoring surface — and on the PAYLOAD axis it would run a value
-        // step that pushes (the tempo). The gate admits the two bound cells
-        // and nothing else, so the lock is the refusal that stands on every
-        // other axis under a lit lamp. (The Edit Flag button forked here too,
-        // Return opening the addressed cell's editor, until its deletion
-        // 2026-09-29.)
+        // THE VERTICAL PAIR AND OPEN TEXT EDITOR FORK ON THE ADDRESSED AXIS,
+        // exactly as the keyboard gate's own bound-axis test does: with Lower
+        // or Upper addressed the press reaches the bound cells — the mode's
+        // one authoring surface — and on the PAYLOAD axis it would run a value
+        // step that pushes (the tempo) or open an editor over serialized
+        // content (bare Return, the button's chord, 2026-10-09). The gate
+        // admits the two bound cells and nothing else, so the lock is the
+        // refusal that stands on every other axis under a lit lamp.
         case RedesignButton::TransportUp:
         case RedesignButton::TransportDown:
+        case RedesignButton::IconOpenTextEditor:
             return a.addressed_cell != MarkerCell::Lower &&
                    a.addressed_cell != MarkerCell::Upper;
         // LEFT / RIGHT ARE THE LANE'S, through the gate's own owner: in the
@@ -14979,14 +15002,14 @@ inline bool playback_launch_playable(const AppState& a,
 //     bound cells and the marker lane's absence — and its whole membership has
 //     one owner, iteration_lock_greys (above), which the arms alone read since
 //     2026-09-12 (the HINTS were its second reader until the refusal-reason
-//     tooltip class was deleted). RE-DERIVED FROM THE ARMS 2026-09-29, the
-//     three shapes are these. SIX ARMS BELOW COMPOSE BOTH HALVES, NINE
-//     BUTTONS (the Edit flag arm left 2026-09-29 with its button, and the
-//     Settings arm joined the same day): Drop marker; Delete and Disable,
-//     sharing one arm; BPM Iterations; Settings; the LEFT / RIGHT pair, which
-//     composes them around one lane term; and the UP / DOWN pair, whose
-//     iteration half is admitted on a BOUND AXIS, where the cells are the
-//     mode's own authoring surface.
+//     tooltip class was deleted). RE-DERIVED FROM THE ARMS 2026-10-09, the
+//     three shapes are these. SEVEN ARMS BELOW COMPOSE BOTH HALVES, TEN
+//     BUTTONS (Open Text Editor's arm joined 2026-10-09): Drop marker; Delete
+//     and Disable, sharing one arm; Open Text Editor; BPM Iterations;
+//     Settings; the LEFT / RIGHT pair, which composes them around one lane
+//     term; and the UP / DOWN pair, whose iteration half is admitted on a
+//     BOUND AXIS, where the cells are the mode's own authoring surface — Open
+//     Text Editor's is too.
 //     THREE ARMS ASK THE ITERATION HALF ALONE, FIVE BUTTONS, having no
 //     read-only term to compose: TOGGLE READ-ONLY (under a lit lamp no tab is
 //     locked at all), TOGGLE HISTORY VIEW, whose arm adds the publishing
@@ -15004,13 +15027,14 @@ inline bool playback_launch_playable(const AppState& a,
 //     MEMBERSHIP'S OWNER IS THE READ-ONLY ARM of the switch below, and its
 //     members are chords read_only_key_blocked (input_key_dispatch.cpp) drops.
 //     THIS COUNTS THE BUTTONS WHOSE ARM READS THE BIT AS ITS FIRST TERM, not
-//     the lock's whole button set (that one is FIFTEEN and is enumerated at
-//     the read-only arm itself, below). RE-DERIVED FROM THE ARMS 2026-09-29,
-//     it is SEVEN — bare `s`, Delete, Ctrl+D, Ctrl+N, Ctrl+B, bare `;` and
-//     bare `i` — bare Return having left with the Edit Flag button and bare
-//     `;` joined with the Settings button that day, and BARE `/` having gone
+//     the lock's whole button set (that one is SIXTEEN and is enumerated at
+//     the read-only arm itself, below). RE-DERIVED FROM THE ARMS 2026-10-09,
+//     it is EIGHT — bare `s`, Delete, Ctrl+D, Ctrl+N, bare Return, Ctrl+B,
+//     bare `;` and bare `i` — bare Return back with the Open Text Editor
+//     button that day (it had left with the Edit Flag button 2026-09-29, the
+//     day bare `;` joined with the Settings button), and BARE `/` having gone
 //     with the measures feature whole on 2026-09-16, which took the measure
-//     editor, its button and its chord together. (CTRL+F IS NOT AN EIGHTH
+//     editor, its button and its chord together. (CTRL+F IS NOT A NINTH
 //     although this gate drops it too: the Flatten button's face does not read
 //     the lock at this arm — tempo_flatten_actionable composes authoring_locked
 //     itself — so it greys with them while owning no term here. The same
@@ -15726,15 +15750,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // on purpose, invisible chrome state otherwise, changing only when `o`
         // is pressed.
         //
-        // THE READ-ONLY LOCK'S BUTTON SET IS FIFTEEN, AND THIS IS THE ONE
-        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-09-29 late
-        // evening: SIXTEEN when the icon row's SETTINGS button joined that
-        // day, fifteen when the Edit Flag button left; every
+        // THE READ-ONLY LOCK'S BUTTON SET IS SIXTEEN, AND THIS IS THE ONE
+        // SITE THAT ENUMERATES IT (re-derived from the arms 2026-10-09, when
+        // OPEN TEXT EDITOR joined; the succession is in git history; every
         // other site states its own class and points here). In five groups,
         // by HOW each asks:
-        //   * THESE SEVEN, whose arms are below — the bit their first term.
-        //     Six read the ACTIVE TAB's bit; GRID ITERATIONS reads the PIECE's
-        //     (any_tab_read_only, its own arm's reason).
+        //   * THESE EIGHT, whose arms are below — the bit their first term.
+        //     Seven read the ACTIVE TAB's bit; GRID ITERATIONS reads the
+        //     PIECE's (any_tab_read_only, its own arm's reason).
         //   * THE FOUR HORIZONTAL/VERTICAL TRANSPORT BUTTONS, at the transport
         //     block below: Up/Down outright, and Left/Right only while a
         //     selection stands, through the gate's own owner
@@ -15817,10 +15840,35 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    (a.iteration_mode_enabled ? iter_tie_toggle_actionable(a)
                                              : inherit_toggle_actionable(a));
-        // (THE EDIT FLAG BUTTON stood on this arm from its landing 2026-08-27
-        // to its deletion 2026-09-29: bare Return opens an editor over
-        // serialized content, so the lock greyed it, and its other refusals
-        // read flag_editor_open_actionable, the Return arm's own predicate.)
+        // OPEN TEXT EDITOR (architect 2026-10-09; the Edit Flag button's arm
+        // of 2026-08-27 to 2026-09-29 in the same shape) GREYS EXACTLY WHERE
+        // BARE Return WOULD NOT OPEN AN EDITOR, each term read from the owner
+        // the key's road reads: THE READ-ONLY LOCK (Return sits on no
+        // read_only_key_blocked allowlist entry — every editor it opens is an
+        // authoring surface); THE ITERATION LOCK off the bound axis
+        // (iteration_lock_greys forks on the addressed cell, the keyboard
+        // gate's own bound-axis admission); THE ARM'S OWN REFUSAL,
+        // flag_editor_open_actionable (nothing focused, the P column on the
+        // payload axis, a tie follower's cell — the tie's sentence is the
+        // key's card ranked ahead of the shared one, the face one grey for
+        // both); and A STANDING TEXT EDITOR (text_editor_session — the
+        // marker-lane editor in every kind, the color picker's hex field, a
+        // dialog editor), where Return is that editor's own commit and never
+        // an open: the button raises no veil of its own and the marker-lane
+        // editor raises none either, so its lift would dispatch the commit
+        // behind a face named for the open — a face never runs an act other
+        // than the one it names (the Copy Resolved Value lift's rule,
+        // 2026-09-29). The `h` view greys it through the derived partition
+        // above (its allowlist does not name Return) and, the refusal holding
+        // in every session there, does not paint it at all
+        // (history_mode_hides_button). The bound cell's kind refusal past the
+        // gate (iter_bound_step_kind_refusal, a belt with no producer today)
+        // stays the key's card behind a lit face.
+        case RedesignButton::IconOpenTextEditor:
+            return !active_view_state(a).read_only &&
+                   !iteration_lock_greys(a, b) &&
+                   a.text_editor_session() == 0 &&
+                   flag_editor_open_actionable(a);
         // THE ITERATION PAIR JOINED THIS ARM ON 2026-09-04, with the two
         // buttons the architect brought back from the deleted Iterations menu.
         // The LOCK is their first term for the reason it is every other
@@ -16009,20 +16057,20 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // THE STRUCTURAL RULE EVERY NEW ARM KEEPS: a face never restates an
         // act's condition. Each reads a predicate the act's own refusal reads
-        // — the two cardinal pairs, the walk pair, Copy value and Jump to
-        // Defining Marker name theirs — so the face and the chord are one decision with nothing to
+        // — the two cardinal pairs, the walk pair, Copy value, Jump to
+        // Defining Marker and Open Text Editor name theirs — so the face and
+        // the chord are one decision with nothing to
         // drift, the shape Undo/Redo have always had (history_step_actionable).
         //
-        // WHAT THE ROW GREYS, re-derived 2026-09-29 evening with the verb
-        // group's change (Edit Flag and Copy Value up to the icon row, where
-        // the same partition greys them; Jump to Defining Marker in). IN THE
-        // `h` VIEW, all
+        // WHAT THE ROW GREYS, re-derived 2026-10-09 with the verb group's
+        // change (Open Text Editor in). IN THE `h` VIEW, all
         // through the DERIVED partition at the top of this body: the
         // PLAY/STOP button (Space is consumed there), UP / DOWN
         // (bare Up/Down are neither the mode's vocabulary nor on its
-        // allowlist), THE FOUR MARKER VERBS and JUMP TO DEFINING MARKER
-        // (Ctrl+J is consumed in there like the
-        // verbs' own chords) — EIGHT of the seventeen. ADD TO SELECTION
+        // allowlist), THE FOUR MARKER VERBS, JUMP TO DEFINING MARKER
+        // (Ctrl+J is consumed in there like the verbs' own chords) and OPEN
+        // TEXT EDITOR (bare Return, on neither list) — NINE of the eighteen,
+        // none of them painted there (history_mode_hides_button). ADD TO SELECTION
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
         // now. LEFT / RIGHT are the mode's own playhead step since 2026-09-26
         // and grey on their own arm below (a diff flag focused, or a wall).
@@ -16034,10 +16082,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // through the other tab, Switch Tab being never-grey); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
         // history view, but allowing home and end, that makes sense". OUTSIDE
-        // THE VIEW: the four VERBS
-        // on a locked tab, their own gate, stated at their arm above — and,
+        // THE VIEW: the four VERBS and OPEN TEXT EDITOR
+        // on a locked tab, their own gate, stated at their arms above — and,
         // since 2026-08-30, THE SELECTION'S STATE on Delete, Disable and
-        // Toggle inherit (that same arm), on UP / DOWN,
+        // Toggle inherit (that same arm; Open Text Editor's focus and
+        // addressed cell at its own arm, 2026-10-09), on UP / DOWN,
         // LEFT / RIGHT, THE WALK and JUMP TO DEFINING MARKER
         // (this block), and
         // since 2026-08-31 THE TWO ARROW PAIRS' OWN WALLS beside it — the
@@ -16841,6 +16890,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // true afterwards for a lamp to report.
         case RedesignButton::IconCopyValue:
         case RedesignButton::IconJumpToDefiningMarker:
+        // OPEN TEXT EDITOR IS MOMENTARY (2026-10-09): it opens an editor, and
+        // the editor's own session is the state, the BPM opener's answer.
+        case RedesignButton::IconOpenTextEditor:
         // THE BPM OPENER IS MOMENTARY (2026-08-01, back with its button
         // 2026-09-04): it opens an editor and the editor's own session is the
         // state. FLATTEN IS MOMENTARY
@@ -17838,8 +17890,18 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // admits no modifier, so there is no second line to bind.
         case RedesignButton::IconJumpToDefiningMarker:
             return {"Jump to Defining Marker (Ctrl+J)", nullptr};
-        // ADD TO SELECTION (2026-08-18), the verb group's SIXTH and last
-        // since 2026-09-29 and a MODE rather than an act — the hint NAMES THE
+        // OPEN TEXT EDITOR (architect 2026-10-09, his name for the act), the
+        // verb group's sixth, ONE LINE: the act's name and its chord as every
+        // row writes them, bare Return by Qt's own name (this table's
+        // convention above; the keypad's Enter is the same arm's second keysym
+        // and is not named separately). It admits no modifier, so there is no
+        // second line to bind. The name holds on either axis — a bound cell's
+        // editor is a text editor as the payload's is — so the overload has no
+        // fork for it.
+        case RedesignButton::IconOpenTextEditor:
+            return {"Open Text Editor (Return)", nullptr};
+        // ADD TO SELECTION (2026-08-18), the verb group's SEVENTH and last
+        // since 2026-10-09 and a MODE rather than an act — the hint NAMES THE
         // TOGGLE (the lamp rule at this table's head, architect 2026-09-01;
         // it read "Add to Selection" from 2026-08-18 and "Add to selection"
         // for the hours of that day's sentence-case pass, a verb phrase that

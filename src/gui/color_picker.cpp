@@ -2,7 +2,6 @@
 
 #include "clearlooks_paint.h"   // cl_scale_thumb_h_px (the thumb's grab height)
 #include "device_config.h"     // the `palette` and `scheme` keys' writer (write_device_config)
-#include "icons.h"             // drop_bound_faces (a changed twelve)
 #include "notifications.h"
 #include "playback_lifecycle.h"
 #include "text_shape.h"
@@ -1385,10 +1384,8 @@ void GuiColorPicker::install_live_words(
     // damage calls). THE PALETTE'S TWELVE PROGRAM ROLES (kGuiPaletteRoles)
     // NEED NO MORE THAN THE CLIENT: they paint in the program's panels, the
     // well and what enters it, never on the frame.
-    // A CHANGED CHROME PICK ALSO DROPS THE BOUND ICON FACES (2026-10-10,
-    // icons.h's BOUND DRAWING): a bound glyph wears its surface's text role,
-    // which the scheme's keys may have moved; the drawings refill lazily in
-    // the new colors. The palette's roles touch no icon.
+    // Neither kind touches an icon: every glyph wears its drawing's own inks
+    // (icons.h's head).
     // A CHANGED FACE TAG RIDES THE SAME BRANCH (2026-10-09: the face follows
     // the scheme, GuiChromePick::face, live under the windows chrome —
     // gui_live_face_set, gui_font.h): the tag is part of the pick, so a scheme
@@ -1399,7 +1396,6 @@ void GuiColorPicker::install_live_words(
     // width across frames (the flag cache rebuilds on the generation the
     // install bumps; re-grepped 2026-10-09).
     if (scheme != chrome_before) {
-        icons::drop_bound_faces();
         viewport.invalidate_surface();
     } else {
         viewport.invalidate_all();

@@ -9,7 +9,7 @@
 #include "theme_file.h"
 #include "palette_file.h"   // kGuiPaletteRoles, effective_palette_name
 #include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
-#include "cool_edit_paint.h"   // kCeCaseInk, the program case's glyph ink
+#include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "chrome_derive.h"  // live_chrome_words (the chrome knob)
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -156,8 +156,7 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_restore(cr);
 }
 
-void render_canvas(cairo_t* cr, const GuiRect& area,
-                   const std::vector<int>& grid_cols) {
+void render_canvas(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -168,17 +167,12 @@ void render_canvas(cairo_t* cr, const GuiRect& area,
     cairo_rectangle(cr, area.x, area.y, area.w, area.h);
     cairo_fill(cr);
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
-    // vertical grid, the horizontal grid, the center lines — every one
+    // horizontal grid, then the center lines — every one
     // t = waveform_line_px() thick, ONE DEVICE PX ("on waveform → unscaled",
     // the class's one inventory), each an aliased integer rect inside the
-    // area.
+    // area. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the rule and its
+    // reason at render.h's row-6 canvas paragraph).
     const int t = waveform_line_px();
-    // THE VERTICAL GRID on the ruler's major columns (the caller's, off the
-    // ruler's own comb), the canvas's full height, each gated on its own
-    // column and clipped at the right edge (fill_waveform_line).
-    set_waveform_source(cr, pal.grid);
-    for (const int col : grid_cols)
-        fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
     // THE HORIZONTAL GRID AND THE CENTER LINES per channel, on the plate's
     // own bands (waveform_channel_band): a line on a row r covers rows
     // [r − t / 2, r − t / 2 + t) — the row r itself at one device px — the
@@ -2432,13 +2426,10 @@ GuiColor surface_text(GuiSurface surface) {
     const bool clearlooks =
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     switch (surface) {
-    case GuiSurface::Face:            return pal.label;
-    case GuiSurface::ProgramCase:     return hex(kCeCaseInk);
     case GuiSurface::CaptionActive:
         return clearlooks ? pal.cl_title_text : pal.caption_active_text;
     case GuiSurface::CaptionInactive:
         return clearlooks ? pal.cl_title_unfocused : pal.caption_inactive_text;
-    case GuiSurface::Card:            return pal.card_text;
     case GuiSurface::ListRow:
         return clearlooks ? pal.cl_text : pal.field_text;
     case GuiSurface::ListRowLit:

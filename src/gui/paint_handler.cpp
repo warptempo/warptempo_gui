@@ -1511,16 +1511,13 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE APP'S ICON at the spec's seat ((2, 1) under win2000, (2, 2) under
     // clearlooks — metacity's menu button, the icon filling its 16 x 16),
     // 16 x 16: the set's AppIcon (icons.h), no case, at the caption's own
-    // placement, standing on the caption (a bound drawing wears the title's
-    // role, following the caption's state as the title does).
+    // placement.
     const ChromeSpec& spec = live_chrome_spec();
     if (!cde)
         icons::draw(cr, icons::Icon::AppIcon,
                     static_cast<double>(row.x + scaled_px(spec.caption_icon_x_px)),
                     static_cast<double>(row.y + scaled_px(spec.caption_icon_y_px)),
-                    static_cast<double>(scaled_px(kCaptionIconPx, 1)),
-                    active ? GuiSurface::CaptionActive
-                           : GuiSurface::CaptionInactive);
+                    static_cast<double>(scaled_px(kCaptionIconPx, 1)));
 
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
@@ -1598,7 +1595,7 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         }
         // The caption's text role (surface_text, render.h: Windows'
         // CaptionText pair, metacity's title and unfocused title under
-        // clearlooks), the one the caption's bound AppIcon wears.
+        // clearlooks).
         set_palette_source(cr, surface_text(active ? GuiSurface::CaptionActive
                                                    : GuiSurface::CaptionInactive));
         text_shape::show_shaped_run(cr, head, x, baseline);
@@ -2463,12 +2460,13 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   (architect 2026-10-09; cool_edit_paint.h):
 //   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete),
 //   disable (Ctrl+D), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
-//   since 2026-09-29) and ADD TO SELECTION (bare `k`, the sticky ctrl, the
-//   row's ONE LIT FACE while the mode stands). The four verbs are the row's
-//   resting greys on a locked tab; the jump and Add to selection are not,
-//   both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood between
-//   Toggle inherit and Add to selection until 2026-09-29; Copy is the icon
-//   row's since, and Edit Flag was deleted);
+//   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09) and
+//   ADD TO SELECTION (bare `k`, the sticky ctrl, the row's ONE LIT FACE
+//   while the mode stands). The four verbs and Open Text Editor are the
+//   row's resting greys on a locked tab; the jump and Add to selection are
+//   not, both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood
+//   between Toggle inherit and Add to selection until 2026-09-29; Copy is
+//   the icon row's since, and Edit Flag was deleted);
 //   THE MARKER WALK (kTransportWalkGroup) — PREVIOUS MARKER (Shift+Tab, its
 //   ctrl press the paired march), NEXT MARKER (Tab, its shifted press
 //   Shift+Tab), CENTER (bare `c`, down from the icon row) and SWITCH TAB
@@ -2490,8 +2488,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // ruling, redesign_button_enabled), the `h` view's derived partition on top.
 // ONE MODE TERM (architect 2026-10-07): in the `h` view a member whose chord
 // the view refuses in every session is NOT PAINTED (history_mode_hides_button,
-// input_pointer.cpp) — Play / Stop, Up and Down, the four verbs and Jump to
-// Defining Marker — and publishes an empty rect, the block closing up from
+// input_pointer.cpp) — Play / Stop, Up and Down, the four verbs, Jump to
+// Defining Marker and Open Text Editor — and publishes an empty rect, the
+// block closing up from
 // the right margin and the state line taking the room; the row in there is
 // ADD TO SELECTION alone, the walk group's four, LEFT and RIGHT, and the two
 // skips: nine cases in four groups. Otherwise no member publishes a zero
@@ -2516,8 +2515,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // (paint_roster_case), the same dead glyph. WHO WEARS THE DEAD FACE HERE, re-derived 2026-10-07 — in
 // the `h` view the derived partition answers dead for the PLAY/STOP button
 // (Space is consumed there), UP and DOWN (bare Up/Down are neither the mode's
-// vocabulary nor on its allowlist), the FOUR MARKER VERBS and JUMP TO
-// DEFINING MARKER (Ctrl+J, consumed in there like the verbs' chords) — every
+// vocabulary nor on its allowlist), the FOUR MARKER VERBS, JUMP TO
+// DEFINING MARKER (Ctrl+J, consumed in there like the verbs' chords) and OPEN
+// TEXT EDITOR (bare Return, on neither list, 2026-10-09) — every
 // one of them dead in every session, so none of them is painted in the view
 // (history_mode_hides_button) — while LEFT / RIGHT are the mode's own
 // playhead step since 2026-09-26 and grey on their own arm (a focused diff
@@ -2529,7 +2529,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // Ctrl+Tab on its allowlist (architect-confirmed for the skips). PREVIOUS
 // MARKER greys only under a lit grid iterations with no reverse step left
 // (its twin, the march, refusing there too). Outside the view the four VERBS
-// grey on a locked tab, their own
+// and OPEN TEXT EDITOR grey on a locked tab, their own
 // gate — JUMP TO DEFINING MARKER, seated among them, does NOT, its chord being
 // navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT THE
 // TRANSPORT THREE AND ADD TO SELECTION greys on the
@@ -2632,6 +2632,14 @@ constexpr TransportRowDef kTransportGroup[] = {
 // lamp, and greys where Ctrl+J would refuse (jump_to_value_source_actionable)
 // and in the `h` view; neither lock greys it, the jump authoring nothing.
 //
+// THE GROUP IS SEVEN SINCE 2026-10-09 (architect: "resurrect the Open Text
+// Editor button. It should go between jump to defining marker and toggle add
+// to selection"): OPEN TEXT EDITOR — bare Return, the sets'
+// accessories-text-editor, Tango's the drawing its Unlock already wears —
+// the glass's road to Return with no editor standing. An act that opens an
+// editor, no lamp; it greys where Return would open nothing and on a locked
+// tab, and the `h` view does not paint it (its roster entry, app_state.h).
+//
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
 // (architect), taking its glyph with it — its only consumer.)
@@ -2641,6 +2649,7 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDisable,    icons::Icon::ViewHidden},
     {RedesignButton::IconMarkerInherit,        icons::Icon::InsertLink},
     {RedesignButton::IconJumpToDefiningMarker, icons::Icon::GoJumpDeclaration},
+    {RedesignButton::IconOpenTextEditor,       icons::Icon::AccessoriesTextEditor},
     {RedesignButton::IconAddToSelection,       icons::Icon::EditSelect},
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's second
@@ -2916,7 +2925,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // gripper, the dark time field, the end bar — with THE STATE LINE on the
     // free face past it (the block at the clock below) — then THE RIGHT
     // BLOCK, packed against the lane's right edge: the MARKER-VERB GROUP (its
-    // six counted off kMarkerVerbGroup), the MARKER-WALK GROUP (Previous
+    // seven counted off kMarkerVerbGroup), the MARKER-WALK GROUP (Previous
     // Marker, Next Marker, Center and Switch Tab, kTransportWalkGroup), the
     // four CARDINAL ARROWS (↓ ↑ ← →, kTransportArrowGroup) and the TRANSPORT
     // THREE (kTransportGroup), each Cool Edit's group, two W of face between
@@ -2932,19 +2941,20 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (paint_bottom_strip).
     //
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
-    // case; the case 23 since 2026-10-09 ~10:25): a group of n is 5 + 6 +
-    // 23n + 4 + 6 = 23n + 21, so the block is the 6 verbs' 159, the walk's
-    // 113, the arrows' 113 and the transport's 90 with three gaps of 2, 481
-    // W — on the tablet's 768 at 300 % starting at W 287, the clock's group
-    // W 2..107 (Tahoma's ~66-W cell in the 85-W field), the state line's
-    // first ink at W 113, clipped at W 285 (~172 W of line). IN THE `h`
-    // VIEW (the hide, 2026-10-07) the block is 1 verb + 4 walk + 2 arrows +
-    // 2 transport in four groups, 44 + 113 + 67 + 67 + 6 = 297 W, the line's
-    // room 356 W. THE ROW CARRIES NO COLLISION RULE — none of the redesign
-    // does — and the crop-at-the-floor allowance recorded at
-    // kMinWindowWidthPx covers a narrow window: the block reaches the
-    // clock's group once the window falls below about 2 + 106 + 481 = 589 W
-    // outside the view. THE STATE
+    // case; the case 23 since 2026-10-09 ~10:25, the verbs seven since
+    // Open Text Editor joined that evening): a group of n is 5 + 6 + 23n + 4
+    // + 6 = 23n + 21, so the block is the 7 verbs' 182, the walk's 113, the
+    // arrows' 113 and the transport's 90 with three gaps of 2, 504 W — on the
+    // tablet's 768 at 300 % starting at W 264, the clock's group W 2..107
+    // (Tahoma's ~66-W cell in the 85-W field), the state line's first ink at
+    // W 113, clipped at W 262 (~149 W of line). IN THE `h` VIEW (the hide,
+    // 2026-10-07; Open Text Editor hidden there with the verbs) the block is
+    // 1 verb + 4 walk + 2 arrows + 2 transport in four groups, 44 + 113 + 67
+    // + 67 + 6 = 297 W, the line's room 356 W. THE ROW CARRIES NO COLLISION
+    // RULE — none of the redesign does — and the crop-at-the-floor allowance
+    // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
+    // the clock's group once the window falls below about 2 + 106 + 504 =
+    // 612 W outside the view. THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.
     int right_block_x = content.x + content.w;
@@ -3691,15 +3701,14 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         paint_popup_chrome(cr, card, PopupFace::Info);
 
         const int box_y = card.y + pad;
-        // The card's class glyph, no case, at the card's own placement,
-        // standing on the card (a bound drawing wears its text role).
+        // The card's class glyph, no case, at the card's own placement.
         icons::draw(cr,
                     n.cls == AppState::NotificationClass::Critical
                         ? icons::Icon::DialogError
                         : icons::Icon::DialogInformation,
                     static_cast<double>(glyph_x + inset),
                     static_cast<double>(box_y + inset),
-                    static_cast<double>(glyph_px), GuiSurface::Card);
+                    static_cast<double>(glyph_px));
 
         if (text_room > 0) {
             cairo_save(cr);
@@ -4165,12 +4174,11 @@ int64_t ruler_step_ms(double ms_per_px) {
 }
 
 // THE COMB'S MAJORS — the ladder's step on a displayed basis and the one
-// expression that places a major on the screen grid, shared by the ruler's
-// walk (paint_ruler_row) and THE CANVAS'S VERTICAL GRID (on_redraw's
-// render_canvas call, architect 2026-10-09: "on the major ticks", the
-// ruler's own columns), so the two cannot stand a column apart. `vp_ms` and
-// `ms_per_px` the basis in milliseconds, `wave_w` the columns the walk
-// spans; `valid` false on a basis with no span.
+// expression that places a major on the screen grid, the ruler's walk's
+// (paint_ruler_row; the canvas draws no vertical grid on them, render.h's
+// row-6 canvas paragraph, 2026-10-09). `vp_ms` and `ms_per_px` the basis in
+// milliseconds, `wave_w` the columns the walk spans; `valid` false on a
+// basis with no span.
 struct RulerComb {
     bool    valid     = false;
     double  ms_per_px = 0.0;
@@ -4199,21 +4207,6 @@ RulerComb ruler_comb(double spp, double vp_start, int sr, int wave_w) {
     c.wave_w = wave_w;
     c.valid  = true;
     return c;
-}
-// THE MAJORS' COLUMNS ON THE WALK'S COLUMNS [0, wave_w), waveform-relative,
-// left to right — the canvas's vertical grid (render_canvas): the ruler's
-// own walk, from its first step to the step past its end.
-std::vector<int> ruler_major_columns(const RulerComb& c) {
-    std::vector<int> out;
-    if (!c.valid) return out;
-    const double end_ms = c.end_ms();
-    for (int64_t k = c.first_step(); ; ++k) {
-        if (static_cast<double>(k) * static_cast<double>(c.step) > end_ms)
-            break;
-        const int col = c.major_col(k);
-        if (col >= 0 && col < c.wave_w) out.push_back(col);
-    }
-    return out;
 }
 
 // `M:SS.mmm`, REAPER VERBATIM: the minutes field is ALWAYS present, zero
@@ -4402,8 +4395,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // exchange for a comb that stops breathing under every pan.
     const int64_t first_step = comb.first_step();
     // A step index's own rounded column: the ONE place a tick position meets
-    // the screen grid (RulerComb::major_col, which the canvas's vertical grid
-    // reads too). Majors anchor here; minors are distributed between them.
+    // the screen grid (RulerComb::major_col). Majors anchor here; minors are
+    // distributed between them.
     const auto major_col = [&](int64_t k) { return comb.major_col(k); };
     // THE LABELS ARE DROPPED AT BOTH ENDS (architect 2026-10-09, the mock's
     // edge-drop rule, retiring 2026-10-05's slide): a label CENTERED on its
@@ -8160,14 +8153,9 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             const int gy = r.y + (r.h - glyph) / 2;
             // THE GLYPH KEEPS ITS OWN COLOURS ON EVERY ROW, lit or resting
             // (architect 2026-10-06: every icon's inks are the drawing's
-            // own, period pixel art no ground recolours — icons.h's head),
-            // EXCEPT A BOUND DRAWING's (2026-10-10, Breeze's), which wears
-            // the row's text pair as the name does (the surface named here).
-            const GuiSurface row_surface =
-                lit ? GuiSurface::ListRowLit : GuiSurface::ListRow;
+            // own, period pixel art no ground recolours — icons.h's head).
             icons::draw(cr, icon, static_cast<double>(gx),
-                        static_cast<double>(gy), static_cast<double>(glyph),
-                        row_surface);
+                        static_cast<double>(gy), static_cast<double>(glyph));
             const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
@@ -8188,9 +8176,9 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            // The row's text pair (surface_text, render.h), the one its
-            // bound glyph wears.
-            set_palette_source(cr, surface_text(row_surface));
+            // The row's text pair (surface_text, render.h).
+            set_palette_source(cr, surface_text(lit ? GuiSurface::ListRowLit
+                                                    : GuiSurface::ListRow));
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);
@@ -8401,8 +8389,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // THE GROUND SPLIT: the chrome erase above covers the whole exposed rect;
     // the canvas's frame and the column's margins then take the panel's face
     // and the frame's ring (paint_canvas_column_frame, above), and the
-    // waveform area its own `waveform_canvas` ground with the grid and the
-    // center lines over it (render_canvas, render.h's row-6 canvas
+    // waveform area its own `waveform_canvas` ground with the horizontal grid
+    // and the center lines over it (render_canvas, render.h's row-6 canvas
     // paragraph). Unconditional and
     // ahead of every content branch, so a cold frame (loading, no audio, or a
     // null plate before the first worker publish) shows canvas where the
@@ -8428,19 +8416,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             cairo_rectangle(cr, painted.x, painted.y, painted.w, painted.h);
             cairo_clip(cr);
         }
-        // THE VERTICAL GRID'S COLUMNS ARE THE RULER'S MAJORS (architect
-        // 2026-10-09), off the same comb on the same PLATE basis and width
-        // the ruler walks (paint_ruler_row), so a grid line stands on its
-        // major tick's column; none while no audio stands.
-        std::vector<int> grid_cols;
-        if (audio.total_frames() > 0 && !app.loading) {
-            const PlateViewportBasis b = plate_viewport_basis();
-            const int ww = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
-                                                  : canvas.w;
-            grid_cols = ruler_major_columns(
-                ruler_comb(b.spp, b.vp_start, audio.sample_rate(), ww));
-        }
-        render_canvas(cr, canvas, grid_cols);
+        render_canvas(cr, canvas);
         if (band_cuts) cairo_restore(cr);
     }
 
@@ -8549,8 +8525,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   2. paint_canvas_column_frame — the panel's face from the canvas's
         //      top frame row through the column's foot and the canvas's
         //      frame ring — then render_canvas — the waveform area's ground,
-        //      the vertical grid, the horizontal grid and the center lines
-        //      (above, unconditional; 2026-10-09).
+        //      the horizontal grid and the center lines (above,
+        //      unconditional; 2026-10-09; no vertical grid, render.h's row-6
+        //      canvas paragraph).
         //   3. the two redesigned top button rows and the
         //      unified bottom row (its chrome, buttons, clock AND state cell
         //      in one painter),

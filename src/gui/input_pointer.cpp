@@ -523,10 +523,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // SEVENTEEN
-    // rows (re-counted 2026-09-29 evening: the walk group grown to four that
-    // morning, then Edit Flag and Copy Value up to the icon row — Edit Flag
-    // deleted there the same evening — and Jump to Defining Marker in),
+    // EIGHTEEN
+    // rows (re-counted 2026-10-09, when Open Text Editor joined the verb
+    // group; the succession is in git history),
     // every chord already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -630,8 +629,30 @@ constexpr ToolbarChord kToolbarChords[] = {
     // and greys it through the derived partition.
     {RedesignButton::IconJumpToDefiningMarker,
      GuiKeys::J,      true,  false, false, false},                             // Ctrl+J
-    // ADD TO SELECTION (architect 2026-08-18), the verb group's SIXTH and last
-    // since 2026-09-29, behind Jump to Defining Marker (the group's count has
+    // OPEN TEXT EDITOR (architect 2026-10-09: "resurrect the Open Text Editor
+    // button. It should go between jump to defining marker and toggle add to
+    // selection and the shortcut of course is enter"), the verb group's SIXTH:
+    // BARE Return, the key that opens the addressed cell's editor on the
+    // focused marker (input_handler.cpp's Return arm) — the glass has no Enter
+    // off the on-screen keyboard, which is why the button exists. THE PRESS
+    // DISPATCHES BARE Return THROUGH on_key AT THE LIFT and the act is that
+    // arm's exactly, ONE ROAD with no second editor-open body, so every gate
+    // the key meets is the button's by construction: the load, the modal
+    // routes, the `h` view's allowlist (which does not name Return, so the
+    // derived partition greys it there and the view hides it), the read-only
+    // allowlist (which does not name it either — every editor is an
+    // authoring surface), the grid-iterations gate (Return admitted on a bound
+    // axis alone), the tie's card and flag_editor_open_actionable. The
+    // keypad's Enter is the same arm's second keysym and is NOT a second row:
+    // a row spells the chord the dispatch synthesizes, and Return is the
+    // spelling every reader accepts (the walk's IsoLeftTab precedent). NOT A
+    // RADIO AND NO LAMP (an act whose editor session is the state), it does
+    // NOT repeat (an opener), and it ADMITS NO MODIFIER, so a modified press
+    // is refused at the band gate and the long press reaches nothing.
+    {RedesignButton::IconOpenTextEditor,
+     GuiKeys::Return, false, false, false, false},                             // bare Return
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH and
+    // last since 2026-10-09, behind Open Text Editor (the group's count has
     // moved around it with every arrival and departure; the succession is in
     // git history):
     // BARE `k`, which was free — he picked it over `n`
@@ -8343,7 +8364,7 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE ROSTER'S POINTER WALK over the whole roster (row 1's three menu
-// anchors, the icon row's twenty-seven and the bottom row's seventeen: the
+// anchors, the icon row's twenty-seven and the bottom row's eighteen: the
 // enum's own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; a MODAL's yield leaves a bottom-row member with
 // a zero rect, as do the icon row's overflow rule and its history stand-ins a

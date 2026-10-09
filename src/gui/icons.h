@@ -8,47 +8,23 @@
 // desktop wearing Tango (Tango's own files only, nothing drawn, no GNOME
 // file, a repeat known by position; the set the product drew itself before
 // is git history), clearlooks' MIST, gnome-icon-theme 2.30's drawings under
-// Mist's own folders). THE BUNDLED SETS are kIconSetKeys below — Tango,
-// Mist and, since 2026-10-10, BREEZE, the neutral set for tuning colors
-// (architect 2026-10-10: "a neutral set that will help me with tuning the
-// colors"). One scalable file per enumerator under assets/icons/<set>/ (its
-// README the mapping, the provenance and the licences), PARSED AT LAUNCH
-// through resvg, the one renderer of every set
+// Mist's own folders). THE BUNDLED SETS are kIconSetKeys below — Tango and
+// Mist (Breeze, the neutral monochrome set bound to the chrome's text role,
+// stood 2026-10-08 to 2026-10-09 and left with that binding: "looks out of
+// place now", architect 2026-10-09). One scalable file per enumerator under
+// assets/icons/<set>/ (its README the mapping, the provenance and the
+// licences), PARSED AT LAUNCH through resvg, the one renderer of every set
 // (svg_icon.h: the wrapper, the error rule and why a set is checked at its
 // import), straight from the bundle — never copied into the config folder
-// (load_svg_set, below) — and rasterised lazily per (glyph, device px,
-// bound color) into an ARGB32 surface that a draw copies at an integer
-// device px, no resample. THE INKS ARE THE DRAWINGS' OWN (gradients,
-// strokes and opacities included), never a theme role — EXCEPT A BOUND
-// DRAWING's; a DISABLED glyph is the live spec's rule (draw_disabled).
-//
-// THE BOUND DRAWING (architect 2026-10-10: Breeze "should take whatever the
-// font color is that sits on the face, the chrome. It's okay if they lose
-// some information in the process"): a file that paints in `currentColor`
-// — every Breeze file, monochrome, and no Tango or Mist file — WEARS THE
-// TEXT ROLE OF THE SURFACE IT STANDS ON ("text over a fill is the theme's
-// recorded pair", now for a glyph too): every draw names its surface
-// (GuiSurface, render.h; surface_text resolves the role under the live
-// chrome) and the glyph takes that role's live bytes — the label on the
-// toolbars and the player's row, the caption's text on the caption (active
-// or inactive as the title is), the card's text on the cards, the list's
-// text pair on the list rows (resting or lit). THE ROAD IS RESVG'S OWN: the
-// file's bytes are kept, and a bound parse hands resvg the user stylesheet
-// `svg { color: #RRGGBB; }` (svg_icon::parse), which `currentColor`
-// resolves against — the file is never edited at run time, and a file with
-// no `currentColor` is parsed once with no stylesheet exactly as before, so
-// ONE ROAD SERVES EVERY SET and no set is special-cased by name. The parses
-// are held per (glyph, color) and the rasters keyed on the color, so a
-// glyph standing on two surfaces at once (AppIcon on an active and an
-// inactive caption) keeps both; a chrome pick that moves the twelve drops
-// the bound parses and rasters (drop_bound_faces) and they refill lazily
-// in the new colors. THE PICTURE UNDER TANGO AND MIST IS UNCHANGED: their
-// files carry no `currentColor`, so every draw keys the one unbound parse.
+// (load_svg_set, below) — and rasterised lazily per (glyph, device px) into
+// an ARGB32 surface that a draw copies at an integer device px, no
+// resample. THE INKS ARE THE DRAWINGS' OWN (gradients, strokes and
+// opacities included), never a theme role; a DISABLED glyph is ReactOS's
+// saturate (draw_disabled).
 //
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in the program's case the
-// drawing's square cell (Tango's 48 units; Breeze's 24, its own 24-px
-// seat, so 1 unit is 20/24 W and a 1-unit stroke 2.5 device px at 300 %)
+// drawing's square cell (Tango's 48 units, Mist's its own)
 // fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20),
 // Cool Edit's own seat since 2026-10-09 ~10:25, program_spec.h's head — 60
 // device px at 300 %, 72 at 360); elsewhere its site's own scaled 16 (the
@@ -74,7 +50,7 @@
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
 // and warptempo_cli must never carry this TU (nor svg_icon's, nor resvg).
 
-#include "render.h"        // the case geometry, live_chrome_spec(), GuiSurface
+#include "render.h"        // the case geometry, live_chrome_spec()
 
 #include <cairo/cairo.h>
 
@@ -186,6 +162,8 @@ enum class Icon {
     EditCopy,            // Copy Resolved Value (Ctrl+C)
     HelpWhatsthis,       // Toggle Tooltips (bare backslash)
     GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J)
+    AccessoriesTextEditor, // Open Text Editor (bare Enter) — the sets'
+                           // accessories-text-editor (architect 2026-10-09)
     EditDelete,          // Delete Folder (the render player)
     AppIcon,             // the caption's icon and the program icon outside
                          // the window (tools/app_icon)
@@ -194,7 +172,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 59;
+inline constexpr int kIconCount = 60;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -214,20 +192,19 @@ inline constexpr const char* kIconNames[] = {
     "BboxNext", "TabDetach", "SettingsConfigure", "Folder", "AudioXWav",
     "MediaRepeatSingle", "GoParentFolder", "DialogInformation",
     "DialogError", "WindowClose", "EditCopy", "HelpWhatsthis",
-    "GoJumpDeclaration", "EditDelete", "AppIcon",
+    "GoJumpDeclaration", "AccessoriesTextEditor", "EditDelete", "AppIcon",
 };
 static_assert(std::size(kIconNames) == kIconCount);
 
 // THE BUNDLED SETS — the `icons` device key's whole vocabulary, a closed
 // compiled list in the Settings row's order (kIconSetChoiceSource,
 // app_state.h), each a folder under assets/icons/ (the APK packs every
-// folder there, android/app/build_apk.sh): Tango, Mist and Breeze
-// (architect 2026-10-10). THE DISPLAY NAMES stand beside the keys, Title
-// Case, the Settings row's combo and list.
-inline constexpr const char* kIconSetKeys[]         = {"tango", "mist",
-                                                       "breeze"};
-inline constexpr const char* kIconSetDisplayNames[] = {"Tango", "Mist",
-                                                       "Breeze"};
+// folder there, android/app/build_apk.sh): Tango and Mist (Breeze left
+// 2026-10-09, an `icons=breeze` line the ordinary unknown-value refusal).
+// THE DISPLAY NAMES stand beside the keys, Title Case, the Settings row's
+// combo and list.
+inline constexpr const char* kIconSetKeys[]         = {"tango", "mist"};
+inline constexpr const char* kIconSetDisplayNames[] = {"Tango", "Mist"};
 static_assert(std::size(kIconSetKeys) == std::size(kIconSetDisplayNames));
 
 // THE `icons` KEY'S GRAMMAR — the ONE owner, asked by the device config's
@@ -244,7 +221,7 @@ constexpr bool is_icon_set_key(std::string_view v) {
     return icon_set_key_for(v) != nullptr;
 }
 inline constexpr const char* kIconSetGrammarReason =
-    "must be tango, mist or breeze";
+    "must be tango or mist";
 // EVERY CHROME'S OWN SET IS A BUNDLED ONE (ChromeSpec::icon_set, the set an
 // absent `icons` line means).
 static_assert(chrome_specs_all([](const ChromeSpec& s) {
@@ -305,31 +282,17 @@ std::optional<std::string> load_svg_set(std::string_view set);
 // and on a flip of True Colors (GuiInputHandler::toggle_true_colors — the
 // rasters are converted for the window as they are made, svg_icon.h): the
 // cache refills lazily at the new sizes and in the new conversion; the
-// parsed drawings stay (a bound parse keys its sRGB color, which neither
-// change moves).
+// parsed drawings stay. (No color pick drops anything: no glyph wears a
+// role, the head's rule.)
 void drop_rasters();
-
-// THE BOUND FACES DROPPED (2026-10-10, the head's BOUND DRAWING): every
-// bound parse and every raster made from one, on a chrome pick that moved
-// the live twelve (GuiColorPicker::install_live_words — a scheme's load, a
-// chrome element's pick, its Paste, its OLD) — the surfaces' text roles
-// may have moved, and a picker's drag would otherwise leave one parse per
-// color it passed through. They refill lazily in the new colors. The
-// unbound drawings and their rasters stay: under Tango and Mist this drops
-// nothing. A palette pick (the program's fifteen) never calls it: no
-// surface a glyph stands on is the palette's.
-void drop_bound_faces();
 
 // Draw `icon`'s cell onto the square (x, y, size_px, size_px): the
 // glyph's live raster at the integer px nearest size_px, copied at the
 // integer device px nearest (x, y) — every caller passes integers. The
 // callers pass icon_glyph_px() (the program's case's seat) or their own scaled
-// 16. `surface` is what the glyph stands on — a bound drawing wears its
-// text role (the head's BOUND DRAWING); an unbound one ignores it. Cairo
-// state is saved and restored. Cannot fail: the launch's load parsed every
-// drawing.
-void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
-          GuiSurface surface);
+// 16. Cairo state is saved and restored. Cannot fail: the launch's load
+// parsed every drawing.
+void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 
 // THE DISABLED GLYPH — a dead button's face: REACTOS'S SATURATE (architect
 // 2026-10-06; comctl32's toolbar draws a disabled 32-bpp image with
@@ -341,12 +304,8 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
 // first time a disabled face asks and cached beside it, copied at the same
 // seat. A disabled WORD keeps the chrome's own rule (show_embossed_run,
 // render.h: Windows' DSS_DISABLED emboss, GTK's etch, Motif's stipple).
-// A bound drawing's disabled face is derived from its raster in the
-// surface's text role (`surface`, as draw's) — the rule applied to a glyph
-// already in the label's color, as Windows' disabled rule falls on a text
-// glyph (architect 2026-10-10, accepted).
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
-                   double size_px, GuiSurface surface);
+                   double size_px);
 
 // THE CASED GLYPH, a toolbar button's: the cell at the case's fixed lead
 // Windows px (icon_case_lead_px — the spec's seat, the head's PLACEMENT)
@@ -354,9 +313,7 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
 // `button_shift_px`, the button's pressed/checked shift (paint_button_box's
 // `ButtonBoxFace::shift`, one Windows px right and down). Every roster
 // button's glyph goes through here or draw_cased_disabled, so the seat has
-// one owner. A CASE IS THE PROGRAM'S: the cased glyph's surface is
-// GuiSurface::ProgramCase by definition (the band, row 8, the player's
-// row), so the two cased calls name none.
+// one owner.
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
                 double size_px, int button_shift_px);
 

@@ -5,8 +5,8 @@
 // (resvg's C API, Apache-2.0 OR MIT), built from one pinned source on both
 // devices (android/deps/85_resvg.sh, CMakeLists.txt): scalable and
 // antialiased, no bitmap anywhere. This file is a thin wrapper:
-// the parse (a bound drawing's under its color, 2026-10-10), the size, one
-// render per (drawing, device px), the channel order cairo wants. The one file that includes <resvg.h> is svg_icon.cpp.
+// the parse, the size, one render per (drawing, device px), the channel
+// order cairo wants. The one file that includes <resvg.h> is svg_icon.cpp.
 //
 // THE ERROR RULE: the launch refuses ONLY MALFORMED SVG — resvg's parse error
 // (not well-formed XML, no root <svg>, no usable size) is the validation
@@ -29,7 +29,6 @@
 #include <cstdint>
 #include <expected>
 #include <memory>
-#include <optional>
 #include <string>
 #include <string_view>
 
@@ -39,9 +38,7 @@ namespace svg_icon {
 
 // One parsed file. A value type: copies share the one immutable tree, which
 // the last copy frees (resvg_tree_destroy). A re-raster at a new scale is one
-// more render of the same tree, never a re-parse; a bound drawing under a new
-// color is a new parse (usvg resolves `currentColor` while it builds the
-// tree), icons.cpp holding one per (glyph, color).
+// more render of the same tree, never a re-parse.
 struct Document {
     std::shared_ptr<resvg_render_tree> tree;
 };
@@ -49,13 +46,9 @@ struct Document {
 // Parse one file's whole bytes. THE ERROR ARM'S PRODUCER is a bundled file
 // resvg refuses (a build defect, caught at launch): "not well-formed SVG
 // (resvg error N)", N the library's own code; the caller prefixes the set and
-// the file. THE BOUND COLOR (2026-10-10, icons.h's BOUND DRAWING): with
-// `current_color` (0xRRGGBB, sRGB) the parse hands resvg the user stylesheet
-// `svg { color: #RRGGBB; }`, so every `currentColor` in the file resolves to
-// it — resvg's own road (resvg_options_set_stylesheet), the bytes untouched;
-// with none, resvg's defaults, a `currentColor` resolving to black.
-std::expected<Document, std::string> parse(
-    std::string_view bytes, std::optional<uint32_t> current_color);
+// the file. The options are resvg's defaults: every bundled drawing names
+// its own inks (icons.h's head).
+std::expected<Document, std::string> parse(std::string_view bytes);
 
 // The drawing at `px` device px a side (px > 0) into a NEW ARGB32 surface the
 // caller owns (cairo_surface_destroy): scaled uniformly by the smaller of

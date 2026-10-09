@@ -1453,7 +1453,7 @@ struct GuiInputHandler {
     // since 2026-08-18, Load in place at the tail since 2026-09-01 — and the
     // VIEW GROUP's three closing it flush right since 2026-10-01) and the
     // bottom
-    // row's seventeen — the right block's MARKER-VERB GROUP of six
+    // row's eighteen — the right block's MARKER-VERB GROUP of seven
     // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the walk
     // group's four (Previous Marker, Next Marker, Center, Switch Tab), four
     // cardinal arrows and the transport three.

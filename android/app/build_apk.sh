@@ -107,8 +107,8 @@ for f in $FONT_FILES; do
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done
 # THE BUNDLED ICON SETS (architect 2026-10-06): each folder under the
-# repository's assets/icons/ (Tango, Mist and Breeze, icons.h's kIconSetKeys,
-# the device config's `icons` choosing among them) copied whole
+# repository's assets/icons/ (Tango and Mist, icons.h's kIconSetKeys, the
+# device config's `icons` choosing between them) copied whole
 # as SVG into the package's assets/icons/<set>/, which aapt2 link's -A packs
 # (deflated) as the APK's `icons/<set>/` asset directory. The app reads them in
 # place at launch, never copying them out (icons.h's load_svg_set;
