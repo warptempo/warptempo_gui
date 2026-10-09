@@ -4913,7 +4913,10 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 
 // Paints the anchor stem (the Ableton pivot affordance) at the zoom anchor's
 // current column, full waveform height — a live zoom gesture's, or the S
-// Pen's retained one between strokes. TWO PRODUCERS, ONE STEM:
+// Pen's retained one between strokes — WHITE, in the scanner's role: the
+// stems that belong to the controls are white and the playhead alone is
+// yellow (architect 2026-10-10; render_strip_anchor_stem). TWO PRODUCERS,
+// ONE STEM:
 //   * THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while `zooming` — from a
 //     ctrl-armed press, or from a ctrl-down edge mid-drag, and gone again at
 //     the ctrl-up edge; the mode's contract is at ScrollDragState);

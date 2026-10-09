@@ -62,7 +62,9 @@
 // PAIR, `invalid_label` and `invalid_label_selected` (architect 2026-10-09
 // ~11:50–12:00, Cool Edit's cues: render.h's marker-lane paragraph, the
 // table at render.cpp's resolve_flag_face); the playhead's `playhead_stem`
-// — its head, its dots and the zoom anchor's stem — and the scanner; and
+// — its head and its dots alone — and the `scanner`, the white of the
+// stems that belong to the controls: the playback line and the zoom
+// anchor's stem (architect 2026-10-10: "the playhead is yellow"); and
 // THE PANEL'S FACE (the program is Cool Edit from the toolbar down: its
 // band, dock bar and row 8 are the program's, so their color is the
 // palette's; the role table's paragraph below). (The four flag kinds' faces
@@ -213,7 +215,11 @@
 // FF0000 selected (architect 2026-10-09 ~11:50–12:00, "dimmer unselected,
 // brighter selected"), and THE SCANNER WHITE (architect 2026-10-07: "let's
 // go back to a white scanner") — THE PLAYHEAD AND THE SCANNER still TWO
-// roles, so a palette may part them. `grid` paints the quarter lines of each
+// roles, so a palette may part them: `playhead_stem` THE PLAYHEAD'S HEAD AND
+// DOTS ALONE, `scanner` THE SCANNER AND THE ZOOM ANCHOR'S STEM, the stems
+// that belong to the controls (architect 2026-10-10: "the non-playhead
+// stems that are related to the controls should be white, and then the
+// playhead is yellow"; render.h's playhead paragraph). `grid` paints the quarter lines of each
 // channel's half — the horizontals alone, Cool Edit's verticals not drawn
 // (architect 2026-10-09 ~18:40) — and `center` each channel's center line
 // over the grid (render_canvas, render.h's row-6 block); Cool Edit's

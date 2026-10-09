@@ -3487,8 +3487,9 @@ inline constexpr SettingsChoiceSource kIconSetChoiceSource{
 };
 // THE FONT'S DOMAIN (architect 2026-10-09 ~21:20, "the font is its own
 // drop-down"): the face sets the `font` key names (kGuiFontKeys, gui_font.h)
-// in their order — Tahoma, FreeSans, Liberation Sans, each named by its
-// files (architect 2026-10-10 ~00:40) — shown by their display names
+// in their order, which is the row's — FreeSans, Liberation Sans, Tahoma,
+// alphabetical (architect 2026-10-10), each named by its files (architect
+// 2026-10-10 ~00:40) — shown by their display names
 // (kGuiFontDisplayNames). The combo shows the config's
 // `font`, tahoma when it has no line (recall_gui_setting_value,
 // settings_io.cpp) — the live face.

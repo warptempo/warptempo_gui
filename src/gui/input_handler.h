@@ -2785,7 +2785,8 @@ private:
     // THE CHOICE EDITOR'S KEYS (2026-10-07 evening; settings_editor.h's
     // head), handle_settings_editor_key's fork while a choice editor stands:
     // Esc closes a dropped list; with the combo focused Up / Down walk the
-    // shown value and Enter commits it; Tab (the list closing), Esc and the
+    // shown value, committing nothing, and Enter — the dialog's default
+    // button, OK — commits it (architect 2026-10-10); Tab (the list closing), Esc and the
     // modal contract's Ctrl+S / Ctrl+Q take the shared route with no
     // completion, as does every key while a button holds the focus; any
     // other key with the combo focused is a consumed nothing — no key edits
@@ -2800,9 +2801,10 @@ private:
     //     takes the focus back and drops the list. False for every other
     //     press, which goes on to the dialog's own claims and its veil.
     //   finish_settings_choice_release — a scroll hold's lift ends it,
-    //     selecting nothing; the armed row's lift: on that row it selects
-    //     and commits (choice_commit), elsewhere it closes the list. False
-    //     when neither stood.
+    //     selecting nothing; the armed row's lift: on that row it shows the
+    //     row and commits nothing (choice_pick — OK and Enter commit,
+    //     architect 2026-10-10), elsewhere it closes the list. False when
+    //     neither stood.
     //   settings_choice_motion — a scroll hold's carry (the thumb's drag),
     //     else a dropped list's hover follows the pointer.
     bool claim_settings_choice_press(GuiMouseButton button, int x, int y,

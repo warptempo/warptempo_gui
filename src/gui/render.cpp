@@ -1047,16 +1047,17 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     if (col >= area.w)    col = area.w - 1;
 
     cairo_save(cr);
-    // THE ANCHOR STEM IS THE PLAYHEAD'S STEM (architect 2026-08-01, at the
-    // row-6 live look; the `playhead_stem` role since 2026-10-03), superseding
-    // the dim tunable grey #686a6c this drew in. The affordance is
-    // deliberately no longer "less loud than a marker stem": it is a position
-    // line during a gesture, and the product's position lines are this one
-    // colour — since 2026-10-09 the playhead's head-and-dots role, Cool
-    // Edit's Curs yellow by default, the anchor's line solid in it.
+    // THE ANCHOR STEM IS THE SCANNER'S WHITE (architect 2026-10-10: "the zoom
+    // stem and the scanner are both white, which unifies them: the
+    // non-playhead stems that are related to the controls should be white,
+    // and then the playhead is yellow"): a control's line during a gesture,
+    // as the scanner is playback's, in the one `scanner` role — the playhead
+    // alone wears `playhead_stem` (render.h's playhead paragraph). It is
+    // deliberately as loud as a marker stem, a solid line where the cues'
+    // and the cursor's are dotted.
     // The canvas's rows, the area whole (2026-10-09: the frame row above it
     // is the canvas's frame, which no line crosses).
-    set_palette_source(cr, palette().playhead_stem);
+    set_palette_source(cr, palette().scanner);
     fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
     cairo_restore(cr);
 }

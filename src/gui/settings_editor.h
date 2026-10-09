@@ -49,7 +49,8 @@ struct GuiInputHandler;
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
 //    card; the chrome and the icon set at the next launch, each card saying
-//    so; the font at once, live, no card (the screen is the answer).
+//    so; the font at once, live, at the OK, no card (the screen is the
+//    answer).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -93,7 +94,14 @@ struct GuiInputHandler;
 // height. THE BUFFER IS KEPT AT `<key>=<shown value>`, so EVERY COMMIT IS THE
 // TEXT ROAD'S — commit() and commit_device_setting, the one road: the
 // grammar, the config write, the next-launch card and the unchanged value's
-// quiet no-op are untouched. THE ROADS:
+// quiet no-op are untouched. THE COMMIT IS OK'S ALONE, EVERY CHOICE ROW'S
+// (architect 2026-10-10, the Font row judged on the glass: "it should not
+// pick the font until I hit OK"): a row of the list, a press and its lift,
+// and Up / Down each MOVE THE SHOWN VALUE and nothing else — no config
+// written, no face swapped, no card; OK (and Enter, the dialog's default
+// button) commits the shown value through commit(); Cancel (and Esc) closes
+// with nothing written and nothing applied, the shown value dying with the
+// session. One road for the three rows, Chrome, Icons and Font. THE ROADS:
 //   * A PRESS ON THE COMBO DROPS ITS LIST UPWARD over the well (the row is
 //     the window's foot; Windows' combo opens above when no room lies
 //     below) — the picker list's painter and geometry
@@ -107,10 +115,11 @@ struct GuiInputHandler;
 //     right, the shown row scrolled into view at the open.
 //   * WHILE THE LIST IS DOWN IT OWNS THE POINTER (the dropdown's ONE PRESS,
 //     ONE ACT): a press on its scroll bar scrolls (the scroll block's input),
-//     a press on a row ARMS it and THE LIFT ON THAT ROW SELECTS AND
-//     COMMITS — the act at the lift, as the picker's list and every menu row
-//     act — closing the editor as Enter does; a press anywhere else closes
-//     the list and is consumed, the combo standing.
+//     a press on a row ARMS it and THE LIFT ON THAT ROW SHOWS IT — the act
+//     at the lift, as the picker's list and every menu row act — closing
+//     the list onto the combo, the editor standing for OK or Cancel
+//     (2026-10-10, above); a press anywhere else closes the list and is
+//     consumed, the combo standing.
 //   * KEYS, with the combo focused: Up / Down walk the shown value, list
 //     down or not (Windows' combo moves its selection without dropping), no
 //     wrap, a dropped list keeping the lit row in view; Enter commits the
@@ -198,13 +207,15 @@ struct GuiSettingsEditor {
     // domain, the line rewritten, a dropped list's lit row following);
     // choice_step moves it by one; set_choice_list_open drops or closes the
     // list; choice_hover and choice_arm_row are the list's lit and pressed
-    // rows; choice_commit selects a row and commits it through commit().
+    // rows; choice_pick is the lift on a row: the list closed and the row
+    // shown, NOTHING COMMITTED — OK and Enter commit, through commit()
+    // (architect 2026-10-10, the head).
     void choice_show(int index);
     void choice_step(int delta);
     void set_choice_list_open(bool open);
     void choice_hover(int row);
     void choice_arm_row(int row);
-    void choice_commit(int index);
+    void choice_pick(int index);
     // The value completion, run on BARE TAB in the field and by open_prefilled:
     // when any settable key is typed with an empty
     // value side (e.g. `notes=`, `gui_scale=`, `tab_a_trim_begin=`),

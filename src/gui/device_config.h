@@ -53,13 +53,15 @@
 //                            effect at the next
 //                            launch, the chrome's rule (architect 2026-10-10)
 //   font=<key>               THE FACE every text is set in, named by its
-//                            files: `tahoma`, `free-sans` or `liberation-sans`
+//                            files: `free-sans`, `liberation-sans` or `tahoma`
 //                            (is_font_key, gui_font.h; any other word the
 //                            launch's hard fail); MAY BE ABSENT, reading as
 //                            tahoma (kDefaultFontKey) — but always written,
 //                            the chrome's rule ("no default setting because
 //                            it's a drop-down", architect 2026-10-09);
-//                            applied LIVE at a Settings pick (gui_live_face_set)
+//                            applied LIVE at the Settings row's OK
+//                            (gui_live_face_set; the row's list only shows
+//                            a face, architect 2026-10-10)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of

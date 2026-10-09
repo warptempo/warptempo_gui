@@ -158,9 +158,9 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 }
 
 // THE CHOICE EDITOR'S ACTS (the head). The shown value is written into the
-// line as `<key>=<value>`, so every road that commits the line — Enter, OK,
-// a list row — commits it through commit() and commit_device_setting
-// unchanged.
+// line as `<key>=<value>`, so the two roads that commit the line — OK and
+// Enter — commit it through commit() and commit_device_setting unchanged;
+// a list row, Up and Down only move it (architect 2026-10-10).
 void GuiSettingsEditor::choice_show(int index) {
     if (!app.settings_choice_live()) return;
     AppState::SettingsChoice& ch = app.settings_choice;
@@ -239,11 +239,15 @@ void GuiSettingsEditor::choice_arm_row(int row) {
     viewport.invalidate_modal_dialog_area();
 }
 
-void GuiSettingsEditor::choice_commit(int index) {
+// THE LIFT ON A LIST ROW SHOWS THE ROW AND COMMITS NOTHING (architect
+// 2026-10-10: "it should not pick the font until I hit OK"): the list
+// closes onto the combo and the line takes the row's value, so OK or Enter
+// commits it and Cancel or Esc leaves the config and the screen as they
+// stood — for every choice row alike.
+void GuiSettingsEditor::choice_pick(int index) {
     if (!app.settings_choice_live()) return;
     set_choice_list_open(false);
     choice_show(index);
-    commit();
 }
 
 // The one opener, and it carries no read-only decision at all: the lock
@@ -1065,7 +1069,8 @@ void GuiSettingsEditor::commit() {
 // project is opened first — a rename-by-hand case, accepted. `chrome`
 // (2026-10-07) and `icons` (2026-10-10): AT THE NEXT LAUNCH alone, each
 // card saying so (their arms). `font` (2026-10-09 ~21:20): AT ONCE, live,
-// no card (its arm).
+// no card (its arm). For a choice row "the commit" is the OK's or Enter's,
+// never a list row's (architect 2026-10-10, settings_editor.h's head).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08 and left with its key.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
@@ -1163,7 +1168,11 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // drop-down"): a face's key under its one grammar owner (is_font_key,
     // gui_font.h), kept as typed and ALWAYS WRITTEN — the default's word too,
     // the chrome's rule, "no default setting because it's a drop-down" — and,
-    // unlike the chrome and the icon set, APPLIED LIVE: the live set moves
+    // unlike the chrome and the icon set, APPLIED LIVE AT THE COMMIT — which
+    // is the OK's (or Enter's), never the list row's, the choice editor's
+    // rule (architect 2026-10-10, settings_editor.h's head: a row only
+    // shows the face's name, and Cancel leaves the face as it stood): the
+    // live set moves
     // (set_live_font), every cache that holds a face keys the set
     // (gui_live_face_set's comment, gui_font.h; the flag cache by its
     // fp_face_set, refreshed here synchronously as the color picker's

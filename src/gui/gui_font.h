@@ -436,17 +436,23 @@ static_assert(same_lanes(kGuiFaceSetWin2000, kGuiFaceSetLiberation));
 // kIconSetKeys' shape. THE WORDS AND THE NAMES ARE THE FILES' (architect
 // 2026-10-10 ~00:40: "I just want to make sure that the fonts are named
 // honestly … FreeSans is what we're actually providing. So the drop-down
-// should use FreeSans in the name"): Tahoma, FreeSans, Liberation Sans —
-// never the Windows face a set stands in for, which is its block's story.
+// should use FreeSans in the name") — never the Windows face a set stands
+// in for, which is its block's story. THE ORDER IS ALPHABETICAL BY THE
+// SHOWN NAME, FreeSans, Liberation Sans, Tahoma (architect 2026-10-10: the
+// order of the evening before was "neither historical nor alphabetical;
+// let's just make it alphabetical"), and the three tables below run in it
+// in parallel; nothing reads a position in them — the default, the
+// first-run stamp and the launch's resolution all go by the key's word
+// (kDefaultFontKey, gui_face_set_for_font_key).
 // THE ABSENT KEY IS `tahoma` (kDefaultFontKey, Windows 2000's own face): the
 // row always shows the live value, and a pick always writes the line
 // (device_config.h). No chrome and no scheme names a face.
 inline constexpr const char* kGuiFontKeys[] = {
-    "tahoma", "free-sans", "liberation-sans"};
+    "free-sans", "liberation-sans", "tahoma"};
 inline constexpr const char* kGuiFontDisplayNames[] = {
-    "Tahoma", "FreeSans", "Liberation Sans"};
+    "FreeSans", "Liberation Sans", "Tahoma"};
 inline constexpr const GuiFaceSet* kGuiFontKeySets[] = {
-    &kGuiFaceSetWin2000, &kGuiFaceSetFreeSans, &kGuiFaceSetLiberation};
+    &kGuiFaceSetFreeSans, &kGuiFaceSetLiberation, &kGuiFaceSetWin2000};
 static_assert(std::size(kGuiFontKeys) == std::size(kGuiFontDisplayNames));
 static_assert(std::size(kGuiFontKeys) == std::size(kGuiFontKeySets));
 
@@ -464,7 +470,7 @@ constexpr bool is_font_key(std::string_view v) {
     return gui_face_set_for_font_key(v) != nullptr;
 }
 inline constexpr const char* kFontGrammarReason =
-    "must be tahoma, free-sans or liberation-sans";
+    "must be free-sans, liberation-sans or tahoma";
 // THE DEFAULT, a config with no `font` line (DeviceConfig::font's
 // initializer spells it).
 inline constexpr const char* kDefaultFontKey = "tahoma";

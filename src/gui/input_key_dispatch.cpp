@@ -9312,8 +9312,14 @@ bool GuiInputHandler::handle_settings_choice_key(GuiKey key,
             settings_editor.choice_step(key == GuiKeys::Down ? 1 : -1);
             return true;
         }
+        // ENTER IS THE DIALOG'S DEFAULT BUTTON, OK: it commits the shown
+        // value (a dropped list closing with it), the one commit a choice
+        // row has besides OK's press — the arrows above and a list row only
+        // move the shown value (architect 2026-10-10, GuiSettingsEditor's
+        // head).
         if (bare && (key == GuiKeys::Return || key == GuiKeys::KpEnter)) {
-            settings_editor.choice_commit(app.settings_choice.shown);
+            settings_editor.set_choice_list_open(false);
+            settings_editor.commit();
             return true;
         }
         const bool ctrl_only = mods.ctrl && !mods.shift && !mods.alt;

@@ -281,9 +281,11 @@ struct TrimRange {
 //                 their dots — and THE INVALID LABEL'S PAIR,
 //                 `invalid_label` at rest and `invalid_label_selected`
 //                 selected (THE MARKER LANE, below); the playhead's role
-//                 `playhead_stem` — its head in the ruler, its dots in the
-//                 canvas, and the zoom
-//                 anchor's stem (THE PLAYHEAD, below); the scanner; and THE
+//                 `playhead_stem` — its head in the ruler and its dots in
+//                 the canvas, nothing else (THE PLAYHEAD, below); the
+//                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
+//                 the white of the stems that belong to the controls
+//                 (architect 2026-10-10); and THE
 //                 PANEL'S `face` (2026-10-09: the program's band, dock bar,
 //                 row 8 and the canvas column's lanes — Cool Edit's — every
 //                 other panel tone derived from it, the COOL EDIT BLOCK,
@@ -656,14 +658,19 @@ void install_true_colors(bool on);
 // not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
 // four roles stood 2026-10-05 to 2026-10-09; the solid `playhead_stem` line
 // before it; git history.)
-// THE ZOOM ANCHOR'S STEM (render_strip_anchor_stem) reads the same
-// `playhead_stem` role, a solid line (the product's position lines are the
-// playhead's color, architect 2026-08-01). THE SCANNER — the moving playback
-// line, paint_scanner — HAS ITS OWN ROLE, `scanner` (architect 2026-10-05),
-// a SOLID line one device px wide over the canvas (Cool Edit's playback
-// cursor is a solid 1-px line, measured 2026-10-09; unscaled on the canvas
-// since ~14:25, waveform_line_px's rule), WHITE in every built-in palette
-// (architect 2026-10-07: "let's go back to a white scanner").
+// THE PLAYHEAD ALONE IS YELLOW: `playhead_stem` is its head and its dots
+// and nothing else (architect 2026-10-10). THE STEMS THAT BELONG TO THE
+// CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-10: "the zoom
+// stem and the scanner are both white, which unifies them: the non-playhead
+// stems that are related to the controls should be white, and then the
+// playhead is yellow"): THE SCANNER — the moving playback line,
+// paint_scanner, its own role since 2026-10-05 — a SOLID line one device px
+// wide over the canvas (Cool Edit's playback cursor is a solid 1-px line,
+// measured 2026-10-09; unscaled on the canvas since ~14:25,
+// waveform_line_px's rule), and THE ZOOM ANCHOR'S STEM
+// (render_strip_anchor_stem), the same solid one-px line at the pivot;
+// WHITE in every built-in palette (architect 2026-10-07: "let's go back to a
+// white scanner").
 
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
 //
@@ -3031,8 +3038,10 @@ void render_playhead(cairo_t* cr,
 
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
-// spanning the canvas, `area` whole, solid, in the
-// `playhead_stem` role (the ruling is at the paint site).
+// spanning the canvas, `area` whole, solid, in the `scanner` role — the
+// white of the stems that belong to the controls, the playhead alone being
+// yellow (architect 2026-10-10; the palette block's playhead paragraph owns
+// the rule).
 // The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
 // edge-pinned anchor draws the stem exactly at the edge and the clamp becomes
