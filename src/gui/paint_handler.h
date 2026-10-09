@@ -52,10 +52,12 @@ struct GuiTargetRender;
 // the live scale, so render.cpp can reach it without pulling paint_handler.h
 // into the lower-layer include graph.
 
-// THE ICON ROW'S LEFT PAD — the row's 8px lead-in, and since 2026-08-14 THE
-// BOTTOM ROW'S PAD TOO, at both ends and for the modal that displaces its
-// tenants (architect: "make sure bottom row is same height and metrics
-// (padding, etc.) as main icon row"). It lives in this header rather than in
+// THE MODAL ROW'S PAD — the bottom row's 8px lead-in and lead-out for the
+// modal that displaces its tenants and the render player's transport (since
+// 2026-10-09 the band and row 8 themselves walk from Cool Edit's edge
+// columns and grippers, program_spec.h; the name is the icon row's, whose
+// pad it was from 2026-08-14, architect: "make sure bottom row is same
+// height and metrics (padding, etc.) as main icon row"). It lives in this header rather than in
 // the painter's file because that unification gave it a reader outside the row
 // — one source, so a retune of the icon row carries to the other by
 // construction. (The one-day STATUS BAR read it too, at both ends and for the

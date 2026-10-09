@@ -8,6 +8,8 @@
 #include "text_shape.h"
 #include "theme_file.h"
 #include "palette_file.h"   // kGuiPaletteRoles, effective_palette_name
+#include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
+#include "cool_edit_paint.h"   // kCeCaseInk, the program case's glyph ink
 #include "chrome_derive.h"  // live_chrome_words (the chrome knob)
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -330,10 +332,6 @@ void paint_relief_sunken_outer(cairo_t* cr, const GuiRect& r) {
     paint_relief_frame(cr, r, palette().shadow, palette().hilight);
 }
 
-void paint_relief_raised_inner(cairo_t* cr, const GuiRect& r) {
-    paint_relief_frame(cr, r, palette().hilight, palette().shadow);
-}
-
 void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
                         int phase_y, GuiColor lit, GuiColor ground) {
     if (r.w <= 0 || r.h <= 0) return;
@@ -636,15 +634,6 @@ void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w) {
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     paint_cell_rect(cr, GuiRect{x, y, w, lw}, palette().shadow);
     paint_cell_rect(cr, GuiRect{x, y + lw, w, lw}, palette().hilight);
-    cairo_restore(cr);
-}
-
-void paint_relief_etched_vline(cairo_t* cr, int x, int y, int h) {
-    const int lw = relief_line_px();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{x, y, lw, h}, palette().shadow);
-    paint_cell_rect(cr, GuiRect{x + lw, y, lw, h}, palette().hilight);
     cairo_restore(cr);
 }
 
@@ -2812,7 +2801,7 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the fifteen as
+    // THE LIVE WORDS (render.h's program_palette_words): the sixteen as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
     // THE LIVE CHROME PICK (render.h's live_chrome_pick): the knob as the
@@ -2829,6 +2818,7 @@ GuiColor surface_text(GuiSurface surface) {
         live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     switch (surface) {
     case GuiSurface::Face:            return pal.label;
+    case GuiSurface::ProgramCase:     return hex(kCeCaseInk);
     case GuiSurface::CaptionActive:
         return clearlooks ? pal.cl_title_text : pal.caption_active_text;
     case GuiSurface::CaptionInactive:
@@ -2852,13 +2842,21 @@ const GuiPaletteWords& program_palette_words() { return g_program_words; }
 const std::optional<GuiChromePick>& live_chrome_pick() { return g_chrome_pick; }
 
 namespace {
-// THE PROGRAM'S FIFTEEN into the installed struct and the plate's two baked
+// THE PROGRAM'S SIXTEEN into the installed struct and the plate's two baked
 // inks off the same words — the install family's shared half (the
 // generation is each member's own bump).
 void fill_program_palette(const GuiPaletteWords& w) {
     g_program_words = w;
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         g_palette.*(kGuiPaletteRoles[i].member) = hex(w[i]);
+    // THE COOL EDIT BLOCK, derived from the panel's face by Cool Edit's own
+    // rule (cool_edit_derive.h), so a pick of Face moves every tone live.
+    static constexpr std::size_t kFace = palette_role_index("face");
+    static_assert(kFace < kGuiPaletteRoleCount);
+    for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
+        if (t.member != nullptr)
+            g_palette.*(t.member) =
+                hex(cool_edit_derive::tone(w[kFace], t.a, t.b));
     static constexpr std::size_t kInk = palette_role_index("waveform_ink");
     static constexpr std::size_t kOutline =
         palette_role_index("waveform_outline");

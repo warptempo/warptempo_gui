@@ -24,11 +24,9 @@
 // THE TONES ARE WINDOWS' QUARTET IN MOTIF'S SCHEME: the Solaris theme
 // (theme_file.h's kGuiThemeCde) sets hilight = the body's top shadow,
 // shadow AND dk_shadow = its bottom shadow and light_3d = the body, so the
-// base's ONE-LINE families — paint_relief_raised_inner (Hilight / Shadow)
-// and paint_relief_sunken_outer (Shadow / Hilight) — ARE Motif's raised and
-// sunken bevels in the body, and the win2000 painters that draw those lines
-// (the etched separators, the one-line time field, the hot-free flat
-// toolbar's pressed line) draw Motif under cde with no fork. What needs a
+// base's ONE-LINE family — paint_relief_sunken_outer (Shadow / Hilight) —
+// IS Motif's sunken bevel in the body, and the win2000 painters that draw those lines
+// (the etched lines) draw Motif under cde with no fork. What needs a
 // painter of its own is below: the tones that are not the body's (the
 // caption's set-1 boxes, the text field's set-4 ring, the inactive frame's)
 // and the shapes Windows never drew (Motif's beveled arrow, the select-
@@ -36,8 +34,8 @@
 // colour (cde_select, the trough, the checked face and the armed menu
 // entry), the field's two shadows, the title's two and the inactive
 // frame's two are the CDE block of roles (theme_file.h); NO HOVER FACE
-// anywhere — Motif has none (the deviations doc records the one-hover-face
-// rule's unused allowance).
+// anywhere — Motif has none, and the toolbars are the program's (Cool
+// Edit's case, none under any chrome, 2026-10-09).
 //
 // EVERY COLOUR OPAQUE, NO GRADIENT, NO ROUNDED CORNER, NO BLEND: Motif's
 // drawing is solid cells; the antialiasing is the renderer's on the mitres
@@ -77,16 +75,6 @@ void paint_cde_armed(cairo_t* cr, const GuiRect& r);
 // the Win95 metrics"; the flag editor's no-box rule and the caret are the
 // cue).
 void paint_cde_field(cairo_t* cr, const GuiRect& r, GuiColor ground);
-
-// -- THE TOOLBAR BUTTON (GuiToolbarStyle::MotifFlat, chrome_spec.h) -----------
-
-// ONE TOOL BUTTON on its case `r`: the body at rest with nothing drawn;
-// PRESSED one sunken line, the glyph one W px right and down; CHECKED
-// (`lamp`) the select colour inside one sunken line, the glyph unshifted;
-// PRESSED AND CHECKED the checked face pushed; DISABLED as the others (the
-// glyph's saturate is the caller's). Answers the glyph's shift.
-int paint_cde_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
-                          bool pressed);
 
 // -- THE CAPTION (dtwm's title bar; render.h's caption block) ------------------
 

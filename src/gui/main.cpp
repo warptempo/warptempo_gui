@@ -154,12 +154,11 @@ namespace {
 // measured 20-px band; its place 2026-10-06), or GtkMenuBar's 1 + 19 + 1,
 // flush under the caption — render.h's menu-row block),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
-// menu row with nothing between, a period menu-bar-plus-toolbar stack
-// folded into one lane — one etched line pair, the 30-px case as the band
-// and 4 px of foot, 36 Windows px whole (architect 2026-10-06), or GTK's
-// 2 + 32 + 2 = 36, or cde's raised form 1 + 2 + 30 + 2 + its foot pair 2 =
-// 37 (2026-10-09); render.h's icon-row block — and NO BORDER beyond that foot:
-// the trim lane's own first row is the boundary), then FLEXIBLE GAP 1, then
+// menu row with nothing between: COOL EDIT'S TOOLBAR BAND, the program's,
+// 37 Windows px under every chrome — 2 head lines, 3 face, the 27-W case,
+// 2 face, 3 foot lines (architect 2026-10-09; program_spec.h, render.h's
+// program block) — its last light line the boundary with the trim lane),
+// then FLEXIBLE GAP 1, then
 // THE CENTERED BLOCK's three: the TRIM lane (trim_lane_h_px(), the
 // miniaturized scroll bar — the dithered track and the window's thumb), the
 // RULER lane
@@ -170,21 +169,16 @@ namespace {
 // (marker_lane_h_px(), the flags, their stems and the playhead's column under
 // them), whose bottom edge is the waveform top. ALL SIX ride the gui_scale
 // axis. The BOTTOM strip is ONE LANE: THE UNIFIED BOTTOM ROW,
-// bottom_row_h_px() tall (the icon row's case on the row's own air — 3 px
-// under win2000, 2 under clearlooks — plus a 1px row of ground on top, where
-// its border-top stood; under clearlooks that row and the next are GTK's
-// status bar's line, architect 2026-10-07) — the clock
-// cell in its time
-// field (the active tab's letter, a pipe
-// and the timestamp, "A | 00:45.115") and THE STATE LINE on the ground
-// beside it (2026-10-03) at the left pad and,
-// flush right, the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
-// owns its membership), the marker walk, the four cardinal arrows and the
-// transport three, the spec's group gap of ground between two groups (eight
-// Windows px under win2000, architect 2026-09-29; an etched separator in
-// each since 2026-10-06), all at the icon
-// row's toolbar case — sitting ON
-// THE WINDOW'S FOOT with the flexible gap 2 between it and the waveform.
+// bottom_row_h_px() tall — COOL EDIT'S DOCK BAR (6 W) over ITS ROW 8 (4 W of
+// face, the band's case, 5 W of face: 36), 42 under every chrome (architect
+// 2026-10-09; program_spec.h) — the clock in its dark time field inside its
+// own group (the active tab's letter, a pipe and the timestamp,
+// "A | 00:45.115") and THE STATE LINE on the face beside it (2026-10-03),
+// and, packed against the right edge, the MARKER-VERB GROUP
+// (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
+// walk, the four cardinal arrows and the transport three, each Cool Edit's
+// group of gripper, cases and end bar — sitting ON THE WINDOW'S FOOT with
+// the flexible gap 2 between it and the waveform.
 //
 // THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
 // (architect 2026-10-07 evening: the maximum height it carried — a render.h
@@ -231,8 +225,9 @@ namespace {
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
 // WITH THE WAVEFORM THE WHOLE LEFTOVER, BOTH GAPS ARE ZERO ON EVERY WINDOW
 // (2026-10-07 evening): gap 1's midpoint term comes to half the bottom row
-// less half the top stack, negative under both chromes at every scale (125
-// or 128 Windows px above against row 8's 37 below), so it floors at 0, and
+// less half the top stack, negative under every chrome at every scale (126
+// or 129 Windows px above against the dock bar and row 8's 42 below), so it
+// floors at 0, and
 // gap 2 is the leftover's remainder after W, 0. The centering is infeasible
 // by construction and the waveform takes the whole leftover, which is the
 // rule's own floor rather than a special case; the two gaps' derivations
@@ -250,84 +245,79 @@ namespace {
 // leftover and both gaps 0 in every stack (the rule above). Every lane is its own composite of rounded parts
 // (scaled_px's rule), so the device rows below are read off the lane
 // accessors, never off a Windows total times the factor — in particular the
-// icon lane's etched pair is 2 x relief_line_px(), not scaled_px(2), so it
-// can differ from a naive total at a fractional gui_scale (none of the
-// scales below hit that case). THE TOP STACK IS 125 WINDOWS PX UNDER
-// WIN2000 AND 128 UNDER CLEARLOOKS (render.h's icon-row block). THE WELL'S
-// HEIGHT AT THE BASE'S 300 % IS 954 DEVICE ROWS UNDER WIN2000 AND 945 UNDER
-// CLEARLOOKS (the rule at centered_leftover_h below). THE WIN2000 STACKS
-// FIRST (the chrome key's round of 2026-10-07 moved none of them — the
-// accessors re-read at 138 and 300 gave every number below again), the
-// CLEARLOOKS STACKS after them.
+// program band's five lines are 5 x relief_line_px(), not scaled_px(5), so
+// they can differ from a naive total at a fractional gui_scale. THE PROGRAM'S
+// BAND IS 37 AND ITS DOCK BAR AND ROW 8 42 UNDER EVERY CHROME (architect
+// 2026-10-09, the program is Cool Edit; program_spec.h), so THE TOP STACK
+// IS 126 WINDOWS PX UNDER WIN2000 AND 129 UNDER CLEARLOOKS, 42 BELOW (render.h's
+// chrome_stack_authored_h). THE WELL'S HEIGHT AT THE BASE'S 300 % IS 936
+// DEVICE ROWS UNDER WIN2000 AND CDE AND 927 UNDER CLEARLOOKS (the rule at
+// centered_leftover_h below). THE WIN2000 STACKS FIRST, the CLEARLOOKS
+// STACKS after them (each re-derived off the accessors 2026-10-09: the band
+// 5 lines + face 3 + the case's 3 lines + glyph 24 + face 2; the dock bar 3
+// lines + face 3; row 8 face 4 + the case + face 5).
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
-//   lanes are 25 caption + 27 menu + 49 icon + 22 trim + 24 ruler + 23 marker
-//   = 170 above, of which 101 is the caption and the two toolbar rows above
-//   the gap and 69 the block above the waveform, and 50 below (the bottom
-//   row's 49 content and its 1-px top row); leftover 860: the waveform 860,
-//   both gaps 0 (the midpoint rule would want 540 - 170 - 430 = -60) — 25
-//   caption / 27 menu / 49 icon / 0 / 69 block / 860 waveform / 0 / 50 row.
+//   lanes are 25 caption + 27 menu + 48 band (5 + 4 + 36 + 3) + 22 trim +
+//   24 ruler + 23 marker = 169 above, of which 100 is the caption, the menu
+//   row and the band above the gap and 69 the block above the waveform, and
+//   56 below (the dock bar's 7 and row 8's 6 + 36 + 7); leftover 855: the
+//   waveform 855, both gaps 0 (the midpoint rule would want 540 - 169 - 427
+//   = -56) — 25 / 27 / 48 / 0 / 69 / 855 / 0 / 56.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — the caption across its top; the architect's
 //   tablet value since 2026-10-06): the lanes are 54 caption + 60 menu +
-//   108 icon + 48 trim + 51 ruler + 54 marker = 375 above (222 the caption
-//   and the two toolbar rows, 153 the block; the ruler's and the marker
+//   111 band + 48 trim + 51 ruler + 54 marker = 378 above (225 the caption,
+//   the menu row and the band, 153 the block; the ruler's and the marker
 //   lane's heights derived from their faces, ruler_lane_h_px and
-//   marker_lane_h_px at render.h) and 111 below (108 + its 3-row top row),
-//   leftover 954: the waveform 954, both gaps 0 (the rule would want 720 -
-//   375 - 477 = -132) — 54 / 60 / 108 / 0 / 153 / 954 / 0 / 111.
+//   marker_lane_h_px at render.h) and 126 below (the dock bar's 18 and row
+//   8's 108), leftover 936: the waveform 936, both gaps 0 (the rule would
+//   want 720 - 378 - 468 = -126) — 54 / 60 / 111 / 0 / 153 / 936 / 0 / 126.
 //   2304x1440 AT gui_scale 400 (same surface, the scale alone different):
-//   the lanes are 72 caption + 80 menu + 144 icon + 64 trim + 68 ruler + 72
-//   marker = 500 above (296 the caption and the two toolbar rows, 204 the
-//   block) and 148 below (144 + its 4-row top row), leftover 792: the
-//   waveform 792, both gaps 0 (the rule would want 720 - 500 - 396 = -176)
-//   — 72 / 80 / 144 / 0 / 204 / 792 / 0 / 148.
+//   the lanes are 72 caption + 80 menu + 148 band + 64 trim + 68 ruler + 72
+//   marker = 504 above (300 and 204) and 168 below (24 + 144), leftover
+//   768: the waveform 768, both gaps 0 — 72 / 80 / 148 / 0 / 204 / 768 / 0 /
+//   168.
 // THE CLEARLOOKS STACKS (2026-10-07, at Windows' proportions — the 13-row
-// cell and the 32-W case, chrome_spec.h's instance; caption 20 + menu 21 +
-// icon 36 + trim 16 + ruler 17 + marker 18 = 128 Windows px above, row 8's
-// 1 + 2 + 32 + 2 = 37 below — the marker lane and the ruler the base's own,
-// the cells being the same):
-//   1920x1080 AT 138 %: the lanes are 28 caption + 28 menu + 51 icon + 22
-//   trim + 24 ruler + 23 marker = 176 above (107 the caption and the two
-//   toolbar rows, 69 the block) and 52 below, leftover 852: the waveform
-//   852, both gaps 0.
-//   2304x1440 AT 300 %: the lanes are 60 caption + 63 menu + 108 icon + 48
-//   trim + 51 ruler + 54 marker = 384 above (231 and 153) and 111 below,
-//   leftover 945: the waveform 945, both gaps 0 — 60 / 63 / 108 / 0 / 153 /
-//   945 / 0 / 111.
+// cell, chrome_spec.h's instance; caption 20 + menu 21 + the program's band
+// 37 + trim 16 + ruler 17 + marker 18 = 129 Windows px above, the program's
+// 42 below — the marker lane and the ruler the base's own, the cells being
+// the same):
+//   1920x1080 AT 138 %: the lanes are 28 caption + 28 menu + 48 band + 22
+//   trim + 24 ruler + 23 marker = 173 above (104 and 69) and 56 below,
+//   leftover 851: the waveform 851, both gaps 0.
+//   2304x1440 AT 300 %: the lanes are 60 caption + 63 menu + 111 band + 48
+//   trim + 51 ruler + 54 marker = 387 above (234 and 153) and 126 below,
+//   leftover 927: the waveform 927, both gaps 0 — 60 / 63 / 111 / 0 / 153 /
+//   927 / 0 / 126.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 380 -> the waveform 380, both gaps 0 — 25 /
-//   27 / 49 / 0 / 69 / 380 / 0 / 50 (the midpoint rule would want gap 1 =
-//   300 - 170 - 190 = -60).
+//   this geometry; win2000): leftover 375 -> the waveform 375, both gaps 0
+//   — 25 / 27 / 48 / 0 / 69 / 375 / 0 / 56 (the midpoint rule would want gap
+//   1 = 300 - 169 - 187 = -56).
 // THE CDE STACKS (2026-10-08 ~17:45, chrome_spec.h's cde instance and the
 // architect's mock_frame_01, "mock 1 is good"): DTWM'S FRAME, 5 Windows px,
 // stands round the app on every window (the spec's window_frame_maximized)
 // OUTSIDE ITS GEOMETRY, as the restored laptop's sizing frame always did
 // (the platforms' frame_px_), so the app's height and width are the
 // surface's less the frame's two sides, and inside it caption 17 + menu 27
-// + icon 37 (Motif's raised form: its top line 1 + 2 + 30 + 2 + the foot
-// pair 2, 2026-10-09) + trim 13 (CDE's own scroll bar) + ruler 3 + marker
-// 18 = 115 Windows px above and row 8's 37 below: the frame's 10 and these
-// 152 are THE BASE'S 162 EXACTLY — THE RULER LANE IS THE LEFTOVER (its 3
-// the remainder, 4 until the form's top line took a row; it stands behind
-// the flags, render.h's chrome_stack_authored_h proving the sum). The whole
-// 480 W of the tablet's 1440 rows, top to bottom: frame 5 | caption 17 |
-// menu 27 | icon 37 | trim 13 | ruler 3 | marker 18 | well 318 | row 8 37 |
-// frame 5.
+// + the program's band 37 + trim 13 (CDE's own scroll bar) + ruler 4 +
+// marker 18 = 116 Windows px above and the program's 42 below: the frame's
+// 10 and these 158 are THE BASE'S 168 EXACTLY — THE RULER LANE IS THE
+// LEFTOVER (its 4 the remainder; it stands behind the flags, render.h's
+// chrome_stack_authored_h proving the sum). The whole 480 W of the tablet's
+// 1440 rows, top to bottom: frame 5 | caption 17 | menu 27 | band 37 | trim
+// 13 | ruler 4 | marker 18 | well 312 | dock bar 6 + row 8 36 | frame 5.
 //   1920x1080 AT 138 %, MAXIMISED (the frame 6 = 1 + 1 + 3 + 1; the app
 //   1908 x 1068): the lanes are 23 caption + 36 menu (1 + 34 + 1, the
-//   content's 34.5 rounding to even) + 50 icon (1 + 3 + 41 + 3 + the foot
-//   pair 2) + 18 trim + 4 ruler + 23 marker = 154 above (109 the caption and
-//   the two toolbar rows, 45 the block) and 50 below, leftover 864: the
-//   waveform 864, both gaps 0 (one row more than the 863 of the 4-W ruler:
-//   the form's line is 1 device row and the W it took from the ruler 2,
-//   each rounded at its element).
+//   content's 34.5 rounding to even) + 48 band + 18 trim + 6 ruler + 23
+//   marker = 154 above (107 the caption, the menu row and the band, 47 the
+//   block) and 56 below, leftover 858: the waveform 858, both gaps 0.
 //   2304x1440 AT 300 % (the frame 15 = 3 + 3 + 6 + 3; the app 2274 x 1410):
-//   the lanes are 51 caption + 81 menu + 111 icon + 39 trim + 9 ruler + 54
-//   marker = 345 above (243 and 102) and 111 below, leftover 954: the
-//   waveform 954, both gaps 0 — the base's well exactly (rows 360-1313 of
-//   the surface, the mock's), its width the app's 2274 floored to the grid
-//   step, 2272 (a 2-px chrome gutter at its right, waveform_area's rule).
+//   the lanes are 51 caption + 81 menu + 111 band + 39 trim + 12 ruler + 54
+//   marker = 348 above (243 and 105) and 126 below, leftover 936: the
+//   waveform 936, both gaps 0 — the base's well exactly, its width the
+//   app's 2274 floored to the grid step, 2272 (a 2-px chrome gutter at its
+//   right, waveform_area's rule).
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -402,15 +392,11 @@ namespace {
 // menu-row block, the row above the content; clearlooks' 19 between one row
 // above and one below; the anchors and the dropdown's hang point read the
 // lane, the label's seat alone reads the content between the rows),
-// the ICON lane is a period menu-bar-plus-toolbar stack folded into one row
-// — one etched line pair, the 30-px case as the band and 4 Windows px of
-// foot, 36 whole (architect 2026-10-06; clearlooks' 2 + 32 + 2, no pair, no
-// foot): render.h's icon-row block, icon_row_h_px; NO border of its own
-// beyond that foot — the trim lane's own first row is still the boundary
-// under it — and the UNIFIED BOTTOM ROW is the same case on the row's own
-// air above and below (bottom_row_air_px), with neither the icon row's etched lines nor its
-// foot, plus a one-px row of ground on top, the waveform side, where its
-// border-top stood (no line drawn since 2026-10-02).
+// the ICON lane is COOL EDIT'S TOOLBAR BAND, 37 Windows px with its own
+// lines under every chrome (architect 2026-10-09; render.h's program block,
+// icon_row_h_px), and the UNIFIED BOTTOM ROW is Cool Edit's DOCK BAR over
+// its ROW 8, the band's case on four W of face above and five below, 6 + 36
+// (dock_bar_h_px, bottom_row_content_h_px).
 constexpr int kTopLaneCount    = 6;
 constexpr int kBottomLaneCount = 1;
 // THE LANE GAP 1 OPENS ABOVE — the first top lane whose inset carries the
@@ -472,13 +458,12 @@ int strip_total_h(bool top_strip) {
 // base's waveform height is the rule every later theme keeps", architect
 // 2026-10-06): a vocabulary lays its lanes at its own period's metrics and
 // the well takes what they leave, no lane squeezed to hold a number. On the
-// tablet's 2304 x 1440 at gui_scale 300 the win2000 lanes leave 1440 − 375 −
-// 111 = 954 device rows (318 Windows px; the ReactOS base settled on
-// mock_TF1, 2026-10-06), the clearlooks lanes 1440 − 384 − 111 = 945 (315
-// Windows px: 3 W more above, metacity's caption, GtkMenuBar and the
-// toolbar band at the base's 13-row cell and a 32-W case, and the same 37
-// below; chrome_spec.h's instance). A COLOR moves no lane: the 954 / 945
-// pair holds under every palette of each chrome. May
+// tablet's 2304 x 1440 at gui_scale 300 the win2000 lanes leave 1440 − 378 −
+// 126 = 936 device rows (312 Windows px; the program's band and its dock
+// bar and row 8 since 2026-10-09), the clearlooks lanes 1440 − 387 − 126 =
+// 927 (309 Windows px: 3 W more above, metacity's caption and GtkMenuBar at
+// the base's 13-row cell; chrome_spec.h's instance). A COLOR moves no lane:
+// the 936 / 927 pair holds under every palette of each chrome. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -803,7 +788,7 @@ GuiRect bottom_row_area(const AppState& a) {
 
 GuiRect bottom_row_content_area(const AppState& a) {
     const GuiRect lane = bottom_row_area(a);
-    const int b = bottom_row_border_h_px();
+    const int b = dock_bar_h_px();
     return GuiRect{lane.x, lane.y + b, lane.w, lane.h - b};
 }
 
@@ -1926,11 +1911,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
     // modal dialog's armed button, the popup's two
     // item faces plus its press claim, the render player's row press and
-    // scrub drag, the notification cards' hover and the flat toolbars'
-    // HOT buttons (AppState::roster_hot and player_hot, architect
-    // 2026-10-06 — the one hover face). No other dialog button, band row or
-    // scrub handle wears a hover face (architect 2026-10-02), so none of
-    // them owes this edge a clear. The platform-side
+    // scrub drag, the notification cards' hover and the two toolbars' HOT
+    // button state (AppState::roster_hot and player_hot — which stores none
+    // since the cases became the program's, 2026-10-09: Cool Edit's toolbar
+    // has no hover face under any chrome, program_spec.h's case_hot_face;
+    // the clear stays as the state's one leave edge). No dialog button, band
+    // row or scrub handle wears a hover face (architect 2026-10-02), so none
+    // of them owes this edge a clear. The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h, and the capability-loss fire
     // site in input_core.cpp).
@@ -2050,9 +2037,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // hover paused has its clock re-armed here (a card a press still holds
         // keeps its bank until the press's own clear, above).
         input_handler.clear_notification_hover();
-        // AND THE HOT TOOLBAR BUTTONS, the roster's and the render player's:
-        // a pointer that has left — or a finger that has lifted, or a pen
-        // whose hover has ended — is on no button.
+        // AND THE HOT TOOLBAR BUTTONS' STATE, the roster's and the render
+        // player's: a pointer that has left — or a finger that has lifted, or
+        // a pen whose hover has ended — is on no button. (Neither is ever lit
+        // since 2026-10-09 — the program's cases have no hover face — so the
+        // clear paints nothing; it keeps the state's leave edge.)
         input_handler.set_roster_hot(-1);
         input_handler.set_player_hot(-1);
         // AND THE PEN'S HOT-FACE LATCH (GuiInputHandler::pen_hot_latch_, the

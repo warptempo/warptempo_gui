@@ -93,7 +93,7 @@ struct ToolbarChord {
     // on it while it is already selected is a CONSUMED NOTHING — AT THE LIFT
     // ALONE since 2026-10-07 evening: the press ARMS like every enabled
     // button's (arm_redesign_press), the hold paints the pressed face over
-    // the lit one (the toolbar case's CHECKED AND PRESSED, paint_toolbar_box),
+    // the lit one (Cool Edit's one down face for both, paint_roster_case),
     // and only the lift's act is the nothing (finish_chrome_press_release).
     // THE CLAIM'S OWN CONSUME IS GONE for the pen's sake (architect
     // 2026-10-07 ~22:15, on the tablet: "it blinks: goes dark for a moment,
@@ -123,7 +123,8 @@ struct ToolbarChord {
     // button a plain consumed nothing, the radio's own reading, rather than
     // leaning on the act's idempotence. (It once kept the CLAIM too, for a
     // face the bitmap crops could not show — a pressed interior over a lit
-    // button; the faces are painted now and compose the two, paint_toolbar_box.)
+    // button; the faces are painted now and compose the two,
+    // paint_roster_case.)
     bool           radio;
     // (EVERY ROW PAINTS A PRESSED INTERIOR — the icon row's and the bottom
     // row's click face — so there is no click-face column: the tab row's two
@@ -3482,9 +3483,9 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // dialog. It answers three readers — the armed button's inside bit with the
 // feint (below), whose pressed face and focus frame are painted and damage
 // the stashed box; THE RENDER PLAYER'S HOT BUTTON (AppState::player_hot,
-// architect 2026-10-06: the player's row is a flat toolbar, the one dialog
-// surface with a hover face; no other dialog button wears one, the frozen
-// design of 2026-10-02); and this surface's tooltip wait (the tail).
+// architect 2026-10-06; never lit since the player's cases became the
+// program's, 2026-10-09: Cool Edit's case has no hover face); and this
+// surface's tooltip wait (the tail).
 //
 // IT TRACKS AN ARMED BUTTON — THE FEINT (architect 2026-08-13,
 // SUPERSEDING this walk's own "sliding off cancels, and sliding back on does
@@ -3509,12 +3510,14 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
         if (app.modal_dialog.valid)
             viewport.invalidate_rect(app.modal_dialog.box);
     }
-    // THE PLAYER'S HOT BUTTON: the hit on the player's row while no dialog
-    // press is armed (comctl32 shows no hot item under capture), else none —
+    // THE PLAYER'S HOT BUTTON: the hit on the player's row while the
+    // program's case has a hot face (program_spec.h's case_hot_face — none
+    // since 2026-10-09, Cool Edit's) and no dialog press is armed (comctl32
+    // shows no hot item under capture), else none —
     // AND NONE WHILE THE PEN'S HOT-FACE LATCH HOLDS (pen_hot_latch_holds,
     // the rule at pen_hot_latch_, 2026-10-09): the roster's own answer, the
     // tapped button at rest until the pen moves off its anchor.
-    set_player_hot(app.modal_dialog.valid &&
+    set_player_hot(kProgramSpec.case_hot_face && app.modal_dialog.valid &&
                            app.modal_dialog.owner ==
                                AppState::ModalDialogOwner::Player &&
                            armed < 0 && !pen_hot_latch_holds()
@@ -8298,10 +8301,11 @@ void GuiInputHandler::finalize_active_drags() {
 // button a resting pointer's hint names, handed to note_tooltip_hover at the
 // tail), the ARMED CHROME PRESS's inside bit (the pressed face, which is
 // painted, and so pays its strip's damage) and THE HOT TOOLBAR BUTTON
-// (AppState::roster_hot, the flat toolbar's one
-// hover face, architect 2026-10-06; set_roster_hot pays its damage). The
-// rects are the painter's stashes, so the button a hint names and the button
-// that lights are the painted button and nothing is measured here.
+// (AppState::roster_hot; set_roster_hot pays its damage) — which stores none
+// since the cases became the program's (2026-10-09: Cool Edit's toolbar has
+// no hover face under any chrome, program_spec.h's case_hot_face). The
+// rects are the painter's stashes, so the button a hint names is the
+// painted button and nothing is measured here.
 // THE HOT FACE'S ONE SETTER (AppState::roster_hot): a change damages the
 // old button's published rect and the new one's — the face is painted inside
 // the case and nowhere else, and a stale stash's rect was already damaged by
@@ -8321,10 +8325,12 @@ void GuiInputHandler::set_roster_hot(int index) {
 void GuiInputHandler::arm_pen_hot_latch() {
     // Armed and unanchored (the rule at pen_hot_latch_): the hook fires after
     // the lift's own delivery, whose restore motion walked every hover face
-    // unlatched, so the two flat toolbars' latched answer — none, the face
-    // painted under the tap's capture — is installed here before the frame
-    // paints: the roster by its own re-walk (whose hot write the latch holds
-    // at -1), the player's hot button directly (its walk,
+    // unlatched, so the two toolbars' latched answer — none, the face painted
+    // under the tap's capture, and since 2026-10-09 the program's cases' only
+    // answer (no hover face under any chrome, so the rest face by
+    // construction) — is installed here before the frame paints: the roster
+    // by its own re-walk (whose hot write stores -1), the player's hot button
+    // directly (its walk,
     // update_modal_dialog_hover, also owns the dialog's tooltip wait, which
     // the arm has no business re-noting). The lit rows need nothing: the
     // restore motion left them on the row the contact last lit, and their
@@ -8405,7 +8411,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         const bool under_pointer = !modal_veil && !under_card &&
                                    rect_contains(f.rect, mx, my) &&
                                    redesign_button_hover_zone(app, id);
-        // THE HOT CANDIDATE: the toolbar button under the pointer on the
+        // THE HOT CANDIDATE (stored by no write while the program's case has
+        // no hot face, below): the toolbar button under the pointer on the
         // same gates — never a menu anchor, the menu row having no hot face
         // (paint_menu_row) — and NO keyboard-modal term:
         // that refusal is the tooltip's dwell, while a button the flag editor
@@ -8425,19 +8432,17 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             break;
         }
     }
-    // THE HOT FACE'S ONE WRITE (AppState::roster_hot): the candidate in a
-    // toolbar style with a hot face (both: Explorer's flat raised line and
-    // GTK's prelit button, toolbar_style_has_hot_face) while no chrome press
-    // is armed — comctl32 shows no hot item while a toolbar holds the
-    // capture, and GTK prelights no other button under a grab — and none
-    // otherwise, so a toolbar style with no hot face would never store one.
+    // THE HOT FACE'S ONE WRITE (AppState::roster_hot): the candidate while
+    // the program's case has a hot face and no chrome press is armed —
+    // comctl32 shows no hot item while a toolbar holds the capture — and
+    // none otherwise. COOL EDIT'S CASE HAS NONE (program_spec.h's
+    // case_hot_face, false since 2026-10-09), so this stores none.
     // AND NONE WHILE THE PEN'S HOT-FACE LATCH HOLDS (pen_hot_latch_holds,
     // the rule at pen_hot_latch_, architect 2026-10-07; every hover-lit face
     // since 2026-10-09): after a pen lift the tapped button reads at rest —
     // the face painted under the tap's capture — until the pen moves off its
     // anchor.
-    set_roster_hot(toolbar_style_has_hot_face(
-                           live_chrome_spec().toolbar_style) &&
+    set_roster_hot(kProgramSpec.case_hot_face &&
                            app.chrome_press.kind ==
                                AppState::ChromePress::Kind::None &&
                            !pen_hot_latch_holds()

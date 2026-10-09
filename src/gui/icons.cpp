@@ -27,7 +27,7 @@ namespace {
 // color, made the first time a draw asks and held until drop_bound_faces.
 //
 // THE CACHE: per (glyph, device px, color) the LIVE raster and, the first
-// time a disabled face asks, its DISABLED copy by the spec's rule
+// time a disabled face asks, its DISABLED copy, ReactOS's saturate
 // (draw_disabled) — an unbound glyph's color is kUnbound, so it has two
 // sizes per scale in use (the toolbar seat, icon_glyph_px, and the small
 // icon's scaled 16 of the caption, the cards and the list rows), at most
@@ -166,8 +166,7 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
         // THE DISABLED FACE IS DERIVED FROM THE sRGB RASTER (svg_icon.h's
         // convert_to_display): on a P3 window the live face is already
         // converted, so the derivation takes a fresh render of the same tree,
-        // and its result is converted after — ReactOS's grays pass whole,
-        // GTK's tinted pixels convert like any ink.
+        // and its result is converted after (ReactOS's grays pass whole).
         Surface fresh;
         cairo_surface_t* source = f.live.get();
         if (display_transform::active()) {
@@ -176,17 +175,7 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                 document(index, key_color(index, surface)), px));
             source = fresh.get();
         }
-        switch (live_chrome_spec().disabled_glyph) {
-        case GuiDisabledGlyph::ReactOSSaturate:
-            f.disabled.reset(svg_icon::saturated_copy(source));
-            break;
-        case GuiDisabledGlyph::GtkSaturatePixelate:
-            f.disabled.reset(svg_icon::saturated_pixelated_copy(source));
-            break;
-        case GuiDisabledGlyph::MotifStipple:
-            f.disabled.reset(svg_icon::stippled_copy(source));
-            break;
-        }
+        f.disabled.reset(svg_icon::saturated_copy(source));
         svg_icon::convert_to_display(f.disabled.get());
     }
     paint_raster(cr, f.disabled.get(), x, y);
@@ -196,14 +185,14 @@ void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
                 double size_px, int button_shift_px) {
     const double x = case_x + icon_case_lead_px() + button_shift_px;
     const double y = case_y + icon_case_lead_px() + button_shift_px;
-    draw(cr, icon, x, y, size_px, GuiSurface::Face);
+    draw(cr, icon, x, y, size_px, GuiSurface::ProgramCase);
 }
 
 void draw_cased_disabled(cairo_t* cr, Icon icon, int case_x, int case_y,
                          double size_px, int button_shift_px) {
     const double x = case_x + icon_case_lead_px() + button_shift_px;
     const double y = case_y + icon_case_lead_px() + button_shift_px;
-    draw_disabled(cr, icon, x, y, size_px, GuiSurface::Face);
+    draw_disabled(cr, icon, x, y, size_px, GuiSurface::ProgramCase);
 }
 
 } // namespace icons

@@ -1,0 +1,1 @@
+Create an svg in modern resolution of a cool edit pro icon theme - a series of audio-editing-related glyphs for use with a graphical digital audio workstation in windows millenium edition. make sure it is not pixelated but a modern translation of the old style. ie it is not a modern design but the lines are drawn for hidpi devices but in late eighties nineties style.

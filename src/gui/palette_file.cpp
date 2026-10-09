@@ -7,6 +7,7 @@
 #include "theme_file.h"        // theme_colour_word (THE ONE COLOR GRAMMAR),
                                // kGuiThemeRoles (the chrome's members)
 #include "chrome_derive.h"     // derive_windows_chrome: the keys' mapping check
+#include "cool_edit_derive.h"  // the Cool Edit block's tones: the coverage check
 
 #include <algorithm>
 #include <array>
@@ -136,8 +137,26 @@ constexpr bool palette_members_disjoint() {
     return true;
 }
 static_assert(palette_members_disjoint());
+// THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled with the
+// program's words, render.cpp) are the struct's third part: distinct, and
+// neither a chrome role's member nor a program role's.
+constexpr bool cool_edit_tones_disjoint() {
+    const auto& tones = cool_edit_derive::kTones;
+    for (std::size_t i = 0; i < std::size(tones); ++i) {
+        if (tones[i].member == nullptr) continue;
+        for (std::size_t j = i + 1; j < std::size(tones); ++j)
+            if (tones[j].member == tones[i].member) return false;
+        for (const GuiThemeRole& t : kGuiThemeRoles)
+            if (t.member == tones[i].member) return false;
+        for (const GuiPaletteRole& p : kGuiPaletteRoles)
+            if (p.member == tones[i].member) return false;
+    }
+    return true;
+}
+static_assert(cool_edit_tones_disjoint());
 static_assert(sizeof(GuiPalette) ==
-              (kGuiThemeRoleCount + kGuiPaletteRoleCount) * sizeof(GuiColor));
+              (kGuiThemeRoleCount + kGuiPaletteRoleCount +
+               cool_edit_derive::kPaintedToneCount) * sizeof(GuiColor));
 
 // EVERY VOCABULARY NAMES A DEFAULT PALETTE, IN THE DEFAULTS' ORDER, and every
 // default belongs to one vocabulary (the preset menu's built-in schemes lead

@@ -46,21 +46,20 @@
 // files carry no `currentColor`, so every draw keys the one unbound parse.
 //
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
-// (100 % is a curiosity, architect 2026-10-06): in a toolbar case the
+// (100 % is a curiosity, architect 2026-10-06): in the program's case the
 // drawing's square cell (Tango's 48 units; Breeze's 24, its own 24-px
 // seat, so 1 unit is 1 W and a 1-unit stroke 3 device px at 300 %) fills
 // the case's glyph seat (icon_glyph_px, render.h:
-// scaled_px(24), the large case's seat, 72 device px at 300 %); elsewhere
+// scaled_px(24), the base's large seat, 72 device px at 300 %); elsewhere
 // its site's own scaled 16 (the caption's icon, the list rows, the cards —
 // Windows' small icon). The window-frame glyphs
 // Windows drew in the button text — the caption's — are not drawings of the
 // set (paint_handler.cpp's caption glyph block).
 //
-// THE PLACEMENT IS FIXED: in a toolbar case the cell sits at the spec's lead
-// from the case's corner (icon_case_lead_px, render.h — win2000's (3, 3),
-// Windows' own seat, the 24-px bitmap's in its large 31 x 30 button as the
-// 16-px one's in its small 23 x 22; clearlooks' (4, 4), GTK's in its 32 x
-// 32 tool button), filling the seat
+// THE PLACEMENT IS FIXED: in the program's case the cell sits at the case's
+// highlight line from its corner (icon_case_lead_px, render.h — Cool Edit's
+// (+1, +1), its 20-px bitmap's seat in its 23-W case, the product's 24-W
+// seat in its 27-W one, architect 2026-10-09), filling the seat
 // (icon_glyph_px), plus the pressed/checked shift (draw_cased below).
 // Nothing is centred on its ink: Windows never did (12 of the 15 STD strip
 // cells with odd ink dimensions sit at the fixed offset). The sites with no
@@ -323,7 +322,7 @@ void drop_bound_faces();
 // Draw `icon`'s cell onto the square (x, y, size_px, size_px): the
 // glyph's live raster at the integer px nearest size_px, copied at the
 // integer device px nearest (x, y) — every caller passes integers. The
-// callers pass icon_glyph_px() (a toolbar case's seat) or their own scaled
+// callers pass icon_glyph_px() (the program's case's seat) or their own scaled
 // 16. `surface` is what the glyph stands on — a bound drawing wears its
 // text role (the head's BOUND DRAWING); an unbound one ignores it. Cairo
 // state is saved and restored. Cannot fail: the launch's load parsed every
@@ -331,21 +330,16 @@ void drop_bound_faces();
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px,
           GuiSurface surface);
 
-// THE DISABLED GLYPH — a dead button's face, by the live spec's
-// disabled_glyph (chrome_spec.h): win2000 REACTOS'S SATURATE (architect
+// THE DISABLED GLYPH — a dead button's face: REACTOS'S SATURATE (architect
 // 2026-10-06; comctl32's toolbar draws a disabled 32-bpp image with
 // ILS_SATURATE | ILS_ALPHA at 192, imagelist.c's saturate_image,
-// svg_icon::saturated_copy), clearlooks GTK 2'S INSENSITIVE ICON
-// (2026-10-07; gdk_pixbuf_saturate_and_pixelate (0.8, TRUE),
-// svg_icon::saturated_pixelated_copy, its checker one device px a cell),
-// cde MOTIF'S INSENSITIVE STIPPLE (2026-10-08; svg_icon::stippled_copy, every
-// other device px of the drawing dropped) —
-// of the live raster, built the first time a disabled face asks and cached
-// beside it (one rule per process: the chrome is chosen once), copied at
-// the same seat. A
-// disabled WORD keeps Windows' DSS_DISABLED emboss (show_embossed_run,
-// render.h), whose mono mask a Tango drawing's gradients cannot give — under
-// cde the word takes the same stipple as the glyph.
+// svg_icon::saturated_copy) UNDER EVERY CHROME since the cased glyphs became
+// the program's (architect 2026-10-09: Cool Edit's disabled art is drawn per
+// glyph and the product has no such art, so its dead case takes this saturate
+// of the live drawing; cool_edit_paint.h) — of the live raster, built the
+// first time a disabled face asks and cached beside it, copied at the same
+// seat. A disabled WORD keeps the chrome's own rule (show_embossed_run,
+// render.h: Windows' DSS_DISABLED emboss, GTK's etch, Motif's stipple).
 // A bound drawing's disabled face is derived from its raster in the
 // surface's text role (`surface`, as draw's) — the rule applied to a glyph
 // already in the label's color, as Windows' disabled rule falls on a text
@@ -359,9 +353,9 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
 // `button_shift_px`, the button's pressed/checked shift (paint_button_box's
 // `ButtonBoxFace::shift`, one Windows px right and down). Every roster
 // button's glyph goes through here or draw_cased_disabled, so the seat has
-// one owner. A CASE STANDS ON THE FACE: the cased glyph's surface is
-// GuiSurface::Face by definition (the toolbars, row 8, the player's row),
-// so the two cased calls name none.
+// one owner. A CASE IS THE PROGRAM'S: the cased glyph's surface is
+// GuiSurface::ProgramCase by definition (the band, row 8, the player's
+// row), so the two cased calls name none.
 void draw_cased(cairo_t* cr, Icon icon, int case_x, int case_y,
                 double size_px, int button_shift_px);
 

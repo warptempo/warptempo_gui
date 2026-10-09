@@ -592,12 +592,20 @@ struct Geometry {
     int scale_trough, scale_len, scale_wid;
     int list_bar_w;
 };
+// GTKTOOLBAR'S TWO LENGTHS AT THE BASE'S CELL, recorded here since the
+// program's band took the toolbar's lane (2026-10-09; chrome_spec.h's
+// clearlooks head): the tool button 32 (the 24-W icon + 2 x (xthickness 3 +
+// inner-border 1), the focus terms zeroed) and the band 36 (its 2 W of air
+// each way). No painter draws GtkToolbar now; the generated toolbar tones
+// they shape (build.py's clearlooks_geometry, the same two numbers) stay in
+// the proof's table.
+inline constexpr int kClToolCasePx = 32;
+inline constexpr int kClToolBandPx = 36;
 constexpr Geometry geometry_of(const ChromeSpec& s) {
-    const int case_h = s.toolbar_case_lead_px + s.toolbar_glyph_px + s.toolbar_case_trail_y_px;
     return Geometry{
         s.caption_height_px, s.caption_button_w_px, s.caption_button_h_px,
         s.menu_row_head_px, s.menu_row_content_px, s.menu_row_foot_px,
-        case_h, 2 * s.icon_row_air_px + case_h, static_cast<int>(s.push_button_box_px),
+        kClToolCasePx, kClToolBandPx, static_cast<int>(s.push_button_box_px),
         kListRowPx, s.popup_item_height_px, kWindowFramePx,
         kClScaleTroughPx, kClScaleSliderLengthPx, kClScaleSliderWidthPx,
         s.scroll_bar_px};

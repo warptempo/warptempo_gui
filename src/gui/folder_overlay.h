@@ -150,8 +150,7 @@ namespace folder_overlay {
 //
 // THE ROW IS WINDOWS' LIST ROW (the ruling above): the panel owns its row
 // height, its pad, its row gap and its icon-to-name gap; the glyph and its
-// lead are the toolbar case's own, read from render.h where they are
-// authored.
+// lead are its own (kRowIconPx, kRowIconInsetPx below).
 
 // THE PANEL'S OUTER INSET, its ONE authored margin — the margin between the
 // band's edge and the rows, at the top, the bottom and both sides.

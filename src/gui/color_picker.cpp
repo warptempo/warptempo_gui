@@ -43,6 +43,7 @@ constexpr RoleName kRoleNames[] = {
     {"flag_label",                "Flag Label"},
     {"playhead_stem",             "Playhead Stem"},
     {"scanner",                   "Scanner"},
+    {"face",                      "Panel Face"},
 };
 static_assert(std::size(kRoleNames) == kGuiPaletteRoleCount);
 constexpr bool role_names_follow_the_table() {

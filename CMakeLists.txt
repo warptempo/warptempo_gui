@@ -155,6 +155,9 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/clearlooks_paint.cpp
     # THE CDE PAINTERS (2026-10-08): the chrome spec's cde arm (cde_paint.h).
     src/gui/cde_paint.cpp
+    # THE PROGRAM'S PAINTERS (2026-10-09): Cool Edit's band, row 8 and its
+    # case, the same under every chrome (cool_edit_paint.h).
+    src/gui/cool_edit_paint.cpp
     src/gui/warpmarkers.cpp
     src/gui/text_editor.cpp
     src/gui/phaseresetmarkers.cpp

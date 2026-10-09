@@ -66,16 +66,6 @@ void paint_cde_field(cairo_t* cr, const GuiRect& r, GuiColor ground) {
     ring(cr, r, palette().cde_field_bs, palette().cde_field_ts);
 }
 
-// -- THE TOOLBAR BUTTON --------------------------------------------------------
-
-int paint_cde_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
-                          bool pressed) {
-    paint_cell_rect(cr, r, palette().ground);
-    if (lamp) paint_cell_rect(cr, inner(r), palette().cde_select);
-    if (lamp || pressed) paint_cde_sunken(cr, r);
-    return pressed ? relief_line_px() : 0;
-}
-
 // -- THE CAPTION ---------------------------------------------------------------
 
 void paint_cde_caption_box(cairo_t* cr, const GuiRect& b,

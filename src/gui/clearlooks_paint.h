@@ -7,16 +7,16 @@
 // THE CLEARLOOKS PAINTERS (architect 2026-10-07, the painters round's first
 // part: the top strip; its second: the dialogs' push buttons and entries,
 // the dropdown, the lists; its last: the trim lane as the scroll bar, the
-// scrub as GtkScale, row 8's entry time fields, the well's frame, the
-// ruler's ticks, the restored laptop's frame) — the chrome spec's clearlooks
+// scrub as GtkScale, the well's frame, the ruler's ticks, the restored
+// laptop's frame; the toolbar band and row 8 are the program's since
+// 2026-10-09, program_spec.h) — the chrome spec's clearlooks
 // arm (chrome_spec.h; the flag editor is the program's own flag in its
 // selected face under every chrome, render_flag_editor_box, architect
 // 2026-10-07 ~09:45),
 // GNOME 2.30's own drawing as Debian 6 squeeze put it on screen: the
 // metacity theme's maximised caption (gnome-themes 2.30.2's Clearlooks
 // metacity-theme-1.xml), and gtk-engines 2.20.2's Clearlooks GUMMY style for
-// the menu bar, the toolbar band, its tool buttons and separators, the push
-// button, the entry, the menu and its items, the list and its selected cell
+// the menu bar, the push button, the entry, the menu and its items, the list and its selected cell
 // (clearlooks_draw.c, clearlooks_draw_gummy.c), the scroll bar and the scale
 // (the same files), the restored window's frame (metacity's
 // `normal` frame style set), his squeeze captures the law
@@ -56,10 +56,11 @@
 //   4. ROUNDED CORNERS (CL1 §4.2): the gummy boxes' corners are the spec's
 //      corner_radius_px (the gtkrc's `radius = 3.0`), scaled like any length
 //      and drawn as antialiased cairo arcs; win2000's radius is 0.
-// AND ONE HOVER FACE MORE IS NOT ADDED (CL1 §4.6): the toolbar's HOT case
-// (GTK's prelight) stays the one hover face; the menu bar's prelit title and
+// AND NO HOVER FACE IS DRAWN (CL1 §4.6): the menu bar's prelit title and
 // the caption buttons' prelight are not drawn (metacity's button_bg_prelight
-// and GTK's prelit menu title would be two new hover faces).
+// and GTK's prelit menu title would be hover faces), and the toolbar's
+// prelit tool button went with the program's band (2026-10-09: the cases are
+// Cool Edit's, with no hover face under any chrome).
 //
 // THE GEOMETRY MAPS AT THE ELEMENT (render.h's scaled_px rule): an authored
 // W-px coordinate k of a box at device origin o stands at o + scaled_px(k),
@@ -143,49 +144,9 @@ void paint_cl_menubar(cairo_t* cr, const GuiRect& lane);
 // it is the caller's, in cl_menubaritem_text, unpushed.
 void paint_cl_menubar_item(cairo_t* cr, const GuiRect& lane, int x, int w);
 
-// THE TOOLBAR BAND — clearlooks_gummy_draw_toolbar (toolbarstyle 1, not
-// topmost: it stands under the menu bar) on `band`, the icon row's band
-// (row 8 is Nautilus's status bar, the ground alone — paint_bottom_strip):
-// its first row bg x 1.1, the 1.04 | 1.01 / 1.0 | 0.97
-// ramp with its step at the band's middle, its last row shade[3].
-void paint_cl_toolbar_band(cairo_t* cr, const GuiRect& band);
-
-// THE GROUP GAP'S SEPARATOR — clearlooks_gummy_draw_separator, vertical, in
-// the gap starting at `gap_x` over the case [case_y, case_y + case_h): a
-// shade[3] column at the spec's toolbar_separator_x_px and its 1.3 column
-// beside it, inset toolbar_separator_inset_y_px at each end
-// (_gtk_toolbar_paint_space_line's 20 % to 80 %).
-void paint_cl_toolbar_separator(cairo_t* cr, int gap_x, int case_y,
-                                int case_h);
-
-// ONE TOOL BUTTON — GtkReliefNone in a toolbar (chrome_spec.h's
-// GtkReliefNone), clearlooks_gummy_draw_button on the button style
-// (xthickness 3, reliefstyle 1) where GTK paints a box at all:
-//   REST     — nothing: the glyph on the band.
-//   HOT      — the prelit button (bg[PRELIGHT], 1.06): the two shadow rings
-//              of the parent's bg (0.97, 0.93), the gummy ramp, the border
-//              mix (shade[6], fill, 0.2), the baked 0.4 top-left highlight.
-//   PRESSED / CHECKED — the active button (bg[ACTIVE], 0.85): the parent's
-//              inset ring (0.94 top-left / 1.06 bottom-right, split on the
-//              diagonal), the ramp, the baked inner shadow over its first
-//              three rows and columns, the border; the glyph one W px right
-//              and down (GtkButton::child-displacement 1).
-//   HOT AND CHECKED — GTK's prelit active toggle: the active button in
-//              bg[PRELIGHT].
-//   PRESSED AND CHECKED — the active button it already wears, the prelight
-//              gone (2026-10-07 evening, the view group's lit radio arming):
-//              GTK 2.20's gtk_toggle_button_update_state sets PRELIGHT only
-//              while the button is not held down (no indicator drawn) and
-//              the held toggle ACTIVE and depressed, so the press reads as
-//              the resting checked face.
-//   DEAD     — nothing (GTK paints no box for an insensitive relief-none
-//              button); DEAD AND CHECKED the insensitive active toggle GTK
-//              does paint: the disabled ramp (1.04 | 1.01 / 0.99 | 0.96 of
-//              bg), the inset ring, the inner shadow, the shade[4] border,
-//              displaced like a checked one.
-// Answers the glyph's shift in device px.
-int paint_cl_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
-                         bool pressed, bool hot, bool enabled);
+// (GtkToolbar's band, its separator and its tool button stood here until
+// the program's band took the toolbar's lane, 2026-10-09: program_spec.h;
+// their generated tones stay in the role table.)
 
 // -- THE DIALOGS, THE DROPDOWN AND THE LIST (the painters round's second
 //    part, 2026-10-07) --------------------------------------------------------
@@ -209,8 +170,8 @@ int paint_cl_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
 //              (spot[2], fill, 0.2); pressed, the inset over that ring and the
 //              spot border; a disabled button is never drawn default (the
 //              engine's `is_default && !disabled`).
-// NO HOT FACE: the dialog buttons have no hover (the toolbars' HOT case is
-// the one hover face, the head) and GTK's focus ring is not drawn (the
+// NO HOT FACE: the dialog buttons have no hover (no button has one, the
+// head) and GTK's focus ring is not drawn (the
 // product draws no focus ring: the default face is the cue). Answers the
 // label's shift in device px.
 int paint_cl_push_button(cairo_t* cr, const GuiRect& r, bool pressed,
@@ -226,10 +187,9 @@ int paint_cl_push_button(cairo_t* cr, const GuiRect& r, bool pressed,
 // caller's, in cl_text, cl_selection / cl_selection_unfocused under
 // cl_text_selected (GtkEntry's own pairs) and cl_text.
 void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused);
-// The same entry on a caller's base: the time fields' `clock_ground`
-// (paint_time_field — the clock pair is the GNOME entry's base / text under
-// the clearlooks theme, gen_theme_files' CLOCK_FROM_FIELD). The ring and
-// the border are the entry's own roles.
+// The same entry on a caller's base (the one-argument form's cl_base; the
+// time fields that passed `clock_ground` are the program's dark field since
+// 2026-10-09). The ring and the border are the entry's own roles.
 void paint_cl_entry(cairo_t* cr, const GuiRect& r, bool focused,
                     GuiColor base);
 
@@ -369,8 +329,8 @@ void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
 // NO GRIPS, no ring, no ramp and no border columns at its ends: the caps ride
 // the body's ends, so an end column would never show, and a cap sliding off
 // the window takes the body's end with it (render_trim_flags). The two lines
-// are the gummy separator's own tones, roles already made for
-// paint_cl_toolbar_separator: a role a second painter reads is that tone put
+// are the gummy separator's own tones (generated for GtkToolbar's separator,
+// clearlooks_gummy_draw_separator): a role a painter reads is that tone put
 // down again, not a color derived here. The trough stays GTK's (above); the
 // caps wear the same two tones (paint_cl_stepper, since the evening). (Gummy's
 // spot[1] slider, its ring and its three grips are the popup lists' bar's —

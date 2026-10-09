@@ -461,9 +461,11 @@ void paint_caption_glyph(cairo_t* cr, int ox, int oy, int w, int h,
     }
 }
 
-// -- THE TOOL BUTTON'S FACES (build.py TOOL_BUTTON_STATES) -------------------
+// -- THE GUMMY BUTTON'S FACES (build.py PUSH_BUTTON_STATES) ------------------
 //
-// One drawn state's roles: ACTIVE (shadow IN: the inset ring, the inner
+// (The tool button's faces, build.py's TOOL_BUTTON_STATES, are generated
+// still and drawn by no painter since the program's band took the toolbar's
+// lane, 2026-10-09.) One drawn state's roles: ACTIVE (shadow IN: the inset ring, the inner
 // shadow, no highlight) or not (the shadow rings and the highlight); the
 // ramp's two segments' ends, the border; the highlight's row and its column's
 // two segments; the inner shadow's three rows, three columns (each two
@@ -477,7 +479,6 @@ struct ClGummyFace {
     Role sh_corner[3][3];
 };
 
-#define CL_R(p, s) &GuiPalette::cl_button_##p##_##s
 #define CL_COL(p, c)                                                        \
     {CL_R(p, shadow_col##c##_upper_0), CL_R(p, shadow_col##c##_upper_1),    \
      CL_R(p, shadow_col##c##_lower_0), CL_R(p, shadow_col##c##_lower_1)}
@@ -494,17 +495,6 @@ struct ClGummyFace {
                   CL_R(p, shadow_corner12)},                                \
                  {CL_R(p, shadow_corner20), CL_R(p, shadow_corner21),       \
                   CL_R(p, shadow_corner22)}}}
-const ClGummyFace kClHot{false, CL_R(hot, upper_0), CL_R(hot, upper_1),
-                         CL_R(hot, lower_0), CL_R(hot, lower_1),
-                         CL_R(hot, border), CL_R(hot, highlight_row),
-                         CL_R(hot, highlight_upper_0),
-                         CL_R(hot, highlight_upper_1),
-                         CL_R(hot, highlight_lower_0),
-                         CL_R(hot, highlight_lower_1), {}, {}, {}};
-const ClGummyFace kClPressed     = CL_ACTIVE_FACE(pressed);
-const ClGummyFace kClHotChecked  = CL_ACTIVE_FACE(hot_checked);
-const ClGummyFace kClDeadChecked = CL_ACTIVE_FACE(dead_checked);
-#undef CL_R
 // The push button's faces (build.py PUSH_BUTTON_STATES), the same layout
 // under cl_push_<state>_.
 #define CL_R(p, s) &GuiPalette::cl_push_##p##_##s
@@ -776,65 +766,6 @@ void paint_cl_menubar_item(cairo_t* cr, const GuiRect& lane, int x, int w) {
     rounded_path(cr, x + du / 2, y + du / 2, w - du, h - du, rad, kTL | kTR);
     stroke_role(cr, &GuiPalette::cl_menubaritem_border);
     cairo_restore(cr);
-}
-
-void paint_cl_toolbar_band(cairo_t* cr, const GuiRect& band) {
-    if (band.w <= 0 || band.h <= 0) return;
-    const ChromeSpec& spec = live_chrome_spec();
-    const int u = relief_line_px();
-    // The step at the band's middle (build.py's pixman_step_row: row
-    // (n + 1) / 2 of the n-row band, n even here).
-    const int band_w = 2 * spec.icon_row_air_px + spec.toolbar_case_lead_px +
-                       spec.toolbar_glyph_px + spec.toolbar_case_trail_y_px;
-    const int step = at(band.y, (band_w + 1) / 2);
-    const int foot = band.y + band.h - u;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{band.x, band.y, band.w, u},
-                    palette().cl_toolbar_light);
-    paint_cl_ramp(cr, GuiRect{band.x, band.y + u, band.w, step - band.y - u},
-                  palette().cl_toolbar_upper_0, palette().cl_toolbar_upper_1);
-    paint_cl_ramp(cr, GuiRect{band.x, step, band.w, foot - step},
-                  palette().cl_toolbar_lower_0, palette().cl_toolbar_lower_1);
-    paint_cell_rect(cr, GuiRect{band.x, foot, band.w, u},
-                    palette().cl_toolbar_shadow);
-    cairo_restore(cr);
-}
-
-void paint_cl_toolbar_separator(cairo_t* cr, int gap_x, int case_y,
-                                int case_h) {
-    const ChromeSpec& spec = live_chrome_spec();
-    const int u     = relief_line_px();
-    const int x     = gap_x + scaled_px(spec.toolbar_separator_x_px);
-    const int inset = scaled_px(spec.toolbar_separator_inset_y_px);
-    const GuiRect dark{x, case_y + inset, u, case_h - 2 * inset};
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, dark, palette().cl_separator_dark);
-    paint_cell_rect(cr, GuiRect{x + u, dark.y, u, dark.h},
-                    palette().cl_separator_light);
-    cairo_restore(cr);
-}
-
-int paint_cl_tool_button(cairo_t* cr, const GuiRect& r, bool lamp,
-                         bool pressed, bool hot, bool enabled) {
-    const ChromeSpec& spec = live_chrome_spec();
-    const int u   = relief_line_px();
-    const int h_w = spec.toolbar_case_lead_px + spec.toolbar_glyph_px +
-                    spec.toolbar_case_trail_y_px;
-    if (!enabled) {
-        if (!lamp) return 0;
-        paint_gummy(cr, r, h_w, kClDeadChecked, ClRing::Inset);
-        return u;
-    }
-    if (pressed)
-        paint_gummy(cr, r, h_w, kClPressed, ClRing::Inset);
-    else if (lamp)
-        paint_gummy(cr, r, h_w, hot ? kClHotChecked : kClPressed,
-                    ClRing::Inset);
-    else if (hot)
-        paint_gummy(cr, r, h_w, kClHot, ClRing::Shadow);
-    return (pressed || lamp) ? u : 0;
 }
 
 int paint_cl_push_button(cairo_t* cr, const GuiRect& r, bool pressed,

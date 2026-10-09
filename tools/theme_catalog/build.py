@@ -711,17 +711,21 @@ def clearlooks_geometry():
     body = body[:body.index('};')]
     f = dict(re.findall(r'\.(\w+)\s*=\s*([^,\n]+),', body))
     i = lambda k: int(f[k])
-    case_h = i('toolbar_case_lead_px') + i('toolbar_glyph_px') + i('toolbar_case_trail_y_px')
-    # the icon row's band (row 8 is GTK's status bar since the painters round's last part, its line the separator's
-    # pair, so the toolbar tones are the icon row's alone)
-    band = 2 * i('icon_row_air_px') + case_h
+    const = lambda path, name: float(re.search(name + r'\s*=\s*([0-9.]+)', open(path).read()).group(1))
+    # GtkToolbar's two lengths at the base's cell: the tool button 32 (the 24-W icon + 2 x (xthickness 3 +
+    # inner-border 1), the focus terms zeroed) and its band 36 (2 W of air each way). The chrome spec carried them
+    # until the program's band took the toolbar's lane (2026-10-09); no painter draws GtkToolbar since, and the two
+    # numbers stay recorded beside the app's port (src/gui/clearlooks_derive.h, kClToolCasePx / kClToolBandPx)
+    case_h = const(os.path.join(REPO, 'src', 'gui', 'clearlooks_derive.h'), 'kClToolCasePx')
+    band = const(os.path.join(REPO, 'src', 'gui', 'clearlooks_derive.h'), 'kClToolBandPx')
+    assert case_h == int(case_h) and band == int(band), (case_h, band)
+    case_h, band = int(case_h), int(band)
     # the push button's height is a double on the spec (push_button_box_px); a whole W px here
     push_h = float(f['push_button_box_px'])
     if push_h != int(push_h): raise SystemExit(f'build: push_button_box_px {push_h} is not a whole W px')
     # THE TWO LENGTHS THE SPEC DOES NOT CARRY (both vocabularies' own, one constant at its owner): the dialog
     # field's height (render.h kModalFieldHeightPx: Windows' 23, GTK's entry at the 13-row cell, 13 + 2 x
     # (ythickness 3 + inner-border 2)) and the list row (folder_overlay.h kRowHeightPx)
-    const = lambda path, name: float(re.search(name + r'\s*=\s*([0-9.]+)', open(path).read()).group(1))
     entry_h = const(os.path.join(REPO, 'src', 'gui', 'render.h'), 'kModalFieldHeightPx')
     row_h = const(os.path.join(REPO, 'src', 'gui', 'folder_overlay.h'), 'kRowHeightPx')
     assert entry_h == int(entry_h) and row_h == int(row_h), (entry_h, row_h)

@@ -17,7 +17,8 @@
 // DEVICE KEYS ("saving a waveform theme requires saving the entire chrome
 // theme as well … one more drop-down that shows what you're picking, whether
 // it's the waveform or the chrome"; the picker's scope, color_picker.h):
-//   A PALETTE — THE PROGRAM'S FIFTEEN (kGuiPaletteRoles below) and nothing
+//   A PALETTE — THE PROGRAM'S SIXTEEN (kGuiPaletteRoles below; the panel's
+//     `face` the sixteenth since 2026-10-09) and nothing
 //     else: `palettes/<name>.palette`, the `palette` device key.
 //   A SCHEME — THE CHROME'S TWELVE KEYS (kGuiChromeLines below), Windows'
 //     own word for a set of chrome colors (the Appearance dialog's
@@ -55,10 +56,13 @@
 // thing ("chrome means anything the accent color can highlight": the
 // playhead's head, WordPad's ruler marker in the chrome's roles, and the flag
 // editor's selection band, the chrome's selected pair). So the palette's
-// program roles are exactly the FIFTEEN below (the scheme's twelve keys are
+// program roles are exactly the SIXTEEN below (the scheme's twelve keys are
 // the chrome's, not the program's): the waveform's canvas, ink and lit
 // outline, the four flag kinds' faces and selected faces, the one flag
-// outline, the one flag label, the playhead's stem and the scanner.
+// outline, the one flag label, the playhead's stem and the scanner — and
+// since 2026-10-09 THE PANEL'S FACE (the program is Cool Edit from the
+// toolbar down: its band, dock bar and row 8 are the program's, so their
+// color is the palette's; the role table's paragraph below).
 // THE FLAG OUTLINE IS A ROLE, `flag_outline` (architect 2026-10-08 ~02:30,
 // on mock_IM2: "today is the only correct one"): its GEOMETRY is exactly
 // today's — the one-W ring round the flag box and its flanks beside the stem
@@ -78,7 +82,7 @@
 // (chrome_spec.h): `windows-2000-standard`, `clearlooks` and `solaris` — the
 // role table's two value columns below (the cde chrome's `solaris` takes
 // Windows 2000's column until he authors its own, 2026-10-08) — THE
-// PROGRAM'S FIFTEEN whenever the active palette is not a file. Each default
+// PROGRAM'S SIXTEEN whenever the active palette is not a file. Each default
 // palette's name IS ITS CHROME'S OWN BUILT-IN SCHEME'S KEY (below), so one
 // word names a chrome's own colors in both kinds, and a default palette is
 // shown by that scheme's display name ("Windows 2000 Standard").
@@ -91,7 +95,7 @@
 // cde chrome's hand-set `solaris`: each a KEY (the catalog's verbatim — the
 // `scheme` key's word for it), a DISPLAY NAME and THE TWELVE CHROME KEYS. A
 // SCHEME IS CHROME-ONLY BY ITS KIND: choosing one installs its twelve and
-// leaves the program's fifteen as they stand (GuiColorPicker::load_preset).
+// leaves the program's sixteen as they stand (GuiColorPicker::load_preset).
 // THE CHROME'S OWN SCHEME — the one its `default_palette` names — CARRIES NO
 // KEYS under that chrome (scheme_record): the compiled theme exactly
 // (Windows 2000 Standard's gray face is hand-set, chrome_derive.h's head, so
@@ -108,8 +112,9 @@
 // LF-terminated `role=value` lines, split at the first '=', no blank line,
 // no comment, no whitespace tolerance, no duplicate), each value THE ONE
 // COLOR GRAMMAR (theme_colour_word, theme_file.h).
-//   A PALETTE FILE NAMES EXACTLY THE FIFTEEN (architect 2026-10-08, the
-//     outline's role): the picker writes all fifteen, so a file missing a
+//   A PALETTE FILE NAMES EXACTLY THE SIXTEEN (architect 2026-10-08, the
+//     outline's role; `face` 2026-10-09): the picker writes all sixteen, so
+//     a file missing a
 //     role is a state the GUI can never produce — the read's first-error hard
 //     fail naming the first missing role in the table's order (the
 //     two-category rule). THE CHROME'S KEYS LEFT THE PALETTE GRAMMAR
@@ -230,11 +235,20 @@ struct GuiPaletteRole {
 // fg_color, BLACK on every face; the playhead's stem and the scanner WHITE,
 // his ruling (CL10a).
 //
+// THE PANEL'S FACE, THE SIXTEENTH ROLE (architect 2026-10-09, the program is
+// Cool Edit): Cool Edit's "Dockable Window 3D Color" (its scheme key `Face`),
+// the ground of the program's panel — the toolbar band, the dock bar and row
+// 8 — whose every other tone derives from it (cool_edit_derive.h); its
+// default Cool Edit's own default scheme's 626C7B IN EVERY COLUMN, the
+// program being the same under every chrome. A PALETTE FILE NAMES IT LIKE
+// ANY ROLE: a file without a `face` line is the read's hard fail (the
+// two-category rule: the picker writes all sixteen).
+//
 // THE TABLE'S ORDER IS THE PICKER'S CHOOSER (color_picker.cpp's kRoleNames):
 // the waveform's three, the four kinds' pairs, then THE TWO FLAG ROLES EVERY
 // KIND SHARES — the outline that rings each face and the label that stands
 // on it, side by side in the chooser ("Flag Outline", "Flag Label") — then
-// the two lines that cross the well.
+// the two lines that cross the well, then the panel's face.
 inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"waveform_canvas",           &GuiPalette::waveform_canvas,           0x000000, 0x000000},
     {"waveform_ink",              &GuiPalette::waveform_ink,              0x00FF00, 0xD2E3F7},
@@ -251,6 +265,7 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"flag_label",                &GuiPalette::flag_label,                0xFFFFFF, 0x000000},
     {"playhead_stem",             &GuiPalette::playhead_stem,             0xFFFFFF, 0xFFFFFF},
     {"scanner",                   &GuiPalette::scanner,                   0xFFFFFF, 0xFFFFFF},
+    {"face",                      &GuiPalette::face,                      0x626C7B, 0x626C7B},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
@@ -258,12 +273,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // install_program_palette takes, a palette file holds and palette_record
 // answers.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
-// render.h spells this type as `std::array<uint32_t, 15>` (install_palette,
+// render.h spells this type as `std::array<uint32_t, 16>` (install_palette,
 // program_palette_words), since this header includes it; the literal is
 // pinned to the table here.
 static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
-              "render.h's std::array<uint32_t, 15> must be GuiPaletteWords");
+              "render.h's std::array<uint32_t, 16> must be GuiPaletteWords");
 
 // THE SCHEME'S TWELVE KEYS (the head; architect 2026-10-08 ~11:00, a
 // scheme's whole content since ~18:15) — THE ONE ENUMERATION of the chrome's

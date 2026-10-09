@@ -4,6 +4,7 @@
 #include "warp_frame_map.h"   // WarpFrameMapSegment for target-view waveform
 #include "waveform_gain.h"    // WaveformGainCurve, the waveform picture's gain
 #include "gui_font.h"         // GuiFont, the face owner's face at a scale
+#include "program_spec.h"     // kProgramSpec, the program's lengths (the band, row 8)
 #include "display_transform.h" // display_color's transform (sRGB -> the window's space)
 
 #include <algorithm>
@@ -121,27 +122,33 @@ struct TrimRange {
 // clearlooks every engine tone — the `cl_*` block — derived from the keys
 // by the Clearlooks engine's and metacity's own arithmetic, ported and
 // proven byte-exact against squeeze's recorded bytes (clearlooks_derive.h's
-// head). With no keys, the chrome's compiled theme stands as recorded.
+// head). With no keys, the chrome's compiled theme stands as recorded. AND
+// THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit): its
+// tones derived from the palette's `face` by Cool Edit's own HLS rule
+// (cool_edit_derive.h, the COOL EDIT BLOCK).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
-// one accessor palette() — no named literal stands beside them since
-// 2026-10-07, when the flag editor's black frame went — or THE ICON SET'S
+// one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM CASE'S
+// AND TIME FIELD'S CONSTANTS (cool_edit_paint.h: Cool Edit's measured
+// default-scheme bytes, which do not follow its preset) — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the Tango and Mist drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
 // one place an antialiased, translucent picture is copied whole. THE ONE
 // EXCEPTION IS A BOUND DRAWING (2026-10-10, the Breeze set): monochrome,
 // painting in `currentColor`, it wears the text role of the surface it
-// stands on (surface_text above; icons.h's head). A DISABLED icon is the
-// live spec's rule on that picture (icons::draw_disabled), no role
-// entering.
+// stands on (surface_text above; icons.h's head). A DISABLED icon is
+// ReactOS's saturate of that picture under every chrome (icons::draw_disabled,
+// the program case's dead glyph), no role entering.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
 // beside every ground role — never a luminance verdict.
 // STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
-// HOVER FACES BUT ONE — the flat toolbars' HOT case, a raised line in the
-// relief quartet (architect 2026-10-06, Explorer's; paint_toolbar_box,
-// paint_handler.cpp): every colour is a solid fill of integer cells. THE
+// HOVER FACE ON ANY BUTTON: the program's cases have none under any chrome
+// (Cool Edit's toolbar has none, program_spec.h's case_hot_face, 2026-10-09)
+// and the chrome's buttons never had one; the menus' and lists' lit rows are
+// a selection, not a button face. Every colour is a solid fill of integer
+// cells. THE
 // COLOR PICKER'S WHEEL IS THE ONE PLACE THE PRODUCT PAINTS COLORS THAT ARE
 // NOT ROLES (architect 2026-10-07, by necessity — the wheel IS the color
 // space, as the icons are their own inks: color_picker::paint_wheel, whose
@@ -151,7 +158,10 @@ struct TrimRange {
 // 2000's title bar where a theme records a gradient end: a SMOOTH 24-bit
 // ramp, each device column its own rounded colour (architect 2026-10-06,
 // ReactOS's caption as captured) — still solid cells, nothing blended at
-// paint time (paint_caption_gradient, the rule's one owner).
+// paint time (paint_caption_gradient, the rule's one owner) — BESIDE THE
+// PROGRAM CASE'S FACE AND SHADOW RAMPS (2026-10-09, Cool Edit's measured
+// rows resampled to device rows, each row one solid colour;
+// cool_edit_paint.h).
 // A DITHER'S CELL IS ONE DEVICE PX (architect 2026-10-06, the whole chrome
 // made scalable: "all colours used are period-authentic; dithering gets
 // translated into whatever it perceptually becomes"): a dither stays a
@@ -197,15 +207,13 @@ struct TrimRange {
 //                 (EDGE_RAISED);
 //   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field, the well
 //                 (EDGE_SUNKEN);
-//   SUNKEN OUTER  ONE line, Shadow / Hilight (BDR_SUNKENOUTER) — a
-//                 status-bar panel, a time field (row 8's clock, the render
-//                 player's two), the open menu title, a flat toolbar button
-//                 pressed or checked;
-//   RAISED INNER  ONE line, Hilight / Shadow (BDR_RAISEDINNER) — a flat
-//                 toolbar button's hot face (architect 2026-10-06);
+//   SUNKEN OUTER  ONE line, Shadow / Hilight (BDR_SUNKENOUTER) — the open
+//                 menu title, the color picker's field and swatch;
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
-//                 the ruler's ticks, a menu separator, the icon row's etched
-//                 pair, the toolbars' group separators.
+//                 the ruler's ticks, a menu separator.
+// (The toolbar band, row 8 and their cases and time fields are the
+// PROGRAM'S since 2026-10-09 — Cool Edit's, cool_edit_paint.h — and wear
+// none of this grammar.)
 // THE CARD FRAME is no relief: ONE flat line in the `card_frame` role on all
 // four sides (THE CARD FACE, below).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
@@ -214,10 +222,12 @@ struct TrimRange {
 //
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
-//   ground        every chrome surface: the five lanes under the caption,
-//                 the caption's buttons, the bottom row, the
-//                 dropdowns, the on-screen keyboard, every button face, a
-//                 DISABLED flag's face;
+//   ground        every chrome surface: the menu row and the chrome's lanes
+//                 under the band, the caption's buttons, the bottom row's
+//                 band under a prompt or a dialog editor, the dropdowns, the
+//                 on-screen keyboard, every chrome button face, a DISABLED
+//                 flag's face (the band and row 8 are the program's panel
+//                 since 2026-10-09, below);
 //   label         chrome text and glyphs, the ruler labels, the trim lane's
 //                 arrow glyph, the playhead head's outline;
 //   the quartet   every relief line, the families unchanged; Hilight also the
@@ -243,15 +253,11 @@ struct TrimRange {
 //                 paint_folder_overlay) — but NOT THE FLAG EDITOR, which
 //                 keeps the flag's selected face (architect 2026-10-07
 //                 ~09:45; EDITING, below);
-//   clock pair    THE TIME FIELDS (architect 2026-10-04, Windows' status
-//                 bar: ButtonFace / ButtonText; every time field since
-//                 2026-10-05): `clock_ground` fills the field inside its
-//                 SUNKEN OUTER line, which keeps the quartet's Shadow /
-//                 Hilight, and `clock_text` is its run — row 8's tab letter
-//                 and digits (paint_bottom_row_buttons_and_clock) and the
-//                 render player's position and length (paint_modal_dialog);
-//                 under clearlooks the base / text of GTK's entry, which
-//                 the time field is there (architect 2026-10-07);
+//   clock pair    UNREAD BY ANY PAINTER since 2026-10-09: the time fields
+//                 are the program's, Cool Edit's dark field
+//                 (paint_ce_time_field); the pair stays in the role table
+//                 and the scheme's derivations (Windows' status bar's
+//                 ButtonFace / ButtonText, GTK's entry base / text);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
 //   caption six   THE CAPTION (architect 2026-10-05, the window's title
@@ -270,7 +276,10 @@ struct TrimRange {
 //                 one flag label, the playhead's stem and the scanner (THE PLAYHEAD,
 //                 below — the head itself is no role: it is WordPad's ruler
 //                 marker, painted in the chrome's own label, hilight, shadow
-//                 and ground).
+//                 and ground), and THE PANEL'S `face` (2026-10-09: the
+//                 program's band, dock bar and row 8 — Cool Edit's — every
+//                 other panel tone derived from it, the COOL EDIT BLOCK,
+//                 cool_edit_derive.h).
 // THE CARD FACE IS THE PERIOD'S TOOLTIP (architect 2026-10-04, reversing the
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
@@ -301,8 +310,8 @@ struct TrimRange {
 // copies are GTK's insensitive text in the engine's two tones
 // (clearlooks_style_draw_layout: the etch shade (bg, 1.2) at (+1, +1) under
 // fg[INSENSITIVE], cl_text_insensitive_etch and cl_text_insensitive — CL1
-// §4.7: no bend, two roles) and a disabled glyph GTK's saturate-and-pixelate
-// (the spec's disabled_glyph).
+// §4.7: no bend, two roles); a disabled glyph is the program's case's,
+// ReactOS's saturate under every chrome (icons::draw_disabled, 2026-10-09).
 //
 // THE CLEARLOOKS VOCABULARY BENDS FOUR RULES OF THIS HEAD FOR ITSELF ALONE
 // (architect 2026-10-07, report CL1 §4): its colours a generated `cl_`
@@ -343,9 +352,11 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // The resolved colors, ONE STRUCT, TWO SOURCES (2026-10-07): the active
 // theme's chrome ROLES and the active palette's program roles, one field
 // each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
-// program's in kGuiPaletteRoles' (palette_file.h), the two tables covering
-// the struct exactly (palette_file.cpp's static_asserts); the mapping above
-// says what each paints. Every field is a solid byte triple.
+// program's in kGuiPaletteRoles' (palette_file.h), and THE COOL EDIT BLOCK
+// derived from the program's `face` (cool_edit_derive.h's painted tones,
+// 2026-10-09) — the three tables covering the struct exactly
+// (palette_file.cpp's static_asserts); the mapping above says what each
+// paints. Every field is a solid byte triple.
 struct GuiPalette {
     // THE CHROME (Windows' names for the built-in's recorded values).
     GuiColor ground;          // COLOR_3DFACE
@@ -399,6 +410,21 @@ struct GuiPalette {
     GuiColor flag_label;
     GuiColor playhead_stem;
     GuiColor scanner;
+    // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
+    // Cool Edit's Face, the ground of the toolbar band, the dock bar and row
+    // 8 under every chrome.
+    GuiColor face;
+    // THE COOL EDIT BLOCK (cool_edit_derive.h's kTones, the painted ones):
+    // the panel's tones, each DERIVED from `face` by Cool Edit's own HLS rule
+    // at every install of the program's words — no file names them; read by
+    // cool_edit_paint.h's painters alone.
+    GuiColor ce_recess;
+    GuiColor ce_mid;
+    GuiColor ce_dark;
+    GuiColor ce_hilight;
+    GuiColor ce_field_dark;
+    GuiColor ce_field_light;
+    GuiColor ce_label;
     // THE CLEARLOOKS BLOCK (theme_file.h's table, generated; the painters
     // that read it are clearlooks_paint.h's).
 #include "theme_clearlooks_members.inc"
@@ -419,8 +445,12 @@ const GuiPalette& palette();
 // it). The one owner of the choice, so a word and a glyph on one surface
 // never part:
 //   Face             the label (Windows' ButtonText; GTK's fg, the knob's
-//                    text; Motif's set-2 foreground) — the toolbars, row 8
-//                    and the render player's flat row
+//                    text; Motif's set-2 foreground) — the chrome's face
+//   ProgramCase      THE PROGRAM'S BUTTON CASE (2026-10-09, the program is
+//                    Cool Edit): its constant glyph ink, black on the case's
+//                    light ramp under every chrome and palette
+//                    (cool_edit_paint.h's kCeCaseInk) — the band, row 8 and
+//                    the render player's row, every cased glyph
 //   CaptionActive    the caption's text, active and inactive — Windows'
 //   CaptionInactive  CaptionText pair under windows-2000 and cde, metacity's
 //                    title text and unfocused title under clearlooks
@@ -434,6 +464,7 @@ const GuiPalette& palette();
 //                    the project picker's rows (paint_folder_overlay)
 enum class GuiSurface {
     Face,
+    ProgramCase,
     CaptionActive,
     CaptionInactive,
     Card,
@@ -511,7 +542,7 @@ struct GuiChromePick {
 // is palette_file.h's. `chrome` is the scheme's keys (GuiChromePick above),
 // none for the live chrome's own scheme, derived over the live chrome's
 // compiled theme (live_chrome_words, chrome_derive.h).
-void install_palette(const std::array<uint32_t, 15>& program,
+void install_palette(const std::array<uint32_t, 16>& program,
                      const std::optional<GuiChromePick>& chrome);
 
 // THE INSTALL FAMILY'S CHROME MEMBER (2026-10-08, the chrome knob): the
@@ -552,7 +583,7 @@ const std::optional<GuiChromePick>& live_chrome_pick();
 // word), the picker's open (the live element's OLD color) and its presets
 // (Save and Save As write these words, and Save's enabled bit compares them
 // with the active preset's).
-const std::array<uint32_t, 15>& program_palette_words();
+const std::array<uint32_t, 16>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
 // program's fifteen alone, the picker's live road — is declared in
@@ -1211,202 +1242,76 @@ inline int relief_line_px() {
     return scaled_px(kReliefLinePx, 1);
 }
 
-// Authored pixel geometry of the ICON ROW — the top strip's lane 2, directly
-// under the MENU ROW with nothing between (row 4 of the redesign: TWENTY-SEVEN
-// view/mode/action buttons — the kIconRowButtons, kIconRowViewGroup and
-// history stand-in tables are the count's one authority; twenty-one stand
-// outside the `h` view and fourteen inside it, the swap's one owner
-// being kIconRowHistoryStandIns (paint_handler.cpp) and the hide's
-// history_mode_hides_button (input_pointer.cpp, 2026-10-07);
-// icons::kIconCount is a different number, the GLYPH set, which the row does
-// not exhaust). THE TOOLBAR CASE IS ALSO ROW 8's (and the render player's row
-// in its lane): both rows read the accessors below, so a retune of the case
-// carries down by construction; row 8's air around it is its own
-// (bottom_row_air_px, below).
+// THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 2,
+// directly under the menu row (architect 2026-10-09: the program is Cool
+// Edit from the toolbar down, the same under every chrome; program_spec.h's
+// head, where every length below is authored and its source named). The
+// roster's twenty-seven view/mode/action buttons stand in it — the
+// kIconRowButtons, kIconRowViewGroup and history stand-in tables are the
+// count's one authority (paint_handler.cpp); icons::kIconCount is a
+// different number, the GLYPH set, which the row does not exhaust. THE CASE
+// IS ALSO ROW 8's AND THE RENDER PLAYER'S: every reader takes the accessors
+// below, so the three rows cannot drift apart.
 //
-// THE CASE IS THE CHROME SPEC'S (chrome_spec.h's toolbar_case_* fields) and
-// A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): its width is
-// scaled_px(lead) + scaled_px(glyph) + scaled_px(trail x), its height
-// scaled_px(lead) + scaled_px(glyph) + scaled_px(trail y). WIN2000:
-// WINDOWS' LARGE TOOLBAR CASE, 31 x 30 (architect 2026-10-06, on mock_TF1
-// and the ReactOS captures) — three px of case left of and above the 24-px
-// glyph seat, FOUR right of it and three below, Windows' own extra column on
-// the right (the small case's 23 x 22 round a 16-px glyph had the same lead
-// and trails) — Explorer's (its button rect is 30 rows, 182-211 of
-// tmp/reactos-hover.png): 93 x 90 device px at 300 %, 43 x 41 at the
-// laptop's 138 %, the glyph 72 and 33 (the Tango set's 48-unit drawing,
-// icons.h, 1.5 device px a unit at 300 %). CLEARLOOKS: GTK's 32 x 32 tool
-// button round the same 24-px seat at (4, 4) (chrome_spec.h's instance: the
-// focus ring's terms zeroed): 96 x 96 at 300 %, 45 x 45 at 138 % (6 + 33 +
-// 6).
-// THE GLYPH RASTERIZES AT icon_glyph_px (icons::draw_cased, at the case's
-// lead offset, never centred on the glyph's ink; the pressed and checked
-// faces' shift is one Windows px further right and down).
+// THE CASE (Cool Edit's §1.3 at the base's 24-W seat): one highlight line,
+// the glyph, one shadow line, one black line — 27 W square, the buttons
+// abutting at that pitch; A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's
+// rule), each line one relief line and the glyph scaled_px(24): 81 device
+// px at 300 %, 36 at the laptop's 138 %. The glyph rasterizes at
+// icon_glyph_px (icons::draw_cased) at the case's first line in from its
+// corner, one line further right and down while pressed or checked
+// (cool_edit_paint.h's faces).
 //
-// THE LANE IS A MENU-BAR-PLUS-TOOLBAR STACK FOLDED INTO ONE ROW (architect
-// 2026-10-06, Explorer's and WordPad's stacking in ReactOS), each term its
-// own rounded part: ONE ETCHED LINE PAIR under the menu row where the spec
-// asks for it (icon_row_etched_pair; a Shadow row over a Hilight row,
-// paint_relief_etched_hline, spanning the lane's width), THE TOOLBAR BAND —
-// the spec's air (icon_row_air_px), the case, the air — and the spec's foot
-// of ground before the trim lane (icon_row_foot_px). WIN2000: 2 + 30 + 4 =
-// 36, the band the case itself (Explorer's band is its buttons' height, air
-// 0); THE TOP STACK IS 125 WINDOWS PX (caption 18 + menu 20 + this lane 36 +
-// trim 16 + the 6-row digit's 17-px ruler + marker 18). CLEARLOOKS: 0 + 2 +
-// 32 + 2 + 0 = 36, GtkToolbar's band (no etched pair: the menu bar's last
-// row is the line; no foot: GTK stacks flush), painted as Clearlooks'
-// toolbar (paint_cl_toolbar_band); its top stack 128 (caption 20 + menu 21
-// + 36 + trim 16 + ruler 17 + marker 18). CDE (2026-10-09): MOTIF'S RAISED
-// FORM — its top line 1 + 2 + 30 + 2 + the etched pair at the FOOT 2 = 37,
-// the form one raised ring from the top line through the pair's dark row,
-// the lane's whole width (icon_row_raised_form, paint_icon_row); its top
-// stack 115 inside dtwm's frame (caption 17 + menu 27 + 37 + trim 13 +
-// ruler 3 + marker 18). The
-// foot's last row's
-// neighbour is the trim lane's own first row, still the boundary — NO
-// BORDER OF ITS OWN (architect 2026-10-01). THE ROW IS MODELLED ON KDENLIVE'S
-// SECOND TOOLBAR, the one under its timeline; the first, sharing the
-// menubar's ground, was left out for space (architect 2026-09-09), so nothing
-// sits between the menu row and this one. THE ETCHED LINES, THE SEPARATORS
-// AND THE AIR ARE INERT GROUND FOR INPUT (hit nothing, Arrow cursor): the
-// hit target is the case. They are painted in paint_icon_row so they repaint
-// with the lane's own damage — win2000's in the theme's Shadow and Hilight
-// roles, clearlooks' in its generated cl_ roles.
-//
-// THE BUTTONS TOUCH WITHIN A GROUP and THE SPEC'S GROUP GAP stands between
-// two groups (toolbar_group_gap_px: 8 Windows px under win2000, architect
-// 2026-10-02, the Y / Z / AB sets: "the buttons touch"; 12 under
-// clearlooks, GtkSeparatorToolItem's space-size), the group boundaries
-// redesign_button_opens_icon_group's. IN EVERY GROUP GAP OF BOTH TOOLBARS
-// STANDS A SEPARATOR, the toolbar style's (chrome_spec.h's toolbar_style;
-// architect 2026-10-06, his word): WIN2000 comctl32's
-// TOOLBAR_DrawFlatSeparator, read off tmp/reactos-hover.png, columns 17-18
-// of Explorer's bar, rows 184-209 — a Shadow column at the gap's 8 / 2 − 1
-// Windows px and a Hilight column beside it, from the case's top + 2 to its
-// bottom − 2, 26 of the 30 rows; CLEARLOOKS clearlooks_gummy_draw_
-// separator's shade[3] column and its 1.3 beside it at 5-6 of the 12, 6
-// rows in at each end, 20 of the 32 (paint_toolbar_separator,
-// paint_handler.cpp, reads toolbar_separator_x_px and
-// toolbar_separator_inset_y_px) — and none across the wide ground before
-// the right-aligned groups, which is no group gap. The walks are
-// paint_icon_row's and paint_bottom_row_buttons_and_clock's.
+// THE BAND (Cool Edit's §1.1): the dark outline, the panes' top light line,
+// three W of face, the case, two W of face, the panes' bottom mid line, the
+// dark outline, the light line — 37 W, the lane whole, UNDER EVERY CHROME.
+// Its panes and grooves are paint_icon_row's walk (cool_edit_paint.h draws
+// them). The hit target is the case; the lines, the faces, the grooves and
+// the recess are inert ground for input.
 //
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because more
 // than one file reads the case: icons.cpp's seat (draw_cased) and
 // paint_handler.cpp's three rows. THE CARD'S GLYPH BOX AND THE FOLDER
-// OVERLAY'S LIST ICON ARE NOT THE CASE (2026-10-06, report_TC's catch: a
-// 24-px glyph would overrun the 17-px list row): each keeps Windows' small
-// 16-px icon on a constant of its own
-// (notifications.h's kNotificationGlyph*, folder_overlay.h's kRowIcon*).
-// The spec's record, authored: the case and the lane's total.
-constexpr int toolbar_case_authored_w(const ChromeSpec& s) {
-    return s.toolbar_case_lead_px + s.toolbar_glyph_px +
-           s.toolbar_case_trail_x_px;
+// OVERLAY'S LIST ICON ARE NOT THE CASE: each keeps Windows' small 16-px icon
+// on a constant of its own (notifications.h's kNotificationGlyph*,
+// folder_overlay.h's kRowIcon*).
+inline int program_line_px() {
+    return relief_line_px();
 }
-constexpr int toolbar_case_authored_h(const ChromeSpec& s) {
-    return s.toolbar_case_lead_px + s.toolbar_glyph_px +
-           s.toolbar_case_trail_y_px;
-}
-constexpr int icon_row_authored_h(const ChromeSpec& s) {
-    return (s.icon_row_etched_pair != GuiEtchedPairSeat::None
-                ? 2 * kReliefLinePx : 0) +
-           (s.icon_row_raised_form ? kReliefLinePx : 0) +
-           s.icon_row_air_px + toolbar_case_authored_h(s) +
-           s.icon_row_air_px + s.icon_row_foot_px;
-}
-// A RAISED FORM CLOSES ON THE FOOT PAIR'S DARK ROW (chrome_spec.h's
-// icon_row_raised_form): no vocabulary may ask for the form without it.
-static_assert(chrome_specs_all([](const ChromeSpec& s) {
-    return !s.icon_row_raised_form ||
-           s.icon_row_etched_pair == GuiEtchedPairSeat::Foot;
-}));
-static_assert(toolbar_case_authored_w(kChromeSpecWin2000) == 31 &&
-              toolbar_case_authored_h(kChromeSpecWin2000) == 30 &&
-              icon_row_authored_h(kChromeSpecWin2000) == 36);
-static_assert(toolbar_case_authored_w(kChromeSpecClearlooks) == 32 &&
-              toolbar_case_authored_h(kChromeSpecClearlooks) == 32 &&
-              icon_row_authored_h(kChromeSpecClearlooks) == 36);
-// CDE: the base's case in Motif's raised form — the form's top line 1 + 2
-// air + 30 + 2 air + the etched pair at the foot = 37 (chrome_spec.h's cde
-// instance, 2026-10-09; the ruler lane gives the row back).
-static_assert(toolbar_case_authored_w(kChromeSpecCde) == 31 &&
-              toolbar_case_authored_h(kChromeSpecCde) == 30 &&
-              icon_row_authored_h(kChromeSpecCde) == 37);
 inline int icon_glyph_px() {
-    return scaled_px(live_chrome_spec().toolbar_glyph_px);
+    return scaled_px(kProgramSpec.glyph_px);
 }
+// The glyph's seat from the case's corner: the case's highlight line.
 inline int icon_case_lead_px() {
-    return scaled_px(live_chrome_spec().toolbar_case_lead_px);
+    return scaled_px(kProgramSpec.case_light_px, 1);
 }
 inline int icon_case_w_px() {
-    const ChromeSpec& s = live_chrome_spec();
-    return scaled_px(s.toolbar_case_lead_px) + scaled_px(s.toolbar_glyph_px) +
-           scaled_px(s.toolbar_case_trail_x_px);
+    const ProgramSpec& p = kProgramSpec;
+    return scaled_px(p.case_light_px, 1) + scaled_px(p.glyph_px) +
+           scaled_px(p.case_shadow_px, 1) + scaled_px(p.case_outer_px, 1);
 }
 inline int icon_case_h_px() {
-    const ChromeSpec& s = live_chrome_spec();
-    return scaled_px(s.toolbar_case_lead_px) + scaled_px(s.toolbar_glyph_px) +
-           scaled_px(s.toolbar_case_trail_y_px);
+    return icon_case_w_px();
 }
-inline int icon_group_space_px() {
-    return scaled_px(live_chrome_spec().toolbar_group_gap_px);
-}
-// THE ETCHED PAIR'S DEVICE HEIGHT IS TWO ROUNDED RELIEF LINES, NEVER
-// scaled_px OF THEIR AUTHORED SUM (the composite rule): paint_relief_etched_hline
-// paints the Shadow row at y and the Hilight row at y + relief_line_px(), so
-// the lane must reserve exactly that, which can differ from scaled_px(2) at
-// a fractional gui_scale. NONE where the spec asks for no pair (clearlooks).
-// TWO SEATS (GuiEtchedPairSeat, 2026-10-08): the HEAD pair stands above the
-// band (win2000), the FOOT pair under it (cde, dtfile's separator under its
-// toolbar); each accessor answers its seat's rows and the lane carries
-// whichever stands.
-inline int icon_row_etched_pair_px() {
-    return live_chrome_spec().icon_row_etched_pair != GuiEtchedPairSeat::None
-               ? 2 * relief_line_px() : 0;
-}
-inline int icon_row_etched_head_px() {
-    return live_chrome_spec().icon_row_etched_pair == GuiEtchedPairSeat::Head
-               ? 2 * relief_line_px() : 0;
-}
-inline int icon_row_etched_foot_px() {
-    return live_chrome_spec().icon_row_etched_pair == GuiEtchedPairSeat::Foot
-               ? 2 * relief_line_px() : 0;
-}
-// THE RAISED FORM'S TOP LINE (chrome_spec.h's icon_row_raised_form, cde,
-// 2026-10-09): one relief line at the lane's head above the band, none where
-// the spec asks for no form — rounded as the line it is, like the pair.
-inline int icon_row_form_head_px() {
-    return live_chrome_spec().icon_row_raised_form ? relief_line_px() : 0;
-}
-// The ground above and below the case inside the icon row's toolbar band:
-// none under win2000 (Explorer's band is the case), 2 under clearlooks and
-// cde.
-inline int icon_row_air_px() {
-    return scaled_px(live_chrome_spec().icon_row_air_px);
-}
-// THE TOOLBAR BAND ALONE — air, case, air — with NO etched line and NO foot
-// in it.
-inline int icon_row_band_h_px() {
-    return 2 * icon_row_air_px() + icon_case_h_px();
-}
-// THE BAND'S TOP, AS AN OFFSET FROM THE LANE'S OWN TOP: the head etched
-// pair (win2000), then the raised form's top line (cde) — where the band's
-// air begins (paint_icon_row's band and foot pair read it).
-inline int icon_row_band_top_offset_px() {
-    return icon_row_etched_head_px() + icon_row_form_head_px();
-}
-// THE CASE'S TOP, AS AN OFFSET FROM THE LANE'S OWN TOP (not the toolbar
-// band's): the band's top above, then the band's own air — the one expression
-// every reader of the case's seat in the FULL lane takes (paint_icon_row,
-// hit rects, dropdown anchors, the folder overlay's band, tooltips), so a
-// retune of either term carries everywhere by construction.
+// THE CASE'S TOP, AS AN OFFSET FROM THE BAND'S OWN TOP — the head's two
+// lines and the face above the case: the one expression every reader of the
+// case's seat in the band takes (paint_icon_row, hit rects, tooltips).
 inline int icon_case_top_offset_px() {
-    return icon_row_band_top_offset_px() + icon_row_air_px();
+    return kProgramSpec.band_head_lines * program_line_px() +
+           scaled_px(kProgramSpec.band_air_above_px);
 }
 inline int icon_row_h_px() {
-    return icon_row_band_top_offset_px() + icon_row_band_h_px() +
-           icon_row_etched_foot_px() +
-           scaled_px(live_chrome_spec().icon_row_foot_px);
+    return icon_case_top_offset_px() + icon_case_h_px() +
+           scaled_px(kProgramSpec.band_air_below_px) +
+           kProgramSpec.band_foot_lines * program_line_px();
+}
+// A PANE'S FACE between its light left column and its first case, and
+// between its last case and its mid right column (Cool Edit's §1.2).
+inline int program_pane_lead_px() {
+    return scaled_px(kProgramSpec.pane_lead_px);
+}
+inline int program_pane_trail_px() {
+    return scaled_px(kProgramSpec.pane_trail_px);
 }
 
 // A BUTTON IS SQUARE-CORNERED (architect 2026-10-02, the Windows-95 design):
@@ -1422,8 +1327,9 @@ inline int icon_row_h_px() {
 //     kScrubChannelLines relief lines tall, top to bottom Shadow, DkShadow,
 //     3DLight, Hilight (the edge's two rings on a rect four lines tall, its
 //     end columns the same rings' sides), spanning the slider's track and
-//     centred in the buttons' band (row 8's toolbar case band since
-//     2026-10-05, bottom_row_seats in paint_handler.cpp). Its height is the sum of its rounded
+//     centred in the buttons' band (row 8's case band since 2026-10-05, the
+//     program's case since 2026-10-09, bottom_row_seats in
+//     paint_handler.cpp). Its height is the sum of its rounded
 //     lines, 4 × relief_line_px (12 device rows at 275 %, 4 at 138 %).
 //   THE THUMB — WINDOWS' POINTED TRACKBAR THUMB (TBS_BOTTOM; architect
 //     2026-10-06, the source ReactOS's own, measured at 100 % on
@@ -1715,49 +1621,32 @@ inline GuiRect marker_flag_box_band(GuiRect lane) {
 // strings moved beside them, every interactive surface one contiguous cluster
 // against the waveform.
 //
-// THE ROW IS THE ICON ROW'S CASE ON ITS OWN AIR (architect 2026-08-14, at his
-// live test: "make sure bottom row is same height and metrics (padding, etc.)
-// as main icon row"; the air its own field since 2026-10-06): it READS the
-// icon row's case accessors rather than restating them — one source, so a
-// retune of the case carries down here by construction — and its air above
-// and below the case is the spec's bottom_row_air_px (chrome_spec.h): under
-// win2000 THREE WINDOWS PX, WordPad's band air, while the icon row has none
-// inside its band (Explorer's band is the case) and row 8 keeps its 3 / 3
-// (architect 2026-10-06) — the content 3 + 30 + 3 = 36 Windows px; under
-// clearlooks GtkToolbar's 2, the content 2 + 32 + 2 = 36, the row
-// Nautilus's STATUS BAR — the ground and nothing else (architect 2026-10-07
-// ~05:30, his captures 00-17-24 and 00-17-47; paint_bottom_strip). (Its earlier
-// boxes — row 8's kdenlive 26 px transport boxes,
-// then the icon row's 32-laptop-px square, then the five-px-air 32 of
-// 2026-10-02 — are git history.)
-//
-// THE CSS BOX MODEL, ONE TOP ROW: a one-Windows-px row of ground sits
-// OUTSIDE the content on top (1 device row at 138 %, 3 at 300 %, 4 at 400 %),
-// on the WAVEFORM side — where row 8's border-top stood. UNDER WIN2000 NO
-// LINE IS DRAWN THERE since 2026-10-02 (architect: nothing between the well
-// and this row, the well's own bottom line being the seam), and the row is
-// kept so nothing on the row moved; NOR UNDER CLEARLOOKS since 2026-10-07
-// ~05:30 (architect: "three lines at the bottom, clearly noticeable"), where
-// Nautilus's status bar stands straight under its list's one frame line on
-// his captures 00-17-24 and 00-17-47 — the well's frame line the seam
-// there too. IT IS THIS ROW'S OWN LENGTH (kBottomRowBorderPx), both
-// vocabularies'. The lane is 1 + 3 + 30 + 3 = 37 Windows px under win2000,
-// 1 + 2 + 32 + 2 = 37 under clearlooks.
-// bottom_row_content_h_px() is the ground the buttons and text sit on;
-// bottom_row_h_px() is the lane the strip stack allocates. Rides
-// gui_scale_factor() like every redesigned row.
-inline constexpr int kBottomRowBorderPx = 1;
-inline int bottom_row_border_h_px() {
-    return scaled_px(kBottomRowBorderPx, 1);
+// THE ROW IS COOL EDIT'S ROW 8 UNDER ITS DOCK BAR (architect 2026-10-09,
+// the program is Cool Edit; program_spec.h): THE DOCK BAR on the well's side
+// — a light row, three W of face, a mid row, a dark row (Cool Edit's
+// y = 915..920), 6 W — then THE ROW's content, four W of face, the program's
+// case (the band's own, read from its accessors above so the rows cannot
+// drift apart) and five W of face: 36 W, the lane 42 under every chrome.
+// Its groups — the grippers, the end bars, the dark time field — are
+// paint_bottom_row_buttons_and_clock's walk (cool_edit_paint.h draws them).
+// The dock bar is the program's under a modal too; the modal surfaces
+// (prompts, the dialog editors, the picker's Cancel, the render player)
+// stand in the content band below it (paint_bottom_strip).
+// bottom_row_content_h_px() is the band the buttons and text sit on;
+// bottom_row_h_px() is the lane the strip stack allocates. Each term its own
+// rounded part.
+inline int dock_bar_h_px() {
+    return 3 * program_line_px() + scaled_px(kProgramSpec.dock_bar_face_px);
 }
-inline int bottom_row_air_px() {
-    return scaled_px(live_chrome_spec().bottom_row_air_px);
+inline int row8_air_above_px() {
+    return scaled_px(kProgramSpec.row8_air_above_px);
 }
 inline int bottom_row_content_h_px() {
-    return 2 * bottom_row_air_px() + icon_case_h_px();
+    return row8_air_above_px() + icon_case_h_px() +
+           scaled_px(kProgramSpec.row8_air_below_px);
 }
 inline int bottom_row_h_px() {
-    return bottom_row_content_h_px() + bottom_row_border_h_px();
+    return dock_bar_h_px() + bottom_row_content_h_px();
 }
 
 // (THE STATUS BAR'S GEOMETRY IS DELETED — architect 2026-08-29, the evening of
@@ -1828,11 +1717,12 @@ inline int marker_flag_edge_h_px() {
 // THE WHOLE STACK IN WINDOWS PX — every lane a vocabulary lays above and
 // below the well, and the frame's two sides where the frame stands on the
 // maximised window (2026-10-08): the caption, the menu row's three terms,
-// the icon row (icon_row_authored_h), the scroll bar's trim lane, the ruler
-// (its authored leftover when it stands behind the flags, else the label
-// face's seat: the cap top, the small face's ascent, the rows to the marker
-// lane), the marker lane (its air, the flag box's edges and faces round the
-// body face's cell) and row 8 (its top row, its air and the case). At 300 %
+// the program's band (program_spec.h, 37 under every chrome), the scroll
+// bar's trim lane, the ruler (its authored leftover when it stands behind
+// the flags, else the label face's seat: the cap top, the small face's
+// ascent, the rows to the marker lane), the marker lane (its air, the flag
+// box's edges and faces round the body face's cell) and the program's dock
+// bar and row 8 (6 + 36 under every chrome). At 300 %
 // every term is a whole multiple of 3 device px, so two stacks equal here
 // leave the tablet's well the same rows.
 constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
@@ -1850,20 +1740,22 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
               s.ruler_baseline_to_marker_px;
     const int marker = kMarkerLaneAirPx + 2 * kMarkerFlagEdgePx +
                        2 * kMarkerFlagFacePx + body.ascent + body.descent;
-    const int row8 = kBottomRowBorderPx + 2 * s.bottom_row_air_px +
-                     toolbar_case_authored_h(s);
+    const int row8 = program_dock_bar_authored_h(kProgramSpec) +
+                     program_row8_authored_h(kProgramSpec);
     return frame + s.caption_height_px + s.menu_row_head_px +
            s.menu_row_content_px + s.menu_row_foot_px +
-           icon_row_authored_h(s) + s.scroll_bar_px + ruler + marker + row8;
+           program_band_authored_h(kProgramSpec) + s.scroll_bar_px + ruler +
+           marker + row8;
 }
-// THE BASE'S STACK, 125 above and 37 below; clearlooks' its own 3 W taller
-// (the leftover of its own lanes, main.cpp's rule); CDE'S THE BASE'S
-// EXACTLY — ITS RULER LANE THE LEFTOVER (architect 2026-10-08 ~17:30–17:45):
-// the frame's 5 + 5 and its 17 / 27 / 37 / 13 / 18 / 37 leave the ruler 3
-// of the base's 162 (the toolbar's raised form, 2026-10-09, took the fourth), so the tablet's well keeps its 954 rows (318 W) under
-// every chrome but clearlooks' 945.
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 162);
-static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 165);
+// THE BASE'S STACK, 126 above and 42 below (2026-10-09: the program's band
+// 37 where Explorer's lane was 36, its dock bar and row 8 42 where row 8 was
+// 37); clearlooks' its own 3 W taller (the leftover of its own lanes,
+// main.cpp's rule); CDE'S THE BASE'S EXACTLY — ITS RULER LANE THE LEFTOVER
+// (architect 2026-10-08 ~17:30–17:45): the frame's 5 + 5 and its 17 / 27 /
+// 37 / 13 / 18 / 42 leave the ruler 4 of the base's 168, so the tablet's
+// well is 936 rows (312 W) under every chrome but clearlooks' 927.
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 168);
+static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 171);
 static_assert(chrome_stack_authored_h(kChromeSpecCde) ==
               chrome_stack_authored_h(kChromeSpecWin2000));
 // THE 1px LEFT BORDER (architect 2026-08-02), full box height, in the flag
@@ -3090,12 +2982,8 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         (the well is render_canvas's own fill of the same
 //                         lines, full width).
 //   paint_relief_sunken_outer — SUNKEN OUTER, ONE ring (DrawEdge's
-//                         BDR_SUNKENOUTER, Shadow / Hilight): a status-bar
-//                         panel, a time field, the open menu title, a flat
-//                         toolbar button pressed or checked.
-//   paint_relief_raised_inner — RAISED INNER, ONE ring (BDR_RAISEDINNER,
-//                         Hilight / Shadow): a flat toolbar button's HOT
-//                         face (architect 2026-10-06).
+//                         BDR_SUNKENOUTER, Shadow / Hilight): the open menu
+//                         title, the color picker's field and swatch.
 //   paint_relief_line_frame — one colour all round, square (no mitre
 //                         between one tone and itself): the dialog's
 //                         default-button frame, the list's focus frame and
@@ -3104,13 +2992,12 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //   lines in `card_frame`, square, on all four sides, at paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
-//                         [x, x + w) (the dropdown's separator, the icon
-//                         row's etched pair).
-//   paint_relief_etched_vline — its vertical twin: a Shadow line on columns
-//                         [x, x + lw) and a Hilight line right of it, rows
-//                         [y, y + h) (the toolbars' group
-//                         separators, 2026-10-06; the ruler's etched ticks
-//                         are painted in place, paint_ruler_row).
+//                         [x, x + w) (the dropdown's separator; the ruler's
+//                         etched ticks are painted in place,
+//                         paint_ruler_row).
+// (The one-line raised inner edge — the flat toolbars' hot face — and the
+// vertical etched line — their group separators — went with the program's
+// band, 2026-10-09: Cool Edit's band is cool_edit_paint.h's.)
 // (paint_relief_raised / paint_relief_sunken, the one-line pair of the thin
 // design, are retired, architect 2026-10-02: every caller names its family.)
 // None of them fills the face: a caller fills first and frames after.
@@ -3121,10 +3008,8 @@ void paint_relief_soft_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_raised(cairo_t* cr, const GuiRect& r);
 void paint_relief_plain_sunken(cairo_t* cr, const GuiRect& r);
 void paint_relief_sunken_outer(cairo_t* cr, const GuiRect& r);
-void paint_relief_raised_inner(cairo_t* cr, const GuiRect& r);
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
-void paint_relief_etched_vline(cairo_t* cr, int x, int y, int h);
 // One flat cell rect in `c` — the face fill every relief caller lays first.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // THE CHECKED DITHER (architect 2026-10-02, Windows' checked toolbar button
@@ -3159,8 +3044,9 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
 // (kept / dropped / dropped / kept) and restores the state. The disabled
 // WORD under cde (show_embossed_run's cde arm) and the disabled glyphs the
 // painters draw themselves (the caption's, the menu's check mark, the
-// combo's wedge) come here; a disabled ICON is the raster twin,
-// svg_icon::stippled_copy (GuiDisabledGlyph::MotifStipple).
+// combo's wedge) come here. (A disabled ICON is the program's case's,
+// ReactOS's saturate under every chrome since 2026-10-09: icons.h's
+// draw_disabled.)
 void paint_stipple_begin(cairo_t* cr, const GuiRect& bounds);
 void paint_stipple_end(cairo_t* cr, int phase_x, int phase_y);
 
