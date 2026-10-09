@@ -273,6 +273,17 @@ struct ChromeSpec {
     GuiEtchedPairSeat  icon_row_etched_pair;
     int                icon_row_air_px;
     int                icon_row_foot_px;
+    // THE TOOLBAR BAND AS MOTIF'S RAISED FORM (2026-10-09, the cde
+    // vocabulary; the instance's head records the capture): when true the
+    // lane opens with ONE TOP-SHADOW LINE above the band's air (one W of the
+    // lane's height, icon_row_authored_h), and the form — that line, the
+    // band and the foot pair's bottom-shadow row, which closes it — wears
+    // one raised ring the lane's whole width, its left column the top shadow
+    // and its right column the bottom shadow, mitred (paint_icon_row). It
+    // needs the FOOT pair (static_asserted in render.h's icon-row block):
+    // the pair's dark row is the form's bottom line and its light row the
+    // next form's top. False under win2000 and clearlooks.
+    bool               icon_row_raised_form;
     // THE RULER LANE'S TWO AUTHORED TERMS (render.h's ruler block; the
     // seat's rule at paint_handler.cpp's ruler_label_baseline_px): how far
     // under the lane's top the labels' CAP TOP lands, and the rows from
@@ -412,6 +423,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .icon_row_etched_pair         = GuiEtchedPairSeat::Head,
     .icon_row_air_px              = 0,
     .icon_row_foot_px             = 4,
+    .icon_row_raised_form         = false,
     .ruler_label_cap_top_px       = 4,
     .ruler_baseline_to_marker_px  = 7,
     .ruler_behind_flags           = false,
@@ -529,6 +541,7 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .icon_row_etched_pair         = GuiEtchedPairSeat::None,
     .icon_row_air_px              = 2,
     .icon_row_foot_px             = 0,
+    .icon_row_raised_form         = false,
     .ruler_label_cap_top_px       = 4,
     .ruler_baseline_to_marker_px  = 7,
     .ruler_behind_flags           = false,
@@ -553,7 +566,8 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 // coder's own measurements on its dl/shots/, named per line — "N" the
 // notepad capture applications_office_notepad_cde15solaris9.png, "O" the
 // Open dialog interface_dialogs_openfile_cde15solaris9.png, "F" the file
-// manager system_managers_filemanager_cde15solaris9.png; capture px are
+// manager system_managers_filemanager_cde15solaris9.png, "C" the Calendar
+// capture tmp/cde15solaris9-1-1.png (2026-10-09, 1:1); capture px are
 // Solaris px at 75 dpi, so every HEIGHT is re-derived at the base's 13-row
 // cell by Motif's arithmetic and every MARGIN is kept as the px constant
 // Motif's resources gave it — the settled rule).
@@ -581,8 +595,13 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   bs; the cap's top on face row 9 = margins 6 + (ascent 13 − cap 10)):
 //   head 1 (the ts row) + content 25 (the base cell 13 + 6 above and below:
 //   the RowColumn's marginHeight 3, the cascade's one-px shadow and its
-//   marginHeight 2) + foot 1 (the bs row) = 27 (ruling 2; the band's own
-//   bevel is the two rows, paint_menu_row's cde arm). THE PADS (re-read
+//   marginHeight 2) + foot 1 (the bs row) = 27 (ruling 2). THE BAR IS A
+//   RAISED FORM THE LANE'S WHOLE WIDTH, ONE RING (paint_menu_row's cde arm;
+//   re-read on C 2026-10-09): the ts along its top (C row 24) and down its
+//   left edge (C x 5), the bs down its right edge (C x 654) and along its
+//   bottom — Motif's 2 px there (C rows 52-53), the product's 1 W (architect
+//   2026-10-09 ~03:15: "1") — mitred; the walk's lead below counts the left
+//   ts column. THE PADS (re-read
 //   2026-10-08 ~18:00, his ruling 5: "make it a little more accurate")
 //   off N's text cells (the mnemonic underlines, row 46, are the cells'
 //   extents): File's cell starts at x 16, 11 px past the bar's ts column
@@ -620,7 +639,20 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   from each end: Motif's SHADOW_ETCHED_IN pair, the same two lines); the
 //   band 2 air + 30 + 2 air = 34 with THE ETCHED PAIR AT ITS FOOT (dtfile
 //   puts its separator under the toolbar, F rows 107-108, 1 bs + 1 ts;
-//   GuiEtchedPairSeat::Foot) and no further foot: 36, Windows' lane;
+//   GuiEtchedPairSeat::Foot) and no further foot. THE TOOLBAR IS ITS OWN
+//   RAISED FORM under the menu bar's (icon_row_raised_form; C 2026-10-09):
+//   a 1-px ts line along its top (C row 54, directly under the bar's bs),
+//   a ts line down its left edge (C x 6, beside the client's x 5), a bs
+//   line down its right edge and along its bottom (C row 93, the next
+//   form's ts at row 94 under it — the foot pair's two rows here). C's
+//   right edge stands 6 px in from the client's (x 648); THE PRODUCT'S IS
+//   FLUSH, the form the lane's whole width (architect 2026-10-09 ~03:15,
+//   mock A, tmp/research/cde_borders/mock_CDE_BORDERS_A_flush.jpg). C's
+//   raised casings round its buttons are NOT taken ("no button casings may
+//   be okay"), the focus ring with them. The top line is one W of the
+//   lane's own height above the band's air, so the case keeps its 2 W of
+//   face above and below between the form's two lines: 1 + 34 + the pair 2
+//   = 37, one W over Windows' lane, the ruler lane giving it back (below);
 //   row 8 the base's 3 / 3 air (1 + 3 + 30 + 3 = 37).
 //   THE FRAME dtwm's 5 on all four sides (N rows 0-4 / 396-400: 2 light +
 //   2 face + 1 dark on the top and left, mirrored on the bottom and right;
@@ -629,9 +661,10 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   CORNER PIECES (cde_paint.h's frame block). THE SCROLL BAR 13
 //   (scroll_bar_px; N rows 383-395 and report §3: the 1-px trough ring, the
 //   11-px slider and arrows inside it) — the trim lane and the popup bar.
-//   THE RULER LANE 4, BEHIND THE FLAGS (ruler_behind_flags; architect
-//   2026-10-08 ~17:30): the lane table's leftover — the frame's 5 + 5 and
-//   the stack 17 + 27 + 36 + 13 + 4 + 18 above the well with row 8's 37
+//   THE RULER LANE 3, BEHIND THE FLAGS (ruler_behind_flags; architect
+//   2026-10-08 ~17:30; 4 until the toolbar's form took a row of it,
+//   2026-10-09): the lane table's leftover — the frame's 5 + 5 and
+//   the stack 17 + 27 + 37 + 13 + 3 + 18 above the well with row 8's 37
 //   below it sum to the base's 125 + 37 (render.h's static_assert), so the
 //   well keeps 954 device rows at 300 % (main.cpp's lane table); its two
 //   label terms unread.
@@ -686,10 +719,11 @@ inline constexpr ChromeSpec kChromeSpecCde = {
     .icon_row_etched_pair         = GuiEtchedPairSeat::Foot,
     .icon_row_air_px              = 2,
     .icon_row_foot_px             = 0,
+    .icon_row_raised_form         = true,
     .ruler_label_cap_top_px       = 0,
     .ruler_baseline_to_marker_px  = 0,
     .ruler_behind_flags           = true,
-    .ruler_lane_px                = 4,
+    .ruler_lane_px                = 3,
     .scroll_bar_px                = 13,
     .bottom_row_air_px            = 3,
     .push_button_box_px           = 23.0,

@@ -157,7 +157,8 @@ namespace {
 // menu row with nothing between, a period menu-bar-plus-toolbar stack
 // folded into one lane — one etched line pair, the 30-px case as the band
 // and 4 px of foot, 36 Windows px whole (architect 2026-10-06), or GTK's
-// 2 + 32 + 2 = 36; render.h's icon-row block — and NO BORDER beyond that foot:
+// 2 + 32 + 2 = 36, or cde's raised form 1 + 2 + 30 + 2 + its foot pair 2 =
+// 37 (2026-10-09); render.h's icon-row block — and NO BORDER beyond that foot:
 // the trim lane's own first row is the boundary), then FLEXIBLE GAP 1, then
 // THE CENTERED BLOCK's three: the TRIM lane (trim_lane_h_px(), the
 // miniaturized scroll bar — the dithered track and the window's thumb), the
@@ -304,22 +305,26 @@ namespace {
 // OUTSIDE ITS GEOMETRY, as the restored laptop's sizing frame always did
 // (the platforms' frame_px_), so the app's height and width are the
 // surface's less the frame's two sides, and inside it caption 17 + menu 27
-// + icon 36 + trim 13 (CDE's own scroll bar) + ruler 4 + marker 18 = 115
-// Windows px above and row 8's 37 below: the frame's 10 and these 152 are
-// THE BASE'S 162 EXACTLY — THE RULER LANE IS THE LEFTOVER (its 4 the
-// remainder; it stands behind the flags, render.h's chrome_stack_authored_h
-// proving the sum). The whole 480 W of the tablet's 1440 rows, top to
-// bottom: frame 5 | caption 17 | menu 27 | icon 36 | trim 13 | ruler 4 |
-// marker 18 | well 318 | row 8 37 | frame 5.
+// + icon 37 (Motif's raised form: its top line 1 + 2 + 30 + 2 + the foot
+// pair 2, 2026-10-09) + trim 13 (CDE's own scroll bar) + ruler 3 + marker
+// 18 = 115 Windows px above and row 8's 37 below: the frame's 10 and these
+// 152 are THE BASE'S 162 EXACTLY — THE RULER LANE IS THE LEFTOVER (its 3
+// the remainder, 4 until the form's top line took a row; it stands behind
+// the flags, render.h's chrome_stack_authored_h proving the sum). The whole
+// 480 W of the tablet's 1440 rows, top to bottom: frame 5 | caption 17 |
+// menu 27 | icon 37 | trim 13 | ruler 3 | marker 18 | well 318 | row 8 37 |
+// frame 5.
 //   1920x1080 AT 138 %, MAXIMISED (the frame 6 = 1 + 1 + 3 + 1; the app
 //   1908 x 1068): the lanes are 23 caption + 36 menu (1 + 34 + 1, the
-//   content's 34.5 rounding to even) + 49 icon (0 + 3 + 41 + 3 + the foot
-//   pair 2) + 18 trim + 6 ruler + 23 marker = 155 above (108 the caption and
-//   the two toolbar rows, 47 the block) and 50 below, leftover 863: the
-//   waveform 863, both gaps 0.
+//   content's 34.5 rounding to even) + 50 icon (1 + 3 + 41 + 3 + the foot
+//   pair 2) + 18 trim + 4 ruler + 23 marker = 154 above (109 the caption and
+//   the two toolbar rows, 45 the block) and 50 below, leftover 864: the
+//   waveform 864, both gaps 0 (one row more than the 863 of the 4-W ruler:
+//   the form's line is 1 device row and the W it took from the ruler 2,
+//   each rounded at its element).
 //   2304x1440 AT 300 % (the frame 15 = 3 + 3 + 6 + 3; the app 2274 x 1410):
-//   the lanes are 51 caption + 81 menu + 108 icon + 39 trim + 12 ruler + 54
-//   marker = 345 above (240 and 105) and 111 below, leftover 954: the
+//   the lanes are 51 caption + 81 menu + 111 icon + 39 trim + 9 ruler + 54
+//   marker = 345 above (243 and 102) and 111 below, leftover 954: the
 //   waveform 954, both gaps 0 — the base's well exactly (rows 360-1313 of
 //   the surface, the mock's), its width the app's 2274 floored to the grid
 //   step, 2272 (a 2-px chrome gutter at its right, waveform_area's rule).

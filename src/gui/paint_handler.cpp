@@ -717,9 +717,10 @@ AppState::RedesignButtonFace& publish_button_face(
 // live in render.h's icon-row block, where the lane table and row 8 read
 // them too; this row spells none of them.
 //
-// THE VERTICAL STORY: the case stands on the etched pair and the toolbar's
-// own air (icon_case_top_offset_px; the air is none), so its top is the
-// lane's top plus that offset. Row 8 shares the case alone, never the etched
+// THE VERTICAL STORY: the case stands on the etched pair (win2000) or the
+// raised form's top line (cde) and the toolbar's own air
+// (icon_case_top_offset_px; the air is none under win2000), so its top is
+// the lane's top plus that offset. Row 8 shares the case alone, never the etched
 // lines, the band's air or the foot: its case sits at its content's top plus
 // its own air (bottom_row_air_px).
 //
@@ -1867,9 +1868,13 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     }
     // UNDER CDE THE BAR IS MOTIF'S MENU BAR, A RAISED ONE-W PANEL
     // (2026-10-08; chrome_spec.h's cde head, the notepad capture's rows 24
-    // and 52): the head row the top shadow, the foot row the bottom shadow,
-    // its left and right columns the same ring — the lane's own bevel on the
-    // body, mitred like every ring.
+    // and 52, re-read on the Calendar capture 2026-10-09): the head row the
+    // top shadow, the foot row the bottom shadow (Motif's 2 px there, the
+    // product's 1 W, architect 2026-10-09 ~03:15), its left column the top
+    // shadow and its right column the bottom shadow, the lane's whole width
+    // — the lane's own bevel on the body, mitred like every ring. The walk's
+    // lead (menu_band_lead_px, 4 W = this ring's column + the RowColumn's
+    // marginWidth 3) already counts the left column.
     if (cde) paint_cde_raised(cr, row);
 
     // THE SHAPING CHOKEPOINT (text_shape.h): each label is MEASURED and PAINTED
@@ -2300,10 +2305,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // fill (paint_cl_toolbar_band: its light first row, the gummy ramp, its
     // shade[3] last row), the band alone — no etched pair above it and no
     // foot below it in this instance, so the band is the lane.
+    const int band_y = lane.y + icon_row_band_top_offset_px();
     if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
-        paint_cl_toolbar_band(cr, GuiRect{lane.x,
-                                          lane.y + icon_row_etched_head_px(),
-                                          lane.w, icon_row_band_h_px()});
+        paint_cl_toolbar_band(cr, GuiRect{lane.x, band_y, lane.w,
+                                          icon_row_band_h_px()});
 
     // THE ETCHED LINE PAIR, Windows' own menubar/toolbar separator
     // (architect 2026-10-05): under the menu row at the lane's top, spanning
@@ -2319,11 +2324,28 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         paint_relief_etched_hline(cr, lane.x, lane.y, lane.w);
         break;
     case GuiEtchedPairSeat::Foot:
-        paint_relief_etched_hline(cr, lane.x,
-                                  lane.y + icon_row_band_h_px(), lane.w);
+        paint_relief_etched_hline(cr, lane.x, band_y + icon_row_band_h_px(),
+                                  lane.w);
         break;
     case GuiEtchedPairSeat::None:
         break;
+    }
+    // UNDER CDE THE BAND IS MOTIF'S RAISED FORM (icon_row_raised_form,
+    // 2026-10-09; chrome_spec.h's cde head, the Calendar capture's rows 54 /
+    // 93): ONE RAISED RING, the lane's whole width (flush, his ruling), from
+    // the form's top line at the lane's head through the foot pair's dark
+    // row, which is the form's bottom line — the top shadow on its top row
+    // and left column, the bottom shadow on its right column and bottom row,
+    // mitred where the tones meet (the menu bar's own ring, paint_menu_row);
+    // the pair's light row under it stays the next form's top. Drawn over
+    // the pair, so the ring's bottom row repaints the dark row in its own
+    // tone and only the bottom-left mitre changes it.
+    if (live_chrome_spec().icon_row_raised_form) {
+        const int form_top = band_y - icon_row_form_head_px();
+        paint_cde_raised(cr, GuiRect{lane.x, form_top, lane.w,
+                                     icon_row_form_head_px() +
+                                         icon_row_band_h_px() +
+                                         relief_line_px()});
     }
 
     // (NO FONT IS SELECTED HERE, and that is the row's own fact since
@@ -2337,10 +2359,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const int glyph_px  = icon_glyph_px();
     const int group_gap = icon_group_space_px();
 
-    // THE CASE STANDS ON THE ETCHED PAIR AND THE TOOLBAR'S OWN AIR
-    // (icon_case_top_offset_px, render.h: the one expression every reader of
-    // the case's seat in the full lane takes) — no air, the band being the
-    // case.
+    // THE CASE STANDS ON THE ETCHED PAIR (win2000) OR THE RAISED FORM'S TOP
+    // LINE (cde) AND THE TOOLBAR'S OWN AIR (icon_case_top_offset_px,
+    // render.h: the one expression every reader of the case's seat in the
+    // full lane takes) — no air under win2000, the band being the case; under
+    // cde 2 W, so the case stands centred in the form's face between its two
+    // lines.
     const int btn_y = lane.y + icon_case_top_offset_px();
 
     // THE RIGHT-ANCHORED PLACES ARE RESOLVED FIRST, because they decide where

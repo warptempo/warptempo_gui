@@ -1242,7 +1242,12 @@ inline int relief_line_px() {
 // 32 + 2 + 0 = 36, GtkToolbar's band (no etched pair: the menu bar's last
 // row is the line; no foot: GTK stacks flush), painted as Clearlooks'
 // toolbar (paint_cl_toolbar_band); its top stack 128 (caption 20 + menu 21
-// + 36 + trim 16 + ruler 17 + marker 18). The
+// + 36 + trim 16 + ruler 17 + marker 18). CDE (2026-10-09): MOTIF'S RAISED
+// FORM — its top line 1 + 2 + 30 + 2 + the etched pair at the FOOT 2 = 37,
+// the form one raised ring from the top line through the pair's dark row,
+// the lane's whole width (icon_row_raised_form, paint_icon_row); its top
+// stack 115 inside dtwm's frame (caption 17 + menu 27 + 37 + trim 13 +
+// ruler 3 + marker 18). The
 // foot's last row's
 // neighbour is the trim lane's own first row, still the boundary — NO
 // BORDER OF ITS OWN (architect 2026-10-01). THE ROW IS MODELLED ON KDENLIVE'S
@@ -1291,20 +1296,28 @@ constexpr int toolbar_case_authored_h(const ChromeSpec& s) {
 constexpr int icon_row_authored_h(const ChromeSpec& s) {
     return (s.icon_row_etched_pair != GuiEtchedPairSeat::None
                 ? 2 * kReliefLinePx : 0) +
+           (s.icon_row_raised_form ? kReliefLinePx : 0) +
            s.icon_row_air_px + toolbar_case_authored_h(s) +
            s.icon_row_air_px + s.icon_row_foot_px;
 }
+// A RAISED FORM CLOSES ON THE FOOT PAIR'S DARK ROW (chrome_spec.h's
+// icon_row_raised_form): no vocabulary may ask for the form without it.
+static_assert(chrome_specs_all([](const ChromeSpec& s) {
+    return !s.icon_row_raised_form ||
+           s.icon_row_etched_pair == GuiEtchedPairSeat::Foot;
+}));
 static_assert(toolbar_case_authored_w(kChromeSpecWin2000) == 31 &&
               toolbar_case_authored_h(kChromeSpecWin2000) == 30 &&
               icon_row_authored_h(kChromeSpecWin2000) == 36);
 static_assert(toolbar_case_authored_w(kChromeSpecClearlooks) == 32 &&
               toolbar_case_authored_h(kChromeSpecClearlooks) == 32 &&
               icon_row_authored_h(kChromeSpecClearlooks) == 36);
-// CDE: the base's case in Motif's band — 2 air + 30 + 2 air + the etched
-// pair at the foot = 36 (chrome_spec.h's cde instance).
+// CDE: the base's case in Motif's raised form — the form's top line 1 + 2
+// air + 30 + 2 air + the etched pair at the foot = 37 (chrome_spec.h's cde
+// instance, 2026-10-09; the ruler lane gives the row back).
 static_assert(toolbar_case_authored_w(kChromeSpecCde) == 31 &&
               toolbar_case_authored_h(kChromeSpecCde) == 30 &&
-              icon_row_authored_h(kChromeSpecCde) == 36);
+              icon_row_authored_h(kChromeSpecCde) == 37);
 inline int icon_glyph_px() {
     return scaled_px(live_chrome_spec().toolbar_glyph_px);
 }
@@ -1345,8 +1358,15 @@ inline int icon_row_etched_foot_px() {
     return live_chrome_spec().icon_row_etched_pair == GuiEtchedPairSeat::Foot
                ? 2 * relief_line_px() : 0;
 }
+// THE RAISED FORM'S TOP LINE (chrome_spec.h's icon_row_raised_form, cde,
+// 2026-10-09): one relief line at the lane's head above the band, none where
+// the spec asks for no form — rounded as the line it is, like the pair.
+inline int icon_row_form_head_px() {
+    return live_chrome_spec().icon_row_raised_form ? relief_line_px() : 0;
+}
 // The ground above and below the case inside the icon row's toolbar band:
-// none under win2000 (Explorer's band is the case), 2 under clearlooks.
+// none under win2000 (Explorer's band is the case), 2 under clearlooks and
+// cde.
 inline int icon_row_air_px() {
     return scaled_px(live_chrome_spec().icon_row_air_px);
 }
@@ -1355,16 +1375,22 @@ inline int icon_row_air_px() {
 inline int icon_row_band_h_px() {
     return 2 * icon_row_air_px() + icon_case_h_px();
 }
+// THE BAND'S TOP, AS AN OFFSET FROM THE LANE'S OWN TOP: the head etched
+// pair (win2000), then the raised form's top line (cde) — where the band's
+// air begins (paint_icon_row's band and foot pair read it).
+inline int icon_row_band_top_offset_px() {
+    return icon_row_etched_head_px() + icon_row_form_head_px();
+}
 // THE CASE'S TOP, AS AN OFFSET FROM THE LANE'S OWN TOP (not the toolbar
-// band's): the top etched pair, then the band's own air — the one expression
+// band's): the band's top above, then the band's own air — the one expression
 // every reader of the case's seat in the FULL lane takes (paint_icon_row,
 // hit rects, dropdown anchors, the folder overlay's band, tooltips), so a
 // retune of either term carries everywhere by construction.
 inline int icon_case_top_offset_px() {
-    return icon_row_etched_head_px() + icon_row_air_px();
+    return icon_row_band_top_offset_px() + icon_row_air_px();
 }
 inline int icon_row_h_px() {
-    return icon_row_etched_head_px() + icon_row_band_h_px() +
+    return icon_row_band_top_offset_px() + icon_row_band_h_px() +
            icon_row_etched_foot_px() +
            scaled_px(live_chrome_spec().icon_row_foot_px);
 }
@@ -1556,14 +1582,15 @@ int cl_scale_thumb_h_px();
 // as they are, but the ticks and the timestamp hide behind the flags (they
 // are not really that useful)"; the spec's ruler_behind_flags): the lane is
 // NOT derived from the face but is the LANE TABLE'S LEFTOVER, the spec's
-// ruler_lane_px, 4 W — what dtwm's frame and cde's other lanes leave of the
-// base's stack (chrome_stack_authored_h below proves it), 12 device rows at
-// 300 % — carrying the ticks, every one 3 W short (kRulerBehindTickPx)
-// hanging from its top, and the playhead's head, its band on the lane's
+// ruler_lane_px, 3 W — what dtwm's frame and cde's other lanes leave of the
+// base's stack (chrome_stack_authored_h below proves it; 4 W until the
+// toolbar's raised form took a row, 2026-10-09), 9 device rows at 300 %, 4
+// at 138 % — carrying the ticks, every one 3 W short (kRulerBehindTickPx),
+// the lane's whole height, hanging from its top, and the playhead's head, its band on the lane's
 // top — Motif's down arrow one W of body below it (the head block's cde
 // arm, 2026-10-08); the labels stand at the MARKER LANE'S rows, behind the
 // flags, their cap band centred on the flag label's (paint_ruler_row's
-// arm). The head's 10 W reach 6 W down into the marker lane, where a flag
+// arm). The head's 10 W reach 7 W down into the marker lane, where a flag
 // under it covers its lower rows; the marker lane's 18 W and its hits are
 // the base's.
 inline int trim_lane_h_px() {
@@ -1810,8 +1837,8 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
 // THE BASE'S STACK, 125 above and 37 below; clearlooks' its own 3 W taller
 // (the leftover of its own lanes, main.cpp's rule); CDE'S THE BASE'S
 // EXACTLY — ITS RULER LANE THE LEFTOVER (architect 2026-10-08 ~17:30–17:45):
-// the frame's 5 + 5 and its 17 / 27 / 36 / 13 / 18 / 37 leave the ruler 4
-// of the base's 162, so the tablet's well keeps its 954 rows (318 W) under
+// the frame's 5 + 5 and its 17 / 27 / 37 / 13 / 18 / 37 leave the ruler 3
+// of the base's 162 (the toolbar's raised form, 2026-10-09, took the fourth), so the tablet's well keeps its 954 rows (318 W) under
 // every chrome but clearlooks' 945.
 static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 162);
 static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 165);
@@ -2258,10 +2285,10 @@ static_assert(playhead_head_glyph_is_rings(),
 // HEIGHT 9 W, under ONE W OF BODY above it (his "slight gap above") — the
 // base's top row the ruler lane's top + 1 W, the apex's last row lane top
 // + 10 W, clear of the timestamp digits behind the flags (at 300 % their
-// cap top stands on the lane's row 33 by the recorded metrics — the lane's
-// 12, the air's 3, the flag's 3 + 3 + 33 to its baseline, less 3 to centre
-// the small cap's 18 on the body's 24 — and the head's last row is its
-// row 29). Each length is a count of the head's quantum u, as the Windows
+// cap top stands on the lane's row 30 by the recorded metrics — the lane's
+// 9 (3 W since 2026-10-09), the air's 3, the flag's 3 + 3 + 33 to its
+// baseline, less 3 to centre the small cap's 18 on the body's 24 — and the
+// head's last row is its row 29, the row directly above them). Each length is a count of the head's quantum u, as the Windows
 // glyph's are, so the base's nine units centre on the stem's columns with
 // no remainder (the middle unit the stem's, an odd count) — the base
 // equalling the Windows glyph's width is the fit's coincidence, not a rule.
