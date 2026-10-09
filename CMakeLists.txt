@@ -134,9 +134,8 @@ set(WARPTEMPO_GUI_SOURCES
     # harfbuzz/cairo-ft link it implies.
     src/gui/text_shape.cpp
     # GUI-ONLY, like text_shape.cpp: the one face owner (gui_font.h), which
-    # builds the product's faces (gui_font.h's kGuiFontFiles: Tahoma,
-    # DejaVu Sans, Go and FreeSans, each with its bold) through FreeType on
-    # both platforms.
+    # builds the product's faces (gui_font.h's kGuiFontFiles: Tahoma and
+    # FreeSans, each with its bold) through FreeType on both platforms.
     src/gui/gui_font_bundled.cpp
     # GUI-ONLY: the icon set (icons.cpp: the load, the raster cache, the
     # draws) and the wrapper over resvg it reads the bundled drawings through
@@ -149,12 +148,6 @@ set(WARPTEMPO_GUI_SOURCES
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
     src/gui/render.cpp
-    # THE CLEARLOOKS PAINTERS (2026-10-07): the chrome spec's clearlooks arm
-    # of the top strip's painters (clearlooks_paint.h). GUI-only like every
-    # painting concern.
-    src/gui/clearlooks_paint.cpp
-    # THE CDE PAINTERS (2026-10-08): the chrome spec's cde arm (cde_paint.h).
-    src/gui/cde_paint.cpp
     # THE PROGRAM'S PAINTERS (2026-10-09): Cool Edit's band, row 8 and its
     # case, the same under every chrome (cool_edit_paint.h).
     src/gui/cool_edit_paint.cpp
@@ -542,8 +535,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     add_dependencies(warptempo_resvg warptempo_resvg_build)
 
     # THE PRODUCT'S FONT FILES, COMPILED IN (architect 2026-10-02; Wine
-    # Tahoma 2026-10-06, DejaVu Sans beside it 2026-10-07, Go 2026-10-08,
-    # FreeSans 2026-10-09; the rule and the
+    # Tahoma 2026-10-06, FreeSans beside it 2026-10-09; the rule and the
     # mechanism's reasons at gui_font_embedded.cpp's head). THE NAMES ARE
     # READ OUT OF gui_font.h's kGuiFontFiles initializer, the one list, so a
     # file added there is embedded here with no second spelling (gui_font.h

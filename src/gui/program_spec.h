@@ -7,7 +7,7 @@
 // prompts, the picker's and the Settings dialogs with their fields and
 // buttons — each chrome's own (chrome_spec.h). THE PROGRAM is COOL EDIT PRO
 // 2.1'S EDIT VIEW FROM THE TOOLBAR DOWN, THE SAME UNDER EVERY CHROME
-// (windows-2000, clearlooks, cde). This header is the one owner of the
+// (windows-2000 today, Windows XP's to come). This header is the one owner of the
 // program's lengths, in Windows px, read by the lane table (main.cpp), the
 // accessors (render.h's program block) and the painters (cool_edit_paint.h);
 // its colors are the palette's Face role and the tones Cool Edit derives

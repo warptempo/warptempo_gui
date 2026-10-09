@@ -2090,8 +2090,8 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     };
     // THE MAXIMISED STATE AND THE FRAME IT DECIDES land with the size
     // (frame_px_, the header): no frame while maximised, else Windows 95's
-    // four px — under cde dtwm's five on every window, maximised too (the
-    // spec's window_frame_maximized, render.h's sizing-frame block). THE
+    // four px — standing while maximised too under a chrome whose spec sets
+    // window_frame_maximized (render.h's sizing-frame block). THE
     // RESTORED SIZE (architect 2026-10-05: a Restore must look
     // like a restore) is remembered here, its one owner, as the WHOLE
     // SURFACE, frame included, like init()'s request: it starts as that
@@ -2129,7 +2129,6 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         frame_px_ = frame;
         input_.set_surface_width(client_w());
         queue_full_surface_damage();
-        pending_activation_flip_ = false;
         if (on_resize_) on_resize_(client_w(), client_h());
         paint_one_frame();
         return;
@@ -2150,18 +2149,15 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
         input_.set_surface_width(client_w());
         queue_full_surface_damage();
         if (on_resize_) on_resize_(client_w(), client_h());
-    } else if (maximized_changed || damage_.empty() ||
-               (pending_activation_flip_ && frame_px_ > 0 &&
-                live_chrome_spec().vocabulary !=
-                    GuiChromeVocabulary::Win2000)) {
+    } else if (maximized_changed || damage_.empty()) {
         // No size change — still schedule a paint so the compositor's
         // reconfigure (an activation or maximize state change: the caption's
-        // roles, the Maximise / Restore glyph; under clearlooks and cde a
-        // restored window's frame, which follows the activation,
-        // pending_activation_flip_) gets honored.
+        // roles, the Maximise / Restore glyph) gets honored. (Windows 2000's
+        // sizing frame does not follow the activation, so a flip needs no
+        // full damage of its own; a later vocabulary whose frame does adds
+        // that arm here.)
         queue_full_surface_damage();
     }
-    pending_activation_flip_ = false;
 
     if (!frame_callback_) schedule_frame_callback();
 }
@@ -2196,7 +2192,6 @@ void GuiPlatform::on_toplevel_configure(int32_t width, int32_t height,
     // change; the hook's contract is the edge, and it is stated at its setter.
     if (activated != window_activated_) {
         window_activated_ = activated;
-        pending_activation_flip_ = true;
         if (activation_changed_hook_) activation_changed_hook_();
     }
 }

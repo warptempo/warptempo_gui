@@ -1,11 +1,12 @@
-# The Mist icons (the Clearlooks vocabulary's icon set)
+# The Mist icons (the GNOME 2.30 set)
 
-The Clearlooks vocabulary's icons, one SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each file named by its
-enumerator: WHAT DEBIAN 6.0 SQUEEZE SHOWS WITH THE "MIST" ICON THEME SELECTED (architect 2026-10-06 and 2026-10-07) —
-Mist's own files (gnome-themes 2.30.2's `icon-themes/Mist`, whose `index.theme` says `Inherits=gnome`) over
-gnome-icon-theme 2.30's drawings, the name `mist` the one squeeze gives the combination. The live set is the chrome
-spec's (`src/gui/chrome_spec.h`'s `icon_set`): this folder is clearlooks', the default chrome since 2026-10-07; a set is
-chosen by its folder's name.
+The GNOME 2.30 icon set he keeps as a choice under the `icons` device key (architect 2026-10-09: "Mist and Tango
+both work"), one SVG per `icons::Icon` enumerator
+(`src/gui/icons.h`), each file named by its enumerator: WHAT DEBIAN 6.0 SQUEEZE SHOWS WITH THE "MIST" ICON THEME
+SELECTED (architect 2026-10-06 and 2026-10-07) — Mist's own files (gnome-themes 2.30.2's `icon-themes/Mist`, whose
+`index.theme` says `Inherits=gnome`) over gnome-icon-theme 2.30's drawings, the name `mist` the one squeeze gives the
+combination. The live set is the device config's `icons` key's, else the chrome spec's (`src/gui/chrome_spec.h`'s
+`icon_set`, Tango under windows-2000): `icons=mist` chooses this folder; a set is chosen by its folder's name.
 
 THE TWO SOURCES. 58 files are gnome-icon-theme 2.30's drawings, 56 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
 the release squeeze installs: 3.0.0 carries 2.30's sheets, redrawn at five of these seats (below), and at two of the
@@ -37,7 +38,7 @@ THE EDITS, each in the table's "edited" column, nothing else changed:
   nothing alone, is not kept).
 
 THE ACCEPT AND THE REVERT (architect 2026-10-07 ~17:00, on the GNOME families survey; Tango keeps its reload arrows
-and its clock, a deliberate asymmetry: Windows 2000 is the reference behind Clearlooks and its set may lag): the pair
+and its clock, a deliberate asymmetry: the Tango set may lag the GNOME set): the pair
 rhymes as GNOME's own accept and revert, and the toolbar's second clock is gone, the clock left to History View's
 `document-open-recent`. With them, the NORMAL card's bulb goes back to squeeze's. Mist carries none of the three
 names (its scalable folder holds folders and `document-open` only), so all three are gnome's drawings by inheritance,
@@ -216,4 +217,4 @@ licence texts) are not read.
 | GoJumpDeclaration | Jump to Defining Marker | 3.0.0 `src/navigation-icons.svg`, slot `go-jump` 48x48 at (26, 50) | — | — | `1624ee1168fbc6ddb1dbcaa45c90e7ca2c817f12408b3ed737b67d369e4afbd1` |
 | AccessoriesTextEditor | Open Text Editor (Return) | 3.0.0 `src/accessories-text-editor.svg`, slot `accessories-text-editor` 48x48 at (296.062, 39.9963) | — | — | `2641037dac14ccffe5a6b9071fa4dbc32960fa893ade679425a0c53db45b2c84` |
 | EditDelete | Delete Folder | 3.0.0 `src/trash.svg`, slot `user-trash` 48x48 at (696, 50) | — | — | `52a0f172d734ee00d7b819644cbe9c878794e8628e462b81bbcd24e69f4f886a` |
-| AppIcon | the caption's icon and the program icon outside the window (on Clearlooks' ground, #EDECEB: `tools/app_icon/gen_app_icon.sh`) | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | MusicNote16th, AudioXWav | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |
+| AppIcon | the caption's icon and the program icon outside the window (on #EDECEB: `tools/app_icon/gen_app_icon.sh`) | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | MusicNote16th, AudioXWav | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |

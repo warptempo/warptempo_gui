@@ -2011,8 +2011,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // claimed above every veil (claim_window_frame_press) — on the hover
     // alone: a live gesture crossing the frame keeps its own cue, the arms
     // below answering it.
-    // A MAXIMISED WINDOW'S FRAME (cde's dtwm frame, standing there too,
-    // 2026-10-08) sizes nothing: the arrow, its press a consumed nothing.
+    // A MAXIMISED WINDOW'S FRAME (a spec's window_frame_maximized, standing
+    // there too) sizes nothing: the arrow, its press a consumed nothing.
     if (const unsigned edges = window_frame_edges_at(app, x, y);
         edges != 0 && !any_pointer_gesture_active(app)) {
         if (gui.window_maximized()) return GuiCursorKind::Arrow;
@@ -4980,7 +4980,8 @@ bool GuiInputHandler::claim_window_frame_press(GuiMouseButton button, int x,
     if (edges == 0) return false;
     // Consumed from here, whatever the button and the modifiers: the
     // window's own chrome binds the bare left press alone, and a maximised
-    // window's frame (cde's, which stands there too) binds nothing.
+    // window's frame (a chrome's that stands there too,
+    // window_frame_maximized) binds nothing.
     if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
         !mods.alt && !gui.window_maximized())
         gui.begin_window_resize(edges);
@@ -5000,21 +5001,6 @@ bool GuiInputHandler::claim_caption_press(
         // AS PAINTED: a button painted disabled (the tablet's Restore) takes
         // its press as a consumed nothing, as a greyed roster button does.
         if (!app.caption_buttons[static_cast<size_t>(b)].enabled) return true;
-        // UNDER CDE THE CLOSE SLOT IS THE WINDOW-MENU BUTTON (2026-10-08,
-        // ruling 3; caption_button_rects' cde arm): it ACTS AT THE PRESS,
-        // as the menu row's anchors do — the toggle's open half, the drag
-        // into the menu and the lift on a verb being the one gesture (the
-        // anchor press's record at the row-1 band claim) — and claims the
-        // held button for the popup when a menu came up. A press while the
-        // menu stands never arrives here: the open dropdown's claim, ranked
-        // above, closes it (a press outside its items dismisses).
-        if (static_cast<GuiCaptionButton>(b) == GuiCaptionButton::Close &&
-            live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
-            toggle_dropdown(DropdownMenu::Window);
-            app.dropdown.press_began_on_item = app.dropdown.open();
-            viewport.invalidate_rect(top_caption_row_area(app));
-            return true;
-        }
         app.chrome_press = AppState::ChromePress{
             .kind     = AppState::ChromePress::Kind::Caption,
             .index    = b,
@@ -5060,9 +5046,6 @@ void GuiInputHandler::finish_caption_release(const AppState::ChromePress& arm,
     switch (static_cast<GuiCaptionButton>(arm.index)) {
     case GuiCaptionButton::Minimize: gui.minimize_window();         return;
     case GuiCaptionButton::Maximize: gui.toggle_window_maximized(); return;
-    // (Under cde the Close slot is the window-menu button, which acts at
-    // the press and arms nothing — claim_caption_press — so this arm is
-    // the other two vocabularies' Close.)
     case GuiCaptionButton::Close:    on_window_close();             return;
     }
 }
@@ -6077,24 +6060,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         const AppState::Dropdown& pop = app.dropdown;
         // WALKED, NOT NAMED (the anchor membership is derived from the menu
         // list — app_state.h — so a menu added later needs no edit here).
-        // THE ANCHOR EXEMPTION IS THE APPLICATION PULL-DOWNS' ALONE
-        // (2026-10-09): with the caption's WINDOW MENU open
-        // (dropdown_hangs_from_caption) no anchor is consulted — the menu
-        // hangs from the caption's lane, so its first rows overlay the menu
-        // row (its first item 18..37 W from the client's top against the row's
-        // 17..44 W, File from x = 4 W, at 300 % and at 138 % alike), and a
-        // press there is the menu's (dropdown_item_at); a press on an anchor
-        // outside it dismisses, as any press outside its items does. The
-        // hover switch in on_motion refuses the window menu for the same
-        // reason: dtwm's menu never slides onto an application's menu bar.
         bool on_menu_button = false;
-        if (!dropdown_hangs_from_caption(pop.menu)) {
-            for (const DropdownMenu m : kDropdownMenus) {
-                if (redesign_button_hit(app, dropdown_anchor_button(m), x,
-                                        y)) {
-                    on_menu_button = true;
-                    break;
-                }
+        for (const DropdownMenu m : kDropdownMenus) {
+            if (redesign_button_hit(app, dropdown_anchor_button(m), x, y)) {
+                on_menu_button = true;
+                break;
             }
         }
         if (!on_menu_button) {
@@ -9547,24 +9517,6 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     if (armed < 0) return true;   // nothing was lit; consumed, menu stays up
     const DropdownMenu menu = app.dropdown.menu;
     app.dropdown.pressed_item = -1;
-    // THE WINDOW MENU'S VERB (2026-10-08, kWindowPopupItems): close first,
-    // then the caption's own act for the verb — Restore and Maximize the
-    // maximized toggle (each greyed where it does not apply), Minimize the
-    // platform's, Close the one close road (on_window_close: the dirty
-    // prompt, the gesture end), exactly what the caption's buttons dispatch
-    // at their lift.
-    if (menu == DropdownMenu::Window) {
-        const WindowPopupVerb verb =
-            kWindowPopupItems[static_cast<size_t>(armed)].verb;
-        close_dropdown();
-        switch (verb) {
-            case WindowPopupVerb::Restore:
-            case WindowPopupVerb::Maximize: gui.toggle_window_maximized(); break;
-            case WindowPopupVerb::Minimize: gui.minimize_window();         break;
-            case WindowPopupVerb::Close:    on_window_close();             break;
-        }
-        return true;
-    }
     // CLOSE FIRST, THEN ACT — the popup is gone before anything the item does
     // runs, so a modal it opens never overlaps the menu even for a frame, and a
     // COMMAND it dispatches is not swallowed by the popup's own keyboard gate.
@@ -10222,15 +10174,9 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // close and that ruling, when no route reached this term at all; it was
     // File-exempt like this on 2026-09-02, when the panel stopped at row 1's
     // foot.)
-    // THE WINDOW MENU'S ANCHOR IS THE CAPTION'S BUTTON (2026-10-08,
-    // dropdown_hangs_from_caption): its painted bit, never a roster face.
-    const bool anchor_live =
-        dropdown_hangs_from_caption(menu)
-            ? app.caption_buttons[static_cast<size_t>(GuiCaptionButton::Close)]
-                  .enabled
-            : app.redesign_buttons[static_cast<size_t>(
-                  redesign_button_index(dropdown_anchor_button(menu)))].enabled;
-    if (!anchor_live) return;
+    if (!app.redesign_buttons[static_cast<size_t>(
+             redesign_button_index(dropdown_anchor_button(menu)))].enabled)
+        return;
     // ONE STATE, SO ONE MENU: a press on the OPEN menu's own button closes it
     // (the gesture that opened it, closing it), and a press on ANOTHER menu's
     // button switches — the close below runs first, damaging the box that is
@@ -10309,8 +10255,6 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // exactly. The x is still the anchor's (the
     // dropdown hangs off the thing that opened it, architect 2026-08-02);
     // only this band's y reads the lane, and it damages FULL WIDTH anyway.
-    // (The window menu hangs from the CAPTION lane's foot instead,
-    // dropdown_hang_y's one expression for both readers.)
     viewport.invalidate_rect(
         GuiRect{0, dropdown_hang_y(app, menu), app.width, dropdown_h_px(menu)});
     // THE TOOLTIP GOES DOWN ON THE OPEN EDGE, A HARD END (a menu opening
@@ -10912,11 +10856,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // press claim (pressed_item / press_began_on_item) out from under the
         // held button, so the coming release acted on a menu the press never
         // touched. The ordinary unheld hover-switch is unchanged.
-        // THE WINDOW MENU SWITCHES TO NO ROW-1 MENU (2026-10-08): it hangs
-        // from the caption, not the menu row, and dtwm's menu does not slide
-        // onto an application's menu bar; its press-and-drag stays its own.
-        if (!mods.primary_button_held &&
-            !dropdown_hangs_from_caption(app.dropdown.menu)) {
+        if (!mods.primary_button_held) {
             for (const DropdownMenu m : kDropdownMenus) {
                 if (m == app.dropdown.menu) continue;
                 if (!redesign_button_hit(app, dropdown_anchor_button(m),

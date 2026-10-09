@@ -2,8 +2,6 @@
 
 #include "theme_file.h"   // GuiThemeWords, the role table, the compiled themes;
                           // through render.h, GuiChromePick and ChromeSpec
-#include "clearlooks_derive.h"  // derive_clearlooks_chrome (the resolver)
-#include "cde_derive.h"         // derive_cde_chrome (the resolver)
 
 #include <array>
 #include <cstddef>
@@ -21,8 +19,10 @@
 // end and text, the inactive caption's three (optional, following the
 // active ones while absent), the selection's fill and text, the field's
 // ground and text. This header is THE WINDOWS-2000 DERIVATION over them and
-// every Windows role's mapping there (clearlooks' is clearlooks_derive.h,
-// below).
+// every Windows role's mapping there; a later vocabulary's derivation joins
+// it in live_chrome_words below (ONE THEME SYNTAX UNDER EVERY CHROME,
+// architect 2026-10-08 ~12:10: the same twelve keys drive each chrome's
+// tones by that desktop's own arithmetic).
 //
 // "A DERIVATION IS ALWAYS ON A SCALE" (architect 2026-10-08 ~11:00): THE
 // 3D SET — Hilight, Shadow, 3DLight, DkShadow — derived from the ground by
@@ -91,14 +91,7 @@
 //                                          not DkShadow — Standard records
 //                                          000000 beside its 404040)
 // A CHROME WITHOUT A GRADIENT would take the title's start alone; Windows
-// 2000's caption paints both ends. THE CLEARLOOKS BLOCK (cl_ roles) is
-// carried from the compiled theme, unread by the win2000 painters.
-//
-// UNDER CLEARLOOKS THE SAME TWELVE KEYS DRAW (architect 2026-10-08 ~12:10,
-// ONE THEME SYNTAX UNDER EVERY CHROME): their derivation there is GTK's and
-// metacity's own arithmetic, ported whole — clearlooks_derive.h, whose head
-// owns its mapping (the title end ignored, the frame off the title) and its
-// proof. live_chrome_words below picks the vocabulary's derivation.
+// 2000's caption paints both ends.
 namespace chrome_derive {
 
 // -- WINDOWS' 240-SCALE HLS (Wine dlls/shlwapi/ordinal.c) ----------------------
@@ -229,11 +222,9 @@ inline constexpr auto kKnobRoleIndex = [] {
     return a;
 }();
 
-// EVERY WINDOWS ROLE IS DECIDED ONCE: each role outside the generated
-// Clearlooks block and the hand-set CDE block (both carried unread by the
-// Windows painters) is in exactly one of the two lists, and each listed name
-// is a role — so a Windows role added to the table is a build failure here
-// until it is decided.
+// EVERY WINDOWS ROLE IS DECIDED ONCE: each role of the table is in exactly
+// one of the two lists, and each listed name is a role — so a role added to
+// the table is a build failure here until it is decided.
 constexpr bool every_windows_role_decided() {
     for (const std::size_t i : kKnobRoleIndex)
         if (i >= kGuiThemeRoleCount) return false;
@@ -241,7 +232,6 @@ constexpr bool every_windows_role_decided() {
         if (theme_role_index(f) >= kGuiThemeRoleCount) return false;
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i) {
         const std::string_view name = kGuiThemeRoles[i].name;
-        if (name.starts_with("cl_") || name.starts_with("cde_")) continue;
         int seen = 0;
         for (const std::size_t k : kKnobRoleIndex)
             if (k == i) ++seen;
@@ -339,9 +329,8 @@ static_assert([] {
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install reads
 // (install_palette / install_chrome_pick, render.cpp): the live chrome's
 // compiled theme, with the knob derived over it when the live scheme
-// carries the keys — Windows' dialog rule under windows-2000 (above), GTK's and
-// metacity's arithmetic under clearlooks (clearlooks_derive.h), Motif's
-// XmGetColors under cde (cde_derive.h, 2026-10-08).
+// carries the keys — Windows' dialog rule under windows-2000 (above); a later
+// vocabulary's case its own desktop's arithmetic.
 inline GuiThemeWords live_chrome_words(const ChromeSpec& spec,
                                        const std::optional<GuiChromePick>& pick) {
     const GuiThemeWords& compiled = chrome_theme_words(spec);
@@ -349,11 +338,6 @@ inline GuiThemeWords live_chrome_words(const ChromeSpec& spec,
     switch (spec.vocabulary) {
         case GuiChromeVocabulary::Win2000:
             return chrome_derive::derive_windows_chrome(compiled, *pick);
-        case GuiChromeVocabulary::Clearlooks:
-            return clearlooks_derive::derive_clearlooks_chrome(
-                compiled, *pick, clearlooks_derive::kGeometry);
-        case GuiChromeVocabulary::Cde:
-            return cde_derive::derive_cde_chrome(compiled, *pick);
     }
     return compiled;
 }

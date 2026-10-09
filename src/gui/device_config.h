@@ -20,15 +20,16 @@
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
 //   chrome=<key>             THE CHROME VOCABULARY the process paints:
-//                            `windows-2000`, `clearlooks` or `cde`
-//                            (is_chrome_key, chrome_spec.h); MAY BE ABSENT,
-//                            reading as windows-2000 (kDefaultChromeKey);
-//                            takes effect at the next launch; the chrome's
-//                            colors are its own, compiled in (theme_file.h)
+//                            `windows-2000`, the one today (is_chrome_key,
+//                            chrome_spec.h; any other word the launch's
+//                            hard fail); MAY BE ABSENT, reading as windows-2000
+//                            (kDefaultChromeKey); takes effect at the next
+//                            launch; the chrome's colors are its own,
+//                            compiled in (theme_file.h)
 //   scheme=<name>            THE SCHEME the chrome is painted in, its twelve
 //                            keys derived over the compiled theme: a built-in
-//                            scheme (`windows-2000-standard`, `clearlooks`,
-//                            `solaris`, the catalog's) or a scheme file read
+//                            scheme (`windows-2000-standard`, the catalog's
+//                            others) or a scheme file read
 //                            at launch (is_scheme_name, palette_file.h); MAY
 //                            BE ABSENT — the first run's state — meaning the
 //                            chrome's own scheme, the compiled theme exactly
@@ -48,8 +49,8 @@
 //                            unknown-value refusal); MAY BE ABSENT — the
 //                            first run's state — meaning the chrome's own
 //                            set (ChromeSpec::icon_set: Tango under
-//                            windows-2000 and cde, Mist under clearlooks;
-//                            effective_icon_set); takes effect at the next
+//                            windows-2000; effective_icon_set); takes
+//                            effect at the next
 //                            launch, the chrome's rule (architect 2026-10-10)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
@@ -291,14 +292,13 @@ struct DeviceConfig {
     // THE SCHEME, UNSET BY DEFAULT (2026-10-08 ~18:15): empty while the
     // config has no `scheme` line, which RESOLVES AT EACH INSTALL to the live
     // chrome's own scheme (effective_scheme_name, palette_file.h:
-    // `windows-2000-standard`, `clearlooks` or `solaris`, the compiled theme
-    // exactly) — never written back; a named scheme is honored under every
-    // chrome.
+    // `windows-2000-standard`, the compiled theme exactly) — never written
+    // back; a named scheme is honored under every chrome.
     std::string scheme;
     // THE PALETTE, UNSET BY DEFAULT (architect 2026-10-07): empty while the
     // config has no `palette` line, which RESOLVES AT EACH INSTALL to the
-    // live chrome's default palette (effective_palette_name, palette_file.h:
-    // `windows-2000-standard`, `clearlooks` or `solaris`) — never written
+    // default palette (effective_palette_name, palette_file.h: Cool Edit's
+    // `cool-edit-default` under every chrome, 2026-10-09) — never written
     // back; a named palette is honored under every chrome.
     std::string palette;
     // THE ICON SET, UNSET BY DEFAULT (architect 2026-10-10): empty while the
@@ -356,10 +356,8 @@ inline constexpr const char* kDefaultProjectsRepo =
 // device px at 300 % outside the view, 1494 inside it (the arithmetic is at
 // paint_icon_row, paint_handler.cpp, re-derived 2026-10-07 for Open Project
 // in Save's group and for the hide; the earlier fit ceilings and their
-// succession are git history); under the clearlooks chrome's 32-W cases and
-// 12-W gaps (760 and 536 Windows px) up to 304 % (2280 and 1608 at 300 %) —
-// and past either
-// ceiling the overflow rule answers. The
+// succession are git history) — and past that ceiling the overflow rule
+// answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
 // kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A

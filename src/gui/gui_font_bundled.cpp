@@ -1,25 +1,23 @@
 #include "gui_font.h"
 
-// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the eight
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the four
 // files handed in once through gui_font_install_bundled — the Linux
 // executable's compiled-in copy (gui_font_embedded.cpp) or the APK's assets —
-// become eight FT faces, the live set (gui_font.h's gui_live_face_set, the
-// chrome spec's) picks its three uses among them, and no site below the seam
-// learns which device handed the bytes in.
+// become four FT faces, the live set (gui_font.h's gui_live_face_set, the
+// chrome spec's or the live scheme's) picks its four uses among them, and no
+// site below the seam learns which device handed the bytes in.
 //
-// THE FACES (Tahoma, Tahoma Bold, DejaVu Sans, DejaVu Sans Bold, Go Regular
-// and Go Bold, TrueType; FreeSans and FreeSans Bold, OpenType CFF — one
-// loader for both formats, FT_New_Memory_Face) are FT faces wrapped as
+// THE FACES (Tahoma and Tahoma Bold, TrueType; FreeSans and FreeSans Bold,
+// OpenType CFF — one loader for both formats, FT_New_Memory_Face) are FT
+// faces wrapped as
 // cairo font faces — the FT-backed
 // shape text_shape requires, since it shapes on the scaled font's own FT
 // face through hb-ft.
 //
 // OUTLINES ONLY, NEVER A STRIKE (architect 2026-10-06; gui_font.h's head).
-// Tahoma carries bitmap strikes (8–16 ppem, the bold 9–13) — DejaVu Sans
-// 2.31 carries none (no EBDT / EBLC table in either file, read 2026-10-07),
-// nor does Go (2026-10-08), nor FreeSans (no fixed sizes, read 2026-10-09
-// through FreeType), so both roads below are no-ops on those six faces,
-// run on all eight alike —
+// Tahoma carries bitmap strikes (8–16 ppem, the bold 9–13) — FreeSans
+// carries none (no fixed sizes, read 2026-10-09 through FreeType), so both
+// roads below are no-ops on its two faces, run on all four alike —
 // and FreeType
 // reads a strike on two roads, both closed here: (1) SIZE SELECTION — a
 // TrueType face with strikes answers a size request whose ppem ROUNDS to a
@@ -41,11 +39,7 @@
 // rather than to the bytecode interpreter (the load equals a forced
 // autohint's; Wine Tahoma's glyphs carry no instructions anyway, maxp's
 // maxSizeOfInstructions 0), and every x equals the unhinted outline's
-// exactly. DejaVu's files DO carry bytecode (fpgm, prep, the glyphs'
-// programs — squeeze's hinter of 2010 ran it), and the light target leaves
-// it unrun the same way: the gnome2 set's ink is the light autohinter's,
-// "compromise and approximate with modern HarfBuzz and DejaVu Sans"
-// (architect 2026-10-07). FREESANS'S CFF MEETS NO AUTOHINTER (measured
+// exactly. FREESANS'S CFF MEETS NO AUTOHINTER (measured
 // 2026-10-09, FreeType 2.14): the CFF driver declares that it hints lightly,
 // so FreeType hands the light target to the face's own PostScript hints
 // through its CFF engine (Adobe's), which grid-fits the vertical direction
@@ -107,7 +101,7 @@ double g_ink_em[kGuiFontFileCount][kMeasureCount] = {};
 
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
-// The eight files' faces, in kGuiFontFiles' order.
+// The four files' faces, in kGuiFontFiles' order.
 OutlineFace           g_outline[kGuiFontFileCount];
 // Each file's five lifted marks' glyph ids and lifts — the math signs onto
 // its hyphen's axis, the pipe onto its digits' band (gui_sign_axis) — and
@@ -144,7 +138,7 @@ void build_outline(OutlineFace& out, const GuiFontBytes& bytes,
     // THE STRIKES HIDDEN FROM SIZE SELECTION (the head's road 1): with the
     // flag clear, a size request never matches a strike, so the size is the
     // outline's own scale and no strike is ever selected for a load. A
-    // NO-OP ON DEJAVU, which has no strike to hide (the head).
+    // NO-OP ON FREESANS, which has no strike to hide (the head).
     out.ft->face_flags &= ~static_cast<FT_Long>(FT_FACE_FLAG_FIXED_SIZES);
     out.ft->num_fixed_sizes = 0;
     out.max_advance_em = static_cast<double>(out.ft->max_advance_width) /
@@ -245,8 +239,8 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     // it of EVERY SET (kGuiFaceSets): each use's file must carry its
     // measure's glyph — and, for an x-height measure, the "H" its cap band
     // derives from (gui_font_cap_px) — and in a set that lifts its signs or
-    // its pipe the seven its axis is measured on, whichever chrome the device
-    // config later chooses.
+    // its pipe the seven its axis is measured on, whichever chrome and scheme
+    // the device config later chooses.
     for (const GuiFaceSet* set : kGuiFaceSets)
         for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
             const double* ink = g_ink_em[set->file[i]];

@@ -3,7 +3,7 @@
 // THE ONE FACE OWNER: every text surface names its face here and nowhere
 // else, so the painters never name a font. THE PRODUCT'S FACES ARE ITS OWN
 // (architect 2026-10-02: "the app becomes its own thing; it has its own
-// fonts"): eight files under the repository's `fonts/` (fonts/README.md has
+// fonts"): four files under the repository's `fonts/` (fonts/README.md has
 // their provenance and licences), carried by both binaries — compiled into
 // the Linux executable (gui_font_embedded.cpp), shipped as the APK's assets
 // on Android — and turned into faces by ONE implementation on both devices,
@@ -11,11 +11,10 @@
 // face: fontconfig is never consulted on the laptop and the tablet has
 // nothing to consult.
 //
-// FOUR FACE SETS, ONE LIVE (architect 2026-10-06, the Windows 2000 pivot;
-// the second set 2026-10-07 with the clearlooks chrome; the third,
-// kGuiFaceSetCde — Go Sans — 2026-10-08 with the cde chrome; the fourth,
-// kGuiFaceSetMsSansSerif — FreeSans, the MS Sans Serif stand-in —
-// 2026-10-09): a set is one desktop's text — which file each of the three
+// TWO FACE SETS, ONE LIVE (architect 2026-10-06, the Windows 2000 pivot;
+// the second, kGuiFaceSetMsSansSerif — FreeSans, the MS Sans Serif
+// stand-in — 2026-10-09; WINDOWS' FACES ALONE, architect 2026-10-09 ~21:30:
+// "Go Sans can be removed because it's not a Windows font"): a set is one desktop's text — which file each of the four
 // uses (GuiFace) is drawn from, its recorded vertical metrics, its tracking
 // and whether its math signs and its pipe are lifted (GuiFaceSet below) —
 // and the chrome
@@ -29,9 +28,7 @@
 // (tahoma.ttf, tahomabd.ttf; TrueType outlines on a Bitstream Vera base),
 // the face the ReactOS captures are set in — its 11-ppem strike equals
 // tmp/reactos.png's menu and title pixels exactly (measured 2026-10-06).
-// THE GNOME2 SET, kGuiFaceSetGnome2: DEJAVU SANS as Debian 6 squeeze ships
-// it (DejaVuSans.ttf, DejaVuSans-Bold.ttf), GNOME 2's Sans 10, the face his
-// squeeze captures are set in. THE MS SANS SERIF SET,
+// THE MS SANS SERIF SET,
 // kGuiFaceSetMsSansSerif: GNU FREEFONT'S FREESANS (FreeSans.otf,
 // FreeSansBold.otf; CFF outlines, URW's Nimbus Sans L under GNU FreeFont's
 // extensions), standing in for the MS Sans Serif Windows set its chrome in
@@ -46,7 +43,7 @@
 // seven rows tall.
 // EVERY FACE DRAWS ITS ANTIALIASED OUTLINE AT EVERY SIZE, NEVER AN EMBEDDED
 // BITMAP STRIKE (architect 2026-10-06; Tahoma carries strikes at 8–16 ppem,
-// its bold at 9–13, and the sheets he judged were outline renders; DejaVu
+// its bold at 9–13, and the sheets he judged were outline renders; FreeSans
 // carries none): the install hides the strikes from FreeType and every glyph
 // load passes FT_LOAD_NO_BITMAP (gui_font_bundled.cpp's head). Every run is
 // shaped by HarfBuzz with the face's OWN ADVANCES LESS THE SET'S TRACKING
@@ -63,8 +60,7 @@
 // element by the seat that reads them — save one derived figure, the cap
 // band of a use measured by its x-height (gui_font_cap_px, 2026-10-09). They
 // are the numbers the period drew at 96 dpi — Tahoma 8's 13-px cell with its
-// 8-row cap, Sans 10's 17-px cell with its 10-row cap, MS Sans Serif 8's
-// 6-row x-height — which is why they seat everything (CLAUDE.md's rounding
+// 8-row cap, MS Sans Serif 8's 6-row x-height — which is why they seat everything (CLAUDE.md's rounding
 // doctrine: every chrome length is a Windows px).
 //
 // THE EM MATCHES THOSE METRICS VERTICALLY (architect 2026-10-05), derived at
@@ -79,10 +75,7 @@
 // cap band derived (gui_font_cap_px). Measured 2026-10-06 for the
 // win2000 set: 11.003, 10.996 and 7.943 Windows px (Tahoma's "H" 1489 of
 // 2048, Tahoma Bold's 1490, Tahoma's "0" 1547 — 8 pt at GDI's 11 ppem,
-// Tahoma's own 8-pt size); 2026-10-07 for the gnome2 set: 13.717, 13.717
-// and 7.933 Windows px (DejaVu Sans's and DejaVu Sans Bold's "H" both 1493
-// of 2048, DejaVu Sans's "0" 1549 — the body 3 % over Sans 10's 13.333);
-// 2026-10-09 for the MS Sans Serif set at its 6-row x-height: 11.450, 11.111
+// Tahoma's own 8-pt size); 2026-10-09 for the MS Sans Serif set at its 6-row x-height: 11.450, 11.111
 // and 8.197 Windows px (FreeSans's "x" 524 of 1000, FreeSans Bold's 540,
 // FreeSans's "0" 732 — Nimbus Sans's own figures, the outlines being
 // Nimbus's), the derived caps 8.347 and 8.100 off the "H", 729 of 1000 in
@@ -91,8 +84,7 @@
 // or deeper glyph ("$", a descender) may poke past a box sized off the
 // recorded rows — accepted (architect 2026-10-05). A FACE'S OWN LINE BOX IS
 // NEVER READ (Tahoma's hhea ascent is 2049 of 2048, above its caps;
-// DejaVu's 1901 / -483 happens to round to the recorded 13 / 4 at Sans 10,
-// and is not read either; FreeSans's 900 / -200 of 1000 stands 171 units
+// FreeSans's 900 / -200 of 1000 stands 171 units
 // above its caps, so a program seating text on that box sets it low): the
 // recorded metrics seat every run, every label's cap band centred by the
 // recorded cap, or the derived one (redesign_baseline), or seated on the
@@ -103,7 +95,7 @@
 //
 // THE FOUR MATH SIGNS AND THE PIPE ARE WHERE THE FACE DRAWS THEM, EXCEPT
 // IN A SET THAT LIFTS THEM (GuiFaceSet::sign_lift and pipe_lift;
-// gui_sign_axis below). THE SIGNS: Tahoma, DejaVu and Go do not lift them —
+// gui_sign_axis below). THE SIGNS: Tahoma does not lift them —
 // Tahoma already draws the five on one axis: its 11-ppem strike centres
 // "-", "+", "<", ">" and "=" all on row 3 of the 8-row cap, and its
 // outlines agree to a few units (the hyphen 566..730 of 2048, centre 648;
@@ -114,7 +106,7 @@
 // deleted with Nimbus on 2026-10-06 returns with them). THE PIPE (architect
 // 2026-10-09 ~21:20, "the pipe should be even"): both Windows sets lift it
 // onto the digits' band, Tahoma's hanging a whole W low of it (the
-// numbers at the sign paragraph below); DejaVu and Go do not.
+// numbers at the sign paragraph below).
 
 #include <cairo/cairo.h>
 
@@ -124,30 +116,25 @@
 enum class GuiFace { Body, Bold, Small, Program };
 inline constexpr std::size_t kGuiFaceCount = 4;
 
-// THE EIGHT FILES, THE INSTALL'S ONE ORDER, EVERY SET'S (architect
-// 2026-10-07, the second vocabulary's pair joining the first's; 2026-10-08
-// the third's, Go; 2026-10-09 the fourth's, FreeSans): THIS LIST
+// THE FOUR FILES, THE INSTALL'S ONE ORDER, EVERY SET'S (architect
+// 2026-10-06, Tahoma's pair; 2026-10-09 FreeSans's beside it): THIS LIST
 // IS THE ONE PLACE THE NAMES ARE SPELLED — the Linux font step
 // (CMakeLists.txt) and the APK's asset step (android/app/build_apk.sh) each
 // read the quoted names out of this initializer, so a file added here is
 // embedded and packed with no second list; the two backends hand the bytes
 // in in this order, and a set names its files by their index here. Every
-// set's files are carried whichever chrome a device runs (the `chrome` key
-// is read after the Android backend installs the faces, and the install
-// measures every set's ems at once, gui_font_bundled.cpp). FreeSans's two
-// are OpenType CFF (".otf"), which the one loader takes as it takes the
-// TrueType six (FT_New_Memory_Face reads either; gui_font_bundled.cpp's head
-// on the hinter each format meets).
-inline constexpr std::size_t kGuiFontFileCount = 8;
+// set's files are carried whichever chrome and scheme a device runs (the
+// `chrome` key is read after the Android backend installs the faces, and
+// the install measures every set's ems at once, gui_font_bundled.cpp).
+// FreeSans's two are OpenType CFF (".otf"), which the one loader takes as it
+// takes Tahoma's TrueType pair (FT_New_Memory_Face reads either;
+// gui_font_bundled.cpp's head on the hinter each format meets).
+inline constexpr std::size_t kGuiFontFileCount = 4;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "tahoma.ttf",                 // 0: win2000's body and small
     "tahomabd.ttf",               // 1: win2000's bold
-    "DejaVuSans.ttf",             // 2: gnome2's body and small
-    "DejaVuSans-Bold.ttf",        // 3: gnome2's bold
-    "Go-Regular.ttf",             // 4: cde's body and small
-    "Go-Bold.ttf",                // 5: cde's bold
-    "FreeSans.otf",               // 6: MS Sans Serif's body and small
-    "FreeSansBold.otf",           // 7: MS Sans Serif's bold
+    "FreeSans.otf",               // 2: MS Sans Serif's body and small
+    "FreeSansBold.otf",           // 3: MS Sans Serif's bold
 };
 
 struct GuiFontBytes {
@@ -162,7 +149,7 @@ struct GuiFontBytes {
 // caller may free or unmap them the moment it returns.
 //
 // THE RETURN IS THE INSTALL OBSERVED, not assumed: true when each of the
-// eight files selects as an FT-BACKED cairo face, which is what text_shape
+// four files selects as an FT-BACKED cairo face, which is what text_shape
 // requires, and EVERY set's faces (kGuiFaceSets below) carry the glyph each
 // em is measured on and, in a set that lifts its signs or its pipe, the
 // hyphen, the "0" and the five marks its axis is measured on — every set,
@@ -254,7 +241,7 @@ struct GuiFaceSet {
 //   the 22-px icons at 100 % (architect 2026-10-06).
 //   TRACKING: none (architect 2026-10-07: "we're not matching font widths,
 //   only the heights"): the recorded metrics match the period's heights and
-//   the widths are the live face's own advances, as the gnome2 set's are.
+//   the widths are the live face's own advances.
 //   SIGNS: where Tahoma draws them (the head). THE PIPE: LIFTED onto the
 //   digits' band (gui_sign_axis below; architect 2026-10-09 ~21:20) — its
 //   bar hangs 1.08 W low of the "0" at the body's em, 3.25 device px at
@@ -267,70 +254,6 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
                     kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
     .pipe_lift   = true,
-};
-
-// THE GNOME2 SET (architect 2026-10-07, the planner's design under his free
-// rein), the clearlooks chrome's: DEJAVU SANS AS DEBIAN 6 SQUEEZE SHIPS IT
-// (ttf-dejavu 2.31-1, DejaVuSans.ttf and DejaVuSans-Bold.ttf byte for byte;
-// fonts/README.md) — GNOME 2's Sans and metacity's Sans Bold, the faces his
-// squeeze captures (tmp/squeeze/) are set in, drawn at the size below.
-//   METRICS (architect 2026-10-07, ~02:20: "Windows is the base: a compact,
-//   nicely proportioned layout; the fonts and the icons become
-//   disproportionate in Clearlooks" — the Clearlooks vocabulary wears
-//   Windows' PROPORTIONS under Clearlooks' own drawing): THE BASE'S CELL,
-//   {11, 2, 8} for the body and the bold — ascent 11 + descent 2, the 13-row
-//   cell, the cap at 8 rows — so DejaVu Sans is drawn to a cap of 8 W px, its
-//   em derived at the install off its own "H" (0.729 em) as every face's is:
-//   10.97 W px, 8.2 pt at 96 dpi, GNOME 2's own "Sans 8" (Appearance ->
-//   Fonts' smallest common setting), not squeeze's default Sans 10 (the
-//   17-row cell his captures show, which the 2026-10-07 base of the
-//   vocabulary carried until this ruling); the small is the same SIX-row
-//   digit as the win2000 set's, a cell all above the baseline (its em 7.93
-//   off the "0"), so the ruler's digits are the base's (GNOME has no small
-//   face: GTK's ruler drew the widget's own font). Every height GTK derives
-//   from the cell is re-derived at 13 (chrome_spec.h's clearlooks instance).
-//   TRACKING: none ("compromise and approximate with modern HarfBuzz and
-//   DejaVu Sans": the bytecode look of 2010 is not reproduced, and Pango
-//   tracked nothing; the heights are matched, never the widths).
-inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
-    .file        = {2, 3, 2, 2},
-    .metrics     = {{11, 2, 8, GuiFaceMeasure::Cap},
-                    {11, 2, 8, GuiFaceMeasure::Cap},
-                    {6, 0, 6, GuiFaceMeasure::Digit},
-                    kGuiProgramFaceMetrics},
-    .tracking_px = 0.0,
-};
-
-// THE CDE SET (architect 2026-10-08, ruling 4 of the CDE arc: "excellent
-// choice"), the cde chrome's: GO SANS — Go Regular and Go Bold, Bigelow &
-// Holmes' 2016 faces for the Go project (fonts/README.md; the Go project's
-// BSD-3-style license) — THE LUCIDA STAND-IN. Solaris 9's CDE set its
-// chrome in B&H Lucida Sans, a 14-px bitmap strike at 75 dpi (cap 10 in a
-// 15-row cell; tmp/research/cde_solaris/report.md §4), which is proprietary
-// and a strike besides (NO BITMAP FONTS, the head); Go is the only open face
-// by Lucida's own designers, in its humanist proportions.
-//   METRICS: THE BASE'S CELL, {11, 2, 8} for the body and the bold — the
-//   settled rule for every later vocabulary, period authentic except for
-//   the proportional fit to Windows' layout (CLAUDE.md's chrome row): Go
-//   Regular drawn to a cap of 8 W px, its em derived at the install off its
-//   own "H" (1480 of 2048, 0.723 em, read 2026-10-08 off the file through
-//   FreeType) — about 11.07 W px — the bold file's "H" the same height; the
-//   small face the same SIX-row digit as the other sets' (its em about 8.10
-//   off the "0", 1517 of 2048), so the ruler's digits are the base's. CDE's
-//   own cap 10 / cell 15 is NOT reproduced.
-//   THE BOLD USE (the caption's title alone) names the bold file so the set
-//   is whole, but UNDER cde THE TITLE IS SET IN THE BODY FACE: dtwm draws
-//   the title in the interface font, the same medium face as the menus (the
-//   notepad capture, title cap 10 at 1-px stems; paint_caption_row's cde
-//   arm) — nothing reads the bold while cde is live.
-//   TRACKING: none (the heights-only rule, as the other two sets).
-inline constexpr GuiFaceSet kGuiFaceSetCde = {
-    .file        = {4, 5, 4, 4},
-    .metrics     = {{11, 2, 8, GuiFaceMeasure::Cap},
-                    {11, 2, 8, GuiFaceMeasure::Cap},
-                    {6, 0, 6, GuiFaceMeasure::Digit},
-                    kGuiProgramFaceMetrics},
-    .tracking_px = 0.0,
 };
 
 // THE MS SANS SERIF SET (architect 2026-10-09: "let's use free sans"), NO
@@ -390,7 +313,7 @@ inline constexpr GuiFaceSet kGuiFaceSetCde = {
 //   sign lift for the plus sign in FreeSans. We should do that for the pipe
 //   as well").
 inline constexpr GuiFaceSet kGuiFaceSetMsSansSerif = {
-    .file        = {6, 7, 6, 6},
+    .file        = {2, 3, 2, 2},
     .metrics     = {{11, 2, 6, GuiFaceMeasure::XHeight},
                     {11, 2, 6, GuiFaceMeasure::XHeight},
                     {6, 0, 6, GuiFaceMeasure::Digit},
@@ -407,8 +330,6 @@ inline constexpr GuiFaceSet kGuiFaceSetMsSansSerif = {
 // chrome and scheme the device later names.
 inline constexpr const GuiFaceSet* kGuiFaceSets[] = {
     &kGuiFaceSetWin2000,
-    &kGuiFaceSetGnome2,
-    &kGuiFaceSetCde,
     &kGuiFaceSetMsSansSerif,
 };
 
@@ -442,16 +363,15 @@ static_assert(same_lanes(kGuiFaceSetWin2000, kGuiFaceSetMsSansSerif));
 // Serif for every other face), a scheme file's from its optional `font`
 // line (palette_file.h's head) — carried in the live pick
 // (render.h's GuiChromePick::face). TAHOMA IS ALSO THE INERT DEFAULT: a
-// non-Windows scheme names Tahoma, which under the windows chrome is the
-// chrome's own face and under clearlooks and cde is never read.
+// non-Windows scheme names Tahoma, the windows chrome's own face.
 enum class GuiSchemeFace { Tahoma, MsSansSerif };
 
 // THE LIVE SET — THE ONE RESOLUTION (architect 2026-10-09): THE CHROME
 // SPEC'S OWN (chrome_spec.h's live_chrome_spec(), chosen once at launch by
 // the device config's `chrome`, which names its set by address), EXCEPT
 // UNDER THE WINDOWS CHROME WHILE THE LIVE SCHEME'S FACE TAG IS MS SANS
-// SERIF, when it is the MS Sans Serif set. Clearlooks and cde keep their
-// own faces whatever scheme is live (their schemes are not Windows'). The
+// SERIF, when it is the MS Sans Serif set. A later vocabulary that is not
+// Windows' keeps its own face whatever scheme is live. The
 // live tag is the installed pick's (set_live_scheme_face, written by the
 // install family's chrome half alone — render.cpp's fill_chrome_palette, at
 // the launch's install_palette and at every live pick through
@@ -538,9 +458,7 @@ double gui_face_em_px(GuiFace face);
 //   (2.08 / 2.49 px), the bold's -200..729 (264.5) against 350.5 0.086 em
 //   (2.87 / 3.44 px) — read 2026-10-09 off the files through FreeType. Both
 //   Windows sets lift it, Tahoma's being far past the quarter W the ruling
-//   allowed as already even; DejaVu's (Vera's bar, Tahoma's own bounds,
-//   0.100 em) and Go's (0.048 em) stand where the faces drew them, the other
-//   chromes taking no parity work in the Cool Edit arc.
+//   allowed as already even.
 //   THE MS SANS SERIF SET'S SIGNS: MS Sans Serif centred all five at 0.389 of its 9-row cap,
 //   while FreeSans keeps its hyphen near there (240..312 of 1000, centre 276,
 //   0.379 of its 729-unit cap) but draws the four signs on Helvetica's math
@@ -620,7 +538,8 @@ cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f);
 // the plain sum of its advances (text_shape.h) and a right-aligned run's
 // right edge stays honest. It scales with the font like every chrome length
 // and is NOT ROUNDED — it is an advance, not a grid point. ONE CONSTANT FOR
-// THE THREE USES (the body, the caption's bold, the ruler's small). The font
+// THE FOUR USES (the body, the caption's bold, the ruler's small, the
+// program's). The font
 // files themselves are unmodified (fonts/README.md).
 // The tracking in DEVICE px at the font's scale, unrounded.
 inline double gui_tracking_px(const GuiFont& f) {
@@ -634,7 +553,7 @@ inline double gui_tracking_px(const GuiFont& f) {
 // untracked figure stays an upper bound.
 double gui_font_advance_bound_px(const GuiFont& f);
 
-// THE LINUX BINARY'S COPY OF THE EIGHT FILES, in kGuiFontFiles' order,
+// THE LINUX BINARY'S COPY OF THE FOUR FILES, in kGuiFontFiles' order,
 // defined by gui_font_embedded.cpp, which only the Linux target compiles (the
 // APK carries the same files as assets instead).
 extern const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount];

@@ -149,8 +149,8 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
 }
 
 // THE RUN'S GLYPHS PLACED at the baseline origin (x, y) — the one placement
-// both the painter and its path sibling below hand cairo, so a halo stroked
-// round the path and the glyphs painted over it cannot part.
+// the painter hands cairo and the ink measure below reads, so the two cannot
+// part.
 static std::vector<cairo_glyph_t> placed_glyphs_of(const ShapedRun& run,
                                                    double x, double y) {
     std::vector<cairo_glyph_t> placed_glyphs;
@@ -175,19 +175,6 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
     cairo_set_scaled_font(cr, gui_outline_scaled_font(run.font));
     cairo_show_glyphs(cr, placed_glyphs.data(),
                       static_cast<int>(placed_glyphs.size()));
-    cairo_restore(cr);
-}
-
-void append_shaped_run_path(cairo_t* cr, const ShapedRun& run, double x,
-                            double y) {
-    if (run.glyphs.empty()) return;
-    const std::vector<cairo_glyph_t> placed_glyphs = placed_glyphs_of(run, x, y);
-    // The path is no part of the saved state, so the outlines appended here
-    // outlive the restore that puts the caller's font back.
-    cairo_save(cr);
-    cairo_set_scaled_font(cr, gui_outline_scaled_font(run.font));
-    cairo_glyph_path(cr, placed_glyphs.data(),
-                     static_cast<int>(placed_glyphs.size()));
     cairo_restore(cr);
 }
 

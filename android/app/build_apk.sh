@@ -16,7 +16,7 @@
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
 #   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the two font files and       (manifest + res + assets)
+#   1. assets (the four font files and      (manifest + res + assets)
 #      the icon sets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
@@ -81,7 +81,6 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
 # THE PRODUCT'S FONT FILES: Tahoma and Tahoma Bold (architect 2026-10-06),
-# DejaVu Sans and DejaVu Sans Bold (2026-10-07), Go and Go Bold (2026-10-08),
 # FreeSans and FreeSans Bold (2026-10-09, OpenType CFF), THE NAMES READ OUT OF
 # gui_font.h's kGuiFontFiles initializer, the one list (CMakeLists.txt's
 # font step reads the same), copied from the repository's own fonts/
@@ -170,8 +169,8 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 compile + link ----------------------------------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, the caption's drawing (assets/icons/tango/AppIcon.svg,
-# Tango's audio-x-generic) over the caption's navy ground, written by
+# layers per density, the Mist set's drawing (assets/icons/mist/AppIcon.svg,
+# GNOME's audio-x-generic) over the ground #EDECEB, written by
 # tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
 # comment states the sizes; nothing here renders). Every GUI pixel is painted
 # by cairo, the roster's icons included (the Tango set's SVG assets above,

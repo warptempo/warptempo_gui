@@ -146,15 +146,13 @@ namespace {
 // lanes since the canvas's top frame row (2026-10-09; seven with the canvas
 // column's air that morning, six from the caption's arrival, architect
 // 2026-10-05) — from the window edge inward
-// (every Windows-px length below the live chrome spec's, chrome_spec.h —
-// win2000's figures first, clearlooks' after them, 2026-10-07): THE
-// CAPTION (caption_row_h_px(), the window's own title bar, Windows'
-// 18-px SM_CYCAPTION or metacity's 20 at the 13-row cell, at the window top on both devices —
+// (every Windows-px length below the live chrome spec's, chrome_spec.h):
+// THE CAPTION (caption_row_h_px(), the window's own title bar, Windows'
+// 18-px SM_CYCAPTION, at the window top on both devices —
 // render.h's caption block), the MENU ROW (menu_row_h_px(), row 1 of the
 // kdenlive redesign, Windows' 19-px menu bar — the anchors' box — plus a
 // one-px row of ground above the content (architect 2026-10-05, Windows'
-// measured 20-px band; its place 2026-10-06), or GtkMenuBar's 1 + 19 + 1,
-// flush under the caption — render.h's menu-row block),
+// measured 20-px band; its place 2026-10-06), flush under the caption — render.h's menu-row block),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
 // menu row with nothing between: COOL EDIT'S TOOLBAR BAND, the program's,
 // 33 Windows px under every chrome — 2 head lines, 3 face, the 23-W case
@@ -216,9 +214,9 @@ namespace {
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE (on a
 // restored laptop window, the client area inside the sizing frame, which the
-// backend keeps out of the app's geometry, platform_wayland.cpp — and under
-// cde on every window, the tablet's too, dtwm's frame standing round it,
-// 2026-10-08). The title bar
+// backend keeps out of the app's geometry, platform_wayland.cpp — and on
+// every window under a vocabulary whose spec sets window_frame_maximized).
+// The title bar
 // is the app's own top lane since 2026-10-05 (labwc draws none: the window asks
 // for client-side decorations), so it is counted like every lane above the gap
 // and needs no arithmetic of its own (the rule's first reasoning, "the labwc
@@ -237,9 +235,8 @@ namespace {
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
 // WITH THE WAVEFORM THE WHOLE LEFTOVER, BOTH GAPS ARE ZERO ON EVERY WINDOW
 // (2026-10-07 evening): gap 1's midpoint term comes to half the bottom row
-// less half the top stack, negative under every chrome at every scale (114
-// or 117 Windows px above against the column's foot, the dock bar and row
-// 8's 44 below), so it
+// less half the top stack, negative at every scale (114 Windows px above
+// against the column's foot, the dock bar and row 8's 44 below), so it
 // floors at 0, and
 // gap 2 is the leftover's remainder after W, 0. The centering is infeasible
 // by construction and the waveform takes the whole leftover, which is the
@@ -261,13 +258,11 @@ namespace {
 // six W the ruler gave the lane at ~21:00, the sum unchanged — the canvas's
 // top frame row 1), the column's foot 6 under it (the bottom frame
 // row 1 and 5 W of face) and its dock bar and row 8 38, so THE TOP STACK IS
-// 114 WINDOWS PX UNDER WIN2000, 117 UNDER CLEARLOOKS AND 120 UNDER CDE INSIDE
-// DTWM'S FRAME, 44 BELOW (render.h's chrome_stack_authored_h). THE WELL'S
-// HEIGHT — THE CANVAS'S INTERIOR — AT THE BASE'S 300 % IS 966 DEVICE ROWS
-// UNDER WIN2000, 957 UNDER CLEARLOOKS AND 918 UNDER CDE (the rule at
-// centered_leftover_h below), AND ITS WIDTH 2256 OF THE TABLET'S 2304 (2224
-// of cde's 2274), 24 device px in from the left (25 under cde; waveform_area,
-// the flooring's leftover split between the margins). Per scale
+// 114 WINDOWS PX UNDER WIN2000, 44 BELOW (render.h's
+// chrome_stack_authored_h). THE WELL'S HEIGHT — THE CANVAS'S INTERIOR — AT
+// THE BASE'S 300 % IS 966 DEVICE ROWS (the rule at centered_leftover_h
+// below), AND ITS WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the
+// left (waveform_area, the flooring's leftover split between the margins). Per scale
 // the canvas column above the canvas is the air + the view bar (line +
 // field + line) + the ruler (ground + line) + the marker lane (rows above
 // the triangle + its five quanta) + the frame row: 15 + 24 (3 + 18 + 3) +
@@ -278,9 +273,9 @@ namespace {
 // moving no stack at 300, 360 or 400 %, and at 138 % rounding one row
 // taller, its 15.18 + 16.56 against 23.46 + 8.28 (the laptop's well one row
 // shorter); the column's foot 18 (3 + 15), 8 (1 + 7), 22 (4 + 18) and 24 (4 +
-// 20). THE WIN2000 STACKS FIRST, then CLEARLOOKS', then CDE's (the band 5
-// lines + face 3 + the case's 3 lines + glyph 20 + face 2; the dock bar 3
-// lines + face 3; row 8 face 4 + the case + face 5).
+// 20). THE WIN2000 STACKS (the band 5 lines + face 3 + the case's 3 lines +
+// glyph 20 + face 2; the dock bar 3 lines + face 3; row 8 face 4 + the case
+// + face 5).
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
 //   lanes are 25 caption + 27 menu + 43 band (5 + 4 + 31 + 3) + 7 air + 10
 //   trim + 16 ruler + 22 marker + 1 frame = 151 above, of which 95 is the
@@ -309,51 +304,10 @@ namespace {
 //   80 menu + 132 band + 20 air + 32 trim + 48 ruler + 68 marker + 4 frame
 //   = 456 above (284 and 172) and 176 below (24 + 24 + 128), leftover 808:
 //   the waveform 808, both gaps 0 — 72 / 80 / 132 / 0 / 172 / 808 / 0 / 176.
-// THE CLEARLOOKS STACKS (2026-10-07, at Windows' proportions — the 13-row
-// cell, chrome_spec.h's instance; caption 20 + menu 21 + the program's band
-// 33 and canvas column 43 = 117 Windows px above, the program's 44 below):
-//   1920x1080 AT 138 %: the lanes are 28 caption + 28 menu + 43 band + 56
-//   the column = 155 above (99 and 56) and 59 below, leftover 866: the
-//   waveform 866, both gaps 0.
-//   2304x1440 AT 300 %: the lanes are 60 caption + 63 menu + 99 band + 129
-//   the column = 351 above (222 and 129) and 132 below, leftover 957: the
-//   waveform 957, both gaps 0 — 60 / 63 / 99 / 0 / 129 / 957 / 0 / 132.
-//   2304x1440 AT 360 %: the lanes are 72 caption + 76 menu + 122 band + 159
-//   the column = 429 above (270 and 159) and 161 below, leftover 850: the
-//   waveform 850, both gaps 0.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry; win2000): leftover 390 -> the waveform 390, both gaps 0
+//   this geometry): leftover 390 -> the waveform 390, both gaps 0
 //   — 25 / 27 / 43 / 0 / 56 / 390 / 0 / 59 (the midpoint rule would want gap
 //   1 = 300 - 151 - 195 = -46).
-// THE CDE STACKS (2026-10-08 ~17:45, chrome_spec.h's cde instance and the
-// architect's mock_frame_01, "mock 1 is good"): DTWM'S FRAME, 5 Windows px,
-// stands round the app on every window (the spec's window_frame_maximized)
-// OUTSIDE ITS GEOMETRY, as the restored laptop's sizing frame always did
-// (the platforms' frame_px_), so the app's height and width are the
-// surface's less the frame's two sides, and inside it caption 17 + menu 27
-// + the program's band 33 and canvas column 43 = 120 Windows px above and
-// the program's 44 below, the frame's 10 making 174 (render.h's
-// chrome_stack_authored_h). Since 2026-10-09 CDE'S WELL IS ITS OWN LANES'
-// LEFTOVER like every chrome's (the ruler is the program's 12 under every
-// chrome, no longer the leftover that held the base's total). The whole 480
-// W of the tablet's 1440 rows, top to bottom: frame 5 | caption 17 | menu
-// 27 | band 33 | air 5 | view bar 8 | ruler 12 | marker 17 | canvas frame 1
-// | canvas 306 | canvas frame 1 + face 5 | dock bar 6 + row 8 32 | frame 5.
-//   1920x1080 AT 138 %, MAXIMISED (the frame 6 = 1 + 1 + 3 + 1; the app
-//   1908 x 1068): the lanes are 23 caption + 36 menu (1 + 34 + 1, the
-//   content's 34.5 rounding to even) + 43 band + 56 the column = 158 above
-//   (102 the caption, the menu row and the band, 56 the block) and 59
-//   below, leftover 851: the waveform 851, both gaps 0; 1888 wide, 10 px in.
-//   2304x1440 AT 300 % (the frame 15 = 3 + 3 + 6 + 3; the app 2274 x 1410):
-//   the lanes are 51 caption + 81 menu + 99 band + 129 the column = 360
-//   above (231 and 129) and 132 below, leftover 918: the waveform 918, both
-//   gaps 0 — its width the app's 2274 less the column's two 21-px sides,
-//   floored to the grid step, 2224, 25 px in (the floor's leftover 8 split
-//   4 and 4 into the margins, waveform_area's rule).
-//   2304x1440 AT 360 % (the frame 19 = 4 + 4 + 7 + 4; the app 2266 x
-//   1402): the lanes are 61 caption + 98 menu (4 + 90 + 4) + 122 band + 159
-//   the column = 440 above (281 and 159) and 161 below, leftover 801: the
-//   waveform 801, both gaps 0; 2208 wide, 29 px in.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -419,12 +373,12 @@ namespace {
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The CAPTION lane is its 18 Windows
-// px whole under win2000, 20 under clearlooks (render.h's caption block: the
+// px whole (render.h's caption block: the
 // title bar's ground, its icon, its title and its three buttons inside it),
 // the MENU lane is its anchors' 19 Windows px PLUS a one-px row of ground
 // (architect 2026-10-05, Windows' measured 20-px menu band — render.h's
-// menu-row block, the row above the content; clearlooks' 19 between one row
-// above and one below; the anchors and the dropdown's hang point read the
+// menu-row block, the row above the content; the anchors and the dropdown's
+// hang point read the
 // lane, the label's seat alone reads the content between the rows),
 // the ICON lane is COOL EDIT'S TOOLBAR BAND, 33 Windows px with its own
 // lines under every chrome (architect 2026-10-09; render.h's program block,
@@ -499,18 +453,13 @@ int strip_total_h(bool top_strip) {
 // THE LEFTOVER the waveform and the two flexible gaps share (the vertical rule
 // above): the window less the whole top lane stack and less the bottom row.
 // EACH VOCABULARY'S WELL IS THE LEFTOVER OF ITS OWN LANES (the planner's
-// design, 2026-10-07, under the architect's free rein; until then "the
-// base's waveform height is the rule every later theme keeps", architect
-// 2026-10-06): a vocabulary lays its lanes at its own period's metrics and
-// the well takes what they leave, no lane squeezed to hold a number. On the
-// tablet's 2304 x 1440 at gui_scale 300 the win2000 lanes leave 1440 − 342 −
-// 132 = 966 device rows (322 Windows px; the program's band, canvas column
-// and its framed canvas, dock bar and row 8 since 2026-10-09), the
-// clearlooks lanes 1440 − 351 − 132 = 957 (319 Windows px: 3 W more above,
-// metacity's caption and GtkMenuBar at the base's 13-row cell;
-// chrome_spec.h's instance) and the cde lanes 1410 − 360 − 132 = 918 inside
-// dtwm's frame. A COLOR moves no lane: the 966 / 957 / 918 rows hold under
-// every palette of each chrome. May
+// design, 2026-10-07, under the architect's free rein): a vocabulary lays
+// its lanes at its own period's metrics and the well takes what they leave,
+// no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
+// gui_scale 300 the win2000 lanes leave 1440 − 342 − 132 = 966 device rows
+// (322 Windows px; the program's band, canvas column and its framed canvas,
+// dock bar and row 8 since 2026-10-09). A COLOR moves no lane: the 966 rows
+// hold under every palette and scheme. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -621,9 +570,8 @@ GuiRect waveform_area(const AppState& a) {
     // PAINTER GRID STEP IS SPLIT BETWEEN THE TWO MARGINS, THE ODD PIXEL TO
     // THE RIGHT (architect 2026-10-09, symmetry strict), the frame columns,
     // the view bar and the ruler following the canvas's x. 24 device px in
-    // and 2256 wide on the tablet's 2304 at 300 % (25 in and 2224 wide of
-    // cde's 2274 inside dtwm's frame), 16 in and 1888 wide on the laptop's
-    // 1920 at 138 % (10 in of cde's 1908), 32 in and 2240 wide at 360 %. The
+    // and 2256 wide on the tablet's 2304 at 300 %, 16 in and 1888 wide on
+    // the laptop's 1920 at 138 %, 32 in and 2240 wide at 360 %. The
     // working column, the zoom map, every column mapping and hit test and the
     // damage boxes read this rect (ON SCREEN IS AS PAINTED).
     const int side = column_inner_x_px();
@@ -3466,8 +3414,7 @@ int gui_main(const char* argument) {
     // built-in or a file read above; 2026-10-08 ~18:15) — its twelve keys
     // derived over the compiled theme by the live chrome's own derivation,
     // live_chrome_words: Windows' Appearance-dialog rule under windows-2000,
-    // chrome_derive.h, the Clearlooks engine's arithmetic under clearlooks,
-    // clearlooks_derive.h, Motif's under cde, cde_derive.h — or, with no
+    // chrome_derive.h — or, with no
     // `scheme` line, THE LIVE CHROME'S OWN SCHEME, the compiled theme exactly
     // (effective_scheme_name, scheme_record); and the palette the config
     // names (a built-in, one of Cool Edit's presets, or a file read above)

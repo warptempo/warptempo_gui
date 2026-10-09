@@ -3378,31 +3378,15 @@ inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
 // taken from (RedesignButton::OpenProject). The menu row is File / Edit /
 // Settings, SETTINGS PAINTING LAST (architect 2026-08-03; the enum order is
 // the painted order, RedesignButton's own rule).
-// THE WINDOW MENU (2026-10-08, the cde vocabulary's caption; architect's
-// ruling 3 of the CDE arc: dtwm has no Close button, close lives in the
-// window menu): the popup the caption's WINDOW-MENU BUTTON drops — the
-// product's window verbs in dtwm's idiom (kWindowPopupItems) — hanging
-// from the caption's lane, not the menu row's (dropdown_hangs_from_caption,
-// dropdown_hang_y). It is NOT in kDropdownMenus: the menu row's anchor
-// walks (the press claim, the hover switch, the live-anchor exemption) do
-// not reach it, its anchor being the caption's button (claim_caption_press
-// opens it at the press, as the menu row's anchors open theirs).
-enum class DropdownMenu { None, File, Edit, Settings, Window };
+enum class DropdownMenu { None, File, Edit, Settings };
 
 // EVERY MENU-ROW MENU, in one place, so the routes that must walk them all —
 // the press claim's anchor test and the hover switch — walk this instead of
 // naming a pair (or a triple). `None` is deliberately absent:
-// it is the closed state, not a menu; `Window` too (above).
+// it is the closed state, not a menu.
 inline constexpr DropdownMenu kDropdownMenus[] = {
     DropdownMenu::File, DropdownMenu::Edit, DropdownMenu::Settings,
 };
-// IS THIS THE CAPTION'S MENU — the one whose anchor is no roster button
-// (above)? Every reader of dropdown_anchor_button on an open menu asks this
-// first (paint_menu_row's open title, paint_dropdown's anchor,
-// toggle_dropdown's guard).
-inline constexpr bool dropdown_hangs_from_caption(DropdownMenu m) {
-    return m == DropdownMenu::Window;
-}
 
 // WHICH BUTTON A MENU HANGS FROM. The dropdown is flush under the button that
 // emits it (architect 2026-08-02), so the painter and the open edge's damage
@@ -3413,10 +3397,7 @@ inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
         case DropdownMenu::File:     return RedesignButton::File;
         case DropdownMenu::Edit:     return RedesignButton::Edit;
         case DropdownMenu::Settings:
-        case DropdownMenu::None:
-        // The window menu's anchor is the caption's button, no roster
-        // button (dropdown_hangs_from_caption, asked first by every reader).
-        case DropdownMenu::Window:   break;
+        case DropdownMenu::None:     break;
     }
     return RedesignButton::Settings;
 }
@@ -3478,9 +3459,9 @@ struct SettingsChoiceSource {
     const char* (*label)(int);
 };
 // THE CHROME'S DOMAIN: the chrome table (kGuiChromeSpecs, chrome_spec.h),
-// its keys in the table's order — windows-2000 then clearlooks then cde,
-// the base first — shown by their display names (ChromeSpec::display_name,
-// architect 2026-10-07; the third row 2026-10-08).
+// its keys in the table's order, the base first — windows-2000 alone today
+// (architect 2026-10-09), Windows XP's row to follow — shown by their
+// display names (ChromeSpec::display_name, architect 2026-10-07).
 inline constexpr SettingsChoiceSource kChromeChoiceSource{
     +[]() -> int { return static_cast<int>(std::size(kGuiChromeSpecs)); },
     +[](int i) -> const char* {
@@ -3906,32 +3887,9 @@ inline constexpr int kEditPopupItemCount =
 // grows a row grows the array with no second edit. (No menu is left out of
 // the expression on the assumption it will always be the shortest — the rule
 // is "the widest menu decides it", not "the menus that happen to be long".)
-// THE WINDOW MENU'S ITEMS (2026-10-08; DropdownMenu::Window): dtwm's window
-// menu's verbs that the product has — Restore, Minimize, Maximize, a line,
-// Close (dtwm's Move, Size, Lower and Occupy Workspace are the window
-// manager's, not the product's) — in dtwm's own order, each a WINDOW VERB
-// dispatched at the release (finish_dropdown_release's Window arm:
-// GuiPlatform's toggle_window_maximized, minimize_window, the close road),
-// greyed by the window's painted state (dropdown_item_enabled's Window arm).
-// No accelerator column: no key hints in UI text.
-enum class WindowPopupVerb { Restore, Minimize, Maximize, Close };
-struct WindowPopupItem {
-    const char*     label;
-    WindowPopupVerb verb;
-    bool            separator_before;
-};
-inline constexpr WindowPopupItem kWindowPopupItems[] = {
-    {"Restore",  WindowPopupVerb::Restore,  false},
-    {"Minimize", WindowPopupVerb::Minimize, false},
-    {"Maximize", WindowPopupVerb::Maximize, false},
-    {"Close",    WindowPopupVerb::Close,    true},
-};
-inline constexpr int kWindowPopupItemCount =
-    static_cast<int>(std::size(kWindowPopupItems));
-
 inline constexpr int kDropdownMaxItemCount =
     std::max({kFilePopupItemCount, kEditPopupItemCount,
-              kSettingsPopupItemCount, kWindowPopupItemCount});
+              kSettingsPopupItemCount});
 
 // IS THIS A COMMAND MENU? The two kinds of menu differ in what a row DOES — a
 // settings key to prefill, a chord to dispatch — and this names the second kind
@@ -3978,7 +3936,6 @@ inline constexpr int dropdown_item_count(DropdownMenu m) {
         case DropdownMenu::File:     return kFilePopupItemCount;
         case DropdownMenu::Edit:     return kEditPopupItemCount;
         case DropdownMenu::Settings: return kSettingsPopupItemCount;
-        case DropdownMenu::Window:   return kWindowPopupItemCount;
         case DropdownMenu::None:     break;
     }
     return 0;
@@ -3987,10 +3944,6 @@ inline constexpr DropdownRow dropdown_row(DropdownMenu m, int i) {
     if (dropdown_is_command_menu(m)) {
         const CommandPopupItem& it = command_popup_item(m, i);
         return {it.label, it.hotkey, it.separator_before};
-    }
-    if (m == DropdownMenu::Window) {
-        const WindowPopupItem& it = kWindowPopupItems[static_cast<size_t>(i)];
-        return {it.label, nullptr, it.separator_before};
     }
     const SettingsPopupItem& it = kSettingsPopupItems[static_cast<size_t>(i)];
     return {it.label, nullptr, it.separator_before};
@@ -6209,17 +6162,6 @@ struct AppState {
         bool    enabled = true;
     };
     std::array<CaptionButtonFace, kCaptionButtonCount> caption_buttons{};
-    // THE WINDOW'S STATE AS PAINTED (2026-10-08): whether the window stands
-    // maximized and whether it can be restored, as the caption painter last
-    // read them off the platform (paint_caption_row, every paint) — what the
-    // window menu's verbs are judged on (dropdown_item_enabled's Window arm),
-    // a reader with no platform of its own; both move only with a configure
-    // that damages the whole window, as the caption's own faces do.
-    struct CaptionWindowFace {
-        bool maximized  = true;
-        bool restorable = false;
-    };
-    CaptionWindowFace caption_window{};
 
     // (THE ACTIVE TAB'S LOCK RECT IS DELETED — architect 2026-08-14, "we
     // should move the icon out of the tab and into the icon row, then show the
@@ -10379,12 +10321,11 @@ inline int64_t render_player_position(const AppState& a,
 //
 // IT OWNS THE INSET, and the inset is the THUMB'S GRAB BOX (the chrome
 // spec's scrub_handle_box_px through render.h's scrub_handle_box_px: 14
-// Windows px under win2000, 23 under clearlooks): the thumb's CENTRE — which
-// is what names the frame — runs from half a box in to half a box short of
-// the end, so the thumb — win2000's 11-px pointed trackbar thumb (architect
-// 2026-10-02; Windows' since 2026-10-06), narrower than the box, or
-// clearlooks' 23-px GtkScale slider, the box itself (2026-10-07) — never
-// hangs off either end of its channel. The USABLE SPAN is the
+// Windows px): the thumb's CENTRE — which is what names the frame — runs
+// from half a box in to half a box short of the end, so the thumb — the
+// 11-px pointed trackbar thumb (architect 2026-10-02; Windows' since
+// 2026-10-06), narrower than the box — never hangs off either end of its
+// channel. The USABLE SPAN is the
 // item less that box; an item too
 // narrow to hold one seats the centre at the left inset and answers frame 0,
 // the same cold answer a zero item gives.
@@ -10405,9 +10346,8 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // Breeze slider; the spec's scrub_handle_box_px since 2026-10-07), and its
 // ONE reader is the press router, which asks it whether a press TAKES the
 // thumb where it stands (the band) or makes it JUMP to the press (the rest of
-// the item, architect 2026-10-02); the painted thumb is win2000's narrower
-// 11 Windows px (paint_scrub_thumb) or clearlooks' slider the box's own 23,
-// and wears no hover face.
+// the item, architect 2026-10-02); the painted thumb is the narrower 11
+// Windows px (paint_scrub_thumb), and wears no hover face.
 // `handle_x` is the handle's painted centre — the position's own column, or
 // the drag's carried one while a drag stands.
 //
@@ -10415,7 +10355,7 @@ inline int render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // 2026-10-02): the painted thumb's own rows (scrub_thumb_h_px, centred in the
 // track's band exactly as the painter centres it) by the grab box's columns
 // centred on that column (render.h's scrub_handle_box_px — the grab, not the
-// picture: win2000's 11-px thumb is painted inside it), HALF-OPEN on both
+// picture: the 11-px thumb is painted inside it), HALF-OPEN on both
 // axes like every other
 // pixel-cell test in the product (a pixel x covers [x, x+1), containing_pixel's
 // rule). A press outside it but on the item makes the thumb JUMP there
@@ -10464,10 +10404,10 @@ GuiRect top_caption_row_area(const AppState& a);
 // positions relative to that area (platform_wayland.cpp) — so a point is on the
 // frame exactly when it lies outside the window's [0, width) x [0, height): a
 // press can land there only while the frame stands (maximised, and on the
-// tablet, the client area is the whole surface — save under cde, whose dtwm
-// frame stands on every window, 2026-10-08: the band is then answered here
-// too and its press and hover take no resize while the window is maximised,
-// claim_window_frame_press and pointer_cursor_kind). A CORNER reaches one caption
+// tablet, the client area is the whole surface — save under a vocabulary
+// whose spec sets window_frame_maximized, whose band is then answered here
+// too and whose press and hover take no resize while the window is
+// maximised, claim_window_frame_press and pointer_cursor_kind). A CORNER reaches one caption
 // height (caption_row_h_px, the live chrome's) past the frame along each of
 // its two edges, as Windows' sizing hit test reached its caption-button
 // size, so a corner is
@@ -10477,31 +10417,13 @@ GuiRect top_caption_row_area(const AppState& a);
 unsigned window_frame_edges_at(const AppState& a, int x, int y);
 GuiRect top_menu_row_area(const AppState& a);
 // THE ROW A DROPDOWN HANGS FROM — the menu lane's foot for the menu row's
-// three (render.h's menu-row block: the anchor is the lane), THE CAPTION
-// LANE'S FOOT for the window menu (2026-10-08; dropdown_hangs_from_caption)
-// — the ONE expression the painter's box and the open edge's damage both
-// read (paint_dropdown, toggle_dropdown), so the damaged band and the
-// painted box start on the same row. UNDER CDE A MENU-ROW PULL-DOWN STANDS
-// ONE LINE HIGHER, ITS TOP SHADOW ON THE BAR'S BOTTOM SHADOW (2026-10-08,
-// the NEdit capture tmp/Screenshot_2026-10-08_10-14-22.png: the "File"
-// pull-down's light top row is the bar's dark row 297 across the pull-down's
-// columns 514-755, the bar's row staying dark left and right of it, the
-// pane's left column under the armed box's left column) — Motif posts the
-// pulldown's shell flush on the bar's last row, so the pane's ring replaces
-// that row with no body row between; the box keeps its height, so its
-// items start on the lane's foot. The window menu keeps the caption's foot
-// (no capture shows dtwm's posted).
-inline int dropdown_hang_y(const AppState& a, DropdownMenu m) {
-    if (dropdown_hangs_from_caption(m)) {
-        const GuiRect lane = top_caption_row_area(a);
-        return lane.y + lane.h;
-    }
+// three (render.h's menu-row block: the anchor is the lane) — the ONE
+// expression the painter's box and the open edge's damage both read
+// (paint_dropdown, toggle_dropdown), so the damaged band and the painted box
+// start on the same row.
+inline int dropdown_hang_y(const AppState& a, DropdownMenu /*m*/) {
     const GuiRect lane = top_menu_row_area(a);
-    const int on_bar_foot =
-        live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde
-            ? relief_line_px()
-            : 0;
-    return lane.y + lane.h - on_bar_foot;
+    return lane.y + lane.h;
 }
 GuiRect top_icon_row_area(const AppState& a);
 // GAP 1's band — the flexible band BETWEEN THE ICON ROW AND THE TRIM LANE (the

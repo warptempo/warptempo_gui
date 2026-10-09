@@ -48,8 +48,8 @@
 // screen with both system bars hidden (MainActivity.java's head, architect
 // 2026-10-01), so a surface pixel, a window pixel and a touch coordinate are
 // one grid (the rule is at width_, platform_android.h), the GUI's offset from
-// it by the frame a chrome keeps on its maximised window (frame_px_, cde's
-// dtwm frame since 2026-10-08), 0 under the other two. The POLICY (the touch
+// it by the frame a chrome keeps on its maximised window (frame_px_, the
+// spec's window_frame_maximized), 0 under windows-2000. The POLICY (the touch
 // state machine, the key-repeat synthesis, the logical pointer, the notional-x
 // bookkeeping, the containment conversion) is in GuiInputCore and is shared
 // verbatim with the Wayland backend; every input event decoded below is handed

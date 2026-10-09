@@ -1,8 +1,8 @@
 #pragma once
 
 // THE DISPLAY TRANSFORM (architect 2026-10-08 ~05:15): EVERY AUTHORED COLOR IS
-// AN sRGB BYTE TRIPLE — a palette role, a chrome role (Windows' and GTK's own
-// scheme bytes are sRGB records), the picker's hex, a catalog theme's byte, an
+// AN sRGB BYTE TRIPLE — a palette role, a chrome role (Windows' own scheme
+// bytes are sRGB records), the picker's hex, a catalog theme's byte, an
 // icon's own inks — "if I open that image in the web browser, it would have
 // the identical color on the GUI". A screenshot he lifts a hex from is
 // unprofiled, which a browser and GIMP take as sRGB; so is every scheme file.
@@ -17,8 +17,7 @@
 //
 // WHERE IT RUNS, the one list (re-grep `display_transform::` to re-derive it):
 // set_palette_source and set_waveform_source (render.cpp — every role paint,
-// the text's ink included, and every row of paint_cl_ramp, which goes through
-// paint_cell_rect); the words the painters write by hand (render.cpp:
+// the text's ink included); the words the painters write by hand (render.cpp:
 // paint_checker_rect's two cells, paint_caption_gradient's ramp, and the
 // waveform plate's two inks, converted on the GUI thread as
 // waveform_plate_inks hands them to the job, so the worker writes them

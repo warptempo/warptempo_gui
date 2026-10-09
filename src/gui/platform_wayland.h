@@ -142,7 +142,7 @@ public:
     // THE WHOLE SURFACE, the window's band with it (2026-10-09): where
     // invalidate_region takes a CLIENT rect and so never reaches the frame,
     // this damages every surface pixel, so the next paint repaints the
-    // sizing frame (paint_window_sizing_frame — under cde dtwm's band) along
+    // sizing frame (paint_window_sizing_frame) along
     // with the client. ONE CALLER, A LIVE CHROME PICK
     // (GuiColorPicker::install_live_words, through
     // Viewport::invalidate_surface): the frame paints in the chrome's roles,
@@ -794,12 +794,6 @@ private:
     bool has_initial_configure_ = false;
     // Latest XDG_TOPLEVEL_STATE_ACTIVATED reading; see window_activated().
     bool window_activated_ = false;
-    // THE ACTIVATION FLIPPED in the configure now being applied: under
-    // clearlooks a restored window's sizing frame wears the activation
-    // (metacity's focused and unfocused frames, paint_window_sizing_frame),
-    // so the surface configure repaints the whole surface for it — the app's
-    // activation hook damages the caption lane alone, its own area.
-    bool pending_activation_flip_ = false;
     // XDG_TOPLEVEL_STATE_MAXIMIZED: read by xdg_toplevel.configure into the
     // pending half, applied with the size at xdg_surface.configure.
     bool pending_maximized_ = false;
@@ -811,8 +805,8 @@ private:
     int  restored_h_ = 0;
     // THE SIZING FRAME'S THICKNESS IN DEVICE PX (architect 2026-10-05): 0
     // while maximised, else render.h's window_frame_px() (four Windows px;
-    // under cde dtwm's five, standing while maximised too — the spec's
-    // window_frame_maximized, architect 2026-10-08), taken
+    // standing while maximised too under a chrome whose spec sets
+    // window_frame_maximized, 2026-10-08), taken
     // at each configure (a gui_scale commit while restored reaches it at the
     // next configure). THE CLIENT AREA is the surface inset by it on every
     // side, and IT IS THE APP'S WHOLE GEOMETRY: the size on_resize carries,

@@ -1,8 +1,6 @@
 #include "render.h"
 #include "app_state.h"
 #include "audio.h"
-#include "clearlooks_paint.h"
-#include "cde_paint.h"
 #include "gui_display_context.h"
 #include "gui_font.h"
 #include "text_shape.h"
@@ -376,41 +374,6 @@ void paint_checker_rect(cairo_t* cr, const GuiRect& r, int phase_x,
     cairo_surface_destroy(tile);
 }
 
-void paint_stipple_begin(cairo_t* cr, const GuiRect& bounds) {
-    // The rule at the declaration.
-    cairo_save(cr);
-    cairo_rectangle(cr, bounds.x, bounds.y, std::max(0, bounds.w),
-                    std::max(0, bounds.h));
-    cairo_clip(cr);
-    cairo_push_group(cr);
-}
-
-void paint_stipple_end(cairo_t* cr, int phase_x, int phase_y) {
-    // THE MASK, Motif's 50 % stipple at one device px a cell: a 2 x 2 A8
-    // tile, opaque at (0, 0) and (1, 1), repeated, nearest, its origin at the
-    // phase — the paint_checker_rect brush's lattice, as an alpha mask.
-    cairo_pop_group_to_source(cr);
-    cairo_surface_t* tile = cairo_image_surface_create(CAIRO_FORMAT_A8, 2, 2);
-    cairo_surface_flush(tile);
-    unsigned char* data = cairo_image_surface_get_data(tile);
-    const int stride = cairo_image_surface_get_stride(tile);
-    for (int y = 0; y < 2; ++y)
-        for (int x = 0; x < 2; ++x)
-            data[y * stride + x] = (x + y) % 2 == 0 ? 0xFF : 0x00;
-    cairo_surface_mark_dirty(tile);
-    cairo_pattern_t* mask = cairo_pattern_create_for_surface(tile);
-    cairo_pattern_set_extend(mask, CAIRO_EXTEND_REPEAT);
-    cairo_pattern_set_filter(mask, CAIRO_FILTER_NEAREST);
-    cairo_matrix_t to_tile;
-    cairo_matrix_init_translate(&to_tile, -static_cast<double>(phase_x),
-                                -static_cast<double>(phase_y));
-    cairo_pattern_set_matrix(mask, &to_tile);
-    cairo_mask(cr, mask);
-    cairo_pattern_destroy(mask);
-    cairo_surface_destroy(tile);
-    cairo_restore(cr);
-}
-
 void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c) {
     paint_square_ring(cr, r, c, c);
 }
@@ -586,40 +549,15 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
 
 int window_frame_px() {
     // The spec's relief lines round Windows' two W of face (the
-    // declaration): 2 + 2 under win2000 and clearlooks, dtwm's 3 + 2 under
-    // cde.
+    // declaration): 2 + 2.
     return live_chrome_spec().window_frame_lines * relief_line_px() +
            scaled_px(kWindowFramePx - 2 * kReliefLinePx, 0);
 }
 
 void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
-                               int frame_px, bool focused) {
+                               int frame_px, bool /*focused*/) {
     if (frame_px <= 0 || surface_w <= 0 || surface_h <= 0) return;
     const int f = frame_px;
-    // UNDER CLEARLOOKS metacity's `normal` frame (paint_cl_window_frame,
-    // clearlooks_paint.h, where the agreement of the two geometries and the
-    // one departure stand), painted on the band alone: the client area is
-    // the app's, whose caption lane draws the title bar's lower rows with
-    // the same painter (paint_caption_row).
-    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
-        cairo_save(cr);
-        cairo_rectangle(cr, 0, 0, surface_w, surface_h);
-        cairo_rectangle(cr, f, f, surface_w - 2 * f, surface_h - 2 * f);
-        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
-        cairo_clip(cr);
-        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
-        paint_cl_window_frame(cr, 0, 0, surface_w, surface_h, f,
-                              caption_row_h_px(), focused);
-        cairo_restore(cr);
-        return;
-    }
-    // UNDER CDE dtwm's frame (paint_cde_window_frame, cde_paint.h: the
-    // frame's colour following the activation, its two rings), on the band
-    // alone.
-    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
-        paint_cde_window_frame(cr, surface_w, surface_h, f, focused);
-        return;
-    }
     // The ground across the band, then the window's raised edge on its outer
     // two lines.
     paint_cell_rect(cr, GuiRect{0, 0, surface_w, f}, palette().ground);
@@ -1343,15 +1281,11 @@ void render_trim_flags(cairo_t* cr,
 }
 
 // THE POPUP LIST'S SCROLL BAR (the rule and the geometry at render.h's popup
-// scroll block; the picture at the declaration): under win2000 the trim
-// lane's vocabulary turned upright — the track's checker, the plain raised
-// thumb and the two plain raised arrow buttons (paint_trim_arrow_button, up
-// and down, pressed while `held` names one); under clearlooks squeeze's
-// gummy GtkScrollbar (clearlooks_paint.h's vertical block, 2026-10-08): the
-// classic trough 2 W short of each end (trough-under-steppers), the gummy
-// slider — one W longer at an end it touches, the engine's junction, under
-// the stepper drawn after it — then the two gummy steppers. Painted over the
-// list box's ground, after its frame, beside its rows.
+// scroll block; the picture at the declaration): the trim lane's vocabulary
+// turned upright — the track's checker, the plain raised thumb and the two
+// plain raised arrow buttons (paint_trim_arrow_button, up and down, pressed
+// while `held` names one). Painted over the list box's ground, after its
+// frame, beside its rows.
 void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
                             PopupScrollPart held) {
     if (!b.present || b.bar.w <= 0 || b.bar.h <= 0) return;
@@ -1359,38 +1293,15 @@ void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
     const bool down_held = held == PopupScrollPart::Down;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
-        const int u = relief_line_px();
-        const int shrink = scaled_px(2);
-        paint_cl_scroll_trough_v(cr, GuiRect{b.bar.x, b.bar.y + shrink, b.bar.w,
-                                             b.bar.h - 2 * shrink});
-        if (b.thumb.h > 0) {
-            GuiRect slider = b.thumb;
-            if (slider.y == b.track.y) { slider.y -= u; slider.h += u; }
-            if (b.thumb.y + b.thumb.h == b.track.y + b.track.h) slider.h += u;
-            paint_cl_scrollbar_slider(cr, slider);
-        }
-        paint_cl_scrollbar_stepper(cr, b.up, /*points_up=*/true, up_held);
-        paint_cl_scrollbar_stepper(cr, b.down, /*points_up=*/false, down_held);
-    } else if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
-        // MOTIF'S VERTICAL XmScrollBar (2026-10-08; the Open dialog
-        // capture's list bar, x 400-412): the trim lane's trough, slider and
-        // arrows turned upright, on the bar's rects.
-        paint_cde_trough(cr, b.bar);
-        if (b.thumb.h > 0) paint_cde_slider(cr, b.thumb, /*horizontal=*/false);
-        paint_cde_arrow(cr, b.up, CdeArrowDir::Up, up_held);
-        paint_cde_arrow(cr, b.down, CdeArrowDir::Down, down_held);
-    } else {
-        paint_cell_rect(cr, b.track, palette().ground);
-        paint_checker_rect(cr, b.track, b.bar.x, b.bar.y, palette().hilight,
-                           palette().ground);
-        if (b.thumb.h > 0) {
-            paint_cell_rect(cr, b.thumb, palette().ground);
-            paint_relief_plain_raised(cr, b.thumb);
-        }
-        paint_trim_arrow_button(cr, b.up, ScrollArrowDir::Up, up_held);
-        paint_trim_arrow_button(cr, b.down, ScrollArrowDir::Down, down_held);
+    paint_cell_rect(cr, b.track, palette().ground);
+    paint_checker_rect(cr, b.track, b.bar.x, b.bar.y, palette().hilight,
+                       palette().ground);
+    if (b.thumb.h > 0) {
+        paint_cell_rect(cr, b.thumb, palette().ground);
+        paint_relief_plain_raised(cr, b.thumb);
     }
+    paint_trim_arrow_button(cr, b.up, ScrollArrowDir::Up, up_held);
+    paint_trim_arrow_button(cr, b.down, ScrollArrowDir::Down, down_held);
     cairo_restore(cr);
 }
 
@@ -2423,17 +2334,11 @@ const GuiPalette& palette() { return g_palette; }
 GuiColor surface_text(GuiSurface surface) {
     // The table and its readers are at the declaration (render.h).
     const GuiPalette& pal = palette();
-    const bool clearlooks =
-        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
     switch (surface) {
-    case GuiSurface::CaptionActive:
-        return clearlooks ? pal.cl_title_text : pal.caption_active_text;
-    case GuiSurface::CaptionInactive:
-        return clearlooks ? pal.cl_title_unfocused : pal.caption_inactive_text;
-    case GuiSurface::ListRow:
-        return clearlooks ? pal.cl_text : pal.field_text;
-    case GuiSurface::ListRowLit:
-        return clearlooks ? pal.cl_text_selected : pal.selected_text;
+    case GuiSurface::CaptionActive:   return pal.caption_active_text;
+    case GuiSurface::CaptionInactive: return pal.caption_inactive_text;
+    case GuiSurface::ListRow:         return pal.field_text;
+    case GuiSurface::ListRowLit:      return pal.selected_text;
     }
     return pal.label;
 }
@@ -2527,34 +2432,12 @@ void install_true_colors(bool on) {
 
 void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline) {
-    // UNDER CDE Motif's stipple of the label (render.h's declaration): the
-    // run's cell — its ascent above the baseline — anchors the phase, and a
-    // margin of an ascent round the run bounds the group (a glyph poking
-    // past its cell is kept whole).
-    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
-        const int asc = std::max(
-            1, static_cast<int>(std::nearbyint(gui_font_ascent_px(run.font))));
-        const int px = static_cast<int>(std::nearbyint(x));
-        const int top = static_cast<int>(std::nearbyint(baseline)) - asc;
-        paint_stipple_begin(
-            cr, GuiRect{px - asc, top - asc,
-                        static_cast<int>(std::ceil(run.width_px)) + 2 * asc,
-                        3 * asc});
-        set_palette_source(cr, palette().label);
-        text_shape::show_shaped_run(cr, run, x, baseline);
-        paint_stipple_end(cr, px, top);
-        return;
-    }
-    // Under clearlooks GTK's own insensitive text, the same two copies in
-    // the engine's two tones (render.h's declaration).
-    const bool clearlooks =
-        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    // Windows' DSS_DISABLED (render.h's declaration): the Hilight copy one
+    // line right and down, the Shadow copy over it.
     const double off = static_cast<double>(relief_line_px());
-    set_palette_source(cr, clearlooks ? palette().cl_text_insensitive_etch
-                                      : palette().hilight);
+    set_palette_source(cr, palette().hilight);
     text_shape::show_shaped_run(cr, run, x + off, baseline + off);
-    set_palette_source(cr, clearlooks ? palette().cl_text_insensitive
-                                      : palette().shadow);
+    set_palette_source(cr, palette().shadow);
     text_shape::show_shaped_run(cr, run, x, baseline);
 }
 

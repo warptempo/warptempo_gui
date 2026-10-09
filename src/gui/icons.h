@@ -3,15 +3,17 @@
 // THE ICON SET AND ITS ONE ROAD (architect 2026-10-06). An Icon is a GLYPH,
 // one per enumerator below, drawn from THE LIVE SET (gui_live_icon_set
 // below): the device config's `icons` key when the line is present, else
-// the live chrome's own (chrome_spec.h's icon_set — win2000's and cde's
-// TANGO 0.8.90'S SCALABLE DRAWINGS, ReactOS's model of a Windows 2000
-// desktop wearing Tango (Tango's own files only, nothing drawn, no GNOME
-// file, a repeat known by position; the set the product drew itself before
-// is git history), clearlooks' MIST, gnome-icon-theme 2.30's drawings under
-// Mist's own folders). THE BUNDLED SETS are kIconSetKeys below — Tango and
-// Mist (Breeze, the neutral monochrome set bound to the chrome's text role,
-// stood 2026-10-08 to 2026-10-09 and left with that binding: "looks out of
-// place now", architect 2026-10-09). One scalable file per enumerator under
+// the live chrome's own (chrome_spec.h's icon_set — win2000's TANGO
+// 0.8.90'S SCALABLE DRAWINGS, ReactOS's model of a Windows 2000 desktop
+// wearing Tango (Tango's own files only, nothing drawn, no GNOME file, a
+// repeat known by position; the set the product drew itself before is git
+// history)). THE BUNDLED SETS are kIconSetKeys below — Tango and MIST,
+// gnome-icon-theme 2.30's drawings under Mist's own folders, the GNOME 2.30
+// set he keeps as a choice under the key (architect 2026-10-09: "Mist and
+// Tango both work"). (Breeze, the neutral monochrome set bound to the
+// chrome's text role, stood 2026-10-08 to 2026-10-09 and left with that
+// binding: "looks out of place now", architect 2026-10-09.) One scalable
+// file per enumerator under
 // assets/icons/<set>/ (its README the mapping, the provenance and the
 // licences), PARSED AT LAUNCH through resvg, the one renderer of every set
 // (svg_icon.h: the wrapper, the error rule and why a set is checked at its
@@ -109,8 +111,8 @@ enum class Icon {
                          // reload's arrows (architect 2026-10-07); Mist's
                          // gnome emblem-default, the green check, GNOME's
                          // accept (architect 2026-10-07 ~17:00). A
-                         // deliberate asymmetry: Windows 2000 is the
-                         // reference behind Clearlooks and its set may lag.
+                         // deliberate asymmetry: the Tango set may lag the
+                         // GNOME set (2026-10-07).
     VcsDiff,             // Toggle History View (`h`)
     ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
                          // the sets' x-office-calendar, the dated page:
@@ -303,7 +305,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // of the live drawing; cool_edit_paint.h) — of the live raster, built the
 // first time a disabled face asks and cached beside it, copied at the same
 // seat. A disabled WORD keeps the chrome's own rule (show_embossed_run,
-// render.h: Windows' DSS_DISABLED emboss, GTK's etch, Motif's stipple).
+// render.h: Windows' DSS_DISABLED emboss).
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                    double size_px);
 

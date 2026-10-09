@@ -1794,9 +1794,9 @@ struct GuiInputHandler {
     // consumed nothing). THE FRAME'S ranks above every veil, the on-screen
     // keyboard's neighbour (a restored window resizes "always"): it hands the
     // press to the compositor's resize at the frame's edges — on a RESTORED
-    // window only, a frame that stands on the maximised window (cde's dtwm
-    // frame, 2026-10-08: the laptop maximised, the tablet always) taking its
-    // press as a consumed nothing, its hover the arrow. THE CAPTION'S
+    // window only, a frame that stands on the maximised window (a spec's
+    // window_frame_maximized: the laptop maximised, the tablet always) taking
+    // its press as a consumed nothing, its hover the arrow. THE CAPTION'S
     // ranks where the File menu's Quit is reachable — below the prompt's
     // veil, the open dropdown's close and every dialog editor's swallow, but
     // admitted through the render player's and the picker's veils as their
@@ -3075,8 +3075,7 @@ private:
     // arm), and the S Pen's hover point then DRIFTS along the pen's axis as
     // the tip rises (the measurement at kPenHotRearmPx), so a face that
     // followed the hover at once blinks — lit, then dark, or the next row
-    // lit (he saw it on the roster under Windows 2000 and on a pull-down's
-    // rows under cde). While this latch stands — THE ONE PREDICATE,
+    // lit (he saw it on the roster and on a pull-down's rows). While this latch stands — THE ONE PREDICATE,
     // pen_hot_latch_holds(), which every hover walk below consults — EVERY
     // HOVER-LIT FACE HOLDS WHAT WAS PAINTED AT THE LIFT: what was lit stays
     // lit, nothing new lights, nothing goes dark, until the rearm motion
@@ -3102,8 +3101,8 @@ private:
     //   them, none (folder_overlay.h); the menu row, the caption buttons and
     //   the dialogs' push buttons none (render.h's palette block: no hover
     //   face on a button; the hot candidate's menu-anchor term in
-    //   recompute_redesign_button_hover; clearlooks_paint.h's and
-    //   cde_paint.h's heads; update_modal_dialog_hover's head); and a
+    //   recompute_redesign_button_hover; update_modal_dialog_hover's head);
+    //   and a
     //   notification card's hover banks its clock and paints nothing
     //   (GuiNotifications::set_hover).
     // ONE HOLD, TWO SHAPES. THE TWO TOOLBARS — the roster and the player —
@@ -3162,8 +3161,8 @@ private:
     //   the pen's hover does, and every first down ends that hover through
     //   its leave (end_pen_hover).
     // THE LATCH IS THE POINTER'S, NOT A CHROME'S: it holds every chrome's lit
-    // row alike (the toolbars' hot faces it once held — Windows 2000's hot
-    // line, GTK's prelight — retired with the program's band, 2026-10-09).
+    // row alike (the toolbars' hot faces it once held retired with the
+    // program's band, 2026-10-09).
     // THE LIFT'S OWN PIXEL IS NOT KEPT (2026-10-08): the anchor is the
     // hover's, so the hook carries no coordinates and the latch none of
     // the contact's.
@@ -3194,8 +3193,8 @@ private:
     // the neighboring button, a case width (23 W, 69 px at 300 % and 84 at
     // 360 %, the program's case round Cool Edit's 20-W seat since
     // 2026-10-09), and below a move to
-    // the next lit row, a popup row (17 W under Windows 2000, 19 under
-    // clearlooks and cde — ChromeSpec::popup_item_height_px), so one row's
+    // the next lit row, a popup row (17 W under Windows 2000 —
+    // ChromeSpec::popup_item_height_px), so one row's
     // deliberate step rearms. Authored in Windows px as every chrome length,
     // though the drift is physical: the tablet is the one pen device. The
     // blink was measured on the roster's hot face (gone since 2026-10-09);

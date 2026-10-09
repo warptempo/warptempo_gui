@@ -26,8 +26,7 @@
 //     "scheme"), AND ITS FACE TAG (architect 2026-10-09: the face follows
 //     the scheme, as a Windows scheme carries its font — Tahoma or MS Sans
 //     Serif, which the windows chrome wears live, gui_font.h's
-//     gui_live_face_set; clearlooks and cde keep their own faces):
-//     `schemes/<name>.scheme`, the `scheme` device key.
+//     gui_live_face_set): `schemes/<name>.scheme`, the `scheme` device key.
 // The two are independent: loading, saving, renaming or deleting one never
 // touches the other, and either applies under any chrome.
 //
@@ -47,9 +46,8 @@
 // EVERY CHROME (architect 2026-10-08 ~11:00 / ~12:10): the same twelve keys
 // draw under every chrome, each deriving the rest its own way — under
 // windows-2000 the 3D set alone, from the ground, as Windows' Appearance
-// dialog derived it (chrome_derive.h); under clearlooks every tone, by GTK's
-// and metacity's own arithmetic, the two title ends ignored
-// (clearlooks_derive.h); under cde Motif's XmGetColors (cde_derive.h).
+// dialog derived it (chrome_derive.h, whose live_chrome_words a later
+// vocabulary's derivation joins).
 //
 // THE PALETTE'S RULE (architect 2026-10-07 ~10:00): A COLOR THE PROGRAM
 // DRAWS IN THE WELL, OR ON A THING THAT ENTERS THE WELL, IS THE PALETTE'S; a
@@ -91,13 +89,13 @@
 // schemes transcribed to the used keys and compiled in") — kGuiChromeSchemes
 // below, EVERY ENTRY OF docs/themes/catalog.json, GENERATED into
 // chrome_schemes.inc by tools/theme_catalog/gen_theme_files.py (the
-// transcription's rules are its head's; regenerate, never hand-edit), and the
-// cde chrome's hand-set `solaris`: each a KEY (the catalog's verbatim — the
-// `scheme` key's word for it), a DISPLAY NAME and THE TWELVE CHROME KEYS. A
+// transcription's rules are its head's; regenerate, never hand-edit): each a
+// KEY (the catalog's verbatim — the `scheme` key's word for it), a DISPLAY
+// NAME and THE TWELVE CHROME KEYS. A
 // SCHEME IS CHROME-ONLY BY ITS KIND: choosing one installs its twelve and
 // leaves the program's twelve as they stand (GuiColorPicker::load_preset).
 // THE CHROME'S OWN SCHEME — the one its `own_scheme` names (chrome_spec.h:
-// `windows-2000-standard`, `clearlooks`, `solaris`) — CARRIES NO
+// `windows-2000-standard`) — CARRIES NO
 // KEYS under that chrome (scheme_record): the compiled theme exactly
 // (Windows 2000 Standard's gray face is hand-set, chrome_derive.h's head, so
 // its scheme run through the rule would not be its own bytes); under another
@@ -137,11 +135,11 @@
 //     absent tahoma, any other word the hard fail). The picker writes the
 //     keys in the table's order (the chooser's order), an unpicked inactive
 //     key left out, then the font line when the tag is MS Sans Serif. A
-//     SCHEME IS HONORED UNDER EVERY CHROME, whichever saved it: a
-//     scheme saved under windows-2000 stands in the folder when the Settings
-//     chrome row switches to clearlooks, and draws there by clearlooks'
-//     derivation. No follower beyond the inactive caption's three: every
-//     other role and key stands alone.
+//     SCHEME IS HONORED UNDER EVERY CHROME, whichever saved it: a scheme
+//     saved under one chrome stands in the folder when the Settings chrome
+//     row switches to another, and draws there by that chrome's derivation.
+//     No follower beyond the inactive caption's three: every other role and
+//     key stands alone.
 // A FILE'S BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's: the hex he lifts from a screenshot or types into the picker, and
 // the tablet converts it at the painter's entry (display_transform.h's head).
@@ -451,17 +449,6 @@ struct GuiChromeScheme {
 };
 inline constexpr GuiChromeScheme kGuiChromeSchemes[] = {
 #include "chrome_schemes.inc"
-    // THE SOLARIS SCHEME, HAND-SET AFTER THE GENERATED ROWS (2026-10-08): the
-    // cde chrome's own built-in, no catalog entry (Sun's Default.dp is not in
-    // cdesktopenv; theme_file.h's kGuiThemeCde head owns its provenance —
-    // NsCDE's Solyaris.dp transcription, the captures the law) — its twelve
-    // keys the compiled theme's words key for key (palette_file.cpp's
-    // defaults_are_their_chromes_schemes proves it): the body and black, the
-    // flat title under white, the inactive three the body under black, the
-    // inverted list selection, set 4's cream under black. The display name
-    // follows the generator's rule for a CDE entry ("CDE Solaris"; "KDE 3
-    // Solaris" is TDE's own transcription of the same palette).
-    {"solaris", "CDE Solaris", {0xAEB2C3, 0x000000, 0xB24D7A, 0xB24D7A, 0xFFFFFF, 0xAEB2C3, 0xAEB2C3, 0x000000, 0x000000, 0xFFF7E9, 0xFFF7E9, 0x000000}},
 };
 
 // The built-in scheme keyed `name`, byte for byte, or nullptr.
@@ -487,9 +474,8 @@ constexpr bool is_chrome_own_scheme(std::string_view name) {
 // 2026-10-08): the device config's key as written, or — EMPTY, no line —
 // for a palette THE DEFAULT PALETTE, `cool-edit-default` under every chrome
 // (2026-10-09), and for a scheme THE LIVE CHROME'S OWN (chrome_spec.h's
-// own_scheme of live_chrome_spec(): `windows-2000-standard`, `clearlooks`
-// or `solaris`). The struct keeps the empty value, so the file never pins a
-// default.
+// own_scheme of live_chrome_spec(): `windows-2000-standard`). The struct
+// keeps the empty value, so the file never pins a default.
 std::string_view effective_palette_name(std::string_view palette);
 std::string_view effective_scheme_name(std::string_view scheme);
 
@@ -526,9 +512,8 @@ inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in palette's key (cool-edit-default, cool-edit-xp-blue, "
     "...) or the name of a palette file read at launch";
 inline constexpr const char* kSchemeGrammarReason =
-    "must be a built-in scheme's key (windows-2000-standard, clearlooks, "
-    "solaris, windows-rainy-day, ...) or the name of a scheme file read at "
-    "launch";
+    "must be a built-in scheme's key (windows-2000-standard, "
+    "windows-rainy-day, ...) or the name of a scheme file read at launch";
 
 // The twelve the palette `name` names — a built-in palette's row, or a
 // loaded file's words (a file names every role, the head). Precondition:

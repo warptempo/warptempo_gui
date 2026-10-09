@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture is the drawing the caption wears on the
-     chrome's ground (architect 2026-10-06), the chrome Clearlooks since
-     2026-10-07: the Mist set's AppIcon, gnome-icon-theme 2.30's
-     audio-x-generic, assets/icons/mist/AppIcon.svg, rasterised ANTIALIASED
-     by rsvg-convert (librsvg 2.62 on the laptop; a vector, not pixel art)
-     and centered over CLEARLOOKS' GROUND, #EDECEB (architect 2026-10-07:
-     the compiled Clearlooks theme's `ground`,
-     src/gui/theme_clearlooks_values.inc, the face every chrome
-     surface of the app stands on), so the mask shows a ground-colored
-     shape carrying the drawing. An ADAPTIVE icon, the whole of it: minSdk is 30, so
+     recents card). Its picture (architect 2026-10-07, kept 2026-10-09):
+     the Mist set's
+     AppIcon, gnome-icon-theme 2.30's audio-x-generic,
+     assets/icons/mist/AppIcon.svg, rasterised ANTIALIASED by rsvg-convert
+     (librsvg 2.62 on the laptop; a vector, not pixel art) and centered over
+     the ground #EDECEB, so the mask shows a ground-colored shape carrying the
+     drawing. An ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
 
      Two layers per density under res/mipmap-<density>/, BOTH written by

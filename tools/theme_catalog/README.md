@@ -6,8 +6,8 @@ stays in git history"; "I don't want to be designing my own theme"). This tool t
 `docs/themes/CATALOG.md` (the crops of the app that once stood beside each entry left the repository 2026-10-08). THE
 CATALOG IS A RECORD AND THE SOURCE OF EACH CHROME'S COMPILED BYTES, NOT A SHIPPED SET (architect 2026-10-08: "okay to
 retire the color theme catalog"; "we just need hard-coded chromes"): no theme file ships and the app reads none, no
-device key or Settings row chooses one; each chrome vocabulary wears its own theme, compiled in (`src/gui/theme_file.h`),
-and `gen_theme_files.py` writes Clearlooks' as a generated include. The architect's workshop for colors is the app's
+device key or Settings row chooses one; each chrome vocabulary wears its own theme, compiled in (`src/gui/theme_file.h`;
+Windows 2000's, the one chrome today). The architect's workshop for colors is the app's
 PALETTES (named presets picked in the app); a look made official becomes a new chrome variant, its theme compiled in
 the same way from a catalog entry. THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's own colors (the waveform, the flags, the
 playhead's stem and the scanner) are no theme's but the app's PALETTES, compiled in (`src/gui/palette_file.h`; the
@@ -20,7 +20,7 @@ Python 3 alone.
 python3 tools/theme_catalog/fetch.py [--refresh]   # the pinned sources -> tmp/theme_sources/ (git-ignored)
 python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json (runs the checks, prints the families)
 python3 tools/theme_catalog/build.py --check-only  # no sources: the checks on the committed catalog, nothing written
-python3 tools/theme_catalog/gen_theme_files.py     # -> src/gui/theme_clearlooks_{roles,members,values}.inc (committed)
+python3 tools/theme_catalog/gen_theme_files.py     # -> src/gui/chrome_schemes.inc (committed), the Windows 2000 column checked
 python3 tools/theme_catalog/catalog_md.py          # -> docs/themes/CATALOG.md
 python3 -I tools/theme_catalog/gen_cool_edit_presets.py [text]  # cool_edit_presets.txt -> src/gui/palette_presets.inc (committed)
 ```
@@ -48,19 +48,13 @@ fail. Byte-stable like the others.
 
 The app compiles in ONE THEME PER CHROME and nothing else (`src/gui/theme_file.h`'s head, `kGuiChromeThemes`):
 `windows-2000-standard` for the `windows-2000` chrome, HAND-RECORDED as the role table's value column
-(`kGuiThemeRoles`), which `gen_theme_files.py` checks against the entry at every run; and `clearlooks` for the
-`clearlooks` chrome, GENERATED WHOLE by `gen_theme_files.py` into `src/gui/theme_clearlooks_values.inc` — every role of
-the table in its order, never hand-edited. The same run writes the role table's generated Clearlooks block,
-`src/gui/theme_clearlooks_roles.inc` and `theme_clearlooks_members.inc`. `build.py`'s `engine_tones` arithmetic
-NOW LIVES IN THE APP TOO (architect 2026-10-08, the twelve chrome keys under clearlooks): `src/gui/clearlooks_derive.h`
-ports it step for step and runs it over a palette's picked keys, and its static_assert — squeeze's own inputs
-reproducing `theme_clearlooks_values.inc` byte for byte — is the two copies' agreement, so a change to
-`engine_tones` (or to the geometry it reads) is a change there too. A catalog change is `build.py`, then
-`gen_theme_files.py` and `catalog_md.py`, then the build, the outputs committed together; the output is byte-stable
-(the role table's order, uppercase hex, LF, no timestamp). No other entry ships as a theme: the bundled theme files
+(`kGuiThemeRoles`), which `gen_theme_files.py` checks against the entry at every run. (`build.py`'s
+`engine_tones` records the Clearlooks engine's tones in the catalog's `clearlooks` entry; nothing reads them.) A catalog change is `build.py`,
+then `gen_theme_files.py` and `catalog_md.py`, then the build, the outputs committed together; the output is
+byte-stable (the catalog's order, uppercase hex, LF, no timestamp). No other entry ships as a theme: the bundled theme files
 (`assets/themes/<key>.theme`, copied into the app's `themes/` folder at every launch and chosen by the `theme` device
 key, 2026-10-04..10-08) retired with the key, the git history keeping them. WHAT SHIPS OF EVERY ENTRY (architect
-2026-10-08 ~11:00, all 104, the two chromes' own among them) is its TWELVE CHROME KEYS — ground and text, the caption's
+2026-10-08 ~11:00, all 104, the windows-2000 chrome's own among them) is its TWELVE CHROME KEYS — ground and text, the caption's
 start, end and text, the inactive caption's three, the selection pair, the field pair — AND ITS FACE TAG (architect
 2026-10-09: the face follows the scheme, as a Windows Appearance scheme carries its font; a Windows entry's `font`
 record, the menu font its own source names — Windows 2000's hive, the Windows 95 CD's shell2.inf, a Plus! .theme's
@@ -77,11 +71,10 @@ names no program role (2026-10-07):
 | `ground`, `label`, `hilight`, `light_3d`, `shadow`, `dk_shadow` | its `ground`, `label` and relief quartet (`bevel_hilight`, `bevel_light`, `bevel_shadow`, `bevel_dkshadow`) |
 | `selected_fill`, `selected_text` | its selected pair; a CDE entry, which records none (Motif selects by inverse video), its `title_active` under colour set 1's Motif foreground |
 | `field_ground`, `field_text` | its field pair |
-| `clock_ground`, `clock_text` | its `ground` and `label` (Windows' status bar is ButtonFace / ButtonText: Windows' own rule); a GNOME 2 entry's its field pair (architect 2026-10-07: GTK has no sunken status panel, a time shown in a field is an entry, base / text; gen_theme_files.py `CLOCK_FROM_FIELD`) |
+| `clock_ground`, `clock_text` | its `ground` and `label` (Windows' status bar is ButtonFace / ButtonText: Windows' own rule; a GNOME 2 entry's field pair stood here for the compiled Clearlooks theme, 2026-10-07 to 2026-10-09) |
 | `card_ground`, `card_text` | its info pair (Windows' InfoWindow / InfoText; GNOME 2's tooltip_bg_color / tooltip_fg_color) where it records one: the two Windows families and GNOME 2; KDE 3 and CDE have no tooltip pair |
 | `card_frame` | its `info_frame` where it records one (GNOME 2: Clearlooks' tooltip border, shade 0.6 of the tooltip's ground); else unnamed, Windows 2000's black, Windows' tooltip border (every Windows entry's raw `WindowFrame` is #000000) |
 | `caption_active`, `caption_active_gradient`, `caption_active_text`, `caption_inactive`, `caption_inactive_gradient`, `caption_inactive_text` | its recorded title colours (architect 2026-10-05, `roles.caption_roles`): Windows' ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle / GradientInactiveTitle / InactiveTitleText, KDE 3's active / inactive background and foreground, CDE's colour sets 1 and 2 under their Motif foregrounds, GNOME 2's metacity title band (selected_bg_color / bg_color, the focused title's literal #FFFFFF, the unfocused title's blend of fg and bg at 0.45); a gradient end only where the entry records one (the 18 Windows entries with Gradient*Title), the generator's flat-caption rule making the end the start otherwise |
-| the Clearlooks painters' `cl_` roles | a GNOME 2 entry's `engine_tones` whole (architect 2026-10-07, the painters round): build.py `engine_tones` runs the Clearlooks engine's and metacity's own arithmetic — the shades, the pixman / metacity gradient rows (a ramp recorded as its first and last painted rows), the translucent strokes composited by pixman's OVER — at the product's geometry read off `src/gui/chrome_spec.h`'s clearlooks instance; gen_theme_files.py also writes them as the role table's generated Clearlooks block, `src/gui/theme_clearlooks_roles.inc` and `theme_clearlooks_members.inc`, beside the compiled Clearlooks theme (never hand-edited) |
 
 The chrome is the entry AS RECORDED, through ONE light-roles function, `roles.light_roles` (the emboss's light copy
 the recorded Hilight), which the frozen crops were rendered through too, so a compiled theme and its crop show one
@@ -160,7 +153,7 @@ its 3DLight DFDFDF (asserted for Windows 98 Standard).
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows 98 Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
 | `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
-| `gnome2` | the Debian 6.0.10 squeeze live image's own bytes (`LOCAL_SOURCES`): `usr/share/themes/Clearlooks/gtk-2.0/gtkrc` (gtk2-engines 1:2.20.1-1) and `metacity-1/metacity-theme-1.xml` (gnome-themes 2.30.2-1), read by `parse_gtkrc.py`; the rule cited at the gtk-engines 2.20.2 and metacity 2.30.3 tarballs | `clearlooks` ("Clearlooks", architect 2026-10-07: squeeze's GNOME 2.30 default, the second chrome vocabulary's theme): the gtkrc's eight `gtk-color-scheme` colours as recorded and five values by the programs' own rules, each with its derivation (`rule.derivations`): the engine's ONE-LINE EDGE as the relief quartet (light, light, dark, dark) = shade 1.06 / 0.94 of the ground (`clearlooks_draw_inset`, `clearlooks_draw_highlight_and_shade`), the tooltip border (shade 0.6 of its ground), the insensitive text (`darker (@bg_color)`), the unfocused title (metacity's `blend/gtk:fg[NORMAL]/gtk:bg[NORMAL]/0.45`); the focused title's literal #FFFFFF raw. The engine's other tones (its shade table, the gummy ramps, metacity's band) are not catalog values: the Clearlooks painters read them by need. His captures (`tmp/squeeze/`) show every computed byte as recorded |
+| `gnome2` | the Debian 6.0.10 squeeze live image's own bytes (`LOCAL_SOURCES`): `usr/share/themes/Clearlooks/gtk-2.0/gtkrc` (gtk2-engines 1:2.20.1-1) and `metacity-1/metacity-theme-1.xml` (gnome-themes 2.30.2-1), read by `parse_gtkrc.py`; the rule cited at the gtk-engines 2.20.2 and metacity 2.30.3 tarballs | `clearlooks` ("Clearlooks", architect 2026-10-07: squeeze's GNOME 2.30 default, the clearlooks chrome vocabulary's theme 2026-10-07 to 2026-10-09, a built-in scheme since): the gtkrc's eight `gtk-color-scheme` colours as recorded and five values by the programs' own rules, each with its derivation (`rule.derivations`): the engine's ONE-LINE EDGE as the relief quartet (light, light, dark, dark) = shade 1.06 / 0.94 of the ground (`clearlooks_draw_inset`, `clearlooks_draw_highlight_and_shade`), the tooltip border (shade 0.6 of its ground), the insensitive text (`darker (@bg_color)`), the unfocused title (metacity's `blend/gtk:fg[NORMAL]/gtk:bg[NORMAL]/0.45`); the focused title's literal #FFFFFF raw. The engine's other tones (its shade table, the gummy ramps, metacity's band) are not catalog roles: `engine_tones` records them, and nothing reads them since the Clearlooks painters left (2026-10-09). His captures (`tmp/squeeze/`) show every computed byte as recorded |
 
 Every family's line in the build: windows 26, windows-plus 16, kde3 25, cde 36, gnome2 1 — 104 entries (the program's
 own family, `warptempo` and the two presets of his retired picker tool, left 2026-10-07 with the program roles). Where the pinned sources

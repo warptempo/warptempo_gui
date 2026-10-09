@@ -1,6 +1,5 @@
 #include "color_picker.h"
 
-#include "clearlooks_paint.h"   // cl_scale_thumb_h_px (the thumb's grab height)
 #include "device_config.h"     // the `palette` and `scheme` keys' writer (write_device_config)
 #include "notifications.h"
 #include "playback_lifecycle.h"
@@ -389,13 +388,8 @@ char widest_hex_digit(const GuiFont& font) {
 } // namespace
 
 GuiRect combo_drop_button(const GuiRect& r) {
-    if (live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks)
-        return GuiRect{0, 0, 0, 0};
-    // the sunken field's two lines (one under cde, Motif's text field —
-    // paint_picker_combo's cde arm, 2026-10-08)
-    const int fb =
-        (live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde ? 1 : 2) *
-        relief_line_px();
+    // the sunken field's two lines
+    const int fb = 2 * relief_line_px();
     const int bw = scaled_px(kComboButtonWPx);
     return GuiRect{r.x + r.w - fb - bw, r.y + fb, bw, r.h - 2 * fb};
 }
@@ -411,20 +405,19 @@ GuiRect combo_drop_button(const GuiRect& r) {
 // with no check-mark column; the combo's text stands inside the sunken
 // field's two lines and the dialog field's 5-W pad (kModalFieldPadXPx).
 // That is THE DROP-DOWN INSET, kComboTextInsetPx = 2 + 5 = 7 W, ONE NUMBER
-// UNDER EVERY CHROME — under clearlooks too, though its gummy button's own
-// pad is 6, and under cde, though its field is one line (the planner's
-// reading of "approximately Windows' padding"). It is:
+// UNDER EVERY CHROME (the planner's reading of "approximately Windows'
+// padding"). It is:
 //   THE FACE'S TEXT INSET, from the combo's outer left edge to the name
 //     (paint_picker_combo; the layout's combo_w, whose face is symmetric
-//     about the name under win2000 and cde);
+//     about the name);
 //   EVERY DROP-DOWN LIST'S ROW INSET, ON BOTH SIDES OF ITS WIDEST NAME — a
 //     list's minimum width is inset + name + inset, the name in every row
 //     standing directly under the name on the face — for THE SCOPE LIST, THE
 //     ELEMENT LIST, THE PRESET MENU (its acts, his files and the built-ins
 //     alike; the layout's and the painter's pad) and THE SETTINGS EDITOR'S
 //     CHOICE LIST, which reads the same painters (paint_combo_list).
-// THE SEPARATORS are the one per-chrome difference among them
-// (paint_popup_separator's three kinds). The element chooser's width stays
+// THE SEPARATORS are the one place a chrome may differ among them
+// (paint_popup_separator). The element chooser's width stays
 // the column's remainder (the head's THE WIDTH). The menus' 22-W pads
 // (kPopupPadXPx, render.h) are the menu row's pull-downs' alone.
 int combo_text_inset_px() {
@@ -432,29 +425,13 @@ int combo_text_inset_px() {
 }
 
 // THE LIST IS EXACTLY THE COMBO'S OUTER BOX WIDE, FLUSH AT BOTH EDGES,
-// under every chrome (architect 2026-10-08, on his clearlooks capture: "the
-// drop-down looks longer than the button you press"): Windows' ComboLBox
-// takes the combo's own width (CB_SETDROPPEDWIDTH's default), its frame
-// flush with the combo's sunken edge, and GTK 2.20's GtkComboBox sizes its
-// popup menu to the widget's ALLOCATION width (gtk_combo_box_menu_popup),
-// which is the gummy button's whole box. Measured on that capture
-// (2026-10-08, 300 %): list and combo both x 199–1332. What reads wider
-// under clearlooks is the button's own 1-W INSET RING — the outermost line
-// of its box, inside its xthickness, in a tone near the ground (224 on the
-// left, 251 on the right over a 237 ground) — so the combo's dark border
-// shows 1 W inside the box on each side while the menu's grey frame stands
-// on the box's edge. Flush with the ring is GTK's; the ring is not
-// subtracted here.
+// under every chrome (architect 2026-10-08: "the drop-down looks longer than
+// the button you press"): Windows' ComboLBox takes the combo's own width
+// (CB_SETDROPPEDWIDTH's default), its frame flush with the combo's sunken
+// edge.
 //
-// AN UPWARD BOX CARRIES ITS OWN TOP LINE (2026-10-08, his capture _033145,
-// the preset menu standing on its button with its top line missing — and
-// the choice editor's capture _010753 the same, the gap hidden there as
-// black over the well): under clearlooks the hanging box's top line stands
-// one row above it, on its opener's foot, which the opener's own repaint
-// carries; standing on the combo's head there is no such row, the line fell
-// outside every rect the box damages and was clipped away. So the upward box
-// is one line taller and its rows start below that line
-// (popup_border_top_px(upward), render.h), under win2000 nothing changing.
+// AN UPWARD BOX CARRIES ITS OWN TOP LINE as a hanging one does
+// (popup_border_top_px(upward), render.h: the whole frame either way).
 //
 // THE SIDE AND THE SCROLL ARE THE POPUP LISTS' (render.h's popup scroll
 // block, 2026-10-08): place_popup_list picks the side and the shown count,
@@ -487,8 +464,7 @@ GuiRect combo_list_item(const ComboList& l, int i) {
 Layout layout(const AppState& app, const GuiFont& font) {
     Layout l;
     const ChromeSpec& spec = live_chrome_spec();
-    // The card's edge: Windows' two lines, GTK's one, Motif's one (the
-    // panel's one-W bevel, 2026-10-08).
+    // The card's edge: Windows' two lines (card_edge_wpx).
     const int lw      = relief_line_px();
     const int edge    = card_edge_wpx(spec) * lw;
     const int pad     = scaled_px(kCardPadPx);
@@ -498,8 +474,7 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int row_h   = scaled_px(kSliderRowPx, 1);
     const int btn_h   = scaled_px(spec.push_button_box_px);
     // THE BOTTOM BAND (card_bottom_band_wpx): the push button's height, or
-    // under cde the taller band the one card height leaves, the row
-    // centered in it.
+    // a taller band the one card height leaves, the row centered in it.
     const int band_h  = scaled_px(card_bottom_band_wpx(spec));
     const int block_h = chooser_h + gap + kChannelCount * row_h;
     const int inner_h = block_h + gap + band_h;
@@ -521,27 +496,16 @@ Layout layout(const AppState& app, const GuiFont& font) {
     // kWheelBlockWPx under every chrome, the right column kColumnGapPx past
     // it to the inner right edge; the scope combo as wide as its widest row
     // needs (face or flush list), the element chooser the column's rest.
-    const int text_gap = scaled_px(kComboTextGapPx);
     const auto combo_w = [&](double text_w) {
         const int t = ceil_px(text_w);
         const int inset = combo_text_inset_px();
-        int face = 0;
-        if (spec.vocabulary == GuiChromeVocabulary::Clearlooks) {
-            // The inset, the name, then GtkComboBox's own right side: the
-            // text gap, the wedge and the gummy button's right pad.
-            face = inset + t + text_gap +
-                   scaled_px(kComboArrowWPx, kComboArrowMinWPx) +
-                   scaled_px(spec.push_button_pad_right_px);
-        } else {
-            // THE FACE IS SYMMETRIC (architect 2026-10-08 ~22:25, on his cde
-            // glass: "the Chrome versus Waveform picker is short on the
-            // right-hand side"): the drop-down inset from the outer edge to
-            // the name, and the same air inside the field's edge after it
-            // before the drop-down button's edge (the inset less the field's
-            // lines, one under cde — combo_drop_button), then the button and
-            // the field's edge: 2 x inset + name + button.
-            face = 2 * inset + t + scaled_px(kComboButtonWPx);
-        }
+        // THE FACE IS SYMMETRIC (architect 2026-10-08 ~22:25: "the Chrome
+        // versus Waveform picker is short on the right-hand side"): the
+        // drop-down inset from the outer edge to the name, and the same air
+        // inside the field's edge after it before the drop-down button's
+        // edge (the inset less the field's lines, combo_drop_button), then
+        // the button and the field's edge: 2 x inset + name + button.
+        const int face = 2 * inset + t + scaled_px(kComboButtonWPx);
         // THE LIST'S MINIMUM (combo_text_inset_px's rule): the inset on
         // both sides of the name.
         const int list = 2 * inset + t;
@@ -1377,7 +1341,7 @@ void GuiColorPicker::install_live_words(
     else                                 viewport.refresh_flag_cache();
     // A CHANGED CHROME PICK — THE SCHEME'S TWELVE KEYS (kGuiChromeLines) —
     // DAMAGES THE WHOLE SURFACE (2026-10-09): the window's sizing frame — the
-    // restored laptop's, cde's dtwm band on both devices — paints in the
+    // restored laptop's — paints in the
     // chrome's roles outside the client area, which invalidate_all never
     // reaches, so a scheme load, a chrome element's pick, its Paste or its
     // OLD tap would leave the band in the previous colors (platform.h's two

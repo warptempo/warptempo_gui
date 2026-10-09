@@ -8,13 +8,14 @@
 #include <string_view>
 
 // COOL EDIT DERIVES ITS PANEL'S TONES FROM ONE COLOR (architect 2026-10-09,
-// the program is Cool Edit; the Clearlooks precedent: one source color, the
-// tones its arithmetic). The program's panel — the toolbar band, the dock
+// the program is Cool Edit: one source color, the tones its arithmetic, as
+// the chrome's 3D set derives from its ground, chrome_derive.h). The
+// program's panel — the toolbar band, the dock
 // bar, row 8 and, in later parts, the canvas column's frames — takes ONE
 // palette role, `face` (Cool Edit's "Dockable Window 3D Color", its scheme
 // key `Face`; palette_file.h's role table, default 626C7B under every
 // chrome), and every other tone the panel puts down is derived from it HERE,
-// the one owner, as clearlooks_derive.h is Clearlooks'.
+// the one owner.
 //
 // THE RULE IS THE ONE THE MEASURER PROVED (tmp/research/cool_edit/
 // METRICS.md §2.1, five presets captured at the same pixel positions —
@@ -41,8 +42,8 @@
 //   tab_light      B2B8C1  −1 −1  0      tab_line    BCC2CA   0 −1 −1
 //   label          D6DADE   0 −1  0      cue_shadow  31363D  −1 −1  0
 //
-// ONE ENUMERATOR PER TONE A PAINTER PUTS DOWN, BY NEED (the cl_ block's
-// rule): every measured tone stands in the table below as the record, and
+// ONE ENUMERATOR PER TONE A PAINTER PUTS DOWN, BY NEED (2026-10-07's rule
+// for a generated block of tones): every measured tone stands in the table below as the record, and
 // those the painters read carry a GuiPalette member (the COOL EDIT BLOCK,
 // render.h's palette struct), filled at every install of the program's words
 // (fill_program_palette, render.cpp) — a pick of Face moves them all live.

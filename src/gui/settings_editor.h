@@ -94,8 +94,8 @@ struct GuiInputHandler;
 // grammar, the config write, the next-launch card and the unchanged value's
 // quiet no-op are untouched. THE ROADS:
 //   * A PRESS ON THE COMBO DROPS ITS LIST UPWARD over the well (the row is
-//     the window's foot; Windows' combo and GTK's open above when no room
-//     lies below) — the picker list's painter and geometry
+//     the window's foot; Windows' combo opens above when no room lies
+//     below) — the picker list's painter and geometry
 //     (paint_combo_list, combo_list), as wide as the combo, the domain in
 //     its source's order, the shown row lit at the open and the hover then
 //     following the pointer (the picker's chooser's rule); the combo takes

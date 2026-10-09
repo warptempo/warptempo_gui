@@ -37,10 +37,11 @@
 // docs/engineering/win2000_deviations.md), and prose may say win2000 for the
 // vocabulary; only a KEY is spelled whole.
 //
-// THREE VOCABULARIES, ONE LIVE, CHOSEN AT LAUNCH (the `chrome` device key,
-// architect 2026-10-07, the planner's design under his free rein:
-// "authenticity wherever possible; the most Clearlooks assets; Windows
-// 2000's metrics the tie-break"):
+// ONE VOCABULARY TODAY, THE TABLE BUILT FOR SEVERAL, ONE LIVE, CHOSEN AT
+// LAUNCH (the `chrome` device key, architect 2026-10-07; THE WINDOWS LINE
+// ALONE, architect 2026-10-09 ~21:20 — "I'm definitely adding XP",
+// "probably stop at XP, maybe 7": WINDOWS XP is the next vocabulary, a
+// second instance on this road):
 //   WIN2000 (the key `windows-2000`) — Windows 2000's "Windows Standard"
 //     chrome as ReactOS 0.4.16 draws it (architect 2026-10-06: "pivot to Win2K as the official
 //     supported version and focus on that"; its classic chrome is that
@@ -50,93 +51,50 @@
 //     REACTOS DEPARTS FROM WINDOWS 2000 THE PRODUCT FOLLOWS REACTOS, on
 //     purpose and under the Windows 2000 name
 //     (docs/engineering/win2000_deviations.md lists the departures).
-//   CLEARLOOKS — GNOME 2.30's Clearlooks as Debian 6 squeeze drew it
-//     (gtk-engines 2.20.2's GUMMY style under gnome-themes 2.30.2's gtkrc
-//     and metacity theme), his squeeze captures the law (tmp/squeeze/,
-//     INDEX.md), WORN AT WINDOWS' PROPORTIONS (architect 2026-10-07 ~02:20:
-//     "Windows is the base: a compact, nicely proportioned layout"; the
-//     instance's head). THE TOP STRIP IS CLEARLOOKS' OWN DRAWING since the
-//     painters round's first part (2026-10-07: the metacity caption, the
-//     menu bar — clearlooks_paint.h), AND THE DIALOGS, THE
-//     DROPDOWN AND THE LISTS since its second part (the push button, the
-//     entry, GtkMenu, the compact list; the tooltip and the cards were
-//     Clearlooks' already: the same one-line card face), AND THE REST OF THE
-//     CHROME since its last part (the scrub as GtkScale, the well's
-//     scrolled-window line, the restored laptop's metacity frame). The
-//     waveform, the canvas column's lanes and the cues are the program's
-//     own (2026-10-09; GTK's scroll bar as the trim lane and its ruler
-//     ticks stood until then), the flag editor with them.
-//   CDE (the key `cde`; architect 2026-10-08 ~12:50, "let's dive right into
-//     the CDE build-out", his rulings of ~14:10 on the three bevel sheets
-//     and of ~15:00) — SOLARIS 9's CDE 1.5, dtwm and Motif as the
-//     guidebookgallery captures show them (tmp/research/cde_solaris/
-//     report.md, its dl/shots/ the law: one capture px = one Solaris px),
-//     under THE SETTLED RULE FOR EVERY LATER VOCABULARY: period authentic
-//     except for the proportional fit to Windows' layout — the base's cell
-//     and seat, every Motif height re-derived at the 13-row cell by Motif's
-//     own arithmetic, the differences the well's (its own lanes' leftover;
-//     the ruler lane absorbed them 2026-10-08 to 2026-10-09), line
-//     weights as the sources give them, what cannot be made to fit
-//     scratched. BEVELS ONE W (ruling 1: CDE's authentic weight — only
-//     dtcalc used Motif's canonical 2), corners mitred like every two-tone
-//     ring; THE MENU BAR 27 W (ruling 2); NO CLOSE BUTTON, close in the
-//     window menu (ruling 3, dtwm's three buttons); GO SANS for Lucida
-//     (ruling 4, kGuiFaceSetCde). THE FULL DTWM FRAME ON EVERY WINDOW, the
-//     tablet's and the maximized laptop's too (architect 2026-10-08 ~17:45,
-//     reversing the ~15:00 "hidden" on his glass pass of phase 1:
-//     window_frame_maximized below), CDE'S OWN 13-W SCROLL BAR
-//     (scroll_bar_px) and
-//     MOTIF'S INSENSITIVE STIPPLE for every disabled word (render.h's
-//     stipple pair; his rulings of ~17:30–18:00); the
-//     focus ring NOT DRAWN (~15:00: "anachronism ok to fit the screen and
-//     the Win95 metrics"). The painters are cde_paint.h's (the Motif bevels
-//     on Windows' one-line families, the caption's four boxes, the scroll
-//     bar, the scale, the frame, the stipple), the colors the Solaris
-//     scheme (theme_file.h's kGuiThemeCde, derived from Solyaris.dp's four
-//     sets by Motif's own rule, cde_derive.h); the instance's head below
-//     records every length against its capture.
+// THE SETTLED RULE FOR EVERY LATER VOCABULARY (architect 2026-10-07; XP's
+// law): PERIOD AUTHENTIC EXCEPT FOR THE PROPORTIONAL FIT TO WINDOWS 2000'S
+// LAYOUT — its chrome from the toolkit's own sources and the period's
+// captures (a provenance-clean capture of the real OS beats ReactOS wherever
+// they differ, 2026-10-09), every height its source derives from the text
+// cell RE-DERIVED AT THE BASE'S 13-ROW CELL by the source's own arithmetic,
+// the base's 24-W icon seat, the height differences the well's (its own
+// lanes' leftover, main.cpp's lane table), line weights as the sources give
+// them, what cannot be made to fit scratched, not forced.
 // A LATER VOCABULARY'S ELEMENT MAY BE SMALLER THAN THE BASE'S, NEVER LARGER
 // WITHOUT HIS RULING (architect 2026-10-08 ~17:45, beside the proportional
-// fit: "ok to make larger elements smaller, as the Clearlooks icon casings
-// were; making them larger than Windows' metric when the historical frame
-// wants the space is done only after consideration"): where a source draws
-// an element smaller than Windows' metric the vocabulary takes the source's
-// own (cde's 13-W popup scroll bar for the base's 16, scroll_bar_px), and where a
-// source draws it larger the base's metric stands until he rules otherwise.
-// WINDOWS-2000 IS THE DEFAULT AND THE METRIC BASE; CLEARLOOKS IS THE SECOND
-// VOCABULARY AND CDE THE THIRD (architect 2026-10-07 ~22:45, reversing the ~16:00 ruling that
-// had made clearlooks the default: "we could revert the default theme to
-// Windows 2000; I just need to work out a good color palette", the color
-// picker's purpose). The table (kGuiChromeSpecs) keeps windows-2000 FIRST:
-// it is the metric base every later vocabulary is fitted to, and the
-// table's order is the compiled themes' and the color picker's chromes' own
-// schemes' (palette_file.cpp's assert).
+// fit: "ok to make larger elements smaller …; making them larger than
+// Windows' metric when the historical frame wants the space is done only
+// after consideration"): where a source draws an element smaller than
+// Windows' metric the vocabulary takes the source's own (scroll_bar_px, the
+// popup scroll bar, is the field it was first ruled on), and where a source
+// draws it larger the base's metric stands until he rules otherwise.
+// WINDOWS-2000 IS THE DEFAULT AND THE METRIC BASE (architect 2026-10-07
+// ~22:45: "we could revert the default theme to Windows 2000; I just need
+// to work out a good color palette", the color picker's purpose). The table
+// (kGuiChromeSpecs) keeps windows-2000 FIRST: it is the metric base every
+// later vocabulary is fitted to, and the table's order is the compiled
+// themes' and the color picker's chromes' own schemes' (palette_file.cpp's
+// assert).
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colors remain in the theme
 // catalog's record (`windows-95-standard`, tools/theme_catalog). The table is
 // kGuiChromeSpecs below, the live instance
 // live_chrome_spec(), set once by set_live_chrome_spec before the first
-// paint. WHERE THE VOCABULARIES DRAW DIFFERENTLY THE PAINTER FORKS ON THE
-// SPEC'S `vocabulary`, the win2000 arm the code that stood before the fork. What no vocabulary is expected to vary is a plain constant at its
+// paint. WHERE A LATER VOCABULARY DRAWS DIFFERENTLY THE PAINTER FORKS ON THE
+// SPEC'S `vocabulary`, the win2000 arm the code that stands today. What no
+// vocabulary is expected to vary is a plain constant at its
 // owner, not a field here: the caption icon's 16-px size (kCaptionIconPx),
 // the card frame's four sides (paint_popup_chrome), the keyboard's
 // Backspace word (onscreen_keyboard.h's cap_word) — each until a painter
 // branch of a later round says otherwise.
 
 // WHICH PERIOD DESKTOP DRAWS THE CHROME — the painters' one switch where
-// the vocabularies draw an element differently (the head): the caption's band,
-// title and buttons, the menu bar and its open title, the disabled words'
-// emboss, the dialogs' push buttons and fields, the dropdown, the lists, the
-// scrub, the well's frame and the restored laptop's frame. A PAINTER THAT
-// FORKS ON `== Clearlooks` ALONE draws
-// its Windows arm under cde too, deliberately, where Windows' drawing in the
-// Solaris scheme's roles IS Motif's (the etched lines, the emboss, the
-// inverted list selection): the cde arm is
-// added only where Motif draws otherwise (2026-10-08).
+// a later vocabulary draws an element differently (the head); one value
+// today, Windows XP's to join it. A later vocabulary's arm is added only
+// where its desktop draws otherwise than Windows 2000 in its own scheme's
+// roles (2026-10-08).
 enum class GuiChromeVocabulary {
     Win2000,
-    Clearlooks,
-    Cde,
 };
 
 struct ChromeSpec {
@@ -180,7 +138,7 @@ struct ChromeSpec {
     int                caption_button_gap_px;
     int                caption_close_gap_px;
     // THE TITLE'S ROOM ENDS this far short of Minimise's box (paint_caption_
-    // row's cut and, under clearlooks, its centring).
+    // row's cut).
     int                caption_title_trail_px;
     // THE MENU ROW, lane 1, in Windows px (render.h's menu-row block and
     // paint_menu_row): the face row above the content, the content (the
@@ -193,14 +151,12 @@ struct ChromeSpec {
     double             menu_label_pad_left_px;
     double             menu_label_pad_right_px;
     double             menu_band_lead_px;
-    // (THE RULER LANE'S FIELDS — its two authored seat terms and cde's ruler
-    // behind the flags with its leftover lane — left the spec 2026-10-09:
-    // the ruler is the program's, Cool Edit's 17 W under every chrome,
-    // program_spec.h.)
+    // (THE RULER LANE'S FIELDS left the spec 2026-10-09: the ruler is the
+    // program's, Cool Edit's under every chrome, program_spec.h.)
     // THE SCROLL BAR'S THICKNESS in Windows px — the popup lists' vertical
     // bar's width (render.h's popup scroll block): Windows' SM_CXVSCROLL 16
-    // under win2000, the base's 16 worn for GTK's 15 under clearlooks, CDE's
-    // own 13 (the smaller-element rule at the head). (It was the trim lane's
+    // under win2000; a later vocabulary's own where its source's is smaller
+    // (the smaller-element rule at the head). (It was the trim lane's
     // height and its caps' square too, 2026-10-08 to 2026-10-09; the trim
     // lane is the program's view bar since.)
     int                scroll_bar_px;
@@ -219,9 +175,7 @@ struct ChromeSpec {
     // thumb's grab band and the mapping insets the track by half of at each
     // end (render.h's scrub block, scrub_handle_box_px). WIN2000 14 (the
     // laptop pixel's 20 re-authored, architect 2026-10-02), the 11-px
-    // trackbar thumb widened to it; CLEARLOOKS GTK's grab is the slider
-    // itself, GtkScale::slider-length 23 (clearlooks_paint.h's
-    // kClScaleSliderLengthPx).
+    // trackbar thumb widened to it.
     double             scrub_handle_box_px;
     // THE DROPDOWN, in Windows px (render.h's dropdown block, where the
     // frame and the separator's rule stand; dropdown_h_px sums them): an
@@ -233,19 +187,17 @@ struct ChromeSpec {
     // VOCABULARY, read off the live lane table at the trim lane's top —
     // notification_stack_bound, notifications.cpp; architect 2026-10-08.)
     // THE CORNERS' RADIUS in Windows px, scaled like any length and drawn
-    // antialiased (clearlooks_paint.cpp: the gummy button, the open menu
-    // title): 0 is a square corner, every box of win2000's.
+    // antialiased: 0 is a square corner, every box of win2000's — no painter
+    // reads another value until a vocabulary with rounded boxes draws them.
     int                corner_radius_px;
     // THE WINDOW'S FRAME (render.h's sizing-frame block, window_frame_px):
     // the relief lines of its composite — Windows' two-line raised edge
-    // under win2000 and clearlooks, dtwm's two-line outer shadow and
-    // one-line inner one under cde — round the 2-W face; and whether it
-    // stands while the window is maximized too: Windows hides its sizing
-    // frame then, dtwm keeps its frame on every window (architect 2026-10-08
-    // ~17:45: "the dtwm frame as in the original, on the tablet too"), so
-    // under cde both platforms keep the band outside the app's geometry on
-    // the maximized window and the tablet's (platform_wayland.h's frame_px_,
-    // platform_android.h's).
+    // under win2000 — round the 2-W face; and whether it stands while the
+    // window is maximized too: Windows hides its sizing frame then, so the
+    // field is false; a vocabulary whose window manager keeps its frame on
+    // every window would set it, and both platforms then keep the band
+    // outside the app's geometry on the maximized window and the tablet's
+    // (platform_wayland.h's frame_px_, platform_android.h's).
     int                window_frame_lines;
     bool               window_frame_maximized;
     // THE ICON SET the vocabulary wears BY DEFAULT: a bundled folder under
@@ -307,245 +259,15 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .icon_set                     = "tango",
 };
 
-// CLEARLOOKS (architect 2026-10-07; report CL1 §3, his squeeze captures the
-// law for every drawing, tmp/squeeze/ — GTK px are Windows px, the 96-dpi
-// pixel). THE VOCABULARY WEARS WINDOWS' PROPORTIONS UNDER CLEARLOOKS' OWN
-// DRAWING (architect 2026-10-07 ~02:20: "Windows is the base: a compact,
-// nicely proportioned layout; the fonts and the icons become
-// disproportionate in Clearlooks"): THE BASE'S CELL — the 13-row cell, cap 8
-// (kGuiFaceSetGnome2, DejaVu Sans at GNOME's "Sans 8") — and THE BASE'S
-// SEAT — the 24-W large toolbar glyph — and every height GTK derives from
-// the cell RE-DERIVED AT 13 by GTK's and metacity's own arithmetic (his
-// squeeze captures, at Sans 10's 17-row cell, check that arithmetic: 24 /
-// 25 / 40 / 29 there, 20 / 21 / 36 / 25 here):
-//   THE CAPTION metacity's `normal_maximized` frame (metacity-theme-1.xml
-//   lines 13-31; theme.c meta_frame_layout_get_borders): the title cell 13
-//   + title_border.top 4 + .bottom 3 = 20; the buttons the lane less
-//   button_border.top 2 and .bottom 2 = 16 tall, aspect_ratio 1.0 = 16
-//   wide, at y 2, each with button_border.left / .right 1 (2 px between
-//   neighbours, an 18-px pitch) and Close's right edge 2 in
-//   (right_titlebar_edge 1 + its border 1); Close's and Minimise's glyphs
-//   at the capture's proportion of the box, 16 x 8 / 20 held even = 6
-//   (hpadding 5), not Bmin 7 `max` (16 − Bpad 6 x 2) = 7 — Maximise and
-//   Restore keep the 7 (hpadding 4), whose ops lose their window below it
-//   (architect 2026-10-07, Minimise at 6 ~05:30; caption_icon_size,
-//   clearlooks_paint.cpp); the menu
-//   button at left_titlebar_edge 1 + border 1 = (2, 2), its 16-px mini
-//   icon centred in its 16 x 16 — FILLING IT, NO MARGIN (the box the icon's
-//   own size); the title's room from 21 (the menu button's 2 + 16 + its
-//   border 1 + title_border.left 2) to 3 short of Minimise (its border 1 +
-//   title_border.right 2), the title centred in it (paint_caption_row).
-//   THE MENU ROW GtkMenuBar (gtkmenubar.c size_request): ythickness 1 + the
-//   item (gtkmenuitem.c: the cell 13 + 2 x the menu_item style's ythickness
-//   3 = 19) + ythickness 1 = 21, the label 5 px in and 5 after (xthickness 2
-//   + GtkMenuItem::horizontal-padding 3), the first item at the bar's
-//   xthickness 1.
-//   (GtkToolbar's band — the 32-W tool button at the cell, 36 with its
-//   air — no longer stands: the program's band took the lane, 2026-10-09;
-//   its two lengths stay recorded where the generated toolbar tones are
-//   computed, clearlooks_derive.h's kClToolCasePx and kClToolBandPx.)
-//   THE PUSH BUTTON the cell 13 + 2 x (xthickness 3 + focus-line-width 1 +
-//   focus-padding 1 + inner-border 1) = 25 (his file chooser's Open, 29 at
-//   the 17 cell), the label 6 px in each way; THE TOOLTIP the tooltips
-//   style's 4-px pad; THE DROPDOWN GtkMenu under the "menu" style
-//   (x/ythickness 0: no margin, the items against the frame) with the
-//   menu_item style's items, the cell 13 + 2 x ythickness 3 = 19 (23 at
-//   the 17 cell on his capture 23-22-06).
-//   THE ENTRY (every dialog field — render.h's
-//   kModalFieldHeightPx, not a spec field, the three chromes agreeing) GTK's at
-//   the cell, 13 + 2 x (3 + 2) = 23 (his 27 at the 17 cell, the Customize
-//   dialog's entry), its text xthickness 3 + inner-border 2 = 5 in; THE
-//   SCRUB'S GRAB GtkScale's slider, slider-length 23 (the default style's).
-//   THE DRAWING: radius 3 on the gummy boxes (the gtkrc's `radius = 3.0`),
-//   the icons "mist" (gnome-icon-theme 2.30's drawings under Mist's own
-//   folders, assets/icons/mist/).
-inline constexpr ChromeSpec kChromeSpecClearlooks = {
-    .key                          = "clearlooks",
-    .display_name                 = "Clearlooks",
-    .vocabulary                   = GuiChromeVocabulary::Clearlooks,
-    .own_scheme                   = "clearlooks",
-    .face_set                     = &kGuiFaceSetGnome2,
-    .caption_height_px            = 20,
-    .caption_icon_x_px            = 2,
-    .caption_icon_y_px            = 2,
-    .caption_title_x_px           = 21,
-    .caption_button_w_px          = 16,
-    .caption_button_h_px          = 16,
-    .caption_button_y_px          = 2,
-    .caption_button_inset_px      = 2,
-    .caption_button_gap_px        = 2,
-    .caption_close_gap_px         = 2,
-    .caption_title_trail_px       = 3,
-    .menu_row_head_px             = 1,
-    .menu_row_content_px          = 19,
-    .menu_row_foot_px             = 1,
-    .menu_label_pad_left_px       = 5.0,
-    .menu_label_pad_right_px      = 5.0,
-    .menu_band_lead_px            = 1.0,
-    .scroll_bar_px                = 16,
-    .push_button_box_px           = 25.0,
-    .push_button_pad_left_px      = 6.0,
-    .push_button_pad_right_px     = 6.0,
-    .tooltip_pad_px               = 4,
-    .scrub_handle_box_px          = 23.0,
-    .popup_item_height_px         = 19,
-    .popup_margin_px              = 0,
-    .corner_radius_px             = 3,
-    .window_frame_lines           = 2,
-    .window_frame_maximized       = false,
-    .icon_set                     = "mist",
-};
-
-// CDE (architect 2026-10-08; tmp/research/cde_solaris/report.md §3 and the
-// coder's own measurements on its dl/shots/, named per line — "N" the
-// notepad capture applications_office_notepad_cde15solaris9.png, "O" the
-// Open dialog interface_dialogs_openfile_cde15solaris9.png, "F" the file
-// manager system_managers_filemanager_cde15solaris9.png, "C" the Calendar
-// capture tmp/cde15solaris9-1-1.png (2026-10-09, 1:1); capture px are
-// Solaris px at 75 dpi, so every HEIGHT is re-derived at the base's 13-row
-// cell by Motif's arithmetic and every MARGIN is kept as the px constant
-// Motif's resources gave it — the settled rule).
-//   THE CAPTION dtwm's title bar, 19 px on N (rows 5-23: 1 ts + 17 + 1 bs,
-//   the 17 the 15-row cell + 2) = 17 W at the base cell (1 + 13 + 2 + 1),
-//   FOUR RAISED ONE-W BOXES side by side, the lane's whole height, each its
-//   own ts / bs ring in colour set 1's tones (N rows 5 / 23 and the columns
-//   at x 5, 23, 24, 557, 558, 576, 577, 595: the window-menu button at the
-//   left, the title box, Minimize, Maximize at the right, all 19 x 19 =
-//   17 x 17 here) — caption_button_w / h 17 at y 0, inset 0, no gaps, no
-//   Close box (ruling 3: the Close slot IS the window-menu button at the
-//   lane's left, caption_button_rects' cde arm; its menu carries the
-//   verbs); NO ICON (dtwm draws none; the seat fields unread); the title
-//   CENTERED in the title box, in the medium face (kGuiFaceSetCde), from
-//   its ts column (caption_title_x_px 18 = the menu button's 17 + the box's
-//   line) to one line before Minimize's box (caption_title_trail_px 1).
-//   THE GLYPHS dtwm's raised bars, read off N: the menu button's bar 11 x
-//   4 at (4, 7) of its 19 (x 9-19, y 12-15), Minimize's square 4 x 4 at
-//   (7, 7) (x 565-568), Maximize's square 11 x 11 at (4, 4) (x 581-591,
-//   y 9-19), each a raised one-px ring round the face — fitted to the
-//   17-box as 10 x 4, 4 x 4 and 10 x 10, centred by integer division
-//   (cde_paint.h's caption block); pressed, a box sinks (dtwm's armed
-//   button), its glyph unmoved.
-//   THE MENU ROW Motif's menu bar, 29 px on N (row 24 ts, 25-51 face, 52
-//   bs; the cap's top on face row 9 = margins 6 + (ascent 13 − cap 10)):
-//   head 1 (the ts row) + content 25 (the base cell 13 + 6 above and below:
-//   the RowColumn's marginHeight 3, the cascade's one-px shadow and its
-//   marginHeight 2) + foot 1 (the bs row) = 27 (ruling 2). THE BAR IS A
-//   RAISED FORM THE LANE'S WHOLE WIDTH, ONE RING (paint_menu_row's cde arm;
-//   re-read on C 2026-10-09): the ts along its top (C row 24) and down its
-//   left edge (C x 5), the bs down its right edge (C x 654) and along its
-//   bottom — Motif's 2 px there (C rows 52-53), the product's 1 W (architect
-//   2026-10-09 ~03:15: "1") — mitred; the walk's lead below counts the left
-//   ts column. THE PADS (re-read
-//   2026-10-08 ~18:00, his ruling 5: "make it a little more accurate")
-//   off N's text cells (the mnemonic underlines, row 46, are the cells'
-//   extents): File's cell starts at x 16, 11 px past the bar's ts column
-//   (x 5), and between File's cell end (x 41) and Edit's cell start (x 55)
-//   lie 14 px — so the lead L (the bar's shadow and the RowColumn's
-//   marginWidth) + the cascade's pad p = 11 and 2 p + the spacing s = 14.
-//   The split is Motif's own arithmetic, the one that also gives the 6
-//   rows above: the RowColumn's marginWidth 3 (L = 1 + 3 = 4,
-//   menu_band_lead_px) and a menu bar's spacing 0 (the
-//   armed boxes touch), the cascade's pad 7 = its one-px shadow + its
-//   marginWidth 6 (menu_label_pad_left_px / _right_px) — every margin kept
-//   as the px constant Motif's resources gave it (the settled rule) — and
-//   THE NEDIT CAPTURE OF 2026-10-08 CONFIRMS IT (tmp/Screenshot_2026-10-08_
-//   10-14-22.png, a real Motif application under NsCDE's Solaris palette,
-//   its "File" title armed, re-measured): the bar's ts column x 510, the
-//   armed box from x 514 (L 4), "File"'s ink 521-545 inside the box's
-//   514-552 (7 a side), "Edit"'s ink from 560 (the next box flush at 553,
-//   spacing 0). THE OPEN TITLE IS THAT ARMED BOX ETCHED IN: Motif's
-//   XmNenableEtchedInMenu, which CDE's sys.resources sets True, draws the
-//   armed cascade SUNKEN — a one-W ring, the bottom shadow on its top row
-//   and left column, the top shadow on its bottom row and right column —
-//   round the SELECT COLOR (XmNselectColor, cde_select; the capture's
-//   3E7C8E is its body 4992A7 at 85 %), the label unpushed in the label
-//   color (paint_cde_armed); THE BOX SPANS THE BAR'S BODY ROWS EXACTLY,
-//   the content rows between the head's top shadow and the foot's bottom
-//   shadow (the capture's 274-296 under the bar's 273 / 297, no body row
-//   above or below it — the capture's relation kept over the RowColumn
-//   margin the height's arithmetic counts, the bar's 27 unchanged), and
-//   the anchor's whole width. Its pull-down hangs with its
-//   top shadow ON the bar's bottom shadow, its left edge flush with the
-//   box's (dropdown_hang_y), the armed item the same etched-in face.
-//   (dtfile's flat toolbar under Motif's raised form stood below the
-//   menu bar until the program's band took the lane, 2026-10-09; git
-//   history.)
-//   THE FRAME dtwm's 5 on all four sides (N rows 0-4 / 396-400: 2 light +
-//   2 face + 1 dark on the top and left, mirrored on the bottom and right;
-//   window_frame_lines 3 round the 2-W face) on every window
-//   (window_frame_maximized), outside the app's geometry, with dtwm's
-//   CORNER PIECES (cde_paint.h's frame block). THE SCROLL BAR 13
-//   (scroll_bar_px; N rows 383-395 and report §3: the 1-px trough ring, the
-//   11-px slider and arrows inside it) — the popup bar. (The ruler lane
-//   behind the flags, the lane table's leftover, stood 2026-10-08 to
-//   2026-10-09; the ruler is the program's since, and cde's well is its own
-//   lanes' leftover like every chrome's — main.cpp's lane table.)
-//   THE PUSH BUTTON Motif's XmPushButton on O: 25 tall (Cancel rows
-//   340-364 = 1 + 23 + 1 round the 15-row cell + 8) = 23 at the base cell,
-//   the dialog field's own height; its pad 6 (File Encoding's box x 136-237
-//   against its ink 143-231: 7 to the ink less the F's 1-2 px bearing);
-//   the default button's extra ring (O's OK, two px outside) NOT DRAWN.
-//   THE TOOLTIP a Motif panel at the card's 2-W pad (CDE has no tooltip:
-//   the cards and the tip take a raised panel in the body, black text).
-//   THE SCRUB'S GRAB the base's 14, the slider drawn 11 wide (the scale,
-//   cde_paint.h). THE DROPDOWN Motif's pulldown: items 19 (the cell 13 +
-//   2 x (marginHeight 2 + the 1-W shadow), no capture shows one open —
-//   derived), no margin inside the one-W raised frame (the RowColumn's 0).
-//   NO ROUNDED CORNER; every disabled word MOTIF'S 50 % STIPPLE at one
-//   device px a cell (architect 2026-10-08 ~17:45: "a combination of
-//   period-authentic (no color blend) and modern (no pixelation)";
-//   render.h's stipple pair — a dead button's glyph is the program's,
-//   cool_edit_paint.h); THE ICONS
-//   Tango's ("for internal testing", the architect: the GNOME set may
-//   follow).
-inline constexpr ChromeSpec kChromeSpecCde = {
-    .key                          = "cde",
-    .display_name                 = "CDE",
-    .vocabulary                   = GuiChromeVocabulary::Cde,
-    .own_scheme                   = "solaris",
-    .face_set                     = &kGuiFaceSetCde,
-    .caption_height_px            = 17,
-    .caption_icon_x_px            = 0,
-    .caption_icon_y_px            = 0,
-    .caption_title_x_px           = 18,
-    .caption_button_w_px          = 17,
-    .caption_button_h_px          = 17,
-    .caption_button_y_px          = 0,
-    .caption_button_inset_px      = 0,
-    .caption_button_gap_px        = 0,
-    .caption_close_gap_px         = 0,
-    .caption_title_trail_px       = 1,
-    .menu_row_head_px             = 1,
-    .menu_row_content_px          = 25,
-    .menu_row_foot_px             = 1,
-    .menu_label_pad_left_px       = 7.0,
-    .menu_label_pad_right_px      = 7.0,
-    .menu_band_lead_px            = 4.0,
-    .scroll_bar_px                = 13,
-    .push_button_box_px           = 23.0,
-    .push_button_pad_left_px      = 6.0,
-    .push_button_pad_right_px     = 6.0,
-    .tooltip_pad_px               = 2,
-    .scrub_handle_box_px          = 14.0,
-    .popup_item_height_px         = 19,
-    .popup_margin_px              = 0,
-    .corner_radius_px             = 0,
-    .window_frame_lines           = 3,
-    .window_frame_maximized       = true,
-    .icon_set                     = "tango",
-};
-
 // THE TABLE — every vocabulary, the `chrome` key's whole vocabulary in its
 // order (is_chrome_key), the face install's probe walking it
 // (gui_font_install_bundled: every set's faces must carry their band glyphs).
 // WINDOWS-2000 FIRST, THE METRIC BASE AND THE DEFAULT (the head;
-// kDefaultChromeKey below), then the vocabularies in their arrival's order.
-// The Settings menu's Chrome row lists the keys in
-// this order (its choice editor, kChromeChoiceSource, app_state.h).
+// kDefaultChromeKey below), then a later vocabulary in its arrival's order
+// (Windows XP next, 2026-10-09). The Settings menu's Chrome row lists the
+// keys in this order (its choice editor, kChromeChoiceSource, app_state.h).
 inline constexpr const ChromeSpec* kGuiChromeSpecs[] = {
     &kChromeSpecWin2000,
-    &kChromeSpecClearlooks,
-    &kChromeSpecCde,
 };
 
 // A PREDICATE OVER EVERY INSTANCE — a static_assert that must hold for every
@@ -571,13 +293,14 @@ constexpr bool is_chrome_key(std::string_view v) {
     return chrome_spec_for_key(v) != nullptr;
 }
 inline constexpr const char* kChromeGrammarReason =
-    "must be windows-2000, clearlooks or cde";
+    "must be windows-2000";
 // THE DEFAULT, a config with no `chrome` line (DeviceConfig::chrome's
 // initializer spells it), and what the first run stamps: `windows-2000`
-// (architect 2026-10-07 ~22:45, the head; clearlooks was the default from
-// ~16:00 that day until then). The win2000 vocabulary's key is
+// (architect 2026-10-07 ~22:45, the head). The win2000 vocabulary's key is
 // `windows-2000` (architect 2026-10-07: the term spelled whole); the
-// earlier `win2000` is an unknown word, the launch's hard fail.
+// earlier `win2000` is an unknown word, the launch's hard fail, as is every
+// word no vocabulary owns (a device config naming one is fixed by hand,
+// docs/INSTALL.md).
 inline constexpr const char* kDefaultChromeKey = "windows-2000";
 static_assert(is_chrome_key(kDefaultChromeKey));
 

@@ -60,11 +60,9 @@ GuiRect notification_stack_bound(const AppState& a) {
     // INFO face's, paint_popup_chrome) ends exactly where the scroll bar
     // begins and the card's ground starts on the bar's own first row. It
     // is anchored on the trim lane and not on the icon row, so whatever
-    // the icon row puts below its cases — win2000's 4-W foot of ground,
-    // clearlooks' toolbar shadow line (its foot 0, the trim lane flush
-    // under it, so the frame lies on that line), gap 1 should it ever open
-    // — the card meets the bar the same way under every chrome and at every
-    // scale. No chrome spec field: no vocabulary needs another anchor (the
+    // stands between the band's cases and the trim lane — the canvas
+    // column's air since 2026-10-09 — the card meets the bar the same way
+    // under every chrome and at every scale. No chrome spec field: no vocabulary needs another anchor (the
     // note among ChromeSpec's fields). The frame never reaches
     // the etched pair above the band (architect's glass 2026-10-06: a
     // card's frame laid over the pair's Hilight line reads as a fault).

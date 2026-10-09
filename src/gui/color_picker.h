@@ -24,8 +24,8 @@ struct Viewport;
 // the in-app picker of the program's twelve colors (kGuiPaletteRoles,
 // palette_file.h: A PALETTE) and, under every chrome, of the chrome's twelve
 // keys (architect 2026-10-08, kGuiChromeLines, palette_file.h: A SCHEME;
-// chrome_derive.h, clearlooks_derive.h, cde_derive.h): "a very slimmed down version … a full-fledged part
-// of the project … branded with the chrome … not an afterthought". This header is
+// chrome_derive.h): "a very slimmed down version … a full-fledged part of
+// the project … branded with the chrome … not an afterthought". This header is
 // the cluster's ONE OWNER of everything that is not pixels or a press body:
 // the lengths, the layout, the color math, the wheel's raster and the acts
 // (GuiColorPicker, below). The state is AppState::ColorPicker (app_state.h,
@@ -83,11 +83,8 @@ struct Viewport;
 // picking), kCardMarginPx of air from the window's side, ITS FOOT
 // kCardMarginPx above the on-screen keyboard's band and the card rising
 // from there (THE SEAT below): the GROUND with a PLAIN RAISED two-line edge
-// under win2000 (a floating palette's edge, DrawEdge EDGE_RAISED, mitred as
-// every relief), under clearlooks GTK's one shade[5] line on four sides
-// (cl_list_frame, the well's own tone) and under cde Motif's one-W raised
-// panel; 6 W of
-// inner pad; NO caption and no title (slim). Inside it, left to right and
+// (a floating palette's edge, DrawEdge EDGE_RAISED, mitred as every
+// relief); 6 W of inner pad; NO caption and no title (slim). Inside it, left to right and
 // top to bottom, ON ONE GRID (THE GRID below):
 //   THE WHEEL (left) — GNOME 2's own, GtkHSV's hue RING with the SV
 //     TRIANGLE inside it, in a square whose side is the wheel block's
@@ -118,19 +115,16 @@ struct Viewport;
 //     (render.h's popup scroll block, the rule's one owner; combo_list), its
 //     shown row scrolled into view at the open (re-derived 2026-10-09, device
 //     px; the longest lists are the two scopes' twelve each): at
-//     the tablet's 300 % twelve rows under win2000 are 12 x 51 + 2 x 3 + 6 +
-//     6 = 630 below a chooser whose foot stands at 399 + 6 + 18 + 63 = 486
-//     of the 1440 rows (THE SEAT's top row), and under clearlooks 12 x 57 +
-//     3 = 687 below 399 + 3 + 18 + 63 = 483, so the list hangs whole on the
-//     tablet as on the laptop (12 x 23 + 6 = 282 at 138 %); the scope's two
+//     the tablet's 300 % twelve rows are 12 x 51 + 2 x 3 + 6 + 6 = 630 below
+//     a chooser whose foot stands at 399 + 6 + 18 + 63 = 486 of the 1440
+//     rows (THE SEAT's top row), so the list hangs whole on the tablet as
+//     on the laptop (12 x 23 + 6 = 282 at 138 %); the scope's two
 //     rows hang whole anywhere.
 //     (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
 //     Value 0–100, Red / Green / Blue 0–255, at ONE PITCH (kSliderRowPx):
 //     the label at the column's left edge (one width for all six, measured
-//     from the widest), the slider in the chrome's own scrub painters
-//     (win2000 the channel and Windows' pointed thumb, clearlooks
-//     GtkScale's trough with its lower part filled and its thumb, cde
-//     XmScale's trough and slider), the value's digits right-aligned to the
+//     from the widest), the slider in the chrome's own scrub painters (the
+//     channel and Windows' pointed thumb), the value's digits right-aligned to the
 //     column's right edge in a fixed cell of tabular digits.
 //   THE BOTTOM ROW, under both — (h) THE HEX FIELD, a sunken field at the
 //     dialog field's size (kModalFieldHeightPx and its pad, render.h — the
@@ -141,9 +135,8 @@ struct Viewport;
 //     when it became the live element, NEW the current, a tap on OLD writing
 //     it back, at its floor; then FOUR BUTTONS — (j) THE PRESET BUTTON,
 //     the row's remainder, the chrome's
-//     combo (the chooser's own drawing: win2000's sunken field with its
-//     drop-down button, clearlooks' gummy button with the engine's wedge)
-//     labeled with THE SCOPE'S ACTIVE PRESET'S NAME (preset_display_name: a
+//     combo (the chooser's own drawing: the sunken field with its drop-down
+//     button) labeled with THE SCOPE'S ACTIVE PRESET'S NAME (preset_display_name: a
 //     built-in's in Title Case, a file's verbatim), cut with Windows' "..."
 //     when it does not fit, the caption title's rule; a press drops THE
 //     PRESET MENU (below); then the push buttons Copy, Paste and Close.
@@ -185,8 +178,7 @@ struct Viewport;
 //   card while the wheel's block stood empty under the wheel; the capture
 //   itself puts the swatch pair under the wheel.
 //
-// THE GRID (architect 2026-10-08 ~21:20, on his cde and windows-2000
-// captures: "the alignment of the drop-downs is off … the first drop-down
+// THE GRID (architect 2026-10-08 ~21:20, on his captures: "the alignment of the drop-downs is off … the first drop-down
 // to the right of the picker varies according to each theme; make it a
 // little more standardized and things fit into a grid more neatly; check
 // the spacing above and below the drop-downs, the sliders, it seems
@@ -194,14 +186,10 @@ struct Viewport;
 //   ONE COLUMN SPLIT UNDER EVERY CHROME — the wheel's block is ONE width,
 //     kWheelBlockWPx, the same under every chrome, and the right column
 //     starts kColumnGapPx past it, so the scope combo's left edge stands
-//     the same W count from the card's left edge under every chrome: 2 + 6
-//     + 92 + 8 = 108 W under win2000, 1 + 6 + 92 + 8 = 107 under clearlooks
-//     and cde — the 1-W difference is the card's edge (Windows' two lines,
-//     GTK's and Motif's one), accepted. The block lets the widest chooser
-//     row fit under the tightest chrome with 6 W to spare (THE WIDTH
-//     below). The scope combo keeps its measured width and THE ELEMENT
-//     CHOOSER SPANS TO THE COLUMN'S RIGHT EDGE, absorbing the slack the
-//     roomier chromes leave.
+//     2 + 6 + 92 + 8 = 108 W from the card's left edge (a later chrome's
+//     card edge moving it by its own difference, accepted). The scope combo
+//     keeps its measured width and THE ELEMENT CHOOSER SPANS TO THE
+//     COLUMN'S RIGHT EDGE, absorbing the slack (THE WIDTH below).
 //   THE RIGHT COLUMN'S INNER GRID — the slider labels' left edge is the
 //     combos' (the column's x); the value cells' right edge kSliderValuePadPx
 //     in from the element chooser's (the column's right edge; 2026-10-09,
@@ -231,29 +219,24 @@ struct Viewport;
 // IS ONE HEIGHT, kCardHeightWPx = 174 W UNDER EVERY CHROME: edge + pad 6 +
 // chooser 21 + gap 6 + six rows of 17 + gap 6 + the bottom band + pad 6 +
 // edge, the band the push button's height — 2 + 6 + 21 + 6 + 102 + 6 + 23 +
-// 6 + 2 = 174 (win2000) and 1 + 6 + 21 + 6 + 102 + 6 + 25 + 6 + 1 = 174
-// (clearlooks); CDE'S 23-W BUTTON WOULD MAKE ITS CARD 172, AND IT IS 174
-// ANYWAY: its bottom band is 25 W (card_bottom_band_wpx: kCardHeightWPx
-// less the rest), the field, the swatch frame and the buttons centered in
-// it, 1 W of air above them and 1 below. Every term a whole Windows px, so
+// 6 + 2 = 174 (win2000); a later chrome whose terms sum shorter keeps 174,
+// its bottom band the remainder (card_bottom_band_wpx: kCardHeightWPx less
+// the rest), the field, the swatch frame and the buttons centered in it.
+// Every term a whole Windows px, so
 // at 300 % the sum is exact. WHY 17 (the planner's call, stated to him):
 // the largest pitch at which the card still stands wholly inside the well
-// on the tablet under every chrome, so the marker lane — its cues on BOTH
-// halves, which a press through the picker selects (THE PRESS THROUGH THE
-// CARD below) — stays in view; at 300 % row 8's top (its dock bar's) is
-// 1326 (win2000 and clearlooks; the program's lanes since 2026-10-09,
-// main.cpp's lane record), the band's top 1326 − 393 = 933, the card's foot
-// 921 and its TOP ROW 921 − 522 = 399, 57 rows under the win2000 canvas's
-// top (342, under its top frame row since 2026-10-09) and 48 under
-// clearlooks' (351); under cde (the surface's rows, dtwm's frame outside the
-// app) row 8's top 1311, the card's top 384, 9 under the canvas's 375. At the laptop's 138 % (1920 x 1080 maximized) the
-// band is 180 rows, the margin 6 and the card 235 under every chrome (2 + 8
-// + 29 + 8 + 6 x 23 + 8 + 32 + 8 + 2 under win2000; 1 + 8 + 29 + 8 + 138 +
-// 8 + 34 + 8 + 1 under clearlooks and cde, 25 W rounding to 34), so its top
-// row is 1029 − 180 − 6 − 235 = 608 under win2000 and clearlooks, far below
-// the well's top. A pitch of 21, the chooser's own height, would make the
+// on the tablet, so the marker lane — its cues on BOTH halves, which a
+// press through the picker selects (THE PRESS THROUGH THE CARD below) —
+// stays in view; at 300 % row 8's top (its dock bar's) is 1326 (the
+// program's lanes since 2026-10-09, main.cpp's lane record), the band's top
+// 1326 − 393 = 933, the card's foot 921 and its TOP ROW 921 − 522 = 399, 57
+// rows under the canvas's top (342, under its top frame row since
+// 2026-10-09). At the laptop's 138 % (1920 x 1080 maximized) the band is 180
+// rows, the margin 6 and the card 235 (2 + 8 + 29 + 8 + 6 x 23 + 8 + 32 + 8
+// + 2), so its top row is 1029 − 180 − 6 − 235 = 608, far below the well's
+// top. A pitch of 21, the chooser's own height, would make the
 // right column seven equal rows and the card 198, but at 300 % its top row
-// would be 327, inside the win2000 marker lane (288–339 since its 17 W,
+// would be 327, inside the marker lane (288–339 since its 17 W,
 // 2026-10-09 ~21:00) over the cues on its half.
 //
 // THE PRESS THROUGH THE CARD (architect 2026-10-08 ~21:20: "pick flags so I
@@ -281,19 +264,16 @@ struct Viewport;
 // FACE OR LIST, whichever is wider, the two 6 W apart (kControlGapPx).
 //   THE FACE: THE DROP-DOWN INSET (kComboTextInsetPx, 7 W under every
 //     chrome, 2026-10-09; combo_text_inset_px's rule) from the combo's
-//     outer edge to the shaped name; under win2000 and cde the same air
-//     inside the field's edge after the name (the inset less the field's
-//     edge — the face symmetric about the name, architect 2026-10-08
-//     ~22:25, "short on the right-hand side"), then the drop-down button
-//     and the field's edge, 2 x 7 + name + 16 under both; under clearlooks
-//     the inset, the name, the 4-W text gap, the wedge and the gummy
-//     button's right pad (GtkComboBox's own right side, kept). The name
+//     outer edge to the shaped name; the same air inside the field's edge
+//     after the name (the inset less the field's edge — the face symmetric
+//     about the name, architect 2026-10-08 ~22:25, "short on the right-hand
+//     side"), then the drop-down button and the field's edge, 2 x 7 + name
+//     + 16. The name
 //     stands left-aligned at the inset and whatever the face has beyond it
 //     is air, as a Windows combo looks.
 //   THE LIST, flush with the combo by the list's own ruling (combo_list):
 //     the same inset on both sides of the name, 7 + name + 7, the names in
-//     its rows under the name on the face. The face is the wider term under
-//     every chrome.
+//     its rows under the name on the face. The face is the wider term.
 // The element chooser is measured over BOTH scopes' names so no scope cuts
 // a name. (The arithmetic below was made on "Selected Phase Reset Flag", the
 // widest name until the palette's ten of 2026-10-09; the widest since,
@@ -301,25 +281,15 @@ struct Viewport;
 // among them in every face, so every margin below only grew.) The names'
 // widths at the base's cap (2026-10-08, the faces'
 // advances summed and rounded up; the layout measures the shaped runs live,
-// so a kerned pair may take a W off): "Waveform" 50 W in Tahoma, 57 in
-// DejaVu Sans, 51 in Go; "Selected Phase Reset Flag" 127, 145 and 136 —
-//   win2000: the scope max(7 + 50 + 7 + 16 = 80, 7 + 50 + 7 = 64) = 80,
-//     the chooser max(7 + 127 + 7 + 16 = 157, 7 + 127 + 7 = 141) = 157; the
-//     row 80 + 6 + 157 = 243 of the inner 360, room for a block of 360 − 8
-//     − 243 = 109 W;
-//   clearlooks: the scope max(7 + 57 + 4 + 7 + 6 = 81, 7 + 57 + 7 = 71) =
-//     81, the chooser max(7 + 145 + 4 + 7 + 6 = 169, 7 + 145 + 7 = 159) =
-//     169; the row 81 + 6 + 169 = 256 of the inner 362, room for 362 − 8 −
-//     256 = 98 W;
-//   cde: the scope max(7 + 51 + 7 + 16 = 81, 7 + 51 + 7 = 65) = 81, the
-//     chooser max(7 + 136 + 7 + 16 = 166, 7 + 136 + 7 = 150) = 166; the row
-//     81 + 6 + 166 = 253 of the inner 362, room for 362 − 8 − 253 = 101 W.
+// so a kerned pair may take a W off): "Waveform" 50 W in Tahoma; "Selected
+// Phase Reset Flag" 127 — the scope max(7 + 50 + 7 + 16 = 80, 7 + 50 + 7 =
+// 64) = 80, the chooser max(7 + 127 + 7 + 16 = 157, 7 + 127 + 7 = 141) =
+// 157; the row 80 + 6 + 157 = 243 of the inner 360, room for a block of 360
+// − 8 − 243 = 109 W.
 // THE BLOCK IS 92 W under every chrome (the split as it landed, kept by
-// the planner's ruling of 2026-10-08 ~23:55), 6 W inside clearlooks' room:
-// the right column 360 − 92 − 8 = 260 W under win2000 (the scope 80, the
-// element chooser 260 − 80 − 6 = 174, 17 W of slack) and 362 − 100 = 262
-// under clearlooks (the scope 81, the chooser 262 − 81 − 6 = 175, 6 W of
-// slack) and cde (the scope 81, the chooser 175, 9 W of slack). The wheel
+// the planner's ruling of 2026-10-08 ~23:55): the right column 360 − 92 − 8
+// = 260 W (the scope 80, the element chooser 260 − 80 − 6 = 174, 17 W of
+// slack). The wheel
 // is the 92-W square (the top block, 21 + 6 + 6 x 17 = 129 W, is the
 // taller), centered in the block: its 37 W of air split 55 device rows
 // above and 56 below at 300 % (the centering's floor). The slider's track
@@ -327,23 +297,20 @@ struct Viewport;
 // button what the hex field, OLD | NEW at its floor and the three push
 // buttons leave.
 // THE BOTTOM ROW'S ARITHMETIC (architect 2026-10-07): the inner width is
-// 360 W under win2000 (376 less 2 x (edge 2 + pad 6)) and 362 under
-// clearlooks and cde (376 less 2 x (1 + 6)); the hex field is its widest
-// spelling `#DDDDDD` plus its two pads — 53 + 10 = 63 W in Tahoma, 60 + 10 =
-// 70 in DejaVu Sans (shaped; the dialog field's 5-W pad under every chrome,
-// 2026-10-08); the row's five gaps are 6 W each; OLD | NEW its floor, two
-// 20-W swatches inside the frame's two lines = 42; Copy, Paste and Close
-// kPushButtonWidthPx = 50 each; THE PRESET BUTTON THE REMAINDER, 360 − 63 −
-// 30 − 42 − 150 = 75 W under win2000 and 362 − 70 − 30 − 42 − 150 = 70 under
-// clearlooks.
+// 360 W (376 less 2 x (edge 2 + pad 6)); the hex field is its widest
+// spelling `#DDDDDD` plus its two pads — 53 + 10 = 63 W in Tahoma (shaped;
+// the dialog field's 5-W pad, 2026-10-08); the row's five gaps are 6 W
+// each; OLD | NEW its floor, two 20-W swatches inside the frame's two lines
+// = 42; Copy, Paste and Close kPushButtonWidthPx = 50 each; THE PRESET
+// BUTTON THE REMAINDER, 360 − 63 − 30 − 42 − 150 = 75 W.
 // WHY THE PRESET BUTTON IS IN THIS ROW AND NOT THE CHOOSER'S (architect
 // 2026-10-07: the chooser's row first, beside the element combo at the width
 // its longest role name needs, the preset combo the remainder — unless that
-// remainder fell under 70 W under either chrome): the element combo for
+// remainder fell under 70 W under any chrome): the element combo for
 // "Selected Phase Reset Flag" alone left the preset combo 77 W under
-// win2000 but 67 under clearlooks, so the ruled fallback stood — the bottom
-// row, the three push buttons at Windows' 50 — and the scope took the
-// chooser row's other seat (THE WIDTH above).
+// win2000 but 67 under a chrome of the day with a wider face, so the ruled
+// fallback stood — the bottom row, the three push buttons at Windows' 50 —
+// and the scope took the chooser row's other seat (THE WIDTH above).
 //
 // EVERY LENGTH IS A WINDOWS PX THROUGH scaled_px, ROUNDED AT THE ELEMENT (the
 // rounding rule): the card is the sum of its rounded parts.
@@ -359,31 +326,25 @@ inline constexpr int kControlGapPx    = 6;
 inline constexpr int kCardPadPx       = kControlGapPx;   // inside the edge
 inline constexpr int kCardWidthPx     = 376;  // the tablet's half less two margins
 // THE WHEEL'S BLOCK, ONE WIDTH UNDER EVERY CHROME (the head's THE GRID and
-// THE WIDTH: clearlooks' 256-W chooser row leaves room for 98 in its 362-W
-// inner width; the split as it landed, 92, kept), so the right column
-// starts at one x.
+// THE WIDTH: the split as it landed, 92, kept), so the right column starts
+// at one x.
 inline constexpr int kWheelBlockWPx   = 92;
 inline constexpr int kColumnGapPx     = 8;    // the wheel's block to the right column
 // THE CHOOSER IS 21 W TALL UNDER EVERY CHROME: Windows' combo box at the
-// 8-pt font (its edit's 13 cell + 2 x 2 of edge + 2 x 2 of pad), and GTK's
-// combo button re-derived at the 13 cell with the focus terms zeroed, 13 +
-// 2 x (xthickness 3 + inner-border 1) = 21 — the tool button's own
-// derivation (chrome_spec.h), the proportional fit to Windows' layout.
+// 8-pt font (its edit's 13 cell + 2 x 2 of edge + 2 x 2 of pad).
 inline constexpr int kChooserHeightPx = 21;
-// THE WIN2000 COMBO'S DROP-DOWN BUTTON: Windows' SM_CXVSCROLL 16, and its
-// arrow Marlett's 7 x 4 wedge. Under clearlooks the whole combo is one
-// gummy button and the wedge is the engine's own, drawn at the same size.
-// Both arms round each side AT THE ELEMENT through scaled_px's floored
-// form, floored at a 3 x 2 device-px wedge so a small scale cannot zero the
+// THE COMBO'S DROP-DOWN BUTTON: Windows' SM_CXVSCROLL 16, and its arrow
+// Marlett's 7 x 4 wedge, each side rounded AT THE ELEMENT through
+// scaled_px's floored form, floored at a 3 x 2 device-px wedge so a small scale cannot zero the
 // triangle (paint_picker_combo, paint_handler.cpp).
 inline constexpr int kComboButtonWPx  = 16;
 inline constexpr int kComboArrowWPx   = 7;
 inline constexpr int kComboArrowHPx   = 4;
 inline constexpr int kComboArrowMinWPx = 3;
 inline constexpr int kComboArrowMinHPx = 2;
-// THE COMBO'S TEXT stops this far short of its wedge (win2000: of the
-// drop-down button), where a long name is cut with "..." (2026-10-07, the
-// preset button's preset names; GtkComboBox's arrow spacing).
+// THE COMBO'S TEXT stops this far short of its drop-down button, where a
+// long name is cut with "..." (2026-10-07, the preset button's preset
+// names).
 inline constexpr int kComboTextGapPx  = 4;
 // THE DROP-DOWN INSET, ONE NUMBER UNDER EVERY CHROME (architect 2026-10-09;
 // the rule's one owner is combo_text_inset_px's comment, color_picker.cpp):
@@ -396,20 +357,17 @@ inline constexpr int kComboTextInsetPx = 7;
 // the settings editor's CHOICE EDITOR (settings_editor.h's head), whose
 // combo is this drawing at the dialog field's seat and whose list is this
 // list. Device px, rounded at the element.
-//   combo_drop_button — win2000's drop-down button inside the combo `r`
-//     (kComboButtonWPx wide, inside the sunken field's two lines), and the
-//     zero rect under clearlooks, whose whole combo is one gummy button.
+//   combo_drop_button — the drop-down button inside the combo `r`
+//     (kComboButtonWPx wide, inside the sunken field's two lines).
 //   combo_list — the list of `count` rows dropped from `combo`, its width,
 //     flush (the definition's ruling), placed and scrolled by the popup
 //     lists' rule (render.h's popup scroll block, place_popup_list): below
 //     the combo's foot where every row fits (the chooser's), else standing
 //     on its head (the choice editor's: the row is the window's foot, and
-//     Windows' and GTK's combos both open above when no room lies below),
+//     Windows' combo opens above when no room lies below),
 //     else the roomier side scrolled. The dropdown's own arithmetic
 //     (dropdown_h_px, render.h): the frame, the item block's two margins, the
-//     rows' room — an UPWARD box under clearlooks one line taller, carrying
-//     its own top line (2026-10-08, popup_border_top_px; the definition says
-//     why). `top` is the popup's scroll; the result's `bar` carries the
+//     rows' room. `top` is the popup's scroll; the result's `bar` carries the
 //     clamped top and the shown count whether or not it is present.
 //   combo_list_item — row `i` of the domain as placed: the dropdown's item
 //     rect (popup_item_rect, short of the bar when one stands), or the zero
@@ -431,23 +389,18 @@ ComboList combo_list(const GuiRect& combo, int count, int window_h, int top);
 GuiRect   combo_list_item(const ComboList& l, int i);
 // A SLIDER ROW IS 17 W, ONE PITCH UNDER EVERY CHROME (the head's THE GRID
 // and THE SEAT, 2026-10-08 ~21:20 / ~21:40); six rows stand flush. The
-// win2000 thumb fills its row — 4 W above the 4-line channel and 9 below it
-// (the point's 5 and 4 of straight side), the player's 8 / 4 / 9 seat with
-// its 9 below kept and its top shortened to the row (comctl32 sizes the
-// straight part to the control, never the point). The scales of the other
-// two are 15 W, centered in the row with 1 W above and below: GtkScale's
-// slider-width (clearlooks_paint.h's kClScaleSliderWidthPx, which its
-// painters size) and XmScale's trough (cde_paint.h's scale block: the
-// Audio capture's volume scale, 15 px across), kScaleSeatPx.
+// thumb fills its row — 4 W above the 4-line channel and 9 below it (the
+// point's 5 and 4 of straight side), the player's 8 / 4 / 9 seat with its 9
+// below kept and its top shortened to the row (comctl32 sizes the straight
+// part to the control, never the point).
 inline constexpr int kSliderRowPx         = 17;
 inline constexpr int kSliderThumbAbovePx  = 4;
-inline constexpr int kScaleSeatPx         = 15;
 inline constexpr int kSliderLabelGapPx    = 4;   // the label to the track
 inline constexpr int kSliderValueGapPx    = 4;   // the track to the value cell
 // THE VALUE CELL'S RIGHT PAD, ONE NUMBER UNDER EVERY CHROME (architect
 // 2026-10-09 ~00:40, on his windows-2000 glass: the numbers "a bit close to
 // the card's right edge, especially when all read 0 … standardize it across
-// the three chromes"): the cell's right edge stands this far in from the
+// the chromes"): the cell's right edge stands this far in from the
 // column's right edge, the slider gap mirrored, so the right-aligned digits
 // have kSliderValueGapPx of air to the track and this to the column's edge —
 // a symmetric cell. The track shortens by it.
@@ -455,7 +408,7 @@ inline constexpr int kSliderValuePadPx    = 4;
 // COPY, PASTE AND CLOSE'S WIDTH (architect 2026-10-07; the head's
 // arithmetic): WINDOWS' PUSH-BUTTON MINIMUM, 50 W, under the dialogs' 75
 // (kModalBtnMinWidthPx) — the three words fit inside it with their pads
-// (Close, the widest, 30 + 12 in DejaVu Sans) — so the preset button
+// (Close the widest with its pads) — so the preset button
 // beside them takes what the row leaves, its name cut with "..." where it
 // does not fit.
 inline constexpr int kPushButtonWidthPx   = 50;
@@ -480,13 +433,14 @@ inline constexpr int kKeyboardBandWPx =
                          onscreen_keyboard::kKeyGapPx);
 static_assert(kKeyboardBandWPx == 131);
 // THE CARD'S HEIGHT IN W PX, ONE UNDER EVERY CHROME (the head's THE SEAT),
-// and each chrome's BOTTOM BAND, the card's remainder under the top block:
-// the push button's height where it ties (win2000 23, clearlooks 25), a
-// taller band with the row centered in it where the chrome's button is
-// shorter (cde: 25 for its 23-W button).
+// and the chrome's BOTTOM BAND, the card's remainder under the top block:
+// the push button's height where it ties (win2000 23); a later chrome whose
+// button is shorter stands the row centered in a taller band.
 inline constexpr int kCardHeightWPx = 174;
-constexpr int card_edge_wpx(const ChromeSpec& spec) {
-    return spec.vocabulary == GuiChromeVocabulary::Win2000 ? 2 : 1;
+// THE CARD'S EDGE: Windows' two-line raised edge (a later vocabulary's own
+// count where its card frame differs).
+constexpr int card_edge_wpx(const ChromeSpec& /*spec*/) {
+    return 2;
 }
 constexpr int card_bottom_band_wpx(const ChromeSpec& spec) {
     return kCardHeightWPx - 2 * card_edge_wpx(spec) - 2 * kCardPadPx -
@@ -495,21 +449,15 @@ constexpr int card_bottom_band_wpx(const ChromeSpec& spec) {
 }
 static_assert(card_bottom_band_wpx(kChromeSpecWin2000) ==
               static_cast<int>(kChromeSpecWin2000.push_button_box_px));
-static_assert(card_bottom_band_wpx(kChromeSpecClearlooks) ==
-              static_cast<int>(kChromeSpecClearlooks.push_button_box_px));
-static_assert(card_bottom_band_wpx(kChromeSpecCde) == 25 &&
-              kChromeSpecCde.push_button_box_px == 23.0);
 // WHY 17 (the head's THE SEAT): the card, its margin above the band and the
-// band stand inside the rows from the tablet's tightest well's top to row
-// 8's top at 300 % — cde's, main.cpp's lane record: the canvas 918 device
-// rows = 306 W and the column's foot under it 6 W, which the band covers
-// with the canvas's foot (2026-10-09, the canvas framed; 313 W of well alone
-// that morning; win2000's 322 + 6, clearlooks' 319 + 6) — 174 + 4 + 131 =
-// 309 of 312, the card's top 3 W under the canvas's top (9 device rows; 4 W,
-// the card's margin, until the foot's row came out of the well) — so the
-// marker lane and the canvas's top frame row stay in view on both halves.
+// band stand inside the rows from the tablet's well's top to row 8's top at
+// 300 % — main.cpp's lane record: win2000's canvas 966 device rows = 322 W
+// and the column's foot under it 6 W, which the band covers with the
+// canvas's foot (2026-10-09, the canvas framed) — 174 + 4 + 131 = 309 of
+// 328, the card's top 19 W under the canvas's top — so the marker lane and
+// the canvas's top frame row stay in view on both halves.
 inline constexpr int kTabletWellTightestWPx =
-    306 + program_column_foot_authored_h(kProgramSpec);
+    322 + program_column_foot_authored_h(kProgramSpec);
 static_assert(kCardHeightWPx + kCardMarginPx + kKeyboardBandWPx <=
               kTabletWellTightestWPx);
 
@@ -587,9 +535,7 @@ constexpr const char* scope_display_name(Scope s) {
 // "Inactive" ones, "Selection", "Selection Text", "Field", "Field Text" —
 // then THE PALETTE'S TWELVE in kGuiPaletteRoles' order; THE CHOOSER LISTS
 // THE LIVE SCOPE'S ALONE (scope_element_at), the same rows under every
-// chrome (one scheme syntax: under clearlooks "Title End" and "Inactive
-// Title End" are listed and ignored, clearlooks_derive.h's head — their OLD
-// shows the key's own word). An element is a chrome key or a program role;
+// chrome (one scheme syntax). An element is a chrome key or a program role;
 // `role` is the key's index in kGuiChromeLines or the role's in
 // kGuiPaletteRoles.
 inline constexpr std::size_t kElementCount =
@@ -685,12 +631,11 @@ bool preset_act_enabled(const AppState& app, PresetAct a);
 // KIND (byte order) — a separator — THE BUILT-INS: under Waveform COOL
 // EDIT'S PRESETS, all twenty in its own order, "Default" first (the default
 // palette under every chrome, palette_file.h's kGuiBuiltinPalettes); under
-// Chrome THE THREE CHROMES' OWN SCHEMES in the vocabularies' order
-// (windows-2000-standard, clearlooks, solaris) — A SEPARATOR ("just put a
-// separator after the default color themes", architect 2026-10-08 ~19:30)
-// — then THE CATALOG'S OTHER 102 in the catalog's order (its 104 less the
-// two chromes' own it holds, windows-2000-standard and clearlooks, listed
-// above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
+// Chrome THE CHROMES' OWN SCHEMES in the vocabularies' order
+// (windows-2000-standard alone today) — A SEPARATOR ("just put a separator
+// after the default color themes", architect 2026-10-08 ~19:30) — then THE
+// CATALOG'S OTHER 103 in the catalog's order (its 104 less the chrome's own
+// it holds, windows-2000-standard, listed above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
 // GROUP IS NOT SHOWN: with no file, ONE separator stands between the acts
 // and the built-ins — a Windows menu never shows an empty group between two
 // separators; the defaults' group is never empty. Each separator is a scroll
@@ -746,7 +691,7 @@ struct Layout {
     GuiRect wheel{0, 0, 0, 0};
     double  cx = 0.0, cy = 0.0, outer_r = 0.0, inner_r = 0.0;
     // The chooser row: the scope combo and the element chooser, each the
-    // whole combo and, under win2000 and cde, its drop-down button.
+    // whole combo and its drop-down button.
     GuiRect scope{0, 0, 0, 0};
     GuiRect scope_button{0, 0, 0, 0};
     GuiRect chooser{0, 0, 0, 0};
@@ -774,7 +719,7 @@ struct Layout {
     GuiRect swatch_frame{0, 0, 0, 0};
     GuiRect swatch_old{0, 0, 0, 0};
     GuiRect swatch_new{0, 0, 0, 0};
-    // The preset button and, under win2000 and cde, its drop-down button.
+    // The preset button and its drop-down button.
     GuiRect menu_button{0, 0, 0, 0};
     GuiRect menu_button_arrow{0, 0, 0, 0};
     GuiRect buttons[3]{};   // Copy, Paste, Close
@@ -789,9 +734,8 @@ struct Layout {
     std::vector<GuiRect> menu_items;
     std::vector<int> menu_sep_ys;
     PopupScrollBar menu_bar;
-    // Whether the menu stands on the button's head (the upper placement),
-    // the box then carrying its own top line under clearlooks (2026-10-08,
-    // combo_list's rule; the painter reads it).
+    // Whether the menu stands on the button's head (the upper placement;
+    // combo_list's rule).
     bool    menu_upward = false;
 };
 Layout layout(const AppState& app, const GuiFont& font);

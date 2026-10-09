@@ -94,33 +94,6 @@ static_assert(keys_map_onto_their_roles([] {
     p.inactive_title_text.reset();
     return p;
 }()));
-// The same under clearlooks (clearlooks_derive.h), but for the two title
-// ends, which that chrome ignores: their roles hold the caption's START
-// (the flat caption), so an ignored key moves nothing.
-constexpr bool keys_map_onto_their_roles_clearlooks(const GuiChromePick& p) {
-    const GuiThemeWords w = clearlooks_derive::derive_clearlooks_chrome(
-        kGuiThemeClearlooks, p, clearlooks_derive::kGeometry);
-    for (std::size_t i = 0; i < kGuiChromeLineCount; ++i) {
-        const std::size_t r = theme_role_index(kGuiChromeLines[i].compiled_role);
-        const std::string_view key = kGuiChromeLines[i].key;
-        if (key == "chrome_title_end") {
-            if (w[r] != p.title_start) return false;
-        } else if (key == "chrome_inactive_title_end") {
-            if (w[r] != p.inactive_start()) return false;
-        } else if (w[r] != chrome_line_word(p, i)) {
-            return false;
-        }
-    }
-    return true;
-}
-static_assert(keys_map_onto_their_roles_clearlooks(distinct_pick()));
-// THE CHROME'S OWN SCHEME IS THE PROOF'S INPUT: clearlooks' built-in
-// scheme carries squeeze's own keys (clearlooks_derive.h's kSqueezePick,
-// whose derivation is the compiled theme byte for byte).
-static_assert([] {
-    const GuiChromeScheme* s = builtin_scheme("clearlooks");
-    return s != nullptr && s->chrome == clearlooks_derive::kSqueezePick;
-}());
 
 // THE TWO TABLES COVER GuiPalette EXACTLY (install_palette fills it off
 // both, render.cpp): the program's members are distinct, none of them is a
@@ -186,8 +159,7 @@ static_assert(own_schemes_are_their_chromes_themes());
 // EACH CHROME'S OWN SCHEME NAMES TAHOMA (2026-10-09): the chrome's own
 // scheme installs no pick, whose face is Tahoma (fill_chrome_palette,
 // render.cpp), so its built-in's tag must say the same — windows-2000-
-// standard's source names Tahoma, clearlooks' and solaris' name no Windows
-// font (the inert tag).
+// standard's source names Tahoma.
 static_assert(std::ranges::all_of(kGuiChromeSpecs, [](const ChromeSpec* s) {
     return builtin_scheme(s->own_scheme)->chrome.face == GuiSchemeFace::Tahoma;
 }));

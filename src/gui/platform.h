@@ -49,13 +49,14 @@
 //
 // THE TWO DAMAGE CALLS (2026-10-09): invalidate_region takes a CLIENT rect —
 // the GUI's whole geometry, the window's band outside it — so no GUI damage
-// ever reaches the sizing frame (the restored laptop's, cde's dtwm band on
-// both devices); invalidate_surface damages the WHOLE SURFACE, the band with
-// it. The band paints in the chrome's roles, so the one GUI event that
-// changes them with the window standing — a live chrome pick, the color
-// picker's install of the twelve (GuiColorPicker::install_live_words) — asks
-// for it; every other repaint of the band rides the backend's own full damage
-// (a configure, its activation flip included, or a window adoption). Both
+// ever reaches the sizing frame (the restored laptop's, or a band a chrome
+// keeps on the maximized window on both devices, window_frame_maximized);
+// invalidate_surface damages the WHOLE SURFACE, the band with it. The band
+// paints in the chrome's roles, so the one GUI event that changes them with
+// the window standing — a live chrome pick, the color picker's install of
+// the twelve (GuiColorPicker::install_live_words) — asks for it; every other
+// repaint of the band rides the backend's own full damage (a configure or a
+// window adoption). Both
 // backends implement the pair alike.
 #ifdef __ANDROID__
 #include "platform_android.h"
