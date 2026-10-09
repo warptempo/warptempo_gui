@@ -7,7 +7,7 @@ gnome-icon-theme 2.30's drawings, the name `mist` the one squeeze gives the comb
 spec's (`src/gui/chrome_spec.h`'s `icon_set`): this folder is clearlooks', the default chrome since 2026-10-07; a set is
 chosen by its folder's name.
 
-THE TWO SOURCES. 57 files are gnome-icon-theme 2.30's drawings, 55 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
+THE TWO SOURCES. 58 files are gnome-icon-theme 2.30's drawings, 56 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
 the release squeeze installs: 3.0.0 carries 2.30's sheets, redrawn at five of these seats (below), and at two of the
 five, DocumentRevert and DialogInformation, the architect ruled squeeze's own drawing back. The 2.30 icons are
 multi-icon Inkscape sheets, `src/*.svg`, one drawing per size slot: each file is one sheet's 48x48 slot EXTRACTED as
@@ -15,13 +15,13 @@ a standalone 48-unit drawing
 — the elements of every visible layer that paint inside the slot's rectangle (each probed alone through rsvg-convert),
 the definitions they reference, the root `width="48" height="48" viewBox="0 0 48 48"`, the drawing translated to the
 origin, written with SVG as the default namespace — and verified against a render of the slot from the sheet itself
-(rsvg-convert at 72 px: maximum channel difference 0 on 53 of the 54 distinct drawings, 5 levels of 255 on EditDelete's
+(rsvg-convert at 72 px: maximum channel difference 0 on 54 of the 55 distinct drawings, 5 levels of 255 on EditDelete's
 user-trash; EditUndo's and EditRedo's judged on mask-stripped copies, below).
 Every layer, not only the icon's own: zoom.svg draws part of zoom-original's and zoom-fit-best's pictures from the
 zoom-in layer, and the slot shows them. 2 files are Mist's own scalable drawings, copied from the gnome-themes tarball
 (byte-identical to the copies squeeze installs under `/usr/share/icons/Mist/scalable/`): `Folder` = Mist's
 `places/folder.svg` and `DocumentOpen` (Open Project, the icon row's first button since 2026-10-07) = Mist's
-`actions/document-open.svg` — the only two of the 59 seats Mist changes (it carries nine names, every one a blue
+`actions/document-open.svg` — the only two of the 60 seats Mist changes (it carries nine names, every one a blue
 folder; the wav row, Up a Folder and every other toolbar and row 8 seat inherit from gnome). Mist's drawings fill the
 48 canvas edge to edge where GNOME's keep 3–4 units of margin, so its folder reads larger at the same seat.
 
@@ -77,11 +77,13 @@ renders identically to 3.0.0's, maximum difference 0). Import check on a sheet o
 shadow's blur, which both renderers draw. The enumerator keeps its name, as Tango's README says.
 
 REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic` is AppIcon, AudioXWav and
-MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder. Every other file is worn once: 59 enumerators over 56
-distinct drawings.
+MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder. Every other file is worn once: 60 enumerators over 57
+distinct drawings (AccessoriesTextEditor, the Open Text Editor button of 2026-10-09, the sixtieth: gedit's notepad
+from 3.0.0's `src/accessories-text-editor.svg`, extracted by the same rule, 46 candidates, 2 kept, maximum difference 0
+against the slot's render at 72 px).
 
 THE KNOWN DEPARTURE FROM SQUEEZE'S BYTES (the planner's call, 2026-10-07: 3.0.0, except where the architect ruled
-squeeze's own). Squeeze installs gnome-icon-theme 2.30.3; at 52 of the 57 GNOME seats 3.0.0's slot renders
+squeeze's own). Squeeze installs gnome-icon-theme 2.30.3; at 53 of the 58 GNOME seats 3.0.0's slot renders
 identically to 2.30.3's (rsvg at 72, maximum difference 0), at five it was redrawn in 3.0.0: three wear 3.0.0's
 drawing, the departure, and two wear 2.30.3's, taken from its sheets (max / mean channel difference of 3.0.0's slot
 from 2.30.3's at 72, levels of 255):
@@ -212,5 +214,6 @@ licence texts) are not read.
 | EditCopy | Copy Resolved Value | 3.0.0 `src/copy-paste-tasks.svg`, slot `edit-copy` 48x48 at (696, 50) | — | — | `7e7b8a4a65137cd6726f2fe6b3756c007586b23637f512451199092c9de16e97` |
 | HelpWhatsthis | Toggle Tooltips | 3.0.0 `src/help-browser.svg`, slot `help-browser` 48x48 at (13, 37) | — | — | `73dab752241b092c65e22f7345ae6d29354e31cb86530e29d2421fe13b489dfc` |
 | GoJumpDeclaration | Jump to Defining Marker | 3.0.0 `src/navigation-icons.svg`, slot `go-jump` 48x48 at (26, 50) | — | — | `1624ee1168fbc6ddb1dbcaa45c90e7ca2c817f12408b3ed737b67d369e4afbd1` |
+| AccessoriesTextEditor | Open Text Editor (Return) | 3.0.0 `src/accessories-text-editor.svg`, slot `accessories-text-editor` 48x48 at (296.062, 39.9963) | — | — | `2641037dac14ccffe5a6b9071fa4dbc32960fa893ade679425a0c53db45b2c84` |
 | EditDelete | Delete Folder | 3.0.0 `src/trash.svg`, slot `user-trash` 48x48 at (696, 50) | — | — | `52a0f172d734ee00d7b819644cbe9c878794e8628e462b81bbcd24e69f4f886a` |
 | AppIcon | the caption's icon and the program icon outside the window (on Clearlooks' ground, #EDECEB: `tools/app_icon/gen_app_icon.sh`) | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | MusicNote16th, AudioXWav | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |
