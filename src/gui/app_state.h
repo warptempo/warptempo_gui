@@ -7280,8 +7280,10 @@ struct AppState {
     // so a stale index never lights another surface's button. The one writer
     // is the dialog's pointer walk (update_modal_dialog_hover, through
     // set_player_hot), held at -1 while a dialog press is armed (comctl32's
-    // capture, as roster_hot); the pointer-leave hook clears it. The painter
-    // adds the enabled term.
+    // capture, as roster_hot) and while the pen's hot-face latch holds (the
+    // rule at GuiInputHandler::pen_hot_latch_); the pointer-leave hook and
+    // the latch's arm (arm_pen_hot_latch) clear it. The painter adds the
+    // enabled term.
     int      player_hot         = -1;
     uint64_t player_hot_session = 0;
 

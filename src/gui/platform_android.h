@@ -375,7 +375,7 @@ public:
     void set_pen_zoom_anchor_release_hook(std::function<void()> cb);
 
     // THE PEN'S LIFT HOOK (architect 2026-10-07, after a pen lift the hot face
-    // waits for motion): fired (null-safe), carrying nothing, at the pen's
+    // waits for motion; every hover-lit face since 2026-10-09): fired (null-safe), carrying nothing, at the pen's
     // lift off an EMPTY glass — the one lift the pointer survives
     // (pointer_focus_at; the rule at on_motion_event's hover arm) — AFTER
     // EVERYTHING the lift delivers (the release, the restore motion at the

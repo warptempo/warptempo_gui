@@ -1484,13 +1484,14 @@ struct GuiInputHandler {
     // index with the standing dialog's session and damages the dialog's box
     // on a change.
     void set_player_hot(int index);
-    // THE PEN'S HOT-FACE LATCH, its two doors (the rule at pen_hot_latch_
-    // below): ARMED by the platform's pen lift hook (main.cpp;
-    // GuiPlatform::set_pen_lift_hook), after the lift's
-    // own delivery, UNANCHORED — the arm re-walks the roster so the hot face
-    // the lift's restore motion lit is withdrawn before the frame paints;
-    // CLEARED by the pointer-leave hook (main.cpp); the anchoring and the
-    // motion's clear are on_motion's own.
+    // THE PEN'S HOT-FACE LATCH, its two doors (the rule, which holds every
+    // hover-lit face, at pen_hot_latch_ below): ARMED by the platform's pen
+    // lift hook (main.cpp; GuiPlatform::set_pen_lift_hook), after the lift's
+    // own delivery, UNANCHORED — the arm re-walks the roster and drops the
+    // player's hot button, so the hot face the lift's restore motion lit on
+    // either flat toolbar is withdrawn before the frame paints; CLEARED by
+    // the pointer-leave hook (main.cpp); the anchoring and the motion's clear
+    // are on_motion's own.
     void arm_pen_hot_latch();
     void clear_pen_hot_latch();
 
@@ -3059,28 +3060,78 @@ private:
     // input_pointer.cpp), never cleared.
     bool roster_chord_in_flight_ = false;
 
-    // AFTER A PEN LIFT THE HOT FACE WAITS FOR MOTION (architect 2026-10-07,
-    // on the glass under Windows 2000: a tapped toggle stayed in its
-    // hot-checked face until the pen moved away — "withholding the color
-    // change until the pen moves away makes it too slow"; the new state must
-    // read right after the tap). The pen's lift keeps the pointer where it
-    // lifted (the rule at platform_android.cpp's hover arm), and a pen held
-    // still over the button it just tapped is not a pointer arriving on it:
-    // while this latch stands the roster walk's one hot write answers -1
-    // (recompute_redesign_button_hover), so the tapped button reads in its
-    // RESTING face — the checker of a checked toggle, the lit radio's
-    // checked face, a plain act's flat rest. A TIMER WOULD NOT DO: expiring
-    // with the pen still hovering in place, it would re-light the very face
-    // it withheld; the latch is a DISTANCE, as the plane's own hysteresis is.
+    // AFTER A PEN LIFT EVERY HOVER-LIT FACE HOLDS UNTIL THE PEN MOVES
+    // (architect 2026-10-07 for the roster's hot face, the first; 2026-10-09
+    // for every hover-lit face, under every chrome). The pen's lift keeps
+    // the pointer where it lifted (the rule at platform_android.cpp's hover
+    // arm), and the S Pen's hover point then DRIFTS along the pen's axis as
+    // the tip rises (the measurement at kPenHotRearmPx), so a face that
+    // followed the hover at once blinks — lit, then dark, or the next row
+    // lit (he saw it on the roster under Windows 2000 and on a pull-down's
+    // rows under cde). While this latch stands — THE ONE PREDICATE,
+    // pen_hot_latch_holds(), which every hover walk below consults — EVERY
+    // HOVER-LIT FACE HOLDS WHAT WAS PAINTED AT THE LIFT: what was lit stays
+    // lit, nothing new lights, nothing goes dark, until the rearm motion
+    // (Windows keeps a menu item lit under a resting pointer, so a held lit
+    // row is the period behavior too).
+    // THE INVENTORY — every face the product lights by hover, re-derived by
+    // grep 2026-10-09 (this is its one statement):
+    //   the roster's hot face (AppState::roster_hot; its walk
+    //     recompute_redesign_button_hover, run per motion and per tick);
+    //   the render player's hot button (AppState::player_hot; its walk
+    //     update_modal_dialog_hover);
+    //   the pull-down menus' lit row (AppState::Dropdown::hovered_item; its
+    //     walk recompute_dropdown_hover, run per motion and per iteration);
+    //   the Settings combo's lit row (AppState::SettingsChoice::list_hover;
+    //     its walk settings_choice_motion);
+    //   the color picker's list — the scope's and the element's, one list —
+    //     and its preset menu (AppState::ColorPicker::chooser_hover and
+    //     menu_hover; their walk color_picker_motion).
+    //   NOTHING ELSE LIGHTS BY HOVER: a flag has no hover face (render.h's
+    //   flag block); the folder overlay's rows, the project picker's among
+    //   them, none (folder_overlay.h); the menu row, the caption buttons and
+    //   the dialogs' push buttons none (render.h's palette block: no hover
+    //   face but the flat toolbars'; the hot candidate's menu-anchor term in
+    //   recompute_redesign_button_hover; clearlooks_paint.h's and
+    //   cde_paint.h's heads; update_modal_dialog_hover's head); and a
+    //   notification card's hover banks its clock and paints nothing
+    //   (GuiNotifications::set_hover).
+    // ONE HOLD, TWO SHAPES. THE TWO FLAT TOOLBARS — the roster and the
+    // player — ANSWER "NONE" while the latch stands: a tap's press held the
+    // capture, and a toolbar shows no hot item under capture (the rule at
+    // AppState::roster_hot), so the face painted at the lift was the tapped
+    // button's RESTING face — the checker of a checked toggle, the lit
+    // radio's checked face, a plain act's flat rest (architect 2026-10-07:
+    // "withholding the color change until the pen moves away makes it too
+    // slow"; the new state must read right after the tap). The lift's
+    // restore motion runs unlatched and lights the button under the pen, and
+    // the arm withdraws that light before any frame paints. THE LIT ROWS —
+    // the menus and the lists — SKIP THEIR RECOMPUTE while it stands, the
+    // previous value kept and no damage requested: nothing darkened them
+    // under the contact, so the restore motion at the lift re-answered the
+    // row the contact last lit, which is the face painted at the lift.
+    // THE HOVER STATE ITSELF STAYS LIVE: the pointer's coordinates, the
+    // tooltip's wait (the roster walk still names the button under the
+    // pointer to note_tooltip_hover, so a hint ripens exactly as without the
+    // latch, the tapped button itself staying spent — AppState::
+    // RedesignTooltip), the press claims and the lift's act all read the
+    // live pointer against the painted picture as ever (ON SCREEN IS AS
+    // PAINTED), so a press after the lift is unaffected; a lit row moved by
+    // a KEY is not the pointer's and is not held; and an open menu's hover
+    // switch onto another anchor is an act, not a face, and stays live.
+    // A TIMER WOULD NOT DO: expiring with the pen still hovering in place, it
+    // would re-light the very face it withheld; the latch is a DISTANCE, as
+    // the plane's own hysteresis is.
     //   ARMED only by the Android backend's pen lift off an empty glass
     //   (GuiPlatform::set_pen_lift_hook) — never by a mouse (the Wayland twin
-    //   never fires) or a finger (it never hovers). IT ARMS AFTER THE LIFT'S
-    //   OWN DELIVERY (architect 2026-10-08): the release and the restore
-    //   motion at the lift run first, unlatched, and the arm then re-walks
-    //   the roster (recompute_redesign_button_hover), withdrawing the hot face
-    //   that motion lit before any frame paints — so no motion of the lift's
-    //   own ever reaches the latch, and the first one that does is the pen's
-    //   first hover report.
+    //   never fires) or a finger (it never hovers), so the mouse and the
+    //   finger are untouched. IT ARMS AFTER THE LIFT'S OWN DELIVERY
+    //   (architect 2026-10-08): the release and the restore motion at the
+    //   lift run first, unlatched, and the arm then re-walks the roster
+    //   (recompute_redesign_button_hover) and drops the player's hot button
+    //   (set_player_hot) — the two toolbars' latched answer — before any
+    //   frame paints; so no motion of the lift's own ever reaches the latch,
+    //   and the first one that does is the pen's first hover report.
     //   ANCHORED AT THE FIRST HOVER REPORT, NOT AT THE LIFT (architect
     //   2026-10-08): the S Pen's hover coordinates are the hover sensor's,
     //   not the contact's, so the latch compares hover against hover. The
@@ -3093,19 +3144,14 @@ private:
     //   after the lift — the distance's measurement is at kPenHotRearmPx.
     //   CLEARED (a) by a motion at least kPenHotRearmPx from the anchor,
     //   Chebyshev, the drag gate's own metric (on_motion's prologue) — the
-    //   same walk then re-lights the button under the pen as usual; (b) by
-    //   every leave (the pointer-leave hook, main.cpp): a HOVER_EXIT, a
-    //   report above the plane, focus loss — and THE NEXT DOWN, which is one
-    //   of them: the latch stands only while the pen's hover does, and every
-    //   first down ends that hover through its leave (end_pen_hover).
-    // THE TOOLTIP'S WAIT IS UNTOUCHED: the walk still names the button under
-    // the pointer to note_tooltip_hover, so a hint ripens exactly as without
-    // the latch (and the tapped button itself stays spent, the rule at
-    // AppState::RedesignTooltip). THE LATCH IS THE POINTER'S, NOT A
-    // CHROME'S: under clearlooks it withholds GTK's prelight the same way,
-    // and it covers every roster button, toggle or not. NOT IN ITS SCOPE: the
-    // render player's hot button (update_modal_dialog_hover, set_player_hot)
-    // and the menu row, which has no hot face.
+    //   same motion's walks then answer as usual, lighting what is under the
+    //   pen and damaging what changed; (b) by every leave (the pointer-leave
+    //   hook, main.cpp): a HOVER_EXIT, a report above the plane, focus loss —
+    //   and THE NEXT DOWN, which is one of them: the latch stands only while
+    //   the pen's hover does, and every first down ends that hover through
+    //   its leave (end_pen_hover).
+    // THE LATCH IS THE POINTER'S, NOT A CHROME'S: it holds Windows 2000's hot
+    // line, GTK's prelight and every chrome's lit row alike.
     // THE LIFT'S OWN PIXEL IS NOT KEPT (2026-10-08): the anchor is the
     // hover's, so the hook carries no coordinates and the latch none of
     // the contact's.
@@ -3116,6 +3162,9 @@ private:
         int  y        = 0;
     };
     PenHotLatch pen_hot_latch_;
+    // THE ONE PREDICATE (the rule and the inventory of its readers above):
+    // the pen has lifted and not yet rearmed.
+    bool pen_hot_latch_holds() const { return pen_hot_latch_.armed; }
     // THE RE-ARM DISTANCE, 12 WINDOWS PX (architect 2026-10-08, retuned on
     // measured data from 3): 36 device px at 300, 17 at 138, converted
     // through scaled_px at the compare and MEASURED FROM THE ANCHOR, the
@@ -3130,11 +3179,15 @@ private:
     // the blink. THE DRIFT IS THE PEN'S GEOMETRY — the hover point slides
     // along the pen's axis as the tip rises — NOT THE HAND. 12 W sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
-    // the neighboring button, a case width (31 W, 93 px). Authored in Windows
-    // px as every chrome length, though the drift is physical: the tablet is
-    // the one pen device. The blink shows only where the rest and hot faces
-    // differ (a checked toggle's checker against the hot face); a plain face
-    // and its hot face differ by the raised line alone under Windows 2000.
+    // the neighboring button, a case width (31 W, 93 px), and below a move to
+    // the next lit row, a popup row (17 W under Windows 2000, 19 under
+    // clearlooks and cde — ChromeSpec::popup_item_height_px), so one row's
+    // deliberate step rearms. Authored in Windows px as every chrome length,
+    // though the drift is physical: the tablet is the one pen device. On the
+    // roster the blink showed where the rest and hot faces differ (a checked
+    // toggle's checker against the hot face; a plain face and its hot face
+    // differ by the raised line alone under Windows 2000); on a menu or a
+    // list it is the lit row itself moving.
     static constexpr double kPenHotRearmPx = 12.0;
 
     // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the settings editor's

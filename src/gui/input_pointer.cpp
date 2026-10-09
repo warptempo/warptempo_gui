@@ -3510,11 +3510,14 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
             viewport.invalidate_rect(app.modal_dialog.box);
     }
     // THE PLAYER'S HOT BUTTON: the hit on the player's row while no dialog
-    // press is armed (comctl32 shows no hot item under capture), else none.
+    // press is armed (comctl32 shows no hot item under capture), else none —
+    // AND NONE WHILE THE PEN'S HOT-FACE LATCH HOLDS (pen_hot_latch_holds,
+    // the rule at pen_hot_latch_, 2026-10-09): the roster's own answer, the
+    // tapped button at rest until the pen moves off its anchor.
     set_player_hot(app.modal_dialog.valid &&
                            app.modal_dialog.owner ==
                                AppState::ModalDialogOwner::Player &&
-                           armed < 0
+                           armed < 0 && !pen_hot_latch_holds()
                        ? hit
                        : -1);
     // AND IT OWNS THIS SURFACE'S TOOLTIP WAIT (2026-08-13, when the modal
@@ -5560,14 +5563,20 @@ void GuiInputHandler::color_picker_motion(int x, int y, GuiInputState mods) {
         }
         return;
     }
-    if (cp.chooser_open) {
+    // THE TWO LIT ROWS HOLD WHILE THE PEN'S HOT-FACE LATCH DOES
+    // (pen_hot_latch_holds, the rule at pen_hot_latch_, 2026-10-09): both
+    // walks are skipped, the rows and their damage left alone, until the pen
+    // moves off its anchor (no button is held then, so the menu's arm has
+    // nothing to follow either). The dialog and roster walks below run on.
+    const bool rows_held = pen_hot_latch_holds();
+    if (cp.chooser_open && !rows_held) {
         const int hit = color_picker_list_hit(cp.stash, x, y);
         if (hit != cp.chooser_hover) {
             cp.chooser_hover = hit;
             color_picker.damage_card();
         }
     }
-    if (cp.menu_open) {
+    if (cp.menu_open && !rows_held) {
         // The lit row follows the pointer onto live rows alone (a grayed row
         // is never lit, the dropdown's gate) and goes dark off the rows —
         // the chooser's own walk.
@@ -5764,6 +5773,11 @@ void GuiInputHandler::settings_choice_motion(int x, int y) {
             viewport.invalidate_modal_dialog_area();
         return;
     }
+    // THE LIT ROW HOLDS WHILE THE PEN'S HOT-FACE LATCH DOES
+    // (pen_hot_latch_holds, the rule at pen_hot_latch_, 2026-10-09): the
+    // walk is skipped, the row and its damage left alone, until the pen
+    // moves off its anchor.
+    if (pen_hot_latch_holds()) return;
     settings_editor.choice_hover(
         modal_dialog_stash_current()
             ? settings_choice_list_hit(app.modal_dialog, x, y) : -1);
@@ -8306,12 +8320,19 @@ void GuiInputHandler::set_roster_hot(int index) {
 
 void GuiInputHandler::arm_pen_hot_latch() {
     // Armed and unanchored (the rule at pen_hot_latch_): the hook fires after
-    // the lift's own delivery, whose restore motion walked the roster
-    // unlatched, so this re-walk withdraws the hot face that motion lit
-    // before the frame paints.
+    // the lift's own delivery, whose restore motion walked every hover face
+    // unlatched, so the two flat toolbars' latched answer — none, the face
+    // painted under the tap's capture — is installed here before the frame
+    // paints: the roster by its own re-walk (whose hot write the latch holds
+    // at -1), the player's hot button directly (its walk,
+    // update_modal_dialog_hover, also owns the dialog's tooltip wait, which
+    // the arm has no business re-noting). The lit rows need nothing: the
+    // restore motion left them on the row the contact last lit, and their
+    // walks hold it from here.
     pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
                                  .x = 0, .y = 0};
     recompute_redesign_button_hover();
+    set_player_hot(-1);
 }
 
 void GuiInputHandler::clear_pen_hot_latch() {
@@ -8410,14 +8431,16 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // is armed — comctl32 shows no hot item while a toolbar holds the
     // capture, and GTK prelights no other button under a grab — and none
     // otherwise, so a toolbar style with no hot face would never store one.
-    // AND NONE WHILE THE PEN'S HOT-FACE LATCH STANDS (pen_hot_latch_, the
-    // rule at its declaration, architect 2026-10-07): after a pen lift the
-    // tapped button reads at rest until the pen moves off its anchor.
+    // AND NONE WHILE THE PEN'S HOT-FACE LATCH HOLDS (pen_hot_latch_holds,
+    // the rule at pen_hot_latch_, architect 2026-10-07; every hover-lit face
+    // since 2026-10-09): after a pen lift the tapped button reads at rest —
+    // the face painted under the tap's capture — until the pen moves off its
+    // anchor.
     set_roster_hot(toolbar_style_has_hot_face(
                            live_chrome_spec().toolbar_style) &&
                            app.chrome_press.kind ==
                                AppState::ChromePress::Kind::None &&
-                           !pen_hot_latch_.armed
+                           !pen_hot_latch_holds()
                        ? hot
                        : -1);
     // THE ARM'S INSIDE BIT — the feint's chrome half (2026-08-13, the modal
@@ -8660,6 +8683,14 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
     // instead of having to remember it. Same first line and same reason as
     // refresh_pointer_cursor's, the boundary's other consumer.
     if (!app.pointer_in_window) return;
+    // AND THE WALK IS SKIPPED WHILE THE PEN'S HOT-FACE LATCH HOLDS
+    // (pen_hot_latch_holds, the rule at pen_hot_latch_, 2026-10-09): after a
+    // pen lift the lit row — and the arm, which no held button can move
+    // then — stay as painted, no damage requested, until the pen moves off
+    // its anchor; the rearm motion's own call (and every iteration after)
+    // walks as usual. The release never reads these faces
+    // (finish_dropdown_release re-derives at its own coordinates).
+    if (pen_hot_latch_holds()) return;
     // THE GEOMETRY IS dropdown_item_at'S, asked at the remembered coordinates —
     // one walk over the published rects for this face derivation, for the press
     // claim and for the release's derive, so "which item is here" cannot mean
@@ -10693,8 +10724,9 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     app.pointer_in_window = true;
     // THE PEN'S HOT-FACE LATCH ANCHORS AT THE FIRST HOVER REPORT AND CLEARS
     // ON MOTION OFF THAT ANCHOR (pen_hot_latch_, the rule at its
-    // declaration), here above every branch so the walk this motion runs
-    // already re-lights the button under it. The latch arms after the lift's
+    // declaration), here above every branch so the hover walks this motion
+    // runs already answer at the pen — the hot button or the lit row under
+    // it lights, damaged as usual. The latch arms after the lift's
     // own delivery, so the first motion met here unanchored is the pen's
     // first hover report: it sets the anchor and clears nothing.
     if (pen_hot_latch_.armed && !pen_hot_latch_.anchored) {

@@ -1809,9 +1809,10 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // withdrawn out of range before the platform reports any hover
             // leaves the pointer resting at the lift until the pen's next
             // report or the next contact — a mouse resting where it clicked.
-            // AND THE HOT FACE WAITS FOR MOTION after such a lift (architect
-            // 2026-10-07): the UP arm arms the GUI's latch (set_pen_lift_hook;
-            // the rule at GuiInputHandler::arm_pen_hot_latch).
+            // AND EVERY HOVER-LIT FACE HOLDS UNTIL MOTION after such a lift
+            // (architect 2026-10-07, the roster's hot face; every face
+            // 2026-10-09): the UP arm arms the GUI's latch (set_pen_lift_hook;
+            // the rule at GuiInputHandler::pen_hot_latch_).
             //
             // A HOVER ABOVE THE GUI'S PLANE IS NOT A POINTER (architect
             // 2026-09-27: every pen hover effect acts only within the plane,

@@ -348,8 +348,8 @@ public:
     // THE PEN'S LIFT HOOK (architect 2026-10-07; the contract at
     // platform_android.h's declaration, the latch it arms at
     // GuiInputHandler::arm_pen_hot_latch): accepted and never fired — a
-    // mouse's release is no pen lift, so the laptop's hot face is unchanged
-    // by construction.
+    // mouse's release is no pen lift, so the laptop's hover faces are
+    // unchanged by construction.
     void set_pen_lift_hook(std::function<void()> /*cb*/) {}
 
     // THE TOUCH SLOP, in device pixels — the GUI's scaled press-becomes-drag
