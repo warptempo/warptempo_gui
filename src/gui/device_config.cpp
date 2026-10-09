@@ -58,7 +58,8 @@ constexpr const char* kDeviceConfigKeys[] = {
 // default chrome since 2026-10-07 ~22:45, kDefaultChromeKey; a config
 // written before the key existed loads, in the default chrome), `scheme`
 // (2026-10-08), absent meaning the chrome's own scheme, `palette`,
-// absent meaning the chrome's default palette, and `icons` (2026-10-10),
+// absent meaning the default palette (Cool Edit's "Default" under every
+// chrome, 2026-10-09), and `icons` (2026-10-10),
 // absent meaning the chrome's own icon set. The scanner
 // checks presence against this list and duplicates against every key.
 constexpr const char* kDeviceConfigRequiredKeys[] = {
@@ -98,7 +99,8 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
     for (const char* key : kDeviceConfigKeys) {
         // AN UNSET PALETTE, SCHEME OR ICON SET WRITES NO LINE (2026-10-07;
         // the scheme 2026-10-08, the icons 2026-10-10): its one spelling is
-        // the line's absence, so the file keeps following the chrome.
+        // the line's absence, so the file keeps following the chrome (the
+        // scheme and the icon set) or the default palette.
         if (std::string_view(key) == "palette" && cfg.palette.empty())
             continue;
         if (std::string_view(key) == "scheme" && cfg.scheme.empty())

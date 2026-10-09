@@ -10,7 +10,8 @@ device key or Settings row chooses one; each chrome vocabulary wears its own the
 and `gen_theme_files.py` writes Clearlooks' as a generated include. The architect's workshop for colors is the app's
 PALETTES (named presets picked in the app); a look made official becomes a new chrome variant, its theme compiled in
 the same way from a catalog entry. THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's own colors (the waveform, the flags, the
-playhead's stem and the scanner) are no theme's but the app's PALETTES, compiled in (`src/gui/palette_file.h`), and
+playhead's stem and the scanner) are no theme's but the app's PALETTES, compiled in (`src/gui/palette_file.h`; the
+built-in ones Cool Edit's presets since 2026-10-09, below), and
 the program's own family of chosen entries (`warptempo` and the presets of his retired picker tool) left the catalog
 with them ("it'll still be in the git history"). A standalone utility: no link path from any product target, no CMake,
 Python 3 alone.
@@ -21,7 +22,25 @@ python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json
 python3 tools/theme_catalog/build.py --check-only  # no sources: the checks on the committed catalog, nothing written
 python3 tools/theme_catalog/gen_theme_files.py     # -> src/gui/theme_clearlooks_{roles,members,values}.inc (committed)
 python3 tools/theme_catalog/catalog_md.py          # -> docs/themes/CATALOG.md
+python3 -I tools/theme_catalog/gen_cool_edit_presets.py [text]  # cool_edit_presets.txt -> src/gui/palette_presets.inc (committed)
 ```
+
+## Cool Edit's presets — the built-in palettes (architect 2026-10-09)
+
+THE PROGRAM'S BUILT-IN PALETTES ARE COOL EDIT PRO 2.1'S COLOR PRESETS (architect 2026-10-09 ~13:30: "only Cool Edit Pro
+palettes for waveform needed now"; the program is Cool Edit under every chrome) and no catalog entry's: the per-chrome
+default palettes (`windows-2000-standard`, `clearlooks`, `solaris` as palette keys, 2026-10-07..10-09) retired that day.
+`cool_edit_presets.txt` is the source, committed: the scheme text inside `coolpro.exe` as extracted from his own copy
+(its head is the provenance note), twenty schemes in Cool Edit's order, Cool Edit's "(Default Scheme)" first.
+`gen_cool_edit_presets.py` (standard library alone; the source's path optional on its command line, the committed copy
+by default) transcribes each into the twelve program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read off the
+header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never hand-edited.
+Its head is the transcription's statement: WvBk, WvFg, GrdL, Cntr, CueM, RngM, Curs and Face to their roles (a scheme
+without a Face takes the default's 626C7B), THE LIT OUTLINE the ink at HLS lightness 0.3157 (the view bar span's shadow
+rule, `src/gui/cool_edit_derive.h`, ported operation for operation; `palette_file.cpp` proves every row against the
+C++ tone()), and the three roles Cool Edit has no key for the same in every preset; the keys `cool-edit-<name>`, the
+display names Cool Edit's own ("Default" for the default; the two schemes whose name line the extraction lacks,
+"Unnamed 1" and "Unnamed 2"). Byte-stable like the others.
 
 ## The compiled themes (architect 2026-10-04; compiled in since 2026-10-08)
 

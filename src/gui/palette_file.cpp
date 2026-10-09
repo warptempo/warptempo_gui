@@ -158,27 +158,17 @@ static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount +
                cool_edit_derive::kPaintedToneCount) * sizeof(GuiColor));
 
-// EVERY VOCABULARY NAMES A DEFAULT PALETTE, IN THE DEFAULTS' ORDER, and every
-// default belongs to one vocabulary (the preset menu's built-in schemes lead
-// with them in this order, color_picker::preset_menu_rows).
-constexpr bool defaults_follow_the_vocabularies() {
-    if (std::size(kGuiChromeSpecs) != std::size(kGuiDefaultPalettes))
-        return false;
-    for (std::size_t i = 0; i < std::size(kGuiDefaultPalettes); ++i)
-        if (std::string_view(kGuiChromeSpecs[i]->default_palette) !=
-            kGuiDefaultPalettes[i].name)
-            return false;
-    return true;
-}
-static_assert(defaults_follow_the_vocabularies());
-
-// EACH DEFAULT IS ITS CHROME'S OWN BUILT-IN SCHEME, AND THAT SCHEME IS THE
+// EACH CHROME'S OWN SCHEME IS A BUILT-IN SCHEME, AND THAT SCHEME IS THE
 // CHROME'S COMPILED THEME KEY FOR KEY (the generator's transcription and the
 // hand-recorded / generated themes agree): so the scheme that carries no
-// keys under its own chrome (scheme_record) is no loss of a word.
-constexpr bool defaults_are_their_chromes_schemes() {
+// keys under its own chrome (scheme_record) is no loss of a word. The
+// themes' table and the specs' run in the vocabularies' order (the preset
+// menu's built-in schemes lead with the chromes' own in this order,
+// color_picker::preset_menu_rows).
+constexpr bool own_schemes_are_their_chromes_themes() {
+    if (std::size(kGuiChromeSpecs) != std::size(kGuiChromeThemes)) return false;
     for (std::size_t c = 0; c < std::size(kGuiChromeThemes); ++c) {
-        const GuiChromeScheme* b = builtin_scheme(kGuiDefaultPalettes[c].name);
+        const GuiChromeScheme* b = builtin_scheme(kGuiChromeSpecs[c]->own_scheme);
         if (b == nullptr) return false;
         if (std::string_view(kGuiChromeThemes[c].chrome) !=
             kGuiChromeSpecs[c]->key)
@@ -191,16 +181,15 @@ constexpr bool defaults_are_their_chromes_schemes() {
     }
     return true;
 }
-static_assert(defaults_are_their_chromes_schemes());
+static_assert(own_schemes_are_their_chromes_themes());
 
 // EACH CHROME'S OWN SCHEME NAMES TAHOMA (2026-10-09): the chrome's own
 // scheme installs no pick, whose face is Tahoma (fill_chrome_palette,
 // render.cpp), so its built-in's tag must say the same — windows-2000-
 // standard's source names Tahoma, clearlooks' and solaris' name no Windows
 // font (the inert tag).
-static_assert(std::ranges::all_of(kGuiDefaultPalettes,
-                                  [](const GuiDefaultPalette& d) {
-    return builtin_scheme(d.name)->chrome.face == GuiSchemeFace::Tahoma;
+static_assert(std::ranges::all_of(kGuiChromeSpecs, [](const ChromeSpec* s) {
+    return builtin_scheme(s->own_scheme)->chrome.face == GuiSchemeFace::Tahoma;
 }));
 // WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S TWELVE IN MS SANS SERIF
 // (the catalog's windows-me-standard; the generator asserts the same).
@@ -233,22 +222,43 @@ constexpr bool builtins_well_formed() {
     return true;
 }
 static_assert(builtins_well_formed());
-static_assert(std::ranges::all_of(kGuiDefaultPalettes,
-                                  [](const GuiDefaultPalette& d) {
-    return is_palette_name_spelling(d.name);
+
+// THE BUILT-IN PALETTES ARE WELL FORMED (palette_file.h's
+// kGuiBuiltinPalettes; the generator checks the same): the keys and display
+// names unique, the keys in the name grammar, THE DEFAULT THE FIRST ROW.
+constexpr bool builtin_palettes_well_formed() {
+    if (std::string_view(kGuiBuiltinPalettes[0].key) != kGuiDefaultPaletteKey)
+        return false;
+    for (std::size_t i = 0; i < std::size(kGuiBuiltinPalettes); ++i) {
+        const GuiBuiltinPalette& a = kGuiBuiltinPalettes[i];
+        if (!is_palette_name_spelling(a.key) ||
+            !is_palette_name_spelling(a.display_name))
+            return false;
+        for (std::size_t j = i + 1; j < std::size(kGuiBuiltinPalettes); ++j)
+            if (std::string_view(a.key) == kGuiBuiltinPalettes[j].key ||
+                std::string_view(a.display_name) ==
+                    kGuiBuiltinPalettes[j].display_name)
+                return false;
+    }
+    return true;
+}
+static_assert(builtin_palettes_well_formed());
+// EVERY BUILT-IN'S LIT OUTLINE IS ITS INK AT THE VIEW BAR SPAN'S SHADOW
+// LIGHTNESS (palette_file.h's role table: Cool Edit records no outline; the
+// generator ran cool_edit_derive.h's round trip once, and the compiled bytes
+// are the record — this proves the record, nothing derives at paint time).
+static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
+                                  [](const GuiBuiltinPalette& b) {
+    const cool_edit_derive::Tone& lo = cool_edit_derive::ink_tone("span_shadow");
+    return b.words[palette_role_index("waveform_outline")] ==
+           cool_edit_derive::tone(b.words[palette_role_index("waveform_ink")],
+                                  lo.a, lo.b);
 }));
 // The device config's default (both templates stamp a default-constructed
-// struct's): no palette and no scheme, the live chrome's own.
+// struct's): no palette and no scheme — the default palette and the live
+// chrome's own scheme.
 static_assert(DeviceConfig{}.palette.empty());
 static_assert(DeviceConfig{}.scheme.empty());
-
-// A DEFAULT'S WORDS, its column of the role table.
-constexpr GuiPaletteWords default_words(const GuiDefaultPalette& d) {
-    GuiPaletteWords w{};
-    for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
-        w[i] = kGuiPaletteRoles[i].*(d.column);
-    return w;
-}
 
 // The index of the scheme key named `key` in kGuiChromeLines, or
 // kGuiChromeLineCount.
@@ -565,15 +575,12 @@ std::optional<std::string> remove_kind_file(PresetKind<Record>& kind,
 } // namespace
 
 std::string_view effective_palette_name(std::string_view palette) {
-    return palette.empty()
-               ? std::string_view(live_chrome_spec().default_palette)
-               : palette;
+    return palette.empty() ? std::string_view(kGuiDefaultPaletteKey) : palette;
 }
 
 std::string_view effective_scheme_name(std::string_view scheme) {
-    // The chrome's own scheme shares its default palette's word (the head).
     return scheme.empty()
-               ? std::string_view(live_chrome_spec().default_palette)
+               ? std::string_view(live_chrome_spec().own_scheme)
                : scheme;
 }
 
@@ -610,8 +617,7 @@ bool is_scheme_name(std::string_view name) {
 }
 
 GuiPaletteWords palette_record(std::string_view name) {
-    if (const GuiDefaultPalette* d = default_palette(name))
-        return default_words(*d);
+    if (const GuiBuiltinPalette* b = builtin_palette(name)) return b->words;
     const auto it = g_palettes.loaded.find(name);
     // Every caller's name came through is_palette_name: a miss is a program
     // bug.
@@ -623,7 +629,7 @@ std::optional<GuiChromePick> scheme_record(std::string_view name) {
     // A BUILT-IN (the declaration): its twelve, unless it is the live
     // chrome's own scheme, which carries none.
     if (const GuiChromeScheme* b = builtin_scheme(name)) {
-        if (name == live_chrome_spec().default_palette) return std::nullopt;
+        if (name == live_chrome_spec().own_scheme) return std::nullopt;
         return b->chrome;
     }
     const auto it = g_schemes.loaded.find(name);

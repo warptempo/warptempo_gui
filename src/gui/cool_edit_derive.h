@@ -196,9 +196,9 @@ inline constexpr Tone kTones[] = {
     {"cue_shadow",    0x31363D, 0.502, -0.004, &GuiPalette::ce_cue_shadow},
     // THE VIEW BAR'S SPAN (METRICS §3), off the INK: its top row and left
     // column, and its bottom row and right column — the ink at HLS L 0.94
-    // and 0.3157. `measured` is the default scheme's (WvFg 4BF3A7); the ink
-    // tones' proof is over Cool Edit's five presets (below), the product's
-    // default ink being its own. THE SHADOW'S LIGHTNESS IS 0.3157, NOT
+    // and 0.3157. `measured` is the default scheme's (WvFg 4BF3A7, the
+    // default palette's ink); the ink tones' proof is over Cool Edit's five
+    // captured presets (below). THE SHADOW'S LIGHTNESS IS 0.3157, NOT
     // METRICS.md's 0.312 (2026-10-09): 0.312 misses the default's shadow by
     // 2 in green (95 for 97), while every one of the five measured shadows
     // sits at exactly L = 161/510 = 0.3157, which reproduces all five
@@ -242,9 +242,10 @@ static_assert(tone(kDefaultFace, 1.0, 0.0) == kDefaultFace);
 // captured presets' waveform inks (WvFg) — Default 4BF3A7, XP Blue 22B893,
 // Fire and Brick FFCE0C, Lipstick and Grapes ED1EC9, Seattle Blues 576AB4 —
 // the fixed-lightness rule reproduces each span's measured highlight and
-// shadow within one per channel.
-// Asserted on Cool Edit's own pairs because the product's default inks are
-// its own (palette_file.h), not Cool Edit's.
+// shadow within one per channel. THE SAME SHADOW RULE IS EVERY BUILT-IN
+// PALETTE'S LIT OUTLINE (2026-10-09, palette_file.h's role table: Cool Edit
+// records no outline), run once by the generator and proven exact over the
+// compiled presets by palette_file.cpp.
 struct SpanPreset {
     uint32_t ink, hilight, shadow;
 };

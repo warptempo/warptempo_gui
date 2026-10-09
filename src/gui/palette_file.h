@@ -71,15 +71,21 @@
 // and selected faces, the one flag outline and the one flag label stood
 // 2026-10-07 to 2026-10-09; git history.)
 //
-// THE BUILT-IN PALETTES ARE THE DEFAULT PALETTES, COMPILED IN, one per
-// chrome vocabulary, each named by its ChromeSpec's `default_palette`
-// (chrome_spec.h): `windows-2000-standard`, `clearlooks` and `solaris` — the
-// role table's two value columns below (the cde chrome's `solaris` takes
-// Windows 2000's column until he authors its own, 2026-10-08) — THE
-// PROGRAM'S TWELVE whenever the active palette is not a file. Each default
-// palette's name IS ITS CHROME'S OWN BUILT-IN SCHEME'S KEY (below), so one
-// word names a chrome's own colors in both kinds, and a default palette is
-// shown by that scheme's display name ("Windows 2000 Standard").
+// THE BUILT-IN PALETTES ARE COOL EDIT'S COLOR PRESETS, COMPILED IN
+// (architect 2026-10-09 ~13:30: "only Cool Edit Pro palettes for waveform
+// needed now"; the program is Cool Edit under every chrome) —
+// kGuiBuiltinPalettes below, the twenty schemes Cool Edit Pro 2.1 carries in
+// its executable, in its order, GENERATED into palette_presets.inc by
+// tools/theme_catalog/gen_cool_edit_presets.py from the committed text
+// tools/theme_catalog/cool_edit_presets.txt (the transcription's rules are
+// its head's; regenerate, never hand-edit): each a KEY (`cool-edit-` and the
+// scheme's name in the key grammar — the `palette` key's word for it), a
+// DISPLAY NAME (Cool Edit's own, "Default" for its "(Default Scheme)") and
+// THE TWELVE. THE DEFAULT PALETTE IS ONE UNDER EVERY CHROME, Cool Edit's
+// "Default" (`cool-edit-default`, kGuiDefaultPaletteKey, the table's first
+// row) — THE PROGRAM'S TWELVE whenever the device config names no palette
+// (the per-chrome default palettes of 2026-10-07 to 2026-10-09 retired the
+// same day: the program is no chrome's).
 //
 // THE BUILT-IN SCHEMES (architect 2026-10-08 ~11:00–11:10: "the catalog's
 // schemes transcribed to the used keys and compiled in") — kGuiChromeSchemes
@@ -89,8 +95,9 @@
 // cde chrome's hand-set `solaris`: each a KEY (the catalog's verbatim — the
 // `scheme` key's word for it), a DISPLAY NAME and THE TWELVE CHROME KEYS. A
 // SCHEME IS CHROME-ONLY BY ITS KIND: choosing one installs its twelve and
-// leaves the program's ten as they stand (GuiColorPicker::load_preset).
-// THE CHROME'S OWN SCHEME — the one its `default_palette` names — CARRIES NO
+// leaves the program's twelve as they stand (GuiColorPicker::load_preset).
+// THE CHROME'S OWN SCHEME — the one its `own_scheme` names (chrome_spec.h:
+// `windows-2000-standard`, `clearlooks`, `solaris`) — CARRIES NO
 // KEYS under that chrome (scheme_record): the compiled theme exactly
 // (Windows 2000 Standard's gray face is hand-set, chrome_derive.h's head, so
 // its scheme run through the rule would not be its own bytes); under another
@@ -98,7 +105,8 @@
 // FILE: a file bearing a built-in's key is the read's hard fail, and the
 // picker never asks the maintenance API below to write, rename or remove
 // one (its writers assert it). Nothing is bundled or copied in; each folder
-// holds his own files alone.
+// holds his own files alone. The same holds of THE BUILT-IN PALETTES: a
+// palette file bearing a built-in palette's key is the read's hard fail.
 //
 // THE FILES, BOTH KINDS BESIDE THE DEVICE CONFIG (palette_folder_path,
 // scheme_folder_path). THE GRAMMAR is the device config's lexical contract
@@ -183,74 +191,61 @@
 // validation doctrine's class 5).
 
 // THE ROLE TABLE — THE ONE ENUMERATION of the program's roles (architect
-// 2026-10-07), in GuiPalette's order: the name a palette file spells, the
+// 2026-10-07), in GuiPalette's order: the name a palette file spells and the
 // GuiPalette member it fills (render.h's palette block owns what each
-// paints) and THE TWO DEFAULT PALETTES' values.
-struct GuiPaletteRole {
-    const char*            name;
-    GuiColor GuiPalette::* member;
-    uint32_t               windows_2000;   // 0xRRGGBB, the `windows-2000-standard` default
-    uint32_t               clearlooks;     // 0xRRGGBB, the `clearlooks` default
-};
-// THE `windows-2000-standard` COLUMN is Windows' own: THE WAVEFORM in Windows' twenty
-// solid colors, the canvas black under Sound Recorder's lime trace (measured
-// on his Windows 98 screenshot 2026-10-05), the lit outline green. THE
-// SCANNER WHITE (architect 2026-10-07: "let's go back to a white scanner").
+// paints). THE TABLE CARRIES NO VALUES (2026-10-09): every built-in palette's
+// twelve, the default's among them, are the generated rows of
+// kGuiBuiltinPalettes below — Cool Edit's own bytes, one source — where the
+// table held a value column per chrome default until that day.
 //
-// THE `clearlooks` COLUMN is his picks on the CL10 sheets (2026-10-07 ~05:30;
-// tmp/clearlooks/report_CL10.md), each byte the engine's own arithmetic on
-// squeeze's gtkrc colors (ge_shade_color through cairo, as
-// tools/theme_catalog/build.py's tones are): the canvas BLACK, his pick (CL10a
-// band 3: the canvas under the accent ink); the ink bg[SELECTED] 86ABD9 at
-// the engine's 1.3 stop, D2E3F7 (architect 2026-10-07 ~09:00: spot[1] read
-// too dark on the black canvas); the lit outline bg[SELECTED] itself (CL10a
-// band 3); the scanner WHITE, his ruling (CL10a).
-//
-// THE CUES, THE INVALID LABEL AND THE PLAYHEAD ARE COOL EDIT'S, THE SAME IN
-// EVERY COLUMN (architect 2026-10-09 ~11:50–12:00; the program is Cool Edit
-// under every chrome): `cue` its CueM F34B58, the red, and `range` its RngM
-// 4B82F3, the blue (METRICS §4.2, his captures' Default scheme); the invalid
-// label Windows' dark / bright red of the sixteen, `invalid_label` 800000 at
-// rest and `invalid_label_selected` FF0000 selected ("dimmer unselected,
-// brighter selected"); `playhead_stem` its Curs FFFF00, the yellow (§4.3) —
-// THE PLAYHEAD AND THE SCANNER still TWO roles, so a palette may part them.
-//
-// THE PANEL'S FACE, THE LAST ROLE (architect 2026-10-09, the program is
-// Cool Edit): Cool Edit's "Dockable Window 3D Color" (its scheme key `Face`),
-// the ground of the program's panel — the toolbar band, the dock bar, row 8
-// and the canvas column's lanes — whose every other tone derives from it
-// (cool_edit_derive.h); its
-// default Cool Edit's own default scheme's 626C7B IN EVERY COLUMN, the
-// program being the same under every chrome. A PALETTE FILE NAMES IT LIKE
-// ANY ROLE: a file without a `face` line is the read's hard fail (the
-// two-category rule: the picker writes all twelve).
-//
-// THE CANVAS'S TWO LINE ROLES ARE COOL EDIT'S, THE SAME IN EVERY COLUMN
-// (architect 2026-10-09, the program is Cool Edit; METRICS §4.4, NOTES.md's
-// set 3, the mock of record): `grid` its GrdL 003500, the grid under the
-// waveform — the quarter lines of each channel's half and the verticals on
-// the ruler's major ticks — and `center` its Cntr A90404, each channel's
-// center line over the grid (render_canvas, render.h's row-6 block). Cool
-// Edit's boundary line (Bndy) is not drawn and has no role.
+// WHAT EACH ROLE TAKES FROM A COOL EDIT SCHEME (the generator's head owns the
+// transcription): the canvas its WvBk, the ink its WvFg, THE LIT OUTLINE
+// the ink at HLS lightness 0.3157, hue and saturation kept (Cool Edit has no
+// such key: the view bar span's shadow rule, cool_edit_derive.h, run once by
+// the generator and proven below), `grid` its GrdL, `center` its Cntr, `cue`
+// its CueM (the red of the default scheme, F34B58) and `range` its RngM (the
+// blue, 4B82F3) — METRICS §4.2 — `playhead_stem` its Curs (the yellow, §4.3),
+// THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color": the
+// ground of the program's panel — the toolbar band, the dock bar, row 8 and
+// the canvas column's lanes — whose every other tone derives from it,
+// cool_edit_derive.h; a scheme recording none takes the default's 626C7B,
+// Cool Edit's own fallback); and THE THREE COOL EDIT HAS NO KEY FOR, the
+// same in every built-in: the invalid label Windows' dark / bright red of
+// the sixteen, `invalid_label` 800000 at rest and `invalid_label_selected`
+// FF0000 selected (architect 2026-10-09 ~11:50–12:00, "dimmer unselected,
+// brighter selected"), and THE SCANNER WHITE (architect 2026-10-07: "let's
+// go back to a white scanner") — THE PLAYHEAD AND THE SCANNER still TWO
+// roles, so a palette may part them. `grid` paints the quarter lines of each
+// channel's half and the verticals on the ruler's major ticks, `center` each
+// channel's center line over the grid (render_canvas, render.h's row-6
+// block); Cool Edit's boundary line (Bndy) is not drawn and has no role. A
+// PALETTE FILE NAMES EVERY ROLE: a file without one is the read's hard fail
+// (the two-category rule: the picker writes all twelve).
 //
 // THE TABLE'S ORDER IS THE PICKER'S CHOOSER (color_picker.cpp's kRoleNames):
 // the waveform's three, the canvas's two lines ("Grid", "Center Line"), the
 // cues' two colors ("Cue", "Range"), the invalid
 // label's pair ("Invalid Label", "Invalid Label Selected"), then the two
 // lines that cross the well ("Playhead", "Scanner"), then the panel's face.
+// The generator reads the names off this table and refuses to run when they
+// are not its own order.
+struct GuiPaletteRole {
+    const char*            name;
+    GuiColor GuiPalette::* member;
+};
 inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
-    {"waveform_canvas",           &GuiPalette::waveform_canvas,           0x000000, 0x000000},
-    {"waveform_ink",              &GuiPalette::waveform_ink,              0x00FF00, 0xD2E3F7},
-    {"waveform_outline",          &GuiPalette::waveform_outline,          0x008000, 0x86ABD9},
-    {"grid",                      &GuiPalette::grid,                      0x003500, 0x003500},
-    {"center",                    &GuiPalette::center,                    0xA90404, 0xA90404},
-    {"cue",                      &GuiPalette::cue,                       0xF34B58, 0xF34B58},
-    {"range",                     &GuiPalette::range,                     0x4B82F3, 0x4B82F3},
-    {"invalid_label",             &GuiPalette::invalid_label,             0x800000, 0x800000},
-    {"invalid_label_selected",    &GuiPalette::invalid_label_selected,    0xFF0000, 0xFF0000},
-    {"playhead_stem",             &GuiPalette::playhead_stem,             0xFFFF00, 0xFFFF00},
-    {"scanner",                   &GuiPalette::scanner,                   0xFFFFFF, 0xFFFFFF},
-    {"face",                      &GuiPalette::face,                      0x626C7B, 0x626C7B},
+    {"waveform_canvas",           &GuiPalette::waveform_canvas},
+    {"waveform_ink",              &GuiPalette::waveform_ink},
+    {"waveform_outline",          &GuiPalette::waveform_outline},
+    {"grid",                      &GuiPalette::grid},
+    {"center",                    &GuiPalette::center},
+    {"cue",                       &GuiPalette::cue},
+    {"range",                     &GuiPalette::range},
+    {"invalid_label",             &GuiPalette::invalid_label},
+    {"invalid_label_selected",    &GuiPalette::invalid_label_selected},
+    {"playhead_stem",             &GuiPalette::playhead_stem},
+    {"scanner",                   &GuiPalette::scanner},
+    {"face",                      &GuiPalette::face},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
@@ -396,35 +391,33 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // (phase_reset_stem_color), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
-// THE DEFAULT PALETTES — THE BUILT-IN PALETTES, each a name and its column
-// of the role table, in the vocabularies' order (kGuiChromeSpecs;
-// palette_file.cpp asserts that every ChromeSpec's default_palette names
-// one, that the two orders agree and that each name is a built-in scheme's
-// key, the chrome's own).
-struct GuiDefaultPalette {
-    const char*              name;
-    uint32_t GuiPaletteRole::* column;
+// THE BUILT-IN PALETTES (the head) — Cool Edit's presets in its order,
+// GENERATED (palette_presets.inc; never hand-edited): the key, the display
+// name and the twelve in the role table's order. palette_file.cpp asserts
+// the keys and display names unique, the keys in the name grammar, the
+// default first, and every lit outline the generator's rule off its ink.
+struct GuiBuiltinPalette {
+    const char*     key;
+    const char*     display_name;
+    GuiPaletteWords words;
 };
-inline constexpr GuiDefaultPalette kGuiDefaultPalettes[] = {
-    {"windows-2000-standard", &GuiPaletteRole::windows_2000},
-    {"clearlooks",   &GuiPaletteRole::clearlooks},
-    // CDE'S DEFAULT PALETTE IS WINDOWS 2000'S COLUMN (2026-10-08, the cde
-    // arc's brief: the program roles the base's — the waveform lime
-    // on black and the rest — "until he authors one in the picker"; the
-    // recipe unchanged, a third column joining this table when he does).
-    {"solaris",      &GuiPaletteRole::windows_2000},
+inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
+#include "palette_presets.inc"
 };
+// THE DEFAULT PALETTE, ONE UNDER EVERY CHROME (the head): Cool Edit's
+// "Default", the table's first row — the palette a config with no `palette`
+// line takes (effective_palette_name).
+inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-default";
 
-// The default palette named `name`, byte for byte, or nullptr.
-constexpr const GuiDefaultPalette* default_palette(std::string_view name) {
-    for (const GuiDefaultPalette& d : kGuiDefaultPalettes)
-        if (name == d.name) return &d;
+// The built-in palette keyed `name`, byte for byte, or nullptr.
+constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
+    for (const GuiBuiltinPalette& b : kGuiBuiltinPalettes)
+        if (name == b.key) return &b;
     return nullptr;
 }
-// Whether `name` is a built-in palette's — a default palette's (the head:
-// the defaults are the built-in palettes, and nothing else is).
+// Whether `name` is a built-in palette's key.
 constexpr bool is_builtin_palette_name(std::string_view name) {
-    return default_palette(name) != nullptr;
+    return builtin_palette(name) != nullptr;
 }
 
 // THE NAME GRAMMAR (the head), BOTH KINDS: 1 to 40 bytes of printable
@@ -479,13 +472,21 @@ constexpr const GuiChromeScheme* builtin_scheme(std::string_view name) {
 constexpr bool is_builtin_scheme_name(std::string_view name) {
     return builtin_scheme(name) != nullptr;
 }
+// Whether `name` is a CHROME'S OWN SCHEME'S key (a ChromeSpec's own_scheme,
+// chrome_spec.h) — the Chrome scope's first group of built-ins
+// (color_picker::preset_menu_rows).
+constexpr bool is_chrome_own_scheme(std::string_view name) {
+    for (const ChromeSpec* s : kGuiChromeSpecs)
+        if (name == s->own_scheme) return true;
+    return false;
+}
 
 // THE ACTIVE PRESETS THE INSTALL TAKES (architect 2026-10-07; the scheme
 // 2026-10-08): the device config's key as written, or — EMPTY, no line —
-// THE LIVE CHROME'S OWN (chrome_spec.h's default_palette of
-// live_chrome_spec(): `windows-2000-standard`, `clearlooks` or `solaris`,
-// which names the chrome's default palette and its own scheme alike). The
-// struct keeps the empty value, so the file never pins a vocabulary's
+// for a palette THE DEFAULT PALETTE, `cool-edit-default` under every chrome
+// (2026-10-09), and for a scheme THE LIVE CHROME'S OWN (chrome_spec.h's
+// own_scheme of live_chrome_spec(): `windows-2000-standard`, `clearlooks`
+// or `solaris`). The struct keeps the empty value, so the file never pins a
 // default.
 std::string_view effective_palette_name(std::string_view palette);
 std::string_view effective_scheme_name(std::string_view scheme);
@@ -505,7 +506,7 @@ std::optional<std::string> read_palette_folder();
 std::optional<std::string> read_scheme_folder();
 
 // HIS FILES' NAMES of each kind, for the picker's preset menu: the loaded
-// files in byte order of their names (the built-ins are kGuiDefaultPalettes
+// files in byte order of their names (the built-ins are kGuiBuiltinPalettes
 // and kGuiChromeSchemes, the menu's own order at
 // color_picker::preset_menu_rows).
 std::vector<std::string> palette_file_names();
@@ -514,20 +515,20 @@ std::vector<std::string> scheme_file_names();
 // THE `palette` AND `scheme` KEYS' GRAMMARS — each kind's ONE owner, asked by
 // the device config's reader (a hand-edited key naming no preset of its
 // kind is the launch's hard fail): a built-in's key or a loaded file's name,
-// byte for byte — for a palette a default palette's key (a catalog scheme's
-// key is the `scheme` key's word alone, 2026-10-08 ~18:15), for a scheme any
-// built-in scheme's.
+// byte for byte — for a palette a built-in palette's key (Cool Edit's
+// presets; a catalog scheme's key is the `scheme` key's word alone,
+// 2026-10-08 ~18:15), for a scheme any built-in scheme's.
 bool is_palette_name(std::string_view name);
 bool is_scheme_name(std::string_view name);
 inline constexpr const char* kPaletteGrammarReason =
-    "must be a default palette's key (windows-2000-standard, clearlooks, "
-    "solaris) or the name of a palette file read at launch";
+    "must be a built-in palette's key (cool-edit-default, cool-edit-xp-blue, "
+    "...) or the name of a palette file read at launch";
 inline constexpr const char* kSchemeGrammarReason =
     "must be a built-in scheme's key (windows-2000-standard, clearlooks, "
     "solaris, windows-rainy-day, ...) or the name of a scheme file read at "
     "launch";
 
-// The twelve the palette `name` names — a default palette's column, or a
+// The twelve the palette `name` names — a built-in palette's row, or a
 // loaded file's words (a file names every role, the head). Precondition:
 // is_palette_name(name), so this resolves and never refuses (install_palette
 // at launch; the picker's load and Delete).
@@ -548,7 +549,7 @@ std::optional<GuiChromePick> scheme_record(std::string_view name);
 // holds, the writers ASSERT their name preconditions (a breach is a program
 // bug) and their one error arm is I/O.
 //
-// write_palette_file: create or overwrite `<name>.palette` with all ten
+// write_palette_file: create or overwrite `<name>.palette` with all twelve
 // roles; write_scheme_file: create or overwrite `<name>.scheme` with the
 // pick's keys — each uppercase `#RRGGBB` in its table's order, through the
 // atomic writer (atomic_write_string_to_path), the folder created on the

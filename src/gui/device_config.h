@@ -33,12 +33,14 @@
 //                            BE ABSENT — the first run's state — meaning the
 //                            chrome's own scheme, the compiled theme exactly
 //                            (effective_scheme_name)
-//   palette=<name>           THE PALETTE the program is painted in: a default
-//                            palette (`windows-2000-standard`, `clearlooks`,
-//                            `solaris`) or a palette file read at launch
+//   palette=<name>           THE PALETTE the program is painted in: a built-in
+//                            palette, one of Cool Edit's presets
+//                            (`cool-edit-default`, `cool-edit-xp-blue`, ...)
+//                            or a palette file read at launch
 //                            (is_palette_name, palette_file.h); MAY BE ABSENT
-//                            — the first run's state — meaning the chrome's
-//                            default palette (effective_palette_name)
+//                            — the first run's state — meaning the default
+//                            palette, Cool Edit's "Default", under every
+//                            chrome (effective_palette_name, 2026-10-09)
 //   icons=<set>              THE ICON SET the glyphs are drawn from: a
 //                            bundled set's key, `tango`, `mist` or `breeze`
 //                            (is_icon_set_key, icons.h); MAY BE ABSENT — the

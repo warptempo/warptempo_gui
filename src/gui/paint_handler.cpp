@@ -5230,7 +5230,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // covers is a per-frame repaint anyway.
 //
 // THE SCANNER IS THE MOVING LINE, and it HAS ITS OWN ROLE, `scanner`
-// (architect 2026-10-05), WHITE in both default palettes (architect
+// (architect 2026-10-05), WHITE in every built-in palette (architect
 // 2026-10-07: "let's go back to a white scanner") — SOLID, one quantum wide,
 // the canvas's rows alone (PlayheadForm::Solid; Cool Edit's playback cursor
 // is a solid 1-px line, measured 2026-10-09).

@@ -126,8 +126,8 @@ GuiChromePick live_scheme_keys() {
     if (const std::optional<GuiChromePick>& live = live_chrome_pick())
         return *live;
     const GuiChromeScheme* own =
-        builtin_scheme(live_chrome_spec().default_palette);
-    assert(own != nullptr);   // defaults_are_their_chromes_schemes
+        builtin_scheme(live_chrome_spec().own_scheme);
+    assert(own != nullptr);   // own_schemes_are_their_chromes_themes
     return own->chrome;
 }
 
@@ -148,12 +148,15 @@ static_assert(text_editor::kMaxPendingCharsPaletteName ==
               static_cast<int>(kPaletteNameMaxBytes));
 } // namespace
 
-// A BUILT-IN IS SHOWN BY ITS GENERATED DISPLAY NAME (kGuiChromeSchemes,
-// palette_file.h — a default palette by its chrome's own scheme's, the
-// same word), a file by its name.
+// A BUILT-IN IS SHOWN BY ITS GENERATED DISPLAY NAME (palette_file.h's
+// kGuiChromeSchemes and kGuiBuiltinPalettes), a file by its name.
 std::string preset_display_name(Scope s, std::string_view name) {
-    if (is_builtin_preset(s, name))
-        return std::string(builtin_scheme(name)->display_name);
+    if (s == Scope::Chrome) {
+        if (const GuiChromeScheme* b = builtin_scheme(name))
+            return std::string(b->display_name);
+    } else if (const GuiBuiltinPalette* b = builtin_palette(name)) {
+        return std::string(b->display_name);
+    }
     return std::string(name);
 }
 
@@ -163,8 +166,8 @@ bool is_builtin_display_name(Scope s, std::string_view name) {
             if (name == b.display_name) return true;
         return false;
     }
-    for (const GuiDefaultPalette& d : kGuiDefaultPalettes)
-        if (name == builtin_scheme(d.name)->display_name) return true;
+    for (const GuiBuiltinPalette& b : kGuiBuiltinPalettes)
+        if (name == b.display_name) return true;
     return false;
 }
 
@@ -226,23 +229,26 @@ std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
         add_name(std::move(n), first);
         first = false;
     }
-    // The built-ins. Under Waveform the live chrome's default palette alone.
+    // The built-ins. Under Waveform Cool Edit's presets in its order.
+    first = true;
     if (s == Scope::Waveform) {
-        add_name(std::string(live_chrome_spec().default_palette), true);
+        for (const GuiBuiltinPalette& b : kGuiBuiltinPalettes) {
+            add_name(b.key, first);
+            first = false;
+        }
         return rows;
     }
     // Under Chrome the chromes' own schemes first, in the vocabularies'
     // order, then — behind their own separator (architect 2026-10-08
     // ~19:30) — every other scheme in the catalog's.
-    first = true;
-    for (const GuiDefaultPalette& d : kGuiDefaultPalettes) {
-        add_name(d.name, first);
+    for (const ChromeSpec* spec : kGuiChromeSpecs) {
+        add_name(spec->own_scheme, first);
         first = false;
     }
     first = true;
     for (const GuiChromeScheme& b : kGuiChromeSchemes) {
         const std::string_view key = b.key;
-        if (is_builtin_palette_name(key)) continue;   // a chrome's own, above
+        if (is_chrome_own_scheme(key)) continue;   // a chrome's own, above
         add_name(std::string(key), first);
         first = false;
     }
@@ -1338,14 +1344,15 @@ const char* failure_words(color_picker::Scope s, const char* palette,
 
 void GuiColorPicker::write_preset_key(std::string_view name) {
     DeviceConfig& cfg = *app.device_config;
-    std::string& key = app.color_picker.scope == color_picker::Scope::Chrome
-                           ? cfg.scheme
-                           : cfg.palette;
-    // The chrome's own scheme and its default palette share one word
-    // (palette_file.h's head), so one test serves both kinds.
+    const bool chrome = app.color_picker.scope == color_picker::Scope::Chrome;
+    std::string& key = chrome ? cfg.scheme : cfg.palette;
+    // What no line means for the kind (palette_file.h's effective names:
+    // the live chrome's own scheme, the default palette) is written as no
+    // line.
+    const std::string_view no_line = chrome ? effective_scheme_name({})
+                                            : effective_palette_name({});
     const std::string value =
-        name == live_chrome_spec().default_palette ? std::string()
-                                                   : std::string(name);
+        name == no_line ? std::string() : std::string(name);
     if (value == key) return;
     key = value;
     const std::optional<GuiFailure> failure = write_device_config(cfg);
@@ -1561,8 +1568,10 @@ void GuiColorPicker::confirm_delete() {
                                             "Could not delete the scheme"));
         return;
     }
-    // THE LIVE CHROME'S OWN of the scope's kind (the declaration).
-    const std::string_view fallback = live_chrome_spec().default_palette;
+    // WHAT NO LINE MEANS for the scope's kind (the declaration): the live
+    // chrome's own scheme, or the default palette.
+    const std::string_view fallback = chrome ? effective_scheme_name({})
+                                             : effective_palette_name({});
     if (chrome)
         apply_live_words(program_palette_words(), scheme_record(fallback));
     else

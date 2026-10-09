@@ -16,7 +16,7 @@
 // literal at the painter. The colors stay the chrome's compiled theme's
 // (theme_file.h's kGuiChromeThemes, by this spec's key) and the palette's
 // (palette_file.h); the spec chooses shapes, seats and faces, and names the
-// palette a config with no `palette` line takes.
+// scheme a config with no `scheme` line takes.
 //
 // THE CHROME ENDS AT THE MENU ROW (architect 2026-10-09 ~06:55, "chrome
 // means chrome, the program is Cool Edit"): the chrome is the caption, the
@@ -30,8 +30,8 @@
 //
 // THE NAME IS `windows-2000` (architect 2026-10-07): the `chrome` key's
 // value (its compiled theme is the catalog entry `windows-2000-standard`,
-// the scheme's word beside it, which also names its default palette since
-// 2026-10-08, the built-in schemes' keys being the catalog's). C++
+// the scheme's word beside it, the built-in schemes' keys being the
+// catalog's). C++
 // IDENTIFIERS AND FILE NAMES KEEP `Win2000` / `win2000` AS THE ABBREVIATION
 // (kChromeSpecWin2000, GuiChromeVocabulary::Win2000,
 // docs/engineering/win2000_deviations.md), and prose may say win2000 for the
@@ -109,7 +109,8 @@
 // Windows 2000; I just need to work out a good color palette", the color
 // picker's purpose). The table (kGuiChromeSpecs) keeps windows-2000 FIRST:
 // it is the metric base every later vocabulary is fitted to, and the
-// table's order is the defaults' order (palette_file.cpp's assert).
+// table's order is the compiled themes' and the color picker's chromes' own
+// schemes' (palette_file.cpp's assert).
 // Windows 95's chrome, the second vocabulary of 2026-10-06's morning, is
 // dropped (it stands in git history); its colors remain in the theme
 // catalog's record (`windows-95-standard`, tools/theme_catalog). The table is
@@ -146,20 +147,18 @@ struct ChromeSpec {
     // one source of every place the user reads a vocabulary's name — the
     // Settings editor's Chrome combo and its list (kChromeChoiceSource); the
     // key stays the file grammar's. (The color picker names a built-in
-    // scheme, and a default palette, by the built-in scheme's own display
-    // name, palette_file.h's kGuiChromeSchemes.)
+    // scheme by its own display name, palette_file.h's kGuiChromeSchemes.)
     const char*        display_name;
     // THE PAINTERS' SWITCH (GuiChromeVocabulary above).
     GuiChromeVocabulary vocabulary;
-    // THE PALETTE A CONFIG WITH NO `palette` LINE TAKES under this chrome
-    // (effective_palette_name, palette_file.h; architect 2026-10-07): the
-    // vocabulary's own program colors, a compiled default palette, named by
     // THE CHROME'S OWN BUILT-IN SCHEME'S KEY (2026-10-08 ~11:10: the catalog
-    // key verbatim, `windows-2000-standard`; palette_file.h's head) — and so
-    // ALSO THE SCHEME A CONFIG WITH NO `scheme` LINE TAKES
-    // (effective_scheme_name, 2026-10-08 ~18:15), which carries no keys
-    // under this chrome: the compiled theme exactly.
-    const char*        default_palette;
+    // key verbatim, `windows-2000-standard`; palette_file.h's head): THE
+    // SCHEME A CONFIG WITH NO `scheme` LINE TAKES (effective_scheme_name,
+    // 2026-10-08 ~18:15), which carries no keys under this chrome — the
+    // compiled theme exactly. It names no palette: the default palette is
+    // Cool Edit's one "Default" under every chrome (2026-10-09,
+    // palette_file.h's head).
+    const char*        own_scheme;
     // The vocabulary's text: the faces, their metrics and tracking (gui_font.h)
     // — its OWN set; under windows-2000 the live scheme's face tag may choose
     // the MS Sans Serif set in its place (gui_live_face_set, 2026-10-09).
@@ -275,7 +274,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .key                          = "windows-2000",
     .display_name                 = "Windows 2000",
     .vocabulary                   = GuiChromeVocabulary::Win2000,
-    .default_palette              = "windows-2000-standard",
+    .own_scheme                   = "windows-2000-standard",
     .face_set                     = &kGuiFaceSetWin2000,
     .caption_height_px            = 18,
     .caption_icon_x_px            = 2,
@@ -364,7 +363,7 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .key                          = "clearlooks",
     .display_name                 = "Clearlooks",
     .vocabulary                   = GuiChromeVocabulary::Clearlooks,
-    .default_palette              = "clearlooks",
+    .own_scheme                   = "clearlooks",
     .face_set                     = &kGuiFaceSetGnome2,
     .caption_height_px            = 20,
     .caption_icon_x_px            = 2,
@@ -503,7 +502,7 @@ inline constexpr ChromeSpec kChromeSpecCde = {
     .key                          = "cde",
     .display_name                 = "CDE",
     .vocabulary                   = GuiChromeVocabulary::Cde,
-    .default_palette              = "solaris",
+    .own_scheme                   = "solaris",
     .face_set                     = &kGuiFaceSetCde,
     .caption_height_px            = 17,
     .caption_icon_x_px            = 0,

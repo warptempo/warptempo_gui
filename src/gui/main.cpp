@@ -3471,11 +3471,13 @@ int gui_main(const char* argument) {
     // clearlooks_derive.h, Motif's under cde, cde_derive.h — or, with no
     // `scheme` line, THE LIVE CHROME'S OWN SCHEME, the compiled theme exactly
     // (effective_scheme_name, scheme_record); and the palette the config
-    // names (a default or a file read above) — or, with no `palette` line,
-    // THE LIVE CHROME'S DEFAULT PALETTE (effective_palette_name) — for the
-    // program's, THE LIVE WORDS' SEED (2026-10-07: resolved here through
-    // palette_record and handed to the install explicitly — render.h's
-    // install_palette) — both resolved against the chrome set above;
+    // names (a built-in, one of Cool Edit's presets, or a file read above)
+    // — or, with no `palette` line, THE DEFAULT PALETTE, Cool Edit's
+    // "Default" under every chrome (effective_palette_name, 2026-10-09) —
+    // for the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here
+    // through palette_record and handed to the install explicitly —
+    // render.h's install_palette) — the scheme resolved against the chrome
+    // set above;
     // installed once, before the first paint. Every painter reads it through
     // palette() (render.h's palette block).
     install_palette(palette_record(effective_palette_name(device_config.palette)),

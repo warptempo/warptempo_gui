@@ -42,8 +42,9 @@ constexpr bool clearlooks_values_in_table_order() {
 static_assert(clearlooks_values_in_table_order());
 
 // EVERY VOCABULARY HAS A COMPILED THEME, IN THE VOCABULARIES' ORDER, and
-// every theme belongs to one vocabulary — the default palettes' assert
-// (palette_file.cpp) in the same shape — so chrome_theme_words never misses.
+// every theme belongs to one vocabulary — the order the chromes' own
+// schemes' assert (palette_file.cpp) walks the two tables in — so
+// chrome_theme_words never misses.
 constexpr bool themes_follow_the_vocabularies() {
     if (std::size(kGuiChromeSpecs) != std::size(kGuiChromeThemes))
         return false;

@@ -65,7 +65,8 @@ struct Viewport;
 // `palette` or `scheme` resolved (effective_palette_name,
 // effective_scheme_name) — NOT A FIELD HERE: the live config is its one
 // truth, read at every paint, so the picker's first open after a launch
-// lands on the config's presets (or the chrome's own) with no seeding to
+// lands on the config's presets (or, with no line, the chrome's own scheme
+// and the default palette) with no seeding to
 // keep in step. THE PRESET MENU (the bottom row's preset button, below)
 // loads a preset of the scope's kind, saves the live words of that kind over
 // the active file, saves them under a new name, renames the active file or
@@ -636,16 +637,17 @@ GuiChromePick live_scheme_keys();
 
 // A PRESET'S SHOWN NAME of the scope's kind (the preset button's label, the
 // menu's rows): a built-in's generated display name ("Windows 2000
-// Standard", "Clearlooks", "CDE Northern Sky" — the key is the file
-// grammar's, this the user's, as element_display_name is; a default palette
-// shown by its chrome's own scheme's), a file's name verbatim. Whether
+// Standard", "Clearlooks", "CDE Northern Sky"; Cool Edit's "Default", "XP
+// Blue" — the key is the file grammar's, this the user's, as
+// element_display_name is), a file's name verbatim. Whether
 // `name` is a built-in's display name of the scope's kind, case and all —
 // the name ask refuses such a name as taken, so the menu never lists two
 // rows reading alike.
 std::string preset_display_name(Scope s, std::string_view name);
 bool        is_builtin_display_name(Scope s, std::string_view name);
-// Whether `name` is a built-in of the scope's kind (a default palette, or
-// any built-in scheme), and whether it names a preset of that kind at all.
+// Whether `name` is a built-in of the scope's kind (any built-in palette,
+// or any built-in scheme), and whether it names a preset of that kind at
+// all.
 bool        is_builtin_preset(Scope s, std::string_view name);
 bool        is_preset_name(Scope s, std::string_view name);
 
@@ -664,8 +666,8 @@ constexpr const char* preset_act_label(PresetAct a) {
 }
 // THE SCOPE'S ACTIVE PRESET — the live device config's `scheme` or
 // `palette` resolved (effective_scheme_name, effective_palette_name): the
-// name as written, or the live chrome's own for no line (the head: no field
-// holds it).
+// name as written, or for no line the live chrome's own scheme or the
+// default palette (the head: no field holds it).
 std::string_view active_preset(const AppState& app, Scope s);
 // THE ACTS' TRUTHFUL ENABLED BITS for the live scope (every roster button
 // truthful), asked by the painter once per paint and published as painted;
@@ -678,16 +680,17 @@ std::string_view active_preset(const AppState& app, Scope s);
 bool preset_act_enabled(const AppState& app, PresetAct a);
 
 // THE MENU'S ROWS for the scope, top to bottom (architect 2026-10-08
-// ~11:10; per scope ~18:15; the defaults' separator ~19:30): the four acts
-// — a separator — HIS FILES OF THE KIND (byte order) — a separator — THE
-// BUILT-INS: under Waveform THE CHROME'S DEFAULT PALETTE ALONE (the live
-// chrome's; the other chromes' defaults are their own chromes' — the
-// `palette` key still names them, palette_file.h); under Chrome THE THREE
-// CHROMES' OWN SCHEMES in the vocabularies' order (windows-2000-standard,
-// clearlooks, solaris) — A SEPARATOR ("just put a separator after the
-// default color themes", architect 2026-10-08 ~19:30) — then THE CATALOG'S
-// OTHER 102 in the catalog's order (its 104 less the two chromes' own it
-// holds, windows-2000-standard and clearlooks, listed above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
+// ~11:10; per scope ~18:15; the defaults' separator ~19:30; Cool Edit's
+// presets 2026-10-09 ~13:30): the four acts — a separator — HIS FILES OF THE
+// KIND (byte order) — a separator — THE BUILT-INS: under Waveform COOL
+// EDIT'S PRESETS, all twenty in its own order, "Default" first (the default
+// palette under every chrome, palette_file.h's kGuiBuiltinPalettes); under
+// Chrome THE THREE CHROMES' OWN SCHEMES in the vocabularies' order
+// (windows-2000-standard, clearlooks, solaris) — A SEPARATOR ("just put a
+// separator after the default color themes", architect 2026-10-08 ~19:30)
+// — then THE CATALOG'S OTHER 102 in the catalog's order (its 104 less the
+// two chromes' own it holds, windows-2000-standard and clearlooks, listed
+// above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
 // GROUP IS NOT SHOWN: with no file, ONE separator stands between the acts
 // and the built-ins — a Windows menu never shows an empty group between two
 // separators; the defaults' group is never empty. Each separator is a scroll
@@ -942,12 +945,12 @@ struct GuiColorPicker {
 
     // -- THE PRESETS' ACTS (the head; the menu's rows reach them at the
     //    lift, color_picker_release). EACH ACTS ON THE LIVE SCOPE'S KIND
-    //    ALONE — a scheme's keys or a palette's ten, the other kind's
+    //    ALONE — a scheme's keys or a palette's twelve, the other kind's
     //    live words and key untouched (2026-10-08 ~18:15) -----------------
     //
     // LOAD — a name row's tap: the named preset installed live (Chrome:
     // scheme_record's keys, or none for the live chrome's own scheme, the
-    // compiled chrome back; Waveform: palette_record's ten) through the
+    // compiled chrome back; Waveform: palette_record's twelve) through the
     // apply shape, THE SCOPE'S ACTIVE PRESET made `name` (its key written,
     // write_preset_key), OLD and NEW reseated off the live element's new
     // color. A load of the active preset itself is the same act: the file's
@@ -955,7 +958,7 @@ struct GuiColorPicker {
     void load_preset(std::string_view name);
     // SAVE — the scope's live words over the active file (write_scheme_file
     // with the live scheme, which a file's load always seats, or
-    // write_palette_file with the live ten); a failure cards. The act is
+    // write_palette_file with the live twelve); a failure cards. The act is
     // gray where it would be a no-op or a refusal (preset_act_enabled), so
     // the press that reaches it always writes.
     void save_preset();
@@ -991,12 +994,13 @@ struct GuiColorPicker {
     // reached through GuiInputHandler.
     void raise_delete();
     // The prompt's Delete: the parked file of the scope's kind removed; the
-    // scope's live words fall to THE LIVE CHROME'S OWN — its compiled
-    // chrome (Chrome) or its default ten (Waveform), the next launch's
-    // picture — installed live, OLD and NEW reseated, the scope's key
-    // cleared and persisted — the preset button then shows the chrome's own
-    // name. A failure cards and changes nothing else. The Cancel drops the
-    // parked name and changes nothing.
+    // scope's live words fall to WHAT NO LINE MEANS — the live chrome's
+    // compiled chrome (Chrome) or the default palette, Cool Edit's
+    // "Default" (Waveform), the next launch's picture — installed live, OLD
+    // and NEW reseated, the scope's key cleared and persisted — the preset
+    // button then shows the chrome's own scheme's name or "Default". A
+    // failure cards and changes nothing else. The Cancel drops the parked
+    // name and changes nothing.
     void confirm_delete();
     void cancel_delete();
 
@@ -1007,8 +1011,9 @@ struct GuiColorPicker {
 
     // THE `scheme` AND `palette` KEYS' ONE WRITER (the presets' acts): `name`
     // becomes THE LIVE SCOPE'S ACTIVE PRESET — its key's value the name, or
-    // EMPTY (NO LINE) when it is the live chrome's own (device_config.h:
-    // absent = the chrome's own); a same-value write never reaches the
+    // EMPTY (NO LINE) when it is what no line means, the live chrome's own
+    // scheme or the default palette (device_config.h); a same-value write
+    // never reaches the
     // writer (the config's no-op rule); otherwise the live struct takes it
     // and write_device_config persists it, a failure the diagnostic on
     // stderr and the display on a card, the live value standing for the
@@ -1021,7 +1026,7 @@ struct GuiColorPicker {
     void apply_live_words(const GuiPaletteWords& words,
                           const std::optional<GuiChromePick>& scheme);
     // THE APPLY SHAPE'S ONE ROAD (2026-10-07; the scheme 2026-10-08): the
-    // ten installed (install_program_palette, palette_file.h) and the
+    // twelve installed (install_program_palette, palette_file.h) and the
     // scheme's keys (install_chrome_pick, render.h), then the apply shape
     // run once, as install_program_palette's declaration states it. Its two
     // callers are set_color and apply_live_words. ITS DAMAGE (2026-10-09): a
@@ -1029,7 +1034,8 @@ struct GuiColorPicker {
     // (Viewport::invalidate_surface, platform.h's two damage calls), and a
     // changed twelve drops the bound icon faces (icons::drop_bound_faces,
     // 2026-10-10: a Breeze glyph wears its surface's text role); the
-    // ten alone the client (invalidate_all) — the rule at the body.
+    // palette's twelve alone the client (invalidate_all) — the rule at the
+    // body.
     void install_live_words(const GuiPaletteWords& words,
                             const std::optional<GuiChromePick>& scheme);
 };

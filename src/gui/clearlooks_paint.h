@@ -312,11 +312,8 @@ void paint_cl_scrollbar_stepper(cairo_t* cr, const GuiRect& b, bool points_up,
                                 bool pressed);
 void paint_cl_scrollbar_slider(cairo_t* cr, const GuiRect& body);
 
-// (THE WELL'S FRAME, paint_cl_well_frame — GtkScrolledWindow's one shade[5]
-// line on the outer row of the well's two at the waveform area's top and
-// bottom — stood 2026-10-07 to 2026-10-09; the canvas's frame is the
-// program's since, the same under every chrome (render.h's row-6 canvas
-// paragraph). Git history.)
+// THE CANVAS'S FRAME IS NO CLEARLOOKS PAINTER'S: it is the program's, the
+// same under every chrome (render.h's row-6 canvas paragraph).
 
 // THE SCRUB'S TROUGH — clearlooks_gummy_draw_scale_trough on `trough`, the
 // kClScaleTroughPx rows across the track (cl_scale_trough_h_px tall), SQUARE

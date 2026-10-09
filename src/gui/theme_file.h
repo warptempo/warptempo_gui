@@ -267,8 +267,8 @@ inline constexpr GuiThemeWords kGuiThemeCde = cde_theme_words();
 
 // THE CHROMES' THEMES — each chrome's key and its compiled words, in the
 // vocabularies' order (kGuiChromeSpecs; theme_file.cpp asserts that every
-// chrome has one and that the two orders agree, the default palettes' shape,
-// palette_file.h's kGuiDefaultPalettes).
+// chrome has one and that the two orders agree; palette_file.cpp that each
+// chrome's own scheme is its theme key for key).
 struct GuiChromeTheme {
     const char*          chrome;   // the ChromeSpec's key
     const GuiThemeWords* words;
