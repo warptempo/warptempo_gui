@@ -3348,7 +3348,8 @@ int gui_main(const char* argument) {
     // THE CHROME IS CHOSEN HERE, ONCE (architect 2026-10-07, chrome_spec.h's
     // live_chrome_spec): the config's `chrome`, judged by its reader, names
     // the vocabulary the whole process paints — its face set, its lanes, its
-    // icon set and its compiled theme — before anything reads the spec: the
+    // icon set (unless the config's `icons` names another) and its compiled
+    // theme — before anything reads the spec: the
     // icon set's load below, the palette's install, the window and the
     // first paint. The faces were installed earlier on Android (android_main,
     // before this function) and need nothing from it: the install measured
@@ -3356,10 +3357,16 @@ int gui_main(const char* argument) {
     // at the first paint. A `chrome` commit in Settings writes the file and
     // takes effect at the next launch (commit_device_setting).
     set_live_chrome_spec(device_config.chrome);
+    // THE ICON SET IS CHOSEN BESIDE IT, ONCE (architect 2026-10-10, icons.h's
+    // gui_live_icon_set): the config's `icons`, judged by its reader, or
+    // with no line the live chrome's own set. An `icons` commit in Settings
+    // writes the file and takes effect at the next launch, the chrome's
+    // rule (commit_device_setting).
+    icons::set_live_icon_set(device_config.icons);
     // THE ICON SET IS LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
-    // load_svg_set): the live chrome spec's set read in place from the
-    // bundle and every drawing parsed before the window exists, so no paint
-    // meets a half-loaded set. A file that is not well-formed SVG is a build
+    // load_svg_set): the live set read in place from the bundle and every
+    // drawing parsed before the window exists, so no paint meets a
+    // half-loaded set. A file that is not well-formed SVG is a build
     // defect, the validation doctrine's class (1): the same road, one line
     // naming the set, the file and resvg's error, and no window.
     if (const std::optional<std::string> err =

@@ -6,8 +6,8 @@ laptop builds its own (`CMakeLists.txt`), the tablet's libraries are cross-built
 `android/NOTES.md` §6) and the APK is installed on one tablet only. The licence texts live in each pinned source; this
 file is the list. Libraries the laptop's binary loads from the system at run time (cairo, HarfBuzz, FreeType, fftw,
 Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. The faces and the icons are data, not
-code: `fonts/README.md`, `assets/icons/tango/README.md` and `assets/icons/mist/README.md` carry their provenance and
-licence texts.
+code: `fonts/README.md`, `assets/icons/tango/README.md`, `assets/icons/mist/README.md` and `assets/icons/breeze/README.md`
+carry their provenance and licence texts.
 
 ## Both devices
 

@@ -5,6 +5,7 @@
 #include "engine_settings.h"
 #include "gui_input.h"
 #include "history_diff.h"
+#include "icons.h"          // kIconSetKeys: the Icons row's domain
 #include "playback.h"
 #include "render_pipeline.h"
 #include "render.h"
@@ -3447,6 +3448,20 @@ inline constexpr SettingsChoiceSource kChromeChoiceSource{
         return kGuiChromeSpecs[static_cast<std::size_t>(i)]->display_name;
     },
 };
+// THE ICON SET'S DOMAIN (architect 2026-10-10): the bundled sets
+// (kIconSetKeys, icons.h) in their order — Tango, Mist, Breeze — shown by
+// their display names (kIconSetDisplayNames). The combo shows THE
+// EFFECTIVE SET, the chrome's own when the config has no `icons` line
+// (recall_gui_setting_value, settings_io.cpp).
+inline constexpr SettingsChoiceSource kIconSetChoiceSource{
+    +[]() -> int { return static_cast<int>(std::size(icons::kIconSetKeys)); },
+    +[](int i) -> const char* {
+        return icons::kIconSetKeys[static_cast<std::size_t>(i)];
+    },
+    +[](int i) -> const char* {
+        return icons::kIconSetDisplayNames[static_cast<std::size_t>(i)];
+    },
+};
 struct SettingsPopupItem {
     const char*                 label;
     const char*                 key;
@@ -3504,13 +3519,20 @@ struct SettingsPopupItem {
 // in Title Case; its commit applies at the next launch and says so on a card
 // (commit_device_setting).
 //
-// `palette` (2026-10-07, the sixth device key) HAS NO ROW: the in-app
-// color picker is its chooser, so the device half stays these four.
+// `palette` (2026-10-07, the sixth device key) and `scheme` HAVE NO ROW:
+// the in-app color picker is their chooser.
 //
-// `Chrome` IS THE ONE CHOICE ROW (architect 2026-10-07 evening; the editor
-// kinds above): its domain the chrome table, its commit the text road's
-// (commit_device_setting), so its refusal-free value, the config write and
-// the next-launch card are unchanged.
+// `Icons` JOINED 2026-10-10 (architect: "an icon picker... like the chrome
+// picker"), RIGHT AFTER Chrome — its companion, out of kDeviceConfigKeys'
+// order, where `icons` is the last key — its domain the bundled sets
+// (kIconSetChoiceSource), its commit the Chrome row's road
+// (commit_device_setting): a pick of the chrome's own set writes no line,
+// the next launch applies it and a card says so.
+//
+// `Chrome` AND `Icons` ARE THE CHOICE ROWS (architect 2026-10-07 evening;
+// the editor kinds above): each domain its owner's table, each commit the
+// text road's (commit_device_setting), so the refusal-free value, the
+// config write and the next-launch card are the text road's.
 //
 // `Pick Colors` IS THE MENU'S FIRST COMMAND ROW (architect 2026-10-07: the
 // in-app color picker, "a full-fledged part of the project"), behind its own
@@ -3542,6 +3564,8 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Projects Path",       "projects_path", false},
     {"Chrome",              "chrome",        false, SettingsPopupAct::EditKey,
      SettingsEditorKind::Choice, &kChromeChoiceSource},
+    {"Icons",               "icons",         false, SettingsPopupAct::EditKey,
+     SettingsEditorKind::Choice, &kIconSetChoiceSource},
     {"Pick Colors",         nullptr,         true, SettingsPopupAct::PickColors},
     {"True Colors",         nullptr,         false, SettingsPopupAct::TrueColors},
 };

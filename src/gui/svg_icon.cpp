@@ -8,16 +8,25 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 
 namespace svg_icon {
 
-std::expected<Document, std::string> parse(std::string_view bytes) {
+std::expected<Document, std::string> parse(
+        std::string_view bytes, std::optional<uint32_t> current_color) {
     // The options are resvg's defaults (96 dpi, no resources directory: a
     // bundled drawing references no file; no font database, the build has no
     // text), made per parse and freed with it: nothing global outlives a
-    // load.
+    // load — plus, for a bound parse, the one-rule stylesheet that sets the
+    // root's `color` (the declaration). resvg copies the string.
     resvg_options* options = resvg_options_create();
+    if (current_color) {
+        char sheet[32];
+        std::snprintf(sheet, sizeof sheet, "svg { color: #%06X; }",
+                      static_cast<unsigned>(*current_color & 0xFFFFFFu));
+        resvg_options_set_stylesheet(options, sheet);
+    }
     resvg_render_tree* tree = nullptr;
     const int32_t code = resvg_parse_tree_from_data(
         bytes.data(), bytes.size(), options, &tree);

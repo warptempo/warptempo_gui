@@ -1016,7 +1016,9 @@ struct GuiColorPicker {
     // run once, as install_program_palette's declaration states it. Its two
     // callers are set_color and apply_live_words. ITS DAMAGE (2026-10-09): a
     // changed twelve the whole surface, the window's sizing frame with it
-    // (Viewport::invalidate_surface, platform.h's two damage calls); the
+    // (Viewport::invalidate_surface, platform.h's two damage calls), and a
+    // changed twelve drops the bound icon faces (icons::drop_bound_faces,
+    // 2026-10-10: a Breeze glyph wears its surface's text role); the
     // fifteen alone the client (invalidate_all) — the rule at the body.
     void install_live_words(const GuiPaletteWords& words,
                             const std::optional<GuiChromePick>& scheme);

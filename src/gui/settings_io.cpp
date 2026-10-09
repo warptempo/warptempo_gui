@@ -5,6 +5,7 @@
 #include "frame_format.h"
 #include "value_format.h"
 
+#include <cassert>
 #include <cerrno>
 #include <cstdio>
 #include <fcntl.h>
@@ -384,6 +385,19 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // no-op.
     if (key == "chrome" && app.device_config != nullptr)
         return app.device_config->chrome;
+    // THE ICON SET (2026-10-10): THE EFFECTIVE SET, the one deliberate
+    // departure from the byte-exact recall — with no `icons` line the
+    // chrome's own (effective_icon_set, icons.h), resolved against the
+    // config's `chrome`, the next launch's, so the Icons row's combo shows
+    // the set that launch will load. Its commit writes no line for the
+    // chrome's own (commit_device_setting), so the recall commits back as
+    // an unchanged no-op either way.
+    if (key == "icons" && app.device_config != nullptr) {
+        const ChromeSpec* chrome = chrome_spec_for_key(app.device_config->chrome);
+        assert(chrome != nullptr);
+        return std::string(
+            icons::effective_icon_set(app.device_config->icons, *chrome));
+    }
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

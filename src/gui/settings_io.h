@@ -152,7 +152,11 @@ std::string format_settings_text(
 // free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`) and
 // `chrome` (since 2026-10-07, held as typed): the same "recall
 // and the file can never diverge" rule the
-// `.settings` keys keep, only against a different file. (`last_project` is
+// `.settings` keys keep, only against a different file — BUT `icons`
+// (2026-10-10), which recalls THE EFFECTIVE SET, the chrome's own where the
+// file has no line (the Icons row's combo shows what the next launch
+// loads; its commit writes no line for the chrome's own, so the two still
+// agree on the file). (`last_project` is
 // not editable and recalls nothing: it is the program's own.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

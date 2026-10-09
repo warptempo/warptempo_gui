@@ -568,6 +568,13 @@ inline constexpr const char* kProjectsPathAppliesCard =
 inline constexpr const char* kChromeAppliesCard =
     "Chrome applies at the next launch";
 
+// THE ICON SET COMMIT'S SENTENCE (architect 2026-10-10): an `icons=` commit
+// changes nothing on screen either — the set is parsed once at launch
+// (set_live_icon_set, icons.h) — so it says where it applies, the chrome's
+// sentence's shape, raised only when the config write succeeded.
+inline constexpr const char* kIconsAppliesCard =
+    "Icons apply at the next launch";
+
 // THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02) — a
 // proper sub-window whose TARGET span rounds below one output sample, which
 // plan_trim refuses and every orchestrator answers by rendering the FULL,

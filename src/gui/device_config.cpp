@@ -8,6 +8,7 @@
                                // through render.h and gui_font.h,
                                // chrome_spec.h's is_chrome_key,
                                // kChromeGrammarReason
+#include "icons.h"             // is_icon_set_key, kIconSetGrammarReason
 
 #include <cstddef>
 #include <cstdio>
@@ -22,7 +23,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, the required
-// set below its subset (SIX keys since 2026-10-08, `theme` gone; the
+// set below its subset (EIGHT keys since 2026-10-10, `icons` appended;
+// seven 2026-10-08, `theme` gone; the
 // count's succession, up to seventeen with the tuning phases of
 // 2026-09-23..27 and nineteen with the colour keys of 2026-10-03..04, is the
 // header's record and git's). THE ORDER IS THE ARCHITECT'S OWN, given
@@ -31,14 +33,15 @@ namespace {
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). The writer's list and the required
-// list stand side by side below, the second the first less its three keys
+// list stand side by side below, the second the first less its four keys
 // that may be absent (2026-10-07; until then one list served both, so no
 // key could be written and not demanded — the absent-able keys are the
 // deliberate exception, each saying what its absence means).
 //
 // `chrome` FOLLOWS last_project (2026-10-07), `scheme` FOLLOWS IT
 // (2026-10-08 ~18:15), the chrome's colors after the chrome, and `palette`
-// FOLLOWS THAT (2026-10-07), the program's colors after the chrome's.
+// FOLLOWS THAT (2026-10-07), the program's colors after the chrome's;
+// `icons` is APPENDED after it (2026-10-10).
 // (`theme` stood after `chrome` 2026-10-03..10-08, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
@@ -48,13 +51,15 @@ constexpr const char* kDeviceConfigKeys[] = {
     "chrome",
     "scheme",
     "palette",
+    "icons",
 };
-// THE REQUIRED SET — every key above but the three that may be ABSENT
+// THE REQUIRED SET — every key above but the four that may be ABSENT
 // (architect 2026-10-07): `chrome`, absent reading as windows-2000 (the
 // default chrome since 2026-10-07 ~22:45, kDefaultChromeKey; a config
 // written before the key existed loads, in the default chrome), `scheme`
-// (2026-10-08), absent meaning the chrome's own scheme, and `palette`,
-// absent meaning the chrome's default palette. The scanner
+// (2026-10-08), absent meaning the chrome's own scheme, `palette`,
+// absent meaning the chrome's default palette, and `icons` (2026-10-10),
+// absent meaning the chrome's own icon set. The scanner
 // checks presence against this list and duplicates against every key.
 constexpr const char* kDeviceConfigRequiredKeys[] = {
     "gui_scale",
@@ -91,12 +96,14 @@ std::filesystem::path device_config_path() {
 std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
-        // AN UNSET PALETTE OR SCHEME WRITES NO LINE (2026-10-07; the scheme
-        // 2026-10-08): its one spelling is the line's absence, so the file
-        // keeps following the chrome.
+        // AN UNSET PALETTE, SCHEME OR ICON SET WRITES NO LINE (2026-10-07;
+        // the scheme 2026-10-08, the icons 2026-10-10): its one spelling is
+        // the line's absence, so the file keeps following the chrome.
         if (std::string_view(key) == "palette" && cfg.palette.empty())
             continue;
         if (std::string_view(key) == "scheme" && cfg.scheme.empty())
+            continue;
+        if (std::string_view(key) == "icons" && cfg.icons.empty())
             continue;
         s += key;
         s += '=';
@@ -125,6 +132,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "palette") {
             // The name verbatim (printable ASCII, palette_file.h's grammar).
             s += cfg.palette;
+        } else if (k == "icons") {
+            // A bundled set's key verbatim (is_icon_set_key, icons.h).
+            s += cfg.icons;
         }
         s += '\n';
     }
@@ -225,6 +235,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kPaletteGrammarReason);
             }
             out.palette = value;
+            return {};
+        }
+        // THE ICON SET (architect 2026-10-10): a bundled set's key under its
+        // one grammar owner (is_icon_set_key, icons.h); absent, the empty
+        // struct value stands — the chrome's own set. An EMPTY value is
+        // refused like any other non-key: the unset key is the line's
+        // absence.
+        if (key == "icons") {
+            if (!icons::is_icon_set_key(value)) {
+                return bad_value(ln, key, value, icons::kIconSetGrammarReason);
+            }
+            out.icons = value;
             return {};
         }
         return warptempo_parse::prefix_line_error(

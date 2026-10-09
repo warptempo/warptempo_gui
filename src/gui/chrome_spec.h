@@ -350,8 +350,11 @@ struct ChromeSpec {
     // platform_android.h's).
     int                window_frame_lines;
     bool               window_frame_maximized;
-    // THE ICON SET the vocabulary wears: a bundled folder under
-    // assets/icons/, parsed at launch through resvg (icons.h's head).
+    // THE ICON SET the vocabulary wears BY DEFAULT: a bundled folder under
+    // assets/icons/ (icons.h's kIconSetKeys, static_asserted there), parsed
+    // at launch through resvg (icons.h's head) — the set an absent `icons`
+    // device key means; the key names another for every chrome (architect
+    // 2026-10-10, gui_live_icon_set).
     const char*        icon_set;
 };
 

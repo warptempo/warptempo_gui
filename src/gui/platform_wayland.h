@@ -73,7 +73,7 @@ public:
     static DeviceConfig device_config_defaults();
 
     // THE BUNDLED ICON SET'S FILES — the SVG drawings of the set `set`
-    // (assets/icons/<set>/, the Tango set's 59), as a map from FILE NAME
+    // (assets/icons/<set>/, 59 per set), as a map from FILE NAME
     // (`<Enumerator>.svg`, no folder) to the file's whole bytes, every file of
     // the set's folder whose name ends `.svg`. Read by the launch's icon load
     // alone (icons::load_svg_set, icons.h), IN PLACE: nothing is copied into

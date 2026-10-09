@@ -4,6 +4,7 @@
 #include "render_output_naming.h"
 #include "device_config.h"
 #include "chrome_spec.h"       // is_chrome_key, kChromeGrammarReason
+#include "icons.h"             // is_icon_set_key, kIconSetGrammarReason
 #include "settings_io.h"
 #include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
@@ -404,10 +405,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other three editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path and since 2026-10-07 chrome — take their one
-    // direct-set body in commit(), commit_device_setting, ahead of this
-    // router.)
+    // move. (The other four editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since 2026-10-07 chrome and since
+    // 2026-10-10 icons — take their one direct-set body in commit(),
+    // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
         int64_t v64 = 0;
         if (!parse_authored_frame(value, v64) || !is_gui_scale_percent(v64)) {
@@ -1060,7 +1061,8 @@ void GuiSettingsEditor::commit() {
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
 // project is opened first — a rename-by-hand case, accepted. `chrome`
-// (2026-10-07): AT THE NEXT LAUNCH alone, its card saying so (its arm).
+// (2026-10-07) and `icons` (2026-10-10): AT THE NEXT LAUNCH alone, each
+// card saying so (their arms).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08 and left with its key.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
@@ -1123,6 +1125,34 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         if (written)
             notifications.notify(AppState::NotificationClass::Normal,
                                  kChromeAppliesCard);
+        return true;
+    }
+
+    // THE ICON SET (architect 2026-10-10): the Chrome arm's road exactly — a
+    // bundled set's key under its one grammar owner (is_icon_set_key,
+    // icons.h), written at once, applied at the next launch and SAID so on
+    // its card (kIconsAppliesCard) — with the palette's rule for the
+    // chrome's own: A PICK OF THE CHROME'S OWN SET WRITES NO LINE (the empty
+    // value, device_config.h), "no line for a chrome's own default", judged
+    // against the config's `chrome`, the next launch's (the recall's
+    // ground, recall_gui_setting_value). A pick that leaves the file as it
+    // stands is the unchanged no-op.
+    if (key == "icons") {
+        if (!icons::is_icon_set_key(value)) {
+            reject(icons::kIconSetGrammarReason);
+            return true;
+        }
+        const ChromeSpec* chrome = chrome_spec_for_key(app.device_config->chrome);
+        assert(chrome != nullptr);
+        const std::string line = value == chrome->icon_set ? std::string()
+                                                           : value;
+        if (line == app.device_config->icons) { unchanged(); return true; }
+        app.device_config->icons = line;
+        const bool written = persist();
+        applied();
+        if (written)
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kIconsAppliesCard);
         return true;
     }
 
@@ -1265,8 +1295,8 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, chrome — gui_scale
-    // and the last three the device config's — per-tab trim / read_only)
+    // gui_scale, projects_repo, projects_path, chrome, icons — gui_scale
+    // and the last four the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).

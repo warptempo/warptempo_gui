@@ -125,11 +125,15 @@ struct TrimRange {
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — no named literal stands beside them since
 // 2026-10-07, when the flag editor's black frame went — or THE ICON SET'S
-// OWN INKS (architect 2026-10-06): the Tango drawings' colours, gradients and
-// opacities as each file names them (icons.h), period artwork, not roles, so
-// a glyph is never recoloured by a theme — the one place an antialiased,
-// translucent picture is copied whole. A DISABLED icon is ReactOS's
-// saturate of that picture (icons::draw_disabled), no role entering.
+// OWN INKS (architect 2026-10-06): the Tango and Mist drawings' colours,
+// gradients and opacities as each file names them (icons.h), period
+// artwork, not roles, so such a glyph is never recoloured by a theme — the
+// one place an antialiased, translucent picture is copied whole. THE ONE
+// EXCEPTION IS A BOUND DRAWING (2026-10-10, the Breeze set): monochrome,
+// painting in `currentColor`, it wears the text role of the surface it
+// stands on (surface_text above; icons.h's head). A DISABLED icon is the
+// live spec's rule on that picture (icons::draw_disabled), no role
+// entering.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
 // colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
 // Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
@@ -408,6 +412,36 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
+// THE SURFACES A GLYPH STANDS ON AND THEIR TEXT ROLES (2026-10-10): each
+// surface's recorded text color under the live chrome — "text over a fill
+// is the theme's recorded pair" — read by the words painted there and by a
+// BOUND icon drawing standing there (icons.h's head: Breeze's glyphs wear
+// it). The one owner of the choice, so a word and a glyph on one surface
+// never part:
+//   Face             the label (Windows' ButtonText; GTK's fg, the knob's
+//                    text; Motif's set-2 foreground) — the toolbars, row 8
+//                    and the render player's flat row
+//   CaptionActive    the caption's text, active and inactive — Windows'
+//   CaptionInactive  CaptionText pair under windows-2000 and cde, metacity's
+//                    title text and unfocused title under clearlooks
+//                    (cl_title_text, cl_title_unfocused); the title
+//                    (paint_caption_row) and the caption's AppIcon
+//   Card             the card's text (InfoText) — the notification cards
+//   ListRow          the list's text pair, resting and lit — the field's
+//   ListRowLit       text and the selection's under windows-2000 and cde,
+//                    GTK's text[NORMAL] and text[SELECTED] under clearlooks
+//                    (cl_text, cl_text_selected); the folder overlay's and
+//                    the project picker's rows (paint_folder_overlay)
+enum class GuiSurface {
+    Face,
+    CaptionActive,
+    CaptionInactive,
+    Card,
+    ListRow,
+    ListRowLit,
+};
+GuiColor surface_text(GuiSurface surface);
+
 // THE CHROME KNOB'S PICK (architect 2026-10-08 ~11:00, replacing the
 // ground-and-text pick of ~09:40): a SCHEME'S TWELVE chrome keys (a scheme
 // of its own kind since 2026-10-08 ~18:15) — palette_file.h owns their file
@@ -479,8 +513,9 @@ void install_palette(const std::array<uint32_t, 15>& program,
 // after both). Why that shape is enough for the chrome: the chrome's colors
 // bake into one cached thing, the flag cache (a disabled flag's ground),
 // keyed by the generation; the caption's ramp image keys its two words
-// itself (paint_caption_gradient); every other chrome painter reads
-// palette() each frame (re-grepped 2026-10-08).
+// itself (paint_caption_gradient); a bound icon's rasters key their color
+// and the caller drops them (icons::drop_bound_faces, 2026-10-10); every
+// other chrome painter reads palette() each frame (re-grepped 2026-10-10).
 void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
 
 // THE LIVE CHROME PICK AS INSTALLED — the knob the install family last wrote
@@ -3178,7 +3213,9 @@ struct WaveformBasis {
 // (render_waveform) and the checked dither's tile (paint_checker_rect), each
 // handing it the color already converted for the window (display_color), and
 // the caption's gradient (paint_caption_gradient), which keys its cache on
-// the authored words and writes its converted ramp itself.
+// the authored words and writes its converted ramp itself; a bound icon's
+// color (icons.cpp) takes the authored word's low 24 bits, its raster
+// converted after.
 inline uint32_t argb32_opaque_word(GuiColor c) {
     return (UINT32_C(255) << 24) |
            (static_cast<uint32_t>(std::nearbyint(c.r * 255.0)) << 16) |

@@ -2,6 +2,7 @@
 
 #include "clearlooks_paint.h"   // cl_scale_thumb_h_px (the thumb's grab height)
 #include "device_config.h"     // the `palette` and `scheme` keys' writer (write_device_config)
+#include "icons.h"             // drop_bound_faces (a changed twelve)
 #include "notifications.h"
 #include "playback_lifecycle.h"
 #include "text_shape.h"
@@ -1379,8 +1380,16 @@ void GuiColorPicker::install_live_words(
     // colors (platform.h's two damage calls). THE FIFTEEN NEED NO MORE THAN
     // THE CLIENT: the palette's colors paint in the well and on what enters
     // it, never on the frame.
-    if (scheme != chrome_before) viewport.invalidate_surface();
-    else                         viewport.invalidate_all();
+    // A CHANGED TWELVE ALSO DROPS THE BOUND ICON FACES (2026-10-10, icons.h's
+    // BOUND DRAWING): a bound glyph wears its surface's text role, which the
+    // twelve may have moved; the drawings refill lazily in the new colors.
+    // The fifteen touch no icon.
+    if (scheme != chrome_before) {
+        icons::drop_bound_faces();
+        viewport.invalidate_surface();
+    } else {
+        viewport.invalidate_all();
+    }
 }
 
 void GuiColorPicker::apply_live_words(

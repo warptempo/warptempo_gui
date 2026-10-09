@@ -1614,13 +1614,16 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE APP'S ICON at the spec's seat ((2, 1) under win2000, (2, 2) under
     // clearlooks — metacity's menu button, the icon filling its 16 x 16),
     // 16 x 16: the set's AppIcon (icons.h), no case, at the caption's own
-    // placement.
+    // placement, standing on the caption (a bound drawing wears the title's
+    // role, following the caption's state as the title does).
     const ChromeSpec& spec = live_chrome_spec();
     if (!cde)
         icons::draw(cr, icons::Icon::AppIcon,
                     static_cast<double>(row.x + scaled_px(spec.caption_icon_x_px)),
                     static_cast<double>(row.y + scaled_px(spec.caption_icon_y_px)),
-                    static_cast<double>(scaled_px(kCaptionIconPx, 1)));
+                    static_cast<double>(scaled_px(kCaptionIconPx, 1)),
+                    active ? GuiSurface::CaptionActive
+                           : GuiSurface::CaptionInactive);
 
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
@@ -1696,10 +1699,11 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
             cairo_stroke(cr);
             cairo_restore(cr);
         }
-        set_palette_source(cr, !clearlooks ? (active ? pal.caption_active_text
-                                                     : pal.caption_inactive_text)
-                               : active    ? pal.cl_title_text
-                                           : pal.cl_title_unfocused);
+        // The caption's text role (surface_text, render.h: Windows'
+        // CaptionText pair, metacity's title and unfocused title under
+        // clearlooks), the one the caption's bound AppIcon wears.
+        set_palette_source(cr, surface_text(active ? GuiSurface::CaptionActive
+                                                   : GuiSurface::CaptionInactive));
         text_shape::show_shaped_run(cr, head, x, baseline);
         if (tail)
             text_shape::show_shaped_run(cr, *tail, x + head.width_px, baseline);
@@ -3966,14 +3970,15 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         paint_popup_chrome(cr, card, PopupFace::Info);
 
         const int box_y = card.y + pad;
-        // The card's class glyph, no case, at the card's own placement.
+        // The card's class glyph, no case, at the card's own placement,
+        // standing on the card (a bound drawing wears its text role).
         icons::draw(cr,
                     n.cls == AppState::NotificationClass::Critical
                         ? icons::Icon::DialogError
                         : icons::Icon::DialogInformation,
                     static_cast<double>(glyph_x + inset),
                     static_cast<double>(box_y + inset),
-                    static_cast<double>(glyph_px));
+                    static_cast<double>(glyph_px), GuiSurface::Card);
 
         if (text_room > 0) {
             cairo_save(cr);
@@ -8883,10 +8888,14 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             const int gy = r.y + (r.h - glyph) / 2;
             // THE GLYPH KEEPS ITS OWN COLOURS ON EVERY ROW, lit or resting
             // (architect 2026-10-06: every icon's inks are the drawing's
-            // own, period pixel art no ground recolours — icons.h's head);
-            // only the name takes the row's text pair.
+            // own, period pixel art no ground recolours — icons.h's head),
+            // EXCEPT A BOUND DRAWING's (2026-10-10, Breeze's), which wears
+            // the row's text pair as the name does (the surface named here).
+            const GuiSurface row_surface =
+                lit ? GuiSurface::ListRowLit : GuiSurface::ListRow;
             icons::draw(cr, icon, static_cast<double>(gx),
-                        static_cast<double>(gy), static_cast<double>(glyph));
+                        static_cast<double>(gy), static_cast<double>(glyph),
+                        row_surface);
             const int text_x = gx + glyph + gap;
 
             // THE NAME, shaped through the one chokepoint, after the glyph —
@@ -8907,10 +8916,9 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
             cairo_rectangle(cr, text_x, r.y,
                             std::max(0, (r.x + r.w) - text_x), r.h);
             cairo_clip(cr);
-            set_palette_source(cr, gtk_list ? (lit ? pal.cl_text_selected
-                                                   : pal.cl_text)
-                                            : (lit ? pal.selected_text
-                                                   : pal.field_text));
+            // The row's text pair (surface_text, render.h), the one its
+            // bound glyph wears.
+            set_palette_source(cr, surface_text(row_surface));
             text_shape::show_shaped_run(
                 cr, run, static_cast<double>(text_x), baseline);
             cairo_restore(cr);

@@ -2821,6 +2821,26 @@ namespace {
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
+
+GuiColor surface_text(GuiSurface surface) {
+    // The table and its readers are at the declaration (render.h).
+    const GuiPalette& pal = palette();
+    const bool clearlooks =
+        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
+    switch (surface) {
+    case GuiSurface::Face:            return pal.label;
+    case GuiSurface::CaptionActive:
+        return clearlooks ? pal.cl_title_text : pal.caption_active_text;
+    case GuiSurface::CaptionInactive:
+        return clearlooks ? pal.cl_title_unfocused : pal.caption_inactive_text;
+    case GuiSurface::Card:            return pal.card_text;
+    case GuiSurface::ListRow:
+        return clearlooks ? pal.cl_text : pal.field_text;
+    case GuiSurface::ListRowLit:
+        return clearlooks ? pal.cl_text_selected : pal.selected_text;
+    }
+    return pal.label;
+}
 uint64_t palette_generation() { return g_palette_generation; }
 WaveformPlateInks waveform_plate_inks() {
     // The window's words (the struct's declaration, render.h).
