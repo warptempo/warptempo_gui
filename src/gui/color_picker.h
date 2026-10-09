@@ -21,7 +21,7 @@ struct GuiPlaybackLifecycle;
 struct Viewport;
 
 // THE COLOR PICKER (architect 2026-10-07, the picker arc's second segment) —
-// the in-app picker of the program's ten colors (kGuiPaletteRoles,
+// the in-app picker of the program's twelve colors (kGuiPaletteRoles,
 // palette_file.h: A PALETTE) and, under every chrome, of the chrome's twelve
 // keys (architect 2026-10-08, kGuiChromeLines, palette_file.h: A SCHEME;
 // chrome_derive.h, clearlooks_derive.h, cde_derive.h): "a very slimmed down version … a full-fledged part
@@ -42,9 +42,9 @@ struct Viewport;
 // what you're picking, whether it's the waveform or the chrome"): ONE
 // DROP-DOWN OF TWO ROWS, "Chrome" and "Waveform" (his words), choosing which
 // of the two preset kinds the picker works on (palette_file.h's head: a
-// SCHEME, the chrome's twelve keys, and a PALETTE, the program's ten).
+// SCHEME, the chrome's twelve keys, and a PALETTE, the program's twelve).
 // The scope sets THE ELEMENT CHOOSER'S ROWS — the twelve under Chrome, the
-// ten under Waveform, never a mixed list — and THE PRESET BUTTON: its
+// twelve under Waveform, never a mixed list — and THE PRESET BUTTON: its
 // label (the scope's active preset) and its menu's rows (its kind's files
 // and built-ins), the four acts acting on that kind alone. OLD | NEW, Copy /
 // Paste, the hex field and the wheel are the scope's live element's, with
@@ -108,15 +108,15 @@ struct Viewport;
 //     live element's name (element_display_name), each with its arrow
 //     button; a press on either drops ITS list — the scope's two rows, or
 //     THE SCOPE'S ELEMENTS (scope_element_at: under Chrome the twelve in
-//     kGuiChromeLines' order, "Chrome" first; under Waveform the ten in
+//     kGuiChromeLines' order, "Chrome" first; under Waveform the twelve in
 //     kGuiPaletteRoles' order) — the menu-row popup's painters and press
 //     road, and a tap on a row selects. THE TWO SHARE ONE LIST: one is down
 //     at a time (AppState::ColorPicker's `chooser_scope` says whose), so the
 //     chooser row is ONE OF THE THREE LIST POPUPS whichever combo dropped
 //     it, placed by the window and SCROLLING when its rows outgrow the room
 //     (render.h's popup scroll block, the rule's one owner; combo_list), its
-//     shown row scrolled into view at the open (re-derived 2026-10-09 with
-//     the ten, device px; the longest list is the Chrome scope's twelve): at
+//     shown row scrolled into view at the open (re-derived 2026-10-09, device
+//     px; the longest lists are the two scopes' twelve each): at
 //     the tablet's 300 % twelve rows under win2000 are 12 x 51 + 2 x 3 + 6 +
 //     6 = 630 below a chooser whose foot stands at 399 + 6 + 18 + 63 = 486
 //     of the 1440 rows (THE SEAT's top row), and under clearlooks 12 x 57 +
@@ -242,10 +242,10 @@ struct Viewport;
 // CARD below) — stays in view; at 300 % row 8's top (its dock bar's) is
 // 1326 (win2000 and clearlooks; the program's lanes since 2026-10-09,
 // main.cpp's lane record), the band's top 1326 − 393 = 933, the card's foot
-// 921 and its TOP ROW 921 − 522 = 399, 60 rows under the win2000 well's top
-// (339) and 51 under clearlooks' (348); under cde (the surface's rows,
-// dtwm's frame outside the app) row 8's top 1311, the card's top 384, 12
-// under the well's 372. At the laptop's 138 % (1920 x 1080 maximized) the
+// 921 and its TOP ROW 921 − 522 = 399, 57 rows under the win2000 canvas's
+// top (342, under its top frame row since 2026-10-09) and 48 under
+// clearlooks' (351); under cde (the surface's rows, dtwm's frame outside the
+// app) row 8's top 1311, the card's top 384, 9 under the canvas's 375. At the laptop's 138 % (1920 x 1080 maximized) the
 // band is 180 rows, the margin 6 and the card 235 under every chrome (2 + 8
 // + 29 + 8 + 6 x 23 + 8 + 32 + 8 + 2 under win2000; 1 + 8 + 29 + 8 + 138 +
 // 8 + 34 + 8 + 1 under clearlooks and cde, 25 W rounding to 34), so its top
@@ -498,14 +498,18 @@ static_assert(card_bottom_band_wpx(kChromeSpecClearlooks) ==
               static_cast<int>(kChromeSpecClearlooks.push_button_box_px));
 static_assert(card_bottom_band_wpx(kChromeSpecCde) == 25 &&
               kChromeSpecCde.push_button_box_px == 23.0);
-// WHY 17 (the head's THE SEAT): the card, its margin above the band, the
-// band and the margin under the well's top stand inside the tablet's
-// tightest well at 300 % (cde's, main.cpp's lane record: 939 device rows =
-// 313 W since the program's canvas column, 2026-10-09; win2000's 329,
-// clearlooks' 326) — 174 + 4 + 131 + 4 = 313, exactly — so the marker lane
-// above the well stays in view on both halves.
-inline constexpr int kTabletWellTightestWPx = 313;
-static_assert(kCardHeightWPx + 2 * kCardMarginPx + kKeyboardBandWPx <=
+// WHY 17 (the head's THE SEAT): the card, its margin above the band and the
+// band stand inside the rows from the tablet's tightest well's top to row
+// 8's top at 300 % — cde's, main.cpp's lane record: the canvas 918 device
+// rows = 306 W and the column's foot under it 6 W, which the band covers
+// with the canvas's foot (2026-10-09, the canvas framed; 313 W of well alone
+// that morning; win2000's 322 + 6, clearlooks' 319 + 6) — 174 + 4 + 131 =
+// 309 of 312, the card's top 3 W under the canvas's top (9 device rows; 4 W,
+// the card's margin, until the foot's row came out of the well) — so the
+// marker lane and the canvas's top frame row stay in view on both halves.
+inline constexpr int kTabletWellTightestWPx =
+    306 + program_column_foot_authored_h(kProgramSpec);
+static_assert(kCardHeightWPx + kCardMarginPx + kKeyboardBandWPx <=
               kTabletWellTightestWPx);
 
 // -- THE CHANNELS -----------------------------------------------------------
@@ -580,7 +584,7 @@ constexpr const char* scope_display_name(Scope s) {
 // over both kinds — THE SCHEME'S TWELVE first, in kGuiChromeLines' order —
 // "Chrome", "Chrome Text", "Title", "Title End", "Title Text", the three
 // "Inactive" ones, "Selection", "Selection Text", "Field", "Field Text" —
-// then THE PALETTE'S TEN in kGuiPaletteRoles' order; THE CHOOSER LISTS
+// then THE PALETTE'S TWELVE in kGuiPaletteRoles' order; THE CHOOSER LISTS
 // THE LIVE SCOPE'S ALONE (scope_element_at), the same rows under every
 // chrome (one scheme syntax: under clearlooks "Title End" and "Inactive
 // Title End" are listed and ignored, clearlooks_derive.h's head — their OLD

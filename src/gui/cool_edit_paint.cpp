@@ -229,17 +229,20 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color) {
     const double u    = cue_unit_px();
     const int    rows = kProgramSpec.cue_triangle_rows;
-    const double half = (rows - 1) * u;   // the top row's reach left
-    const double x    = col;
+    // THE AXIS IS THE STEM PIXEL'S CENTRE (architect 2026-10-09 ~14:35: "at
+    // every scale, the marker triangle must be fully centered on the stem"):
+    // the stem is one device px at `col`, so the axis is col + 0.5 and the
+    // top edge's 2·rows − 1 quanta stand half to each side of it.
+    const double axis = col + 0.5;
+    const double half = (2 * rows - 1) * u / 2.0;   // 4.5u
     const double y    = top;
-    // THE STAIRCASE'S ENVELOPE, offset `dx`: the top row's two outer ends
-    // (col − 4u, top) and (col + 5u, top) to the apex cell's bottom centre
-    // (col + u / 2, top + 5u).
+    // THE STAIRCASE'S ENVELOPE, offset `dx`: (axis − 4.5u, top),
+    // (axis + 4.5u, top) and the apex (axis, top + 5u).
     const auto triangle = [&](double dx, GuiColor c) {
         cairo_new_path(cr);
-        cairo_move_to(cr, x - half + dx, y);
-        cairo_line_to(cr, x + half + u + dx, y);
-        cairo_line_to(cr, x + u / 2.0 + dx, y + rows * u);
+        cairo_move_to(cr, axis - half + dx, y);
+        cairo_line_to(cr, axis + half + dx, y);
+        cairo_line_to(cr, axis + dx, y + rows * u);
         cairo_close_path(cr);
         set_palette_source(cr, c);
         cairo_fill(cr);

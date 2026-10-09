@@ -989,12 +989,13 @@ bool point_on_placement_lanes(const AppState& app, const GuiAudio& audio,
 // drag = grab-pan, motionless click = the half's act, shift+drag = the sweep,
 // ctrl+drag = the zoom.
 //
-// The waveform BAND spans the FULL WINDOW WIDTH (top.w), not the effective
-// width: the <=15 px inert right gutter counts as waveform by the user's
-// lights, so a press there arms the pan and its click act deselects while
-// seating nothing (the gutter is 0 px at 1920/2560/3840, so it only matters
-// off-deployment). The TRIM BAR, the lanes and the flexible GAP band are
-// outside it.
+// The waveform BAND is THE CANVAS'S INTERIOR, waveform_area exactly
+// (2026-10-09, the canvas framed): the column's margins either side — the
+// panel's face, the frame's columns and the grid floor's leftover split
+// between them — are the program's panel, not waveform, and answer nothing, as
+// the frame rows above and below do (the right gutter counted as waveform
+// while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
+// BAR, the lanes and the flexible GAP band are outside it.
 //
 // FIVE READERS, re-derived by grep 2026-09-25: the press router's SHIFT sweep
 // claim, its CTRL zoom claim, the pointer cursor map's Pan/Zoom zone, the `h`
@@ -1005,10 +1006,7 @@ bool point_on_placement_lanes(const AppState& app, const GuiAudio& audio,
 // the band walk in on_button_press rather than this predicate, because it
 // also has to pick the release act.
 bool point_on_nav_surface(const AppState& app, int x, int y) {
-    const GuiRect area = waveform_area(app);
-    const GuiRect top  = top_strip_area(app);
-    return x >= area.x && x < top.x + top.w &&
-           y >= area.y && y < area.y + area.h;
+    return rect_contains(waveform_area(app), x, y);
 }
 
 // Active-domain playhead frame at click column `col`: the single-rounding
@@ -2965,8 +2963,10 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // the ctrl-armed press's own seat-at-the-press.
     if ((f.two_finger || one_finger_zoom) && !app.touch_nav_zoom.seated) {
         TouchNavZoomState& z = app.touch_nav_zoom;
+        // The waveform's own column (window x less the area's x, the
+        // canvas standing the column's margin in since 2026-10-09).
         const double seat_col =
-            static_cast<double>(f.x) - (one_finger_zoom ? f.dx : 0.0);
+            static_cast<double>(f.x - wf_area.x) - (one_finger_zoom ? f.dx : 0.0);
         z.anchor_sample = vp + seat_col * spp_old;
         z.seated        = true;
         z.one_finger    = one_finger_zoom;
@@ -3016,16 +3016,18 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // ONE FINGER — the phone model's pan, unchanged and stateless: the
         // content under the PREVIOUS centroid column (x - eff_dx) is what the
         // finger holds, placed at the CURRENT centroid. The anchor column
-        // convention is the mouse zoom's own (window x against the live
-        // viewport — the waveform starts at the window edge), and no clamp is
+        // convention is the mouse zoom's own (the waveform's column, window x
+        // less the area's x, against the live viewport — the canvas standing
+        // the column's margin in from the window's side since 2026-10-09), and no clamp is
         // needed on a pan: nothing persists between frames for an off-area
         // column to corrupt, and the placement runs through the viewport
         // chokepoint's own clamps either way. The seat is already cleared at
         // the top of the body — which is what makes the DOWNGRADE clean: a
         // finger lifting from the pair continues as this pan, and the next
         // upgrade takes a FRESH pivot rather than inheriting the dead pinch's.
-        anchor_sample = vp + (static_cast<double>(f.x) - eff_dx) * spp_old;
-        anchor_col    = static_cast<double>(f.x);
+        const double col = static_cast<double>(f.x - wf_area.x);
+        anchor_sample = vp + (col - eff_dx) * spp_old;
+        anchor_col    = col;
     } else {
         // A ZOOM — TWO FINGERS, OR ONE UNDER CTRL — PIVOTS ABOUT THE POINT ON
         // THE WAVEFORM THE GESTURE GRABBED, held for the phase's life: seated
@@ -6674,19 +6676,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.loading || audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
-    // The waveform BAND spans the full window width (top.w), not the effective
-    // width (area.w): the <=15 px inert right gutter counts as a waveform click
-    // by the user's lights, so a plain press there still reaches the waveform
-    // branch and arms the pending click like any other — a gutter PAN works
-    // from any column, and the motionless release's act degenerates per half:
-    // the upper half's placement clears the selection and seats nothing (no
-    // column exists), and the lower half's scrub returns silently (no launch
-    // position exists, and a scrub act touches no selection anyway). The
-    // gutter is 0 px at the deployment widths
-    // (1920/2560/3840 are multiples of 16), so this only matters off-deployment.
-    const bool inside_waveform =
-        x >= area.x && x < top.x + top.w &&
-        y >= area.y && y < area.y + area.h;
+    // The waveform BAND is the canvas's interior, waveform_area exactly
+    // (2026-10-09; the navigation surface's own rule, point_on_nav_surface):
+    // the column's margins beside it are the program's panel and a press
+    // there falls to the tail's consumed nothing.
+    const bool inside_waveform = rect_contains(area, x, y);
     const bool inside_top = rect_contains(top, x, y);
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -7197,9 +7191,11 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // THE BAND IS EXACTLY top_ruler_row_area AND NOTHING BELOW IT (the
             // claim reads the lane accessor and only the lane accessor). The
             // `h` VIEW never reaches this arm — its own gate armed the same
-            // pending with the mode's deferred land far above. A GUTTER press
-            // still arms; its motionless release's click act deselects and
-            // seats no playhead, the placement body's own gutter shape.
+            // pending with the mode's deferred land far above. A press on the
+            // column's MARGINS (the face and the frame columns beside the
+            // ruler's ground, 2026-10-09) still arms; its motionless release's
+            // click act deselects and seats no playhead, the placement body's
+            // own off-column shape.
             {
                 const GuiRect ruler = top_ruler_row_area(app);
                 if (y >= ruler.y && y < ruler.y + ruler.h) {
@@ -9707,13 +9703,10 @@ bool GuiInputHandler::handle_history_mode_press(
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // The waveform BAND, spelled as on_button_press spells it (the inert right
-    // gutter counts as waveform by the user's lights).
+    // The waveform BAND, spelled as on_button_press spells it (the canvas's
+    // interior, waveform_area exactly, 2026-10-09).
     const GuiRect area = waveform_area(app);
-    const GuiRect top  = top_strip_area(app);
-    const bool inside_waveform =
-        x >= area.x && x < top.x + top.w &&
-        y >= area.y && y < area.y + area.h;
+    const bool inside_waveform = rect_contains(area, x, y);
     // THE MODE'S NAVIGATION SURFACE, from the ONE geometry owner: the whole
     // waveform and nothing else (the lanes left it 2026-09-25). It has been
     // the full waveform height in here since playback left the view

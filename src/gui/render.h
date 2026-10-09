@@ -96,8 +96,8 @@ struct TrimRange {
 // the CHROME paints — the chrome and its relief, the time fields' own pair,
 // the cards' three, the selected and field pairs, the caption — and THE
 // PALETTE every color the PROGRAM draws in the well or on a thing that
-// enters it (the waveform's canvas, ink and outline, the cues' two colors
-// and the invalid label's pair, the playhead and the scanner, the panel's
+// enters it (the waveform's canvas, ink and outline, the canvas's grid and
+// center line, the cues' two colors and the invalid label's pair, the playhead and the scanner, the panel's
 // face; palette_file.h's head owns the rule that parts the two). The
 // chrome's roles, their order and Windows 2000's values are the role table
 // (kGuiThemeRoles, theme_file.h); THE ACTIVE THEME IS THE LIVE CHROME'S OWN,
@@ -130,7 +130,7 @@ struct TrimRange {
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
 // PAINTER CONSTANTS (cool_edit_paint.h: Cool Edit's measured bytes that do
 // not follow its preset — the case's, the time field's digits, the view
-// bar's black field and its playhead dots' black, the ruler's ticks and
+// bar's black field, the ruler's ticks and
 // digits and their black shadow) — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the Tango and Mist drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
@@ -208,7 +208,7 @@ struct TrimRange {
 //   PLAIN RAISED  3DLight / DkShadow, Hilight / Shadow — a push button, the
 //                 scroll-bar thumb, a menu's and a dropdown's frame
 //                 (EDGE_RAISED);
-//   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field, the well
+//   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field
 //                 (EDGE_SUNKEN);
 //   SUNKEN OUTER  ONE line, Shadow / Hilight (BDR_SUNKENOUTER) — the open
 //                 menu title, the color picker's field and swatch;
@@ -272,16 +272,18 @@ struct TrimRange {
 //                 in the label — and the sizing frame round a
 //                 restored laptop window is the quartet and the ground
 //                 (paint_window_sizing_frame);
-//   THE PALETTE   the program's TEN (palette_file.h, 2026-10-07; ten since
-//                 2026-10-09): the waveform's canvas, ink and outline (ROW
-//                 6, below; the ink also the view bar's span, its bevels
-//                 derived from it); THE CUES' TWO COLORS, Cool Edit's —
+//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; twelve
+//                 since 2026-10-09): the waveform's canvas, ink and outline
+//                 (ROW 6, below; the ink also the view bar's span, its
+//                 bevels derived from it); THE CANVAS'S TWO LINES, Cool
+//                 Edit's — `grid` under the waveform and `center` on each
+//                 channel's zero (ROW 6); THE CUES' TWO COLORS, Cool Edit's —
 //                 `cue` the red and `range` the blue, the triangles and
 //                 their dots — and THE INVALID LABEL'S PAIR,
 //                 `invalid_label` at rest and `invalid_label_selected`
 //                 selected (THE MARKER LANE, below); the playhead's role
 //                 `playhead_stem` — its head in the ruler, its dots in the
-//                 canvas and over the view bar's span, and the zoom
+//                 canvas, and the zoom
 //                 anchor's stem (THE PLAYHEAD, below); the scanner; and THE
 //                 PANEL'S `face` (2026-10-09: the program's band, dock bar,
 //                 row 8 and the canvas column's lanes — Cool Edit's — every
@@ -299,9 +301,11 @@ struct TrimRange {
 // owning its corners whole — a flat line, not a bevel, so the relief's mitre
 // is not drawn on it (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE
 // RULE'S ONE STATEMENT.
-// THE WELL keeps its two-line plain sunken edge top and bottom (render_canvas);
-// under clearlooks GtkScrolledWindow's one shade[5] line on the pair's outer
-// row (paint_cl_well_frame, architect 2026-10-07).
+// THE CANVAS'S FRAME IS THE PROGRAM'S (architect 2026-10-09, Cool Edit's
+// canvas, the same under every chrome): one ring of the panel's tones round
+// the waveform area — dark top and left, light right and bottom, mitred —
+// with no chrome edge (paint_canvas_column_frame, paint_handler.cpp; the
+// chrome's sunken well and clearlooks' and cde's lines stood until that day).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD (architect 2026-10-03, Windows'
 // DrawState DSS_DISABLED): the word in the theme's HILIGHT one Windows px
@@ -405,6 +409,8 @@ struct GuiPalette {
     GuiColor waveform_canvas;
     GuiColor waveform_ink;
     GuiColor waveform_outline;
+    GuiColor grid;
+    GuiColor center;
     GuiColor cue;
     GuiColor range;
     GuiColor invalid_label;
@@ -531,7 +537,7 @@ struct GuiChromePick {
 // (chrome_theme_words(live_chrome_spec()), theme_file.h — so the chrome is
 // set first, set_live_chrome_spec), THE SCHEME'S twelve keys derived over
 // it (`chrome` below), and THE PROGRAM'S off `program`, THE
-// LIVE WORDS (2026-10-07, the color picker's round): the ten program
+// LIVE WORDS (2026-10-07, the color picker's round): the twelve program
 // colors as they stand in the process, which the caller hands in
 // explicitly — AT LAUNCH the palette the config's `palette` key names and
 // the scheme its `scheme` key names (2026-10-08; through is_palette_name and
@@ -549,14 +555,14 @@ struct GuiChromePick {
 // is palette_file.h's. `chrome` is the scheme's keys (GuiChromePick above),
 // none for the live chrome's own scheme, derived over the live chrome's
 // compiled theme (live_chrome_words, chrome_derive.h).
-void install_palette(const std::array<uint32_t, 10>& program,
+void install_palette(const std::array<uint32_t, 12>& program,
                      const std::optional<GuiChromePick>& chrome);
 
 // THE INSTALL FAMILY'S CHROME MEMBER (2026-10-08, the chrome knob): the
 // chrome's members rewritten off live_chrome_words(live chrome, `chrome`)
 // (chrome_derive.h — the compiled theme, with the knob derived over it by
-// the live chrome's derivation) and palette_generation bumped, the program's ten
-// untouched. THE PICKER'S LIVE ROAD beside install_program_palette
+// the live chrome's derivation) and palette_generation bumped, the program's
+// twelve untouched. THE PICKER'S LIVE ROAD beside install_program_palette
 // (GuiColorPicker::install_live_words, which runs that member's apply shape
 // after both). Why that shape is enough for the chrome: the chrome's colors
 // bake into one cached thing, the flag cache (a disabled flag's ground),
@@ -577,11 +583,11 @@ void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
 // color_picker.h), file-scope for the same reason.
 const std::optional<GuiChromePick>& live_chrome_pick();
 
-// THE LIVE WORDS AS INSTALLED — the program's ten the install family
+// THE LIVE WORDS AS INSTALLED — the program's twelve the install family
 // last wrote (install_palette's `program`, or install_program_palette's
 // `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
 // spelled as its array type here because palette_file.h includes this
-// header, which static_asserts the 10 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
+// header, which static_asserts the 12 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
 // reopen (gui_main's loop) while the installed palette is not, and the
 // picker's picks are the PROCESS's until a preset is saved (color_picker.h's
@@ -590,10 +596,10 @@ const std::optional<GuiChromePick>& live_chrome_pick();
 // word), the picker's open (the live element's OLD color) and its presets
 // (Save and Save As write these words, and Save's enabled bit compares them
 // with the active preset's).
-const std::array<uint32_t, 10>& program_palette_words();
+const std::array<uint32_t, 12>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
-// program's ten alone, the picker's live road — is declared in
+// program's twelve alone, the picker's live road — is declared in
 // palette_file.h beside the words it takes and defined in render.cpp beside
 // install_palette.)
 
@@ -630,22 +636,29 @@ void install_true_colors(bool on);
 // 2026-10-09, the program is Cool Edit; the mock of record
 // tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; program_spec.h owns every
 // length): the column's 5 W of face under the band, THE VIEW BAR, THE RULER
-// FLIPPED and THE MARKER LANE OF CUES, the well under them. Its colors are
+// FLIPPED and THE MARKER LANE OF CUES, THE CANVAS under them in its frame
+// (row 6's canvas paragraph), the view bar, the ruler and the canvas 6 W in
+// from each side on the panel's face. Its colors are
 // the panel's Face-derived tones (the COOL EDIT BLOCK), the waveform's ink,
 // the cues' two colors, the invalid label's pair and the playhead's color
 // (the palette), and the painter constants Cool Edit draws whatever its
 // preset (cool_edit_paint.h).
 //
-// THE TRIM BAR IS COOL EDIT'S VIEW BAR (METRICS §3; render_trim_flags owns
-// the drawing, trim_lane_h_px the rows): the `ce_mid` line on top, a BLACK
-// field 6 W tall (kCeViewBarField), the `ce_hilight` line under it — the
-// ruler's top line; and in the field THE SPAN, the trim window's columns as
+// THE TRIM BAR IS COOL EDIT'S VIEW BAR (METRICS §3, §4.1; render_trim_flags
+// owns the drawing, trim_lane_h_px the rows): A SUNKEN RING round a BLACK
+// field 6 W tall (kCeViewBarField) — the `ce_mid` line on top and its dark
+// LEFT column, the `ce_hilight` line under the field (the ruler's top line)
+// and its light RIGHT column, mitred (2026-10-09, the third part: the
+// column's two frame columns, the canvas's own, outside the field's
+// columns, which are the canvas's); and in the field THE SPAN, the trim window's columns as
 // a RAISED BLOCK OF THE INK — its top row and left column `ce_span_hilight`,
 // its body `waveform_ink`, its bottom row and right column `ce_span_shadow`
 // (the ink at HLS L 0.94 and 0.3157, cool_edit_derive.h), the two mitred
-// where they meet (paint_relief_frame, 2026-10-09 ~12:40) — with THE
-// PLAYHEAD over it as a dotted column, the playhead's color and black
-// alternating per quantum (`playhead_stem`, kCeViewBarDot). No track, no caps drawn, no pressed
+// where they meet (paint_relief_frame, 2026-10-09 ~12:40). NO PLAYHEAD IN
+// THE BAR (architect 2026-10-09 ~14:30, "I thought we agreed no dots on the
+// trim bar"; the mock of record draws none): Cool Edit's period-2 cursor
+// column over its span (METRICS §3) is not drawn, so the bar is the black
+// field and the span's block alone. No track, no caps drawn, no pressed
 // face: the lane's grabs are the span's two ends and its body (TrimBarHit,
 // below). (Windows' miniaturized scroll bar with its checker track and its
 // arrow-button caps stood 2026-10-02 to 2026-10-09; GTK's trough under
@@ -653,7 +666,9 @@ void install_true_colors(bool on);
 //
 // THE RULER IS COOL EDIT'S, FLIPPED (METRICS §4.4; NOTES.md's "flipped
 // ruler"; paint_ruler_row): `ce_mid` ground under the view bar's light line,
-// its own `ce_hilight` line along its foot; THE TICKS kCeRulerTick (E0E0E0,
+// its own `ce_hilight` line along its foot, a `ce_dark` LEFT column and a
+// `ce_hilight` RIGHT column beside the ground (2026-10-09, the column's
+// frame columns; the dark one meeting the foot line mitred); THE TICKS kCeRulerTick (E0E0E0,
 // face-independent in every preset), one quantum wide, STANDING ON THE
 // GROUND'S BOTTOM ROW and rising into it; THE DIGITS the program face at
 // cap 7 in the tick's ink over a BLACK (+1, +1) shadow (kCeRulerShadow).
@@ -668,14 +683,13 @@ void install_true_colors(bool on);
 // ground's bottom row
 // (paint_ruler_row; cue_triangle_h_px's rows; its painted columns, the cull
 // and the move's damage box one extent, cue_triangle_reach_right_px); IN THE
-// CANVAS a DOTTED COLUMN, one quantum every four in the same color on the
-// canvas's quantum rows ≡ 1 (mod 4), the cues' two colors on rows ≡ 3 and
+// CANVAS a DOTTED COLUMN, one device px every four device rows in the same
+// color (2026-10-09 ~14:25, "on waveform → unscaled") on the canvas's rows
+// ≡ 1 (mod 4), the cues' two colors on rows ≡ 3 and
 // ≡ 7 (mod 8), so they interleave on one column (paint_playheads,
-// fill_dotted_waveform_line); IN THE VIEW BAR the dotted column over the
-// span, the playhead's color and black alternating (render_trim_flags).
-// Across the marker lane and the
-// well's top frame it draws nothing (Cool Edit puts no dot on its frame
-// row). IT MAY STAND ON A MARKER'S COLUMN — NO SNAP, NO AVOIDANCE (architect
+// fill_dotted_waveform_line). Across the view bar (architect 2026-10-09
+// ~14:30, "no dots on the trim bar"), the marker lane and the canvas's top
+// frame row it draws nothing (Cool Edit puts no dot on its frame row). IT MAY STAND ON A MARKER'S COLUMN — NO SNAP, NO AVOIDANCE (architect
 // 2026-10-09): the head and a cue's triangle stand in different lanes and
 // the dots interleave, so the coincident-stem suppression of 2026-08-01 to
 // 2026-10-09 (the playhead's stem yielding whole to a marker's) is retired.
@@ -687,8 +701,9 @@ void install_true_colors(bool on);
 // `playhead_stem` role, a solid line (the product's position lines are the
 // playhead's color, architect 2026-08-01). THE SCANNER — the moving playback
 // line, paint_scanner — HAS ITS OWN ROLE, `scanner` (architect 2026-10-05),
-// a SOLID one-quantum line over the canvas (Cool Edit's playback cursor is a
-// solid 1-px line, measured 2026-10-09), WHITE in both default palettes
+// a SOLID line one device px wide over the canvas (Cool Edit's playback
+// cursor is a solid 1-px line, measured 2026-10-09; unscaled on the canvas
+// since ~14:25, waveform_line_px's rule), WHITE in both default palettes
 // (architect 2026-10-07: "let's go back to a white scanner").
 
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
@@ -699,22 +714,23 @@ void install_true_colors(bool on);
 // TRIANGLE — the 9-7-5-3-1 quanta's envelope on the lane's last five rows,
 // one antialiased triangle (paint_ce_cue_triangle, 2026-10-09 ~12:40), its
 // apex the marker's column on the lane's last row, directly above the
-// well's top frame row — over the same triangle one quantum right in
+// canvas's top frame row — over the same triangle one quantum right in
 // `ce_cue_shadow`;
 // THE LABEL — the marker's one label in the program face at cap 7, in the
 // panel's light tone `ce_hilight`, no shadow, starting six quanta right of
 // the column, its cap on rows 1 .. 7 (baseline the top of row 8) — the label
 // and the triangle sharing rows 6 and 7 but never columns; and THE STEM —
-// one-quantum DOTS on the canvas's quantum rows, the canvas alone (no dot
+// DOTS ONE DEVICE PX SQUARE on the canvas's device rows (2026-10-09 ~14:25,
+// "on waveform → unscaled"), the canvas alone (no dot
 // in the lane or on the frame row; paint_marker_stems). No box, no outline,
-// no stem through the well's lines.
+// no stem through the frame row.
 //
 // THE CUES ARE COOL EDIT'S TWO COLORS (architect 2026-10-09 ~11:50–12:00:
 // "red+blue for warp and phase, red only for invalid (half the amount of
 // dots) and for history blue only for + and red only for −"; METRICS §4.2):
 // THE RED `cue` (Cool Edit's CueM, F34B58 in every default palette) and
 // THE BLUE `range` (its RngM, 4B82F3). A point cue's stem is Cool Edit's
-// range start and end superimposed — the blue dots on the canvas's quantum
+// range start and end superimposed — the blue dots on the canvas's device
 // rows ≡ 3 (mod 8), the red on rows ≡ 7, one dot every four rows in
 // alternating colors; a one-color stem keeps its color's phase alone, half
 // the dots (program_spec.h's dot fields). WARP AND PHASE RESET WEAR THE
@@ -823,8 +839,8 @@ void install_true_colors(bool on);
 // the plate is the raw bar alone in the ink, with no outline; lit, the plate
 // is two bars (the rule is at render_waveform's declaration), BOTH FILLED IN
 // THE INK, the inner distinguished only by its OUTLINE, its true contour, an
-// erosion at distance waveform_line_px() (1 px on the laptop at 138 %, 3 on
-// the tablet at 275 %), in the `waveform_outline` role — ITS OWN COLOUR
+// erosion at distance waveform_line_px() (one device px at every scale since
+// 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
 // magnified and the compressed bars, the ink's hides it. The `windows-2000`
 // palette's is Windows' GREEN #008000 under Sound Recorder's LIME #00FF00
@@ -834,23 +850,35 @@ void install_true_colors(bool on);
 // (waveform_plate_inks); the canvas is laid live under the plate's
 // transparent gaps (render_canvas) and bakes nowhere.
 //
-// THE WELL — the waveform area's two-line border, taken FROM the area at its
-// top and its bottom, full window width (the geometry at
-// waveform_border_px): a PLAIN SUNKEN edge, Windows' client-area frame
-// (architect 2026-10-02 ~21:20, "as few exceptions as possible") — the TOP a
-// Shadow line then a DkShadow line, the BOTTOM a 3DLight line then a Hilight
-// line, top to bottom, the canvas between, in the theme's quartet. THE WELL
-// STANDS AS IT WAS UNDER THE PROGRAM'S CANVAS COLUMN (2026-10-09: the
-// canvas is a later part), its top frame directly under the marker lane's
-// last row. THE CUES' AND THE PLAYHEAD'S DOTS keep to the canvas
-// (waveform_content_rect; Cool Edit puts no dot on its frame row); THE ZOOM
-// ANCHOR'S STEM alone crosses the top lines (waveform_stem_band) and stops
-// at the canvas's foot.
-//
-// TAKEN FROM THE AREA, NOT ADDED TO IT: waveform_content_rect is the content
-// and it shrinks by these rows, while waveform_area itself does not move, so
-// the lane stack, the strip geometry, the effective width, samples-per-pixel
-// and every column mapping are untouched by the border.
+// THE CANVAS IS COOL EDIT'S (architect 2026-10-09, the third part; METRICS
+// §4.1 and §4.4, NOTES.md's set 3, the mock of record
+// tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png): THE WAVEFORM AREA IS THE
+// CANVAS'S INTERIOR, inside its frame (the ring of the panel's tones, the
+// palette head's canvas-frame paragraph; the frame rows are lanes of their
+// own and its columns the column's margins, main.cpp's lane table and
+// waveform_area), so every column mapping, hit test and damage box reads the
+// interior. UNDER THE WAVEFORM, in render_canvas's one pass, in this order:
+// the `waveform_canvas` fill; THE VERTICAL GRID — a `grid` line one device px
+// wide ("on waveform → unscaled", architect 2026-10-09 ~14:25,
+// waveform_line_px's rule) on every column the ruler stands a MAJOR tick on
+// (the ruler's own columns, paint_ruler_row's comb, the tick's left device
+// column), the canvas's full height; THE HORIZONTAL GRID — per channel, a
+// `grid` line one device px tall at the channel's zero row ± nearbyint(k · H
+// / 4) device rows for k = 1, 2, 3, H the channel's half height (its zero row
+// to its band's edge; the k = 4 line would stand on the band's edge and is
+// not drawn), the canvas's full width; THE CENTER LINE per channel on its
+// zero row, one device px, in `center`, over the grid.
+// The waveform's plate is blitted over all of it, ink over every line. Each
+// channel's band and zero row are the plate's own (waveform_channel_band
+// below), so the lines stand where the plate's zero is. NO BOUNDARY LINES
+// AND NOTHING BETWEEN THE CHANNELS (architect 2026-10-09, "we have very
+// limited vertical real estate"): the two channels abut, Cool Edit's Bndy
+// clip guides are not drawn, and the chrome's two-line sunken well that stood
+// round the area (the theme's quartet, under clearlooks GTK's scrolled-window
+// line, under cde Motif's one-W shadow; 2026-10-02 to 2026-10-09) is gone
+// with the content band it carved out of the area. THE CUES' AND THE
+// PLAYHEAD'S DOTS and the scanner span the canvas, their dot rows counted from
+// its first row; THE ZOOM ANCHOR'S STEM spans it too.
 
 // THE PLATE'S TWO BAKED INKS, as words: the fingerprint field and the job
 // field that carry the active ink and outline to the worker (the worker reads
@@ -1413,9 +1441,10 @@ int cl_scale_thumb_w_px();
 int cl_scale_thumb_h_px();
 
 // THE CANVAS COLUMN'S LANES — THE COLUMN'S AIR, the TRIM lane (the view
-// bar), the RULER lane and the MARKER lane, stacked in that order under the
-// icon row (main.cpp's lane table), the marker lane's bottom edge the
-// waveform's top with no gap: THE PROGRAM'S, COOL EDIT'S, THE SAME UNDER
+// bar), the RULER lane, the MARKER lane and THE CANVAS'S TOP FRAME ROW,
+// stacked in that order under the icon row (main.cpp's lane table), the
+// frame row's bottom edge the waveform's top with no gap: THE PROGRAM'S,
+// COOL EDIT'S, THE SAME UNDER
 // EVERY CHROME (architect 2026-10-09; program_spec.h owns every length and
 // its source; the colors at the palette block's canvas-column paragraph).
 // Each lane is a composite of its rounded parts (scaled_px's rule): a line
@@ -1429,6 +1458,8 @@ int cl_scale_thumb_h_px();
 //              / 65.
 //   THE MARKER 6 W above the cue's triangle and its five quanta
 //              (marker_lane_h_px): 33 / 13 / 42.
+//   THE FRAME  the canvas's dark top frame row, one line
+//              (canvas_top_frame_h_px, below): 3 / 1 / 4.
 inline int column_air_h_px() {
     return scaled_px(kProgramSpec.column_air_px);
 }
@@ -1444,8 +1475,9 @@ inline int ruler_ground_h_px() {
 inline int ruler_lane_h_px() {
     return ruler_ground_h_px() + program_line_px();
 }
-// THE CUE'S QUANTUM — the stem's own width, u = scaled_px(1, 1)
-// (program_spec.h's head: the triangles, the dots, the label's leads).
+// THE CUE'S QUANTUM, u = scaled_px(1, 1) (program_spec.h's head: the
+// triangles and the label's leads; the stem's dots on the canvas are one
+// device px, waveform_line_px's rule, 2026-10-09).
 inline int cue_unit_px() {
     return program_line_px();
 }
@@ -1466,26 +1498,64 @@ inline int cue_baseline_px() {
 inline int cue_fill_h_px() {
     return scaled_px(kProgramSpec.cue_fill_px);
 }
-// THE TRIANGLE'S PAINTED COLUMNS round its apex column `col` — the cue's and
-// the playhead head's one extent, read off the painter's own construction
-// (paint_ce_cue_triangle: its top edge nine quanta, the middle one the
-// column's, and the shadow triangle one quantum right of it): [col −
-// cue_triangle_half_w_px(), col + cue_triangle_reach_right_px()), four
-// quanta left and six right (the four, the apex quantum and the shadow's),
-// ten quanta in all — 30 device px at 300 %, 40 at 360 %, 10 at 138 %. THE
-// ONE ROAD for every reader of that width: the cue's published triangle
-// box (paint_cues), the head's cull (paint_ruler_row) and the playhead's
-// cull and damage box (render_playhead, playhead_invalidate_rect,
-// main.cpp), so no repaint can be narrower than what the head painted.
+// THE TRIANGLE'S PAINTED COLUMNS round its stem column `col` — the cue's and
+// the playhead head's one extent, read off the painter's own vertices
+// (paint_ce_cue_triangle, architect 2026-10-09 ~14:35, centred on the
+// one-px stem: the top edge from col + 0.5 − 4.5u to col + 0.5 + 4.5u, the
+// shadow triangle one quantum right of it, so the outer edges col + 0.5 −
+// 4.5u and col + 0.5 + 5.5u) taken to whole device columns: [col −
+// cue_triangle_half_w_px(), col + cue_triangle_reach_right_px()), ⌊9u / 2⌋
+// left and ⌊(11u + 2) / 2⌋ right — 13 and 17 device px at 300 % (u 3), 18
+// and 23 at 360 % (u 4), 4 and 6 at 138 % (u 1). THE ONE ROAD for every
+// reader of that width: the cue's published triangle box (paint_cues), the
+// label clip at the next triangle (paint_cues), the flag iterator's cull,
+// the head's cull (paint_ruler_row) and the playhead's cull and damage box
+// (render_playhead, playhead_invalidate_rect, main.cpp), so no repaint can
+// be narrower than what the head painted.
 inline int cue_triangle_half_w_px() {
-    return (kProgramSpec.cue_triangle_rows - 1) * cue_unit_px();
+    const int rows = kProgramSpec.cue_triangle_rows;
+    return (2 * rows - 1) * cue_unit_px() / 2;
 }
 inline int cue_triangle_reach_right_px() {
-    return cue_triangle_half_w_px() + 2 * cue_unit_px();
+    const int rows = kProgramSpec.cue_triangle_rows;
+    return ((2 * rows + 1) * cue_unit_px() + 2) / 2;
 }
+static_assert(kProgramSpec.cue_triangle_rows == 5);   // 9u and 11u above
 // THE COLUMN'S AIR LANE (top lane 3, main.cpp; defined there beside the
 // other lane accessors).
 GuiRect top_column_air_area(const AppState& a);
+// THE CANVAS'S FRAME AND THE COLUMN'S MARGINS (architect 2026-10-09, the
+// third part; program_spec.h's column_margin_px and column_foot_px, METRICS
+// §4.1): the canvas's TOP FRAME ROW is a lane of its own, top lane 7, one
+// line (canvas_top_frame_h_px), directly under the marker lane; the COLUMN'S
+// FOOT is the bottom strip's lane 1, the bottom frame row and 5 W of face
+// (column_foot_h_px), between the canvas and the dock bar. Across, the column
+// stands column_margin_w_px of face in from each side of the window, then its
+// one-line frame column, then its interior — THE WAVEFORM AREA — its width
+// floored to the grid step and the floor's leftover (under 16 device px)
+// split between the two margins, the odd pixel to the right (main.cpp's
+// waveform_area owns the split; column_inner_x_px is the side before it).
+// 15 + 3 = 18 device rows of foot at 300 %, 7 + 1 = 8 at 138 %, 18 + 4 = 22
+// at 360 %; the side 18 + 3 = 21 device px at 300 %, 8 + 1 = 9 at 138 %,
+// 22 + 4 = 26 at 360 %.
+inline int canvas_top_frame_h_px() {
+    return program_line_px();
+}
+inline int column_foot_face_h_px() {
+    return scaled_px(kProgramSpec.column_foot_px);
+}
+inline int column_foot_h_px() {
+    return program_line_px() + column_foot_face_h_px();
+}
+inline int column_margin_w_px() {
+    return scaled_px(kProgramSpec.column_margin_px);
+}
+inline int column_inner_x_px() {
+    return column_margin_w_px() + program_line_px();
+}
+// The two lanes (main.cpp, beside the other lane accessors).
+GuiRect top_canvas_frame_area(const AppState& a);
+GuiRect bottom_column_foot_area(const AppState& a);
 
 // (THE TRIM LANE AS WINDOWS' MINIATURIZED SCROLL BAR — its 16-W track,
 // caps and thumb, GTK's bar under clearlooks and Motif's under cde — THE
@@ -1568,9 +1638,11 @@ inline int bottom_row_h_px() {
 // below the well, and the frame's two sides where the frame stands on the
 // maximised window (2026-10-08): the chrome's caption and the menu row's
 // three terms, then THE PROGRAM'S (program_spec.h, the same under every
-// chrome since 2026-10-09): the band 33, the canvas column's 42 (the air 5,
-// the view bar 8, the ruler 18, the marker lane 11) and the dock bar and
-// row 8 38. At 300 % every term is a whole multiple of 3 device px.
+// chrome since 2026-10-09): the band 33, the canvas column's 43 above the
+// canvas (the air 5, the view bar 8, the ruler 18, the marker lane 11, the
+// canvas's top frame row 1), the column's foot 6 under it (the bottom frame
+// row and 5 W of face) and the dock bar and row 8 38. At 300 % every term is
+// a whole multiple of 3 device px.
 constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
     const int frame = s.window_frame_maximized
         ? 2 * (s.window_frame_lines * kReliefLinePx + kWindowFramePx -
@@ -1581,25 +1653,27 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
     return frame + s.caption_height_px + s.menu_row_head_px +
            s.menu_row_content_px + s.menu_row_foot_px +
            program_band_authored_h(kProgramSpec) +
-           program_column_authored_h(kProgramSpec) + row8;
+           program_column_authored_h(kProgramSpec) +
+           program_column_foot_authored_h(kProgramSpec) + row8;
 }
-// THE STACKS (2026-10-09, the canvas column Cool Edit's): WIN2000 113 above
-// and 38 below, 151 — the tablet's well at 300 % 987 rows (329 W);
-// CLEARLOOKS 3 W taller above (its caption and menu bar), 154 — 978 rows;
-// CDE its frame's 5 + 5 and its taller caption and menu bar, 167 — 939 rows
-// of the app's 1410 (the ruler no longer the leftover that held the base's
-// 160 under cde: the ruler is the program's 18 under every chrome, so each
-// chrome's well is its own lanes' leftover, main.cpp's rule).
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 151);
-static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 154);
-static_assert(chrome_stack_authored_h(kChromeSpecCde) == 167);
+// THE STACKS (2026-10-09, the canvas column Cool Edit's, its canvas framed):
+// WIN2000 114 above and 44 below, 158 — the tablet's well at 300 % 966 rows
+// (322 W); CLEARLOOKS 3 W taller above (its caption and menu bar), 161 —
+// 957 rows; CDE its frame's 5 + 5 and its taller caption and menu bar, 174
+// — 918 rows of the app's 1410 (each chrome's well its own lanes' leftover,
+// main.cpp's rule).
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 158);
+static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 161);
+static_assert(chrome_stack_authored_h(kChromeSpecCde) == 174);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
-// (clip_to_waveform_columns, render.cpp) — and the flag iterator admits a
-// marker whose triangle reaches into them (its left edge four quanta left of
-// its column), so a marker just past the last column shows the left half of
-// its triangle there, and no dots (the stem stash is gated to [0, w)).
+// (clip_to_waveform_columns, render.cpp), the columns standing at the
+// canvas's own x since 2026-10-09 (waveform_area, the column's margin) — and
+// the flag iterator admits a marker whose triangle reaches into them (its
+// left edge four quanta left of its column), so a marker just past the last
+// column shows the left half of its triangle there, and no dots (the stem
+// stash is gated to [0, w)).
 // THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because they count relief
 // lines (the slider's block, with its constants, is above): the channel its
 // four lines, the thumb its rows above the channel, the channel and its rows
@@ -1613,64 +1687,63 @@ inline int scrub_thumb_h_px() {
     return scrub_thumb_above_px() + scrub_channel_h_px() +
            scrub_thumb_below_px();
 }
-// THE WELL'S BORDER, taken FROM the waveform area at its top and its bottom:
-// the PLAIN SUNKEN edge's TWO relief lines a side (the colours and the order
-// at the row-6 palette block), so 6 device rows on the tablet, 2 on the
-// laptop, and still two lines at 50 %. Under clearlooks the same two rows a
-// side, the outer GTK's scrolled-window line and the inner the canvas
-// (paint_cl_well_frame, architect 2026-10-07).
-inline int waveform_border_px() {
-    return 2 * relief_line_px();
-}
-// THE WAVEFORM'S LINE WIDTH (architect 2026-09-27, "scale all, including the
-// ruler ticks and the playhead head"): every vertical LINE on the waveform and
-// the ruler scales with gui_scale — one Windows px: 1 up to 149 % (the floor
-// holding 50 %; the laptop's 138 %), 2 from 150 % through 250 % (banker's
-// rounding takes 2.5 to 2), 3 above that (the tablet's 275 %) and 4 at the
-// 350 % ceiling.
-// ITS READERS — the one inventory of the class, each an ALIASED INTEGER
-// RECT [col, col + t) whose left edge is the item's own column and which is
-// clipped to the waveform's columns [0, w): the scanner (render_playhead),
-// the zoom anchor stem (render_strip_anchor_stem), the phase-reset lead-in
-// ring's four sides (t thick, its left side on the reset's own columns), the
-// lit plate's inner OUTLINE, an erosion at distance t (outline_bar,
-// render.cpp, t riding the plate job and its fingerprint) — and, since
-// 2026-10-09, THE PROGRAM'S QUANTUM u (program_line_px and cue_unit_px are
-// the same scaled_px(1, 1)): the cues' and the playhead's dots
-// (fill_dotted_waveform_line) and the ruler's ticks — and THE CUES'
-// TRIANGLES AND THE PLAYHEAD'S HEAD, measured in it but no rect since
-// 2026-10-09 ~12:40: one antialiased triangle whose top edge spans nine t
-// and whose apex is the column's own t-wide cell's bottom centre
-// (paint_ce_cue_triangle). NOT a reader:
-// the plate column, one device pixel by rule — resolution, not size — with
-// its bar's one-row floor.
+// (THE WELL'S BORDER, waveform_border_px — two relief lines taken from the
+// waveform area at its top and its bottom — went with the well, 2026-10-09:
+// the canvas's frame stands outside the area, row 6's canvas paragraph.)
+// THE WAVEFORM'S LINE WIDTH — ONE DEVICE PX AT EVERY SCALE (architect
+// 2026-10-09 ~14:25, "ON WAVEFORM → UNSCALED. OTHERWISE, SCALED."; his
+// ~14:20 on the laptop at 200 %: "the marker stems are gui scaled; I thought
+// we agreed they would be unscaled like the waveform, so the resolution
+// matches" — the rule of 2026-10-06 that a period technique is drawn at the
+// device's resolution, one device px a cell, as the checker and the dither
+// are). EVERYTHING PAINTED ON THE CANVAS stands at the plate's own
+// resolution, the plate column being one device px by rule: THE READERS —
+// the one inventory of the class, each an ALIASED INTEGER RECT [col, col +
+// 1) whose left edge is the item's own column, clipped to the waveform's
+// columns [0, w) — the scanner and the resting cursor's dots
+// (render_playhead), the cues' dots (paint_marker_stems), the zoom anchor's
+// stem (render_strip_anchor_stem), the phase-reset lead-in ring's four sides
+// (its left side on the reset's own column), the lit plate's inner OUTLINE,
+// an erosion at distance 1 (outline_bar, render.cpp, the width riding the
+// plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
+// (render_canvas). EVERYTHING OFF THE CANVAS keeps THE PROGRAM'S QUANTUM u =
+// scaled_px(1, 1) (program_line_px, cue_unit_px): the cues' triangles and the
+// playhead's head (paint_ce_cue_triangle), the ruler's ticks (paint_ruler_row,
+// fill_waveform_line's `t`) and the view bar's dotted column (render_trim_flags).
+// (From 2026-09-27, "scale all, including the ruler ticks and the playhead
+// head", until this ruling every canvas line was one Windows px, scaled.)
 inline int waveform_line_px() {
-    return scaled_px(1, 1);
+    return 1;
 }
-// THE LINE'S ONE PAINT: columns [col, col + waveform_line_px()) of a strip
-// whose columns are [0, area_w), at window x `area_x`, rows [y0, y1), as ONE
-// aliased integer rect in the caller's source colour. THE TWO EDGE RULES live
-// here: a line is GATED ON ITS OWN COLUMN (col outside [0, area_w) paints
-// nothing, so a marker at column −1 shows no pixel at 0 — a line belongs to
-// its column), and its width is CLIPPED at the right edge, so a line at
-// w − 1 paints that one column and nothing reaches a non-multiple-of-16
-// window's leftover strip.
+// THE LINE'S ONE PAINT: columns [col, col + t) of a strip whose columns are
+// [0, area_w), at window x `area_x`, rows [y0, y1), as ONE aliased integer
+// rect in the caller's source colour, `t` the canvas's one device px unless a
+// lane's reader passes its quantum (the ruler's ticks). THE TWO EDGE RULES
+// live here: a line is GATED ON ITS OWN COLUMN (col outside [0, area_w)
+// paints nothing, so a marker at column −1 shows no pixel at 0 — a line
+// belongs to its column), and its width is CLIPPED at the right edge, so a
+// line at w − 1 paints that one column and nothing reaches the face beside
+// the canvas.
 inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
-                               double y0, double y1) {
+                               double y0, double y1,
+                               int t = waveform_line_px()) {
     if (col < 0 || col >= area_w) return;
-    const int t   = waveform_line_px();
     const int end = (col + t < area_w) ? col + t : area_w;
     cairo_rectangle(cr, static_cast<double>(area_x + col), y0,
                     static_cast<double>(end - col), y1 - y0);
     cairo_fill(cr);
 }
 // THE DOTTED LINE (architect 2026-10-09, Cool Edit's cue and cursor columns,
-// METRICS §4.2 / §4.3): the line's own column and edge rules
-// (fill_waveform_line), its rows [y0, y1) counted in quanta t from y0, a
-// dot one quantum tall on every quantum row k with k ≡ `phase` (mod
-// `period`), the last cut at y1 — the cues on phase 3 and the playhead on
-// phase 1 of 4 (program_spec.h's dot fields), so the two interleave on one
-// column. In the caller's source color.
+// METRICS §4.2 / §4.3), A PERIOD TECHNIQUE AT THE DEVICE'S RESOLUTION
+// (~14:20 / ~14:25, waveform_line_px's rule: "on waveform → unscaled"): the
+// line's own column and edge rules (fill_waveform_line), its rows [y0, y1)
+// counted in DEVICE ROWS from y0, a dot one device px square on every row k
+// with k ≡ `phase` (mod `period`) — Cool Edit's own 1-px dot every 4 rows at
+// 1:1, at every gui_scale — the cues' red on 7 and blue on 3 of 8 and the
+// playhead on 1 of 4 (program_spec.h's dot fields), so they interleave on one
+// column. The column is the item's own painted column, the dot one px on it
+// — the stem the cue's triangle and the playhead's head stand centred on
+// (paint_ce_cue_triangle, ~14:35). In the caller's source color.
 inline void fill_dotted_waveform_line(cairo_t* cr, int area_x, int area_w,
                                       int col, int y0, int y1, int period,
                                       int phase) {
@@ -2530,15 +2603,16 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // recolours, the playheads and the marker stems paint on — cold frames (no
 // plate yet) included.
 //
-// render_canvas ALSO owns THE WELL — the waveform area's two-line border at
-// its top and its bottom (waveform_border_px; the colours at the row-6
-// palette block; under clearlooks paint_cl_well_frame's one line on the
-// outer row of each pair), taken FROM the area, not added to it, so no lane or column
-// arithmetic moves and the CONTENT band shrinks by those rows at each end
-// (waveform_content_rect below). Top and bottom only; the area's sides are the
-// window edges (and the inert right gutter), which need no rule.
+// render_canvas ALSO owns THE CANVAS'S LINES UNDER THE WAVEFORM (architect
+// 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, the
+// vertical grid on `grid_cols` (columns of the area, the ruler's major ticks;
+// empty on a frame with no displayed basis), then each channel's horizontal
+// grid and its center line, the channels' bands off waveform_inset_px
+// (waveform_channel_band). The canvas's frame round the area is
+// paint_canvas_column_frame's (paint_handler.cpp).
 void render_background(cairo_t* cr, int x, int y, int w, int h);
-void render_canvas(cairo_t* cr, int x, int y, int w, int h);
+void render_canvas(cairo_t* cr, const GuiRect& area,
+                   const std::vector<int>& grid_cols);
 
 // THE RELIEF HELPERS — the chrome's one painter family for the Windows-95
 // edge grammar (architect 2026-10-02; the grammar and the family table at the
@@ -2565,9 +2639,7 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         frame. (The scrub's pointed thumb draws its own
 //                         soft raised pentagon, paint_scrub_thumb.)
 //   paint_relief_plain_sunken — PLAIN SUNKEN: a field, the list (the folder
-//                         overlay's band, 2026-10-06), the scrub's channel
-//                         (the well is render_canvas's own fill of the same
-//                         lines, full width).
+//                         overlay's band, 2026-10-06), the scrub's channel.
 //   paint_relief_sunken_outer — SUNKEN OUTER, ONE ring (DrawEdge's
 //                         BDR_SUNKENOUTER, Shadow / Hilight): the open menu
 //                         title, the color picker's field and swatch.
@@ -2649,33 +2721,32 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
                        double x, double baseline);
 
 
-// The waveform area's CONTENT band — THE CANVAS: the area minus the well's two
-// lines at its top and its bottom (waveform_border_px). Every pass that fills
-// a BAND inside the area clips to this — the plate blit — and THE CANVAS'S
-// VERTICALS span it: the scanner and the resting cursor's dots
-// (render_playhead) and the cues' dots (paint_marker_stems, 2026-10-09 —
-// Cool Edit puts no dot on its frame rows), their dot rows counted from its
-// first row. THE PHASE-RESET OVERLAY RING stands on it too since 2026-10-06,
-// its horizontals on the band's first and last rows inside the well's edge
-// (the ruling is at paint_phase_reset_overlay_ring). Degenerate areas (too
-// short to carry both borders) pass through unshrunk rather than inverting.
-inline GuiRect waveform_content_rect(GuiRect area) {
-    const int b = waveform_border_px();
-    if (area.h <= 2 * b) return area;
-    return GuiRect{area.x, area.y + b, area.w, area.h - 2 * b};
+// (waveform_content_rect — the area less the well's two lines at its top and
+// its bottom, the band the plate blit, the canvas's verticals and the
+// lead-in ring kept to — and waveform_stem_band — the area through the
+// well's top lines, the zoom anchor's stem — went with the well, 2026-10-09:
+// the waveform area IS the canvas since, every one of those passes spanning
+// it whole, row 6's canvas paragraph.)
+//
+// ONE CHANNEL'S BAND, area-local rows: the plate's (render_waveform_to_cache_
+// surface, its one layout) and the canvas's grid and center lines'
+// (render_canvas), so the lines stand on the zero row the plate's bars
+// straddle. Channel 0 is [inset, split), channel 1 [split, split + its
+// height), the two equal and abutting (waveform_channel_split_row); its ZERO
+// ROW is y + h / 2, the row render_waveform's centre y + h · 0.5 floors to.
+// h <= 0 when the inset leaves no band.
+struct WaveformChannelBand {
+    int y = 0;
+    int h = 0;
+    int zero_row() const { return y + h / 2; }
+};
+inline WaveformChannelBand waveform_channel_band(int area_h, int inset_px,
+                                                 int channel) {
+    const int split = waveform_channel_split_row(area_h, inset_px);
+    if (split < 0) return WaveformChannelBand{};
+    const int ch_h = split - inset_px;
+    return WaveformChannelBand{channel == 0 ? inset_px : split, ch_h};
 }
-// THE STEMS' BAND (architect 2026-10-02): the area from its TOP — through
-// the well's top lines — to the canvas's foot. Its one reader since
-// 2026-10-09 is the strip-drag anchor stem (render_strip_anchor_stem); the
-// marker stems and the playhead keep to the canvas (waveform_content_rect
-// above). Degenerate areas pass through whole, as the canvas's do.
-inline GuiRect waveform_stem_band(GuiRect area) {
-    const int b = waveform_border_px();
-    if (area.h <= 2 * b) return area;
-    return GuiRect{area.x, area.y, area.w, area.h - b};
-}
-// (waveform_well_top_band, the rows a marker stem's flanks crossed the well's
-// top lines in, went with the flanks, 2026-10-09.)
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's
 // samples-per-pixel, and the plate width.
@@ -2987,8 +3058,8 @@ void render_waveform(cairo_surface_t* dest,
                      WaveformPlateInks inks,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
-// Draws a waveform_line_px()-wide vertical LINE down the CANVAS of `area`
-// (waveform_content_rect) at the column nearest `playhead_pixel_x` (offset
+// Draws a waveform_line_px()-wide vertical LINE down the CANVAS, `area`
+// whole (row 6's canvas paragraph), at the column nearest `playhead_pixel_x` (offset
 // from area.x), [col, col + t), in `color`, in the FORM the caller picks
 // (architect 2026-10-09, the program is Cool Edit): THE SCANNER SOLID
 // (PlayheadForm::Solid, Cool Edit's playback cursor a solid 1-px line), THE
@@ -3016,7 +3087,7 @@ void render_playhead(cairo_t* cr,
 
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
-// spanning the stems' band (waveform_stem_band), solid, in the
+// spanning the canvas, `area` whole, solid, in the
 // `playhead_stem` role (the ruling is at the paint site).
 // The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
@@ -3193,22 +3264,23 @@ struct TrimBarHit {
 // Draws THE VIEW BAR — the whole trim lane (architect 2026-10-09, the
 // program is Cool Edit; METRICS §3, the palette block's canvas-column
 // paragraph for its colors, trim_lane_h_px for its rows), the same under
-// every chrome: the top line, the black field and the bottom line across the
-// waveform's columns, then THE SPAN — the trim window's columns, the begin
+// every chrome: the black field across the waveform's columns in its sunken
+// ring (the top line and the left column, the bottom line and the right
+// column, mitred), then THE SPAN — the trim window's columns, the begin
 // column through the end column inclusive, a raised one-quantum bevel block
 // of the ink in the field's rows, sliding off an edge like any content
 // (architect 2026-10-05: an out-of-view bound reads as the window running
-// on) — then THE PLAYHEAD over the span as a dotted column (`playhead_col`,
-// the plate basis's column, waveform-relative; no dots where it is off the
-// span). All pixel-bound integer fills but the span's two mitred corner
+// on); no playhead (the canvas-column paragraph above, 2026-10-09 ~14:30).
+// All pixel-bound integer fills but the ring's and the span's mitred corner
 // blocks, antialiased (paint_relief_frame, 2026-10-09). The lane band is
 // the `trim_bar` PARAMETER — the caller passes top_trim_row_area(app), and
 // the band painted in is published as TrimBarHit::lane, the y-gate both
 // trim hits read, so paint and hit take the band as one value;
-// `waveform_area` is read for its `.w` ALONE — the column-mapping
-// denominator and the bar's width, so the inert non-multiple-of-16 gutter
-// beside it stays the lane's face. `top_strip_area` is a validity guard
-// only. Column placement is on the displayed viewport basis — `trim.begin` /
+// `waveform_area` is read for its `.x` and `.w` — the canvas's columns, the
+// field's and the span's (2026-10-09: the column's margins), `.w` also the
+// column-mapping denominator — and the ring's two side columns stand one
+// line outside them; the lane's face beyond is paint_trim's.
+// `top_strip_area` is a validity guard only. Column placement is on the displayed viewport basis — `trim.begin` /
 // `trim.end` are already in the displayed domain. The span has NO editable
 // payload; it is a plain-press grab target only (trim is outside the
 // selection system).
@@ -3226,7 +3298,6 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
                        const TrimRange& trim,
-                       int playhead_col,
                        TrimBarHit* out_hit);
 
 // The top-strip lane the cues occupy, exactly as the lane accessor reports
@@ -3238,8 +3309,13 @@ void render_trim_flags(cairo_t* cr,
 // gate and every other lane consumer read, whatever the strip's lane heights
 // are. Kept as a struct rather than a bare GuiRect so the call sites
 // that thread it through keep naming what they are threading.
+// `columns_x` is THE WAVEFORM'S FIRST COLUMN in the surface's x (2026-10-09:
+// the canvas stands the column's margin in from the window's side,
+// waveform_area's x) — the origin the cues' columns are counted from and the
+// clip's left edge (clip_to_waveform_columns).
 struct FlagLaneRects {
     GuiRect marker_lane;
+    int     columns_x = 0;
 };
 
 // ONE MARKER STEM, as the flag painter publishes it: the window x of the

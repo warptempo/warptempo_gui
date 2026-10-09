@@ -4143,6 +4143,58 @@ int64_t ruler_step_ms(double ms_per_px) {
     return kRulerLadderMs[std::size(kRulerLadderMs) - 1];
 }
 
+// THE COMB'S MAJORS — the ladder's step on a displayed basis and the one
+// expression that places a major on the screen grid, shared by the ruler's
+// walk (paint_ruler_row) and THE CANVAS'S VERTICAL GRID (on_redraw's
+// render_canvas call, architect 2026-10-09: "on the major ticks", the
+// ruler's own columns), so the two cannot stand a column apart. `vp_ms` and
+// `ms_per_px` the basis in milliseconds, `wave_w` the columns the walk
+// spans; `valid` false on a basis with no span.
+struct RulerComb {
+    bool    valid     = false;
+    double  ms_per_px = 0.0;
+    double  vp_ms     = 0.0;
+    int64_t step      = 0;
+    int     wave_w    = 0;
+    // A step index's own rounded column, waveform-relative: the ONE place a
+    // tick position meets the screen grid (the walk's rigid-comb rule).
+    int major_col(int64_t k) const {
+        const double t = static_cast<double>(k) * static_cast<double>(step);
+        return static_cast<int>(std::nearbyint((t - vp_ms) / ms_per_px));
+    }
+    // The walk's first step, whose major stands at or left of column 0.
+    int64_t first_step() const {
+        return static_cast<int64_t>(std::floor(vp_ms / step));
+    }
+    double end_ms() const { return vp_ms + ms_per_px * wave_w; }
+};
+RulerComb ruler_comb(double spp, double vp_start, int sr, int wave_w) {
+    RulerComb c;
+    if (spp <= 0.0 || sr <= 0 || wave_w <= 0) return c;
+    c.ms_per_px = spp * 1000.0 / static_cast<double>(sr);
+    c.vp_ms     = vp_start * 1000.0 / static_cast<double>(sr);
+    if (c.ms_per_px <= 0.0) return c;
+    c.step   = ruler_step_ms(c.ms_per_px);
+    c.wave_w = wave_w;
+    c.valid  = true;
+    return c;
+}
+// THE MAJORS' COLUMNS ON THE WALK'S COLUMNS [0, wave_w), waveform-relative,
+// left to right — the canvas's vertical grid (render_canvas): the ruler's
+// own walk, from its first step to the step past its end.
+std::vector<int> ruler_major_columns(const RulerComb& c) {
+    std::vector<int> out;
+    if (!c.valid) return out;
+    const double end_ms = c.end_ms();
+    for (int64_t k = c.first_step(); ; ++k) {
+        if (static_cast<double>(k) * static_cast<double>(c.step) > end_ms)
+            break;
+        const int col = c.major_col(k);
+        if (col >= 0 && col < c.wave_w) out.push_back(col);
+    }
+    return out;
+}
+
 // `M:SS.mmm`, REAPER VERBATIM: the minutes field is ALWAYS present, zero
 // included — "0:47.250" below a minute, not "47.250" (architect 2026-08-01,
 // retiring the leading-unit dropping, which was the planner's invention and not
@@ -4176,10 +4228,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
-    // THE LANE'S FACE, then THE GROUND AND ITS LINE over the waveform's
+    // THE LANE'S FACE, then THE GROUND AND ITS FRAME over the canvas's
     // columns (render.h's canvas-column paragraph, below once the width is
-    // read): the inert non-multiple-of-16 gutter beside them stays the panel's
-    // face, as the view bar's does. THE MARKER LANE'S PANEL FACE is laid here
+    // read): the column's margins beside them stay the panel's face, as the
+    // view bar's do. THE MARKER LANE'S PANEL FACE is laid here
     // too, before the flag blit, the lane's ground under every cue (the flag
     // cache paints the cues alone).
     const GuiPalette& pal = palette();
@@ -4196,9 +4248,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const int sr = audio.sample_rate();
     if (basis.spp <= 0.0 || sr <= 0) { cairo_restore(cr); return; }
+    // THE RULER'S COLUMNS ARE THE CANVAS'S (2026-10-09, the column's
+    // margins): the ground and every tick, digit and the head from the
+    // waveform area's x, the frame's side columns one line outside it.
+    const GuiRect area = waveform_area(app);
+    const int cx = area.x;
 
-    const double ms_per_px = basis.spp * 1000.0 / static_cast<double>(sr);
-    const double vp_ms     = basis.vp_start * 1000.0 / static_cast<double>(sr);
     // THE WALK WIDTH IS THE PLATE'S OWN, NOT THE LIVE ONE — the same
     // published-width rule the flag cache spells at its wave_w read
     // (waveform_cache.cpp). The spp above comes from the published fingerprint,
@@ -4211,16 +4266,29 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // live-width fallback mirrors plate_viewport_basis's own cold arm (no plate
     // published yet, spp already live).
     const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
-                                              : waveform_area(app).w;
-    if (ms_per_px <= 0.0 || wave_w <= 0) { cairo_restore(cr); return; }
-    // THE GROUND AND ITS LINE over the waveform's columns: `ce_mid`, then
-    // `ce_hilight` along its foot.
-    paint_cell_rect(cr, GuiRect{lane.x, lane.y, wave_w, ground_h}, pal.ce_mid);
-    paint_cell_rect(cr, GuiRect{lane.x, lane.y + ground_h, wave_w, lw},
-                    pal.ce_hilight);
+                                              : area.w;
+    const RulerComb comb = ruler_comb(basis.spp, basis.vp_start, sr, wave_w);
+    if (!comb.valid) { cairo_restore(cr); return; }
+    // THE GROUND AND ITS FRAME over the canvas's columns (METRICS §4.1, the
+    // mock's ruler): `ce_mid` ground, then the frame's L — the `ce_dark` left
+    // column beside the ground and the `ce_hilight` foot line and right
+    // column — as the canvas's ring would draw it one row up, the row above
+    // (the view bar's light line, its own) cut away by the lane's clip, so the
+    // dark column meets the light foot MITRED at the bottom-left
+    // (paint_relief_frame, cool_edit_paint.h's diagonal rule). The ground and
+    // the frame read the LIVE area, as the canvas's own frame does
+    // (paint_canvas_column_frame); the walk below reads the plate's width.
+    paint_cell_rect(cr, GuiRect{cx, lane.y, area.w, ground_h}, pal.ce_mid);
+    cairo_save(cr);
+    cairo_rectangle(cr, lane.x, lane.y, lane.w, ground_h + lw);
+    cairo_clip(cr);
+    paint_relief_frame(cr, GuiRect{cx - lw, lane.y - lw, area.w + 2 * lw,
+                                   ground_h + 2 * lw},
+                       pal.ce_dark, pal.ce_hilight);
+    cairo_restore(cr);
 
-    const int64_t step  = ruler_step_ms(ms_per_px);
-    const double  end_ms = vp_ms + ms_per_px * wave_w;
+    const int64_t step   = comb.step;
+    const double  end_ms = comb.end_ms();
     // (There is no `minor` time step any more. It had two consumers — the float
     // placement of each minor tick and the head's since-deleted float
     // re-derivation of which columns carried one — and the rigid comb replaced
@@ -4277,25 +4345,25 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // on its own major, so the error is bounded inside one segment rather than
     // walking across the ruler. One pixel on a countable informative line, in
     // exchange for a comb that stops breathing under every pan.
-    const int64_t first_step = static_cast<int64_t>(std::floor(vp_ms / step));
-    // A step index's own rounded column: the ONE place a tick position meets the
-    // screen grid. Majors anchor here; minors are distributed between them.
-    const auto major_col = [&](int64_t k) {
-        const double t = static_cast<double>(k) * static_cast<double>(step);
-        return static_cast<int>(std::nearbyint((t - vp_ms) / ms_per_px));
-    };
+    const int64_t first_step = comb.first_step();
+    // A step index's own rounded column: the ONE place a tick position meets
+    // the screen grid (RulerComb::major_col, which the canvas's vertical grid
+    // reads too). Majors anchor here; minors are distributed between them.
+    const auto major_col = [&](int64_t k) { return comb.major_col(k); };
     // THE LABELS ARE DROPPED AT BOTH ENDS (architect 2026-10-09, the mock's
     // edge-drop rule, retiring 2026-10-05's slide): a label CENTERED on its
     // major's column whose box — its run and the shadow's quantum — would
     // cross either end of the ruler's columns [0, wave_w) is not painted, so
     // no digit is ever cut. The walk therefore starts at first_step, whose
     // major stands at or left of column 0.
-    const int t = waveform_line_px();
+    // THE TICK'S WIDTH IS THE PROGRAM'S QUANTUM (off the canvas: "otherwise,
+    // scaled", waveform_line_px's rule, 2026-10-09).
+    const int t = program_line_px();
     // THE WALK'S CLIP: the waveform's columns [0, wave_w) over the ground's
     // rows, so a tick past the last column and the leftover strip a
     // non-multiple-of-16 window leaves beside wave_w carry nothing.
     cairo_save(cr);
-    cairo_rectangle(cr, lane.x, lane.y, wave_w, ground_h);
+    cairo_rectangle(cr, cx, lane.y, wave_w, ground_h);
     cairo_clip(cr);
     for (int64_t k = first_step; ; ++k) {
         const double step_ms = static_cast<double>(k) * static_cast<double>(step);
@@ -4316,14 +4384,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const bool major = (i == 0);
             const bool tick_on_lane = col >= 0 && col < wave_w;
             if (!tick_on_lane && !major) continue;
-            // waveform_line_px() wide (render.h, the class's one inventory),
-            // left edge on the tick's own column, clipped at the right edge,
-            // in kCeRulerTick, standing on the ground's bottom row.
+            // One quantum wide (program_line_px; render.h's waveform_line_px
+            // inventory), left edge on the tick's own column, clipped at the
+            // right edge, in kCeRulerTick, standing on the ground's bottom row.
             if (tick_on_lane) {
                 set_palette_source(cr, hex(kCeRulerTick));
-                fill_waveform_line(cr, lane.x, wave_w, col,
+                fill_waveform_line(cr, cx, wave_w, col,
                                    major ? major_top : minor_top,
-                                   ground_bottom);
+                                   ground_bottom, t);
             }
             if (!major) continue;
             // The label CENTERED ON ITS MAJOR'S COLUMN (the tick's own t
@@ -4350,7 +4418,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
             // colour to all the numbers"): the tick's ink over Cool Edit's
             // black (+1, +1) shadow (METRICS §4.4).
-            const double x = static_cast<double>(lane.x + lx);
+            const double x = static_cast<double>(cx + lx);
             set_palette_source(cr, hex(kCeRulerShadow));
             text_shape::show_shaped_run(cr, run, x + t, baseline + t);
             set_palette_source(cr, hex(kCeRulerTick));
@@ -4373,8 +4441,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // (its diagonal edges antialiased over them). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
-    // playhead paragraph). It draws NOTHING across the marker lane and the
-    // well's top frame; its canvas dots are paint_playheads'.
+    // playhead paragraph). It draws NOTHING across the view bar, the marker
+    // lane and the canvas's top frame row; its canvas dots are
+    // paint_playheads'. CENTRED ON THE PLAYHEAD'S ONE-PX COLUMN (architect
+    // 2026-10-09 ~14:35; paint_ce_cue_triangle).
     //
     // The whole head is the RESTING CURSOR'S: the `h` view, the render player
     // and the audition reach it through this one block, and the scanner keeps
@@ -4399,9 +4469,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         if (col + right - 1 >= 0 && col - left <= wave_w - 1) {
             const int head_top = ground_bottom - rows;
             cairo_save(cr);
-            cairo_rectangle(cr, lane.x, head_top, wave_w, rows);
+            cairo_rectangle(cr, cx, head_top, wave_w, rows);
             cairo_clip(cr);
-            paint_ce_cue_triangle(cr, lane.x + col, head_top,
+            paint_ce_cue_triangle(cr, cx + col, head_top,
                                   palette().playhead_stem);
             cairo_restore(cr);
         }
@@ -4455,15 +4525,12 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // 2026-10-03 (architect, "the trim bar is enough"), the trim bar being
     // the whole picture of the window, the sweep's included.
     //
-    // The clip is the CONTENT band, not the full area: the area's top and
-    // bottom rows are render_canvas's well lines and no band-filling pass may
-    // cover them. (The plate's own inset band leaves those rows transparent
-    // anyway, so this is the structural statement of the rule rather than a
-    // pixel change.)
+    // The clip is the AREA, the canvas's interior (2026-10-09: the canvas's
+    // frame stands outside it), so a plate published at a stale size never
+    // paints over the frame.
     if (wf_cache.surface) {
-        const GuiRect content = waveform_content_rect(area);
         cairo_save(cr);
-        cairo_rectangle(cr, content.x, content.y, content.w, content.h);
+        cairo_rectangle(cr, area.x, area.y, area.w, area.h);
         cairo_clip(cr);
         cairo_set_source_surface(cr, wf_cache.surface,
                                  area.x, area.y);
@@ -4758,14 +4825,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // with no fill inside it the band now READS as the two edges of a span rather
 // than as a tinted region.
 //
-// THE RING STANDS INSIDE THE WELL'S EDGE (architect 2026-10-06): its top run
-// on the content band's first row and its bottom run on its last
-// (waveform_content_rect), the verticals spanning the band between them, so
-// the well's two-line sunken edge at the top and the bottom stays whole under
-// a reset's span. The ring rode the area's outermost rows from 2026-08-01
-// until this ruling — a frame drawn on the frame — which was settled under
-// the earlier flat border, before the well had a Windows edge for the ring to
-// break.
+// THE RING STANDS ON THE CANVAS (architect 2026-10-06; the canvas the area
+// whole since 2026-10-09): its top run on the area's first row and its
+// bottom run on its last, the verticals spanning the rows between them, the
+// canvas's frame round the area staying whole under a reset's span. (Inside
+// the well's two-line edge from 2026-10-06 until the well went, 2026-10-09.)
 //
 // A vertical side is drawn only where the band's own edge
 // is the true edge — both x0 and x1 come back already clipped to the area, so a
@@ -4795,10 +4859,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // repaint; a palette install damages the whole window.
     const GuiColor ring = phase_reset_stem_color(band.red);
     set_palette_source(cr, ring);
-    // THE CONTENT BAND, not the full area (architect 2026-10-06): the top run
-    // lands on the canvas's first row (content.y, just under the well's top
-    // lines) and the bottom on its last (content.y + content.h - 1, just
-    // above the bottom lines), with the verticals spanning every row between
+    // THE CANVAS'S ROWS (architect 2026-10-06; the area whole since
+    // 2026-10-09): the top run lands on the canvas's first row and the
+    // bottom on its last, with the verticals spanning every row between
     // them. No other reader takes the ring's rows: it is no hit target, and
     // its damage is the whole waveform area's (the flag cache's rebuild and
     // Selection::damage_overlay_on_subject_change), which holds it at any
@@ -4807,11 +4870,10 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // [x0, x0 + t) are the stem's own; a side is never wider than the band
     // (both verticals then cover it), and the band is already clipped to the
     // waveform's columns, so no side reaches past them.
-    const GuiRect content = waveform_content_rect(area);
     const double t  = static_cast<double>(waveform_line_px());
     const double sw = std::min(t, w);
-    const double y0 = static_cast<double>(content.y);
-    const double h  = static_cast<double>(content.h);
+    const double y0 = static_cast<double>(area.y);
+    const double h  = static_cast<double>(area.h);
     cairo_rectangle(cr, band.x0, y0, w, t);              // top
     cairo_rectangle(cr, band.x0, y0 + h - t, w, t);      // bottom
     cairo_rectangle(cr, band.x0, y0, sw, h);             // left
@@ -4822,9 +4884,9 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
 
-// The LIVE trim pass: every trim pixel — the view bar's lines and field, the
-// span and the playhead's dots over it (render_trim_flags), and the column's
-// air above it — paints here per frame, entirely inside those two lanes,
+// The LIVE trim pass: every trim pixel — the view bar's ring and field and
+// the span (render_trim_flags), and the column's air above it — paints here
+// per frame, entirely inside those two lanes,
 // which no later pass paints on; its slot is in the paint-order block in
 // on_redraw (the one authoritative sequence).
 //
@@ -4886,8 +4948,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // column lanes): 5 W of the panel face under the band's last line
     // (METRICS §4.1), the lane's whole width, painted with the bar it heads.
     // The trim lane's own ground the same face, under the view bar, so the
-    // inert non-multiple-of-16 gutter beside the bar (render_trim_flags
-    // spans the waveform's columns alone) reads as the panel.
+    // column's margins beside the bar's frame (render_trim_flags spans the
+    // canvas's columns and its two frame columns alone, 2026-10-09) read as
+    // the panel.
     const GuiRect trim_row = top_trim_row_area(app);
     {
         const GuiRect air = top_column_air_area(app);
@@ -4901,7 +4964,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     TrimBarHit* const out_hit =
         clip_covers_drawable(cr, app,
-                             GuiRect{trim_row.x, trim_row.y,
+                             GuiRect{area.x, trim_row.y,
                                      std::max(basis.area_w, 0), trim_row.h})
             ? &app.trim_bar_hit : nullptr;
     if (area.w <= 0 || area.h <= 0 || top_strip.w <= 0 || top_strip.h <= 0 ||
@@ -4956,19 +5019,11 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // window's WHOLE display.
     // NO HELD FACE (2026-10-09): the view bar draws no caps, so a grab shows
     // nothing pressed (the held scroll arrow of 2026-10-03 went with them).
-    // THE PLAYHEAD'S COLUMN for the bar's dotted column: the resting cursor's,
-    // on the playhead's own PLATE basis (paint_playheads, paint_ruler_row), so
-    // the bar's dots, the ruler's head and the canvas's dots stand on one
-    // column.
-    const PlateViewportBasis pb = plate_viewport_basis();
-    const int playhead_col =
-        pb.spp > 0.0
-            ? static_cast<int>(std::nearbyint(playhead_pixel_x(
-                  app, static_cast<int64_t>(pb.vp_start), pb.spp)))
-            : -1;
+    // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "no dots on the
+    // trim bar"; render.h's view-bar paragraph).
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame, trim,
-                      playhead_col, out_hit);
+                      out_hit);
 }
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
@@ -4987,9 +5042,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 //
 // THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS TWO CUE COLORS (architect
 // 2026-10-09, METRICS §4.2; the two colors ~11:50; render.h's marker-lane
-// paragraph): one-quantum dots on the CANVAS'S quantum rows from its top row
-// (fill_dotted_waveform_line, waveform_content_rect) — none on the well's
-// frame rows and none in the lane — THE RED (`cue`) on rows ≡ cue_dot_phase
+// paragraph): one-device-px dots on the CANVAS'S device rows from its top
+// row (fill_dotted_waveform_line, the area whole) — none on the canvas's
+// frame row and none in the lane — THE RED (`cue`) on rows ≡ cue_dot_phase
 // and THE BLUE (`range`) on rows ≡ range_dot_phase (mod cue_dot_period,
 // program_spec.h), each where the stash says the cue wears it
 // (resolve_flag_face's table: a warp or phase-reset cue both, alternating
@@ -5011,7 +5066,7 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     // here — the stash's two bits are the marker's resolved class, the
     // whole answer, and the colors the palette's two live roles.
     cairo_save(cr);
-    const GuiRect band = waveform_content_rect(area);
+    const GuiRect& band = area;   // the canvas, the area whole (2026-10-09)
     const ProgramSpec& ps = kProgramSpec;
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
@@ -5138,16 +5193,16 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
     // THIS PASS IS THE CURSOR'S CANVAS RUN, nothing else: its HEAD is the
-    // yellow triangle in the ruler (paint_ruler_row) and its dots over the
-    // view bar's span are render_trim_flags'; across the marker lane and the
-    // well's top frame the playhead draws nothing (architect 2026-10-09,
-    // Cool Edit puts no dot on its frame row).
+    // yellow triangle in the ruler (paint_ruler_row); across the view bar
+    // (architect 2026-10-09 ~14:30), the marker lane and the canvas's top
+    // frame row the playhead draws nothing (Cool Edit puts no dot on its
+    // frame row).
     //
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form at the resting cursor column whatever the selection is doing —
     // since 2026-10-09 COOL EDIT'S DOTTED COLUMN (render.h's playhead
-    // paragraph): one-quantum dots in the palette's `playhead_stem` (Cool
-    // Edit's Curs yellow by default) on the canvas's quantum rows ≡ 1
+    // paragraph): one-device-px dots in the palette's `playhead_stem` (Cool
+    // Edit's Curs yellow by default) on the canvas's device rows ≡ 1
     // (mod 4), the cues' dots on rows ≡ 3, so a playhead on a marker's
     // column interleaves with its dots and neither yields. It paints AFTER
     // paint_marker_stems (architect 2026-09-23) and before the scanner.
@@ -8049,6 +8104,42 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     cairo_restore(cr);
 }
 
+// -- THE CANVAS'S FRAME AND THE COLUMN'S MARGINS ---------------------------
+//
+// (architect 2026-10-09, the third part, "accurate to the mock-up"; METRICS
+// §4.1, the mock of record's set 3; program_spec.h's column_margin_px and
+// column_foot_px, render.h's canvas-frame accessors.) ONE PAINTER for the
+// rows from the canvas's top frame row (top lane 7) through the column's
+// foot (bottom lane 1): the panel's FACE across them, the window's width —
+// the margins beside the canvas, the frame rows' own ground and the foot's
+// 5 W — then THE CANVAS'S FRAME, one ring round the waveform area: the
+// `ce_dark` top row and left column, the `ce_hilight` right column and
+// bottom row, MITRED at the top-right and bottom-left corner blocks where
+// the dark meets the light (paint_relief_frame, cool_edit_paint.h's diagonal
+// rule). It runs before render_canvas, which lays the canvas over the
+// interior this face covered; the view bar's and the ruler's own side
+// columns are their painters' (render_trim_flags, paint_ruler_row). THE
+// SAME UNDER EVERY CHROME; the program's colors alone.
+namespace {
+void paint_canvas_column_frame(cairo_t* cr, const AppState& app) {
+    const GuiRect area = waveform_area(app);
+    const GuiRect top  = top_canvas_frame_area(app);
+    const GuiRect foot = bottom_column_foot_area(app);
+    const int y1 = foot.y + foot.h;
+    if (top.w <= 0 || y1 <= top.y) return;
+    const GuiPalette& p = palette();
+    const int lw = program_line_px();
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{top.x, top.y, top.w, y1 - top.y}, p.face);
+    paint_relief_frame(cr,
+                       GuiRect{area.x - lw, top.y, area.w + 2 * lw,
+                               foot.y + lw - top.y},
+                       p.ce_dark, p.ce_hilight);
+    cairo_restore(cr);
+}
+} // namespace
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -8213,27 +8304,27 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     render_background(cr, x, y, w, h);
     // THE GROUND SPLIT: the chrome erase above covers the whole exposed rect;
-    // the waveform area then takes its own `waveform_canvas` ground.
-    // Unconditional and
+    // the canvas's frame and the column's margins then take the panel's face
+    // and the frame's ring (paint_canvas_column_frame, above), and the
+    // waveform area its own `waveform_canvas` ground with the grid and the
+    // center lines over it (render_canvas, render.h's row-6 canvas
+    // paragraph). Unconditional and
     // ahead of every content branch, so a cold frame (loading, no audio, or a
     // null plate before the first worker publish) shows canvas where the
     // waveform will be rather than a chrome-colored hole. The outer clip already
     // bounds this to the exposed rect, so the full-rect fill costs nothing off
-    // the damage. The rect is the EFFECTIVE-width waveform_area, so the <=15px
-    // inert right gutter at a non-multiple-of-16 window stays chrome — it is
-    // outside every grid-aligned surface and no waveform pixel ever paints there
-    // (no gutter exists at 1920/2560/3840).
+    // the damage.
     {
+        paint_canvas_column_frame(cr, app);
         const GuiRect canvas = waveform_area(app);
         // AND NOT UNDER THE ON-SCREEN KEYBOARD. The painted rect's one owner is
         // onscreen_keyboard::waveform_paint_area (the rule is stated there):
         // the band is opaque and paints after everything below, so the ground
         // under it is a fill nobody ever sees. The rect handed to render_canvas
-        // is still the WHOLE area — the well's lines are its geometry, and a
-        // shortened rect would draw the bottom ones as lines across the
-        // keyboard's top edge — so the band is subtracted with a
-        // CLIP rather than with a smaller rectangle. Nothing at all on a
-        // platform with no painted keyboard.
+        // is still the WHOLE area — the channels' bands and their lines are
+        // its geometry — so the band is subtracted with a CLIP rather than
+        // with a smaller rectangle. Nothing at all on a platform with no
+        // painted keyboard.
         const GuiRect painted =
             onscreen_keyboard::waveform_paint_area(app, gui);
         const bool band_cuts = painted.h < canvas.h;
@@ -8242,7 +8333,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             cairo_rectangle(cr, painted.x, painted.y, painted.w, painted.h);
             cairo_clip(cr);
         }
-        render_canvas(cr, canvas.x, canvas.y, canvas.w, canvas.h);
+        // THE VERTICAL GRID'S COLUMNS ARE THE RULER'S MAJORS (architect
+        // 2026-10-09), off the same comb on the same PLATE basis and width
+        // the ruler walks (paint_ruler_row), so a grid line stands on its
+        // major tick's column; none while no audio stands.
+        std::vector<int> grid_cols;
+        if (audio.total_frames() > 0 && !app.loading) {
+            const PlateViewportBasis b = plate_viewport_basis();
+            const int ww = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
+                                                  : canvas.w;
+            grid_cols = ruler_major_columns(
+                ruler_comb(b.spp, b.vp_start, audio.sample_rate(), ww));
+        }
+        render_canvas(cr, canvas, grid_cols);
         if (band_cuts) cairo_restore(cr);
     }
 
@@ -8348,8 +8451,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // branch:
         //   1. render_background — the chrome erase over the whole exposed
         //      rect (above, unconditional).
-        //   2. render_canvas — the waveform area's ground AND THE WELL, its
-        //      two lines top and bottom (above, unconditional).
+        //   2. paint_canvas_column_frame — the panel's face from the canvas's
+        //      top frame row through the column's foot and the canvas's
+        //      frame ring — then render_canvas — the waveform area's ground,
+        //      the vertical grid, the horizontal grid and the center lines
+        //      (above, unconditional; 2026-10-09).
         //   3. the two redesigned top button rows and the
         //      unified bottom row (its chrome, buttons, clock AND state cell
         //      in one painter),
@@ -8358,8 +8464,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      below them paints on).
         //   4. waveform plate -> phase-reset overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the column's air and the
-        //      trim lane: Cool Edit's view bar, its span and the cursor's
-        //      dots over it (2026-10-09).
+        //      trim lane: Cool Edit's view bar and its span (2026-10-09; no
+        //      cursor mark in the bar, ~14:30).
         //   6. the MARKER STEMS (waveform): the cues' dots, rows ≡ 3 of 4.
         //   7. the CURSOR's CANVAS DOTS (paint_playheads, rows ≡ 1 of 4 —
         //      the head is the ruler pass's, step 9).

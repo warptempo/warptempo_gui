@@ -6,10 +6,10 @@
 
 // THE CLEARLOOKS PAINTERS (architect 2026-10-07, the painters round's first
 // part: the top strip; its second: the dialogs' push buttons and entries,
-// the dropdown, the lists; its last: the scrub as GtkScale, the well's
-// frame, the restored laptop's frame; the toolbar band, row 8 and the canvas
-// column's lanes — the trim lane, the ruler, the cues — are the program's
-// since 2026-10-09, program_spec.h) — the chrome spec's clearlooks
+// the dropdown, the lists; its last: the scrub as GtkScale, the restored
+// laptop's frame; the toolbar band, row 8 and the canvas column — the trim
+// lane, the ruler, the cues and the canvas's frame — are the program's since
+// 2026-10-09, program_spec.h) — the chrome spec's clearlooks
 // arm (chrome_spec.h; the flag editor is the program's own cue label in its
 // selected look under every chrome, render_flag_editor_box),
 // GNOME 2.30's own drawing as Debian 6 squeeze put it on screen: the
@@ -230,7 +230,7 @@ void paint_cl_list(cairo_t* cr, const GuiRect& surf);
 // cl_text_selected.
 void paint_cl_selected_cell(cairo_t* cr, const GuiRect& r, bool focused);
 
-// -- THE SCRUB, THE POPUP LISTS' BAR, THE WELL AND THE FRAME (the painters
+// -- THE SCRUB, THE POPUP LISTS' BAR AND THE FRAME (the painters
 //    round's last part, 2026-10-07) ---------------------------------------------
 
 // GTKSCALE'S LENGTHS (the default style's GtkScale::slider-length 23 and
@@ -312,23 +312,11 @@ void paint_cl_scrollbar_stepper(cairo_t* cr, const GuiRect& b, bool points_up,
                                 bool pressed);
 void paint_cl_scrollbar_slider(cairo_t* cr, const GuiRect& body);
 
-// THE WELL'S FRAME — GtkScrolledWindow's shadow IN under GUMMY
-// (clearlooks_style_draw_shadow's "scrolled_window" arm, P2's list frame:
-// ONE shade[5] line, cl_list_frame) on the well's top and bottom rows of the
-// waveform area `area` (render_canvas, which takes the frame's two lines a
-// side FROM the area under both chromes, waveform_border_px): the OUTER line
-// of each pair is the scrolled window's, the inner one the canvas the
-// window's child begins on — GTK's one line at the base's thickness. THE
-// WELL'S EDGES ARE THAT ONE LINE AND NOTHING ELSE (architect 2026-10-07
-// ~05:30: "Clearlooks is friendlier to flat one-pixel one-colour borders —
-// the file manager's main panel is just a one-pixel line all around"): his
-// Nautilus captures 00-17-24 and 00-17-47 show the list's ground, ONE frame
-// line, then the window's ground above it and the status bar's ground below
-// it — so row 8 under the well draws no line of its own (paint_bottom_strip;
-// the gummy status bar's own two-line frame, clearlooks_gummy_draw_statusbar,
-// which his Music Player capture 23-12-32 shows under its list, is not the
-// file manager's).
-void paint_cl_well_frame(cairo_t* cr, const GuiRect& area);
+// (THE WELL'S FRAME, paint_cl_well_frame — GtkScrolledWindow's one shade[5]
+// line on the outer row of the well's two at the waveform area's top and
+// bottom — stood 2026-10-07 to 2026-10-09; the canvas's frame is the
+// program's since, the same under every chrome (render.h's row-6 canvas
+// paragraph). Git history.)
 
 // THE SCRUB'S TROUGH — clearlooks_gummy_draw_scale_trough on `trough`, the
 // kClScaleTroughPx rows across the track (cl_scale_trough_h_px tall), SQUARE

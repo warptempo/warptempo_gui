@@ -142,9 +142,10 @@ namespace {
 //
 // Per-strip lane stacks with per-lane heights. Top and bottom strips DIFFER in
 // height; the waveform takes what they leave, and TWO FLEXIBLE GAPS stand
-// either side of it, both 0 (the vertical rule below). The TOP strip is SEVEN lanes since
-// the canvas column's air (2026-10-09; six from the caption's arrival,
-// architect 2026-10-05) — from the window edge inward
+// either side of it, both 0 (the vertical rule below). The TOP strip is EIGHT
+// lanes since the canvas's top frame row (2026-10-09; seven with the canvas
+// column's air that morning, six from the caption's arrival, architect
+// 2026-10-05) — from the window edge inward
 // (every Windows-px length below the live chrome spec's, chrome_spec.h —
 // win2000's figures first, clearlooks' after them, 2026-10-07): THE
 // CAPTION (caption_row_h_px(), the window's own title bar, Windows'
@@ -161,7 +162,7 @@ namespace {
 // program_spec.h, render.h's program block) — its last light line the
 // boundary with the trim lane),
 // then FLEXIBLE GAP 1, then
-// THE CENTERED BLOCK's four, THE PROGRAM'S CANVAS COLUMN (architect
+// THE CENTERED BLOCK's five, THE PROGRAM'S CANVAS COLUMN (architect
 // 2026-10-09, the program is Cool Edit; program_spec.h, render.h's canvas
 // column lanes): THE COLUMN'S AIR (column_air_h_px(), 5 W of face), the
 // TRIM lane (trim_lane_h_px(), Cool Edit's view bar, 8 W — a line, the
@@ -170,10 +171,13 @@ namespace {
 // timestamps and the PLAYHEAD'S HEAD on its bottom rows — and a PLACEMENT
 // LANE: a motionless click places the playhead and every drag there does
 // nothing, the navigation surface being the waveform alone
-// (point_on_placement_lanes, app_state.h)) and the MARKER lane
-// (marker_lane_h_px(), 11 W, Cool Edit's cues), whose bottom edge is the
-// waveform top. ALL SEVEN ride the gui_scale axis. The BOTTOM strip is ONE
-// LANE: THE UNIFIED BOTTOM ROW,
+// (point_on_placement_lanes, app_state.h)), the MARKER lane
+// (marker_lane_h_px(), 11 W, Cool Edit's cues) and THE CANVAS'S TOP FRAME
+// ROW (canvas_top_frame_h_px(), one dark line, 2026-10-09), whose bottom
+// edge is the waveform top. ALL EIGHT ride the gui_scale axis. The BOTTOM
+// strip is TWO LANES: THE COLUMN'S FOOT (column_foot_h_px(), the canvas's
+// light bottom frame row and 5 W of face, 6 W, 2026-10-09) directly under
+// the waveform, and THE UNIFIED BOTTOM ROW,
 // bottom_row_h_px() tall — COOL EDIT'S DOCK BAR (6 W) over ITS ROW 8 (4 W of
 // face, the band's case, 5 W of face: 32), 38 under every chrome (architect
 // 2026-10-09; program_spec.h) — the clock in its dark time field inside its
@@ -182,8 +186,8 @@ namespace {
 // and, packed against the right edge, the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
 // walk, the four cardinal arrows and the transport three, each Cool Edit's
-// group of gripper, cases and end bar — sitting ON THE WINDOW'S FOOT with
-// the flexible gap 2 between it and the waveform.
+// group of gripper, cases and end bar — sitting ON THE WINDOW'S FOOT, the
+// column's foot over it and the flexible gap 2 above both.
 //
 // THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
 // (architect 2026-10-07 evening: the maximum height it carried — a render.h
@@ -198,14 +202,13 @@ namespace {
 //   THE ICON ROW, directly under it with nothing between;
 //   GAP 1 — flexible band of blank window ground;
 //   THE CENTERED BLOCK — the column's air, the trim lane, the ruler, the
-//     marker lane, then THE WAVEFORM,
-//     whose own thick bottom border (render_canvas's, taken FROM the waveform
-//     area) is the block's bottom edge;
+//     marker lane, the canvas's top frame row, then THE WAVEFORM, the
+//     canvas's interior (its frame columns and the margins beside it,
+//     waveform_area's x);
 //   GAP 2 — flexible blank window ground;
-//   THE UNIFIED BOTTOM ROW at the window's foot, its first row plain ground
-//     under both chromes (no line between it and the well: win2000 since
-//     2026-10-02, clearlooks since 2026-10-07 ~05:30, Nautilus's status bar
-//     under its list's one frame line).
+//   THE COLUMN'S FOOT — the canvas's bottom frame row and 5 W of face;
+//   THE UNIFIED BOTTOM ROW at the window's foot, its first row the dock
+//     bar's light row.
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE (on a
@@ -221,18 +224,19 @@ namespace {
 // of it in the four functions below (the gap's SIZE is the centering's
 // remainder above the block, and the lanes above the gap are part of the top
 // lane stack whichever side of it they sit on):
-//   leftover = win_h - (the top lanes whole) - the bottom strip's ONE lane
-//              = centered_leftover_h; the waveform's own borders are INSIDE
-//                its area, so the block's thick bottom border is not a term
-//                here (counting it would double it),
+//   leftover = win_h - (the top lanes whole) - the bottom strip's two lanes
+//              = centered_leftover_h; the canvas's two frame rows are lanes
+//                (top lane 7, bottom lane 1), so the waveform is the frame's
+//                interior and nothing inside its area is a border,
 //   W        = max(0, leftover)                            = waveform_h,
 //   gap 1    = max(0, win_h/2 - (the top lanes whole) - W/2)
 //              = top_flex_gap,
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
 // WITH THE WAVEFORM THE WHOLE LEFTOVER, BOTH GAPS ARE ZERO ON EVERY WINDOW
 // (2026-10-07 evening): gap 1's midpoint term comes to half the bottom row
-// less half the top stack, negative under every chrome at every scale (113
-// or 116 Windows px above against the dock bar and row 8's 38 below), so it
+// less half the top stack, negative under every chrome at every scale (114
+// or 117 Windows px above against the column's foot, the dock bar and row
+// 8's 44 below), so it
 // floors at 0, and
 // gap 2 is the leftover's remainder after W, 0. The centering is infeasible
 // by construction and the waveform takes the whole leftover, which is the
@@ -249,91 +253,100 @@ namespace {
 // program line is one quantum, relief_line_px(), not a share of scaled_px of
 // a total, so a lane can differ from a naive total at a fractional
 // gui_scale. THE PROGRAM IS THE SAME UNDER EVERY CHROME (architect
-// 2026-10-09, program_spec.h): its band 33, its canvas column 42 (the air 5,
-// the view bar 8, the ruler 18, the marker lane 11) and its dock bar and row
-// 8 38, so THE TOP STACK IS 113 WINDOWS PX UNDER WIN2000, 116 UNDER
-// CLEARLOOKS AND 119 UNDER CDE INSIDE DTWM'S FRAME, 38 BELOW (render.h's
-// chrome_stack_authored_h). THE WELL'S HEIGHT AT THE BASE'S 300 % IS 987
-// DEVICE ROWS UNDER WIN2000, 978 UNDER CLEARLOOKS AND 939 UNDER CDE (the
-// rule at centered_leftover_h below). Per scale the canvas column is the
-// air + the view bar (line + field + line) + the ruler (ground + line) + the
-// marker lane (rows above the triangle + its five quanta): 15 + 24 (3 + 18 +
-// 3) + 54 (51 + 3) + 33 (18 + 15) = 126 at 300 %, 7 + 10 (1 + 8 + 1) + 24
-// (23 + 1) + 13 (8 + 5) = 54 at 138 %, 18 + 30 (4 + 22 + 4) + 65 (61 + 4) +
-// 42 (22 + 20) = 155 at 360 % and 20 + 32 + 72 + 44 = 168 at 400 %. THE
-// WIN2000 STACKS FIRST, then CLEARLOOKS', then CDE's (the band 5 lines +
-// face 3 + the case's 3 lines + glyph 20 + face 2; the dock bar 3 lines +
-// face 3; row 8 face 4 + the case + face 5).
+// 2026-10-09, program_spec.h): its band 33, its canvas column 43 above the
+// canvas (the air 5, the view bar 8, the ruler 18, the marker lane 11, the
+// canvas's top frame row 1), the column's foot 6 under it (the bottom frame
+// row 1 and 5 W of face) and its dock bar and row 8 38, so THE TOP STACK IS
+// 114 WINDOWS PX UNDER WIN2000, 117 UNDER CLEARLOOKS AND 120 UNDER CDE INSIDE
+// DTWM'S FRAME, 44 BELOW (render.h's chrome_stack_authored_h). THE WELL'S
+// HEIGHT — THE CANVAS'S INTERIOR — AT THE BASE'S 300 % IS 966 DEVICE ROWS
+// UNDER WIN2000, 957 UNDER CLEARLOOKS AND 918 UNDER CDE (the rule at
+// centered_leftover_h below), AND ITS WIDTH 2256 OF THE TABLET'S 2304 (2224
+// of cde's 2274), 24 device px in from the left (25 under cde; waveform_area,
+// the flooring's leftover split between the margins). Per scale
+// the canvas column above the canvas is the air + the view bar (line +
+// field + line) + the ruler (ground + line) + the marker lane (rows above
+// the triangle + its five quanta) + the frame row: 15 + 24 (3 + 18 + 3) +
+// 54 (51 + 3) + 33 (18 + 15) + 3 = 129 at 300 %, 7 + 10 (1 + 8 + 1) + 24
+// (23 + 1) + 13 (8 + 5) + 1 = 55 at 138 %, 18 + 30 (4 + 22 + 4) + 65 (61 +
+// 4) + 42 (22 + 20) + 4 = 159 at 360 % and 20 + 32 + 72 + 44 + 4 = 172 at
+// 400 %; the column's foot 18 (3 + 15), 8 (1 + 7), 22 (4 + 18) and 24 (4 +
+// 20). THE WIN2000 STACKS FIRST, then CLEARLOOKS', then CDE's (the band 5
+// lines + face 3 + the case's 3 lines + glyph 20 + face 2; the dock bar 3
+// lines + face 3; row 8 face 4 + the case + face 5).
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
 //   lanes are 25 caption + 27 menu + 43 band (5 + 4 + 31 + 3) + 7 air + 10
-//   trim + 24 ruler + 13 marker = 149 above, of which 95 is the caption, the
-//   menu row and the band above the gap and 54 the block above the
-//   waveform, and 51 below (the dock bar's 7 and row 8's 6 + 31 + 7);
-//   leftover 880: the waveform 880, both gaps 0 (the midpoint rule would
-//   want 540 - 149 - 440 = -49) — 25 / 27 / 43 / 0 / 54 / 880 / 0 / 51.
+//   trim + 24 ruler + 13 marker + 1 frame = 150 above, of which 95 is the
+//   caption, the menu row and the band above the gap and 55 the block above
+//   the waveform, and 59 below (the column's foot 8, the dock bar's 7 and
+//   row 8's 6 + 31 + 7); leftover 871: the waveform 871, both gaps 0 (the
+//   midpoint rule would want 540 - 150 - 435 = -45) — 25 / 27 / 43 / 0 / 55
+//   / 871 / 0 / 59; the waveform 1888 wide, 16 px in.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — the caption across its top; the architect's
 //   tablet value since 2026-10-06): the lanes are 54 caption + 60 menu +
-//   99 band (15 + 9 + 69 + 6) + 15 air + 24 trim + 54 ruler + 33 marker =
-//   339 above (213 the caption, the menu row and the band, 126 the block)
-//   and 114 below (the dock bar's 18 and row 8's 12 + 69 + 15), leftover
-//   987: the waveform 987, both gaps 0 (the rule would want 720 - 339 - 493
-//   = -112) — 54 / 60 / 99 / 0 / 126 / 987 / 0 / 114.
+//   99 band (15 + 9 + 69 + 6) + 15 air + 24 trim + 54 ruler + 33 marker + 3
+//   frame = 342 above (213 the caption, the menu row and the band, 129 the
+//   block) and 132 below (the column's foot 18, the dock bar's 18 and row
+//   8's 12 + 69 + 15), leftover 966: the waveform 966, both gaps 0 (the rule
+//   would want 720 - 342 - 483 = -105) — 54 / 60 / 99 / 0 / 129 / 966 / 0 /
+//   132; the waveform 2256 wide, 24 px in.
 //   2304x1440 AT gui_scale 360 (same surface; every relief line 4 here, so
 //   the case is 84 where it is 81 at 300): the lanes are 65 caption + 72
 //   menu + 122 band (20 + 11 + 84 + 7) + 18 air + 30 trim + 65 ruler + 42
-//   marker = 414 above (259 and 155) and 139 below (23 + 14 + 84 + 18),
-//   leftover 887: the waveform 887, both gaps 0 — 65 / 72 / 122 / 0 / 155 /
-//   887 / 0 / 139.
+//   marker + 4 frame = 418 above (259 and 159) and 161 below (22 + 23 + 14 +
+//   84 + 18), leftover 861: the waveform 861, both gaps 0 — 65 / 72 / 122 /
+//   0 / 159 / 861 / 0 / 161; the waveform 2240 wide, 32 px in.
 //   2304x1440 AT gui_scale 400 (same surface): the lanes are 72 caption +
-//   80 menu + 132 band + 20 air + 32 trim + 72 ruler + 44 marker = 452
-//   above (284 and 168) and 152 below (24 + 128), leftover 836: the
-//   waveform 836, both gaps 0 — 72 / 80 / 132 / 0 / 168 / 836 / 0 / 152.
+//   80 menu + 132 band + 20 air + 32 trim + 72 ruler + 44 marker + 4 frame
+//   = 456 above (284 and 172) and 176 below (24 + 24 + 128), leftover 808:
+//   the waveform 808, both gaps 0 — 72 / 80 / 132 / 0 / 172 / 808 / 0 / 176.
 // THE CLEARLOOKS STACKS (2026-10-07, at Windows' proportions — the 13-row
 // cell, chrome_spec.h's instance; caption 20 + menu 21 + the program's band
-// 33 and canvas column 42 = 116 Windows px above, the program's 38 below):
-//   1920x1080 AT 138 %: the lanes are 28 caption + 28 menu + 43 band + 54
-//   the column = 153 above (99 and 54) and 51 below, leftover 876: the
-//   waveform 876, both gaps 0.
-//   2304x1440 AT 300 %: the lanes are 60 caption + 63 menu + 99 band + 126
-//   the column = 348 above (222 and 126) and 114 below, leftover 978: the
-//   waveform 978, both gaps 0 — 60 / 63 / 99 / 0 / 126 / 978 / 0 / 114.
-//   2304x1440 AT 360 %: the lanes are 72 caption + 76 menu + 122 band + 155
-//   the column = 425 above (270 and 155) and 139 below, leftover 876: the
-//   waveform 876, both gaps 0.
+// 33 and canvas column 43 = 117 Windows px above, the program's 44 below):
+//   1920x1080 AT 138 %: the lanes are 28 caption + 28 menu + 43 band + 55
+//   the column = 154 above (99 and 55) and 59 below, leftover 867: the
+//   waveform 867, both gaps 0.
+//   2304x1440 AT 300 %: the lanes are 60 caption + 63 menu + 99 band + 129
+//   the column = 351 above (222 and 129) and 132 below, leftover 957: the
+//   waveform 957, both gaps 0 — 60 / 63 / 99 / 0 / 129 / 957 / 0 / 132.
+//   2304x1440 AT 360 %: the lanes are 72 caption + 76 menu + 122 band + 159
+//   the column = 429 above (270 and 159) and 161 below, leftover 850: the
+//   waveform 850, both gaps 0.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry; win2000): leftover 400 -> the waveform 400, both gaps 0
-//   — 25 / 27 / 43 / 0 / 54 / 400 / 0 / 51 (the midpoint rule would want gap
-//   1 = 300 - 149 - 200 = -49).
+//   this geometry; win2000): leftover 391 -> the waveform 391, both gaps 0
+//   — 25 / 27 / 43 / 0 / 55 / 391 / 0 / 59 (the midpoint rule would want gap
+//   1 = 300 - 150 - 195 = -45).
 // THE CDE STACKS (2026-10-08 ~17:45, chrome_spec.h's cde instance and the
 // architect's mock_frame_01, "mock 1 is good"): DTWM'S FRAME, 5 Windows px,
 // stands round the app on every window (the spec's window_frame_maximized)
 // OUTSIDE ITS GEOMETRY, as the restored laptop's sizing frame always did
 // (the platforms' frame_px_), so the app's height and width are the
 // surface's less the frame's two sides, and inside it caption 17 + menu 27
-// + the program's band 33 and canvas column 42 = 119 Windows px above and
-// the program's 38 below, the frame's 10 making 167 (render.h's
+// + the program's band 33 and canvas column 43 = 120 Windows px above and
+// the program's 44 below, the frame's 10 making 174 (render.h's
 // chrome_stack_authored_h). Since 2026-10-09 CDE'S WELL IS ITS OWN LANES'
 // LEFTOVER like every chrome's (the ruler is the program's 18 under every
 // chrome, no longer the leftover that held the base's total). The whole 480
 // W of the tablet's 1440 rows, top to bottom: frame 5 | caption 17 | menu
-// 27 | band 33 | air 5 | view bar 8 | ruler 18 | marker 11 | well 313 | dock
-// bar 6 + row 8 32 | frame 5.
+// 27 | band 33 | air 5 | view bar 8 | ruler 18 | marker 11 | canvas frame 1
+// | canvas 306 | canvas frame 1 + face 5 | dock bar 6 + row 8 32 | frame 5.
 //   1920x1080 AT 138 %, MAXIMISED (the frame 6 = 1 + 1 + 3 + 1; the app
 //   1908 x 1068): the lanes are 23 caption + 36 menu (1 + 34 + 1, the
-//   content's 34.5 rounding to even) + 43 band + 54 the column = 156 above
-//   (102 the caption, the menu row and the band, 54 the block) and 51
-//   below, leftover 861: the waveform 861, both gaps 0.
+//   content's 34.5 rounding to even) + 43 band + 55 the column = 157 above
+//   (102 the caption, the menu row and the band, 55 the block) and 59
+//   below, leftover 852: the waveform 852, both gaps 0; 1888 wide, 10 px in.
 //   2304x1440 AT 300 % (the frame 15 = 3 + 3 + 6 + 3; the app 2274 x 1410):
-//   the lanes are 51 caption + 81 menu + 99 band + 126 the column = 357
-//   above (231 and 126) and 114 below, leftover 939: the waveform 939, both
-//   gaps 0 — its width the app's 2274 floored to the grid step, 2272 (a
-//   2-px chrome gutter at its right, waveform_area's rule).
+//   the lanes are 51 caption + 81 menu + 99 band + 129 the column = 360
+//   above (231 and 129) and 132 below, leftover 918: the waveform 918, both
+//   gaps 0 — its width the app's 2274 less the column's two 21-px sides,
+//   floored to the grid step, 2224, 25 px in (the floor's leftover 8 split
+//   4 and 4 into the margins, waveform_area's rule).
 //   2304x1440 AT 360 % (the frame 19 = 4 + 4 + 7 + 4; the app 2266 x
-//   1402): the lanes are 61 caption + 98 menu (4 + 90 + 4) + 122 band + 155
-//   the column = 436 above (281 and 155) and 139 below, leftover 827: the
-//   waveform 827, both gaps 0.
+//   1402): the lanes are 61 caption + 98 menu (4 + 90 + 4) + 122 band + 159
+//   the column = 440 above (281 and 159) and 161 below, leftover 801: the
+//   waveform 801, both gaps 0; 2208 wide, 29 px in.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -366,15 +379,18 @@ namespace {
 // ruler's own bottom rows. Every seam — the window top|caption seam,
 // caption|menu, menu|icon (tight and borderless), icon|air (GAP 1's band;
 // where gap 1 is zero the air's own first row is the boundary), air|trim,
-// trim|ruler, ruler|marker, and both outer kFlagBottomLiftPx gaps — is
-// honored structurally by the loop below and by every consumer. (The cues'
-// and the playhead's DOTS are the canvas's, below the well's top frame.) ONE
+// trim|ruler, ruler|marker, marker|frame, foot|bottom row, and both outer
+// kFlagBottomLiftPx gaps — is honored structurally by the loop below and by
+// every consumer. (The cues' and the playhead's DOTS are the canvas's, below
+// its top frame row; the canvas's frame is one ring across three lanes and
+// the waveform's rows, painted by paint_canvas_column_frame off the lanes'
+// rects, paint_handler.cpp.) ONE
 // shared helper — strip_row_rect — is the single
 // geometry owner; every named accessor delegates to it, so a lane is a pure
 // index from its strip's window edge, and a bottom lane's y is its inset
 // flipped about the window midline (the BOTTOM ROW rests ON the window's foot
-// as bottom lane 0, the strip's only lane — gap 2 is above it, in
-// bottom_strip_h's total rather than in the lane's inset).
+// as bottom lane 0, the column's foot above it as lane 1 — gap 2 is above
+// both, in bottom_strip_h's total rather than in a lane's inset).
 
 // Defensive backstop only: floor the window dims to the 640x480 minimum before
 // any geometry arithmetic so no code path can compute a negative/zero waveform,
@@ -388,11 +404,11 @@ namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. EVERY
 // LANE IN BOTH STRIPS is an authored Windows-px length on the GUI-SCALE axis,
 // a composite of its rounded parts (caption_row_h_px(), menu_row_h_px(),
-// icon_row_h_px(), the canvas column's four — column_air_h_px(),
-// trim_lane_h_px(), ruler_lane_h_px(), marker_lane_h_px(), program_spec.h's
-// constants since 2026-10-09, no longer derived from a face — and
-// bottom_row_h_px()). The lanes' rulings are at those accessors'
-// declarations in render.h.
+// icon_row_h_px(), the canvas column's five — column_air_h_px(),
+// trim_lane_h_px(), ruler_lane_h_px(), marker_lane_h_px(),
+// canvas_top_frame_h_px(), program_spec.h's constants since 2026-10-09, no
+// longer derived from a face — column_foot_h_px() and bottom_row_h_px()).
+// The lanes' rulings are at those accessors' declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The CAPTION lane is its 18 Windows
@@ -405,13 +421,15 @@ namespace {
 // lane, the label's seat alone reads the content between the rows),
 // the ICON lane is COOL EDIT'S TOOLBAR BAND, 33 Windows px with its own
 // lines under every chrome (architect 2026-10-09; render.h's program block,
-// icon_row_h_px), the canvas column's four lanes Cool Edit's air, view bar,
-// ruler and marker lane, 5 + 8 + 18 + 11 (render.h's canvas column lanes),
-// and the UNIFIED BOTTOM ROW is Cool Edit's DOCK BAR over
+// icon_row_h_px), the canvas column's five lanes Cool Edit's air, view bar,
+// ruler, marker lane and canvas's top frame row, 5 + 8 + 18 + 11 + 1
+// (render.h's canvas column lanes), the COLUMN'S FOOT the canvas's bottom
+// frame row and its face, 1 + 5 (column_foot_h_px), and the UNIFIED BOTTOM
+// ROW is Cool Edit's DOCK BAR over
 // its ROW 8, the band's case on four W of face above and five below, 6 + 32
 // (dock_bar_h_px, bottom_row_content_h_px).
-constexpr int kTopLaneCount    = 7;
-constexpr int kBottomLaneCount = 1;
+constexpr int kTopLaneCount    = 8;
+constexpr int kBottomLaneCount = 2;
 // THE LANE GAP 1 OPENS ABOVE — the first top lane whose inset carries the
 // flexible band (strip_row_rect below): THE COLUMN'S AIR, lane 3 since
 // 2026-10-09 (the trim lane's before it), so the caption and the two
@@ -431,24 +449,31 @@ int top_lane_height(int lane) {
         case 3: return column_air_h_px();        // 5 W of face
         case 4: return trim_lane_h_px();         // the view bar
         case 5: return ruler_lane_h_px();        // the ruler / placement lane
-        // The cues; bottom edge = waveform top.
-        case 6: return marker_lane_h_px();
+        case 6: return marker_lane_h_px();       // the cues
+        // THE CANVAS'S DARK TOP FRAME ROW (2026-10-09, the third part);
+        // bottom edge = waveform top.
+        case 7: return canvas_top_frame_h_px();
         default: return 0;
     }
 }
-// The bottom strip's ONE lane, indexed from the WINDOW'S FOOT inward like
+// The bottom strip's TWO lanes, indexed from the WINDOW'S FOOT inward like
 // every lane table here — so lane 0 is THE UNIFIED BOTTOM ROW, resting on the
 // window's foot (2026-08-12, rows 8 and 9 merged: the clock left, the
-// buttons flush right; the layout is paint_bottom_row_buttons_and_clock's).
-// GAP 2 sits ABOVE it, in bottom_strip_h's total rather than in the lane's
-// inset, so lane 0 is flush with the window edge like the top strip's
-// own lane 0. (THE STATUS BAR was bottom lane 0 for ONE DAY — 2026-08-29,
+// buttons flush right; the layout is paint_bottom_row_buttons_and_clock's),
+// and lane 1 THE COLUMN'S FOOT above it (2026-10-09: the canvas's bottom
+// frame row and its face, the program's). GAP 2 sits ABOVE them, in
+// bottom_strip_h's total rather than in a lane's inset, so lane 0 is flush
+// with the window edge like the top strip's own lane 0 (and gap 2 being 0,
+// lane 1's top is the waveform's bottom). (THE STATUS BAR was bottom lane 0 for ONE DAY — 2026-08-29,
 // the messaging redesign's bar half — with this row one lane in above it; the
 // architect ruled the bar off that evening and its state text is this row's
 // own cell now, right of the clock.)
 int bottom_lane_height(int lane) {
     switch (lane) {
-        case 0: return bottom_row_h_px();       // unified row (+ its top row)
+        case 0: return bottom_row_h_px();       // unified row (+ its dock bar)
+        // THE COLUMN'S FOOT (2026-10-09, the third part): the canvas's light
+        // bottom frame row and 5 W of face; top edge = waveform bottom.
+        case 1: return column_foot_h_px();
         default: return 0;
     }
 }
@@ -471,13 +496,14 @@ int strip_total_h(bool top_strip) {
 // base's waveform height is the rule every later theme keeps", architect
 // 2026-10-06): a vocabulary lays its lanes at its own period's metrics and
 // the well takes what they leave, no lane squeezed to hold a number. On the
-// tablet's 2304 x 1440 at gui_scale 300 the win2000 lanes leave 1440 − 339 −
-// 114 = 987 device rows (329 Windows px; the program's band, canvas column,
-// dock bar and row 8 since 2026-10-09), the clearlooks lanes 1440 − 348 −
-// 114 = 978 (326 Windows px: 3 W more above, metacity's caption and
-// GtkMenuBar at the base's 13-row cell; chrome_spec.h's instance) and the
-// cde lanes 1410 − 357 − 114 = 939 inside dtwm's frame. A COLOR moves no
-// lane: the 987 / 978 / 939 rows hold under every palette of each chrome. May
+// tablet's 2304 x 1440 at gui_scale 300 the win2000 lanes leave 1440 − 342 −
+// 132 = 966 device rows (322 Windows px; the program's band, canvas column
+// and its framed canvas, dock bar and row 8 since 2026-10-09), the
+// clearlooks lanes 1440 − 351 − 132 = 957 (319 Windows px: 3 W more above,
+// metacity's caption and GtkMenuBar at the base's 13-row cell;
+// chrome_spec.h's instance) and the cde lanes 1410 − 360 − 132 = 918 inside
+// dtwm's frame. A COLOR moves no lane: the 966 / 957 / 918 rows hold under
+// every palette of each chrome. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -569,9 +595,8 @@ GuiRect waveform_area(const AppState& a) {
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // Effective waveform width: the largest multiple of the grid step not
-    // exceeding the window width, leaving a <=15 px inert right gutter. A
-    // gutter appears only at a non-multiple-of-16 width (never at
-    // 1920/2304/2560/3840).
+    // exceeding the room the column's two sides leave (below), the remainder
+    // (<= 15 px) split into the two margins' face.
     //
     // The step is 16 because the painter grid is quantized to sixteenths of
     // a frame (painter_quantized_spp, warp_frame_map_view.h), so at a
@@ -581,24 +606,41 @@ GuiRect waveform_area(const AppState& a) {
     // column times a power of two (a half at level 1), so at whole levels q is
     // the logical spp exactly at every rate.
     constexpr int kGridStepPx = 16;
-    const int effective_w = w - (w % kGridStepPx);
+    // THE CANVAS'S INTERIOR ACROSS (architect 2026-10-09, the third part;
+    // program_spec.h's column_margin_px, METRICS §4.1): the column stands
+    // the margin's face and one frame column in from each side of the window
+    // (column_inner_x_px), and the interior is what the two sides leave,
+    // floored to the grid step. THE LEFTOVER OF FLOORING THE WIDTH TO THE
+    // PAINTER GRID STEP IS SPLIT BETWEEN THE TWO MARGINS, THE ODD PIXEL TO
+    // THE RIGHT (architect 2026-10-09, symmetry strict), the frame columns,
+    // the view bar and the ruler following the canvas's x. 24 device px in
+    // and 2256 wide on the tablet's 2304 at 300 % (25 in and 2224 wide of
+    // cde's 2274 inside dtwm's frame), 16 in and 1888 wide on the laptop's
+    // 1920 at 138 % (10 in of cde's 1908), 32 in and 2240 wide at 360 %. The
+    // working column, the zoom map, every column mapping and hit test and the
+    // damage boxes read this rect (ON SCREEN IS AS PAINTED).
+    const int side = column_inner_x_px();
+    const int inner_room = std::max(0, w - 2 * side);
+    const int slack = inner_room % kGridStepPx;
+    const int effective_w = inner_room - slack;
+    const int inner_x = side + slack / 2;
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, a constructive DOMAIN INVARIANT
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
-    // the vocabulary reaches it: the eight lanes are 151 Windows px at 100 %
-    // under win2000, the top strip's 113 plus the bottom row's 38 (lane by
+    // the vocabulary reaches it: the ten lanes are 158 Windows px at 100 %
+    // under win2000, the top strip's 114 plus the bottom strip's 44 (lane by
     // lane through scaled_px and each lane from its rounded parts, which is
     // not one multiply of the sum; re-derived 2026-10-09 for the program's
-    // canvas column). At 350 % they take 540 device px (63 caption + 70 menu
-    // + 119 band + 18 air + 29 trim + 64 ruler + 41 marker = 404 above, and
-    // 136 row), leaving a 1080-tall window 540; at 400 %, 604 (452 + 152),
-    // leaving the tablet's 1440 rows 836 (the stack record at the lane table
-    // above); and they pass 1440 near 950 %, short of the 1000 % ceiling
-    // (architect 2026-10-05), so the top of the vocabulary lands on this
-    // floor. (The hosts run far below it: the laptop is 138 % on 1080, where
-    // the eight lanes take 200, and the tablet 300 % on its 1440-tall
-    // surface, where they take 453.) The guard
+    // framed canvas). At 350 % they take 566 device px (63 caption + 70 menu
+    // + 119 band + 18 air + 29 trim + 64 ruler + 41 marker + 4 frame = 408
+    // above, and 22 foot + 136 row), leaving a 1080-tall window 514; at
+    // 400 %, 632 (456 + 176), leaving the tablet's 1440 rows 808 (the stack
+    // record at the lane table above); and they pass 1440 near 910 %, short of
+    // the 1000 % ceiling (architect 2026-10-05), so the top of the vocabulary
+    // lands on this floor. (The hosts run far below it: the laptop is 138 %
+    // on 1080, where the ten lanes take 209, and the tablet 300 % on its
+    // 1440-tall surface, where they take 474.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
@@ -630,7 +672,7 @@ GuiRect waveform_area(const AppState& a) {
     // zero-height gaps, rather than a negative one. No lane's height depends
     // on the window, so no term can deepen an overflow.)
     const int h_avail = h - top_h - bot_h;
-    return GuiRect{0, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
+    return GuiRect{inner_x, top_h, effective_w, h_avail < 0 ? 0 : h_avail};
 }
 
 // ONE shared layout contract for every strip lane — the single geometry owner.
@@ -648,7 +690,8 @@ GuiRect waveform_area(const AppState& a) {
 // midline (`h - inset - lane_h`).
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 4 (the column's air
-// lane 3, the ruler lane 5 and the marker lane lane 6), and
+// lane 3, the ruler lane 5, the marker lane lane 6 and the canvas's top frame
+// row lane 7), and
 // hit_test_trim_endcap / the pair-drag y-gate read the band render_trim_flags
 // painted the view bar in (published as AppState::trim_bar_hit's `lane`),
 // because
@@ -715,8 +758,9 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // BLOCK's cap; lane 4 is the TRIM lane (Cool Edit's view bar: the span and
 // its two ends, every trim gesture and the span-framing double-click); lane
 // 5 is the RULER lane (the timestamp ladder and the playhead's head; a
-// placement lane); lane 6 is the MARKER lane (the cues), whose bottom edge
-// is flush with the waveform area top.
+// placement lane); lane 6 is the MARKER lane (the cues); lane 7 is THE
+// CANVAS'S TOP FRAME ROW (2026-10-09), whose bottom edge is flush with the
+// waveform area top.
 GuiRect top_caption_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 0);
 }
@@ -767,6 +811,17 @@ GuiRect top_ruler_row_area(const AppState& a) {
 
 GuiRect top_marker_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, 6);
+}
+
+// THE CANVAS'S TOP FRAME ROW (top lane 7) and THE COLUMN'S FOOT (bottom
+// lane 1), 2026-10-09 — render.h's canvas-frame accessors; their one painter
+// is paint_canvas_column_frame (paint_handler.cpp).
+GuiRect top_canvas_frame_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/true, 7);
+}
+
+GuiRect bottom_column_foot_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/false, 1);
 }
 
 // THE BOTTOM STRIP IS ONE LANE — THE UNIFIED BOTTOM ROW (bottom lane 0, on
@@ -1237,14 +1292,17 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // only the WIDTH, as an emptiness test. Both are the narrow-on-plate shape,
 // reserved for the two per-frame scanner sites (the rule and the per-site table
 // are at playhead_pixel_x, app_state.h). THE BOX IS THE HEAD'S PAINTED WIDTH
-// (2026-10-09, ON SCREEN IS AS PAINTED): the columns [col − 4u, col + 6u) the
-// yellow triangle and its shadow cover (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h, the painter's own extent) — 30 device
-// px at 300 %, 40 at 360 %, 10 at 138 % — which also holds the one-quantum
+// (2026-10-09, ON SCREEN IS AS PAINTED): the columns the yellow triangle and
+// its shadow cover, centred on the one-px stem (cue_triangle_half_w_px and
+// cue_triangle_reach_right_px, render.h, the painter's own vertices) — 30
+// device px at 300 %, 41 at 360 %, 10 at 138 % — which also holds the one-px
 // line of the scanner and the dots, so a move repaints every column the head
 // stood on and no shadow column is left behind.
+// `px_x` is the waveform's own column (offset from area.x, as every
+// playhead pixel is), so the box is placed at area.x + col — the canvas
+// standing the column's margin in from the window's side since 2026-10-09.
 GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
-    const int col = static_cast<int>(std::nearbyint(px_x));
+    const int col = area.x + static_cast<int>(std::nearbyint(px_x));
     const int x0 = std::max(area.x, col - cue_triangle_half_w_px());
     const int x1 = std::min(area.x + area.w,
                             col + cue_triangle_reach_right_px());
@@ -1252,8 +1310,8 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     // Envelope extends up from the top of the window to the bottom of the
     // waveform area so it covers the playhead's dots inside the waveform AND
     // its top-strip pixels above — the yellow head on the ruler's bottom rows
-    // (paint_ruler_row) and its dots over the view bar's span
-    // (render_trim_flags, 2026-10-09). The top strip is where the cursor's
+    // (paint_ruler_row, 2026-10-09; the view bar carries no mark since
+    // ~14:30). The top strip is where the cursor's
     // non-waveform pixels live, and the envelope
     // covers the whole lane band above the waveform rather than tracking the
     // head's own rows, exactly as Viewport::invalidate_waveform_area (the

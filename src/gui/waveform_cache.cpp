@@ -98,11 +98,14 @@ void render_waveform_to_cache_surface(
     // row comes from waveform_channel_split_row, which names where the bands
     // meet. Purely a vertical band offset: no column's frame span moves, so
     // plate column purity and both views' identity are untouched.
-    const int split_row = waveform_channel_split_row(area_h, inset_px);
-    if (split_row < 0) return;
-    const int ch_h = split_row - cache_area.y;
-    const GuiRect ch0{0, cache_area.y, cache_area.w, ch_h};
-    const GuiRect ch1{0, split_row, cache_area.w, ch_h};
+    // THE TWO BANDS' ONE LAYOUT is waveform_channel_band (render.h), which the
+    // canvas's grid and center lines read too (render_canvas), so the lines
+    // stand on these bands' zero rows.
+    const WaveformChannelBand b0 = waveform_channel_band(area_h, inset_px, 0);
+    const WaveformChannelBand b1 = waveform_channel_band(area_h, inset_px, 1);
+    if (b0.h <= 0) return;
+    const GuiRect ch0{0, b0.y, cache_area.w, b0.h};
+    const GuiRect ch1{0, b1.y, cache_area.w, b1.h};
     // The full render IS the basis: global column 0 at the plate's own width.
     const WaveformBasis basis{vp_start, painter_spp, area_w};
     // ROW 6: the plate's inks are the `waveform_ink` and `waveform_outline`
@@ -1224,7 +1227,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // accessors — the same bands the empty-lane press gate and the hit rects
     // read. The top strip is anchored at screen y=0 and this surface mirrors it
     // 1:1, so the screen-coordinate lane rects are already surface-local.
-    const FlagLaneRects flag_lanes{top_marker_row_area(app)};
+    // THE COLUMNS' ORIGIN is the canvas's (waveform_area's x, the column's
+    // margin, its frame column and half the grid floor's leftover,
+    // 2026-10-09) — a function of the scale and the window's width, both of
+    // which the fingerprint keys (fp_gui_scale_percent, fp_area_w).
+    const FlagLaneRects flag_lanes{top_marker_row_area(app),
+                                   waveform_area(app).x};
     // The width the flag column mapping divides the displayed span by — the same
     // denominator the live trim pass and the hit tests use (this pass stages it
     // for them at the tail), so flags stay column-aligned with the trim/stem

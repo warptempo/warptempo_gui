@@ -38,17 +38,25 @@
 // last line, METRICS §4.1), THE VIEW BAR — the trim bar — (a line, the
 // black field, a line: 8), THE RULER FLIPPED (17 rows of ground on the view
 // bar's light line, its ticks standing on its bottom row, then its own
-// light bottom line: 18) and THE MARKER LANE of Cool Edit's cues (11), the
-// well's top frame row under its last. The canvas itself — its grid and
-// its centre lines — is a later part; the well and its frame stand as they
-// were.
+// light bottom line: 18) and THE MARKER LANE of Cool Edit's cues (11); then
+// THE CANVAS (architect 2026-10-09, the third part, "accurate to the
+// mock-up"; METRICS §4.1, the mock's set 3): its dark top frame row under
+// the marker lane (1), the canvas itself — the waveform area, its grid and
+// its center lines — and its light bottom frame row and 5 W of face under
+// it before the dock bar (the column's foot, 6). THE COLUMN STANDS 6 W IN
+// FROM EACH SIDE of the window's client area on the panel's face
+// (column_margin_px): the view bar, the ruler and the canvas share its
+// columns and its two frame columns — dark on the left, light on the right
+// — while the column's air and the marker lane span the window's width on
+// the face, as Cool Edit's cue lane does.
 //
 // THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN QUANTA, NOT IN ROUNDED W
 // (2026-10-09): a triangle's 9-7-5-3-1 rows (drawn as their envelope, one
 // antialiased triangle, since ~12:40: paint_ce_cue_triangle), its shadow's
-// one-quantum offset, the label's lead from the column, the selected fill's
-// pads and the dots down the canvas are counted in the stem's own width u =
-// scaled_px(1, 1) (render.h's waveform_line_px) — the playhead head's
+// one-quantum offset, the label's lead from the column and the selected
+// fill's pads are counted in the quantum u = scaled_px(1, 1) (render.h's
+// program_line_px; the dots down the canvas are device rows since 2026-10-09
+// ~14:25, the dot fields below) — the playhead head's
 // construction since 2026-10-05 — so the apex is the stem's column at every
 // scale and the nine units centre on it with no remainder; the LANES' ROWS
 // and the text's seats are W lengths, each its own rounded part (scaled_px's
@@ -127,6 +135,22 @@ struct ProgramSpec {
     // bar's top line (METRICS §4.1, Cool Edit's y = 79..83), a lane of its
     // own above the trim lane (main.cpp's lane table).
     int  column_air_px;
+    // THE COLUMN'S SIDE MARGIN (METRICS §4.1, Cool Edit's x = 202..207 of
+    // face before the canvas frame's dark column at 208; the mock's FX0 = 6
+    // and FX1 = WW − 7): this much face from each side of the window's client
+    // area to the column's frame column, the frame column one line, then the
+    // column's interior — the view bar's field, the ruler's ground and the
+    // canvas. THE COLUMN'S FOOT: this much face under the canvas's light
+    // bottom frame row before the dock bar's light row (Cool Edit's 5 rows
+    // above the dock bar, mirroring the column's air above the view bar).
+    int  column_margin_px;
+    int  column_foot_px;
+    // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
+    // mock set 3, "grid 4 per half channel"; METRICS §4.4's GrdL): each
+    // channel's half height divided into this many, a line at every inner
+    // division above and below the zero row (render_canvas, render.h's row-6
+    // canvas paragraph).
+    int  grid_divisions;
     // THE VIEW BAR'S FIELD between its two lines (METRICS §3: Cool Edit's
     // 10; architect 2026-10-09, mock set 1's axis, 6): the trim lane is a
     // line, this field and a line.
@@ -164,8 +188,11 @@ struct ProgramSpec {
     int  cue_fill_pad;
     int  cue_segment_gap;
     int  cue_overlap_lead;
-    // THE CANVAS DOTS (METRICS §4.2, §4.3), one quantum square, counted in
-    // quanta from the canvas's first row: THE PLAYHEAD'S every `dot_period`
+    // THE CANVAS DOTS (METRICS §4.2, §4.3), ONE DEVICE PX SQUARE, COUNTED IN
+    // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
+    // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
+    // every gui_scale; render.h's waveform_line_px and
+    // fill_dotted_waveform_line): THE PLAYHEAD'S every `dot_period`
     // rows on its phase; A CUE'S TWO COLORS each every `cue_dot_period` rows
     // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
     // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
@@ -213,6 +240,9 @@ inline constexpr ProgramSpec kProgramSpec = {
     .field_pad_px       = 8.0,
     .state_air_px       = 5.0,
     .column_air_px         = 5,
+    .column_margin_px      = 6,
+    .column_foot_px        = 5,
+    .grid_divisions        = 4,
     .view_bar_field_px     = 6,
     .ruler_ground_px       = 17,
     .ruler_minor_tick_px   = 2,
@@ -251,10 +281,11 @@ constexpr int program_row8_authored_h(const ProgramSpec& p) {
     return p.row8_air_above_px + program_case_authored_px(p) +
            p.row8_air_below_px;
 }
-// The canvas column's three lanes above the well (the head): the view bar a
+// The canvas column's lanes above the canvas (the head): the view bar a
 // line, its field and a line; the ruler its ground and its bottom line; the
 // marker lane its rows above the triangle and the triangle's quanta (one W
-// each at 100 %).
+// each at 100 %); the canvas's top frame row one line. Below the canvas, the
+// column's foot: the bottom frame row and its face.
 constexpr int program_view_bar_authored_h(const ProgramSpec& p) {
     return 1 + p.view_bar_field_px + 1;
 }
@@ -266,7 +297,11 @@ constexpr int program_marker_lane_authored_h(const ProgramSpec& p) {
 }
 constexpr int program_column_authored_h(const ProgramSpec& p) {
     return p.column_air_px + program_view_bar_authored_h(p) +
-           program_ruler_authored_h(p) + program_marker_lane_authored_h(p);
+           program_ruler_authored_h(p) + program_marker_lane_authored_h(p) +
+           1;
+}
+constexpr int program_column_foot_authored_h(const ProgramSpec& p) {
+    return 1 + p.column_foot_px;
 }
 static_assert(program_case_authored_px(kProgramSpec) == 23);
 static_assert(program_band_authored_h(kProgramSpec) == 33);
@@ -275,7 +310,11 @@ static_assert(program_row8_authored_h(kProgramSpec) == 32);
 static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
 static_assert(program_ruler_authored_h(kProgramSpec) == 18);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 11);
-static_assert(program_column_authored_h(kProgramSpec) == 42);
+static_assert(program_column_authored_h(kProgramSpec) == 43);
+static_assert(program_column_foot_authored_h(kProgramSpec) == 6);
+// The column's foot mirrors its air (METRICS §4.1: 5 rows of face above the
+// view bar, 5 under the canvas's bottom frame row).
+static_assert(kProgramSpec.column_foot_px == kProgramSpec.column_air_px);
 // THE CUE'S ROWS (METRICS §4.2): the label's cap (7, rows 1 .. 7) and the
 // triangle (rows 6 .. 10) share rows 6 and 7 but never columns — the label
 // stands past the triangle's shadow; the fill's rows end one below the

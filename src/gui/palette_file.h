@@ -17,9 +17,10 @@
 // DEVICE KEYS ("saving a waveform theme requires saving the entire chrome
 // theme as well … one more drop-down that shows what you're picking, whether
 // it's the waveform or the chrome"; the picker's scope, color_picker.h):
-//   A PALETTE — THE PROGRAM'S TEN (kGuiPaletteRoles below; ten since
-//     2026-10-09, when the cues took Cool Edit's two colors) and nothing
-//     else: `palettes/<name>.palette`, the `palette` device key.
+//   A PALETTE — THE PROGRAM'S TWELVE (kGuiPaletteRoles below; twelve since
+//     2026-10-09, when the cues took Cool Edit's two colors and the canvas
+//     its grid and center line) and nothing else: `palettes/<name>.palette`,
+//     the `palette` device key.
 //   A SCHEME — THE CHROME'S TWELVE KEYS (kGuiChromeLines below), Windows'
 //     own word for a set of chrome colors (the Appearance dialog's
 //     "scheme"), AND ITS FACE TAG (architect 2026-10-09: the face follows
@@ -56,9 +57,10 @@
 // thing ("chrome means anything the accent color can highlight": the
 // selected cue label and the flag editor's field and selection band, the
 // chrome's selected pair). So the palette's
-// program roles are exactly the TEN below (the scheme's twelve keys are
+// program roles are exactly the TWELVE below (the scheme's twelve keys are
 // the chrome's, not the program's): the waveform's canvas, ink and lit
-// outline; THE CUES' TWO COLORS, `cue` and `range`, and THE INVALID LABEL'S
+// outline; THE CANVAS'S GRID AND CENTER LINE, `grid` and `center`; THE CUES'
+// TWO COLORS, `cue` and `range`, and THE INVALID LABEL'S
 // PAIR, `invalid_label` and `invalid_label_selected` (architect 2026-10-09
 // ~11:50–12:00, Cool Edit's cues: render.h's marker-lane paragraph, the
 // table at render.cpp's resolve_flag_face); the playhead's `playhead_stem`
@@ -74,7 +76,7 @@
 // (chrome_spec.h): `windows-2000-standard`, `clearlooks` and `solaris` — the
 // role table's two value columns below (the cde chrome's `solaris` takes
 // Windows 2000's column until he authors its own, 2026-10-08) — THE
-// PROGRAM'S TEN whenever the active palette is not a file. Each default
+// PROGRAM'S TWELVE whenever the active palette is not a file. Each default
 // palette's name IS ITS CHROME'S OWN BUILT-IN SCHEME'S KEY (below), so one
 // word names a chrome's own colors in both kinds, and a default palette is
 // shown by that scheme's display name ("Windows 2000 Standard").
@@ -104,8 +106,8 @@
 // LF-terminated `role=value` lines, split at the first '=', no blank line,
 // no comment, no whitespace tolerance, no duplicate), each value THE ONE
 // COLOR GRAMMAR (theme_colour_word, theme_file.h).
-//   A PALETTE FILE NAMES EXACTLY THE TEN (architect 2026-10-08; the ten
-//     2026-10-09): the picker writes all ten, so a file missing a
+//   A PALETTE FILE NAMES EXACTLY THE TWELVE (architect 2026-10-08; the
+//     twelve 2026-10-09): the picker writes all twelve, so a file missing a
 //     role is a state the GUI can never produce — the read's first-error hard
 //     fail naming the first missing role in the table's order (the
 //     two-category rule); a line naming a retired role (the flag faces of
@@ -213,7 +215,7 @@ struct GuiPaletteRole {
 // brighter selected"); `playhead_stem` its Curs FFFF00, the yellow (§4.3) —
 // THE PLAYHEAD AND THE SCANNER still TWO roles, so a palette may part them.
 //
-// THE PANEL'S FACE, THE TENTH ROLE (architect 2026-10-09, the program is
+// THE PANEL'S FACE, THE LAST ROLE (architect 2026-10-09, the program is
 // Cool Edit): Cool Edit's "Dockable Window 3D Color" (its scheme key `Face`),
 // the ground of the program's panel — the toolbar band, the dock bar, row 8
 // and the canvas column's lanes — whose every other tone derives from it
@@ -221,17 +223,28 @@ struct GuiPaletteRole {
 // default Cool Edit's own default scheme's 626C7B IN EVERY COLUMN, the
 // program being the same under every chrome. A PALETTE FILE NAMES IT LIKE
 // ANY ROLE: a file without a `face` line is the read's hard fail (the
-// two-category rule: the picker writes all ten).
+// two-category rule: the picker writes all twelve).
+//
+// THE CANVAS'S TWO LINE ROLES ARE COOL EDIT'S, THE SAME IN EVERY COLUMN
+// (architect 2026-10-09, the program is Cool Edit; METRICS §4.4, NOTES.md's
+// set 3, the mock of record): `grid` its GrdL 003500, the grid under the
+// waveform — the quarter lines of each channel's half and the verticals on
+// the ruler's major ticks — and `center` its Cntr A90404, each channel's
+// center line over the grid (render_canvas, render.h's row-6 block). Cool
+// Edit's boundary line (Bndy) is not drawn and has no role.
 //
 // THE TABLE'S ORDER IS THE PICKER'S CHOOSER (color_picker.cpp's kRoleNames):
-// the waveform's three, the cues' two colors ("Cue", "Range"), the invalid
+// the waveform's three, the canvas's two lines ("Grid", "Center Line"), the
+// cues' two colors ("Cue", "Range"), the invalid
 // label's pair ("Invalid Label", "Invalid Label Selected"), then the two
 // lines that cross the well ("Playhead", "Scanner"), then the panel's face.
 inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"waveform_canvas",           &GuiPalette::waveform_canvas,           0x000000, 0x000000},
     {"waveform_ink",              &GuiPalette::waveform_ink,              0x00FF00, 0xD2E3F7},
     {"waveform_outline",          &GuiPalette::waveform_outline,          0x008000, 0x86ABD9},
-    {"cue",                       &GuiPalette::cue,                       0xF34B58, 0xF34B58},
+    {"grid",                      &GuiPalette::grid,                      0x003500, 0x003500},
+    {"center",                    &GuiPalette::center,                    0xA90404, 0xA90404},
+    {"cue",                      &GuiPalette::cue,                       0xF34B58, 0xF34B58},
     {"range",                     &GuiPalette::range,                     0x4B82F3, 0x4B82F3},
     {"invalid_label",             &GuiPalette::invalid_label,             0x800000, 0x800000},
     {"invalid_label_selected",    &GuiPalette::invalid_label_selected,    0xFF0000, 0xFF0000},
@@ -245,12 +258,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // install_program_palette takes, a palette file holds and palette_record
 // answers.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
-// render.h spells this type as `std::array<uint32_t, 16>` (install_palette,
+// render.h spells this type as `std::array<uint32_t, 12>` (install_palette,
 // program_palette_words), since this header includes it; the literal is
 // pinned to the table here.
 static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
-              "render.h's std::array<uint32_t, 16> must be GuiPaletteWords");
+              "render.h's std::array<uint32_t, 12> must be GuiPaletteWords");
 
 // THE SCHEME'S TWELVE KEYS (the head; architect 2026-10-08 ~11:00, a
 // scheme's whole content since ~18:15) — THE ONE ENUMERATION of the chrome's
@@ -347,7 +360,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
     return kGuiPaletteRoleCount;
 }
 
-// INSTALL THE PROGRAM'S TEN ALONE (2026-10-07; the install family's
+// INSTALL THE PROGRAM'S TWELVE ALONE (2026-10-07; the install family's
 // second member, defined in render.cpp beside install_palette, render.h):
 // `words` written into GuiPalette's program members, the plate's two inks
 // re-baked and palette_generation bumped, the chrome members untouched — THE
@@ -363,19 +376,20 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // and after the install; when it moved, the synchronous plate rebuild
 // (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
 // flag cache rebuilt at its tail, keyed by the generation); when it did not
-// (a cue color, an invalid label, the playhead, the scanner, the face: no
-// plate render),
+// (the grid, the center line, a cue color, an invalid label, the playhead,
+// the scanner, the face: no plate render),
 // the flag cache alone, synchronously (Viewport::refresh_flag_cache, so a frame
 // callback served before the tick cannot blit flags in the old colors); then
 // Viewport::invalidate_all, so the swap is one frame.
-// WHY THAT IS ENOUGH (re-read 2026-10-09): the ten bake into two
+// WHY THAT IS ENOUGH (re-read 2026-10-09): the twelve bake into two
 // cached things alone — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,
 // keyed by the generation (FlagCache::fp_palette_generation), whose rebuild
 // also stages the stem stash (AppState::staged_marker_stems, swapped in at
 // the publish; it carries which of the two cue colors each stem wears, the
 // colors read live); every other reader paints live from palette()
-// each frame — the canvas (render_canvas), the program's panel (the band,
+// each frame — the canvas, its grid and its center lines (render_canvas),
+// the program's panel (the band, the canvas column's frame,
 // row 8, the view bar and its span, the ruler, the marker lane's face), the
 // cues' dots (paint_marker_stems), the playhead's head and dots, the open
 // flag editor (render_flag_editor_box), the lead-in ring
@@ -513,7 +527,7 @@ inline constexpr const char* kSchemeGrammarReason =
     "solaris, windows-rainy-day, ...) or the name of a scheme file read at "
     "launch";
 
-// The ten the palette `name` names — a default palette's column, or a
+// The twelve the palette `name` names — a default palette's column, or a
 // loaded file's words (a file names every role, the head). Precondition:
 // is_palette_name(name), so this resolves and never refuses (install_palette
 // at launch; the picker's load and Delete).

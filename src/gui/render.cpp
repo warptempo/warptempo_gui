@@ -156,54 +156,62 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_restore(cr);
 }
 
-void render_canvas(cairo_t* cr, int x, int y, int w, int h) {
+void render_canvas(cairo_t* cr, const GuiRect& area,
+                   const std::vector<int>& grid_cols) {
+    if (area.w <= 0 || area.h <= 0) return;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    const GuiPalette& pal = palette();
     // The ground is the `waveform_canvas` role (the palette's row-6 block),
     // through the waveform's chokepoint (set_waveform_source, render.h).
-    set_waveform_source(cr, palette().waveform_canvas);
-    cairo_rectangle(cr, x, y, w, h);
+    set_waveform_source(cr, pal.waveform_canvas);
+    cairo_rectangle(cr, area.x, area.y, area.w, area.h);
     cairo_fill(cr);
-    // THE WELL (architect 2026-10-02; the colours at the row-6 palette block,
-    // the thickness at waveform_border_px): taken FROM the area, painted in
-    // the same pass as the ground so the two can never disagree about where
-    // the canvas ends — the PLAIN SUNKEN edge's horizontals, full width: on
-    // top a Shadow line then a DkShadow line, at the bottom a 3DLight line
-    // then a Hilight line, each one relief line. waveform_content_rect reads
-    // the same thickness; the zoom anchor's stem alone crosses the top lines
-    // (waveform_stem_band), the cues' and the playhead's dots keeping to the
-    // canvas (2026-10-09), and no vertical crosses the bottom ones. An area
-    // too short to carry both
-    // borders draws neither rather than overlapping them.
-    // UNDER CLEARLOOKS THE WELL IS GTK'S SCROLLED WINDOW (architect
-    // 2026-10-07, the painters round's last part; paint_cl_well_frame,
-    // clearlooks_paint.h): the outer line of each pair its one shade[5]
-    // line, the inner the canvas laid above — the same thickness taken from
-    // the area, so nothing that reads waveform_border_px moves.
-    // UNDER CDE THE WELL IS A MOTIF TEXT WIDGET'S ONE-W SHADOW (2026-10-08;
-    // dtpad's text area on the notepad capture, row 54 the field's bottom
-    // shadow over the cream, the bevel one px at the ruling): the OUTER
-    // line of each pair the sunken ring in the body's tones — the bottom
-    // shadow on top, the top shadow at the bottom — and the inner line the
-    // canvas, Clearlooks' shape in Motif's tones; the same thickness taken
-    // from the area, so nothing that reads waveform_border_px moves.
-    const int border = waveform_border_px();
-    const int lw     = relief_line_px();
-    if (h > 2 * border &&
-        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks) {
-        paint_cl_well_frame(cr, GuiRect{x, y, w, h});
-    } else if (h > 2 * border &&
-               live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde) {
-        paint_cell_rect(cr, GuiRect{x, y, w, lw}, palette().shadow);
-        paint_cell_rect(cr, GuiRect{x, y + h - lw, w, lw}, palette().hilight);
-    } else if (h > 2 * border) {
-        paint_cell_rect(cr, GuiRect{x, y, w, lw}, palette().shadow);
-        paint_cell_rect(cr, GuiRect{x, y + lw, w, border - lw},
-                        palette().dk_shadow);
-        paint_cell_rect(cr, GuiRect{x, y + h - border, w, border - lw},
-                        palette().light_3d);
-        paint_cell_rect(cr, GuiRect{x, y + h - lw, w, lw}, palette().hilight);
+    // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
+    // vertical grid, the horizontal grid, the center lines — every one
+    // t = waveform_line_px() thick, ONE DEVICE PX ("on waveform → unscaled",
+    // the class's one inventory), each an aliased integer rect inside the
+    // area.
+    const int t = waveform_line_px();
+    // THE VERTICAL GRID on the ruler's major columns (the caller's, off the
+    // ruler's own comb), the canvas's full height, each gated on its own
+    // column and clipped at the right edge (fill_waveform_line).
+    set_waveform_source(cr, pal.grid);
+    for (const int col : grid_cols)
+        fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
+    // THE HORIZONTAL GRID AND THE CENTER LINES per channel, on the plate's
+    // own bands (waveform_channel_band): a line on a row r covers rows
+    // [r − t / 2, r − t / 2 + t) — the row r itself at one device px — the
+    // zero row being the row the plate's bars straddle; the k-th grid line
+    // stands t · nearbyint(k · (H / t) / 4) = nearbyint(k · H / 4) device rows
+    // from the zero row, H the channel's half height in device rows — k = 1 ..
+    // 3, the fourth on the band's edge not drawn.
+    const int inset = waveform_inset_px();
+    const auto hline = [&](int row) {
+        const int top = std::max(area.y, area.y + row - t / 2);
+        const int bot = std::min(area.y + area.h, area.y + row - t / 2 + t);
+        if (bot > top) cairo_rectangle(cr, area.x, top, area.w, bot - top);
+    };
+    for (int ch = 0; ch < 2; ++ch) {
+        const WaveformChannelBand band = waveform_channel_band(area.h, inset, ch);
+        if (band.h <= 0) continue;
+        const int zero = band.zero_row();
+        const double half_q = static_cast<double>(band.h) / 2.0 / t;
+        const int n = kProgramSpec.grid_divisions;
+        for (int k = 1; k < n; ++k) {
+            const int d = t * static_cast<int>(std::nearbyint(k * half_q / n));
+            hline(zero - d);
+            hline(zero + d);
+        }
     }
+    set_waveform_source(cr, pal.grid);
+    cairo_fill(cr);
+    for (int ch = 0; ch < 2; ++ch) {
+        const WaveformChannelBand band = waveform_channel_band(area.h, inset, ch);
+        if (band.h > 0) hline(band.zero_row());
+    }
+    set_waveform_source(cr, pal.center);
+    cairo_fill(cr);
     cairo_restore(cr);
 }
 
@@ -1055,17 +1063,16 @@ void render_playhead(cairo_t* cr,
     // The waveform_line_px()-wide line (render.h) paints whenever its column
     // is onscreen (gated on its own column and clipped at the right edge), so
     // it never leaks into an adjacent region, straight over whatever it
-    // crosses — waveform ink included. THE CANVAS'S ROWS ALONE (2026-10-09):
-    // the scanner solid, the resting cursor Cool Edit's dotted column on its
-    // own phase (the declaration).
-    const GuiRect rows = waveform_content_rect(area);
+    // crosses — waveform ink included. THE CANVAS'S ROWS, the area whole
+    // (2026-10-09): the scanner solid, the resting cursor Cool Edit's dotted
+    // column on its own phase (the declaration).
     set_palette_source(cr, color);
     if (form == PlayheadForm::Dotted)
-        fill_dotted_waveform_line(cr, area.x, area.w, col, rows.y,
-                                  rows.y + rows.h, kProgramSpec.dot_period,
+        fill_dotted_waveform_line(cr, area.x, area.w, col, area.y,
+                                  area.y + area.h, kProgramSpec.dot_period,
                                   kProgramSpec.playhead_dot_phase);
     else
-        fill_waveform_line(cr, area.x, area.w, col, rows.y, rows.y + rows.h);
+        fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
     cairo_restore(cr);
 }
 
@@ -1087,11 +1094,10 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     // line during a gesture, and the product's position lines are this one
     // colour — since 2026-10-09 the playhead's head-and-dots role, Cool
     // Edit's Curs yellow by default, the anchor's line solid in it.
-    // The stems' band, as every stem (waveform_stem_band, architect
-    // 2026-10-02): through the well's top lines to the canvas's foot.
-    const GuiRect band = waveform_stem_band(area);
+    // The canvas's rows, the area whole (2026-10-09: the frame row above it
+    // is the canvas's frame, which no line crosses).
     set_palette_source(cr, palette().playhead_stem);
-    fill_waveform_line(cr, area.x, area.w, col, band.y, band.y + band.h);
+    fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
     cairo_restore(cr);
 }
 
@@ -1238,7 +1244,6 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
                        const TrimRange& trim,
-                       int playhead_col,
                        TrimBarHit* out_hit) {
     // COLD FIRST, so every early return below publishes "nothing grabbable"
     // over a lane that painted no bar (the contract at the declaration).
@@ -1259,31 +1264,35 @@ void render_trim_flags(cairo_t* cr,
         static_cast<double>(trim.end), viewport_start_sample,
         viewport_end_sample, waveform_area.w);
 
-    const int lane_x   = trim_bar.x;
+    // THE BAR'S COLUMNS ARE THE CANVAS'S (2026-10-09, the column's margins):
+    // waveform_area's x and its effective width, the frame's side columns one
+    // line outside them.
+    const int lane_x   = waveform_area.x;
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
 
+    // THE BAR (METRICS §3, §4.1): a SUNKEN RING round the black field — the
+    // mid line along its top and the mid column on its left, the hilight
+    // line along its foot (the ruler's top line, the lane below standing
+    // straight on it) and the hilight column on its right, the two tones
+    // MITRED at the top-right and bottom-left corner blocks
+    // (paint_relief_frame, cool_edit_paint.h's diagonal rule) — its side
+    // columns the canvas frame's, one line outside the field's columns.
+    const GuiPalette& pal = palette();
+    const int lw = program_line_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{lane_x, lane_y, lane_w, lane_h},
+                    hex(kCeViewBarField));
+    paint_relief_frame(cr, GuiRect{lane_x - lw, lane_y, lane_w + 2 * lw, lane_h},
+                       pal.ce_mid, pal.ce_hilight);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 
-    // THE BAR (METRICS §3): the mid line along its top, the black field,
-    // the hilight line along its foot — the ruler's top line, the lane below
-    // standing straight on it. Horizontal lines only: the well under the
-    // column has no side frame, and neither has the bar (the bar spans the
-    // waveform's columns edge to edge, as the well does).
-    const GuiPalette& pal = palette();
-    const int lw = program_line_px();
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
     const int field_y = lane_y + lw;
     const int field_h = lane_h - 2 * lw;
-    paint_cell_rect(cr, GuiRect{lane_x, lane_y, lane_w, lw}, pal.ce_mid);
-    paint_cell_rect(cr, GuiRect{lane_x, field_y, lane_w, field_h},
-                    hex(kCeViewBarField));
-    paint_cell_rect(cr, GuiRect{lane_x, lane_y + lane_h - lw, lane_w, lw},
-                    pal.ce_hilight);
 
     // THE SPAN — the trim window's columns, the begin column through the end
     // column inclusive, sliding off an edge like any content (the clip cuts
@@ -1293,8 +1302,7 @@ void render_trim_flags(cairo_t* cr,
     // right column the dark one, the two MITRED at the top-right and
     // bottom-left corner blocks (architect 2026-10-09 ~12:40, the diagonal
     // rule reaching the program: cool_edit_paint.h's head;
-    // paint_relief_frame). The bar's own frame is two horizontal lines with
-    // no side columns, so it has no corner to mitre.
+    // paint_relief_frame).
     const int span_lo = std::max(bc.col, -lw);
     const int span_hi = std::min(ec.col + 1, lane_w + lw);
     if (span_hi > span_lo && field_h > 0) {
@@ -1304,24 +1312,10 @@ void render_trim_flags(cairo_t* cr,
                         pal.waveform_ink);
         paint_relief_frame(cr, GuiRect{sx, field_y, sw, field_h},
                            pal.ce_span_hilight, pal.ce_span_shadow);
-        // THE PLAYHEAD OVER THE SPAN (METRICS §3): a one-quantum dotted
-        // column on the playhead's column, the playhead's color (the
-        // palette's `playhead_stem`, Cool Edit's FFFF00 by default) and black
-        // alternating per quantum row of the field, the playhead's on the odd
-        // rows (Cool Edit's 86, 88, … under its span's top row 85), and only
-        // where the column stands on the span.
-        if (playhead_col >= span_lo && playhead_col < span_hi &&
-            playhead_col >= 0 && playhead_col < lane_w) {
-            const int px = lane_x + playhead_col;
-            const int dw = std::min(lw, lane_x + lane_w - px);
-            for (int k = 0; field_y + k * lw < field_y + field_h; ++k) {
-                const int y = field_y + k * lw;
-                const int h = std::min(lw, field_y + field_h - y);
-                paint_cell_rect(cr, GuiRect{px, y, dw, h},
-                                k % 2 == 1 ? pal.playhead_stem
-                                           : hex(kCeViewBarDot));
-            }
-        }
+        // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought we
+        // agreed no dots on the trim bar"; the mock of record draws none):
+        // Cool Edit's period-2 cursor column over its span (METRICS §3) is
+        // not drawn.
     }
 
     // THE GRABS, as painted: the span's two end zones and the body between
@@ -1462,7 +1456,9 @@ bool stem_column_on_waveform(int col, int w) {
 // construction.
 template <typename MarkerVec, typename Emit>
 void iterate_visible_flags_impl(
-    GuiRect top_strip_area,
+    // The waveform's first column in the surface's x (FlagLaneRects'
+    // columns_x, 2026-10-09).
+    int columns_x,
     int waveform_width,
     const MarkerVec& markers,
     long long viewport_start_sample,
@@ -1540,7 +1536,7 @@ void iterate_visible_flags_impl(
         // col - reach.
         if (col - reach >= waveform_width) continue;
         const double left_x =
-            static_cast<double>(top_strip_area.x) + static_cast<double>(col);
+            static_cast<double>(columns_x) + static_cast<double>(col);
 
         emit(static_cast<int>(i), left_x);
     }
@@ -2019,14 +2015,14 @@ void render_flag_boxes_impl(
     // THE PASS PAINTS INSIDE THE WAVEFORM'S COLUMNS (clip_to_waveform_columns
     // above, architect 2026-09-26): a cue running past the last column is
     // cut off there. Released by the pass's closing restore.
-    clip_to_waveform_columns(cr, top_strip_area.x, waveform_width,
+    clip_to_waveform_columns(cr, lanes.columns_x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
     // THE PROGRAM FACE for the whole pass (gui_font.h; the cues' cap 7),
     // every run carrying it (text_shape.h).
     const GuiFont font = gui_font(GuiFace::Program);
     std::vector<CueDraw> cues;
 
-    iterate_visible_flags_impl(top_strip_area, waveform_width, markers,
+    iterate_visible_flags_impl(lanes.columns_x, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
                                warp_frame_map, drag_overlay,
                                // `iteration_on` widens the bound by the two
@@ -2101,7 +2097,7 @@ void render_flag_boxes_impl(
             cues.push_back(std::move(c));
         });
 
-    paint_cues(cr, lane, top_strip_area.x, waveform_width, cues, out_hit_rects,
+    paint_cues(cr, lane, lanes.columns_x, waveform_width, cues, out_hit_rects,
                out_stems);
     cairo_restore(cr);
 }
@@ -2251,7 +2247,7 @@ void render_history_diff_flags(
     cairo_save(cr);
     // The waveform's columns are this pass's clip too, the live lane's rule
     // (clip_to_waveform_columns, architect 2026-09-26).
-    clip_to_waveform_columns(cr, top_strip_area.x, waveform_width,
+    clip_to_waveform_columns(cr, lanes.columns_x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
     // The program face for the pass, exactly as render_flag_boxes_impl names
     // it (gui_font.h).
@@ -2286,7 +2282,7 @@ void render_history_diff_flags(
     std::vector<CueDraw> cues;
 
     iterate_visible_flags_impl(
-        top_strip_area, waveform_width, flags,
+        lanes.columns_x, waveform_width, flags,
         viewport_start_sample, viewport_end_sample,
         warp_frame_map,
         // NO DRAG OVERLAY: the mode consumes every authoring gesture, so no
@@ -2379,7 +2375,7 @@ void render_history_diff_flags(
             cues.push_back(std::move(c));
         });
 
-    paint_cues(cr, lane, top_strip_area.x, waveform_width, cues, out_hit_rects,
+    paint_cues(cr, lane, lanes.columns_x, waveform_width, cues, out_hit_rects,
                out_stems);
     cairo_restore(cr);
 }
@@ -2419,7 +2415,7 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the ten as
+    // THE LIVE WORDS (render.h's program_palette_words): the twelve as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
     // THE LIVE CHROME PICK (render.h's live_chrome_pick): the knob as the
@@ -2460,7 +2456,7 @@ const GuiPaletteWords& program_palette_words() { return g_program_words; }
 const std::optional<GuiChromePick>& live_chrome_pick() { return g_chrome_pick; }
 
 namespace {
-// THE PROGRAM'S TEN into the installed struct and the plate's two baked
+// THE PROGRAM'S TWELVE into the installed struct and the plate's two baked
 // inks off the same words — the install family's shared half (the
 // generation is each member's own bump).
 void fill_program_palette(const GuiPaletteWords& w) {

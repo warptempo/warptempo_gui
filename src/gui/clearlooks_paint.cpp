@@ -1145,17 +1145,6 @@ void paint_cl_scrollbar_slider(cairo_t* cr, const GuiRect& body) {
     cairo_restore(cr);
 }
 
-void paint_cl_well_frame(cairo_t* cr, const GuiRect& area) {
-    const int u = relief_line_px();
-    const GuiPalette& pal = palette();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{area.x, area.y, area.w, u}, pal.cl_list_frame);
-    paint_cell_rect(cr, GuiRect{area.x, area.y + area.h - u, area.w, u},
-                    pal.cl_list_frame);
-    cairo_restore(cr);
-}
-
 namespace {
 
 // THE SCALE TROUGH'S ROWS, top to bottom from its top `y`: the inset ring,

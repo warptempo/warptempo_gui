@@ -102,10 +102,11 @@ inline constexpr uint32_t kCeFieldText = 0xEFF0F0;
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
 // (§3); THE RULER'S TICKS AND DIGITS, E0E0E0 (§4.4, face-independent in all
 // five presets), the digits' (+1, +1) SHADOW black (§4.4 and §6: "≈ black,
-// observed down to 0D0708", darker than the panel labels' dark tone); and
-// the view bar's playhead dots' other color, black (§3: the playhead's
-// color and 000000 alternating). THE PLAYHEAD'S OWN COLOR — the head, its
-// dots in the canvas and in the view bar — is the palette's `playhead_stem`
+// observed down to 0D0708", darker than the panel labels' dark tone). (Cool
+// Edit's period-2 cursor column over the view bar's span, the playhead's
+// color and 000000 alternating, is not drawn: architect 2026-10-09 ~14:30.)
+// THE PLAYHEAD'S OWN COLOR — the head and its dots in the canvas — is the
+// palette's `playhead_stem`
 // since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 its default in every
 // palette (palette_file.h's role table), as the cues' two colors are the
 // palette's `cue` and `range`; the triangles' shadow is the derived
@@ -113,7 +114,6 @@ inline constexpr uint32_t kCeFieldText = 0xEFF0F0;
 inline constexpr uint32_t kCeViewBarField   = 0x000000;
 inline constexpr uint32_t kCeRulerTick      = 0xE0E0E0;
 inline constexpr uint32_t kCeRulerShadow    = 0x000000;
-inline constexpr uint32_t kCeViewBarDot     = 0x000000;
 
 // -- THE CASE ------------------------------------------------------------------
 
@@ -201,16 +201,21 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 
 // COOL EDIT'S POINT-CUE MASK (METRICS §4.2, §4.3), THE CUES' AND THE
 // PLAYHEAD HEAD'S ONE PAINTER: a staircase of five rows of one quantum u
-// (cue_unit_px) from `top`, row r spanning the apex column `col` (window x,
-// its own u wide) widened by (4 − r) quanta either side — 9, 7, 5, 3, 1
-// quanta — each row's SHADOW one quantum right of it. DRAWN AS THE
-// STAIRCASE'S DIAGONALS (architect 2026-10-09 ~12:40, the head's rule): ONE
-// ANTIALIASED TRIANGLE in `color` with the vertices (col − 4u, top),
-// (col + 5u, top) and (col + u / 2, top + 5u) — the top row's two outer
-// ends and the apex cell's bottom centre — over THE SAME TRIANGLE ONE
-// QUANTUM RIGHT in `ce_cue_shadow`, painted first (Cool Edit's shadow one
-// pixel right of every row is that offset). Its painted columns stay
-// [col − 4u, col + 6u) over its five rows (cue_triangle_half_w_px and
-// cue_triangle_reach_right_px, render.h); the caller's clip cuts it. (Aliased
-// rows of cells stood until the rule reached the program, 2026-10-09.)
+// (cue_unit_px) from `top` — 9, 7, 5, 3, 1 quanta — each row's SHADOW one
+// quantum right of it. DRAWN AS THE STAIRCASE'S DIAGONALS (architect
+// 2026-10-09 ~12:40, the head's rule) AND CENTRED ON THE STEM (~14:35: "at
+// every scale, the marker triangle must be fully centered on the stem"): the
+// stem is ONE DEVICE PX at window column `col` (render.h's waveform_line_px,
+// "on waveform → unscaled"), so the axis is its centre s + 0.5 and ONE
+// ANTIALIASED TRIANGLE in `color` has the vertices (s + 0.5 − 4.5u, top),
+// (s + 0.5 + 4.5u, top) and (s + 0.5, top + 5u) — its two sides mirror
+// images about the stem at every gui_scale, u odd or even — over THE SAME
+// TRIANGLE ONE QUANTUM RIGHT in `ce_cue_shadow`, painted first (Cool Edit's
+// shadow one pixel right of every row is that offset). Its painted columns
+// are [s − ⌊9u / 2⌋, s + ⌊(11u + 2) / 2⌋) — the vertices' outer edges,
+// s + 0.5 − 4.5u and s + 0.5 + 5.5u with the shadow, taken to whole device
+// columns (cue_triangle_half_w_px and cue_triangle_reach_right_px, render.h,
+// the one owner every extent reads); the caller's clip cuts it. (Aliased
+// rows of cells stood until the rule reached the program, 2026-10-09; the
+// apex on the u-wide cell's centre, col + u / 2, until ~14:35.)
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color);
