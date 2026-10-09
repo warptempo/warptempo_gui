@@ -58,24 +58,33 @@
 // (redesign_baseline, line_baseline), the flag box, the lane heights and the
 // ruler lane are the recorded integers in Windows px times the scale, as
 // unrounded doubles (a font quantity is not a grid point), rounded at the
-// element by the seat that reads them. They are the numbers the period drew
-// at 96 dpi — Tahoma 8's 13-px cell with its 8-row cap, Sans 10's 17-px
-// cell with its 10-row cap — which is why they seat everything (CLAUDE.md's rounding doctrine: every chrome length is a
-// Windows px).
+// element by the seat that reads them — save one derived figure, the cap
+// band of a use measured by its x-height (gui_font_cap_px, 2026-10-09). They
+// are the numbers the period drew at 96 dpi — Tahoma 8's 13-px cell with its
+// 8-row cap, Sans 10's 17-px cell with its 10-row cap, MS Sans Serif 8's
+// 6-row x-height — which is why they seat everything (CLAUDE.md's rounding
+// doctrine: every chrome length is a Windows px).
 //
 // THE EM MATCHES THOSE METRICS VERTICALLY (architect 2026-10-05), derived at
-// the install from the face's own measured ink (gui_face_em_px): the body's
-// is the em at which the body file's "H" stands as tall as the recorded cap,
-// the bold's the bold file's "H" against the same cap, the small's the body
-// file's "0" ink against the recorded digit. Measured 2026-10-06 for the
+// the install from the face's own measured ink (gui_face_em_px): each use's
+// recorded measure names its glyph (GuiFaceMeasure, 2026-10-09) and the em
+// is the one at which that glyph's ink stands the recorded rows tall — the
+// body's the body file's "H" against the recorded cap, the bold's the bold
+// file's "H" against the same cap, the small's the body file's "0" ink
+// against the recorded digit, the program face's the "H" against its 7 —
+// EXCEPT THE MS SANS SERIF SET'S BODY AND BOLD, measured by THE X-HEIGHT off
+// each file's "x" (architect 2026-10-09 ~11:40; that set's block below), its
+// cap band derived (gui_font_cap_px). Measured 2026-10-06 for the
 // win2000 set: 11.003, 10.996 and 7.943 Windows px (Tahoma's "H" 1489 of
 // 2048, Tahoma Bold's 1490, Tahoma's "0" 1547 — 8 pt at GDI's 11 ppem,
 // Tahoma's own 8-pt size); 2026-10-07 for the gnome2 set: 13.717, 13.717
 // and 7.933 Windows px (DejaVu Sans's and DejaVu Sans Bold's "H" both 1493
 // of 2048, DejaVu Sans's "0" 1549 — the body 3 % over Sans 10's 13.333);
-// 2026-10-09 for the MS Sans Serif set at its 9-row cap: 12.346, 12.346 and 8.197
-// Windows px (FreeSans's and FreeSans Bold's "H" both 729 of 1000, FreeSans's
-// "0" 732 — Nimbus Sans's own figures, the outlines being Nimbus's).
+// 2026-10-09 for the MS Sans Serif set at its 6-row x-height: 11.450, 11.111
+// and 8.197 Windows px (FreeSans's "x" 524 of 1000, FreeSans Bold's 540,
+// FreeSans's "0" 732 — Nimbus Sans's own figures, the outlines being
+// Nimbus's), the derived caps 8.347 and 8.100 off the "H", 729 of 1000 in
+// both weights.
 // The em is vertical alone: horizontally the face is its own, and a taller
 // or deeper glyph ("$", a descender) may poke past a box sized off the
 // recorded rows — accepted (architect 2026-10-05). A FACE'S OWN LINE BOX IS
@@ -84,7 +93,8 @@
 // and is not read either; FreeSans's 900 / -200 of 1000 stands 171 units
 // above its caps, so a program seating text on that box sets it low): the
 // recorded metrics seat every run, every label's cap band centred by the
-// recorded cap (redesign_baseline) or seated on the recorded ascent
+// recorded cap, or the derived one (redesign_baseline), or seated on the
+// recorded ascent
 // (line_baseline), so no face's line box can misplace a label. HORIZONTALLY THE FACE IS ITS OWN: every
 // width used for layout is the shaped run's (text_shape), the face's own
 // advances at the live size less the tracking.
@@ -166,23 +176,51 @@ inline double gui_font_scale(const GuiFont& f) {
     return static_cast<double>(f.percent) / 100.0;
 }
 
+// WHICH INK HEIGHT A USE'S RECORDED NUMBER IS (2026-10-09; architect
+// 2026-10-09 ~11:40, "authentic to 1 windows px per measure for 1:1
+// proportion … I'm talking about height"): each recorded measure names its
+// glyph, and the em is the one at which that glyph's outline ink stands the
+// recorded rows tall (gui_face_em_px) — THE CAP off "H" (the body, the bold
+// and the program face of every set but one), THE DIGIT off "0" (the small
+// face of every set: WordPad's six-row ruler digit), or THE X-HEIGHT off "x"
+// (the MS Sans Serif set's body and bold: FreeSans does not share MS Sans
+// Serif's cap-to-x proportion, so one of the two heights must be the exact
+// one, and the lowercase is most of what is read — that set's block below).
+// Every measure is a HEIGHT: the face keeps its own advances, never a width
+// match (the head).
+enum class GuiFaceMeasure { Cap, Digit, XHeight };
+constexpr char32_t gui_measure_glyph(GuiFaceMeasure m) {
+    switch (m) {
+    case GuiFaceMeasure::Cap:     return U'H';
+    case GuiFaceMeasure::Digit:   return U'0';
+    case GuiFaceMeasure::XHeight: return U'x';
+    }
+    return U'H';
+}
+
 // THE RECORDED VERTICAL METRICS of one use, in Windows px: the ascent and
-// the descent (the cell is their sum) and the CAP band, the digits' and
-// capitals' rows above the baseline. Each set records its own (below).
+// the descent (the cell is their sum) and THE MEASURE, the rows the named
+// glyph's ink stands above the baseline (GuiFaceMeasure above). Each set
+// records its own (below). THE CAP BAND the chrome's labels center
+// (gui_font_cap_px) is the measure itself for a cap or digit measure and is
+// DERIVED for an x-height measure.
 struct GuiFaceMetrics {
-    int ascent  = 0;
-    int descent = 0;
-    int cap     = 0;
+    int            ascent  = 0;
+    int            descent = 0;
+    int            height  = 0;
+    GuiFaceMeasure measure = GuiFaceMeasure::Cap;
 };
 
 // THE PROGRAM FACE'S RECORDED METRICS, every set's (2026-10-09): Cool Edit's
 // cap of 7 W for its ruler digits and its cue labels, read off his captures
 // (tmp/research/cool_edit/METRICS.md §4.2, §4.4); the ascent and descent
-// the cap's own proportion of the body's 11 / 2 over 8, rounded: {10, 2, 7}.
+// the cap's own proportion of the body's 11 / 2 over 8, rounded: {10, 2, 7},
+// measured by the cap ("H") under every set, FreeSans's included.
 // No lane reads the cell: the ruler and the marker lane seat these runs on
 // their own authored rows (program_spec.h), so the cell is a record and the
 // cap the em's measure.
-inline constexpr GuiFaceMetrics kGuiProgramFaceMetrics = {10, 2, 7};
+inline constexpr GuiFaceMetrics kGuiProgramFaceMetrics = {
+    10, 2, 7, GuiFaceMeasure::Cap};
 
 // ONE CHROME VOCABULARY'S TEXT (architect 2026-10-06): per use (GuiFace, in
 // its order), the kGuiFontFiles index the use is drawn from and its recorded
@@ -208,7 +246,10 @@ struct GuiFaceSet {
 //   the widths are the live face's own advances, as the gnome2 set's are.
 inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
     .file        = {0, 1, 0, 0},
-    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}, kGuiProgramFaceMetrics},
+    .metrics     = {{11, 2, 8, GuiFaceMeasure::Cap},
+                    {11, 2, 8, GuiFaceMeasure::Cap},
+                    {6, 0, 6, GuiFaceMeasure::Digit},
+                    kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
 };
 
@@ -237,7 +278,10 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
 //   tracked nothing; the heights are matched, never the widths).
 inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
     .file        = {2, 3, 2, 2},
-    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}, kGuiProgramFaceMetrics},
+    .metrics     = {{11, 2, 8, GuiFaceMeasure::Cap},
+                    {11, 2, 8, GuiFaceMeasure::Cap},
+                    {6, 0, 6, GuiFaceMeasure::Digit},
+                    kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
 };
 
@@ -266,7 +310,10 @@ inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
 //   TRACKING: none (the heights-only rule, as the other two sets).
 inline constexpr GuiFaceSet kGuiFaceSetCde = {
     .file        = {4, 5, 4, 4},
-    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}, kGuiProgramFaceMetrics},
+    .metrics     = {{11, 2, 8, GuiFaceMeasure::Cap},
+                    {11, 2, 8, GuiFaceMeasure::Cap},
+                    {6, 0, 6, GuiFaceMeasure::Digit},
+                    kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
 };
 
@@ -286,15 +333,30 @@ inline constexpr GuiFaceSet kGuiFaceSetCde = {
 // is proprietary), and FreeSans is a Helvetica, the genre MS Sans Serif was
 // drawn from, its Latin outlines URW's Nimbus Sans L (the face of the
 // win95 vocabulary dropped 2026-10-06).
-//   METRICS: MS SANS SERIF 8 AT 96 DPI, {11, 2, 9} for the body and the
-//   bold — the base's 13-row cell (ascent 11 + descent 2), so every lane
-//   and box keeps its 13, with CAPS AND DIGITS 9 ROWS, measured 2026-10-09
-//   on tmp/winme.png (1:1): the menu bar's "F", "E", "V", "I", "H" rows
-//   27..35, the status line's "F" 394..402, the caption's bold "S" and "W"
-//   8..16 — nine rows each, where tmp/win2000pro.png's Tahoma stands eight
-//   (the menu's "F" 28..35, the bold "D" 9..16); the win95 set recorded the
-//   same {11, 2, 9}. The em derives at the install off FreeSans's own "H"
-//   (729 of 1000 in both weights): 12.346 W px. THE SMALL IS THE BASE'S
+//   METRICS: MS SANS SERIF 8 AT 96 DPI BY ITS X-HEIGHT, {11, 2, x 6} for
+//   the body and the bold (architect 2026-10-09 ~11:40: "authentic to 1
+//   windows px per measure for 1:1 proportion … I'm talking about height")
+//   — the base's 13-row cell (ascent 11 + descent 2), so every lane and box
+//   keeps its 13, the lowercase standing 6 ROWS, measured 2026-10-09 on
+//   tmp/winme.png (1:1), the menu titles' x-height 6 where
+//   tmp/win2000pro.png's Tahoma stands 6 too. THE CAPTURE'S CAPS AND DIGITS
+//   STAND 9 ROWS (the menu bar's "F", "E", "V", "I", "H" rows 27..35, the
+//   status line's "F" 394..402, the caption's bold "S" and "W" 8..16 —
+//   where Tahoma's stand eight, the menu's "F" 28..35, the bold "D" 9..16):
+//   that 9 is the bitmap's own tall-cap proportion, cap over x 1.5, which a
+//   Helvetica does not share — FreeSans's "H" 729 and "x" 524 of 1000 stand
+//   1.39 — so no one em honors both heights, and the ruling makes THE
+//   X-HEIGHT THE EXACT MEASURE, the lowercase being most of what is read (at
+//   the capture's cap 9 FreeSans's x stood 6.47 W, half a row over: the
+//   face read larger than Tahoma's). The em derives at the install off
+//   each file's own "x" (GuiFaceMeasure::XHeight): FreeSans's 524 of 1000,
+//   11.450 W px against Tahoma's 11.003; FreeSans Bold's 540 of 1000 (the
+//   x-height URW's metrics record for Nimbus Sans L Bold, whose outlines
+//   the file carries — the install reads the file's own ink), 11.111 W px.
+//   THE CAP IS DERIVED, the em times the file's own
+//   "H" (729 of 1000 in both weights): 8.347 W for the body, 8.100 for the
+//   bold — the band the chrome's labels center (gui_font_cap_px). The
+//   heights-only rule stands: the x-height is a height. THE SMALL IS THE BASE'S
 //   SIX-ROW DIGIT, {6, 0, 6}, not the win95 set's {7, 0, 7}: that was Small
 //   Fonts' digit as ACID and Vegas drew their rulers, the win95
 //   vocabulary's own model; Windows Me's WordPad ruler is Windows 2000's
@@ -310,7 +372,10 @@ inline constexpr GuiFaceSet kGuiFaceSetCde = {
 //   2026-10-09, the lift returning with Nimbus's outlines).
 inline constexpr GuiFaceSet kGuiFaceSetMsSansSerif = {
     .file        = {6, 7, 6, 6},
-    .metrics     = {{11, 2, 9}, {11, 2, 9}, {6, 0, 6}, kGuiProgramFaceMetrics},
+    .metrics     = {{11, 2, 6, GuiFaceMeasure::XHeight},
+                    {11, 2, 6, GuiFaceMeasure::XHeight},
+                    {6, 0, 6, GuiFaceMeasure::Digit},
+                    kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
     .sign_lift   = true,
 };
@@ -331,7 +396,8 @@ inline constexpr const GuiFaceSet* kGuiFaceSets[] = {
 // face follows the scheme live, gui_live_face_set below): the two record
 // the same cell, ascent 11 and descent 2 for the body and the bold, and
 // the same six-row small digit and the same program face — only the body's
-// cap differs (8 / 9), which no lane height reads — so the stack and the
+// and the bold's measure differ (Tahoma's cap 8 / FreeSans's x-height 6, its
+// cap derived), which no lane height reads — so the stack and the
 // well keep their rows across a swap (since 2026-10-09 the ruler and the
 // marker lane are the program's authored rows, program_spec.h, and read no
 // face at all).
@@ -342,7 +408,8 @@ constexpr bool same_lanes(const GuiFaceSet& a, const GuiFaceSet& b) {
             return false;
     }
     const std::size_t small = static_cast<std::size_t>(GuiFace::Small);
-    return a.metrics[small].cap == b.metrics[small].cap;
+    return a.metrics[small].height == b.metrics[small].height &&
+           a.metrics[small].measure == b.metrics[small].measure;
 }
 static_assert(same_lanes(kGuiFaceSetWin2000, kGuiFaceSetMsSansSerif));
 
@@ -405,15 +472,21 @@ inline double gui_font_descent_px(const GuiFont& f) {
 inline double gui_font_line_px(const GuiFont& f) {
     return gui_font_ascent_px(f) + gui_font_descent_px(f);
 }
-inline double gui_font_cap_px(const GuiFont& f) {
-    return gui_face_metrics(f.face).cap * gui_font_scale(f);
-}
+// THE CAP BAND in device px at the font's scale, unrounded — what
+// redesign_baseline centers in a chrome box (paint_handler.cpp): for a use
+// measured by its cap or its digit the recorded measure itself, exactly as
+// recorded; for a use measured by its X-HEIGHT (the MS Sans Serif set's body
+// and bold, 2026-10-09) DERIVED, the em times the use's file's own "H" ink
+// per em (FreeSans's 8.347 W, FreeSans Bold's 8.100), so a label centers
+// the cap band its face truly draws, never a recorded cap the face does not
+// stand. Out of line: the "H" ink is the install's (gui_font_bundled.cpp).
+double gui_font_cap_px(const GuiFont& f);
 
 // THE FACE'S EM, in Windows px, DERIVED FROM THE RECORDED METRICS: the
-// live set's recorded cap over the use's file's own ink height of the glyph
-// named in the head ("H", or "0" for the small), per em, the ink read off
-// the bundled file at the install (every file's, so the em follows whichever
-// set the chrome names).
+// live set's recorded measure over the use's file's own ink height of the
+// glyph the measure names (GuiFaceMeasure: "H", "0" or "x"), per em, the
+// ink read off the bundled file at the install (every file's, so the em
+// follows whichever set the chrome and the scheme name).
 double gui_face_em_px(GuiFace face);
 
 // THE FOUR MATH SIGNS SIT ON THE HYPHEN'S AXIS IN A SET THAT LIFTS THEM
@@ -432,8 +505,8 @@ double gui_face_em_px(GuiFace face);
 //   file's 0.044 em ("+", "=") and 0.0435 ("<", ">"), the bold's 0.043 and
 //   0.0425 (its hyphen 207..342) — read 2026-10-09 off FreeSans through
 //   FreeType, EQUAL TO THE FIGURES RECORDED FOR NIMBUS SANS on 2026-10-06 to
-//   the unit; at 300 % the body's plus rises 1.63 device px, the small's
-//   1.08.
+//   the unit; at 300 % the body's plus rises 1.51 device px at its
+//   x-height em (2026-10-09), the small's 1.08.
 //   The sets that do not lift (Tahoma, DejaVu, Go) answer every lift 0: the
 //   head records why Tahoma needs none.
 // THE LIFTS ARE DERIVED at the install, like the em, from each file's own

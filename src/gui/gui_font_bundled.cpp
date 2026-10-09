@@ -52,11 +52,12 @@
 // alone as the light autohinter does — the load differs from a forced
 // autohint's on 47 of the regular's A..z at 300 %, and every x stays
 // within 1/64 px of the unhinted outline's at 100, 138 and 300 % (the Nimbus
-// faces of 2026-10-06 met the same road). The face's blue zones snap the
-// "H" to whole rows: the recorded 9 at 100 % and 27 at 300 % exactly, and at
-// the laptop's 138 % 13 rows for the 12.42 the em asks — the hinter's
-// rounding of the ink, which no seat reads (the recorded cap places every
-// label). The advances stay
+// faces of 2026-10-06 met the same road; those figures were measured at the
+// capture's 9-row cap, before the set took its x-height measure, gui_font.h).
+// The face's blue zones snap the "H" and the "x" to whole rows — the
+// hinter's rounding of the ink, which no seat reads (the recorded cap, or
+// the x-height set's derived one, gui_font_cap_px, places every label).
+// The advances stay
 // unhinted (text_shape's come off hb-ft, which loads its own glyphs
 // unhinted) and both devices measure one set of widths. The vertical
 // metrics are the recorded constants anyway (gui_font.h), so the hinter
@@ -94,14 +95,15 @@ struct OutlineFace {
     double               max_advance_em = 0.0;
 };
 
-// THE GLYPH EACH USE'S EM IS MEASURED ON (gui_font.h's head): the "H" for
-// the two text faces and the program's, the "0" for the small digits.
-constexpr char32_t kBandGlyph[kGuiFaceCount] = {U'H', U'H', U'0', U'H'};
-// Each file's outline ink height of each band glyph, per em, read once at the
-// install (outline_ink_em): index 0 the "H", 1 the "0". The em of a use is
-// the live set's recorded cap over its file's entry (gui_face_em_px), so the
+// THE GLYPHS A USE'S EM AND CAP ARE MEASURED ON (gui_font.h's
+// GuiFaceMeasure): each file's outline ink height of each, per em, read once
+// at the install (outline_ink_em), in GuiFaceMeasure's order — the "H", the
+// "0", the "x". The em of a use is the live set's recorded measure over its
+// file's entry for the measure's glyph (gui_face_em_px), and an x-height
+// use's cap band the em times its file's "H" (gui_font_cap_px), so the
 // install needs no knowledge of which set the chrome will name.
-double g_ink_em[kGuiFontFileCount][2] = {};
+constexpr std::size_t kMeasureCount = 3;
+double g_ink_em[kGuiFontFileCount][kMeasureCount] = {};
 
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
@@ -114,8 +116,8 @@ GuiSignAxis           g_sign_axis[kGuiFontFileCount];
 bool                  g_sign_axis_ok[kGuiFontFileCount] = {};
 
 std::size_t face_index(GuiFace face) { return static_cast<std::size_t>(face); }
-std::size_t band_index(GuiFace face) {
-    return kBandGlyph[face_index(face)] == U'0' ? 1 : 0;
+std::size_t measure_index(GuiFaceMeasure m) {
+    return static_cast<std::size_t>(m);
 }
 
 // The face a use is drawn from: the live set's file for it.
@@ -217,23 +219,31 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
     g_options = cairo_font_options_create();
     cairo_font_options_set_hint_style(g_options, CAIRO_HINT_STYLE_SLIGHT);
     bool ok = true;
-    // EVERY FILE BUILDS (gui_font.h's head), and each file's band inks and
-    // sign axis are read off its outline.
+    // EVERY FILE BUILDS (gui_font.h's head), and each file's measure inks
+    // and sign axis are read off its outline.
+    constexpr GuiFaceMeasure kMeasures[kMeasureCount] = {
+        GuiFaceMeasure::Cap, GuiFaceMeasure::Digit, GuiFaceMeasure::XHeight};
     for (std::size_t i = 0; i < kGuiFontFileCount; ++i) {
         build_outline(g_outline[i], files[i], kGuiFontFiles[i]);
-        g_ink_em[i][0] = outline_ink_em(g_outline[i], U'H');
-        g_ink_em[i][1] = outline_ink_em(g_outline[i], U'0');
+        for (const GuiFaceMeasure m : kMeasures)
+            g_ink_em[i][measure_index(m)] =
+                outline_ink_em(g_outline[i], gui_measure_glyph(m));
         g_sign_axis_ok[i] = measure_sign_axis(g_outline[i], g_sign_axis[i]);
     }
     // THE EMS MATCH THE LIVE SET'S RECORDED METRICS VERTICALLY (gui_font.h),
     // derived per call from these inks (gui_face_em_px), so the probe asks
-    // it of EVERY SET (kGuiFaceSets): each use's file must carry its band
-    // glyph, and in a set that lifts its signs the five its axis is measured
-    // on, whichever chrome the device config later chooses.
+    // it of EVERY SET (kGuiFaceSets): each use's file must carry its
+    // measure's glyph — and, for an x-height measure, the "H" its cap band
+    // derives from (gui_font_cap_px) — and in a set that lifts its signs the
+    // five its axis is measured on, whichever chrome the device config later
+    // chooses.
     for (const GuiFaceSet* set : kGuiFaceSets)
         for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
-            if (g_ink_em[set->file[i]]
-                        [band_index(static_cast<GuiFace>(i))] <= 0.0)
+            const double* ink = g_ink_em[set->file[i]];
+            const GuiFaceMeasure m = set->metrics[i].measure;
+            if (ink[measure_index(m)] <= 0.0) ok = false;
+            if (m == GuiFaceMeasure::XHeight &&
+                ink[measure_index(GuiFaceMeasure::Cap)] <= 0.0)
                 ok = false;
             if (set->sign_lift && !g_sign_axis_ok[set->file[i]]) ok = false;
         }
@@ -245,8 +255,20 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
 double gui_face_em_px(GuiFace face) {
     const GuiFaceSet& set = gui_live_face_set();
     const std::size_t i = face_index(face);
-    return static_cast<double>(set.metrics[i].cap) /
-           g_ink_em[set.file[i]][band_index(face)];
+    const GuiFaceMetrics& m = set.metrics[i];
+    return static_cast<double>(m.height) /
+           g_ink_em[set.file[i]][measure_index(m.measure)];
+}
+
+double gui_font_cap_px(const GuiFont& f) {
+    const GuiFaceMetrics& m = gui_face_metrics(f.face);
+    if (m.measure != GuiFaceMeasure::XHeight)
+        return m.height * gui_font_scale(f);
+    const GuiFaceSet& set = gui_live_face_set();
+    return gui_face_em_px(f.face) *
+           g_ink_em[set.file[face_index(f.face)]]
+                   [measure_index(GuiFaceMeasure::Cap)] *
+           gui_font_scale(f);
 }
 
 const GuiSignAxis& gui_sign_axis(GuiFace face) {
