@@ -100,7 +100,13 @@ def provenance(src, path):
 #   unsquashfs -d tmp/squeeze_fs/fs -f tmp/squeeze_fs/live/filesystem.squashfs <path>
 # (tmp/squeeze_fs/README.md), the files read as data, nothing executed. The engine's and metacity's source tarballs
 # are the toolkit rule's citations (toolkit_rules.py's GTK 2 block), read, never parsed, like motif_rules above.
+# The Windows 95 OSR2 disc (architect 2026-10-09) is the other local image: its Appearance schemes are registry data in
+# shell2.inf, packed in the cabinet win95/PRECOPY1.CAB (a spanned set with PRECOPY2.CAB), extracted with
+#   7z x tmp/W95_PLUS_AR.iso win95/PRECOPY1.CAB win95/PRECOPY2.CAB -o<scratch>
+#   7z x <scratch>/win95/PRECOPY1.CAB shell2.inf -otmp/theme_sources/win95_shell2inf
+# (7z needs both cabinets present to open the spanned set), the file read as data, nothing executed.
 SQUEEZE_FS = os.path.join(REPO, 'tmp', 'squeeze_fs', 'fs')
+WIN95_SHELL2INF_DIR = os.path.join(SOURCES_DIR, 'win95_shell2inf')
 LOCAL_SOURCES = {
     'squeeze_live': dict(project='Debian 6.0.10 squeeze live (i386, GNOME desktop), the installed system read as data',
                          image='debian-live-6.0.10-i386-gnome-desktop.iso',
@@ -115,6 +121,16 @@ LOCAL_SOURCES = {
                                 'usr/share/themes/Clearlooks/metacity-1/metacity-theme-1.xml':
                                     ('gnome-themes 2.30.2-1',
                                      '17293715eb7a6b45e1fd3e9554b9497b819deb5f555acb2cf3e78cfc30ca1c4a')}),
+    'win95_shell2inf': dict(project='Windows 95 OSR2 (Microsoft), shell2.inf: the Appearance schemes of the shell '
+                            'setup, registry data read as data from the retail disc image',
+                            image='W95_PLUS_AR.iso',
+                            image_sha256='53e6a0a96e7e0686c1bf718225d1c21e393db12158ebf475f7fc4e4c5ab6e8d9',
+                            cabinet='win95/PRECOPY1.CAB',
+                            cabinet_sha256='ec8a17fcf9e7bc016da3b7b90dd32058b8936d04985fb2128662a80fc0932850',
+                            cabinet_next='win95/PRECOPY2.CAB',
+                            cabinet_next_sha256='bac1a80d253c87c8d9d3da14156280919caa319acf2d621e94acbe70c190e433',
+                            files={'shell2.inf': ('Windows 95 OSR2 shell2.inf, dated 1996-08-24',
+                                                  '3bd8069637f1bd5ab1ab13b27c9300446ed4ec4b240ddbfe044345e64535a8b4')}),
     'gtk2_rules': dict(project='gtk-engines 2.20.2 (GNOME), the Clearlooks engine and its support library',
                        tarball='gtk-engines-2.20.2.tar.bz2',
                        tarball_sha256='15b680abca6c773ecb85253521fa100dd3b8549befeecc7595b10209d62d66b5',
@@ -131,15 +147,22 @@ LOCAL_SOURCES = {
 
 
 def local_file(src, path):
-    """Where a local source's file is on the build host (squeeze_live's alone are read)."""
+    """Where a local source's file is on the build host (squeeze_live's and win95_shell2inf's alone are read)."""
+    if src == 'win95_shell2inf': return os.path.join(WIN95_SHELL2INF_DIR, path)
     assert src == 'squeeze_live', src
     return os.path.join(SQUEEZE_FS, path)
 
 
 def local_provenance(src, path):
     """The provenance record of one local source's file: the image (or tarball) it is read out of, with its sha256
-    and URL, and for an image's file its package and its own sha256."""
+    and URL, and for an image's file its package and its own sha256 (a squashfs image's file: the squashfs too; a
+    cabinet image's file: the cabinet, its spanned continuation and their sha256s, the image having no URL)."""
     s = LOCAL_SOURCES[src]
+    if 'cabinet' in s:
+        package, sha = s['files'][path]
+        return {'project': s['project'], 'file': path, 'package': package, 'sha256': sha, 'image': s['image'],
+                'image_sha256': s['image_sha256'], 'cabinet': s['cabinet'], 'cabinet_sha256': s['cabinet_sha256'],
+                'cabinet_next': s['cabinet_next'], 'cabinet_next_sha256': s['cabinet_next_sha256']}
     if 'image' in s:
         package, sha = s['files'][path]
         return {'project': s['project'], 'file': path, 'package': package, 'sha256': sha, 'image': s['image'],
@@ -148,4 +171,3 @@ def local_provenance(src, path):
     assert path in s['files'], (src, path)
     return {'project': s['project'], 'file': path, 'tarball': s['tarball'], 'tarball_sha256': s['tarball_sha256'],
             'url': s['url']}
-

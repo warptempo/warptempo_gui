@@ -3510,9 +3510,12 @@ struct SettingsPopupItem {
 //
 // `Theme` STOOD 2026-10-03..10-08 (architect: the theme was a device key
 // with a Settings row), the last row of the device group, a text row whose
-// domain — the built-in plus ninety-odd bundled theme files — no list
-// could show; it LEFT WITH ITS KEY when every chrome's colors were compiled
-// in (architect 2026-10-08, theme_file.h).
+// domain — the built-in theme plus the catalog's entries as bundled theme
+// files — no list could show; it LEFT WITH ITS KEY when every chrome's
+// colors were compiled in (architect 2026-10-08, theme_file.h). No theme
+// file ships now: the catalog's entries are the built-in SCHEMES, compiled
+// from it by tools/theme_catalog/gen_theme_files.py (103 since 2026-10-09,
+// palette_file.h), chosen in the color picker.
 //
 // `Chrome` JOINED 2026-10-07 (architect, the second vocabulary), the last row
 // of the device group in kDeviceConfigKeys' order, its label its key's name

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # tools/theme_catalog/parse_windows.py — the Windows scheme formats: ReactOS's hivedef.inf "New Schemes", a Windows
-# setup hive's own default colours (its HKCU "Control Panel\Colors" lines) and its Appearance\Schemes values, and a
-# .theme file's [Control Panel\Colors]. All come out under Windows' own key names (the .theme spelling, which is
+# setup hive's own default colours (its HKCU "Control Panel\Colors" lines) and its Appearance\Schemes values, Windows
+# 95's shell2.inf Appearance\Schemes values, and a .theme file's [Control Panel\Colors]. All come out under Windows' own key names (the .theme spelling, which is
 # also the name the registry's Control Panel\Colors uses), each value an (r, g, b) byte triple. A malformed file is a
 # one-line hard fail naming it (NO BACKSTOPS: the inputs are pinned third-party files).
 import re
@@ -86,6 +86,50 @@ def parse_hive_schemes(path):
         if name in out: die(path, f'scheme {name!r} recorded twice')
         o = SCHEME_RGB_OFFSET
         out[name] = {COLOR_NAMES[j]: tuple(bs[o + 4 * j:o + 4 * j + 3]) for j in range(SCHEME_COLOURS)}
+    if not out: die(path, 'no Appearance\\Schemes values')
+    return out
+
+
+# A Windows 95 shell2.inf Appearance\Schemes value (REG_BINARY, flags 1): the 16-bit SCHEMEDATA the Windows 95 Display
+# Properties dialog stores, 492 bytes — a 6-byte header (version and size words), the ANSI NONCLIENTMETRICS-era LOGFONTs
+# (MS Sans Serif, Arial), then, in the LAST 100 bytes, COLORREF rgb[25] (COLOR_SCROLLBAR 0 .. COLOR_INFOBK 24), each
+# stored R, G, B and a palette-flag byte (02, or 00 on a few; ignored here). Windows 95 has no COLOR_HOTLIGHT,
+# COLOR_GRADIENT*, COLOR_MENUHILIGHT or COLOR_MENUBAR.
+W95_SCHEME_BYTES = 492
+W95_SCHEME_COLOURS = 25
+W95_SCHEME_RGB_OFFSET = W95_SCHEME_BYTES - 4 * W95_SCHEME_COLOURS
+
+
+def parse_win95_schemes(path):
+    r"""-> {scheme name: ({key: rgb}, recorded)}: the `HKCU,"Control Panel\Appearance\Schemes",%NAME%,1,<hex bytes>`
+    values of a Windows 95 shell2.inf [schemes.reg] (continued with trailing backslashes), each named by its [Strings]
+    entry, every blob W95_SCHEME_BYTES long, its colour array read under COLOR_NAMES' first 25 keys; `recorded` is
+    the colour array's 100 bytes as the INF spells them (lowercase hex, comma-separated, the line wraps removed).
+    The [shlold.reg] names (deleted old schemes, no bytes) are not values. Read as latin-1."""
+    txt = open(path, encoding='latin-1').read()
+    strings = dict(re.findall(r'^(\w+)\s*=\s*"([^"]*)"\s*$', txt, re.M))
+    lines = txt.splitlines()
+    out = {}
+    i = 0
+    while i < len(lines):
+        m = re.match(r'^HKCU,"Control Panel\\Appearance\\Schemes",%(\w+)%,1,(.*)$', lines[i])
+        i += 1
+        if not m: continue
+        body = m.group(2)
+        while body.rstrip().endswith('\\'):
+            if i >= len(lines): die(path, f'scheme {m.group(1)} runs past the end of the file')
+            body = body.rstrip()[:-1] + lines[i].strip(); i += 1
+        if not re.fullmatch(r'\s*[0-9a-fA-F]{2}(\s*,\s*[0-9a-fA-F]{2})*\s*', body):
+            die(path, f'scheme {m.group(1)}: unreadable bytes')
+        hexes = [x.strip().lower() for x in body.split(',')]
+        bs = bytes(int(x, 16) for x in hexes)
+        if len(bs) != W95_SCHEME_BYTES: die(path, f'scheme {m.group(1)} is {len(bs)} bytes, not {W95_SCHEME_BYTES}')
+        if m.group(1) not in strings: die(path, f'scheme {m.group(1)} has no [Strings] name')
+        name = strings[m.group(1)]
+        if name in out: die(path, f'scheme {name!r} recorded twice')
+        o = W95_SCHEME_RGB_OFFSET
+        out[name] = ({COLOR_NAMES[j]: tuple(bs[o + 4 * j:o + 4 * j + 3]) for j in range(W95_SCHEME_COLOURS)},
+                     ','.join(hexes[o:]))
     if not out: die(path, 'no Appearance\\Schemes values')
     return out
 

@@ -26,7 +26,7 @@ import hashlib, json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from sources import SOURCES, REPO, local_path, provenance, LOCAL_SOURCES, local_file, local_provenance
-from parse_windows import parse_hivedef, parse_hive_colors, parse_hive_schemes, parse_theme
+from parse_windows import parse_hivedef, parse_hive_colors, parse_hive_schemes, parse_win95_schemes, parse_theme
 from parse_kde import parse_kcsrc
 from parse_cde import parse_dp
 from parse_gtkrc import parse_gtkrc, gtkrc_color, expr_text, parse_metacity, metacity_color, frame_piece, draw_ops_flat
@@ -74,6 +74,32 @@ KDE_NOT_35 = {
 }
 KDE3_ENTRIES = 25       # KDE 3.5's own schemes, less its three usability schemes
 DUPLICATES = {'cde-broica': 'cde-default'}   # key: the twin it repeats
+
+# THE WINDOWS 95 CD'S APPEARANCE SCHEMES (architect 2026-10-09: "the Windows 95 flavour of the schemes whose bytes differ
+# from Windows 2000's, under a windows-95- prefix, imported from the CD itself"): shell2.inf carries 27 (sources.py
+# win95_shell2inf). build.py accounts for every one, so a re-pinned source cannot change the list silently:
+#   WIN95_DIFFERENT: the six whose bytes differ from their Windows 2000 twin (the windows-family entry the ReactOS, XP and
+#     Windows 2000 records agree on) -> the CD's name: each an entry of its own, windows-95-<name>, its twin's key here;
+#   WIN95_SAME: the ten byte-equal on all 25 COLOR_* values to their twin (and Windows Standard to windows-95-standard):
+#     no second entry for the same bytes;
+#   WIN95_NOT_ENTRIES: the rest, with the reason the catalog does not carry them.
+WIN95_DIFFERENT = {'Maple': 'windows-maple', 'Wheat': 'windows-wheat', 'Marine (high color)': 'windows-marine',
+                   'Storm (VGA)': 'windows-storm', 'Rose': 'windows-rose', 'Plum (high color)': 'windows-plum'}
+WIN95_SAME = {'Windows Standard': 'windows-95-standard', 'Brick': 'windows-brick', 'Spruce': 'windows-spruce',
+              'Teal (VGA)': 'windows-teal', 'Red, White, and Blue (VGA)': 'windows-red-white-and-blue',
+              'Pumpkin (large)': 'windows-pumpkin', 'Eggplant': 'windows-eggplant', 'Rainy Day': 'windows-rainy-day',
+              'Desert': 'windows-desert', 'Lilac': 'windows-lilac', 'Slate': 'windows-slate'}
+WIN95_NOT_ENTRIES = {
+    'Windows Standard (large)': 'role-identical to Windows Standard on all 25 values (a size variant)',
+    'Windows Standard (extra large)': 'role-identical to Windows Standard on all 25 values (a size variant)',
+    'Lilac (large)': 'role-identical to Lilac on all 25 values (a size variant)',
+    'Rose (large)': 'a size variant of Rose that differs from it on 13 values (Windows 2000\'s hive carries it too); '
+                    'the catalog\'s Windows Rose is the plain scheme',
+    'High Contrast Black': 'a usability scheme', 'High Contrast Black (large)': 'a usability scheme',
+    'High Contrast Black (extra large)': 'a usability scheme', 'High Contrast White': 'a usability scheme',
+    'High Contrast White (large)': 'a usability scheme', 'High Contrast White (extra large)': 'a usability scheme',
+}
+WIN95_SHA256 = LOCAL_SOURCES['win95_shell2inf']['files']['shell2.inf'][1]
 
 # THE DISPLAY TIER (architect 2026-10-03, late): each entry is tagged by the smallest period colour set holding every
 # colour its roles use (display_tier). `vga`: the 16 colours of the VGA / Windows 16-colour palette. `windows-20`: those
@@ -138,6 +164,17 @@ def xp_name(n):
     'Red, Blue & White' as Windows' 'Red, White, and Blue'."""
     n = re.sub(r' \((VGA|high color)\)$', '', n)
     return 'Red, White, and Blue' if n == 'Red, Blue & White' else n
+
+
+def win95_file():
+    """The extracted shell2.inf (sources.py LOCAL_SOURCES win95_shell2inf), its sha256 checked: a different byte is a
+    hard fail."""
+    p = local_file('win95_shell2inf', 'shell2.inf')
+    if not os.path.exists(p):
+        raise SystemExit(f'build: {p} is missing; extract it from the Windows 95 image (sources.py LOCAL_SOURCES)')
+    got = hashlib.sha256(open(p, 'rb').read()).hexdigest()
+    if got != WIN95_SHA256: raise SystemExit(f'build: {p} sha256 {got}, pinned {WIN95_SHA256}')
+    return p
 
 
 def diff_keys(a, b):
@@ -224,21 +261,59 @@ def windows_entries():
         notes.append(f'Windows 2000\'s setup hive names it "{scheme}" (Appearance\\Schemes)' + ('' if not d else
                      ', differing on ' + ', '.join(f'{k} {hx(w2k_schemes[scheme][k])} (here {hx(cols[k])})' for k in d)))
 
-    # WINDOWS 95 STANDARD, hand-recorded: the retail picture.
+    # WINDOWS 95 STANDARD and the six Windows 95 flavours: the Windows 95 OSR2 CD's own Appearance schemes (sources.py
+    # win95_shell2inf; architect 2026-10-09, replacing the hand-recorded entry of 2026-10-03, whose bytes the CD's
+    # "Windows Standard" equals on all 25 values). A scheme is 25 COLOR_* values (Windows 95 has no Gradient,
+    # MenuHilight or MenuBar), its recorded bytes the colour array of the 492-byte value, kept in the provenance as the
+    # INF spells them.
+    w95 = parse_win95_schemes(win95_file())
+    w95_prov = local_provenance('win95_shell2inf', 'shell2.inf')
+    accounted = set(WIN95_DIFFERENT) | set(WIN95_SAME) | set(WIN95_NOT_ENTRIES)
+    if set(w95) != accounted:
+        raise SystemExit(f'build: the CD\'s schemes are {sorted(w95)}, not the accounted {sorted(accounted)}')
+
+    def w95_source(scheme):
+        return w95_prov | {'scheme': scheme, 'recorded': w95[scheme][1],
+                           'layout': 'COLORREF[25], COLOR_SCROLLBAR .. COLOR_INFOBK: the last 100 bytes of the '
+                                     '492-byte value, each R, G, B and a flag byte'}
+
     f98, c98 = w98['Windows Default']
-    cols = dict(c98); cols['ButtonLight'] = (0xDF, 0xDF, 0xDF)
+    cols = w95['Windows Standard'][0]
+    # the entry's bytes are what the hand-recorded entry held (the retail captures' DFDFDF 3DLight under Windows 98's
+    # Windows Default.theme): the CD equals it on every one of the 25 values
+    want = dict(c98); want['ButtonLight'] = (0xDF, 0xDF, 0xDF)
+    assert cols == want, diff_keys(cols, want)
     assert (cols['ButtonFace'], cols['ButtonHilight'], cols['ButtonShadow'], cols['ButtonDkShadow']) == \
         ((192,) * 3, (255,) * 3, (128,) * 3, (0,) * 3)
-    out.append(entry('windows', 'Windows 95 Standard', 'Windows 95 Standard', [
-        {'project': 'hand-recorded (architect 2026-10-03)', 'keys': ['ButtonFace', 'ButtonHilight', 'ButtonLight',
-         'ButtonShadow', 'ButtonDkShadow'], 'record': 'the Windows 95 retail screen captures (Toasty Tech): a window '
-         'frame\'s outer top line is DFDFDF, COLOR_3DLIGHT; face C0C0C0, Hilight FFFFFF, Shadow 808080, DkShadow 000000'},
-        provenance('win98_themes', f98) | {'keys': 'every other key'}], cols, notes=[
-        'the sources disagree on ButtonLight (COLOR_3DLIGHT): the Windows 95 retail captures show DFDFDF; Windows 98\'s '
-        'Windows Default.theme and windows-98-standard\'s records (Windows 2000\'s and XP\'s "Windows Classic") record '
-        'C0C0C0 (the face), and the early Windows 95 beta captures draw no 3DLight line. The entry is the retail '
-        'Windows 95 picture, a flat caption (no Gradient keys).']))
+    d98 = diff_keys(cols, c98)
+    out.append(entry('windows', 'Windows 95 Standard', 'Windows 95 Standard', [w95_source('Windows Standard')], cols, notes=[
+        'the CD names it "Windows Standard"; its "Windows Standard (large)" and "(extra large)" are the same 25 values',
+        'the sources disagree on ButtonLight (COLOR_3DLIGHT): the CD records DFDFDF, as the Windows 95 retail screen '
+        'captures (Toasty Tech: a window frame\'s outer top line) show it; Windows 98\'s Windows Default.theme and '
+        'windows-98-standard\'s records (Windows 2000\'s and XP\'s "Windows Classic") record C0C0C0 (the face), and the '
+        'early Windows 95 beta captures draw no 3DLight line',
+        'Windows 98\'s Windows Default.theme records the same bytes but for ' + ', '.join(
+            f'{k} {hx(c98[k])} (here {hx(cols[k])})' for k in d98) + '; a flat caption (no Gradient keys)']))
     out[-1]['corroborated'] = 0
+    by_key_now = {e['key']: e for e in out}
+    for name, twin in WIN95_SAME.items():     # the byte-equal ones: equal on all 25 values to their entry
+        t = by_key_now[twin]['raw']
+        got = {k: hx(v) for k, v in w95[name][0].items()}
+        if got != {k: t[k] for k in got}: raise SystemExit(f'build: the CD\'s {name} is not equal to {twin}')
+    for name in ('Windows Standard (large)', 'Windows Standard (extra large)', 'Lilac (large)'):
+        twin = {'Lilac (large)': 'Lilac'}.get(name, 'Windows Standard')
+        if w95[name][0] != w95[twin][0]: raise SystemExit(f'build: the CD\'s {name} is not equal to its {twin}')
+    for name, twin in WIN95_DIFFERENT.items():
+        cols = w95[name][0]
+        t = by_key_now[twin]['raw']
+        d = sorted(k for k in cols if hx(cols[k]) != t[k])
+        assert d, name
+        label = f'Windows 95 {xp_name(name)}'     # the (VGA) / (high color) tag dropped, as the Windows 2000 entries'
+        out.append(entry('windows', label, label, [w95_source(name)], cols, notes=[
+            f'the CD names it "{name}"; the Windows 2000 entry {twin} (ReactOS, XP and Windows 2000\'s own hive agree) '
+            f'differs on ' + ', '.join(f'{k} {hx(cols[k])} (there {t[k]})' for k in d) + '; the other values equal it',
+            'no Gradient, MenuHilight or MenuBar key (Windows 95 has none): a flat caption']))
+        out[-1]['corroborated'] = 0
 
     # WINDOWS 98 STANDARD: Windows 98's default scheme, the C0C0C0 face under the navy-to-#1084D0 gradient caption.
     # Its bytes are XP's saved scheme (zkedem's classic.theme, saved from WEPOS 2009's Display Properties, DisplayName
@@ -541,10 +616,10 @@ def clearlooks_geometry():
     push_h = float(f['push_button_box_px'])
     if push_h != int(push_h): raise SystemExit(f'build: push_button_box_px {push_h} is not a whole W px')
     # THE TWO LENGTHS THE SPEC DOES NOT CARRY (both vocabularies' own, one constant at its owner): the dialog
-    # field's height (paint_handler.cpp kModalFieldHeightPx: Windows' 23, GTK's entry at the 13-row cell, 13 + 2 x
+    # field's height (render.h kModalFieldHeightPx: Windows' 23, GTK's entry at the 13-row cell, 13 + 2 x
     # (ythickness 3 + inner-border 2)) and the list row (folder_overlay.h kRowHeightPx)
     const = lambda path, name: float(re.search(name + r'\s*=\s*([0-9.]+)', open(path).read()).group(1))
-    entry_h = const(os.path.join(REPO, 'src', 'gui', 'paint_handler.cpp'), 'kModalFieldHeightPx')
+    entry_h = const(os.path.join(REPO, 'src', 'gui', 'render.h'), 'kModalFieldHeightPx')
     row_h = const(os.path.join(REPO, 'src', 'gui', 'folder_overlay.h'), 'kRowHeightPx')
     assert entry_h == int(entry_h) and row_h == int(row_h), (entry_h, row_h)
     # THE PAINTERS ROUND'S LAST PART'S LENGTHS: the trim lane's height (the spec's scroll_bar_px, the base's 16 GTK's
@@ -1129,15 +1204,28 @@ def checks(entries):
     assert {r: v for r, v in w98['roles'].items() if w95[r] != v} == {'bevel_light': '#C0C0C0'}
     assert (w98['raw']['GradientActiveTitle'], w98['raw']['GradientInactiveTitle']) == ('#1084D0', '#B5B5B5')
     assert 'GradientActiveTitle' not in by['windows-95-standard']['raw']
+    # the Windows 95 CD's six (architect 2026-10-09): right after windows-95-standard, in this order, 25 values each, and
+    # each differing from its Windows 2000 twin on exactly the values the CD's shell2.inf records differently
+    w95_six = {'windows-95-maple': ('windows-maple', ['ActiveTitle', 'AppWorkspace', 'InactiveTitle']),
+               'windows-95-wheat': ('windows-wheat', ['AppWorkspace']),
+               'windows-95-marine': ('windows-marine', ['TitleText']),
+               'windows-95-storm': ('windows-storm', ['InactiveTitleText']),
+               'windows-95-rose': ('windows-rose', ['InactiveTitleText']),
+               'windows-95-plum': ('windows-plum', ['Hilight', 'TitleText'])}
+    at = keys.index('windows-95-standard')
+    assert keys[at + 1:at + 7] == list(w95_six), keys[at:at + 8]
+    for k, (twin, diff) in w95_six.items():
+        assert len(by[k]['raw']) == 25 and by[k]['family'] == 'windows', k
+        assert sorted(x for x in by[k]['raw'] if by[k]['raw'][x] != by[twin]['raw'][x]) == diff, k
     for gone in ('windows-classic', 'windows-standard'): assert gone not in by, gone
     for d in DUPLICATES: assert d not in by, d
     assert sum(1 for e in entries if e['family'] == 'kde3') == KDE3_ENTRIES
     assert len(KDE_NOT_35['tde_kcs']) == 21
-    # the display tiers: Windows Storm, Teal and Red, White, and Blue are the only `vga` entries, none `windows-20`
+    # the display tiers: Windows Storm, Teal and Red, White, and Blue and Windows 95 Storm are the only `vga` entries, none `windows-20`
     # (Windows 98 Standard misses `vga` only by its tooltip ground #FFFFE1, Windows 95 Standard by that and its 3DLight
     # #DFDFDF)
     assert sorted(e['key'] for e in entries if e['display_tier'] == 'vga') == \
-        ['windows-red-white-and-blue', 'windows-storm', 'windows-teal']
+        ['windows-95-storm', 'windows-red-white-and-blue', 'windows-storm', 'windows-teal']
     assert not [e['key'] for e in entries if e['display_tier'] == 'windows-20']
     assert display_tier(w98['roles']) == 'high-colour' and \
         display_tier({r: v for r, v in w98['roles'].items() if r != 'info_ground'}) == 'vga'
@@ -1226,6 +1314,13 @@ def main():
         'kde3_not_kde35': {'schemes': kde_later,
                            'reason': 'KDE colour schemes KDE 3.5 did not ship, added later by Trinity; the '
                                      'catalog keeps what KDE 3.5 shipped (architect 2026-10-03, late)'},
+        'windows_95_cd': {'schemes': WIN95_NOT_ENTRIES,
+                          'byte_equal_to_an_entry': WIN95_SAME,
+                          'reason': 'the Windows 95 CD\'s 27 Appearance schemes: 6 are entries (windows-95-maple, '
+                                    '-wheat, -marine, -storm, -rose, -plum: their bytes differ from Windows 2000\'s '
+                                    'of the same name), 11 are byte-equal on all 25 values to an existing entry (the '
+                                    'second map) and the rest are listed first with their reasons (architect '
+                                    '2026-10-09)'},
         'duplicates': {'keys': dups,
                        'reason': 'role-identical to the named entry, which is kept (architect 2026-10-03, late)'}}))
     for fam in FAMILIES:
