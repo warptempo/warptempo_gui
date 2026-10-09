@@ -174,6 +174,27 @@ constexpr bool defaults_are_their_chromes_schemes() {
 }
 static_assert(defaults_are_their_chromes_schemes());
 
+// EACH CHROME'S OWN SCHEME NAMES TAHOMA (2026-10-09): the chrome's own
+// scheme installs no pick, whose face is Tahoma (fill_chrome_palette,
+// render.cpp), so its built-in's tag must say the same — windows-2000-
+// standard's source names Tahoma, clearlooks' and solaris' name no Windows
+// font (the inert tag).
+static_assert(std::ranges::all_of(kGuiDefaultPalettes,
+                                  [](const GuiDefaultPalette& d) {
+    return builtin_scheme(d.name)->chrome.face == GuiSchemeFace::Tahoma;
+}));
+// WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S TWELVE IN MS SANS SERIF
+// (the catalog's windows-me-standard; the generator asserts the same).
+static_assert([] {
+    const GuiChromeScheme* me = builtin_scheme("windows-me-standard");
+    const GuiChromeScheme* w2k = builtin_scheme("windows-2000-standard");
+    if (me == nullptr || w2k == nullptr) return false;
+    GuiChromePick twelve = me->chrome;
+    twelve.face = w2k->chrome.face;
+    return twelve == w2k->chrome &&
+           me->chrome.face == GuiSchemeFace::MsSansSerif;
+}());
+
 // THE BUILT-INS' KEYS AND DISPLAY NAMES ARE UNIQUE (the generator checks the
 // same), the keys in the name grammar, and every scheme records its inactive
 // caption (the struct's comment).
@@ -306,6 +327,19 @@ std::expected<GuiChromePick, std::string> read_scheme_file(
     auto scan = warptempo_settings::scan_key_value_file(
         f, [&](int ln, const std::string& role, const std::string& value)
                   -> std::expected<void, std::string> {
+        // THE OPTIONAL FONT LINE (palette_file.h's kGuiSchemeFontKey): one
+        // of the two words, the scanner refusing a second line.
+        if (role == kGuiSchemeFontKey) {
+            const std::optional<GuiSchemeFace> face =
+                scheme_font_of_word(value);
+            if (!face) {
+                return warptempo_parse::prefix_line_error(
+                    ln, "font has invalid value '" + value +
+                        "': must be tahoma or ms-sans-serif");
+            }
+            pick.face = *face;
+            return {};
+        }
         const std::size_t c = chrome_line_index(role);
         if (c == kGuiChromeLineCount) {
             return warptempo_parse::prefix_line_error(
@@ -353,7 +387,8 @@ std::string palette_file_text(const GuiPaletteWords& words) {
 }
 
 // The text write_scheme_file puts down: the nine and each picked inactive
-// key, in the table's order.
+// key, in the table's order, then the font line when the pick's tag is MS
+// Sans Serif (palette_file.h's kGuiSchemeFontKey: absent is tahoma).
 std::string scheme_file_text(const GuiChromePick& pick) {
     std::string s;
     for (std::size_t k = 0; k < kGuiChromeLineCount; ++k) {
@@ -361,6 +396,12 @@ std::string scheme_file_text(const GuiChromePick& pick) {
         if (l.word != nullptr) put_line(s, l.key, pick.*(l.word));
         else if (const std::optional<uint32_t>& v = pick.*(l.optional))
             put_line(s, l.key, *v);
+    }
+    if (pick.face != GuiSchemeFace::Tahoma) {
+        s += kGuiSchemeFontKey;
+        s += '=';
+        s += scheme_font_word(pick.face);
+        s += '\n';
     }
     return s;
 }

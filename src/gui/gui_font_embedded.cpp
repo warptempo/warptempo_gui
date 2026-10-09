@@ -1,7 +1,7 @@
 #include "gui_font.h"
 
 // THE LINUX BINARY CARRIES ITS OWN FACES (architect 2026-10-02, "bundle it for
-// both"): the six files under the repository's `fonts/` (gui_font.h's
+// both"): the eight files under the repository's `fonts/` (gui_font.h's
 // kGuiFontFiles) are compiled into the executable here, so the laptop depends
 // on no installed font package and asks fontconfig nothing. The Wayland
 // backend hands these to gui_font_install_bundled (gui_font.h) once, at the
@@ -48,10 +48,16 @@ const uint8_t kGoRegular[] = {
 const uint8_t kGoBold[] = {
 #include "Go-Bold.ttf.inc"
 };
+const uint8_t kFreeSans[] = {
+#include "FreeSans.otf.inc"
+};
+const uint8_t kFreeSansBold[] = {
+#include "FreeSansBold.otf.inc"
+};
 
 } // namespace
 
-static_assert(kGuiFontFileCount == 6);
+static_assert(kGuiFontFileCount == 8);
 const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount] = {
     {kTahoma, sizeof(kTahoma)},
     {kTahomaBold, sizeof(kTahomaBold)},
@@ -59,4 +65,6 @@ const GuiFontBytes gui_font_embedded_files[kGuiFontFileCount] = {
     {kDejaVuSansBold, sizeof(kDejaVuSansBold)},
     {kGoRegular, sizeof(kGoRegular)},
     {kGoBold, sizeof(kGoBold)},
+    {kFreeSans, sizeof(kFreeSans)},
+    {kFreeSansBold, sizeof(kFreeSansBold)},
 };

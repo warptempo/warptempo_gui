@@ -81,7 +81,8 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
 # THE PRODUCT'S FONT FILES: Tahoma and Tahoma Bold (architect 2026-10-06),
-# DejaVu Sans and DejaVu Sans Bold (2026-10-07), THE NAMES READ OUT OF
+# DejaVu Sans and DejaVu Sans Bold (2026-10-07), Go and Go Bold (2026-10-08),
+# FreeSans and FreeSans Bold (2026-10-09, OpenType CFF), THE NAMES READ OUT OF
 # gui_font.h's kGuiFontFiles initializer, the one list (CMakeLists.txt's
 # font step reads the same), copied from the repository's own fonts/
 # (architect 2026-10-02) -- the very files the Linux executable compiles in,
@@ -89,8 +90,9 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 # installed font package. They are what gui_font_bundled.cpp builds the
 # product's faces from, and android_main ABORTS if one is missing -- a font
 # that failed to install would otherwise paint silently in cairo's default
-# face. They are stored (-0 ttf at aapt2 link) so
-# AAsset_getBuffer hands FreeType a pointer straight into the mapped APK.
+# face. They are stored (-0 ttf and -0 otf at aapt2 link, one flag per
+# suffix the list spells) so AAsset_getBuffer hands FreeType a pointer
+# straight into the mapped APK.
 #
 # The copies land under the build tree, which .gitignore already ignores
 # (`build*/`); the tracked originals are fonts/'s.
@@ -199,6 +201,7 @@ wt_say "aapt2 link"
     --version-code 1 \
     --version-name "2.0" \
     -0 ttf \
+    -0 otf \
     --auto-add-overlay \
     "$PKGDIR/res.zip"
 

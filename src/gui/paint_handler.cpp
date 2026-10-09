@@ -2989,10 +2989,12 @@ static int time_field_pad_px() {
     return scaled_px(kStatusPanelPadPx);
 }
 
-// The time fields' metrics, MEMOISED ON THE SCALE — thirteen tiny shaping
-// passes (ten digits, the two letters and the specimen) that answer the same
-// thing on every frame, the face being fixed and the scale the only variable
-// (the widths are the live face's own, gui_font.h).
+// The time fields' metrics, MEMOISED ON THE SCALE AND THE LIVE FACE SET —
+// thirteen tiny shaping passes (ten digits, the two letters and the
+// specimen) that answer the same thing on every frame until the scale moves
+// or the live scheme's face tag swaps the set under the windows chrome
+// (gui_live_face_set, gui_font.h, 2026-10-09; the widths are the live
+// face's own).
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -3002,6 +3004,7 @@ static int time_field_pad_px() {
 // cell is its field's damage box too.
 struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
+    const GuiFaceSet* set = nullptr;   // and the live set
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
     double letter_w = 0.0;    // the widest tab letter's shaped width
 };
@@ -3009,7 +3012,7 @@ static TimeFieldMetrics g_time_field_metrics;
 
 static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
     TimeFieldMetrics& m = g_time_field_metrics;
-    if (m.percent == font.percent) return m;
+    if (m.percent == font.percent && m.set == &gui_live_face_set()) return m;
     char widest = '0';
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
@@ -3027,6 +3030,7 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
                               text_shape::shape_text_run(font, one).width_px);
     }
     m.percent = font.percent;
+    m.set     = &gui_live_face_set();
     return m;
 }
 

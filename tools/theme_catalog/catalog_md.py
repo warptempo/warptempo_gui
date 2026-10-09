@@ -31,7 +31,8 @@ def relative_luminance(rgb):
 FAMILY_HEAD = {
     'windows': 'Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes '
                'saved as .theme files; Windows 2000 Standard from Windows 2000\'s own setup hive; Windows 95 Standard '
-               'and the six Windows 95 flavours from the Windows 95 CD\'s own shell2.inf)',
+               'and the six Windows 95 flavours from the Windows 95 CD\'s own shell2.inf; Windows Me Standard, '
+               'Windows 2000 Standard\'s bytes in MS Sans Serif, checked on his two WordPad captures)',
     'windows-plus': 'Windows 98 / Plus! desktop themes (the shipped .theme files)',
     'kde3': 'KDE 3.5 colour schemes, as Trinity\'s tdebase carries them (relief by KDE 3\'s own rule at each scheme\'s contrast)',
     'cde': 'CDE palettes (colour set 5 the ground; foreground and shadows by Motif\'s own rule)',
@@ -108,8 +109,12 @@ def write_md(cat):
         if fam in FAMILY_NOTE: L += [FAMILY_NOTE[fam], '']
         for e in es:
             imit = f" — imitates {e['imitates']}" if e.get('imitates') else ''
+            # the face tag (architect 2026-10-09: the face follows the scheme), a Windows entry's alone: the tag and
+            # the menu font its source names
+            face = (f" · Face: {e['font']['face']} (the source's menu font: {e['font']['named']})"
+                    if 'font' in e else '')
             L += [f"### `{e['key']}`", '', f"**{e['name']}**{imit} · ground {e['roles']['ground']} · {prov_line(e)}", '',
-                  f"Display tier: {e['display_tier']}", '', '']
+                  f"Display tier: {e['display_tier']}{face}", '', '']
     open(MD, 'w').write('\n'.join(L) + '\n')
 
 

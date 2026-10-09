@@ -2,9 +2,9 @@
 
 Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, imported only"): its colours are the bytes its source records, each with its provenance in [catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the relief at run time (KDE 3, CDE / Motif, GNOME 2's Clearlooks and metacity), that toolkit's rule ran once at import and is named. A theme is the CHROME's colors alone (2026-10-07): the program's own colors are its palettes, compiled into the app (src/gui/palette_file.h), and the program's own family of chosen entries left the catalog with them. THE CATALOG IS A RECORD, NOT A SHIPPED SET (2026-10-08): no theme ships as a file and none is chosen in the app; each chrome's colors are compiled in, and the catalog is their source — `windows-2000-standard` the windows-2000 chrome's, `clearlooks` the clearlooks chrome's (tools/theme_catalog/gen_theme_files.py, src/gui/theme_file.h) — and the record a look made official as a new chrome variant is drawn from. Each entry once had a crop, the app as the retired mock-up renderer drew it on 2026-10-05 and 06 in the tablet's geometry (the tablet's 2304 x 1440 at gui_scale 275, cropped, never scaled: the top strip in two halves over the well's bottom lines and the bottom row, transparent between them), before the product's Windows 2000 pivot of 2026-10-06 evening, so the crops showed the retired Windows 95 chrome in Nimbus Sans; that render road broke with the pivot and retired on 2026-10-07, the crops were frozen as last rendered (a theme's colours read true in them, and a theme imported since had none), and they left the repository on 2026-10-08 (the git history keeps them). The chrome was the theme's as recorded; the waveform pane, the flags and the playhead were the program's own elements in the colors of the crop's day (the lime waveform on black with its green outline, the warp flag purple #800080 and its selected face fuchsia #FF00FF, the invalid flag maroon #800000 and its selected face red #FF0000, white labels, the playhead's white stem; a theme names none of them since 2026-10-07: they are the app's palettes), its playhead's head was the renderer's older grey head, not the app's WordPad ruler marker in the theme's chrome. The well kept the app's two-line sunken edge (the theme's Shadow and DkShadow above, its 3DLight and Hilight below); the flags were the flat Acid flag (the scene's flags were warp markers, so the warp pair), the face with a one-px outline in the theme's DkShadow, the stem leaving the face across the bottom outline, shown left to right editing (the in-place editor: the selected face under a black frame, its text in the selected pair), selected (the selected face under the selected label, the stem with it), invalid (the removed pair), disabled (the ground, the label embossed) and unselected; the playhead's head carried a one-px outline in the theme's label; disabled words and glyphs were Windows' emboss; the ruler label and the trim arrow were the theme's label, the ruler ticks its Shadow. The DISPLAY TIER is the smallest period colour set holding every colour the entry's roles use: vga (the 16 VGA colours), windows-20 (those and Windows' four static extras #C0DCC0, #A6CAF0, #FFFBF0, #A0A0A4, always solid on a 256-colour display), else high-colour. Not imported: catalog.json's `not_imported`. Built by `tools/theme_catalog/` (fetch.py, build.py, catalog_md.py; the theme files by gen_theme_files.py).
 
-## Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes saved as .theme files; Windows 2000 Standard from Windows 2000's own setup hive; Windows 95 Standard and the six Windows 95 flavours from the Windows 95 CD's own shell2.inf)
+## Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes saved as .theme files; Windows 2000 Standard from Windows 2000's own setup hive; Windows 95 Standard and the six Windows 95 flavours from the Windows 95 CD's own shell2.inf; Windows Me Standard, Windows 2000 Standard's bytes in MS Sans Serif, checked on his two WordPad captures)
 
-25 entries, darkest ground first.
+26 entries, darkest ground first.
 
 The Windows 95 CD carries 27 Appearance schemes (shell2.inf); only the six whose bytes differ from Windows 2000's of the same name are entries here, under a `windows-95-` prefix — Maple, Wheat, Marine, Storm, Rose and Plum — the other 21 being equal to an entry (Windows Standard, Brick, Spruce, Teal, Red, White, and Blue, Pumpkin, Eggplant, Rainy Day, Desert, Lilac, Slate), a size variant of one, or a usability scheme (`not_imported.windows_95_cd`, catalog.json).
 
@@ -12,175 +12,182 @@ The Windows 95 CD carries 27 Appearance schemes (shell2.inf); only the six whose
 
 **Rainy Day** · ground #8399B1 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-plum`
 
 **Plum** · ground #A89890 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-95-plum`
 
 **Windows 95 Plum** · ground #A89890 · W95_PLUS_AR.iso `shell2.inf`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: MS Sans Serif)
 
 
 ### `windows-eggplant`
 
 **Eggplant** · ground #90B0A8 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Times New Roman)
 
 
 ### `windows-lilac`
 
 **Lilac** · ground #AEA8D9 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: tahoma (the source's menu font: Tahoma)
 
 
 ### `windows-slate`
 
 **Slate** · ground #9DB9C8 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-marine`
 
 **Marine** · ground #88C0B8 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-95-marine`
 
 **Windows 95 Marine** · ground #88C0B8 · W95_PLUS_AR.iso `shell2.inf`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: MS Sans Serif)
 
 
 ### `windows-rose`
 
 **Rose** · ground #CFAFB7 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-95-rose`
 
 **Windows 95 Rose** · ground #CFAFB7 · W95_PLUS_AR.iso `shell2.inf`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: MS Sans Serif)
 
 
 ### `windows-brick`
 
 **Brick** · ground #C2BFA5 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-spruce`
 
 **Spruce** · ground #A2C8A9 · zkedem/windows10-classic-themes@f126b0b1 `spruce.theme` + 1 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-storm`
 
 **Storm** · ground #C0C0C0 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: vga
+Display tier: vga · Face: tahoma (the source's menu font: Tahoma)
 
 
 ### `windows-teal`
 
 **Teal** · ground #C0C0C0 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: vga
+Display tier: vga · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-red-white-and-blue`
 
 **Red, White, and Blue** · ground #C0C0C0 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: vga
+Display tier: vga · Face: ms-sans-serif (the source's menu font: Times New Roman)
 
 
 ### `windows-95-standard`
 
 **Windows 95 Standard** · ground #C0C0C0 · W95_PLUS_AR.iso `shell2.inf`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: MS Sans Serif)
 
 
 ### `windows-95-storm`
 
 **Windows 95 Storm** · ground #C0C0C0 · W95_PLUS_AR.iso `shell2.inf`
 
-Display tier: vga
+Display tier: vga · Face: ms-sans-serif (the source's menu font: Arial)
 
 
 ### `windows-98-standard`
 
 **Windows 98 Standard** · ground #C0C0C0 · zkedem/windows10-classic-themes@f126b0b1 `classic.theme` + 3 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-desert`
 
 **Desert** · ground #D5CCBB · zkedem/windows10-classic-themes@f126b0b1 `desert.theme` + 1 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-2000-standard`
 
 **Windows 2000 Standard** · ground #D4D0C8 · Windows2000ProfessionalSP3.iso `I386/HIVEDEF.INF` + 4 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: tahoma (the source's menu font: Tahoma)
+
+
+### `windows-me-standard`
+
+**Windows Me Standard** · ground #D4D0C8 · guidebookgallery.org screenshots of WordPad under Windows Me and Windows 2000 Professional (the architect's copies, 1:1) `winme.png` + 2 more
+
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: MS Sans Serif)
 
 
 ### `windows-pumpkin`
 
 **Pumpkin** · ground #ECD59D · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-maple`
 
 **Maple** · ground #E6D8AE · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-95-maple`
 
 **Windows 95 Maple** · ground #E6D8AE · W95_PLUS_AR.iso `shell2.inf`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: MS Sans Serif)
 
 
 ### `windows-wheat`
 
 **Wheat** · ground #DEDEA0 · reactos/reactos@d004b2c1 `boot/bootdata/hivedef.inf` + 2 more
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Microsoft Sans Serif)
 
 
 ### `windows-95-wheat`
 
 **Windows 95 Wheat** · ground #DEDEA0 · W95_PLUS_AR.iso `shell2.inf`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: MS Sans Serif)
 
 
 ## Windows 98 / Plus! desktop themes (the shipped .theme files)
@@ -191,112 +198,112 @@ Display tier: high-colour
 
 **Underwater (high color)** · ground #3868C8 · 1j01/98@52451052 `desktop/Themes/Windows Official/Underwater (high color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Haettenschweiler)
 
 
 ### `plus-dangerous-creatures`
 
 **Dangerous Creatures (256 color)** · ground #707070 · 1j01/98@52451052 `desktop/Themes/Windows Official/Dangerous Creatures (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Arial)
 
 
 ### `plus-mystery`
 
 **Mystery (high color)** · ground #687868 · 1j01/98@52451052 `desktop/Themes/Windows Official/Mystery (high color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Calisto MT)
 
 
 ### `plus-travel`
 
 **Travel (high color)** · ground #908070 · 1j01/98@52451052 `desktop/Themes/Windows Official/Travel (high color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Comic Sans MS)
 
 
 ### `plus-space`
 
 **Space (256 color)** · ground #809098 · 1j01/98@52451052 `desktop/Themes/Windows Official/Space (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: OCR A Extended)
 
 
 ### `plus-the-60s-usa`
 
 **The 60's USA (256 color)** · ground #D068D8 · 1j01/98@52451052 `desktop/Themes/Windows Official/The 60's USA (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Lucida Sans)
 
 
 ### `plus-science`
 
 **Science (256 color)** · ground #8399B1 · 1j01/98@52451052 `desktop/Themes/Windows Official/Science (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Lucida Sans Unicode)
 
 
 ### `plus-more-windows`
 
 **More Windows (high color)** · ground #9098A0 · 1j01/98@52451052 `desktop/Themes/Windows Official/More Windows (high color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: News Gothic MT)
 
 
 ### `plus-jungle`
 
 **Jungle (256 color)** · ground #B8A068 · 1j01/98@52451052 `desktop/Themes/Windows Official/Jungle (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Tempus Sans ITC)
 
 
 ### `plus-leonardo-da-vinci`
 
 **Leonardo da Vinci (256 color)** · ground #BFA59F · 1j01/98@52451052 `desktop/Themes/Windows Official/Leonardo da Vinci (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Book Antiqua)
 
 
 ### `plus-baseball`
 
 **Baseball (256 color)** · ground #D0A870 · 1j01/98@52451052 `desktop/Themes/Windows Official/Baseball (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: MS Sans Serif)
 
 
 ### `plus-inside-your-computer`
 
 **Inside your Computer (high color)** · ground #A8C8A8 · 1j01/98@52451052 `desktop/Themes/Windows Official/Inside your Computer (high color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Abadi MT Condensed Light)
 
 
 ### `plus-windows-98`
 
 **Windows 98 (256 color)** · ground #B4C3DC · 1j01/98@52451052 `desktop/Themes/Windows Official/Windows 98 (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: News Gothic MT)
 
 
 ### `plus-nature`
 
 **Nature (high color)** · ground #D8C0A0 · 1j01/98@52451052 `desktop/Themes/Windows Official/Nature (high color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Copperplate Gothic Light)
 
 
 ### `plus-the-golden-era`
 
 **The Golden Era (high color)** · ground #B8C8B8 · 1j01/98@52451052 `desktop/Themes/Windows Official/The Golden Era (high color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: Century Gothic)
 
 
 ### `plus-sports`
 
 **Sports (256 color)** · ground #B0E0A0 · 1j01/98@52451052 `desktop/Themes/Windows Official/Sports (256 color).theme`
 
-Display tier: high-colour
+Display tier: high-colour · Face: ms-sans-serif (the source's menu font: OCR A Extended)
 
 
 ## KDE 3.5 colour schemes, as Trinity's tdebase carries them (relief by KDE 3's own rule at each scheme's contrast)

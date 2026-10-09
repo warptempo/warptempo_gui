@@ -3514,7 +3514,7 @@ struct SettingsPopupItem {
 // files — no list could show; it LEFT WITH ITS KEY when every chrome's
 // colors were compiled in (architect 2026-10-08, theme_file.h). No theme
 // file ships now: the catalog's entries are the built-in SCHEMES, compiled
-// from it by tools/theme_catalog/gen_theme_files.py (103 since 2026-10-09,
+// from it by tools/theme_catalog/gen_theme_files.py (104 since 2026-10-09,
 // palette_file.h), chosen in the color picker.
 //
 // `Chrome` JOINED 2026-10-07 (architect, the second vocabulary), the last row

@@ -151,3 +151,123 @@ def parse_theme(path):
         cols[m.group(1)] = rgb
     dn = re.search(r'^DisplayName=(.*)$', txt, re.M)
     return (dn.group(1).strip() if dn else None), cols
+
+
+# THE SCHEMES' MENU FONTS (architect 2026-10-09: the face follows the scheme, as a Windows Appearance scheme carries
+# its font): each source's NONCLIENTMETRICS records five LOGFONTs — the caption, the small caption, the MENU, the status
+# bar and the message box — and the scheme's face tag is read off the MENU font, the face of the chrome's body text
+# (the menus, the status line, the dialogs' words), which is what the product's body face sets; the caption's face
+# (Tahoma bold in Windows 2000's Brick, Times New Roman in its Rose) is the title's alone and not read. The face name is
+# the LOGFONT's lfFaceName up to its first NUL (the bytes past it are the dialog's leftovers).
+#   Windows 2000's hive (SCHEMEDATA, parse_hive_schemes): NONCLIENTMETRICSW after the 4-byte header — cbSize and five
+#     ints (24 bytes), lfCaptionFont (LOGFONTW, 92: 28 bytes of fields, then WCHAR lfFaceName[32]), two ints,
+#     lfSmCaptionFont, two ints, then lfMenuFont: its face at 4 + 24 + 92 + 8 + 92 + 8 + 28 = 256, UTF-16LE.
+#   Windows 95's shell2.inf (parse_win95_schemes): the same order in LOGFONTA (60: 28 bytes, then CHAR[32]) after a
+#     2-byte version and NONCLIENTMETRICS' cbSize and five ints — lfMenuFont's face at 2 + 24 + 60 + 8 + 60 + 8 + 28 =
+#     190, ANSI (the CD's captions, menus, status and message faces sit at 54, 122, 190, 250 and 310).
+#   A .theme file's [Metrics] NonclientMetrics= (NONCLIENTMETRICSA, its 340 bytes as decimal numbers): lfMenuFont's
+#     face at 24 + 60 + 8 + 60 + 8 + 28 = 188, ANSI.
+HIVE_MENU_FACE = 4 + 24 + 92 + 8 + 92 + 8 + 28
+W95_MENU_FACE = 2 + 24 + 60 + 8 + 60 + 8 + 28
+THEME_MENU_FACE = 24 + 60 + 8 + 60 + 8 + 28
+
+
+def _face_a(bs, off):
+    return bs[off:off + 32].split(b'\0')[0].decode('latin-1')
+
+
+def _hex_values(path, pattern, flags_text):
+    """The Appearance\\Schemes values of an INF (continued lines joined) -> {[Strings] name: bytes}."""
+    txt = open(path, encoding='latin-1').read()
+    strings = dict(re.findall(r'^(\w+)\s*=\s*"([^"]*)"\s*$', txt, re.M))
+    lines = txt.splitlines()
+    out = {}
+    i = 0
+    while i < len(lines):
+        m = re.match(pattern, lines[i])
+        i += 1
+        if not m: continue
+        body = m.group(2)
+        while body.rstrip().endswith('\\'):
+            if i >= len(lines): die(path, f'scheme {m.group(1)} runs past the end of the file')
+            body = body.rstrip()[:-1] + lines[i].strip(); i += 1
+        if m.group(1) not in strings: die(path, f'scheme {m.group(1)} has no [Strings] name')
+        out[strings[m.group(1)]] = bytes(int(x.strip(), 16) for x in body.split(','))
+    if not out: die(path, f'no {flags_text} Appearance\\Schemes values')
+    return out
+
+
+def parse_hive_scheme_fonts(path):
+    r"""-> {scheme name: menu font face}: a Windows setup hive's Appearance\Schemes values (parse_hive_schemes' blobs),
+    each value's lfMenuFont face (HIVE_MENU_FACE)."""
+    out = {}
+    for name, bs in _hex_values(path, r'^HKCU,"Control Panel\\Appearance\\Schemes","%(\w+)%",0x00030001,(.*)$',
+                                'hive').items():
+        if len(bs) != SCHEME_BYTES: die(path, f'scheme {name!r} is {len(bs)} bytes, not {SCHEME_BYTES}')
+        face = bs[HIVE_MENU_FACE:HIVE_MENU_FACE + 64].decode('utf-16le').split('\0')[0]
+        if not face: die(path, f'scheme {name!r} names no menu font')
+        out[name] = face
+    return out
+
+
+def parse_win95_scheme_fonts(path):
+    r"""-> {scheme name: menu font face}: a Windows 95 shell2.inf's Appearance\Schemes values (parse_win95_schemes'
+    blobs), each value's lfMenuFont face (W95_MENU_FACE)."""
+    out = {}
+    for name, bs in _hex_values(path, r'^HKCU,"Control Panel\\Appearance\\Schemes",%(\w+)%,1,(.*)$',
+                                'shell2.inf').items():
+        if len(bs) != W95_SCHEME_BYTES: die(path, f'scheme {name!r} is {len(bs)} bytes, not {W95_SCHEME_BYTES}')
+        face = _face_a(bs, W95_MENU_FACE)
+        if not face: die(path, f'scheme {name!r} names no menu font')
+        out[name] = face
+    return out
+
+
+def parse_theme_menu_font(path):
+    """-> the menu font face of a .theme file's [Metrics] NonclientMetrics= (THEME_MENU_FACE), or None when the file
+    carries no NonclientMetrics line (the XP saved schemes of xp_classic_zkedem record colours alone)."""
+    txt = open(path, encoding='latin-1').read()
+    m = re.search(r'^NonclientMetrics=([\d ]+?)\s*$', txt, re.M)
+    if not m: return None
+    bs = bytes(int(x) for x in m.group(1).split())
+    if len(bs) < THEME_MENU_FACE + 32: die(path, f'NonclientMetrics is {len(bs)} bytes')
+    face = _face_a(bs, THEME_MENU_FACE)
+    if not face: die(path, 'NonclientMetrics names no menu font')
+    return face
+
+
+def read_png_rgb(path):
+    """-> (width, height, rows): an 8-bit RGB, non-interlaced PNG's pixels as rows of (r, g, b) tuples, through zlib and
+    the five PNG filters (the PNG specification's section 9), the standard library alone; any other PNG kind is a
+    one-line hard fail (the inputs are pinned captures)."""
+    import struct, zlib
+    data = open(path, 'rb').read()
+    if data[:8] != b'\x89PNG\r\n\x1a\n': die(path, 'not a PNG')
+    pos, idat, ihdr = 8, b'', None
+    while pos < len(data):
+        n, kind = struct.unpack('>I4s', data[pos:pos + 8])
+        body = data[pos + 8:pos + 8 + n]
+        if kind == b'IHDR': ihdr = struct.unpack('>IIBBBBB', body)
+        elif kind == b'IDAT': idat += body
+        pos += 12 + n
+    if ihdr is None: die(path, 'no IHDR')
+    w, h, depth, ctype, _, _, interlace = ihdr
+    if (depth, ctype, interlace) != (8, 2, 0): die(path, f'not an 8-bit RGB non-interlaced PNG {ihdr}')
+    raw, stride, bpp = zlib.decompress(idat), w * 3, 3
+    rows, prev = [], bytearray(stride)
+    for y in range(h):
+        f, line = raw[y * (stride + 1)], bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+        for x in range(stride):
+            a = line[x - bpp] if x >= bpp else 0
+            b = prev[x]
+            c = prev[x - bpp] if x >= bpp else 0
+            if f == 1: line[x] = (line[x] + a) & 255
+            elif f == 2: line[x] = (line[x] + b) & 255
+            elif f == 3: line[x] = (line[x] + (a + b) // 2) & 255
+            elif f == 4:
+                p = a + b - c; pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+            elif f != 0: die(path, f'row {y}: filter {f}')
+        rows.append([tuple(line[i:i + 3]) for i in range(0, stride, 3)])
+        prev = line
+    return w, h, rows

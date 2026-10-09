@@ -3459,8 +3459,9 @@ int gui_main(const char* argument) {
     // PER-PROCESS BESIDES THESE, by inventory: the two signal dispositions,
     // the renderer's file-scope scale (set_gui_scale_percent), the text
     // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),
-    // the bottom row's clock metrics memo (keyed on the text size, not the
-    // piece), the modal session-id counter (text_editor::next_session_id —
+    // the bottom row's clock metrics memo (keyed on the text size and the
+    // live face set, not the piece), the live scheme's face tag (gui_font.h,
+    // installed with the palette), the modal session-id counter (text_editor::next_session_id —
     // monotonic for the process, so no id repeats across reopens), the strict
     // load's scratch serial (history_diff.cpp), and on Android the glue
     // pointer g_android_app and the stdio routing. Every other static in the

@@ -1384,6 +1384,15 @@ void GuiColorPicker::install_live_words(
     // BOUND DRAWING): a bound glyph wears its surface's text role, which the
     // twelve may have moved; the drawings refill lazily in the new colors.
     // The fifteen touch no icon.
+    // A CHANGED FACE TAG RIDES THE SAME BRANCH (2026-10-09: the face follows
+    // the scheme, GuiChromePick::face, live under the windows chrome —
+    // gui_live_face_set, gui_font.h): the tag is part of the pick, so a scheme
+    // whose tag differs is a changed pick, the whole surface is damaged, and
+    // every text is shaped afresh at the next paint — the scaled fonts and
+    // the time-field memo key the live set, the lanes cannot move
+    // (gui_font.h's same_lanes), and nothing else holds a shaped run or a
+    // width across frames (the flag cache rebuilds on the generation the
+    // install bumps; re-grepped 2026-10-09).
     if (scheme != chrome_before) {
         icons::drop_bound_faces();
         viewport.invalidate_surface();

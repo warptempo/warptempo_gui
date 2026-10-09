@@ -217,7 +217,9 @@ struct ChromeSpec {
     // (effective_scheme_name, 2026-10-08 ~18:15), which carries no keys
     // under this chrome: the compiled theme exactly.
     const char*        default_palette;
-    // The vocabulary's text: the faces, their metrics and tracking (gui_font.h).
+    // The vocabulary's text: the faces, their metrics and tracking (gui_font.h)
+    // — its OWN set; under windows-2000 the live scheme's face tag may choose
+    // the MS Sans Serif set in its place (gui_live_face_set, 2026-10-09).
     const GuiFaceSet*  face_set;
     // THE CAPTION, the top strip's lane 0, in Windows px (render.h's caption
     // block, where every element's rule stands): the lane's height; the

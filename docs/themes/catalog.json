@@ -384,7 +384,12 @@
    "notes": [
     "xp_classic_zkedem brick.theme (\"Brick\") differs on MenuHilight #8D8961 (here #008080)",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/Brick_classic8.theme (\"Brick\") differs on MenuHilight #000000 (here #008080)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Brick\""
+   }
   },
   {
    "key": "windows-eggplant",
@@ -472,7 +477,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/eggplant_classic8.theme (\"Eggplant\") differs on MenuHilight #000000 (here #588078)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Times New Roman",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Eggplant\""
+   }
   },
   {
    "key": "windows-lilac",
@@ -560,7 +570,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/lilac_classic8.theme (\"Lilac\") differs on MenuHilight #000000 (here #5A4EB1)"
-   ]
+   ],
+   "font": {
+    "face": "tahoma",
+    "named": "Tahoma",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Lilac\""
+   }
   },
   {
    "key": "windows-maple",
@@ -648,7 +663,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/maple_classic8.theme (\"Maple\") differs on MenuHilight #000000 (here #C6A646)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Maple\""
+   }
   },
   {
    "key": "windows-marine",
@@ -737,7 +757,12 @@
    "notes": [
     "xp_classic_zkedem marine.theme names it \"Marine (high color)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/marine_classic8.theme (\"Marine\") differs on MenuHilight #000000 (here #000080)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Marine (high color)\""
+   }
   },
   {
    "key": "windows-plum",
@@ -826,7 +851,12 @@
    "notes": [
     "xp_classic_zkedem plum.theme names it \"Plum (high color)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/plum_classic8.theme (\"Plum\") differs on MenuHilight #000000 (here #008080)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Plum (high color)\""
+   }
   },
   {
    "key": "windows-pumpkin",
@@ -914,7 +944,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/pumpkin_classic8.theme (\"Pumpkin\") differs on MenuHilight #000000 (here #800080)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Pumpkin (large)\""
+   }
   },
   {
    "key": "windows-rainy-day",
@@ -1002,7 +1037,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/rainyday_classic8.theme (\"Rainy Day\") differs on MenuHilight #000000 (here #4F657D)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Rainy Day\""
+   }
   },
   {
    "key": "windows-rose",
@@ -1090,7 +1130,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/rose_classic8.theme (\"Rose\") differs on MenuHilight #000000 (here #9F6070)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Rose\""
+   }
   },
   {
    "key": "windows-slate",
@@ -1178,7 +1223,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/slate_classic8.theme (\"Slate\") differs on MenuHilight #000000 (here #558097)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Slate\""
+   }
   },
   {
    "key": "windows-storm",
@@ -1266,7 +1316,12 @@
    "display_tier": "vga",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/storm_classic8.theme (\"Storm\") differs on MenuHilight #000000 (here #800080)"
-   ]
+   ],
+   "font": {
+    "face": "tahoma",
+    "named": "Tahoma",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Storm (VGA)\""
+   }
   },
   {
    "key": "windows-teal",
@@ -1355,7 +1410,12 @@
    "notes": [
     "xp_classic_zkedem teal.theme names it \"Teal (VGA)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/teal_classic8.theme (\"Teal\") differs on MenuHilight #000000 (here #008080)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Teal (VGA)\""
+   }
   },
   {
    "key": "windows-wheat",
@@ -1443,7 +1503,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/wheat_classic8.theme (\"Wheat\") differs on MenuHilight #000000 (here #808000)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Wheat\""
+   }
   },
   {
    "key": "windows-red-white-and-blue",
@@ -1533,7 +1598,12 @@
     "xp_classic_zkedem redwhiteblue.theme names it \"Red, White, and Blue (VGA)\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/redbluewhite_classic8.theme (\"Red, Blue & White\") differs on MenuHilight #000000 (here #800000)",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/redbluewhite_classic8.theme names it \"Red, Blue & White\""
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Times New Roman",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Red, White, and Blue (VGA)\""
+   }
   },
   {
    "key": "windows-desert",
@@ -1613,7 +1683,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/desert_classic8.theme (\"Desert\") differs on MenuHilight #000000 (here #008080)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Desert\""
+   }
   },
   {
    "key": "windows-spruce",
@@ -1693,7 +1768,12 @@
    "display_tier": "high-colour",
    "notes": [
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/spruce_classic8.theme (\"Spruce\") differs on MenuHilight #000000 (here #599764)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Spruce\""
+   }
   },
   {
    "key": "windows-95-standard",
@@ -1770,7 +1850,12 @@
     "the CD names it \"Windows Standard\"; its \"Windows Standard (large)\" and \"(extra large)\" are the same 25 values",
     "the sources disagree on ButtonLight (COLOR_3DLIGHT): the CD records DFDFDF, as the Windows 95 retail screen captures (Toasty Tech: a window frame's outer top line) show it; Windows 98's Windows Default.theme and windows-98-standard's records (Windows 2000's and XP's \"Windows Classic\") record C0C0C0 (the face), and the early Windows 95 beta captures draw no 3DLight line",
     "Windows 98's Windows Default.theme records the same bytes but for ButtonLight #C0C0C0 (here #DFDFDF); a flat caption (no Gradient keys)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "MS Sans Serif",
+    "from": "lfMenuFont of the Windows 95 CD's shell2.inf, Appearance\\Schemes \"Windows Standard\""
+   }
   },
   {
    "key": "windows-95-maple",
@@ -1846,7 +1931,12 @@
    "notes": [
     "the CD names it \"Maple\"; the Windows 2000 entry windows-maple (ReactOS, XP and Windows 2000's own hive agree) differs on ActiveTitle #C6A646 (there #800000), AppWorkspace #F2ECD7 (there #C6A646), InactiveTitle #A0A0A4 (there #C6A646); the other values equal it",
     "no Gradient, MenuHilight or MenuBar key (Windows 95 has none): a flat caption"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "MS Sans Serif",
+    "from": "lfMenuFont of the Windows 95 CD's shell2.inf, Appearance\\Schemes \"Maple\""
+   }
   },
   {
    "key": "windows-95-wheat",
@@ -1922,7 +2012,12 @@
    "notes": [
     "the CD names it \"Wheat\"; the Windows 2000 entry windows-wheat (ReactOS, XP and Windows 2000's own hive agree) differs on AppWorkspace #EEEED0 (there #BCBC41); the other values equal it",
     "no Gradient, MenuHilight or MenuBar key (Windows 95 has none): a flat caption"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "MS Sans Serif",
+    "from": "lfMenuFont of the Windows 95 CD's shell2.inf, Appearance\\Schemes \"Wheat\""
+   }
   },
   {
    "key": "windows-95-marine",
@@ -1998,7 +2093,12 @@
    "notes": [
     "the CD names it \"Marine (high color)\"; the Windows 2000 entry windows-marine (ReactOS, XP and Windows 2000's own hive agree) differs on TitleText #C0C0C0 (there #FFFFFF); the other values equal it",
     "no Gradient, MenuHilight or MenuBar key (Windows 95 has none): a flat caption"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "MS Sans Serif",
+    "from": "lfMenuFont of the Windows 95 CD's shell2.inf, Appearance\\Schemes \"Marine (high color)\""
+   }
   },
   {
    "key": "windows-95-storm",
@@ -2074,7 +2174,12 @@
    "notes": [
     "the CD names it \"Storm (VGA)\"; the Windows 2000 entry windows-storm (ReactOS, XP and Windows 2000's own hive agree) differs on InactiveTitleText #000000 (there #C0C0C0); the other values equal it",
     "no Gradient, MenuHilight or MenuBar key (Windows 95 has none): a flat caption"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Arial",
+    "from": "lfMenuFont of the Windows 95 CD's shell2.inf, Appearance\\Schemes \"Storm (VGA)\""
+   }
   },
   {
    "key": "windows-95-rose",
@@ -2150,7 +2255,12 @@
    "notes": [
     "the CD names it \"Rose\"; the Windows 2000 entry windows-rose (ReactOS, XP and Windows 2000's own hive agree) differs on InactiveTitleText #000000 (there #7D7D7D); the other values equal it",
     "no Gradient, MenuHilight or MenuBar key (Windows 95 has none): a flat caption"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "MS Sans Serif",
+    "from": "lfMenuFont of the Windows 95 CD's shell2.inf, Appearance\\Schemes \"Rose\""
+   }
   },
   {
    "key": "windows-95-plum",
@@ -2226,7 +2336,12 @@
    "notes": [
     "the CD names it \"Plum (high color)\"; the Windows 2000 entry windows-plum (ReactOS, XP and Windows 2000's own hive agree) differs on Hilight #284848 (there #008080), TitleText #D8D0C8 (there #FFFFFF); the other values equal it",
     "no Gradient, MenuHilight or MenuBar key (Windows 95 has none): a flat caption"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "MS Sans Serif",
+    "from": "lfMenuFont of the Windows 95 CD's shell2.inf, Appearance\\Schemes \"Plum (high color)\""
+   }
   },
   {
    "key": "windows-98-standard",
@@ -2327,7 +2442,12 @@
     "Windows 2000's setup hive names it \"Windows Classic\" (Appearance\\Schemes)",
     "ReactOS records it as \"ReactOS Classic\"",
     "Windows 98's Windows Default.theme (its default scheme) records the same bytes, but for Background #008080 (here #3A6EA5), and no Gradient key (the caption's two ends are Windows 2000's and XP's records of the scheme)"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Microsoft Sans Serif",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Windows Classic\""
+   }
   },
   {
    "key": "windows-2000-standard",
@@ -2436,7 +2556,104 @@
     "xp_classic_zkedem standard.theme names it \"Windows Standard\"",
     "xp_classic_8 desktop/Themes/classicthemes8/Themes/winxp_classic8.theme names it \"Windows XP Classic\"",
     "ReactOS records it as \"ReactOS Standard\""
-   ]
+   ],
+   "font": {
+    "face": "tahoma",
+    "named": "Tahoma",
+    "from": "lfMenuFont of Windows 2000's setup hive, Appearance\\Schemes \"Windows Standard\""
+   }
+  },
+  {
+   "key": "windows-me-standard",
+   "name": "Windows Me Standard",
+   "family": "windows",
+   "provenance": {
+    "sources": [
+     {
+      "project": "guidebookgallery.org screenshots of WordPad under Windows Me and Windows 2000 Professional (the architect's copies, 1:1)",
+      "file": "winme.png",
+      "what": "WordPad, Windows Me, the classic desktop (600 x 411)",
+      "sha256": "7d578f4efca7379d51c8b975e816528895e196f425f944a80838868ec9d83534"
+     },
+     {
+      "project": "guidebookgallery.org screenshots of WordPad under Windows Me and Windows 2000 Professional (the architect's copies, 1:1)",
+      "file": "win2000pro.png",
+      "what": "WordPad, Windows 2000 Professional (600 x 411)",
+      "sha256": "92cbef51a3ba92b5a3dc6dc7f9cf8f93fa0fd53de9cb04225a176f9489287e0c"
+     },
+     {
+      "project": "Windows 2000 Professional SP3 (Microsoft), the setup's default-user hive, read as data from the retail disc image",
+      "file": "I386/HIVEDEF.INF",
+      "item": "win_2000_professional_sp3_english_202605",
+      "image": "Windows2000ProfessionalSP3.iso",
+      "image_sha1": "51b9a010af4b6243ff1ccbc4b4fb41725240f17c",
+      "sha1": "4cd963825ea971ae1d667c593071c1d62964d050",
+      "url": "https://archive.org/download/win_2000_professional_sp3_english_202605/Windows2000ProfessionalSP3.iso/I386%2FHIVEDEF.INF"
+     }
+    ]
+   },
+   "raw": {
+    "ActiveBorder": "#D4D0C8",
+    "ActiveTitle": "#0A246A",
+    "AppWorkSpace": "#808080",
+    "Background": "#3A6EA5",
+    "ButtonAlternateFace": "#B5B5B5",
+    "ButtonDkShadow": "#404040",
+    "ButtonFace": "#D4D0C8",
+    "ButtonHilight": "#FFFFFF",
+    "ButtonLight": "#D4D0C8",
+    "ButtonShadow": "#808080",
+    "ButtonText": "#000000",
+    "GradientActiveTitle": "#A6CAF0",
+    "GradientInactiveTitle": "#C0C0C0",
+    "GrayText": "#808080",
+    "Hilight": "#0A246A",
+    "HilightText": "#FFFFFF",
+    "HotTrackingColor": "#000080",
+    "InactiveBorder": "#D4D0C8",
+    "InactiveTitle": "#808080",
+    "InactiveTitleText": "#D4D0C8",
+    "InfoText": "#000000",
+    "InfoWindow": "#FFFFE1",
+    "Menu": "#D4D0C8",
+    "MenuText": "#000000",
+    "Scrollbar": "#D4D0C8",
+    "TitleText": "#FFFFFF",
+    "Window": "#FFFFFF",
+    "WindowFrame": "#000000",
+    "WindowText": "#000000"
+   },
+   "roles": {
+    "ground": "#D4D0C8",
+    "label": "#000000",
+    "bevel_hilight": "#FFFFFF",
+    "bevel_light": "#D4D0C8",
+    "bevel_shadow": "#808080",
+    "bevel_dkshadow": "#404040",
+    "selected_fill": "#0A246A",
+    "selected_text": "#FFFFFF",
+    "info_ground": "#FFFFE1",
+    "info_text": "#000000",
+    "field_ground": "#FFFFFF",
+    "field_text": "#000000",
+    "disabled_text": "#808080",
+    "title_active": "#0A246A",
+    "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
+   "display_tier": "high-colour",
+   "notes": [
+    "Windows Me ships Windows 2000's \"Windows Standard\" colours under MS Sans Serif: the bytes are Windows 2000's setup hive's (HKCU \"Control Panel\\Colors\"), windows-2000-standard's exactly",
+    "the two captures (WordPad at identical metrics) both show ButtonFace #D4D0C8, ButtonHilight #FFFFFF, ButtonShadow #808080, ButtonDkShadow #404040, ActiveTitle #0A246A, GradientActiveTitle #A6CAF0 byte for byte; the caption's interior ramp differs by a few levels between them (column 500: 97BAE2 under Me, 99BCE5 under 2000), the two systems' gradient arithmetic, not the scheme",
+    "the face: the title's first capital stands 9 rows in the Me capture and 8 in the Windows 2000 one, and the menu bar's capitals likewise (rows 27..35 against 28..35): MS Sans Serif 8 against Tahoma 8"
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "MS Sans Serif",
+    "from": "measured on the winme_captures: the cap 9 rows (MS Sans Serif 8) where Windows 2000's Tahoma 8 stands 8"
+   }
   },
   {
    "key": "plus-baseball",
@@ -2501,7 +2718,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "MS Sans Serif",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-dangerous-creatures",
@@ -2568,7 +2790,12 @@
    "display_tier": "high-colour",
    "notes": [
     "1j01/98 also carries \"Copy of Dangerous Creatures (256 color).theme\", byte-identical; not a second entry"
-   ]
+   ],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Arial",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-inside-your-computer",
@@ -2633,7 +2860,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Abadi MT Condensed Light",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-jungle",
@@ -2698,7 +2930,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Tempus Sans ITC",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-leonardo-da-vinci",
@@ -2763,7 +3000,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Book Antiqua",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-more-windows",
@@ -2828,7 +3070,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "News Gothic MT",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-mystery",
@@ -2893,7 +3140,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Calisto MT",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-nature",
@@ -2958,7 +3210,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Copperplate Gothic Light",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-science",
@@ -3023,7 +3280,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Lucida Sans Unicode",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-space",
@@ -3088,7 +3350,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "OCR A Extended",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-sports",
@@ -3153,7 +3420,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "OCR A Extended",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-the-60s-usa",
@@ -3218,7 +3490,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Lucida Sans",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-the-golden-era",
@@ -3283,7 +3560,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Century Gothic",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-travel",
@@ -3348,7 +3630,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Comic Sans MS",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-underwater",
@@ -3413,7 +3700,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "Haettenschweiler",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "plus-windows-98",
@@ -3478,7 +3770,12 @@
     "id": "windows-dialog"
    },
    "display_tier": "high-colour",
-   "notes": []
+   "notes": [],
+   "font": {
+    "face": "ms-sans-serif",
+    "named": "News Gothic MT",
+    "from": "lfMenuFont of its .theme's [Metrics] NonclientMetrics"
+   }
   },
   {
    "key": "kde3-atlas-green",

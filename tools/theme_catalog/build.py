@@ -27,6 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from sources import SOURCES, REPO, local_path, provenance, LOCAL_SOURCES, local_file, local_provenance
 from parse_windows import parse_hivedef, parse_hive_colors, parse_hive_schemes, parse_win95_schemes, parse_theme
+from parse_windows import parse_hive_scheme_fonts, parse_win95_scheme_fonts, parse_theme_menu_font, read_png_rgb
 from parse_kde import parse_kcsrc
 from parse_cde import parse_dp
 from parse_gtkrc import parse_gtkrc, gtkrc_color, expr_text, parse_metacity, metacity_color, frame_piece, draw_ops_flat
@@ -177,6 +178,49 @@ def win95_file():
     return p
 
 
+# THE SCHEME'S FACE TAG (architect 2026-10-09: "the face follows the scheme", as a Windows Appearance scheme carries its
+# font): every Windows-family entry's `font` record is READ FROM ITS OWN SOURCE — the menu font its scheme records
+# (parse_windows.py's MENU FONTS block: the face of the chrome's body text) — and tagged for the product's two Windows
+# faces: `tahoma` where the source names Tahoma; `ms-sans-serif` where it names MS Sans Serif or its TrueType twin
+# Microsoft Sans Serif, AND FOR EVERY OTHER FACE (Arial, Times New Roman, the Plus! themes' display faces), the MS
+# Sans Serif set (FreeSans, the Helvetica stand-in) being the product's one other Windows face. The record keeps the
+# face the source named and where it was read. Windows 2000's own entries read Windows 2000's hive
+# (parse_hive_scheme_fonts), the Windows 95 CD's its shell2.inf, the Plus! themes their .theme's NonclientMetrics,
+# windows-me-standard the captures (the cap measured, winme_captures). No source of the family lacks a font, so no
+# era rule is needed; a family whose source names no Windows font (KDE 3, CDE, GNOME 2) carries no record, and the
+# generator gives it the inert tahoma (gen_theme_files.py's head).
+def font_record(named, where):
+    return {'face': 'tahoma' if named == 'Tahoma' else 'ms-sans-serif', 'named': named, 'from': where}
+
+
+# THE WINDOWS ME CAPTURES (sources.py winme_captures; architect 2026-10-09): one capture px is one Windows px, WordPad at
+# identical metrics under both systems. WINME_SAMPLES: a pixel per value the captures show, in Windows' key names —
+# the menu bar's ground, the frame's outer light column, its inner and outer dark right columns, the caption's first
+# and last gradient columns. WINME_TITLE_BOX: the caption rows and the columns of the title's first capital ("S" of
+# SCRIPT, "D" of Document), whose white rows are the bold face's cap.
+WINME_SAMPLES = {'ButtonFace': (300, 30), 'ButtonHilight': (1, 200), 'ButtonShadow': (598, 200),
+                 'ButtonDkShadow': (599, 200), 'ActiveTitle': (4, 4), 'GradientActiveTitle': (595, 4)}
+WINME_TITLE_BOX = (range(3, 18), range(24, 32))
+
+
+def winme_captures():
+    """-> {file: rows}: the two captures, each sha256 checked (a different byte is a hard fail)."""
+    out = {}
+    for f, (_, want) in LOCAL_SOURCES['winme_captures']['files'].items():
+        p = local_file('winme_captures', f)
+        if not os.path.exists(p): raise SystemExit(f'build: {p} is missing (sources.py LOCAL_SOURCES winme_captures)')
+        got = hashlib.sha256(open(p, 'rb').read()).hexdigest()
+        if got != want: raise SystemExit(f'build: {p} sha256 {got}, pinned {want}')
+        out[f] = read_png_rgb(p)[2]
+    return out
+
+
+def title_cap_rows(rows):
+    """The number of caption rows holding the title's white in WINME_TITLE_BOX: its first capital's height."""
+    ys, xs = WINME_TITLE_BOX
+    return sum(1 for y in ys if any(rows[y][x] == (255, 255, 255) for x in xs))
+
+
 def diff_keys(a, b):
     return sorted(k for k in set(a) & set(b) if a[k] != b[k])
 
@@ -243,6 +287,18 @@ def windows_entries():
 
     hv2k = 'I386/HIVEDEF.INF'
     w2k_schemes = parse_hive_schemes(local_path('win2000_hivedef', hv2k))
+    w2k_fonts = parse_hive_scheme_fonts(local_path('win2000_hivedef', hv2k))
+
+    def hive_font(name):
+        r"""The font record of the Windows 2000 entry `name` off its hive's Appearance\Schemes value: the value whose
+        name is `name` once its (VGA) / (high color) tag is dropped, else `name (large)` (the hive's only Pumpkin)."""
+        hits = [n for n in w2k_fonts if xp_name(n) == name] or [n for n in w2k_fonts if n == name + ' (large)']
+        if len(hits) != 1: raise SystemExit(f'build: Windows 2000\'s hive has {hits} for {name!r}')
+        return font_record(w2k_fonts[hits[0]], f'lfMenuFont of Windows 2000\'s setup hive, Appearance\\Schemes '
+                                               f'"{hits[0]}"')
+
+    # the Windows 2000 schemes above (ReactOS's corroborated ones, Desert and Spruce): their hive's own fonts
+    for e in out: e['font'] = hive_font(e['name'])
 
     def folded_in(name, cols, provs, notes):
         """The ReactOS scheme folded into `name`: -> its provenance appended, its label and any raw difference noted."""
@@ -267,6 +323,11 @@ def windows_entries():
     # MenuHilight or MenuBar), its recorded bytes the colour array of the 492-byte value, kept in the provenance as the
     # INF spells them.
     w95 = parse_win95_schemes(win95_file())
+    w95_fonts = parse_win95_scheme_fonts(win95_file())
+
+    def w95_font(scheme):
+        return font_record(w95_fonts[scheme], f'lfMenuFont of the Windows 95 CD\'s shell2.inf, Appearance\\Schemes '
+                                              f'"{scheme}"')
     w95_prov = local_provenance('win95_shell2inf', 'shell2.inf')
     accounted = set(WIN95_DIFFERENT) | set(WIN95_SAME) | set(WIN95_NOT_ENTRIES)
     if set(w95) != accounted:
@@ -295,6 +356,7 @@ def windows_entries():
         'Windows 98\'s Windows Default.theme records the same bytes but for ' + ', '.join(
             f'{k} {hx(c98[k])} (here {hx(cols[k])})' for k in d98) + '; a flat caption (no Gradient keys)']))
     out[-1]['corroborated'] = 0
+    out[-1]['font'] = w95_font('Windows Standard')
     by_key_now = {e['key']: e for e in out}
     for name, twin in WIN95_SAME.items():     # the byte-equal ones: equal on all 25 values to their entry
         t = by_key_now[twin]['raw']
@@ -314,6 +376,7 @@ def windows_entries():
             f'differs on ' + ', '.join(f'{k} {hx(cols[k])} (there {t[k]})' for k in d) + '; the other values equal it',
             'no Gradient, MenuHilight or MenuBar key (Windows 95 has none): a flat caption']))
         out[-1]['corroborated'] = 0
+        out[-1]['font'] = w95_font(name)
 
     # WINDOWS 98 STANDARD: Windows 98's default scheme, the C0C0C0 face under the navy-to-#1084D0 gradient caption.
     # Its bytes are XP's saved scheme (zkedem's classic.theme, saved from WEPOS 2009's Display Properties, DisplayName
@@ -337,6 +400,10 @@ def windows_entries():
     out.append(entry('windows', 'Windows 98 Standard', 'Windows 98 Standard', [provenance('xp_classic_zkedem', f)] + provs,
                      cols, notes=notes))
     out[-1]['corroborated'] = n_ok
+    # its face: Windows 2000's record of the scheme ("Windows Classic"), which Windows 98's Windows Default.theme agrees
+    # with (its NonclientMetrics' menu font MS Sans Serif)
+    out[-1]['font'] = hive_font('Windows Classic')
+    assert parse_theme_menu_font(local_path('win98_themes', f98)) == 'MS Sans Serif', f98
 
     # WINDOWS 2000 STANDARD (architect 2026-10-06, the chrome's theme and the compiled built-in): Windows 2000's own
     # default colours, its setup hive's HKCU "Control Panel\Colors", read off the retail disc image (sources.py
@@ -356,6 +423,39 @@ def windows_entries():
     out.append(entry('windows', 'Windows 2000 Standard', 'Windows 2000 Standard', [provenance('win2000_hivedef', hv2k)]
                      + provs, cols, notes=notes))
     out[-1]['corroborated'] = n_ok
+    out[-1]['font'] = hive_font('Windows Standard')
+    w2k_raw = out[-1]['raw']
+
+    # WINDOWS ME STANDARD (architect 2026-10-09): Windows Me's classic desktop is Windows 2000's chrome and Windows 2000
+    # Standard's colours set in MS Sans Serif — the face being the one difference, as his guidebookgallery captures of
+    # WordPad under the two systems show (sources.py winme_captures): Windows 2000 Standard's 29 bytes under the face
+    # tag ms-sans-serif. The captures are checked against those bytes value by value where they show one
+    # (WINME_SAMPLES), and the face is measured off them: the title's first capital stands 9 rows in the Me capture
+    # (MS Sans Serif 8's cap) and 8 in the Windows 2000 one (Tahoma 8's).
+    caps = winme_captures()
+    for f, rows in caps.items():
+        for k, (x, y) in WINME_SAMPLES.items():
+            if rows[y][x] != cols[k]:
+                raise SystemExit(f'build: {f} ({x}, {y}) is {hx(rows[y][x])}, not Windows 2000 Standard\'s {k} '
+                                 f'{hx(cols[k])}')
+    me_cap, w2k_cap = title_cap_rows(caps['winme.png']), title_cap_rows(caps['win2000pro.png'])
+    assert (me_cap, w2k_cap) == (9, 8), (me_cap, w2k_cap)
+    out.append(entry('windows', 'Windows Me Standard', 'Windows Me Standard',
+                     [local_provenance('winme_captures', 'winme.png'), local_provenance('winme_captures', 'win2000pro.png'),
+                      provenance('win2000_hivedef', hv2k)], cols, notes=[
+        'Windows Me ships Windows 2000\'s "Windows Standard" colours under MS Sans Serif: the bytes are Windows 2000\'s '
+        'setup hive\'s (HKCU "Control Panel\\Colors"), windows-2000-standard\'s exactly',
+        'the two captures (WordPad at identical metrics) both show ' + ', '.join(
+            f'{k} {hx(cols[k])}' for k in WINME_SAMPLES) + ' byte for byte; the caption\'s interior ramp differs by a few '
+        'levels between them (column 500: 97BAE2 under Me, 99BCE5 under 2000), the two systems\' gradient arithmetic, '
+        'not the scheme',
+        f'the face: the title\'s first capital stands {me_cap} rows in the Me capture and {w2k_cap} in the Windows 2000 '
+        'one, and the menu bar\'s capitals likewise (rows 27..35 against 28..35): MS Sans Serif 8 against Tahoma 8']))
+    out[-1]['corroborated'] = 0
+    out[-1]['font'] = {'face': 'ms-sans-serif', 'named': 'MS Sans Serif',
+                       'from': f'measured on the winme_captures: the cap {me_cap} rows (MS Sans Serif 8) where Windows '
+                               f'2000\'s Tahoma 8 stands {w2k_cap}'}
+    assert out[-1]['raw'] == w2k_raw
     by_key = {e['key']: e for e in out}
     for name, (twin, _) in REACTOS_ONLY.items():     # "role-identical": the roles the twin entry maps, byte for byte
         if twin and map_roles('windows', {k: hx(v) for k, v in ros_only[name].items()}) != by_key[twin]['roles']:
@@ -374,6 +474,9 @@ def windows_entries():
         words = re.sub(r' \((256|high) color\)$', '', stem)
         out.append(entry('windows-plus', words, stem, provenance('win98_themes', f), cols, notes=notes))
         out[-1]['corroborated'] = 0
+        face = parse_theme_menu_font(local_path('win98_themes', f))
+        if face is None: raise SystemExit(f'build: {f} carries no NonclientMetrics')
+        out[-1]['font'] = font_record(face, f'lfMenuFont of its .theme\'s [Metrics] NonclientMetrics')
     return out, sorted(ros_only)
 
 
@@ -1218,6 +1321,19 @@ def checks(entries):
         assert len(by[k]['raw']) == 25 and by[k]['family'] == 'windows', k
         assert sorted(x for x in by[k]['raw'] if by[k]['raw'][x] != by[twin]['raw'][x]) == diff, k
     for gone in ('windows-classic', 'windows-standard'): assert gone not in by, gone
+    # the face tags (architect 2026-10-09): every Windows-family entry carries one read off its source, and no other
+    # family does; Windows 2000 Standard names Tahoma, Windows Me Standard (right after it) is its bytes in MS Sans
+    # Serif, and the Windows 95 CD's and 98's defaults name MS Sans Serif
+    for e in entries:
+        assert ('font' in e) == (e['family'] in ('windows', 'windows-plus')), e['key']
+        if 'font' in e:
+            assert e['font']['face'] == ('tahoma' if e['font']['named'] == 'Tahoma' else 'ms-sans-serif'), e['key']
+    assert by['windows-2000-standard']['font']['face'] == 'tahoma'
+    at = keys.index('windows-2000-standard')
+    assert keys[at + 1] == 'windows-me-standard', keys[at:at + 2]
+    me = by['windows-me-standard']
+    assert me['raw'] == by['windows-2000-standard']['raw'] and me['font']['face'] == 'ms-sans-serif'
+    for k in ('windows-95-standard', 'windows-98-standard'): assert by[k]['font']['face'] == 'ms-sans-serif', k
     for d in DUPLICATES: assert d not in by, d
     assert sum(1 for e in entries if e['family'] == 'kde3') == KDE3_ENTRIES
     assert len(KDE_NOT_35['tde_kcs']) == 21

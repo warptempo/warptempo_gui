@@ -93,7 +93,11 @@ private:
 // own FT face, through the hb font cached on that scaled font (hb_font_of),
 // and append the glyphs to `run`; each glyph's cluster is its byte index into
 // the string. EVERY GLYPH'S ADVANCE TAKES THE TRACKING (gui_tracking_px,
-// gui_font.h) after the 26.6 conversion, the last included.
+// gui_font.h) after the 26.6 conversion, the last included, and A MATH
+// SIGN'S Y OFFSET TAKES ITS LIFT onto the hyphen's axis where the live set
+// lifts its signs (gui_sign_lift_px, gui_font.h — the MS Sans Serif set alone,
+// 2026-10-09: matched by glyph id after substitution, HarfBuzz's
+// up-positive sense, the advance untouched).
 void append_glyphs(const GuiFont& font, std::string_view utf8,
                    ShapedRun& run) {
     const double         tracking = gui_tracking_px(font);
@@ -125,7 +129,8 @@ void append_glyphs(const GuiFont& font, std::string_view utf8,
         // The byte index this glyph's cluster starts at (see ShapedGlyph).
         glyph.cluster      = infos[i].cluster;
         glyph.x_offset_px  = positions[i].x_offset / k26Dot6;
-        glyph.y_offset_px  = positions[i].y_offset / k26Dot6;
+        glyph.y_offset_px  = positions[i].y_offset / k26Dot6 +
+                             gui_sign_lift_px(font, glyph.glyph_index);
         glyph.x_advance_px = positions[i].x_advance / k26Dot6 + tracking;
         run.width_px += glyph.x_advance_px;
         run.glyphs.push_back(glyph);

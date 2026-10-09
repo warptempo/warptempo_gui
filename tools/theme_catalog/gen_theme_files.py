@@ -53,7 +53,13 @@
 # caption_active_gradient where the entry records one, else THE START (the flat caption), its TEXT
 # caption_active_text, and the inactive three the same off the inactive roles (roles.caption_roles); THE SELECTION =
 # the selected pair (roles.selected_pair: a CDE entry, which records none, its title_active under colour set 1's
-# foreground); THE FIELD = the field pair. THE DISPLAY NAME is the family's word, then the catalog name in Title Case
+# foreground); THE FIELD = the field pair; and THE FACE TAG (architect 2026-10-09: the face follows the scheme, as a
+# Windows Appearance scheme carries its font), the pick's thirteenth member — `GuiSchemeFace::MsSansSerif` where the
+# entry's `font` record says ms-sans-serif (build.py's font_record: the menu font its source records, Tahoma for
+# Tahoma and MS Sans Serif for every other face), `GuiSchemeFace::Tahoma` where it says tahoma, and the INERT Tahoma
+# for an entry with no record (KDE 3, CDE, GNOME 2: no Windows font; the windows chrome then wears its own face, and
+# clearlooks and cde never read the tag). WINDOWS ME STANDARD's twelve are checked equal to Windows 2000 Standard's
+# (its face the one difference; palette_file.cpp asserts the same). THE DISPLAY NAME is the family's word, then the catalog name in Title Case
 # (SCHEME_FAMILY_WORD, scheme_display_name): "Windows Rainy Day", "Plus Space" (the Plus! themes' colour-depth tag
 # dropped), "KDE 3 Storm", "CDE Northern Sky" (CDE's run-together names parted at their capitals); a name that
 # already opens with the family's word takes it once ("Windows 2000 Standard"), and the one GNOME 2 entry, the
@@ -184,6 +190,7 @@ SCHEME_KEYS = (('chrome_ground', 'ground'), ('chrome_text', 'label'),
                ('chrome_inactive_title_text', 'caption_inactive_text'),
                ('chrome_selection', 'selected_fill'), ('chrome_selection_text', 'selected_text'),
                ('chrome_field', 'field_ground'), ('chrome_field_text', 'field_text'))
+SCHEME_FACES = {'tahoma': 'GuiSchemeFace::Tahoma', 'ms-sans-serif': 'GuiSchemeFace::MsSansSerif'}
 SCHEME_FAMILY_WORD = {'windows': 'Windows', 'windows-plus': 'Plus', 'kde3': 'KDE 3', 'cde': 'CDE', 'gnome2': None}
 SCHEME_SMALL_WORDS = {'and', 'da', 'of'}   # Title Case keeps them lower inside a name ("Leonardo da Vinci")
 LINES_ROW = r'kGuiChromeLines\[\] = \{(.*?)\};'
@@ -208,6 +215,13 @@ def scheme_display_name(e):
     return f'{word} {name}'
 
 
+def scheme_face(e):
+    """One catalog entry -> its face tag's C++ enumerator (the head's rule)."""
+    face = e.get('font', {}).get('face', 'tahoma')
+    if face not in SCHEME_FACES: raise SystemExit(f'gen_theme_files: {e["key"]} names the face {face!r}')
+    return SCHEME_FACES[face]
+
+
 def scheme_row(e):
     """One catalog entry -> its kGuiChromeSchemes row (the head's rule)."""
     words = compiled_theme(e)
@@ -216,7 +230,7 @@ def scheme_row(e):
                  'caption_inactive_text', 'selected_fill', 'selected_text', 'field_ground', 'field_text'):
         if role not in named: raise SystemExit(f'gen_theme_files: {e["key"]} records no {role}')
     values = ', '.join(f'0x{words[role][1:]}' for _, role in SCHEME_KEYS)
-    return f'    {{"{e["key"]}", "{scheme_display_name(e)}", {{{values}}}}},\n'
+    return f'    {{"{e["key"]}", "{scheme_display_name(e)}", {{{values}, {scheme_face(e)}}}}},\n'
 
 
 def write_schemes_include(entries):
@@ -226,6 +240,11 @@ def write_schemes_include(entries):
                          'not SCHEME_KEYS')
     keys = [e['key'] for e in entries]
     names = [scheme_display_name(e) for e in entries]
+    by_key = {e['key']: e for e in entries}
+    me, w2k = by_key['windows-me-standard'], by_key[WIN2000]
+    if [compiled_theme(me)[r] for _, r in SCHEME_KEYS] != [compiled_theme(w2k)[r] for _, r in SCHEME_KEYS] or \
+            scheme_face(me) != SCHEME_FACES['ms-sans-serif'] or scheme_face(w2k) != SCHEME_FACES['tahoma']:
+        raise SystemExit('gen_theme_files: windows-me-standard is not windows-2000-standard\'s twelve in MS Sans Serif')
     for what, xs in (('key', keys), ('display name', names)):
         dup = sorted({x for x in xs if xs.count(x) > 1})
         if dup: raise SystemExit(f'gen_theme_files: duplicate scheme {what}s: {dup}')
@@ -235,9 +254,9 @@ def write_schemes_include(entries):
             raise SystemExit(f'gen_theme_files: the display name {n!r} is outside the palette name grammar')
     write(SCHEMES_INC, GENERATED +
           '// THE BUILT-IN SCHEMES (src/gui/palette_file.h\'s kGuiChromeSchemes, included in its initializer): every\n'
-          '// catalog entry in the catalog\'s order, its key, its display name and its twelve chrome keys in\n'
-          '// kGuiChromeLines\' order, the entry\'s recorded bytes (docs/themes/catalog.json) under the generator\'s\n'
-          '// rules; regenerate, never hand-edit.\n' +
+          '// catalog entry in the catalog\'s order, its key, its display name, its twelve chrome keys in\n'
+          '// kGuiChromeLines\' order and its face tag, the entry\'s recorded bytes and font\n'
+          '// (docs/themes/catalog.json) under the generator\'s rules; regenerate, never hand-edit.\n' +
           ''.join(scheme_row(e) for e in entries))
     return len(entries)
 

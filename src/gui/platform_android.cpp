@@ -2497,9 +2497,9 @@ namespace {
 // are: the template's projects_path, device_config_defaults above.)
 
 // LOAD THE PRODUCT'S FACES OUT OF THE APK, or die. The assets are the
-// repository's own font files — all four, both chrome vocabularies' sets,
-// whichever the config names (gui_font.h's kGuiFontFiles, in its order;
-// architect 2026-10-02, 2026-10-06 and 2026-10-07; build_apk.sh's asset
+// repository's own font files — every one, every face set's (gui_font.h's
+// kGuiFaceSets), whichever chrome and scheme the config names (gui_font.h's
+// kGuiFontFiles, in its order; architect 2026-10-02 to 2026-10-09; build_apk.sh's asset
 // step copies every name that list spells), and the abort below covers
 // each of them. This runs BEFORE gui_main reads the device config's
 // `chrome`, which is why the install measures every set's ems (its probe,

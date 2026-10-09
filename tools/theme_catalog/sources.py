@@ -105,7 +105,12 @@ def provenance(src, path):
 #   7z x tmp/W95_PLUS_AR.iso win95/PRECOPY1.CAB win95/PRECOPY2.CAB -o<scratch>
 #   7z x <scratch>/win95/PRECOPY1.CAB shell2.inf -otmp/theme_sources/win95_shell2inf
 # (7z needs both cabinets present to open the spanned set), the file read as data, nothing executed.
+# THE WINDOWS ME CAPTURES (architect 2026-10-09) are the third local source: his two guidebookgallery screenshots of
+# WordPad, under Windows Me and under Windows 2000 Professional, 1:1 (one capture px = one Windows px), kept in the
+# repository's gitignored tmp/ as he saved them and pinned by sha256 — read as data (build.py's read_png_rgb), for the
+# windows-me-standard entry's byte check and its cap measurement.
 SQUEEZE_FS = os.path.join(REPO, 'tmp', 'squeeze_fs', 'fs')
+CAPTURES_DIR = os.path.join(REPO, 'tmp')
 WIN95_SHELL2INF_DIR = os.path.join(SOURCES_DIR, 'win95_shell2inf')
 LOCAL_SOURCES = {
     'squeeze_live': dict(project='Debian 6.0.10 squeeze live (i386, GNOME desktop), the installed system read as data',
@@ -131,6 +136,13 @@ LOCAL_SOURCES = {
                             cabinet_next_sha256='bac1a80d253c87c8d9d3da14156280919caa319acf2d621e94acbe70c190e433',
                             files={'shell2.inf': ('Windows 95 OSR2 shell2.inf, dated 1996-08-24',
                                                   '3bd8069637f1bd5ab1ab13b27c9300446ed4ec4b240ddbfe044345e64535a8b4')}),
+    'winme_captures': dict(project='guidebookgallery.org screenshots of WordPad under Windows Me and Windows 2000 '
+                           'Professional (the architect\'s copies, 1:1)',
+                           captures=True,
+                           files={'winme.png': ('WordPad, Windows Me, the classic desktop (600 x 411)',
+                                                '7d578f4efca7379d51c8b975e816528895e196f425f944a80838868ec9d83534'),
+                                  'win2000pro.png': ('WordPad, Windows 2000 Professional (600 x 411)',
+                                                     '92cbef51a3ba92b5a3dc6dc7f9cf8f93fa0fd53de9cb04225a176f9489287e0c')}),
     'gtk2_rules': dict(project='gtk-engines 2.20.2 (GNOME), the Clearlooks engine and its support library',
                        tarball='gtk-engines-2.20.2.tar.bz2',
                        tarball_sha256='15b680abca6c773ecb85253521fa100dd3b8549befeecc7595b10209d62d66b5',
@@ -147,8 +159,10 @@ LOCAL_SOURCES = {
 
 
 def local_file(src, path):
-    """Where a local source's file is on the build host (squeeze_live's and win95_shell2inf's alone are read)."""
+    """Where a local source's file is on the build host (squeeze_live's, win95_shell2inf's and winme_captures' alone
+    are read)."""
     if src == 'win95_shell2inf': return os.path.join(WIN95_SHELL2INF_DIR, path)
+    if src == 'winme_captures': return os.path.join(CAPTURES_DIR, path)
     assert src == 'squeeze_live', src
     return os.path.join(SQUEEZE_FS, path)
 
@@ -158,6 +172,9 @@ def local_provenance(src, path):
     and URL, and for an image's file its package and its own sha256 (a squashfs image's file: the squashfs too; a
     cabinet image's file: the cabinet, its spanned continuation and their sha256s, the image having no URL)."""
     s = LOCAL_SOURCES[src]
+    if s.get('captures'):
+        what, sha = s['files'][path]
+        return {'project': s['project'], 'file': path, 'what': what, 'sha256': sha}
     if 'cabinet' in s:
         package, sha = s['files'][path]
         return {'project': s['project'], 'file': path, 'package': package, 'sha256': sha, 'image': s['image'],

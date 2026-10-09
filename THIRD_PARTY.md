@@ -7,7 +7,9 @@ laptop builds its own (`CMakeLists.txt`), the tablet's libraries are cross-built
 file is the list. Libraries the laptop's binary loads from the system at run time (cairo, HarfBuzz, FreeType, fftw,
 Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. The faces and the icons are data, not
 code: `fonts/README.md`, `assets/icons/tango/README.md`, `assets/icons/mist/README.md` and `assets/icons/breeze/README.md`
-carry their provenance and licence texts.
+carry their provenance and licence texts. The faces are compiled into `warptempo_gui` (and packed into the APK), among
+them GNU FreeFont's FreeSans and FreeSans Bold (20120503; GPL-3.0-or-later with the font exception, the texts in
+`fonts/LICENSE-FreeFont.txt`, since 2026-10-09); the repository distributes no binary.
 
 ## Both devices
 

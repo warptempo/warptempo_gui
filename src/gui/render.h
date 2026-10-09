@@ -454,6 +454,15 @@ GuiColor surface_text(GuiSurface surface);
 // are picked words, never a rule's white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
 // absent ("on the tablet I'm not even going to fill them out; there is no
 // inactive state there") — the inactive_* accessors below resolve them.
+// BESIDE THE TWELVE, THE SCHEME'S FACE TAG (architect 2026-10-09: the face
+// follows the scheme, as a Windows Appearance scheme carries its font;
+// GuiSchemeFace, gui_font.h): a built-in's read from its source, a file's
+// from its optional `font` line, Tahoma for the chrome's own scheme (no
+// pick, which windows-2000-standard's own tag equals — palette_file.cpp's
+// check); the installed pick's tag is the live tag (fill_chrome_palette,
+// render.cpp), which chooses the windows chrome's face set
+// (gui_live_face_set). Part of the pick's equality, so a tag that moves is
+// a change the picker's Save sees.
 struct GuiChromePick {
     uint32_t                ground         = 0;   // 0xRRGGBB, sRGB, each
     uint32_t                text           = 0;
@@ -467,6 +476,7 @@ struct GuiChromePick {
     uint32_t                selection_text = 0;
     uint32_t                field          = 0;
     uint32_t                field_text     = 0;
+    GuiSchemeFace           face           = GuiSchemeFace::Tahoma;
     constexpr uint32_t inactive_start() const {
         return inactive_title_start.value_or(title_start);
     }
@@ -516,6 +526,10 @@ void install_palette(const std::array<uint32_t, 15>& program,
 // itself (paint_caption_gradient); a bound icon's rasters key their color
 // and the caller drops them (icons::drop_bound_faces, 2026-10-10); every
 // other chrome painter reads palette() each frame (re-grepped 2026-10-10).
+// THE PICK'S FACE TAG installs with it (fill_chrome_palette,
+// set_live_scheme_face — under the windows chrome the face moves live; the
+// caller's whole-surface damage on a changed pick covers it, its own
+// comment at GuiColorPicker::install_live_words).
 void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
 
 // THE LIVE CHROME PICK AS INSTALLED — the knob the install family last wrote
@@ -1618,8 +1632,16 @@ int ruler_lane_h_px();
 // period's list row (kRowHeightPx, folder_overlay.h), so the
 // label's caps — Tahoma's 8 rows — get 4 Windows px above them (the cell's
 // top rows, the row "^" climbs into, and the face) and 3 below (the descent
-// and the face). The label sits on the cell's baseline at every scale, and a
-// glyph poking past the cell or the box is accepted (gui_font.h). The
+// and the face); MS Sans Serif's 9 (the windows chrome under a scheme
+// tagged MS Sans Serif, gui_font.h) get 3 above and the same 3 below, the
+// cap band centred in the box's inside. The label sits on the cell's
+// baseline at every scale, and a glyph poking past the cell or the box is
+// accepted (gui_font.h). THE BOX NEVER GROWS FOR A FACE'S OVERSHOOTS
+// (architect 2026-10-09, on FreeSans's "^", "{" and "}": "if we accommodate
+// them, the flag becomes too high"): an accent, a descender or a bracket
+// that passes the cell or the box is let through, never paid for in rows —
+// the box is the recorded cell and its four rows of edge and face under
+// every face. The
 // ascent and the descent are each rounded on their own (scaled_px), the box
 // the sum of its rounded parts. Every row the box gains or saves is THE
 // WAVEFORM'S (his ruling): the lane stack above it moves and the waveform's

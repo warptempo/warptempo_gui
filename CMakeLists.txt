@@ -134,8 +134,9 @@ set(WARPTEMPO_GUI_SOURCES
     # harfbuzz/cairo-ft link it implies.
     src/gui/text_shape.cpp
     # GUI-ONLY, like text_shape.cpp: the one face owner (gui_font.h), which
-    # builds the product's two faces (Tahoma and Tahoma Bold) through
-    # FreeType on both platforms.
+    # builds the product's faces (gui_font.h's kGuiFontFiles: Tahoma,
+    # DejaVu Sans, Go and FreeSans, each with its bold) through FreeType on
+    # both platforms.
     src/gui/gui_font_bundled.cpp
     # GUI-ONLY: the icon set (icons.cpp: the load, the raster cache, the
     # draws) and the wrapper over resvg it reads the bundled drawings through
@@ -538,7 +539,8 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     add_dependencies(warptempo_resvg warptempo_resvg_build)
 
     # THE PRODUCT'S FONT FILES, COMPILED IN (architect 2026-10-02; Wine
-    # Tahoma 2026-10-06, DejaVu Sans beside it 2026-10-07; the rule and the
+    # Tahoma 2026-10-06, DejaVu Sans beside it 2026-10-07, Go 2026-10-08,
+    # FreeSans 2026-10-09; the rule and the
     # mechanism's reasons at gui_font_embedded.cpp's head). THE NAMES ARE
     # READ OUT OF gui_font.h's kGuiFontFiles initializer, the one list, so a
     # file added there is embedded here with no second spelling (gui_font.h

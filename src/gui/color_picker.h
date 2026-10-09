@@ -676,7 +676,7 @@ bool preset_act_enabled(const AppState& app, PresetAct a);
 // CHROMES' OWN SCHEMES in the vocabularies' order (windows-2000-standard,
 // clearlooks, solaris) — A SEPARATOR ("just put a separator after the
 // default color themes", architect 2026-10-08 ~19:30) — then THE CATALOG'S
-// OTHER 101 in the catalog's order (its 103 less the two chromes' own it
+// OTHER 102 in the catalog's order (its 104 less the two chromes' own it
 // holds, windows-2000-standard and clearlooks, listed above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
 // GROUP IS NOT SHOWN: with no file, ONE separator stands between the acts
 // and the built-ins — a Windows menu never shows an empty group between two
