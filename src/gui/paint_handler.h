@@ -48,9 +48,9 @@ struct GuiTargetRender;
 // Declared here so paint_handler.cpp can reach them. No pointer-side grab
 // tolerance survives (the marker stems' died with their pointer surface,
 // 2026-08-12, the trim endcaps' with the arrow buttons, 2026-10-03);
-// playhead_half_px() lives in render.h, as does gui_font(face), the faces at
-// the live scale, so render.cpp can reach it without pulling paint_handler.h
-// into the lower-layer include graph.
+// gui_font(face), the faces at the live scale, lives in render.h, so
+// render.cpp can reach it without pulling paint_handler.h into the
+// lower-layer include graph.
 
 // THE MODAL ROW'S PAD — the bottom row's 8px lead-in and lead-out for the
 // modal that displaces its tenants and the render player's transport (since
@@ -151,30 +151,23 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, inset_px, line_px, the plate's two
-    // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
+    // vp_start, vp_end, area_w, area_h, line_px, the plate's two INKS, the
+    // GAIN field, target, and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
     // on, and each is keyed BY FIELD rather than through whatever else happens
-    // to move with it.
+    // to move with it. THE AREA'S TWO DIMENSIONS ARE THE PLATE'S WHOLE LAYOUT
+    // since the waveform's vertical inset went (architect 2026-10-09): the
+    // channels split the area whole (waveform_channel_band, render.h). (The
+    // inset was a field of its own until then, and the measured MONOSPACE
+    // font size before row 7, its proxy while it was font-derived.)
     int64_t   fp_vp_start    = 0;
     int64_t   fp_vp_end      = 0;
     int       fp_area_w      = 0;
     int       fp_area_h      = 0;
-    // The measured font pixel size the live pixels were rendered under. The
-    // plate's own font dependence is the inset band and the area height; keying
-    // the measure itself makes both sound by field (see the fingerprint note in
-    // waveform_cache.cpp).
-    // The waveform INSET the live pixels were rendered with (waveform_inset_px()
-    // — the plate's one geometry input that is not an area dimension). Keyed
-    // directly, so an inset change dirties the plate BY FIELD rather than
-    // through whichever area dimension happens to move with it. (It keyed the
-    // measured MONOSPACE font size until row 7, as a proxy for this: the inset
-    // was font-derived then. The proxy died with the grid; the thing itself is
-    // what the job takes.)
-    int       fp_inset_px = -1;
     // THE LINE WIDTH the live pixels were rendered with (waveform_line_px(),
     // render.h): the lit inner bar's outline erodes at that distance, so a
-    // gui_scale change that moves it re-renders the plate BY FIELD, keyed
-    // directly like the inset.
+    // change that moves it re-renders the plate BY FIELD, keyed directly. (One
+    // device px at every scale since 2026-10-09; the field stays, the width
+    // being the job's input.)
     int       fp_line_px = -1;
     // THE TWO BAKED INKS the live pixels were written in (the `waveform_ink`
     // and `waveform_outline` roles, waveform_plate_inks, render.h): the plate
@@ -187,7 +180,7 @@ struct WaveformCache {
     // curve's version where the picture is magnified, 0 where the gate answers
     // flat (waveform_gain_fingerprint, warp_frame_map_view.h, which owns that
     // rule). A FINGERPRINT FIELD in its own right, keyed directly like the
-    // inset: the gain is an input to the tip mapping alone, so nothing else
+    // line width: the gain is an input to the tip mapping alone, so nothing else
     // about the plate would move if it changed by itself (the magnification
     // lamp moves no map), and without it a plate rendered at one gain could go
     // on being blitted after the gain changed. The field alone is enough to
@@ -224,7 +217,6 @@ struct WaveformCache {
     int64_t   pending_fp_vp_end      = 0;
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
-    int       pending_fp_inset_px = -1;
     int       pending_fp_line_px = -1;
     WaveformPlateInks pending_fp_inks{};
     uint64_t  pending_fp_gain_hash = 0;
@@ -248,7 +240,6 @@ struct WaveformCache {
     double    supersede_painter_spp = 0.0;  // the lattice q, like the job's
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
-    int       supersede_inset_px    = 0;   // GUI-captured waveform inset
     int       supersede_line_px     = 0;   // GUI-captured waveform line width
     WaveformPlateInks supersede_inks{};    // GUI-captured plate inks
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
@@ -334,7 +325,7 @@ struct FlagCache {
     // scale — the box, the pole, the label's font size, the cells'
     // padding — so it is an input to this surface exactly as the viewport and
     // the marker generations are, and it is keyed BY FIELD like the plate's own
-    // inset and gain field rather than through whatever else happens to move
+    // line width and gain field rather than through whatever else happens to move
     // with it. (fp_area_h does move at every 1 % step on a 1080-px window,
     // because the waveform's 500-px cap and the strip's lanes are all scaled —
     // but that is arithmetic on one window size, not construction; a window
@@ -621,9 +612,8 @@ struct GuiPaintHandler {
     // PLATE-REGISTERED overlays (re-derived by grep over this accessor's
     // callers, 2026-08-02; the region ground and ink left 2026-10-03): the
     // phase-reset ring (through
-    // phase_reset_overlay_band), the playhead head (the ruler pass) and its
-    // dots over the view bar's span (the trim pass, 2026-10-09), the cursor
-    // playhead, the scanner — plus its two per-frame narrow damage sites in
+    // phase_reset_overlay_band), the playhead head (the ruler pass), the
+    // cursor playhead, the scanner — plus its two per-frame narrow damage sites in
     // main.cpp — and the strip-drag anchor; and ONE INPUT READER (architect
     // 2026-09-24, strictly as painted), the waveform-lane playhead step's
     // hold, which takes the cursor's prior column as the cursor pass painted
@@ -677,16 +667,13 @@ private:
         double   painter_spp   = 0.0;
         int      area_w        = 0;
         int      area_h        = 0;
-        // The waveform inset (waveform_inset_px()), captured on the GUI thread
-        // beside area_w/area_h so the worker render reads no scale state (the
-        // GUI thread mutates that without draining jobs). All scale-derived
-        // geometry is snapshotted. It is BOTH a render input and a fingerprint
-        // field — the plate's only non-area geometry, so nothing else would
-        // move if it changed alone.
-        int      inset_px      = 0;
-        // The waveform LINE WIDTH (waveform_line_px()), captured the same way
-        // and for the same reason: the lit inner bar's outline erodes at that
-        // distance, so it is both a render input and a fingerprint field.
+        // The waveform LINE WIDTH (waveform_line_px()), captured on the GUI
+        // thread beside area_w/area_h so the worker render reads no scale
+        // state (the GUI thread mutates that without draining jobs): the lit
+        // inner bar's outline erodes at that distance, so it is both a render
+        // input and a fingerprint field. (The waveform's vertical inset rode
+        // here until its removal, architect 2026-10-09: the channels split the
+        // area whole, so area_w and area_h are the plate's whole layout.)
         int      line_px       = 0;
         // The plate's two INKS (waveform_plate_inks), captured the same way
         // and for the same reason: the plate bakes their words, so they are
@@ -694,7 +681,7 @@ private:
         WaveformPlateInks inks{};
         // The waveform PICTURE's gain field (waveform_gain_fingerprint): nonzero
         // means apply the audio's derived curve. It is both the render input
-        // and the fingerprint field, exactly like inset_px above: it feeds the
+        // and the fingerprint field, exactly like line_px above: it feeds the
         // tip mapping and nothing else, so nothing else would move if it
         // changed alone.
         uint64_t gain_hash = 0;
@@ -854,8 +841,8 @@ private:
     // crosses the ink deliberately.
     void paint_phase_reset_overlay_ring(cairo_t* cr, const GuiRect& area);
     // The LIVE trim pass: paints EVERY trim pixel per frame — the view bar
-    // whole (its lines, its black field, the span and the playhead's dots
-    // over it) and the column's air above it — in ONE pass, entirely inside
+    // whole (its lines, its black field and the span; no playhead, architect
+    // 2026-10-09 ~14:30) and the column's air above it — in ONE pass, entirely inside
     // those two lanes. Its slot is in THE AUTHORITATIVE PAINT-ORDER BLOCK IN
     // on_redraw; this states only this pass's own place in it. Invoked
     // whenever the exposed rect intersects the top strip OR the waveform area
@@ -867,8 +854,9 @@ private:
     // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
     // of the active column stems, always, as COOL EDIT'S DOTTED COLUMN since
-    // 2026-10-09, in its TWO CUE COLORS since ~11:50: one-quantum dots on the
-    // canvas's quantum rows, the blue `range` on rows ≡ 3 and the red `cue`
+    // 2026-10-09, in its TWO CUE COLORS since ~11:50: one-device-px dots on
+    // the canvas's device rows (~14:25, "on waveform → unscaled"), the blue
+    // `range` on rows ≡ 3 and the red `cue`
     // on rows ≡ 7 (mod 8), each where the cue wears it, the canvas alone
     // (render.h's marker-lane paragraph); a DISABLED marker stems never.
     // Which colors stand is the cue's class whether the marker is selected
@@ -887,11 +875,11 @@ private:
     // NO PAINT-TIME COLOR OVERRIDE (architect 2026-10-03): the stem paints
     // the stash's class. The open flag editor's refusal recolors nothing.
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
-    // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's, its dots
-    // over the view bar render_trim_flags'): Cool Edit's dotted column in the
-    // palette's `playhead_stem` (its Curs yellow by default) on the canvas's
-    // quantum rows ≡ 1 (mod 4), painted after the marker stems, whose dots
-    // stand between its own.
+    // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's; nothing
+    // over the view bar, architect 2026-10-09 ~14:30): Cool Edit's dotted
+    // column in the palette's `playhead_stem` (its Curs yellow by default),
+    // one-device-px dots on the canvas's device rows ≡ 1 (mod 4), painted
+    // after the marker stems, whose dots stand between its own.
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_marker_stems and paint_playheads: the scanner draws OVER the stems

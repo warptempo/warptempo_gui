@@ -34,14 +34,17 @@
 // hard-coded chromes"): no `theme` device key, no themes folder, no bundled
 // files, no Settings row — THE CHROME CHOSEN IS ITS COLORS (kGuiChromeThemes
 // below, resolved by the chrome's key, chrome_theme_words). The architect's
-// workshop for colors is THE PALETTE (palette_file.h: named presets saved
-// and loaded in the app), whose CHROME KNOB may carry the chrome's twelve
-// keys, honored over this compiled theme under windows-2000 with the 3D set
-// derived from the ground by Windows' own rule (architect 2026-10-08,
-// chrome_derive.h — the compiled words themselves never change), and whose
-// BUILT-IN SCHEMES are the catalog's entries transcribed to those keys
-// (palette_file.h's kGuiChromeSchemes, generated); a look made official becomes A
-// NEW CHROME VARIANT, its theme compiled in beside these two:
+// workshop for colors is TWO KINDS OF NAMED PRESET, saved and loaded in the
+// app (palette_file.h's head, the owner): A SCHEME — THE CHROME'S TWELVE
+// KEYS and its face tag, `schemes/<name>.scheme` under the `scheme` device
+// key — derived over this compiled theme by the live chrome's own
+// derivation (under windows-2000 the 3D set from the ground by Windows' own
+// rule, chrome_derive.h; the compiled words themselves never change), its
+// BUILT-INS the catalog's entries transcribed to those keys (palette_file.h's
+// kGuiChromeSchemes, generated); and A PALETTE — THE PROGRAM'S TWELVE
+// ROLES, never this file's, `palettes/<name>.palette` under the `palette`
+// key. A look made official becomes A NEW CHROME VARIANT, its theme compiled
+// in beside these:
 //   `windows-2000` wears WINDOWS 2000's "Windows Standard" scheme
 //     (tools/theme_catalog's `windows-2000-standard`): THE ROLE TABLE'S
 //     VALUE COLUMN, hand-recorded, the generator checking it against its

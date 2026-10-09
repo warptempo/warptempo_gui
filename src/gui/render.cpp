@@ -185,15 +185,16 @@ void render_canvas(cairo_t* cr, const GuiRect& area,
     // zero row being the row the plate's bars straddle; the k-th grid line
     // stands t · nearbyint(k · (H / t) / 4) = nearbyint(k · H / 4) device rows
     // from the zero row, H the channel's half height in device rows — k = 1 ..
-    // 3, the fourth on the band's edge not drawn.
-    const int inset = waveform_inset_px();
+    // 3, the fourth on the band's edge not drawn. The bands split the canvas
+    // whole (no inset, architect 2026-10-09), so H is half a band, the band
+    // the canvas's halved and floored height.
     const auto hline = [&](int row) {
         const int top = std::max(area.y, area.y + row - t / 2);
         const int bot = std::min(area.y + area.h, area.y + row - t / 2 + t);
         if (bot > top) cairo_rectangle(cr, area.x, top, area.w, bot - top);
     };
     for (int ch = 0; ch < 2; ++ch) {
-        const WaveformChannelBand band = waveform_channel_band(area.h, inset, ch);
+        const WaveformChannelBand band = waveform_channel_band(area.h, ch);
         if (band.h <= 0) continue;
         const int zero = band.zero_row();
         const double half_q = static_cast<double>(band.h) / 2.0 / t;
@@ -207,7 +208,7 @@ void render_canvas(cairo_t* cr, const GuiRect& area,
     set_waveform_source(cr, pal.grid);
     cairo_fill(cr);
     for (int ch = 0; ch < 2; ++ch) {
-        const WaveformChannelBand band = waveform_channel_band(area.h, inset, ch);
+        const WaveformChannelBand band = waveform_channel_band(area.h, ch);
         if (band.h > 0) hline(band.zero_row());
     }
     set_waveform_source(cr, pal.center);

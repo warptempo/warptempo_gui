@@ -872,7 +872,21 @@ void install_true_colors(bool on);
 // zero row, one device px, in `center`, over the grid.
 // The waveform's plate is blitted over all of it, ink over every line. Each
 // channel's band and zero row are the plate's own (waveform_channel_band
-// below), so the lines stand where the plate's zero is. NO BOUNDARY LINES
+// below), so the lines stand where the plate's zero is. THE CHANNELS FILL THE
+// CANVAS (architect 2026-10-09, "remove", the mock of record's channels top
+// to bottom): each takes the canvas's halved and floored height, channel 0
+// from its first row and channel 1 under it (an odd canvas's last row below
+// channel 1, no ink reaching it), with NO INSET above or below — the 6-W
+// band that stood there was the tip-down playhead triangle's seat (deleted
+// 2026-08-02) kept as a symmetric margin, and the playhead's head and the
+// cues' triangles stand above the canvas's frame, so nothing needs it; the
+// dots, the lead-in ring and the scanner paint over the ink there as they do
+// everywhere on the canvas. The leveler's headroom (waveform_gain.h's
+// constants: its target, and the inner bar's foreground half) is the only
+// thing keeping the peaks off the edges; an outer bar the clamp clips flat
+// (the loud body, accepted there) stands on its band's edge row — the
+// canvas's first or last row against the frame, or the row where the
+// channels meet. NO BOUNDARY LINES
 // AND NOTHING BETWEEN THE CHANNELS (architect 2026-10-09, "we have very
 // limited vertical real estate"): the two channels abut, Cool Edit's Bndy
 // clip guides are not drawn, and the chrome's two-line sunken well that stood
@@ -931,8 +945,8 @@ WaveformPlateInks waveform_plate_inks();
 void   set_gui_scale_percent(int percent);
 
 // THE LIVE PERCENT ITSELF, for the one thing a factor cannot serve: a CACHE
-// FINGERPRINT FIELD. The scale is an input to pixels the way an inset or a
-// gain field is, and a fingerprint keys its inputs BY FIELD rather
+// FINGERPRINT FIELD. The scale is an input to pixels the way a line width or
+// a gain field is, and a fingerprint keys its inputs BY FIELD rather
 // than through whatever else happens to move with them — an integer percent is
 // what makes that compare exact, where the factor is a double and a derived
 // dimension is a coincidence. Nothing paints through this: every painted
@@ -1030,27 +1044,6 @@ constexpr double kRowGapPx = 0.0;
 // may clip at the floor, which is acceptable (nobody authors at 640x480).
 constexpr int kMinWindowWidthPx  = 640;
 constexpr int kMinWindowHeightPx = 480;
-
-// THE PLAYHEAD/INSET UNIT, and the last of the marker flag's old geometry.
-//
-// It WAS derived: kFlagWidthPx 15 (a marker flag's rectangle width at the
-// default font size) scaled on gui_font_scale(), forced odd, halved up. Row 5
-// retired the flag rectangle and its fused triangle, and row 7 retired the font
-// axis, so the derivation had nothing left to derive from — what survives is the
-// NUMBER it produced at scale 1 (8), authored directly here on the gui_scale
-// axis. kFlagWidthPx / kFlagHeightPx / flag_lane_w_px / flag_lane_h_px are gone
-// with the chain; every pixel is identical at 100%.
-//
-// ONE CONSUMER, below: waveform_inset_px() (the waveform's symmetric
-// top/bottom margin). The tip-down triangle mask sized from this number too
-// and had no caller for it; it is DELETED (2026-08-02), and with it
-// playhead_triangle_h_px(), the silhouette accessor the consumers used to
-// read through; the second consumer, the playhead's damage half-width
-// playhead_half_px, went 2026-10-09 (its note below, beside the inset).
-// 6 WINDOWS PX (architect 2026-10-02, the unit's change): the laptop pixel's
-// 8 re-authored to the length that keeps its tablet size (16 device px then,
-// 6 × 2.75 = 16.5 → 16 now).
-inline constexpr int kPlayheadUnitPx = 6;
 
 // THE CAPTION — the top strip's lane 0, at the window edge: THE WINDOW'S OWN
 // TITLE BAR, painted by the app on both devices (architect 2026-10-05; the
@@ -1709,8 +1702,8 @@ inline int scrub_thumb_h_px() {
 // plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
 // (render_canvas). EVERYTHING OFF THE CANVAS keeps THE PROGRAM'S QUANTUM u =
 // scaled_px(1, 1) (program_line_px, cue_unit_px): the cues' triangles and the
-// playhead's head (paint_ce_cue_triangle), the ruler's ticks (paint_ruler_row,
-// fill_waveform_line's `t`) and the view bar's dotted column (render_trim_flags).
+// playhead's head (paint_ce_cue_triangle) and the ruler's ticks
+// (paint_ruler_row, fill_waveform_line's `t`).
 // (From 2026-09-27, "scale all, including the ruler ticks and the playhead
 // head", until this ruling every canvas line was one Windows px, scaled.)
 inline int waveform_line_px() {
@@ -2466,41 +2459,15 @@ void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
                             PopupScrollPart held);
 
 
-// Waveform-internal top/bottom inset, in pixels. The drawn waveform samples
-// are confined to [area.y + waveform_inset_px(), area.y + area.h -
-// waveform_inset_px()] so the waveform is symmetric about its area center and
-// the marker and playhead stems have a clean stem-only band at the top before
-// the samples begin. The symmetric margin is the whole of the purpose.
-//
-// PROVENANCE (2026-08-02): this used to BE the tip-down triangle's mask height,
-// returned through playhead_triangle_h_px(), which is deleted with the
-// silhouette — so the inset owns its derivation outright now, and THE VALUE IS
-// KEPT EXACT: the same authored unit, the same std::nearbyint, the same floor
-// — the unit re-authored as 6 Windows px since 2026-10-02, 16 device px at
-// 275 % (16 at the tablet's 200 % before) and 8 at 138 %. The floor of 2 was
-// the triangle's own ("always a tip row below a top row") and survives only to
-// hold the value; it cannot fire while gui_scale rests in [50, 1000] (6 px
-// reaches 2 only below 25 %).
-inline int waveform_inset_px() {
-    return scaled_px(kPlayheadUnitPx, 2);
-}
-
-// THE CHANNEL SPLIT ROW — where the two channel bands meet, area-local (add the
-// area's y for a window row). The plate renderer
-// (render_waveform_to_cache_surface) is its ONE caller: it lays the top band
-// down to this row and the bottom band from it. Nothing paints on the row —
-// the two channels meet flush.
-//
-// The band is the area minus the symmetric inset at each end; each channel
-// takes the halved-and-floored height, so at an odd band height the spare row
-// falls at the BOTTOM of the drawing band, inside the inset, where nothing
-// draws (the reasoning is at the renderer). Returns -1 when the inset leaves no
-// band at all — the caller's own refusal case.
-inline int waveform_channel_split_row(int area_h, int inset_px) {
-    const int inset_h = area_h - 2 * inset_px;
-    if (inset_h <= 0) return -1;
-    return inset_px + inset_h / 2;
-}
+// (THE WAVEFORM'S VERTICAL INSET IS GONE — architect 2026-10-09, "remove":
+// waveform_inset_px, a symmetric 6-W margin above and below the channels —
+// once the retired tip-down playhead triangle's mask height, kept as "a clean
+// stem-only band at the top before the samples begin" — and its unit
+// kPlayheadUnitPx. Since the canvas became Cool Edit's that day the playhead's
+// head and the cues' triangles stand in the ruler and the marker lane, above
+// the canvas's frame, and nothing on the canvas needed the band; the two
+// channels fill the canvas whole, as the mock of record's do
+// (waveform_channel_band, below). Git history.)
 
 // (THE PLAYHEAD COLUMN'S OLD REACH, playhead_half_px — ± scaled_px(6) − 1,
 // the retired tip-down triangle's footprint — bounded the playhead's cull and
@@ -2509,7 +2476,7 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // 275 %, so a slow move left the head's shadow column behind). Both now read
 // the head's own painted columns, cue_triangle_half_w_px and
 // cue_triangle_reach_right_px above, which also cover the scanner's and the
-// dots' one-quantum line [c, c + t). Git history.)
+// dots' one-device-px line [c, c + 1). Git history.)
 
 // (THE MONOSPACE EDITOR TIER IS GONE — row 7, 2026-08-01. EditorTextBox,
 // render_editor_text_box, flag_chip_rect, flag_chip_width_px,
@@ -2608,7 +2575,7 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, the
 // vertical grid on `grid_cols` (columns of the area, the ruler's major ticks;
 // empty on a frame with no displayed basis), then each channel's horizontal
-// grid and its center line, the channels' bands off waveform_inset_px
+// grid and its center line, the channels' bands the plate's own
 // (waveform_channel_band). The canvas's frame round the area is
 // paint_canvas_column_frame's (paint_handler.cpp).
 void render_background(cairo_t* cr, int x, int y, int w, int h);
@@ -2729,21 +2696,25 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // ONE CHANNEL'S BAND, area-local rows: the plate's (render_waveform_to_cache_
 // surface, its one layout) and the canvas's grid and center lines'
 // (render_canvas), so the lines stand on the zero row the plate's bars
-// straddle. Channel 0 is [inset, split), channel 1 [split, split + its
-// height), the two equal and abutting (waveform_channel_split_row); its ZERO
-// ROW is y + h / 2, the row render_waveform's centre y + h · 0.5 floors to.
-// h <= 0 when the inset leaves no band.
+// straddle. THE TWO CHANNELS FILL THE CANVAS (architect 2026-10-09, the
+// inset removed; the mock of record's channels fill it top to bottom): each
+// takes the canvas's halved-and-floored height, channel 0 [0, h) and channel
+// 1 [h, 2h), EXACTLY EQUAL AND ABUTTING — no row between them (architect
+// 2026-08-03, when the channel-split line retired: a spare row between would
+// read as a one-px gap in the ink). At an odd canvas height the spare row is
+// the canvas's LAST, under channel 1, where the canvas's ground and lines
+// paint and no ink reaches. Its ZERO ROW is y + h / 2, the row
+// render_waveform's centre y + h · 0.5 floors to; its HALF HEIGHT H, the
+// grid's (row 6's canvas paragraph), runs from that row to the band's edge.
+// h <= 0 only on a canvas under two rows.
 struct WaveformChannelBand {
     int y = 0;
     int h = 0;
     int zero_row() const { return y + h / 2; }
 };
-inline WaveformChannelBand waveform_channel_band(int area_h, int inset_px,
-                                                 int channel) {
-    const int split = waveform_channel_split_row(area_h, inset_px);
-    if (split < 0) return WaveformChannelBand{};
-    const int ch_h = split - inset_px;
-    return WaveformChannelBand{channel == 0 ? inset_px : split, ch_h};
+inline WaveformChannelBand waveform_channel_band(int area_h, int channel) {
+    const int ch_h = area_h / 2;
+    return WaveformChannelBand{channel == 0 ? 0 : ch_h, ch_h};
 }
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's

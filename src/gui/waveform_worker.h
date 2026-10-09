@@ -50,15 +50,14 @@ struct WaveformJob {
     bool      target           = false;
     uint64_t  warp_frame_map_hash     = 0;
 
-    // Font-dependent waveform inset (waveform_inset_px()), captured on the GUI
-    // thread at dispatch alongside area_w/area_h. The worker must never read
+    // The waveform LINE WIDTH (waveform_line_px(), render.h), captured on the
+    // GUI thread at dispatch alongside area_w/area_h: the lit inner bar's
+    // outline erodes at that distance. The worker must never read
     // g_gui_scale_percent itself — the GUI thread mutates that via
     // set_gui_scale_percent without draining in-flight jobs — so ALL
-    // font-derived geometry is snapshotted here for a coherent render.
-    int       inset_px         = 0;
-    // The waveform LINE WIDTH (waveform_line_px(), render.h), captured beside
-    // the inset for the same reason: the lit inner bar's outline erodes at
-    // that distance.
+    // geometry is snapshotted here for a coherent render. (The waveform's
+    // vertical inset rode here too until its removal, architect 2026-10-09:
+    // the channels split the area whole, waveform_channel_band.)
     int       line_px          = 0;
     // The plate's two INKS (waveform_plate_inks, render.h), captured beside
     // the line width for the same reason: the worker reads no live palette.
@@ -187,8 +186,8 @@ private:
 // the GUI thread (force_synchronous_waveform_rebuild), touching only the
 // supplied dest surface, the audio handle's peak pyramid (read-only after
 // load), the caller's warp_frame_map snapshot, and the job-captured geometry
-// scalars (area_w/area_h/inset_px/line_px) and inks — no other shared or
-// main-thread state. The inset, the line width, the inks and the
+// scalars (area_w/area_h/line_px) and inks — no other shared or
+// main-thread state. The line width, the inks and the
 // MAGNIFICATION are passed in rather than read off live state so
 // the render touches no gui_scale and no settings state: ALL scale-dependent
 // geometry
@@ -204,7 +203,6 @@ void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
     int area_h,
-    int inset_px,
     int line_px,
     WaveformPlateInks inks,
     const GuiAudio& audio,

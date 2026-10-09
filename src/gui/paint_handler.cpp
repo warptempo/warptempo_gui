@@ -4864,8 +4864,8 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     // bottom on its last, with the verticals spanning every row between
     // them. No other reader takes the ring's rows: it is no hit target, and
     // its damage is the whole waveform area's (the flag cache's rebuild and
-    // Selection::damage_overlay_on_subject_change), which holds it at any
-    // inset. EVERY SIDE IS waveform_line_px() THICK (render.h, the class's one
+    // Selection::damage_overlay_on_subject_change), which holds it whole.
+    // EVERY SIDE IS waveform_line_px() THICK (render.h, the class's one
     // inventory), inward from the band's edges, so the left side's columns
     // [x0, x0 + t) are the stem's own; a side is never wider than the band
     // (both verticals then cover it), and the band is already clipped to the
@@ -5231,9 +5231,11 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 //
 // THE SCANNER IS THE MOVING LINE, and it HAS ITS OWN ROLE, `scanner`
 // (architect 2026-10-05), WHITE in every built-in palette (architect
-// 2026-10-07: "let's go back to a white scanner") — SOLID, one quantum wide,
-// the canvas's rows alone (PlayheadForm::Solid; Cool Edit's playback cursor
-// is a solid 1-px line, measured 2026-10-09).
+// 2026-10-07: "let's go back to a white scanner") — SOLID, ONE DEVICE PX
+// wide at every scale (architect 2026-10-09 ~14:25, "on waveform →
+// unscaled", waveform_line_px's rule, render.h), the canvas's rows alone
+// (PlayheadForm::Solid; Cool Edit's playback cursor is a solid 1-px line,
+// measured 2026-10-09).
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (render_playhead is shared with the cursor and cannot reach a strip lane at
