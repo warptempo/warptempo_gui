@@ -686,7 +686,6 @@ Layout layout(const AppState& app, const GuiFont& font) {
         if (mx + w > app.width) mx = app.width - w;
         if (mx < 0) mx = 0;
         l.menu = GuiRect{mx, p.y, w, p.h};
-        l.menu_upward = p.upward;
         l.menu_bar = popup_scroll_bar(l.menu, p.upward, std::move(row_h),
                                       p.room_h,
                                       app.color_picker.menu_scroll.top);

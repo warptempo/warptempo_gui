@@ -106,9 +106,12 @@ struct GuiInputHandler;
 //     the window's foot; Windows' combo opens above when no room lies
 //     below) — the picker list's painter and geometry
 //     (paint_combo_list, combo_list), as wide as the combo, the domain in
-//     its source's order, the shown row lit at the open and the hover then
-//     following the pointer (the picker's chooser's rule); the combo takes
-//     no hover face. The press gives the combo the focus back from a button.
+//     its source's order, the shown row lit at the open and the lit row then
+//     following the pointer over the rows and HOLDING OFF THEM — Windows'
+//     combo list, so the pen's contact on the combo cannot put the seeded
+//     row out (2026-10-09 evening; the rule at settings_choice_motion, the
+//     picker's chooser's too); the combo takes no hover face. The press
+//     gives the combo the focus back from a button.
 //     IT IS ONE OF THE THREE LIST POPUPS (render.h's popup scroll block, the
 //     rule's one owner, 2026-10-08): placed by the window's room and
 //     SCROLLING when its rows outgrow it, its scroll bar inside it at its

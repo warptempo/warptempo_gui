@@ -1457,14 +1457,23 @@ struct GuiInputHandler {
     // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the walk
     // group's four (Previous Marker, Next Marker, Center, Switch Tab), four
     // cardinal arrows and the transport three.
-    // EVERY ONE OF THEM
-    // PUBLISHES A REAL RECT on every frame the roster paints: the bottom row's
-    // cluster swap, which published zero rects for whichever four it hid, went
-    // with the history companions on 2026-08-18 (definitions beside
-    // on_motion in input_pointer.cpp). The one exception is a window too
-    // narrow for the icon row, where a member the view group's overflow
-    // covers whole publishes a zero rect and one it covers in part only its
-    // painted columns (paint_icon_row).
+    // EVERY MEMBER PUBLISHES WHAT IT PAINTED on every frame the roster
+    // paints — a real rect where it stands, the EMPTY RECT (which no point is
+    // inside) where it does not, so no press, hover or tooltip reaches a
+    // member off the screen. THE EMPTY RECTS, each at its owner: the icon
+    // row's history stand-ins (kIconRowHistoryStandIns, paint_handler.cpp,
+    // architect 2026-10-05) — outside the `h` view the six companions, inside
+    // it the two authoring groups they replace; THE `h` VIEW'S HIDE
+    // (architect 2026-10-07, history_mode_hides_button, input_pointer.cpp)
+    // — inside the view every member of either row whose chord the view
+    // refuses in every session; row 8 whole under a modal that owns the
+    // bottom row (modal_owns_bottom_row, paint_bottom_strip); and a window
+    // too narrow for the icon row, where a member the view group's overflow
+    // covers whole publishes the empty rect and one it covers in part only
+    // its painted columns (paint_icon_row). (The bottom row's cluster swap,
+    // which published zero rects for whichever four it hid, went with the
+    // history companions' move on 2026-08-18; definitions beside on_motion
+    // in input_pointer.cpp.)
     // It re-resolves the cursor's last position against the painter's stashed
     // rects for its three readers — the tooltip's wait, the armed chrome
     // press's inside bit and the roster's hot button (AppState::roster_hot,
@@ -2806,7 +2815,8 @@ private:
     //     architect 2026-10-10), elsewhere it closes the list. False when
     //     neither stood.
     //   settings_choice_motion — a scroll hold's carry (the thumb's drag),
-    //     else a dropped list's hover follows the pointer.
+    //     else a dropped list's lit row follows the pointer over its rows
+    //     and holds off them (2026-10-09 evening, the rule at the body).
     bool claim_settings_choice_press(GuiMouseButton button, int x, int y,
                                      GuiInputState mods);
     bool finish_settings_choice_release(int x, int y);
@@ -3026,8 +3036,9 @@ private:
     //     published stash, never derived live.
     //   color_picker_motion — a scroll hold's carry (the thumb's drag), a
     //     live gesture's carry (the slider, the ring, the triangle; the
-    //     button lost ends it), else the list's and the menu's hover, the
-    //     dialog buttons' walk and the roster's.
+    //     button lost ends it), else the list's and the menu's lit rows
+    //     (following the pointer over their rows, holding off them,
+    //     2026-10-09 evening), the dialog buttons' walk and the roster's.
     //   color_picker_release — the gesture's end (already applied), a scroll
     //     hold's end, a menu row's act (GuiColorPicker's preset acts) or a
     //     list row's select (the scope's set_scope or the element's
@@ -3130,6 +3141,15 @@ private:
     // PAINTED), so a press after the lift is unaffected; a lit row moved by
     // a KEY is not the pointer's and is not held; and an open menu's hover
     // switch onto another anchor is an act, not a face, and stays live.
+    // THE TOUCH-DOWN IS NOT THE LATCH'S (2026-10-09 evening, his blink on
+    // the Settings combo at the pen's contact): the latch stands only after
+    // a lift, and the lists' lit rows answer the down by their own rule — a
+    // list's lit row follows the pointer onto its rows and HOLDS OFF THEM
+    // (Windows' combo list; settings_choice_motion, color_picker_motion), so
+    // the contact's motions over the combo that dropped it, and the lift's
+    // restore motion before the latch arms, change no face. The pull-down
+    // menus open with no lit row and go dark off their rows (Windows' menu),
+    // so their contact has nothing to put out.
     // A TIMER WOULD NOT DO: expiring with the pen still hovering in place, it
     // would re-light the very face it withheld; the latch is a DISTANCE, as
     // the plane's own hysteresis is.

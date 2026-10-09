@@ -175,8 +175,8 @@ struct GuiFontBytes {
 // requires, and EVERY set's faces (kGuiFaceSets below) carry the glyph each
 // em is measured on and, in a set that lifts its signs or its pipe, the
 // hyphen, the "0" and the five marks its axis is measured on — every set,
-// because the install precedes the `font` key's read on Android, and a
-// Settings pick moves the face live.
+// because the install precedes the `font` key's read on Android, and the
+// Settings dialog's OK on a new Font choice moves the face live.
 // Its producer is breach-only (the bytes are the repository's own, so a face that fails to
 // build is a build defect), and each caller dies on false.
 bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
@@ -234,10 +234,12 @@ struct GuiFaceMetrics {
 // 2026-10-09 ~21:00, when the ruler took the small face's six-row digit);
 // the ascent and descent the cap's own proportion of the body's 11 / 2 over
 // 8, rounded: {10, 2, 7}, measured by the cap ("H") under every set,
-// FreeSans's included. No lane reads the cell: the marker lane seats these
-// runs on its own authored rows (program_spec.h), so the cell is a record
-// and the cap the em's measure — save the descent, which render.h's assert
-// holds clear of the cue's triangle.
+// FreeSans's included. No lane's HEIGHT reads the cell (the marker lane's
+// rows are program_spec.h's), but the cell SEATS THE CUES' TEXT: it is the
+// line box render.h's cue_baseline_px centres in the lane, the label's
+// baseline its top plus the ascent and the flag editor's selection band the
+// box itself (architect 2026-10-09 evening), the descent held clear of the
+// cue's triangle by render.h's assert.
 inline constexpr GuiFaceMetrics kGuiProgramFaceMetrics = {
     10, 2, 7, GuiFaceMeasure::Cap};
 
@@ -396,15 +398,17 @@ inline constexpr GuiFaceSet kGuiFaceSetLiberation = {
 // (gui_font_install_bundled: each set's files must carry the glyphs its ems
 // and its sign axis are measured on) — every set the `font` key can name,
 // so each is proven installable whichever face the device later names or
-// a Settings pick moves to.
+// a Settings commit moves to.
 inline constexpr const GuiFaceSet* kGuiFaceSets[] = {
     &kGuiFaceSetWin2000,
     &kGuiFaceSetFreeSans,
     &kGuiFaceSetLiberation,
 };
 
-// A LIVE SWAP BETWEEN THE SETS MOVES NO LANE (a Settings pick of the `font`
-// key moves the face live, gui_live_face_set below): the three record
+// A LIVE SWAP BETWEEN THE SETS MOVES NO LANE (the Settings dialog's OK on a
+// new Font choice moves the face live — a pick in the row's list only moves
+// its highlight, 2026-10-09 evening; gui_live_face_set below): the three
+// record
 // the same cell, ascent 11 and descent 2 for the body and the bold, and
 // the same six-row small digit and the same program face — only the body's
 // and the bold's measure differ (Tahoma's cap 8 / FreeSans's and Liberation
@@ -478,9 +482,11 @@ static_assert(is_font_key(kDefaultFontKey));
 
 // THE LIVE SET — THE ONE RESOLUTION (architect 2026-10-09): the set the
 // device config's `font` names, installed at launch (set_live_font, gui_main,
-// beside set_live_chrome_spec, before the first paint) and MOVED LIVE by
-// the Settings menu's Font row (commit_device_setting's font arm,
-// settings_editor.cpp): the caches that hold the face key the set
+// beside set_live_chrome_spec, before the first paint) and MOVED LIVE when
+// the Settings dialog's OK commits a new Font choice (commit_device_setting's
+// font arm, settings_editor.cpp; the pick in the row's list only moves its
+// highlight, the choice rows committing at OK alone since 2026-10-09
+// evening): the caches that hold the face key the set
 // (gui_font_bundled.cpp's scaled fonts and with them text_shape's hb fonts,
 // paint_handler.cpp's time-field memo, the flag cache's fp_face_set —
 // paint_handler.h; nothing else holds a shaped run or a width across

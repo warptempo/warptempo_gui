@@ -174,8 +174,8 @@ struct ChromeSpec {
     // tooltip arm, kTooltipLineGapPx beside it).
     int                tooltip_pad_px;
     // (THE TIME FIELD'S HEIGHT AND PAD left the spec 2026-10-08: every time
-    // field is the dialog field, one shape under every chrome —
-    // kModalFieldHeightPx and kModalFieldPadXPx, render.h.)
+    // field is the program's since 2026-10-09, Cool Edit's dark field under
+    // every chrome, its height and its own 4-W pad program_spec.h's.)
     // THE SCRUB THUMB'S GRAB BOX — the box the press router takes as the
     // thumb's grab band and the mapping insets the track by half of at each
     // end (render.h's scrub block, scrub_handle_box_px). WIN2000 14 (the
@@ -192,8 +192,10 @@ struct ChromeSpec {
     // VOCABULARY, read off the live lane table at the trim lane's top —
     // notification_stack_bound, notifications.cpp; architect 2026-10-08.)
     // THE CORNERS' RADIUS in Windows px, scaled like any length and drawn
-    // antialiased: 0 is a square corner, every box of win2000's — no painter
-    // reads another value until a vocabulary with rounded boxes draws them.
+    // antialiased: 0 is a square corner, every box of win2000's. NO PAINTER
+    // READS IT TODAY (2026-10-09); the field is KEPT for Windows XP, the
+    // next vocabulary, whose caption and buttons may want rounded corners —
+    // its first reader is that vocabulary's painter arm.
     int                corner_radius_px;
     // THE WINDOW'S FRAME (render.h's sizing-frame block, window_frame_px):
     // the relief lines of its composite — Windows' two-line raised edge

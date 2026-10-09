@@ -684,9 +684,12 @@ void install_true_colors(bool on);
 // `ce_cue_shadow`;
 // THE LABEL — the marker's one label in the program face at cap 7, in the
 // panel's light tone `ce_hilight`, no shadow, starting six quanta right of
-// the column, ITS CAP BAND CENTRED IN THE LANE (architect 2026-10-09
-// ~21:45, "it should be centered vertically"; cue_baseline_px, the box
-// rule): at 100 % the cap on rows 5 .. 11, the baseline the top of row 12,
+// the column, ITS LINE BOX CENTRED IN THE LANE (architect 2026-10-09
+// evening, on the glass at 300 %: the editor's band stood three rows of
+// field above and six below, and he asked for it even; the cap band's
+// centring of ~21:45 retired;
+// cue_baseline_px, the box rule): at 100 % the box on rows 2 .. 13, the
+// cap on rows 5 .. 11, the baseline the top of row 12,
 // its descenders and the history's brackets reaching into rows 12 .. 14
 // beside the triangle's rows 12 .. 16 — THE LANE 17 W, the product's own
 // (architect 2026-10-09 ~16:50 / ~21:00, Cool Edit's 11 grown by the six the
@@ -749,8 +752,9 @@ void install_true_colors(bool on);
 //             only thing") — FFFFFF under Windows 2000 Standard against the
 //             light tone at rest; the segment's resting face box (the
 //             overlap rule's, below) stays as it is, the text not moving,
-//             its cap band centred in the lane as at rest (cue_baseline_px,
-//             2026-10-09 ~21:45) (an invalid cue's text its bright red);
+//             on the baseline of its line box centred in the lane as at
+//             rest (cue_baseline_px, 2026-10-09 evening) (an invalid cue's
+//             text its bright red);
 //             THE TRIANGLE KEEPS ITS COLOR, and the playhead stands on the
 //             marker where the selection landed it. THE PRESS TARGET STAYS
 //             THE WHOLE LANE, rows 0 .. 16 (architect 2026-10-09 ~21:00, "the
@@ -788,8 +792,8 @@ void install_true_colors(bool on);
 // with A ONE-QUANTUM OUTLINE in `field_text`, over the edited segment's box
 // on THE WHOLE LANE'S ROWS 0 .. 16, the selected box's (the outline on rows
 // 0 and 16 and one quantum outside the pads; 2026-10-09 ~21:00), the text
-// at the segment's own seat and baseline — the cap band centred in the
-// field, which is the lane (cue_baseline_px, 2026-10-09 ~21:45) — with one
+// at the segment's own seat and baseline — the resting label's, its line
+// box centred in the field, which is the lane (cue_baseline_px) — with one
 // quantum of pad either side of its run, its descenders inside the field
 // (the text's clip the field's inner rows), THE CARET AND THE SELECTION BAND
 // THE TEXT'S LINE BOX (architect 2026-10-09 ~23:30: "in Windows highlighted
@@ -799,14 +803,16 @@ void install_true_colors(bool on);
 // the bottom"): the program face's recorded ascent above the baseline and
 // its descent below it (gui_face_metrics, 10 + 2 W), the dialog field's own
 // band rule (paint_modal_dialog) — Windows fills the line, and the 17-W
-// field round a 12-W line leaves rows of field above and below it. At 100 %
-// the band on lane rows 2 .. 13 inside the inner rows 1 .. 15, one row of
-// field above and two below; at 300 % rows 6 .. 41 inside 3 .. 47, three
-// above and six below. THE BAND FOLLOWS THE TEXT, NOT THE FIELD'S CENTRE: the
-// cap band is centred in the lane, and the line box stands half a W higher
-// round it (its ascent 3 W over the cap, its descent 2 under the baseline),
-// so where the two disagree — by a row at 138 % and 300 %, by two at 360 % —
-// the band keeps its baseline, the white showing what it shows. A selected
+// field round a 12-W line leaves rows of field above and below it. THE LINE
+// BOX IS CENTRED IN THE LANE (architect 2026-10-09 evening, on the glass at
+// 300 %: the band stood three rows of field above and six below, and he
+// asked for it even): the band's rows ARE cue_line_box_top_px's and
+// cue_line_box_h_px's, the one derivation the baseline is defined from, so
+// the band and the text cannot part. At 100 % the band on lane rows 2 .. 13
+// inside the inner rows 1 .. 15, one row of field above and two below; at
+// 138 % rows 2 .. 18 inside 1 .. 20, one and two; at 300 % rows 7 .. 42
+// inside 3 .. 47, four and five; at 360 % rows 10 .. 52 inside 4 .. 58, six
+// and six — the odd leftover row below, the box rule's. A selected
 // glyph's ink past the band (a descender deeper than the recorded 2 W)
 // takes the field text, the field ink's clip the band's complement in both
 // its columns and its rows. The field grows and
@@ -1253,12 +1259,12 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 // WIN2000 Windows' 14-dialog-unit edit box beside its 14-unit push button,
 // 23 W (the laptop pixel's 31 re-authored at the unit's change, 2026-10-02,
 // the pad's 7 as 5 — paint_handler.cpp's kModal* block keeps the sampled
-// record). THE TIME FIELDS — row 8's clock and the render player's position
-// and length, Cool Edit's dark field 17 W tall since 2026-10-09
-// (program_spec.h) — TAKE THIS PAD (architect 2026-10-10 ~00:30, "bring the
-// timestamp in line with the text box used for the regular text boxes for
-// typing"; paint_handler.cpp's time_field_pad_px), their height their own.
-// (They took the whole shape, the height too, 2026-10-08 to 2026-10-09.)
+// record). THE TIME FIELDS are not this field: row 8's clock and the render
+// player's position and length are Cool Edit's dark field, its height and
+// its 4-W pad program_spec.h's own (architect 2026-10-09 evening, "the other
+// ones are Windows chrome whereas this one is a Cool Edit chrome"). (They
+// took this whole shape 2026-10-08 to 2026-10-09 and this pad on the
+// evening of 2026-10-09.)
 inline constexpr double kModalFieldHeightPx = 23.0;
 inline constexpr double kModalFieldPadXPx   = 5.0;
 
@@ -1493,22 +1499,41 @@ inline int cue_fill_h_px() {
 // callers stand): the baseline that centres `font`'s cap band in the box
 // [box_y, box_y + box_h), a half-row tie toward the top.
 double redesign_baseline(const GuiFont& font, double box_y, double box_h);
-// THE CUE LABEL'S BASELINE under the marker lane's top — THE PROGRAM FACE'S
-// CAP BAND CENTRED IN THE LABEL'S BOX, THE WHOLE LANE (architect 2026-10-09
-// ~21:45, "it should be centered vertically"), by the product's one rule for
-// a label in a box (redesign_baseline: floor((h + cap) / 2)), so the seat is
-// DERIVED from the lane's composite height and the face's cap at the live
-// scale, never an authored row scaled on its own (scaled_px(12) would stand
-// 17 at 138 % against the centred 15, and 43 at 360 % against 44). Every
-// label segment — the resting label, the bound cells, the history's two
-// halves — and the flag editor's text ride it. THE ROWS: at 100 % the cap 7
-// on rows 5 .. 11 of the 17, the baseline the top of row 12; at 300 % (lane
-// 51, cap 21) the baseline 36, the cap on rows 15 .. 35; at 360 % (lane 63,
-// cap 25.2) 44, the cap from 18.8; at 138 % (lane 22, cap 9.66) 15.
+// THE CUE LABEL'S LINE BOX AND ITS BASELINE under the marker lane's top —
+// THE PROGRAM FACE'S LINE BOX CENTRED IN THE LABEL'S BOX, THE WHOLE LANE
+// (architect 2026-10-09 evening, on the glass at 300 %: the open editor's
+// selection band — the line box — stood three rows of field above it and
+// six below, and he asked for it even; the cap band's centring of 2026-10-09
+// ~21:45, "it should be centered vertically", retired with it). ONE RULE FOR
+// THE LABEL AND THE BAND: the line box, the recorded ascent plus descent
+// (10 + 2 W, gui_font_line_px) rounded once to whole rows, stands in the
+// lane by the box rule — the floor of the leftover above, the odd row below
+// — and THE BASELINE IS THE BOX'S TOP PLUS THE ASCENT, rounded once. The
+// resting label and the editor's text must share one baseline (the editor's
+// text sits at the label's seat), so the line box's centring wins and the
+// cap's own is not kept. Every label segment — the resting label, the bound
+// cells, the history's two halves — and the flag editor's text ride the
+// baseline, and the editor's caret and selection band ARE the box
+// (render_flag_editor_box reads cue_line_box_top_px and cue_line_box_h_px,
+// never a second derivation). DERIVED from the lane's composite height and
+// the face's recorded metrics at the live scale, never an authored row
+// scaled on its own. THE ROWS (box, baseline): at 100 % rows 2 .. 13 of the
+// 17, the baseline the top of row 12 (the cap on rows 5 .. 11, as the cap
+// rule put it); at 138 % (lane 22, box 17) rows 2 .. 18, the baseline 16;
+// at 300 % (lane 51, box 36) rows 7 .. 42, the baseline 37 (the cap rule's
+// 36 one row higher); at 360 % (lane 63, box 43) rows 10 .. 52, the
+// baseline 46.
+inline int cue_line_box_h_px() {
+    return static_cast<int>(
+        std::nearbyint(gui_font_line_px(gui_font(GuiFace::Program))));
+}
+inline int cue_line_box_top_px() {
+    return (marker_lane_h_px() - cue_line_box_h_px()) / 2;
+}
 inline int cue_baseline_px() {
-    return static_cast<int>(redesign_baseline(
-        gui_font(GuiFace::Program), 0.0,
-        static_cast<double>(marker_lane_h_px())));
+    return cue_line_box_top_px() +
+           static_cast<int>(std::nearbyint(
+               gui_font_ascent_px(gui_font(GuiFace::Program))));
 }
 // THE RULER'S DIGITS ARE THE SMALL FACE'S SIX ROWS UNDER ONE W OF AIR
 // (program_spec.h's ruler fields), in every face set (gui_font.h: every
@@ -1527,8 +1552,9 @@ static_assert([] {
     return true;
 }());
 // THE CUE LABEL'S ROWS AT 100 % (cue_baseline_px's rule over the lane's
-// authored 17 and the program face's recorded cap 7 — the program face is
-// measured by its cap in every set, gui_font.h's kGuiProgramFaceMetrics):
+// authored 17 and the program face's recorded line box, ascent 10 and
+// descent 2, and its cap 7 — the program face is measured by its cap in
+// every set, gui_font.h's kGuiProgramFaceMetrics): the box on rows 2 .. 13,
 // the baseline the top of row 12, the cap on rows 5 .. 11. THE DESCENT ENDS
 // ABOVE THE LANE'S LAST ROW — the box's outline row: the baseline plus the
 // recorded descent plus two rows to spare for the glyphs that overshoot the
@@ -1537,12 +1563,13 @@ static_assert([] {
 // 0.288 of the cap under the baseline in Tahoma ("y"; "g" 0.285, "(" 0.257,
 // "[" 0.181), 0.299 in FreeSans ("g", "y"; its brackets 0.291) — 2.0 / 2.1 W
 // at 100 %, rows 12 .. 14; at 300 % (cap 21) 6.0 / 6.3 device rows under
-// the baseline 36, ending on row 42 of the 51, five rows above the outline's
-// three (48 .. 50); at 360 % (cap 25.2) 7.3 / 7.5 under 44, ending on row 51
+// the baseline 37, ending on row 43 of the 51, four rows above the outline's
+// three (48 .. 50); at 360 % (cap 25.2) 7.3 / 7.5 under 46, ending on row 53
 // of the 63, the outline 59 .. 62.
 constexpr int kCueLabelBaselineAt100 =
-    (program_marker_lane_authored_h(kProgramSpec) +
-     kGuiProgramFaceMetrics.height) / 2;
+    (program_marker_lane_authored_h(kProgramSpec) -
+     (kGuiProgramFaceMetrics.ascent + kGuiProgramFaceMetrics.descent)) / 2 +
+    kGuiProgramFaceMetrics.ascent;
 static_assert(kGuiProgramFaceMetrics.measure == GuiFaceMeasure::Cap);
 static_assert(kCueLabelBaselineAt100 == 12);
 static_assert(kCueLabelBaselineAt100 - kGuiProgramFaceMetrics.height == 5);
@@ -1651,8 +1678,8 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // each group the gripper, 5 W of face, its cases or the time field, 5 W of
 // face and the end bar — the product's symmetric air where Cool Edit's
 // movable panes measure 6 and 4 (architect 2026-10-10 ~00:30,
-// program_spec.h's group fields) — and the time field's pads the dialog
-// field's 5 W (kModalFieldPadXPx above).
+// program_spec.h's group fields) — and the time field's pads its own 4 W
+// (program_spec.h's field_pad_px).
 // The dock bar is the program's under a modal too; the modal surfaces
 // (prompts, the dialog editors, the picker's Cancel, the render player)
 // stand in the content band below it (paint_bottom_strip).
@@ -3545,11 +3572,12 @@ struct FlagEditorBox {
 // paragraph): a box in the chrome's FIELD PAIR over THE WHOLE LANE, the
 // selected label's rows (2026-10-09 ~21:00) — `field_ground` inside a
 // one-quantum `field_text` outline, its text and caret `field_text` on the
-// label's own baseline and seat, the caret and the selection band over the
-// field's whole inner rows (2026-10-09, the edit control's full-height
-// selection: a selected substring's descenders stay in the selection pair),
-// so opening an editor changes the label's SIZE and nothing about where its
-// text stands —
+// label's own baseline and seat, the caret and the selection band THE TEXT'S
+// LINE BOX centred in the lane (the program face's 10 + 2 W, the one
+// derivation the baseline is defined from — cue_line_box_top_px; the rule,
+// its rows at each scale and the selected ink past the band taking the field
+// text are the EDITING paragraph's), so opening an editor changes the
+// label's SIZE and nothing about where its text stands —
 // the selected substring in the chrome's SELECTED PAIR, the ordinary
 // highlight. The box paints over the lane, the triangle and any neighbouring
 // label it reaches. Since no field buys a caret column, the

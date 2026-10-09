@@ -270,7 +270,7 @@ adb shell run-as com.warptempo.gui cat /data/user/0/com.warptempo.gui/files/warp
 #   scheme=<name>                 (a scheme's name, its colors; absent means the chrome's own)
 #   palette=<name>                (a palette's name; absent means Cool Edit's "Default")
 #   icons=mist                    (or tango; absent means the chrome's own)
-#   font=tahoma                   (or free-sans or liberation-sans; absent means tahoma)
+#   font=tahoma                   (free-sans, liberation-sans or tahoma; absent means tahoma)
 # /storage/emulated/0 and /sdcard are one folder; the tablet's clone is its files/ folder.
 ```
 

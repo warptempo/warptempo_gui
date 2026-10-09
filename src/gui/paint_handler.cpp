@@ -959,12 +959,13 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the opener and
 // the view group cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
-// walks). Under win2000 the row fits whole down to 715 Windows px of window
-// at 100 % outside the `h` view and 498 inside it (the width math at
-// paint_icon_row, its one statement, re-derived 2026-10-07 for Open Project
-// in Save's group and for the view's hide), so neither host reaches the rule
-// at its scale: the tablet's 2304 device px hold the row in both states up
-// to 318 % and the laptop's 1920 up to 268 %.
+// walks). The band holds every pane down to 569 Windows px of window at
+// 100 % outside the `h` view and 408 inside it (the width math at
+// paint_icon_row, its one statement, re-derived 2026-10-09 for the
+// program's 23-W case), so neither host reaches the rule at its scale: the
+// tablet's 2304 device px hold the row in both states up to about 404 % and
+// the laptop's 1920 up to about 337 % (the W arithmetic over the device
+// width; each element's own rounding moves the edge by a pixel or so).
 constexpr IconRowDef kIconRowViewGroup[] = {
     {RedesignButton::ViewSW, icons::Icon::DocumentExport},
     {RedesignButton::ViewTW, icons::Icon::DocumentImport},
@@ -1174,18 +1175,19 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
 // keyboard's caps, the folder overlay's rows, the menu row's anchors
 // (the plain menu bar's seat, a capture of the real OS
-// beating ReactOS's band, architect 2026-10-09 ~17:40), and the cues'
-// labels in the marker lane (2026-10-09 ~21:45, below). ONE LINE SEAT: the
+// beating ReactOS's band, architect 2026-10-09 ~17:40). ONE LINE SEAT: the
 // tooltip's two lines (line_baseline).
 //
-// THE CANVAS COLUMN'S TEXT: THE RULER'S DIGITS TAKE NEITHER SEAT
-// (2026-10-09, the program is Cool Edit): they stand on an AUTHORED
-// BASELINE ROW of their lane — program_spec.h's ruler_baseline_px (the
-// architect's row under one W of air, 2026-10-09 ~21:00). THE CUES' LABELS
-// TAKE THE BOX SEAT (architect 2026-10-09 ~21:45, "it should be centered
-// vertically"): the program face's cap band centred in the whole marker
-// lane, their box (render.h's cue_baseline_px, this solver's one caller
-// outside this file — hence its external linkage, declared in render.h).
+// THE CANVAS COLUMN'S TEXT TAKES NEITHER SEAT (2026-10-09, the program is
+// Cool Edit): THE RULER'S DIGITS stand on an AUTHORED BASELINE ROW of their
+// lane — program_spec.h's ruler_baseline_px (the architect's row under one
+// W of air, 2026-10-09 ~21:00); THE CUES' LABELS stand on THE LINE BOX
+// CENTRED IN THE MARKER LANE (architect 2026-10-09 evening: the face's
+// ascent-plus-descent band, rounded once, centred by the box rule, the
+// baseline its top plus the ascent — render.h's cue_baseline_px), so the
+// flag editor's selection band, which is that line box, sits even in its
+// field; the cap band's centring by this solver (2026-10-09 ~21:45) retired
+// with it. (This solver is declared in render.h for its readers there.)
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
 // corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
@@ -2480,14 +2482,16 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // "DD:DD.DDD" (kTimeShape) and, on row 8, the widest TAB LETTER in the
 // letter's slot (kClockTabLetters) — shaped through the one chokepoint at the
 // live size, so nothing is trusted to the face. The field is that cell plus
-// the field's pad either side — THE DIALOG FIELD'S 5 W (kModalFieldPadXPx,
-// architect 2026-10-10 ~00:30: the time field "in line with the text box
-// used for the regular text boxes for typing"; time_field_pad_px below) —
+// the field's pad either side — THE TIME FIELD'S OWN 4 W (program_spec.h's
+// field_pad_px, architect 2026-10-09 evening: "this one is a Cool Edit
+// chrome", tighter than the dialog field's 5; time_field_pad_px below) —
 // its width ceiled, and ROW 8'S CLOCK at least the mock's 85 W
 // (kProgramSpec.field_min_w_px). At 300 % the floor sets the clock's width
-// in all three faces (Tahoma's cell about 201 device px, 201 + 2 · 15
-// against the floor's 255), the cell centered in it (below); the render
-// player's two fields take no floor and are their cell and the two pads.
+// in all three faces (Tahoma's cell about 201 device px, 201 + 2 · 12
+// against the floor's 255), the cell centered in it (below) — and where the
+// floor wins the cell's seat is independent of the pad, so the pad shows
+// only in the render player's two fields, which take no floor and are their
+// cell and the two pads.
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2527,17 +2531,15 @@ constexpr std::string_view kClockTabLetters = "AB";
 
 // THE FIELD'S HEIGHT, ITS PAD AND ROW 8'S CLOCK'S LEAST WIDTH, each one
 // element rounded once (scaled_px): 17 W tall (51 device rows at 300 %, 23
-// at 138 %; program_spec.h's field_h_px) and THE DIALOG FIELD'S PAD,
-// kModalFieldPadXPx's 5 W (render.h; 15 device px at 300 %, 7 at 138 %, 18
-// at 360 %) — the time field's pad IS the regular typing field's (architect
-// 2026-10-10 ~00:30, "bring the timestamp in line with the text box used for
-// the regular text boxes for typing"; program_spec.h's time-field
-// paragraph), one constant at both fields.
+// at 138 %; program_spec.h's field_h_px) and THE TIME FIELD'S OWN PAD, 4 W
+// (12 device px at 300 %, 6 at 138 %, 14 at 360 %; program_spec.h's
+// field_pad_px, architect 2026-10-09 evening — the Cool Edit field tighter
+// than the dialog field's 5), one constant at every time field.
 static int time_field_h_px() {
     return scaled_px(kProgramSpec.field_h_px);
 }
 static int time_field_pad_px() {
-    return scaled_px(kModalFieldPadXPx);
+    return scaled_px(kProgramSpec.field_pad_px);
 }
 
 // THE AIR BETWEEN TWO TIME FIELDS — the render player's position and length
@@ -2550,7 +2552,7 @@ constexpr double kTimeFieldGapPx = 3.0;
 // The time fields' metrics, MEMOISED ON THE SCALE AND THE LIVE FACE SET —
 // thirteen tiny shaping passes (ten digits, the two letters and the
 // specimen) that answer the same thing on every frame until the scale moves
-// or a Settings pick of the `font` key swaps the set live
+// or a Settings commit of the `font` key swaps the set live
 // (gui_live_face_set, gui_font.h, 2026-10-09; the widths are the live
 // face's own).
 // Single-threaded paint state; the waveform worker never reaches this file's
@@ -5446,9 +5448,10 @@ namespace {
 // field → OK → Cancel; the rule at paint_modal_dialog's editor arm).
 constexpr double kModalButtonGapPx    = 6.0;
 // (THE FIELD'S HEIGHT AND PAD, kModalFieldHeightPx 23 and kModalFieldPadXPx
-// 5, are render.h's since 2026-10-08: the time fields and the color picker's
-// hex field take them too, so their one source is where every reader sees
-// it.)
+// 5, are render.h's since 2026-10-08: the color picker's hex field and the
+// settings choice's combo take them too, so their one source is where every
+// reader sees it; the time fields, which took them 2026-10-08 to 2026-10-09,
+// are Cool Edit's dark field with program_spec.h's own height and pad.)
 constexpr double kModalFieldWidthPx   = 378.0;  // authored; see the block above
 constexpr double kModalFieldMinWidthPx = 29.0;  // the field's floor
 // THE DIALOG BUTTONS' BOX — the deleted toolbar row's own anatomy, OWNED here
@@ -6973,8 +6976,9 @@ void GuiPaintHandler::paint_combo_list(
 // the combo (the picker's chooser takes none). The list, when down, is
 // paint_combo_list's at combo_list — standing on the combo's head, the row
 // being the window's foot, and scrolling by the popup lists' rule — the
-// shown row seeded lit at the open and the hover following the pointer (the
-// chooser's rule). The combo, the list, its rows (the zero rect for a row
+// shown row seeded lit at the open and the lit row following the pointer
+// over the rows and holding off them (the chooser's rule,
+// settings_choice_motion). The combo, the list, its rows (the zero rect for a row
 // scrolled out of view) and its bar publish into the modal stash, the press
 // road's only geometry.
 void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,

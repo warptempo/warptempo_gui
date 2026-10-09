@@ -5617,22 +5617,29 @@ void GuiInputHandler::color_picker_motion(int x, int y, GuiInputState mods) {
     // moves off its anchor (no button is held then, so the menu's arm has
     // nothing to follow either). The dialog and roster walks below run on.
     const bool rows_held = pen_hot_latch_holds();
+    // BOTH LIT ROWS FOLLOW THE POINTER ONTO THEIR ROWS AND HOLD OFF THEM
+    // (2026-10-09 evening, the settings choice's rule and its reason at
+    // settings_choice_motion): each opens with a row lit — the combo's shown
+    // one, the active preset's name — and the pen's contact on the combo or
+    // the preset button that dropped it is no act on the list, so it puts
+    // out nothing; the lift off the rows still selects nothing (both lifts
+    // read the row under them, color_picker_release).
     if (cp.chooser_open && !rows_held) {
         const int hit = color_picker_list_hit(cp.stash, x, y);
-        if (hit != cp.chooser_hover) {
+        if (hit >= 0 && hit != cp.chooser_hover) {
             cp.chooser_hover = hit;
             color_picker.damage_card();
         }
     }
     if (cp.menu_open && !rows_held) {
         // The lit row follows the pointer onto live rows alone (a grayed row
-        // is never lit, the dropdown's gate) and goes dark off the rows —
-        // the chooser's own walk.
+        // is never lit, the dropdown's gate) and holds off the rows — the
+        // chooser's own walk.
         const int hit = color_picker_menu_hit(cp.stash, x, y);
         const int lit =
             hit >= 0 && !cp.stash.menu_rows[static_cast<std::size_t>(hit)].enabled
                 ? -1 : hit;
-        if (lit != cp.menu_hover) {
+        if (hit >= 0 && lit != cp.menu_hover) {
             cp.menu_hover = lit;
             if (cp.menu_pressed >= 0) cp.menu_pressed = lit;
             color_picker.damage_card();
@@ -5828,9 +5835,26 @@ void GuiInputHandler::settings_choice_motion(int x, int y) {
     // walk is skipped, the row and its damage left alone, until the pen
     // moves off its anchor.
     if (pen_hot_latch_holds()) return;
-    settings_editor.choice_hover(
-        modal_dialog_stash_current()
-            ? settings_choice_list_hit(app.modal_dialog, x, y) : -1);
+    // THE LIT ROW FOLLOWS THE POINTER ONTO THE ROWS AND HOLDS OFF THEM
+    // (2026-10-09 evening, his S Pen on the Chrome / Icons / Font combo: "as
+    // soon as the pen touches the drop-down button, the entry blinks"):
+    // Windows' combo list moves its highlight only under a pointer over its
+    // items, and a pointer anywhere else — the combo the list dropped from
+    // among it — leaves the last lit row lit. The blink was this walk
+    // answering "no row" at the pen's own contact: the press drops the list
+    // with the shown row lit (choice's seed, set_choice_list_open), and the
+    // contact's next motion over the combo — the tip's jitter, or the
+    // restore motion at its lift, which runs before the latch arms — put it
+    // out a frame later. A pointer off the rows is no act on the list, so
+    // it changes no face (the pen latch's own principle, pen_hot_latch_);
+    // the lift off the rows still closes the list with nothing shown
+    // (finish_settings_choice_release), the lit row being a face, not a
+    // pick. The color picker's chooser list and preset menu walk the same
+    // way (color_picker_motion).
+    const int hit = modal_dialog_stash_current()
+                        ? settings_choice_list_hit(app.modal_dialog, x, y)
+                        : -1;
+    if (hit >= 0) settings_editor.choice_hover(hit);
 }
 
 

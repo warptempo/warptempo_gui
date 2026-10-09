@@ -3554,8 +3554,12 @@ struct SettingsPopupItem {
 // files — no list could show; it LEFT WITH ITS KEY when every chrome's
 // colors were compiled in (architect 2026-10-08, theme_file.h). No theme
 // file ships now: the catalog's entries are the built-in SCHEMES, compiled
-// from it by tools/theme_catalog/gen_theme_files.py (104 since 2026-10-09,
-// palette_file.h), chosen in the color picker.
+// from it by tools/theme_catalog/gen_theme_files.py, chosen in the color
+// picker: 104 since 2026-10-09 — chrome_schemes.inc's rows, one per catalog
+// entry (windows 26, windows-plus 16, kde3 25, cde 36, gnome2 1), the
+// windows-2000 chrome's own `windows-2000-standard` among them rather than
+// beside them (palette_file.h's kGuiChromeSchemes; the picker's menu lists
+// it first and the other 103 after its separator).
 //
 // `Chrome` JOINED 2026-10-07 (architect, the second vocabulary), the last row
 // of the device group in kDeviceConfigKeys' order, its label its key's name

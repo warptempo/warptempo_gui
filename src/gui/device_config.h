@@ -359,23 +359,26 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
-// pixel the seven lanes (the caption's among them) paint 500 device rows
-// above the waveform and 116 below at 400 %, 616 in all, leaving the
-// tablet's 1440 rows 824 of waveform; they pass 1440 near 935 %, past
-// which the waveform is the zero height waveform_area's floor answers (the
-// arithmetic and the guard at waveform_area, main.cpp).
+// pixel the lanes above the waveform — the caption 18 W, the menu row 20,
+// the program's band 33 and its canvas column's 43 — and below it — the
+// column's foot 6, the dock bar 6 and row 8's 32 — stand 114 + 44 = 158 W
+// under windows-2000 (re-derived 2026-10-09 against program_spec.h's
+// lanes), 456 device rows above the waveform and 176 below at 400 %, 632 in
+// all, leaving the tablet's 1440 rows 808 of waveform; they pass 1440 near
+// 911 %, past which the waveform is the zero height waveform_area's floor
+// answers (the arithmetic and the guard at waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: under the
-// win2000 chrome, below 715 Windows px of window at 100 % (498 in the `h`
-// view) the icon row's twenty-one standing buttons in seven groups (fourteen
-// in the view, its history stand-ins and the view's hide — architect
-// 2026-10-05 and 2026-10-07) no longer fit,
-// and its flush-right view group covers the groups to its left (the
-// overflow rule at kIconRowViewGroup, paint_handler.cpp). The tablet's
-// 2304-px panel holds the row whole in both states up to 318 % — 2145
-// device px at 300 % outside the view, 1494 inside it (the arithmetic is at
-// paint_icon_row, paint_handler.cpp, re-derived 2026-10-07 for Open Project
-// in Save's group and for the hide; the earlier fit ceilings and their
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 569
+// Windows px of window at 100 % (408 in the `h` view) the icon row — Cool
+// Edit's band since 2026-10-09, its twenty-one standing members in seven
+// panes round the program's 23-W case (fourteen in the view, its history
+// stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07) — no
+// longer fits, and its flush-right view group covers the panes to its left
+// (the overflow rule at kIconRowViewGroup, paint_handler.cpp). The tablet's
+// 2304-px panel holds the row whole in both states up to about 404 % —
+// 1356 + 351 device px at 300 % outside the view (the arithmetic is at
+// paint_icon_row, paint_handler.cpp, its one statement, re-derived
+// 2026-10-09 for the program's band; the earlier fit ceilings and their
 // succession are git history) — and past that ceiling the overflow rule
 // answers. The
 // redesign carries no

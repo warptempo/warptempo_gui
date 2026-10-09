@@ -36,6 +36,8 @@ ROOT=$(tr '\n' ' ' < "$SRC" | grep -o '<svg[[:space:]][^>]*>' | sed -n 1p)
 grep -q -E '[[:space:]]width="48(\.0+)?(px)?"' <<< "$ROOT" && grep -q -E '[[:space:]]height="48(\.0+)?(px)?"' <<< "$ROOT" \
     || { echo "gen_app_icon: $SRC: not a 48 x 48 drawing" >&2; exit 1; }
 
+# The ground EDECEB is the launcher's own since 2026-10-09: the Clearlooks chrome that named it is removed, and the
+# SVG comment below keeps its words so the committed output stays byte-identical.
 {
     printf '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">\n'
     printf '  <!-- The program icon outside the window, the Linux desktop icon (the .desktop'"'"'s\n'

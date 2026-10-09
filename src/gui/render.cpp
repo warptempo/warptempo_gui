@@ -2803,27 +2803,26 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
 
     // TWO SETS OF ROWS. THE TEXT VIEWPORT IS THE FIELD'S WHOLE INNER HEIGHT,
     // inside the outline (2026-10-09, the field the whole lane since ~21:00)
-    // — so a descender or a history bracket below the lane's centred
-    // baseline paints whole (rows 12 .. 14 of the 17 at 100 %, 36 .. 42 of
-    // the 51 at 300 %, render.h's descent assert). THE CARET AND THE
-    // SELECTION BAND ARE THE TEXT'S LINE BOX (architect 2026-10-09 ~23:30,
-    // render.h's EDITING paragraph): the program face's recorded ascent above
-    // the baseline and its descent below it, the dialog field's own band rule
+    // — so a descender or a history bracket below the lane's baseline paints
+    // whole (rows 12 .. 14 of the 17 at 100 %, 37 .. 43 of the 51 at 300 %,
+    // render.h's descent assert). THE CARET AND THE SELECTION BAND ARE THE
+    // TEXT'S LINE BOX (architect 2026-10-09 ~23:30, render.h's EDITING
+    // paragraph): the program face's recorded ascent above the baseline and
+    // its descent below it, the dialog field's own band rule
     // (paint_modal_dialog) — Windows' edit control fills its line with the
     // selection, and this field round a smaller line leaves rows of field
-    // above and below the band. THE BAND KEEPS THE TEXT'S BASELINE rather
-    // than centring in the field: the cap band is the lane's centred one, so
-    // the line box stands where the text's own ascent and descent put it —
-    // at 100 % rows 2 .. 13 of the inner 1 .. 15, at 138 % rows 1 .. 17 of
-    // 1 .. 20, at 300 % 6 .. 41 of 3 .. 47, at 360 % 8 .. 50 of 4 .. 58 (a
-    // centred box would stand one row lower at 138 % and 300 %, two at 360 %).
-    // Each term rounded at the element (nearbyint), as the dialog field's.
+    // above and below the band. THE BOX IS CENTRED IN THE LANE and the
+    // baseline is defined from it (architect 2026-10-09 evening, on the
+    // glass at 300 %: the band stood three rows of field above and six
+    // below, and he asked for it even): the band's rows are read off the one derivation the
+    // baseline is (cue_line_box_top_px, cue_line_box_h_px, render.h), never
+    // re-derived from the baseline — at 100 % rows 2 .. 13 of the inner
+    // 1 .. 15, at 138 % rows 2 .. 18 of 1 .. 20, at 300 % 7 .. 42 of 3 .. 47,
+    // at 360 % 10 .. 52 of 4 .. 58.
     const int view_y = lane.y + u;
     const int view_h = fill_h - 2 * u;
-    const int band_y = static_cast<int>(
-        std::nearbyint(baseline - gui_font_ascent_px(font)));
-    const int band_h =
-        static_cast<int>(std::nearbyint(gui_font_line_px(font)));
+    const int band_y = lane.y + cue_line_box_top_px();
+    const int band_h = cue_line_box_h_px();
 
     // Everything from here paints CLIPPED to the text viewport INSIDE THE
     // FIELD, so a scrolled run, its selection and its caret all stop at the
@@ -3004,6 +3003,50 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // ink. The gap after the field belongs to the first riding box.
         const int gap    = kProgramSpec.cue_segment_gap * u;
         const int run_x0 = bx + box_w;
+        // THE RUN IS CUT AT THE NEXT TRIANGLE AS THE RESTING LABEL IS (the
+        // overlap rule, paint_cues; 2026-10-09 evening): the riding cells wear
+        // their resting look, and at rest a label's extent ends at the next
+        // cue's triangle's left edge wherever the next column stands past the
+        // overlap lead — so the riding face boxes, which span the whole lane,
+        // never cover a neighbour's triangle the resting row shows. THE NEXT
+        // CUE is paint_cues' own: the cues ordered by column, stably in store
+        // order, so it is the least (column, index) after this marker's on
+        // the same displayed basis the field's column was resolved on; one
+        // sharing this column stands within the lead and cuts nothing. Only
+        // the FIELD paints over a neighbour (render.h's EDITING paragraph);
+        // what rides past a neighbour's triangle as the field grows is cut
+        // there, as the committed label will be.
+        int ride_clip_hi = std::numeric_limits<int>::max();
+        {
+            bool have_next = false;
+            int  next_col  = 0;
+            for (int j = 0; j < store_n; ++j) {
+                if (j == idx) continue;
+                const int64_t f =
+                    phase ? pmv[static_cast<size_t>(j)].time_frame
+                          : mv[static_cast<size_t>(j)].time_frame;
+                const int cj = painted_column_of_source_frame_on_basis(
+                    app, audio, static_cast<double>(f), map, basis.vp_start,
+                    basis.spp);
+                const bool after = cj > col || (cj == col && j > idx);
+                if (!after) continue;
+                if (!have_next || cj < next_col) {
+                    have_next = true;
+                    next_col  = cj;
+                }
+            }
+            if (have_next && next_col - col > kProgramSpec.cue_overlap_lead * u)
+                ride_clip_hi = area.x + next_col - cue_triangle_half_w_px();
+        }
+        cairo_save(cr);
+        if (ride_clip_hi != std::numeric_limits<int>::max()) {
+            const int clip_lo = std::min(run_x0, ride_clip_hi);
+            cairo_rectangle(cr, static_cast<double>(clip_lo),
+                            static_cast<double>(lane.y),
+                            static_cast<double>(ride_clip_hi - clip_lo),
+                            static_cast<double>(fill_h));
+            cairo_clip(cr);
+        }
         int cursor_x = run_x0;
         const int lower_seam = cursor_x;
         // The field's outline column stands in the first gap's first quantum
@@ -3034,6 +3077,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         if (ride_lower) ride(cl.lower_run, cl.lower_w);
         const int upper_seam = cursor_x;
         if (ride_upper) ride(cl.upper_run, cl.upper_w);
+        cairo_restore(cr);   // the next triangle's cut
 
         // THE RUN IS PUBLISHED AS A FLAG HIT RECT, keyed to the marker being
         // edited: its rect is the WHOLE re-painted run's extent, the gaps
@@ -3048,8 +3092,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // zero rect, which contains no point. It carries no triangle: the
         // triangle stays the flag pass's. It begins after the field's outline
         // column, as its face does: that column is the field's, claimed by
-        // `box`.
-        const int run_w = cursor_x - face_x0;
+        // `box`. It ends where the next triangle's cut ends the pixels
+        // (ride_clip_hi above), as the resting label's claim does.
+        const int run_w = std::min(cursor_x, ride_clip_hi) - face_x0;
         if (cursor_x > run_x0 && run_w > 0) {
             FlagHitRect& r = out.riding_cells;
             r.marker_index          = idx;

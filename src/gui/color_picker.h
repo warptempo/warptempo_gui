@@ -734,9 +734,6 @@ struct Layout {
     std::vector<GuiRect> menu_items;
     std::vector<int> menu_sep_ys;
     PopupScrollBar menu_bar;
-    // Whether the menu stands on the button's head (the upper placement;
-    // combo_list's rule).
-    bool    menu_upward = false;
 };
 Layout layout(const AppState& app, const GuiFont& font);
 

@@ -50,8 +50,9 @@ The app compiles in ONE THEME PER CHROME and nothing else (`src/gui/theme_file.h
 `windows-2000-standard` for the `windows-2000` chrome, HAND-RECORDED as the role table's value column
 (`kGuiThemeRoles`), which `gen_theme_files.py` checks against the entry at every run. (The Clearlooks engine's
 tones, `build.py`'s `engine_tones`, are not computed since the clearlooks chrome's removal, 2026-10-09: its arithmetic
-read three files that left with that chrome and stands in git history at d5b91f52^; the `clearlooks` entry's
-`engine_tones` record leaves catalog.json at the next build.) A catalog change is `build.py`,
+read three files that left with that chrome and stands in git history at d5b91f52^. The committed catalog.json's
+`clearlooks` entry still carries its `engine_tones`: they are the record of a run `build.py` no longer performs, the
+engine having left with the chrome on 2026-10-09, and they leave catalog.json at its next build.) A catalog change is `build.py`,
 then `gen_theme_files.py` and `catalog_md.py`, then the build, the outputs committed together; the output is
 byte-stable (the catalog's order, uppercase hex, LF, no timestamp). No other entry ships as a theme: the bundled theme files
 (`assets/themes/<key>.theme`, copied into the app's `themes/` folder at every launch and chosen by the `theme` device
@@ -97,8 +98,10 @@ chrome. The dark level (2026-10-03..04: a second, computed row per entry) was dr
   once in the catalog's `rules`. That is part of the import, not a
   derivation of ours.
 - THE CHROME IS THE THEME'S; THE WAVEFORM PANE, THE FLAGS AND THE PLAYHEAD ARE THE PROGRAM'S OWN ELEMENTS (architect
-  2026-10-03), their colors the app's PALETTES since 2026-10-07, never a theme's (`src/gui/palette_file.h`). The
-  flags are the FLAT Acid flag, outlined in the canvas's color and shaded by nothing. Each entry still names the rule its family's desktop shaded a 3D face with (`flag_rule`:
+  2026-10-03), their colors the app's PALETTES since 2026-10-07, never a theme's (`src/gui/palette_file.h`, whose
+  role table owns them). The flags were the FLAT Acid flag, outlined in the canvas's color and shaded by nothing,
+  2026-10-07/08; since 2026-10-09 they are Cool Edit's cues, red and blue triangles and dots (the palette's `cue` and
+  `range`). Each entry still names the rule its family's desktop shaded a 3D face with (`flag_rule`:
   Windows' Appearance dialog, `windows_dialog`, over shlwapi's 240-scale integer HLS as Wine implements it; KDE 3's;
   Motif's; FLAT for GNOME 2, whose Clearlooks draws no one-line bevel round a raised face — `toolkit_rules.flag_bevel`), KEPT as the record of the design the flat flag replaced (the retired mock-up
   renderer's "bevelled" flag style); the app reads it nowhere. These are the only rules in the tool.
@@ -203,12 +206,14 @@ and lists, 5 THE PRIMARY (an application's background; dtsession's high-colour `
 dialogs), 8 the front panel; Motif paints two shadows, so its quartet is (ts, ts, bs, bs); it has no selection
 highlight (text selection is inverse video), no tooltip pair and no disabled colour (insensitive text is stippled).
 
-THE APP-SPECIFIC ROLES (architect 2026-10-03), drawn from the catalog roles above rather than stored: the ruler label
-and the trim lane's arrow glyph <- `label`; the ruler ticks <- `bevel_shadow`; the playhead head's outline <- `label`;
-THE DISABLED EMBOSS's light copy <- `bevel_hilight` (`roles.light_roles`). THE PROGRAM'S OWN COLORS are no catalog
-roles and no theme's (2026-10-07): they are the app's palettes (`src/gui/palette_file.h`), and the flag outline is the
-canvas. The frozen crops, rendered before the split, show the program colors of their day (CATALOG.md's head says
-which).
+THE APP-SPECIFIC ROLES (architect 2026-10-03), drawn from the catalog roles above rather than stored — the record of
+2026-10-03 to 2026-10-08: the ruler label and the trim lane's arrow glyph <- `label`; the ruler ticks <-
+`bevel_shadow`; the playhead head's outline <- `label`; THE DISABLED EMBOSS's light copy <- `bevel_hilight`
+(`roles.light_roles`). Since 2026-10-09 the ruler, the trim lane, the playhead's head and
+the cues are Cool Edit's program, their tones the palette's `face` and its derived tones and the palette's roles
+(`src/gui/palette_file.h`, `src/gui/cool_edit_derive.h`). THE PROGRAM'S OWN COLORS are no catalog roles and no theme's
+(2026-10-07): they are the app's palettes. The frozen crops, rendered before the split, show the program colors of their
+day (CATALOG.md's head says which).
 
 ## The checks (build.py, before the write)
 

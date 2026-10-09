@@ -139,17 +139,19 @@ struct ProgramSpec {
     // height and ROW 8'S CLOCK'S least width (the mock's 85; the render
     // player's two fields are their cell and pads alone). Every time field
     // takes the shape: row 8's clock and the render player's position and
-    // length. THE PAD from its outer edge to the reserved cell on each side
-    // IS NO FIELD HERE: it is THE DIALOG FIELD'S, kModalFieldPadXPx's 5 W
-    // (render.h), the regular typing field's (architect 2026-10-10 ~00:30:
-    // "bring the timestamp in line with the text box used for the regular
-    // text boxes for typing. Don't worry about Cool Edit's spacing there —
-    // some of the reason for the spacing is that there's six boxes crammed
-    // next to each other"), read at the time field (paint_handler.cpp's
-    // time_field_pad_px). Cool Edit's Begin / End / Length field, whose ink
-    // stands 10 and 12 W in, set the 8 W of 2026-10-09.
+    // length. THE PAD from its outer edge to the reserved cell on each side,
+    // `field_pad_px`, IS THE TIME FIELD'S OWN 4 W (architect 2026-10-09
+    // evening, at the consolidation session's close: one W less air on either
+    // side than the dialog field's 5 — "the other ones are Windows chrome
+    // whereas this one is a Cool Edit chrome", so Cool Edit's field may sit
+    // tighter than a Windows input box), read at every time field
+    // (paint_handler.cpp's time_field_pad_px). Its history in one clause:
+    // Cool Edit's Begin / End / Length field's 8 W (its ink 10 and 12 W in)
+    // on 2026-10-09, the dialog field's 5 W (kModalFieldPadXPx) that
+    // evening, its own 4 W since.
     double field_h_px;
     double field_min_w_px;
+    double field_pad_px;
     // THE STATE LINE'S AIR: its first ink this far past the time-field
     // group's end bar (the field's own symmetric air of 2026-10-08, the end
     // bar now standing between the field and the line).
@@ -204,11 +206,15 @@ struct ProgramSpec {
     // many rows from the lane's top, THE WHOLE LANE (rows 0 .. 16: "the text
     // box should take up the whole marker lane … right now it's too small to
     // click"; render.h's cue_fill_h_px reads the lane's own composite, so the
-    // box is the lane at every scale); THE LABEL'S CAP BAND CENTRED IN THAT
-    // BOX (architect 2026-10-09 ~21:45, "it should be centered vertically"):
-    // no authored baseline row — render.h's cue_baseline_px derives it from
-    // the lane's height and the program face's cap by the product's box rule
-    // (redesign_baseline), at 100 % the cap 7 on rows 5 .. 11 and the
+    // box is the lane at every scale); THE LABEL'S LINE BOX CENTRED IN THAT
+    // BOX (architect 2026-10-09 evening, on the glass at 300 %: the editor's
+    // band stood three rows of field above and six below, and he asked for
+    // it even; the cap band's centring of ~21:45 before it): no authored
+    // baseline row — render.h's
+    // cue_baseline_px derives it from the lane's height and the program
+    // face's recorded line box (ascent + descent) by the box rule, the box's
+    // top plus the ascent, the flag editor's selection band the same box; at
+    // 100 % the box on rows 2 .. 13, the cap 7 on rows 5 .. 11 and the
     // baseline the top of row 12, the descenders over the triangle's rows
     // beside it (render.h's asserts, where the face is in scope).
     int  cue_above_triangle_px;
@@ -280,6 +286,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .end_bar_face_px    = 3,
     .field_h_px         = 17.0,
     .field_min_w_px     = 85.0,
+    .field_pad_px       = 4.0,
     .state_air_px       = 5.0,
     .column_air_px         = 5,
     .column_margin_px      = 6,
@@ -377,9 +384,9 @@ static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
 static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.cue_triangle_rows ==
               kProgramSpec.ruler_baseline_px - 1);
 // THE CUE'S ROWS (the product's lane): the triangle on rows 12 .. 16, the
-// label's box the whole lane, the label's cap band centred in it (render.h's
-// asserts read the program face's recorded cap and descent against the
-// lane: the cap on rows 5 .. 11, the descent ending above the last row).
+// label's box the whole lane, the label's line box centred in it (render.h's
+// asserts read the program face's recorded line box, cap and descent against
+// the lane: the cap on rows 5 .. 11, the descent ending above the last row).
 static_assert(kProgramSpec.cue_fill_px ==
               program_marker_lane_authored_h(kProgramSpec));
 static_assert(kProgramSpec.cue_label_lead >
