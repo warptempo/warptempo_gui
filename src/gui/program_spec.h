@@ -37,9 +37,16 @@
 // tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; its generator mock_ce_s3.py,
 // NOTES.md's sets 2 and 3): THE COLUMN'S AIR (5 W of face under the band's
 // last line, METRICS §4.1), THE VIEW BAR — the trim bar — (a line, the
-// black field, a line: 8), THE RULER FLIPPED (17 rows of ground on the view
+// black field, a line: 8), THE RULER FLIPPED (11 rows of ground on the view
 // bar's light line, its ticks standing on its bottom row, then its own
-// light bottom line: 18) and THE MARKER LANE of Cool Edit's cues (11); then
+// light bottom line: 12) and THE MARKER LANE of Cool Edit's cues (17) —
+// the ruler and the lane THE PRODUCT'S ROWS, NOT COOL EDIT'S 17 AND 11
+// (architect 2026-10-09 ~16:50, the go ~21:00: the ruler's digits the
+// base's six-row small digit with one W of air above them, the rows saved
+// given to the marker lane, whose label box is the whole lane — "right now
+// it's too small to click"; usability over accuracy, render.h's row-6
+// canvas paragraph; the mock of record tmp/mocks/cool_edit/
+// mock_CE_S4_TRI_05.png, NOTES.md's set 4); then
 // THE CANVAS (architect 2026-10-09, the third part, "accurate to the
 // mock-up"; METRICS §4.1, the mock's set 3): its dark top frame row under
 // the marker lane (1), the canvas itself — the waveform area, its grid and
@@ -156,21 +163,33 @@ struct ProgramSpec {
     // 10; architect 2026-10-09, mock set 1's axis, 6): the trim lane is a
     // line, this field and a line.
     int  view_bar_field_px;
-    // THE RULER'S GROUND, its rows 0 .. 16 under the view bar's light line
-    // (METRICS §4.4, 17 rows), then its own light bottom line; THE TICKS
+    // THE RULER'S GROUND, its rows 0 .. 10 under the view bar's light line
+    // (architect 2026-10-09 ~16:50 / ~21:00: Cool Edit's 17 rows, METRICS
+    // §4.4, shrunk to 1 + 6 + 4 — "the timestamps should basically be
+    // touching the trim bar — one Windows pixel of empty space above"), then
+    // its own light bottom line: ROW 0 AIR; THE DIGITS the base's six-row
+    // small digit (GuiFace::Small, gui_font.h — every set's small face, a
+    // cell all above the baseline) on rows 1 .. 6, their BASELINE the top of
+    // this ground row (7), the black (+1, +1) shadow's last row 7; THE TICKS
     // stand on the ground's bottom row and rise this far into it (minor and
-    // major); THE DIGITS' BASELINE is the top of this ground row (12), the
-    // cap of 7 above it and the black shadow ending on it.
+    // major: rows 9 .. 10 and 7 .. 10), a major's top row the shadow's last,
+    // the tick painted over it (the mock of record's order, paint_ruler_row).
     int  ruler_ground_px;
     int  ruler_minor_tick_px;
     int  ruler_major_tick_px;
     int  ruler_baseline_px;
-    // THE MARKER LANE (METRICS §4.2, 11 rows): this many W rows above the
-    // cue's triangle (row 0 the air, the label's cap on rows 1 .. 7), then
-    // the triangle's cue_triangle_rows quanta, its apex on the lane's last
-    // row; the label's baseline the top of this lane row (8), the selected
-    // fill this many rows from the lane's top (rows 0 .. 8: one row of air
-    // above the cap and one below the baseline).
+    // THE MARKER LANE (architect 2026-10-09 ~16:50 / ~21:00, 17 rows where
+    // Cool Edit's has 11, METRICS §4.2 — the six the ruler gave): this many W
+    // rows above the cue's triangle (row 0 the air, the label's cap on rows
+    // 1 .. 7, Cool Edit's seat kept), then the triangle's cue_triangle_rows
+    // quanta on rows 12 .. 16 ("the triangle height is okay right now"), its
+    // apex on the lane's last row; the label's baseline the top of this lane
+    // row (8); THE LABEL'S BOX — the selected fill, the resting face box, the
+    // press target and the flag editor's field — this many rows from the
+    // lane's top, THE WHOLE LANE (rows 0 .. 16: "the text box should take up
+    // the whole marker lane … right now it's too small to click"; render.h's
+    // cue_fill_h_px reads the lane's own composite, so the box is the lane at
+    // every scale).
     int  cue_above_triangle_px;
     int  cue_triangle_rows;
     int  cue_baseline_px;
@@ -248,14 +267,14 @@ inline constexpr ProgramSpec kProgramSpec = {
     .column_foot_px        = 5,
     .grid_divisions        = 4,
     .view_bar_field_px     = 6,
-    .ruler_ground_px       = 17,
+    .ruler_ground_px       = 11,
     .ruler_minor_tick_px   = 2,
     .ruler_major_tick_px   = 4,
-    .ruler_baseline_px     = 12,
-    .cue_above_triangle_px = 6,
+    .ruler_baseline_px     = 7,
+    .cue_above_triangle_px = 12,
     .cue_triangle_rows     = 5,
     .cue_baseline_px       = 8,
-    .cue_fill_px           = 9,
+    .cue_fill_px           = 17,
     .cue_label_lead        = 6,
     .cue_fill_lead         = 5,
     .cue_fill_pad          = 1,
@@ -312,24 +331,39 @@ static_assert(program_band_authored_h(kProgramSpec) == 33);
 static_assert(program_dock_bar_authored_h(kProgramSpec) == 6);
 static_assert(program_row8_authored_h(kProgramSpec) == 32);
 static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
-static_assert(program_ruler_authored_h(kProgramSpec) == 18);
-static_assert(program_marker_lane_authored_h(kProgramSpec) == 11);
+static_assert(program_ruler_authored_h(kProgramSpec) == 12);
+static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);
 static_assert(program_column_authored_h(kProgramSpec) == 43);
 static_assert(program_column_foot_authored_h(kProgramSpec) == 6);
 // The column's foot mirrors its air (METRICS §4.1: 5 rows of face above the
 // view bar, 5 under the canvas's bottom frame row).
 static_assert(kProgramSpec.column_foot_px == kProgramSpec.column_air_px);
-// THE CUE'S ROWS (METRICS §4.2): the label's cap (7, rows 1 .. 7) and the
-// triangle (rows 6 .. 10) share rows 6 and 7 but never columns — the label
-// stands past the triangle's shadow; the fill's rows end one below the
-// baseline; the playhead's head (rows 12 .. 16 of the ruler) is the cue's
-// triangle on the ruler's own rows.
+// THE RULER'S ROWS (2026-10-09 ~21:00): the six the ruler gave are the six
+// the marker lane took, so the column and every stack keep their totals.
+static_assert(program_ruler_authored_h(kProgramSpec) +
+                  program_marker_lane_authored_h(kProgramSpec) ==
+              18 + 11);
+// THE MAJOR TICK'S TOP ROW IS THE DIGITS' SHADOW'S LAST (the black shadow,
+// one row under the digits' rows 1 .. 6, ends on row 7), the tick painted
+// over it; the
+// PLAYHEAD'S HEAD, the cue's triangle on the ground's last five rows (6 ..
+// 10), reaches the digits' last row (6) and covers what stands under it
+// (the mock of record). The digits' own rows — one W of air, then the small
+// face's six — are render.h's assert, where the face is in scope.
+static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.ruler_major_tick_px ==
+              kProgramSpec.ruler_baseline_px);
+static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.cue_triangle_rows ==
+              kProgramSpec.ruler_baseline_px - 1);
+// THE CUE'S ROWS (METRICS §4.2's seat, the product's lane): the label's cap
+// (7, rows 1 .. 7, the baseline the top of row 8) above the triangle (rows
+// 12 .. 16) with rows 8 .. 11 between for the descenders and the brackets
+// (render.h's assert reads the program face's recorded descent against
+// them); the label's box the whole lane.
 static_assert(kProgramSpec.cue_baseline_px - 7 == 1);
-static_assert(kProgramSpec.cue_fill_px == kProgramSpec.cue_baseline_px + 1);
+static_assert(kProgramSpec.cue_fill_px ==
+              program_marker_lane_authored_h(kProgramSpec));
 static_assert(kProgramSpec.cue_label_lead >
               (2 * kProgramSpec.cue_triangle_rows - 1) / 2 + 1);
-static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.cue_triangle_rows ==
-              kProgramSpec.ruler_baseline_px);
 // The cue's two colors alternate one dot every playhead period, and neither
 // shares a row with the playhead's dots.
 static_assert(kProgramSpec.cue_dot_period == 2 * kProgramSpec.dot_period);

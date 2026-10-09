@@ -36,12 +36,13 @@
 // extensions), standing in for the MS Sans Serif Windows set its chrome in
 // before Windows 2000's Standard scheme took Tahoma. In each set the body is
 // the regular file,
-// the bold (the caption's title alone) the bold file, the small (the
-// ruler's labels until 2026-10-09, when the ruler became Cool Edit's) the
-// regular file at the smaller em, and THE PROGRAM'S (architect
-// 2026-10-09, the program is Cool Edit: the ruler's digits and the cues'
-// labels at Cool Edit's cap of 7 W, METRICS §4.2 and §4.4) the regular file
-// at the em that stands its "H" seven rows tall.
+// the bold (the caption's title alone) the bold file, the small (THE
+// RULER'S DIGITS — Cool Edit's flipped ruler at the base's six-row digit
+// since architect 2026-10-09 ~16:50 / ~21:00, program_spec.h's ruler
+// fields) the regular file at the smaller em, and THE PROGRAM'S (architect
+// 2026-10-09, the program is Cool Edit: the cues' labels at Cool Edit's
+// cap of 7 W, METRICS §4.2) the regular file at the em that stands its "H"
+// seven rows tall.
 // EVERY FACE DRAWS ITS ANTIALIASED OUTLINE AT EVERY SIZE, NEVER AN EMBEDDED
 // BITMAP STRIKE (architect 2026-10-06; Tahoma carries strikes at 8–16 ppem,
 // its bold at 9–13, and the sheets he judged were outline renders; DejaVu
@@ -212,13 +213,15 @@ struct GuiFaceMetrics {
 };
 
 // THE PROGRAM FACE'S RECORDED METRICS, every set's (2026-10-09): Cool Edit's
-// cap of 7 W for its ruler digits and its cue labels, read off his captures
-// (tmp/research/cool_edit/METRICS.md §4.2, §4.4); the ascent and descent
-// the cap's own proportion of the body's 11 / 2 over 8, rounded: {10, 2, 7},
-// measured by the cap ("H") under every set, FreeSans's included.
-// No lane reads the cell: the ruler and the marker lane seat these runs on
-// their own authored rows (program_spec.h), so the cell is a record and the
-// cap the em's measure.
+// cap of 7 W for its cue labels, read off his captures
+// (tmp/research/cool_edit/METRICS.md §4.2; its ruler digits too until
+// 2026-10-09 ~21:00, when the ruler took the small face's six-row digit);
+// the ascent and descent the cap's own proportion of the body's 11 / 2 over
+// 8, rounded: {10, 2, 7}, measured by the cap ("H") under every set,
+// FreeSans's included. No lane reads the cell: the marker lane seats these
+// runs on its own authored rows (program_spec.h), so the cell is a record
+// and the cap the em's measure — save the descent, which render.h's assert
+// holds clear of the cue's triangle.
 inline constexpr GuiFaceMetrics kGuiProgramFaceMetrics = {
     10, 2, 7, GuiFaceMeasure::Cap};
 
@@ -270,9 +273,9 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
 //   17-row cell his captures show, which the 2026-10-07 base of the
 //   vocabulary carried until this ruling); the small is the same SIX-row
 //   digit as the win2000 set's, a cell all above the baseline (its em 7.93
-//   off the "0"), so the ruler lane keeps its 17 (GNOME has no small face:
-//   GTK's ruler drew the widget's own font). Every height GTK derives from
-//   the cell is re-derived at 13 (chrome_spec.h's clearlooks instance).
+//   off the "0"), so the ruler's digits are the base's (GNOME has no small
+//   face: GTK's ruler drew the widget's own font). Every height GTK derives
+//   from the cell is re-derived at 13 (chrome_spec.h's clearlooks instance).
 //   TRACKING: none ("compromise and approximate with modern HarfBuzz and
 //   DejaVu Sans": the bytecode look of 2010 is not reproduced, and Pango
 //   tracked nothing; the heights are matched, never the widths).
@@ -400,7 +403,8 @@ inline constexpr const GuiFaceSet* kGuiFaceSets[] = {
 // cap derived), which no lane height reads — so the stack and the
 // well keep their rows across a swap (since 2026-10-09 the ruler and the
 // marker lane are the program's authored rows, program_spec.h, and read no
-// face at all).
+// face's cell for their heights — the ruler's six-row digit the small
+// face's in every set, render.h's assert).
 constexpr bool same_lanes(const GuiFaceSet& a, const GuiFaceSet& b) {
     for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
         if (a.metrics[i].ascent != b.metrics[i].ascent ||

@@ -2642,8 +2642,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
               : mv[static_cast<size_t>(idx)].time_frame;
 
     // THE MARKER LANE, the flag pass's own: the field is the label's selected
-    // fill (rows 0 to cue_fill_h_px), standing exactly where the resting
-    // segment's box does.
+    // fill (cue_fill_h_px, the whole lane since 2026-10-09 ~21:00), standing
+    // exactly where the resting segment's box does.
     const GuiRect lane = top_marker_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
     const int u      = cue_unit_px();
@@ -2879,13 +2879,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                 : warp_iter_cells(mv, idx, iteration_on);
     const bool ride_cells = ride_text.present;
 
-    // 1. THE FIELD IS A BOX ON THE LABEL'S ROWS (cue_fill_h_px, rows 0 .. 8):
-    //    the segment's box — its run and one quantum of pad either side, the
+    // 1. THE FIELD IS A BOX OVER THE WHOLE LANE (cue_fill_h_px, rows 0 ..
+    //    16, the selected label's box; architect 2026-10-09 ~21:00): the
+    //    segment's box — its run and one quantum of pad either side, the
     //    text standing exactly where the resting label's does — with A
     //    ONE-QUANTUM OUTLINE in `field_text` round it, outside the pads on
-    //    the left and right and on the box's first and last rows (the label's
-    //    air rows), `field_ground` inside. IT PAINTS OVER THE LANE — the
-    //    triangle's shadow and any neighbouring label it reaches (architect
+    //    the left and right and on the box's first and last rows (the lane's
+    //    top air row and the triangle's apex row), `field_ground` inside. IT
+    //    PAINTS OVER THE LANE — the triangle's right edge and shadow and any
+    //    neighbouring label it reaches (architect
     //    2026-10-09: "it may overlap with the flag and other elements, that's
     //    fine"). A refused Enter recolors nothing (text_editor::refuse selects
     //    the whole text; the owner's card says why). Since the editor opens on
@@ -2897,9 +2899,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                                 field_box.w - 2 * u, field_box.h - 2 * u},
                     field_fill);
 
-    // The caret / selection band: inside the outline, the field's whole
-    // inner height. A text field's caret spans its whole field, so this needs
-    // no font-extent solve.
+    // THE TEXT VIEWPORT, THE CARET AND THE SELECTION BAND ARE ONE SET OF ROWS:
+    // THE FIELD'S WHOLE INNER HEIGHT, inside the outline (2026-10-09, the
+    // field the whole lane since ~21:00) — so a descender or a history
+    // bracket below the baseline paints whole (rows 8 .. 10 of the lane at
+    // the program face, render.h's descent assert), and THE CARET AND THE
+    // SELECTION SPAN THE FIELD as Windows' single-line edit control fills its
+    // client height with the selection, a selected glyph's descender staying
+    // in the selection pair, never handed to the field text below a band
+    // that ends on the baseline. Authored rows, so no font-extent solve.
     const int band_y = lane.y + u;
     const int band_h = fill_h - 2 * u;
 
@@ -2929,9 +2937,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    text viewport and the selected run to the band, two disjoint regions
     //    whose union is the whole viewport, so no pixel is painted by both
     //    inks and every edge pixel antialiases against exactly the ground it
-    //    sits on. The band spans the viewport's whole height, so the
-    //    complement is the columns left and right of it. With no selection
-    //    the run paints unclipped inside the viewport.
+    //    sits on. The band spans the viewport's whole height (the rows block
+    //    above), so the complement is the columns left and right of it. With
+    //    no selection the run paints unclipped inside the viewport.
     //
     //    Both edges come from byte_x, so the highlight cannot drift off the
     //    glyphs it marks however proportional they are.

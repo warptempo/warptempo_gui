@@ -253,8 +253,8 @@ struct Viewport;
 // row is 1029 − 180 − 6 − 235 = 608 under win2000 and clearlooks, far below
 // the well's top. A pitch of 21, the chooser's own height, would make the
 // right column seven equal rows and the card 198, but at 300 % its top row
-// would be 327, inside the win2000 marker lane (306–339) over the cues on its
-// half.
+// would be 327, inside the win2000 marker lane (288–339 since its 17 W,
+// 2026-10-09 ~21:00) over the cues on its half.
 //
 // THE PRESS THROUGH THE CARD (architect 2026-10-08 ~21:20: "pick flags so I
 // can toggle, test the selected flag without having to close the picker and

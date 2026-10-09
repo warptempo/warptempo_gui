@@ -1233,8 +1233,9 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 //
 // THE CANVAS COLUMN'S TEXT TAKES NEITHER SEAT (2026-10-09, the program is
 // Cool Edit): the ruler's digits and the cues' labels stand on AUTHORED
-// BASELINE ROWS of their lanes — program_spec.h's ruler_baseline_px and
-// cue_baseline_px, Cool Edit's measured rows — so neither solver is asked.
+// BASELINE ROWS of their lanes — program_spec.h's ruler_baseline_px (the
+// architect's row under one W of air, 2026-10-09 ~21:00) and
+// cue_baseline_px (Cool Edit's measured row) — so neither solver is asked.
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
 // corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
@@ -4127,11 +4128,15 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
 //     Cool Edit; METRICS §4.4, the mock of record; render.h's canvas-column
 //     paragraph): the Face-derived ground under the view bar's light line,
 //     its own light bottom line, the ticks E0E0E0 STANDING ON THE GROUND'S
-//     BOTTOM ROW — majors four W, minors two — and the digits in the
-//     program face at cap 7 over a black (+1, +1) shadow, their baseline the
-//     top of the ground's row 12. (Kdenlive's look — the majors rising above
-//     the flags, the etched ticks, the small face's labels — stood
-//     2026-08-01 to 2026-10-09; git history.)
+//     BOTTOM ROW — majors four W, minors two — and the digits over a black
+//     (+1, +1) shadow; THE GROUND 11 W, THE DIGITS THE BASE'S SIX-ROW SMALL
+//     DIGIT on its rows 1 .. 6 under one row of air, their baseline the top
+//     of row 7 (architect 2026-10-09 ~16:50 / ~21:00, the product's rows
+//     where Cool Edit's ruler is 17 with cap-7 digits: "one Windows pixel of
+//     empty space above", the six rows saved given to the marker lane;
+//     program_spec.h's ruler fields). (Kdenlive's look — the majors rising
+//     above the flags, the etched ticks — stood 2026-08-01 to 2026-10-09;
+//     git history.)
 //   MODEL, from Reaper (architect 2026-08-01): WHERE the ticks go. A round
 //     ladder of labeled steps, the smallest rung whose label pitch clears the
 //     minimum, and eight binary minors inside each step; the labels' text.
@@ -4348,16 +4353,20 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // THE TICKS STAND ON THE GROUND'S BOTTOM ROW (METRICS §4.4, the mock's
     // flipped ruler): each one quantum wide in kCeRulerTick, rising the
     // major's four W or the minor's two into the ground from its foot — its
-    // rows 13 .. 16 and 15 .. 16 of 0 .. 16.
+    // rows 7 .. 10 and 9 .. 10 of 0 .. 10.
     const int ground_bottom = lane.y + ground_h;   // one past the ground's rows
     const int major_top = ground_bottom - scaled_px(kProgramSpec.ruler_major_tick_px);
     const int minor_top = ground_bottom - scaled_px(kProgramSpec.ruler_minor_tick_px);
 
-    // THE DIGITS: the program face at cap 7 (gui_font.h's kGuiProgramFaceMetrics,
-    // the cues' own), their BASELINE THE TOP OF THE GROUND'S ROW 12 — the cap on
-    // rows 5 .. 11, the black (+1, +1) shadow ending on row 12 — an authored
-    // row of the lane, neither solver asked (redesign_baseline's block).
-    const GuiFont font = gui_font(GuiFace::Program);
+    // THE DIGITS: THE SMALL FACE (gui_font.h: every set's small face is the
+    // base's six-row digit, WordPad's ruler digit, its cell all above the
+    // baseline; architect 2026-10-09 ~16:50, Cool Edit's cap-7 digits read
+    // "very small" anyway), their BASELINE THE TOP OF THE GROUND'S ROW 7 —
+    // the digits on rows 1 .. 6 under row 0's air, "basically touching the
+    // trim bar", the black (+1, +1) shadow ending on row 7, a major tick's
+    // top row — an authored row of the lane, neither solver asked
+    // (redesign_baseline's block).
+    const GuiFont font = gui_font(GuiFace::Small);
     const double baseline =
         static_cast<double>(lane.y + scaled_px(kProgramSpec.ruler_baseline_px));
 
@@ -4407,6 +4416,36 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // THE TICK'S WIDTH IS THE PROGRAM'S QUANTUM (off the canvas: "otherwise,
     // scaled", waveform_line_px's rule, 2026-10-09).
     const int t = program_line_px();
+    // ONE MAJOR'S LABEL at its column `col` and its step time `step_ms`,
+    // CENTERED ON THE MAJOR'S COLUMN (the tick's own t wide, the run's centre
+    // on the tick's). The label's TIME is still the exact step time — only
+    // tick PLACEMENT is distributed, and a major is at its own exact time
+    // anyway. Its x rides `col`, which for a major IS the rounded major, so
+    // number and line cannot drift apart.
+    const auto paint_major_label = [&](int col, double step_ms) {
+        // step_ms is INTEGRAL BY CONSTRUCTION (k * step, both int64, the
+        // product exact in double at any ruler magnitude), so this is a
+        // representation change, not a rounding: llrint reads the integer
+        // back and can never meet a tie. (nearbyint is the rule where a
+        // fraction is actually rounded; the trim bar's displayed_trim_ms
+        // cast makes the same integral-valued claim.)
+        const int64_t label_ms = static_cast<int64_t>(std::llrint(step_ms));
+        if (label_ms < 0) return;
+        const std::string txt = ruler_label_text(label_ms, step);
+        const text_shape::ShapedRun run =
+            text_shape::shape_text_run(font, txt.c_str());
+        const int run_w = static_cast<int>(std::ceil(run.width_px));
+        const int lx = col + t / 2 - run_w / 2;   // within the columns
+        if (lx < 0 || lx + run_w + t > wave_w) return;   // the edge-drop
+        // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
+        // colour to all the numbers"): the tick's ink over Cool Edit's
+        // black (+1, +1) shadow (METRICS §4.4).
+        const double x = static_cast<double>(cx + lx);
+        set_palette_source(cr, hex(kCeRulerShadow));
+        text_shape::show_shaped_run(cr, run, x + t, baseline + t);
+        set_palette_source(cr, hex(kCeRulerTick));
+        text_shape::show_shaped_run(cr, run, x, baseline);
+    };
     // THE WALK'S CLIP: the waveform's columns [0, wave_w) over the ground's
     // rows, so a tick past the last column and the leftover strip a
     // non-multiple-of-16 window leaves beside wave_w carry nothing.
@@ -4432,6 +4471,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const bool major = (i == 0);
             const bool tick_on_lane = col >= 0 && col < wave_w;
             if (!tick_on_lane && !major) continue;
+            // A MAJOR'S LABEL PAINTS BEFORE ITS TICK, so the tick stands whole
+            // over the digits' shadow where the shadow's last row meets the
+            // major's top row (program_spec.h's ruler fields, 2026-10-09
+            // ~21:00; the mock of record paints the ticks over). Only the
+            // label's own major can meet it: a minor rises to row 9, below the
+            // shadow's last row 7, and the next major stands a whole step —
+            // at least eight minimum minor pitches — away.
+            if (major) paint_major_label(col, step_ms);
             // One quantum wide (program_line_px; render.h's waveform_line_px
             // inventory), left edge on the tick's own column, clipped at the
             // right edge, in kCeRulerTick, standing on the ground's bottom row.
@@ -4441,36 +4488,6 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                    major ? major_top : minor_top,
                                    ground_bottom, t);
             }
-            if (!major) continue;
-            // The label CENTERED ON ITS MAJOR'S COLUMN (the tick's own t
-            // wide, the run's centre on the tick's). The label's TIME is still
-            // the exact step time — only tick PLACEMENT is distributed, and a
-            // major is at its own exact time anyway. Its x rides `col`, which
-            // for a major IS the rounded major, so number and line cannot
-            // drift apart.
-            // step_ms is INTEGRAL BY CONSTRUCTION (k * step, both int64, the
-            // product exact in double at any ruler magnitude), so this is a
-            // representation change, not a rounding: llrint reads the integer
-            // back and can never meet a tie. (nearbyint is the rule where a
-            // fraction is actually rounded; the trim bar's displayed_trim_ms
-            // cast makes the same integral-valued claim.)
-            const int64_t label_ms = static_cast<int64_t>(std::llrint(step_ms));
-            if (label_ms < 0) continue;
-            const std::string txt =
-                ruler_label_text(label_ms, step);
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(font, txt.c_str());
-            const int run_w = static_cast<int>(std::ceil(run.width_px));
-            const int lx = col + t / 2 - run_w / 2;   // within the columns
-            if (lx < 0 || lx + run_w + t > wave_w) continue;   // the edge-drop
-            // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
-            // colour to all the numbers"): the tick's ink over Cool Edit's
-            // black (+1, +1) shadow (METRICS §4.4).
-            const double x = static_cast<double>(cx + lx);
-            set_palette_source(cr, hex(kCeRulerShadow));
-            text_shape::show_shaped_run(cr, run, x + t, baseline + t);
-            set_palette_source(cr, hex(kCeRulerTick));
-            text_shape::show_shaped_run(cr, run, x, baseline);
         }
     }
     cairo_restore(cr);
@@ -4483,10 +4500,12 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // one antialiased triangle (paint_ce_cue_triangle, 2026-10-09 ~12:40), in
     // the palette's `playhead_stem` (Cool Edit's Curs yellow FFFF00 by
     // default, 2026-10-09) over the same triangle one quantum right in
-    // `ce_cue_shadow`, ON THE GROUND'S ROWS 12 .. 16, its apex — the bottom
+    // `ce_cue_shadow`, ON THE GROUND'S ROWS 6 .. 10, its apex — the bottom
     // centre of the playhead's one-quantum column — on the ground's bottom
-    // row. It is OPAQUE over the ticks and digits the walk above laid down
-    // (its diagonal edges antialiased over them). NO SNAP, NO
+    // row, its top row the digits' last (2026-10-09 ~21:00, the 11-W
+    // ground). It is OPAQUE over the ticks and digits the walk above laid
+    // down, covering whatever stands under it (its diagonal edges
+    // antialiased over them; the mock of record). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
     // playhead paragraph). It draws NOTHING across the view bar, the marker

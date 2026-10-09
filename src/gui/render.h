@@ -660,8 +660,14 @@ void install_true_colors(bool on);
 // `ce_hilight` RIGHT column beside the ground (2026-10-09, the column's
 // frame columns; the dark one meeting the foot line mitred); THE TICKS kCeRulerTick (E0E0E0,
 // face-independent in every preset), one quantum wide, STANDING ON THE
-// GROUND'S BOTTOM ROW and rising into it; THE DIGITS the program face at
-// cap 7 in the tick's ink over a BLACK (+1, +1) shadow (kCeRulerShadow).
+// GROUND'S BOTTOM ROW and rising into it, painted over the digits' shadow
+// where a major's top row meets it; THE DIGITS the base's SIX-ROW SMALL
+// DIGIT (GuiFace::Small; architect 2026-10-09 ~16:50 / ~21:00, Cool Edit's
+// cap-7 digits "very small" there anyway) on the ground's rows 1 .. 6 under
+// one row of air, "basically touching the trim bar", in the tick's ink over
+// a BLACK (+1, +1) shadow (kCeRulerShadow) — the ground 11 W where Cool
+// Edit's is 17, the six rows the marker lane's (program_spec.h's ruler
+// fields).
 
 // THE PLAYHEAD IS COOL EDIT'S CURSOR (METRICS §4.3; architect 2026-10-09,
 // the mock of record): ITS HEAD the cue's triangle — the 9-7-5-3-1 quanta's
@@ -669,8 +675,9 @@ void install_true_colors(bool on);
 // column (paint_ce_cue_triangle, 2026-10-09 ~12:40) — in THE PALETTE'S
 // `playhead_stem` (architect 2026-10-09 ~11:50; Cool Edit's Curs yellow
 // FFFF00 in every default palette) over the same triangle one quantum right
-// in `ce_cue_shadow`, ON THE RULER'S ROWS 12 .. 16, the apex on the
-// ground's bottom row
+// in `ce_cue_shadow`, ON THE RULER'S ROWS 6 .. 10, the apex on the
+// ground's bottom row, its top row the digits' last — it covers what stands
+// under it (2026-10-09 ~21:00, the mock of record)
 // (paint_ruler_row; cue_triangle_h_px's rows; its painted columns, the cull
 // and the move's damage box one extent, cue_triangle_reach_right_px); IN THE
 // CANVAS a DOTTED COLUMN, one device px every four device rows in the same
@@ -716,8 +723,11 @@ void install_true_colors(bool on);
 // `ce_cue_shadow`;
 // THE LABEL — the marker's one label in the program face at cap 7, in the
 // panel's light tone `ce_hilight`, no shadow, starting six quanta right of
-// the column, its cap on rows 1 .. 7 (baseline the top of row 8) — the label
-// and the triangle sharing rows 6 and 7 but never columns; and THE STEM —
+// the column, its cap on rows 1 .. 7 (baseline the top of row 8), its
+// descenders and the history's brackets reaching into rows 8 .. 11 above
+// the triangle's rows 12 .. 16 — THE LANE 17 W, the product's own (architect
+// 2026-10-09 ~16:50 / ~21:00, Cool Edit's 11 grown by the six the ruler
+// gave; program_spec.h's marker-lane fields); and THE STEM —
 // DOTS ONE DEVICE PX SQUARE on the canvas's device rows (2026-10-09 ~14:25,
 // "on waveform → unscaled"), the canvas alone (no dot
 // in the lane or on the frame row; paint_marker_stems). No box, no outline,
@@ -745,8 +755,10 @@ void install_true_colors(bool on);
 //
 // THE OVERLAP RULE (architect 2026-10-09, settled on the five overlap
 // captures of NOTES.md set 2): the labels paint RIGHT TO LEFT, each on an
-// OPAQUE FACE BOX over its own extent (rows 0 .. 8, from one quantum before
-// its text to one past its last segment's), and a label is CLIPPED AT THE
+// OPAQUE FACE BOX over its own extent (THE WHOLE LANE'S ROWS, 0 .. 16 — the
+// selected box's and the press target's rows, so the label is one geometry
+// at rest and selected, 2026-10-09 ~21:00; from one quantum before its text
+// to one past its last segment's), and a label is CLIPPED AT THE
 // NEXT TRIANGLE'S LEFT EDGE (the next column less four quanta) when the next
 // marker stands more than the six-quantum lead to its right; within the
 // lead it is not clipped and overprints; then the triangles paint LEFT TO
@@ -767,9 +779,12 @@ void install_true_colors(bool on);
 //             EMBOSS (above), and NO DOTS;
 //   SELECTED  THE LABEL IN THE CHROME'S SELECTED PAIR (architect 2026-10-09,
 //             the mock's selected cue): `selected_text` on a `selected_fill`
-//             box over the lane's rows 0 .. 8 — one row of air above the cap
-//             and one below the baseline — from one quantum before the text
-//             to one past its end, the text not moving (an invalid cue's
+//             box over THE WHOLE LANE, rows 0 .. 16 (architect 2026-10-09
+//             ~21:00, "the text box should take up the whole marker lane …
+//             right now it's too small to click"), the triangles painting
+//             over it where they meet — from one
+//             quantum before the text to one past its end, the text not
+//             moving (an invalid cue's
 //             text the bright red on that fill); THE TRIANGLE KEEPS ITS
 //             COLOR. SELECTION IS ONE SEGMENT'S (architect 2026-09-05):
 //             the ADDRESSED cell's segment wears it — the payload for every
@@ -797,9 +812,15 @@ void install_true_colors(bool on);
 // under `field_text`, the text and the caret in the field text (white under
 // black under Windows 2000; clearlooks' and cde's own pairs, read as roles) —
 // with A ONE-QUANTUM OUTLINE in `field_text`, over the edited segment's box
-// on the lane's rows 0 .. 8 (the outline on rows 0 and 8 and one quantum
-// outside the pads), the text at the segment's own seat with one quantum of
-// pad either side of its run, growing and shrinking with what is typed, the
+// on THE WHOLE LANE'S ROWS 0 .. 16, the selected box's (the outline on rows
+// 0 and 16 and one quantum outside the pads; 2026-10-09 ~21:00), the text
+// at the segment's own seat and baseline with one quantum of pad either
+// side of its run, its descenders inside the field (the text's clip the
+// field's inner rows), THE CARET AND THE SELECTION BAND SPANNING THE
+// FIELD'S WHOLE INNER ROWS, 1 .. 15 (2026-10-09: Windows' single-line edit
+// control fills its client height with the selection, so a selected
+// substring's descenders stay in the selection pair), the field growing and
+// shrinking with what is typed, the
 // segments to its right riding its edge in their resting look; and THE
 // SELECTED SUBSTRING IN THE CHROME'S SELECTED PAIR, `selected_text` on
 // `selected_fill`, the ordinary highlight. AN INVALID MARKER'S FIELD TEXT
@@ -1461,10 +1482,14 @@ int cl_scale_thumb_h_px();
 //              138 %, 18 at 360 %.
 //   THE TRIM   the view bar, a line, the 6-W field, a line (trim_lane_h_px):
 //              24 / 10 / 30.
-//   THE RULER  17 W of ground and its bottom line (ruler_lane_h_px): 54 / 24
-//              / 65.
-//   THE MARKER 6 W above the cue's triangle and its five quanta
-//              (marker_lane_h_px): 33 / 13 / 42.
+//   THE RULER  11 W of ground and its bottom line (ruler_lane_h_px): 36 / 16
+//              / 44.
+//   THE MARKER 12 W above the cue's triangle and its five quanta
+//              (marker_lane_h_px): 51 / 22 / 63.
+// (The ruler's 6 W went to the marker lane, architect 2026-10-09 ~21:00 —
+// program_spec.h's ruler and marker-lane fields; the two lanes' sum keeps
+// its 87 device rows at 300 % and its 107 at 360 %, and at 138 % rounds one
+// row taller, 38 against 37, the laptop's well one row shorter.)
 //   THE FRAME  the canvas's dark top frame row, one line
 //              (canvas_top_frame_h_px, below): 3 / 1 / 4.
 inline int column_air_h_px() {
@@ -1497,14 +1522,42 @@ inline int cue_above_triangle_h_px() {
 inline int marker_lane_h_px() {
     return cue_above_triangle_h_px() + cue_triangle_h_px();
 }
-// The label's baseline and the selected fill's rows, under the marker lane's
-// top (program_spec.h's marker lane fields).
+// The label's baseline and THE LABEL BOX'S ROWS — the selected fill, the
+// resting face box, the published press target and the flag editor's field
+// — under the marker lane's top (program_spec.h's marker lane fields). THE
+// BOX IS THE WHOLE LANE (architect 2026-10-09 ~21:00), so its height is the
+// lane's own composite, never a second rounding of the same 17 W: at 138 %
+// scaled_px(17) is 23 against the lane's 17 + 5 = 22, at 360 % 61 against
+// 43 + 20 = 63 (cue_fill_px equals the lane's authored height, program_spec.h's
+// assert).
 inline int cue_baseline_px() {
     return scaled_px(kProgramSpec.cue_baseline_px);
 }
 inline int cue_fill_h_px() {
-    return scaled_px(kProgramSpec.cue_fill_px);
+    return marker_lane_h_px();
 }
+// THE RULER'S DIGITS ARE THE SMALL FACE'S SIX ROWS UNDER ONE W OF AIR
+// (program_spec.h's ruler fields), in every face set (gui_font.h: every
+// set's small face is the base's six-row digit, its cell all above the
+// baseline).
+constexpr bool ruler_digit_rows_hold(const GuiFaceSet& set) {
+    const GuiFaceMetrics& m =
+        set.metrics[static_cast<std::size_t>(GuiFace::Small)];
+    return m.measure == GuiFaceMeasure::Digit && m.descent == 0 &&
+           m.ascent == m.height &&
+           kProgramSpec.ruler_baseline_px == 1 + m.height;
+}
+static_assert(ruler_digit_rows_hold(kGuiFaceSetWin2000) &&
+              ruler_digit_rows_hold(kGuiFaceSetGnome2) &&
+              ruler_digit_rows_hold(kGuiFaceSetCde) &&
+              ruler_digit_rows_hold(kGuiFaceSetMsSansSerif));
+// THE CUE LABEL'S RECORDED DESCENT STANDS CLEAR OF THE TRIANGLE: the program
+// face's baseline plus its recorded descent above the triangle's first row,
+// with two rows to spare for the glyphs that overshoot the record — "g" and
+// the history's brackets reach about 2.4 W under the baseline in Tahoma and
+// FreeSans, rows 8 .. 10 (the descender check, 2026-10-09 ~21:00).
+static_assert(kProgramSpec.cue_baseline_px + kGuiProgramFaceMetrics.descent +
+                  2 <= kProgramSpec.cue_above_triangle_px);
 // THE TRIANGLE'S PAINTED COLUMNS round its stem column `col` — the cue's and
 // the playhead head's one extent, read off the painter's own vertices
 // (paint_ce_cue_triangle, architect 2026-10-09 ~14:35, centred on the
@@ -1567,8 +1620,9 @@ GuiRect bottom_column_foot_area(const AppState& a);
 
 // (THE TRIM LANE AS WINDOWS' MINIATURIZED SCROLL BAR — its 16-W track,
 // caps and thumb, GTK's bar under clearlooks and Motif's under cde — THE
-// RULER DERIVED FROM ITS SMALL FACE with the playhead's WordPad head on its
-// bottom rows, cde's ruler behind the flags, and THE MARKER LANE DERIVED
+// RULER'S HEIGHT DERIVED FROM ITS SMALL FACE with the playhead's WordPad
+// head on its bottom rows, cde's ruler behind the flags, and THE MARKER LANE
+// DERIVED
 // FROM THE 17-W FLAG BOX stood 2026-10-02 to 2026-10-09; git history.)
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
@@ -1647,7 +1701,7 @@ inline int bottom_row_h_px() {
 // maximised window (2026-10-08): the chrome's caption and the menu row's
 // three terms, then THE PROGRAM'S (program_spec.h, the same under every
 // chrome since 2026-10-09): the band 33, the canvas column's 43 above the
-// canvas (the air 5, the view bar 8, the ruler 18, the marker lane 11, the
+// canvas (the air 5, the view bar 8, the ruler 12, the marker lane 17, the
 // canvas's top frame row 1), the column's foot 6 under it (the bottom frame
 // row and 5 W of face) and the dock bar and row 8 38. At 300 % every term is
 // a whole multiple of 3 device px.
@@ -2545,7 +2599,9 @@ void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
 // SINCE 2026-10-09 A CUE IS TWO RECTS (architect 2026-10-09: "the flag's
 // press target becomes the union of the triangle and the label's box as
 // painted"): `x, y, w, h` is THE LABEL'S BOX as painted — its opaque face
-// box on the lane's rows 0 .. 8, from one quantum before its first
+// box on THE WHOLE LANE'S ROWS (2026-10-09 ~21:00: a press anywhere in the
+// lane's height over the label's columns is the label's — "right now it's
+// too small to click"; cue_fill_h_px), from one quantum before its first
 // segment's text to one past its last's, cut where the overlap rule cut it
 // — and `tri_*` THE TRIANGLE'S, its top edge's nine quanta and the
 // shadow's tenth over its five rows. Either may be empty (a label the
@@ -3376,8 +3432,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // overlap rule at the palette block's marker-lane paragraph, every length
 // program_spec.h's): each marker's TRIANGLE with its apex on the marker's
 // pixel column on the lane's last rows, and its LABEL six quanta right of
-// the column on the lane's rows 0 .. 8 — the payload label (the warp
-// payload's scale truncation at kMarkerFlagScaleGlyphs above) and, where
+// the column on its box over the lane's whole height — the payload label
+// (the warp payload's scale truncation at kMarkerFlagScaleGlyphs above) and,
+// where
 // they paint, its two bound cells as further segments — in the program face
 // (gui_font(GuiFace::Program)); every run carries its font, so `cr`'s font
 // state is not touched.
@@ -3461,8 +3518,9 @@ void render_flags(cairo_t* cr,
 // published rect and never the kind.
 //
 //   `box`           the painted field in window coordinates — the edited
-//                   segment's box in the field pair on the lane's rows
-//                   0 .. 8, its one-quantum outline included: for the
+//                   segment's box in the field pair over the lane's whole
+//                   height (cue_fill_h_px, 2026-10-09 ~21:00), its
+//                   one-quantum outline included: for the
 //                   payload editor the marker's payload label holding the
 //                   FULL untruncated pending, for the bound editor the bound
 //                   cell's segment in the same role, anchored where that
@@ -3567,10 +3625,14 @@ struct FlagEditorBox {
 //
 // THE FIELD IS WINDOWS' EDIT FIELD, ONE DESIGN UNDER EVERY CHROME (architect
 // 2026-10-09; the ruling and its reason at the palette block's editing
-// paragraph): a box in the chrome's FIELD PAIR on the lane's rows 0 .. 8 —
-// `field_ground` inside a one-quantum `field_text` outline, its text and
-// caret `field_text` on the label's own baseline and seat, so opening an
-// editor changes the label's SIZE and nothing about where its text stands —
+// paragraph): a box in the chrome's FIELD PAIR over THE WHOLE LANE, the
+// selected label's rows (2026-10-09 ~21:00) — `field_ground` inside a
+// one-quantum `field_text` outline, its text and caret `field_text` on the
+// label's own baseline and seat, the caret and the selection band over the
+// field's whole inner rows (2026-10-09, the edit control's full-height
+// selection: a selected substring's descenders stay in the selection pair),
+// so opening an editor changes the label's SIZE and nothing about where its
+// text stands —
 // the selected substring in the chrome's SELECTED PAIR, the ordinary
 // highlight. The box paints over the lane, the triangle and any neighbouring
 // label it reaches. Since no field buys a caret column, the
