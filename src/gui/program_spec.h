@@ -44,13 +44,15 @@
 // were.
 //
 // THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN QUANTA, NOT IN ROUNDED W
-// (2026-10-09): a triangle's 9-7-5-3-1 rows, its shadow column, the label's
-// lead from the column, the selected fill's pads and the dots down the
-// canvas are counted in the stem's own width u = scaled_px(1, 1) (render.h's
-// waveform_line_px) — the playhead head's construction since 2026-10-05 —
-// so the apex is the stem's column at every scale and the nine units centre
-// on it with no remainder; the LANES' ROWS and the text's seats are W
-// lengths, each its own rounded part (scaled_px's rule).
+// (2026-10-09): a triangle's 9-7-5-3-1 rows (drawn as their envelope, one
+// antialiased triangle, since ~12:40: paint_ce_cue_triangle), its shadow's
+// one-quantum offset, the label's lead from the column, the selected fill's
+// pads and the dots down the canvas are counted in the stem's own width u =
+// scaled_px(1, 1) (render.h's waveform_line_px) — the playhead head's
+// construction since 2026-10-05 — so the apex is the stem's column at every
+// scale and the nine units centre on it with no remainder; the LANES' ROWS
+// and the text's seats are W lengths, each its own rounded part (scaled_px's
+// rule).
 struct ProgramSpec {
     // THE CASE (METRICS §1.3): one highlight row and column on the top and
     // left, the glyph seat, one shadow row and column and one black row and
@@ -77,8 +79,9 @@ struct ProgramSpec {
     int  band_foot_lines;
     // A PANE (METRICS §1.2): its light left column, this much face, its
     // cases, this much face, its mid right column; between two panes a dark
-    // column, so the groove reads mid | dark | light — 12 W from one pane's
-    // last case to the next pane's first, as Cool Edit's.
+    // column (the left pane's outer edge, cool_edit_paint.h), so the groove
+    // reads mid | dark | light — 12 W from one pane's last case to the next
+    // pane's first, as Cool Edit's.
     int  pane_lead_px;
     int  pane_trail_px;
     // THE DOCK BAR above row 8 (METRICS §2.2, Cool Edit's y = 915..920): a

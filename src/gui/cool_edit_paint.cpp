@@ -59,12 +59,13 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     if (down) {
-        // F8F8F8 under all, so its bottom row and right column stand; the
-        // black top row and left column, 808080 inside them, the ramp on
-        // the seat one line further in.
-        cell(cr, r.x, r.y, r.w, r.h, kCeRingLight);
-        cell(cr, r.x, r.y, 2 * lw + g, lw, kCeRingOuter);
-        cell(cr, r.x, r.y, lw, 2 * lw + g, kCeRingOuter);
+        // THE OUTER RING, black on the top row and left column and F8F8F8
+        // on the bottom row and right column, MITRED at its top-right and
+        // bottom-left corner blocks (the head's diagonal rule: a two-tone
+        // ring, as the chrome's sunken edges are, accepted 2026-10-09); 808080
+        // inside the black, square (one tone, its partner the face); the
+        // ramp on the seat one line further in.
+        paint_relief_frame(cr, r, hex(kCeRingOuter), hex(kCeRingLight));
         cell(cr, r.x + lw, r.y + lw, lw + g, lw, kCeRingMid);
         cell(cr, r.x + lw, r.y + lw, lw, lw + g, kCeRingMid);
         paint_face_ramp(cr, r.x + 2 * lw, r.y + 2 * lw, g);
@@ -72,18 +73,22 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
         return lw;
     }
     paint_face_ramp(cr, r.x + lw, r.y + lw, g);
-    // The highlight along the top row and down the left column.
-    cell(cr, r.x, r.y, lw + g, lw, kCeCaseHighlight);
-    cell(cr, r.x, r.y + lw, lw, g, kCeCaseHighlight);
-    // The shadow ramp down the right column and across the bottom row.
+    // THE HIGHLIGHT / SHADOW RING inside the black line, MITRED at its
+    // top-right and bottom-left corner blocks (the head's diagonal rule):
+    // the highlight's square L, the shadow's first tone over it as the
+    // mitred L — Cool Edit's measured ADAEAF junction pixel is exactly the
+    // two tones' half-and-half, the diagonal at one capture px — then the
+    // shadow's ramp over the ring's straight runs, each step one device row
+    // or column, the corner blocks left as the mitre drew them.
+    paint_relief_frame(cr, GuiRect{r.x, r.y, r.w - lw, r.h - lw},
+                       hex(kCeCaseHighlight), hex(kCeCaseShadowFirst));
     for (int i = 0; i < g; ++i) {
         const uint32_t s = shadow_at(i, g);
         cell(cr, r.x + lw + g, r.y + lw + i, lw, 1, s);
         cell(cr, r.x + lw + i, r.y + lw + g, 1, lw, s);
     }
-    // The junctions, then the black line on the right and bottom.
-    cell(cr, r.x + lw + g, r.y, lw, lw, kCeCaseCornerLight);
-    cell(cr, r.x, r.y + lw + g, lw, lw, kCeCaseCornerLight);
+    // The shadow's own corner (one tone, square), then the black line on
+    // the right and bottom (one tone, square).
     cell(cr, r.x + lw + g, r.y + lw + g, lw, lw, kCeCaseCornerShadow);
     cell(cr, r.x + 2 * lw + g, r.y, lw, r.h, kCeCaseOuter);
     cell(cr, r.x, r.y + 2 * lw + g, r.w, lw, kCeCaseOuter);
@@ -106,31 +111,37 @@ void paint_ce_band_ground(cairo_t* cr, const GuiRect& band) {
 void paint_ce_pane(cairo_t* cr, const GuiRect& band, int x0, int x1) {
     const int lw = program_line_px();
     const int w = x1 - x0;
-    if (w <= 2 * lw || band.h <= 5 * lw) return;
+    if (w <= 4 * lw || band.h <= 5 * lw) return;
     const GuiPalette& p = palette();
-    const int top    = band.y + lw;                 // the light top row
-    const int face_y = top + lw;
-    const int mid_y  = band.y + band.h - 3 * lw;    // the foot's mid row
+    const int top  = band.y + lw;                 // the light top row
+    const int foot = band.y + band.h - lw;        // past the dark foot row
+    // THE OUTER RING — the light top row and left column, the groove's dark
+    // column and the dark foot row — and THE INNER RING inside it — the face
+    // (no line) and the mid right column and mid foot row: the two-line
+    // raised edge, each ring MITRED at its top-right and bottom-left corner
+    // blocks, the two diagonals one 45-degree line (paint_relief_frame,
+    // render.cpp; the head's diagonal rule). Cool Edit's one mid pixel atop
+    // the groove (METRICS §1.2) is the outer ring's top-right block at one
+    // capture px; the reading's one change to his pixels is the light left
+    // column's last cell, the outer ring's own where Cool Edit drew the mid
+    // row through it (accepted 2026-10-09).
+    const GuiRect outer{x0, top, w, foot - top};
+    const GuiRect inner{x0 + lw, top + lw, w - 2 * lw, foot - top - 2 * lw};
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cell(cr, x0, face_y, w, mid_y - face_y, p.face);
-    cell(cr, x0, top, w, lw, p.ce_hilight);
-    cell(cr, x0, face_y, lw, mid_y - face_y, p.ce_hilight);
-    cell(cr, x1 - lw, face_y, lw, mid_y - face_y, p.ce_mid);
-    cell(cr, x0, mid_y, w, lw, p.ce_mid);
-    cell(cr, x0, mid_y + lw, w, lw, p.ce_dark);
+    paint_cell_rect(cr, inner, p.face);
+    paint_relief_frame(cr, outer, p.ce_hilight, p.ce_dark);
+    paint_relief_frame(cr, inner, p.face, p.ce_mid);
     cairo_restore(cr);
 }
 
-void paint_ce_band_dark_column(cairo_t* cr, const GuiRect& band, int x,
-                               bool mitre) {
+void paint_ce_band_dark_column(cairo_t* cr, const GuiRect& band, int x) {
     const int lw = program_line_px();
     if (band.h <= 2 * lw) return;
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cell(cr, x, band.y + lw, lw, band.h - 2 * lw, p.ce_dark);
-    if (mitre) cell(cr, x, band.y + lw, lw, lw, p.ce_mid);
     cairo_restore(cr);
 }
 
@@ -142,10 +153,10 @@ void paint_ce_dock_bar(cairo_t* cr, const GuiRect& bar) {
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cell(cr, bar.x, bar.y, bar.w, bar.h, p.face);
-    cell(cr, bar.x, bar.y, bar.w - lw, lw, p.ce_hilight);
-    cell(cr, bar.x, bar.y + lw, lw, mid_y - bar.y - lw, p.ce_hilight);
-    cell(cr, bar.x + bar.w - lw, bar.y, lw, mid_y - bar.y, p.ce_mid);
-    cell(cr, bar.x, mid_y, bar.w, lw, p.ce_mid);
+    // The light / mid ring down to the mid row, MITRED (the head's rule);
+    // the dark row under it one tone, square.
+    paint_relief_frame(cr, GuiRect{bar.x, bar.y, bar.w, mid_y + lw - bar.y},
+                       p.ce_hilight, p.ce_mid);
     cell(cr, bar.x, mid_y + lw, bar.w, lw, p.ce_dark);
     cairo_restore(cr);
 }
@@ -156,12 +167,37 @@ void paint_ce_gripper(cairo_t* cr, int x, int case_y, int case_h) {
     const int y0 = case_y - reach;
     const int h  = case_h + 2 * reach;
     const GuiPalette& p = palette();
+    // ONE ETCHED PAIR at column `cx`: the light column on rows [y0, y0 + h)
+    // and the mid column right of it one line lower — a two-line STAIRCASE
+    // at each end, drawn as its diagonal (the head's rule): each end cut
+    // along the 45-degree line through the two end cells' like corners (the
+    // top-left corners at the head, the bottom-right at the foot), so the
+    // pair is a parallelogram that keeps the staircase's two outermost
+    // corners and each end cell its half toward the column. The two share
+    // their pixel-aligned seam; the cuts are antialiased against the face.
+    const auto pair = [&](int cx) {
+        const double a = cx, b = cx + lw, c = cx + 2 * lw;
+        const double t = y0, e = y0 + h;
+        cairo_new_path(cr);
+        cairo_move_to(cr, a, t);
+        cairo_line_to(cr, b, t + lw);
+        cairo_line_to(cr, b, e);
+        cairo_line_to(cr, a, e - lw);
+        cairo_close_path(cr);
+        set_palette_source(cr, p.ce_hilight);
+        cairo_fill(cr);
+        cairo_move_to(cr, b, t + lw);
+        cairo_line_to(cr, c, t + 2 * lw);
+        cairo_line_to(cr, c, e + lw);
+        cairo_line_to(cr, b, e);
+        cairo_close_path(cr);
+        set_palette_source(cr, p.ce_mid);
+        cairo_fill(cr);
+    };
     cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cell(cr, x, y0, lw, h, p.ce_hilight);
-    cell(cr, x + 3 * lw, y0, lw, h, p.ce_hilight);
-    cell(cr, x + lw, y0 + lw, lw, h, p.ce_mid);
-    cell(cr, x + 4 * lw, y0 + lw, lw, h, p.ce_mid);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    pair(x);
+    pair(x + 3 * lw);
     cairo_restore(cr);
 }
 
@@ -171,39 +207,47 @@ void paint_ce_end_bar(cairo_t* cr, int x, int y, int h) {
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cell(cr, x, y, lw, h - lw, p.ce_hilight);
-    cell(cr, x, y, lw + face, lw, p.ce_hilight);
-    cell(cr, x + lw + face, y, lw, h, p.ce_mid);
+    // The light / mid ring, MITRED (the head's rule); the dark column right
+    // of it one tone, square.
+    paint_relief_frame(cr, GuiRect{x, y, 2 * lw + face, h}, p.ce_hilight,
+                       p.ce_mid);
     cell(cr, x + 2 * lw + face, y, lw, h, p.ce_dark);
-    cell(cr, x, y + h - lw, 2 * lw + face, lw, p.ce_mid);
     cairo_restore(cr);
 }
 
 void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     if (f.w <= 0 || f.h <= 0) return;
-    const int lw = program_line_px();
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cell(cr, f.x, f.y, f.w, f.h, p.ce_mid);
-    cell(cr, f.x, f.y, f.w - lw, lw, p.ce_field_dark);
-    cell(cr, f.x, f.y, lw, f.h - lw, p.ce_field_dark);
-    cell(cr, f.x, f.y + f.h - lw, f.w, lw, p.ce_field_light);
-    cell(cr, f.x + f.w - lw, f.y, lw, f.h, p.ce_field_light);
+    // The field-dark / field-light ring, MITRED (the head's rule).
+    paint_relief_frame(cr, f, p.ce_field_dark, p.ce_field_light);
     cairo_restore(cr);
 }
 
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color) {
-    const int u = cue_unit_px();
-    const int rows = kProgramSpec.cue_triangle_rows;
+    const double u    = cue_unit_px();
+    const int    rows = kProgramSpec.cue_triangle_rows;
+    const double half = (rows - 1) * u;   // the top row's reach left
+    const double x    = col;
+    const double y    = top;
+    // THE STAIRCASE'S ENVELOPE, offset `dx`: the top row's two outer ends
+    // (col − 4u, top) and (col + 5u, top) to the apex cell's bottom centre
+    // (col + u / 2, top + 5u).
+    const auto triangle = [&](double dx, GuiColor c) {
+        cairo_new_path(cr);
+        cairo_move_to(cr, x - half + dx, y);
+        cairo_line_to(cr, x + half + u + dx, y);
+        cairo_line_to(cr, x + u / 2.0 + dx, y + rows * u);
+        cairo_close_path(cr);
+        set_palette_source(cr, c);
+        cairo_fill(cr);
+    };
     cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    for (int r = 0; r < rows; ++r) {
-        const int half = (rows - 1 - r) * u;
-        const int y = top + r * u;
-        cell(cr, col - half, y, 2 * half + u, u, color);
-        cell(cr, col + half + u, y, u, u, palette().ce_cue_shadow);
-    }
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    triangle(u, palette().ce_cue_shadow);
+    triangle(0.0, color);
     cairo_restore(cr);
 }
 

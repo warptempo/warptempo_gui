@@ -216,7 +216,9 @@ struct TrimRange {
 //                 a menu separator.
 // (The toolbar band, row 8 and their cases and time fields, the view bar,
 // the ruler and the marker lane are the PROGRAM'S since 2026-10-09 — Cool
-// Edit's, cool_edit_paint.h — and wear none of this grammar.)
+// Edit's, cool_edit_paint.h — and wear none of these families; THE MITRE
+// reaches them, architect 2026-10-09 ~12:40, through paint_relief_frame:
+// cool_edit_paint.h's head.)
 // THE CARD FRAME is no relief: ONE flat line in the `card_frame` role on all
 // four sides (THE CARD FACE, below).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
@@ -640,7 +642,8 @@ void install_true_colors(bool on);
 // ruler's top line; and in the field THE SPAN, the trim window's columns as
 // a RAISED BLOCK OF THE INK — its top row and left column `ce_span_hilight`,
 // its body `waveform_ink`, its bottom row and right column `ce_span_shadow`
-// (the ink at HLS L 0.94 and 0.3157, cool_edit_derive.h) — with THE
+// (the ink at HLS L 0.94 and 0.3157, cool_edit_derive.h), the two mitred
+// where they meet (paint_relief_frame, 2026-10-09 ~12:40) — with THE
 // PLAYHEAD over it as a dotted column, the playhead's color and black
 // alternating per quantum (`playhead_stem`, kCeViewBarDot). No track, no caps drawn, no pressed
 // face: the lane's grabs are the span's two ends and its body (TrimBarHit,
@@ -656,11 +659,13 @@ void install_true_colors(bool on);
 // cap 7 in the tick's ink over a BLACK (+1, +1) shadow (kCeRulerShadow).
 
 // THE PLAYHEAD IS COOL EDIT'S CURSOR (METRICS §4.3; architect 2026-10-09,
-// the mock of record): ITS HEAD the cue's triangle — 9-7-5-3-1 quanta, the
-// apex the playhead's column — in THE PALETTE'S `playhead_stem` (architect
-// 2026-10-09 ~11:50; Cool Edit's Curs yellow FFFF00 in every default
-// palette) with the `ce_cue_shadow` column one quantum right of each row, ON
-// THE RULER'S ROWS 12 .. 16, the apex on the ground's bottom row
+// the mock of record): ITS HEAD the cue's triangle — the 9-7-5-3-1 quanta's
+// envelope drawn as one antialiased triangle, the apex the playhead's
+// column (paint_ce_cue_triangle, 2026-10-09 ~12:40) — in THE PALETTE'S
+// `playhead_stem` (architect 2026-10-09 ~11:50; Cool Edit's Curs yellow
+// FFFF00 in every default palette) over the same triangle one quantum right
+// in `ce_cue_shadow`, ON THE RULER'S ROWS 12 .. 16, the apex on the
+// ground's bottom row
 // (paint_ruler_row; cue_triangle_h_px's rows; its painted columns, the cull
 // and the move's damage box one extent, cue_triangle_reach_right_px); IN THE
 // CANVAS a DOTTED COLUMN, one quantum every four in the same color on the
@@ -691,9 +696,11 @@ void install_true_colors(bool on);
 // THE FLAG IS COOL EDIT'S CUE (architect 2026-10-09, the mock of record and
 // NOTES.md's "cue construction"; METRICS §4.2; the lengths program_spec.h's,
 // the drawing render_flag_boxes_impl's): on the lane's PANEL FACE, THE
-// TRIANGLE — 9-7-5-3-1 quanta on the lane's last five rows, its apex the
-// marker's column on the lane's last row, directly above the well's top
-// frame row — with the `ce_cue_shadow` column one quantum right of each row;
+// TRIANGLE — the 9-7-5-3-1 quanta's envelope on the lane's last five rows,
+// one antialiased triangle (paint_ce_cue_triangle, 2026-10-09 ~12:40), its
+// apex the marker's column on the lane's last row, directly above the
+// well's top frame row — over the same triangle one quantum right in
+// `ce_cue_shadow`;
 // THE LABEL — the marker's one label in the program face at cap 7, in the
 // panel's light tone `ce_hilight`, no shadow, starting six quanta right of
 // the column, its cap on rows 1 .. 7 (baseline the top of row 8) — the label
@@ -1461,8 +1468,8 @@ inline int cue_fill_h_px() {
 }
 // THE TRIANGLE'S PAINTED COLUMNS round its apex column `col` — the cue's and
 // the playhead head's one extent, read off the painter's own construction
-// (paint_ce_cue_triangle: its widest row nine quanta, the middle one the
-// column's, and the shadow's quantum right of it): [col −
+// (paint_ce_cue_triangle: its top edge nine quanta, the middle one the
+// column's, and the shadow triangle one quantum right of it): [col −
 // cue_triangle_half_w_px(), col + cue_triangle_reach_right_px()), four
 // quanta left and six right (the four, the apex quantum and the shadow's),
 // ten quanta in all — 30 device px at 300 %, 40 at 360 %, 10 at 138 %. THE
@@ -1630,8 +1637,11 @@ inline int waveform_border_px() {
 // render.cpp, t riding the plate job and its fingerprint) — and, since
 // 2026-10-09, THE PROGRAM'S QUANTUM u (program_line_px and cue_unit_px are
 // the same scaled_px(1, 1)): the cues' and the playhead's dots
-// (fill_dotted_waveform_line), the ruler's ticks, the cues' triangles and
-// the playhead's head, whose apex is the column's own t wide. NOT a reader:
+// (fill_dotted_waveform_line) and the ruler's ticks — and THE CUES'
+// TRIANGLES AND THE PLAYHEAD'S HEAD, measured in it but no rect since
+// 2026-10-09 ~12:40: one antialiased triangle whose top edge spans nine t
+// and whose apex is the column's own t-wide cell's bottom centre
+// (paint_ce_cue_triangle). NOT a reader:
 // the plate column, one device pixel by rule — resolution, not size — with
 // its bar's one-row floor.
 inline int waveform_line_px() {
@@ -2482,7 +2492,7 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // painted"): `x, y, w, h` is THE LABEL'S BOX as painted — its opaque face
 // box on the lane's rows 0 .. 8, from one quantum before its first
 // segment's text to one past its last's, cut where the overlap rule cut it
-// — and `tri_*` THE TRIANGLE'S, its widest row's nine quanta and the
+// — and `tri_*` THE TRIANGLE'S, its top edge's nine quanta and the
 // shadow's tenth over its five rows. Either may be empty (a label the
 // overlap rule cut to nothing, a field standing in for the label, the
 // riding cells' run, which carries no triangle). The containment owner is
@@ -2542,7 +2552,9 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 // inner ring on the rect inset one line (Windows' DrawEdge), the two rings'
 // diagonals one line.
 //   paint_relief_frame  — one ring, any two colours (the one owner every
-//                         helper below calls).
+//                         helper below calls, and THE PROGRAM'S MITRE since
+//                         2026-10-09: every two-tone ring cool_edit_paint.cpp
+//                         draws and the view bar's span — its head).
 //   paint_relief_soft_raised  — SOFT RAISED: a caption button at rest
 //                         (2026-10-05), an on-screen keyboard key.
 //   paint_relief_soft_sunken  — SOFT SUNKEN: a caption button pressed, a
@@ -3188,7 +3200,8 @@ struct TrimBarHit {
 // (architect 2026-10-05: an out-of-view bound reads as the window running
 // on) — then THE PLAYHEAD over the span as a dotted column (`playhead_col`,
 // the plate basis's column, waveform-relative; no dots where it is off the
-// span). All pixel-bound integer fills, no antialiasing. The lane band is
+// span). All pixel-bound integer fills but the span's two mitred corner
+// blocks, antialiased (paint_relief_frame, 2026-10-09). The lane band is
 // the `trim_bar` PARAMETER — the caller passes top_trim_row_area(app), and
 // the band painted in is published as TrimBarHit::lane, the y-gate both
 // trim hits read, so paint and hit take the band as one value;

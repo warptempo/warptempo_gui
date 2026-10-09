@@ -1290,8 +1290,11 @@ void render_trim_flags(cairo_t* cr,
     // it; a side lying farther off than one quantum is held there, outside
     // the clip, so the rect stays in cairo's range at any zoom): the ink's
     // body, its top row and left column the light bevel, its bottom row and
-    // right column the dark one (the mock's order: the bottom row over the
-    // left column's foot, the right column under the top row's end).
+    // right column the dark one, the two MITRED at the top-right and
+    // bottom-left corner blocks (architect 2026-10-09 ~12:40, the diagonal
+    // rule reaching the program: cool_edit_paint.h's head;
+    // paint_relief_frame). The bar's own frame is two horizontal lines with
+    // no side columns, so it has no corner to mitre.
     const int span_lo = std::max(bc.col, -lw);
     const int span_hi = std::min(ec.col + 1, lane_w + lw);
     if (span_hi > span_lo && field_h > 0) {
@@ -1299,14 +1302,8 @@ void render_trim_flags(cairo_t* cr,
         const int sw = span_hi - span_lo;
         paint_cell_rect(cr, GuiRect{sx, field_y, sw, field_h},
                         pal.waveform_ink);
-        paint_cell_rect(cr, GuiRect{sx, field_y, sw, lw}, pal.ce_span_hilight);
-        paint_cell_rect(cr, GuiRect{sx, field_y, lw, field_h},
-                        pal.ce_span_hilight);
-        paint_cell_rect(cr, GuiRect{sx, field_y + field_h - lw, sw, lw},
-                        pal.ce_span_shadow);
-        paint_cell_rect(cr, GuiRect{sx + sw - lw, field_y + lw, lw,
-                                    field_h - lw},
-                        pal.ce_span_shadow);
+        paint_relief_frame(cr, GuiRect{sx, field_y, sw, field_h},
+                           pal.ce_span_hilight, pal.ce_span_shadow);
         // THE PLAYHEAD OVER THE SPAN (METRICS §3): a one-quantum dotted
         // column on the playhead's column, the playhead's color (the
         // palette's `playhead_stem`, Cool Edit's FFFF00 by default) and black
@@ -1906,7 +1903,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             r.iter_upper_boundary_x = cells && c.seg[2].present
                                           ? static_cast<double>(c.seg[2].x0)
                                           : right;
-            // The triangle's box: its widest row and the shadow's quantum,
+            // The triangle's box: its top edge and the shadow's quantum,
             // its five rows.
             FlagHitRect tri;
             tri.x = static_cast<double>(c.col - half);

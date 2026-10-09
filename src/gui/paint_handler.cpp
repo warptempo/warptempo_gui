@@ -2168,7 +2168,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     const int glyph_px = icon_glyph_px();
     const int lead     = program_pane_lead_px();
     const int trail    = program_pane_trail_px();
-    // A PANE of n cases, from its light column through its mid column.
+    // A PANE of n cases, from its light column through its mid column (the
+    // groove's dark column after it is the pane's outer edge, painted with
+    // it: paint_ce_pane takes the extent through that column).
     const auto pane_w = [&](int n) {
         return lw + lead + n * btn_w + trail + lw;
     };
@@ -2382,44 +2384,44 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_rectangle(cr, lane.x, lane.y,
                     std::max(0, left_limit - lane.x), lane.h);
     cairo_clip(cr);
-    // The band's dark left edge column, then each pane and the groove's dark
-    // column after it (its top cell the mid tone, the mitre).
-    paint_ce_band_dark_column(cr, lane, lane.x, /*mitre=*/false);
+    // The band's dark left edge column, then each pane with the groove's
+    // dark column after it — the pane's own outer edge, its top the mitre
+    // (paint_ce_pane).
+    paint_ce_band_dark_column(cr, lane, lane.x);
     int x = lane.x + lw;
     for (const std::vector<IconRowDef>& pane : panes) {
         const int n = static_cast<int>(pane.size());
-        paint_ce_pane(cr, lane, x, x + pane_w(n));
+        paint_ce_pane(cr, lane, x, x + pane_w(n) + lw);
         int bx = x + lw + lead;
         for (const IconRowDef& def : pane) {
             const int shown_w = std::clamp(left_limit - bx, 0, btn_w);
             paint_member(def, bx, GuiRect{bx, btn_y, shown_w, btn_h});
             bx += btn_w;
         }
-        x += pane_w(n);
-        paint_ce_band_dark_column(cr, lane, x, /*mitre=*/true);
-        x += lw;
+        x += pane_w(n) + lw;
     }
     cairo_restore(cr);
 
     // THE RIGHT-ANCHORED PANES, PAINTED LAST AND WHOLE, each member
     // publishing the full case it paints: the dark column the left panes stop
-    // at, the history opener's pane at one x in both states, the groove's
-    // dark column, the view group's pane, the band's dark right edge column.
+    // at (a lone column, square: no pane of its own stands left of it), the
+    // history opener's pane at one x in both states with the groove's dark
+    // column after it, the view group's pane with the band's dark right edge
+    // column after it — each of those two the pane's own outer edge, mitred
+    // (paint_ce_pane).
     // NEITHER IS EVER HIDDEN (history_mode_hides_button): bare `h` is the
     // view's own vocabulary and bare 1 / 2 / 3 its admitted selectors, so
     // the hide does not reach this walk.
-    paint_ce_band_dark_column(cr, lane, left_limit, /*mitre=*/true);
-    paint_ce_pane(cr, lane, history_x0, history_x0 + pane_w(1));
+    paint_ce_band_dark_column(cr, lane, left_limit);
+    paint_ce_pane(cr, lane, history_x0, history_x0 + pane_w(1) + lw);
     paint_member(kIconRowHistoryOpener, history_x,
                  GuiRect{history_x, btn_y, btn_w, btn_h});
-    paint_ce_band_dark_column(cr, lane, view_x0 - lw, /*mitre=*/true);
-    paint_ce_pane(cr, lane, view_x0, view_x0 + pane_w(view_n));
+    paint_ce_pane(cr, lane, view_x0, view_x0 + pane_w(view_n) + lw);
     int vx = view_x0 + lw + lead;
     for (const IconRowDef& def : kIconRowViewGroup) {
         paint_member(def, vx, GuiRect{vx, btn_y, btn_w, btn_h});
         vx += btn_w;
     }
-    paint_ce_band_dark_column(cr, lane, right_edge, /*mitre=*/false);
 
     cairo_restore(cr);
 }
@@ -4361,12 +4363,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09, the mock of record; METRICS §4.3; render.h's playhead
-    // paragraph): the cue's own 9-7-5-3-1 quanta (paint_ce_cue_triangle) in
+    // paragraph): the cue's own 9-7-5-3-1 quanta drawn as their envelope,
+    // one antialiased triangle (paint_ce_cue_triangle, 2026-10-09 ~12:40), in
     // the palette's `playhead_stem` (Cool Edit's Curs yellow FFFF00 by
-    // default, 2026-10-09) with the `ce_cue_shadow` column one quantum
-    // right of each row, ON THE GROUND'S ROWS 12 .. 16, its apex — the
-    // playhead's column, one quantum wide — on the ground's bottom row. It is
-    // OPAQUE over the ticks and digits the walk above laid down. NO SNAP, NO
+    // default, 2026-10-09) over the same triangle one quantum right in
+    // `ce_cue_shadow`, ON THE GROUND'S ROWS 12 .. 16, its apex — the bottom
+    // centre of the playhead's one-quantum column — on the ground's bottom
+    // row. It is OPAQUE over the ticks and digits the walk above laid down
+    // (its diagonal edges antialiased over them). NO SNAP, NO
     // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
     // in the marker lane below (the coincident-stem rule is retired, render.h's
     // playhead paragraph). It draws NOTHING across the marker lane and the

@@ -25,8 +25,30 @@
 // are CONSTANTS below — Cool Edit's default scheme's bytes as measured,
 // never derived ("the buttons did not change color with the preset",
 // architect 2026-10-09; the fit that was tried is cool_edit_derive.h's head)
-// — and so is the time field's digit ink. Every line is square-joined, as
-// Cool Edit draws it (no mitre but the groove's one recorded pixel, below).
+// — and so is the time field's digit ink.
+// THE DIAGONAL RULE REACHES THE PROGRAM (architect 2026-10-09 ~12:40: "any
+// jagged staircase of pixel lines, even if it's only two lines, we take as
+// an intention of a diagonal, so that when they're scaled they don't look
+// like a pixel that's been scaled up"; the chrome's mitre of 2026-10-06,
+// paint_relief_frame's head, render.cpp): THE CAPTURE'S SQUARE PIXEL CORNER
+// IS THE PERIOD'S LIMIT AND THE DIAGONAL THE ARTIST'S INTENT. Wherever a
+// light tone meets a dark one at a ring's corner, the corner block is split
+// along the 45-degree diagonal from the ring's outer corner to its inner one
+// through paint_relief_frame (the light square L, the dark mitred L over it,
+// antialiased by cairo): the case's highlight / shadow ring (Cool Edit's
+// ADAEAF junction pixel is the two tones' half-and-half, the diagonal at one
+// capture px) and the down face's black / F8F8F8 ring; the pane's two-line
+// edge, the groove's dark column its outer bottom-right (Cool Edit's one mid
+// pixel atop the groove is that ring's corner at one capture px); the dock
+// bar's and the end bar's light / mid rings; the time field's ring; the
+// view bar's span (render_trim_flags). A two-line staircase that is no ring
+// — the gripper's etched pairs, the cue's and the playhead head's
+// 9-7-5-3-1 rows — is drawn as its diagonal (their painters say how). A
+// one-tone line stays square: the case's black outline, the down face's
+// 808080 line, the dock bar's dark row, the end bar's dark column, the
+// band's edge columns. The dots are cells (a dot is not a line). (Every
+// line square-joined as the capture's pixels show stood the morning of
+// 2026-10-09; git history.)
 // NOT DRAWN: the face's brushed grain (METRICS §1.4: a ±5 2-px texture over
 // the ramp, a texture and not a tone — the ramp is drawn smooth); the
 // LIGHT-FACE TEXT SWAP (cool_edit_derive.h's head).
@@ -52,13 +74,14 @@ static_assert(kCeFaceRamp.size() ==
 // three differ by one level).
 inline constexpr uint32_t kCeCaseHighlight = 0xFDFEFF;
 // THE SHADOW — the right column and the bottom row, a ramp from its first
-// to its last measured tone (5D5E5E … 4C4D4D) across the glyph seat.
+// to its last measured tone (5D5E5E … 4C4D4D) across the glyph seat; its
+// first tone also the mitre's dark half at the top-right and bottom-left.
 inline constexpr uint32_t kCeCaseShadowFirst = 0x5D5E5E;
 inline constexpr uint32_t kCeCaseShadowLast  = 0x4C4D4D;
-// THE TWO JUNCTIONS: where the highlight meets the shadow (the top-right and
-// bottom-left cells) and the shadow's own corner (bottom-right, inside the
-// black line).
-inline constexpr uint32_t kCeCaseCornerLight  = 0xADAEAF;
+// THE SHADOW'S OWN CORNER (bottom-right, inside the black line). Where the
+// highlight meets the shadow (the top-right and bottom-left) Cool Edit's
+// measured ADAEAF is the two tones' half-and-half — the mitre, drawn as the
+// diagonal (the head's rule), so no constant stands for it.
 inline constexpr uint32_t kCeCaseCornerShadow = 0x4B4C4C;
 // THE BLACK LINE on the right and bottom.
 inline constexpr uint32_t kCeCaseOuter = 0x000000;
@@ -97,14 +120,14 @@ inline constexpr uint32_t kCeViewBarDot     = 0x000000;
 // ONE BUTTON CASE on `r` (icon_case_w_px square), in its face:
 //   REST     — the highlight on the top row and left column, the face ramp
 //              on the glyph seat, the shadow ramp on the right column and
-//              bottom row, the junction cells, the black line on the right
-//              and bottom; the glyph at (+1, +1) lines.
+//              bottom row, the two mitred where they meet, the black line
+//              on the right and bottom; the glyph at (+1, +1) lines.
 //   DOWN     — PRESSED (a live press) or CHECKED (`lamp`), the same face
 //              (Cool Edit draws them alike, the window group's checked cases
 //              and the zoom button's press on his captures): black on the
 //              top row and left column, 808080 inside it, the ramp on the
 //              seat one line further in, F8F8F8 on the bottom row and right
-//              column; the glyph at (+2, +2).
+//              column, mitred against the black; the glyph at (+2, +2).
 //   DISABLED — the face its state gives, the glyph saturated (the caller's
 //              icons::draw_cased_disabled — Cool Edit's per-glyph disabled
 //              art has no counterpart for the product's icon sets).
@@ -120,38 +143,43 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down);
 // between, the light line on its last row — Cool Edit's band where no pane
 // stands. The panes and the grooves' dark columns are laid over it.
 void paint_ce_band_ground(cairo_t* cr, const GuiRect& band);
-// ONE PANE over the band's ground, its columns [x0, x1): the light top row
-// across it (the band's second row), the light left column and the mid right
-// column down the face rows, the face between, the mid row and the dark row
-// across its foot (the band's last three rows but one: the light last row is
-// the ground's).
+// ONE PANE over the band's ground, its columns [x0, x1) FROM ITS LIGHT LEFT
+// COLUMN THROUGH THE GROOVE'S DARK COLUMN AFTER IT (2026-10-09 ~12:40): a
+// two-line raised edge from the band's second row through its last row but
+// one (the light last row is the ground's) — the outer ring the light top
+// row and left column against the dark column and the dark foot row, the
+// inner ring the face against the mid right column and the mid foot row,
+// each ring mitred, the face between. So the groove reads mid | dark |
+// light, the dark column the left pane's outer edge and the light the next
+// pane's (METRICS §1.2).
 void paint_ce_pane(cairo_t* cr, const GuiRect& band, int x0, int x1);
-// A GROOVE'S DARK COLUMN (or the band's dark edge column) at `x`, one line
-// wide, from the band's second row through its last row but one; with
-// `mitre`, its top cell the mid tone (METRICS §1.2: the groove's dark column
-// meets the panes' light top row in a mid pixel). The window's two edge
-// columns take none.
-void paint_ce_band_dark_column(cairo_t* cr, const GuiRect& band, int x,
-                               bool mitre);
+// A LONE DARK COLUMN at `x`, one line wide, from the band's second row
+// through its last row but one, square: the band's left edge and the column
+// before the right-anchored panes, each the outline left of a pane's light
+// column with no pane of its own to the left (every other dark column is a
+// pane's own, paint_ce_pane).
+void paint_ce_band_dark_column(cairo_t* cr, const GuiRect& band, int x);
 
 // -- THE DOCK BAR AND ROW 8 -----------------------------------------------------
 
 // THE DOCK BAR on `bar` (dock_bar_h_px tall, the lane's width): the light
-// row across its top but its last column, the face rows with a light left
-// column, the mid right column down to the mid row, the mid row and the dark
-// row across its foot.
+// row across its top and the light left column against the mid right column
+// and the mid row, the ring mitred, the face rows within, and the dark row
+// across its foot.
 void paint_ce_dock_bar(cairo_t* cr, const GuiRect& bar);
 // THE GRIPPER at column `x` (five lines wide): two etched double lines —
 // light, mid, a face line, light, mid — the light ones from the reach above
 // the case's top `case_y` to the reach below its bottom, the mid ones one
-// line lower.
+// line lower, each pair's two-line step at either end drawn as its diagonal
+// (the painter's cut).
 void paint_ce_gripper(cairo_t* cr, int x, int case_y, int case_h);
 inline int ce_gripper_w_px() {
     return kProgramSpec.gripper_cols * program_line_px();
 }
 // THE END BAR at column `x` over the row's content band [y, y + h): a light
-// column and a light top row over its face, a mid column and a dark column
-// the band's height, and a mid row along its foot.
+// column and a light top row over its face against a mid column and a mid
+// row along its foot, the ring mitred, and a dark column the band's height
+// right of it.
 void paint_ce_end_bar(cairo_t* cr, int x, int y, int h);
 inline int ce_end_bar_w_px() {
     return 3 * program_line_px() + scaled_px(kProgramSpec.end_bar_face_px);
@@ -161,7 +189,8 @@ inline int ce_end_bar_w_px() {
 
 // THE DARK TIME FIELD on `field` (METRICS §5.4): the field-dark line on its
 // top row and left column, the mid tone inside, the field-light line on its
-// bottom row and right column. Its digits are the caller's, in kCeFieldText.
+// bottom row and right column, the ring mitred. Its digits are the caller's,
+// in kCeFieldText.
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // A PANEL LABEL (METRICS §6): `run` in the label tone with the dark tone
 // under it one line right and down, Cool Edit's shadow on a dark face.
@@ -171,9 +200,17 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // -- THE CUE'S TRIANGLE ---------------------------------------------------------
 
 // COOL EDIT'S POINT-CUE MASK (METRICS §4.2, §4.3), THE CUES' AND THE
-// PLAYHEAD HEAD'S ONE PAINTER: five rows of one quantum u (cue_unit_px) from
-// `top`, row r spanning the apex column `col` (window x, its own u wide)
-// widened by (4 − r) quanta either side — 9, 7, 5, 3, 1 quanta — in `color`,
-// each row's SHADOW one quantum right of it in `ce_cue_shadow`. The apex row
-// is the last. Aliased integer rects; the caller's clip cuts it.
+// PLAYHEAD HEAD'S ONE PAINTER: a staircase of five rows of one quantum u
+// (cue_unit_px) from `top`, row r spanning the apex column `col` (window x,
+// its own u wide) widened by (4 − r) quanta either side — 9, 7, 5, 3, 1
+// quanta — each row's SHADOW one quantum right of it. DRAWN AS THE
+// STAIRCASE'S DIAGONALS (architect 2026-10-09 ~12:40, the head's rule): ONE
+// ANTIALIASED TRIANGLE in `color` with the vertices (col − 4u, top),
+// (col + 5u, top) and (col + u / 2, top + 5u) — the top row's two outer
+// ends and the apex cell's bottom centre — over THE SAME TRIANGLE ONE
+// QUANTUM RIGHT in `ce_cue_shadow`, painted first (Cool Edit's shadow one
+// pixel right of every row is that offset). Its painted columns stay
+// [col − 4u, col + 6u) over its five rows (cue_triangle_half_w_px and
+// cue_triangle_reach_right_px, render.h); the caller's clip cuts it. (Aliased
+// rows of cells stood until the rule reached the program, 2026-10-09.)
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color);
