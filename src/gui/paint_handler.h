@@ -621,8 +621,8 @@ struct GuiPaintHandler {
     // PLATE-REGISTERED overlays (re-derived by grep over this accessor's
     // callers, 2026-08-02; the region ground and ink left 2026-10-03): the
     // phase-reset ring (through
-    // phase_reset_overlay_band), the playhead head and the cursor's
-    // marker-lane run (both painted in the ruler pass), the cursor
+    // phase_reset_overlay_band), the playhead head (the ruler pass) and its
+    // dots over the view bar's span (the trim pass, 2026-10-09), the cursor
     // playhead, the scanner — plus its two per-frame narrow damage sites in
     // main.cpp — and the strip-drag anchor; and ONE INPUT READER (architect
     // 2026-09-24, strictly as painted), the waveform-lane playhead step's
@@ -733,16 +733,17 @@ private:
         double x0    = 0.0;   // left screen x, clipped to the area
         double x1    = 0.0;   // right screen x, exclusive, clipped
         bool   red   = false; // the reset is in the column's red set (the ring's color)
-        bool   selected = false; // the reset's payload box is the bright one (the ring's colour)
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
 
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
-    // THE RULER LANE (top lane 4): the timestamp ladder and its ticks. Reads the
-    // DISPLAYED plate basis, so it re-derives on every pan/zoom along with the
-    // strip content it is painted beside.
+    // THE RULER LANE (top lane 5): Cool Edit's flipped ruler — its ground and
+    // bottom line, the timestamp ladder's ticks and digits and the playhead's
+    // yellow head — and the MARKER LANE'S panel face under the cues the flag
+    // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
+    // every pan/zoom along with the strip content it is painted beside.
     void paint_ruler_row(cairo_t* cr);
     // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
     // flat sampled ground, the three menu anchors flush left and nothing
@@ -852,77 +853,43 @@ private:
     // painted AFTER the plate, a boundary line like the playheads, so it
     // crosses the ink deliberately.
     void paint_phase_reset_overlay_ring(cairo_t* cr, const GuiRect& area);
-    // The LIVE trim pass: paints EVERY trim pixel per frame — the trim bar
-    // lane whole (its ground, the window's bar, the two endcaps and the
-    // midpoint mark) — in ONE pass, entirely inside the trim lane. Its slot is
-    // step 5 of THE AUTHORITATIVE PAINT-ORDER BLOCK IN on_redraw; this states
-    // only this pass's own place in it. Invoked whenever the exposed rect
-    // intersects the top strip OR the waveform area — render_background erases
-    // every exposed top-strip pixel, so a strip-only damage (hover text, a
-    // flag change) must repaint the live trim bar/endcaps too; the outer Cairo
-    // damage clip bounds the actual work. See the definition for the basis
-    // contract.
+    // The LIVE trim pass: paints EVERY trim pixel per frame — the view bar
+    // whole (its lines, its black field, the span and the playhead's dots
+    // over it) and the column's air above it — in ONE pass, entirely inside
+    // those two lanes. Its slot is in THE AUTHORITATIVE PAINT-ORDER BLOCK IN
+    // on_redraw; this states only this pass's own place in it. Invoked
+    // whenever the exposed rect intersects the top strip OR the waveform area
+    // — render_background erases every exposed top-strip pixel, so a
+    // strip-only damage (hover text, a flag change) must repaint the live view
+    // bar too; the outer Cairo damage clip bounds the actual work. See the
+    // definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
     // MARKER STEMS (row 5, 2026-08-01) — the per-frame waveform overlay that
     // replaced the singleton selected-marker stem outright. EVERY ENABLED marker
-    // of the active column stems, always, from its flag's bottom (= the marker
-    // lane's bottom = the waveform top) down through the waveform to the
-    // window's content bottom, in its flag box's fill; a DISABLED marker stems
-    // never. A selected marker's stem takes its SELECTED FACE while its flag
-    // box is the bright cell (architect 2026-10-03, the brighter selected
-    // flag; the bright selected stem first ruled 2026-09-23; 2026-10-04, the
-    // stem follows the box it leaves from, so a bound cell addressed leaves
-    // it resting), so at a coarse zoom the selected stems stand out among
-    // many; the colour is resolved in the painter (resolve_flag_face) and
-    // published in the stash. The stems paint
-    // UNDER the playhead's stem and the flags (architect 2026-09-23); a marker
-    // on the playhead's own frame keeps its stem through the playhead's
-    // suppression (playhead_stem_suppressed).
+    // of the active column stems, always, as COOL EDIT'S DOTTED COLUMN since
+    // 2026-10-09: one-quantum dots in its cue's triangle face on the canvas's
+    // quantum rows ≡ 3 (mod 4), the canvas alone (render.h's marker-lane
+    // paragraph); a DISABLED marker stems never. The face is the kind's
+    // resting one whether the marker is selected or not (the cue never
+    // changes when selected); it is resolved in the painter
+    // (resolve_flag_face) and published in the stash. The stems paint under
+    // the playhead's dots (architect 2026-09-23), which stand on rows ≡ 1, so
+    // a playhead on a marker's column interleaves with it.
     //
     // It paints from the marker painter's stash (AppState::marker_stems) rather
-    // than walking the store: the stem stands on its flag box's LEFT EDGE, and
+    // than walking the store: the stem stands on its cue's apex column, and
     // that column is the one the painter already resolved on the displayed
-    // basis, so stem and flag cannot land on different pixels during an async
+    // basis, so stem and cue cannot land on different pixels during an async
     // publish window. A live overlay, not a cache — the stash is the cached
     // part.
     //
-    // NO PAINT-TIME COLOUR OVERRIDE (architect 2026-10-03): the stem paints
-    // the stash's colour, the marker's resolved stem. The open flag editor's
-    // refusal recolours nothing, the stem included (the override that
-    // reddened the stem from 2026-08-01 is retired).
-    //
-    // The old singleton stem's whole apparatus goes with it: the size()==1 gate,
-    // the DragOverlay re-derivation (the stash already carries the mid-drag
-    // column), the grey focus-column paint, and selection.cpp's stem
-    // capture/damage pairs. The `selected_stem` config key it painted from
-    // outlived this site by a day and died with the whole tunable palette
-    // (2026-08-02).
+    // NO PAINT-TIME COLOR OVERRIDE (architect 2026-10-03): the stem paints
+    // the stash's color. The open flag editor's refusal recolors nothing.
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
-    // THE STEMS' FLANKS (architect 2026-10-05, the flag "A+"): for every
-    // stem in the same stash, the flag outline carried down both sides of
-    // the stem through the well's top lines (fill_stem_flanks, render.h, the
-    // rule; waveform_well_top_band, the rows), in the theme's DkShadow. ITS
-    // OWN PASS, painted right after the plate and BEFORE the phase-reset
-    // ring and the stems: every stem then paints over a neighbour's flank
-    // (the stem wins), and the focused reset's ring, the stem's own unit,
-    // runs its top side on unbroken from the stem rather than notched by it.
-    void paint_marker_stem_flanks(cairo_t* cr, const GuiRect& area);
-    // THE COINCIDENT-STEM SUPPRESSION (architect 2026-08-01) — 035e669's model
-    // reinstated under row 5's always-on-stem regime, and since 2026-09-23 the
-    // stated half of the playhead-over-stems ruling ("where the playhead's
-    // column is a marker's, the marker stem wins"). True when a MARKER'S OWN
-    // STEM is standing where the cursor playhead's stem would stand, in which
-    // case the playhead's stem (its waveform segment and its marker-lane run
-    // alike) does not paint and the marker's stem IS the display.
-    // The HEAD still paints — see the definition for the whole ruling, the two
-    // ways a stem qualifies, and why this is a state compare and never a pixel
-    // one.
-    bool playhead_stem_suppressed() const;
-    // THE RESTING CURSOR's waveform stem (the head and the marker-lane run
-    // belong to paint_ruler_row). Paints OVER the marker stems (architect
-    // 2026-09-23, invoked after paint_marker_stems; a coincident marker's stem
-    // wins through playhead_stem_suppressed) and UNDER the flags — the z-order
-    // flip, the hidden-by-marker model for a cursor sitting ON a marker.
+    // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's, its dots
+    // over the view bar render_trim_flags'): Cool Edit's dotted yellow column
+    // on the canvas's quantum rows ≡ 1 (mod 4), painted after the marker
+    // stems, whose dots stand between its own.
     void paint_playheads(cairo_t* cr, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_marker_stems and paint_playheads: the scanner draws OVER the stems

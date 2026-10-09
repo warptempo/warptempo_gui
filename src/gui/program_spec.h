@@ -29,10 +29,28 @@
 // this header's). (The 24-W seat round a 27-W case, a 37-W band and a 36-W
 // row 8 stood for the morning of 2026-10-09; git history.)
 //
-// THIS BRIEF BUILT THE TWO LANES THE ROSTER STANDS IN — THE TOOLBAR BAND
-// (the top strip's lane 2) and ROW 8 under its DOCK BAR (the bottom strip's
-// one lane); the canvas column (the view bar, the ruler, the cue lane, the
-// canvas) follows in later parts and its lanes stay as they were.
+// THE PROGRAM'S LANES (2026-10-09): THE TOOLBAR BAND (the top strip's lane
+// 2) and ROW 8 under its DOCK BAR (the bottom strip's one lane), the
+// roster's; and, from the band down to the well, the CANVAS COLUMN'S THREE
+// in ORDER R (architect 2026-10-09 ~09:40, the mock of record
+// tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; its generator mock_ce_s3.py,
+// NOTES.md's sets 2 and 3): THE COLUMN'S AIR (5 W of face under the band's
+// last line, METRICS §4.1), THE VIEW BAR — the trim bar — (a line, the
+// black field, a line: 8), THE RULER FLIPPED (17 rows of ground on the view
+// bar's light line, its ticks standing on its bottom row, then its own
+// light bottom line: 18) and THE MARKER LANE of Cool Edit's cues (11), the
+// well's top frame row under its last. The canvas itself — its grid and
+// its centre lines — is a later part; the well and its frame stand as they
+// were.
+//
+// THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN QUANTA, NOT IN ROUNDED W
+// (2026-10-09): a triangle's 9-7-5-3-1 rows, its shadow column, the label's
+// lead from the column, the selected fill's pads and the dots down the
+// canvas are counted in the stem's own width u = scaled_px(1, 1) (render.h's
+// waveform_line_px) — the playhead head's construction since 2026-10-05 —
+// so the apex is the stem's column at every scale and the nine units centre
+// on it with no remainder; the LANES' ROWS and the text's seats are W
+// lengths, each its own rounded part (scaled_px's rule).
 struct ProgramSpec {
     // THE CASE (METRICS §1.3): one highlight row and column on the top and
     // left, the glyph seat, one shadow row and column and one black row and
@@ -100,6 +118,56 @@ struct ProgramSpec {
     // group's end bar (the field's own symmetric air of 2026-10-08, the end
     // bar now standing between the field and the line).
     double state_air_px;
+
+    // -- THE CANVAS COLUMN (METRICS §3, §4; NOTES.md sets 2 and 3) ----------
+    // THE COLUMN'S AIR: the face between the band's last line and the view
+    // bar's top line (METRICS §4.1, Cool Edit's y = 79..83), a lane of its
+    // own above the trim lane (main.cpp's lane table).
+    int  column_air_px;
+    // THE VIEW BAR'S FIELD between its two lines (METRICS §3: Cool Edit's
+    // 10; architect 2026-10-09, mock set 1's axis, 6): the trim lane is a
+    // line, this field and a line.
+    int  view_bar_field_px;
+    // THE RULER'S GROUND, its rows 0 .. 16 under the view bar's light line
+    // (METRICS §4.4, 17 rows), then its own light bottom line; THE TICKS
+    // stand on the ground's bottom row and rise this far into it (minor and
+    // major); THE DIGITS' BASELINE is the top of this ground row (12), the
+    // cap of 7 above it and the black shadow ending on it.
+    int  ruler_ground_px;
+    int  ruler_minor_tick_px;
+    int  ruler_major_tick_px;
+    int  ruler_baseline_px;
+    // THE MARKER LANE (METRICS §4.2, 11 rows): this many W rows above the
+    // cue's triangle (row 0 the air, the label's cap on rows 1 .. 7), then
+    // the triangle's cue_triangle_rows quanta, its apex on the lane's last
+    // row; the label's baseline the top of this lane row (8), the selected
+    // fill this many rows from the lane's top (rows 0 .. 8: one row of air
+    // above the cap and one below the baseline).
+    int  cue_above_triangle_px;
+    int  cue_triangle_rows;
+    int  cue_baseline_px;
+    int  cue_fill_px;
+    // THE CUE'S HORIZONTAL LENGTHS, IN QUANTA from the marker's column
+    // (the head): the label's first column past the column (Cool Edit's
+    // stem 416 → label 422), the selected fill's first column (one quantum
+    // before the text) and its pad past the text, the gap between two of a
+    // marker's label segments' boxes (the bound cells, the history's two
+    // halves — the product's own, a segment's text standing the label's
+    // lead past the previous one's end), and the overlap rule's lead: a
+    // label is clipped at the next triangle's left edge when the next column
+    // stands more than this far right.
+    int  cue_label_lead;
+    int  cue_fill_lead;
+    int  cue_fill_pad;
+    int  cue_segment_gap;
+    int  cue_overlap_lead;
+    // THE CANVAS DOTS (METRICS §4.2, §4.3): a dot one quantum square every
+    // this many quanta down the canvas, the cues' on rows ≡ the cue phase
+    // and the playhead's on rows ≡ its own, so the two interleave on one
+    // column.
+    int  dot_period;
+    int  cue_dot_phase;
+    int  playhead_dot_phase;
 };
 
 inline constexpr ProgramSpec kProgramSpec = {
@@ -127,6 +195,24 @@ inline constexpr ProgramSpec kProgramSpec = {
     .field_min_w_px     = 85.0,
     .field_pad_px       = 8.0,
     .state_air_px       = 5.0,
+    .column_air_px         = 5,
+    .view_bar_field_px     = 6,
+    .ruler_ground_px       = 17,
+    .ruler_minor_tick_px   = 2,
+    .ruler_major_tick_px   = 4,
+    .ruler_baseline_px     = 12,
+    .cue_above_triangle_px = 6,
+    .cue_triangle_rows     = 5,
+    .cue_baseline_px       = 8,
+    .cue_fill_px           = 9,
+    .cue_label_lead        = 6,
+    .cue_fill_lead         = 5,
+    .cue_fill_pad          = 1,
+    .cue_segment_gap       = 4,
+    .cue_overlap_lead      = 6,
+    .dot_period            = 4,
+    .cue_dot_phase         = 3,
+    .playhead_dot_phase    = 1,
 };
 
 // THE AUTHORED TOTALS, the lane table's record (render.h's
@@ -146,9 +232,46 @@ constexpr int program_row8_authored_h(const ProgramSpec& p) {
     return p.row8_air_above_px + program_case_authored_px(p) +
            p.row8_air_below_px;
 }
+// The canvas column's three lanes above the well (the head): the view bar a
+// line, its field and a line; the ruler its ground and its bottom line; the
+// marker lane its rows above the triangle and the triangle's quanta (one W
+// each at 100 %).
+constexpr int program_view_bar_authored_h(const ProgramSpec& p) {
+    return 1 + p.view_bar_field_px + 1;
+}
+constexpr int program_ruler_authored_h(const ProgramSpec& p) {
+    return p.ruler_ground_px + 1;
+}
+constexpr int program_marker_lane_authored_h(const ProgramSpec& p) {
+    return p.cue_above_triangle_px + p.cue_triangle_rows;
+}
+constexpr int program_column_authored_h(const ProgramSpec& p) {
+    return p.column_air_px + program_view_bar_authored_h(p) +
+           program_ruler_authored_h(p) + program_marker_lane_authored_h(p);
+}
 static_assert(program_case_authored_px(kProgramSpec) == 23);
 static_assert(program_band_authored_h(kProgramSpec) == 33);
 static_assert(program_dock_bar_authored_h(kProgramSpec) == 6);
 static_assert(program_row8_authored_h(kProgramSpec) == 32);
+static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
+static_assert(program_ruler_authored_h(kProgramSpec) == 18);
+static_assert(program_marker_lane_authored_h(kProgramSpec) == 11);
+static_assert(program_column_authored_h(kProgramSpec) == 42);
+// THE CUE'S ROWS (METRICS §4.2): the label's cap (7, rows 1 .. 7) and the
+// triangle (rows 6 .. 10) share rows 6 and 7 but never columns — the label
+// stands past the triangle's shadow; the fill's rows end one below the
+// baseline; the playhead's head (rows 12 .. 16 of the ruler) is the cue's
+// triangle on the ruler's own rows.
+static_assert(kProgramSpec.cue_baseline_px - 7 == 1);
+static_assert(kProgramSpec.cue_fill_px == kProgramSpec.cue_baseline_px + 1);
+static_assert(kProgramSpec.cue_label_lead >
+              (2 * kProgramSpec.cue_triangle_rows - 1) / 2 + 1);
+static_assert(kProgramSpec.ruler_ground_px - kProgramSpec.cue_triangle_rows ==
+              kProgramSpec.ruler_baseline_px);
+static_assert(kProgramSpec.cue_dot_phase != kProgramSpec.playhead_dot_phase);
+// The label's text stands one pad quantum inside its fill: the fill's lead
+// and pad are the label's lead (render.cpp's cue_segment_boxes).
+static_assert(kProgramSpec.cue_label_lead ==
+              kProgramSpec.cue_fill_lead + kProgramSpec.cue_fill_pad);
 
 #endif // WARPTEMPO_GUI_PROGRAM_SPEC_H

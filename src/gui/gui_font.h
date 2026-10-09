@@ -37,7 +37,11 @@
 // before Windows 2000's Standard scheme took Tahoma. In each set the body is
 // the regular file,
 // the bold (the caption's title alone) the bold file, the small (the
-// ruler's labels alone) the regular file at the smaller em.
+// ruler's labels until 2026-10-09, when the ruler became Cool Edit's) the
+// regular file at the smaller em, and THE PROGRAM'S (architect
+// 2026-10-09, the program is Cool Edit: the ruler's digits and the cues'
+// labels at Cool Edit's cap of 7 W, METRICS §4.2 and §4.4) the regular file
+// at the em that stands its "H" seven rows tall.
 // EVERY FACE DRAWS ITS ANTIALIASED OUTLINE AT EVERY SIZE, NEVER AN EMBEDDED
 // BITMAP STRIKE (architect 2026-10-06; Tahoma carries strikes at 8–16 ppem,
 // its bold at 9–13, and the sheets he judged were outline renders; DejaVu
@@ -101,8 +105,8 @@
 #include <cstddef>
 #include <cstdint>
 
-enum class GuiFace { Body, Bold, Small };
-inline constexpr std::size_t kGuiFaceCount = 3;
+enum class GuiFace { Body, Bold, Small, Program };
+inline constexpr std::size_t kGuiFaceCount = 4;
 
 // THE EIGHT FILES, THE INSTALL'S ONE ORDER, EVERY SET'S (architect
 // 2026-10-07, the second vocabulary's pair joining the first's; 2026-10-08
@@ -171,6 +175,15 @@ struct GuiFaceMetrics {
     int cap     = 0;
 };
 
+// THE PROGRAM FACE'S RECORDED METRICS, every set's (2026-10-09): Cool Edit's
+// cap of 7 W for its ruler digits and its cue labels, read off his captures
+// (tmp/research/cool_edit/METRICS.md §4.2, §4.4); the ascent and descent
+// the cap's own proportion of the body's 11 / 2 over 8, rounded: {10, 2, 7}.
+// No lane reads the cell: the ruler and the marker lane seat these runs on
+// their own authored rows (program_spec.h), so the cell is a record and the
+// cap the em's measure.
+inline constexpr GuiFaceMetrics kGuiProgramFaceMetrics = {10, 2, 7};
+
 // ONE CHROME VOCABULARY'S TEXT (architect 2026-10-06): per use (GuiFace, in
 // its order), the kGuiFontFiles index the use is drawn from and its recorded
 // metrics; the tracking in Windows px per glyph; whether the four math signs
@@ -194,8 +207,8 @@ struct GuiFaceSet {
 //   only the heights"): the recorded metrics match the period's heights and
 //   the widths are the live face's own advances, as the gnome2 set's are.
 inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
-    .file        = {0, 1, 0},
-    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}},
+    .file        = {0, 1, 0, 0},
+    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}, kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
 };
 
@@ -223,8 +236,8 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
 //   DejaVu Sans": the bytecode look of 2010 is not reproduced, and Pango
 //   tracked nothing; the heights are matched, never the widths).
 inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
-    .file        = {2, 3, 2},
-    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}},
+    .file        = {2, 3, 2, 2},
+    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}, kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
 };
 
@@ -252,8 +265,8 @@ inline constexpr GuiFaceSet kGuiFaceSetGnome2 = {
 //   arm) — nothing reads the bold while cde is live.
 //   TRACKING: none (the heights-only rule, as the other two sets).
 inline constexpr GuiFaceSet kGuiFaceSetCde = {
-    .file        = {4, 5, 4},
-    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}},
+    .file        = {4, 5, 4, 4},
+    .metrics     = {{11, 2, 8}, {11, 2, 8}, {6, 0, 6}, kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
 };
 
@@ -296,8 +309,8 @@ inline constexpr GuiFaceSet kGuiFaceSetCde = {
 //   SIGNS: LIFTED onto the hyphen's axis (gui_sign_axis below; architect
 //   2026-10-09, the lift returning with Nimbus's outlines).
 inline constexpr GuiFaceSet kGuiFaceSetMsSansSerif = {
-    .file        = {6, 7, 6},
-    .metrics     = {{11, 2, 9}, {11, 2, 9}, {6, 0, 6}},
+    .file        = {6, 7, 6, 6},
+    .metrics     = {{11, 2, 9}, {11, 2, 9}, {6, 0, 6}, kGuiProgramFaceMetrics},
     .tracking_px = 0.0,
     .sign_lift   = true,
 };
@@ -317,10 +330,11 @@ inline constexpr const GuiFaceSet* kGuiFaceSets[] = {
 // A LIVE SWAP BETWEEN THE WINDOWS CHROME'S TWO SETS MOVES NO LANE (the
 // face follows the scheme live, gui_live_face_set below): the two record
 // the same cell, ascent 11 and descent 2 for the body and the bold, and
-// the same six-row small digit — only the cap differs (8 / 9), which no
-// lane height reads — so every memo of a lane's rows keyed on the scale
-// alone (the marker lane's, the ruler lane's, paint_handler.cpp) stays
-// true across a swap, and the stack and the well keep their rows.
+// the same six-row small digit and the same program face — only the body's
+// cap differs (8 / 9), which no lane height reads — so the stack and the
+// well keep their rows across a swap (since 2026-10-09 the ruler and the
+// marker lane are the program's authored rows, program_spec.h, and read no
+// face at all).
 constexpr bool same_lanes(const GuiFaceSet& a, const GuiFaceSet& b) {
     for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
         if (a.metrics[i].ascent != b.metrics[i].ascent ||

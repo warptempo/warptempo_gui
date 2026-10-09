@@ -72,8 +72,7 @@ void paint_cde_armed(cairo_t* cr, const GuiRect& r);
 // shades a widget from its own background. NO FOCUS RING (architect
 // 2026-10-08 ~15:00: CDE's 1-W ring in the active-title colour round the
 // focused text widget is not drawn — "anachronism ok to fit the screen and
-// the Win95 metrics"; the flag editor's no-box rule and the caret are the
-// cue).
+// the Win95 metrics"; the caret is the cue).
 void paint_cde_field(cairo_t* cr, const GuiRect& r, GuiColor ground);
 
 // -- THE CAPTION (dtwm's title bar; render.h's caption block) ------------------
@@ -104,7 +103,8 @@ void paint_cde_caption_box(cairo_t* cr, const GuiRect& b, bool active,
 void paint_cde_caption_glyph(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
                              bool active, bool enabled);
 
-// -- THE SCROLL BAR (the trim lane, the popup lists' bar) ----------------------
+// -- THE SCROLL BAR (the popup lists' bar; the trim lane's until 2026-10-09,
+//    the program's view bar since) ---------------------------------------------
 
 // THE TROUGH — XmScrollBar on the notepad capture (rows 383-395: a sunken
 // one-px ring, the bottom shadow on its top and left, the top shadow on its
@@ -112,23 +112,21 @@ void paint_cde_caption_glyph(cairo_t* cr, const GuiRect& b, CdeCaptionBox which,
 // set's select): the ring on `bar` and cde_select inside it. THE RECT IS
 // THE WHOLE BAR'S, ITS ARROWS INCLUDED (architect 2026-10-08 ~19:05, off the
 // notepad capture: "today's caps lack that frame") — the popup list's bar
-// end to end, and on the trim lane the trim bar alone, the begin cap's
-// outer edge to the end cap's, ONE SUNKEN RECTANGLE on the lane's body
-// (render_trim_flags). The arrows and the slider stand inside the ring
-// (below), on the bar's inner rows.
+// end to end. The arrows and the slider stand inside the ring (below), on
+// the bar's inner rows.
 void paint_cde_trough(cairo_t* cr, const GuiRect& bar);
 // THE SLIDER — the raised box in the body, one W inside the trough's ring
-// on the lane's axis (`horizontal`: inset on top and bottom, the ends the
-// caller's — the trim lane's body runs to its caps; a vertical bar's inset
-// on left and right): the body filled under one raised line.
+// on the bar's axis (`horizontal`: inset on top and bottom, the ends the
+// caller's; a vertical bar's inset on left and right): the body filled
+// under one raised line.
 void paint_cde_slider(cairo_t* cr, const GuiRect& body, bool horizontal);
 // THE ARROW — Motif's beveled triangle (XmeDrawArrow as the notepad's bars
 // draw it, 11 px in the 13-px bar: the left arrow's apex at the trough's
 // inner column, its upper edge the TOP SHADOW, its lower edge and its base
 // the BOTTOM SHADOW, the face the body; the right arrow's base light; up's
 // left edge light, right edge and base dark; down's base and left edge
-// light) on the cap's box `b` (the trim lane's 13 x 13, the popup bar's —
-// the spec's scroll_bar_px, CDE's own 13 since 2026-10-08), THE CAP STANDING
+// light) on the cap's box `b` (the popup bar's 13 x 13 — the spec's
+// scroll_bar_px, CDE's own 13 since 2026-10-08), THE CAP STANDING
 // AT THE BAR'S END INSIDE THE TROUGH'S RING (2026-10-08 ~19:05, the
 // architect off the notepad capture: the trough's rect is the whole bar's,
 // paint_cde_trough): the triangle's box is the cap less one W on every side
@@ -146,8 +144,9 @@ void paint_cde_arrow(cairo_t* cr, const GuiRect& b, CdeArrowDir dir,
                      bool pressed);
 // THE SAME TRIANGLE IN EXACTLY THE BOX `t` (its base one side of the box,
 // its apex the middle of the opposite side, the edges and tones as above) —
-// paint_cde_arrow's own drawing, and the playhead's head under cde
-// (render.h's playhead head block: Motif's down arrow, 9 x 9 W).
+// paint_cde_arrow's own drawing. (It drew the playhead's head under cde too,
+// Motif's 9 x 9 W down arrow, 2026-10-08 to 2026-10-09; the head is the
+// program's yellow triangle since.)
 void paint_cde_arrow_triangle(cairo_t* cr, const GuiRect& t, CdeArrowDir dir,
                               bool pressed);
 

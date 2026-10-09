@@ -70,9 +70,9 @@ void remap_marker_indices_after_reorder(AppState& app,
 
 // hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
 // references are now explicit arguments. There is no grab tolerance left:
-// the trim caps are their painted arrow buttons since 2026-10-03 and the
-// marker surfaces (the flag boxes) hit on their painted rects, neither with a
-// halo. Both families read a PAINTER'S STASH: the flag
+// the trim grabs are the view bar's span's end zones since 2026-10-09 (the
+// painted arrow buttons from 2026-10-03) and the marker surfaces (the cues'
+// triangles and labels) hit on their painted rects, neither with a halo. Both families read a PAINTER'S STASH: the flag
 // lane's (AppState::flag_hit_rects) and, since 2026-09-24, the trim lane's
 // (AppState::trim_bar_hit).
 
@@ -125,14 +125,15 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 
 TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (architect 2026-09-24, strictly
-    // as-painted; the contract is at AppState::trim_bar_hit). The caps are the
-    // arrow buttons GuiPaintHandler::paint_trim last DREW — on the displayed
-    // item basis and the displayed map, through trim_endcap_rect, each
-    // published as its painted rect over the lane's whole height — so a press
-    // between a trim write and its repaint grabs the button still on screen,
-    // a button sliding off an edge by its visible columns alone, and one
-    // wholly off the lane, having painted nothing, answers nothing. Nothing here reads app.trim or re-runs the owner chain. Cold
-    // (nothing painted) nothing is grabbable.
+    // as-painted; the contract is at AppState::trim_bar_hit). The grabs are
+    // the view bar's span's two end zones as GuiPaintHandler::paint_trim last
+    // DREW the span — on the displayed item basis and the displayed map,
+    // through trim_endcap_rect, each published over the lane's whole height
+    // (2026-10-09; the arrow buttons from 2026-10-03) — so a press between a
+    // trim write and its repaint grabs the span still on screen, a zone
+    // sliding off an edge by its visible columns alone, and one wholly off
+    // the lane answers nothing. Nothing here reads app.trim or re-runs the
+    // owner chain. Cold (nothing painted) nothing is grabbable.
     const TrimBarHit& h = app.trim_bar_hit;
     if (!h.published) return TrimHit::None;
 
@@ -144,11 +145,11 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
     if (mouse_y < h.lane.y || mouse_y >= h.lane.y + h.lane.h)
         return TrimHit::None;
 
-    // THE BUTTON IS THE TARGET (architect 2026-10-03): each published rect is
-    // tested as it is, with no tolerance. The two rects never overlap — the
-    // painter stands the end button edge to edge right of the begin's in the
-    // narrow case (trim_endcap_rect) — so the order of the two tests decides
-    // nothing.
+    // THE ZONE IS THE TARGET (architect 2026-10-03, for the buttons the zones
+    // replaced): each published rect is tested as it is, with no tolerance.
+    // The two rects never overlap — the end zone stands edge to edge right of
+    // the begin's in the narrow case (trim_endcap_rect) — so the order of the
+    // two tests decides nothing.
     const auto on = [&](const TrimBarHitCap& cap) {
         return cap.painted && mouse_x >= cap.rect.x &&
                mouse_x < cap.rect.x + cap.rect.w;
@@ -160,7 +161,7 @@ TrimHit hit_test_trim_endcap(const AppState& app, int mouse_x, int mouse_y) {
 
 bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
     // THE PAINTER'S STASH, the endcap test's twin (AppState::trim_bar_hit):
-    // the interval is the body between the two arrow buttons' inner edges as
+    // the interval is the span's body between its two end zones as
     // render_trim_flags last DREW it — trim_bridge_gap over the painted
     // columns, already clipped to the lane's painted width, so the inert
     // non-multiple-of-16 right gutter answers false exactly as it paints no
@@ -168,9 +169,9 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
     // the no-audio answer, the trim pass painting only over loaded audio.
     const TrimBarHit& h = app.trim_bar_hit;
     if (!h.published) return false;
-    // The TRIM BAR LANE ONLY — the band the bar and its endcaps were painted
-    // in, and the exact band hit_test_trim_endcap gates on. A top-strip point
-    // BELOW it (the ruler, then the marker lane) is not the bridge handle.
+    // The TRIM BAR LANE ONLY — the band the view bar was painted in, and the
+    // exact band hit_test_trim_endcap gates on. A top-strip point BELOW it
+    // (the ruler, then the marker lane) is not the bridge handle.
     if (mouse_y < h.lane.y || mouse_y >= h.lane.y + h.lane.h) return false;
     return mouse_x >= h.bridge_lo && mouse_x < h.bridge_hi;
 }
@@ -182,8 +183,18 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
 // riding box must resolve to the marker and the cell a resting one resolves
 // to, and the only way to be sure of that is to answer both out of the same
 // walk with the same boundary idiom.
+//
+// A CUE IS TWO RECTS (FlagHitRect, render.h, 2026-10-09): its label's box and
+// its triangle, and the walk follows the cue painter's own order
+// (render.cpp's paint_cues, render.h's marker-lane paragraph): THE TRIANGLES
+// paint last, left to right, so a press on any triangle answers the
+// rightmost triangle under it; THE LABELS paint right to left under them, so
+// among labels the LEFTMOST under the point is on top. `on_triangle` says
+// which of the two answered (a triangle is the payload's, never a cell).
 static const FlagHitRect* topmost_flag_rect(const AppState& app,
-                                            int mouse_x, int mouse_y) {
+                                            int mouse_x, int mouse_y,
+                                            bool* on_triangle = nullptr) {
+    if (on_triangle) *on_triangle = false;
     // THE OPEN EDITOR'S RIDING BOXES ARE ASKED FIRST — whichever of the
     // marker's boxes stand to the RIGHT of the field, re-painted at its right
     // edge by the editor's painter and published there as a flag rect of their
@@ -209,17 +220,24 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
     // one open, and the mode's own paint zeroes this.
     const FlagHitRect& rc = app.flag_editor_box.riding_cells;
     if (rc.marker_index >= 0 &&
-        mouse_x >= rc.x && mouse_x < rc.x + rc.w &&
-        mouse_y >= rc.y && mouse_y < rc.y + rc.h) {
+        flag_hit_rect_contains(rc, static_cast<double>(mouse_x),
+                               static_cast<double>(mouse_y))) {
         return &rc;
     }
+    const double px = static_cast<double>(mouse_x);
+    const double py = static_cast<double>(mouse_y);
     for (auto it = app.flag_hit_rects.rbegin();
          it != app.flag_hit_rects.rend(); ++it) {
         const FlagHitRect& r = *it;
-        if (mouse_x >= r.x && mouse_x < r.x + r.w &&
-            mouse_y >= r.y && mouse_y < r.y + r.h) {
+        if (px >= r.tri_x && px < r.tri_x + r.tri_w &&
+            py >= r.tri_y && py < r.tri_y + r.tri_h) {
+            if (on_triangle) *on_triangle = true;
             return &r;
         }
+    }
+    for (const FlagHitRect& r : app.flag_hit_rects) {
+        if (px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h)
+            return &r;
     }
     return nullptr;
 }
@@ -227,13 +245,17 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
 MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
                               int mouse_x, int mouse_y) {
     (void)audio;
-    const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
-    // THE PAINTER'S OWN BOUNDARIES, never a re-derivation: each is the seam
-    // column of the box it introduces, and each collapses onto the next where
-    // that box did not paint (FlagHitRect's contract), so the walk from the
-    // rightmost box inward can only answer a box with pixels — a cell-less
-    // flag answers Payload everywhere by construction.
-    if (!r) return MarkerCell::Payload;
+    bool on_triangle = false;
+    const FlagHitRect* r =
+        topmost_flag_rect(app, mouse_x, mouse_y, &on_triangle);
+    // THE PAINTER'S OWN BOUNDARIES, never a re-derivation: each is the box
+    // start of the segment it introduces, and each collapses onto the label's
+    // right edge where that segment did not paint (FlagHitRect's contract),
+    // so the walk from the rightmost segment inward can only answer a segment
+    // with pixels — a cell-less label answers Payload everywhere by
+    // construction. THE TRIANGLE IS THE MARKER'S OWN, never a cell: a press
+    // on it answers Payload whatever the boundaries say.
+    if (!r || on_triangle) return MarkerCell::Payload;
     const double x = static_cast<double>(mouse_x);
     if (x >= r->iter_upper_boundary_x) return MarkerCell::Upper;
     if (x >= r->iter_lower_boundary_x) return MarkerCell::Lower;
@@ -259,17 +281,15 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // Cold (nothing painted yet) the stash is empty and nothing is clickable,
     // which is the honest answer: a flag with no pixels has no box to grab.
     //
-    // THE SHAPE IS A PLAIN RECT. The fused tip-down triangle below the old flag
-    // — and its slope test through flag_triangle_half_width_at — died with the
-    // triangle lane; a marker is one box in one lane now.
+    // THE SHAPE IS TWO RECTS (2026-10-09, architect: "the union of the
+    // triangle and the label's box as painted"): the cue's triangle's box —
+    // its widest row and the shadow's quantum over its five rows — and its
+    // label's box. No slope test: the triangle's box is its hit.
     //
-    // Z-ORDER: the painter walks the store FORWARD and later boxes cover
-    // earlier ones, so the topmost box under a point is the LAST containing
-    // rect. Walk backwards and take the first hit (topmost_flag_rect above).
-    // Selection no longer lifts anything (it is a colour swap, not a z-rule),
-    // so this is the whole arbitration — one pass, no class split; a later
-    // flag covering an earlier flag's cells resolves to the later marker
-    // exactly as the pixels say.
+    // Z-ORDER is the cue painter's (topmost_flag_rect above): triangles over
+    // labels, the rightmost triangle on top, the leftmost label on top.
+    // Selection lifts nothing (it is the label's selected pair, not a
+    // z-rule), so this is the whole arbitration.
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
     return r ? r->marker_index : -1;
 }

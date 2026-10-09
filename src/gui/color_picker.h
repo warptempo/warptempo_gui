@@ -237,22 +237,23 @@ struct Viewport;
 // it, 1 W of air above them and 1 below. Every term a whole Windows px, so
 // at 300 % the sum is exact. WHY 17 (the planner's call, stated to him):
 // the largest pitch at which the card still stands wholly inside the well
-// on the tablet under every chrome, so the marker lane — its flags on BOTH
+// on the tablet under every chrome, so the marker lane — its cues on BOTH
 // halves, which a press through the picker selects (THE PRESS THROUGH THE
 // CARD below) — stays in view; at 300 % row 8's top (its dock bar's) is
 // 1326 (win2000 and clearlooks; the program's lanes since 2026-10-09,
 // main.cpp's lane record), the band's top 1326 − 393 = 933, the card's foot
-// 921 and its TOP ROW 921 − 522 = 399, 33 rows under the win2000 well's top
-// (366) and 24 under clearlooks' (375); under cde (the surface's rows,
-// dtwm's frame outside the app) row 8's top 1311, the card's top 384, 33
-// under the well's 351. At the laptop's 138 % (1920 x 1080 maximized) the
+// 921 and its TOP ROW 921 − 522 = 399, 60 rows under the win2000 well's top
+// (339) and 51 under clearlooks' (348); under cde (the surface's rows,
+// dtwm's frame outside the app) row 8's top 1311, the card's top 384, 12
+// under the well's 372. At the laptop's 138 % (1920 x 1080 maximized) the
 // band is 180 rows, the margin 6 and the card 235 under every chrome (2 + 8
 // + 29 + 8 + 6 x 23 + 8 + 32 + 8 + 2 under win2000; 1 + 8 + 29 + 8 + 138 +
 // 8 + 34 + 8 + 1 under clearlooks and cde, 25 W rounding to 34), so its top
 // row is 1029 − 180 − 6 − 235 = 608 under win2000 and clearlooks, far below
 // the well's top. A pitch of 21, the chooser's own height, would make the
 // right column seven equal rows and the card 198, but at 300 % its top row
-// would be 327, inside the marker lane (312–366) over the flags on its half.
+// would be 327, inside the win2000 marker lane (306–339) over the cues on its
+// half.
 //
 // THE PRESS THROUGH THE CARD (architect 2026-10-08 ~21:20: "pick flags so I
 // can toggle, test the selected flag without having to close the picker and
@@ -495,12 +496,13 @@ static_assert(card_bottom_band_wpx(kChromeSpecCde) == 25 &&
               kChromeSpecCde.push_button_box_px == 23.0);
 // WHY 17 (the head's THE SEAT): the card, its margin above the band, the
 // band and the margin under the well's top stand inside the tablet's
-// tightest well at 300 % (clearlooks', main.cpp's lane record: 951 device
-// rows = 317 W since the program's lanes, 2026-10-09) — 174 + 4 + 131 + 4 =
-// 313 — so the marker lane above the well stays in view on both halves.
-inline constexpr int kTabletWellClearlooksWPx = 317;
+// tightest well at 300 % (cde's, main.cpp's lane record: 939 device rows =
+// 313 W since the program's canvas column, 2026-10-09; win2000's 329,
+// clearlooks' 326) — 174 + 4 + 131 + 4 = 313, exactly — so the marker lane
+// above the well stays in view on both halves.
+inline constexpr int kTabletWellTightestWPx = 313;
 static_assert(kCardHeightWPx + 2 * kCardMarginPx + kKeyboardBandWPx <=
-              kTabletWellClearlooksWPx);
+              kTabletWellTightestWPx);
 
 // -- THE CHANNELS -----------------------------------------------------------
 

@@ -19,10 +19,12 @@ struct GuiTargetRender;
 // BPM dialog editor, and the
 // BPM-mode enter/exit transitions. Damage is reached through viewport.
 //
-// AN OPEN RECOLORS NOTHING (architect 2026-10-07 ~09:45, both chromes): the
-// marker-lane editors paint in the flag's own selected face, outline and
-// stem, the selected substring in the chrome's selected pair — the picture
-// is render_flag_editor_box's (render.h's EDITING paragraph owns the look).
+// AN OPEN IS WINDOWS' EDIT FIELD (architect 2026-10-09, every chrome): the
+// marker-lane editors paint a box in the chrome's field pair with a
+// one-quantum outline in the field text over the edited segment, the
+// selected substring in the chrome's selected pair — the picture is
+// render_flag_editor_box's (render.h's EDITING paragraph owns the look and
+// the ruling's reason).
 struct GuiFlagEditor {
     AppState&             app;
     GuiAudio&             audio;

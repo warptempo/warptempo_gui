@@ -9,8 +9,11 @@
 // THE PROGRAM'S PAINTERS — COOL EDIT PRO 2.1'S PANEL (architect 2026-10-09,
 // "chrome means chrome, the program is Cool Edit"; program_spec.h's head):
 // the button case in its faces, the toolbar band's lines and panes and
-// grooves, the dock bar, row 8's grippers and end bars, the dark time field
-// and the shadowed panel label — THE SAME UNDER EVERY CHROME. The lengths
+// grooves, the dock bar, row 8's grippers and end bars, the dark time field,
+// the shadowed panel label and the cue's triangle — THE SAME UNDER EVERY
+// CHROME (the canvas column's lanes — the view bar, the ruler, the cues —
+// are painted by render_trim_flags, paint_ruler_row and the flag pass out of
+// these and the constants below). The lengths
 // are program_spec.h's (render.h's program accessors, each a rounded part);
 // the measurements are tmp/research/cool_edit/METRICS.md's, one capture px a
 // W, and the approved mock is tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png
@@ -71,6 +74,20 @@ inline constexpr uint32_t kCeRingLight = 0xF8F8F8;
 inline constexpr uint32_t kCeCaseInk = 0x000000;
 // THE TIME FIELD'S DIGITS (METRICS §5.4, ≈EFF0F0 on the default scheme).
 inline constexpr uint32_t kCeFieldText = 0xEFF0F0;
+
+// -- THE CANVAS COLUMN'S CONSTANTS (METRICS §3, §4; 2026-10-09) ---------------
+// The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
+// (§3); THE RULER'S TICKS AND DIGITS, E0E0E0 (§4.4, face-independent in all
+// five presets), the digits' (+1, +1) SHADOW black (§4.4 and §6: "≈ black,
+// observed down to 0D0708", darker than the panel labels' dark tone); THE
+// PLAYHEAD'S YELLOW, FFFF00 (Cool Edit's Curs, §4.3) — the head, its dots in
+// the canvas and in the view bar — and the view bar's dots' other color,
+// black (§3: FFFF00 and 000000 alternating).
+inline constexpr uint32_t kCeViewBarField   = 0x000000;
+inline constexpr uint32_t kCeRulerTick      = 0xE0E0E0;
+inline constexpr uint32_t kCeRulerShadow    = 0x000000;
+inline constexpr uint32_t kCePlayhead       = 0xFFFF00;
+inline constexpr uint32_t kCeViewBarDot     = 0x000000;
 
 // -- THE CASE ------------------------------------------------------------------
 
@@ -147,3 +164,13 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // under it one line right and down, Cool Edit's shadow on a dark face.
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline);
+
+// -- THE CUE'S TRIANGLE ---------------------------------------------------------
+
+// COOL EDIT'S POINT-CUE MASK (METRICS §4.2, §4.3), THE CUES' AND THE
+// PLAYHEAD HEAD'S ONE PAINTER: five rows of one quantum u (cue_unit_px) from
+// `top`, row r spanning the apex column `col` (window x, its own u wide)
+// widened by (4 − r) quanta either side — 9, 7, 5, 3, 1 quanta — in `color`,
+// each row's SHADOW one quantum right of it in `ce_cue_shadow`. The apex row
+// is the last. Aliased integer rects; the caller's clip cuts it.
+void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color);

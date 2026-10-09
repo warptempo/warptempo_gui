@@ -95,8 +95,8 @@ struct OutlineFace {
 };
 
 // THE GLYPH EACH USE'S EM IS MEASURED ON (gui_font.h's head): the "H" for
-// the two text faces, the "0" for the digits.
-constexpr char32_t kBandGlyph[kGuiFaceCount] = {U'H', U'H', U'0'};
+// the two text faces and the program's, the "0" for the small digits.
+constexpr char32_t kBandGlyph[kGuiFaceCount] = {U'H', U'H', U'0', U'H'};
 // Each file's outline ink height of each band glyph, per em, read once at the
 // install (outline_ink_em): index 0 the "H", 1 the "0". The em of a use is
 // the live set's recorded cap over its file's entry (gui_face_em_px), so the

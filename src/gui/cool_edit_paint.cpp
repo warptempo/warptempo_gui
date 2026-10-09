@@ -193,6 +193,20 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     cairo_restore(cr);
 }
 
+void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color) {
+    const int u = cue_unit_px();
+    const int rows = kProgramSpec.cue_triangle_rows;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    for (int r = 0; r < rows; ++r) {
+        const int half = (rows - 1 - r) * u;
+        const int y = top + r * u;
+        cell(cr, col - half, y, 2 * half + u, u, color);
+        cell(cr, col + half + u, y, u, u, palette().ce_cue_shadow);
+    }
+    cairo_restore(cr);
+}
+
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline) {
     const double lw = static_cast<double>(program_line_px());

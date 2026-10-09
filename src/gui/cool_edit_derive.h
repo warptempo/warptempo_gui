@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 // COOL EDIT DERIVES ITS PANEL'S TONES FROM ONE COLOR (architect 2026-10-09,
 // the program is Cool Edit; the Clearlooks precedent: one source color, the
@@ -46,7 +47,12 @@
 // render.h's palette struct), filled at every install of the program's words
 // (fill_program_palette, render.cpp) — a pick of Face moves them all live.
 // The toolbar band and row 8 read seven: the recess, the mid, the dark, the
-// hilight, the time field's two lines and the panel label's ink.
+// hilight, the time field's two lines and the panel label's ink; THE CANVAS
+// COLUMN (2026-10-09) the mid (the view bar's top line, the ruler's
+// ground), the hilight (the view bar's and the ruler's light lines, the
+// cues' labels), the dark and the cue shadow — and TWO TONES OFF THE
+// WAVEFORM'S INK rather than the face, the view bar's span bevels
+// (ToneSource::Ink below; their proof over Cool Edit's five presets).
 //
 // NOT DERIVED (constants of the painter, cool_edit_paint.h): THE BUTTON
 // CASE — its face ramp, its highlight and shadow, its black line, the
@@ -138,13 +144,22 @@ constexpr uint32_t tone(uint32_t face, double a, double b) {
 
 // -- THE TONES ----------------------------------------------------------------
 
+// THE ROLE A TONE IS DERIVED FROM: the panel's `face` (every tone of §2.1)
+// or, since 2026-10-09, THE WAVEFORM'S INK (`waveform_ink`): the view bar's
+// span is a raised block of Cool Edit's WvFg — its body the ink itself, its
+// light and dark bevels the ink at a FIXED HLS lightness with its hue and
+// saturation kept (METRICS §3: L 0.94 and, refit, 0.3157 — the table's
+// note; a = 0 below), the same round trip as the face's tones.
+enum class ToneSource { Face, Ink };
+
 struct Tone {
     const char*            name;
     uint32_t               measured;   // Cool Edit's default scheme's byte
     double                 a, b;       // the fit: L' = a·L + b
     GuiColor GuiPalette::* member;     // the painted ones; nullptr = record
+    ToneSource             source = ToneSource::Face;
 };
-// Each with where Cool Edit draws it (METRICS §2.1, §2.2).
+// Each with where Cool Edit draws it (METRICS §2.1, §2.2, §3).
 inline constexpr Tone kTones[] = {
     // the dock's recess and the band's stretch where no pane stands
     {"recess",        0x4E5662, 0.798,  0.000, &GuiPalette::ce_recess},
@@ -175,8 +190,24 @@ inline constexpr Tone kTones[] = {
     {"tab_line",      0xBCC2CA, 0.414,  0.584, nullptr},
     // the panel label's ink on a dark face (its shadow `dark` at (+1, +1))
     {"label",         0xD6DADE, 0.264,  0.740, &GuiPalette::ce_label},
-    // the cue and playhead markers' shadow (the canvas column's part)
-    {"cue_shadow",    0x31363D, 0.502, -0.004, nullptr},
+    // the cue's and the playhead head's shadow, one quantum right of each
+    // of the triangle's rows (METRICS §4.2, §4.3; the marker lane and the
+    // ruler, 2026-10-09)
+    {"cue_shadow",    0x31363D, 0.502, -0.004, &GuiPalette::ce_cue_shadow},
+    // THE VIEW BAR'S SPAN (METRICS §3), off the INK: its top row and left
+    // column, and its bottom row and right column — the ink at HLS L 0.94
+    // and 0.3157. `measured` is the default scheme's (WvFg 4BF3A7); the ink
+    // tones' proof is over Cool Edit's five presets (below), the product's
+    // default ink being its own. THE SHADOW'S LIGHTNESS IS 0.3157, NOT
+    // METRICS.md's 0.312 (2026-10-09): 0.312 misses the default's shadow by
+    // 2 in green (95 for 97), while every one of the five measured shadows
+    // sits at exactly L = 161/510 = 0.3157, which reproduces all five
+    // within one per channel (the proof below) — the gripper's refit
+    // precedent at this file's head.
+    {"span_hilight",  0xE3FDF1, 0.0,    0.940, &GuiPalette::ce_span_hilight,
+     ToneSource::Ink},
+    {"span_shadow",   0x0A9757, 0.0,    0.3157, &GuiPalette::ce_span_shadow,
+     ToneSource::Ink},
 };
 
 constexpr std::size_t painted_tone_count() {
@@ -199,11 +230,46 @@ constexpr bool within_one(uint32_t x, uint32_t y) {
 // Cool Edit's default scheme within one per channel.
 static_assert([] {
     for (const Tone& t : kTones)
-        if (!within_one(tone(kDefaultFace, t.a, t.b), t.measured))
+        if (t.source == ToneSource::Face &&
+            !within_one(tone(kDefaultFace, t.a, t.b), t.measured))
             return false;
     return true;
 }());
 // The default Face itself is a byte of the round trip (a = 1, b = 0).
 static_assert(tone(kDefaultFace, 1.0, 0.0) == kDefaultFace);
+
+// THE SPAN'S PROOF (METRICS §3; architect 2026-10-09): over Cool Edit's FIVE
+// captured presets' waveform inks (WvFg) — Default 4BF3A7, XP Blue 22B893,
+// Fire and Brick FFCE0C, Lipstick and Grapes ED1EC9, Seattle Blues 576AB4 —
+// the fixed-lightness rule reproduces each span's measured highlight and
+// shadow within one per channel.
+// Asserted on Cool Edit's own pairs because the product's default inks are
+// its own (palette_file.h), not Cool Edit's.
+struct SpanPreset {
+    uint32_t ink, hilight, shadow;
+};
+inline constexpr SpanPreset kSpanPresets[] = {
+    {0x4BF3A7, 0xE3FDF1, 0x0A9757},
+    {0x22B893, 0xE5FAF5, 0x19886C},
+    {0xFFCE0C, 0xFFF9E1, 0xA18100},
+    {0xED1EC9, 0xFCE3F8, 0x950C7D},
+    {0x576AB4, 0xEAECF5, 0x323E6F},
+};
+constexpr const Tone& ink_tone(const char* name) {
+    for (const Tone& t : kTones)
+        if (std::string_view(t.name) == name) return t;
+    return kTones[0];
+}
+static_assert([] {
+    const Tone& hi = ink_tone("span_hilight");
+    const Tone& lo = ink_tone("span_shadow");
+    if (hi.source != ToneSource::Ink || lo.source != ToneSource::Ink)
+        return false;
+    for (const SpanPreset& p : kSpanPresets) {
+        if (!within_one(tone(p.ink, hi.a, hi.b), p.hilight)) return false;
+        if (!within_one(tone(p.ink, lo.a, lo.b), p.shadow)) return false;
+    }
+    return true;
+}());
 
 } // namespace cool_edit_derive

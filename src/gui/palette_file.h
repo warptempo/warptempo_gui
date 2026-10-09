@@ -54,8 +54,8 @@
 // DRAWS IN THE WELL, OR ON A THING THAT ENTERS THE WELL, IS THE PALETTE'S; a
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
-// playhead's head, WordPad's ruler marker in the chrome's roles, and the flag
-// editor's selection band, the chrome's selected pair). So the palette's
+// selected cue label and the flag editor's field and selection band, the
+// chrome's selected pair). So the palette's
 // program roles are exactly the SIXTEEN below (the scheme's twelve keys are
 // the chrome's, not the program's): the waveform's canvas, ink and lit
 // outline, the four flag kinds' faces and selected faces, the one flag
@@ -63,19 +63,22 @@
 // since 2026-10-09 THE PANEL'S FACE (the program is Cool Edit from the
 // toolbar down: its band, dock bar and row 8 are the program's, so their
 // color is the palette's; the role table's paragraph below).
-// THE FLAG OUTLINE IS A ROLE, `flag_outline` (architect 2026-10-08 ~02:30,
-// on mock_IM2: "today is the only correct one"): its GEOMETRY is exactly
-// today's — the one-W ring round the flag box and its flanks beside the stem
-// down the well's top lines, stopping just before the canvas, where the
-// outline merges into it (render.h's marker-lane paragraph) — and only its
-// COLOR is his to pick, since an outline that is always the canvas is "odd
-// when the canvas is anything but black": over a light canvas he may give it
-// one of the well frame's tones, so the flag's connection to the canvas
-// reads seamless. EVERY DEFAULT PALETTE GIVES IT ITS CANVAS'S BYTES, so the
-// defaults paint exactly as the outline-is-the-canvas rule of 2026-10-07 did
-// ("otherwise it will poke out when going into the canvas"). THE FLAG LABEL
-// IS ONE for every face, resting and selected (his one-label rule of
-// 2026-10-07; the four per-kind selected labels retired the same day).
+// THE FLAG OUTLINE IS A ROLE, `flag_outline` (architect 2026-10-08 ~02:30):
+// the color of the one-W ring round the flag box and its flanks beside the
+// stem down the well's top lines, every default palette giving it its
+// canvas's bytes. THE FLAG LABEL IS ONE for every face, resting and selected
+// (his one-label rule of 2026-10-07).
+// SIX ROLES ARE UNREAD SINCE 2026-10-09, KEPT IN THE GRAMMAR PENDING HIS
+// RULING (the flags became Cool Edit's cues, render.h's marker-lane
+// paragraph): `flag_outline` (a cue has no box, no ring and no flanks),
+// `flag_label` (a cue's label is the panel's light tone, a selected one the
+// chrome's selected pair), and the four `*_flag_selected` faces (a cue's
+// triangle never changes when selected). A palette file still names all
+// sixteen — a file without one of these lines is still the read's hard fail,
+// both devices' files carry them — and the picker still offers them; none
+// moves a pixel. `playhead_stem` is read by the zoom anchor's stem alone
+// (the resting playhead is Cool Edit's yellow, a painter constant,
+// cool_edit_paint.h).
 //
 // THE BUILT-IN PALETTES ARE THE DEFAULT PALETTES, COMPILED IN, one per
 // chrome vocabulary, each named by its ChromeSpec's `default_palette`
@@ -216,8 +219,9 @@ struct GuiPaletteRole {
 // faint white on the cyan and the lime is the rule's accepted price, said
 // plainly). THE PLAYHEAD'S STEM AND THE SCANNER
 // BOTH WHITE (architect 2026-10-07: "let's go back to a white scanner") and
-// still TWO roles, so a palette may part them — the head is no role at all,
-// WordPad's ruler marker painted in the chrome's own roles (render.h).
+// still TWO roles, so a palette may part them — the resting playhead's head
+// and dots are no role at all since 2026-10-09, Cool Edit's yellow
+// (render.h's playhead paragraph), the stem role the zoom anchor's alone.
 //
 // THE `clearlooks` COLUMN is his picks on the CL10 sheets (2026-10-07 ~05:30;
 // tmp/clearlooks/report_CL10.md), each byte the engine's own arithmetic on
@@ -237,8 +241,9 @@ struct GuiPaletteRole {
 //
 // THE PANEL'S FACE, THE SIXTEENTH ROLE (architect 2026-10-09, the program is
 // Cool Edit): Cool Edit's "Dockable Window 3D Color" (its scheme key `Face`),
-// the ground of the program's panel — the toolbar band, the dock bar and row
-// 8 — whose every other tone derives from it (cool_edit_derive.h); its
+// the ground of the program's panel — the toolbar band, the dock bar, row 8
+// and the canvas column's lanes — whose every other tone derives from it
+// (cool_edit_derive.h); its
 // default Cool Edit's own default scheme's 626C7B IN EVERY COLUMN, the
 // program being the same under every chrome. A PALETTE FILE NAMES IT LIKE
 // ANY ROLE: a file without a `face` line is the read's hard fail (the
@@ -401,10 +406,10 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // keyed by the generation (FlagCache::fp_palette_generation), whose rebuild
 // also stages the stem stash and its colors (AppState::staged_marker_stems,
 // swapped in at the publish); every other reader paints live from palette()
-// each frame — the canvas (render_canvas), the stems' flanks
-// (paint_marker_stem_flanks), the open flag editor (render_flag_editor_box),
-// the lead-in ring (phase_reset_stem_color), the playhead's stem, the zoom
-// anchor's and the scanner.
+// each frame — the canvas (render_canvas), the program's panel (the band,
+// row 8, the view bar and its span, the ruler, the marker lane's face), the
+// open flag editor (render_flag_editor_box), the lead-in ring
+// (phase_reset_stem_color), the zoom anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
 // THE DEFAULT PALETTES — THE BUILT-IN PALETTES, each a name and its column

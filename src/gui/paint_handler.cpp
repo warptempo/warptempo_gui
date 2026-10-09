@@ -1223,22 +1223,15 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // card's first line, the dropdown items, the prompt's message, the render player's
 // two time fields, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
-// keyboard's caps, and the folder overlay's rows. FIVE LINE SEATS: the
-// tooltip's two lines, the ruler's labels, since 2026-10-02 the marker
-// lane's flag labels (below), and since 2026-10-06 the menu row's anchors —
+// keyboard's caps, and the folder overlay's rows. TWO LINE SEATS: the
+// tooltip's two lines and, since 2026-10-06, the menu row's anchors —
 // Explorer's menu band draws its text as a line DT_VCENTERed in the band's
-// button, the derivation at paint_menu_row. (The folder overlay's TEXT rows
-// were a fourth, and the one site that forked between the two seats, until
-// they went with the AV Sync Stats panel on 2026-09-30.)
+// button, the derivation at paint_menu_row.
 //
-// THE MARKER LANE IS A LINE SEAT TOO, and stays out of the box solver: the
-// live flag pass, the history-diff flag pass and the marker-lane editor each
-// seat their label at the flag box's top plus marker_flag_baseline_px() — its
-// edge band, one Windows px of face, then the body face's recorded ascent
-// (architect 2026-10-05): the box is exactly outline, face, the body's
-// whole cell, face, outline, so there is no margin to centre in — the caps
-// fall centred by the cell itself. The owner and the arithmetic are at
-// render.h's marker_lane_h_px block.
+// THE CANVAS COLUMN'S TEXT TAKES NEITHER SEAT (2026-10-09, the program is
+// Cool Edit): the ruler's digits and the cues' labels stand on AUTHORED
+// BASELINE ROWS of their lanes — program_spec.h's ruler_baseline_px and
+// cue_baseline_px, Cool Edit's measured rows — so neither solver is asked.
 //
 // TWO AUTHORED DROPS RETIRED WITH THIS RULE, both of them hand-measured
 // corrections to the proxy the rule replaces. THE CLOCKS' 1px: the bottom
@@ -2698,10 +2691,19 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // own inset), its width ceiled — and ROW 8'S CLOCK at least the mock's 85 W
 // (kProgramSpec.field_min_w_px), which Tahoma's cell fills.
 //
-// THE RUN IS RIGHT-ALIGNED (architect 2026-10-05, the period's ACID / Vegas
-// fields): it ENDS AT THE FIELD'S RIGHT PAD, so nothing moves as the time
-// changes. On row 8 the pipe and the digits are ONE RUN, ` | ` and the
-// timestamp, ending there, and the tab letter is painted RIGHT-ALIGNED
+// THE RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect 2026-10-05, the
+// period's ACID / Vegas fields): it ENDS AT THE RESERVED CELL'S RIGHT EDGE,
+// so nothing moves as the time changes — the purpose of the rule, which the
+// fixed cell keeps. THE CELL STANDS CENTERED IN THE FIELD (architect
+// 2026-10-09, his tablet captures: under Tahoma row 8's clock sits on the
+// 85-W floor and the run, ending at the right pad, stood 28 device px from
+// the left line and 22 from the right at 300 %): where the cell plus its pads
+// is the field, the cell's right edge is the field's right pad; where the
+// floor wins, the cell's right edge stands the pad PLUS HALF THE FLOOR'S
+// SURPLUS in from the right line, so the ink is centered whatever the face.
+// The render player's two fields take no floor, so their cell's right edge
+// is the right pad. On row 8 the pipe and the digits are ONE RUN, ` | ` and
+// the timestamp, ending there, and the tab letter is painted RIGHT-ALIGNED
 // AGAINST THAT RUN'S START: switching tab moves at most the letter's own left
 // edge and nothing else — no letter's kerning can reach the pipe, the two
 // being shaped apart. (Tahoma's A is 0.600 em and its B 0.589, less the
@@ -2999,7 +3001,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // letter, a space, the LITERAL pipe, a space, then the timestamp. THE
         // RESERVED CELL IS THE WIDEST LETTER'S SLOT, THE ` | ` AND THE
         // DIGITS' SPECIMEN, so it is ONE WIDTH ON EVERY TAB AND AT EVERY TIME;
-        // the ` | ` and the digits end at the field's right pad and the letter
+        // the ` | ` and the digits end at the cell's right edge and the letter
         // stands right-aligned against them (the right-alignment rule at
         // kTimeShape's block), so no tab switch moves the pipe or the
         // digits.
@@ -3037,10 +3039,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double baseline =
             redesign_baseline(font, static_cast<double>(clock_field.y),
                               static_cast<double>(clock_field.h));
-        // THE RUN'S END: the field's right pad.
-        const int run_end = field_x + field_w - time_field_pad_px();
-        const int cell_x =
-            run_end - static_cast<int>(std::ceil(cell_w));
+        // THE RUN'S END: the reserved cell's right edge, the cell CENTERED in
+        // the field (kTimeShape's block, architect 2026-10-09) — the right
+        // pad plus half the floor's surplus where the 85-W floor wins, the
+        // right pad alone where the cell fills the field.
+        const int cell_ceil = static_cast<int>(std::ceil(cell_w));
+        const int surplus =
+            std::max(0, field_w - (cell_ceil + 2 * time_field_pad_px()));
+        const int run_end =
+            field_x + field_w - time_field_pad_px() - surplus / 2;
+        const int cell_x = run_end - cell_ceil;
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // app_state.h — the stash contract is at the field). One pixel of slack
@@ -3127,7 +3135,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             state = app.queue_progress_text;
         }
         // THE CLOCK, UNCLIPPED AND RIGHT-ALIGNED — ` | ` and the digits as
-        // one run ending at the field's right pad, then the tab letter ending
+        // one run ending at the cell's right edge, then the tab letter ending
         // where that run starts, so the pipe and the digits stand still
         // whatever the letter.
         const text_shape::ShapedRun time_run =
@@ -3470,7 +3478,7 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // screen since the queue retired 2026-08-30 — painted top-right, right-aligned
 // at kPanelPadPx from the window's edge, its first card at the chrome spec's
 // card seat — one relief line above the trim lane's first row, read off the
-// live lane table, so the card's frame ends where the scroll bar begins
+// live lane table, so the card's frame ends where the view bar begins
 // under every chrome (architect 2026-10-08: "it looks like absolute
 // positioning where it should be relative to the elements"; the rule and
 // the margins at
@@ -4081,27 +4089,27 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// -- THE RULER LANE (top lane 3, row 5 of the redesign) ---------------------
+// -- THE RULER LANE (top lane 5) ---------------------------------------------
 //
-// A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes KDENLIVE'S LOOK and
-// REAPER'S GEOMETRY MODEL (architect 2026-08-01).
-//   LOOK, from row_5_full.png (its colours and the label size the 2026-10-02
-//     design's: ETCHED ticks, the theme's label at the small face): the two tick lengths
-//     differing at their TOP
-//     — majors rise kRulerMajorRisePx above the marker lane, minors start at it, and BOTH run
-//     down to the marker lane's bottom (the waveform top). That shared bottom is
-//     what makes "the majors peek above the flags" the whole mechanism; the
-//     brief's "minors end where the marker band begins" was superseded by the
-//     measurement.
-//   MODEL, from Reaper: WHERE the ticks go. A round ladder of labeled steps, the
-//     smallest rung whose label pitch clears the minimum, and eight binary
-//     minors inside each step.
-// The composite's own tick spacing is neither — it is a hand-assembled kdenlive
-// frame, and it carries elements (a zone edge or a guide) this product has no
-// analogue for. It was measured for the LOOK only.
+// A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes COOL EDIT'S LOOK
+// and REAPER'S GEOMETRY MODEL.
+//   LOOK, Cool Edit's FLIPPED RULER (architect 2026-10-09, the program is
+//     Cool Edit; METRICS §4.4, the mock of record; render.h's canvas-column
+//     paragraph): the Face-derived ground under the view bar's light line,
+//     its own light bottom line, the ticks E0E0E0 STANDING ON THE GROUND'S
+//     BOTTOM ROW — majors four W, minors two — and the digits in the
+//     program face at cap 7 over a black (+1, +1) shadow, their baseline the
+//     top of the ground's row 12. (Kdenlive's look — the majors rising above
+//     the flags, the etched ticks, the small face's labels — stood
+//     2026-08-01 to 2026-10-09; git history.)
+//   MODEL, from Reaper (architect 2026-08-01): WHERE the ticks go. A round
+//     ladder of labeled steps, the smallest rung whose label pitch clears the
+//     minimum, and eight binary minors inside each step; the labels' text.
 //
 // PAINT-ONLY. Nothing here snaps, authors, or hit-tests: the ladder decides
-// pixels and nothing else.
+// pixels and nothing else. (The lane keeps its PLACEMENT-LANE role for the
+// pointer, point_on_placement_lanes — a press on the ruler places the
+// playhead — which reads the lane's rect, never this painter.)
 namespace {
 
 // THE ROUND LADDER of labeled steps, in milliseconds. Every rung is a value a
@@ -4119,33 +4127,6 @@ constexpr int  kRulerMinorsPerStep = 8;
 // its labels at least 8x that apart. 9 Windows px (the laptop pixel's 12
 // re-authored at the unit's change, architect 2026-10-02).
 constexpr double kRulerMinMinorPitchPx = 9.0;
-// THE LABELS' CAP TOP, in Windows px under the lane's top: 4, AT EVERY SCALE
-// (architect 2026-10-02, the U4 mock's "above 6, below 10" laptop rows,
-// re-authored as 4 and 7 at the unit's change, the labels at the small
-// face). THE LINE'S TOP PAD IS DERIVED, never authored: the label is a LINE
-// (line_baseline), whose baseline sits nearbyint(ascent) under the line's
-// top, so its cap top sits nearbyint(ascent) - nearbyint(cap) under it, and
-// the pad that lands the cap top at this row is
-//
-//     pad = max(0, scaled_px(cap top) - (nearbyint(ascent) - nearbyint(cap)))
-//
-// of the label's own face, THE SMALL FACE (gui_font(GuiFace::Small)), both
-// metrics its recorded ones (gui_font.h). Its cell is all cap — ascent 6,
-// cap 6, WordPad's ruler digit — so the pad is scaled_px(cap top) itself at
-// every scale (2026-10-05); the rule stays general because the face's
-// ascent-minus-cap is the face's to change. THE CAP TOP IS THE CHROME
-// SPEC'S (ruler_label_cap_top_px, 2026-10-08: the base's 4; cde's 0, the
-// digits against the trim lane, the ruler lane absorbing the 6 W its taller
-// top strip costs). The rule's one implementation is
-// ruler_label_baseline_px below; the lane's height under the labels is
-// ruler_lane_h_px's arithmetic (render.h).
-// How far a MAJOR tick rises above the marker lane. Minors rise none. 3
-// Windows px (the laptop pixel's 4 re-authored, architect 2026-10-02).
-constexpr double kRulerMajorRisePx     = 3.0;
-// THE TICK'S LENGTH BEHIND THE FLAGS (the spec's ruler_behind_flags, cde;
-// architect 2026-10-08 ~17:30, mock_frame_01's 3 W): every tick, major and
-// minor alike, hanging from the ruler lane's top.
-constexpr double kRulerBehindTickPx    = 3.0;
 
 // The smallest ladder rung whose minors clear the minimum pitch. Falls back to
 // the coarsest rung when even that crowds (an absurd zoom-out), which is the
@@ -4185,80 +4166,7 @@ std::string ruler_label_text(int64_t ms, int64_t step_ms) {
     return std::string(buf);
 }
 
-// THE LABELS' BASELINE, in device rows under the ruler lane's top: the
-// derived pad of the cap top's rule, then line_baseline's ascent. ONE
-// SEAT FOR ITS TWO READERS, the painter (paint_ruler_row) and the lane's own
-// height (ruler_lane_h_px), each handing in the label face at its painted
-// size, so the digits and the ground beneath them are one measurement and
-// never two.
-int ruler_label_baseline_px(const GuiFont& font) {
-    const int ascent_to_cap =
-        static_cast<int>(std::nearbyint(gui_font_ascent_px(font))) -
-        static_cast<int>(std::nearbyint(gui_font_cap_px(font)));
-    const int pad =
-        std::max(0, scaled_px(live_chrome_spec().ruler_label_cap_top_px) -
-                        ascent_to_cap);
-    return static_cast<int>(line_baseline(font, static_cast<double>(pad)));
-}
-
 } // namespace
-
-// THE RULER LANE'S DERIVED HEIGHT (the rule and its scales at the
-// declaration, render.h): the labels' baseline, then the spec's
-// ruler_baseline_to_marker_px authored rows to the marker lane (the base's
-// 7; cde's 5). Read at LAYOUT, outside any paint, off
-// the small face's recorded metrics (gui_font.h), the very numbers the
-// painter's seat reads, so the digits and the ground beneath them are one
-// measurement. Cheap enough to answer per query.
-int ruler_lane_h_px() {
-    // THE RULER BEHIND THE FLAGS (the spec's ruler_behind_flags, cde): the
-    // lane is its authored leftover, nothing seated in it but the ticks and
-    // the head's top (paint_ruler_row's arm).
-    const ChromeSpec& spec = live_chrome_spec();
-    if (spec.ruler_behind_flags) return scaled_px(spec.ruler_lane_px);
-    return ruler_label_baseline_px(gui_font(GuiFace::Small)) +
-           scaled_px(spec.ruler_baseline_to_marker_px);
-}
-
-// THE MARKER LANE'S DERIVED ROWS (the rule and its scales at render.h's
-// marker_lane_h_px block): the flag box is its top edge band, one Windows px
-// of face, the BODY FACE'S WHOLE RECORDED CELL (its ascent above the
-// baseline, its descent from the baseline's row down), a second Windows px of face and its
-// bottom edge band (architect 2026-10-05: 17 Windows px, the period's
-// list row); the label's baseline is the edge, the face and the ascent
-// under the box's top, at every scale and in either face; the lane is the
-// box with one Windows px of air above it and none below (architect
-// 2026-10-03: the box stands on the well). The ascent and the descent are
-// Windows-px elements each rounded on its own (scaled_px), the box the sum
-// of its rounded parts. MEMOIZED ON THE SCALE: the lane table asks on every
-// geometry query.
-namespace {
-struct MarkerLaneRows {
-    int percent   = -1;
-    int box_h     = 0;
-    int baseline  = 0;   // under the box's top
-    int lane_h    = 0;
-};
-const MarkerLaneRows& marker_lane_rows() {
-    static MarkerLaneRows rows;
-    const int percent = gui_scale_percent();
-    if (percent == rows.percent) return rows;
-    const GuiFaceMetrics& cell = gui_face_metrics(GuiFace::Body);
-    const int above = scaled_px(cell.ascent, 1);
-    const int below = scaled_px(cell.descent);
-    const int edge  = marker_flag_edge_h_px();
-    const int face  = marker_flag_face_px();
-    rows.box_h    = edge + face + above + below + face + edge;
-    rows.baseline = edge + face + above;
-    rows.lane_h   = rows.box_h + marker_lane_air_px();
-    rows.percent  = percent;
-    return rows;
-}
-} // namespace
-
-int marker_flag_box_h_px()    { return marker_lane_rows().box_h; }
-int marker_flag_baseline_px() { return marker_lane_rows().baseline; }
-int marker_lane_h_px()        { return marker_lane_rows().lane_h; }
 
 void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const GuiRect lane   = top_ruler_row_area(app);
@@ -4266,9 +4174,17 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     cairo_save(cr);
-    set_palette_source(cr, palette().ground);
-    cairo_rectangle(cr, lane.x, lane.y, lane.w, lane.h);
-    cairo_fill(cr);
+    // THE LANE'S FACE, then THE GROUND AND ITS LINE over the waveform's
+    // columns (render.h's canvas-column paragraph, below once the width is
+    // read): the inert non-multiple-of-16 gutter beside them stays the panel's
+    // face, as the view bar's does. THE MARKER LANE'S PANEL FACE is laid here
+    // too, before the flag blit, the lane's ground under every cue (the flag
+    // cache paints the cues alone).
+    const GuiPalette& pal = palette();
+    const int ground_h = ruler_ground_h_px();
+    const int lw       = program_line_px();
+    paint_cell_rect(cr, lane, pal.face);
+    if (marker.w > 0 && marker.h > 0) paint_cell_rect(cr, marker, pal.face);
 
     // THE DISPLAYED BASIS, not the live viewport: the ruler must agree with the
     // pixels actually on screen, so it reads the same plate epoch the playheads
@@ -4295,6 +4211,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
                                               : waveform_area(app).w;
     if (ms_per_px <= 0.0 || wave_w <= 0) { cairo_restore(cr); return; }
+    // THE GROUND AND ITS LINE over the waveform's columns: `ce_mid`, then
+    // `ce_hilight` along its foot.
+    paint_cell_rect(cr, GuiRect{lane.x, lane.y, wave_w, ground_h}, pal.ce_mid);
+    paint_cell_rect(cr, GuiRect{lane.x, lane.y + ground_h, wave_w, lw},
+                    pal.ce_hilight);
 
     const int64_t step  = ruler_step_ms(ms_per_px);
     const double  end_ms = vp_ms + ms_per_px * wave_w;
@@ -4306,47 +4227,21 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // ladder's own kRulerMinorsPerStep; only its expression as a duration is
     // gone.)
 
-    // THE RULER BEHIND THE FLAGS (architect 2026-10-08 ~17:30, the spec's
-    // ruler_behind_flags — cde; mock_frame_01, "mock 1 is good"): "the ticks
-    // reduced and the timestamp pushed down; the flags remain as they are,
-    // but the ticks and the timestamp hide behind the flags". EVERY TICK,
-    // major and minor alike, is kRulerBehindTickPx SHORT, hanging from the
-    // lane's top (the trim lane's bottom line), etched as ever; THE LABELS
-    // stand at the MARKER LANE'S rows, their small face's cap band centred on
-    // the flags' label cap band (the body face's, marker_flag_baseline_px),
-    // painted here, before the flag blit, so a flag covers whatever label it
-    // stands on and nothing moves; THE HEAD stands at the lane's top over
-    // ticks and labels (the head block below). The walk, the comb, the
-    // labels' text and their slide at the edges are the base's.
-    const bool behind = live_chrome_spec().ruler_behind_flags;
-    const int tick_bottom = marker.y + marker.h;         // the waveform top
-    const int minor_top   = marker.y;                    // no rise
-    const int major_top   = marker.y - scaled_px(kRulerMajorRisePx);
-    const int behind_tick_bottom = lane.y + scaled_px(kRulerBehindTickPx);
+    // THE TICKS STAND ON THE GROUND'S BOTTOM ROW (METRICS §4.4, the mock's
+    // flipped ruler): each one quantum wide in kCeRulerTick, rising the
+    // major's four W or the minor's two into the ground from its foot — its
+    // rows 13 .. 16 and 15 .. 16 of 0 .. 16.
+    const int ground_bottom = lane.y + ground_h;   // one past the ground's rows
+    const int major_top = ground_bottom - scaled_px(kProgramSpec.ruler_major_tick_px);
+    const int minor_top = ground_bottom - scaled_px(kProgramSpec.ruler_minor_tick_px);
 
-    const GuiFont font = gui_font(GuiFace::Small);
-    // THE LABEL IS A LINE, not a box, AT THE SMALL FACE
-    // (gui_font.h): the seat is line_baseline's ascent off a top pad DERIVED so the cap top
-    // lands the spec's cap top (ruler_label_cap_top_px) authored rows under the lane's top (the rule
-    // and its three scales at that constant), through the one seat the lane's
-    // height also reads (ruler_label_baseline_px). THE SEAT IS ANCHORED TO THE
-    // LANE'S TOP, never centred in it or hung from its bottom: the lane's
-    // height below the baseline is the spec's ruler_baseline_to_marker_px (render.h).
-    // BEHIND THE FLAGS the seat is the flags' own: the flag label's baseline
-    // (the box's top, its air above, the box's baseline) less half the two
-    // faces' cap difference, so the two cap bands share their centre.
-    const auto behind_baseline = [&] {
-        const double flag_baseline = static_cast<double>(
-            marker.y + marker_lane_air_px() + marker_flag_baseline_px());
-        const double body_cap =
-            std::nearbyint(gui_font_cap_px(gui_font(GuiFace::Body)));
-        const double small_cap = std::nearbyint(gui_font_cap_px(font));
-        return flag_baseline -
-               std::nearbyint((body_cap - small_cap) / 2.0);
-    };
+    // THE DIGITS: the program face at cap 7 (gui_font.h's kGuiProgramFaceMetrics,
+    // the cues' own), their BASELINE THE TOP OF THE GROUND'S ROW 12 — the cap on
+    // rows 5 .. 11, the black (+1, +1) shadow ending on row 12 — an authored
+    // row of the lane, neither solver asked (redesign_baseline's block).
+    const GuiFont font = gui_font(GuiFace::Program);
     const double baseline =
-        behind ? behind_baseline()
-               : static_cast<double>(lane.y + ruler_label_baseline_px(font));
+        static_cast<double>(lane.y + scaled_px(kProgramSpec.ruler_baseline_px));
 
     // THE COMB IS RIGID UNDER PAN (architect 2026-08-01, from the grab-pan
     // shimmer at working zoom: the minor ticks visibly stepped at different
@@ -4387,37 +4282,20 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         const double t = static_cast<double>(k) * static_cast<double>(step);
         return static_cast<int>(std::nearbyint((t - vp_ms) / ms_per_px));
     };
-    // A label starts this far right of its major's column: the tick's own
-    // width plus 2 Windows px (the rule at the label's paint below).
-    const int label_dx = waveform_line_px() + scaled_px(2);
-    // THE LABELS SLIDE IN AND OUT AT BOTH EDGES (architect 2026-10-05, "like
-    // the marker flags and their text"): a label is the clip's to cut, never
-    // the walk's to drop. A label runs RIGHTWARD from its major, so a major
-    // LEFT of the view can still reach into it; the walk therefore starts at
-    // the earliest major whose label, measured on the face it is drawn in,
-    // still reaches column 0 (first_step's own major stands at or left of
-    // column 0, so it is always walked). At the RIGHT a major past end_ms has
-    // its label wholly past the view, so the break below drops nothing
-    // visible.
-    int64_t k_first = first_step;
-    while (k_first > 0) {
-        const int64_t prev = k_first - 1;
-        const text_shape::ShapedRun prev_run = text_shape::shape_text_run(
-            font, ruler_label_text(prev * step, step).c_str());
-        if (major_col(prev) + label_dx + prev_run.width_px <= 0.0) break;
-        k_first = prev;
-    }
-    // THE WALK'S CLIP: the waveform's columns [0, wave_w), the flags' own
-    // (render.cpp, clip_to_waveform_columns), over the lane and the ticks'
-    // descent — so a label is cut at the window's left edge and at the last
-    // column exactly as a flag's text is, and the leftover strip a
-    // non-multiple-of-16 window leaves beside wave_w carries no digit.
+    // THE LABELS ARE DROPPED AT BOTH ENDS (architect 2026-10-09, the mock's
+    // edge-drop rule, retiring 2026-10-05's slide): a label CENTERED on its
+    // major's column whose box — its run and the shadow's quantum — would
+    // cross either end of the ruler's columns [0, wave_w) is not painted, so
+    // no digit is ever cut. The walk therefore starts at first_step, whose
+    // major stands at or left of column 0.
+    const int t = waveform_line_px();
+    // THE WALK'S CLIP: the waveform's columns [0, wave_w) over the ground's
+    // rows, so a tick past the last column and the leftover strip a
+    // non-multiple-of-16 window leaves beside wave_w carry nothing.
     cairo_save(cr);
-    cairo_rectangle(cr, lane.x, lane.y, wave_w, tick_bottom - lane.y);
+    cairo_rectangle(cr, lane.x, lane.y, wave_w, ground_h);
     cairo_clip(cr);
-    const bool gtk_ticks =
-        live_chrome_spec().vocabulary == GuiChromeVocabulary::Clearlooks;
-    for (int64_t k = k_first; ; ++k) {
+    for (int64_t k = first_step; ; ++k) {
         const double step_ms = static_cast<double>(k) * static_cast<double>(step);
         if (step_ms > end_ms) break;
         const int mx    = major_col(k);
@@ -4437,41 +4315,21 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             const bool tick_on_lane = col >= 0 && col < wave_w;
             if (!tick_on_lane && !major) continue;
             // waveform_line_px() wide (render.h, the class's one inventory),
-            // left edge on the tick's own column, clipped at the right edge.
-            // EVERY TICK IS ETCHED (architect 2026-10-02, the Sonic Foundry
-            // etching): the tick in the theme's Shadow, then one line of
-            // Hilight immediately to its RIGHT over exactly the tick's own
-            // rows, drawn right after it, so the labels, the head, the flags
-            // and the stems cover the pair wherever they cover the tick.
-            // UNDER CLEARLOOKS THE PAIR IS THE GNOME SEPARATOR'S (architect
-            // 2026-10-07, the painters round's last part; CL1 §3.8):
-            // clearlooks_gummy_draw_separator's shade[3] column and its x1.3
-            // beside it, the toolbar separator's two roles, on the same
-            // columns.
-            const int tick_top = behind ? lane.y
-                               : major  ? major_top
-                                        : minor_top;
-            const int tick_end = behind ? behind_tick_bottom : tick_bottom;
+            // left edge on the tick's own column, clipped at the right edge,
+            // in kCeRulerTick, standing on the ground's bottom row.
             if (tick_on_lane) {
-                set_palette_source(cr, gtk_ticks ? palette().cl_separator_dark
-                                                 : palette().shadow);
-                fill_waveform_line(cr, lane.x, wave_w, col, tick_top,
-                                   tick_end);
-                set_palette_source(cr, gtk_ticks ? palette().cl_separator_light
-                                                 : palette().hilight);
-                fill_waveform_line(cr, lane.x, wave_w,
-                                   col + waveform_line_px(), tick_top,
-                                   tick_end);
+                set_palette_source(cr, hex(kCeRulerTick));
+                fill_waveform_line(cr, lane.x, wave_w, col,
+                                   major ? major_top : minor_top,
+                                   ground_bottom);
             }
             if (!major) continue;
-            // The label starts past its major tick's own width plus 2 Windows
-            // px — the etched Hilight line beside the tick and one px of air
-            // (architect 2026-10-02: kept at 2 through the unit's change, the
-            // conversion's 1 leaving the label touching the etched line).
-            // The label's TIME is still the exact step time — only tick
-            // PLACEMENT is distributed, and a major is at its own exact time
-            // anyway. Its x rides `col`, which for a major IS the rounded major,
-            // so number and line cannot drift apart.
+            // The label CENTERED ON ITS MAJOR'S COLUMN (the tick's own t
+            // wide, the run's centre on the tick's). The label's TIME is still
+            // the exact step time — only tick PLACEMENT is distributed, and a
+            // major is at its own exact time anyway. Its x rides `col`, which
+            // for a major IS the rounded major, so number and line cannot
+            // drift apart.
             // step_ms is INTEGRAL BY CONSTRUCTION (k * step, both int64, the
             // product exact in double at any ruler magnitude), so this is a
             // representation change, not a rounding: llrint reads the integer
@@ -4484,238 +4342,61 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                 ruler_label_text(label_ms, step);
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, txt.c_str());
-            // EVERY LABEL IS ONE COLOUR (architect 2026-10-02, on the Y1
-            // mock: "give the same colour to all the numbers"), THE THEME'S
-            // LABEL (architect 2026-10-03).
-            set_palette_source(cr, palette().label);
-            text_shape::show_shaped_run(cr, run,
-                                        static_cast<double>(lane.x + col +
-                                                            label_dx),
-                                        baseline);
+            const int run_w = static_cast<int>(std::ceil(run.width_px));
+            const int lx = col + t / 2 - run_w / 2;   // within the columns
+            if (lx < 0 || lx + run_w + t > wave_w) continue;   // the edge-drop
+            // EVERY LABEL IS ONE COLOR (architect 2026-10-02, "give the same
+            // colour to all the numbers"): the tick's ink over Cool Edit's
+            // black (+1, +1) shadow (METRICS §4.4).
+            const double x = static_cast<double>(lane.x + lx);
+            set_palette_source(cr, hex(kCeRulerShadow));
+            text_shape::show_shaped_run(cr, run, x + t, baseline + t);
+            set_palette_source(cr, hex(kCeRulerTick));
+            text_shape::show_shaped_run(cr, run, x, baseline);
         }
     }
     cairo_restore(cr);
 
-    // -- THE PLAYHEAD HEAD AND ITS MARKER-LANE COLUMN --------------------------
+    // -- THE PLAYHEAD'S HEAD ---------------------------------------------------
     //
-    // THE HEAD IS WORDPAD'S RULER INDENT MARKER (architect 2026-10-05, the
-    // glyph and its provenance at kPlayheadHeadGlyph, render.h), a FIXED 9 x 8
-    // Windows-px marker DRAWN AS NESTED OUTLINES (architect 2026-10-06: the
-    // chrome is scalable) — the silhouette, the bevel's outer edge and the
-    // face, the rings render.h derives from the bitmap — antialiased, its
-    // diagonals smooth at every scale: a bevelled chip in four chrome roles.
-    // UNDER CDE IT IS MOTIF'S BEVELED DOWN ARROW (architect 2026-10-08;
-    // render.h's head block, kPlayheadHeadMotifBaseUnits): 9 x 9 W under
-    // one W of body, in the chrome's tones, no outline — through the same
-    // band accessors, cull and clip.
+    // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
+    // 2026-10-09, the mock of record; METRICS §4.3; render.h's playhead
+    // paragraph): the cue's own 9-7-5-3-1 quanta (paint_ce_cue_triangle) in
+    // Cool Edit's yellow FFFF00 with the `ce_cue_shadow` column one quantum
+    // right of each row, ON THE GROUND'S ROWS 12 .. 16, its apex — the
+    // playhead's column, one quantum wide — on the ground's bottom row. It is
+    // OPAQUE over the ticks and digits the walk above laid down. NO SNAP, NO
+    // AVOIDANCE: it may stand on a marker's column, the cue's triangle being
+    // in the marker lane below (the coincident-stem rule is retired, render.h's
+    // playhead paragraph). It draws NOTHING across the marker lane and the
+    // well's top frame; its canvas dots are paint_playheads'.
     //
-    // TIP-DOWN ONE WINDOWS PX INTO THE MARKER LANE (architect 2026-10-05,
-    // moved down from flush on the ruler lane's own bottom row, architect
-    // 2026-09-23): its tip row is the marker lane's FIRST row — the one
-    // Windows px of air above the flag box, marker_lane_air_px — touching the
-    // box's own top edge, rather than the ruler lane's last row. A flag box
-    // still stands whole: the box painter below takes only its own band
-    // (marker_flag_box_band), never the lane's air, so the head's tip and a
-    // flag's top edge meet without either covering the other. THE SEAT TERM
-    // IS UNCHANGED BY THE GLYPH'S OWN HEIGHT (ruler_baseline_to_marker_px,
-    // render.h, states the new height's effect on how the head's top sits
-    // against the digits at each scale — a small gap at 138 %, a two-row
-    // overlap at 275 %, flush at 400 %, every case within his "a little
-    // overlap is fine" ruling).
-    //
-    // THE GLYPH IS OPAQUE (architect 2026-10-02: "the classic Windows way"):
-    // it paints over whatever this painter already laid down in its band —
-    // the labels and the ticks' rise — painted after them, in FOUR CHROME
-    // ROLES, never a role of its own (render.h's playhead paragraph states
-    // which region paints which): K in LABEL (the outline, the Windows 95
-    // arrow cursor's edge), W in HILIGHT and S in SHADOW (the bevel), '.' in
-    // GROUND at every time: the hold posture (AppState::camera_hold) has no
-    // visible lamp for now (architect 2026-10-05: a white centre is not
-    // Windows' marker; a visible hold cue is a later discussion). Outside the
-    // silhouette nothing is painted, its antialiased edge blending into what
-    // lies beneath.
-    //
-    // THE PLAYHEAD'S COLUMN THROUGH THE MARKER LANE IS THIS PAINTER'S TOO: a
-    // waveform_line_px()-wide run in the `playhead_stem` role (the waveform
-    // segment's own
-    // columns) from the marker lane's top to the waveform top,
-    // where render_playhead's waveform segment (paint_playheads) begins and
-    // crosses the well's top lines, so head, column and stem read as one
-    // unbroken object. It paints HERE, before the flag blit that follows this
-    // pass, so a flag box standing in the column covers it over the box's
-    // rows — the hidden-by-marker model — and the run shows in the lane's
-    // air above the boxes (none below them since 2026-10-03: a box stands on
-    // the well). It obeys the waveform segment's
-    // own suppression (playhead_stem_suppressed): where a marker's stem stands
-    // on the playhead's frame the whole stem yields to that marker, whose flag
-    // then stands in the lane at that column, and the HEAD alone still paints, as
-    // it always has in that case.
-    //
-    // IT STAYS IN THIS PAINTER for its band: the ruler's bottom rows are this
-    // painter's lane, and the head must paint over the labels and the ticks
-    // the walk above just painted.
-    //
-    // The whole object is the RESTING CURSOR'S: the `h` view, the render
-    // player and the audition reach it through this one block, and the scanner
-    // keeps its bare waveform line (paint_scanner).
+    // The whole head is the RESTING CURSOR'S: the `h` view, the render player
+    // and the audition reach it through this one block, and the scanner keeps
+    // its bare waveform line (paint_scanner).
     //
     // THE HALF-HEAD RULE (2026-05-09, d4e4e04e; restored 2026-09-26, architect):
-    // the HEAD paints whenever any part of it overlaps the waveform's columns
+    // the head paints whenever any part of it overlaps the waveform's columns
     // [0, wave_w), CLIPPED to them, so a playhead whose column lies just past
-    // either edge shows the head's nearer half there. The case that needs it
-    // is the right edge: a frame in the song's last half-column rounds to grid
-    // point wave_w, one past the last column — End's landing at the whole-song
-    // zoom in the ordinary case (a file short enough that the fit saturates at
-    // the floor occupies less than the window and its last frame paints
-    // inside), and at the right wall at some zooms — and the head's left
-    // half at the edge keeps that playhead on screen at its true point rather
-    // than vanishing or being pulled inward. The marker-lane STEM stays gated
-    // to [0, wave_w): a column past the last has no pixel of its own. A MARKER
-    // there shows the same edge its own way (architect 2026-09-26): its flag's
-    // left border alone on the last column(s), no stem — the flag iterator's
-    // cull and the lane's clip to the waveform's columns, render.cpp.
+    // either edge shows the head's nearer half there — a frame in the song's
+    // last half-column rounds to grid point wave_w, one past the last column
+    // (End's landing at the whole-song zoom), and the head's left half at the
+    // edge keeps that playhead on screen at its true point.
     {
         const double cursor_px = playhead_pixel_x(
             app, static_cast<int64_t>(basis.vp_start), basis.spp);
-        const int col = static_cast<int>(std::nearbyint(cursor_px));
-        // THE GLYPH'S ONE QUANTUM, identical to the stem's own width by
-        // construction (both are scaled_px(1, 1), render.h): `u` sizes every
-        // glyph unit, `t` is kept as its own name because it is the stem's
-        // width in the cull formula below, even though the two are always
-        // the same number.
-        const int u     = playhead_head_unit_px();
-        const int t     = waveform_line_px();
-        const int reach = playhead_head_half_w_px();  // the widest rows' half
-        if (col + reach + t - 1 >= 0 && col - reach <= wave_w - 1) {
-            const int rows = playhead_head_h_px();  // kPlayheadHeadRows * u
-            // THE BAND'S BOTTOM EDGE IS ONE WINDOWS PX INTO THE MARKER LANE
-            // (architect 2026-10-05), not the ruler lane's own bottom: the tip
-            // row now lands on the marker lane's first row — the one Windows
-            // px of air above the flag box (marker_lane_air_px) — touching
-            // the box's top edge, so the band spans the ruler lane's last
-            // (rows - 1) rows plus that one marker-lane row. The seat used to
-            // sit flush on the ruler lane's bottom (ruler_baseline_to_marker_px's
-            // old rule); the move is this one term, so a playhead's damage
-            // rect must include it (below).
-            // BEHIND THE FLAGS (the arm above) the head's band starts on
-            // the ruler lane's own top (cde's Motif arrow one W of body
-            // below it, inside the band), the mock's seat: it stands over
-            // the short ticks and reaches down into the marker lane over
-            // the labels, a flag standing under it covering its lower rows
-            // as the flags cover everything this pass lays down.
-            const int    head_top    = behind ? lane.y
-                                              : marker.y + marker_lane_air_px() -
-                                                    rows;
-            // THE STEM PAINTS FIRST AND THE HEAD OVER IT — THE TIP SHOWS WHOLE
-            // (architect 2026-10-07, off his capture of the hidden tip): the
-            // band's last row is the marker lane's first, and the marker-lane
-            // stem is the tip's own column at the tip's own width (u = t, the
-            // quantum above), so a stem painted after the head covered the
-            // tip cell. The marker is WordPad's pointed indent marker and comes
-            // to its point, the stem continuing from under it. Fixed BY ORDER,
-            // never by starting the stem at head_bottom: the stem keeps its
-            // own gate ([0, wave_w), fill_waveform_line) and the head its own
-            // cull and clip (the half-head rule above), each unchanged, and a
-            // start row taken from the head's band would couple the two at the
-            // edges. The head is opaque over everything beneath its
-            // silhouette, the labels, the ticks and now the stem alike.
-            if (!playhead_stem_suppressed()) {
-                set_palette_source(cr, palette().playhead_stem);
-                fill_waveform_line(cr, lane.x, wave_w, col, marker.y,
-                                   marker.y + marker.h);
-            }
-            // NO HOLD LAMP (architect 2026-10-05): the glyph's '.' region is
-            // GROUND whether or not the hold posture stands; a visible hold
-            // cue is a later discussion.
-            //
-            // THE FOUR REGIONS, ONE PARTITION IN ONE GROUP (render.h's head
-            // paragraph): the outline (ring 0 less ring 1), the bevel's two
-            // halves (ring 1 less ring 2, split at the top-right corner along
-            // x = 7 and at the tip along the axis) and the face (ring 2), in
-            // the glyph's Windows px from its top-left (gx, gy), u device px
-            // each. Each is filled ADDED into a cleared group, so where two
-            // regions share an antialiased edge their coverages sum to the
-            // whole pixel and no colour bleeds through the seam, then the
-            // group is painted over the ruler once. Column 4's cell (the tip
-            // column) sits on the stem's own [col, col + t) because u and t
-            // are the same quantum (render.h), so the tip, 4.5 units in,
-            // lands on the stem's centre.
-            const double gx = lane.x + col - 4.0 * u;
-            const double gy = head_top;
-            const auto ring = [&](double k) {
-                cairo_move_to(cr, gx + k * u,         gy + k * u);
-                cairo_line_to(cr, gx + (9.0 - k) * u, gy + k * u);
-                cairo_line_to(cr, gx + (9.0 - k) * u, gy + 4.0 * u);
-                cairo_line_to(cr, gx + 4.5 * u,       gy + (8.0 - k) * u);
-                cairo_line_to(cr, gx + k * u,         gy + 4.0 * u);
-                cairo_close_path(cr);
-            };
-            const auto poly = [&](std::initializer_list<std::pair<double, double>>
-                                      pts) {
-                bool first = true;
-                for (const auto& [px, py] : pts) {
-                    if (first) cairo_move_to(cr, gx + px * u, gy + py * u);
-                    else       cairo_line_to(cr, gx + px * u, gy + py * u);
-                    first = false;
-                }
-                cairo_close_path(cr);
-            };
-            // THE CLIP to the waveform's columns (the half-head rule above),
-            // over the head's band alone, the stem already painted.
+        const int col   = static_cast<int>(std::nearbyint(cursor_px));
+        const int u     = cue_unit_px();
+        const int reach = cue_triangle_half_w_px();   // the widest row's half
+        const int rows  = cue_triangle_h_px();
+        // The reach right is the widest row's half, the apex's own quantum
+        // and the shadow's.
+        if (col + reach + 2 * u - 1 >= 0 && col - reach <= wave_w - 1) {
+            const int head_top = ground_bottom - rows;
             cairo_save(cr);
             cairo_rectangle(cr, lane.x, head_top, wave_w, rows);
             cairo_clip(cr);
-            // UNDER CDE MOTIF'S BEVELED DOWN ARROW (render.h's head block,
-            // kPlayheadHeadMotifBaseUnits): the gap's units of body across
-            // the base's width, then the triangle in its square of units
-            // under it, its base's middle unit the stem's column — drawn by
-            // the trim caps' own painter (paint_cde_arrow_triangle), in the
-            // chrome's tones, no outline.
-            if (playhead_head_is_motif()) {
-                const int base_w = kPlayheadHeadMotifBaseUnits * u;
-                const int gap_h  = kPlayheadHeadMotifGapUnits * u;
-                const int tri_h  = kPlayheadHeadMotifHeightUnits * u;
-                const int tx = lane.x + col -
-                               (kPlayheadHeadMotifBaseUnits - 1) / 2 * u;
-                paint_cell_rect(cr, GuiRect{tx, head_top, base_w, gap_h},
-                                palette().ground);
-                paint_cde_arrow_triangle(
-                    cr, GuiRect{tx, head_top + gap_h, base_w, tri_h},
-                    CdeArrowDir::Down, /*pressed=*/false);
-            } else {
-                cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-                cairo_push_group(cr);
-                cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
-                cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
-                // K: the outline, ring 0 with ring 1 cut out.
-                cairo_new_path(cr);
-                ring(0.0);
-                ring(1.0);
-                set_palette_source(cr, palette().label);
-                cairo_fill(cr);
-                // W: the bevel's top and left, ring 1's top-left half less
-                // ring 2.
-                cairo_new_path(cr);
-                poly({{1.0, 1.0}, {7.0, 1.0}, {7.0, 2.0}, {2.0, 2.0},
-                      {2.0, 4.0}, {4.5, 6.0}, {4.5, 7.0}, {1.0, 4.0}});
-                set_palette_source(cr, palette().hilight);
-                cairo_fill(cr);
-                // S: the bevel's right, the top-right corner and the tip's
-                // right half.
-                cairo_new_path(cr);
-                poly({{7.0, 1.0}, {8.0, 1.0}, {8.0, 4.0}, {4.5, 7.0},
-                      {4.5, 6.0}, {7.0, 4.0}});
-                set_palette_source(cr, palette().shadow);
-                cairo_fill(cr);
-                // '.': the face, ring 2.
-                cairo_new_path(cr);
-                ring(2.0);
-                set_palette_source(cr, palette().ground);
-                cairo_fill(cr);
-                cairo_pop_group_to_source(cr);
-                cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-                cairo_paint(cr);
-            }
+            paint_ce_cue_triangle(cr, lane.x + col, head_top, hex(kCePlayhead));
             cairo_restore(cr);
         }
     }
@@ -4947,22 +4628,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // this reset's stem — at rest and through a drag alike, the drag writing
     // only its proposal, so the ring and the stem share one class throughout.
     bool red_class = false;
-    // THE RESET'S SELECTION BIT, for the ring's colour (architect 2026-09-23:
-    // the ring and the stem are one object and brighten together; 2026-10-04:
-    // the stem follows its FLAG BOX). It is the bit the flag pass hands this
-    // reset's PAYLOAD face, whose stem the ring mirrors
-    // (render_flag_boxes_impl, render.cpp), re-spelled across the pass's
-    // parameter boundary from the same state its fingerprint carries (the
-    // selection, the addressed cell, the mode verdict): selected iff the reset
-    // is a member (app.selected_markers, the pass's own membership set) and
-    // its bright cell is the payload. This reset IS the focus, so its bright
-    // cell is app.addressed_cell — falling back to the payload where that
-    // bound cell is painted nowhere, which is the pass's rule and
-    // marker_paints_iter_cells' question (a bound field opens only on a
-    // painted cell, enter_iter_bound_edit, so the pass's suppression arm adds
-    // nothing here). A selected reset whose addressed cell is a bound cell
-    // keeps its resting stem, so its ring keeps the resting colour too.
-    bool selected = false;
     {
         assert(app.active_audio_view == 'T');   // P stands in target alone
 
@@ -4975,9 +4640,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
         // label cascade).
         if (marker.disabled) return out;
         red_class = phase_reset_red_flag_set_cached(app).red.count(idx) > 0;
-        selected  = app.selected_markers.count(idx) > 0 &&
-                    (app.addressed_cell == MarkerCell::Payload ||
-                     !marker_paints_iter_cells(app, 'P', idx));
 
         // Map selection: the DISPLAYED paint basis (displayed_or_live_target_map
         // — the SAME map the flags, stems, drag overlay and riding playhead read,
@@ -5078,7 +4740,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     out.x0    = x0;
     out.x1    = x1;
     out.red   = red_class;
-    out.selected = selected;
     return out;
 }
 
@@ -5113,25 +4774,20 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const double w = band.x1 - band.x0;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE RING IS THE STEM'S COLOUR (architect 2026-08-01) — "they're one
-    // unit", the ring and the stem of the reset it annotates. It wears what
-    // that stem wears: the `removed_flag` face when the reset is in the
-    // column's red set (band.red; the invalid flag wears the removed pair),
-    // the `phase_reset_flag` face otherwise, each its selected face while the
-    // reset's payload box is the bright one (band.selected; architect
-    // 2026-10-04, the stem follows the box it leaves from).
+    // THE RING IS THE STEM'S COLOR (architect 2026-08-01) — "they're one
+    // unit", the ring and the dotted stem of the reset it annotates. It wears
+    // what those dots wear: the `removed_flag` face when the reset is in the
+    // column's red set (band.red; the invalid flag wears the removed face),
+    // the `phase_reset_flag` face otherwise — resting whether the reset is
+    // selected or not, as the cue's triangle and dots are since 2026-10-09.
     // phase_reset_stem_color asks the one ladder rather than restating it,
     // so ring and stem cannot drift.
     // DAMAGE: this pass paints live in on_redraw from app state, never from a
-    // cached surface, and every change to its colour's inputs misses the flag
+    // cached surface, and every change to its color's inputs misses the flag
     // cache's fingerprint, whose rebuild damages the waveform with the strip
     // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
     // repaint; a palette install damages the whole window.
-    const GuiColor ring = phase_reset_stem_color(band.red, band.selected);
-    // BELOW THE STEMS' FLANKS (architect 2026-10-05, fill_stem_flanks): the
-    // flanks stand in the well's top lines alone, which the ring no longer
-    // enters, so the reset's stem leaves its flanks straight onto the ring's
-    // top run and its left side.
+    const GuiColor ring = phase_reset_stem_color(band.red);
     set_palette_source(cr, ring);
     // THE CONTENT BAND, not the full area (architect 2026-10-06): the top run
     // lands on the canvas's first row (content.y, just under the well's top
@@ -5160,10 +4816,11 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
 
-// The LIVE trim pass: every trim pixel — the lane ground, the window bar, the
-// two endcaps and the midpoint mark — paints here per frame, entirely inside
-// the trim lane, which no later pass paints on; its slot is step 5 of the
-// paint-order block in on_redraw (the one authoritative sequence).
+// The LIVE trim pass: every trim pixel — the view bar's lines and field, the
+// span and the playhead's dots over it (render_trim_flags), and the column's
+// air above it — paints here per frame, entirely inside those two lanes,
+// which no later pass paints on; its slot is in the paint-order block in
+// on_redraw (the one authoritative sequence).
 //
 // BASIS: the FREE item-geometry owners — item_viewport_basis(app, audio)
 // and displayed_or_live_target_map(app, audio) — feeding the shared geometry
@@ -5219,7 +4876,19 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
+    // THE COLUMN'S AIR above the view bar (top lane 3, render.h's canvas
+    // column lanes): 5 W of the panel face under the band's last line
+    // (METRICS §4.1), the lane's whole width, painted with the bar it heads.
+    // The trim lane's own ground the same face, under the view bar, so the
+    // inert non-multiple-of-16 gutter beside the bar (render_trim_flags
+    // spans the waveform's columns alone) reads as the panel.
     const GuiRect trim_row = top_trim_row_area(app);
+    {
+        const GuiRect air = top_column_air_area(app);
+        if (air.w > 0 && air.h > 0) paint_cell_rect(cr, air, palette().face);
+        if (trim_row.w > 0 && trim_row.h > 0)
+            paint_cell_rect(cr, trim_row, palette().face);
+    }
     // The ITEM basis (free owner; the member plate_viewport_basis is the other
     // epoch — see the header comment above), read ahead of the gate below
     // because the covering test measures the lane at its painted width.
@@ -5277,32 +4946,23 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // rather than re-derived inside the painter, and the painter publishes the
     // band it painted in as the stash's `lane` — the y-gate both trim hits
     // read — so the painted band and the clickable band are one value.
-    // NO WAVEFORM STEMS (architect 2026-08-01): the bar and its two endcaps are
-    // the trim window's WHOLE display. render_trim_stems drew a 1px grey
-    // vertical down the waveform at each bound; the redesigned lane says the
-    // window where the window is, and a pair of full-height lines competing with
-    // the marker stems said it a second time in the same pixels.
-    // THE HELD CAP (architect 2026-10-03, render_trim_flags' `pressed`): a
-    // cap is pressed FROM ITS PRESS TO THE GESTURE'S END, as a push button
-    // shows its pressed face from its press ("looks odd" when it waited for
-    // the drag to start moving) — the single-bound pending (a press on the
-    // cap still under the grab gate, PendingTrimDrag) and the single-bound
-    // drag it becomes both press their bound's button, so a press that never
-    // moves wears it until the lift. The pair (bridge) arm and drag press
-    // none. The damage at both edges is input_trim.cpp's
-    // (arm_pending_trim_drag, disarm_pending_trim_drag, commit_trim_drag).
-    const bool single_drag = app.trim_drag.active && !app.trim_drag.both;
-    const bool single_pending =
-        app.pending_trim_drag.active && !app.pending_trim_drag.both;
-    const bool held_is_begin = single_drag ? app.trim_drag.is_begin
-                                           : app.pending_trim_drag.is_begin;
-    const TrimPressedCap pressed =
-        single_drag || single_pending
-            ? (held_is_begin ? TrimPressedCap::Begin : TrimPressedCap::End)
-            : TrimPressedCap::None;
+    // NO WAVEFORM STEMS (architect 2026-08-01): the view bar is the trim
+    // window's WHOLE display.
+    // NO HELD FACE (2026-10-09): the view bar draws no caps, so a grab shows
+    // nothing pressed (the held scroll arrow of 2026-10-03 went with them).
+    // THE PLAYHEAD'S COLUMN for the bar's dotted column: the resting cursor's,
+    // on the playhead's own PLATE basis (paint_playheads, paint_ruler_row), so
+    // the bar's dots, the ruler's head and the canvas's dots stand on one
+    // column.
+    const PlateViewportBasis pb = plate_viewport_basis();
+    const int playhead_col =
+        pb.spp > 0.0
+            ? static_cast<int>(std::nearbyint(playhead_pixel_x(
+                  app, static_cast<int64_t>(pb.vp_start), pb.spp)))
+            : -1;
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
-                      basis.vp_start_frame, basis.vp_end_frame, trim, pressed,
-                      out_hit);
+                      basis.vp_start_frame, basis.vp_end_frame, trim,
+                      playhead_col, out_hit);
 }
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
@@ -5313,81 +4973,47 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // flag, architect 2026-09-23) — is at the declaration.
 //
 // It reads the marker painter's stash (app.marker_stems) instead of walking a
-// store: the stem stands on its flag box's LEFT EDGE, and that column was
-// already resolved by the pass that painted the box, on the displayed basis
+// store: the stem stands on its cue's APEX COLUMN, and that column was
+// already resolved by the pass that painted the cue, on the displayed basis
 // those pixels were laid out against. So the DragOverlay substitution, the
-// source->target map walk, the per-marker cull and the colour ladder all happen
+// source->target map walk, the per-marker cull and the color ladder all happen
 // exactly once, in the painter, and a stem can never land a pixel away from its
-// own flag. Disabled markers are simply absent from the stash.
+// own triangle. Disabled markers are simply absent from the stash.
 //
-// The stem RUNS CONTINUOUS (architect 2026-10-02): from the waveform area's
-// top — through the well's top lines, straight on from the box's bottom row,
-// which is the marker lane's last (architect 2026-10-03: the box stands on
-// the well) — to the canvas's foot, where it stops at the well's bottom
-// lines (waveform_stem_band), as the playhead's stem does. Across the well's
-// top lines it stands between its FLANKS (architect 2026-10-05), painted
-// before it by paint_marker_stem_flanks, so a stem wins over a neighbour's.
+// THE STEM IS COOL EDIT'S DOTTED COLUMN (architect 2026-10-09; METRICS §4.2;
+// render.h's marker-lane paragraph): one-quantum dots in the triangle's face
+// on the CANVAS'S quantum rows ≡ 3 (mod 4) from the canvas's top row
+// (fill_dotted_waveform_line, waveform_content_rect) — none on the well's
+// frame rows and none in the lane — the playhead's dots on rows ≡ 1, so the
+// two interleave on one column. (The solid stem through the well's top lines
+// between its flanks stood 2026-10-02 to 2026-10-09; git history.)
 //
-// Z-ORDER (architect 2026-09-23): the stems paint UNDER the playhead's stem,
-// which follows this pass, and under the flag boxes, so a dense run of stems at
-// a coarse zoom never hides a playhead standing near them. Where the playhead's
-// column IS a marker's, the marker's stem wins the column by the ruling's other
-// half: the playhead's stem does not paint there (playhead_stem_suppressed).
+// Z-ORDER (architect 2026-09-23): the stems paint UNDER the playhead's dots,
+// which follow this pass; on a shared column the two phases never touch.
 // The full sequence is the paint-order block in on_redraw.
 void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     if (app.marker_stems.empty()) return;
 
     // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
-    // refused commit recolours nothing, so no paint-time override stands
-    // here — the stash's colour is the marker's resolved stem, the whole
+    // refused commit recolors nothing, so no paint-time override stands
+    // here — the stash's color is the marker's resolved face, the whole
     // answer.
     cairo_save(cr);
-    const GuiRect band = waveform_stem_band(area);
-    const double y0 = static_cast<double>(band.y);
-    const double y1 = static_cast<double>(band.y + band.h);
+    const GuiRect band = waveform_content_rect(area);
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
-        // render.cpp); fill_waveform_line (render.h) restates that gate
-        // against the area this painter is handed, so no entry can leak its
-        // column into the chrome beside the waveform, and clips the line's
-        // waveform_line_px() width at the right edge.
+        // render.cpp); fill_dotted_waveform_line (render.h) restates that
+        // gate against the area this painter is handed, so no entry can leak
+        // its column into the chrome beside the waveform, and clips the
+        // dots' waveform_line_px() width at the right edge.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
         set_palette_source(cr, stem.color);
-        fill_waveform_line(cr, area.x, area.w, col, y0, y1);
-    }
-    cairo_restore(cr);
-}
-
-// -- GuiPaintHandler::paint_marker_stem_flanks ---------------------------
-
-// THE STEMS' FLANKS (the contract at the declaration; the rule at
-// fill_stem_flanks, render.h): the same stash, the same column derivation
-// as paint_marker_stems, so a flank can never stand a pixel away from its
-// stem. DAMAGE is the stems' own: a flank lives and dies with its stem's
-// entry and sits inside the waveform area, which every stash change damages
-// whole (the flag cache's rebuild damages the waveform with the strip,
-// maybe_rebuild_flag_cache); a narrow playhead damage repaints the flanks
-// under its clip like every other pass. Nothing is cached in the well's rows.
-void GuiPaintHandler::paint_marker_stem_flanks(cairo_t* cr,
-                                               const GuiRect& area) {
-    if (area.w <= 0 || area.h <= 0) return;
-    if (app.marker_stems.empty()) return;
-    const GuiRect band = waveform_well_top_band(area);
-    if (band.h <= 0) return;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // The flags' outline, carried down: the palette's `flag_outline` under
-    // every chrome (architect 2026-10-08, render.h's marker-lane paragraph).
-    set_palette_source(cr, palette().flag_outline);
-    const double y0 = static_cast<double>(band.y);
-    const double y1 = static_cast<double>(band.y + band.h);
-    for (const MarkerStem& stem : app.marker_stems) {
-        const int col = static_cast<int>(std::nearbyint(
-            stem.x - static_cast<double>(area.x)));
-        fill_stem_flanks(cr, area.x, area.w, col, y0, y1);
+        fill_dotted_waveform_line(cr, area.x, area.w, col, band.y,
+                                  band.y + band.h, kProgramSpec.dot_period,
+                                  kProgramSpec.cue_dot_phase);
     }
     cairo_restore(cr);
 }
@@ -5480,168 +5106,12 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     render_strip_anchor_stem(cr, area, col);
 }
 
-// -- GuiPaintHandler::playhead_stem_suppressed ---------------------------
-
-// THE PLAYHEAD'S STEM SUPPRESSES WHERE A MARKER'S STEM ALREADY STANDS
-// (architect 2026-08-01). SINCE 2026-09-23 THIS IS HALF OF THE Z-ORDER RULING
-// ITSELF, not a side effect of paint order: the playhead's stem paints ABOVE
-// every marker stem and below every flag box (so a dense run of markers at a
-// coarse zoom cannot hide it), and WHEN THE PLAYHEAD'S COLUMN IS A MARKER'S,
-// THE MARKER STEM WINS — this predicate is that half. With the playhead now
-// painting after the stems, it is also the only thing that keeps a coincident
-// marker's stem (brightened when selected) on show. This REINSTATES 035e669's model — "the cursor playhead
-// is conceptually COINCIDENT with the selection and fully hidden behind the
-// marker — line on the stem, triangle behind the flag; suppression as
-// implementation, not absence" — which the 2026-07-30 always-paints ruling
-// deleted. It is the coincident case ALONE that the always-paints clause loses:
-// the playhead still paints everywhere else, unconditionally, and the HEAD
-// paints even here (on the ruler's bottom rows since 2026-09-23, just above
-// the coincident flag, so it stays whole; a ±1 column is invisible against the HEAD, whose widest rows are
-// 9 * waveform_line_px() (the glyph's own 9 columns, kPlayheadHeadGlyph,
-// render.h) — 9px at the 50% floor, 9 at 100%, 36 at 350% and 90 at the
-// 1000% ceiling, so it is at least nine columns wide anywhere in the schema
-// and the ±1 never approaches half
-// of it. That is
-// exactly what a stem beside another stem is not, at any scale: a stem is
-// waveform_line_px() wide (render.h; 1 column on the laptop, 3 on the tablet —
-// the line scales with gui_scale since 2026-09-27), so there the same ±1 is
-// half the object or more, and a t-wide playhead one column left of a
-// marker, painting over the stems, covers t − 1 of that stem's t columns).
-// The suppression covers the WHOLE stem, its marker-lane run included (read by
-// paint_ruler_row as well as paint_playheads): in that lane the coincident
-// marker's flag fills the column, and a white run a column beside its left
-// edge would be the same ±1 split.
-//
-// WHY IT IS PRINCIPLED AGAIN, and why it was not on 2026-07-30: in the OLD
-// visual model only a selected SINGLETON stemmed, so suppressing the playhead
-// over an unstemmed marker would have left the column blank — absence, not
-// hiding. Row 5 gives EVERY ENABLED marker an always-on stem, so a coincident
-// marker's own stem is a real, always-present line for the playhead to hide
-// behind, and the deleted model becomes true again.
-//
-// WHAT IT FIXES: the two stems are derived through DIFFERENT column arithmetic
-// — marker stems publish from the flag-cache rebuild (the flag layout's own
-// column resolution; its spp rides the plate's published width since the
-// 2026-08-01 resize-window fix, see waveform_cache.cpp's wave_w read), the
-// playhead from playhead_pixel_x against plate_viewport_basis — so at some
-// zoom rests a marker and a playhead standing on the SAME frame round to columns
-// one pixel apart, and nudging or dragging the marker made the pair flicker
-// between one line and two. Suppression removes the second line rather than
-// trying to make two roundings agree.
-// A TRACE (2026-09-26) FOUND THAT PREMISE STALE since the very 2026-08-01 fix
-// cited above: maybe_rebuild_flag_cache (waveform_cache.cpp) and
-// plate_viewport_basis now read the SAME wf_cache.fp_* fields — fp_vp_start,
-// fp_vp_end and fp_area_w for the spp both use, fp_warp_frame_map for the
-// target view's frame mapping — and a coincident marker's paint sample equals
-// the cursor, so both columns come from the identical expression; no ±1 can
-// arise between them at rest. The only remaining divergence is a transient
-// plate-map lag in target view: playhead_cursor_sample is stamped into the
-// active domain at the moment it is set (through the LIVE warp frame map),
-// while a target-view flag's column crosses wf_cache.fp_warp_frame_map, the
-// worker-published snapshot — so a warp edit whose plate rebuild (resize,
-// load) has not yet landed can still show the old one-pixel split for the
-// span the rebuild covers. The suppression stands as the ruled z-order (the
-// marker's stem wins its column), not as a rounding repair.
-//
-// A STATE COMPARE, NEVER A PIXEL ONE: the qualifying test is the LAND's own
-// exact-int64 formula — clamp_playhead_to_live_domain(source_frame_to_active_-
-// domain(time_frame)) == playhead_cursor_sample — reused verbatim from
-// auto_select_marker_at_playhead (input_pointer.cpp), which owns the coincidence
-// family's question "is the playhead standing on a marker". Comparing columns
-// instead would ask the two roundings to agree, which is the defect.
-//
-// THE WALK IS OVER THE PAINTED STEMS (app.marker_stems), not over a store, and
-// that is what makes "a stem is standing there" the literal predicate: the stash
-// holds one entry per ENABLED, VISIBLE marker (a disabled marker publishes none,
-// a culled one publishes none), so a marker with no stem can never suppress the
-// playhead's — the blank-column failure mode is structurally unreachable rather
-// than argued. It is also bounded by the visible marker count.
-//
-// TWO WAYS A STEM QUALIFIES:
-//   * THE DRAG RIDE. While a marker drag tows the playhead (apply_drag_motion
-//     writes the cursor to the proposal's own active-domain position every
-//     motion event, and commit_drag lands it on the committed frame), the
-//     dragged marker's stem and the playhead ARE one object by construction —
-//     but mid-motion the proposal is a fractional double and the store still
-//     holds the pre-drag frame, so the exact compare below cannot see it. The
-//     drag's own fact is what the arm reads instead, and it is the same fact the
-//     overlay paints the flag and the stash publishes the stem with: the
-//     marker's index appearing in the DragOverlay.
-//   * EXACT COINCIDENCE AT REST, the compare above — which is what the keyboard
-//     nudge leaves behind (the nudges re-land the playhead through
-//     land_playhead_on_marker, whose write IS this formula, so a nudged marker
-//     rests exactly coincident) and what every marker click, Tab jump and
-//     coincidence auto-select leave behind too.
-//
-// IN THE HISTORY VIEW (`h`) THE PLAYHEAD YIELDS TO A COINCIDENT DIFF STEM
-// exactly as it yields to a marker's stem live (architect 2026-09-27). There
-// the stash is the diff lane's (render_history_diff_flags), its marker_index
-// an index into app.history_mode.flags, so that arm qualifies a stem by its
-// diff flag's own time_frame — an authored SOURCE frame, which the lane maps
-// through the same warp frame map a live marker's takes — under the same
-// land formula, which is the one the mode's own lands run
-// (land_playhead_on_source_frame). Index-guarded against the flags vector; it
-// has no drag arm, the mode consuming every authoring gesture.
-//
-// SCOPE NOTE, deliberately WIDER than "the focused marker": any marker with a
-// painted stem suppresses, focused or not. The artifact is the same ±1 wherever
-// the playhead stands on a marker, the display is that marker's stem either way,
-// and reading the FOCUS here would make a waveform pixel depend on the
-// SELECTION — the exact dependency row 5 deleted Selection::stem_subject /
-// damage_stem_on_subject_change for (selection.cpp), whose mutators damage the
-// top strip and not the waveform. Keyed on the playhead and the stash instead,
-// every input this reads is already damaged by its own writer.
-bool GuiPaintHandler::playhead_stem_suppressed() const {
-    if (app.marker_stems.empty()) return false;
-
-    // THE LAND'S OWN FORMULA, the one coincidence test both arms below call.
-    const auto coincident = [&](int64_t source_frame) {
-        return clamp_playhead_to_live_domain(
-                   source_frame_to_active_domain(app, audio, source_frame),
-                   app, audio) == app.playhead_cursor_sample;
-    };
-
-    // THE HISTORY ARM. The stash's index domain follows its painter
-    // (AppState::marker_stems): in the mode it indexes history_mode.flags, so
-    // the stem qualifies by its DIFF FLAG's frame and never by a live store
-    // row. No drag arm: the mode consumes every authoring gesture, so no
-    // marker drag tows the playhead here.
-    if (app.history_mode.active) {
-        const int n = static_cast<int>(app.history_mode.flags.size());
-        for (const MarkerStem& stem : app.marker_stems) {
-            const int i = stem.marker_index;
-            if (i < 0 || i >= n) continue;
-            if (coincident(app.history_mode.flags[
-                    static_cast<std::size_t>(i)].time_frame))
-                return true;
-        }
-        return false;
-    }
-
-    // The dragged marker, or -1. The view compare is a statement, not a repair:
-    // the drag-modal gate swallows `p`, so a live drag's mode is always the
-    // active column — the stash indices this compares against are that column's.
-    const int dragged =
-        (app.drag.active && app.drag.drag_mode == app.active_markers_view &&
-         !app.drag.dragging_markers.empty())
-            ? app.drag.dragging_markers[0]
-            : -1;
-
-    // The stash is the ACTIVE column's (both columns publish one), so the
-    // store is the active one through its selector pair (active_marker_count /
-    // active_marker_time_frame, app_state.h).
-    const int n = active_marker_count(app);
-    for (const MarkerStem& stem : app.marker_stems) {
-        const int i = stem.marker_index;
-        if (i == dragged) return true;
-        if (i < 0) continue;
-        // Index-guarded against the store the stash was published from having
-        // shrunk since (an undo under a stale stash): a missing row simply does
-        // not suppress.
-        if (i < n && coincident(active_marker_time_frame(app, i))) return true;
-    }
-    return false;
-}
+// (THE PLAYHEAD'S STEM YIELDED WHOLE TO A COINCIDENT MARKER'S STEM —
+// playhead_stem_suppressed, 2026-08-01 to 2026-10-09. Retired with the solid
+// stems (architect 2026-10-09: the playhead "may stand on a marker's column —
+// no snap, no avoidance"): the cue's dots and the playhead's interleave on
+// one column, rows ≡ 3 and ≡ 1 of 4, so neither covers the other and there
+// is nothing left to arbitrate. Git history.)
 
 // -- GuiPaintHandler::paint_playheads ------------------------------------
 
@@ -5654,80 +5124,25 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     const PlateViewportBasis basis = plate_viewport_basis();
     const double disp_spp = basis.spp;
     const double px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, disp_spp);
-    // ROW 5 RETIRED THE TRIANGLE and this pass draws NOTHING in a strip lane
-    // any more: the tip-down triangle died with its lane, and its successor —
-    // the aliased head on the ruler lane's bottom rows and the column's run
-    // through the marker lane — is paint_ruler_row's (the ruling is at that
-    // block). So this pass is the WAVEFORM segment of the cursor's
-    // stem, nothing else — and since 2026-08-02 render_playhead draws a line and
-    // only a line: the dead triangle branch is deleted, and with it the lane
-    // rect this call used to thread through to it.
-
-    // The cursor paints UNDER the marker flags (the Z-ORDER FLIP, architect
-    // 2026-07-23 — see the paint-order block in on_redraw): its line passes
-    // beneath a marker flag sharing its column, so a cursor resting on a marker
-    // sits hidden behind that marker's flag. In the waveform it paints OVER the
-    // marker STEMS (architect 2026-09-23), invoked after paint_marker_stems, so
-    // a dense run of stems at a coarse zoom cannot hide it; where its column is
-    // a marker's, the marker's stem wins (the suppression below). Gated on the waveform OR the top strip
-    // being exposed: the cursor's HEAD and marker-lane run live in the strip
-    // (paint_ruler_row) and this stem in the waveform, and the two halves of one line repaint
-    // together whatever the damage shape — the outer Cairo clip bounds the
-    // actual work.
+    // THIS PASS IS THE CURSOR'S CANVAS RUN, nothing else: its HEAD is the
+    // yellow triangle in the ruler (paint_ruler_row) and its dots over the
+    // view bar's span are render_trim_flags'; across the marker lane and the
+    // well's top frame the playhead draws nothing (architect 2026-10-09,
+    // Cool Edit puts no dot on its frame row).
     //
-    // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner
-    // now, invoked after this one, so the moving line crosses a marker's stem
-    // instead of blinking out behind it. This pass is the CURSOR alone: the
-    // scanner is over everything in the waveform area while it runs, this
-    // cursor included.
-
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
-    // form, drawn at the resting cursor column whatever the selection is
-    // doing — a waveform_line_px()-wide line (render.h)
-    // painted solid straight over the plate ink. WITH ONE EXCEPTION SINCE 2026-08-01, and exactly one: where a
-    // MARKER'S stem already stands on the playhead's frame, the playhead's STEM
-    // does not paint and that marker's stem is the display (035e669's
-    // hidden-behind-the-marker model, reinstated — the whole ruling is at
-    // playhead_stem_suppressed; the marker-lane run obeys it too). The clause
-    // above still holds everywhere else, and the HEAD paints in the suppressed
-    // case too (paint_ruler_row).
+    // form at the resting cursor column whatever the selection is doing —
+    // since 2026-10-09 COOL EDIT'S DOTTED COLUMN (render.h's playhead
+    // paragraph): one-quantum dots in kCePlayhead on the canvas's quantum rows
+    // ≡ 1 (mod 4), the cues' dots on rows ≡ 3, so a playhead on a marker's
+    // column interleaves with its dots and neither yields (the coincident
+    // suppression is retired). It paints AFTER paint_marker_stems (architect
+    // 2026-09-23) and before the scanner.
     //
-    // The three-way chain that used to live here is gone with the SPAN FORM: the
-    // region is no longer a playhead at all (it IS THE TRIM, painted on the
-    // trim bar alone), so it hides
-    // nothing and suppresses nothing, and the split half-triangle renderer is
-    // deleted outright. The non-empty-selection suppression is
-    // gone too: a cursor resting ON the focused marker is simply hidden behind
-    // that marker's flag by the z-order flip, which is what the old else-arm was
-    // spelling out by not painting — and when the arrows move the focused marker
-    // the cursor rides along VISIBLY, which is the lane model's honest reading.
-    // THE TRIANGLE IS OFF EVERYWHERE (row 5): the cursor's tip-down triangle
-    // retired with the triangle lane, and its successor is the ruler pass's.
-    // So this call is the stem's WAVEFORM segment; the ruler pass draws the
-    // head on the ruler's bottom rows and the column's run through the marker
-    // lane down to the waveform top, where this segment begins, and the three
-    // make one unbroken object.
-    // THE STEM IS THE `playhead_stem` KEY, UNIFORM FROM THE HEAD TO THE
-    // CANVAS'S FOOT (architect 2026-10-03; its contrast over the chrome and the
-    // canvas is the user's choice): the head above it is the playhead's
-    // identity, and the stem is that head's line continued down through the
-    // waveform.
-    //
-    // Z-INTENT (architect 2026-09-23): this segment goes down OVER the marker
-    // stems painted before it and UNDER the flag boxes blitted after it, and the
-    // marker-lane run above it (the ruler pass) likewise goes under the flags.
-    // At a coincident column there is no overlap to order: the stem yields whole
-    // to the marker's (playhead_stem_suppressed), the ruling's other half. The
-    // flag half is the HIDDEN-BY-MARKER model translated — a flag sharing the
-    // cursor's column hides it, exactly as flags painted over the old triangle.
-    // The stem runs OVER the well's top lines and stops at its bottom ones
-    // (PlayheadRows::Stem, waveform_stem_band, architect 2026-10-02): it is a
-    // boundary line continuing from the lane above, like the marker stems
-    // beside it.
-    if (!playhead_stem_suppressed()) {
-        render_playhead(cr, area, px_x, palette().playhead_stem,
-                        PlayheadRows::Stem);
-    }
+    // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
+    // invoked after this one, solid over everything in the canvas while it
+    // runs, this cursor included.
+    render_playhead(cr, area, px_x, hex(kCePlayhead), PlayheadForm::Dotted);
 }
 
 // -- GuiPaintHandler::paint_scanner --------------------------------------
@@ -5745,15 +5160,15 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // stems, over the cursor where they overlap, over the plate. Everything it
 // covers is a per-frame repaint anyway.
 //
-// THE SCANNER IS THE MOVING STEM, and it HAS ITS OWN ROLE, `scanner`
-// (architect 2026-10-05), apart from the resting cursor's `playhead_stem`;
-// both default palettes paint both white (architect 2026-10-07: "let's go
-// back to a white scanner"), and a palette may still part them.
+// THE SCANNER IS THE MOVING LINE, and it HAS ITS OWN ROLE, `scanner`
+// (architect 2026-10-05), WHITE in both default palettes (architect
+// 2026-10-07: "let's go back to a white scanner") — SOLID, one quantum wide,
+// the canvas's rows alone (PlayheadForm::Solid; Cool Edit's playback cursor
+// is a solid 1-px line, measured 2026-10-09).
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
-// (the ruling is at paint_ruler_row's head block — render_playhead is shared
-// with the cursor and, since 2026-08-02, cannot reach a strip lane at all: it
-// draws the line inside `area` and nothing else).
+// (render_playhead is shared with the cursor and cannot reach a strip lane at
+// all: it draws inside `area`'s canvas and nothing else).
 // Same displayed-plate basis the cursor uses, so both ride the blitted pixels
 // through a worker rebuild; the value fields it reads are meaningful only while
 // active, which is exactly what the gate asks.
@@ -5764,7 +5179,7 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
     const double scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
     render_playhead(cr, area, scan_px, palette().scanner,
-                    PlayheadRows::Canvas);
+                    PlayheadForm::Solid);
 }
 
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
@@ -8927,28 +8342,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).
-        //   4. waveform plate -> the marker stems' FLANKS in the well's top
-        //      lines (architect 2026-10-05) -> phase-reset overlay ring.
-        //   5. LIVE TRIM, one pass, entirely inside the trim lane: the
-        //      dithered track and the window's thumb.
-        //   6. the MARKER STEMS (waveform).
-        //   7. the CURSOR's WAVEFORM stem segment (paint_playheads — the head
-        //      and the marker-lane run are the ruler pass's, step 9), over
-        //      the marker stems and under the flags.
-        //   8. the SCANNER (waveform).
-        //   9. the RULER lane — etched ticks and labels — AND, in the same
-        //      pass, the cursor's HEAD (WordPad's 9x8 marker, opaque) seated
-        //      through the ruler with its tip row on the marker lane's own
-        //      first row (marker_lane_air_px, one Windows px above the flag
-        //      box) rather than flush on the ruler's own bottom: at 138 % its
-        //      top stands 3 rows below the labels' baseline (no overlap), at
-        //      275 % it rises 2 rows into the digits' own ink, and at 400 %
-        //      it lands exactly on the baseline (render.h's
-        //      ruler_baseline_to_marker_px block) — and the cursor's column
-        //      through the marker lane, under the flags, painted BEFORE the
-        //      head so the tip shows whole (architect 2026-10-07; the
-        //      reasoning is at that block in paint_ruler_row).
-        //  10. the FLAG BLIT.
+        //   4. waveform plate -> phase-reset overlay ring.
+        //   5. LIVE TRIM, one pass, entirely inside the column's air and the
+        //      trim lane: Cool Edit's view bar, its span and the cursor's
+        //      dots over it (2026-10-09).
+        //   6. the MARKER STEMS (waveform): the cues' dots, rows ≡ 3 of 4.
+        //   7. the CURSOR's CANVAS DOTS (paint_playheads, rows ≡ 1 of 4 —
+        //      the head is the ruler pass's, step 9).
+        //   8. the SCANNER (waveform), solid.
+        //   9. the RULER lane — Cool Edit's flipped ruler, its ticks and
+        //      digits — AND, in the same pass, the cursor's HEAD (the yellow
+        //      triangle on the ruler's bottom rows, opaque over the ticks and
+        //      digits) and the MARKER LANE'S panel face under the cues.
+        //  10. the FLAG BLIT — the cues.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only).
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
         //      the on-screen keyboard since 2026-08-27 or the folder overlay
@@ -8990,32 +8396,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     overlay contributes no ground (architect 2026-07-27): its 1px
         //     RING is its whole visual, and a boundary line paints AFTER the
         //     plate, crossing the ink like the stems do.
-        //   THE Z-ORDER FLIP (architect 2026-07-23) — the cursor playhead's
-        //     STEM passes UNDER
-        //     marker flags, so a cursor resting on a marker sits hidden behind
-        //     that marker's flag standing in the same column; a SELECTION adds
-        //     no playhead-like mark of its own, its whole cue being its
-        //     members' BRIGHTENED FLAGS (the class ladder's brighter pair) with
-        //     the landed cursor on the focus. (2026-08-01 lifted the SCANNER
-        //     above the stems, so the moving line does not blink out at every
-        //     marker it crosses.)
-        //   THE PLAYHEAD STEM OVER THE MARKER STEMS (architect 2026-09-23) —
-        //     the cursor's stem paints ABOVE every marker stem and BELOW every
-        //     flag box, so at a coarse zoom a dense run of markers no longer
-        //     hides a playhead standing near but not on one: what must read
-        //     there is WHERE THE PLAYHEAD IS. Its other half keeps coincidence
-        //     legible: WHEN THE PLAYHEAD'S COLUMN IS A MARKER'S, THE MARKER
-        //     STEM WINS — the playhead's whole stem yields there
-        //     (playhead_stem_suppressed) and the marker's stem shows,
-        //     brightening when selected. (Row 5 had put the marker stems above
-        //     the cursor's stem until this ruling.)
+        //   THE COLUMN IS SHARED, NOT CONTESTED (architect 2026-10-09, the
+        //     program is Cool Edit): a SELECTION adds no playhead-like mark of
+        //     its own, its whole cue being its members' selected LABELS with
+        //     the landed cursor on the focus; the cursor's dots paint over the
+        //     marker stems' (2026-09-23) and the two phases interleave, so a
+        //     playhead resting on a marker's column shows both and neither
+        //     yields; its head in the ruler and the cue's triangle in the
+        //     marker lane never meet. (2026-08-01 lifted the SCANNER above the
+        //     stems, so the moving line does not blink out at every marker it
+        //     crosses.)
 
         if (rects_intersect(exposed, wave_paint)) {
             paint_waveform_plate(cr, area);
-            // The stems' FLANKS (architect 2026-10-05) over the well's top
-            // lines, ahead of the ring and the stems, so both paint over
-            // them (paint_marker_stem_flanks' declaration).
-            paint_marker_stem_flanks(cr, area);
             // The overlay band's boundary ring — the phase-reset overlay's whole
             // visual — over the plate and under trim
             // and the stems, so the focused reset's own stem stays crisp on top
@@ -9024,8 +8417,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
-        // pixels (the trim bar lane's ground, the window's bar, the endcaps and
-        // the midpoint mark).
+        // pixels (the view bar whole and the column's air above it).
         // Gated on EITHER half being exposed: render_background erased every
         // exposed top-strip pixel above, so a strip-only damage (hover text, a
         // flag change) must repaint the strip-resident trim pixels; the outer
@@ -9036,32 +8428,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         // MARKER STEMS BEFORE THE CURSOR (architect 2026-09-23): the cursor's
-        // waveform stem paints over them, and the flag boxes go over
-        // everything in the strip blit below. The stems are the flags' waveform
-        // half; the playhead stem between the two halves is the ruling itself
-        // (the paint-order block above), and at a coincident column the two
-        // never overlap because the playhead's stem yields whole there
-        // (playhead_stem_suppressed).
+        // dots paint after them; on a shared column the two dot phases never
+        // touch (2026-10-09, the paint-order block above).
         if (rects_intersect(exposed, wave_paint)) {
             paint_marker_stems(cr, area);
         }
 
-        // The CURSOR AFTER THE MARKER STEMS and BEFORE the flag blit (the
-        // playhead-over-stems ruling, architect 2026-09-23, and the Z-ORDER
-        // FLIP, architect 2026-07-23): its line paints over every marker stem
-        // and UNDER the marker flags that follow. Everything laid down before
-        // it — the plate, the phase-reset overlay ring, the trim lane — stays
-        // under it as before. (The scanner
-        // used to ride along in this pass and now paints after it, below —
-        // waveform-only either way, so its stacking against the lanes never
-        // entered the question.)
-        // flag_cache.surface is ARGB32, CLEAR-cleared
-        // each rebuild and transparent outside the painted shapes, so the flag
-        // blit composites source-over and never erases the playheads it does not
-        // cover. Gated on area OR top_strip: the cursor line lives in the waveform
-        // area, its head in the top strip.
-        if (rects_intersect(exposed, wave_paint) ||
-            rects_intersect(exposed, top_strip)) {
+        // The CURSOR'S CANVAS DOTS AFTER THE MARKER STEMS (the
+        // playhead-over-stems ruling, architect 2026-09-23). Everything laid
+        // down before it — the plate, the phase-reset overlay ring — stays
+        // under it as before. (The scanner paints after it, below.) Its head
+        // is the ruler pass's and its view-bar dots the trim pass's, so this
+        // pass is the waveform's alone.
+        if (rects_intersect(exposed, wave_paint)) {
             paint_playheads(cr, area);
         }
 
@@ -9077,8 +8456,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         if (rects_intersect(exposed, top_strip)) {
-            // The ruler paints BEFORE the flags: its ticks descend past the
-            // marker lane's top and must sit UNDER whatever that lane draws.
+            // The ruler paints BEFORE the flags: it lays the marker lane's
+            // panel face, which the flag blit's cues stand on.
             paint_ruler_row(cr);
             paint_flag_annotations(cr, top_strip);
         }

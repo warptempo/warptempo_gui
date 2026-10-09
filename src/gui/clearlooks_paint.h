@@ -6,18 +6,17 @@
 
 // THE CLEARLOOKS PAINTERS (architect 2026-10-07, the painters round's first
 // part: the top strip; its second: the dialogs' push buttons and entries,
-// the dropdown, the lists; its last: the trim lane as the scroll bar, the
-// scrub as GtkScale, the well's frame, the ruler's ticks, the restored
-// laptop's frame; the toolbar band and row 8 are the program's since
-// 2026-10-09, program_spec.h) — the chrome spec's clearlooks
-// arm (chrome_spec.h; the flag editor is the program's own flag in its
-// selected face under every chrome, render_flag_editor_box, architect
-// 2026-10-07 ~09:45),
+// the dropdown, the lists; its last: the scrub as GtkScale, the well's
+// frame, the restored laptop's frame; the toolbar band, row 8 and the canvas
+// column's lanes — the trim lane, the ruler, the cues — are the program's
+// since 2026-10-09, program_spec.h) — the chrome spec's clearlooks
+// arm (chrome_spec.h; the flag editor is the program's own cue label in its
+// selected look under every chrome, render_flag_editor_box),
 // GNOME 2.30's own drawing as Debian 6 squeeze put it on screen: the
 // metacity theme's maximised caption (gnome-themes 2.30.2's Clearlooks
 // metacity-theme-1.xml), and gtk-engines 2.20.2's Clearlooks GUMMY style for
 // the menu bar, the push button, the entry, the menu and its items, the list and its selected cell
-// (clearlooks_draw.c, clearlooks_draw_gummy.c), the scroll bar and the scale
+// (clearlooks_draw.c, clearlooks_draw_gummy.c), the popup lists' scroll bar and the scale
 // (the same files), the restored window's frame (metacity's
 // `normal` frame style set), his squeeze captures the law
 // (tmp/squeeze/). Every painter here is called from its win2000 sibling's
@@ -231,8 +230,8 @@ void paint_cl_list(cairo_t* cr, const GuiRect& surf);
 // cl_text_selected.
 void paint_cl_selected_cell(cairo_t* cr, const GuiRect& r, bool focused);
 
-// -- THE LANES, THE SCRUB, THE STATUS BAR AND THE FRAME (the painters round's
-//    last part, 2026-10-07) ----------------------------------------------------
+// -- THE SCRUB, THE POPUP LISTS' BAR, THE WELL AND THE FRAME (the painters
+//    round's last part, 2026-10-07) ---------------------------------------------
 
 // GTKSCALE'S LENGTHS (the default style's GtkScale::slider-length 23 and
 // GtkRange::slider-width 15; clearlooks_draw_gummy.c's TROUGH_SIZE 7), in
@@ -243,99 +242,11 @@ inline constexpr int kClScaleTroughPx       = 7;
 inline constexpr int kClScaleSliderLengthPx = 23;
 inline constexpr int kClScaleSliderWidthPx  = 15;
 
-// THE TRIM CAP'S RAMP LENGTH, in Windows px: the ring of each cap
-// (paint_cl_stepper below) turns from the light tone to the dark over its
-// first kClCapRampPx rows and is the dark tone flat below them — 15 % of the
-// 16-W box (architect 2026-10-07 evening, the TC2 sheet's step j: "the ramp
-// starts in the top row and ends early", so the whole turn falls inside the
-// outer corner's arc and the straight outer column carries no gradient).
-// Converted at the element (scaled_px): 2 rows at 100, 3 at 138, 7 at 300.
-inline constexpr double kClCapRampPx = 2.4;
-
-// THE TRIM LANE IS GTK'S HORIZONTAL SCROLL BAR — ITS TROUGH — round the
-// product's own light bar: the body between the caps the light slider
-// (paint_cl_slider below) and the caps in step with it (paint_cl_stepper
-// below, 2026-10-07 evening) — (architect 2026-10-07, the painters round's
-// last part; render.h's trim block keeps every rect: the lane, the two caps'
-// 16 x 16 boxes where trim_endcap_rect puts them, the body between them, the
-// hit stash). THE BAR WEARS THE LANE'S 16 W ROWS,
-// Windows' SM_CYHSCROLL, where GTK's is 15 (GtkRange::slider-width and
-// stepper-size 15): one row more of every ramp below, the base's thickness
-// kept (the settled rule: the proportional fit to Windows' layout).
-//
-// THE TROUGH — clearlooks_draw_scrollbar_trough (gummy keeps the classic
-// one), its vertical frame's axes exchanged: across the lane `lane`
-// shade[2], its first and last rows the shade[5] border, and under the top
-// border the shadow — a linear gradient shade (shade[2], 0.95) -> shade[2]
-// from row 1 to row 3 whose rows 1 and 2 show (row 3 on is the fill, the
-// source's own arithmetic; build.py records the two rows). NO END COLUMNS:
-// GTK's trough ends under its steppers (trough-under-steppers), and the
-// lane's ends are the window's, past which the bar runs on as its body does
-// (render_trim_flags' OFF SCREEN rule) — so the border is the two rows.
-void paint_cl_trough(cairo_t* cr, const GuiRect& lane);
-
-// ONE CAP, THE PRODUCT'S OWN, IN STEP WITH THE LIGHT BAR (architect 2026-10-07
-// ~16:40, on the glass, of the gummy stepper this replaces — its shade[7]
-// border ring dark along its whole top row against the body's light line:
-// "the trim end caps look tacked on ... misaligned. They need to start with
-// a light side at the top, and the curve that forms the outer edge of each
-// end cap needs to start on a light tone and then darken as it goes down, to
-// imitate the reflection of light"; and ~17:10: "be careful that there is
-// some contrast between the trim end cap and the body, at least in the top
-// part — we don't want it to blur together either"; the TC1 sheet's variant
-// c) on a trim cap's box `b` (trim_endcap_rect's 16 x 16): THE RING, one W
-// wide, is the bar's own two tones — THE ONE RAMP from `cl_separator_light`
-// (the body's light line continued) to `cl_separator_dark` (its dark line
-// continued) over the box's first kClCapRampPx rows, its first row the
-// light tone itself (paint_cl_ramp, rule 2 of the head), and every row
-// below the ramp the dark tone flat, the bottom row included — so its two
-// OUTER corners, rounded at the spec's radius (the begin cap's left ones, the
-// end cap's right: GTK's stepper A and D, the corners at the bar's ends),
-// start light and darken along the curve. THE RAMP ENDS EARLY (architect
-// 2026-10-07 evening, the TC2 sheet's step j): a ramp over the whole height
-// drew the eye at any distance and made the straight outer column read
-// SLANTED, the begin cap's left line leaning right from bottom to top — the
-// gradient down a straight column is the lean; ended inside the corner's
-// arc, the darkening runs along the curve "up and to the right" and the
-// straight column is one tone. THE FACE inside, its corners
-// concentric, is the window ground at rest (the bar's own, a button in the
-// bevel, not a gummy box on it) and `cl_stepper_pressed_face` pressed —
-// bg[ACTIVE] of the scrollbar style, the default style's shade (0.9,
-// bg_color), his capture 00-12-13's pressed stepper, flat here; THE INNER
-// EDGE, where the cap meets the body, one W of the dark tone the lane's
-// whole height — the contrast his caveat asks for, a dark cell notching the
-// light line at the top so the cap reads as a button against the body (the
-// sheet's variant e, without it, blurred into the body at rest). Every
-// tone a role: the ring's two are reused by the light bar's own ruling
-// (paint_cl_slider), the pressed face the one tone added (the gummy
-// stepper's own tones are the popup lists' bar's, paint_cl_scrollbar_stepper
-// below, not the trim lane's). THE ARROW stays the engine's own, kept by ruling
-// (clearlooks_draw_normal_arrow, its chevron filled in fg) at GtkRange's
-// arrow-scaling 0.5 of the 16-W box — 8 W, so the engine's 8-wide,
-// 4.75-tall wedge, its line half-width 0.75 — centered on the box, pointing
-// left on the begin cap and right on the end cap; GTK displaces no arrow
-// (GtkRange::arrow-displacement 0): pressed, only the face changes. NO
-// HOVER FACE (the one hover face is the toolbars').
-void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
-                      bool pressed);
-
-// THE BODY IS THE PRODUCT'S OWN LIGHT SLIDER, A RECORDED DEPARTURE FROM
-// SQUEEZE'S GUMMY ONE (architect 2026-10-07, the CL15 sheets: "Clearlooks is
-// anonymous enough that we can get away with our own scroll bar") on the
-// body rect `body` (render_trim_flags' gap, the bridge, the kept region
-// between the caps): THE WINDOW GROUND, `ground`, with ONE W px of
-// `cl_separator_light` (FCFCFC, shade (shade[3], 1.3)) along its top row and
-// ONE W px of `cl_separator_dark` (C4C2BF, shade[3]) along its bottom row —
-// NO GRIPS, no ring, no ramp and no border columns at its ends: the caps ride
-// the body's ends, so an end column would never show, and a cap sliding off
-// the window takes the body's end with it (render_trim_flags). The two lines
-// are the gummy separator's own tones (generated for GtkToolbar's separator,
-// clearlooks_gummy_draw_separator): a role a painter reads is that tone put
-// down again, not a color derived here. The trough stays GTK's (above); the
-// caps wear the same two tones (paint_cl_stepper, since the evening). (Gummy's
-// spot[1] slider, its ring and its three grips are the popup lists' bar's —
-// paint_cl_scrollbar_slider below, 2026-10-08 — never the trim lane's.)
-void paint_cl_slider(cairo_t* cr, const GuiRect& body);
+// (THE TRIM LANE AS GTK'S HORIZONTAL SCROLL BAR — its trough, the product's
+// light slider and its caps in step with it, paint_cl_trough /
+// paint_cl_slider / paint_cl_stepper — stood 2026-10-07 to 2026-10-09; the
+// trim lane is the program's view bar since, the same under every chrome.
+// Git history.)
 
 // THE POPUP LISTS' VERTICAL SCROLL BAR (architect 2026-10-08; the rule and
 // the geometry at render.h's popup scroll block, the dispatch
@@ -345,8 +256,7 @@ void paint_cl_slider(cairo_t* cr, const GuiRect& body);
 // bar, the normal one in the squeeze folder — this is the one from the trim
 // bar, it doesn't work here"; his captures 00-17-24, Nautilus' list bar, and
 // 00-12-13, a pressed stepper, the law, reproduced byte for byte at GTK's 15
-// by build.py's arithmetic), at the base's 16 W wide; THE TRIM LANE KEEPS
-// ITS OWN CAPS AND LIGHT SLIDER (above; their ruling stands). A RECORDED
+// by build.py's arithmetic), at the base's 16 W wide. A RECORDED
 // DEPARTURE FROM GTK (architect 2026-10-08, on squeeze's Country combo,
 // tmp/Screenshot_2026-10-08_05-20-01.png): GtkComboBox's overflowing popup
 // scrolls with a scroll ARROW at its top and its bottom, which he rejects —
@@ -375,9 +285,11 @@ void paint_cl_slider(cairo_t* cr, const GuiRect& body);
 //     corners rounded at the spec's radius (the up stepper's top two, the
 //     down stepper's bottom two, GTK's steppers A and D). RESTING bg[NORMAL],
 //     PRESSED the scrollbar style's bg[ACTIVE] (the capture 00-12-13's
-//     pressed stepper); no prelight (the one hover face is the toolbars'),
-//     and GTK displaces no arrow. THE ARROW the engine's chevron in fg, the
-//     trim caps' own (GtkRange's arrow-scaling 0.5 of the 16-W box).
+//     pressed stepper); no prelight (no button has a hover face), and GTK
+//     displaces no arrow. THE ARROW the engine's chevron in fg
+//     (clearlooks_draw_normal_arrow, GtkRange's arrow-scaling 0.5 of the
+//     16-W box: the engine's 8-wide, 4.75-tall wedge, its line half-width
+//     0.75, centered on the box).
 //   THE SLIDER (paint_cl_scrollbar_slider) on the thumb's painted rect —
 //     clearlooks_gummy_draw_scrollbar_slider with colorize_scrollbar TRUE:
 //     spot[1]'s gummy ramp across the fill (W columns 1 .. 14, the step at
@@ -442,7 +354,7 @@ void paint_cl_scale_trough(cairo_t* cr, const GuiRect& trough, int split);
 // (shade[7], fill, 0.2) at THE SOURCE'S RADIUS 2.5 (kClScaleSliderRadiusPx,
 // the engine's own literal — the spec's 3 is the gtkrc's), three shade[7]
 // grip bars on the engine's columns, the top-left highlight at radius 2,
-// baked. No prelight (the one hover face is the toolbars').
+// baked. No prelight (no button has a hover face).
 void paint_cl_scale_thumb(cairo_t* cr, const GuiRect& box);
 int  cl_scale_trough_h_px();
 // (cl_scale_thumb_w_px / cl_scale_thumb_h_px are declared in render.h's

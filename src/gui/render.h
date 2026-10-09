@@ -77,7 +77,7 @@ inline GuiColor display_color(GuiColor srgb) {
 
 // Trim boundaries in domain-frame samples (source-frame in source view,
 // target-frame in target view). Trim no longer dims any renderer — it is
-// consumed by render_trim_flags to place the bar and its endcaps. Values
+// consumed by render_trim_flags to place the view bar's span. Values
 // are the AUTHORED positions mapped into the displayed domain by the live
 // trim pass (GuiPaintHandler::paint_trim, through displayed_trim_ms):
 // per-bound, unordered (bounds may be inverted mid-gesture — crossed cannot
@@ -127,9 +127,11 @@ struct TrimRange {
 // tones derived from the palette's `face` by Cool Edit's own HLS rule
 // (cool_edit_derive.h, the COOL EDIT BLOCK).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
-// one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM CASE'S
-// AND TIME FIELD'S CONSTANTS (cool_edit_paint.h: Cool Edit's measured
-// default-scheme bytes, which do not follow its preset) — or THE ICON SET'S
+// one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
+// PAINTER CONSTANTS (cool_edit_paint.h: Cool Edit's measured bytes that do
+// not follow its preset — the case's, the time field's digits, the view
+// bar's black field, the ruler's ticks and digits and their black shadow,
+// the playhead's yellow) — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the Tango and Mist drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
@@ -169,7 +171,8 @@ struct TrimRange {
 // the panel's own pixel, the period technique at native resolution, so at
 // 400 % the pattern is four times finer than a 96-dpi screen's and the eye
 // blends it as it blended the original. THE ONE DITHER is the checked face
-// and the trim track's checker (paint_checker_rect, Windows' pattern brush).
+// and the popup lists' scroll track (paint_checker_rect, Windows' pattern
+// brush; the trim track's checker went with the view bar, 2026-10-09).
 // THIS PARAGRAPH IS THE RULE'S ONE STATEMENT; every other chrome length stays
 // in Windows px (scaled_px).
 //
@@ -210,10 +213,10 @@ struct TrimRange {
 //   SUNKEN OUTER  ONE line, Shadow / Hilight (BDR_SUNKENOUTER) — the open
 //                 menu title, the color picker's field and swatch;
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
-//                 the ruler's ticks, a menu separator.
-// (The toolbar band, row 8 and their cases and time fields are the
-// PROGRAM'S since 2026-10-09 — Cool Edit's, cool_edit_paint.h — and wear
-// none of this grammar.)
+//                 a menu separator.
+// (The toolbar band, row 8 and their cases and time fields, the view bar,
+// the ruler and the marker lane are the PROGRAM'S since 2026-10-09 — Cool
+// Edit's, cool_edit_paint.h — and wear none of this grammar.)
 // THE CARD FRAME is no relief: ONE flat line in the `card_frame` role on all
 // four sides (THE CARD FACE, below).
 // The CHECKED face is Windows' dither: a checkerboard of Hilight over the
@@ -226,22 +229,20 @@ struct TrimRange {
 //                 under the band, the caption's buttons, the bottom row's
 //                 band under a prompt or a dialog editor, the dropdowns, the
 //                 on-screen keyboard, every chrome button face, a DISABLED
-//                 flag's face (the band and row 8 are the program's panel
-//                 since 2026-10-09, below);
-//   label         chrome text and glyphs, the ruler labels, the trim lane's
-//                 arrow glyph, the playhead head's outline;
+//                 cue's triangle (the band, row 8 and the canvas column's
+//                 lanes are the program's panel since 2026-10-09, below);
+//   label         chrome text and glyphs, the popup scroll bar's arrow
+//                 glyph;
 //   the quartet   every relief line, the families unchanged; Hilight also the
-//                 light copy of THE DISABLED EMBOSS (below); Shadow also the
-//                 ruler ticks (the etch's Hilight line beside each),
-//                 DkShadow also the dialog
-//                 focus frame (the flag outline is the palette's
-//                 `flag_outline`, below);
+//                 light copy of THE DISABLED EMBOSS (below), a disabled cue
+//                 label's included; DkShadow also the dialog focus frame;
 //   selected pair a dropdown's lit row, the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
 //                 band and selected substring of every text field, the flag
-//                 editor's included, over the flag's own selected face
-//                 (EDITING, below) — ONE PAIR, FOCUSED OR NOT (the 2026-09-02
+//                 editor's included, and THE SELECTED CUE'S LABEL — its fill
+//                 and its text (THE MARKER LANE, below) — ONE
+//                 PAIR, FOCUSED OR NOT (the 2026-09-02
 //                 inactive selection face retired, architect 2026-10-03, on
 //                 Windows 95's Network Neighborhood, where a selection keeps
 //                 Hilight / HilightText in a window that has lost the focus);
@@ -250,9 +251,9 @@ struct TrimRange {
 //                 band under the player and the picker, Windows 95's list
 //                 view, its resting names and its glyphs' text-class paths
 //                 in the field text (architect 2026-10-06,
-//                 paint_folder_overlay) — but NOT THE FLAG EDITOR, which
-//                 keeps the flag's selected face (architect 2026-10-07
-//                 ~09:45; EDITING, below);
+//                 paint_folder_overlay) — and THE FLAG EDITOR'S FIELD, its
+//                 ground, its one-quantum outline, its text and its caret
+//                 (architect 2026-10-09; EDITING, below);
 //   clock pair    UNREAD BY ANY PAINTER since 2026-10-09: the time fields
 //                 are the program's, Cool Edit's dark field
 //                 (paint_ce_time_field); the pair stays in the role table
@@ -270,16 +271,22 @@ struct TrimRange {
 //                 restored laptop window is the quartet and the ground
 //                 (paint_window_sizing_frame);
 //   THE PALETTE   the program's (palette_file.h, 2026-10-07): the
-//                 waveform's canvas, ink and outline (ROW 6, below), the
-//                 flag kinds' faces and selected faces, the one FLAG
-//                 OUTLINE round every flag (THE MARKER LANE, below), the
-//                 one flag label, the playhead's stem and the scanner (THE PLAYHEAD,
-//                 below — the head itself is no role: it is WordPad's ruler
-//                 marker, painted in the chrome's own label, hilight, shadow
-//                 and ground), and THE PANEL'S `face` (2026-10-09: the
-//                 program's band, dock bar and row 8 — Cool Edit's — every
-//                 other panel tone derived from it, the COOL EDIT BLOCK,
-//                 cool_edit_derive.h).
+//                 waveform's canvas, ink and outline (ROW 6, below; the ink
+//                 also the view bar's span, its bevels derived from it), the
+//                 flag kinds' faces — THE CUES' TRIANGLES and their dots
+//                 since 2026-10-09 (THE MARKER LANE, below) — the scanner
+//                 and the zoom anchor's stem, and THE PANEL'S `face`
+//                 (2026-10-09: the program's band, dock bar, row 8 and the
+//                 canvas column's lanes — Cool Edit's — every other panel
+//                 tone derived from it, the COOL EDIT BLOCK,
+//                 cool_edit_derive.h). UNREAD SINCE 2026-10-09, kept in the
+//                 grammar pending his ruling (palette_file.h's role table):
+//                 the four selected faces, `flag_outline` and `flag_label`
+//                 (the cue's triangle never changes when selected, its label
+//                 is the panel's light tone, and no outline rings it); the
+//                 resting playhead is Cool Edit's yellow, a painter constant
+//                 (THE PLAYHEAD, below), so `playhead_stem` is read by the
+//                 zoom anchor's stem alone.
 // THE CARD FACE IS THE PERIOD'S TOOLTIP (architect 2026-10-04, reversing the
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
@@ -415,9 +422,11 @@ struct GuiPalette {
     // 8 under every chrome.
     GuiColor face;
     // THE COOL EDIT BLOCK (cool_edit_derive.h's kTones, the painted ones):
-    // the panel's tones, each DERIVED from `face` by Cool Edit's own HLS rule
-    // at every install of the program's words — no file names them; read by
-    // cool_edit_paint.h's painters alone.
+    // the panel's tones, each DERIVED from `face` — the view bar's span
+    // bevels from `waveform_ink` — by Cool Edit's own HLS rule at every
+    // install of the program's words; no file names them; read by the
+    // program's painters alone (cool_edit_paint.h, the canvas column's lanes
+    // in render.cpp and paint_handler.cpp).
     GuiColor ce_recess;
     GuiColor ce_mid;
     GuiColor ce_dark;
@@ -425,6 +434,10 @@ struct GuiPalette {
     GuiColor ce_field_dark;
     GuiColor ce_field_light;
     GuiColor ce_label;
+    GuiColor ce_cue_shadow;
+    // the view bar's span bevels, off the waveform's ink (2026-10-09)
+    GuiColor ce_span_hilight;
+    GuiColor ce_span_shadow;
     // THE CLEARLOOKS BLOCK (theme_file.h's table, generated; the painters
     // that read it are clearlooks_paint.h's).
 #include "theme_clearlooks_members.inc"
@@ -617,193 +630,175 @@ uint64_t palette_generation();
 // palette_file.h), then the whole window invalidated — every color changes.
 void install_true_colors(bool on);
 
-// -- THE TRIM LANE, THE RULER LANE, THE PLAYHEAD -------------------------------
-
-// THE TRIM LANE IS A MINIATURIZED SCROLL BAR (architect 2026-10-02; the
-// geometry at trim_lane_h_px and render_trim_flags) and takes no colour of
-// its own: its track is the CHECKED dither (Hilight over the ground), its
-// thumb's body and its two arrow buttons plain raised boxes on the ground, and
-// THE ARROW GLYPH THE LABEL (architect 2026-10-03: a chrome glyph on a chrome
-// face). A HELD END CAP IS THE PRESSED SCROLL ARROW (architect 2026-10-03),
-// from the press on it to the gesture's end, a motionless press included:
-// Windows draws a held scroll arrow DFCS_PUSHED | DFCS_FLAT — one Shadow line
-// round the face, the glyph one Windows px right and down (render_trim_flags).
-// UNDER CLEARLOOKS the lane is GTK's horizontal scroll bar — its trough in
-// its generated cl_ tones — round the product's own light bar, body and caps
-// (architect 2026-10-07; clearlooks_paint.h's trim block).
-
-// THE RULER LANE's inks: every timestamp in the LABEL (architect 2026-10-03;
-// "give the same colour to all the numbers", 2026-10-02), and the TICKS
-// ETCHED — each tick a Shadow line with a Hilight line immediately to its
-// right over the same rows (architect 2026-10-02, the Sonic Foundry etching;
-// paint_ruler_row).
-
-// THE PLAYHEAD. THE HEAD IS NO LONGER A ROLE OF ITS OWN (architect
-// 2026-10-05): it is WordPad's down-pointing ruler indent marker, a FIXED
-// 9 x 8 Windows-px BITMAP (kPlayheadHeadGlyph, below; geometry measured from
-// a Windows 95 screenshot, its colours not trusted), seated tip-down one
-// Windows px into the marker lane's own first row (architect 2026-10-05; the
-// ruler lane's bottom rows carry the rest of it — paint_ruler_row) and
-// painted in four of the CHROME's own roles: the glyph's outline in LABEL
-// (COLOR_BTNTEXT, the role Windows maps a toolbar or ruler bitmap's black
-// to), its bevel in HILIGHT and SHADOW, and its interior in GROUND — a
-// raised chip on the chrome, not a flat silhouette (UNDER CDE Motif's
-// beveled down arrow instead, 2026-10-08 — the head block's cde arm,
-// kPlayheadHeadMotifBaseUnits). NO HOLD LAMP (architect
-// 2026-10-05): the glyph paints the same face whether or not
-// AppState::camera_hold stands. THE STEM is the `playhead_stem` role, UNIFORM from the head
-// to the canvas's foot (its contrast over the chrome and the canvas is the
-// user's choice), and the zoom anchor's stem
-// (render_strip_anchor_stem) takes the same role. THE SCANNER — the moving
-// playback line, paint_scanner — HAS ITS OWN ROLE, `scanner` (architect
-// 2026-10-05): it is the moving stem in every other respect (waveform-only,
-// no head, no lane presence), and both default palettes paint it WHITE, the
-// stem's colour (architect 2026-10-07: "let's go back to a white scanner");
-// the two stay two roles, so a palette may still part them.
-
-// -- THE MARKER LANE: THE FLAT FLAGS ---------------------------------------------
+// -- THE CANVAS COLUMN: THE VIEW BAR, THE RULER, THE PLAYHEAD -------------------
 //
-// THE FLAG IS THE ACID FLAG (architect 2026-10-03, the bevelled Sonic Foundry
-// box retired as "a 3D surface with a cut through it"): a FLAT BOX in its
-// KIND's face, its label in `flag_label` (a pair, like Windows' — never a
-// luminance verdict), and a ONE-WINDOWS-PX OUTLINE IN THE PALETTE'S
-// `flag_outline`, on all four sides, selected or not (below) — the box's
-// left border column, its top row, its run's closing column and its bottom
-// row, so the box keeps its width and height. THE OUTLINE'S GEOMETRY IS
-// FIXED AND ITS COLOR IS HIS (architect 2026-10-08 ~02:30, on mock_IM2:
-// "today is the only correct one"; palette_file.h's head): the ring and the
-// flanks below stop just before the canvas, where the outline merges into
-// it, and the color is a palette role, settable in the picker, because an
-// outline that is always the canvas is "odd when the canvas is anything but
-// black" — over a light canvas one of the well frame's tones reads the
-// flag's connection to the canvas as seamless. BOTH DEFAULT PALETTES GIVE IT
-// THEIR CANVAS'S BYTES, black, the rule of 2026-10-07 kept as the default
-// ("otherwise it will poke out when going into the canvas": an outline
-// lighter than the well "looks like it has a lip around it", and the
-// canvas's own color makes the stem's flanks vanish where they enter the
-// canvas) — UNDER WIN2000 THE FLAGS RING BLACK on the ground, where they once
-// rang in the scheme's DkShadow 404040. THE STEM leaves from the box's
-// LEFTMOST FACE COLUMN (the marker's own frame column) and crosses the bottom outline into the well and
-// the canvas, one same-colour column. THE OUTLINE IS CARRIED DOWN BOTH SIDES
-// OF THE STEM (architect 2026-10-05, the flag "A+"): one outline-width column
-// in the outline immediately left and immediately right of the stem, from the
-// box's bottom outline row through the well's top lines, stopping where the
-// canvas begins, so the stem never touches the well's lines (in the lane the
-// box's own left border and bottom row are those columns; in the well
-// fill_stem_flanks paints them). The bound cells take the same anatomy,
-// each cell's left seam the shared outline column.
+// THE CANVAS COLUMN IS COOL EDIT'S, THE SAME UNDER EVERY CHROME (architect
+// 2026-10-09, the program is Cool Edit; the mock of record
+// tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; program_spec.h owns every
+// length): the column's 5 W of face under the band, THE VIEW BAR, THE RULER
+// FLIPPED and THE MARKER LANE OF CUES, the well under them. Its colors are
+// the panel's Face-derived tones (the COOL EDIT BLOCK), the waveform's ink
+// and the kinds' faces (the palette), and the painter constants Cool Edit
+// draws whatever its preset (cool_edit_paint.h).
 //
-// EACH KIND HAS ITS OWN PAIR (architect 2026-10-04, reopening 2026-10-03's one
-// flag colour for every kind) — GuiFlagKind, render.cpp: WARP (`warp_flag` /
-// `warp_flag_selected`) and PHASE RESET (`phase_reset_flag` /
-// `phase_reset_flag_selected`), each authoring column's flags by their column,
-// and the `h` view's ADDED (`added_flag` / `added_flag_selected`) and REMOVED
-// (`removed_flag` / `removed_flag_selected`), each a face and a brighter
-// selected face. ONE LABEL FOR EVERY FACE, RESTING AND SELECTED (architect
-// 2026-10-07, his one-label rule, retiring the per-kind selected labels of
-// the same morning): `flag_label` on every face of every kind — white in
-// the `windows-2000` palette, black in `clearlooks` (palette_file.h, which
-// states the contrast white keeps on the bright accents).
+// THE TRIM BAR IS COOL EDIT'S VIEW BAR (METRICS §3; render_trim_flags owns
+// the drawing, trim_lane_h_px the rows): the `ce_mid` line on top, a BLACK
+// field 6 W tall (kCeViewBarField), the `ce_hilight` line under it — the
+// ruler's top line; and in the field THE SPAN, the trim window's columns as
+// a RAISED BLOCK OF THE INK — its top row and left column `ce_span_hilight`,
+// its body `waveform_ink`, its bottom row and right column `ce_span_shadow`
+// (the ink at HLS L 0.94 and 0.3157, cool_edit_derive.h) — with THE
+// PLAYHEAD over it as a dotted column, FFFF00 and black alternating per
+// quantum (kCePlayhead, kCeViewBarDot). No track, no caps drawn, no pressed
+// face: the lane's grabs are the span's two ends and its body (TrimBarHit,
+// below). (Windows' miniaturized scroll bar with its checker track and its
+// arrow-button caps stood 2026-10-02 to 2026-10-09; GTK's trough under
+// clearlooks and Motif's under cde with it; git history.)
+//
+// THE RULER IS COOL EDIT'S, FLIPPED (METRICS §4.4; NOTES.md's "flipped
+// ruler"; paint_ruler_row): `ce_mid` ground under the view bar's light line,
+// its own `ce_hilight` line along its foot; THE TICKS kCeRulerTick (E0E0E0,
+// face-independent in every preset), one quantum wide, STANDING ON THE
+// GROUND'S BOTTOM ROW and rising into it; THE DIGITS the program face at
+// cap 7 in the tick's ink over a BLACK (+1, +1) shadow (kCeRulerShadow).
+
+// THE PLAYHEAD IS COOL EDIT'S CURSOR (METRICS §4.3; architect 2026-10-09,
+// the mock of record): ITS HEAD the cue's triangle — 9-7-5-3-1 quanta, the
+// apex the playhead's column — in Cool Edit's yellow FFFF00 (kCePlayhead)
+// with the `ce_cue_shadow` column one quantum right of each row, ON THE
+// RULER'S ROWS 12 .. 16, the apex on the ground's bottom row (paint_ruler_row;
+// cue_triangle_h_px's rows); IN THE CANVAS a DOTTED COLUMN, one quantum every
+// four in the same yellow on the canvas's quantum rows ≡ 1 (mod 4), the cues'
+// dots on rows ≡ 3, so the two interleave on one column (paint_playheads,
+// fill_dotted_waveform_line); IN THE VIEW BAR the dotted yellow-and-black
+// column over the span (render_trim_flags). Across the marker lane and the
+// well's top frame it draws nothing (Cool Edit puts no dot on its frame
+// row). IT MAY STAND ON A MARKER'S COLUMN — NO SNAP, NO AVOIDANCE (architect
+// 2026-10-09): the head and a cue's triangle stand in different lanes and
+// the dots interleave, so the coincident-stem suppression of 2026-08-01 to
+// 2026-10-09 (the playhead's stem yielding whole to a marker's) is retired.
+// NO HOLD LAMP (architect 2026-10-05): the head paints the same whether or
+// not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
+// four roles, and under cde Motif's beveled arrow, stood 2026-10-05 to
+// 2026-10-09; the solid `playhead_stem` line before it; git history.)
+// THE ZOOM ANCHOR'S STEM (render_strip_anchor_stem) keeps the
+// `playhead_stem` role, its one reader. THE SCANNER — the moving playback
+// line, paint_scanner — HAS ITS OWN ROLE, `scanner` (architect 2026-10-05),
+// a SOLID one-quantum line over the canvas (Cool Edit's playback cursor is a
+// solid 1-px line, measured 2026-10-09), WHITE in both default palettes
+// (architect 2026-10-07: "let's go back to a white scanner").
+
+// -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
+//
+// THE FLAG IS COOL EDIT'S CUE (architect 2026-10-09, the mock of record and
+// NOTES.md's "cue construction"; METRICS §4.2; the lengths program_spec.h's,
+// the drawing render_flag_boxes_impl's): on the lane's PANEL FACE, THE
+// TRIANGLE — 9-7-5-3-1 quanta on the lane's last five rows, its apex the
+// marker's column on the lane's last row, directly above the well's top
+// frame row — with the `ce_cue_shadow` column one quantum right of each row;
+// THE LABEL — the marker's one label in the program face at cap 7, in the
+// panel's light tone `ce_hilight`, no shadow, starting six quanta right of
+// the column, its cap on rows 1 .. 7 (baseline the top of row 8) — the label
+// and the triangle sharing rows 6 and 7 but never columns; and THE STEM —
+// one-quantum DOTS in the triangle's color on the canvas's quantum rows ≡ 3
+// (mod 4), the canvas alone (no dot in the lane or on the frame row;
+// paint_marker_stems). No box, no outline, no stem through the well's lines.
+// (The ACID flag box of 2026-10-03 — its flat face, its `flag_outline` ring
+// and closing column, its stem crossing the well's lines between its two
+// flanks — stood until 2026-10-09; git history.)
+//
+// THE TRIANGLE'S COLOR IS THE KIND'S RESTING FACE (GuiFlagKind, render.cpp):
+// WARP `warp_flag`, PHASE RESET `phase_reset_flag`, the `h` view's ADDED
+// `added_flag` and REMOVED `removed_flag` — and it NEVER CHANGES WHEN
+// SELECTED (Cool Edit's never does). THE OPEN QUESTION, recorded and not
+// built (architect 2026-10-09: "he will judge the four colors on the
+// glass"): ONE CONSTANT CUE COLOR for every kind, Cool Edit's own CueM
+// F34B58, in place of the four faces. The selected faces, `flag_outline`
+// and `flag_label` are read by no cue (the palette mapping above).
+//
+// THE LABEL'S SEGMENTS: the marker's payload label, then — while grid
+// iterations paint them — its LOWER and UPPER bound cells, each a segment of
+// the same label standing the segment gap past the one before it (the
+// history's changed pair likewise: its removed half, then its added half),
+// every segment's text the program face on the lane's baseline.
+//
+// THE OVERLAP RULE (architect 2026-10-09, settled on the five overlap
+// captures of NOTES.md set 2): the labels paint RIGHT TO LEFT, each on an
+// OPAQUE FACE BOX over its own extent (rows 0 .. 8, from one quantum before
+// its text to one past its last segment's), and a label is CLIPPED AT THE
+// NEXT TRIANGLE'S LEFT EDGE (the next column less four quanta) when the next
+// marker stands more than the six-quantum lead to its right; within the
+// lead it is not clipped and overprints; then the triangles paint LEFT TO
+// RIGHT over every label, so a right triangle covers its left neighbour's
+// shadow.
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
-// then invalid, then the kind's own pair; each arm answers selected and
-// unselected):
-//   THE FLAG  the kind's face under `flag_label`, the stem in the face;
+// then invalid, then the kind's own face):
+//   THE CUE   the kind's face on the triangle and its dots, the label in
+//             `ce_hilight`;
 //   INVALID   the red-flag class (warp_red_flag_set_cached and its phase-reset
-//             twin) WEARS THE REMOVED PAIR (architect 2026-10-04; again
-//             2026-10-07 ~09:45, "red face again", after a morning of a red X
-//             in the kind's pair): one red for both, the context telling them
-//             apart — invalid while authoring, removed in `h` —
-//             `removed_flag` under `flag_label`, the stem in that face, no
-//             glyph and no extra width;
-//   DISABLED  the theme's GROUND for the face, the label in THE DISABLED
-//             EMBOSS (above), and NO STEM;
-//   SELECTED  A BRIGHTER FACE, NOTHING WHITE (architect 2026-10-03, the colour
-//             loop's sets BG..BT, retiring the white outline ring of mock
-//             AR02): the selected flag's FACE AND STEM take the selected face
-//             of its pair — the kind's, or `removed_flag_selected` over an
-//             invalid one ("bright red means selected and error") — its
-//             LABEL the one `flag_label`. The OUTLINE STAYS the one-line
-//             `flag_outline`, selected or not (in the defaults the canvas's
-//             black: "it has to be black and stay black; it's the only one
-//             that stays out of the way of the stem"), so every seam column
-//             is the outline whichever box paints it. It is Windows' own selected-icon
-//             reversal, a face that changes rather than a frame that appears.
-//             SELECTION IS ONE CELL'S (architect 2026-09-05): the ADDRESSED
-//             cell wears the selected face — the payload for every selected
-//             marker but the focus, whose addressed cell is
-//             AppState::addressed_cell — and THE STEM IS THE FLAG BOX'S
-//             (architect 2026-10-04, "otherwise it looks disconnected": the
-//             stem belongs to the box it leaves from), so it takes the
-//             selected face only when the PAYLOAD is the bright cell and
-//             keeps the marker's resting face (the kind's, or `removed_flag`
-//             on an invalid marker) while a BOUND CELL is the addressed one;
-//   SELECTED DISABLED (architect 2026-10-07 ~15:10, on his tablet shot of a
-//             selected disabled marker vanishing on its D2E3F7 face; a
-//             disabled marker is selectable, so its selection must show): THE
-//             REGULAR SELECTED FLAG — the KIND's selected face under the
-//             regular `flag_label` — and NO STEM: the missing stem is the
-//             whole disabled cue ("a real enabled marker never has a white
-//             stem").
-// A FLAG HAS NO HOVER FACE (architect 2026-09-29): the pointer over a flag says
+//             twin) WEARS THE REMOVED FACE (architect 2026-10-04; again
+//             2026-10-07 ~09:45, "red face again"): `removed_flag` on the
+//             triangle and its dots — one red for both, the context telling
+//             them apart, invalid while authoring, removed in `h`;
+//   DISABLED  the theme's GROUND on the triangle, the label in THE DISABLED
+//             EMBOSS (above), and NO DOTS;
+//   SELECTED  THE LABEL IN THE CHROME'S SELECTED PAIR (architect 2026-10-09,
+//             the mock's selected cue): `selected_text` on a `selected_fill`
+//             box over the lane's rows 0 .. 8 — one row of air above the cap
+//             and one below the baseline — from one quantum before the text
+//             to one past its end, the text not moving; THE TRIANGLE KEEPS
+//             ITS COLOR. SELECTION IS ONE SEGMENT'S (architect 2026-09-05):
+//             the ADDRESSED cell's segment wears it — the payload for every
+//             selected marker but the focus, whose addressed cell is
+//             AppState::addressed_cell;
+//   SELECTED DISABLED (architect 2026-10-07 ~15:10: a disabled marker is
+//             selectable, so its selection must show): the selected label
+//             over the disabled triangle, no dots.
+// A CUE HAS NO HOVER FACE (architect 2026-09-29): the pointer over a cue says
 // what a press will do through the CURSOR alone (pointer_cursor_kind).
 //
-// THE SEAM COLUMN between a flag box and the cell to its right is the outline
-// column the two boxes share (architect 2026-08-20, kept under every face since),
-// the flag outline whatever either box's state:
-// ONE BOUNDARY, THREE RENDERINGS, all taking the outline so it never appears or
-// vanishes on an editor open — the resting and the riding cell through the one
-// cell painter (paint_iter_bound_cell) and the open bound field's left border.
-// The published cell boundary IS the seam column, so a press on the divider
-// reads as the cell it introduces. Every run carries a closing column
-// (architect 2026-09-25; marker_flag_border_px).
+// THE PHASE-RESET LEAD-IN RING on the waveform wears the color its reset's
+// dots wear (paint_phase_reset_overlay_ring, through phase_reset_stem_color —
+// architect 2026-09-17, the ring and the stem one unit): the phase-reset
+// face, or the removed face on a red reset; resting whether selected or not,
+// as the dots are since 2026-10-09.
 //
-// THE PHASE-RESET LEAD-IN RING on the waveform wears the colour its reset's
-// stem wears (paint_phase_reset_overlay_ring, through phase_reset_stem_color —
-// architect 2026-09-17): the phase-reset face, or the removed face on a red
-// reset, and the matching selected face while the reset's PAYLOAD is the
-// bright cell
-// (architect 2026-10-04: a reset whose addressed cell is a bound cell keeps
-// its resting stem, and so its resting ring).
+// EDITING: THE FIELD IS WINDOWS' EDIT FIELD (architect 2026-10-09,
+// reversing 2026-10-07 ~09:45's flag-in-its-selected-face; the drawing
+// render_flag_editor_box's): a box in THE CHROME'S FIELD PAIR — `field_ground`
+// under `field_text`, the text and the caret in the field text (white under
+// black under Windows 2000; clearlooks' and cde's own pairs, read as roles) —
+// with A ONE-QUANTUM OUTLINE in `field_text`, over the edited segment's box
+// on the lane's rows 0 .. 8 (the outline on rows 0 and 8 and one quantum
+// outside the pads), the text at the segment's own seat with one quantum of
+// pad either side of its run, growing and shrinking with what is typed, the
+// segments to its right riding its edge in their resting look; and THE
+// SELECTED SUBSTRING IN THE CHROME'S SELECTED PAIR, `selected_text` on
+// `selected_fill`, the ordinary highlight. WHY THE FIELD PAIR: it is the
+// legibility guarantee ("when you're looking very closely at a label it has
+// to be legible"), and the selection pair is the highlight "precisely to
+// avoid this problem" — the selected look of the resting label could not
+// carry a band of its own pair. THE BOX PAINTS OVER THE LANE, the triangle
+// and any neighbouring label ("it may overlap with the flag and other
+// elements, that's fine"). Outside the editor the selected label stays
+// white on the selection fill with no box.
 //
-// EDITING RECOLORS NOTHING: THE FLAG STAYS IN ITS SELECTED FACE (architect
-// 2026-10-07 ~09:45, one design under both chromes, retiring the morning's
-// white box — "the current way would require chopping off the connection to
-// the stem … overall a lot less intuitive"): over the edited flag or cell
-// the flag's own FLAT box, of the flag's height and its run's width, on the
-// flag's own outline geometry in `flag_outline`, its face THE LADDER'S
-// SELECTED ANSWER for the marker (the kind's selected face, the removed
-// pair's over an invalid marker, the kind's selected face over a disabled
-// one), its text and caret the one `flag_label` — a disabled marker's
-// field is the selected disabled flag, the one label on the kind's selected
-// face like every other — the field pads (Windows'
-// margin strips) either side of the text, and THE
-// SELECTED SUBSTRING THE CHROME'S SELECTED PAIR, `selected_fill` under
-// `selected_text` (Clearlooks' 86ABD9 under white, win2000's Hilight under
-// HilightText) — part of the chrome, not a flag color. THE ACCEPTED CAVEAT
-// (architect 2026-10-07): a flag face at or near the chrome's selection
-// color hides the selection band. THE STEM FOLLOWS THE PAYLOAD
-// BOX (architect 2026-10-04): the marker's selected face under the PAYLOAD
-// field, which is the payload box opened and the addressed cell; the
-// marker's resting face under a BOUND-CELL field, the flag box standing at
-// rest beside it (render_flag_editor_box). The bound-cell editor is the same
-// editor.
-//
-// A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red outline and
+// A REFUSED ENTER RECOLORS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it
-// SELECTS THE WHOLE TEXT in the selected pair (text_editor::refuse), so the
-// first keystroke replaces it, and the refusing owner's CARD says why. The
-// flag editor's outline stays the flag's and the dialog field's edge its
-// plain sunken pair. No glyph marks it.
+// SELECTS THE WHOLE TEXT in the selected pair inside the field
+// (text_editor::refuse), so the first keystroke replaces it, and the
+// refusing owner's CARD says why. No glyph marks it.
 //
-// THE HISTORY VIEW'S DIFF FLAGS take their own two kinds (architect
-// 2026-10-04): an ADDED half the `added_flag` pair, a REMOVED half the
-// `removed_flag` pair, each half of a changed pair its own, and THE LABEL
-// CARRIES THE SIGN — the history mode's one bracket spelling, `[+]` before an
-// added line's payload and `[-]` before a removed one's (architect 2026-08-05;
-// history_diff_label, paint_handler.h, the same sign row 8's walk line
-// spells), which says the kind in words where the colour says it at a glance.
-// The view's focus swap wears the selected face, face, label and stem
+// THE HISTORY VIEW'S DIFF FLAGS are cues of their own two kinds (architect
+// 2026-10-04): an ADDED half `added_flag`, a REMOVED half `removed_flag` —
+// a changed pair's triangle the removed half's, the half its dots leave
+// from — and THE LABEL CARRIES THE SIGN — the history mode's one bracket
+// spelling, `[+]` before an added line's payload and `[-]` before a removed
+// one's (architect 2026-08-05; history_diff_label, paint_handler.h, the same
+// sign row 8's walk line spells), a changed pair's label its two halves as
+// two segments. The view's focus or selection lights the whole label, both
+// halves and the gap between them, as one selected box
 // (render_history_diff_flags).
 
 // -- ROW 6: THE WAVEFORM ---------------------------------------------------------
@@ -829,15 +824,13 @@ void install_true_colors(bool on);
 // waveform_border_px): a PLAIN SUNKEN edge, Windows' client-area frame
 // (architect 2026-10-02 ~21:20, "as few exceptions as possible") — the TOP a
 // Shadow line then a DkShadow line, the BOTTOM a 3DLight line then a Hilight
-// line, top to bottom, the canvas between, in the theme's quartet. THE STEMS
-// CROSS THE TOP LINES (architect 2026-10-02): a marker's stem, the playhead's
-// and the zoom anchor's run continuous from the lane above into the canvas
-// (waveform_stem_band), and stop at the canvas's foot; a flag box stands on
-// the top lines (architect 2026-10-03, marker_flag_box_band), so a marker's
-// stem leaves its box's bottom row straight into them — between its two
-// FLANKS, the box's outline carried down through them (architect 2026-10-05,
-// fill_stem_flanks). The playhead's and the anchor's stems leave no box and
-// cross bare.
+// line, top to bottom, the canvas between, in the theme's quartet. THE WELL
+// STANDS AS IT WAS UNDER THE PROGRAM'S CANVAS COLUMN (2026-10-09: the
+// canvas is a later part), its top frame directly under the marker lane's
+// last row. THE CUES' AND THE PLAYHEAD'S DOTS keep to the canvas
+// (waveform_content_rect; Cool Edit puts no dot on its frame row); THE ZOOM
+// ANCHOR'S STEM alone crosses the top lines (waveform_stem_band) and stops
+// at the canvas's foot.
 //
 // TAKEN FROM THE AREA, NOT ADDED TO IT: waveform_content_rect is the content
 // and it shrinks by these rows, while waveform_area itself does not move, so
@@ -1407,193 +1400,75 @@ inline int scrub_handle_box_px() {
 int cl_scale_thumb_w_px();
 int cl_scale_thumb_h_px();
 
-// ROW 5's THREE LANES — the TRIM lane, the RULER lane and the MARKER lane,
-// stacked in that order under the icon row (the order is main.cpp's lane
-// table), the marker lane's bottom edge the waveform's top with no gap. All
-// three ride the gui_scale axis; the ruler's height is DERIVED from its label
-// face (ruler_lane_h_px, below).
-//
-// THE TRIM LANE IS A MINIATURIZED WINDOWS-95 SCROLL BAR, 16 WINDOWS PX TALL —
-// Windows' own scroll bar width (architect 2026-10-02 ~21:20, the AC set: "a
-// very miniaturized scroll bar"): FLUSH on the lane, no trough and no border;
-// the TRACK, the trimmed-off stretches either side of the kept region out to
-// the window's edges, is the CHECKED dither (Hilight over the ground in one
-// device px cells, phase anchored at the lane's top-left); the THUMB is the
-// kept region: a 16 x 16 Windows-px ARROW BUTTON at each bound — Windows'
-// scroll-bar arrow buttons, the begin's pointing left and the end's right
-// (architect 2026-10-03, the rule at trim_arrow_button_w_px) — and between their
-// inner edges THE BODY, a PLAIN RAISED box on the ground the lane's full
-// height with no grip (the painter is render_trim_flags). The lane is ONE
-// RECT for paint and for every hit reader — the arrow buttons
-// (trim_endcap_rect takes the lane rect's y/h), the bridge's y-gate and the
-// framing double-click band — so paint and hit move together by
-// construction. 44 device rows at 275 %, 22 at 138 %. UNDER CLEARLOOKS
-// (architect 2026-10-07, the painters round's last part) the same lane, the
-// same caps' rects and the same body are GTK'S HORIZONTAL SCROLL BAR — the
-// trough, the caps and the slider (clearlooks_paint.h's trim block, where
-// the bar wears this 16 for GTK's 15) — and the trim bar still stands
-// outside the well, above the ruler, as his capture 00-17-24's bar stands
-// outside the list's frame. THE HEIGHT IS THE CHROME SPEC'S scroll_bar_px
-// (2026-10-08, one source for the lane, its caps and the popup lists' bar):
-// Windows' 16 under win2000 and clearlooks, CDE's own 13 under cde
-// (architect 2026-10-08 ~17:45: "the canonical scroll bar seems smaller than
-// the one we have … make them historically accurate"; the smaller-element
-// rule at chrome_spec.h's head) — the 3 W it saves the ruler lane's
-// (ruler_behind_flags).
-// THE RULER LANE'S HEIGHT IS DERIVED FROM THE LABEL FACE, NOT AUTHORED AND
-// SCALED (architect 2026-10-02). The lane stacks, from its top:
-//
-//     lane = pad + nearbyint(ascent) + scaled_px(ruler_baseline_to_marker_px)
-//
-// — the labels' line seated so their CAP TOP lands the spec's ruler_label_cap_top_px (the base's 4)
-// Windows px under the lane's top (the pad, derived from the face's own
-// ascent and cap height; paint_handler.cpp owns the rule), the face's ascent
-// to the baseline (line_baseline), then SEVEN WINDOWS PX from the baseline to
-// the marker lane's top (below). ONE HELPER seats the labels for both
-// readers — the painter's baseline and this height (ruler_label_baseline_px,
-// paint_handler.cpp) — so the two cannot disagree. The face is THE SMALL
-// FACE (gui_font.h, architect 2026-10-05), whose recorded cell is all cap —
-// a 6-row digit, WordPad's ruler's (ascent 6, cap 6, descent 0) — times the
-// scale at every scale: 4 + 6 + 7 = 17 Windows px at 100 %;
-//   400 % (k = 4): pad 16, ascent 24, baseline row 40, cap ink rows
-//     16..39: lane 40 + 28 = 68.
-//   275 % (the tablet): pad 11, ascent 16.5 -> 16 (the tie to even),
-//     baseline row 27, cap ink rows 11..26: lane 27 + 19 = 46.
-//   138 % (the laptop): pad 6, ascent 8.28 -> 8, baseline row 14, ink
-//     rows 6..13: lane 14 + 10 = 24.
-// The major ticks' rise above the marker lane is the painter's own and does
-// not enter the lane.
-//
-// THE BASELINE → MARKER LANE DISTANCE, SEVEN WINDOWS PX (architect
-// 2026-10-02, the U4 mock's "above 6, below 10" laptop rows re-authored at
-// the unit's change as 4 and 7). ITS SEAT IS ONE WINDOWS PX DOWN, INTO THE
-// MARKER LANE (architect 2026-10-05): the head's tip row lands on the marker
-// lane's own first row — its one Windows px of air above the flag box
-// (marker_lane_air_px) — touching the box's top edge, rather than flush on
-// the ruler lane's bottom; this term is unaffected by the head's own height,
-// so it alone settles constraint (a), that the tip never enters the flag
-// box: it never did, and still does not.
-//
-// THE HEAD'S HEIGHT NO LONGER MATCHES THIS DISTANCE PLUS THE AIR ROW AT
-// EVERY SCALE (architect 2026-10-05, the WordPad glyph replacing the
-// half-width table): the glyph is 8 Windows-px QUANTA tall
-// (kPlayheadHeadRows * u, u = waveform_line_px(), never scaled_px(8) — the
-// rounding rule's "sum of its rounded parts"), 8 / 24 / 32 device px at
-// 138 / 275 / 400 %, against the distance-plus-air sum of 11 / 22 / 32 the
-// old half-width table matched exactly. The two agree only at 400 %; at
-// 138 % the glyph is 3 rows SHORTER, so its top stands 3 rows below the
-// digits' baseline — no overlap at all, a small gap of ground instead; at
-// 275 % it is 2 rows TALLER, so its top rises 2 rows above the baseline,
-// into the digits' own ink — accepted under the same ruling as the
-// paragraph this one replaces, "a little overlap is fine" (and now, per his
-// 2026-10-05 wording, "whatever else it covers — digits, ticks — is fine").
-// CONSTRAINT (b), that the head's top never rises into the TRIM lane above
-// the ruler lane, holds at every one of the three with room to spare: the
-// ruler lane itself is 26 / 49 / 72 device rows (ruler_lane_h_px,
-// paint_handler.cpp), and the glyph's top row sits 19 / 28 / 44 device rows
-// down from the ruler lane's own top respectively — never within 18 rows of
-// its ceiling, let alone past it.
-// (THE TWO AUTHORED TERMS — the cap top's 4 and the baseline-to-marker 7 —
-// ARE THE CHROME SPEC'S since 2026-10-08, ruler_label_cap_top_px and
-// ruler_baseline_to_marker_px: the base's 4 / 7 under win2000 and
-// clearlooks.)
-//
-// THE RULER BEHIND THE FLAGS — CDE (architect 2026-10-08 ~17:30, his glass
-// pass: "the ticks reduced and the timestamp pushed down; the flags remain
-// as they are, but the ticks and the timestamp hide behind the flags (they
-// are not really that useful)"; the spec's ruler_behind_flags): the lane is
-// NOT derived from the face but is the LANE TABLE'S LEFTOVER, the spec's
-// ruler_lane_px, 4 W — what dtwm's frame and cde's other lanes leave of the
-// base's stack (chrome_stack_authored_h below proves it; 3 W for the
-// morning of 2026-10-09, while the toolbar's raised form took a row), 12
-// device rows at 300 %, 6 at 138 % — carrying the ticks, every one 3 W short (kRulerBehindTickPx),
-// the lane's whole height, hanging from its top, and the playhead's head, its band on the lane's
-// top — Motif's down arrow one W of body below it (the head block's cde
-// arm, 2026-10-08); the labels stand at the MARKER LANE'S rows, behind the
-// flags, their cap band centred on the flag label's (paint_ruler_row's
-// arm). The head's 10 W reach 7 W down into the marker lane, where a flag
-// under it covers its lower rows; the marker lane's 18 W and its hits are
-// the base's.
+// THE CANVAS COLUMN'S LANES — THE COLUMN'S AIR, the TRIM lane (the view
+// bar), the RULER lane and the MARKER lane, stacked in that order under the
+// icon row (main.cpp's lane table), the marker lane's bottom edge the
+// waveform's top with no gap: THE PROGRAM'S, COOL EDIT'S, THE SAME UNDER
+// EVERY CHROME (architect 2026-10-09; program_spec.h owns every length and
+// its source; the colors at the palette block's canvas-column paragraph).
+// Each lane is a composite of its rounded parts (scaled_px's rule): a line
+// is one quantum (program_line_px), a run of face or ground its own
+// scaled_px, the cue's triangle its quanta.
+//   THE AIR    5 W of face (column_air_h_px): 15 device rows at 300 %, 7 at
+//              138 %, 18 at 360 %.
+//   THE TRIM   the view bar, a line, the 6-W field, a line (trim_lane_h_px):
+//              24 / 10 / 30.
+//   THE RULER  17 W of ground and its bottom line (ruler_lane_h_px): 54 / 24
+//              / 65.
+//   THE MARKER 6 W above the cue's triangle and its five quanta
+//              (marker_lane_h_px): 33 / 13 / 42.
+inline int column_air_h_px() {
+    return scaled_px(kProgramSpec.column_air_px);
+}
+inline int view_bar_field_h_px() {
+    return scaled_px(kProgramSpec.view_bar_field_px);
+}
 inline int trim_lane_h_px() {
-    return scaled_px(live_chrome_spec().scroll_bar_px, 3);
+    return program_line_px() + view_bar_field_h_px() + program_line_px();
 }
-// Defined in paint_handler.cpp beside the label seat it reads; the rule is
-// the block above.
-int ruler_lane_h_px();
+inline int ruler_ground_h_px() {
+    return scaled_px(kProgramSpec.ruler_ground_px);
+}
+inline int ruler_lane_h_px() {
+    return ruler_ground_h_px() + program_line_px();
+}
+// THE CUE'S QUANTUM — the stem's own width, u = scaled_px(1, 1)
+// (program_spec.h's head: the triangles, the dots, the label's leads).
+inline int cue_unit_px() {
+    return program_line_px();
+}
+inline int cue_triangle_h_px() {
+    return kProgramSpec.cue_triangle_rows * cue_unit_px();
+}
+inline int cue_above_triangle_h_px() {
+    return scaled_px(kProgramSpec.cue_above_triangle_px);
+}
+inline int marker_lane_h_px() {
+    return cue_above_triangle_h_px() + cue_triangle_h_px();
+}
+// The label's baseline and the selected fill's rows, under the marker lane's
+// top (program_spec.h's marker lane fields).
+inline int cue_baseline_px() {
+    return scaled_px(kProgramSpec.cue_baseline_px);
+}
+inline int cue_fill_h_px() {
+    return scaled_px(kProgramSpec.cue_fill_px);
+}
+// The triangle's half-width beyond its apex column: four quanta (its widest
+// row nine quanta, the middle one the column's), and its reach right with
+// the shadow column: five.
+inline int cue_triangle_half_w_px() {
+    return (kProgramSpec.cue_triangle_rows - 1) * cue_unit_px();
+}
+// THE COLUMN'S AIR LANE (top lane 3, main.cpp; defined there beside the
+// other lane accessors).
+GuiRect top_column_air_area(const AppState& a);
 
-// THE MARKER LANE'S HEIGHT IS DERIVED FROM THE FLAG BOX, NOT AUTHORED
-// (architect 2026-10-02, the AC / AD sets' rule; the box re-ruled on the
-// body face's whole cell 2026-10-05): the flag box is its top edge band
-// (marker_flag_edge_h_px), ONE WINDOWS PX OF FACE, the
-// body face's recorded CELL (its ascent above the baseline, its descent from
-// the baseline's row down), ONE WINDOWS PX OF FACE and its bottom edge band,
-// every term a whole device row —
-//
-//     box  = edge + face + ascent + descent + face + edge
-//     lane = scaled_px(kMarkerLaneAirPx) + box
-//
-// THE CELL IS THE BODY FACE'S WHOLE 13 (ascent 11 + descent 2, Tahoma 8's
-// cell and MS Sans Serif 8's alike; gui_font.h's recorded metrics, read in
-// marker_lane_rows, paint_handler.cpp), not the label's ink (architect
-// 2026-10-05) — THE FLAG IS 1 + 1 + 11 + 2 + 1 + 1 = 17 WINDOWS PX, the
-// period's list row (kRowHeightPx, folder_overlay.h), so the
-// label's caps — Tahoma's 8 rows — get 4 Windows px above them (the cell's
-// top rows, the row "^" climbs into, and the face) and 3 below (the descent
-// and the face); MS Sans Serif's 9 (the windows chrome under a scheme
-// tagged MS Sans Serif, gui_font.h) get 3 above and the same 3 below, the
-// cap band centred in the box's inside. The label sits on the cell's
-// baseline at every scale, and a glyph poking past the cell or the box is
-// accepted (gui_font.h). THE BOX NEVER GROWS FOR A FACE'S OVERSHOOTS
-// (architect 2026-10-09, on FreeSans's "^", "{" and "}": "if we accommodate
-// them, the flag becomes too high"): an accent, a descender or a bracket
-// that passes the cell or the box is let through, never paid for in rows —
-// the box is the recorded cell and its four rows of edge and face under
-// every face. The
-// ascent and the descent are each rounded on their own (scaled_px), the box
-// the sum of its rounded parts. Every row the box gains or saves is THE
-// WAVEFORM'S (his ruling): the lane stack above it moves and the waveform's
-// leftover takes up the difference (main.cpp's vertical block).
-//
-// THE LANE IS THE BOX WITH ONE WINDOWS PX OF GROUND ABOVE IT AND NONE BELOW
-// IT (architect 2026-10-03): the box's bottom row is the lane's last row,
-// so the flag stands ON the well, touching its upper border line (the
-// waveform area's first row, the next lane down) and never overlapping it,
-// and the marker's
-// stem runs on from the box's bottom straight through the well's top lines
-// (waveform_stem_band), flanked by the box's outline carried down
-// (fill_stem_flanks, 2026-10-05). THE AIR ABOVE IS THE MINOR TICKS' (architect
-// 2026-10-03): the ruler's minor ticks start at the marker lane's top
-// (paint_ruler_row's minor_top), so that one px is where the comb stays
-// visible over a run of flags — "the minor ticks visible above the flags are
-// helpful" — which is why the air above is kept while the air below went.
-// The box's label is seated as a LINE under its face band (baseline = box
-// top + edge + face + ascent): 138 % box 1 + 1 + 15 + 3 + 1 + 1 = 22,
-// lane 23; 275 % 3 + 3 + 30 + 6 + 3 + 3 = 48, lane 51; 400 % 4 + 4 + 44 +
-// 8 + 4 + 4 = 68, lane 72 (2026-10-05; the air, the face bands and the
-// edges floored at one row). Every box
-// painter and every flag hit rect takes the BOX's rows
-// (marker_flag_box_band), never the lane's: the box is what is painted and
-// so what is pressed, and with no air under it there is no strip below a box
-// to press. THE THREE ARE DEFINED IN paint_handler.cpp beside the ruler's,
-// memoized on the scale the same way.
-inline constexpr int kMarkerLaneAirPx = 1;
-inline int marker_lane_air_px() {
-    return scaled_px(kMarkerLaneAirPx, 1);
-}
-// The face between the box's outline and the body's cell, above it and
-// below it (the rule above, architect 2026-10-05).
-inline constexpr int kMarkerFlagFacePx = 1;
-inline int marker_flag_face_px() {
-    return scaled_px(kMarkerFlagFacePx, 1);
-}
-int marker_flag_box_h_px();
-int marker_lane_h_px();
-// The box's band inside a marker lane rect `lane`: the lane less its air
-// above, the box's bottom the lane's bottom.
-inline GuiRect marker_flag_box_band(GuiRect lane) {
-    const int air = marker_lane_air_px();
-    return GuiRect{lane.x, lane.y + air, lane.w, marker_flag_box_h_px()};
-}
+// (THE TRIM LANE AS WINDOWS' MINIATURIZED SCROLL BAR — its 16-W track,
+// caps and thumb, GTK's bar under clearlooks and Motif's under cde — THE
+// RULER DERIVED FROM ITS SMALL FACE with the playhead's WordPad head on its
+// bottom rows, cde's ruler behind the flags, and THE MARKER LANE DERIVED
+// FROM THE 17-W FLAG BOX stood 2026-10-02 to 2026-10-09; git history.)
 
 // Authored pixel geometry of THE BOTTOM ROW — THE UNIFIED BOTTOM ROW, the
 // lane rows 8 and 9 merged into (architect-ruled 2026-08-12; the bottom
@@ -1666,152 +1541,42 @@ inline int bottom_row_h_px() {
 // text surface names its face, gui_font(face), and reads its vertical
 // metrics off the recorded constants.)
 
-// THE MARKER FLAG's anatomy, measured off row_5_lane_3_marker_unselected.png
-// (56x20 = a 1px left border plus a 55x20 fill box; the border's own record is
-// at marker_flag_border_px) and confirmed against row_5_full.png, where the same
-// box occupies rows 37..56 with the border at column 22 and the FILL — and the
-// stem running on below it — at column 23.
-//
-// LEFT-ANCHORED, NOT CENTERED. The composite settles it: the stem stands on
-// the box's leftmost column (its waveform_line_px() width running rightward
-// from there, under the fill, never under the border), so a marker's box
-// opens AT its frame and runs
-// rightward, exactly as a kdenlive guide label does. The old flag was centered
-// on its column (it was a symmetric shape with a tip); a text box is not
-// symmetric and has no tip, so centering it would put the frame under the
-// middle of a word.
-//
-// THE WIDTH IS DERIVED, NEVER FIXED: pad + shaped(truncated label) + pad, and
-// THE TWO PADS ARE EQUAL (architect 2026-08-01, at the row-5 live test).
-//
-// THE CROP SAYS 2 AND 3, AND THE ARCHITECT OVERRODE IT. Shaping the crop's
-// "Marker" offscreen through the same chokepoint at the same size (Liberation
-// Sans 16px, the face then) gives an advance of 49.797px with the first
-// glyph's left side bearing at exactly 1.00; against the 55px box that pins
-// the left pad at 2 (2 + 1.00 = column 3, where the crop's ink core starts)
-// and leaves 3 on the right. Reproduced faithfully, that extra right pixel READS as slack rather
-// than as padding — so the box goes symmetric at 2 and comes out 54 wide where
-// kdenlive's is 55. A measured pixel deliberately given up, recorded here so
-// the next reader does not "fix" it back.
-// TWO WINDOWS PX EACH SINCE THE UNIT'S CHANGE (architect 2026-10-02): the
-// laptop pixel's 2 converts to 1.45, and the nearer 1 would have halved the
-// laptop's pad to one device px against the box's edge; 2 is 6 device px at
-// 275 % (4 before) and 3 at 138 % (2 before).
-inline constexpr int kMarkerFlagPadRightPx = 2;
-inline constexpr int kMarkerFlagPadLeftPx  = 2;
-inline int marker_flag_pad_left_px() {
-    return scaled_px(kMarkerFlagPadLeftPx, 1);
-}
-inline int marker_flag_pad_right_px() {
-    return scaled_px(kMarkerFlagPadRightPx, 1);
-}
-// THE BOX'S TOP AND BOTTOM OUTLINE ROWS, one Windows px each (architect
-// 2026-10-03, the flat flag; the colours at render.h's palette block): the
-// outline's horizontals, inside the box's rows, so the box keeps its height.
-// The LEFT side and the run's closing RIGHT column are the border below, in
-// the same outline colour.
-inline constexpr int kMarkerFlagEdgePx = 1;
-inline int marker_flag_edge_h_px() {
-    return scaled_px(kMarkerFlagEdgePx, 1);
-}
-
 // THE WHOLE STACK IN WINDOWS PX — every lane a vocabulary lays above and
 // below the well, and the frame's two sides where the frame stands on the
-// maximised window (2026-10-08): the caption, the menu row's three terms,
-// the program's band (program_spec.h, 33 under every chrome), the scroll
-// bar's trim lane, the ruler (its authored leftover when it stands behind
-// the flags, else the label face's seat: the cap top, the small face's
-// ascent, the rows to the marker lane), the marker lane (its air, the flag
-// box's edges and faces round the body face's cell) and the program's dock
-// bar and row 8 (6 + 32 under every chrome). At 300 %
-// every term is a whole multiple of 3 device px, so two stacks equal here
-// leave the tablet's well the same rows.
+// maximised window (2026-10-08): the chrome's caption and the menu row's
+// three terms, then THE PROGRAM'S (program_spec.h, the same under every
+// chrome since 2026-10-09): the band 33, the canvas column's 42 (the air 5,
+// the view bar 8, the ruler 18, the marker lane 11) and the dock bar and
+// row 8 38. At 300 % every term is a whole multiple of 3 device px.
 constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
-    const GuiFaceMetrics& body =
-        s.face_set->metrics[static_cast<std::size_t>(GuiFace::Body)];
-    const GuiFaceMetrics& small =
-        s.face_set->metrics[static_cast<std::size_t>(GuiFace::Small)];
     const int frame = s.window_frame_maximized
         ? 2 * (s.window_frame_lines * kReliefLinePx + kWindowFramePx -
                2 * kReliefLinePx)
         : 0;
-    const int ruler = s.ruler_behind_flags
-        ? s.ruler_lane_px
-        : s.ruler_label_cap_top_px + small.ascent +
-              s.ruler_baseline_to_marker_px;
-    const int marker = kMarkerLaneAirPx + 2 * kMarkerFlagEdgePx +
-                       2 * kMarkerFlagFacePx + body.ascent + body.descent;
     const int row8 = program_dock_bar_authored_h(kProgramSpec) +
                      program_row8_authored_h(kProgramSpec);
     return frame + s.caption_height_px + s.menu_row_head_px +
            s.menu_row_content_px + s.menu_row_foot_px +
-           program_band_authored_h(kProgramSpec) + s.scroll_bar_px + ruler +
-           marker + row8;
+           program_band_authored_h(kProgramSpec) +
+           program_column_authored_h(kProgramSpec) + row8;
 }
-// THE BASE'S STACK, 122 above and 38 below (2026-10-09: the program's band
-// 33 and its dock bar and row 8 38, Cool Edit's own round its 20-W seat,
-// program_spec.h); clearlooks' its own 3 W taller (the leftover of its own
-// lanes, main.cpp's rule); CDE'S THE BASE'S EXACTLY — ITS RULER LANE THE
-// LEFTOVER (architect 2026-10-08 ~17:30–17:45): the frame's 5 + 5 and its
-// 17 / 27 / 33 / 13 / 18 / 38 leave the ruler 4 of the base's 160, so the
-// tablet's well at 300 % is 960 rows (320 W) under every chrome but
-// clearlooks' 951.
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 160);
-static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 163);
-static_assert(chrome_stack_authored_h(kChromeSpecCde) ==
-              chrome_stack_authored_h(kChromeSpecWin2000));
-// THE 1px LEFT BORDER (architect 2026-08-02), full box height, in the flag
-// outline's color (`flag_outline`, render.h's palette block). The
-// geometry clause that makes it a BORDER and not a wider
-// box is his and it is explicit: THE STEM STAYS ON THE FILL'S LEFTMOST COLUMN,
-// so the border sits one column to the LEFT of the marker's own frame column
-// and never over it. Nothing inside moved — the fill's origin is still the
-// frame column, its interior width is still pad + shaped + pad, and the label's
-// pen is still measured from the fill's origin. What widened is THE BOX, and
-// only leftward: the painter draws this column and the published hit rect
-// starts on it, so a press on the border is a press on the flag.
-//
-// AT THE VIEWPORT'S FIRST COLUMN THE BORDER IS SIMPLY CLIPPED AWAY. Both the
-// marker lane rect and the waveform area begin at window x = 0, so a flag there
-// paints its fill at 0 and its border at -1, off the surface, where cairo drops
-// it. That is the honest answer rather than a defect: pushing the fill right to
-// make room would move the flag off the frame column it names and off its own
-// stem, and the column alignment is the authored fact where the border is
-// decoration.
-//
-// AT THE LAST COLUMN THE BORDER IS WHAT SHOWS (architect 2026-09-26). The
-// marker lane is clipped to the waveform's columns [0, w) — every flag box,
-// flag-editor box and hit rect (clip_to_waveform_columns, render.cpp) — and
-// the flag iterator admits a flag whose box, THIS BORDER INCLUDED, reaches
-// into those columns. So a marker at grid point w (one past the last column)
-// paints this border ALONE on the last column(s), [w - border, w): one column
-// at the laptop's 138 %, three at the tablet's 275 %. No fill, no text and
-// no stem (the stem is
-// gated to [0, w)); its hit rect is that strip, so the border is clickable
-// as painted; and its open editor paints the very same columns, the field's
-// border standing where the resting flag's does.
-//
-// THE RUN CLOSES WITH ONE MORE SUCH COLUMN ON ITS RIGHT (architect 2026-09-25,
-// reversing "the box has no right border", which stood from 2026-08-02): a
-// short later flag standing over a long earlier one let the earlier tail run
-// on out of the later fill with nothing between them. The column stands just
-// past the fill of the run's RIGHTMOST box — the flag box on a cell-less run,
-// the upper cell where cells paint, the open field or its riding upper cell
-// under a marker-lane editor — in that box's own face.border, and it is inside
-// the published rect. Interior seams stay ONE column: the flag box's right
-// side against the lower cell is that cell's own left seam, never a closing
-// column plus a seam. It needs no clip rule of its own: past the waveform's
-// last column it is cut off like the fill it follows.
-inline constexpr int kMarkerFlagBorderPx = 1;
-inline int marker_flag_border_px() {
-    return scaled_px(kMarkerFlagBorderPx, 1);
-}
-// The label BASELINE, in device rows under the BOX's top (marker_flag_box_band,
-// never the lane's): the box's edge band, one Windows px of face, then the
-// body face's recorded ascent (architect 2026-10-05: the label sits on the
-// cell's baseline). Defined in paint_handler.cpp with the box's height (the rule at
-// marker_lane_h_px's block above).
-int marker_flag_baseline_px();
+// THE STACKS (2026-10-09, the canvas column Cool Edit's): WIN2000 113 above
+// and 38 below, 151 — the tablet's well at 300 % 987 rows (329 W);
+// CLEARLOOKS 3 W taller above (its caption and menu bar), 154 — 978 rows;
+// CDE its frame's 5 + 5 and its taller caption and menu bar, 167 — 939 rows
+// of the app's 1410 (the ruler no longer the leftover that held the base's
+// 160 under cde: the ruler is the program's 18 under every chrome, so each
+// chrome's well is its own lanes' leftover, main.cpp's rule).
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 151);
+static_assert(chrome_stack_authored_h(kChromeSpecClearlooks) == 154);
+static_assert(chrome_stack_authored_h(kChromeSpecCde) == 167);
+// AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
+// box's rule kept for the cue): the marker lane paints inside the waveform's
+// columns [0, w) — every triangle, label, editor field and hit rect
+// (clip_to_waveform_columns, render.cpp) — and the flag iterator admits a
+// marker whose triangle reaches into them (its left edge four quanta left of
+// its column), so a marker just past the last column shows the left half of
+// its triangle there, and no dots (the stem stash is gated to [0, w)).
 // THE PLAY-SCRUB'S CHANNEL AND THUMB HEIGHTS, here because they count relief
 // lines (the slider's block, with its constants, is above): the channel its
 // four lines, the thumb its rows above the channel, the channel and its rows
@@ -1840,20 +1605,19 @@ inline int waveform_border_px() {
 // holding 50 %; the laptop's 138 %), 2 from 150 % through 250 % (banker's
 // rounding takes 2.5 to 2), 3 above that (the tablet's 275 %) and 4 at the
 // 350 % ceiling.
-// ITS READERS, grepped at the ruling — the one inventory of the class, each
-// an ALIASED INTEGER RECT [col, col + t) whose left edge is the item's own
-// column and which is clipped to the waveform's columns [0, w): the marker
-// stems in both columns and the `h` diff lane (paint_marker_stems), the
-// playhead's waveform segment and the scanner (render_playhead), the
-// playhead's run through the marker lane and the ruler ticks
-// (paint_ruler_row), the zoom anchor stem (render_strip_anchor_stem), and the
-// phase-reset lead-in ring's four sides (t thick, its left side on the
-// stem's own columns); and the lit plate's inner OUTLINE, an erosion at
-// distance t (outline_bar, render.cpp, t riding the plate job and its
-// fingerprint). The playhead HEAD widens each row by t − 1 on the right so it
-// stays centred on the stem (paint_ruler_row). NOT a reader: the plate
-// column, one device pixel by rule — resolution, not size — with its bar's
-// one-row floor.
+// ITS READERS — the one inventory of the class, each an ALIASED INTEGER
+// RECT [col, col + t) whose left edge is the item's own column and which is
+// clipped to the waveform's columns [0, w): the scanner (render_playhead),
+// the zoom anchor stem (render_strip_anchor_stem), the phase-reset lead-in
+// ring's four sides (t thick, its left side on the reset's own columns), the
+// lit plate's inner OUTLINE, an erosion at distance t (outline_bar,
+// render.cpp, t riding the plate job and its fingerprint) — and, since
+// 2026-10-09, THE PROGRAM'S QUANTUM u (program_line_px and cue_unit_px are
+// the same scaled_px(1, 1)): the cues' and the playhead's dots
+// (fill_dotted_waveform_line), the ruler's ticks, the cues' triangles and
+// the playhead's head, whose apex is the column's own t wide. NOT a reader:
+// the plate column, one device pixel by rule — resolution, not size — with
+// its bar's one-row floor.
 inline int waveform_line_px() {
     return scaled_px(1, 1);
 }
@@ -1874,35 +1638,27 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
                     static_cast<double>(end - col), y1 - y0);
     cairo_fill(cr);
 }
-// THE STEM'S FLANKS (architect 2026-10-05, the flag "A+"): a marker's stem
-// crosses the well's top lines between TWO OUTLINE COLUMNS, the flag box's
-// outline carried down both sides of it, so the stem never touches the
-// well's lines. Each flank is the outline's own width
-// (marker_flag_border_px), the left one [col − b, col) and the right one
-// [col + t, col + t + b) beside the stem's [col, col + t); in the caller's
-// source color (the outline's, `flag_outline`). GATED ON THE
-// STEM'S OWN COLUMN as fill_waveform_line is (no stem, no flanks), each flank
-// CLIPPED to the strip's columns [0, area_w). In the marker lane the flanks
-// are the box's own outline — its left border column and its bottom row —
-// so only the well's rows are painted here (waveform_well_top_band); the
-// canvas below is not touched. One painter, paint_marker_stem_flanks, from
-// the stems' stash, so every flag kind (both live columns, the bound cells'
-// flag, the open payload editor, the `h` diff flags) flanks alike and a
-// DISABLED flag, publishing no stem, has none.
-inline void fill_stem_flanks(cairo_t* cr, int area_x, int area_w, int col,
-                             double y0, double y1) {
-    if (col < 0 || col >= area_w) return;
-    const int t  = waveform_line_px();
-    const int b  = marker_flag_border_px();
-    const int l0 = (col - b > 0) ? col - b : 0;
-    if (col > l0)
-        cairo_rectangle(cr, static_cast<double>(area_x + l0), y0,
-                        static_cast<double>(col - l0), y1 - y0);
-    const int r0 = col + t;
-    const int r1 = (r0 + b < area_w) ? r0 + b : area_w;
-    if (r1 > r0)
-        cairo_rectangle(cr, static_cast<double>(area_x + r0), y0,
-                        static_cast<double>(r1 - r0), y1 - y0);
+// THE DOTTED LINE (architect 2026-10-09, Cool Edit's cue and cursor columns,
+// METRICS §4.2 / §4.3): the line's own column and edge rules
+// (fill_waveform_line), its rows [y0, y1) counted in quanta t from y0, a
+// dot one quantum tall on every quantum row k with k ≡ `phase` (mod
+// `period`), the last cut at y1 — the cues on phase 3 and the playhead on
+// phase 1 of 4 (program_spec.h's dot fields), so the two interleave on one
+// column. In the caller's source color.
+inline void fill_dotted_waveform_line(cairo_t* cr, int area_x, int area_w,
+                                      int col, int y0, int y1, int period,
+                                      int phase) {
+    if (col < 0 || col >= area_w || period <= 0) return;
+    const int t   = waveform_line_px();
+    const int end = (col + t < area_w) ? col + t : area_w;
+    for (int k = phase; y0 + k * t < y1; k += period) {
+        const int top = y0 + k * t;
+        const int bot = top + t < y1 ? top + t : y1;
+        cairo_rectangle(cr, static_cast<double>(area_x + col),
+                        static_cast<double>(top),
+                        static_cast<double>(end - col),
+                        static_cast<double>(bot - top));
+    }
     cairo_fill(cr);
 }
 // THE SCALE IS THE ONE THING A FLAG CUTS (architect 2026-09-19, replacing the
@@ -1954,13 +1710,13 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // bound with nothing added for it. Nothing is LAID OUT against this constant;
 // every cell's real width comes from its own shaped run.)
 
-// An UPPER BOUND on a flag box's painted width, used only to decide how far
-// LEFT of the viewport a marker may sit and still reach into it (flags run
-// rightward, so the left cull needs a width and the right cull only the left
-// border's reach, which the iterator reads itself). No
-// ASCII glyph in a sans face advances more than one em, so glyphs * em + the
-// two pads bounds every box the truncation can produce. A bound, not a size:
-// nothing is laid out against it.
+// An UPPER BOUND on a cue's label reach right of its column, used only to
+// decide how far LEFT of the viewport a marker may sit and still reach into
+// it (labels run rightward, so the left cull needs a width and the right
+// cull only the triangle's left reach, which the iterator reads itself). No
+// ASCII glyph in a sans face advances more than one em, so glyphs * em plus
+// the label's lead and pad bounds every label the truncation can produce. A
+// bound, not a size: nothing is laid out against it.
 //
 // THE GLYPH COUNT IS THE WORST PAINTED TOTAL, spelled out of the display
 // composer's own grammar (flag_display_text): FOUR bytes of base (a tempo is
@@ -1974,9 +1730,9 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // under the `*N.NN...` it replaces there. The phase-reset token (five bytes)
 // is far under it, which is why ONE bound still serves both columns.
 //
-// `iteration_on` ADDS THE TWO BOUND CELLS, and it must: an eligible flag runs
-// two cells further right than its label predicts (each a seam column, two
-// pads and kIterCellGlyphs glyphs), and a bound that no longer bounds would
+// `iteration_on` ADDS THE TWO BOUND CELLS, and it must: an eligible label runs
+// two segments further right than its payload predicts (each the segment
+// gap, its pads and kIterCellGlyphs glyphs), and a bound that no longer bounds would
 // cull a marker whose flag still reached into the viewport. The cells' shape
 // is FIXED, so this stays a constant-time bound rather than becoming a
 // measurement, and it is charged flat rather than per marker — every carrier
@@ -1992,61 +1748,50 @@ inline constexpr size_t kIterCellGlyphs = 5;
 // few offscreen markers per frame costs a shaped run each and drops nothing
 // visible.
 //
-// THE FLAG'S OWN LEFT BORDER IS DELIBERATELY NOT IN IT. This bound answers
-// "how far RIGHT of its frame column can a box reach", and that border grows
-// the box the other way — leftward, away from the viewport — so adding it
-// would only over-admit culled markers by one column and never save a visible
-// one. The cells' seam columns ARE in it: they stand to the right. So is the
-// run's CLOSING column (2026-09-25), charged ONCE on the flag term, since a
-// run has exactly one whether or not cells follow.
+// A cue has no left border (2026-10-09): the triangle's left reach is the
+// iterator's own right-cull term, never a width to the right.
 inline double marker_flag_max_width_px(bool iteration_on) {
     const size_t glyphs = 4 +                                  // `N.NN` base
                           5 * kMaxTempoDeviationTerms +        // `+0.01` each
                           1 + kMarkerFlagScaleGlyphs +         // `*N.NN`
                           kMarkerLabelTruncationMarker.size();
-    const double pads = static_cast<double>(marker_flag_pad_left_px() +
-                                            marker_flag_pad_right_px());
-    const double glyph_bound = gui_font_advance_bound_px(gui_font(GuiFace::Body));
-    const double flag = static_cast<double>(glyphs) * glyph_bound +
-                        pads +
-                        static_cast<double>(marker_flag_border_px());  // closing
-    if (!iteration_on) return flag;
-    const double cell = static_cast<double>(kIterCellGlyphs) * glyph_bound +
-                        pads + static_cast<double>(marker_flag_border_px());
-    return flag + 2.0 * cell;
+    const int u = cue_unit_px();
+    const double glyph_bound =
+        gui_font_advance_bound_px(gui_font(GuiFace::Program));
+    // The payload's lead and its fill's pad past the text.
+    const double label =
+        static_cast<double>(glyphs) * glyph_bound +
+        static_cast<double>((kProgramSpec.cue_label_lead +
+                             kProgramSpec.cue_fill_pad) * u);
+    if (!iteration_on) return label;
+    // Each cell: the segment gap and its two pads round its glyphs.
+    const double cell =
+        static_cast<double>(kIterCellGlyphs) * glyph_bound +
+        static_cast<double>((kProgramSpec.cue_segment_gap +
+                             2 * kProgramSpec.cue_fill_pad) * u);
+    return label + 2.0 * cell;
 }
 
-// THE TRIM CAPS ARE WINDOWS' SCROLL-BAR ARROW BUTTONS (architect 2026-10-03:
-// "the arrows are truthful: the left arrow is the begin, the right one the
-// end"): a 16 x 16 Windows-px PLAIN RAISED button at each end of the thumb —
-// square on the trim lane's full height, both the chrome spec's
-// scroll_bar_px (16 under win2000 and clearlooks, 13 under cde, Motif's
-// beveled arrow in it), read here, the one owner of the width — the ground
-// under the plain raised edge
-// and an arrow glyph in the label, no hover face, and from the press on it to
-// the gesture's end the PRESSED scroll arrow (render_trim_flags; the palette
-// block's trim paragraph) — under clearlooks the light bar's own cap on the
-// same box, the engine's arrow (paint_cl_stepper).
-// THE BEGIN BUTTON'S LEFT EDGE STANDS ON THE BEGIN COLUMN and its arrow
-// points LEFT; THE END BUTTON'S RIGHT EDGE STANDS ON THE END COLUMN and its
-// arrow points RIGHT; the thumb's BODY runs between the two buttons' inner
-// edges. NARROW: when both bounds are in view and the window's drawn width
-// (end column − begin column + 1) is under two buttons, the BEGIN BUTTON
-// STAYS ANCHORED on its column and the END BUTTON STANDS IMMEDIATELY RIGHT OF
-// IT, edge to edge (architect 2026-10-03), so the right arrow alone overruns
-// its column — by 2 x 16 Windows px − the width, in device px 2 x the button
-// − the width — and the body is empty; from two buttons' width up each
-// button sits on its own column (the rect owner is trim_endcap_rect). OFF
-// SCREEN: a bound out of view paints no button and the body runs past that
-// window edge by its edge's thickness — a cap off screen is simply off
-// screen. THE BUTTON IS THE TARGET: its painted rect is the hit band, with no
-// tolerance added. 44 x 44 device px at 275 %, 22 x 22 at 138 %, 8 x 8 at
-// 50 % (under cde 39 x 39 at 300 %, 18 x 18 at 138 %), floored at 3 as the
-// lane is so the two stay square.
-inline int trim_arrow_button_w_px() {
-    return scaled_px(live_chrome_spec().scroll_bar_px, 3);
+// THE VIEW BAR'S GRABS (architect 2026-10-09: the trim bar's hit geometry
+// "stays what it is, re-read off the new painted rects"): the begin and end
+// GRABS are the span's two END ZONES, each this many W wide — the bar's own
+// height, 8 W, square on the lane as Windows' caps were — standing on the
+// bound's column inside the span (the begin's left edge on the begin column,
+// the end's right edge on the end column), and the BRIDGE the span's body
+// between them (render_trim_flags publishes all three; trim_endcap_rect and
+// trim_bridge_gap own the rule). NO CAP IS DRAWN: the span's own bevel is its
+// only edge (METRICS §3, "the span's own bevel is the only edge"), so the
+// zones are the span's painted columns read as its two ends. NARROW: where
+// the span is under two zones wide the begin zone keeps its column and the
+// end zone stands edge to edge right of it, overrunning the end column by
+// the difference — the one place a grab stands past the painted span, kept
+// so a narrow window's two ends are always both grabbable (trim_endcap_rect's
+// rule, 2026-10-03).
+inline int view_bar_grab_w_px() {
+    return trim_lane_h_px();
 }
-// THE ARROW GLYPH, Windows' scroll arrow: its pixel form is four columns
+// THE ARROW GLYPH, Windows' scroll arrow — THE POPUP LISTS' SCROLL BAR'S
+// since 2026-10-09 (the trim caps that first wore it are gone): its pixel form is four columns
 // 1, 3, 5 and 7 Windows rows tall from the tip, each centred on the middle
 // row — a 4 x 7 triangle. THE CHROME IS SCALABLE (architect 2026-10-06, his
 // glass: "still the pixelated icon versions"), so it is drawn as ONE FILLED
@@ -2060,197 +1805,16 @@ inline int trim_arrow_button_w_px() {
 // below the glyph). Antialiased (the lane paints aliased; the triangle alone
 // takes cairo's default). At 400 % (u 4): 16 x 28 in the 64 x 64 case, at
 // (+24, +18); at 138 % (u 1): 4 x 7 in 22 x 22 at (+9, +7). The arrows have
-// no disabled face: the trim lane has no state that greys them. (The
-// win2000 arm's; clearlooks draws the engine's chevron, paint_cl_stepper.)
+// no disabled face. (The win2000 arm's; clearlooks draws the engine's
+// chevron, paint_cl_scrollbar_stepper, and cde Motif's arrow.)
 inline constexpr int kTrimArrowGlyphWPx = 4;
 inline constexpr int kTrimArrowGlyphHPx = 7;
 
-// THE PLAYHEAD HEAD IS WORDPAD'S RULER INDENT MARKER (architect 2026-10-05,
-// retiring the kdenlive-derived half-width table below): a FIXED 9 x 8
-// Windows-px marker measured from a Windows 95 screenshot — geometry only,
-// its own colours were never trusted (below) — seated tip-down ONE WINDOWS
-// PX INTO THE MARKER LANE exactly as before (the seat rule is
-// ruler_baseline_to_marker_px's; the move itself did not change, only the
-// shape that is moved). The composite's height and width are the quantum
-// u = scaled_px(1, 1) SUMMED OVER THE GLYPH'S OWN ROWS AND COLUMNS
-// (kPlayheadHeadRows * u tall, kPlayheadHeadCols * u wide) — never a single
-// rounded whole (scaled_px(8) is RETIRED with the table it served; the
-// rounding rule is "a composite is the sum of its rounded parts").
-//
-// THE CHROME IS SCALABLE (architect 2026-10-06: anti-aliasing is not a
-// colour), so the marker is DRAWN AS NESTED OUTLINES in the glyph's Windows
-// px, its diagonals true diagonals, smooth at 400 % as the trim lane's
-// scroll arrows and the caption's Close X are — no longer one integer
-// rectangle per cell. THE BITMAP BELOW STAYS AS THE MEASURE: it is the
-// marker's pixel form at 100 %, and the outlines are derived from it by one
-// rule, checked against it at compile time (playhead_head_glyph_is_rings).
-// THE RINGS: ring k (k = 0 the silhouette, 1 the bevel's outer edge, 2 the
-// face) is the pentagon
-//     (k, k) (9 - k, k) (9 - k, 4) (4.5, 8 - k) (k, 4)
-// — its TOP and its VERTICALS as the bitmap has them (the full rows' outer
-// edges, the verticals ending at row 4's top, y = 4), its TIP the ring's
-// tip cell's outer edge at that cell's centre (the scroll arrows' own
-// construction: the base the far column's outer edge, the tip the tip
-// column's outer edge at the middle). The outline is ring 0 less ring 1, in
-// K's role; the bevel is ring 1 less ring 2, W's role on its top and left,
-// S's on its right — S OWNS THE TOP-RIGHT CORNER as the bitmap's column 7
-// does (the split leaves the ring along x = 7 between y = 1 and 2) — and
-// the two meet at the tip on the axis, x = 4.5; the face is ring 2, in
-// '.''s role. The four are ONE PARTITION painted in one group by addition,
-// so their shared antialiased edges sum to whole pixels and no colour
-// bleeds between them, then the group over the ruler (paint_ruler_row).
-//
-// THE TIP COLUMN (column 4 of 9, zero-based — kPlayheadHeadGlyph's row7)
-// CENTRES ON THE STEM'S OWN COLUMNS WITH NO REMAINDER: the stem is
-// waveform_line_px() = t columns wide and t is scaled_px(1, 1) too — the
-// identical expression as u — so the tip cell and the stem are the SAME
-// WIDTH at every scale, the drawn tip (4.5u in) lands on the stem's centre,
-// and with nine (an odd count) columns the four either side are exactly
-// symmetric on the stem with nothing left over to floor.
-//
-// THE GLYPH (K the outline, W the hilight bevel, S the shadow bevel, '.' the
-// chrome ground, '_' TRANSPARENT — left unpainted, so whatever this painter
-// already laid down there, a ruler label or a tick, shows through):
-//     row0  KKKKKKKKK
-//     row1  KWWWWWWSK
-//     row2  KW.....SK
-//     row3  KW.....SK
-//     row4  _KW...SK_
-//     row5  __KW.SK__
-//     row6  ___KSK___
-//     row7  ____K____
-// Rows 0-3 are the glyph's full nine columns, the widest the head ever
-// paints; rows 4-7 taper two columns a row, the same WordPad silhouette, tip
-// row7 a single K cell. K paints in the theme's LABEL role — COLOR_BTNTEXT,
-// the role Windows maps a toolbar or ruler bitmap's black to, the same role
-// the ruler labels and the trim lane's arrow glyph already paint in; W
-// paints in HILIGHT, S in SHADOW (the relief quartet's own two roles, never
-// a literal); '.' paints in GROUND, the chrome's own face colour, so the
-// glyph reads as a small raised chip on the chrome rather than a flat
-// silhouette — OPAQUE (architect 2026-10-02, "the classic Windows way"),
-// painting over whatever this painter already laid down in its band, the
-// labels and the ticks' rise, same as the retired table's shape did.
-//
-// NO HOLD LAMP (architect 2026-10-05): every region keeps its code's role
-// whether or not AppState::camera_hold stands.
-//
-// THE OLD HEIGHT, scaled_px(kPlayheadHeadHeightPx) with the retired
-// kPlayheadHeadHeightPx = 8, does NOT equal the new 8u at every scale: 8, 24
-// and 32 device px at 138 / 275 / 400 % against the old 11, 22 and 32 — the
-// two agree only at 400 %. The seat arithmetic this forces is at
-// ruler_baseline_to_marker_px's paragraph above; it still holds his two
-// constraints (the tip never enters the flag box, the head's top never
-// rises into the trim lane) at every one of the three.
-//
-// THE FLOOR OF 1 IS UNIFORM: the quantum u = scaled_px(1, 1) is floored at 1
-// by construction, so the marker can never collapse to zero at any gui_scale
-// in [50, 1000].
-inline constexpr int kPlayheadHeadRows = 8;
-inline constexpr int kPlayheadHeadCols = 9;
-inline constexpr char kPlayheadHeadGlyph[kPlayheadHeadRows][kPlayheadHeadCols] = {
-    {'K','K','K','K','K','K','K','K','K'},
-    {'K','W','W','W','W','W','W','S','K'},
-    {'K','W','.','.','.','.','.','S','K'},
-    {'K','W','.','.','.','.','.','S','K'},
-    {'_','K','W','.','.','.','S','K','_'},
-    {'_','_','K','W','.','S','K','_','_'},
-    {'_','_','_','K','S','K','_','_','_'},
-    {'_','_','_','_','K','_','_','_','_'},
-};
-// THE RINGS' RULE, CHECKED AGAINST THE BITMAP: a cell's depth is its distance
-// in cells from the silhouette's nearest side — the top (its row), the left
-// and the right (its column from each vertical in rows 0-3, from each
-// diagonal's staircase in rows 4-7) — and the bitmap is K at depth 0, '.' at
-// 2 and over, '_' outside, and at depth 1 S where the right side is nearest
-// (a tie included: the top-right corner and the tip) and W elsewhere. So the
-// pentagons above, which follow those sides, are the bitmap's own rings.
-inline constexpr bool playhead_head_glyph_is_rings() {
-    constexpr int mid = kPlayheadHeadCols / 2;   // the tip column, 4
-    for (int r = 0; r < kPlayheadHeadRows; ++r) {
-        const int taper = r < mid ? 0 : r - (mid - 1);   // rows 4-7: 1..4
-        for (int c = 0; c < kPlayheadHeadCols; ++c) {
-            const int left  = c - taper;
-            const int right = (kPlayheadHeadCols - 1 - taper) - c;
-            char want = '_';
-            if (left >= 0 && right >= 0) {
-                int d = r < left ? r : left;
-                if (right < d) d = right;
-                want = d == 0 ? 'K' : d >= 2 ? '.' : right == 1 ? 'S' : 'W';
-            }
-            if (kPlayheadHeadGlyph[r][c] != want) return false;
-        }
-    }
-    return true;
-}
-static_assert(playhead_head_glyph_is_rings(),
-              "kPlayheadHeadGlyph must be the rasterized rings of the "
-              "pentagon rule (render.h's head paragraph)");
-// UNDER CDE THE HEAD IS MOTIF'S BEVELED DOWN ARROW (architect 2026-10-08
-// ~19:00-20:05, his glass pass: "more triangular", "as close as possible to
-// the source — whether it's the calendar arrows or the scrollbar"): the
-// triangle XmeDrawArrow draws (paint_cde_arrow_triangle, the trim caps' own),
-// pointing DOWN at the playhead, IN THE CHROME'S TONES — the face the body,
-// the three edges one W wide, the base and the left edge the top shadow
-// (HILIGHT under the Solaris scheme), the right edge the bottom shadow
-// (SHADOW) — and NO OUTLINE (the Windows glyph's K ring is Windows'; the
-// Motif arrow has none). THE PROPORTION IS THE SOURCES' SQUARE: dtcm's
-// "Today" arrows (tmp/cde15solaris9-1-1.png) 11 px across the base and 11
-// from the base to the apex, the notepad bar's arrows 11 x 11 (rows
-// 384-394) — base = height, the apex on the base's midline. THE SIZE IS HIS
-// PICK "c" of the proportional sheet (~20:05, squares 7-12 W): BASE 9 W,
-// HEIGHT 9 W, under ONE W OF BODY above it (his "slight gap above") — the
-// base's top row the ruler lane's top + 1 W, the apex's last row lane top
-// + 10 W, clear of the timestamp digits behind the flags (at 300 % their
-// cap top stands on the lane's row 30 by the recorded metrics — the lane's
-// 9 (3 W since 2026-10-09), the air's 3, the flag's 3 + 3 + 33 to its
-// baseline, less 3 to centre the small cap's 18 on the body's 24 — and the
-// head's last row is its row 29, the row directly above them). Each length is a count of the head's quantum u, as the Windows
-// glyph's are, so the base's nine units centre on the stem's columns with
-// no remainder (the middle unit the stem's, an odd count) — the base
-// equalling the Windows glyph's width is the fit's coincidence, not a rule.
-// The gap's row is painted the body across the base's width, so a tick
-// under the head does not show above it; the head's band is the gap and the
-// triangle, its half-width beyond the stem four units: the two bounds below
-// answer by vocabulary, the painter, its cull and its clip reading them.
-inline constexpr int kPlayheadHeadMotifBaseUnits   = 9;
-inline constexpr int kPlayheadHeadMotifHeightUnits = 9;
-inline constexpr int kPlayheadHeadMotifGapUnits    = 1;
-static_assert(kPlayheadHeadMotifBaseUnits % 2 == 1,
-              "the Motif head's base must be an odd count of units, its "
-              "middle unit the stem's");
-inline bool playhead_head_is_motif() {
-    return live_chrome_spec().vocabulary == GuiChromeVocabulary::Cde;
-}
-// THE ONE QUANTUM, shared by every glyph unit and identical to the stem's
-// own width by construction (both are scaled_px(1, 1)) — named here for the
-// painter rather than read as waveform_line_px() twice over, so the two
-// callers (the glyph's own unit, the stem's column width) read as one
-// fact even though they are, in the end, the same call.
-inline int playhead_head_unit_px() {
-    return scaled_px(1, 1);
-}
-// THE HEAD'S HEIGHT IN DEVICE ROWS, the ONE expression of it for the
-// painter's band (paint_ruler_row): kPlayheadHeadRows quanta, summed —
-// never scaled_px(kPlayheadHeadRows) (the rounding rule above). NO FLOOR
-// beyond the quantum's own: the glyph cannot collapse at any gui_scale in
-// [50, 1000].
-inline int playhead_head_h_px() {
-    if (playhead_head_is_motif())
-        return (kPlayheadHeadMotifGapUnits + kPlayheadHeadMotifHeightUnits) *
-               playhead_head_unit_px();
-    return kPlayheadHeadRows * playhead_head_unit_px();
-}
-// THE GLYPH'S HALF-WIDTH BEYOND THE STEM, in device px: the four columns
-// either side of the tip column, each one quantum — (kPlayheadHeadCols - 1)
-// / 2 of them — the painter's and the off-screen cull's one width term:
-// rows 0-3 use the glyph's full width, rows 4-7 taper inward, so this bound
-// (the widest row's half) still covers every row, and the drawn rings lie
-// inside the bitmap's box, their antialiased edges included.
-inline int playhead_head_half_w_px() {
-    if (playhead_head_is_motif())
-        return (kPlayheadHeadMotifBaseUnits - 1) / 2 * playhead_head_unit_px();
-    return (kPlayheadHeadCols - 1) / 2 * playhead_head_unit_px();
-}
+// (THE PLAYHEAD HEAD WAS WORDPAD'S RULER INDENT MARKER — a 9 x 8 W glyph in
+// the chrome's label, hilight, shadow and ground, drawn as nested rings and
+// checked against its bitmap, and under cde Motif's beveled arrow — from
+// 2026-10-05 to 2026-10-09; it is Cool Edit's yellow triangle since, the
+// cue's own (the palette block's playhead paragraph). Git history.)
 
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, its
 // seat under the pointer, the three durations of its life and the slop of its
@@ -2788,16 +2352,16 @@ inline int popup_scroll_top_at_thumb(const PopupScrollBar& b, int thumb_y) {
     return std::clamp(static_cast<int>(std::nearbyint(t * b.max_top)), 0,
                       b.max_top);
 }
-// THE BAR'S PICTURE (defined in render.cpp beside the trim bar's painters):
-// under win2000 Windows' vertical scroll bar — the track the trim track's
-// checker (Hilight over the ground at one device px a cell, its phase the
-// bar's top-left), the thumb a PLAIN RAISED box on the ground with no grip,
-// the two arrows the trim caps' buttons turned (plain raised, the scroll
-// arrow pointing up and down, the pressed face the caps' while `held` names
-// one); under clearlooks squeeze's own gummy GtkScrollbar — the classic
-// trough, the gummy steppers and the spot[1] gummy slider with its grips
-// (clearlooks_paint.h's vertical block, 2026-10-08; the trim lane keeps its
-// own caps and light slider). No hover face under either.
+// THE BAR'S PICTURE (defined in render.cpp beside the view bar's painter):
+// under win2000 Windows' vertical scroll bar — the track Windows' checker
+// (Hilight over the ground at one device px a cell, its phase the bar's
+// top-left), the thumb a PLAIN RAISED box on the ground with no grip, the
+// two arrows Windows' scroll-arrow buttons (paint_trim_arrow_button: plain
+// raised, the arrow pointing up and down, the pressed face while `held`
+// names one); under clearlooks squeeze's own gummy GtkScrollbar — the
+// classic trough, the gummy steppers and the spot[1] gummy slider with its
+// grips (clearlooks_paint.h's vertical block, 2026-10-08); under cde Motif's
+// (cde_paint.h's scroll-bar block). No hover face under any.
 void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
                             PopupScrollPart held);
 
@@ -2856,15 +2420,11 @@ inline int waveform_channel_split_row(int area_h, int inset_px) {
 // requirement, and neither owns the other.
 //
 // RECORDED MISMATCH, live and deliberate: the cursor's HEAD on the
-// ruler lane's bottom rows is WIDER than this reach at every scale. The
-// head's widest rows (its own glyph's rows 0-3, kPlayheadHeadGlyph,
-// architect 2026-10-05) are its full kPlayheadHeadCols = 9 columns, 9 *
-// waveform_line_px() off the glyph's own quantum — 9 px at 50 % and at
-// 100 %, 9 at 138 %, 27 at 275 %, 36 at 350 % and 90 at the 1000 % ceiling
-// — against this ± 15-at-275 % reach, which rides a
-// different authored unit. Both scale, and neither is a function of the
-// other, so the gap is a fact at every scale rather than a 100%-only
-// observation. It is harmless as
+// ruler's bottom rows (the cue's triangle, 2026-10-09) is WIDER than this
+// reach at some scales — its widest row nine quanta plus the shadow's
+// tenth, 10 px at 100 % and at 138 %, 30 at 300 %, 40 at 360 % — against
+// this ± 15-at-275 % reach, which rides a different authored unit. Both
+// scale, and neither is a function of the other. It is harmless as
 // the damage rule stands — narrow damage is reserved for the two per-frame
 // SCANNER sites, and the scanner is waveform-only and draws no head, while
 // every discrete CURSOR move takes full waveform-area damage (the rule and the
@@ -2886,29 +2446,26 @@ inline int playhead_half_px() {
 // characters any more.)
 
 
-// Screen-coord rect of one rendered flag, keyed back to its marker index.
-// Emitted in the same order flags appear left-to-right. It is the WHOLE PAINTED
-// BOX — the 1px left border included, so its x sits one column left of the
-// marker's frame column (marker_flag_border_px), and the run's closing right
-// column included where the producer painted one (2026-09-25) — because this
-// stash has always been the painted extent and a click on the border is a
-// click on the flag. IT IS CLIPPED TO THE WAVEFORM'S COLUMNS [0, w) as the
-// pixels are (architect 2026-09-26, clip_hit_rect_to_waveform_columns,
-// render.cpp): a flag cut off at the last column claims its visible part, and
-// a marker at grid point w claims its left-border strip alone; the two cell
-// boundaries stay where the painter put them.
+// Screen-coord rects of one rendered cue, keyed back to its marker index,
+// emitted left to right. It is the PAINTED EXTENT — the label's box and the
+// triangle (below) — because this stash has always been what the pixels
+// show. IT IS CLIPPED TO THE WAVEFORM'S COLUMNS [0, w) as the pixels are
+// (architect 2026-09-26, clip_hit_rect_to_waveform_columns, render.cpp): a
+// cue cut off at an edge claims its visible part; the two cell boundaries
+// stay where the painter put them.
 //
-// IT SPANS THE TWO ITERATION BOUND CELLS TOO where they
-// paint: each is the flag continued, so all of it is ordinary flag surface for
-// press, drag and select and the rect covers the whole run. The two
+// THE LABEL'S BOX SPANS THE TWO ITERATION BOUND CELLS TOO where they paint:
+// each is a segment of the same label, so all of it is ordinary flag surface
+// for press, drag and select. The two
 // boundaries are the PAINTER'S own numbers, published rather than re-derived,
 // because a second shaping pass could disagree with the pixels: the window x
-// where the flag box ends and the LOWER cell's seam begins
-// (`iter_lower_boundary_x`) and where the lower cell ends and the UPPER cell's
-// seam begins (`iter_upper_boundary_x`). They are non-decreasing, and
-// each collapses onto the rect's own right edge when its box did not paint (an
-// absent box is always the run's tail) — a cell-less flag publishes both cell
-// boundaries AT the rect's right edge, past its closing column — so
+// where the LOWER cell's segment box begins (`iter_lower_boundary_x`) and
+// where the UPPER cell's begins (`iter_upper_boundary_x`), a press in the
+// gap before a segment reading as the segment left of it. They are
+// non-decreasing, and
+// each collapses onto the label box's right edge when its segment did not
+// paint (an absent segment is always the label's tail) — a cell-less label
+// publishes both boundaries AT its right edge — so
 // hit_test_flag_cell's walk (Upper first, then Lower, else Payload)
 // can never answer a cell that has no pixels. EVERY PRODUCER SETS BOTH (the flag pass, the editor's riding run and the `h`
 // view's diff flags). ONE READER, hit_test_flag_cell (app_state.cpp),
@@ -2926,6 +2483,18 @@ inline int playhead_half_px() {
 // what makes a press on a riding cell resolve to the same marker and the same
 // MarkerCell a press on the resting one resolves to. A cold or absent run
 // reads marker_index -1 with a zero rect, which contains no point.
+//
+// SINCE 2026-10-09 A CUE IS TWO RECTS (architect 2026-10-09: "the flag's
+// press target becomes the union of the triangle and the label's box as
+// painted"): `x, y, w, h` is THE LABEL'S BOX as painted — its opaque face
+// box on the lane's rows 0 .. 8, from one quantum before its first
+// segment's text to one past its last's, cut where the overlap rule cut it
+// — and `tri_*` THE TRIANGLE'S, its widest row's nine quanta and the
+// shadow's tenth over its five rows. Either may be empty (a label the
+// overlap rule cut to nothing, a field standing in for the label, the
+// riding cells' run, which carries no triangle). The containment owner is
+// flag_hit_rect_contains below; the two boundaries are the label's
+// segments' box edges.
 struct FlagHitRect {
     int    marker_index = -1;
     double x            = 0.0;
@@ -2934,7 +2503,18 @@ struct FlagHitRect {
     double h            = 0.0;
     double iter_lower_boundary_x = 0.0;
     double iter_upper_boundary_x = 0.0;
+    double tri_x        = 0.0;
+    double tri_y        = 0.0;
+    double tri_w        = 0.0;
+    double tri_h        = 0.0;
 };
+// THE ONE CONTAINMENT TEST of a published cue (the label's box or its
+// triangle), half-open on both axes like rect_contains.
+inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
+    return (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) ||
+           (x >= r.tri_x && x < r.tri_x + r.tri_w && y >= r.tri_y &&
+            y < r.tri_y + r.tri_h);
+}
 
 // All rendering helpers take a Cairo context and pixel-space rectangles; they
 // have no X11 or event-loop dependencies.
@@ -2974,8 +2554,8 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //                         (2026-10-05), an on-screen keyboard key.
 //   paint_relief_soft_sunken  — SOFT SUNKEN: a caption button pressed, a
 //                         keyboard key checked or pressed.
-//   paint_relief_plain_raised — PLAIN RAISED: a push button, the scroll-bar
-//                         thumb (the trim lane's), a menu's and a
+//   paint_relief_plain_raised — PLAIN RAISED: a push button, the popup
+//                         scroll bar's thumb and arrows, a menu's and a
 //                         dropdown's frame, the restored window's sizing
 //                         frame. (The scrub's pointed thumb draws its own
 //                         soft raised pentagon, paint_scrub_thumb.)
@@ -2989,14 +2569,12 @@ void render_canvas(cairo_t* cr, int x, int y, int w, int h);
 //   paint_relief_line_frame — one colour all round, square (no mitre
 //                         between one tone and itself): the dialog's
 //                         default-button frame, the list's focus frame and
-//                         the trim lane's pressed arrow button.
+//                         the popup scroll bar's pressed arrow button.
 //   (The CARD FRAME — the tooltip's and the cards' — is no relief: its
 //   lines in `card_frame`, square, on all four sides, at paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
-//                         [x, x + w) (the dropdown's separator; the ruler's
-//                         etched ticks are painted in place,
-//                         paint_ruler_row).
+//                         [x, x + w) (the dropdown's separator).
 // (The one-line raised inner edge — the flat toolbars' hot face — and the
 // vertical etched line — their group separators — went with the program's
 // band, 2026-10-09: Cool Edit's band is cool_edit_paint.h's.)
@@ -3068,39 +2646,31 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 
 // The waveform area's CONTENT band — THE CANVAS: the area minus the well's two
 // lines at its top and its bottom (waveform_border_px). Every pass that fills
-// a BAND inside the area clips to this — the plate blit — and the SCANNER, the moving
-// playback line, which belongs to the picture alone, spans it (render_playhead).
-// THE PHASE-RESET OVERLAY RING stands on it too since 2026-10-06, its
-// horizontals on the band's first and last rows inside the well's edge (the
-// ruling is at paint_phase_reset_overlay_ring). Degenerate areas (too short to carry both
-// borders) pass through unshrunk rather than inverting.
+// a BAND inside the area clips to this — the plate blit — and THE CANVAS'S
+// VERTICALS span it: the scanner and the resting cursor's dots
+// (render_playhead) and the cues' dots (paint_marker_stems, 2026-10-09 —
+// Cool Edit puts no dot on its frame rows), their dot rows counted from its
+// first row. THE PHASE-RESET OVERLAY RING stands on it too since 2026-10-06,
+// its horizontals on the band's first and last rows inside the well's edge
+// (the ruling is at paint_phase_reset_overlay_ring). Degenerate areas (too
+// short to carry both borders) pass through unshrunk rather than inverting.
 inline GuiRect waveform_content_rect(GuiRect area) {
     const int b = waveform_border_px();
     if (area.h <= 2 * b) return area;
     return GuiRect{area.x, area.y + b, area.w, area.h - 2 * b};
 }
-// THE STEMS' BAND (architect 2026-10-02, the stems run continuous): the area
-// from its TOP — through the well's top lines — to the canvas's foot. A
-// stem crosses the top lines because it continues from the lane above, flag
-// to canvas, and stops at the bottom lines, where nothing below continues it.
-// Its readers: the marker stems in both columns and the `h` diff lane
-// (paint_marker_stems), the playhead's waveform segment (render_playhead) and
-// the strip-drag anchor stem (render_strip_anchor_stem). Degenerate areas pass
-// through whole, as the canvas's do.
+// THE STEMS' BAND (architect 2026-10-02): the area from its TOP — through
+// the well's top lines — to the canvas's foot. Its one reader since
+// 2026-10-09 is the strip-drag anchor stem (render_strip_anchor_stem); the
+// marker stems and the playhead keep to the canvas (waveform_content_rect
+// above). Degenerate areas pass through whole, as the canvas's do.
 inline GuiRect waveform_stem_band(GuiRect area) {
     const int b = waveform_border_px();
     if (area.h <= 2 * b) return area;
     return GuiRect{area.x, area.y, area.w, area.h - b};
 }
-// THE WELL'S TOP LINES' ROWS, the band a marker stem's FLANKS paint in
-// (fill_stem_flanks, architect 2026-10-05): from the area's top to where the
-// canvas begins, full width. A degenerate area draws no well
-// (render_canvas), so it has no lines to flank and the band is empty.
-inline GuiRect waveform_well_top_band(GuiRect area) {
-    const int b = waveform_border_px();
-    if (area.h <= 2 * b) return GuiRect{area.x, area.y, area.w, 0};
-    return GuiRect{area.x, area.y, area.w, b};
-}
+// (waveform_well_top_band, the rows a marker stem's flanks crossed the well's
+// top lines in, went with the flanks, 2026-10-09.)
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's
 // samples-per-pixel, and the plate width.
@@ -3412,51 +2982,41 @@ void render_waveform(cairo_surface_t* dest,
                      WaveformPlateInks inks,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
-// Draws a waveform_line_px()-wide vertical LINE down `area` at the column
-// nearest `playhead_pixel_x` (offset from area.x), [col, col + t), over the
-// rows `band` picks (architect 2026-10-02): the CURSOR's stem is a stem and
-// runs continuous from the marker lane's run into the canvas
-// (PlayheadRows::Stem, waveform_stem_band), the SCANNER is the picture's own
-// line and spans the canvas alone (PlayheadRows::Canvas,
-// waveform_content_rect); in one solid
-// `color` end to end, painted straight over whatever it crosses — waveform
-// ink included. No-op if outside; the line is gated on its own column and
-// clipped at the right edge (fill_waveform_line), so it never leaks into an
-// adjacent region.
+// Draws a waveform_line_px()-wide vertical LINE down the CANVAS of `area`
+// (waveform_content_rect) at the column nearest `playhead_pixel_x` (offset
+// from area.x), [col, col + t), in `color`, in the FORM the caller picks
+// (architect 2026-10-09, the program is Cool Edit): THE SCANNER SOLID
+// (PlayheadForm::Solid, Cool Edit's playback cursor a solid 1-px line), THE
+// RESTING CURSOR DOTTED (PlayheadForm::Dotted, fill_dotted_waveform_line on
+// the playhead's phase, its dots interleaving with the cues'), painted
+// straight over whatever it crosses — waveform ink included. No-op if
+// outside; the line is gated on its own column and clipped at the right
+// edge, so it never leaks into an adjacent region.
 //
-// THE LINE IS THE WHOLE FUNCTION (2026-08-02). It used to carry a
-// `draw_triangle` flag and a `triangle_lane` rect for an inverted-triangle
-// indicator stamped from a cached mask above the stem: row 5 replaced the
-// cursor's tip-down triangle with the aliased head that paint_ruler_row
-// draws (with the column's marker-lane run beside it, the ruling at that
-// block) — and every caller had passed `false` ever since. The branch,
-// the mask and the lane rect are all deleted; both callers were already
-// line-only, so no painted pixel moves. (The complementary triangle-only form
-// was retired with the selected-marker focus triangle when the singleton's
-// focus became an always-on stem, architect 2026-07-25, so there was never a
-// draw_line flag either — the line has always been unconditional.)
+// THE LINE IS THE WHOLE FUNCTION (2026-08-02): the cursor's head is
+// paint_ruler_row's (the yellow triangle in the ruler since 2026-10-09), and
+// no strip lane is reachable from here.
 //
 // The former two-tone form (an `ink_plate` parameter carrying the displayed
 // plate, whose alpha masked a ground-colored overdraw wherever the column
 // crossed an opaque sample) is retired too: architect 2026-07-26, the notch
 // retired with the polarity inversion — the contrast problem it patched is
 // solved by the scheme, so that parameter went with it.
-enum class PlayheadRows { Stem, Canvas };
+enum class PlayheadForm { Solid, Dotted };
 void render_playhead(cairo_t* cr,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
-                     PlayheadRows band);
+                     PlayheadForm form);
 
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
-// spanning the stems' band like a marker stem (waveform_stem_band), in
-// the `playhead_stem` role — the product's one position-line colour (the
-// ruling is at the paint site).
+// spanning the stems' band (waveform_stem_band), solid, in the
+// `playhead_stem` role (the ruling is at the paint site).
 // The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an
 // edge-pinned anchor draws the stem exactly at the edge and the clamp becomes
-// visible (the Ableton affordance). Like every other stem it paints ONE solid
+// visible (the Ableton affordance). It paints ONE solid
 // color straight over the waveform ink it crosses — the ink-notch overdraw and
 // its plate parameter are retired (architect 2026-07-26, with the polarity
 // inversion). The line is an aliased integer rect waveform_line_px() wide,
@@ -3468,9 +3028,9 @@ void render_strip_anchor_stem(cairo_t* cr,
 // (The cached marker-stem renderers render_markers / render_phaseresetmarkers
 // are retired: marker stems are a live overlay,
 // GuiPaintHandler::paint_marker_stems — EVERY enabled marker's column, painted
-// from the flag painter's stash. Trim below is live too — its bar, endcaps and
-// midpoint mark in GuiPaintHandler::paint_trim, ahead of the playheads; trim has
-// had no stem since render_trim_stems died, and no stem is cached anywhere.)
+// from the flag painter's stash. Trim below is live too — the view bar in
+// GuiPaintHandler::paint_trim, ahead of the playheads; trim has had no stem
+// since render_trim_stems died, and no stem is cached anywhere.)
 
 // The ONE trim bound-to-column geometry owner. Every consumer of a
 // trim bound's pixel column funnels here, and there is ONE: the paint site
@@ -3531,22 +3091,20 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // half-open, EMPTY when hi <= lo), the ONE owner of the bridge, run by the
 // painter (render_trim_flags) alone: the clipped interval is what the painter
 // PUBLISHES as the pair drag's handle (TrimBarHit::bridge_lo / bridge_hi,
-// read by point_in_trim_bridge_span) — and the painter's BODY: the thumb's
-// body between its two arrow buttons' inner edges. Both bounds must be set
+// read by point_in_trim_bridge_span) — the view bar's span between its two
+// end zones (view_bar_grab_w_px). Both bounds must be set
 // (callers gate). ONE RULE ON EVERY SIDE (architect 2026-10-05): lo is the
-// begin button's inner RIGHT edge (col + endcap_w) and hi the end button's
-// inner LEFT edge, exclusive (col - endcap_w + 1), whether the button is on
-// screen, part on it or wholly past an edge — so the body slides off with its
-// buttons and never takes their room. In the NARROW case, where
-// trim_endcap_rect stands the end button right of the begin's, hi is under
-// lo and the gap is empty, as the body is; a window wholly off one side is
-// empty or wholly past that edge. The +endcap_w inset is the ROOM a button —
-// trim_arrow_button_w_px() wide — occupies. This interval is returned
+// begin zone's inner RIGHT edge (col + endcap_w) and hi the end zone's
+// inner LEFT edge, exclusive (col - endcap_w + 1), whether the zone is on
+// screen, part on it or wholly past an edge. In the NARROW case, where
+// trim_endcap_rect stands the end zone right of the begin's, hi is under
+// lo and the gap is empty; a window wholly off one side is
+// empty or wholly past that edge. The +endcap_w inset is the ROOM a zone
+// occupies. This interval is returned
 // UNCLAMPED, offscreen columns included; it is NOT a drawn interval. The
 // painter clamps it ONCE per use: the published bridge intersects it with the
 // effective width [0, wave_w), so the inert non-multiple-of-16 gutter
-// [wave_w, strip_w) neither paints nor hits, and the body holds a side that
-// lies farther off than its edge's thickness just outside the clip.
+// [wave_w, strip_w) answers no hit.
 struct TrimBridgeGap {
     int lo;  // inclusive left column
     int hi;  // exclusive right column (empty gap when hi <= lo)
@@ -3562,74 +3120,61 @@ TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
 // then rounded again; the identity (null/empty map) path returns the frame
 // as-is. A negative frame is guarded to 0 (unreachable — past-EOF is load-fatal
 // and bounds are never negative — kept for exactness vs the prior hit code).
-// The painter's one mapping owner, so an endcap is drawn — and, through the
-// stash, grabbed — on its bound's image. `map` is null in source view
+// The painter's one mapping owner, so a span's end is drawn — and, through
+// the stash, grabbed — on its bound's image. `map` is null in source view
 // (identity) and the item pixels' own map (displayed_or_live_target_map) in
 // target view.
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
 
-// The ONE trim ARROW-BUTTON screen-rect owner (named for the endcaps the
-// buttons are): the edge-anchoring rule lives here, run by the painter
-// (render_trim_flags), which paints each button on this rect, clipped to the
-// lane, and publishes it for the hit test (hit_test_trim_endcap reads TrimBarHit,
-// below), so paint and hit are one rect.
+// The ONE trim GRAB screen-rect owner (named for the endcaps the grabs were
+// until 2026-10-09; the view bar's span's two END ZONES since —
+// view_bar_grab_w_px's rule): the edge-anchoring rule lives here, run by the
+// painter (render_trim_flags), which publishes each zone, clipped to the
+// lane, for the hit test (hit_test_trim_endcap reads TrimBarHit, below).
 //
-// A trim bound is an EDGE, not a point: the begin button's LEFT edge sits ON
-// the begin column (rect left = strip_x + begin.col), the end button's RIGHT
-// edge sits on the end column (rightmost pixel = strip_x + end.col).
-// Deliberate asymmetry vs centered marker flags: a bound at frame 0 / EOF has
-// its button fully onscreen. THE NARROW CASE (architect 2026-10-03): when
-// the drawn width end.col − begin.col + 1 is under two buttons — the columns
-// read wherever they stand, on screen or off (architect 2026-10-05), so a
-// narrow window slides off an edge as one piece — the begin button keeps its column and the END button is
-// placed IMMEDIATELY RIGHT OF IT, edge to edge (rect left = strip_x +
-// begin.col + the button's width), so the right arrow alone overruns its
-// column, by 2 x the button − the width. The two rects therefore never
-// overlap: at two buttons' width and above each stands on its own column
-// with the body (possibly empty) between them.
+// A trim bound is an EDGE, not a point: the begin zone's LEFT edge sits ON
+// the begin column (rect left = strip_x + begin.col), the end zone's RIGHT
+// edge sits on the end column (rightmost pixel = strip_x + end.col) — the
+// span's own two ends. THE NARROW CASE (architect 2026-10-03): when the
+// drawn width end.col − begin.col + 1 is under two zones — the columns read
+// wherever they stand, on screen or off (architect 2026-10-05) — the begin
+// zone keeps its column and the END zone is placed IMMEDIATELY RIGHT OF IT,
+// edge to edge, so it alone overruns its column. The two rects never
+// overlap.
 //
-// THE RECT IS THE BUTTON, trim_arrow_button_w_px() wide (the spec's
-// scroll_bar_px: 16 Windows px, 13 under cde) over
-// the trim lane `row`'s whole height (the same 16), and it is THE HIT BAND
-// AS IT IS — no tolerance inflates it (architect 2026-10-03: the button is
-// the target). `is_begin` picks which bound's button. The rect may lie part
-// or wholly past the lane's edge (an offscreen bound keeps its own column,
+// THE RECT IS THE ZONE, view_bar_grab_w_px() wide over the trim lane `row`'s
+// whole height, and it is THE HIT BAND AS IT IS — no tolerance inflates it.
+// `is_begin` picks which bound's zone. The rect may lie part or wholly past
+// the lane's edge (an offscreen bound keeps its own column,
 // TrimBoundColumn); the painter's clip decides what of it is on screen.
 GuiRect trim_endcap_rect(bool is_begin, int strip_x,
                          const TrimBoundColumn& begin,
                          const TrimBoundColumn& end, GuiRect row);
 
-// (render_trim_stems IS DELETED, architect 2026-08-01. It drew the WAVEFORM-AREA
-// portion of the trim bounds — a 1px grey vertical at each bound's column,
-// spanning the waveform, meeting the strip-crossing segment at the waveform top
-// to form one unbroken line. THE BAR AND ITS TWO ENDCAPS ARE THE WHOLE DISPLAY
-// now: the redesigned trim lane states the window at the window, and two
-// full-height verticals competing with the marker stems stated it a second time
-// in the same pixels. The `trim_stem` config key it painted from outlived it by
-// a day and died with the whole tunable palette on 2026-08-02.)
+// (render_trim_stems IS DELETED, architect 2026-08-01: the bar is the trim
+// window's whole display. The record is git history.)
 
 // THE TRIM BAR'S HIT STASH (architect 2026-09-24, strictly as-painted): what
-// render_trim_flags last PAINTED as the thumb's two arrow buttons and its
-// body, published by that
-// painter into AppState::trim_bar_hit so the trim hits read the pixels rather
-// than re-running the painter's owner chain on the live trim — the flag
-// lane's stash doctrine (AppState::flag_hit_rects) carried to the trim lane.
-// Everything is in SCREEN pixels. `lane` is the band the thumb was painted
-// in, the y-gate of both hits. Each end (a TrimBarHitCap) is its arrow
-// button's rect (trim_endcap_rect: the button over the lane's whole height,
-// clipped to the lane's painted width, and the hit band as it is — no
-// tolerance) — a button sliding off an edge publishes its visible columns
-// alone (architect 2026-10-05) — and `painted` is false for a button wholly
-// off the lane, which answers no hit. The two rects never overlap
-// (trim_endcap_rect's narrow rule), so nothing arbitrates between them. The
-// bridge is the half-open interval [bridge_lo, bridge_hi) between the two
-// buttons' inner edges — the thumb's body — already clipped to the lane's
-// painted width (trim_bridge_gap); empty when lo >= hi, as in the narrow
-// case. `published` false is COLD — nothing painted, nothing grabbable.
+// render_trim_flags last PAINTED as the view bar's span — its two end zones
+// and its body between them — published by that painter into
+// AppState::trim_bar_hit so the trim hits read the pixels rather than
+// re-running the painter's owner chain on the live trim — the flag lane's
+// stash doctrine (AppState::flag_hit_rects) carried to the trim lane.
+// Everything is in SCREEN pixels. `lane` is the view bar's band (its two
+// lines and its field), the y-gate of both hits. Each end (a TrimBarHitCap)
+// is its zone's rect (trim_endcap_rect, over the lane's whole height,
+// clipped to the lane's painted width, the hit band as it is — no
+// tolerance), a zone sliding off an edge publishing its visible columns
+// alone (architect 2026-10-05), and `painted` false for a zone wholly off
+// the lane, which answers no hit. The two rects never overlap. The bridge is
+// the half-open interval [bridge_lo, bridge_hi) between the two zones'
+// inner edges, already clipped to the lane's painted width
+// (trim_bridge_gap); empty when lo >= hi, as in the narrow case.
+// `published` false is COLD — nothing painted, nothing grabbable.
 struct TrimBarHitCap {
     bool    painted = false;
-    GuiRect rect{0, 0, 0, 0};   // the arrow button, clipped to the lane
+    GuiRect rect{0, 0, 0, 0};   // the end zone, clipped to the lane
 };
 struct TrimBarHit {
     bool          published = false;
@@ -3640,65 +3185,34 @@ struct TrimBarHit {
     int           bridge_hi = 0;   // screen x, exclusive
 };
 
-// Draws the WHOLE TRIM LANE (architect 2026-10-02, the AC set; the geometry
-// at trim_lane_h_px): Windows 95's scroll bar, miniaturized — under
-// clearlooks GTK's trough round the light bar (architect 2026-10-07: the
-// trough, the slider for the body and the caps in step with it,
-// clearlooks_paint.h; every rect, the order and the publication below the
-// same). All pixel-bound integer fills, no stroke and no antialiasing
-// anywhere in the win2000 lane (the clearlooks caps' corners and arrows are
-// antialiased, the renderer's). The lane band is the `trim_bar` PARAMETER — the caller passes
-// top_trim_row_area(app) (top-strip lane 2), and the band painted in is
-// published as TrimBarHit::lane, the y-gate both trim hits read, so paint and
-// hit take the band as one value and cannot drift; nothing in here re-derives
-// the lane's y from the row heights above it. `trim_bar` gives the lane's
-// x/y/h; `waveform_area` is read for its `.w` ALONE — both the column-mapping
-// denominator and the lane's effective width, so the inert non-multiple-of-16
-// gutter is outside the clip and never paints. `top_strip_area` is a
-// validity guard only.
-//
-// PAINT ORDER IS BACK TO FRONT: THE TRACK across the whole lane — the ground,
-// then the checked dither (paint_checker_rect, its phase at the lane's
-// top-left) — then THE THUMB'S BODY, the ground under a PLAIN RAISED edge,
-// the lane's full height, with no grip, then THE ARROW BUTTONS over it. An
-// inverted or degenerate window leaves the track showing.
-// THE THUMB SPANS THE WINDOW ITSELF and SLIDES OFF AN EDGE like any other
-// content (architect 2026-10-05): buttons and body keep their own columns
-// past the lane's edge and the clip cuts them, so an out-of-view bound reads
-// as the window running on rather than ending at the view. It is the one "this is the
-// trim window" signal and its body the grab of the pair (bridge) drag.
-// THE TWO ARROW BUTTONS ARE THE CAPS (architect 2026-10-03; the rule at
-// trim_arrow_button_w_px): each bound's button, on the rect
-// trim_endcap_rect places — EDGE-ANCHORED on the bound columns, the begin's
-// LEFT edge on its column, the end's RIGHT edge on its own, and in the
-// NARROW case the end's standing right of the begin's — the ground under a
-// plain raised edge with the arrow glyph (kTrimArrowGlyphWPx) centred in
-// it, the begin's pointing left and the end's right. THE BODY runs between
-// the buttons' inner edges (trim_bridge_gap's interval), empty in the narrow
-// case. A button wholly off the lane paints and publishes nothing. A bound is an EDGE, not a point — the deliberate
-// asymmetry vs centered marker flags — so a bound at frame 0 / EOF shows its
-// button fully onscreen. Column placement is on the displayed viewport basis
-// — `trim.begin` / `trim.end` are already in the displayed domain, so no
-// further translation happens here. A button has NO editable payload; it is
-// a plain-press grab target only (trim is outside the selection system).
+// Draws THE VIEW BAR — the whole trim lane (architect 2026-10-09, the
+// program is Cool Edit; METRICS §3, the palette block's canvas-column
+// paragraph for its colors, trim_lane_h_px for its rows), the same under
+// every chrome: the top line, the black field and the bottom line across the
+// waveform's columns, then THE SPAN — the trim window's columns, the begin
+// column through the end column inclusive, a raised one-quantum bevel block
+// of the ink in the field's rows, sliding off an edge like any content
+// (architect 2026-10-05: an out-of-view bound reads as the window running
+// on) — then THE PLAYHEAD over the span as a dotted column (`playhead_col`,
+// the plate basis's column, waveform-relative; no dots where it is off the
+// span). All pixel-bound integer fills, no antialiasing. The lane band is
+// the `trim_bar` PARAMETER — the caller passes top_trim_row_area(app), and
+// the band painted in is published as TrimBarHit::lane, the y-gate both
+// trim hits read, so paint and hit take the band as one value;
+// `waveform_area` is read for its `.w` ALONE — the column-mapping
+// denominator and the bar's width, so the inert non-multiple-of-16 gutter
+// beside it stays the lane's face. `top_strip_area` is a validity guard
+// only. Column placement is on the displayed viewport basis — `trim.begin` /
+// `trim.end` are already in the displayed domain. The span has NO editable
+// payload; it is a plain-press grab target only (trim is outside the
+// selection system).
 // PUBLISHES WHAT IT PAINTS into `out_hit` when non-null (TrimBarHit above):
-// the lane, both buttons and the bridge interval, from the very columns this
-// pass fills — and a cold record on every early return, since a lane that
-// painted no thumb has nothing to grab. The CALLER decides whether this frame
-// may publish at all (GuiPaintHandler::paint_trim passes null unless the
-// damage clip covers the whole lane), so a narrow repaint cannot stamp the
-// stash over pixels it did not redraw.
-// `pressed` NAMES THE CAP A SINGLE-BOUND GRAB HOLDS, from its press to the
-// gesture's end (architect 2026-10-03; the derivation is paint_trim's): that
-// button paints PRESSED, as Windows draws a held scroll arrow —
-// DrawFrameControl's DFCS_PUSHED | DFCS_FLAT (Wine, dlls/user32/scroll.c →
-// uitools.c UITOOLS95_DFC_ButtonPush: EDGE_SUNKEN under BF_FLAT, one Shadow
-// line round the face, its inner line the face itself, and the arrow drawn
-// one px right and down of its resting place) — here the ground under one
-// Shadow line ring (paint_relief_line_frame) and the glyph one Windows px
-// right and down. The pair (bridge) grab presses no cap: its grab is the
-// thumb, which Windows leaves raised under the drag.
-enum class TrimPressedCap { None, Begin, End };
+// the lane, the span's two end zones and its body between them, from the
+// very columns this pass fills — and a cold record on every early return.
+// The CALLER decides whether this frame may publish at all
+// (GuiPaintHandler::paint_trim passes null unless the damage clip covers the
+// whole lane), so a narrow repaint cannot stamp the stash over pixels it did
+// not redraw.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect trim_bar,
@@ -3706,43 +3220,33 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_start_sample,
                        long long viewport_end_sample,
                        const TrimRange& trim,
-                       TrimPressedCap pressed,
+                       int playhead_col,
                        TrimBarHit* out_hit);
 
-// The top-strip lane a flag box occupies, exactly as the lane accessor reports
+// The top-strip lane the cues occupy, exactly as the lane accessor reports
 // it: `marker_lane` = top_marker_row_area, whose bottom edge is flush with the
 // waveform top. The accessor delegates to strip_row_rect, the single
 // strip-geometry owner, and takes AppState — which this module does not see, so
 // the caller resolves it and passes it in. That is the point of the parameter:
-// the flag boxes and their hit rects land on the SAME band the empty-lane press
+// the cues and their hit rects land on the SAME band the empty-lane press
 // gate and every other lane consumer read, whatever the strip's lane heights
-// are, instead of being re-derived by stacking upward from the waveform top.
-// ROW 5 COLLAPSED TWO LANES INTO ONE (2026-08-01). The flag was a fused
-// rectangle-plus-triangle glyph spanning a flag lane and a triangle lane; it is
-// now a single box inside the ONE marker lane, so this carries one rect and the
-// seam invariant that bound the pair is retired (the record is at the lane table
-// in main.cpp). Kept as a struct rather than a bare GuiRect so the call sites
+// are. Kept as a struct rather than a bare GuiRect so the call sites
 // that thread it through keep naming what they are threading.
 struct FlagLaneRects {
     GuiRect marker_lane;
 };
 
 // ONE MARKER STEM, as the flag painter publishes it: the window x of the
-// column the stem stands on (the flag box's own LEFT edge — the composite shows
-// the stem under it) and the color its class resolved to. The flag PAINTERS are
-// the only producers — the two live columns', and the `h` view's diff lane,
-// which replaces them wholesale while the mode stands; the readers are the
-// per-frame waveform passes
-// (GuiPaintHandler::paint_marker_stems and, for the stem's FLANKS in the
-// well's top lines, paint_marker_stem_flanks) and the playhead's stem
-// suppression decider (GuiPaintHandler::playhead_stem_suppressed), both
-// paint-side, so a stem and its flag can never disagree about a column.
-// The published COLOUR is the marker's resolved stem — its FLAG BOX's face:
-// its kind's face or the removed face (invalid), or the matching selected
-// face while the payload box is the bright one (architect 2026-10-04: the
-// stem follows the box it leaves from, so a selected marker whose addressed
-// cell is a bound cell publishes its resting stem) — and the consumer paints
-// it as published.
+// column the cue's dots stand on (the triangle's apex column) and the color
+// its class resolved to. The flag PAINTERS are the only producers — the two
+// live columns', and the `h` view's diff lane, which replaces them wholesale
+// while the mode stands; the one reader is the per-frame waveform pass
+// GuiPaintHandler::paint_marker_stems, which paints the dotted column
+// (fill_dotted_waveform_line), so the dots and their triangle can never
+// disagree about a column. The published COLOUR is the cue's TRIANGLE's —
+// its kind's resting face, or the removed face (invalid), selected or not
+// (2026-10-09: Cool Edit's cue never changes when selected) — and the
+// consumer paints it as published.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -3761,26 +3265,25 @@ struct MarkerStem {
     GuiColor color;
 };
 
-// WHICH ONE BOX OF WHICH ONE MARKER THE FLAG PASS DOES NOT PAINT, because an
-// open marker-lane editor is standing in for it. THE ONE GRAPHIC MODEL, stated
-// once here and applied to all three editors (architect 2026-09-05, on the
-// tablet: "it just feels odd to have one nonvariant field in the middle ... the
-// two editors on the opposite ends behaving one way and the bounds one in the
-// middle behaving in a different way makes the whole thing seem hacked
-// together"): THE EDITED BOX IS SUPPRESSED IN THIS PASS, THE FIELD IS THE WIDTH
-// OF ITS OWN CONTENT, AND EVERY BOX TO ITS RIGHT RIDES THE FIELD'S RIGHT EDGE,
-// painted there in resting order with resting anatomy — and published there —
-// by render_flag_editor_box.
+// WHICH ONE SEGMENT OF WHICH ONE MARKER'S LABEL THE FLAG PASS DOES NOT PAINT,
+// because an open marker-lane editor is standing in for it. THE ONE GRAPHIC
+// MODEL, stated once here and applied to all three editors (architect
+// 2026-09-05, on the tablet: "it just feels odd to have one nonvariant field
+// in the middle ... the two editors on the opposite ends behaving one way and
+// the bounds one in the middle behaving in a different way makes the whole
+// thing seem hacked together"): THE EDITED SEGMENT IS SUPPRESSED IN THIS
+// PASS, THE FIELD IS THE WIDTH OF ITS OWN CONTENT, AND EVERY SEGMENT TO ITS
+// RIGHT RIDES THE FIELD'S RIGHT EDGE, painted there in its resting look — and
+// published there — by render_flag_editor_box. (Boxes until 2026-10-09, the
+// label's segments since; the model unchanged.)
 //
-// `cell` NAMES THE EDITED BOX in the marker's own left-to-right run — Payload
-// (the flag box itself), then Lower, Upper — and this pass's rule is
-// ONE COMPARISON: it paints the boxes LEFT of that cell exactly as it does at
-// rest, and NOTHING from that cell rightward. A payload editor therefore takes
-// the marker's whole column (the flag is its leftmost box), a lower-bound
-// editor leaves the flag standing and takes the lower cell and the upper cell,
-// and an upper-bound editor leaves the flag and the lower cell and takes the
-// upper cell alone — the rule the two separate
-// indices this replaced applied to the two kinds they covered.
+// `cell` NAMES THE EDITED SEGMENT in the label's own left-to-right run —
+// Payload, then Lower, Upper — and this pass's rule is ONE COMPARISON: it
+// paints the segments LEFT of that cell exactly as it does at rest, and
+// NOTHING from that cell rightward. A payload editor therefore takes the
+// marker's whole label, a lower-bound editor leaves the payload standing
+// and takes the lower cell and the upper cell, and an upper-bound editor
+// leaves the payload and the lower cell and takes the upper cell alone.
 //
 // ONE BOX AT MOST, which is why this is an index and a cell rather than a set:
 // the three editors are ONE text_editor::State, so no two can stand together.
@@ -3802,126 +3305,56 @@ struct SuppressedBox {
 // at all, answer the resting value.
 SuppressedBox suppressed_flag_box(const AppState& app);
 
-// Draws the marker lane's flags in `top_strip_area` above visible markers, in
-// THE TEXT-ON-FLAG FORM (row 5, 2026-08-01): each flag is a box whose FACE's
-// LEFT EDGE stands on its marker's pixel column, spanning the flag box's band
-// (marker_flag_box_band) and carrying the marker's own composed label in the
-// redesign's sans face. The width is DERIVED from the shaped label (pad +
-// shaped + pad); the pads and the warp payload's scale truncation live at
-// kMarkerFlagPadLeftPx above. THE FLAT FLAG (architect 2026-10-03; the palette
-// block's marker-lane paragraph owns the look): the face flat in its state's
-// color, a ONE-WINDOWS-PX OUTLINE in `flag_outline` — the box's top and
-// bottom rows (marker_flag_edge_h_px) inside the band, its left border column
-// and its run's closing column outside the face — and the stem leaving the
-// face's leftmost column across the bottom outline.
-//
-// THE LEFT BORDER (architect 2026-08-02) stands one column LEFT of the frame
-// column so THE STEM KEEPS THE FACE'S LEFTMOST COLUMN. The published hit rect is
-// the whole box, border included; the geometry and the left-edge clip are at
-// marker_flag_border_px.
-//
-// AND ONE CLOSING COLUMN AT THE RUN'S RIGHT (architect 2026-09-25): every
-// marker's run — the flag box alone, or the flag box and its bound cells —
-// ends on ONE outline column past its RIGHTMOST box, so a run is bordered one
-// column each side. Its INTERIOR seams stay single: between the flag box and
-// the lower cell, and between the two cells, the one column is the next cell's
-// own left seam, never a closing column beside it. The hit rect covers the
-// closing column (its last column, reading as the box it closes); the geometry
-// is at marker_flag_border_px.
-//
-// OVERLAP IS LATER-OVER-EARLIER IN STORE ORDER and there is NO OTHER OCCLUSION
-// MANAGEMENT AT ALL — no elision, no z-lift for selection, no run arbitration.
-// That is the whole model the marker-text lane's resolver used to stand in for,
-// and it is deliberately the simplest thing that can be true: a later marker's
-// box covers an earlier one's tail, and the user pans or zooms to read it. The
-// closing column is what keeps that tail from running into the later flag's
-// face. (A SELECTION LIFT — selected flags painted in a second pass over
-// unselected ones — stood for one day, 2026-09-25, and was struck by the
-// architect as poor design; the closing column answers the blend it reached
-// for.)
-//
-// THE STATES, resolved in priority order by the one ladder
-// (resolve_flag_face, render.cpp) — DISABLED WINS, then INVALID, then the
-// kind's own pair — and SELECTION IS THE BRIGHTER FACE of whichever stands
-// (the palette block's THE STATES):
-//   Disabled:  the theme's ground for the face, the label in the disabled
-//              emboss, NO STEM. A disabled invalid marker is disabled.
-//   Invalid:   the red set (warp_red_flag_set_cached, or the phase-reset
-//              column's): the REMOVED pair's `removed_flag` under
-//              `flag_label`, the stem in the face.
-//   Otherwise: the column's KIND — `warp_flag` on the warp column,
-//              `phase_reset_flag` on the phase-reset column, their cells
-//              alike (architect 2026-10-04) — under `flag_label`, the stem in
-//              the face.
-//   Selected:  the addressed cell's selected face (the kind's, or
-//              `removed_flag_selected` over an invalid one) under the one
-//              `flag_label`; the stem in the FLAG BOX's face, so
-//              selected only while the payload is the addressed cell
-//              (architect 2026-10-04);
-//              a selected DISABLED cell the kind's selected face under the
-//              same `flag_label`, no stem (architect 2026-10-07). The outline
-//              stays the flag outline.
+// Draws the marker lane's CUES in `top_strip_area` for the visible markers
+// (architect 2026-10-09, Cool Edit's cues; the look, the states and the
+// overlap rule at the palette block's marker-lane paragraph, every length
+// program_spec.h's): each marker's TRIANGLE with its apex on the marker's
+// pixel column on the lane's last rows, and its LABEL six quanta right of
+// the column on the lane's rows 0 .. 8 — the payload label (the warp
+// payload's scale truncation at kMarkerFlagScaleGlyphs above) and, where
+// they paint, its two bound cells as further segments — in the program face
+// (gui_font(GuiFace::Program)); every run carries its font, so `cr`'s font
+// state is not touched.
 //
 // `iteration_on` PAINTS THE TWO BOUND CELLS (architect 2026-09-04; the
 // phase-reset painter below carries the same parameter for its own hop
-// bracket, and THE CALLER PASSES THE COLUMN'S OWN VERDICT rather than the
-// mode's bare bit since 2026-09-10 — iteration_column_lit, app_state.h — so
-// the cells paint on the column the lamp was lit in and on no other): while
-// the mode is lit here, every marker the sweep reads
-// (iter_popup_eligible_marker, warpmarkers.h — so a disabled owner, which
-// carries no bracket at all, paints no cells)
-// extends its flag rightward with two more boxes, the LOWER bound then the
-// UPPER, each painted exactly as the flag box is — the marker's own state,
-// the seam column on its left, the outline rows, the label's ink — carrying the
-// bound in its signed two-decimal form (format_iter_bound_cell). A cell
-// reads as another flag payload, and the sign is its whole syntax: a flag
-// payload never carries one and a cell always does, so no bracket or
-// separator opens in one cell to close in the next. The flag's own text is
-// the plain composer's (flag_text) in every state; no bracket paints anywhere.
+// bracket, and THE CALLER PASSES THE COLUMN'S OWN VERDICT —
+// iteration_column_lit, app_state.h): while the mode is lit here, every
+// marker the sweep reads (iter_popup_eligible_marker, warpmarkers.h — so a
+// disabled owner, which carries no bracket at all, paints no cells) extends
+// its label with the LOWER bound then the UPPER, each a segment the segment
+// gap past the one before it, carrying the bound in its signed two-decimal
+// form (format_iter_bound_cell). The sign is a cell's whole syntax: a
+// payload never carries one and a cell always does. A TIE FOLLOWER'S CELLS
+// wear the disabled emboss (architect 2026-09-19: they show the leader's
+// numbers and are not this marker's to author).
 //
-// `focus_marker` / `focus_cell` NAME THE SELECTED CELL (architect 2026-09-05,
-// the brighter face since 2026-10-03): a selected marker shows its selected
-// face on its ADDRESSED cell and no other box, and the addressed cell is the
-// payload for every selected marker but the focus, whose addressed cell is
-// `focus_cell` (AppState::addressed_cell — a press's cell, an editor's, or
-// the one a bracket-only undo entry's restore brings back; every other focus
-// route resets it to the payload). Where the focus SHOWS that cell NOWHERE —
-// neither in this pass nor in the open field standing in for it — its payload
-// takes the selected face instead, so a selected marker always shows its
-// selection, and shows it once: while a field stands, the FIELD is where its
-// own cell's selection lives. The rule is stated once at the palette block's
-// marker-lane paragraph and applies on both columns — a phase reset's bound
-// cells are cells too. Disabled and invalid resolve cell by cell through the
-// same ladder; the stem is the flag box's, its selected face only while the
-// payload is the bright cell (architect 2026-10-04).
-//
-// The labels are the body face (gui_font(GuiFace::Body)); every run
-// carries its font, so `cr`'s font state is not touched.
+// `focus_marker` / `focus_cell` NAME THE SELECTED SEGMENT (architect
+// 2026-09-05): a selected marker shows its selected look on its ADDRESSED
+// cell's segment and no other, the addressed cell being the payload for
+// every selected marker but the focus, whose addressed cell is `focus_cell`
+// (AppState::addressed_cell). Where the focus SHOWS that cell NOWHERE —
+// neither in this pass nor in the open field standing in for it — its
+// payload takes the selected look instead, so a selected marker always
+// shows its selection, and shows it once.
 //
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
-// painted box in PAINT ORDER (so the hit walk reads it backwards to get the
-// topmost box) and `out_stems` one entry per ENABLED painted marker. A derived
-// width cannot be recomputed without shaping, so the pixels' own pass is the
-// single owner of both — the same painter-stash contract the redesigned rows'
-// buttons already use. Either pointer may be null.
+// painted cue, left to right (the hit walk follows the paint order:
+// triangles first, read backwards — the right one on top — then labels,
+// read forwards — the left one on top, the labels painting right to left;
+// topmost_flag_rect, app_state.cpp), and `out_stems` one entry per ENABLED cue
+// whose column is a waveform column. A derived width cannot be recomputed
+// without shaping, so the pixels' own pass is the single owner of both.
+// Either pointer may be null.
 //
-// `suppressed` NAMES THE ONE BOX THIS PASS DOES NOT PAINT (SuppressedBox
-// above): the marker whose marker-lane editor is open, and WHICH of its boxes
-// that editor stands in for. The pass paints the boxes left of that one at
-// rest and nothing from it rightward, the boxes to its right riding the
-// field's edge under the editor's own painter.
-//
-// THE PUBLISHED GEOMETRY FOLLOWS THE PIXELS, which is this stash's whole
-// doctrine: the rect covers exactly what the pass painted, every boundary
-// belonging to a yielded box collapsing onto the rect's right edge so no point
-// can answer a box with no ink, and a marker whose FLAG box is suppressed
-// publishes no rect at all. Without the skip the editor's box would merely be
-// drawn OVER this one, which hides it only while the edited text is the wider
-// of the two; a SHORTENED payload then let the committed label's tail show past
-// the editor's right edge (the 2026-08-02 bug), and a press in that blank tail
-// closed the editor and resolved a marker click off pixels where nothing was
-// drawn. THE STEM IS THE EXCEPTION on both counts — it paints and publishes for
-// the whole session, the editor unrolling from the flag's own column.
+// `suppressed` NAMES THE ONE SEGMENT THIS PASS DOES NOT PAINT (SuppressedBox
+// above): the marker whose marker-lane editor is open, and WHICH of its
+// segments that editor stands in for. The pass paints the segments left of
+// that one at rest and nothing from it rightward, the ones to its right
+// riding the field's edge under the editor's own painter; THE TRIANGLE AND
+// THE DOTS paint and publish for the whole session. The published label box
+// covers exactly what the pass painted, every boundary belonging to a
+// yielded segment collapsing onto its right edge.
 //
 // BOTH COLUMNS TAKE IT, but the PAYLOAD cell is
 // unreachable on the phase-reset one: that editor is a warp-column surface by its own
@@ -3931,9 +3364,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 //
 // `warp_frame_map`: the displayed-axis translation the painters share (the live
 // map in target view). `waveform_width` is the EFFECTIVE waveform width
-// (waveform_area.w), the column-mapping denominator; flags share the marker
-// stems' samples-per-pixel so a flag's left edge lands on the column its stem
-// rises at, at every window width.
+// (waveform_area.w), the column-mapping denominator, so a cue lands on the
+// column its dots stand on at every window width.
 void render_flags(cairo_t* cr,
                   GuiRect top_strip_area,
                   FlagLaneRects lanes,
@@ -3962,40 +3394,29 @@ void render_flags(cairo_t* cr,
 // — and the pointer path reads it identically for both, which is why the consumers test the
 // published rect and never the kind.
 //
-//   `box`           the painted box in window coordinates — for the payload
-//                   editor the marker's flag, unrolled to hold the FULL
-//                   untruncated pending; for the bound editor the bound cell in the same
-//                   role, anchored at that cell's own seam. ONE WIDTH RULE FOR
-//                   BOTH (architect 2026-09-05, retiring the bound
-//                   field's pin to its cell): the box is its two pads plus its
+//   `box`           the painted field in window coordinates — the edited
+//                   segment's box in the field pair on the lane's rows
+//                   0 .. 8, its one-quantum outline included: for the
+//                   payload editor the marker's payload label holding the
+//                   FULL untruncated pending, for the bound editor the bound
+//                   cell's segment in the same role, anchored where that
+//                   segment's box rests. ONE WIDTH RULE FOR ALL (architect
+//                   2026-09-05): the field is its two quanta of pad plus its
 //                   shaped pending run and nothing more, so NO FIELD BUYS A
-//                   CARET COLUMN — every one borrows it from its own right pad
-//                   (the borrow, render_flag_editor_box). Each field therefore
-//                   OPENS AT the width of the box it stands in for, to the
-//                   column — the payload's one deliberate step being the
-//                   untruncated run where the resting label was capped at nine
-//                   glyphs — and then GROWS AND SHRINKS with what is typed, on
-//                   every kind alike, with the marker's boxes to its right
-//                   riding that edge. An emptied field is two pads, the
-//                   smallest box there is, whichever kind it belongs to.
-//                   NEVER CLAMPED ON-WINDOW, ON ANY KIND, AT EITHER EDGE
-//                   (architect 2026-09-06): the field opens at its own box's
-//                   seam wherever that seam is and the WAVEFORM'S EDGE cuts it
-//                   off, like every other box in this lane: the logical field
-//                   (its seam, its width, `text_origin_x`, `byte_x`) is
-//                   unclipped and may reach past either edge, while `box`, the
-//                   published claim, is the painted box CLIPPED TO THE
+//                   CARET COLUMN — every one borrows it from its own right
+//                   pad (the borrow, render_flag_editor_box). Each field
+//                   therefore OPENS AT the width of the segment box it stands
+//                   in for — the payload's one deliberate step being the
+//                   untruncated run where the resting label was capped — and
+//                   then GROWS AND SHRINKS with what is typed, the label's
+//                   segments to its right riding that edge. NEVER CLAMPED
+//                   ON-WINDOW (architect 2026-09-06): the logical field (its
+//                   seat, its width, `text_origin_x`, `byte_x`) is unclipped
+//                   and may reach past either edge, while `box`, the
+//                   published claim, is the painted field CLIPPED TO THE
 //                   WAVEFORM'S COLUMNS [x0, x0 + w) as its pixels are
-//                   (architect 2026-09-26, clip_to_waveform_columns) — a field
-//                   cut off at the last column claims its visible part, a
-//                   marker at grid point w its border strip alone, and a field
-//                   wholly past the edge an empty box. Every box
-//                   spans its 1px LEFT BORDER too (the flag's own for the
-//                   payload editor, the seam divider for the other two), so
-//                   its x is one column left of the fill and its w one wider
-//                   — and a field that is its run's LAST box (nothing rides
-//                   past it) spans the run's CLOSING column as well, one more
-//                   column on its right (2026-09-25, marker_flag_border_px).
+//                   (architect 2026-09-26, clip_to_waveform_columns), a field
+//                   wholly past the edge an empty box.
 //   `text_origin_x` the window x that pending BYTE 0 paints at. It already
 //                   carries the view offset, so it is negative-of-nothing and
 //                   directly usable: byte k sits at text_origin_x + byte_x[k].
@@ -4004,23 +3425,22 @@ void render_flags(cairo_t* cr,
 //                   The caret, both selection edges and click-to-byte all index
 //                   it, so what is drawn and what is grabbed are one vector.
 //
-//   `riding_cells`  THE MARKER'S BOXES TO THE RIGHT OF THE EDITED ONE, in
-//                   resting order with resting anatomy, painted at the field's
-//                   right edge so the row reads as it reads at rest with only
-//                   the edited box's width live (architect 2026-09-05, THE ONE
-//                   GRAPHIC MODEL — SuppressedBox above states it once). What
-//                   rides follows from which box the field stands in for: the
-//                   payload field carries the two bound cells, the
-//                   LOWER-bound field the upper cell, and the UPPER-bound
-//                   field nothing, it being the rightmost box there is.
+//   `riding_cells`  THE LABEL'S SEGMENTS TO THE RIGHT OF THE EDITED ONE, in
+//                   resting order with their resting look on their face box,
+//                   painted from the field's right edge so the label reads as
+//                   it reads at rest with only the edited segment's width live
+//                   (architect 2026-09-05, THE ONE GRAPHIC MODEL —
+//                   SuppressedBox above states it once). What rides follows
+//                   from which segment the field stands in for: the payload
+//                   field carries the two bound cells, the LOWER-bound field
+//                   the upper cell, and the UPPER-bound field nothing.
 //                   Published as a FlagHitRect: the run's whole painted
-//                   extent, every seam divider and the upper cell's closing
-//                   column included (2026-09-25), keyed to the edited
-//                   marker and carrying the same three boundaries a resting
-//                   run publishes — each one collapsing onto the next where
-//                   its box is not in the run — so the pointer resolves WHICH
-//                   CELL out of it exactly as it does at rest. marker_index -1
-//                   with a zero rect wherever nothing rides.
+//                   extent (no triangle), keyed to the edited marker and
+//                   carrying the same boundaries a resting label publishes —
+//                   each collapsing onto the next where its segment is not in
+//                   the run — so the pointer resolves WHICH CELL out of it
+//                   exactly as it does at rest. marker_index -1 with a zero
+//                   rect wherever nothing rides.
 //
 //                   THE RIDING CELLS ARE THE MARKER'S OWN CELLS FOR THE
 //                   POINTER TOO (architect 2026-09-05, completing the
@@ -4030,12 +3450,12 @@ void render_flags(cairo_t* cr,
 //                   (topmost_flag_rect, app_state.cpp) asks this rect FIRST,
 //                   because the editor paints last and so covers whatever the
 //                   lane pass drew under it. The two publications cannot
-//                   overlap in any case: the pass's rect ends where the edited
-//                   box begins and this run begins at the field's right edge,
-//                   so under a BOUND editor the same marker publishes both —
-//                   its flag box (and, under the upper field, its lower cell)
-//                   in the lane stash, its riding run here — and a point falls
-//                   in exactly one. A press on a riding cell is
+//                   overlap in any case: the pass's label box ends where the
+//                   edited segment begins and this run begins past the field's
+//                   right edge, so under a BOUND editor the same marker
+//                   publishes both — its triangle and its payload (and, under
+//                   the upper field, its lower cell) in the lane stash, its
+//                   riding run here — and a point falls in exactly one. A press on a riding cell is
 //                   therefore an ORDINARY OUTSIDE PRESS: the payload editor
 //                   closes without committing like it does for every other
 //                   outside press, and the press then acts on the cell under
@@ -4074,42 +3494,33 @@ struct FlagEditorBox {
     std::vector<double> byte_x;
 };
 
-// THE FLAG EDITOR'S UNROLL (row 5's last piece, 2026-08-01): the marker's flag
-// box EXPANDS to hold its full untruncated payload, and the editor's text is
-// drawn inside it — kdenlive's flag-becomes-the-text-box, which is also how
-// this product's own editor read before the marker-text lane took the payload
-// away.
+// THE FLAG EDITOR'S UNROLL (row 5's last piece, 2026-08-01): the edited
+// segment of the cue's label EXPANDS to hold its full untruncated payload,
+// and the editor's text is drawn in it — kdenlive's flag-becomes-the-text-
+// box, on Cool Edit's cue since 2026-10-09.
 //
-// THE BOX IS THE FLAG ITSELF IN ITS SELECTED FACE, ONE DESIGN UNDER EVERY
-// CHROME (architect 2026-10-07 ~09:45, retiring the morning's white box; the
-// palette block's editing paragraph) on the flag's own outline geometry —
-// its left border column, its top and bottom rows (marker_flag_edge_h_px)
-// and its closing column, all in `flag_outline` — so opening an editor
-// changes the flag's SIZE and nothing about where it stands or how it is
-// colored: the flat box in the ladder's SELECTED answer for the marker
-// (resolve_flag_face — the removed pair's over an invalid marker, the
-// selected-disabled arm's over a disabled one), its text and caret that
-// answer's label, the selected substring in the CHROME's selected pair
-// (`selected_fill` under `selected_text`), the caret and selection band
-// inside the outline's rows. The pads are the field's margin strips. Since
-// no field buys a caret column,
-// the size only changes where the resting label was capped, the field opening
-// at the committed run's own width and growing only with what is typed past
-// it; the bound cells riding its right edge keep the flag anatomy. A REFUSED
-// COMMIT recolours nothing: the whole text is selected (text_editor::refuse)
-// and the refusing owner's card says why, the dialog field's rule on this
-// surface.
+// THE FIELD IS WINDOWS' EDIT FIELD, ONE DESIGN UNDER EVERY CHROME (architect
+// 2026-10-09; the ruling and its reason at the palette block's editing
+// paragraph): a box in the chrome's FIELD PAIR on the lane's rows 0 .. 8 —
+// `field_ground` inside a one-quantum `field_text` outline, its text and
+// caret `field_text` on the label's own baseline and seat, so opening an
+// editor changes the label's SIZE and nothing about where its text stands —
+// the selected substring in the chrome's SELECTED PAIR, the ordinary
+// highlight. The box paints over the lane, the triangle and any neighbouring
+// label it reaches. Since no field buys a caret column, the
+// size only changes where the resting label was capped, the field opening at
+// the committed run's own width and growing only with what is typed past it;
+// the cells riding its right edge keep their resting look. THE TRIANGLE AND
+// THE DOTS stay the cached pass's. A REFUSED COMMIT recolours nothing: the
+// whole text is selected (text_editor::refuse) and the refusing owner's card
+// says why, the dialog field's rule on this surface.
 //
-// THE TEXT IS THE REDESIGN'S SANS, matching the labels it replaces — the
-// monospace face dies at this surface with the lane placement owner
-// (lane_text_left_x) that used to put it here.
+// THE TEXT IS THE PROGRAM FACE, matching the labels it replaces.
 //
-// AT THE WAVEFORM'S EDGE THE BOX IS CUT OFF AND NOTHING MOVES — the clip is
-// the waveform's columns [0, w), the resting flag's own (architect
-// 2026-09-26: nothing of the field paints in the leftover strip beside w, and
-// a marker at grid point w shows its left border alone, on the columns its
-// resting flag's border shows on; the published box and riding rect are
-// clipped with the pixels) — (architect 2026-09-06,
+// AT THE WAVEFORM'S EDGE THE FIELD IS CUT OFF AND NOTHING MOVES — the clip is
+// the waveform's columns [0, w), the resting cue's own (architect
+// 2026-09-26; the published box and riding rect are clipped with the
+// pixels) — (architect 2026-09-06,
 // on the clamp this paragraph used to describe: "leave its position truthful,
 // don't clamp it, don't do anything"). The box used to slide left to stay
 // fully on-window, its width capped at the lane so that it always could; both
@@ -4134,7 +3545,7 @@ struct FlagEditorBox {
 // this scroll; it is a GuiPaintHandler method and already holds an AppState&.)
 void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 
-// The phase-reset column's flags: the identical box, the identical class ladder
+// The phase-reset column's cues: the identical cue, the identical class ladder
 // and the identical publication contract render_flags documents above. Their
 // LABEL is the display-only kPhaseResetLaneToken (a phase reset authors no
 // payload). `iteration_on` PAINTS THIS COLUMN'S TWO BOUND CELLS since
@@ -4142,8 +3553,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 // column's own verdict, true only while the lamp was lit HERE: every reset the
 // sweep reads (phase_reset_iter_eligible_marker, phaseresetmarkers.h — so a
 // disabled reset, which carries no bracket at all, paints no cells) extends its
-// flag with the LOWER
-// bound then the UPPER, each painted exactly as the flag box is, carrying the
+// label with the LOWER
+// bound then the UPPER, each a segment as the warp column's are, carrying the
 // bound as a SIGNED WHOLE HOP of the analysis lattice
 // (format_phase_iter_bound_cell). The sign is the whole syntax here as it is
 // on the warp column, and the ABSENT DECIMALS are what tell a hop cell from a
@@ -4174,18 +3585,16 @@ void render_phase_reset_flags(cairo_t* cr,
                             // gates, while the bound editor is both columns'.
                             SuppressedBox suppressed = SuppressedBox{});
 
-// THE COLOUR A LIVE PHASE RESET'S STEM WEARS, for a surface that must wear it
-// too — the lead-in ring (paint_phase_reset_overlay_ring, paint_handler.cpp,
-// architect 2026-09-17). It asks the one ladder (resolve_flag_face,
-// render.cpp) rather than restating it: the `removed_flag` face when `red`
-// (the column's red set, phase_reset_red_flag_set_cached), the
-// `phase_reset_flag` face otherwise, each its selected face when `selected`
-// (the reset selected AND
-// its payload the bright cell — the bit the flag pass hands the payload box
-// whose face the stem wears, architect 2026-10-04), so the ring and its stem
-// stay one object at rest and selected.
-// No disabled arm, a disabled reset painting neither stem nor ring.
-GuiColor phase_reset_stem_color(bool red, bool selected);
+// THE COLOUR A LIVE PHASE RESET'S CUE AND DOTS WEAR, for a surface that must
+// wear it too — the lead-in ring (paint_phase_reset_overlay_ring,
+// paint_handler.cpp, architect 2026-09-17). It asks the one ladder
+// (resolve_flag_face, render.cpp) rather than restating it: the
+// `removed_flag` face when `red` (the column's red set,
+// phase_reset_red_flag_set_cached), the `phase_reset_flag` face otherwise —
+// resting, selected or not (2026-10-09: the cue never changes when
+// selected), so the ring and its dots stay one object.
+// No disabled arm, a disabled reset painting neither dots nor ring.
+GuiColor phase_reset_stem_color(bool red);
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the
@@ -4269,29 +3678,20 @@ struct HistoryDiffFlag {
 // `marker_index` carrying the INDEX INTO `flags`, out_stems the same), so
 // hit_test_flag keeps working unchanged and answers a diff-flag index.
 //
-// THE ANATOMY IS THE LIVE FLAG'S (the palette block's marker-lane paragraph):
-// the flat box in ITS KIND's face (architect 2026-10-04): an added half the
-// `added_flag` pair, a removed half the `removed_flag` pair, its
-// one-Windows-px outline in `flag_outline` — the left border outside the
-// face, the top and bottom rows, the closing column — and the label on the
-// redesign's sans
-// at the lane baseline in `flag_label`. THE LABEL CARRIES THE SIGN: `[+]`
-// before an added line's payload, `[-]` before a removed one's
-// (history_diff_label, paint_handler.h). A CHANGED pair is that same box
-// at double width — the removed half then the added half, each its own label,
-// ONE outline column wrapping the whole at its left and a SECOND outline
-// column ON THE SEAM between them (2026-08-20, standing since 2026-09-02; the
-// halves were two saturated hues then, and the shared column stays the
-// anatomy's one seam rule). The pair is still ONE flag: one rect, one focus,
-// one claim.
+// THE ANATOMY IS THE LIVE CUE'S (the palette block's marker-lane paragraph):
+// the triangle in ITS KIND's face (architect 2026-10-04) — an added flag's
+// `added_flag`, a removed flag's `removed_flag`, a CHANGED pair's the
+// removed half's, the half its dots leave from — and the label in the
+// program face. THE LABEL CARRIES THE SIGN: `[+]` before an added line's
+// payload, `[-]` before a removed one's (history_diff_label,
+// paint_handler.h). A CHANGED pair's label is its two halves as two
+// segments, the removed then the added, the segment gap between them. The
+// pair is still ONE flag: one rect, one focus, one claim.
 //
-// EVERY HALF IS SIZED BY ITS OWN SHAPED TEXT — pad + shaped(label) + pad — so
-// the halves of a pair are routinely ASYMMETRIC and the seam, the border and
-// the one hit rect all compose off the two measured widths rather than off any
-// assumed equality. That is proven machinery: a warp pair's two tempo tokens
-// have differed in width since this lane's first day. A longer half simply
-// measures longer, and THESE LABELS ARE NEVER TRUNCATED (the cull bound
-// follows the commit's own widest text; the reasoning is at the paint site).
+// EVERY HALF IS SIZED BY ITS OWN SHAPED TEXT, so the halves of a pair are
+// routinely ASYMMETRIC and the one hit rect composes off the two measured
+// widths. THESE LABELS ARE NEVER TRUNCATED (the cull bound follows the
+// commit's own widest text; the reasoning is at the paint site).
 //
 // THE LANE CARRIES THE DISABLED AXIS, PER COMMIT SIDE (architect 2026-08-22,
 // closing a state-axis gap the view shipped with: a `#` line and a live one
@@ -4299,32 +3699,29 @@ struct HistoryDiffFlag {
 // A HALF whose line is EFFECTIVELY disabled within ITS OWN side's commit — the
 // local '#' or, same-day deepening, the label cascade resolved over that
 // side's full warp set (the effective pair at HistoryDiffFlag above; the '#'
-// in the TEXT stays the local byte) — paints the LIVE LANE'S DISABLED FACE
-// through the same ladder (resolve_flag_face): the theme's ground, the label
-// embossed. IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes its own bit,
-// so a disable TOGGLE paints one disabled half beside one live half and the
-// direction of the toggle is readable off the flag itself. The outline columns
-// are the flag outline on every half, focused or not (below).
+// in the TEXT stays the local byte) — paints its segment in the LIVE LANE'S
+// DISABLED EMBOSS, and a single disabled half's triangle the theme's ground
+// (resolve_flag_face). IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes
+// its own bit, so a disable TOGGLE paints one embossed half beside one live
+// half and the direction of the toggle is readable off the label itself.
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none) and
 // `selected` its OWN multi-selection (ordinals into the same list, 2026-08-05):
-// EITHER GIVES that flag THE SELECTED FACE, both halves of a double flag
-// together (the live lane's selection, architect 2026-10-03: face, label and
-// stem through the one ladder). One face for both,
-// deliberately — the focus is the selection's singleton when the set is empty,
-// and the revert act reads them the same way, so a second face would be a
-// distinction nothing acts on. The STEM is the face of the half it leaves
-// from — the removed half's on a changed pair, which paints first — its
-// selected face with the flag's. THE STEM READS THE DISABLED AXIS (architect 2026-08-22): a SINGLE
+// EITHER GIVES that flag THE SELECTED LOOK, both halves of a double flag
+// together as ONE selected box (the live lane's selected label). One look
+// for both, deliberately — the focus is the selection's singleton when the
+// set is empty, and the revert act reads them the same way, so a second look
+// would be a distinction nothing acts on. The triangle keeps its color. THE
+// DOTS READ THE DISABLED AXIS (architect 2026-08-22): a SINGLE
 // flag — added-only or removed-only — whose one side is EFFECTIVELY disabled
-// publishes NO STEM AT ALL, the live lane's rule verbatim, while a CHANGED
-// PAIR KEEPS ITS STEM whichever halves are disabled, because the pair as a
+// publishes NO DOTS AT ALL, the live lane's rule verbatim, while a CHANGED
+// PAIR KEEPS ITS DOTS whichever halves are disabled, because the pair as a
 // whole is a live EDIT being displayed rather than a line in a switched-off
 // state.
 // NO CELLS AND NO ADDRESSED CELL ON THIS LANE: a bracket is session-only and
 // in no commit, so a diff flag carries no bound cells, and the view's focus is
 // its own diff-flag cycle's with nothing for AppState::addressed_cell to
-// address — the focus rings the whole flag.
+// address — the focus lights the whole label.
 void render_history_diff_flags(cairo_t* cr,
                                GuiRect top_strip_area,
                                FlagLaneRects lanes,

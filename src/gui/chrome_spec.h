@@ -21,12 +21,12 @@
 // THE CHROME ENDS AT THE MENU ROW (architect 2026-10-09 ~06:55, "chrome
 // means chrome, the program is Cool Edit"): the chrome is the caption, the
 // menu row, the window frame, the pull-downs, the cards, the prompts and the
-// dialogs with their fields and buttons, the trim lane, the scrub, the
-// ruler's ticks and the well's frame (the canvas column's lanes until the
-// program's later parts take them); THE TOOLBAR BAND AND ROW 8 ARE THE
-// PROGRAM'S, Cool Edit's under every chrome (program_spec.h) — so no field
-// here shapes a toolbar case, a toolbar band, row 8's air or a dead button's
-// glyph.
+// dialogs with their fields and buttons, the scrub and the well's frame (the
+// canvas until the program's later parts take it); THE TOOLBAR BAND, ROW 8
+// AND THE CANVAS COLUMN'S LANES — the view bar, the ruler, the cues — ARE
+// THE PROGRAM'S, Cool Edit's under every chrome (program_spec.h) — so no
+// field here shapes a toolbar case, a toolbar band, row 8's air, the trim
+// lane, the ruler or a dead button's glyph.
 //
 // THE NAME IS `windows-2000` (architect 2026-10-07): the `chrome` key's
 // value (its compiled theme is the catalog entry `windows-2000-standard`,
@@ -61,14 +61,11 @@
 //     DROPDOWN AND THE LISTS since its second part (the push button, the
 //     entry, GtkMenu, the compact list; the tooltip and the cards were
 //     Clearlooks' already: the same one-line card face), AND THE REST OF THE
-//     CHROME since its last part (the trim lane as GTK's scroll bar, the
-//     scrub as GtkScale, the well's scrolled-window line, the ruler's
-//     ticks, the restored laptop's metacity frame). The waveform and the
-//     flags stay the program's own, the flag editor with them — the flag
-//     in its selected face under every chrome (architect 2026-10-07
-//     ~09:45). The trim lane's bar is the product's own: the light slider
-//     for the body and the caps in step with it (paint_cl_slider,
-//     paint_cl_stepper).
+//     CHROME since its last part (the scrub as GtkScale, the well's
+//     scrolled-window line, the restored laptop's metacity frame). The
+//     waveform, the canvas column's lanes and the cues are the program's
+//     own (2026-10-09; GTK's scroll bar as the trim lane and its ruler
+//     ticks stood until then), the flag editor with them.
 //   CDE (the key `cde`; architect 2026-10-08 ~12:50, "let's dive right into
 //     the CDE build-out", his rulings of ~14:10 on the three bevel sheets
 //     and of ~15:00) — SOLARIS 9's CDE 1.5, dtwm and Motif as the
@@ -77,7 +74,8 @@
 //     under THE SETTLED RULE FOR EVERY LATER VOCABULARY: period authentic
 //     except for the proportional fit to Windows' layout — the base's cell
 //     and seat, every Motif height re-derived at the 13-row cell by Motif's
-//     own arithmetic, the differences absorbed by the ruler lane, line
+//     own arithmetic, the differences the well's (its own lanes' leftover;
+//     the ruler lane absorbed them 2026-10-08 to 2026-10-09), line
 //     weights as the sources give them, what cannot be made to fit
 //     scratched. BEVELS ONE W (ruling 1: CDE's authentic weight — only
 //     dtcalc used Motif's canonical 2), corners mitred like every two-tone
@@ -86,8 +84,8 @@
 //     (ruling 4, kGuiFaceSetCde). THE FULL DTWM FRAME ON EVERY WINDOW, the
 //     tablet's and the maximized laptop's too (architect 2026-10-08 ~17:45,
 //     reversing the ~15:00 "hidden" on his glass pass of phase 1:
-//     window_frame_maximized below), THE RULER BEHIND THE FLAGS
-//     (ruler_behind_flags), CDE'S OWN 13-W SCROLL BAR (scroll_bar_px) and
+//     window_frame_maximized below), CDE'S OWN 13-W SCROLL BAR
+//     (scroll_bar_px) and
 //     MOTIF'S INSENSITIVE STIPPLE for every disabled word (render.h's
 //     stipple pair; his rulings of ~17:30–18:00); the
 //     focus ring NOT DRAWN (~15:00: "anachronism ok to fit the screen and
@@ -103,7 +101,7 @@
 // were; making them larger than Windows' metric when the historical frame
 // wants the space is done only after consideration"): where a source draws
 // an element smaller than Windows' metric the vocabulary takes the source's
-// own (cde's 13-W scroll bar for the base's 16, scroll_bar_px), and where a
+// own (cde's 13-W popup scroll bar for the base's 16, scroll_bar_px), and where a
 // source draws it larger the base's metric stands until he rules otherwise.
 // WINDOWS-2000 IS THE DEFAULT AND THE METRIC BASE; CLEARLOOKS IS THE SECOND
 // VOCABULARY AND CDE THE THIRD (architect 2026-10-07 ~22:45, reversing the ~16:00 ruling that
@@ -128,8 +126,8 @@
 // the vocabularies draw an element differently (the head): the caption's band,
 // title and buttons, the menu bar and its open title, the disabled words'
 // emboss, the dialogs' push buttons and fields, the dropdown, the lists, the
-// trim lane, the scrub, the well's frame, the ruler's ticks, the restored
-// laptop's frame and the flag editor. A PAINTER THAT FORKS ON `== Clearlooks` ALONE draws
+// scrub, the well's frame and the restored laptop's frame. A PAINTER THAT
+// FORKS ON `== Clearlooks` ALONE draws
 // its Windows arm under cde too, deliberately, where Windows' drawing in the
 // Solaris scheme's roles IS Motif's (the etched lines, the emboss, the
 // inverted list selection): the cde arm is
@@ -196,34 +194,16 @@ struct ChromeSpec {
     double             menu_label_pad_left_px;
     double             menu_label_pad_right_px;
     double             menu_band_lead_px;
-    // THE RULER LANE'S TWO AUTHORED TERMS (render.h's ruler block; the
-    // seat's rule at paint_handler.cpp's ruler_label_baseline_px): how far
-    // under the lane's top the labels' CAP TOP lands, and the rows from
-    // their baseline to the marker lane. The base's 4 and 7 (the lane 4 + 6
-    // + 7 = 17), clearlooks' the same; UNREAD under cde, whose ruler stands
-    // behind the flags (ruler_behind_flags below; 0 and 0 there).
-    int                ruler_label_cap_top_px;
-    int                ruler_baseline_to_marker_px;
-    // THE RULER BEHIND THE FLAGS (architect 2026-10-08 ~17:30, his glass
-    // pass of cde's phase 1: "the ticks reduced and the timestamp pushed
-    // down; the flags remain as they are, but the ticks and the timestamp
-    // hide behind the flags (they are not really that useful)"): when true
-    // the ruler lane is `ruler_lane_px` W — THE LEFTOVER OF THE LANE TABLE,
-    // what the vocabulary's other lanes and its frame leave of the base's
-    // stack so the well keeps its rows (render.h's chrome_stack_authored_h
-    // proves the sum) — its ticks short, hanging from its top, its timestamps drawn at
-    // the marker lane's rows behind the flags and the playhead's head at its
-    // top (paint_ruler_row's arm); the two terms above unread. False (the
-    // base's ruler): the lane derives from the label face, ruler_lane_px
-    // unread (0).
-    bool               ruler_behind_flags;
-    int                ruler_lane_px;
-    // THE SCROLL BAR'S THICKNESS in Windows px — the trim lane's height, its
-    // two arrow caps' square and the popup lists' vertical bar's width
-    // (render.h's trim and popup scroll blocks), one source (2026-10-08):
-    // Windows' SM_CXVSCROLL 16 under win2000, the base's 16 worn for GTK's
-    // 15 under clearlooks, CDE's own 13 (the smaller-element rule at the
-    // head).
+    // (THE RULER LANE'S FIELDS — its two authored seat terms and cde's ruler
+    // behind the flags with its leftover lane — left the spec 2026-10-09:
+    // the ruler is the program's, Cool Edit's 17 W under every chrome,
+    // program_spec.h.)
+    // THE SCROLL BAR'S THICKNESS in Windows px — the popup lists' vertical
+    // bar's width (render.h's popup scroll block): Windows' SM_CXVSCROLL 16
+    // under win2000, the base's 16 worn for GTK's 15 under clearlooks, CDE's
+    // own 13 (the smaller-element rule at the head). (It was the trim lane's
+    // height and its caps' square too, 2026-10-08 to 2026-10-09; the trim
+    // lane is the program's view bar since.)
     int                scroll_bar_px;
     // THE PUSH BUTTON — the dialogs' word buttons (paint_handler.cpp's
     // kModal* block): the box's height and the label's pads left and right.
@@ -314,10 +294,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .menu_label_pad_left_px       = 9.0,
     .menu_label_pad_right_px      = 7.0,
     .menu_band_lead_px            = 2.0,
-    .ruler_label_cap_top_px       = 4,
-    .ruler_baseline_to_marker_px  = 7,
-    .ruler_behind_flags           = false,
-    .ruler_lane_px                = 0,
     .scroll_bar_px                = 16,
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 7.0,
@@ -407,10 +383,6 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
     .menu_label_pad_left_px       = 5.0,
     .menu_label_pad_right_px      = 5.0,
     .menu_band_lead_px            = 1.0,
-    .ruler_label_cap_top_px       = 4,
-    .ruler_baseline_to_marker_px  = 7,
-    .ruler_behind_flags           = false,
-    .ruler_lane_px                = 0,
     .scroll_bar_px                = 16,
     .push_button_box_px           = 25.0,
     .push_button_pad_left_px      = 6.0,
@@ -505,15 +477,10 @@ inline constexpr ChromeSpec kChromeSpecClearlooks = {
 //   (window_frame_maximized), outside the app's geometry, with dtwm's
 //   CORNER PIECES (cde_paint.h's frame block). THE SCROLL BAR 13
 //   (scroll_bar_px; N rows 383-395 and report §3: the 1-px trough ring, the
-//   11-px slider and arrows inside it) — the trim lane and the popup bar.
-//   THE RULER LANE 4, BEHIND THE FLAGS (ruler_behind_flags; architect
-//   2026-10-08 ~17:30): the lane table's leftover — the frame's 5 + 5 and
-//   the stack 17 + 27 + the program's band 33 + 13 + 4 + 18 above the well
-//   with the program's dock bar and row 8, 38, below it sum to the base's
-//   122 + 38 (render.h's static_assert), so the well keeps the base's 960
-//   device rows at 300 % (main.cpp's lane table); its two label terms
-//   unread. (3 for the morning of 2026-10-09, while Motif's toolbar form
-//   took a row of it.)
+//   11-px slider and arrows inside it) — the popup bar. (The ruler lane
+//   behind the flags, the lane table's leftover, stood 2026-10-08 to
+//   2026-10-09; the ruler is the program's since, and cde's well is its own
+//   lanes' leftover like every chrome's — main.cpp's lane table.)
 //   THE PUSH BUTTON Motif's XmPushButton on O: 25 tall (Cancel rows
 //   340-364 = 1 + 23 + 1 round the 15-row cell + 8) = 23 at the base cell,
 //   the dialog field's own height; its pad 6 (File Encoding's box x 136-237
@@ -555,10 +522,6 @@ inline constexpr ChromeSpec kChromeSpecCde = {
     .menu_label_pad_left_px       = 7.0,
     .menu_label_pad_right_px      = 7.0,
     .menu_band_lead_px            = 4.0,
-    .ruler_label_cap_top_px       = 0,
-    .ruler_baseline_to_marker_px  = 0,
-    .ruler_behind_flags           = true,
-    .ruler_lane_px                = 4,
     .scroll_bar_px                = 13,
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 6.0,

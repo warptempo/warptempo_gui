@@ -919,31 +919,13 @@ void paint_cl_selected_cell(cairo_t* cr, const GuiRect& r, bool focused) {
     cairo_restore(cr);
 }
 
-// -- THE LANES, THE SCRUB, THE STATUS BAR AND THE FRAME (the painters round's
-//    last part, 2026-10-07; the rules at the declarations) ---------------------
+// -- THE SCRUB, THE POPUP LISTS' BAR AND THE FRAME (the painters round's last
+//    part, 2026-10-07; the rules at the declarations) -------------------------
 
 static_assert(kChromeSpecClearlooks.scrub_handle_box_px ==
                   kClScaleSliderLengthPx,
               "GTK's scrub grab is the slider itself: the spec's box is "
               "slider-length");
-
-void paint_cl_trough(cairo_t* cr, const GuiRect& lane) {
-    if (lane.w <= 0 || lane.h <= 0) return;
-    const int u = relief_line_px();
-    const GuiPalette& pal = palette();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, lane, pal.cl_trough_fill);
-    // The shadow's two graded rows (W rows 1 and 2), the one ramp rule.
-    paint_cl_ramp(cr, GuiRect{lane.x, lane.y + u, lane.w,
-                              at(lane.y, 3) - (lane.y + u)},
-                  pal.cl_trough_shadow_0, pal.cl_trough_shadow_1);
-    paint_cell_rect(cr, GuiRect{lane.x, lane.y, lane.w, u},
-                    pal.cl_trough_border);
-    paint_cell_rect(cr, GuiRect{lane.x, lane.y + lane.h - u, lane.w, u},
-                    pal.cl_trough_border);
-    cairo_restore(cr);
-}
 
 namespace {
 
@@ -993,53 +975,6 @@ void paint_cl_chevron(cairo_t* cr, const GuiRect& b, double turn, int bar_w) {
 // authored across it.
 constexpr int kClScrollBarW = kChromeSpecClearlooks.scroll_bar_px;
 
-// ONE TRIM CAP (the rule at paint_cl_stepper): the ring's ramp runs down the
-// cap, its outer corners the bar's ends, its inner edge where it meets the
-// body.
-void paint_cl_cap(cairo_t* cr, const GuiRect& b, bool left, bool pressed) {
-    if (b.w <= 0 || b.h <= 0) return;
-    const GuiPalette& pal = palette();
-    const int    u   = relief_line_px();
-    const double du  = u;
-    const double rad = std::min<double>(scaled_px(live_chrome_spec().corner_radius_px),
-                                        std::min(b.w, b.h) / 2.0);
-    const unsigned corners = left ? (kTL | kBL) : (kTR | kBR);
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    // THE RING, the box inside its outer rounded path: the one ramp from the
-    // bar's light tone to its dark tone over the first kClCapRampPx rows,
-    // then the dark tone flat to the bottom (the body's dark line continued)
-    // — the turn ends inside the corner's arc, so the straight outer side is
-    // one tone (the step-j ruling at kClCapRampPx). The clip's arcs are the
-    // renderer's antialiasing.
-    cairo_save(cr);
-    rounded_path(cr, b.x, b.y, b.w, b.h, rad, corners);
-    cairo_clip(cr);
-    const int ramp_rows = std::min(scaled_px(kClCapRampPx) + 1, b.h);
-    paint_cl_ramp(cr, GuiRect{b.x, b.y, b.w, ramp_rows},
-                  pal.cl_separator_light, pal.cl_separator_dark);
-    if (ramp_rows < b.h)
-        paint_cell_rect(cr, GuiRect{b.x, b.y + ramp_rows, b.w, b.h - ramp_rows},
-                        pal.cl_separator_dark);
-    cairo_restore(cr);
-    // THE FACE, one W in, its rounded corners concentric with the ring's:
-    // the ground at rest, bg[ACTIVE] pressed.
-    cairo_save(cr);
-    rounded_path(cr, b.x + du, b.y + du, b.w - 2 * du, b.h - 2 * du,
-                 std::max(0.0, rad - du), corners);
-    cairo_clip(cr);
-    paint_cell_rect(cr, GuiRect{b.x + u, b.y + u, b.w - 2 * u, b.h - 2 * u},
-                    pressed ? pal.cl_stepper_pressed_face : pal.ground);
-    cairo_restore(cr);
-    // THE INNER EDGE: one W of the dark tone where the cap meets the body,
-    // the lane's whole height (the begin cap's right column, the end cap's
-    // left).
-    paint_cell_rect(cr, GuiRect{left ? b.x + b.w - u : b.x, b.y, u, b.h},
-                    pal.cl_separator_dark);
-    cairo_restore(cr);
-    paint_cl_chevron(cr, b, left ? M_PI_2 : -M_PI_2, kClScrollBarW);
-}
-
 // THE LIST BAR'S STEPS ACROSS ITS WIDTH (build.py's pixman_step_row): the
 // stepper's ramp from column 0 to the width, the slider's from column 1 to
 // the width less 2 — W column 8 of the 16 both.
@@ -1060,11 +995,6 @@ void paint_cl_ramp_across_split(cairo_t* cr, const GuiRect& r, int ox,
 }
 
 } // namespace
-
-void paint_cl_stepper(cairo_t* cr, const GuiRect& b, bool points_left,
-                      bool pressed) {
-    paint_cl_cap(cr, b, points_left, pressed);
-}
 
 void paint_cl_scrollbar_stepper(cairo_t* cr, const GuiRect& b, bool points_up,
                                 bool pressed) {
@@ -1212,23 +1142,6 @@ void paint_cl_scrollbar_slider(cairo_t* cr, const GuiRect& body) {
         paint_cell_rect(cr, GuiRect{gx0, gy, gx1 - gx0, at(gy, 1) - gy},
                         pal.cl_scrollbar_slider_grip);
     }
-    cairo_restore(cr);
-}
-
-void paint_cl_slider(cairo_t* cr, const GuiRect& body) {
-    if (body.w <= 0 || body.h <= 0) return;
-    const GuiPalette& pal = palette();
-    const int u = relief_line_px();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // The ground, then its top row light and its bottom row dark — the gummy
-    // separator's own two roles, reused (the declaration says why that is no
-    // derivation).
-    paint_cell_rect(cr, body, pal.ground);
-    paint_cell_rect(cr, GuiRect{body.x, body.y, body.w, u},
-                    pal.cl_separator_light);
-    paint_cell_rect(cr, GuiRect{body.x, body.y + body.h - u, body.w, u},
-                    pal.cl_separator_dark);
     cairo_restore(cr);
 }
 
