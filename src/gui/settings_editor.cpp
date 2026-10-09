@@ -160,7 +160,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
 // THE CHOICE EDITOR'S ACTS (the head). The shown value is written into the
 // line as `<key>=<value>`, so the two roads that commit the line — OK and
 // Enter — commit it through commit() and commit_device_setting unchanged;
-// a list row, Up and Down only move it (architect 2026-10-10).
+// a list row, Up and Down only move it (architect 2026-10-09).
 void GuiSettingsEditor::choice_show(int index) {
     if (!app.settings_choice_live()) return;
     AppState::SettingsChoice& ch = app.settings_choice;
@@ -240,7 +240,7 @@ void GuiSettingsEditor::choice_arm_row(int row) {
 }
 
 // THE LIFT ON A LIST ROW SHOWS THE ROW AND COMMITS NOTHING (architect
-// 2026-10-10: "it should not pick the font until I hit OK"): the list
+// 2026-10-09: "it should not pick the font until I hit OK"): the list
 // closes onto the combo and the line takes the row's value, so OK or Enter
 // commits it and Cancel or Esc leaves the config and the screen as they
 // stood — for every choice row alike.
@@ -412,7 +412,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // file's reader runs, so "loadable iff it commits" still holds across the
     // move. (The other five editable device keys — projects_repo and, since
     // 2026-09-02, projects_path, since 2026-10-07 chrome, since
-    // 2026-10-10 icons and since 2026-10-09 font — take their one
+    // 2026-10-09 icons and since 2026-10-09 font — take their one
     // direct-set body in commit(),
     // commit_device_setting, ahead of this router.)
     if (key == "gui_scale") {
@@ -1067,10 +1067,10 @@ void GuiSettingsEditor::commit() {
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
 // project is opened first — a rename-by-hand case, accepted. `chrome`
-// (2026-10-07) and `icons` (2026-10-10): AT THE NEXT LAUNCH alone, each
+// (2026-10-07) and `icons` (2026-10-09): AT THE NEXT LAUNCH alone, each
 // card saying so (their arms). `font` (2026-10-09 ~21:20): AT ONCE, live,
 // no card (its arm). For a choice row "the commit" is the OK's or Enter's,
-// never a list row's (architect 2026-10-10, settings_editor.h's head).
+// never a list row's (architect 2026-10-09, settings_editor.h's head).
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08 and left with its key.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
@@ -1136,7 +1136,7 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return true;
     }
 
-    // THE ICON SET (architect 2026-10-10): the Chrome arm's road exactly — a
+    // THE ICON SET (architect 2026-10-09): the Chrome arm's road exactly — a
     // bundled set's key under its one grammar owner (is_icon_set_key,
     // icons.h), written at once, applied at the next launch and SAID so on
     // its card (kIconsAppliesCard) — with the palette's rule for the
@@ -1170,7 +1170,7 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // the chrome's rule, "no default setting because it's a drop-down" — and,
     // unlike the chrome and the icon set, APPLIED LIVE AT THE COMMIT — which
     // is the OK's (or Enter's), never the list row's, the choice editor's
-    // rule (architect 2026-10-10, settings_editor.h's head: a row only
+    // rule (architect 2026-10-09, settings_editor.h's head: a row only
     // shows the face's name, and Cancel leaves the face as it stood): the
     // live set moves
     // (set_live_font), every cache that holds a face keys the set

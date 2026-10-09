@@ -20,7 +20,7 @@
 // architect 2026-10-09 ~21:20 / ~23:30: "the font is its own drop-down … it
 // doesn't really make sense picking a font via palette or even in the
 // palette picker"). EVERY SET IS NAMED BY ITS FILES, NEVER BY THE WINDOWS
-// FACE IT STANDS IN FOR (architect 2026-10-10 ~00:40: "I just want to make
+// FACE IT STANDS IN FOR (architect 2026-10-09 evening: "I just want to make
 // sure that the fonts are named honestly … Liberation Sans is a stand-in for
 // Arial, and FreeSans is what we're actually providing"): the key's words,
 // the Settings row's names and the identifiers say Tahoma, FreeSans and
@@ -40,7 +40,7 @@
 // before Windows 2000's Standard scheme took Tahoma. THE LIBERATION SET,
 // kGuiFaceSetLiberation (`liberation-sans`): LIBERATION SANS 2.1.5
 // (LiberationSans-Regular.ttf, LiberationSans-Bold.ttf; TrueType outlines,
-// Arial's metrics — a stand-in for Arial, architect 2026-10-10), the face a
+// Arial's metrics — a stand-in for Arial, architect 2026-10-09), the face a
 // user whom FreeSans's hinting troubles falls back to. In each set the body is
 // the regular file,
 // the bold (the caption's title alone) the bold file, the small (THE
@@ -284,7 +284,7 @@ inline constexpr GuiFaceSet kGuiFaceSetWin2000 = {
 
 // THE FREESANS SET (architect 2026-10-09: "let's use free sans"), the
 // `font` key's `free-sans`, "FreeSans" in the Settings row — named by its
-// files, never by the face it stands in for (architect 2026-10-10 ~00:40,
+// files, never by the face it stands in for (architect 2026-10-09 evening,
 // the head; gui_live_face_set below) — GNU FREEFONT'S FREESANS, FreeSans
 // and FreeSans Bold of GNU FreeFont 20120503, its last release
 // (fonts/README.md; GPL-3.0-or-later with the font exception), THE MS SANS
@@ -355,7 +355,7 @@ inline constexpr GuiFaceSet kGuiFaceSetFreeSans = {
 // working out right now … we should install Liberation Sans as a
 // fallback"), the `font` key's `liberation-sans`, "Liberation Sans" in the
 // Settings row, named by its files — a stand-in for Arial (architect
-// 2026-10-10 ~00:40), no period chrome's face — LIBERATION SANS 2.1.5,
+// 2026-10-09 evening), no period chrome's face — LIBERATION SANS 2.1.5,
 // Regular and Bold (fonts/README.md;
 // SIL Open Font License 1.1, the files unmodified under their own names):
 // "my go-to font because of the kerning. It looks the best at 1080p … the
@@ -438,11 +438,11 @@ static_assert(same_lanes(kGuiFaceSetWin2000, kGuiFaceSetLiberation));
 // (kFontChoiceSource, app_state.h), each word naming its set, its shown
 // name beside it, Title Case (the row's combo and list) — icons.h's
 // kIconSetKeys' shape. THE WORDS AND THE NAMES ARE THE FILES' (architect
-// 2026-10-10 ~00:40: "I just want to make sure that the fonts are named
+// 2026-10-09 evening: "I just want to make sure that the fonts are named
 // honestly … FreeSans is what we're actually providing. So the drop-down
 // should use FreeSans in the name") — never the Windows face a set stands
 // in for, which is its block's story. THE ORDER IS ALPHABETICAL BY THE
-// SHOWN NAME, FreeSans, Liberation Sans, Tahoma (architect 2026-10-10: the
+// SHOWN NAME, FreeSans, Liberation Sans, Tahoma (architect 2026-10-09: the
 // order of the evening before was "neither historical nor alphabetical;
 // let's just make it alphabetical"), and the three tables below run in it
 // in parallel; nothing reads a position in them — the default, the

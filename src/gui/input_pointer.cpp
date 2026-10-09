@@ -5813,7 +5813,7 @@ bool GuiInputHandler::finish_settings_choice_release(int x, int y) {
     const int hit = modal_dialog_stash_current()
                         ? settings_choice_list_hit(app.modal_dialog, x, y)
                         : -1;
-    // THE LIFT ON A ROW SHOWS IT AND COMMITS NOTHING (architect 2026-10-10:
+    // THE LIFT ON A ROW SHOWS IT AND COMMITS NOTHING (architect 2026-10-09:
     // OK commits, Cancel discards — GuiSettingsEditor::choice_pick).
     if (hit >= 0) settings_editor.choice_pick(hit);
     else          settings_editor.set_choice_list_open(false);
@@ -7965,7 +7965,7 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // where an unarmed release still ends.
     // THE SETTINGS CHOICE EDITOR'S ROW LIFT (2026-10-07 evening), its press
     // claim's mirror: the armed list row's lift shows that row and commits
-    // nothing — OK's lift below, or Enter, commits (architect 2026-10-10) —
+    // nothing — OK's lift below, or Enter, commits (architect 2026-10-09) —
     // or closes the list off the row. Ahead of the dialog's buttons, which no
     // press armed while the list was down.
     if (button == GuiMouseButton::Left && finish_settings_choice_release(x, y))

@@ -3386,7 +3386,7 @@ int gui_main(const char* argument) {
     // the face caches are built at the first paint. A `font` commit in
     // Settings moves it again, live (commit_device_setting).
     set_live_font(device_config.font);
-    // THE ICON SET IS CHOSEN BESIDE IT, ONCE (architect 2026-10-10, icons.h's
+    // THE ICON SET IS CHOSEN BESIDE IT, ONCE (architect 2026-10-09, icons.h's
     // gui_live_icon_set): the config's `icons`, judged by its reader, or
     // with no line the live chrome's own set. An `icons` commit in Settings
     // writes the file and takes effect at the next launch, the chrome's

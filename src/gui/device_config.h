@@ -51,7 +51,7 @@
 //                            set (ChromeSpec::icon_set: Tango under
 //                            windows-2000; effective_icon_set); takes
 //                            effect at the next
-//                            launch, the chrome's rule (architect 2026-10-10)
+//                            launch, the chrome's rule (architect 2026-10-09)
 //   font=<key>               THE FACE every text is set in, named by its
 //                            files: `free-sans`, `liberation-sans` or `tahoma`
 //                            (is_font_key, gui_font.h; any other word the
@@ -61,7 +61,7 @@
 //                            it's a drop-down", architect 2026-10-09);
 //                            applied LIVE at the Settings row's OK
 //                            (gui_live_face_set; the row's list only shows
-//                            a face, architect 2026-10-10)
+//                            a face, architect 2026-10-09)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
@@ -71,7 +71,7 @@
 // `theme` the same day, the program's colors' own file type; `theme` gone
 // 2026-10-08, below; `scheme` placed between `chrome` and `palette`
 // 2026-10-08 ~18:15, the chrome's colors after the chrome and before the
-// program's; `icons` APPENDED after `palette` 2026-10-10, and `font`
+// program's; `icons` APPENDED after `palette` 2026-10-09, and `font`
 // APPENDED after `icons` 2026-10-09 ~21:20);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
@@ -217,7 +217,7 @@
 // still load, and `font` absent (2026-10-09) is tahoma for the same reason —
 // the writer names both always; `palette` absent is the chrome's default
 // palette, `scheme` absent (2026-10-08) the chrome's own scheme and `icons`
-// absent (2026-10-10) the chrome's own icon set, each the one spelling of
+// absent (2026-10-09) the chrome's own icon set, each the one spelling of
 // that state, which the writer emits by leaving the line out), one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -244,7 +244,7 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`, `Projects Repository`,
 // `Projects Path`, since 2026-10-07 `Chrome` (`Theme` stood after it
-// 2026-10-03..10-08), since 2026-10-10 `Icons` and since 2026-10-09 ~21:20
+// 2026-10-03..10-08), since 2026-10-09 `Icons` and since 2026-10-09 ~21:20
 // `Font` (kSettingsPopupItems,
 // app_state.h) as rows that open the settings editor prefilled, and the
 // editor commits each through this file's writer under the key's own
@@ -266,7 +266,7 @@
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for the four required keys: a successful read always assigns
 // them. THE FIVE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
-// (2026-10-07; the scheme 2026-10-08, the icons 2026-10-10, the font
+// (2026-10-07; the scheme 2026-10-08, the icons 2026-10-09, the font
 // 2026-10-09): `chrome` "windows-2000" (the default chrome, architect
 // 2026-10-07 ~22:45), `font` "tahoma" (kDefaultFontKey),
 // `scheme`, `palette` and `icons` empty (no line: the chrome's own). Both
@@ -292,7 +292,7 @@
 // takes the chrome's colors from its compiled theme (chrome_theme_words,
 // theme_file.h), with the scheme's twelve keys derived over it by the live
 // chrome's derivation (live_chrome_words, chrome_derive.h). THE ICON SET IS
-// ITS KEY VERBATIM TOO (2026-10-10): gui_main installs it once beside the
+// ITS KEY VERBATIM TOO (2026-10-09): gui_main installs it once beside the
 // chrome (set_live_icon_set, icons.h), before the set's load. SO IS THE
 // FONT (2026-10-09): gui_main installs it beside the chrome (set_live_font,
 // gui_font.h), and the Settings row's commit installs it again live.
@@ -317,7 +317,7 @@ struct DeviceConfig {
     // `cool-edit-default` under every chrome, 2026-10-09) — never written
     // back; a named palette is honored under every chrome.
     std::string palette;
-    // THE ICON SET, UNSET BY DEFAULT (architect 2026-10-10): empty while the
+    // THE ICON SET, UNSET BY DEFAULT (architect 2026-10-09): empty while the
     // config has no `icons` line, which RESOLVES AT LAUNCH to the live
     // chrome's own set (effective_icon_set, icons.h: `tango` or `mist`) —
     // never written back; a named set is honored under every chrome
@@ -590,12 +590,12 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // struct they were handed rather than composing one from AppState's fields.
 //
 // FOUR CALL SITES CARRY THE KEY COMMITS, and this is their inventory
-// (re-grepped 2026-10-10; the font arm added 2026-10-09 ~21:20):
+// (re-grepped 2026-10-09; the font arm added 2026-10-09 ~21:20):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves five keys —
 // `projects_repo=`, `projects_path=`, `chrome=`, `icons=` and `font=`
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the path
-// arm joined 2026-09-02, the chrome's 2026-10-07, the icons' 2026-10-10,
+// arm joined 2026-09-02, the chrome's 2026-10-07, the icons' 2026-10-09,
 // the font's 2026-10-09;
 // the theme's stood 2026-10-03..10-08); the color picker's `palette=` and `scheme=` write
 // (GuiColorPicker::write_preset_key, color_picker.cpp, 2026-10-07; the

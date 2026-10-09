@@ -9315,7 +9315,7 @@ bool GuiInputHandler::handle_settings_choice_key(GuiKey key,
         // ENTER IS THE DIALOG'S DEFAULT BUTTON, OK: it commits the shown
         // value (a dropped list closing with it), the one commit a choice
         // row has besides OK's press — the arrows above and a list row only
-        // move the shown value (architect 2026-10-10, GuiSettingsEditor's
+        // move the shown value (architect 2026-10-09, GuiSettingsEditor's
         // head).
         if (bare && (key == GuiKeys::Return || key == GuiKeys::KpEnter)) {
             settings_editor.set_choice_list_open(false);

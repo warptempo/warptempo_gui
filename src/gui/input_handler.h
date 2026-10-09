@@ -2795,7 +2795,7 @@ private:
     // head), handle_settings_editor_key's fork while a choice editor stands:
     // Esc closes a dropped list; with the combo focused Up / Down walk the
     // shown value, committing nothing, and Enter — the dialog's default
-    // button, OK — commits it (architect 2026-10-10); Tab (the list closing), Esc and the
+    // button, OK — commits it (architect 2026-10-09); Tab (the list closing), Esc and the
     // modal contract's Ctrl+S / Ctrl+Q take the shared route with no
     // completion, as does every key while a button holds the focus; any
     // other key with the combo focused is a consumed nothing — no key edits
@@ -2812,7 +2812,7 @@ private:
     //   finish_settings_choice_release — a scroll hold's lift ends it,
     //     selecting nothing; the armed row's lift: on that row it shows the
     //     row and commits nothing (choice_pick — OK and Enter commit,
-    //     architect 2026-10-10), elsewhere it closes the list. False when
+    //     architect 2026-10-09), elsewhere it closes the list. False when
     //     neither stood.
     //   settings_choice_motion — a scroll hold's carry (the thumb's drag),
     //     else a dropped list's lit row follows the pointer over its rows

@@ -27,7 +27,7 @@ struct GuiInputHandler;
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect) projects_path,
 // which had been hand-edited only, since 2026-10-07 chrome, since
-// 2026-10-10 icons and since 2026-10-09 ~21:20 font (theme,
+// 2026-10-09 icons and since 2026-10-09 ~21:20 font (theme,
 // editable 2026-10-03..10-08, its level and the twelve
 // program colour keys, editable 2026-10-03..04, left with their keys; the
 // config's key last_project is the program's own and has no editor; the
@@ -83,7 +83,7 @@ struct GuiInputHandler;
 // and theme at the very least"; the design the planner's, delegated) STANDS
 // BESIDE THE TEXT EDITOR: a Settings row whose key's domain is a SHORT
 // CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — today the
-// Chrome row, since 2026-10-10 the Icons row and since 2026-10-09 ~21:20 the
+// Chrome row, since 2026-10-09 the Icons row and since 2026-10-09 ~21:20 the
 // Font row, the theme having left with its key 2026-10-08) opens
 // THE SAME BOTTOM-ROW EDITOR — the same text_editor session
 // underneath, so the modal rank, OK and Cancel, the focus ring, the playback
@@ -95,7 +95,7 @@ struct GuiInputHandler;
 // TEXT ROAD'S — commit() and commit_device_setting, the one road: the
 // grammar, the config write, the next-launch card and the unchanged value's
 // quiet no-op are untouched. THE COMMIT IS OK'S ALONE, EVERY CHOICE ROW'S
-// (architect 2026-10-10, the Font row judged on the glass: "it should not
+// (architect 2026-10-09, the Font row judged on the glass: "it should not
 // pick the font until I hit OK"): a row of the list, a press and its lift,
 // and Up / Down each MOVE THE SHOWN VALUE and nothing else — no config
 // written, no face swapped, no card; OK (and Enter, the dialog's default
@@ -121,7 +121,7 @@ struct GuiInputHandler;
 //     a press on a row ARMS it and THE LIFT ON THAT ROW SHOWS IT — the act
 //     at the lift, as the picker's list and every menu row act — closing
 //     the list onto the combo, the editor standing for OK or Cancel
-//     (2026-10-10, above); a press anywhere else closes the list and is
+//     (2026-10-09, above); a press anywhere else closes the list and is
 //     consumed, the combo standing.
 //   * KEYS, with the combo focused: Up / Down walk the shown value, list
 //     down or not (Windows' combo moves its selection without dropping), no
@@ -212,7 +212,7 @@ struct GuiSettingsEditor {
     // list; choice_hover and choice_arm_row are the list's lit and pressed
     // rows; choice_pick is the lift on a row: the list closed and the row
     // shown, NOTHING COMMITTED — OK and Enter commit, through commit()
-    // (architect 2026-10-10, the head).
+    // (architect 2026-10-09, the head).
     void choice_show(int index);
     void choice_step(int delta);
     void set_choice_list_open(bool open);

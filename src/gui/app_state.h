@@ -3471,7 +3471,7 @@ inline constexpr SettingsChoiceSource kChromeChoiceSource{
         return kGuiChromeSpecs[static_cast<std::size_t>(i)]->display_name;
     },
 };
-// THE ICON SET'S DOMAIN (architect 2026-10-10): the bundled sets
+// THE ICON SET'S DOMAIN (architect 2026-10-09): the bundled sets
 // (kIconSetKeys, icons.h) in their order — Tango, Mist — shown by
 // their display names (kIconSetDisplayNames). The combo shows THE
 // EFFECTIVE SET, the chrome's own when the config has no `icons` line
@@ -3488,8 +3488,8 @@ inline constexpr SettingsChoiceSource kIconSetChoiceSource{
 // THE FONT'S DOMAIN (architect 2026-10-09 ~21:20, "the font is its own
 // drop-down"): the face sets the `font` key names (kGuiFontKeys, gui_font.h)
 // in their order, which is the row's — FreeSans, Liberation Sans, Tahoma,
-// alphabetical (architect 2026-10-10), each named by its files (architect
-// 2026-10-10 ~00:40) — shown by their display names
+// alphabetical (architect 2026-10-09), each named by its files (architect
+// 2026-10-09 evening) — shown by their display names
 // (kGuiFontDisplayNames). The combo shows the config's
 // `font`, tahoma when it has no line (recall_gui_setting_value,
 // settings_io.cpp) — the live face.
@@ -3569,7 +3569,7 @@ struct SettingsPopupItem {
 // `palette` (2026-10-07, the sixth device key) and `scheme` HAVE NO ROW:
 // the in-app color picker is their chooser.
 //
-// `Icons` JOINED 2026-10-10 (architect: "an icon picker... like the chrome
+// `Icons` JOINED 2026-10-09 (architect: "an icon picker... like the chrome
 // picker"), RIGHT AFTER Chrome — its companion, out of kDeviceConfigKeys'
 // order, where `icons` is the last key — its domain the bundled sets
 // (kIconSetChoiceSource), its commit the Chrome row's road

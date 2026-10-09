@@ -285,7 +285,7 @@ struct TrimRange {
 //                 the canvas, nothing else (THE PLAYHEAD, below); the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
-//                 (architect 2026-10-10); and THE
+//                 (architect 2026-10-09); and THE
 //                 PANEL'S `face` (2026-10-09: the program's band, dock bar,
 //                 row 8 and the canvas column's lanes — Cool Edit's — every
 //                 other panel tone derived from it, the COOL EDIT BLOCK,
@@ -425,7 +425,7 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
-// THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-10): each
+// THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-09): each
 // surface's recorded text color under the live chrome — "text over a fill
 // is the theme's recorded pair" — read by the words painted there, the one
 // owner of the choice a later vocabulary with roles of its own would fork
@@ -659,8 +659,8 @@ void install_true_colors(bool on);
 // four roles stood 2026-10-05 to 2026-10-09; the solid `playhead_stem` line
 // before it; git history.)
 // THE PLAYHEAD ALONE IS YELLOW: `playhead_stem` is its head and its dots
-// and nothing else (architect 2026-10-10). THE STEMS THAT BELONG TO THE
-// CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-10: "the zoom
+// and nothing else (architect 2026-10-09). THE STEMS THAT BELONG TO THE
+// CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
 // stem and the scanner are both white, which unifies them: the non-playhead
 // stems that are related to the controls should be white, and then the
 // playhead is yellow"): THE SCANNER — the moving playback line,
@@ -889,7 +889,7 @@ void install_true_colors(bool on);
 // would stand on the band's edge and is not drawn), the canvas's full width,
 // Cool Edit's grid under the ink; then THE WAVEFORM'S PLATE; then THE CENTER
 // LINE per channel on its zero row, one device px, in `center`, OVER THE INK
-// (architect 2026-10-10 ~00:40: "it's supposed to be visible over the
+// (architect 2026-10-09 evening: "it's supposed to be visible over the
 // waveform. Otherwise, in a project like this with tape hiss, there's never
 // enough zero that the red line would become visible ever";
 // render_center_lines, a live pass after the plate's blit, the plate baking
@@ -1677,7 +1677,7 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // paint_bottom_row_buttons_and_clock's walk (cool_edit_paint.h draws them):
 // each group the gripper, 5 W of face, its cases or the time field, 5 W of
 // face and the end bar — the product's symmetric air where Cool Edit's
-// movable panes measure 6 and 4 (architect 2026-10-10 ~00:30,
+// movable panes measure 6 and 4 (architect 2026-10-09 evening,
 // program_spec.h's group fields) — and the time field's pads its own 4 W
 // (program_spec.h's field_pad_px).
 // The dock bar is the program's under a modal too; the modal surfaces
@@ -2608,7 +2608,7 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, each
 // channel's horizontal grid, the channels' bands the plate's own
 // (waveform_channel_band) — no vertical grid. render_center_lines owns THE
-// CENTER LINES, OVER THE WAVEFORM (architect 2026-10-10 ~00:40): each
+// CENTER LINES, OVER THE WAVEFORM (architect 2026-10-09 evening): each
 // channel's zero row, one device px in `center`, painted live after the
 // plate's blit and before the dots (on_redraw's paint order) — the canvas's
 // lines stay these two painters' and the plate keeps baking its two inks
@@ -3067,7 +3067,7 @@ void render_playhead(cairo_t* cr,
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
 // spanning the canvas, `area` whole, solid, in the `scanner` role — the
 // white of the stems that belong to the controls, the playhead alone being
-// yellow (architect 2026-10-10; the palette block's playhead paragraph owns
+// yellow (architect 2026-10-09; the palette block's playhead paragraph owns
 // the rule).
 // The anchor is
 // the clamped column the strip-drag math pins each event — edge-included, so an

@@ -118,7 +118,7 @@ struct ProgramSpec {
     // whose six columns are a light column, this much face, a mid and a dark
     // column (its top row light and its bottom row mid).
     // THE GROUP'S AIR IS THE PRODUCT'S OWN SYMMETRIC 5 W, the gripper to the
-    // first case and the last case to the end bar alike (architect 2026-10-10
+    // first case and the last case to the end bar alike (architect 2026-10-09
     // ~00:30, on the measurement sheet tmp/mocks/cool_edit/
     // sheet_ROW8_SPACING.jpg: "those grippers are there because the elements
     // can be moved in Cool Edit Pro's GUI. We won't allow that here. So let's
@@ -355,7 +355,7 @@ static_assert(program_case_authored_px(kProgramSpec) == 23);
 static_assert(program_band_authored_h(kProgramSpec) == 33);
 static_assert(program_dock_bar_authored_h(kProgramSpec) == 6);
 static_assert(program_row8_authored_h(kProgramSpec) == 32);
-// ROW 8'S GROUP AIR IS SYMMETRIC (architect 2026-10-10 ~00:30, the fields'
+// ROW 8'S GROUP AIR IS SYMMETRIC (architect 2026-10-09 evening, the fields'
 // paragraph above): the gripper's air and the end bar's are one length.
 static_assert(kProgramSpec.gripper_to_case_px ==
               kProgramSpec.case_to_end_bar_px);

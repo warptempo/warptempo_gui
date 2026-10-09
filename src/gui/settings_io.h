@@ -155,7 +155,7 @@ std::string format_settings_text(
 // the same "recall
 // and the file can never diverge" rule the
 // `.settings` keys keep, only against a different file — BUT `icons`
-// (2026-10-10), which recalls THE EFFECTIVE SET, the chrome's own where the
+// (2026-10-09), which recalls THE EFFECTIVE SET, the chrome's own where the
 // file has no line (the Icons row's combo shows what the next launch
 // loads; its commit writes no line for the chrome's own, so the two still
 // agree on the file). (`last_project` is

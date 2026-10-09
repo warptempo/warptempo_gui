@@ -64,7 +64,7 @@
 // table at render.cpp's resolve_flag_face); the playhead's `playhead_stem`
 // — its head and its dots alone — and the `scanner`, the white of the
 // stems that belong to the controls: the playback line and the zoom
-// anchor's stem (architect 2026-10-10: "the playhead is yellow"); and
+// anchor's stem (architect 2026-10-09: "the playhead is yellow"); and
 // THE PANEL'S FACE (the program is Cool Edit from the toolbar down: its
 // band, dock bar and row 8 are the program's, so their color is the
 // palette's; the role table's paragraph below). (The four flag kinds' faces
@@ -217,7 +217,7 @@
 // go back to a white scanner") — THE PLAYHEAD AND THE SCANNER still TWO
 // roles, so a palette may part them: `playhead_stem` THE PLAYHEAD'S HEAD AND
 // DOTS ALONE, `scanner` THE SCANNER AND THE ZOOM ANCHOR'S STEM, the stems
-// that belong to the controls (architect 2026-10-10: "the non-playhead
+// that belong to the controls (architect 2026-10-09: "the non-playhead
 // stems that are related to the controls should be white, and then the
 // playhead is yellow"; render.h's playhead paragraph). `grid` paints the quarter lines of each
 // channel's half — the horizontals alone, Cool Edit's verticals not drawn

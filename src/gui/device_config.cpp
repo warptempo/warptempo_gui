@@ -23,7 +23,7 @@ namespace {
 
 // The file's key set, in on-disk order — the writer's order, the required
 // set below its subset (NINE keys since 2026-10-09 ~21:20, `font`
-// appended; eight 2026-10-10, `icons` appended;
+// appended; eight 2026-10-09, `icons` appended;
 // seven 2026-10-08, `theme` gone; the
 // count's succession, up to seventeen with the tuning phases of
 // 2026-09-23..27 and nineteen with the colour keys of 2026-10-03..04, is the
@@ -41,7 +41,7 @@ namespace {
 // `chrome` FOLLOWS last_project (2026-10-07), `scheme` FOLLOWS IT
 // (2026-10-08 ~18:15), the chrome's colors after the chrome, and `palette`
 // FOLLOWS THAT (2026-10-07), the program's colors after the chrome's;
-// `icons` is APPENDED after it (2026-10-10), and `font` after that
+// `icons` is APPENDED after it (2026-10-09), and `font` after that
 // (2026-10-09 ~21:20).
 // (`theme` stood after `chrome` 2026-10-03..10-08, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
@@ -61,7 +61,7 @@ constexpr const char* kDeviceConfigKeys[] = {
 // written before the key existed loads, in the default chrome), `scheme`
 // (2026-10-08), absent meaning the chrome's own scheme, `palette`,
 // absent meaning the default palette (Cool Edit's "Default" under every
-// chrome, 2026-10-09), `icons` (2026-10-10),
+// chrome, 2026-10-09), `icons` (2026-10-09),
 // absent meaning the chrome's own icon set, and `font` (2026-10-09),
 // absent reading as tahoma (kDefaultFontKey), so the configs written before
 // the key load. The scanner
@@ -104,7 +104,7 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
         // AN UNSET PALETTE, SCHEME OR ICON SET WRITES NO LINE (2026-10-07;
-        // the scheme 2026-10-08, the icons 2026-10-10): its one spelling is
+        // the scheme 2026-10-08, the icons 2026-10-09): its one spelling is
         // the line's absence, so the file keeps following the chrome (the
         // scheme and the icon set) or the default palette.
         if (std::string_view(key) == "palette" && cfg.palette.empty())
@@ -250,7 +250,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.palette = value;
             return {};
         }
-        // THE ICON SET (architect 2026-10-10): a bundled set's key under its
+        // THE ICON SET (architect 2026-10-09): a bundled set's key under its
         // one grammar owner (is_icon_set_key, icons.h); absent, the empty
         // struct value stands — the chrome's own set. An EMPTY value is
         // refused like any other non-key: the unset key is the line's

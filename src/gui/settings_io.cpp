@@ -385,7 +385,7 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // no-op.
     if (key == "chrome" && app.device_config != nullptr)
         return app.device_config->chrome;
-    // THE ICON SET (2026-10-10): THE EFFECTIVE SET, the one deliberate
+    // THE ICON SET (2026-10-09): THE EFFECTIVE SET, the one deliberate
     // departure from the byte-exact recall — with no `icons` line the
     // chrome's own (effective_icon_set, icons.h), resolved against the
     // config's `chrome`, the next launch's, so the Icons row's combo shows

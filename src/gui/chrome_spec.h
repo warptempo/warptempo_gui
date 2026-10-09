@@ -211,7 +211,7 @@ struct ChromeSpec {
     // assets/icons/ (icons.h's kIconSetKeys, static_asserted there), parsed
     // at launch through resvg (icons.h's head) — the set an absent `icons`
     // device key means; the key names another for every chrome (architect
-    // 2026-10-10, gui_live_icon_set).
+    // 2026-10-09, gui_live_icon_set).
     const char*        icon_set;
 };
 

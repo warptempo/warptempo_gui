@@ -2603,7 +2603,7 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
 // (icon_row_pad_x) from each edge; CASES_RIGHT is where row 8's last case
 // ends (the right block packed against the lane's edge, its last end bar
 // and the group's air before it — 2026-10-09; that air 5 W since
-// 2026-10-10 ~00:30, program_spec.h's group fields), where the player's
+// 2026-10-09 evening, program_spec.h's group fields), where the player's
 // right pair ends too. Every BUTTON on either row is THE PROGRAM'S CASE (render.h's
 // program block) at the row's four W of face under the content's top
 // (row8_air_above_px); the faces are paint_roster_case's on both rows. What
@@ -2657,7 +2657,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int btn_y     = seats.case_y;
     // COOL EDIT'S GROUP (program_spec.h, METRICS §5.2): the gripper, its
     // air, the cases abutting, the same air, the end bar — the air the
-    // product's symmetric 5 W (architect 2026-10-10 ~00:30, the group fields'
+    // product's symmetric 5 W (architect 2026-10-09 evening, the group fields'
     // paragraph); two W of face before the first group and between two.
     const int group_gap = scaled_px(kProgramSpec.row8_group_gap_px);
     const int grip_w    = ce_gripper_w_px();
@@ -2722,7 +2722,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     //
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
     // case; the case 23 since 2026-10-09 ~10:25, the verbs seven since
-    // Open Text Editor joined that evening, the air 5 / 5 since 2026-10-10
+    // Open Text Editor joined that evening, the air 5 / 5 since 2026-10-09
     // ~00:30 — Cool Edit's 6 / 4 before it, the same sum): a group of n is
     // 5 + 5 + 23n + 5 + 6 = 23n + 21, so the block is the 7 verbs' 182, the walk's 113, the
     // arrows' 113 and the transport's 90 with three gaps of 2, 504 W — on the
@@ -4917,7 +4917,7 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // current column, full waveform height — a live zoom gesture's, or the S
 // Pen's retained one between strokes — WHITE, in the scanner's role: the
 // stems that belong to the controls are white and the playhead alone is
-// yellow (architect 2026-10-10; render_strip_anchor_stem). TWO PRODUCERS,
+// yellow (architect 2026-10-09; render_strip_anchor_stem). TWO PRODUCERS,
 // ONE STEM:
 //   * THE ONE NAV DRAG'S ZOOM PHASE (scroll_drag while `zooming` — from a
 //     ctrl-armed press, or from a ctrl-down edge mid-drag, and gone again at
@@ -8058,7 +8058,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on).
         //   4. waveform plate -> THE CENTER LINES over the ink
-        //      (render_center_lines, architect 2026-10-10 ~00:40; with audio
+        //      (render_center_lines, architect 2026-10-09 evening; with audio
         //      loaded they paint here and not at step 2, a null plate's frame
         //      included) -> phase-reset overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the column's air and the
@@ -8128,7 +8128,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, wave_paint)) {
             paint_waveform_plate(cr, area);
-            // THE CENTER LINES OVER THE INK (architect 2026-10-10 ~00:40;
+            // THE CENTER LINES OVER THE INK (architect 2026-10-09 evening;
             // render_center_lines, render.h's row-6 canvas paragraph): each
             // channel's zero row, one device px in `center`, right after the
             // blit and under every dot, ring and line that follows.

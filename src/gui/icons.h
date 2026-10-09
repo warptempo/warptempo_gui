@@ -240,7 +240,7 @@ inline std::string_view effective_icon_set(std::string_view icons,
     return icons.empty() ? std::string_view(chrome.icon_set) : icons;
 }
 
-// THE LIVE SET (architect 2026-10-10): the device config's `icons`
+// THE LIVE SET (architect 2026-10-09): the device config's `icons`
 // override installed ONCE at launch (set_live_icon_set, gui_main, beside
 // set_live_chrome_spec and before load_svg_set), else the live chrome
 // spec's own — effective_icon_set against the live chrome. A Settings

@@ -180,7 +180,7 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
     // horizontal grid alone — t = waveform_line_px() thick, ONE DEVICE PX
     // ("on waveform → unscaled", the class's one inventory), each an aliased
     // integer rect inside the area. THE CENTER LINES STAND OVER THE WAVEFORM
-    // (architect 2026-10-10 ~00:40), render_center_lines below, a pass after
+    // (architect 2026-10-09 evening), render_center_lines below, a pass after
     // the plate's blit. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the
     // rule and its reason at render.h's row-6 canvas paragraph).
     const int t = waveform_line_px();
@@ -216,7 +216,7 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
 void render_center_lines(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     // THE CENTER LINE per channel ON ITS ZERO ROW, OVER THE WAVEFORM'S INK
-    // (architect 2026-10-10 ~00:40: "it's supposed to be visible over the
+    // (architect 2026-10-09 evening: "it's supposed to be visible over the
     // waveform. Otherwise, in a project like this with tape hiss, there's
     // never enough zero that the red line would become visible ever"; the
     // order at render.h's row-6 canvas paragraph): one device px, the grid's
@@ -1047,7 +1047,7 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     if (col >= area.w)    col = area.w - 1;
 
     cairo_save(cr);
-    // THE ANCHOR STEM IS THE SCANNER'S WHITE (architect 2026-10-10: "the zoom
+    // THE ANCHOR STEM IS THE SCANNER'S WHITE (architect 2026-10-09: "the zoom
     // stem and the scanner are both white, which unifies them: the
     // non-playhead stems that are related to the controls should be white,
     // and then the playhead is yellow"): a control's line during a gesture,
