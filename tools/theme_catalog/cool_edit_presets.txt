@@ -2,12 +2,17 @@
 # src/gui/palette_presets.inc from this file). PROVENANCE: the color schemes as text inside coolpro.exe (Cool Edit Pro
 # 2.1, Syntrillium Software), extracted from the architect's own installed copy on 2026-10-09
 # (tmp/research/cool_edit/color_presets.txt, outside the repository) and copied here byte for byte below these
-# comment lines; the scheme bytes are the program's own, transcribed as the Windows schemes were from Microsoft's hive.
+# comment lines, the two registry names below the one addition; the scheme bytes are the program's own, transcribed
+# as the Windows schemes were from Microsoft's hive.
 # FORMAT: the first line is "(Default Scheme)" followed by its values on the same line; after it EACH VALUES LINE IS
 # FOLLOWED BY ITS NAME LINE (checked against his Wine captures: Face 1C47C6 is "XP Blue", 8751CA "Lipstick and
-# Grapes", C7C8CF "Seattle Blues"); two values lines have no name line in the extraction (the twelfth, WvFg FE0D0D,
-# and the last, WvFg 73BA51) and are named "Unnamed 1" and "Unnamed 2" by the generator. Lines opening with '#' are
-# this note and nothing else.
+# Grapes", C7C8CF "Seattle Blues"). EVERY ROW IS NAMED. Two name lines are absent from the exe's text — after the
+# twelfth values line (WvFg FE0D0D, the red-on-blue scheme after CEPro 1.2) and after the last (WvFg 73BA51) — and
+# stand here as "3D" and "Easy on the Eyes" from COOL EDIT'S OWN REGISTRY ENTRIES, written by the program under Wine
+# on the architect's laptop on 2026-10-09: HKEY_CURRENT_USER\Software\Syntrillium\CEPro2\Presets\Colors, values
+# Set00-Set19, each "<name>,<the values>" in this file's order (Set11 "3D", Set19 "Easy on the Eyes"; every Set's
+# WvFg checked against its row here), the Wine capture of the Color Presets list showing exactly these twenty names.
+# Lines opening with '#' are this note and nothing else.
 (Default Scheme),WvFg=4BF3A7,WvBk=000000,Bndy=EDECEC,Cntr=A90404,CueM=F34B58,RngM=4B82F3,GrdL=003500,_Sel=F6F6FF,ChLi=4B82F3,ChBk=0A0917,ChGr=006A00,ChDt=FFFFFF,SpHi=F8FFED,SpLo=010E19,SpRv=1,SpGm=B4,Face=626C7B,_LED=FF0000,Edit=7FFF00,UseW=2,PBSg=0,prog=0000FF,STWa=FFFFFFFF,STSp=28,Curs=FFFF00,AnyL=00306E,AnyR=640028
 WvFg=22B893,WvBk=000000,Bndy=754107,Cntr=E85E3C,CueM=C17DB0,RngM=4BC0F3,GrdL=0F0459,_Sel=FFFFFF,ChLi=FFFF00,ChBk=0A0917,ChGr=484984,ChDt=FFFFFF,SpHi=F2F4E9,SpLo=1A0909,SpRv=1,SpGm=A0,Face=1C47C6,_LED=64FFD5,Edit=70F4D0,UseW=2,PBSg=1,prog=45C545,STWa=2D,STSp=23,Curs=FFFF00
 XP Blue
@@ -30,6 +35,7 @@ Periwinkle
 WvFg=1BF0AB,WvBk=000000,Bndy=6F879F,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=042C4F,_Sel=FEFEFF,ChLi=F3FE6B,ChBk=0A0917,ChGr=7C7A9E,ChDt=F5DEF5,SpHi=F2FFE5,SpLo=011619,SpRv=1,SpGm=AA,Face=7088A0,_LED=F3FF11,Edit=66FF4A,UseW=2,PBSg=0,prog=0000FF,STWa=FFFFFFFF,STSp=FFFFFFFF,Curs=FFFF6C
 CEPro 1.2
 WvFg=FE0D0D,WvBk=000000,Bndy=5A1C9F,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=0F0459,_Sel=1CFE0A,ChLi=FF3737,ChBk=0A0917,ChGr=790000,ChDt=B3FFB7,SpHi=F2FFE5,SpLo=011619,SpRv=1,SpGm=AA,Face=2F1AEE,_LED=FF2B2B,Edit=FF5151,UseW=2,PBSg=0,prog=FE0D0D,STWa=3C,STSp=32,Curs=FFFF00
+3D
 WvFg=13F774,WvBk=000000,Bndy=0013FB,Cntr=E85E3C,CueM=37FDF8,RngM=70B3FC,GrdL=010B63,_Sel=F2DBE8,ChLi=E7F200,ChBk=130909,ChGr=7E0F0C,ChDt=DEEDF5,SpHi=E8FEEA,SpLo=11110B,SpRv=0,SpGm=12C,Face=03040A,_LED=37FF3D,Edit=D9DDE6,UseW=2,PBSg=0,prog=13F774,STWa=3C,STSp=32,Curs=FFFF00
 Stealth
 WvFg=83F4A2,WvBk=073C2F,Bndy=FFFFFF,Cntr=616161,CueM=FFFFFF,RngM=FFFFFF,GrdL=555454,_Sel=F88834,ChLi=E7EAAD,ChBk=0A0917,ChGr=363636,ChDt=CEFFD4,SpHi=F2FFE5,SpLo=011619,SpRv=1,SpGm=AA,Face=ACA9D0,_LED=10E0FE,Edit=F4FF98,UseW=2,PBSg=0,prog=83F4A2,STWa=5D,STSp=6,Curs=FFFF00
@@ -45,3 +51,4 @@ Midnight Blues
 WvFg=D9B732,WvBk=3D2E20,Bndy=804000,Cntr=804000,CueM=804000,RngM=804000,GrdL=3C1E1E,_Sel=B3B366,ChLi=804000,ChBk=453425,ChGr=3C1E1E,ChDt=804000,SpHi=F2FFE5,SpLo=011619,SpRv=1,SpGm=AA,Face=C1B791,_LED=FF5B0D,Edit=9D9D00,UseW=2,PBSg=0,prog=D9B732,STWa=3C,STSp=32,Curs=FFFF00
 Safari So Good
 WvFg=73BA51,WvBk=000000,Bndy=FFFFFF,Cntr=FFFFFF,CueM=FFFFFF,RngM=FFFFFF,GrdL=003500,_Sel=C6FFFF,ChLi=FFFFFF,ChBk=0A0917,ChGr=003500,ChDt=FFFFFF,SpHi=F2FFE5,SpLo=011619,SpRv=1,SpGm=AA,Face=626C7B,_LED=FF0000,Edit=66CC00,UseW=2,PBSg=0,prog=73BA51,STWa=3C,STSp=32,Curs=FFFF00
+Easy on the Eyes

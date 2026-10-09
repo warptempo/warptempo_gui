@@ -63,12 +63,12 @@ COOL_EDIT_NOTE = ('Not desktop themes and not catalog entries: the WAVEFORM\'s b
                   'tools/theme_catalog/gen_cool_edit_presets.py into src/gui/palette_presets.inc). SOURCE: the color '
                   'schemes Cool Edit Pro 2.1 (Syntrillium Software) carries as text in coolpro.exe, extracted from the '
                   'architect\'s own copy on 2026-10-09 and committed as tools/theme_catalog/cool_edit_presets.txt, in '
-                  'Cool Edit\'s own order; Default (Cool Edit\'s "(Default Scheme)") is the default palette under every '
+                  'Cool Edit\'s own order, the two names the exe\'s text lacks (3D, Easy on the Eyes) from Cool Edit\'s '
+                  'own registry entries written under Wine the same day; Default (Cool Edit\'s "(Default Scheme)") is the default palette under every '
                   'chrome. Each sets the canvas (WvBk), the ink (WvFg), the grid (GrdL), the center line (Cntr), the cue '
                   'and range colors (CueM, RngM), the playhead (Curs) and the panel\'s face (Face; Classic Cool records '
                   'none and takes the default\'s); the waveform outline is the ink at HLS lightness 0.3157, and the '
-                  'invalid label\'s pair (#800000, #FF0000) and the scanner (#FFFFFF) are the same in all. Unnamed 1 and '
-                  'Unnamed 2 are the two schemes whose name line the extraction lacks.')
+                  'invalid label\'s pair (#800000, #FF0000) and the scanner (#FFFFFF) are the same in all.')
 
 
 def cool_edit_section():

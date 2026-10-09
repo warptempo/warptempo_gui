@@ -30,7 +30,8 @@
 // row 8 stood for the morning of 2026-10-09; git history.)
 //
 // THE PROGRAM'S LANES (2026-10-09): THE TOOLBAR BAND (the top strip's lane
-// 2) and ROW 8 under its DOCK BAR (the bottom strip's one lane), the
+// 2) and ROW 8 under its DOCK BAR (the bottom strip's lane 0, on the
+// window's foot), the
 // roster's; and, from the band down to the well, the CANVAS COLUMN'S THREE
 // in ORDER R (architect 2026-10-09 ~09:40, the mock of record
 // tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; its generator mock_ce_s3.py,
@@ -198,7 +199,10 @@ struct ProgramSpec {
     // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
     // 3, so a point cue's two alternate one dot every `dot_period` rows, BLUE
     // FIRST FROM THE TOP, and a one-color stem has half the dots (render.cpp's
-    // resolve_flag_face owns which a flag wears). THE PHASES ARE THE
+    // resolve_flag_face owns which a flag wears); the phase-reset lead-in
+    // ring's right side takes the same rows and its top and bottom runs the
+    // same phases in device columns counted from the reset's own column
+    // (paint_phase_reset_overlay_ring, 2026-10-09 ~17:40). THE PHASES ARE THE
     // CAPTURE'S, RE-COUNTED FROM THE CANVAS'S TOP (the captures are the law,
     // 2026-10-09): METRICS gives the red at capture y ≡ 3 and the blue at
     // y ≡ 7 (mod 8), absolute rows, and Cool Edit's canvas starts at y = 108

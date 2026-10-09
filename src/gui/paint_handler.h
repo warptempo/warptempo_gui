@@ -716,10 +716,15 @@ private:
     // lead-in audition — one rule, that mirror's readers enumerated at its own
     // declaration in selection.h.
     struct PhaseResetOverlayBand {
-        bool   valid = false;
-        double x0    = 0.0;   // left screen x, clipped to the area
-        double x1    = 0.0;   // right screen x, exclusive, clipped
-        bool   red   = false; // the reset is in the column's red set (the ring's color)
+        bool   valid  = false;
+        double x0     = 0.0;   // left screen x, clipped to the area
+        double x1     = 0.0;   // right screen x, exclusive, clipped
+        // The reset's own column in screen x, UNCLIPPED (left of x0 when the
+        // stem stands off the area's left edge): the origin the ring's top
+        // and bottom dot runs are phased from, so the pattern stays put on
+        // the song as the view pans.
+        double stem_x = 0.0;
+        bool   red    = false; // the reset is in the column's red set (the ring's dots)
     };
     PhaseResetOverlayBand phase_reset_overlay_band(const GuiRect& area) const;
 
@@ -731,6 +736,8 @@ private:
     // head (the `playhead_stem` role) — and the MARKER LANE'S panel face under the cues the flag
     // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
     // every pan/zoom along with the strip content it is painted beside.
+    // PUBLISHES the head's hit as painted (AppState::playhead_head_hit, the
+    // head drag's target, 2026-10-09).
     void paint_ruler_row(cairo_t* cr);
     // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
     // flat sampled ground, the three menu anchors flush left and nothing
@@ -836,9 +843,11 @@ private:
     // free function directly, in the floating-surfaces slot and for their
     // reason: it publishes geometry the pointer path reads.)
     void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
-    // The overlay band's 1px ring — the phase-reset overlay's whole visual —
-    // painted AFTER the plate, a boundary line like the playheads, so it
-    // crosses the ink deliberately.
+    // The overlay band's DOTTED ring — the phase-reset overlay's whole
+    // visual, its right side and its top and bottom runs one-device-px dots
+    // in the reset's own stem pattern (its left side is the stem itself;
+    // architect 2026-10-09) — painted AFTER the plate and before the stems,
+    // over the ink like every dot on the canvas.
     void paint_phase_reset_overlay_ring(cairo_t* cr, const GuiRect& area);
     // The LIVE trim pass: paints EVERY trim pixel per frame — the view bar
     // whole (its lines, its black field and the span; no playhead, architect

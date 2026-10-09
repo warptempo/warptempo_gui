@@ -2072,8 +2072,12 @@ struct GuiInputHandler {
     // with placement_only set, so the motionless release runs the click act
     // (and the empty-lane seed when `seed_empty_lane`) and a drag does
     // nothing — no pan, no zoom phase (contract at
-    // ScrollDragState::placement_only, app_state.h).
-    void arm_placement_press(int x, int y, bool history, bool seed_empty_lane);
+    // ScrollDragState::placement_only, app_state.h) — but for the HEAD DRAG
+    // (`head_drag`, a plain press on the playhead's head as painted, architect
+    // 2026-10-09 ~17:40): past the slop each motion runs the click act at the
+    // pointer's column (ScrollDragState::head_drag).
+    void arm_placement_press(int x, int y, bool history, bool seed_empty_lane,
+                             bool head_drag = false);
 
     // THE CTRL ENTRY TO THE SAME ONE DRAG (2026-08-14, the live-ctrl model —
     // contract at ScrollDragState, app_state.h): arms the ordinary nav press

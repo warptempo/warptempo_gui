@@ -1376,18 +1376,19 @@ void GuiColorPicker::install_live_words(
     install_chrome_pick(scheme);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
-    // A CHANGED TWELVE DAMAGES THE WHOLE SURFACE (2026-10-09): the window's
-    // sizing frame — the restored laptop's, cde's dtwm band on both devices —
-    // paints in the chrome's roles outside the client area, which
-    // invalidate_all never reaches, so a scheme load, a chrome element's
-    // pick, its Paste or its OLD tap would leave the band in the previous
-    // colors (platform.h's two damage calls). THE FIFTEEN NEED NO MORE THAN
-    // THE CLIENT: the palette's colors paint in the well and on what enters
-    // it, never on the frame.
-    // A CHANGED TWELVE ALSO DROPS THE BOUND ICON FACES (2026-10-10, icons.h's
-    // BOUND DRAWING): a bound glyph wears its surface's text role, which the
-    // twelve may have moved; the drawings refill lazily in the new colors.
-    // The fifteen touch no icon.
+    // A CHANGED CHROME PICK — THE SCHEME'S TWELVE KEYS (kGuiChromeLines) —
+    // DAMAGES THE WHOLE SURFACE (2026-10-09): the window's sizing frame — the
+    // restored laptop's, cde's dtwm band on both devices — paints in the
+    // chrome's roles outside the client area, which invalidate_all never
+    // reaches, so a scheme load, a chrome element's pick, its Paste or its
+    // OLD tap would leave the band in the previous colors (platform.h's two
+    // damage calls). THE PALETTE'S TWELVE PROGRAM ROLES (kGuiPaletteRoles)
+    // NEED NO MORE THAN THE CLIENT: they paint in the program's panels, the
+    // well and what enters it, never on the frame.
+    // A CHANGED CHROME PICK ALSO DROPS THE BOUND ICON FACES (2026-10-10,
+    // icons.h's BOUND DRAWING): a bound glyph wears its surface's text role,
+    // which the scheme's keys may have moved; the drawings refill lazily in
+    // the new colors. The palette's roles touch no icon.
     // A CHANGED FACE TAG RIDES THE SAME BRANCH (2026-10-09: the face follows
     // the scheme, GuiChromePick::face, live under the windows chrome —
     // gui_live_face_set, gui_font.h): the tag is part of the pick, so a scheme

@@ -9,9 +9,10 @@
 # Scheme)", is THE DEFAULT PALETTE under every chrome (`cool-edit-default`, palette_file.h's kGuiDefaultPaletteKey).
 #
 # THE SOURCE (cool_edit_presets.txt's own head says where it came from): the first line is "(Default Scheme)" and its
-# values on the same line; after it each values line is followed by its name line. A values line followed by another
-# values line, or by the file's end, has no name in the extraction and is named "Unnamed <n>", n counting those lines
-# from 1 in the file's order. Lines opening with '#' are the file's note.
+# values on the same line; after it EVERY values line is followed by its name line (the two the exe's text lacks come
+# from Cool Edit's own registry, the file's head). A values line followed by another values line, or by the file's
+# end, is the run's hard fail, the first such line named; a name line following no values line likewise. Lines
+# opening with '#' are the file's note.
 #
 # THE TRANSCRIPTION, each role <- the scheme's key, nothing derived but the outline:
 #   waveform_canvas <- WvBk          waveform_ink <- WvFg          grid <- GrdL          center <- Cntr
@@ -148,22 +149,19 @@ def presets(path):
     if not lines or not lines[0].startswith(DEFAULT_LINE):
         raise SystemExit(f'gen_cool_edit_presets: {path} does not open with {DEFAULT_LINE!r}')
     out = [[DEFAULT_NAME, parse_values(lines[0][len(DEFAULT_LINE):])]]
-    named = True
-    unnamed = 0
+    pending = None   # the values line still waiting for its name line
     for ln in lines[1:]:
         if '=' in ln:
-            if not named:
-                unnamed += 1
-                out[-1][0] = f'Unnamed {unnamed}'
+            if pending is not None:
+                raise SystemExit(f'gen_cool_edit_presets: the values line {pending!r} is followed by no name line')
             out.append([None, parse_values(ln)])
-            named = False
+            pending = ln
         else:
-            if named: raise SystemExit(f'gen_cool_edit_presets: the name line {ln!r} follows no values line')
+            if pending is None: raise SystemExit(f'gen_cool_edit_presets: the name line {ln!r} follows no values line')
             out[-1][0] = ln
-            named = True
-    if not named:
-        unnamed += 1
-        out[-1][0] = f'Unnamed {unnamed}'
+            pending = None
+    if pending is not None:
+        raise SystemExit(f'gen_cool_edit_presets: the values line {pending!r} is followed by no name line')
     return [tuple(p) for p in out]
 
 
@@ -224,8 +222,7 @@ def main():
                 'its display\n'
                 '// name and the twelve in kGuiPaletteRoles\' order under the generator\'s rules; regenerate, never '
                 'hand-edit.\n' + rows)
-    print(f'wrote {os.path.relpath(PRESETS_INC, REPO)}: {len(ps)} built-in palettes '
-          f'({sum(n.startswith("Unnamed ") for n in names)} unnamed in the source)')
+    print(f'wrote {os.path.relpath(PRESETS_INC, REPO)}: {len(ps)} built-in palettes')
 
 
 if __name__ == '__main__':

@@ -695,6 +695,14 @@ void install_true_colors(bool on);
 // 2026-10-09): the head and a cue's triangle stand in different lanes and
 // the dots interleave, so the coincident-stem suppression of 2026-08-01 to
 // 2026-10-09 (the playhead's stem yielding whole to a marker's) is retired.
+// THE HEAD IS GRABBED AND DRAGGED, as Cool Edit's is (architect 2026-10-09
+// ~17:40): its HIT is the head as painted, its columns (the triangle and its
+// shadow, cut to the waveform's) over its five quanta of the ruler's rows,
+// no box beyond them — published by paint_ruler_row
+// (AppState::playhead_head_hit) and read by point_on_playhead_head
+// (input_pointer.cpp), a cue over the head keeping the press; a plain press
+// there drags the playhead, every motion past the slop the ruler's
+// placement act at the pointer's column (ScrollDragState::head_drag).
 // NO HOLD LAMP (architect 2026-10-05): the head paints the same whether or
 // not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
 // four roles, and under cde Motif's beveled arrow, stood 2026-10-05 to
@@ -705,7 +713,7 @@ void install_true_colors(bool on);
 // line, paint_scanner — HAS ITS OWN ROLE, `scanner` (architect 2026-10-05),
 // a SOLID line one device px wide over the canvas (Cool Edit's playback
 // cursor is a solid 1-px line, measured 2026-10-09; unscaled on the canvas
-// since ~14:25, waveform_line_px's rule), WHITE in both default palettes
+// since ~14:25, waveform_line_px's rule), WHITE in every built-in palette
 // (architect 2026-10-07: "let's go back to a white scanner").
 
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
@@ -785,11 +793,15 @@ void install_true_colors(bool on);
 // A CUE HAS NO HOVER FACE (architect 2026-09-29): the pointer over a cue says
 // what a press will do through the CURSOR alone (pointer_cursor_kind).
 //
-// THE PHASE-RESET LEAD-IN RING on the waveform wears its reset's TRIANGLE's
-// color (paint_phase_reset_overlay_ring, through phase_reset_stem_color —
-// architect 2026-09-17, the ring and the cue one unit): the cue's red,
-// valid or invalid (2026-10-09); resting whether selected or not, as the
-// triangle is.
+// THE PHASE-RESET LEAD-IN RING on the waveform is DOTTED IN ITS RESET'S STEM
+// PATTERN, never a solid line (paint_phase_reset_overlay_ring, through
+// phase_reset_stem_dots — architect 2026-09-17, the ring and the cue one
+// unit; 2026-10-09 ~17:40, "made of the same stuff the marker looks like"):
+// its left side the stem itself, its right side the stem's dots on the
+// band's last column, its top and bottom runs the same two phases along the
+// canvas's first and last rows; the red and the blue for a valid reset, the
+// red alone for an invalid one; resting whether selected or not, as the
+// stem is.
 //
 // EDITING: THE FIELD IS WINDOWS' EDIT FIELD (architect 2026-10-09,
 // reversing 2026-10-07 ~09:45's flag-in-its-selected-face; the drawing
@@ -844,9 +856,11 @@ void install_true_colors(bool on);
 // erosion at distance waveform_line_px() (one device px at every scale since
 // 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
-// magnified and the compressed bars, the ink's hides it. The `windows-2000`
-// palette's is Windows' GREEN #008000 under Sound Recorder's LIME #00FF00
-// trace on black (palette_file.h's role table). THE PLATE
+// magnified and the compressed bars, the ink's hides it. The default
+// palette's, Cool Edit's "Default" (`cool-edit-default`, the default under
+// every chrome, palette_presets.inc), is #0A9757 under its #4BF3A7 ink on
+// black — the ink at HLS lightness 0.3157, the generator's outline rule
+// (tools/theme_catalog/gen_cool_edit_presets.py). THE PLATE
 // BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the
 // pair rides each render job and the cache's fingerprint
 // (waveform_plate_inks); the canvas is laid live under the plate's
@@ -1155,13 +1169,18 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // fields; architect 2026-10-07, each vocabulary's own), each its own
 // rounded part: A HEAD ROW of plain ground, THE CONTENT — the anchors' box
 // and the labels' box both, where the anchors and their labels stand, the
-// label's cell centred in it (paint_menu_row) — and A FOOT ROW under it.
+// label seated in it by the vocabulary's rule (paint_menu_row: the cap band
+// centred under win2000, the cell centred as a line under clearlooks and
+// cde) — and A FOOT ROW under it.
 //   WIN2000: head 1 + content 19 + foot 0 = 20. THE CONTENT IS 19 WINDOWS
 //   PX (architect 2026-10-02; it was the kdenlive File item's 30 laptop px
 //   until the unit's change), since 2026-10-06 read as EXPLORER'S MENU
 //   BAND's button — the 13-row cell + comctl32's DEFPAD_CY 6 (toolbar.c,
 //   TOOLBAR_MeasureButton; the band's record at paint_handler.cpp's head of
-//   the menu row) — the cap's top on row 6 of the content. THE HEAD ROW
+//   the menu row) — the cap's top on row 5 of the content since 2026-10-09,
+//   the plain menu bar's seat his WordPad captures of the real OS show, the
+//   cap band centred (paint_menu_row; ReactOS's band seat, row 6, departed
+//   from, win2000_deviations.md). THE HEAD ROW
 //   above it, directly under the caption (architect 2026-10-05, Windows 95
 //   screenshots measured at 100 % agreeing on a 20-px menu band; the row's
 //   place architect 2026-10-06, ReactOS: caption 18, face 1, menu 19): the
@@ -1504,7 +1523,8 @@ inline int cue_fill_h_px() {
 // and 23 at 360 % (u 4), 4 and 6 at 138 % (u 1). THE ONE ROAD for every
 // reader of that width: the cue's published triangle box (paint_cues), the
 // label clip at the next triangle (paint_cues), the flag iterator's cull,
-// the head's cull (paint_ruler_row) and the playhead's cull and damage box
+// the head's cull and its published hit (paint_ruler_row,
+// AppState::playhead_head_hit) and the playhead's cull and damage box
 // (render_playhead, playhead_invalidate_rect, main.cpp), so no repaint can
 // be narrower than what the head painted.
 inline int cue_triangle_half_w_px() {
@@ -1696,8 +1716,9 @@ inline int scrub_thumb_h_px() {
 // 1) whose left edge is the item's own column, clipped to the waveform's
 // columns [0, w) — the scanner and the resting cursor's dots
 // (render_playhead), the cues' dots (paint_marker_stems), the zoom anchor's
-// stem (render_strip_anchor_stem), the phase-reset lead-in ring's four sides
-// (its left side on the reset's own column), the lit plate's inner OUTLINE,
+// stem (render_strip_anchor_stem), the phase-reset lead-in ring's dots
+// (its right side and its top and bottom runs, paint_phase_reset_overlay_ring;
+// its left side is the reset's stem), the lit plate's inner OUTLINE,
 // an erosion at distance 1 (outline_bar, render.cpp, the width riding the
 // plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
 // (render_canvas). EVERYTHING OFF THE CANVAS keeps THE PROGRAM'S QUANTUM u =
@@ -3640,17 +3661,23 @@ void render_phase_reset_flags(cairo_t* cr,
                             // gates, while the bound editor is both columns'.
                             SuppressedBox suppressed = SuppressedBox{});
 
-// THE COLOR A LIVE PHASE RESET'S CUE TRIANGLE WEARS, for a surface that must
-// wear it too — the lead-in ring (paint_phase_reset_overlay_ring,
-// paint_handler.cpp, architect 2026-09-17). It asks the one resolver
-// (resolve_flag_face's table, render.cpp) rather than restating it: the
-// palette's `cue` red, for a valid reset and for one in the column's red set
-// (`red`, phase_reset_red_flag_set_cached) alike — an invalid reset differs
-// by its red dots alone and its `invalid_label` pair, which a solid ring
-// cannot show (2026-10-09 ~11:50) — resting, selected or not (the cue never
-// changes when selected), so the ring and its triangle stay one object.
-// No disabled arm, a disabled reset painting neither dots nor ring.
-GuiColor phase_reset_stem_color(bool red);
+// THE DOTS A LIVE PHASE RESET'S STEM WEARS, for the surface that must wear
+// them too — the lead-in ring (paint_phase_reset_overlay_ring,
+// paint_handler.cpp; the ring and the cue one unit, architect 2026-09-17,
+// dotted in the stem's pattern since 2026-10-09 ~17:40). It asks the one
+// resolver (resolve_flag_face's table, render.cpp) rather than restating it:
+// the red `cue` dots and the blue `range` dots for a valid reset, the red
+// alone for one in the column's red set (`red`,
+// phase_reset_red_flag_set_cached) — resting, selected or not (the cue never
+// changes when selected), so the ring and its stem stay one object. The
+// colors are the palette's two live roles, read by the painter as the stems
+// read them. No disabled arm, a disabled reset painting neither dots nor
+// ring.
+struct GuiStemDots {
+    bool cue_dots   = false;
+    bool range_dots = false;
+};
+GuiStemDots phase_reset_stem_dots(bool red);
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the

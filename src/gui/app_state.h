@@ -1248,8 +1248,9 @@ struct TrimDragState {
 // possible; the horizontal zoom ... was designed to unify the motions for zoom
 // on both devices"). The two lanes are PLACEMENT SURFACES now: a press there
 // arms this same pending with `placement_only` set, so a motionless release
-// runs the placement click act and a drag does nothing at all (the field's
-// own contract below). THE LOWER HALF JOINED
+// runs the placement click act and a drag does nothing at all — but on the
+// playhead's head, whose drag places the playhead under the pointer
+// (`head_drag`, 2026-10-09) (the fields' own contracts below). THE LOWER HALF JOINED
 // when the press-time audition scrub moved to the lift (architect 2026-08-13:
 // "the playhead scrub is an outlier. We do everything on lift the finger or on
 // mouse up, but the playhead scrub, we do right on mouse down. We should remove
@@ -1468,8 +1469,27 @@ struct ScrollDragState {
     // the zoom phase (sync_nav_drag_mode refuses it), and every end — the
     // release, a lost button, the force-end — owes nothing but the disarm.
     // Mutually exclusive with scrub_release (a lane is not the waveform) and
-    // never set with ctrl_entry (a ctrl press on a lane arms nothing).
+    // never set with ctrl_entry (a ctrl press on a lane arms nothing). ITS
+    // ONE DRAG is the head drag below (2026-10-09), which begins no capture,
+    // pan or zoom either.
     bool   placement_only = false;
+    // THE HEAD DRAG — THE PLACEMENT LANES' ONE DRAG (architect 2026-10-09
+    // ~17:40, Cool Edit's cursor grabbed by its head): the plain press landed
+    // on the PLAYHEAD'S HEAD as painted (point_on_playhead_head,
+    // input_pointer.cpp — no flag over it, the flags' claim ranking first),
+    // set only beside placement_only. FROM THE CROSSING ON (the slop is
+    // jitter, the pending's own rule), EVERY MOTION EVENT runs THE PLACEMENT
+    // ACT at the pointer's column — the motionless click's own act,
+    // run_nav_click_act's placement arm (the play's stop, the deselect or the
+    // `h` view's mode land, the playhead to the column, the follow override),
+    // the column clamped onto the waveform's — so the playhead rides the
+    // pointer; a motionless press-and-lift places at the press, the lane's
+    // click unchanged; the lift ends it (a crossed release runs no act). No
+    // capture, no pan, no zoom (placement_only's own refusals stand), and
+    // the cursor keeps the head's TrimResize for the press's life
+    // (pointer_cursor_kind). The touch translation drives the same
+    // deliveries, so the pen and the finger ride it with no touch-side code.
+    bool   head_drag = false;
     // THE LIVE MODE (the one-model ruling above): true while the drag is in
     // its ZOOM phase — seeded from the press's own ctrl at the arm, then
     // synced from mods.ctrl at every MODIFIER EDGE and every motion event
@@ -5300,10 +5320,12 @@ struct AppState {
     // compressor) — is two flat bars per column, in both audio views: the
     // levelled, expanded OUTER and the compressed, expanded INNER over it,
     // both in the plate's ink, the inner outlined in an erosion at distance
-    // t = waveform_line_px() of its own (1 px on the laptop at 138 %, 3 on
-    // the tablet at 275 %; t snapshotted on the plate job and in its fingerprint, render.h
-    // and waveform_cache.cpp) (architect 2026-09-25/27, the inks render.h's
-    // row-6 constants — the rule is at render_waveform's declaration); DARK,
+    // t = waveform_line_px() of its own (one device px at every scale since
+    // 2026-10-09, "on waveform → unscaled"; t snapshotted on the plate job and
+    // in its fingerprint, render.h and waveform_cache.cpp) (architect
+    // 2026-09-25/27, the inks the palette's `waveform_ink` and
+    // `waveform_outline` roles — the rule is at render_waveform's
+    // declaration); DARK,
     // the raw picture alone. THE BIT IS THE ANSWER, read by waveform_magnified
     // (warp_frame_map_view.h) and by the lamp's face, and by nothing else —
     // it reaches no authoring, no red cue, no render and no sidecar. Its one
@@ -6273,6 +6295,19 @@ struct AppState {
     // pixels commit together. Cold (nothing painted yet) nothing on the bar
     // is grabbable — the honest answer, as for a flag with no pixels.
     TrimBarHit               trim_bar_hit;
+
+    // THE PLAYHEAD HEAD'S PAINTER STASH (architect 2026-10-09 ~17:40, the
+    // head drag — ScrollDragState::head_drag), the trim stash's doctrine
+    // carried to the ruler: GuiPaintHandler::paint_ruler_row publishes the
+    // rect it last DREW the head in — the triangle's and its shadow's
+    // columns cut to the waveform's, over the head's five quanta of the
+    // ruler's rows, in SCREEN pixels, no tolerance — and
+    // point_on_playhead_head (input_pointer.cpp) reads this and nothing
+    // else, so the press and the cursor map answer the head on screen.
+    // Written only by a run whose damage clip redrew it (the pass's
+    // publish_head rule). Empty — a head off the waveform's columns, or
+    // nothing painted yet — nothing to grab.
+    GuiRect                  playhead_head_hit{0, 0, 0, 0};
 
     // THE OPEN FLAG EDITOR'S BOX, published by the same painter-owns-derived-
     // geometry rule the two stashes above follow, and for the same reason: the

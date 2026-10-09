@@ -31,7 +31,9 @@ THE PROGRAM'S BUILT-IN PALETTES ARE COOL EDIT PRO 2.1'S COLOR PRESETS (architect
 palettes for waveform needed now"; the program is Cool Edit under every chrome) and no catalog entry's: the per-chrome
 default palettes (`windows-2000-standard`, `clearlooks`, `solaris` as palette keys, 2026-10-07..10-09) retired that day.
 `cool_edit_presets.txt` is the source, committed: the scheme text inside `coolpro.exe` as extracted from his own copy
-(its head is the provenance note), twenty schemes in Cool Edit's order, Cool Edit's "(Default Scheme)" first.
+(its head is the provenance note), twenty schemes in Cool Edit's order, Cool Edit's "(Default Scheme)" first, every one
+named — the two names the exe's text lacks, "3D" and "Easy on the Eyes", from Cool Edit's own registry entries written
+under Wine (2026-10-09, the file's head).
 `gen_cool_edit_presets.py` (standard library alone; the source's path optional on its command line, the committed copy
 by default) transcribes each into the twelve program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read off the
 header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never hand-edited.
@@ -39,8 +41,8 @@ Its head is the transcription's statement: WvBk, WvFg, GrdL, Cntr, CueM, RngM, C
 without a Face takes the default's 626C7B), THE LIT OUTLINE the ink at HLS lightness 0.3157 (the view bar span's shadow
 rule, `src/gui/cool_edit_derive.h`, ported operation for operation; `palette_file.cpp` proves every row against the
 C++ tone()), and the three roles Cool Edit has no key for the same in every preset; the keys `cool-edit-<name>`, the
-display names Cool Edit's own ("Default" for the default; the two schemes whose name line the extraction lacks,
-"Unnamed 1" and "Unnamed 2"). Byte-stable like the others.
+display names Cool Edit's own ("Default" for the default); a values line with no name line after it is the run's hard
+fail. Byte-stable like the others.
 
 ## The compiled themes (architect 2026-10-04; compiled in since 2026-10-08)
 

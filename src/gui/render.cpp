@@ -1925,15 +1925,15 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
 
 } // namespace
 
-// The phase-reset lead-in ring's color (declaration in render.h): the
-// resolver above asked for a LIVE reset's TRIANGLE on the same class bit the
-// flag pass hands it, so the ring can never pick a color its cue would not
-// (the cue's red, valid or invalid, since 2026-10-09). It stands outside the
-// file's anonymous namespace so paint_handler.cpp reaches it; the resolver
-// it calls stays file-local.
-GuiColor phase_reset_stem_color(bool red) {
-    return resolve_flag_face(GuiFlagKind::PhaseReset, /*disabled=*/false, red)
-        .triangle;
+// The phase-reset lead-in ring's dots (declaration in render.h): the
+// resolver above asked for a LIVE reset's STEM PAIR on the same class bit the
+// flag pass hands it, so the ring can never wear a dot its stem would not.
+// It stands outside the file's anonymous namespace so paint_handler.cpp
+// reaches it; the resolver it calls stays file-local.
+GuiStemDots phase_reset_stem_dots(bool red) {
+    const FlagFace f =
+        resolve_flag_face(GuiFlagKind::PhaseReset, /*disabled=*/false, red);
+    return GuiStemDots{f.cue_dots, f.range_dots};
 }
 
 namespace {

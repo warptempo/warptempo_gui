@@ -1216,17 +1216,20 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
-// rule is not asked. TWELVE BOX SEATS (re-grepped 2026-10-06): the
+// rule is not asked. THE BOX SEATS (the color picker's and the settings
+// choice's combos, lists and fields seat the same way): the
 // caption's title, the row-8 clock (in its time field) and the
 // state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
 // is at paint_bottom_row_buttons_and_clock), the notification
 // card's first line, the dropdown items, the prompt's message, the render player's
 // two time fields, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
 // the reasoning is at that site), the modal buttons' own labels, the on-screen
-// keyboard's caps, and the folder overlay's rows. TWO LINE SEATS: the
-// tooltip's two lines and, since 2026-10-06, the menu row's anchors —
-// Explorer's menu band draws its text as a line DT_VCENTERed in the band's
-// button, the derivation at paint_menu_row.
+// keyboard's caps, the folder overlay's rows, and the menu row's anchors
+// under windows-2000 (the plain menu bar's seat, a capture of the real OS
+// beating ReactOS's band, architect 2026-10-09 ~17:40). TWO LINE SEATS: the
+// tooltip's two lines and the menu row's anchors under clearlooks and cde —
+// GTK's and Motif's arithmetic stand the cell as a line in the item, the
+// derivation at paint_menu_row.
 //
 // THE CANVAS COLUMN'S TEXT TAKES NEITHER SEAT (2026-10-09, the program is
 // Cool Edit): the ruler's digits and the cues' labels stand on AUTHORED
@@ -1785,30 +1788,46 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     const GuiRect content = menu_row_content_rect(row);
     constexpr int kMenuOpenTextShiftPx = 1;
 
-    // THE LABEL'S SEAT IS THE BAND'S TEXT SEAT, A LINE, NOT A CAP-CENTRED
-    // BOX (architect 2026-10-06): the cell stands at (content − cell) / 2,
-    // integer division, in Windows px. WIN2000: the band's button is the
+    // THE LABEL'S SEAT. WIN2000: THE PLAIN MENU BAR'S, THE CAP BAND CENTRED
+    // IN THE CONTENT AS EVERY OTHER CHROME BOX (architect 2026-10-09 ~17:40:
+    // "File Edit Settings looks off center … in winme.png and win2000pro.png
+    // the capitals are closer to the top"; the standing rule, "ReactOS
+    // officially always gives way to screenshots — official screenshots with
+    // good provenance like guidebookgallery"): redesign_baseline over the
     // content's 19 rows (render.h's menu-row block: the 13-row cell +
-    // DEFPAD_CY 6) and
-    // comctl32 draws a list-style button's text DT_LEFT | DT_VCENTER |
-    // DT_SINGLELINE in it (toolbar.c's default dwDTFlags), which stands the
-    // CELL — ascent + descent — at (19 - 13) / 2 = 3 rows, DrawText's integer
-    // division, so the cap's top is 3 + (11 - 8) = row 6 (tmp/reactos-
-    // hover.png: content rows 161-179, cap 167-174). The 3 is authored in
-    // Windows px from the recorded metrics and rounded at the element; the
-    // line takes line_baseline from there. (redesign_baseline's cap-centring,
-    // which every other chrome box keeps, would floor this row's 5.5 to 5 —
-    // a plain menu.c bar's row, the head of the menu row's pads.)
-    // CLEARLOOKS, the same expression: GtkMenuItem's 19 rows round the
-    // 13-row cell stand it at (19 − 13) / 2 = 3, the menu item's ythickness,
-    // so the cell's top is the bar's row 1 + 3 = 4 (report CL1 §3.2) — one
-    // rule for both, no field.
-    const GuiFaceMetrics& band_face = gui_face_metrics(GuiFace::Body);
-    const int band_text_lead =
-        (spec.menu_row_content_px - (band_face.ascent + band_face.descent)) /
-        2;
-    const double label_baseline = line_baseline(
-        font, static_cast<double>(content.y + scaled_px(band_text_lead)));
+    // DEFPAD_CY 6) puts the cap's top on row floor((19 − 8) / 2) = 5, five W
+    // of air above the cap and six below the baseline — his WordPad captures
+    // of the real OS, tmp/shots/winme.png (the band rows 22–41, the cap
+    // 27–35) and tmp/shots/win2000pro.png (the cap 28–35, the i's dot on 27),
+    // the seat of Windows' plain window menu bar (menu.c). THE SEAT DEPARTED
+    // FROM is ReactOS's Explorer menu band (2026-10-06 to 2026-10-09;
+    // tmp/reactos-hover.png, content rows 161–179, cap 167–174): comctl32 draws
+    // a list-style button's text DT_LEFT | DT_VCENTER | DT_SINGLELINE
+    // (toolbar.c's default dwDTFlags), standing the CELL — ascent + descent —
+    // at (19 − 13) / 2 = 3 rows and the cap's top on row 6; a capture of the
+    // real OS beats ReactOS where the two differ (win2000_deviations.md).
+    // At 300 % the cap's top stands 16 device rows into the content
+    // (floor((57 − 24) / 2)), 19 under the lane's top.
+    // CLEARLOOKS AND CDE KEEP THE LINE SEAT, the cell at (content − cell) / 2,
+    // integer division, in Windows px, the line taking line_baseline from
+    // there: GtkMenuItem's 19 rows round the 13-row cell stand it at
+    // (19 − 13) / 2 = 3, the menu item's ythickness, so the cell's top is the
+    // bar's row 1 + 3 = 4 (report CL1 §3.2) — GTK's own arithmetic; cde's
+    // Motif bar the same expression over its own content rows.
+    double label_baseline = 0.0;
+    if (!clearlooks && !cde) {
+        label_baseline = redesign_baseline(
+            font, static_cast<double>(content.y),
+            static_cast<double>(content.h));
+    } else {
+        const GuiFaceMetrics& band_face = gui_face_metrics(GuiFace::Body);
+        const int band_text_lead =
+            (spec.menu_row_content_px -
+             (band_face.ascent + band_face.descent)) /
+            2;
+        label_baseline = line_baseline(
+            font, static_cast<double>(content.y + scaled_px(band_text_lead)));
+    }
 
     // THE WALK: from the band's lead (menu_band_lead_px), ADJACENT WITH NO GAP.
     // Row 2 inserts a 2px invisible separator between its adjacent buttons
@@ -4111,7 +4130,9 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
 // PAINT-ONLY. Nothing here snaps, authors, or hit-tests: the ladder decides
 // pixels and nothing else. (The lane keeps its PLACEMENT-LANE role for the
 // pointer, point_on_placement_lanes — a press on the ruler places the
-// playhead — which reads the lane's rect, never this painter.)
+// playhead — which reads the lane's rect, never this ladder; the playhead's
+// head, which the ruler pass paints after the ladder, publishes its own hit
+// for the head drag, paint_ruler_row's head block.)
 namespace {
 
 // THE ROUND LADDER of labeled steps, in milliseconds. Every rung is a value a
@@ -4225,7 +4246,33 @@ std::string ruler_label_text(int64_t ms, int64_t step_ms) {
 void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const GuiRect lane   = top_ruler_row_area(app);
     const GuiRect marker = top_marker_row_area(app);
-    if (lane.w <= 0 || lane.h <= 0) return;
+    // THE HEAD'S HIT IS PUBLISHED AS PAINTED (AppState::playhead_head_hit;
+    // architect 2026-10-09 ~17:40, the head drag): `head` the rect this run
+    // paints the head in (the head block below), empty where none paints.
+    // A run republishes only what its damage clip redrew — the trim stash's
+    // rule (paint_trim), for its reason: on_redraw runs once per damage
+    // rect, and a run under a rect that missed the head would stamp the
+    // stash with a head it never drew. A head this run paints is published
+    // when the clip covers it; a head that paints nowhere is published (cold,
+    // nothing to grab) when the clip covers the head last published, whose
+    // pixels this run erased. Every move of the playhead damages the head's
+    // old and new columns from the window's top (playhead_invalidate_rect,
+    // main.cpp; the discrete moves' Viewport::invalidate_waveform_area), so
+    // the frame that shows a moved head is always a publishing one.
+    const auto publish_head = [&](const GuiRect& head) {
+        const GuiRect last = app.playhead_head_hit;
+        if (head.w > 0 && head.h > 0) {
+            if (clip_covers_drawable(cr, app, head))
+                app.playhead_head_hit = head;
+        } else if (last.w <= 0 || last.h <= 0 ||
+                   clip_covers_drawable(cr, app, last)) {
+            app.playhead_head_hit = GuiRect{0, 0, 0, 0};
+        }
+    };
+    if (lane.w <= 0 || lane.h <= 0) {
+        publish_head(GuiRect{0, 0, 0, 0});
+        return;
+    }
 
     cairo_save(cr);
     // THE LANE'S FACE, then THE GROUND AND ITS FRAME over the canvas's
@@ -4247,7 +4294,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // rebuild and repaints the strip, and this pass rides along with it.
     const PlateViewportBasis basis = plate_viewport_basis();
     const int sr = audio.sample_rate();
-    if (basis.spp <= 0.0 || sr <= 0) { cairo_restore(cr); return; }
+    if (basis.spp <= 0.0 || sr <= 0) {
+        publish_head(GuiRect{0, 0, 0, 0});
+        cairo_restore(cr);
+        return;
+    }
     // THE RULER'S COLUMNS ARE THE CANVAS'S (2026-10-09, the column's
     // margins): the ground and every tick, digit and the head from the
     // waveform area's x, the frame's side columns one line outside it.
@@ -4268,7 +4319,11 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w
                                               : area.w;
     const RulerComb comb = ruler_comb(basis.spp, basis.vp_start, sr, wave_w);
-    if (!comb.valid) { cairo_restore(cr); return; }
+    if (!comb.valid) {
+        publish_head(GuiRect{0, 0, 0, 0});
+        cairo_restore(cr);
+        return;
+    }
     // THE GROUND AND ITS FRAME over the canvas's columns (METRICS §4.1, the
     // mock's ruler): `ce_mid` ground, then the frame's L — the `ce_dark` left
     // column beside the ground and the `ce_hilight` foot line and right
@@ -4466,6 +4521,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         // one extent, the damage box's too).
         const int left  = cue_triangle_half_w_px();
         const int right = cue_triangle_reach_right_px();
+        GuiRect head_hit{0, 0, 0, 0};
         if (col + right - 1 >= 0 && col - left <= wave_w - 1) {
             const int head_top = ground_bottom - rows;
             cairo_save(cr);
@@ -4474,7 +4530,19 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             paint_ce_cue_triangle(cr, cx + col, head_top,
                                   palette().playhead_stem);
             cairo_restore(cr);
+            // THE HEAD'S HIT (architect 2026-10-09 ~17:40, the head drag;
+            // point_on_playhead_head, input_pointer.cpp): EXACTLY THE PAINTED
+            // HEAD — its triangle's and shadow's columns [col − left,
+            // col + right) cut to the waveform's columns as the clip above
+            // cuts them, over the head's five quanta of the ruler's rows — and
+            // nothing beyond it ("I don't think we should get in the habit of
+            // making invisible hitboxes"), published by the pass's rule
+            // (publish_head, the pass's head).
+            const int x0 = std::max(0, col - left);
+            const int x1 = std::min(wave_w, col + right);
+            head_hit = GuiRect{cx + x0, head_top, x1 - x0, rows};
         }
+        publish_head(head_hit);
     }
 
     cairo_restore(cr);
@@ -4696,7 +4764,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // the seed grain's end, derived in the block below from the same frame
     // and the same map the paint sample reads.
     int64_t width_samples;
-    // The reset's CLASS, for the ring's colour: the column's RESTING red set
+    // The reset's CLASS, for the ring's dots: the column's RESTING red set
     // keyed by store index, the set and the index the flag pass reads for
     // this reset's stem — at rest and through a drag alike, the drag writing
     // only its proposal, so the ring and the stem share one class throughout.
@@ -4797,10 +4865,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     if (right_col <= left_col) return out;
 
     // The band spans columns [left_col, right_col): the stem's own column
-    // (left_col) sits inside it, and the stems paint after both of the band's
-    // passes, so the stem stays crisp on top of the left seam.
+    // (left_col) is its left side, which the ring leaves to the stem
+    // (paint_phase_reset_overlay_ring).
     double x0 = static_cast<double>(area.x + left_col);
     double x1 = static_cast<double>(area.x + right_col);
+    const double stem_x = x0;
 
     // Horizontal clip to [area.x, area.x + area.w); the band shows whenever the
     // intersection is non-empty even if the stem column is off-screen left
@@ -4809,76 +4878,100 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     x1 = std::min(x1, static_cast<double>(area.x + area.w));
     if (x1 <= x0) return out;
 
-    out.valid = true;
-    out.x0    = x0;
-    out.x1    = x1;
-    out.red   = red_class;
+    out.valid  = true;
+    out.x0     = x0;
+    out.x1     = x1;
+    out.stem_x = stem_x;
+    out.red    = red_class;
     return out;
 }
 
 // THE OVERLAY RING — the phase-reset overlay's WHOLE visual (architect
-// 2026-07-27): the band's opaque border, waveform_line_px() thick (1px at
-// 100 %, the stem's own width at every scale), in the phase-reset stem's own
-// colour (see below) and nothing else,
-// painted AFTER the plate. It is a BOUNDARY LINE, like the playheads and the
-// stems, so an opaque line crossing waveform ink is correct and intended, and
-// with no fill inside it the band now READS as the two edges of a span rather
-// than as a tinted region.
+// 2026-07-27): the band's border and nothing else, no fill, so the band
+// READS as the edges of a span rather than as a tinted region, painted
+// AFTER the plate and over the ink.
 //
-// THE RING STANDS ON THE CANVAS (architect 2026-10-06; the canvas the area
-// whole since 2026-10-09): its top run on the area's first row and its
-// bottom run on its last, the verticals spanning the rows between them, the
-// canvas's frame round the area staying whole under a reset's span. (Inside
-// the well's two-line edge from 2026-10-06 until the well went, 2026-10-09.)
-//
-// A vertical side is drawn only where the band's own edge
-// is the true edge — both x0 and x1 come back already clipped to the area, so a
-// band running past a viewport edge draws its border there too; that is the
-// same flush-to-the-edge reading the trim bridge's clipped fill has, and the
-// band is an aid rather than a hit target, so no sentinel machinery is needed.
+// THE RING IS DOTTED IN THE STEM'S OWN PATTERN, NEVER A SOLID LINE
+// (architect 2026-10-09 ~17:40: the ring is "made of the same stuff the
+// marker looks like"; "they're one unit", 2026-08-01): every cell one device
+// px (waveform_line_px, "on waveform → unscaled"), in the reset's own two dot
+// colors exactly as its stem wears them — phase_reset_stem_dots asks the one
+// resolver (resolve_flag_face) for the stem's pair, so the ring and the stem
+// cannot drift: a valid reset the red `cue` and the blue `range`
+// alternating, an invalid one the red alone; resting whether the reset is
+// selected or not, as the stem is.
+//   THE LEFT SIDE IS THE STEM'S OWN COLUMN and the ring does not paint it:
+//     the reset's stem already stands there (paint_marker_stems, after this
+//     pass), and a playhead on the reset interleaves its yellow there as on
+//     any stem — "yellow, blue, yellow, red all the way around". A stem off
+//     the area's left edge leaves the clipped band with no left side.
+//   THE RIGHT SIDE on the band's last column, the stem's rule exactly
+//     (program_spec.h's dot fields: the blue on the canvas rows ≡
+//     range_dot_phase and the red on ≡ cue_dot_phase, mod cue_dot_period,
+//     counted from the canvas's first row) — fill_dotted_waveform_line, the
+//     stem's own painter. A band clipped at the area's right edge draws it
+//     there, flush, as the trim bridge's clipped fill reads.
+//   THE TOP RUN on the canvas's first row and THE BOTTOM RUN on its last:
+//     the same two phases turned through the corners, counted in device
+//     columns from the reset's own column (band.stem_x, unclipped, so the
+//     run stays put on the song as the view pans): the blue on columns
+//     stem + range_dot_phase + k · cue_dot_period, the red on stem +
+//     cue_dot_phase + k · cue_dot_period — one dot every four columns,
+//     alternating, as down the stem. The corners carry whatever
+//     cell the rules give them; a band one column wide is its stem alone.
+// PURE PALETTE BYTES (the palette composites nothing): aliased integer
+// cell rectangles, the stems' own form, no alpha and no half column. The
+// band's edges are whole columns by construction (displayed_column_at's
+// integers off the area's x).
+// THE CANVAS'S ROWS (architect 2026-10-06; the area whole since
+// 2026-10-09): the runs land on the canvas's first and last rows, the
+// canvas's frame round the area staying whole under a reset's span. No
+// other reader takes the ring's cells: it is no hit target, and its damage
+// is the whole waveform area's (the flag cache's rebuild and
+// Selection::damage_overlay_on_subject_change), which holds it whole.
+// DAMAGE: this pass paints live in on_redraw from app state, never from a
+// cached surface, and every change to its dots' inputs misses the flag
+// cache's fingerprint, whose rebuild damages the waveform with the strip
+// (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own repaint;
+// a palette install damages the whole window.
 void GuiPaintHandler::paint_phase_reset_overlay_ring(
     cairo_t* cr, const GuiRect& area) {
     const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
     if (!band.valid) return;
 
-    const double w = band.x1 - band.x0;
+    const GuiStemDots dots = phase_reset_stem_dots(band.red);
+    const ProgramSpec& ps = kProgramSpec;
+    const int t      = waveform_line_px();
+    const int x0     = static_cast<int>(std::nearbyint(band.x0));
+    const int x1     = static_cast<int>(std::nearbyint(band.x1));
+    const int stem   = static_cast<int>(std::nearbyint(band.stem_x));
+    const int period = ps.cue_dot_period;
+    const int y_top  = area.y;
+    const int y_bot  = area.y + area.h - t;
+
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // THE RING IS THE CUE'S COLOR (architect 2026-08-01) — "they're one
-    // unit", the ring and the cue of the reset it annotates. A solid ring
-    // cannot alternate as the dots do, so it wears the cue's TRIANGLE: the
-    // red `cue` since 2026-10-09 ~11:50, for a valid reset and an invalid
-    // one alike (band.red still asks the class, the triangle answering the
-    // same red to both) — resting whether the reset is selected or not, as
-    // the triangle is. phase_reset_stem_color asks the one resolver rather
-    // than restating it, so ring and cue cannot drift.
-    // DAMAGE: this pass paints live in on_redraw from app state, never from a
-    // cached surface, and every change to its color's inputs misses the flag
-    // cache's fingerprint, whose rebuild damages the waveform with the strip
-    // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own
-    // repaint; a palette install damages the whole window.
-    const GuiColor ring = phase_reset_stem_color(band.red);
-    set_palette_source(cr, ring);
-    // THE CANVAS'S ROWS (architect 2026-10-06; the area whole since
-    // 2026-10-09): the top run lands on the canvas's first row and the
-    // bottom on its last, with the verticals spanning every row between
-    // them. No other reader takes the ring's rows: it is no hit target, and
-    // its damage is the whole waveform area's (the flag cache's rebuild and
-    // Selection::damage_overlay_on_subject_change), which holds it whole.
-    // EVERY SIDE IS waveform_line_px() THICK (render.h, the class's one
-    // inventory), inward from the band's edges, so the left side's columns
-    // [x0, x0 + t) are the stem's own; a side is never wider than the band
-    // (both verticals then cover it), and the band is already clipped to the
-    // waveform's columns, so no side reaches past them.
-    const double t  = static_cast<double>(waveform_line_px());
-    const double sw = std::min(t, w);
-    const double y0 = static_cast<double>(area.y);
-    const double h  = static_cast<double>(area.h);
-    cairo_rectangle(cr, band.x0, y0, w, t);              // top
-    cairo_rectangle(cr, band.x0, y0 + h - t, w, t);      // bottom
-    cairo_rectangle(cr, band.x0, y0, sw, h);             // left
-    cairo_rectangle(cr, band.x1 - sw, y0, sw, h);        // right
-    cairo_fill(cr);
+    const auto paint_dots = [&](const GuiColor& color, int phase) {
+        set_palette_source(cr, color);
+        // The top and bottom runs: the first column at or past x0 whose
+        // offset from the stem is ≡ phase (mod period).
+        const int off   = x0 - stem;
+        const int first = x0 + (((phase - off) % period) + period) % period;
+        for (int x = first; x < x1; x += period) {
+            cairo_rectangle(cr, static_cast<double>(x),
+                            static_cast<double>(y_top),
+                            static_cast<double>(t), static_cast<double>(t));
+            cairo_rectangle(cr, static_cast<double>(x),
+                            static_cast<double>(y_bot),
+                            static_cast<double>(t), static_cast<double>(t));
+        }
+        cairo_fill(cr);
+        // The right side on the band's last column.
+        fill_dotted_waveform_line(cr, area.x, area.w, x1 - t - area.x,
+                                  area.y, area.y + area.h, period, phase);
+    };
+    if (dots.range_dots) paint_dots(palette().range, ps.range_dot_phase);
+    if (dots.cue_dots) paint_dots(palette().cue, ps.cue_dot_phase);
     cairo_restore(cr);
 }
 
@@ -8515,9 +8608,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     colors, it never washes over them; and since the sweep's region
         //     highlight retired (architect 2026-10-03, "the trim bar is
         //     enough") NO pass recolours the waveform at all. The phase-reset
-        //     overlay contributes no ground (architect 2026-07-27): its 1px
-        //     RING is its whole visual, and a boundary line paints AFTER the
-        //     plate, crossing the ink like the stems do.
+        //     overlay contributes no ground (architect 2026-07-27): its
+        //     RING is its whole visual — one-device-px dots in its reset's
+        //     stem pattern (2026-10-09 ~17:40) — painted AFTER the plate,
+        //     over the ink like the stems' dots, and before them.
         //   THE COLUMN IS SHARED, NOT CONTESTED (architect 2026-10-09, the
         //     program is Cool Edit): a SELECTION adds no playhead-like mark of
         //     its own, its whole cue being its members' selected LABELS with
@@ -8531,10 +8625,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
         if (rects_intersect(exposed, wave_paint)) {
             paint_waveform_plate(cr, area);
-            // The overlay band's boundary ring — the phase-reset overlay's whole
-            // visual — over the plate and under trim
-            // and the stems, so the focused reset's own stem stays crisp on top
-            // of the left seam.
+            // The overlay band's dotted ring — the phase-reset overlay's whole
+            // visual — over the plate and under the stems and the cursor's
+            // dots: its left side is the focused reset's own stem, which
+            // paint_marker_stems lays down, the playhead's dots interleaving
+            // there as on any stem.
             paint_phase_reset_overlay_ring(cr, area);
         }
 

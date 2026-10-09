@@ -387,8 +387,9 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // the program's panel (the band, the canvas column's frame,
 // row 8, the view bar and its span, the ruler, the marker lane's face), the
 // cues' dots (paint_marker_stems), the playhead's head and dots, the open
-// flag editor (render_flag_editor_box), the lead-in ring
-// (phase_reset_stem_color), the zoom anchor's stem and the scanner.
+// flag editor (render_flag_editor_box), the lead-in ring's dots (its stem's
+// pair through phase_reset_stem_dots, the two colors read live), the zoom
+// anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
 // THE BUILT-IN PALETTES (the head) — Cool Edit's presets in its order,

@@ -170,8 +170,9 @@ namespace {
 // Cool Edit's flipped ruler, 17 W of ground and its line — the ticks, the
 // timestamps and the PLAYHEAD'S HEAD on its bottom rows — and a PLACEMENT
 // LANE: a motionless click places the playhead and every drag there does
-// nothing, the navigation surface being the waveform alone
-// (point_on_placement_lanes, app_state.h)), the MARKER lane
+// nothing but the head's, which drags the playhead (2026-10-09), the
+// navigation surface being the waveform alone (point_on_placement_lanes and
+// point_on_playhead_head, input_pointer.cpp)), the MARKER lane
 // (marker_lane_h_px(), 11 W, Cool Edit's cues) and THE CANVAS'S TOP FRAME
 // ROW (canvas_top_frame_h_px(), one dark line, 2026-10-09), whose bottom
 // edge is the waveform top. ALL EIGHT ride the gui_scale axis. The BOTTOM
@@ -530,8 +531,8 @@ int top_flex_gap(int win_h) {
                               - waveform_h(win_h) / 2;
     return gap > 0 ? gap : 0;
 }
-// GAP 2 — the flexible blank band between the waveform's bottom border and the
-// UNIFIED BOTTOM ROW, the bottom strip's one lane:
+// GAP 2 — the flexible blank band between the waveform's bottom edge and the
+// bottom strip's lanes (the column's foot over the UNIFIED BOTTOM ROW):
 // the REMAINDER of the leftover, which
 // is what makes the stack add up to the window exactly. Zero, the waveform
 // taking the whole leftover (the vertical rule above). IT IS THE BAND THAT
@@ -684,8 +685,8 @@ GuiRect waveform_area(const AppState& a) {
 // between the ICON ROW and the TRIM LANE, so the trim lane and every lane
 // below it carry the gap while the menu row and the icon row stand at the
 // window's top). The
-// bottom strip's own gap 2 is NOT an inset here: its one lane rests on the
-// window's foot, and the gap sits above it, inside bottom_strip_h. The top
+// bottom strip's own gap 2 is NOT an inset here: its lanes count up from the
+// window's foot, and the gap sits above them, inside bottom_strip_h. The top
 // strip counts downward from y=0; the bottom strip mirrors it about the window
 // midline (`h - inset - lane_h`).
 //
@@ -824,37 +825,28 @@ GuiRect bottom_column_foot_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 1);
 }
 
-// THE BOTTOM STRIP IS ONE LANE — THE UNIFIED BOTTOM ROW (bottom lane 0, on
-// the window's foot;
-// 2026-08-12, rows 8
-// and 9 merged; the succession is at the bottom row's geometry block,
-// render.h), with GAP 2's blank window ground between it
-// and the waveform: the clock at the left in a time field (architect
-// 2026-10-02, Windows' status bar; 2026-10-05, the period's field;
-// 2026-10-08, the dialog field's size in symmetric air) with THE
-// STATE LINE on the
-// ground right of it (architect 2026-10-03), and a RIGHT-ANCHORED BLOCK of the MARKER-VERB GROUP
-// (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
-// walk, the four cardinal arrows and the transport three, at the icon row's
-// boxes, eight Windows px of bare ground between two groups (architect
-// 2026-09-29; the separators retired 2026-10-02).
+// THE BOTTOM STRIP IS TWO LANES (2026-10-09, the program is Cool Edit;
+// render.h's bottom-row geometry block and canvas-frame accessors): BOTTOM
+// LANE 0, on the window's foot, THE UNIFIED BOTTOM ROW (2026-08-12, rows 8
+// and 9 merged; the succession at render.h's bottom-row block) — Cool Edit's
+// DOCK BAR at its head and ROW 8 under it: the clock at the left in its dark
+// time field with THE STATE LINE on the face right of it, and, packed
+// against the right edge, the MARKER-VERB GROUP (kMarkerVerbGroup,
+// paint_handler.cpp, owns its membership), the marker walk, the four
+// cardinal arrows and the transport three, each Cool Edit's group between
+// its grippers and end bars (program_spec.h); and BOTTOM LANE 1, THE
+// COLUMN'S FOOT (bottom_column_foot_area, above), the canvas's light bottom
+// frame row and 5 W of face, between the waveform and the dock bar. Gap 2
+// stands above lane 1 inside bottom_strip_h and is zero since the waveform
+// became the whole leftover.
 // THE ROW CARRIES NO DIRTY MARK: Save's grey is the mark (architect
 // 2026-10-05, plain_save_actionable), the clock's `*` suffix retired, and no
 // title carries one — neither the laptop's window title nor the caption's
-// "<piece> - Warptempo" (paint_caption_row). THE LANE IS THE ICON ROW'S
-// HEIGHT since 2026-08-14, its content and border both delegating to that
-// row's accessors.
-// bottom_row_area is the lane INCLUDING its 1px top row (the waveform side,
-// where commit B's "thin border" stood — plain ground since 2026-10-02), as
-// the strip stack allocates it; bottom_row_content_area is the ground under
-// that row, the band every button, baseline and cell works in. Paint and hit agree through the one accessor exactly as the top rows'
-// do through theirs. THE ROW RESTS ON THE WINDOW'S FOOT — bottom lane 0, the
-// strip's only lane — which it has since commit B apart from the one day the
-// STATUS BAR stood under it (2026-08-29; the bar folded back into this row
-// that evening and its state cell is the clock's neighbour here now).
-//
-// (The former pan-strip row retired earlier — pan lives on the plain-drag
-// grab and the ctrl strip drag's horizontal axis.)
+// "<piece> - Warptempo" (paint_caption_row).
+// bottom_row_area is the lane INCLUDING the dock bar, as the strip stack
+// allocates it; bottom_row_content_area is the band under the dock bar, the
+// band every button, baseline and cell works in. Paint and hit agree through
+// the one accessor exactly as the top rows' do through theirs.
 GuiRect bottom_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, 0);
 }

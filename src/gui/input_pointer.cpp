@@ -946,7 +946,13 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // horizontal zoom ... was designed to unify the motions for zoom on both
 // devices"): off a flag, a motionless click or tap there places the playhead
 // and the marker lane's empty-stretch double-click creates, and EVERY DRAG
-// DOES NOTHING — no grab-pan, no ctrl zoom, no shift sweep. The FLAG BOXES
+// DOES NOTHING — no grab-pan, no ctrl zoom, no shift sweep — WITH ONE
+// EXCEPTION, THE PLAYHEAD'S HEAD (architect 2026-10-09 ~17:40, Cool Edit's
+// cursor grabbed by its head): a plain press on the head as painted
+// (point_on_playhead_head, below) is the HEAD DRAG, every motion past the
+// slop the placement act at the pointer's column (ScrollDragState::head_drag). The
+// press's order: a flag first (a cue's triangle or label over the head is
+// a flag act, hit_test_flag), then the head, then the lane's placement. The FLAG BOXES
 // carve themselves out (point_on_placement_lanes below, and the band walks'
 // own flag claims), and the TRIM BAR is a disjoint y-band that never answers
 // true here (it has its own claim and its own cue). Deliberately NOT the
@@ -978,6 +984,21 @@ bool point_on_placement_lanes(const AppState& app, const GuiAudio& audio,
                               int x, int y) {
     if (!point_in_placement_lanes(app, x, y)) return false;
     return hit_test_flag(app, audio, x, y) < 0;
+}
+
+// THE PLAYHEAD'S HEAD AS PAINTED (architect 2026-10-09 ~17:40, the head drag;
+// the lanes' one drag, above): the head's painted columns — the triangle and
+// its shadow, cut to the waveform's columns — over its five quanta of the
+// ruler's rows, NO INVISIBLE HIT BOX beyond them ("I don't think we should
+// get in the habit of making invisible hitboxes"), read from the ruler
+// pass's own publication (AppState::playhead_head_hit, paint_ruler_row) as
+// every flag rect is (ON SCREEN IS AS PAINTED). Its callers ask the flags
+// first, so a cue standing over the head keeps the press. THREE READERS: the
+// plain press's ruler band walk in on_button_press and in
+// handle_history_mode_press (each arming arm_placement_press with the head
+// drag), and the cursor map's head arm (pointer_cursor_kind).
+bool point_on_playhead_head(const AppState& app, int x, int y) {
+    return rect_contains(app.playhead_head_hit, x, y);
 }
 
 // THE NAVIGATION SURFACE, THE ONE OWNER OF ITS GEOMETRY: THE WHOLE WAVEFORM
@@ -2156,6 +2177,13 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     }
     if (app.drag.active || app.pending_marker_press.active)
         return GuiCursorKind::TrimResize;
+    // THE HEAD DRAG KEEPS ITS CUE (architect 2026-10-09 ~17:40), the marker
+    // drag's rule: the playhead slides side to side under the pointer, so the
+    // TrimResize the head wears at rest stays true for the whole press, read
+    // from the pending's own record (ScrollDragState::head_drag) and never
+    // re-derived from a head that moves with the pointer. Capture-free.
+    if (app.scroll_drag.active && app.scroll_drag.head_drag)
+        return GuiCursorKind::TrimResize;
     // (THE REGION EDITOR'S OWN LIVE ARM STOOD HERE FROM 2026-08-15 TO
     // 2026-08-18 and is deleted with the gesture; the overlay's drags that
     // replaced it were deleted in turn on 2026-09-22.)
@@ -2235,7 +2263,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // they are PLACEMENT SURFACES now, a motionless click their one act and
     // no drag armed there, and a click carries no cue anywhere in this map —
     // so they fall to the top strip's plain Arrow below, with no term of
-    // their own, as they do under ctrl (no zoom there any more).
+    // their own, as they do under ctrl (no zoom there any more) — but for the
+    // PLAYHEAD'S HEAD, whose plain drag moves the playhead (2026-10-09), its
+    // TrimResize at the strip's arm below.
     const bool on_nav_surface = point_on_nav_surface(app, x, y);
 
     // (ALT IS UNNAMED: its pointer vocabulary is EMPTY since 2026-08-12 — the
@@ -2428,6 +2458,14 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
             // promises the gesture.
             return GuiCursorKind::TrimResize;
         }
+        // THE PLAYHEAD'S HEAD WEARS TrimResize (architect 2026-10-09 ~17:40,
+        // the head drag): its plain press drags the playhead side to side, the
+        // product's move-me-horizontally gesture, so it takes the flag box's
+        // and the trim bridge's shape — the cursor promises the gesture, read
+        // through the press's own predicate (point_on_playhead_head, the
+        // painter's published head) under the flag arm, the press's own
+        // order.
+        if (point_on_playhead_head(app, x, y)) return GuiCursorKind::TrimResize;
         // The rest of the strip: the button rows (claimed far above the
         // waveform in the press path, no cue of their own), the two
         // PLACEMENT LANES' empty stretches (a motionless click places, no drag
@@ -5173,7 +5211,8 @@ bool GuiInputHandler::claim_player_scrub_press(int x, int y,
     drag.grab_dx  = on_thumb ? x - marker_x : 0;
     // THE CARRIED x IS A THUMB CENTRE, so it is clamped onto the thumb's OWN
     // TRAVEL and not onto the item — the painter draws the thumb at it, and a
-    // centre past either inset would hang the thumb off its channel (the
+    // centre past either end of that travel would hang the thumb off its
+    // channel (the
     // travel is the mapping's, one owner: render_player_scrub_usable_span).
     drag.marker_x = clamp_player_scrub_marker_x(x - drag.grab_dx);
     viewport.invalidate_rect(track);
@@ -7196,11 +7235,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // ruler's ground, 2026-10-09) still arms; its motionless release's
             // click act deselects and seats no playhead, the placement body's
             // own off-column shape.
+            // ON THE PLAYHEAD'S HEAD AS PAINTED the same pending is THE HEAD
+            // DRAG (architect 2026-10-09 ~17:40; point_on_playhead_head,
+            // ScrollDragState::head_drag): past the slop every motion places
+            // the playhead at the pointer's column. The flags rank first
+            // (mh_index, the one hit above — a cue never stands in the ruler,
+            // and the order is stated rather than left to geometry).
             {
                 const GuiRect ruler = top_ruler_row_area(app);
                 if (y >= ruler.y && y < ruler.y + ruler.h) {
-                    arm_placement_press(x, y, /*history=*/false,
-                                        /*seed_empty_lane=*/false);
+                    arm_placement_press(
+                        x, y, /*history=*/false, /*seed_empty_lane=*/false,
+                        /*head_drag=*/mh_index < 0 &&
+                            point_on_playhead_head(app, x, y));
                     return;
                 }
             }
@@ -7519,11 +7566,16 @@ void GuiInputHandler::arm_nav_press(int x, int y, bool history,
 // FOUR CALLERS, by grep 2026-09-25: the live router's ruler band, its empty
 // marker-lane stretch (the one that seeds), its shift claim off the waveform,
 // and the `h` view's router (its ruler, its empty lane stretch and its shift
-// claim through one arm each).
+// claim through one arm each). `head_drag` (architect 2026-10-09 ~17:40) is
+// the two ruler bands' alone, true where the plain press landed on the
+// playhead's head as painted (point_on_playhead_head): the lanes' one drag,
+// the playhead riding the pointer past the slop (ScrollDragState::head_drag).
 void GuiInputHandler::arm_placement_press(int x, int y, bool history,
-                                          bool seed_empty_lane) {
+                                          bool seed_empty_lane,
+                                          bool head_drag) {
     arm_nav_press(x, y, history, seed_empty_lane, /*scrub_release=*/false);
     app.scroll_drag.placement_only = true;
+    app.scroll_drag.head_drag      = head_drag;
 }
 
 // THE CTRL ENTRY TO THE SAME ONE DRAG (2026-08-14, the live-ctrl model —
@@ -8030,7 +8082,9 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         app.scroll_drag = ScrollDragState{};
         // A PLACEMENT LANE'S CROSSED PRESS (2026-09-25) began no capture and
         // moved no viewport, so it owes nothing: no act (it was not a click),
-        // no predictor re-anchor, no capture end.
+        // no predictor re-anchor, no capture end — the head drag's included
+        // (2026-10-09), its every motion past the slop having run the act
+        // already, so its lift ends it where the last motion placed it.
         if (moved && placement) return;
         if (moved) {
             if (!zooming && playback.is_playing())
@@ -9778,14 +9832,18 @@ bool GuiInputHandler::handle_history_mode_press(
     if (ctrl || shift || alt) return true;
 
     // PLAIN FROM HERE. The band walk mirrors the live press router's: the
-    // ruler is a placement lane (arm_placement_press, 2026-09-25), the trim
-    // bar keeps its framing double-click, the marker lane splits
+    // ruler is a placement lane (arm_placement_press, 2026-09-25) whose
+    // playhead head is the head drag in here as outside (2026-10-09 ~17:40,
+    // the mode's land at every placement; the diff flags rank first), the
+    // trim bar keeps its framing double-click, the marker lane splits
     // flag-vs-stretch, and the waveform is the navigation surface.
     {
         const GuiRect ruler = top_ruler_row_area(app);
         if (y >= ruler.y && y < ruler.y + ruler.h) {
-            arm_placement_press(x, y, /*history=*/true,
-                                /*seed_empty_lane=*/false);
+            arm_placement_press(
+                x, y, /*history=*/true, /*seed_empty_lane=*/false,
+                /*head_drag=*/hit_test_flag(app, audio, x, y) < 0 &&
+                    point_on_playhead_head(app, x, y));
             return true;
         }
     }
@@ -11031,6 +11089,21 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // event's delta is applied — the same two-caller shape, and the same
         // argument, as the dropdown hover walk. Both reach the one body.
         sync_nav_drag_mode(mods);
+        // THE HEAD DRAG'S ONE STEP (architect 2026-10-09 ~17:40; contract at
+        // ScrollDragState::head_drag): THE CLICK ACT ITSELF at the pointer's
+        // column — run_nav_click_act, the motionless release's own body, the
+        // `h` view's mode land with it — the column clamped onto the
+        // waveform's, so a pointer past either end of the canvas holds the
+        // playhead at that end's column rather than meeting the act's gutter.
+        // No second placement road: the play's stop, the deselect, the
+        // movement owner and its damage are the act's.
+        const auto head_drag_step = [&] {
+            const GuiRect area = waveform_area(app);
+            const int col =
+                std::clamp(mouse_x - area.x, 0, std::max(0, area.w - 1));
+            run_nav_click_act(area.x + col, sd.history,
+                              /*scrub_release=*/false);
+        };
         // Sub-threshold: still the pending click. The press did nothing, so
         // nothing happens here either — the fork IS the threshold. last_x
         // stays at the press until the crossing, which therefore folds the
@@ -11047,7 +11120,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // navigation surface on both devices): `moved` is what tells the
             // release the press was not a click, and no capture, pan or zoom
             // follows — the held button stays this pending's until the release.
-            if (sd.placement_only) return;
+            // THE ONE EXCEPTION IS THE HEAD DRAG (2026-10-09), whose crossing
+            // is its first step.
+            if (sd.placement_only) {
+                if (sd.head_drag) head_drag_step();
+                return;
+            }
             // THE DRAG BEGINS AT THE CROSSING, and so does its CAPTURE — not
             // at the press, or every motionless click would blink the cursor
             // away and back, the ctrl click included (the unification's own
@@ -11072,7 +11150,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
             // other site: from here every switch rides sync_nav_drag_mode.
             set_strip_capture_notional_x_frozen(sd.zooming);
         }
-        if (sd.placement_only) return;  // past the crossing: nothing, ever
+        // Past the crossing a placement lane's pending does nothing, ever —
+        // but the head drag, whose every motion is a step (2026-10-09).
+        if (sd.placement_only) {
+            if (sd.head_drag) head_drag_step();
+            return;
+        }
         if (sd.zooming) {
             // The ZOOM phase: dx off the live level about the seated pivot
             // (right zooms in), dy discarded, and the pointer's own notional x
