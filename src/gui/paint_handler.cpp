@@ -1691,62 +1691,51 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 //
 // COOL EDIT'S FRAME WINDOW ROUND THE PROGRAM: one sunken line, Shadow on the
 // top and left and Hilight on the bottom and right, in the chrome's roles,
-// mitred — the law (his Cool Edit captures), the geometry and the chrome
-// surfaces outside it at render.h's program_frame_rect, its one statement.
-// TWO PAINTERS, one for each moment of the frame's picture:
-//   paint_program_frame — THE RING, program_frame_rect whole, with the rows
-//     (on_redraw's step 3): its top row is its own lane under the menu row,
-//     its bottom row its own lane under row 8 (or above the row, under a
-//     chrome tenant), and its columns stand in the line every program lane
-//     leaves on each side, so nothing else paints them; the keyboard slot
-//     and the floating surfaces cover it where they stand.
-//   paint_program_frame_keyboard_blocks — THE BLOCKS ROUND A STANDING
-//     KEYBOARD, after the keyboard slot (the rule at onscreen_keyboard.h's
-//     frame block): the upper block's closure — the column's foot and the
-//     Hilight row over the canvas's lowest rows, the ring's columns ending
-//     there — and, where row 8 stays the program's, the lower block's ring,
-//     its Shadow row over the keyboard band's last line.
-// Both paint with the outer damage clip bounding them; the ring is a handful
-// of rects, so neither is exposure-gated.
+// mitred — the law (his Cool Edit captures), the geometry and the overlays
+// laid over it at render.h's program_frame_rect, its one statement.
+// paint_program_frame paints THE RING, program_frame_rect whole, with the
+// rows (on_redraw's step 3): its top row is its own lane under the menu row,
+// its bottom row its own lane under row 8, and its columns stand in the line
+// every program lane leaves on each side, so nothing else paints them; the
+// keyboard slot, the bottom overlays and the floating surfaces cover it where
+// they stand. The outer damage clip bounds it; the ring is a handful of
+// rects, so it is not exposure-gated.
 void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
     const GuiRect ring = program_frame_rect(app);
     if (ring.w <= 0 || ring.h <= 0) return;
     paint_relief_sunken_outer(cr, ring);
 }
 
-void GuiPaintHandler::paint_program_frame_keyboard_blocks(cairo_t* cr) {
-    if (!onscreen_keyboard::stands(app, gui)) return;
-    const GuiRect closure = onscreen_keyboard::program_closure_rect(app);
-    const GuiRect upper   = onscreen_keyboard::program_upper_ring_rect(app);
-    if (closure.w <= 0 || upper.w <= 0) return;
+// -- THE BOTTOM OVERLAYS (architect 2026-10-10) -------------------------------
+//
+// THE DIALOG AND THE ON-SCREEN KEYBOARD AS COOL EDIT'S STATUS BAR — the law,
+// the mocks and every rect at onscreen_keyboard.h's overlay block. This
+// painter lays what the overlay owns beyond the keys and the controls: THE
+// LINE, one relief line in the chrome's Hilight across the window's whole
+// width on the overlay's top row (over the keyboard alone, over the dialog
+// alone, or over the pair), and THE DIALOG'S GROUND in the chrome's ground
+// under it. The keyboard's band is paint_onscreen_keyboard's (its ground and
+// its keys, through the keyboard slot just before this), the dialog's
+// controls paint_modal_dialog's (after the floating surfaces). No bottom or
+// side border: the overlay ends at the window's foot and edges as Cool
+// Edit's status bar does. Not exposure-gated — two fills, the outer damage
+// clip bounding them — and it publishes nothing: a press on the dialog's
+// ground meets the dialog's veil, a press on the keyboard's line the
+// keyboard's claim.
+void GuiPaintHandler::paint_bottom_overlays(cairo_t* cr) {
+    const GuiRect over = onscreen_keyboard::overlay_rect(app, gui);
+    if (over.w <= 0 || over.h <= 0) return;
     const GuiPalette& p = palette();
-    const int lw   = program_line_px();
-    const int foot = column_foot_h_px();
-    const GuiRect area = waveform_area(app);
-    const GuiRect canvas_top = top_canvas_frame_area(app);
-    const GuiRect column = bottom_column_foot_area(app);
     cairo_save(cr);
-    // THE COLUMN'S FOOT, CLOSED ABOVE THE KEYBOARD: the program's face over
-    // the foot's rows across the program's columns, then the canvas's ring
-    // with its light bottom row on the foot's first line, cut to the foot's
-    // rows — its dark left column meeting that row mitred, as the canonical
-    // foot's does (paint_canvas_column_frame).
-    const int foot_y = closure.y;
-    cairo_save(cr);
-    cairo_rectangle(cr, column.x, foot_y, column.w, foot);
-    cairo_clip(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{column.x, foot_y, column.w, foot}, p.face);
-    paint_relief_frame(cr,
-                       GuiRect{area.x - lw, canvas_top.y, area.w + 2 * lw,
-                               foot_y + lw - canvas_top.y},
-                       p.ce_dark, p.ce_hilight);
-    cairo_restore(cr);
-    // THE UPPER BLOCK'S RING, its Hilight row the closure's last line.
-    paint_relief_sunken_outer(cr, upper);
-    // THE LOWER BLOCK'S RING where row 8 stays the program's.
-    const GuiRect lower = onscreen_keyboard::program_lower_ring_rect(app);
-    if (lower.w > 0 && lower.h > 0) paint_relief_sunken_outer(cr, lower);
+    if (onscreen_keyboard::dialog_stands(app)) {
+        paint_cell_rect(cr,
+                        onscreen_keyboard::dialog_ground_rect(
+                            app, onscreen_keyboard::stands(app, gui)),
+                        p.ground);
+    }
+    const int line = std::min(onscreen_keyboard::overlay_line_px(), over.h);
+    paint_cell_rect(cr, GuiRect{over.x, over.y, over.w, line}, p.hilight);
     cairo_restore(cr);
 }
 
@@ -5212,8 +5201,9 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // either is down the press is theirs (the press router's veil). A PROMPT
 // over the picker (the palette Delete question) owns the row as every
 // prompt does. THIS SET LESS THE RENDER PLAYER IS THE ROW'S CHROME TENANTS
-// (chrome_tenant_owns_bottom_row, app_state.h, 2026-10-10), which stand
-// outside the program's frame (paint_bottom_strip's ground).
+// (chrome_tenant_owns_bottom_row, app_state.h, 2026-10-10), which stand in
+// THE DIALOG, the bottom overlay laid over the row (onscreen_keyboard.h's
+// overlay block).
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
     if (app.render_player.active) return true;
@@ -5237,8 +5227,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // from here onto the grounded band (the cluster's tables and the clock's
     // metrics live beside that body).
     // THE ROW HAS A MODAL STATE since 2026-08-13, in which those tenants
-    // stand down and the lane carries the prompt or the dialog
-    // editor instead (the ruling and the fork are at modal_owns_bottom_row,
+    // stand down and the render player takes the lane, or the dialog overlay
+    // laid over it carries the prompt or the dialog editor (2026-10-10; the
+    // ruling and the fork are at modal_owns_bottom_row,
     // just above; the modal's own layout is paint_modal_dialog's) — and with
     // the chain gone there is nothing left on the lane to negotiate with,
     // which is what makes that yield clean.
@@ -5261,33 +5252,26 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) return;
 
     // THE LANE'S GROUND (architect 2026-10-09, the program is Cool Edit;
-    // the frame 2026-10-10): while row 8 or the render player stands — the
-    // program's tenants — COOL EDIT'S DOCK BAR at its head (paint_ce_dock_bar;
-    // the column's foot stands straight on its light row) and the content
-    // band under it in THE PANEL'S FACE, the lane one frame line in from each
-    // side inside the program's frame; while a CHROME TENANT owns the row
-    // (chrome_tenant_owns_bottom_row, app_state.h — a prompt, a dialog editor
-    // or the picker's Cancel: the chrome's surfaces, their words in the
-    // chrome's label pair, their push buttons the chrome's) THE ROW STANDS
-    // OUTSIDE THE PROGRAM'S FRAME as Windows' status bar stands outside Cool
-    // Edit's: NO DOCK BAR — it parts two of Cool Edit's panels, and the row
-    // under it is no longer Cool Edit's — and the whole lane in THE CHROME'S
-    // GROUND at the client's full width, the frame's bottom row standing on
-    // the dock bar's first line above it (main.cpp's bottom_lane_order;
-    // render.h's program_frame_rect), the content band where it stood. The
-    // ground erases whatever render_background laid down, so the strip does
-    // not depend on that erase happening to hold the same value. The modal
-    // paints on this ground and lays none of its own (paint_modal_dialog).
+    // the frame 2026-10-10), ON EVERY FRAME WHATEVER STANDS OVER IT: COOL
+    // EDIT'S DOCK BAR at its head (paint_ce_dock_bar; the column's foot
+    // stands straight on its light row) and the content band under it in THE
+    // PANEL'S FACE, the lane one frame line in from each side inside the
+    // program's frame. The row's tenants are the program's (row 8, the render
+    // player); a CHROME TENANT — a prompt, a dialog editor or the picker's
+    // Cancel — is THE DIALOG, a bottom overlay laid over the content band and
+    // the frame's bottom row with the dock bar left in view above it as Cool
+    // Edit's ridge (onscreen_keyboard.h's overlay block, its ground and line
+    // paint_bottom_overlays'), so this lane never changes for it. The ground
+    // erases whatever render_background laid down, so the strip does not
+    // depend on that erase happening to hold the same value. The render
+    // player paints on this ground and lays none of its own
+    // (paint_modal_dialog).
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        if (chrome_tenant_owns_bottom_row(app)) {
-            paint_cell_rect(cr, lane, palette().ground);
-        } else {
-            paint_ce_dock_bar(
-                cr, GuiRect{lane.x, lane.y, lane.w, content.y - lane.y});
-            paint_cell_rect(cr, content, palette().face);
-        }
+        paint_ce_dock_bar(cr,
+                          GuiRect{lane.x, lane.y, lane.w, content.y - lane.y});
+        paint_cell_rect(cr, content, palette().face);
         cairo_restore(cr);
     }
 
@@ -5317,7 +5301,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // NOTHING READS THESE ZEROES as a bound — since 2026-08-13 nothing on
     // this row is measured from a button stash at all, the status chain having
     // taken its right anchor to the tab row with it.
-    if (modal_owns_bottom_row(app)) {
+    // AND THE ROW YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-10-10, ON SCREEN
+    // IS AS PAINTED): the keyboard is a bottom overlay standing on the
+    // window's foot, its band always taller than the row, so row 8 is under
+    // it whole — the flag editor's case, the one editor that raises the
+    // keyboard with no dialog — and a button nothing shows must not hover,
+    // wear a tooltip or answer a press (the keyboard's claim takes the press
+    // first; the zero rects take the rest).
+    if (modal_owns_bottom_row(app) || onscreen_keyboard::stands(app, gui)) {
         for (const TransportRowDef& def : kTransportGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
                                 def.id,
@@ -5389,7 +5380,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // stands — modal_owns_bottom_row, above, is the shared fork, and this body
 // paints into the lane the row's tenants left.
 //
-// CONTENT PER KIND, on the row's own ground (there is no box, no frame and no
+// THE DIALOG IS A BOTTOM OVERLAY SINCE 2026-10-10 (architect, Cool Edit's
+// status bar: onscreen_keyboard.h's overlay block): a prompt's, an editor's
+// and the picker's controls stand on the chrome's ground laid over row 8's
+// content band and the frame's bottom row under one Hilight line
+// (paint_bottom_overlays), centered in that ground, or on the on-screen
+// keyboard with one pad between; the render player keeps the row's own face.
+// CONTENT PER KIND, on that ground (there is no box, no frame and no
 // window margin), EVERYTHING FLUSH LEFT since the architect's live look later
 // on 2026-08-13 ("your eyes have to go the whole distance of the screen") —
 // the layout rule and what gives when the row runs out of width are at the
@@ -5496,12 +5493,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // UNCONDITIONALLY from on_redraw's tail, rewrites AppState::modal_dialog and
 // AppState::dialog_editor_text every run (zero/invalid with no dialog up), so
 // the pointer path always reads what is actually on screen and a closed
-// dialog strands nothing. `box` is the whole lane — the modal's surface — and
-// it is what the hover invalidation and the damage ride. Damage: the openers
-// invalidate the whole window (no surface exists before the first paint);
-// every later edit, blink, flash and closer rides invalidate_modal_dialog_area,
-// which takes this row's lane whole — the modal's surface, and the rect a
-// closer owes (viewport.cpp).
+// dialog strands nothing. `box` is the modal's surface — the dialog's whole
+// overlay, its line and its ground (onscreen_keyboard::dialog_rect, since
+// 2026-10-10 the dialog is a bottom overlay laid over the row), or the lane
+// under the render player — and it is what the hover invalidation and the
+// damage ride. Damage: the openers invalidate the whole window (no surface
+// exists before the first paint); every later edit, blink, flash and closer
+// rides invalidate_modal_dialog_area, which takes this row's lane and the
+// dialog's overlay whole — the modal's surface, and the rect a closer owes
+// (viewport.cpp).
 
 namespace {
 
@@ -5718,12 +5718,29 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     if (prompt_up && app.color_picker.active)
         paint_color_picker(cr, 0, /*veiled=*/true);
 
-    // THE MODAL'S SURFACE IS THE BOTTOM ROW'S CONTENT BAND — the lane's ground
-    // is already painted (paint_bottom_strip's chrome runs on
-    // every frame class and yields the rest of the row to this body), so
-    // nothing here draws a ground of its own.
-    const GuiRect lane    = bottom_row_area(app);
-    const GuiRect content = bottom_row_content_area(app);
+    // THE MODAL'S SURFACE: the RENDER PLAYER'S is the bottom row's content
+    // band — the program's tenant, on the row's own face, which
+    // paint_bottom_strip lays on every frame class, and a prompt raised over
+    // the player stands there with it — and every chrome tenant's
+    // (onscreen_keyboard::dialog_stands) is THE DIALOG, the bottom overlay
+    // laid over the row (architect
+    // 2026-10-10; onscreen_keyboard.h's overlay block): its ground and line
+    // are paint_bottom_overlays', already painted, so nothing here draws a
+    // ground of its own. The dialog's controls are laid out in its BAND
+    // (dialog_band_rect: the ground's top, the alone band's height) — alone
+    // the ground under the line down to the window's foot, on the keyboard
+    // the same top pad with the keyboard's edge pad as the gap below — and
+    // keep the row's own x and width, so they stand where the row's tenants'
+    // margins stand.
+    const GuiRect lane        = bottom_row_area(app);
+    const GuiRect row_band    = bottom_row_content_area(app);
+    const bool    dialog      = onscreen_keyboard::dialog_stands(app);
+    const bool    on_keyboard = onscreen_keyboard::stands(app, gui);
+    const GuiRect dialog_band =
+        onscreen_keyboard::dialog_band_rect(app, on_keyboard);
+    const GuiRect content = dialog
+        ? GuiRect{row_band.x, dialog_band.y, row_band.w, dialog_band.h}
+        : row_band;
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) {
         // A degenerate row publishes nothing, the cold answer the pointer path
         // already reads correctly (a zero stash contains no point) — and it
@@ -6848,13 +6865,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.buttons.push_back(out);
     }
 
-    // THE MODAL'S SURFACE IS THE LANE — its top row included, because that is
-    // the rectangle the modal owns and the rectangle its damage must erase.
+    // THE MODAL'S SURFACE IS THE BOX: the dialog's its whole overlay, the
+    // line and the ground (onscreen_keyboard::dialog_rect, 2026-10-10), and
+    // the player's (and a prompt's over it) the lane, its top row included —
+    // because that is the rectangle the modal owns and the rectangle its
+    // damage must erase.
     // THE SESSION IS STAMPED HERE, one write for both branches at the moment
     // the geometry becomes readable: it is the id of the surface these rects
     // belong to, and every input site that reads them compares it against the
     // live one (modal_dialog_stash_current, input_pointer.cpp).
-    dlg.box     = lane;
+    dlg.box     = dialog ? onscreen_keyboard::dialog_rect(app, on_keyboard)
+                         : lane;
     dlg.session = live_session;
     dlg.valid   = true;
     cairo_restore(cr);
@@ -7480,10 +7501,12 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
 
     cairo_save(cr);
 
-    // The lane's ground, one fill across the whole band and NO LINE AT ITS TOP
-    // EDGE: the band's ground is the bottom row's ground, so the two lanes read
-    // as one block and a seam between them would draw a border through the
-    // middle of it.
+    // The band's ground, one fill across the whole band in the chrome's
+    // ground. The overlay's Hilight line above it (or above the dialog
+    // standing on it) is paint_bottom_overlays' (2026-10-10,
+    // onscreen_keyboard.h's overlay block), and there is no line at its foot
+    // or its sides: it ends at the window's edges as Cool Edit's status bar
+    // does.
     set_palette_source(cr, palette().ground);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
@@ -8172,19 +8195,20 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      that skipped a frame would strand them (the reasoning is at
         //      step 3). The overdraw is a mode's cost, paid only while the
         //      panel stands. Both tenants stand over the program's frame
-        //      (full window width, 2026-10-10), and AFTER THE KEYBOARD the
-        //      program's blocks round it (paint_program_frame_keyboard_blocks:
-        //      the column's foot and the frame's Hilight row closing the
-        //      program above it, which the waveform's painted rect also
-        //      leaves out, and the lower block's ring where row 8 stays the
-        //      program's).
+        //      (full window width, 2026-10-10), and AFTER THE SLOT the bottom
+        //      overlays' line and the dialog's ground (paint_bottom_overlays,
+        //      2026-10-10: the keyboard and the dialog laid over row 8 and
+        //      the frame's bottom row as Cool Edit's status bar, the line
+        //      above the pair, which the waveform's painted rect also leaves
+        //      out).
         //  13. the flag editor's box, then THE NOTIFICATION CARDS
         //      (paint_notifications, 2026-08-29 — the top-right stack, above
         //      every lane and the keyboard slot), then the dropdown — the
         //      floating surfaces, after every pass above and outside this
         //      branch — then the MODAL DIALOG (paint_modal_dialog,
         //      2026-08-12; the bottom row the prompts and the five modal
-        //      editors paint in since 2026-08-13), and LAST the TOOLTIP,
+        //      editors paint in since 2026-08-13, the dialog overlay's ground
+        //      since 2026-10-10), and LAST the TOOLTIP,
         //      which reads that stash.
         // (The bottom row left the tail of this sequence in row 7 — it paints
         // with the other redesigned rows at step 3, on every frame class, and
@@ -8307,12 +8331,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // declaration). With the slot down that is one platform query and two
     // bit reads; with it up the outer Cairo clip makes a narrow damage cheap.
     paint_keyboard_slot(cr, GuiRect{x, y, w, h});
-    // THE PROGRAM'S BLOCKS ROUND A STANDING KEYBOARD (2026-10-10): the
-    // closure above it and, where row 8 stays the program's, the lower
-    // block's ring over its last line — after the slot, whose band they
-    // meet, and before the floating surfaces (onscreen_keyboard.h's frame
-    // block). Nothing without a standing keyboard.
-    paint_program_frame_keyboard_blocks(cr);
+    // THE BOTTOM OVERLAYS' LINE AND THE DIALOG'S GROUND (2026-10-10,
+    // onscreen_keyboard.h's overlay block): after the slot, whose keyboard
+    // band they head, and before the floating surfaces; the dialog's
+    // controls paint on this ground at paint_modal_dialog. Nothing while
+    // neither overlay stands.
+    paint_bottom_overlays(cr);
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
     // the waveform, because both hang outside their strips (the dropdown below

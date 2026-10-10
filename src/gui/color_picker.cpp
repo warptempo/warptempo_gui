@@ -489,13 +489,16 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int card_h  = 2 * edge + 2 * pad + inner_h;
 
     // THE SEAT (the head): the foot kCardMarginPx above the on-screen
-    // keyboard's band — its rect whether or not it stands, the one rule on
-    // both devices — and the card rising from there.
-    const GuiRect band = onscreen_keyboard::surface_rect(app);
+    // keyboard's overlay — its band and the overlay's line above it
+    // (2026-10-10, onscreen_keyboard.h's overlay block), its rect whether or
+    // not it stands, the one rule on both devices — and the card rising from
+    // there.
+    const int kb_top = onscreen_keyboard::surface_rect(app).y -
+                       onscreen_keyboard::overlay_line_px();
     l.edge_px = edge;
     l.card = GuiRect{app.color_picker.on_right ? app.width - margin - card_w
                                                : margin,
-                     band.y - margin - card_h, card_w, card_h};
+                     kb_top - margin - card_h, card_w, card_h};
     l.inner = GuiRect{l.card.x + edge + pad, l.card.y + edge + pad,
                       card_w - 2 * (edge + pad), inner_h};
 

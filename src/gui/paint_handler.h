@@ -777,16 +777,17 @@ private:
     // after them touches their lanes, the flag cache being transparent there.
     void paint_menu_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
-    // THE PROGRAM'S FRAME (2026-10-10; the law, the geometry and the chrome
-    // surfaces outside it at render.h's program_frame_rect, the two painters'
-    // split at their definitions beside paint_menu_row): THE RING
+    // THE PROGRAM'S FRAME (2026-10-10; the law, the geometry and the overlays
+    // laid over it at render.h's program_frame_rect): THE RING
     // (program_frame_rect, one sunken line in the chrome's Shadow and Hilight,
-    // mitred), painted with the rows on every frame class; and THE BLOCKS
-    // ROUND A STANDING KEYBOARD (onscreen_keyboard.h's frame block), painted
-    // after the keyboard slot — nothing while no keyboard stands. Neither
-    // publishes anything: the frame is inert ground for input.
+    // mitred), painted with the rows on every frame class. It publishes
+    // nothing: the frame is inert ground for input.
     void paint_program_frame(cairo_t* cr);
-    void paint_program_frame_keyboard_blocks(cairo_t* cr);
+    // THE BOTTOM OVERLAYS (2026-10-10; the law and every rect at
+    // onscreen_keyboard.h's overlay block): the overlay's Hilight line and
+    // the dialog's ground, painted after the keyboard slot — nothing while
+    // neither the dialog nor the keyboard stands. Publishes nothing.
+    void paint_bottom_overlays(cairo_t* cr);
     // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
     // record at render.h's caption block): the gradient in the
     // caption roles of the window's activation (GuiPlatform::caption_active),

@@ -69,8 +69,9 @@
 // before 2026-08-28 both were the keyboard's). Two owners, neither
 // restated here:
 //   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
-//     row's own lane, lifted (keyboard_slot_band, app_state.h, which the
-//     keyboard's surface_rect reads too). ITS HEIGHT IS THE CEILING'S WHOLE
+//     row's top, the window's whole width (keyboard_slot_band, app_state.h;
+//     the keyboard stands on the window's foot instead since 2026-10-10, a
+//     bottom overlay, onscreen_keyboard.h). ITS HEIGHT IS THE CEILING'S WHOLE
 //     EXTENT, every time it stands: from DIRECTLY UNDER THE ICON ROW
 //     (keyboard_slot_max_height_px, the same header — the bottom row's top
 //     less the icon row's foot) down to the bottom row,

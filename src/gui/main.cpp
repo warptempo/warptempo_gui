@@ -193,15 +193,15 @@ namespace {
 // walk, the four cardinal arrows and the transport three, each Cool Edit's
 // group of gripper, cases and end bar — and THE PROGRAM FRAME'S BOTTOM ROW
 // (program_frame_line_px(), one Hilight line), ON THE WINDOW'S FOOT under
-// row 8, or, while a CHROME TENANT owns the row, between the column's foot
-// and the row, which then rests on the window's foot outside the frame
-// (bottom_lane_order below; render.h's program_frame_rect) — the flexible
-// gap 2 above all three.
+// row 8 (render.h's program_frame_rect) — the flexible gap 2 above all
+// three. NO TENANT MOVES A LANE: a dialog and the on-screen keyboard are
+// BOTTOM OVERLAYS laid over the design at the window's foot, Cool Edit's
+// status bar (2026-10-10, onscreen_keyboard.h's overlay block), and every
+// lane here keeps its rows under them.
 // ACROSS, EVERY PROGRAM LANE STANDS ONE FRAME LINE IN FROM EACH SIDE
 // (2026-10-10, strip_row_rect): the band, the canvas column's five, its
-// foot, and the bottom row while the program owns it; the caption, the menu
-// row, the frame's two rows and the bottom row under a chrome tenant span
-// the client.
+// foot and the bottom row; the caption, the menu row and the frame's two
+// rows span the client.
 //
 // THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
 // (architect 2026-10-07 evening: the maximum height it carried — a render.h
@@ -223,8 +223,7 @@ namespace {
 //   GAP 2 — flexible blank window ground;
 //   THE COLUMN'S FOOT — the canvas's bottom frame row and 5 W of face;
 //   THE UNIFIED BOTTOM ROW, its first row the dock bar's light row, and THE
-//     PROGRAM FRAME'S BOTTOM ROW at the window's foot (the two swapped
-//     while a chrome tenant owns the row).
+//     PROGRAM FRAME'S BOTTOM ROW at the window's foot.
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE (on a
@@ -383,9 +382,8 @@ namespace {
 // index from its strip's window edge, and a bottom lane's y is its inset
 // flipped about the window midline (the program frame's BOTTOM ROW rests ON
 // the window's foot as bottom lane 0, the BOTTOM ROW above it as lane 1 and
-// the column's foot as lane 2 — the first two swapped while a chrome tenant
-// owns the row, bottom_lane_order — gap 2 above all three, in
-// bottom_strip_h's total rather than in a lane's inset).
+// the column's foot as lane 2 — gap 2 above all three, in bottom_strip_h's
+// total rather than in a lane's inset).
 
 // Defensive backstop only: floor the window dims to the 640x480 minimum before
 // any geometry arithmetic so no code path can compute a negative/zero waveform,
@@ -463,69 +461,44 @@ int top_lane_height(int lane) {
     }
 }
 // The bottom strip's THREE lanes, indexed from the WINDOW'S FOOT inward like
-// every lane table here, and THE ONE LANE TABLE WHOSE ORDER IS STATE
-// (2026-10-10, render.h's program_frame_rect): while the program owns the
-// bottom row, lane 0 is THE PROGRAM FRAME'S BOTTOM ROW on the window's foot,
-// one Hilight line, and lane 1 THE UNIFIED BOTTOM ROW above it (2026-08-12,
-// rows 8 and 9 merged: the clock left, the buttons flush right; the layout is
-// paint_bottom_row_buttons_and_clock's) — Cool Edit's frame closing under its
-// lowest panel; while a CHROME TENANT owns the row
-// (chrome_tenant_owns_bottom_row, app_state.h) the two swap — the row rests
-// on the window's foot outside the frame, Windows' status bar's seat, and
-// the frame's bottom row takes the dock bar's first line above it — so the
-// row's content band stands where it stood before the frame came and the
-// modal's controls are seated exactly as they were. Lane 2 is THE COLUMN'S
-// FOOT in both orders (2026-10-09: the canvas's bottom frame row and its
-// face, the program's), its rows and every height above it unmoved by the
-// swap. GAP 2 sits ABOVE the three, in bottom_strip_h's total rather than in
-// a lane's inset, so lane 0 is flush with the window edge like the top
-// strip's own lane 0 (and gap 2 being 0, lane 2's top is the waveform's
-// bottom). (THE STATUS BAR was bottom lane 0 for ONE DAY — 2026-08-29, the
-// messaging redesign's bar half — with this row one lane in above it; the
-// architect ruled the bar off that evening and its state text is this row's
-// own cell now, right of the clock.)
-enum class BottomLane { ProgramFrame, Row, ColumnFoot };
-int bottom_lane_identity_height(BottomLane l) {
-    switch (l) {
-        case BottomLane::ProgramFrame: return program_frame_line_px();
-        case BottomLane::Row:          return bottom_row_h_px();  // + its dock bar
+// every lane table here: lane 0 is THE PROGRAM FRAME'S BOTTOM ROW on the
+// window's foot, one Hilight line — Cool Edit's frame closing under its
+// lowest panel (render.h's program_frame_rect) — lane 1 THE UNIFIED BOTTOM
+// ROW above it (2026-08-12, rows 8 and 9 merged: the clock left, the buttons
+// flush right; the layout is paint_bottom_row_buttons_and_clock's) and lane
+// 2 THE COLUMN'S FOOT (2026-10-09: the canvas's bottom frame row and its
+// face, the program's). THE ORDER IS FIXED: no tenant of the row moves a
+// lane — a dialog and the on-screen keyboard are overlays laid over these
+// rows (2026-10-10, onscreen_keyboard.h's overlay block). GAP 2 sits ABOVE
+// the three, in bottom_strip_h's total rather than in a lane's inset, so
+// lane 0 is flush with the window edge like the top strip's own lane 0 (and
+// gap 2 being 0, lane 2's top is the waveform's bottom). (THE STATUS BAR was
+// bottom lane 0 for ONE DAY — 2026-08-29, the messaging redesign's bar half
+// — with this row one lane in above it; the architect ruled the bar off that
+// evening and its state text is this row's own cell now, right of the
+// clock.)
+constexpr int kBottomProgramFrameLane = 0;
+constexpr int kBottomRowLane          = 1;
+constexpr int kBottomColumnFootLane   = 2;
+int bottom_lane_height(int lane) {
+    switch (lane) {
+        case kBottomProgramFrameLane: return program_frame_line_px();
+        case kBottomRowLane:          return bottom_row_h_px();  // + its dock bar
         // THE COLUMN'S FOOT (2026-10-09, the third part): the canvas's light
         // bottom frame row and 5 W of face; top edge = waveform bottom.
-        case BottomLane::ColumnFoot:   return column_foot_h_px();
+        case kBottomColumnFootLane:   return column_foot_h_px();
+        default: return 0;
     }
-    return 0;
-}
-// THE ORDER (the table's head): the lane at `lane` from the window's foot.
-BottomLane bottom_lane_order(const AppState& a, int lane) {
-    const bool chrome = chrome_tenant_owns_bottom_row(a);
-    switch (lane) {
-        case 0: return chrome ? BottomLane::Row : BottomLane::ProgramFrame;
-        case 1: return chrome ? BottomLane::ProgramFrame : BottomLane::Row;
-        default: return BottomLane::ColumnFoot;
-    }
-}
-// The bottom lane holding `l` in the live order.
-int bottom_lane_index(const AppState& a, BottomLane l) {
-    for (int i = 0; i < kBottomLaneCount; ++i)
-        if (bottom_lane_order(a, i) == l) return i;
-    return kBottomLaneCount - 1;
 }
 // The UN-GAPPED lane sum — the strip's lanes and their (zero) authored gaps
 // alone, with NO flexible gap in it. Each strip's public height adds its own
 // flexible gap to this (top_strip_h / bottom_strip_h below), so this stays the
-// gap derivation's own input and the two can never be circular. The bottom
-// strip's sum is its three lanes' whatever their order, so the swap moves no
-// strip height and no well.
+// gap derivation's own input and the two can never be circular.
 int strip_total_h(bool top_strip) {
     int sum = 2 * static_cast<int>(kFlagBottomLiftPx);  // outer + waveform-side gaps
     const int lanes = top_strip ? kTopLaneCount : kBottomLaneCount;
-    if (top_strip) {
-        for (int i = 0; i < lanes; ++i) sum += top_lane_height(i);
-    } else {
-        sum += bottom_lane_identity_height(BottomLane::ProgramFrame) +
-               bottom_lane_identity_height(BottomLane::Row) +
-               bottom_lane_identity_height(BottomLane::ColumnFoot);
-    }
+    for (int i = 0; i < lanes; ++i)
+        sum += top_strip ? top_lane_height(i) : bottom_lane_height(i);
     sum += (lanes - 1) * static_cast<int>(kRowGapPx);   // inter-lane gaps
     return sum;
 }
@@ -718,8 +691,9 @@ GuiRect waveform_area(const AppState& a) {
 }
 
 // ONE shared layout contract for every strip lane — the single geometry owner,
-// FILE-LOCAL since 2026-10-10 (the bottom strip's lane index became state, so
-// every reader takes a named accessor below and no index leaves this file).
+// FILE-LOCAL since 2026-10-10 (every reader takes a named accessor below and
+// no lane index leaves this file, so a lane added or moved is one table's
+// edit).
 // A lane is a pure index from its strip's window edge (0 = the edge-most lane):
 // the outer gap kFlagBottomLiftPx sits between the window edge and lane 0, and
 // each successive lane is one prior-lane height + one inter-lane gap kRowGapPx
@@ -729,18 +703,16 @@ GuiRect waveform_area(const AppState& a) {
 // below it carry the gap while the menu row, the program frame's top row and
 // the icon row stand at the window's top). The
 // bottom strip's own gap 2 is NOT an inset here: its lanes count up from the
-// window's foot in the live order (bottom_lane_order), and the gap sits above
-// them, inside bottom_strip_h. The top strip counts downward from y=0; the
-// bottom strip mirrors it about the window midline (`h - inset - lane_h`).
+// window's foot, and the gap sits above them, inside bottom_strip_h. The top
+// strip counts downward from y=0; the bottom strip mirrors it about the
+// window midline (`h - inset - lane_h`).
 //
 // ACROSS (2026-10-10, render.h's program_frame_rect): A PROGRAM LANE STANDS
 // ONE FRAME LINE IN FROM EACH SIDE — the band and every top lane under it,
-// the column's foot, and the bottom row while the program owns it — the
-// program frame's columns standing in the line beside it; the caption, the
-// menu row, the frame's two rows and the bottom row under a chrome tenant
-// (Windows' status bar's place, outside Cool Edit's frame) span the client.
-// Every hit rect, damage rect and painter reads its lane here, so the inset
-// is one geometry for paint and hit.
+// the column's foot and the bottom row — the program frame's columns
+// standing in the line beside it; the caption, the menu row and the frame's
+// two rows span the client. Every hit rect, damage rect and painter reads
+// its lane here, so the inset is one geometry for paint and hit.
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 5 (the column's air
 // lane 4, the ruler lane 6, the marker lane lane 7 and the canvas's top frame
@@ -760,8 +732,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
     int w = a.width, h = a.height;
     clamp_dims(w, h);
     const auto lane_height = [&](int i) {
-        return top_strip ? top_lane_height(i)
-                         : bottom_lane_identity_height(bottom_lane_order(a, i));
+        return top_strip ? top_lane_height(i) : bottom_lane_height(i);
     };
     int inset = static_cast<int>(kFlagBottomLiftPx);
     for (int i = 0; i < lane_from_window_edge; ++i) {
@@ -775,14 +746,9 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
         inset += top_flex_gap(h);
     const int lane_h = lane_height(lane_from_window_edge);
     const int y = top_strip ? inset : (h - inset - lane_h);
-    bool program = false;
-    if (top_strip) {
-        program = lane_from_window_edge >= kTopProgramLane;
-    } else {
-        const BottomLane id = bottom_lane_order(a, lane_from_window_edge);
-        program = id == BottomLane::ColumnFoot ||
-                  (id == BottomLane::Row && !chrome_tenant_owns_bottom_row(a));
-    }
+    const bool program = top_strip
+                             ? lane_from_window_edge >= kTopProgramLane
+                             : lane_from_window_edge != kBottomProgramFrameLane;
     if (!program) return GuiRect{0, y, w, lane_h};
     const int lw = program_frame_line_px();
     return GuiRect{lw, y, std::max(0, w - 2 * lw), lane_h};
@@ -866,17 +832,16 @@ unsigned window_frame_edges_at(const AppState& a, int x, int y) {
 }
 
 // THE PROGRAM'S FRAME (2026-10-10; the law, the geometry and the chrome
-// surfaces outside it at render.h's program_frame_rect): its top row, top
-// lane 2; its bottom row, a bottom lane in the live order
-// (bottom_lane_order); and the ring, the client's whole width from the top
-// row's first line to the bottom row's last.
+// overlays laid over it at render.h's program_frame_rect): its top row, top
+// lane 2; its bottom row, bottom lane 0 on the window's foot; and the ring,
+// the client's whole width from the top row's first line to the bottom row's
+// last.
 GuiRect top_program_frame_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, kTopProgramFrameLane);
 }
 
 GuiRect bottom_program_frame_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false,
-                          bottom_lane_index(a, BottomLane::ProgramFrame));
+    return strip_row_rect(a, /*top_strip=*/false, kBottomProgramFrameLane);
 }
 
 GuiRect program_frame_rect(const AppState& a) {
@@ -914,8 +879,7 @@ GuiRect top_canvas_frame_area(const AppState& a) {
 }
 
 GuiRect bottom_column_foot_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false,
-                          bottom_lane_index(a, BottomLane::ColumnFoot));
+    return strip_row_rect(a, /*top_strip=*/false, kBottomColumnFootLane);
 }
 
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the succession at
@@ -928,11 +892,11 @@ GuiRect bottom_column_foot_area(const AppState& a) {
 // its grippers and end bars (program_spec.h). It is BOTTOM LANE 1, between
 // the column's foot (lane 2, bottom_column_foot_area above, the canvas's
 // light bottom frame row and 5 W of face) and the program frame's bottom row
-// on the window's foot, one frame line in from each side — or, while a
-// CHROME TENANT owns it, BOTTOM LANE 0 on the window's foot under the
-// frame's bottom row, the client's whole width (bottom_lane_order, 2026-10-10).
-// Gap 2 stands above lane 2 inside bottom_strip_h and is zero since the
-// waveform became the whole leftover.
+// on the window's foot, one frame line in from each side, whatever stands
+// over it (a dialog or the on-screen keyboard is an overlay, never a lane:
+// onscreen_keyboard.h's overlay block, 2026-10-10). Gap 2 stands above lane
+// 2 inside bottom_strip_h and is zero since the waveform became the whole
+// leftover.
 // THE ROW CARRIES NO DIRTY MARK: Save's grey is the mark (architect
 // 2026-10-05, plain_save_actionable), the clock's `*` suffix retired, and no
 // title carries one — neither the laptop's window title nor the caption's
@@ -942,8 +906,7 @@ GuiRect bottom_column_foot_area(const AppState& a) {
 // band every button, baseline and cell works in. Paint and hit agree through
 // the one accessor exactly as the top rows' do through theirs.
 GuiRect bottom_row_area(const AppState& a) {
-    return strip_row_rect(a, /*top_strip=*/false,
-                          bottom_lane_index(a, BottomLane::Row));
+    return strip_row_rect(a, /*top_strip=*/false, kBottomRowLane);
 }
 
 GuiRect bottom_row_content_area(const AppState& a) {
@@ -2871,8 +2834,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 // on the HIDE the rect has to erase a surface that no longer
                 // stands (so there is nothing to ask its height of), and the
                 // overlay's band is the ceiling whenever it stands while the
-                // keyboard's is its four key rows — one rect that contains
-                // both (onscreen_keyboard::slot_damage_rect).
+                // keyboard's is its band on the window's foot with the
+                // overlay's line and any dialog on it (2026-10-10) — one rect
+                // that contains both (onscreen_keyboard::slot_damage_rect).
                 viewport.invalidate_rect(
                     onscreen_keyboard::slot_damage_rect(app));
             }

@@ -10430,7 +10430,7 @@ GuiRect top_strip_area(const AppState& a);
 // (Every lane rect comes from ONE file-local helper in main.cpp,
 // strip_row_rect, whose layout contract stands at its definition; the named
 // lane accessors below delegate to it, and since 2026-10-10 no lane index
-// leaves that file — the bottom strip's order is state, bottom_lane_order.)
+// leaves that file.)
 // THE CAPTION — top lane 0, the window's title bar (architect 2026-10-05;
 // render.h's caption block, paint_caption_row).
 GuiRect top_caption_row_area(const AppState& a);
@@ -10500,9 +10500,9 @@ GuiRect top_marker_row_area(const AppState& a);
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the lane
 // including its dock bar, and the content band under the dock bar — bottom
 // lane 1 over the program frame's bottom row on the window's foot, one frame
-// line in from each side, or, while a chrome tenant owns it, bottom lane 0
-// on the window's foot, the client's whole width (2026-10-10; main.cpp's
-// bottom_lane_order). (It was row 7's single
+// line in from each side, whatever stands over it (2026-10-10: a dialog and
+// the on-screen keyboard are overlays laid over it, onscreen_keyboard.h's
+// overlay block). (It was row 7's single
 // status lane from 2026-08-01, one of two lanes while the transport row
 // stood, 2026-08-11..12, the strip's whole surface at the unification, the strip's
 // one lane resting on the WINDOW'S FOOT from commit B, one of two for the one
@@ -10517,21 +10517,17 @@ GuiRect bottom_row_content_area(const AppState& a);
 // program_frame_rect.)
 
 // DOES A CHROME TENANT OWN THE BOTTOM ROW — a prompt, a dialog editor or the
-// picker's Cancel, never the render player, which is the program's tenant
-// (2026-10-10; the rule and its law at render.h's program_frame_rect): the
-// row's chrome surfaces stand OUTSIDE the program's frame, as Windows' status
-// bar stands outside Cool Edit's, so while this answers true the frame
-// closes on the dock bar's first line above the row (main.cpp's
-// bottom_lane_order swaps the two bottom lanes), the row's lane is the
-// chrome's ground at the client's whole width with no dock bar
-// (paint_bottom_strip), and a standing keyboard sits on the row's content
-// band (keyboard_slot_floor_y). The same set paint_bottom_strip's ground
-// forks on, read there through this owner: the row's modal owners
-// (modal_owns_bottom_row, paint_handler.cpp — the prompt, the render
-// player, the picker, the three dialog editors, AppState::
-// dialog_editor_session's set) less the render player. A prompt raised over
-// the render player (its load confirmation) stands on the player's row and
-// so on the program's face, inside the frame, as it did before the frame.
+// picker's Cancel, never the render player, which is the program's tenant:
+// while this answers true THE DIALOG stands, a BOTTOM OVERLAY laid over the
+// design at the window's foot as Cool Edit's status bar stands under its
+// panels (architect 2026-10-10; the overlays' geometry at
+// onscreen_keyboard.h's overlay block, their painter paint_bottom_overlays):
+// one Hilight line on top, the chrome's ground to the window's foot, no
+// lane moved. The row's modal owners (modal_owns_bottom_row,
+// paint_handler.cpp — the prompt, the render player, the picker, the three
+// dialog editors, AppState::dialog_editor_session's set) less the render
+// player. A prompt raised over the render player (its load confirmation)
+// stands on the player's row, on the program's face, as the player does.
 inline bool chrome_tenant_owns_bottom_row(const AppState& a) {
     if (a.render_player.active) return false;
     return a.prompt.active || a.picker.active ||
@@ -10565,58 +10561,40 @@ TooltipHangBands tooltip_hang_bands(const AppState& a);
 
 // -- THE KEYBOARD SLOT'S SHARED BAND (2026-08-28) ----------------------------
 //
-// THE SLOT IS THE LANE ABOVE THE BOTTOM ROW that the on-screen keyboard and
+// THE SLOT IS THE SPACE ABOVE THE BOTTOM ROW that the on-screen keyboard and
 // the folder overlay take turns in — never both (structurally: the overlay's
-// owners are not editors; the record is at onscreen_keyboard::stands). The two tenants agree on
-// the band's X, ITS WIDTH AND ITS BOTTOM EDGE and differ only in HEIGHT (the
-// keyboard's four key rows; the overlay's the ceiling's whole extent, named
-// below), so that
-// agreement is written ONCE here rather than twice in the two headers —
-// which is also the only place both of them can read it, folder_overlay.h
-// being the lower of the two since the overlay's rows stopped borrowing the
-// keyboard's row pitch. (folder_overlay_stands, above, lives here for the
-// same reason.)
+// owners are not editors; the record is at onscreen_keyboard::stands). The
+// two tenants SHARE THE CEILING (below) and the slot's one damage rect
+// (onscreen_keyboard::slot_damage_rect), and SINCE 2026-10-10 NOT THE FLOOR:
+// the keyboard is a BOTTOM OVERLAY standing on the window's foot over row 8
+// (onscreen_keyboard.h's overlay block — Cool Edit's status bar, the
+// architect's model), while the folder overlay's band keeps the row's top as
+// its floor, the dock bar and row 8 (or the dialog laid over it) in view
+// under the list. Written here because this is the one place both headers
+// can read, folder_overlay.h being the lower of the two since the overlay's
+// rows stopped borrowing the keyboard's row pitch. (folder_overlay_stands,
+// above, lives here for the same reason.)
 
-// THE SLOT'S FLOOR — where its tenant's band stands — THE BOTTOM ROW'S TOP,
-// NOT THE WINDOW'S (reading the ROW's lane is what kept the tenants off the
-// STATUS BAR for the one day a lane stood below it, 2026-08-29, with no term
-// of its own), EXCEPT WHILE A CHROME TENANT OWNS THE ROW (2026-10-10, the
-// program's frame: chrome_tenant_owns_bottom_row, render.h's
-// program_frame_rect), when it is THE ROW'S CONTENT BAND'S TOP: the row then
-// stands outside the program's frame on the window's foot, its dock bar's
-// rows plain chrome ground, and the tenant sits directly on the dialog — the
-// keyboard full width in the chrome's ground on the dialog's content band
-// (the planner's mock of record, tmp/mocks/ring/mock_RING_STD_2_keyboard.png:
-// at 300 % the keyboard on rows 951–1343, the content band from 1344), and
-// the picker's folder overlay on its Cancel row the same way. A program-owned
-// row (row 8 under the flag editor's keyboard, the render player under its
-// overlay) keeps the floor on its lane's top, the dock bar standing.
-inline int keyboard_slot_floor_y(const AppState& a) {
-    return chrome_tenant_owns_bottom_row(a) ? bottom_row_content_area(a).y
-                                            : bottom_row_area(a).y;
-}
-
-// THE BAND: the slot's floor (above), lifted by `height`, ACROSS THE WINDOW'S
-// WHOLE WIDTH — the clamped window width the lane accessors run on, read off
-// the caption's lane, so a raw a.width cannot disagree with them on a
-// sub-minimum window. FULL WIDTH SINCE 2026-10-10, when the program's lanes
-// stepped one frame line in from each side: the keyboard is chrome and stands
-// outside the program's frame, over its columns (render.h's
-// program_frame_rect), and the overlay shares its band (folder_overlay.h's
-// "full window width"). It
-// does not ask whether anything stands: a rect is a fact about geometry and
-// standing is a decision each caller makes for itself. The one zero rect is
-// the degenerate one — a window with no width, or a height that scales to
-// nothing.
+// THE FOLDER OVERLAY'S BAND: THE BOTTOM ROW'S TOP, NOT THE WINDOW'S, as its
+// floor (reading the ROW's lane is what kept the tenant off the STATUS BAR
+// for the one day a lane stood below it, 2026-08-29, with no term of its
+// own), lifted by `height`, ACROSS THE WINDOW'S WHOLE WIDTH — the clamped
+// window width the lane accessors run on, read off the caption's lane, so a
+// raw a.width cannot disagree with them on a sub-minimum window, and over
+// the program frame's columns, the band's look before the frame came
+// (2026-10-10: the row's lane steps one frame line in from each side, the
+// band does not). It does not ask whether anything stands: a rect is a fact
+// about geometry and standing is a decision each caller makes for itself.
+// The one zero rect is the degenerate one — a window with no width, or a
+// height that scales to nothing.
 inline GuiRect keyboard_slot_band(const AppState& a, int height) {
     const GuiRect window = top_caption_row_area(a);
     if (window.w <= 0 || height <= 0) return GuiRect{0, 0, 0, 0};
-    return GuiRect{window.x, keyboard_slot_floor_y(a) - height, window.w,
-                   height};
+    return GuiRect{window.x, bottom_row_area(a).y - height, window.w, height};
 }
 
-// THE SLOT'S CEILING, AS A HEIGHT: how far up from the slot's floor a
-// tenant may reach — TO THE ICON ROW'S FOOT and no further, the whole area
+// THE SLOT'S CEILING, AS A HEIGHT: how far up from the bottom row's top the
+// folder overlay reaches — TO THE ICON ROW'S FOOT and no further, the whole area
 // below the toolbar (architect 2026-09-09, the top strip relayout that put the
 // icon row under the menu row: the band starts directly under the icon row,
 // GAP 1 INCLUDED, and carries no line of its own — nor does the icon row since
@@ -10627,16 +10605,15 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // `h` VIEW'S PARTITION (File live, the other two anchors and every icon
 // dead: the face is redesign_button_enabled's head over
 // menu_anchor_live, and the press is the veil's with the live anchor
-// exempted — architect 2026-09-03 evening). The height is the slot's floor
-// (keyboard_slot_floor_y) less the icon row's foot, both resolved by the lane
-// accessors on the CLAMPED window dimensions — the same geometry
-// keyboard_slot_band takes its floor and width from, so the two cannot
-// disagree about where the band begins. Zero on a degenerate stack, which
-// every consumer already reads as "no room". ON THE TABLET (2304x1440 at
-// gui_scale 300, gap 1 zero) the band runs [216, 1323): under the 54
-// caption, 60 menu, the program frame's 3-row top and the 99 icon rows, down
-// to the 114-tall bottom row over the frame's 3-row bottom — [216, 1344)
-// under the picker, whose Cancel row is a chrome tenant (2026-10-10).
+// exempted — architect 2026-09-03 evening). The height is the bottom row's
+// top less the icon row's foot, both resolved by the lane accessors on the
+// CLAMPED window dimensions — the same geometry keyboard_slot_band takes its
+// floor and width from, so the two cannot disagree about where the band
+// begins. Zero on a degenerate stack, which every consumer already reads as
+// "no room". ON THE TABLET (2304x1440 at gui_scale 300, gap 1 zero) the band
+// runs [216, 1323): under the 54 caption, 60 menu, the program frame's 3-row
+// top and the 99 icon rows, down to the 114-tall bottom row over the frame's
+// 3-row bottom, under the render player and the picker alike.
 //
 // THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT
 // (architect 2026-08-28: "from the bottom strip up to the middle of the
@@ -10648,14 +10625,14 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // 2026-09-09 relayout put the toolbar above the gap.
 //
 // ONLY THE OVERLAY IS CAPPED BY IT: the keyboard's height is its four key
-// rows, authored, and it is deliberately not clamped here — a band that
-// scaled past this ceiling would be a keyboard with a row missing. (That
-// sentence is what keeps the on-screen keyboard exactly where it was under
-// every move of this ceiling: onscreen_keyboard::surface_height_px reads no
-// term of this function, and only slot_damage_rect's MAX reads it beside the
-// overlay's own surface_rect.)
+// rows and its pads, authored, and it is deliberately not clamped here — a
+// band that scaled past this ceiling would be a keyboard with a row missing.
+// (That sentence is what keeps the on-screen keyboard exactly where it is
+// under every move of this ceiling: onscreen_keyboard::surface_height_px
+// reads no term of this function, and only slot_damage_rect's union reads it
+// beside the keyboard's own overlay.)
 inline int keyboard_slot_max_height_px(const AppState& a) {
-    const int    floor_y = keyboard_slot_floor_y(a);
+    const int    floor_y = bottom_row_area(a).y;
     const GuiRect icon   = top_icon_row_area(a);
     const int    top_y   = icon.y + icon.h;
     const int h = floor_y - top_y;

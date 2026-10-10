@@ -1046,12 +1046,11 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 //
 // AND ONLY WHERE THE WAVEFORM IS PAINTED (2026-10-10, ON SCREEN IS AS
 // PAINTED): the extent is the waveform's painted rect,
-// onscreen_keyboard::waveform_paint_area — waveform_area less the keyboard
-// slot's band and, while the on-screen keyboard stands, the program's closure
-// above it (the column's foot and the frame's Hilight row painted over the
-// canvas's lowest rows, program_closure_rect). Those rows answer nothing, as
-// the column's foot and the frame rows answer nothing where they stand at
-// rest. ONE RECT FOR THE PIXELS AND THE PRESS, rather than a press rect of its
+// onscreen_keyboard::waveform_paint_area — waveform_area less the folder
+// overlay's band and the standing bottom overlay, the keyboard with its line
+// and any dialog standing on it (onscreen_keyboard.h's overlay block). Those
+// rows answer nothing: what lies under an overlay is covered. ONE RECT FOR
+// THE PIXELS AND THE PRESS, rather than a press rect of its
 // own beside the paint rect: the press then cannot answer where the waveform
 // is not painted, whatever later stands over it. The COORDINATES stay
 // waveform_area's (every column conversion reads it, the half split
@@ -3316,10 +3315,11 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // PRESS — so every key would need a hold beat to type one character.
     // Answering false lets the finger resolve to the pointer translation and
     // reach the keyboard's own press claim, which is where a key acts.
-    // ONE SPELLING OF "ON THE KEYBOARD": this asks the same owner the press
-    // claim asks, so the two cannot disagree.
+    // ONE SPELLING OF "ON THE KEYBOARD": this asks the same rect the press
+    // claim asks (claim_rect, the band and its line), so the two cannot
+    // disagree.
     if (onscreen_keyboard::stands(app, gui) &&
-        rect_contains(onscreen_keyboard::surface_rect(app), x, y))
+        rect_contains(onscreen_keyboard::claim_rect(app), x, y))
         return false;
     // AND IT YIELDS UNDER THE FOLDER OVERLAY'S BAND (2026-08-28), for the two
     // clauses above's reason exactly and for one more: the panel paints over
@@ -4564,7 +4564,10 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
                                                     int x, int y) {
     if (!onscreen_keyboard::stands(app, gui)) return false;
     const GuiRect surf = onscreen_keyboard::surface_rect(app);
-    if (!rect_contains(surf, x, y)) return false;
+    // THE CLAIM IS THE BAND AND, WITH NO DIALOG ON IT, THE OVERLAY'S LINE
+    // ABOVE IT (2026-10-10, onscreen_keyboard::claim_rect): row 8 and the
+    // waveform under the overlay answer nothing.
+    if (!rect_contains(onscreen_keyboard::claim_rect(app), x, y)) return false;
 
     // CONSUMED FROM HERE, whatever it lands on and whichever button it was —
     // the surface is opaque to the pointer, and a non-left press has no meaning
@@ -6755,10 +6758,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     const GuiRect top  = top_strip_area(app);
     // The waveform BAND is the navigation surface, point_on_nav_surface
     // exactly — the canvas's interior where the waveform is painted
-    // (2026-10-09; the closure above a standing keyboard carved out
-    // 2026-10-10): the column's margins beside it and the closure's rows over
-    // it are the program's panel and frame, and a press there falls to the
-    // tail's consumed nothing. `area` stays the coordinate origin.
+    // (2026-10-09; a bottom overlay's line and a dialog on the keyboard
+    // carved out 2026-10-10): the column's margins beside it are the
+    // program's panel, and a press there falls to the tail's consumed
+    // nothing. `area` stays the coordinate origin.
     const bool inside_waveform = point_on_nav_surface(app, gui, x, y);
     const bool inside_top = rect_contains(top, x, y);
     const bool ctrl  = mods.ctrl;

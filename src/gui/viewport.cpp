@@ -2,6 +2,7 @@
 
 #include "audio.h"
 #include "notifications.h"   // notification_stack_bound (the stack's damage rect)
+#include "onscreen_keyboard.h"   // the bottom overlays' rects (the modal's damage)
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
@@ -156,18 +157,26 @@ void Viewport::invalidate_status_cell_area() {
 // (it must erase the modal AND bring the row's own tenants back). The OPENERS
 // do not come through here — nothing is painted before a surface's first paint,
 // so they invalidate the whole window. Caller inventory at the declaration.
-// THE PROGRAM FRAME'S BOTTOM ROW RIDES WITH THE LANE (2026-10-10): a chrome
-// tenant's open and close swap the row and the frame's bottom row on the
-// window's foot (main.cpp's bottom_lane_order), so a CLOSER moves both, and
-// the two lanes together are one span in either order — the frame's row
-// joins the damage, ACROSS THE CLIENT'S WHOLE WIDTH (the frame's own row's
-// span, the frame's columns beside a program-owned row included), so the
-// row's tenants come back with the frame closed round them.
+// THE DIALOG IS A BOTTOM OVERLAY (2026-10-10, onscreen_keyboard.h's overlay
+// block): a chrome tenant's surface is laid over the row's content band and
+// the program frame's bottom row at the window's whole width, its line on
+// the content band's first row — so the damage is the lane UNITED WITH THE
+// DIALOG ALONE (the lane's top down to the window's foot, the whole width),
+// which erases the dialog and brings the row's tenants, the frame's columns
+// and its bottom row back on a close; and, while the keyboard stands, THE
+// DIALOG STANDING ON IT too (a prompt raised or answered over a dialog
+// editor with the keyboard up repaints there). A dialog editor's close
+// takes the keyboard with it, and the slot's hide edge damages that form
+// (onscreen_keyboard::slot_damage_rect, main.cpp's comparator).
 void Viewport::invalidate_modal_dialog_area() {
-    const GuiRect t = bottom_row_area(app);
-    const GuiRect f = bottom_program_frame_area(app);
-    const GuiRect span = union_rect(t, f);
-    gui.invalidate_region(f.x, span.y, f.w, span.h);
+    const GuiRect t     = bottom_row_area(app);
+    const GuiRect alone = onscreen_keyboard::dialog_rect(app,
+                                                         /*on_keyboard=*/false);
+    const GuiRect span  = alone.w > 0 ? union_rect(t, alone) : t;
+    gui.invalidate_region(span.x, span.y, span.w, span.h);
+    if (onscreen_keyboard::stands(app, gui))
+        invalidate_rect(onscreen_keyboard::dialog_rect(app,
+                                                       /*on_keyboard=*/true));
     // THE CHOICE EDITOR'S DROPPED LIST AS PAINTED (2026-10-07 evening): it
     // stands over the well above the row, so every repaint and every closer
     // of the modal covers it too — a list closed by the editor's own close

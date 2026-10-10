@@ -483,9 +483,9 @@ struct Viewport {
     void invalidate_status_cell_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole), WITH THE
-    // PROGRAM FRAME'S BOTTOM ROW across the client since 2026-10-10 (a chrome
-    // tenant's close swaps the two on the window's foot — the definition
-    // says why). ITS CALLERS,
+    // DIALOG'S OVERLAY since 2026-10-10 (the lane down to the window's foot
+    // across the client, and the dialog standing on a standing keyboard —
+    // the definition says why). ITS CALLERS,
     // re-greped 2026-08-28, are the THREE DIALOG EDITORS' repaint sites plus the
     // RENDER PLAYER's three, the player being the row's third owner:
     //

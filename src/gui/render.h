@@ -228,18 +228,20 @@ struct TrimRange {
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
 //   ground        every chrome surface: the menu row and the chrome's lanes
-//                 under the band, the caption's buttons, the bottom row's
-//                 whole lane under a chrome tenant — a prompt, a dialog
-//                 editor or the picker's Cancel, outside the program's
-//                 frame since 2026-10-10 — the dropdowns, the
-//                 on-screen keyboard, every chrome button face, a DISABLED
+//                 under the band, the caption's buttons, THE BOTTOM
+//                 OVERLAYS — the dialog (a prompt, a dialog editor or the
+//                 picker's Cancel) and the on-screen keyboard, laid over the
+//                 design at the window's foot since 2026-10-10 — the
+//                 dropdowns, every chrome button face, a DISABLED
 //                 cue's triangle (the band, row 8 and the canvas column's
 //                 lanes are the program's panel since 2026-10-09, below);
 //   label         chrome text and glyphs, the popup scroll bar's arrow
 //                 glyph;
 //   the quartet   every relief line, the families unchanged; Hilight also the
 //                 light copy of THE DISABLED EMBOSS (below), a disabled cue
-//                 label's included; DkShadow also the dialog focus frame;
+//                 label's included, and THE BOTTOM OVERLAYS' ONE TOP LINE
+//                 (2026-10-10, paint_bottom_overlays); DkShadow also the
+//                 dialog focus frame;
 //   selected pair a dropdown's lit row, the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
@@ -1322,26 +1324,21 @@ inline int relief_line_px() {
 // At 300 % the menu row ends at row 114, the ring's top row is 114–116, the
 // band starts at 117, the ring's columns are 0–2 and 2301–2303 and its
 // bottom row the window's last three rows.
-// THE CHROME SURFACES OF THE BOTTOM ROW STAND OUTSIDE IT, as Windows' status
-// bar stands outside Cool Edit's: while a CHROME TENANT owns the row
-// (chrome_tenant_owns_bottom_row, app_state.h — a prompt, a dialog editor,
-// the picker's Cancel; the render player is the program's and stays inside)
-// the program ends above the row — the ring's bottom row takes the dock
-// bar's first line (the two bottom lanes swap, main.cpp's bottom_lane_order)
-// and the row lane under it, full window width, is the chrome's ground, its
-// content band where it stood. THE ON-SCREEN KEYBOARD STANDS OUTSIDE IT
-// TOO, full width in the chrome's ground: above the keyboard the program
-// closes — the column's foot and then the ring's Hilight row, painted over
-// the canvas's lowest rows exactly as the keyboard paints over them
-// (onscreen_keyboard::program_closure_rect, waveform_paint_area) — and, where
-// row 8 stays the program's under it (the flag editor raises the keyboard
-// with no chrome tenant; the planner's ruling for the unmocked case, to be
-// judged on the glass), the dock bar and row 8 are a second block, opened
-// by the ring's top Shadow row over the keyboard band's last line (its
-// ground pad below the keys) with the columns down both sides of them to the
-// ring's bottom row. The painters: paint_program_frame (the ring, beside the
-// menu row's painter) and paint_program_frame_keyboard_blocks (the two
-// blocks round a standing keyboard, after the keyboard slot).
+// THE CHROME SURFACES AT THE BOTTOM ARE OVERLAYS LAID OVER IT, as Cool Edit's
+// status bar stands under its panels (architect 2026-10-10: "they're
+// analogous to the taskbar, basically, but they sit on top of the design.
+// They don't move anything below them"): THE DIALOG — a chrome tenant of the
+// bottom row (chrome_tenant_owns_bottom_row, app_state.h: a prompt, a dialog
+// editor, the picker's Cancel; the render player is the program's and stays
+// in the row) — and THE ON-SCREEN KEYBOARD each stand at the window's foot,
+// the window's whole width over the ring's columns and bottom row in their
+// rows, one Hilight line on top and the chrome's ground below, no border at
+// the foot or the sides; the ring, the lanes and row 8 keep their geometry
+// and paint as always, and the overlay covers them (the law, the three cases
+// and every rect at onscreen_keyboard.h's overlay block). The painters:
+// paint_program_frame (the ring, beside the menu row's painter) and
+// paint_bottom_overlays (the overlay's line and the dialog's ground, after
+// the keyboard slot).
 inline int program_frame_line_px() {
     return relief_line_px();
 }
@@ -1753,14 +1750,14 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // movable panes measure 6 and 4 (architect 2026-10-09 evening,
 // program_spec.h's group fields) — and the time field's pads 5 W each side,
 // the dialog field's own (program_spec.h's field_pad_px, 2026-10-10).
-// The modal surfaces (prompts, the dialog editors, the picker's Cancel, the
-// render player) stand in the content band below the dock bar's rows
-// (paint_bottom_strip). Under the render player, the program's tenant, the
-// dock bar stands and the row stays inside the program's frame; under a
-// CHROME TENANT (chrome_tenant_owns_bottom_row, app_state.h) the dock bar is
-// not painted, the program's frame closing on the dock bar's first line
-// above the row and the whole lane the chrome's ground at the window's full
-// width (program_frame_rect's chrome paragraph, 2026-10-10).
+// The render player, the program's tenant, stands in the content band below
+// the dock bar's rows, on the row's face (paint_bottom_strip). A CHROME
+// TENANT (chrome_tenant_owns_bottom_row, app_state.h: a prompt, a dialog
+// editor, the picker's Cancel) is THE DIALOG, a bottom overlay laid over the
+// content band and the program frame's bottom row from the dock bar's foot to
+// the window's foot, the dock bar left standing above it (2026-10-10,
+// program_frame_rect's overlay paragraph and onscreen_keyboard.h's overlay
+// block); the lane under it is the program's as always.
 // bottom_row_content_h_px() is the band the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Each term its own
 // rounded part.
