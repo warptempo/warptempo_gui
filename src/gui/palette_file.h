@@ -146,8 +146,8 @@
 //     files). The picker writes the keys in the table's order (the chooser's
 //     order), an unpicked inactive key left out. A
 //     SCHEME IS HONORED UNDER EVERY CHROME, whichever saved it: a scheme
-//     saved under one chrome stands in the folder when the Settings chrome
-//     row switches to another, and draws there by that chrome's derivation.
+//     file saved under a chrome since removed (Clearlooks, CDE) stands in
+//     the folder and draws on the one chrome there is, by its derivation.
 //     No follower beyond the inactive caption's three.
 // A FILE'S BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's: the hex he lifts from a screenshot or types into the picker, and

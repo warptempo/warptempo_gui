@@ -124,9 +124,10 @@ struct TrimRange {
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
 // PAINTER CONSTANTS (cool_edit_paint.h: Cool Edit's measured bytes that do
-// not follow its preset — the case's, the time field's digits, the view
-// bar's black field, the ruler's ticks and
-// digits and their black shadow) — or THE ICON SET'S
+// not follow its preset — the case's black outline and down rings, the view
+// bar's black field, the ruler's ticks and digits and their black shadow;
+// the case's ramps and the time field's digits derive from the Face, ce_case_*
+// and ce_field_text) — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the Tango and Mist drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
@@ -1696,7 +1697,8 @@ static_assert(kCueLabelBaselineAt100 + kGuiProgramFaceMetrics.descent + 2 <=
 // left and ⌊(11u + 2) / 2⌋ right — 13 and 17 device px at 300 % (u 3), 18
 // and 23 at 360 % (u 4), 4 and 6 at 138 % (u 1). THE ONE ROAD for every
 // reader of that width: the cue's published triangle box (paint_cues), the
-// label clip at the next triangle (paint_cues), the flag iterator's cull,
+// label's face box from its own triangle's left edge (paint_cues; no label is
+// clipped), the flag iterator's cull,
 // the head's cull and its published hit (paint_ruler_row,
 // AppState::playhead_head_hit) and the playhead's cull and damage box
 // (render_playhead, playhead_invalidate_rect, main.cpp), so no repaint can

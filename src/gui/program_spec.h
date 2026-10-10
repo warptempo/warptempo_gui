@@ -237,8 +237,9 @@ struct ProgramSpec {
     // before the text) and its pad past the text, the gap between two of a
     // marker's label segments' boxes (the bound cells, the history's two
     // halves — the product's own, a segment's text standing the label's
-    // lead past the previous one's end). (A label is always clipped at the
-    // next triangle's left edge: render.h's overlap rule, 2026-10-10.)
+    // lead past the previous one's end). (A label is never clipped: a later
+    // cue's face box occludes an earlier label, render.h's overlap rule,
+    // 2026-10-10.)
     int  cue_label_lead;
     int  cue_fill_lead;
     int  cue_fill_pad;
