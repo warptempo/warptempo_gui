@@ -143,15 +143,24 @@ struct ProgramSpec {
     // fields look good"; the 85-W floor round row 8's clock, Cool Edit's mock
     // of 2026-10-09, removed 2026-10-10). THE PAD from its outer edge to the
     // reserved cell on each side,
-    // `field_pad_px`, IS THE TIME FIELD'S OWN 4 W (architect 2026-10-09
-    // evening, at the consolidation session's close: one W less air on either
-    // side than the dialog field's 5 — "the other ones are Windows chrome
-    // whereas this one is a Cool Edit chrome", so Cool Edit's field may sit
-    // tighter than a Windows input box), read at every time field
-    // (paint_handler.cpp's time_field_pad_px). Its history in one clause:
-    // Cool Edit's Begin / End / Length field's 8 W (its ink 10 and 12 W in)
-    // on 2026-10-09, the dialog field's 5 W (kModalFieldPadXPx) that
-    // evening, its own 4 W since.
+    // `field_pad_px`, IS 5 W, the dialog field's own pad (kModalFieldPadXPx)
+    // — the time field in line with the text box (architect 2026-10-09
+    // evening, "bring the timestamp in line with the text box used for the
+    // regular text boxes"; 2026-10-10: "let's add back one pixel on the left
+    // and one on the right side for that input box, which will also change
+    // the media player's padding"). The constant stays the program's own,
+    // this header owning the program's lengths, read at every time field
+    // (paint_handler.cpp's time_field_pad_px). WHY 5 AND NOT 4: the time
+    // field's own 4 W of 2026-10-09 evening ("the other ones are Windows
+    // chrome whereas this one is a Cool Edit chrome") landed while the 85-W
+    // floor still stood round row 8's clock, so he saw no change there;
+    // removing the floor on 2026-10-10 then took the clock from the floor's
+    // width straight to its cell plus 4 W — a larger step than the one W he
+    // asked for — and the pad went back to 5 to undo that half of it. Its
+    // history in one clause: Cool Edit's Begin / End / Length field's 8 W
+    // (its ink 10 and 12 W in) on 2026-10-09, the dialog field's 5 W that
+    // evening, the time field's own 4 W at the session's close, 5 W again
+    // since 2026-10-10.
     double field_h_px;
     double field_pad_px;
     // THE STATE LINE'S AIR: its first ink this far past the time-field
@@ -287,7 +296,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .case_to_end_bar_px = 5,
     .end_bar_face_px    = 3,
     .field_h_px         = 17.0,
-    .field_pad_px       = 4.0,
+    .field_pad_px       = 5.0,
     .state_air_px       = 5.0,
     .column_air_px         = 5,
     .column_margin_px      = 6,

@@ -615,7 +615,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // BACKEND's answer (GuiPlatform::device_config_defaults — a platform fact, not
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
-// 275 % and its external files dir's `projects/`;
+// 300 % and its external files dir's `projects/`;
 // both stamp the default chrome (kDefaultChromeKey), the default font
 // (kDefaultFontKey) and no scheme, palette or icons line, kDefaultProjectsRepo and
 // a blank

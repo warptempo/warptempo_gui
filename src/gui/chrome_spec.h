@@ -177,7 +177,7 @@ struct ChromeSpec {
     int                tooltip_pad_px;
     // (THE TIME FIELD'S HEIGHT AND PAD left the spec 2026-10-08: every time
     // field is the program's since 2026-10-09, Cool Edit's dark field under
-    // every chrome, its height and its own 4-W pad program_spec.h's.)
+    // every chrome, its height and its 5-W pad program_spec.h's.)
     // THE SCRUB THUMB'S GRAB BOX — the box the press router takes as the
     // thumb's grab band and the mapping insets the track by half of at each
     // end (render.h's scrub block, scrub_handle_box_px). WIN2000 14 (the

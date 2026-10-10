@@ -383,9 +383,10 @@ namespace {
 // the MENU lane is its anchors' 19 Windows px PLUS a one-px row of ground
 // (architect 2026-10-05, Windows' measured 20-px menu band — render.h's
 // menu-row block, the row above the content) PLUS Windows' etched pair
-// under it, two relief lines (2026-10-10; the anchors and the dropdown's
-// hang point read the lane, the label's seat alone reads the content between
-// the head and the foot),
+// under it, two relief lines (2026-10-10; the anchors read the lane, the
+// label's seat reads the content between the head and the foot, and the
+// dropdown hangs from the content's end over the pair, covering it while a
+// menu is down — dropdown_hang_y, app_state.h),
 // the ICON lane is COOL EDIT'S TOOLBAR BAND, 33 Windows px with its own
 // lines under every chrome (architect 2026-10-09; render.h's program block,
 // icon_row_h_px), the canvas column's five lanes Cool Edit's air, view bar,

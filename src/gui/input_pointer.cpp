@@ -98,13 +98,18 @@ struct ToolbarChord {
     // THE CLAIM'S OWN CONSUME IS GONE for the pen's sake (architect
     // 2026-10-07 ~22:15, on the tablet: "it blinks: goes dark for a moment,
     // goes back to white", at the down and again at the lift — "a
-    // radio-button issue — the toggles don't do that"): the pen's HOVER_EXIT
-    // before the tip's down and the touch translation's leave at the lift
-    // each drop the hot face (main.cpp's leave hook), and with no arm
-    // holding it off (the hover walk keeps hot at −1 only while a chrome
-    // press is armed) the down's synthesized entry motion and the lift's
-    // HOVER_ENTER lit it again around each drop. Armed, the selected radio
-    // reads press, release, hover exactly as a toggle does. THE ICON ROW'S VIEW
+    // radio-button issue — the toggles don't do that"): the blink was the
+    // flat toolbar's hot face of that day, dropped by the pen's HOVER_EXIT
+    // before the tip's down and by the touch translation's leave at the lift
+    // and lit again around each drop, with no arm holding it off. THE ROSTER
+    // HAS NO HOT FACE SINCE 2026-10-09 (Cool Edit's toolbar has none,
+    // program_spec.h's case_hot_face), so no leave has a roster face to
+    // darken — the pen's hover end (GuiPointerLeaveReason::PenHoverEnd,
+    // input_core.h) keeps the open pull-down's lit row, the one hover-lit
+    // face a leave touches, and the pen latch holds that row after a lift —
+    // and the arm stays because it is the toggles' own reading: armed, the
+    // selected radio reads press, release exactly as a toggle does, its
+    // pressed face held under the tip. THE ICON ROW'S VIEW
     // GROUP is the flag's one user since the tab pair's deletion
     // (2026-10-01); the walk lamp, read-only, history and
     // Cumulative are TOGGLES and press through in both directions, which is why

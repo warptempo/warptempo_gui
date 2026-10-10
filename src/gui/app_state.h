@@ -268,9 +268,9 @@ constexpr double kNavZoomPxPerLevel = 145.0;
 // the panel on every host, not the same count of device pixels: 200 device px
 // is ~43 mm on the retired road rig and only ~20 mm on the tablet's 249 PPI
 // panel, which is exactly the "too fast" the architect drove. At the tablet's
-// own 275 % a level costs 399 device px (145 Windows px, kNavZoomPxPerLevel's
-// unit since 2026-10-02) — ~41 mm on that panel, back on the rig's ~43 mm
-// order of hand travel instead of half it. Durations never scale;
+// own 300 % a level costs 435 device px (145 Windows px, kNavZoomPxPerLevel's
+// unit since 2026-10-02; a double, never rounded — below) — ~44 mm on that
+// panel, back on the rig's ~43 mm order of hand travel instead of half it. Durations never scale;
 // lengths do — the same split the
 // press road's four pixel thresholds take (drag_moved_threshold_px,
 // grab_moved_threshold_px, double_click_slack_px,
@@ -664,8 +664,8 @@ struct ValueDragState {
 // number, and a retune is this line (architect 2026-09-10). It is a LENGTH and
 // so it SCALES: the drag reads it through scaled_px, exactly as every other
 // authored press-road distance does (the drag gate, the double-click slack,
-// the touch slop), because a hand's six Windows px at 275 % is not the same
-// gesture as at 138 %. Durations never scale; this is not one. The same
+// the touch slop), because a hand's six Windows px at 300 % (18 device px) is
+// not the same gesture as at 138 % (8). Durations never scale; this is not one. The same
 // travel buys a cent, a bound cent and a hop alike — the
 // step is one step whatever the cell's domain is, which is what makes the
 // gesture read the same on every cell of every flag.
@@ -4048,7 +4048,7 @@ inline int dropdown_h_px(DropdownMenu m) {
 // apart from the holds, neither being one, and both stay on the constant.
 constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
 // 6 WINDOWS PX (8 laptop px until the unit's change, architect 2026-10-02:
-// 16 device px at the tablet's 275 % as at its 200 % before).
+// 18 device px at the tablet's 300 %, 8 at the laptop's 138 %).
 constexpr int     kDoubleClickSlackPx = 6;
 
 // The slack in DEVICE pixels at the live gui_scale — the compare sites' one
@@ -4206,7 +4206,8 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // every gate reads that accessor and never this constant, and at gui_scale 100
 // it is this number exactly. 6 WINDOWS PX since the unit's change (architect
 // 2026-10-02): the laptop pixel's 8 re-authored to the device length it had
-// on the tablet, 16 px — 8dp — at 275 % as at 200 % before.
+// on the tablet then; at the tablet's 300 % it is 18 device px — 9dp under
+// its 320 density — and at the laptop's 138 % 8.
 constexpr int     kDragMovedThresholdPx = 6;
 
 // The gate in DEVICE pixels at the live gui_scale — THE ONE READER FOR EVERY
@@ -4221,7 +4222,7 @@ inline int drag_moved_threshold_px() {
 // THE GRAB GATE (architect 2026-09-29): the Chebyshev distance a press that
 // GRABS A THING must travel before it becomes that thing's drag — TWICE the
 // drag gate above, derived from it so the two stay one authored number (12
-// Windows px; twice the drag gate's rounded 16 device px, 32, at 275 %). A
+// Windows px; twice the drag gate's rounded 18 device px, 36, at 300 %). A
 // grab is a press on an object whose
 // drag MOVES it — a click that rolls a few pixels on a flag or a trim endcap
 // must stay the click it meant to be, because the drag it would otherwise
@@ -4254,9 +4255,9 @@ inline int drag_moved_threshold_px() {
 // click, never a drag, whichever the seed then does with it.
 // TWICE THE ROUNDED DRAG GATE, NOT THE ROUNDED DOUBLE (architect 2026-10-02,
 // scaled_px's composite rule): the grab gate is built from its rounded part,
-// 2 × drag_moved_threshold_px() — 16 device px at 138 % and 32 at 275 %,
-// the 16 and 32 it was before the unit's change — where scaled_px(12) would
-// round once to 17 and 33.
+// 2 × drag_moved_threshold_px() — 16 device px at 138 % (2 × 8) and 36 at
+// 300 % (2 × 18) — where scaled_px(12) would round once to 17 at 138 %
+// (16.56); at 300 % the two agree, 36, every W being 3 device px there.
 constexpr int     kGrabMovedThresholdPx = 2 * kDragMovedThresholdPx;
 
 inline int grab_moved_threshold_px() {
@@ -5438,7 +5439,7 @@ struct AppState {
     //
     // IT IS A PER-DEVICE PREFERENCE, NOT A PROPERTY OF THE PIECE (architect
     // 2026-08-27): it left the `.settings` sidecar that day for the device
-    // config, because the same project wants 138 on the laptop and 275 on the
+    // config, because the same project wants 138 on the laptop and 300 on the
     // tablet (100 and 225 in that day's laptop-pixel unit) and the sidecar
     // travels between them. Ctrl+S does not carry it and
     // no load writes it — gui_main reads the config ONCE at startup, before the

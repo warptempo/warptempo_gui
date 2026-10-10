@@ -75,7 +75,7 @@ struct GuiTargetRender;
 // state cell — reads this 8 like every other redesigned row, so the product
 // has one lane pad and no second number. EIGHT WINDOWS PX since the unit's
 // change (architect 2026-10-02: the laptop pixel's 8 kept as the Windows
-// number, 22 device px at 275 % and 11 at 138 %).
+// number, 24 device px at 300 % and 11 at 138 %).
 inline int icon_row_pad_x() {
     return scaled_px(8.0);
 }

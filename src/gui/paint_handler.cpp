@@ -2497,14 +2497,15 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // "DD:DD.DDD" (kTimeShape) and, on row 8, the widest TAB LETTER in the
 // letter's slot (kClockTabLetters) — shaped through the one chokepoint at the
 // live size, so nothing is trusted to the face. The field is that cell plus
-// the field's pad either side — THE TIME FIELD'S OWN 4 W (program_spec.h's
-// field_pad_px, architect 2026-10-09 evening: "this one is a Cool Edit
-// chrome", tighter than the dialog field's 5; time_field_pad_px below) —
-// its width ceiled, AND NOTHING MORE: row 8's clock exactly as the render
+// the field's pad either side — 5 W, THE DIALOG FIELD'S OWN (program_spec.h's
+// field_pad_px, where the reason it is 5 and not the 4 of 2026-10-09 evening
+// stands: architect 2026-10-10, "let's add back one pixel on the left and one
+// on the right side for that input box"; time_field_pad_px below) — its
+// width ceiled, AND NOTHING MORE: row 8's clock exactly as the render
 // player's two fields (architect 2026-10-10, "the media player's fields look
 // good"; the 85-W floor of Cool Edit's mock, 2026-10-09, removed 2026-10-10).
 // At 300 % under Tahoma the clock is its cell of about 201 device px plus
-// 2 · 12.
+// 2 · 15.
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2538,10 +2539,10 @@ constexpr const char* kTimeShape = "DD:DD.DDD";
 constexpr std::string_view kClockTabLetters = "AB";
 
 // THE FIELD'S HEIGHT AND ITS PAD, each one element rounded once (scaled_px): 17 W tall (51 device rows at 300 %, 23
-// at 138 %; program_spec.h's field_h_px) and THE TIME FIELD'S OWN PAD, 4 W
-// (12 device px at 300 %, 6 at 138 %, 14 at 360 %; program_spec.h's
-// field_pad_px, architect 2026-10-09 evening — the Cool Edit field tighter
-// than the dialog field's 5), one constant at every time field.
+// at 138 %; program_spec.h's field_h_px) and THE TIME FIELD'S PAD, 5 W
+// (15 device px at 300 %, 7 at 138 % — 6.9 rounded — and 18 at 360 %;
+// program_spec.h's field_pad_px, architect 2026-10-10 — the dialog field's
+// own 5, kModalFieldPadXPx), one constant at every time field.
 static int time_field_h_px() {
     return scaled_px(kProgramSpec.field_h_px);
 }
@@ -2732,17 +2733,17 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // ~00:30 — Cool Edit's 6 / 4 before it, the same sum): a group of n is
     // 5 + 5 + 23n + 5 + 6 = 23n + 21, so the block is the 7 verbs' 182, the walk's 113, the
     // arrows' 113 and the transport's 90 with three gaps of 2, 504 W — on the
-    // tablet's 768 at 300 % starting at W 264, the clock's group W 2..97
-    // (Tahoma's ~67-W cell and its two 4-W pads, a ~75-W field; 2026-10-10),
-    // the state line's first ink at W 103, clipped at W 262 (~159 W of
+    // tablet's 768 at 300 % starting at W 264, the clock's group W 2..99
+    // (Tahoma's ~67-W cell and its two 5-W pads, a ~77-W field; 2026-10-10),
+    // the state line's first ink at W 105, clipped at W 262 (~157 W of
     // line). IN THE `h` VIEW (the hide,
     // 2026-10-07; Open Text Editor hidden there with the verbs) the block is
     // 1 verb + 4 walk + 2 arrows + 2 transport in four groups, 44 + 113 + 67
-    // + 67 + 6 = 297 W, the line's room 366 W. THE ROW CARRIES NO COLLISION
+    // + 67 + 6 = 297 W, the line's room 364 W. THE ROW CARRIES NO COLLISION
     // RULE — none of the redesign does — and the crop-at-the-floor allowance
     // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
-    // the clock's group once the window falls below about 2 + 96 + 504 =
-    // 602 W outside the view. THE STATE
+    // the clock's group once the window falls below about 2 + 98 + 504 =
+    // 604 W outside the view. THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.
     int right_block_x = content.x + content.w;
@@ -5389,20 +5390,23 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // displaced; the rest are the surviving sampled constants, sampled in laptop
 // px and each re-authored in Windows px at the block below (the field colors
 // and their derivations are at the kModal* block, render.h):
-//   kModalButtonGapPx 8  — modal_popup.png's inter-button gap (Save ends
-//                          x=504, Do Not Save begins x=513; identically
-//                          619..626).
-//   kModalFieldHeightPx 31 — editor.png's field, borders included (y=5..35),
-//                          vertically centred in the row's content band.
-//   kModalFieldPadXPx    — its border-to-ink inset (x=86..92), 7 laptop px:
-//                          the 5 W render.h holds, at 138 % (5 · 1.38 =
-//                          6.9 → 7 device px).
+//   kModalButtonGapPx 6 W — modal_popup.png's inter-button gap, 8 laptop px
+//                          (Save ends x=504, Do Not Save begins x=513;
+//                          identically 619..626): 8 device px at 138 %
+//                          (6 · 1.38 = 8.28 → 8), 18 at 300 %.
+//   kModalFieldHeightPx 23 W — editor.png's field, borders included
+//                          (y=5..35, 31 laptop px), vertically centred in the
+//                          row's content band: 32 device px at 138 %
+//                          (23 · 1.38 = 31.74 → 32), 69 at 300 %.
+//   kModalFieldPadXPx 5 W — its border-to-ink inset (x=86..92), 7 laptop px:
+//                          7 device px at 138 % (5 · 1.38 = 6.9 → 7), 15 at
+//                          300 %.
 //   (the label-to-field gap is NOT a constant of its own: since 2026-10-08
 //    it is kModalButtonGapPx, the editor row's ONE GAP — label → field,
 //    field → OK, OK → Cancel; the rule at the editor arm. From 2026-08-29
 //    it was the window-edge pad read twice, which with the label's trailing
 //    space read wider than the field's other end.)
-//   kModalFieldWidthPx 520 — AUTHORED, not sampled (the crop's field width is
+//   kModalFieldWidthPx 378 W — AUTHORED, not sampled (the crop's field width is
 //                          its dialog's layout, not a rule): wide enough for
 //                          every render-entry id and settings line met in
 //                          practice. AN OVER-LONG BUFFER SCROLLS since
@@ -5414,12 +5418,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //                          (text_editor::State::view_offset_px), while the
 //                          published byte geometry stays the painter's
 //                          unclipped truth.
-//   kModalFocusFramePx 1 — the keyboard focus frame, RESERVED around every
+//   kModalFocusFramePx 1 W — the keyboard focus frame, RESERVED around every
 //                          button and painted for the focused one (the
 //                          reflow-free rule is at the constant).
 // THE FIELD ABSORBS THE SHRINK on a narrow window exactly as it did in the
 // box — it takes whatever is left between the label and the buttons, floored
-// at 40px so it stays a field.
+// at 29 W (kModalFieldMinWidthPx) so it stays a field.
 //
 // THE PUBLICATION is the floating surfaces' own convention: this runs
 // UNCONDITIONALLY from on_redraw's tail, rewrites AppState::modal_dialog and

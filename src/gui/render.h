@@ -977,7 +977,7 @@ WaveformPlateInks waveform_plate_inks();
 // chrome length is the number Windows 95 drew at 96 dpi (or, where Windows
 // has no such element, the length that kept its device size on the tablet
 // when the unit changed), and gui_scale is the number of DEVICE px per
-// Windows px, in percent — the tablet 275 (a 16-px glyph = 44 device px),
+// Windows px, in percent — the tablet 300 (a 16-px glyph = 48 device px),
 // the laptop 138 (22). EVERY PAINTED DIMENSION IN THE TREE RIDES IT through
 // scaled_px, below, where the rounding rule is stated. (The unit before it
 // was the laptop's own pixel at 100 %, the kdenlive crops' measure; the
@@ -1149,7 +1149,7 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
 // corners are the resize handles (window_frame_edges_at, app_state.h). THE
 // THICKNESS IS A COMPOSITE OF ITS ROUNDED PARTS (scaled_px's rule): two
 // relief lines and two Windows px of ground, window_frame_px — 5 device px at
-// the laptop's 138 % (1 + 1 + 3), 12 at 275 % (3 + 3 + 6). The relief
+// the laptop's 138 % (1 + 1 + 3), 12 at 300 % (3 + 3 + 6). The relief
 // lines are the spec's window_frame_lines; a vocabulary whose spec sets
 // window_frame_maximized keeps the band on every window, the maximized
 // laptop's and the tablet's too (both platforms' frame_px_), the hit test
@@ -1277,10 +1277,12 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 // the pad's 7 as 5 — paint_handler.cpp's kModal* block keeps the sampled
 // record). THE TIME FIELDS are not this field: row 8's clock and the render
 // player's position and length are Cool Edit's dark field, its height and
-// its 4-W pad program_spec.h's own (architect 2026-10-09 evening, "the other
-// ones are Windows chrome whereas this one is a Cool Edit chrome"). (They
-// took this whole shape 2026-10-08 to 2026-10-09 and this pad on the
-// evening of 2026-10-09.)
+// its pad program_spec.h's own (architect 2026-10-09 evening, "the other
+// ones are Windows chrome whereas this one is a Cool Edit chrome") — the
+// pad 5 W, equal to this field's since 2026-10-10 ("let's add back one
+// pixel on the left and one on the right side for that input box";
+// program_spec.h's field_pad_px holds why). (They took this whole shape
+// 2026-10-08 to 2026-10-09.)
 inline constexpr double kModalFieldHeightPx = 23.0;
 inline constexpr double kModalFieldPadXPx   = 5.0;
 
@@ -1386,7 +1388,7 @@ inline int program_pane_trail_px() {
 //     centred in the buttons' band (row 8's case band since 2026-10-05, the
 //     program's case since 2026-10-09, bottom_row_seats in
 //     paint_handler.cpp). Its height is the sum of its rounded
-//     lines, 4 × relief_line_px (12 device rows at 275 %, 4 at 138 %).
+//     lines, 4 × relief_line_px (12 device rows at 300 %, 4 at 138 %).
 //   THE THUMB — WINDOWS' POINTED TRACKBAR THUMB (TBS_BOTTOM; architect
 //     2026-10-06, the source ReactOS's own, measured at 100 % on
 //     tmp/reactos-media.png, mplay32's position slider, and confirmed on
@@ -1413,8 +1415,8 @@ inline int program_pane_trail_px() {
 //     4 + 9 = 21 Windows px, the volume slider's 16 + 5 (mplay32's taller
 //     control draws 18 + 5 = 23; the seat was kept rather than the channel
 //     moved), the straight part over the channel and the point below it,
-//     toward the channel's bottom: 59 device rows at 275 %, 63 at 300 %, 27
-//     at 138 %, each part rounded on its own.
+//     toward the channel's bottom: 63 device rows at 300 % (24 + 12 + 27),
+//     27 at 138 %, each part rounded on its own.
 // NO PLAYED EXTENT AND NOTHING THAT READS THE WINDOW'S FOCUS: the channel is
 // lines on the ground, the position is the thumb. The painter is
 // paint_modal_dialog's player branch; the press is claim_player_scrub_press.
@@ -1694,8 +1696,8 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // each group the gripper, 5 W of face, its cases or the time field, 5 W of
 // face and the end bar — the product's symmetric air where Cool Edit's
 // movable panes measure 6 and 4 (architect 2026-10-09 evening,
-// program_spec.h's group fields) — and the time field's pads its own 4 W
-// (program_spec.h's field_pad_px).
+// program_spec.h's group fields) — and the time field's pads 5 W each side,
+// the dialog field's own (program_spec.h's field_pad_px, 2026-10-10).
 // The dock bar is the program's under a modal too; the modal surfaces
 // (prompts, the dialog editors, the picker's Cancel, the render player)
 // stand in the content band below it (paint_bottom_strip).
@@ -2091,9 +2093,9 @@ inline constexpr int64_t kTooltipAutoPopMs = 5000;
 // `config_viewConfigurationHoverSlop` = 4dp (core/res/values/config.xml),
 // half the platform's 8dp touch slop. It is taken as 3 WINDOWS PX through
 // scaled_px (4 laptop px until the unit's change, architect 2026-10-02):
-// 8 device px, exactly 4dp, on the tablet at its 275 % under the 320 density
-// it runs at, and half the drag gate (kDragMovedThresholdPx 6, app_state.h)
-// as Android's is half its touch slop. Floor 1, so a small scale never
+// 9 device px on the tablet at its 300 % under the 320 density it runs at,
+// 4.5dp — Android's 4dp to within half a dp — and half the drag gate
+// (kDragMovedThresholdPx 6, app_state.h) as Android's is half its touch slop. Floor 1, so a small scale never
 // zeroes it.
 inline constexpr int kTooltipHoverSlopPx = 3;
 inline int tooltip_hover_slop_px() {
@@ -2919,10 +2921,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 //
 // THE LIT OUTLINE (architect 2026-09-27) — THE INNER BAR'S TRUE CONTOUR,
 // `outline_px` THICK, ALIASED. `outline_px` is t = waveform_line_px() (render.h,
-// the job's snapshot): 1 on the laptop at 138 %, 3 on the tablet at 275 % —
-// the outline is a LINE
-// and scales with gui_scale like the stems, while the plate column stays one
-// device pixel. A pixel of the inner's shape (the inner bars of all columns)
+// the job's snapshot): ONE DEVICE PX AT EVERY SCALE since 2026-10-09 ("on
+// waveform → unscaled", waveform_line_px's rule) — the plate column's own
+// width, as the stems' dots are. A pixel of the inner's shape (the inner bars of all columns)
 // is a BORDER pixel iff any pixel within t of it straight left, right, up or
 // down lies outside that shape — an erosion at distance t, the four-neighbour
 // test at t = 1, byte-identical there to the one-pixel contour. The outer bar

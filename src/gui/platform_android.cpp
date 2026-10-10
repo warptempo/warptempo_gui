@@ -431,15 +431,16 @@ GuiPlatform::~GuiPlatform() {
 // ---------------------------------------------------------------------------
 
 // The tablet's device-config template (contract at the declaration, rationale
-// at this backend's own). 275 % AT THE WINDOWS PIXEL (architect 2026-10-02):
-// 2.75 device px per Windows px, so the toolbar's 16-px glyph paints 44
-// device px — the tablet's glyph at its 200 % before the unit's change, the
-// size the architect settled on the glass (2026-09-29; the template's 225 of
-// the laptop-pixel unit before that, 2026-08-27, and the afternoon's 250
-// stepped back that evening are git history and a closed question). The
-// icon row fits this panel whole at every scale the vocabulary admits (the
-// arithmetic is at paint_icon_row, paint_handler.cpp), clearing it by 490
-// device px at 275.
+// at this backend's own). 300 % AT THE WINDOWS PIXEL (architect 2026-10-10,
+// "sure, that can be updated later": the template follows the scale the
+// tablet has run at since 2026-10-06): 3 device px per Windows px, every
+// Windows px a whole number of device px, so a 16-px glyph paints 48 device
+// px, the program's 20-W glyph seat 60 and a relief line 3. (The template
+// stood at 275 from 2026-10-02 — the tablet's glyph at its 200 % before the
+// unit's change, 44 device px — and its earlier values are git history and
+// a closed question.) The icon row fits this panel whole (the arithmetic is
+// at paint_icon_row, paint_handler.cpp: 1356 + 351 of the 2304 device px
+// outside the `h` view at 300), clearing it by 597.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into
@@ -460,7 +461,7 @@ GuiPlatform::~GuiPlatform() {
 // this device, so a template pointing anywhere else could never be right.
 DeviceConfig GuiPlatform::device_config_defaults() {
     DeviceConfig cfg;
-    cfg.gui_scale     = 275;
+    cfg.gui_scale     = 300;
     const char* dir = (g_android_app && g_android_app->activity)
                           ? g_android_app->activity->externalDataPath
                           : nullptr;

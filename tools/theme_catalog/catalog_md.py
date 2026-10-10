@@ -142,7 +142,8 @@ def write_md(cat):
         if e['family'] not in fams: fams.append(e['family'])
     for fam in fams:
         es = sorted((e for e in cat['entries'] if e['family'] == fam), key=lambda e: relative_luminance(unhex(e['roles']['ground'])))
-        L += [f'## {FAMILY_HEAD[fam]}', '', f'{len(es)} entries, darkest ground first.', '']
+        noun = 'entry' if len(es) == 1 else 'entries'
+        L += [f'## {FAMILY_HEAD[fam]}', '', f'{len(es)} {noun}, darkest ground first.', '']
         if fam in FAMILY_NOTE: L += [FAMILY_NOTE[fam], '']
         for e in es:
             imit = f" — imitates {e['imitates']}" if e.get('imitates') else ''

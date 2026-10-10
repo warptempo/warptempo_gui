@@ -262,7 +262,7 @@ adb logcat -d -s warptempo:I | grep -E 'working_column|GitHub'
 # a line with working_column= (a piece opened), and none with "GitHub refused" or "GitHub offline"
 adb shell run-as com.warptempo.gui cat /data/user/0/com.warptempo.gui/files/warptempo_gui/config
 # four to nine lines:
-#   gui_scale=300                 (the tablet's scale; a first run stamps 275, change it in the app)
+#   gui_scale=300                 (the tablet's scale, which a first run stamps; change it in the app)
 #   projects_repo=github.com/warptempo/warptempo_projects
 #   projects_path=/storage/emulated/0/Android/data/com.warptempo.gui/files/projects
 #   last_project=<the piece open>

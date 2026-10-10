@@ -4,7 +4,7 @@ Every entry below but the product's own is a desktop theme of the era IMPORTED, 
 
 ## Warptempo: the product's own chrome schemes (the architect's scheme files made built-ins, recorded verbatim; the relief by Windows' Appearance-dialog rule, as the app derives it)
 
-1 entries, darkest ground first.
+1 entry, darkest ground first.
 
 ### `cool-edit-pro-me`
 
@@ -754,7 +754,7 @@ Display tier: high-colour
 
 ## GNOME 2: Clearlooks as Debian 6 squeeze shipped it (its gtkrc's colour scheme; the relief, the tooltip border and the unfocused title by the engine's and metacity's own rules)
 
-1 entries, darkest ground first.
+1 entry, darkest ground first.
 
 ### `clearlooks`
 

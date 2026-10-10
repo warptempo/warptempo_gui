@@ -126,11 +126,11 @@ public:
     bool init(int width, int height, const char* title);
 
     // THE DEVICE CONFIG'S FIRST-RUN TEMPLATE, the seam's own member (contract at
-    // platform_wayland.h, which owns it): this backend answers 275 % and
-    // `<externalDataPath>/projects` as the projects path. 275 is the
-    // tablet's own glyph size at the Windows pixel (architect 2026-10-02: a
-    // 16-px glyph at 44 device px), the whole icon row fitting (rationale at
-    // the definition, platform_android.cpp). (Until
+    // platform_wayland.h, which owns it): this backend answers 300 % and
+    // `<externalDataPath>/projects` as the projects path. 300 is the scale
+    // the tablet runs at (architect 2026-10-10; a 16-px glyph at 48 device
+    // px), the whole icon row fitting (rationale at the definition,
+    // platform_android.cpp). (Until
     // 2026-08-28 the template also stamped a blank `audio_player`, nothing on
     // the tablet being spawnable; the key retired whole with the in-app
     // render player, which plays a render through the product's own engine
