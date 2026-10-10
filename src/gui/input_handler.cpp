@@ -115,6 +115,22 @@ struct AtScopeExit {
 
 } // namespace
 
+// IS THIS KEY A MENU TITLE'S ACCESS KEY (architect 2026-10-10 ~17:20)? Alt
+// alone with the File, Edit or Settings letter (dropdown_title_access_key,
+// app_state.h) — the one predicate on_key's three overlay routers (the render
+// player's, the project picker's, the color picker's) ask before taking a key
+// and its access-key arm asks again, so the keys follow the tap wherever a
+// title's tap opens its menu. NOT WHILE THE COLOR PICKER'S ONE FIELD STANDS
+// (the hex field, the preset name ask): the field owns the keyboard, an
+// Alt+letter there reaching its router and falling silent as it does in the
+// main editors (whose gate stands above the arm).
+bool GuiInputHandler::menu_title_access_key(GuiKey key,
+                                            GuiInputState mods) const {
+    if (!mods.alt || mods.ctrl || mods.shift) return false;
+    if (app.color_picker.active && color_picker.field_active()) return false;
+    return dropdown_menu_for_access_key(key) != DropdownMenu::None;
+}
+
 void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The dispatch's own repeat scope, first statement so it covers the whole
     // body (the ruling and the reasoning are at the guard above).
@@ -339,6 +355,15 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // to the ordinary close road; that road closes the player first
     // (GuiPrompt::request_close), and the close drops both arms with the
     // overlay and the scrub state — the force-end every other gesture takes.
+    //
+    // THE MENU TITLES' ACCESS KEYS PASS THIS BLOCK AND THE PICKER'S AND THE
+    // COLOR PICKER'S BELOW (architect 2026-10-10 ~17:20: wherever a title's tap
+    // opens its menu, its Alt+letter does): menu_title_access_key skips the
+    // router, and the key meets the access-key arm further down — the same
+    // road as everywhere, toggle_dropdown, whose guard is the anchor's painted
+    // face, so under these overlays File opens and Edit and Settings refuse
+    // exactly as a tap on them does (menu_anchor_live). The open menu's own
+    // letters never get here: the dropdown gate above answers them first.
     if (app.render_player.active) {
         if (any_pointer_gesture_active(app)) {
             // THE DRAG GATE'S QUESTION ASKED EARLIER SAYS THE DRAG GATE'S
@@ -350,7 +375,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                      kKeysDuringDrag);
                 return;
             }
-        } else if (route_render_player_key(key, mods)) {
+        } else if (!menu_title_access_key(key, mods) &&
+                   route_render_player_key(key, mods)) {
             return;
         }
     }
@@ -378,7 +404,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                      kKeysDuringDrag);
                 return;
             }
-        } else if (route_picker_key(key, mods)) {
+        } else if (!menu_title_access_key(key, mods) &&
+                   route_picker_key(key, mods)) {
             return;
         }
     }
@@ -406,7 +433,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
                                      kKeysDuringDrag);
                 return;
             }
-        } else if (route_color_picker_key(key, mods)) {
+        } else if (!menu_title_access_key(key, mods) &&
+                   route_color_picker_key(key, mods)) {
             return;
         }
     }
@@ -745,20 +773,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the press does (menu_anchor_live: in the `h` view, under the folder
     // overlay and the color picker only File is live). AT THE PRESS, as
     // every hotkey (the timing doctrine, input_handler.h). RANKED HERE,
-    // under every keyboard owner — a prompt, the open menu's own gate (where
-    // a row's letter and the titles' switch are dropdown_key_blocked's), the
-    // render player's, the picker's and the color picker's routers (each
-    // the whole vocabulary while it stands, so the three consume these as
-    // every chord but their hatches), the load, the editors (a field types
-    // or swallows; never a menu) and the gestures — and above the `h`
-    // view's allowlist and the authoring locks, neither of which governs a
-    // menu's open. Alt alone: every Ctrl+Alt chord is untouched.
-    if (alt && !ctrl && !shift) {
-        const DropdownMenu m = dropdown_menu_for_access_key(key);
-        if (m != DropdownMenu::None) {
-            toggle_dropdown(m);
-            return;
-        }
+    // under the prompt, the open menu's own gate (where a row's letter and
+    // the titles' switch are dropdown_key_blocked's), the load, the editors (a
+    // field types or swallows; never a menu) and the gestures, and over the
+    // render player's, the picker's and the color picker's routers, which
+    // let these keys by (menu_title_access_key — the keys follow the tap,
+    // 2026-10-10 ~17:20), and above the `h` view's allowlist and the
+    // authoring locks, neither of which governs a menu's open. Alt alone:
+    // every Ctrl+Alt chord is untouched.
+    if (menu_title_access_key(key, mods)) {
+        toggle_dropdown(dropdown_menu_for_access_key(key));
+        return;
     }
 
     // THE `h` HISTORY MODE — its own keys, then its allowlist. Placed HERE,

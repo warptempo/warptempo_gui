@@ -7246,7 +7246,9 @@ bool GuiInputHandler::route_color_picker_key(GuiKey key, GuiInputState mods) {
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
     // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (the unbound-keys
     // ruling, the two list owners' arm): the router is the whole vocabulary
-    // while the picker stands.
+    // while the picker stands — LESS THE MENU TITLES' ACCESS KEYS, which
+    // on_key never hands it (menu_title_access_key, architect 2026-10-10; a
+    // standing field is the one case it does, above).
     if (ctrl || shift || alt) return true;
     // ESC CLOSES AN OPEN LIST FIRST (architect 2026-10-07, Windows' and
     // GTK's own order): the chooser row's list (the scope's or the
@@ -7331,7 +7333,9 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // button means the key was not one of the ring's.
     if (route_modal_dialog_focus_key(key, mods)) return true;
 
-    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
+    // EVERY OTHER MODIFIED CHORD (the menu titles' Alt access keys never
+    // arrive: on_key lets them by, menu_title_access_key, architect
+    // 2026-10-10): CONSUMED, AND SILENTLY (architect
     // 2026-08-30, the unbound-keys ruling — "bound keys either show an effect
     // or a card, so an unbound key is identified by its silence"), the
     // player's own arm one mode over and for its reason: the router is the
@@ -8173,7 +8177,9 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (architect
+    // EVERY OTHER MODIFIED CHORD (the menu titles' Alt access keys never
+    // arrive: on_key lets them by, menu_title_access_key, architect
+    // 2026-10-10): CONSUMED, AND SILENTLY (architect
     // 2026-08-30, the unbound-keys ruling) — the mode's router IS the whole
     // vocabulary while it stands, so a chord that means something outside it
     // means nothing in here, and a press that does nothing is answered by the

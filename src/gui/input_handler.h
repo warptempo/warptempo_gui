@@ -1749,6 +1749,11 @@ struct GuiInputHandler {
     // run under an open popup.
     bool dropdown_key_blocked(GuiKey key, GuiInputState mods);
 
+    // A menu title's Alt+letter (architect 2026-10-10 ~17:20), which the three
+    // overlay routers let by to the access-key arm: the tap's open, wherever
+    // the tap opens its menu. The definition holds the rule.
+    bool menu_title_access_key(GuiKey key, GuiInputState mods) const;
+
     // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss
     // hook's clear: a pointer that has
     // left the window is on no button, and since the act moved to the release
@@ -4329,7 +4334,9 @@ private:
     // save (legal, no stop); Ctrl+Q
     // falls through to the quit road, which takes the player down at its
     // head (GuiPrompt::request_close, the compositor's close road too, so
-    // neither gesture restates the step). EVERY OTHER
+    // neither gesture restates the step). THE MENU TITLES' ACCESS KEYS (Alt+F,
+    // Alt+E, Alt+S) never reach this router: on_key lets them by to the
+    // tap's own open (menu_title_access_key, architect 2026-10-10). EVERY OTHER
     // CHORD IS CONSUMED (strict modifier validation's no-op). THE KEYBOARD IS
     // THE CLOSE ROAD ON PLASTIC AND THE CLOSE BUTTON IS THE ROAD ON GLASS
     // (architect: "ctrl+q should still work on laptop, tablet requires cancel
