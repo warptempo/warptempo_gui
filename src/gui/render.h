@@ -969,7 +969,12 @@ void install_true_colors(bool on);
 // channels meet. NO BOUNDARY LINES
 // AND NOTHING BETWEEN THE CHANNELS (architect 2026-10-09, "we have very
 // limited vertical real estate"): the two channels abut, Cool Edit's Bndy
-// clip guides are not drawn, and the chrome's two-line sunken well that stood
+// clip guides are not drawn — EXCEPT ONE ROW OF THE GRID'S OWN COLOR ON THE
+// PRESS SEAM (architect 2026-10-10 ~15:45, "so that you know that's the
+// scrub": a horizontal line in the `grid` role, one device px, under the
+// waveform with the grid, on waveform_press_seam_row, the row where a press's
+// act changes; it stands on the channels' meeting row and takes no row from
+// either, the ink painting over it as over every grid line) — and the chrome's two-line sunken well that stood
 // round the area (the theme's quartet, 2026-10-02 to 2026-10-09) is gone
 // with the content band it carved out of the area. THE CUES' AND THE
 // PLAYHEAD'S DOTS and the scanner span the canvas, their dot rows counted from
@@ -2717,7 +2722,8 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // render_canvas ALSO owns THE CANVAS'S LINES UNDER THE WAVEFORM (architect
 // 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, each
 // channel's horizontal grid, the channels' bands the plate's own
-// (waveform_channel_band) — no vertical grid. render_center_lines owns THE
+// (waveform_channel_band) — no vertical grid — plus THE PRESS SEAM'S LINE
+// (architect 2026-10-10, waveform_press_seam_row). render_center_lines owns THE
 // CENTER LINES, OVER THE WAVEFORM (architect 2026-10-09 evening): each
 // channel's zero row, one device px in `center`, painted live after the
 // plate's blit and before the dots (on_redraw's paint order) — the canvas's
@@ -2821,7 +2827,8 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // takes the canvas's halved-and-floored height, channel 0 [0, h) and channel
 // 1 [h, 2h), EXACTLY EQUAL AND ABUTTING — no row between them (architect
 // 2026-08-03, when the channel-split line retired: a spare row between would
-// read as a one-px gap in the ink). At an odd canvas height the spare row is
+// read as a one-px gap in the ink; the line that returned 2026-10-10 stands
+// ON the meeting row, waveform_press_seam_row, and takes no row of its own). At an odd canvas height the spare row is
 // the canvas's LAST, under channel 1, where the canvas's ground and lines
 // paint and no ink reaches. Its ZERO ROW is y + h / 2, the row
 // render_waveform's centre y + h · 0.5 floors to; its HALF HEIGHT H, the
@@ -2835,6 +2842,21 @@ struct WaveformChannelBand {
 inline WaveformChannelBand waveform_channel_band(int area_h, int channel) {
     const int ch_h = area_h / 2;
     return WaveformChannelBand{channel == 0 ? 0 : ch_h, ch_h};
+}
+
+// THE PRESS SEAM'S ROW, the ONE owner (architect 2026-10-10 ~15:45): the
+// first row of the waveform's lower half, `area.y + area.h / 2` — where a
+// press on the waveform changes act (above it a motionless release places the
+// playhead, from it down the release scrubs; waveform_lower_half,
+// input_pointer.cpp, reads this row, and render_canvas paints its line on it
+// from the same call, so the line and the press cannot drift). Integer
+// division, so an odd canvas gives the lower half the extra row. It is also
+// channel 1's first row (waveform_channel_band: band 1 starts at area.h / 2)
+// and the row where each channel's k = n grid line would fall (the band's
+// edge, the one the grid skips), so the seam line is the one grid-edge line
+// drawn, in the grid's `grid` role, one device px.
+inline int waveform_press_seam_row(const GuiRect& area) {
+    return area.y + area.h / 2;
 }
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's

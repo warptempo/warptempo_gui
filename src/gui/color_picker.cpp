@@ -478,17 +478,17 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int card_w  = scaled_px(kCardWidthPx);
     const int card_h  = 2 * edge + 2 * pad + inner_h;
 
-    // THE SEAT (the head): the foot kCardMarginPx above the on-screen
-    // keyboard's overlay — its band and the overlay's line above it
-    // (2026-10-10, onscreen_keyboard.h's overlay block), its rect whether or
-    // not it stands, the one rule on both devices — and the card rising from
+    // THE SEAT (the head, architect 2026-10-10 ~15:45): the card's top
+    // kCardBelowBandWPx under the toolbar band's bottom edge, read off the
+    // lane table (top_icon_row_area), its rect whether or not the keyboard
+    // stands, the one rule on both devices — and the card hanging down from
     // there.
-    const int kb_top = onscreen_keyboard::surface_rect(app).y -
-                       onscreen_keyboard::overlay_line_px();
+    const GuiRect band = top_icon_row_area(app);
+    const int top = band.y + band.h + scaled_px(kCardBelowBandWPx);
     l.edge_px = edge;
     l.card = GuiRect{app.color_picker.on_right ? app.width - margin - card_w
                                                : margin,
-                     kb_top - margin - card_h, card_w, card_h};
+                     top, card_w, card_h};
     l.inner = GuiRect{l.card.x + edge + pad, l.card.y + edge + pad,
                       card_w - 2 * (edge + pad), inner_h};
 

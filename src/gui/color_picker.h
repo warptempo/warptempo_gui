@@ -83,9 +83,9 @@ struct Viewport;
 //
 // WHAT IT IS. ONE CARD ON THE WELL, on the half of the window opposite the
 // opening tap (so the well under the other half stays in view while
-// picking), kCardMarginPx of air from the window's side, ITS FOOT
-// kCardMarginPx above the on-screen keyboard's band and the card rising
-// from there (THE SEAT below): the GROUND with a PLAIN RAISED two-line edge
+// picking), kCardMarginPx of air from the window's side, ITS TOP
+// kCardBelowBandWPx under the toolbar band's bottom edge and the card
+// hanging down from there (THE SEAT below): the GROUND with a PLAIN RAISED two-line edge
 // (a floating palette's edge, DrawEdge EDGE_RAISED, mitred as every
 // relief); 6 W of inner pad; NO caption and no title (slim). Inside it, left to right and
 // top to bottom, ON ONE GRID (THE GRID below):
@@ -207,42 +207,46 @@ struct Viewport;
 //     the bottom row to the pad below; and the six slider rows at ONE PITCH,
 //     kSliderRowPx = 17 W under every chrome (THE SEAT below says why 17).
 //
-// THE SEAT (architect 2026-10-08 ~21:40, replacing the height budget of
-// 2026-10-07: "the card can start from a little bit above the keyboard and
-// just go up; it's okay if it covers up some of that screen" — he works one
-// view at a time, and what the card covers comes back at its Close). THE
-// CARD'S FOOT IS ANCHORED: its bottom edge stands kCardMarginPx above the
-// on-screen keyboard's overlay — its line's top, the window's foot less the
-// band and the line, 135 W (2026-10-10, onscreen_keyboard.h's overlay block:
-// 2 x 4.5 of edge pad + 4 x 29 of key + 3 x 3 of gap + the 1-W line,
-// asserted below) — ONE RULE ON BOTH DEVICES, though the
-// laptop's band never rises, so the hex field types on glass with the card
-// in full view. The card rises from there: over the well and, were it
-// taller than the well, over the top strip's lanes on its half, covered
-// while it stands (a press there is the card's, the veil's rule). THE CARD
-// IS ONE HEIGHT, kCardHeightWPx = 174 W UNDER EVERY CHROME: edge + pad 6 +
+// THE SEAT (architect 2026-10-10 ~15:45, replacing the foot anchor of
+// 2026-10-08 ~21:40: "color picker position is good on tablet; the vertical
+// position on the laptop is too low — it should be placed relative to the
+// top icon row in the same way the tablet is"). THE CARD'S TOP IS ANCHORED:
+// its top edge stands kCardBelowBandWPx = 95 W under THE TOOLBAR BAND'S
+// BOTTOM EDGE (top_icon_row_area's y + h, main.cpp's lane record, so the
+// seat follows the lanes above it and not a literal row), and the card hangs
+// down kCardHeightWPx from there — ONE RULE ON BOTH DEVICES, the card
+// covering whatever stands under it while it stands (a press there is the
+// card's, the veil's rule; what it covers comes back at its Close). The 95
+// was chosen for the tablet: at 300 % the band's bottom edge is row 216 (the
+// caption 54, the menu row 60, the program frame's top row 3 and the band
+// 99), 95 W = 285 rows, so THE CARD'S TOP ROW IS 501 (500 was the aim, the
+// seat of the foot anchor it replaces, which a whole W could not reach: 94 W
+// gives 498) and its foot 501 + 522 = 1023, 11 rows above the on-screen
+// keyboard's line at 1034 (the band 1037–1439, 403 rows on the window's
+// foot, the line 1034–1036; onscreen_keyboard.h's overlay block: 2 x 4.5 of
+// edge pad + 4 x 29 of key + 3 x 3 of gap + the 1-W line, asserted below), so
+// the hex field types on glass with the card in full view. THE CARD IS ONE
+// HEIGHT, kCardHeightWPx = 174 W UNDER EVERY CHROME: edge + pad 6 +
 // chooser 21 + gap 6 + six rows of 17 + gap 6 + the bottom band + pad 6 +
 // edge, the band the push button's height — 2 + 6 + 21 + 6 + 102 + 6 + 23 +
 // 6 + 2 = 174 (win2000); a later chrome whose terms sum shorter keeps 174,
 // its bottom band the remainder (card_bottom_band_wpx: kCardHeightWPx less
 // the rest), the field, the swatch frame and the buttons centered in it.
 // Every term a whole Windows px, so
-// at 300 % the sum is exact. WHY 17 (the planner's call, stated to him):
-// the largest pitch at which the card still stands wholly inside the well
-// on the tablet, so the marker lane — its cues on BOTH halves, which a
-// press through the picker selects (THE PRESS THROUGH THE CARD below) —
-// stays in view; at 300 % the overlay's line stands on row 1034 (the band
-// 1037–1439, 403 rows on the window's foot), the card's foot 1034 − 12 =
-// 1022 and its TOP ROW 1022 − 522 = 500, 155 rows under the canvas's top
-// (345, under its top frame row, main.cpp's lane record). At the laptop's
-// 138 % (1920 x 1080 maximized) the band is 184 rows and the line 1, the
-// margin 6 and the card 235 (2 + 8 + 29 + 8 + 6 x 23 + 8 + 32 + 8 + 2), so
-// its top row is 1080 − 185 − 6 − 235 = 654, far below the well's top. A
-// pitch of 21, the chooser's own height, would make the right column seven
-// equal rows and the card 198, 72 device rows taller at 300 % — its top row
-// 428, still in the well since the keyboard stands on the window's foot
-// (2026-10-10); 17 was set when the band stood on row 8's top and 21 would
-// have reached the marker lane.
+// at 300 % the sum is exact. On the laptop (1920 x 1080 maximized, the
+// keyboard band never rising, so nothing there to clear) the band's bottom
+// edge is row 96 at 138 % (the caption 25, the menu row 27, the frame's top
+// row 1, the band 43), the card's top row 96 + 131 = 227 and its foot 227 +
+// 235 = 462 (2 + 8 + 29 + 8 + 6 x 23 + 8 + 32 + 8 + 2 rows), and at 200 % row 144 (36 + 40 + 2 +
+// 66), the top row 144 + 190 = 334 and the foot 334 + 348 = 682. WHY 17 (the
+// planner's call, stated to him): the largest pitch at which the card, hung
+// from the band, still stands above the on-screen keyboard on the tablet;
+// the static_assert below sums the lanes above the band, the 95, the card,
+// its margin and the keyboard's overlay in W against the tablet's 480 W of
+// height, and at 300 % it is exact to the row (72 + 95 + 174 + 4 + 135 =
+// 480). A pitch of 21, the chooser's own height, would make the right column
+// seven equal rows and the card 198, its foot at row 1095 — over the
+// keyboard's keys.
 //
 // THE PRESS THROUGH THE CARD (architect 2026-10-08 ~21:20: "pick flags so I
 // can toggle, test the selected flag without having to close the picker and
@@ -321,7 +325,7 @@ struct Viewport;
 // rounding rule): the card is the sum of its rounded parts.
 namespace color_picker {
 
-inline constexpr int kCardMarginPx    = 4;    // from the window's side and above the keyboard's overlay
+inline constexpr int kCardMarginPx    = 4;    // from the window's side
 // THE ONE GAP (the head's THE GRID, 2026-10-08 ~21:20): between every
 // block — the chooser row, the slider rows, the bottom row — and between
 // the chooser row's two combos and the bottom row's items; the card's pad
@@ -459,20 +463,24 @@ constexpr int card_bottom_band_wpx(const ChromeSpec& spec) {
 }
 static_assert(card_bottom_band_wpx(kChromeSpecWin2000) ==
               static_cast<int>(kChromeSpecWin2000.push_button_box_px));
-// WHY 17 (the head's THE SEAT): the card, its margin above the overlay and
-// the keyboard's overlay stand inside the rows from the tablet's well's top
-// to the window's foot at 300 % — main.cpp's lane record: win2000's canvas
-// 960 device rows = 320 W, the column's foot under it 6 W, the dock bar and
-// row 8 38 W and the program frame's bottom row 1 W, all of which the
-// overlay covers from the foot up (2026-10-10) — 174 + 4 + 135 = 313 of 365,
-// the card's top about 52 W under the canvas's top — so the marker lane and
-// the canvas's top frame row stay in view on both halves.
-inline constexpr int kTabletWellTightestWPx =
-    320 + program_column_foot_authored_h(kProgramSpec) +
-    program_dock_bar_authored_h(kProgramSpec) +
-    program_row8_authored_h(kProgramSpec) + kReliefLinePx;
-static_assert(kCardHeightWPx + kCardMarginPx + kKeyboardBandWPx <=
-              kTabletWellTightestWPx);
+// THE CARD'S SEAT, in W px (the head's THE SEAT): the toolbar band's bottom
+// edge stands below the caption, the menu row's head and content, the
+// program frame's top row and the band, and the card's top is
+// kCardBelowBandWPx under it (architect 2026-10-10 ~15:45).
+inline constexpr int kCardBelowBandWPx = 95;
+inline constexpr int kLanesAboveCardWPx =
+    static_cast<int>(kChromeSpecWin2000.caption_height_px +
+                     kChromeSpecWin2000.menu_row_head_px +
+                     kChromeSpecWin2000.menu_row_content_px) +
+    kReliefLinePx + program_band_authored_h(kProgramSpec);
+static_assert(kLanesAboveCardWPx == 72);
+// WHY 17 (the head's THE SEAT): the card hung from the band, its margin and
+// the keyboard's overlay stand inside the tablet's window height at 300 %,
+// 1440 rows = 480 W — 72 + 95 + 174 + 4 + 135 = 480.
+inline constexpr int kTabletWindowWPx = 480;
+static_assert(kLanesAboveCardWPx + kCardBelowBandWPx + kCardHeightWPx +
+                  kCardMarginPx + kKeyboardBandWPx <=
+              kTabletWindowWPx);
 
 // -- THE CHANNELS -----------------------------------------------------------
 

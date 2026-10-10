@@ -957,12 +957,14 @@ bool roster_index_click_face(int index) {
 // architect asked for — "get rid of the crosshairs but retain the scrub
 // action".
 //
-// It is the same arithmetic the retired 1px channel-split line was drawn on
-// (that line went 2026-08-03; the split it marked did not) — integer division,
-// so an odd-height area gives the lower half the extra row, which is what the
-// press has always done.
+// The split row is waveform_press_seam_row (render.h), the one owner the
+// canvas's seam line reads too (architect 2026-10-10: the 1-px line the
+// 2026-08-03 retirement removed returned in the grid's color on this row, so
+// the scrub half is visible; the cursor half stays closed) — integer
+// division, so an odd-height area gives the lower half the extra row, which is
+// what the press has always done.
 bool waveform_lower_half(const GuiRect& area, int y) {
-    return y >= area.y + area.h / 2;
+    return y >= waveform_press_seam_row(area);
 }
 
 // THE TOP STRIP'S TWO PLACEMENT LANES — the RULER and the MARKER lane — the
@@ -6219,8 +6221,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // picker's veil below, whose claim (color_picker_press) answers it as the
     // popup's; a press outside the box meets the exemptions as ever. AND SO
     // DOES THE CARD ITSELF (2026-10-08 ~21:40, color_picker.h's THE SEAT):
-    // the card rises from above the keyboard's band and, in a window short
-    // enough, over the top strip's lanes on its half, and where it stands
+    // the card hangs from the toolbar band's bottom edge and, in a window
+    // short enough, over row 8 and the keyboard's band, and where it stands
     // the pixel is the card's (color_picker_card_at, as published). On the
     // two devices it stays inside the well, so this term is the rule's
     // statement there rather than a road anyone walks.

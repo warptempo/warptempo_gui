@@ -177,7 +177,7 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
     cairo_rectangle(cr, area.x, area.y, area.w, area.h);
     cairo_fill(cr);
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
-    // horizontal grid alone — t = waveform_line_px() thick, ONE DEVICE PX
+    // horizontal grid and the press seam's line — t = waveform_line_px() thick, ONE DEVICE PX
     // ("on waveform → unscaled", the class's one inventory), each an aliased
     // integer rect inside the area. THE CENTER LINES STAND OVER THE WAVEFORM
     // (architect 2026-10-09 evening), render_center_lines below, a pass after
@@ -208,6 +208,12 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
             hline(zero + d);
         }
     }
+    // THE PRESS SEAM'S LINE (architect 2026-10-10 ~15:45): one device px in
+    // the grid's role on the row where a press changes act
+    // (waveform_press_seam_row, the same call waveform_lower_half reads, so
+    // the line and the press cannot drift), appended to the grid's path and
+    // filled with it; it coincides with the channels' meeting row.
+    canvas_hline(cr, area, waveform_press_seam_row(area) - area.y, t);
     set_waveform_source(cr, pal.grid);
     cairo_fill(cr);
     cairo_restore(cr);
