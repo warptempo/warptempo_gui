@@ -1585,6 +1585,11 @@ struct GuiInputHandler {
     // derives nothing and takes the recorded arm, which is -1 in every state that
     // can reach it.
     bool finish_dropdown_release(int x, int y);
+    // The open menu's row `item` RUN — close first, then the menu's own
+    // action — the release's body, shared since 2026-10-10 with the row's
+    // access key (dropdown_key_blocked). The caller has asked the row's
+    // painted enabled bit; `x` is the window x Pick Colors opens against.
+    void activate_dropdown_item(int item, int x);
     // Drop the popup's POINTER-DERIVED state — the hovered face, the armed
     // face and the press claim — at the hook fired by both the pointer-leave
     // and capability-loss edges (its only caller). Only capability loss ends
@@ -1738,8 +1743,10 @@ struct GuiInputHandler {
 
     // True when the open dropdown swallowed `key` — the popup-modal gate,
     // ranked directly under the prompt at the top of on_key. Bare Esc closes,
-    // Ctrl+Q closes and falls through to the close route, everything else is
-    // swallowed inert so no command can run under an open popup.
+    // Ctrl+Q closes and falls through to the close route, a row's access key
+    // (bare or Alt) runs that row and a title's Alt+letter switches menus
+    // (2026-10-10), and everything else is swallowed inert so no command can
+    // run under an open popup.
     bool dropdown_key_blocked(GuiKey key, GuiInputState mods);
 
     // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss

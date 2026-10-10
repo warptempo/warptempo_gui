@@ -303,6 +303,14 @@ namespace {
 //     both halves ("Toggle Read-Only (O)"); a single word is the same string
 //     in either class and settles nothing. The chord suffix "(Ctrl+S)" is not
 //     part of the name and is spelled by its own owner.
+//   * NO KEY HINTS IN UI TEXT, WITH ONE EXCEPTION: WINDOWS' UNDERLINED ACCESS
+//     KEY on the menu row's titles and on every row of their pull-downs,
+//     always shown (architect 2026-10-10, "part of the aesthetic and
+//     therefore important"; the letters at dropdown_title_access_key,
+//     app_state.h, the line at access_underline_rect below). It is an
+//     underline under a letter of the plain word, never a bracket and never
+//     on a modal button (the `[S]ave` spelling stays retired), and the label
+//     strings stay the plain words.
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
 //     iterations work in source view", "GUI Scale", "URL").
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
@@ -333,6 +341,7 @@ namespace {
 struct MenuButtonDef {
     RedesignButton id;
     const char*    label;
+    int            access;   // the access key's byte in `label`
 };
 // SETTINGS SITS LAST (architect 2026-08-03, moving Settings behind the
 // NAVIGATION anchor that then sat between it and File — the application's
@@ -355,7 +364,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // held face, so a button acting at the lift said nothing while it was down,
     // and the standard home for Quit is a File menu (kdenlive's own). Nothing
     // else moved — the label is shorter, so the float is 3px narrower at 100%.
-    {RedesignButton::File,       "File"},
+    {RedesignButton::File,       "File",     0},
     // THE EDIT MENU (architect 2026-08-20) — the row's THIRD dropdown again,
     // painted between File and Settings, the standard order and kdenlive's own.
     // A COMMAND MENU of THREE rows, the propagate family whole, and a
@@ -363,7 +372,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // same ruling, so this menu is those commands' one pointer home rather than
     // a second road to them. Nothing here needed a width or pad term — the row
     // is one left-to-right accumulation over this table.
-    {RedesignButton::Edit,       "Edit"},
+    {RedesignButton::Edit,       "Edit",     0},
     // (THE ITERATIONS MENU WAS THE ROW'S FOURTH DROPDOWN from 2026-08-27 to
     // 2026-09-04, painted between Edit and Settings — a COMMAND MENU of TWO
     // rows, "BPM Iterations" and "Grid Iterations", landing as "Series" and
@@ -382,7 +391,7 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // rather than a chord, and it shared the one popup state — see
     // AppState::Dropdown. Its removal is one row here and one enumerator there;
     // no width, pad or anchor term reads this table's length.)
-    {RedesignButton::Settings,   "Settings"},
+    {RedesignButton::Settings,   "Settings", 0},
     // (THE HELP MENU — architect 2026-09-03 — was the row's FIFTH dropdown
     // and the only one ever painted to the RIGHT of Settings, a COMMAND MENU
     // of ONE row, "AV Sync Stats", which was its chord, Shift+L. The
@@ -393,6 +402,24 @@ constexpr MenuButtonDef kMenuButtons[] = {
     // table simply lost a row: no width, pad,
     // total or anchor expression reads its length.)
 };
+// EACH TITLE'S MARKED LETTER IS ITS MENU'S KEY (architect 2026-10-10,
+// Windows' &File, &Edit, &Settings; the keys are app_state.h's
+// dropdown_title_access_key, the rule beside them): the word is this
+// table's, the key the keyboard's, and this ties the two.
+static_assert([] {
+    for (const MenuButtonDef& def : kMenuButtons) {
+        bool found = false;
+        for (const DropdownMenu m : kDropdownMenus) {
+            if (dropdown_anchor_button(m) != def.id) continue;
+            found = true;
+            if (access_key_of(def.label, def.access) !=
+                dropdown_title_access_key(m))
+                return false;
+        }
+        if (!found) return false;
+    }
+    return true;
+}(), "each menu title marks the letter of its Alt access key");
 
 // (ROW 2 — THE TOOLBAR — IS DELETED: 2026-08-12, the grand relayout's roster
 // commit. The labeled Save / Undo / Redo / Render lane of 2026-07-31
@@ -1220,6 +1247,62 @@ double line_baseline(const GuiFont& font, double line_y) {
     return line_y + std::nearbyint(gui_font_ascent_px(font));
 }
 
+// THE ACCESS KEY'S UNDERLINE — WINDOWS' MENU MNEMONIC (architect 2026-10-10:
+// "accelerators are not used on the tablet, but they are part of the
+// aesthetic and therefore important"; the letters and the keys are
+// app_state.h's, dropdown_title_access_key), ALWAYS DRAWN: on the menu row's
+// titles and on every row of their three pull-downs, nowhere else (not the
+// tooltips, the cards, the dialogs' buttons or the color picker's preset
+// menu). Windows 2000 hides it until Alt is held; ReactOS always draws it,
+// and so does this product — the tablet has no Alt to reveal it (the
+// departure, win2000_deviations.md).
+//
+// THE LINE IS DrawText's PREFIX UNDERLINE (user32's TEXT_DrawUnderscore)
+// read off his ReactOS capture, tmp/reactos-menu2.png (File's F, Edit's open
+// E, Undo's U): ONE W THICK, ONE W OF AIR UNDER THE BASELINE (the cell's
+// ascent + 1 — the F's last ink row 166, the line on 168), FROM THE MARKED
+// GLYPH'S PEN TO ITS ADVANCE LESS ONE W (LineTo stops one short: the F's
+// 6-px advance under a 5-px line, the U's 7 under 6). Both lengths are
+// scaled quanta (the off-waveform rule); the pens are the run's own, measured
+// through the shaping chokepoint (byte_offsets_px), never assumed. A run
+// painted in a color takes the line in that color; THE DISABLED EMBOSS takes
+// it in both copies, as DSS_DISABLED draws the whole text bitmap twice.
+GuiRect access_underline_rect(const text_shape::ShapedRun& run,
+                              const char* label, int access, double x,
+                              double baseline) {
+    const std::size_t a = static_cast<std::size_t>(access);
+    const std::vector<double> pen = text_shape::byte_offsets_px(
+        run, std::char_traits<char>::length(label));
+    const int line = scaled_px(1, 1);
+    const int x0 = static_cast<int>(std::nearbyint(x + pen[a]));
+    const int x1 = static_cast<int>(std::nearbyint(x + pen[a + 1])) - line;
+    const int y  = static_cast<int>(std::nearbyint(baseline)) + line;
+    return GuiRect{x0, y, std::max(x1 - x0, line), line};
+}
+// A menu label in `ink`, its access key underlined (`label` the run's own
+// text; a null label, the accelerator column's, paints the run alone).
+void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
+                     const char* label, int access, double x,
+                     double baseline, GuiColor ink) {
+    set_palette_source(cr, ink);
+    text_shape::show_shaped_run(cr, run, x, baseline);
+    if (label != nullptr)
+        paint_cell_rect(cr,
+                        access_underline_rect(run, label, access, x, baseline),
+                        ink);
+}
+// The same in THE DISABLED EMBOSS (show_embossed_run's two copies, render.h):
+// the Hilight copy one relief line right and down, its line with it, then
+// the Shadow copy at its place over it.
+void show_embossed_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
+                              const char* label, int access, double x,
+                              double baseline) {
+    const int off = relief_line_px();
+    show_access_run(cr, run, label, access, x + off, baseline + off,
+                    palette().hilight);
+    show_access_run(cr, run, label, access, x, baseline, palette().shadow);
+}
+
 // -- THE CAPTION (architect 2026-10-05) ----------------------------------------
 //
 // THE CAPTION BUTTONS' GLYPHS — MARLETT's characters as the caption buttons
@@ -1528,15 +1611,16 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // EMBOSS (show_embossed_run). NO HOVER FACE (architect 2026-10-02: "hover
     // is awkward with pen and sometimes flickers"; Windows 98's hot-tracked
     // raised title is not adopted, and ReactOS draws none) and no press face:
-    // a press opens the menu, whose open title is the cue. NO MNEMONIC
-    // UNDERLINES (ReactOS always draws them; Windows 2000 hides them until
-    // Alt).
+    // a press opens the menu, whose open title is the cue. THE MNEMONIC
+    // UNDERLINE STANDS ON EVERY FACE, ALWAYS (architect 2026-10-10, ReactOS's
+    // way — Windows 2000 hides it until Alt; access_underline_rect).
     //
     // EVERY ACTION ON THE FLOAT IS THE SAME KIND since 2026-08-13: each button
-    // TOGGLES A DROPDOWN — the roster's three non-chord actions, since no
-    // keyboard chord
-    // opens or closes a popup. The menus lead only where the keyboard already
-    // goes: the bare `;` key still opens the settings editor directly, and
+    // TOGGLES A DROPDOWN — the roster's three non-chord actions; the keyboard
+    // reaches the same toggle by the titles' Alt access keys since 2026-10-10
+    // (on_key's access-key arm), never through the chord table. The menus
+    // lead only where the keyboard already goes: the bare `;` key still opens
+    // the settings editor directly, and
     // File's three items are Ctrl+O, Ctrl+Alt+O and Ctrl+Q. (The left float
     // held a CHORD button until that day — Quit, dispatched through the shared
     // chord table like every other redesigned button; the act is the File menu's
@@ -1671,13 +1755,17 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         }
         // THE LABEL SEATS IN THE ANCHOR'S CONTENT, NOT ITS LANE (the face
         // row block above): the band's text seat (label_baseline, above).
+        // THE ACCESS KEY'S UNDERLINE rides the label in every face — at
+        // rest, pushed in under the open title, embossed when dead
+        // (access_underline_rect).
         const double label_x = static_cast<double>(x + pad_l + push);
         const double label_y = label_baseline + push;
         if (!face.enabled && !open_anchor) {
-            show_embossed_run(cr, run, label_x, label_y);
+            show_embossed_access_run(cr, run, def.label, def.access, label_x,
+                                     label_y);
         } else {
-            set_palette_source(cr, palette().label);
-            text_shape::show_shaped_run(cr, run, label_x, label_y);
+            show_access_run(cr, run, def.label, def.access, label_x, label_y,
+                            palette().label);
         }
 
         x += btn_w;
@@ -3839,19 +3927,20 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
         // a live row; a DISABLED row's label THE DISABLED EMBOSS
         // (show_embossed_run) — one disabled rule for the menu anchors and
         // the menus (architect 2026-10-03, Windows' DSS_DISABLED). A disabled
-        // row is never lit (the gate above).
+        // row is never lit (the gate above). THE LABEL CARRIES ITS ACCESS
+        // KEY'S UNDERLINE in whichever ink it takes, the emboss's two copies
+        // included (access_underline_rect); the accelerator column none.
         const GuiColor row_ink =
             lit ? palette().selected_text : palette().label;
         const auto show_row_run = [&](const text_shape::ShapedRun& r,
-                                      double rx) {
+                                      const char* label, double rx) {
             if (!enabled[i]) {
-                show_embossed_run(cr, r, rx, base);
+                show_embossed_access_run(cr, r, label, row.access, rx, base);
                 return;
             }
-            set_palette_source(cr, row_ink);
-            text_shape::show_shaped_run(cr, r, rx, base);
+            show_access_run(cr, r, label, row.access, rx, base, row_ink);
         };
-        show_row_run(runs[i], static_cast<double>(x + pad_l));
+        show_row_run(runs[i], row.label, static_cast<double>(x + pad_l));
         // THE CHECK MARK (paint_menu_check), in the label's ink.
         if (dropdown_item_checked(menu, i))
             paint_menu_check(cr, item, x + pad_l, enabled[i], row_ink);
@@ -3869,7 +3958,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             const double hot_x =
                 static_cast<double>(x + w - pad_r) -
                 std::nearbyint(hot_runs[i].width_px);
-            show_row_run(hot_runs[i], hot_x);
+            show_row_run(hot_runs[i], nullptr, hot_x);
         }
         iy += item_h;
     }

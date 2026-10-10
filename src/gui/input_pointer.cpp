@@ -59,7 +59,8 @@ namespace {
 // SETTINGS anchors (re-greped 2026-09-09 against kDropdownMenus, the Help
 // anchor having left with the top strip relayout), each of
 // whose action is a POPUP TOGGLE,
-// not a chord at all, since no keyboard chord opens or closes a dropdown. All
+// not a chord at all — the keyboard reaches the toggle only by the titles' Alt
+// access keys (2026-10-10, on_key's access-key arm), never this table. All
 // three are spelled at their own claim, which walks kDropdownMenus rather than
 // naming them.
 // THE ABSENTEES ARE NAMED IN ONE PLACE ONLY: the static_assert below this
@@ -6622,8 +6623,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // membership is kDropdownMenus (app_state.h) and this file's
                 // ONE enumeration of it is the band-claim block above; nothing
                 // is re-listed here. Each anchor's action is a POPUP TOGGLE,
-                // which no keyboard chord performs, so they take the walk below
-                // rather than a row in the chord table. Their ITEMS lead to
+                // which no roster chord performs (the titles' Alt access keys
+                // reach the same toggle_dropdown, 2026-10-10), so they take the
+                // walk below rather than a row in the chord table. Their
+                // ITEMS lead to
                 // routes the keyboard already has — the bare `;` still opens
                 // the settings editor DIRECTLY, and every File and Edit row
                 // carries its own accelerator — so a
@@ -6975,8 +6978,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // nothing on the pointer at all. An alt-exact press falls to the
         // strict-modifier discard below, a consumed no-op like every other
         // unbound combination; on the keyboard alt survives only inside the
-        // Ctrl+Alt chords, whose inventory is the alt vocabulary at
-        // chord_is_bound, gui_input.h.)
+        // Ctrl+Alt chords and the menu titles' Alt access keys (2026-10-10),
+        // whose inventory is the alt vocabulary at chord_is_bound,
+        // gui_input.h.)
 
         // Ctrl-exact left press splits by surface. On a top-strip MARKER it is
         // the individual membership toggle + land on the resulting focus (the
@@ -9577,6 +9581,16 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // afterwards can move an arm this button-down no longer owns.
     app.dropdown.press_began_on_item = false;
     if (armed < 0) return true;   // nothing was lit; consumed, menu stays up
+    activate_dropdown_item(armed, x);
+    return true;
+}
+
+// THE ROW'S ACT — the release's body above, and since 2026-10-10 the access
+// key's too (dropdown_key_blocked: a row's letter under an open menu runs
+// exactly what its release runs; the callers ask the row's painted enabled
+// bit first). `x` is the lift's window x, Pick Colors' one reader; the key
+// passes the painted row's center.
+void GuiInputHandler::activate_dropdown_item(int armed, int x) {
     const DropdownMenu menu = app.dropdown.menu;
     app.dropdown.pressed_item = -1;
     // CLOSE FIRST, THEN ACT — the popup is gone before anything the item does
@@ -9617,7 +9631,7 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
         chord.shift = it.shift;
         chord.alt   = it.alt;
         on_key(it.key, chord);
-        return true;
+        return;
     }
     // SETTINGS: the editor's open is its own ordinary route, prefilled through
     // the one recall serializer.
@@ -9639,16 +9653,15 @@ bool GuiInputHandler::finish_dropdown_release(int x, int y) {
     // opener carries its own refusals.
     if (item.act == SettingsPopupAct::PickColors) {
         color_picker.open(x);
-        return true;
+        return;
     }
     // TRUE COLORS (2026-10-08): the conversion's toggle, its apply shape
     // whole at its one act.
     if (item.act == SettingsPopupAct::TrueColors) {
         toggle_true_colors();
-        return true;
+        return;
     }
     settings_editor.open_prefilled(item.key);
-    return true;
 }
 
 // THE DROPDOWN'S TWO WRITERS. Both damage the same pair of rects —

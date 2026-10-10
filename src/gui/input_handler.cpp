@@ -274,7 +274,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // gate swallows every chord it does not name, which is the whole point: a
     // popup that let `s` drop a marker underneath it would be a trap.
     //
-    // It admits exactly two keys, and both DISMISS:
+    // It admits two keys that DISMISS, and since 2026-10-10 the ACCESS KEYS
+    // (dropdown_key_blocked: a row's letter, bare or with Alt, runs the row as
+    // its release does; a title's Alt+letter is that title's press):
     //   - bare Esc CLOSES it, and that is ONE OF THE BARE-ESC BINDINGS (the
     //     enumeration further down carries the full list, the count and this
     //     rank). ONE
@@ -288,7 +290,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //     below, matching every other modal's Ctrl+Q hatch.
     // A popup and an editor CANNOT be open together, so this gate can never
     // contend with route_modal_editor_key — and the claim rests on TWO
-    // mechanisms, one per class. The popup opens only from row 1, and while a
+    // mechanisms, one per class. The popup opens only from row 1 or the
+    // titles' Alt access keys, whose arm stands below the editor gate (so no
+    // editor is up when they open one), and while a
     // DIALOG editor is up the press that would open it dies at the dialog's
     // veil in on_button_press, which since 2026-08-13 swallows the roster
     // whole. The pointer-transparent FLAG
@@ -732,6 +736,29 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  kKeysDuringDrag);
         return;
+    }
+
+    // THE MENU TITLES' ACCESS KEYS (architect 2026-10-10; the rule and the
+    // letters at dropdown_title_access_key, app_state.h): Alt+F, Alt+E and
+    // Alt+S are the File, Edit and Settings titles' PRESS — toggle_dropdown,
+    // the one open road, which refuses a dead anchor on its painted face as
+    // the press does (menu_anchor_live: in the `h` view, under the folder
+    // overlay and the color picker only File is live). AT THE PRESS, as
+    // every hotkey (the timing doctrine, input_handler.h). RANKED HERE,
+    // under every keyboard owner — a prompt, the open menu's own gate (where
+    // a row's letter and the titles' switch are dropdown_key_blocked's), the
+    // render player's, the picker's and the color picker's routers (each
+    // the whole vocabulary while it stands, so the three consume these as
+    // every chord but their hatches), the load, the editors (a field types
+    // or swallows; never a menu) and the gestures — and above the `h`
+    // view's allowlist and the authoring locks, neither of which governs a
+    // menu's open. Alt alone: every Ctrl+Alt chord is untouched.
+    if (alt && !ctrl && !shift) {
+        const DropdownMenu m = dropdown_menu_for_access_key(key);
+        if (m != DropdownMenu::None) {
+            toggle_dropdown(m);
+            return;
+        }
     }
 
     // THE `h` HISTORY MODE — its own keys, then its allowlist. Placed HERE,

@@ -934,7 +934,8 @@ void GuiInputHandler::run_iter_tie_toggle() {
 // rather than an unreachable case. EVERY USER-ACT CLOSER STILL CANNOT FIRE WITH
 // ONE UP, positionally: bare `h`, the Ctrl+S checkpoint act, the bare `v` revert
 // and the loads behind `'` are all KEYBOARD routes dispatching BELOW on_key's
-// popup gate, which swallows every chord but Ctrl+Q while a menu is up (Ctrl+Q
+// popup gate, which swallows every chord but Ctrl+Q and the open menu's access
+// keys while a menu is up (none of them is one of these; Ctrl+Q
 // closes the popup itself and then takes the close-window route, which ends the
 // process rather than the view; the WM close is the same), and there is no
 // pointer closer at all. THE PREFETCH ARRIVAL IS THE EXCEPTION — it runs off a
@@ -1684,8 +1685,9 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 // reached from on_key's main body, BELOW every gate that must refuse an entry,
 // so each refusal is the existing gate's and there is no second copy to
 // drift. In on_key's own order — the prompt swallow (returns unconditionally),
-// the open dropdown (dropdown_key_blocked: every chord but Ctrl+Q is inert while
-// a popup is up), loading-or-absent audio (returns), the editor text drag, the
+// the open dropdown (dropdown_key_blocked: every chord but Ctrl+Q and the
+// menus' access keys — no `h` among them — is inert while a popup is up),
+// loading-or-absent audio (returns), the editor text drag, the
 // keyboard-modal editor gate (keyboard_modal_editor_active + modal_editor_key_-
 // blocked, and a printable `h` is a PrintableKey, so it is not merely dropped
 // but TYPED — the editor's own handler consumes it and returns above this
@@ -4277,8 +4279,10 @@ void GuiInputHandler::run_history_revert() {
 // nothing here, and the
 // Navigation menu's 2026-08-15 deletion needed nothing either: the popup's bare
 // Esc is ONE bare-Esc binding through all of it, never two). Returns true when the press is SWALLOWED (the
-// popup consumed it, or it was inert); false only for Ctrl+Q, which closes the
-// popup and then lets on_key run the close route.
+// popup consumed it, or it was inert, or an access key ran a row or a title —
+// a row's command dispatching through on_key with the popup already closed);
+// false only for Ctrl+Q, which closes the popup and then lets on_key run the
+// close route.
 //
 // Bare-exact and ctrl-exact respectively, like every other modal predicate here:
 // a modified Escape and a shifted Ctrl+Q carry no binding anywhere, so they fall
@@ -4295,6 +4299,35 @@ bool GuiInputHandler::dropdown_key_blocked(GuiKey key, GuiInputState mods) {
     if (key == GuiKeys::Q && mods.ctrl && !mods.shift && !mods.alt) {
         close_dropdown();
         return false;   // fall through to the close route
+    }
+    // THE ACCESS KEYS (architect 2026-10-10; the letters and the rule at
+    // dropdown_title_access_key, app_state.h): A ROW'S LETTER, BARE OR WITH
+    // ALT, RUNS THAT ROW exactly as its release does (activate_dropdown_item,
+    // the release's own body, at the painted row's center x), its painted
+    // enabled bit asked first — a greyed row's letter is consumed doing
+    // nothing, as a press on it is. The open menu's rows answer before the
+    // titles (Windows' precedence); then A TITLE'S Alt+LETTER is that title's
+    // press, toggle_dropdown — another menu switches, the open menu's own
+    // title closes it, a dead anchor refuses on its painted face. Ctrl and
+    // Shift spell none of them, so every Ctrl+Alt chord keeps its swallow.
+    if (!mods.ctrl && !mods.shift) {
+        const int item =
+            dropdown_item_for_access_key(app.dropdown.menu, key);
+        if (item >= 0) {
+            const std::size_t at = static_cast<std::size_t>(item);
+            if (app.dropdown.item_enabled[at]) {
+                const GuiRect& r = app.dropdown.item_rects[at];
+                activate_dropdown_item(item, r.x + r.w / 2);
+            }
+            return true;
+        }
+        if (mods.alt) {
+            const DropdownMenu m = dropdown_menu_for_access_key(key);
+            if (m != DropdownMenu::None) {
+                toggle_dropdown(m);
+                return true;
+            }
+        }
     }
     // Every other chord is inert while the popup is up — AND SILENT, a BOUND
     // one included: it is a RULED silence (notifications.h's what-stays-silent

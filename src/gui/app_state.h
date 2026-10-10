@@ -2014,8 +2014,9 @@ struct TrimBarPressSeed {
 // 2026-08-15, ITERATIONS a fourth from 2026-08-27 until its own deletion on
 // 2026-09-04, and HELP a fourth from 2026-09-03 until its deletion on
 // 2026-09-09): each press TOGGLES ITS OWN
-// DROPDOWN, which no keyboard chord does, and all three are spelled at the menu
-// claim rather than in the chord table.
+// DROPDOWN — which the keyboard reaches only by the titles' Alt access keys
+// (2026-10-10, dropdown_title_access_key), never as a roster chord — and all
+// three are spelled at the menu claim rather than in the chord table.
 //
 // The enum ORDER is painted order but for the bottom row's transport three
 // (above), and redesign_button_index depends on the
@@ -3402,6 +3403,57 @@ inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
     return RedesignButton::Settings;
 }
 
+// THE MENU ROW'S ACCESS KEYS (architect 2026-10-10: "accelerators are not
+// used on the tablet, but they are part of the aesthetic and therefore
+// important") — Windows' underlined letter on every menu title and every
+// pull-down row, ALWAYS SHOWN (Windows 2000 hides them until Alt is held; a
+// recorded departure, win2000_deviations.md's product section: the tablet
+// has no Alt to reveal them). THE LETTER IS DATA ON EACH ROW: a BYTE INDEX
+// into the row's plain label (`access`), so the label stays the plain word
+// wherever else it is read and Windows' `&` spelling never enters a string;
+// the painter underlines that glyph (paint_access_underline,
+// paint_handler.cpp) and the keyboard reads the same index through
+// access_key_of. THE TITLES are Windows' own: Alt+F, Alt+E and Alt+S —
+// the title words are the painter's (kMenuButtons, paint_handler.cpp, whose
+// static_assert ties each word's marked letter to the key below); the rows'
+// letters are the planner's pick under Windows' habit (the first letter
+// where free in its menu, else a distinctive later one), unique within each
+// menu (dropdown_access_keys_valid's static_assert).
+//
+// THE KEYS (the act's road at GuiInputHandler::dropdown_key_blocked and
+// on_key's access-key arm): with no menu open, Alt + a title's letter is
+// that title's press — toggle_dropdown, the one open road, refusing a dead
+// anchor on its painted face as the press does; while a menu is open, a
+// row's letter, bare or with Alt, is that row's release
+// (activate_dropdown_item), a greyed row's letter consumed doing nothing as
+// its press is, and another title's Alt+letter switches menus. THE OPEN
+// MENU'S ROWS ANSWER FIRST, Windows' own precedence (user32's menu loop
+// matches a key in the deepest open menu): Settings' Font (F) answers Alt+F
+// before the File title does, Edit's Paste Phase Reset State (S) Alt+S
+// before Settings.
+//
+// AN ASCII LETTER'S KEY: the letter folded to the lowercase keysym every
+// GuiKeys letter is (gui_input.h), the platform case-folding alike.
+inline constexpr GuiKey access_key_of(const char* label, int access) {
+    const char c = label[access];
+    return static_cast<GuiKey>(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
+}
+inline constexpr GuiKey dropdown_title_access_key(DropdownMenu m) {
+    switch (m) {
+        case DropdownMenu::File:     return GuiKeys::F;
+        case DropdownMenu::Edit:     return GuiKeys::E;
+        case DropdownMenu::Settings: return GuiKeys::S;
+        case DropdownMenu::None:     break;
+    }
+    return 0;
+}
+// The menu whose title answers `key` under Alt, or None.
+inline constexpr DropdownMenu dropdown_menu_for_access_key(GuiKey key) {
+    for (const DropdownMenu m : kDropdownMenus)
+        if (dropdown_title_access_key(m) == key) return m;
+    return DropdownMenu::None;
+}
+
 // IS THIS BUTTON A MENU ANCHOR? DERIVED from the menu list above through the
 // anchor owner, never a second list — so a menu added here is an anchor
 // everywhere at once (the press claim, the history partition). The COLLAPSE walk asked it too until 2026-08-13, then asked
@@ -3491,6 +3543,7 @@ inline constexpr SettingsChoiceSource kFontChoiceSource{
 };
 struct SettingsPopupItem {
     const char*                 label;
+    int                         access;   // the access key's byte in `label`
     const char*                 key;
     bool                        separator_before;
     SettingsPopupAct            act     = SettingsPopupAct::EditKey;
@@ -3595,20 +3648,31 @@ struct SettingsPopupItem {
 // (dropdown_item_checked; the dropdown painter); its release flips the bit
 // (GuiInputHandler::toggle_true_colors) and cards nothing; it grays as every
 // Settings row does.
+//
+// THE ACCESS KEYS (architect 2026-10-10; the rule at
+// dropdown_title_access_key): &Title, &Notes, &URL, Co&ver, &GUI Scale,
+// Projects &Repository, Projects &Path, &Icons, &Font, Pick &Colors and True
+// C&olors — the O of Colors, not the planner's E of True: bare `e` is the
+// left mouse button at the platform boundary (kLeftClickKey, gui_input.h),
+// so an E row could never answer its own letter while the menu stands.
 inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
-    {"Title",               "title",         false},
-    {"Notes",               "notes",         false},
-    {"URL",                 "url",           false},
-    {"Cover",               "cover",         false},
-    {"GUI Scale",           "gui_scale",     true},
-    {"Projects Repository", "projects_repo", false},
-    {"Projects Path",       "projects_path", false},
-    {"Icons",               "icons",         false, SettingsPopupAct::EditKey,
-     SettingsEditorKind::Choice, &kIconSetChoiceSource},
-    {"Font",                "font",          false, SettingsPopupAct::EditKey,
-     SettingsEditorKind::Choice, &kFontChoiceSource},
-    {"Pick Colors",        nullptr,         true, SettingsPopupAct::PickColors},
-    {"True Colors",         nullptr,         false, SettingsPopupAct::TrueColors},
+    {"Title",               0,  "title",         false},
+    {"Notes",               0,  "notes",         false},
+    {"URL",                 0,  "url",           false},
+    {"Cover",               2,  "cover",         false},
+    {"GUI Scale",           0,  "gui_scale",     true},
+    {"Projects Repository", 9,  "projects_repo", false},
+    {"Projects Path",       9,  "projects_path", false},
+    {"Icons",               0,  "icons",         false,
+     SettingsPopupAct::EditKey, SettingsEditorKind::Choice,
+     &kIconSetChoiceSource},
+    {"Font",                0,  "font",          false,
+     SettingsPopupAct::EditKey, SettingsEditorKind::Choice,
+     &kFontChoiceSource},
+    {"Pick Colors",         5,  nullptr,         true,
+     SettingsPopupAct::PickColors},
+    {"True Colors",         6,  nullptr,         false,
+     SettingsPopupAct::TrueColors},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
@@ -3671,6 +3735,7 @@ inline constexpr const SettingsPopupItem* settings_choice_item(
 // forking the release.
 struct CommandPopupItem {
     const char* label;
+    int         access;   // the access key's byte in `label`
     const char* hotkey;   // the accelerator column's text, right-aligned
     GuiKey      key;
     bool        ctrl;
@@ -3722,7 +3787,9 @@ struct CommandPopupItem {
 // IT DISPLAYS ITS HOTKEY, by explicit architect design and against nothing: the
 // no-gesture-hints-in-UI preference is about hint PROSE inside labels, and the
 // architect ordered kdenlive's accelerator column on the command menus (its own
-// crop, dropdown_full_hotkeys.png, is the anatomy). The Navigation menu the
+// crop, dropdown_full_hotkeys.png, is the anatomy). EVERY ROW ALSO WEARS ITS
+// ACCESS KEY, Windows' underlined letter, the rule's other ruled exception
+// (architect 2026-10-10, dropdown_title_access_key). The Navigation menu the
 // column was authored for is deleted, and the column's metrics and its layout
 // term survive on the command tables that remain — this one and Edit's three
 // rows (Help's one stood 2026-09-03..09) — so nothing about it is
@@ -3760,10 +3827,13 @@ struct CommandPopupItem {
 // — while the icon row stands Open Project and Save together in one group
 // with none between (redesign_button_opens_icon_group). The deliberate
 // asymmetry is that ruling.
+//
+// THE ACCESS KEYS (architect 2026-10-10; the rule at
+// dropdown_title_access_key): &Open Project, &Revert, &Quit.
 inline constexpr CommandPopupItem kFilePopupItems[] = {
-    {"Open Project", "Ctrl+O", GuiKeys::O, true,  false, false, false},
-    {"Revert",       "Ctrl+Alt+O", GuiKeys::O, true, false, true, false},
-    {"Quit", "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
+    {"Open Project", 0, "Ctrl+O", GuiKeys::O, true,  false, false, false},
+    {"Revert",       0, "Ctrl+Alt+O", GuiKeys::O, true, false, true, false},
+    {"Quit",         0, "Ctrl+Q", GuiKeys::Q, true,  false, false, true},
 };
 inline constexpr int kFilePopupItemCount =
     static_cast<int>(std::size(kFilePopupItems));
@@ -3806,12 +3876,16 @@ inline constexpr int kFilePopupItemCount =
 // locks, the folder overlay, the load. The chords still
 // card every one of those refusals (2026-08-30, the strictness ruling).
 // (RECORD: "AN ITEM NEVER GREYS" stood here until 2026-09-24.)
+//
+// THE ACCESS KEYS (architect 2026-10-10; the rule at
+// dropdown_title_access_key): &Copy Phase Resets, &Paste Phase Resets and
+// Paste Phase Reset &State, the S of State.
 inline constexpr CommandPopupItem kEditPopupItems[] = {
-    {"Copy Phase Resets",      "Ctrl+P",           GuiKeys::P,
+    {"Copy Phase Resets",       0,  "Ctrl+P",           GuiKeys::P,
      true,  false, false, false},
-    {"Paste Phase Resets",     "Ctrl+Alt+P",       GuiKeys::P,
+    {"Paste Phase Resets",      0,  "Ctrl+Alt+P",       GuiKeys::P,
      true,  false, true,  false},
-    {"Paste Phase Reset State", "Ctrl+Alt+Shift+P", GuiKeys::P,
+    {"Paste Phase Reset State", 18, "Ctrl+Alt+Shift+P", GuiKeys::P,
      true,  true,  true,  false},
 };
 inline constexpr int kEditPopupItemCount =
@@ -3943,6 +4017,7 @@ inline constexpr const CommandPopupItem& command_popup_item(DropdownMenu m,
 // release body switches on the menu once. One shared view, two typed actions.
 struct DropdownRow {
     const char* label;
+    int         access;   // the access key's byte in `label`
     const char* hotkey;   // nullptr -> this menu has no accelerator column
     bool        separator_before;
 };
@@ -3958,11 +4033,49 @@ inline constexpr int dropdown_item_count(DropdownMenu m) {
 inline constexpr DropdownRow dropdown_row(DropdownMenu m, int i) {
     if (dropdown_is_command_menu(m)) {
         const CommandPopupItem& it = command_popup_item(m, i);
-        return {it.label, it.hotkey, it.separator_before};
+        return {it.label, it.access, it.hotkey, it.separator_before};
     }
     const SettingsPopupItem& it = kSettingsPopupItems[static_cast<size_t>(i)];
-    return {it.label, nullptr, it.separator_before};
+    return {it.label, it.access, nullptr, it.separator_before};
 }
+
+// THE ROW A KEY NAMES IN AN OPEN MENU (the access keys' rule at
+// dropdown_title_access_key), or -1: the row whose marked letter is `key`.
+inline constexpr int dropdown_item_for_access_key(DropdownMenu m, GuiKey key) {
+    for (int i = 0; i < dropdown_item_count(m); ++i) {
+        const DropdownRow row = dropdown_row(m, i);
+        if (access_key_of(row.label, row.access) == key) return i;
+    }
+    return -1;
+}
+// EVERY ROW'S MARK IS A LETTER OF ITS OWN LABEL, UNIQUE IN ITS MENU, and
+// never bare `e` — the left mouse button at the platform boundary
+// (kLeftClickKey), which no open menu could hear as its letter.
+inline constexpr bool dropdown_access_keys_valid(DropdownMenu m) {
+    for (int i = 0; i < dropdown_item_count(m); ++i) {
+        const DropdownRow row = dropdown_row(m, i);
+        if (row.access < 0 ||
+            static_cast<std::size_t>(row.access) >=
+                std::char_traits<char>::length(row.label))
+            return false;
+        const GuiKey k = access_key_of(row.label, row.access);
+        if (k < GuiKeys::A || k > GuiKeys::Z || k == kLeftClickKey)
+            return false;
+        if (dropdown_item_for_access_key(m, k) != i) return false;
+    }
+    return true;
+}
+static_assert(dropdown_access_keys_valid(DropdownMenu::File) &&
+                  dropdown_access_keys_valid(DropdownMenu::Edit) &&
+                  dropdown_access_keys_valid(DropdownMenu::Settings),
+              "each pull-down row marks one letter of its own label, unique "
+              "in its menu and never bare `e` (the left mouse button)");
+static_assert(dropdown_menu_for_access_key(GuiKeys::F) == DropdownMenu::File &&
+                  dropdown_menu_for_access_key(GuiKeys::E) ==
+                      DropdownMenu::Edit &&
+                  dropdown_menu_for_access_key(GuiKeys::S) ==
+                      DropdownMenu::Settings,
+              "the titles' access keys are Windows' own: Alt+F, Alt+E, Alt+S");
 
 // IS THIS ROW CHECKED — the one menu row with a state, Settings' "True
 // Colors" (architect 2026-10-08), answers the live bit

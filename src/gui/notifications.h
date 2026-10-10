@@ -80,7 +80,9 @@
 //     admissions fork their own truthful sentences ("There is nothing to
 //     load" for bare `'`, "Select a change to revert" / kTabReadOnlyCard for
 //     bare `v`). A card naming the chord pressed says what happened, never
-//     what to press instead — it is not a gesture hint.
+//     what to press instead — it is not a gesture hint. (UI text carries no
+//     key hint at all but one class: the menus' underlined access keys,
+//     architect 2026-10-10 — paint_handler.cpp's capitalization block.)
 //   * THE VERBS' OWN REFUSALS, naming a subject or a view, never a chord: the
 //     home-view binding ("Markers are placed in source view", "Markers are
 //     moved in source view", Shift+S's "Already in phase reset view"); the
@@ -249,9 +251,10 @@
 //     Esc inside a drag gate is NOT this case: Esc is bound, so the gate
 //     cards it with every other bound key.
 //   * EVERY CHORD UNDER AN OPEN MENU DROPDOWN (2026-09-02): dropdown_key_blocked
-//     consumes everything but bare Esc and Ctrl+Q, bound chords included,
-//     without asking chord_is_bound — a popup is a question on screen, the
-//     standing prompt's own silence.
+//     consumes everything but bare Esc, Ctrl+Q and the menus' access keys
+//     (2026-10-10), bound chords included, without asking chord_is_bound — a
+//     popup is a question on screen, the standing prompt's own silence; a
+//     greyed row's letter is consumed silently, as its press is.
 //   * THE T+W POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY-LANE
 //     DOUBLE-CLICK DROP (the warp column's alone), because a gesture that
 //     never begins is its own answer; the double-click drop's READ-ONLY arm is
