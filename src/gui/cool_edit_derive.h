@@ -585,4 +585,62 @@ static_assert([] {
 static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
               within_one(0x5E5E5E, 0x5D5D5D));
 
+// -- THE DISABLED CUE'S FADED LOOK (architect 2026-10-10 ~12:20) ---------------
+
+// "Disabled markers should basically not be [very legible]. They just need to
+// show themselves as existing … the arrow needs to be legible for me, but the
+// text doesn't … since it's disabled, it's inert": a disabled cue (and every
+// inert label — a tie follower's cells) wears its LIVE colors BLENDED TOWARD
+// THE PANEL'S FACE, "an opacity look … not actually opaque" — three DERIVED
+// SOLID COLORS (the palette composites nothing at paint time; each a
+// precomputed per-channel mix, round(a + t·(b − a)), filled at every install
+// of the program's words so a pick of Face, `cue` or `range` moves them
+// live; render.cpp's fill_program_palette):
+//   the TRIANGLE   the kind's own triangle color (the `cue` red, or the
+//                  `range` blue of a history ADDED flag) 45 % toward the Face;
+//   its SHADOW     `cue_shadow` 45 % toward the Face;
+//   the LABEL      the resting label's tone (`hilight`, Cool Edit's cue-label
+//                  ink, re-verified on three captures 2026-10-10) 65 % toward
+//                  the Face — "blended further … a faded, opaque sort of
+//                  look", the text legible least of the three.
+// A selected inert segment keeps the selected label color (the chrome's
+// `label`) so its selection still shows; a disabled cue has no dots.
+inline constexpr double kDisabledTriangleMix = 0.45;
+inline constexpr double kDisabledShadowMix   = 0.45;
+inline constexpr double kDisabledLabelMix    = 0.65;
+
+// Each channel of `from` moved fraction `t` of the way to `to`, rounded half
+// up to its byte.
+constexpr uint32_t mix_toward(uint32_t from, uint32_t to, double t) {
+    uint32_t out = 0;
+    for (int shift = 16; shift >= 0; shift -= 8) {
+        const double a = static_cast<double>((from >> shift) & 0xFF);
+        const double b = static_cast<double>((to >> shift) & 0xFF);
+        out |= static_cast<uint32_t>(a + t * (b - a) + 0.5) << shift;
+    }
+    return out;
+}
+// The triangle of the live color `triangle` (the `cue` or the `range`),
+// faded toward `face`.
+constexpr uint32_t disabled_triangle(uint32_t triangle, uint32_t face) {
+    return mix_toward(triangle, face, kDisabledTriangleMix);
+}
+// The cue shadow of `face`, faded toward it.
+constexpr uint32_t disabled_cue_shadow(uint32_t face) {
+    return mix_toward(tone_of(named_tone("cue_shadow"), face, 0), face,
+                      kDisabledShadowMix);
+}
+// The resting label tone of `face`, faded toward it.
+constexpr uint32_t disabled_cue_label(uint32_t face) {
+    return mix_toward(tone_of(named_tone("hilight"), face, 0), face,
+                      kDisabledLabelMix);
+}
+// The GuiPalette members these fill (the faded cue triangle, the faded
+// range triangle, the faded shadow, the faded label), counted by
+// palette_file.cpp's coverage check.
+inline constexpr std::size_t kDisabledCueMemberCount = 4;
+// A mix of 0 is the source and a mix of 1 the target, per channel.
+static_assert(mix_toward(0x102030, 0xF0E0D0, 0.0) == 0x102030 &&
+              mix_toward(0x102030, 0xF0E0D0, 1.0) == 0xF0E0D0);
+
 } // namespace cool_edit_derive

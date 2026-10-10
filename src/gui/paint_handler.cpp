@@ -4298,7 +4298,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             cairo_rectangle(cr, cx, head_top, wave_w, rows);
             cairo_clip(cr);
             paint_ce_cue_triangle(cr, cx + col, head_top,
-                                  palette().playhead_stem);
+                                  palette().playhead_stem,
+                                  palette().ce_cue_shadow);
             cairo_restore(cr);
             // THE HEAD'S HIT (architect 2026-10-09 ~17:40, the head drag;
             // point_on_playhead_head, input_pointer.cpp): EXACTLY THE PAINTED

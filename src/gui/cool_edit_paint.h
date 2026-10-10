@@ -210,4 +210,8 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // the one owner every extent reads); the caller's clip cuts it. (Aliased
 // rows of cells stood until the rule reached the program, 2026-10-09; the
 // apex on the u-wide cell's centre, col + u / 2, until ~14:35.)
-void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color);
+// `shadow` is the shadow's color: `ce_cue_shadow` for a live cue and the
+// playhead's head, the faded `ce_off_cue_shadow` for a disabled cue
+// (2026-10-10, cool_edit_derive.h's faded look).
+void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
+                           GuiColor shadow);

@@ -1629,9 +1629,10 @@ enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
 // render.h, owns the look): the triangle's color, which of the two dot
 // colors stand on its stem (no dots at all on a disabled cue), and whether
 // its label wears the invalid pair. The label's other looks are the
-// segment's own (selected, embossed or the panel's light tone).
+// segment's own (selected, inert or the panel's light tone).
 struct FlagFace {
     GuiColor triangle;
+    GuiColor shadow;
     bool     cue_dots;
     bool     range_dots;
     bool     invalid_label;
@@ -1644,11 +1645,21 @@ struct FlagFace {
 // the ladder read top to bottom, the first matching row wins:
 //   flag                     triangle  dots (program_spec.h's phases)  label
 //                                                                      rest / selected
-//   DISABLED (any kind)      ground    none                            emboss / white
+//   DISABLED (any kind)      faded     none                            faded / white
 //   INVALID (any live kind)  cue red   red alone                       dim / bright red
 //   WARP, PHASE RESET        cue red   red and blue, alternating       light / white
 //   history ADDED            blue      blue alone (the range end's)    light / white
 //   history REMOVED          cue red   red alone (the range start's)   light / white
+// THE DISABLED ROW'S FADE (architect 2026-10-10 ~12:20, "the arrow needs to
+// be legible for me, but the text doesn't … since it's disabled, it's inert"):
+// the triangle and its shadow are the kind's own live colors (the `cue` red,
+// the `range` blue of an ADDED half) and `cue_shadow` BLENDED 45 % TOWARD THE
+// FACE, the label's rest tone 65 % toward it — derived solid colors, "an
+// opacity look … not actually opaque" (cool_edit_derive.h, the members
+// `ce_off_*`); the selected label stays the chrome's `label` so a selection
+// shows. Every INERT label — a disabled cue's segments and a tie follower's
+// cells — wears the faded label, one look for inert cue text (the Windows
+// emboss retired from cues 2026-10-10).
 // The red is the palette's `cue`, the blue its `range`; THE DOTS' ROWS, counted
 // from the canvas's first row, are the red's ≡ 7 and the blue's ≡ 3 (mod 8),
 // blue first from the top — the capture's absolute red y ≡ 3 / blue y ≡ 7
@@ -1669,28 +1680,37 @@ struct FlagFace {
 // class (HistoryDiffFlag's note), so `red` is false there.
 FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
     const GuiPalette& p = palette();
-    if (disabled) return FlagFace{p.ground, false, false, false};
-    if (red)      return FlagFace{p.cue, true, false, true};
+    if (disabled) {
+        return FlagFace{kind == GuiFlagKind::Added ? p.ce_off_range
+                                                   : p.ce_off_cue,
+                        p.ce_off_cue_shadow, false, false, false};
+    }
+    if (red)      return FlagFace{p.cue, p.ce_cue_shadow, true, false, true};
     switch (kind) {
         case GuiFlagKind::Warp:
-        case GuiFlagKind::PhaseReset: return FlagFace{p.cue, true, true, false};
-        case GuiFlagKind::Added:      return FlagFace{p.range, false, true, false};
-        case GuiFlagKind::Removed:    return FlagFace{p.cue, true, false, false};
+        case GuiFlagKind::PhaseReset:
+            return FlagFace{p.cue, p.ce_cue_shadow, true, true, false};
+        case GuiFlagKind::Added:
+            return FlagFace{p.range, p.ce_cue_shadow, false, true, false};
+        case GuiFlagKind::Removed:
+            return FlagFace{p.cue, p.ce_cue_shadow, true, false, false};
     }
-    return FlagFace{p.cue, true, true, false};
+    return FlagFace{p.cue, p.ce_cue_shadow, true, true, false};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run, its
 // face box [x0, x1) in window x (the text at x0 plus the pad quantum), and
-// its look — the chrome's selected text on the face, the disabled emboss, or
-// the panel's light tone.
+// its look — the chrome's selected text on the face, the faded inert label,
+// or the panel's light tone.
 struct CueSegment {
     bool                  present  = false;
     text_shape::ShapedRun run;
     int                   x0       = 0;
     int                   x1       = 0;
     bool                  selected = false;
-    bool                  embossed = false;
+    // INERT: a disabled marker's segment or a tie follower's cell, the faded
+    // label (ce_off_label) unless selected (2026-10-10).
+    bool                  inert    = false;
 };
 // ONE CUE, laid out: its marker (or diff flag) index, its column in window
 // x, the triangle's resolved face and whether its dots paint, and its label's
@@ -1777,28 +1797,27 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             if (!s.present) continue;
             const double tx = static_cast<double>(
                 s.x0 + kProgramSpec.cue_fill_pad * u);
-            if (s.embossed && !s.selected) {
-                show_embossed_run(cr, s.run, tx, base);
-            } else {
-                // The label's ink (resolve_flag_face's table): an invalid
-                // cue's red pair, else the chrome's text on the face or the
-                // light tone — a selected disabled segment the chrome's text
-                // too, so its selection shows.
-                const bool inv = c.face.invalid_label;
-                set_palette_source(cr, s.selected
-                                           ? (inv ? pal.invalid_label_selected
-                                                  : pal.label)
-                                           : (inv ? pal.invalid_label
-                                                  : pal.ce_hilight));
-                text_shape::show_shaped_run(cr, s.run, tx, base);
-            }
+            // The label's ink (resolve_flag_face's table): an invalid cue's
+            // red pair, else the chrome's text on the face, the faded inert
+            // label or the light tone — a selected inert segment the
+            // chrome's text, so its selection shows.
+            const bool inv = c.face.invalid_label;
+            set_palette_source(cr, s.selected
+                                       ? (inv ? pal.invalid_label_selected
+                                              : pal.label)
+                                   : s.inert
+                                       ? pal.ce_off_label
+                                       : (inv ? pal.invalid_label
+                                              : pal.ce_hilight));
+            text_shape::show_shaped_run(cr, s.run, tx, base);
         }
         cairo_restore(cr);
     }
 
     // THE TRIANGLES, LEFT TO RIGHT, over every label.
     for (const CueDraw& c : cues)
-        paint_ce_cue_triangle(cr, c.col, tri_top, c.face.triangle);
+        paint_ce_cue_triangle(cr, c.col, tri_top, c.face.triangle,
+                              c.face.shadow);
 
     // THE PUBLICATION, left to right.
     for (int i = 0; i < n; ++i) {
@@ -1997,9 +2016,10 @@ void render_flag_boxes_impl(
             // THE SEGMENTS: the payload label (the column's composer, the cut
             // inside it), then the two bound cells where they paint — each
             // shaped on the program face and boxed by the one layout
-            // (cue_segment_boxes). A TIE FOLLOWER'S CELLS wear the disabled
-            // emboss (architect 2026-09-19: the leader's numbers, not this
-            // marker's to author); a disabled marker's every segment does.
+            // (cue_segment_boxes). A TIE FOLLOWER'S CELLS wear the faded inert
+            // label (architect 2026-09-19: the leader's numbers, not this
+            // marker's to author; the Windows emboss retired from cue text
+            // 2026-10-10); a disabled marker's every segment does.
             const text_shape::ShapedRun payload =
                 text_shape::shape_text_run(font, label_of(i));
             const IterCellLayout cl = measure_iter_cells(font, cells);
@@ -2023,7 +2043,7 @@ void render_flag_boxes_impl(
                 seg.x0       = c.col + boxes.x0[s];
                 seg.x1       = c.col + boxes.x1[s];
                 seg.selected = sel && bright == order[s];
-                seg.embossed = dis || (s > 0 && cells.follower);
+                seg.inert = dis || (s > 0 && cells.follower);
             }
             cues.push_back(std::move(c));
         });
@@ -2267,7 +2287,7 @@ void render_history_diff_flags(
             // is disabled dims here exactly as its live marker does, while the
             // '#' in the LABEL text stays the line's verbatim local byte (the
             // text/face split at HistoryDiffFlag). A
-            // disable TOGGLE paints one embossed half beside one live one and
+            // disable TOGGLE paints one faded half beside one live one and
             // the direction of the toggle reads straight off the label. Each
             // bit is meaningful exactly when its half is painted, so a bit
             // resting at false on a half that does not exist is never
@@ -2282,7 +2302,7 @@ void render_history_diff_flags(
                 seg.x0       = c.col + boxes.x0[s];
                 seg.x1       = c.col + boxes.x1[s];
                 seg.selected = focused;
-                seg.embossed = s == 0 ? removed_disabled : added_disabled;
+                seg.inert = s == 0 ? removed_disabled : added_disabled;
             }
 
             // THE TRIANGLE AND THE DOTS through the live lane's one resolver
@@ -2410,6 +2430,16 @@ void fill_program_palette(const GuiPaletteWords& w) {
         g_palette.ce_case_shadow_last =
             hex(case_tone(kCaseShadowLast, w[kFace]));
         g_palette.ce_case_corner = hex(case_tone(kCaseCorner, w[kFace]));
+    }
+    // The disabled cue's faded triangles, shadow and label (2026-10-10).
+    {
+        using namespace cool_edit_derive;
+        static constexpr std::size_t kCue = palette_role_index("cue");
+        static constexpr std::size_t kRange = palette_role_index("range");
+        g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], w[kFace]));
+        g_palette.ce_off_range = hex(disabled_triangle(w[kRange], w[kFace]));
+        g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(w[kFace]));
+        g_palette.ce_off_label = hex(disabled_cue_label(w[kFace]));
     }
     static constexpr std::size_t kOutline =
         palette_role_index("waveform_outline");
@@ -2756,8 +2786,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const double baseline = static_cast<double>(lane.y + cue_baseline_px());
 
     // THE MARKER'S OWN STATE for the segments riding the field's right edge,
-    // which keep their resting look: the disabled emboss, a tie follower's
-    // cells embossed (2026-09-19), else the panel's light tone, or an invalid
+    // which keep their resting look: the faded inert label, a tie follower's
+    // cells faded (2026-09-19), else the panel's light tone, or an invalid
     // marker's dim red (below).
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
@@ -2814,7 +2844,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    fine"). A refused Enter recolors nothing (text_editor::refuse selects
     //    the whole text; the owner's card says why). Since the editor opens on
     //    any store index (enter_top_flag_edit), disabled included, a disabled
-    //    marker's field is this same box, never embossed.
+    //    marker's field is this same box, never faded.
     const GuiRect field_box{bx - u, lane.y, box_w + 2 * u, fill_h};
     paint_cell_rect(cr, field_box, pal.field_text);
     paint_cell_rect(cr, GuiRect{field_box.x + u, field_box.y + u,
@@ -2971,7 +3001,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //
     // Each segment wears its resting look — its box in the panel face, the
     // text in the panel's light tone, an invalid marker's dim red or the
-    // disabled emboss — and none takes
+    // faded inert label — and none takes
     // the selected look while the field stands, each open having seated the
     // selection axis on the cell it edits.
     //
@@ -3083,15 +3113,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             paint_cell_rect(cr, GuiRect{fx, lane.y, x0 + w - fx, fill_h},
                             pal.face);
             const double tx = static_cast<double>(x0 + pad_l);
-            if (cell_dis) {
-                show_embossed_run(cr, seg_run, tx, baseline);
-            } else {
-                // The resting label's ink: an invalid marker's dim red, else
-                // the panel's light tone (resolve_flag_face's table).
-                set_palette_source(cr, red ? pal.invalid_label
-                                           : pal.ce_hilight);
-                text_shape::show_shaped_run(cr, seg_run, tx, baseline);
-            }
+            // The resting label's ink: the faded inert label, else an invalid
+            // marker's dim red, else the panel's light tone
+            // (resolve_flag_face's table).
+            set_palette_source(cr, cell_dis ? pal.ce_off_label
+                                  : red     ? pal.invalid_label
+                                            : pal.ce_hilight);
+            text_shape::show_shaped_run(cr, seg_run, tx, baseline);
             cursor_x = x0 + w;
         };
         if (ride_lower) ride(cl.lower_run, cl.lower_w);

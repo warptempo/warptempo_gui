@@ -324,7 +324,9 @@ struct TrimRange {
 // (below). A disabled GLYPH is ReactOS's saturate since the Tango set
 // (architect 2026-10-06, icons::draw_disabled); nothing else dims — the dims of the kdenlive design (the disabled
 // mix, the accelerator column's and the tooltip line's) retired with the
-// luminance rule the same day. A DROPDOWN'S ACCELERATOR COLUMN takes its
+// luminance rule the same day. (A CUE'S LABEL IS THE ONE EXCEPTION: an inert
+// cue label is the faded tone, not the emboss — the marker-lane paragraph.)
+// A DROPDOWN'S ACCELERATOR COLUMN takes its
 // item's own ink: the item's label ink, the selected text on a lit row, the
 // emboss on a disabled one. A disabled glyph is the program's case's,
 // ReactOS's saturate under every chrome (icons::draw_disabled, 2026-10-09).
@@ -441,6 +443,13 @@ struct GuiPalette {
     GuiColor ce_case_shadow_first;
     GuiColor ce_case_shadow_last;
     GuiColor ce_case_corner;
+    // THE DISABLED CUE'S FADED LOOK (2026-10-10; cool_edit_derive.h's
+    // disabled_* mixes toward the Face): the triangle of the `cue` red, the
+    // triangle of the `range` blue, the cue shadow, and the resting label.
+    GuiColor ce_off_cue;
+    GuiColor ce_off_range;
+    GuiColor ce_off_cue_shadow;
+    GuiColor ce_off_label;
 };
 
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
@@ -764,8 +773,14 @@ void install_true_colors(bool on);
 //             text, even unselected — dimmer unselected, brighter
 //             selected") — `invalid_label` at rest, `invalid_label_selected`
 //             when selected, on the panel's face in both;
-//   DISABLED  the theme's GROUND on the triangle, the label in THE DISABLED
-//             EMBOSS (above), and NO DOTS;
+//   DISABLED  THE FADED LOOK (architect 2026-10-10 ~12:20, "the arrow needs
+//             to be legible for me, but the text doesn't … since it's
+//             disabled, it's inert"): the kind's triangle color and the cue
+//             shadow BLENDED 45 % TOWARD THE FACE and the label's rest tone
+//             65 % toward it — derived solid colors, "an opacity look …
+//             not actually opaque" (cool_edit_derive.h, `ce_off_*`) — and NO
+//             DOTS; the same faded label on a tie follower's cells (one
+//             look for inert cue text; the Windows emboss retired from cues);
 //   SELECTED  THE LABEL'S TEXT IN THE CHROME'S `label` ON THE PANEL'S FACE,
 //             NO FILL (architect 2026-10-09 ~23:30: "when I clicked on a
 //             flag and it was selected, the text would go white, not navy
@@ -794,7 +809,7 @@ void install_true_colors(bool on);
 //   SELECTED DISABLED (architect 2026-10-07 ~15:10: a disabled marker is
 //             selectable, so its selection must show): the selected label —
 //             its text in the chrome's `label` on the face in place of the
-//             emboss, no fill — over the disabled triangle, no dots.
+//             faded label, no fill — over the faded triangle, no dots.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29): the pointer over a cue says
 // what a press will do through the CURSOR alone (pointer_cursor_kind).
 //
@@ -3489,8 +3504,9 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // gap past the one before it, carrying the bound in its signed two-decimal
 // form (format_iter_bound_cell). The sign is a cell's whole syntax: a
 // payload never carries one and a cell always does. A TIE FOLLOWER'S CELLS
-// wear the disabled emboss (architect 2026-09-19: they show the leader's
-// numbers and are not this marker's to author).
+// wear the faded inert label (architect 2026-09-19: they show the leader's
+// numbers and are not this marker's to author; the emboss retired from cue
+// text 2026-10-10).
 //
 // `focus_marker` / `focus_cell` NAME THE SELECTED SEGMENT (architect
 // 2026-09-05): a selected marker shows its selected look on its ADDRESSED
@@ -3878,9 +3894,9 @@ struct HistoryDiffFlag {
 // local '#' or, same-day deepening, the label cascade resolved over that
 // side's full warp set (the effective pair at HistoryDiffFlag above; the '#'
 // in the TEXT stays the local byte) — paints its segment in the LIVE LANE'S
-// DISABLED EMBOSS, and a single disabled half's triangle the theme's ground
+// FADED INERT LABEL, and a single disabled half's triangle the faded one
 // (resolve_flag_face). IT SPLITS HONESTLY ON A CHANGED PAIR: each half takes
-// its own bit, so a disable TOGGLE paints one embossed half beside one live
+// its own bit, so a disable TOGGLE paints one faded half beside one live
 // half and the direction of the toggle is readable off the label itself.
 //
 // `focus_index` is the mode's OWN focus (at most one flag, -1 for none) and

@@ -113,7 +113,8 @@ static_assert(palette_members_disjoint());
 // program's words, render.cpp) are the struct's third part — the table's
 // painted tones and the panel label's swapping pair: distinct, and neither a
 // chrome role's member nor a program role's — and the button case's members
-// (kCaseMemberCount, the ramp's array and four lines) after them.
+// (kCaseMemberCount, the ramp's array and four lines) and the disabled
+// cue's four faded colors (kDisabledCueMemberCount) after them.
 constexpr bool cool_edit_tones_disjoint() {
     std::array<GuiColor GuiPalette::*,
                cool_edit_derive::kPaintedToneCount +
@@ -139,7 +140,8 @@ static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount +
                cool_edit_derive::kPaintedToneCount +
                std::size(cool_edit_derive::kLabelPairMembers) +
-               cool_edit_derive::kCaseMemberCount) *
+               cool_edit_derive::kCaseMemberCount +
+               cool_edit_derive::kDisabledCueMemberCount) *
                   sizeof(GuiColor));
 
 // EACH CHROME'S OWN SCHEME IS A BUILT-IN SCHEME, AND THAT SCHEME IS THE

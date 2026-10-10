@@ -226,7 +226,8 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     cairo_restore(cr);
 }
 
-void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color) {
+void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
+                           GuiColor shadow) {
     const double u    = cue_unit_px();
     const int    rows = kProgramSpec.cue_triangle_rows;
     // THE AXIS IS THE STEM PIXEL'S CENTRE (architect 2026-10-09 ~14:35: "at
@@ -249,7 +250,7 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color) {
     };
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    triangle(u, palette().ce_cue_shadow);
+    triangle(u, shadow);
     triangle(0.0, color);
     cairo_restore(cr);
 }
