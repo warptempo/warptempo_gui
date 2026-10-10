@@ -1304,7 +1304,10 @@ inline int relief_line_px() {
 // LINE — BDR_SUNKENOUTER, Shadow on the top and left, Hilight on the bottom
 // and right — in the SYSTEM colors round the whole program: THE CHROME'S
 // Shadow and Hilight roles, which follow the scheme (under cool-edit-pro-me
-// the derived 343941 / A3AAB6), never the panel's Face-derived tones; the
+// the derived 414752 / AEB5BF off its ground 626C7B, Cool Edit's own panel
+// face, since 2026-10-10 ~08:45 — the Shadow row then reads as its own
+// shade above the band's darker line), never the panel's Face-derived
+// tones; the
 // two two-tone corners MITRED (paint_relief_sunken_outer over
 // paint_relief_frame, the program's diagonal rule at cool_edit_paint.h's
 // head).

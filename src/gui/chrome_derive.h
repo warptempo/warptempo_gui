@@ -293,11 +293,12 @@ static_assert(windows_dialog(0xD4D0C8).shadow == 0x978E7B);
 // Northern Sky's ground (CDE), the picker's test case: 98ABB6 / 2C363D.
 static_assert(windows_dialog(0x41525C).hilight == 0x98ABB6);
 static_assert(windows_dialog(0x41525C).shadow == 0x2C363D);
-// Cool Edit Pro ME's ground (the product's own built-in scheme, 2026-10-10;
+// Cool Edit Pro ME's ground (the product's own built-in scheme; since
+// 2026-10-10 ~08:45 Cool Edit's panel face 626C7B, the recess 4E5662 before;
 // docs/themes/catalog.json's cool-edit-pro-me records the quartet, run
 // through toolkit_rules.windows_dialog at import): the relief it paints.
-static_assert(windows_dialog(0x4E5662) ==
-              Quartet{0xA3AAB6, 0x4E5662, 0x343941, 0});
+static_assert(windows_dialog(0x626C7B) ==
+              Quartet{0xAEB5BF, 0x626C7B, 0x414752, 0});
 // RAINY DAY WHOLE, as its catalog entry records it (ButtonFace 8399B1,
 // ActiveTitle 4F657D → GradientActiveTitle 80B4D0 under TitleText FFFFFF,
 // InactiveTitle 808080 → B0BCD0 under C1CCD9, Hilight 4F657D under FFFFFF,

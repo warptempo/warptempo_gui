@@ -306,9 +306,9 @@
      {
       "project": "Warptempo: the architect's own chrome scheme, picked in the app's color picker and saved by its Save As (src/gui/color_picker.h)",
       "file": "schemes/Cool Edit Pro ME.scheme",
-      "saved": "the tablet, 2026-10-10 ~06:50",
+      "saved": "the tablet, 2026-10-10 ~08:40",
       "recorded": [
-       "chrome_ground=#4E5662",
+       "chrome_ground=#626C7B",
        "chrome_text=#EFF0F0",
        "chrome_title_start=#0A246A",
        "chrome_title_end=#A6CAF0",
@@ -326,15 +326,15 @@
     "rule": {
      "id": "windows-dialog",
      "computed": {
-      "windows-dialog:hilight": "#A3AAB6",
-      "windows-dialog:light": "#4E5662",
-      "windows-dialog:shadow": "#343941",
+      "windows-dialog:hilight": "#AEB5BF",
+      "windows-dialog:light": "#626C7B",
+      "windows-dialog:shadow": "#414752",
       "windows-dialog:dkshadow": "#000000"
      }
     }
    },
    "raw": {
-    "chrome_ground": "#4E5662",
+    "chrome_ground": "#626C7B",
     "chrome_text": "#EFF0F0",
     "chrome_title_start": "#0A246A",
     "chrome_title_end": "#A6CAF0",
@@ -348,11 +348,11 @@
     "chrome_field_text": "#EFF0F0"
    },
    "roles": {
-    "ground": "#4E5662",
+    "ground": "#626C7B",
     "label": "#EFF0F0",
-    "bevel_hilight": "#A3AAB6",
-    "bevel_light": "#4E5662",
-    "bevel_shadow": "#343941",
+    "bevel_hilight": "#AEB5BF",
+    "bevel_light": "#626C7B",
+    "bevel_shadow": "#414752",
     "bevel_dkshadow": "#000000",
     "selected_fill": "#0A246A",
     "selected_text": "#EFF0F0",
@@ -367,7 +367,8 @@
    "display_tier": "high-colour",
    "notes": [
     "the architect's scheme file, its twelve keys verbatim (architect 2026-10-10 ~06:30: \"make it a permanent part of the hard-coded as one of the options alongside Windows 2000 Standard\")",
-    "the caption's six and the selection fill are Windows Me Standard's bytes (windows-me-standard); the ground #4E5662 is Cool Edit Pro 2.1's toolbar recess tone, the field #414751 its pane's bottom mid line, the text, the selection text and the field text #EFF0F0 its text white (his Wine captures, tmp/research/cool_edit/METRICS.md sections 1.1 and 4.4)",
+    "the caption's six and the selection fill are Windows Me Standard's bytes (windows-me-standard); the ground #626C7B is Cool Edit Pro 2.1's panel face (its \"Dockable Window 3D Color\" default, the palette's face role), the field #414751 its pane's bottom mid line, the text, the selection text and the field text #EFF0F0 its text white (his Wine captures, tmp/research/cool_edit/METRICS.md sections 1, 1.1 and 4.4)",
+    "the ground is the panel face since 2026-10-10 ~08:45 (his file of ~08:40), the toolbar recess tone #4E5662 that morning (his file of ~06:50): \"using a lighter chrome makes that line ... stand out as a different shade\" -- the frame's Shadow line under the menu row against Cool Edit's darker band line beneath it",
     "the relief quartet is Windows' Appearance-dialog rule on the ground, as the app derives it under the windows-2000 chrome (src/gui/chrome_derive.h): the scheme records no 3D colours"
    ]
   },

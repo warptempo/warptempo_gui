@@ -8,7 +8,7 @@ Every entry below but the product's own is a desktop theme of the era IMPORTED, 
 
 ### `cool-edit-pro-me`
 
-**Cool Edit Pro ME** · ground #4E5662 · Warptempo: the architect's own chrome scheme, picked in the app's color picker and saved by its Save As (src/gui/color_picker.h) `schemes/Cool Edit Pro ME.scheme`; windows-dialog rule
+**Cool Edit Pro ME** · ground #626C7B · Warptempo: the architect's own chrome scheme, picked in the app's color picker and saved by its Save As (src/gui/color_picker.h) `schemes/Cool Edit Pro ME.scheme`; windows-dialog rule
 
 Display tier: high-colour
 

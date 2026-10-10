@@ -175,16 +175,20 @@ def entry(family, key_words, name, prov, raw, computed=None, notes=None, imitate
 # windows_dialog, the `windows-dialog` rule), the derivation the app runs on any scheme that carries keys under the
 # windows-2000 chrome (src/gui/chrome_derive.h), so the record is what the screen shows. No sha256 pins the file: the
 # twelve lines are the record, kept in the entry's provenance as the file spells them.
-# COOL EDIT PRO ME (his file of 2026-10-10 ~06:50, saved on the tablet, replacing his nine-key "Cool Edit Pro" of
-# ~05:46): Windows Me Standard's caption, inactive caption and selection fill (windows-me-standard's bytes) under Cool
-# Edit Pro 2.1's panel tones, as his Wine captures measure them (tmp/research/cool_edit/METRICS.md): the ground its
-# toolbar RECESS (§1.1, the band's ground right of the last pane), the field its pane's bottom mid line (§1.1), the
-# text, the selection text and the field text its text white (the tab labels and the time field's digits, §4.4).
+# COOL EDIT PRO ME (his file of 2026-10-10 ~08:40, saved on the tablet, replacing his ~06:50 file of the same name,
+# which replaced his nine-key "Cool Edit Pro" of ~05:46): Windows Me Standard's caption, inactive caption and selection
+# fill (windows-me-standard's bytes) under Cool Edit Pro 2.1's panel tones, as his Wine captures measure them
+# (tmp/research/cool_edit/METRICS.md): the ground its PANEL FACE 626C7B (its "Dockable Window 3D Color" default, §1,
+# the palette's `face` role) since ~08:45 — "using a lighter chrome makes that line … stand out as a different shade":
+# the frame's Shadow line under the menu row then reads as its own shade against Cool Edit's darker band line beneath
+# it, where the toolbar RECESS 4E5662 of ~06:50 (§1.1) made "two of the same line above the top row" — the field its
+# pane's bottom mid line (§1.1), the text, the selection text and the field text its text white (the tab labels and the
+# time field's digits, §4.4).
 WARPTEMPO_PROJECT = ('Warptempo: the architect\'s own chrome scheme, picked in the app\'s color picker and saved by its '
                      'Save As (src/gui/color_picker.h)')
 WARPTEMPO_SCHEMES = (
-    ('Cool Edit Pro ME', 'the tablet, 2026-10-10 ~06:50', (
-        ('chrome_ground', '#4E5662'), ('chrome_text', '#EFF0F0'), ('chrome_title_start', '#0A246A'),
+    ('Cool Edit Pro ME', 'the tablet, 2026-10-10 ~08:40', (
+        ('chrome_ground', '#626C7B'), ('chrome_text', '#EFF0F0'), ('chrome_title_start', '#0A246A'),
         ('chrome_title_end', '#A6CAF0'), ('chrome_title_text', '#FFFFFF'), ('chrome_inactive_title_start', '#808080'),
         ('chrome_inactive_title_end', '#C0C0C0'), ('chrome_inactive_title_text', '#D4D0C8'),
         ('chrome_selection', '#0A246A'), ('chrome_selection_text', '#EFF0F0'), ('chrome_field', '#414751'),
@@ -192,9 +196,12 @@ WARPTEMPO_SCHEMES = (
         'the architect\'s scheme file, its twelve keys verbatim (architect 2026-10-10 ~06:30: "make it a permanent '
         'part of the hard-coded as one of the options alongside Windows 2000 Standard")',
         'the caption\'s six and the selection fill are Windows Me Standard\'s bytes (windows-me-standard); the ground '
-        '#4E5662 is Cool Edit Pro 2.1\'s toolbar recess tone, the field #414751 its pane\'s bottom mid line, the text, '
-        'the selection text and the field text #EFF0F0 its text white (his Wine captures, '
-        'tmp/research/cool_edit/METRICS.md sections 1.1 and 4.4)',
+        '#626C7B is Cool Edit Pro 2.1\'s panel face (its "Dockable Window 3D Color" default, the palette\'s face role), '
+        'the field #414751 its pane\'s bottom mid line, the text, the selection text and the field text #EFF0F0 its '
+        'text white (his Wine captures, tmp/research/cool_edit/METRICS.md sections 1, 1.1 and 4.4)',
+        'the ground is the panel face since 2026-10-10 ~08:45 (his file of ~08:40), the toolbar recess tone #4E5662 '
+        'that morning (his file of ~06:50): "using a lighter chrome makes that line ... stand out as a different '
+        'shade" -- the frame\'s Shadow line under the menu row against Cool Edit\'s darker band line beneath it',
         'the relief quartet is Windows\' Appearance-dialog rule on the ground, as the app derives it under the '
         'windows-2000 chrome (src/gui/chrome_derive.h): the scheme records no 3D colours']),
 )
@@ -826,7 +833,7 @@ def checks(entries):
     cep = by['cool-edit-pro-me']
     assert cep['raw'] == dict(WARPTEMPO_SCHEMES[0][2]) and cep['family'] == 'warptempo'
     assert [cep['roles'][x] for x in ('ground', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')] == \
-        ['#4E5662', '#A3AAB6', '#4E5662', '#343941', '#000000']
+        ['#626C7B', '#AEB5BF', '#626C7B', '#414752', '#000000']
     assert cep['display_tier'] == 'high-colour'
     # the catalog is the chrome's alone (2026-10-07): no entry carries program roles, and the program's own family of
     # palette entries is gone with them (its colors are the palette's, src/gui/palette_file.h); every family is one of
