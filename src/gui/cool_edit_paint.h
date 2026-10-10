@@ -22,12 +22,13 @@
 // THE COLORS ARE TWO KINDS. THE PANEL'S are the palette's: the `face` role
 // and the tones Cool Edit derives from it (cool_edit_derive.h, the COOL EDIT
 // BLOCK of palette()), so a pick of Face moves the whole panel — the time
-// field's digits and the panel label's swapping pair among them (2026-10-10).
-// THE CASE'S are CONSTANTS below — Cool Edit's default scheme's bytes as
-// measured, never derived ("the buttons did not change color with the
-// preset", architect 2026-10-09; the fits that were tried are
-// cool_edit_derive.h's head) — and so are the ruler's ink and the view
-// bar's field.
+// field's digits and the panel label's swapping pair among them, and since
+// 2026-10-10 THE BUTTON CASE'S face ramp, highlight, shadow ramp and corner
+// (the per-row case tones, cool_edit_derive.h's head with the fit's worst
+// errors; the default Face's within 2 of the bytes it replaced). THE
+// CONSTANTS below are what Cool Edit draws whatever its preset: the case's
+// black outline and the pressed and checked rings, the ruler's ink and the
+// view bar's field.
 // THE DIAGONAL RULE REACHES THE PROGRAM (architect 2026-10-09 ~12:40: "any
 // jagged staircase of pixel lines, even if it's only two lines, we take as
 // an intention of a diagonal, so that when they're scaled they don't look
@@ -56,35 +57,20 @@
 
 // -- THE CASE'S CONSTANTS (METRICS §1.3–1.5; 0xRRGGBB, sRGB) -----------------
 
-// THE FACE RAMP — the 20 interior rows' median bytes over ten buttons
-// (METRICS §1.4 (b)), ONE STOP PER W ROW OF THE 20-W GLYPH SEAT, never
-// resampled (architect 2026-10-09 ~10:25, the seat Cool Edit's own 20):
-// stop i fills the seat's W row i, whose device rows are
-// [nearbyint(i·g/20), nearbyint((i+1)·g/20)) of the seat's g, so the rows
-// tile the seat exactly at every scale, each stop a flat band of its bytes.
-inline constexpr std::array<uint32_t, 20> kCeFaceRamp = {
-    0xFEFEFE, 0xF9FEFE, 0xF9FAFC, 0xF2F3F6, 0xEBECEE,
-    0xE4E5E7, 0xDEDFE1, 0xDDDEE0, 0xD7D8DA, 0xD1D1D3,
-    0xCACACB, 0xC4C5C6, 0xC2C3C4, 0xBABBBD, 0xB5B6B7,
-    0xAEAFB0, 0xA9A9AB, 0xA7A7A8, 0x9FA0A1, 0x989899,
-};
-static_assert(kCeFaceRamp.size() ==
-              static_cast<std::size_t>(kProgramSpec.glyph_px));
-// THE HIGHLIGHT — the case's top row and left column, Cool Edit's FEFEFF …
-// FDFEFF … FCFEFF authored as its one middle tone (the brief's ruling; the
-// three differ by one level).
-inline constexpr uint32_t kCeCaseHighlight = 0xFDFEFF;
-// THE SHADOW — the right column and the bottom row, a ramp from its first
-// to its last measured tone (5D5E5E … 4C4D4D) across the glyph seat; its
-// first tone also the mitre's dark half at the top-right and bottom-left.
-inline constexpr uint32_t kCeCaseShadowFirst = 0x5D5E5E;
-inline constexpr uint32_t kCeCaseShadowLast  = 0x4C4D4D;
-// THE SHADOW'S OWN CORNER (bottom-right, inside the black line). Where the
-// highlight meets the shadow (the top-right and bottom-left) Cool Edit's
-// measured ADAEAF is the two tones' half-and-half — the mitre, drawn as the
-// diagonal (the head's rule), so no constant stands for it.
-inline constexpr uint32_t kCeCaseCornerShadow = 0x4B4C4C;
-// THE BLACK LINE on the right and bottom.
+// THE FACE RAMP (palette().ce_case_ramp, the case tones): ONE STOP PER W ROW
+// OF THE 20-W GLYPH SEAT, never resampled (architect 2026-10-09 ~10:25, the
+// seat Cool Edit's own 20): stop i fills the seat's W row i, whose device
+// rows are [nearbyint(i·g/20), nearbyint((i+1)·g/20)) of the seat's g, so the
+// rows tile the seat exactly at every scale, each stop a flat band of its
+// bytes. THE HIGHLIGHT (ce_case_highlight) on the top row and left column;
+// THE SHADOW on the right column and the bottom row, a ramp from
+// ce_case_shadow_first to ce_case_shadow_last across the glyph seat, its
+// first tone also the mitre's dark half at the top-right and bottom-left;
+// THE SHADOW'S OWN CORNER (ce_case_corner) at the bottom-right inside the
+// black line. Where the highlight meets the shadow Cool Edit's measured
+// ADAEAF is the two tones' half-and-half — the mitre, drawn as the diagonal
+// (the head's rule), so no tone stands for it.
+// THE BLACK LINE on the right and bottom, 000000 on every captured Face.
 inline constexpr uint32_t kCeCaseOuter = 0x000000;
 // THE PRESSED AND CHECKED RINGS (METRICS §1.5, constant over all five
 // presets): black on the top and left outside, 808080 inside it, F8F8F8 on

@@ -432,6 +432,15 @@ struct GuiPalette {
     // the view bar's span bevels, off the waveform's ink (2026-10-09)
     GuiColor ce_span_hilight;
     GuiColor ce_span_shadow;
+    // THE BUTTON CASE, tinted by `face` (2026-10-10; cool_edit_derive.h's
+    // case tones, the per-row fit): the glyph seat's ramp, one stop per W
+    // row, the highlight, the shadow ramp's two ends and the shadow's corner
+    // — the black outline and the down rings stay the painter's constants.
+    std::array<GuiColor, 20> ce_case_ramp;
+    GuiColor ce_case_highlight;
+    GuiColor ce_case_shadow_first;
+    GuiColor ce_case_shadow_last;
+    GuiColor ce_case_corner;
 };
 
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope

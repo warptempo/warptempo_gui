@@ -17,28 +17,27 @@ void cell(cairo_t* cr, int x, int y, int w, int h, GuiColor c) {
     paint_cell_rect(cr, GuiRect{x, y, w, h}, c);
 }
 
-uint32_t lerp_word(uint32_t a, uint32_t b, double t) {
-    uint32_t out = 0;
-    for (int shift = 16; shift >= 0; shift -= 8) {
-        const double ca = static_cast<double>((a >> shift) & 0xFF);
-        const double cb = static_cast<double>((b >> shift) & 0xFF);
-        const auto v = static_cast<uint32_t>(std::nearbyint(ca + (cb - ca) * t));
-        out |= v << shift;
-    }
-    return out;
+// Each channel's byte between a and b at t, rounded to its byte.
+GuiColor lerp_color(const GuiColor& a, const GuiColor& b, double t) {
+    const auto ch = [t](double ca, double cb) {
+        return std::nearbyint((ca + (cb - ca) * t) * 255.0) / 255.0;
+    };
+    return GuiColor{ch(a.r, b.r), ch(a.g, b.g), ch(a.b, b.b)};
 }
 
 // The shadow ramp's tone at step i of n (its two ends exact).
-uint32_t shadow_at(int i, int n) {
+GuiColor shadow_at(int i, int n) {
     const double t = n > 1 ? static_cast<double>(i) / (n - 1) : 0.0;
-    return lerp_word(kCeCaseShadowFirst, kCeCaseShadowLast, t);
+    return lerp_color(palette().ce_case_shadow_first,
+                      palette().ce_case_shadow_last, t);
 }
 
 // The seat's face over the g x g square at (x, y): stop i on the seat's W
 // row i, its device rows the rounded edges i·g/20 to (i+1)·g/20 (the
 // ramp's rule, cool_edit_paint.h).
 void paint_face_ramp(cairo_t* cr, int x, int y, int g) {
-    const int m = static_cast<int>(kCeFaceRamp.size());
+    const auto& ramp = palette().ce_case_ramp;
+    const int m = static_cast<int>(ramp.size());
     for (int i = 0; i < m; ++i) {
         const int y0 = static_cast<int>(
             std::nearbyint(static_cast<double>(i) * g / m));
@@ -46,7 +45,7 @@ void paint_face_ramp(cairo_t* cr, int x, int y, int g) {
             std::nearbyint(static_cast<double>(i + 1) * g / m));
         if (y1 > y0)
             cell(cr, x, y + y0, g, y1 - y0,
-                 kCeFaceRamp[static_cast<std::size_t>(i)]);
+                 ramp[static_cast<std::size_t>(i)]);
     }
 }
 
@@ -81,15 +80,16 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
     // shadow's ramp over the ring's straight runs, each step one device row
     // or column, the corner blocks left as the mitre drew them.
     paint_relief_frame(cr, GuiRect{r.x, r.y, r.w - lw, r.h - lw},
-                       hex(kCeCaseHighlight), hex(kCeCaseShadowFirst));
+                       palette().ce_case_highlight,
+                       palette().ce_case_shadow_first);
     for (int i = 0; i < g; ++i) {
-        const uint32_t s = shadow_at(i, g);
+        const GuiColor s = shadow_at(i, g);
         cell(cr, r.x + lw + g, r.y + lw + i, lw, 1, s);
         cell(cr, r.x + lw + i, r.y + lw + g, 1, lw, s);
     }
     // The shadow's own corner (one tone, square), then the black line on
     // the right and bottom (one tone, square).
-    cell(cr, r.x + lw + g, r.y + lw + g, lw, lw, kCeCaseCornerShadow);
+    cell(cr, r.x + lw + g, r.y + lw + g, lw, lw, palette().ce_case_corner);
     cell(cr, r.x + 2 * lw + g, r.y, lw, r.h, kCeCaseOuter);
     cell(cr, r.x, r.y + 2 * lw + g, r.w, lw, kCeCaseOuter);
     cairo_restore(cr);

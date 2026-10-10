@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <string_view>
 
 // COOL EDIT DERIVES ITS PANEL'S TONES FROM ONE COLOR (architect 2026-10-09,
@@ -63,15 +64,24 @@
 // WAVEFORM'S INK rather than the face, the view bar's span bevels
 // (ToneSource::Ink below; their proof over Cool Edit's five presets).
 //
-// NOT DERIVED (constants of the painter, cool_edit_paint.h): THE BUTTON
-// CASE — its face ramp, its highlight and shadow, its black line, the
-// pressed and checked rings — because "the buttons did not change color with
-// the preset" (architect 2026-10-09): the measured tint follows Face at 5 to
-// 10 % of its chroma with k varying 0.05–0.10 across the presets and a
-// brightness lift that is no clean function of Face (METRICS §1.4,
-// UNCERTAIN 1; METRICS_PRESETS_1010.md §4c over thirteen Faces), so the
-// default scheme's bytes are authored as they stand. (The time field's
-// digits follow Face since 2026-10-10: the `text` tone below.)
+// THE BUTTON CASE FOLLOWS FACE TOO (architect 2026-10-10, reopening
+// 2026-10-09's "the buttons did not change color with the preset": the fit's
+// misses are "off by 5 to 8 … imperceptible … OK to implement"): its face
+// ramp, its highlight, its shadow ramp's two ends and the shadow's corner are
+// each a CASE TONE below — the Face's HLS hue kept, L' = A + B·L_F and
+// S' = C·S_F, per row (METRICS_PRESETS_1010.md §4c, the best model the
+// measurement found; no closed rule fits within 4). The coefficients are the
+// minimax fit over thirteen captured Faces (scripts/m85_case_fit.py) WITH
+// THE DEFAULT FACE HELD WITHIN 2 PER CHANNEL OF ITS MEASURED BYTES (the
+// app's default look does not move; static_assert below). Worst channel
+// error over the twelve other Faces: rows 0–19 5.3–8.8 except row 5 9.4,
+// row 10 10.2 and row 6 11.3 (XP Blue and Midnight, which Cool Edit lifts
+// brighter than any HLS-lightness rule follows); the highlight 2.7, the
+// shadow ends and the corner 2.0 (the shadow is near lightness-independent,
+// B ≈ 0, tinted by hue alone). The default-scheme constants they replace
+// missed the other Faces by 19–34. NOT FOLLOWING FACE (cool_edit_paint.h's
+// constants): the black outer line and the pressed and checked rings,
+// byte-identical on every captured Face (§4a, METRICS §1.5).
 //
 // THE TEXT TONES (2026-10-10; tmp/research/cool_edit/METRICS_PRESETS_1010.md,
 // eleven captures over nine Faces, §2–§3): Cool Edit's PROGRAM TEXT — the
@@ -495,5 +505,84 @@ static_assert([] {
 
 // THE SELECTED TEXT'S PIN (the ruling's byte on the default ink).
 static_assert(tone_of(named_tone("selected_text"), 0, 0x4BF3A7) == 0x03301C);
+
+// -- THE BUTTON CASE (2026-10-10, the head) ----------------------------------
+
+// ONE CASE TONE: on the Face, L' = a·L + b and S' = c·S, the hue kept (the
+// head's per-row fit, scripts/m85_case_fit.py: a the slope B, b the
+// intercept A), and `default_byte` Cool Edit's default scheme's byte as
+// measured (METRICS §1.3–1.4), which the default Face reproduces within 2.
+struct CaseTone {
+    double   a, b, c;
+    uint32_t default_byte;
+};
+constexpr uint32_t case_tone(const CaseTone& t, uint32_t face) {
+    return tone(face, t.a, t.b, t.c);
+}
+// THE FACE RAMP — ONE STOP PER W ROW OF THE 20-W GLYPH SEAT, top to bottom
+// (cool_edit_paint.h's paint_ce_case), each row's worst miss over the twelve
+// other captured Faces at its right.
+inline constexpr std::array<CaseTone, 20> kCaseRamp = {{
+    {0.18050, 0.92600, 1.28000, 0xFEFEFE},   //  0   5.3
+    {0.20750, 0.89700, 0.77700, 0xF9FEFE},   //  1   7.2
+    {0.23100, 0.87600, 1.07000, 0xF9FAFC},   //  2   6.9
+    {0.17200, 0.87500, 0.94100, 0xF2F3F6},   //  3   8.8
+    {0.17000, 0.86250, 0.82900, 0xEBECEE},   //  4   6.4
+    {0.20500, 0.82000, 0.59900, 0xE4E5E7},   //  5   9.4
+    {0.16900, 0.81200, 0.47700, 0xDEDFE1},   //  6  11.3
+    {0.20800, 0.78250, 0.43600, 0xDDDEE0},   //  7   8.4
+    {0.18150, 0.77650, 0.36400, 0xD7D8DA},   //  8   7.9
+    {0.18950, 0.74550, 0.27500, 0xD1D1D3},   //  9   7.6
+    {0.22250, 0.70400, 0.21500, 0xCACACB},   // 10  10.2
+    {0.19750, 0.69150, 0.23800, 0xC4C5C6},   // 11   8.1
+    {0.16250, 0.69700, 0.20000, 0xC2C3C4},   // 12   6.1
+    {0.15850, 0.66900, 0.16000, 0xBABBBD},   // 13   7.6
+    {0.17850, 0.64300, 0.15500, 0xB5B6B7},   // 14   6.1
+    {0.17000, 0.62100, 0.12100, 0xAEAFB0},   // 15   6.7
+    {0.15000, 0.60650, 0.11300, 0xA9A9AB},   // 16   6.4
+    {0.13200, 0.59650, 0.11300, 0xA7A7A8},   // 17   7.0
+    {0.13800, 0.57250, 0.09900, 0x9FA0A1},   // 18   6.5
+    {0.14100, 0.54400, 0.10300, 0x989899},   // 19   6.4
+}};
+static_assert(kCaseRamp.size() ==
+              static_cast<std::size_t>(kProgramSpec.glyph_px));
+// THE HIGHLIGHT — the top row and left column (Cool Edit's FEFEFF … FDFEFF …
+// FCFEFF on the default Face, its middle tone the default byte); worst 2.7.
+inline constexpr CaseTone kCaseHighlight = {0.02150, 0.97950, 1.18600, 0xFDFEFF};
+// THE SHADOW — the right column and bottom row, a ramp from its first to its
+// last tone across the glyph seat (5D5E5E … 4C4D4D on the default Face), the
+// first also the mitre's dark half; and THE SHADOW'S OWN CORNER at the
+// bottom right. Worst 2.0 each.
+inline constexpr CaseTone kCaseShadowFirst = {-0.00100, 0.37000, 0.08200, 0x5D5E5E};
+inline constexpr CaseTone kCaseShadowLast  = {0.00650, 0.29850, 0.08200, 0x4C4D4D};
+inline constexpr CaseTone kCaseCorner      = {0.00450, 0.29500, 0.08100, 0x4B4C4C};
+// The GuiPalette members the case fills (the ramp's array and the four
+// lines), counted by palette_file.cpp's coverage check.
+inline constexpr std::size_t kCaseMemberCount = kCaseRamp.size() + 4;
+
+constexpr bool within_two(uint32_t x, uint32_t y) {
+    for (int shift = 0; shift <= 16; shift += 8) {
+        const int a = static_cast<int>((x >> shift) & 0xFF);
+        const int b = static_cast<int>((y >> shift) & 0xFF);
+        if (a - b > 2 || b - a > 2) return false;
+    }
+    return true;
+}
+// THE CASE'S PROOF (the head): the default Face keeps every case tone within
+// 2 per channel of Cool Edit's default scheme as measured — the default look
+// does not move.
+static_assert([] {
+    for (const CaseTone& t : kCaseRamp)
+        if (!within_two(case_tone(t, kDefaultFace), t.default_byte)) return false;
+    for (const CaseTone* t : {&kCaseHighlight, &kCaseShadowFirst,
+                              &kCaseShadowLast, &kCaseCorner})
+        if (!within_two(case_tone(*t, kDefaultFace), t->default_byte))
+            return false;
+    return true;
+}());
+// A grey Face gives a grey case (its saturation 0): Arctic Freeze's shadow
+// starts within one of the measured 5D5D5D (METRICS_PRESETS_1010.md §4a).
+static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
+              within_one(0x5E5E5E, 0x5D5D5D));
 
 } // namespace cool_edit_derive

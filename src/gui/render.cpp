@@ -2399,6 +2399,18 @@ void fill_program_palette(const GuiPaletteWords& w) {
     // The panel label's pair, swapping past its own threshold (2026-10-10).
     g_palette.ce_label = hex(cool_edit_derive::label_ink(w[kFace]));
     g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(w[kFace]));
+    // The button case, tinted by the face (2026-10-10, the per-row fit).
+    {
+        using namespace cool_edit_derive;
+        for (std::size_t i = 0; i < kCaseRamp.size(); ++i)
+            g_palette.ce_case_ramp[i] = hex(case_tone(kCaseRamp[i], w[kFace]));
+        g_palette.ce_case_highlight = hex(case_tone(kCaseHighlight, w[kFace]));
+        g_palette.ce_case_shadow_first =
+            hex(case_tone(kCaseShadowFirst, w[kFace]));
+        g_palette.ce_case_shadow_last =
+            hex(case_tone(kCaseShadowLast, w[kFace]));
+        g_palette.ce_case_corner = hex(case_tone(kCaseCorner, w[kFace]));
+    }
     static constexpr std::size_t kOutline =
         palette_role_index("waveform_outline");
     static_assert(kInk < kGuiPaletteRoleCount &&

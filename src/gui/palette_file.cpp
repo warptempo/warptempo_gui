@@ -112,7 +112,8 @@ static_assert(palette_members_disjoint());
 // THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled with the
 // program's words, render.cpp) are the struct's third part — the table's
 // painted tones and the panel label's swapping pair: distinct, and neither a
-// chrome role's member nor a program role's.
+// chrome role's member nor a program role's — and the button case's members
+// (kCaseMemberCount, the ramp's array and four lines) after them.
 constexpr bool cool_edit_tones_disjoint() {
     std::array<GuiColor GuiPalette::*,
                cool_edit_derive::kPaintedToneCount +
@@ -137,7 +138,8 @@ static_assert(cool_edit_tones_disjoint());
 static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount +
                cool_edit_derive::kPaintedToneCount +
-               std::size(cool_edit_derive::kLabelPairMembers)) *
+               std::size(cool_edit_derive::kLabelPairMembers) +
+               cool_edit_derive::kCaseMemberCount) *
                   sizeof(GuiColor));
 
 // EACH CHROME'S OWN SCHEME IS A BUILT-IN SCHEME, AND THAT SCHEME IS THE
