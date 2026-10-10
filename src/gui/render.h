@@ -749,18 +749,22 @@ void install_true_colors(bool on);
 // history's changed pair likewise: its removed half, then its added half),
 // every segment's text the program face on the lane's baseline.
 //
-// THE OVERLAP RULE (architect 2026-10-09, settled on the five overlap
-// captures of NOTES.md set 2): the labels paint RIGHT TO LEFT, each on an
-// OPAQUE FACE BOX over its own extent (THE WHOLE LANE'S ROWS, 0 .. 16 — the
+// THE OVERLAP RULE: LATER WINS BY OCCLUSION, NEVER BY CUTTING (architect
+// 2026-10-09, settled on the five overlap captures of NOTES.md set 2; 2026-10-10
+// ~19:00, after two near-coincident phase resets showed the earlier one's text
+// over the later's: "why not go simpler — later always wins?", and "a long
+// flag before a short one should continue after the short one ends"). The
+// labels paint LEFT TO RIGHT, each on an OPAQUE FACE BOX from ITS OWN
+// TRIANGLE'S LEFT EDGE (the column less the triangle's half width) to one
+// quantum past its last segment's text, on THE WHOLE LANE'S ROWS 0 .. 16 (the
 // press target's rows, so the label is one geometry at rest and selected,
-// 2026-10-09 ~21:00, a selected label taking no fill of its own, ~23:30;
-// from one quantum before its text to one past its last segment's), and a
-// label is CLIPPED AT THE
-// NEXT TRIANGLE'S LEFT EDGE (the next column less four quanta) when the next
-// marker stands more than the six-quantum lead to its right; within the
-// lead it is not clipped and overprints; then the triangles paint LEFT TO
+// 2026-10-09 ~21:00, a selected label taking no fill of its own, ~23:30), so
+// a later cue masks an earlier label's text only across its own
+// triangle-to-end extent and an earlier long label's text resumes past a
+// short later one; no label is ever clipped. Then the triangles paint LEFT TO
 // RIGHT over every label, so a right triangle covers its left neighbour's
-// shadow.
+// shadow. The press follows the picture (topmost_flag_rect, app_state.cpp):
+// the rightmost triangle, then the rightmost label box, under the point.
 //
 // THE STATES (resolve_flag_face, render.cpp, the one ladder: disabled wins,
 // then invalid, then the kind):
@@ -2679,11 +2683,12 @@ void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
 // painted"): `x, y, w, h` is THE LABEL'S BOX as painted — its opaque face
 // box on THE WHOLE LANE'S ROWS (2026-10-09 ~21:00: a press anywhere in the
 // lane's height over the label's columns is the label's — "right now it's
-// too small to click"; cue_fill_h_px), from one quantum before its first
-// segment's text to one past its last's, cut where the overlap rule cut it
-// — and `tri_*` THE TRIANGLE'S, its top edge's nine quanta and the
-// shadow's tenth over its five rows. Either may be empty (a label the
-// overlap rule cut to nothing, a field standing in for the label, the
+// too small to click"; cue_fill_h_px), from the triangle's left edge (the
+// column less the triangle's half width) to one quantum past its last
+// segment's text, the occluding box the painter lays — and `tri_*` THE
+// TRIANGLE'S, its top edge's nine quanta and the shadow's tenth over its
+// five rows. Either may be empty (a cue with no label segment, a field
+// standing in for the label, the
 // riding cells' run, which carries no triangle). The containment owner is
 // flag_hit_rect_contains below; the two boundaries are the label's
 // segments' box edges.
@@ -3541,8 +3546,8 @@ SuppressedBox suppressed_flag_box(const AppState& app);
 // THE PAINTER PUBLISHES ITS GEOMETRY. `out_hit_rects` receives one rect per
 // painted cue, left to right (the hit walk follows the paint order:
 // triangles first, read backwards — the right one on top — then labels,
-// read forwards — the left one on top, the labels painting right to left;
-// topmost_flag_rect, app_state.cpp), and `out_stems` one entry per ENABLED cue
+// read backwards likewise — the right one on top, the labels painting left
+// to right; topmost_flag_rect, app_state.cpp), and `out_stems` one entry per ENABLED cue
 // whose column is a waveform column. A derived width cannot be recomputed
 // without shaping, so the pixels' own pass is the single owner of both.
 // Either pointer may be null.

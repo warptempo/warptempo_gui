@@ -237,14 +237,12 @@ struct ProgramSpec {
     // before the text) and its pad past the text, the gap between two of a
     // marker's label segments' boxes (the bound cells, the history's two
     // halves — the product's own, a segment's text standing the label's
-    // lead past the previous one's end), and the overlap rule's lead: a
-    // label is clipped at the next triangle's left edge when the next column
-    // stands more than this far right.
+    // lead past the previous one's end). (A label is always clipped at the
+    // next triangle's left edge: render.h's overlap rule, 2026-10-10.)
     int  cue_label_lead;
     int  cue_fill_lead;
     int  cue_fill_pad;
     int  cue_segment_gap;
-    int  cue_overlap_lead;
     // THE CANVAS DOTS (METRICS §4.2, §4.3), ONE DEVICE PX SQUARE, COUNTED IN
     // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
@@ -314,7 +312,6 @@ inline constexpr ProgramSpec kProgramSpec = {
     .cue_fill_lead         = 5,
     .cue_fill_pad          = 1,
     .cue_segment_gap       = 4,
-    .cue_overlap_lead      = 6,
     .dot_period            = 4,
     .playhead_dot_phase    = 1,
     .cue_dot_period        = 8,

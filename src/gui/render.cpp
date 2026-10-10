@@ -1386,7 +1386,7 @@ bool stem_column_on_waveform(int col, int w) {
 // Shared flag iteration used by render_flags, its phase-reset analogue and
 // the `h` view's diff lane. Invokes `emit(i, left_x)` for EVERY visible
 // marker IN STORE ORDER; the cue painter collects them and orders them by
-// column itself (the overlap rule paints the labels right to left and the
+// column itself (the overlap rule paints the labels left to right and the
 // triangles left to right, render.h's marker-lane paragraph).
 //
 // THE PAINT/HIT INVARIANT. `left_x` — the marker's painted pixel column — is
@@ -1734,10 +1734,11 @@ struct CueDraw {
 
 // THE CUES' ONE PAINTER (render.h's marker-lane paragraph: the overlap rule,
 // the states; the lengths program_spec.h's), shared by both marker columns
-// and the `h` view's lane: the labels RIGHT TO LEFT, each on its opaque face
-// box and cut at the next triangle's left edge where the next column stands
-// past the overlap lead — a selected segment its text in the chrome's
-// selected text on that face, no fill of its own (2026-10-09 ~23:30); then
+// and the `h` view's lane: the labels LEFT TO RIGHT, each on its opaque face
+// box from its own triangle's left edge to its text's end, so a later cue
+// masks an earlier label only across its own extent — a selected segment its
+// text in the chrome's selected text on that face, no fill of its own
+// (2026-10-09 ~23:30); then
 // the triangles LEFT TO RIGHT; then the
 // publication — one FlagHitRect per cue (its label box as painted and its
 // triangle, both clipped to the waveform's columns), and one MarkerStem per
@@ -1761,32 +1762,29 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     const double base  = static_cast<double>(lane.y + cue_baseline_px());
     const GuiPalette& pal = palette();
     const int n = static_cast<int>(cues.size());
-    // Each label's painted extent [lo, hi): its first segment's box start to
-    // its last's end, cut at the next triangle's left edge where the next
-    // column stands past the lead; empty where no segment paints.
+    // Each label's OCCLUDING BOX [lo, hi): from its own triangle's left edge
+    // (its column less the triangle's half width) to its last segment's end;
+    // empty where no segment paints. The text stands where its segments put
+    // it; the box only reaches back to the triangle.
     std::vector<int> lo(static_cast<std::size_t>(n), 0);
     std::vector<int> hi(static_cast<std::size_t>(n), 0);
     for (int i = 0; i < n; ++i) {
         const CueDraw& c = cues[static_cast<std::size_t>(i)];
-        int a = 0, b = 0;
+        int b = 0;
         bool any = false;
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
-            if (!any) a = s.x0;
             b = s.x1;
             any = true;
         }
-        if (any && i + 1 < n) {
-            const int next = cues[static_cast<std::size_t>(i + 1)].col;
-            if (next - c.col > kProgramSpec.cue_overlap_lead * u)
-                b = std::min(b, next - half);
-        }
-        lo[static_cast<std::size_t>(i)] = a;
-        hi[static_cast<std::size_t>(i)] = any ? std::max(a, b) : a;
+        lo[static_cast<std::size_t>(i)] = c.col - half;
+        hi[static_cast<std::size_t>(i)] = any ? std::max(c.col - half, b)
+                                             : c.col - half;
     }
 
-    // THE LABELS, RIGHT TO LEFT.
-    for (int i = n - 1; i >= 0; --i) {
+    // THE LABELS, LEFT TO RIGHT: a later cue's box masks an earlier cue's
+    // text across its own extent alone.
+    for (int i = 0; i < n; ++i) {
         const CueDraw& c = cues[static_cast<std::size_t>(i)];
         const int a = lo[static_cast<std::size_t>(i)];
         const int b = hi[static_cast<std::size_t>(i)];
@@ -3059,50 +3057,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // ink. The gap after the field belongs to the first riding box.
         const int gap    = kProgramSpec.cue_segment_gap * u;
         const int run_x0 = bx + box_w;
-        // THE RUN IS CUT AT THE NEXT TRIANGLE AS THE RESTING LABEL IS (the
-        // overlap rule, paint_cues; 2026-10-09 evening): the riding cells wear
-        // their resting look, and at rest a label's extent ends at the next
-        // cue's triangle's left edge wherever the next column stands past the
-        // overlap lead — so the riding face boxes, which span the whole lane,
-        // never cover a neighbour's triangle the resting row shows. THE NEXT
-        // CUE is paint_cues' own: the cues ordered by column, stably in store
-        // order, so it is the least (column, index) after this marker's on
-        // the same displayed basis the field's column was resolved on; one
-        // sharing this column stands within the lead and cuts nothing. Only
-        // the FIELD paints over a neighbour (render.h's EDITING paragraph);
-        // what rides past a neighbour's triangle as the field grows is cut
-        // there, as the committed label will be.
-        int ride_clip_hi = std::numeric_limits<int>::max();
-        {
-            bool have_next = false;
-            int  next_col  = 0;
-            for (int j = 0; j < store_n; ++j) {
-                if (j == idx) continue;
-                const int64_t f =
-                    phase ? pmv[static_cast<size_t>(j)].time_frame
-                          : mv[static_cast<size_t>(j)].time_frame;
-                const int cj = painted_column_of_source_frame_on_basis(
-                    app, audio, static_cast<double>(f), map, basis.vp_start,
-                    basis.spp);
-                const bool after = cj > col || (cj == col && j > idx);
-                if (!after) continue;
-                if (!have_next || cj < next_col) {
-                    have_next = true;
-                    next_col  = cj;
-                }
-            }
-            if (have_next && next_col - col > kProgramSpec.cue_overlap_lead * u)
-                ride_clip_hi = area.x + next_col - cue_triangle_half_w_px();
-        }
-        cairo_save(cr);
-        if (ride_clip_hi != std::numeric_limits<int>::max()) {
-            const int clip_lo = std::min(run_x0, ride_clip_hi);
-            cairo_rectangle(cr, static_cast<double>(clip_lo),
-                            static_cast<double>(lane.y),
-                            static_cast<double>(ride_clip_hi - clip_lo),
-                            static_cast<double>(fill_h));
-            cairo_clip(cr);
-        }
+        // THE RUN IS NOT CLIPPED (architect 2026-10-10 ~19:00): the riding
+        // cells paint where the paint order puts them. The editor paints
+        // after the lane pass, so the run stands over a neighbour's label and
+        // triangle as the field itself does (render.h's EDITING paragraph,
+        // "it may overlap with the flag and other elements, that's fine").
         int cursor_x = run_x0;
         const int lower_seam = cursor_x;
         // The field's outline column stands in the first gap's first quantum
@@ -3131,7 +3090,6 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         if (ride_lower) ride(cl.lower_run, cl.lower_w);
         const int upper_seam = cursor_x;
         if (ride_upper) ride(cl.upper_run, cl.upper_w);
-        cairo_restore(cr);   // the next triangle's cut
 
         // THE RUN IS PUBLISHED AS A FLAG HIT RECT, keyed to the marker being
         // edited: its rect is the WHOLE re-painted run's extent, the gaps
@@ -3146,9 +3104,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // zero rect, which contains no point. It carries no triangle: the
         // triangle stays the flag pass's. It begins after the field's outline
         // column, as its face does: that column is the field's, claimed by
-        // `box`. It ends where the next triangle's cut ends the pixels
-        // (ride_clip_hi above), as the resting label's claim does.
-        const int run_w = std::min(cursor_x, ride_clip_hi) - face_x0;
+        // `box`. It ends where the pixels end.
+        const int run_w = cursor_x - face_x0;
         if (cursor_x > run_x0 && run_w > 0) {
             FlagHitRect& r = out.riding_cells;
             r.marker_index          = idx;

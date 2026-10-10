@@ -188,8 +188,9 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y) {
 // its triangle, and the walk follows the cue painter's own order
 // (render.cpp's paint_cues, render.h's marker-lane paragraph): THE TRIANGLES
 // paint last, left to right, so a press on any triangle answers the
-// rightmost triangle under it; THE LABELS paint right to left under them, so
-// among labels the LEFTMOST under the point is on top. `on_triangle` says
+// rightmost triangle under it; THE LABELS paint left to right under them (a
+// later label's box masks an earlier one's text), so among labels the
+// RIGHTMOST under the point is on top. `on_triangle` says
 // which of the two answered (a triangle is the payload's, never a cell).
 static const FlagHitRect* topmost_flag_rect(const AppState& app,
                                             int mouse_x, int mouse_y,
@@ -235,7 +236,9 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
             return &r;
         }
     }
-    for (const FlagHitRect& r : app.flag_hit_rects) {
+    for (auto it = app.flag_hit_rects.rbegin();
+         it != app.flag_hit_rects.rend(); ++it) {
+        const FlagHitRect& r = *it;
         if (px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h)
             return &r;
     }
@@ -287,7 +290,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // label's box. No slope test: the triangle's box is its hit.
     //
     // Z-ORDER is the cue painter's (topmost_flag_rect above): triangles over
-    // labels, the rightmost triangle on top, the leftmost label on top.
+    // labels, the rightmost triangle on top, the rightmost label on top.
     // Selection lifts nothing (it is the label's selected pair, not a
     // z-rule), so this is the whole arbitration.
     const FlagHitRect* r = topmost_flag_rect(app, mouse_x, mouse_y);
