@@ -8,9 +8,12 @@
 #include <string_view>
 
 // COOL EDIT DERIVES ITS PANEL'S TONES FROM ONE COLOR (architect 2026-10-09,
-// the program is Cool Edit: one source color, the tones its arithmetic, as
-// the chrome's 3D set derives from its ground, chrome_derive.h). The
-// program's panel — the toolbar band, the dock
+// the program is Cool Edit: one source color, the tones its arithmetic) —
+// AND SINCE 2026-10-10 THE CHROME'S TOO (architect 2026-10-10, "the chrome
+// color should just be the Cool Edit theme color … even the font color, all
+// of that would be inherited from Cool Edit": every chrome role but the
+// caption's six is one of the tones below, chrome_derive.h the mapping).
+// The program's panel — the toolbar band, the dock
 // bar, row 8 and, in later parts, the canvas column's frames — takes ONE
 // palette role, `face` (Cool Edit's "Dockable Window 3D Color", its scheme
 // key `Face`; palette_file.h's role table, default 626C7B under every
@@ -41,6 +44,9 @@
 //   tab_dark       1F2227   0  0  0      field_light ABB1BB  −1  0 +1
 //   tab_light      B2B8C1  −1 −1  0      tab_line    BCC2CA   0 −1 −1
 //   label          D6DADE   0 −1  0      cue_shadow  31363D  −1 −1  0
+//   text           EFF0F0   0 −1 −1      text_dark   312A10  +1 +1 +1
+//                                        (text_dark on Safari So Good's
+//                                        C1B791, the text tones below)
 //
 // ONE ENUMERATOR PER TONE A PAINTER PUTS DOWN, BY NEED (2026-10-07's rule
 // for a generated block of tones): every measured tone stands in the table below as the record, and
@@ -65,14 +71,29 @@
 // The time field's digits (EFF0F0) likewise, a constant of the field's
 // painter.
 //
-// THE LIGHT-FACE TEXT SWAP — MEASURED, NOT BUILT (architect 2026-10-09: a
-// dark panel is the one he draws): on Seattle Blues (Face L = 0.796) Cool
-// Edit swaps the panel label's ink and shadow — the dark tone (52545F, the
-// `dark` fit) as ink and the light one (E2E2E6, the `hilight` fit) as its
-// shadow, an engraved look — and its program text turns dark (1A1D36 for
-// EFF0F0). The threshold lies somewhere between L = 0.555 (Lipstick, light
-// text) and 0.796 (Seattle), unpinned by the five presets (METRICS
-// UNCERTAIN 3). The panel here keeps the dark-face pair at every Face.
+// THE TEXT TONES (2026-10-10; tmp/research/cool_edit/METRICS_PRESETS_1010.md,
+// eleven captures over nine Faces, §2–§3): Cool Edit's PROGRAM TEXT — the
+// clock, the active tab's "Files", the Sel / View digits — is NOT the
+// two-parameter rule: its saturation is cut too, S' = c·S + d (the Tone's c
+// and d below; c = 1, d = 0 for every panel tone). On a dark Face it is
+// `text`, L' = .086·L + .900, S' = .2·S (§2a, worst 1 over nine Faces); ABOVE
+// THE TEXT THRESHOLD (kTextSwapLightness) Cool Edit SWAPS it dark, `text_dark`,
+// L' = .16·L + .025, S' = .58·S + .32 (§3d's clock fit, worst 1 over four
+// Faces; a grey Face takes colorsys's hue 0, as the clock measured, so its
+// dark text is a red-brown 311A1A). The fields' digits NEVER swap — their
+// ground is the dark `mid` at every Face (§2a, §3a) — so the field text is
+// `text` at every Face (field_text below). THE CHROME WEARS THEM
+// (chrome_derive.h): the label, the clock text and the card text the swapping
+// text, the field text the never-swapping one. THE PANEL LABEL'S OWN SWAP —
+// a later threshold, (.663, .739] (§3a), ink and shadow trading to the
+// `dark` / `hilight` pair (§3c) — is not built: the panel keeps its
+// dark-face pair at every Face.
+//
+// THE SELECTED TEXT (architect 2026-10-10, "I agree with your call"): the
+// chrome's selection fill is THE WAVEFORM'S INK and its text the ink
+// darkened, `selected_text` — the ink at HLS L 0.10, hue and saturation
+// kept (ToneSource::Ink, as the span's bevels). A ruling, not a measurement:
+// Cool Edit draws no text on its ink; the default ink's byte is pinned below.
 
 namespace cool_edit_derive {
 
@@ -125,18 +146,29 @@ constexpr uint32_t byte_of(double v) {
     return static_cast<uint32_t>(n < 0 ? 0 : (n > 255 ? 255 : n));
 }
 
-// THE ONE DERIVATION: Face in HLS, L' = a·L + b clamped, H and S kept.
-constexpr uint32_t tone(uint32_t face, double a, double b) {
-    const Hls f = rgb_to_hls(static_cast<double>((face >> 16) & 0xFF) / 255.0,
-                             static_cast<double>((face >> 8) & 0xFF) / 255.0,
-                             static_cast<double>(face & 0xFF) / 255.0);
-    double l = a * f.l + b;
-    l = l < 0.0 ? 0.0 : (l > 1.0 ? 1.0 : l);
-    if (f.s == 0.0) {
+constexpr Hls hls_of(uint32_t rgb) {
+    return rgb_to_hls(static_cast<double>((rgb >> 16) & 0xFF) / 255.0,
+                      static_cast<double>((rgb >> 8) & 0xFF) / 255.0,
+                      static_cast<double>(rgb & 0xFF) / 255.0);
+}
+
+constexpr double clamp_unit(double x) {
+    return x < 0.0 ? 0.0 : (x > 1.0 ? 1.0 : x);
+}
+
+// THE ONE DERIVATION: the source in HLS, L' = a·L + b clamped, the hue
+// kept, and S' = c·S + d clamped — c = 1, d = 0 (the saturation kept) for
+// every tone but the program text's (the head).
+constexpr uint32_t tone(uint32_t face, double a, double b, double c = 1.0,
+                        double d = 0.0) {
+    const Hls f = hls_of(face);
+    const double l = clamp_unit(a * f.l + b);
+    const double s = clamp_unit(c * f.s + d);
+    if (s == 0.0) {
         const uint32_t v = byte_of(l);
         return (v << 16) | (v << 8) | v;
     }
-    const double m2 = l <= 0.5 ? l * (1.0 + f.s) : l + f.s - l * f.s;
+    const double m2 = l <= 0.5 ? l * (1.0 + s) : l + s - l * s;
     const double m1 = 2.0 * l - m2;
     return (byte_of(hls_value(m1, m2, f.h + 1.0 / 3.0)) << 16) |
            (byte_of(hls_value(m1, m2, f.h)) << 8) |
@@ -155,10 +187,17 @@ enum class ToneSource { Face, Ink };
 
 struct Tone {
     const char*            name;
-    uint32_t               measured;   // Cool Edit's default scheme's byte
+    uint32_t               measured;   // Cool Edit's byte on `measured_on`
     double                 a, b;       // the fit: L' = a·L + b
-    GuiColor GuiPalette::* member;     // the painted ones; nullptr = record
+    // The panel's painted ones; nullptr = a record, or a tone the chrome
+    // wears through its own roles (chrome_derive.h, by name).
+    GuiColor GuiPalette::* member;
     ToneSource             source = ToneSource::Face;
+    double                 c = 1.0, d = 0.0;   // S' = c·S + d (the head)
+    // The source color `measured` was captured on: the default Face for
+    // every Face tone but the swapped text, which the default never shows
+    // (the head's proof).
+    uint32_t               measured_on = kDefaultFace;
 };
 // Each with where Cool Edit draws it (METRICS §2.1, §2.2, §3).
 inline constexpr Tone kTones[] = {
@@ -195,6 +234,15 @@ inline constexpr Tone kTones[] = {
     // of the triangle's rows (METRICS §4.2, §4.3; the marker lane and the
     // ruler, 2026-10-09)
     {"cue_shadow",    0x31363D, 0.502, -0.004, &GuiPalette::ce_cue_shadow},
+    // THE PROGRAM TEXT (2026-10-10, the head's text tones): the clock's,
+    // "Files"' and the field digits' light ink on a dark Face — the chrome's
+    // label, clock and card text below the swap and its field text at
+    // every Face (chrome_derive.h) — and Cool Edit's swapped dark ink above
+    // the threshold, measured on Safari So Good (C1B791, its clock 312A10).
+    {"text",          0xEFF0F0, 0.086,  0.900, nullptr, ToneSource::Face,
+     0.2, 0.0},
+    {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
+     0.58, 0.32, 0xC1B791},
     // THE VIEW BAR'S SPAN (METRICS §3), off the INK: its top row and left
     // column, and its bottom row and right column — the ink at HLS L 0.94
     // and 0.3157. `measured` is the default scheme's (WvFg 4BF3A7, the
@@ -209,6 +257,11 @@ inline constexpr Tone kTones[] = {
      ToneSource::Ink},
     {"span_shadow",   0x0A9757, 0.0,    0.3157, &GuiPalette::ce_span_shadow,
      ToneSource::Ink},
+    // THE CHROME'S SELECTED TEXT (2026-10-10, the head): the ink at HLS L
+    // 0.10 over the selection fill, which is the ink itself
+    // (chrome_derive.h). `measured` is the rule's byte on the default ink
+    // 4BF3A7 — a ruling, nothing captured — pinned below.
+    {"selected_text", 0x03301C, 0.0,    0.100, nullptr, ToneSource::Ink},
 };
 
 constexpr std::size_t painted_tone_count() {
@@ -228,11 +281,12 @@ constexpr bool within_one(uint32_t x, uint32_t y) {
     return true;
 }
 // THE PROOF (the head): the default Face reproduces every measured tone of
-// Cool Edit's default scheme within one per channel.
+// Cool Edit's default scheme within one per channel — the swapped text on
+// the Face it was captured on.
 static_assert([] {
     for (const Tone& t : kTones)
         if (t.source == ToneSource::Face &&
-            !within_one(tone(kDefaultFace, t.a, t.b), t.measured))
+            !within_one(tone(t.measured_on, t.a, t.b, t.c, t.d), t.measured))
             return false;
     return true;
 }());
@@ -257,11 +311,14 @@ inline constexpr SpanPreset kSpanPresets[] = {
     {0xED1EC9, 0xFCE3F8, 0x950C7D},
     {0x576AB4, 0xEAECF5, 0x323E6F},
 };
-constexpr const Tone& ink_tone(const char* name) {
+// The tone named `name` (every name is the table's: a miss answers the
+// first row, which the callers' asserts catch).
+constexpr const Tone& named_tone(const char* name) {
     for (const Tone& t : kTones)
         if (std::string_view(t.name) == name) return t;
     return kTones[0];
 }
+constexpr const Tone& ink_tone(const char* name) { return named_tone(name); }
 static_assert([] {
     const Tone& hi = ink_tone("span_hilight");
     const Tone& lo = ink_tone("span_shadow");
@@ -273,5 +330,98 @@ static_assert([] {
     }
     return true;
 }());
+
+// -- THE TEXT AND ITS SWAP (2026-10-10, the head) ------------------------------
+
+// A tone off its source: the Face, or the waveform's ink.
+constexpr uint32_t tone_of(const Tone& t, uint32_t face, uint32_t ink) {
+    return tone(t.source == ToneSource::Ink ? ink : face, t.a, t.b, t.c, t.d);
+}
+
+// THE TEXT THRESHOLD: Cool Edit's program text turns dark above it, keyed on
+// the Face's HLS L (METRICS_PRESETS_1010.md §3b: L and the RGB mean agree on
+// every capture; HSV V and luma are ruled out by the label's swap). The
+// captures pin it in (.624, .663] — Dusty Rose's L .624 keeps the light
+// text, Safari So Good's .663 swaps — and 0.64 sits inside that interval
+// with room on both sides, nearer the light side, which no capture
+// contradicts; any value in the interval reproduces all eleven captures.
+// The panel label's own swap (a later threshold) is not built (the head).
+inline constexpr double kTextSwapLightness = 0.64;
+constexpr bool text_swaps(uint32_t face) {
+    return hls_of(face).l > kTextSwapLightness;
+}
+
+// THE PROGRAM TEXT ON `face`: the light ink, or the dark one past the
+// threshold — the chrome's label, clock and card text (chrome_derive.h).
+constexpr uint32_t program_text(uint32_t face) {
+    return tone_of(named_tone(text_swaps(face) ? "text_dark" : "text"), face, 0);
+}
+// THE FIELD TEXT ON `face`: the light ink at every Face — the fields' ground
+// is the dark `mid`, which never swaps (the head).
+constexpr uint32_t field_text(uint32_t face) {
+    return tone_of(named_tone("text"), face, 0);
+}
+
+// THE TEXT'S PROOF (METRICS_PRESETS_1010.md §2a and §3d, the clock's flat
+// core; Seattle Blues from METRICS.md): every captured Face's program text
+// within one per channel, the swap falling where the captures put it.
+struct TextPreset {
+    uint32_t face, text;
+};
+inline constexpr TextPreset kTextPresets[] = {
+    {0x626C7B, 0xEFF0F0},   // Default
+    {0x272B6D, 0xE9E9EE},   // Midnight
+    {0x2F1AEE, 0xF0EFF4},   // 3D
+    {0xA8969C, 0xF4F4F4},   // Dusty Rose, L .624: light
+    {0x414141, 0xEBEBEB},   // Midnight Blues
+    {0x03040A, 0xE2E3E8},   // Stealth
+    {0x1C47C6, 0xEDEEF2},   // XP Blue
+    {0x8E283A, 0xF0EBEC},   // Fire and Brick
+    {0x8751CA, 0xF3F1F4},   // Lipstick and Grapes
+    {0xC1B791, 0x312A10},   // Safari So Good, L .663: swapped
+    {0xACA9D0, 0x151237},   // Grape, Lime and Tangerine: swapped
+    {0xC0C0C0, 0x311A1A},   // Arctic Freeze (grey: hue 0): swapped
+    {0xC7C8CF, 0x1A1D36},   // Seattle Blues: swapped
+};
+static_assert([] {
+    for (const TextPreset& p : kTextPresets)
+        if (!within_one(program_text(p.face), p.text)) return false;
+    return true;
+}());
+// The field text never swaps: on the default Face it is the program text.
+static_assert(field_text(kDefaultFace) == program_text(kDefaultFace));
+static_assert(text_swaps(0xC0C0C0) && !text_swaps(kDefaultFace));
+
+// THE DARK TONE AND THE HILIGHT ON OTHER FACES (METRICS_PRESETS_1010.md §2c,
+// §3c: the panel label's shadow, and the swapped label's ink and shadow) —
+// the chrome's card frame and its Hilight since 2026-10-10 (chrome_derive.h)
+// — within one per channel on the captured Faces, the swapped Grape and
+// Arctic Freeze among them.
+struct FaceToneSample {
+    const char* tone;
+    uint32_t    face, measured;
+};
+inline constexpr FaceToneSample kFaceToneSamples[] = {
+    {"dark",    0x626C7B, 0x2B2F36},   // Default
+    {"dark",    0x272B6D, 0x10122E},   // Midnight
+    {"dark",    0x2F1AEE, 0x11086A},   // 3D
+    {"dark",    0xA8969C, 0x4C3F43},   // Dusty Rose
+    {"dark",    0x414141, 0x1B1B1B},   // Midnight Blues
+    {"dark",    0x03040A, 0x000103},   // Stealth
+    {"dark",    0xC1B791, 0x5E5635},   // Safari So Good
+    {"dark",    0xC0C0C0, 0x555555},   // Arctic Freeze
+    {"dark",    0xACA9D0, 0x3E3A6B},   // Grape, Lime and Tangerine
+    {"hilight", 0xC0C0C0, 0xDFDFDF},   // Arctic Freeze
+    {"hilight", 0xACA9D0, 0xD4D3E6},   // Grape, Lime and Tangerine
+};
+static_assert([] {
+    for (const FaceToneSample& p : kFaceToneSamples)
+        if (!within_one(tone_of(named_tone(p.tone), p.face, 0), p.measured))
+            return false;
+    return true;
+}());
+
+// THE SELECTED TEXT'S PIN (the ruling's byte on the default ink).
+static_assert(tone_of(named_tone("selected_text"), 0, 0x4BF3A7) == 0x03301C);
 
 } // namespace cool_edit_derive

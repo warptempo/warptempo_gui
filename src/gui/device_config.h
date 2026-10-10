@@ -24,16 +24,17 @@
 //                            chrome_spec.h; any other word the launch's
 //                            hard fail); MAY BE ABSENT, reading as windows-2000
 //                            (kDefaultChromeKey); takes effect at the next
-//                            launch; the chrome's colors are its own,
-//                            compiled in (theme_file.h)
-//   scheme=<name>            THE SCHEME the chrome is painted in, its twelve
-//                            keys derived over the compiled theme: a built-in
-//                            scheme (`windows-2000-standard`, the catalog's
-//                            others) or a scheme file read
+//                            launch; the chrome's colors are the palette's
+//                            Cool Edit tones and the scheme's caption
+//                            (chrome_derive.h)
+//   scheme=<name>            THE SCHEME the caption is painted in, its six
+//                            keys (the caption alone since 2026-10-10): a
+//                            built-in scheme (`windows-2000-standard`, the
+//                            catalog's others) or a scheme file read
 //                            at launch (is_scheme_name, palette_file.h); MAY
 //                            BE ABSENT — the first run's state — meaning the
-//                            chrome's own scheme, the compiled theme exactly
-//                            (effective_scheme_name)
+//                            chrome's own scheme, the compiled caption
+//                            exactly (effective_scheme_name)
 //   palette=<name>           THE PALETTE the program is painted in: a built-in
 //                            palette, one of Cool Edit's presets
 //                            (`cool-edit-default`, `cool-edit-xp-blue`, ...)
@@ -289,9 +290,9 @@
 // (set_live_chrome_spec, chrome_spec.h), and the install resolves the
 // palette and the scheme (install_palette, render.h, through
 // effective_palette_name and effective_scheme_name, palette_file.h) and
-// takes the chrome's colors from its compiled theme (chrome_theme_words,
-// theme_file.h), with the scheme's twelve keys derived over it by the live
-// chrome's derivation (live_chrome_words, chrome_derive.h). THE ICON SET IS
+// derives the chrome's colors from the palette's Cool Edit tones and the
+// scheme's caption keys, or with none the chrome's compiled caption
+// (live_chrome_words, chrome_derive.h; chrome_caption, theme_file.h). THE ICON SET IS
 // ITS KEY VERBATIM TOO (2026-10-09): gui_main installs it once beside the
 // chrome (set_live_icon_set, icons.h), before the set's load. SO IS THE
 // FONT (2026-10-09): gui_main installs it beside the chrome (set_live_font,
@@ -308,7 +309,7 @@ struct DeviceConfig {
     // THE SCHEME, UNSET BY DEFAULT (2026-10-08 ~18:15): empty while the
     // config has no `scheme` line, which RESOLVES AT EACH INSTALL to the live
     // chrome's own scheme (effective_scheme_name, palette_file.h:
-    // `windows-2000-standard`, the compiled theme exactly) — never written
+    // `windows-2000-standard`, the compiled caption exactly) — never written
     // back; a named scheme is honored under every chrome.
     std::string scheme;
     // THE PALETTE, UNSET BY DEFAULT (architect 2026-10-07): empty while the

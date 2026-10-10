@@ -3048,10 +3048,12 @@ void GuiPaintHandler::paint_popup_chrome(cairo_t* cr, const GuiRect& r,
     //          SIDES (architect 2026-10-06: WS_BORDER, ReactOS's tooltip and
     //          Windows 2000's) — each side laid on the face as a square cell
     //          rect, the bottom row and the right column last, so they own
-    //          their corners whole as the captures' black does (a flat line,
-    //          no bevel: the relief's mitre, paint_relief_frame, is not drawn
-    //          here) — the tooltip and every notification card, whose words
-    //          their painters set in `card_text`. A card keeps its own height
+    //          their corners whole as the captures' border does (a flat
+    //          line, no bevel: the relief's mitre, paint_relief_frame, is not
+    //          drawn here) — the tooltip and every notification card, whose
+    //          words their painters set in `card_text`. Since 2026-10-10 the
+    //          three are Cool Edit's (the panel's Face, the program text and
+    //          the `dark` tone, chrome_derive.h). A card keeps its own height
     //          rule: the line is drawn on its outer rows; its pad is the
     //          spec's (tooltip_pad_px).
     if (face == PopupFace::Menu) {

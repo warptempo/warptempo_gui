@@ -21,42 +21,45 @@
 //     2026-10-09, when the cues took Cool Edit's two colors and the canvas
 //     its grid and center line) and nothing else: `palettes/<name>.palette`,
 //     the `palette` device key.
-//   A SCHEME — THE CHROME'S TWELVE KEYS (kGuiChromeLines below), Windows'
-//     own word for a set of chrome colors (the Appearance dialog's
-//     "scheme"), and NO FACE (architect 2026-10-09 ~21:20: "the scheme's
+//   A SCHEME — THE CAPTION'S SIX KEYS (kGuiChromeLines below; the chrome's
+//     twelve keys until 2026-10-10, when every other chrome color came to
+//     inherit the palette's Cool Edit tones, chrome_derive.h), Windows' own
+//     word for a set of chrome colors (the Appearance dialog's "scheme"),
+//     and NO FACE (architect 2026-10-09 ~21:20: "the scheme's
 //     default font should stop being honored — it should only be honored
 //     from the font picker"; the face is the device config's `font` key,
 //     gui_font.h): `schemes/<name>.scheme`, the `scheme` device key.
 // The two are independent: loading, saving, renaming or deleting one never
 // touches the other, and either applies under any chrome.
 //
-// TWO SOURCES FOR ONE STRUCT (architect 2026-10-07; 2026-10-08): THE LIVE
-// CHROME'S COMPILED THEME (theme_file.h's kGuiChromeThemes, never edited in
-// the app) colors the chrome, THE SCHEME'S TWELVE KEYS derived over it by
-// the live chrome's own derivation when the active scheme carries them, and
-// THE PALETTE colors the program — both kinds picked in the app and saved as
-// NAMED presets, the architect's workshop, "save and load a handful of
+// TWO SOURCES FOR ONE STRUCT (architect 2026-10-07; 2026-10-08; recast
+// 2026-10-10): THE PALETTE colors the program AND, THROUGH COOL EDIT'S
+// TONES, EVERY CHROME ROLE BUT THE CAPTION (architect 2026-10-10: "the
+// caption remains the only thing that's outside of Cool Edit";
+// chrome_derive.h), and THE SCHEME colors the caption — its six keys, or
+// with none the live chrome's compiled caption (theme_file.h's
+// kGuiChromeCaptions, never edited in the app) — both kinds picked in the
+// app and saved as NAMED presets, the architect's workshop, "save and load a handful of
 // themes at a time before we hard code them" (2026-10-08; a look made
 // official becomes a chrome variant, its colors compiled in).
 // GuiPalette (render.h) keeps every member; install_palette (render.h) fills
-// the chrome members off the theme's role table (kGuiThemeRoles) with the
-// scheme's keys derived over it and the program members off this file's
-// (kGuiPaletteRoles), so every painter reads palette() as before and no
-// painter knows which source a color came from. ONE SCHEME SYNTAX UNDER
-// EVERY CHROME (architect 2026-10-08 ~11:00 / ~12:10): the same twelve keys
-// draw under every chrome, each deriving the rest its own way — under
-// windows-2000 the 3D set alone, from the ground, as Windows' Appearance
-// dialog derived it (chrome_derive.h, whose live_chrome_words a later
-// vocabulary's derivation joins).
+// the program members off this file's table (kGuiPaletteRoles) and the
+// chrome members off the theme's role table (kGuiThemeRoles) by the one
+// derivation (chrome_derive.h's live_chrome_words, which a later
+// vocabulary's case joins), so every painter reads palette() as before and
+// no painter knows which source a color came from. ONE SCHEME SYNTAX UNDER
+// EVERY CHROME (architect 2026-10-08 ~11:00 / ~12:10): the same keys draw
+// under every chrome.
 //
 // THE PALETTE'S RULE (architect 2026-10-07 ~10:00): A COLOR THE PROGRAM
 // DRAWS IN THE WELL, OR ON A THING THAT ENTERS THE WELL, IS THE PALETTE'S; a
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // selected cue label and the flag editor's field and selection band, the
-// chrome's selected pair). So the palette's
-// program roles are exactly the TWELVE below (the scheme's twelve keys are
-// the chrome's, not the program's): the waveform's canvas, ink and lit
+// chrome's selected pair — whose colors are themselves the palette's tones
+// since 2026-10-10, chrome_derive.h). So the palette's
+// program roles are exactly the TWELVE below (the scheme's keys are the
+// caption's, not the program's): the waveform's canvas, ink and lit
 // outline; THE CANVAS'S GRID AND CENTER LINE, `grid` and `center`; THE CUES'
 // TWO COLORS, `cue` and `range`, and THE INVALID LABEL'S
 // PAIR, `invalid_label` and `invalid_label_selected` (architect 2026-10-09
@@ -93,16 +96,18 @@
 // chrome_schemes.inc by tools/theme_catalog/gen_theme_files.py (the
 // transcription's rules are its head's; regenerate, never hand-edit): each a
 // KEY (the catalog's verbatim — the `scheme` key's word for it), a DISPLAY
-// NAME and THE TWELVE CHROME KEYS; THE PRODUCT'S OWN among them (2026-10-10,
-// kGuiProductSchemeKeys below: his schemes made built-ins). A
-// SCHEME IS CHROME-ONLY BY ITS KIND: choosing one installs its twelve and
-// leaves the program's twelve as they stand (GuiColorPicker::load_preset).
-// THE CHROME'S OWN SCHEME — the one its `own_scheme` names (chrome_spec.h:
-// `windows-2000-standard`) — CARRIES NO
-// KEYS under that chrome (scheme_record): the compiled theme exactly
-// (Windows 2000 Standard's gray face is hand-set, chrome_derive.h's head, so
-// its scheme run through the rule would not be its own bytes); under another
-// chrome it is a scheme like any. A BUILT-IN IS NOT A FILE AND TAKES NO
+// NAME and THE SIX CAPTION KEYS; THE PRODUCT'S OWN among them (2026-10-10,
+// kGuiProductSchemeKeys below: his schemes made built-ins); the catalog's
+// `clearlooks` entry is not among them (architect 2026-10-10, "we can
+// remove the Clearlooks theme": the Clearlooks chrome left 2026-10-09; the
+// generator's head). A SCHEME IS CAPTION-ONLY BY ITS KIND: choosing one
+// installs its six and leaves the program's twelve as they stand
+// (GuiColorPicker::load_preset). THE CHROME'S OWN SCHEME — the one its
+// `own_scheme` names (chrome_spec.h: `windows-2000-standard`) — CARRIES NO
+// KEYS under that chrome (scheme_record): the compiled caption exactly
+// (theme_file.h, asserted equal to the scheme's six), so a config naming no
+// scheme and one naming the chrome's own paint alike and the picker's Save
+// stays gray on it; under another chrome it is a scheme like any. A BUILT-IN IS NOT A FILE AND TAKES NO
 // FILE: a file bearing a built-in's key is the read's hard fail, and the
 // picker never asks the maintenance API below to write, rename or remove
 // one (its writers assert it). Nothing is bundled or copied in; each folder
@@ -127,11 +132,14 @@
 //     the GUI no longer writes, the read's hard fail on that line, an unknown
 //     role (a file of the combined days that carried both halves — split
 //     2026-10-08 — is the planner's to edit at the install, no migration).
-//   A SCHEME FILE NAMES THE CHROME'S KEYS ALONE (kGuiChromeLines): THE NINE
-//     OF THE BLOCK — every key but the inactive caption's three — ALL
-//     REQUIRED, the first missing one in the table's order the read's hard
-//     fail (the picker writes all nine); THE INACTIVE CAPTION'S THREE EACH
-//     OPTIONAL, written once that element has been picked, and absent
+//   A SCHEME FILE NAMES THE CAPTION'S KEYS ALONE (kGuiChromeLines): THE
+//     THREE OF THE BLOCK — the title's start, end and text — ALL REQUIRED,
+//     the first missing one in the table's order the read's hard fail (the
+//     picker writes all three); A RETIRED KEY — the ground, the text, the
+//     selection and the field pairs of 2026-10-08 to 2026-10-10 — is an
+//     unknown role, the read's hard fail on that line, with no migration
+//     (the planner edits the devices' files at the install); THE INACTIVE
+//     CAPTION'S THREE EACH OPTIONAL, written once that element has been picked, and absent
 //     FOLLOWING the active caption's (GuiChromePick's accessors); a program
 //     role in a scheme file is an unknown role, and so is a `font` line (the
 //     scheme's optional font line of 2026-10-09 retired the same night with
@@ -141,8 +149,7 @@
 //     SCHEME IS HONORED UNDER EVERY CHROME, whichever saved it: a scheme
 //     saved under one chrome stands in the folder when the Settings chrome
 //     row switches to another, and draws there by that chrome's derivation.
-//     No follower beyond the inactive caption's three: every other role and
-//     key stands alone.
+//     No follower beyond the inactive caption's three.
 // A FILE'S BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's: the hex he lifts from a screenshot or types into the picker, and
 // the tablet converts it at the painter's entry (display_transform.h's head).
@@ -266,42 +273,36 @@ static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
               "render.h's std::array<uint32_t, 12> must be GuiPaletteWords");
 
-// THE SCHEME'S TWELVE KEYS (the head; architect 2026-10-08 ~11:00, a
-// scheme's whole content since ~18:15) — THE ONE ENUMERATION of the chrome's
-// keys, in the file's, the chooser's and the generated schemes' order
+// THE SCHEME'S SIX KEYS — THE CAPTION (the head; architect 2026-10-08
+// ~11:00, a scheme's whole content since ~18:15; the caption alone since
+// 2026-10-10) — THE ONE ENUMERATION of the scheme's keys, in the file's, the
+// chooser's and the generated schemes' order
 // (tools/theme_catalog/gen_theme_files.py reads the keys off this table and
 // checks its own against them): each the key a scheme file spells,
 // GuiChromePick's member it fills (render.h) — a block key's word or an
-// inactive key's optional — THE COMPILED ROLE whose word it shows while the
-// live scheme carries no keys (the picker's OLD, and the seed of the block a
-// first pick creates; the role chrome_derive.h maps the key onto,
-// palette_file.cpp's check) and, for an inactive key, the block key it
-// FOLLOWS while absent.
+// inactive key's optional — THE CHROME ROLE it moves (chrome_derive.h maps
+// it there, palette_file.cpp's check; the picker's OLD while the live
+// scheme carries no keys is that key's word in the live chrome's compiled
+// caption) and, for an inactive key, the block key it FOLLOWS while absent.
 inline constexpr std::size_t kGuiChromeNoFollow = static_cast<std::size_t>(-1);
 struct GuiChromeLine {
-    const char*                          key;
+    const char*                              key;
     uint32_t GuiChromePick::*                word;       // a block key's
     std::optional<uint32_t> GuiChromePick::* optional;   // an inactive key's
-    const char*                          compiled_role;
-    std::size_t                          follows;    // kGuiChromeNoFollow for a block key
+    const char*                              role;
+    std::size_t                              follows;    // kGuiChromeNoFollow for a block key
 };
 inline constexpr GuiChromeLine kGuiChromeLines[] = {
-    {"chrome_ground",               &GuiChromePick::ground,         nullptr, "ground",                    kGuiChromeNoFollow},
-    {"chrome_text",                 &GuiChromePick::text,           nullptr, "label",                     kGuiChromeNoFollow},
-    {"chrome_title_start",          &GuiChromePick::title_start,    nullptr, "caption_active",            kGuiChromeNoFollow},
-    {"chrome_title_end",            &GuiChromePick::title_end,      nullptr, "caption_active_gradient",   kGuiChromeNoFollow},
-    {"chrome_title_text",           &GuiChromePick::title_text,     nullptr, "caption_active_text",       kGuiChromeNoFollow},
-    {"chrome_inactive_title_start", nullptr, &GuiChromePick::inactive_title_start, "caption_inactive",          2},
-    {"chrome_inactive_title_end",   nullptr, &GuiChromePick::inactive_title_end,   "caption_inactive_gradient", 3},
-    {"chrome_inactive_title_text",  nullptr, &GuiChromePick::inactive_title_text,  "caption_inactive_text",     4},
-    {"chrome_selection",            &GuiChromePick::selection,      nullptr, "selected_fill",             kGuiChromeNoFollow},
-    {"chrome_selection_text",       &GuiChromePick::selection_text, nullptr, "selected_text",             kGuiChromeNoFollow},
-    {"chrome_field",                &GuiChromePick::field,          nullptr, "field_ground",              kGuiChromeNoFollow},
-    {"chrome_field_text",           &GuiChromePick::field_text,     nullptr, "field_text",                kGuiChromeNoFollow},
+    {"chrome_title_start",          &GuiChromePick::title_start, nullptr, "caption_active",          kGuiChromeNoFollow},
+    {"chrome_title_end",            &GuiChromePick::title_end,   nullptr, "caption_active_gradient", kGuiChromeNoFollow},
+    {"chrome_title_text",           &GuiChromePick::title_text,  nullptr, "caption_active_text",     kGuiChromeNoFollow},
+    {"chrome_inactive_title_start", nullptr, &GuiChromePick::inactive_title_start, "caption_inactive",          0},
+    {"chrome_inactive_title_end",   nullptr, &GuiChromePick::inactive_title_end,   "caption_inactive_gradient", 1},
+    {"chrome_inactive_title_text",  nullptr, &GuiChromePick::inactive_title_text,  "caption_inactive_text",     2},
 };
 inline constexpr std::size_t kGuiChromeLineCount = std::size(kGuiChromeLines);
 
-// Whether the key is one of the block's nine (else an inactive key).
+// Whether the key is one of the block's three (else an inactive key).
 constexpr bool is_chrome_block_line(std::size_t line) {
     return kGuiChromeLines[line].word != nullptr;
 }
@@ -331,19 +332,22 @@ constexpr std::size_t palette_role_index(std::string_view name) {
     return kGuiPaletteRoleCount;
 }
 
-// INSTALL THE PROGRAM'S TWELVE ALONE (2026-10-07; the install family's
-// second member, defined in render.cpp beside install_palette, render.h):
-// `words` written into GuiPalette's program members, the plate's two inks
-// re-baked and palette_generation bumped, the chrome members untouched — THE
-// COMPILED CHROME STAYS LAUNCH-BOUND (it moves only with the chrome, at
-// launch, install_palette), the program's colors move live, and so does the
-// scheme's twelve, through its own member beside this one
-// (install_chrome_pick, render.h, 2026-10-08). THE PICKER'S LIVE ROAD
+// INSTALL THE PROGRAM'S TWELVE (2026-10-07; the install family's second
+// member, defined in render.cpp beside install_palette, render.h): `words`
+// written into GuiPalette's program members, the plate's two inks re-baked,
+// THE CHROME'S MEMBERS RE-DERIVED FROM THEM under the live scheme's caption
+// (2026-10-10: every chrome role but the caption's six is a tone of the
+// palette's face or ink, chrome_derive.h's live_chrome_words) and
+// palette_generation bumped — so a pick of the Face or the ink moves the
+// chrome live; the caption's six move through their own member beside this
+// one (install_chrome_pick, render.h, 2026-10-08). THE PICKER'S LIVE ROAD
 // (GuiColorPicker::install_live_words, color_picker.h, which calls both and
 // then runs this shape once). THE APPLY SHAPE THE
 // CALLER OWES, after the call: the caller kicks the waveform when the plate
 // inks changed and otherwise refreshes the flag cache alone, then
-// invalidates the whole window — the waveform_plate_inks pair read before
+// invalidates the whole window (the whole SURFACE when the chrome's words
+// moved: the restored laptop's sizing frame paints in them, outside the
+// client, GuiColorPicker::install_live_words) — the waveform_plate_inks pair read before
 // and after the install; when it moved, the synchronous plate rebuild
 // (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
 // flag cache rebuilt at its tail, keyed by the generation); when it did not
@@ -413,8 +417,8 @@ constexpr bool is_palette_name_spelling(std::string_view v) {
 // THE BUILT-IN SCHEMES (the head) — every catalog entry in the catalog's
 // order, GENERATED (chrome_schemes.inc; never hand-edited): the key, the
 // display name ("Windows Rainy Day", "CDE Northern Sky" — the family's word,
-// then the catalog name in Title Case; the generator's head) and the twelve
-// keys' words, every inactive key present (a scheme records its inactive
+// then the catalog name in Title Case; the generator's head) and the six
+// caption keys' words, every inactive key present (a scheme records its inactive
 // caption, flat where it records no end). No face: a scheme carries none
 // (2026-10-09 ~21:20, the head; the catalog keeps each source's font as
 // its record).
@@ -455,7 +459,7 @@ constexpr bool is_chrome_own_scheme(std::string_view name) {
 // head; the scheme rows carry no family), so the Chrome scope's first group
 // takes them after the chromes' own schemes, "alongside Windows 2000
 // Standard" (color_picker::preset_menu_rows). No chrome's own: under every
-// chrome a product scheme carries its twelve keys, derived as any built-in's
+// chrome a product scheme carries its six keys, as any built-in's
 // (scheme_record; chrome_derive.h).
 inline constexpr const char* kGuiProductSchemeKeys[] = {
 #include "chrome_schemes_product.inc"
@@ -516,9 +520,10 @@ inline constexpr const char* kSchemeGrammarReason =
 // is_palette_name(name), so this resolves and never refuses (install_palette
 // at launch; the picker's load and Delete).
 GuiPaletteWords palette_record(std::string_view name);
-// The keys the scheme `name` names — for a BUILT-IN its twelve, or NONE when
-// it is the live chrome's own scheme (the compiled theme exactly, the head);
-// for a loaded file its keys (the nine and each inactive key it carries).
+// The keys the scheme `name` names — for a BUILT-IN its six, or NONE when
+// it is the live chrome's own scheme (the compiled caption exactly, the
+// head); for a loaded file its keys (the three and each inactive key it
+// carries).
 // Precondition: is_scheme_name(name), so this resolves and never refuses.
 std::optional<GuiChromePick> scheme_record(std::string_view name);
 
@@ -539,17 +544,17 @@ std::optional<GuiChromePick> scheme_record(std::string_view name);
 // first write. Precondition: `name` in the grammar and no built-in's of the
 // kind.
 // A SCHEME FILE IS WRITTEN AS THE SCREEN SHOWS IT (2026-10-08, the planner's
-// ruling on the scheme split): the nine block keys always, and EACH
+// ruling on the scheme split): the three block keys always, and EACH
 // INACTIVE KEY THE PICK CARRIES — so a pick that holds the inactive three
 // (a built-in scheme's, every one of which records them; a file's that
-// named them; one the picker has picked) is written with all twelve and the
+// named them; one the picker has picked) is written with all six and the
 // saved file reproduces the saved look, the laptop's inactive gray staying
-// gray after a Save As from windows-2000-standard; the NINE-KEY FORM is the
-// file of a pick whose inactive three were never picked and never present,
-// the inactive caption then following the active one (the head's rule,
-// unchanged). The picker hands this writer the live scheme's keys
+// gray after a Save As from windows-2000-standard; the THREE-KEY FORM is
+// the file of a pick whose inactive three were never picked and never
+// present, the inactive caption then following the active one (the head's
+// rule, unchanged). The picker hands this writer the live scheme's keys
 // (color_picker::live_scheme_keys: the live pick, or the live chrome's own
-// built-in's twelve while it stands, which carries none live). The reader
+// built-in's six while it stands, which carries none live). The reader
 // takes both forms (read_scheme_file).
 std::optional<std::string> write_palette_file(std::string_view name,
                                               const GuiPaletteWords& words);

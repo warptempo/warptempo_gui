@@ -7,9 +7,10 @@
 // THE CHROME SPEC (architect 2026-10-06): the choices of the period desktop
 // the chrome follows, for the elements a later vocabulary may draw
 // differently — read by the chokepoint that paints each element, never a
-// literal at the painter. The colors stay the chrome's compiled theme's
-// (theme_file.h's kGuiChromeThemes, by this spec's key) and the palette's
-// (palette_file.h); the spec chooses shapes and seats, and names the
+// literal at the painter. The colors are the palette's (palette_file.h),
+// the chrome inheriting its Cool Edit tones (chrome_derive.h), and the
+// caption's the scheme's or the chrome's compiled caption (theme_file.h's
+// kGuiChromeCaptions, by this spec's key); the spec chooses shapes and seats, and names the
 // scheme a config with no `scheme` line takes. It names NO FACE: the face
 // is the device config's `font` key alone, under every chrome (architect
 // 2026-10-09 ~21:20, "the font is its own drop-down"; gui_font.h's
@@ -26,7 +27,7 @@
 // lane, the ruler or a dead button's glyph.
 //
 // THE NAME IS `windows-2000` (architect 2026-10-07): the `chrome` key's
-// value (its compiled theme is the catalog entry `windows-2000-standard`,
+// value (its compiled caption is the catalog entry `windows-2000-standard`'s,
 // the scheme's word beside it, the built-in schemes' keys being the
 // catalog's). C++
 // IDENTIFIERS AND FILE NAMES KEEP `Win2000` / `win2000` AS THE ABBREVIATION
@@ -120,7 +121,7 @@ struct ChromeSpec {
     // key verbatim, `windows-2000-standard`; palette_file.h's head): THE
     // SCHEME A CONFIG WITH NO `scheme` LINE TAKES (effective_scheme_name,
     // 2026-10-08 ~18:15), which carries no keys under this chrome — the
-    // compiled theme exactly. It names no palette: the default palette is
+    // compiled caption exactly. It names no palette: the default palette is
     // Cool Edit's one "Default" under every chrome (2026-10-09,
     // palette_file.h's head).
     const char*        own_scheme;

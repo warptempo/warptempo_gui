@@ -11,8 +11,7 @@
 namespace {
 
 // The role table names each role once, the name its member's own, so a
-// lookup by name (theme_role_index) and the catalog's record name one role
-// each. AN
+// lookup by name (theme_role_index) names one role each. AN
 // EXHAUSTIVE PROOF IN N LOG N: every name measured once, the names sorted,
 // no two neighbours equal (the form that held clang's default constexpr step
 // budget on the NDK's compiler when the table carried 322 roles, 2026-10-07).
@@ -25,31 +24,31 @@ constexpr bool role_names_unique() {
 }
 static_assert(role_names_unique());
 
-// EVERY VOCABULARY HAS A COMPILED THEME, IN THE VOCABULARIES' ORDER, and
-// every theme belongs to one vocabulary — the order the chromes' own
+// EVERY VOCABULARY HAS A COMPILED CAPTION, IN THE VOCABULARIES' ORDER, and
+// every caption belongs to one vocabulary — the order the chromes' own
 // schemes' assert (palette_file.cpp) walks the two tables in — so
-// chrome_theme_words never misses.
-constexpr bool themes_follow_the_vocabularies() {
-    if (std::size(kGuiChromeSpecs) != std::size(kGuiChromeThemes))
+// chrome_caption never misses.
+constexpr bool captions_follow_the_vocabularies() {
+    if (std::size(kGuiChromeSpecs) != std::size(kGuiChromeCaptions))
         return false;
-    for (std::size_t i = 0; i < std::size(kGuiChromeThemes); ++i)
+    for (std::size_t i = 0; i < std::size(kGuiChromeCaptions); ++i)
         if (std::string_view(kGuiChromeSpecs[i]->key) !=
-            kGuiChromeThemes[i].chrome)
+            kGuiChromeCaptions[i].chrome)
             return false;
     return true;
 }
-static_assert(themes_follow_the_vocabularies());
+static_assert(captions_follow_the_vocabularies());
 // The device config's default (both templates stamp a default-constructed
 // struct's): the default chrome, kDefaultChromeKey.
 static_assert(DeviceConfig{}.chrome == kDefaultChromeKey);
 
 } // namespace
 
-const GuiThemeWords& chrome_theme_words(const ChromeSpec& spec) {
-    for (const GuiChromeTheme& t : kGuiChromeThemes)
-        if (std::string_view(spec.key) == t.chrome) return *t.words;
-    // Every vocabulary has a theme (the assert above): a miss is a program
+const GuiChromePick& chrome_caption(const ChromeSpec& spec) {
+    for (const GuiChromeCaption& t : kGuiChromeCaptions)
+        if (std::string_view(spec.key) == t.chrome) return *t.caption;
+    // Every vocabulary has a caption (the assert above): a miss is a program
     // bug.
     assert(false);
-    return kGuiThemeWin2000;
+    return kGuiCaptionWin2000;
 }

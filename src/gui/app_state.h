@@ -8773,9 +8773,9 @@ struct AppState {
 
     // -- THE COLOR PICKER'S WHOLE STATE (architect 2026-10-07) -----------
     //
-    // THE IN-APP PICKER OF THE PROGRAM'S TEN COLORS (kGuiPaletteRoles,
-    // palette_file.h: a PALETTE) AND, UNDER EVERY CHROME, THE CHROME'S
-    // TWELVE KEYS (kGuiChromeLines: a SCHEME; chrome_derive.h), ONE KIND AT
+    // THE IN-APP PICKER OF THE PROGRAM'S TWELVE COLORS (kGuiPaletteRoles,
+    // palette_file.h: a PALETTE) AND, UNDER EVERY CHROME, THE CAPTION'S SIX
+    // KEYS (kGuiChromeLines: a SCHEME; chrome_derive.h), ONE KIND AT
     // A TIME BY ITS SCOPE — a slim card on the well, chrome-branded, the FIFTH
     // ModalDialogOwner (its rank and its modal shape are at
     // ModalDialogOwner). Everything about the card that is not pixels is in
@@ -8791,13 +8791,13 @@ struct AppState {
     //              chooser lists and the preset button works on; set to
     //              Waveform at every open (GuiColorPicker::open);
     //   `element`  THE LIVE ELEMENT, an index into the elements' one space
-    //              (color_picker::element_at: the scheme's twelve keys, then
+    //              (color_picker::element_at: the scheme's six keys, then
     //              kGuiPaletteRoles), always one of the scope's;
     //   `parked_element`  THE OTHER SCOPE'S live element, swapped with
     //              `element` at a scope's change (GuiColorPicker::set_scope).
     //              BOTH KEPT ACROSS OPENS: the first open lands on the
     //              Waveform scope's first row (Canvas) with Chrome parked on
-    //              its first (Chrome), a later open returns to the elements
+    //              its first (Title), a later open returns to the elements
     //              last picked — the picker remembers where the work was;
     //   `old_rgb`  OLD — the live element's color WHEN IT BECAME the live
     //              element (the open, or the chooser's change); a tap on the
@@ -8924,7 +8924,7 @@ struct AppState {
             GuiRect  chooser{0, 0, 0, 0};      // the element combo: a press drops its list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
             // The list's rows, the dropped list's every one (the scope's
-            // two, or the scope's elements — at most the chrome's twelve,
+            // two, or the scope's elements — at most the palette's twelve,
             // color_picker::kListRowMax, asserted there), by row — the zero
             // rect for a row scrolled out of view, and past the list's
             // count — and its scroll bar (absent while every row shows).

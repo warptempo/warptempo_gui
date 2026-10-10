@@ -92,39 +92,35 @@ struct TrimRange {
 
 // -- Palette ---------------------------------------------------------------
 //
-// THE GUI'S COLORS ARE ROLES AND NOTHING ELSE, FROM TWO SOURCES
-// (architect 2026-10-04; the split 2026-10-07): a THEME holds every color
-// the CHROME paints — the chrome and its relief, the time fields' own pair,
-// the cards' three, the selected and field pairs, the caption — and THE
-// PALETTE every color the PROGRAM draws in the well or on a thing that
-// enters it (the waveform's canvas, ink and outline, the canvas's grid and
-// center line, the cues' two colors and the invalid label's pair, the playhead and the scanner, the panel's
-// face; palette_file.h's head owns the rule that parts the two). The
-// chrome's roles, their order and Windows 2000's values are the role table
-// (kGuiThemeRoles, theme_file.h); THE ACTIVE THEME IS THE LIVE CHROME'S OWN,
-// COMPILED IN (architect 2026-10-08: no theme files, no `theme` key —
-// kGuiChromeThemes, theme_file.h's head: Windows 2000's scheme under
-// windows-2000).
+// THE GUI'S COLORS ARE ROLES AND NOTHING ELSE (architect 2026-10-04; the
+// split 2026-10-07; the chrome's inheritance 2026-10-10): THE PALETTE holds
+// every color the PROGRAM draws in the well or on a thing that enters it
+// (the waveform's canvas, ink and outline, the canvas's grid and center
+// line, the cues' two colors and the invalid label's pair, the playhead and
+// the scanner, the panel's face; palette_file.h's head owns the rule that
+// parts program from chrome), and THE CHROME'S ROLES — the chrome and its
+// relief, the time fields' own pair, the cards' three, the selected and
+// field pairs, the caption — ARE INHERITED FROM IT, every one but the
+// caption's six a tone of the palette's face or ink by Cool Edit's own
+// arithmetic (architect 2026-10-10: "we follow Cool Edit's theming";
+// chrome_derive.h's head, the per-role table), THE CAPTION'S SIX a
+// SCHEME'S. The chrome's roles and their order are the role table
+// (kGuiThemeRoles, theme_file.h).
 // The program's roles are kGuiPaletteRoles and the compiled built-in
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
 // active palette is the device config's `palette` — a built-in or a
 // `<name>.palette` file from the `palettes/` folder beside it — or, with no
 // `palette` line, the default palette, Cool Edit's "Default" under every
-// chrome (2026-10-09); the active SCHEME, the chrome's twelve keys, is
-// its `scheme` — a built-in or a `<name>.scheme` file from the `schemes/`
+// chrome (2026-10-09); the active SCHEME, the caption's six keys, is its
+// `scheme` — a built-in or a `<name>.scheme` file from the `schemes/`
 // folder — or, with no line, the live chrome's own, which carries no keys
-// (2026-10-08 ~18:15). There is NO LEVEL (architect 2026-10-04): a
-// dark look, like any look made official, would be a chrome variant of its
-// own (2026-10-08). The app computes no color but THE CHROME KNOB'S
-// DERIVATION, each chrome's own and only over a scheme that carries the
-// chrome's twelve keys (architect 2026-10-08; live_chrome_words picks the
-// vocabulary's): under windows-2000 the relief quartet derived from the
-// ground by Windows' own Appearance-dialog rule, as Windows itself computed
-// it, every other chrome role a picked key (chrome_derive.h's head). With no
-// keys, the chrome's compiled theme stands as recorded. AND
-// THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit): its
-// tones derived from the palette's `face` by Cool Edit's own HLS rule
-// (cool_edit_derive.h, the COOL EDIT BLOCK).
+// and paints the chrome's COMPILED CAPTION (theme_file.h's
+// kGuiChromeCaptions: Windows 2000 Standard's under windows-2000). There is
+// NO LEVEL (architect 2026-10-04): a dark look, like any look made official,
+// would be a chrome variant of its own (2026-10-08). The app computes no
+// color but COOL EDIT'S: the program's panel tones derived from the
+// palette's `face` (cool_edit_derive.h, the COOL EDIT BLOCK) and, through
+// the same tones, the chrome's roles (chrome_derive.h).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
 // PAINTER CONSTANTS (cool_edit_paint.h: Cool Edit's measured bytes that do
@@ -139,10 +135,12 @@ struct TrimRange {
 // text role left 2026-10-09, icons.h's head). A DISABLED icon is
 // ReactOS's saturate of that picture under every chrome (icons::draw_disabled,
 // the program case's dead glyph), no role entering.
-// TEXT OVER A FILL IS THE FILL'S OWN PAIR — Windows recorded a text
-// colour beside every face (ButtonFace / ButtonText, Hilight / HilightText,
-// Window / WindowText, InfoWindow / InfoText), and a theme carries a text role
-// beside every ground role — never a luminance verdict.
+// TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
+// role — AND COOL EDIT'S: the chrome's text is Cool Edit's program text off
+// the Face, light on a dark Face and swapped dark past Cool Edit's own
+// threshold (cool_edit_derive.h's text tones; architect 2026-10-10:
+// "whatever luminous rules we previously had are superseded by the Cool Edit
+// follow"), the field's text never swapping on its dark ground.
 // STILL OPAQUE, STILL NO COMPOSITING, NO GRADIENTS, NO ROUNDED CORNERS, NO
 // HOVER FACE ON ANY BUTTON: the program's cases have none under any chrome
 // (Cool Edit's toolbar has none, program_spec.h's case_hot_face, 2026-10-09)
@@ -263,8 +261,9 @@ struct TrimRange {
 //   clock pair    UNREAD BY ANY PAINTER since 2026-10-09: the time fields
 //                 are the program's, Cool Edit's dark field
 //                 (paint_ce_time_field); the pair stays in the role table
-//                 and the scheme's derivation (Windows' status bar's
-//                 ButtonFace / ButtonText);
+//                 and the derivation (Windows' status bar's ButtonFace /
+//                 ButtonText, the Face and the program text since
+//                 2026-10-10);
 //   card trio     the tooltip and every notification card (THE CARD FACE,
 //                 below);
 //   caption six   THE CAPTION (architect 2026-10-05, the window's title
@@ -300,11 +299,14 @@ struct TrimRange {
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
 // `card_ground` under `card_text` with a THIN LINE of `card_frame`, ONE
-// Windows px (relief_line_px) and no relief line — the built-in's #FFFFE1
-// (InfoWindow) under black (InfoText) — on ALL FOUR SIDES (architect
-// 2026-10-06; the cards take the tooltip's look, his word), ReactOS's
-// tooltip on tmp/reactos-tooltips.png ("Views": WS_BORDER, black all round),
-// Windows 2000's. The line is painted as square cell rects on the face,
+// Windows px (relief_line_px) and no relief line, on ALL FOUR SIDES
+// (architect 2026-10-06; the cards take the tooltip's look, his word),
+// ReactOS's tooltip on tmp/reactos-tooltips.png ("Views": WS_BORDER all
+// round), Windows 2000's shape. ITS COLORS ARE COOL EDIT'S since 2026-10-10
+// (architect: "tooltips and cards take the Face, the derived text and a
+// dark border derived from the Cool Edit tones"): the panel's Face under
+// the program text, framed in the `dark` tone, Cool Edit's box outline
+// (chrome_derive.h) — Windows' cream InfoWindow under black retired. The line is painted as square cell rects on the face,
 // owning its corners whole — a flat line, not a bevel, so the relief's mitre
 // is not drawn on it (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE
 // RULE'S ONE STATEMENT.
@@ -356,16 +358,18 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
-// The resolved colors, ONE STRUCT, TWO SOURCES (2026-10-07): the active
-// theme's chrome ROLES and the active palette's program roles, one field
-// each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
+// The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES —
+// derived from the live palette and the live scheme's caption since
+// 2026-10-10 (chrome_derive.h) — and the active palette's program roles, one
+// field each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
 // program's in kGuiPaletteRoles' (palette_file.h), and THE COOL EDIT BLOCK
 // derived from the program's `face` (cool_edit_derive.h's painted tones,
 // 2026-10-09) — the three tables covering the struct exactly
 // (palette_file.cpp's static_asserts); the mapping above says what each
 // paints. Every field is a solid byte triple.
 struct GuiPalette {
-    // THE CHROME (Windows' names for the built-in's recorded values).
+    // THE CHROME (Windows' element names; the values Cool Edit's tones and
+    // the scheme's caption, chrome_derive.h).
     GuiColor ground;          // COLOR_3DFACE
     GuiColor label;           // COLOR_BTNTEXT
     GuiColor hilight;         // COLOR_3DHILIGHT
@@ -450,14 +454,16 @@ enum class GuiSurface {
 };
 GuiColor surface_text(GuiSurface surface);
 
-// THE CHROME KNOB'S PICK (architect 2026-10-08 ~11:00, replacing the
-// ground-and-text pick of ~09:40): a SCHEME'S TWELVE chrome keys (a scheme
-// of its own kind since 2026-10-08 ~18:15) — palette_file.h owns their file
-// grammar (kGuiChromeLines: the nine of the block, all required, and the
-// three inactive, each optional), chrome_derive.h the derivation under
-// windows-2000 (the 3D set from the ground) with its mapping.
-// "WE SHOULD NEVER HAVE A TOGGLE": the caption's text and the selection's
-// are picked words, never a rule's white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
+// A SCHEME'S KEYS — THE CAPTION ALONE since 2026-10-10 (architect
+// 2026-10-10: "the caption remains the only thing that's outside of Cool
+// Edit"; "scheme files shrink to the caption's keys"; every other chrome
+// role inherits the palette's Cool Edit tones, chrome_derive.h): the title's
+// start, end and text, and the inactive caption's three — palette_file.h
+// owns their file grammar (kGuiChromeLines: the three of the block, all
+// required, and the three inactive, each optional), chrome_derive.h the
+// mapping onto the caption's roles. "WE SHOULD NEVER HAVE A TOGGLE"
+// (2026-10-08): the caption's text is a picked word, never a rule's
+// white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
 // absent ("on the tablet I'm not even going to fill them out; there is no
 // inactive state there") — the inactive_* accessors below resolve them.
 // A SCHEME CARRIES NO FACE (architect 2026-10-09 ~21:20: "the scheme's
@@ -465,18 +471,12 @@ GuiColor surface_text(GuiSurface surface);
 // the font picker"): the face is the device config's `font` key alone
 // (gui_font.h's gui_live_face_set).
 struct GuiChromePick {
-    uint32_t                ground         = 0;   // 0xRRGGBB, sRGB, each
-    uint32_t                text           = 0;
-    uint32_t                title_start    = 0;
+    uint32_t                title_start    = 0;   // 0xRRGGBB, sRGB, each
     uint32_t                title_end      = 0;
     uint32_t                title_text     = 0;
     std::optional<uint32_t> inactive_title_start;
     std::optional<uint32_t> inactive_title_end;
     std::optional<uint32_t> inactive_title_text;
-    uint32_t                selection      = 0;
-    uint32_t                selection_text = 0;
-    uint32_t                field          = 0;
-    uint32_t                field_text     = 0;
     constexpr uint32_t inactive_start() const {
         return inactive_title_start.value_or(title_start);
     }
@@ -489,19 +489,20 @@ struct GuiChromePick {
     constexpr bool operator==(const GuiChromePick&) const = default;
 };
 
-// Install every color: THE CHROME'S off THE LIVE CHROME'S COMPILED THEME
-// (chrome_theme_words(live_chrome_spec()), theme_file.h — so the chrome is
-// set first, set_live_chrome_spec), THE SCHEME'S twelve keys derived over
-// it (`chrome` below), and THE PROGRAM'S off `program`, THE
-// LIVE WORDS (2026-10-07, the color picker's round): the twelve program
-// colors as they stand in the process, which the caller hands in
-// explicitly — AT LAUNCH the palette the config's `palette` key names and
-// the scheme its `scheme` key names (2026-10-08; through is_palette_name and
-// is_scheme_name — a built-in or a file read at launch — or, with no line,
-// the default palette and the live chrome's own scheme,
-// effective_palette_name and effective_scheme_name,
-// palette_file.h: gui_main resolves them with palette_record and
-// scheme_record and passes the two).
+// Install every color: THE PROGRAM'S off `program`, THE LIVE WORDS
+// (2026-10-07, the color picker's round): the twelve program colors as they
+// stand in the process, which the caller hands in explicitly — and THE
+// CHROME'S, DERIVED FROM THEM (2026-10-10, the chrome inherits Cool Edit:
+// every role but the caption's six a tone of the palette's face or ink,
+// live_chrome_words, chrome_derive.h), the caption's six off `chrome`, the
+// scheme's keys, or with none the live chrome's compiled caption
+// (chrome_caption(live_chrome_spec()), theme_file.h — so the chrome is set
+// first, set_live_chrome_spec). AT LAUNCH the palette the config's `palette`
+// key names and the scheme its `scheme` key names (2026-10-08; through
+// is_palette_name and is_scheme_name — a built-in or a file read at launch —
+// or, with no line, the default palette and the live chrome's own scheme,
+// effective_palette_name and effective_scheme_name, palette_file.h: gui_main
+// resolves them with palette_record and scheme_record and passes the two).
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
 // `palette` and `scheme` keys name THE ACTIVE PRESETS (color_picker.h's THE
 // PRESETS) and give the words at launch alone; a preset's load or Delete
@@ -510,28 +511,27 @@ struct GuiChromePick {
 // palette_generation below, the flag cache's fingerprint term, and the
 // plate's two baked inks (waveform_plate_inks) move with it. The words type
 // is palette_file.h's. `chrome` is the scheme's keys (GuiChromePick above),
-// none for the live chrome's own scheme, derived over the live chrome's
-// compiled theme (live_chrome_words, chrome_derive.h).
+// none for the live chrome's own scheme.
 void install_palette(const std::array<uint32_t, 12>& program,
                      const std::optional<GuiChromePick>& chrome);
 
-// THE INSTALL FAMILY'S CHROME MEMBER (2026-10-08, the chrome knob): the
-// chrome's members rewritten off live_chrome_words(live chrome, `chrome`)
-// (chrome_derive.h — the compiled theme, with the knob derived over it by
-// the live chrome's derivation) and palette_generation bumped, the program's
-// twelve untouched. THE PICKER'S LIVE ROAD beside install_program_palette
-// (GuiColorPicker::install_live_words, which runs that member's apply shape
-// after both). Why that shape is enough for the chrome: the chrome's colors
-// bake into one cached thing, the flag cache (a disabled flag's ground),
-// keyed by the generation; the caption's ramp image keys its two words
-// itself (paint_caption_gradient); no icon raster carries a role (icons.h's
-// head); every other chrome painter reads palette() each frame (re-checked
-// 2026-10-09).
+// THE INSTALL FAMILY'S CAPTION MEMBER (2026-10-08, the chrome knob; the
+// caption alone since 2026-10-10): the chrome's members re-derived off
+// live_chrome_words(live chrome, the live program words, `chrome`)
+// (chrome_derive.h) and palette_generation bumped, the program's twelve
+// untouched — only the caption's six can move. THE PICKER'S LIVE ROAD
+// beside install_program_palette (GuiColorPicker::install_live_words, which
+// runs that member's apply shape after both). Why that shape is enough for
+// the chrome: the chrome's colors bake into one cached thing, the flag cache
+// (a disabled flag's ground), keyed by the generation; the caption's ramp
+// image keys its two words itself (paint_caption_gradient); no icon raster
+// carries a role (icons.h's head); every other chrome painter reads
+// palette() each frame (re-checked 2026-10-09).
 void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
 
-// THE LIVE CHROME PICK AS INSTALLED — the knob the install family last wrote
-// (install_palette's or install_chrome_pick's `chrome`), carried as given
-// under every chrome — THE LIVE SCHEME, as program_palette_words is THE LIVE
+// THE LIVE CHROME PICK AS INSTALLED — the caption keys the install family
+// last wrote (install_palette's or install_chrome_pick's `chrome`), carried
+// as given under every chrome — THE LIVE SCHEME, as program_palette_words is THE LIVE
 // PALETTE (what the picker's Save writes and its enabled bit compares,
 // color_picker.h), file-scope for the same reason.
 const std::optional<GuiChromePick>& live_chrome_pick();
@@ -750,13 +750,15 @@ void install_true_colors(bool on);
 //             when selected, on the panel's face in both;
 //   DISABLED  the theme's GROUND on the triangle, the label in THE DISABLED
 //             EMBOSS (above), and NO DOTS;
-//   SELECTED  THE LABEL'S TEXT IN THE CHROME'S `selected_text` ON THE
-//             PANEL'S FACE, NO FILL (architect 2026-10-09 ~23:30: "when I
-//             clicked on a flag and it was selected, the text would go
-//             white, not navy blue background"; "clicking on a flag to
-//             select it makes the text turn white. That's it. That's the
-//             only thing") — FFFFFF under Windows 2000 Standard against the
-//             light tone at rest; the segment's resting face box (the
+//   SELECTED  THE LABEL'S TEXT IN THE CHROME'S `label` ON THE PANEL'S FACE,
+//             NO FILL (architect 2026-10-09 ~23:30: "when I clicked on a
+//             flag and it was selected, the text would go white, not navy
+//             blue background"; "clicking on a flag to select it makes the
+//             text turn white. That's it. That's the only thing") — Cool
+//             Edit's program text, EFEFEF on the default Face, against the
+//             light tone at rest (the chrome's `selected_text` until
+//             2026-10-10, when it became the ink darkened for the ink's
+//             fill, chrome_derive.h); the segment's resting face box (the
 //             overlap rule's, below) stays as it is, the text not moving,
 //             on the baseline of its line box centred in the lane as at
 //             rest (cue_baseline_px, 2026-10-09 evening) (an invalid cue's
@@ -775,7 +777,7 @@ void install_true_colors(bool on);
 //             changed pair, one item, turns both halves at once;
 //   SELECTED DISABLED (architect 2026-10-07 ~15:10: a disabled marker is
 //             selectable, so its selection must show): the selected label —
-//             its text in `selected_text` on the face in place of the
+//             its text in the chrome's `label` on the face in place of the
 //             emboss, no fill — over the disabled triangle, no dots.
 // A CUE HAS NO HOVER FACE (architect 2026-09-29): the pointer over a cue says
 // what a press will do through the CURSOR alone (pointer_cursor_kind).
@@ -793,8 +795,8 @@ void install_true_colors(bool on);
 // EDITING: THE FIELD IS WINDOWS' EDIT FIELD (architect 2026-10-09,
 // reversing 2026-10-07 ~09:45's flag-in-its-selected-face; the drawing
 // render_flag_editor_box's): a box in THE CHROME'S FIELD PAIR — `field_ground`
-// under `field_text`, the text and the caret in the field text (white under
-// black under Windows 2000, read as roles) —
+// under `field_text`, the text and the caret in the field text (Cool Edit's
+// dark field under its light text since 2026-10-10, read as roles) —
 // with A ONE-QUANTUM OUTLINE in `field_text`, over the edited segment's box
 // on THE WHOLE LANE'S ROWS 0 .. 16, the selected box's (the outline on rows
 // 0 and 16 and one quantum outside the pads; 2026-10-09 ~21:00), the text
@@ -836,9 +838,10 @@ void install_true_colors(bool on);
 // carry a band of its own pair. THE BOX PAINTS OVER THE LANE, the triangle
 // and any neighbouring label ("it may overlap with the flag and other
 // elements, that's fine"). Outside the editor the selected label is its
-// white text on the panel's face, no fill and no box (SELECTED, above); the
-// open editor shows its whole text selected, white on the selection fill
-// inside the field — "a fully highlighted white text editor".
+// light text on the panel's face, no fill and no box (SELECTED, above); the
+// open editor shows its whole text selected in the selected pair inside the
+// field — "a fully highlighted white text editor" under Windows 2000's pair,
+// the ink under its darkened text since 2026-10-10 (chrome_derive.h).
 //
 // A REFUSED ENTER RECOLORS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it

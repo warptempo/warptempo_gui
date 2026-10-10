@@ -9,138 +9,133 @@
 #include <optional>
 #include <string_view>
 
-// THE CHROME'S COLORS (architect 2026-10-04; COMPILED IN since 2026-10-08)
-// — every color the CHROME paints, as ROLES, and the theme that fills them,
-// one per chrome vocabulary. THE PROGRAM'S COLORS ARE NO THEME'S since
-// 2026-10-07: the waveform, the flags, the playhead's stem and the scanner
-// are THE PALETTE's, a file type of its own (palette_file.h, whose head owns
-// the rule that parts the two).
+// THE CHROME'S COLORS (architect 2026-10-04; COMPILED IN since 2026-10-08;
+// INHERITED FROM COOL EDIT since 2026-10-10) — every color the CHROME
+// paints, as ROLES. THE PROGRAM'S COLORS ARE NO THEME'S since 2026-10-07:
+// the waveform, the flags, the playhead's stem, the scanner and the panel's
+// face are THE PALETTE's, a file type of its own (palette_file.h, whose head
+// owns the rule that parts the two).
 //
-// A THEME IS A VALUE FOR EVERY CHROME ROLE. The roles are the role table
-// below — THE ONE ENUMERATION of the chrome's: its name, the GuiPalette field
-// it fills (render.h, whose palette block owns what each role paints) and
-// WINDOWS 2000'S value. The roles are Windows 2000 Standard's recorded chrome
-// (architect 2026-10-06, the Windows 2000 pivot; the catalog entry
-// `windows-2000-standard`'s bytes, its setup hive's Control Panel\Colors:
-// ButtonFace, ButtonText, the relief quartet, Hilight / HilightText, Window /
-// WindowText; Windows' status bar's ButtonFace / ButtonText for the clock
-// panel; Windows' InfoWindow / InfoText and its tooltip's black border for
-// the cards; ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle
-// / GradientInactiveTitle / InactiveTitleText for the caption).
+// THE CHROME INHERITS COOL EDIT (architect 2026-10-10: "the chrome color
+// should just be the Cool Edit theme color … we're getting rid of chrome
+// inside the body. The caption remains the only thing that's outside of Cool
+// Edit … even the font color, all of that would be inherited from Cool
+// Edit"; "whatever luminous rules we previously had are superseded by the
+// Cool Edit follow"): EVERY CHROME ROLE BUT THE CAPTION'S SIX IS A TONE OF
+// THE LIVE PALETTE — the panel's `face` and the tones Cool Edit derives from
+// it, the waveform's ink and its darkened text (cool_edit_derive.h's tones;
+// the per-role mapping is chrome_derive.h's, the one owner) — re-derived at
+// every install of the palette, so a pick of the Face or the ink moves the
+// chrome live. THE CAPTION'S SIX ARE A SCHEME'S (palette_file.h's head: a
+// scheme is the caption alone since 2026-10-10), or, with no scheme keys
+// live, the live chrome's COMPILED CAPTION below.
 //
-// EVERY CHROME'S THEME IS COMPILED IN AND THERE ARE NO THEME FILES (architect
-// 2026-10-08, "okay to retire the color theme catalog"; "we just need
-// hard-coded chromes"): no `theme` device key, no themes folder, no bundled
-// files, no Settings row — THE CHROME CHOSEN IS ITS COLORS (kGuiChromeThemes
-// below, resolved by the chrome's key, chrome_theme_words). The architect's
-// workshop for colors is TWO KINDS OF NAMED PRESET, saved and loaded in the
-// app (palette_file.h's head, the owner): A SCHEME — THE CHROME'S TWELVE
-// KEYS, `schemes/<name>.scheme` under the `scheme` device key (no face: the
-// face is the `font` key's, gui_font.h) — derived over this compiled theme by the live chrome's own
-// derivation (under windows-2000 the 3D set from the ground by Windows' own
-// rule, chrome_derive.h; the compiled words themselves never change), its
-// BUILT-INS the catalog's entries transcribed to those keys (palette_file.h's
-// kGuiChromeSchemes, generated); and A PALETTE — THE PROGRAM'S TWELVE
-// ROLES, never this file's, `palettes/<name>.palette` under the `palette`
-// key. A look made official becomes A NEW CHROME VARIANT, its theme compiled
-// in beside this one:
-//   `windows-2000` wears WINDOWS 2000's "Windows Standard" scheme
-//     (tools/theme_catalog's `windows-2000-standard`): THE ROLE TABLE'S
-//     VALUE COLUMN, hand-recorded, the generator checking it against its
-//     catalog entry at every run.
-// The imported catalog's other entries (Windows 95's and 98's schemes, the
-// Plus! themes, GNOME's, KDE 3's, CDE's) stay in the catalog as the tool's
-// RECORD;
-// what ships of them is their twelve chrome keys alone, as the BUILT-IN
-// SCHEMES (architect 2026-10-08 ~11:00; a preset kind of their own since the
-// split of 2026-10-08, palette_file.h's head), no theme of theirs compiled
-// here.
+// THE ROLES are the role table below — THE ONE ENUMERATION of the chrome's:
+// its name and the GuiPalette field it fills (render.h, whose palette block
+// owns what each role paints). They are Windows' own element names
+// (ButtonFace, ButtonText, the relief quartet, Hilight / HilightText, Window
+// / WindowText, the status bar's pair, InfoWindow / InfoText and the
+// tooltip's border, and the six of the caption), the chrome's painters
+// written against them; the values are no longer Windows'.
+//
+// THE COMPILED CAPTION, ONE PER CHROME (kGuiChromeCaptions below, resolved
+// by the chrome's key, chrome_caption): the caption a config with no
+// `scheme` line paints, the six caption keys of the chrome's own scheme
+// (chrome_spec.h's own_scheme):
+//   `windows-2000` wears WINDOWS 2000's "Windows Standard" caption
+//     (tools/theme_catalog's `windows-2000-standard`, its setup hive's
+//     ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle /
+//     GradientInactiveTitle / InactiveTitleText): HAND-RECORDED below, the
+//     generator checking it against its catalog entry at every run.
+// The imported catalog's other entries stay in the catalog as the tool's
+// RECORD; what ships of them is their caption keys alone, as the BUILT-IN
+// SCHEMES (palette_file.h's kGuiChromeSchemes, generated).
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15): Windows'
-// scheme bytes are what those systems put into an sRGB frame buffer, as the captures show them; the tablet converts each at
-// the painter's entry (display_transform.h's head), the laptop none.
+// scheme bytes are what those systems put into an sRGB frame buffer, as the
+// captures show them; the tablet converts each at the painter's entry
+// (display_transform.h's head), the laptop none.
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
 // 2026-10-04), in GuiPalette's order: the Windows chrome's twenty-one (the
 // caption's six since 2026-10-05). The program's roles left for the
 // palette's own table 2026-10-07 (kGuiPaletteRoles, palette_file.h). The
-// theme and install_palette (render.cpp) walk it, so a role cannot be valued
-// and not painted. What each role paints is render.h's palette block (THE MAPPING).
+// derivation (chrome_derive.h, which decides every role exactly once) and
+// install_palette (render.cpp) walk it, so a role cannot be valued and not
+// painted. What each role paints is render.h's palette block (THE MAPPING).
 struct GuiThemeRole {
-    const char*          name;
+    const char*            name;
     GuiColor GuiPalette::* member;
-    uint32_t             windows_2000;   // 0xRRGGBB, Windows 2000's theme
 };
 inline constexpr GuiThemeRole kGuiThemeRoles[] = {
-    // THE CHROME — Windows 2000 Standard as recorded.
-    {"ground",                    &GuiPalette::ground,                    0xD4D0C8},
-    {"label",                     &GuiPalette::label,                     0x000000},
-    {"hilight",                   &GuiPalette::hilight,                   0xFFFFFF},
-    {"light_3d",                  &GuiPalette::light_3d,                  0xD4D0C8},
-    {"shadow",                    &GuiPalette::shadow,                    0x808080},
-    {"dk_shadow",                 &GuiPalette::dk_shadow,                 0x404040},
-    {"selected_fill",             &GuiPalette::selected_fill,             0x0A246A},
-    {"selected_text",             &GuiPalette::selected_text,             0xFFFFFF},
-    {"field_ground",              &GuiPalette::field_ground,              0xFFFFFF},
-    {"field_text",                &GuiPalette::field_text,                0x000000},
-    {"clock_ground",              &GuiPalette::clock_ground,              0xD4D0C8},
-    {"clock_text",                &GuiPalette::clock_text,                0x000000},
-    {"card_ground",               &GuiPalette::card_ground,               0xFFFFE1},
-    {"card_text",                 &GuiPalette::card_text,                 0x000000},
-    {"card_frame",                &GuiPalette::card_frame,                0x000000},
+    // THE CHROME — the live palette's tones (chrome_derive.h).
+    {"ground",                    &GuiPalette::ground},
+    {"label",                     &GuiPalette::label},
+    {"hilight",                   &GuiPalette::hilight},
+    {"light_3d",                  &GuiPalette::light_3d},
+    {"shadow",                    &GuiPalette::shadow},
+    {"dk_shadow",                 &GuiPalette::dk_shadow},
+    {"selected_fill",             &GuiPalette::selected_fill},
+    {"selected_text",             &GuiPalette::selected_text},
+    {"field_ground",              &GuiPalette::field_ground},
+    {"field_text",                &GuiPalette::field_text},
+    {"clock_ground",              &GuiPalette::clock_ground},
+    {"clock_text",                &GuiPalette::clock_text},
+    {"card_ground",               &GuiPalette::card_ground},
+    {"card_text",                 &GuiPalette::card_text},
+    {"card_frame",                &GuiPalette::card_frame},
     // THE CAPTION (architect 2026-10-05): the window's title bar, ACTIVE
     // while the window has the focus and INACTIVE without it (the tablet's is
     // always active, GuiPlatform::caption_active), each a START at the left,
     // a GRADIENT END at the right and the title's TEXT — Windows' ActiveTitle
     // / GradientActiveTitle / TitleText and InactiveTitle /
-    // GradientInactiveTitle / InactiveTitleText. Windows 2000's is its
-    // navy-to-sky-blue caption under white and its grey-to-silver one under
-    // the face's colour.
-    {"caption_active",            &GuiPalette::caption_active,            0x0A246A},
-    {"caption_active_gradient",   &GuiPalette::caption_active_gradient,   0xA6CAF0},
-    {"caption_active_text",       &GuiPalette::caption_active_text,       0xFFFFFF},
-    {"caption_inactive",          &GuiPalette::caption_inactive,          0x808080},
-    {"caption_inactive_gradient", &GuiPalette::caption_inactive_gradient, 0xC0C0C0},
-    {"caption_inactive_text",     &GuiPalette::caption_inactive_text,     0xD4D0C8},
+    // GradientInactiveTitle / InactiveTitleText; the scheme's six keys, the
+    // one part of the chrome outside Cool Edit (2026-10-10).
+    {"caption_active",            &GuiPalette::caption_active},
+    {"caption_active_gradient",   &GuiPalette::caption_active_gradient},
+    {"caption_active_text",       &GuiPalette::caption_active_text},
+    {"caption_inactive",          &GuiPalette::caption_inactive},
+    {"caption_inactive_gradient", &GuiPalette::caption_inactive_gradient},
+    {"caption_inactive_text",     &GuiPalette::caption_inactive_text},
 };
 inline constexpr std::size_t kGuiThemeRoleCount = std::size(kGuiThemeRoles);
 
 // The index of the role named `name` in the table, or kGuiThemeRoleCount —
-// the chrome knob's lookup (chrome_derive.h, evaluated at compile time).
+// the derivation's lookup (chrome_derive.h, evaluated at compile time).
 constexpr std::size_t theme_role_index(std::string_view name) {
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         if (name == kGuiThemeRoles[i].name) return i;
     return kGuiThemeRoleCount;
 }
 
-// ONE THEME'S VALUES, as words in the role table's order — what
-// install_palette reads.
+// THE CHROME'S WORDS, in the role table's order — what the derivation
+// answers and install_palette reads.
 using GuiThemeWords = std::array<uint32_t, kGuiThemeRoleCount>;
 
-// WINDOWS 2000'S THEME: the role table's value column.
-constexpr GuiThemeWords windows_2000_theme_words() {
-    GuiThemeWords w{};
-    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
-        w[i] = kGuiThemeRoles[i].windows_2000;
-    return w;
-}
-inline constexpr GuiThemeWords kGuiThemeWin2000 = windows_2000_theme_words();
+// WINDOWS 2000'S COMPILED CAPTION (the head): Windows Standard's navy-to-sky-
+// blue caption under white and its grey-to-silver one under the face's
+// D4D0C8 — the six in GuiChromePick's order (render.h), the inactive three
+// recorded. tools/theme_catalog/gen_theme_files.py reads this initializer
+// and checks it against the catalog entry.
+inline constexpr GuiChromePick kGuiCaptionWin2000{
+    0x0A246A, 0xA6CAF0, 0xFFFFFF, 0x808080, 0xC0C0C0, 0xD4D0C8};
 
-// THE CHROMES' THEMES — each chrome's key and its compiled words, in the
+// THE CHROMES' CAPTIONS — each chrome's key and its compiled caption, in the
 // vocabularies' order (kGuiChromeSpecs; theme_file.cpp asserts that every
 // chrome has one and that the two orders agree; palette_file.cpp that each
-// chrome's own scheme is its theme key for key).
-struct GuiChromeTheme {
+// chrome's own scheme is its caption key for key).
+struct GuiChromeCaption {
     const char*          chrome;   // the ChromeSpec's key
-    const GuiThemeWords* words;
+    const GuiChromePick* caption;
 };
-inline constexpr GuiChromeTheme kGuiChromeThemes[] = {
-    {"windows-2000", &kGuiThemeWin2000},
+inline constexpr GuiChromeCaption kGuiChromeCaptions[] = {
+    {"windows-2000", &kGuiCaptionWin2000},
 };
 
-// THE ONE RESOLVER: the words of the chrome `spec` — read by install_palette
-// (render.cpp) with the live chrome (live_chrome_spec()). Every chrome has a
-// theme (theme_file.cpp's assert), so this never misses.
-const GuiThemeWords& chrome_theme_words(const ChromeSpec& spec);
+// THE ONE RESOLVER: the compiled caption of the chrome `spec` — read by the
+// derivation's live words (live_chrome_words, chrome_derive.h) and the
+// picker's OLD while no scheme keys stand. Every chrome has one
+// (theme_file.cpp's assert), so this never misses.
+const GuiChromePick& chrome_caption(const ChromeSpec& spec);
 
 // THE ONE COLOUR GRAMMAR (architect 2026-10-03) — the palette files'
 // (palette_file.h): `#` and six hexadecimal digits, either case, OR one of

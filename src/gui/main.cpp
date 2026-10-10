@@ -3530,15 +3530,14 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE LIVE
-    // CHROME'S COMPILED THEME for the chrome's colors (2026-10-08,
-    // chrome_theme_words, theme_file.h) with THE SCHEME the config names (a
-    // built-in or a file read above; 2026-10-08 ~18:15) — its twelve keys
-    // derived over the compiled theme by the live chrome's own derivation,
-    // live_chrome_words: Windows' Appearance-dialog rule under windows-2000,
-    // chrome_derive.h — or, with no
-    // `scheme` line, THE LIVE CHROME'S OWN SCHEME, the compiled theme exactly
-    // (effective_scheme_name, scheme_record); and the palette the config
+    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE SCHEME the
+    // config names (a built-in or a file read above; 2026-10-08 ~18:15) —
+    // its six caption keys (the caption alone since 2026-10-10) — or, with no
+    // `scheme` line, THE LIVE CHROME'S OWN SCHEME, which carries none and
+    // paints the chrome's compiled caption (effective_scheme_name,
+    // scheme_record; chrome_caption, theme_file.h), every other chrome color
+    // derived from the palette's Cool Edit tones (live_chrome_words,
+    // chrome_derive.h); and the palette the config
     // names (a built-in, one of Cool Edit's presets, or a file read above)
     // — or, with no `palette` line, THE DEFAULT PALETTE, Cool Edit's
     // "Default" under every chrome (effective_palette_name, 2026-10-09) —

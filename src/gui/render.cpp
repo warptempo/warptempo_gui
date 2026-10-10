@@ -8,7 +8,7 @@
 #include "palette_file.h"   // kGuiPaletteRoles, effective_palette_name
 #include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
-#include "chrome_derive.h"  // live_chrome_words (the chrome knob)
+#include "chrome_derive.h"  // live_chrome_words (the chrome off the palette)
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -1654,14 +1654,16 @@ struct FlagFace {
 // blue first from the top — the capture's absolute red y ≡ 3 / blue y ≡ 7
 // re-counted from Cool Edit's canvas top at y = 108 ≡ 4 (mod 8)
 // (program_spec.h's dot fields, the derivation's owner); "light" the panel's
-// `ce_hilight`, "white" the chrome's `selected_text` (FFFFFF under Windows
-// 2000 Standard), every label on the panel's face with no fill in either
-// state; the red pair `invalid_label` at rest and
+// `ce_hilight`, "white" the chrome's `label` — Cool Edit's program text,
+// EFEFEF on the default Face, dark past its light-face swap (2026-10-10:
+// the chrome's `selected_text` it read until then became the ink darkened,
+// a text for the ink's fill, not for the face; chrome_derive.h) — every
+// label on the panel's face with no fill in either state; the red pair `invalid_label` at rest and
 // `invalid_label_selected` selected ("keeps red for the text, even
 // unselected — dimmer unselected, brighter selected"). THE TRIANGLE AND THE
 // DOTS NEVER CHANGE WITH SELECTION (Cool Edit's never do): the label
-// carries the selection — ITS TEXT ALONE, the chrome's `selected_text` on
-// the panel's face, no fill (architect 2026-10-09 ~23:30: "clicking on a
+// carries the selection — ITS TEXT ALONE, the chrome's `label` on the
+// panel's face, no fill (architect 2026-10-09 ~23:30: "clicking on a
 // flag to select it makes the text turn white. That's it"), the invalid
 // label its bright red the same way. A `h`-view half is never the invalid
 // class (HistoryDiffFlag's note), so `red` is false there.
@@ -1779,13 +1781,13 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
                 show_embossed_run(cr, s.run, tx, base);
             } else {
                 // The label's ink (resolve_flag_face's table): an invalid
-                // cue's red pair, else the chrome's selected text on the
-                // face or the light tone — a selected disabled segment the
-                // selected text too, so its selection shows.
+                // cue's red pair, else the chrome's text on the face or the
+                // light tone — a selected disabled segment the chrome's text
+                // too, so its selection shows.
                 const bool inv = c.face.invalid_label;
                 set_palette_source(cr, s.selected
                                            ? (inv ? pal.invalid_label_selected
-                                                  : pal.selected_text)
+                                                  : pal.label)
                                            : (inv ? pal.invalid_label
                                                   : pal.ce_hilight));
                 text_shape::show_shaped_run(cr, s.run, tx, base);
@@ -2346,8 +2348,8 @@ namespace {
     // THE LIVE WORDS (render.h's program_palette_words): the twelve as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
-    // THE LIVE CHROME PICK (render.h's live_chrome_pick): the knob as the
-    // install family last wrote it.
+    // THE LIVE CHROME PICK (render.h's live_chrome_pick): the caption keys
+    // as the install family last wrote them.
     std::optional<GuiChromePick> g_chrome_pick;
 } // namespace
 
@@ -2376,7 +2378,8 @@ const std::optional<GuiChromePick>& live_chrome_pick() { return g_chrome_pick; }
 
 namespace {
 // THE PROGRAM'S TWELVE into the installed struct and the plate's two baked
-// inks off the same words — the install family's shared half (the
+// inks off the same words — the install family's first shared half (the
+// chrome's members, derived from these words, are the other's; the
 // generation is each member's own bump).
 void fill_program_palette(const GuiPaletteWords& w) {
     g_program_words = w;
@@ -2401,14 +2404,16 @@ void fill_program_palette(const GuiPaletteWords& w) {
                   kOutline < kGuiPaletteRoleCount);
     g_plate_inks = WaveformPlateInks{w[kInk], w[kOutline]};
 }
-// THE CHROME'S MEMBERS off the live chrome's words with the knob
-// (live_chrome_words, chrome_derive.h: the compiled theme, the knob derived
-// over it by the live chrome's derivation) — the install family's other
-// shared half. No face moves with it: a scheme carries none (2026-10-09
-// ~21:20; the `font` key's, gui_font.h).
+// THE CHROME'S MEMBERS off the live words (live_chrome_words,
+// chrome_derive.h: every role but the caption's six a tone of the program's
+// live face or ink, 2026-10-10, the caption the scheme's keys or the live
+// chrome's compiled caption) — the install family's other shared half, run
+// after the program's whenever either moves. No face moves with it: a
+// scheme carries none (2026-10-09 ~21:20; the `font` key's, gui_font.h).
 void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
     g_chrome_pick = chrome;
-    const GuiThemeWords w = live_chrome_words(live_chrome_spec(), chrome);
+    const GuiThemeWords w =
+        live_chrome_words(live_chrome_spec(), g_program_words, chrome);
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
 }
@@ -2416,15 +2421,15 @@ void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
 
 void install_palette(const GuiPaletteWords& program,
                      const std::optional<GuiChromePick>& chrome) {
-    // The chrome's fields are filled off the live chrome's compiled theme
-    // with the scheme's keys (live_chrome_words, chrome_derive.h, which
-    // never misses) and the program's off `program`, THE LIVE WORDS the
+    // The program's fields are filled off `program`, THE LIVE WORDS the
     // caller resolved (render.h: the launch's palette_record of the
-    // `palette` key, beside the scheme_record of the `scheme` key), the two
-    // tables covering the struct exactly
-    // (palette_file.cpp), so a role cannot be valued and not painted.
-    fill_chrome_palette(chrome);
+    // `palette` key, beside the scheme_record of the `scheme` key), then the
+    // chrome's derived from them with the scheme's keys (live_chrome_words,
+    // chrome_derive.h, which never misses), the two tables covering the
+    // struct exactly (palette_file.cpp), so a role cannot be valued and not
+    // painted.
     fill_program_palette(program);
+    fill_chrome_palette(chrome);
     ++g_palette_generation;
 }
 
@@ -2437,8 +2442,10 @@ void install_chrome_pick(const std::optional<GuiChromePick>& chrome) {
 
 void install_program_palette(const GuiPaletteWords& words) {
     // The contract and the apply shape the caller owes are at the
-    // declaration (palette_file.h).
+    // declaration (palette_file.h): the chrome re-derived from the new
+    // words under the live caption.
     fill_program_palette(words);
+    fill_chrome_palette(g_chrome_pick);
     ++g_palette_generation;
 }
 

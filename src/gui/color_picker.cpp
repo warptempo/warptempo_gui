@@ -4,7 +4,8 @@
 #include "notifications.h"
 #include "playback_lifecycle.h"
 #include "text_shape.h"
-#include "theme_file.h"         // the compiled chrome's words (a key's OLD, the block's seed)
+#include "theme_file.h"         // the compiled caption (a key's OLD, the block's seed)
+#include "chrome_derive.h"      // live_chrome_words: whether a pick moved the chrome
 #include "viewport.h"
 
 #include <algorithm>
@@ -47,21 +48,15 @@ constexpr bool role_names_follow_the_table() {
     return true;
 }
 static_assert(role_names_follow_the_table());
-// The scheme's twelve, in kGuiChromeLines' order (asserted the same
-// way; the names his, architect 2026-10-08 ~11:00).
+// The scheme's six — the caption's, 2026-10-10 — in kGuiChromeLines' order
+// (asserted the same way; the names his, architect 2026-10-08 ~11:00).
 constexpr RoleName kChromeNames[] = {
-    {"chrome_ground",               "Chrome"},
-    {"chrome_text",                 "Chrome Text"},
     {"chrome_title_start",          "Title"},
     {"chrome_title_end",            "Title End"},
     {"chrome_title_text",           "Title Text"},
     {"chrome_inactive_title_start", "Inactive Title"},
     {"chrome_inactive_title_end",   "Inactive Title End"},
     {"chrome_inactive_title_text",  "Inactive Title Text"},
-    {"chrome_selection",            "Selection"},
-    {"chrome_selection_text",       "Selection Text"},
-    {"chrome_field",                "Field"},
-    {"chrome_field_text",           "Field Text"},
 };
 static_assert(std::size(kChromeNames) == kGuiChromeLineCount);
 constexpr bool chrome_names_follow_the_lines() {
@@ -72,12 +67,11 @@ constexpr bool chrome_names_follow_the_lines() {
 }
 static_assert(chrome_names_follow_the_lines());
 
-// The compiled theme's word for a chrome role (a key's OLD while no block
-// stands, and the seed of the block its first pick creates).
-uint32_t compiled_chrome_word(std::string_view role) {
-    const std::size_t i = theme_role_index(role);
-    assert(i < kGuiThemeRoleCount);
-    return chrome_theme_words(live_chrome_spec())[i];
+// The live chrome's compiled caption's word for a scheme key (a key's OLD
+// while no block stands, and the seed of the block its first pick creates).
+uint32_t compiled_chrome_word(std::size_t line) {
+    assert(line < kGuiChromeLineCount);
+    return chrome_line_word(chrome_caption(live_chrome_spec()), line);
 }
 } // namespace
 
@@ -117,7 +111,7 @@ uint32_t element_color(std::size_t e) {
     if (!el.chrome) return program_palette_words()[el.role];
     const std::optional<GuiChromePick>& pick = live_chrome_pick();
     return pick ? chrome_line_word(*pick, el.role)
-                : compiled_chrome_word(kGuiChromeLines[el.role].compiled_role);
+                : compiled_chrome_word(el.role);
 }
 
 GuiChromePick live_scheme_keys() {
@@ -133,8 +127,7 @@ GuiChromePick compiled_chrome_pick() {
     GuiChromePick p;
     for (std::size_t k = 0; k < kGuiChromeLineCount; ++k)
         if (is_chrome_block_line(k))
-            set_chrome_line_word(p, k,
-                                 compiled_chrome_word(kGuiChromeLines[k].compiled_role));
+            set_chrome_line_word(p, k, compiled_chrome_word(k));
     return p;
 }
 
@@ -1144,8 +1137,8 @@ void GuiColorPicker::set_color(uint32_t rgb, bool from_hsv) {
     // THE LIVE APPLY: the live words with one rewritten, through the apply
     // shape's one road (install_live_words). A chrome element's FIRST pick
     // over the chrome's own scheme creates the block whole (the
-    // declaration): the nine from the live chrome's compiled words, then the
-    // picked key written.
+    // declaration): the three from the live chrome's compiled caption, then
+    // the picked key written.
     GuiPaletteWords words = program_palette_words();
     std::optional<GuiChromePick> scheme = live_chrome_pick();
     const color_picker::Element el = color_picker::element_at(cp.element);
@@ -1343,24 +1336,28 @@ void GuiColorPicker::install_live_words(
     // declaration (palette_file.h) and, for the chrome, install_chrome_pick's
     // (render.h).
     const WaveformPlateInks before = waveform_plate_inks();
-    const std::optional<GuiChromePick> chrome_before = live_chrome_pick();
+    const GuiThemeWords chrome_before = live_chrome_words(
+        live_chrome_spec(), program_palette_words(), live_chrome_pick());
     install_program_palette(words);
     install_chrome_pick(scheme);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
-    // A CHANGED CHROME PICK — THE SCHEME'S TWELVE KEYS (kGuiChromeLines) —
-    // DAMAGES THE WHOLE SURFACE (2026-10-09): the window's sizing frame — the
-    // restored laptop's — paints in the
-    // chrome's roles outside the client area, which invalidate_all never
-    // reaches, so a scheme load, a chrome element's pick, its Paste or its
-    // OLD tap would leave the band in the previous colors (platform.h's two
-    // damage calls). THE PALETTE'S TWELVE PROGRAM ROLES (kGuiPaletteRoles)
-    // NEED NO MORE THAN THE CLIENT: they paint in the program's panels, the
-    // well and what enters it, never on the frame.
+    // A CHANGED CHROME — THE SCHEME'S CAPTION KEYS (kGuiChromeLines), OR THE
+    // PALETTE'S FACE OR INK, WHICH EVERY OTHER CHROME ROLE DERIVES FROM
+    // SINCE 2026-10-10 (chrome_derive.h) — DAMAGES THE WHOLE SURFACE
+    // (2026-10-09): the window's sizing frame — the restored laptop's —
+    // paints in the chrome's roles outside the client area, which
+    // invalidate_all never reaches, so a scheme load, a chrome element's
+    // pick, a Face pick, its Paste or its OLD tap would leave the band in the
+    // previous colors (platform.h's two damage calls). A PALETTE PICK THAT
+    // MOVES NO CHROME ROLE NEEDS NO MORE THAN THE CLIENT: those roles paint
+    // in the program's panels, the well and what enters it, never on the
+    // frame.
     // Neither kind touches an icon: every glyph wears its drawing's own inks
     // (icons.h's head). Neither moves the face: a scheme carries none
     // (2026-10-09 ~21:20; the `font` key's, gui_font.h).
-    if (scheme != chrome_before) {
+    if (live_chrome_words(live_chrome_spec(), program_palette_words(),
+                          live_chrome_pick()) != chrome_before) {
         viewport.invalidate_surface();
     } else {
         viewport.invalidate_all();
@@ -1470,14 +1467,9 @@ void GuiColorPicker::commit_name() {
         }
     } else if (chrome) {
         // THE KEYS ON SCREEN (the declaration): the live scheme, or the
-        // chrome's own built-in's twelve, installed live with the write.
-        // Save As from the chrome's own scheme installs the built-in's
-        // twelve live, so under windows-2000 the hand-set relief quartet
-        // (Hilight FFFFFF, Shadow 808080) becomes the derivation's EAE8E3 /
-        // 978E7B: accepted (architect 2026-10-08: Windows' hand-set 3D set
-        // against a scheme file's derived set "not a problem ... creating
-        // variation is the point"); a save writes the scheme as the screen
-        // shows it.
+        // chrome's own built-in's six, installed live with the write (the
+        // compiled caption exactly, so nothing on screen moves); a save
+        // writes the scheme as the screen shows it.
         const bool own = !live_chrome_pick().has_value();
         const GuiChromePick pick = color_picker::live_scheme_keys();
         failure = write_scheme_file(name, pick);

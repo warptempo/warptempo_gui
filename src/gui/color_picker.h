@@ -22,9 +22,10 @@ struct Viewport;
 
 // THE COLOR PICKER (architect 2026-10-07, the picker arc's second segment) —
 // the in-app picker of the program's twelve colors (kGuiPaletteRoles,
-// palette_file.h: A PALETTE) and, under every chrome, of the chrome's twelve
-// keys (architect 2026-10-08, kGuiChromeLines, palette_file.h: A SCHEME;
-// chrome_derive.h): "a very slimmed down version … a full-fledged part of
+// palette_file.h: A PALETTE) and, under every chrome, of the caption's six
+// keys (architect 2026-10-08, kGuiChromeLines, palette_file.h: A SCHEME —
+// the caption alone since 2026-10-10, every other chrome color the
+// palette's Cool Edit tones, chrome_derive.h): "a very slimmed down version … a full-fledged part of
 // the project … branded with the chrome … not an afterthought". This header is
 // the cluster's ONE OWNER of everything that is not pixels or a press body:
 // the lengths, the layout, the color math, the wheel's raster and the acts
@@ -42,14 +43,16 @@ struct Viewport;
 // what you're picking, whether it's the waveform or the chrome"): ONE
 // DROP-DOWN OF TWO ROWS, "Chrome" and "Waveform" (his words), choosing which
 // of the two preset kinds the picker works on (palette_file.h's head: a
-// SCHEME, the chrome's twelve keys, and a PALETTE, the program's twelve).
-// The scope sets THE ELEMENT CHOOSER'S ROWS — the twelve under Chrome, the
+// SCHEME, the caption's six keys, and a PALETTE, the program's twelve).
+// The scope sets THE ELEMENT CHOOSER'S ROWS — the six under Chrome, the
 // twelve under Waveform, never a mixed list — and THE PRESET BUTTON: its
 // label (the scope's active preset) and its menu's rows (its kind's files
 // and built-ins), the four acts acting on that kind alone. OLD | NEW, Copy /
 // Paste, the hex field and the wheel are the scope's live element's, with
-// no scope of their own. THE SCOPE AT EVERY OPEN IS WAVEFORM — the common
-// case: he authors the waveform's colors — and each scope keeps its own
+// no scope of their own. A WAVEFORM PICK OF THE PANEL FACE OR THE INK MOVES
+// THE CHROME TOO (2026-10-10: the chrome inherits them, chrome_derive.h);
+// the Chrome scope moves the caption alone. THE SCOPE AT EVERY OPEN IS
+// WAVEFORM — the common case: he authors the waveform's colors — and each scope keeps its own
 // live element across a switch and a close (AppState::ColorPicker's
 // `element` and `parked_element`). Esc and Close are unchanged.
 //
@@ -105,8 +108,8 @@ struct Viewport;
 //     "Waveform" (scope_display_name), then THE ELEMENT CHOOSER showing the
 //     live element's name (element_display_name), each with its arrow
 //     button; a press on either drops ITS list — the scope's two rows, or
-//     THE SCOPE'S ELEMENTS (scope_element_at: under Chrome the twelve in
-//     kGuiChromeLines' order, "Chrome" first; under Waveform the twelve in
+//     THE SCOPE'S ELEMENTS (scope_element_at: under Chrome the six in
+//     kGuiChromeLines' order, "Title" first; under Waveform the twelve in
 //     kGuiPaletteRoles' order) — the menu-row popup's painters and press
 //     road, and a tap on a row selects. THE TWO SHARE ONE LIST: one is down
 //     at a time (AppState::ColorPicker's `chooser_scope` says whose), so the
@@ -114,7 +117,7 @@ struct Viewport;
 //     it, placed by the window and SCROLLING when its rows outgrow the room
 //     (render.h's popup scroll block, the rule's one owner; combo_list), its
 //     shown row scrolled into view at the open (re-derived 2026-10-09, device
-//     px; the longest lists are the two scopes' twelve each): at
+//     px; the longest list is the Waveform scope's twelve): at
 //     the tablet's 300 % twelve rows are 12 x 51 + 2 x 3 + 6 + 6 = 630 below
 //     a chooser whose foot stands at 399 + 6 + 18 + 63 = 486 of the 1440
 //     rows (THE SEAT's top row), so the list hangs whole on the tablet as
@@ -538,12 +541,11 @@ constexpr const char* scope_display_name(Scope s) {
     return s == Scope::Chrome ? "Chrome" : "Waveform";
 }
 
-// THE ELEMENTS (architect 2026-10-08, the chrome knob; its twelve ~11:00;
-// under every chrome since ~12:10; by scope since ~18:15): one index space
-// over both kinds — THE SCHEME'S TWELVE first, in kGuiChromeLines' order —
-// "Chrome", "Chrome Text", "Title", "Title End", "Title Text", the three
-// "Inactive" ones, "Selection", "Selection Text", "Field", "Field Text" —
-// then THE PALETTE'S TWELVE in kGuiPaletteRoles' order; THE CHOOSER LISTS
+// THE ELEMENTS (architect 2026-10-08, the chrome knob; under every chrome
+// since ~12:10; by scope since ~18:15; the caption alone since 2026-10-10):
+// one index space over both kinds — THE SCHEME'S SIX first, in
+// kGuiChromeLines' order — "Title", "Title End", "Title Text" and the three
+// "Inactive" ones — then THE PALETTE'S TWELVE in kGuiPaletteRoles' order; THE CHOOSER LISTS
 // THE LIVE SCOPE'S ALONE (scope_element_at), the same rows under every
 // chrome (one scheme syntax). An element is a chrome key or a program role;
 // `role` is the key's index in kGuiChromeLines or the role's in
@@ -570,30 +572,30 @@ std::size_t scope_element_count(Scope s);
 std::size_t scope_element_at(Scope s, std::size_t i);
 std::size_t element_row(std::size_t e);
 // THE CHOOSER'S NAMES, Title Case (the planner's list, 2026-10-07; the
-// knob's twelve, his, 2026-10-08): the role table's names are the file grammar's,
+// scheme's, his, 2026-10-08): the role table's names are the file grammar's,
 // these the user's.
 const char* element_display_name(std::size_t e);
 // THE ELEMENT'S LIVE COLOR: a program role's live word, or the live scheme's
 // key — an inactive key never picked showing the active key it follows —
-// and with no keys in the live scheme the live chrome's COMPILED word of the
-// key's role (kGuiChromeLines' compiled_role), so OLD shows what the chrome
-// wears.
+// and with no keys in the live scheme the key's word in the live chrome's
+// COMPILED CAPTION (chrome_caption, theme_file.h), so OLD shows what the
+// caption wears.
 uint32_t    element_color(std::size_t e);
-// THE BLOCK A FIRST PICK CREATES (GuiColorPicker::set_color): the nine
-// block keys from the live chrome's compiled words, the inactive three
+// THE BLOCK A FIRST PICK CREATES (GuiColorPicker::set_color): the three
+// block keys from the live chrome's compiled caption, the inactive three
 // absent.
 GuiChromePick compiled_chrome_pick();
 // THE KEYS OF THE SCHEME ON SCREEN, what Save As writes (palette_file.h's
 // write_scheme_file: written as the screen shows it, 2026-10-08): the live
 // pick, or — the live chrome's own scheme standing, which carries no keys
-// live — that built-in's twelve, its inactive three among them.
+// live — that built-in's six, its inactive three among them.
 GuiChromePick live_scheme_keys();
 
 // -- THE PRESETS ---------------------------------------------------------------
 
 // A PRESET'S SHOWN NAME of the scope's kind (the preset button's label, the
 // menu's rows): a built-in's generated display name ("Windows 2000
-// Standard", "Clearlooks", "CDE Northern Sky"; Cool Edit's "Default", "XP
+// Standard", "CDE Northern Sky"; Cool Edit's "Default", "XP
 // Blue" — the key is the file grammar's, this the user's, as
 // element_display_name is), a file's name verbatim. Whether
 // `name` is a built-in's display name of the scope's kind, case and all —
@@ -839,7 +841,7 @@ struct GuiColorPicker {
     // word for the live element — a program role's in the live palette, or
     // a key's in the live scheme, where THE FIRST PICK OF ANY CHROME ELEMENT
     // OVER THE CHROME'S OWN SCHEME CREATES THE BLOCK (architect 2026-10-08
-    // ~11:00): its nine from the live chrome's compiled words
+    // ~11:00): its three from the live chrome's compiled caption
     // (color_picker::compiled_chrome_pick), then the picked key written — an
     // inactive key becoming picked, its two siblings still following —
     // installs it through the apply shape (install_live_words), and keeps the HSV
@@ -903,7 +905,7 @@ struct GuiColorPicker {
     //
     // LOAD — a name row's tap: the named preset installed live (Chrome:
     // scheme_record's keys, or none for the live chrome's own scheme, the
-    // compiled chrome back; Waveform: palette_record's twelve) through the
+    // compiled caption back; Waveform: palette_record's twelve) through the
     // apply shape, THE SCOPE'S ACTIVE PRESET made `name` (its key written,
     // write_preset_key), OLD and NEW reseated off the live element's new
     // color. A load of the active preset itself is the same act: the file's
@@ -929,7 +931,7 @@ struct GuiColorPicker {
     // editor standing. Then SAVE AS writes the scope's live words under the
     // name — for a scheme the keys on screen (color_picker::live_scheme_keys:
     // while the live chrome's own stands, which carries no keys live, its
-    // built-in's twelve, installed live with the write so the active file
+    // built-in's six, installed live with the write so the active file
     // and the live scheme are one record) — and makes it the scope's active
     // preset (the key written, as a load
     // writes it); RENAME renames the active file and rewrites the key — the
@@ -948,7 +950,7 @@ struct GuiColorPicker {
     void raise_delete();
     // The prompt's Delete: the parked file of the scope's kind removed; the
     // scope's live words fall to WHAT NO LINE MEANS — the live chrome's
-    // compiled chrome (Chrome) or the default palette, Cool Edit's
+    // compiled caption (Chrome) or the default palette, Cool Edit's
     // "Default" (Waveform), the next launch's picture — installed live, OLD
     // and NEW reseated, the scope's key cleared and persisted — the preset
     // button then shows the chrome's own scheme's name or "Default". A
@@ -983,10 +985,11 @@ struct GuiColorPicker {
     // scheme's keys (install_chrome_pick, render.h), then the apply shape
     // run once, as install_program_palette's declaration states it. Its two
     // callers are set_color and apply_live_words. ITS DAMAGE (2026-10-09): a
-    // changed twelve the whole surface, the window's sizing frame with it
-    // (Viewport::invalidate_surface, platform.h's two damage calls); the
-    // palette's twelve alone the client (invalidate_all) — the rule at the
-    // body.
+    // changed chrome — the caption's keys, or the palette's face or ink the
+    // other chrome roles derive from (2026-10-10) — the whole surface, the
+    // window's sizing frame with it (Viewport::invalidate_surface,
+    // platform.h's two damage calls); any other palette change the client
+    // alone (invalidate_all) — the rule at the body.
     void install_live_words(const GuiPaletteWords& words,
                             const std::optional<GuiChromePick>& scheme);
 };

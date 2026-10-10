@@ -6,7 +6,7 @@
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 #include "theme_file.h"        // theme_colour_word (THE ONE COLOR GRAMMAR),
                                // kGuiThemeRoles (the chrome's members)
-#include "chrome_derive.h"     // derive_windows_chrome: the keys' mapping check
+#include "chrome_derive.h"     // derive_chrome: the keys' mapping check
 #include "cool_edit_derive.h"  // the Cool Edit block's tones: the coverage check
 
 #include <algorithm>
@@ -35,7 +35,7 @@ constexpr bool palette_role_names_unique() {
     return true;
 }
 static_assert(palette_role_names_unique());
-// The scheme's twelve keys are no program role's name, so each kind's reader
+// The scheme's keys are no program role's name, so each kind's reader
 // refuses the other kind's key as an unknown role (palette_file.h's head:
 // a palette file carrying a chrome key is no longer the GUI's).
 static_assert(std::ranges::none_of(kGuiChromeLines, [](const GuiChromeLine& c) {
@@ -44,15 +44,15 @@ static_assert(std::ranges::none_of(kGuiChromeLines, [](const GuiChromeLine& c) {
 
 // THE KEYS' TABLE IS WELL FORMED (palette_file.h's kGuiChromeLines): the keys
 // distinct; each a block key (a word, no follow) or an inactive key (an
-// optional, following an EARLIER block key); each compiled role a chrome
-// role; and the block is nine, the inactive caption three.
+// optional, following an EARLIER block key); each role a chrome role; and
+// the block is three, the inactive caption three.
 constexpr bool chrome_lines_well_formed() {
     std::size_t block = 0;
     for (std::size_t i = 0; i < kGuiChromeLineCount; ++i) {
         const GuiChromeLine& l = kGuiChromeLines[i];
         for (std::size_t j = i + 1; j < kGuiChromeLineCount; ++j)
             if (std::string_view(l.key) == kGuiChromeLines[j].key) return false;
-        if (theme_role_index(l.compiled_role) >= kGuiThemeRoleCount) return false;
+        if (theme_role_index(l.role) >= kGuiThemeRoleCount) return false;
         if ((l.word != nullptr) == (l.optional != nullptr)) return false;
         if (l.word != nullptr) {
             if (l.follows != kGuiChromeNoFollow) return false;
@@ -61,16 +61,15 @@ constexpr bool chrome_lines_well_formed() {
             return false;
         }
     }
-    return block == 9 && kGuiChromeLineCount == 12;
+    return block == 3 && kGuiChromeLineCount == 6;
 }
 static_assert(chrome_lines_well_formed());
 
-// THE PICKER SHOWS WHAT THE DERIVATION PAINTS: for a pick whose twelve words
-// are all distinct, each key's compiled role in the derived chrome
-// (chrome_derive::derive_windows_chrome) holds exactly that key's word — so
-// the role a key's OLD reads while no block stands (compiled_role) is the
-// role the key moves once one does. Then an inactive key absent: its role
-// holds the followed key's word.
+// THE PICKER SHOWS WHAT THE DERIVATION PAINTS: for a pick whose six words
+// are all distinct, each key's role in the derived chrome
+// (chrome_derive::derive_chrome) holds exactly that key's word — so the key
+// the picker's OLD reads is the role the key moves. Then an inactive key
+// absent: its role holds the followed key's word.
 constexpr GuiChromePick distinct_pick() {
     GuiChromePick p;
     for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
@@ -79,9 +78,9 @@ constexpr GuiChromePick distinct_pick() {
 }
 constexpr bool keys_map_onto_their_roles(const GuiChromePick& p) {
     const GuiThemeWords w =
-        chrome_derive::derive_windows_chrome(kGuiThemeWin2000, p);
+        chrome_derive::derive_chrome(kGuiBuiltinPalettes[0].words, p);
     for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
-        if (w[theme_role_index(kGuiChromeLines[i].compiled_role)] !=
+        if (w[theme_role_index(kGuiChromeLines[i].role)] !=
             chrome_line_word(p, i))
             return false;
     return true;
@@ -132,31 +131,28 @@ static_assert(sizeof(GuiPalette) ==
                cool_edit_derive::kPaintedToneCount) * sizeof(GuiColor));
 
 // EACH CHROME'S OWN SCHEME IS A BUILT-IN SCHEME, AND THAT SCHEME IS THE
-// CHROME'S COMPILED THEME KEY FOR KEY (the generator's transcription and the
-// hand-recorded / generated themes agree): so the scheme that carries no
-// keys under its own chrome (scheme_record) is no loss of a word. The
-// themes' table and the specs' run in the vocabularies' order (the preset
-// menu's built-in schemes lead with the chromes' own in this order,
+// CHROME'S COMPILED CAPTION KEY FOR KEY (the generator's transcription and
+// the hand-recorded caption agree): so the scheme that carries no keys
+// under its own chrome (scheme_record) is no loss of a word. The captions'
+// table and the specs' run in the vocabularies' order (the preset menu's
+// built-in schemes lead with the chromes' own in this order,
 // color_picker::preset_menu_rows).
-constexpr bool own_schemes_are_their_chromes_themes() {
-    if (std::size(kGuiChromeSpecs) != std::size(kGuiChromeThemes)) return false;
-    for (std::size_t c = 0; c < std::size(kGuiChromeThemes); ++c) {
+constexpr bool own_schemes_are_their_chromes_captions() {
+    if (std::size(kGuiChromeSpecs) != std::size(kGuiChromeCaptions))
+        return false;
+    for (std::size_t c = 0; c < std::size(kGuiChromeCaptions); ++c) {
         const GuiChromeScheme* b = builtin_scheme(kGuiChromeSpecs[c]->own_scheme);
         if (b == nullptr) return false;
-        if (std::string_view(kGuiChromeThemes[c].chrome) !=
+        if (std::string_view(kGuiChromeCaptions[c].chrome) !=
             kGuiChromeSpecs[c]->key)
             return false;
-        const GuiThemeWords& w = *kGuiChromeThemes[c].words;
-        for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
-            if (w[theme_role_index(kGuiChromeLines[i].compiled_role)] !=
-                chrome_line_word(b->chrome, i))
-                return false;
+        if (b->chrome != *kGuiChromeCaptions[c].caption) return false;
     }
     return true;
 }
-static_assert(own_schemes_are_their_chromes_themes());
+static_assert(own_schemes_are_their_chromes_captions());
 
-// WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S TWELVE (the catalog's
+// WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S SIX (the catalog's
 // windows-me-standard, kept as an entry under Me's name; the generator
 // asserts the same): Me's one difference from 2000 was its font, MS Sans
 // Serif, which a scheme does not carry — the face is the `font` device
@@ -319,10 +315,11 @@ std::expected<GuiPaletteWords, std::string> read_palette_file(
 }
 
 // ONE SCHEME FILE under the grammar (the head), its stem already judged: the
-// nine block keys required, the first missing one in the table's order
+// three block keys required, the first missing one in the table's order
 // named; the inactive keys each optional (the unread ones following the
-// active caption); a program role, or a `font` line (a scheme carries no
-// face since 2026-10-09 ~21:20), an unknown role.
+// active caption); a program role, a retired key (the ground, the text, the
+// selection and the field pairs, retired 2026-10-10) or a `font` line (a
+// scheme carries no face since 2026-10-09 ~21:20), an unknown role.
 std::expected<GuiChromePick, std::string> read_scheme_file(
         const std::filesystem::path& path) {
     std::ifstream f(path, std::ios::binary);
@@ -378,7 +375,7 @@ std::string palette_file_text(const GuiPaletteWords& words) {
     return s;
 }
 
-// The text write_scheme_file puts down: the nine and each picked inactive
+// The text write_scheme_file puts down: the three and each picked inactive
 // key, in the table's order.
 std::string scheme_file_text(const GuiChromePick& pick) {
     std::string s;
@@ -580,8 +577,8 @@ GuiPaletteWords palette_record(std::string_view name) {
 }
 
 std::optional<GuiChromePick> scheme_record(std::string_view name) {
-    // A BUILT-IN (the declaration): its twelve, unless it is the live
-    // chrome's own scheme, which carries none.
+    // A BUILT-IN (the declaration): its six, unless it is the live chrome's
+    // own scheme, which carries none.
     if (const GuiChromeScheme* b = builtin_scheme(name)) {
         if (name == live_chrome_spec().own_scheme) return std::nullopt;
         return b->chrome;

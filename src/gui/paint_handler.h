@@ -846,7 +846,7 @@ private:
     // (the dropdown) — or INFO — THE CARD FACE, the period's tooltip:
     // `card_ground` with a thin `card_frame` line on all four sides (the
     // tooltip and the notification cards, architect 2026-10-04; the sides
-    // 2026-10-06; render.h's palette block).
+    // 2026-10-06; Cool Edit's colors 2026-10-10; render.h's palette block).
     enum class PopupFace { Menu, Info };
     void paint_popup_chrome(cairo_t* cr, const GuiRect& r, PopupFace face);
     // THE NOTIFICATION CARDS (2026-08-29): the visible stack, top-right under
