@@ -12,15 +12,18 @@ PALETTES (named presets picked in the app); a look made official becomes a new c
 the same way from a catalog entry. THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's own colors (the waveform, the flags, the
 playhead's stem and the scanner) are no theme's but the app's PALETTES, compiled in (`src/gui/palette_file.h`; the
 built-in ones Cool Edit's presets since 2026-10-09, below), and
-the program's own family of chosen entries (`warptempo` and the presets of his retired picker tool) left the catalog
-with them ("it'll still be in the git history"). A standalone utility: no link path from any product target, no CMake,
-Python 3 alone.
+the program's own family of chosen palette entries (the presets of his retired picker tool) left the catalog with them
+("it'll still be in the git history"). THE ONE DESIGNED FAMILY (architect 2026-10-10 ~06:30: "I have created a theme
+called Cool Edit Pro for the Chrome … make it a permanent part of the hard-coded as one of the options alongside
+Windows 2000 Standard"): `warptempo`, THE PRODUCT'S OWN CHROME SCHEMES — his scheme files, picked in the app and saved by
+the picker, recorded verbatim (build.py `warptempo_entries`; the family below). A standalone utility: no link path from
+any product target, no CMake, Python 3 alone.
 
 ```
 python3 tools/theme_catalog/fetch.py [--refresh]   # the pinned sources -> tmp/theme_sources/ (git-ignored)
 python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json (runs the checks, prints the families)
 python3 tools/theme_catalog/build.py --check-only  # no sources: the checks on the committed catalog, nothing written
-python3 tools/theme_catalog/gen_theme_files.py     # -> src/gui/chrome_schemes.inc (committed), the Windows 2000 column checked
+python3 tools/theme_catalog/gen_theme_files.py     # -> src/gui/chrome_schemes.inc and chrome_schemes_product.inc (committed), the Windows 2000 column checked
 python3 tools/theme_catalog/catalog_md.py          # -> docs/themes/CATALOG.md
 python3 -I tools/theme_catalog/gen_cool_edit_presets.py [text]  # cool_edit_presets.txt -> src/gui/palette_presets.inc (committed)
 ```
@@ -57,7 +60,7 @@ then `gen_theme_files.py` and `catalog_md.py`, then the build, the outputs commi
 byte-stable (the catalog's order, uppercase hex, LF, no timestamp). No other entry ships as a theme: the bundled theme files
 (`assets/themes/<key>.theme`, copied into the app's `themes/` folder at every launch and chosen by the `theme` device
 key, 2026-10-04..10-08) retired with the key, the git history keeping them. WHAT SHIPS OF EVERY ENTRY (architect
-2026-10-08 ~11:00, all 104, the windows-2000 chrome's own among them) is its TWELVE CHROME KEYS — ground and text, the caption's
+2026-10-08 ~11:00, all 105, the windows-2000 chrome's own and the product's own among them) is its TWELVE CHROME KEYS — ground and text, the caption's
 start, end and text, the inactive caption's three, the selection pair, the field pair — and NO FACE (architect
 2026-10-09 ~21:20: "the scheme's default font should stop being honored — it should only be honored from the font
 picker"; the app's face is its `font` device key; a Windows entry's `font` record, the menu font its own source names
@@ -65,7 +68,8 @@ picker"; the app's face is its `font` device key; a Windows entry's `font` recor
 classed `tahoma` for Tahoma and `ms-sans-serif` for every other face by build.py's font_record, stays the catalog's
 record and is read by no generator) as the palette's BUILT-IN SCHEMES: `gen_theme_files.py` transcribes them into the generated `src/gui/chrome_schemes.inc` (`kGuiChromeSchemes`,
 `src/gui/palette_file.h`; the transcription's rules and the display names are the generator's head; never
-hand-edited). A compiled theme takes the CHROME roles
+hand-edited), the product's own keys a second time into `src/gui/chrome_schemes_product.inc`
+(`kGuiProductSchemeKeys`, the picker's Chrome menu seating them beside the chrome's own). A compiled theme takes the CHROME roles
 THE ENTRY RECORDS, each the recorded byte; a role it does not name takes Windows 2000's value, and a caption start
 recorded without its gradient end makes the end the start, a FLAT CAPTION (the generator's head is the statement); it
 names no program role (2026-10-07):
@@ -127,12 +131,13 @@ chrome. The dark level (2026-10-03..04: a second, computed row per entry) was dr
 ## An entry
 
 `key` (unique ASCII, lowercase words joined by hyphens behind the family prefix — `windows-`, `plus-`, `kde3-`,
-`cde-`; a `gnome2` key is the GTK theme's own name, lowercase, with no prefix, `clearlooks`), `name` (the source's display name verbatim; a Windows 98
+`cde-`; a `gnome2` key is the GTK theme's own name, lowercase, with no prefix, `clearlooks`, and a `warptempo` key the
+scheme's name the same way, `cool-edit-pro-me`), `name` (the source's display name verbatim; a Windows 98
 theme's file name, a CDE palette's file stem), `family`, `imitates` (optional: a KDE scheme whose name says it imitates
 another desktop), `provenance` (`sources`: one record per source file; `rule`: the toolkit rule's id, its parameters
 and every value it computed), `raw`, `roles`, `flag_rule` (the rule the bevelled flag style took — kept as a record, read by
 nothing since the retired renderer's "bevelled" style: `{"id":
-"windows-dialog"}` for the families `windows` and `windows-plus` — the architect: "take Windows' rule" —,
+"windows-dialog"}` for the families `windows`, `windows-plus` and `warptempo` — the architect: "take Windows' rule" —,
 `{"id": "kde3", "contrast": c}` at the scheme's own contrast, `{"id": "motif"}` for `cde`, `{"id": "flat"}` for
 `gnome2`; described in the catalog's `rules`), `display_tier` (below), `notes` (every disagreement between sources, every relabelling).
 
@@ -148,21 +153,23 @@ the sets are also catalog.json's `display_tiers`, and each entry's CATALOG.md bl
 | `high-colour` | anything else |
 
 Today: `vga` 4 (Windows Storm, Teal, and Red, White, and Blue, and Windows 95 Storm; build.py asserts the list),
-`windows-20` 0, `high-colour` 99. Windows 98 Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and
+`windows-20` 0, `high-colour` 101. Windows 98 Standard misses `vga` only by its tooltip ground FFFFE1, Windows 95 Standard by that and
 its 3DLight DFDFDF (asserted for Windows 98 Standard).
 
 ## Families and sources
 
 | family | source | what |
 |---|---|---|
+| `warptempo` | the architect's own scheme files, written by the app's color picker (Save As), their twelve chrome keys recorded verbatim in build.py's `WARPTEMPO_SCHEMES` and in each entry's provenance (`recorded`) | THE PRODUCT'S OWN CHROME SCHEMES (architect 2026-10-10), designed, not imported, first in the catalog: `cool-edit-pro-me` ("Cool Edit Pro ME", his file of 2026-10-10 ~06:50) — Windows Me Standard's caption, inactive caption and selection fill under Cool Edit Pro 2.1's panel tones (the ground 4E5662 its toolbar recess, the field 414751 its pane's bottom mid line, the text, selection text and field text EFF0F0 its text white); the raw keys are the scheme's own (`chrome_ground` …), the relief quartet Windows' Appearance-dialog rule on the ground, run at import (`windows-dialog`), as the app derives it under windows-2000 |
 | `windows` | ReactOS `boot/bootdata/hivedef.inf` ("New Schemes", COLOR_* indices, 0x00BBGGRR, English names from the first [Strings] block), corroborated by the Windows XP classic schemes saved as .theme files (zkedem/windows10-classic-themes; 1j01/98 `desktop/Themes/classicthemes8`) and Windows 98's `Windows Default.theme`; Windows 2000's own setup hive, `I386/HIVEDEF.INF` of the Windows 2000 Professional SP3 disc image on archive.org (its HKCU `Control Panel\Colors` and its `Appearance\Schemes` values, each a 712-byte SCHEMEDATA whose 29 COLORREFs parse_windows.py reads); Windows 95's own Appearance schemes, `shell2.inf` (dated 1996-08-24) in the cabinet `win95/PRECOPY1.CAB` (spanned with `PRECOPY2.CAB`) of the Windows 95 OSR2 disc image `W95_PLUS_AR.iso`, a LOCAL SOURCE (below): 27 registry values of 492 bytes, each a COLORREF[25] (COLOR_SCROLLBAR .. COLOR_INFOBK, R, G, B and a flag byte) in its last 100 bytes, which parse_windows.py `parse_win95_schemes` reads | a hivedef.inf scheme is imported only when a second, independent source records it with equal bytes on every role key (the rest: Not imported, below); Desert and Spruce (absent from ReactOS) come from the two XP records. THE THREE DEFAULT SCHEMES (architect 2026-10-06, "just make it accurate"), one entry per distinct byte set, keyed by the release whose default the bytes are, every source's own label in the notes: `windows-2000-standard`, Windows 2000's own HKCU colours (its hive names the scheme "Windows Standard"), corroborated by zkedem's `standard.theme` ("Windows Standard"), classicthemes8's "Windows XP Classic" and ReactOS's "ReactOS Standard"; `windows-98-standard`, the C0C0C0 face under the navy-to-1084D0 caption, zkedem's `classic.theme` ("Windows Classic"), corroborated by Windows 2000's own "Windows Classic" scheme value, ReactOS's "ReactOS Classic" and Windows 98's `Windows Default.theme` (equal on every key it records but the desktop Background; it carries no Gradient key) — Windows 95 Standard's roles but for the 3DLight (C0C0C0 against DFDFDF) and the caption's gradient ends (1084D0 / B5B5B5 against flat); `windows-95-standard`, the Windows 95 CD's "Windows Standard" (architect 2026-10-09: it replaced the hand-recorded entry of 2026-10-03, whose bytes the CD equals on all 25 values; DFDFDF the 3DLight, as the retail captures show it). `windows-me-standard` (architect 2026-10-09), right after `windows-2000-standard`: Windows 2000 Standard's bytes under the font record `ms-sans-serif` (as a built-in scheme, Windows 2000 Standard's twelve under Me's name: a scheme carries no face since 2026-10-09 ~21:20), Windows Me's classic desktop being Windows 2000's in MS Sans Serif — a LOCAL SOURCE (below), his two guidebookgallery captures of WordPad (`tmp/winme.png`, `tmp/win2000pro.png`), byte-checked against the hive's values where they show one (ButtonFace, ButtonHilight, ButtonShadow, ButtonDkShadow, ActiveTitle, GradientActiveTitle) and the face measured off them (the title's capital 9 rows against Tahoma's 8). THE WINDOWS 95 FLAVOURS (architect 2026-10-09): of the CD's 27 schemes, the six whose bytes differ from Windows 2000's of the same name are entries of their own right after `windows-95-standard`, under a `windows-95-` prefix, 25 values each and a flat caption (Windows 95 has no Gradient, MenuHilight or MenuBar): `windows-95-maple` (ActiveTitle, InactiveTitle, AppWorkspace), `windows-95-wheat` (AppWorkspace), `windows-95-marine` (TitleText), `windows-95-storm` (InactiveTitleText), `windows-95-rose` (InactiveTitleText), `windows-95-plum` (TitleText, Hilight); the other 21 are not entries (11 byte-equal to an existing entry, 10 size variants and High Contrast schemes: catalog.json's `not_imported.windows_95_cd`, build.py's WIN95_* maps, which account for every one of the 27). The former `windows-classic` (the 2000 bytes) and `windows-standard` (the 98 bytes) are retired into them |
 | `windows-plus` | 1j01/98 `desktop/Themes/Windows Official/*.theme`, `[Control Panel\Colors]` | the Windows 98 / Plus! desktop themes; `Windows Default` corroborates Windows 98 Standard, the byte-identical `Copy of Dangerous Creatures` is not a second entry |
 | `kde3` | TDE tdebase `kcontrol/krdb/kcs/*.kcsrc` (49), less the 24 not imported: KDE 3.5's three usability schemes and the 21 Trinity added later — KDE 3.5's own 25 (architect 2026-10-03, late: the KDE catalog keeps only what KDE 3.5 shipped; build.py asserts 25). The Q4OS 6.9 TDE image was a second source until 2026-10-03; its six schemes were all not imported, and the source was dropped | relief by KDE 3's rule at the scheme's own `contrast=` (default 7) |
 | `cde` | cdesktopenv `cde/programs/palettes/*.dp` | the eight colour sets of each palette (16-bit, recorded as each channel's top byte, the verbatim lines in the provenance), and Motif's foreground, select colour and two shadows for every set; the four monochrome palettes (Black, White, BlackWhite, WhiteBlack: X colour names, refused by dtsession on a colour display) are reported, not imported |
 | `gnome2` | the Debian 6.0.10 squeeze live image's own bytes (`LOCAL_SOURCES`): `usr/share/themes/Clearlooks/gtk-2.0/gtkrc` (gtk2-engines 1:2.20.1-1) and `metacity-1/metacity-theme-1.xml` (gnome-themes 2.30.2-1), read by `parse_gtkrc.py`; the rule cited at the gtk-engines 2.20.2 and metacity 2.30.3 tarballs | `clearlooks` ("Clearlooks", architect 2026-10-07: squeeze's GNOME 2.30 default, the clearlooks chrome vocabulary's theme 2026-10-07 to 2026-10-09, a built-in scheme since): the gtkrc's eight `gtk-color-scheme` colours as recorded and five values by the programs' own rules, each with its derivation (`rule.derivations`): the engine's ONE-LINE EDGE as the relief quartet (light, light, dark, dark) = shade 1.06 / 0.94 of the ground (`clearlooks_draw_inset`, `clearlooks_draw_highlight_and_shade`), the tooltip border (shade 0.6 of its ground), the insensitive text (`darker (@bg_color)`), the unfocused title (metacity's `blend/gtk:fg[NORMAL]/gtk:bg[NORMAL]/0.45`); the focused title's literal #FFFFFF raw. The engine's other tones (its shade table, the gummy ramps, metacity's band) are not catalog roles, and since the Clearlooks painters left (2026-10-09) build.py no longer computes them (`engine_tones`, git history at d5b91f52^). His captures (`tmp/squeeze/`) show every computed byte as recorded |
 
-Every family's line in the build: windows 26, windows-plus 16, kde3 25, cde 36, gnome2 1 — 104 entries (the program's
-own family, `warptempo` and the two presets of his retired picker tool, left 2026-10-07 with the program roles). Where the pinned sources
+Every family's line in the build: warptempo 1, windows 26, windows-plus 16, kde3 25, cde 36, gnome2 1 — 105 entries
+(the program's own family of palette entries, the two presets of his retired picker tool, left 2026-10-07 with the
+program roles; the `warptempo` family is the product's own chrome schemes since 2026-10-10). Where the pinned sources
 cannot be fetched (the cloud: the Trinity mirror lies outside its egress; the squeeze image off the laptop),
 `build.py --check-only` runs the checks on the committed catalog.json and writes nothing.
 
@@ -198,7 +205,13 @@ cannot be fetched (the cloud: the Trinity mirror lies outside its egress; the sq
 | `title_active` | `ActiveTitle` | `activeBackground` | `set1` | `selected_bg_color` |
 | `title_inactive` | `InactiveTitle` | `inactiveBackground` | `set2` | `bg_color` |
 
-A `kde3:`, `motif:`, `gtk2:`, `gtkrc:` or `metacity:` value is computed by that toolkit's rule at import (`provenance.rule.computed`); every other
+The `warptempo` family (2026-10-10) maps the scheme's own keys: `ground` `chrome_ground`, `label` `chrome_text`, the
+quartet `windows-dialog:hilight` / `:light` / `:shadow` / `:dkshadow`, the selected pair `chrome_selection` /
+`chrome_selection_text`, the field pair `chrome_field` / `chrome_field_text`, the titles `chrome_title_start` /
+`chrome_inactive_title_start` (its caption the six `chrome_*title*` keys, `roles.CAPTION`); no info pair, no disabled
+text.
+
+A `kde3:`, `motif:`, `gtk2:`, `gtkrc:`, `metacity:` or `windows-dialog:` value is computed by that rule at import (`provenance.rule.computed`); every other
 value is a raw key. KDE 3's relief comes from the scheme's `background` (its `buttonBackground` is recorded raw: the
 app has one ground). CDE's colour sets (Motif `ColorObj.c`'s resource defaults, dtsession `SrvPalette.c`, dtwm
 `WmResource.c` / `Dtwm.defs`): 1 the active window frame, 2 the inactive frame, 3 and 7 workspace backdrops, 4 text
@@ -224,7 +237,8 @@ Windows 95 Standard's quartet is FFFFFF / DFDFDF / 808080 / 000000 on C0C0C0; KD
 import); Windows' dialog rule gives D4D0C8 -> Hilight EAE8E3 and Rainy Day 8399B1 -> C1CCD9 / 4F657D; every entry's
 `flag_rule` is its family's and runs; kde3 has 25 entries; the not-imported lists are exactly the schemes found (a re-pinned source cannot
 change them silently) and each duplicate is role-identical to its twin; no entry carries program roles and every
-family is an importing one; the `vga` entries are exactly Windows Storm, Teal, Red, White, and Blue and Windows 95 Storm, none is `windows-20`;
+family is one of build.py's FAMILIES; `cool-edit-pro-me` leads the catalog, its raw the twelve of WARPTEMPO_SCHEMES,
+its quartet A3AAB6 / 4E5662 / 343941 / 000000 on 4E5662 (`src/gui/chrome_derive.h` asserts the same); the `vga` entries are exactly Windows Storm, Teal, Red, White, and Blue and Windows 95 Storm, none is `windows-20`;
 every key is unique and ASCII; Clearlooks' roles are exactly the squeeze bytes (#EDECEB, #000000, the quartet
 #FBFBFA / #FBFBFA / #E0DEDD / #E0DEDD, #86ABD9 / #FFFFFF, #F5F5B5 / #000000 / #BABA45, #FFFFFF / #1A1A1A, #A9A5A2,
 #86ABD9 / #EDECEB), its unfocused title #6B6A6A, its flag rule flat (`toolkit_rules.py` asserts the engine's shade

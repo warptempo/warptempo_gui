@@ -168,6 +168,14 @@ static_assert([] {
     return me->chrome == w2k->chrome;
 }());
 
+// THE PRODUCT'S OWN SCHEMES ARE BUILT-INS AND NO CHROME'S OWN
+// (palette_file.h's kGuiProductSchemeKeys): each key a row of
+// kGuiChromeSchemes, so the menu's first group lists a scheme that loads,
+// and none a ChromeSpec's own_scheme, so no row is listed twice.
+static_assert(std::ranges::all_of(kGuiProductSchemeKeys, [](const char* k) {
+    return builtin_scheme(k) != nullptr && !is_chrome_own_scheme(k);
+}));
+
 // THE BUILT-INS' KEYS AND DISPLAY NAMES ARE UNIQUE (the generator checks the
 // same), the keys in the name grammar, and every scheme records its inactive
 // caption (the struct's comment).

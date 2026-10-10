@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# tools/theme_catalog/gen_theme_files.py — docs/themes/catalog.json -> THE BUILT-IN SCHEMES' GENERATED INCLUDE (below),
+# tools/theme_catalog/gen_theme_files.py — docs/themes/catalog.json -> THE BUILT-IN SCHEMES' GENERATED INCLUDES (below),
 # with the check of the compiled Windows 2000 theme against its catalog entry.
 # EVERY CHROME'S COLORS ARE COMPILED IN (architect 2026-10-08: "okay to retire the color theme catalog"; "we just need
 # hard-coded chromes"): no theme file ships and the app reads none (src/gui/theme_file.h's head). The catalog stays the
@@ -49,14 +49,19 @@
 # font, MS Sans Serif, a Settings matter now). THE DISPLAY NAME is the family's word, then the catalog name in Title Case
 # (SCHEME_FAMILY_WORD, scheme_display_name): "Windows Rainy Day", "Plus Space" (the Plus! themes' colour-depth tag
 # dropped), "KDE 3 Storm", "CDE Northern Sky" (CDE's run-together names parted at their capitals); a name that
-# already opens with the family's word takes it once ("Windows 2000 Standard"), and the one GNOME 2 entry is its name
-# alone ("Clearlooks", a scheme like any other). Keys and display names
+# already opens with the family's word takes it once ("Windows 2000 Standard"), and the one GNOME 2 entry and the
+# product's own are their names alone ("Clearlooks", "Cool Edit Pro ME", schemes like any other). Keys and display names
 # are checked unique, and every display name printable ASCII within the palette name grammar's 40 bytes (a typed
 # preset name equal to one is refused as taken, color_picker.cpp's commit_name).
+# THE PRODUCT'S OWN SCHEMES (architect 2026-10-10, build.py's `warptempo` family: his schemes made built-ins): their
+# rows stand in the include like any entry's, and their KEYS are written a second time, in the catalog's order, as
+# src/gui/chrome_schemes_product.inc — the rows of kGuiProductSchemeKeys (palette_file.h), which seats them in the
+# picker's Chrome menu in its first group, after the chromes' own (color_picker.cpp's preset_menu_rows); the scheme
+# rows carry no family, so the family is read here, once, and the menu's group stays derived from the catalog.
 #
 # BYTE-STABLE: the roles in the role table's order (kGuiThemeRoles, src/gui/theme_file.h, read here and checked
 # against ROLE_ORDER), the schemes in the catalog's, uppercase hex, LF, no timestamp; run it twice and the include
-# is identical. THE INCLUDE IT WRITES IS ITS OUTPUT, NEVER HAND-EDITED: a catalog change is build.py, then this,
+# is identical. THE TWO INCLUDES IT WRITES ARE ITS OUTPUT, NEVER HAND-EDITED: a catalog change is build.py, then this,
 # the output committed with it.
 #
 #   python3 -I tools/theme_catalog/gen_theme_files.py
@@ -144,7 +149,11 @@ SCHEME_KEYS = (('chrome_ground', 'ground'), ('chrome_text', 'label'),
                ('chrome_inactive_title_text', 'caption_inactive_text'),
                ('chrome_selection', 'selected_fill'), ('chrome_selection_text', 'selected_text'),
                ('chrome_field', 'field_ground'), ('chrome_field_text', 'field_text'))
-SCHEME_FAMILY_WORD = {'windows': 'Windows', 'windows-plus': 'Plus', 'kde3': 'KDE 3', 'cde': 'CDE', 'gnome2': None}
+SCHEME_FAMILY_WORD = {'warptempo': None, 'windows': 'Windows', 'windows-plus': 'Plus', 'kde3': 'KDE 3', 'cde': 'CDE',
+                      'gnome2': None}
+# THE PRODUCT'S OWN SCHEMES (the head): the family whose keys the second include lists
+PRODUCT_FAMILY = 'warptempo'
+PRODUCT_INC = os.path.join(REPO, 'src', 'gui', 'chrome_schemes_product.inc')
 SCHEME_SMALL_WORDS = {'and', 'da', 'of'}   # Title Case keeps them lower inside a name ("Leonardo da Vinci")
 LINES_ROW = r'kGuiChromeLines\[\] = \{(.*?)\};'
 PALETTE_FILE_H = os.path.join(REPO, 'src', 'gui', 'palette_file.h')
@@ -203,7 +212,14 @@ def write_schemes_include(entries):
           '// kGuiChromeLines\' order, the entry\'s recorded bytes (docs/themes/catalog.json) under the\n'
           '// generator\'s rules; regenerate, never hand-edit.\n' +
           ''.join(scheme_row(e) for e in entries))
-    return len(entries)
+    product = [e['key'] for e in entries if e['family'] == PRODUCT_FAMILY]
+    if not product: raise SystemExit(f'gen_theme_files: the catalog has no {PRODUCT_FAMILY} entry')
+    write(PRODUCT_INC, GENERATED +
+          '// THE PRODUCT\'S OWN SCHEMES (src/gui/palette_file.h\'s kGuiProductSchemeKeys, included in its\n'
+          '// initializer): the keys of the catalog\'s `warptempo` entries in the catalog\'s order, each a row of\n'
+          '// chrome_schemes.inc; regenerate, never hand-edit.\n' +
+          ''.join(f'    "{k}",\n' for k in product))
+    return len(entries), len(product)
 
 
 def main():
@@ -220,9 +236,9 @@ def main():
     if {r: table[r] for r in named} != named:
         raise SystemExit(f'gen_theme_files: {THEME_FILE_H}\'s column is not {WIN2000}\'s bytes: '
                          f'{ {r: (table[r], v) for r, v in named.items() if table[r] != v} }')
-    schemes = write_schemes_include(entries)
-    print(f'wrote {os.path.relpath(SCHEMES_INC, REPO)}')
-    print(f'{schemes} built-in schemes')
+    schemes, product = write_schemes_include(entries)
+    print(f'wrote {os.path.relpath(SCHEMES_INC, REPO)} and {os.path.relpath(PRODUCT_INC, REPO)}')
+    print(f'{schemes} built-in schemes, {product} of them the product\'s own')
 
 
 if __name__ == '__main__':

@@ -634,10 +634,12 @@ bool preset_act_enabled(const AppState& app, PresetAct a);
 // EDIT'S PRESETS, all twenty in its own order, "Default" first (the default
 // palette under every chrome, palette_file.h's kGuiBuiltinPalettes); under
 // Chrome THE CHROMES' OWN SCHEMES in the vocabularies' order
-// (windows-2000-standard alone today) — A SEPARATOR ("just put a separator
-// after the default color themes", architect 2026-10-08 ~19:30) — then THE
-// CATALOG'S OTHER 103 in the catalog's order (its 104 less the chrome's own
-// it holds, windows-2000-standard, listed above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
+// (windows-2000-standard alone today) and in the same group THE PRODUCT'S
+// OWN (kGuiProductSchemeKeys, palette_file.h: cool-edit-pro-me, "Cool Edit
+// Pro ME", architect 2026-10-10, "alongside Windows 2000 Standard") — A
+// SEPARATOR ("just put a separator after the default color themes",
+// architect 2026-10-08 ~19:30) — then THE CATALOG'S OTHER 103 in the
+// catalog's order (its 105 less the two listed above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
 // GROUP IS NOT SHOWN: with no file, ONE separator stands between the acts
 // and the built-ins — a Windows menu never shows an empty group between two
 // separators; the defaults' group is never empty. Each separator is a scroll

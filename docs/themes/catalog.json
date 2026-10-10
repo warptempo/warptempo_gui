@@ -1,5 +1,5 @@
 {
- "what": "The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, no derivation). Every colour is a recorded byte with its provenance; where the source records only base colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif, GNOME 2's Clearlooks and metacity), that toolkit's own rule ran once at import and its rule and sources are named in the entry's provenance. \"raw\" holds every value the source records under its own key names; \"roles\" the catalog roles (tools/theme_catalog/roles.py); a role a source has no word for is absent and the app's own value applies. Bytes are #RRGGBB as the source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The catalog is the chrome's alone (2026-10-07): the program's colors are the app's compiled palettes (src/gui/palette_file.h).",
+ "what": "The Warptempo theme catalog (tools/theme_catalog/build.py; architect 2026-10-03: imported themes only, no derivation). Every colour is a recorded byte with its provenance; where the source records only base colours and its toolkit computed the rest at run time (KDE 3, CDE / Motif, GNOME 2's Clearlooks and metacity), that toolkit's own rule ran once at import and its rule and sources are named in the entry's provenance. \"raw\" holds every value the source records under its own key names; \"roles\" the catalog roles (tools/theme_catalog/roles.py); a role a source has no word for is absent and the app's own value applies. Bytes are #RRGGBB as the source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The catalog is the chrome's alone (2026-10-07): the program's colors are the app's compiled palettes (src/gui/palette_file.h). One family is designed, not imported (2026-10-10): `warptempo`, the product's own chrome schemes, each the architect's scheme file recorded verbatim, its relief by Windows' Appearance-dialog rule as the app derives it.",
  "roles": [
   "ground",
   "label",
@@ -20,7 +20,7 @@
  ],
  "rules": {
   "windows-dialog": {
-   "name": "Windows' Appearance dialog on a 3D face, in shlwapi's 240-scale integer HLS: Hilight = the lightness halfway to white (the half rounded up), Shadow = two thirds of it (floored), hue and saturation kept, 3DLight the face, DkShadow black; read by the flags' one-line bevel (Hilight top and left, Shadow bottom and right) of the windows and windows-plus families (tools/theme_catalog/toolkit_rules.py windows_dialog, flag_bevel)",
+   "name": "Windows' Appearance dialog on a 3D face, in shlwapi's 240-scale integer HLS: Hilight = the lightness halfway to white (the half rounded up), Shadow = two thirds of it (floored), hue and saturation kept, 3DLight the face, DkShadow black; read by the flags' one-line bevel (Hilight top and left, Shadow bottom and right) of the windows and windows-plus families, and run at import for the relief quartet of the product's own schemes, the warptempo family, as the app derives it (tools/theme_catalog/toolkit_rules.py windows_dialog, flag_bevel)",
    "sources": [
     {
      "project": "Wine (wine-mirror), shlwapi: ColorRGBToHLS / ColorHLSToRGB, Windows' 240-scale integer HLS (the flags' windows-dialog rule)",
@@ -297,6 +297,80 @@
   }
  },
  "entries": [
+  {
+   "key": "cool-edit-pro-me",
+   "name": "Cool Edit Pro ME",
+   "family": "warptempo",
+   "provenance": {
+    "sources": [
+     {
+      "project": "Warptempo: the architect's own chrome scheme, picked in the app's color picker and saved by its Save As (src/gui/color_picker.h)",
+      "file": "schemes/Cool Edit Pro ME.scheme",
+      "saved": "the tablet, 2026-10-10 ~06:50",
+      "recorded": [
+       "chrome_ground=#4E5662",
+       "chrome_text=#EFF0F0",
+       "chrome_title_start=#0A246A",
+       "chrome_title_end=#A6CAF0",
+       "chrome_title_text=#FFFFFF",
+       "chrome_inactive_title_start=#808080",
+       "chrome_inactive_title_end=#C0C0C0",
+       "chrome_inactive_title_text=#D4D0C8",
+       "chrome_selection=#0A246A",
+       "chrome_selection_text=#EFF0F0",
+       "chrome_field=#414751",
+       "chrome_field_text=#EFF0F0"
+      ]
+     }
+    ],
+    "rule": {
+     "id": "windows-dialog",
+     "computed": {
+      "windows-dialog:hilight": "#A3AAB6",
+      "windows-dialog:light": "#4E5662",
+      "windows-dialog:shadow": "#343941",
+      "windows-dialog:dkshadow": "#000000"
+     }
+    }
+   },
+   "raw": {
+    "chrome_ground": "#4E5662",
+    "chrome_text": "#EFF0F0",
+    "chrome_title_start": "#0A246A",
+    "chrome_title_end": "#A6CAF0",
+    "chrome_title_text": "#FFFFFF",
+    "chrome_inactive_title_start": "#808080",
+    "chrome_inactive_title_end": "#C0C0C0",
+    "chrome_inactive_title_text": "#D4D0C8",
+    "chrome_selection": "#0A246A",
+    "chrome_selection_text": "#EFF0F0",
+    "chrome_field": "#414751",
+    "chrome_field_text": "#EFF0F0"
+   },
+   "roles": {
+    "ground": "#4E5662",
+    "label": "#EFF0F0",
+    "bevel_hilight": "#A3AAB6",
+    "bevel_light": "#4E5662",
+    "bevel_shadow": "#343941",
+    "bevel_dkshadow": "#000000",
+    "selected_fill": "#0A246A",
+    "selected_text": "#EFF0F0",
+    "field_ground": "#414751",
+    "field_text": "#EFF0F0",
+    "title_active": "#0A246A",
+    "title_inactive": "#808080"
+   },
+   "flag_rule": {
+    "id": "windows-dialog"
+   },
+   "display_tier": "high-colour",
+   "notes": [
+    "the architect's scheme file, its twelve keys verbatim (architect 2026-10-10 ~06:30: \"make it a permanent part of the hard-coded as one of the options alongside Windows 2000 Standard\")",
+    "the caption's six and the selection fill are Windows Me Standard's bytes (windows-me-standard); the ground #4E5662 is Cool Edit Pro 2.1's toolbar recess tone, the field #414751 its pane's bottom mid line, the text, the selection text and the field text #EFF0F0 its text white (his Wine captures, tmp/research/cool_edit/METRICS.md sections 1.1 and 4.4)",
+    "the relief quartet is Windows' Appearance-dialog rule on the ground, as the app derives it under the windows-2000 chrome (src/gui/chrome_derive.h): the scheme records no 3D colours"
+   ]
+  },
   {
    "key": "windows-brick",
    "name": "Brick",

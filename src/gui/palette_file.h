@@ -93,7 +93,8 @@
 // chrome_schemes.inc by tools/theme_catalog/gen_theme_files.py (the
 // transcription's rules are its head's; regenerate, never hand-edit): each a
 // KEY (the catalog's verbatim — the `scheme` key's word for it), a DISPLAY
-// NAME and THE TWELVE CHROME KEYS. A
+// NAME and THE TWELVE CHROME KEYS; THE PRODUCT'S OWN among them (2026-10-10,
+// kGuiProductSchemeKeys below: his schemes made built-ins). A
 // SCHEME IS CHROME-ONLY BY ITS KIND: choosing one installs its twelve and
 // leaves the program's twelve as they stand (GuiColorPicker::load_preset).
 // THE CHROME'S OWN SCHEME — the one its `own_scheme` names (chrome_spec.h:
@@ -437,11 +438,31 @@ constexpr bool is_builtin_scheme_name(std::string_view name) {
     return builtin_scheme(name) != nullptr;
 }
 // Whether `name` is a CHROME'S OWN SCHEME'S key (a ChromeSpec's own_scheme,
-// chrome_spec.h) — the Chrome scope's first group of built-ins
+// chrome_spec.h) — the Chrome scope's first group of built-ins, its head
 // (color_picker::preset_menu_rows).
 constexpr bool is_chrome_own_scheme(std::string_view name) {
     for (const ChromeSpec* s : kGuiChromeSpecs)
         if (name == s->own_scheme) return true;
+    return false;
+}
+// THE PRODUCT'S OWN SCHEMES (architect 2026-10-10 ~06:30: "I have created a
+// theme called Cool Edit Pro for the Chrome … make it a permanent part of
+// the hard-coded as one of the options alongside Windows 2000 Standard") —
+// the catalog's `warptempo` family, his scheme files made built-ins
+// (`cool-edit-pro-me`, "Cool Edit Pro ME"): rows of kGuiChromeSchemes like
+// any built-in, their KEYS GENERATED a second time into
+// chrome_schemes_product.inc in the catalog's order (gen_theme_files.py's
+// head; the scheme rows carry no family), so the Chrome scope's first group
+// takes them after the chromes' own schemes, "alongside Windows 2000
+// Standard" (color_picker::preset_menu_rows). No chrome's own: under every
+// chrome a product scheme carries its twelve keys, derived as any built-in's
+// (scheme_record; chrome_derive.h).
+inline constexpr const char* kGuiProductSchemeKeys[] = {
+#include "chrome_schemes_product.inc"
+};
+constexpr bool is_product_own_scheme(std::string_view name) {
+    for (const char* k : kGuiProductSchemeKeys)
+        if (name == k) return true;
     return false;
 }
 

@@ -76,6 +76,19 @@ MAPPING = {
         'field_ground': 'base_color', 'field_text': 'text_color', 'disabled_text': 'gtkrc:fg[INSENSITIVE]',
         'title_active': 'selected_bg_color', 'title_inactive': 'bg_color',
     },
+    # THE PRODUCT'S OWN SCHEMES (architect 2026-10-10, build.py warptempo_entries): the raw keys are the scheme file's
+    # own, the twelve chrome keys as the picker's Save As writes them (kGuiChromeLines, src/gui/palette_file.h); the
+    # relief quartet is Windows' Appearance-dialog rule on the ground (toolkit_rules.windows_dialog), run once at
+    # import, as the app derives it from the same ground under the windows-2000 chrome (src/gui/chrome_derive.h). A
+    # scheme records no tooltip pair and no disabled text: absent.
+    'warptempo': {
+        'ground': 'chrome_ground', 'label': 'chrome_text',
+        'bevel_hilight': 'windows-dialog:hilight', 'bevel_light': 'windows-dialog:light',
+        'bevel_shadow': 'windows-dialog:shadow', 'bevel_dkshadow': 'windows-dialog:dkshadow',
+        'selected_fill': 'chrome_selection', 'selected_text': 'chrome_selection_text',
+        'field_ground': 'chrome_field', 'field_text': 'chrome_field_text',
+        'title_active': 'chrome_title_start', 'title_inactive': 'chrome_inactive_title_start',
+    },
 }
 for _fam, _row in MAPPING.items():
     assert set(_row) <= set(ROLES), (_fam, set(_row) - set(ROLES))
@@ -120,6 +133,12 @@ CAPTION = {
 CAPTION['windows-plus'] = CAPTION['windows']
 CAPTION['gnome2'] = (('caption_active', 'selected_bg_color'), ('caption_active_text', 'title_text'),
                      ('caption_inactive', 'bg_color'), ('caption_inactive_text', 'metacity:title_unfocused'))
+# the product's own schemes (architect 2026-10-10): the scheme's six caption keys, both gradients recorded
+CAPTION['warptempo'] = (('caption_active', 'chrome_title_start'), ('caption_active_gradient', 'chrome_title_end'),
+                        ('caption_active_text', 'chrome_title_text'),
+                        ('caption_inactive', 'chrome_inactive_title_start'),
+                        ('caption_inactive_gradient', 'chrome_inactive_title_end'),
+                        ('caption_inactive_text', 'chrome_inactive_title_text'))
 
 
 def caption_roles(e):

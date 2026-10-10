@@ -1553,8 +1553,9 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // height is each anchor's rectangle AND its published hit rect, flush
     // under the caption with no air above it; the icon row begins on the
     // next pixel row with no margin between. The anchor's foot and the
-    // lane's foot are one edge, the icon row's first pixel under it — where
-    // the dropdown hangs. THE LANE IS NOT ITS CONTENT SINCE 2026-10-05: one
+    // lane's foot are one edge, the icon row's first pixel under it; the
+    // dropdown hangs from the content's foot, over the etched pair
+    // (dropdown_hang_y, 2026-10-10). THE LANE IS NOT ITS CONTENT SINCE 2026-10-05: one
     // row of ground stands ABOVE the content (ReactOS: caption, face row,
     // menu), and since 2026-10-10 WINDOWS' ETCHED PAIR stands BELOW it (the
     // spec's menu_row_head_px and menu_row_foot_px, render.h's menu-row
@@ -3565,12 +3566,10 @@ void paint_menu_check(cairo_t* cr, const GuiRect& item, int pen_x,
 
 void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // THE MENU ROW'S DROPDOWN — ONE painter for EVERY menu, hanging flush under
-    // the button that emits it at ZERO margin: its top edge is the BUTTON's
-    // bottom edge, which since the 2026-09-09 relayout IS the menu lane's
-    // bottom and the ICON ROW's first pixel — the anchors fill the lane now,
-    // so there is no margin strip between them (the ruling, and the margin
-    // that held those two edges one pixel apart 2026-08-02..09-09, are at the
-    // anchor arithmetic below), under that button's left edge. Publishes its own
+    // the menu bar at ZERO margin: its top edge is the row under the menu
+    // bar's CONTENT, over the lane's etched foot, which it covers while it
+    // stands (architect 2026-10-10, Windows' pull-down; dropdown_hang_y owns
+    // the seat and its law), under the emitting button's left edge. Publishes its own
     // rect and every item rect, so the press claim hit-tests exactly what was
     // painted and never re-shapes a label.
     //
@@ -3698,26 +3697,21 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // expression.
     const int h = dropdown_h_px(menu);
 
-    // FLUSH WITH THE BUTTON IT EMITS FROM ON X, AND WITH THE LANE ON Y.
-    // The x is the anchor's own left edge (architect 2026-08-02), the
-    // published rect's, so the band's lead (menu_band_lead_px) carries the box
-    // in with the anchor. THE Y IS THE MENU
-    // LANE'S FOOT, which since the 2026-09-09 relayout IS the ICON ROW'S
-    // FIRST PIXEL, so the box hangs straight onto the toolbar with nothing
-    // between — and the anchor's pill IS the lane (render.h's menu-row
-    // block), so the pill's foot is that row too and the dropdown
-    // touches the first row as it does in kdenlive. It is read from
-    // top_menu_row_area rather than from btn.y + btn.h because the LANE is
-    // the owner of that row: for the hours the lane stood at 34 the pill
-    // was 4 authored rows short of it, and a dropdown hung from the pill
-    // floated over the row's own ground — the very thing the architect saw
-    // and ruled against. From 2026-08-02 to 2026-09-09 the two differed by
-    // the lane's 1px margin-bottom, where he ruled the BUTTON: the box
-    // covered that margin strip while the menu was up, the ruled look and
-    // not a leak. What he stated then is what this reads now — "the menu
-    // row's bottom edge", the whole lane's — with the anchor keeping the x.
+    // FLUSH WITH THE BUTTON IT EMITS FROM ON X, AND WITH THE MENU BAR'S
+    // CONTENT ON Y. The x is the anchor's own left edge (architect
+    // 2026-08-02), the published rect's, so the band's lead
+    // (menu_band_lead_px) carries the box in with the anchor. THE Y IS THE
+    // ROW UNDER THE CONTENT (dropdown_hang_y, architect 2026-10-10): a Windows
+    // pull-down drops from the menu bar's bottom row and covers the band
+    // border beneath it, so the box stands on the lane's etched foot and
+    // covers it while the menu is down, as the box covered the lane's 1-px
+    // margin strip under the anchor when the architect ruled the BUTTON's
+    // foot (2026-08-02). It is read from the lane's content rect
+    // (menu_row_content_rect of top_menu_row_area) rather than from btn.y +
+    // btn.h because the anchor's pill is the whole lane (render.h's menu-row
+    // block), the etched foot included.
     int x = btn.x;
-    int y = dropdown_hang_y(app, menu);   // flush: zero margin under the LANE
+    int y = dropdown_hang_y(app, menu);   // flush: zero margin under the content
     if (x + w > app.width) x = app.width - w;
     if (x < 0) x = 0;
     app.dropdown.rect = GuiRect{x, y, w, h};

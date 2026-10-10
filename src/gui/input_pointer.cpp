@@ -10277,16 +10277,14 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // label), so this damages FULL WIDTH from the button's top down — a band,
     // not a guess, and cheap because it happens once per open.
     //
-    // THE TOP EDGE IS THE MENU LANE'S FOOT, the same expression paint_dropdown
-    // places the box at — read from the SAME lane accessor there, so the
-    // damaged band and the painted box start on the same row of pixels; a
-    // band anchored anywhere else would leave a strip of the popup unpainted
-    // at one end. It is the LANE and not the anchor's rect because the lane
-    // is the one owner of that row: the anchor's published rect is its pill,
-    // which IS the lane (render.h's menu-row block), so the two agree
-    // exactly. The x is still the anchor's (the
-    // dropdown hangs off the thing that opened it, architect 2026-08-02);
-    // only this band's y reads the lane, and it damages FULL WIDTH anyway.
+    // THE TOP EDGE IS THE MENU BAR'S CONTENT'S FOOT, over the lane's etched
+    // foot (architect 2026-10-10, dropdown_hang_y's rule), the same
+    // expression paint_dropdown places the box at — so the damaged band and
+    // the painted box start on the same row of pixels; a band anchored
+    // anywhere else would leave a strip of the popup unpainted at one end.
+    // The x is still the anchor's (the dropdown hangs off the thing that
+    // opened it, architect 2026-08-02); only this band's y reads the seat,
+    // and it damages FULL WIDTH anyway.
     viewport.invalidate_rect(
         GuiRect{0, dropdown_hang_y(app, menu), app.width, dropdown_h_px(menu)});
     // THE TOOLTIP GOES DOWN ON THE OPEN EDGE, A HARD END (a menu opening

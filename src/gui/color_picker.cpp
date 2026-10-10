@@ -237,16 +237,23 @@ std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
         return rows;
     }
     // Under Chrome the chromes' own schemes first, in the vocabularies'
-    // order, then — behind their own separator (architect 2026-10-08
-    // ~19:30) — every other scheme in the catalog's.
+    // order, then in the same group the product's own (architect 2026-10-10:
+    // "alongside Windows 2000 Standard"; kGuiProductSchemeKeys, the
+    // catalog's order), then — behind their own separator (architect
+    // 2026-10-08 ~19:30) — every other scheme in the catalog's.
     for (const ChromeSpec* spec : kGuiChromeSpecs) {
         add_name(spec->own_scheme, first);
+        first = false;
+    }
+    for (const char* key : kGuiProductSchemeKeys) {
+        add_name(key, first);
         first = false;
     }
     first = true;
     for (const GuiChromeScheme& b : kGuiChromeSchemes) {
         const std::string_view key = b.key;
-        if (is_chrome_own_scheme(key)) continue;   // a chrome's own, above
+        if (is_chrome_own_scheme(key) || is_product_own_scheme(key))
+            continue;   // the first group's, above
         add_name(std::string(key), first);
         first = false;
     }

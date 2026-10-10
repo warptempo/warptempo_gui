@@ -1205,10 +1205,12 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // anchor's rectangle fills the LANE top to bottom and IS the anchor's
 // published hit rect (paint_menu_row; the open anchor's sunken box stands
 // round the content rows alone, as ReactOS's does round its 19-row item),
-// and the anchor's foot is the lane's foot, which is where the dropdown and its
-// damage band hang (top_menu_row_area — paint_dropdown and toggle_dropdown
-// read the same accessor), so the popup touches the icon row's first pixel,
-// under the etched pair — it hangs off the LANE, never the content.
+// and the anchor's foot is the lane's foot. THE DROPDOWN AND ITS DAMAGE BAND
+// HANG FROM THE CONTENT'S FOOT, OVER THE ETCHED PAIR (architect 2026-10-10:
+// a Windows pull-down drops from the menu bar's bottom row and covers the
+// band border beneath it; dropdown_hang_y, which paint_dropdown and
+// toggle_dropdown both read, owns the seat), so the popup covers the pair
+// while it stands.
 //
 // FLUSH UNDER THE CAPTION (the window's top edge until the caption's arrival,
 // 2026-10-05), WITH NO AIR ABOVE THE ANCHORS beyond the head row (architect
@@ -1224,9 +1226,10 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // its head row 3 and 1, its foot two relief lines, 6 and 2 (8 at 360 %) —
 // lane totals of 66 and 29 (80 at 360 %). TWO ACCESSORS FOR TWO
 // READERS, deliberately: the
-// lane table and the anchor/hit-rect/dropdown geometry read the LANE
-// (menu_row_h_px), the label's seat and the open box read the CONTENT alone
-// (menu_row_content_rect, paint_menu_row) — the one place the two differ.
+// lane table and the anchor/hit-rect geometry read the LANE
+// (menu_row_h_px), the label's seat, the open box and the dropdown's seat
+// read the CONTENT alone (menu_row_content_rect, paint_menu_row,
+// dropdown_hang_y).
 inline int menu_row_content_h_px() {
     return scaled_px(live_chrome_spec().menu_row_content_px, 5);
 }
@@ -1285,10 +1288,10 @@ inline constexpr double kModalFieldPadXPx   = 5.0;
 // sunken, status or etched edge in the chrome, and of one cell of the checked
 // dither (architect 2026-10-02: Windows' DrawEdge draws one-pixel lines, two
 // to an edge; the grammar is at the palette head): 3 device px at the
-// tablet's 275 %, 1 at the laptop's 138 %, floored at 1 so it never vanishes
-// at 50 %. The relief helpers (paint_relief_soft_raised and its siblings)
-// paint every line at it; the icon row's etched pair below is two
-// lines.
+// tablet's 300 % (its scale since 2026-10-06), 4 at 360 %, 1 at the laptop's
+// 138 %, floored at 1 so it never vanishes at 50 %. The relief helpers
+// (paint_relief_soft_raised and its siblings) paint every line at it; the
+// menu row's etched foot above is two lines (menu_row_foot_h_px).
 inline constexpr int kReliefLinePx = 1;
 inline int relief_line_px() {
     return scaled_px(kReliefLinePx, 1);

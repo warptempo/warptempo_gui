@@ -3555,11 +3555,12 @@ struct SettingsPopupItem {
 // colors were compiled in (architect 2026-10-08, theme_file.h). No theme
 // file ships now: the catalog's entries are the built-in SCHEMES, compiled
 // from it by tools/theme_catalog/gen_theme_files.py, chosen in the color
-// picker: 104 since 2026-10-09 — chrome_schemes.inc's rows, one per catalog
-// entry (windows 26, windows-plus 16, kde3 25, cde 36, gnome2 1), the
-// windows-2000 chrome's own `windows-2000-standard` among them rather than
-// beside them (palette_file.h's kGuiChromeSchemes; the picker's menu lists
-// it first and the other 103 after its separator).
+// picker: 105 since 2026-10-10 — chrome_schemes.inc's rows, one per catalog
+// entry (warptempo 1, windows 26, windows-plus 16, kde3 25, cde 36, gnome2
+// 1), the windows-2000 chrome's own `windows-2000-standard` and the
+// product's own `cool-edit-pro-me` among them rather than beside them
+// (palette_file.h's kGuiChromeSchemes; the picker's menu lists the two first
+// and the other 103 after its separator).
 //
 // `Chrome` JOINED 2026-10-07 (architect, the second vocabulary), the last row
 // of the device group in kDeviceConfigKeys' order, its label its key's name
@@ -10452,14 +10453,21 @@ GuiRect top_caption_row_area(const AppState& a);
 // zone map (pointer_cursor_kind). Hit tests are not guards (CLAUDE.md).
 unsigned window_frame_edges_at(const AppState& a, int x, int y);
 GuiRect top_menu_row_area(const AppState& a);
-// THE ROW A DROPDOWN HANGS FROM — the menu lane's foot for the menu row's
-// three (render.h's menu-row block: the anchor is the lane) — the ONE
-// expression the painter's box and the open edge's damage both read
-// (paint_dropdown, toggle_dropdown), so the damaged band and the painted box
-// start on the same row.
+// THE ROW A DROPDOWN HANGS FROM — THE MENU BAR'S CONTENT'S FOOT for the menu
+// row's three, the row under the content's last (menu_row_content_rect's
+// end), OVER THE LANE'S FOOT (architect 2026-10-10): a Windows pull-down
+// drops from the menu bar's bottom row and covers the band border beneath
+// it, so while a menu is down its box stands on the etched pair's rows and
+// covers them (his WordPad captures of the real OS, tmp/win2000pro.png and
+// tmp/winme.png: the menu bar rows 22–41, the pair 42–43 — the box's first
+// row is 42). At the tablet's 300 % the box's top row is 114, the pair's
+// first (the caption 54, the head row 3, the content 57). The ONE expression the painter's box and the open edge's damage
+// both read (paint_dropdown, toggle_dropdown), so the damaged band and the
+// painted box start on the same row; the box's published rect, its hit rect
+// and the close edge's damage are that box.
 inline int dropdown_hang_y(const AppState& a, DropdownMenu /*m*/) {
-    const GuiRect lane = top_menu_row_area(a);
-    return lane.y + lane.h;
+    const GuiRect content = menu_row_content_rect(top_menu_row_area(a));
+    return content.y + content.h;
 }
 GuiRect top_icon_row_area(const AppState& a);
 // GAP 1's band — the flexible band BETWEEN THE ICON ROW AND THE TRIM LANE (the

@@ -221,10 +221,15 @@ struct ChromeSpec {
 // Windows' SM_CYCAPTION 18 with its DFC_CAPTION buttons 16 x 14 two px down
 // and in, Minimise and Maximise touching, two px before Close, the small
 // icon at (2, 1), the title's pen two px past it (render.h's caption
-// block); THE MENU ROW Explorer's menu band, the 19-row button under one
-// face row, the label 9 px in and 7 after, the rebar's 2-px lead
-// (paint_handler.cpp's kMenuLabel* record), and UNDER IT WINDOWS' ETCHED
-// PAIR, 2 W — a Shadow row, then a Hilight row, the lane's whole width
+// block); THE MENU ROW two sources, the captures beating ReactOS
+// (win2000_deviations.md's two menu-row lines): FROM EXPLORER'S MENU BAND as
+// ReactOS draws it (browseui's CMenuBand, measured on tmp/reactos-hover.png)
+// the 19-row content under one face row, the label 9 px in and 7 after and
+// the rebar's 2-px lead (paint_handler.cpp's kMenuLabel* record); FROM THE
+// PLAIN WINDOW'S MENU BAR (menu.c) as his WordPad captures of the real OS
+// show it, the label's seat — the cap's top on row 5 of the 19, the cap band
+// centred (architect 2026-10-09 ~17:40, paint_menu_row) — and UNDER IT
+// WINDOWS' ETCHED PAIR, 2 W — a Shadow row, then a Hilight row, the lane's whole width
 // (architect 2026-10-10, on the tablet under his darker scheme: "there's
 // one pixel missing from the separator under File Edit Settings … Windows
 // menus are never just a straight line, they're always a bevel"; "that's the
@@ -238,7 +243,8 @@ struct ChromeSpec {
 // a capture beats ReactOS (win2000_deviations.md); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
 // (tmp/reactos-tooltips.png); THE DROPDOWN Windows' popup menu, 17-px items
-// one px inside the frame; THE ICONS Tango 0.8.90's scalable drawings,
+// one px inside the frame, hanging from the menu bar's bottom row over the
+// etched pair (architect 2026-10-10, dropdown_hang_y); THE ICONS Tango 0.8.90's scalable drawings,
 // ReactOS's own model of a Windows 2000 desktop dressed in Tango (architect
 // 2026-10-06: assets/icons/tango/, its README the mapping). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the

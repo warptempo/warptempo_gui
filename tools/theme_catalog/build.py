@@ -11,8 +11,13 @@
 # chrome's removal (architect 2026-10-09 ~21:20): that arithmetic (engine_tones and its helpers) stands in git history
 # at d5b91f52^ — the note above the checks below.
 # THE CATALOG IS THE CHROME'S ALONE (architect 2026-10-07): the program's colors are the palette's, compiled in
-# (src/gui/palette_file.h), and the program's own family of chosen entries (`warptempo` and the presets of his
-# retired picker tool) left the catalog the same day ("it'll still be in the git history").
+# (src/gui/palette_file.h), and the program's own family of chosen entries (the presets of his retired picker tool)
+# left the catalog the same day ("it'll still be in the git history").
+# THE PRODUCT'S OWN SCHEMES, THE ONE DESIGNED FAMILY (architect 2026-10-10 ~06:30: "I have created a theme called Cool
+# Edit Pro for the Chrome … make it a permanent part of the hard-coded as one of the options alongside Windows 2000
+# Standard"): the `warptempo` family — a chrome scheme the architect picked in the app and saved through the picker,
+# made a built-in — is recorded as his file spells it, its relief by Windows' Appearance-dialog rule run at import
+# (warptempo_entries); it leads the catalog (FAMILIES), so the generated schemes lead with it.
 # NOT IMPORTED (architect 2026-10-03, late; NOT_IMPORTED below, each with its reason, recorded in the catalog): the
 # schemes no independent source records as Windows', the usability schemes, the KDE schemes KDE 3.5 did not ship, and
 # the role-identical duplicates. The
@@ -37,16 +42,18 @@ import toolkit_rules as T
 from roles import ROLES, MAPPING, map_roles
 
 OUT = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
-FAMILIES = ('windows', 'windows-plus', 'kde3', 'cde', 'gnome2')
+FAMILIES = ('warptempo', 'windows', 'windows-plus', 'kde3', 'cde', 'gnome2')
 # a key's prefix per family; GNOME 2's keys are the GTK theme's own name, lowercase (`clearlooks`; architect
-# 2026-10-07: the compiled Clearlooks theme)
-KEY_PREFIX = {'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde', 'gnome2': None}
+# 2026-10-07: the compiled Clearlooks theme), and the product's own the scheme's name, lowercase (`cool-edit-pro-me`)
+KEY_PREFIX = {'warptempo': None, 'windows': 'windows', 'windows-plus': 'plus', 'kde3': 'kde3', 'cde': 'cde',
+              'gnome2': None}
 # THE FLAGS' RULE per family (architect 2026-10-03, late: a flag's one-line bevel is its theme family's own rule on the
 # flag's face, toolkit_rules.flag_bevel): Windows' Appearance dialog for the Windows families and the program's own
 # ("take Windows' rule"), KDE 3's at the scheme's contrast, Motif's for CDE, FLAT for GNOME 2 (Clearlooks draws no
-# one-line bevel round a raised face: toolkit_rules.flag_bevel states why).
-FLAG_RULE = {'windows': 'windows-dialog', 'windows-plus': 'windows-dialog', 'kde3': 'kde3', 'cde': 'motif',
-             'gnome2': 'flat'}
+# one-line bevel round a raised face: toolkit_rules.flag_bevel states why); the product's own schemes Windows', the
+# chrome they are made under.
+FLAG_RULE = {'warptempo': 'windows-dialog', 'windows': 'windows-dialog', 'windows-plus': 'windows-dialog',
+             'kde3': 'kde3', 'cde': 'motif', 'gnome2': 'flat'}
 
 # NOT IMPORTED (architect 2026-10-03, late), each group with its reason; build.py asserts every named scheme exists in
 # its source and, for a duplicate, that its roles equal its twin's, so a re-pinned source cannot change the list
@@ -159,6 +166,53 @@ def entry(family, key_words, name, prov, raw, computed=None, notes=None, imitate
     e['display_tier'] = display_tier(e['roles'])
     e['notes'] = notes or []
     return e
+
+
+# ------------------------------------------------------------------ the product's own (warptempo)
+# THE PRODUCT'S OWN SCHEMES (architect 2026-10-10 ~06:30, the head): each the architect's scheme file as the picker's
+# Save As wrote it, its twelve chrome keys (kGuiChromeLines, src/gui/palette_file.h) recorded VERBATIM as `raw`, under
+# the file's own key names; the relief quartet Windows' Appearance-dialog rule on its ground (toolkit_rules.
+# windows_dialog, the `windows-dialog` rule), the derivation the app runs on any scheme that carries keys under the
+# windows-2000 chrome (src/gui/chrome_derive.h), so the record is what the screen shows. No sha256 pins the file: the
+# twelve lines are the record, kept in the entry's provenance as the file spells them.
+# COOL EDIT PRO ME (his file of 2026-10-10 ~06:50, saved on the tablet, replacing his nine-key "Cool Edit Pro" of
+# ~05:46): Windows Me Standard's caption, inactive caption and selection fill (windows-me-standard's bytes) under Cool
+# Edit Pro 2.1's panel tones, as his Wine captures measure them (tmp/research/cool_edit/METRICS.md): the ground its
+# toolbar RECESS (§1.1, the band's ground right of the last pane), the field its pane's bottom mid line (§1.1), the
+# text, the selection text and the field text its text white (the tab labels and the time field's digits, §4.4).
+WARPTEMPO_PROJECT = ('Warptempo: the architect\'s own chrome scheme, picked in the app\'s color picker and saved by its '
+                     'Save As (src/gui/color_picker.h)')
+WARPTEMPO_SCHEMES = (
+    ('Cool Edit Pro ME', 'the tablet, 2026-10-10 ~06:50', (
+        ('chrome_ground', '#4E5662'), ('chrome_text', '#EFF0F0'), ('chrome_title_start', '#0A246A'),
+        ('chrome_title_end', '#A6CAF0'), ('chrome_title_text', '#FFFFFF'), ('chrome_inactive_title_start', '#808080'),
+        ('chrome_inactive_title_end', '#C0C0C0'), ('chrome_inactive_title_text', '#D4D0C8'),
+        ('chrome_selection', '#0A246A'), ('chrome_selection_text', '#EFF0F0'), ('chrome_field', '#414751'),
+        ('chrome_field_text', '#EFF0F0')), [
+        'the architect\'s scheme file, its twelve keys verbatim (architect 2026-10-10 ~06:30: "make it a permanent '
+        'part of the hard-coded as one of the options alongside Windows 2000 Standard")',
+        'the caption\'s six and the selection fill are Windows Me Standard\'s bytes (windows-me-standard); the ground '
+        '#4E5662 is Cool Edit Pro 2.1\'s toolbar recess tone, the field #414751 its pane\'s bottom mid line, the text, '
+        'the selection text and the field text #EFF0F0 its text white (his Wine captures, '
+        'tmp/research/cool_edit/METRICS.md sections 1.1 and 4.4)',
+        'the relief quartet is Windows\' Appearance-dialog rule on the ground, as the app derives it under the '
+        'windows-2000 chrome (src/gui/chrome_derive.h): the scheme records no 3D colours']),
+)
+WARPTEMPO_DIALOG_KEYS = ('windows-dialog:hilight', 'windows-dialog:light', 'windows-dialog:shadow',
+                         'windows-dialog:dkshadow')
+
+
+def warptempo_entries():
+    """The product's own schemes (the rule above), in WARPTEMPO_SCHEMES' order."""
+    out = []
+    for name, saved, keys, notes in WARPTEMPO_SCHEMES:
+        raw = {k: unhex(v) for k, v in keys}
+        computed = dict(zip(WARPTEMPO_DIALOG_KEYS, T.windows_dialog(raw['chrome_ground'])))
+        prov = {'project': WARPTEMPO_PROJECT, 'file': f'schemes/{name}.scheme', 'saved': saved,
+                'recorded': [f'{k}={v}' for k, v in keys]}
+        out.append(entry('warptempo', name, name, prov, raw, computed, notes=notes, rule={'id': 'windows-dialog'}))
+        out[-1]['corroborated'] = 0
+    return out
 
 
 # ------------------------------------------------------------------ Windows (windows), windows-plus
@@ -530,7 +584,9 @@ RULES = {
                                'lightness halfway to white (the half rounded up), Shadow = two thirds of it (floored), hue and '
                                'saturation kept, 3DLight the face, DkShadow black; read by the flags\' one-line bevel '
                                '(Hilight top and left, Shadow bottom and right) of the windows and windows-plus '
-                               'families (tools/theme_catalog/toolkit_rules.py windows_dialog, flag_bevel)',
+                               'families, and run at import for the relief quartet of the product\'s own schemes, '
+                               'the warptempo family, as the app derives it (tools/theme_catalog/toolkit_rules.py '
+                               'windows_dialog, flag_bevel)',
                        'sources': [provenance('wine_rules', 'dlls/shlwapi/ordinal.c')]},
     'kde3': {'name': 'KDE 3 createApplicationPalette over Qt 3\'s integer HSV at the scheme\'s contrast (default 7): '
                      'light = background.light(100 + (2c + 4) x 16 / 10), midlight = background.light(110), dark = '
@@ -764,8 +820,17 @@ def checks(entries):
                            'disabled_text': '#A9A5A2', 'title_active': '#86ABD9', 'title_inactive': '#EDECEB'}, cl['roles']
     assert cl['raw']['title_text'] == '#FFFFFF' and cl['provenance']['rule']['computed']['metacity:title_unfocused'] == '#6B6A6A'
     assert cl['flag_rule'] == {'id': 'flat'} and cl['display_tier'] == 'high-colour'
-    # the catalog is the chrome's alone (2026-10-07): no entry carries program roles, and the program's own family is
-    # gone with them (its colors are the palette's, src/gui/palette_file.h)
+    # the product's own (2026-10-10): Cool Edit Pro ME leads the catalog, its raw his file's twelve, its relief the
+    # dialog rule's on its ground (src/gui/chrome_derive.h asserts the same quartet off the same ground)
+    assert keys[0] == 'cool-edit-pro-me', keys[:2]
+    cep = by['cool-edit-pro-me']
+    assert cep['raw'] == dict(WARPTEMPO_SCHEMES[0][2]) and cep['family'] == 'warptempo'
+    assert [cep['roles'][x] for x in ('ground', 'bevel_hilight', 'bevel_light', 'bevel_shadow', 'bevel_dkshadow')] == \
+        ['#4E5662', '#A3AAB6', '#4E5662', '#343941', '#000000']
+    assert cep['display_tier'] == 'high-colour'
+    # the catalog is the chrome's alone (2026-10-07): no entry carries program roles, and the program's own family of
+    # palette entries is gone with them (its colors are the palette's, src/gui/palette_file.h); every family is one of
+    # FAMILIES, the product's own chrome schemes among them
     for e in entries: assert 'program_roles' not in e and e['family'] in FAMILIES, e['key']
 
 
@@ -791,7 +856,9 @@ def document(entries, not_imported):
                 'a role a source has no word for is absent and the app\'s own value applies. Bytes are #RRGGBB as the '
                 'source records them (the renderer takes a theme byte as a Display-P3 byte as-is). The catalog is the '
                 'chrome\'s alone (2026-10-07): the program\'s colors are the app\'s compiled palettes '
-                '(src/gui/palette_file.h).',
+                '(src/gui/palette_file.h). One family is designed, not imported (2026-10-10): `warptempo`, the '
+                'product\'s own chrome schemes, each the architect\'s scheme file recorded verbatim, its relief by '
+                'Windows\' Appearance-dialog rule as the app derives it.',
         'roles': list(ROLES),
         'rules': RULES,
         'display_tiers': {'what': 'each entry\'s display_tier: the smallest of these period colour sets holding every '
@@ -822,7 +889,7 @@ def main():
     if sys.argv[1:]: raise SystemExit('usage: python3 tools/theme_catalog/build.py [--check-only]')
     win, ros_only = windows_entries()
     kde, kde_later = kde_entries()
-    entries = win + kde
+    entries = warptempo_entries() + win + kde
     cde, mono = cde_entries(); entries += cde
     entries += gnome2_entries()
     entries, dups = drop_duplicates(entries)

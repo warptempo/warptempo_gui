@@ -35,6 +35,8 @@ def relative_luminance(rgb):
 
 
 FAMILY_HEAD = {
+    'warptempo': 'Warptempo: the product\'s own chrome schemes (the architect\'s scheme files made built-ins, recorded '
+                 'verbatim; the relief by Windows\' Appearance-dialog rule, as the app derives it)',
     'windows': 'Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes '
                'saved as .theme files; Windows 2000 Standard from Windows 2000\'s own setup hive; Windows 95 Standard '
                'and the six Windows 95 flavours from the Windows 95 CD\'s own shell2.inf; Windows Me Standard, '
@@ -97,8 +99,10 @@ def write_md(cat):
     """catalog.json -> CATALOG.md: the head, then per family its entries darkest ground first (the windows family's
     note on the Windows 95 CD after its heading)."""
     L = ['# The theme catalog', '',
-         'Every entry below is a desktop theme of the era IMPORTED, not designed (architect 2026-10-03: "no derived, '
-         'imported only"): its colours are the bytes its source records, each with its provenance in '
+         'Every entry below but the product\'s own is a desktop theme of the era IMPORTED, not designed (architect '
+         '2026-10-03: "no derived, imported only"; the product\'s own schemes, the `warptempo` family, 2026-10-10, are '
+         'the architect\'s scheme files recorded verbatim): its colours are the bytes its source records, each with '
+         'its provenance in '
          '[catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the '
          'relief at run time (KDE 3, CDE / Motif, GNOME 2\'s Clearlooks and metacity), that toolkit\'s rule ran once '
          'at import and is named. A theme is the CHROME\'s colors alone (2026-10-07): the program\'s own colors are '
