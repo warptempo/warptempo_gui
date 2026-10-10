@@ -150,13 +150,14 @@ void Viewport::invalidate_status_cell_area() {
     gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
 
-// THE MODAL'S DAMAGE — the unified bottom row's lane whole, which IS the
-// modal's surface since it moved onto the row (2026-08-13). No stash rider and
-// no cell arithmetic: the row yields whole while a dialog stands, so the lane
-// is both the smallest rect that covers the modal and the rect a CLOSER owes
-// (it must erase the modal AND bring the row's own tenants back). The OPENERS
-// do not come through here — nothing is painted before a surface's first paint,
-// so they invalidate the whole window. Caller inventory at the declaration.
+// THE MODAL'S DAMAGE — every rect the modal can paint and every rect its
+// close must give back, the unified bottom row's lane among them (the modal
+// has stood in the row since 2026-08-13, and the row's own tenants come back
+// on a close). No stash rider and no cell arithmetic: the rects below are the
+// overlay's own geometry, the lane alone covering only what keeps to the
+// row, which the dialog does not (below). The OPENERS do not come through here — nothing is
+// painted before a surface's first paint, so they invalidate the whole
+// window. Caller inventory at the declaration.
 // THE DIALOG IS A BOTTOM OVERLAY (2026-10-10, onscreen_keyboard.h's overlay
 // block): a chrome tenant's surface is laid over the row's content band and
 // the program frame's bottom row at the window's whole width, its line on

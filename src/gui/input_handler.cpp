@@ -5,6 +5,7 @@
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "icons.h"                  // drop_rasters on a scale change
+#include "onscreen_keyboard.h"      // the bottom overlay's wheel swallow
 #include "render.h"
 #include "device_config.h"
 #include "settings_io.h"
@@ -3428,6 +3429,16 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     if (folder_overlay_stands(app)) {
         return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;
     }
+    // THE BOTTOM OVERLAY SWALLOWS THE WHEEL (2026-10-10, ON SCREEN IS AS
+    // PAINTED): the keyboard alone, the dialog alone or the dialog on the
+    // keyboard, their line on top (onscreen_keyboard.h's overlay block) —
+    // opaque, not a scroll surface, and what lies under it is covered, so a
+    // detent over its painted rect reaches neither the waveform nor row 8
+    // behind it. -1 for the inert bands' reason. The touch pinch asks this
+    // context per frame (apply_touch_nav_update), so this is its refusal
+    // over the overlay too.
+    if (rect_contains(onscreen_keyboard::overlay_rect(app, gui), x, y))
+        return -1;
     // THE COLOR PICKER SWALLOWS THE WHEEL (2026-10-07): the well under it
     // is for looking at, and its veil consumes the pointer's acts alike;
     // the touch pan asks this context too, so a pan dies here with it.
@@ -3476,10 +3487,26 @@ int GuiInputHandler::wheel_context(int x, int y) const {
         }
     }
 
-    const GuiRect area = waveform_area(app);
-    const GuiRect top  = top_strip_area(app);
+    // THE WAVEFORM WHERE IT IS PAINTED (2026-10-10): waveform_paint_area, the
+    // press road's own navigation surface (point_on_nav_surface,
+    // input_pointer.cpp) — the overlay's rows over the canvas answered -1
+    // above, and this reads the same one geometry rather than the whole
+    // canvas interior.
+    // THE TOP STRIP LESS THE PROGRAM'S FRAME (2026-10-10, inert ground —
+    // paint_program_frame publishes nothing): the frame's top row spans the
+    // client inside the strip and its two columns stand outside every
+    // program lane's inset (strip_row_rect), so the strip's surface is the
+    // rows under the frame's top row across the program lanes' columns, read
+    // off the trim lane's rect; a wheel on the frame falls to the no-context
+    // 0, as on the frame's bottom row and on its columns beside the waveform.
+    const GuiRect area  = onscreen_keyboard::waveform_paint_area(app, gui);
+    const GuiRect top   = top_strip_area(app);
+    const GuiRect frame = top_program_frame_area(app);
+    const GuiRect lanes = top_trim_row_area(app);
     const bool inside_waveform = rect_contains(area, x, y);
-    const bool inside_top      = rect_contains(top, x, y);
+    const bool inside_top      = rect_contains(top, x, y) &&
+                                 !rect_contains(frame, x, y) &&
+                                 x >= lanes.x && x < lanes.x + lanes.w;
     if (inside_waveform) return 1;
     // A FLAG CELL (context 5, architect 2026-09-14): the plain wheel over a
     // flag of the LIVE marker lane selects that flag and steps that cell

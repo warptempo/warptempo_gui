@@ -966,8 +966,13 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 }
 
 // THE TOP STRIP'S TWO PLACEMENT LANES — the RULER and the MARKER lane — the
-// band owner (a point is in the lanes iff it is in the top strip AND in either
-// lane's y-band). THEY LEFT THE NAVIGATION SURFACE ON BOTH DEVICES (architect
+// band owner (a point is in the lanes iff it is in either lane's RECT, BOTH
+// AXES: since 2026-10-10 every program lane stands one frame line in from
+// each side, strip_row_rect, and the program frame's two columns beside it
+// are inert ground — paint_program_frame publishes nothing — so a lane's
+// membership is its rect's x bounds as well as its y bounds, the canvas
+// column's inner margins, inside the rect, keeping their recorded answer in
+// on_button_press's ruler band). THEY LEFT THE NAVIGATION SURFACE ON BOTH DEVICES (architect
 // 2026-09-25: "out of both — we want symmetry as much as possible; the
 // horizontal zoom ... was designed to unify the motions for zoom on both
 // devices"): off a flag, a motionless click or tap there places the playhead
@@ -985,11 +990,8 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // flexible GAP 1 band above the menu row — that ground is the row's own
 // chrome, not surface, and stays inert.
 bool point_in_placement_lanes(const AppState& app, int x, int y) {
-    if (!rect_contains(top_strip_area(app), x, y)) return false;
-    const GuiRect ruler = top_ruler_row_area(app);
-    if (y >= ruler.y && y < ruler.y + ruler.h) return true;
-    const GuiRect lane = top_marker_row_area(app);
-    return y >= lane.y && y < lane.y + lane.h;
+    return rect_contains(top_ruler_row_area(app), x, y) ||
+           rect_contains(top_marker_row_area(app), x, y);
 }
 
 // THE PLACEMENT SURFACE, the navigation surface's sibling (architect
@@ -2263,11 +2265,12 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // THE TRIM BAR BAND, spelled from the ONE geometry owner the press sites read
     // (top_trim_row_area) and derived once because THREE modifier arms below need
     // it — plain (the endcap / bridge drags), ctrl and ctrl+shift (the two
-    // bound-set clicks). The presses gate on the top strip first and so does this.
+    // bound-set clicks). The presses gate on the top strip first and so does this,
+    // and like them it tests the lane's RECT, both axes (2026-10-10: the program
+    // frame's columns beside the inset lane are inert ground and wear no trim
+    // cue — point_in_placement_lanes' head).
     const GuiRect trim_bar_row = top_trim_row_area(app);
-    const bool in_trim_bar = inside_top &&
-                             y >= trim_bar_row.y &&
-                             y < trim_bar_row.y + trim_bar_row.h;
+    const bool in_trim_bar = inside_top && rect_contains(trim_bar_row, x, y);
     // THE `h` HISTORY MODE CONSUMES THIS BAND'S TRIM GESTURES, which is why the
     // mode enters the map HERE rather than as a fourth blanket return above. The
     // mode is PER-ZONE, and since 2026-08-07 it is the ONLY per-zone consumer
@@ -2965,22 +2968,17 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // waveform behind it (this gesture skips the press road entirely, so no
     // veil refuses it).
     if (folder_overlay_stands(app)) return;
-    // AND THE ON-SCREEN KEYBOARD TAKES NONE EITHER (2026-08-29), the overlay
-    // clause's twin and the same hole one tenant over: the keyboard paints
-    // over the waveform's lower part and `wheel_context` answers 1 there (the
-    // band sits inside waveform_area and the wheel carries no keyboard term),
-    // so two thumbs landing on keys inside the disambiguation window (a window
-    // opened everywhere then) became a Nav pinch and zoomed the waveform
-    // BEHIND the keyboard, about a column the user cannot see. Since
-    // 2026-09-25 a pinch begins only from the pan zone's window, which yields
-    // under the keyboard, so what this clause answers now is a pinch whose
-    // centroid travels over the keys. The pan zone already yields under this same rect
-    // (touch_point_in_pan_zone's keyboard clause) — this is the two-finger half
-    // of that answer, and it asks the same two owners, so the two cannot
-    // disagree. A key is not a navigation surface at any finger count.
-    if (onscreen_keyboard::stands(app, gui) &&
-        rect_contains(onscreen_keyboard::surface_rect(app), f.x, f.y))
-        return;
+    // AND THE BOTTOM OVERLAY TAKES NONE EITHER — the keyboard, the dialog, or
+    // the dialog on the keyboard, their line on top — and that answer is the
+    // wheel context's own -1 above, no clause here (2026-10-10): wheel_context
+    // swallows the overlay's whole painted rect (onscreen_keyboard::
+    // overlay_rect) and reads the waveform where it is painted (waveform_paint_
+    // area), so a pinch whose centroid travels onto the keys or the line above
+    // them navigates nothing, the press road's and the pan zone's own extent
+    // (point_on_nav_surface). The clause that stood here from 2026-08-29 asked
+    // the keyboard's band alone and let a centroid on its line zoom the
+    // waveform behind it. A key is not a navigation surface at any finger
+    // count.
     // Defensive only: the platform guarantees a positive ratio (a degenerate
     // finger distance delivers 1.0).
     double dist_ratio = f.dist_ratio;
@@ -7058,10 +7056,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // THE BAND IS THE CURRENT GEOMETRY OWNER, top_trim_row_area — the
             // exact band the plain endcap/bar drags and the span-framing
             // double-click claim, so paint, hit and every trim gesture read ONE
-            // accessor and cannot drift.
+            // accessor and cannot drift. THE BAND IS THE LANE'S RECT, BOTH
+            // AXES (2026-10-10): the program frame's columns beside it are
+            // inert ground and set no bound (point_in_placement_lanes' head).
             if (inside_top) {
                 const GuiRect trim_band = top_trim_row_area(app);
-                if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
+                if (rect_contains(trim_band, x, y)) {
                     // THE PRESS ONLY ARMS — THE ONE SURVIVING DEFERRED CLICK
                     // (2026-08-17; contract at PendingClickAct, app_state.h —
                     // this press IS the endcap drag's arm, the genuine press
@@ -7111,7 +7111,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // included, falling to the return below.
         if (ctrl && shift && !alt && inside_top) {
             const GuiRect trim_band = top_trim_row_area(app);
-            if (y >= trim_band.y && y < trim_band.y + trim_band.h) {
+            if (rect_contains(trim_band, x, y)) {
                 // THE PRESS ONLY ARMS, the BEGIN set's own shape above: the END
                 // set runs at the motionless lift and a crossing runs it and
                 // then hands over to that bound's endcap drag (the one
@@ -7271,13 +7271,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // lane's empty stretches — the ruler seeds nothing.
             //
             // THE BAND IS EXACTLY top_ruler_row_area AND NOTHING BELOW IT (the
-            // claim reads the lane accessor and only the lane accessor). The
-            // `h` VIEW never reaches this arm — its own gate armed the same
+            // claim reads the lane accessor and only the lane accessor), ITS
+            // RECT ON BOTH AXES (2026-10-10): the program frame's columns
+            // outside the lane's inset are inert ground and fall to the empty
+            // spot's consumed nothing below (point_in_placement_lanes' head).
+            // The `h` VIEW never reaches this arm — its own gate armed the same
             // pending with the mode's deferred land far above. A press on the
-            // column's MARGINS (the face and the frame columns beside the
-            // ruler's ground, 2026-10-09) still arms; its motionless release's
-            // click act deselects and seats no playhead, the placement body's
-            // own off-column shape.
+            // column's MARGINS (the face and the canvas column's frame columns
+            // beside the ruler's ground, inside the lane, 2026-10-09) still
+            // arms; its motionless release's click act deselects and seats no
+            // playhead, the placement body's own off-column shape.
             // ON THE PLAYHEAD'S HEAD AS PAINTED the same pending is THE HEAD
             // DRAG (architect 2026-10-09 ~17:40; point_on_playhead_head,
             // ScrollDragState::head_drag): past the slop every motion places
@@ -7286,7 +7289,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // and the order is stated rather than left to geometry).
             {
                 const GuiRect ruler = top_ruler_row_area(app);
-                if (y >= ruler.y && y < ruler.y + ruler.h) {
+                if (rect_contains(ruler, x, y)) {
                     arm_placement_press(
                         x, y, /*history=*/false, /*seed_empty_lane=*/false,
                         /*head_drag=*/mh_index < 0 &&
@@ -7295,8 +7298,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 }
             }
             const GuiRect trim_bar = top_trim_row_area(app);
-            const bool in_trim_bar =
-                (y >= trim_bar.y && y < trim_bar.y + trim_bar.h);
+            const bool in_trim_bar = rect_contains(trim_bar, x, y);
             if (in_trim_bar) {
                 // Plain trim-bar press. An endcap/bridge hit ARMS the trim drag
                 // and commits nothing at the press: only the threshold crossing
@@ -7396,7 +7398,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // single marker lane in row 5.
                 const GuiRect marker_lane = top_marker_row_area(app);
                 const bool in_flag_or_tri =
-                    y >= marker_lane.y && y < marker_lane.y + marker_lane.h;
+                    rect_contains(marker_lane, x, y);
                 if (in_flag_or_tri) {
                     // The empty marker-lane stretch — a PLACEMENT SURFACE
                     // since 2026-09-25 (architect: the lanes left the
@@ -7452,7 +7454,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // playhead, no marker, no selection or region change, and no
                 // playback effect either, because this press claimed nothing
                 // and the stops all live at the claims. That covers the
-                // inter-lane gaps and any press in the FLEXIBLE GAP 1 band,
+                // inter-lane gaps, the program frame's top row and its two
+                // columns beside every inset lane (2026-10-10, inert ground),
+                // and any press in the FLEXIBLE GAP 1 band,
                 // which since 2026-09-03 opens ABOVE the menu row (the
                 // centering rule's remainder, main.cpp's vertical rule: inside
                 // top_strip_area but in no lane, so it falls to exactly this
@@ -9786,16 +9790,18 @@ bool GuiInputHandler::handle_history_mode_press(
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // The waveform BAND, spelled as on_button_press spells it (the canvas's
-    // interior, waveform_area exactly, 2026-10-09).
+    // `area` is the coordinate origin alone; where the waveform takes a press
+    // is the navigation surface below, as on_button_press spells it.
     const GuiRect area = waveform_area(app);
-    const bool inside_waveform = rect_contains(area, x, y);
     // THE MODE'S NAVIGATION SURFACE, from the ONE geometry owner: the whole
     // waveform and nothing else (the lanes left it 2026-09-25). It has been
     // the full waveform height in here since playback left the view
     // (2026-08-05), and since 2026-08-13 the LIVE surface is the same rect —
     // the two halves became one out there too — so the mode's surface is no
     // longer a special case and there is nothing left for a mode term to say.
+    // It is also the plain press's waveform band at the walk's foot below
+    // (2026-10-10, the live router's own reading): where the waveform is
+    // painted, so a bottom overlay's rows over the canvas take no press.
     const bool on_nav_surface = point_on_nav_surface(app, gui, x, y);
 
     // THE MULTI-SELECTION'S TWO MODIFIED CLICKS (architect 2026-08-05), asked
@@ -9811,7 +9817,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // surfaces since 2026-09-25).
     if ((shift != ctrl) && !alt) {
         const GuiRect lane = top_marker_row_area(app);
-        if (y >= lane.y && y < lane.y + lane.h) {
+        if (rect_contains(lane, x, y)) {
             const int hit = hit_test_flag(app, audio, x, y);
             if (hit >= 0) {
                 // THE PRESS ACTS (2026-08-17: a diff-flag press has no drag to
@@ -9865,10 +9871,13 @@ bool GuiInputHandler::handle_history_mode_press(
     // playhead head is the head drag in here as outside (2026-10-09 ~17:40,
     // the mode's land at every placement; the diff flags rank first), the
     // trim bar keeps its framing double-click, the marker lane splits
-    // flag-vs-stretch, and the waveform is the navigation surface.
+    // flag-vs-stretch, and the waveform is the navigation surface. Each lane
+    // is its RECT on both axes, the live walk's (2026-10-10: the program
+    // frame's columns beside the inset lanes are inert ground and fall to the
+    // tail's consumed nothing — point_in_placement_lanes' head).
     {
         const GuiRect ruler = top_ruler_row_area(app);
-        if (y >= ruler.y && y < ruler.y + ruler.h) {
+        if (rect_contains(ruler, x, y)) {
             arm_placement_press(
                 x, y, /*history=*/true, /*seed_empty_lane=*/false,
                 /*head_drag=*/hit_test_flag(app, audio, x, y) < 0 &&
@@ -9916,7 +9925,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // rather than a gesture that meant something different in one mode.
     {
         const GuiRect trim_bar = top_trim_row_area(app);
-        if (y >= trim_bar.y && y < trim_bar.y + trim_bar.h) {
+        if (rect_contains(trim_bar, x, y)) {
             if (trim_bar_double_click_at(dc_at_press, x, y)) {
                 run_span_framing_command();
                 return true;
@@ -9927,7 +9936,7 @@ bool GuiInputHandler::handle_history_mode_press(
         }
     }
     const GuiRect lane = top_marker_row_area(app);
-    if (y >= lane.y && y < lane.y + lane.h) {
+    if (rect_contains(lane, x, y)) {
         // hit_test_flag SERVES THE MODE UNCHANGED: while the mode stands the
         // painter's stash holds the diff flags' rects, published by the same
         // pass that built app.history_mode.flags, so the index it returns is an
@@ -9983,7 +9992,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // above all returned, so what is left is the navigation surface's floor.
     // Both halves take the same pending since playback left the view — there
     // is no scrub half in here.
-    if (inside_waveform) {
+    if (on_nav_surface) {
         // NO STEM CLAIM (the seventh glass ruling — stems pointer-inert in
         // all contexts): the press is the surface's own at EVERY column,
         // stems included. The diff flag's LANE BOX is its one pointer
@@ -10291,9 +10300,9 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // THE OPEN EDGE DAMAGES THE BOX BEFORE THE BOX EXISTS. Its rect is not
     // published until paint_dropdown runs, and a redraw is CLIPPED to the
     // damage it was handed — so strip damage alone would clip away whatever the
-    // popup hangs past the strip. The settings menu (nine rows and a
-    // separator) is taller than the four lanes below the menu lane at every
-    // scale, so without the band its overhang would never paint.
+    // popup hangs past the strip. The settings menu (its rows and
+    // separators) is taller than the top strip's lanes below the menu lane
+    // at every scale, so without the band its overhang would never paint.
     //
     // The HEIGHT is derivable without painting (dropdown_h_px — item count
     // times item height, plus the separator blocks and the borders), so the
@@ -10301,8 +10310,9 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // label), so this damages FULL WIDTH from the button's top down — a band,
     // not a guess, and cheap because it happens once per open.
     //
-    // THE TOP EDGE IS THE MENU BAR'S CONTENT'S FOOT, over the lane's etched
-    // foot (architect 2026-10-10, dropdown_hang_y's rule), the same
+    // THE TOP EDGE IS THE MENU BAR'S CONTENT'S FOOT, which is the lane's,
+    // over the program frame's top row (2026-10-10, dropdown_hang_y's rule:
+    // the pull-down covers what stands under the menu bar), the same
     // expression paint_dropdown places the box at — so the damaged band and
     // the painted box start on the same row of pixels; a band anchored
     // anywhere else would leave a strip of the popup unpainted at one end.

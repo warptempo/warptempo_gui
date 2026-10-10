@@ -239,10 +239,11 @@ namespace {
 // of it in the four functions below (the gap's SIZE is the centering's
 // remainder above the block, and the lanes above the gap are part of the top
 // lane stack whichever side of it they sit on):
-//   leftover = win_h - (the top lanes whole) - the bottom strip's two lanes
-//              = centered_leftover_h; the canvas's two frame rows are lanes
-//                (top lane 7, bottom lane 1), so the waveform is the frame's
-//                interior and nothing inside its area is a border,
+//   leftover = win_h - (the top lanes whole) - the bottom strip's three lanes
+//              = centered_leftover_h; the canvas's top frame row is top lane
+//                8 and its bottom frame row heads bottom lane 2 (the
+//                column's foot), so the waveform is the frame's interior and
+//                nothing inside its area is a border,
 //   W        = max(0, leftover)                            = waveform_h,
 //   gap 1    = max(0, win_h/2 - (the top lanes whole) - W/2)
 //              = top_flex_gap,
