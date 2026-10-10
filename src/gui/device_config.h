@@ -360,14 +360,15 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: at the Windows
-// pixel the lanes above the waveform — the caption 18 W, the menu row 20,
-// the program's band 33 and its canvas column's 43 — and below it — the
-// column's foot 6, the dock bar 6 and row 8's 32 — stand 114 + 44 = 158 W
-// under windows-2000 (re-derived 2026-10-09 against program_spec.h's
-// lanes), 456 device rows above the waveform and 176 below at 400 %, 632 in
-// all, leaving the tablet's 1440 rows 808 of waveform; they pass 1440 near
-// 911 %, past which the waveform is the zero height waveform_area's floor
-// answers (the arithmetic and the guard at waveform_area, main.cpp).
+// pixel the lanes above the waveform — the caption 18 W, the menu row 22
+// (its etched foot since 2026-10-10), the program's band 33 and its canvas
+// column's 43 — and below it — the column's foot 6, the dock bar 6 and row
+// 8's 32 — stand 116 + 44 = 160 W under windows-2000 (re-derived
+// 2026-10-10), 464 device rows above the waveform and 176 below at 400 %,
+// 640 in all, leaving the tablet's 1440 rows 800 of waveform; they pass
+// 1440 near 900 %, past which the waveform is the zero height
+// waveform_area's floor answers (the arithmetic and the guard at
+// waveform_area, main.cpp).
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 569
 // Windows px of window at 100 % (408 in the `h` view) the icon row — Cool

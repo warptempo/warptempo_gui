@@ -147,9 +147,11 @@ struct ChromeSpec {
     int                caption_title_trail_px;
     // THE MENU ROW, lane 1, in Windows px (render.h's menu-row block and
     // paint_menu_row): the face row above the content, the content (the
-    // anchors' button height, the label's cell centred in it), the row
-    // below it; each anchor's pads left and right of its label and the
-    // band's lead before the first anchor.
+    // anchors' button height, the label's cell centred in it), the foot
+    // below it — relief lines, each its own rounded part (menu_row_foot_h_px;
+    // win2000's the etched pair, kChromeSpecWin2000 below); each anchor's
+    // pads left and right of its label and the band's lead before the first
+    // anchor.
     int                menu_row_head_px;
     int                menu_row_content_px;
     int                menu_row_foot_px;
@@ -221,7 +223,19 @@ struct ChromeSpec {
 // icon at (2, 1), the title's pen two px past it (render.h's caption
 // block); THE MENU ROW Explorer's menu band, the 19-row button under one
 // face row, the label 9 px in and 7 after, the rebar's 2-px lead
-// (paint_handler.cpp's kMenuLabel* record); THE PUSH
+// (paint_handler.cpp's kMenuLabel* record), and UNDER IT WINDOWS' ETCHED
+// PAIR, 2 W — a Shadow row, then a Hilight row, the lane's whole width
+// (architect 2026-10-10, on the tablet under his darker scheme: "there's
+// one pixel missing from the separator under File Edit Settings … Windows
+// menus are never just a straight line, they're always a bevel"; "that's the
+// last part of the Windows chrome above Cool Edit, so it must be Windows").
+// The law is his WordPad captures of the real OS at 1:1, tmp/win2000pro.png
+// and tmp/winme.png: the menu bar on rows 22–41, ROW 42 SHADOW 808080, ROW
+// 43 HILIGHT FFFFFF, the toolbar's face from row 44 — the program's band
+// follows the Hilight row here as the toolbar's face does there. No pair
+// stands ABOVE the menu row: ReactOS's Explorer rebar draws one at its top
+// (tmp/reactos.png rows 32–33), Explorer's and not the plain window's, and
+// a capture beats ReactOS (win2000_deviations.md); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
 // (tmp/reactos-tooltips.png); THE DROPDOWN Windows' popup menu, 17-px items
 // one px inside the frame; THE ICONS Tango 0.8.90's scalable drawings,
@@ -247,7 +261,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .caption_title_trail_px       = 2,
     .menu_row_head_px             = 1,
     .menu_row_content_px          = 19,
-    .menu_row_foot_px             = 0,
+    .menu_row_foot_px             = 2,
     .menu_label_pad_left_px       = 9.0,
     .menu_label_pad_right_px      = 7.0,
     .menu_band_lead_px            = 2.0,

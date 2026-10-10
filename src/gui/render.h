@@ -1170,8 +1170,8 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // rounded part: A HEAD ROW of plain ground, THE CONTENT — the anchors' box
 // and the labels' box both, where the anchors and their labels stand, the
 // label seated in it by the vocabulary's rule (paint_menu_row: the cap band
-// centred under win2000) — and A FOOT ROW under it.
-//   WIN2000: head 1 + content 19 + foot 0 = 20. THE CONTENT IS 19 WINDOWS
+// centred under win2000) — and A FOOT under it.
+//   WIN2000: head 1 + content 19 + foot 2 = 22. THE CONTENT IS 19 WINDOWS
 //   PX (architect 2026-10-02; it was the kdenlive File item's 30 laptop px
 //   until the unit's change), since 2026-10-06 read as EXPLORER'S MENU
 //   BAND's button — the 13-row cell + comctl32's DEFPAD_CY 6 (toolbar.c,
@@ -1187,12 +1187,16 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 //   architect's live judgments were made against — and the extra row is
 //   added beside it rather than folded into it, so EVERY LABEL STAYS AT
 //   ITS PLACE IN THE CONTENT (the painter seats on the CONTENT rows, never
-//   the lane's, below).
-// The ICON ROW stands directly under the lane with no margin of its own
-// (kdenlive, QEMU and virt-manager draw no border between the menubar and
-// the toolbar, and neither does this row): its ground — the content ground
-// since 2026-10-01, the icon row's own (paint_menu_row) — runs straight on
-// into the icon row's.
+//   the lane's, below). THE FOOT is WINDOWS' ETCHED PAIR under the menu bar
+//   (architect 2026-10-10, his WordPad captures of the real OS: a Shadow
+//   row, then a Hilight row — chrome_spec.h's win2000 record holds the law
+//   and his words), painted across the lane's whole width by
+//   paint_relief_etched_hline in the scheme's own Shadow and Hilight
+//   (paint_menu_row).
+// The ICON ROW — the program's band — stands directly under the lane with no
+// margin of its own: the pair's Hilight row is the lane's last, and the
+// band's dark outline follows it, as the toolbar's face follows the pair in
+// the captures.
 //
 // THE ANCHOR IS THE LANE, NOT THE CONTENT (architect 2026-09-09: "make the
 // height of the top row based on the thirty pixels of File/Edit ... this way
@@ -1203,8 +1207,8 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // round the content rows alone, as ReactOS's does round its 19-row item),
 // and the anchor's foot is the lane's foot, which is where the dropdown and its
 // damage band hang (top_menu_row_area — paint_dropdown and toggle_dropdown
-// read the same accessor), so the popup touches the icon row's first pixel —
-// it hangs off the LANE, never the content.
+// read the same accessor), so the popup touches the icon row's first pixel,
+// under the etched pair — it hangs off the LANE, never the content.
 //
 // FLUSH UNDER THE CAPTION (the window's top edge until the caption's arrival,
 // 2026-10-05), WITH NO AIR ABOVE THE ANCHORS beyond the head row (architect
@@ -1217,7 +1221,8 @@ void paint_window_sizing_frame(cairo_t* cr, int surface_w, int surface_h,
 // rounded with std::nearbyint through scaled_px and floored like every other
 // lane metric, EACH ITS OWN ROUNDED PART (the composite rule): win2000's
 // content 57 device rows at the tablet's 300 %, 26 at the laptop's 138 %,
-// its head row 3 and 1 — lane totals of 60 and 27. TWO ACCESSORS FOR TWO
+// its head row 3 and 1, its foot two relief lines, 6 and 2 (8 at 360 %) —
+// lane totals of 66 and 29 (80 at 360 %). TWO ACCESSORS FOR TWO
 // READERS, deliberately: the
 // lane table and the anchor/hit-rect/dropdown geometry read the LANE
 // (menu_row_h_px), the label's seat and the open box read the CONTENT alone
@@ -1228,8 +1233,16 @@ inline int menu_row_content_h_px() {
 inline int menu_row_head_h_px() {
     return scaled_px(live_chrome_spec().menu_row_head_px, 1);
 }
+// THE FOOT IS RELIEF LINES, NOT A RUN OF FACE (2026-10-10): win2000's two,
+// the etched pair paint_relief_etched_hline draws at relief_line_px() a line,
+// so the lane's foot is the pair's own composite, 2 × relief_line_px() — a
+// whole scaled_px(2) would round the pair as one length and disagree with
+// its painted lines at a fractional scale (3 against 2 at 138 %, a row of
+// face left under the Hilight; 7 against 8 at 360 %, the Hilight cut into
+// the band). relief_line_px floors at 1, so no scale drops a row of the pair.
+inline int relief_line_px();   // THE RELIEF LINE, below
 inline int menu_row_foot_h_px() {
-    return scaled_px(live_chrome_spec().menu_row_foot_px);
+    return live_chrome_spec().menu_row_foot_px * relief_line_px();
 }
 inline int menu_row_h_px() {
     return menu_row_head_h_px() + menu_row_content_h_px() +
@@ -1739,11 +1752,11 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
            program_column_authored_h(kProgramSpec) +
            program_column_foot_authored_h(kProgramSpec) + row8;
 }
-// THE STACK (2026-10-09, the canvas column Cool Edit's, its canvas framed):
-// WIN2000 114 above and 44 below, 158 — the tablet's well at 300 % 966 rows
-// (322 W) of the app's 1410 (a vocabulary's well its own lanes' leftover,
-// main.cpp's rule).
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 158);
+// THE STACK (2026-10-09, the canvas column Cool Edit's, its canvas framed;
+// the menu row's etched foot 2026-10-10): WIN2000 116 above and 44 below,
+// 160 — the tablet's well at 300 % 960 rows (320 W) of the surface's 1440
+// (a vocabulary's well its own lanes' leftover, main.cpp's rule).
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 160);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -2655,7 +2668,8 @@ void render_center_lines(cairo_t* cr, const GuiRect& area);
 //   lines in `card_frame`, square, on all four sides, at paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
 //                         [y, y + lw) and a Hilight line under it, columns
-//                         [x, x + w) (the dropdown's separator).
+//                         [x, x + w) (the dropdown's separator; the menu
+//                         row's foot since 2026-10-10, paint_menu_row).
 // (The one-line raised inner edge — the flat toolbars' hot face — and the
 // vertical etched line — their group separators — went with the program's
 // band, 2026-10-09: Cool Edit's band is cool_edit_paint.h's.)

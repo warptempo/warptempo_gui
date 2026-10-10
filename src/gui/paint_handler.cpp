@@ -1551,14 +1551,14 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE LANE IS THE ANCHOR (architect 2026-10-01 — render.h's menu-row
     // block carries the ruling and its why): the whole lane's
     // height is each anchor's rectangle AND its published hit rect, flush
-    // under the caption with no air above it; the icon row's ground begins
-    // on the next pixel row with no margin, border or line between. The
-    // anchor's foot, the lane's foot and the icon row's first pixel are the
-    // same row — where the dropdown hangs. THE LANE IS NOT ITS CONTENT SINCE
-    // 2026-10-05: one row of ground stands ABOVE the content (ReactOS:
-    // caption, face row, menu), and a vocabulary may stand one below it
-    // too — the spec's menu_row_head_px and menu_row_foot_px, render.h's
-    // menu-row block — so every
+    // under the caption with no air above it; the icon row begins on the
+    // next pixel row with no margin between. The anchor's foot and the
+    // lane's foot are one edge, the icon row's first pixel under it — where
+    // the dropdown hangs. THE LANE IS NOT ITS CONTENT SINCE 2026-10-05: one
+    // row of ground stands ABOVE the content (ReactOS: caption, face row,
+    // menu), and since 2026-10-10 WINDOWS' ETCHED PAIR stands BELOW it (the
+    // spec's menu_row_head_px and menu_row_foot_px, render.h's menu-row
+    // block; the law at chrome_spec.h's win2000 record) — so every
     // label on this row is seated in the CONTENT ALONE
     // (menu_row_content_rect) rather than the taller lane — the one place
     // this row reads two different heights for two different things.
@@ -1574,6 +1574,18 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         set_palette_source(cr, ground);
         cairo_rectangle(cr, row.x, row.y, row.w, row.h);
         cairo_fill(cr);
+    }
+
+    // THE FOOT: WINDOWS' ETCHED PAIR under the menu bar (architect
+    // 2026-10-10; his WordPad captures' rows 42 and 43, chrome_spec.h's
+    // win2000 record) — the Shadow row, then the Hilight row, the scheme's
+    // own two (a picked scheme's derived pair), across the lane's whole
+    // width on the foot's rows, the content's foot down. One relief line a
+    // row, so the pair fills the foot exactly (menu_row_foot_h_px).
+    if (menu_row_foot_h_px() > 0) {
+        const GuiRect content_rows = menu_row_content_rect(row);
+        paint_relief_etched_hline(cr, row.x, content_rows.y + content_rows.h,
+                                  row.w);
     }
 
     // THE SHAPING CHOKEPOINT (text_shape.h): each label is MEASURED and PAINTED

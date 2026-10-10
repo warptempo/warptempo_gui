@@ -152,7 +152,8 @@ namespace {
 // render.h's caption block), the MENU ROW (menu_row_h_px(), row 1 of the
 // kdenlive redesign, Windows' 19-px menu bar — the anchors' box — plus a
 // one-px row of ground above the content (architect 2026-10-05, Windows'
-// measured 20-px band; its place 2026-10-06), flush under the caption — render.h's menu-row block),
+// measured 20-px band; its place 2026-10-06) and Windows' etched pair under
+// it (2026-10-10, 22 W), flush under the caption — render.h's menu-row block),
 // the ICON ROW (icon_row_h_px(), row 4 of the redesign, directly under the
 // menu row with nothing between: COOL EDIT'S TOOLBAR BAND, the program's,
 // 33 Windows px under every chrome — 2 head lines, 3 face, the 23-W case
@@ -235,7 +236,7 @@ namespace {
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
 // WITH THE WAVEFORM THE WHOLE LEFTOVER, BOTH GAPS ARE ZERO ON EVERY WINDOW
 // (2026-10-07 evening): gap 1's midpoint term comes to half the bottom row
-// less half the top stack, negative at every scale (114 Windows px above
+// less half the top stack, negative at every scale (116 Windows px above
 // against the column's foot, the dock bar and row 8's 44 below), so it
 // floors at 0, and
 // gap 2 is the leftover's remainder after W, 0. The centering is infeasible
@@ -245,8 +246,8 @@ namespace {
 // them.
 //
 // THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-10-09 (the canvas column Cool Edit's: render.h's canvas column lanes)
-// rather than adjusted, the waveform the whole leftover and both gaps 0 in
+// 2026-10-10 (the canvas column Cool Edit's: render.h's canvas column lanes;
+// the menu row's etched foot, render.h's menu-row block) rather than adjusted, the waveform the whole leftover and both gaps 0 in
 // every stack (the rule above). Every lane is its own composite of rounded
 // parts (scaled_px's rule), so the device rows below are read off the lane
 // accessors, never off a Windows total times the factor — in particular a
@@ -257,10 +258,12 @@ namespace {
 // canvas (the air 5, the view bar 8, the ruler 12, the marker lane 17 — the
 // six W the ruler gave the lane at ~21:00, the sum unchanged — the canvas's
 // top frame row 1), the column's foot 6 under it (the bottom frame
-// row 1 and 5 W of face) and its dock bar and row 8 38, so THE TOP STACK IS
-// 114 WINDOWS PX UNDER WIN2000, 44 BELOW (render.h's
+// row 1 and 5 W of face) and its dock bar and row 8 38, and the chrome's
+// caption 18 and menu row 22 (its face row 1, content 19 and etched pair 2,
+// the pair two relief lines at every scale), so THE TOP STACK IS 116
+// WINDOWS PX UNDER WIN2000, 44 BELOW (render.h's
 // chrome_stack_authored_h). THE WELL'S HEIGHT — THE CANVAS'S INTERIOR — AT
-// THE BASE'S 300 % IS 966 DEVICE ROWS (the rule at centered_leftover_h
+// THE BASE'S 300 % IS 960 DEVICE ROWS (the rule at centered_leftover_h
 // below), AND ITS WIDTH 2256 OF THE TABLET'S 2304, 24 device px in from the
 // left (waveform_area, the flooring's leftover split between the margins). Per scale
 // the canvas column above the canvas is the air + the view bar (line +
@@ -277,37 +280,38 @@ namespace {
 // glyph 20 + face 2; the dock bar 3 lines + face 3; row 8 face 4 + the case
 // + face 5).
 //   1920x1080 AT 138 %, THE LAPTOP (maximised, so no sizing frame): the
-//   lanes are 25 caption + 27 menu + 43 band (5 + 4 + 31 + 3) + 7 air + 10
-//   trim + 16 ruler + 22 marker + 1 frame = 151 above, of which 95 is the
-//   caption, the menu row and the band above the gap and 56 the block above
-//   the waveform, and 59 below (the column's foot 8, the dock bar's 7 and
-//   row 8's 6 + 31 + 7); leftover 870: the waveform 870, both gaps 0 (the
-//   midpoint rule would want 540 - 151 - 435 = -46) — 25 / 27 / 43 / 0 / 56
-//   / 870 / 0 / 59; the waveform 1888 wide, 16 px in.
+//   lanes are 25 caption + 29 menu (1 + 26 + 2) + 43 band (5 + 4 + 31 + 3)
+//   + 7 air + 10 trim + 16 ruler + 22 marker + 1 frame = 153 above, of which
+//   97 is the caption, the menu row and the band above the gap and 56 the
+//   block above the waveform, and 59 below (the column's foot 8, the dock
+//   bar's 7 and row 8's 6 + 31 + 7); leftover 868: the waveform 868, both
+//   gaps 0 (the midpoint rule would want 540 - 153 - 434 = -47) — 25 / 29 /
+//   43 / 0 / 56 / 868 / 0 / 59; the waveform 1888 wide, 16 px in.
 //   2304x1440 AT gui_scale 300, THE GLASS HOST (the tablet's WHOLE SURFACE,
 //   full screen with both system bars hidden since 2026-10-01 —
 //   MainActivity.java's head — the caption across its top; the architect's
-//   tablet value since 2026-10-06): the lanes are 54 caption + 60 menu +
-//   99 band (15 + 9 + 69 + 6) + 15 air + 24 trim + 36 ruler + 51 marker + 3
-//   frame = 342 above (213 the caption, the menu row and the band, 129 the
-//   block) and 132 below (the column's foot 18, the dock bar's 18 and row
-//   8's 12 + 69 + 15), leftover 966: the waveform 966, both gaps 0 (the rule
-//   would want 720 - 342 - 483 = -105) — 54 / 60 / 99 / 0 / 129 / 966 / 0 /
-//   132; the waveform 2256 wide, 24 px in.
+//   tablet value since 2026-10-06): the lanes are 54 caption + 66 menu (3 +
+//   57 + 6) + 99 band (15 + 9 + 69 + 6) + 15 air + 24 trim + 36 ruler + 51
+//   marker + 3 frame = 348 above (219 the caption, the menu row and the
+//   band, 129 the block) and 132 below (the column's foot 18, the dock bar's
+//   18 and row 8's 12 + 69 + 15), leftover 960: the waveform 960, both gaps
+//   0 (the rule would want 720 - 348 - 480 = -108) — 54 / 66 / 99 / 0 / 129
+//   / 960 / 0 / 132; the waveform 2256 wide, 24 px in.
 //   2304x1440 AT gui_scale 360 (same surface; every relief line 4 here, so
-//   the case is 84 where it is 81 at 300): the lanes are 65 caption + 72
-//   menu + 122 band (20 + 11 + 84 + 7) + 18 air + 30 trim + 44 ruler + 63
-//   marker + 4 frame = 418 above (259 and 159) and 161 below (22 + 23 + 14 +
-//   84 + 18), leftover 861: the waveform 861, both gaps 0 — 65 / 72 / 122 /
-//   0 / 159 / 861 / 0 / 161; the waveform 2240 wide, 32 px in.
+//   the case is 84 where it is 81 at 300): the lanes are 65 caption + 80
+//   menu (4 + 68 + 8) + 122 band (20 + 11 + 84 + 7) + 18 air + 30 trim + 44
+//   ruler + 63 marker + 4 frame = 426 above (267 and 159) and 161 below (22
+//   + 23 + 14 + 84 + 18), leftover 853: the waveform 853, both gaps 0 — 65 /
+//   80 / 122 / 0 / 159 / 853 / 0 / 161; the waveform 2240 wide, 32 px in.
 //   2304x1440 AT gui_scale 400 (same surface): the lanes are 72 caption +
-//   80 menu + 132 band + 20 air + 32 trim + 48 ruler + 68 marker + 4 frame
-//   = 456 above (284 and 172) and 176 below (24 + 24 + 128), leftover 808:
-//   the waveform 808, both gaps 0 — 72 / 80 / 132 / 0 / 172 / 808 / 0 / 176.
+//   88 menu (4 + 76 + 8) + 132 band + 20 air + 32 trim + 48 ruler + 68
+//   marker + 4 frame = 464 above (292 and 172) and 176 below (24 + 24 +
+//   128), leftover 800: the waveform 800, both gaps 0 — 72 / 88 / 132 / 0 /
+//   172 / 800 / 0 / 176.
 //   1024x600 AT 138 %, A SHORT WINDOW (kept as a worked case; no host runs
-//   this geometry): leftover 390 -> the waveform 390, both gaps 0
-//   — 25 / 27 / 43 / 0 / 56 / 390 / 0 / 59 (the midpoint rule would want gap
-//   1 = 300 - 151 - 195 = -46).
+//   this geometry): leftover 388 -> the waveform 388, both gaps 0
+//   — 25 / 29 / 43 / 0 / 56 / 388 / 0 / 59 (the midpoint rule would want gap
+//   1 = 300 - 153 - 194 = -47).
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -338,7 +342,8 @@ namespace {
 // NO ASSET SPANS A SEAM (2026-10-09): a marker's cue — its triangle and its
 // label — stands inside the marker lane, and the playhead's head on the
 // ruler's own bottom rows. Every seam — the window top|caption seam,
-// caption|menu, menu|icon (tight and borderless), icon|air (GAP 1's band;
+// caption|menu, menu|icon (tight, the menu row's etched pair its own last
+// rows, 2026-10-10), icon|air (GAP 1's band;
 // where gap 1 is zero the air's own first row is the boundary), air|trim,
 // trim|ruler, ruler|marker, marker|frame, foot|bottom row, and both outer
 // kFlagBottomLiftPx gaps — is honored structurally by the loop below and by
@@ -377,9 +382,10 @@ namespace {
 // title bar's ground, its icon, its title and its three buttons inside it),
 // the MENU lane is its anchors' 19 Windows px PLUS a one-px row of ground
 // (architect 2026-10-05, Windows' measured 20-px menu band — render.h's
-// menu-row block, the row above the content; the anchors and the dropdown's
-// hang point read the
-// lane, the label's seat alone reads the content between the rows),
+// menu-row block, the row above the content) PLUS Windows' etched pair
+// under it, two relief lines (2026-10-10; the anchors and the dropdown's
+// hang point read the lane, the label's seat alone reads the content between
+// the head and the foot),
 // the ICON lane is COOL EDIT'S TOOLBAR BAND, 33 Windows px with its own
 // lines under every chrome (architect 2026-10-09; render.h's program block,
 // icon_row_h_px), the canvas column's five lanes Cool Edit's air, view bar,
@@ -456,9 +462,10 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 300 the win2000 lanes leave 1440 − 342 − 132 = 966 device rows
-// (322 Windows px; the program's band, canvas column and its framed canvas,
-// dock bar and row 8 since 2026-10-09). A COLOR moves no lane: the 966 rows
+// gui_scale 300 the win2000 lanes leave 1440 − 348 − 132 = 960 device rows
+// (320 Windows px; the program's band, canvas column and its framed canvas,
+// dock bar and row 8 since 2026-10-09, the menu row's etched foot since
+// 2026-10-10). A COLOR moves no lane: the 960 rows
 // hold under every palette and scheme. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -583,20 +590,20 @@ GuiRect waveform_area(const AppState& a) {
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
-    // the vocabulary reaches it: the ten lanes are 158 Windows px at 100 %
-    // under win2000, the top strip's 114 plus the bottom strip's 44 (lane by
+    // the vocabulary reaches it: the ten lanes are 160 Windows px at 100 %
+    // under win2000, the top strip's 116 plus the bottom strip's 44 (lane by
     // lane through scaled_px and each lane from its rounded parts, which is
-    // not one multiply of the sum; re-derived 2026-10-09 for the program's
-    // framed canvas; the ruler's 6 W the marker lane's since ~21:00). At
-    // 350 % they take 565 device px (63 caption + 70 menu + 119 band + 18
-    // air + 29 trim + 42 ruler + 62 marker + 4 frame = 407 above, and 22
-    // foot + 136 row), leaving a 1080-tall window 515; at
-    // 400 %, 632 (456 + 176), leaving the tablet's 1440 rows 808 (the stack
-    // record at the lane table above); and they pass 1440 near 910 %, short of
+    // not one multiply of the sum; re-derived 2026-10-10 for the menu row's
+    // etched foot). At
+    // 350 % they take 573 device px (63 caption + 78 menu + 119 band + 18
+    // air + 29 trim + 42 ruler + 62 marker + 4 frame = 415 above, and 22
+    // foot + 136 row), leaving a 1080-tall window 507; at
+    // 400 %, 640 (464 + 176), leaving the tablet's 1440 rows 800 (the stack
+    // record at the lane table above); and they pass 1440 near 900 %, short of
     // the 1000 % ceiling (architect 2026-10-05), so the top of the vocabulary
     // lands on this floor. (The hosts run far below it: the laptop is 138 %
-    // on 1080, where the ten lanes take 210, and the tablet 300 % on its
-    // 1440-tall surface, where they take 474.) The guard
+    // on 1080, where the ten lanes take 212, and the tablet 300 % on its
+    // 1440-tall surface, where they take 480.) The guard
     // does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If

@@ -229,15 +229,16 @@ struct Viewport;
 // press through the picker selects (THE PRESS THROUGH THE CARD below) —
 // stays in view; at 300 % row 8's top (its dock bar's) is 1326 (the
 // program's lanes since 2026-10-09, main.cpp's lane record), the band's top
-// 1326 − 393 = 933, the card's foot 921 and its TOP ROW 921 − 522 = 399, 57
-// rows under the canvas's top (342, under its top frame row since
-// 2026-10-09). At the laptop's 138 % (1920 x 1080 maximized) the band is 180
+// 1326 − 393 = 933, the card's foot 921 and its TOP ROW 921 − 522 = 399, 51
+// rows under the canvas's top (348, under its top frame row since
+// 2026-10-09; the menu row's etched foot since 2026-10-10). At the laptop's 138 % (1920 x 1080 maximized) the band is 180
 // rows, the margin 6 and the card 235 (2 + 8 + 29 + 8 + 6 x 23 + 8 + 32 + 8
 // + 2), so its top row is 1029 − 180 − 6 − 235 = 608, far below the well's
 // top. A pitch of 21, the chooser's own height, would make the
 // right column seven equal rows and the card 198, but at 300 % its top row
-// would be 327, inside the marker lane (288–339 since its 17 W,
-// 2026-10-09 ~21:00) over the cues on its half.
+// would be 327, inside the marker lane (294–345 since its 17 W,
+// 2026-10-09 ~21:00, and the menu row's etched foot, 2026-10-10) over the
+// cues on its half.
 //
 // THE PRESS THROUGH THE CARD (architect 2026-10-08 ~21:20: "pick flags so I
 // can toggle, test the selected flag without having to close the picker and
@@ -451,13 +452,14 @@ static_assert(card_bottom_band_wpx(kChromeSpecWin2000) ==
               static_cast<int>(kChromeSpecWin2000.push_button_box_px));
 // WHY 17 (the head's THE SEAT): the card, its margin above the band and the
 // band stand inside the rows from the tablet's well's top to row 8's top at
-// 300 % — main.cpp's lane record: win2000's canvas 966 device rows = 322 W
-// and the column's foot under it 6 W, which the band covers with the
-// canvas's foot (2026-10-09, the canvas framed) — 174 + 4 + 131 = 309 of
-// 328, the card's top 19 W under the canvas's top — so the marker lane and
-// the canvas's top frame row stay in view on both halves.
+// 300 % — main.cpp's lane record: win2000's canvas 960 device rows = 320 W
+// (the menu row's etched foot taking 2 W, 2026-10-10) and the column's foot
+// under it 6 W, which the band covers with the canvas's foot (2026-10-09,
+// the canvas framed) — 174 + 4 + 131 = 309 of 326, the card's top 17 W
+// under the canvas's top — so the marker lane and the canvas's top frame
+// row stay in view on both halves.
 inline constexpr int kTabletWellTightestWPx =
-    322 + program_column_foot_authored_h(kProgramSpec);
+    320 + program_column_foot_authored_h(kProgramSpec);
 static_assert(kCardHeightWPx + kCardMarginPx + kKeyboardBandWPx <=
               kTabletWellTightestWPx);
 
