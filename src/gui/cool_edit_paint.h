@@ -21,11 +21,13 @@
 //
 // THE COLORS ARE TWO KINDS. THE PANEL'S are the palette's: the `face` role
 // and the tones Cool Edit derives from it (cool_edit_derive.h, the COOL EDIT
-// BLOCK of palette()), so a pick of Face moves the whole panel. THE CASE'S
-// are CONSTANTS below — Cool Edit's default scheme's bytes as measured,
-// never derived ("the buttons did not change color with the preset",
-// architect 2026-10-09; the fit that was tried is cool_edit_derive.h's head)
-// — and so is the time field's digit ink.
+// BLOCK of palette()), so a pick of Face moves the whole panel — the time
+// field's digits and the panel label's swapping pair among them (2026-10-10).
+// THE CASE'S are CONSTANTS below — Cool Edit's default scheme's bytes as
+// measured, never derived ("the buttons did not change color with the
+// preset", architect 2026-10-09; the fits that were tried are
+// cool_edit_derive.h's head) — and so are the ruler's ink and the view
+// bar's field.
 // THE DIAGONAL RULE REACHES THE PROGRAM (architect 2026-10-09 ~12:40: "any
 // jagged staircase of pixel lines, even if it's only two lines, we take as
 // an intention of a diagonal, so that when they're scaled they don't look
@@ -50,8 +52,7 @@
 // line square-joined as the capture's pixels show stood the morning of
 // 2026-10-09; git history.)
 // NOT DRAWN: the face's brushed grain (METRICS §1.4: a ±5 2-px texture over
-// the ramp, a texture and not a tone — the ramp is drawn smooth); the
-// LIGHT-FACE TEXT SWAP (cool_edit_derive.h's head).
+// the ramp, a texture and not a tone — the ramp is drawn smooth).
 
 // -- THE CASE'S CONSTANTS (METRICS §1.3–1.5; 0xRRGGBB, sRGB) -----------------
 
@@ -91,8 +92,6 @@ inline constexpr uint32_t kCeCaseOuter = 0x000000;
 inline constexpr uint32_t kCeRingOuter = 0x000000;
 inline constexpr uint32_t kCeRingMid   = 0x808080;
 inline constexpr uint32_t kCeRingLight = 0xF8F8F8;
-// THE TIME FIELD'S DIGITS (METRICS §5.4, ≈EFF0F0 on the default scheme).
-inline constexpr uint32_t kCeFieldText = 0xEFF0F0;
 
 // -- THE CANVAS COLUMN'S CONSTANTS (METRICS §3, §4; 2026-10-09) ---------------
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
@@ -106,7 +105,14 @@ inline constexpr uint32_t kCeFieldText = 0xEFF0F0;
 // since 2026-10-09 ~11:50, Cool Edit's Curs FFFF00 its default in every
 // palette (palette_file.h's role table), as the cues' two colors are the
 // palette's `cue` and `range`; the triangles' shadow is the derived
-// `ce_cue_shadow`.
+// `ce_cue_shadow`. THE RULER'S INK IS NO TONE OF FACE AND NEVER SWAPS
+// (architect 2026-10-10, "we follow Cool Edit's theming";
+// METRICS_PRESETS_1010.md §2d, §2e): its ticks are E0E0E0 byte for byte on
+// all nine Faces captured that day, the light and engraved ones included,
+// and its digits' cores the same ink over the same black shadow — the
+// ruler's ground is the dark `mid` at every Face, so Cool Edit keeps it
+// light where the panel's text and label swap. Not a Face tone left
+// undone: following Face here would depart from Cool Edit.
 inline constexpr uint32_t kCeViewBarField   = 0x000000;
 inline constexpr uint32_t kCeRulerTick      = 0xE0E0E0;
 inline constexpr uint32_t kCeRulerShadow    = 0x000000;
@@ -186,10 +192,14 @@ inline int ce_end_bar_w_px() {
 // THE DARK TIME FIELD on `field` (METRICS §5.4): the field-dark line on its
 // top row and left column, the mid tone inside, the field-light line on its
 // bottom row and right column, the ring mitred. Its digits are the caller's,
-// in kCeFieldText.
+// in the palette's `ce_field_text` (the never-swapping light text: the
+// field's ground is dark at every Face, cool_edit_derive.h's head).
 void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
-// A PANEL LABEL (METRICS §6): `run` in the label tone with the dark tone
-// under it one line right and down, Cool Edit's shadow on a dark face.
+// A PANEL LABEL (METRICS §6): `run` in the palette's `ce_label` with
+// `ce_label_shadow` under it one line right and down — the label tone over
+// the dark tone on a dark Face, and past the label threshold Cool Edit's
+// ENGRAVED pair, the dark tone over the hilight (2026-10-10,
+// cool_edit_derive.h's label_ink / label_shadow).
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline);
 

@@ -420,7 +420,14 @@ struct GuiPalette {
     GuiColor ce_hilight;
     GuiColor ce_field_dark;
     GuiColor ce_field_light;
+    // the program's time fields' digits, the never-swapping light text
+    // (2026-10-10)
+    GuiColor ce_field_text;
+    // the panel label's ink and its (+1, +1) shadow, swapped to the engraved
+    // pair past the label threshold (2026-10-10; cool_edit_derive.h's
+    // label_ink / label_shadow, not the tone table)
     GuiColor ce_label;
+    GuiColor ce_label_shadow;
     GuiColor ce_cue_shadow;
     // the view bar's span bevels, off the waveform's ink (2026-10-09)
     GuiColor ce_span_hilight;

@@ -257,7 +257,7 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color) {
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline) {
     const double lw = static_cast<double>(program_line_px());
-    set_palette_source(cr, palette().ce_dark);
+    set_palette_source(cr, palette().ce_label_shadow);
     text_shape::show_shaped_run(cr, run, x + lw, baseline + lw);
     set_palette_source(cr, palette().ce_label);
     text_shape::show_shaped_run(cr, run, x, baseline);

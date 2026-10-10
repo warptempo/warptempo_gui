@@ -110,25 +110,35 @@ constexpr bool palette_members_disjoint() {
 }
 static_assert(palette_members_disjoint());
 // THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled with the
-// program's words, render.cpp) are the struct's third part: distinct, and
-// neither a chrome role's member nor a program role's.
+// program's words, render.cpp) are the struct's third part — the table's
+// painted tones and the panel label's swapping pair: distinct, and neither a
+// chrome role's member nor a program role's.
 constexpr bool cool_edit_tones_disjoint() {
-    const auto& tones = cool_edit_derive::kTones;
-    for (std::size_t i = 0; i < std::size(tones); ++i) {
-        if (tones[i].member == nullptr) continue;
-        for (std::size_t j = i + 1; j < std::size(tones); ++j)
-            if (tones[j].member == tones[i].member) return false;
+    std::array<GuiColor GuiPalette::*,
+               cool_edit_derive::kPaintedToneCount +
+                   std::size(cool_edit_derive::kLabelPairMembers)>
+        members{};
+    std::size_t n = 0;
+    for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
+        if (t.member != nullptr) members[n++] = t.member;
+    for (GuiColor GuiPalette::* m : cool_edit_derive::kLabelPairMembers)
+        members[n++] = m;
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = i + 1; j < n; ++j)
+            if (members[j] == members[i]) return false;
         for (const GuiThemeRole& t : kGuiThemeRoles)
-            if (t.member == tones[i].member) return false;
+            if (t.member == members[i]) return false;
         for (const GuiPaletteRole& p : kGuiPaletteRoles)
-            if (p.member == tones[i].member) return false;
+            if (p.member == members[i]) return false;
     }
     return true;
 }
 static_assert(cool_edit_tones_disjoint());
 static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount +
-               cool_edit_derive::kPaintedToneCount) * sizeof(GuiColor));
+               cool_edit_derive::kPaintedToneCount +
+               std::size(cool_edit_derive::kLabelPairMembers)) *
+                  sizeof(GuiColor));
 
 // EACH CHROME'S OWN SCHEME IS A BUILT-IN SCHEME, AND THAT SCHEME IS THE
 // CHROME'S COMPILED CAPTION KEY FOR KEY (the generator's transcription and

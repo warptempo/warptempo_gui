@@ -2394,10 +2394,11 @@ void fill_program_palette(const GuiPaletteWords& w) {
     static_assert(kFace < kGuiPaletteRoleCount);
     for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
         if (t.member != nullptr)
-            g_palette.*(t.member) = hex(cool_edit_derive::tone(
-                t.source == cool_edit_derive::ToneSource::Ink ? w[kInk]
-                                                              : w[kFace],
-                t.a, t.b));
+            g_palette.*(t.member) =
+                hex(cool_edit_derive::tone_of(t, w[kFace], w[kInk]));
+    // The panel label's pair, swapping past its own threshold (2026-10-10).
+    g_palette.ce_label = hex(cool_edit_derive::label_ink(w[kFace]));
+    g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(w[kFace]));
     static constexpr std::size_t kOutline =
         palette_role_index("waveform_outline");
     static_assert(kInk < kGuiPaletteRoleCount &&

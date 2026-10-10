@@ -2522,9 +2522,10 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // (architect 2026-10-09, the program is Cool Edit; METRICS §5.4,
 // paint_ce_time_field) — its field-dark line on the top and left, the mid
 // tone inside, its field-light line on the bottom and right, all three the
-// palette's Face-derived tones, the digits Cool Edit's EFF0F0 (kCeFieldText,
-// a constant of the painter: the chrome's time-field roles, clock_ground and
-// clock_text, are unread by the program) — kProgramSpec.field_h_px tall
+// palette's Face-derived tones, the digits the never-swapping light text
+// (`ce_field_text`, Face-derived since 2026-10-10 — EFEFEF on the default
+// Face for Cool Edit's measured EFF0F0; the chrome's time-field roles,
+// clock_ground and clock_text, are unread by the program) — kProgramSpec.field_h_px tall
 // (17 W), CENTRED ON THE CASE'S ROWS (a half-row tie toward the top, the cap
 // rule's own), its run in THE BODY FACE (gui_font.h; no period field used a
 // monospace face), its cap band centred in the field by redesign_baseline.
@@ -2968,7 +2969,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     already walked over this ground.
         //   * THE STATE — THE BODY FACE (gui_font(GuiFace::Body)) IN COOL
         //     EDIT'S PANEL LABEL PAIR (show_ce_label: the label tone with the
-        //     dark tone one line right and down, METRICS §6 — 2026-10-09),
+        //     dark tone one line right and down, METRICS §6 — 2026-10-09;
+        //     past the label threshold the engraved pair, 2026-10-10),
         //     straight on the row's face, ON THE CLOCK'S OWN BASELINE
         //     (architect 2026-10-07: "whichever one is right, the other
         //     should be centred to behave like it", and the field is right).
@@ -3010,7 +3012,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const text_shape::ShapedRun letter_run = text_shape::shape_text_run(
             font, std::string(1, app.active_tab_view));
         const double run_x = static_cast<double>(cell_x);
-        set_palette_source(cr, hex(kCeFieldText));
+        set_palette_source(cr, palette().ce_field_text);
         text_shape::show_shaped_run(cr, time_run, run_x, baseline);
         text_shape::show_shaped_run(cr, letter_run,
                                     run_x + time_run.width_px, baseline);
@@ -6377,7 +6379,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    FIELDS since 2026-10-05, the POSITION and then the LENGTH, each
         //    centred on the case's rows with its run on the field's own
         //    seat, Cool Edit's dark field and its ink (paint_ce_time_field,
-        //    kCeFieldText) — the fields row 8's clock is, said twice. ONE RECT ROUND BOTH IS PUBLISHED (dlg.clock) for the
+        //    `ce_field_text`) — the fields row 8's clock is, said twice. ONE RECT ROUND BOTH IS PUBLISHED (dlg.clock) for the
         //    tick's per-position damage, beside the scrub's, and the two CLIP
         //    at the lane's right pad on a narrow window. --
         const int sr = audio.sample_rate();
@@ -6401,7 +6403,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 // kTimeShape's block).
                 const text_shape::ShapedRun run = text_shape::shape_text_run(
                     cfont, format_timestamp(seconds_of(shown[i])));
-                set_palette_source(cr, hex(kCeFieldText));
+                set_palette_source(cr, palette().ce_field_text);
                 text_shape::show_shaped_run(
                     cr, run,
                     static_cast<double>(field_x + field_w - field_pad) -

@@ -53,8 +53,10 @@
 // those the painters read carry a GuiPalette member (the COOL EDIT BLOCK,
 // render.h's palette struct), filled at every install of the program's words
 // (fill_program_palette, render.cpp) — a pick of Face moves them all live.
-// The toolbar band and row 8 read seven: the recess, the mid, the dark, the
-// hilight, the time field's two lines and the panel label's ink; THE CANVAS
+// The toolbar band and row 8 read eight: the recess, the mid, the dark, the
+// hilight, the time field's two lines and its digits (the never-swapping
+// `text`), and the panel label's pair (the label's swap below, its two
+// members filled by label_ink / label_shadow rather than the table); THE CANVAS
 // COLUMN (2026-10-09) the mid (the view bar's top line, the ruler's
 // ground), the hilight (the view bar's and the ruler's light lines, the
 // cues' labels), the dark and the cue shadow — and TWO TONES OFF THE
@@ -67,9 +69,9 @@
 // the preset" (architect 2026-10-09): the measured tint follows Face at 5 to
 // 10 % of its chroma with k varying 0.05–0.10 across the presets and a
 // brightness lift that is no clean function of Face (METRICS §1.4,
-// UNCERTAIN 1), so the default scheme's bytes are authored as they stand.
-// The time field's digits (EFF0F0) likewise, a constant of the field's
-// painter.
+// UNCERTAIN 1; METRICS_PRESETS_1010.md §4c over thirteen Faces), so the
+// default scheme's bytes are authored as they stand. (The time field's
+// digits follow Face since 2026-10-10: the `text` tone below.)
 //
 // THE TEXT TONES (2026-10-10; tmp/research/cool_edit/METRICS_PRESETS_1010.md,
 // eleven captures over nine Faces, §2–§3): Cool Edit's PROGRAM TEXT — the
@@ -84,10 +86,21 @@
 // ground is the dark `mid` at every Face (§2a, §3a) — so the field text is
 // `text` at every Face (field_text below). THE CHROME WEARS THEM
 // (chrome_derive.h): the label, the clock text and the card text the swapping
-// text, the field text the never-swapping one. THE PANEL LABEL'S OWN SWAP —
-// a later threshold, (.663, .739] (§3a), ink and shadow trading to the
-// `dark` / `hilight` pair (§3c) — is not built: the panel keeps its
-// dark-face pair at every Face.
+// text, the field text the never-swapping one — and so does THE PROGRAM'S
+// OWN TIME FIELD (row 8's clock, the render player's two fields: the
+// `ce_field_text` member, architect 2026-10-10, "whatever Cool Edit seems to
+// be doing as far as the dark text, we do that as well").
+//
+// THE PANEL LABEL AND ITS OWN SWAP (2026-10-10, the same ruling; §2c, §2e,
+// §3a, §3c): the label's ink on a dark Face is `label`, L' = .244·L + .750
+// with the saturation KEPT (refit over seven Faces, worst 1 — the label is
+// not the program text's rule), its (+1, +1) shadow `dark`; ABOVE A LATER
+// THRESHOLD of its own (kLabelSwapLightness, in (.663, .739]) Cool Edit
+// ENGRAVES it — the ink the `dark` tone and the shadow the `hilight` tone,
+// within one on Arctic Freeze and Grape. label_ink / label_shadow below; the
+// state line and every show_ce_label reader. THE RULER'S DIGITS AND TICKS
+// are no tone of Face: Cool Edit's E0E0E0 on every preset, never swapping
+// (§2d; kCeRulerTick, cool_edit_paint.h).
 //
 // THE SELECTED TEXT (architect 2026-10-10, "I agree with your call"): the
 // chrome's selection fill is THE WAVEFORM'S INK and its text the ink
@@ -228,8 +241,13 @@ inline constexpr Tone kTones[] = {
     {"tab_light",     0xB2B8C1, 0.322,  0.586, nullptr},
     // the organizer tab's bottom line
     {"tab_line",      0xBCC2CA, 0.414,  0.584, nullptr},
-    // the panel label's ink on a dark face (its shadow `dark` at (+1, +1))
-    {"label",         0xD6DADE, 0.264,  0.740, &GuiPalette::ce_label},
+    // the panel label's ink on a dark face (its shadow `dark` at (+1, +1));
+    // past kLabelSwapLightness the label is the `dark` / `hilight` pair
+    // instead (label_ink / label_shadow below, which fill the pair's two
+    // members — no member here). (.244, .750) the refit over seven Faces
+    // (METRICS_PRESETS_1010.md §2c, worst 1; 2026-10-10), the (.264, .740)
+    // of the five 2026-10-09 presets missing Midnight, Stealth and Safari by 2.
+    {"label",         0xD6DADE, 0.244,  0.750, nullptr},
     // the cue's and the playhead head's shadow, one quantum right of each
     // of the triangle's rows (METRICS §4.2, §4.3; the marker lane and the
     // ruler, 2026-10-09)
@@ -237,10 +255,12 @@ inline constexpr Tone kTones[] = {
     // THE PROGRAM TEXT (2026-10-10, the head's text tones): the clock's,
     // "Files"' and the field digits' light ink on a dark Face — the chrome's
     // label, clock and card text below the swap and its field text at
-    // every Face (chrome_derive.h) — and Cool Edit's swapped dark ink above
-    // the threshold, measured on Safari So Good (C1B791, its clock 312A10).
-    {"text",          0xEFF0F0, 0.086,  0.900, nullptr, ToneSource::Face,
-     0.2, 0.0},
+    // every Face (chrome_derive.h), and THE PROGRAM'S TIME FIELDS' DIGITS at
+    // every Face (`ce_field_text`: the field's ground is the dark `mid`, so
+    // it never swaps) — and Cool Edit's swapped dark ink above the
+    // threshold, measured on Safari So Good (C1B791, its clock 312A10).
+    {"text",          0xEFF0F0, 0.086,  0.900, &GuiPalette::ce_field_text,
+     ToneSource::Face, 0.2, 0.0},
     {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
      0.58, 0.32, 0xC1B791},
     // THE VIEW BAR'S SPAN (METRICS §3), off the INK: its top row and left
@@ -345,7 +365,7 @@ constexpr uint32_t tone_of(const Tone& t, uint32_t face, uint32_t ink) {
 // text, Safari So Good's .663 swaps — and 0.64 sits inside that interval
 // with room on both sides, nearer the light side, which no capture
 // contradicts; any value in the interval reproduces all eleven captures.
-// The panel label's own swap (a later threshold) is not built (the head).
+// The panel label's own swap is a later threshold (kLabelSwapLightness).
 inline constexpr double kTextSwapLightness = 0.64;
 constexpr bool text_swaps(uint32_t face) {
     return hls_of(face).l > kTextSwapLightness;
@@ -361,6 +381,33 @@ constexpr uint32_t program_text(uint32_t face) {
 constexpr uint32_t field_text(uint32_t face) {
     return tone_of(named_tone("text"), face, 0);
 }
+
+// THE LABEL THRESHOLD (2026-10-10; METRICS_PRESETS_1010.md §3a, §3b): the
+// panel label swaps LATER than the text, on the same key (the Face's HLS L;
+// luma and HSV V ruled out by Safari and Arctic). The captures pin it in
+// (.663, .739] — Safari So Good's L .663 keeps the light label (EEECE2 over
+// 5E5635) while its text is already dark, Grape's .739 is engraved — and
+// 0.70 is that interval's middle (.701), the widest margin to both captured
+// Faces; any value in it reproduces every capture.
+inline constexpr double kLabelSwapLightness = 0.70;
+static_assert(kLabelSwapLightness > kTextSwapLightness);
+constexpr bool label_swaps(uint32_t face) {
+    return hls_of(face).l > kLabelSwapLightness;
+}
+// THE PANEL LABEL'S INK AND ITS (+1, +1) SHADOW ON `face` (the head):
+// `label` over `dark` on a dark Face, `dark` over `hilight` (engraved) past
+// the label threshold.
+constexpr uint32_t label_ink(uint32_t face) {
+    return tone_of(named_tone(label_swaps(face) ? "dark" : "label"), face, 0);
+}
+constexpr uint32_t label_shadow(uint32_t face) {
+    return tone_of(named_tone(label_swaps(face) ? "hilight" : "dark"), face, 0);
+}
+// The pair's two members, filled by label_ink / label_shadow at every
+// install beside the table's painted tones (fill_program_palette).
+inline constexpr GuiColor GuiPalette::* kLabelPairMembers[] = {
+    &GuiPalette::ce_label, &GuiPalette::ce_label_shadow,
+};
 
 // THE TEXT'S PROOF (METRICS_PRESETS_1010.md §2a and §3d, the clock's flat
 // core; Seattle Blues from METRICS.md): every captured Face's program text
@@ -417,6 +464,31 @@ inline constexpr FaceToneSample kFaceToneSamples[] = {
 static_assert([] {
     for (const FaceToneSample& p : kFaceToneSamples)
         if (!within_one(tone_of(named_tone(p.tone), p.face, 0), p.measured))
+            return false;
+    return true;
+}());
+
+// THE LABEL'S PROOF (METRICS_PRESETS_1010.md §2c, §3c, the flat cores of
+// "Begin"): every captured Face's label ink and shadow within one per
+// channel, the swap falling between Safari So Good and Grape.
+struct LabelPreset {
+    uint32_t face, ink, shadow;
+};
+inline constexpr LabelPreset kLabelPresets[] = {
+    {0x626C7B, 0xD6DADE, 0x2B2F36},   // Default
+    {0x272B6D, 0xBBBDE6, 0x10122E},   // Midnight
+    {0x2F1AEE, 0xCBC5FA, 0x11086A},   // 3D
+    {0xA8969C, 0xE8E4E5, 0x4C3F43},   // Dusty Rose
+    {0x414141, 0xCFCFCF, 0x1B1B1B},   // Midnight Blues
+    {0x03040A, 0x9EA8E2, 0x000103},   // Stealth
+    {0xC1B791, 0xEEECE2, 0x5E5635},   // Safari So Good, L .663: light
+    {0xACA9D0, 0x3E3A6B, 0xD4D3E6},   // Grape, Lime and Tangerine: engraved
+    {0xC0C0C0, 0x555555, 0xDFDFDF},   // Arctic Freeze: engraved
+};
+static_assert([] {
+    for (const LabelPreset& p : kLabelPresets)
+        if (!within_one(label_ink(p.face), p.ink) ||
+            !within_one(label_shadow(p.face), p.shadow))
             return false;
     return true;
 }());
