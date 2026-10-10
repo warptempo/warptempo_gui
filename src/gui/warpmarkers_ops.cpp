@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -531,9 +532,27 @@ void GuiWarpMarkersOps::toggle_inherits() {
     target_render.trigger();
 }
 
-// Toggle the disabled flag on each selected marker. The flag is allowed
-// on any marker (cascade still applies only when the toggled marker is a
-// label_def).
+// Ctrl+D: toggle the disabled flag on each selected marker. The flag is
+// allowed on any marker, and each selected marker flips its OWN flag — except
+// that A LABEL DEFINITION'S TOGGLE CARRIES ITS REFERENCES, BOTH WAYS
+// (architect 2026-10-10: "either the definition is enabled and the references
+// are all enabled, or the definition is disabled and the references are also
+// disabled" — they are structural). The references follow their definition
+// through the render-time cascade (marker_effectively_disabled, the one
+// definition, warp_frame_map_build.h: a ref is effectively disabled by its
+// own flag OR its definition's), so what this act owes them is to get their
+// OWN flags out of the cascade's way: every reference in the store naming a
+// toggled definition, selected or not, has its own flag CLEARED, in either
+// direction. Clearing rather than writing true on a disable keeps the sidecar
+// free of redundant per-reference flags, the cascade already disabling them;
+// before the ruling a reference carrying its own flag (flagged alone earlier,
+// or flipped false -> true when selected beside its definition for the
+// re-enable) stayed disabled after its definition came back. A selected
+// reference whose definition this same act toggles is therefore NOT flipped
+// on its own — its definition governs it. A reference toggled WITHOUT its
+// definition flips its own flag as every other marker does: the accepted
+// exception, a reference disabled alone under an enabled definition, which
+// the ruling keeps possible.
 void GuiWarpMarkersOps::toggle_disabled() {
     // The subject refusal reads its one owner (marker_selection_standing,
     // app_state.h), the delete's shape — and, like the delete's, it is SILENT
@@ -545,15 +564,38 @@ void GuiWarpMarkersOps::toggle_disabled() {
     // normalizes that at render/preview time (the silent 1.00 seed takes
     // the frame-0 slot) — nothing gates this gesture.
     std::vector<GuiWarpMarker> proposed = mv_const;
+    // The labels of the definitions this act toggles (the stale-index belt's
+    // skip as in the flip loop below); label_def_taken keeps a label to one
+    // definition, so a label names one governing marker.
+    std::vector<std::string> toggled_defs;
+    for (int idx : app.selected_markers) {
+        if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        if (!proposed[idx].label_def.empty())
+            toggled_defs.push_back(proposed[idx].label_def);
+    }
+    const auto governed = [&toggled_defs](const GuiWarpMarker& m) {
+        return !m.label_ref.empty()
+            && std::find(toggled_defs.begin(), toggled_defs.end(),
+                         m.label_ref) != toggled_defs.end();
+    };
     bool changed = false;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
+        if (governed(proposed[idx])) continue;  // its definition's, below
         proposed[idx].disabled = !proposed[idx].disabled;
         // (A BRACKET CLEAR RODE THIS LOOP for a few hours on 2026-09-10, so a
         // marker disabled under a lit lamp could not keep a bracket the flag
         // no longer paints. The ITERATION LOCK landed the same day and made it
         // unreachable: Ctrl+D is one of the acts the lock refuses, so no
         // marker can be disabled while any bracket stands.)
+        changed = true;
+    }
+    // The definition's toggle carries its references (the ruling at the head
+    // of this function): every reference to a toggled definition, selected or
+    // not, sheds its own flag and follows the definition through the cascade.
+    for (GuiWarpMarker& m : proposed) {
+        if (!m.disabled || !governed(m)) continue;
+        m.disabled = false;
         changed = true;
     }
     if (!changed) return;

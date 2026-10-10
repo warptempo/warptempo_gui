@@ -301,12 +301,14 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     target_render.trigger();
 }
 
-// Toggle the disabled flag on each selected phase reset. Unconditional —
-// phase resets have no label-def gating like warp markers do. This mutates
-// each marker in place via marker_mut, whereas the warp column's
-// toggle_disabled (warpmarkers_ops.cpp) builds a proposed vector and swaps
-// it in; the two are behaviorally equivalent and the style split is a
-// cosmetic mirror divergence, accepted.
+// Toggle the disabled flag on each selected phase reset, each its own flag
+// alone — this column carries no labels, so it owes nothing like the warp
+// column's carry, where a label definition's toggle clears its references'
+// own flags (architect 2026-10-10, at toggle_disabled, warpmarkers_ops.cpp:
+// the recorded asymmetry). This mutates each marker in place via marker_mut,
+// whereas the warp column's toggle_disabled builds a proposed vector and
+// swaps it in; for an unlabeled selection the two behave alike and the style
+// split is a cosmetic mirror divergence, accepted.
 void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     // The subject refusal reads its one owner (marker_selection_standing,
     // app_state.h) and is SILENT for the delete's reason: the Ctrl+D dispatch
