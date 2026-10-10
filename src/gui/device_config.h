@@ -78,8 +78,8 @@
 //
 // WHY IT EXISTS. `gui_scale` was a `.settings` key until 2026-08-27, which
 // made it a fact about the PIECE: the same project opened on the laptop and
-// on the tablet wants 138 and 275 (100 and 225 in the laptop-pixel unit of
-// that day). Carrying it in the sidecar meant every
+// on the tablet wants different scales — 138 and 300 today (100 and 225 in
+// the laptop-pixel unit of that day). Carrying it in the sidecar meant every
 // sync of a project between the two devices had to rewrite it on the way over
 // and put it back on the way home. It is the panel's business, so it
 // follows the panel. (`audio_player`, the `l` command's external player, made
@@ -351,7 +351,8 @@ inline constexpr const char* kDefaultProjectsRepo =
 //
 // THE PERCENT IS DEVICE PX PER WINDOWS-95 PX since 2026-10-02 (architect; the
 // unit's statement is at render.h's scaled_px): the laptop runs 138 (a
-// 16-px glyph at 22 device px) and the tablet 275 (44); 100 is Windows' own
+// 16-W glyph at 22 device px, 16 · 1.38 = 22.08) and the tablet 300 since
+// 2026-10-06 (the same glyph at 48, 16 · 3); 100 is Windows' own
 // 96-dpi size; 1000 is the ceiling; 50 is the half-size floor,
 // which is where every structural dimension in render.h's scaled_px
 // accessors still has a floor holding it above zero.

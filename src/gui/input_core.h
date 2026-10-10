@@ -132,9 +132,8 @@ enum GuiWindowEdge : unsigned {
 // WHY THE POINTER FOCUS WAS DROPPED — the one fact the leave hook's fire
 // sites do not share, handed to the consumer because it changes what the drop
 // may leave standing (2026-08-08).
-//   * OrdinaryLeave is the pointer focus dropping, for any of three reasons
-//     every consumer reads the same (architect 2026-10-01; the third
-//     2026-10-06):
+//   * OrdinaryLeave is the pointer focus dropping, on either of two edges
+//     every consumer reads the same (architect 2026-10-01):
 //     THE LEAVE — pointer_leave (wl_pointer.leave on Wayland) and, since
 //     touch phase 1 (2026-08-11), a touch POINTER TRANSLATION's ABNORMAL end
 //     WITH NO PHYSICAL POINTER FOCUSED: the window system took the contact
@@ -155,9 +154,8 @@ enum GuiWindowEdge : unsigned {
 //     motion, no release will ever arrive on that object again, so nothing
 //     may be KEPT DELIBERATELY across it — a keep would have no event left
 //     to redeem it; no consumer keeps anything across either edge, which is
-//     why one enumerator serves both.
-//     (The S Pen's hover ending is its own reason since 2026-10-10,
-//     PenHoverEnd below.) WHAT THE CAPABILITY LOSS PROMISES IS
+//     why one enumerator serves both. (The S Pen's hover ending is its own
+//     reason, PenHoverEnd below.) WHAT THE CAPABILITY LOSS PROMISES IS
 //     BOUNDED, and no more than its fire site does: the logical left hold
 //     ends in both its sources, the popup's claim drops, and every face
 //     clears ONCE. It does not promise a cold stream at a later capability
@@ -192,6 +190,15 @@ enum GuiWindowEdge : unsigned {
 //     the faces as ever — a DOWN on the same row changes nothing, a hover
 //     re-entry elsewhere moves the row by its walk, a pen withdrawn for good
 //     leaves the row lit as Windows leaves it under a resting pointer.
+//     TRACED ON HIS GLASS 2026-10-10 (three taps on the open Settings menu's
+//     Pick Colors row, three on the Font row's drop-down): the stylus
+//     HOVER_EXIT and its DOWN arrive in SEPARATE deliveries within one
+//     millisecond (steady-clock ms 92518249 → 92518250, 92524919 → 92524919,
+//     92528433 → 92528434), the exit's leave running before the DOWN's own
+//     motion and press, so a frame could paint between them — the darkening
+//     showed whenever one did, which is why the blink came and went on most
+//     rows (the frame boundary falling in that gap or not, the tip's speed
+//     moving it); with the hold, no face changed on any of the six taps.
 //     Everything else the leave does it still does: the tooltip goes at once
 //     as on leaving any tool (architect 2026-10-06), the in-window bit drops,
 //     the press arms, the scroll holds, the drags, the cards' hover and the
@@ -592,15 +599,16 @@ public:
     // no consumer keeps anything across either — while the pen's hover ending
     // (PenHoverEnd, 2026-10-10) and a translated contact's lift pass their own
     // reasons. Each fire site
-    // passes its own reason and none infers it. The one consumer that reads it
-    // is named at the enum.
+    // passes its own reason and none infers it. The two consumers that read it
+    // (the tooltip's leave and the lit rows' clear) are named at the enum.
     // The one owner of the drop-what-the-pointer-was-naming behavior. What
     // main.cpp wires it to is enumerated THERE, at the hook body, which is the
     // authoritative list — this contract deliberately does not keep a second
     // copy — but the shape is: every face and claim derived from where the
     // pointer is, so a pointer that slides out through the window edge cannot
     // leave a stranded pressed interior, a lit menu item or a hanging tooltip
-    // behind. It USED to clear the
+    // behind (the pen's hover end keeping the lit menu item, PenHoverEnd's
+    // rule at the enum). It USED to clear the
     // marker hover popup as well; that whole surface died with the marker-text
     // lane in row 5. Widened 2026-08-03 to the open dropdown's pointer-derived
     // state; full story at clear_dropdown_pointer_state. Null-safe.

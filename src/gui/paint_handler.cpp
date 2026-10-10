@@ -13,7 +13,6 @@
 #include "text_editor.h"
 #include "text_shape.h"
 #include "time_format.h"
-#include "trace_combo.h"   // the diagnostic trace of 2026-10-10
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 #include "engine/engine_geometry.h"  // kN, kRs — the seed frame mirror
@@ -1058,8 +1057,9 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
 // 1 + 2 + 13 + 2 + 1 — the black line, two rows of face, the 13-row cell,
 // two rows, the line — and two face columns stand between the left line and
 // the V, so the pad is 2 each way INSIDE the four-sided frame, whose line is
-// its own rounded part (relief_line_px): at the tablet's 275 %,
-// 3 + 6 + 36 + 6 + 3 = 54 for one line (the band 13 x 2.75 = 35.75, the sum
+// its own rounded part (relief_line_px): at the tablet's 300 %,
+// 3 + 6 + 39 + 6 + 3 = 57 for one line (the band 13 x 3 = 39), and at the
+// laptop's 138 %, 1 + 3 + 18 + 3 + 1 = 26 (the band 13 x 1.38 = 17.94,
 // rounded once). The gap is the laptop pixel's 4 re-authored at the unit's
 // change. render.h carries only a BOUND on this for the
 // damage band.
@@ -1155,13 +1155,14 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 //
 // THE CAP BAND IS THE BODY FACE'S RECORDED ONE AT EVERY SCALE (architect
 // 2026-10-05, gui_font.h): the recorded cap times the scale, an unrounded
-// double — Tahoma's 8 rows: 8 device rows at 100 %, 11.04 at 138 %, 22 at
-// 275 %, 32 at 400 % — the face's em being the one that stands its "H"
+// double — Tahoma's 8 rows: 8 device rows at 100 %, 11.04 at 138 %, 24 at
+// 300 %, 32 at 400 % — the face's em being the one that stands its "H"
 // exactly that tall.
 //
-// THE SEATS AT THE TABLET'S 275 %: the dropdown's 47-row item seats at row
-// floor((47 + 22) / 2) = 34; the answer is independent of the box's y by
-// construction rather than by a tie rule.
+// THE SEATS AT THE TABLET'S 300 %: the dropdown's 17-W item, 51 rows, seats
+// at row floor((51 + 24) / 2) = 37; at the laptop's 138 % the item's 23 rows
+// (17 x 1.38 = 23.46) seat at floor((23 + 11.04) / 2) = 17. The answer is
+// independent of the box's y by construction rather than by a tie rule.
 //
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
@@ -1198,7 +1199,7 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // WAS cap-centring, so the offset is gone. The time fields (2026-10-05) seat
 // their own box: the 68-row field at 400 % puts the body's 32-row cap at
 // row 50 (eighteen rows above it, eighteen below — a 4-row line and 14 of
-// face each side), the 47-row field at 275 % its 22-row band at row 34, the
+// face each side), the 51-row field at 300 % its 24-row band at row 37, the
 // 23-row field at 138 % its 11.04-row band at row 17.
 // AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
 // rather than the field band's plus a drop, which is what levels it with OK
@@ -1247,7 +1248,7 @@ double line_baseline(const GuiFont& font, double line_y) {
 // 2026-10-06, the disabled Restore at 400 %, where device-px centring alone
 // had put the cell at (3.5, 2.5) Windows px and the emboss's Hilight copy
 // over the top half of the bevel's Shadow line); right at whole multiples, it
-// was wrong at 275 %, the committed default — a 44 x 38 box, u = 3, a 27-px
+// was wrong at 275 %, the tablet's scale until 2026-10-06 — a 44 x 38 box, u = 3, a 27-px
 // cell put at (6, 3), the glyph's top three rows inside the inner bevel (the
 // two relief lines of 3 device px take rows 0..5). The authored seat puts it
 // at (8, 6), exactly after the bevel. AT A NON-WHOLE SCALE the cell (9u)
@@ -3353,11 +3354,10 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     // square before 2026-10-02).
     const int btn      = notification_glyph_box_px();
     const int glyph_px = notification_glyph_px();
-    // THE GLYPH INSET IS AN INTEGER HALF AND SITS ONE PIXEL LEFT OF CENTRE
-    // WHERE THE DIFFERENCE IS ODD (recorded 2026-09-02): both terms are
-    // already scaled, so `btn - glyph_px` is even at the tablet's 275 % and
-    // the laptop's 138 % (16 and 8) and odd at some others, where this
-    // truncating division loses the half pixel to the left and the top.
+    // THE GLYPH INSET IS THE ROUNDED LEAD: the box is the lead, the glyph
+    // and the lead, each rounded at the element (notification_glyph_box_px),
+    // so `btn - glyph_px` is twice the lead and always even — 18 at the
+    // tablet's 300 %, 8 at the laptop's 138 % — and this division is exact.
     const int inset    = (btn - glyph_px) / 2;
     // ONE NUMBER FOR ALL FIVE DISTANCES (architect 2026-08-30): the box's
     // vertical margin is the card's every pad, so the horizontal placement
@@ -3817,17 +3817,6 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             show_row_run(hot_runs[i], hot_x);
         }
         iy += item_h;
-    }
-
-    // THE DIAGNOSTIC TRACE'S FRAME LINE (trace_combo.h, 2026-10-10): the lit
-    // row as this run painted it, with the run's clip.
-    if (trace_combo::gate()) {
-        double cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0;
-        cairo_clip_extents(cr, &cx0, &cy0, &cx1, &cy1);
-        TRACE_COMBO("paint.dropdown",
-                    "menu=%d hover=%d pressed=%d clip=%.0f,%.0f,%.0f,%.0f",
-                    static_cast<int>(menu), app.dropdown.hovered_item,
-                    app.dropdown.pressed_item, cx0, cy0, cx1, cy1);
     }
 
     cairo_restore(cr);
@@ -5399,7 +5388,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //                          619..626).
 //   kModalFieldHeightPx 31 — editor.png's field, borders included (y=5..35),
 //                          vertically centred in the row's content band.
-//   kModalFieldPadXPx 7  — its border-to-ink inset (x=86..92).
+//   kModalFieldPadXPx    — its border-to-ink inset (x=86..92), 7 laptop px:
+//                          the 5 W render.h holds, at 138 % (5 · 1.38 =
+//                          6.9 → 7 device px).
 //   (the label-to-field gap is NOT a constant of its own: since 2026-10-08
 //    it is kModalButtonGapPx, the editor row's ONE GAP — label → field,
 //    field → OK, OK → Cancel; the rule at the editor arm. From 2026-08-29
@@ -5544,11 +5535,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // indices name, and the face-state reset below is what keeps them from
     // outliving it.
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    // THE DIAGNOSTIC TRACE'S GATE (trace_combo.h, 2026-10-10), refreshed on
-    // every frame beside the run loop's settled tail (main.cpp).
-    trace_combo::refresh_gate(
-        app.dropdown.open() || text_editor::is_active(app.settings_editor),
-        "paint");
     const uint64_t prev_session = dlg.session;
     // THE OUTGOING ENABLED BITS, AS PAINTED — read before the reset clears the
     // stash, for the player row's as-painted publication at the button walk
@@ -6794,28 +6780,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.box     = lane;
     dlg.session = live_session;
     dlg.valid   = true;
-    // THE DIAGNOSTIC TRACE'S FRAME LINE (trace_combo.h, 2026-10-10): the
-    // dialog's faces as this run painted them, with the run's clip, so a
-    // blink reads as two consecutive runs disagreeing.
-    if (trace_combo::gate()) {
-        double cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0;
-        cairo_clip_extents(cr, &cx0, &cy0, &cx1, &cy1);
-        const AppState::SettingsChoice& ch = app.settings_choice;
-        TRACE_COMBO("paint.dialog",
-                    "owner=%d choice=%d shown=%d list_open=%d list_hover=%d "
-                    "list_pressed=%d focus=%d focus_active=%d pressed=%d "
-                    "inside=%d key_pressed=%d player_hot=%d clip=%.0f,%.0f,"
-                    "%.0f,%.0f",
-                    static_cast<int>(dlg.owner),
-                    app.settings_choice_live() ? 1 : 0, ch.shown,
-                    ch.list_open ? 1 : 0, ch.list_hover, ch.list_pressed,
-                    app.modal_dialog_focus,
-                    app.modal_dialog_focus_active ? 1 : 0,
-                    app.modal_dialog_pressed,
-                    app.modal_dialog_press_inside ? 1 : 0,
-                    app.modal_dialog_key_pressed, app.player_hot, cx0, cy0,
-                    cx1, cy1);
-    }
     cairo_restore(cr);
 }
 

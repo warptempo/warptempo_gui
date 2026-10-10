@@ -1439,24 +1439,27 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors,
-    // row 4's twenty-seven (OPEN PROJECT leading since 2026-10-07, the
-    // toolbar four included since the 2026-08-12 relayout, COPY VALUE
-    // between Redo and Render since 2026-09-29, Full zoom out
-    // leading the zoom group (Center left it for the bottom row 2026-09-29),
-    // SETTINGS and ENABLE TOOLTIPS behind the padlock since 2026-09-29 (help
-    // after settings since 2026-10-01), the
-    // WAVEFORM MAGNIFICATION lamp in the zoom group since 2026-09-22, the ITERATION
-    // GROUP back from the menu row since 2026-09-04 with FLATTEN joining it
-    // 2026-09-19, the history group's
-    // seven — the opener, the walk lamp and the four companions
-    // since 2026-08-18, Load in place at the tail since 2026-09-01 — and the
-    // VIEW GROUP's three closing it flush right since 2026-10-01) and the
-    // bottom
-    // row's eighteen — the right block's MARKER-VERB GROUP of seven
-    // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the walk
-    // group's four (Previous Marker, Next Marker, Center, Switch Tab), four
-    // cardinal arrows and the transport three.
+    // three menu anchors, the icon row's twenty-seven and row 8's eighteen
+    // (the painter's tables in paint_handler.cpp own each membership; the
+    // counts re-derived from them 2026-10-10):
+    //   THE ICON ROW, 17 + 6 + 1 + 3 = 27 — the left walk's seventeen
+    //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Value and
+    //   Render; Full Zoom Out, Waveform Magnification, Follow and Restrict
+    //   Undo; BPM, Iteration and Flatten; Listen, the padlock, Settings and
+    //   Enable Tooltips), the history view's six stand-ins (Older, Newer,
+    //   Revert and Load in Place in Undo's slots, the walk lamp and Cumulative
+    //   in the iteration group's — kIconRowHistoryStandIns), the history
+    //   opener right-anchored (kIconRowHistoryOpener) and the VIEW GROUP's
+    //   three flush right — 21 standing outside the `h` view (the six
+    //   stand-ins publishing empty rects) and 14 inside it (the stand-ins in,
+    //   the two authoring groups they replace out, and the view's hide
+    //   leaving Full Zoom Out and Enable Tooltips alone of their groups);
+    //   ROW 8, 7 + 4 + 4 + 3 = 18 — the MARKER-VERB GROUP's seven
+    //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
+    //   Marker, Open Text Editor since 2026-10-09, Add to Selection), the walk
+    //   group's four (Previous Marker, Next Marker, Center, Switch Tab), the
+    //   four cardinal arrows and the transport three; inside the `h` view the
+    //   hide leaves 1 + 4 + 2 + 2 = 9.
     // EVERY MEMBER PUBLISHES WHAT IT PAINTED on every frame the roster
     // paints — a real rect where it stands, the EMPTY RECT (which no point is
     // inside) where it does not, so no press, hover or tooltip reaches a
@@ -3154,8 +3157,12 @@ private:
     // THE PEN'S HOVER END DARKENS NOTHING (architect 2026-10-10, his S Pen
     // touching down on the open Settings menu's row: "the word Pick Colors
     // blinks"): the platform sends a HOVER_EXIT just before every tip DOWN,
-    // and the leave it took (end_pen_hover) darkened the menu's lit row for
-    // the frame before the DOWN's own walk re-lit it. The pen's leave is its
+    // in a delivery of its own — within one millisecond of the DOWN on his
+    // glass (traced 2026-10-10, six taps; the figures at
+    // GuiPointerLeaveReason), so a frame paints between the two only
+    // sometimes, which is why the blink came and went — and a leave there
+    // (end_pen_hover) that darkened would put the menu's lit row out for any
+    // such frame, until the DOWN's own walk re-lit it. The pen's leave is its
     // own reason, GuiPointerLeaveReason::PenHoverEnd (input_core.h, the
     // rule's statement), and it keeps every face in the inventory above as
     // painted — what was lit stays lit, this latch's own principle — while

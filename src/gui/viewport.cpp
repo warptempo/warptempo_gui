@@ -7,7 +7,6 @@
 #include "text_editor.h"
 #include "warp_frame_map_view.h"
 #include "platform.h"
-#include "trace_combo.h"   // the diagnostic trace of 2026-10-10
 
 #include <algorithm>
 #include <cmath>
@@ -157,8 +156,7 @@ void Viewport::invalidate_status_cell_area() {
 // (it must erase the modal AND bring the row's own tenants back). The OPENERS
 // do not come through here — nothing is painted before a surface's first paint,
 // so they invalidate the whole window. Caller inventory at the declaration.
-void Viewport::invalidate_modal_dialog_area(const char* caller) {
-    TRACE_COMBO("damage.modal", "caller=%s", caller);
+void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
     // THE CHOICE EDITOR'S DROPPED LIST AS PAINTED (2026-10-07 evening): it
@@ -884,8 +882,7 @@ void Viewport::kick_waveform_sync_if_gain_changed(uint64_t prior_hash) {
     kick_waveform_sync();
 }
 
-void Viewport::invalidate_top_strip(const char* caller) {
-    TRACE_COMBO("damage.top_strip", "caller=%s", caller);
+void Viewport::invalidate_top_strip() {
     const GuiRect ts = top_strip_area(app);
     gui.invalidate_region(ts.x, ts.y, ts.w, ts.h + 1);
 }

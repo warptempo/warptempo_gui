@@ -7298,8 +7298,12 @@ struct AppState {
     // (architect 2026-10-06, Explorer's flat toolbar): the one writer is the roster's
     // pointer walk (recompute_redesign_button_hover), which damages the old
     // and the new button's rect when it changes, and the pointer-leave hook
-    // clears it (a pointer that has left is on no button; a finger's lift is
-    // that leave). It is held at -1 WHILE ANY CHROME PRESS IS ARMED —
+    // clears it on every reason (a pointer that has left is on no button; a
+    // finger's lift is that leave) — on the pen's hover end too, whose rule
+    // keeps every hover-lit face (PenHoverEnd, input_core.h): the slot holds
+    // -1 there by construction, so the clear changes nothing, and a hot face
+    // ruled back would have its clear ask pointer_leave_keeps_lit_rows as the
+    // pull-down's does. It is held at -1 WHILE ANY CHROME PRESS IS ARMED —
     // comctl32's capture: a toolbar holding the mouse shows no hot item
     // (TOOLBAR_TranslateState's bHot & !bCaptured) — under the walk's own
     // gates (no veil, no card over it, the hover zone).
@@ -7314,8 +7318,9 @@ struct AppState {
     // is the dialog's pointer walk (update_modal_dialog_hover, through
     // set_player_hot), held at -1 while a dialog press is armed (comctl32's
     // capture, as roster_hot) and while the pen's hot-face latch holds (the
-    // rule at GuiInputHandler::pen_hot_latch_); the pointer-leave hook and
-    // the latch's arm (arm_pen_hot_latch) clear it.
+    // rule at GuiInputHandler::pen_hot_latch_); the pointer-leave hook (on
+    // every reason, as roster_hot's) and the latch's arm (arm_pen_hot_latch)
+    // clear it.
     int      player_hot         = -1;
     uint64_t player_hot_session = 0;
 

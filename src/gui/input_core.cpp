@@ -1,5 +1,4 @@
 #include "input_core.h"
-#include "trace_combo.h"
 
 #include <time.h>
 
@@ -603,7 +602,9 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // motion (pointer_enter) that re-resolves, and the held state below
     // survives — so what the hook drops is the pointer-derived FACES, leaving a
     // return with nothing stale on screen rather than relying on the absence of
-    // later events. The hook owns the erase damage, and main.cpp's hook body is
+    // later events (all but the open pull-down's lit row on the pen's hover end,
+    // PenHoverEnd, which keeps it — GuiPointerLeaveReason, input_core.h). The
+    // hook owns the erase damage, and main.cpp's hook body is
     // the authoritative list of what it clears. (The MARKER hover popup rode this
     // edge too until row 5 deleted it; a marker's value lives on its flag now,
     // so there is no pointer-position-dependent marker surface left — but an
@@ -674,8 +675,6 @@ void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     // 2026-10-01: the stream continues here, but no consumer keeps anything
     // across either edge); PenHoverEnd from the Android pen's hover ending,
     // whose leave darkens no lit row (2026-10-10; the enum carries the rule).
-    TRACE_COMBO("core.pointer_leave", "reason=%d",
-                static_cast<int>(reason));
     if (pointer_left_hook_)
         pointer_left_hook_(reason);
     // Left-held state persists across leave; the next press/release
@@ -711,8 +710,10 @@ void GuiInputCore::pointer_capability_lost() {
     // capability loss, a staged-motion flush may leave pointer_in_window true
     // and a hover face stale until the pointer next enters; accepted, do not
     // re-guard.
-    // OrdinaryLeave, the leave's own reason: every consumer reads the two
-    // edges the same (architect 2026-10-01; GuiPointerLeaveReason).
+    // OrdinaryLeave, the reason every Wayland leave passes: every consumer
+    // reads the two edges the same (architect 2026-10-01), the pull-down's lit
+    // row darkened by both — only the Android pen's hover end (PenHoverEnd)
+    // keeps it (GuiPointerLeaveReason, the one statement).
     if (pointer_left_hook_)
         pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
     end_left_hold_source(/*physical=*/true);
@@ -1386,7 +1387,9 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     //     button starts no wait until it has left it (the rule is at
     //     AppState::RedesignTooltip) — while a contact
     //     the window system took ends the tooltip's hover as a mouse leaving
-    //     the window does (GuiPointerLeaveReason carries both).
+    //     the window does (GuiPointerLeaveReason carries both). Both darken
+    //     the pull-down's lit row; only the pen's hover end, PenHoverEnd,
+    //     keeps it, and no contact's end is one.
     // The mods are current_mods() at delivery: the touch bit is already down
     // and the delivering edge means neither sibling holds, so the motion
     // honestly reads unheld — an ordinary resting motion.

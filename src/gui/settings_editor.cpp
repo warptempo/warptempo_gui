@@ -12,7 +12,6 @@
 #include "text_editor.h"
 #include "undo.h"
 #include "color_picker.h"      // combo_list: the choice list's open damage and seat
-#include "trace_combo.h"       // the diagnostic trace of 2026-10-10
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -169,8 +168,6 @@ void GuiSettingsEditor::choice_show(int index) {
     // NO WRAP: an end stays an end (Windows' combo stops there), though a
     // list hovered elsewhere still takes its lit row back to the shown one.
     index = std::clamp(index, 0, n - 1);
-    TRACE_COMBO("choice.show", "shown %d->%d list_open=%d list_hover=%d",
-                ch.shown, index, ch.list_open ? 1 : 0, ch.list_hover);
     const bool hover_moves = ch.list_open && ch.list_hover != index;
     if (ch.list_open) ch.list_hover = index;
     // THE LIT ROW KEPT IN VIEW (render.h's popup scroll block): a step past
@@ -197,7 +194,6 @@ void GuiSettingsEditor::choice_show(int index) {
 
 void GuiSettingsEditor::choice_step(int delta) {
     if (!app.settings_choice_live()) return;
-    TRACE_COMBO("choice.step", "delta=%d", delta);
     choice_show(app.settings_choice.shown + delta);
 }
 
@@ -205,9 +201,6 @@ void GuiSettingsEditor::set_choice_list_open(bool open) {
     if (!app.settings_choice_live()) return;
     AppState::SettingsChoice& ch = app.settings_choice;
     if (ch.list_open == open) return;
-    TRACE_COMBO("choice.list_open", "%d->%d shown=%d (damages the modal box%s)",
-                ch.list_open ? 1 : 0, open ? 1 : 0, ch.shown,
-                open ? " and the list's box" : "");
     // THE CLOSE'S DAMAGE is the modal's, which covers the list as painted
     // (Viewport::invalidate_modal_dialog_area); THE OPEN'S is the rect the
     // next paint will give the list — derived from the combo AS PAINTED, for
@@ -233,8 +226,6 @@ void GuiSettingsEditor::choice_hover(int row) {
     if (!app.settings_choice_live()) return;
     AppState::SettingsChoice& ch = app.settings_choice;
     if (!ch.list_open || row == ch.list_hover) return;
-    TRACE_COMBO("choice.hover", "%d->%d (damages the modal box)",
-                ch.list_hover, row);
     ch.list_hover = row;
     viewport.invalidate_modal_dialog_area();
 }
@@ -243,7 +234,6 @@ void GuiSettingsEditor::choice_arm_row(int row) {
     if (!app.settings_choice_live()) return;
     AppState::SettingsChoice& ch = app.settings_choice;
     if (!ch.list_open) return;
-    TRACE_COMBO("choice.arm_row", "pressed %d->%d", ch.list_pressed, row);
     ch.list_pressed = row;
     ch.list_press_began_on_item = true;
     viewport.invalidate_modal_dialog_area();
@@ -256,7 +246,6 @@ void GuiSettingsEditor::choice_arm_row(int row) {
 // stood — for every choice row alike.
 void GuiSettingsEditor::choice_pick(int index) {
     if (!app.settings_choice_live()) return;
-    TRACE_COMBO("choice.pick", "index=%d", index);
     set_choice_list_open(false);
     choice_show(index);
 }

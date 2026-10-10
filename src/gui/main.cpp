@@ -48,7 +48,6 @@
 #include "selection.h"
 #include "settings_editor.h"
 #include "settings_io.h"
-#include "trace_combo.h"   // the diagnostic trace of 2026-10-10
 #include "render_cache.h"
 #include "target_render.h"
 #include "text_editor.h"
@@ -2029,10 +2028,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // reads every reason alike but one: the open popup's lit row, which the
     // pen's hover end keeps (the popup's paragraph above).
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
-        TRACE_COMBO("hook.leave",
-                    "reason=%d in_window_was=%d dd_hover=%d dd_pressed=%d",
-                    static_cast<int>(reason), app.pointer_in_window ? 1 : 0,
-                    app.dropdown.hovered_item, app.dropdown.pressed_item);
         app.pointer_in_window = false;
         using TooltipHoverEnd = GuiInputHandler::TooltipHoverEnd;
         input_handler.end_tooltip_hover(
@@ -2047,8 +2042,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // rather than routed through that owner because THIS edge asks a
         // different question and clears more with it: a pointer that has left
         // is on no button AND at no position, so the tooltip goes too, and the
-        // popup's HOVERED item goes
-        // whether or not anything was armed. The narrower owner is a subset of
+        // popup's HOVERED item goes on an ordinary leave (the pen's hover end
+        // keeps it, below) whether or not anything was armed. The narrower
+        // owner is a subset of
         // this body, deliberately.
         input_handler.clear_redesign_button_press();
         // The MODAL's armed dialog button goes on the same edge and for a
@@ -2217,11 +2213,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // and the hover walk reads nothing it writes — so the order here stays
     // free.
     gui.set_loop_settled_hook([&](GuiInputState mods) {
-        // THE DIAGNOSTIC TRACE'S GATE (trace_combo.h, 2026-10-10): a pull-down
-        // menu or the Settings editor open.
-        trace_combo::refresh_gate(
-            app.dropdown.open() || text_editor::is_active(app.settings_editor),
-            "settled");
         input_handler.refresh_pointer_cursor(mods);
         input_handler.recompute_dropdown_hover(mods);
         input_handler.sync_nav_drag_mode(mods);
