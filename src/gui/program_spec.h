@@ -135,11 +135,14 @@ struct ProgramSpec {
     int  case_to_end_bar_px;
     int  end_bar_face_px;
     // THE DARK TIME FIELD (METRICS §5.4: 72 x 17, its TL line, its ground,
-    // its BR line; the mocked field 85 wide round the clock's cell): its
-    // height and ROW 8'S CLOCK'S least width (the mock's 85; the render
-    // player's two fields are their cell and pads alone). Every time field
-    // takes the shape: row 8's clock and the render player's position and
-    // length. THE PAD from its outer edge to the reserved cell on each side,
+    // its BR line): its height. Every time field takes the shape — row 8's
+    // clock and the render player's position and length — and EVERY TIME
+    // FIELD IS ITS RESERVED CELL PLUS THE PAD ON EACH SIDE, no least width
+    // (architect 2026-10-10, on the tablet: "the row eight clock has a 85
+    // Windows pixel floor — let's remove that floor … the media player's
+    // fields look good"; the 85-W floor round row 8's clock, Cool Edit's mock
+    // of 2026-10-09, removed 2026-10-10). THE PAD from its outer edge to the
+    // reserved cell on each side,
     // `field_pad_px`, IS THE TIME FIELD'S OWN 4 W (architect 2026-10-09
     // evening, at the consolidation session's close: one W less air on either
     // side than the dialog field's 5 — "the other ones are Windows chrome
@@ -150,7 +153,6 @@ struct ProgramSpec {
     // on 2026-10-09, the dialog field's 5 W (kModalFieldPadXPx) that
     // evening, its own 4 W since.
     double field_h_px;
-    double field_min_w_px;
     double field_pad_px;
     // THE STATE LINE'S AIR: its first ink this far past the time-field
     // group's end bar (the field's own symmetric air of 2026-10-08, the end
@@ -285,7 +287,6 @@ inline constexpr ProgramSpec kProgramSpec = {
     .case_to_end_bar_px = 5,
     .end_bar_face_px    = 3,
     .field_h_px         = 17.0,
-    .field_min_w_px     = 85.0,
     .field_pad_px       = 4.0,
     .state_air_px       = 5.0,
     .column_air_px         = 5,

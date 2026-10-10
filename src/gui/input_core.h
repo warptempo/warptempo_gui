@@ -156,12 +156,8 @@ enum GuiWindowEdge : unsigned {
 //     may be KEPT DELIBERATELY across it — a keep would have no event left
 //     to redeem it; no consumer keeps anything across either edge, which is
 //     why one enumerator serves both.
-//     THE PEN'S HOVER ENDING — the Android backend's S Pen hover ending
-//     (GuiPlatform::end_pen_hover: a HOVER_EXIT, a report above the GUI's
-//     plane, any first down, focus loss — architect 2026-09-27, every pen
-//     hover effect acts only within the plane): the pen has no titlebar to
-//     step onto, so its leave keeps nothing, and the tooltip goes at once as
-//     on leaving any tool (architect 2026-10-06). WHAT THE CAPABILITY LOSS PROMISES IS
+//     (The S Pen's hover ending is its own reason since 2026-10-10,
+//     PenHoverEnd below.) WHAT THE CAPABILITY LOSS PROMISES IS
 //     BOUNDED, and no more than its fire site does: the logical left hold
 //     ends in both its sources, the popup's claim drops, and every face
 //     clears ONCE. It does not promise a cold stream at a later capability
@@ -182,14 +178,47 @@ enum GuiWindowEdge : unsigned {
 //     OrdinaryLeave. (The S Pen's lift off an empty glass takes no leave at
 //     all since 2026-10-07: the Android backend focuses the pointer at the
 //     lift, so the fork's restore arm runs — pointer_focus_at.)
-// The distinction is read in one place, main.cpp's hook body, by exactly one
-// consumer: the tooltip's leave (end_tooltip_hover), which the contact's lift
-// (TouchLift) makes no leave at all, OrdinaryLeave being its hard end. Every
-// other clear the hook performs is unconditional and reads this not at all.
+//   * PenHoverEnd is the Android backend's S Pen hover ending
+//     (GuiPlatform::end_pen_hover: a HOVER_EXIT — which the platform sends
+//     just before every tip DOWN — a report above the GUI's plane, any first
+//     down, focus loss; architect 2026-09-27, every pen hover effect acts
+//     only within the plane). An ordinary leave in every respect but one:
+//     THE PEN'S HOVER END DARKENS NOTHING (architect 2026-10-10, his S Pen
+//     touching down on the open Settings menu's row: "the word Pick Colors
+//     blinks" — the exit's leave put the lit row out for the frame before the
+//     DOWN's own walk re-lit it): every hover-lit face keeps what was painted
+//     (pointer_leave_keeps_lit_rows, below), the pen latch's own principle
+//     (GuiInputHandler::pen_hot_latch_), and the next pointer event re-derives
+//     the faces as ever — a DOWN on the same row changes nothing, a hover
+//     re-entry elsewhere moves the row by its walk, a pen withdrawn for good
+//     leaves the row lit as Windows leaves it under a resting pointer.
+//     Everything else the leave does it still does: the tooltip goes at once
+//     as on leaving any tool (architect 2026-10-06), the in-window bit drops,
+//     the press arms, the scroll holds, the drags, the cards' hover and the
+//     pen latch clear. A mouse leaving the window (OrdinaryLeave) still
+//     darkens.
+// The distinction is read in one place, main.cpp's hook body, by two
+// consumers: the tooltip's leave (end_tooltip_hover), which the contact's lift
+// (TouchLift) makes no leave at all, OrdinaryLeave and PenHoverEnd being its
+// hard end; and the lit rows' clear (pointer_leave_keeps_lit_rows), which
+// PenHoverEnd skips. Every other clear the hook performs is unconditional
+// and reads this not at all.
 enum class GuiPointerLeaveReason {
     OrdinaryLeave,
     TouchLift,
+    PenHoverEnd,
 };
+
+// THE ONE PREDICATE the leave's lit-row clears ask (PenHoverEnd's rule,
+// above; 2026-10-10): true where the leave keeps every hover-lit face as
+// painted. Of the hover-lit faces in the pen latch's inventory
+// (GuiInputHandler::pen_hot_latch_) the pull-down menus' lit row is the one
+// a leave darkens (clear_dropdown_pointer_state, main.cpp's hook); the
+// Settings combo's list and the color picker's list and preset menu are
+// cleared by no leave, and the two toolbars store no hot face.
+inline bool pointer_leave_keeps_lit_rows(GuiPointerLeaveReason reason) {
+    return reason == GuiPointerLeaveReason::PenHoverEnd;
+}
 
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
 // 2026-08-25). A SCREEN PIXEL x COVERS [x, x+1), so a surface coordinate names
@@ -359,11 +388,12 @@ public:
     // region, the caret) leaves the pointer resting here for the backend's
     // next hover report, a motion.
     void pointer_focus_at(double x, double y);
-    // Always the ordinary leave (OrdinaryLeave: every Wayland call and the
-    // Android pen's hover ending); TouchLift is
-    // deliver_touch_translation_end's alone and does not come through here
-    // (GuiPointerLeaveReason, above the class).
-    void pointer_leave();
+    // The ordinary leave by default (OrdinaryLeave: every Wayland call); the
+    // Android pen's hover ending passes PenHoverEnd (end_pen_hover, 2026-10-10);
+    // TouchLift is deliver_touch_translation_end's alone and does not come
+    // through here (GuiPointerLeaveReason, above the class).
+    void pointer_leave(
+        GuiPointerLeaveReason reason = GuiPointerLeaveReason::OrdinaryLeave);
     void pointer_motion(double x, double y);
     void pointer_button(GuiMouseButton button, bool pressed);
     // THE SIGN IS THE SEAM'S CONTRACT AND BOTH DOORS SHARE IT: POSITIVE MEANS
@@ -560,7 +590,8 @@ public:
     // 2026-08-08): the ordinary leave and the capability loss both pass
     // OrdinaryLeave (architect 2026-10-01) — the difference above is real, but
     // no consumer keeps anything across either — while the pen's hover ending
-    // and a translated contact's lift pass their own reasons. Each fire site
+    // (PenHoverEnd, 2026-10-10) and a translated contact's lift pass their own
+    // reasons. Each fire site
     // passes its own reason and none infers it. The one consumer that reads it
     // is named at the enum.
     // The one owner of the drop-what-the-pointer-was-naming behavior. What

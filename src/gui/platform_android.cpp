@@ -3,6 +3,7 @@
 #include "gui_font.h"
 #include "gui_main.h"
 #include "render.h"   // window_frame_px, paint_window_sizing_frame
+#include "trace_combo.h"
 
 #include <android/asset_manager.h>
 #include <android/configuration.h>
@@ -1698,6 +1699,41 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
     const bool pen_in_plane =
         pen_present && pen_report_in_plane(event, masked, pen_index);
 
+    // THE DIAGNOSTIC TRACE (trace_combo.h, 2026-10-10): every delivered
+    // motion event while the gate stands — its action, the acting pointer's
+    // tool, x, y and the pen's hover distance, the plane's answer and the
+    // backend's hover and contact state before the event.
+    if (trace_combo::gate()) {
+        const char* name = "OTHER";
+        switch (masked) {
+            case AMOTION_EVENT_ACTION_HOVER_ENTER:    name = "HOVER_ENTER"; break;
+            case AMOTION_EVENT_ACTION_HOVER_MOVE:     name = "HOVER_MOVE"; break;
+            case AMOTION_EVENT_ACTION_HOVER_EXIT:     name = "HOVER_EXIT"; break;
+            case AMOTION_EVENT_ACTION_DOWN:           name = "DOWN"; break;
+            case AMOTION_EVENT_ACTION_POINTER_DOWN:   name = "POINTER_DOWN"; break;
+            case AMOTION_EVENT_ACTION_MOVE:           name = "MOVE"; break;
+            case AMOTION_EVENT_ACTION_UP:             name = "UP"; break;
+            case AMOTION_EVENT_ACTION_POINTER_UP:     name = "POINTER_UP"; break;
+            case AMOTION_EVENT_ACTION_CANCEL:         name = "CANCEL"; break;
+            case AMOTION_EVENT_ACTION_BUTTON_PRESS:   name = "BUTTON_PRESS"; break;
+            case AMOTION_EVENT_ACTION_BUTTON_RELEASE: name = "BUTTON_RELEASE"; break;
+            default: break;
+        }
+        const size_t ti = index < count ? index : 0;
+        const float dist = pen_present
+            ? AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_DISTANCE,
+                                        pen_index)
+            : -1.0f;
+        TRACE_COMBO("plat.event",
+                    "%s tool=%s x=%.1f y=%.1f dist=%.1f in_plane=%d "
+                    "hovering=%d contact=%d",
+                    name, count > 0 && is_pen(ti) ? "stylus" : "finger",
+                    count > 0 ? px(ti) : -1.0, count > 0 ? py(ti) : -1.0,
+                    static_cast<double>(dist), pen_in_plane ? 1 : 0,
+                    pen_hovering_ ? 1 : 0,
+                    input_.touch_contact_active() ? 1 : 0);
+    }
+
     // THE SIDE BUTTON IS THE CTRL BIT, set BEFORE this event's delivery so
     // the press, the motions and the settled hook's sync_nav_drag_mode all
     // read the state this event reported (the door's contract,
@@ -1802,7 +1838,11 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // re-entry painted the checker for a frame or more. THE HOVER
             // STILL ENDS where it always did — a HOVER_EXIT, a report above
             // the plane, a first down, focus loss — through end_pen_hover's
-            // ordinary leave. A pen lifting while another contact stays on
+            // leave, which since 2026-10-10 is the pen's own (PenHoverEnd)
+            // and DARKENS NO LIT ROW: the exit the platform sends just before
+            // every tip DOWN put the lit row out for a frame until the DOWN's
+            // walk re-lit it ("the word Pick Colors blinks"; the rule at
+            // GuiPointerLeaveReason, input_core.h). A pen lifting while another contact stays on
             // the glass is no hover (hovers are dropped under a contact): its
             // end takes the leave as before and its next hover is an enter;
             // so does every finger's lift (a finger never hovers). A pen
@@ -1824,18 +1864,25 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // enter or motion is delivered. Back within the plane (at or
             // under the ENTER threshold, the latch's rule) the first report
             // is a fresh enter. Neither the exit nor a report
-            // above the plane touches the retained zoom anchor.
+            // above the plane touches the retained zoom anchor, and neither
+            // darkens a lit row (PenHoverEnd, end_pen_hover).
             if (!pen_present) return;
             if (!pen_in_plane) {   // a HOVER_EXIT, or a hover above the plane
+                TRACE_COMBO("plat.hover", "became=end_pen_hover");
                 end_pen_hover();
                 set_pen_ctrl(false);
                 return;
             }
-            if (input_.touch_contact_active()) return;
+            if (input_.touch_contact_active()) {
+                TRACE_COMBO("plat.hover", "became=dropped(contact)");
+                return;
+            }
             if (!pen_hovering_) {
                 pen_hovering_ = true;
+                TRACE_COMBO("plat.hover", "became=pointer_enter");
                 input_.pointer_enter(px(pen_index), py(pen_index));
             } else {
+                TRACE_COMBO("plat.hover", "became=pointer_motion");
                 input_.pointer_motion(px(pen_index), py(pen_index));
             }
             input_.pointer_frame();
@@ -1895,6 +1942,8 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             {
                 const bool finger_down = index < count && !is_pen(index);
                 if (!input_.touch_contact_active()) {
+                    TRACE_COMBO("plat.down", "became=end_pen_hover(was=%d)",
+                                pen_hovering_ ? 1 : 0);
                     end_pen_hover();
                     if (finger_down) set_pen_ctrl(false);
                     else pen_stroke_shared_ = false;
@@ -1922,6 +1971,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                     input_.touch_motion(AMotionEvent_getPointerId(event, i),
                                         px(i), py(i));
                 }
+                TRACE_COMBO("plat.down", "became=touch_down");
                 input_.touch_down(AMotionEvent_getPointerId(event, index),
                                   px(index), py(index), tool_of(index));
             }
@@ -1985,10 +2035,12 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                 const bool pen_stays = pen_lift &&
                                        masked == AMOTION_EVENT_ACTION_UP;
                 if (pen_stays) {
+                    TRACE_COMBO("plat.up", "became=pointer_focus_at");
                     input_.pointer_focus_at(px(index), py(index));
                     pen_hovering_ = true;
                 }
                 pen_lift_keeps_anchor_ = keep_seat;
+                TRACE_COMBO("plat.up", "became=touch_up");
                 input_.touch_up(AMotionEvent_getPointerId(event, index));
                 pen_lift_keeps_anchor_ = false;
                 // THE PEN'S LIFT DROPS THE CTRL BIT, after the lift's own
@@ -2016,7 +2068,10 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
                     // first HOVER_ENTER at the lift point itself; the hover
                     // point then drifts along the pen's axis as the tip rises
                     // (the measurement at kPenHotRearmPx).
-                    if (pen_stays && pen_lift_hook_) pen_lift_hook_();
+                    if (pen_stays && pen_lift_hook_) {
+                        TRACE_COMBO("plat.up", "became=pen_lift_hook");
+                        pen_lift_hook_();
+                    }
                     return;
                 }
             }
@@ -2037,6 +2092,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // the Ctrl clear (pen_report_in_plane's transitions: the
             // predicate sets it out only on a cancel that still carries the
             // pen, and this one may not).
+            TRACE_COMBO("plat.cancel", "became=touch_cancel");
             input_.touch_cancel();
             set_pen_ctrl(false);
             pen_on_glass_ = false;
@@ -2070,10 +2126,15 @@ void GuiPlatform::set_pen_ctrl(bool held) {
 void GuiPlatform::end_pen_hover() {
     if (!pen_hovering_) return;
     pen_hovering_ = false;
-    // The ordinary leave: the pen has left the tool as a mouse leaving the
-    // window has, and keeps nothing across it (the rule is at
+    // THE PEN'S OWN LEAVE, PenHoverEnd (architect 2026-10-10, "the word Pick
+    // Colors blinks"): the pen has left the tool as a mouse leaving the window
+    // has — the tooltip, the in-window bit, the arms and the latch go — but
+    // its leave DARKENS NOTHING, every hover-lit face keeping what was
+    // painted. The HOVER_EXIT the platform sends just before every tip DOWN
+    // comes through here, and an ordinary leave put the lit row out for the
+    // frame before the DOWN's own walk re-lit it (the rule is at
     // GuiPointerLeaveReason, input_core.h).
-    input_.pointer_leave();
+    input_.pointer_leave(GuiPointerLeaveReason::PenHoverEnd);
     input_.pointer_frame();
 }
 

@@ -1594,7 +1594,9 @@ struct GuiInputHandler {
     // gone; the painter lights the hovered item with no in-window term of its
     // own, so dropping the arm alone would leave an item lit outside the
     // window. The menu stays OPEN — leaving the window is not a dismissal.
-    void clear_dropdown_pointer_state();
+    // `keep_faces` (the pen's hover end, pointer_leave_keeps_lit_rows,
+    // 2026-10-10) drops the claim alone, both faces kept as painted.
+    void clear_dropdown_pointer_state(bool keep_faces = false);
 
     // THE HOVER TOOLTIP'S HARD END (the model is at AppState::RedesignTooltip):
     // hides the box at once, stops the wait and disarms the reshow, leaving
@@ -3143,13 +3145,23 @@ private:
     // switch onto another anchor is an act, not a face, and stays live.
     // THE TOUCH-DOWN IS NOT THE LATCH'S (2026-10-09 evening, his blink on
     // the Settings combo at the pen's contact): the latch stands only after
-    // a lift, and the lists' lit rows answer the down by their own rule — a
-    // list's lit row follows the pointer onto its rows and HOLDS OFF THEM
+    // a lift, and the lists' lit rows answer the contact by their own rule —
+    // a list's lit row follows the pointer onto its rows and HOLDS OFF THEM
     // (Windows' combo list; settings_choice_motion, color_picker_motion), so
     // the contact's motions over the combo that dropped it, and the lift's
     // restore motion before the latch arms, change no face. The pull-down
-    // menus open with no lit row and go dark off their rows (Windows' menu),
-    // so their contact has nothing to put out.
+    // menus go dark off their rows (Windows' menu).
+    // THE PEN'S HOVER END DARKENS NOTHING (architect 2026-10-10, his S Pen
+    // touching down on the open Settings menu's row: "the word Pick Colors
+    // blinks"): the platform sends a HOVER_EXIT just before every tip DOWN,
+    // and the leave it took (end_pen_hover) darkened the menu's lit row for
+    // the frame before the DOWN's own walk re-lit it. The pen's leave is its
+    // own reason, GuiPointerLeaveReason::PenHoverEnd (input_core.h, the
+    // rule's statement), and it keeps every face in the inventory above as
+    // painted — what was lit stays lit, this latch's own principle — while
+    // still clearing the latch and doing everything else a leave does; the
+    // next pointer event re-derives the faces as ever. The mouse's leave
+    // still darkens.
     // A TIMER WOULD NOT DO: expiring with the pen still hovering in place, it
     // would re-light the very face it withheld; the latch is a DISTANCE, as
     // the plane's own hysteresis is.
@@ -3181,7 +3193,8 @@ private:
     //   hook, main.cpp): a HOVER_EXIT, a report above the plane, focus loss —
     //   and THE NEXT DOWN, which is one of them: the latch stands only while
     //   the pen's hover does, and every first down ends that hover through
-    //   its leave (end_pen_hover).
+    //   its leave (end_pen_hover) — the leave that darkens no lit row
+    //   (PenHoverEnd, above).
     // THE LATCH IS THE POINTER'S, NOT A CHROME'S: it holds every chrome's lit
     // row alike (the toolbars' hot faces it once held retired with the
     // program's band, 2026-10-09).

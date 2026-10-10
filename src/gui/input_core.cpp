@@ -1,4 +1,5 @@
 #include "input_core.h"
+#include "trace_combo.h"
 
 #include <time.h>
 
@@ -593,7 +594,7 @@ void GuiInputCore::pointer_focus_at(double x, double y) {
     if (!pointer_captured_) pointer_position_unknown_ = false;
 }
 
-void GuiInputCore::pointer_leave() {
+void GuiInputCore::pointer_leave(GuiPointerLeaveReason reason) {
     pointer_focused_ = false;
     // Fire the leave hook: no motion arrives WHILE the pointer stays outside, so
     // without this a redesigned row's button would keep its lit face for that
@@ -668,12 +669,15 @@ void GuiInputCore::pointer_leave() {
     // that delivers it when no leave follows, so clearing it at the finalize
     // would change behaviour on paths with no defect behind them.
     flush_deferred_motion();
-    // OrdinaryLeave is the argument, the same reason the capability loss
-    // passes (architect 2026-10-01): the stream continues here, but no
-    // consumer keeps anything across either edge. The Android pen's hover
-    // ending is the same leave (the enum carries the rule).
+    // THE CALLER'S REASON is the argument: OrdinaryLeave from every Wayland
+    // leave, the same reason the capability loss passes (architect
+    // 2026-10-01: the stream continues here, but no consumer keeps anything
+    // across either edge); PenHoverEnd from the Android pen's hover ending,
+    // whose leave darkens no lit row (2026-10-10; the enum carries the rule).
+    TRACE_COMBO("core.pointer_leave", "reason=%d",
+                static_cast<int>(reason));
     if (pointer_left_hook_)
-        pointer_left_hook_(GuiPointerLeaveReason::OrdinaryLeave);
+        pointer_left_hook_(reason);
     // Left-held state persists across leave; the next press/release
     // will resync it. We do NOT clear pointer_left_held_ here because
     // a drag that briefly skids outside the surface and returns

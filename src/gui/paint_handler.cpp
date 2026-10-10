@@ -13,6 +13,7 @@
 #include "text_editor.h"
 #include "text_shape.h"
 #include "time_format.h"
+#include "trace_combo.h"   // the diagnostic trace of 2026-10-10
 #include "warp_frame_map_view.h"
 #include "warp_frame_map.h"
 #include "engine/engine_geometry.h"  // kN, kRs — the seed frame mirror
@@ -2485,26 +2486,19 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // the field's pad either side — THE TIME FIELD'S OWN 4 W (program_spec.h's
 // field_pad_px, architect 2026-10-09 evening: "this one is a Cool Edit
 // chrome", tighter than the dialog field's 5; time_field_pad_px below) —
-// its width ceiled, and ROW 8'S CLOCK at least the mock's 85 W
-// (kProgramSpec.field_min_w_px). At 300 % the floor sets the clock's width
-// in all three faces (Tahoma's cell about 201 device px, 201 + 2 · 12
-// against the floor's 255), the cell centered in it (below) — and where the
-// floor wins the cell's seat is independent of the pad, so the pad shows
-// only in the render player's two fields, which take no floor and are their
-// cell and the two pads.
+// its width ceiled, AND NOTHING MORE: row 8's clock exactly as the render
+// player's two fields (architect 2026-10-10, "the media player's fields look
+// good"; the 85-W floor of Cool Edit's mock, 2026-10-09, removed 2026-10-10).
+// At 300 % under Tahoma the clock is its cell of about 201 device px plus
+// 2 · 12.
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
 // CELL'S RIGHT EDGE, so nothing moves as the time changes — the purpose of
-// the rule, which the fixed cell keeps (row 8's composition below). THE CELL STANDS CENTERED IN THE FIELD (architect
-// 2026-10-09, his tablet captures: under Tahoma row 8's clock sits on the
-// 85-W floor and the run, ending at the right pad, stood 28 device px from
-// the left line and 22 from the right at 300 %): where the cell plus its pads
-// is the field, the cell's right edge is the field's right pad; where the
-// floor wins, the cell's right edge stands the pad PLUS HALF THE FLOOR'S
-// SURPLUS in from the right line, so the ink is centered whatever the face.
-// The render player's two fields take no floor, so their cell's right edge
-// is the right pad. On row 8 THE DIGITS AND THE PIPE ARE ONE RUN, the
+// the rule, which the fixed cell keeps (row 8's composition below). THE
+// CELL'S RIGHT EDGE IS THE FIELD'S RIGHT PAD in every time field, the field
+// being the cell and its two pads (the floor's centering of 2026-10-09 went
+// with the floor). On row 8 THE DIGITS AND THE PIPE ARE ONE RUN, the
 // timestamp and ` | `, STARTING AT THE CELL'S LEFT EDGE — the digits are
 // tabular, so the run is the specimen's width plus the separator's at every
 // time and the pipe never moves as the time runs — and the tab
@@ -2529,8 +2523,7 @@ constexpr const char* kTimeShape = "DD:DD.DDD";
 // values) — the set the letter slot is measured over.
 constexpr std::string_view kClockTabLetters = "AB";
 
-// THE FIELD'S HEIGHT, ITS PAD AND ROW 8'S CLOCK'S LEAST WIDTH, each one
-// element rounded once (scaled_px): 17 W tall (51 device rows at 300 %, 23
+// THE FIELD'S HEIGHT AND ITS PAD, each one element rounded once (scaled_px): 17 W tall (51 device rows at 300 %, 23
 // at 138 %; program_spec.h's field_h_px) and THE TIME FIELD'S OWN PAD, 4 W
 // (12 device px at 300 %, 6 at 138 %, 14 at 360 %; program_spec.h's
 // field_pad_px, architect 2026-10-09 evening — the Cool Edit field tighter
@@ -2633,10 +2626,9 @@ static GuiRect time_field_rect(int x, int w, int case_y, int case_h) {
     return GuiRect{x, case_y + (case_h - h) / 2, w, h};
 }
 // A FIELD'S WIDTH round a reserved cell `cell_w` wide: the cell ceiled and
-// the pad either side, at least `min_w` device px.
-static int time_field_w_px(double cell_w, int min_w) {
-    return std::max(min_w, static_cast<int>(std::ceil(cell_w)) +
-                               2 * time_field_pad_px());
+// the pad either side (no least width since 2026-10-10, kTimeShape's block).
+static int time_field_w_px(double cell_w) {
+    return static_cast<int>(std::ceil(cell_w)) + 2 * time_field_pad_px();
 }
 
 void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
@@ -2726,16 +2718,17 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // ~00:30 — Cool Edit's 6 / 4 before it, the same sum): a group of n is
     // 5 + 5 + 23n + 5 + 6 = 23n + 21, so the block is the 7 verbs' 182, the walk's 113, the
     // arrows' 113 and the transport's 90 with three gaps of 2, 504 W — on the
-    // tablet's 768 at 300 % starting at W 264, the clock's group W 2..107
-    // (Tahoma's ~66-W cell in the 85-W field), the state line's first ink at
-    // W 113, clipped at W 262 (~149 W of line). IN THE `h` VIEW (the hide,
+    // tablet's 768 at 300 % starting at W 264, the clock's group W 2..97
+    // (Tahoma's ~67-W cell and its two 4-W pads, a ~75-W field; 2026-10-10),
+    // the state line's first ink at W 103, clipped at W 262 (~159 W of
+    // line). IN THE `h` VIEW (the hide,
     // 2026-10-07; Open Text Editor hidden there with the verbs) the block is
     // 1 verb + 4 walk + 2 arrows + 2 transport in four groups, 44 + 113 + 67
-    // + 67 + 6 = 297 W, the line's room 356 W. THE ROW CARRIES NO COLLISION
+    // + 67 + 6 = 297 W, the line's room 366 W. THE ROW CARRIES NO COLLISION
     // RULE — none of the redesign does — and the crop-at-the-floor allowance
     // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
-    // the clock's group once the window falls below about 2 + 106 + 504 =
-    // 612 W outside the view. THE STATE
+    // the clock's group once the window falls below about 2 + 96 + 504 =
+    // 602 W outside the view. THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.
     int right_block_x = content.x + content.w;
@@ -2827,12 +2820,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double cell_w = tm.time_w + sep_w + tm.letter_w;
         // THE CLOCK'S GROUP: two W of face in from the lane's left edge, the
         // gripper, the group's 5-W air, the field (its widest string and its
-        // pads, at least the mock's 85 W), the same air, the end bar.
+        // pads), the same air, the end bar.
         const int group_x = content.x + group_gap;
         paint_ce_gripper(cr, group_x, btn_y, btn_h);
         const int field_x = group_x + grip_w + grip_face;
-        const int field_w = time_field_w_px(
-            cell_w, scaled_px(kProgramSpec.field_min_w_px));
+        const int field_w = time_field_w_px(cell_w);
         const GuiRect clock_field =
             time_field_rect(field_x, field_w, btn_y, btn_h);
         paint_ce_time_field(cr, clock_field);
@@ -2856,17 +2848,14 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const double baseline =
             redesign_baseline(font, static_cast<double>(clock_field.y),
                               static_cast<double>(clock_field.h));
-        // THE CELL'S RIGHT EDGE, the cell CENTERED in the field (kTimeShape's
-        // block, architect 2026-10-09) — the right pad plus half the floor's
-        // surplus where the 85-W floor wins, the right pad alone where the
-        // cell fills the field; its left edge, where the digits start, the
+        // THE CELL'S RIGHT EDGE IS THE FIELD'S RIGHT PAD — with no floor
+        // (removed 2026-10-10; Cool Edit's mock of 2026-10-09 set one, the cell
+        // centered in its surplus) the field is the cell and its two pads, so
+        // this is the one case; its left edge, where the digits start, the
         // ceiled cell short of it.
         const int cell_ceil = static_cast<int>(std::ceil(cell_w));
-        const int surplus =
-            std::max(0, field_w - (cell_ceil + 2 * time_field_pad_px()));
-        const int cell_end =
-            field_x + field_w - time_field_pad_px() - surplus / 2;
-        const int cell_x = cell_end - cell_ceil;
+        const int cell_end  = field_x + field_w - time_field_pad_px();
+        const int cell_x    = cell_end - cell_ceil;
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // app_state.h — the stash contract is at the field). One pixel of slack
@@ -3828,6 +3817,17 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
             show_row_run(hot_runs[i], hot_x);
         }
         iy += item_h;
+    }
+
+    // THE DIAGNOSTIC TRACE'S FRAME LINE (trace_combo.h, 2026-10-10): the lit
+    // row as this run painted it, with the run's clip.
+    if (trace_combo::gate()) {
+        double cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0;
+        cairo_clip_extents(cr, &cx0, &cy0, &cx1, &cy1);
+        TRACE_COMBO("paint.dropdown",
+                    "menu=%d hover=%d pressed=%d clip=%.0f,%.0f,%.0f,%.0f",
+                    static_cast<int>(menu), app.dropdown.hovered_item,
+                    app.dropdown.pressed_item, cx0, cy0, cx1, cy1);
     }
 
     cairo_restore(cr);
@@ -5544,6 +5544,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // indices name, and the face-state reset below is what keeps them from
     // outliving it.
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    // THE DIAGNOSTIC TRACE'S GATE (trace_combo.h, 2026-10-10), refreshed on
+    // every frame beside the run loop's settled tail (main.cpp).
+    trace_combo::refresh_gate(
+        app.dropdown.open() || text_editor::is_active(app.settings_editor),
+        "paint");
     const uint64_t prev_session = dlg.session;
     // THE OUTGOING ENABLED BITS, AS PAINTED — read before the reset clears the
     // stash, for the player row's as-painted publication at the button walk
@@ -6170,13 +6175,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // fixed-width rule at kTimeShape's block), its cell the widest-digit
         // specimen alone (time_field_metrics, row 8's own memo), so neither
         // field nor anything right of it moves as the position runs or an
-        // item of another length loads — the cell and its pads, no least
-        // width (row 8's clock's 85 is its own).
+        // item of another length loads — the cell and its pads, as row 8's
+        // clock is.
         const GuiFont cfont = gui_font(GuiFace::Body);
         const double cell_w =
             time_field_metrics(cfont).time_w;
         const int field_pad = time_field_pad_px();
-        const int field_w   = time_field_w_px(cell_w, 0);
+        const int field_w   = time_field_w_px(cell_w);
         const int field_gap = scaled_px(kTimeFieldGapPx);
         const int clock_w   = field_w + field_gap + field_w;
 
@@ -6789,6 +6794,28 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.box     = lane;
     dlg.session = live_session;
     dlg.valid   = true;
+    // THE DIAGNOSTIC TRACE'S FRAME LINE (trace_combo.h, 2026-10-10): the
+    // dialog's faces as this run painted them, with the run's clip, so a
+    // blink reads as two consecutive runs disagreeing.
+    if (trace_combo::gate()) {
+        double cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0;
+        cairo_clip_extents(cr, &cx0, &cy0, &cx1, &cy1);
+        const AppState::SettingsChoice& ch = app.settings_choice;
+        TRACE_COMBO("paint.dialog",
+                    "owner=%d choice=%d shown=%d list_open=%d list_hover=%d "
+                    "list_pressed=%d focus=%d focus_active=%d pressed=%d "
+                    "inside=%d key_pressed=%d player_hot=%d clip=%.0f,%.0f,"
+                    "%.0f,%.0f",
+                    static_cast<int>(dlg.owner),
+                    app.settings_choice_live() ? 1 : 0, ch.shown,
+                    ch.list_open ? 1 : 0, ch.list_hover, ch.list_pressed,
+                    app.modal_dialog_focus,
+                    app.modal_dialog_focus_active ? 1 : 0,
+                    app.modal_dialog_pressed,
+                    app.modal_dialog_press_inside ? 1 : 0,
+                    app.modal_dialog_key_pressed, app.player_hot, cx0, cy0,
+                    cx1, cy1);
+    }
     cairo_restore(cr);
 }
 

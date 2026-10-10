@@ -48,6 +48,7 @@
 #include "selection.h"
 #include "settings_editor.h"
 #include "settings_io.h"
+#include "trace_combo.h"   // the diagnostic trace of 2026-10-10
 #include "render_cache.h"
 #include "target_render.h"
 #include "text_editor.h"
@@ -2004,12 +2005,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // until a RETURN motion recomputes. One call clears both faces AND the press
     // claim (clear_dropdown_pointer_state), and dropping the claim is what
     // leaves a re-entry's motion and any later release owning nothing; the MENU
-    // ITSELF STAYS UP, because leaving the window is not a dismissal.
+    // ITSELF STAYS UP, because leaving the window is not a dismissal. THE
+    // PEN'S HOVER END (PenHoverEnd) KEEPS THE FACES and drops the claim alone
+    // (architect 2026-10-10: the HOVER_EXIT before every tip DOWN blinked the
+    // row — the rule at GuiPointerLeaveReason, input_core.h).
     // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (end_tooltip_hover), and it
     // must end HERE rather than be left to the tick's hover recompute, which
     // refuses outright while the pointer is outside. THE REASON FORKS IT: the
-    // ORDINARY leave, capability loss and the pen's hover leaving the plane
-    // (all OrdinaryLeave) are HARD ends (architect
+    // ORDINARY leave, capability loss (OrdinaryLeave) and the pen's hover
+    // ending (PenHoverEnd) are HARD ends (architect
     // 2026-10-06, Windows 95's: leaving the tool hides a tooltip at once) —
     // the box goes down in this same event, through the one hide that
     // damages the box's own published rect as well as the strip (the box
@@ -2022,8 +2026,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (end_tooltip_hover). (The S Pen's lift off an empty glass never reaches
     // this body since 2026-10-07: the pen stays the pointer at its lift, the
     // restore motion's arm — pointer_focus_at.) Every other effect here
-    // reads every reason alike.
+    // reads every reason alike but one: the open popup's lit row, which the
+    // pen's hover end keeps (the popup's paragraph above).
     gui.set_pointer_left_hook([&](GuiPointerLeaveReason reason) {
+        TRACE_COMBO("hook.leave",
+                    "reason=%d in_window_was=%d dd_hover=%d dd_pressed=%d",
+                    static_cast<int>(reason), app.pointer_in_window ? 1 : 0,
+                    app.dropdown.hovered_item, app.dropdown.pressed_item);
         app.pointer_in_window = false;
         using TooltipHoverEnd = GuiInputHandler::TooltipHoverEnd;
         input_handler.end_tooltip_hover(
@@ -2047,7 +2056,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // not happened yet, and the pointer is on no button now (the contract
         // is at clear_modal_dialog_press).
         input_handler.clear_modal_dialog_press();
-        input_handler.clear_dropdown_pointer_state();
+        // THE OPEN POPUP'S LIT ROW STAYS LIT ACROSS THE PEN'S HOVER END
+        // (architect 2026-10-10, "the word Pick Colors blinks": the HOVER_EXIT
+        // before every tip DOWN darkened it for a frame; the rule at
+        // GuiPointerLeaveReason's PenHoverEnd, input_core.h): the one
+        // predicate keeps the face, the press claim still dropped. Every
+        // other reason clears both faces as ever.
+        input_handler.clear_dropdown_pointer_state(
+            pointer_leave_keeps_lit_rows(reason));
         // THE RENDER PLAYER'S TWO ARMS go on the same edge (2026-08-28) — the
         // overlay's row press and the scrub's marker drag, both acts that
         // have not happened yet and both dropped uncommitted here exactly as
@@ -2201,6 +2217,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // and the hover walk reads nothing it writes — so the order here stays
     // free.
     gui.set_loop_settled_hook([&](GuiInputState mods) {
+        // THE DIAGNOSTIC TRACE'S GATE (trace_combo.h, 2026-10-10): a pull-down
+        // menu or the Settings editor open.
+        trace_combo::refresh_gate(
+            app.dropdown.open() || text_editor::is_active(app.settings_editor),
+            "settled");
         input_handler.refresh_pointer_cursor(mods);
         input_handler.recompute_dropdown_hover(mods);
         input_handler.sync_nav_drag_mode(mods);

@@ -537,7 +537,9 @@ struct Viewport {
     // player's three included; the per-tick comparator in main.cpp calls here
     // for the hint changes no row damage carries (the previous-track window's
     // edge under a playing item, which only the clock's cell damages).
-    void invalidate_modal_dialog_area();
+    // `caller` names the requesting function for the diagnostic trace of
+    // 2026-10-10 alone (trace_combo.h), filled at the call site.
+    void invalidate_modal_dialog_area(const char* caller = __builtin_FUNCTION());
     // The unified bottom row's CLOCK CELL, and the authoritative inventory of
     // who wants it
     // (2026-08-11, when the timestamp moved off the status line and the one
@@ -633,7 +635,8 @@ struct Viewport {
     // invalidate_waveform_area in 2026-07-30 and then deleted outright with
     // Selection's stem subject pair, because stems no longer key on selection
     // at all.)
-    void invalidate_top_strip();
+    // `caller` as at invalidate_modal_dialog_area (the trace of 2026-10-10).
+    void invalidate_top_strip(const char* caller = __builtin_FUNCTION());
     void invalidate_all();
     // THE WHOLE SURFACE, the window's sizing frame with it (2026-10-09;
     // GuiPlatform::invalidate_surface, the rule at platform.h): a live

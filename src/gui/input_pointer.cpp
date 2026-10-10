@@ -9,6 +9,7 @@
 #include "paint_handler.h"
 #include "render.h"
 #include "text_editor.h"
+#include "trace_combo.h"   // the diagnostic trace of 2026-10-10
 
 #include <algorithm>
 #include <cmath>
@@ -3619,6 +3620,8 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
 void GuiInputHandler::set_player_hot(int index) {
     const uint64_t session = index >= 0 ? app.modal_dialog.session : 0;
     if (index == app.player_hot && session == app.player_hot_session) return;
+    TRACE_COMBO("modal.player_hot", "%d->%d (damages the modal box)",
+                app.player_hot, index);
     app.player_hot         = index;
     app.player_hot_session = session;
     if (app.modal_dialog.valid)
@@ -4037,6 +4040,8 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
 // down on a focused button must not leave that Enter able to fire a second
 // act at its release. A prompt has no field and never calls this.
 bool GuiInputHandler::return_modal_focus_to_field() {
+    TRACE_COMBO("modal.focus_to_field", "focus %d->-1",
+                app.modal_dialog_focus);
     if (app.modal_dialog_focus < 0) return false;
     clear_modal_dialog_key_press();
     app.modal_dialog_focus        = -1;
@@ -5786,6 +5791,7 @@ bool GuiInputHandler::claim_settings_choice_press(GuiMouseButton button,
         }
         const int hit = current ? settings_choice_list_hit(app.modal_dialog, x, y)
                                 : -1;
+        TRACE_COMBO("choice.press", "list_open hit=%d", hit);
         if (plain_left && hit >= 0) settings_editor.choice_arm_row(hit);
         else                        settings_editor.set_choice_list_open(false);
         return true;
@@ -5793,6 +5799,8 @@ bool GuiInputHandler::claim_settings_choice_press(GuiMouseButton button,
     if (plain_left && current && rect_contains(app.modal_dialog.combo, x, y)) {
         // THE COMBO TAKES THE FOCUS BACK AT THE PRESS, the field's own rule
         // (return_modal_focus_to_field), then drops its list.
+        TRACE_COMBO("choice.press", "on_combo focus=%d",
+                    app.modal_dialog_focus);
         (void)return_modal_focus_to_field();
         settings_editor.set_choice_list_open(true);
         return true;
@@ -5813,6 +5821,7 @@ bool GuiInputHandler::finish_settings_choice_release(int x, int y) {
     const int hit = modal_dialog_stash_current()
                         ? settings_choice_list_hit(app.modal_dialog, x, y)
                         : -1;
+    TRACE_COMBO("choice.release", "hit=%d", hit);
     // THE LIFT ON A ROW SHOWS IT AND COMMITS NOTHING (architect 2026-10-09:
     // OK commits, Cancel discards — GuiSettingsEditor::choice_pick).
     if (hit >= 0) settings_editor.choice_pick(hit);
@@ -5840,12 +5849,16 @@ void GuiInputHandler::settings_choice_motion(int x, int y) {
     // soon as the pen touches the drop-down button, the entry blinks"):
     // Windows' combo list moves its highlight only under a pointer over its
     // items, and a pointer anywhere else — the combo the list dropped from
-    // among it — leaves the last lit row lit. The blink was this walk
-    // answering "no row" at the pen's own contact: the press drops the list
+    // among it — leaves the last lit row lit. Before this rule the walk
+    // answered "no row" at the pen's own contact: the press drops the list
     // with the shown row lit (choice's seed, set_choice_list_open), and the
     // contact's next motion over the combo — the tip's jitter, or the
     // restore motion at its lift, which runs before the latch arms — put it
-    // out a frame later. A pointer off the rows is no act on the list, so
+    // out a frame later. (That was one half of what he saw, the contact's
+    // own motions; the blink outlived it, and on the open menu's row it was
+    // the pen's HOVER_EXIT before the DOWN, whose leave darkens no lit row
+    // since 2026-10-10 — GuiPointerLeaveReason's PenHoverEnd, input_core.h.)
+    // A pointer off the rows is no act on the list, so
     // it changes no face (the pen latch's own principle, pen_hot_latch_);
     // the lift off the rows still closes the list with nothing shown
     // (finish_settings_choice_release), the lit row being a face, not a
@@ -5854,12 +5867,20 @@ void GuiInputHandler::settings_choice_motion(int x, int y) {
     const int hit = modal_dialog_stash_current()
                         ? settings_choice_list_hit(app.modal_dialog, x, y)
                         : -1;
+    TRACE_COMBO("choice.motion", "hit=%d list_hover=%d", hit,
+                app.settings_choice.list_hover);
     if (hit >= 0) settings_editor.choice_hover(hit);
 }
 
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
+    TRACE_COMBO("gui.press",
+                "button=%d x=%d y=%d dd_hover=%d list_open=%d list_hover=%d "
+                "focus=%d",
+                static_cast<int>(button), x, y, app.dropdown.hovered_item,
+                app.settings_choice.list_open ? 1 : 0,
+                app.settings_choice.list_hover, app.modal_dialog_focus);
     // ANY PRESS IS THE TOOLTIP'S HARD END, above every gate — Windows hides a
     // tooltip at a click ("About Tooltip Controls"), and a hint left floating
     // over the thing the user just clicked is noise. The release is one too
@@ -7827,6 +7848,12 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
 // live state by the platform).
 void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
                                         int y, GuiInputState mods) {
+    TRACE_COMBO("gui.release",
+                "button=%d x=%d y=%d dd_hover=%d list_open=%d list_hover=%d "
+                "focus=%d",
+                static_cast<int>(button), x, y, app.dropdown.hovered_item,
+                app.settings_choice.list_open ? 1 : 0,
+                app.settings_choice.list_hover, app.modal_dialog_focus);
     // THE TOOLTIP'S HELD BIT, above every return: the platform's own answer
     // with this release (the left's release reads up; another button's reads
     // whatever the left still is), so a wait may start again — on the next
@@ -8404,6 +8431,7 @@ void GuiInputHandler::arm_pen_hot_latch() {
     // the arm has no business re-noting). The lit rows need nothing: the
     // restore motion left them on the row the contact last lit, and their
     // walks hold it from here.
+    TRACE_COMBO("latch.arm", "was_armed=%d", pen_hot_latch_.armed ? 1 : 0);
     pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
                                  .x = 0, .y = 0};
     recompute_redesign_button_hover();
@@ -8411,6 +8439,8 @@ void GuiInputHandler::arm_pen_hot_latch() {
 }
 
 void GuiInputHandler::clear_pen_hot_latch() {
+    TRACE_COMBO("latch.clear_leave", "was_armed=%d",
+                pen_hot_latch_.armed ? 1 : 0);
     pen_hot_latch_.armed = false;
 }
 
@@ -8782,6 +8812,9 @@ void GuiInputHandler::recompute_dropdown_hover(GuiInputState mods) {
     const int armed = press_live ? hit : app.dropdown.pressed_item;
     if (app.dropdown.hovered_item == hit &&
         app.dropdown.pressed_item == armed) return;
+    TRACE_COMBO("dd.hover", "hover %d->%d pressed %d->%d",
+                app.dropdown.hovered_item, hit, app.dropdown.pressed_item,
+                armed);
     app.dropdown.hovered_item = hit;
     app.dropdown.pressed_item = armed;
     // ONE DAMAGE PAIR FOR BOTH ITEMS. The popup's WHOLE published box is
@@ -10337,8 +10370,17 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
 // arithmetic. It is transition-gated like the roster clears beside it; with the
 // menu closed both indices are already -1 (the struct reset) and this is a
 // compare, which is also why the zero rect is never handed to the damage.
-void GuiInputHandler::clear_dropdown_pointer_state() {
+// `keep_faces` — the pen's hover end (GuiPointerLeaveReason::PenHoverEnd,
+// pointer_leave_keeps_lit_rows; architect 2026-10-10, "the word Pick Colors
+// blinks") — drops the claim alone and leaves both faces as painted: the
+// HOVER_EXIT before every tip DOWN is no pointer leaving the menu, and the
+// DOWN's own walk re-derives them (on the same row, no change).
+void GuiInputHandler::clear_dropdown_pointer_state(bool keep_faces) {
+    TRACE_COMBO("dd.clear_pointer", "keep_faces=%d hover=%d pressed=%d",
+                keep_faces ? 1 : 0, app.dropdown.hovered_item,
+                app.dropdown.pressed_item);
     app.dropdown.press_began_on_item = false;
+    if (keep_faces) return;
     if (app.dropdown.hovered_item < 0 && app.dropdown.pressed_item < 0) return;
     app.dropdown.hovered_item = -1;
     app.dropdown.pressed_item = -1;
@@ -10770,6 +10812,12 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // at the cursor's last position.
     app.last_mouse_x = mouse_x;
     app.last_mouse_y = mouse_y;
+    TRACE_COMBO("gui.motion",
+                "x=%d y=%d held=%d in_window_was=%d dd_hover=%d "
+                "list_hover=%d",
+                mouse_x, mouse_y, mods.primary_button_held ? 1 : 0,
+                app.pointer_in_window ? 1 : 0, app.dropdown.hovered_item,
+                app.settings_choice.list_hover);
     app.pointer_in_window = true;
     // THE PEN'S HOT-FACE LATCH ANCHORS AT THE FIRST HOVER REPORT AND CLEARS
     // ON MOTION OFF THAT ANCHOR (pen_hot_latch_, the rule at its
@@ -10782,10 +10830,14 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         pen_hot_latch_.anchored = true;
         pen_hot_latch_.x = mouse_x;
         pen_hot_latch_.y = mouse_y;
+        TRACE_COMBO("latch.anchor", "x=%d y=%d", mouse_x, mouse_y);
     } else if (pen_hot_latch_.armed &&
                std::max(std::abs(mouse_x - pen_hot_latch_.x),
                         std::abs(mouse_y - pen_hot_latch_.y)) >=
                    scaled_px(kPenHotRearmPx)) {
+        TRACE_COMBO("latch.clear_motion", "dist=%d",
+                    std::max(std::abs(mouse_x - pen_hot_latch_.x),
+                             std::abs(mouse_y - pen_hot_latch_.y)));
         pen_hot_latch_.armed = false;
     }
     // THE RELEASE-TIME ARMS END HERE ON THE BUTTON-LOST EDGE,
