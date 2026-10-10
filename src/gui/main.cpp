@@ -3486,18 +3486,9 @@ int gui_main(const char* argument) {
         }
         device_config = *cfg;
     }
-    // THE CHROME IS CHOSEN HERE, ONCE (architect 2026-10-07, chrome_spec.h's
-    // live_chrome_spec): the config's `chrome`, judged by its reader, names
-    // the vocabulary the whole process paints — its lanes, its
-    // icon set (unless the config's `icons` names another) and its compiled
-    // theme — before anything reads the spec: the
-    // icon set's load below, the palette's install, the window and the
-    // first paint. A `chrome` commit in Settings writes the file and
-    // takes effect at the next launch (commit_device_setting).
-    set_live_chrome_spec(device_config.chrome);
-    // THE FACE IS CHOSEN BESIDE IT (architect 2026-10-09 ~21:20, gui_font.h's
+    // THE FACE IS CHOSEN HERE (architect 2026-10-09 ~21:20, gui_font.h's
     // gui_live_face_set): the config's `font`, judged by its reader, tahoma
-    // with no line, under every chrome. The faces were installed earlier on
+    // with no line. The faces were installed earlier on
     // Android (android_main, before this function) and need nothing from
     // it: the install measured every set's ems (gui_font_bundled.cpp), and
     // the face caches are built at the first paint. A `font` commit in

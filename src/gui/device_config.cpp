@@ -5,7 +5,6 @@
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 #include "palette_file.h"      // is_palette_name, is_scheme_name and their reasons
-#include "chrome_spec.h"       // is_chrome_key, kChromeGrammarReason
 #include "icons.h"             // is_icon_set_key, kIconSetGrammarReason
 #include "gui_font.h"          // is_font_key, kFontGrammarReason
 
@@ -22,8 +21,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, the required
-// set below its subset (NINE keys since 2026-10-09 ~21:20, `font`
-// appended; eight 2026-10-09, `icons` appended;
+// set below its subset (EIGHT keys since 2026-10-10, `chrome` gone;
+// nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09, `icons` appended;
 // seven 2026-10-08, `theme` gone; the
 // count's succession, up to seventeen with the tuning phases of
 // 2026-09-23..27 and nineteen with the colour keys of 2026-10-03..04, is the
@@ -33,33 +32,29 @@ namespace {
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). The writer's list and the required
-// list stand side by side below, the second the first less its five keys
+// list stand side by side below, the second the first less its four keys
 // that may be absent (2026-10-07; until then one list served both, so no
 // key could be written and not demanded — the absent-able keys are the
 // deliberate exception, each saying what its absence means).
 //
-// `chrome` FOLLOWS last_project (2026-10-07), `scheme` FOLLOWS IT
-// (2026-10-08 ~18:15), the chrome's colors after the chrome, and `palette`
-// FOLLOWS THAT (2026-10-07), the program's colors after the chrome's;
-// `icons` is APPENDED after it (2026-10-09), and `font` after that
-// (2026-10-09 ~21:20).
-// (`theme` stood after `chrome` 2026-10-03..10-08, the header's record.)
+// `scheme` FOLLOWS last_project (2026-10-08 ~18:15), the chrome's colors, and
+// `palette` FOLLOWS THAT (2026-10-07), the program's colors after the
+// chrome's; `icons` is APPENDED after it (2026-10-09), and `font` after that
+// (2026-10-09 ~21:20). (`chrome` stood after last_project 2026-10-07 to
+// 2026-10-10, `theme` 2026-10-03..10-08, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
     "projects_path",
     "last_project",
-    "chrome",
     "scheme",
     "palette",
     "icons",
     "font",
 };
-// THE REQUIRED SET — every key above but the five that may be ABSENT
-// (architect 2026-10-07): `chrome`, absent reading as windows-2000 (the
-// default chrome since 2026-10-07 ~22:45, kDefaultChromeKey; a config
-// written before the key existed loads, in the default chrome), `scheme`
-// (2026-10-08), absent meaning the chrome's own scheme, `palette`,
+// THE REQUIRED SET — every key above but the four that may be ABSENT
+// (architect 2026-10-07): `scheme` (2026-10-08), absent meaning the chrome's
+// own scheme, `palette`,
 // absent meaning the default palette (Cool Edit's "Default" under every
 // chrome, 2026-10-09), `icons` (2026-10-09),
 // absent meaning the chrome's own icon set, and `font` (2026-10-09),
@@ -130,10 +125,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "last_project") {
             // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
-        } else if (k == "chrome") {
-            // The vocabulary's key verbatim, always written (the default's
-            // too, so a file once rewritten names its chrome).
-            s += cfg.chrome;
         } else if (k == "scheme") {
             // The name verbatim (printable ASCII, palette_file.h's grammar).
             s += cfg.scheme;
@@ -145,8 +136,8 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += cfg.icons;
         } else if (k == "font") {
             // The face's key verbatim, always written (the default's too,
-            // the chrome's rule: "no default setting because it's a
-            // drop-down", architect 2026-10-09).
+            // ("no default setting because it's a drop-down",
+            // architect 2026-10-09).
             s += cfg.font;
         }
         s += '\n';
@@ -218,16 +209,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                     "must be one folder name, not a path");
             }
             out.last_project = value;
-            return {};
-        }
-        // THE CHROME (architect 2026-10-07): a vocabulary's key under its one
-        // grammar owner (is_chrome_key, chrome_spec.h); absent, the struct's
-        // windows-2000 stands (kDefaultChromeKey).
-        if (key == "chrome") {
-            if (!is_chrome_key(value)) {
-                return bad_value(ln, key, value, kChromeGrammarReason);
-            }
-            out.chrome = value;
             return {};
         }
         // THE SCHEME (2026-10-08) AND THE PALETTE (2026-10-07): a built-in's

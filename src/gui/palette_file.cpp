@@ -144,27 +144,15 @@ static_assert(sizeof(GuiPalette) ==
                cool_edit_derive::kDisabledCueMemberCount) *
                   sizeof(GuiColor));
 
-// EACH CHROME'S OWN SCHEME IS A BUILT-IN SCHEME, AND THAT SCHEME IS THE
-// CHROME'S COMPILED CAPTION KEY FOR KEY (the generator's transcription and
-// the hand-recorded caption agree): so the scheme that carries no keys
-// under its own chrome (scheme_record) is no loss of a word. The captions'
-// table and the specs' run in the vocabularies' order (the preset menu's
-// built-in schemes lead with the chromes' own in this order,
-// color_picker::preset_menu_rows).
-constexpr bool own_schemes_are_their_chromes_captions() {
-    if (std::size(kGuiChromeSpecs) != std::size(kGuiChromeCaptions))
-        return false;
-    for (std::size_t c = 0; c < std::size(kGuiChromeCaptions); ++c) {
-        const GuiChromeScheme* b = builtin_scheme(kGuiChromeSpecs[c]->own_scheme);
-        if (b == nullptr) return false;
-        if (std::string_view(kGuiChromeCaptions[c].chrome) !=
-            kGuiChromeSpecs[c]->key)
-            return false;
-        if (b->chrome != *kGuiChromeCaptions[c].caption) return false;
-    }
-    return true;
+// THE CHROME'S OWN SCHEME IS A BUILT-IN SCHEME, AND THAT SCHEME IS THE
+// COMPILED CAPTION KEY FOR KEY (the generator's transcription and the
+// hand-recorded caption agree): so the scheme that carries no keys (scheme_record)
+// is no loss of a word.
+constexpr bool own_scheme_is_the_compiled_caption() {
+    const GuiChromeScheme* b = builtin_scheme(kChromeSpecWin2000.own_scheme);
+    return b != nullptr && b->chrome == chrome_caption();
 }
-static_assert(own_schemes_are_their_chromes_captions());
+static_assert(own_scheme_is_the_compiled_caption());
 
 // WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S SIX (the catalog's
 // windows-me-standard, kept as an entry under Me's name; the generator

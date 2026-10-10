@@ -379,24 +379,15 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "projects_repo") return app.projects_repo;
     if (key == "projects_path" && app.device_config != nullptr)
         return app.device_config->projects_path;
-    // THE CHROME (2026-10-07), verbatim — the struct holds it as typed and
-    // the file writes it so. The recall is the live value, a vocabulary's
-    // key (is_chrome_key), so a recalled line commits back as an unchanged
-    // no-op.
-    if (key == "chrome" && app.device_config != nullptr)
-        return app.device_config->chrome;
     // THE ICON SET (2026-10-09): THE EFFECTIVE SET, the one deliberate
     // departure from the byte-exact recall — with no `icons` line the
-    // chrome's own (effective_icon_set, icons.h), resolved against the
-    // config's `chrome`, the next launch's, so the Icons row's combo shows
-    // the set that launch will load. Its commit writes no line for the
+    // chrome's own (effective_icon_set, icons.h), so the Icons row's combo
+    // shows the set the next launch will load. Its commit writes no line for the
     // chrome's own (commit_device_setting), so the recall commits back as
     // an unchanged no-op either way.
     if (key == "icons" && app.device_config != nullptr) {
-        const ChromeSpec* chrome = chrome_spec_for_key(app.device_config->chrome);
-        assert(chrome != nullptr);
-        return std::string(
-            icons::effective_icon_set(app.device_config->icons, *chrome));
+        return std::string(icons::effective_icon_set(
+            app.device_config->icons, live_chrome_spec()));
     }
     // THE FONT (2026-10-09 ~21:20), verbatim — the struct holds it as typed
     // (tahoma when the file has no line, the struct's default) and the file

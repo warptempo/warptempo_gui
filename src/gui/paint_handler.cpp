@@ -1289,12 +1289,11 @@ struct CaptionGlyphPoint {
 constexpr int kCaptionGlyphCellPx = 9;
 constexpr int kCaptionGlyphSeatXPx = 3;
 constexpr int kCaptionGlyphSeatYPx = 2;
-// The cell fits every vocabulary's caption button (chrome_spec.h's
-// caption_button_* fields).
-static_assert(chrome_specs_all([](const ChromeSpec& s) {
-    return kCaptionGlyphSeatXPx + kCaptionGlyphCellPx <= s.caption_button_w_px &&
-           kCaptionGlyphSeatYPx + kCaptionGlyphCellPx <= s.caption_button_h_px;
-}));
+// The cell fits the caption button (chrome_spec.h's caption_button_* fields).
+static_assert(kCaptionGlyphSeatXPx + kCaptionGlyphCellPx <=
+                  kChromeSpecWin2000.caption_button_w_px &&
+              kCaptionGlyphSeatYPx + kCaptionGlyphCellPx <=
+                  kChromeSpecWin2000.caption_button_h_px);
 constexpr CaptionGlyphRect kCaptionMinimizeGlyph[] = {{0, 7, 7, 2}};
 constexpr CaptionGlyphRect kCaptionMaximizeGlyph[] = {
     {0, 0, 9, 2}, {0, 2, 1, 6}, {8, 2, 1, 6}, {0, 8, 9, 1}};
@@ -5161,7 +5160,7 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
     }
     if (text_editor::is_active(app.settings_editor)) {
         // A CHOICE EDITOR'S LABEL IS ITS ROW'S (2026-10-07 evening): the
-        // menu row's own word ("Chrome") in the dialogs' `<word>:` form, the
+        // menu row's own word ("Icons") in the dialogs' `<word>:` form, the
         // combo beside it carrying no key to read; the text editor keeps
         // "Setting:" before its `key=value` line.
         prefix = app.settings_choice_live()

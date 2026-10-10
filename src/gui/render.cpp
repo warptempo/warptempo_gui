@@ -2456,7 +2456,7 @@ void fill_program_palette(const GuiPaletteWords& w) {
 void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
     g_chrome_pick = chrome;
     const GuiThemeWords w =
-        live_chrome_words(live_chrome_spec(), g_program_words, chrome);
+        live_chrome_words(g_program_words, chrome);
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
         g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
 }

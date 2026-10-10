@@ -3,7 +3,7 @@
 #include "input_handler.h"
 #include "render_output_naming.h"
 #include "device_config.h"
-#include "chrome_spec.h"       // is_chrome_key, kChromeGrammarReason
+#include "chrome_spec.h"       // live_chrome_spec (the icon set's default)
 #include "icons.h"             // is_icon_set_key, kIconSetGrammarReason
 #include "gui_font.h"          // is_font_key, kFontGrammarReason, set_live_font
 #include "settings_io.h"
@@ -410,8 +410,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // spelling through parse_authored_frame and the RANGE through
     // is_gui_scale_percent (device_config.h), which is the very predicate that
     // file's reader runs, so "loadable iff it commits" still holds across the
-    // move. (The other five editable device keys — projects_repo and, since
-    // 2026-09-02, projects_path, since 2026-10-07 chrome, since
+    // move. (The other four editable device keys — projects_repo and, since
+    // 2026-09-02, projects_path, since
     // 2026-10-09 icons and since 2026-10-09 font — take their one
     // direct-set body in commit(),
     // commit_device_setting, ahead of this router.)
@@ -1066,9 +1066,8 @@ void GuiSettingsEditor::commit() {
 // THE ONE RECORDED EDGE: the picker's same-project no-op compares NAMES
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
-// project is opened first — a rename-by-hand case, accepted. `chrome`
-// (2026-10-07) and `icons` (2026-10-09): AT THE NEXT LAUNCH alone, each
-// card saying so (their arms). `font` (2026-10-09 ~21:20): AT ONCE, live,
+// project is opened first — a rename-by-hand case, accepted. `icons`
+// (2026-10-09): AT THE NEXT LAUNCH alone, its card saying so (its arm). `font` (2026-10-09 ~21:20): AT ONCE, live,
 // no card (its arm). For a choice row "the commit" is the OK's or Enter's,
 // never a list row's (architect 2026-10-09, settings_editor.h's head).
 // (`theme`, in force at once with the palette repainted whole, had an arm
@@ -1115,45 +1114,23 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         text_editor::deactivate(app.settings_editor);
     };
 
-    // THE CHROME (architect 2026-10-07): a vocabulary's key under its one
-    // grammar owner (is_chrome_key, chrome_spec.h) — any other word the
-    // refusal, the refused field and the card, this body's shape — kept as
-    // typed and written at once. IT CANNOT APPLY LIVE: its faces, lanes,
-    // icon set and compiled colors are built once at launch
-    // (set_live_chrome_spec, install_palette, gui_main) — so the commit
-    // changes nothing on screen and SAYS WHERE IT APPLIES on its card, the
-    // projects path's rule (kChromeAppliesCard, raised only when the write
-    // succeeded: the next launch reads the file).
-    if (key == "chrome") {
-        if (!is_chrome_key(value)) { reject(kChromeGrammarReason); return true; }
-        if (value == app.device_config->chrome) { unchanged(); return true; }
-        app.device_config->chrome = value;
-        const bool written = persist();
-        applied();
-        if (written)
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kChromeAppliesCard);
-        return true;
-    }
-
-    // THE ICON SET (architect 2026-10-09): the Chrome arm's road exactly — a
-    // bundled set's key under its one grammar owner (is_icon_set_key,
-    // icons.h), written at once, applied at the next launch and SAID so on
-    // its card (kIconsAppliesCard) — with the palette's rule for the
-    // chrome's own: A PICK OF THE CHROME'S OWN SET WRITES NO LINE (the empty
-    // value, device_config.h), "no line for a chrome's own default", judged
-    // against the config's `chrome`, the next launch's (the recall's
-    // ground, recall_gui_setting_value). A pick that leaves the file as it
-    // stands is the unchanged no-op.
+    // THE ICON SET (architect 2026-10-09): a bundled set's key under its one
+    // grammar owner (is_icon_set_key, icons.h), written at once, kept as
+    // typed on refusal, and IT CANNOT APPLY LIVE: the parsed set is built
+    // once at launch (set_live_icon_set, gui_main), so the commit changes
+    // nothing on screen and SAYS WHERE IT APPLIES on its card
+    // (kIconsAppliesCard, raised only when the write succeeded: the next
+    // launch reads the file) — with the palette's rule for the chrome's own:
+    // A PICK OF THE CHROME'S OWN SET WRITES NO LINE (the empty value,
+    // device_config.h), "no line for a chrome's own default". A pick that
+    // leaves the file as it stands is the unchanged no-op.
     if (key == "icons") {
         if (!icons::is_icon_set_key(value)) {
             reject(icons::kIconSetGrammarReason);
             return true;
         }
-        const ChromeSpec* chrome = chrome_spec_for_key(app.device_config->chrome);
-        assert(chrome != nullptr);
-        const std::string line = value == chrome->icon_set ? std::string()
-                                                           : value;
+        const std::string line =
+            value == live_chrome_spec().icon_set ? std::string() : value;
         if (line == app.device_config->icons) { unchanged(); return true; }
         app.device_config->icons = line;
         const bool written = persist();
@@ -1167,8 +1144,8 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // THE FONT (architect 2026-10-09 ~21:20: "the font is its own
     // drop-down"): a face's key under its one grammar owner (is_font_key,
     // gui_font.h), kept as typed and ALWAYS WRITTEN — the default's word too,
-    // the chrome's rule, "no default setting because it's a drop-down" — and,
-    // unlike the chrome and the icon set, APPLIED LIVE AT THE COMMIT — which
+    // "no default setting because it's a drop-down" — and, unlike the icon
+    // set, APPLIED LIVE AT THE COMMIT — which
     // is the OK's (or Enter's), never the list row's, the choice editor's
     // rule (architect 2026-10-09, settings_editor.h's head: a row only
     // shows the face's name, and Cancel leaves the face as it stood): the
@@ -1333,8 +1310,8 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, chrome, icons, font — gui_scale
-    // and the last five the device config's — per-tab trim / read_only)
+    // gui_scale, projects_repo, projects_path, icons, font — gui_scale
+    // and the last four the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
     // output to what a Ctrl+S would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).

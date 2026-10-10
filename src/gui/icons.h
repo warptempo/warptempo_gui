@@ -212,8 +212,7 @@ static_assert(std::size(kIconSetKeys) == std::size(kIconSetDisplayNames));
 // THE `icons` KEY'S GRAMMAR — the ONE owner, asked by the device config's
 // reader (any other word the launch's first-error hard fail: a hand edit is
 // the only producer) and by the settings editor's Icons row (its refused
-// commit): a bundled set's key, byte for byte — chrome_spec.h's
-// is_chrome_key's shape.
+// commit): a bundled set's key, byte for byte.
 constexpr const char* icon_set_key_for(std::string_view v) {
     for (const char* k : kIconSetKeys)
         if (v == k) return k;
@@ -224,17 +223,14 @@ constexpr bool is_icon_set_key(std::string_view v) {
 }
 inline constexpr const char* kIconSetGrammarReason =
     "must be tango or mist";
-// EVERY CHROME'S OWN SET IS A BUNDLED ONE (ChromeSpec::icon_set, the set an
+// THE CHROME'S OWN SET IS A BUNDLED ONE (ChromeSpec::icon_set, the set an
 // absent `icons` line means).
-static_assert(chrome_specs_all([](const ChromeSpec& s) {
-    return is_icon_set_key(s.icon_set);
-}));
+static_assert(is_icon_set_key(kChromeSpecWin2000.icon_set));
 
-// THE SET A CONFIG MEANS under a chrome: its `icons` value, or with no line
-// (an empty value) that chrome's own (ChromeSpec::icon_set) — what the
-// launch loads (gui_live_icon_set) and what the Settings row shows
-// (recall_gui_setting_value, settings_io.cpp, against the config's own
-// `chrome`, the next launch's).
+// THE SET A CONFIG MEANS: its `icons` value, or with no line (an empty
+// value) the chrome's own (ChromeSpec::icon_set) — what the launch loads
+// (gui_live_icon_set) and what the Settings row shows
+// (recall_gui_setting_value, settings_io.cpp).
 inline std::string_view effective_icon_set(std::string_view icons,
                                            const ChromeSpec& chrome) {
     return icons.empty() ? std::string_view(chrome.icon_set) : icons;
@@ -242,7 +238,7 @@ inline std::string_view effective_icon_set(std::string_view icons,
 
 // THE LIVE SET (architect 2026-10-09): the device config's `icons`
 // override installed ONCE at launch (set_live_icon_set, gui_main, beside
-// set_live_chrome_spec and before load_svg_set), else the live chrome
+// the scale and before load_svg_set), else the live chrome
 // spec's own — effective_icon_set against the live chrome. A Settings
 // commit of `icons` writes the file and takes effect at the next launch,
 // the chrome's rule: the parsed set is built on it.

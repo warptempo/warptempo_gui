@@ -52,7 +52,7 @@ fail. Byte-stable like the others.
 SINCE 2026-10-10 THE APP'S CHROME INHERITS COOL EDIT (architect 2026-10-10: "the caption remains the only thing that's
 outside of Cool Edit"): every chrome role but the caption's six is a tone of the live palette (`src/gui/chrome_derive.h`),
 so what the app takes from this catalog is CAPTIONS alone. It compiles in ONE CAPTION PER CHROME
-(`src/gui/theme_file.h`'s head, `kGuiChromeCaptions`): `windows-2000-standard`'s for the `windows-2000` chrome,
+(`src/gui/theme_file.h`'s head): `windows-2000-standard`'s for the one chrome,
 HAND-RECORDED as `kGuiCaptionWin2000`, which `gen_theme_files.py` checks against the entry at every run. (The Clearlooks
 engine's tones, `build.py`'s `engine_tones`, are not computed since the clearlooks chrome's removal, 2026-10-09: its
 arithmetic read three files that left with that chrome and stands in git history at d5b91f52^. The committed

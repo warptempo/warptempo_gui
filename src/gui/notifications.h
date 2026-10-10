@@ -559,19 +559,10 @@ inline constexpr const char* kCheckpointPublishing =
 inline constexpr const char* kProjectsPathAppliesCard =
     "Projects path applies at the next Open project and the next launch";
 
-// THE CHROME COMMIT'S SENTENCE (architect 2026-10-07): a `chrome=` commit
-// from the settings editor rewrites the device config and changes nothing
-// on screen — the vocabulary's faces, lanes and icon set are built once at
-// launch (set_live_chrome_spec, chrome_spec.h) — so the press says where it
-// applies, the projects path's rule above: one clause, raised only when the
-// config write succeeded (GuiSettingsEditor::commit_device_setting).
-inline constexpr const char* kChromeAppliesCard =
-    "Chrome applies at the next launch";
-
 // THE ICON SET COMMIT'S SENTENCE (architect 2026-10-09): an `icons=` commit
 // changes nothing on screen either — the set is parsed once at launch
-// (set_live_icon_set, icons.h) — so it says where it applies, the chrome's
-// sentence's shape, raised only when the config write succeeded.
+// (set_live_icon_set, icons.h) — so it says where it applies, the projects
+// path's rule above, raised only when the config write succeeded.
 inline constexpr const char* kIconsAppliesCard =
     "Icons apply at the next launch";
 // (A `font=` commit raises no such card: the face moves live, the screen

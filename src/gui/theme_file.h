@@ -38,15 +38,15 @@
 // tooltip's border, and the six of the caption), the chrome's painters
 // written against them; the values are no longer Windows'.
 //
-// THE COMPILED CAPTION, ONE PER CHROME (kGuiChromeCaptions below, resolved
-// by the chrome's key, chrome_caption): the caption a config with no
-// `scheme` line paints, the six caption keys of the chrome's own scheme
-// (chrome_spec.h's own_scheme):
-//   `windows-2000` wears WINDOWS 2000's "Windows Standard" caption
-//     (tools/theme_catalog's `windows-2000-standard`, its setup hive's
-//     ActiveTitle / GradientActiveTitle / TitleText and InactiveTitle /
-//     GradientInactiveTitle / InactiveTitleText): HAND-RECORDED below, the
-//     generator checking it against its catalog entry at every run.
+// THE COMPILED CAPTION (kGuiCaptionWin2000 below, read through
+// chrome_caption): the caption a config with no `scheme` line paints, the six
+// caption keys of the chrome's own scheme (chrome_spec.h's own_scheme).
+// Windows 2000 is the one chrome (architect 2026-10-10) and wears its
+// "Windows Standard" caption (tools/theme_catalog's `windows-2000-standard`,
+// its setup hive's ActiveTitle / GradientActiveTitle / TitleText and
+// InactiveTitle / GradientInactiveTitle / InactiveTitleText):
+// HAND-RECORDED below, the generator checking it against its catalog entry
+// at every run.
 // The imported catalog's other entries stay in the catalog as the tool's
 // RECORD; what ships of them is their caption keys alone, as the BUILT-IN
 // SCHEMES (palette_file.h's kGuiChromeSchemes, generated).
@@ -119,23 +119,13 @@ using GuiThemeWords = std::array<uint32_t, kGuiThemeRoleCount>;
 inline constexpr GuiChromePick kGuiCaptionWin2000{
     0x0A246A, 0xA6CAF0, 0xFFFFFF, 0x808080, 0xC0C0C0, 0xD4D0C8};
 
-// THE CHROMES' CAPTIONS — each chrome's key and its compiled caption, in the
-// vocabularies' order (kGuiChromeSpecs; theme_file.cpp asserts that every
-// chrome has one and that the two orders agree; palette_file.cpp that each
-// chrome's own scheme is its caption key for key).
-struct GuiChromeCaption {
-    const char*          chrome;   // the ChromeSpec's key
-    const GuiChromePick* caption;
-};
-inline constexpr GuiChromeCaption kGuiChromeCaptions[] = {
-    {"windows-2000", &kGuiCaptionWin2000},
-};
-
-// THE ONE RESOLVER: the compiled caption of the chrome `spec` — read by the
-// derivation's live words (live_chrome_words, chrome_derive.h) and the
-// picker's OLD while no scheme keys stand. Every chrome has one
-// (theme_file.cpp's assert), so this never misses.
-const GuiChromePick& chrome_caption(const ChromeSpec& spec);
+// THE ONE RESOLVER: the compiled caption — read by the derivation's live
+// words (live_chrome_words, chrome_derive.h) and the picker's OLD while no
+// scheme keys stand. palette_file.cpp asserts that the chrome's own scheme is
+// this caption key for key.
+inline constexpr const GuiChromePick& chrome_caption() {
+    return kGuiCaptionWin2000;
+}
 
 // THE ONE COLOUR GRAMMAR (architect 2026-10-03) — the palette files'
 // (palette_file.h): `#` and six hexadecimal digits, either case, OR one of

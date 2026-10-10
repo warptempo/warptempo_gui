@@ -71,7 +71,7 @@ static_assert(chrome_names_follow_the_lines());
 // while no block stands, and the seed of the block its first pick creates).
 uint32_t compiled_chrome_word(std::size_t line) {
     assert(line < kGuiChromeLineCount);
-    return chrome_line_word(chrome_caption(live_chrome_spec()), line);
+    return chrome_line_word(chrome_caption(), line);
 }
 } // namespace
 
@@ -119,7 +119,7 @@ GuiChromePick live_scheme_keys() {
         return *live;
     const GuiChromeScheme* own =
         builtin_scheme(live_chrome_spec().own_scheme);
-    assert(own != nullptr);   // own_schemes_are_their_chromes_themes
+    assert(own != nullptr);   // own_scheme_is_the_compiled_caption
     return own->chrome;
 }
 
@@ -229,15 +229,12 @@ std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
         }
         return rows;
     }
-    // Under Chrome the chromes' own schemes first, in the vocabularies'
-    // order, then in the same group the product's own (architect 2026-10-10:
-    // "alongside Windows 2000 Standard"; kGuiProductSchemeKeys, the
-    // catalog's order), then — behind their own separator (architect
+    // Under Chrome the chrome's own scheme first, then in the same group the
+    // product's own (architect 2026-10-10: "alongside Windows 2000
+    // Standard"; kGuiProductSchemeKeys, the catalog's order), then — behind their own separator (architect
     // 2026-10-08 ~19:30) — every other scheme in the catalog's.
-    for (const ChromeSpec* spec : kGuiChromeSpecs) {
-        add_name(spec->own_scheme, first);
-        first = false;
-    }
+    add_name(live_chrome_spec().own_scheme, first);
+    first = false;
     for (const char* key : kGuiProductSchemeKeys) {
         add_name(key, first);
         first = false;
@@ -1337,7 +1334,7 @@ void GuiColorPicker::install_live_words(
     // (render.h).
     const WaveformPlateInks before = waveform_plate_inks();
     const GuiThemeWords chrome_before = live_chrome_words(
-        live_chrome_spec(), program_palette_words(), live_chrome_pick());
+        program_palette_words(), live_chrome_pick());
     install_program_palette(words);
     install_chrome_pick(scheme);
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
@@ -1356,7 +1353,7 @@ void GuiColorPicker::install_live_words(
     // Neither kind touches an icon: every glyph wears its drawing's own inks
     // (icons.h's head). Neither moves the face: a scheme carries none
     // (2026-10-09 ~21:20; the `font` key's, gui_font.h).
-    if (live_chrome_words(live_chrome_spec(), program_palette_words(),
+    if (live_chrome_words(program_palette_words(),
                           live_chrome_pick()) != chrome_before) {
         viewport.invalidate_surface();
     } else {

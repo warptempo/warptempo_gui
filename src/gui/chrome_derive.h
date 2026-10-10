@@ -240,15 +240,9 @@ static_assert([] {
 // THE CHROME'S LIVE WORDS — THE ONE RESOLVER the install family reads
 // (install_palette / install_program_palette / install_chrome_pick,
 // render.cpp): the derivation over the program's live words, the caption the
-// live scheme's keys or, with none, the live chrome's compiled caption
-// (chrome_caption, theme_file.h); a later vocabulary's case its own.
-inline GuiThemeWords live_chrome_words(const ChromeSpec& spec,
-                                       const GuiPaletteWords& program,
+// live scheme's keys or, with none, the compiled caption (chrome_caption,
+// theme_file.h).
+inline GuiThemeWords live_chrome_words(const GuiPaletteWords& program,
                                        const std::optional<GuiChromePick>& pick) {
-    const GuiChromePick& caption = pick ? *pick : chrome_caption(spec);
-    switch (spec.vocabulary) {
-        case GuiChromeVocabulary::Win2000:
-            return chrome_derive::derive_chrome(program, caption);
-    }
-    return chrome_derive::derive_chrome(program, caption);
+    return chrome_derive::derive_chrome(program, pick ? *pick : chrome_caption());
 }

@@ -3458,19 +3458,6 @@ struct SettingsChoiceSource {
     const char* (*value)(int);
     const char* (*label)(int);
 };
-// THE CHROME'S DOMAIN: the chrome table (kGuiChromeSpecs, chrome_spec.h),
-// its keys in the table's order, the base first — windows-2000 alone today
-// (architect 2026-10-09), Windows XP's row to follow — shown by their
-// display names (ChromeSpec::display_name, architect 2026-10-07).
-inline constexpr SettingsChoiceSource kChromeChoiceSource{
-    +[]() -> int { return static_cast<int>(std::size(kGuiChromeSpecs)); },
-    +[](int i) -> const char* {
-        return kGuiChromeSpecs[static_cast<std::size_t>(i)]->key;
-    },
-    +[](int i) -> const char* {
-        return kGuiChromeSpecs[static_cast<std::size_t>(i)]->display_name;
-    },
-};
 // THE ICON SET'S DOMAIN (architect 2026-10-09): the bundled sets
 // (kIconSetKeys, icons.h) in their order — Tango, Mist — shown by
 // their display names (kIconSetDisplayNames). The combo shows THE
@@ -3562,20 +3549,18 @@ struct SettingsPopupItem {
 // (palette_file.h's kGuiChromeSchemes; the picker's menu lists the two first
 // and the other 103 after its separator).
 //
-// `Chrome` JOINED 2026-10-07 (architect, the second vocabulary), the last row
-// of the device group in kDeviceConfigKeys' order, its label its key's name
-// in Title Case; its commit applies at the next launch and says so on a card
-// (commit_device_setting).
+// `Chrome` STOOD 2026-10-07..10-10 (the vocabulary choice) and LEFT WITH ITS
+// KEY (architect 2026-10-10, chrome_spec.h's head): Windows 2000 is the one
+// chrome.
 //
 // `palette` (2026-10-07, the sixth device key) and `scheme` HAVE NO ROW:
 // the in-app color picker is their chooser.
 //
 // `Icons` JOINED 2026-10-09 (architect: "an icon picker... like the chrome
-// picker"), RIGHT AFTER Chrome — its companion, out of kDeviceConfigKeys'
-// order, where `icons` is the last key — its domain the bundled sets
-// (kIconSetChoiceSource), its commit the Chrome row's road
-// (commit_device_setting): a pick of the chrome's own set writes no line,
-// the next launch applies it and a card says so.
+// picker"), HEADING THE CHOICE ROWS since the Chrome row left (2026-10-10),
+// its domain the bundled sets (kIconSetChoiceSource), its commit the text
+// road's (commit_device_setting): a pick of the chrome's own set writes no
+// line, the next launch applies it and a card says so.
 //
 // `Font` JOINED 2026-10-09 ~21:20 (architect: "the font is its own
 // drop-down … it doesn't really make sense picking a font via palette or
@@ -3585,7 +3570,7 @@ struct SettingsPopupItem {
 // always writes the line ("no default setting because it's a drop-down"),
 // and it applies LIVE, no card.
 //
-// `Chrome`, `Icons` AND `Font` ARE THE CHOICE ROWS (architect 2026-10-07
+// `Icons` AND `Font` ARE THE CHOICE ROWS (architect 2026-10-07
 // evening; the editor kinds above): each domain its owner's table, each
 // commit the text road's (commit_device_setting), so the refusal-free
 // value and the config write are the text road's.
@@ -3618,8 +3603,6 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI Scale",           "gui_scale",     true},
     {"Projects Repository", "projects_repo", false},
     {"Projects Path",       "projects_path", false},
-    {"Chrome",              "chrome",        false, SettingsPopupAct::EditKey,
-     SettingsEditorKind::Choice, &kChromeChoiceSource},
     {"Icons",               "icons",         false, SettingsPopupAct::EditKey,
      SettingsEditorKind::Choice, &kIconSetChoiceSource},
     {"Font",                "font",          false, SettingsPopupAct::EditKey,

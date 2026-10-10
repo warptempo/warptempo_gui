@@ -463,8 +463,7 @@ static_assert(std::size(kGuiFontKeys) == std::size(kGuiFontKeySets));
 // THE `font` KEY'S GRAMMAR — the ONE owner, asked by the device config's
 // reader (any other word the launch's first-error hard fail: a hand edit is
 // the only producer) and by the settings editor's Font row (its refused
-// commit): a set's key, byte for byte — chrome_spec.h's is_chrome_key's
-// shape. The set it names, or none.
+// commit): a set's key, byte for byte. The set it names, or none.
 constexpr const GuiFaceSet* gui_face_set_for_font_key(std::string_view v) {
     for (std::size_t i = 0; i < std::size(kGuiFontKeys); ++i)
         if (v == kGuiFontKeys[i]) return kGuiFontKeySets[i];
@@ -482,7 +481,7 @@ static_assert(is_font_key(kDefaultFontKey));
 
 // THE LIVE SET — THE ONE RESOLUTION (architect 2026-10-09): the set the
 // device config's `font` names, installed at launch (set_live_font, gui_main,
-// beside set_live_chrome_spec, before the first paint) and MOVED LIVE when
+// before the first paint) and MOVED LIVE when
 // the Settings dialog's OK commits a new Font choice (commit_device_setting's
 // font arm, settings_editor.cpp; the pick in the row's list only moves its
 // highlight, the choice rows committing at OK alone since 2026-10-09

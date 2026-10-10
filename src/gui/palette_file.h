@@ -37,16 +37,15 @@
 // TONES, EVERY CHROME ROLE BUT THE CAPTION (architect 2026-10-10: "the
 // caption remains the only thing that's outside of Cool Edit";
 // chrome_derive.h), and THE SCHEME colors the caption — its six keys, or
-// with none the live chrome's compiled caption (theme_file.h's
-// kGuiChromeCaptions, never edited in the app) — both kinds picked in the
+// with none the compiled caption (theme_file.h's
+// kGuiCaptionWin2000, never edited in the app) — both kinds picked in the
 // app and saved as NAMED presets, the architect's workshop, "save and load a handful of
 // themes at a time before we hard code them" (2026-10-08; a look made
 // official becomes a chrome variant, its colors compiled in).
 // GuiPalette (render.h) keeps every member; install_palette (render.h) fills
 // the program members off this file's table (kGuiPaletteRoles) and the
 // chrome members off the theme's role table (kGuiThemeRoles) by the one
-// derivation (chrome_derive.h's live_chrome_words, which a later
-// vocabulary's case joins), so every painter reads palette() as before and
+// derivation (chrome_derive.h's live_chrome_words), so every painter reads palette() as before and
 // no painter knows which source a color came from. ONE SCHEME SYNTAX UNDER
 // EVERY CHROME (architect 2026-10-08 ~11:00 / ~12:10): the same keys draw
 // under every chrome.
@@ -445,9 +444,7 @@ constexpr bool is_builtin_scheme_name(std::string_view name) {
 // chrome_spec.h) — the Chrome scope's first group of built-ins, its head
 // (color_picker::preset_menu_rows).
 constexpr bool is_chrome_own_scheme(std::string_view name) {
-    for (const ChromeSpec* s : kGuiChromeSpecs)
-        if (name == s->own_scheme) return true;
-    return false;
+    return name == kChromeSpecWin2000.own_scheme;
 }
 // THE PRODUCT'S OWN SCHEMES (architect 2026-10-10 ~06:30: "I have created a
 // theme called Cool Edit Pro for the Chrome … make it a permanent part of

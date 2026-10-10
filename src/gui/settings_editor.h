@@ -23,11 +23,12 @@ struct GuiInputHandler;
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
-// SIX editable ones the per-device config carries — gui_scale and
+// FIVE editable ones the per-device config carries — gui_scale and
 // projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
 // since 2026-09-02 (architect) projects_path,
-// which had been hand-edited only, since 2026-10-07 chrome, since
-// 2026-10-09 icons and since 2026-10-09 ~21:20 font (theme,
+// which had been hand-edited only, since
+// 2026-10-09 icons and since 2026-10-09 ~21:20 font (chrome,
+// editable 2026-10-07..10-10, and theme,
 // editable 2026-10-03..10-08, its level and the twelve
 // program colour keys, editable 2026-10-03..04, left with their keys; the
 // config's key last_project is the program's own and has no editor; the
@@ -40,7 +41,7 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    chrome, icons and font — in ONE body,
+//    icons and font — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
@@ -48,8 +49,7 @@ struct GuiInputHandler;
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; the chrome and the icon set at the next launch, each card saying
-//    so; the font at once, live, at the OK, no card (the screen is the
+//    card; the icon set at the next launch, its card saying so; the font at once, live, at the OK, no card (the screen is the
 //    answer).
 //    gui_scale, the
 //    one other
@@ -79,16 +79,17 @@ struct GuiInputHandler;
 //    refuses no lock (only a standing color picker, 2026-10-08); the
 //    account is at GuiSettingsEditor::open.
 //
-// THE CHOICE EDITOR (architect 2026-10-07 evening: "a drop-down for chrome
-// and theme at the very least"; the design the planner's, delegated) STANDS
+// THE CHOICE EDITOR (architect 2026-10-07 evening, "a drop-down for chrome
+// and theme at the very least"; the design the planner's, delegated; the
+// Chrome row removed 2026-10-10 with the `chrome` key) STANDS
 // BESIDE THE TEXT EDITOR: a Settings row whose key's domain is a SHORT
 // CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — today the
-// Chrome row, since 2026-10-09 the Icons row and since 2026-10-09 ~21:20 the
-// Font row, the theme having left with its key 2026-10-08) opens
+// Icons row (2026-10-09) and since 2026-10-09 ~21:20 the Font row, the
+// theme having left with its key 2026-10-08) opens
 // THE SAME BOTTOM-ROW EDITOR — the same text_editor session
 // underneath, so the modal rank, OK and Cancel, the focus ring, the playback
 // stop and every closer are the text editor's — with its row's word as the
-// label ("Chrome: ") and, WHERE THE FIELD STANDS, THE CHROME'S COMBO BOX
+// label ("Icons: ") and, WHERE THE FIELD STANDS, THE PROGRAM'S COMBO BOX
 // showing the shown value: the color picker's combo drawing
 // (paint_picker_combo, a second reader) at the field's seat and its 23-W
 // height. THE BUFFER IS KEPT AT `<key>=<shown value>`, so EVERY COMMIT IS THE
@@ -101,7 +102,7 @@ struct GuiInputHandler;
 // written, no face swapped, no card; OK (and Enter, the dialog's default
 // button) commits the shown value through commit(); Cancel (and Esc) closes
 // with nothing written and nothing applied, the shown value dying with the
-// session. One road for the three rows, Chrome, Icons and Font. THE ROADS:
+// session. One road for the two rows, Icons and Font. THE ROADS:
 //   * A PRESS ON THE COMBO DROPS ITS LIST UPWARD over the well (the row is
 //     the window's foot; Windows' combo opens above when no room lies
 //     below) — the picker list's painter and geometry
@@ -243,7 +244,7 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `chrome=`, `icons=` and `font=` — in one body (the head's
+    // `icons=` and `font=` — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the

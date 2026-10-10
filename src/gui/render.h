@@ -115,7 +115,7 @@ struct TrimRange {
 // `scheme` — a built-in or a `<name>.scheme` file from the `schemes/`
 // folder — or, with no line, the live chrome's own, which carries no keys
 // and paints the chrome's COMPILED CAPTION (theme_file.h's
-// kGuiChromeCaptions: Windows 2000 Standard's under windows-2000). There is
+// kGuiCaptionWin2000: Windows 2000 Standard's). There is
 // NO LEVEL (architect 2026-10-04): a dark look, like any look made official,
 // would be a chrome variant of its own (2026-10-08). The app computes no
 // color but COOL EDIT'S: the program's panel tones derived from the
@@ -520,9 +520,8 @@ struct GuiChromePick {
 // CHROME'S, DERIVED FROM THEM (2026-10-10, the chrome inherits Cool Edit:
 // every role but the caption's six a tone of the palette's face or ink,
 // live_chrome_words, chrome_derive.h), the caption's six off `chrome`, the
-// scheme's keys, or with none the live chrome's compiled caption
-// (chrome_caption(live_chrome_spec()), theme_file.h — so the chrome is set
-// first, set_live_chrome_spec). AT LAUNCH the palette the config's `palette`
+// scheme's keys, or with none the compiled caption
+// (chrome_caption(), theme_file.h). AT LAUNCH the palette the config's `palette`
 // key names and the scheme its `scheme` key names (2026-10-08; through
 // is_palette_name and is_scheme_name — a built-in or a file read at launch —
 // or, with no line, the default palette and the live chrome's own scheme,
@@ -542,7 +541,7 @@ void install_palette(const std::array<uint32_t, 12>& program,
 
 // THE INSTALL FAMILY'S CAPTION MEMBER (2026-10-08, the chrome knob; the
 // caption alone since 2026-10-10): the chrome's members re-derived off
-// live_chrome_words(live chrome, the live program words, `chrome`)
+// live_chrome_words(the live program words, `chrome`)
 // (chrome_derive.h) and palette_generation bumped, the program's twelve
 // untouched — only the caption's six can move. THE PICKER'S LIVE ROAD
 // beside install_program_palette (GuiColorPicker::install_live_words, which

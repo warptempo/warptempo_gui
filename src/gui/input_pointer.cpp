@@ -5856,7 +5856,7 @@ void GuiInputHandler::settings_choice_motion(int x, int y) {
     // moves off its anchor.
     if (pen_hot_latch_holds()) return;
     // THE LIT ROW FOLLOWS THE POINTER ONTO THE ROWS AND HOLDS OFF THEM
-    // (2026-10-09 evening, his S Pen on the Chrome / Icons / Font combo: "as
+    // (2026-10-09 evening, his S Pen on the Icons / Font combo (the Chrome row stood then): "as
     // soon as the pen touches the drop-down button, the entry blinks"):
     // Windows' combo list moves its highlight only under a pointer over its
     // items, and a pointer anywhere else — the combo the list dropped from
