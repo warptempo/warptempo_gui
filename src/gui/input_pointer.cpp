@@ -1044,16 +1044,30 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 // while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
 // BAR, the lanes and the flexible GAP band are outside it.
 //
-// FIVE READERS, re-derived by grep 2026-09-25: the press router's SHIFT sweep
-// claim, its CTRL zoom claim, the pointer cursor map's Pan/Zoom zone, the `h`
-// view's own press router, and the TOUCH PAN ZONE (touch_point_in_pan_zone,
-// the one-finger pan surface by ruling, which must not drift from the
-// mouse's — so a finger on the lanes resolves to the pointer translation,
-// where a tap places and a drag does nothing). The plain press's own arm is
-// the band walk in on_button_press rather than this predicate, because it
-// also has to pick the release act.
-bool point_on_nav_surface(const AppState& app, int x, int y) {
-    return rect_contains(waveform_area(app), x, y);
+// AND ONLY WHERE THE WAVEFORM IS PAINTED (2026-10-10, ON SCREEN IS AS
+// PAINTED): the extent is the waveform's painted rect,
+// onscreen_keyboard::waveform_paint_area — waveform_area less the keyboard
+// slot's band and, while the on-screen keyboard stands, the program's closure
+// above it (the column's foot and the frame's Hilight row painted over the
+// canvas's lowest rows, program_closure_rect). Those rows answer nothing, as
+// the column's foot and the frame rows answer nothing where they stand at
+// rest. ONE RECT FOR THE PIXELS AND THE PRESS, rather than a press rect of its
+// own beside the paint rect: the press then cannot answer where the waveform
+// is not painted, whatever later stands over it. The COORDINATES stay
+// waveform_area's (every column conversion reads it, the half split
+// included) — this rect is only where the surface ends.
+//
+// SIX READERS, re-derived 2026-10-10: the press router's SHIFT sweep claim,
+// its CTRL zoom claim, its PLAIN band walk (the waveform arm at the band walk's
+// foot, which arms the pending click and picks the release act), the pointer
+// cursor map's Pan/Zoom zone, the `h` view's own press router, and the TOUCH
+// PAN ZONE (touch_point_in_pan_zone, the one-finger pan surface by ruling,
+// which must not drift from the mouse's — so a finger on the lanes resolves
+// to the pointer translation, where a tap places and a drag does nothing).
+bool point_on_nav_surface(const AppState& app, const GuiPlatform& gui, int x,
+                          int y) {
+    return rect_contains(onscreen_keyboard::waveform_paint_area(app, gui), x,
+                         y);
 }
 
 // Active-domain playhead frame at click column `col`: the single-rounding
@@ -2292,7 +2306,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // their own, as they do under ctrl (no zoom there any more) — but for the
     // PLAYHEAD'S HEAD, whose plain drag moves the playhead (2026-10-09), its
     // TrimResize at the strip's arm below.
-    const bool on_nav_surface = point_on_nav_surface(app, x, y);
+    const bool on_nav_surface = point_on_nav_surface(app, gui, x, y);
 
     // (ALT IS UNNAMED: its pointer vocabulary is EMPTY since 2026-08-12 — the
     // grab-pan it carried moved onto the plain drag and the alt press claims
@@ -3321,7 +3335,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     if (folder_overlay::stands(app) &&
         rect_contains(folder_overlay::surface_rect(app), x, y))
         return false;
-    return point_on_nav_surface(app, x, y);
+    return point_on_nav_surface(app, gui, x, y);
 }
 
 // --- The touch region former (the hold on the pan zone) --------------------
@@ -6739,11 +6753,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.loading || audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_strip_area(app);
-    // The waveform BAND is the canvas's interior, waveform_area exactly
-    // (2026-10-09; the navigation surface's own rule, point_on_nav_surface):
-    // the column's margins beside it are the program's panel and a press
-    // there falls to the tail's consumed nothing.
-    const bool inside_waveform = rect_contains(area, x, y);
+    // The waveform BAND is the navigation surface, point_on_nav_surface
+    // exactly — the canvas's interior where the waveform is painted
+    // (2026-10-09; the closure above a standing keyboard carved out
+    // 2026-10-10): the column's margins beside it and the closure's rows over
+    // it are the program's panel and frame, and a press there falls to the
+    // tail's consumed nothing. `area` stays the coordinate origin.
+    const bool inside_waveform = point_on_nav_surface(app, gui, x, y);
     const bool inside_top = rect_contains(top, x, y);
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
@@ -7076,7 +7092,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
             // strict no-op below. (The `h` view's ctrl press falls through to
             // this same claim; the click act is not armed on this entry, so
             // the mode needs no arm of its own here.)
-            if (point_on_nav_surface(app, x, y))
+            if (point_on_nav_surface(app, gui, x, y))
                 arm_nav_zoom_press(x, y);
             return;
         }
@@ -7206,7 +7222,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         // placement lane — and a shift drag there does nothing. No empty-lane
         // seed: the shift click was never the create's first half.
         if (shift && !(inside_top && mh_index >= 0)) {
-            if (point_on_nav_surface(app, x, y)) {
+            if (point_on_nav_surface(app, gui, x, y)) {
                 place_playhead_and_arm_region(x - area.x, x, y);
             } else if (point_on_placement_lanes(app, audio, x, y)) {
                 arm_placement_press(x, y, /*history=*/false,
@@ -9777,7 +9793,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // (2026-08-05), and since 2026-08-13 the LIVE surface is the same rect —
     // the two halves became one out there too — so the mode's surface is no
     // longer a special case and there is nothing left for a mode term to say.
-    const bool on_nav_surface = point_on_nav_surface(app, x, y);
+    const bool on_nav_surface = point_on_nav_surface(app, gui, x, y);
 
     // THE MULTI-SELECTION'S TWO MODIFIED CLICKS (architect 2026-08-05), asked
     // FIRST because they are the only modified presses in this mode that hit

@@ -742,7 +742,7 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
-    // THE RULER LANE (top lane 5): Cool Edit's flipped ruler — its ground and
+    // THE RULER LANE (top lane 6): Cool Edit's flipped ruler — its ground and
     // bottom line, the timestamp ladder's ticks and digits and the playhead's
     // head (the `playhead_stem` role) — and the MARKER LANE'S panel face under the cues the flag
     // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
@@ -752,15 +752,15 @@ private:
     void paint_ruler_row(cairo_t* cr);
     // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
     // flat sampled ground, the three menu anchors flush left and nothing
-    // flush right), the ICON ROW (top lane 2, row 4: the
+    // flush right), the ICON ROW (top lane 3, row 4: the
     // twenty-seven view/mode/action buttons, no border of its own since
     // 2026-10-01, twenty-one standing outside the `h` view and fourteen
     // inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
     // history_mode_hides_button, since 2026-10-07), and the
-    // UNIFIED BOTTOM ROW's button cluster (bottom lane 0, the strip's ONE
-    // lane, ON THE WINDOW'S FOOT: the clock cell and the STATE CELL left, then
-    // the marker verbs, the marker walk, the arrow four and the transport
-    // three flush right behind their separators, declared below).
+    // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the program
+    // frame's bottom row on the window's foot: the clock cell and the STATE
+    // CELL left, then the marker verbs, the marker walk, the arrow four and
+    // the transport three flush right in their groups, declared below).
     // All three PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
@@ -777,6 +777,16 @@ private:
     // after them touches their lanes, the flag cache being transparent there.
     void paint_menu_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
+    // THE PROGRAM'S FRAME (2026-10-10; the law, the geometry and the chrome
+    // surfaces outside it at render.h's program_frame_rect, the two painters'
+    // split at their definitions beside paint_menu_row): THE RING
+    // (program_frame_rect, one sunken line in the chrome's Shadow and Hilight,
+    // mitred), painted with the rows on every frame class; and THE BLOCKS
+    // ROUND A STANDING KEYBOARD (onscreen_keyboard.h's frame block), painted
+    // after the keyboard slot — nothing while no keyboard stands. Neither
+    // publishes anything: the frame is inert ground for input.
+    void paint_program_frame(cairo_t* cr);
+    void paint_program_frame_keyboard_blocks(cairo_t* cr);
     // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
     // record at render.h's caption block): the gradient in the
     // caption roles of the window's activation (GuiPlatform::caption_active),

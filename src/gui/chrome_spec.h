@@ -146,15 +146,16 @@ struct ChromeSpec {
     // row's cut).
     int                caption_title_trail_px;
     // THE MENU ROW, lane 1, in Windows px (render.h's menu-row block and
-    // paint_menu_row): the face row above the content, the content (the
-    // anchors' button height, the label's cell centred in it), the foot
-    // below it — relief lines, each its own rounded part (menu_row_foot_h_px;
-    // win2000's the etched pair, kChromeSpecWin2000 below); each anchor's
+    // paint_menu_row): the face row above the content and the content (the
+    // anchors' button height, the label's cell centred in it); each anchor's
     // pads left and right of its label and the band's lead before the first
-    // anchor.
+    // anchor. THE ROW HAS NO FOOT (2026-10-10): the line under it is the
+    // program's frame, Cool Edit's, the same under every chrome
+    // (render.h's program_frame_rect) — the field that carried win2000's
+    // etched pair that morning left with the pair, a foot to be made a field
+    // again only when a later vocabulary's menu bar draws one of its own.
     int                menu_row_head_px;
     int                menu_row_content_px;
-    int                menu_row_foot_px;
     double             menu_label_pad_left_px;
     double             menu_label_pad_right_px;
     double             menu_band_lead_px;
@@ -228,23 +229,19 @@ struct ChromeSpec {
 // the rebar's 2-px lead (paint_handler.cpp's kMenuLabel* record); FROM THE
 // PLAIN WINDOW'S MENU BAR (menu.c) as his WordPad captures of the real OS
 // show it, the label's seat — the cap's top on row 5 of the 19, the cap band
-// centred (architect 2026-10-09 ~17:40, paint_menu_row) — and UNDER IT
-// WINDOWS' ETCHED PAIR, 2 W — a Shadow row, then a Hilight row, the lane's whole width
-// (architect 2026-10-10, on the tablet under his darker scheme: "there's
-// one pixel missing from the separator under File Edit Settings … Windows
-// menus are never just a straight line, they're always a bevel"; "that's the
-// last part of the Windows chrome above Cool Edit, so it must be Windows").
-// The law is his WordPad captures of the real OS at 1:1, tmp/win2000pro.png
-// and tmp/winme.png: the menu bar on rows 22–41, ROW 42 SHADOW 808080, ROW
-// 43 HILIGHT FFFFFF, the toolbar's face from row 44 — the program's band
-// follows the Hilight row here as the toolbar's face does there. No pair
-// stands ABOVE the menu row: ReactOS's Explorer rebar draws one at its top
-// (tmp/reactos.png rows 32–33), Explorer's and not the plain window's, and
-// a capture beats ReactOS (win2000_deviations.md); THE PUSH
+// centred (architect 2026-10-09 ~17:40, paint_menu_row) — and NO LINE UNDER
+// IT: Cool Edit's plain menu bar ends at its content, and the Shadow row
+// under it is its frame window's sunken line round the program (architect
+// 2026-10-10 ~08:10; the law and his words at render.h's program_frame_rect;
+// WordPad's etched pair under its menu bar is its rebar's band border, the
+// wrong family for a plain menu bar, and stood here that morning). No pair
+// stands ABOVE the menu row either: ReactOS's Explorer rebar draws one at
+// its top (tmp/reactos.png rows 32–33), Explorer's and not the plain
+// window's, and a capture beats ReactOS (win2000_deviations.md); THE PUSH
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
 // (tmp/reactos-tooltips.png); THE DROPDOWN Windows' popup menu, 17-px items
 // one px inside the frame, hanging from the menu bar's bottom row over the
-// etched pair (architect 2026-10-10, dropdown_hang_y); THE ICONS Tango 0.8.90's scalable drawings,
+// program frame's top row (dropdown_hang_y); THE ICONS Tango 0.8.90's scalable drawings,
 // ReactOS's own model of a Windows 2000 desktop dressed in Tango (architect
 // 2026-10-06: assets/icons/tango/, its README the mapping). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
@@ -267,7 +264,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .caption_title_trail_px       = 2,
     .menu_row_head_px             = 1,
     .menu_row_content_px          = 19,
-    .menu_row_foot_px             = 2,
     .menu_label_pad_left_px       = 9.0,
     .menu_label_pad_right_px      = 7.0,
     .menu_band_lead_px            = 2.0,

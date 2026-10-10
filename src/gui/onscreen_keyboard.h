@@ -11,10 +11,16 @@
 // so paint and hit cannot describe different keys.
 //
 // WHAT IT IS. A four-row keyboard wearing plasma-keyboard's three pages key
-// for key and width for width (the layout table below), full window width,
-// sitting DIRECTLY ABOVE THE BOTTOM
-// ROW and painting over the waveform area's lower part — which the waveform's
-// own passes then do not paint at all (waveform_paint_area, below). It stands while ANY OF
+// for key and width for width (the layout table below), full window width in
+// the chrome's ground, standing OUTSIDE THE PROGRAM'S FRAME (2026-10-10,
+// render.h's program_frame_rect): its floor the slot's (keyboard_slot_floor_y,
+// app_state.h) — DIRECTLY ON THE DIALOG'S CONTENT BAND while a chrome tenant
+// owns the bottom row, on the bottom row's lane otherwise — and above it the
+// program closes, the column's foot and the frame's Hilight row painted over
+// the canvas's lowest rows (program_closure_rect, below), while the keyboard
+// paints over the waveform area's lower part — the waveform's
+// own passes then not painting under either at all (waveform_paint_area,
+// below). It stands while ANY OF
 // THE TEXT EDITORS stands, on a backend that asks for one, and it
 // REPLACES NOTHING: the flag editor keeps painting in the marker lane, a dialog
 // editor keeps painting in the bottom row with its own buttons, and this sits
@@ -509,8 +515,10 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 
 // -- The surface's rect ------------------------------------------------------
 
-// THE SURFACE'S RECT: full window width, its BOTTOM edge flush on the bottom
-// row's top edge, so the two lanes touch with no window ground between them.
+// THE SURFACE'S RECT: full window width, its BOTTOM edge flush on the slot's
+// floor (keyboard_slot_floor_y, app_state.h: the bottom row's top edge, or
+// the dialog's content band's top while a chrome tenant owns the row), so
+// the keyboard and the row touch with no window ground between them.
 // It OVERLAYS the waveform area's lower part — nothing in the vertical stack
 // moved to make room (main.cpp's stack owner is untouched by this feature), and
 // the waveform simply is not painted where this paints.
@@ -543,6 +551,64 @@ inline GuiRect surface_rect(const AppState& a) {
 inline GuiRect slot_damage_rect(const AppState& a) {
     return keyboard_slot_band(
         a, std::max(surface_height_px(), keyboard_slot_max_height_px(a)));
+}
+
+// -- The program's frame round a standing keyboard (2026-10-10) -------------
+//
+// THE KEYBOARD STANDS OUTSIDE THE PROGRAM'S FRAME (render.h's
+// program_frame_rect, where the law stands), so while it stands the frame is
+// drawn as the blocks the keyboard leaves of the program, never through it:
+//   * THE UPPER BLOCK — everything above the keyboard — CLOSES DIRECTLY
+//     ABOVE IT: the column's foot (the canvas's light bottom frame row and 5 W
+//     of face, column_foot_h_px) and then the frame's Hilight row, painted
+//     over the canvas's lowest rows exactly as the keyboard paints over the
+//     rows under it — no relayout, the waveform's passes clipped off them
+//     (waveform_paint_area below) — and the frame's columns ending at that
+//     row (program_upper_ring_rect). At 300 % under a dialog editor: the foot
+//     on rows 930–947, the Hilight row 948–950, the keyboard 951–1343 on the
+//     dialog's content band from 1344 (the mock of record,
+//     tmp/mocks/ring/mock_RING_STD_2_keyboard.png).
+//   * THE LOWER BLOCK — where the bottom row stays the program's under the
+//     keyboard, the flag editor's case (the planner's ruling for this
+//     unmocked case, to be judged on the glass): the dock bar and row 8
+//     under the keyboard, opened by the frame's top Shadow row over the
+//     keyboard band's LAST line (its ground pad below the keys) and closed by
+//     the canonical bottom row, the columns down both sides of them
+//     (program_lower_ring_rect). Under a chrome tenant there is none: the row
+//     stands outside the frame and the keyboard sits on it.
+// Painted by paint_program_frame_keyboard_blocks (paint_handler.cpp) after
+// the keyboard slot; geometry only here, no standing asked.
+inline int program_closure_h_px() {
+    return column_foot_h_px() + program_frame_line_px();
+}
+// THE CLOSURE: the foot's rows and the frame's Hilight row above the
+// keyboard's band, the client's whole width.
+inline GuiRect program_closure_rect(const AppState& a) {
+    const GuiRect surf = surface_rect(a);
+    if (surf.w <= 0 || surf.h <= 0) return GuiRect{0, 0, 0, 0};
+    const int h = program_closure_h_px();
+    return GuiRect{surf.x, surf.y - h, surf.w, h};
+}
+// THE UPPER BLOCK'S RING: the canonical ring's top row down to the
+// keyboard's top, its bottom row the closure's last line.
+inline GuiRect program_upper_ring_rect(const AppState& a) {
+    const GuiRect ring = program_frame_rect(a);
+    const GuiRect surf = surface_rect(a);
+    if (ring.w <= 0 || surf.w <= 0 || surf.y <= ring.y)
+        return GuiRect{0, 0, 0, 0};
+    return GuiRect{ring.x, ring.y, ring.w, surf.y - ring.y};
+}
+// THE LOWER BLOCK'S RING: from the keyboard band's last line to the
+// canonical ring's bottom row — empty under a chrome tenant.
+inline GuiRect program_lower_ring_rect(const AppState& a) {
+    if (chrome_tenant_owns_bottom_row(a)) return GuiRect{0, 0, 0, 0};
+    const GuiRect ring = program_frame_rect(a);
+    const GuiRect surf = surface_rect(a);
+    if (ring.w <= 0 || surf.w <= 0) return GuiRect{0, 0, 0, 0};
+    const int top = surf.y + surf.h - program_frame_line_px();
+    const int bot = ring.y + ring.h;
+    if (bot <= top) return GuiRect{0, 0, 0, 0};
+    return GuiRect{ring.x, top, ring.w, bot - top};
 }
 
 // -- The session-change owner, and the waveform's painted rect --------------
@@ -619,14 +685,19 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // band's whole height, at the panel's own tick rate. ONE GATE, ONE CLIP for
 // both tenants.
 //
-// IT IS THE EXPOSURE GATE AND THE CLIP, NEVER A GEOMETRY INPUT: the column
-// mapping and every hit test keep reading waveform_area itself (the displayed
-// basis, the strictly-as-painted rule at app_state.h), so paint and hit
-// cannot drift — this rect
-// says only WHERE THE PIXELS MAY LAND.
+// IT IS THE EXPOSURE GATE, THE CLIP AND THE NAVIGATION SURFACE'S EXTENT,
+// NEVER A COORDINATE INPUT: the column mapping keeps reading waveform_area
+// itself (the displayed basis, the strictly-as-painted rule at app_state.h),
+// while the press, the cursor's Pan / Zoom zone and the touch pan zone ask
+// this rect where the waveform ENDS (point_on_nav_surface, input_pointer.cpp,
+// 2026-10-10) — so a press never answers where no waveform is painted, the
+// closure's rows above a standing keyboard among them, and paint and hit
+// cannot drift. This rect says WHERE THE PIXELS MAY LAND, and so where the
+// waveform takes a press.
 //
-// The band is a full-width lane flush on the bottom row's top edge, so what it
-// hides off the waveform is always a BOTTOM SLICE and the answer is a rect. A
+// The band is a full-width lane flush on the slot's floor, so what it (and the
+// keyboard's closure above it) hides off the waveform is always a BOTTOM
+// SLICE and the answer is a rect. A
 // band that reaches no higher than the waveform's own bottom subtracts
 // nothing (no window builds one since the waveform became the lanes' whole
 // leftover, 2026-10-07: gap 2 is 0, so the band always overlaps it); a band
@@ -644,6 +715,10 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // spared this way — their painters run and the panel covers them, because
 // they publish the roster's hit rects (the record is at the paint-order
 // block, paint_handler.cpp).
+// THE KEYBOARD'S SHARE IS ITS BAND AND THE PROGRAM'S CLOSURE ABOVE IT
+// (2026-10-10, program_closure_rect above): the column's foot and the frame's
+// Hilight row stand over the canvas's lowest rows while the keyboard does, so
+// the waveform stops above them, exactly as it stops above the band.
 inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
     const GuiRect area    = waveform_area(a);
     const bool    overlay = folder_overlay::stands(a);
@@ -651,7 +726,8 @@ inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
     const GuiRect surf = overlay ? folder_overlay::surface_rect(a)
                                  : surface_rect(a);
     if (surf.w <= 0 || surf.h <= 0) return area;
-    const int hidden = (area.y + area.h) - surf.y;
+    const int cut_y = overlay ? surf.y : surf.y - program_closure_h_px();
+    const int hidden = (area.y + area.h) - cut_y;
     if (hidden <= 0) return area;
     GuiRect painted = area;
     painted.h = hidden >= area.h ? 0 : area.h - hidden;

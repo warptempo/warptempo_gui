@@ -10427,11 +10427,10 @@ int     top_strip_h(const AppState& a);
 int     bottom_strip_h(const AppState& a);
 GuiRect waveform_area(const AppState& a);
 GuiRect top_strip_area(const AppState& a);
-// One shared lane-rect helper for every strip lane (see the layout contract at
-// its definition in main.cpp). lane_from_window_edge indexes from the strip's
-// window edge, 0 = edge-most. The named lane accessors below delegate to it.
-GuiRect strip_row_rect(const AppState& a, bool top_strip,
-                       int lane_from_window_edge);
+// (Every lane rect comes from ONE file-local helper in main.cpp,
+// strip_row_rect, whose layout contract stands at its definition; the named
+// lane accessors below delegate to it, and since 2026-10-10 no lane index
+// leaves that file — the bottom strip's order is state, bottom_lane_order.)
 // THE CAPTION — top lane 0, the window's title bar (architect 2026-10-05;
 // render.h's caption block, paint_caption_row).
 GuiRect top_caption_row_area(const AppState& a);
@@ -10456,13 +10455,13 @@ unsigned window_frame_edges_at(const AppState& a, int x, int y);
 GuiRect top_menu_row_area(const AppState& a);
 // THE ROW A DROPDOWN HANGS FROM — THE MENU BAR'S CONTENT'S FOOT for the menu
 // row's three, the row under the content's last (menu_row_content_rect's
-// end), OVER THE LANE'S FOOT (architect 2026-10-10): a Windows pull-down
-// drops from the menu bar's bottom row and covers the band border beneath
-// it, so while a menu is down its box stands on the etched pair's rows and
-// covers them (his WordPad captures of the real OS, tmp/win2000pro.png and
-// tmp/winme.png: the menu bar rows 22–41, the pair 42–43 — the box's first
-// row is 42). At the tablet's 300 % the box's top row is 114, the pair's
-// first (the caption 54, the head row 3, the content 57). The ONE expression the painter's box and the open edge's damage
+// end), which is the lane's foot since the row ends at its content
+// (2026-10-10): a Windows pull-down drops from the menu bar's bottom row and
+// covers what stands under it, so while a menu is down its box stands on the
+// program frame's top row and covers it (render.h's program_frame_rect). At
+// the tablet's 300 % the box's top row is 114, the frame's first (the
+// caption 54, the head row 3, the content 57). The ONE expression the
+// painter's box and the open edge's damage
 // both read (paint_dropdown, toggle_dropdown), so the damaged band and the
 // painted box start on the same row; the box's published rect, its hit rect
 // and the close edge's damage are that box.
@@ -10498,20 +10497,46 @@ GuiRect top_ruler_row_area(const AppState& a);
 // arc's merged trim-bar + ruler input band — lived between these accessors for
 // one day, 2026-08-11..12, and was deleted whole with the arc's revert.)
 GuiRect top_marker_row_area(const AppState& a);
-// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the bottom
-// strip's ONE lane (bottom lane 0), ON THE WINDOW'S FOOT with GAP 2's blank
-// ground between it and the waveform —
-// the lane including its 1px
-// border-top, and the content band under that border. (It was row 7's single
+// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the lane
+// including its dock bar, and the content band under the dock bar — bottom
+// lane 1 over the program frame's bottom row on the window's foot, one frame
+// line in from each side, or, while a chrome tenant owns it, bottom lane 0
+// on the window's foot, the client's whole width (2026-10-10; main.cpp's
+// bottom_lane_order). (It was row 7's single
 // status lane from 2026-08-01, one of two lanes while the transport row
 // stood, 2026-08-11..12, the strip's whole surface at the unification, the strip's
 // one lane resting on the WINDOW'S FOOT from commit B, one of two for the one
-// day the STATUS BAR took that foot on 2026-08-29, and the strip's one lane
-// again since that evening's fold, which put the bar's STATE TEXT in this
-// row's own cell beside the clock; each flexible gap is
-// strip geometry, not a lane.)
+// day the STATUS BAR took that foot on 2026-08-29, the strip's one lane
+// again from that evening's fold, which put the bar's STATE TEXT in this
+// row's own cell beside the clock, and one of two from the column's foot,
+// 2026-10-09; each flexible gap is strip geometry, not a lane.)
 GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
+// (The program frame's two lanes and its ring are declared in render.h,
+// beside the frame's rule: top_program_frame_area, bottom_program_frame_area,
+// program_frame_rect.)
+
+// DOES A CHROME TENANT OWN THE BOTTOM ROW — a prompt, a dialog editor or the
+// picker's Cancel, never the render player, which is the program's tenant
+// (2026-10-10; the rule and its law at render.h's program_frame_rect): the
+// row's chrome surfaces stand OUTSIDE the program's frame, as Windows' status
+// bar stands outside Cool Edit's, so while this answers true the frame
+// closes on the dock bar's first line above the row (main.cpp's
+// bottom_lane_order swaps the two bottom lanes), the row's lane is the
+// chrome's ground at the client's whole width with no dock bar
+// (paint_bottom_strip), and a standing keyboard sits on the row's content
+// band (keyboard_slot_floor_y). The same set paint_bottom_strip's ground
+// forks on, read there through this owner: the row's modal owners
+// (modal_owns_bottom_row, paint_handler.cpp — the prompt, the render
+// player, the picker, the three dialog editors, AppState::
+// dialog_editor_session's set) less the render player. A prompt raised over
+// the render player (its load confirmation) stands on the player's row and
+// so on the program's face, inside the frame, as it did before the frame.
+inline bool chrome_tenant_owns_bottom_row(const AppState& a) {
+    if (a.render_player.active) return false;
+    return a.prompt.active || a.picker.active ||
+           a.dialog_editor_session() != 0;
+}
 
 // THE HOVER TOOLTIP'S SEAT AND THE BAND IT CAN HANG INTO (architect
 // 2026-10-06, Windows 95's seat; the measurement and its source are at
@@ -10552,25 +10577,45 @@ TooltipHangBands tooltip_hang_bands(const AppState& a);
 // keyboard's row pitch. (folder_overlay_stands, above, lives here for the
 // same reason.)
 
-// THE BAND: the BOTTOM ROW'S OWN lane, lifted by `height` — x and w taken
-// from that lane rather than from a.width so the two rects are the same band
-// by construction (the lane accessors run on the CLAMPED window dimensions
-// and a raw a.width would disagree with them on a sub-minimum window). THE
-// FLOOR IS THE BOTTOM ROW'S TOP, NOT THE WINDOW'S, and the row rests on the
-// window's foot again since 2026-08-29's fold, so the two coincide today —
-// reading the ROW's lane is what kept the tenants off the STATUS BAR for the
-// one day a lane stood below it, with no term of its own. It
-// does not ask whether anything stands: a rect is a fact about geometry and
-// standing is a decision each caller makes for itself. The one zero rect is
-// the degenerate one — a bottom row with no width, or a height that scales to
-// nothing.
-inline GuiRect keyboard_slot_band(const AppState& a, int height) {
-    const GuiRect bottom = bottom_row_area(a);
-    if (bottom.w <= 0 || height <= 0) return GuiRect{0, 0, 0, 0};
-    return GuiRect{bottom.x, bottom.y - height, bottom.w, height};
+// THE SLOT'S FLOOR — where its tenant's band stands — THE BOTTOM ROW'S TOP,
+// NOT THE WINDOW'S (reading the ROW's lane is what kept the tenants off the
+// STATUS BAR for the one day a lane stood below it, 2026-08-29, with no term
+// of its own), EXCEPT WHILE A CHROME TENANT OWNS THE ROW (2026-10-10, the
+// program's frame: chrome_tenant_owns_bottom_row, render.h's
+// program_frame_rect), when it is THE ROW'S CONTENT BAND'S TOP: the row then
+// stands outside the program's frame on the window's foot, its dock bar's
+// rows plain chrome ground, and the tenant sits directly on the dialog — the
+// keyboard full width in the chrome's ground on the dialog's content band
+// (the planner's mock of record, tmp/mocks/ring/mock_RING_STD_2_keyboard.png:
+// at 300 % the keyboard on rows 951–1343, the content band from 1344), and
+// the picker's folder overlay on its Cancel row the same way. A program-owned
+// row (row 8 under the flag editor's keyboard, the render player under its
+// overlay) keeps the floor on its lane's top, the dock bar standing.
+inline int keyboard_slot_floor_y(const AppState& a) {
+    return chrome_tenant_owns_bottom_row(a) ? bottom_row_content_area(a).y
+                                            : bottom_row_area(a).y;
 }
 
-// THE SLOT'S CEILING, AS A HEIGHT: how far up from the bottom row's top edge a
+// THE BAND: the slot's floor (above), lifted by `height`, ACROSS THE WINDOW'S
+// WHOLE WIDTH — the clamped window width the lane accessors run on, read off
+// the caption's lane, so a raw a.width cannot disagree with them on a
+// sub-minimum window. FULL WIDTH SINCE 2026-10-10, when the program's lanes
+// stepped one frame line in from each side: the keyboard is chrome and stands
+// outside the program's frame, over its columns (render.h's
+// program_frame_rect), and the overlay shares its band (folder_overlay.h's
+// "full window width"). It
+// does not ask whether anything stands: a rect is a fact about geometry and
+// standing is a decision each caller makes for itself. The one zero rect is
+// the degenerate one — a window with no width, or a height that scales to
+// nothing.
+inline GuiRect keyboard_slot_band(const AppState& a, int height) {
+    const GuiRect window = top_caption_row_area(a);
+    if (window.w <= 0 || height <= 0) return GuiRect{0, 0, 0, 0};
+    return GuiRect{window.x, keyboard_slot_floor_y(a) - height, window.w,
+                   height};
+}
+
+// THE SLOT'S CEILING, AS A HEIGHT: how far up from the slot's floor a
 // tenant may reach — TO THE ICON ROW'S FOOT and no further, the whole area
 // below the toolbar (architect 2026-09-09, the top strip relayout that put the
 // icon row under the menu row: the band starts directly under the icon row,
@@ -10582,15 +10627,16 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // `h` VIEW'S PARTITION (File live, the other two anchors and every icon
 // dead: the face is redesign_button_enabled's head over
 // menu_anchor_live, and the press is the veil's with the live anchor
-// exempted — architect 2026-09-03 evening). The height is the bottom row's
-// top edge less the icon row's foot, both resolved by the lane accessors on
-// the CLAMPED window dimensions — the same geometry keyboard_slot_band takes
-// its x and width from, so the two cannot disagree about where the band
-// begins. Zero on a degenerate stack, which every consumer already reads as
-// "no room". ON THE TABLET (2304x1440 at gui_scale 300, gap 1 zero) the
-// band runs [219, 1326): under the 54
-// caption, 66 menu (its etched foot's 6 among them, 2026-10-10) and 99 icon
-// rows, down to the 114-tall bottom row.
+// exempted — architect 2026-09-03 evening). The height is the slot's floor
+// (keyboard_slot_floor_y) less the icon row's foot, both resolved by the lane
+// accessors on the CLAMPED window dimensions — the same geometry
+// keyboard_slot_band takes its floor and width from, so the two cannot
+// disagree about where the band begins. Zero on a degenerate stack, which
+// every consumer already reads as "no room". ON THE TABLET (2304x1440 at
+// gui_scale 300, gap 1 zero) the band runs [216, 1323): under the 54
+// caption, 60 menu, the program frame's 3-row top and the 99 icon rows, down
+// to the 114-tall bottom row over the frame's 3-row bottom — [216, 1344)
+// under the picker, whose Cancel row is a chrome tenant (2026-10-10).
 //
 // THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT
 // (architect 2026-08-28: "from the bottom strip up to the middle of the
@@ -10609,7 +10655,7 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // term of this function, and only slot_damage_rect's MAX reads it beside the
 // overlay's own surface_rect.)
 inline int keyboard_slot_max_height_px(const AppState& a) {
-    const int    floor_y = bottom_row_area(a).y;
+    const int    floor_y = keyboard_slot_floor_y(a);
     const GuiRect icon   = top_icon_row_area(a);
     const int    top_y   = icon.y + icon.h;
     const int h = floor_y - top_y;

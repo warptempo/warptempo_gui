@@ -156,9 +156,18 @@ void Viewport::invalidate_status_cell_area() {
 // (it must erase the modal AND bring the row's own tenants back). The OPENERS
 // do not come through here — nothing is painted before a surface's first paint,
 // so they invalidate the whole window. Caller inventory at the declaration.
+// THE PROGRAM FRAME'S BOTTOM ROW RIDES WITH THE LANE (2026-10-10): a chrome
+// tenant's open and close swap the row and the frame's bottom row on the
+// window's foot (main.cpp's bottom_lane_order), so a CLOSER moves both, and
+// the two lanes together are one span in either order — the frame's row
+// joins the damage, ACROSS THE CLIENT'S WHOLE WIDTH (the frame's own row's
+// span, the frame's columns beside a program-owned row included), so the
+// row's tenants come back with the frame closed round them.
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
-    gui.invalidate_region(t.x, t.y, t.w, t.h);
+    const GuiRect f = bottom_program_frame_area(app);
+    const GuiRect span = union_rect(t, f);
+    gui.invalidate_region(f.x, span.y, f.w, span.h);
     // THE CHOICE EDITOR'S DROPPED LIST AS PAINTED (2026-10-07 evening): it
     // stands over the well above the row, so every repaint and every closer
     // of the modal covers it too — a list closed by the editor's own close

@@ -195,7 +195,7 @@ namespace {
 // inactive selection face: ONE SELECTED PAIR, FOCUSED OR NOT, the record at
 // render.h's palette block.)
 
-// ROW 1. The row's height lives in render.h (menu_row_h_px, its three terms
+// ROW 1. The row's height lives in render.h (menu_row_h_px, its two terms
 // the chrome spec's menu_row_* fields), because main.cpp's lane table needs
 // it; its pads and lead below are the spec's too (architect 2026-10-07).
 //
@@ -959,8 +959,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the opener and
 // the view group cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
-// walks). The band holds every pane down to 569 Windows px of window at
-// 100 % outside the `h` view and 408 inside it (the width math at
+// walks). The band holds every pane down to 571 Windows px of window at
+// 100 % outside the `h` view and 410 inside it (the width math at
 // paint_icon_row, its one statement, re-derived 2026-10-09 for the
 // program's 23-W case), so neither host reaches the rule at its scale: the
 // tablet's 2304 device px hold the row in both states up to about 404 % and
@@ -1551,18 +1551,19 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // THE LANE IS THE ANCHOR (architect 2026-10-01 — render.h's menu-row
     // block carries the ruling and its why): the whole lane's
     // height is each anchor's rectangle AND its published hit rect, flush
-    // under the caption with no air above it; the icon row begins on the
-    // next pixel row with no margin between. The anchor's foot and the
-    // lane's foot are one edge, the icon row's first pixel under it; the
-    // dropdown hangs from the content's foot, over the etched pair
-    // (dropdown_hang_y, 2026-10-10). THE LANE IS NOT ITS CONTENT SINCE 2026-10-05: one
-    // row of ground stands ABOVE the content (ReactOS: caption, face row,
-    // menu), and since 2026-10-10 WINDOWS' ETCHED PAIR stands BELOW it (the
-    // spec's menu_row_head_px and menu_row_foot_px, render.h's menu-row
-    // block; the law at chrome_spec.h's win2000 record) — so every
+    // under the caption with no air above it; the program frame's top row
+    // begins on the next pixel row (paint_program_frame, 2026-10-10). The
+    // anchor's foot and the lane's foot are one edge, and the dropdown hangs
+    // from it over the frame's top row (dropdown_hang_y). THE LANE IS NOT ITS
+    // CONTENT SINCE 2026-10-05: one row of ground stands ABOVE the content
+    // (ReactOS: caption, face row, menu; the spec's menu_row_head_px,
+    // render.h's menu-row block) — so every
     // label on this row is seated in the CONTENT ALONE
     // (menu_row_content_rect) rather than the taller lane — the one place
-    // this row reads two different heights for two different things.
+    // this row reads two different heights for two different things. NO LINE
+    // STANDS UNDER THE CONTENT: Cool Edit's plain menu bar has none, the line
+    // under it being its frame's (2026-10-10, render.h's program_frame_rect;
+    // Windows' etched pair, a rebar's band border, stood here that morning).
 
     cairo_save(cr);
 
@@ -1575,18 +1576,6 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         set_palette_source(cr, ground);
         cairo_rectangle(cr, row.x, row.y, row.w, row.h);
         cairo_fill(cr);
-    }
-
-    // THE FOOT: WINDOWS' ETCHED PAIR under the menu bar (architect
-    // 2026-10-10; his WordPad captures' rows 42 and 43, chrome_spec.h's
-    // win2000 record) — the Shadow row, then the Hilight row, the scheme's
-    // own two (a picked scheme's derived pair), across the lane's whole
-    // width on the foot's rows, the content's foot down. One relief line a
-    // row, so the pair fills the foot exactly (menu_row_foot_h_px).
-    if (menu_row_foot_h_px() > 0) {
-        const GuiRect content_rows = menu_row_content_rect(row);
-        paint_relief_etched_hline(cr, row.x, content_rows.y + content_rows.h,
-                                  row.w);
     }
 
     // THE SHAPING CHOKEPOINT (text_shape.h): each label is MEASURED and PAINTED
@@ -1695,6 +1684,69 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         x += btn_w;
     }
 
+    cairo_restore(cr);
+}
+
+// -- THE PROGRAM'S FRAME (2026-10-10) ---------------------------------------
+//
+// COOL EDIT'S FRAME WINDOW ROUND THE PROGRAM: one sunken line, Shadow on the
+// top and left and Hilight on the bottom and right, in the chrome's roles,
+// mitred — the law (his Cool Edit captures), the geometry and the chrome
+// surfaces outside it at render.h's program_frame_rect, its one statement.
+// TWO PAINTERS, one for each moment of the frame's picture:
+//   paint_program_frame — THE RING, program_frame_rect whole, with the rows
+//     (on_redraw's step 3): its top row is its own lane under the menu row,
+//     its bottom row its own lane under row 8 (or above the row, under a
+//     chrome tenant), and its columns stand in the line every program lane
+//     leaves on each side, so nothing else paints them; the keyboard slot
+//     and the floating surfaces cover it where they stand.
+//   paint_program_frame_keyboard_blocks — THE BLOCKS ROUND A STANDING
+//     KEYBOARD, after the keyboard slot (the rule at onscreen_keyboard.h's
+//     frame block): the upper block's closure — the column's foot and the
+//     Hilight row over the canvas's lowest rows, the ring's columns ending
+//     there — and, where row 8 stays the program's, the lower block's ring,
+//     its Shadow row over the keyboard band's last line.
+// Both paint with the outer damage clip bounding them; the ring is a handful
+// of rects, so neither is exposure-gated.
+void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
+    const GuiRect ring = program_frame_rect(app);
+    if (ring.w <= 0 || ring.h <= 0) return;
+    paint_relief_sunken_outer(cr, ring);
+}
+
+void GuiPaintHandler::paint_program_frame_keyboard_blocks(cairo_t* cr) {
+    if (!onscreen_keyboard::stands(app, gui)) return;
+    const GuiRect closure = onscreen_keyboard::program_closure_rect(app);
+    const GuiRect upper   = onscreen_keyboard::program_upper_ring_rect(app);
+    if (closure.w <= 0 || upper.w <= 0) return;
+    const GuiPalette& p = palette();
+    const int lw   = program_line_px();
+    const int foot = column_foot_h_px();
+    const GuiRect area = waveform_area(app);
+    const GuiRect canvas_top = top_canvas_frame_area(app);
+    const GuiRect column = bottom_column_foot_area(app);
+    cairo_save(cr);
+    // THE COLUMN'S FOOT, CLOSED ABOVE THE KEYBOARD: the program's face over
+    // the foot's rows across the program's columns, then the canvas's ring
+    // with its light bottom row on the foot's first line, cut to the foot's
+    // rows — its dark left column meeting that row mitred, as the canonical
+    // foot's does (paint_canvas_column_frame).
+    const int foot_y = closure.y;
+    cairo_save(cr);
+    cairo_rectangle(cr, column.x, foot_y, column.w, foot);
+    cairo_clip(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_cell_rect(cr, GuiRect{column.x, foot_y, column.w, foot}, p.face);
+    paint_relief_frame(cr,
+                       GuiRect{area.x - lw, canvas_top.y, area.w + 2 * lw,
+                               foot_y + lw - canvas_top.y},
+                       p.ce_dark, p.ce_hilight);
+    cairo_restore(cr);
+    // THE UPPER BLOCK'S RING, its Hilight row the closure's last line.
+    paint_relief_sunken_outer(cr, upper);
+    // THE LOWER BLOCK'S RING where row 8 stays the program's.
+    const GuiRect lower = onscreen_keyboard::program_lower_ring_rect(app);
+    if (lower.w > 0 && lower.h > 0) paint_relief_sunken_outer(cr, lower);
     cairo_restore(cr);
 }
 
@@ -1823,8 +1875,9 @@ static std::string history_walk_line(AppState& app) {
 // still stands beside its one caller, which is now that cell.)
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
-    // THE ICON ROW (top lane 2, directly under the menu row; row 4 of the
-    // redesign): COOL EDIT'S TOOLBAR BAND since 2026-10-09 (the roster block
+    // THE ICON ROW (top lane 3, directly under the program frame's top row;
+    // row 4 of the redesign; one frame line in from each side since
+    // 2026-10-10): COOL EDIT'S TOOLBAR BAND since 2026-10-09 (the roster block
     // above), its groups the band's panes, the cases abutting within a pane,
     // a groove between two panes — TWENTY-ONE members in
     // SEVEN groups outside the `h` view and FOURTEEN in seven inside it (the
@@ -1894,13 +1947,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // column, the history opener's pane, the dark column the left panes stop
     // at — is
     //   1 + 80 + 1 + 34 + 1 = 117,
-    // so the band holds every pane in any window at least 569 Windows px
-    // wide outside the view (408 inside it) — the tablet's 768 at 300 %
-    // with a recess of 199 between. IN DEVICE PX, off the painted walk (each
-    // line one relief line, each face and the glyph its own scaled_px): at
-    // the tablet's 300 % (cases 69) 1356 + 351 of its 2304; at the laptop's
-    // 138 % (lines 1, faces 7 and 6, cases 31) 608 + 157 of its 1920. A
-    // roster move restates these numbers.
+    // so the band holds every pane in any window at least 571 Windows px
+    // wide outside the view (410 inside it), the band standing one program
+    // frame line in from each side (2026-10-10) — the tablet's 768 at 300 %
+    // a band of 766 with a recess of 197 between. IN DEVICE PX, off the
+    // painted walk (each line one relief line, each face and the glyph its
+    // own scaled_px): at the tablet's 300 % (cases 69) 1356 + 351 of its
+    // band's 2298; at the laptop's 138 % (lines 1, faces 7 and 6, cases 31)
+    // 608 + 157 of its 1918. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -2733,17 +2787,19 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // ~00:30 — Cool Edit's 6 / 4 before it, the same sum): a group of n is
     // 5 + 5 + 23n + 5 + 6 = 23n + 21, so the block is the 7 verbs' 182, the walk's 113, the
     // arrows' 113 and the transport's 90 with three gaps of 2, 504 W — on the
-    // tablet's 768 at 300 % starting at W 264, the clock's group W 2..99
+    // tablet's 768 at 300 %, the lane W 1..766 inside the program frame's
+    // columns (2026-10-10), starting at W 263, the clock's group W 3..100
     // (Tahoma's ~67-W cell and its two 5-W pads, a ~77-W field; 2026-10-10),
-    // the state line's first ink at W 105, clipped at W 262 (~157 W of
+    // the state line's first ink at W 106, clipped at W 261 (~155 W of
     // line). IN THE `h` VIEW (the hide,
     // 2026-10-07; Open Text Editor hidden there with the verbs) the block is
     // 1 verb + 4 walk + 2 arrows + 2 transport in four groups, 44 + 113 + 67
     // + 67 + 6 = 297 W, the line's room 364 W. THE ROW CARRIES NO COLLISION
     // RULE — none of the redesign does — and the crop-at-the-floor allowance
     // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
-    // the clock's group once the window falls below about 2 + 98 + 504 =
-    // 604 W outside the view. THE STATE
+    // the clock's group once the window falls below about 1 + 2 + 98 + 504 +
+    // 1 = 606 W outside the view (the program frame's two lines among them).
+    // THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.
     int right_block_x = content.x + content.w;
@@ -3568,9 +3624,9 @@ void paint_menu_check(cairo_t* cr, const GuiRect& item, int pen_x,
 void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // THE MENU ROW'S DROPDOWN — ONE painter for EVERY menu, hanging flush under
     // the menu bar at ZERO margin: its top edge is the row under the menu
-    // bar's CONTENT, over the lane's etched foot, which it covers while it
-    // stands (architect 2026-10-10, Windows' pull-down; dropdown_hang_y owns
-    // the seat and its law), under the emitting button's left edge. Publishes its own
+    // bar's CONTENT — the program frame's top row since 2026-10-10, which it
+    // covers while it stands (Windows' pull-down; dropdown_hang_y owns the
+    // seat) — under the emitting button's left edge. Publishes its own
     // rect and every item rect, so the press claim hit-tests exactly what was
     // painted and never re-shapes a label.
     //
@@ -3702,15 +3758,15 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     // CONTENT ON Y. The x is the anchor's own left edge (architect
     // 2026-08-02), the published rect's, so the band's lead
     // (menu_band_lead_px) carries the box in with the anchor. THE Y IS THE
-    // ROW UNDER THE CONTENT (dropdown_hang_y, architect 2026-10-10): a Windows
-    // pull-down drops from the menu bar's bottom row and covers the band
-    // border beneath it, so the box stands on the lane's etched foot and
-    // covers it while the menu is down, as the box covered the lane's 1-px
-    // margin strip under the anchor when the architect ruled the BUTTON's
-    // foot (2026-08-02). It is read from the lane's content rect
-    // (menu_row_content_rect of top_menu_row_area) rather than from btn.y +
-    // btn.h because the anchor's pill is the whole lane (render.h's menu-row
-    // block), the etched foot included.
+    // ROW UNDER THE CONTENT (dropdown_hang_y): a Windows pull-down drops from
+    // the menu bar's bottom row and covers what stands beneath it, so the box
+    // stands on the program frame's top row and covers it while the menu is
+    // down (2026-10-10), as the box covered the lane's 1-px margin strip under
+    // the anchor when the architect ruled the BUTTON's foot (2026-08-02). It
+    // is read from the lane's content rect (menu_row_content_rect of
+    // top_menu_row_area) rather than from btn.y + btn.h because the anchor's
+    // pill is the whole lane (render.h's menu-row block); the row ending at
+    // its content, the two agree.
     int x = btn.x;
     int y = dropdown_hang_y(app, menu);   // flush: zero margin under the content
     if (x + w > app.width) x = app.width - w;
@@ -3829,7 +3885,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// -- THE RULER LANE (top lane 5) ---------------------------------------------
+// -- THE RULER LANE (top lane 6) ---------------------------------------------
 //
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes COOL EDIT'S LOOK
 // and REAPER'S GEOMETRY MODEL.
@@ -4758,9 +4814,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
-    // THE COLUMN'S AIR above the view bar (top lane 3, render.h's canvas
+    // THE COLUMN'S AIR above the view bar (top lane 4, render.h's canvas
     // column lanes): 5 W of the panel face under the band's last line
-    // (METRICS §4.1), the lane's whole width, painted with the bar it heads.
+    // (METRICS §4.1), the lane's whole width inside the program's frame,
+    // painted with the bar it heads.
     // The trim lane's own ground the same face, under the view bar, so the
     // column's margins beside the bar's frame (render_trim_flags spans the
     // canvas's columns and its two frame columns alone, 2026-10-09) read as
@@ -5154,7 +5211,9 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // element list, drawn last, cover a row where they hang over it, and while
 // either is down the press is theirs (the press router's veil). A PROMPT
 // over the picker (the palette Delete question) owns the row as every
-// prompt does.
+// prompt does. THIS SET LESS THE RENDER PLAYER IS THE ROW'S CHROME TENANTS
+// (chrome_tenant_owns_bottom_row, app_state.h, 2026-10-10), which stand
+// outside the program's frame (paint_bottom_strip's ground).
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
     if (app.render_player.active) return true;
@@ -5201,26 +5260,34 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     const GuiRect content = bottom_row_content_area(app);
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) return;
 
-    // THE LANE'S GROUND (architect 2026-10-09, the program is Cool Edit):
-    // COOL EDIT'S DOCK BAR at its head on every frame (paint_ce_dock_bar; the
-    // well's own bottom line stands straight on its light row), and under
-    // it the content band in THE PANEL'S FACE while row 8 or the render
-    // player stands — the program's tenants — and in THE CHROME'S GROUND
-    // while a prompt, a dialog editor or the picker's Cancel owns the row:
-    // those are the chrome's surfaces (their words in the chrome's label
-    // pair, their push buttons the chrome's), standing in the program's row
-    // as a dialog would. The ground erases whatever render_background laid
-    // down, so the strip does not depend on that erase happening to hold
-    // the same value. The modal paints on this ground and lays none of its
-    // own (paint_modal_dialog).
+    // THE LANE'S GROUND (architect 2026-10-09, the program is Cool Edit;
+    // the frame 2026-10-10): while row 8 or the render player stands — the
+    // program's tenants — COOL EDIT'S DOCK BAR at its head (paint_ce_dock_bar;
+    // the column's foot stands straight on its light row) and the content
+    // band under it in THE PANEL'S FACE, the lane one frame line in from each
+    // side inside the program's frame; while a CHROME TENANT owns the row
+    // (chrome_tenant_owns_bottom_row, app_state.h — a prompt, a dialog editor
+    // or the picker's Cancel: the chrome's surfaces, their words in the
+    // chrome's label pair, their push buttons the chrome's) THE ROW STANDS
+    // OUTSIDE THE PROGRAM'S FRAME as Windows' status bar stands outside Cool
+    // Edit's: NO DOCK BAR — it parts two of Cool Edit's panels, and the row
+    // under it is no longer Cool Edit's — and the whole lane in THE CHROME'S
+    // GROUND at the client's full width, the frame's bottom row standing on
+    // the dock bar's first line above it (main.cpp's bottom_lane_order;
+    // render.h's program_frame_rect), the content band where it stood. The
+    // ground erases whatever render_background laid down, so the strip does
+    // not depend on that erase happening to hold the same value. The modal
+    // paints on this ground and lays none of its own (paint_modal_dialog).
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-        paint_ce_dock_bar(cr, GuiRect{lane.x, lane.y, lane.w, content.y - lane.y});
-        const bool chrome_tenant = modal_owns_bottom_row(app) &&
-                                   !app.render_player.active;
-        paint_cell_rect(cr, content,
-                        chrome_tenant ? palette().ground : palette().face);
+        if (chrome_tenant_owns_bottom_row(app)) {
+            paint_cell_rect(cr, lane, palette().ground);
+        } else {
+            paint_ce_dock_bar(
+                cr, GuiRect{lane.x, lane.y, lane.w, content.y - lane.y});
+            paint_cell_rect(cr, content, palette().face);
+        }
         cairo_restore(cr);
     }
 
@@ -7705,10 +7772,11 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // (architect 2026-10-09, the third part, "accurate to the mock-up"; METRICS
 // §4.1, the mock of record's set 3; program_spec.h's column_margin_px and
 // column_foot_px, render.h's canvas-frame accessors.) ONE PAINTER for the
-// rows from the canvas's top frame row (top lane 7) through the column's
-// foot (bottom lane 1): the panel's FACE across them, the window's width —
-// the margins beside the canvas, the frame rows' own ground and the foot's
-// 5 W — then THE CANVAS'S FRAME, one ring round the waveform area: the
+// rows from the canvas's top frame row (top lane 8) through the column's
+// foot (bottom lane 2): the panel's FACE across them, the program's columns
+// inside its frame (2026-10-10) — the margins beside the canvas, the frame
+// rows' own ground and the foot's 5 W — then THE CANVAS'S FRAME, one ring
+// round the waveform area: the
 // `ce_dark` top row and left column, the `ce_hilight` right column and
 // bottom row, MITRED at the top-right and bottom-left corner blocks where
 // the dark meets the light (paint_relief_frame, cool_edit_paint.h's diagonal
@@ -7997,6 +8065,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, bottom_row_area(app))) {
             paint_bottom_strip(cr);
         }
+        // THE PROGRAM'S FRAME (2026-10-10, render.h's program_frame_rect):
+        // the ring round the program, with the rows it wraps — its columns
+        // stand in the line every program lane leaves, so no lane painter
+        // covers it. Not exposure-gated: a handful of rects, the outer clip
+        // bounding them.
+        paint_program_frame(cr);
     }
 
     if (plate_branch) {
@@ -8057,7 +8131,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      in one painter),
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
-        //      below them paints on).
+        //      below them paints on), then THE PROGRAM'S FRAME round the
+        //      program (paint_program_frame, 2026-10-10: its two rows lanes of
+        //      their own, its columns the line every program lane leaves).
         //   4. waveform plate -> THE CENTER LINES over the ink
         //      (render_center_lines, architect 2026-10-09 evening; with audio
         //      loaded they paint here and not at step 2, a null plate's frame
@@ -8095,7 +8171,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      because their painters own the roster's HIT RECTS and a row
         //      that skipped a frame would strand them (the reasoning is at
         //      step 3). The overdraw is a mode's cost, paid only while the
-        //      panel stands.
+        //      panel stands. Both tenants stand over the program's frame
+        //      (full window width, 2026-10-10), and AFTER THE KEYBOARD the
+        //      program's blocks round it (paint_program_frame_keyboard_blocks:
+        //      the column's foot and the frame's Hilight row closing the
+        //      program above it, which the waveform's painted rect also
+        //      leaves out, and the lower block's ring where row 8 stays the
+        //      program's).
         //  13. the flag editor's box, then THE NOTIFICATION CARDS
         //      (paint_notifications, 2026-08-29 — the top-right stack, above
         //      every lane and the keyboard slot), then the dropdown — the
@@ -8225,6 +8307,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // declaration). With the slot down that is one platform query and two
     // bit reads; with it up the outer Cairo clip makes a narrow damage cheap.
     paint_keyboard_slot(cr, GuiRect{x, y, w, h});
+    // THE PROGRAM'S BLOCKS ROUND A STANDING KEYBOARD (2026-10-10): the
+    // closure above it and, where row 8 stays the program's, the lower
+    // block's ring over its last line — after the slot, whose band they
+    // meet, and before the floating surfaces (onscreen_keyboard.h's frame
+    // block). Nothing without a standing keyboard.
+    paint_program_frame_keyboard_blocks(cr);
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
     // the waveform, because both hang outside their strips (the dropdown below
