@@ -141,6 +141,7 @@
 // share is app_state.h's.
 #include "app_state.h"
 #include "render.h"
+#include "renders_dir.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -270,11 +271,63 @@ inline GuiRect content_rect(const AppState& a) {
     return GuiRect{s.x + lw, s.y + lw, s.w - 2 * lw, s.h - 2 * lw};
 }
 
+// THE FOLDER NAME ABOVE THE PLAYLIST (architect 2026-10-10 ~23:00, "the path
+// field … should just show the name of the folder that you're currently
+// looking at … just stick the title above the playlist and put a separator";
+// the render player is not front-facing, so it is minimal — no field box, no
+// style of its own): WHILE THE RENDER PLAYER STANDS the content rect's top
+// gives up ONE LIST ROW (kRowHeightPx) to a line naming the VIEWED folder —
+// where Up a Folder and entering a folder land, `tmp` at the top level — and
+// under it an ETCHED separator pair. It is not a row: no hit, no highlight, no
+// scroll. The project picker, which shares the panel, has none (header_px is
+// zero there). THE NAME IS THE VIEWED FOLDER'S, NOT THE PLAYING ITEM'S: the
+// car's artist line (GuiRenderPlayer's media-session push) names the item's
+// folder while one sounds, and the two differ only while the listener browses
+// another folder during playback.
+inline bool has_header(const AppState& a) {
+    return a.folder_overlay.owner == AppState::FolderOverlay::Owner::Player;
+}
+
+// The header's height under the content's top: the panel pad, the name's row
+// and the separator's two lines; zero where the panel carries no header.
+inline int header_px(const AppState& a) {
+    if (!has_header(a)) return 0;
+    return pad_px() + button_row_height_px() + 2 * relief_line_px();
+}
+
+// The viewed folder's own name (the root listing is the project's `tmp/`).
+inline std::string viewed_folder_name(const AppState& a) {
+    const AppState::RenderPlayer& rp = a.render_player;
+    return (rp.folder == AppState::RenderPlayer::Folder::Root
+                ? project_batch_root(a.source_audio_path)
+                : rp.batch_dir)
+        .filename()
+        .string();
+}
+
+// The name's row: the first row slot of the content, the rows' own width.
+inline GuiRect header_name_rect(const AppState& a) {
+    const GuiRect band = content_rect(a);
+    return GuiRect{band.x + pad_px(), band.y + pad_px(),
+                   band.w - 2 * pad_px(), button_row_height_px()};
+}
+
+// THE ROWS' BAND: the content rect under the header. EVERY ROW GEOMETRY
+// (the row rects, the scroll ceiling, the keep-visible walk, the painter's
+// row clip and row_at's containment) reads this and not the content rect, so
+// paint and hit agree on the header's moved edge. Equal to content_rect
+// where there is no header.
+inline GuiRect rows_rect(const AppState& a) {
+    const GuiRect c = content_rect(a);
+    const int     h = std::min(header_px(a), c.h);
+    return GuiRect{c.x, c.y + h, c.w, c.h - h};
+}
+
 // -- The scroll state --------------------------------------------------------
 
 // The scroll offset's ceiling: how much of the content lies past the band.
 inline int max_scroll_px(const AppState& a) {
-    const GuiRect band = content_rect(a);
+    const GuiRect band = rows_rect(a);
     return std::max(0, content_height_px(a) - band.h);
 }
 
@@ -293,7 +346,7 @@ inline void clamp_scroll(AppState& a) {
 // press router read their rects from here and nowhere else). It may lie partly or wholly
 // outside the band; the painter clips and the hit test asks the band first.
 inline GuiRect row_rect(const AppState& a, int index) {
-    const GuiRect band = content_rect(a);
+    const GuiRect band = rows_rect(a);
     const int h = button_row_height_px();
     const int y = band.y + pad_px() + index * (h + button_row_gap_px()) -
                   a.folder_overlay.scroll_px;
@@ -311,7 +364,8 @@ inline void for_each_row(const AppState& a, Fn&& fn) {
     }
 }
 
-// The row under (x, y), or -1 — a point outside the CONTENT rect answers -1
+// The row under (x, y), or -1 — a point outside the ROWS' BAND (rows_rect: the
+// content rect under the render player's folder-name header) answers -1
 // whatever row's rect would contain it, so a row scrolled out of the band
 // cannot be pressed through the waveform above or the bottom row below. It is
 // the content rect and not the surface because the surface is the band's
@@ -320,7 +374,7 @@ inline void for_each_row(const AppState& a, Fn&& fn) {
 // The painter clips its row walk to this same rect, so paint and hit agree on
 // every pixel of the band.
 inline int row_at(const AppState& a, int x, int y) {
-    const GuiRect band = content_rect(a);
+    const GuiRect band = rows_rect(a);
     if (!rect_contains(band, x, y)) return -1;
     int hit = -1;
     for_each_row(a, [&](int i, const AppState::FolderOverlayRow&,
@@ -337,7 +391,7 @@ inline int row_at(const AppState& a, int x, int y) {
 inline void scroll_row_into_view(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    const GuiRect band = content_rect(a);
+    const GuiRect band = rows_rect(a);
     const GuiRect r    = row_rect(a, index);
     const int top      = band.y + pad_px();
     const int bottom   = band.y + band.h - pad_px();
@@ -415,7 +469,8 @@ inline bool move_highlight(AppState& a, int delta) {
 // render player's Highlight Previous / Next buttons): the walk's landing row
 // differs from the row the highlight stands on. False on an empty listing and
 // at the wall the walk clamps to; a -1 highlight is actionable, the walk
-// seating row 0 exactly as the arrow keys do. The band's scroll-into-view
+// starting FROM row 0 (walk_origin_row) and applying its delta exactly as the
+// arrow keys do: Down lands on row 1, Up on row 0. The band's scroll-into-view
 // alone (a highlight already on the wall row but partly out of view) is not
 // asked: that is a repaint of the band, not a step of the highlight.
 inline bool move_highlight_actionable(const AppState& a, int delta) {

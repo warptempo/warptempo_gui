@@ -10299,7 +10299,8 @@ int render_player_highlight_act_row(const AppState& a);
 //   to (row 0 for Highlight Previous, the last row for Highlight Next) —
 //   through folder_overlay::move_highlight_actionable, the step's own owner,
 //   so the face and the arrow keys cannot disagree. A highlight standing on
-//   no row is lit: the walk seats row 0 from there, as the keys do. The
+//   no row is lit: the walk starts FROM row 0 there (walk_origin_row) and
+//   applies its delta, as the keys do — Down lands on row 1, Up on row 0. The
 //   keys stay silent at the walls and the grey is the buttons' whole message.
 //   REPEAT ONE and CLOSE never grey (the lamp always toggles; Close is the
 //   escape sentinel).

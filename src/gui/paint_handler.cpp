@@ -7820,11 +7820,41 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // row below, or the band's own edge.
     paint_cell_rect(cr, surf, palette().field_ground);
     paint_relief_plain_sunken(cr, surf);
-    // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
-    // SAME RECT (folder_overlay.h) — the surface inside its edge — so paint
-    // and hit agree about every pixel at any scroll offset. The surface stays
+    // THE ROW WALK'S CLIP IS THE ROWS' BAND AND row_at'S CONTAINMENT IS THE
+    // SAME RECT (folder_overlay.h's rows_rect) — the surface inside its edge,
+    // under the player's folder-name header — so paint and hit agree about
+    // every pixel at any scroll offset. The surface stays
     // the field, the damage and the band's outer claim.
-    const GuiRect content = folder_overlay::content_rect(app);
+    const GuiRect whole = folder_overlay::content_rect(app);
+    cairo_rectangle(cr, whole.x, whole.y, whole.w, whole.h);
+    cairo_clip(cr);
+    // THE FOLDER NAME ABOVE THE LIST (folder_overlay.h's header block,
+    // architect 2026-10-10 ~23:00; the render player's listing alone): the
+    // viewed folder's name in the list's own text pair and face at the rows'
+    // own text inset, clipped at the content's right edge (no ellipsis), and
+    // under it the etched separator pair. Not a row — no hit, no scroll. The
+    // rows below clip to THE ROWS' BAND, under the separator.
+    if (folder_overlay::has_header(app)) {
+        const GuiFont hfont = gui_font(GuiFace::Body);
+        const GuiRect nr    = folder_overlay::header_name_rect(app);
+        const int text_x = nr.x + folder_overlay::row_icon_inset_px() +
+                           folder_overlay::row_icon_px() +
+                           folder_overlay::row_icon_gap_px();
+        const text_shape::ShapedRun hrun = text_shape::shape_text_run(
+            hfont, folder_overlay::viewed_folder_name(app));
+        const double hbase = redesign_baseline(
+            hfont, static_cast<double>(nr.y), static_cast<double>(nr.h));
+        cairo_save(cr);
+        cairo_rectangle(cr, text_x, nr.y, std::max(0, (nr.x + nr.w) - text_x),
+                        nr.h);
+        cairo_clip(cr);
+        set_palette_source(cr, surface_text(GuiSurface::ListRow));
+        text_shape::show_shaped_run(cr, hrun, static_cast<double>(text_x),
+                                    hbase);
+        cairo_restore(cr);
+        paint_relief_etched_hline(cr, nr.x, nr.y + nr.h, nr.w);
+    }
+    const GuiRect content = folder_overlay::rows_rect(app);
     cairo_rectangle(cr, content.x, content.y, content.w, content.h);
     cairo_clip(cr);
 

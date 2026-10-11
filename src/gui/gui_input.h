@@ -181,13 +181,13 @@ struct GuiInputState {
     // produces no character (function keys, bare modifiers). It is a FULL
     // CODEPOINT, not a byte — a compose or dead-key sequence arrives here
     // whole (U+2026, U+2014, an accented letter) and the text editors UTF-8
-    // encode it on insertion, so nothing truncates at this boundary. THREE
-    // CONSUMERS
-    // (re-derived 2026-07-30): the text editors' printable-insertion path,
-    // repeat_eligible's editor-typing repeat gate, and the modal prompt's
-    // LETTER responses — the last joined 2026-07-30, because the prompt is the
-    // product's one CASE-SENSITIVE letter surface and the case-folded GuiKey
-    // cannot express that (CapsLock defeated the old !shift spelling). Every
+    // encode it on insertion, so nothing truncates at this boundary. ONE
+    // SURFACE READS IT (re-derived by grep 2026-10-10): the text editors, at
+    // their two readers in text_editor.cpp — the key classifier (whose
+    // printable verdict repeat_eligible's editor-typing repeat gate asks) and
+    // handle_key's printable insertion. The modal prompt's letter responses
+    // read it from 2026-07-30 until the prompts' access keys went Windows
+    // strict (2026-10-10): they match the case-folded GuiKey now. Every
     // other consumer reads the GuiKey and ignores this.
     uint32_t codepoint           = 0;
     // True iff this key event is a SYNTHESIZED REPEAT — one the process
