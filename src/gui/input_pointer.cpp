@@ -498,6 +498,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // dispatch at all — the dead face's consumed press, per the Cumulative
     // entry's note above; and even reached, bare `,` and `.` are bound in
     // handle_history_mode_key alone, so there is nothing for them to fire.
+    //
+    // NO HOLD-REPEAT, THOUGH THEY STAND IN THE ARROWS' SEAT (architect
+    // 2026-10-11): in the `h` view the two take the Left / Right arrows' place
+    // on row 8 (kTransportHistoryStepGroup) but not the arrows' `repeats`
+    // column — these rows set none. They are shift-admitting, and a
+    // non-repeating button's long press IS its shifted press, the jump to the
+    // walk's end; a hold-repeat would collide with that long press (the
+    // standing principle above: a held repeat outranks the long-press shift).
+    // A deliberate asymmetry with the arrows.
     {RedesignButton::HistoryOlder,
      GuiKeys::Comma,  false, false, false, false},                             // bare ,
     {RedesignButton::HistoryNewer,

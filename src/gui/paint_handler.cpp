@@ -2427,7 +2427,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // skips: nine cases in four groups. THE STAND-IN (architect 2026-10-11,
 // kTransportHistoryStepGroup): in the view Older / Newer take the seat Left
 // and Right hold outside it, the four arrows publishing empty rects, and
-// outside it the two publish empty rects. Otherwise no member publishes a
+// outside it the two publish empty rects. THE STAND-INS DO NOT INHERIT THE
+// ARROWS' HOLD-REPEAT (architect 2026-10-11; kToolbarChords, input_pointer.cpp,
+// records why). Otherwise no member publishes a
 // zero rect except under a modal.
 //
 // (A CENTERED ESC BUTTON shipped between the groups on row 8's first day and
