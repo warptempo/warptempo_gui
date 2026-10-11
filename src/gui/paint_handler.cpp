@@ -5638,7 +5638,7 @@ constexpr double kModalFieldMinWidthPx = 29.0;  // the field's floor
 // Cancel, Yes, Save, Discard, Retry, Reload, Keep, Delete — Discard the
 // widest at about 56 with its pads at the 13-px face), so the row reads as
 // Windows' row of equal buttons. A glyph button is not this box: the render
-// player's seven are row 8's case, the program's (architect 2026-10-05,
+// player's nine are row 8's case, the program's (architect 2026-10-05,
 // bottom_row_seats; render.h's program block).
 constexpr double kModalBtnMinWidthPx  = 75.0;
 // THE FOCUS FRAME'S WIDTH — the keyboard-focused button's frame, ONE
@@ -5875,7 +5875,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // them, until the player's Stop retired 2026-09-01, and the middle
     // button's live face stays the pause it took on 2026-08-28 — the REPEAT
     // ONE toggle wears
-    // MediaRepeatSingle in both its states, the UP button GoParentFolder, and
+    // MediaRepeatSingle in both its states, the HIGHLIGHT PAIR GoDown and GoUp
+    // (architect 2026-10-10, Highlight Next and Highlight Previous, the band
+    // walk's two keys on glass), the UP A FOLDER button GoParentFolder, and
     // since 2026-09-01 the LOAD IN PLACE wears DialogOkApply and CLOSE
     // WindowClose — while a word button keeps the
     // label box every prompt and editor button has always had. THE PLAYER'S
@@ -5894,7 +5896,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         bool        lit          = false;
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
-        // below. ONE OWNER READS IT, re-greped 2026-09-30: the player's seven
+        // below. ONE OWNER READS IT, re-greped 2026-09-30: the player's nine
         // through render_player_button_enabled; true on every other owner's
         // buttons.
         bool        enabled      = true;
@@ -5906,9 +5908,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // WHERE IT PAINTS. The single left-flushed cluster every other owner
         // lays out is written into this field by the walk below; THE PLAYER'S
         // ROW IS NOT ONE CLUSTER (transport, separator, scrub, clock,
-        // separator, the lamp, the Up button — then the last two FLUSH RIGHT),
-        // so its own branch writes all seven and the walk simply paints where
-        // it is told.
+        // separator, the lamp, the highlight pair, the Up a Folder button —
+        // then the last two FLUSH RIGHT), so its own branch writes all nine
+        // and the walk simply paints where it is told.
         int         x            = 0;
     };
     std::vector<DialogButtonPlan> plan;
@@ -5928,7 +5930,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // then the scrub and the clock (both laid out in the player's own
         // branch below, the separators either side of them retired
         // 2026-10-02), then the REPEAT ONE
-        // lamp, the UP button, and the last two FLUSH RIGHT: Load in place ·
+        // lamp, the HIGHLIGHT PAIR (Highlight Next, Highlight Previous: the
+        // bare Down / Up keys' band walk on a button, architect 2026-10-10),
+        // the UP A FOLDER button, and the last two FLUSH RIGHT: Load in place ·
         // Close, GLYPH buttons since 2026-09-01 like every other button on
         // this row.
         // Close LAST, the escape sentinel by construction as every prompt has
@@ -6015,7 +6019,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         };
         // (THE `word_button` LAMBDA IS DELETED — 2026-09-01, with its last two
         // callers: Load in place and Close became GLYPH buttons, so the
-        // player's row is seven glyphs and no word at all. The other three
+        // player's row is nine glyphs and no word at all. The other three
         // owners' word buttons are built in their own branches below and the
         // walk's word arm still paints them; what went is this owner's copy of
         // the builder, not the kind.)
@@ -6044,7 +6048,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
                      icons::Icon::MediaRepeatSingle,
                      app.render_player.repeat_one);
-        // UP, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
+        // THE HIGHLIGHT PAIR (architect 2026-10-10): the render player on
+        // glass has no arrow keys, so the bare Down / Up keys' band walk is a
+        // pair of buttons — DOWN THEN UP, the order of row 8's own pair
+        // (TransportDown, TransportUp) — that move the highlight one row and
+        // nothing else (GuiRenderPlayer::move_highlight), so a file is picked
+        // silently and then loaded in place or played. They wear GoDown and
+        // GoUp, row 8's own arrows. GoUp is therefore the SAME DRAWING as
+        // Up a Folder's GoParentFolder in both icon sets (the two files are
+        // byte-identical), so the pair's Up and the folder button read alike
+        // side by side; the architect is asked separately about a distinct
+        // Up a Folder glyph.
+        glyph_button(AppState::PlayerButtonAct::HighlightDown,
+                     icons::Icon::GoDown);
+        glyph_button(AppState::PlayerButtonAct::HighlightUp,
+                     icons::Icon::GoUp);
+        // UP A FOLDER, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
         // more, so the way out of a batch folder is here — beside the lamp,
         // ahead of the right-flushed pair, on GoParentFolder, Explorer 95's
@@ -6066,7 +6085,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // WindowClose, Marlett's close X (the
         // notification cards' dismiss was its other reader until the card's X
         // retired, 2026-10-01; a def is a glyph and several buttons are free
-        // to wear one). The row is SEVEN GLYPH
+        // to wear one). The row is NINE GLYPH
         // BUTTONS and no word button, so its faces take the glyph fork whole.
         // Close stays LAST, the escape sentinel by construction, and both keep
         // their acts, their keys and their hints unchanged.
@@ -6116,7 +6135,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     for (size_t i = 0; i < plan.size(); ++i) {
         if (plan[i].glyph) {
             // A glyph button is the PROGRAM'S CASE (the player's alone, its
-            // seven being the plan's only glyph buttons): row 8's width.
+            // nine being the plan's only glyph buttons): row 8's width.
             plan[i].w = seats.case_w;
         } else {
             const double lw =
@@ -6307,9 +6326,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //
         //    THE ROW GAINED THE UP BUTTON on 2026-09-01, between the lamp
         //    and the right-flushed pair, so the fixed run after the scrub
-        //    carries TWO glyph boxes now and the plan is seven items — and
-        //    LATER THAT DAY THE PAIR ITSELF BECAME GLYPHS, so every one of the
-        //    seven is a box of the same width and the whole row is fixed
+        //    carried TWO glyph boxes then — and LATER THAT DAY THE PAIR ITSELF
+        //    BECAME GLYPHS. THE HIGHLIGHT PAIR (architect 2026-10-10) stands
+        //    between the lamp and Up a Folder, so the fixed run after the
+        //    scrub carries FOUR glyph boxes now and the plan is nine items,
+        //    every one of them a box of the same width and the whole row is fixed
         //    except the scrub. THE BOXES ARE ROW 8'S CASES (architect
         //    2026-10-05, bottom_row_seats; the program's since 2026-10-09):
         //    each box wears the roster's face (paint_roster_case; the walk
@@ -6379,8 +6400,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int words_w  = bw + ggap + bw;
         const int words_x0 = std::max(cx0, seats.cases_right - words_w);
         // What the row owes AFTER the scrub: the group space, the clock
-        // cell, the group space, the lamp, THE UP BUTTON with the glyph gap
-        // between them, and the GAP BEFORE THE RIGHT-FLUSHED PAIR, which is
+        // cell, the group space, the lamp, THE HIGHLIGHT PAIR AND THE UP A
+        // FOLDER BUTTON with the glyph gap between each two of the four
+        // boxes, and the GAP BEFORE THE RIGHT-FLUSHED PAIR, which is
         // that same glyph gap since 2026-09-01. THE 2026-08-29 SPACING RULING
         // IS SPENT, not overruled: it put the WORD BUTTONS' OWN gap there ("the
         // air between the last glyph and Load in place is the air between Load
@@ -6390,7 +6412,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // word-button gap left on this row to win: every gap between two
         // boxes on it is the row's one glyph gap (kPlayerGlyphGapPx).
         const int after_scrub =
-            group + clock_w + group + bw + ggap + bw + ggap;
+            group + clock_w + group + 4 * bw + 4 * ggap;
         // THE FLOOR IS TWO HANDLE BOXES — a track that cannot seat the handle
         // at each end is not a track (28 Windows px since the unit's change).
         int scrub_w = words_x0 - after_scrub - scrub_x0;
@@ -6399,9 +6421,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int clock_x0  = scrub_x0 + (scrub_w > 0 ? scrub_w + group : 0);
         const int clock_end = clock_x0 + clock_w;
         plan[3].x = clock_end + group;              // Repeat one
-        plan[4].x = plan[3].x + bw + ggap;          // Up
-        plan[5].x = words_x0;                       // Load in place
-        plan[6].x = words_x0 + bw + ggap;           // Close
+        plan[4].x = plan[3].x + bw + ggap;          // Highlight Next (Down)
+        plan[5].x = plan[4].x + bw + ggap;          // Highlight Previous (Up)
+        plan[6].x = plan[5].x + bw + ggap;          // Up a Folder
+        plan[7].x = words_x0;                       // Load in place
+        plan[8].x = words_x0 + bw + ggap;           // Close
 
         // -- THE PLAY-SCRUB, SOUND RECORDER'S CHANNEL UNDER WINDOWS'
         //    TRACKBAR THUMB (architect 2026-10-02, the thumb 2026-10-06; the
@@ -6814,7 +6838,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28, the
     //    player's relaid row): the single left-flushed cluster is laid out
     //    here, in the walk that has always laid it out, and the PLAYER's
-    //    branch above has already written all seven of its own — one walk, two
+    //    branch above has already written all nine of its own — one walk, two
     //    arrangements, and no second painter. --
     if (!player_up) {
         int cluster_x = buttons_x0;
@@ -6851,7 +6875,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (update_modal_dialog_hover) drives the tooltip and that row's hot
         // button.
         // THE RENDER PLAYER'S ROW IS ROW 8'S CASES (architect 2026-10-05;
-        // the program's since 2026-10-09): its seven boxes take the roster's
+        // the program's since 2026-10-09): its nine boxes take the roster's
         // face through the one painter, paint_roster_case — the rest face,
         // Cool Edit's down face pressed (the glyph one line right and down)
         // and for Repeat One's lamp, NO HOT FACE (program_spec.h's

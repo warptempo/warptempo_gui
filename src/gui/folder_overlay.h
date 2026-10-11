@@ -393,13 +393,34 @@ inline int walk_origin_row(const AppState& a) {
                                               : a.folder_overlay.highlight_row;
 }
 
+// THE ROW A WALK OF `delta` ROWS LANDS ON, or -1 for an empty listing (the
+// step's one owner: move_highlight below seats it, and
+// move_highlight_actionable asks whether it would change the highlight).
+inline int move_highlight_target(const AppState& a, int delta) {
+    const int n = static_cast<int>(a.folder_overlay.rows.size());
+    if (n <= 0) return -1;
+    return std::clamp(walk_origin_row(a) + delta, 0, n - 1);
+}
+
 // Move the highlight by `delta` rows, clamped; an empty listing has nothing
 // to move and a -1 highlight walks from row 0 (the origin owner above).
 // Returns whether the band changed.
 inline bool move_highlight(AppState& a, int delta) {
-    const int n = static_cast<int>(a.folder_overlay.rows.size());
-    if (n <= 0) return false;
-    return set_highlight(a, std::clamp(walk_origin_row(a) + delta, 0, n - 1));
+    const int to = move_highlight_target(a, delta);
+    if (to < 0) return false;
+    return set_highlight(a, to);
+}
+
+// WOULD A WALK OF `delta` ROWS MOVE THE HIGHLIGHT (architect 2026-10-10, the
+// render player's Highlight Previous / Next buttons): the walk's landing row
+// differs from the row the highlight stands on. False on an empty listing and
+// at the wall the walk clamps to; a -1 highlight is actionable, the walk
+// seating row 0 exactly as the arrow keys do. The band's scroll-into-view
+// alone (a highlight already on the wall row but partly out of view) is not
+// asked: that is a repaint of the band, not a step of the highlight.
+inline bool move_highlight_actionable(const AppState& a, int delta) {
+    const int to = move_highlight_target(a, delta);
+    return to >= 0 && to != a.folder_overlay.highlight_row;
 }
 
 // Scroll the band by `rows` rows (the wheel's detent step) at the button

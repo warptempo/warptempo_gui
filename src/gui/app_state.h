@@ -6530,12 +6530,13 @@ struct AppState {
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
     // the two skips around Play-Pause (Home / Play-Pause / End, the main
     // window's own triple since 2026-09-01), the play-scrub, the clock, the
-    // Repeat one lamp, the Up button and the right-flushed pair Load in place /
-    // Close (the order of 2026-08-28; that day's Stop sat after the two-faced
+    // Repeat one lamp, the highlight pair (Highlight Next / Previous, architect
+    // 2026-10-10), the Up a Folder button and the right-flushed pair Load in
+    // place / Close (the order of 2026-08-28; that day's Stop sat after the two-faced
     // button until it retired 2026-09-01, and Up took its place beside the lamp
     // — the pair were WORD buttons until later that same day, when the
     // architect gave them the checkmark and the window-close X and the row
-    // became seven glyphs) — is
+    // became glyphs; nine buttons since the highlight pair) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
     // still outranks it (the load confirmation paints over the player's row
@@ -6593,7 +6594,7 @@ struct AppState {
     enum class ModalDialogOwner {
         None, Prompt, Editor, Player, Picker, ColorPicker
     };
-    // THE PLAYER'S SEVEN BUTTONS, the third dispatch vocabulary beside a
+    // THE PLAYER'S NINE BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
     // under the Player owner and the other two vocabularies are zero/false
@@ -6638,10 +6639,21 @@ struct AppState {
     // they run now is home() and next_track() again, the car's own Previous
     // and Next reaching neither button.
     //
+    // THE HIGHLIGHT PAIR (architect 2026-10-10, the tablet having no arrow
+    // keys): `HighlightDown` / `HighlightUp` move the band's highlight one
+    // row and NOTHING ELSE — no load, no play, no change to the transport's
+    // item, in every transport state — the bare Down / Up keys' own act
+    // (GuiRenderPlayer::move_highlight(+1 / -1)), so a file can be picked
+    // silently and then loaded in place or played. They sit after Repeat One,
+    // DOWN THEN UP as row 8's own pair (TransportDown, TransportUp) stands,
+    // ahead of Up a Folder. Each greys exactly where its walk would not move
+    // the highlight (folder_overlay::move_highlight_actionable, the step's
+    // own owner, read by the act and the face alike) and admits no modifier.
+    //
     // UP IS THE `..` ROW'S ACT, LIFTED ONTO THE ROW (architect 2026-09-01,
     // with the player's move inside `tmp/`): the listings carry no `..` row
-    // any more, so going up is a BUTTON — beside Repeat one, ahead of the
-    // right-flushed pair — whose act is GuiRenderPlayer::up() and whose key twin is
+    // any more, so going up is a BUTTON — after the highlight pair (2026-10-10), ahead of
+    // the right-flushed pair — whose act is GuiRenderPlayer::up() and whose key twin is
     // Backspace, unchanged. It greys at the root, which is `tmp/` itself
     // (render_player_up_actionable, the wall's one owner, read by the act and
     // by the face alike).
@@ -6654,8 +6666,8 @@ struct AppState {
     // the slot is Load in Place, unchanged. The acts are
     // GuiInputHandler::render_player_delete and its confirmation.
     enum class PlayerButtonAct {
-        None, Home, PlayPause, NextTrack, RepeatOne, Up, LoadInPlace, Delete,
-        Close
+        None, Home, PlayPause, NextTrack, RepeatOne, HighlightDown,
+        HighlightUp, Up, LoadInPlace, Delete, Close
     };
     // THE COLOR PICKER'S THREE BUTTONS (2026-10-07), the fourth dispatch
     // vocabulary: what a card button DOES at its lift
@@ -10043,6 +10055,12 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // Backspace, which the router has bound to this act since the mode
         // was built, so the button advertises the chord it answers exactly as
         // every other row of this table does.
+        // THE HIGHLIGHT PAIR (architect 2026-10-10): the band walk's two
+        // keys, named for the act — the highlight alone moves.
+        case AppState::PlayerButtonAct::HighlightDown:
+            return "Highlight Next (Down)";
+        case AppState::PlayerButtonAct::HighlightUp:
+            return "Highlight Previous (Up)";
         case AppState::PlayerButtonAct::Up:          return "Up a Folder (Backspace)";
         case AppState::PlayerButtonAct::LoadInPlace: return "Load in Place (')";
         // DELETE (architect 2026-09-29), Load in Place's slot at the root: the
@@ -10123,6 +10141,8 @@ inline std::string render_player_button_shift_hint(
                                         : std::string();
         case AppState::PlayerButtonAct::PlayPause:
         case AppState::PlayerButtonAct::RepeatOne:
+        case AppState::PlayerButtonAct::HighlightDown:
+        case AppState::PlayerButtonAct::HighlightUp:
         case AppState::PlayerButtonAct::Up:
         case AppState::PlayerButtonAct::LoadInPlace:
         case AppState::PlayerButtonAct::Close:
@@ -10143,6 +10163,8 @@ static_assert(
     player_button_shift_admits(AppState::PlayerButtonAct::NextTrack) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::PlayPause) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::RepeatOne) &&
+    !player_button_shift_admits(AppState::PlayerButtonAct::HighlightDown) &&
+    !player_button_shift_admits(AppState::PlayerButtonAct::HighlightUp) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::Up) &&
     !player_button_shift_admits(AppState::PlayerButtonAct::LoadInPlace) &&
     player_button_shift_admits(AppState::PlayerButtonAct::Delete) &&
@@ -10250,6 +10272,13 @@ int render_player_highlight_act_row(const AppState& a);
 //   the key keeps its card, the roster's shape. The render run's edges
 //   damage nothing on the row, so the per-tick comparator (main.cpp) is
 //   what repaints the face on them.
+//   THE HIGHLIGHT PAIR (architect 2026-10-10) grey where the band walk would
+//   not move the highlight — an empty listing, or the wall the walk clamps
+//   to (row 0 for Highlight Previous, the last row for Highlight Next) —
+//   through folder_overlay::move_highlight_actionable, the step's own owner,
+//   so the face and the arrow keys cannot disagree. A highlight standing on
+//   no row is lit: the walk seats row 0 from there, as the keys do. The
+//   keys stay silent at the walls and the grey is the buttons' whole message.
 //   REPEAT ONE and CLOSE never grey (the lamp always toggles; Close is the
 //   escape sentinel).
 // TWO READER CLASSES: the plan builder (paint_modal_dialog, publishing the

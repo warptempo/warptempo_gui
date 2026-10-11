@@ -140,7 +140,9 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // the motionless LIFT (the press still arms, the same press being the band's
 // possible scroll drag) and the highlight moves onto the row first; Enter is
 // the keyboard's own click on the highlight and Up/Down walk the band without
-// opening anything. THE PLAY BUTTON READS THE HIGHLIGHT FIRST AND THE
+// opening anything — and, for the tablet's lack of arrow keys, the row's
+// Highlight Next / Highlight Previous buttons (architect 2026-10-10) are the
+// same walk, move_highlight(+1 / -1), on glass. THE PLAY BUTTON READS THE HIGHLIGHT FIRST AND THE
 // TRANSPORT SECOND (architect 2026-08-31, narrowing 2026-08-29's "it never
 // reads the highlight, in any state" — the table is at play_button_act). THE
 // TRANSPORT'S ITEM is separate from the highlight: it keeps playing while the

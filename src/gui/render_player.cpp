@@ -589,6 +589,13 @@ bool render_player_button_enabled(const AppState& a,
             if (rp.transport != Transport::Idle) return true;
             return !rp.item.empty();
         }
+        // THE HIGHLIGHT PAIR (architect 2026-10-10): the band walk's own
+        // question, through the step's one owner, so the face and the bare
+        // Up / Down keys cannot disagree about the wall.
+        case AppState::PlayerButtonAct::HighlightDown:
+            return folder_overlay::move_highlight_actionable(a, +1);
+        case AppState::PlayerButtonAct::HighlightUp:
+            return folder_overlay::move_highlight_actionable(a, -1);
         case AppState::PlayerButtonAct::Up:
             // THE ACT'S OWN WALL, through its one owner (2026-09-01): the
             // root is `tmp/` and there is nothing above it. No twin — the

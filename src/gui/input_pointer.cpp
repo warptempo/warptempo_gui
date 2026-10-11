@@ -3701,7 +3701,7 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y, bool shift) {
     // CLAIM READS THE PAINTED FACE (architect 2026-09-24, strictly
     // as-painted), the per-tick comparator (main.cpp) keeping it honest, and
     // a face painted live dispatches, its act answering for itself. THE
-    // PLAYER'S SEVEN ARE THE ONLY
+    // PLAYER'S NINE ARE THE ONLY
     // BUTTONS THAT PUBLISH IT (re-greped 2026-09-30), so this line is inert
     // off every other owner's row.
     if (!app.modal_dialog.buttons[static_cast<size_t>(hit)].enabled)
@@ -3941,6 +3941,15 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
                 return true;
             case AppState::PlayerButtonAct::RepeatOne:
                 render_player.toggle_repeat_one();
+                return true;
+            // THE HIGHLIGHT PAIR (architect 2026-10-10): the bare Down / Up
+            // keys' own call, the band walk and nothing else — a silent wall
+            // at either end of the listing, in every transport state.
+            case AppState::PlayerButtonAct::HighlightDown:
+                render_player.move_highlight(+1);
+                return true;
+            case AppState::PlayerButtonAct::HighlightUp:
+                render_player.move_highlight(-1);
                 return true;
             case AppState::PlayerButtonAct::Up:
                 // THE `..` ROW'S ACT, ON THE ROW SINCE 2026-09-01: the same
