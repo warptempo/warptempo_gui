@@ -753,14 +753,15 @@ private:
     // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
     // flat sampled ground, the three menu anchors flush left and nothing
     // flush right), the ICON ROW (top lane 3, row 4: the
-    // twenty-seven view/mode/action buttons, no border of its own since
-    // 2026-10-01, twenty-one standing outside the `h` view and fourteen
+    // twenty-five view/mode/action buttons, no border of its own since
+    // 2026-10-01, twenty-one standing outside the `h` view and twelve
     // inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
     // history_mode_hides_button, since 2026-10-07), and the
     // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the program
     // frame's bottom row on the window's foot: the clock cell and the STATE
     // CELL left, then the marker verbs, the marker walk, the arrow four and
-    // the transport three flush right in their groups, declared below).
+    // the transport three flush right in their groups, declared below; in
+    // the `h` view Older / Newer stand in the arrows' seat, 2026-10-11).
     // All three PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis

@@ -1982,16 +1982,19 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus),
-// row 4's TWENTY-SEVEN
+// row 4's TWENTY-FIVE
 // view / mode / action buttons (OPEN PROJECT leading them since 2026-10-07,
 // the deleted toolbar row's four behind it since the 2026-08-12 relayout,
 // COPY VALUE between Redo and Render since 2026-09-29; the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS follow since 2026-08-18, with LOAD IN PLACE at their tail since
-// 2026-09-01 — the six behind the opener standing in two greyed authoring
+// 2026-09-01 — the four behind the opener standing in two greyed authoring
 // groups' slots, and only in the `h` view, since 2026-10-05
-// (kIconRowHistoryStandIns, paint_handler.cpp) — and THE VIEW GROUP'S THREE
-// close the row flush right since 2026-10-01), then the bottom row's
-// NINETEEN (re-counted 2026-10-11, when Toggle Value Drag joined) —
+// (kIconRowHistoryStandIns, paint_handler.cpp), the walk's OLDER / NEWER
+// row 8's since 2026-10-11 though the enum keeps them here — and THE VIEW
+// GROUP'S THREE close the row flush right since 2026-10-01), then the
+// bottom row's NINETEEN (re-counted 2026-10-11, when Toggle Value Drag
+// joined; twenty-one with Older / Newer, which stand in the arrows' seat in
+// the `h` view, kTransportHistoryStepGroup) —
 // the transport three, the MARKER-VERB GROUP'S EIGHT (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S FOUR
 // (2026-08-15; Previous Marker, Next Marker, Center and Switch Tab since
@@ -2611,7 +2614,11 @@ enum class RedesignButton {
     // held
     // — how the delta READS, what you can DO from inside the view, then where
     // you can STEP: the cumulative toggle (bare `u`), the revert act (bare `v`)
-    // and the walk's older / newer steps (bare `,` and `.`).
+    // and the walk's older / newer steps (bare `,` and `.`). THE TWO STEPS ARE
+    // ROW 8'S SINCE 2026-10-11 (architect ~02:40): in the `h` view they stand
+    // in the Left / Right arrows' seat, second group left of the transport,
+    // "reserved for the most used action" (kTransportHistoryStepGroup,
+    // paint_handler.cpp); the other two stay the icon row's stand-ins.
     //
     // THEY GREY OUTSIDE THE `h` VIEW AND ARE LIVE INSIDE IT (2026-08-18), which
     // is this row's own settled rule — what a mode refuses simply GREYS — and a
@@ -2697,7 +2704,12 @@ enum class RedesignButton {
     // the row's first day) — which inherit the bare arrows' whole
     // semantics by dispatching through on_key like every other chord button.
     //
-    // NOTHING ON THIS ROW SWAPS OR HIDES SINCE 2026-08-18. The four HISTORY
+    // NOTHING ON THIS ROW SWAPPED OR HID FROM 2026-08-18 UNTIL 2026-10-07
+    // (the hide, below) and 2026-10-11 (the stand-in: in the `h` view OLDER
+    // and NEWER take the Left / Right arrows' seat, the arrows publishing
+    // empty rects — architect, "the nudge was for precision placement and
+    // history view has no placement"; kTransportHistoryStepGroup,
+    // paint_handler.cpp, its one owner). The four HISTORY
     // COMPANIONS took the arrows' four slots while the `h` view stood from
     // 2026-08-14 until then — one cluster of four painted at that anchor in
     // either state, the other publishing zero rects — and they went back to the
@@ -3118,7 +3130,7 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     return i;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — NINETEEN since 2026-10-11: the
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — TWENTY-ONE since 2026-10-11: the
 // transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, JUMP TO DEFINING MARKER (2026-09-29), OPEN TEXT EDITOR
 // (2026-10-09), ADD TO SELECTION, TOGGLE VALUE DRAG (2026-10-11)
@@ -3137,8 +3149,11 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // were deleted, and FOUR since 2026-09-29 — Previous Marker, Next Marker,
 // Center down from the icon row, and Switch Tab) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
-// since 2026-08-12). The FOUR HISTORY COMPANIONS were members from 2026-08-14
-// until the same relayout took them back up to the icon row. Named
+// since 2026-08-12), and THE WALK'S OLDER / NEWER, standing in the arrows'
+// seat in the `h` view alone (architect 2026-10-11 ~02:40,
+// kTransportHistoryStepGroup, paint_handler.cpp). The FOUR HISTORY
+// COMPANIONS were members from 2026-08-14 until the same relayout took them
+// back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
 // about any one button: these pixels live in the BOTTOM strip, so every
 // damage decision the other rows answer with invalidate_top_strip must answer
@@ -3178,6 +3193,8 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
         case RedesignButton::TransportUp:
         case RedesignButton::TransportLeft:
         case RedesignButton::TransportRight:
+        case RedesignButton::HistoryOlder:
+        case RedesignButton::HistoryNewer:
             return true;
         default:
             return false;
@@ -18125,7 +18142,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // They were painted inside the view alone from 2026-08-12
         // (first as the icon row's collapsed four, then as the bottom row's
         // swapped cluster) until the 2026-08-18 relayout, and are again since
-        // 2026-10-05, as the icon row's history stand-ins.
+        // 2026-10-05 — the icon row's history stand-ins until 2026-10-11,
+        // row 8's in the arrows' seat since (kTransportHistoryStepGroup), so
+        // the tooltip flips above them with the row.
         case RedesignButton::HistoryOlder:
             return {"Older (,)", "Press Shift for oldest."};
         case RedesignButton::HistoryNewer:

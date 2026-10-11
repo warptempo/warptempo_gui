@@ -870,10 +870,12 @@ constexpr IconRowDef kIconRowButtons[] = {
 
 // THE HISTORY STAND-INS — THE ICON ROW'S ONE MODE SWAP (architect
 // 2026-10-05, so the row fits the tablet's 2304 device px at gui_scale 400):
-// WHILE THE `h` VIEW STANDS, the history group's six companions paint in the
+// WHILE THE `h` VIEW STANDS, the history group's four companions here (the
+// walk lamp, Cumulative, Revert and Load in Place; Older and Newer are row
+// 8's since 2026-10-11, kTransportHistoryStepGroup) paint in the
 // slots of the AUTHORING GROUPS THE VIEW GREYS WHOLE, and those groups'
 // members publish empty rects; outside the view the authoring groups stand
-// and the six publish empty rects. The opener (IconHistory) is not a
+// and the four publish empty rects. The opener (IconHistory) is not a
 // companion and stands at its own slot in both states. Every other x is the
 // walk's plain accumulation over whichever members stand, and the keyboard
 // is untouched: only the row's picture changes, every chord answering
@@ -891,10 +893,12 @@ constexpr IconRowDef kIconRowButtons[] = {
 // backslash). A ruling that admits one of those seven chords into the view
 // removes its group from this table.
 //
-// THE SLOTS: seven, the six companions using six of them. UNDO'S FOUR take
-// the walk's steps and the view's two acts, Older and Newer in Undo's and
-// Redo's slots (the walk's step back and step forward where the session's
-// own back and forward stand), then Revert and Load in Place; THE ITERATION
+// THE SLOTS: seven, the four companions using four of them. UNDO'S FOUR take
+// the view's two acts, Revert and Load in Place, so that group stands two
+// cases narrower in the view — OLDER AND NEWER LEFT IT FOR ROW 8 (architect
+// 2026-10-11 ~02:40; they stood in Undo's and Redo's slots from 2026-10-05):
+// they take the Left / Right arrows' seat there, the row's stand-in
+// (kTransportHistoryStepGroup); THE ITERATION
 // GROUP'S THREE take the two reading lamps, the walk source and the
 // cumulative reading, so that group stands one case narrower in the view
 // and the render-entry group right of it sits one case (31 Windows px)
@@ -912,9 +916,7 @@ constexpr IconRowDef kIconRowButtons[] = {
 // damage, so the row repaints whole on the frame the mode flips and every
 // member publishes its rect — a real one or an empty one — in that pass; a
 // press resolves against that painted row (publish_button_face).
-constexpr IconRowDef kIconRowHistoryStepGroup[] = {
-    {RedesignButton::HistoryOlder,      icons::Icon::KeyframePrevious},
-    {RedesignButton::HistoryNewer,      icons::Icon::KeyframeNext},
+constexpr IconRowDef kIconRowHistoryActGroup[] = {
     {RedesignButton::HistoryRevert,     icons::Icon::DocumentRevert},
     // THE LOAD IN PLACE (architect 2026-09-01, off the render-entry group):
     // the icon row's press runs the `h` view's own load — the confirmation on
@@ -938,7 +940,7 @@ struct IconRowStandIn {
     std::span<const IconRowDef>   members;
 };
 constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
-    {RedesignButton::Undo,    kIconRowHistoryStepGroup},
+    {RedesignButton::Undo,    kIconRowHistoryActGroup},
     {RedesignButton::IconBpm, kIconRowHistoryReadingGroup},
 };
 
@@ -989,7 +991,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // the view group cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
 // walks). The band holds every pane down to 571 Windows px of window at
-// 100 % outside the `h` view and 410 inside it (the width math at
+// 100 % outside the `h` view and 362 inside it (the width math at
 // paint_icon_row, its one statement, re-derived 2026-10-09 for the
 // program's 23-W case), so neither host reaches the rule at its scale: the
 // tablet's 2304 device px hold the row in both states up to about 404 % and
@@ -2035,13 +2037,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // band's dark right edge column. Outside the `h` view the LEFT WALK is
     // seventeen members in five panes,
     //   1 + 17·23 + 5·12 = 452,
-    // and inside it ten in five, 1 + 10·23 + 60 = 291; the RIGHT-ANCHORED
+    // and inside it eight in five, 1 + 8·23 + 60 = 245 (Older and Newer
+    // row 8's since 2026-10-11); the RIGHT-ANCHORED
     // span — the edge column, the view group's pane (3 cases), its dark
     // column, the history opener's pane, the dark column the left panes stop
     // at — is
     //   1 + 80 + 1 + 34 + 1 = 117,
     // so the band holds every pane in any window at least 571 Windows px
-    // wide outside the view (410 inside it), the band standing one program
+    // wide outside the view (362 inside it), the band standing one program
     // frame line in from each side (2026-10-10) — the tablet's 768 at 300 %
     // a band of 766 with a recess of 197 between. IN DEVICE PX, off the
     // painted walk (each line one relief line, each face and the glyph its
@@ -2414,15 +2417,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // EVERY BUTTON GREYS WHERE ITS PRESS WOULD BE A NO-OP (the truthful-buttons
 // ruling, redesign_button_enabled), the `h` view's derived partition on top.
-// ONE MODE TERM (architect 2026-10-07): in the `h` view a member whose chord
+// TWO MODE TERMS. THE HIDE (architect 2026-10-07): in the `h` view a member whose chord
 // the view refuses in every session is NOT PAINTED (history_mode_hides_button,
 // input_pointer.cpp) — Play / Stop, Up and Down, the four verbs, Jump to
 // Defining Marker and Open Text Editor — and publishes an empty rect, the
 // block closing up from
 // the right margin and the state line taking the room; the row in there is
-// ADD TO SELECTION alone, the walk group's four, LEFT and RIGHT, and the two
-// skips: nine cases in four groups. Otherwise no member publishes a zero
-// rect except under a modal.
+// ADD TO SELECTION alone, the walk group's four, OLDER and NEWER, and the two
+// skips: nine cases in four groups. THE STAND-IN (architect 2026-10-11,
+// kTransportHistoryStepGroup): in the view Older / Newer take the seat Left
+// and Right hold outside it, the four arrows publishing empty rects, and
+// outside it the two publish empty rects. Otherwise no member publishes a
+// zero rect except under a modal.
 //
 // (A CENTERED ESC BUTTON shipped between the groups on row 8's first day and
 // was DELETED at the architect's live pass — "looks like a missing button
@@ -2619,16 +2625,28 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
     {RedesignButton::TransportLeft,        icons::Icon::GoPrevious},
     {RedesignButton::TransportRight,       icons::Icon::GoNext},
 };
-// (THE ARROWS' MODE TWIN IS DELETED — architect 2026-08-18. From 2026-08-14 a
-// kHistoryClusterGroup of four history companions was painted at the arrows'
-// own right anchor while the `h` view stood, the two fours swapping and
-// whichever was unpainted publishing zero rects. The relayout moved those four
-// back to the ICON ROW, so the swap had one cluster left and stopped being a
-// swap: the table, the shown/hidden selection, the four zero-rect publishes
-// and the mode term in this row's layout all went together. The row's one
-// mode term since 2026-10-07 is the `h` view's hide, a subtraction and not a
-// swap: nothing stands in for a hidden member — history_mode_hides_button,
-// paint_bottom_row_buttons_and_clock's walk.)
+// THE `h` VIEW'S STAND-IN ON THIS ROW — OLDER AND NEWER IN THE ARROWS' SEAT
+// (architect 2026-10-11 ~02:40): while the view stands this group paints in
+// the arrow group's place, Older where Left stands and Newer where Right
+// does (Up and Down are hidden there anyway, history_mode_hides_button), and
+// the arrow four publish empty rects; outside the view the arrows stand and
+// these two publish empty rects. The seat is the row's MOST-USED ACTION'S,
+// second group left of the transport's — stepping left / right outside the
+// view, stepping older / newer in it — and the nudge pair has no seat in the
+// view at all ("I never use that … the nudge was for precision placement
+// and history view has no placement"); the marker walk stays the neighbor.
+// THE KEYS ARE UNCHANGED: `,` / `.` step the walk and bare Left / Right
+// stay the view's playhead step (handle_history_mode_key) — only the buttons
+// moved. They wear the glyphs they wore in the icon row's Undo slots
+// (2026-10-05 to 2026-10-11), the sets' keyframe pair.
+// (The arrows' first mode twin, a kHistoryClusterGroup of four history
+// companions painted at the arrows' anchor 2026-08-14..18, went back to the
+// icon row with the 2026-08-18 relayout; this is a narrower swap, two for
+// the two arrows the view still painted.)
+constexpr TransportRowDef kTransportHistoryStepGroup[] = {
+    {RedesignButton::HistoryOlder,         icons::Icon::KeyframePrevious},
+    {RedesignButton::HistoryNewer,         icons::Icon::KeyframeNext},
+};
 
 // THE TIME FIELDS — ROW 8'S CLOCK AND THE RENDER PLAYER'S POSITION AND
 // LENGTH, ONE FIELD SHAPE UNDER EVERY CHROME: COOL EDIT'S DARK FIELD
@@ -2875,10 +2893,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THREE (kTransportGroup), each Cool Edit's group, two W of face between
     // two. The whole block is measured first and laid left to right from
     // there, so one expression owns the anchor and no group re-derives it.
-    // ITS ONE MODE TERM is the `h` view's hide (architect 2026-10-07,
-    // history_mode_hides_button): a member hidden there publishes an empty
+    // ITS TWO MODE TERMS are the `h` view's: the hide (architect 2026-10-07,
+    // history_mode_hides_button) — a member hidden there publishes an empty
     // rect, the block is measured over the members that stand, and a group
-    // hidden whole takes its gripper and end bar with it; every other button
+    // hidden whole takes its gripper and end bar with it — and the stand-in
+    // (architect 2026-10-11, kTransportHistoryStepGroup): Older / Newer in
+    // the arrows' seat; every other button
     // on this row publishes a real rect on every frame, except under a modal
     // that owns the row — every one but the color picker
     // (modal_owns_bottom_row) — where the row yields whole
@@ -2897,8 +2917,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // line). IN THE `h` VIEW (the hide,
     // 2026-10-07; Open Text Editor and Toggle Value Drag hidden there with
     // the verbs) the block is
-    // 1 verb + 4 walk + 2 arrows + 2 transport in four groups, 44 + 113 + 67
-    // + 67 + 6 = 297 W, the line's room 364 W. THE ROW CARRIES NO COLLISION
+    // 1 verb + 4 walk + Older / Newer in the arrows' seat (2026-10-11) + 2
+    // transport in four groups, 44 + 113 + 67 + 67 + 6 = 297 W, the line's room 364 W. THE ROW CARRIES NO COLLISION
     // RULE — none of the redesign does — and the crop-at-the-floor allowance
     // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
     // the clock's group once the window falls below about 1 + 2 + 98 + 527 +
@@ -2910,8 +2930,22 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     {
         // THE FOUR GROUPS IN PAINTED ORDER, each read off its own table, so a
         // box joining or leaving moves the block with no second edit.
+        // IN THE `h` VIEW the arrows' seat is the walk's two steps
+        // (kTransportHistoryStepGroup, its one owner): the group that does
+        // not stand publishes its members' empty rects here.
+        const bool history = app.history_mode.active;
+        const std::span<const TransportRowDef> absent =
+            history ? std::span<const TransportRowDef>(kTransportArrowGroup)
+                    : std::span<const TransportRowDef>(
+                          kTransportHistoryStepGroup);
+        for (const TransportRowDef& def : absent)
+            (void)publish_button_face(cr, app, audio, playback,
+                                      target_render, def.id, GuiRect{});
         const std::span<const TransportRowDef> groups[] = {
-            kMarkerVerbGroup, kTransportWalkGroup, kTransportArrowGroup,
+            kMarkerVerbGroup, kTransportWalkGroup,
+            history ? std::span<const TransportRowDef>(
+                          kTransportHistoryStepGroup)
+                    : std::span<const TransportRowDef>(kTransportArrowGroup),
             kTransportGroup};
         // THE BLOCK'S WIDTH IS THE PAINTED GROUPS' (architect 2026-10-07): in
         // the `h` view a button whose chord the view refuses in every session
@@ -5486,10 +5520,11 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
                                 def.id,
                                 GuiRect{0, 0, 0, 0});
         }
-        // The right block's other three groups stand down with the transport
-        // — the MARKER VERBS, the MARKER-WALK GROUP and the four ARROWS. Each
-        // is a tenant of this lane like every other member, and the modal
-        // takes the lane whole: four tables, every button on the row.
+        // The right block's other groups stand down with the transport
+        // — the MARKER VERBS, the MARKER-WALK GROUP, the four ARROWS and the
+        // `h` view's Older / Newer in their seat. Each is a tenant of this
+        // lane like every other member, and the modal takes the lane whole:
+        // five tables, every button on the row.
         for (const TransportRowDef& def : kMarkerVerbGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
                                 def.id,
@@ -5501,6 +5536,11 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
                                 GuiRect{0, 0, 0, 0});
         }
         for (const TransportRowDef& def : kTransportArrowGroup) {
+            publish_button_face(cr, app, audio, playback, target_render,
+                                def.id,
+                                GuiRect{0, 0, 0, 0});
+        }
+        for (const TransportRowDef& def : kTransportHistoryStepGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
                                 def.id,
                                 GuiRect{0, 0, 0, 0});

@@ -2092,8 +2092,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // names, it is the step's own consumed nothing.
     // ONLY THE BARE SHAPES REPEAT (repeat_eligible, below): a held absolute jump
     // could only flap against the wall it is already on.
-    // THE ICON ROW'S TWO ARROW BUTTONS ARE THESE KEYS (2026-08-05,
-    // RedesignButton::HistoryOlder / HistoryNewer): they dispatch the
+    // THE TWO STEP BUTTONS ARE THESE KEYS (2026-08-05,
+    // RedesignButton::HistoryOlder / HistoryNewer — row 8's since 2026-10-11,
+    // in the Left / Right arrows' seat in the view, which keeps bare Left /
+    // Right as its playhead step below): they dispatch the
     // bare chords through on_key like every other button, so this is the one
     // body and a click at a wall is the same consumed nothing a key press is —
     // behind a DEAD FACE since 2026-08-30, the buttons greying at the wall

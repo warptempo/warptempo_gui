@@ -1493,6 +1493,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // companions do not stand (kIconRowHistoryStandIns, paint_handler.cpp,
 // which names this walk as the membership's derivation). A change here that
 // answers one of those seven LIVE in the view is a change to that table too.
+// ROW 8 HAS ITS OWN SINCE 2026-10-11 (architect): in the view Older / Newer
+// stand in the Left / Right arrows' seat (kTransportHistoryStepGroup,
+// paint_handler.cpp) — a seat ruling, not this walk's: the arrows' chords
+// stay live in the view, only their buttons stand down there.
 //
 // THE ONE CHORD WALK BOTH `h` ANSWERS TAKE (architect 2026-10-07): the grey
 // (history_mode_disables_button) asks the allowlist about THIS session, the

@@ -1442,35 +1442,40 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors, the icon row's twenty-seven and row 8's nineteen
+    // three menu anchors, the icon row's twenty-five and row 8's twenty-one
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-11):
-    //   THE ICON ROW, 17 + 6 + 1 + 3 = 27 — the left walk's seventeen
+    // counts re-derived from them 2026-10-11, Older / Newer moving down):
+    //   THE ICON ROW, 17 + 4 + 1 + 3 = 25 — the left walk's seventeen
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Value and
     //   Render; Full Zoom Out, Waveform Magnification, Follow and Restrict
     //   Undo; BPM, Iteration and Flatten; Listen, the padlock, Settings and
-    //   Enable Tooltips), the history view's six stand-ins (Older, Newer,
-    //   Revert and Load in Place in Undo's slots, the walk lamp and Cumulative
+    //   Enable Tooltips), the history view's four stand-ins (Revert and Load
+    //   in Place in Undo's slots, the walk lamp and Cumulative
     //   in the iteration group's — kIconRowHistoryStandIns), the history
     //   opener right-anchored (kIconRowHistoryOpener) and the VIEW GROUP's
-    //   three flush right — 21 standing outside the `h` view (the six
-    //   stand-ins publishing empty rects) and 14 inside it (the stand-ins in,
+    //   three flush right — 21 standing outside the `h` view (the four
+    //   stand-ins publishing empty rects) and 12 inside it (the stand-ins in,
     //   the two authoring groups they replace out, and the view's hide
     //   leaving Full Zoom Out and Enable Tooltips alone of their groups);
-    //   ROW 8, 8 + 4 + 4 + 3 = 19 — the MARKER-VERB GROUP's eight
+    //   ROW 8, 8 + 4 + 4 + 3 + 2 = 21 — the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
     //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle
     //   Value Drag since 2026-10-11), the walk
     //   group's four (Previous Marker, Next Marker, Center, Switch Tab), the
-    //   four cardinal arrows and the transport three; inside the `h` view the
-    //   hide leaves 1 + 4 + 2 + 2 = 9.
+    //   four cardinal arrows, the transport three and the `h` view's Older /
+    //   Newer (kTransportHistoryStepGroup, architect 2026-10-11): 19 standing
+    //   outside the view (the two publishing empty rects), and inside it
+    //   1 + 4 + 2 + 2 = 9 — the hide's survivors, Older / Newer in the
+    //   arrows' seat and the four arrows' rects empty.
     // EVERY MEMBER PUBLISHES WHAT IT PAINTED on every frame the roster
     // paints — a real rect where it stands, the EMPTY RECT (which no point is
     // inside) where it does not, so no press, hover or tooltip reaches a
     // member off the screen. THE EMPTY RECTS, each at its owner: the icon
     // row's history stand-ins (kIconRowHistoryStandIns, paint_handler.cpp,
-    // architect 2026-10-05) — outside the `h` view the six companions, inside
-    // it the two authoring groups they replace; THE `h` VIEW'S HIDE
+    // architect 2026-10-05) — outside the `h` view the four companions, inside
+    // it the two authoring groups they replace; row 8's stand-in
+    // (kTransportHistoryStepGroup, 2026-10-11) — outside the view Older /
+    // Newer, inside it the four arrows; THE `h` VIEW'S HIDE
     // (architect 2026-10-07, history_mode_hides_button, input_pointer.cpp)
     // — inside the view every member of either row whose chord the view
     // refuses in every session; row 8 whole under a modal that owns the
