@@ -868,7 +868,7 @@ int notification_card_max_w_px(const AppState& a);
 // Viewport::invalidate_notification_stack takes): the painted cards lie
 // inside the room by construction, so it erases what stood and admits what
 // comes without shaping a single glyph off the paint clock. A window with no
-// room between the card seat (one line above the trim lane) and the bottom
+// room between the card seat (the trim lane's first row) and the bottom
 // row answers a zero
 // height and paints nothing — a window with no waveform at all, in the
 // contrived class.

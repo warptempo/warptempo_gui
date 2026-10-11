@@ -120,7 +120,7 @@ struct ChromeSpec {
     int                popup_item_height_px;
     int                popup_margin_px;
     // (THE NOTIFICATION CARDS' SEAT IS NO FIELD: ONE RULE FOR EVERY
-    // VOCABULARY, read off the live lane table at the trim lane's top —
+    // VOCABULARY, read off the live lane table at the trim lane's first row —
     // notification_stack_bound, notifications.cpp; architect 2026-10-08.)
     // THE WINDOW'S FRAME (render.h's sizing-frame block, window_frame_px):
     // the relief lines of its composite — Windows' two-line raised edge
