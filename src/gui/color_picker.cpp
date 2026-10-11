@@ -1492,8 +1492,7 @@ void GuiColorPicker::raise_delete() {
     assert(!color_picker::is_builtin_preset(cp.scope, active));
     cp.pending_delete = active;
     app.prompt.present("Delete '" + active + "'?",
-                       {'d', '\x1b'},
-                       {"Delete", "Cancel"},
+                       kPromptDeleteCancel,
                        DialogTrigger::DELETE_PRESET_CONFIRM,
                        PromptInitialFocus::LastButton);
     viewport.invalidate_all();

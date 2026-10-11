@@ -3652,8 +3652,7 @@ void GuiInputHandler::run_history_pull_press() {
     app.pending_history_pull = std::move(plan);
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Reload this piece from GitHub's newer checkpoint?",
-                       {'r', 'k', '\x1b'},
-                       {"Reload", "Keep", "Cancel"},
+                       kPromptReloadKeepCancel,
                        DialogTrigger::PULL_CONFIRM,
                        PromptInitialFocus::LastButton);
     viewport.invalidate_all();
@@ -6431,6 +6430,18 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // DECIDES (modal_dialog_stash_current, the one comparison). A flag editor
 // publishes no dialog at all, so its ring is empty by construction and every
 // shape here declines.
+// THE DIALOG BUTTONS' ACCESS KEYS (architect 2026-10-10, Windows strict; the
+// contract is at the declaration). Under the same identity gate as the ring:
+// a stash that is not the live surface's names no button.
+int GuiInputHandler::modal_dialog_access_button(GuiKey key,
+                                                GuiInputState mods,
+                                                bool field_focused) const {
+    if (mods.ctrl || mods.shift) return -1;
+    if (field_focused && !mods.alt) return -1;
+    if (!modal_dialog_stash_current()) return -1;
+    return app.modal_dialog.button_for_access_key(key);
+}
+
 bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
                                                    GuiInputState mods) {
     // KEYPAD ENTER IS RETURN, HERE AS EVERYWHERE (2026-08-29). The pair is one
@@ -7164,8 +7175,7 @@ void GuiInputHandler::history_load_in_place() {
     // revert confirmation (PromptInitialFocus).
     app.prompt.present(
         "Load '" + app.history_mode.member_label(member) + "' in place?",
-        {'o', '\x1b'},
-        {"OK", "Cancel"},
+        kPromptOkCancel,
         DialogTrigger::LOAD_IN_PLACE_CONFIRM,
         PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
@@ -7244,6 +7254,21 @@ bool GuiInputHandler::route_color_picker_key(GuiKey key, GuiInputState mods) {
     // THE ONE FALL-THROUGH: Ctrl+Q to the ordinary quit road, which takes
     // the picker down at its head (GuiPrompt::request_close).
     if (ctrl && !shift && !alt && key == GuiKeys::Q) return false;
+    // THE BUTTONS' ACCESS KEYS (architect 2026-10-10, Windows strict;
+    // modal_dialog_access_button): with no field standing nothing on the
+    // card takes a letter, so Copy's C and Paste's P answer bare or with
+    // Alt (a grayed Paste's letter a consumed nothing, the dispatch reading
+    // the painted bit); Close has none, being Esc. While the chooser's list
+    // or the preset menu is down the letters are that popup's, which takes
+    // none: consumed below.
+    if (!app.color_picker.chooser_open && !app.color_picker.menu_open) {
+        const int access =
+            modal_dialog_access_button(key, mods, /*field_focused=*/false);
+        if (access >= 0) {
+            dispatch_modal_dialog_button(access);
+            return true;
+        }
+    }
     // EVERY OTHER MODIFIED CHORD: CONSUMED, AND SILENTLY (the unbound-keys
     // ruling, the two list owners' arm): the router is the whole vocabulary
     // while the picker stands — LESS THE MENU TITLES' ACCESS KEYS, which
@@ -7267,7 +7292,7 @@ bool GuiInputHandler::route_color_picker_key(GuiKey key, GuiInputState mods) {
         return true;
     }
     // Every bare key else is a consumed silence: the card has no ring to
-    // walk and no act on a letter.
+    // walk and no act on a letter but the buttons' access keys above.
     return true;
 }
 
@@ -7283,6 +7308,22 @@ bool GuiInputHandler::handle_color_picker_field_key(GuiKey key,
     // arm_modal_dialog_press). With both refused the focus index never
     // leaves -1 under the picker.
     if (key == GuiKeys::Tab || key == GuiKeys::IsoLeftTab) return true;
+    // THE BUTTONS' ACCESS KEYS WITH THE FIELD FOCUSED (architect 2026-10-10,
+    // Windows strict; modal_dialog_access_button): the bare letter types,
+    // ALT+letter answers. A live button's letter ends the standing edit
+    // first, as a press on the button does (color_picker_press — Windows'
+    // mnemonic clicks the button, which takes the focus); a grayed one's (all
+    // three under the name ask) is a consumed nothing, the edit standing.
+    const int access =
+        modal_dialog_access_button(key, mods, /*field_focused=*/true);
+    if (access >= 0) {
+        if (app.modal_dialog.buttons[static_cast<std::size_t>(access)]
+                .enabled) {
+            color_picker.field_cancel();
+            dispatch_modal_dialog_button(access);
+        }
+        return true;
+    }
     return route_modal_editor_key(
         app.color_picker.field_editor, key, mods,
         /*autocomplete=*/{},
@@ -8633,8 +8674,7 @@ void GuiInputHandler::render_player_load_in_place() {
     // the two `'` load roads answer alike by construction. Through
     // PromptState::present, the one raise route, so the painted gate holds.
     app.prompt.present("Load '" + render_entry_id(*entry) + "' in place?",
-                       {'o', '\x1b'},
-                       {"OK", "Cancel"},
+                       kPromptOkCancel,
                        DialogTrigger::LOAD_IN_PLACE_CONFIRM,
                        PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
@@ -8693,8 +8733,7 @@ void GuiInputHandler::render_player_delete(bool all) {
             ? "Delete all " + std::to_string(folders.size()) + " folders?"
             : "Delete '" + folders.front().filename().string() + "'?";
     app.prompt.present(question,
-                       {'d', '\x1b'},
-                       {"Delete", "Cancel"},
+                       kPromptDeleteCancel,
                        DialogTrigger::DELETE_FOLDER_CONFIRM,
                        PromptInitialFocus::LastButton);
     viewport.invalidate_all();

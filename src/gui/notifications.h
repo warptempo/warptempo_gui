@@ -81,8 +81,9 @@
 //     load" for bare `'`, "Select a change to revert" / kTabReadOnlyCard for
 //     bare `v`). A card naming the chord pressed says what happened, never
 //     what to press instead — it is not a gesture hint. (UI text carries no
-//     key hint at all but one class: the menus' underlined access keys,
-//     architect 2026-10-10 — paint_handler.cpp's capitalization block.)
+//     key hint at all but one class: the underlined access keys of the
+//     menus and the dialog buttons, architect 2026-10-10 — paint_handler.cpp's
+//     capitalization block.)
 //   * THE VERBS' OWN REFUSALS, naming a subject or a view, never a chord: the
 //     home-view binding ("Markers are placed in source view", "Markers are
 //     moved in source view", Shift+S's "Already in phase reset view"); the

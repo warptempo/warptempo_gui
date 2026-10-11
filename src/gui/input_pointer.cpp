@@ -3862,8 +3862,12 @@ int GuiInputHandler::modal_dialog_focus_live() const {
 //   PromptState::painted must stand for a prompt — an arm outlives its press
 //   by definition and the surface under it may have been replaced (the
 //   save-failed rung leaves live-keyed rects where the new box is not);
-//   the RESPONSE KEY the stash names is validated against the LIVE response
-//   set, a different question from the stash's and asked separately.
+//   the RESPONSE KEY the stash names is validated against the LIVE answers
+//   (PromptState::answers), a different question from the stash's and asked
+//   separately.
+// THE ACCESS KEYS RIDE THIS ROAD TOO (architect 2026-10-10, Windows strict):
+// modal_dialog_access_button selects the index off the stash and its callers
+// fire it here, so a letter meets every gate a press meets.
 // THE ONE THING THE STASH DECIDES is a button's ENABLED bit (architect
 // 2026-09-24, strictly as-painted): the claim reads the painted face, never
 // the live predicate, and the act answers for itself (the player's arm below).
@@ -3878,8 +3882,8 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
         dlg.buttons[static_cast<size_t>(index)];
     if (app.prompt.active) {
         if (!app.prompt.painted) return false;
-        for (char live : app.prompt.response_keys) {
-            if (b.response_key != 0 && b.response_key == live) {
+        for (const PromptAnswer& live : app.prompt.answers) {
+            if (b.response_key != 0 && b.response_key == live.key) {
                 prompt.activate_response(b.response_key);
                 return true;
             }

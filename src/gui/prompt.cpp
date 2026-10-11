@@ -36,26 +36,20 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // Space is swallowed while the prompt is up, so playback cannot restart
     // until it closes.
     playback_lifecycle.stop_playback_for_modal_open();
-    // Sentinel chars for non-letter keys: 0x7F = Delete, 0x1B = Escape.
-    // The GuiKey → char mapping in input_handler.cpp's prompt dispatch
-    // produces these for GuiKeys::Delete / GuiKeys::Escape; the prompt
-    // machinery remains a vector<char> match.
-    //
     // Save always writes a loadable file: the marker serializer writes
     // the time-sorted store (equal times reload legal), trim bounds persist
     // whatever the store holds (inverted bounds reload intact), and
     // settings persist the committed state — the honest invariant is that
-    // the GUI never writes a LOAD-invalid state. `s` = Save / Delete =
-    // discard-and-proceed / Esc = cancel; the labels are the BUTTONS' PLAIN
-    // WORDS (PromptState's declaration owns the rule and the retired bracket
-    // spelling's record), so the Delete sentinel wears "Discard" and Escape
-    // wears "Cancel" — each button naming its key on its TOOLTIP instead.
+    // the GUI never writes a LOAD-invalid state. Save (S) / Discard (D,
+    // discard-and-proceed; the Delete key until Windows strict, architect
+    // 2026-10-10) / Cancel (Esc); the buttons wear their plain words with
+    // the access letter underlined (PromptState's declaration owns the rule
+    // and the retired bracket spelling's record).
     // Through `present`, the state's one raise route: it clears the PAINTED
     // bit, so nothing this prompt asks can be answered until the painter has
     // put it on the screen (the rule is at PromptState).
     app.prompt.present("Save unsaved changes?",
-                       {'s', '\x7f', '\x1b'},
-                       {"Save", "Discard", "Cancel"},
+                       kPromptSaveDiscardCancel,
                        t,
                        PromptInitialFocus::LastButton);
     viewport.invalidate_all();
@@ -75,15 +69,15 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // chord here, the `'` press there, the paste chord or its Edit row), so the
 // question itself is the safeguard and its Enter confirms the act the user
 // just asked for; the three-way Save / Discard / Cancel prompts above and
-// below are no such confirmation and keep the last button. `o` is OK's letter,
-// the load confirmation's. The stop below is every prompt's own opening act, not
-// something this one adds: playback stops and an A/B audition ends, exactly as
+// below are no such confirmation and keep the last button. OK carries no
+// access key (Windows strict, architect 2026-10-10; its `o` the dispatch char
+// alone): Enter and its press answer it. The stop below is every prompt's own
+// opening act, not something this one adds: playback stops and an A/B audition ends, exactly as
 // raising any other prompt does.
 void GuiPrompt::open_revert_confirm() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Discard unsaved changes and reload?",
-                       {'o', '\x1b'},
-                       {"OK", "Cancel"},
+                       kPromptOkCancel,
                        DialogTrigger::REVERT_CONFIRM,
                        PromptInitialFocus::FirstButton);
     viewport.invalidate_all();
@@ -110,8 +104,8 @@ void GuiPrompt::open_revert_confirm() {
 void GuiPrompt::activate_response(char k) {
     if (!app.prompt.active) return;
     const DialogTrigger trigger = app.prompt.trigger;
-    // Sentinels: '\x7f' = Delete (discard), '\x1b' = Escape (cancel).
-    // See open_unsaved above.
+    // The chars are the PromptAnswer tables' (app_state.h): a letter, or
+    // '\x1b' for the Esc answer, Cancel.
 
     if (trigger == DialogTrigger::PASTE_CONFIRM) {
         // ONE SUBJECT: the phase reset paste, raised by
@@ -133,7 +127,7 @@ void GuiPrompt::activate_response(char k) {
     if (trigger == DialogTrigger::LOAD_IN_PLACE_CONFIRM) {
         // THE LOAD CONFIRMATION (2026-08-28; TWO SUBJECTS since 2026-08-29 —
         // the render player's highlighted batch entry and the `h` view's
-        // viewed walk member): `o` is OK and runs the act the parked subject
+        // viewed walk member): OK (`o`, its dispatch char) runs the act the parked subject
         // names, through the input handler; Escape drops both parked subjects.
         // ONE PROMPT BODY, so this arm knows nothing about which raise it is
         // answering — the fork is the handler's. The prompt closes first
@@ -255,8 +249,7 @@ void GuiPrompt::activate_response(char k) {
                 // (kCheckpointPublishing) — so this rung inherits whichever
                 // sentence and asks the one thing only it knows to ask.
                 app.prompt.present("Retry the failed save?",
-                                   {'r', '\x7f', '\x1b'},
-                                   {"Retry", "Discard", "Cancel"},
+                                   kPromptRetryDiscardCancel,
                                    trigger,
                                    PromptInitialFocus::LastButton);
                 viewport.invalidate_all();
@@ -267,7 +260,7 @@ void GuiPrompt::activate_response(char k) {
             proceed(trigger);
             return;
         }
-        if (k == '\x7f') {
+        if (k == 'd') {
             app.prompt.active = false;
             viewport.invalidate_all();
             proceed(trigger);

@@ -182,36 +182,24 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // The modal prompt (painted on the bottom row since 2026-08-13) owns input while
-    // active. Only the prompt's
-    // own response keys do anything; everything else is swallowed so
-    // marker edits / playback / viewport keys cannot sneak in while
-    // the prompt is up. Delete and Escape map to sentinel chars '\x7f' and
-    // '\x1b' so they participate in the same vector<char> match as letter
-    // responses. The dialog's BUTTONS answer too — the pointer's press claim
-    // (input_pointer.cpp) calls the same activate_response — but the keyboard
-    // half here is byte-identical to the bottom-strip era.
-    // EVERY response — letters, Delete, Escape alike — matches BARE ONLY
-    // (architect 2026-07-28): no ctrl, no alt, and no shift. That is what stops
-    // Ctrl+S from picking the Save answer in the close prompt and Alt+Y from applying
-    // a confirmed paste.
-    // CASE-SENSITIVITY IS THE CODEPOINT'S JOB, NOT !shift's (architect 2026-07-30):
-    // the platform case-folds letter keysyms, so the GuiKey says `y` for every way
-    // of typing a Y, and the old `!shift` spelling let CAPSLOCK deliver a
-    // visually-uppercase Y that still answered the Yes response — the exact outcome the
-    // case-sensitivity was there to forbid. `mods.codepoint` is the true character
-    // under the live keyboard state (xkb_state_key_get_utf32 at the platform
-    // boundary, shift AND lock applied), so the letter arm reads THAT: a capital Y
-    // never matches a lowercase response key, however it was produced. The bare-only
-    // gate stays as the modifier rule it always was, and the Delete / Escape
-    // responses keep matching on the GuiKey (they carry no case and no codepoint
-    // worth reading). (The bracket-accelerator LABELS this match once shipped
-    // beside — "[S]ave", pacman's Y/n convention — went out with the
-    // bottom-strip prompt line on 2026-08-12, came back with the row hours
-    // later and are RETIRED AGAIN, with their reason recorded, on 2026-08-13:
-    // the responses are BUTTONS wearing plain words that name their key on a
-    // TOOLTIP, PromptState's declaration owning the label rule. THE MATCH HERE
-    // WAS UNCHANGED BY ALL THREE, deliberately.)
+    // The modal prompt (painted on the bottom row since 2026-08-13) owns input
+    // while active. Only the prompt's own ACCESS KEYS, Esc and its focus ring
+    // do anything; everything else is swallowed so marker edits / playback /
+    // viewport keys cannot sneak in while the prompt is up. The dialog's
+    // BUTTONS answer too — the pointer's press claim (input_pointer.cpp)
+    // reaches the same activate_response through the shared dispatch, which
+    // the access keys ride as well.
+    // THE ACCESS KEYS ARE WINDOWS STRICT (architect 2026-10-10 ~16:05; the
+    // rule is PromptState's, app_state.h): a prompt's focus is always on a
+    // button, so a button's underlined letter answers BARE or with ALT, CASE-
+    // INSENSITIVELY on the case-folded key (Caps Lock answers), Shift and
+    // Ctrl spelling nothing — the menus' own match. That SUPERSEDES the
+    // bare-only match of 2026-07-28 (which kept Alt+Y off the paste
+    // confirmation) and the codepoint-exact lowercase match of 2026-07-30
+    // (which kept a Caps Lock Y from answering Yes): Windows answers both.
+    // Ctrl+S still picks no Save. ESC IS THE LAST ANSWER, Cancel, matched
+    // bare on the GuiKey; the Delete key answers nothing any more (it was
+    // Discard's until Windows strict, which gave Discard its D).
     if (app.prompt.active) {
         // THE PAINTED GATE (2026-08-13): a prompt the user has not SEEN
         // answers nothing. One dispatch batch arrives whole before the loop
@@ -219,8 +207,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // editor down on the close road and raising the unsaved-work prompt,
         // Delete right behind
         // it) was answering a question that had never been on screen. EVERY
-        // key is consumed while the bit is false — the response letters, Esc,
-        // Delete, and the Ctrl+Q hatch below with them: a consumed no-answer is
+        // key is consumed while the bit is false — the access letters, Esc
+        // and the Ctrl+Q hatch below with them: a consumed no-answer is
         // the only safe reading of input aimed at an unseen surface, and
         // nothing is lost that a second press after the paint does not
         // recover. The bit's writer is paint_modal_dialog's prompt branch and
@@ -257,29 +245,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // one ring, one owner (route_modal_dialog_focus_key,
         // input_key_dispatch.cpp); a prompt has no field, so the editors'
         // completion-first Tab arm has no counterpart here and this call is the
-        // whole of the prompt's ring. The response letters below are untouched,
-        // so answering by letter, Delete or Esc is byte-identical to before the
-        // ring.
+        // whole of the prompt's ring. The access letters below are the ring's
+        // equals (any button answers its letter wherever the ring stands),
+        // so answering by letter or Esc is the same with or without the ring.
         if (route_modal_dialog_focus_key(key, mods)) {
             return;
         }
-        char k = 0;
-        if (!ctrl && !shift && !alt) {
-            if (mods.codepoint >= 'a' && mods.codepoint <= 'z') {
-                k = static_cast<char>(mods.codepoint);
-            } else if (key == GuiKeys::Delete) {
-                k = '\x7f';
-            } else if (key == GuiKeys::Escape) {
-                k = '\x1b';
-            }
+        const int access =
+            modal_dialog_access_button(key, mods, /*field_focused=*/false);
+        if (access >= 0) {
+            dispatch_modal_dialog_button(access);
+            return;
         }
-        if (k != 0) {
-            for (char rk : app.prompt.response_keys) {
-                if (k == rk) {
-                    prompt.activate_response(rk);
-                    return;
-                }
-            }
+        if (!ctrl && !shift && !alt && key == GuiKeys::Escape) {
+            prompt.activate_response('\x1b');
         }
         return;
     }

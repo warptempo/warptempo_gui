@@ -307,10 +307,12 @@ namespace {
 //     KEY on the menu row's titles and on every row of their pull-downs,
 //     always shown (architect 2026-10-10, "part of the aesthetic and
 //     therefore important"; the letters at dropdown_title_access_key,
-//     app_state.h, the line at access_underline_rect below). It is an
-//     underline under a letter of the plain word, never a bracket and never
-//     on a modal button (the `[S]ave` spelling stays retired), and the label
-//     strings stay the plain words.
+//     app_state.h, the line at access_underline_rect below), and since the
+//     same day on THE DIALOG BUTTONS' WORDS (Windows strict; the prompts'
+//     letters at PromptState, app_state.h, the color picker's Copy and Paste
+//     in its plan; OK, Cancel and Close carry none). It is an underline under
+//     a letter of the plain word, never a bracket (the `[S]ave` spelling
+//     stays retired), and the label strings stay the plain words.
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
 //     iterations work in source view", "GUI Scale", "URL").
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
@@ -1251,11 +1253,12 @@ double line_baseline(const GuiFont& font, double line_y) {
 // "accelerators are not used on the tablet, but they are part of the
 // aesthetic and therefore important"; the letters and the keys are
 // app_state.h's, dropdown_title_access_key), ALWAYS DRAWN: on the menu row's
-// titles and on every row of their three pull-downs, nowhere else (not the
-// tooltips, the cards, the dialogs' buttons or the color picker's preset
-// menu). Windows 2000 hides it until Alt is held; ReactOS always draws it,
-// and so does this product — the tablet has no Alt to reveal it (the
-// departure, win2000_deviations.md).
+// titles, on every row of their three pull-downs and, since the same day, on
+// the dialog buttons' words (Windows strict, PromptState's block;
+// show_button_word), nowhere else (not the tooltips, the cards or the color
+// picker's preset menu). Windows 2000 hides it until Alt is held; ReactOS
+// always draws it, and so does this product — the tablet has no Alt to
+// reveal it (the departure, win2000_deviations.md).
 //
 // THE LINE IS DrawText's PREFIX UNDERLINE (user32's TEXT_DrawUnderscore)
 // read off his ReactOS capture, tmp/reactos-menu2.png (File's F, Edit's open
@@ -1301,6 +1304,19 @@ void show_embossed_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
     show_access_run(cr, run, label, access, x + off, baseline + off,
                     palette().hilight);
     show_access_run(cr, run, label, access, x, baseline, palette().shadow);
+}
+// A DIALOG BUTTON'S WORD (architect 2026-10-10, Windows strict): `run` the
+// word shaped, its access key underlined at byte `access` (-1: the word
+// alone — OK, Cancel, Close), in the label ink or, disabled, the emboss.
+static void show_button_word(cairo_t* cr, const text_shape::ShapedRun& run,
+                             const char* label, int access, double x,
+                             double baseline, bool enabled) {
+    const char* marked = access >= 0 ? label : nullptr;
+    if (enabled)
+        show_access_run(cr, run, marked, access, x, baseline,
+                        palette().label);
+    else
+        show_embossed_access_run(cr, run, marked, access, x, baseline);
 }
 
 // -- THE CAPTION (architect 2026-10-05) ----------------------------------------
@@ -5485,15 +5501,13 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // the layout rule and what gives when the row runs out of width are at the
 // layout block below:
 //   A PROMPT — the message at the row's left pad, one pad, then the answer
-//   buttons in painted order. Each button wears its response's PLAIN WORD
-//   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK" on the load
-//   confirmation)
-//   and names its key on its TOOLTIP instead — the bracketed accelerators are
-//   retired for the second time and with their reason recorded at PromptState,
-//   which owns the label rule; the codepoint-exact lowercase match is
-//   untouched, so a typed capital still does not answer. ONE BUTTON WEARS THE
-//   PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this block's
-//   "no default face: this prompt system has no Enter answer, so every button
+//   buttons in painted order. Each button wears its answer's PLAIN WORD
+//   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Reload", "Keep",
+//   "Delete") with Windows' UNDERLINED ACCESS KEY (architect 2026-10-10,
+//   Windows strict; OK and Cancel none) — the bracketed accelerators stay
+//   retired, PromptState owning the label rule and the key match. ONE BUTTON
+//   WEARS THE PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this
+//   block's "no default face: this prompt system has no Enter answer, so every button
 //   is plain") — the LAST, the Escape sentinel, on every prompt but THE FOUR
 //   CONFIRMATION RAISES — the load's two, File → Revert's and, since
 //   2026-09-16, the phase reset paste's — which are raised
@@ -5515,9 +5529,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // just like the regular icon tooltips"), through the roster's own machinery
 // end to end — the same Qt timing, the same box, the same painter, the same
 // AppState::redesign_tooltip state, whose owner names either surface now. The
-// TEXT is composed per button from the word it wears plus the key it
-// dispatches (modal_dialog_button_hint, app_state.h) and published in the
-// stash beside the rect; the WAIT is written by this surface's own hover walk
+// TEXT is a word button's word alone since the underline carries its key
+// (architect 2026-10-10, Windows strict), a glyph button's the player's own,
+// published in the stash beside the rect; the WAIT is written by this surface's own hover walk
 // (update_modal_dialog_hover), and as everywhere no wait starts under a held
 // press (the model is at AppState::RedesignTooltip).
 //
@@ -5889,6 +5903,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // stay zero/false on its buttons.
     struct DialogButtonPlan {
         std::string label;
+        // The access key's byte in `label`, -1 for none (Windows strict,
+        // architect 2026-10-10): a prompt answer's from its table; every
+        // other owner's word button (OK, Cancel) and every glyph has none.
+        int         access       = -1;
         char        response_key = 0;
         bool        editor_ok    = false;
         AppState::PlayerButtonAct player_act = AppState::PlayerButtonAct::None;
@@ -5915,11 +5933,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     };
     std::vector<DialogButtonPlan> plan;
     if (prompt_up) {
-        for (size_t i = 0; i < app.prompt.response_labels.size(); ++i) {
+        for (const PromptAnswer& a : app.prompt.answers) {
             DialogButtonPlan b;
-            b.label = app.prompt.response_labels[i];
-            b.response_key = i < app.prompt.response_keys.size()
-                                 ? app.prompt.response_keys[i] : 0;
+            b.label        = a.label;
+            b.access       = a.access;
+            b.response_key = a.key;
             plan.push_back(std::move(b));
         }
     } else if (player_up) {
@@ -6933,14 +6951,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 redesign_baseline(font, static_cast<double>(r.y),
                                   static_cast<double>(r.h)) +
                 static_cast<double>(box.shift);
-            if (enabled)
-                show_row_text(cr, font, lx, ly, plan[i].label,
-                              palette().label);
-            else
-                show_row_text_embossed(cr, font, lx, ly, plan[i].label);
+            show_button_word(cr, text_shape::shape_text_run(font, plan[i].label),
+                             plan[i].label.c_str(), plan[i].access, lx, ly,
+                             enabled);
         }
         AppState::ModalDialogButton out;
         out.rect         = r;
+        out.access_key   = plan[i].access >= 0
+                               ? access_key_of(plan[i].label.c_str(),
+                                               plan[i].access)
+                               : 0;
         out.response_key = plan[i].response_key;
         out.editor_ok    = plan[i].editor_ok;
         out.player_act   = plan[i].player_act;
@@ -6963,18 +6983,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                prev_enabled[i].first == out.player_act;
             out.enabled = carry && prev_enabled[i].second;
         }
-        // THE HINT, composed from the word and the DISPATCH (2026-08-13, the
-        // ruling that took the accelerators off the labels and put the key on
-        // a tooltip): the composer is the one owner of the format and of the
-        // key's spelling (modal_dialog_button_hint, app_state.h) and it reads
-        // the very fields the click and the ring's Enter dispatch on, so a
-        // button cannot advertise a key it does not send. Published with the
-        // rect because the WORD is the half the pointer path cannot re-derive.
-        out.tooltip = plan[i].tooltip.empty()
-                          ? modal_dialog_button_hint(plan[i].label,
-                                                     plan[i].response_key,
-                                                     plan[i].editor_ok)
-                          : plan[i].tooltip;
+        // THE HINT: a word button's is THE ACT'S NAME ALONE, its word
+        // (architect 2026-10-10, Windows strict — the underline carries the
+        // access key, and Enter and Esc are every dialog's; the key-naming
+        // hint "Save (S)" of 2026-08-13 retired with it); a glyph button's
+        // is the player's own. Published with the rect because the WORD is
+        // the half the pointer path cannot re-derive.
+        out.tooltip = plan[i].tooltip.empty() ? plan[i].label
+                                              : plan[i].tooltip;
         // THE MODIFIER LINE (2026-08-28), published beside it and empty on
         // every button with no shifted twin — the roster hint's `line2` over
         // this surface, and its one producer is the player's plan above.
@@ -7397,19 +7413,26 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
         cp.menu_open, menu_button_enabled);
 
     // THE THREE PUSH BUTTONS, published on the modal stash; all three gray
-    // while the name ask stands, Paste while the slot is empty.
+    // while the name ask stands, Paste while the slot is empty. THEIR ACCESS
+    // KEYS (architect 2026-10-10, Windows strict; PromptState's block owns
+    // the rule): &Copy and &Paste, Close none — it is the card's Esc, as
+    // Cancel is a dialog's; the keys at route_color_picker_key and
+    // handle_color_picker_field_key.
     {
         struct Plan {
             const char* label;
+            int access;   // the access key's byte in `label`, -1 for none
             AppState::ColorPickerButtonAct act;
             bool enabled;
         };
         const Plan plan[3] = {
-            {"Copy",  AppState::ColorPickerButtonAct::Copy,  !asking},
-            {"Paste", AppState::ColorPickerButtonAct::Paste,
+            {"Copy",  0, AppState::ColorPickerButtonAct::Copy,  !asking},
+            {"Paste", 0, AppState::ColorPickerButtonAct::Paste,
              !asking && cp.slot_full},
-            {"Close", AppState::ColorPickerButtonAct::Close, !asking},
+            {"Close", -1, AppState::ColorPickerButtonAct::Close, !asking},
         };
+        static_assert(access_key_of("Copy", 0) != access_key_of("Paste", 0),
+                      "the picker's access letters must differ");
         for (int i = 0; i < 3; ++i) {
             const GuiRect& r = L.buttons[i];
             const bool enabled = plan[i].enabled;
@@ -7424,13 +7447,15 @@ void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
                 text_shape::shape_text_run(font, plan[i].label);
             const double lx = r.x + (r.w - std::ceil(run.width_px)) / 2 + box.shift;
             const double ly = redesign_baseline(font, r.y, r.h) + box.shift;
-            if (enabled)
-                show_row_text(cr, font, lx, ly, plan[i].label, palette().label);
-            else
-                show_row_text_embossed(cr, font, lx, ly, plan[i].label);
+            show_button_word(cr, run, plan[i].label, plan[i].access, lx, ly,
+                             enabled);
             if (veiled) continue;
             AppState::ModalDialogButton out;
             out.rect             = r;
+            out.access_key       = plan[i].access >= 0
+                                       ? access_key_of(plan[i].label,
+                                                       plan[i].access)
+                                       : 0;
             out.color_picker_act = plan[i].act;
             out.enabled          = enabled;
             out.tooltip          = plan[i].label;   // the act's name, nothing else

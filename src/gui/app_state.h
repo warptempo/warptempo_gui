@@ -26,6 +26,7 @@
 #include <limits>
 #include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -4446,34 +4447,37 @@ enum class DialogTrigger {
 // per response right-aligned at its right pad; the centered box of 2026-08-12
 // is scrapped, and before that arc the prompts were a tier in this same row's
 // status span).
-// Keyboard input is owned by the prompt exactly as it always was: only the
-// response keys (and Esc, which activates the rightmost response) do
-// anything; everything else is swallowed. `response_keys` holds lowercase
-// letters and the match is CASE-SENSITIVE on the codepoint (the rule is at
-// the prompt dispatch, input_handler.cpp); the two non-letter responses match
-// on the GuiKey (Delete, Escape) instead.
-// `response_labels` are the BUTTONS' words, one per response, parallel to
-// response_keys, IN PLAIN WORDS — "Save", "Discard", "Cancel", "Retry",
-// "Yes", and "OK" on the load confirmation. The two key-named
-// sentinels take the word their MEANING spells rather than their key's name:
-// '\x7f' (Delete, the discard-and-proceed) is "Discard", '\x1b' (Escape) is
-// "Cancel".
+// Keyboard input is owned by the prompt exactly as it always was: only its
+// answers' ACCESS KEYS, Esc (the last answer, Cancel) and the focus ring's
+// Tab / arrows / Enter / Space do anything; everything else is swallowed.
+// The answers are a PromptAnswer table (below): each answer's dispatch char
+// (`key`, what activate_response forks on), its button's PLAIN WORD
+// (`label` — "Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Reload",
+// "Keep", "Delete") and its ACCESS KEY (`access`).
 //
-// THE BRACKETED ACCELERATOR SPELLING ("[S]ave", "[D]iscard") IS RETIRED FOR
-// THE SECOND TIME AND WITH ITS REASON RECORDED, so it is not proposed a third
-// (architect 2026-08-13, at his live look): it went with the bottom-strip
-// status line on 2026-08-12, came back with the row hours later — the buttons
-// being touch targets that could also name the letter that answers them — and
-// he read the result plainly: "the brackets now look odd... a normal button
-// would use an underline for the character... I guess what we could do is do
-// tooltips for the buttons. So we don't do underscores or underline or
-// brackets or anything like that." SO THE KEY IS NAMED ON THE BUTTON'S
-// TOOLTIP, the product's own way of naming a chord (the roster's hint format
-// verbatim — "Save (S)"), composed at modal_dialog_button_hint below from what
-// the button DISPATCHES. NONE OF THIS EVER REACHED THE MATCHING:
-// response_keys and the codepoint-exact lowercase compare are untouched
-// through all three spellings and through the 2026-09-01 upper-casing, so a
-// typed capital still does not answer.
+// THE DIALOG BUTTONS CARRY WINDOWS' UNDERLINED ACCESS KEYS (architect
+// 2026-10-10 ~16:05, "agree to make it windows strict"), exactly as the menu
+// row got them the same day (dropdown_title_access_key, whose rule this
+// follows): the letter is a BYTE INDEX into the plain word, underlined by the
+// painter and always shown; OK and Cancel carry NONE, being Enter and Esc as
+// in Windows. With a BUTTON focused — every prompt, a prompt having no field
+// — the BARE letter fires its button and Alt+letter fires it too; the match
+// is the menus' own, CASE-INSENSITIVE on the case-folded key (Caps Lock
+// answers) with Shift and Ctrl spelling nothing. THAT SUPERSEDES TWO RECORDS
+// (Windows strict, 2026-10-10): the bare-only match of 2026-07-28 (which
+// refused Alt+Y on the paste confirmation) and the codepoint-exact lowercase
+// match of 2026-07-30 (which refused a Caps Lock Y). NON-WINDOWS KEYS ON
+// DIALOG BUTTONS WENT WITH IT: Discard answered the Delete key (a '\x7f'
+// sentinel) and OK the letter `o`; Discard answers D now, and OK only Enter
+// and its press. The resolution is the published stash's
+// (ModalDialogGeometry::button_for_access_key), fired through the button's
+// own dispatch (GuiInputHandler::modal_dialog_access_button).
+//
+// THE BRACKETED ACCELERATOR SPELLING ("[S]ave", "[D]iscard") STAYS RETIRED
+// (architect 2026-08-13, at his live look: "the brackets now look odd... a
+// normal button would use an underline for the character"); the key lived on
+// the button's tooltip from then until the underline arrived on 2026-10-10,
+// and the tooltip is the act's name alone since (Windows strict).
 // A PROMPT DOES HAVE AN ENTER ANSWER, AND IT IS THE PASSIVELY FOCUSED BUTTON
 // (architect 2026-08-13, SUPERSEDING this block's own standing ruling — "no
 // button wears the default face; this prompt system HAS no Enter answer,
@@ -4485,8 +4489,8 @@ enum class DialogTrigger {
 // makes that safe is not the absence of a default but two facts that were not
 // available when the old rule was written:
 //   (i)  THE LAST BUTTON IS THE ESCAPE SENTINEL — the non-destructive answer,
-//        by construction rather than by convention. All SIX present() sites
-//        put '\x1b' last: the unsaved-work prompt (Save / Discard /
+//        by construction rather than by convention. Every answer table
+//        below puts '\x1b' last (kPromptAnswerTablesValid asserts it): the unsaved-work prompt (Save / Discard /
 //        CANCEL), its save-failed restatement (Retry / Discard / CANCEL), THE
 //        PHASE RESET PASTE'S CONFIRMATION (Yes / CANCEL), THE LOAD
 //        CONFIRMATION'S TWO RAISERS (OK / CANCEL — one prompt body, two
@@ -4526,7 +4530,7 @@ enum class DialogTrigger {
 // tail-sync machinery and each round found another span; the record is in
 // closed_questions.md and git).
 // WHAT THE GATE COSTS: while `painted` is false the prompt consumes EVERY
-// key — not just the response letters but Esc and Delete too (the prompt
+// key — not just the access letters but Esc too (the prompt
 // dispatch, input_handler.cpp), because a consumed no-answer is the only
 // safe reading of input aimed at an unseen surface — and the pointer's
 // response claim is gated on it as well (on_button_press; the veil still
@@ -4575,6 +4579,65 @@ enum class DialogTrigger {
 //                 the revert and the pastes answer it as they do.
 enum class PromptInitialFocus { LastButton, FirstButton };
 
+// ONE ANSWER OF A PROMPT: `key` the char activate_response forks on (a
+// lowercase letter, or '\x1b' for the Esc answer, Cancel), `label` the
+// button's plain word, `access` the byte in `label` of its ACCESS KEY
+// (architect 2026-10-10, Windows strict; the rule is PromptState's block
+// above), or -1 for none — OK and Cancel, Enter and Esc in Windows. A
+// lettered answer's `key` IS its access letter, folded; OK's `o` is its
+// dispatch identity alone, reached by its press and Enter, never typed.
+struct PromptAnswer {
+    char        key;
+    const char* label;
+    int         access;
+};
+// THE ANSWER TABLES, one per answer set, each named for its words; the
+// raises pass one to PromptState::present. Cancel LAST on every one, the
+// escape sentinel (PromptState's fact (i)).
+inline constexpr PromptAnswer kPromptSaveDiscardCancel[] = {
+    {'s', "Save", 0}, {'d', "Discard", 0}, {'\x1b', "Cancel", -1}};
+inline constexpr PromptAnswer kPromptRetryDiscardCancel[] = {
+    {'r', "Retry", 0}, {'d', "Discard", 0}, {'\x1b', "Cancel", -1}};
+inline constexpr PromptAnswer kPromptReloadKeepCancel[] = {
+    {'r', "Reload", 0}, {'k', "Keep", 0}, {'\x1b', "Cancel", -1}};
+inline constexpr PromptAnswer kPromptYesCancel[] = {
+    {'y', "Yes", 0}, {'\x1b', "Cancel", -1}};
+inline constexpr PromptAnswer kPromptOkCancel[] = {
+    {'o', "OK", -1}, {'\x1b', "Cancel", -1}};
+inline constexpr PromptAnswer kPromptDeleteCancel[] = {
+    {'d', "Delete", 0}, {'\x1b', "Cancel", -1}};
+// A TABLE IS WELL FORMED when every dispatch char is distinct, a marked
+// letter lies inside its word and IS its answer's key (folded, access_key_of),
+// no two marked letters coincide, and the last answer is the Esc one.
+template <std::size_t N>
+inline constexpr bool prompt_answers_valid(const PromptAnswer (&t)[N]) {
+    if (N == 0 || t[N - 1].key != '\x1b' || t[N - 1].access >= 0)
+        return false;
+    for (std::size_t i = 0; i < N; ++i) {
+        if (t[i].access >= 0) {
+            if (static_cast<std::size_t>(t[i].access) >=
+                std::char_traits<char>::length(t[i].label))
+                return false;
+            if (access_key_of(t[i].label, t[i].access) !=
+                static_cast<GuiKey>(static_cast<unsigned char>(t[i].key)))
+                return false;
+        }
+        for (std::size_t j = 0; j < i; ++j)
+            if (t[j].key == t[i].key) return false;
+    }
+    return true;
+}
+inline constexpr bool kPromptAnswerTablesValid =
+    prompt_answers_valid(kPromptSaveDiscardCancel) &&
+    prompt_answers_valid(kPromptRetryDiscardCancel) &&
+    prompt_answers_valid(kPromptReloadKeepCancel) &&
+    prompt_answers_valid(kPromptYesCancel) &&
+    prompt_answers_valid(kPromptOkCancel) &&
+    prompt_answers_valid(kPromptDeleteCancel);
+static_assert(kPromptAnswerTablesValid,
+              "a prompt's access letter must be in its word, be its key, be "
+              "unique, and Cancel (Esc, no letter) must stand last");
+
 struct PromptState {
     bool                     active = false;
     bool                     painted = false;   // see the block above
@@ -4587,8 +4650,8 @@ struct PromptState {
     // the user SEEN this surface).
     uint64_t                 session = 0;
     std::string              text;
-    std::vector<char>        response_keys;     // lowercase
-    std::vector<std::string> response_labels;   // plain words, e.g. "Save"
+    // The answers, in button order: one of the static tables above.
+    std::span<const PromptAnswer> answers;
     DialogTrigger            trigger = DialogTrigger::CLOSE_WINDOW;
     // WHICH BUTTON THE PAINTER'S RAISE FOCUSES (the enum above owns the
     // choice). Written only by present, read only by paint_modal_dialog's
@@ -4612,59 +4675,19 @@ struct PromptState {
     // `focus` is REQUIRED, not defaulted: a new raise states which button its
     // Enter answers rather than inheriting one silently.
     void present(std::string t,
-                 std::vector<char> keys,
-                 std::vector<std::string> labels,
+                 std::span<const PromptAnswer> a,
                  DialogTrigger trig,
                  PromptInitialFocus focus) {
         active          = true;
         painted         = false;
         session         = text_editor::next_session_id();
         text            = std::move(t);
-        response_keys   = std::move(keys);
-        response_labels = std::move(labels);
+        answers         = a;
         trigger         = trig;
         initial_focus   = focus;
     }
 };
 
-// A MODAL BUTTON'S TOOLTIP TEXT (architect 2026-08-13, the ruling that retired
-// the bracketed accelerators: "we just do a tooltip just like the regular icon
-// tooltips"). The FORMAT IS THE ROSTER'S OWN — "<word> (<key>)", exactly
-// "Toggle Grid Iterations (I)" — and so is the accelerator's SPELLING, the product's
-// one convention (spell_chord's head, gui_input.h): a bare letter UPPERCASE,
-// a named key by Qt's own English name ("Del", "Esc", "Return").
-//
-// THE CAPITAL IS THE CAP'S NAME AND NOT THE PRESS'S CASE, which is the one
-// thing to know here: the MATCH is codepoint-exact on the LOWERCASE letter
-// (PromptState's rule, untouched), so this hint upper-cases the letter for
-// display alone and a typed capital still does not answer. That is the shift
-// ambiguity the speller's head weighs and accepts, on this surface too. It
-// read the letter as typed until 2026-09-01, when the product took one
-// spelling for every surface.
-//
-// THE KEY IS DERIVED FROM WHAT THE BUTTON DISPATCHES, never hand-listed beside
-// the words: a PROMPT button carries its response char (the two sentinels
-// '\x7f' and '\x1b' being Delete and Escape — PromptState's own mapping), an
-// EDITOR button carries `editor_ok`, which IS the session's Enter-or-Escape.
-// So a prompt that grows a response, or an editor button that changes which
-// key it sends, cannot drift from its own hint.
-inline std::string modal_dialog_button_hint(std::string_view word,
-                                            char response_key,
-                                            bool editor_ok) {
-    std::string key;
-    if (response_key == '\x7f') {
-        key = "Del";
-    } else if (response_key == '\x1b') {
-        key = "Esc";
-    } else if (response_key != 0) {
-        char c = response_key;
-        if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
-        key = std::string(1, c);
-    } else {
-        key = editor_ok ? "Return" : "Esc";
-    }
-    return std::string(word) + " (" + key + ")";
-}
 
 
 // WHY THE WINDOW EXISTS AT ALL (architect 2026-08-19: "its purpose is to speed
@@ -6464,16 +6487,17 @@ struct AppState {
     // claim region; `buttons` are the answer buttons in painted order.
     //
     // A BUTTON CARRIES ITS DISPATCH, not a label: for a PROMPT,
-    // `response_key` is the PromptState response char the click activates
-    // (validated against the LIVE response_keys at dispatch); for an EDITOR,
+    // `response_key` is the PromptAnswer dispatch char the click activates
+    // (validated against the LIVE answers at dispatch); for an EDITOR,
     // `editor_ok` selects the session's own Enter (true) or Esc (false),
     // dispatched through the editor's one key route — button-is-its-chord.
-    // `tooltip` is the composed hint the painter drew this button's word for
-    // (modal_dialog_button_hint, above — the word plus the key that dispatch
-    // names), stashed rather than re-composed because the WORD is the only
-    // half the pointer path cannot see: the prompt's labels are its own and
-    // the editors' two are literals. Every dialog button has one, so
-    // membership needs no test beyond the index.
+    // `tooltip` is the button's word, the act's name and nothing else since
+    // the underline carries the key (architect 2026-10-10, Windows strict),
+    // stashed because the WORD is the half the pointer path cannot see: the
+    // prompt's labels are its tables' and the editors' two are literals.
+    // Every dialog button has one, so membership needs no test beyond the
+    // index. `access_key` is the underlined letter's key AS PAINTED, 0 for
+    // none (button_for_access_key, the keyboard's one resolution).
     //
     // PUBLISHED GEOMETRY MAY ONLY SELECT; LIVE STATE DECIDES (the doctrine,
     // recorded here once, 2026-08-13). The icon roster always obeyed it —
@@ -6706,7 +6730,12 @@ struct AppState {
         // other owner's builder leaves it true — a prompt's, a picker's and
         // an editor's buttons are always live while their dialog stands.
         bool        enabled      = true;
-        std::string tooltip;            // "<word> (<key>)"; never empty
+        std::string tooltip;            // the word alone; never empty
+        // THE ACCESS KEY AS PAINTED (architect 2026-10-10, Windows strict;
+        // PromptState's block owns the rule): the folded key of the letter
+        // the painter underlined in the word, 0 where none is (OK, Cancel,
+        // Close, every glyph button).
+        GuiKey      access_key   = 0;
         // THE MODIFIER LINE, empty on every button that admits no modified
         // press — the roster tooltip's `line2` over this surface (2026-08-28).
         // Its ONE producer is the player's two skips, and it says the
@@ -6758,6 +6787,16 @@ struct AppState {
         std::vector<GuiRect>           combo_list_items;
         PopupScrollBar                 combo_list_bar;
         std::vector<ModalDialogButton> buttons;
+        // THE BUTTON A KEY'S ACCESS LETTER NAMES, by index, or -1 — read off
+        // the published buttons (ON SCREEN IS AS PAINTED), the dialog
+        // buttons' twin of dropdown_item_for_access_key. The focus kind's
+        // rule and the act are GuiInputHandler::modal_dialog_access_button's.
+        int button_for_access_key(GuiKey key) const {
+            if (key == 0) return -1;
+            for (std::size_t i = 0; i < buttons.size(); ++i)
+                if (buttons[i].access_key == key) return static_cast<int>(i);
+            return -1;
+        }
     };
     ModalDialogGeometry modal_dialog;
 

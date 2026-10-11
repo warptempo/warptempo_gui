@@ -4608,6 +4608,20 @@ private:
     // in the FIELD they never reach this route and keep their old meanings.
     bool route_modal_dialog_focus_key(GuiKey key, GuiInputState mods);
 
+    // THE DIALOG BUTTONS' ACCESS KEYS (architect 2026-10-10, Windows strict;
+    // the rule is PromptState's, app_state.h): the index of the live
+    // dialog's published button whose underlined letter `key` names under
+    // the focus kind's rule, or -1. With a BUTTON focused (`field_focused`
+    // false) the letter answers bare or with Alt; with a TEXT FIELD focused
+    // the bare letter types and only Alt+letter answers; Shift and Ctrl
+    // spell none. The match is the published stash's
+    // (ModalDialogGeometry::button_for_access_key, as painted), asked only
+    // of the live surface's stash; the caller fires the index through
+    // dispatch_modal_dialog_button, the one act road. Callers: the prompt
+    // gate (input_handler.cpp) and the color picker's two key routes.
+    int  modal_dialog_access_button(GuiKey key, GuiInputState mods,
+                                    bool field_focused) const;
+
     // THE `h` HISTORY MODE's entry points (bodies in
     // input_key_dispatch.cpp, except the pointer one in input_pointer.cpp). The
     // mode itself — what it shows, what opens and closes it, what it refuses and

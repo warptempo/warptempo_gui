@@ -80,5 +80,6 @@ Example output, also in lossy audio format:
 - [`INSTALL.md`](INSTALL.md): installing, building, the first run, the tablet, daily use, trouble, and migrating an older project folder.
 - The tooltips: every button and its key, with the tooltip lamp lit.
 - The menus: each title's and each row's underlined letter is its access key — Alt with a title's letter opens that menu, and a row's letter runs the row while its menu is open.
+- The dialogs: a button's underlined letter is its access key — the letter alone answers a question, Alt with the letter while a text field has the focus; Enter is the focused button and Esc is Cancel.
 - The source comments and `docs/engineering/closed_questions.md`: the engineering record of the rulings behind the behaviour, not user reading.
 - [`README.md`](../README.md): credits and licence.
