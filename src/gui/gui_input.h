@@ -835,7 +835,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Toggle Value Drag (architect 2026-10-11), the bare LEFT BRACKET,
         // bound in both modes as `k` is: the one-shot lamp arming the flag's
         // value drag (AppState::value_drag_lamp), the `h` view's allowlist
-        // refusing it on a card. Every modified `[`, and the whole of `]`,
+        // refusing it on a card, and under grid iterations its own arm carding
+        // that the lamp is always on there (kValueDragIterationsCard). Every modified `[`, and the whole of `]`,
         // are unbound.
         case GuiKeys::BracketLeft: return bare;
         // Toggle Tooltips (architect 2026-09-29), the bare BACKSLASH, bound in

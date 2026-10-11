@@ -54,7 +54,7 @@
 // invalidate_surface damages the WHOLE SURFACE, the band with it. The band
 // paints in the chrome's roles, so the one GUI event that changes them with
 // the window standing — a live chrome pick, the color picker's install of
-// the twelve (GuiColorPicker::install_live_words) — asks for it; every other
+// the eleven (GuiColorPicker::install_live_words) — asks for it; every other
 // repaint of the band rides the backend's own full damage (a configure or a
 // window adoption). Both
 // backends implement the pair alike.

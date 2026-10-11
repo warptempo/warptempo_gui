@@ -9,8 +9,10 @@ struct GuiTargetRender;
 
 // THE FLAG'S VALUE DRAG — the second plain-flag drag and the ONE pointer
 // gesture that changes a marker's VALUE (architect 2026-09-10). It runs only
-// while THE VALUE DRAG LAMP is lit — bare `[` and row 8's Toggle Value Drag,
-// a ONE-SHOT this unit's commit puts out (architect 2026-10-11, retiring the
+// while THE VALUE DRAG IS ARMED (value_drag_armed): THE VALUE DRAG LAMP lit —
+// bare `[` and row 8's Toggle Value Drag, a ONE-SHOT this unit's commit puts
+// out — or grid iterations standing, under which it is permanently lit and
+// nothing is spent (architect 2026-10-11 ~01:45) (architect 2026-10-11, retiring the
 // view posture of 2026-09-13, under which a sideways drag in T+W changed a
 // tempo unnoticed; the whole rule is at value_drag_posture, app_state.h) —
 // where a plain flag press-and-drag in ANY VIEW, source view included, steps
@@ -111,7 +113,8 @@ struct ValueDragOps {
     // End the gesture, pushing the tempo arm's one undo entry iff the
     // marker's tempo pair moved (the rule is above), and SPEND THE LAMP
     // (AppState::value_drag_lamp, 2026-10-11) — a drag began, so the one-shot
-    // goes dark. Called by the release, by the lost-button arm and by the
+    // goes dark (under grid iterations nothing is spent: the mode arms every
+    // drag, value_drag_armed). Called by the release, by the lost-button arm and by the
     // force-end finalizer alike — every end of this gesture commits what
     // stands, the standing no-cancel rule.
     void commit();

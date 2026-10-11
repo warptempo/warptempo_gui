@@ -2,7 +2,7 @@
 
 The product's icons, one SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each file named by its enumerator:
 TANGO 0.8.90'S SCALABLE DRAWINGS, the model ReactOS follows on its Windows 2000 desktop (architect 2026-10-06:
-Tango's own files only, nothing drawn, no GNOME file), the chrome spec's set (`src/gui/chrome_spec.h`'s `icon_set`);
+Tango's own files only, nothing drawn, no GNOME file — one recorded exception, ValueDrag, below), the chrome spec's set (`src/gui/chrome_spec.h`'s `icon_set`);
 the set the product drew itself before is git history.
 
 Every file is a 48-unit Inkscape drawing COPIED BYTE FOR BYTE from Tango's `scalable/` tree: never edit one (an edit
@@ -38,8 +38,15 @@ program icon), AudioXWav (a wav row) and MusicNote16th (BPM Iterations); `action
 (Load in Place) and MediaRepeatSingle (Toggle Repeat One); `actions/process-stop` is DialogCancel and WindowClose;
 `apps/accessories-text-editor` is Unlock (Toggle Read-Only, unlocked) and
 AccessoriesTextEditor (Open Text Editor, architect 2026-10-09: the bare Enter's act as a button, its drawing a byte copy
-of the file Unlock already wore and was checked as). Every other file is worn once: 59 enumerators over 54 distinct
+of the file Unlock already wore and was checked as). Every other file is worn once: 60 enumerators over 55 distinct
 drawings.
+
+THE ONE FILE THAT IS NOT TANGO'S, A RECORDED EXCEPTION (architect 2026-10-11, the value drag lamp, Toggle Value Drag,
+bare `[`): ValueDrag wears GNOME icon theme 3.0.0's `object-flip-vertical`, the orange vertical double arrow, a
+byte copy of the Mist set's `assets/icons/mist/ValueDrag.svg` — Tango 0.8.90 draws no vertical double arrow, and the
+act wanted "a double-sided arrow with an up and a down". Its provenance (the 3.0.0 sheet, its sha256, the slot's
+extraction and its check against the sheet's own render) and its licence (3.0.0's LGPL v3, the texts beside it) are
+the Mist set's, `assets/icons/mist/README.md`; this folder adds no licence text for it.
 
 ## Provenance
 
@@ -135,4 +142,5 @@ the SVG files only; this repository carries the texts.
 | GoJumpDeclaration | Jump to Defining Marker | scalable/actions/go-jump.svg | — | `da4e4493791e6e53325c72f67e61c4ef21d148edda740256beb48c7e72f062f6` |
 | AccessoriesTextEditor | Open Text Editor | scalable/apps/accessories-text-editor.svg | Unlock | `ab79ede7f8b2c1de4b229d3e17c300f270c712c7ddd8a9e9fb1f7b472a26fc89` |
 | EditDelete | Delete Folder | scalable/actions/edit-delete.svg | — | `406e8c8eba860fec81d84fd9fb4b956bfd2e8f1a1432ed3f46c9cd61b3a8b728` |
+| ValueDrag | Toggle Value Drag (`[`) | not Tango's: GNOME 3.0.0's `object-flip-vertical`, a byte copy of `assets/icons/mist/ValueDrag.svg` (the exception above) | — | `e38d7fd7e3539672dadec7347682d4ae043f8efbd390dfe49d152c5d4c36c7d0` |
 | AppIcon | the caption's icon and the program icon (the chrome grey ground, #D4D0C8) | scalable/mimetypes/audio-x-generic.svg | AudioXWav, MusicNote16th | `d7619127acfe25edf59eca10be48776bf33d3a2dfa3a4dba9923032cc5dbc05f` |

@@ -637,13 +637,14 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     — stays refused by the base list beside it. OUTSIDE A LIT LAMP the
 //     chord refuses at its own arm instead, a tie existing only where
 //     brackets do.
-//   * BARE `[` — THE VALUE DRAG LAMP (architect 2026-10-11): since that day
-//     no flag drag is the value drag unless this one-shot is lit, and under
-//     the lock the drag's targets are the bound cells, the mode's own
-//     authoring surface (value_drag_target admits them under the iteration
-//     lock; the payload stays refused there). A lamp writes no store and
-//     pushes nothing, so the lock has nothing to protect from it. The base
-//     list refuses it: on a locked tab no flag drag of either axis acts.
+//   * BARE `[` — THE VALUE DRAG LAMP (architect 2026-10-11): ADMITTED FOR
+//     ITS OWN CARD — under the lock the lamp is permanently lit (~01:45,
+//     value_drag_armed: every flag drag the value drag on the bound cells,
+//     the mode's own authoring surface, value_drag_target admitting them and
+//     refusing the payload), so the arm changes nothing and answers with
+//     kValueDragIterationsCard, the undo pair's shape (a sentence about the
+//     act, not the lock's way out). The base list refuses it: on a locked
+//     tab no flag drag of either axis acts.
 //
 // THE FACES MIRROR IT BY HAND, exactly as they mirror the base, and the
 // ITERATION HALF OF THAT MIRROR HAS ONE OWNER (iteration_lock_greys,
@@ -722,8 +723,9 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     // THE TIE, ctrl-and-shift exact as its dispatch arm is — which is what
     // keeps the plain Ctrl+N, the inherit toggle, out of this admission.
     if (key == GuiKeys::N && ctrl && shift && !alt) return false;
-    // THE VALUE DRAG LAMP, bare-exact as its dispatch arm is (2026-10-11):
-    // the lamp arms the bound cells' drag, the mode's own authoring surface.
+    // THE VALUE DRAG LAMP, bare-exact as its dispatch arm is (2026-10-11),
+    // admitted for its own card: the lamp is permanently lit under the mode
+    // (~01:45), so the arm cards that it is (delta (b)).
     if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) return false;
     // The clipboard copy, ctrl-exact as its dispatch arm is — which is
     // what keeps the two ALT-bearing pastes out of this admission.
@@ -5349,6 +5351,13 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // view.
     flag_editor.wipe_iter_state();
     app.iteration_mode_enabled = false;
+    // LEAVING THE MODE PUTS THE VALUE DRAG LAMP OUT (architect 2026-10-11
+    // ~01:50, "it's simpler that way"; AppState::value_drag_lamp): this tail
+    // is the mode's second exit road beside bare `i`'s toggle, which clears it
+    // at both edges. The bottom lane is damaged so the button's lit face (the
+    // mode's, value_drag_armed) goes dark in this frame.
+    app.value_drag_lamp = false;
+    viewport.invalidate_rect(bottom_row_area(app));
     viewport.invalidate_top_strip();
     // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR did,
     // 2026-08-29: the mode bit is one of the eligibility terms the resolved
@@ -7743,6 +7752,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             flag_editor.wipe_iter_state();
         }
         app.iteration_mode_enabled = !app.iteration_mode_enabled;
+        // ENTERING OR LEAVING THE MODE PUTS THE VALUE DRAG LAMP OUT (architect
+        // 2026-10-11 ~01:50, "it's simpler that way"; AppState::value_drag_lamp):
+        // through the mode the drag is armed by the mode itself
+        // (value_drag_armed), and on the way out the lamp is dark. Both
+        // edges, the same write; the sweep's success tail, the mode's other
+        // exit road, makes it too. The bottom lane's damage below, on both
+        // edges, covers the button's face.
+        app.value_drag_lamp = false;
         // AND THE ON EDGE SPENDS THE SELECTION, ON BOTH COLUMNS (architect
         // 2026-09-12): the bound cells are addressed one marker at a time and
         // by a PLAIN press, so entering the mode is exactly the moment a built
@@ -7754,14 +7771,13 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // press. The ON edge alone: leaving the mode leaves add to selection
         // exactly as it stands.
         //
-        // THE DAMAGE IS BOTH LANES where the write happens: the Grid
-        // Iterations lamp is the icon row's and the Add to Selection lamp the
-        // bottom row's, and a mode toggle must light in the frame it was asked
-        // for rather than on the per-tick face comparator's next pass.
-        if (app.iteration_mode_enabled) {
-            selection_consumed(app);
-            viewport.invalidate_rect(bottom_row_area(app));
-        }
+        // THE DAMAGE IS BOTH LANES on both edges: the Grid Iterations lamp
+        // is the icon row's, and the Add to Selection lamp and the Toggle
+        // Value Drag face (lit and grey through the mode, 2026-10-11) the
+        // bottom row's, and a mode toggle must light in the frame it was
+        // asked for rather than on the per-tick face comparator's next pass.
+        if (app.iteration_mode_enabled) selection_consumed(app);
+        viewport.invalidate_rect(bottom_row_area(app));
         viewport.invalidate_top_strip();
         // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR
         // did, 2026-08-29: the mode bit is one of the eligibility terms
@@ -8059,12 +8075,22 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // on a locked tab with the lock's card (both flag drags refuse there, so
     // the lamp would arm nothing), the grid-iterations gate admits it (the
     // bound cells are the drag's targets — delta (b)), and the `h` view's
-    // allowlist refuses it (its flags arm no drag). It stops no playback and
+    // allowlist refuses it (its flags arm no drag). UNDER GRID ITERATIONS IT
+    // CHANGES NOTHING AND CARDS WHY (architect 2026-10-11 ~01:45): the lamp is
+    // permanently lit there (value_drag_armed, app_state.h), the stored bit
+    // dark and unread through the mode, and a bound chord is never silent —
+    // kValueDragIterationsCard; the button greys lit there, so its press dies
+    // before reaching this arm. It stops no playback and
     // writes no store, no undo entry and no dirty mark. THE REPAINT IS THE
     // BOTTOM LANE'S, `k`'s reason: the lamp must light in the frame it was
     // asked for. (Bare `x` toggled the first value drag lamp from 2026-09-10
     // to 2026-09-13 and binds nothing.)
     if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) {
+        if (app.iteration_mode_enabled) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kValueDragIterationsCard);
+            return true;
+        }
         app.value_drag_lamp = !app.value_drag_lamp;
         viewport.invalidate_rect(bottom_row_area(app));
         return true;

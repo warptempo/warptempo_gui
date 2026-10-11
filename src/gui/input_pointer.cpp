@@ -684,8 +684,9 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::K,      false, false, false, false},                             // bare k
     // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40), the verb group's
     // EIGHTH and last, immediately right of Add to Selection: BARE `[`, which
-    // was free, the one-shot lamp that arms the flag's value drag
-    // (AppState::value_drag_lamp; the rule at value_drag_posture). Add to
+    // was free, the one-shot lamp that arms the flag's value drag, permanently
+    // lit under grid iterations (AppState::value_drag_lamp, value_drag_armed;
+    // the rule at value_drag_posture). Add to
     // Selection's shape exactly — the lamp reads the bit the key flips, the
     // press dispatches the chord at the LIFT, the key acts at the press. ITS
     // GATES ARE THE KEY'S BY CONSTRUCTION: the read-only allowlist does not

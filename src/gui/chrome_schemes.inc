@@ -3,7 +3,6 @@
 // catalog entry but the dropped ones in the catalog's order, its key, its display name and its six
 // caption keys in kGuiChromeLines' order, the entry's recorded bytes (docs/themes/catalog.json)
 // under the generator's rules; regenerate, never hand-edit.
-    {"cool-edit-pro-me", "Cool Edit Pro ME", {0x0A246A, 0xA6CAF0, 0xFFFFFF, 0x808080, 0xC0C0C0, 0xD4D0C8}},
     {"windows-brick", "Windows Brick", {0x800000, 0xB07440, 0xE1E0D2, 0x8D8961, 0xC8B870, 0xE1E0D2}},
     {"windows-eggplant", "Windows Eggplant", {0x588078, 0x834B83, 0xFFFFFF, 0x90B0A8, 0xCBBDD2, 0x588078}},
     {"windows-lilac", "Windows Lilac", {0x5A4EB1, 0xB68FCB, 0xFFFFFF, 0x808080, 0xB8B4D0, 0xFFFFFF}},

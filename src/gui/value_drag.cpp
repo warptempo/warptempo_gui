@@ -248,7 +248,11 @@ void ValueDragOps::commit() {
     // the lost button and the force-end finalizer — so the lamp cannot
     // outlive its drag. The lane is damaged here so the face goes dark in the
     // frame the lift ends, as the key's toggle lights it (AppState::
-    // value_drag_lamp; the rule at value_drag_posture).
+    // value_drag_lamp; the rule at value_drag_posture). UNDER GRID ITERATIONS
+    // NOTHING IS SPENT (architect 2026-10-11 ~01:45): the drag is armed by
+    // the mode (value_drag_armed), the stored bit already dark there (put
+    // out at the mode's edges, `[` refused), so this write changes nothing
+    // and the next drag is armed as this one was.
     app.value_drag_lamp = false;
     viewport.invalidate_rect(bottom_row_area(app));
 

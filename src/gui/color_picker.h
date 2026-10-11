@@ -21,7 +21,7 @@ struct GuiPlaybackLifecycle;
 struct Viewport;
 
 // THE COLOR PICKER (architect 2026-10-07, the picker arc's second segment) —
-// the in-app picker of the program's twelve colors (kGuiPaletteRoles,
+// the in-app picker of the program's eleven colors (kGuiPaletteRoles,
 // palette_file.h: A PALETTE) and, under every chrome, of the caption's six
 // keys (architect 2026-10-08, kGuiChromeLines, palette_file.h: A SCHEME —
 // the caption alone since 2026-10-10, every other chrome color the
@@ -43,9 +43,9 @@ struct Viewport;
 // what you're picking, whether it's the waveform or the chrome"): ONE
 // DROP-DOWN OF TWO ROWS, "Chrome" and "Waveform" (his words), choosing which
 // of the two preset kinds the picker works on (palette_file.h's head: a
-// SCHEME, the caption's six keys, and a PALETTE, the program's twelve).
+// SCHEME, the caption's six keys, and a PALETTE, the program's eleven).
 // The scope sets THE ELEMENT CHOOSER'S ROWS — the six under Chrome, the
-// twelve under Waveform, never a mixed list — and THE PRESET BUTTON: its
+// eleven under Waveform, never a mixed list — and THE PRESET BUTTON: its
 // label (the scope's active preset) and its menu's rows (its kind's files
 // and built-ins), the four acts acting on that kind alone. OLD | NEW, Copy /
 // Paste, the hex field and the wheel are the scope's live element's, with
@@ -109,7 +109,7 @@ struct Viewport;
 //     live element's name (element_display_name), each with its arrow
 //     button; a press on either drops ITS list — the scope's two rows, or
 //     THE SCOPE'S ELEMENTS (scope_element_at: under Chrome the six in
-//     kGuiChromeLines' order, "Title" first; under Waveform the twelve in
+//     kGuiChromeLines' order, "Title" first; under Waveform the eleven in
 //     kGuiPaletteRoles' order) — the menu-row popup's painters and press
 //     road, and a tap on a row selects. THE TWO SHARE ONE LIST: one is down
 //     at a time (AppState::ColorPicker's `chooser_scope` says whose), so the
@@ -117,11 +117,11 @@ struct Viewport;
 //     it, placed by the window and SCROLLING when its rows outgrow the room
 //     (render.h's popup scroll block, the rule's one owner; combo_list), its
 //     shown row scrolled into view at the open (re-derived 2026-10-09, device
-//     px; the longest list is the Waveform scope's twelve): at
-//     the tablet's 300 % twelve rows are 12 x 51 + 2 x 3 + 6 + 6 = 630 below
+//     px; the longest list is the Waveform scope's eleven, 2026-10-11): at
+//     the tablet's 300 % eleven rows are 11 x 51 + 2 x 3 + 6 + 6 = 579 below
 //     a chooser whose foot stands at 399 + 6 + 18 + 63 = 486 of the 1440
 //     rows (THE SEAT's top row), so the list hangs whole on the tablet as
-//     on the laptop (12 x 23 + 6 = 282 at 138 %); the scope's two
+//     on the laptop (11 x 23 + 6 = 259 at 138 %); the scope's two
 //     rows hang whole anywhere.
 //     (b)–(g) SIX SLIDER ROWS, Hue 0–360, Saturation 0–100,
 //     Value 0–100, Red / Green / Blue 0–255, at ONE PITCH (kSliderRowPx):
@@ -149,7 +149,7 @@ struct Viewport;
 //     As", "Rename", "Delete" (Title Case, no ellipsis — kdenlive's
 //     convention: nothing here opens a dialog), each with its truthful
 //     enabled bit (preset_act_enabled), then, each group behind a
-//     separator, HIS FILES OF THE SCOPE'S KIND (byte order) and ITS
+//     separator, HIS FILES OF THE SCOPE'S KIND (alphabetical) and ITS
 //     BUILT-INS (preset_menu_rows owns the order) — the acts first so they lead
 //     at the head (architect 2026-10-08 ~11:10). Its width is the widest row's
 //     between THE DROP-DOWN INSET on both sides (combo_text_inset_px's rule,
@@ -647,17 +647,19 @@ bool preset_act_enabled(const AppState& app, PresetAct a);
 
 // THE MENU'S ROWS for the scope, top to bottom (architect 2026-10-08
 // ~11:10; per scope ~18:15; the defaults' separator ~19:30; Cool Edit's
-// presets 2026-10-09 ~13:30): the four acts — a separator — HIS FILES OF THE
-// KIND (byte order) — a separator — THE BUILT-INS: under Waveform COOL
-// EDIT'S PRESETS, all twenty in its own order, "Default" first (the default
-// palette under every chrome, palette_file.h's kGuiBuiltinPalettes); under
-// Chrome THE CHROMES' OWN SCHEMES in the vocabularies' order
-// (windows-2000-standard alone today) and in the same group THE PRODUCT'S
-// OWN (kGuiProductSchemeKeys, palette_file.h: cool-edit-pro-me, "Cool Edit
-// Pro ME", architect 2026-10-10, "alongside Windows 2000 Standard") — A
-// SEPARATOR ("just put a separator after the default color themes",
-// architect 2026-10-08 ~19:30) — then THE CATALOG'S OTHER 103 in the
-// catalog's order (its 105 less the two listed above). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
+// presets 2026-10-09 ~13:30; alphabetical 2026-10-11): the four acts — a
+// separator — HIS FILES OF THE KIND ALPHABETICALLY (case-insensitive by
+// name, ties by bytes) — a separator — THE BUILT-INS: under Waveform COOL
+// EDIT'S PRESETS, all twenty, "Default" PINNED FIRST ("because it's called
+// default, we should support it as a default"; the default palette under
+// every chrome, palette_file.h's kGuiBuiltinPalettes) and the other
+// nineteen ALPHABETICALLY by their display names; under Chrome THE CHROME'S
+// OWN SCHEME alone (windows-2000-standard; the product's own
+// cool-edit-pro-me of 2026-10-10 removed 2026-10-11, "effectively the same
+// now, now that Chrome only sets the caption") — A SEPARATOR ("just put a
+// separator after the default color themes", architect 2026-10-08 ~19:30)
+// — then THE CATALOG'S OTHER SCHEMES GROUPED BY FAMILY in the catalog's
+// order, never alphabetized (his word, 2026-10-11). A GROUP OPENS ON ITS SEPARATOR AND AN EMPTY
 // GROUP IS NOT SHOWN: with no file, ONE separator stands between the acts
 // and the built-ins — a Windows menu never shows an empty group between two
 // separators; the defaults' group is never empty. Each separator is a scroll
@@ -908,12 +910,12 @@ struct GuiColorPicker {
 
     // -- THE PRESETS' ACTS (the head; the menu's rows reach them at the
     //    lift, color_picker_release). EACH ACTS ON THE LIVE SCOPE'S KIND
-    //    ALONE — a scheme's keys or a palette's twelve, the other kind's
+    //    ALONE — a scheme's keys or a palette's eleven, the other kind's
     //    live words and key untouched (2026-10-08 ~18:15) -----------------
     //
     // LOAD — a name row's tap: the named preset installed live (Chrome:
     // scheme_record's keys, or none for the live chrome's own scheme, the
-    // compiled caption back; Waveform: palette_record's twelve) through the
+    // compiled caption back; Waveform: palette_record's eleven) through the
     // apply shape, THE SCOPE'S ACTIVE PRESET made `name` (its key written,
     // write_preset_key), OLD and NEW reseated off the live element's new
     // color. A load of the active preset itself is the same act: the file's
@@ -921,7 +923,7 @@ struct GuiColorPicker {
     void load_preset(std::string_view name);
     // SAVE — the scope's live words over the active file (write_scheme_file
     // with the live scheme, which a file's load always seats, or
-    // write_palette_file with the live twelve); a failure cards. The act is
+    // write_palette_file with the live eleven); a failure cards. The act is
     // gray where it would be a no-op or a refusal (preset_act_enabled), so
     // the press that reaches it always writes.
     void save_preset();
@@ -989,7 +991,7 @@ struct GuiColorPicker {
     void apply_live_words(const GuiPaletteWords& words,
                           const std::optional<GuiChromePick>& scheme);
     // THE APPLY SHAPE'S ONE ROAD (2026-10-07; the scheme 2026-10-08): the
-    // twelve installed (install_program_palette, palette_file.h) and the
+    // eleven installed (install_program_palette, palette_file.h) and the
     // scheme's keys (install_chrome_pick, render.h), then the apply shape
     // run once, as install_program_palette's declaration states it. Its two
     // callers are set_color and apply_live_words. ITS DAMAGE (2026-10-09): a

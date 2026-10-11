@@ -17,9 +17,10 @@
 // DEVICE KEYS ("saving a waveform theme requires saving the entire chrome
 // theme as well … one more drop-down that shows what you're picking, whether
 // it's the waveform or the chrome"; the picker's scope, color_picker.h):
-//   A PALETTE — THE PROGRAM'S TWELVE (kGuiPaletteRoles below; twelve since
+//   A PALETTE — THE PROGRAM'S ELEVEN (kGuiPaletteRoles below; twelve from
 //     2026-10-09, when the cues took Cool Edit's two colors and the canvas
-//     its grid and center line) and nothing else: `palettes/<name>.palette`,
+//     its grid and center line, eleven since 2026-10-11, when the invalid
+//     label's selected red retired) and nothing else: `palettes/<name>.palette`,
 //     the `palette` device key.
 //   A SCHEME — THE CAPTION'S SIX KEYS (kGuiChromeLines below; the chrome's
 //     twelve keys until 2026-10-10, when every other chrome color came to
@@ -57,13 +58,14 @@
 // selected cue label and the flag editor's field and selection band, the
 // chrome's selected pair — whose colors are themselves the palette's tones
 // since 2026-10-10, chrome_derive.h). So the palette's
-// program roles are exactly the TWELVE below (the scheme's keys are the
+// program roles are exactly the ELEVEN below (the scheme's keys are the
 // caption's, not the program's): the waveform's canvas, ink and lit
 // outline; THE CANVAS'S GRID AND CENTER LINE, `grid` and `center`; THE CUES'
-// TWO COLORS, `cue` and `range`, and THE INVALID LABEL'S
-// PAIR, `invalid_label` and `invalid_label_selected` (architect 2026-10-09
-// ~11:50–12:00, Cool Edit's cues: render.h's marker-lane paragraph, the
-// table at render.cpp's resolve_flag_face); the playhead's `playhead_stem`
+// TWO COLORS, `cue` and `range` (architect 2026-10-09 ~11:50–12:00, Cool
+// Edit's cues), and THE INVALID COLOR, `invalid_label` (architect 2026-10-11
+// ~01:00–01:20: an invalid cue's triangle, dots and resting label and the
+// `h` view's removed half; render.h's marker-lane paragraph, the table at
+// render.cpp's resolve_flag_face); the playhead's `playhead_stem`
 // — its head and its dots alone — and the `scanner`, the white of the
 // stems that belong to the controls: the playback line and the zoom
 // anchor's stem (architect 2026-10-09: "the playhead is yellow"); and
@@ -83,9 +85,9 @@
 // its head's; regenerate, never hand-edit): each a KEY (`cool-edit-` and the
 // scheme's name in the key grammar — the `palette` key's word for it), a
 // DISPLAY NAME (Cool Edit's own, "Default" for its "(Default Scheme)") and
-// THE TWELVE. THE DEFAULT PALETTE IS ONE UNDER EVERY CHROME, Cool Edit's
+// THE ELEVEN. THE DEFAULT PALETTE IS ONE UNDER EVERY CHROME, Cool Edit's
 // "Default" (`cool-edit-default`, kGuiDefaultPaletteKey, the table's first
-// row) — THE PROGRAM'S TWELVE whenever the device config names no palette
+// row) — THE PROGRAM'S ELEVEN whenever the device config names no palette
 // (the per-chrome default palettes of 2026-10-07 to 2026-10-09 retired the
 // same day: the program is no chrome's).
 //
@@ -95,12 +97,13 @@
 // chrome_schemes.inc by tools/theme_catalog/gen_theme_files.py (the
 // transcription's rules are its head's; regenerate, never hand-edit): each a
 // KEY (the catalog's verbatim — the `scheme` key's word for it), a DISPLAY
-// NAME and THE SIX CAPTION KEYS; THE PRODUCT'S OWN among them (2026-10-10,
-// kGuiProductSchemeKeys below: his schemes made built-ins); the catalog's
+// NAME and THE SIX CAPTION KEYS (the product's own `cool-edit-pro-me` of
+// 2026-10-10 removed 2026-10-11, "effectively the same now, now that Chrome
+// only sets the caption"); the catalog's
 // `clearlooks` entry is not among them (architect 2026-10-10, "we can
 // remove the Clearlooks theme": the Clearlooks chrome left 2026-10-09; the
 // generator's head). A SCHEME IS CAPTION-ONLY BY ITS KIND: choosing one
-// installs its six and leaves the program's twelve as they stand
+// installs its six and leaves the program's eleven as they stand
 // (GuiColorPicker::load_preset). THE CHROME'S OWN SCHEME — the one its
 // `own_scheme` names (chrome_spec.h: `windows-2000-standard`) — CARRIES NO
 // KEYS under that chrome (scheme_record): the compiled caption exactly
@@ -119,12 +122,13 @@
 // LF-terminated `role=value` lines, split at the first '=', no blank line,
 // no comment, no whitespace tolerance, no duplicate), each value THE ONE
 // COLOR GRAMMAR (theme_colour_word, theme_file.h).
-//   A PALETTE FILE NAMES EXACTLY THE TWELVE (architect 2026-10-08; the
-//     twelve 2026-10-09): the picker writes all twelve, so a file missing a
+//   A PALETTE FILE NAMES EXACTLY THE ELEVEN (architect 2026-10-08; the
+//     eleven 2026-10-11): the picker writes all eleven, so a file missing a
 //     role is a state the GUI can never produce — the read's first-error hard
 //     fail naming the first missing role in the table's order (the
 //     two-category rule); a line naming a retired role (the flag faces of
-//     2026-10-07 to 2026-10-09 among them) is an unknown role, the read's
+//     2026-10-07 to 2026-10-09 and `invalid_label_selected`, 2026-10-09 to
+//     2026-10-11, among them) is an unknown role, the read's
 //     hard fail on that line, with no migration — the planner edits the
 //     devices' files at the install. THE CHROME'S KEYS LEFT THE PALETTE GRAMMAR
 //     (2026-10-08 ~18:15): a palette file carrying a chrome key is a state
@@ -201,7 +205,7 @@
 // 2026-10-07), in GuiPalette's order: the name a palette file spells and the
 // GuiPalette member it fills (render.h's palette block owns what each
 // paints). THE TABLE CARRIES NO VALUES (2026-10-09): every built-in palette's
-// twelve, the default's among them, are the generated rows of
+// eleven, the default's among them, are the generated rows of
 // kGuiBuiltinPalettes below — Cool Edit's own bytes, one source — where the
 // table held a value column per chrome default until that day.
 //
@@ -216,12 +220,16 @@
 // ground of the program's panel — the toolbar band, the dock bar, row 8 and
 // the canvas column's lanes — whose every other tone derives from it,
 // cool_edit_derive.h; a scheme recording none takes the default's 626C7B,
-// Cool Edit's own fallback); and THE THREE COOL EDIT HAS NO KEY FOR, the
-// same in every built-in: the invalid label Windows' dark / bright red of
-// the sixteen, `invalid_label` 800000 at rest and `invalid_label_selected`
-// FF0000 selected (architect 2026-10-09 ~11:50–12:00, "dimmer unselected,
-// brighter selected"), and THE SCANNER WHITE (architect 2026-10-07: "let's
-// go back to a white scanner") — THE PLAYHEAD AND THE SCANNER still TWO
+// Cool Edit's own fallback); THE INVALID COLOR `invalid_label` ITS Cntr
+// TOO, the preset's own center-line color (architect 2026-10-11 ~01:00–01:20;
+// Windows' dark red 800000 and the selected FF0000 of 2026-10-09 retired,
+// the selected role with them: "No flags change color when you select them
+// … I'd rather the text just go white, and the flag should be the
+// indicator that it's invalid" — a selected invalid label is the chrome's
+// text as every selected label's; still a role of its own, so a palette
+// may part it from the center line); and THE ONE COOL EDIT HAS NO KEY FOR,
+// the same in every built-in: THE SCANNER WHITE (architect 2026-10-07:
+// "let's go back to a white scanner") — THE PLAYHEAD AND THE SCANNER still TWO
 // roles, so a palette may part them: `playhead_stem` THE PLAYHEAD'S HEAD AND
 // DOTS ALONE, `scanner` THE SCANNER AND THE ZOOM ANCHOR'S STEM, the stems
 // that belong to the controls (architect 2026-10-09: "the non-playhead
@@ -232,12 +240,11 @@
 // over the grid (render_canvas, render.h's row-6 block); Cool Edit's
 // boundary line (Bndy) is not drawn and has no role. A
 // PALETTE FILE NAMES EVERY ROLE: a file without one is the read's hard fail
-// (the two-category rule: the picker writes all twelve).
+// (the two-category rule: the picker writes all eleven).
 //
 // THE TABLE'S ORDER IS THE PICKER'S CHOOSER (color_picker.cpp's kRoleNames):
 // the waveform's three, the canvas's two lines ("Grid", "Center Line"), the
-// cues' two colors ("Cue", "Range"), the invalid
-// label's pair ("Invalid Label", "Invalid Label Selected"), then the two
+// cues' two colors ("Cue", "Range"), the invalid color ("Invalid"), then the two
 // lines that cross the well ("Playhead", "Scanner"), then the panel's face.
 // The generator reads the names off this table and refuses to run when they
 // are not its own order.
@@ -254,7 +261,6 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {"cue",                       &GuiPalette::cue},
     {"range",                     &GuiPalette::range},
     {"invalid_label",             &GuiPalette::invalid_label},
-    {"invalid_label_selected",    &GuiPalette::invalid_label_selected},
     {"playhead_stem",             &GuiPalette::playhead_stem},
     {"scanner",                   &GuiPalette::scanner},
     {"face",                      &GuiPalette::face},
@@ -265,12 +271,12 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // install_program_palette takes, a palette file holds and palette_record
 // answers.
 using GuiPaletteWords = std::array<uint32_t, kGuiPaletteRoleCount>;
-// render.h spells this type as `std::array<uint32_t, 12>` (install_palette,
+// render.h spells this type as `std::array<uint32_t, 11>` (install_palette,
 // program_palette_words), since this header includes it; the literal is
 // pinned to the table here.
 static_assert(std::is_same_v<GuiPaletteWords,
                              std::remove_cvref_t<decltype(program_palette_words())>>,
-              "render.h's std::array<uint32_t, 12> must be GuiPaletteWords");
+              "render.h's std::array<uint32_t, 11> must be GuiPaletteWords");
 
 // THE SCHEME'S SIX KEYS — THE CAPTION (the head; architect 2026-10-08
 // ~11:00, a scheme's whole content since ~18:15; the caption alone since
@@ -331,7 +337,7 @@ constexpr std::size_t palette_role_index(std::string_view name) {
     return kGuiPaletteRoleCount;
 }
 
-// INSTALL THE PROGRAM'S TWELVE (2026-10-07; the install family's second
+// INSTALL THE PROGRAM'S ELEVEN (2026-10-07; the install family's second
 // member, defined in render.cpp beside install_palette, render.h): `words`
 // written into GuiPalette's program members, the plate's two inks re-baked,
 // THE CHROME'S MEMBERS RE-DERIVED FROM THEM under the live scheme's caption
@@ -350,32 +356,33 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // and after the install; when it moved, the synchronous plate rebuild
 // (Viewport::kick_waveform_sync — the plate re-rendered in the new inks, the
 // flag cache rebuilt at its tail, keyed by the generation); when it did not
-// (the grid, the center line, a cue color, an invalid label, the playhead,
+// (the grid, the center line, a cue color, the invalid color, the playhead,
 // the scanner, the face: no plate render),
 // the flag cache alone, synchronously (Viewport::refresh_flag_cache, so a frame
 // callback served before the tick cannot blit flags in the old colors); then
 // Viewport::invalidate_all, so the swap is one frame.
-// WHY THAT IS ENOUGH (re-read 2026-10-09): the twelve bake into two
+// WHY THAT IS ENOUGH (re-read 2026-10-09): the eleven bake into two
 // cached things alone — the waveform plate, keyed by its two inks
 // (waveform_plate_inks, the worker's job carrying them), and the flag cache,
 // keyed by the generation (FlagCache::fp_palette_generation), whose rebuild
 // also stages the stem stash (AppState::staged_marker_stems, swapped in at
-// the publish; it carries which of the two cue colors each stem wears, the
-// colors read live); every other reader paints live from palette()
+// the publish; it carries which of the cue colors each stem's two phases
+// wear, the colors read live); every other reader paints live from palette()
 // each frame — the canvas, its grid and its center lines (render_canvas),
 // the program's panel (the band, the canvas column's frame,
 // row 8, the view bar and its span, the ruler, the marker lane's face), the
 // cues' dots (paint_marker_stems), the playhead's head and dots, the open
 // flag editor (render_flag_editor_box), the lead-in ring's dots (its stem's
-// pair through phase_reset_stem_dots, the two colors read live), the zoom
+// pair through phase_reset_stem_dots, the colors read live), the zoom
 // anchor's stem and the scanner.
 void install_program_palette(const GuiPaletteWords& words);
 
 // THE BUILT-IN PALETTES (the head) — Cool Edit's presets in its order,
 // GENERATED (palette_presets.inc; never hand-edited): the key, the display
-// name and the twelve in the role table's order. palette_file.cpp asserts
+// name and the eleven in the role table's order. palette_file.cpp asserts
 // the keys and display names unique, the keys in the name grammar, the
-// default first, and every lit outline the generator's rule off its ink.
+// default first, every lit outline the generator's rule off its ink and
+// every invalid color its center line.
 struct GuiBuiltinPalette {
     const char*     key;
     const char*     display_name;
@@ -446,27 +453,6 @@ constexpr bool is_builtin_scheme_name(std::string_view name) {
 constexpr bool is_chrome_own_scheme(std::string_view name) {
     return name == kChromeSpecWin2000.own_scheme;
 }
-// THE PRODUCT'S OWN SCHEMES (architect 2026-10-10 ~06:30: "I have created a
-// theme called Cool Edit Pro for the Chrome … make it a permanent part of
-// the hard-coded as one of the options alongside Windows 2000 Standard") —
-// the catalog's `warptempo` family, his scheme files made built-ins
-// (`cool-edit-pro-me`, "Cool Edit Pro ME"): rows of kGuiChromeSchemes like
-// any built-in, their KEYS GENERATED a second time into
-// chrome_schemes_product.inc in the catalog's order (gen_theme_files.py's
-// head; the scheme rows carry no family), so the Chrome scope's first group
-// takes them after the chromes' own schemes, "alongside Windows 2000
-// Standard" (color_picker::preset_menu_rows). No chrome's own: under every
-// chrome a product scheme carries its six keys, as any built-in's
-// (scheme_record; chrome_derive.h).
-inline constexpr const char* kGuiProductSchemeKeys[] = {
-#include "chrome_schemes_product.inc"
-};
-constexpr bool is_product_own_scheme(std::string_view name) {
-    for (const char* k : kGuiProductSchemeKeys)
-        if (name == k) return true;
-    return false;
-}
-
 // THE ACTIVE PRESETS THE INSTALL TAKES (architect 2026-10-07; the scheme
 // 2026-10-08): the device config's key as written, or — EMPTY, no line —
 // for a palette THE DEFAULT PALETTE, `cool-edit-default` under every chrome
@@ -512,7 +498,7 @@ inline constexpr const char* kSchemeGrammarReason =
     "must be a built-in scheme's key (windows-2000-standard, "
     "windows-rainy-day, ...) or the name of a scheme file read at launch";
 
-// The twelve the palette `name` names — a built-in palette's row, or a
+// The eleven the palette `name` names — a built-in palette's row, or a
 // loaded file's words (a file names every role, the head). Precondition:
 // is_palette_name(name), so this resolves and never refuses (install_palette
 // at launch; the picker's load and Delete).
@@ -534,7 +520,7 @@ std::optional<GuiChromePick> scheme_record(std::string_view name);
 // holds, the writers ASSERT their name preconditions (a breach is a program
 // bug) and their one error arm is I/O.
 //
-// write_palette_file: create or overwrite `<name>.palette` with all twelve
+// write_palette_file: create or overwrite `<name>.palette` with all eleven
 // roles; write_scheme_file: create or overwrite `<name>.scheme` with the
 // pick's keys — each uppercase `#RRGGBB` in its table's order, through the
 // atomic writer (atomic_write_string_to_path), the folder created on the

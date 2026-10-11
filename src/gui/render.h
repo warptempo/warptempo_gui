@@ -96,7 +96,7 @@ struct TrimRange {
 // split 2026-10-07; the chrome's inheritance 2026-10-10): THE PALETTE holds
 // every color the PROGRAM draws in the well or on a thing that enters it
 // (the waveform's canvas, ink and outline, the canvas's grid and center
-// line, the cues' two colors and the invalid label's pair, the playhead and
+// line, the cues' two colors and the invalid color, the playhead and
 // the scanner, the panel's face; palette_file.h's head owns the rule that
 // parts program from chrome), and THE CHROME'S ROLES — the chrome and its
 // relief, the time fields' own pair, the cards' three, the selected and
@@ -276,17 +276,18 @@ struct TrimRange {
 //                 in the label — and the sizing frame round a
 //                 restored laptop window is the quartet and the ground
 //                 (paint_window_sizing_frame);
-//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; twelve
-//                 since 2026-10-09): the waveform's canvas, ink and outline
+//   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; eleven
+//                 since 2026-10-11): the waveform's canvas, ink and outline
 //                 (ROW 6, below; the ink also the view bar's span, its
 //                 bevels derived from it); THE CANVAS'S TWO LINES, Cool
 //                 Edit's — `grid` under the waveform and `center` on each
 //                 channel's zero, over it (ROW 6); THE CUES' TWO COLORS,
 //                 Cool Edit's —
 //                 `cue` the red and `range` the blue, the triangles and
-//                 their dots — and THE INVALID LABEL'S PAIR,
-//                 `invalid_label` at rest and `invalid_label_selected`
-//                 selected (THE MARKER LANE, below); the playhead's role
+//                 their dots — and THE INVALID COLOR, `invalid_label`,
+//                 each built-in's center line (2026-10-11): an invalid
+//                 cue's triangle, dots and resting label and the history's
+//                 removed half (THE MARKER LANE, below); the playhead's role
 //                 `playhead_stem` — its head in the ruler and its dots in
 //                 the canvas, nothing else (THE PLAYHEAD, below); the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
@@ -404,7 +405,6 @@ struct GuiPalette {
     GuiColor cue;
     GuiColor range;
     GuiColor invalid_label;
-    GuiColor invalid_label_selected;
     GuiColor playhead_stem;
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
@@ -446,9 +446,11 @@ struct GuiPalette {
     GuiColor ce_case_corner;
     // THE DISABLED CUE'S FADED LOOK (2026-10-10; cool_edit_derive.h's
     // disabled_* mixes toward the Face): the triangle of the `cue` red, the
-    // triangle of the `range` blue, the cue shadow, and the resting label.
+    // triangle of the invalid color (2026-10-11, the `range` blue's until
+    // the history's plus took the cue red), the cue shadow, and the resting
+    // label.
     GuiColor ce_off_cue;
-    GuiColor ce_off_range;
+    GuiColor ce_off_invalid;
     GuiColor ce_off_cue_shadow;
     GuiColor ce_off_label;
 };
@@ -516,7 +518,7 @@ struct GuiChromePick {
 };
 
 // Install every color: THE PROGRAM'S off `program`, THE LIVE WORDS
-// (2026-10-07, the color picker's round): the twelve program colors as they
+// (2026-10-07, the color picker's round): the eleven program colors as they
 // stand in the process, which the caller hands in explicitly — and THE
 // CHROME'S, DERIVED FROM THEM (2026-10-10, the chrome inherits Cool Edit:
 // every role but the caption's six a tone of the palette's face or ink,
@@ -537,13 +539,13 @@ struct GuiChromePick {
 // plate's two baked inks (waveform_plate_inks) move with it. The words type
 // is palette_file.h's. `chrome` is the scheme's keys (GuiChromePick above),
 // none for the live chrome's own scheme.
-void install_palette(const std::array<uint32_t, 12>& program,
+void install_palette(const std::array<uint32_t, 11>& program,
                      const std::optional<GuiChromePick>& chrome);
 
 // THE INSTALL FAMILY'S CAPTION MEMBER (2026-10-08, the chrome knob; the
 // caption alone since 2026-10-10): the chrome's members re-derived off
 // live_chrome_words(the live program words, `chrome`)
-// (chrome_derive.h) and palette_generation bumped, the program's twelve
+// (chrome_derive.h) and palette_generation bumped, the program's eleven
 // untouched — only the caption's six can move. THE PICKER'S LIVE ROAD
 // beside install_program_palette (GuiColorPicker::install_live_words, which
 // runs that member's apply shape after both). Why that shape is enough for
@@ -561,11 +563,11 @@ void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
 // color_picker.h), file-scope for the same reason.
 const std::optional<GuiChromePick>& live_chrome_pick();
 
-// THE LIVE WORDS AS INSTALLED — the program's twelve the install family
+// THE LIVE WORDS AS INSTALLED — the program's eleven the install family
 // last wrote (install_palette's `program`, or install_program_palette's
 // `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
 // spelled as its array type here because palette_file.h includes this
-// header, which static_asserts the 12 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
+// header, which static_asserts the 11 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
 // reopen (gui_main's loop) while the installed palette is not, and the
 // picker's picks are the PROCESS's until a preset is saved (color_picker.h's
@@ -574,10 +576,10 @@ const std::optional<GuiChromePick>& live_chrome_pick();
 // word), the picker's open (the live element's OLD color) and its presets
 // (Save and Save As write these words, and Save's enabled bit compares them
 // with the active preset's).
-const std::array<uint32_t, 12>& program_palette_words();
+const std::array<uint32_t, 11>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
-// program's twelve alone, the picker's live road — is declared in
+// program's eleven alone, the picker's live road — is declared in
 // palette_file.h beside the words it takes and defined in render.cpp beside
 // install_palette.)
 
@@ -618,7 +620,7 @@ void install_true_colors(bool on);
 // (row 6's canvas paragraph), the view bar, the ruler and the canvas 6 W in
 // from each side on the panel's face. Its colors are
 // the panel's Face-derived tones (the COOL EDIT BLOCK), the waveform's ink,
-// the cues' two colors, the invalid label's pair and the playhead's color
+// the cues' two colors, the invalid color and the playhead's color
 // (the palette), and the painter constants Cool Edit draws whatever its
 // preset (cool_edit_paint.h).
 //
@@ -737,9 +739,12 @@ void install_true_colors(bool on);
 // THE BLUE `range` (its RngM, 4B82F3). A point cue's stem is Cool Edit's
 // range start and end superimposed — the blue dots on the canvas's device
 // rows ≡ 3 (mod 8), the red on rows ≡ 7, one dot every four rows in
-// alternating colors; a one-color stem keeps its color's phase alone, half
-// the dots (program_spec.h's dot fields). WARP AND PHASE RESET WEAR THE
-// SAME CUE: the kind reads from the label alone (his one-label rule).
+// alternating colors; a one-color stem keeps one phase alone, half the dots
+// (program_spec.h's dot fields). WARP AND PHASE RESET WEAR THE SAME CUE: the
+// kind reads from the label alone (his one-label rule). THE FLAG IS THE
+// INVALID INDICATOR (architect 2026-10-11 ~01:00–01:20): an invalid cue's
+// triangle and dots wear THE INVALID COLOR, `invalid_label` (each built-in
+// palette's center line), in place of the cue red.
 // THE TRIANGLE NEVER CHANGES WITH SELECTION (Cool Edit's never does). THE
 // TABLE — which triangle, which dots, which label — is resolve_flag_face's
 // head (render.cpp), the one resolver every cue goes through.
@@ -773,14 +778,18 @@ void install_true_colors(bool on);
 //   THE CUE   the red triangle, the red and blue dots, the label in
 //             `ce_hilight`;
 //   INVALID   the red-flag class (warp_red_flag_set_cached and its phase-reset
-//             twin): the red triangle, THE RED DOTS ALONE, and THE LABEL RED
-//             IN BOTH STATES (architect 2026-10-09 ~12:00: "keeps red for the
-//             text, even unselected — dimmer unselected, brighter
-//             selected") — `invalid_label` at rest, `invalid_label_selected`
-//             when selected, on the panel's face in both;
+//             twin): THE TRIANGLE IN THE INVALID COLOR, ITS DOTS ALONE on
+//             the red's phase, and THE RESTING LABEL IN IT TOO, on the
+//             panel's face; SELECTED, the label's text the chrome's `label`
+//             as every selected label's (architect 2026-10-11: "No flags
+//             change color when you select them. It's the text that changes
+//             color … I'd rather the text just go white, and the flag should
+//             be the indicator that it's invalid"; the bright selected red
+//             of 2026-10-09 retired with its role);
 //   DISABLED  THE FADED LOOK (architect 2026-10-10 ~12:20, "the arrow needs
 //             to be legible for me, but the text doesn't … since it's
-//             disabled, it's inert"): the kind's triangle color and the cue
+//             disabled, it's inert"): the triangle's live color (the cue
+//             red, or the invalid color, 2026-10-11) and the cue
 //             shadow BLENDED 45 % TOWARD THE FACE and the label's rest tone
 //             65 % toward it — derived solid colors, "an opacity look …
 //             not actually opaque" (cool_edit_derive.h, `ce_off_*`) — and NO
@@ -798,7 +807,7 @@ void install_true_colors(bool on);
 //             overlap rule's, below) stays as it is, the text not moving,
 //             on the baseline of its line box centred in the lane as at
 //             rest (cue_baseline_px, 2026-10-09 evening) (an invalid cue's
-//             text its bright red);
+//             text likewise, 2026-10-11);
 //             THE TRIANGLE KEEPS ITS COLOR, and the playhead stands on the
 //             marker where the selection landed it. THE PRESS TARGET STAYS
 //             THE WHOLE LANE, rows 0 .. 16 (architect 2026-10-09 ~21:00, "the
@@ -825,7 +834,7 @@ void install_true_colors(bool on);
 // its left side the stem itself, its right side the stem's dots on the
 // band's last column, its top and bottom runs the same two phases along the
 // canvas's first and last rows; the red and the blue for a valid reset, the
-// red alone for an invalid one; resting whether selected or not, as the
+// invalid color alone for an invalid one; resting whether selected or not, as the
 // stem is.
 //
 // EDITING: THE FIELD IS WINDOWS' EDIT FIELD (architect 2026-10-09,
@@ -863,11 +872,10 @@ void install_true_colors(bool on);
 // shrinks with what is typed, the
 // segments to its right riding its edge in their resting look; and THE
 // SELECTED SUBSTRING IN THE CHROME'S SELECTED PAIR, `selected_text` on
-// `selected_fill`, the ordinary highlight. AN INVALID MARKER'S FIELD TEXT
-// AND CARET ARE ITS LABEL'S BRIGHT RED, `invalid_label_selected`, on the
-// field's ground (architect 2026-10-09 ~12:00; the open editor is the cue
-// in its selected look), the outline and the selected substring unchanged,
-// its riding segments in the resting dim red. WHY THE FIELD PAIR: it is the
+// `selected_fill`, the ordinary highlight. AN INVALID MARKER'S FIELD IS THE
+// SAME FIELD, its text and caret the field's own (architect 2026-10-11, the
+// selected invalid red retired: the flag is the indicator), its riding
+// segments in the resting invalid color. WHY THE FIELD PAIR: it is the
 // legibility guarantee ("when you're looking very closely at a label it has
 // to be legible"), and the selection pair is the highlight "precisely to
 // avoid this problem" — the selected look of the resting label could not
@@ -886,9 +894,11 @@ void install_true_colors(bool on);
 // refusing owner's CARD says why. No glyph marks it.
 //
 // THE HISTORY VIEW'S DIFF FLAGS are cues of their own two kinds (architect
-// 2026-10-04; the colors 2026-10-09 ~11:50): an ADDED half the BLUE
-// triangle with the blue dots alone (Cool Edit's range end), a REMOVED half
-// the RED triangle with the red dots alone (its range start) — a changed
+// 2026-10-04; the colors 2026-10-11 ~01:00–01:20, the plus and the minus):
+// an ADDED half (the plus) THE MARKER'S OWN FACE, the `cue` triangle with
+// the cue dots alone (on the blue's phase, the half's since 2026-10-09), a
+// REMOVED half (the minus) THE INVALID COLOR, triangle and dots alone (on
+// the red's phase) — the `range` blue leaves the history view — a changed
 // pair's triangle SPLIT between the two, centred between its two halves'
 // stems (2026-10-11; render_history_diff_flags owns the pair) — and
 // THE LABEL CARRIES THE SIGN — the history mode's one bracket
@@ -1350,11 +1360,10 @@ inline int relief_line_px() {
 // BELOW that row, outside it. So Cool Edit's frame window draws ONE SUNKEN
 // LINE — BDR_SUNKENOUTER, Shadow on the top and left, Hilight on the bottom
 // and right — in the SYSTEM colors round the whole program: THE CHROME'S
-// Shadow and Hilight roles, which follow the scheme (under cool-edit-pro-me
-// the derived 414752 / AEB5BF off its ground 626C7B, Cool Edit's own panel
-// face, since 2026-10-10 ~08:45 — the Shadow row then reads as its own
-// shade above the band's darker line), never the panel's Face-derived
-// tones; the
+// Shadow and Hilight roles, Cool Edit's tones off the live palette's Face
+// since 2026-10-10 (chrome_derive.h: the Shadow row reads as its own shade
+// above the band's darker line), never the panel's own painter constants;
+// the
 // two two-tone corners MITRED (paint_relief_sunken_outer over
 // paint_relief_frame, the program's diagonal rule at cool_edit_paint.h's
 // head).
@@ -3439,20 +3448,37 @@ struct FlagLaneRects {
     int     columns_x = 0;
 };
 
+// WHICH COLOR A CUE'S DOTS WEAR ON ONE OF THE STEM'S TWO PHASES (the red's
+// `cue_dot_phase` and the blue's `range_dot_phase`, program_spec.h), named
+// as a ROLE so the stash keeps no color and the painter reads the palette
+// live (2026-10-11, when the invalid color joined the dots and the history's
+// added half took the cue red on the blue's phase; resolve_flag_face,
+// render.cpp, the one table): none, the `cue` red, the `range` blue, or the
+// invalid color.
+enum class GuiCueDot : uint8_t { None, Cue, Range, Invalid };
+// The live palette role a dot color names. Precondition: not None.
+inline GuiColor cue_dot_color(GuiCueDot d) {
+    const GuiPalette& p = palette();
+    return d == GuiCueDot::Range     ? p.range
+           : d == GuiCueDot::Invalid ? p.invalid_label
+                                     : p.cue;
+}
+
 // ONE MARKER STEM, as the flag painter publishes it: the window x of the
-// column the cue's dots stand on (the triangle's apex column) and WHICH OF
-// THE TWO CUE COLORS' DOTS its class resolved to (resolve_flag_face,
-// render.cpp; architect 2026-10-09 ~11:50): the red `cue` dots, the blue
-// `range` dots, or both — a warp or phase-reset cue both, alternating; an
-// invalid one and the history's removed half the red alone; the history's
-// added half the blue alone — selected or not (Cool Edit's cue never
-// changes when selected). The flag PAINTERS are the only producers — the
+// column the cue's dots stand on (the triangle's apex column) and THE DOTS
+// ITS CLASS RESOLVED TO ON EACH PHASE (resolve_flag_face, render.cpp;
+// architect 2026-10-09 ~11:50, 2026-10-11): a warp or phase-reset cue the
+// red `cue` on the red's phase and the blue `range` on the blue's,
+// alternating; an invalid one and the history's removed half the invalid
+// color alone on the red's phase; the history's added half the cue red
+// alone on the blue's — selected or not (Cool Edit's cue never changes when
+// selected). The flag PAINTERS are the only producers — the
 // two live columns', and the `h` view's diff lane, which replaces them
 // wholesale while the mode stands; the one reader is the per-frame waveform
-// pass GuiPaintHandler::paint_marker_stems, which paints each color's dotted
-// column on its phase (fill_dotted_waveform_line, program_spec.h's dot
-// fields) in the palette's live role, so the dots and their triangle can
-// never disagree about a column or a class.
+// pass GuiPaintHandler::paint_marker_stems, which paints each phase's dotted
+// column (fill_dotted_waveform_line, program_spec.h's dot fields) in the
+// palette's live role, so the dots and their triangle can never disagree
+// about a column or a class.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem
 // ever (architect), and expressing that as an absent entry rather than a flag
 // on the entry means the consumer has nothing to re-decide. THE `h` VIEW'S
@@ -3466,10 +3492,10 @@ struct FlagLaneRects {
 // pointer-inert, the seventh glass ruling — so the stash is paint-only again
 // and `marker_index` serves the painter's identity bookkeeping alone.)
 struct MarkerStem {
-    int    marker_index;
-    double x;
-    bool   cue_dots;     // the red, on cue_dot_phase
-    bool   range_dots;   // the blue, on range_dot_phase
+    int       marker_index;
+    double    x;
+    GuiCueDot cue_phase_dots;     // on cue_dot_phase
+    GuiCueDot range_phase_dots;   // on range_dot_phase
 };
 
 // THE NUDGED PAIR'S RECTANGLE RUNS (architect 2026-10-10 ~18:55 →
@@ -3480,10 +3506,11 @@ struct MarkerStem {
 // first row and one along its last, from the left stem's window column `x0`
 // to the right stem's `x1`, both ends included. Dotted as the phase-reset
 // lead-in ring's runs are (paint_phase_reset_overlay_ring, the model): one
-// device px a dot, the red `cue` and the blue `range` alternating one every
-// four columns, counted from the left stem's own column (unclipped, so the
-// run stays put on the song as the view pans) — the two halves' colors
-// alternating as a warp stem alternates them. Always shown, selected or
+// device px a dot, the invalid color on the red's phase and the `cue` red on
+// the blue's alternating one every four columns (2026-10-11, the removed
+// half's and the added half's), counted from the left stem's own column
+// (unclipped, so the run stays put on the song as the view pans) — the two
+// halves' colors alternating as a warp stem alternates its two. Always shown, selected or
 // not. The history lane's painter is the one producer (render_history_diff_-
 // flags; the live lanes publish none), paint_marker_stems the one reader; a
 // run reaching past either edge of the waveform's columns is published and
@@ -3828,18 +3855,23 @@ void render_phase_reset_flags(cairo_t* cr,
 // paint_handler.cpp; the ring and the cue one unit, architect 2026-09-17,
 // dotted in the stem's pattern since 2026-10-09 ~17:40). It asks the one
 // resolver (resolve_flag_face's table, render.cpp) rather than restating it:
-// the red `cue` dots and the blue `range` dots for a valid reset, the red
-// alone for one in the column's red set (`red`,
-// phase_reset_red_flag_set_cached) — resting, selected or not (the cue never
-// changes when selected), so the ring and its stem stay one object. The
-// colors are the palette's two live roles, read by the painter as the stems
-// read them. No disabled arm, a disabled reset painting neither dots nor
-// ring.
+// the red `cue` dots and the blue `range` dots for a valid reset, the
+// invalid color alone for one in the column's red set (`red`,
+// phase_reset_red_flag_set_cached; 2026-10-11) — resting, selected or not
+// (the cue never changes when selected), so the ring and its stem stay one
+// object. The colors are the palette's live roles (cue_dot_color), read by
+// the painter as the stems read them. No disabled arm, a disabled reset
+// painting neither dots nor ring.
 struct GuiStemDots {
-    bool cue_dots   = false;
-    bool range_dots = false;
+    GuiCueDot cue_phase_dots   = GuiCueDot::None;
+    GuiCueDot range_phase_dots = GuiCueDot::None;
 };
 GuiStemDots phase_reset_stem_dots(bool red);
+// THE DOTS A LIVE `h`-VIEW HALF'S STEM WEARS (the added half's when `added`,
+// else the removed half's), off the same one resolver, for the nudged pair's
+// rectangle runs (MarkerStemRun; paint_marker_stem_runs), so the runs and
+// the pair's two stems cannot part (2026-10-11).
+GuiStemDots history_half_dots(bool added);
 
 // ONE PREPARED DIFF FLAG for the `h` history mode's lane, in the ORDER it is
 // painted and published. The caller (maybe_rebuild_flag_cache) resolves the
@@ -3960,17 +3992,19 @@ inline int64_t history_diff_flag_landing_frame(const HistoryDiffFlag& f) {
 //
 // THE ANATOMY IS THE LIVE CUE'S (the palette block's marker-lane paragraph):
 // the triangle and its dots by ITS KIND (architect 2026-10-04; the colors
-// 2026-10-09 ~11:50, resolve_flag_face's table) — an added flag the
-// `range` blue with the blue dots alone, a removed flag the `cue` red with
-// the red dots alone; never the invalid class, so never the `invalid_label`
-// pair — and the label in the program face. THE LABEL CARRIES THE SIGN: `[+]` before an added line's
+// 2026-10-11 ~01:00–01:20, resolve_flag_face's table) — an added flag (the
+// plus) the marker's own face, the `cue` red with the cue dots alone, a
+// removed flag (the minus) THE INVALID COLOR with its dots alone; the
+// `range` blue never; the label never the invalid class, its resting text
+// the light tone — and the label in the program face. THE LABEL CARRIES THE SIGN: `[+]` before an added line's
 // payload, `[-]` before a removed one's (history_diff_label,
 // paint_handler.h).
 //
 // A CHANGED PAIR IS ONE FLAG OVER TWO STEMS (architect 2026-10-10 ~18:55 →
 // 2026-10-11 ~00:00; the two pairings are GuiHistoryWarpChange's,
 // history_diff.h): each half keeps ITS OWN STEM at its own frame in its own
-// half's dots — the removed red alone, the added blue alone — and the one
+// half's dots — the removed the invalid color alone, the added the cue red
+// alone — and the one
 // flag's triangle stands CENTRED BETWEEN THE TWO STEMS, a SPLIT TRIANGLE
 // (paint_ce_cue_split_triangle, cool_edit_paint.h): its left half the LEFT
 // marker's color, its right half the right marker's, split on the vertical
@@ -3979,7 +4013,7 @@ inline int64_t history_diff_flag_landing_frame(const HistoryDiffFlag& f) {
 // apart) also draws the RECTANGLE's top and bottom between its two stems on
 // the canvas (MarkerStemRun), always; a SAME-FRAME pair stands removed left,
 // added right (HistoryDiffFlag::added_left), its two stems one column — the
-// red and the blue alternating there — and no rectangle. The pair is still
+// invalid color and the cue red alternating there — and no rectangle. The pair is still
 // ONE flag: one rect, one focus, one claim, one Tab stop.
 //
 // EVERY HALF IS SIZED BY ITS OWN SHAPED TEXT, so the halves of a pair are

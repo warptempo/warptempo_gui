@@ -577,7 +577,8 @@ struct DragState {
 //
 // THE FLAG'S OTHER DRAG, and the ONE gesture that changes a marker's VALUE
 // with the pointer. While the VALUE DRAG LAMP stands lit (bare `[`, a one-shot
-// spent by the drag it arms — value_drag_posture, below, where the posture's
+// spent by the drag it arms, and permanently lit under grid iterations,
+// 2026-10-11 ~01:45 — value_drag_armed and value_drag_posture, below, where the posture's
 // whole contract lives; the VIEW decided it from 2026-09-13 to 2026-10-11)
 // a plain flag press-and-drag steps a value VERTICALLY — one step per
 // kValueDragPxPerStep authored pixels of travel, UP = INCREASE, measured from
@@ -2972,11 +2973,14 @@ enum class RedesignButton {
     // every flag drag is the value drag in every view; dark, none is; the
     // lift of a value drag that began puts it out (the rule is at
     // value_drag_posture). It wears the sets' vertical double arrow
-    // (icons::Icon::ValueDrag). ITS FACE: the selected face while lit, the
+    // (icons::Icon::ValueDrag). ITS FACE: the selected face while ARMED
+    // (value_drag_armed: the lamp lit, or grid iterations standing), the
     // roster's lamp rule; GREY ON A LOCKED TAB, where no flag drag of either
     // axis can act and bare `[` drops at read_only_key_blocked with the lock's
-    // card; LIVE UNDER GRID ITERATIONS, whose bound cells are the drag's
-    // targets (the iteration gate admits the chord); absent in the `h` view,
+    // card; UNDER GRID ITERATIONS PERMANENTLY LIT AND GREY (architect
+    // 2026-10-11 ~01:45, "the lamp becomes permanent in grid iterations
+    // mode"): the view selectors' lit-and-grey face under the same mode, its
+    // press dead and bare `[` carding why; absent in the `h` view,
     // whose allowlist does not name the chord (the derived partition and
     // history_mode_hides_button). It admits no modifier and does not repeat.
     IconValueDrag,
@@ -3614,12 +3618,12 @@ struct SettingsPopupItem {
 // colors were compiled in (architect 2026-10-08, theme_file.h). No theme
 // file ships now: the catalog's entries are the built-in SCHEMES, compiled
 // from it by tools/theme_catalog/gen_theme_files.py, chosen in the color
-// picker: 105 since 2026-10-10 — chrome_schemes.inc's rows, one per catalog
-// entry (warptempo 1, windows 26, windows-plus 16, kde3 25, cde 36, gnome2
-// 1), the windows-2000 chrome's own `windows-2000-standard` and the
-// product's own `cool-edit-pro-me` among them rather than beside them
-// (palette_file.h's kGuiChromeSchemes; the picker's menu lists the two first
-// and the other 103 after its separator).
+// picker: 103 since 2026-10-11 — chrome_schemes.inc's rows, one per catalog
+// entry but the dropped `clearlooks` (windows 26, windows-plus 16, kde3 25,
+// cde 36), the windows-2000 chrome's own `windows-2000-standard` among them
+// rather than beside them (palette_file.h's kGuiChromeSchemes; the picker's
+// menu lists it first and the other 102 after its separator; the product's
+// own `cool-edit-pro-me` of 2026-10-10 removed 2026-10-11).
 //
 // `Chrome` STOOD 2026-10-07..10-10 (the vocabulary choice) and LEFT WITH ITS
 // KEY (architect 2026-10-10, chrome_spec.h's head): Windows 2000 is the one
@@ -5907,11 +5911,19 @@ struct AppState {
     // value_drag_posture). IT IS SPENT BY USE: the lift of a gesture whose
     // value drag actually BEGAN puts it out (ValueDragOps::commit, every end
     // of that gesture); a press that never crosses the grab gate, or crosses
-    // on a cell the drag cannot step, leaves it lit. SESSION STATE in the
-    // add_to_selection family: not authored, no undo entry, no dirty mark,
-    // never serialized, dark at every project open (a fresh AppState). Its
-    // writers are the `[` arm (input_key_dispatch.cpp, the button's chord
-    // too) and that commit, nothing else.
+    // on a cell the drag cannot step, leaves it lit. UNDER GRID ITERATIONS
+    // THIS BIT IS NOT READ (architect 2026-10-11 ~01:45: "if I'm in grid
+    // iterations, I know exactly that I'm only moving things up and down"):
+    // the drag is armed by the mode itself (value_drag_armed, the one
+    // predicate every reader asks), and ENTERING OR LEAVING THE MODE PUTS THIS
+    // BIT OUT (~01:50, "it's simpler that way") — so it stands dark through
+    // the mode, `[` refusing there, and the lamp is dark on the way out.
+    // SESSION STATE in the add_to_selection family: not authored, no undo
+    // entry, no dirty mark, never serialized, dark at every project open (a
+    // fresh AppState). Its writers are the `[` arm (input_key_dispatch.cpp,
+    // the button's chord too), that commit, and the mode's two edges (bare
+    // `i`'s toggle and the sweep's success tail, input_key_dispatch.cpp),
+    // nothing else.
     bool          value_drag_lamp = false;
 
     // STEMS NEVER APPEAR OR VANISH WITH THE SELECTION (row 5, architect). Every
@@ -8949,7 +8961,7 @@ struct AppState {
 
     // -- THE COLOR PICKER'S WHOLE STATE (architect 2026-10-07) -----------
     //
-    // THE IN-APP PICKER OF THE PROGRAM'S TWELVE COLORS (kGuiPaletteRoles,
+    // THE IN-APP PICKER OF THE PROGRAM'S ELEVEN COLORS (kGuiPaletteRoles,
     // palette_file.h: a PALETTE) AND, UNDER EVERY CHROME, THE CAPTION'S SIX
     // KEYS (kGuiChromeLines: a SCHEME; chrome_derive.h), ONE KIND AT
     // A TIME BY ITS SCOPE — a slim card on the well, chrome-branded, the FIFTH
@@ -9100,7 +9112,7 @@ struct AppState {
             GuiRect  chooser{0, 0, 0, 0};      // the element combo: a press drops its list
             GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
             // The list's rows, the dropped list's every one (the scope's
-            // two, or the scope's elements — at most the palette's twelve,
+            // two, or the scope's elements — at most the palette's eleven,
             // color_picker::kListRowMax, asserted there), by row — the zero
             // rect for a row scrolled out of view, and past the list's
             // count — and its scroll bar (absent while every row shows).
@@ -13287,6 +13299,16 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
     }
 }
 
+// IS THE VALUE DRAG ARMED — THE ONE PREDICATE (architect 2026-10-11 ~01:45):
+// the lamp lit (AppState::value_drag_lamp), or GRID ITERATIONS STANDING, under
+// which the lamp is permanently lit ("the lamp becomes permanent in grid
+// iterations mode") and the stored bit is not read. Every reader asks this,
+// never the bit: the posture below and the button's lit face
+// (redesign_button_selected); the bit's writers are listed at it.
+inline bool value_drag_armed(const AppState& a) {
+    return a.value_drag_lamp || a.iteration_mode_enabled;
+}
+
 // IS THE FLAG'S PLAIN DRAG THE VALUE DRAG HERE — the gesture's POSTURE, and
 // since 2026-10-11 it is THE VALUE DRAG LAMP'S (architect ~00:40, bare `[`
 // and row 8's Toggle Value Drag, AppState::value_drag_lamp). His reason: the
@@ -13331,6 +13353,14 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // press of `[`. A press that never crosses the grab gate, or crosses on a
 // non-target, began nothing and leaves it lit.
 //
+// UNDER GRID ITERATIONS THE DRAG IS ARMED WITHOUT THE LAMP (architect
+// 2026-10-11 ~01:45, "it's the only thing to do in grid iterations … the lamp
+// becomes permanent in grid iterations mode"): every plain flag drag is the
+// value drag on every bound cell while the mode stands, drag after drag, no
+// `[` between them, and nothing is spent (the stored bit is dark through the
+// mode, put out at both its edges). value_drag_armed below is that one
+// question, and every reader asks it rather than the stored bit.
+//
 // IT MAY BE TRUE WHILE ADD TO SELECTION IS LIT, and the two compose PER BOX
 // since 2026-09-19: the sticky ctrl turns a plain press on the PAYLOAD into
 // the membership toggle, which arms nothing, so no crossing exists THERE to
@@ -13347,7 +13377,7 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // its pending arm and its flag hover arm — so the cue cannot flip at the
 // crossing.
 inline bool value_drag_posture(const AppState& a) {
-    return !a.history_mode.active && a.value_drag_lamp;
+    return !a.history_mode.active && value_drag_armed(a);
 }
 
 // DOES THE VIEW REFUSE THE FLAG'S HORIZONTAL DRAG — the dark lamp's other
@@ -14575,6 +14605,15 @@ inline constexpr const char* kRedoSwitchesViewCard =
 // composer (notifications.h) includes this header and not the reverse.
 inline constexpr const char* kIterationLockCard =
     "Turn off grid iterations first";
+
+// BARE `[` UNDER GRID ITERATIONS (architect 2026-10-11 ~01:45): the value drag
+// lamp is permanently lit there (value_drag_armed), so the chord changes
+// nothing — and a bound chord is never silent (chord_is_bound), so its arm
+// answers with this one clause. It states the state, not a way out, because
+// the toggle has nothing to undo: the press asked for a change the mode
+// already makes.
+inline constexpr const char* kValueDragIterationsCard =
+    "Value drag is always on in grid iterations";
 
 // (THE TWO LAMP-EXCLUSION SENTENCES stood here from 2026-09-10 to
 // 2026-09-12 — `kAddToSelectionLitCard` "Turn off add to selection first" and
@@ -16659,15 +16698,19 @@ inline bool redesign_button_enabled(const AppState& a,
         // (redesign_button_selected below).
         case RedesignButton::IconAddToSelection:
             break;
-        // TOGGLE VALUE DRAG (architect 2026-10-11) GREYS ON A LOCKED TAB
-        // ALONE, the read-only set's newest member: there no flag drag of
-        // either axis can act (the payload and the bound cells both refuse at
+        // TOGGLE VALUE DRAG (architect 2026-10-11) GREYS ON A LOCKED TAB,
+        // the read-only set's newest member: there no flag drag of either
+        // axis can act (the payload and the bound cells both refuse at
         // value_drag_target, the horizontal move at authoring_locked), so the
         // lamp would arm nothing, and bare `[` is off read_only_key_blocked's
-        // allowlist, the gate carding the lock's sentence. GRID ITERATIONS
-        // DOES NOT GREY IT: the bound cells are the mode's authoring surface
-        // and the drag's targets, and the iteration gate admits the chord
-        // (iteration_lock_key_blocked's delta (b)). THE `h` VIEW greys and
+        // allowlist, the gate carding the lock's sentence. AND IT GREYS UNDER
+        // GRID ITERATIONS, LIT (architect 2026-10-11 ~01:45: the lamp is
+        // permanent there, value_drag_armed): the press could change nothing,
+        // so the face is the view selectors' under the same mode — the
+        // checked face still saying the drag is armed over the saturated
+        // glyph (iteration_lock_greys' account) — and bare `[`, which the
+        // iteration gate admits (its delta (b)), cards the reason at its own
+        // arm (kValueDragIterationsCard). THE `h` VIEW greys and
         // hides it through the derived partition above (its allowlist does
         // not name the chord; the posture is false there in any case). IT
         // STAYS LIVE IN T+P WITH GRID ITERATIONS DARK, where no cell is a
@@ -16677,7 +16720,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // lamp lit elsewhere with no road to put it out (a greyed button
         // refuses its press). Its lamp, not this bit, reports the mode.
         case RedesignButton::IconValueDrag:
-            return !active_view_state(a).read_only;
+            return !active_view_state(a).read_only &&
+                   !a.iteration_mode_enabled;
         // THE FIVE HISTORY BUTTONS ANSWER DEAD OUTSIDE THE `h` VIEW
         // (2026-08-18) — the ICON ROW's own settled rule, which is where they
         // live again since the roster relayout: what a mode refuses simply
@@ -17104,10 +17148,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // as it does for the Cumulative toggle up in row 4.
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
-        // it reads the live bit bare `[` flips and the drag it armed puts out
-        // (ValueDragOps::commit), so the lit face and the posture cannot
+        // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the
+        // bit bare `[` flips and the drag it armed puts out, or grid
+        // iterations standing, ~01:45), so the lit face and the posture cannot
         // drift; the per-tick face comparator (main.cpp) repaints the spend.
-        case RedesignButton::IconValueDrag: return a.value_drag_lamp;
+        case RedesignButton::IconValueDrag: return value_drag_armed(a);
         // The iteration button's pattern exactly: a TOGGLE reading the live bit
         // its own chord flips, so the lamp and the mode cannot drift.
         case RedesignButton::IconHistory: return a.history_mode.active;
@@ -17841,12 +17886,13 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         case RedesignButton::OpenProject:
             return {"Open Project (Ctrl+O)", "Press Shift to revert."};
         // SAVE (architect 2026-10-11): its second line names the shift twin,
-        // the publish chord, by the act's own name — "Save and Commit" here,
-        // the author's act; the stateful overload swaps in "Pull" on a mirror
-        // (device_is_mirror) and drops the line in the `h` view, where the
-        // plain press is already that chord.
+        // the publish chord, IN THE ROSTER'S OWN FORM, as Open's "Press
+        // Shift to revert." — "save and commit" here, the author's act; the
+        // stateful overload swaps in "pull" on a mirror (device_is_mirror)
+        // and drops the line in the `h` view, where the plain press is
+        // already that chord.
         case RedesignButton::Save:
-            return {"Save (Ctrl+S)", "Save and Commit (Ctrl+Shift+S)"};
+            return {"Save (Ctrl+S)", "Press Shift to save and commit."};
         case RedesignButton::Undo:       return {"Undo (Ctrl+Z)", nullptr};
         case RedesignButton::Redo:       return {"Redo (Ctrl+Shift+Z)", nullptr};
         // THE MODIFIER LINE NAMES THE OTHER FUNCTION (architect 2026-07-31),
@@ -18474,8 +18520,9 @@ inline RedesignTooltipText redesign_button_tooltip(
     // Ctrl+Shift+S the plain lift spells in the view, so the modified press
     // does nothing different and the line drops (rule (2) below). OUTSIDE THE
     // VIEW ITS SECOND LINE NAMES THE TWIN BY THE DEVICE'S ROLE (architect
-    // 2026-10-11): the constant table's "Save and Commit (Ctrl+Shift+S)" on
-    // an author, "Pull (Ctrl+Shift+S)" on a mirror (device_is_mirror), whose
+    // 2026-10-11), in the roster's own form: the constant table's "Press
+    // Shift to save and commit." on an author, "Press Shift to pull." on a
+    // mirror (device_is_mirror), whose
     // publish chord takes the pull road alone — rule (1)'s name fork, applied
     // to the twin's line. (ITS TWO OTHER FORKS STOOD AHEAD OF THIS ONE
     // until 2026-09-12, the in-flight "Committing the checkpoint (Ctrl+S)"
@@ -18496,7 +18543,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         return {"Save and Commit (Ctrl+Shift+S)", nullptr};
     }
     if (b == RedesignButton::Save && device_is_mirror(a)) {
-        return {redesign_button_tooltip(b).line1, "Pull (Ctrl+Shift+S)"};
+        return {redesign_button_tooltip(b).line1, "Press Shift to pull."};
     }
     // RENDER HAS NO HISTORY-VIEW HINT since 2026-08-08: the act left this button
     // with its chord, so in the view Render is an ordinary dead button and shows

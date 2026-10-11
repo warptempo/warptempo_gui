@@ -2572,7 +2572,8 @@ constexpr TransportRowDef kTransportGroup[] = {
 // bare `[`, the sets' vertical double arrow (ValueDrag) — IMMEDIATELY RIGHT
 // OF ADD TO SELECTION, the group's second lamp and its last member ("arm Add
 // to Selection, pick several flags, then arm this and drag them"). A
-// one-shot: the drag it arms puts it out (its roster entry, app_state.h).
+// one-shot: the drag it arms puts it out; under grid iterations permanently
+// lit and grey (2026-10-11 ~01:45; its roster entry, app_state.h).
 //
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
@@ -4783,8 +4784,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // colors exactly as its stem wears them — phase_reset_stem_dots asks the one
 // resolver (resolve_flag_face) for the stem's pair, so the ring and the stem
 // cannot drift: a valid reset the red `cue` and the blue `range`
-// alternating, an invalid one the red alone; resting whether the reset is
-// selected or not, as the stem is.
+// alternating, an invalid one the invalid color alone (2026-10-11); resting
+// whether the reset is selected or not, as the stem is.
 //   THE LEFT SIDE IS THE STEM'S OWN COLUMN and the ring does not paint it:
 //     the reset's stem already stands there (paint_marker_stems, after this
 //     pass), and a playhead on the reset interleaves its yellow there as on
@@ -4855,8 +4856,10 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
         fill_dotted_waveform_line(cr, area.x, area.w, x1 - t - area.x,
                                   area.y, area.y + area.h, period, phase);
     };
-    if (dots.range_dots) paint_dots(palette().range, ps.range_dot_phase);
-    if (dots.cue_dots) paint_dots(palette().cue, ps.cue_dot_phase);
+    if (dots.range_phase_dots != GuiCueDot::None)
+        paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
+    if (dots.cue_phase_dots != GuiCueDot::None)
+        paint_dots(cue_dot_color(dots.cue_phase_dots), ps.cue_dot_phase);
     cairo_restore(cr);
 }
 
@@ -5019,16 +5022,18 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // exactly once, in the painter, and a stem can never land a pixel away from its
 // own triangle. Disabled markers are simply absent from the stash.
 //
-// THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS TWO CUE COLORS (architect
-// 2026-10-09, METRICS §4.2; the two colors ~11:50; render.h's marker-lane
-// paragraph): one-device-px dots on the CANVAS'S device rows from its top
-// row (fill_dotted_waveform_line, the area whole) — none on the canvas's
-// frame row and none in the lane — THE RED (`cue`) on rows ≡ cue_dot_phase
-// and THE BLUE (`range`) on rows ≡ range_dot_phase (mod cue_dot_period,
-// program_spec.h), each where the stash says the cue wears it
-// (resolve_flag_face's table: a warp or phase-reset cue both, alternating
+// THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE COLORS (architect
+// 2026-10-09, METRICS §4.2; the two colors ~11:50; the invalid color
+// 2026-10-11; render.h's marker-lane paragraph): one-device-px dots on the
+// CANVAS'S device rows from its top row (fill_dotted_waveform_line, the
+// area whole) — none on the canvas's frame row and none in the lane — on
+// rows ≡ cue_dot_phase (the red's phase) and on rows ≡ range_dot_phase (the
+// blue's; mod cue_dot_period, program_spec.h), each phase in the role the
+// stash names for it (GuiCueDot, cue_dot_color; resolve_flag_face's table:
+// a warp or phase-reset cue the red `cue` and the blue `range`, alternating
 // one dot every four rows; an invalid one and the history's removed half
-// the red alone, the added half the blue alone) — the playhead's dots on
+// the invalid color alone on the red's phase, the added half the cue red
+// alone on the blue's) — the playhead's dots on
 // rows ≡ 1 of 4, so neither color shares a row with them. (The solid stem
 // through the well's top lines between its flanks stood 2026-10-02 to
 // 2026-10-09; git history.)
@@ -5043,8 +5048,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 
     // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
     // refused commit recolors nothing, so no paint-time override stands
-    // here — the stash's two bits are the marker's resolved class, the
-    // whole answer, and the colors the palette's two live roles.
+    // here — the stash's two phases are the marker's resolved class, the
+    // whole answer, and the colors the palette's live roles.
     cairo_save(cr);
     const GuiRect& band = area;   // the canvas, the area whole (2026-10-09)
     const ProgramSpec& ps = kProgramSpec;
@@ -5057,14 +5062,14 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
         // dots' waveform_line_px() width at the right edge.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
-        if (stem.cue_dots) {
-            set_palette_source(cr, palette().cue);
+        if (stem.cue_phase_dots != GuiCueDot::None) {
+            set_palette_source(cr, cue_dot_color(stem.cue_phase_dots));
             fill_dotted_waveform_line(cr, area.x, area.w, col, band.y,
                                       band.y + band.h, ps.cue_dot_period,
                                       ps.cue_dot_phase);
         }
-        if (stem.range_dots) {
-            set_palette_source(cr, palette().range);
+        if (stem.range_phase_dots != GuiCueDot::None) {
+            set_palette_source(cr, cue_dot_color(stem.range_phase_dots));
             fill_dotted_waveform_line(cr, area.x, area.w, col, band.y,
                                       band.y + band.h, ps.cue_dot_period,
                                       ps.range_dot_phase);
@@ -5078,9 +5083,11 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // nudged pair's rectangle, on the canvas's first and last rows, between its
 // two stems — THE PHASE-RESET LEAD-IN RING'S RUNS' FORM EXACTLY
 // (paint_phase_reset_overlay_ring, the model): one device px a dot
-// (waveform_line_px, "on waveform → unscaled"), the blue on columns left
-// stem + range_dot_phase + k · cue_dot_period and the red on left stem +
-// cue_dot_phase + k · cue_dot_period, through the right stem's column,
+// (waveform_line_px, "on waveform → unscaled"), the added half's cue red
+// on columns left stem + range_dot_phase + k · cue_dot_period and the
+// removed half's invalid color on left stem + cue_dot_phase + k ·
+// cue_dot_period (2026-10-11, each half's color on its own phase, read off
+// the one resolver's two faces), through the right stem's column,
 // aliased integer cells, clipped to the area. Read as published, before
 // the stems paint their sides (paint_marker_stems), whose dots never share
 // a row with these (the stems' phases are rows 3 and 7 of 8).
@@ -5115,8 +5122,10 @@ void GuiPaintHandler::paint_marker_stem_runs(cairo_t* cr,
         }
         cairo_fill(cr);
     };
-    paint_dots(palette().range, ps.range_dot_phase);
-    paint_dots(palette().cue, ps.cue_dot_phase);
+    paint_dots(cue_dot_color(history_half_dots(/*added=*/true).range_phase_dots),
+               ps.range_dot_phase);
+    paint_dots(cue_dot_color(history_half_dots(/*added=*/false).cue_phase_dots),
+               ps.cue_dot_phase);
     cairo_restore(cr);
 }
 

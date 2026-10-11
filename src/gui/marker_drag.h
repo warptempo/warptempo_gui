@@ -14,8 +14,8 @@ struct GuiTargetRender;
 // single-select already naming the grabbed marker; the
 // contract is at PendingMarkerPress, app_state.h). THE CROSSING FORKS ON THE
 // VALUE DRAG'S POSTURE and this gesture is the other half: while the VALUE
-// DRAG LAMP is lit (bare `[`, a one-shot; value_drag_posture, app_state.h,
-// 2026-10-11) the flag's plain drag is the VERTICAL one in every view
+// DRAG IS ARMED (bare `[`, a one-shot, or grid iterations standing;
+// value_drag_armed / value_drag_posture, app_state.h, 2026-10-11) the flag's plain drag is the VERTICAL one in every view
 // (ValueDragOps, value_drag.{h,cpp}) and this one does not begin at all, on
 // any flag — "we never allow multi-axis dragging; flags move up and down or
 // not at all" (architect 2026-09-10). With the lamp DARK this one is the
@@ -51,7 +51,7 @@ struct GuiTargetRender;
 // step alone. THE VALUE DRAG is a pointer tempo gesture, and it is a different
 // gesture from the deleted one in every way that made the deletion right — it
 // is LAMP-GATED (bare `[`, a one-shot spent by the drag it arms, since
-// 2026-10-11 — lamp-gated on bare `x` from 2026-09-10, view-gated from
+// 2026-10-11, the lamp permanently lit under grid iterations — lamp-gated on bare `x` from 2026-09-10, view-gated from
 // 2026-09-13 until the architect put it back on a lamp), it is a VERTICAL
 // STEP of the very value the arrows step, through the arrows' own landing
 // owner, and it carries NO map arithmetic at all: no bisection, no

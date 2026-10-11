@@ -1275,11 +1275,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // Red-flag sets: the marker indices whose render normalizes to the 1.00
     // fallback OR that share their frame with another row of their own store,
     // disabled or not (the caches' contract, warp_frame_map_view.h), painted
-    // INVALID — the cue's red triangle, its stem the red dots alone, its
-    // label the red pair, `invalid_label` at rest and `invalid_label_selected`
-    // selected (resolve_flag_face's table, render.cpp; architect 2026-10-09
-    // ~11:50); DISABLED wins over it, a disabled invalid marker painting the
-    // disabled look.
+    // INVALID — the triangle and its stem's dots alone in the invalid color,
+    // `invalid_label`, its resting label in it too (resolve_flag_face's
+    // table, render.cpp; architect 2026-10-09 ~11:50, 2026-10-11); DISABLED
+    // wins over it, a disabled invalid marker painting the disabled look in
+    // the faded invalid color.
     // Read from the memoized caches (keyed on the respective store
     // generation), so the silent classification runs only on a marker change,
     // not on this per-tick rebuild; the committed store means a red flag

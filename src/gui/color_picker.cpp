@@ -34,8 +34,7 @@ constexpr RoleName kRoleNames[] = {
     {"center",                    "Center Line"},
     {"cue",                      "Cue"},
     {"range",                     "Range"},
-    {"invalid_label",             "Invalid Label"},
-    {"invalid_label_selected",    "Invalid Label Selected"},
+    {"invalid_label",             "Invalid"},
     {"playhead_stem",             "Playhead"},
     {"scanner",                   "Scanner"},
     {"face",                      "Panel Face"},
@@ -197,6 +196,22 @@ bool preset_act_enabled(const AppState& app, PresetAct a) {
     return false;
 }
 
+namespace {
+// THE MENUS' ALPHABETICAL ORDER (architect 2026-10-11): case-insensitive by
+// the display name (ASCII, the name grammar's), ties by bytes so the order
+// is total and stable.
+bool alphabetical_less(std::string_view a, std::string_view b) {
+    const auto lower = [](char c) {
+        return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
+    };
+    const bool less = std::ranges::lexicographical_compare(
+        a, b, {}, lower, lower);
+    const bool more = std::ranges::lexicographical_compare(
+        b, a, {}, lower, lower);
+    return less || (!more && a < b);
+}
+} // namespace
+
 std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
     // The acts first (the declaration: the order is their reachability).
     std::vector<PresetMenuRow> rows;
@@ -214,36 +229,44 @@ std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
         r.separator_before = opens_group;
         rows.push_back(std::move(r));
     };
+    // His files, ALPHABETICALLY under either scope (2026-10-11; a file's
+    // display name is its name).
+    std::vector<std::string> files = s == Scope::Chrome ? scheme_file_names()
+                                                        : palette_file_names();
+    std::ranges::stable_sort(files, alphabetical_less);
     bool first = true;
-    for (std::string& n : s == Scope::Chrome ? scheme_file_names()
-                                             : palette_file_names()) {
+    for (std::string& n : files) {
         add_name(std::move(n), first);
         first = false;
     }
-    // The built-ins. Under Waveform Cool Edit's presets in its order.
+    // The built-ins. Under Waveform Cool Edit's presets ALPHABETICALLY BY
+    // THEIR DISPLAY NAMES WITH "Default" PINNED FIRST (architect 2026-10-11:
+    // "because it's called default, we should support it as a default"; the
+    // default palette, kGuiBuiltinPalettes' first row).
     first = true;
     if (s == Scope::Waveform) {
-        for (const GuiBuiltinPalette& b : kGuiBuiltinPalettes) {
-            add_name(b.key, first);
-            first = false;
-        }
+        std::vector<const GuiBuiltinPalette*> others;
+        for (const GuiBuiltinPalette& b : kGuiBuiltinPalettes)
+            if (std::string_view(b.key) != kGuiDefaultPaletteKey)
+                others.push_back(&b);
+        std::ranges::stable_sort(others, [](const GuiBuiltinPalette* a,
+                                            const GuiBuiltinPalette* b) {
+            return alphabetical_less(a->display_name, b->display_name);
+        });
+        add_name(kGuiDefaultPaletteKey, first);
+        first = false;
+        for (const GuiBuiltinPalette* b : others) add_name(b->key, false);
         return rows;
     }
-    // Under Chrome the chrome's own scheme first, then in the same group the
-    // product's own (architect 2026-10-10: "alongside Windows 2000
-    // Standard"; kGuiProductSchemeKeys, the catalog's order), then — behind their own separator (architect
-    // 2026-10-08 ~19:30) — every other scheme in the catalog's.
+    // Under Chrome the chrome's own scheme alone, then — behind their own
+    // separator (architect 2026-10-08 ~19:30) — every other scheme GROUPED
+    // BY FAMILY IN THE CATALOG'S ORDER (architect 2026-10-11, his word: the
+    // built-in schemes are not alphabetized).
     add_name(live_chrome_spec().own_scheme, first);
-    first = false;
-    for (const char* key : kGuiProductSchemeKeys) {
-        add_name(key, first);
-        first = false;
-    }
     first = true;
     for (const GuiChromeScheme& b : kGuiChromeSchemes) {
         const std::string_view key = b.key;
-        if (is_chrome_own_scheme(key) || is_product_own_scheme(key))
-            continue;   // the first group's, above
+        if (is_chrome_own_scheme(key)) continue;   // the first group's, above
         add_name(std::string(key), first);
         first = false;
     }

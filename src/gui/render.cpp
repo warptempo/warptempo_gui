@@ -1632,76 +1632,91 @@ static CueSegmentBoxes cue_segment_boxes(const int (&w)[3],
 enum class GuiFlagKind { Warp, PhaseReset, Added, Removed };
 
 // The resolved paint of ONE cue (the palette block's marker-lane paragraph,
-// render.h, owns the look): the triangle's color, which of the two dot
-// colors stand on its stem (no dots at all on a disabled cue), and whether
-// its label wears the invalid pair. The label's other looks are the
-// segment's own (selected, inert or the panel's light tone).
+// render.h, owns the look): the triangle's color, the dots on each of the
+// stem's two phases (none at all on a disabled cue), and whether its resting
+// label wears the invalid color. The label's other looks are the segment's
+// own (selected, inert or the panel's light tone).
 struct FlagFace {
-    GuiColor triangle;
-    GuiColor shadow;
-    bool     cue_dots;
-    bool     range_dots;
-    bool     invalid_label;
+    GuiColor  triangle;
+    GuiColor  shadow;
+    GuiCueDot cue_phase_dots;
+    GuiCueDot range_phase_dots;
+    bool      invalid_label;
 };
 
 // THE ONE RESOLVER for every cue — both marker columns and the `h` view's
 // diff flags (architect 2026-10-09 ~11:50–12:00, Cool Edit's two cue colors:
 // "red+blue for warp and phase, red only for invalid (half the amount of
-// dots) and for history blue only for + and red only for −"). THE TABLE,
-// the ladder read top to bottom, the first matching row wins:
-//   flag                     triangle  dots (program_spec.h's phases)  label
+// dots)"; 2026-10-11 ~01:00–01:20, THE FLAG IS THE INVALID INDICATOR and the
+// history's plus and minus). THE TABLE, the ladder read top to bottom, the
+// first matching row wins:
+//   flag                     triangle  dots (red's phase | blue's phase)   label
 //                                                                      rest / selected
 //   DISABLED (any kind)      faded     none                            faded / white
-//   INVALID (any live kind)  cue red   red alone                       dim / bright red
-//   WARP, PHASE RESET        cue red   red and blue, alternating       light / white
-//   history ADDED            blue      blue alone (the range end's)    light / white
-//   history REMOVED          cue red   red alone (the range start's)   light / white
+//   INVALID (any live kind)  invalid   invalid | —                     invalid / white
+//   WARP, PHASE RESET        cue red   cue red | range blue            light / white
+//   history ADDED (plus)     cue red   —       | cue red               light / white
+//   history REMOVED (minus)  invalid   invalid | —                     light / white
+// "invalid" is the palette's `invalid_label`, each built-in's center line
+// (palette_file.h's role table); THE `range` BLUE LEAVES THE HISTORY VIEW
+// (2026-10-11: the plus takes the marker's own face, the minus the invalid
+// color), each half keeping its phase of 2026-10-09 so a changed pair's two
+// stems on one column still alternate.
 // THE DISABLED ROW'S FADE (architect 2026-10-10 ~12:20, "the arrow needs to
 // be legible for me, but the text doesn't … since it's disabled, it's inert"):
-// the triangle and its shadow are the kind's own live colors (the `cue` red,
-// the `range` blue of an ADDED half) and `cue_shadow` BLENDED 45 % TOWARD THE
-// FACE, the label's rest tone 65 % toward it — derived solid colors, "an
-// opacity look … not actually opaque" (cool_edit_derive.h, the members
-// `ce_off_*`); the selected label stays the chrome's `label` so a selection
-// shows. Every INERT label — a disabled cue's segments and a tie follower's
-// cells — wears the faded label, one look for inert cue text (the Windows
-// emboss retired from cues 2026-10-10).
-// The red is the palette's `cue`, the blue its `range`; THE DOTS' ROWS, counted
-// from the canvas's first row, are the red's ≡ 7 and the blue's ≡ 3 (mod 8),
-// blue first from the top — the capture's absolute red y ≡ 3 / blue y ≡ 7
-// re-counted from Cool Edit's canvas top at y = 108 ≡ 4 (mod 8)
-// (program_spec.h's dot fields, the derivation's owner); "light" the panel's
-// `ce_hilight`, "white" the chrome's `label` — Cool Edit's program text,
-// EFEFEF on the default Face, dark past its light-face swap (2026-10-10:
-// the chrome's `selected_text` it read until then became the ink darkened,
-// a text for the ink's fill, not for the face; chrome_derive.h) — every
-// label on the panel's face with no fill in either state; the red pair `invalid_label` at rest and
-// `invalid_label_selected` selected ("keeps red for the text, even
-// unselected — dimmer unselected, brighter selected"). THE TRIANGLE AND THE
-// DOTS NEVER CHANGE WITH SELECTION (Cool Edit's never do): the label
-// carries the selection — ITS TEXT ALONE, the chrome's `label` on the
-// panel's face, no fill (architect 2026-10-09 ~23:30: "clicking on a
-// flag to select it makes the text turn white. That's it"), the invalid
-// label its bright red the same way. A `h`-view half is never the invalid
-// class (HistoryDiffFlag's note), so `red` is false there.
+// the triangle and its shadow are the live row's triangle color (the `cue`
+// red, or the invalid color of an invalid cue or a REMOVED half, 2026-10-11)
+// and `cue_shadow` BLENDED 45 % TOWARD THE FACE, the label's rest tone 65 %
+// toward it — derived solid colors, "an opacity look … not actually opaque"
+// (cool_edit_derive.h, the members `ce_off_*`); the selected label stays the
+// chrome's `label` so a selection shows. Every INERT label — a disabled
+// cue's segments and a tie follower's cells — wears the faded label, one
+// look for inert cue text (the Windows emboss retired from cues 2026-10-10).
+// THE DOTS' ROWS, counted from the canvas's first row, are the red's phase
+// ≡ 7 and the blue's ≡ 3 (mod 8), the blue's first from the top — the
+// capture's absolute red y ≡ 3 / blue y ≡ 7 re-counted from Cool Edit's
+// canvas top at y = 108 ≡ 4 (mod 8) (program_spec.h's dot fields, the
+// derivation's owner); "light" the panel's `ce_hilight`, "white" the
+// chrome's `label` — Cool Edit's program text, EFEFEF on the default Face,
+// dark past its light-face swap (2026-10-10: the chrome's `selected_text` it
+// read until then became the ink darkened, a text for the ink's fill, not
+// for the face; chrome_derive.h) — every label on the panel's face with no
+// fill in either state. THE TRIANGLE AND THE DOTS NEVER CHANGE WITH
+// SELECTION (Cool Edit's never do): the label carries the selection — ITS
+// TEXT ALONE, the chrome's `label` on the panel's face, no fill (architect
+// 2026-10-09 ~23:30: "clicking on a flag to select it makes the text turn
+// white. That's it"), AN INVALID LABEL THE SAME (architect 2026-10-11: "No
+// flags change color when you select them. It's the text that changes
+// color … I'd rather the text just go white, and the flag should be the
+// indicator that it's invalid"; the bright selected red of 2026-10-09
+// retired with its role). A DISABLED INVALID CUE — the red set counts
+// disabled rows (warp_red_flag_set_cached's (3)) — fades the invalid color.
+// A `h`-view half is never the invalid class (HistoryDiffFlag's note), so
+// `red` is false there.
 FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
     const GuiPalette& p = palette();
+    const bool invalid_triangle = red || kind == GuiFlagKind::Removed;
     if (disabled) {
-        return FlagFace{kind == GuiFlagKind::Added ? p.ce_off_range
-                                                   : p.ce_off_cue,
-                        p.ce_off_cue_shadow, false, false, false};
+        return FlagFace{invalid_triangle ? p.ce_off_invalid : p.ce_off_cue,
+                        p.ce_off_cue_shadow, GuiCueDot::None, GuiCueDot::None,
+                        false};
     }
-    if (red)      return FlagFace{p.cue, p.ce_cue_shadow, true, false, true};
+    if (red)
+        return FlagFace{p.invalid_label, p.ce_cue_shadow, GuiCueDot::Invalid,
+                        GuiCueDot::None, true};
     switch (kind) {
         case GuiFlagKind::Warp:
         case GuiFlagKind::PhaseReset:
-            return FlagFace{p.cue, p.ce_cue_shadow, true, true, false};
+            break;
         case GuiFlagKind::Added:
-            return FlagFace{p.range, p.ce_cue_shadow, false, true, false};
+            return FlagFace{p.cue, p.ce_cue_shadow, GuiCueDot::None,
+                            GuiCueDot::Cue, false};
         case GuiFlagKind::Removed:
-            return FlagFace{p.cue, p.ce_cue_shadow, true, false, false};
+            return FlagFace{p.invalid_label, p.ce_cue_shadow,
+                            GuiCueDot::Invalid, GuiCueDot::None, false};
     }
-    return FlagFace{p.cue, p.ce_cue_shadow, true, true, false};
+    return FlagFace{p.cue, p.ce_cue_shadow, GuiCueDot::Cue, GuiCueDot::Range,
+                    false};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run, its
@@ -1813,18 +1828,16 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             if (!s.present) continue;
             const double tx = static_cast<double>(
                 s.x0 + kProgramSpec.cue_fill_pad * u);
-            // The label's ink (resolve_flag_face's table): an invalid cue's
-            // red pair, else the chrome's text on the face, the faded inert
-            // label or the light tone — a selected inert segment the
-            // chrome's text, so its selection shows.
-            const bool inv = c.face.invalid_label;
-            set_palette_source(cr, s.selected
-                                       ? (inv ? pal.invalid_label_selected
-                                              : pal.label)
-                                   : s.inert
-                                       ? pal.ce_off_label
-                                       : (inv ? pal.invalid_label
-                                              : pal.ce_hilight));
+            // The label's ink (resolve_flag_face's table): a selected
+            // segment the chrome's text on the face, an invalid cue's
+            // included (2026-10-11), else the faded inert label, an invalid
+            // cue's resting invalid color, or the light tone — a selected
+            // inert segment the chrome's text, so its selection shows.
+            set_palette_source(cr, s.selected ? pal.label
+                                   : s.inert  ? pal.ce_off_label
+                                   : c.face.invalid_label
+                                              ? pal.invalid_label
+                                              : pal.ce_hilight);
             text_shape::show_shaped_run(cr, s.run, tx, base);
         }
         cairo_restore(cr);
@@ -1891,11 +1904,13 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
                 if (stem_column_on_waveform(
                         static_cast<int>(std::nearbyint(s.x)) - x0, w))
                     out_stems->push_back(s);
-        } else if (out_stems && (c.face.cue_dots || c.face.range_dots) &&
+        } else if (out_stems &&
+                   (c.face.cue_phase_dots != GuiCueDot::None ||
+                    c.face.range_phase_dots != GuiCueDot::None) &&
                    stem_column_on_waveform(c.col - x0, w))
             out_stems->push_back(MarkerStem{c.index, static_cast<double>(c.col),
-                                            c.face.cue_dots,
-                                            c.face.range_dots});
+                                            c.face.cue_phase_dots,
+                                            c.face.range_phase_dots});
     }
 }
 
@@ -1909,7 +1924,15 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
 GuiStemDots phase_reset_stem_dots(bool red) {
     const FlagFace f =
         resolve_flag_face(GuiFlagKind::PhaseReset, /*disabled=*/false, red);
-    return GuiStemDots{f.cue_dots, f.range_dots};
+    return GuiStemDots{f.cue_phase_dots, f.range_phase_dots};
+}
+// The `h` view's live half's dots (declaration in render.h), off the same
+// resolver, for the nudged pair's rectangle runs.
+GuiStemDots history_half_dots(bool added) {
+    const FlagFace f = resolve_flag_face(
+        added ? GuiFlagKind::Added : GuiFlagKind::Removed,
+        /*disabled=*/false, /*red=*/false);
+    return GuiStemDots{f.cue_phase_dots, f.range_phase_dots};
 }
 
 namespace {
@@ -2396,8 +2419,9 @@ void render_history_diff_flags(
             // THE TRIANGLE AND THE DOTS through the live lane's one resolver
             // (resolve_flag_face) by the KIND of each half — a diff line is
             // never the invalid class (HistoryDiffFlag's note). A SINGLE
-            // flag: the removed red with its red dots alone, the added blue
-            // with its blue dots alone (2026-10-09); THE DOTS READ THE
+            // flag: the removed (the minus) the invalid color with its dots
+            // alone, the added (the plus) the cue red with its dots alone
+            // (2026-10-11); THE DOTS READ THE
             // DISABLED AXIS (architect 2026-08-22): a single half whose one
             // side is disabled publishes none and wears the faded triangle,
             // the live lane's rule.
@@ -2429,9 +2453,11 @@ void render_history_diff_flags(
             c.split_right = right_face.triangle;
             c.own_stems   = true;
             c.stems[0] = MarkerStem{i, static_cast<double>(col_left),
-                                    left_face.cue_dots, left_face.range_dots};
+                                    left_face.cue_phase_dots,
+                                    left_face.range_phase_dots};
             c.stems[1] = MarkerStem{i, static_cast<double>(col_right),
-                                    right_face.cue_dots, right_face.range_dots};
+                                    right_face.cue_phase_dots,
+                                    right_face.range_phase_dots};
             // THE RECTANGLE'S TOP AND BOTTOM between the two stems, on a
             // nudged pair whose stems stand on two columns (MarkerStemRun,
             // render.h): published whenever any of it reaches the waveform's
@@ -2485,7 +2511,7 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the twelve as
+    // THE LIVE WORDS (render.h's program_palette_words): the eleven as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
     // THE LIVE CHROME PICK (render.h's live_chrome_pick): the caption keys
@@ -2517,7 +2543,7 @@ const GuiPaletteWords& program_palette_words() { return g_program_words; }
 const std::optional<GuiChromePick>& live_chrome_pick() { return g_chrome_pick; }
 
 namespace {
-// THE PROGRAM'S TWELVE into the installed struct and the plate's two baked
+// THE PROGRAM'S ELEVEN into the installed struct and the plate's two baked
 // inks off the same words — the install family's first shared half (the
 // chrome's members, derived from these words, are the other's; the
 // generation is each member's own bump).
@@ -2555,9 +2581,11 @@ void fill_program_palette(const GuiPaletteWords& w) {
     {
         using namespace cool_edit_derive;
         static constexpr std::size_t kCue = palette_role_index("cue");
-        static constexpr std::size_t kRange = palette_role_index("range");
+        static constexpr std::size_t kInvalid =
+            palette_role_index("invalid_label");
         g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], w[kFace]));
-        g_palette.ce_off_range = hex(disabled_triangle(w[kRange], w[kFace]));
+        g_palette.ce_off_invalid =
+            hex(disabled_triangle(w[kInvalid], w[kFace]));
         g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(w[kFace]));
         g_palette.ce_off_label = hex(disabled_cue_label(w[kFace]));
     }
@@ -2908,7 +2936,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // THE MARKER'S OWN STATE for the segments riding the field's right edge,
     // which keep their resting look: the faded inert label, a tie follower's
     // cells faded (2026-09-19), else the panel's light tone, or an invalid
-    // marker's dim red (below).
+    // marker's invalid color (below).
     const bool dis = phase ? pmv[static_cast<size_t>(idx)].disabled
                            : effective_disabled(mv, idx);
     // THE MARKER'S INVALID CLASS, off the same memoized red-flag set the flag
@@ -2933,15 +2961,14 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // SELECTED PAIR, `selected_text` on `selected_fill`, the ordinary
     // highlight — the pair that exists "precisely to avoid this problem" —
     // part of the chrome, as every selection in the product is. AN INVALID
-    // MARKER'S TEXT IS ITS LABEL'S BRIGHT RED (architect 2026-10-09 ~12:00:
-    // the invalid label "keeps red for the text, even unselected — dimmer
-    // unselected, brighter selected"; the open editor is the cue in its
-    // selected look): `invalid_label_selected` on the field's ground, the
-    // caret with it, the selected substring still the selected pair.
+    // MARKER'S FIELD IS THE SAME FIELD, its text and caret the field's own
+    // (architect 2026-10-11: "No flags change color when you select them …
+    // the flag should be the indicator that it's invalid"; the bright
+    // selected red of 2026-10-09 retired with its role); `red` colors its
+    // riding segments alone, their resting invalid color.
     const GuiPalette& pal = palette();
     const GuiColor field_fill = pal.field_ground;
-    const GuiColor field_ink  = red ? pal.invalid_label_selected
-                                    : pal.field_text;
+    const GuiColor field_ink  = pal.field_text;
     const GuiColor sel_fill   = pal.selected_fill;
     const GuiColor sel_text   = pal.selected_text;
     const int  field_rank = flag_box_rank(field_cell);
@@ -3195,7 +3222,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                             pal.face);
             const double tx = static_cast<double>(x0 + pad_l);
             // The resting label's ink: the faded inert label, else an invalid
-            // marker's dim red, else the panel's light tone
+            // marker's invalid color, else the panel's light tone
             // (resolve_flag_face's table).
             set_palette_source(cr, cell_dis ? pal.ce_off_label
                                   : red     ? pal.invalid_label

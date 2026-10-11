@@ -25,7 +25,7 @@
 namespace {
 
 // The role table names each role once, so the reader's lookup is a
-// bijection (twelve names: the pairwise form is cheap here).
+// bijection (eleven names: the pairwise form is cheap here).
 constexpr bool palette_role_names_unique() {
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         for (std::size_t j = i + 1; j < kGuiPaletteRoleCount; ++j)
@@ -166,14 +166,6 @@ static_assert([] {
     return me->chrome == w2k->chrome;
 }());
 
-// THE PRODUCT'S OWN SCHEMES ARE BUILT-INS AND NO CHROME'S OWN
-// (palette_file.h's kGuiProductSchemeKeys): each key a row of
-// kGuiChromeSchemes, so the menu's first group lists a scheme that loads,
-// and none a ChromeSpec's own_scheme, so no row is listed twice.
-static_assert(std::ranges::all_of(kGuiProductSchemeKeys, [](const char* k) {
-    return builtin_scheme(k) != nullptr && !is_chrome_own_scheme(k);
-}));
-
 // THE BUILT-INS' KEYS AND DISPLAY NAMES ARE UNIQUE (the generator checks the
 // same), the keys in the name grammar, and every scheme records its inactive
 // caption (the struct's comment).
@@ -225,6 +217,14 @@ static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
            cool_edit_derive::tone(b.words[palette_role_index("waveform_ink")],
                                   lo.a, lo.b);
 }));
+// EVERY BUILT-IN'S INVALID COLOR IS ITS CENTER LINE (palette_file.h's role
+// table, architect 2026-10-11; the generator copies Cool Edit's Cntr into
+// both, and this proves the record).
+static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
+                                  [](const GuiBuiltinPalette& b) {
+    return b.words[palette_role_index("invalid_label")] ==
+           b.words[palette_role_index("center")];
+}));
 // The device config's default (both templates stamp a default-constructed
 // struct's): no palette and no scheme — the default palette and the live
 // chrome's own scheme.
@@ -274,7 +274,7 @@ std::filesystem::path kind_file_path(const PresetKind<Record>& kind,
 }
 
 // ONE PALETTE FILE under the grammar (palette_file.h's head), its stem
-// already judged: exactly the twelve, a scheme's key or a retired role an
+// already judged: exactly the eleven, a scheme's key or a retired role an
 // unknown role.
 std::expected<GuiPaletteWords, std::string> read_palette_file(
         const std::filesystem::path& path) {
@@ -302,7 +302,7 @@ std::expected<GuiPaletteWords, std::string> read_palette_file(
         return {};
     }, std::span<const char* const>{});
     if (!scan) return std::unexpected(std::move(scan.error()));
-    // EVERY ROLE IS REQUIRED (the head: the picker writes all twelve), the
+    // EVERY ROLE IS REQUIRED (the head: the picker writes all eleven), the
     // first missing one in the table's order named. (A file from before the
     // ten of 2026-10-09 fails earlier, on its first retired line; a file of
     // the ten that day, on its missing `grid`.)
