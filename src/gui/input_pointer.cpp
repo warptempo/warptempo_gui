@@ -5475,7 +5475,7 @@ void GuiInputHandler::set_color_picker_list_open(bool open, bool scope) {
     // list's rect (the stash's, what has to be erased), on the open the
     // rect the next paint will give it (the layout's — the one live
     // derivation here, for DAMAGE alone, never for a hit).
-    // THE SCROLL STARTS AT THE HEAD, the shown element scrolled into view
+    // THE SCROLL STARTS AT THE HEAD, the shown element AT THE TOP
     // (render.h's popup scroll block: a combo's one exception) — the
     // layout's shown count, derived here for that seat alone.
     // THE LIT ROW is the combo's shown one: the live scope's row in the
@@ -5493,7 +5493,7 @@ void GuiInputHandler::set_color_picker_list_open(bool open, bool scope) {
     if (open) {
         const color_picker::Layout l =
             color_picker::layout(app, gui_font(GuiFace::Body));
-        cp.chooser_scroll.top = popup_scroll_reveal(l.list.bar, 0, shown);
+        cp.chooser_scroll.top = popup_scroll_top_at(l.list.bar, shown);
         viewport.invalidate_rect(l.list.box);
         color_picker.damage_card();
     }
@@ -5504,8 +5504,8 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
     if (cp.menu_open == open) return;
     // THE LIST'S DAMAGE RULE ONE SURFACE OVER (above), and THE LIT ROW
     // STARTS ON THE ACTIVE PRESET'S NAME (color_picker.h's THE PRESET MENU:
-    // the chooser's hover seed), found among the menu's rows — AND SCROLLED
-    // INTO VIEW as a combo's list does (architect 2026-10-11, render.h's
+    // the chooser's hover seed), found among the menu's rows — AND AT THE TOP
+    // of the list as a combo's is (architect 2026-10-11, render.h's
     // popup scroll block), its scroll row the row's index plus the
     // separators at or before it (layout: a separator is a scroll row of
     // its own); no live named preset, the menu opens at its head.
@@ -5526,7 +5526,7 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
             if (!l.menu_rows[i].is_act && l.menu_rows[i].name == active) {
                 cp.menu_hover = static_cast<int>(i);
                 cp.menu_scroll.top =
-                    popup_scroll_reveal(l.menu_bar, 0, scroll_row);
+                    popup_scroll_top_at(l.menu_bar, scroll_row);
                 break;
             }
             ++scroll_row;

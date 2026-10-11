@@ -116,7 +116,7 @@ struct GuiInputHandler;
 //     IT IS ONE OF THE THREE LIST POPUPS (render.h's popup scroll block, the
 //     rule's one owner, 2026-10-08): placed by the window's room and
 //     SCROLLING when its rows outgrow it, its scroll bar inside it at its
-//     right, the shown row scrolled into view at the open.
+//     right, the shown row at the top at the open.
 //   * WHILE THE LIST IS DOWN IT OWNS THE POINTER (the dropdown's ONE PRESS,
 //     ONE ACT): a press on its scroll bar scrolls (the scroll block's input),
 //     a press on a row ARMS it and THE LIFT ON THAT ROW SHOWS IT — the act

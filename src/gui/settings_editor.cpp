@@ -205,8 +205,8 @@ void GuiSettingsEditor::set_choice_list_open(bool open) {
     // (Viewport::invalidate_modal_dialog_area); THE OPEN'S is the rect the
     // next paint will give the list — derived from the combo AS PAINTED, for
     // damage and the scroll's seat alone, never for a hit. THE SCROLL STARTS
-    // AT THE HEAD with the shown value scrolled into view (render.h's popup
-    // scroll block: a combo's one exception).
+    // AT THE HEAD, but for the shown value, which opens AT THE TOP (render.h's
+    // popup scroll block: a combo's one exception).
     viewport.invalidate_modal_dialog_area();
     ch.list_open    = open;
     ch.list_hover   = open ? ch.shown : -1;
@@ -217,7 +217,7 @@ void GuiSettingsEditor::set_choice_list_open(bool open) {
         const color_picker::ComboList l = color_picker::combo_list(
             app.modal_dialog.combo, app.settings_choice_count(), app.height,
             /*top=*/0);
-        ch.list_scroll.top = popup_scroll_reveal(l.bar, 0, ch.shown);
+        ch.list_scroll.top = popup_scroll_top_at(l.bar, ch.shown);
         viewport.invalidate_rect(l.box);
     }
 }

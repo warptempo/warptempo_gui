@@ -2346,7 +2346,8 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    list starts at its head), with ONE EXCEPTION, Windows' combo's own
 //    (architect 2026-10-11): a list that opens with a current value lit —
 //    the choice editor's, the element list and the preset menu (its active
-//    preset) — scrolls that row into view at the open (popup_scroll_reveal).
+//    preset) — opens with that row AT THE TOP, clamped at the end
+//    (popup_scroll_top_at).
 //  * THE PICTURE IS A VERTICAL SCROLL BAR INSIDE THE LIST, AT ITS RIGHT, UNDER
 //    EVERY CHROME (architect 2026-10-08, his ReactOS WordPad font-combo
 //    capture: "exactly as we would expect, just a scroll bar on the side"; and
@@ -2388,8 +2389,8 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    lift ends it and selects nothing. THE LAPTOP'S WHEEL over a scrolling
 //    list scrolls kPopupWheelRows a notch (Windows' default wheel lines),
 //    the modified wheel a swallowed nothing. The choice editor's Up / Down
-//    keep the lit row in view, a step past the shown block scrolling by one
-//    row (popup_scroll_reveal). A press anywhere else is the popup's own, as
+//    keep the lit row in view by least travel, a step past the shown block
+//    scrolling by one row (popup_scroll_reveal). A press anywhere else is the popup's own, as
 //    before: a row arms, outside closes.
 //  * THE DAMAGE: a scroll, an arrow's pressed face and the thumb drag repaint
 //    the whole box.
@@ -2521,6 +2522,13 @@ inline int popup_scroll_clamp(const PopupScrollBar& b, int top) {
 // The rows `b` shows from `top` (clamped).
 inline int popup_scroll_shown(const PopupScrollBar& b, int top) {
     return popup_rows_fitting(b.row_h, b.room, popup_scroll_clamp(b, top));
+}
+// The top a list opens on when `row` is its current value: that row at the
+// very top of the shown rows, clamped so the last page stays full (architect
+// 2026-10-11; Windows' combo, CBDropDown's LB_SETTOPINDEX on the dropped
+// index, listbox.c clamping to the last top).
+inline int popup_scroll_top_at(const PopupScrollBar& b, int row) {
+    return popup_scroll_clamp(b, row);
 }
 // The top that shows row `row`: unchanged when it already shows, else the
 // least travel that does (one row per step past the block's edge).

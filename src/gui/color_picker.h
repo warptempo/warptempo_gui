@@ -116,7 +116,7 @@ struct Viewport;
 //     chooser row is ONE OF THE THREE LIST POPUPS whichever combo dropped
 //     it, placed by the window and SCROLLING when its rows outgrow the room
 //     (render.h's popup scroll block, the rule's one owner; combo_list), its
-//     shown row scrolled into view at the open (re-derived 2026-10-09, device
+//     shown row at the top of the list at the open (re-derived 2026-10-09, device
 //     px; the longest list is the Waveform scope's eleven, 2026-10-11): at
 //     the tablet's 300 % eleven rows are 11 x 51 + 2 x 3 + 6 + 6 = 579 below
 //     a chooser whose foot stands at 399 + 6 + 18 + 63 = 486 of the 1440
@@ -160,7 +160,7 @@ struct Viewport;
 //     2026-10-08): hung from the button's foot or standing on its head by the
 //     window's room, and SCROLLING when its rows outgrow it — the acts and the
 //     separators ordinary rows that scroll with the names, none pinned, the
-//     scroll revealing the active preset at each open; the shown rows and the bar published as
+//     scroll opening with the active preset at the top each time; the shown rows and the bar published as
 //     painted (layout). Every preset Save As writes is reachable, so the act
 //     refuses no name for room. The lit row starts on the active preset's name
 //     (the chooser's own seat, the hover seeded at the open) and follows the
