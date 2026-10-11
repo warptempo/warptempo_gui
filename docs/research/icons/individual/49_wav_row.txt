@@ -1,0 +1,5 @@
+act: Wav Row
+what it does: a wav file row in the render player
+status: CANDIDATE - redraw as is
+image: 49_wav_row.png (from 0927 r8c10)
+prompt line: wav row - a dark panel with a green waveform

@@ -1,0 +1,5 @@
+act: Delete Folder
+what it does: deletes a render folder
+status: CANDIDATE - redraw as is
+image: 57_delete_folder.png (from 0927 r8c8)
+prompt line: delete folder - a yellow folder marked with an X

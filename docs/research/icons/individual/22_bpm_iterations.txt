@@ -1,0 +1,5 @@
+act: BPM Iterations
+what it does: renders a sweep of BPM iterations
+status: CANDIDATE - redraw as is
+image: 22_bpm_iterations.png (from 0927 r9c5)
+prompt line: bpm iterations - the letters Bpm over a teal arc

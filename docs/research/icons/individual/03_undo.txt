@@ -1,0 +1,5 @@
+act: Undo
+what it does: undoes the last edit
+status: CANDIDATE - redraw as is
+image: 03_undo.png (from 0927 r1c5)
+prompt line: undo - a teal arrow curling back to the left

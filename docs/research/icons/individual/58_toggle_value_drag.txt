@@ -1,0 +1,7 @@
+act: Toggle Value Drag
+what it does: toggles dragging a marker's value up and down
+status: DERIVATIVE - the image is the parent to derive from
+image: 58_toggle_value_drag_a.png (from 0927 r8c6)
+image: 58_toggle_value_drag_b.png (from 0927 r6c6)
+derive: derive: the vertical double arrow of Waveform Magnification (first image) over the M marker tab of Drop Marker (second image)
+prompt line: toggle value drag - a vertical double-headed arrow over a cue marker

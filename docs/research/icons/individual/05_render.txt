@@ -1,0 +1,6 @@
+act: Render
+what it does: renders the target audio (also the BPM / grid sweep)
+status: DERIVATIVE - the image is the parent to derive from
+image: 05_render.png (from 0927 r4c5)
+derive: derive from this red diamond: the same red, drawn as a round record dot
+prompt line: render - a red record dot

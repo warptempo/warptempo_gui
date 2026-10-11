@@ -1,0 +1,5 @@
+act: Flatten
+what it does: flattens the deviation terms into the value
+status: CANDIDATE - redraw as is
+image: 18_flatten.png (from 0927 r7c2)
+prompt line: flatten - two tracks merging into one

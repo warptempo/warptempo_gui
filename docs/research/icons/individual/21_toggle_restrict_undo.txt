@@ -1,0 +1,6 @@
+act: Toggle Restrict Undo
+what it does: restricts undo to the current view
+status: CANDIDATE - redraw as is
+image: 21_toggle_restrict_undo_a.png (from 0951 sheet 2 r3c2)
+image: 21_toggle_restrict_undo_b.png (from 0951 sheet 2 r3c3)
+prompt line: toggle restrict undo - a dotted frame around an undo arrow

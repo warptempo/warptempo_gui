@@ -1,0 +1,5 @@
+act: Target with Warp
+what it does: view 2: the target audio with warp markers
+status: CANDIDATE - redraw as is
+image: 09_target_with_warp.png (from 0951 sheet 2 r1c8)
+prompt line: target with warp - a metronome passing outward through an open door

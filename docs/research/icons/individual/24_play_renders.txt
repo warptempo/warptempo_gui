@@ -1,0 +1,6 @@
+act: Play Renders
+what it does: opens the render player
+status: CANDIDATE - redraw as is
+image: 24_play_renders_a.png (from 0927 r9c4)
+image: 24_play_renders_b.png (from 0927 r10c2)
+prompt line: play renders - a compact disc

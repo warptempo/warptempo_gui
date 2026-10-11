@@ -1,0 +1,5 @@
+act: Toggle Grid Iterations
+what it does: toggles grid-iteration rendering
+status: CANDIDATE - redraw as is
+image: 23_toggle_grid_iterations.png (from 0951 sheet 2 r3c4)
+prompt line: toggle grid iterations - a grid of small cells

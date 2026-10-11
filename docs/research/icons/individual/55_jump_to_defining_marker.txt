@@ -1,0 +1,6 @@
+act: Jump to Defining Marker
+what it does: jumps to the marker that defines the value
+status: CANDIDATE - redraw as is
+image: 55_jump_to_defining_marker_a.png (from 0951 sheet 2 r2c9)
+image: 55_jump_to_defining_marker_b.png (from 0951 sheet 2 r2c10)
+prompt line: jump to defining marker - an arrow jumping to a marker flag

@@ -1,0 +1,6 @@
+act: Delete Markers
+what it does: deletes the selected markers
+status: DERIVATIVE - the image is the parent to derive from
+image: 15_delete_markers.png (from 0927 r6c6)
+derive: derive from Drop Marker: the same ruler and M tab, struck by a red X
+prompt line: delete markers - a cue ruler with an M marker tab struck by a red X

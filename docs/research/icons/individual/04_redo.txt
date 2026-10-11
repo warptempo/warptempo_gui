@@ -1,0 +1,5 @@
+act: Redo
+what it does: redoes the undone edit
+status: CANDIDATE - redraw as is
+image: 04_redo.png (from 0927 r1c6)
+prompt line: redo - a teal arrow curling forward to the right

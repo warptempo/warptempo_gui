@@ -1,0 +1,5 @@
+act: Source with Warp
+what it does: view 1: the source audio with warp markers
+status: CANDIDATE - redraw as is
+image: 08_source_with_warp.png (from 0951 sheet 2 r1c7)
+prompt line: source with warp - a metronome passing inward through an open door

@@ -1,0 +1,6 @@
+act: Toggle Disabled
+what it does: disables / enables the selected markers (muted)
+status: DERIVATIVE - the image is the parent to derive from
+image: 16_toggle_disabled.png (from 0927 r8c10)
+derive: derive from this waveform panel: the waveform greyed, a red slash across it
+prompt line: toggle disabled - a teal waveform greyed under a red slash

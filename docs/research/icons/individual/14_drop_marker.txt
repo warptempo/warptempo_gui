@@ -1,0 +1,5 @@
+act: Drop Marker
+what it does: drops a marker at the playhead
+status: CANDIDATE - redraw as is
+image: 14_drop_marker.png (from 0927 r6c6)
+prompt line: drop marker - a cue ruler with an M marker tab

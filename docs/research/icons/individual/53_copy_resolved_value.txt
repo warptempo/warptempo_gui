@@ -1,0 +1,5 @@
+act: Copy Resolved Value
+what it does: copies the marker's resolved value
+status: CANDIDATE - redraw as is
+image: 53_copy_resolved_value.png (from 0951 sheet 2 r1c6)
+prompt line: copy resolved value - two overlapping pages, one with a number

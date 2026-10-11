@@ -1,0 +1,5 @@
+act: Go to End
+what it does: moves the playhead to the end
+status: CANDIDATE - redraw as is
+image: 38_go_to_end.png (from 0927 r5c8)
+prompt line: go to end - a teal triangle and bar pointing right

@@ -1,0 +1,5 @@
+act: Stop
+what it does: stops playback
+status: CANDIDATE - redraw as is
+image: 36_stop.png (from 0927 r4c8)
+prompt line: stop - a teal square

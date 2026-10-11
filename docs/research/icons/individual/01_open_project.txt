@@ -1,0 +1,5 @@
+act: Open Project
+what it does: opens a project from the picker
+status: CANDIDATE - redraw as is
+image: 01_open_project.png (from 0927 r1c2)
+prompt line: open project - an open yellow folder
