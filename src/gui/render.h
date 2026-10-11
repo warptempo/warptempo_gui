@@ -3972,18 +3972,6 @@ struct HistoryDiffFlag {
     bool added_left() const { return nudged() && now_frame < then_frame; }
 };
 
-// WHERE A FLAG LANDS THE PLAYHEAD — the Tab walk's, the focus click's, the
-// Center press's and the walk's seed (history_diff_cycle_target): the flag's
-// own frame, and on a NUDGED pair the frame midway between its two halves
-// (std::nearbyint), under the one flag's split triangle, which stands centred
-// between the two stems (2026-10-11).
-inline int64_t history_diff_flag_landing_frame(const HistoryDiffFlag& f) {
-    if (!f.nudged()) return f.time_frame;
-    return static_cast<int64_t>(std::nearbyint(
-        (static_cast<double>(f.then_frame) +
-         static_cast<double>(f.now_frame)) / 2.0));
-}
-
 // THE HISTORY MODE'S MARKER LANE. Replaces render_flags / render_phase_reset_-
 // flags wholesale while the mode stands: no live marker paints, and this pass
 // becomes the producer of the same two stashes they produce (out_hit_rects with

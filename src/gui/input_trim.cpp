@@ -265,7 +265,7 @@ void GuiInputHandler::park_playhead_at_trim_start() {
     // waveform's) no longer covers it. The call sits HERE, beside the one
     // cursor write, rather than copied per caller — this helper is the trim
     // family's single playhead writer (both trim-commit callers ride it),
-    // the same damage-beside-the-write shape land_playhead_on_source_frame
+    // the same damage-beside-the-write shape land_playhead_on_domain_frame
     // carries. Caller inventory at Viewport::invalidate_clock_area
     // (viewport.h).
     viewport.invalidate_clock_area();

@@ -15,7 +15,9 @@ struct GuiTargetRender;
 // nothing is spent (architect 2026-10-11 ~01:45) (architect 2026-10-11, retiring the
 // view posture of 2026-09-13, under which a sideways drag in T+W changed a
 // tempo unnoticed; the whole rule is at value_drag_posture, app_state.h) —
-// where a plain flag press-and-drag in ANY VIEW, source view included, steps
+// where a plain flag press-and-drag in ANY VIEW, source view included (the
+// phase reset view holds the lamp dark outside grid iterations, 2026-10-11
+// ~02:05, no target standing there), steps
 // the pressed cell's value VERTICALLY and the horizontal marker drag is off
 // on every flag: "we never allow multi-axis dragging; flags move up and down
 // or not at all." It steps the ONE pressed marker; a multi-selection is not

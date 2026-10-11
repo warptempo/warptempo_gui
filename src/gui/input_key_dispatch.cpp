@@ -1893,9 +1893,10 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     clear_history_mode_focus(app.history_mode);
     app.history_mode.focus = there;
     // Every branch that reaches here lands, through the movement owner.
-    land_playhead_on_source_frame(
+    land_playhead_on_domain_frame(
         app, audio, viewport,
-        history_diff_flag_landing_frame(
+        history_diff_flag_landing_domain_frame(
+            app, audio,
             app.history_mode.flags[static_cast<std::size_t>(there)]));
     // THE CAMERA IS THE CALLER'S STATEMENT, the live walk's own
     // MarkerLandingFrame and its own switch (jump_playhead_to_focused_marker),
@@ -6817,8 +6818,8 @@ void GuiInputHandler::open_project_picker() {
     // A PROMPT IS SILENT AND AN EDITOR IS NOT (architect 2026-08-30): a
     // prompt VEILS everything and is itself the answer on screen — its
     // question is what the press has to deal with — while an editor is
-    // pointer-transparent in the two of its five kinds the top-strip flag
-    // editor takes (FlagPayload and IterBound, text_editor.h), so
+    // pointer-transparent in the kinds the top-strip flag editor takes
+    // (FlagPayload and IterBound, text_editor::Kind, text_editor.h), so
     // the File menu's Open project row is reachable under it and owes a
     // sentence. The KEY road never reaches either arm: Ctrl+O under any
     // editor dies at on_key's editor gate, which says these very words with
@@ -8080,7 +8081,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // permanently lit there (value_drag_armed, app_state.h), the stored bit
     // dark and unread through the mode, and a bound chord is never silent —
     // kValueDragIterationsCard; the button greys lit there, so its press dies
-    // before reaching this arm. It stops no playback and
+    // before reaching this arm. IN THE PHASE RESET VIEW WITH THE MODE DARK
+    // IT CHANGES NOTHING AND CARDS WHY (architect 2026-10-11 ~02:05, "it has
+    // no meaning there"): no flag there is a target, the button greys unlit
+    // (value_drag_armed), and the stored bit is left as it was —
+    // kValueDragPhaseResetViewCard. It stops no playback and
     // writes no store, no undo entry and no dirty mark. THE REPAINT IS THE
     // BOTTOM LANE'S, `k`'s reason: the lamp must light in the frame it was
     // asked for. (Bare `x` toggled the first value drag lamp from 2026-09-10
@@ -8089,6 +8094,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         if (app.iteration_mode_enabled) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  kValueDragIterationsCard);
+            return true;
+        }
+        if (app.active_markers_view == 'P') {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 kValueDragPhaseResetViewCard);
             return true;
         }
         app.value_drag_lamp = !app.value_drag_lamp;

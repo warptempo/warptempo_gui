@@ -231,7 +231,7 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // promises is that the pair of plays it makes on each tab is identical, which
 // is exactly a resting cursor that cannot move under it. Reaching this function
 // means the playhead's POSITION IN THE MUSIC is changing. THE RULE'S SECOND
-// OWNER is the land (land_playhead_on_marker / land_playhead_on_source_frame,
+// OWNER is the land (land_playhead_on_marker / land_playhead_on_domain_frame,
 // input_pointer.cpp), and it has THREE EXEMPTIONS, none of which reaches an
 // owner: a TRANSLATION (reseat_playhead_to below, translate_playhead_to — the
 // undo/redo restore's re-land, which scrolls nothing — and

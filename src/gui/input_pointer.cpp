@@ -693,7 +693,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // name it (the lock refuses both flag drags, so the lamp would arm
     // nothing), the iteration gate admits it (the bound cells are its
     // targets), and the `h` view's allowlist does not name it, so the derived
-    // partition greys it there and the view hides it. NOT A RADIO, NO REPEAT
+    // partition greys it there and the view hides it. The phase reset view
+    // greys it unlit outside grid iterations at its enabled arm (2026-10-11
+    // ~02:05, value_drag_armed), the key carding why. NOT A RADIO, NO REPEAT
     // (a toggle repeats onto itself), NO MODIFIER ADMITTED.
     {RedesignButton::IconValueDrag,
      GuiKeys::BracketLeft, false, false, false, false},                        // bare [
@@ -1734,14 +1736,19 @@ bool history_mode_hides_button(const AppState& app, RedesignButton b) {
 // THE STORE LOOKUP IS ALL THIS FUNCTION ADDS to the one below it. Resolving the
 // index to an authored frame is the marker-shaped half; the two-step placement
 // basis and the damage are the frame-shaped half, hoisted into
-// seat_playhead_on_source_frame so a caller holding a frame that belongs to NO
-// store entry — the `h` history mode's diff flags, whose removed lines exist in
-// no store at all — lands through the identical expression instead of a second
-// copy of it, and so the land / reseat pair cannot drift either. Everything the list above says about WHEN a land happens and what
+// seat_playhead_on_source_frame, whose domain-shaped tail
+// (seat_playhead_on_domain_frame) is the write a caller holding a DISPLAYED
+// frame that belongs to NO store entry — the `h` history mode's diff flags,
+// whose removed lines exist in no store at all and whose nudged pair lands
+// between its two mapped stems — seats through instead of a second copy of
+// it, and so the land / reseat pair cannot drift either. Everything the list above says about WHEN a land happens and what
 // it must not touch governs both halves alike.
 // The shared write, defined below the two entry points that share it.
 static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                           Viewport& viewport, int64_t src_frame);
+static void seat_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
+                                          Viewport& viewport,
+                                          int64_t domain_frame);
 
 void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
                              Viewport& viewport, int hit) {
@@ -1799,25 +1806,39 @@ void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
 // The frame-shaped half, above — the MOVEMENT owner's frame form: the
 // audition's end, then the seat. Every caller of this one is a command whose
 // subject is the playhead (the `h` mode's Tab cycle, its `c` and its two
-// diff-flag click bodies), so none of them wants the reseat.
-void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
-                                   Viewport& viewport, int64_t src_frame) {
+// diff-flag click bodies), so none of them wants the reseat. IT TAKES A
+// DISPLAYED-DOMAIN FRAME (2026-10-11): its callers land a diff flag where the
+// flag is painted (history_diff_flag_landing_domain_frame, app_state.h), and a
+// nudged pair's painted centre exists only in the displayed domain.
+void land_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
+                                   Viewport& viewport, int64_t domain_frame) {
     // The A/B audition's end, this entry point's half of it — the argument is
     // at the marker form above, the inventory at GuiAuditionSequence. The
     // hold posture's clear too, but only when the seat moves the cursor
     // (AppState::camera_hold).
     clear_audition_sequence(app);
     const int64_t sample_before = app.playhead_cursor_sample;
-    seat_playhead_on_source_frame(app, audio, viewport, src_frame);
+    seat_playhead_on_domain_frame(app, audio, viewport, domain_frame);
     if (app.playhead_cursor_sample != sample_before) app.camera_hold = false;
 }
 
-// The write itself, shared by the two above. Its own two decisions:
+// The write itself, shared by the marker entry points above: the forward map,
+// then the domain tail below, whose two decisions follow.
 static void seat_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
                                           Viewport& viewport,
                                           int64_t src_frame) {
-    int64_t sample = source_frame_to_active_domain(app, audio, src_frame);
-    sample = clamp_playhead_to_live_domain(sample, app, audio);
+    seat_playhead_on_domain_frame(
+        app, audio, viewport,
+        source_frame_to_active_domain(app, audio, src_frame));
+}
+
+// The domain-shaped tail of the seat: the clamp, the idempotence return and
+// the damage, shared by the source form above and the domain land.
+static void seat_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
+                                          Viewport& viewport,
+                                          int64_t domain_frame) {
+    const int64_t sample =
+        clamp_playhead_to_live_domain(domain_frame, app, audio);
     // IDEMPOTENCE ONLY, carrying no semantics: a land onto the sample the
     // playhead already holds writes the same value and moves no pixel, so
     // there is nothing to damage. It decides nothing about the audition — its
@@ -2041,10 +2062,10 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      under the card;
 //   1. the prompt's veil (the top of the handler — its dialog buttons are the
 //      one thing a press can reach, and a button carries no cursor cue);
-//   2. the TWO DIALOG modal editors' veil, which consumes every press
+//   2. the DIALOG modal editors' veil, which consumes every press
 //      outside the dialog's own field and buttons — the
 //      shared predicate is modal_dialog_editor_active, whose membership is
-//      AppState::dialog_editor_session's three;
+//      AppState::dialog_editor_session's;
 //   3. the open dropdown, which owns the pointer and consumes every press over
 //      the pixels it floats above;
 //   4. the loading / empty-audio return, above the whole waveform band. The four
@@ -10105,7 +10126,7 @@ bool GuiInputHandler::handle_history_mode_press(
 // selection with what it hit, so the focus alone is then a selection of one, and
 // the revert act's subject falls back to that focus with nothing to remember.
 //
-// IT LANDS THROUGH THE MOVEMENT OWNER (land_playhead_on_source_frame). The
+// IT LANDS THROUGH THE MOVEMENT OWNER (land_playhead_on_domain_frame). The
 // out-of-range arm (`hit` < 0, tolerance the router cannot produce) lands
 // nothing; the empty-lane click the router DOES produce goes to the placement
 // pending's act (run_nav_click_act), which places the playhead there. (It hid the trim region
@@ -10125,10 +10146,12 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
     if (hit >= 0 && hit < static_cast<int>(app.history_mode.flags.size()))
         app.history_mode.focus = hit;
     if (app.history_mode.focus >= 0) {
-        land_playhead_on_source_frame(
+        land_playhead_on_domain_frame(
             app, audio, viewport,
-            history_diff_flag_landing_frame(app.history_mode.flags[
-                static_cast<std::size_t>(app.history_mode.focus)]));
+            history_diff_flag_landing_domain_frame(
+                app, audio,
+                app.history_mode.flags[
+                    static_cast<std::size_t>(app.history_mode.focus)]));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
     // (the flag's and its stem's colours swap; the stem's column stays put),
@@ -10203,9 +10226,10 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
         else                 sel.insert(hit);
     }
     app.history_mode.focus = hit;
-    land_playhead_on_source_frame(
+    land_playhead_on_domain_frame(
         app, audio, viewport,
-        history_diff_flag_landing_frame(
+        history_diff_flag_landing_domain_frame(
+            app, audio,
             app.history_mode.flags[static_cast<std::size_t>(hit)]));
     viewport.invalidate_all();
 }

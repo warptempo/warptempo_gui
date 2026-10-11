@@ -2349,7 +2349,11 @@ void render_history_diff_flags(
             // column on a same-frame pair. THE FLAG STANDS CENTRED BETWEEN
             // THEM: col the midpoint floored, the triangle's axis the two
             // stems' centres' mean, so 0.5 past col on an even sum and on
-            // the boundary right of col (1.0) on an odd one.
+            // the boundary right of col (1.0) on an odd one. THE LANDING
+            // READS THIS BASIS (history_diff_flag_landing_domain_frame,
+            // app_state.h, 2026-10-11): both halves mapped first, then
+            // centred, so a click, Tab or Center seats the playhead under
+            // this triangle across a warp breakpoint too.
             const int col_left = static_cast<int>(std::nearbyint(left_x));
             const int col_right =
                 f.nudged()

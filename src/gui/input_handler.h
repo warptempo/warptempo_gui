@@ -432,16 +432,18 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
 void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
                                Viewport& viewport, int hit);
 
-// The same land with the store lookup taken off the front: place the playhead on
-// an authored SOURCE frame directly, through the identical two-step basis, the
-// identical damage and the identical audition end. It exists for the callers holding a
-// frame that belongs to no store entry — the `h` history mode's focus click,
-// whose removed diff flags name frames the session no longer has — and
+// The same land with the store lookup and the forward map taken off the front:
+// place the playhead on a DISPLAYED-DOMAIN frame directly, through the
+// identical clamp, the identical damage and the identical audition end. It
+// exists for the callers holding a frame that belongs to no store entry — the
+// `h` history mode's diff flags, whose removed lines name frames the session no
+// longer has and whose nudged pair lands between its two MAPPED stems
+// (history_diff_flag_landing_domain_frame, app_state.h, 2026-10-11) — and
 // land_playhead_on_marker shares its write, so the marker route and the frame
 // route cannot drift. Same contract otherwise: playhead write plus the movement
 // owner's audition end, no selection, read-only allowed.
-void land_playhead_on_source_frame(AppState& app, const GuiAudio& audio,
-                                   Viewport& viewport, int64_t src_frame);
+void land_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
+                                   Viewport& viewport, int64_t domain_frame);
 
 // COINCIDENCE AUTO-SELECT — the entry counterpart of the never-park rule
 // (architect 2026-07-29): the selection is never stashed, so an ENTRY re-acquires

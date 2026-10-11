@@ -2980,7 +2980,9 @@ enum class RedesignButton {
     // card; UNDER GRID ITERATIONS PERMANENTLY LIT AND GREY (architect
     // 2026-10-11 ~01:45, "the lamp becomes permanent in grid iterations
     // mode"): the view selectors' lit-and-grey face under the same mode, its
-    // press dead and bare `[` carding why; absent in the `h` view,
+    // press dead and bare `[` carding why; UNLIT AND GREY IN THE PHASE RESET
+    // VIEW outside the mode (~02:05, value_drag_armed), the stored bit kept
+    // and bare `[` carding why; absent in the `h` view,
     // whose allowlist does not name the chord (the derived partition and
     // history_mode_hides_button). It admits no modifier and does not repeat.
     IconValueDrag,
@@ -5110,7 +5112,7 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //     (4) THE TWO MOVEMENT OWNERS (architect 2026-08-26) — three call sites,
 //         each unconditional at its entry: Viewport::move_playhead_to
 //         (viewport.cpp) and the two land entry points
-//         land_playhead_on_marker / land_playhead_on_source_frame
+//         land_playhead_on_marker / land_playhead_on_domain_frame
 //         (input_pointer.cpp), which do not wrap one another but share a seat
 //         body the NON-movement entries also use, so the clear rides the entry
 //         points and not the seat.
@@ -5340,7 +5342,7 @@ struct AppState {
     //     moves (a group framing is not a hold; undo.cpp), and by the three
     //     playhead MOVEMENT OWNERS
     //     (Viewport::move_playhead_to, land_playhead_on_marker,
-    //     land_playhead_on_source_frame) — play-then-stop leaves the hold
+    //     land_playhead_on_domain_frame) — play-then-stop leaves the hold
     //     standing, a moved playhead does not. THE TWO LANDS CLEAR ONLY WHEN
     //     THEY MOVE THE CURSOR (architect 2026-09-26): a land onto the sample
     //     the playhead already holds keeps the bit, so an editor opened on
@@ -13305,8 +13307,20 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
 // iterations mode") and the stored bit is not read. Every reader asks this,
 // never the bit: the posture below and the button's lit face
 // (redesign_button_selected); the bit's writers are listed at it.
+//
+// THE PHASE RESET VIEW HOLDS THE LAMP DARK OUTSIDE GRID ITERATIONS (architect
+// 2026-10-11 ~02:05, "it has no meaning there"): on the P column no flag is a
+// value-drag target unless the mode paints bound cells (value_drag_target's
+// payload arm is warp-only, its bound arm marker_paints_iter_cells), so the
+// lamp is UNLIT AND GREY there in either audio view and the posture false —
+// the plain flag drag is the horizontal phase-reset move again wherever the
+// view admits it. THE STORED BIT IS KEPT, NOT PUT OUT: a lamp lit on the
+// warp column shows lit again on the way back, nothing spent in between
+// (no value drag can begin here to spend it). Bare `[` there is the greyed
+// roster act's key and cards why (kValueDragPhaseResetViewCard).
 inline bool value_drag_armed(const AppState& a) {
-    return a.value_drag_lamp || a.iteration_mode_enabled;
+    if (a.iteration_mode_enabled) return true;
+    return a.value_drag_lamp && a.active_markers_view != 'P';
 }
 
 // IS THE FLAG'S PLAIN DRAG THE VALUE DRAG HERE — the gesture's POSTURE, and
@@ -13320,9 +13334,11 @@ inline bool value_drag_armed(const AppState& a) {
 // answered this once before, bare `x` and the same button, 2026-09-10 to
 // 2026-09-13, deleted then for the view's automation; this one differs in
 // being SPENT BY USE.) THE WHOLE RULE, stated once:
-//   * LAMP LIT — YES, IN EVERY VIEW, SOURCE VIEW TOO ("there's no reason not
-//     to … the only reason we kept it off is the difficulty in distinguishing
-//     a horizontal vertical drag"): every plain flag press-and-drag is the
+//   * LAMP LIT — YES, IN EITHER AUDIO VIEW ON THE WARP COLUMN, SOURCE VIEW
+//     TOO ("there's no reason not to … the only reason we kept it off is the
+//     difficulty in distinguishing a horizontal vertical drag"; the phase
+//     reset view holds the lamp dark outside grid iterations, 2026-10-11 ~02:05,
+//     value_drag_armed): every plain flag press-and-drag is the
 //     value drag on whatever value_drag_target answers, and a press on a cell
 //     it cannot step is the silent non-event — never the horizontal move;
 //   * LAMP DARK — NO, IN EVERY VIEW: no flag drag is the value drag. Where
@@ -13608,6 +13624,28 @@ struct MarkerWalkStep {
 MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
                                 bool forward);
 
+// WHERE A HISTORY FLAG LANDS THE PLAYHEAD, IN THE DISPLAYED DOMAIN — the Tab
+// walk's, the focus click's, the Center press's and the walk's seed
+// (history_diff_cycle_target below), each landing it through the movement
+// owner's domain form (land_playhead_on_domain_frame, input_handler.h): the
+// flag's own frame forward-mapped, and on a NUDGED pair THE PAINTED CENTRE
+// (2026-10-11) — the mean of its two halves' frames EACH MAPPED into the
+// displayed domain first (std::nearbyint), the basis the painter centres the
+// split triangle on (render_history_diff_flags maps both stems and stands the
+// flag between the painted columns). A midpoint taken in SOURCE frames and
+// then mapped would leave the triangle across a warp breakpoint in target
+// view, where the map's slope differs on the pair's two sides; in source view
+// the map is the identity and the two agree. The pair's then / now SOURCE
+// frames stay what pairing and revert read; only the landing is the domain's.
+inline int64_t history_diff_flag_landing_domain_frame(
+        const AppState& a, const GuiAudio& audio, const HistoryDiffFlag& f) {
+    if (!f.nudged()) return source_frame_to_active_domain(a, audio, f.time_frame);
+    const int64_t then_d = source_frame_to_active_domain(a, audio, f.then_frame);
+    const int64_t now_d  = source_frame_to_active_domain(a, audio, f.now_frame);
+    return static_cast<int64_t>(std::nearbyint(
+        (static_cast<double>(then_d) + static_cast<double>(now_d)) / 2.0));
+}
+
 // THE `h` VIEW'S DIFF-FLAG CYCLE, ITS STOP — the index a bare Tab (forward)
 // or Shift+Tab (back) would focus in history_mode.flags, or -1 where the press
 // is a silent consumed no-op. ONE OWNER, ONE READER: the act
@@ -13629,14 +13667,13 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
 // ahead.
 //
 // THE COMPARE IS IN THE ACTIVE DISPLAY DOMAIN, both sides: the flags carry
-// SOURCE frames (the act lands them through land_playhead_on_source_frame)
-// and playhead_cursor_sample is a domain frame, so each candidate
-// forward-translates. The mode switches no audio view, so it stands in
-// whichever of source (identity) or target (the live map) the tab was in.
+// SOURCE frames and playhead_cursor_sample is a domain frame, so each
+// candidate forward-translates. The mode switches no audio view, so it stands
+// in whichever of source (identity) or target (the live map) the tab was in.
 //
-// THE CANDIDATE'S FRAME IS WHERE IT LANDS (history_diff_flag_landing_frame,
-// render.h — a nudged pair's midpoint), so a playhead the walk parked on a
-// pair is ON it here too.
+// THE CANDIDATE'S FRAME IS WHERE IT LANDS (history_diff_flag_landing_domain_-
+// frame above — a nudged pair's painted centre), so a playhead the walk parked
+// on a pair is ON it here too.
 //
 // FIRST/LAST HIT IS THE NEAREST HIT: rebuild_history_diff_flags leaves the
 // list sorted ASCENDING BY time_frame and the source->domain translation is
@@ -13660,9 +13697,8 @@ inline int history_diff_cycle_target(const AppState& a, const GuiAudio& audio,
     }
     const int64_t ph_f = a.playhead_cursor_sample;
     auto frame_of = [&](int i) -> int64_t {
-        return source_frame_to_active_domain(
-            a, audio,
-            history_diff_flag_landing_frame(flags[static_cast<std::size_t>(i)]));
+        return history_diff_flag_landing_domain_frame(
+            a, audio, flags[static_cast<std::size_t>(i)]);
     };
     if (forward) {
         for (int i = 0; i < n; ++i)
@@ -14614,6 +14650,14 @@ inline constexpr const char* kIterationLockCard =
 // already makes.
 inline constexpr const char* kValueDragIterationsCard =
     "Value drag is always on in grid iterations";
+
+// BARE `[` IN THE PHASE RESET VIEW WITH GRID ITERATIONS DARK (architect
+// 2026-10-11 ~02:05, "it has no meaning there"): no flag there is a value-drag
+// target, the button greys unlit (value_drag_armed), and the bound chord
+// answers with this one clause, the greyed roster act's card. The stored lamp
+// is left as it was.
+inline constexpr const char* kValueDragPhaseResetViewCard =
+    "The phase reset view has no values to drag";
 
 // (THE TWO LAMP-EXCLUSION SENTENCES stood here from 2026-09-10 to
 // 2026-09-12 — `kAddToSelectionLitCard` "Turn off add to selection first" and
@@ -16712,16 +16756,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // iteration gate admits (its delta (b)), cards the reason at its own
         // arm (kValueDragIterationsCard). THE `h` VIEW greys and
         // hides it through the derived partition above (its allowlist does
-        // not name the chord; the posture is false there in any case). IT
-        // STAYS LIVE IN T+P WITH GRID ITERATIONS DARK, where no cell is a
-        // target and a lit lamp makes every flag drag the silent non-event —
-        // the lamp still changes what a drag does there (it turns the
-        // horizontal phase-reset move off), and a grey there would strand a
-        // lamp lit elsewhere with no road to put it out (a greyed button
-        // refuses its press). Its lamp, not this bit, reports the mode.
+        // not name the chord; the posture is false there in any case). AND
+        // IT GREYS, UNLIT, IN THE PHASE RESET VIEW WITH GRID ITERATIONS DARK
+        // (architect 2026-10-11 ~02:05, "it has no meaning there"): no P flag
+        // is a target there, so value_drag_armed holds the lamp dark in that
+        // view and keeps the stored bit — a lamp lit on the warp column is
+        // not stranded, it shows lit again on the way back — and bare `[`
+        // cards the reason at its own arm (kValueDragPhaseResetViewCard).
+        // Its lamp, not this bit, reports the mode.
         case RedesignButton::IconValueDrag:
             return !active_view_state(a).read_only &&
-                   !a.iteration_mode_enabled;
+                   !a.iteration_mode_enabled &&
+                   a.active_markers_view != 'P';
         // THE FIVE HISTORY BUTTONS ANSWER DEAD OUTSIDE THE `h` VIEW
         // (2026-08-18) — the ICON ROW's own settled rule, which is where they
         // live again since the roster relayout: what a mode refuses simply
@@ -19192,7 +19238,7 @@ bool point_in_trim_bridge_span(const AppState& app, int mouse_x, int mouse_y);
 // create) were this contract's recorded LIVE-BASIS exception and now convert
 // through item_viewport_basis instead, the same painted twin. THE RECORDED
 // LIVE-BASIS FAMILY IS NARROWER NOW: the post-commit land/follow placements
-// alone — land_playhead_on_marker, land_playhead_on_source_frame and the
+// alone — land_playhead_on_marker, land_playhead_on_domain_frame and the
 // follow lamp's camera paging, which WRITE the viewport rather than read a
 // snapshot of it, so staying live is what keeps them from chasing their own
 // tail — while walls stay integer source frames outside either basis;

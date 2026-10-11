@@ -15,7 +15,7 @@ struct GuiTargetRender;
 // contract is at PendingMarkerPress, app_state.h). THE CROSSING FORKS ON THE
 // VALUE DRAG'S POSTURE and this gesture is the other half: while the VALUE
 // DRAG IS ARMED (bare `[`, a one-shot, or grid iterations standing;
-// value_drag_armed / value_drag_posture, app_state.h, 2026-10-11) the flag's plain drag is the VERTICAL one in every view
+// value_drag_armed / value_drag_posture, app_state.h, 2026-10-11) the flag's plain drag is the VERTICAL one in every view (the phase reset view holds the lamp dark outside grid iterations, ~02:05)
 // (ValueDragOps, value_drag.{h,cpp}) and this one does not begin at all, on
 // any flag — "we never allow multi-axis dragging; flags move up and down or
 // not at all" (architect 2026-09-10). With the lamp DARK this one is the

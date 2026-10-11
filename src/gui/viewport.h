@@ -591,7 +591,7 @@ struct Viewport {
     //   * input_pointer's two direct cursor writes:
     //     seat_playhead_on_source_frame — the write every marker land, Tab/`c`
     //     jump and history diff-flag click rides, whether it arrives through
-    //     land_playhead_on_marker / land_playhead_on_source_frame or through
+    //     land_playhead_on_marker / land_playhead_on_domain_frame or through
     //     reseat_playhead_on_marker — and the region
     //     sweep's own per-motion cursor write (apply_region_drag_motion, the
     //     drag carrying the playhead on its moving end).
