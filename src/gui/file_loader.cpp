@@ -431,11 +431,10 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     selection.clear_selection();
     app.active_markers_view    = 'W';
     app.drag = DragState{};
-    // The flag's OTHER drag, cleared with its sibling (2026-09-10). It has no
-    // lamp to leave standing since 2026-09-13 — whether a flag drag is this
-    // one is the view's answer (value_drag_posture) — and the sticky ctrl
-    // below is a lamp this body leaves standing: it resets the in-flight
-    // GESTURE state alone.
+    // The flag's OTHER drag, cleared with its sibling (2026-09-10). Its lamp
+    // (value_drag_lamp, since 2026-10-11) and the sticky ctrl below are lamps
+    // this body leaves standing — the fresh AppState's own, both dark: it
+    // resets the in-flight GESTURE state alone.
     app.value_drag = ValueDragState{};
     app.region_drag = RegionDragState{};
     app.pending_marker_press = PendingMarkerPress{};

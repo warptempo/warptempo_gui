@@ -79,8 +79,8 @@
 //
 // VALUEDRAG IS THE EIGHTH (architect 2026-09-10, with the value drag):
 // `ns-resize`, the vertical twin of the trim bridge's `ew-resize`, worn over a
-// flag box whose cell the VALUE DRAG can step wherever the view arms it
-// (value_drag_posture, app_state.h, since 2026-09-13) — the
+// flag box whose cell the VALUE DRAG can step while its lamp arms it
+// (value_drag_posture, app_state.h, the lamp's since 2026-10-11) — the
 // tempo on an owning flag, a bound on a bound cell — and kept for the whole
 // gesture by the live-drag rule the marker and trim drags already
 // take. It is the second kind with an ALT NAME (`size_ver`), the same

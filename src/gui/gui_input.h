@@ -828,11 +828,16 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // far side of the keyboard and belongs to trim by feel), bound in
         // both modes as `f` and `z` are: it toggles in both audio views, and
         // the `h` view's allowlist refuses it on a card rather than falling
-        // silent. Every modified backtick, and the whole of `[` and `]`, are
-        // unbound. (The backtick was the S+M view selector from 2026-09-19
+        // silent. Every modified backtick is unbound. (The backtick was the S+M view selector from 2026-09-19
         // until the magnification level markers column's deletion 2026-09-23;
         // the lamp was on bare `]` for its first hours, then on bare `[`.)
         case GuiKeys::Grave: return bare;
+        // Toggle Value Drag (architect 2026-10-11), the bare LEFT BRACKET,
+        // bound in both modes as `k` is: the one-shot lamp arming the flag's
+        // value drag (AppState::value_drag_lamp), the `h` view's allowlist
+        // refusing it on a card. Every modified `[`, and the whole of `]`,
+        // are unbound.
+        case GuiKeys::BracketLeft: return bare;
         // Toggle Tooltips (architect 2026-09-29), the bare BACKSLASH, bound in
         // both modes: the lamp is chrome and the `h` view's allowlist admits
         // it. Every modified backslash is unbound. (The key was Synchronize to
@@ -954,12 +959,19 @@ static_assert(chord_is_bound(GuiKeys::Grave, GuiInputState{}, false) &&
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Grave,
                                   GuiInputState{true, false, false}, false) &&
-                  !chord_is_bound(GuiKeys::BracketLeft, GuiInputState{},
-                                  false) &&
+                  chord_is_bound(GuiKeys::BracketLeft, GuiInputState{},
+                                 false) &&
+                  chord_is_bound(GuiKeys::BracketLeft, GuiInputState{},
+                                 true) &&
+                  !chord_is_bound(GuiKeys::BracketLeft,
+                                  GuiInputState{false, true, false}, false) &&
+                  !chord_is_bound(GuiKeys::BracketLeft,
+                                  GuiInputState{true, false, false}, false) &&
                   !chord_is_bound(GuiKeys::BracketRight, GuiInputState{},
                                   false),
               "the backtick is the magnification lamp, bare in both modes and "
-              "no decoration of it; `[` and `]` are unbound");
+              "no decoration of it; bare `[` is the value drag lamp "
+              "(2026-10-11), no decoration of it binds, and `]` is unbound");
 static_assert(chord_is_bound(GuiKeys::Backslash, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Backslash, GuiInputState{}, true) &&
                   !chord_is_bound(GuiKeys::Backslash,

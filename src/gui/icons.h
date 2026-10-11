@@ -168,6 +168,10 @@ enum class Icon {
     AccessoriesTextEditor, // Open Text Editor (bare Enter) — the sets'
                            // accessories-text-editor (architect 2026-10-09)
     EditDelete,          // Delete Folder (the render player)
+    ValueDrag,           // Toggle Value Drag (bare `[`) — a vertical double
+                         // arrow, the drag it arms (architect 2026-10-11:
+                         // "a double-sided arrow with an up and a down";
+                         // never a zoom glyph)
     AppIcon,             // the caption's icon and the program icon outside
                          // the window (tools/app_icon)
 };
@@ -175,7 +179,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 59;
+inline constexpr int kIconCount = 60;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -195,7 +199,8 @@ inline constexpr const char* kIconNames[] = {
     "BboxNext", "TabDetach", "SettingsConfigure", "Folder", "AudioXWav",
     "MediaRepeatSingle", "DialogInformation", "DialogError", "WindowClose",
     "EditCopy", "HelpWhatsthis",
-    "GoJumpDeclaration", "AccessoriesTextEditor", "EditDelete", "AppIcon",
+    "GoJumpDeclaration", "AccessoriesTextEditor", "EditDelete", "ValueDrag",
+    "AppIcon",
 };
 static_assert(std::size(kIconNames) == kIconCount);
 

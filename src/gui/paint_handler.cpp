@@ -2387,11 +2387,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   (architect 2026-10-09; cool_edit_paint.h):
 //   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete),
 //   disable (Ctrl+D), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
-//   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09) and
-//   ADD TO SELECTION (bare `k`, the sticky ctrl, the row's ONE LIT FACE
-//   while the mode stands). The four verbs and Open Text Editor are the
-//   row's resting greys on a locked tab; the jump and Add to selection are
-//   not, both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood
+//   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09),
+//   ADD TO SELECTION (bare `k`, the sticky ctrl, lit while the mode stands)
+//   and TOGGLE VALUE DRAG (bare `[`, since 2026-10-11, lit while armed — the
+//   row's two lamps). The four verbs, Open Text Editor and Toggle Value Drag
+//   are the row's resting greys on a locked tab; the jump and Add to
+//   selection are not, both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood
 //   between Toggle inherit and Add to selection until 2026-09-29; Copy is
 //   the icon row's since, and Edit Flag was deleted);
 //   THE MARKER WALK (kTransportWalkGroup) — PREVIOUS MARKER (Shift+Tab, its
@@ -2538,9 +2539,9 @@ constexpr TransportRowDef kTransportGroup[] = {
 // THE GROUP IS FIVE since later the same day, the architect seating ADD TO
 // SELECTION himself — "add group selection icon ('Add to Selection') after
 // toggle inherit, before the separator". It is the group's one MODE (bare `k`,
-// EditSelect: the pointer with a plus) and therefore the only
-// member of this table that ever wears the lit fill; the four verbs above are
-// acts that complete.
+// EditSelect: the pointer with a plus) and therefore wears the lit fill; the
+// four verbs above are acts that complete. (Toggle Value Drag, the group's
+// second lamp since 2026-10-11, is the other member that does.)
 //
 // It was SEVEN from 2026-09-19 until 2026-09-29 — the four verbs, the EDIT
 // FLAG BUTTON (2026-08-27), COPY RESOLVED VALUE (2026-08-29) and ADD TO
@@ -2567,6 +2568,12 @@ constexpr TransportRowDef kTransportGroup[] = {
 // editor, no lamp; it greys where Return would open nothing and on a locked
 // tab, and the `h` view does not paint it (its roster entry, app_state.h).
 //
+// THE GROUP IS EIGHT SINCE 2026-10-11 (architect ~00:40): TOGGLE VALUE DRAG —
+// bare `[`, the sets' vertical double arrow (ValueDrag) — IMMEDIATELY RIGHT
+// OF ADD TO SELECTION, the group's second lamp and its last member ("arm Add
+// to Selection, pick several flags, then arm this and drag them"). A
+// one-shot: the drag it arms puts it out (its roster entry, app_state.h).
+//
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
 // (architect), taking its glyph with it — its only consumer.)
@@ -2578,6 +2585,7 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconJumpToDefiningMarker, icons::Icon::GoJumpDeclaration},
     {RedesignButton::IconOpenTextEditor,       icons::Icon::AccessoriesTextEditor},
     {RedesignButton::IconAddToSelection,       icons::Icon::EditSelect},
+    {RedesignButton::IconValueDrag,            icons::Icon::ValueDrag},
 };
 // THE MARKER-WALK GROUP (architect 2026-08-15), the right block's second
 // group between the verbs and the arrows — FOUR SINCE 2026-09-29 (architect),
@@ -2860,7 +2868,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // gripper, the dark time field, the end bar — with THE STATE LINE on the
     // free face past it (the block at the clock below) — then THE RIGHT
     // BLOCK, packed against the lane's right edge: the MARKER-VERB GROUP (its
-    // seven counted off kMarkerVerbGroup), the MARKER-WALK GROUP (Previous
+    // eight counted off kMarkerVerbGroup), the MARKER-WALK GROUP (Previous
     // Marker, Next Marker, Center and Switch Tab, kTransportWalkGroup), the
     // four CARDINAL ARROWS (↓ ↑ ← →, kTransportArrowGroup) and the TRANSPORT
     // THREE (kTransportGroup), each Cool Edit's group, two W of face between
@@ -2876,23 +2884,24 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (paint_bottom_strip).
     //
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
-    // case; the case 23 since 2026-10-09 ~10:25, the verbs seven since
-    // Open Text Editor joined that evening, the air 5 / 5 since 2026-10-09
+    // case; the case 23 since 2026-10-09 ~10:25, the verbs eight since
+    // Toggle Value Drag joined 2026-10-11, the air 5 / 5 since 2026-10-09
     // ~00:30 — Cool Edit's 6 / 4 before it, the same sum): a group of n is
-    // 5 + 5 + 23n + 5 + 6 = 23n + 21, so the block is the 7 verbs' 182, the walk's 113, the
-    // arrows' 113 and the transport's 90 with three gaps of 2, 504 W — on the
+    // 5 + 5 + 23n + 5 + 6 = 23n + 21, so the block is the 8 verbs' 205, the walk's 113, the
+    // arrows' 113 and the transport's 90 with three gaps of 2, 527 W — on the
     // tablet's 768 at 300 %, the lane W 1..766 inside the program frame's
-    // columns (2026-10-10), starting at W 263, the clock's group W 3..100
+    // columns (2026-10-10), starting at W 240, the clock's group W 3..100
     // (Tahoma's ~67-W cell and its two 5-W pads, a ~77-W field; 2026-10-10),
-    // the state line's first ink at W 106, clipped at W 261 (~155 W of
+    // the state line's first ink at W 106, clipped at W 238 (~132 W of
     // line). IN THE `h` VIEW (the hide,
-    // 2026-10-07; Open Text Editor hidden there with the verbs) the block is
+    // 2026-10-07; Open Text Editor and Toggle Value Drag hidden there with
+    // the verbs) the block is
     // 1 verb + 4 walk + 2 arrows + 2 transport in four groups, 44 + 113 + 67
     // + 67 + 6 = 297 W, the line's room 364 W. THE ROW CARRIES NO COLLISION
     // RULE — none of the redesign does — and the crop-at-the-floor allowance
     // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
-    // the clock's group once the window falls below about 1 + 2 + 98 + 504 +
-    // 1 = 606 W outside the view (the program frame's two lines among them).
+    // the clock's group once the window falls below about 1 + 2 + 98 + 527 +
+    // 1 = 629 W outside the view (the program frame's two lines among them).
     // THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.

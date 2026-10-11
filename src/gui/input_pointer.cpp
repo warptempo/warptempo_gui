@@ -223,7 +223,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // It admits SHIFT — Revert, the one translated twin (the lift's chord
     // build below) — and nothing else; a one-shot act, no radio, no repeat.
     {RedesignButton::OpenProject, GuiKeys::O,  true,  false, false, false},   // Ctrl+O (+Shift: Ctrl+Alt+O)
-    {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false},   // Ctrl+S (in `h`: Ctrl+Shift+S, save_button_publishes)
+    // SAVE admits SHIFT since 2026-10-11 (architect): its shift-click and
+    // long press are Ctrl+Shift+S, the publish chord (run_publish_chord) —
+    // the row's own key under both modifiers, no translation.
+    {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false},   // Ctrl+S (+Shift, and in `h`: Ctrl+Shift+S, save_button_publishes)
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false,  true},   // Ctrl+Shift+Z
     // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the value pair's
@@ -529,8 +532,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // EIGHTEEN
-    // rows (re-counted 2026-10-09, when Open Text Editor joined the verb
+    // NINETEEN
+    // rows (re-counted 2026-10-11, when Toggle Value Drag joined the verb
     // group; the succession is in git history),
     // every chord already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
@@ -657,8 +660,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // is refused at the band gate and the long press reaches nothing.
     {RedesignButton::IconOpenTextEditor,
      GuiKeys::Return, false, false, false, false},                             // bare Return
-    // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH and
-    // last since 2026-10-09, behind Open Text Editor (the group's count has
+    // ADD TO SELECTION (architect 2026-08-18), the verb group's SEVENTH
+    // since 2026-10-09, behind Open Text Editor (the group's count has
     // moved around it with every arrival and departure; the succession is in
     // git history):
     // BARE `k`, which was free — he picked it over `n`
@@ -679,6 +682,20 @@ constexpr ToolbarChord kToolbarChords[] = {
     // about this row's chord.
     {RedesignButton::IconAddToSelection,
      GuiKeys::K,      false, false, false, false},                             // bare k
+    // TOGGLE VALUE DRAG (architect 2026-10-11 ~00:40), the verb group's
+    // EIGHTH and last, immediately right of Add to Selection: BARE `[`, which
+    // was free, the one-shot lamp that arms the flag's value drag
+    // (AppState::value_drag_lamp; the rule at value_drag_posture). Add to
+    // Selection's shape exactly — the lamp reads the bit the key flips, the
+    // press dispatches the chord at the LIFT, the key acts at the press. ITS
+    // GATES ARE THE KEY'S BY CONSTRUCTION: the read-only allowlist does not
+    // name it (the lock refuses both flag drags, so the lamp would arm
+    // nothing), the iteration gate admits it (the bound cells are its
+    // targets), and the `h` view's allowlist does not name it, so the derived
+    // partition greys it there and the view hides it. NOT A RADIO, NO REPEAT
+    // (a toggle repeats onto itself), NO MODIFIER ADMITTED.
+    {RedesignButton::IconValueDrag,
+     GuiKeys::BracketLeft, false, false, false, false},                        // bare [
     // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
     // behind a separator and ahead of the arrows — FOUR ROWS since 2026-09-29
     // (architect): PREVIOUS MARKER, NEXT MARKER (the walk), CENTER and SWITCH
@@ -1443,9 +1460,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the face,
 // which since 2026-08-08 has nothing left to arbitrate on row 2: the ONE button
 // whose shifted twin the mode consumed while its base chord stood — Render —
-// is dead on both shapes now, and Save admits no shift press at all. (Save's
-// own base chord is what this walk asks about, its shift column being false in
-// the table and in redesign_button_shift_admits alike.) (2) A
+// is dead on both shapes now, and Save's shifted press (admitted since
+// 2026-10-11) is the very publish chord its plain lift spells in the view, so
+// its two shapes are one answer here. (The walk asks Save's chord with the
+// shift set, save_button_publishes below.) (2) A
 // button the READ-ONLY tab bit refuses is not this function's business: that
 // refusal is the lock's, and it applies inside the view exactly as outside it.
 // SINCE 2026-08-15 THE LOCK GREYS ITS OWN SET (redesign_button_enabled's
@@ -1486,9 +1504,12 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // Ctrl+S, its table chord, is the plain save there, with no button of its
 // own. Outside the view the button is that plain save. Asked by the lift's
 // chord build (finish_chrome_press_release) and by the `h` chord walk below,
-// so the face and the press read one chord. Save admits no modified press
-// (it is in neither shift- nor ctrl-admission), so nothing else ever shifts
-// its chord.
+// so the face and the press read one chord. SAVE ADMITS SHIFT since
+// 2026-10-11 (architect: the publish chord as its twin, Open's model): its
+// shift-click and long press spell Ctrl+Shift+S in EITHER view — outside
+// the view the twin, inside it the same chord this term already spells, so
+// the `h` view's tap, shift-click and long press run one act. It admits no
+// ctrl.
 static bool save_button_publishes(RedesignButton id, bool history_view) {
     return id == RedesignButton::Save && history_view;
 }
@@ -2221,7 +2242,7 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // definition, exactly as a bound drag leaves the band). Capture-free, so
     // there is a visible cursor to keep.
     if (app.value_drag.active) return GuiCursorKind::ValueDrag;
-    // THE PENDING ARM IS THE SAME ARM FOR BOTH DRAGS, and where the view makes
+    // THE PENDING ARM IS THE SAME ARM FOR BOTH DRAGS, and where the lamp makes
     // the flag's plain drag the vertical one it has to ask the posture's
     // question (value_drag_posture, app_state.h): sub-threshold the pointer
     // still rests on the flag box it pressed, where the hover arm below
@@ -2229,13 +2250,18 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // one, so the pending reads the same predicates and the cue cannot flip at
     // the crossing. A marker drag cannot be live here at all while the posture
     // stands — the crossing begins one gesture or none — so `drag.active`
-    // needs no term. (Nothing a pending press can outlive moves the posture:
-    // the drag-modal gate swallows every chord that could switch a view.)
+    // needs no term. WITH THE LAMP DARK WHERE THE VIEW REFUSES THE HORIZONTAL
+    // MOVE (horizontal_flag_drag_refused, 2026-10-11) the crossing begins
+    // nothing, so the pending wears the Arrow, the hover arm's own answer
+    // there. (Nothing a pending press can outlive moves either: the drag-modal
+    // gate swallows every chord that could switch a view or flip the lamp.)
     if (value_drag_posture(app) && app.pending_marker_press.active) {
         return value_drag_target(app, audio, app.pending_marker_press.marker,
                                  app.pending_marker_press.cell)
                    ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
     }
+    if (horizontal_flag_drag_refused(app) && app.pending_marker_press.active)
+        return GuiCursorKind::Arrow;
     if (app.drag.active || app.pending_marker_press.active)
         return GuiCursorKind::TrimResize;
     // THE HEAD DRAG KEEPS ITS CUE (architect 2026-10-09 ~17:40), the marker
@@ -2441,14 +2467,14 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // read-only tab) or does not exist (the `h` view's diff flags, which
         // take clicks alone) the box still wears it, one shape for the one
         // surface. THE EXCEPTIONS ARE THE VALUE DRAG'S POSTURE (2026-09-10,
-        // the view's own since 2026-09-13 — which is also why the warp column's
-        // off-home view no longer reaches this resting answer: target view on
-        // that column IS the posture) and the ADD TO SELECTION lamp
-        // (2026-09-12) — and they are exceptions because each changes WHICH
-        // GESTURE the surface offers rather than merely whether it will
-        // succeed: under either the horizontal move is off on every flag, so a
-        // box that still promised it would promise a gesture that no longer
-        // exists.
+        // the lamp's since 2026-10-11), THE DARK LAMP'S VIEW REFUSAL (T+W and
+        // T+P under grid iterations, horizontal_flag_drag_refused, the same
+        // day — which is why the warp column's off-home view never reaches
+        // this resting answer) and the ADD TO SELECTION lamp (2026-09-12) —
+        // and they are exceptions because each changes WHICH GESTURE the
+        // surface offers rather than merely whether it will succeed: under
+        // any of them the horizontal move is off on every flag, so a box that
+        // still promised it would promise a gesture that does not exist.
         // Those forks are at the arms below. It reads
         // hit_test_flag — the painter's published boxes, the same predicate the
         // press claims and the nav surface carves itself out with — so it
@@ -2458,8 +2484,8 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
         // selection act, which carries no cue) and AHEAD of the strip's Arrow,
         // which is what used to answer here.
         // THE VALUE DRAG POSTURE TAKES THIS ARM WHILE IT STANDS (architect
-        // 2026-09-10 for the gesture, 2026-09-13 for the posture being the
-        // view's — value_drag_posture, app_state.h), and it is the map's
+        // 2026-09-10 for the gesture, 2026-10-11 for the posture being the
+        // lamp's — value_drag_posture, app_state.h), and it is the map's
         // standing rule applied rather than an exception to it: there the
         // flag's plain drag is the VERTICAL one, so a box whose cell the drag
         // can act on wears the vertical resize — and a box it cannot act on
@@ -2515,9 +2541,13 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                 return value_drag_target(app, audio, flag_hit, cell)
                            ? GuiCursorKind::ValueDrag : GuiCursorKind::Arrow;
             }
-            // Off the value drag's posture the flag's plain drag is the
-            // HORIZONTAL move, so its box wears TrimResize — the cursor
-            // promises the gesture.
+            // THE DARK LAMP WHERE THE VIEW REFUSES THE HORIZONTAL MOVE
+            // (architect 2026-10-11; horizontal_flag_drag_refused — T+W, and
+            // T+P under grid iterations): no flag drag exists there at all,
+            // so the box wears the Arrow, what a point arming nothing wears.
+            if (horizontal_flag_drag_refused(app)) return GuiCursorKind::Arrow;
+            // Everywhere else the flag's plain drag is the HORIZONTAL move,
+            // so its box wears TrimResize — the cursor promises the gesture.
             return GuiCursorKind::TrimResize;
         }
         // THE PLAYHEAD'S HEAD WEARS TrimResize (architect 2026-10-09 ~17:40,
@@ -8424,7 +8454,7 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE ROSTER'S POINTER WALK over the whole roster (row 1's three menu
-// anchors, the icon row's twenty-seven and the bottom row's eighteen: the
+// anchors, the icon row's twenty-seven and the bottom row's nineteen: the
 // enum's own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; a MODAL's yield leaves a bottom-row member with
 // a zero rect, as do the icon row's overflow rule and its history stand-ins a
@@ -11469,18 +11499,17 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // OFF-HOME FLAG DRAG — a WARP flag in target view (the tempo drag that
         // once armed there is deleted, see marker_drag.h; the P column drags
         // wherever it stands, which is T+P alone since 2026-09-21) — is the
-        // posture fork's below.
-        // THE VALUE DRAG FORKS AHEAD OF THE LOCK (architect 2026-09-10): wherever
-        // the view makes it so — target view on the warp column, and the phase
-        // column under grid iterations (value_drag_posture, app_state.h, where
-        // the whole rule is stated, 2026-09-13) — the flag's plain drag is the
-        // VERTICAL one, so the crossing begins that gesture or NONE — "we
+        // view refusal's below, behind the lamp's fork.
+        // THE VALUE DRAG FORKS AHEAD OF THE LOCK (architect 2026-09-10): while
+        // the VALUE DRAG LAMP stands lit (value_drag_posture, app_state.h,
+        // where the whole rule is stated — the lamp's since 2026-10-11, the
+        // view's from 2026-09-13) the flag's plain drag is the VERTICAL one
+        // in every view, so the crossing begins that gesture or NONE — "we
         // never allow multi-axis dragging; flags move up and down or not at
         // all". The return is unconditional for that reason: a flag the value
         // drag cannot act on does not fall back to the horizontal move under
-        // the posture, it simply does not drag. (Nothing is lost by it: T+W is
-        // where the home-view binding refuses the horizontal warp drag, and
-        // the lit lamp's lock refuses the horizontal phase-reset drag.) The
+        // the lamp, it simply does not drag, and the lamp stays lit (only a
+        // drag that BEGAN spends it, at its commit). The
         // two AUTHORING GATES are not skipped, they are ASKED INSIDE the
         // target rule instead — value_drag_target reads
         // authoring_locked for the payload and the tab's read-only bit for a
@@ -11502,7 +11531,15 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 value_drag.apply_motion(mouse_y);
             return;
         }
-        // No home-view test: T+W is the posture's, so S+W and T+P with grid
+        // THE DARK LAMP WHERE THE VIEW REFUSES THE HORIZONTAL MOVE (architect
+        // 2026-10-11): T+W, the home-view binding's one off-home flag state,
+        // and T+P under grid iterations, whose lock refuses the move — the
+        // drag is NOTHING there, silent as this whole surface is, the press's
+        // click acts standing (horizontal_flag_drag_refused, app_state.h).
+        // Until that day the view made the drag the value drag there, which
+        // is how a sideways drag changed a tempo unnoticed.
+        if (horizontal_flag_drag_refused(app)) return;
+        // No home-view test: T+W returned above, so S+W and T+P with grid
         // iterations dark (T+P the phase-reset column's only view since
         // 2026-09-21) reach here, both of them authoring views.
         if (authoring_locked(app)) return;

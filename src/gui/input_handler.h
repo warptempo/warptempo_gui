@@ -1440,9 +1440,9 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors, the icon row's twenty-seven and row 8's eighteen
+    // three menu anchors, the icon row's twenty-seven and row 8's nineteen
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-10):
+    // counts re-derived from them 2026-10-11):
     //   THE ICON ROW, 17 + 6 + 1 + 3 = 27 — the left walk's seventeen
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Value and
     //   Render; Full Zoom Out, Waveform Magnification, Follow and Restrict
@@ -1455,9 +1455,10 @@ struct GuiInputHandler {
     //   stand-ins publishing empty rects) and 14 inside it (the stand-ins in,
     //   the two authoring groups they replace out, and the view's hide
     //   leaving Full Zoom Out and Enable Tooltips alone of their groups);
-    //   ROW 8, 7 + 4 + 4 + 3 = 18 — the MARKER-VERB GROUP's seven
+    //   ROW 8, 8 + 4 + 4 + 3 = 19 — the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
-    //   Marker, Open Text Editor since 2026-10-09, Add to Selection), the walk
+    //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle
+    //   Value Drag since 2026-10-11), the walk
     //   group's four (Previous Marker, Next Marker, Center, Switch Tab), the
     //   four cardinal arrows and the transport three; inside the `h` view the
     //   hide leaves 1 + 4 + 2 + 2 = 9.

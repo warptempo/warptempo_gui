@@ -9,18 +9,21 @@ struct GuiTargetRender;
 
 // THE FLAG'S VALUE DRAG — the second plain-flag drag and the ONE pointer
 // gesture that changes a marker's VALUE (architect 2026-09-10). It runs only
-// where the VIEW makes it the flag's plain drag — TARGET view on the warp
-// column, and the phase column's cells while grid iterations is lit (architect
-// 2026-09-13, retiring the bare `x` lamp that decided it before; the whole
-// rule is at value_drag_posture, app_state.h) — where a plain flag
-// press-and-drag steps the pressed cell's value VERTICALLY and the horizontal
-// marker drag is off on every flag: "we never allow multi-axis dragging; flags
-// move up and down or not at all."
+// while THE VALUE DRAG LAMP is lit — bare `[` and row 8's Toggle Value Drag,
+// a ONE-SHOT this unit's commit puts out (architect 2026-10-11, retiring the
+// view posture of 2026-09-13, under which a sideways drag in T+W changed a
+// tempo unnoticed; the whole rule is at value_drag_posture, app_state.h) —
+// where a plain flag press-and-drag in ANY VIEW, source view included, steps
+// the pressed cell's value VERTICALLY and the horizontal marker drag is off
+// on every flag: "we never allow multi-axis dragging; flags move up and down
+// or not at all." It steps the ONE pressed marker; a multi-selection is not
+// carried.
 //
 // THE PRESS IS THE MARKER DRAG'S: run_marker_click_act runs at the press
 // (stop, select, land, address the cell) and arms
 // PendingMarkerPress; the crossing of the shared drag threshold forks on the
-// posture and begins exactly one of the two gestures. So this unit owns no press
+// posture and begins at most one of the two gestures (with the lamp dark in
+// T+W, and in T+P under grid iterations, neither). So this unit owns no press
 // path, no selection write and no playhead write — a value change is not a
 // movement, and the press already put the playhead where it belongs.
 //
@@ -37,9 +40,10 @@ struct GuiTargetRender;
 // A PASS IS A TEMPO TARGET AND THE DRAG CONVERTS IT (architect 2026-09-10:
 // "the pass inherits whatever it was and then applies on up and down, so we
 // should allow the drag on passes as well"; the payload being a target in
-// target view alone since 2026-09-13, the conversion was deleted that morning
+// target view alone from 2026-09-13, the conversion was deleted that morning
 // as unreachable and restored that afternoon when the arrow step began
-// freezing a pass in target view too). The seed is the arrow step's own
+// freezing a pass in target view too; a target in both views since
+// 2026-10-11, the lamp's posture). The seed is the arrow step's own
 // body — warp_tempo_step_start (warpmarkers_ops.h) — so the value the hand
 // walks from is the EFFECTIVE base the flag shows, and the first motion writes
 // the step's own three fields: `tempo_inherits` false, the landed cents, and
@@ -75,7 +79,7 @@ struct GuiTargetRender;
 // a map bisection over hypothetical builds, a predecessor-eligibility walk and
 // a group seed — was deleted with its keyboard twin on 2026-07-29 and stays
 // deleted and unproposed; the record is at the head of marker_drag.h. This is
-// a view-gated vertical STEP of the same values the arrows step, with no map
+// a lamp-armed vertical STEP of the same values the arrows step, with no map
 // arithmetic anywhere in it, and it is the architect's own ruling of
 // 2026-09-10.)
 struct ValueDragOps {
@@ -105,8 +109,9 @@ struct ValueDragOps {
     // One motion event's whole effect. Cheap and idempotent inside a step.
     void apply_motion(int mouse_y);
     // End the gesture, pushing the tempo arm's one undo entry iff the
-    // marker's tempo pair moved (the rule is above). Called by the release,
-    // by the lost-button arm and by the
+    // marker's tempo pair moved (the rule is above), and SPEND THE LAMP
+    // (AppState::value_drag_lamp, 2026-10-11) — a drag began, so the one-shot
+    // goes dark. Called by the release, by the lost-button arm and by the
     // force-end finalizer alike — every end of this gesture commits what
     // stands, the standing no-cancel rule.
     void commit();

@@ -8,7 +8,7 @@ SELECTED (architect 2026-10-06 and 2026-10-07) — Mist's own files (gnome-theme
 combination. The live set is the device config's `icons` key's, else the chrome spec's (`src/gui/chrome_spec.h`'s
 `icon_set`, Tango under windows-2000): `icons=mist` chooses this folder; a set is chosen by its folder's name.
 
-THE TWO SOURCES. 57 files are gnome-icon-theme 2.30's drawings, 55 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
+THE TWO SOURCES. 58 files are gnome-icon-theme 2.30's drawings, 56 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
 the release squeeze installs: 3.0.0 carries 2.30's sheets, redrawn at five of these seats (below), and at two of the
 five, DocumentRevert and DialogInformation, the architect ruled squeeze's own drawing back. The 2.30 icons are
 multi-icon Inkscape sheets, `src/*.svg`, one drawing per size slot: each file is one sheet's 48x48 slot EXTRACTED as
@@ -16,13 +16,13 @@ a standalone 48-unit drawing
 — the elements of every visible layer that paint inside the slot's rectangle (each probed alone through rsvg-convert),
 the definitions they reference, the root `width="48" height="48" viewBox="0 0 48 48"`, the drawing translated to the
 origin, written with SVG as the default namespace — and verified against a render of the slot from the sheet itself
-(rsvg-convert at 72 px: maximum channel difference 0 on 54 of the 55 distinct drawings, 5 levels of 255 on EditDelete's
-user-trash; EditUndo's and EditRedo's judged on mask-stripped copies, below).
+(rsvg-convert at 72 px: maximum channel difference 0 on 54 of the 56 distinct drawings, 5 levels of 255 on EditDelete's
+user-trash and 1 on ValueDrag's flip arrow; EditUndo's and EditRedo's judged on mask-stripped copies, below).
 Every layer, not only the icon's own: zoom.svg draws part of zoom-original's and zoom-fit-best's pictures from the
 zoom-in layer, and the slot shows them. 2 files are Mist's own scalable drawings, copied from the gnome-themes tarball
 (byte-identical to the copies squeeze installs under `/usr/share/icons/Mist/scalable/`): `Folder` = Mist's
 `places/folder.svg` and `DocumentOpen` (Open Project, the icon row's first button since 2026-10-07) = Mist's
-`actions/document-open.svg` — the only two of the 59 seats Mist changes (it carries nine names, every one a blue
+`actions/document-open.svg` — the only two of the 60 seats Mist changes (it carries nine names, every one a blue
 folder; the wav row and every other toolbar and row 8 seat inherit from gnome). Mist's drawings fill the
 48 canvas edge to edge where GNOME's keep 3–4 units of margin, so its folder reads larger at the same seat.
 
@@ -78,10 +78,22 @@ renders identically to 3.0.0's, maximum difference 0). Import check on a sheet o
 shadow's blur, which both renderers draw. The enumerator keeps its name, as Tango's README says.
 
 REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic` is AppIcon, AudioXWav and
-MusicNote16th. Every other file is worn once: 59 enumerators over 57
-distinct drawings (AccessoriesTextEditor, the Open Text Editor button of 2026-10-09, the last: gedit's notepad
+MusicNote16th. Every other file is worn once: 60 enumerators over 58
+distinct drawings (AccessoriesTextEditor, the Open Text Editor button of 2026-10-09: gedit's notepad
 from 3.0.0's `src/accessories-text-editor.svg`, extracted by the same rule, 46 candidates, 2 kept, maximum difference 0
-against the slot's render at 72 px).
+against the slot's render at 72 px; ValueDrag, below, the last).
+
+THE VALUE DRAG LAMP OF 2026-10-11 (architect ~00:40, Toggle Value Drag, bare `[`: "a double-sided arrow with an up
+and a down would be ideal; if not, something relating to speed, like a speedometer" — never a zoom glyph): ValueDrag
+wears gnome's `object-flip-vertical`, the orange vertical double arrow. Mist carries no such name, so it is gnome's
+drawing by inheritance, by the same road: 3.0.0's `src/object-flip-rotate.svg` (sheet sha256
+`cd9be5ee2271c9a797d49aa9749f70c4ad48f53768f651c166560baba865afa1`), the `object-flip-vertical` layer's 48 slot at
+(76.000122, 300), its two groups kept (the arrow `g9542-4-7` and its blurred shadow `g10278`) with the five gradients
+and the one filter they reference, written by hand (the slot's elements read off the sheet; no other layer paints
+inside the rectangle); maximum difference 1 level of 255 against the slot's render at 72 px (rsvg-convert). GNOME's
+own 48-px PNG is pixel-identical in 2.30.3 and 3.12.0, so the drawing is squeeze's; rsvg-convert sits 0.80 levels
+(mean) from it at 48 over #D4D0C8. One `<filter>`, the shadow's blur, which both renderers draw. The resvg half of the
+import check (the product's own road) is the planner's, outstanding.
 
 THE KNOWN DEPARTURE FROM SQUEEZE'S BYTES (the planner's call, 2026-10-07: 3.0.0, except where the architect ruled
 squeeze's own). Squeeze installs gnome-icon-theme 2.30.3; at 52 of the 57 GNOME seats 3.0.0's slot renders
@@ -216,4 +228,5 @@ licence texts) are not read.
 | GoJumpDeclaration | Jump to Defining Marker | 3.0.0 `src/navigation-icons.svg`, slot `go-jump` 48x48 at (26, 50) | — | — | `1624ee1168fbc6ddb1dbcaa45c90e7ca2c817f12408b3ed737b67d369e4afbd1` |
 | AccessoriesTextEditor | Open Text Editor (Return) | 3.0.0 `src/accessories-text-editor.svg`, slot `accessories-text-editor` 48x48 at (296.062, 39.9963) | — | — | `2641037dac14ccffe5a6b9071fa4dbc32960fa893ade679425a0c53db45b2c84` |
 | EditDelete | Delete Folder | 3.0.0 `src/trash.svg`, slot `user-trash` 48x48 at (696, 50) | — | — | `52a0f172d734ee00d7b819644cbe9c878794e8628e462b81bbcd24e69f4f886a` |
+| ValueDrag | Toggle Value Drag (`[`) | 3.0.0 `src/object-flip-rotate.svg`, slot `object-flip-vertical` 48x48 at (76.000122, 300) (Mist carries no `object-flip-vertical`) | — | — | `e38d7fd7e3539672dadec7347682d4ae043f8efbd390dfe49d152c5d4c36c7d0` |
 | AppIcon | the caption's icon and the program icon outside the window (on #EDECEB: `tools/app_icon/gen_app_icon.sh`) | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | MusicNote16th, AudioXWav | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |

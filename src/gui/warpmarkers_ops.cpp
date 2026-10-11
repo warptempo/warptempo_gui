@@ -929,8 +929,8 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // — the pointer tempo drag and its keyboard twin, the bare Left/Right
     // tempo-image step — were deleted (the list is at the head of
     // marker_drag.h). It was the whole tempo surface anywhere until 2026-09-10,
-    // when the VALUE DRAG joined it — a view-gated vertical pointer step (armed
-    // in target view on this column, value_drag_posture)
+    // when the VALUE DRAG joined it — a vertical pointer step (armed by bare
+    // `[`'s one-shot lamp in either view since 2026-10-11, value_drag_posture)
     // through this arm's own landing owner and this arm's own kind refusal
     // (value_drag.cpp), so the two hands ask the same questions.
     // W+target authors tempo only, never position. The tempo step there

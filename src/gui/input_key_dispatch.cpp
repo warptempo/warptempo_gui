@@ -454,8 +454,10 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
     // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
     // survives as a backstop for entries that outlive a mid-history lock.
-    // Delete, `;`, `i` and the phase-reset propagate's copy/paste chords
-    // (the Ctrl+P three) are likewise
+    // Delete, `;`, `i`, `[` (the value drag lamp, 2026-10-11: on a locked
+    // tab both flag drags refuse, so the lamp would arm nothing — Toggle
+    // Value Drag greys with the verbs) and the phase-reset propagate's
+    // copy/paste chords (the Ctrl+P three) are likewise
     // absent (blocked here); `'` LEFT that list on 2026-09-01 for a
     // state-dependent entry of its own, blocked in the `h` view and admitted
     // outside it (is_load_in_place_player above). The trim gesture left it on
@@ -578,8 +580,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // other subtractions; each named a chord read-only was thought to admit and
 // does not. Re-greped at the base's body.)
 //
-// DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, FIVE
-// entries since 2026-09-19 and each with its own reason (BARE `m` WAS A SIXTH
+// DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, SIX
+// entries since 2026-10-11 and each with its own reason (BARE `m` WAS ANOTHER
 // until 2026-09-10:
 // it was admitted as the one road that LEFT this mode by entering another,
 // enter_bpm_mode having run the same wipe the `i` toggle runs, and the
@@ -635,6 +637,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     — stays refused by the base list beside it. OUTSIDE A LIT LAMP the
 //     chord refuses at its own arm instead, a tie existing only where
 //     brackets do.
+//   * BARE `[` — THE VALUE DRAG LAMP (architect 2026-10-11): since that day
+//     no flag drag is the value drag unless this one-shot is lit, and under
+//     the lock the drag's targets are the bound cells, the mode's own
+//     authoring surface (value_drag_target admits them under the iteration
+//     lock; the payload stays refused there). A lamp writes no store and
+//     pushes nothing, so the lock has nothing to protect from it. The base
+//     list refuses it: on a locked tab no flag drag of either axis acts.
 //
 // THE FACES MIRROR IT BY HAND, exactly as they mirror the base, and the
 // ITERATION HALF OF THAT MIRROR HAS ONE OWNER (iteration_lock_greys,
@@ -713,6 +722,9 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     // THE TIE, ctrl-and-shift exact as its dispatch arm is — which is what
     // keeps the plain Ctrl+N, the inherit toggle, out of this admission.
     if (key == GuiKeys::N && ctrl && shift && !alt) return false;
+    // THE VALUE DRAG LAMP, bare-exact as its dispatch arm is (2026-10-11):
+    // the lamp arms the bound cells' drag, the mode's own authoring surface.
+    if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) return false;
     // The clipboard copy, ctrl-exact as its dispatch arm is — which is
     // what keeps the two ALT-bearing pastes out of this admission.
     if (key == GuiKeys::P && ctrl && !shift && !alt)
@@ -8003,11 +8015,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // is the other). Bare `i`'s ON edge still puts
     // THIS lamp out (architect 2026-09-12), a use case ending rather than a
     // refusal.
-    // THE VALUE DRAG IS NO GATE EITHER: its posture (the view's since
-    // 2026-09-13) may stand beside this lamp harmlessly by construction — with
-    // this one lit a PAYLOAD press arms nothing, so no tempo drag begins there
-    // and the cursor answers Arrow on that box (value_drag_posture,
-    // app_state.h); a bound cell's drag is the posture's as usual.
+    // THE VALUE DRAG LAMP IS NO GATE EITHER: the two may stand lit together
+    // harmlessly by construction — with this one lit a PAYLOAD press arms
+    // nothing, so no tempo drag begins there and the cursor answers Arrow on
+    // that box (value_drag_posture, app_state.h); a bound cell's drag is the
+    // posture's as usual.
     //
     // EVERY OTHER OMISSION IS DELIBERATE: it is legal in both
     // columns and both audio views (a selection is not authored content, so
@@ -8036,10 +8048,27 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // (BARE `x` TOGGLED THE VALUE DRAG LAMP HERE from 2026-09-10 until
-    // 2026-09-13, when the architect deleted the lamp, its button and its bit
-    // for a posture the view derives — value_drag_posture, app_state.h. The
-    // chord is unbound and says nothing.)
+    // BARE `[` (no modifiers): toggle THE VALUE DRAG LAMP (architect
+    // 2026-10-11 ~00:40), the one-shot that arms the flag's value drag — lit,
+    // every flag drag is the value drag in every view; dark, none is
+    // (value_drag_posture, app_state.h, owns the rule). `k`'s shape exactly:
+    // one bit flipped both ways by one key, row 8's Toggle Value Drag button
+    // dispatching this same chord. Its OTHER writer is the drag it arms
+    // (ValueDragOps::commit puts it out at the lift of a value drag that
+    // began). ITS GATES ARE ABOVE THIS DISPATCH: the read-only gate drops it
+    // on a locked tab with the lock's card (both flag drags refuse there, so
+    // the lamp would arm nothing), the grid-iterations gate admits it (the
+    // bound cells are the drag's targets — delta (b)), and the `h` view's
+    // allowlist refuses it (its flags arm no drag). It stops no playback and
+    // writes no store, no undo entry and no dirty mark. THE REPAINT IS THE
+    // BOTTOM LANE'S, `k`'s reason: the lamp must light in the frame it was
+    // asked for. (Bare `x` toggled the first value drag lamp from 2026-09-10
+    // to 2026-09-13 and binds nothing.)
+    if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) {
+        app.value_drag_lamp = !app.value_drag_lamp;
+        viewport.invalidate_rect(bottom_row_area(app));
+        return true;
+    }
 
     // `l` (no modifiers): "Play renders" — THE RENDER PLAYER (architect
     // design 2026-08-28, retiring the external `audio_player` spawn whole):

@@ -13,12 +13,18 @@ struct GuiTargetRender;
 // a pending; motion past the shared threshold begins the move, the press's
 // single-select already naming the grabbed marker; the
 // contract is at PendingMarkerPress, app_state.h). THE CROSSING FORKS ON THE
-// VALUE DRAG'S POSTURE and this gesture is the other half: where the view arms
-// that posture — target view on the warp column, the phase column under grid
-// iterations (value_drag_posture, app_state.h, 2026-09-13) — the flag's plain
-// drag is the VERTICAL one (ValueDragOps, value_drag.{h,cpp}) and this one
-// does not begin at all, on any flag — "we never allow multi-axis
-// dragging; flags move up and down or not at all" (architect 2026-09-10).
+// VALUE DRAG'S POSTURE and this gesture is the other half: while the VALUE
+// DRAG LAMP is lit (bare `[`, a one-shot; value_drag_posture, app_state.h,
+// 2026-10-11) the flag's plain drag is the VERTICAL one in every view
+// (ValueDragOps, value_drag.{h,cpp}) and this one does not begin at all, on
+// any flag — "we never allow multi-axis dragging; flags move up and down or
+// not at all" (architect 2026-09-10). With the lamp DARK this one is the
+// flag's plain drag wherever the view lets it author (S+W, and T+P with grid
+// iterations dark); where the view refuses it — T+W, the home-view binding,
+// and T+P under grid iterations, the lock — the crossing begins NOTHING
+// (horizontal_flag_drag_refused, app_state.h). From 2026-09-13 to
+// 2026-10-11 the view made the drag there the value drag, and a sideways drag
+// in T+W changed a tempo unnoticed.
 // Shared by BOTH COLUMNS and dispatched on app.active_markers_view (begin)
 // and app.drag.drag_mode (commit). It moves ONE marker: groups are never moved (architect 2026-07-29 —
 // the doctrine is at the head of position_nudge.h). It
@@ -44,9 +50,9 @@ struct GuiTargetRender;
 // overruling himself): the tempo surface is no longer the bare Up/Down cent
 // step alone. THE VALUE DRAG is a pointer tempo gesture, and it is a different
 // gesture from the deleted one in every way that made the deletion right — it
-// is VIEW-GATED (target view on the warp column, the phase column's cells
-// under grid iterations — lamp-gated on bare `x` from 2026-09-10 until the
-// architect automated it on 2026-09-13), it is a VERTICAL
+// is LAMP-GATED (bare `[`, a one-shot spent by the drag it arms, since
+// 2026-10-11 — lamp-gated on bare `x` from 2026-09-10, view-gated from
+// 2026-09-13 until the architect put it back on a lamp), it is a VERTICAL
 // STEP of the very value the arrows step, through the arrows' own landing
 // owner, and it carries NO map arithmetic at all: no bisection, no
 // hypothetical builds, no predecessor walk, no group seed. It lives in its own

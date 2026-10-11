@@ -328,8 +328,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // frame by construction, so the ride and its landing now agree too.
     // Reachable through the PHASE-RESET column in target view (its only view
     // since 2026-09-21) — a warp drag is source-home
-    // because the THRESHOLD CROSSING forks T+W into the value drag
-    // (value_drag_posture) before it begins this one; the gate lives there,
+    // because the THRESHOLD CROSSING drops T+W (horizontal_flag_drag_refused,
+    // or the lit lamp's value drag, value_drag_posture) before it begins this
+    // one; the gate lives there,
     // not at the arming press, which is unconditional.
     // A marker drag can never run under live playback — the ARMING PRESS's
     // click act stops playback (run_marker_plain_select) and the drag-modal
@@ -552,7 +553,8 @@ void MarkerDragOps::commit_drag() {
     // No synchronous re-warp at commit: a marker drag can no longer change the
     // displayed target plate. Warp marker drags author in warp's SOURCE home
     // view only (the home-view binding, architect 2026-07-22 — the THRESHOLD
-    // CROSSING forks T+W into the value drag before beginning this one, the
+    // CROSSING drops T+W, into the lit lamp's value drag or into nothing,
+    // before beginning this one, the
     // arming press itself being unconditional so an off-home flag click
     // still selects and lands, and the view cannot toggle mid-gesture since every
     // key but the Ctrl+Q hatch is swallowed while a drag

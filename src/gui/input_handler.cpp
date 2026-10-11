@@ -663,8 +663,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // drag guard: Tab, undo, `t`, and the rest never see a key mid-drag.
     // The editor text-selection drag has its own modal gate above
     // the text-editor handlers; the pointer gestures here — the marker /
-    // VALUE (2026-09-10 — the flag's vertical drag, armed by the view since
-    // 2026-09-13 (value_drag_posture),
+    // VALUE (2026-09-10 — the flag's vertical drag, armed by bare `[`'s lamp
+    // since 2026-10-11 (value_drag_posture),
     // which writes the live store per motion and so must swallow every chord
     // exactly as its horizontal sibling does) /
     // trim / region drags, the one nav drag and its pending

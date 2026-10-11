@@ -34,9 +34,10 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, int origin_y) {
     // THE TARGET RULE, asked of its one owner and asked HERE rather than at the
     // caller, so the crossing and the cursor map cannot answer it differently
     // (value_drag_target, app_state.h). A refusal is SILENT and writes nothing:
-    // a pointer gesture's non-event is its own answer, and where the view makes
+    // a pointer gesture's non-event is its own answer, and where the lamp makes
     // this the flag's plain drag (value_drag_posture) a flag that cannot be
-    // dragged simply does not drag.
+    // dragged simply does not drag — and the lamp stays lit, nothing having
+    // begun (only commit spends it).
     if (!value_drag_target(app, audio, marker, cell)) return false;
 
     // `column` is W or P, the column axis's two letters, so the `== 'P'` forks
@@ -240,6 +241,16 @@ void ValueDragOps::commit() {
     // camera through the reseat).
     ValueDragState st = std::move(app.value_drag);
     app.value_drag = ValueDragState{};
+    // THE LAMP IS SPENT (architect 2026-10-11): a value drag BEGAN — this
+    // body runs only for an active one — so the one-shot that armed it goes
+    // dark at the gesture's end, whatever the drag wrote (a drag that wandered
+    // back to its start still spent it). Every end lands here — the release,
+    // the lost button and the force-end finalizer — so the lamp cannot
+    // outlive its drag. The lane is damaged here so the face goes dark in the
+    // frame the lift ends, as the key's toggle lights it (AppState::
+    // value_drag_lamp; the rule at value_drag_posture).
+    app.value_drag_lamp = false;
+    viewport.invalidate_rect(bottom_row_area(app));
 
     // A BOUND DRAG COMMITS NOTHING AT ALL: every write it made already stands
     // in the store and already damaged the lane, a bracket pushes no undo
