@@ -5891,7 +5891,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // ONE toggle wears
     // MediaRepeatSingle in both its states, the HIGHLIGHT PAIR GoDown and GoUp
     // (architect 2026-10-10, Highlight Next and Highlight Previous, the band
-    // walk's two keys on glass), the UP A FOLDER button GoParentFolder, and
+    // walk's two keys on glass), the UP A FOLDER button Folder, and
     // since 2026-09-01 the LOAD IN PLACE wears DialogOkApply and CLOSE
     // WindowClose — while a word button keeps the
     // label box every prompt and editor button has always had. THE PLAYER'S
@@ -6072,11 +6072,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // (TransportDown, TransportUp) — that move the highlight one row and
         // nothing else (GuiRenderPlayer::move_highlight), so a file is picked
         // silently and then loaded in place or played. They wear GoDown and
-        // GoUp, row 8's own arrows. GoUp is therefore the SAME DRAWING as
-        // Up a Folder's GoParentFolder in both icon sets (the two files are
-        // byte-identical), so the pair's Up and the folder button read alike
-        // side by side; the architect is asked separately about a distinct
-        // Up a Folder glyph.
+        // GoUp, row 8's own arrows.
         glyph_button(AppState::PlayerButtonAct::HighlightDown,
                      icons::Icon::GoDown);
         glyph_button(AppState::PlayerButtonAct::HighlightUp,
@@ -6084,15 +6080,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // UP A FOLDER, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
         // player's move inside `tmp/`): the listings carry no `..` row any
         // more, so the way out of a batch folder is here — beside the lamp,
-        // ahead of the right-flushed pair, on GoParentFolder, Explorer 95's
-        // VIEW_PARENTFOLDER — the folder with the bent arrow (an arrow alone
-        // says "up" about a NUMBER while the act here is leaving a
-        // DIRECTORY). GoUp is untouched — the roster's bare-Up
-        // transport button still wears it, a def being a glyph and several
-        // buttons being free to wear one. It greys at the root through the
-        // act's own wall.
+        // ahead of the right-flushed pair, on THE PLAIN FOLDER, the folder
+        // row's own drawing (architect 2026-10-10 ~22:40: "the open folder
+        // action is to click on the folder … it just has to be enough to
+        // distinguish it from the other up arrow" — the old copy of GoUp
+        // stood beside Highlight Previous's GoUp as two identical arrows; a
+        // def being a glyph and several buttons being free to wear one). It
+        // greys at the root through the act's own wall.
         glyph_button(AppState::PlayerButtonAct::Up,
-                     icons::Icon::GoParentFolder);
+                     icons::Icon::Folder);
         // THE LAST TWO ARE GLYPHS SINCE 2026-09-01 (architect, with the icon
         // row's Load in place moving to the history group): "the media player
         // button should get the checkmark glyph then. Close should then get a

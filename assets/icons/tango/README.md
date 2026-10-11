@@ -36,9 +36,9 @@ same way: 0.87 at 72 px and 2.10 at 33 from rsvg-convert. The enumerator keeps i
 REPEATS, known by position (the files byte-identical): `mimetypes/audio-x-generic` is AppIcon (the caption and the
 program icon), AudioXWav (a wav row) and MusicNote16th (BPM Iterations); `actions/view-refresh` is DialogOkApply
 (Load in Place) and MediaRepeatSingle (Toggle Repeat One); `actions/process-stop` is DialogCancel and WindowClose;
-`actions/go-up` is GoUp and GoParentFolder; `apps/accessories-text-editor` is Unlock (Toggle Read-Only, unlocked) and
+`apps/accessories-text-editor` is Unlock (Toggle Read-Only, unlocked) and
 AccessoriesTextEditor (Open Text Editor, architect 2026-10-09: the bare Enter's act as a button, its drawing a byte copy
-of the file Unlock already wore and was checked as). Every other file is worn once: 60 enumerators over 54 distinct
+of the file Unlock already wore and was checked as). Every other file is worn once: 59 enumerators over 54 distinct
 drawings.
 
 ## Provenance
@@ -117,17 +117,16 @@ the SVG files only; this repository carries the texts.
 | MediaSkipForward | Go to End | scalable/actions/media-skip-forward.svg | — | `5ef8c15b2a3ae34d7decb4874137dff89b00aa2912c3e040966144b039cf53dc` |
 | DialogCancel | Cancel (Render's mid-render face) | scalable/actions/process-stop.svg | WindowClose | `594fca9066549a473625d4a8e603861d079742c13ab6bd69ab6c7a577d77e091` |
 | GoDown | Down (the value ladder) | scalable/actions/go-down.svg | — | `4f18bfddfeb4888870ab3cc309ed46418fbb555945508ddbfbb664a0d513f07d` |
-| GoUp | Up (the value ladder) | scalable/actions/go-up.svg | GoParentFolder | `7d51d4af61813049ee8cf2d3091099404048a3477e5366e646b19627179cce95` |
+| GoUp | Up (the value ladder) | scalable/actions/go-up.svg | — | `7d51d4af61813049ee8cf2d3091099404048a3477e5366e646b19627179cce95` |
 | Lock | Toggle Read-Only, locked | scalable/emblems/emblem-readonly.svg | — | `aabc9fc74cd88ae80669f85f66b66ba980c13769d87b70a36e6b79d07c340382` |
 | Unlock | Toggle Read-Only, unlocked | scalable/apps/accessories-text-editor.svg | AccessoriesTextEditor | `ab79ede7f8b2c1de4b229d3e17c300f270c712c7ddd8a9e9fb1f7b472a26fc89` |
 | BboxPrev | Previous Marker (Shift+Tab) | scalable/actions/go-first.svg | — | `465eba822a18240e059c1ad6d68c120ca9dfe134692b160897597bff9b2712f5` |
 | BboxNext | Next Marker (Tab) | scalable/actions/go-last.svg | — | `5a24d27249a5b557c4be774e322a642a299c0908412d52b6de847e2f2c8a9d82` |
 | TabDetach | Switch Tab | scalable/apps/preferences-system-windows.svg | — | `e7e3bb63358211734430c132fc00064540ca4dd74b6b2e7ea1bc5cbdfdea2c14` |
 | SettingsConfigure | Settings | scalable/categories/preferences-system.svg | — | `12c8cf88a3c5c23667243eeab6aeb499c699039433b23ddf766cca8bf11a1990` |
-| Folder | a folder row | scalable/places/folder.svg | — | `65e24650244b04139c6bb8a76a5e53382d9a09d4cd3eaa6752eff6ef5fafeff1` |
+| Folder | a folder row and Up a Folder (the render player) | scalable/places/folder.svg | — | `65e24650244b04139c6bb8a76a5e53382d9a09d4cd3eaa6752eff6ef5fafeff1` |
 | AudioXWav | a wav row | scalable/mimetypes/audio-x-generic.svg | AppIcon, MusicNote16th | `d7619127acfe25edf59eca10be48776bf33d3a2dfa3a4dba9923032cc5dbc05f` |
 | MediaRepeatSingle | Toggle Repeat One | scalable/actions/view-refresh.svg | DialogOkApply | `a43596670cfced66e14bd9ee984288a9d69490f0f08953ad13f2a6bf5e4d70fb` |
-| GoParentFolder | Up a Folder | scalable/actions/go-up.svg | GoUp | `7d51d4af61813049ee8cf2d3091099404048a3477e5366e646b19627179cce95` |
 | DialogInformation | a NORMAL card | scalable/status/dialog-information.svg | — | `0695314b6f6153c2d6b10da9bf47a2554c3f7b9bf8c0fedafd716c33a3603708` |
 | DialogError | a CRITICAL card | scalable/emblems/emblem-unreadable.svg | — | `7b54655d45b437976aa546f9f200700ae2d6edb3fd471dba5533171a8718512d` |
 | WindowClose | Close (the render player) | scalable/actions/process-stop.svg | DialogCancel | `594fca9066549a473625d4a8e603861d079742c13ab6bd69ab6c7a577d77e091` |

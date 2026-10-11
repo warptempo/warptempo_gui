@@ -8,7 +8,7 @@ SELECTED (architect 2026-10-06 and 2026-10-07) — Mist's own files (gnome-theme
 combination. The live set is the device config's `icons` key's, else the chrome spec's (`src/gui/chrome_spec.h`'s
 `icon_set`, Tango under windows-2000): `icons=mist` chooses this folder; a set is chosen by its folder's name.
 
-THE TWO SOURCES. 58 files are gnome-icon-theme 2.30's drawings, 56 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
+THE TWO SOURCES. 57 files are gnome-icon-theme 2.30's drawings, 55 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
 the release squeeze installs: 3.0.0 carries 2.30's sheets, redrawn at five of these seats (below), and at two of the
 five, DocumentRevert and DialogInformation, the architect ruled squeeze's own drawing back. The 2.30 icons are
 multi-icon Inkscape sheets, `src/*.svg`, one drawing per size slot: each file is one sheet's 48x48 slot EXTRACTED as
@@ -22,8 +22,8 @@ Every layer, not only the icon's own: zoom.svg draws part of zoom-original's and
 zoom-in layer, and the slot shows them. 2 files are Mist's own scalable drawings, copied from the gnome-themes tarball
 (byte-identical to the copies squeeze installs under `/usr/share/icons/Mist/scalable/`): `Folder` = Mist's
 `places/folder.svg` and `DocumentOpen` (Open Project, the icon row's first button since 2026-10-07) = Mist's
-`actions/document-open.svg` — the only two of the 60 seats Mist changes (it carries nine names, every one a blue
-folder; the wav row, Up a Folder and every other toolbar and row 8 seat inherit from gnome). Mist's drawings fill the
+`actions/document-open.svg` — the only two of the 59 seats Mist changes (it carries nine names, every one a blue
+folder; the wav row and every other toolbar and row 8 seat inherit from gnome). Mist's drawings fill the
 48 canvas edge to edge where GNOME's keep 3–4 units of margin, so its folder reads larger at the same seat.
 
 THE EDITS, each in the table's "edited" column, nothing else changed:
@@ -78,13 +78,13 @@ renders identically to 3.0.0's, maximum difference 0). Import check on a sheet o
 shadow's blur, which both renderers draw. The enumerator keeps its name, as Tango's README says.
 
 REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic` is AppIcon, AudioXWav and
-MusicNote16th; gnome's `go-up` is GoUp and GoParentFolder. Every other file is worn once: 60 enumerators over 57
-distinct drawings (AccessoriesTextEditor, the Open Text Editor button of 2026-10-09, the sixtieth: gedit's notepad
+MusicNote16th. Every other file is worn once: 59 enumerators over 57
+distinct drawings (AccessoriesTextEditor, the Open Text Editor button of 2026-10-09, the last: gedit's notepad
 from 3.0.0's `src/accessories-text-editor.svg`, extracted by the same rule, 46 candidates, 2 kept, maximum difference 0
 against the slot's render at 72 px).
 
 THE KNOWN DEPARTURE FROM SQUEEZE'S BYTES (the planner's call, 2026-10-07: 3.0.0, except where the architect ruled
-squeeze's own). Squeeze installs gnome-icon-theme 2.30.3; at 53 of the 58 GNOME seats 3.0.0's slot renders
+squeeze's own). Squeeze installs gnome-icon-theme 2.30.3; at 52 of the 57 GNOME seats 3.0.0's slot renders
 identically to 2.30.3's (rsvg at 72, maximum difference 0), at five it was redrawn in 3.0.0: three wear 3.0.0's
 drawing, the departure, and two wear 2.30.3's, taken from its sheets (max / mean channel difference of 3.0.0's slot
 from 2.30.3's at 72, levels of 255):
@@ -198,17 +198,16 @@ licence texts) are not read.
 | MediaSkipForward | Go to End | 3.0.0 `src/media-control-icons.svg`, slot `media-skip-forward` 48x48 at (456, 150) | — | — | `59255549061dab46601d8e9ae678df87175d09d3cd63047680735d7a8a9225dc` |
 | DialogCancel | Cancel (Render's mid-render face) | 3.0.0 `src/navigation-icons.svg`, slot `process-stop` 48x48 at (696, 50) | — | 3.0.0 ≠ 2.30.3 | `9a8383ed16d05c5091c41caa64ad5d28106e85a7ef6a5d94c5ba15d51803bba0` |
 | GoDown | Down (the value ladder) | 3.0.0 `src/navigation-icons.svg`, slot `go-down` 48x48 at (186, 50) | — | — | `9740ecff336ea73d1fc3651c1f2dc7992a5179c75fcd038d5d40b58f28a8f821` |
-| GoUp | Up (the value ladder) | 3.0.0 `src/navigation-icons.svg`, slot `go-up` 48x48 at (366, 50) | GoParentFolder | — | `398b36552f6037180f7be36160d22a4180db0c5d4c5ce6593c65c5fd1e7e396f` |
+| GoUp | Up (the value ladder) | 3.0.0 `src/navigation-icons.svg`, slot `go-up` 48x48 at (366, 50) | — | — | `398b36552f6037180f7be36160d22a4180db0c5d4c5ce6593c65c5fd1e7e396f` |
 | Lock | Toggle Read-Only, locked | 3.0.0 `src/changes.svg`, slot `changes-prevent` 48x48 at (296, 50) | — | — | `ae4d15d03f13b3351bac46d00ae0c1a0cfc4b1db8b29379807d4cb0800019ec2` |
 | Unlock | Toggle Read-Only, unlocked | 3.0.0 `src/changes.svg`, slot `changes-allow` 48x48 at (696, 50) | — | — | `138f451327658b2c600c5a0336aa6a24b90f12b652959c3c96aa5606a8d06e7e` |
 | BboxPrev | Previous Marker (Shift+Tab) | 3.0.0 `src/navigation-icons.svg`, slot `go-first` 48x48 at (456, 50) | — | — | `01e0a2c310027a4c8fce2ade0e9971fd3c55d891df64210e498ee6ec9b3b8ff3` |
 | BboxNext | Next Marker (Tab) | 3.0.0 `src/navigation-icons.svg`, slot `go-last` 48x48 at (856, 50) | — | — | `01007440faf4da38305b5f25d8ea98dec712a9442aea40f91a25786c80889628` |
 | TabDetach | Switch Tab | 3.0.0 `src/preferences-system-windows.svg`, slot `preferences-system-windows` 48x48 at (296, 50) | — | 3.0.0 ≠ 2.30.3 | `206cfdfd36c084b4d586a85ec036fd4d5a30b549ea6d9cb0c894efbcbdfc0fe0` |
 | SettingsConfigure | Settings | 3.0.0 `src/preferences-system.svg`, slot `preferences-system` 48x48 at (296.062, 49.9963) | — | — | `f39fe9462f889924bc4564c5233b56141f32d56737470c2cb12f53c0fd567fbc` |
-| Folder | a folder row | Mist `icon-themes/Mist/scalable/places/folder.svg` | — | namespace repair (original `4c7a2378b702b4a4567525236905b35f456ce4a13cafa973271947e060e01467`) | `5e15025b6bd9f08a17f18665371b6927bf4dab0b4a5575d3673cf7dbc4d10e52` |
+| Folder | a folder row and Up a Folder (the render player) | Mist `icon-themes/Mist/scalable/places/folder.svg` | — | namespace repair (original `4c7a2378b702b4a4567525236905b35f456ce4a13cafa973271947e060e01467`) | `5e15025b6bd9f08a17f18665371b6927bf4dab0b4a5575d3673cf7dbc4d10e52` |
 | AudioXWav | a wav row | 3.0.0 `src/audio-x-generic.svg`, slot `audio-x-generic` 48x48 at (296.062, 49.9963) | MusicNote16th, AppIcon | — | `af9057ecdb54541c0ce57d1b9e453dc825f0cfd3bfb554fde2afc3e83b234ad0` |
 | MediaRepeatSingle | Toggle Repeat One | 3.0.0 `src/media-control-icons.svg`, slot `media-playlist-repeat` 48x48 at (56, 150) | — | — | `7bbc59c69d5f443288e59a23400ee6042727e5a9839e5c4f7be4855d9ead2c9e` |
-| GoParentFolder | Up a Folder | 3.0.0 `src/navigation-icons.svg`, slot `go-up` 48x48 at (366, 50) | GoUp | — | `398b36552f6037180f7be36160d22a4180db0c5d4c5ce6593c65c5fd1e7e396f` |
 | DialogInformation | a NORMAL card | 2.30.3 `src/dialog-information.svg` (sheet sha256 `c5512bea2e4eee6f61b34027874ad0eb1a46f00f4e54a3c6a895e23570420c2e`), slot `dialog-information` 48x48 at (296, 50) (Mist carries no `dialog-information`) | — | 2.30.3's slot, 3.0.0 ≠ 2.30.3 (GPL v2) | `ac5c58ad79cecb62f552154ef467db94029ad6361e7c74d4b25de632dea5a08a` |
 | DialogError | a CRITICAL card | 3.0.0 `src/edit-delete.svg`, slot `edit-delete` 48x48 at (296, 49) | — | — | `796aaa833db70a55f292380e601890402871575a87fe501d7038dc57c88b246b` |
 | WindowClose | Close (the render player) | 3.0.0 `src/window-close.svg`, slot `window-close` 48x48 at (296, 50) | — | — | `5ea22cd3007a61f65ceb55dee86a3286579bde37b0f29b22a6b3aa2399060dc1` |

@@ -151,12 +151,13 @@ enum class Icon {
     TabDetach,           // Switch Tab (Ctrl+Tab)
     SettingsConfigure,   // Settings (bare `;`)
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
-    Folder,              // a folder row
+    Folder,              // a folder row; Up a Folder (the render player,
+                         // architect 2026-10-10: the plain folder, enough to
+                         // tell it from the Highlight Previous arrow)
     AudioXWav,           // a wav row
     // THE RENDER PLAYER'S ROW.
     MediaRepeatSingle,   // Toggle Repeat One — one glyph in both states,
                          // the lamp carrying the state
-    GoParentFolder,      // Up a Folder
     // THE NOTIFICATION CARDS' CLASS GLYPHS (notifications.h).
     DialogInformation,   // a NORMAL card's glyph
     DialogError,         // a CRITICAL card's glyph
@@ -174,7 +175,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 60;
+inline constexpr int kIconCount = 59;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -192,8 +193,8 @@ inline constexpr const char* kIconNames[] = {
     "MediaPlaybackStop", "MediaPlaybackPause", "MediaSkipForward",
     "DialogCancel", "GoDown", "GoUp", "Lock", "Unlock", "BboxPrev",
     "BboxNext", "TabDetach", "SettingsConfigure", "Folder", "AudioXWav",
-    "MediaRepeatSingle", "GoParentFolder", "DialogInformation",
-    "DialogError", "WindowClose", "EditCopy", "HelpWhatsthis",
+    "MediaRepeatSingle", "DialogInformation", "DialogError", "WindowClose",
+    "EditCopy", "HelpWhatsthis",
     "GoJumpDeclaration", "AccessoriesTextEditor", "EditDelete", "AppIcon",
 };
 static_assert(std::size(kIconNames) == kIconCount);
