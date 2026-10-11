@@ -1403,9 +1403,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button (Center, the
 //   walk group's third since 2026-09-29) on the same terms
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
-//   and THE BOTTOM ROW'S LEFT / RIGHT since 2026-09-26 (bare Left / Right, the
-//   mode's own playhead step; their own arm greys them over a focused diff
-//   flag and at the wall, horizontal_arrow_step_actionable),
+//   and THE BOTTOM ROW'S LEFT / RIGHT CHORDS since 2026-09-26 (bare Left /
+//   Right, the mode's own playhead step, admitted; the hide predicate leaves
+//   them be, but kTransportHistoryStepGroup removes the arrow BUTTONS from
+//   this view, Older / Newer being the painted pair there),
 //   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
 //   and the same free answer). Those three plus Revert are the roster's
 //   RESTING-DISABLED family — four of them, joined by the WALK LAMP on
@@ -1577,8 +1578,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // Revert with no diff flag selected, Load in Place over a memberless walk
 // (the allowlist's two conditional admissions), and every arm of
 // redesign_button_enabled's own (Older / Newer at the walk's walls, Save with
-// nothing to commit, Left / Right at the wall, a skip at the end) — is
-// painted and greys as it always did.
+// nothing to commit, a skip at the end) — is painted and greys as it always
+// did. (Left / Right are admitted by this predicate, their chords staying
+// live, but kTransportHistoryStepGroup removes the arrow BUTTONS in the view;
+// Older / Newer are the painted, state-greyed pair there.)
 //
 // THE SAME TABLE AS THE GREY, so the two can never disagree: hidden implies
 // greyed (a chord refused in every state is refused in this one), a chord
@@ -8489,7 +8492,8 @@ void GuiInputHandler::finalize_active_drags() {
 }
 
 // THE ROSTER'S POINTER WALK over the whole roster (row 1's three menu
-// anchors, the icon row's twenty-seven and the bottom row's nineteen: the
+// anchors, the icon row's and the bottom row's members: the painters'
+// membership tables own the counts (app_state.h's bottom-row head), the
 // enum's own count at kRedesignButtonCount — the stash is
 // AppState::redesign_buttons; a MODAL's yield leaves a bottom-row member with
 // a zero rect, as do the icon row's overflow rule and its history stand-ins a
@@ -8994,9 +8998,10 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // the verbs' chords are consumed there) — all of them dead by
         // construction, so since 2026-10-07 none of them is PAINTED in the
         // view (history_mode_hides_button: an empty rect, which no press
-        // reaches) — while the two skips (the mode's absolute jumps), LEFT
-        // and RIGHT (its own playhead step since 2026-09-26, greyed by their
-        // own arm over a focused diff flag and at the wall) and the
+        // reaches) — while the two skips (the mode's absolute jumps), the
+        // LEFT / RIGHT chords (its own playhead step since 2026-09-26, admitted;
+        // the arrow buttons are not painted in the view, Older / Newer being
+        // the painted, state-greyed pair) and the
         // marker-walk group's four (its diff-flag cycle, its centring, the
         // admitted tab switch) take no partition grey. ADD TO SELECTION IS
         // IN NEITHER LIST ANY MORE: the `h` view ADMITTED bare `k` on

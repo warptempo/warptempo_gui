@@ -589,10 +589,12 @@ struct Viewport {
     //     the zoom appliers'; the cursor clamp that CAN move the value
     //     damages the clock itself inside clamp_display_state_to_live_domain).
     //   * input_pointer's two direct cursor writes:
-    //     seat_playhead_on_source_frame — the write every marker land, Tab/`c`
-    //     jump and history diff-flag click rides, whether it arrives through
-    //     land_playhead_on_marker / land_playhead_on_domain_frame or through
-    //     reseat_playhead_on_marker — and the region
+    //     seat_playhead_on_domain_frame — the direct writer every marker land,
+    //     Tab/`c` jump and history diff-flag click rides (history lands call
+    //     it directly; seat_playhead_on_source_frame is the source-to-domain
+    //     wrapper feeding it for marker lands, whether through
+    //     land_playhead_on_marker / land_playhead_on_domain_frame or
+    //     reseat_playhead_on_marker) — and the region
     //     sweep's own per-motion cursor write (apply_region_drag_motion, the
     //     drag carrying the playhead on its moving end).
     //
@@ -612,7 +614,7 @@ struct Viewport {
     // deliberately unlisted; routes that funnel
     // through a listed owner (the settings editor's active-tab playhead
     // commit through move_playhead_to, every marker land through
-    // seat_playhead_on_source_frame, the nudges through their shared tail)
+    // seat_playhead_on_domain_frame (via seat_playhead_on_source_frame), the nudges through their shared tail)
     // need no row of their own.
     void invalidate_clock_area();
     // Narrow playhead/scanner damage: the union (or the pair) of the two given

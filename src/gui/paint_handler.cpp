@@ -2455,9 +2455,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // DEFINING MARKER (Ctrl+J, consumed in there like the verbs' chords) and OPEN
 // TEXT EDITOR (bare Return, on neither list, 2026-10-09) — every
 // one of them dead in every session, so none of them is painted in the view
-// (history_mode_hides_button) — while LEFT / RIGHT are the mode's own
-// playhead step since 2026-09-26 and grey on their own arm (a focused diff
-// flag, the wall); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
+// (history_mode_hides_button) — while the LEFT / RIGHT chords are the mode's
+// own playhead step since 2026-09-26 (admitted; the hide predicate leaves
+// them be, kTransportHistoryStepGroup removing the arrow buttons from the
+// view, Older / Newer the painted, state-greyed pair there); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
 // being on that mode's allowlist now and the lamp producing the view's own
 // multi-selection; the two
 // SKIPS and THE WALK GROUP'S FOUR stay lit, Home/End being the mode's
@@ -2497,8 +2498,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // expected to know that with the playhead outside trim it's not going to play
 // in target view". (The ARROWS had no in-view answer to paint at the time —
 // they were not painted in there at all under the cluster swap. In the view
-// since 2026-09-26 LEFT and RIGHT are the mode's own playhead step, live, and
-// UP and DOWN, whose bare chords the mode consumes, are not painted there
+// the LEFT and RIGHT chords are the mode's own playhead step, live, but
+// kTransportHistoryStepGroup removes the arrow buttons there, Older / Newer
+// being the painted, state-greyed pair; UP and DOWN, whose bare chords the mode consumes, are not painted there
 // since 2026-10-07 (history_mode_hides_button). Those are the partition's
 // own answers and no part of the always-on ruling, which is about the
 // RESTING face.)

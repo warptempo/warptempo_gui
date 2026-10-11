@@ -16420,11 +16420,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // allowlist), THE FOUR MARKER VERBS, JUMP TO DEFINING MARKER
         // (Ctrl+J is consumed in there like the verbs' own chords), OPEN
         // TEXT EDITOR (bare Return, on neither list) and TOGGLE VALUE DRAG
-        // (bare `[`, on neither list) — TEN of the nineteen,
-        // none of them painted there (history_mode_hides_button). ADD TO SELECTION
+        // (bare `[`, on neither list) — TEN of the bottom row's
+        // members, none of them painted there (history_mode_hides_button). ADD TO SELECTION
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
-        // now. LEFT / RIGHT are the mode's own playhead step since 2026-09-26
-        // and grey on their own arm below (a diff flag focused, or a wall).
+        // now. The LEFT / RIGHT chords are the mode's own playhead step since
+        // 2026-09-26 (admitted; the hide predicate leaves them be, but
+        // kTransportHistoryStepGroup removes the arrow buttons in the view,
+        // Older / Newer being the painted, state-greyed pair).
         // The two SKIPS and
         // THE WALK GROUP'S FOUR stay lit, being the mode's own
         // absolute jumps, its diff-flag cycle both ways, its `c` and the
