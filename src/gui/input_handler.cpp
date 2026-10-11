@@ -2957,8 +2957,8 @@ void GuiInputHandler::run_center_command() {
             playback_lifecycle.stop_playback_if_playing();
             land_playhead_on_source_frame(
                 app, audio, viewport,
-                app.history_mode.flags[
-                    static_cast<std::size_t>(focus)].time_frame);
+                history_diff_flag_landing_frame(app.history_mode.flags[
+                    static_cast<std::size_t>(focus)]));
         }
         viewport.apply_zoom_change(kWorkingZoomLevel);
         viewport.center_viewport_on_playhead();

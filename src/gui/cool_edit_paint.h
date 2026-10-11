@@ -215,3 +215,14 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // (2026-10-10, cool_edit_derive.h's faded look).
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
                            GuiColor shadow);
+
+// THE SPLIT TRIANGLE of the `h` view's changed pair (architect 2026-10-10 /
+// 2026-10-11; render_history_diff_flags): the same triangle and shadow,
+// its axis at window x `axis` — a stem's centre col + 0.5, or on a nudged
+// pair the midpoint between its two stems' centres, which may fall on a
+// column boundary — SPLIT ON THE VERTICAL THROUGH ITS APEX (the stem's
+// centre rule above): the half left of the axis in `left`, the half right
+// of it in `right`, antialiased, the axis column's coverage shared.
+void paint_ce_cue_split_triangle(cairo_t* cr, double axis, int top,
+                                 GuiColor left, GuiColor right,
+                                 GuiColor shadow);

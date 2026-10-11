@@ -5029,6 +5029,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // The full sequence is the paint-order block in on_redraw.
 void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
+    paint_marker_stem_runs(cr, area);
     if (app.marker_stems.empty()) return;
 
     // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
@@ -5060,6 +5061,53 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
                                       ps.range_dot_phase);
         }
     }
+    cairo_restore(cr);
+}
+
+// THE NUDGED PAIRS' RECTANGLE RUNS (MarkerStemRun, render.h, owns the look;
+// architect 2026-10-10 / 2026-10-11): the top and bottom of each `h`-view
+// nudged pair's rectangle, on the canvas's first and last rows, between its
+// two stems — THE PHASE-RESET LEAD-IN RING'S RUNS' FORM EXACTLY
+// (paint_phase_reset_overlay_ring, the model): one device px a dot
+// (waveform_line_px, "on waveform → unscaled"), the blue on columns left
+// stem + range_dot_phase + k · cue_dot_period and the red on left stem +
+// cue_dot_phase + k · cue_dot_period, through the right stem's column,
+// aliased integer cells, clipped to the area. Read as published, before
+// the stems paint their sides (paint_marker_stems), whose dots never share
+// a row with these (the stems' phases are rows 3 and 7 of 8).
+void GuiPaintHandler::paint_marker_stem_runs(cairo_t* cr,
+                                             const GuiRect& area) {
+    if (app.marker_stem_runs.empty()) return;
+    const ProgramSpec& ps = kProgramSpec;
+    const int t      = waveform_line_px();
+    const int period = ps.cue_dot_period;
+    const int y_top  = area.y;
+    const int y_bot  = area.y + area.h - t;
+    const int clip_lo = area.x;
+    const int clip_hi = area.x + area.w - t;   // the last whole dot's column
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    const auto paint_dots = [&](const GuiColor& color, int phase) {
+        set_palette_source(cr, color);
+        for (const MarkerStemRun& run : app.marker_stem_runs) {
+            const int x0 = static_cast<int>(std::nearbyint(run.x0));
+            const int x1 = static_cast<int>(std::nearbyint(run.x1));
+            const int hi = std::min(x1, clip_hi);
+            int x = x0 + phase;
+            if (x < clip_lo) x += ((clip_lo - x + period - 1) / period) * period;
+            for (; x <= hi; x += period) {
+                cairo_rectangle(cr, static_cast<double>(x),
+                                static_cast<double>(y_top),
+                                static_cast<double>(t), static_cast<double>(t));
+                cairo_rectangle(cr, static_cast<double>(x),
+                                static_cast<double>(y_bot),
+                                static_cast<double>(t), static_cast<double>(t));
+            }
+        }
+        cairo_fill(cr);
+    };
+    paint_dots(palette().range, ps.range_dot_phase);
+    paint_dots(palette().cue, ps.cue_dot_phase);
     cairo_restore(cr);
 }
 
@@ -8015,6 +8063,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     if (app.flag_stash_staged) {
         std::swap(app.flag_hit_rects, app.staged_flag_hit_rects);
         std::swap(app.marker_stems, app.staged_marker_stems);
+        std::swap(app.marker_stem_runs, app.staged_marker_stem_runs);
         app.flag_stash_staged = false;
     }
 

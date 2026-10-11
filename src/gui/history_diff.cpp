@@ -410,6 +410,72 @@ void pair_changes_by_frame(std::vector<Entry>&  removed,
     added.swap(kept_added);
 }
 
+// THE NUDGED PAIRING, run on what pair_changes_by_frame left (architect
+// 2026-10-10 ~18:55 → 2026-10-11 ~00:00; the window's ruling is at
+// kHistoryNudgeWindowMs, history_diff.h): a leftover removal `r` and a
+// leftover addition `a` of this column pair into one change when
+// |r.frame − a.frame| <= `window` AND THEY ARE EACH OTHER'S ONLY NEIGHBOR —
+// no other line of the column, removed, added or unchanged, on either side,
+// stands within the window of either of the two. `then_frames` and
+// `now_frames` are every frame of the column's then and now sides, SORTED
+// (an unchanged line is on both, a same-frame pair's halves one on each), so
+// the test is two counts over [min − window, max + window] — the union of
+// the two windows, contiguous because the two frames are within one window
+// of each other: the then side must hold `r` alone there and the now side
+// `a` alone. Which is also what makes the pairing order-free: an `r` with
+// two candidates fails the now-side count, an `a` claimed by two removals
+// fails the then-side count, so no merge can take a line another merge
+// wanted. The payload may differ ("what matters is what's on the flag");
+// `make_change` copies each half's own frame.
+template <typename Entry, typename Change, typename Make>
+void pair_nudged_changes(std::vector<Entry>&         removed,
+                         std::vector<Entry>&         added,
+                         std::vector<Change>&        changed,
+                         const std::vector<int64_t>& then_frames,
+                         const std::vector<int64_t>& now_frames,
+                         int64_t                     window,
+                         Make                        make_change) {
+    const auto count_in = [](const std::vector<int64_t>& side, int64_t lo,
+                             int64_t hi) {
+        return std::upper_bound(side.begin(), side.end(), hi) -
+               std::lower_bound(side.begin(), side.end(), lo);
+    };
+    std::vector<bool>  claimed(added.size(), false);
+    std::vector<Entry> kept_removed;
+    kept_removed.reserve(removed.size());
+
+    for (const Entry& r : removed) {
+        std::size_t match = added.size();
+        for (std::size_t j = 0; j < added.size(); ++j) {
+            if (claimed[j]) continue;
+            const int64_t lo = std::min(r.frame, added[j].frame);
+            const int64_t hi = std::max(r.frame, added[j].frame);
+            if (hi - lo > window) continue;
+            if (count_in(then_frames, lo - window, hi + window) == 1 &&
+                count_in(now_frames, lo - window, hi + window) == 1) {
+                match = j;
+            }
+            break;   // the first addition in reach decides: a second one
+                     // in reach would have failed the now-side count
+        }
+        if (match == added.size()) {
+            kept_removed.push_back(r);
+            continue;
+        }
+        claimed[match] = true;
+        changed.push_back(make_change(r, added[match]));
+    }
+
+    std::vector<Entry> kept_added;
+    kept_added.reserve(added.size());
+    for (std::size_t j = 0; j < added.size(); ++j) {
+        if (!claimed[j]) kept_added.push_back(added[j]);
+    }
+
+    removed.swap(kept_removed);
+    added.swap(kept_added);
+}
+
 // ---------------------------------------------------------------------------
 // filename match over the committed tree
 // ---------------------------------------------------------------------------
@@ -1667,8 +1733,10 @@ bool GuiHistoryDiff::walk_finished_empty() const {
 }
 
 bool GuiHistoryDiff::init(const AppState&           app,
-                          const GuiHistoryPrefetch& prefetch) {
+                          const GuiHistoryPrefetch& prefetch,
+                          int                       sample_rate) {
     available_ = false;
+    sample_rate_ = sample_rate;
     unavailable_reason_ = GuiFailure{};
     repo_root_.clear();
     base_name_.clear();
@@ -1830,7 +1898,8 @@ GuiHistoryCommitDelta compute_commit_delta(
         const std::string& then_settings,
         const std::string& now_warp,
         const std::string& now_phase_reset,
-        const std::string& now_settings) {
+        const std::string& now_settings,
+        int                sample_rate) {
     GuiHistoryCommitDelta d;
     d.sha = sha;
 
@@ -1931,11 +2000,16 @@ GuiHistoryCommitDelta compute_commit_delta(
         }
     }
 
-    pair_changes_by_frame(
-        d.warp_removed, d.warp_added, d.warp_changed,
+    // THE TWO PAIRINGS, IN ORDER (GuiHistoryWarpChange owns the rule): the
+    // same-frame pair first, then the nudged pair over what it left, judged
+    // against every frame of each side (the sorted lists below, the column's
+    // own extractor's frames — the run_ordinals frames — so an unchanged line
+    // and a same-frame pair's halves count as the neighbors they are).
+    const auto warp_make =
         [](const GuiHistoryWarpEntry& r, const GuiHistoryWarpEntry& a) {
             GuiHistoryWarpChange c;
-            c.frame            = r.frame;
+            c.then_frame       = r.frame;
+            c.now_frame        = a.frame;
             c.then_ordinal     = r.ordinal;
             c.now_ordinal      = a.ordinal;
             c.then_tempo_token = r.tempo_token;
@@ -1945,19 +2019,46 @@ GuiHistoryCommitDelta compute_commit_delta(
             c.then_effective_disabled = r.effective_disabled;
             c.now_effective_disabled  = a.effective_disabled;
             return c;
-        });
-    pair_changes_by_frame(
-        d.phase_reset_removed, d.phase_reset_added, d.phase_reset_changed,
+        };
+    const auto phase_reset_make =
         [](const GuiHistoryPhaseResetEntry& r,
            const GuiHistoryPhaseResetEntry& a) {
             GuiHistoryPhaseResetChange c;
-            c.frame         = r.frame;
+            c.then_frame    = r.frame;
+            c.now_frame     = a.frame;
             c.then_ordinal  = r.ordinal;
             c.now_ordinal   = a.ordinal;
             c.then_disabled = r.disabled;
             c.now_disabled  = a.disabled;
             return c;
-        });
+        };
+    const auto sorted_frames =
+        [](const std::vector<std::string>& lines, const auto& frame_of) {
+            std::vector<int64_t> out;
+            out.reserve(lines.size());
+            for (const std::string& line : lines) {
+                if (const std::optional<int64_t> f = frame_of(line)) {
+                    out.push_back(*f);
+                }
+            }
+            std::sort(out.begin(), out.end());
+            return out;
+        };
+    const int64_t nudge_window = history_nudge_window_frames(sample_rate);
+
+    pair_changes_by_frame(d.warp_removed, d.warp_added, d.warp_changed,
+                          warp_make);
+    pair_nudged_changes(d.warp_removed, d.warp_added, d.warp_changed,
+                        sorted_frames(warp_diff.then_lines, warp_frame_of),
+                        sorted_frames(warp_diff.now_lines, warp_frame_of),
+                        nudge_window, warp_make);
+    pair_changes_by_frame(d.phase_reset_removed, d.phase_reset_added,
+                          d.phase_reset_changed, phase_reset_make);
+    pair_nudged_changes(
+        d.phase_reset_removed, d.phase_reset_added, d.phase_reset_changed,
+        sorted_frames(phase_reset_diff.then_lines, phase_reset_frame_of),
+        sorted_frames(phase_reset_diff.now_lines, phase_reset_frame_of),
+        nudge_window, phase_reset_make);
 
     // THE SCALE PAIR RIDES THE SAME SUBSTITUTION as the marker columns: then is
     // whichever side is older in this reading, now whichever is newer, so the
@@ -2005,7 +2106,7 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
             snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
             snap.settings.text,
             now_.warpmarkers_text, now_.phaseresetmarkers_text,
-            now_.settings_text);
+            now_.settings_text, sample_rate_);
         return &*slots[index];
     }
 
@@ -2036,7 +2137,7 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
             snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
             snap.settings.text,
             now_.warpmarkers_text, now_.phaseresetmarkers_text,
-            now_.settings_text);
+            now_.settings_text, sample_rate_);
         return &*slots[index];
     }
     const GuiHistoryCommitSidecars& newer = commits[index - 1];
@@ -2044,7 +2145,7 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
         snap.sha, snap.warpmarkers.text, snap.phaseresetmarkers.text,
         snap.settings.text,
         newer.warpmarkers.text, newer.phaseresetmarkers.text,
-        newer.settings.text);
+        newer.settings.text, sample_rate_);
     return &*slots[index];
 }
 
@@ -2053,8 +2154,10 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
 // ---------------------------------------------------------------------------
 
 void GuiHistoryLocalWalk::init(const AppState&          app,
-                               const GuiHistoryNowSide& now) {
+                               const GuiHistoryNowSide& now,
+                               int                      sample_rate) {
     app_        = &app;
+    sample_rate_ = sample_rate;
     undo_count_ = app.history.undo_stack.size();
     redo_count_ = app.history.redo_stack.size();
     // THE +1 IS THE LIVE MEMBER — the state the session is standing in, which is
@@ -2222,7 +2325,7 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
         std::string(), then_side->warpmarkers_text,
         then_side->phaseresetmarkers_text, then_side->settings_text,
         now_side->warpmarkers_text, now_side->phaseresetmarkers_text,
-        now_side->settings_text);
+        now_side->settings_text, sample_rate_);
     return &*slots[index];
 }
 

@@ -7,6 +7,7 @@
 
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -293,14 +294,23 @@ struct GuiHistoryWarpEntry {
     bool        effective_disabled = false;
 };
 
-// A warp line the two sides both carry at the SAME frame with different text —
-// the removed line and the added line paired, which is what the double flag
-// paints. Both the payload and the disable prefix can differ.
+// A removed warp line and an added one PAIRED INTO ONE CHANGE — which is
+// what the lane's one changed flag paints. Both the payload and the disable
+// prefix can differ. TWO PAIRINGS PRODUCE IT (pair_changes_by_frame, then
+// pair_nudged_changes): the same-frame pair, where then_frame == now_frame,
+// and THE NUDGED PAIR (architect 2026-10-10 / 2026-10-11), a leftover removed
+// line and a leftover added line of the column within
+// kHistoryNudgeWindowMs of each other and each other's only neighbor —
+// "effectively the same marker nudged", whatever the edit was. The payload
+// may differ there too ("what matters is what's on the flag").
 struct GuiHistoryWarpChange {
-    int64_t     frame = 0;
-    // Each half's row within the frame's run on its own side (the contract at
-    // GuiHistoryWarpEntry::ordinal): the pairing is positional per frame
-    // (pair_changes_by_frame), so the two may differ.
+    // Each half's own frame on its own side: equal on a same-frame pair,
+    // apart by at most the nudge window on a nudged one.
+    int64_t     then_frame = 0;
+    int64_t     now_frame  = 0;
+    // Each half's row within its frame's run on its own side (the contract at
+    // GuiHistoryWarpEntry::ordinal): the same-frame pairing is positional per
+    // frame (pair_changes_by_frame), so the two may differ.
     int         then_ordinal = 0;
     int         now_ordinal  = 0;
     std::string then_tempo_token;
@@ -328,13 +338,16 @@ struct GuiHistoryPhaseResetEntry {
     bool        disabled = false;
 };
 
-// A phase reset line present at the same frame on both sides with a different
-// disable prefix. The phase reset line's payload is frame PLUS the disable
-// bit, not the frame alone, so `100` -> `#100` is a genuine same-frame change
-// exactly as a warp tempo edit is, and it pairs the same way rather than
-// reading as an unrelated remove and add.
+// A removed phase reset line and an added one paired into one change, by the
+// warp column's two pairings (GuiHistoryWarpChange owns the rule; the nudge
+// window is the same constant on both columns). The phase reset line's
+// payload is frame PLUS the disable bit, not the frame alone, so `100` ->
+// `#100` is a genuine same-frame change exactly as a warp tempo edit is, and
+// it pairs the same way rather than reading as an unrelated remove and add;
+// a reset moved a few milliseconds pairs as the nudged change.
 struct GuiHistoryPhaseResetChange {
-    int64_t frame         = 0;
+    int64_t then_frame    = 0;   // each half's own frame on its own side
+    int64_t now_frame     = 0;
     int     then_ordinal  = 0;   // each half's row within the frame's run on
     int     now_ordinal   = 0;   // its own side (GuiHistoryWarpEntry::ordinal)
     bool    then_disabled = false;
@@ -456,7 +469,8 @@ GuiHistoryNowSide build_history_now_side(const AppState& app);
 //
 // `sha` is always the VIEWED member's, and EMPTY on the local walk: an undo
 // entry has no name, and the delta carries the emptiness rather than
-// inventing one.
+// inventing one. `sample_rate` is the source's, the nudge window's one
+// input (history_nudge_window_frames).
 GuiHistoryCommitDelta compute_commit_delta(
     const std::string& sha,
     const std::string& then_warp,
@@ -464,7 +478,30 @@ GuiHistoryCommitDelta compute_commit_delta(
     const std::string& then_settings,
     const std::string& now_warp,
     const std::string& now_phase_reset,
-    const std::string& now_settings);
+    const std::string& now_settings,
+    int                sample_rate);
+
+// THE NUDGE WINDOW (architect 2026-10-10 ~18:55 → 2026-10-11 ~00:00): a
+// removed marker and an added marker of ONE column within this many
+// milliseconds of each other, and each the other's only neighbor of that
+// column within it on either side — removed, added or unchanged — read as ONE
+// CHANGED PAIR, the marker nudged (pair_nudged_changes, history_diff.cpp).
+// His reasoning: two real markers of one type never stand 20–30 ms apart, so
+// a near pair is a nudge in effect even if it was a delete and a re-add, and
+// an occasional false merge is harmless because both positions stay on
+// screen. "If one marker has more than one marker within the 30 milliseconds
+// from it, none of the three qualify." A FIXED TIME — never pixels, never the
+// zoom — and one constant for warp and phase reset alike.
+inline constexpr int kHistoryNudgeWindowMs = 30;
+
+// The window in SOURCE frames at the source's rate, std::nearbyint (the
+// rounding rule wherever a value lands on the frame grid). A pair is within
+// it when |then_frame − now_frame| <= this.
+inline int64_t history_nudge_window_frames(int sample_rate) {
+    return static_cast<int64_t>(std::nearbyint(
+        static_cast<double>(kHistoryNudgeWindowMs) *
+        static_cast<double>(sample_rate) / 1000.0));
+}
 
 // ONE SIDECAR AS ONE COMMIT CARRIED IT. `path` is the committed path in THAT
 // commit's own tree and is EMPTY when the commit carries no file by that name —
@@ -812,7 +849,11 @@ public:
     // at the site in the definition. Which is exactly why the scan failure had
     // to become its own answer: with emptiness no longer refusing, an unread
     // history would otherwise have passed for a read one.
-    bool init(const AppState& app, const GuiHistoryPrefetch& prefetch);
+    //
+    // `sample_rate` is the loaded source's, kept for the visit as every
+    // delta's nudge window (compute_commit_delta).
+    bool init(const AppState& app, const GuiHistoryPrefetch& prefetch,
+              int sample_rate);
 
     // IS THE REMOTE WALK AVAILABLE? — the bootstrap's verdict, ANSWERED ONCE
     // PER ENTRY and read back from here all visit long (architect 2026-09-04).
@@ -923,6 +964,7 @@ private:
     std::string       base_name_;
     std::string       project_directory_;
     GuiHistoryNowSide now_;
+    int               sample_rate_ = 0;   // the source's, the nudge window's
 
     // THE WALK ITSELF LIVES IN THE PREFETCH STORE (history_prefetch.h), not
     // here: this is a binding, and the generation is which run it bound to.
@@ -1048,8 +1090,10 @@ public:
     //
     // `app` IS RETAINED as the stacks' owner. It outlives every visit (it is the
     // one long-lived object in the program) and the entries it hands back are
-    // read only through the frozen sizes above.
-    void init(const AppState& app, const GuiHistoryNowSide& now);
+    // read only through the frozen sizes above. `sample_rate` is the source's,
+    // every delta's nudge window as on the commit walk.
+    void init(const AppState& app, const GuiHistoryNowSide& now,
+              int sample_rate);
 
     // How many STATES the timeline carries — U + R + 1, the `n/N` denominator
     // the corner shows on the Local tab, and fixed for the visit. It is never zero once init has
@@ -1138,6 +1182,7 @@ private:
     std::size_t                              undo_count_ = 0;
     std::size_t                              redo_count_ = 0;
     std::size_t                              count_      = 0;
+    int                                      sample_rate_ = 0;
     std::shared_ptr<const GuiHistoryGuiSide> gui_;
     GuiHistoryNowSide                        now_;
     std::vector<Member>                      members_;

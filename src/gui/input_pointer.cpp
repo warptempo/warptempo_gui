@@ -10096,8 +10096,8 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
     if (app.history_mode.focus >= 0) {
         land_playhead_on_source_frame(
             app, audio, viewport,
-            app.history_mode.flags[
-                static_cast<std::size_t>(app.history_mode.focus)].time_frame);
+            history_diff_flag_landing_frame(app.history_mode.flags[
+                static_cast<std::size_t>(app.history_mode.focus)]));
     }
     // A DISCRETE COMMAND: full-window damage when the focus actually moved
     // (the flag's and its stem's colours swap; the stem's column stays put),
@@ -10174,7 +10174,8 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit, bool extend) {
     app.history_mode.focus = hit;
     land_playhead_on_source_frame(
         app, audio, viewport,
-        app.history_mode.flags[static_cast<std::size_t>(hit)].time_frame);
+        history_diff_flag_landing_frame(
+            app.history_mode.flags[static_cast<std::size_t>(hit)]));
     viewport.invalidate_all();
 }
 

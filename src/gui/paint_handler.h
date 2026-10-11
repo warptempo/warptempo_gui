@@ -112,10 +112,11 @@ constexpr const char* kBpmEditorPrefix      = "BPM:";
 //   * a PHASE RESET has no payload — its frame is its whole identity — so it
 //     reads the bare `[-]` / `[+]`, with the `#` disable spelling as its one
 //     payload when the bit is set (`[+]#`). That is what makes the phase-reset
-//     column's CHANGED pair say anything at all: a same-frame change there IS a
-//     disable toggle, so `[-]#` beside `[+]` is the toggle in
-//     the file's own spelling, where `[-]` beside `[+]` would carry no
-//     information;
+//     column's same-frame CHANGED pair say anything at all: a same-frame
+//     change there IS a disable toggle, so `[-]#` beside `[+]` is the toggle
+//     in the file's own spelling, where `[-]` beside `[+]` would carry no
+//     information (a NUDGED pair's `[-]` beside `[+]` says the move, its two
+//     stems apart, 2026-10-11);
 //   * the CORNER passes disabled=false and the `scale=` token, the payload arm
 //     alone.
 //
@@ -904,7 +905,13 @@ private:
     //
     // NO PAINT-TIME COLOR OVERRIDE (architect 2026-10-03): the stem paints
     // the stash's class. The open flag editor's refusal recolors nothing.
+    // It paints the `h` view's nudged pairs' rectangle runs first
+    // (paint_marker_stem_runs, AppState::marker_stem_runs), the stems their
+    // sides.
     void paint_marker_stems(cairo_t* cr, const GuiRect& area);
+    // The nudged pairs' rectangle runs (MarkerStemRun, render.h; the body
+    // owns the form), paint_marker_stems' first act.
+    void paint_marker_stem_runs(cairo_t* cr, const GuiRect& area);
     // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's; nothing
     // over the view bar, architect 2026-10-09 ~14:30): Cool Edit's dotted
     // column in the palette's `playhead_stem` (its Curs yellow by default),

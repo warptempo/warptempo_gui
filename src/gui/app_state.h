@@ -6363,7 +6363,8 @@ struct AppState {
     // producers' gate, stem_column_on_waveform in render.cpp; a flag hanging
     // into view from past either edge publishes no stem) — a disabled marker has no stem ever, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode means one
-    // per diff flag, that lane's classes all stemming. Since the stems-inert
+    // per diff flag on a waveform column, a changed pair two (each half its
+    // own stem, 2026-10-11), that lane's classes all stemming. Since the stems-inert
     // ruling (architect 2026-08-12) `marker_stems` is PAINT-ONLY: its three
     // readers are the per-frame stem painter (GuiPaintHandler::
     // paint_marker_stems), its flanks' painter (GuiPaintHandler::
@@ -6386,12 +6387,19 @@ struct AppState {
     // painted has no box to click.
     std::vector<FlagHitRect> flag_hit_rects;
     std::vector<MarkerStem>  marker_stems;
+    // THE NUDGED PAIRS' RECTANGLE RUNS (MarkerStemRun, render.h; 2026-10-11),
+    // the stems' companion: the history lane's painter alone writes them (the
+    // rebuild empties the staged half before any lane painter runs), they
+    // stage and promote with the pair above and drop with it at a mode edge,
+    // and paint_marker_stems is their one reader.
+    std::vector<MarkerStemRun> marker_stem_runs;
     // The staging half (the contract above): written by the rebuild's lane
     // painter, swapped into the pair above at the next frame's top.
     // flag_stash_staged is what tells a staged EMPTY lane (a rebuild that
     // painted no flag) from no stage at all.
     std::vector<FlagHitRect> staged_flag_hit_rects;
     std::vector<MarkerStem>  staged_marker_stems;
+    std::vector<MarkerStemRun> staged_marker_stem_runs;
     bool                     flag_stash_staged = false;
 
     // THE TRIM BAR'S PAINTER STASH (architect 2026-09-24, strictly
@@ -13525,9 +13533,15 @@ MarkerWalkStep marker_walk_step(const AppState& a, const GuiAudio& audio,
 // forward-translates. The mode switches no audio view, so it stands in
 // whichever of source (identity) or target (the live map) the tab was in.
 //
+// THE CANDIDATE'S FRAME IS WHERE IT LANDS (history_diff_flag_landing_frame,
+// render.h — a nudged pair's midpoint), so a playhead the walk parked on a
+// pair is ON it here too.
+//
 // FIRST/LAST HIT IS THE NEAREST HIT: rebuild_history_diff_flags leaves the
 // list sorted ASCENDING BY time_frame and the source->domain translation is
-// monotone, so the scan needs no minimum-search. Where several flags share one
+// monotone, so the scan needs no minimum-search (a nudged pair's midpoint
+// keeps that order: no other line of the column stands within its window,
+// the merge's own rule, history_diff.h). Where several flags share one
 // frame (a changed/removed/added coincidence, which the stable sort keeps
 // grouped) the group's first member forward and its last backward is the
 // stop, and the index step then walks the rest of the group — every flag
@@ -13546,7 +13560,8 @@ inline int history_diff_cycle_target(const AppState& a, const GuiAudio& audio,
     const int64_t ph_f = a.playhead_cursor_sample;
     auto frame_of = [&](int i) -> int64_t {
         return source_frame_to_active_domain(
-            a, audio, flags[static_cast<std::size_t>(i)].time_frame);
+            a, audio,
+            history_diff_flag_landing_frame(flags[static_cast<std::size_t>(i)]));
     };
     if (forward) {
         for (int i = 0; i < n; ++i)

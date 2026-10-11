@@ -1730,6 +1730,17 @@ struct CueDraw {
     // or plain halves of one item (the history's pair, whose label publishes
     // no cell boundary: no bracket lives in a commit).
     bool                      segments_are_cells = true;
+    // THE HISTORY'S CHANGED PAIR (render_history_diff_flags, 2026-10-11):
+    // the triangle SPLIT, its left half face.triangle and its right half
+    // `split_right`, its axis `axis_offset` past col — a stem's centre 0.5,
+    // or 1.0 where a nudged pair's midpoint falls on the boundary right of
+    // col — and ITS OWN STEMS, the pair's two, published in place of the
+    // face's one at col (each still gated to the waveform's columns).
+    bool                      split = false;
+    GuiColor                  split_right{};
+    double                    axis_offset = 0.5;
+    bool                      own_stems = false;
+    std::array<MarkerStem, 2> stems{};
 };
 
 // THE CUES' ONE PAINTER (render.h's marker-lane paragraph: the overlap rule,
@@ -1742,7 +1753,8 @@ struct CueDraw {
 // the triangles LEFT TO RIGHT; then the
 // publication — one FlagHitRect per cue (its label box as painted and its
 // triangle, both clipped to the waveform's columns), and one MarkerStem per
-// cue whose dots paint and whose column is a waveform column. `lane` is the
+// cue whose dots paint and whose column is a waveform column (the history's
+// changed pair its own two, CueDraw::own_stems). `lane` is the
 // marker lane, `x0` / `w` the waveform's columns the pass is clipped to (the
 // caller set the clip). Cues arrive in store order and are ordered here by
 // column (stable).
@@ -1819,9 +1831,15 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     }
 
     // THE TRIANGLES, LEFT TO RIGHT, over every label.
-    for (const CueDraw& c : cues)
-        paint_ce_cue_triangle(cr, c.col, tri_top, c.face.triangle,
-                              c.face.shadow);
+    for (const CueDraw& c : cues) {
+        if (c.split)
+            paint_ce_cue_split_triangle(
+                cr, static_cast<double>(c.col) + c.axis_offset, tri_top,
+                c.face.triangle, c.split_right, c.face.shadow);
+        else
+            paint_ce_cue_triangle(cr, c.col, tri_top, c.face.triangle,
+                                  c.face.shadow);
+    }
 
     // THE PUBLICATION, left to right.
     for (int i = 0; i < n; ++i) {
@@ -1868,8 +1886,13 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             }
             if (label_on || r.tri_w > 0.0) out_hit_rects->push_back(r);
         }
-        if (out_stems && (c.face.cue_dots || c.face.range_dots) &&
-            stem_column_on_waveform(c.col - x0, w))
+        if (out_stems && c.own_stems) {
+            for (const MarkerStem& s : c.stems)
+                if (stem_column_on_waveform(
+                        static_cast<int>(std::nearbyint(s.x)) - x0, w))
+                    out_stems->push_back(s);
+        } else if (out_stems && (c.face.cue_dots || c.face.range_dots) &&
+                   stem_column_on_waveform(c.col - x0, w))
             out_stems->push_back(MarkerStem{c.index, static_cast<double>(c.col),
                                             c.face.cue_dots,
                                             c.face.range_dots});
@@ -2187,12 +2210,15 @@ void render_history_diff_flags(
         const std::set<int>& selected,
         std::vector<FlagHitRect>* out_hit_rects,
         std::vector<MarkerStem>* out_stems,
+        std::vector<MarkerStemRun>* out_runs,
         const std::vector<WarpFrameMapSegment>* warp_frame_map) {
     // The same clear-first contract the two marker painters carry: this pass is
     // the SOLE producer of both stashes while the history mode stands, so a
-    // frame that paints nothing must leave nothing claimable behind.
+    // frame that paints nothing must leave nothing claimable behind — and of
+    // the runs (MarkerStemRun) always.
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
+    if (out_runs)      out_runs->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
     if (viewport_end_sample <= viewport_start_sample) return;
 
@@ -2234,6 +2260,39 @@ void render_history_diff_flags(
         static_cast<double>((kProgramSpec.cue_fill_lead +
                              4 * kProgramSpec.cue_fill_pad +
                              kProgramSpec.cue_segment_gap) * u);
+
+    // THE NUDGED PAIR'S COLUMNS. The iterator maps a flag's time_frame — the
+    // LEFT marker's (HistoryDiffFlag) — and the pair's RIGHT stem is mapped
+    // here by the iterator's own two steps (frame_to_paint_sample, then
+    // displayed_column_at over the same samples-per-pixel), so both stems
+    // land where a live marker at either frame would. THE CULL WIDENS BY THE
+    // WIDEST PAIR'S SPAN: the iterator culls on the left frame, and a pair
+    // whose left stem is far off the left edge may still stand its right
+    // stem, its rectangle and its centred flag in view.
+    const double spp =
+        static_cast<double>(viewport_end_sample - viewport_start_sample) /
+        static_cast<double>(waveform_width);
+    const auto paint_col = [&](int64_t frame) {
+        return lanes.columns_x +
+               displayed_column_at(
+                   frame_to_paint_sample(static_cast<double>(frame),
+                                         warp_frame_map),
+                   static_cast<double>(viewport_start_sample), spp);
+    };
+    double widest_pair_px = 0.0;
+    if (spp > 0.0) {
+        for (const HistoryDiffFlag& f : flags) {
+            if (!f.nudged()) continue;
+            const double span =
+                std::fabs(frame_to_paint_sample(
+                              static_cast<double>(f.then_frame),
+                              warp_frame_map) -
+                          frame_to_paint_sample(
+                              static_cast<double>(f.now_frame),
+                              warp_frame_map)) / spp + 1.0;
+            if (span > widest_pair_px) widest_pair_px = span;
+        }
+    }
     std::vector<CueDraw> cues;
 
     iterate_visible_flags_impl(
@@ -2244,7 +2303,7 @@ void render_history_diff_flags(
         // marker drag can be in flight while this pass runs — and a diff flag is
         // not a marker in any store, so nothing could index it anyway.
         /*drag_overlay=*/nullptr,
-        cull_width_px,
+        cull_width_px + widest_pair_px,
         [&](int i, double left_x) {
             const HistoryDiffFlag& f = flags[static_cast<std::size_t>(i)];
             // THE MODE'S OWN FOCUS AND ITS OWN SELECTION, never the live one:
@@ -2261,23 +2320,46 @@ void render_history_diff_flags(
             if (!f.removed && !f.added) return;
             CueDraw c;
             c.index = i;
-            c.col   = static_cast<int>(std::nearbyint(left_x));
-            // THE TWO HALVES AS TWO SEGMENTS (the removed then the added),
-            // their box layout the live lane's one (cue_segment_boxes), the
-            // segment slots 0 and 1; a selected flag's two halves both turn
-            // the selected text, no fill (render.h's SELECTED row).
+            const bool pair = f.removed && f.added;
+            // THE LEFT MARKER'S STEM COLUMN, the iterator's; on a pair the
+            // right one's off its own frame (paint_col above) — the same
+            // column on a same-frame pair. THE FLAG STANDS CENTRED BETWEEN
+            // THEM: col the midpoint floored, the triangle's axis the two
+            // stems' centres' mean, so 0.5 past col on an even sum and on
+            // the boundary right of col (1.0) on an odd one.
+            const int col_left = static_cast<int>(std::nearbyint(left_x));
+            const int col_right =
+                f.nudged()
+                    ? paint_col(f.added_left() ? f.then_frame : f.now_frame)
+                    : col_left;
+            const int col_sum = col_left + col_right;
+            c.col = static_cast<int>(
+                std::floor(static_cast<double>(col_sum) / 2.0));
+            c.axis_offset = (col_sum - 2 * c.col == 1) ? 1.0 : 0.5;
+            // THE TWO HALVES AS TWO SEGMENTS, THE LEFT MARKER'S FIRST (the
+            // removed then the added, the added first on a pair moved
+            // earlier — HistoryDiffFlag::added_left), their box layout the
+            // live lane's one (cue_segment_boxes), the segment slots 0 and
+            // 1; a selected flag's two halves both turn the selected text,
+            // no fill (render.h's SELECTED row).
+            const bool added_first = f.added_left();
             text_shape::ShapedRun run_removed;
             text_shape::ShapedRun run_added;
             if (f.removed)
                 run_removed = text_shape::shape_text_run(font, f.removed_text);
             if (f.added)
                 run_added = text_shape::shape_text_run(font, f.added_text);
-            const bool present[3] = {f.removed, f.added, false};
+            const text_shape::ShapedRun& run0 =
+                added_first ? run_added : run_removed;
+            const text_shape::ShapedRun& run1 =
+                added_first ? run_removed : run_added;
+            const bool present[3] = {
+                added_first ? f.added : f.removed,
+                added_first ? f.removed : f.added, false};
             const int widths[3] = {
-                static_cast<int>(std::nearbyint(run_removed.width_px)),
-                static_cast<int>(std::nearbyint(run_added.width_px)), 0};
+                static_cast<int>(std::nearbyint(run0.width_px)),
+                static_cast<int>(std::nearbyint(run1.width_px)), 0};
             const CueSegmentBoxes boxes = cue_segment_boxes(widths, present);
-            const bool pair = f.removed && f.added;
             c.segments_are_cells = false;
 
             // THE DISABLED AXIS, ONE EFFECTIVE BIT PER COMMIT SIDE (architect
@@ -2298,34 +2380,68 @@ void render_history_diff_flags(
             // consulted.
             const bool removed_disabled = f.then_effective_disabled;
             const bool added_disabled   = f.now_effective_disabled;
+            const bool inert0 = added_first ? added_disabled : removed_disabled;
+            const bool inert1 = added_first ? removed_disabled : added_disabled;
             for (int s = 0; s < 2; ++s) {
                 CueSegment& seg = c.seg[static_cast<std::size_t>(s)];
                 if (!present[s]) continue;
                 seg.present  = true;
-                seg.run      = s == 0 ? run_removed : run_added;
+                seg.run      = s == 0 ? run0 : run1;
                 seg.x0       = c.col + boxes.x0[s];
                 seg.x1       = c.col + boxes.x1[s];
                 seg.selected = focused;
-                seg.inert = s == 0 ? removed_disabled : added_disabled;
+                seg.inert    = s == 0 ? inert0 : inert1;
             }
 
             // THE TRIANGLE AND THE DOTS through the live lane's one resolver
-            // (resolve_flag_face), AS THE KIND OF THE HALF THE DOTS LEAVE
-            // FROM (architect 2026-10-04): the removed half's on a changed
-            // pair or a removed-only flag (the red, its dots red alone), the
-            // added half's on an added-only one (the blue, its dots blue
-            // alone; 2026-10-09) — a diff line is never the invalid class
-            // (HistoryDiffFlag's note). THE DOTS READ THE DISABLED AXIS
-            // (architect 2026-08-22):
-            // a SINGLE half whose one side is disabled publishes none, the
-            // live lane's rule; A CHANGED PAIR ALWAYS KEEPS ITS DOTS, its
-            // triangle the removed face: the pair is a live EDIT being
-            // displayed, not a line in a switched-off state.
-            const GuiFlagKind kind =
-                f.removed ? GuiFlagKind::Removed : GuiFlagKind::Added;
-            const bool single_disabled =
-                !pair && (f.removed ? removed_disabled : added_disabled);
-            c.face = resolve_flag_face(kind, single_disabled, /*red=*/false);
+            // (resolve_flag_face) by the KIND of each half — a diff line is
+            // never the invalid class (HistoryDiffFlag's note). A SINGLE
+            // flag: the removed red with its red dots alone, the added blue
+            // with its blue dots alone (2026-10-09); THE DOTS READ THE
+            // DISABLED AXIS (architect 2026-08-22): a single half whose one
+            // side is disabled publishes none and wears the faded triangle,
+            // the live lane's rule.
+            if (!pair) {
+                const GuiFlagKind kind =
+                    f.removed ? GuiFlagKind::Removed : GuiFlagKind::Added;
+                const bool disabled =
+                    f.removed ? removed_disabled : added_disabled;
+                c.face = resolve_flag_face(kind, disabled, /*red=*/false);
+                cues.push_back(std::move(c));
+                return;
+            }
+            // A CHANGED PAIR (architect 2026-10-10 / 2026-10-11, the
+            // declaration's paragraph): THE SPLIT TRIANGLE, each half the
+            // live face of the marker on its side, and THE TWO STEMS, each
+            // at its own column in its own half's dots. A CHANGED PAIR
+            // ALWAYS KEEPS ITS DOTS AND ITS LIVE TRIANGLE whichever halves
+            // are disabled (2026-08-22): the pair is a live EDIT being
+            // displayed, not a line in a switched-off state; the label's
+            // segments carry each half's disabled bit.
+            const FlagFace removed_face = resolve_flag_face(
+                GuiFlagKind::Removed, /*disabled=*/false, /*red=*/false);
+            const FlagFace added_face = resolve_flag_face(
+                GuiFlagKind::Added, /*disabled=*/false, /*red=*/false);
+            const FlagFace& left_face  = added_first ? added_face : removed_face;
+            const FlagFace& right_face = added_first ? removed_face : added_face;
+            c.face        = left_face;
+            c.split       = true;
+            c.split_right = right_face.triangle;
+            c.own_stems   = true;
+            c.stems[0] = MarkerStem{i, static_cast<double>(col_left),
+                                    left_face.cue_dots, left_face.range_dots};
+            c.stems[1] = MarkerStem{i, static_cast<double>(col_right),
+                                    right_face.cue_dots, right_face.range_dots};
+            // THE RECTANGLE'S TOP AND BOTTOM between the two stems, on a
+            // nudged pair whose stems stand on two columns (MarkerStemRun,
+            // render.h): published whenever any of it reaches the waveform's
+            // columns, the painter clipping it there.
+            if (out_runs && col_right > col_left &&
+                col_right >= lanes.columns_x &&
+                col_left < lanes.columns_x + waveform_width)
+                out_runs->push_back(MarkerStemRun{
+                    i, static_cast<double>(col_left),
+                    static_cast<double>(col_right)});
             cues.push_back(std::move(c));
         });
 

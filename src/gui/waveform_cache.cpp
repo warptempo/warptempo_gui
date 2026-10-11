@@ -900,10 +900,15 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // both sides', a removed flag its then side's, an added flag its now
     // side's — off the same delta entry, so the row the flag shows is the row
     // the revert addresses (the contract is at HistoryDiffFlag, render.h).
+    // AND EACH HALF'S OWN FRAME (2026-10-11, the nudged pair): `then_frame`
+    // and `now_frame` off the same entry, `time_frame` the left marker's —
+    // a changed pair's smaller frame, which on a same-frame pair is the one.
     if (app.active_markers_view == 'P') {
         for (const GuiHistoryPhaseResetChange& c : d->phase_reset_changed) {
             HistoryDiffFlag f;
-            f.time_frame   = c.frame;
+            f.time_frame   = std::min(c.then_frame, c.now_frame);
+            f.then_frame   = c.then_frame;
+            f.now_frame    = c.now_frame;
             f.removed      = true;
             f.added        = true;
             f.removed_text =
@@ -920,6 +925,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_removed) {
             HistoryDiffFlag f;
             f.time_frame   = e.frame;
+            f.then_frame   = e.frame;
             f.removed      = true;
             f.removed_text =
                 history_diff_label("[-]", e.disabled);
@@ -931,6 +937,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
         for (const GuiHistoryPhaseResetEntry& e : d->phase_reset_added) {
             HistoryDiffFlag f;
             f.time_frame = e.frame;
+            f.now_frame  = e.frame;
             f.added      = true;
             f.added_text =
                 history_diff_label("[+]", e.disabled);
@@ -942,7 +949,9 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
         // The WARP column — 'W', the one letter left after the two arms above.
         for (const GuiHistoryWarpChange& c : d->warp_changed) {
             HistoryDiffFlag f;
-            f.time_frame   = c.frame;
+            f.time_frame   = std::min(c.then_frame, c.now_frame);
+            f.then_frame   = c.then_frame;
+            f.now_frame    = c.now_frame;
             f.removed      = true;
             f.added        = true;
             f.removed_text =
@@ -960,6 +969,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
         for (const GuiHistoryWarpEntry& e : d->warp_removed) {
             HistoryDiffFlag f;
             f.time_frame   = e.frame;
+            f.then_frame   = e.frame;
             f.removed      = true;
             f.removed_text =
                 history_diff_label("[-]", e.disabled, e.tempo_token);
@@ -972,6 +982,7 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
         for (const GuiHistoryWarpEntry& e : d->warp_added) {
             HistoryDiffFlag f;
             f.time_frame = e.frame;
+            f.now_frame  = e.frame;
             f.added      = true;
             f.added_text = history_diff_label("[+]", e.disabled, e.tempo_token);
             f.now_ordinal            = e.ordinal;
@@ -1283,6 +1294,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // blits that surface (the stage bit is raised at the tail below). The
     // active view supplies its own column's stash and the other column's is
     // not retained — hit tests and the stem pass are both active-column-only.
+    // THE RUNS' STAGED HALF IS EMPTIED HERE, above the three arms: the
+    // history arm alone writes it (clearing it first itself), and a live arm
+    // must stage none (AppState::marker_stem_runs).
+    app.staged_marker_stem_runs.clear();
     if (history_active) {
         // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
         // marker paints. (The lane is not the whole of that suppression — the
@@ -1302,6 +1317,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             app.history_mode.selection,
             &app.staged_flag_hit_rects,
             &app.staged_marker_stems,
+            &app.staged_marker_stem_runs,
             // THE SAME MAP ARGUMENT the live columns take — a diff flag's frame
             // is an authored SOURCE frame exactly as a marker's is, in both
             // stores, so target view translates it through the same segments and

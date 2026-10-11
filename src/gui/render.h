@@ -747,7 +747,8 @@ void install_true_colors(bool on);
 // THE LABEL'S SEGMENTS: the marker's payload label, then — while grid
 // iterations paint them — its LOWER and UPPER bound cells, each a segment of
 // the same label standing the segment gap past the one before it (the
-// history's changed pair likewise: its removed half, then its added half),
+// history's changed pair likewise: its left marker's half, then its right
+// marker's — removed then added unless the pair was nudged earlier),
 // every segment's text the program face on the lane's baseline.
 //
 // THE OVERLAP RULE: LATER WINS BY OCCLUSION, NEVER BY CUTTING (architect
@@ -888,7 +889,8 @@ void install_true_colors(bool on);
 // 2026-10-04; the colors 2026-10-09 ~11:50): an ADDED half the BLUE
 // triangle with the blue dots alone (Cool Edit's range end), a REMOVED half
 // the RED triangle with the red dots alone (its range start) — a changed
-// pair's triangle the removed half's, the half its dots leave from — and
+// pair's triangle SPLIT between the two, centred between its two halves'
+// stems (2026-10-11; render_history_diff_flags owns the pair) — and
 // THE LABEL CARRIES THE SIGN — the history mode's one bracket
 // spelling, `[+]` before an added line's payload and `[-]` before a removed
 // one's (architect 2026-08-05; history_diff_label, paint_handler.h, the same
@@ -3470,6 +3472,29 @@ struct MarkerStem {
     bool   range_dots;   // the blue, on range_dot_phase
 };
 
+// THE NUDGED PAIR'S RECTANGLE RUNS (architect 2026-10-10 ~18:55 →
+// 2026-10-11): the `h` view's changed pair whose two halves stand apart
+// draws a RECTANGLE on the canvas — its left side the left marker's stem,
+// its right side the right marker's (each a MarkerStem above, in its own
+// half's dots) — and THIS is its top and bottom: a run along the canvas's
+// first row and one along its last, from the left stem's window column `x0`
+// to the right stem's `x1`, both ends included. Dotted as the phase-reset
+// lead-in ring's runs are (paint_phase_reset_overlay_ring, the model): one
+// device px a dot, the red `cue` and the blue `range` alternating one every
+// four columns, counted from the left stem's own column (unclipped, so the
+// run stays put on the song as the view pans) — the two halves' colors
+// alternating as a warp stem alternates them. Always shown, selected or
+// not. The history lane's painter is the one producer (render_history_diff_-
+// flags; the live lanes publish none), paint_marker_stems the one reader; a
+// run reaching past either edge of the waveform's columns is published and
+// clipped at paint, the stems between which it stands possibly off screen.
+// It is promoted and dropped with the stem stash (AppState::marker_stems).
+struct MarkerStemRun {
+    int    marker_index;
+    double x0;
+    double x1;
+};
+
 // WHICH ONE SEGMENT OF WHICH ONE MARKER'S LABEL THE FLAG PASS DOES NOT PAINT,
 // because an open marker-lane editor is standing in for it. THE ONE GRAPHIC
 // MODEL, stated once here and applied to all three editors (architect
@@ -3824,11 +3849,22 @@ GuiStemDots phase_reset_stem_dots(bool red);
 // THE FRAME FIELD IS NAMED time_frame ON PURPOSE: it is what the shared column
 // mapper iterate_visible_flags_impl reads off a marker, so a diff flag rides the
 // EXACT expression a live marker rides — same map, same viewport, same width,
-// same nearbyint — rather than a second spelling of it.
+// same nearbyint — rather than a second spelling of it. IT IS THE LEFT
+// MARKER'S FRAME: a single half's own, and on a changed pair the smaller of
+// the two halves' frames (architect 2026-10-10 / 2026-10-11, the nudged
+// pair), the pair's right stem mapped from the other by the same expression
+// (render_history_diff_flags). `then_frame` and `now_frame` are each half's
+// OWN frame, meaningful exactly when its half's bool is set — equal on a
+// same-frame pair, apart by at most the nudge window on a NUDGED one
+// (kHistoryNudgeWindowMs, history_diff.h) — and they are what the revert
+// addresses: the now row at now_frame, the then line back at then_frame.
 //
 // The two halves are independent bools rather than an enum because the CHANGED
-// case is exactly "both": one double-width flag, the removed half (`-`) left,
-// the added half (`+`) right.
+// case is exactly "both": one flag whose label carries both halves, THE LEFT
+// MARKER'S SEGMENT FIRST — the removed half left on a same-frame pair (before,
+// then after: the planner's reading of his "whichever one comes first",
+// 2026-10-11) and on a nudged pair whose removed marker stands left, the
+// added half left where the added marker does (added_left).
 // THE THEN SIDE'S VALUE RIDES ALONG (2026-08-05), for the REVERT act rather than
 // for the paint: `then_token` is the removed line's payload past the '|' —
 // VERBATIM, the same slice the label is built from — and `then_disabled` its
@@ -3870,7 +3906,9 @@ GuiStemDots phase_reset_stem_dots(bool red);
 // lane's diff inks, per half; the full ruling is at render_history_diff_flags
 // below.
 struct HistoryDiffFlag {
-    int64_t     time_frame = 0;
+    int64_t     time_frame = 0;       // the left marker's (the paragraph above)
+    int64_t     then_frame = 0;       // the removed half's own
+    int64_t     now_frame  = 0;       // the added half's own
     bool        removed    = false;   // the commit had this line
     bool        added      = false;   // the session has this line
     std::string removed_text;
@@ -3890,7 +3928,29 @@ struct HistoryDiffFlag {
     // the view and reddens only once its lines are back in the live store.
     // The disabled axis DOES travel (the two effective bits above, 2026-08-22)
     // because it is a property of the line itself.
+
+    // A CHANGED PAIR whose two halves stand apart — the nudged pair, drawn as
+    // the rectangle between its two stems (render_history_diff_flags).
+    bool nudged() const {
+        return removed && added && then_frame != now_frame;
+    }
+    // THE ADDED HALF IS THE LEFT MARKER: a nudged pair moved earlier. Its
+    // label, its split triangle and its stems then run added | removed; a
+    // same-frame pair stands removed left, added right.
+    bool added_left() const { return nudged() && now_frame < then_frame; }
 };
+
+// WHERE A FLAG LANDS THE PLAYHEAD — the Tab walk's, the focus click's, the
+// Center press's and the walk's seed (history_diff_cycle_target): the flag's
+// own frame, and on a NUDGED pair the frame midway between its two halves
+// (std::nearbyint), under the one flag's split triangle, which stands centred
+// between the two stems (2026-10-11).
+inline int64_t history_diff_flag_landing_frame(const HistoryDiffFlag& f) {
+    if (!f.nudged()) return f.time_frame;
+    return static_cast<int64_t>(std::nearbyint(
+        (static_cast<double>(f.then_frame) +
+         static_cast<double>(f.now_frame)) / 2.0));
+}
 
 // THE HISTORY MODE'S MARKER LANE. Replaces render_flags / render_phase_reset_-
 // flags wholesale while the mode stands: no live marker paints, and this pass
@@ -3902,13 +3962,25 @@ struct HistoryDiffFlag {
 // the triangle and its dots by ITS KIND (architect 2026-10-04; the colors
 // 2026-10-09 ~11:50, resolve_flag_face's table) — an added flag the
 // `range` blue with the blue dots alone, a removed flag the `cue` red with
-// the red dots alone, a CHANGED pair the removed half's, the half its dots
-// leave from; never the invalid class, so never the `invalid_label` pair —
-// and the label in the program face. THE LABEL CARRIES THE SIGN: `[+]` before an added line's
+// the red dots alone; never the invalid class, so never the `invalid_label`
+// pair — and the label in the program face. THE LABEL CARRIES THE SIGN: `[+]` before an added line's
 // payload, `[-]` before a removed one's (history_diff_label,
-// paint_handler.h). A CHANGED pair's label is its two halves as two
-// segments, the removed then the added, the segment gap between them. The
-// pair is still ONE flag: one rect, one focus, one claim.
+// paint_handler.h).
+//
+// A CHANGED PAIR IS ONE FLAG OVER TWO STEMS (architect 2026-10-10 ~18:55 →
+// 2026-10-11 ~00:00; the two pairings are GuiHistoryWarpChange's,
+// history_diff.h): each half keeps ITS OWN STEM at its own frame in its own
+// half's dots — the removed red alone, the added blue alone — and the one
+// flag's triangle stands CENTRED BETWEEN THE TWO STEMS, a SPLIT TRIANGLE
+// (paint_ce_cue_split_triangle, cool_edit_paint.h): its left half the LEFT
+// marker's color, its right half the right marker's, split on the vertical
+// through its apex. Its label is the two halves as two segments, THE LEFT
+// MARKER'S FIRST, the segment gap between them. A NUDGED pair (the halves
+// apart) also draws the RECTANGLE's top and bottom between its two stems on
+// the canvas (MarkerStemRun), always; a SAME-FRAME pair stands removed left,
+// added right (HistoryDiffFlag::added_left), its two stems one column — the
+// red and the blue alternating there — and no rectangle. The pair is still
+// ONE flag: one rect, one focus, one claim, one Tab stop.
 //
 // EVERY HALF IS SIZED BY ITS OWN SHAPED TEXT, so the halves of a pair are
 // routinely ASYMMETRIC and the one hit rect composes off the two measured
@@ -3955,6 +4027,7 @@ void render_history_diff_flags(cairo_t* cr,
                                const std::set<int>& selected,
                                std::vector<FlagHitRect>* out_hit_rects,
                                std::vector<MarkerStem>* out_stems,
+                               std::vector<MarkerStemRun>* out_runs,
                                const std::vector<WarpFrameMapSegment>* warp_frame_map);
 
 // THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical

@@ -255,6 +255,49 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
     cairo_restore(cr);
 }
 
+void paint_ce_cue_split_triangle(cairo_t* cr, double axis, int top,
+                                 GuiColor left, GuiColor right,
+                                 GuiColor shadow) {
+    const double u    = cue_unit_px();
+    const int    rows = kProgramSpec.cue_triangle_rows;
+    const double half = (2 * rows - 1) * u / 2.0;   // 4.5u, as above
+    const double y    = top;
+    const double apex = y + rows * u;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    // The shadow whole, one quantum right, as the unsplit triangle's.
+    cairo_new_path(cr);
+    cairo_move_to(cr, axis - half + u, y);
+    cairo_line_to(cr, axis + half + u, y);
+    cairo_line_to(cr, axis + u, apex);
+    cairo_close_path(cr);
+    set_palette_source(cr, shadow);
+    cairo_fill(cr);
+    // THE TWO HALVES SUMMED IN A GROUP, then laid over the shadow as one:
+    // each half's antialiased coverage is ADDED, so the axis column takes
+    // its share of each color with no seam of ground between them and the
+    // outer edges carry one color alone (painting one half over the other
+    // would leave a seam, or a fringe of the under color on the over half's
+    // edges).
+    cairo_push_group(cr);
+    const auto half_tri = [&](double x_out, GuiColor c) {
+        cairo_new_path(cr);
+        cairo_move_to(cr, x_out, y);
+        cairo_line_to(cr, axis, y);
+        cairo_line_to(cr, axis, apex);
+        cairo_close_path(cr);
+        set_palette_source(cr, c);
+        cairo_fill(cr);
+    };
+    half_tri(axis - half, left);
+    cairo_set_operator(cr, CAIRO_OPERATOR_ADD);
+    half_tri(axis + half, right);
+    cairo_pop_group_to_source(cr);
+    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+    cairo_paint(cr);
+    cairo_restore(cr);
+}
+
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline) {
     const double lw = static_cast<double>(program_line_px());
