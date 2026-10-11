@@ -150,7 +150,9 @@ shopt -s nocaseglob
 #      into the app's private folder beside its settings file
 #      (files/warptempo_gui/deploy_key, .pub), reachable only through run-as.
 #   5. the tablet's settings file (files/warptempo_gui/config): the projects_repo
-#      line is made to read github.com/warptempo/warptempo_projects, and every
+#      line is made to read github.com/warptempo/warptempo_projects, the role
+#      line role=author (the tablet authors; the key is required, so the app's
+#      first start refuses without it), and every
 #      line of a retired key the app refuses to start with is removed -- sync_path,
 #      and the thirteen colour keys that left 2026-10-04 when every colour became
 #      a role of a theme file (theme_level and the twelve program colour keys,
@@ -187,6 +189,7 @@ TABLET_WIRELESS="${WARPTEMPO_TABLET_ADDR:-}"
 GITHUB_CLONE_URL="https://github.com/warptempo/warptempo_projects.git"
 ORIGIN_URL="ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git"
 PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
+ROLE_LINE="role=author"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; and the
@@ -1067,7 +1070,7 @@ apply_setup() {
         put_as_app "$TABLET_KEY.pub" "$APPCFG/deploy_key.pub" 644 || die "the deploy key's .pub did not arrive intact"
     fi
 
-    # 5. THE SETTINGS FILE: projects_repo made right, the retired keys' lines gone
+    # 5. THE SETTINGS FILE: projects_repo and role made right, the retired keys' lines gone
     # (sync_path and the thirteen colour keys, RETIRED_KEYS), the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
@@ -1083,22 +1086,23 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" -v retired="${RETIRED_KEYS[*]}" '
+        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v retired="${RETIRED_KEYS[*]}" '
             BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1 }
             /^projects_repo=/ { print repo; had = 1; next }
+            /^role=/          { print role; had_role = 1; next }
             (substr($0, 1, index($0, "=")) in gone) { next }
                               { print }
-            END               { if (had == 0) print repo }' "$old_cfg" > "$new_cfg"
+            END               { if (had == 0) print repo; if (had_role == 0) print role }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository and has no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository and its role and has no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, and no line of a retired key (${RETIRED_KEYS[*]})"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, and no line of a retired key"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, and no line of a retired key"
     fi
     printf '\n'
 

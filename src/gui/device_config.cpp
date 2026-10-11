@@ -21,7 +21,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, the required
-// set below its subset (EIGHT keys since 2026-10-10, `chrome` gone;
+// set below its subset (NINE keys since 2026-10-10 evening, `role`
+// appended; EIGHT 2026-10-10, `chrome` gone;
 // nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09, `icons` appended;
 // seven 2026-10-08, `theme` gone; the
 // count's succession, up to seventeen with the tuning phases of
@@ -39,8 +40,8 @@ namespace {
 //
 // `scheme` FOLLOWS last_project (2026-10-08 ~18:15), the chrome's colors, and
 // `palette` FOLLOWS THAT (2026-10-07), the program's colors after the
-// chrome's; `icons` is APPENDED after it (2026-10-09), and `font` after that
-// (2026-10-09 ~21:20). (`chrome` stood after last_project 2026-10-07 to
+// chrome's; `icons` is APPENDED after it (2026-10-09), `font` after that
+// (2026-10-09 ~21:20), and `role` after that (2026-10-10). (`chrome` stood after last_project 2026-10-07 to
 // 2026-10-10, `theme` 2026-10-03..10-08, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
@@ -51,6 +52,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "palette",
     "icons",
     "font",
+    "role",
 };
 // THE REQUIRED SET — every key above but the four that may be ABSENT
 // (architect 2026-10-07): `scheme` (2026-10-08), absent meaning the chrome's
@@ -59,13 +61,16 @@ constexpr const char* kDeviceConfigKeys[] = {
 // chrome, 2026-10-09), `icons` (2026-10-09),
 // absent meaning the chrome's own icon set, and `font` (2026-10-09),
 // absent reading as tahoma (kDefaultFontKey), so the configs written before
-// the key load. The scanner
+// the key load. `role` (2026-10-10) IS REQUIRED, the one key appended
+// since the four that is: "if one of these lines is not in place, it means
+// something's wrong with the config or the setup" (architect). The scanner
 // checks presence against this list and duplicates against every key.
 constexpr const char* kDeviceConfigRequiredKeys[] = {
     "gui_scale",
     "projects_repo",
     "projects_path",
     "last_project",
+    "role",
 };
 // The struct's font default is the grammar owner's (gui_font.h).
 static_assert(DeviceConfig{}.font == kDefaultFontKey);
@@ -108,6 +113,12 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             continue;
         if (std::string_view(key) == "icons" && cfg.icons.empty())
             continue;
+        // AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
+        // alone carries it, and the program never invents a role — the
+        // read-back then refuses on the required key (device_config.h).
+        if (std::string_view(key) == "role" &&
+            cfg.role == GuiDeviceRole::Unset)
+            continue;
         s += key;
         s += '=';
         const std::string_view k(key);
@@ -139,6 +150,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // ("no default setting because it's a drop-down",
             // architect 2026-10-09).
             s += cfg.font;
+        } else if (k == "role") {
+            // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
+            s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
+                                                   : kDeviceRoleMirror;
         }
         s += '\n';
     }
@@ -251,6 +266,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kFontGrammarReason);
             }
             out.font = value;
+            return {};
+        }
+        // THE ROLE (architect 2026-10-10): one of the two words, required
+        // (kDeviceConfigRequiredKeys); any other word the launch's hard fail.
+        if (key == "role") {
+            if (value == kDeviceRoleAuthor) {
+                out.role = GuiDeviceRole::Author;
+            } else if (value == kDeviceRoleMirror) {
+                out.role = GuiDeviceRole::Mirror;
+            } else {
+                return bad_value(ln, key, value, kDeviceRoleGrammarReason);
+            }
             return {};
         }
         return warptempo_parse::prefix_line_error(

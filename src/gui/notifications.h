@@ -102,12 +102,11 @@
 //     tenth arm, enter_bpm_mode's own bail, is unreachable and silent).
 //   * THE MODES: the picker's "Choose a project first" and its opener's
 //     "Close the editor first"; kCheckpointPublishing (below — bare `h`, the
-//     `h` view's Ctrl+S, the save owner, the picker, File → Revert); "History
-//     is unavailable[: <reason>]" (the press that asks for git on a visit
-//     that could not bootstrap the remote walk — bare `g` at set_history_delta
-//     and Ctrl+S at open_history_commit_editor — plus the commit-title
-//     editor's Enter into a closed mode and the failed-scan arrival; the
-//     entry opens on the local walk and raises none); the trim bar's "A trim
+//     publish chord, the save owner, the picker, File → Revert); "History
+//     is unavailable[: <reason>]" (the press that asks for git where the
+//     remote walk could not bootstrap — bare `g` at set_history_delta and the
+//     publish chord, Ctrl+Shift+S, at run_publish_chord — plus the failed-scan
+//     arrival; the entry opens on the local walk and raises none); the trim bar's "A trim
 //     bound must stay inside its partner" (the act's, never
 //     trim_bound_click_frame's); playback's kPlaybackDeviceUnavailableCard
 //     (playback_lifecycle.h — the one launch body, the two pre-launch gates
@@ -169,16 +168,21 @@
 //     phase copy that captured nothing, "No labeled, enabled markers are
 //     selected, so nothing was copied". THE EDITORS' OWN Ctrl+C and Ctrl+V are
 //     silent: an editor is its own world with that world's conventions.
-//   * THE GITHUB CARDS (2026-09-27), Ctrl+S in the `h` view forking on the
-//     status (open_history_commit_editor), each the KEY'S — the Save face
+//   * THE GITHUB CARDS (2026-09-27), the publish chord (Ctrl+Shift+S since
+//     2026-10-10, in either view) forking on the status and the device's role
+//     (run_publish_chord), each the KEY'S — in the `h` view the Save face
 //     greys on the same status: "GitHub is still being checked", "GitHub
 //     refused this device", "This device and GitHub have both moved" (stderr
 //     names the fix), "GitHub has not been checked"; the pull's synchronous
 //     refusals "Pull refused: this device has moved", "Pull refused:
 //     '<piece>' has changes not committed", "Pull refused: GitHub's
 //     checkpoint of this piece would not load" and "Pull failed: nothing was
-//     changed". UNDER `offline` Ctrl+S CARDS NOTHING (architect 2026-09-28):
-//     the press asks GitHub again and row 8's state cell carries the answer.
+//     changed"; the role's two (2026-10-10), "This device is a mirror" and
+//     "GitHub has nothing newer"; and outside the view, where no face shows
+//     the head delta, "Nothing to commit" and "The checkpoints are still
+//     being read". UNDER `offline` THE CHORD ASKS GITHUB AGAIN (architect
+//     2026-09-28) and cards nothing in the view, where row 8's state cell
+//     carries the answer, and "Asking GitHub again" outside it.
 //     The GitHub CHECK itself raises nothing — its failing readings print one
 //     stderr line each and the status word is state.
 //
@@ -210,8 +214,8 @@
 //     Shift+0 over a full window, the picker's row on the project already
 //     open, the render player's folder-end skips, Backspace at the root and
 //     its idle family (no render loaded, seeking before playback), the
-//     position nudge at its wall in both columns, the `h` view's Ctrl+S over
-//     an empty head delta and its sibling, a clean session's plain Ctrl+S
+//     position nudge at its wall in both columns, the publish chord over
+//     an empty head delta in the `h` view and its sibling, a clean session's plain Ctrl+S
 //     (architect 2026-10-05, GuiSaveOps::save_from_key), and a held
 //     Ctrl+Z / Ctrl+Shift+Z whose repeat runs out of history. THE COUNTER-CLASS IS THE TEST: a command whose effect
 //     would have spread across the screen keeps its card even where its
@@ -542,8 +546,8 @@ inline const char* authoring_lock_card(const AppState& a) {
 // picker's router, the render player's fall-through —
 // and the close prompt's Save answer; bare `h`'s entry refusal (which also
 // prints it on stderr); the Open project picker's open act and File > Revert;
-// and the commit act's own opener (open_history_commit_editor), the `h`
-// view's Ctrl+S. All of them meet AppState::history_checkpoint_in_flight.
+// and the commit act's own fork (run_publish_chord), the publish chord,
+// Ctrl+Shift+S. All of them meet AppState::history_checkpoint_in_flight.
 // ONE CLAUSE (architect 2026-09-01, the capitalization sweep's sentence
 // shape): the sentence is the instruction. It read "A checkpoint is still
 // publishing; try again when it finishes" until that day.

@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Eight keys live here and nowhere else:
+// piece (architect 2026-08-27). Nine keys live here and nowhere else:
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -55,6 +55,20 @@
 //                            applied LIVE at the Settings row's OK
 //                            (gui_live_face_set; the row's list only shows
 //                            a face, architect 2026-10-09)
+//   role=<role>              THE DEVICE'S PART IN THE PROJECTS REPOSITORY
+//                            (architect 2026-10-10): `author` (the tablet:
+//                            it authors every movement, commits and pushes,
+//                            and pulls only when GitHub is ahead) or
+//                            `mirror` (the laptop: it never commits and
+//                            never pushes, and follows GitHub by pulling) —
+//                            GuiDeviceRole below; REQUIRED, an absent line
+//                            or any other word the launch's hard fail ("if
+//                            one of these lines is not in place, it means
+//                            something's wrong with the config or the
+//                            setup"); no Settings row, the file is its one
+//                            road; a harmless redundancy and a sanity
+//                            check ("the tablet should never pull [but to
+//                            recover], and the laptop should never push")
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
@@ -63,7 +77,8 @@
 // `palette` APPENDED after `theme` 2026-10-07, the program's colors' own
 // file type; `theme` gone 2026-10-08, below; `scheme` placed before `palette`
 // 2026-10-08 ~18:15, the chrome's colors before the program's; `icons` APPENDED after `palette` 2026-10-09, and `font`
-// APPENDED after `icons` 2026-10-09 ~21:20);
+// APPENDED after `icons` 2026-10-09 ~21:20, and `role` APPENDED after
+// `font` 2026-10-10);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -201,7 +216,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eight
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nine
 // keys and each at most once, every key REQUIRED but `scheme`, `palette`,
 // `icons` and `font` (`font` absent (2026-10-09) is tahoma, so the configs
 // written before the key still load — the writer names it always; `palette`
@@ -237,7 +252,9 @@
 // kSettingsPopupItems,
 // app_state.h) as rows that open the settings editor prefilled, and the
 // editor commits each through this file's writer under the key's own
-// grammar below. (Font follows Icons.) `palette` (2026-10-07) and
+// grammar below. (Font follows Icons.) `role` (2026-10-10) is NOT EDITABLE
+// IN THE APP: the planner sets it on each device by hand, the program not
+// running, and the program only carries it through its rewrites. `palette` (2026-10-07) and
 // `scheme` (2026-10-08) HAVE NO SETTINGS ROW: the color picker's preset menu
 // is their road (color_picker.h's THE PRESETS), which writes each key
 // through the same writer. Until
@@ -259,7 +276,11 @@
 // and `icons` empty (no line: the chrome's own). Both backends stamp a
 // default-constructed struct's (GuiPlatform::device_config_defaults), so the
 // first-run file of either device names `font=tahoma` and no scheme, palette
-// or icons line.
+// or icons line. THE ROLE'S DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
+// (architect 2026-10-10: the program never invents a device's role), so a
+// first run stamps a file WITHOUT `role` and its read-back refuses the launch
+// on the missing key — the file is already there for the hand to add
+// `role=author` or `role=mirror` to.
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -279,6 +300,14 @@
 // ICON SET IS ITS KEY VERBATIM TOO (2026-10-09): gui_main installs it once
 // (set_live_icon_set, icons.h), before the set's load. SO IS THE FONT
 // (2026-10-09): gui_main installs it (set_live_font, gui_font.h), and the Settings row's commit installs it again live.
+// THE DEVICE'S ROLE (architect 2026-10-10; the key's ruling is in the head's
+// list): what this device may do to the projects repository. `Unset` is
+// CONSTRUCTION STATE alone — the first-run template's, which writes no line —
+// and never survives a read, the key being required. Read through
+// device_is_mirror (app_state.h) by the publish chord's act and the `h`
+// Save face.
+enum class GuiDeviceRole { Unset, Author, Mirror };
+
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;
@@ -305,6 +334,8 @@ struct DeviceConfig {
     // kDefaultFontKey (gui_font.h) — what an absent line reads as, and
     // always written.
     std::string font = "tahoma";
+    // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
+    GuiDeviceRole role = GuiDeviceRole::Unset;
 };
 
 // The repository a device is STAMPED WITH when it has never named one — the
@@ -452,6 +483,13 @@ inline bool is_projects_repo(const std::string& v) {
     return true;
 }
 
+// THE role GRAMMAR (architect 2026-10-10) — the two words, exactly; the one
+// owner the reader and the writer read.
+inline constexpr const char* kDeviceRoleAuthor = "author";
+inline constexpr const char* kDeviceRoleMirror = "mirror";
+inline constexpr const char* kDeviceRoleGrammarReason =
+    "must be author or mirror";
+
 // (THE palette AND scheme GRAMMARS are palette_file.h's is_palette_name and
 // kPaletteGrammarReason, is_scheme_name and kSchemeGrammarReason, with THE
 // ONE COLOUR GRAMMAR every palette role's and scheme key's value takes,
@@ -595,7 +633,9 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
 // both stamp the default font
-// (kDefaultFontKey) and no scheme, palette or icons line, kDefaultProjectsRepo and
+// (kDefaultFontKey) and no scheme, palette, icons or role line (the role is
+// never invented, so the first run's read-back refuses on it — the struct's
+// role paragraph), kDefaultProjectsRepo and
 // a blank
 // last_project),
 // so a first run on either device lands a

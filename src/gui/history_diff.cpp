@@ -2398,8 +2398,8 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // another device) refuses the push as non-fast-forward, CommittedNotPushed
 // too — the accepted window; the next check reads Diverged. A FAILED PUSH IS
 // RETRIED IN THE APP (architect 2026-09-27, superseding "never by an in-app
-// retry" of 2026-08-09): the status reads Ahead, and Ctrl+S in the `h` view
-// runs this act again, whose clean-but-owing arm pushes the branch. OUT-OF-APP
+// retry" of 2026-08-09): the status reads Ahead, and the publish chord
+// (Ctrl+Shift+S, either view, 2026-10-10) runs this act again, whose clean-but-owing arm pushes the branch. OUT-OF-APP
 // GIT UNDER projects/ is unsanctioned use: a commit racing this act may yield
 // a blunt error rather than a graded diagnosis (git and closed_questions.md
 // carry the history of what this replaced).
@@ -2441,8 +2441,8 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // those changing in the seconds since the fetch, a remote that moved in that
 // window, a server-side rejection, the time bound.
 //
-// `title` IS THE COMMIT MESSAGE and the caller's (the commit-title editor's
-// buffer, seeded from history_checkpoint_title). Nothing matches on it, so it is
+// `title` IS THE COMMIT MESSAGE and the caller's (history_checkpoint_title's
+// default, the only title since 2026-10-10). Nothing matches on it, so it is
 // written and never read back.
 //
 // IT CREATES NO DIRECTORY, AND NEEDS NONE: `project_directory` is the folder the
@@ -2553,8 +2553,7 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
                          (up.ahead > 0)
                              ? ", and this device has its own: fast-forward "
                                "only, so resolve it in a terminal"
-                             : "; pull them first (Ctrl+S in the history "
-                               "view)");
+                             : "; pull them first (Ctrl+Shift+S)");
             return GuiHistoryCommitOutcome::RemoteMoved;
         }
         github = (up.ahead > 0) ? GuiGitHubStatus::Ahead
@@ -3059,8 +3058,8 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
                      "warptempo_gui: Pull failed: the files were partly "
                      "updated and '%s' did not move (%s)\n"
                      "warptempo_gui:   on the laptop: 'git -C %s restore "
-                     "projects' in the terminal, then pull again (Ctrl+S "
-                     "in h)\n"
+                     "projects' in the terminal, then pull again "
+                     "(Ctrl+Shift+S)\n"
                      "warptempo_gui:   on the tablet: re-place the clone "
                      "with 'warptempo_sync setup' from the laptop\n",
                      branch.c_str(), diag.c_str(), plan.repo_root.c_str());

@@ -112,12 +112,10 @@ struct GuiPrompt {
     // (NO COMMIT CONFIRMATION HERE ANY MORE. The `h` history view's
     // Save-and-Commit act was guarded by a fourth prompt — HISTORY_COMMIT, one
     // question with `y` and Esc — until 2026-08-07, when the architect replaced
-    // it with the COMMIT-TITLE EDITOR: the act asks for the message instead of
-    // asking for permission, and a bare Enter over the prefilled default is the
-    // old `y`. The prompt kind, this opener and the back-pointer to the input
-    // handler that its `y` reached the act through were all deleted; the editor
-    // lives with the mode's other machinery, at
-    // GuiInputHandler::open_history_commit_editor. THE BACK-POINTER IS BACK
+    // it with the COMMIT-TITLE EDITOR, itself retired 2026-10-10 when the act
+    // stopped asking anything (GuiInputHandler::run_publish_chord, the default
+    // title). The prompt kind, this opener and the back-pointer to the input
+    // handler that its `y` reached the act through were all deleted. THE BACK-POINTER IS BACK
     // SINCE 2026-08-28 for a different question — the render player's load
     // confirmation, whose raise lives on the input handler beside the act it
     // confirms; the member above records its one reader.)

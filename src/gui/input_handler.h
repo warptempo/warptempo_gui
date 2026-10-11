@@ -537,7 +537,8 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // CHORD'S ALONE): Ctrl+S — head_delta_empty and history_checkpoint_in_flight —
 // was the instance he hit, a committed-and-current session being told the
 // view's own save chord was "not available in the history view", so the chord
-// is admitted as vocabulary and open_history_commit_editor answers both states
+// is admitted as vocabulary (the act's chord is Ctrl+Shift+S since 2026-10-10)
+// and run_publish_chord answers both states
 // (the publishing card, then the one-dimensional silence), with the Save
 // button's grey reading history_checkpoint_actionable at its own arm. Both
 // readers hand it the
@@ -927,8 +928,8 @@ struct GuiInputHandler {
     // (NO GuiPrompt FRIENDSHIP. The prompt needed one while the history mode's
     // commit confirmation lived there — its `y` reached the private act through
     // a back-pointer — and both went with the prompt on 2026-08-07: the act is
-    // now run by the commit-title editor's Enter, which is a private method of
-    // this same struct.)
+    // now run by the publish chord's act (run_publish_chord, 2026-10-10), a
+    // private method of this same struct.)
 
     // KEYBOARD COMMANDS ACT AT THE PRESS. This is the one ranked key
     // dispatch: the platform delivers physical presses and synthesized
@@ -2271,9 +2272,9 @@ struct GuiInputHandler {
     bool cancel_archival_session();
 
     // True when ANY text editor is consuming printable keys — the settings
-    // editor, the commit-title editor, or the top-strip flag editor in ANY of
-    // its kinds (unlike modal_dialog_editor_active, which names the three
-    // DIALOG-hosted surfaces — those first two plus the flag editor's
+    // editor, the color picker's field, or the top-strip flag editor in ANY of
+    // its kinds (unlike modal_dialog_editor_active, which names the two
+    // DIALOG-hosted surfaces — the settings editor and the flag editor's
     // BpmBracket kind — and omits
     // the FlagPayload and IterBound kinds, both of which paint in the marker
     // lane). The platform's
@@ -2759,7 +2760,7 @@ private:
     void run_playhead_end_jump(bool forward, bool whole_piece);
 
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
-    // the commit-title editor, the bpm bracket editor, and (architect
+    // the bpm bracket editor, the color picker's field and (architect
     // 2026-07-28) the top-strip flag editor. The modal contract is stated once
     // at the definition; returns true if the editor consumed the key (on_key
     // then returns), false on Ctrl+Q so on_key runs the close routing.
@@ -2768,12 +2769,12 @@ private:
     // the SETTINGS and LOAD editors and returning whether it ADVANCED the
     // buffer, which is what decides between consuming the key and letting it
     // walk the focus ring (THE ONE AUTOCOMPLETE MODEL, architect 2026-08-13,
-    // stated in full at the definition). The commit-title, bpm and flag editors
+    // stated in full at the definition). The bpm and flag editors
     // have nothing to complete and pass an empty hook; for the flag editor bare
     // Tab never arrives at all, the on_key gate swallowing it before this route
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit and
     // cancel are the per-editor bodies, and `repaint` is the
-    // editor's own damage for a text change — the three dialog surfaces
+    // editor's own damage for a text change — the two dialog surfaces
     // pass the modal's own owner (the bottom row's lane,
     // viewport.cpp), the flag editor the top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
@@ -3255,38 +3256,18 @@ private:
     // on a menu or a list it is the lit row itself moving.
     static constexpr double kPenHotRearmPx = 12.0;
 
-    // THE COMMIT-TITLE EDITOR (architect 2026-08-07) — the settings editor's
-    // dialog pattern for the history view's OTHER act. Ctrl+S while the view
-    // stands opens it prefilled with `Update <id>`; Enter runs the
-    // Save-and-Commit act under whatever the buffer holds; Esc abandons with
-    // nothing written; an empty or whitespace-only buffer refuses with a card
-    // and stays
-    // open, since a checkpoint with no message is not a thing to write.
-    // It REPLACED the act's confirmation prompt, and a bare Enter over the
-    // prefill is that prompt's `y` — the pause is the same, and the editor uses
-    // it to ask something worth asking.
-    //
-    // open_history_commit_editor: the opener, reached from ONE place —
-    // Ctrl+S's own arm, which the mode bit re-aims (on_key's `s` handler,
-    // input_handler.cpp; it was Ctrl+Alt+R's arm until 2026-08-08, when the
-    // architect moved the act onto the SAVE button's chord). IT OWNS THE ACT'S
-    // TWO SESSION REFUSALS since 2026-09-01 (a checkpoint in flight, an empty
-    // head delta), which the mode's allowlist carried as admission terms until
-    // then; its body states both.
-    // commit_title_editor_commit: Enter — validate non-blank, close the editor,
-    // run the act (run_history_commit, which owns the save, the close and the
-    // dispatch).
-    // commit_title_editor_exit_no_commit: the abandon body — Esc's cancel, and
-    // Ctrl+Q's through the close road's own step (close_modal_editors_no_commit).
-    // handle_commit_title_editor_key: the key router, through
-    // route_modal_editor_key like the three editors before it. It passes NO
-    // autocomplete hook — there is no vocabulary here to complete against, a
-    // commit title being free text — so bare Tab walks the dialog's focus ring
-    // from the first press, as it does in the bpm editor.
-    void open_history_commit_editor();
-    void commit_title_editor_commit();
-    void commit_title_editor_exit_no_commit();
-    bool handle_commit_title_editor_key(GuiKey key, GuiInputState mods);
+    // THE PUBLISH CHORD'S ACT (architect 2026-10-10) — Ctrl+Shift+S in the
+    // main window and in the `h` view alike, and the `h` view's Save button's
+    // lift: the pull while GitHub is ahead, the check while offline, else
+    // save and commit under the default title with no question asked, a
+    // MIRROR device taking no commit road. Its one caller is on_key's `s`
+    // arm (is_publish_key, gui_input.h); the fork and its order are at the
+    // definition (input_key_dispatch.cpp). THE COMMIT-TITLE EDITOR it
+    // replaces (2026-08-07 to 2026-10-10, itself the replacement of a
+    // confirmation prompt) is RETIRED WHOLE: "I'm always just using the same
+    // title, the default. And if I make a mistake, a revert is just a quick
+    // load in place away" (architect 2026-10-10).
+    void run_publish_chord();
 
     // -- THE RECIPE APPLY, and the rule it exists to state once ----------
     //
@@ -3844,7 +3825,7 @@ private:
     //   a scrub still acts under an open one and the cursor must not lie about
     //   that. Its own BOX is the exception and not a refusal: that rect takes
     //   the caret press, so it answers Text (above) while everything around it
-    //   answers whatever the surface under the editor would. The three DIALOG
+    //   answers whatever the surface under the editor would. The two DIALOG
     //   modal editors DO refuse, because their veil really
     //   does swallow the press (modal_dialog_editor_active) — with the FIELD
     //   the one rect inside that veil which takes an act, and so the one thing
@@ -4161,8 +4142,9 @@ private:
 
     // KEYBOARD MODALITY (architect 2026-07-28): true when an open editor owns
     // the keyboard, so every chord outside the admitted set is a silent no-op.
-    // EVERY editor does — the two single-State dialog ones (settings,
-    // commit title), the bpm bracket, the bound editor, and the
+    // EVERY editor does — the single-State dialog one (settings; the commit
+    // title stood beside it 2026-08-07 to 2026-10-10), the bpm bracket, the
+    // bound editor, the color picker's field and the
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
@@ -4184,8 +4166,8 @@ private:
     // Modal-editor predicate + key gate (bodies in input_key_dispatch.cpp).
     // THIS DECLARATION IS THE AUTHORITATIVE STATEMENT of what
     // modal_dialog_editor_active is for; other sites carry a pointer here.
-    // It names the DIALOG-HOSTED modal editors — the settings editor, the
-    // commit-title editor and the bpm bracket editor (plus the prompts, gated
+    // It names the DIALOG-HOSTED modal editors — the settings editor and the
+    // bpm bracket editor (plus the prompts, gated
     // separately), the surfaces that
     // paint in the MODAL since 2026-08-12 — on the BOTTOM ROW since
     // 2026-08-13, which is where the name came from in the first place (it
@@ -4726,12 +4708,12 @@ private:
     //     the walk already shown a consumed nothing at its call site.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
-    //   * the COMMIT-TITLE EDITOR asks for the message (its cluster is declared
-    //     above, beside the picker).
-    //   * run_history_commit is that editor's Enter: save, rebuild the bytes,
-    //     close the view, and hand the captured job to the background worker.
-    //     Its body owns the close partition (THE VIEW CLOSES IFF THE SAVE
-    //     LANDED, architect 2026-08-07) and the capture list.
+    //   * the PUBLISH CHORD'S ACT forks in front of it (run_publish_chord,
+    //     declared above, beside the picker), asking nothing (2026-10-10).
+    //   * run_history_commit is that act's commit arm: save, rebuild the bytes,
+    //     close a standing view, and hand the captured job to the background
+    //     worker. Its body owns the close partition (THE VIEW CLOSES IFF THE
+    //     SAVE LANDED, architect 2026-08-07) and the capture list.
     //   * on_history_checkpoint_complete is the worker's completion, back on
     //     the main thread: it clears the in-flight bit and RAISES A CRITICAL
     //     NOTIFICATION CARD for each of the three failing verdicts (the two
@@ -4749,8 +4731,9 @@ private:
     //     from on_key's ordinary body BELOW the read-only gate, so a locked tab
     //     refuses it exactly as it refuses `'` — but no longer as it refuses the
     //     checkpoint act, which authors nothing and runs from a locked tab
-    //     (2026-08-07's band ruling; the act's chord is Ctrl+S since
-    //     2026-08-08, admitted by that same gate). Its body owns the
+    //     (2026-08-07's band ruling; the act's chord is Ctrl+Shift+S since
+    //     2026-10-10 — Ctrl+S from 2026-08-08 — admitted by that same gate).
+    //     Its body owns the
     //     per-class inverse, the always-force rule and the one undo entry.
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     // The mode's Tab act, one step over the viewed checkpoint's diff flags in
@@ -4774,14 +4757,18 @@ private:
     void focus_history_diff_flag(int hit);
     void select_history_diff_flags_modified(int hit, bool extend);
     void close_history_mode();
-    void run_history_commit(const std::string& title);
+    // The session is the press's (run_publish_chord's own): the `h` visit's,
+    // or the main window's transient bind.
+    void run_history_commit(const GuiHistoryDiff& session,
+                            const std::string&    title);
     void on_history_checkpoint_complete(GuiHistoryCommitOutcome outcome,
                                         GuiGitHubStatus         github);
-    // THE PULL (architect 2026-09-27): Ctrl+S in the `h` view while the GitHub
-    // status reads Behind. The press plans it (plan_history_pull, local and
-    // synchronous), asks the question only when the pull changes the open
+    // THE PULL (architect 2026-09-27): the publish chord (Ctrl+Shift+S since
+    // 2026-10-10, in either view) while the GitHub status reads Behind, on the
+    // session that press read. The press plans it (plan_history_pull, local
+    // and synchronous), asks the question only when the pull changes the open
     // piece, and runs it (execute_history_pull) at once otherwise.
-    void run_history_pull_press();
+    void run_history_pull_press(const GuiHistoryDiff& session);
     void execute_history_pull(const GuiHistoryPullPlan& plan, bool reload);
     void on_github_check_complete(GuiGitHubStatus status);
     void run_history_revert();
@@ -4795,7 +4782,8 @@ public:
     //
     // START A FRESH SCAN of the loaded source's committed history — the ONE
     // funnel for all four kickers (main.cpp's startup load tail, the
-    // checkpoint completion's re-warm, the `h` entry's staleness kick, and the
+    // checkpoint completion's re-warm, the staleness kick of the `h` entry and
+    // of the main window's publish chord, and the
     // pull's re-warm after it wrote the working tree), none of which can fire
     // with a visit standing (the definition carries the proof, and the
     // deferral bit that stood for the case none of them produces was deleted
@@ -4803,17 +4791,18 @@ public:
     void kick_history_prefetch();
     // THE GITHUB CHECK'S ONE DISPATCH (architect 2026-09-27): at every project
     // open (main.cpp's load tail, beside the prefetch kick), every `h` entry
-    // that bootstrapped a clone, and Ctrl+S in the view (the Save button's
-    // lift included) under Offline (open_history_commit_editor, architect
-    // 2026-09-28). The status reads Checking until the
+    // that bootstrapped a clone, and the publish chord in either view (the
+    // `h` Save button's lift included) under Offline (run_publish_chord,
+    // architect 2026-09-28; Ctrl+Shift+S since 2026-10-10). The status reads Checking until the
     // worker answers (on_github_check_complete). A worker already busy
     // dispatches nothing: a check in flight answers soon, and a checkpoint's
     // completion writes its own reading.
     void dispatch_github_check();
     // The same question with the staleness test in front of it: kick only when
     // the store describes another source, another projects_repo, or a branch tip
-    // that has moved. Public for symmetry with the funnel; its one caller is the
-    // mode's entry owner.
+    // that has moved. Public for symmetry with the funnel; its two callers are
+    // the mode's entry owner and the main window's publish chord
+    // (run_publish_chord's transient bind, 2026-10-10).
     void kick_history_prefetch_if_stale();
     // THE ARRIVAL HOOK, from the platform's prefetch ready fd (main.cpp's
     // wiring): drain the worker's queue into the store and, while the view

@@ -139,8 +139,8 @@ static void show_row_text_embossed(cairo_t* cr, const GuiFont& font,
 
 // (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
 // DIED 2026-08-12 when the editors became dialogs: the settings, load,
-// commit-title and BPM editors paint as a label + dark inset field + OK/Cancel
-// buttons in paint_modal_dialog at the tail of this file, and the prompt's
+// commit-title and BPM editors painted as a label + dark inset field + OK/Cancel
+// buttons in paint_modal_dialog (the two left since: the settings and BPM) at the tail of this file, and the prompt's
 // text-plus-labels line became a message + real buttons. The one-run
 // prefix+pending shaping died with it — the prefix is a LABEL outside the
 // field now, so the pending run shapes alone and the published click-to-caret
@@ -1023,7 +1023,8 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
     // This body owns only WHICH glyph the swap gives.
     if (!redesign_button_glyph_swapped(app, b)) return table_icon;
     switch (b) {
-        // SAVE, in the history view (where Ctrl+S IS the checkpoint act) and
+        // SAVE, in the history view (where its lift is the checkpoint act's
+        // chord, Ctrl+Shift+S since 2026-10-10) and
         // while a checkpoint publishes.
         // THE PULL GLYPH (vcs-pull, 2026-09-27) is Save's third, in the view
         // while the GitHub status reads Behind (redesign_button_glyph).
@@ -5259,10 +5260,6 @@ void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
 // caller below wants only the null test and is unaffected.
 static text_editor::State* dialog_editor_to_paint(AppState& app,
                                                   std::string& prefix) {
-    if (text_editor::is_active(app.commit_title_editor)) {
-        prefix = kCommitTitleEditorPrefix;
-        return &app.commit_title_editor;
-    }
     if (text_editor::is_active(app.settings_editor)) {
         // A CHOICE EDITOR'S LABEL IS ITS ROW'S (2026-10-07 evening): the
         // menu row's own word ("Icons") in the dialogs' `<word>:` form, the
@@ -5476,7 +5473,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // THE MODAL SURFACE — THE BOTTOM ROW (architect 2026-08-13, scrapping the
 // centered box he ratified the day before: "it looks sloppy — no compositor
 // drop shadow, and faking one wouldn't work"). It hosts the PROMPTS and the
-// THREE modal editors (settings / commit-title / BPM); the top-strip
+// TWO modal editors (settings / BPM; the commit-title editor was the third
+// until its retirement 2026-10-10); the top-strip
 // FLAG editor is deliberately NOT a dialog — it is positional, editing the
 // marker where it stands, and stays the pointer-transparent unrolled flag
 // (render_flag_editor_box).
@@ -6710,7 +6708,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // a caret resting mid-string) and must die with the edit. enter() and
             // deactivate() already zero it, so it RESETS when a dialog opens and
             // when it closes, with no reset site of its own to keep in step — and
-            // since each of the three dialog editors owns its own State, a change
+            // since each dialog editor owns its own State, a change
             // of the stash's owner is structurally a change of offset too. A
             // prompt has no field and writes none.
             //

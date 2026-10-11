@@ -60,9 +60,10 @@ namespace text_editor {
 // CAPS ARE TIGHT BOUNDS and each derives its own — the flag payload, the
 // iteration bound, and, since 2026-09-06, the BPM bracket, whose
 // beats field stopped admitting leading zeros and so gained a widest spelling
-// like every other field of that grammar. THE OTHER TWO ARE POLICY CEILINGS
-// and each says so where it stands: the settings value and the commit title
-// are FREE TEXT, with no widest spelling to be tight against.
+// like every other field of that grammar. THE SETTINGS VALUE IS A POLICY
+// CEILING and says so where it stands: FREE TEXT, with no widest spelling to
+// be tight against (the commit title was the second, until its editor
+// retired 2026-10-10).
 //
 // Maximum bytes allowed in `pending`, and it belongs to the FLAG PAYLOAD
 // editor alone: every other Kind names its own cap below, so this default is
@@ -217,15 +218,6 @@ constexpr int kMaxPendingCharsBpm = 44;
 // minimal-travel rule each painter applies — so the two cannot scroll
 // differently.
 constexpr int kMaxPendingCharsSettings = 1024;
-// The history mode's commit-title editor (Ctrl+S while the view stands).
-// Holds the checkpoint's commit message — one line, prefilled with `Update
-// <id>` and free UTF-8 text the user may rewrite. A POLICY CEILING — free
-// text has no widest spelling — and 256 is generous, well past the
-// ~50-character summary line a commit title is written to be.
-// (The `h` view's load prompt took the same ceiling until 2026-08-28, when
-// the field-less picker replaced it; that picker retired the next day and the
-// view's `'` raises a plain confirmation now, with nothing to type at all.)
-constexpr int kMaxPendingCharsCommitTitle = 256;
 // THE COLOR PICKER'S HEX FIELD (2026-10-07, color_picker.h): one color as
 // `#RRGGBB`, the widest spelling the commit admits — seven bytes, the `#`
 // optional at the commit, so a pasted `83D798` fits too.
@@ -242,9 +234,7 @@ constexpr int kMaxPendingCharsPaletteName = 40;
 // commit-time validator). The flag editor uses FlagPayload (the plain
 // canonical payload — tempo, scale, labels, never a bracket); the BPM popup
 // uses BpmBracket; the settings-prompt editor uses SettingsAssignment
-// (`key=value`); the history mode's commit-title editor uses CommitTitle
-// (free one-line text, the message the checkpoint commit carries);
-// and the ITERATION BOUND editor uses IterBound (the text of one of the two
+// (`key=value`); and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is
 // State::iter_upper below — judged at its commit against the bracket's walls).
 // ONE KIND, TWO GRAMMARS SINCE 2026-09-09: a warp marker's cell holds a signed
@@ -252,9 +242,9 @@ constexpr int kMaxPendingCharsPaletteName = 40;
 // State::iter_hops says which — one kind because the two are the same surface,
 // the same open, the same modal contract and the same commit route, differing
 // only in what the bytes mean, exactly as the side bit differs in which bound
-// they name. THERE ARE SEVEN KINDS AND THREE OF THEM ARE
-// DIALOG EDITORS; the two top-strip kinds (FlagPayload, IterBound) share the
-// flag editor's State and paint in the marker lane; THE SIXTH AND SEVENTH,
+// they name. THERE ARE SIX KINDS AND TWO OF THEM ARE
+// DIALOG EDITORS (SettingsAssignment, BpmBracket); the two top-strip kinds (FlagPayload, IterBound) share the
+// flag editor's State and paint in the marker lane; THE FIFTH AND SIXTH,
 // PaletteHex and PaletteName (2026-10-07), are THE COLOR PICKER'S ONE FIELD
 // — one line of `#RRGGBB` on the picker's card, or a palette's name while
 // its name ask stands (AppState::ColorPicker::field_editor, one State for
@@ -263,7 +253,10 @@ constexpr int kMaxPendingCharsPaletteName = 40;
 // AppState::text_editor_session (so the on-screen keyboard rises for it and
 // the keyboard-modal gate stands) and NOT of dialog_editor_session. (A sixth,
 // MagnificationLevelText, the magnification level markers column's one-digit
-// editor, stood from 2026-09-15 until that column's deletion 2026-09-23.)
+// editor, stood from 2026-09-15 until that column's deletion 2026-09-23;
+// CommitTitle, the `h` view's commit-title editor, from 2026-08-07 until the
+// architect retired it 2026-10-10 — the checkpoint takes the default title
+// with no question asked, GuiInputHandler::run_publish_chord.)
 // IterBound arrived on
 // 2026-09-05, when every cell became a mini flag with its own editor (the
 // MeasureText kind, the marker measure editor, stood from 2026-08-19 until the
@@ -274,12 +267,11 @@ constexpr int kMaxPendingCharsPaletteName = 40;
 // FIELD-LESS PICKER over the folder overlay (AppState::Picker, app_state.h),
 // which is a modal owner and not an editor. THIS ENUM IS THE AUTHORITATIVE
 // LIST of the editors, and the roster that matters for modality is
-// AppState::dialog_editor_session, which NAMES the three.
+// AppState::dialog_editor_session, which NAMES the two.
 enum class Kind {
     FlagPayload,
     BpmBracket,
     SettingsAssignment,
-    CommitTitle,
     IterBound,
     PaletteHex,
     PaletteName,
@@ -293,8 +285,7 @@ enum class Kind {
 // product's modal surfaces and `enter` below is their one activation route,
 // which is what makes the stamping STRUCTURAL rather than disciplinary: no
 // opener can forget to take an id, and each new dialog editor has inherited
-// the identity for free — the commit-title editor in 2026-08-07 among them,
-// not touching this counter.
+// the identity for free, not touching this counter.
 // THE SURFACES THAT ARE NOT EDITORS take their ids from this same counter at
 // their own one raise route each — every non-editor member of
 // AppState::ModalDialogOwner (app_state.h), which is the modal surfaces' ONE
@@ -326,7 +317,7 @@ struct State {
     // it alone — `target` is what says "not editing", and a dead session's id
     // must not be reusable). The TOP-STRIP FLAG editor takes one too and
     // nothing ever reads it: it publishes no dialog, so it has no geometry to
-    // validate. What the three DIALOG editors' ids are for is at
+    // validate. What the two DIALOG editors' ids are for is at
     // AppState::ModalDialogGeometry.
     uint64_t session = 0;
 

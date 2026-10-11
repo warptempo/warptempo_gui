@@ -477,6 +477,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
+    // NO ROLE (architect 2026-10-10): the program never invents one, so the
+    // first start's read-back refuses on the required `role` key;
+    // `warptempo_sync setup` writes `role=author` (GuiDeviceRole,
+    // device_config.h).
     return cfg;
 }
 

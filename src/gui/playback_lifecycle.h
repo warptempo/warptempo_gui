@@ -153,15 +153,15 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-09-30 — NINE
-    // sites: GuiSettingsEditor::open (settings_editor.cpp); in
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-10 — NINE
+    // sites (the color picker's open, GuiColorPicker::open in
+    // color_picker.cpp, joined 2026-10-07 among them): GuiSettingsEditor::open (settings_editor.cpp); in
     // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
     // (history_load_in_place — the history picker it replaced on 2026-08-29
     // was this caller before it), the `m`
-    // bpm editor (handle_mode_keys), the history view's COMMIT-TITLE editor
-    // (open_history_commit_editor), the OPEN PROJECT PICKER
+    // bpm editor (handle_mode_keys), the OPEN PROJECT PICKER
     // (open_project_picker, 2026-08-27 as a prompt, field-less since
-    // 2026-08-28) and the `h` view's PULL question (run_history_pull_press,
+    // 2026-08-28) and the PULL question (run_history_pull_press,
     // Reload / Keep / Cancel); the TWO
     // prompt opens (prompt.cpp: unsaved, and File → Revert's confirmation —
     // the error notice's was a third until that prompt kind retired whole on
@@ -173,7 +173,9 @@ struct GuiPlaybackLifecycle {
     // caller from 2026-09-03 until the panel's deletion on 2026-09-30.) (The
     // Generate Magnification Level Markers
     // confirmation was a tenth from 2026-09-22 until the act's deletion on
-    // 2026-09-23, the count going back TEN to NINE with it.) It had gone seven
+    // 2026-09-23, the count going back TEN to NINE with it; the history view's
+    // COMMIT-TITLE editor was one from 2026-08-07 until its retirement
+    // 2026-10-10.) It had gone seven
     // to six on 2026-08-09, when the render-library advisory prompt was
     // deleted with the whole attestation surface.
     // IT WENT EIGHT TO SEVEN LATER THE SAME DAY: the settings editor's TWO doors
@@ -208,7 +210,7 @@ struct GuiPlaybackLifecycle {
     // cannot restart until the surface closes.
     // THE DECISION TABLE lives here, so a new modal surface inherits an ANSWER
     // instead of an absence:
-    //   * DIALOG modal surfaces — the three dialog editors, the prompts and
+    //   * DIALOG modal surfaces — the two dialog editors, the prompts and
     //     the picker, all painted as the bottom row's modal since 2026-08-13
     //     — STOP.
     //   * The TOP-STRIP FLAG EDITOR IS EXEMPT, and that is a DECISION, not an

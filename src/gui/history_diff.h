@@ -29,9 +29,8 @@ class GuiHistoryPrefetch;
 // raises that same composed line on a card when bare `g` asks for the remote
 // walk this visit could not bootstrap (GuiInputHandler::set_history_delta);
 // the CHECKPOINT ACT'S, which raises it for the same reason
-// (open_history_commit_editor); the prefetch arrival that closes a standing
-// view, which does both; and run_history_commit's !active arm, which raises
-// it bare. It lives beside the reason it prefixes rather than in one of the
+// (run_publish_chord); and the prefetch arrival that closes a standing
+// view, which does both. It lives beside the reason it prefixes rather than in one of the
 // readers, so no reader can drift from the producer. (TWO DEAD-BUTTON
 // TOOLTIPS said it too from 2026-09-04 to 2026-09-12 — the walk lamp's and
 // Save-and-Commit's, over the faces this fact greys. A tooltip names the act
@@ -1147,13 +1146,14 @@ private:
 
 // -- THE COMMIT ACT — the first of the three mutating git routes ------------
 //
-// What the mode reads, it can now also WRITE: while the history mode stands,
-// Ctrl+S saves the piece and commits the live authoring state into its directory
-// in the projects repository (the mode bit selects the command, exactly as the
-// iteration bit selects the sweep; the chord was Ctrl+Alt+R until 2026-08-08,
-// when the architect moved the act onto the chord its first step already is).
-// The GUI half — the COMMIT-TITLE EDITOR that
-// asks for the message (2026-08-07, superseding the confirmation prompt), THE
+// What the mode reads, it can now also WRITE: the publish chord, Ctrl+Shift+S
+// (2026-10-10, in the main window and the `h` view alike), saves the piece and
+// commits the live authoring state into its directory in the projects
+// repository (the chord was Ctrl+Alt+R until 2026-08-08 and Ctrl+S in the
+// view until 2026-10-10). The GUI half — THE CHORD'S FORK that asks nothing
+// (run_publish_chord: the pull, the check or the commit by the GitHub status
+// and the device's role; the commit-title editor that asked for the message
+// from 2026-08-07 retired 2026-10-10), THE
 // ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and commit", and a
 // failed save refuses it before this module is reached at all), the CLOSE that
 // ends the view once THE SAVE has landed (2026-08-07, superseding the
@@ -1166,11 +1166,12 @@ private:
 // THE DEFAULT commit message: `Update <id>`, where the id is the piece
 // directory's own leaf name ("projects/550 - 1" -> "Update 550 - 1").
 //
-// SINCE 2026-08-07 IT IS A PREFILL RATHER THAN THE MESSAGE ITSELF (architect,
-// superseding "the message is derived, not chosen"): the act opens a
-// commit-title editor seeded with this, and whatever the user leaves in that
-// buffer is the title the act carries. This stays the ONE owner of the default
-// spelling, and it has exactly one reader — the editor's opener.
+// IT IS THE MESSAGE ITSELF AGAIN SINCE 2026-10-10 (architect: "I'm always
+// just using the same title, the default. And if I make a mistake, a revert
+// is just a quick load in place away"): from 2026-08-07 it was the prefill of
+// a commit-title editor, now retired, and every checkpoint carries it. The
+// ONE owner of the spelling, with one reader — the publish chord's act
+// (run_publish_chord).
 std::string history_checkpoint_title(const std::string& project_directory);
 
 // HOW FAR THE ACT GOT — eight answers over ONE sanctioned path (the act's own
@@ -1206,7 +1207,7 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // since the act's fetch (non-fast-forward), a server-side rejection, the time
 // bound — and the deploy key or the host-key pin only if either changed in
 // those seconds, since the act's own fetch meets them first (RemoteRefused). The GitHub status reads Ahead, and
-// Ctrl+S in the `h` view retries: the act's clean-but-owing arm finds the
+// the publish chord (Ctrl+Shift+S) retries: the act's clean-but-owing arm finds the
 // branch still ahead and pushes it (which is also how a push made IN THE
 // TERMINAL is recognized — the branch is no longer ahead).
 //
@@ -1242,9 +1243,11 @@ enum class GuiHistoryCommitOutcome {
 
 // THE GITHUB STATUS (architect 2026-09-27) — how this device's branch stands
 // against GitHub, as of the last fetch. Row 8's `h` walk line says it as
-// `GitHub: <word>` (github_status_word), and it selects what Ctrl+S does in
-// the view: UpToDate commits, Ahead commits or retries the push, Behind
-// pulls, Offline asks GitHub again, and the rest refuse with a card.
+// `GitHub: <word>` (github_status_word), and it selects what the publish
+// chord (Ctrl+Shift+S, either view, 2026-10-10) does: UpToDate commits, Ahead
+// commits or retries the push, Behind pulls, Offline asks GitHub again, and
+// the rest refuse with a card — a mirror device committing nothing
+// (run_publish_chord).
 //   Unchecked — no reading: the project's first check has not been
 //               dispatched, or the check could not classify (no clone, a
 //               read that did not answer, a fetch that failed in the clone
@@ -1254,7 +1257,7 @@ enum class GuiHistoryCommitOutcome {
 //   Ahead     — this branch has commits GitHub has not (a push that failed).
 //   Behind    — GitHub has commits this branch has not; the pull's case.
 //   Diverged  — both have moved; fast-forward only, so no in-app answer.
-//   Offline   — the fetch could not reach GitHub; Ctrl+S in the view
+//   Offline   — the fetch could not reach GitHub; the publish chord
 //               dispatches the check again.
 //   Refused   — GitHub declined this device, the guard refused the clone's
 //               remotes, or HEAD is not on main (another branch, or
@@ -1275,7 +1278,7 @@ enum class GuiGitHubStatus {
 const char* github_status_word(GuiGitHubStatus status);
 
 // THE GITHUB CHECK — the check job's whole body, run on the checkpoint worker
-// at every project open, every `h` entry and Ctrl+S in the view under
+// at every project open, every `h` entry and the publish chord under
 // Offline: derive the clone from the source
 // through the same three steps resolve_history_walk_header takes
 // (resolve_repo_root_for_source, open_clone_for and the projects-home guard
@@ -1305,8 +1308,8 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
 // failure on stderr in one line, and this returns how far it got; it prints its
 // own success line too, so the caller reports nothing.
 //
-// `title` IS THE COMMIT MESSAGE, and the caller's (the commit-title editor's
-// buffer, seeded from history_checkpoint_title). It is written and never read
+// `title` IS THE COMMIT MESSAGE, and the caller's (history_checkpoint_title's
+// default, the only title since 2026-10-10). It is written and never read
 // back: the act matches on nothing, the content-signature attribution that once
 // did having gone with the graded machinery (2026-08-09).
 //
@@ -1350,7 +1353,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 
 // -- THE PULL (architect 2026-09-27) -----------------------------------------
 //
-// BEHIND, Ctrl+S in the `h` view is PULL: a FAST-FORWARD of the checked-out
+// BEHIND, the publish chord (Ctrl+Shift+S since 2026-10-10, in either view;
+// Ctrl+S in the `h` view before) is PULL: a FAST-FORWARD of the checked-out
 // branch to the remote-tracking ref THE LAST CHECK FETCHED, synchronous on
 // the main thread and NETWORK-FREE (the ref is local; nothing is fetched
 // again). Fast-forward only: a branch that is not strictly behind refuses.

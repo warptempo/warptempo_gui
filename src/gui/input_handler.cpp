@@ -366,8 +366,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the player's shape — ITS ROUTER IS THE WHOLE VOCABULARY
     // (route_picker_key), Ctrl+Q the one fall-through (with the picker
     // already closed by the close road), Ctrl+S consumed by the router as the
-    // save (in the `h` view the ordinary Ctrl+S is the commit-title editor,
-    // which must not open over a picker). The File menu above the band reads
+    // save, and Ctrl+Shift+S (the publish chord, 2026-10-10) as a consumed
+    // nothing — the pull's question must not open over a picker. The File menu above the band reads
     // the same way it does under the player: Quit falls through, Open Project
     // is the silent no-op — and here that
     // last one is the picker answering about itself. The gesture clause is the player's
@@ -530,9 +530,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // flight.
     }
 
-    // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the two
-    // single-State dialog ones (settings and the commit title since
-    // 2026-08-07), the bpm bracket (a
+    // KEYBOARD-MODAL EDITOR GATE. While ANY editor is open — the
+    // single-State dialog one (settings; the commit title stood beside it
+    // 2026-08-07 to 2026-10-10), the bpm bracket (a
     // dialog too), and the top-strip flag editor
     // (architect 2026-07-28, which brought the last of them in) — only the keys
     // the editor itself consumes plus bare Esc, Ctrl+S, and Ctrl+Q get through
@@ -616,14 +616,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // closes the edit first.
     if (text_editor::is_active(app.settings_editor)) {
         if (handle_settings_editor_key(key, mods)) return;
-    }
-
-    // Commit-title editor (Ctrl+S in the `h` history view). Same modal shape
-    // as the blocks above, and mutually exclusive with them by construction:
-    // its opener is a chord the keyboard-modal gate drops while any editor is
-    // open, and the view's own allowlist admits no other opener.
-    if (text_editor::is_active(app.commit_title_editor)) {
-        if (handle_commit_title_editor_key(key, mods)) return;
     }
 
     // (CTRL+C COPIES THE FOCUSED MARKER'S RESOLVED VALUE — architect
@@ -1294,11 +1286,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       since it can only fire while one of the editors owns the
     //       keyboard, and the same press then falls through to that editor's own
     //       close/cancel;
-    //   (b) THE EDITORS — all five kinds, through route_modal_editor_key: Esc
+    //   (b) THE EDITORS — every kind, through route_modal_editor_key: Esc
     //       closes / cancels the edit (the editor blocks above, bit-for-bit
     //       unchanged);
-    //       the commit-title editor (2026-08-07) joined that route and added no
-    //       place of its own, which is the point of there being one route;
+    //       the commit-title editor (2026-08-07 to 2026-10-10) joined that
+    //       route and added no place of its own, which is the point of there
+    //       being one route;
     //   (c) THE PROMPTS — Esc activates the rightmost response (the prompt gate at
     //       the top of on_key, unchanged);
     //   (c2) THE DROPDOWNS — Esc closes the open popup (the popup gate, directly
@@ -1367,7 +1360,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // since 2026-08-31, (e), the mode's own cards being ordinary cards — run
     // inside the view. That rung is what the ADMISSION buys, not the only rung
     // reachable in there (re-derived 2026-08-28): the view also opens the
-    // load confirmation on `'` and the COMMIT-TITLE editor on Ctrl+S, so (a),
+    // load confirmation on `'` and the pull's question on Ctrl+Shift+S, and
+    // any editor its admitted chords can open, so (a),
     // (b) and (c) run in it too — the checkpoint's own failure notice being
     // another prompt this view can raise — but each of those gates sits ABOVE
     // the allowlist in on_key, so the press never reaches the admission at
@@ -1799,46 +1793,44 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // (exact under a speed-up, a few output samples under a slow-down; the
         // one-term arithmetic is at phase_reset_lead_in_launch_offset,
         // selection.cpp).
-        // THE LETTER CARRIES THREE CHORDS: bare `s` is the drop above, Ctrl+S
-        // saves, and Shift+S (2026-08-28) drops a phase reset from the warp
+        // THE LETTER CARRIES FOUR CHORDS: bare `s` is the drop above, Ctrl+S
+        // saves, Shift+S (2026-08-28) drops a phase reset from the warp
         // column's either view — the same lead-in drop with the trip to T+P
         // in front of it (in the P column it refuses whole since 2026-08-30
-        // as already crossed; the act's head). Every
+        // as already crossed; the act's head) — and CTRL+SHIFT+S PUBLISHES
+        // (2026-10-10, below). Every
         // other modifier combination on `s` is unbound and FALLS OUT OF THIS
         // BLOCK (2026-08-30) to the strict-modifier tail, which says so on a
-        // card: this block claims the three spellings it binds and nothing
+        // card: this block claims the four spellings it binds and nothing
         // else, so an unbound one is answered by the tail that answers every
         // other unbound chord rather than dying here unremarked.
         //
-        // THE HISTORY VIEW SELECTS THE OTHER COMMAND (architect 2026-08-08, the
-        // iteration bit's own bit-selects-the-command precedent applied to this
-        // chord): while the view stands Ctrl+S is SAVE AND COMMIT — the act that
-        // runs this very save first and then publishes the checkpoint — so the
-        // fork is here, inside the one route, and the Save button reaches it by
-        // synthesizing this chord like every other redesigned button. THE ACT'S
-        // OWN PRECONDITIONS ARE THE ACT'S SINCE 2026-09-01
-        // (open_history_commit_editor, which raises the publishing card for a
-        // checkpoint in flight and stays silent on an empty head delta): the
-        // view's allowlist admits this chord as VOCABULARY now, unconditionally,
-        // and the grey the two terms used to produce through that admission
-        // comes off history_checkpoint_actionable at the button's own arm. What
-        // reaches this line is every Ctrl+S pressed in the view. (It rode
-        // Ctrl+Alt+R from 2026-08-04 to 2026-08-08; the act is save-first by
-        // definition, so it belongs on the save chord and the Render hijack is
-        // gone whole.) Inside the commit-title editor Ctrl+S is the PLAIN save
-        // again, through the editors' modal contract, which sits above this
-        // arm and never reaches it — and so is it inside a standing PICKER,
-        // whose router consumes the chord as that same plain save above this
-        // arm (route_picker_key), the commit-title editor never opening over
-        // one.
+        // CTRL+SHIFT+S IS THE PUBLISH CHORD, IN BOTH VIEWS (architect
+        // 2026-10-10 ~18:35: "ctrl shift s should commit to github using the
+        // default title, no modal. this is to help commit quickly from main
+        // page. in history view the hotkey for save then becomes ctrl s and
+        // save and commit becomes ctrl shift s. however the icons in history
+        // remain the same. also ctrl shift s becomes pull if appropriate";
+        // the commit-title editor retired the same night): the pull, the
+        // check or save-and-commit under the default title by the GitHub
+        // status and the device's role (run_publish_chord owns the fork). The
+        // `h` view's Save button reaches it by spelling this chord at its lift
+        // (finish_chrome_press_release), its face unchanged. CTRL+S IS THE
+        // PLAIN SAVE IN BOTH VIEWS since that ruling (it was the checkpoint
+        // act in the view from 2026-08-08, and the plain save had no key
+        // there). Both chords are admitted by the read-only gate — a save and
+        // a checkpoint of the state the tab already holds author nothing —
+        // and by the `h` view's allowlist; inside a standing PICKER, player or
+        // color picker the router answers Ctrl+S as the plain save and
+        // Ctrl+Shift+S as a consumed nothing, and under an editor the
+        // keyboard-modal gate swallows Ctrl+Shift+S on its card.
+        if (is_publish_key(key, mods)) {
+            run_publish_chord();
+            return;
+        }
         if (ctrl && !shift && !alt) {
-            if (app.history_mode.active) {
-                open_history_commit_editor();
-                return;
-            }
             // A CLEAN SESSION'S CTRL+S IS SILENT (architect 2026-10-05): the
-            // `h` view's Ctrl+S over an empty head delta is the precedent,
-            // the greyed Save the answer (GuiSaveOps::save_from_key).
+            // greyed Save is the answer (GuiSaveOps::save_from_key).
             save_ops.save_from_key();
             return;
         }
@@ -3382,8 +3374,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     //
     // Only the DIALOG modal surfaces swallow the wheel HERE — the roster is
     // AppState::dialog_editor_session's and this line restates none of it
-    // (it named the retired LOAD editor until 2026-08-29; the settings,
-    // commit-title and BpmBracket editors are the three today) —
+    // (it named the retired LOAD editor until 2026-08-29 and the retired
+    // commit-title editor until 2026-10-10) —
     // modal_dialog_editor_active, deliberately NOT the keyboard gate's
     // keyboard_modal_editor_active. The top-strip flag editor IS keyboard-modal
     // (architect 2026-07-28) and the wheel still punches through it anyway,

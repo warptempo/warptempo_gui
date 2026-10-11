@@ -652,6 +652,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     }
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
+    // NO ROLE (architect 2026-10-10): the program never invents one, so the
+    // stamped file's read-back refuses on the required `role` key and the
+    // hand adds `role=mirror` here (GuiDeviceRole, device_config.h).
     return cfg;
 }
 

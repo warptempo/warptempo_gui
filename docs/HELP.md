@@ -40,7 +40,7 @@ Save is the unsaved-work mark: it lights when the markers or the piece's setting
 
 ### History
 
-A piece's checkpoints are git commits in the projects repository. The tablet authors and commits (Save and Commit, in the history view), GitHub is the hub, and the laptop pulls. The history view walks the checkpoints and shows each as a diff of flags, from which a difference can be reverted or a whole checkpoint loaded in place; the mechanics are in [`INSTALL.md`](INSTALL.md)'s Daily use.
+A piece's checkpoints are git commits in the projects repository. The tablet authors and commits (`Ctrl+Shift+S`, Save and Commit, in the main window or the history view, under the title `Update <piece>` with nothing asked; it pulls instead when GitHub is ahead), GitHub is the hub, and the laptop pulls (the same key there; each device's config names its role, author or mirror). `Ctrl+S` is the plain save everywhere. The history view walks the checkpoints and shows each as a diff of flags, from which a difference can be reverted or a whole checkpoint loaded in place; the mechanics are in [`INSTALL.md`](INSTALL.md)'s Daily use.
 
 ### Colors
 

@@ -87,7 +87,7 @@ bool GuiSaveOps::save() {
     // inherits it as it inherits the write arms' cards: the refusal takes the
     // prompt's "Retry the failed save?" rung and the card is its reason. The
     // commit act's prelude save never meets it (ordering, above), and the
-    // `h` view's Ctrl+S cards the same sentence at open_history_commit_editor.
+    // publish chord cards the same sentence at run_publish_chord.
     // Input routing, judging no data.
     if (app.history_checkpoint_in_flight) {
         notifications.notify(AppState::NotificationClass::Normal,

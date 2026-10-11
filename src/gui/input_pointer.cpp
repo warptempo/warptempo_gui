@@ -41,7 +41,7 @@
 // ONE CLICK-TO-BYTE MAPPING (row 7, 2026-08-01). Every editor in the product is
 // PROPORTIONAL now, so there is no advance to divide by anywhere: each takes an
 // origin plus the shaped run's per-byte boundaries from ITS OWN painter's
-// publication — the flag editor's FlagEditorBox, the three dialog
+// publication — the flag editor's FlagEditorBox, the two dialog
 // editors' DialogEditorText — and click-to-byte is the same nearest-boundary
 // search over both. The monospace arm (a char-0 origin times one cell advance)
 // died with the face; ActiveEditorText carries the one pair.
@@ -223,7 +223,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // It admits SHIFT — Revert, the one translated twin (the lift's chord
     // build below) — and nothing else; a one-shot act, no radio, no repeat.
     {RedesignButton::OpenProject, GuiKeys::O,  true,  false, false, false},   // Ctrl+O (+Shift: Ctrl+Alt+O)
-    {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false},   // Ctrl+S
+    {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false},   // Ctrl+S (in `h`: Ctrl+Shift+S, save_button_publishes)
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false,  true},   // Ctrl+Shift+Z
     // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the value pair's
@@ -1123,8 +1123,7 @@ struct ActiveEditorText {
     // The painter's per-byte pen offsets for that editor's own shaped run.
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
-    // true = one of the three DIALOG editors (settings / commit-title /
-    // BPM, painting in the BOTTOM ROW'S modal since
+    // true = one of the two DIALOG editors (settings / BPM, painting in the BOTTOM ROW'S modal since
     // 2026-08-13 — centered for the one day from 2026-08-12, and the field
     // was `bottom_strip` while they lived on the status lane); false = the
     // top-strip flag editor. Selects the claim
@@ -1145,7 +1144,7 @@ struct ActiveEditorText {
 ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     (void)audio;
     ActiveEditorText g;
-    // THE THREE DIALOG EDITORS share ONE publication — only one of them is
+    // THE TWO DIALOG EDITORS share ONE publication — only one of them is
     // ever open, and paint_modal_dialog fills it from whichever editor it
     // actually painted. An invalid publication (nothing painted yet, or an
     // editor the dialog's precedence hides — a prompt is up) leaves this
@@ -1154,15 +1153,12 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     const AppState::DialogEditorText& be = app.dialog_editor_text;
     const bool dialog_open =
         text_editor::is_active(app.settings_editor) ||
-        text_editor::is_active(app.commit_title_editor) ||
         (text_editor::is_active(app.top_flag_editor) &&
          app.top_flag_editor.kind == text_editor::Kind::BpmBracket);
     if (dialog_open) {
         if (!be.valid) return g;
         g.ed = text_editor::is_active(app.settings_editor)
                    ? &app.settings_editor
-             : text_editor::is_active(app.commit_title_editor)
-                   ? &app.commit_title_editor
                    : &app.top_flag_editor;
         g.text_left    = be.text_origin_x;
         g.byte_x       = &be.byte_x;
@@ -1302,7 +1298,8 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // button took its grey from that admission through this walk. The architect
 // ruled a gate's membership the CHORD'S ALONE that day (a state term there made
 // the gate answer the view's own save chord with "not available in the history
-// view"), so Ctrl+S is admitted outright, this walk answers LIVE for Save, and
+// view"), so the act's chord is admitted outright (Ctrl+Shift+S since
+// 2026-10-10), this walk answers LIVE for Save, and
 // the same two terms reach the face from redesign_button_enabled's own Save arm
 // through history_checkpoint_actionable (app_state.h) — the identical grey off
 // the act's own predicate. It admits BARE `v` — the revert's chord since
@@ -1334,8 +1331,9 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
 //   LIVE — the icon row's view group, ViewSW/ViewTW/ViewTP (bare 1/2/3, the admitted
-//   view selectors), Save (Ctrl+S, which in this mode IS the
-//   save-and-commit checkpoint act and wears the "Save and Commit" face — LIVE
+//   view selectors), Save (its lift Ctrl+Shift+S in this mode since
+//   2026-10-10, Ctrl+S before — save_button_publishes — the
+//   save-and-commit checkpoint act, wearing the "Save and Commit" face — LIVE
 //   FROM THIS WALK SINCE 2026-09-01, when the chord's two session terms left the
 //   allowlist for the act, its own arm in redesign_button_enabled greying it
 //   with an empty head delta or a checkpoint in flight exactly as this walk used
@@ -1480,6 +1478,21 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hide (history_mode_hides_button, below) about EVERY session
 // (history_mode_key_blocked_in_every_state, input_key_dispatch.cpp, the
 // allowlist's same body); the mode's own vocabulary answers LIVE for both.
+// THE `h` VIEW'S SAVE BUTTON SPELLS THE PUBLISH CHORD (architect 2026-10-10:
+// "in history view the hotkey for save then becomes ctrl s and save and
+// commit becomes ctrl shift s. however the icons in history remain the
+// same"): while the view stands its lift is Ctrl+Shift+S (is_publish_key,
+// gui_input.h) — the save-and-commit act, the pull or the check — and
+// Ctrl+S, its table chord, is the plain save there, with no button of its
+// own. Outside the view the button is that plain save. Asked by the lift's
+// chord build (finish_chrome_press_release) and by the `h` chord walk below,
+// so the face and the press read one chord. Save admits no modified press
+// (it is in neither shift- nor ctrl-admission), so nothing else ever shifts
+// its chord.
+static bool save_button_publishes(RedesignButton id, bool history_view) {
+    return id == RedesignButton::Save && history_view;
+}
+
 static bool history_mode_refuses_button_chord(const AppState* state,
                                               RedesignButton b) {
     // THE THREE ANCHORS ARE NOT THIS PARTITION'S (2026-09-24): their one
@@ -1498,6 +1511,10 @@ static bool history_mode_refuses_button_chord(const AppState* state,
         chord.ctrl  = tc.ctrl;
         chord.shift = tc.shift;
         chord.alt   = tc.alt;
+        // Both readers ask only while the view stands (the grey from
+        // redesign_button_enabled's `h` term, the hide on its own mode term).
+        if (save_button_publishes(tc.id, /*history_view=*/true))
+            chord.shift = true;
         if (history_mode_owns_key(tc.key, chord)) return false;
         return state != nullptr
                    ? history_mode_key_blocked(tc.key, chord, *state)
@@ -2002,7 +2019,7 @@ void GuiInputHandler::scrub_press_at(int click_rel_x) {
 //      under the card;
 //   1. the prompt's veil (the top of the handler — its dialog buttons are the
 //      one thing a press can reach, and a button carries no cursor cue);
-//   2. the THREE DIALOG modal editors' veil, which consumes every press
+//   2. the TWO DIALOG modal editors' veil, which consumes every press
 //      outside the dialog's own field and buttons — the
 //      shared predicate is modal_dialog_editor_active, whose membership is
 //      AppState::dialog_editor_session's three;
@@ -4046,8 +4063,6 @@ void GuiInputHandler::dispatch_modal_dialog_editor_act(bool ok) {
         handle_top_flag_editor_key(key, mods);
     } else if (text_editor::is_active(app.settings_editor)) {
         handle_settings_editor_key(key, mods);
-    } else if (text_editor::is_active(app.commit_title_editor)) {
-        handle_commit_title_editor_key(key, mods);
     }
 }
 
@@ -6442,7 +6457,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // F2.1: mouse drag-to-select inside the active text editor. A press on
     // the active editor's field places the caret and arms a selection
     // drag (anchor == caret until the pointer moves). Resolved before the
-    // per-editor modal swallows below so the gesture reaches the three dialog
+    // per-editor modal swallows below so the gesture reaches the two dialog
     // editors too. ON GLASS ONLY A TAP AND THE DOUBLE PRESS ARRIVE HERE: a
     // finger's drag or hold in the field is the touch translation's caret
     // drag and delivers no press (the trio's bodies beside
@@ -6564,10 +6579,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
 
     // THE VEIL'S LAST WORD: any DIALOG editor still standing here swallows the
     // press. It asks the membership's own predicate rather than spelling the
-    // three surfaces again — the set is NAMED once (modal_dialog_editor_active
+    // dialog surfaces again — the set is NAMED once (modal_dialog_editor_active
     // over AppState::dialog_editor_session, whose declaration says so) so it
-    // cannot drift, and a fourth dialog editor would be veiled here by existing
-    // rather than by an edit. What the swallow buys is the same for all three,
+    // cannot drift, and a third dialog editor would be veiled here by existing
+    // rather than by an edit. What the swallow buys is the same for both,
     // and the BPM editor is the case that names it: mouse input does not
     // interact with a dialog beyond its own field and buttons, claimed above,
     // and the session ends only through Esc / the Enter dispatch path / the
@@ -8065,7 +8080,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         return;
     }
     if (text_editor::is_active(app.settings_editor)) return;
-    if (text_editor::is_active(app.commit_title_editor)) return;
     // NON-LEFT RELEASES END HERE, and nothing is owed: every release body below
     // finishes something a LEFT press armed, and no other button arms anything —
     // the RIGHT button is fully unbound (2026-08-12, the eighth glass ruling;
@@ -9078,8 +9092,8 @@ void GuiInputHandler::finish_chrome_press_release(
     // reach-through's own buttons; with that retired the veil is blanket
     // again, and its whole job here is the editor OPENED MID-HOLD — a key
     // press deliberately does not end a pointer hold (main.cpp's set_on_key
-    // hook), so Ctrl+S in the `h` view raises the commit-title editor under a
-    // standing arm, and an arm taken before the dialog rose must not fire into
+    // hook), so a key that raises an editor dialog (bare `;`, the settings
+    // editor) does so under a standing arm, and an arm taken before the dialog rose must not fire into
     // it. IT SITS ABOVE THE KIND SWITCH because the rule is every arm's and
     // none has an exception to it. (Carried per-branch it once was on the
     // roster's and missing from the deleted walk-tab kind's, so arming a
@@ -9313,6 +9327,9 @@ void GuiInputHandler::finish_chrome_press_release(
             chord.shift = false;
             chord.alt   = true;
         }
+        // THE `h` VIEW'S SAVE IS THE PUBLISH CHORD (save_button_publishes).
+        if (save_button_publishes(tc.id, app.history_mode.active))
+            chord.shift = true;
         // A LIFT THAT SPELLS CTRL+C UNDER A STANDING MARKER-LANE EDITOR IS
         // REFUSED ON THE EDITOR'S OWN SWALLOW CARD (architect 2026-09-29): the
         // flag editor, in every kind, raises no veil, so the roster stays
@@ -10282,8 +10299,8 @@ void GuiInputHandler::toggle_dropdown(DropdownMenu menu) {
     // OPENING A MENU ENDS AN ACTIVE FLAG EDIT, discarding it — exactly what a
     // press anywhere outside the editor's box already does. It is what keeps "a
     // popup and an editor are never open together" true, and the FLAG editor is
-    // the one class that needs it: the DIALOG modal editors (the settings,
-    // load and commit-title editors and the BPM bracket, the membership
+    // the one class that needs it: the DIALOG modal editors (the settings
+    // editor and the BPM bracket, the membership
     // modal_dialog_editor_active names) veil every press at the top of
     // on_button_press, above the row-1 band claim, so a menu button is not even
     // reachable while one of them is up — but the FlagPayload editor is
@@ -11050,7 +11067,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     // F2.1: editor-text drag motion. Handled before the dialog-editor branch
-    // (which returns) so the gesture reaches the three dialog editors' fields,
+    // (which returns) so the gesture reaches the two dialog editors' fields,
     // and before the trim / playhead branches. A lost button finalizes like
     // release, mirroring those handlers.
     if (app.editor_text_drag.active) {
@@ -11099,7 +11116,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         return;
     }
     if (modal_dialog_editor_active()) {
-        // THE EDITOR DIALOG'S MOTION — the three dialog editors in one branch
+        // THE EDITOR DIALOG'S MOTION — the two dialog editors in one branch
         // (the BPM bracket included since the dialog arc; it used to fall
         // through to the gesture branches, harmlessly, its presses all
         // swallowed): the dialog buttons' walk, then the roster walk, whose

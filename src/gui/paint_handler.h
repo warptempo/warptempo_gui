@@ -88,6 +88,10 @@ inline int icon_row_pad_x() {
 // pointer path never measures one — the painter publishes the field's own
 // click-to-caret origin (AppState::DialogEditorText), so the mapped
 // geometry IS the painted one rather than a re-derivation that could drift.
+// NO TRAILING SPACE on any label here (2026-10-08): the air after the colon is
+// the editor row's one gap (paint_modal_dialog's editor arm), never a space
+// inside the label. (The `h` view's commit-title editor's "Commit:" stood
+// here 2026-08-07 to 2026-10-10, when the editor retired.)
 constexpr const char* kSettingsEditorPrefix = "Setting:";
 constexpr const char* kBpmEditorPrefix      = "BPM:";
 // The OPEN PROJECT prompt's label (File → Open project, 2026-08-27) — ONE WAY TO SHOW
@@ -96,11 +100,6 @@ constexpr const char* kBpmEditorPrefix      = "BPM:";
 // their text fields and became the field-less picker over the folder overlay
 // — architect 2026-08-28; the picker's row is Cancel alone since 2026-08-29 and
 // wears no label.)
-// The `h` history view's COMMIT-TITLE editor (2026-08-07), whose buffer is the
-// message the checkpoint commit will carry. NO TRAILING SPACE on any label
-// here (2026-10-08): the air after the colon is the editor row's one gap
-// (paint_modal_dialog's editor arm), never a space inside the label.
-constexpr const char* kCommitTitleEditorPrefix = "Commit:";
 
 // THE `h` HISTORY MODE'S ONE BRACKET SPELLING — the sign, then the payload
 // DIRECTLY AGAINST IT, no space (architect 2026-08-05, superseding the arc's
@@ -921,7 +920,7 @@ private:
     void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
     // THE MODAL (2026-08-13): the BOTTOM ROW, hosting the prompts and the
-    // three modal editors (settings / commit-title / BPM) while one
+    // two modal editors (settings / BPM) while one
     // stands — the row's own painter yields the lane to it. Painted LAST from
     // on_redraw's tail, unconditionally: it publishes AppState::modal_dialog
     // and AppState::dialog_editor_text, the geometry the pointer path's veil,

@@ -95,8 +95,8 @@ struct GuiInputHandler;
 // the player's own rule), while the folder overlay stands (the Open project
 // picker — the player is forked ahead at the hook, so its owner tag never
 // reaches this test), under a DIALOG modal
-// editor (modal_dialog_editor_active: the settings editor, the commit-title
-// editor and the BPM bracket editor, the surfaces whose open stopped
+// editor (modal_dialog_editor_active: the settings editor and the BPM
+// bracket editor, the surfaces whose open stopped
 // playback and whose keys are theirs alone) and in the `h` history view
 // (playback is removed from the view whole and bare Space is consumed
 // there).

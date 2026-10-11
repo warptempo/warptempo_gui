@@ -4396,7 +4396,8 @@ enum class DialogTrigger {
     // THE PULL'S QUESTION (architect 2026-09-27): "Reload this piece from
     // GitHub's newer checkpoint?", Reload / Keep / Cancel with passive focus
     // on Cancel (a three-way, not a confirmation — Reload discards the
-    // session). Raised by Ctrl+S in the `h` view, only when the pull changes
+    // session). Raised by the publish chord, Ctrl+Shift+S, in either view
+    // (Ctrl+S in the `h` view until 2026-10-10), only when the pull changes
     // the open piece; the plan waits at AppState::pending_history_pull.
     PULL_CONFIRM,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
@@ -6444,7 +6445,8 @@ struct AppState {
     FlagEditorBox flag_editor_box;
 
     // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
-    // geometry contract for the settings / load / commit-title / BPM editors,
+    // geometry contract for the settings and BPM editors (the load and
+    // commit-title editors stood among them until 2026-08-28 and 2026-10-10),
     // which paint inside the MODAL's inset field since 2026-08-12 (they wrote
     // straight onto the status lane, row 9, from row 7 until then; the press
     // region is the published FIELD rect, modal_dialog.field, and it stays the
@@ -6472,7 +6474,7 @@ struct AppState {
     };
     DialogEditorText dialog_editor_text;
 
-    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the three dialog
+    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the two dialog
     // editors, the render player and the picker paint ON THE BOTTOM ROW since
     // 2026-08-13 (architect, scrapping
     // the centered box of 2026-08-12: "it looks sloppy — no compositor drop
@@ -6801,8 +6803,9 @@ struct AppState {
     ModalDialogGeometry modal_dialog;
 
     // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
-    // THE AUTHORITATIVE MEMBERSHIP of the THREE DIALOG-HOSTED editors (the
-    // settings editor, the commit-title editor and the bpm bracket editor;
+    // THE AUTHORITATIVE MEMBERSHIP of the TWO DIALOG-HOSTED editors (the
+    // settings editor and the bpm bracket editor — the commit-title editor
+    // was the third from 2026-08-07 until its retirement 2026-10-10;
     // the top-strip flag
     // editor is deliberately not one of them in ANY of its non-bracket
     // kinds — FlagPayload or IterBound, both of
@@ -6811,15 +6814,13 @@ struct AppState {
     // PICKER, which is a modal owner and not an editor — AppState::Picker).
     // The predicate GuiInputHandler::modal_dialog_editor_active is this id
     // being non-zero, and ITS declaration is the authoritative statement of
-    // what that predicate is FOR and who calls it; this is where the three are
+    // what that predicate is FOR and who calls it; this is where the two are
     // NAMED, so the set cannot drift between the two. At most one can be
     // active at a time (every opener refuses while another owns the
     // keyboard), so the order below is free.
     uint64_t dialog_editor_session() const {
         if (text_editor::is_active(settings_editor))
             return settings_editor.session;
-        if (text_editor::is_active(commit_title_editor))
-            return commit_title_editor.session;
         if (text_editor::is_active(top_flag_editor) &&
             top_flag_editor.kind == text_editor::Kind::BpmBracket)
             return top_flag_editor.session;
@@ -7876,7 +7877,7 @@ struct AppState {
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
     //   LIT — the view group's three (bare 1/2/3), the
-    //   COMMIT-FACED SAVE (Ctrl+S, the act itself), SWITCH TAB
+    //   COMMIT-FACED SAVE (Ctrl+Shift+S since 2026-10-10, the act itself), SWITCH TAB
     //   (Ctrl+Tab, which the ALLOWLIST admits since
     //   2026-08-18 — a tab switch works in here like everywhere else), the
     //   history button and the WALK LAMP
@@ -7969,7 +7970,7 @@ struct AppState {
     //
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the
-    // second is Ctrl+S, further down, on the same reasoning). In the
+    // second is Ctrl+Shift+S, further down, on the same reasoning). In the
     // mode that act's subject CHANGES, AND IT CHANGES WITH THE WALK
     // (2026-08-08, when the architect gave the Local walk the act his 2026-08-07
     // ruling had it consume). SINCE 2026-08-29 IT ACTS ON THE VIEWED MEMBER
@@ -7998,29 +7999,25 @@ struct AppState {
     // allowlist (history_mode_key_blocked's own term), which is also what greys
     // the icon row's Load in place button there.
     //
-    // THE OTHER ADMITTED MUTATOR IS Ctrl+S, AND IT WRITES OUTSIDE THIS
-    // SESSION (architect 2026-08-04, REHOMED FROM Ctrl+Alt+R 2026-08-08): while
-    // the mode stands that chord is not the plain disk save but THE
-    // SAVE-AND-COMMIT ACT — the mode bit selecting the command exactly as the
-    // iteration bit selects the sweep, one route with the selection inside it
-    // (on_key's `s` arm). It belongs on THIS chord because the act runs the
-    // ordinary save as its first step, so the Save button is the surface that
-    // tells the truth about it; Render kept its own chord and greys in the view
-    // with the rest of the consumed roster, and THE PLAIN DISK SAVE HAS NO
-    // HOTKEY IN HERE at all (a settings-only drift — the one thing the head
-    // delta calls "nothing to checkpoint" — is saved by leaving the view first,
-    // architect-accepted 2026-08-08). IT ASKS FOR THE COMMIT
-    // MESSAGE FIRST, through the COMMIT-TITLE EDITOR (architect 2026-08-07,
-    // replacing the confirmation prompt that used to guard it and superseding
-    // "the message is derived, not chosen"): a fourth modal editor (dialog-
-    // hosted since 2026-08-12),
-    // prefilled with `Update <id>`, where a bare Enter is the old `y` and typing
-    // over the prefill names the checkpoint. On Enter the act runs THE ORDINARY
-    // SAVE beside the
+    // THE OTHER ADMITTED MUTATOR IS CTRL+SHIFT+S, AND IT WRITES OUTSIDE THIS
+    // SESSION (architect 2026-08-04; rehomed from Ctrl+Alt+R onto Ctrl+S
+    // 2026-08-08 and onto Ctrl+Shift+S, THE PUBLISH CHORD, 2026-10-10, which
+    // runs the same act from the main window too): THE SAVE-AND-COMMIT ACT
+    // (GuiInputHandler::run_publish_chord). Ctrl+S is the plain disk save in
+    // here since that ruling. The Save button stays the act's surface in the
+    // view, spelling the publish chord at its lift, because the act runs the
+    // ordinary save as its first step; Render kept its own chord and greys in
+    // the view with the rest of the consumed roster. IT ASKS NOTHING SINCE
+    // 2026-10-10 (architect: "I'm always just using the same title, the
+    // default. And if I make a mistake, a revert is just a quick load in
+    // place away"): the commit takes the default title, `Update <id>`
+    // (history_checkpoint_title), with no question — the commit-title editor
+    // that asked from 2026-08-07, itself the replacement of a confirmation
+    // prompt, is retired whole. The act runs THE ORDINARY SAVE beside the
     // source through its one owner (GuiSaveOps::save — the same act Ctrl+S is,
     // dirty cleared with it) and only then writes the live authoring state as
     // the three sidecars into the piece's directory in the projects repository,
-    // commits those three paths alone under the entered title and pushes
+    // commits those three paths alone under the default title and pushes
     // (commit_history_checkpoint, history_diff.h — fetching first and refusing
     // before the COMMIT if GitHub has moved, the save above already standing
     // by then (architect 2026-09-28: withholding it solves nothing, since
@@ -8042,9 +8039,9 @@ struct AppState {
     // greys too (history_checkpoint_in_flight, which lives on AppState rather
     // than here because the act outlives the view). Both terms are composed
     // once at history_checkpoint_actionable, which the face reads; the act
-    // forks on them in that order (open_history_commit_editor). They were the
+    // forks on them in that order (run_publish_chord). They were the
     // allowlist's admission terms from 2026-08-05 and 2026-08-07, which is what
-    // made the gate answer this chord with "Ctrl+S is not available in the
+    // made the gate answer the act's chord with "Ctrl+S is not available in the
     // history view".
     //
     // EVERYTHING PAST THE SAVE RUNS ON A WORKER (architect 2026-08-07): the git
@@ -8083,9 +8080,10 @@ struct AppState {
     // would drift from what is on screen — and it is not one here BY
     // CONSTRUCTION: the two gates above refuse every route that could change the
     // markers or the engine settings for the whole life of the session EXCEPT
-    // the mode's own three MUTATORS — `'` (the load-in-place), Ctrl+S (the
-    // commit act, on Ctrl+Alt+R until 2026-08-08, or the pull while GitHub is
-    // ahead, 2026-09-27) and bare `v` (the revert
+    // the mode's own three MUTATORS — `'` (the load-in-place), Ctrl+Shift+S
+    // (the commit act, on Ctrl+Alt+R until 2026-08-08 and Ctrl+S until
+    // 2026-10-10, or the pull while GitHub is ahead, 2026-09-27) and bare `v`
+    // (the revert
     // act, on Ctrl+H until 2026-09-01;
     // membership re-derived 2026-08-06)
     // — and every one of those closes the view as it ends, so no session
@@ -8386,7 +8384,7 @@ struct AppState {
         // derivation, re-stated 2026-08-06: the allowlist DOES admit an authoring
         // key — bare `v`, the revert act — so "no authoring route is admitted" is
         // not what makes the bit safe. What makes it safe is that all THREE of
-        // the mode's mutators (`'`, Ctrl+S and `v`) end by closing the
+        // the mode's mutators (`'`, Ctrl+Shift+S and `v`) end by closing the
         // view, so no session outlives a write to its own now side. A FUTURE
         // MUTATOR THAT DOES NOT CLOSE THE VIEW WOULD HAVE TO RECOMPUTE THIS BIT.
         // It is cleared by the whole-struct reset at close,
@@ -8428,15 +8426,15 @@ struct AppState {
         // reads EMPTY and greys the act, even though a byte-level commit would
         // land. Deliberate: a checkpoint is about authoring content, the same
         // reasoning that makes `scale` the only settings key this mode
-        // displays. THE PLAIN DISK SAVE IS NOT THE ESCAPE HATCH IT WAS: since
-        // 2026-08-08 Ctrl+S in the view IS this act, so a settings-only drift is
-        // saved by leaving the view first (architect-accepted with the move).
+        // displays. A settings-only drift is saved by the plain Ctrl+S, the
+        // view's plain save again since 2026-10-10 (from 2026-08-08 Ctrl+S
+        // was this act and the drift was saved by leaving the view).
         // The act's own NothingToCommit arm remains the byte-level backstop for
         // the state where the bit says there IS something and the repository
         // disagrees.
         //
         // ONE READER, TWO CONSUMERS: history_checkpoint_actionable composes it
-        // with the in-flight bit, and the ACT (open_history_commit_editor,
+        // with the in-flight bit, and the ACT (run_publish_chord,
         // input_key_dispatch.cpp) and the SAVE button's own arm both take that
         // one decision — the press a silent no-op under the one-dimensional
         // rule, the button greyed, never two spellings of it. THE READER WAS
@@ -8862,22 +8860,6 @@ struct AppState {
         return settings_choice_row().choices->label(i);
     }
 
-    // THE COMMIT-TITLE EDITOR (architect 2026-08-07), the fourth dialog
-    // modal and the `h` history view's own: Ctrl+S while the view stands
-    // opens it prefilled with the checkpoint's default message (`Update <id>`,
-    // history_checkpoint_title's own spelling) and Enter runs the Save-and-
-    // Commit act with whatever the buffer holds as the commit title. It
-    // REPLACED the confirmation prompt that used to guard the act: the question
-    // "shall I?" and the question "under what message?" are the same pause, and
-    // only the second one carries information — a bare Enter is the old `y`.
-    // Esc abandons with nothing written, and an empty or whitespace-only buffer
-    // refuses with a card rather than committing an unnamed checkpoint.
-    // A dialog modal like the two above, with its own State so the paint
-    // regions stay independent; it can only be open while the history mode
-    // stands, which is what keeps it out of every other surface's way.
-    text_editor::State commit_title_editor;
-    bool commit_title_editor_blink_last = false;
-
     // -- THE PICKER'S WHOLE STATE (architect 2026-08-28) -------------------
     //
     // THE FIELD-LESS MODAL OVER THE FOLDER OVERLAY'S LIST — "we're not
@@ -9113,8 +9095,8 @@ struct AppState {
     // different objects.
     //
     // THREE REFUSALS READ IT, single-in-flight and the write race being the two
-    // rules: the history view's COMMIT ACT (open_history_commit_editor, which
-    // says the publishing sentence, AND the Save-and-Commit button, which greys
+    // rules: the COMMIT ACT (run_publish_chord, which says the publishing
+    // sentence in either view, AND the `h` view's Save-and-Commit button, which greys
     // through history_checkpoint_actionable — one composition of this bit with
     // the head delta, read by the act and the face alike; it was the
     // ALLOWLIST'S Ctrl+S ADMISSION until 2026-09-01, when a membership test
@@ -9137,15 +9119,16 @@ struct AppState {
     // against GitHub as of the last fetch. PER PROJECT, born Unchecked with
     // this AppState, written on the MAIN THREAD alone: Checking when a check
     // is dispatched (GuiInputHandler::dispatch_github_check — every project
-    // open, every `h` entry, and Ctrl+S in the view while Offline), the
+    // open, every `h` entry, and the publish chord, Ctrl+Shift+S, in either
+    // view while Offline), the
     // check's reading at its completion, the checkpoint act's own fetched
     // reading at its completion, and UpToDate when a pull lands. READ BY
     // row 8's `h` walk line (its `GitHub: <word>` segment), by the Save
     // button's face in the view (its grey, and the Pull glyph while Behind —
     // history_checkpoint_actionable, history_pull_actionable,
     // history_github_recheck_actionable, redesign_button_glyph) and by
-    // Ctrl+S's act
-    // there (open_history_commit_editor), which forks on it.
+    // the publish chord's act in either view (run_publish_chord, since
+    // 2026-10-10 — Ctrl+S's in the view before), which forks on it.
     GuiGitHubStatus github_status = GuiGitHubStatus::Unchecked;
 
     // THE PULL PARKED UNDER ITS QUESTION (architect 2026-09-27): a pull that
@@ -12954,7 +12937,7 @@ inline const ViewState& active_view_state(const AppState& a) {
 // EVERYTHING THE READ-ONLY LOCK REFUSES THE ITERATION LOCK REFUSES TOO WITH
 // TWO NAMED EXCEPTIONS, and nearly everything it admits the iteration lock
 // admits: navigation, playback, the trim gestures and `Shift+0`,
-// Ctrl+S, both render chords, Open project and the quit. WHAT
+// Ctrl+S, Ctrl+Shift+S, both render chords, Open project and the quit. WHAT
 // THE ITERATION LOCK ADDS is the bound cells — Up/Down and Return with a
 // bound axis addressed, bare `i` itself (the off edge must always be
 // reachable) and
@@ -14161,6 +14144,20 @@ inline bool history_revert_actionable(const AppState& a) {
            !active_view_state(a).read_only;
 }
 
+// IS THIS DEVICE A MIRROR? (architect 2026-10-10, ~23:00: "the tablet should
+// never pull [but to recover a wiped or new device], and the laptop should
+// never push") — the device config's required `role` key (GuiDeviceRole,
+// device_config.h), `mirror` on the laptop and `author` on the tablet: a
+// harmless redundancy and a sanity check. A MIRROR TAKES NO COMMIT ROAD: the
+// publish chord's act refuses every commit and push there on a card and
+// takes the pull road alone (run_publish_chord, which owns the gate at the
+// act), and the `h` view's Save-and-Commit face is dark on it
+// (history_checkpoint_actionable). An author's pull is not gated: the
+// chord pulls whenever GitHub is ahead, the recovery the ruling names.
+inline bool device_is_mirror(const AppState& a) {
+    return a.device_config->role == GuiDeviceRole::Mirror;
+}
+
 // DID THIS VISIT'S REMOTE WALK BOOTSTRAP? — the ONE predicate for "git can be
 // asked about this piece", and the GUI's whole vocabulary for it (architect
 // 2026-09-04: a visit whose bootstrap refuses — a source in no clone, a clone
@@ -14180,7 +14177,7 @@ inline bool history_revert_actionable(const AppState& a) {
 // no glyph can disagree with its key: the WALK LAMP'S ACT
 // (GuiInputHandler::set_history_delta, which refuses a switch toward the
 // remote walk and cards the reason) and its FACE (redesign_button_enabled's
-// HistoryWalk arm); the CHECKPOINT ACT (open_history_commit_editor, which
+// HistoryWalk arm); the CHECKPOINT ACT (run_publish_chord, which
 // cards this fact as its OUTERMOST premise) and SAVE'S FACE through the two
 // predicates below; row 8's GitHub SEGMENT (history_walk_line), which stands
 // only on a visit that has a clone; and the FAILED-SCAN ARRIVAL
@@ -14195,9 +14192,10 @@ inline bool history_remote_walk_available(const AppState& a) {
 }
 
 // IS SAVE THE PULL? (architect 2026-09-27) — inside the `h` view, on a visit
-// with a clone, while the GitHub status reads BEHIND: Ctrl+S fast-forwards to
-// what the last check fetched (GuiInputHandler::run_history_pull_press), and
-// the Save button wears IconVcsPull and "Pull (Ctrl+S)". The glyph's one
+// with a clone, while the GitHub status reads BEHIND: the publish chord
+// (Ctrl+Shift+S, 2026-10-10) fast-forwards to what the last check fetched
+// (GuiInputHandler::run_history_pull_press), and the Save button wears
+// IconVcsPull and "Pull (Ctrl+Shift+S)". The glyph's one
 // source (redesign_button_glyph's Save arm) and the pull's admission below.
 inline bool history_save_is_pull(const AppState& a) {
     return a.history_mode.active && history_remote_walk_available(a) &&
@@ -14219,20 +14217,25 @@ inline bool history_pull_actionable(const AppState& a) {
 // this takes the whole AppState rather than the mode struct), and a GITHUB
 // STATUS THAT ADMITS A COMMIT: UP TO DATE with something to commit (the head
 // delta, measured once per visit), or AHEAD — a committed-but-unpushed branch,
-// whose Ctrl+S retries the push through the act's clean-but-owing arm, so
+// whose chord retries the push through the act's clean-but-owing arm, so
 // AHEAD ACTS WHATEVER THE HEAD DELTA SAYS (the session equals the unpushed
 // commit, and the push is still owed) ONCE THE DELTA IS MEASURED (architect
-// 2026-09-28): the act forks on the delta — empty retries the push under
-// the default title, non-empty asks the
-// title — and the bit RESTS TRUE while unmeasured, which under Ahead would
-// select the untitled road for real edits, so the face greys and the key is
-// silent until the measurement lands, as under UP TO DATE. Every other status
+// 2026-09-28): the act forks on the delta — empty retries the push, non-empty
+// commits and pushes, both under the default title since 2026-10-10 — and
+// the bit RESTS TRUE while unmeasured, which under Ahead would push without
+// asking whether real edits are owed, so the face greys and the key is
+// silent until the measurement lands, as under UP TO DATE. AND THE DEVICE
+// IS AN AUTHOR (architect 2026-10-10, device_is_mirror above): a mirror takes
+// no commit road, so on a mirror this face is dark and the act cards
+// "This device is a mirror" (or, up to date, that GitHub has nothing newer).
+// Every other status
 // greys the face — Checking, Refused, Diverged and Unchecked, each carded by
-// the key at the act (open_history_commit_editor) — Behind is the PULL's face
+// the key at the act (run_publish_chord) — Behind is the PULL's face
 // instead (history_pull_actionable above) and Offline the CHECK's
 // (history_github_recheck_actionable below). So an offline device takes no
-// checkpoint, on the laptop too (architect 2026-09-27, symmetric): outside the
-// view Ctrl+S is the plain save always.
+// checkpoint, on the laptop too (architect 2026-09-27, symmetric). (Outside
+// the view this face is not asked: the Save button is the plain save there,
+// and the publish chord, Ctrl+Shift+S, has no button of its own.)
 //
 // IT EXISTS BECAUSE THE ALLOWLIST STOPPED CARRYING THOSE TERMS. Ctrl+S was
 // admitted into the `h` view's vocabulary only while its terms held from
@@ -14241,14 +14244,14 @@ inline bool history_pull_actionable(const AppState& a) {
 // shape out: a membership test carrying state makes the gate's generic
 // "Ctrl+S is not available in the history view" answer a chord the view
 // exists to run, which is a lie about the vocabulary. So the ACT answers now
-// (open_history_commit_editor) and the FACE reads this predicate.
+// (run_publish_chord) and the FACE reads this predicate.
 // ONE READER: redesign_button_enabled's Save arm (scoped to the mode, the
 // button being the plain disk save everywhere else). Like the pull's and the
 // recheck's beside it, a face over the act's own subject refusal: live
 // session state, no data judged, outside the guard topology.
 inline bool history_checkpoint_actionable(const AppState& a) {
     if (!a.history_mode.active || !history_remote_walk_available(a) ||
-        a.history_checkpoint_in_flight) {
+        a.history_checkpoint_in_flight || device_is_mirror(a)) {
         return false;
     }
     if (a.github_status == GuiGitHubStatus::Ahead) {
@@ -14258,16 +14261,17 @@ inline bool history_checkpoint_actionable(const AppState& a) {
            !a.history_mode.head_delta_empty;
 }
 
-// WOULD CTRL+S ASK GITHUB AGAIN? (architect 2026-09-28) — inside the `h`
+// WOULD THE PUBLISH CHORD ASK GITHUB AGAIN? (architect 2026-09-28; the
+// chord Ctrl+Shift+S since 2026-10-10) — inside the `h`
 // view, on a visit with a clone, with no checkpoint publishing, while the
 // GitHub status reads OFFLINE: the reading
-// may be minutes old (the hotspot coming up after the view opened), so Ctrl+S
-// and the Save button's lift DISPATCH THE CHECK (dispatch_github_check, its
+// may be minutes old (the hotspot coming up after the view opened), so the
+// chord and the Save button's lift DISPATCH THE CHECK (dispatch_github_check, its
 // one dispatcher) and nothing else — row 8 reads `checking...` and then the
 // answer, and the next press acts on it. The face is live on these terms (a
 // face that advertises an act dispatches it) and greys under Checking like
 // every other status in flight. Read by Save's face; the act answers the same
-// status at its own fork (open_history_commit_editor), below the no-clone and
+// status at its own fork (run_publish_chord), below the no-clone and
 // in-flight refusals this restates.
 inline bool history_github_recheck_actionable(const AppState& a) {
     return a.history_mode.active && history_remote_walk_available(a) &&
@@ -16770,11 +16774,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // there).
         //
         // AND IN THE VIEW A STANDING COLOR PICKER GRAYS IT (2026-10-08): the
-        // Save-and-Commit act asks its title on a dialog editor, so the act
-        // refuses whole under the picker (open_history_commit_editor's
-        // color picker arm) — the picker's own Ctrl+S being the plain disk
+        // act refuses whole under the picker (run_publish_chord's color
+        // picker arm; the openers refuse under each other, and the pull's
+        // question is a modal) — the picker's own Ctrl+S being the plain disk
         // save (route_color_picker_key), never this act. Outside the view
         // the button is that plain save and acts under the picker.
+        //
+        // AND IN THE VIEW THE BUTTON IS THE PUBLISH CHORD'S (architect
+        // 2026-10-10: "the icons in history remain the same"): its lift spells
+        // Ctrl+Shift+S there (finish_chrome_press_release), Ctrl+S being the
+        // plain save in both views since, so the face above reads that act's
+        // predicates — a MIRROR's dark save-and-commit face included
+        // (history_checkpoint_actionable).
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty() &&
                    !a.history_checkpoint_in_flight &&
@@ -17156,10 +17167,11 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // two-glyph button's reader asks.
 inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
     switch (b) {
-        // SAVE wears the commit glyph in the history view (where Ctrl+S IS the
-        // checkpoint act) and while a checkpoint publishes — and the PULL
-        // glyph in the view while the GitHub status reads Behind, where
-        // Ctrl+S pulls (history_save_is_pull).
+        // SAVE wears the commit glyph in the history view (where its lift is
+        // the publish chord, Ctrl+Shift+S since 2026-10-10) and while a
+        // checkpoint publishes — and the PULL glyph in the view while the
+        // GitHub status reads Behind, where the chord pulls
+        // (history_save_is_pull).
         case RedesignButton::Save:
             if (!a.history_checkpoint_in_flight && history_save_is_pull(a)) {
                 return 2;
@@ -18175,7 +18187,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // whichever command it currently is:
 //
 //   SAVE, WITH THE HISTORY MODE STANDING → the vcs-commit icon and the
-//   "Save and Commit (Ctrl+S)" hint: Ctrl+S there SAVES the piece beside its
+//   "Save and Commit (Ctrl+Shift+S)" hint: its lift there, the publish chord
+//   (Ctrl+S until 2026-10-10), SAVES the piece beside its
 //   source through this
 //   very button's ordinary act and then commits the live state into the projects
 //   repository as a checkpoint (run_history_commit, input_key_dispatch.cpp, owns
@@ -18193,11 +18206,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   were a REASON and a STATE rather than a name, and the face already says
 //   the button is dead in each. The FACTS are untouched: the two keys still
 //   card the bootstrap's reason (bare `g` at the walk's one switch owner,
-//   Ctrl+S at run_history_commit, each appending the clone-specific clause a
-//   constant line could never carry), and while a checkpoint publishes
-//   Ctrl+S cards kCheckpointPublishing in both of its forms — the `h` view's
-//   at open_history_commit_editor, the ordinary save at GuiSaveOps::save's own
-//   arm since 2026-09-24.)
+//   the publish chord at run_publish_chord, each appending the clone-specific
+//   clause a constant line could never carry), and while a checkpoint
+//   publishes both chords card kCheckpointPublishing — the publish chord at
+//   run_publish_chord, the ordinary save at GuiSaveOps::save's own arm since
+//   2026-09-24.)
 //
 //   RENDER, WITH AN EXPLICIT RENDER ACT LIVE (the single render, the sweep,
 //   the queue — never the automatic preview) → the dialog-cancel glyph, the
@@ -18228,7 +18241,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // things, and every fork below is one of them:
 //
 //   (1) FORK THE NAME where the press means something else NOW. Save reads
-//   "Save and Commit (Ctrl+S)" in the `h` view, Render reads "Cancel" while a
+//   "Save and Commit (Ctrl+Shift+S)" in the `h` view, Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations (Ctrl+Alt+R)" with the mode on,
 //   Play reads "Stop (Space)" while the transport is live, Full zoom out reads "Back to
 //   Previous View (0)" while its whole-song state stands and "Back to Working
@@ -18320,10 +18333,10 @@ inline RedesignTooltipText redesign_button_tooltip(
     if (b == RedesignButton::Save &&
         a.redesign_buttons[static_cast<size_t>(RedesignButton::Save)].glyph ==
             2) {
-        return {"Pull (Ctrl+S)", nullptr};
+        return {"Pull (Ctrl+Shift+S)", nullptr};
     }
     if (b == RedesignButton::Save && a.history_mode.active) {
-        return {"Save and Commit (Ctrl+S)", nullptr};
+        return {"Save and Commit (Ctrl+Shift+S)", nullptr};
     }
     // RENDER HAS NO HISTORY-VIEW HINT since 2026-08-08: the act left this button
     // with its chord, so in the view Render is an ordinary dead button and shows

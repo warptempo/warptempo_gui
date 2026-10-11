@@ -1699,7 +1699,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (NO BACK-WIRE FOR THE PROMPT. It had one while the history mode's commit
     // confirmation lived there — its `y` reached the act through the pointer —
     // and both went with the prompt on 2026-08-07, the act now being run by the
-    // commit-title editor's Enter inside the input handler itself.)
+    // input handler itself — the publish chord's act since 2026-10-10,
+    // run_publish_chord.)
 
     // Viewport worker kick: NOTHING REQUESTS IT DIRECTLY ANY MORE. Follow-scroll
     // during playback was the one caller that asked for the new waveform
@@ -2931,16 +2932,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 text_editor::cursor_visible_now(app.settings_editor);
             if (now_visible != app.settings_editor_blink_last) {
                 app.settings_editor_blink_last = now_visible;
-                invalidate_modal_dialog_area();
-            }
-        }
-        // And for the history view's commit-title editor.
-        if (text_editor::is_active(app.commit_title_editor)) {
-            const bool now_visible =
-                dialog_field_focused &&
-                text_editor::cursor_visible_now(app.commit_title_editor);
-            if (now_visible != app.commit_title_editor_blink_last) {
-                app.commit_title_editor_blink_last = now_visible;
                 invalidate_modal_dialog_area();
             }
         }
