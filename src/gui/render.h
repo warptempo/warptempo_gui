@@ -716,7 +716,7 @@ void install_true_colors(bool on);
 // canvas's top frame row — over the same triangle one quantum right in
 // `ce_cue_shadow`;
 // THE LABEL — the marker's one label in the program face at cap 7, in the
-// panel's light tone `ce_hilight`, no shadow, starting six quanta right of
+// panel's light tone `ce_hilight`, ITS TEXT UNDER THE TRIANGLE'S OWN SHADOW one quantum right and down (architect 2026-10-11, "make the text stand out a little more because it's a little small, but that's on purpose": the cap-7 text stays, and the product departs from Cool Edit, which draws none; `show_cue_label`, render.cpp, the one painter of every label look on the face, the shadow `FlagFace::shadow`, the faded one on a disabled cue; the flag editor's field text takes none; the shadow is ink, never extent), starting six quanta right of
 // the column, ITS LINE BOX CENTRED IN THE LANE (architect 2026-10-09
 // evening, on the glass at 300 %: the editor's band stood three rows of
 // field above and six below, and he asked for it even; the cap band's

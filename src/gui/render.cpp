@@ -1733,6 +1733,24 @@ struct CueSegment {
     // label (ce_off_label) unless selected (2026-10-10).
     bool                  inert    = false;
 };
+// THE CUE LABEL'S ONE TEXT PAINTER (architect 2026-10-11, "make the text stand
+// out a little more because it's a little small, but that's on purpose"; Cool
+// Edit draws no shadow under its cue labels, so this is the product's own
+// departure): the run first in its cue's triangle shadow (`FlagFace::shadow`,
+// the live `ce_cue_shadow` or the disabled cue's faded one) ONE SCALED
+// QUANTUM right and down, then `ink` over it. Every label look on the panel's
+// face goes through here — resting, invalid, inert, selected, and the flag
+// editor's riding cells; the editor's FIELD text does not.
+static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
+                           double x, double baseline, GuiColor ink,
+                           GuiColor shadow) {
+    const double q = static_cast<double>(cue_unit_px());
+    set_palette_source(cr, shadow);
+    text_shape::show_shaped_run(cr, run, x + q, baseline + q);
+    set_palette_source(cr, ink);
+    text_shape::show_shaped_run(cr, run, x, baseline);
+}
+
 // ONE CUE, laid out: its marker (or diff flag) index, its column in window
 // x, the triangle's resolved face and whether its dots paint, and its label's
 // up-to-three segments in their left-to-right order.
@@ -1833,12 +1851,13 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             // included (2026-10-11), else the faded inert label, an invalid
             // cue's resting invalid color, or the light tone — a selected
             // inert segment the chrome's text, so its selection shows.
-            set_palette_source(cr, s.selected ? pal.label
-                                   : s.inert  ? pal.ce_off_label
-                                   : c.face.invalid_label
-                                              ? pal.invalid_label
-                                              : pal.ce_hilight);
-            text_shape::show_shaped_run(cr, s.run, tx, base);
+            show_cue_label(cr, s.run, tx, base,
+                           s.selected ? pal.label
+                           : s.inert  ? pal.ce_off_label
+                           : c.face.invalid_label
+                                      ? pal.invalid_label
+                                      : pal.ce_hilight,
+                           c.face.shadow);
         }
         cairo_restore(cr);
     }
@@ -3228,10 +3247,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             // The resting label's ink: the faded inert label, else an invalid
             // marker's invalid color, else the panel's light tone
             // (resolve_flag_face's table).
-            set_palette_source(cr, cell_dis ? pal.ce_off_label
-                                  : red     ? pal.invalid_label
-                                            : pal.ce_hilight);
-            text_shape::show_shaped_run(cr, seg_run, tx, baseline);
+            show_cue_label(cr, seg_run, tx, baseline,
+                           cell_dis ? pal.ce_off_label
+                           : red    ? pal.invalid_label
+                                    : pal.ce_hilight,
+                           dis ? pal.ce_off_cue_shadow : pal.ce_cue_shadow);
             cursor_x = x0 + w;
         };
         if (ride_lower) ride(cl.lower_run, cl.lower_w);
