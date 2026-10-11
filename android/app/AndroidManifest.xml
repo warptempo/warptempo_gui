@@ -77,7 +77,13 @@
          buffers' dataspace, which GuiPlatform::adopt_window
          (src/gui/platform_android.cpp) tags DISPLAY_P3, so the panel receives
          the app as it receives a gallery viewer's P3-tagged image. The rule
-         and its measurement are at that call and that file's head. -->
+         and its measurement are at that call and that file's head.
+
+         autoRemoveFromRecents="true": A CLOSED PROGRAM LEAVES THE TASKBAR
+         (architect 2026-10-11). As Windows drops a closed program's taskbar
+         button, the task's Recents card goes when the activity finishes (the
+         caption's Close quits; onDestroy ends the process), so a stale card
+         never cold-launches; a backgrounded live app still stays in Recents. -->
     <activity
         android:name=".MainActivity"
         android:exported="true"
@@ -88,6 +94,7 @@
         android:launchMode="singleTask"
         android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|density|uiMode|navigation|keyboard"
         android:windowSoftInputMode="adjustNothing"
+        android:autoRemoveFromRecents="true"
         android:colorMode="wideColorGamut">
 
       <!-- soname without the lib prefix and the .so suffix. -->
