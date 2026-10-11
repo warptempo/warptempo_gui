@@ -118,7 +118,7 @@ struct Viewport;
 //     shown row at the top of the list at the open (re-derived 2026-10-09, device
 //     px; the longest list is the Waveform scope's eleven, 2026-10-11): at
 //     the tablet's 300 % eleven rows are 11 x 51 + 2 x 3 + 6 + 6 = 579 below
-//     a chooser whose foot stands at 399 + 6 + 18 + 63 = 486 of the 1440
+//     a chooser whose foot stands at 345 + 6 + 18 + 63 = 432 of the 1440
 //     rows (THE SEAT's top row), so the list hangs whole on the tablet as
 //     on the laptop (11 x 23 + 6 = 259 at 138 %); the scope's two
 //     rows hang whole anywhere.
@@ -255,8 +255,9 @@ struct Viewport;
 // rule's site). Everything else off
 // the card is the veil's consumed nothing.
 //
-// THE WIDTH: kCardWidthPx = 376, the tablet's half (384 W of its 768) less
-// the margin on both sides (384 − 2 x 4). THE WHEEL BLOCK, kWheelBlockWPx =
+// THE WIDTH: kCardWidthPx = 376, kept from its first derivation, the
+// tablet's half (384 W of its 768) less two 4-W margins (384 − 2 x 4);
+// the seat has none. THE WHEEL BLOCK, kWheelBlockWPx =
 // 92, stands on the chooser row (2026-10-08 ~18:15, the scope beside the
 // element chooser — the planner's seat, where nothing else moves; the one
 // split ~21:20): each of its two combos needs as much as its widest row,
@@ -322,7 +323,7 @@ namespace color_picker {
 // bottom row reads as the same rhythm.
 inline constexpr int kControlGapPx    = 6;
 inline constexpr int kCardPadPx       = kControlGapPx;   // inside the edge
-inline constexpr int kCardWidthPx     = 376;  // the tablet's half less two margins
+inline constexpr int kCardWidthPx     = 376;  // the tablet's half less two 4-W margins, as first sized
 // THE WHEEL'S BLOCK, ONE WIDTH UNDER EVERY CHROME (the head's THE GRID and
 // THE WIDTH: the split as it landed, 92, kept), so the right column starts
 // at one x.

@@ -81,9 +81,10 @@
 
          autoRemoveFromRecents="true": A CLOSED PROGRAM LEAVES THE TASKBAR
          (architect 2026-10-11). As Windows drops a closed program's taskbar
-         button, the task's Recents card goes when the activity finishes (the
-         caption's Close quits; onDestroy ends the process), so a stale card
-         never cold-launches; a backgrounded live app still stays in Recents. -->
+         button, the task's Recents card goes when the activity FINISHES (the
+         caption's Close, File Quit, Back: request_exit, ANativeActivity_finish).
+         A process the system kills in the background never finishes, so its
+         card stays and tapping it cold-launches, as any app's would: accepted. -->
     <activity
         android:name=".MainActivity"
         android:exported="true"
