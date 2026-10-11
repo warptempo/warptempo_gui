@@ -488,7 +488,6 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int lw      = relief_line_px();
     const int edge    = card_edge_wpx(spec) * lw;
     const int pad     = scaled_px(kCardPadPx);
-    const int margin  = scaled_px(kCardMarginPx);
     const int gap     = scaled_px(kControlGapPx);   // THE ONE GAP (THE GRID)
     const int chooser_h = scaled_px(kChooserHeightPx);
     const int row_h   = scaled_px(kSliderRowPx, 1);
@@ -501,16 +500,17 @@ Layout layout(const AppState& app, const GuiFont& font) {
     const int card_w  = scaled_px(kCardWidthPx);
     const int card_h  = 2 * edge + 2 * pad + inner_h;
 
-    // THE SEAT (the head, architect 2026-10-10 ~15:45): the card's top
-    // kCardBelowBandWPx under the toolbar band's bottom edge, read off the
-    // lane table (top_icon_row_area), its rect whether or not the keyboard
-    // stands, the one rule on both devices — and the card hanging down from
-    // there.
-    const GuiRect band = top_icon_row_area(app);
-    const int top = band.y + band.h + scaled_px(kCardBelowBandWPx);
+    // THE SEAT (the head, architect 2026-10-11): flush in the well's top
+    // corner on the tap-opposite side, the first row and column inside the
+    // canvas frame's ring — waveform_area's x and x + w, the row under
+    // top_canvas_frame_area (the ring's painter,
+    // paint_canvas_column_frame, reads the same rects).
+    const GuiRect well = waveform_area(app);
+    const GuiRect ring_top = top_canvas_frame_area(app);
+    const int top = ring_top.y + ring_top.h;
     l.edge_px = edge;
-    l.card = GuiRect{app.color_picker.on_right ? app.width - margin - card_w
-                                               : margin,
+    l.card = GuiRect{app.color_picker.on_right ? well.x + well.w - card_w
+                                               : well.x,
                      top, card_w, card_h};
     l.inner = GuiRect{l.card.x + edge + pad, l.card.y + edge + pad,
                       card_w - 2 * (edge + pad), inner_h};
