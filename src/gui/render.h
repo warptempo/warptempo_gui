@@ -2343,10 +2343,10 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    remaining row fits (popup_scroll_max_top, from the heights, not total
 //    less shown). THE STATE is PopupScroll, one per popup: the top row and
 //    the bar's held part. IT IS RESET TO THE HEAD AT EACH OPEN (a reopened
-//    list starts at its head, the preset menu's acts first), with ONE
-//    EXCEPTION, Windows' combo's own: a COMBO's list — the choice editor's
-//    and the element list, each opening with its shown value lit — scrolls
-//    that row into view at the open (popup_scroll_reveal).
+//    list starts at its head), with ONE EXCEPTION, Windows' combo's own
+//    (architect 2026-10-11): a list that opens with a current value lit —
+//    the choice editor's, the element list and the preset menu (its active
+//    preset) — scrolls that row into view at the open (popup_scroll_reveal).
 //  * THE PICTURE IS A VERTICAL SCROLL BAR INSIDE THE LIST, AT ITS RIGHT, UNDER
 //    EVERY CHROME (architect 2026-10-08, his ReactOS WordPad font-combo
 //    capture: "exactly as we would expect, just a scroll bar on the side"; and

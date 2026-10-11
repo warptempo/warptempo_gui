@@ -160,7 +160,7 @@ struct Viewport;
 //     2026-10-08): hung from the button's foot or standing on its head by the
 //     window's room, and SCROLLING when its rows outgrow it — the acts and the
 //     separators ordinary rows that scroll with the names, none pinned, the
-//     scroll at the head at each open; the shown rows and the bar published as
+//     scroll revealing the active preset at each open; the shown rows and the bar published as
 //     painted (layout). Every preset Save As writes is reachable, so the act
 //     refuses no name for room. The lit row starts on the active preset's name
 //     (the chooser's own seat, the hover seeded at the open) and follows the
@@ -665,8 +665,8 @@ bool preset_act_enabled(const AppState& app, PresetAct a);
 // separators; the defaults' group is never empty. Each separator is a scroll
 // row of its own in the layout (layout's preset menu). THE ORDER IS THE
 // ACTS' REACHABILITY (2026-10-07): the acts lead, so hung from the button
-// they are the rows nearest it, and a menu that scrolls opens at its head
-// with the acts in view (the head's THE PRESET MENU). A row is a NAME (its
+// they are the rows nearest it, and a menu that scrolls with no active preset opens
+// at its head with the acts in view (the head's THE PRESET MENU). A row is a NAME (its
 // load) or an ACT; `separator_before` marks the row that opens a group.
 struct PresetMenuRow {
     bool        is_act = false;

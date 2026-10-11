@@ -5504,9 +5504,11 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
     if (cp.menu_open == open) return;
     // THE LIST'S DAMAGE RULE ONE SURFACE OVER (above), and THE LIT ROW
     // STARTS ON THE ACTIVE PRESET'S NAME (color_picker.h's THE PRESET MENU:
-    // the chooser's hover seed), found among the menu's rows — THE SCROLL
-    // AT THE HEAD, the acts in view (render.h's popup scroll block: the
-    // menu is no combo, so its lit name may lie below the shown rows).
+    // the chooser's hover seed), found among the menu's rows — AND SCROLLED
+    // INTO VIEW as a combo's list does (architect 2026-10-11, render.h's
+    // popup scroll block), its scroll row the row's index plus the
+    // separators at or before it (layout: a separator is a scroll row of
+    // its own); no live named preset, the menu opens at its head.
     if (!open) color_picker.damage_card();
     cp.menu_open    = open;
     cp.menu_hover   = -1;
@@ -5518,9 +5520,17 @@ void GuiInputHandler::set_color_picker_menu_open(bool open) {
             color_picker::layout(app, gui_font(GuiFace::Body));
         const std::string_view active =
             color_picker::active_preset(app, cp.scope);
-        for (std::size_t i = 0; i < l.menu_rows.size(); ++i)
-            if (!l.menu_rows[i].is_act && l.menu_rows[i].name == active)
+        int scroll_row = 0;
+        for (std::size_t i = 0; i < l.menu_rows.size(); ++i) {
+            if (l.menu_rows[i].separator_before) ++scroll_row;
+            if (!l.menu_rows[i].is_act && l.menu_rows[i].name == active) {
                 cp.menu_hover = static_cast<int>(i);
+                cp.menu_scroll.top =
+                    popup_scroll_reveal(l.menu_bar, 0, scroll_row);
+                break;
+            }
+            ++scroll_row;
+        }
         viewport.invalidate_rect(l.menu);
         color_picker.damage_card();
     }
