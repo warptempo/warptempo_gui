@@ -278,7 +278,16 @@ void paint_ce_cue_split_triangle(cairo_t* cr, double axis, int top,
     // its share of each color with no seam of ground between them and the
     // outer edges carry one color alone (painting one half over the other
     // would leave a seam, or a fringe of the under color on the over half's
-    // edges).
+    // edges). THE GROUP IS CLIPPED TO ITS OWN BOX (2026-10-12): cairo sizes
+    // the group's surface to the clip's extents, so an unclipped group was a
+    // strip-sized scratch surface, zeroed and composited back, per pair (the
+    // history view's pan / zoom cost). The box is the two halves' integer
+    // bounds with one device px of margin for the antialiased coverage; the
+    // picture is unchanged.
+    cairo_rectangle(cr, std::floor(axis - half) - 1.0, y - 1.0,
+                    std::ceil(axis + half) + 1.0 - (std::floor(axis - half) - 1.0),
+                    std::ceil(apex) + 1.0 - (y - 1.0));
+    cairo_clip(cr);
     cairo_push_group(cr);
     const auto half_tri = [&](double x_out, GuiColor c) {
         cairo_new_path(cr);
