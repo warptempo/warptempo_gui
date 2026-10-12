@@ -54,7 +54,13 @@ std::expected<Document, std::string> parse(std::string_view bytes);
 // caller owns (cairo_surface_destroy): scaled uniformly by the smaller of
 // px / its width and px / its height and centred (a square drawing fills the
 // cell), the offset unsnapped, the antialiasing resvg's.
-cairo_surface_t* rasterise(const Document& doc, int px);
+//
+// `shift_x` / `shift_y` TRANSLATE THE DRAWING in its own user units before the
+// scale (positive right / down), composed into resvg's one render transform;
+// a user-unit shift scales with the raster, so it holds at every px. Zero
+// leaves the drawing exactly as the file centers it.
+cairo_surface_t* rasterise(const Document& doc, int px, double shift_x = 0.0,
+                           double shift_y = 0.0);
 
 // THE SATURATED COPY — ReactOS's disabled glyph (comctl32's ILS_SATURATE |
 // ILS_ALPHA at 192, imagelist.c's saturate_image): a NEW surface the caller

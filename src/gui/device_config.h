@@ -21,7 +21,7 @@
 //                            successful open; blank until the first
 //   scheme=<name>            THE SCHEME the caption is painted in, its six
 //                            keys (the caption alone since 2026-10-10): a
-//                            built-in scheme (`windows-2000-standard`, the
+//                            built-in scheme (`windows-storm`, the
 //                            catalog's others) or a scheme file read
 //                            at launch (is_scheme_name, palette_file.h); MAY
 //                            BE ABSENT — the first run's state — meaning the
@@ -29,11 +29,11 @@
 //                            exactly (effective_scheme_name)
 //   palette=<name>           THE PALETTE the program is painted in: a built-in
 //                            palette, one of Cool Edit's presets
-//                            (`cool-edit-default`, `cool-edit-xp-blue`, ...)
+//                            (`cool-edit-midnight`, `cool-edit-xp-blue`, ...)
 //                            or a palette file read at launch
 //                            (is_palette_name, palette_file.h); MAY BE ABSENT
 //                            — the first run's state — meaning the default
-//                            palette, Cool Edit's "Default", under every
+//                            palette, Cool Edit's "Midnight", under every
 //                            chrome (effective_palette_name, 2026-10-09)
 //   icons=<set>              THE ICON SET the glyphs are drawn from: a
 //                            bundled set's key, `tango`, `mist` or `gnome-2.28`
@@ -296,7 +296,7 @@
 // effective_palette_name and effective_scheme_name, palette_file.h) and
 // derives the chrome's colors from the palette's Cool Edit tones and the
 // scheme's caption keys, or with none the compiled caption
-// (live_chrome_words, chrome_derive.h; chrome_caption, theme_file.h). THE
+// (live_chrome_words, chrome_derive.h; chrome_caption, palette_file.h). THE
 // ICON SET IS ITS KEY VERBATIM TOO (2026-10-09): gui_main installs it once
 // (set_live_icon_set, icons.h), before the set's load. SO IS THE FONT
 // (2026-10-09): gui_main installs it (set_live_font, gui_font.h), and the Settings row's commit installs it again live.
@@ -316,13 +316,13 @@ struct DeviceConfig {
     // THE SCHEME, UNSET BY DEFAULT (2026-10-08 ~18:15): empty while the
     // config has no `scheme` line, which RESOLVES AT EACH INSTALL to the live
     // chrome's own scheme (effective_scheme_name, palette_file.h:
-    // `windows-2000-standard`, the compiled caption exactly) — never written
+    // `windows-storm`, the compiled caption exactly) — never written
     // back.
     std::string scheme;
     // THE PALETTE, UNSET BY DEFAULT (architect 2026-10-07): empty while the
     // config has no `palette` line, which RESOLVES AT EACH INSTALL to the
     // default palette (effective_palette_name, palette_file.h: Cool Edit's
-    // `cool-edit-default` under every chrome, 2026-10-09) — never written
+    // `cool-edit-midnight` under every chrome, 2026-10-12) — never written
     // back.
     std::string palette;
     // THE ICON SET, UNSET BY DEFAULT (architect 2026-10-09): empty while the

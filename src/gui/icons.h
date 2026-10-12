@@ -217,6 +217,32 @@ inline constexpr const char* kIconSetKeys[]         = {"tango", "mist", "gnome-2
 inline constexpr const char* kIconSetDisplayNames[] = {"Tango", "Mist", "GNOME 2.28"};
 static_assert(std::size(kIconSetKeys) == std::size(kIconSetDisplayNames));
 
+// THE GNOME 2.28 ARROWS CENTERED (architect 2026-10-12, his pick of the
+// body-centered sheet): each listed glyph of the GNOME 2.28 set ALONE is drawn
+// translated by (dx, dy) in the SVG's own user units (the files are 48-unit
+// canvases; +x right, +y down), composed into resvg's render transform
+// (svg_icon::rasterise) so it scales with the raster, the disabled copy
+// derived from the shifted render. THE BODY-CENTERING TEST: the shift puts the
+// arrow's BODY, the ink at alpha >= 0.5 at 60 px with GNOME's soft drop shadow
+// excluded (the shadow hangs below by design), at the center of its seat; the
+// mirror pairs (Undo / Redo, Previous / Next, BboxPrev / BboxNext, Up / Down)
+// come out symmetric to within 0.1 px. Where Undo's shadow crosses the canvas
+// edge after its shift it clips, accepted. THE FILES STAY BYTE-IDENTICAL to
+// gnome-icon-theme 2.28.0's: the shift is the product's, not the file's.
+// Tango and Mist take none.
+struct IconShift {
+    const char* name;   // the enumerator's name, kIconNames' spelling
+    float       dx;
+    float       dy;
+};
+inline constexpr IconShift kGnome228Shifts[] = {
+    {"EditUndo", 3.6f, 0.7f},         {"EditRedo", -1.5f, 0.7f},
+    {"GoPrevious", 1.6f, -1.9f},      {"GoNext", -0.6f, -2.0f},
+    {"BboxPrev", 0.0f, -1.9f},        {"BboxNext", 0.0f, -1.9f},
+    {"GoUp", 0.1f, -1.4f},            {"GoDown", 0.0f, -1.6f},
+    {"GoJumpDeclaration", -0.2f, 0.4f}, {"ValueDrag", 0.0f, 1.5f},
+};
+
 // THE `icons` KEY'S GRAMMAR — the ONE owner, asked by the device config's
 // reader (any other word the launch's first-error hard fail: a hand edit is
 // the only producer) and by the settings editor's Icons row (its refused

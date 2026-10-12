@@ -100,3 +100,5 @@ resvg road was not run for this import).
 | ZoomFitBest | `zoom-fit-best` | `scalable/actions/zoom-fit-best.svg` | — | `51638162efffd4c36f788cb4dd6eec1893603cb433a4bc29b9f1011bcb3937df` |
 | ZoomInY | `zoom-in` | `scalable/actions/zoom-in.svg` | — | `a463e274f24ea34b0be7c2ec69cad25fdb5cfc50132aaf09bcef200a20a3f83a` |
 | ZoomOriginal | `zoom-original` | `scalable/actions/zoom-original.svg` | — | `989ba03465dbf4f7bc64232d10a63c55de12d857f2d86f555e6dc7fe88b7bf35` |
+
+The product draws ten arrow glyphs translated in user units (icons.h's kGnome228Shifts, architect 2026-10-12, the arrow body centered in its seat); these files stay byte-identical to the originals, the shift is the product's, not the file's.

@@ -38,8 +38,8 @@
 // TONES, EVERY CHROME ROLE BUT THE CAPTION (architect 2026-10-10: "the
 // caption remains the only thing that's outside of Cool Edit";
 // chrome_derive.h), and THE SCHEME colors the caption — its six keys, or
-// with none the compiled caption (theme_file.h's
-// kGuiCaptionWin2000, never edited in the app) — both kinds picked in the
+// with none the compiled caption (kGuiCaptionOwn
+// below, never edited in the app) — both kinds picked in the
 // app and saved as NAMED presets, the architect's workshop, "save and load a handful of
 // themes at a time before we hard code them" (2026-10-08; a look made
 // official becomes a chrome variant, its colors compiled in).
@@ -86,8 +86,8 @@
 // scheme's name in the key grammar — the `palette` key's word for it), a
 // DISPLAY NAME (Cool Edit's own, "Default" for its "(Default Scheme)") and
 // THE ELEVEN. THE DEFAULT PALETTE IS ONE UNDER EVERY CHROME, Cool Edit's
-// "Default" (`cool-edit-default`, kGuiDefaultPaletteKey, the table's first
-// row) — THE PROGRAM'S ELEVEN whenever the device config names no palette
+// "Midnight" (`cool-edit-midnight`, kGuiDefaultPaletteKey; architect
+// 2026-10-12, replacing "Default") — THE PROGRAM'S ELEVEN whenever the device config names no palette
 // (the per-chrome default palettes of 2026-10-07 to 2026-10-09 retired the
 // same day: the program is no chrome's).
 //
@@ -105,9 +105,9 @@
 // generator's head). A SCHEME IS CAPTION-ONLY BY ITS KIND: choosing one
 // installs its six and leaves the program's eleven as they stand
 // (GuiColorPicker::load_preset). THE CHROME'S OWN SCHEME — the one its
-// `own_scheme` names (chrome_spec.h: `windows-2000-standard`) — CARRIES NO
+// `own_scheme` names (chrome_spec.h: `windows-storm`) — CARRIES NO
 // KEYS under that chrome (scheme_record): the compiled caption exactly
-// (theme_file.h, asserted equal to the scheme's six), so a config naming no
+// (kGuiCaptionOwn, the scheme's six by construction), so a config naming no
 // scheme and one naming the chrome's own paint alike and the picker's Save
 // stays gray on it; under another chrome it is a scheme like any. A BUILT-IN IS NOT A FILE AND TAKES NO
 // FILE: a file bearing a built-in's key is the read's hard fail, and the
@@ -392,15 +392,21 @@ inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 #include "palette_presets.inc"
 };
 // THE DEFAULT PALETTE, ONE UNDER EVERY CHROME (the head): Cool Edit's
-// "Default", the table's first row — the palette a config with no `palette`
-// line takes (effective_palette_name).
-inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-default";
+// "Midnight" (architect 2026-10-12; "Default" is one of the others now) —
+// the palette a config with no `palette` line takes
+// (effective_palette_name).
+inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-midnight";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
 constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
     for (const GuiBuiltinPalette& b : kGuiBuiltinPalettes)
         if (name == b.key) return &b;
     return nullptr;
+}
+// THE DEFAULT PALETTE'S ELEVEN (the derivation checks' and the install
+// family's base).
+inline constexpr const GuiPaletteWords& default_palette_words() {
+    return builtin_palette(kGuiDefaultPaletteKey)->words;
 }
 // Whether `name` is a built-in palette's key.
 constexpr bool is_builtin_palette_name(std::string_view name) {
@@ -443,6 +449,16 @@ constexpr const GuiChromeScheme* builtin_scheme(std::string_view name) {
         if (name == b.key) return &b;
     return nullptr;
 }
+// THE COMPILED CAPTION (theme_file.h's head): the chrome's own scheme's six
+// keys, read from the generated table (a compile error if the key names no
+// row). THE ONE RESOLVER — read by the derivation's live words
+// (live_chrome_words, chrome_derive.h) and the picker's OLD while no scheme
+// keys stand.
+inline constexpr GuiChromePick kGuiCaptionOwn =
+    builtin_scheme(kChromeSpecWin2000.own_scheme)->chrome;
+inline constexpr const GuiChromePick& chrome_caption() {
+    return kGuiCaptionOwn;
+}
 // Whether `name` is a built-in scheme's key (the chromes' own among them).
 constexpr bool is_builtin_scheme_name(std::string_view name) {
     return builtin_scheme(name) != nullptr;
@@ -455,9 +471,9 @@ constexpr bool is_chrome_own_scheme(std::string_view name) {
 }
 // THE ACTIVE PRESETS THE INSTALL TAKES (architect 2026-10-07; the scheme
 // 2026-10-08): the device config's key as written, or — EMPTY, no line —
-// for a palette THE DEFAULT PALETTE, `cool-edit-default` under every chrome
-// (2026-10-09), and for a scheme THE LIVE CHROME'S OWN (chrome_spec.h's
-// own_scheme of live_chrome_spec(): `windows-2000-standard`). The struct
+// for a palette THE DEFAULT PALETTE, `cool-edit-midnight` under every chrome
+// (2026-10-12), and for a scheme THE LIVE CHROME'S OWN (chrome_spec.h's
+// own_scheme of live_chrome_spec(): `windows-storm`). The struct
 // keeps the empty value, so the file never pins a default.
 std::string_view effective_palette_name(std::string_view palette);
 std::string_view effective_scheme_name(std::string_view scheme);
@@ -492,10 +508,10 @@ std::vector<std::string> scheme_file_names();
 bool is_palette_name(std::string_view name);
 bool is_scheme_name(std::string_view name);
 inline constexpr const char* kPaletteGrammarReason =
-    "must be a built-in palette's key (cool-edit-default, cool-edit-xp-blue, "
+    "must be a built-in palette's key (cool-edit-midnight, cool-edit-xp-blue, "
     "...) or the name of a palette file read at launch";
 inline constexpr const char* kSchemeGrammarReason =
-    "must be a built-in scheme's key (windows-2000-standard, "
+    "must be a built-in scheme's key (windows-storm, "
     "windows-rainy-day, ...) or the name of a scheme file read at launch";
 
 // The eleven the palette `name` names — a built-in palette's row, or a
@@ -532,7 +548,7 @@ std::optional<GuiChromePick> scheme_record(std::string_view name);
 // (a built-in scheme's, every one of which records them; a file's that
 // named them; one the picker has picked) is written with all six and the
 // saved file reproduces the saved look, the laptop's inactive gray staying
-// gray after a Save As from windows-2000-standard; the THREE-KEY FORM is
+// gray after a Save As from windows-storm; the THREE-KEY FORM is
 // the file of a pick whose inactive three were never picked and never
 // present, the inactive caption then following the active one (the head's
 // rule, unchanged). The picker hands this writer the live scheme's keys

@@ -110,12 +110,12 @@ struct TrimRange {
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
 // active palette is the device config's `palette` — a built-in or a
 // `<name>.palette` file from the `palettes/` folder beside it — or, with no
-// `palette` line, the default palette, Cool Edit's "Default" under every
-// chrome (2026-10-09); the active SCHEME, the caption's six keys, is its
+// `palette` line, the default palette, Cool Edit's "Midnight" under every
+// chrome (2026-10-12); the active SCHEME, the caption's six keys, is its
 // `scheme` — a built-in or a `<name>.scheme` file from the `schemes/`
 // folder — or, with no line, the live chrome's own, which carries no keys
-// and paints the chrome's COMPILED CAPTION (theme_file.h's
-// kGuiCaptionWin2000: Windows 2000 Standard's). There is
+// and paints the chrome's COMPILED CAPTION (palette_file.h's
+// kGuiCaptionOwn: Windows Storm's, architect 2026-10-12). There is
 // NO LEVEL (architect 2026-10-04): a dark look, like any look made official,
 // would be a chrome variant of its own (2026-10-08). The app computes no
 // color but COOL EDIT'S: the program's panel tones derived from the
@@ -524,7 +524,7 @@ struct GuiChromePick {
 // every role but the caption's six a tone of the palette's face or ink,
 // live_chrome_words, chrome_derive.h), the caption's six off `chrome`, the
 // scheme's keys, or with none the compiled caption
-// (chrome_caption(), theme_file.h). AT LAUNCH the palette the config's `palette`
+// (chrome_caption(), palette_file.h). AT LAUNCH the palette the config's `palette`
 // key names and the scheme its `scheme` key names (2026-10-08; through
 // is_palette_name and is_scheme_name — a built-in or a file read at launch —
 // or, with no line, the default palette and the live chrome's own scheme,
@@ -920,8 +920,8 @@ void install_true_colors(bool on);
 // 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
 // magnified and the compressed bars, the ink's hides it. The default
-// palette's, Cool Edit's "Default" (`cool-edit-default`, the default under
-// every chrome, palette_presets.inc), is #0A9757 under its #4BF3A7 ink on
+// palette's, Cool Edit's "Default" (`cool-edit-default`, one of the twenty
+// since 2026-10-12, palette_presets.inc), is #0A9757 under its #4BF3A7 ink on
 // black — the ink at HLS lightness 0.3157, the generator's outline rule
 // (tools/theme_catalog/gen_cool_edit_presets.py). THE PLATE
 // BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the

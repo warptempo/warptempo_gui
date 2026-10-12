@@ -78,7 +78,7 @@ constexpr GuiChromePick distinct_pick() {
 }
 constexpr bool keys_map_onto_their_roles(const GuiChromePick& p) {
     const GuiThemeWords w =
-        chrome_derive::derive_chrome(kGuiBuiltinPalettes[0].words, p);
+        chrome_derive::derive_chrome(default_palette_words(), p);
     for (std::size_t i = 0; i < kGuiChromeLineCount; ++i)
         if (w[theme_role_index(kGuiChromeLines[i].role)] !=
             chrome_line_word(p, i))
@@ -144,15 +144,9 @@ static_assert(sizeof(GuiPalette) ==
                cool_edit_derive::kDisabledCueMemberCount) *
                   sizeof(GuiColor));
 
-// THE CHROME'S OWN SCHEME IS A BUILT-IN SCHEME, AND THAT SCHEME IS THE
-// COMPILED CAPTION KEY FOR KEY (the generator's transcription and the
-// hand-recorded caption agree): so the scheme that carries no keys (scheme_record)
-// is no loss of a word.
-constexpr bool own_scheme_is_the_compiled_caption() {
-    const GuiChromeScheme* b = builtin_scheme(kChromeSpecWin2000.own_scheme);
-    return b != nullptr && b->chrome == chrome_caption();
-}
-static_assert(own_scheme_is_the_compiled_caption());
+// THE CHROME'S OWN SCHEME IS THE COMPILED CAPTION BY CONSTRUCTION
+// (kGuiCaptionOwn reads the scheme's row of the generated table), so the
+// scheme that carries no keys (scheme_record) is no loss of a word.
 
 // WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S SIX (the catalog's
 // windows-me-standard, kept as an entry under Me's name; the generator
@@ -188,10 +182,9 @@ static_assert(builtins_well_formed());
 
 // THE BUILT-IN PALETTES ARE WELL FORMED (palette_file.h's
 // kGuiBuiltinPalettes; the generator checks the same): the keys and display
-// names unique, the keys in the name grammar, THE DEFAULT THE FIRST ROW.
+// names unique, the keys in the name grammar, THE DEFAULT A ROW OF THE TABLE.
 constexpr bool builtin_palettes_well_formed() {
-    if (std::string_view(kGuiBuiltinPalettes[0].key) != kGuiDefaultPaletteKey)
-        return false;
+    if (builtin_palette(kGuiDefaultPaletteKey) == nullptr) return false;
     for (std::size_t i = 0; i < std::size(kGuiBuiltinPalettes); ++i) {
         const GuiBuiltinPalette& a = kGuiBuiltinPalettes[i];
         if (!is_palette_name_spelling(a.key) ||

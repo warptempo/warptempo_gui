@@ -3624,7 +3624,7 @@ struct SettingsPopupItem {
 // from it by tools/theme_catalog/gen_theme_files.py, chosen in the color
 // picker: 42 since 2026-10-12 (103 until the KDE 3 and CDE families
 // were dropped) — chrome_schemes.inc's rows, one per catalog entry of the
-// windows (26) and windows-plus (16) families, the windows-2000 chrome's own `windows-2000-standard` among them
+// windows (26) and windows-plus (16) families, the windows-2000 chrome's own `windows-storm` among them
 // rather than beside them (palette_file.h's kGuiChromeSchemes; the picker's
 // menu lists it first and the other 41 after its separator; the product's
 // own `cool-edit-pro-me` of 2026-10-10 removed 2026-10-11).

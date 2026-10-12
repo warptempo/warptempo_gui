@@ -37,6 +37,7 @@ struct Faces {
 
 struct LoadedSet {
     std::array<svg_icon::Document, kIconCount> docs;
+    std::array<std::pair<float, float>, kIconCount> shifts{};   // kGnome228Shifts
     std::map<std::pair<int, int>, Faces>      rasters;
 };
 
@@ -57,7 +58,8 @@ Faces& faces_for(Icon icon, int px) {
     const int index = static_cast<int>(icon);
     Faces& f = set.rasters[{index, px}];
     if (!f.live) {
-        f.live.reset(svg_icon::rasterise(document(index), px));
+        const auto [sx, sy] = set.shifts[static_cast<size_t>(index)];
+        f.live.reset(svg_icon::rasterise(document(index), px, sx, sy));
         svg_icon::convert_to_display(f.live.get());
     }
     return f;
@@ -88,6 +90,10 @@ std::optional<std::string> load_svg_set(std::string_view set) {
         auto doc = svg_icon::parse(found->second);
         if (!doc) return label + file + ": " + doc.error();
         loaded.docs[static_cast<size_t>(i)] = std::move(*doc);
+        if (set == "gnome-2.28")
+            for (const IconShift& s : kGnome228Shifts)
+                if (std::string_view(s.name) == kIconNames[i])
+                    loaded.shifts[static_cast<size_t>(i)] = {s.dx, s.dy};
     }
     loaded_set() = std::move(loaded);
     return std::nullopt;
@@ -116,8 +122,10 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
         Surface fresh;
         cairo_surface_t* source = f.live.get();
         if (display_transform::active()) {
+            const auto [sx, sy] =
+                loaded_set()->shifts[static_cast<size_t>(icon)];
             fresh.reset(svg_icon::rasterise(
-                document(static_cast<int>(icon)), px));
+                document(static_cast<int>(icon)), px, sx, sy));
             source = fresh.get();
         }
         f.disabled.reset(svg_icon::saturated_copy(source));

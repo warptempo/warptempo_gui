@@ -118,7 +118,7 @@ GuiChromePick live_scheme_keys() {
         return *live;
     const GuiChromeScheme* own =
         builtin_scheme(live_chrome_spec().own_scheme);
-    assert(own != nullptr);   // own_scheme_is_the_compiled_caption
+    assert(own != nullptr);   // kGuiCaptionOwn
     return own->chrome;
 }
 
@@ -240,7 +240,7 @@ std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
         first = false;
     }
     // The built-ins. Under Waveform Cool Edit's presets ALPHABETICALLY BY
-    // THEIR DISPLAY NAMES WITH "Default" PINNED FIRST (architect 2026-10-11:
+    // THEIR DISPLAY NAMES WITH THE DEFAULT (Midnight since 2026-10-12) PINNED FIRST (architect 2026-10-11:
     // "because it's called default, we should support it as a default"; the
     // default palette, kGuiBuiltinPalettes' first row).
     first = true;

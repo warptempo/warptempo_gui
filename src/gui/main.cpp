@@ -3517,7 +3517,7 @@ int gui_main(const char* argument) {
     // its six caption keys (the caption alone since 2026-10-10) — or, with no
     // `scheme` line, THE LIVE CHROME'S OWN SCHEME, which carries none and
     // paints the chrome's compiled caption (effective_scheme_name,
-    // scheme_record; chrome_caption, theme_file.h), every other chrome color
+    // scheme_record; chrome_caption, palette_file.h), every other chrome color
     // derived from the palette's Cool Edit tones (live_chrome_words,
     // chrome_derive.h); and the palette the config
     // names (a built-in, one of Cool Edit's presets, or a file read above)

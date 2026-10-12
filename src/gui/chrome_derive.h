@@ -194,31 +194,31 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program,
 
 // -- THE CHECKS ----------------------------------------------------------------
 
-// THE DEFAULT PALETTE (Cool Edit's "Default": Face 626C7B, ink 4BF3A7) under
-// Windows 2000's caption: the chrome it paints, role by role.
+// THE DEFAULT PALETTE (Cool Edit's "Midnight": Face 272B6D, ink 4FD8D1) under
+// Windows Storm's caption: the chrome it paints, role by role.
 inline constexpr GuiThemeWords kDefaultCheck =
-    derive_chrome(kGuiBuiltinPalettes[0].words, kGuiCaptionWin2000);
-static_assert(kDefaultCheck[theme_role_index("ground")] == 0x626C7B);
-static_assert(kDefaultCheck[theme_role_index("light_3d")] == 0x626C7B);
-static_assert(kDefaultCheck[theme_role_index("hilight")] == 0xAEB4BE);
-static_assert(kDefaultCheck[theme_role_index("shadow")] == 0x404750);
+    derive_chrome(default_palette_words(), chrome_caption());
+static_assert(kDefaultCheck[theme_role_index("ground")] == 0x272B6D);
+static_assert(kDefaultCheck[theme_role_index("light_3d")] == 0x272B6D);
+static_assert(kDefaultCheck[theme_role_index("hilight")] == 0x797ECF);
+static_assert(kDefaultCheck[theme_role_index("shadow")] == 0x191C47);
 static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
-static_assert(kDefaultCheck[theme_role_index("label")] == 0xEFEFEF);
-static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x404750);
-static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xEFEFEF);
-static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x4BF3A7);
-static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x03301C);
-static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x626C7B);
-static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xEFEFEF);
-static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x2A2F35);
-static_assert(kDefaultCheck[theme_role_index("caption_active")] == 0x0A246A);
-static_assert(kDefaultCheck[theme_role_index("caption_inactive_text")] == 0xD4D0C8);
+static_assert(kDefaultCheck[theme_role_index("label")] == 0xEAEAEE);
+static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x191C47);
+static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xEAEAEE);
+static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x4FD8D1);
+static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x092A28);
+static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x272B6D);
+static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xEAEAEE);
+static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x11122F);
+static_assert(kDefaultCheck[theme_role_index("caption_active")] == 0x800080);
+static_assert(kDefaultCheck[theme_role_index("caption_inactive_text")] == 0xC0C0C0);
 // A LIGHT FACE SWAPS THE TEXT AND NOT THE FIELD'S (Arctic Freeze's C0C0C0,
 // METRICS_PRESETS_1010.md §3a): the label dark, the field text light.
 static_assert([] {
-    GuiPaletteWords p = kGuiBuiltinPalettes[0].words;
+    GuiPaletteWords p = default_palette_words();
     p[palette_role_index("face")] = 0xC0C0C0;
-    const GuiThemeWords w = derive_chrome(p, kGuiCaptionWin2000);
+    const GuiThemeWords w = derive_chrome(p, chrome_caption());
     return w[theme_role_index("label")] == 0x311919 &&
            w[theme_role_index("card_text")] == 0x311919 &&
            w[theme_role_index("field_text")] == 0xF6F6F6 &&
@@ -226,12 +226,12 @@ static_assert([] {
 }());
 // THE INACTIVE CAPTION FOLLOWS while unpicked.
 static_assert([] {
-    GuiChromePick p = kGuiCaptionWin2000;
+    GuiChromePick p = chrome_caption();
     p.inactive_title_start.reset();
     p.inactive_title_text.reset();
-    const GuiThemeWords w = derive_chrome(kGuiBuiltinPalettes[0].words, p);
-    return w[theme_role_index("caption_inactive")] == 0x0A246A &&
-           w[theme_role_index("caption_inactive_gradient")] == 0xC0C0C0 &&
+    const GuiThemeWords w = derive_chrome(default_palette_words(), p);
+    return w[theme_role_index("caption_inactive")] == 0x800080 &&
+           w[theme_role_index("caption_inactive_gradient")] == 0xA8ACA8 &&
            w[theme_role_index("caption_inactive_text")] == 0xFFFFFF;
 }());
 

@@ -581,7 +581,7 @@ const char* element_display_name(std::size_t e);
 // THE ELEMENT'S LIVE COLOR: a program role's live word, or the live scheme's
 // key — an inactive key never picked showing the active key it follows —
 // and with no keys in the live scheme the key's word in the live chrome's
-// COMPILED CAPTION (chrome_caption, theme_file.h), so OLD shows what the
+// COMPILED CAPTION (chrome_caption, palette_file.h), so OLD shows what the
 // caption wears.
 uint32_t    element_color(std::size_t e);
 // THE BLOCK A FIRST PICK CREATES (GuiColorPicker::set_color): the three
@@ -645,11 +645,11 @@ bool preset_act_enabled(const AppState& app, PresetAct a);
 // presets 2026-10-09 ~13:30; alphabetical 2026-10-11): the four acts — a
 // separator — HIS FILES OF THE KIND ALPHABETICALLY (case-insensitive by
 // name, ties by bytes) — a separator — THE BUILT-INS: under Waveform COOL
-// EDIT'S PRESETS, all twenty, "Default" PINNED FIRST ("because it's called
+// EDIT'S PRESETS, all twenty, THE DEFAULT (Midnight since 2026-10-12) PINNED FIRST ("because it's called
 // default, we should support it as a default"; the default palette under
 // every chrome, palette_file.h's kGuiBuiltinPalettes) and the other
 // nineteen ALPHABETICALLY by their display names; under Chrome THE CHROME'S
-// OWN SCHEME alone (windows-2000-standard; the product's own
+// OWN SCHEME alone (windows-storm; the product's own
 // cool-edit-pro-me of 2026-10-10 removed 2026-10-11, "effectively the same
 // now, now that Chrome only sets the caption") — A SEPARATOR ("just put a
 // separator after the default color themes", architect 2026-10-08 ~19:30)
@@ -956,9 +956,9 @@ struct GuiColorPicker {
     // The prompt's Delete: the parked file of the scope's kind removed; the
     // scope's live words fall to WHAT NO LINE MEANS — the live chrome's
     // compiled caption (Chrome) or the default palette, Cool Edit's
-    // "Default" (Waveform), the next launch's picture — installed live, OLD
+    // "Midnight" (Waveform), the next launch's picture — installed live, OLD
     // and NEW reseated, the scope's key cleared and persisted — the preset
-    // button then shows the chrome's own scheme's name or "Default". A
+    // button then shows the chrome's own scheme's name or "Midnight". A
     // failure cards and changes nothing else. The Cancel drops the parked
     // name and changes nothing.
     void confirm_delete();

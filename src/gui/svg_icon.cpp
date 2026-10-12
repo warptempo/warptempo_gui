@@ -35,7 +35,8 @@ std::expected<Document, std::string> parse(std::string_view bytes) {
                                                        resvg_tree_destroy)};
 }
 
-cairo_surface_t* rasterise(const Document& doc, int px) {
+cairo_surface_t* rasterise(const Document& doc, int px, double shift_x,
+                           double shift_y) {
     // A new image surface is cleared to transparent, which resvg's render
     // composites onto. Its stride is exactly 4 * px: cairo aligns ARGB32
     // rows to 4 bytes, and resvg's pixmap is packed rows of 4 bytes.
@@ -50,8 +51,8 @@ cairo_surface_t* rasterise(const Document& doc, int px) {
                               px / static_cast<double>(size.height));
     const resvg_transform fit{
         static_cast<float>(k), 0.0f, 0.0f, static_cast<float>(k),
-        static_cast<float>((px - size.width * k) / 2.0),
-        static_cast<float>((px - size.height * k) / 2.0)};
+        static_cast<float>((px - size.width * k) / 2.0 + k * shift_x),
+        static_cast<float>((px - size.height * k) / 2.0 + k * shift_y)};
     resvg_render(doc.tree.get(), fit, static_cast<uint32_t>(px),
                  static_cast<uint32_t>(px), reinterpret_cast<char*>(data));
 
