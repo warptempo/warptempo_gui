@@ -176,10 +176,13 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // simply stays there. It is not a selection sync. Done last so invalidations
     // in the helper don't double-paint with the ones above.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
-    viewport.move_playhead_to(sample);
+    // The seat is a movement owner except under the hold posture, which a
+    // drop inherits (Viewport::seat_playhead_on_drop).
+    viewport.seat_playhead_on_drop(sample);
     // A DROP IS A POINT COMMAND (architect 2026-07-29, overruling the drops'
     // earlier keep-the-highlight behavior): it seats the playhead on the marker
-    // it creates and single-selects it, the seat above being a movement owner.
+    // it creates and single-selects it, the seat above being a movement owner
+    // that keeps a standing hold bit (architect 2026-10-12).
     // PAST EVERY REFUSAL by
     // construction, which still matters because the seat is a movement: the
     // callers' gates (read-only, active_column_authoring_allowed, the

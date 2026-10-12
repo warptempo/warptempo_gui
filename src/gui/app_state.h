@@ -5280,6 +5280,15 @@ struct AppState {
     //     column. A restore that moved no cursor moves no camera and keeps
     //     the bit. (2026-09-23 to 2026-09-25: the restore kept the bit across
     //     its land and let the landing owner decide.)
+    //     AND BY THE MARKER DROP (architect 2026-10-12, "if the playhead has a
+    //     hold bit and a new marker is dropped, it inherits the hold bit"),
+    //     the third exemption, a drop under the hold being authored on the
+    //     held column: its seat of the playhead on the new marker is a
+    //     movement owner too, so Viewport::seat_playhead_on_drop reads the
+    //     bit before the seat and re-arms it after — a seat that moved no
+    //     cursor (the warp drop) only re-arms, a seat that moved it (the P
+    //     column's lead-in drop) first holds the column the cursor painted in
+    //     before the drop, as the restore does. A dark bit drops as before.
     //   * CLEARED by every other camera change (the chokepoint above: the
     //     pans, the drags, the pointer zooms, `0`'s both presses (the second
     //     also through move_playhead_to when it moves the playhead), follow's
@@ -5300,7 +5309,8 @@ struct AppState {
     //     the marker under the playhead (Enter, the flag double-click, a
     //     bound cell, `m`) keeps the hold, and so do a marker click, a Tab
     //     step or a collapse landing on that marker; move_playhead_to clears
-    //     at every call. THE SELECTION DOES NOT ENTER INTO IT (architect
+    //     at every call (but the drop's seat, seat_playhead_on_drop). THE
+    //     SELECTION DOES NOT ENTER INTO IT (architect
     //     2026-09-26): the hold is a camera posture on the playhead's column,
     //     so no selection write sets or clears the bit — a click that forms a
     //     group and moves the playhead clears through its land, one that
@@ -13702,7 +13712,7 @@ enum class MarkerLandingFrame { Center, Land };
 // (restore_history_entry's visual tail, undo.cpp, where FollowEdge means the
 // landing owner's Restore; architect 2026-09-25), each reading it BEFORE its
 // act, since the act's own movement would put the posture out and each keeps
-// it (the posture's two exemptions, at its declaration). The two answers are at
+// it (the posture's exemptions, at its declaration). The two answers are at
 // NudgeCamera (gui_input.h).
 inline NudgeCamera nudge_camera(const AppState& a) {
     return a.camera_hold ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;

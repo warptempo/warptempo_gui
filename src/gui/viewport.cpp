@@ -249,15 +249,42 @@ void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
 // it stood, so a movement is one of the posture's three movement-owner clears,
 // the two lands being the others — this owner at every call, the lands only
 // when they change the cursor (architect 2026-09-26: a land onto the sample
-// already held is no movement of the posture's subject). The two exemptions
+// already held is no movement of the posture's subject). The three exemptions
 // are the nudge, which
-// keeps the bit across its whole act, and the undo/redo singleton restore
-// under the hold, which holds the column after its land and re-arms the bit;
-// the rule is at AppState::camera_hold.
+// keeps the bit across its whole act, the undo/redo singleton restore
+// under the hold, which holds the column after its land and re-arms the bit,
+// and the marker drop (seat_playhead_on_drop, below); the rule is at
+// AppState::camera_hold.
 void Viewport::move_playhead_to(int64_t new_sample) {
     clear_audition_sequence(app);
     app.camera_hold = false;
     reseat_playhead_to(new_sample);
+}
+
+// THE DROP'S SEAT, THE HOLD POSTURE'S THIRD EXEMPTION (architect 2026-10-12,
+// "if the playhead has a hold bit and a new marker is dropped, it inherits the
+// hold bit": a drop under the hold is authored on the held column), the rule's
+// one owner for every drop body (GuiWarpMarkersOps::drop_marker,
+// GuiPhaseResetMarkersOps::drop_phase_reset_at_position). The bit, the cursor
+// and the AS-PAINTED item basis are read BEFORE the seat, which puts the bit
+// out as every movement does; a bit that stood is then re-armed. A seat that
+// moved the cursor (the P column's lead-in drop seats the playhead
+// kPhaseResetLeadInSamples before where it stood) first holds the column the
+// cursor painted in before the drop, the undo singleton restore's precedent
+// (restore_history_entry, undo.cpp), so the bit stays truthful
+// (hold_derived_on_arrival): the playhead paints in the held column. A seat
+// that moved nothing (the warp drop, any same-sample re-affirm) only re-arms.
+// A dark bit leaves the plain movement.
+void Viewport::seat_playhead_on_drop(int64_t new_sample) {
+    const bool held = app.camera_hold;
+    const int64_t cursor_before = app.playhead_cursor_sample;
+    const ItemViewportBasis painted = item_viewport_basis(app, audio);
+    move_playhead_to(new_sample);
+    if (!held) return;
+    if (painted.spp > 0.0 && app.playhead_cursor_sample != cursor_before)
+        hold_subject_column_after_nudge(displayed_column_at(
+            static_cast<double>(cursor_before), painted.vp_start, painted.spp));
+    app.camera_hold = true;
 }
 
 namespace {

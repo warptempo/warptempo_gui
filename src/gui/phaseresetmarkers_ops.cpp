@@ -75,10 +75,14 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // consequence (the
     // reset is created for the playhead), not a selection sync.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
-    viewport.move_playhead_to(sample);
+    // The seat is a movement owner except under the hold posture, which a
+    // drop inherits (Viewport::seat_playhead_on_drop); the lead-in drop's
+    // seat moves the cursor, so there the helper holds the painted column.
+    viewport.seat_playhead_on_drop(sample);
     // A DROP IS A POINT COMMAND (architect 2026-07-29, drop_marker's twin —
     // see the fuller statement there): it seats the playhead on the reset it
-    // creates and single-selects it, the seat above being a movement owner.
+    // creates and single-selects it, the seat above being a movement owner
+    // that keeps a standing hold bit (architect 2026-10-12).
     // PAST EVERY
     // REFUSAL: the callers' read-only / home-view gates and the wrapper's own
     // sample-rate test return before this runs, and this function's two refusals

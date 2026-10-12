@@ -306,6 +306,10 @@ struct Viewport {
     // (viewport.cpp). UNCONDITIONAL — a write onto the frame the cursor already
     // holds still ends the act.
     void move_playhead_to(int64_t new_sample);
+    // A marker drop's seat of the playhead: move_playhead_to that keeps a
+    // standing hold (the posture's third exemption; the rule and body are at
+    // the definition, viewport.cpp).
+    void seat_playhead_on_drop(int64_t new_sample);
     // THE RESEAT — the identical write with NO audition end, for the callers whose write
     // is not a movement (contract at the definition, viewport.cpp). Named rather
     // than spelled as a flag on the mover: "skip the rule this time" would be the

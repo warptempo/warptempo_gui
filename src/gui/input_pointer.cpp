@@ -1773,8 +1773,8 @@ void land_playhead_on_marker(AppState& app, const GuiAudio& audio,
     clear_audition_sequence(app);
     // AND THE HOLD POSTURE GOES OUT WHEN THE LAND MOVES THE PLAYHEAD
     // (architect 2026-09-26): one of its three movement-owner clears (the rule
-    // and its two exemptions — the nudge's and the undo/redo restore's — are
-    // at AppState::camera_hold). Unlike the audition's end it is gated on the
+    // and its three exemptions — the nudge's, the undo/redo restore's and the
+    // drop's — are at AppState::camera_hold). Unlike the audition's end it is gated on the
     // seat's own outcome, read after the frame half's clamp and idempotence
     // return: a land onto the sample the cursor already holds (an editor
     // opening on the marker under the playhead — Enter, the flag
