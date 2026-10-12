@@ -10,7 +10,7 @@ not well-formed SVG fails the launch, naming the file. Files of other names in t
 texts) are not read.
 
 Two seats are deliberate (architect 2026-10-12): DocumentSave wears `devices/media-floppy`, the old diskette; Lock
-wears `emblems/emblem-readonly`. DialogError wears `process-stop`, since 2.28's `edit-delete` is the bin. Every other
+wears `actions/system-lock-screen`, the monitor with the padlock (architect 2026-10-12: emblem-readonly is nearly monochrome and does not read). DialogError wears `process-stop`, since 2.28's `edit-delete` is the bin. Every other
 seat is the freedesktop name the Mist set uses. THE READ-ONLY TOGGLE wears Lock alone under every set; its lit face
 says read-only.
 
@@ -75,7 +75,7 @@ resvg road was not run for this import).
 | KeyframePrevious | `media-seek-backward` | `scalable/actions/media-seek-backward.svg` | — | `1786b697e7925a0b948f9c9bbc09e94acb58b47f3fd7a33e5fe95ebf328c28e5` |
 | ListAdd | `list-add` | `scalable/actions/list-add.svg` | — | `7bda3185d186632a1c94f445c2fd294dca958e1f4bf9d7ac7c8d3a4367858315` |
 | ListRemove | `list-remove` | `scalable/actions/list-remove.svg` | — | `0523527a96ecd792973dcbd68df270805e6268a2f778ec5a795554d90c34765f` |
-| Lock | `emblem-readonly` | `scalable/emblems/emblem-readonly.svg` | — | `4e8027eecc9f7da628cc1ceea79a20b2d3319deb5ff444d38d310dce3dbe9ccc` |
+| Lock | `system-lock-screen` | `scalable/actions/system-lock-screen.svg` | — | `0fee2e7c4f54bcb3cf35b495cbca9a816f61620518267626d17fb846886dd0cf` |
 | Mathmode | `x-office-spreadsheet` | `scalable/mimetypes/x-office-spreadsheet.svg` | — | `81c124da8fb1cdab0f223a4b54162923b53d04c36909ae358180696fc76303cc` |
 | MediaPlaybackPause | `media-playback-pause` | `scalable/actions/media-playback-pause.svg` | — | `b1256da6927c2604836f14b862b62745c2873b316155f4643fc3166a101cf12e` |
 | MediaPlaybackStart | `media-playback-start` | `scalable/actions/media-playback-start.svg` | — | `236ed91f2ec0e924d0575a7e53f3f1c939abce61dbf2b8a90361e616a4f9219c` |
@@ -90,7 +90,7 @@ resvg road was not run for this import).
 | SettingsConfigure | `preferences-system` | `scalable/categories/preferences-system.svg` | — | `fe6e0e022ef3ea6c1a3b979a930c9d3404efd21dd48fd71ad4eda453701f38aa` |
 | ShallowHistory | `x-office-calendar` | `scalable/mimetypes/x-office-calendar.svg` | — | `2cee419db4b8f565828b1718ff10a7f9ebe6ae622e51b726a855618a5e9751a8` |
 | TabDetach | `preferences-system-windows` | `scalable/apps/preferences-system-windows.svg` | — | `5b198b46dfcb737528049fff9881c9d53d82824ad73c87a6c7723817ba8923d5` |
-| TimelineLift | `system-lock-screen` | `scalable/actions/system-lock-screen.svg` | — | `0fee2e7c4f54bcb3cf35b495cbca9a816f61620518267626d17fb846886dd0cf` |
+| TimelineLift | `view-restore` | `scalable/actions/view-restore.svg` | — | `29e7965ac964f3d1dee94fc3cf3f4a3b21d723672c92f51c8acefffdf82c2ef0` |
 | ValueDrag | `object-flip-vertical` | `scalable/actions/object-flip-vertical.svg` | — | `5fb09615159e44c02a584cfa048dcb8ddd0b663111da4ea6be5c26851a6fbd0b` |
 | VcsCommit | `go-top` | `scalable/actions/go-top.svg` | — | `c9f7ee737b3ebaa57c40339b9d738b5525ad0f7d088008710a1e6a810a0e7470` |
 | VcsDiff | `document-open-recent` | `scalable/actions/document-open-recent.svg` | — | `38824dc638b0c1cfa7b32ed818dfc7c630e31539d2255f38f03a9feb72175dc3` |
