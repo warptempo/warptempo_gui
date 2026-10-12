@@ -190,7 +190,7 @@ namespace {
 // "00:45.115 | A") and THE STATE LINE on the face beside it (2026-10-03),
 // and, packed against the right edge, the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
-// walk, the four cardinal arrows and the transport (Play / Stop alone), each Cool Edit's
+// walk, the cardinal arrows with Play / Stop last, each Cool Edit's
 // group of gripper, cases and end bar — and THE PROGRAM FRAME'S BOTTOM ROW
 // (program_frame_line_px(), one Hilight line), ON THE WINDOW'S FOOT under
 // row 8 (render.h's program_frame_rect) — the flexible gap 2 above all
@@ -889,7 +889,7 @@ GuiRect bottom_column_foot_area(const AppState& a) {
 // in its dark time field with THE STATE LINE on the face right of it, and,
 // packed against the right edge, the MARKER-VERB GROUP (kMarkerVerbGroup,
 // paint_handler.cpp, owns its membership), the marker walk, the four
-// cardinal arrows and the transport (Play / Stop alone), each Cool Edit's group between
+// cardinal arrows and Play / Stop (the arrow group's last case), each Cool Edit's group between
 // its grippers and end bars (program_spec.h). It is BOTTOM LANE 1, between
 // the column's foot (lane 2, bottom_column_foot_area above, the canvas's
 // light bottom frame row and 5 W of face) and the program frame's bottom row

@@ -760,7 +760,7 @@ private:
     // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the program
     // frame's bottom row on the window's foot: the clock cell and the STATE
     // CELL left, then the marker verbs, the marker walk, the arrow four and
-    // the transport (Play / Stop alone) flush right in their groups, declared below; in
+    // Play / Stop (the arrow group's last case) flush right in their groups, declared below; in
     // the `h` view Older / Newer stand in the arrows' seat, 2026-10-11).
     // All three PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
@@ -809,7 +809,7 @@ private:
     // right block), then the right
     // margin's block — the MARKER-VERB GROUP (its membership is
     // kMarkerVerbGroup's, in the .cpp), the marker walk, the arrow four and
-    // the transport (Play / Stop alone), eight Windows px of bare ground between groups —
+    // Play / Stop (the arrow group's last case), eight Windows px of bare ground between groups —
     // at the icon row's boxes, painted onto the lane paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the
     // only caller of this body, which keeps the family's fifth button-row

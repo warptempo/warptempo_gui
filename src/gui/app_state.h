@@ -1998,8 +1998,8 @@ struct TrimBarPressSeed {
 // the transport's one, the MARKER-VERB GROUP'S EIGHT (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S FOUR
 // (2026-08-15; Previous Marker, Next Marker, Center and Switch Tab since
-// 2026-09-29) and the four cardinal arrows, in enum order; the row PAINTS the transport last, at its
-// right end (architect 2026-09-29), the enum keeping them first because
+// 2026-09-29) and the four cardinal arrows, in enum order; the row PAINTS Play as the arrow
+// group's last case, at the right end (architect 2026-10-12), the enum keeping it first because
 // nothing reads the bottom row's enum order. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
@@ -2025,7 +2025,7 @@ struct TrimBarPressSeed {
 // (2026-10-10, dropdown_title_access_key), never as a roster chord — and all
 // three are spelled at the menu claim rather than in the chord table.
 //
-// The enum ORDER is painted order but for the bottom row's transport (Play / Stop)
+// The enum ORDER is painted order but for the bottom row's Play / Stop
 // (above), and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
 // main.cpp walks the range by index). The indices are DERIVED and never
@@ -2679,15 +2679,15 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. SEVENTEEN buttons in four groups, all FLUSH AT THE RIGHT
+    // detection. SEVENTEEN buttons in three groups, all FLUSH AT THE RIGHT
     // MARGIN with the CLOCK alone at the row's left pad (architect
     // 2026-09-29, the right-handed tablet's layout). The enum lists the
     // marker group, the walk and the arrows in painted order, left to right,
-    // divided by separators, and THE TRANSPORT (THE ONE PLAY/STOP BUTTON =
-    // bare Space, alone in its group) before them, which the row PAINTS LAST,
-    // at its right end (architect 2026-10-12: the Go to Start / Go to End
-    // pair left the row — Home / End keep their keys — and Play stands alone
-    // at the far right, Shift+Play being the A/B audition): THE
+    // divided by separators, and THE ONE PLAY/STOP BUTTON (bare Space) before
+    // them, which the row PAINTS LAST, as the arrow group's fifth case at the
+    // far right (architect 2026-10-12: the Go to Start / Go to End pair left
+    // the row — Home / End keep their keys — and Play abuts the right arrow,
+    // Shift+Play being the A/B audition): THE
     // MARKER GROUP'S SIX VERBS
     // (the four single-marker verbs of 2026-08-18: drop = bare `s`, delete =
     // Delete, disable = Ctrl+D, inherit = Ctrl+N; then JUMP TO DEFINING MARKER

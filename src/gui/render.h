@@ -1771,7 +1771,7 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // field and the state line on the ground beside it at the left pad
 // (architect 2026-10-02 / 2026-10-03 / 2026-10-05),
 // and the MARKER-VERB GROUP, the marker walk, the four cardinal arrows and
-// the transport (Play / Stop alone) flush right, eight Windows px of bare ground between
+// Play / Stop (the arrow group's last case) flush right, eight Windows px of bare ground between
 // groups (architect 2026-09-29; kMarkerVerbGroup in
 // paint_handler.cpp owns that group's membership, which does not bear
 // restating here), all one line ON THE WINDOW'S FOOT — which it holds again

@@ -1457,17 +1457,17 @@ struct GuiInputHandler {
     //   stand-ins publishing empty rects) and 12 inside it (the stand-ins in,
     //   the two authoring groups they replace out, and the view's hide
     //   leaving Full Zoom Out and Enable Tooltips alone of their groups);
-    //   ROW 8, 8 + 4 + 4 + 1 + 2 = 19 — the MARKER-VERB GROUP's eight
+    //   ROW 8, 8 + 4 + 5 + 2 = 19 — the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
     //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle
     //   Value Drag since 2026-10-11), the walk
     //   group's four (Previous Marker, Next Marker, Center, Switch Tab), the
-    //   four cardinal arrows, the transport (Play / Stop alone, kTransportGroup)
+    //   four cardinal arrows with Play / Stop last (kTransportArrowGroup)
     //   and the `h` view's Older /
     //   Newer (kTransportHistoryStepGroup, architect 2026-10-11): 17 standing
     //   outside the view (the two publishing empty rects), and inside it
     //   1 + 4 + 2 = 7 — the hide's survivors, Older / Newer in the
-    //   arrows' seat and the four arrows' rects empty.
+    //   arrows' seat and the arrow group's five rects empty.
     // EVERY MEMBER PUBLISHES WHAT IT PAINTED on every frame the roster
     // paints — a real rect where it stands, the EMPTY RECT (which no point is
     // inside) where it does not, so no press, hover or tooltip reaches a
