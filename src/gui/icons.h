@@ -162,8 +162,7 @@ enum class Icon {
                          // arrow, the drag it arms (architect 2026-10-11:
                          // "a double-sided arrow with an up and a down";
                          // never a zoom glyph)
-    AppIcon,             // the caption's icon and the program icon outside
-                         // the window (tools/app_icon)
+    AppIcon,             // the caption's icon
 };
 
 // Roster size, the names' and the load's count (load_svg_set parses one

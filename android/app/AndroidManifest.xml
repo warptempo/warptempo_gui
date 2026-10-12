@@ -29,12 +29,12 @@
   <!-- The OTG stick is M6's, and a device without one must still install. -->
   <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
-  <!-- android:icon is the launcher and recents icon: GNOME's
-       audio-x-generic, tools/app_icon/AppIcon.svg (architect 2026-10-06),
-       rasterised antialiased over the ground #EDECEB, the adaptive icon's background layer
+  <!-- android:icon is the launcher and recents icon: GNOME 2.28's
+       BPM icon, assets/icons/gnome-2.28/MusicNote16th.svg (architect 2026-10-12),
+       rasterised antialiased over the button case's gradient, the adaptive icon's background layer
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the sizes and the ground's
        reason). The Linux desktop's launcher icon
-       (packaging/warptempo_gui.svg) is the same drawing verbatim; both are
+       (packaging/warptempo_gui.svg) is the same drawing bare; both are
        written by tools/app_icon/gen_app_icon.sh. -->
   <application
       android:label="Warptempo"
