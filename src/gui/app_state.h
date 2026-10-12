@@ -1992,13 +1992,13 @@ struct TrimBarPressSeed {
 // (kIconRowHistoryStandIns, paint_handler.cpp), the walk's OLDER / NEWER
 // row 8's since 2026-10-11 though the enum keeps them here — and THE VIEW
 // GROUP'S THREE close the row flush right since 2026-10-01), then the
-// bottom row's NINETEEN (re-counted 2026-10-11, when Toggle Value Drag
-// joined; twenty-one with Older / Newer, which stand in the arrows' seat in
+// bottom row's SEVENTEEN (re-counted 2026-10-12, when Go to Start and
+// Go to End left; nineteen with Older / Newer, which stand in the arrows' seat in
 // the `h` view, kTransportHistoryStepGroup) —
-// the transport three, the MARKER-VERB GROUP'S EIGHT (kMarkerVerbGroup,
+// the transport's one, the MARKER-VERB GROUP'S EIGHT (kMarkerVerbGroup,
 // paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S FOUR
 // (2026-08-15; Previous Marker, Next Marker, Center and Switch Tab since
-// 2026-09-29) and the four cardinal arrows, in enum order; the row PAINTS the transport three last, at its
+// 2026-09-29) and the four cardinal arrows, in enum order; the row PAINTS the transport last, at its
 // right end (architect 2026-09-29), the enum keeping them first because
 // nothing reads the bottom row's enum order. It exists ONCE, here, because
 // it indexes
@@ -2025,7 +2025,7 @@ struct TrimBarPressSeed {
 // (2026-10-10, dropdown_title_access_key), never as a roster chord — and all
 // three are spelled at the menu claim rather than in the chord table.
 //
-// The enum ORDER is painted order but for the bottom row's transport three
+// The enum ORDER is painted order but for the bottom row's transport (Play / Stop)
 // (above), and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
 // main.cpp walks the range by index). The indices are DERIVED and never
@@ -2679,14 +2679,16 @@ enum class RedesignButton {
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
     // unification): permanent on every host — no touch mode, no flag, no
-    // detection. FIFTEEN buttons in three groups, all FLUSH AT THE RIGHT
+    // detection. SEVENTEEN buttons in four groups, all FLUSH AT THE RIGHT
     // MARGIN with the CLOCK alone at the row's left pad (architect
-    // 2026-09-29, the right-handed tablet's layout). The enum lists them in
-    // painted order, left to right, divided by separators (architect
-    // 2026-10-12: the Go to Start / Go to End pair left the row — Home / End
-    // keep their keys — and Play, bare Space, took the first seat of the
-    // marker group, nearest the pen's resting place mid-screen): THE
-    // MARKER GROUP'S SEVEN, PLAY FIRST, then the six verbs
+    // 2026-09-29, the right-handed tablet's layout). The enum lists the
+    // marker group, the walk and the arrows in painted order, left to right,
+    // divided by separators, and THE TRANSPORT (THE ONE PLAY/STOP BUTTON =
+    // bare Space, alone in its group) before them, which the row PAINTS LAST,
+    // at its right end (architect 2026-10-12: the Go to Start / Go to End
+    // pair left the row — Home / End keep their keys — and Play stands alone
+    // at the far right, Shift+Play being the A/B audition): THE
+    // MARKER GROUP'S SIX VERBS
     // (the four single-marker verbs of 2026-08-18: drop = bare `s`, delete =
     // Delete, disable = Ctrl+D, inherit = Ctrl+N; then JUMP TO DEFINING MARKER
     // (2026-09-29, Ctrl+J) AND ADD
@@ -3114,8 +3116,8 @@ inline constexpr int redesign_button_index(RedesignButton b) {
     return i;
 }
 
-// WHICH BUTTONS ARE THE BOTTOM ROW'S — TWENTY-ONE since 2026-10-11: the
-// transport three, the FOUR SINGLE-MARKER VERBS that came down from the icon
+// WHICH BUTTONS ARE THE BOTTOM ROW'S — NINETEEN since 2026-10-12: the
+// transport's one (Play / Stop), the FOUR SINGLE-MARKER VERBS that came down from the icon
 // row on 2026-08-18, JUMP TO DEFINING MARKER (2026-09-29), OPEN TEXT EDITOR
 // (2026-10-09), ADD TO SELECTION, TOGGLE VALUE DRAG (2026-10-11)
 // (the EDIT FLAG BUTTON, 2026-08-27, and the COPY VALUE button, 2026-08-29,
