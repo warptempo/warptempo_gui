@@ -3,9 +3,6 @@
 #include "input_handler.h"
 #include "render_output_naming.h"
 #include "device_config.h"
-#include "chrome_spec.h"       // live_chrome_spec (the icon set's default)
-#include "icons.h"             // is_icon_set_key, kIconSetGrammarReason
-#include "gui_font.h"          // is_font_key, kFontGrammarReason, set_live_font
 #include "settings_io.h"
 #include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
@@ -1066,12 +1063,10 @@ void GuiSettingsEditor::commit() {
 // THE ONE RECORDED EDGE: the picker's same-project no-op compares NAMES
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
-// project is opened first — a rename-by-hand case, accepted. `icons`
-// (2026-10-09): AT THE NEXT LAUNCH alone, its card saying so (its arm). `font` (2026-10-09 ~21:20): AT ONCE, live,
-// no card (its arm). For a choice row "the commit" is the OK's or Enter's,
+// project is opened first — a rename-by-hand case, accepted. (`theme`, in force at once with the palette repainted whole, had an arm
+// here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
+// with its key.) For a choice row "the commit" is the OK's or Enter's,
 // never a list row's (architect 2026-10-09, settings_editor.h's head).
-// (`theme`, in force at once with the palette repainted whole, had an arm
-// here 2026-10-03..10-08 and left with its key.)
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
@@ -1113,63 +1108,6 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         viewport.invalidate_modal_dialog_area();
         text_editor::deactivate(app.settings_editor);
     };
-
-    // THE ICON SET (architect 2026-10-09): a bundled set's key under its one
-    // grammar owner (is_icon_set_key, icons.h), written at once, kept as
-    // typed on refusal, and IT CANNOT APPLY LIVE: the parsed set is built
-    // once at launch (set_live_icon_set, gui_main), so the commit changes
-    // nothing on screen and SAYS WHERE IT APPLIES on its card
-    // (kIconsAppliesCard, raised only when the write succeeded: the next
-    // launch reads the file) — with the palette's rule for the chrome's own:
-    // A PICK OF THE CHROME'S OWN SET WRITES NO LINE (the empty value,
-    // device_config.h), "no line for a chrome's own default". A pick that
-    // leaves the file as it stands is the unchanged no-op.
-    if (key == "icons") {
-        if (!icons::is_icon_set_key(value)) {
-            reject(icons::kIconSetGrammarReason);
-            return true;
-        }
-        const std::string line =
-            value == live_chrome_spec().icon_set ? std::string() : value;
-        if (line == app.device_config->icons) { unchanged(); return true; }
-        app.device_config->icons = line;
-        const bool written = persist();
-        applied();
-        if (written)
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 kIconsAppliesCard);
-        return true;
-    }
-
-    // THE FONT (architect 2026-10-09 ~21:20: "the font is its own
-    // drop-down"): a face's key under its one grammar owner (is_font_key,
-    // gui_font.h), kept as typed and ALWAYS WRITTEN — the default's word too,
-    // "no default setting because it's a drop-down" — and, unlike the icon
-    // set, APPLIED LIVE AT THE COMMIT — which
-    // is the OK's (or Enter's), never the list row's, the choice editor's
-    // rule (architect 2026-10-09, settings_editor.h's head: a row only
-    // shows the face's name, and Cancel leaves the face as it stood): the
-    // live set moves
-    // (set_live_font), every cache that holds a face keys the set
-    // (gui_live_face_set's comment, gui_font.h; the flag cache by its
-    // fp_face_set, refreshed here synchronously as the color picker's
-    // install refreshes it, so no frame served before the tick blits the
-    // labels in the old face), the sets record one cell so no lane moves
-    // (same_lanes), and the whole window is damaged, every lane's text
-    // redrawn in the new face. So no card: the screen is the answer. A
-    // failed write keeps the live face for the session, the card saying the
-    // persist failed.
-    if (key == "font") {
-        if (!is_font_key(value)) { reject(kFontGrammarReason); return true; }
-        if (value == app.device_config->font) { unchanged(); return true; }
-        app.device_config->font = value;
-        set_live_font(value);
-        (void)persist();
-        applied();
-        viewport.refresh_flag_cache();
-        viewport.invalidate_all();
-        return true;
-    }
 
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;

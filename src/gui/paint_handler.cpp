@@ -1512,8 +1512,7 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE TITLE, Windows' "Document - Program" convention (architect
     // 2026-10-05): the open piece's name (AppState::project_name, the
     // project's folder) and " - Warptempo", or "Warptempo" alone where no
-    // piece is open. THE BOLD FACE (gui_font.h: the `font` key's set's bold —
-    // Tahoma Bold, FreeSans Bold or Liberation Sans Bold) through the shaping
+    // piece is open. THE BOLD FACE (gui_font.h: Liberation Sans Bold) through the shaping
     // chokepoint, its cap band centred in the lane — Tahoma Bold's 8-row cap
     // on rows 5..12 of the 18 at 100 %, ReactOS's own seat on its captures
     // (2026-10-06). THE ROOM runs from the spec's caption_title_x_px to its
@@ -2549,7 +2548,7 @@ struct TransportRowDef {
 // THE GROUP IS SEVEN SINCE 2026-10-09 (architect: "resurrect the Open Text
 // Editor button. It should go between jump to defining marker and toggle add
 // to selection"): OPEN TEXT EDITOR — bare Return, the sets'
-// accessories-text-editor, Tango's its own drawing —
+// accessories-text-editor —
 // the glass's road to Return with no editor standing. An act that opens an
 // editor, no lamp; it greys where Return would open nothing and on a locked
 // tab, and the `h` view does not paint it (its roster entry, app_state.h).
@@ -2730,12 +2729,10 @@ static int time_field_pad_px() {
 // round 72-W fields).
 constexpr double kTimeFieldGapPx = 3.0;
 
-// The time fields' metrics, MEMOISED ON THE SCALE AND THE LIVE FACE SET —
+// The time fields' metrics, MEMOISED ON THE SCALE —
 // thirteen tiny shaping passes (ten digits, the two letters and the
 // specimen) that answer the same thing on every frame until the scale moves
-// or a Settings commit of the `font` key swaps the set live
-// (gui_live_face_set, gui_font.h, 2026-10-09; the widths are the live
-// face's own).
+// (the widths are the face's own).
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -2745,7 +2742,6 @@ constexpr double kTimeFieldGapPx = 3.0;
 // cell is its field's damage box too.
 struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
-    const GuiFaceSet* set = nullptr;   // and the live set
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
     double letter_w = 0.0;    // the widest tab letter's shaped width
 };
@@ -2753,7 +2749,7 @@ static TimeFieldMetrics g_time_field_metrics;
 
 static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
     TimeFieldMetrics& m = g_time_field_metrics;
-    if (m.percent == font.percent && m.set == &gui_live_face_set()) return m;
+    if (m.percent == font.percent) return m;
     char widest = '0';
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
@@ -2771,7 +2767,6 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
                               text_shape::shape_text_run(font, one).width_px);
     }
     m.percent = font.percent;
-    m.set     = &gui_live_face_set();
     return m;
 }
 

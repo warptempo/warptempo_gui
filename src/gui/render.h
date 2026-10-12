@@ -128,7 +128,7 @@ struct TrimRange {
 // bar's black field, the ruler's ticks and digits and their black shadow;
 // the case's ramps and the time field's digits derive from the Face, ce_case_*
 // and ce_field_text) — or THE ICON SET'S
-// OWN INKS (architect 2026-10-06): the Tango and Mist drawings' colours,
+// OWN INKS (architect 2026-10-06): the icon drawings' colours,
 // gradients and opacities as each file names them (icons.h), period
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
 // one place an antialiased, translucent picture is copied whole, no glyph
@@ -323,7 +323,7 @@ struct TrimRange {
 // right and down, then the same word in Shadow at its place over it (the
 // light copy is Hilight by Windows' own rule, architect 2026-10-04, the
 // separate light-copy role leaving with the dark level), show_embossed_run
-// (below). A disabled GLYPH is ReactOS's saturate since the Tango set
+// (below). A disabled GLYPH is ReactOS's saturate since the first icon set
 // (architect 2026-10-06, icons::draw_disabled); nothing else dims — the dims of the kdenlive design (the disabled
 // mix, the accelerator column's and the tooltip line's) retired with the
 // luminance rule the same day. (A CUE'S LABEL IS THE ONE EXCEPTION: an inert
@@ -494,10 +494,8 @@ GuiColor surface_text(GuiSurface surface);
 // white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
 // absent ("on the tablet I'm not even going to fill them out; there is no
 // inactive state there") — the inactive_* accessors below resolve them.
-// A SCHEME CARRIES NO FACE (architect 2026-10-09 ~21:20: "the scheme's
-// default font should stop being honored — it should only be honored from
-// the font picker"): the face is the device config's `font` key alone
-// (gui_font.h's gui_live_face_set).
+// A SCHEME CARRIES NO FACE: the face is the product's one (gui_font.h's
+// gui_live_face_set).
 struct GuiChromePick {
     uint32_t                title_start    = 0;   // 0xRRGGBB, sRGB, each
     uint32_t                title_end      = 0;
@@ -1659,9 +1657,8 @@ inline int cue_baseline_px() {
                gui_font_ascent_px(gui_font(GuiFace::Program))));
 }
 // THE RULER'S DIGITS ARE THE SMALL FACE'S SIX ROWS UNDER ONE W OF AIR
-// (program_spec.h's ruler fields), in every face set (gui_font.h: every
-// set's small face is the base's six-row digit, its cell all above the
-// baseline).
+// (program_spec.h's ruler fields) (gui_font.h: the set's small face is the
+// base's six-row digit, its cell all above the baseline).
 constexpr bool ruler_digit_rows_hold(const GuiFaceSet& set) {
     const GuiFaceMetrics& m =
         set.metrics[static_cast<std::size_t>(GuiFace::Small)];
@@ -1676,8 +1673,8 @@ static_assert([] {
 }());
 // THE CUE LABEL'S ROWS AT 100 % (cue_baseline_px's rule over the lane's
 // authored 17 and the program face's recorded line box, ascent 10 and
-// descent 2, and its cap 7 — the program face is measured by its cap in
-// every set, gui_font.h's kGuiProgramFaceMetrics): the box on rows 2 .. 13,
+// descent 2, and its cap 7 — the program face is measured by its cap,
+// gui_font.h's kGuiProgramFaceMetrics): the box on rows 2 .. 13,
 // the baseline the top of row 12, the cap on rows 5 .. 11. THE DESCENT ENDS
 // ABOVE THE LANE'S LAST ROW — the box's outline row: the baseline plus the
 // recorded descent plus two rows to spare for the glyphs that overshoot the

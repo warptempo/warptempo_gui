@@ -3,7 +3,7 @@
      recents card). Its picture (architect 2026-10-07, kept 2026-10-09):
      the Mist set's
      AppIcon, gnome-icon-theme 2.30's audio-x-generic,
-     assets/icons/mist/AppIcon.svg, rasterised ANTIALIASED by rsvg-convert
+     tools/app_icon/AppIcon.svg, rasterised ANTIALIASED by rsvg-convert
      (librsvg 2.62 on the laptop; a vector, not pixel art) and centered over
      the ground #EDECEB, so the mask shows a ground-colored shape carrying the
      drawing. An ADAPTIVE icon, the whole of it: minSdk is 30, so

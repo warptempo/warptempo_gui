@@ -751,8 +751,8 @@ Two things the backend does that are not on the Wayland side at all:
   see 10.4.
 
 Font install failure is a **hard abort**, not a fallback: `install_fonts_or_die`
-opens the font assets — the two files of gui_font.h's kGuiFontFiles (Tahoma
-and Tahoma Bold since 2026-10-06, Nimbus Sans beside them that day's morning),
+opens the font assets — the two files of gui_font.h's kGuiFontFiles (Liberation Sans
+and its Bold since 2026-10-12; Tahoma, FreeSans and Nimbus Sans before),
 copied by `build_apk.sh` from the repository's `fonts/` (since 2026-10-02;
 Liberation from the host's package before) — installs them, and the install
 ANSWERS whether each face is FT-backed and carries its em's glyph (the probe moved from this

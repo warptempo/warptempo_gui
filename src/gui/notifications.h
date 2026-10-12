@@ -567,15 +567,6 @@ inline constexpr const char* kCheckpointPublishing =
 inline constexpr const char* kProjectsPathAppliesCard =
     "Projects path applies at the next Open project and the next launch";
 
-// THE ICON SET COMMIT'S SENTENCE (architect 2026-10-09): an `icons=` commit
-// changes nothing on screen either — the set is parsed once at launch
-// (set_live_icon_set, icons.h) — so it says where it applies, the projects
-// path's rule above, raised only when the config write succeeded.
-inline constexpr const char* kIconsAppliesCard =
-    "Icons apply at the next launch";
-// (A `font=` commit raises no such card: the face moves live, the screen
-// its answer — commit_device_setting's font arm, 2026-10-09.)
-
 // THE TRIM FALLBACK'S SENTENCE (architect 2026-09-02) — a
 // proper sub-window whose TARGET span rounds below one output sample, which
 // plan_trim refuses and every orchestrator answers by rendering the FULL,

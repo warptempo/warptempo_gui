@@ -83,9 +83,9 @@ struct GuiInputHandler;
 // and theme at the very least"; the design the planner's, delegated; the
 // Chrome row removed 2026-10-10 with the `chrome` key) STANDS
 // BESIDE THE TEXT EDITOR: a Settings row whose key's domain is a SHORT
-// CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — today the
-// Icons row (2026-10-09) and since 2026-10-09 ~21:20 the Font row, the
-// theme having left with its key 2026-10-08) opens
+// CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — no row today:
+// the Icons row (2026-10-09) and the Font row (2026-10-09 ~21:20) left with
+// their keys 2026-10-12, the theme having left with its key 2026-10-08) opens
 // THE SAME BOTTOM-ROW EDITOR — the same text_editor session
 // underneath, so the modal rank, OK and Cancel, the focus ring, the playback
 // stop and every closer are the text editor's — with its row's word as the
@@ -244,7 +244,7 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `icons=` and `font=` — in one body (the head's
+    // — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the

@@ -1,25 +1,22 @@
 #include "gui_font.h"
 
-// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: the six
+// THE FACE OWNER'S ONE IMPLEMENTATION (gui_font.h), on both devices: two
 // files handed in once through gui_font_install_bundled — the Linux
 // executable's compiled-in copy (gui_font_embedded.cpp) or the APK's assets —
-// become six FT faces, the live set (gui_font.h's gui_live_face_set, the one
-// the `font` device key names) picks its four uses among them, and no
-// site below the seam learns which device handed the bytes in.
+// become two FT faces, the set (gui_font.h's gui_live_face_set, the one
+// face) picks its four uses among them, and no site below the seam learns
+// which device handed the bytes in.
 //
-// THE FACES (Tahoma and Tahoma Bold, TrueType; FreeSans and FreeSans Bold,
-// OpenType CFF; Liberation Sans and its Bold, TrueType — one loader for both
-// formats, FT_New_Memory_Face) are FT faces wrapped as
+// THE FACES (Liberation Sans and its Bold, TrueType, FT_New_Memory_Face) are
+// FT faces wrapped as
 // cairo font faces — the FT-backed
 // shape text_shape requires, since it shapes on the scaled font's own FT
 // face through hb-ft.
 //
 // OUTLINES ONLY, NEVER A STRIKE (architect 2026-10-06; gui_font.h's head).
-// Tahoma carries bitmap strikes (8–16 ppem, the bold 9–13) — FreeSans
-// carries none (no fixed sizes, read 2026-10-09 through FreeType), so both
-// roads below are no-ops on its two faces; they run on all six alike, so a
-// strike in any file, Liberation Sans's included, is closed off — and FreeType
-// reads a strike on two roads, both closed here: (1) SIZE SELECTION — a
+// The roads below run on every file, so a strike in any file (Tahoma, the
+// product's first face, carried them at 8–16 ppem), Liberation Sans's
+// included, is closed off — and FreeType reads a strike on two roads, both closed here: (1) SIZE SELECTION — a
 // TrueType face with strikes answers a size request whose ppem ROUNDS to a
 // strike's by SELECTING the strike, scaling even the outline at the strike's
 // whole ppem (the laptop's 138 % asked Tahoma for 15.19 ppem and got 15.00,
@@ -33,26 +30,15 @@
 //
 // THE PRODUCT'S HINTER IS SLIGHT (architect 2026-10-02, kept 2026-10-06):
 // cairo's SLIGHT is FreeType's light target, which grid-fits the VERTICAL
-// direction alone. For Tahoma's TrueType — and Liberation Sans's, the same
-// driver (2026-10-09) — that is the AUTOHINTER in its light
-// mode (measured 2026-10-06, FreeType 2.14) — FreeType's TrueType driver
-// does not hint lightly, so it hands the light target to the autohinter
-// rather than to the bytecode interpreter (the load equals a forced
-// autohint's; Wine Tahoma's glyphs carry no instructions anyway, maxp's
-// maxSizeOfInstructions 0, and Liberation Sans's instructions are never
-// run on this road), and every x equals the unhinted outline's
-// exactly. FREESANS'S CFF MEETS NO AUTOHINTER (measured
-// 2026-10-09, FreeType 2.14): the CFF driver declares that it hints lightly,
-// so FreeType hands the light target to the face's own PostScript hints
-// through its CFF engine (Adobe's), which grid-fits the vertical direction
-// alone as the light autohinter does — the load differs from a forced
-// autohint's on 47 of the regular's A..z at 300 %, and every x stays
-// within 1/64 px of the unhinted outline's at 100, 138 and 300 % (the Nimbus
-// faces of 2026-10-06 met the same road; those figures were measured at the
-// capture's 9-row cap, before the set took its x-height measure, gui_font.h).
-// The face's blue zones snap the "H" and the "x" to whole rows — the
-// hinter's rounding of the ink, which no seat reads (the recorded cap, or
-// the x-height set's derived one, gui_font_cap_px, places every label).
+// direction alone. For Liberation Sans's TrueType that is the AUTOHINTER in
+// its light mode (measured 2026-10-06, FreeType 2.14) — FreeType's TrueType
+// driver does not hint lightly, so it hands the light target to the
+// autohinter rather than to the bytecode interpreter (the load equals a
+// forced autohint's; the face's instructions are never run on this road),
+// and every x equals the unhinted outline's exactly. The face's blue zones
+// snap the "H" and the "x" to whole rows — the hinter's rounding of the ink,
+// which no seat reads (the recorded cap, or the derived one,
+// gui_font_cap_px, places every label).
 // The advances stay
 // unhinted (text_shape's come off hb-ft, which loads its own glyphs
 // unhinted) and both devices measure one set of widths. The vertical
@@ -94,16 +80,16 @@ struct OutlineFace {
 // THE GLYPHS A USE'S EM AND CAP ARE MEASURED ON (gui_font.h's
 // GuiFaceMeasure): each file's outline ink height of each, per em, read once
 // at the install (outline_ink_em), in GuiFaceMeasure's order — the "H", the
-// "0", the "x". The em of a use is the live set's recorded measure over its
+// "0", the "x". The em of a use is the set's recorded measure over its
 // file's entry for the measure's glyph (gui_face_em_px), and an x-height
 // use's cap band the em times its file's "H" (gui_font_cap_px), so the
-// install needs no knowledge of which set the chrome will name.
+// install needs no knowledge of which set is named.
 constexpr std::size_t kMeasureCount = 3;
 double g_ink_em[kGuiFontFileCount][kMeasureCount] = {};
 
 FT_Library            g_library = nullptr;
 cairo_font_options_t* g_options = nullptr;
-// The six files' faces, in kGuiFontFiles' order.
+// The two files' faces, in kGuiFontFiles' order.
 OutlineFace           g_outline[kGuiFontFileCount];
 // Each file's five lifted marks' glyph ids and lifts — the math signs onto
 // its hyphen's axis, the pipe onto its digits' band (gui_sign_axis) — and
@@ -117,7 +103,7 @@ std::size_t measure_index(GuiFaceMeasure m) {
     return static_cast<std::size_t>(m);
 }
 
-// The face a use is drawn from: the live set's file for it.
+// The face a use is drawn from: the set's file for it.
 const OutlineFace& outline_of(GuiFace face) {
     return g_outline[gui_live_face_set().file[face_index(face)]];
 }
@@ -140,7 +126,7 @@ void build_outline(OutlineFace& out, const GuiFontBytes& bytes,
     // THE STRIKES HIDDEN FROM SIZE SELECTION (the head's road 1): with the
     // flag clear, a size request never matches a strike, so the size is the
     // outline's own scale and no strike is ever selected for a load. A
-    // NO-OP ON FREESANS, which has no strike to hide (the head).
+    // NO-OP ON A FILE WITH NO STRIKE, as Liberation Sans's (the head).
     out.ft->face_flags &= ~static_cast<FT_Long>(FT_FACE_FLAG_FIXED_SIZES);
     out.ft->num_fixed_sizes = 0;
     out.max_advance_em = static_cast<double>(out.ft->max_advance_width) /
@@ -186,8 +172,7 @@ InkCentre outline_ink_centre(const OutlineFace& f, char32_t cp) {
 // each mark's lift is its target's ink centre less its own, per em — the
 // hyphen's for the four math signs, the "0"'s (the digit measure's glyph,
 // the digits' band) for the pipe (2026-10-09 ~21:20). Every mark is
-// measured for every file whichever sets lift it; the set's flags choose at
-// the reader. False when the face lacks a target or a mark.
+// measured for every file; the set's flags choose at the reader. False when the face lacks a target or a mark.
 bool measure_sign_axis(const OutlineFace& f, GuiSignAxis& out) {
     const InkCentre hyphen = outline_ink_centre(f, U'-');
     const InkCentre digit =
@@ -236,13 +221,12 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]) {
                 outline_ink_em(g_outline[i], gui_measure_glyph(m));
         g_sign_axis_ok[i] = measure_sign_axis(g_outline[i], g_sign_axis[i]);
     }
-    // THE EMS MATCH THE LIVE SET'S RECORDED METRICS VERTICALLY (gui_font.h),
+    // THE EMS MATCH THE SET'S RECORDED METRICS VERTICALLY (gui_font.h),
     // derived per call from these inks (gui_face_em_px), so the probe asks
-    // it of EVERY SET (kGuiFaceSets): each use's file must carry its
+    // it of the set (kGuiFaceSets): each use's file must carry its
     // measure's glyph — and, for an x-height measure, the "H" its cap band
     // derives from (gui_font_cap_px) — and in a set that lifts its signs or
-    // its pipe the seven its axis is measured on, whichever face the device
-    // config's `font` later names or a Settings pick moves to.
+    // its pipe the seven its axis is measured on.
     for (const GuiFaceSet* set : kGuiFaceSets)
         for (std::size_t i = 0; i < kGuiFaceCount; ++i) {
             const double* ink = g_ink_em[set->file[i]];
@@ -292,18 +276,14 @@ cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
     // points, set_gui_scale_percent): a paint asks for it per run. The hb
     // font text_shape shapes with hangs on this scaled font as cairo user
     // data and dies with it (text_shape.cpp's hb_font_of), so it follows this
-    // cache's key and rebuild without a second cache. THE LIVE SET IS A KEY
-    // (2026-10-09): it follows the `font` device key, which a Settings pick
-    // moves live (gui_live_face_set, gui_font.h).
+    // cache's key and rebuild without a second cache.
     struct Cached {
         int                  percent = -1;
-        const GuiFaceSet*    set     = nullptr;
         cairo_scaled_font_t* font    = nullptr;
     };
     static Cached cache[kGuiFaceCount];
     Cached& c = cache[face_index(f.face)];
-    const GuiFaceSet* set = &gui_live_face_set();
-    if (c.percent == f.percent && c.set == set) return c.font;
+    if (c.percent == f.percent) return c.font;
     if (c.font != nullptr) cairo_scaled_font_destroy(c.font);
     const double em = gui_face_em_px(f.face) * gui_font_scale(f);
     cairo_matrix_t font_matrix;
@@ -313,7 +293,6 @@ cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
     c.font = cairo_scaled_font_create(outline_of(f.face).face, &font_matrix,
                                       &ctm, g_options);
     c.percent = f.percent;
-    c.set     = set;
     return c.font;
 }
 

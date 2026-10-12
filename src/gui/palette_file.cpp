@@ -151,8 +151,8 @@ static_assert(sizeof(GuiPalette) ==
 // WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S SIX (the catalog's
 // windows-me-standard, kept as an entry under Me's name; the generator
 // asserts the same): Me's one difference from 2000 was its font, MS Sans
-// Serif, which a scheme does not carry — the face is the `font` device
-// key's, a Settings matter (architect 2026-10-09 ~21:20, gui_font.h).
+// Serif, which a scheme does not carry — the face is the product's
+// one (architect 2026-10-09 ~21:20, gui_font.h).
 static_assert([] {
     const GuiChromeScheme* me = builtin_scheme("windows-me-standard");
     const GuiChromeScheme* w2k = builtin_scheme("windows-2000-standard");

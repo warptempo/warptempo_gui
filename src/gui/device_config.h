@@ -35,26 +35,6 @@
 //                            — the first run's state — meaning the default
 //                            palette, Cool Edit's "Midnight", under every
 //                            chrome (effective_palette_name, 2026-10-09)
-//   icons=<set>              THE ICON SET the glyphs are drawn from: a
-//                            bundled set's key, `tango`, `mist` or `gnome-2.28`
-//                            (is_icon_set_key, icons.h; `breeze` left with
-//                            its set 2026-10-09, an old line the ordinary
-//                            unknown-value refusal); MAY BE ABSENT — the
-//                            first run's state — meaning the chrome's own
-//                            set (ChromeSpec::icon_set: Tango under
-//                            windows-2000; effective_icon_set); takes
-//                            effect at the next
-//                            launch (architect 2026-10-09)
-//   font=<key>               THE FACE every text is set in, named by its
-//                            files: `free-sans`, `liberation-sans` or `tahoma`
-//                            (is_font_key, gui_font.h; any other word the
-//                            launch's hard fail); MAY BE ABSENT, reading as
-//                            tahoma (kDefaultFontKey) — but always written
-//                            ("no default setting because it's a
-//                            drop-down", architect 2026-10-09);
-//                            applied LIVE at the Settings row's OK
-//                            (gui_live_face_set; the row's list only shows
-//                            a face, architect 2026-10-09)
 //   role=<role>              THE DEVICE'S PART IN THE PROJECTS REPOSITORY
 //                            (architect 2026-10-10): `author` (the tablet:
 //                            it authors every movement, commits and pushes,
@@ -76,9 +56,8 @@
 // 2026-10-03, the colour keys that stood after it for a day gone, below;
 // `palette` APPENDED after `theme` 2026-10-07, the program's colors' own
 // file type; `theme` gone 2026-10-08, below; `scheme` placed before `palette`
-// 2026-10-08 ~18:15, the chrome's colors before the program's; `icons` APPENDED after `palette` 2026-10-09, and `font`
-// APPENDED after `icons` 2026-10-09 ~21:20, and `role` APPENDED after
-// `font` 2026-10-10);
+// 2026-10-08 ~18:15, the chrome's colors before the program's; `role` APPENDED after
+// `palette` 2026-10-10; `icons` and `font` stood 2026-10-09 to 2026-10-12);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -216,13 +195,11 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the nine
-// keys and each at most once, every key REQUIRED but `scheme`, `palette`,
-// `icons` and `font` (`font` absent (2026-10-09) is tahoma, so the configs
-// written before the key still load — the writer names it always; `palette`
-// absent is the default palette, `scheme` absent (2026-10-08) the chrome's own scheme and `icons`
-// absent (2026-10-09) the chrome's own icon set, each the one spelling of
-// that state, which the writer emits by leaving the line out), one canonical spelling per
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven
+// keys and each at most once, every key REQUIRED but `scheme` and `palette`
+// (`palette` absent is the default palette, `scheme` absent (2026-10-08) the
+// chrome's own scheme, each the one spelling of that state, which the writer
+// emits by leaving the line out), one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
 // silent fallback to defaults — a fallback would silently discard a value the
@@ -247,12 +224,12 @@
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`, `Projects Repository`,
-// `Projects Path`, since 2026-10-09 `Icons` and since 2026-10-09 ~21:20
-// `Font` (`Chrome` stood 2026-10-07..10-10 and `Theme` 2026-10-03..10-08;
+// `Projects Path` (`Chrome` stood 2026-10-07..10-10, `Icons` and `Font`
+// 2026-10-09..10-12 and `Theme` 2026-10-03..10-08;
 // kSettingsPopupItems,
 // app_state.h) as rows that open the settings editor prefilled, and the
 // editor commits each through this file's writer under the key's own
-// grammar below. (Font follows Icons.) `role` (2026-10-10) is NOT EDITABLE
+// grammar below. `role` (2026-10-10) is NOT EDITABLE
 // IN THE APP: the planner sets it on each device by hand, the program not
 // running, and the program only carries it through its rewrites. `palette` (2026-10-07) and
 // `scheme` (2026-10-08) HAVE NO SETTINGS ROW: the color picker's preset menu
@@ -270,17 +247,18 @@
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for the four required keys: a successful read always assigns
-// them. THE FOUR ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
-// (the palette 2026-10-07; the scheme 2026-10-08, the icons 2026-10-09, the
-// font 2026-10-09): `font` "tahoma" (kDefaultFontKey), `scheme`, `palette`
-// and `icons` empty (no line: the chrome's own). Both backends stamp a
+// them. THE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
+// (the palette 2026-10-07; the scheme 2026-10-08): `scheme` and `palette`
+// empty (no line: the chrome's own). Both backends stamp a
 // default-constructed struct's (GuiPlatform::device_config_defaults), so the
-// first-run file of either device names `font=tahoma` and no scheme, palette
-// or icons line. THE ROLE'S DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
+// first-run file of either device names no scheme or palette line. THE ROLE'S
+// DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
 // (architect 2026-10-10: the program never invents a device's role), so a
 // first run stamps a file WITHOUT `role` and its read-back refuses the launch
 // on the missing key — the file is already there for the hand to add
-// `role=author` or `role=mirror` to.
+// `role=author` or `role=mirror` to. (The `icons` and `font` keys left
+// 2026-10-12: GNOME 2.28 and Liberation Sans are the only options,
+// hard-coded.)
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -296,10 +274,7 @@
 // effective_palette_name and effective_scheme_name, palette_file.h) and
 // derives the chrome's colors from the palette's Cool Edit tones and the
 // scheme's caption keys, or with none the compiled caption
-// (live_chrome_words, chrome_derive.h; chrome_caption, palette_file.h). THE
-// ICON SET IS ITS KEY VERBATIM TOO (2026-10-09): gui_main installs it once
-// (set_live_icon_set, icons.h), before the set's load. SO IS THE FONT
-// (2026-10-09): gui_main installs it (set_live_font, gui_font.h), and the Settings row's commit installs it again live.
+// (live_chrome_words, chrome_derive.h; chrome_caption, palette_file.h).
 // THE DEVICE'S ROLE (architect 2026-10-10; the key's ruling is in the head's
 // list): what this device may do to the projects repository. `Unset` is
 // CONSTRUCTION STATE alone — the first-run template's, which writes no line —
@@ -325,15 +300,6 @@ struct DeviceConfig {
     // `cool-edit-midnight` under every chrome, 2026-10-12) — never written
     // back.
     std::string palette;
-    // THE ICON SET, UNSET BY DEFAULT (architect 2026-10-09): empty while the
-    // config has no `icons` line, which RESOLVES AT LAUNCH to the live
-    // chrome's own set (effective_icon_set, icons.h: `tango`, `mist` or `gnome-2.28`) —
-    // never written back (set_live_icon_set, gui_main).
-    std::string icons;
-    // THE FONT DEFAULT (architect 2026-10-09 ~21:20): tahoma,
-    // kDefaultFontKey (gui_font.h) — what an absent line reads as, and
-    // always written.
-    std::string font = "tahoma";
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
 };
@@ -608,12 +574,12 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // struct they were handed rather than composing one from AppState's fields.
 //
 // FOUR CALL SITES CARRY THE KEY COMMITS, and this is their inventory
-// (re-grepped 2026-10-09; the font arm added 2026-10-09 ~21:20):
+// (re-grepped 2026-10-12):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves four keys —
-// `projects_repo=`, `projects_path=`, `icons=` and `font=`
+// the settings editor's ONE device-key body, which serves two keys —
+// `projects_repo=` and `projects_path=`
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the path
-// arm joined 2026-09-02, the icons' 2026-10-09, the font's 2026-10-09;
+// arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the chrome's 2026-10-07..10-10); the
 // color picker's `palette=` and `scheme=` write
 // (GuiColorPicker::write_preset_key, color_picker.cpp, 2026-10-07; the
@@ -632,8 +598,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
-// both stamp the default font
-// (kDefaultFontKey) and no scheme, palette, icons or role line (the role is
+// both stamp no scheme, palette or role line (the role is
 // never invented, so the first run's read-back refuses on it — the struct's
 // role paragraph), kDefaultProjectsRepo and
 // a blank

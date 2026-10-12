@@ -2623,7 +2623,7 @@ void fill_program_palette(const GuiPaletteWords& w) {
 // live face or ink, 2026-10-10, the caption the scheme's keys or the live
 // chrome's compiled caption) — the install family's other shared half, run
 // after the program's whenever either moves. No face moves with it: a
-// scheme carries none (2026-10-09 ~21:20; the `font` key's, gui_font.h).
+// scheme carries none (2026-10-09 ~21:20; the face is gui_font.h's one).
 void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
     g_chrome_pick = chrome;
     const GuiThemeWords w =

@@ -5,7 +5,6 @@
 #include "engine_settings.h"
 #include "gui_input.h"
 #include "history_diff.h"
-#include "icons.h"          // kIconSetKeys: the Icons row's domain
 #include "playback.h"
 #include "render_pipeline.h"
 #include "render.h"
@@ -3537,37 +3536,6 @@ struct SettingsChoiceSource {
     const char* (*value)(int);
     const char* (*label)(int);
 };
-// THE ICON SET'S DOMAIN (architect 2026-10-09): the bundled sets
-// (kIconSetKeys, icons.h) in their order — Tango, Mist, GNOME 2.28 — shown by
-// their display names (kIconSetDisplayNames). The combo shows THE
-// EFFECTIVE SET, the chrome's own when the config has no `icons` line
-// (recall_gui_setting_value, settings_io.cpp).
-inline constexpr SettingsChoiceSource kIconSetChoiceSource{
-    +[]() -> int { return static_cast<int>(std::size(icons::kIconSetKeys)); },
-    +[](int i) -> const char* {
-        return icons::kIconSetKeys[static_cast<std::size_t>(i)];
-    },
-    +[](int i) -> const char* {
-        return icons::kIconSetDisplayNames[static_cast<std::size_t>(i)];
-    },
-};
-// THE FONT'S DOMAIN (architect 2026-10-09 ~21:20, "the font is its own
-// drop-down"): the face sets the `font` key names (kGuiFontKeys, gui_font.h)
-// in their order, which is the row's — FreeSans, Liberation Sans, Tahoma,
-// alphabetical (architect 2026-10-09), each named by its files (architect
-// 2026-10-09 evening) — shown by their display names
-// (kGuiFontDisplayNames). The combo shows the config's
-// `font`, tahoma when it has no line (recall_gui_setting_value,
-// settings_io.cpp) — the live face.
-inline constexpr SettingsChoiceSource kFontChoiceSource{
-    +[]() -> int { return static_cast<int>(std::size(kGuiFontKeys)); },
-    +[](int i) -> const char* {
-        return kGuiFontKeys[static_cast<std::size_t>(i)];
-    },
-    +[](int i) -> const char* {
-        return kGuiFontDisplayNames[static_cast<std::size_t>(i)];
-    },
-};
 struct SettingsPopupItem {
     const char*                 label;
     int                         access;   // the access key's byte in `label`
@@ -3636,24 +3604,11 @@ struct SettingsPopupItem {
 // `palette` (2026-10-07, the sixth device key) and `scheme` HAVE NO ROW:
 // the in-app color picker is their chooser.
 //
-// `Icons` JOINED 2026-10-09 (architect: "an icon picker... like the chrome
-// picker"), HEADING THE CHOICE ROWS since the Chrome row left (2026-10-10),
-// its domain the bundled sets (kIconSetChoiceSource), its commit the text
-// road's (commit_device_setting): a pick of the chrome's own set writes no
-// line, the next launch applies it and a card says so.
-//
-// `Font` JOINED 2026-10-09 ~21:20 (architect: "the font is its own
-// drop-down … it doesn't really make sense picking a font via palette or
-// even in the palette picker"), RIGHT AFTER Icons, `font` being the last
-// key — its domain the face sets (kFontChoiceSource), its commit the text
-// road's (commit_device_setting) with its own two differences: a pick
-// always writes the line ("no default setting because it's a drop-down"),
-// and it applies LIVE, no card.
-//
-// `Icons` AND `Font` ARE THE CHOICE ROWS (architect 2026-10-07
-// evening; the editor kinds above): each domain its owner's table, each
-// commit the text road's (commit_device_setting), so the refusal-free
-// value and the config write are the text road's.
+// `Icons` AND `Font` STOOD 2026-10-09..10-12 (the choice rows: the bundled
+// icon sets, the face sets) and LEFT WITH THEIR KEYS (architect 2026-10-12:
+// GNOME 2.28 and Liberation Sans the only options, hard-coded). The Choice
+// editor kind (the combo of settings_editor.h) has no row now; its machinery
+// stands for a future closed-list key.
 //
 // `Pick Colors` IS THE MENU'S FIRST COMMAND ROW (architect 2026-10-07: the
 // in-app color picker, "a full-fledged part of the project"), behind its own
@@ -3678,7 +3633,7 @@ struct SettingsPopupItem {
 //
 // THE ACCESS KEYS (architect 2026-10-10; the rule at
 // dropdown_title_access_key): &Title, &Notes, &URL, Co&ver, &GUI Scale,
-// Projects &Repository, Projects &Path, &Icons, &Font, Pick &Colors and True
+// Projects &Repository, Projects &Path, Pick &Colors and True
 // C&olors — the O of Colors, not the planner's E of True: bare `e` is the
 // left mouse button at the platform boundary (kLeftClickKey, gui_input.h),
 // so an E row could never answer its own letter while the menu stands.
@@ -3690,12 +3645,6 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI Scale",           0,  "gui_scale",     true},
     {"Projects Repository", 9,  "projects_repo", false},
     {"Projects Path",       9,  "projects_path", false},
-    {"Icons",               0,  "icons",         false,
-     SettingsPopupAct::EditKey, SettingsEditorKind::Choice,
-     &kIconSetChoiceSource},
-    {"Font",                0,  "font",          false,
-     SettingsPopupAct::EditKey, SettingsEditorKind::Choice,
-     &kFontChoiceSource},
     {"Pick Colors",         5,  nullptr,         true,
      SettingsPopupAct::PickColors},
     {"True Colors",         6,  nullptr,         false,

@@ -8,8 +8,7 @@
 // caption's the scheme's or the compiled caption (theme_file.h's
 // chrome_caption); the spec chooses shapes and seats, and names the scheme a
 // config with no `scheme` line takes. It names NO FACE: the face is the
-// device config's `font` key alone (architect 2026-10-09 ~21:20, "the font
-// is its own drop-down"; gui_font.h's gui_live_face_set).
+// product's one (gui_font.h's gui_live_face_set).
 //
 // THE CHROME ENDS AT THE MENU ROW (architect 2026-10-09 ~06:55, "chrome
 // means chrome, the program is Cool Edit"): the chrome is the caption, the
@@ -55,8 +54,8 @@ struct ChromeSpec {
     // Cool Edit's one "Midnight" under every chrome (2026-10-12,
     // palette_file.h's head).
     const char*        own_scheme;
-    // (THE VOCABULARY'S FACE SET left the spec 2026-10-09: the `font` device
-    // key names the face under every chrome, gui_font.h.)
+    // (THE VOCABULARY'S FACE SET left the spec 2026-10-09: the face is the
+    // product's one, gui_font.h.)
     // THE CAPTION, the top strip's lane 0, in Windows px (render.h's caption
     // block, where every element's rule stands): the lane's height; the
     // icon's seat (its size is the small icon's, kCaptionIconPx); the
@@ -133,12 +132,6 @@ struct ChromeSpec {
     // (platform_wayland.h's frame_px_, platform_android.h's).
     int                window_frame_lines;
     bool               window_frame_maximized;
-    // THE ICON SET the vocabulary wears BY DEFAULT: a bundled folder under
-    // assets/icons/ (icons.h's kIconSetKeys, static_asserted there), parsed
-    // at launch through resvg (icons.h's head) — the set an absent `icons`
-    // device key means; the key names another for every chrome (architect
-    // 2026-10-09, gui_live_icon_set).
-    const char*        icon_set;
 };
 
 // WIN2000 (architect 2026-10-06), off the ReactOS captures: THE CAPTION
@@ -164,9 +157,8 @@ struct ChromeSpec {
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
 // (tmp/reactos-tooltips.png); THE DROPDOWN Windows' popup menu, 17-px items
 // one px inside the frame, hanging from the menu bar's bottom row over the
-// program frame's top row (dropdown_hang_y); THE ICONS Tango 0.8.90's scalable drawings,
-// ReactOS's own model of a Windows 2000 desktop dressed in Tango (architect
-// 2026-10-06: assets/icons/tango/, its README the mapping). (Explorer's
+// program frame's top row (dropdown_hang_y); THE ICONS GNOME 2.28's scalable drawings
+// (icons.h's head; architect 2026-10-12). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
@@ -197,7 +189,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .popup_margin_px              = 1,
     .window_frame_lines           = 2,
     .window_frame_maximized       = false,
-    .icon_set                     = "gnome-2.28",   // architect 2026-10-12
 };
 
 // THE LIVE SPEC — the one instance the process paints, Windows 2000's.

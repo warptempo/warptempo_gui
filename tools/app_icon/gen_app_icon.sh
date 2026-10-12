@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# tools/app_icon/gen_app_icon.sh — assets/icons/mist/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
-# THE ICON (architect 2026-10-07 ~17:00, kept 2026-10-09): the Mist set's AppIcon, gnome-icon-theme 2.30's
-# audio-x-generic (its 48 slot extracted from 3.0.0's sheet — assets/icons/mist/README.md), on the ground
+# tools/app_icon/gen_app_icon.sh — tools/app_icon/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
+# THE ICON (architect 2026-10-07 ~17:00, kept 2026-10-09): the drawing of the Mist set removed 2026-10-12, gnome-icon-theme
+# 2.30's audio-x-generic (its 48 slot extracted from 3.0.0's sheet — tools/app_icon/README.md), on the ground
 # #EDECEB, so both outputs carry that face behind the drawing. (The SVG comment the generator writes names the
 # ground by its 2026-10-07 source, the text the committed output carries.) It writes, from the repo root's point of view:
 #   packaging/warptempo_gui.svg     the Linux desktop icon (the .desktop's Icon=warptempo_gui; docs/INSTALL.md
@@ -23,7 +23,7 @@ set -euo pipefail
 [ $# -eq 0 ] || { echo "usage: bash tools/app_icon/gen_app_icon.sh" >&2; exit 2; }
 cd "$(dirname "$0")/../.."
 
-SRC=assets/icons/mist/AppIcon.svg
+SRC=tools/app_icon/AppIcon.svg
 OUT_SVG=packaging/warptempo_gui.svg
 RES=android/app/res
 GROUND='#EDECEB'   # the icon's ground (the head)

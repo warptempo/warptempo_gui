@@ -80,9 +80,8 @@ rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
 # --- 1. assets ------------------------------------------------------------
-# THE PRODUCT'S FONT FILES: Tahoma and Tahoma Bold (architect 2026-10-06),
-# FreeSans and FreeSans Bold (2026-10-09, OpenType CFF), Liberation Sans and
-# Liberation Sans Bold (2026-10-09, TrueType), THE NAMES READ OUT OF
+# THE PRODUCT'S FONT FILES: Liberation Sans and Liberation Sans Bold
+# (TrueType; architect 2026-10-12, the one face), THE NAMES READ OUT OF
 # gui_font.h's kGuiFontFiles initializer, the one list (CMakeLists.txt's
 # font step reads the same), copied from the repository's own fonts/
 # (architect 2026-10-02) -- the very files the Linux executable compiles in,
@@ -90,7 +89,7 @@ mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 # installed font package. They are what gui_font_bundled.cpp builds the
 # product's faces from, and android_main ABORTS if one is missing -- a font
 # that failed to install would otherwise paint silently in cairo's default
-# face. They are stored (-0 ttf and -0 otf at aapt2 link, one flag per
+# face. They are stored (-0 ttf at aapt2 link, one flag per
 # suffix the list spells) so AAsset_getBuffer hands FreeType a pointer
 # straight into the mapped APK.
 #
@@ -106,9 +105,9 @@ for f in $FONT_FILES; do
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done
-# THE BUNDLED ICON SETS (architect 2026-10-06): each folder under the
-# repository's assets/icons/ (Tango and Mist, icons.h's kIconSetKeys, the
-# device config's `icons` choosing between them) copied whole
+# THE BUNDLED ICON SET (architect 2026-10-06; GNOME 2.28 alone since
+# 2026-10-12, icons.h's kIconSet): each folder under the
+# repository's assets/icons/ copied whole
 # as SVG into the package's assets/icons/<set>/, which aapt2 link's -A packs
 # (deflated) as the APK's `icons/<set>/` asset directory. The app reads them in
 # place at launch, never copying them out (icons.h's load_svg_set;
@@ -170,11 +169,11 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 compile + link ----------------------------------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, the Mist set's drawing (assets/icons/mist/AppIcon.svg,
-# GNOME's audio-x-generic) over the ground #EDECEB, written by
+# layers per density, the drawing tools/app_icon/AppIcon.svg
+# (GNOME's audio-x-generic) over the ground #EDECEB, written by
 # tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
 # comment states the sizes; nothing here renders). Every GUI pixel is painted
-# by cairo, the roster's icons included (the Tango set's SVG assets above,
+# by cairo, the roster's icons included (the GNOME 2.28 set's SVG assets above,
 # rasterised by resvg, svg_icon.cpp, and copied by cairo); the app declares no
 # @string, no style, no res/values. aapt2 compile turns the
 # directory into res.zip, which link takes as a positional input.
@@ -201,7 +200,6 @@ wt_say "aapt2 link"
     --version-code 1 \
     --version-name "2.0" \
     -0 ttf \
-    -0 otf \
     --auto-add-overlay \
     "$PKGDIR/res.zip"
 

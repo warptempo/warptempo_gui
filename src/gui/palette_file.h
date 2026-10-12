@@ -28,8 +28,7 @@
 //     word for a set of chrome colors (the Appearance dialog's "scheme"),
 //     and NO FACE (architect 2026-10-09 ~21:20: "the scheme's
 //     default font should stop being honored — it should only be honored
-//     from the font picker"; the face is the device config's `font` key,
-//     gui_font.h): `schemes/<name>.scheme`, the `scheme` device key.
+//     from the font picker"; the face is the product's one, gui_font.h): `schemes/<name>.scheme`, the `scheme` device key.
 // The two are independent: loading, saving, renaming or deleting one never
 // touches the other, and either applies under any chrome.
 //

@@ -5,8 +5,6 @@
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
 #include "palette_file.h"      // is_palette_name, is_scheme_name and their reasons
-#include "icons.h"             // is_icon_set_key, kIconSetGrammarReason
-#include "gui_font.h"          // is_font_key, kFontGrammarReason
 
 #include <cstddef>
 #include <cstdio>
@@ -21,10 +19,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, the required
-// set below its subset (NINE keys since 2026-10-10 evening, `role`
-// appended; EIGHT 2026-10-10, `chrome` gone;
-// nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09, `icons` appended;
-// seven 2026-10-08, `theme` gone; the
+// set below its subset (SEVEN keys since 2026-10-12, `icons` and
+// `font` gone; nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
+// `chrome` gone; nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09,
+// `icons` appended; seven 2026-10-08, `theme` gone; the
 // count's succession, up to seventeen with the tuning phases of
 // 2026-09-23..27 and nineteen with the colour keys of 2026-10-03..04, is the
 // header's record and git's). THE ORDER IS THE ARCHITECT'S OWN, given
@@ -33,16 +31,17 @@ namespace {
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). The writer's list and the required
-// list stand side by side below, the second the first less its four keys
+// list stand side by side below, the second the first less its two keys
 // that may be absent (2026-10-07; until then one list served both, so no
 // key could be written and not demanded — the absent-able keys are the
 // deliberate exception, each saying what its absence means).
 //
 // `scheme` FOLLOWS last_project (2026-10-08 ~18:15), the chrome's colors, and
 // `palette` FOLLOWS THAT (2026-10-07), the program's colors after the
-// chrome's; `icons` is APPENDED after it (2026-10-09), `font` after that
-// (2026-10-09 ~21:20), and `role` after that (2026-10-10). (`chrome` stood after last_project 2026-10-07 to
-// 2026-10-10, `theme` 2026-10-03..10-08, the header's record.)
+// chrome's; `role` is APPENDED after it
+// (2026-10-10). (`chrome` stood after last_project 2026-10-07 to
+// 2026-10-10, `theme` 2026-10-03..10-08, `icons` and `font` 2026-10-09 to
+// 2026-10-12, the header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -50,19 +49,13 @@ constexpr const char* kDeviceConfigKeys[] = {
     "last_project",
     "scheme",
     "palette",
-    "icons",
-    "font",
     "role",
 };
-// THE REQUIRED SET — every key above but the four that may be ABSENT
+// THE REQUIRED SET — every key above but the two that may be ABSENT
 // (architect 2026-10-07): `scheme` (2026-10-08), absent meaning the chrome's
-// own scheme, `palette`,
-// absent meaning the default palette (Cool Edit's "Default" under every
-// chrome, 2026-10-09), `icons` (2026-10-09),
-// absent meaning the chrome's own icon set, and `font` (2026-10-09),
-// absent reading as tahoma (kDefaultFontKey), so the configs written before
-// the key load. `role` (2026-10-10) IS REQUIRED, the one key appended
-// since the four that is: "if one of these lines is not in place, it means
+// own scheme, and `palette`, absent meaning the default palette (Cool Edit's
+// "Midnight" under every chrome). `role` (2026-10-10) IS REQUIRED, the one key
+// appended since that is: "if one of these lines is not in place, it means
 // something's wrong with the config or the setup" (architect). The scanner
 // checks presence against this list and duplicates against every key.
 constexpr const char* kDeviceConfigRequiredKeys[] = {
@@ -72,8 +65,6 @@ constexpr const char* kDeviceConfigRequiredKeys[] = {
     "last_project",
     "role",
 };
-// The struct's font default is the grammar owner's (gui_font.h).
-static_assert(DeviceConfig{}.font == kDefaultFontKey);
 
 } // namespace
 
@@ -103,15 +94,12 @@ std::filesystem::path device_config_path() {
 std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
-        // AN UNSET PALETTE, SCHEME OR ICON SET WRITES NO LINE (2026-10-07;
-        // the scheme 2026-10-08, the icons 2026-10-09): its one spelling is
-        // the line's absence, so the file keeps following the chrome (the
-        // scheme and the icon set) or the default palette.
+        // AN UNSET PALETTE OR SCHEME WRITES NO LINE (2026-10-07; the scheme
+        // 2026-10-08): its one spelling is the line's absence, so the file
+        // keeps following the chrome (the scheme) or the default palette.
         if (std::string_view(key) == "palette" && cfg.palette.empty())
             continue;
         if (std::string_view(key) == "scheme" && cfg.scheme.empty())
-            continue;
-        if (std::string_view(key) == "icons" && cfg.icons.empty())
             continue;
         // AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
         // alone carries it, and the program never invents a role — the
@@ -142,14 +130,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "palette") {
             // The name verbatim (printable ASCII, palette_file.h's grammar).
             s += cfg.palette;
-        } else if (k == "icons") {
-            // A bundled set's key verbatim (is_icon_set_key, icons.h).
-            s += cfg.icons;
-        } else if (k == "font") {
-            // The face's key verbatim, always written (the default's too,
-            // ("no default setting because it's a drop-down",
-            // architect 2026-10-09).
-            s += cfg.font;
         } else if (k == "role") {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
@@ -244,28 +224,6 @@ std::expected<DeviceConfig, std::string> read_device_config(
                 return bad_value(ln, key, value, kPaletteGrammarReason);
             }
             out.palette = value;
-            return {};
-        }
-        // THE ICON SET (architect 2026-10-09): a bundled set's key under its
-        // one grammar owner (is_icon_set_key, icons.h); absent, the empty
-        // struct value stands — the chrome's own set. An EMPTY value is
-        // refused like any other non-key: the unset key is the line's
-        // absence.
-        if (key == "icons") {
-            if (!icons::is_icon_set_key(value)) {
-                return bad_value(ln, key, value, icons::kIconSetGrammarReason);
-            }
-            out.icons = value;
-            return {};
-        }
-        // THE FONT (architect 2026-10-09 ~21:20): a face's key under its one
-        // grammar owner (is_font_key, gui_font.h); absent, the struct's
-        // tahoma stands (kDefaultFontKey).
-        if (key == "font") {
-            if (!is_font_key(value)) {
-                return bad_value(ln, key, value, kFontGrammarReason);
-            }
-            out.font = value;
             return {};
         }
         // THE ROLE (architect 2026-10-10): one of the two words, required

@@ -379,23 +379,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "projects_repo") return app.projects_repo;
     if (key == "projects_path" && app.device_config != nullptr)
         return app.device_config->projects_path;
-    // THE ICON SET (2026-10-09): THE EFFECTIVE SET, the one deliberate
-    // departure from the byte-exact recall — with no `icons` line the
-    // chrome's own (effective_icon_set, icons.h), so the Icons row's combo
-    // shows the set the next launch will load. Its commit writes no line for the
-    // chrome's own (commit_device_setting), so the recall commits back as
-    // an unchanged no-op either way.
-    if (key == "icons" && app.device_config != nullptr) {
-        return std::string(icons::effective_icon_set(
-            app.device_config->icons, live_chrome_spec()));
-    }
-    // THE FONT (2026-10-09 ~21:20), verbatim — the struct holds it as typed
-    // (tahoma when the file has no line, the struct's default) and the file
-    // writes it so; it is the live face (gui_live_face_set), so the Font
-    // row's combo shows the face on screen and a recalled line commits back
-    // as an unchanged no-op.
-    if (key == "font" && app.device_config != nullptr)
-        return app.device_config->font;
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

@@ -97,9 +97,8 @@ private:
 // gui_font.h) after the 26.6 conversion, the last included, and A LIFTED
 // MARK'S Y OFFSET TAKES ITS LIFT where the live set lifts it
 // (gui_sign_lift_px, gui_font.h — the four math signs onto the hyphen's
-// axis in the FreeSans and Liberation sets, 2026-10-09, the latter's
-// lift negative, added as it comes; the pipe onto the digits' band in
-// every set, 2026-10-09 ~21:20: matched by glyph id after substitution,
+// axis, 2026-10-09, the lift negative in Liberation Sans, added as it
+// comes; the pipe onto the digits' band, 2026-10-09 ~21:20: matched by glyph id after substitution,
 // HarfBuzz's up-positive sense, the advance untouched).
 void append_glyphs(const GuiFont& font, std::string_view utf8,
                    ShapedRun& run) {

@@ -2513,13 +2513,10 @@ namespace {
 // are: the template's projects_path, device_config_defaults above.)
 
 // LOAD THE PRODUCT'S FACES OUT OF THE APK, or die. The assets are the
-// repository's own font files — every one, every face set's (gui_font.h's
-// kGuiFaceSets), whichever face the config's `font` names (gui_font.h's
-// kGuiFontFiles, in its order; architect 2026-10-02 to 2026-10-09; build_apk.sh's asset
+// repository's own font files — every one (gui_font.h's
+// kGuiFontFiles, in its order; architect 2026-10-02 to 2026-10-12; build_apk.sh's asset
 // step copies every name that list spells), and the abort below covers
-// each of them. This runs BEFORE gui_main reads the device config's
-// `font`, and a Settings pick moves the face live, which is why the install
-// measures every set's ems (its probe, gui_font.h). A
+// each of them. A
 // missing or unreadable asset is a BUILD defect — the packaging step puts every
 // file in and there is no runtime state that removes one — so there is no
 // error arm to design: painting would otherwise silently use cairo's default,
@@ -2527,7 +2524,7 @@ namespace {
 // CALLER'S: gui_font_bundled.cpp keeps its own log-and-answer-false arms.
 //
 // THE INSTALL IS OBSERVED, not assumed: gui_font_install_bundled answers
-// whether each face is FT-backed and every set's carry their ems' glyphs
+// whether each face is FT-backed and the set's carry their ems' glyphs
 // (its probe, gui_font.h), and false aborts here exactly as a missing asset
 // does — the Wayland backend's GuiPlatform::init asks the same owner the
 // same question of the bytes compiled into its executable. FALSE IS STILL

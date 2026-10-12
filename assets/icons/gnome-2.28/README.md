@@ -1,17 +1,17 @@
 # The GNOME 2.28 icons
 
 gnome-icon-theme 2.28.0, taken whole and self-contained (architect 2026-10-12): every drawing is from the 2.28.0
-tarball's `scalable/` tree, nothing from any other release. Its look is the 2.20 to 2.28 GNOME, chosen over 2.30 (the
-Mist set). One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator and COPIED BYTE FOR
-BYTE from the tarball: never edit one. The `icons` device key's value is `gnome-2.28`, the Settings Icons row's name
-"GNOME 2.28". The program parses the files at launch, in place, through resvg (`src/gui/svg_icon.h`): on the laptop
+tarball's `scalable/` tree, nothing from any other release. Its look is the 2.20 to 2.28 GNOME, chosen over 2.30
+(the Mist set, removed 2026-10-12 with Tango, GNOME 2.28 the one set). One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator and COPIED BYTE FOR
+BYTE from the tarball: never edit one. The set is hard-coded (`icons::kIconSet`; the `icons` device key and the Settings Icons
+row were removed 2026-10-12). The program parses the files at launch, in place, through resvg (`src/gui/svg_icon.h`): on the laptop
 from this folder, on the tablet from the APK's `icons/gnome-2.28/` assets (`android/app/build_apk.sh`); a file that is
 not well-formed SVG fails the launch, naming the file. Files of other names in this folder (this README, the licence
 texts) are not read.
 
 Two seats are deliberate (architect 2026-10-12): DocumentSave wears `devices/media-floppy`, the old diskette; Lock
 wears `actions/system-lock-screen`, the monitor with the padlock (architect 2026-10-12: emblem-readonly is nearly monochrome and does not read). DialogError wears `process-stop`, since 2.28's `edit-delete` is the bin. Every other
-seat is the freedesktop name the Mist set uses. THE READ-ONLY TOGGLE wears Lock alone under every set; its lit face
+seat is the freedesktop name the removed Mist set used. THE READ-ONLY TOGGLE wears Lock; its lit face
 says read-only.
 
 REPEATS, known by position (the files byte-identical) are listed in the table.
@@ -30,7 +30,7 @@ it is the tarball's only licence statement: there is no "or later" and no per-fi
 
 How the files sit beside the GPL-3 program: each SVG is a separate data file under its own licence, read at run time
 and never linked or compiled into the program's code; the repository distributes source only (THIRD_PARTY.md's own
-statement); and Mist's two files from 2.30.3, also GPL v2 alone, already ship this way.
+statement).
 
 ## The import check
 
@@ -90,7 +90,7 @@ resvg road was not run for this import).
 | SettingsConfigure | `preferences-system` | `scalable/categories/preferences-system.svg` | — | `fe6e0e022ef3ea6c1a3b979a930c9d3404efd21dd48fd71ad4eda453701f38aa` |
 | ShallowHistory | `x-office-calendar` | `scalable/mimetypes/x-office-calendar.svg` | — | `2cee419db4b8f565828b1718ff10a7f9ebe6ae622e51b726a855618a5e9751a8` |
 | TabDetach | `preferences-system-windows` | `scalable/apps/preferences-system-windows.svg` | — | `5b198b46dfcb737528049fff9881c9d53d82824ad73c87a6c7723817ba8923d5` |
-| TimelineLift | `view-restore` | `scalable/actions/view-restore.svg` | — | `29e7965ac964f3d1dee94fc3cf3f4a3b21d723672c92f51c8acefffdf82c2ef0` |
+| TimelineLift | `view-fullscreen` (architect 2026-10-12: view-restore's tiny windows left the case mostly empty) | `scalable/actions/view-fullscreen.svg` | — | `30d89134642e45f2e08299a8cde3d3bb95199f3355c5ba62cc3f2e752dd0527c` |
 | ValueDrag | `object-flip-vertical` | `scalable/actions/object-flip-vertical.svg` | — | `5fb09615159e44c02a584cfa048dcb8ddd0b663111da4ea6be5c26851a6fbd0b` |
 | VcsCommit | `go-top` | `scalable/actions/go-top.svg` | — | `c9f7ee737b3ebaa57c40339b9d738b5525ad0f7d088008710a1e6a810a0e7470` |
 | VcsDiff | `document-open-recent` | `scalable/actions/document-open-recent.svg` | — | `38824dc638b0c1cfa7b32ed818dfc7c630e31539d2255f38f03a9feb72175dc3` |

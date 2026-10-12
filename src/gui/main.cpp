@@ -3477,20 +3477,6 @@ int gui_main(const char* argument) {
         }
         device_config = *cfg;
     }
-    // THE FACE IS CHOSEN HERE (architect 2026-10-09 ~21:20, gui_font.h's
-    // gui_live_face_set): the config's `font`, judged by its reader, tahoma
-    // with no line. The faces were installed earlier on
-    // Android (android_main, before this function) and need nothing from
-    // it: the install measured every set's ems (gui_font_bundled.cpp), and
-    // the face caches are built at the first paint. A `font` commit in
-    // Settings moves it again, live (commit_device_setting).
-    set_live_font(device_config.font);
-    // THE ICON SET IS CHOSEN BESIDE IT, ONCE (architect 2026-10-09, icons.h's
-    // gui_live_icon_set): the config's `icons`, judged by its reader, or
-    // with no line the live chrome's own set. An `icons` commit in Settings
-    // writes the file and takes effect at the next launch, the chrome's
-    // rule (commit_device_setting).
-    icons::set_live_icon_set(device_config.icons);
     // THE ICON SET IS LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
     // load_svg_set): the live set read in place from the bundle and every
     // drawing parsed before the window exists, so no paint meets a
@@ -3580,9 +3566,8 @@ int gui_main(const char* argument) {
     // PER-PROCESS BESIDES THESE, by inventory: the two signal dispositions,
     // the renderer's file-scope scale (set_gui_scale_percent), the text
     // shaper's face caches and the bundled-font state (gui_font_bundled.cpp),
-    // the bottom row's clock metrics memo (keyed on the text size and the
-    // live face set, not the piece), the live face set (gui_font.h's
-    // set_live_font, the `font` key's), the modal session-id counter (text_editor::next_session_id —
+    // the bottom row's clock metrics memo (keyed on the text size, not
+    // the piece), the modal session-id counter (text_editor::next_session_id —
     // monotonic for the process, so no id repeats across reopens), the strict
     // load's scratch serial (history_diff.cpp), and on Android the glue
     // pointer g_android_app and the stdio routing. Every other static in the

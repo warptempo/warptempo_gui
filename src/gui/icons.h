@@ -1,20 +1,13 @@
 #pragma once
 
 // THE ICON SET AND ITS ONE ROAD (architect 2026-10-06). An Icon is a GLYPH,
-// one per enumerator below, drawn from THE LIVE SET (gui_live_icon_set
-// below): the device config's `icons` key when the line is present, else
-// the live chrome's own (chrome_spec.h's icon_set — win2000's GNOME 2.28,
-// gnome-icon-theme 2.28.0's scalable drawings, the default since architect
-// 2026-10-12; Tango 0.8.90's, ReactOS's model of a Windows 2000 desktop
-// wearing Tango, stays a choice (Tango's own files only, nothing drawn, no
-// GNOME file, a repeat known by position; the set the product drew itself before is git
-// history)). THE BUNDLED SETS are kIconSetKeys below — Tango, MIST,
-// gnome-icon-theme 2.30's drawings under Mist's own folders, the GNOME 2.30
-// set he keeps as a choice under the key (architect 2026-10-09: "Mist and
-// Tango both work"), and GNOME 2.28, gnome-icon-theme 2.28.0's drawings
-// alone, nothing from another release (architect 2026-10-12). (Breeze, the neutral monochrome set bound to the
-// chrome's text role, stood 2026-10-08 to 2026-10-09 and left with that
-// binding: "looks out of place now", architect 2026-10-09.) One scalable
+// one per enumerator below, drawn from THE ONE SET (kIconSet below): GNOME
+// 2.28, gnome-icon-theme 2.28.0's scalable drawings alone, nothing from
+// another release - hard-coded since architect 2026-10-12 ("making Liberation
+// Sans and GNOME 2.28 the only options, hard-coded, and drop their config
+// keys"; the Tango and Mist sets, the `icons` device key and the Settings
+// Icons row were removed that day, docs/engineering/closed_questions.md).
+// One scalable
 // file per enumerator under
 // assets/icons/<set>/ (its README the mapping, the provenance and the
 // licences), PARSED AT LAUNCH through resvg, the one renderer of every set
@@ -28,7 +21,7 @@
 //
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in the program's case the
-// drawing's square cell (Tango's 48 units, Mist's its own)
+// drawing's square cell (48 units)
 // fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20),
 // Cool Edit's own seat since 2026-10-09 ~10:25, program_spec.h's head — 60
 // device px at 300 %, 72 at 360); elsewhere its site's own scaled 16 (the
@@ -109,12 +102,9 @@ enum class Icon {
     PreviewRenderOn,     // Play Renders
     DialogOkApply,       // Load in Place (the icon row and the render
                          // player's row): the walked version loaded into
-                         // the editor in place. Tango's view-refresh, the
-                         // reload's arrows (architect 2026-10-07); Mist's
-                         // gnome emblem-default, the green check, GNOME's
-                         // accept (architect 2026-10-07 ~17:00). A
-                         // deliberate asymmetry: the Tango set may lag the
-                         // GNOME set (2026-10-07).
+                         // the editor in place. GNOME's emblem-default,
+                         // the green check, GNOME's accept (architect
+                         // 2026-10-07 ~17:00).
     VcsDiff,             // Toggle History View (`h`)
     ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
                          // the sets' x-office-calendar, the dated page:
@@ -126,12 +116,10 @@ enum class Icon {
     GoPrevious,          // Row 8's left arrow (bare Left)
     GoNext,              // Row 8's right arrow (bare Right)
     DocumentRevert,      // Revert (bare `v`): back to the viewed
-                         // checkpoint. Tango's appointment-new, the clock
-                         // (architect 2026-10-07); Mist's gnome
-                         // document-revert, the page with the yellow return
-                         // arrow, GNOME's revert, rhyming with Load in
-                         // Place's accept (architect 2026-10-07 ~17:00; the
-                         // same asymmetry as DialogOkApply's)
+                         // checkpoint. GNOME's document-revert, the page
+                         // with the yellow return arrow, GNOME's revert,
+                         // rhyming with Load in Place's accept (architect
+                         // 2026-10-07 ~17:00)
     // ROW 8'S TRANSPORT. PLAY AND STOP ARE ONE BUTTON'S TWO FACES
     // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
     // pause state); the render player's own Play/Pause button wears
@@ -206,19 +194,12 @@ inline constexpr const char* kIconNames[] = {
 };
 static_assert(std::size(kIconNames) == kIconCount);
 
-// THE BUNDLED SETS — the `icons` device key's whole vocabulary, a closed
-// compiled list in the Settings row's order (kIconSetChoiceSource,
-// app_state.h), each a folder under assets/icons/ (the APK packs every
-// folder there, android/app/build_apk.sh): Tango, Mist and GNOME 2.28 (Breeze left
-// 2026-10-09, an `icons=breeze` line the ordinary unknown-value refusal).
-// THE DISPLAY NAMES stand beside the keys, Title Case, the Settings row's
-// combo and list.
-inline constexpr const char* kIconSetKeys[]         = {"tango", "mist", "gnome-2.28"};
-inline constexpr const char* kIconSetDisplayNames[] = {"Tango", "Mist", "GNOME 2.28"};
-static_assert(std::size(kIconSetKeys) == std::size(kIconSetDisplayNames));
+// THE ONE SET, a folder under assets/icons/ (the APK packs it,
+// android/app/build_apk.sh): GNOME 2.28, hard-coded (architect 2026-10-12).
+inline constexpr const char* kIconSet = "gnome-2.28";
 
 // THE GNOME 2.28 ARROWS CENTERED (architect 2026-10-12, his pick of the
-// body-centered sheet): each listed glyph of the GNOME 2.28 set ALONE is drawn
+// body-centered sheet): each listed glyph is drawn
 // translated by (dx, dy) in the SVG's own user units (the files are 48-unit
 // canvases; +x right, +y down), composed into resvg's render transform
 // (svg_icon::rasterise) so it scales with the raster, the disabled copy
@@ -229,7 +210,6 @@ static_assert(std::size(kIconSetKeys) == std::size(kIconSetDisplayNames));
 // come out symmetric to within 0.1 px. Where Undo's shadow crosses the canvas
 // edge after its shift it clips, accepted. THE FILES STAY BYTE-IDENTICAL to
 // gnome-icon-theme 2.28.0's: the shift is the product's, not the file's.
-// Tango and Mist take none.
 struct IconShift {
     const char* name;   // the enumerator's name, kIconNames' spelling
     float       dx;
@@ -243,59 +223,11 @@ inline constexpr IconShift kGnome228Shifts[] = {
     {"GoJumpDeclaration", -0.2f, 0.4f}, {"ValueDrag", 0.0f, 1.5f},
 };
 
-// THE `icons` KEY'S GRAMMAR — the ONE owner, asked by the device config's
-// reader (any other word the launch's first-error hard fail: a hand edit is
-// the only producer) and by the settings editor's Icons row (its refused
-// commit): a bundled set's key, byte for byte.
-constexpr const char* icon_set_key_for(std::string_view v) {
-    for (const char* k : kIconSetKeys)
-        if (v == k) return k;
-    return nullptr;
-}
-constexpr bool is_icon_set_key(std::string_view v) {
-    return icon_set_key_for(v) != nullptr;
-}
-inline constexpr const char* kIconSetGrammarReason =
-    "must be tango, mist or gnome-2.28";
-// THE CHROME'S OWN SET IS A BUNDLED ONE (ChromeSpec::icon_set, the set an
-// absent `icons` line means).
-static_assert(is_icon_set_key(kChromeSpecWin2000.icon_set));
+// THE SET (architect 2026-10-12): the one bundled set, loaded once at launch
+// (load_svg_set, below).
+inline std::string_view gui_live_icon_set() { return kIconSet; }
 
-// THE SET A CONFIG MEANS: its `icons` value, or with no line (an empty
-// value) the chrome's own (ChromeSpec::icon_set) — what the launch loads
-// (gui_live_icon_set) and what the Settings row shows
-// (recall_gui_setting_value, settings_io.cpp).
-inline std::string_view effective_icon_set(std::string_view icons,
-                                           const ChromeSpec& chrome) {
-    return icons.empty() ? std::string_view(chrome.icon_set) : icons;
-}
-
-// THE LIVE SET (architect 2026-10-09): the device config's `icons`
-// override installed ONCE at launch (set_live_icon_set, gui_main, beside
-// the scale and before load_svg_set), else the live chrome
-// spec's own — effective_icon_set against the live chrome. A Settings
-// commit of `icons` writes the file and takes effect at the next launch,
-// the chrome's rule: the parsed set is built on it.
-namespace icons_detail {
-inline const char* g_override = nullptr;   // a kIconSetKeys entry, or none
-} // namespace icons_detail
-inline std::string_view gui_live_icon_set() {
-    return effective_icon_set(icons_detail::g_override != nullptr
-                                  ? icons_detail::g_override
-                                  : "",
-                              live_chrome_spec());
-}
-// Precondition: `icons` is empty (no line) or is_icon_set_key, the config's
-// reader having judged it. ONE CALLER, gui_main, once per launch.
-inline void set_live_icon_set(std::string_view icons) {
-    icons_detail::g_override = icons.empty() ? nullptr
-                                             : icon_set_key_for(icons);
-    assert(icons.empty() || icons_detail::g_override != nullptr);
-}
-
-// THE SET'S LOAD, once, in gui_main after the device config's read (whose
-// `icons`, or with no line its `chrome`, names the set) and before the
-// window: `set`'s files fetched from the bundle
+// THE SET'S LOAD, once, in gui_main before the window: `set`'s files fetched from the bundle
 // (GuiPlatform::bundled_icon_files — the repository's assets/icons/<set>/ on
 // the laptop, the APK's icons/<set>/ assets on the tablet; READ IN PLACE,
 // never copied into the config folder: nobody authors an icon set on the
@@ -303,7 +235,7 @@ inline void set_live_icon_set(std::string_view icons) {
 // then every enumerator's `<name>.svg` parsed in enum order before any draw
 // (svg_icon::parse; files of other names, the README among them, ignored).
 // THE ERROR ARM'S PRODUCERS: the bundle unreadable (IO), a file missing or
-// not well-formed SVG (a build defect) — "icon set 'tango': EditDelete.svg:
+// not well-formed SVG (a build defect) — "icon set 'gnome-2.28': EditDelete.svg:
 // not well-formed SVG (resvg error 7)", the first only, which gui_main
 // prints and exits on (the validation doctrine's class (1)). A construct
 // resvg does not draw passes the load: the set's import sheet is that check

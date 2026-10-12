@@ -1375,7 +1375,7 @@ void GuiColorPicker::install_live_words(
     // frame.
     // Neither kind touches an icon: every glyph wears its drawing's own inks
     // (icons.h's head). Neither moves the face: a scheme carries none
-    // (2026-10-09 ~21:20; the `font` key's, gui_font.h).
+    // (2026-10-09 ~21:20; the face is gui_font.h's one).
     if (live_chrome_words(program_palette_words(),
                           live_chrome_pick()) != chrome_before) {
         viewport.invalidate_surface();
