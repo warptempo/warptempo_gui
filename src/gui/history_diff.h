@@ -481,24 +481,25 @@ GuiHistoryCommitDelta compute_commit_delta(
     const std::string& now_settings,
     int                sample_rate);
 
-// THE NUDGE WINDOW (architect 2026-10-10 ~18:55 → 2026-10-12 ~04:35; 30 ms
-// until 2026-10-12): a removed marker and an added marker of ONE column within
-// this many milliseconds of each other, and each the other's only neighbor of
-// that column within it on either side — removed, added or unchanged — read as
-// ONE CHANGED PAIR, the marker nudged (pair_nudged_changes, history_diff.cpp).
-// WHY 120: the window exists so a moved marker's history flag is not hidden
-// behind its partner's; at his working zoom a short label such as "[-]a.03" is
-// cut by a neighbor's triangle up to about 120 ms past its stem (measured on
-// his tablet capture 2026-10-12: a pair 104 ms apart already overlapping).
-// Real markers of either kind stand at least ~300 ms apart in his densest
-// movement, so a window under half of that never pairs two real markers, and
-// an occasional false merge is harmless because both positions stay on
-// screen. If one marker has more than one marker within the window of it,
-// NONE OF THE THREE QUALIFY — a third marker inside the window cancels the
-// merge, rarer with warp markers (which carry the payload he must read) than
-// with phase resets (interchangeable, payload-free). A FIXED TIME — never
-// pixels, never the zoom — and one constant for warp and phase reset alike.
-inline constexpr int kHistoryNudgeWindowMs = 120;
+// THE NUDGE WINDOW (architect 2026-10-10 ~18:55 → 2026-10-12 ~04:50; 30 ms
+// until 2026-10-12, 120 briefly): a removed marker and an added marker of ONE
+// column within this many milliseconds of each other, and each the other's
+// only neighbor of that column within it on either side — removed, added or
+// unchanged — read as ONE CHANGED PAIR, the marker nudged (pair_nudged_changes,
+// history_diff.cpp). WHY 150: the window exists so a moved marker's history
+// flag is not hidden behind its partner's; at his working zoom a short label
+// such as "[-]a.03" is cut by a neighbor's triangle up to about 120 ms past its
+// stem (measured on his tablet capture 2026-10-12: a pair 104 ms apart already
+// overlapping), and 150 gives margin past that for longer labels while
+// standing at half the ~300 ms least spacing of real markers of either kind in
+// his densest movement, so it never pairs two real markers; an occasional
+// false merge is harmless because both positions stay on screen. If one marker
+// has more than one marker within the window of it, NONE OF THE THREE QUALIFY
+// — a third marker inside the window cancels the merge, rarer with warp
+// markers (which carry the payload he must read) than with phase resets
+// (interchangeable, payload-free). A FIXED TIME — never pixels, never the zoom
+// — and one constant for warp and phase reset alike.
+inline constexpr int kHistoryNudgeWindowMs = 150;
 
 // The window in SOURCE frames at the source's rate, std::nearbyint (the
 // rounding rule wherever a value lands on the frame grid). A pair is within
