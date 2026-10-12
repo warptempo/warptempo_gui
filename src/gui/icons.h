@@ -203,31 +203,28 @@ static_assert(std::size(kIconNames) == kIconCount);
 // android/app/build_apk.sh): GNOME 2.28, hard-coded (architect 2026-10-12).
 inline constexpr const char* kIconSet = "gnome-2.28";
 
-// THE GNOME 2.28 GLYPHS CENTERED (architect 2026-10-12, his pick of the
-// body-centered sheet; the arrows, and view-fullscreen after the same test
-// measured it off-centre): any glyph the body test finds off-centre is listed
-// here, each drawn translated by (dx, dy) in the SVG's own user units (the files are 48-unit
+// THE GNOME 2.28 GLYPHS BODY-CENTERED (architect 2026-10-12: every glyph, no
+// exceptions, "the simpler rule is just center all of them"): each is drawn
+// translated by (dx, dy) in the SVG's own user units (the files are 48-unit
 // canvases; +x right, +y down), composed into resvg's render transform
 // (svg_icon::rasterise) so it scales with the raster, the disabled copy
-// derived from the shifted render. THE BODY-CENTERING TEST: the shift puts the
-// glyph's BODY, the ink at alpha >= 0.5 at 60 px with GNOME's soft drop shadow
-// excluded (the shadow hangs below by design), at the center of its seat; the
-// arrows' mirror pairs (Undo / Redo, Previous / Next, BboxPrev / BboxNext, Up / Down)
-// come out symmetric to within 0.1 px. Where Undo's shadow crosses the canvas
-// edge after its shift it clips, accepted. THE FILES STAY BYTE-IDENTICAL to
-// gnome-icon-theme 2.28.0's (TabDetachB alone is a derived file, its README): the shift is the product's, not the file's.
+// derived from the shifted render. THE BODY-CENTERING TEST: the body is the
+// drawing with its shadows removed STRUCTURALLY (an element under a
+// feGaussianBlur filter, a fill of a radial gradient fading to transparent,
+// an id or inkscape:label containing "shadow"); its alpha >= 0.1 bounds at
+// 240 px give a bbox whose center the shift puts at the canvas centre. The
+// table is GENERATED into icon_shifts.inc by tools/icon_center/gen_icon_shifts.py
+// (never hand-edited), in kIconNames order. Where a shifted shadow crosses the
+// canvas edge it clips, accepted. THE FILES STAY BYTE-IDENTICAL to
+// gnome-icon-theme 2.28.0's (TabDetachB alone is a derived file, its README):
+// the shift is the product's, not the file's.
 struct IconShift {
     const char* name;   // the enumerator's name, kIconNames' spelling
     float       dx;
     float       dy;
 };
 inline constexpr IconShift kGnome228Shifts[] = {
-    {"EditUndo", 3.6f, 0.7f},         {"EditRedo", -1.5f, 0.7f},
-    {"GoPrevious", 1.6f, -1.9f},      {"GoNext", -0.6f, -2.0f},
-    {"BboxPrev", 0.0f, -1.9f},        {"BboxNext", 0.0f, -1.9f},
-    {"GoUp", 0.1f, -1.4f},            {"GoDown", 0.0f, -1.6f},
-    {"GoJumpDeclaration", -0.2f, 0.4f}, {"ValueDrag", 0.0f, 1.5f},
-    {"TimelineLift", -0.5f, -0.5f},
+#include "icon_shifts.inc"
 };
 
 // THE SET (architect 2026-10-12): the one bundled set, loaded once at launch
