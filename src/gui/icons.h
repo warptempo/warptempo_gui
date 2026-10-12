@@ -138,7 +138,13 @@ enum class Icon {
     // THE MARKER WALK AND THE TAB SWITCH.
     BboxPrev,            // Previous Marker (Shift+Tab)
     BboxNext,            // Next Marker (Tab)
-    TabDetach,           // Switch Tab (Ctrl+Tab)
+    TabDetach,           // Switch Tab (Ctrl+Tab) on tab A: the upper left
+                         // window in front
+    TabDetachB,          // Switch Tab on tab B (architect 2026-10-12): the
+                         // same two windows with the lower right one in
+                         // front, so the front window is the tab shown
+                         // (redesign_button_icon); the set's one derived
+                         // file, its README
     SettingsConfigure,   // Settings (bare `;`)
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
     Folder,              // a folder row; Up a Folder (the render player,
@@ -168,7 +174,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 59;
+inline constexpr int kIconCount = 60;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -185,7 +191,7 @@ inline constexpr const char* kIconNames[] = {
     "DocumentRevert", "MediaSkipBackward", "MediaPlaybackStart",
     "MediaPlaybackStop", "MediaPlaybackPause", "MediaSkipForward",
     "DialogCancel", "GoDown", "GoUp", "Lock", "BboxPrev",
-    "BboxNext", "TabDetach", "SettingsConfigure", "Folder", "AudioXWav",
+    "BboxNext", "TabDetach", "TabDetachB", "SettingsConfigure", "Folder", "AudioXWav",
     "MediaRepeatSingle", "DialogInformation", "DialogError", "WindowClose",
     "EditCopy", "HelpWhatsthis",
     "GoJumpDeclaration", "AccessoriesTextEditor", "EditDelete", "ValueDrag",
@@ -197,18 +203,19 @@ static_assert(std::size(kIconNames) == kIconCount);
 // android/app/build_apk.sh): GNOME 2.28, hard-coded (architect 2026-10-12).
 inline constexpr const char* kIconSet = "gnome-2.28";
 
-// THE GNOME 2.28 ARROWS CENTERED (architect 2026-10-12, his pick of the
-// body-centered sheet): each listed glyph is drawn
-// translated by (dx, dy) in the SVG's own user units (the files are 48-unit
+// THE GNOME 2.28 GLYPHS CENTERED (architect 2026-10-12, his pick of the
+// body-centered sheet; the arrows, and view-fullscreen after the same test
+// measured it off-centre): any glyph the body test finds off-centre is listed
+// here, each drawn translated by (dx, dy) in the SVG's own user units (the files are 48-unit
 // canvases; +x right, +y down), composed into resvg's render transform
 // (svg_icon::rasterise) so it scales with the raster, the disabled copy
 // derived from the shifted render. THE BODY-CENTERING TEST: the shift puts the
-// arrow's BODY, the ink at alpha >= 0.5 at 60 px with GNOME's soft drop shadow
+// glyph's BODY, the ink at alpha >= 0.5 at 60 px with GNOME's soft drop shadow
 // excluded (the shadow hangs below by design), at the center of its seat; the
-// mirror pairs (Undo / Redo, Previous / Next, BboxPrev / BboxNext, Up / Down)
+// arrows' mirror pairs (Undo / Redo, Previous / Next, BboxPrev / BboxNext, Up / Down)
 // come out symmetric to within 0.1 px. Where Undo's shadow crosses the canvas
 // edge after its shift it clips, accepted. THE FILES STAY BYTE-IDENTICAL to
-// gnome-icon-theme 2.28.0's: the shift is the product's, not the file's.
+// gnome-icon-theme 2.28.0's (TabDetachB alone is a derived file, its README): the shift is the product's, not the file's.
 struct IconShift {
     const char* name;   // the enumerator's name, kIconNames' spelling
     float       dx;
@@ -220,6 +227,7 @@ inline constexpr IconShift kGnome228Shifts[] = {
     {"BboxPrev", 0.0f, -1.9f},        {"BboxNext", 0.0f, -1.9f},
     {"GoUp", 0.1f, -1.4f},            {"GoDown", 0.0f, -1.6f},
     {"GoJumpDeclaration", -0.2f, 0.4f}, {"ValueDrag", 0.0f, 1.5f},
+    {"TimelineLift", -0.5f, -0.5f},
 };
 
 // THE SET (architect 2026-10-12): the one bundled set, loaded once at launch

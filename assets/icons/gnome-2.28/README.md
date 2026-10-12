@@ -3,7 +3,7 @@
 gnome-icon-theme 2.28.0, taken whole and self-contained (architect 2026-10-12): every drawing is from the 2.28.0
 tarball's `scalable/` tree, nothing from any other release. Its look is the 2.20 to 2.28 GNOME, chosen over 2.30
 (the Mist set, removed 2026-10-12 with Tango, GNOME 2.28 the one set). One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator and COPIED BYTE FOR
-BYTE from the tarball: never edit one. The set is hard-coded (`icons::kIconSet`; the `icons` device key and the Settings Icons
+BYTE from the tarball: never edit one. THE ONE EXCEPTION is TabDetachB (architect 2026-10-12), the product's own derived file, below. The set is hard-coded (`icons::kIconSet`; the `icons` device key and the Settings Icons
 row were removed 2026-10-12). The program parses the files at launch, in place, through resvg (`src/gui/svg_icon.h`): on the laptop
 from this folder, on the tablet from the APK's `icons/gnome-2.28/` assets (`android/app/build_apk.sh`); a file that is
 not well-formed SVG fails the launch, naming the file. Files of other names in this folder (this README, the licence
@@ -32,9 +32,17 @@ How the files sit beside the GPL-3 program: each SVG is a separate data file und
 and never linked or compiled into the program's code; the repository distributes source only (THIRD_PARTY.md's own
 statement).
 
+## The one derived file
+
+`TabDetachB.svg` is the product's own edit of `preferences-system-windows.svg` (2026-10-12): the element order only, the
+group `g2865` (the lower right window) moved after `g2820` (the upper left window) so the back window paints in front;
+every coordinate is unchanged. Switch Tab wears `TabDetach.svg` on tab A and this file on tab B: the same two windows,
+the one in front the tab shown. GPL-2 section 2(a)'s changed-file notice is the comment inside the SVG, naming the
+change and the date; the original `TabDetach.svg` stays byte-identical to the tarball's. Its hash is in the table.
+
 ## The import check
 
-All 59 files were rendered through rsvg-convert at 60 px onto one contact sheet and looked at (the product's own
+All 59 tarball files (TabDetachB, derived, added 2026-10-12) were rendered through rsvg-convert at 60 px onto one contact sheet and looked at (the product's own
 resvg road was not run for this import).
 
 ## The icons
@@ -90,6 +98,7 @@ resvg road was not run for this import).
 | SettingsConfigure | `preferences-system` | `scalable/categories/preferences-system.svg` | — | `fe6e0e022ef3ea6c1a3b979a930c9d3404efd21dd48fd71ad4eda453701f38aa` |
 | ShallowHistory | `x-office-calendar` | `scalable/mimetypes/x-office-calendar.svg` | — | `2cee419db4b8f565828b1718ff10a7f9ebe6ae622e51b726a855618a5e9751a8` |
 | TabDetach | `preferences-system-windows` | `scalable/apps/preferences-system-windows.svg` | — | `5b198b46dfcb737528049fff9881c9d53d82824ad73c87a6c7723817ba8923d5` |
+| TabDetachB | `preferences-system-windows` (CHANGED FILE, below) | `scalable/apps/preferences-system-windows.svg` | — | `4a82be25026c3befe2cf7c4f739d16db008e5a1c10266e6dd69a9b5a5ee457d5` |
 | TimelineLift | `view-fullscreen` (architect 2026-10-12: view-restore's tiny windows left the case mostly empty) | `scalable/actions/view-fullscreen.svg` | — | `30d89134642e45f2e08299a8cde3d3bb95199f3355c5ba62cc3f2e752dd0527c` |
 | ValueDrag | `object-flip-vertical` | `scalable/actions/object-flip-vertical.svg` | — | `5fb09615159e44c02a584cfa048dcb8ddd0b663111da4ea6be5c26851a6fbd0b` |
 | VcsCommit | `go-top` | `scalable/actions/go-top.svg` | — | `c9f7ee737b3ebaa57c40339b9d738b5525ad0f7d088008710a1e6a810a0e7470` |

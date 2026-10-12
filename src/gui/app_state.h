@@ -17372,6 +17372,14 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // that predates this act (accepted cost, recorded at the fork).
         case RedesignButton::TransportPlayStop:
             return transport_session_live(a);
+        // SWITCH TAB WEARS THE TAB (architect 2026-10-12): the table's
+        // TabDetach (the upper left window in front) on tab A, TabDetachB
+        // (the same two windows, the lower right one in front) on tab B —
+        // the pair reads as one toggle. The bit is active_tab_view itself,
+        // the truth row 8's clock letter reads; the stash carries it, so the
+        // per-tick comparator repaints the face on any writer of the tab.
+        case RedesignButton::TransportSwitchTab:
+            return a.active_tab_view == 'B';
         default:
             return false;
     }

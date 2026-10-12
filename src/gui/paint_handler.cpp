@@ -1046,6 +1046,10 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         // needs no chord exception, because Space already toggles.
         case RedesignButton::TransportPlayStop:
             return icons::Icon::MediaPlaybackStop;
+        // SWITCH TAB ON TAB B (architect 2026-10-12): the same two windows
+        // with the other in front; tab A wears the table's TabDetach.
+        case RedesignButton::TransportSwitchTab:
+            return icons::Icon::TabDetachB;
         default:
             return table_icon;
     }
