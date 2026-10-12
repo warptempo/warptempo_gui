@@ -888,8 +888,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Left: case GuiKeys::Right:
             return bare;
         // The trim bounds bare, and the WHOLE-PIECE ends under ctrl
-        // (architect 2026-09-26: the S Pen's side button is glass's Ctrl, so
-        // the skip buttons' ctrl-click reaches Ctrl+Home / Ctrl+End there too).
+        // (architect 2026-09-26: the S Pen's side button is glass's Ctrl).
         // Shift spells nothing.
         case GuiKeys::Home: case GuiKeys::End: return bare || cl;
         // The viewport's stepped scroll.

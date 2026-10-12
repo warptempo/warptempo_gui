@@ -2046,10 +2046,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // is, where the bare pair lands on the trim bounds — the way to reach
     // audio the window has cut off without opening the window first. Same
     // body, same unconditional acts (run_playhead_end_jump,
-    // input_key_dispatch.cpp), through the movement owner as always. The two
-    // skip buttons dispatch it on a ctrl-click (redesign_button_ctrl_admits,
-    // app_state.h), which on the tablet is the S Pen's side button held on
-    // the skip.
+    // input_key_dispatch.cpp), through the movement owner as always.
     //
     // THEY DISPATCH HERE, WITH THE OTHER CTRL CHORDS, because the bare pair's
     // arms live in a switch this function reaches only with no modifier held —

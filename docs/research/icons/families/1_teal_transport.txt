@@ -1,0 +1,18 @@
+family: the teal transport and arrows
+
+PROMPT (attach 1_teal_transport.png):
+This sheet is one family of a Cool Edit Pro icon theme - audio-editing glyphs for a graphical digital audio workstation in Windows Millennium Edition. Redraw the whole family as SVGs, one per cell, each labeled with its name: a modern translation of the old style, not pixelated, the lines drawn for hiDPI devices but in late eighties / nineties style. Keep exactly this style, line weight and palette, and keep the members consistent with each other. Cells marked * are rough mock-ups of glyphs the original set lacks: keep their idea, draw them properly so they match their siblings.
+
+go to start - a teal bar and triangle pointing left
+left - two teal triangles pointing left
+play - one teal triangle pointing right (*mock-up)
+pause - two teal vertical bars (*mock-up)
+stop - a teal square
+right - two teal triangles pointing right
+go to end - a teal triangle and bar pointing right
+up - one teal triangle pointing up (*mock-up)
+down - one teal triangle pointing down (*mock-up)
+render - a red record dot (*mock-up)
+toggle repeat one - a teal arrow circling back over a ring
+undo - a teal arrow curling back to the left
+redo - a teal arrow curling forward to the right

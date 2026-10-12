@@ -2408,12 +2408,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   compositor's key-repeat rate (the record at the arrows' chord-table rows,
 //   input_pointer.cpp). The pressed interior is the ordinary arm's, and the
 //   hold has no cue of its own;
-//   THE TRANSPORT (kTransportGroup), closing the row — skip-back (bare Home,
-//   Ctrl+Home the whole-piece jump), THE ONE PLAY/STOP BUTTON (bare Space,
-//   whose GLYPH and TOOLTIP swap on the live audition bit — the reason this
-//   row's paint goes through redesign_button_icon) and skip-forward (bare
-//   End, Ctrl+End). The last button's right edge is one lane pad in from the
-//   lane's right edge.
+//   The last button's right edge is one lane pad in from the lane's right
+//   edge. (The Go to Start / Go to End pair left the row 2026-10-12; their
+//   keys, Home and End with their Ctrl twins, are untouched.)
 //
 // EVERY BUTTON GREYS WHERE ITS PRESS WOULD BE A NO-OP (the truthful-buttons
 // ruling, redesign_button_enabled), the `h` view's derived partition on top.
@@ -2515,26 +2512,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // eight W apart on the row's face, no grippers (paint_modal_dialog's player
 // branch).
 
-// The painter's half of the row's roster: four groups, all in the right
-// block and painted left to right in the order the body lays them (verbs,
-// walk, arrows, transport); each table is declared beside its reasons.
+// The painter's half of the row's roster: three groups, all in the right
+// block and painted left to right in the order the body lays them (the
+// marker group, walk, arrows); each table is declared beside its reasons.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
 // key off the same ids.
 struct TransportRowDef {
     RedesignButton id;
     icons::Icon    icon;
-};
-// THE TRANSPORT THREE, the right block's LAST GROUP since 2026-09-29
-// (architect: the most-used buttons at the bottom right for the right hand):
-// play and stop are ONE stateful button (2026-08-15), so the table carries
-// media-playback-START as that button's resting glyph and the resolver swaps
-// in media-playback-STOP while an audition runs (redesign_button_icon —
-// Save's and Render's own shape, and the reason this row's paint goes through
-// the resolver).
-constexpr TransportRowDef kTransportGroup[] = {
-    {RedesignButton::TransportSkipBack,    icons::Icon::MediaSkipBackward},
-    {RedesignButton::TransportPlayStop,    icons::Icon::MediaPlaybackStart},
-    {RedesignButton::TransportSkipForward, icons::Icon::MediaSkipForward},
 };
 // THE SINGLE-MARKER VERBS (architect 2026-08-18, "move drop/delete/disable/
 // toggle inherit to bottom right row"), the RIGHT BLOCK'S FIRST GROUP: drop
@@ -2588,7 +2573,15 @@ constexpr TransportRowDef kTransportGroup[] = {
 // (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
 // of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
 // (architect), taking its glyph with it — its only consumer.)
+// PLAY / STOP HAS THE GROUP'S FIRST SEAT (architect 2026-10-12: his pen is
+// mid-screen when he decides to play or stop, and the seat lands near the
+// screen's centre). Play and stop are ONE stateful button (2026-08-15), so
+// the table carries media-playback-START as its resting glyph and the
+// resolver swaps in media-playback-STOP while an audition runs
+// (redesign_button_icon — Save's and Render's own shape, and the reason this
+// row's paint goes through the resolver).
 constexpr TransportRowDef kMarkerVerbGroup[] = {
+    {RedesignButton::TransportPlayStop,    icons::Icon::MediaPlaybackStart},
     {RedesignButton::IconMarkerDrop,       icons::Icon::ListAdd},
     {RedesignButton::IconMarkerDelete,     icons::Icon::ListRemove},
     {RedesignButton::IconMarkerDisable,    icons::Icon::ViewHidden},
@@ -2890,11 +2883,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 2026-10-09): THE CLOCK'S GROUP two W in from the lane's left edge — the
     // gripper, the dark time field, the end bar — with THE STATE LINE on the
     // free face past it (the block at the clock below) — then THE RIGHT
-    // BLOCK, packed against the lane's right edge: the MARKER-VERB GROUP (its
-    // eight counted off kMarkerVerbGroup), the MARKER-WALK GROUP (Previous
-    // Marker, Next Marker, Center and Switch Tab, kTransportWalkGroup), the
-    // four CARDINAL ARROWS (↓ ↑ ← →, kTransportArrowGroup) and the TRANSPORT
-    // THREE (kTransportGroup), each Cool Edit's group, two W of face between
+    // BLOCK, packed against the lane's right edge: the MARKER GROUP (Play /
+    // Stop first, then the verbs; its nine counted off kMarkerVerbGroup),
+    // the MARKER-WALK GROUP (Previous Marker, Next Marker, Center and Switch
+    // Tab, kTransportWalkGroup) and the four CARDINAL ARROWS (↓ ↑ ← →,
+    // kTransportArrowGroup), each Cool Edit's group, two W of face between
     // two. The whole block is measured first and laid left to right from
     // there, so one expression owns the anchor and no group re-derives it.
     // ITS TWO MODE TERMS are the `h` view's: the hide (architect 2026-10-07,
@@ -2909,30 +2902,30 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (paint_bottom_strip).
     //
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
-    // case; the case 23 since 2026-10-09 ~10:25, the verbs eight since
-    // Toggle Value Drag joined 2026-10-11, the air 5 / 5 since 2026-10-09
-    // ~00:30 — Cool Edit's 6 / 4 before it, the same sum): a group of n is
-    // 5 + 5 + 23n + 5 + 6 = 23n + 21, so the block is the 8 verbs' 205, the walk's 113, the
-    // arrows' 113 and the transport's 90 with three gaps of 2, 527 W — on the
-    // tablet's 768 at 300 %, the lane W 1..766 inside the program frame's
-    // columns (2026-10-10), starting at W 240, the clock's group W 3..100
-    // (Tahoma's ~67-W cell and its two 5-W pads, a ~77-W field; 2026-10-10),
-    // the state line's first ink at W 106, clipped at W 238 (~132 W of
-    // line). IN THE `h` VIEW (the hide,
-    // 2026-10-07; Open Text Editor and Toggle Value Drag hidden there with
-    // the verbs) the block is
-    // 1 verb + 4 walk + Older / Newer in the arrows' seat (2026-10-11) + 2
-    // transport in four groups, 44 + 113 + 67 + 67 + 6 = 297 W, the line's room 364 W. THE ROW CARRIES NO COLLISION
-    // RULE — none of the redesign does — and the crop-at-the-floor allowance
-    // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
-    // the clock's group once the window falls below about 1 + 2 + 98 + 527 +
-    // 1 = 629 W outside the view (the program frame's two lines among them).
+    // case; the case 23 since 2026-10-09 ~10:25, the marker group nine since
+    // Play took its first seat 2026-10-12, the air Cool Edit's measured 6
+    // before the first case and 4 after the last since 2026-10-12): a group
+    // of n is 5 + 6 + 23n + 4 + 6 = 23n + 21, so the block is the marker
+    // group's 228, the walk's 113 and the arrows' 113 with two gaps of 2,
+    // 458 W — on the tablet's 768 at 300 %, the lane W 1..766 inside the
+    // program frame's columns (2026-10-10), starting at W 309, the clock's
+    // group W 3..100 (Tahoma's ~67-W cell and its two 5-W pads, a ~77-W
+    // field; 2026-10-10), the state line's first ink at W 106, clipped at
+    // W 307 (~201 W of line). IN THE `h` VIEW (the hide, 2026-10-07; Play,
+    // Open Text Editor and Toggle Value Drag hidden there with the verbs)
+    // the block is 1 verb + 4 walk + Older / Newer in the arrows' seat
+    // (2026-10-11) in three groups, 44 + 113 + 67 + 4 = 228 W, the line's
+    // room 433 W. THE ROW CARRIES NO COLLISION RULE — none of the redesign
+    // does — and the crop-at-the-floor allowance recorded at
+    // kMinWindowWidthPx covers a narrow window: the block reaches the
+    // clock's group once the window falls below about 1 + 2 + 98 + 458 +
+    // 1 = 560 W outside the view (the program frame's two lines among them).
     // THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.
     int right_block_x = content.x + content.w;
     {
-        // THE FOUR GROUPS IN PAINTED ORDER, each read off its own table, so a
+        // THE THREE GROUPS IN PAINTED ORDER, each read off its own table, so a
         // box joining or leaving moves the block with no second edit.
         // IN THE `h` VIEW the arrows' seat is the walk's two steps
         // (kTransportHistoryStepGroup, its one owner): the group that does
@@ -2949,8 +2942,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             kMarkerVerbGroup, kTransportWalkGroup,
             history ? std::span<const TransportRowDef>(
                           kTransportHistoryStepGroup)
-                    : std::span<const TransportRowDef>(kTransportArrowGroup),
-            kTransportGroup};
+                    : std::span<const TransportRowDef>(kTransportArrowGroup)};
         // THE BLOCK'S WIDTH IS THE PAINTED GROUPS' (architect 2026-10-07): in
         // the `h` view a button whose chord the view refuses in every session
         // is not painted (history_mode_hides_button, input_pointer.cpp), so
@@ -5519,16 +5511,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // wear a tooltip or answer a press (the keyboard's claim takes the press
     // first; the zero rects take the rest).
     if (modal_owns_bottom_row(app) || onscreen_keyboard::stands(app, gui)) {
-        for (const TransportRowDef& def : kTransportGroup) {
-            publish_button_face(cr, app, audio, playback, target_render,
-                                def.id,
-                                GuiRect{0, 0, 0, 0});
-        }
-        // The right block's other groups stand down with the transport
-        // — the MARKER VERBS, the MARKER-WALK GROUP, the four ARROWS and the
+        // The right block's groups stand down together: the MARKER GROUP, the MARKER-WALK GROUP, the four ARROWS and the
         // `h` view's Older / Newer in their seat. Each is a tenant of this
         // lane like every other member, and the modal takes the lane whole:
-        // five tables, every button on the row.
+        // four tables, every button on the row.
         for (const TransportRowDef& def : kMarkerVerbGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
                                 def.id,

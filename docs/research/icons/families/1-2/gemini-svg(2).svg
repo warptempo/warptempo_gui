@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" shape-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="redoTeal" x1="85%" y1="10%" x2="15%" y2="90%">
+      <stop offset="0%" stop-color="#4ee7ba"/>
+      <stop offset="50%" stop-color="#14c798"/>
+      <stop offset="100%" stop-color="#047b5e"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="48" height="48" fill="#d4d0c8"/>
+
+  <!-- Redo Arrow Body (Horizontally mirrored geometry) -->
+  <path d="M 29 25
+           L 29 32
+           L 43 21
+           L 29 10
+           L 29 17
+           C 20.5 17, 12 21, 11 30
+           C 10.2 36, 15.5 41, 20 42
+           C 16 38.5, 15 34, 17.5 29
+           C 20 24.5, 24.5 25, 29 25
+           Z"
+        fill="url(#redoTeal)"
+        stroke="#0c352a"
+        stroke-width="1.4"
+        stroke-linejoin="round"
+        stroke-linecap="round"/>
+
+  <!-- Upper specular highlight line -->
+  <path d="M 41.2 21 L 30 11.5 L 30 18 C 24 18 17 20.5 13 27"
+        fill="none"
+        stroke="#b8ffeb"
+        stroke-width="1"
+        stroke-linecap="round"
+        opacity="0.85"/>
+</svg>

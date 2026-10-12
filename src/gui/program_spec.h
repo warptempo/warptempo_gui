@@ -117,17 +117,13 @@ struct ProgramSpec {
     // the gripper to the first case and from the last case to the END BAR,
     // whose six columns are a light column, this much face, a mid and a dark
     // column (its top row light and its bottom row mid).
-    // THE GROUP'S AIR IS THE PRODUCT'S OWN SYMMETRIC 5 W, the gripper to the
-    // first case and the last case to the end bar alike (architect 2026-10-09
-    // ~00:30, on the measurement sheet tmp/mocks/cool_edit/
-    // sheet_ROW8_SPACING.jpg: "those grippers are there because the elements
-    // can be moved in Cool Edit Pro's GUI. We won't allow that here. So let's
-    // go 5 / 5 on the gripper spacing"): Cool Edit's grippers are the handles
-    // of panes it lets the user drag, which the product never allows, so the
-    // air round the cases is a usability choice and not a measurement — his
-    // rule, usability over accuracy (render.h's row-6 canvas paragraph). Cool
-    // Edit's measured 6 and 4 (METRICS §5.2's chain) are the source departed
-    // from; the group's width is unchanged, 6 + 4 = 5 + 5.
+    // THE GROUP'S AIR IS COOL EDIT'S MEASURED 6 W from the gripper to the
+    // first case and 4 W from the last case to the end bar (architect
+    // 2026-10-12, on his mocks tmp/mocks/row8_air/): the asymmetry is
+    // optical — the end bar's bevel makes 4 W after the last case read as
+    // much air as 6 W after the gripper, the same 5-before / 4-after he
+    // measured in the toolbar band ("the Cool Edit row spacing has had a
+    // purpose for being asymmetrical"). METRICS §5.2's chain is the source.
     int  row8_group_gap_px;
     int  gripper_cols;
     int  gripper_reach_px;
@@ -293,8 +289,8 @@ inline constexpr ProgramSpec kProgramSpec = {
     .row8_group_gap_px  = 2,
     .gripper_cols       = 5,
     .gripper_reach_px   = 2,
-    .gripper_to_case_px = 5,
-    .case_to_end_bar_px = 5,
+    .gripper_to_case_px = 6,
+    .case_to_end_bar_px = 4,
     .end_bar_face_px    = 3,
     .field_h_px         = 17.0,
     .field_pad_px       = 5.0,
@@ -365,10 +361,6 @@ static_assert(program_case_authored_px(kProgramSpec) == 23);
 static_assert(program_band_authored_h(kProgramSpec) == 33);
 static_assert(program_dock_bar_authored_h(kProgramSpec) == 6);
 static_assert(program_row8_authored_h(kProgramSpec) == 32);
-// ROW 8'S GROUP AIR IS SYMMETRIC (architect 2026-10-09 evening, the fields'
-// paragraph above): the gripper's air and the end bar's are one length.
-static_assert(kProgramSpec.gripper_to_case_px ==
-              kProgramSpec.case_to_end_bar_px);
 static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
 static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);

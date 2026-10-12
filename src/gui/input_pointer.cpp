@@ -599,20 +599,12 @@ constexpr ToolbarChord kToolbarChords[] = {
     // tick_chrome_press_repeat below. The physical arrow KEYS are untouched
     // throughout, repeat_eligible included — the arm SHARES that predicate
     // rather than mirroring it.
-    // THE TWO SKIPS ADMIT CTRL (architect 2026-09-26): a CTRL-CLICK
-    // dispatches Ctrl+Home / Ctrl+End, the WHOLE-PIECE jump, through
-    // redesign_button_ctrl_admits (app_state.h) — on glass the S Pen's side
-    // button held on the skip. They admit no shift, which is what keeps the
-    // LONG PRESS — glass's held shift — off the act by construction, so a held
-    // skip is the trim-bound jump a tap is. The rows below carry the PLAIN
-    // chord, as every row does; the admission and its modifier are the
-    // roster's, never a column here.
-    {RedesignButton::TransportSkipBack,
-     GuiKeys::Home,   false, false, false, false},                             // bare Home
+    // The rows below carry the PLAIN chord, as every row does; the
+    // admission and its modifier are the roster's, never a column here.
+    // (Home / End have no button since 2026-10-12; their keys are
+    // input_key_dispatch.cpp's.)
     {RedesignButton::TransportPlayStop,
      GuiKeys::Space,  false, false, false, false},                             // bare Space
-    {RedesignButton::TransportSkipForward,
-     GuiKeys::End,    false, false, false, false},                             // bare End
     // THE SINGLE-MARKER VERBS (2026-08-12), the right block's first group
     // since the architect moved them down here on 2026-08-18: drop, delete,
     // disable toggle and inherit/collapse (FLATTEN stood among them for the

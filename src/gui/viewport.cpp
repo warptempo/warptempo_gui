@@ -79,13 +79,10 @@ int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
 // the clamp's purpose are all at the declaration (app_state.h). THREE READERS:
 // the shared jump body run_playhead_end_jump (input_key_dispatch.cpp) plus the
 // history view's own pair, so the live Home / End, their ctrl forms and the
-// mode's absolute jumps spell one bound once instead of once per route (the
-// bottom row's two SKIP buttons dispatch Home / End, and Ctrl+Home / Ctrl+End
-// on a ctrl press, like any other chrome button and reach it that way); and
+// mode's absolute jumps spell one bound once instead of once per route; and
 // playhead_end_jump_actionable just below, the jump acts' "would this form
-// change anything" owner, through which the SKIPS' FACE and the acts' own
-// no-op refusals read this landing (the skips' case in
-// redesign_button_enabled, app_state.h, states the face).
+// change anything" owner, through which the acts' own no-op refusals read this
+// landing.
 int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
                                     bool forward, bool whole_piece) {
     if (whole_piece || app.history_mode.active) {

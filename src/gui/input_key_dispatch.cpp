@@ -1764,9 +1764,9 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     them and states the whole succession);
 //   * BARE `u` — the Cumulative toggle's own button (2026-08-08), which joined
 //     that family on exactly the same terms and shares that arm;
-//   * BARE Home / BARE End — the bottom row's two SKIP buttons;
-//     CTRL+HOME / CTRL+END are the same two buttons' ctrl press (architect
-//     2026-09-26), claimed above beside the march;
+//   * BARE Home / BARE End and CTRL+HOME / CTRL+END — keys alone since
+//     2026-10-12 (the bottom row's skip buttons left), claimed above beside
+//     the march;
 //   * BARE `c` — the icon row's zoom-original button since the 2026-08-12
 //     relayout, likewise;
 //   * BARE Tab (with its shifted form, the walk button's shift press) — the

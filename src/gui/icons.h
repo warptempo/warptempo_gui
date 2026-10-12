@@ -134,11 +134,11 @@ enum class Icon {
     // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
     // pause state); the render player's own Play/Pause button wears
     // MediaPlaybackPause while live.
-    MediaSkipBackward,   // Go to Start (bare Home)
+    MediaSkipBackward,   // the render player's Previous (row 8 has no skip since 2026-10-12)
     MediaPlaybackStart,  // Play (the face while stopped)
     MediaPlaybackStop,   // Stop (the face while an audition runs)
     MediaPlaybackPause,  // Pause (the render player's row, while live)
-    MediaSkipForward,    // Go to End (bare End)
+    MediaSkipForward,    // the render player's Next
     DialogCancel,        // Render's mid-render Cancel face
     GoDown,              // Row 8's down arrow (bare Down)
     GoUp,                // Row 8's up arrow (bare Up)
