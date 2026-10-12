@@ -3621,11 +3621,11 @@ struct SettingsPopupItem {
 // colors were compiled in (architect 2026-10-08, theme_file.h). No theme
 // file ships now: the catalog's entries are the built-in SCHEMES, compiled
 // from it by tools/theme_catalog/gen_theme_files.py, chosen in the color
-// picker: 103 since 2026-10-11 — chrome_schemes.inc's rows, one per catalog
-// entry but the dropped `clearlooks` (windows 26, windows-plus 16, kde3 25,
-// cde 36), the windows-2000 chrome's own `windows-2000-standard` among them
+// picker: 42 since 2026-10-12 (103 until the KDE 3 and CDE families
+// were dropped) — chrome_schemes.inc's rows, one per catalog entry of the
+// windows (26) and windows-plus (16) families, the windows-2000 chrome's own `windows-2000-standard` among them
 // rather than beside them (palette_file.h's kGuiChromeSchemes; the picker's
-// menu lists it first and the other 102 after its separator; the product's
+// menu lists it first and the other 41 after its separator; the product's
 // own `cool-edit-pro-me` of 2026-10-10 removed 2026-10-11).
 //
 // `Chrome` STOOD 2026-10-07..10-10 (the vocabulary choice) and LEFT WITH ITS

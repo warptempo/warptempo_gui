@@ -420,9 +420,9 @@ constexpr bool is_palette_name_spelling(std::string_view v) {
     return true;
 }
 
-// THE BUILT-IN SCHEMES (the head) — every catalog entry in the catalog's
-// order, GENERATED (chrome_schemes.inc; never hand-edited): the key, the
-// display name ("Windows Rainy Day", "CDE Northern Sky" — the family's word,
+// THE BUILT-IN SCHEMES (the head) — every windows and windows-plus catalog
+// entry in the catalog's order, GENERATED (chrome_schemes.inc; never hand-edited): the key, the
+// display name ("Windows Rainy Day", "Plus Space" — the family's word,
 // then the catalog name in Title Case; the generator's head) and the six
 // caption keys' words, every inactive key present (a scheme records its inactive
 // caption, flat where it records no end). No face: a scheme carries none

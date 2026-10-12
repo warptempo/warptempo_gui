@@ -598,7 +598,7 @@ GuiChromePick live_scheme_keys();
 
 // A PRESET'S SHOWN NAME of the scope's kind (the preset button's label, the
 // menu's rows): a built-in's generated display name ("Windows 2000
-// Standard", "CDE Northern Sky"; Cool Edit's "Default", "XP
+// Standard", "Plus Space"; Cool Edit's "Default", "XP
 // Blue" — the key is the file grammar's, this the user's, as
 // element_display_name is), a file's name verbatim. Whether
 // `name` is a built-in's display name of the scope's kind, case and all —

@@ -61,9 +61,9 @@ catalog.json's `clearlooks` entry still carries its `engine_tones`: they are the
 performs, and they leave catalog.json at its next build.) A catalog change is `build.py`, then `gen_theme_files.py` and
 `catalog_md.py`, then the build, the outputs committed together; the output is byte-stable (the catalog's order,
 uppercase hex, LF, no timestamp). No entry ships as a theme: the bundled theme files (`assets/themes/<key>.theme`,
-2026-10-04..10-08) retired with the `theme` key, the git history keeping them. WHAT SHIPS OF EVERY ENTRY BUT
-`clearlooks` (architect 2026-10-10: "we can remove the Clearlooks theme"; 103 of the 104, the windows-2000 chrome's
-own among them) is its SIX CAPTION KEYS — the caption's start, end and text and the inactive
+2026-10-04..10-08) retired with the `theme` key, the git history keeping them. WHAT SHIPS OF THE `windows` AND `windows-plus` ENTRIES
+(architect 2026-10-12: the KDE 3 and CDE families leave the built-ins, 42 of the 104, the windows-2000 chrome's
+own among them; `clearlooks` went 2026-10-10: "we can remove the Clearlooks theme"; the others stay the catalog's record) is its SIX CAPTION KEYS — the caption's start, end and text and the inactive
 caption's three (the ground, text, selection and field keys of 2026-10-08 retired 2026-10-10) — and NO FACE (architect
 2026-10-09 ~21:20: "the scheme's default font should stop being honored — it should only be honored from the font
 picker"; the app's face is its `font` device key; a Windows entry's `font` record stays the catalog's record and is
