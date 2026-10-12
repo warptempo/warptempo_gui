@@ -1829,6 +1829,16 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
 
     // THE LABELS, LEFT TO RIGHT: a later cue's box masks an earlier cue's
     // text across its own extent alone.
+    //
+    // THE TEXT PAINTS ONLY WHERE NO LATER BOX WILL COVER IT (architect
+    // 2026-10-12, the marker slowdown at coarse zoom: a cost cut that paints
+    // the same pixels — every later box is opaque, the same rows, and its
+    // left edge never lies left of this one's, the cues being ordered by
+    // column): the VISIBLE SPANS of [a, b) less every later non-empty box,
+    // found in one walk over the later boxes that start inside it, and the
+    // text clipped to their union. A long label before a short one keeps its
+    // span past the short one's end.
+    std::vector<std::pair<int, int>> spans;
     for (int i = 0; i < n; ++i) {
         const CueDraw& c = cues[static_cast<std::size_t>(i)];
         const int a = lo[static_cast<std::size_t>(i)];
@@ -1842,6 +1852,27 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         // 2026-10-09 ~23:30, render.h's SELECTED row), its text alone
         // changing color.
         paint_cell_rect(cr, GuiRect{a, lane.y, b - a, fill_h}, pal.face);
+        cairo_restore(cr);
+
+        spans.clear();
+        int cursor = a;
+        for (int j = i + 1; j < n && cursor < b; ++j) {
+            const int ja = lo[static_cast<std::size_t>(j)];
+            const int jb = hi[static_cast<std::size_t>(j)];
+            if (ja >= b) break;
+            if (jb <= ja) continue;
+            if (ja > cursor) spans.emplace_back(cursor, ja);
+            cursor = std::max(cursor, jb);
+        }
+        if (cursor < b) spans.emplace_back(cursor, b);
+        if (spans.empty()) continue;
+
+        cairo_save(cr);
+        cairo_new_path(cr);
+        for (const auto& sp : spans)
+            cairo_rectangle(cr, sp.first, lane.y, sp.second - sp.first,
+                            fill_h);
+        cairo_clip(cr);
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
             const double tx = static_cast<double>(

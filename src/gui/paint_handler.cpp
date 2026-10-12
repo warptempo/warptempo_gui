@@ -21,6 +21,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <initializer_list>
 #include <span>
 #include <string>
@@ -5040,6 +5041,37 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
 
+// THE DOT COLUMN'S MASK (paint_marker_stems): a one-px-wide A8 strip `h`
+// rows tall, 255 on rows k ≡ `phase` (mod `period`) counting from its top
+// (k from `phase` up, as fill_dotted_waveform_line's loop runs), 0 elsewhere.
+// Cached by (h, period, phase) for the process; a size change replaces the
+// cache whole. Cost cut only (architect 2026-10-12): it paints the rectangles'
+// pixels.
+static cairo_surface_t* dot_column_mask(int h, int period, int phase) {
+    struct Entry {
+        int h, period, phase;
+        cairo_surface_t* surface;
+    };
+    static std::vector<Entry> cache;
+    for (const Entry& e : cache)
+        if (e.h == h && e.period == period && e.phase == phase)
+            return e.surface;
+    if (cache.size() >= 4) {
+        for (const Entry& e : cache) cairo_surface_destroy(e.surface);
+        cache.clear();
+    }
+    cairo_surface_t* surface =
+        cairo_image_surface_create(CAIRO_FORMAT_A8, 1, std::max(h, 1));
+    unsigned char* data = cairo_image_surface_get_data(surface);
+    const int stride = cairo_image_surface_get_stride(surface);
+    std::memset(data, 0, static_cast<std::size_t>(stride) * std::max(h, 1));
+    for (int k = phase; k < h; k += period) data[k * stride] = 255;
+    cairo_surface_mark_dirty(surface);
+    cache.push_back(Entry{h, period, phase, surface});
+    return surface;
+}
+
+
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
 // what stems and in which of the two cue colors — is at the declaration.
@@ -5083,27 +5115,35 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     cairo_save(cr);
     const GuiRect& band = area;   // the canvas, the area whole (2026-10-09)
     const ProgramSpec& ps = kProgramSpec;
+    // ONE MASK OP A STEM'S COLUMN, NOT ONE RECTANGLE A DOT (architect
+    // 2026-10-12, the marker slowdown at coarse zoom: a cost cut that paints
+    // the same pixels): the dots of fill_dotted_waveform_line's rule — rows
+    // ≡ phase (mod period) from the band's top, one device px — as a cached
+    // one-px-wide A8 mask, laid at the stem's column with the source color;
+    // an opaque source through a 0 / 255 mask is the rectangles' pixels
+    // exactly. The same column gate (fill_dotted_waveform_line's) applies.
+    const auto dotted_stem = [&](int col, int phase, GuiColor color) {
+        if (col < 0 || col >= area.w || ps.cue_dot_period <= 0) return;
+        cairo_surface_t* mask =
+            dot_column_mask(band.h, ps.cue_dot_period, phase);
+        set_palette_source(cr, color);
+        cairo_mask_surface(cr, mask, static_cast<double>(area.x + col),
+                           static_cast<double>(band.y));
+    };
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
         // already publish only columns in [0, w) (stem_column_on_waveform,
-        // render.cpp); fill_dotted_waveform_line (render.h) restates that
-        // gate against the area this painter is handed, so no entry can leak
-        // its column into the chrome beside the waveform, and clips the
-        // dots' waveform_line_px() width at the right edge.
+        // render.cpp); the gate restates that against the area this painter
+        // is handed, so no entry can leak its column into the chrome beside
+        // the waveform.
         const int col = static_cast<int>(std::nearbyint(
             stem.x - static_cast<double>(area.x)));
-        if (stem.cue_phase_dots != GuiCueDot::None) {
-            set_palette_source(cr, cue_dot_color(stem.cue_phase_dots));
-            fill_dotted_waveform_line(cr, area.x, area.w, col, band.y,
-                                      band.y + band.h, ps.cue_dot_period,
-                                      ps.cue_dot_phase);
-        }
-        if (stem.range_phase_dots != GuiCueDot::None) {
-            set_palette_source(cr, cue_dot_color(stem.range_phase_dots));
-            fill_dotted_waveform_line(cr, area.x, area.w, col, band.y,
-                                      band.y + band.h, ps.cue_dot_period,
-                                      ps.range_dot_phase);
-        }
+        if (stem.cue_phase_dots != GuiCueDot::None)
+            dotted_stem(col, ps.cue_dot_phase,
+                        cue_dot_color(stem.cue_phase_dots));
+        if (stem.range_phase_dots != GuiCueDot::None)
+            dotted_stem(col, ps.range_dot_phase,
+                        cue_dot_color(stem.range_phase_dots));
     }
     cairo_restore(cr);
 }
