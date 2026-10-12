@@ -196,7 +196,7 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .popup_margin_px              = 1,
     .window_frame_lines           = 2,
     .window_frame_maximized       = false,
-    .icon_set                     = "tango",
+    .icon_set                     = "gnome-2.28",   // architect 2026-10-12
 };
 
 // THE LIVE SPEC — the one instance the process paints, Windows 2000's.

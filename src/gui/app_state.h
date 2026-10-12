@@ -2512,8 +2512,9 @@ enum class RedesignButton {
     IconListen,
     // THE READ-ONLY TOGGLE (2026-08-14), the padlock's new home: it left the
     // TABS, where it was a per-tab slot, for a roster button that reports THE
-    // ACTIVE TAB's read_only bit — Lock's glyph and a lit lamp when the tab
-    // is locked, Unlock's unlit when it is not.
+    // ACTIVE TAB's read_only bit — Lock's glyph always, a lit lamp when the tab
+    // is locked, unlit when it is not (the one closed-padlock glyph
+    // either way, architect 2026-10-12).
     //
     // THE MOVE IS WHAT MAKES IT ITS CHORD, with no exception: bare `o`
     // toggles the ACTIVE tab's read-only and nothing else, and this button
@@ -3537,7 +3538,7 @@ struct SettingsChoiceSource {
     const char* (*label)(int);
 };
 // THE ICON SET'S DOMAIN (architect 2026-10-09): the bundled sets
-// (kIconSetKeys, icons.h) in their order — Tango, Mist — shown by
+// (kIconSetKeys, icons.h) in their order — Tango, Mist, GNOME 2.28 — shown by
 // their display names (kIconSetDisplayNames). The combo shows THE
 // EFFECTIVE SET, the chrome's own when the config has no `icons` line
 // (recall_gui_setting_value, settings_io.cpp).
@@ -17190,11 +17191,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         case RedesignButton::IconHistory: return a.history_mode.active;
         // THE READ-ONLY LAMP (2026-08-14), the same toggle pattern over the
         // ACTIVE TAB's own bit — which is exactly what bare `o` flips, so the
-        // lamp and the lock cannot drift. It is what carries the padlock's
-        // old two-state face into this row: the glyph swaps closed/open with
-        // the bit (redesign_button_icon, paint_handler.cpp) and the lit fill
-        // says the same thing in the row's own vocabulary, which is how
-        // iteration already reports a mode that is ON.
+        // lamp and the lock cannot drift. The glyph is the one closed padlock
+        // either way (architect 2026-10-12); the lit fill alone says the
+        // bit, which is how iteration already reports a mode that is ON.
         case RedesignButton::IconReadOnly:
             return active_view_state(a).read_only;
         // THE TOOLTIP LAMP (architect 2026-09-29): the same toggle pattern,
@@ -17351,13 +17350,13 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
 // top-strip damage, so this term is the one repaint of that edge.
 //
 // EVERY SUBJECT IS BINARY — two glyphs, one bit — which is what lets a single
-// bool serve all four. A future button with THREE glyphs needs a wider stash,
+// bool serve all three. A future button with THREE glyphs needs a wider stash,
 // not another predicate beside this one.
 //
 // A NAMED LIST WITH A `default`, deliberately, and not the exhaustive shape
 // redesign_button_enabled takes: this is not a classification of the
 // roster (where a new button must be forced to state its row) but a list of
-// the four buttons that HAVE a second glyph, so the honest default for a new
+// the three buttons that HAVE a second glyph, so the honest default for a new
 // button is "wears its table icon".
 //
 // SAVE HAS THREE GLYPHS SINCE 2026-09-27, the one wider subject, so the
@@ -17410,11 +17409,6 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // the hint is a face that follows the button (architect 2026-09-24).
         case RedesignButton::Render:
             return a.queue_running;
-        // THE READ-ONLY TOGGLE's table glyph is the CLOSED padlock, so the
-        // swap is the OPEN one — true on a writable tab. The inversion is the
-        // table's choice and not a statement about which state is ordinary.
-        case RedesignButton::IconReadOnly:
-            return !active_view_state(a).read_only;
         // THE TRANSPORT BUTTON wears media-playback-STOP while an audition
         // runs; its table glyph is media-playback-start. THE A/B AUDITION IS
         // ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST (architect

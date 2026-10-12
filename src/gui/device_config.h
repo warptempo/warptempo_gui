@@ -36,7 +36,7 @@
 //                            palette, Cool Edit's "Default", under every
 //                            chrome (effective_palette_name, 2026-10-09)
 //   icons=<set>              THE ICON SET the glyphs are drawn from: a
-//                            bundled set's key, `tango` or `mist`
+//                            bundled set's key, `tango`, `mist` or `gnome-2.28`
 //                            (is_icon_set_key, icons.h; `breeze` left with
 //                            its set 2026-10-09, an old line the ordinary
 //                            unknown-value refusal); MAY BE ABSENT — the
@@ -327,7 +327,7 @@ struct DeviceConfig {
     std::string palette;
     // THE ICON SET, UNSET BY DEFAULT (architect 2026-10-09): empty while the
     // config has no `icons` line, which RESOLVES AT LAUNCH to the live
-    // chrome's own set (effective_icon_set, icons.h: `tango` or `mist`) —
+    // chrome's own set (effective_icon_set, icons.h: `tango`, `mist` or `gnome-2.28`) —
     // never written back (set_live_icon_set, gui_main).
     std::string icons;
     // THE FONT DEFAULT (architect 2026-10-09 ~21:20): tahoma,

@@ -846,10 +846,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // outside the `h` view having been Play renders' own; the two that stay
     // keep his order and Listen still opens the group.
     {RedesignButton::IconListen, icons::Icon::PreviewRenderOn},
-    // The read-only pair, Lock and Unlock. The TABLE entry is Lock and the
-    // resolver (redesign_button_icon, above) is what swaps it for Unlock
-    // on a writable tab — every button goes through that resolver, so this
-    // constant is the fallback rather than the painted truth.
+    // The read-only toggle wears the closed padlock under every set and in
+    // both states (architect 2026-10-12); its lit / sunken face alone says
+    // read-only, like Toggle Tooltips.
     {RedesignButton::IconReadOnly,       icons::Icon::Lock},
     // SETTINGS (architect 2026-09-29), right after the padlock and ahead of
     // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
@@ -1039,17 +1038,6 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         // contract are at redesign_button_glyph_swapped's Render arm, the
         // click's divergence at finish_chrome_press_release's Render arm.
         case RedesignButton::Render: return icons::Icon::DialogCancel;
-        // THE READ-ONLY TOGGLE'S PADLOCK (2026-08-14): the CLOSED lock while
-        // the active tab is read-only — which is its TABLE glyph — and the
-        // OPEN one while it is writable, so this row is the swap. It is the
-        // tabs' own two-glyph face carried whole onto the button that took the
-        // padlock's job, and a THIRD kind of stateful glyph: Save's and
-        // Render's swap on a MODE, this one on the very bit its own chord
-        // flips, so it says the same thing as its lit lamp
-        // (redesign_button_selected) in the padlock's vocabulary rather than
-        // the row's. The tabs' DIM on the open lock did not come along — in
-        // this row a dimmed glyph means disabled.
-        case RedesignButton::IconReadOnly: return icons::Icon::Unlock;
         // THE COLLAPSED PLAY/STOP BUTTON (architect 2026-08-15): one button
         // over bare Space, wearing media-playback-STOP while the TRANSPORT is
         // live — a plain audition, or an A/B audition sequence including its
@@ -2561,7 +2549,7 @@ struct TransportRowDef {
 // THE GROUP IS SEVEN SINCE 2026-10-09 (architect: "resurrect the Open Text
 // Editor button. It should go between jump to defining marker and toggle add
 // to selection"): OPEN TEXT EDITOR — bare Return, the sets'
-// accessories-text-editor, Tango's the drawing its Unlock already wears —
+// accessories-text-editor, Tango's its own drawing —
 // the glass's road to Return with no editor standing. An act that opens an
 // editor, no lamp; it greys where Return would open nothing and on a locked
 // tab, and the `h` view does not paint it (its roster entry, app_state.h).

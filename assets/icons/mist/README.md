@@ -8,7 +8,7 @@ SELECTED (architect 2026-10-06 and 2026-10-07) — Mist's own files (gnome-theme
 combination. The live set is the device config's `icons` key's, else the chrome spec's (`src/gui/chrome_spec.h`'s
 `icon_set`, Tango under windows-2000): `icons=mist` chooses this folder; a set is chosen by its folder's name.
 
-THE TWO SOURCES. 58 files are gnome-icon-theme 2.30's drawings, 56 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
+THE TWO SOURCES. 57 files are gnome-icon-theme 2.30's drawings, 55 TAKEN FROM THE 3.0.0 TARBALL and 2 FROM 2.30.3'S,
 the release squeeze installs: 3.0.0 carries 2.30's sheets, redrawn at five of these seats (below), and at two of the
 five, DocumentRevert and DialogInformation, the architect ruled squeeze's own drawing back. The 2.30 icons are
 multi-icon Inkscape sheets, `src/*.svg`, one drawing per size slot: each file is one sheet's 48x48 slot EXTRACTED as
@@ -22,7 +22,7 @@ Every layer, not only the icon's own: zoom.svg draws part of zoom-original's and
 zoom-in layer, and the slot shows them. 2 files are Mist's own scalable drawings, copied from the gnome-themes tarball
 (byte-identical to the copies squeeze installs under `/usr/share/icons/Mist/scalable/`): `Folder` = Mist's
 `places/folder.svg` and `DocumentOpen` (Open Project, the icon row's first button since 2026-10-07) = Mist's
-`actions/document-open.svg` — the only two of the 60 seats Mist changes (it carries nine names, every one a blue
+`actions/document-open.svg` — the only two of the 59 seats Mist changes (it carries nine names, every one a blue
 folder; the wav row and every other toolbar and row 8 seat inherit from gnome). Mist's drawings fill the
 48 canvas edge to edge where GNOME's keep 3–4 units of margin, so its folder reads larger at the same seat.
 
@@ -78,7 +78,7 @@ renders identically to 3.0.0's, maximum difference 0). Import check on a sheet o
 shadow's blur, which both renderers draw. The enumerator keeps its name, as Tango's README says.
 
 REPEATS, known by position (the files byte-identical): gnome's `audio-x-generic` is AppIcon, AudioXWav and
-MusicNote16th. Every other file is worn once: 60 enumerators over 58
+MusicNote16th. Every other file is worn once: 59 enumerators over 58
 distinct drawings (AccessoriesTextEditor, the Open Text Editor button of 2026-10-09: gedit's notepad
 from 3.0.0's `src/accessories-text-editor.svg`, extracted by the same rule, 46 candidates, 2 kept, maximum difference 0
 against the slot's render at 72 px; ValueDrag, below, the last).
@@ -111,7 +111,7 @@ from 2.30.3's at 72, levels of 255):
 
 ## The import check (the resvg ruling: a set is checked once, at its import)
 
-All 58 files of the import through the product's own road (a scratch harness over `src/gui/svg_icon.cpp` and the
+All 58 files of the import (Unlock, the open padlock, retired 2026-10-12 with its file; 57 remain) through the product's own road (a scratch harness over `src/gui/svg_icon.cpp` and the
 build's resvg 0.48.1) and through rsvg-convert 2.62.4, composited over #D4D0C8, the mean absolute channel difference
 in levels of 255: the median over the 58 is **0.52 at 72 px** (p90 1.20, worst 2.91 HelpWhatsthis) and **1.75 at 33
 px** (p90 3.46, worst 4.61 EditDelete); 1.03 at 48. Against GNOME's own 48-px PNGs in the 3.0.0 tarball, the median is
@@ -149,7 +149,7 @@ column is the shipped file's sha256.
 ## Licence
 
 gnome-icon-theme 3.0.0's `COPYING`, copied here verbatim as `COPYING-gnome-icon-theme-3.0.0`, reads: "GNOME icon theme
-is distributed under the terms of either GNU LGPL v.3 or Creative Commons BY-SA 3.0 license." The set takes the 55
+is distributed under the terms of either GNU LGPL v.3 or Creative Commons BY-SA 3.0 license." The set takes the 54
 files from 3.0.0 under the LGPL v3, whose text the tarball ships as `COPYING_LGPL` (here `COPYING_LGPL-gnome-icon-theme-3.0.0`), with
 the GNU GPL v3 beside it as `COPYING_GPL3-gnome-icon-theme-3.0.0` (the LGPL v3's base text, carried for completeness,
 copied from the GNU text rather than the tarball, which does not ship it); the
@@ -212,7 +212,6 @@ licence texts) are not read.
 | GoDown | Down (the value ladder) | 3.0.0 `src/navigation-icons.svg`, slot `go-down` 48x48 at (186, 50) | — | — | `9740ecff336ea73d1fc3651c1f2dc7992a5179c75fcd038d5d40b58f28a8f821` |
 | GoUp | Up (the value ladder) | 3.0.0 `src/navigation-icons.svg`, slot `go-up` 48x48 at (366, 50) | — | — | `398b36552f6037180f7be36160d22a4180db0c5d4c5ce6593c65c5fd1e7e396f` |
 | Lock | Toggle Read-Only, locked | 3.0.0 `src/changes.svg`, slot `changes-prevent` 48x48 at (296, 50) | — | — | `ae4d15d03f13b3351bac46d00ae0c1a0cfc4b1db8b29379807d4cb0800019ec2` |
-| Unlock | Toggle Read-Only, unlocked | 3.0.0 `src/changes.svg`, slot `changes-allow` 48x48 at (696, 50) | — | — | `138f451327658b2c600c5a0336aa6a24b90f12b652959c3c96aa5606a8d06e7e` |
 | BboxPrev | Previous Marker (Shift+Tab) | 3.0.0 `src/navigation-icons.svg`, slot `go-first` 48x48 at (456, 50) | — | — | `01e0a2c310027a4c8fce2ade0e9971fd3c55d891df64210e498ee6ec9b3b8ff3` |
 | BboxNext | Next Marker (Tab) | 3.0.0 `src/navigation-icons.svg`, slot `go-last` 48x48 at (856, 50) | — | — | `01007440faf4da38305b5f25d8ea98dec712a9442aea40f91a25786c80889628` |
 | TabDetach | Switch Tab | 3.0.0 `src/preferences-system-windows.svg`, slot `preferences-system-windows` 48x48 at (296, 50) | — | 3.0.0 ≠ 2.30.3 | `206cfdfd36c084b4d586a85ec036fd4d5a30b549ea6d9cb0c894efbcbdfc0fe0` |

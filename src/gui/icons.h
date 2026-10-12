@@ -3,14 +3,16 @@
 // THE ICON SET AND ITS ONE ROAD (architect 2026-10-06). An Icon is a GLYPH,
 // one per enumerator below, drawn from THE LIVE SET (gui_live_icon_set
 // below): the device config's `icons` key when the line is present, else
-// the live chrome's own (chrome_spec.h's icon_set — win2000's TANGO
-// 0.8.90'S SCALABLE DRAWINGS, ReactOS's model of a Windows 2000 desktop
-// wearing Tango (Tango's own files only, nothing drawn, no GNOME file, a
-// repeat known by position; the set the product drew itself before is git
-// history)). THE BUNDLED SETS are kIconSetKeys below — Tango and MIST,
+// the live chrome's own (chrome_spec.h's icon_set — win2000's GNOME 2.28,
+// gnome-icon-theme 2.28.0's scalable drawings, the default since architect
+// 2026-10-12; Tango 0.8.90's, ReactOS's model of a Windows 2000 desktop
+// wearing Tango, stays a choice (Tango's own files only, nothing drawn, no
+// GNOME file, a repeat known by position; the set the product drew itself before is git
+// history)). THE BUNDLED SETS are kIconSetKeys below — Tango, MIST,
 // gnome-icon-theme 2.30's drawings under Mist's own folders, the GNOME 2.30
 // set he keeps as a choice under the key (architect 2026-10-09: "Mist and
-// Tango both work"). (Breeze, the neutral monochrome set bound to the
+// Tango both work"), and GNOME 2.28, gnome-icon-theme 2.28.0's drawings
+// alone, nothing from another release (architect 2026-10-12). (Breeze, the neutral monochrome set bound to the
 // chrome's text role, stood 2026-10-08 to 2026-10-09 and left with that
 // binding: "looks out of place now", architect 2026-10-09.) One scalable
 // file per enumerator under
@@ -142,9 +144,9 @@ enum class Icon {
     DialogCancel,        // Render's mid-render Cancel face
     GoDown,              // Row 8's down arrow (bare Down)
     GoUp,                // Row 8's up arrow (bare Up)
-    // THE READ-ONLY TOGGLE'S TWO STATES, swapped by redesign_button_icon.
-    Lock,                // Locked
-    Unlock,              // Unlocked
+    // THE READ-ONLY TOGGLE'S ONE GLYPH (architect 2026-10-12): the closed
+    // padlock under every set; its lit / sunken face alone says read-only.
+    Lock,                // Toggle Read-Only
     // THE MARKER WALK AND THE TAB SWITCH.
     BboxPrev,            // Previous Marker (Shift+Tab)
     BboxNext,            // Next Marker (Tab)
@@ -179,7 +181,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 60;
+inline constexpr int kIconCount = 59;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -195,7 +197,7 @@ inline constexpr const char* kIconNames[] = {
     "KeyframePrevious", "KeyframeNext", "GoPrevious", "GoNext",
     "DocumentRevert", "MediaSkipBackward", "MediaPlaybackStart",
     "MediaPlaybackStop", "MediaPlaybackPause", "MediaSkipForward",
-    "DialogCancel", "GoDown", "GoUp", "Lock", "Unlock", "BboxPrev",
+    "DialogCancel", "GoDown", "GoUp", "Lock", "BboxPrev",
     "BboxNext", "TabDetach", "SettingsConfigure", "Folder", "AudioXWav",
     "MediaRepeatSingle", "DialogInformation", "DialogError", "WindowClose",
     "EditCopy", "HelpWhatsthis",
@@ -207,12 +209,12 @@ static_assert(std::size(kIconNames) == kIconCount);
 // THE BUNDLED SETS — the `icons` device key's whole vocabulary, a closed
 // compiled list in the Settings row's order (kIconSetChoiceSource,
 // app_state.h), each a folder under assets/icons/ (the APK packs every
-// folder there, android/app/build_apk.sh): Tango and Mist (Breeze left
+// folder there, android/app/build_apk.sh): Tango, Mist and GNOME 2.28 (Breeze left
 // 2026-10-09, an `icons=breeze` line the ordinary unknown-value refusal).
 // THE DISPLAY NAMES stand beside the keys, Title Case, the Settings row's
 // combo and list.
-inline constexpr const char* kIconSetKeys[]         = {"tango", "mist"};
-inline constexpr const char* kIconSetDisplayNames[] = {"Tango", "Mist"};
+inline constexpr const char* kIconSetKeys[]         = {"tango", "mist", "gnome-2.28"};
+inline constexpr const char* kIconSetDisplayNames[] = {"Tango", "Mist", "GNOME 2.28"};
 static_assert(std::size(kIconSetKeys) == std::size(kIconSetDisplayNames));
 
 // THE `icons` KEY'S GRAMMAR — the ONE owner, asked by the device config's
@@ -228,7 +230,7 @@ constexpr bool is_icon_set_key(std::string_view v) {
     return icon_set_key_for(v) != nullptr;
 }
 inline constexpr const char* kIconSetGrammarReason =
-    "must be tango or mist";
+    "must be tango, mist or gnome-2.28";
 // THE CHROME'S OWN SET IS A BUNDLED ONE (ChromeSpec::icon_set, the set an
 // absent `icons` line means).
 static_assert(is_icon_set_key(kChromeSpecWin2000.icon_set));
