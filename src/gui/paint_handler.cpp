@@ -169,13 +169,18 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // caches, the surface may be null on the very first paint after a load
     // (before the first rebuild fires); the blit is skipped and the background
     // shows through for that one frame.
+    // THE SURFACE HOLDS THE RULER LANE'S TOP THROUGH THE STRIP'S BOTTOM
+    // (2026-10-13, FlagCache's head), so it lands at its own origin row,
+    // flag_cache.origin_y, clipped as ever to the top strip: the clip's rows
+    // above the origin take no source, and the rows it holds are the bytes
+    // the whole-strip surface put there.
     if (flag_cache.surface) {
         cairo_save(cr);
         cairo_rectangle(cr, top_strip.x, top_strip.y,
                         top_strip.w, top_strip.h);
         cairo_clip(cr);
         cairo_set_source_surface(cr, flag_cache.surface,
-                                 top_strip.x, top_strip.y);
+                                 top_strip.x, flag_cache.origin_y);
         cairo_paint(cr);
         cairo_restore(cr);
     }

@@ -9,6 +9,8 @@
 #include "warp_frame_map.h"
 
 #include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -1207,11 +1209,14 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // wouldn't agree with anything sensible.
     if (!wf_cache.fp_rendered) return;
 
+    // THE SURFACE'S BAND (2026-10-13, FlagCache's head): the window's width,
+    // the client rows from the ruler lane's top through the top strip's
+    // bottom — the rows the cues' ink can reach.
     const GuiRect top_strip = top_strip_area(app);
-    if (top_strip.w <= 0 || top_strip.h <= 0) return;
-
+    const int origin_y  = top_ruler_row_area(app).y;
     const int surface_w = top_strip.w;
-    const int surface_h = top_strip.h;
+    const int surface_h = top_strip.y + top_strip.h - origin_y;
+    if (surface_w <= 0 || surface_h <= 0) return;
     // THE SCALE THE FLAG PIXELS ARE LAID OUT AT, keyed by field (contract at
     // FlagCache::fp_gui_scale_percent).
     const int gui_scale = gui_scale_percent();
@@ -1328,6 +1333,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_history_source          == history_source &&
         flag_cache.fp_history_local_index     == history_local_index;
 
+    // THE ORIGIN NEEDS NO FIELD (FlagCache::origin_y): it moves with the
+    // scale alone, which fp_gui_scale_percent keys. A tripwire, not a key —
+    // an origin that moved under an unchanged fingerprint is a program bug.
+    assert(!matches || flag_cache.origin_y == origin_y);
     if (matches) return;
 
     if (!flag_cache.surface ||
@@ -1342,31 +1351,59 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.width  = surface_w;
         flag_cache.height = surface_h;
     }
+    flag_cache.origin_y = origin_y;
 
-    cairo_t* ccr = cairo_create(flag_cache.surface);
-    cairo_save(ccr);
-    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
-    cairo_paint(ccr);
-    cairo_restore(ccr);
-
-    // top_strip_area is anchored at (0, 0), so the local rect equals the
-    // surface rect. The blit at on_redraw time positions the surface back
-    // at screen (0, 0).
-    const GuiRect local_top_strip{0, 0, surface_w, surface_h};
-    // The flag/triangle LANE rects the shapes occupy, straight from the lane
+    // THE FLAG/TRIANGLE LANE rects the shapes occupy, straight from the lane
     // accessors — the same bands the empty-lane press gate and the hit rects
-    // read. The top strip is anchored at screen y=0 and this surface mirrors it
-    // 1:1, so the screen-coordinate lane rects are already surface-local.
+    // read, in CLIENT coordinates: the context below is translated so that
+    // client row origin_y is the surface's row 0, and the painters never see
+    // the surface's own rows.
     // THE COLUMNS' ORIGIN is the canvas's (waveform_area's x, the column's
     // margin, its frame column and half the grid floor's leftover,
     // 2026-10-09) — a function of the scale and the window's width, both of
     // which the fingerprint keys (fp_gui_scale_percent, fp_area_w).
     const FlagLaneRects flag_lanes{top_marker_row_area(app),
                                    waveform_area(app).x};
+
+    // THE TRIPWIRES OF THE BAND (class 4; FlagCache's head carries the bound
+    // and the premise): every cue row is placed off the marker lane's top,
+    // the label's baseline at cue_baseline_px. ABOVE, a glyph's ink reaches
+    // at most the program face's em over the baseline, which must stand at
+    // or under the surface's first row; BELOW, the recorded descent and the
+    // label shadow's one quantum must end at or above the surface's last row
+    // (true by the lane's own geometry; stated here beside its twin).
+    {
+        const GuiFont program = gui_font(GuiFace::Program);
+        [[maybe_unused]] const int baseline =
+            flag_lanes.marker_lane.y + cue_baseline_px();
+        [[maybe_unused]] const int em_rows = static_cast<int>(std::ceil(
+            gui_face_em_px(GuiFace::Program) * gui_font_scale(program)));
+        [[maybe_unused]] const int descent_rows =
+            static_cast<int>(std::ceil(gui_font_descent_px(program)));
+        assert(baseline - em_rows >= origin_y);
+        assert(baseline + descent_rows + cue_unit_px() <=
+               origin_y + surface_h);
+    }
+
+    cairo_t* ccr = cairo_create(flag_cache.surface);
+    cairo_save(ccr);
+    cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(ccr);
+    cairo_restore(ccr);
+    // CLIENT COORDINATES ON THE SURFACE (FlagCache's head): one integral
+    // translation, so every painter places its cells where it placed them on
+    // the whole-strip surface and the direct road (direct_pixel_target)
+    // still takes the context, carrying the translation and the clip list.
+    cairo_translate(ccr, 0.0, -static_cast<double>(origin_y));
+
+    // THE BAND THE SURFACE HOLDS, in client coordinates, handed to every pass
+    // as its `top_strip_area`: each pass clips its ink to these rows
+    // (clip_to_waveform_columns), exactly the surface's.
+    const GuiRect local_top_strip{0, origin_y, surface_w, surface_h};
     // The width the flag column mapping divides the displayed span by — the same
     // denominator the live trim pass and the hit tests use (this pass stages it
     // for them at the tail), so flags stay column-aligned with the trim/stem
-    // verticals below them. The surface stays full-strip width; a
+    // verticals below them. The surface stays the window's width; a
     // non-multiple-of-16 window leaves the gutter columns unpainted.
     //
     // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
@@ -1554,7 +1591,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // deleting that duplicate is safe exactly because THIS rebuild remains the
     // stage owner on every viewport/map/dimension change — every one of those
     // changes moves a field of this cache's fingerprint (fp_vp span, map hash,
-    // target bit, top-strip dims, measured font px; wave_w is the PLATE's width
+    // target bit, the surface band's dims, the scale; wave_w is the PLATE's width
     // now and cannot move without moving the fp_vp span with it — the
     // derivation is at wave_w — and the window width moves surface_w besides),
     // so the rebuild fires and re-stages. A trim-only

@@ -324,13 +324,49 @@ struct WaveformCache {
 // (fp_suppressed_box_index, fp_suppressed_box_cell) precisely so open, close,
 // retarget and a move between one marker's own cells all rebuild this surface.
 //
-// The cache surface matches `top_strip_area(app)`: width = window width,
-// height = top_strip_height, origin (0,0). The blit at on_redraw time
-// positions the surface at screen (top_strip.x, top_strip.y) (= (0, 0)).
+// THE SURFACE HOLDS THE ROWS ITS INK CAN REACH (2026-10-13): the window's
+// width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
+// y, `origin_y`) through the top strip's bottom (the canvas's top frame row's
+// foot) — the ruler lane, the marker lane and the frame row, 90 device rows
+// at 300 % where the whole strip from row 0 was 345. Every cue pixel is
+// placed off the marker lane's top (paint_cues, render.cpp: the face boxes,
+// the triangles, the text on cue_baseline_px with its shadow one quantum
+// down); the only ink that can leave the lane is a glyph's overshoot, above
+// the baseline at most the program face's em (THE PREMISE: FreeType's
+// outline bounds never pass the em for the bundled face), which the lane's
+// rows above the baseline and the ruler lane above them hold with room to
+// spare (the surface's top stands more than twice the em over the baseline:
+// 73 rows against a 30.5-row em at 300 %, 24 W against 10.2 at 100 %), and
+// below it the descent and the shadow's quantum inside the lane's own rows.
+// maybe_rebuild_flag_cache asserts both bounds at every rebuild.
+// THE PAINTERS STILL WORK IN CLIENT COORDINATES: the rebuild translates its
+// context by -origin_y and hands each pass the band the surface holds as its
+// `top_strip_area`, so every published hit rect and stem is client-coordinate
+// as it was, and each pass's own clip (clip_to_waveform_columns over that
+// band's rows) bounds its ink to the surface. The blit
+// (paint_flag_annotations) lands the surface at (top_strip.x, origin_y),
+// clipped to the top strip.
+// IDENTITY RESTS ON (2026-10-13) — the bytes are the whole-strip surface's
+// of before, by construction: the same painters paint the same
+// client-coordinate geometry through an integral translation (cairo ignores
+// a translation in the font's ctm, and both platforms already hand on_redraw
+// a context translated by an integral frame; the direct road,
+// direct_pixel_target, carries the translation and the clip list through);
+// the pass's clip loses only rows no painter can ink (the em bound,
+// asserted); and the blit puts the same bytes on the same client rows — the
+// rows above origin_y held only transparent pixels, which the OVER blit left
+// untouched.
 struct FlagCache {
     cairo_surface_t* surface = nullptr;
     int              width   = 0;
     int              height  = 0;
+    // THE SURFACE'S ORIGIN (2026-10-13): the first client row it holds, the
+    // ruler lane's top — row 0 of the surface is this client row. Written at
+    // every rebuild with the surface it describes; read by the blit. A
+    // function of the scale alone (the lanes above the ruler are scaled
+    // lengths and gap 1 is zero, the top lanes outweighing the bottom's), so
+    // fp_gui_scale_percent keys it and the rebuild asserts as much at a match.
+    int              origin_y = 0;
 
     int64_t   fp_vp_start            = 0;
     int64_t   fp_vp_end              = 0;
@@ -479,8 +515,9 @@ struct FlagCache {
             cairo_surface_destroy(surface);
             surface = nullptr;
         }
-        width  = 0;
-        height = 0;
+        width    = 0;
+        height   = 0;
+        origin_y = 0;
     }
 
     ~FlagCache() { destroy_surface(); }
@@ -556,9 +593,11 @@ struct GuiPaintHandler {
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
-    //   - GEOMETRY, two fields off the LIVE top strip rect (top_strip_area, not
-    //     the plate — this surface mirrors the strip, not the waveform):
-    //     fp_area_w, fp_area_h;
+    //   - GEOMETRY, two fields off the LIVE surface band (not the plate —
+    //     this surface holds strip rows, not the waveform): fp_area_w the
+    //     window's width (top_strip_area's), fp_area_h the band's height, the
+    //     ruler lane's top through the top strip's bottom (2026-10-13,
+    //     FlagCache's head; its origin keyed through fp_gui_scale_percent);
     //   - THE SCALE, one field read live off render.h: fp_gui_scale_percent —
     //     every flag dimension rides gui_scale, so the axis is keyed BY FIELD
     //     rather than left to ride whichever strip dimension happens to move

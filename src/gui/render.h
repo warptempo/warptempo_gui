@@ -2855,7 +2855,8 @@ void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // device offset and unit device scale; the operator OVER; the matrix a pure
 // integral translation (both platforms hand on_redraw a context translated
 // by the integral frame width, platform_wayland.cpp / platform_android.cpp's
-// paint loops; the flag cache's is the identity); the clip a list of
+// paint loops; the flag cache's by its band's origin row, upward, since
+// 2026-10-13, FlagCache's head, paint_handler.h); the clip a list of
 // integral rectangles (cairo_copy_clip_rectangle_list, in user space, so the
 // translation carries them to device pixels; each is intersected with the
 // surface). Anything else answers false and the caller takes cairo's road.
