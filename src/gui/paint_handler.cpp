@@ -1505,7 +1505,8 @@ std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
 
 // THE CAPTION'S TITLE, ITS BOXES' ENABLED BIT AND THEIR PUSHED FACE — each
 // spelled once, read by the painter and by the caption's as-painted
-// fingerprint (caption_row_fingerprint, below), so the two cannot disagree.
+// fingerprint (GuiPaintHandler::upper_rows_fingerprint, the one owner of the
+// caption, menu row and band fingerprints), so the two cannot disagree.
 static std::string caption_title(const AppState& app) {
     return app.project_name.empty() ? std::string("Warptempo")
                                     : app.project_name + " - Warptempo";
@@ -1627,7 +1628,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
 }
 
 // THE OPEN TITLE — the menu whose pull-down stands — spelled once for the
-// painter and the menu row's as-painted fingerprint (menu_row_fingerprint).
+// painter and the menu row's as-painted fingerprint
+// (GuiPaintHandler::upper_rows_fingerprint).
 static bool menu_title_open(const AppState& app, RedesignButton id) {
     return app.dropdown.open() && id == dropdown_anchor_button(app.dropdown.menu);
 }
@@ -1998,7 +2000,7 @@ static std::string history_walk_line(AppState& app) {
 
 // THE BAND'S STANDING MEMBERS, IN PANES (2026-10-13: lifted out of
 // paint_icon_row so the painter and the band's as-painted fingerprint,
-// icon_row_fingerprint below, walk ONE membership): every member that stands
+// GuiPaintHandler::upper_rows_fingerprint, walk ONE membership): every member that stands
 // in this state laid into its pane — a pane's width is its standing members'
 // — in the walk's order, and every member that does not stand into `absent`.
 // A group LEADER (redesign_button_opens_icon_group, app_state.h — the

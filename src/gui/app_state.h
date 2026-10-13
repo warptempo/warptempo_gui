@@ -10765,8 +10765,13 @@ inline int dropdown_hang_y(const AppState& a, DropdownMenu /*m*/) {
 GuiRect top_icon_row_area(const AppState& a);
 // THE VIEWPORT'S LANES' TOP ROW — the toolbar band's foot, the first row of
 // the column's air (2026-10-13). Every lane from here through the waveform's
-// bottom reads the viewport, the zoom or the cursor and every row above it
-// reads none of them; the inventory is at Viewport::invalidate_waveform_area
+// bottom a viewport step repaints UNCONDITIONALLY; the rows above it (the
+// caption, the menu row, the band) repaint only when the fingerprint of their
+// complete painted inputs differs from the one the paint buffer last painted
+// (GuiPaintHandler::upper_rows_fingerprint, settled by
+// settle_owed_lane_damage) — the band's Full Zoom Out reads the zoom level, so
+// those rows are not free of the viewport, only of a viewport step's own
+// changes. The inventory is at Viewport::invalidate_waveform_area
 // (viewport.h), whose rect starts here.
 int viewport_lanes_top_y(const AppState& a);
 // GAP 1's band — the flexible band BETWEEN THE ICON ROW AND THE TRIM LANE (the
@@ -17398,9 +17403,9 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // between the Cumulative toggle going back up to the icon row and ADD
         // TO SELECTION arriving, which is the row's lamp now — its arm is
         // above with the other toggles, where a mode's lamp belongs): the
-        // two skips, the walk group's four (Center among them since
-        // 2026-09-29), the four arrows
-        // and the marker verbs are all acts
+        // walk group's three (Walk Previous, Walk, Switch Tab; the two skips
+        // left the roster 2026-10-12, Home and End being keys alone), the four
+        // arrows and the marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
         // 2026-08-15 collapse, is the ONE PLAY/STOP BUTTON. It carried the
         // row's only lamp for the hours it was a RADIO PAIR, lit on
