@@ -4271,7 +4271,9 @@ private:
     // the marker lane's flags, the waveform, the two dead
     // menu anchors, all of it — and the roster's buttons are
     // dead through redesign_button_enabled's first arm (their faces grey,
-    // their press claims refuse). THE ONE EXEMPTION IS THE LIVE FILE ANCHOR
+    // their press claims refuse) EXCEPT PLAY RENDERS (architect 2026-10-13,
+    // "so the user can quickly toggle it on/off by pressing the same button
+    // twice"): it stays lit and its lift, bare `l`, is the player's close. THE ONE EXEMPTION IS THE LIVE FILE ANCHOR
     // above the band (architect 2026-09-03 evening — the `h` view's partition
     // extended to both overlay contents): its press reaches the menu-row
     // claim through press_on_live_menu_anchor, and its OPEN MENU then owns

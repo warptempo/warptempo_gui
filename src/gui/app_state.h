@@ -15837,7 +15837,18 @@ inline bool redesign_button_enabled(const AppState& a,
     // this face had no viewer; on 2026-09-02 the band stopped at row 1's foot
     // and File alone stayed lit under it, which is the shape this ruling
     // restores.)
-    if (folder_overlay_stands(a)) return false;
+    // THE PLAYER'S OWN OPENER IS THE ONE EXCEPTION (architect 2026-10-13, low
+    // priority: "we should allow the media player button in media player, so
+    // the user can quickly toggle it on/off by pressing the same button twice"):
+    // while the RENDER PLAYER stands, Play Renders stays lit and its lift is
+    // bare `l`, which the player's router already answers with the player's
+    // own close (GuiRenderPlayer::close), so the button toggles exactly as the
+    // key does. The picker's band keeps it grey (the picker is no player, and
+    // a press there would open one over a list owner); the press and lift
+    // carry the same exemption (on_button_press's player veil,
+    // finish_chrome_press_release's head).
+    if (folder_overlay_stands(a))
+        return b == RedesignButton::IconListen && a.render_player.active;
     // THE COLOR PICKER GRAYS NOTHING WHOLESALE (architect 2026-10-07 evening
     // for row 8, 2026-10-08 for the icon row): the two button rows stay on
     // under it, painted and acting as without it (the asymmetry at

@@ -6372,6 +6372,16 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (app.render_player.active && !menu_row_press_admitted &&
         !caption_press_admitted) {
         if (button != GuiMouseButton::Left) return;
+        // THE PLAY RENDERS BUTTON TOGGLES THE PLAYER OFF (architect
+        // 2026-10-13: "so the user can quickly toggle it on/off by pressing
+        // the same button twice"): the icon row's press reaches the roster's
+        // own arm, whose painted-bit gate consumes every button but the one
+        // the face leaves lit (redesign_button_enabled's overlay arm), and the
+        // lift is bare `l`, the player's own closer.
+        if (rect_contains(top_icon_row_area(app), x, y)) {
+            claim_button_row_press();
+            return;
+        }
         if (claim_player_scrub_press(x, y, mods)) return;
         if (!mods.ctrl && !mods.alt && modal_dialog_stash_current()) {
             arm_modal_dialog_press(x, y, mods.shift);
@@ -8057,10 +8067,17 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // mirror: the scrub's marker drag (the seek commits here) and the modal
     // row's armed button through the one shared dispatch. Every other lift
     // is consumed — a chrome arm taken above dies here undispatched, the
-    // veil's answer (no chrome can arm under the player anyway, its roster
-    // being dead).
+    // veil's answer — but the Play renders arm, the one roster button the
+    // player leaves lit (architect 2026-10-13), which is lifted below.
     if (app.render_player.active) {
         if (button == GuiMouseButton::Left) {
+            // THE PLAY RENDERS BUTTON'S LIFT (architect 2026-10-13), its press
+            // block's mirror: the one roster arm the player's veil admits
+            // dispatches through the chrome act's own body.
+            if (chrome.kind == AppState::ChromePress::Kind::Roster) {
+                finish_chrome_press_release(chrome, x, y);
+                return;
+            }
             if (finish_player_scrub_release(x, y)) return;
             // THE SHIFTED-TWIN VERDICT IS READ BEFORE THE TAKE, which clears
             // the arm the hold is measured against (2026-08-28; the term's two
@@ -9190,7 +9207,13 @@ void GuiInputHandler::finish_chrome_press_release(
     // alone, and the lift answers as without the picker — a face the picker
     // makes a no-op is painted grey (redesign_button_enabled), so its lift
     // stops at the painted bit below.
-    if (modal_dialog_editor_active() || app.render_player.active ||
+    // THE PLAYER IS NO TERM FOR THE PLAY RENDERS ARM (architect 2026-10-13):
+    // that button, lit under the player, is the one roster arm the player's
+    // veil admits and its lift is the player's close; any other arm is the
+    // mid-hold case above and stays refused.
+    if (modal_dialog_editor_active() ||
+        (app.render_player.active &&
+         arm.index != redesign_button_index(RedesignButton::IconListen)) ||
         app.picker.active) return;
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
