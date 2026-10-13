@@ -1110,13 +1110,14 @@ void GuiInputHandler::close_history_mode() {
 //
 // A VIEW SWITCH INSIDE THE MODE IS DELIBERATELY NOT ONE OF THESE EDGES
 // (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist): it
-// already ends in kick_waveform_sync, whose tail rebuilds the flag cache INLINE
-// — the same republication every edge now reaches for, arrived at as part of
-// the switch itself — so there is no frame to protect.
+// already ends in kick_waveform_sync, whose owed rebuild rebuilds the flag
+// cache before the next frame paints (the pre-paint hook, 2026-10-13) — the
+// same republication every edge now reaches for, arrived at as part of the
+// switch itself — so there is no frame to protect.
 // Nor is there a domain change to protect against: on both sides of a view
 // switch `marker_index` indexes app.history_mode.flags, the mode owning the lane
-// throughout. Dropping anyway would be worse than redundant if it ran after the
-// kick, erasing the geometry that kick had just published. (The LIVE lane leans
+// throughout. Dropping anyway would be worse than redundant if it ran after a
+// flushed kick, erasing the geometry that rebuild had just published. (The LIVE lane leans
 // on the very same synchronous rebuild across `p`, where its stash genuinely
 // does change domain — warp store index to phase-reset store index — so the
 // mode is asking no more of that route than the live columns already do.)
@@ -1127,7 +1128,7 @@ void GuiInputHandler::close_history_mode() {
 // owns the lane on both sides, so `marker_index` indexes
 // app.history_mode.flags throughout and no domain changes; and
 // switch_active_tab_view_to ends in the same kick_waveform_sync, so the
-// arriving band's flags are republished inside the press. THE LIST ITSELF DOES
+// arriving band's flags are republished before the frame paints. THE LIST ITSELF DOES
 // NOT CHANGE ACROSS A TAB SWITCH AT ALL, which is the stronger fact: the two
 // tabs share both marker stores and the engine settings, so the delta a
 // switch arrives at is the delta it left — only the WINDOW the flags are laid
@@ -1157,10 +1158,17 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // only thing that differs.
 //
 // IT IS THE VIEW SWITCH'S OWN ROUTE, unforked: Viewport::kick_waveform_sync
-// renders the plate synchronously, publishes the displayed fingerprint and
-// rebuilds the flag cache INLINE at its tail — and that tail is the whole point
-// of this call, the mode's lane content (app.history_mode.flags plus the two
-// pointer stashes over it) being that rebuild's history arm's output. There is
+// owes the synchronous rebuild, which renders the plate, publishes the
+// displayed fingerprint and rebuilds the flag cache at its tail — and that
+// tail is the whole point of this call, the mode's lane content
+// (app.history_mode.flags plus the two pointer stashes over it) being that
+// rebuild's history arm's output. THIS CALL FLUSHES IT IN THE PRESS
+// (2026-10-13), where the view switch leaves it to the pre-paint hook: the
+// edge has just DROPPED the list (drop_lane_stash_across_history_edge), and
+// its keyboard and click readers (AppState::HistoryMode::flags names them)
+// in a later event of the same drain must find the arriving list, not the
+// emptied one — the drop and the refill stay one swap inside the press, as
+// they were while every kick rendered inline. There is
 // deliberately NO flag-only reach: the `p` column toggle faced this exact choice
 // on 2026-07-30 and joined the view-switch class rather than growing a second
 // kick, on the reasoning that the redundant plate render is one discrete
@@ -1198,6 +1206,9 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // caller, damage being the last thing every edge does.
 void GuiInputHandler::republish_history_lane_now() {
     viewport.kick_waveform_sync();
+    // The refill now, not at the pre-paint hook (the reason in the block
+    // above): the drop left the list empty for its readers.
+    paint_handler.flush_owed_waveform_rebuild();
 }
 
 // ENTER THE MODE ON A FRESH SESSION — the one entry owner, the mirror of
@@ -9087,11 +9098,17 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // the playhead's own registration: every user-driven camera write
     // (this hold's own included) rebuilds the plate synchronously, so a held
     // key's next repeat reads the column the last step's write placed even
-    // before a frame promotes the item mirror. Cold (no plate built yet —
+    // before a frame promotes the item mirror. THAT REBUILD IS OWED since
+    // 2026-10-13 (the pre-paint hook pays it, Viewport::kick_waveform_sync),
+    // so this site FLUSHES it before the read: a repeat delivered in the same
+    // drain as the previous step would otherwise read the plate that step's
+    // camera write replaced, and the held column would creep by the step.
+    // Cold (no plate built yet —
     // nothing painted, so no painted column), the item basis, which is then
     // the live viewport by its own contract. The camera write itself stays a
     // live clamp_viewport_start write (hold_subject_column_after_nudge, the
     // marker nudge's shape).
+    paint_handler.flush_owed_waveform_rebuild();
     const int64_t cursor_before = app.playhead_cursor_sample;
     double painted_vp_start = 0.0;
     double painted_spp      = 0.0;

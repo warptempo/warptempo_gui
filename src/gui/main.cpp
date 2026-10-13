@@ -1740,13 +1740,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // 2026-07-26 — one render path for moving and resting plates.)
 
     // Every user-driven viewport change routes here instead of the async
-    // worker — zoom, scroll/pan, and the one-shot jumps alike: render
-    // the plate synchronously and publish the displayed fingerprint now so the
-    // overlays and waveform land in the same frame. See
-    // Viewport::kick_waveform_sync and
-    // GuiPaintHandler::force_synchronous_waveform_rebuild.
+    // worker — zoom, scroll/pan, and the one-shot jumps alike: it OWES the
+    // synchronous plate rebuild (architect 2026-10-13), which the pre-paint
+    // hook below runs once per frame from the latest state, publishing the
+    // displayed fingerprint before the damage list is read so the overlays
+    // and waveform land in the same frame. See Viewport::kick_waveform_sync
+    // and GuiPaintHandler::force_synchronous_waveform_rebuild.
     viewport.request_waveform_sync_ =
-        [&]() { paint_handler.force_synchronous_waveform_rebuild(); };
+        [&]() { paint_handler.owe_waveform_rebuild(); };
     // The marker drag release's seam (the rule at
     // MarkerDragOps::commit_drag's tail, the contract at its Viewport
     // declaration): the flag-only refresh.
@@ -3341,6 +3342,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     };
     gui.set_on_pre_paint([&]() {
         pre_paint_advance();
+        // THE OWED PLATE REBUILD, ONCE PER FRAME (architect 2026-10-13; the
+        // rule at Viewport::kick_waveform_sync): every kick since the last
+        // frame owed it, and it runs here from the latest state — AFTER the
+        // advance, whose scanner sampling and Follow page may kick, and
+        // OUTSIDE the advance, whose early returns (loading, the render
+        // player, a stopped play) must not skip a debt an event left; and
+        // BEFORE the owed check below, because the rebuild declares the
+        // window-top rect (damage_window_top_rows), whose owed rows above
+        // the viewport's lanes that check settles. Where a debt is paid, the
+        // scanner's narrow damage above resolved on the plate it replaces,
+        // and the rebuild's full rect covers both of its columns.
+        paint_handler.flush_owed_waveform_rebuild();
         // THE OWED CHECK LAST (2026-10-13): the rows above the viewport's
         // lanes and the clock cell, which the narrowed routes owe a check
         // rather than a repaint, are compared after every write the advance

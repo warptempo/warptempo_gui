@@ -599,12 +599,27 @@ struct GuiPaintHandler {
     // async one. This is the route for EVERY user-driven viewport change,
     // PANNING INCLUDED since the incremental shift-and-strip path was retired
     // (architect 2026-07-26 — moving and resting plates come off one code path;
-    // see the routing rules at the definition). Undriven changes — resize (but
-    // for a clamp that moves the effective gain, GuiPaintHandler::on_resize),
-    // the launch load, the preview completion's repaint — stay on the worker;
+    // see the routing rules at the definition). Undriven changes — resize, the
+    // launch load, the preview completion's repaint — stay on the worker;
     // FOLLOW'S PAGE TURN joined this route 2026-09-02 (the vanishing
     // playhead line — the reasoning is at Viewport::follow_scroll_if_needed).
+    // ONE PER FRAME since 2026-10-13: a kick OWES it (owe_waveform_rebuild)
+    // and the pre-paint hook runs it (flush_owed_waveform_rebuild); a run by
+    // any road discharges the debt. The rule is at Viewport::kick_waveform_sync.
     void force_synchronous_waveform_rebuild();
+
+    // THE OWED REBUILD (architect 2026-10-13; the rule and its flush sites at
+    // Viewport::kick_waveform_sync's declaration, viewport.h).
+    // owe_waveform_rebuild: kick_waveform_sync's road (the callback wired in
+    // main.cpp) — marks the synchronous rebuild owed and declares the rect the
+    // rebuild declares (the window's top through the waveform's bottom,
+    // damage_window_top_rows), so the frame that runs it is scheduled whether
+    // or not the kicking route damaged anything of its own.
+    // flush_owed_waveform_rebuild: runs the owed rebuild now, a no-op when
+    // none is owed — the pre-paint hook's tail (main.cpp), and the event-time
+    // readers of what the rebuild publishes, each naming its read at its site.
+    void owe_waveform_rebuild();
+    void flush_owed_waveform_rebuild();
 
     // THE PRE-PAINT CHECK OF WHAT THE NARROWED ROUTES OWE (2026-10-13): the
     // rows above the viewport's lanes and row 8's clock cell, each repainted
@@ -660,6 +675,13 @@ struct GuiPaintHandler {
     PlateViewportBasis plate_viewport_basis() const;
 
 private:
+    // THE DEBT (2026-10-13): set by owe_waveform_rebuild, cleared at the head
+    // of force_synchronous_waveform_rebuild by whichever road runs it. While it
+    // stands the worker's dirty-detect stands down (maybe_enqueue_waveform_render's
+    // head): the owed rebuild publishes the live fingerprint before the next
+    // paint, so a job dispatched in between would only be drained unfinished.
+    bool waveform_rebuild_owed = false;
+
     // The two as-painted fingerprints and the paint's half of their record
     // (settle_owed_lane_damage's block, paint_handler.cpp).
     GuiUpperRowsFingerprint upper_rows_fingerprint();

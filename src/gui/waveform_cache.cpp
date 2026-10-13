@@ -260,6 +260,14 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // overlay carries.
     if (displayed_basis_frozen(app))
         return;
+    // AN OWED SYNCHRONOUS REBUILD STANDS THIS DOWN (2026-10-13): the kick that
+    // owed it moved the fingerprint, and the pre-paint hook's rebuild publishes
+    // the live one before any frame paints (the rule at
+    // Viewport::kick_waveform_sync). The tick runs about twice per frame, so
+    // without this every tick between a pan's motion and its frame would
+    // dispatch a job for the rebuild's wait_until_idle to cancel.
+    if (waveform_rebuild_owed)
+        return;
 
     WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
@@ -607,9 +615,12 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      A/B tab switch, the source/target toggle, undo / redo — AND ALL PANNING
 //      (touchpad scroll, the plain-wheel stepped pan, PageUp/PageDown, the
 //      plain-drag grab-pan).
-//      They arrive at a bounded rate: pointer detents
-//      coalesce to one action per pointer frame, and key repeat is compositor-
-//      throttled, so a full inline render per event is affordable. The pyramid
+//      ONE RENDER PER DISPLAYED FRAME (architect 2026-10-13): each change
+//      OWES this render (Viewport::kick_waveform_sync, owe_waveform_rebuild)
+//      and the pre-paint hook runs it once, from the latest state, however
+//      many changes the frame's event drain carried — 1.76 touch events a
+//      frame on the tablet's pinch, measured 2026-10-13, each of which ran it
+//      inline before. Only frames no display ever showed are skipped. The pyramid
 //      bounds the peak read per-column cost unconditionally, in both views
 //      (the bound and its proof live at GuiAudio::level_for_span). A
 //      magnified plate also pays waveform_expander_multiplier_over
@@ -686,7 +697,19 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // Viewport::translate_playhead_to now, which scrolls nothing, so the playhead
 // rides offscreen until the release and the displayed basis holds. A new
 // caller that can run inside the freeze answers at its own site, not here.
+// THE OWED REBUILD (2026-10-13) CAN BE PAID INSIDE ONE: a kick owed before an
+// aimed press (a pan's motion and the press in one drain) is paid at the
+// pre-paint hook after the press armed. It publishes what the inline render
+// would have published at the kick, the press having moved no camera — its
+// select and land change only flag-cache fields, which the tick's rebuild
+// would stage anyway — and the freeze's promote gate (on_redraw) holds the
+// staged basis exactly as it held the inline render's.
 void GuiPaintHandler::force_synchronous_waveform_rebuild() {
+    // A RUN BY ANY ROAD DISCHARGES THE DEBT (2026-10-13): it renders the live
+    // state, which is what the owed rebuild would render. Cleared ahead of the
+    // validity return, as the inline kick it replaces rendered nothing there
+    // either; the next kick owes again.
+    waveform_rebuild_owed = false;
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
 
@@ -774,8 +797,14 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // torrent the plate leads the overlays by the whole gesture. Doing the
     // rebuild here makes plate, fingerprint, flag cache, and the
     // staged displayed hit map all commit before the next paint — the
-    // same-frame consistency EVERY kick_waveform_sync caller expects. That
-    // caller set is not enumerated here: the ONE authoritative inventory lives
+    // same-frame consistency EVERY kick_waveform_sync caller expects. SINCE
+    // 2026-10-13 THIS RUNS IN THE PRE-PAINT HOOK (the owed rebuild's flush,
+    // main.cpp), after every write the hook makes and before the damage list
+    // is read, so the commit lands in the very frame that paints it; the
+    // staged stash is promoted by that frame's on_redraw exactly as before,
+    // and an event-time reader of the plate or of the history lane's list
+    // flushes first (the sites are named at Viewport::kick_waveform_sync). The
+    // kick's caller set is not enumerated here: the ONE authoritative inventory lives
     // at Viewport::kick_waveform_sync's declaration (viewport.h), and a second
     // copy here is exactly the drift the one-site rule exists to prevent (the
     // copy this replaces had gained a member with no code site). The rebuild
@@ -789,6 +818,22 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // here closes the hit-test staleness window that otherwise lasts until the
     // next tick.
     maybe_rebuild_flag_cache();
+}
+
+// THE OWED REBUILD'S TWO HALVES (architect 2026-10-13; the rule at
+// Viewport::kick_waveform_sync). The mark declares the rebuild's own rect at
+// once: several kick tails — undo, the load-in-places, the tempo step among
+// them — reach the kick without passing the waveform's damage owner, and a
+// debt with no frame scheduled would never reach the pre-paint hook that pays
+// it. The rebuild declares the same rect again when it runs, coalesced.
+void GuiPaintHandler::owe_waveform_rebuild() {
+    waveform_rebuild_owed = true;
+    const GuiRect a = waveform_area(app);
+    damage_window_top_rows(app, gui, a.y + a.h);
+}
+
+void GuiPaintHandler::flush_owed_waveform_rebuild() {
+    if (waveform_rebuild_owed) force_synchronous_waveform_rebuild();
 }
 
 // -- Flag-cache fingerprint hashes ---------------------------------------

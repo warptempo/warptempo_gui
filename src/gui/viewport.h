@@ -240,7 +240,8 @@ struct Viewport {
     // any more.
     // (The live-per-event kicks that remain are apply_strip_drag_zoom,
     // scroll_viewport — generic viewport rebuilds, not map edits, both
-    // sustained pointer gestures paying one full rebuild per pointer frame.)
+    // sustained pointer gestures paying one full rebuild per displayed frame
+    // since the rebuild became owed, 2026-10-13, below.)
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
     // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
@@ -259,10 +260,45 @@ struct Viewport {
     // playback mover is on the synchronous route now, once per page (the
     // per-frame centered pin that shared the route from 2026-08-31 retired
     // 2026-09-13).
+    //
+    // THE REBUILD IS OWED, NEVER RUN HERE (architect 2026-10-13, P4 approved):
+    // the callback marks the synchronous rebuild owed
+    // (GuiPaintHandler::owe_waveform_rebuild, which also declares the
+    // rebuild's rect so the frame that pays it is scheduled) and the
+    // pre-paint hook runs it ONCE, at its tail (main.cpp) — after the
+    // scanner advance and Follow's page, either of which may kick, and before
+    // the owed lane check. The 2026-07-26 ruling that every mover takes the
+    // synchronous full rebuild keeps its intent: EVERY FRAME takes one, from
+    // the latest state, so no frame paints overlays against a stale plate;
+    // the only renders skipped are of states no display ever showed (a
+    // drain's 1.76 touch events per frame on the tablet's pinch, measured
+    // 2026-10-13, each rendered inline before). It is synchronous per frame
+    // on the main thread, NEVER A WORKER: the asynchronous pan fast path
+    // stays closed (closed_questions.md). The reclamp below still runs at
+    // once, every caller expecting clamped geometry on return.
+    // THE FLUSH (GuiPaintHandler::flush_owed_waveform_rebuild) is for an
+    // event-time READER of what the rebuild publishes — the plate and its
+    // fingerprint (plate_viewport_basis), the flag cache, the staged stash,
+    // the `h` lane's list (AppState::HistoryMode::flags). The staged stash is
+    // promoted only by on_redraw, so a press resolving against the displayed
+    // geometry (displayed_or_live_target_map, item_viewport_basis, the
+    // promoted hit rects) reads the same thing either way and needs none.
+    // TWO SITES FLUSH, by inventory 2026-10-13 (every caller class above and
+    // every event-time reader of the rebuild's output examined; no caller
+    // reads that output after its own kick in the same event — the drop, the
+    // camera moves and the edit tails all read live or displayed state — and
+    // the two readers below read it in a LATER event of the same drain):
+    //   * GuiInputHandler::run_waveform_lane_playhead_step, ahead of its
+    //     plate-basis read: a held arrow's next repeat in the same drain must
+    //     read the column the previous step's camera write placed, which the
+    //     inline rebuild had published;
+    //   * GuiInputHandler::republish_history_lane_now, after its kick: the
+    //     history edge's drop and refill of the lane's list stay one swap in
+    //     the press, for the keyboard and click readers of that list.
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport
-        // chokepoint BEFORE the synchronous rebuild. A target-view map edit
+        // chokepoint BEFORE the synchronous rebuild is owed. A target-view map edit
         // (tempo step, engine-scale commit) can change the
         // target total, hence the per-file effective zoom ceiling and the
         // viewport walls; the edit tails call this at the OLD zoom/viewport, so
