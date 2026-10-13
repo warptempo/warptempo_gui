@@ -1910,7 +1910,7 @@ inline int scrub_thumb_h_px() {
 // stem (render_strip_anchor_stem), the phase-reset lead-in ring's dots
 // (its right side and its top and bottom runs, paint_phase_reset_overlay_ring;
 // its left side is the reset's stem), the lit plate's inner OUTLINE,
-// an erosion at distance 1 (outline_bar, render.cpp, the width riding the
+// an erosion at distance 1 (render_waveform's inner_interior, render.cpp, the width riding the
 // plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
 // (render_canvas, render_center_lines). EVERYTHING OFF THE CANVAS keeps THE PROGRAM'S QUANTUM u =
 // scaled_px(1, 1) (program_line_px, cue_unit_px): the cues' triangles and the
@@ -2992,12 +2992,16 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 //
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
-// context. ONE COMPOSITING RULE, where there were two: every write REPLACES.
-// The caller cleared every column this call regenerates and each column is
-// written by its one bar with the lamp dark, and lit by its outer bar and
-// then its inner bar over it (the inner overwriting the outer where they
-// overlap is the magnification rule's order), so
-// replacing is correct and idempotent — the max-compositing that the segments needed (they wrote into an
+// context. ONE COMPOSITING RULE, where there were two: every write REPLACES,
+// and no write reads. The caller cleared every column this call regenerates;
+// with the lamp dark a pixel takes its column's one bar, and lit the inner
+// bar's word where the inner covers it, else the outer's (the inner over the
+// outer where they overlap is the magnification rule's order) — a priority,
+// so replacing is correct and idempotent, and the surface is written
+// ROW-MAJOR, one row at a time along memory, after every column's rows are
+// gathered (2026-10-13, a cost cut; the identity with the column-by-column
+// order it replaced is stated once, at the write pass in render.cpp) — the
+// max-compositing that the segments needed (they wrote into an
 // already-rendered neighbour) went with them.
 //
 // The words are PREMULTIPLIED ARGB32 (argb32_opaque_word): each ink's word is
@@ -3064,8 +3068,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // is a BORDER pixel iff any pixel within t of it straight left, right, up or
 // down lies outside that shape — an erosion at distance t, the four-neighbour
 // test at t = 1, byte-identical there to the one-pixel contour. The outer bar
-// has no outline (its outline ink would be its fill). Paint order per column:
-// outer, then the inner's fill and border over it; on a steep rise between
+// has no outline (its outline ink would be its fill). Precedence per column:
+// the inner's fill and border over the outer; on a steep rise between
 // columns the outline runs down the taller column's side and the line is
 // continuous. Written as pixel words like every other plate pixel: no cairo
 // stroke, no coverage, no blend.
@@ -3158,7 +3162,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // `expander_multiplier`, one per working-zoom column, waveform_gain.h owns
 // the stage): a plate column spanning source frames [s0, s1) takes the
 // LARGEST multiplier — the smallest reduction — over the working columns the
-// span covers (waveform_expander_multiplier_over, a plain loop, no pow), and
+// span covers (waveform_expander_multiplier_over, constant time through the
+// curve's range-maximum index since 2026-10-13, no pow), and
 // both tips of BOTH lit bars take it beside the bar's own scale (the gain on
 // the outer, the compressor's on the inner) before each bar's one clamp. At working
 // zoom that is the column's own reduction; coarser, it is the one choice

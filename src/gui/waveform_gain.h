@@ -266,6 +266,36 @@
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.
 
+// THE EXPANDER'S RANGE-MAXIMUM INDEX (2026-10-13, a cost cut that returns
+// the same float): the painter's rule asks, per plate column, for the
+// largest `expander_multiplier` over a run of working columns — one at
+// working zoom, a few hundred at full zoom-out, 2256 plate columns a channel
+// at every pan or pinch step; the tablet's profile of a magnified pan put
+// 9.2 % of all CPU on the plain scan. A BLOCKED SPARSE TABLE answers it in
+// constant time: the array in blocks of kExpanderRangeBlock columns, a
+// sparse table over the WHOLE blocks' maxima (level j's entry b the largest
+// over blocks [b, b + 2^j)), a query the two overlapping power-of-two block
+// runs covering its whole blocks plus a scan of its two partial end blocks
+// (a query inside one or two neighbouring blocks is scanned whole, at most
+// 2 x kExpanderRangeBlock - 2 entries). BIT-EXACT by construction: max is
+// idempotent, so the overlap counts nothing twice, and on these floats it is
+// exact in any order — every multiplier is a pow of a positive base cast to
+// float, never NaN and never -0, so the largest is one stored value
+// whichever way the comparisons run. Memory: levels x blocks floats, the
+// array's own size times (floor(log2(n / 16)) + 1) / 16 — exactly one float
+// per working column at a million columns (16 levels over 62,500 blocks),
+// so the 2.2 MB of multipliers of an 8-minute piece carry about 2.2 MB of
+// index, never more than the array itself under 2^20 working columns.
+// IT STORES MULTIPLIERS, NEVER GAINED PEAKS: the gained second pyramid stays
+// ruled out (the list above; render.h's centre rule) and the picture is
+// unchanged — the index only reaches the same maximum the scan reached.
+struct WaveformRangeMaxIndex {
+    int64_t            blocks = 0;  // whole blocks of kExpanderRangeBlock columns
+    int                levels = 0;  // table levels, 0 when there is no whole block
+    std::vector<float> table;       // level j's `blocks` entries at offset j * blocks
+};
+inline constexpr int64_t kExpanderRangeBlock = 16;
+
 // The picture's continuous magnification, derived from the source once per
 // load (off the load path — GuiAudio::gain_curve).
 struct WaveformGainCurve {
@@ -274,6 +304,7 @@ struct WaveformGainCurve {
     std::vector<double> inner_scale;     // THE COMPRESSOR x THE FOREGROUND GAIN, per hop beside `gain`, each in (0, 1/2]
     int64_t             column_frames = 0;    // the working column's width in source frames; column k is [k * column_frames, (k + 1) * column_frames)
     std::vector<float>  expander_multiplier;  // THE EXPANDER, per working column, each in [0, 1]; empty is the identity
+    WaveformRangeMaxIndex expander_range_max; // over `expander_multiplier`, built with it (the index's head above)
 };
 
 // `interleaved` is stereo float32, `total_frames` frames (2 * total_frames
@@ -296,8 +327,10 @@ double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame);
 // THE PAINTER'S EXPANDER RULE for a plate column spanning source frames
 // [s0, s1): the LARGEST multiplier (the smallest reduction) over the working
 // columns s0 / column_frames through (s1 - 1) / column_frames, both clamped
-// into the array — a plain loop, one column at working zoom and a few hundred
-// at full zoom-out. 1.0 for an empty curve.
+// into the array — constant time at every zoom through the curve's
+// range-maximum index (WaveformRangeMaxIndex, 2026-10-13; a plain loop
+// before, one column at working zoom and a few hundred at full zoom-out).
+// 1.0 for an empty curve.
 float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t s0, int64_t s1);
 
 // The derivation's identity for the plate fingerprint: bump on any change to

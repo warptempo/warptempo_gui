@@ -713,9 +713,9 @@ void render_waveform(cairo_surface_t* dest,
     // Each column is written straight into the plate's pixel words, and a
     // column is ONE HARD BAR: its own raw min/max interval, floored to rows and
     // filled inclusively with the opaque ink word (with the lamp lit, the
-    // outer bar goes down first and the inner over it, both in the ink word,
-    // the inner's outline (outline_px thick) in the outline word — the rule is at this
-    // function's declaration).
+    // inner bar stands over the outer, both in the ink word, the inner's
+    // outline (outline_px thick) in the outline word — the rule is at this
+    // function's declaration; the row-major write pass below).
     // There is no fractional coverage and no inter-column connectivity of
     // any kind — a spike stands alone, exactly as in a classic min/max
     // renderer; the inner's outline READS the neighbouring columns' rows to
@@ -770,19 +770,6 @@ void render_waveform(cairo_surface_t* dest,
     if (col_lo < 0)      col_lo = 0;
     if (col_hi > surf_w) col_hi = surf_w;
     if (col_hi <= col_lo) return;
-
-    // Write one pixel word, REPLACING what is there. Row/column bounds are
-    // established by the bar writer below; this is its single store site.
-    // Replace is unambiguously correct now: the caller cleared every column this
-    // call regenerates, and each column is written once by its one bar with
-    // the lamp dark, and lit by its outer bar and then its inner, which
-    // overwrites the outer where they overlap, the order the magnification rule wants
-    // (the max-compositing the tip segments needed went with them).
-    const auto put = [&](int x, int y, uint32_t word) {
-        auto* px = reinterpret_cast<uint32_t*>(
-            surf_data + static_cast<size_t>(y) * surf_stride);
-        px[x] = word;
-    };
 
     // Global column c's display-domain edge, AS THE LATTICE POINT ITSELF:
     // g(k0+c) = nearbyint((k0+c)*spp), bit-for-bit the integer
@@ -860,16 +847,9 @@ void render_waveform(cairo_surface_t* dest,
         return BarRows{r0, r1};
     };
 
-    // THE DARK BAR AND THE LIT OUTER: its rows filled with one word, no
-    // outline.
-    const auto fill_bar = [&](int x, const BarRows& b, uint32_t word) {
-        if (x < col_lo || x >= col_hi) return;
-        for (int y = b.r0; y <= b.r1; ++y) put(x, y, word);
-    };
-
-    // THE LIT INNER BAR: its rows, each written ONCE with the ink word or the
-    // outline word (the outline recolours pixels of the bar's own shape and
-    // adds none). THE CONTOUR FROM THE 2t + 1 COLUMNS' EXTENTS, t =
+    // THE LIT INNER BAR'S INTERIOR: which of its rows wear the ink word and
+    // which the outline word (the outline recolours pixels of the bar's own
+    // shape and adds none). THE CONTOUR FROM THE 2t + 1 COLUMNS' EXTENTS, t =
     // outline_px (the line width, render.h's waveform_line_px, snapshotted on
     // the job), no 2D scan: a row of this bar is INTERIOR iff every row within
     // t above and below it is in this bar (rows [r0 + t, r1 - t]) and it lies
@@ -878,14 +858,13 @@ void render_waveform(cairo_surface_t* dest,
     // erosion at distance t, the four-neighbour test at t = 1. That interior
     // is one interval [lo, hi] because each bar is one; the rows of the bar
     // above and below it are the border, the whole bar when the interior is
-    // empty. No inner tip reaches full scale (kForegroundGain's
+    // empty (lo > hi; when it is not, lo >= r0 and hi <= r1, each clause only
+    // narrowing). No inner tip reaches full scale (kForegroundGain's
     // static_assert, waveform_gain.cpp), so no inner bar is clipped and each
     // of its ends is a true end of the shape, taking the border.
     assert(!gain_or_null || outline_px >= 1);
     const int t = outline_px;
-    const auto outline_bar = [&](int i, const std::vector<BarRows>& rows) {
-        const int x = area.x + i;
-        if (x < col_lo || x >= col_hi) return;
+    const auto inner_interior = [&](int i, const std::vector<BarRows>& rows) {
         const BarRows& b = rows[static_cast<size_t>(i)];
         int lo = b.r0 + t;
         int hi = b.r1 - t;
@@ -901,21 +880,16 @@ void render_waveform(cairo_surface_t* dest,
                 hi = std::min(hi, n.r1);
             }
         }
-        if (lo > hi) {
-            for (int y = b.r0; y <= b.r1; ++y) put(x, y, outline_word);
-            return;
-        }
-        // lo >= r0 and hi <= r1 here: each clause only narrows the interval.
-        for (int y = b.r0;   y < lo;     ++y) put(x, y, outline_word);
-        for (int y = lo;     y <= hi;    ++y) put(x, y, ink_word);
-        for (int y = hi + 1; y <= b.r1;  ++y) put(x, y, outline_word);
+        return BarRows{lo, hi};
     };
 
-    // THE LIT INNER BARS' ROWS, one per column of this call, held so the
-    // write pass can read the neighbours within t of every column. Both
-    // callers are full-plate renders, so this call's columns ARE the plate and
-    // its first and last columns' missing neighbours are the plate's side
-    // edges.
+    // THE BARS' ROWS, one per column of this call: the dark bar or the lit
+    // outer in `outer_rows`, the lit inner in `inner_rows` — held so the
+    // write pass can read the neighbours within t of every column and write
+    // the surface row by row. Both callers are full-plate renders, so this
+    // call's columns ARE the plate and its first and last columns' missing
+    // neighbours are the plate's side edges.
+    std::vector<BarRows> outer_rows(static_cast<size_t>(area.w));
     std::vector<BarRows> inner_rows;
     if (gain_or_null) inner_rows.resize(static_cast<size_t>(area.w));
 
@@ -941,40 +915,92 @@ void render_waveform(cairo_surface_t* dest,
         // clip flat against the lane's edges instead of running off into row
         // arithmetic (the inner's scale, c x 1/2, is at most 1/2, so its
         // clamp is a no-op kept for the one shape). A PICTURE gain: the samples
-        // themselves are untouched, here and everywhere. The outer is
-        // written here in the plate's ink; the inner's rows are held for the
-        // write pass below, which paints it over the outer with its outline.
+        // themselves are untouched, here and everywhere.
         // DARK: the raw bar at scale 1.0, where the clamp is a no-op (raw
-        // peaks already rest in range), written here in the plate's ink, so
-        // the dark plate is the plate this writer always drew.
+        // peaks already rest in range), so the dark plate is the plate this
+        // writer always drew.
         if (gain_or_null) {
             const int64_t centre = (s0 + s1) / 2;
             const double e = static_cast<double>(
                 waveform_expander_multiplier_over(*gain_or_null, s0, s1));
             const double outer = waveform_gain_at(*gain_or_null, centre) * e;
             const double inner = waveform_inner_scale_at(*gain_or_null, centre) * e;
-            fill_bar(area.x + i,
-                     bar_rows(magnified_tip(mm.first, outer),
-                              magnified_tip(mm.second, outer)),
-                     ink_word);
+            outer_rows[static_cast<size_t>(i)] =
+                bar_rows(magnified_tip(mm.first, outer),
+                         magnified_tip(mm.second, outer));
             inner_rows[static_cast<size_t>(i)] =
                 bar_rows(magnified_tip(mm.first, inner),
                          magnified_tip(mm.second, inner));
         } else {
-            fill_bar(area.x + i,
-                     bar_rows(magnified_tip(mm.first, 1.0),
-                              magnified_tip(mm.second, 1.0)),
-                     ink_word);
+            outer_rows[static_cast<size_t>(i)] =
+                bar_rows(magnified_tip(mm.first, 1.0),
+                         magnified_tip(mm.second, 1.0));
         }
 
         g_prev = g1;
     }
 
-    // THE LIT WRITE PASS, per column: the inner's fill and outline over the
-    // outer the loop above wrote — replace-writes, so where the two overlap
-    // the inner wins, as it always has.
-    if (gain_or_null) {
-        for (int i = 0; i < area.w; i++) outline_bar(i, inner_rows);
+    // THE WRITE PASS, ROW-MAJOR (2026-10-13, a cost cut that writes the same
+    // words: the tablet's profile of a magnified pan put 12.8 % of all CPU on
+    // the old column-major store — one word per row of a column at the
+    // surface's row stride, a cache miss a row, the lit outer's tall bars
+    // several times the dark plate's rows). Each owned column's rows are
+    // gathered first — the outer [o0, o1], the lit inner [i0, i1] and its
+    // interior [lo, hi] (an empty inner, the dark lamp's, never matches) —
+    // then the surface is written one row at a time, the columns in order, so
+    // the stores run along memory.
+    //
+    // THE IDENTITY, the one statement of it: the column-major writer this
+    // replaces REPLACE-wrote the outer bar's rows with the ink word, then
+    // (lit) every row of the inner bar once — the ink word inside its
+    // interior, the outline word elsewhere in it — over the outer, and left
+    // every other pixel as the caller's clear had it. The word that writer
+    // leaves at (x, y) is therefore decided by priority alone: inside the
+    // inner, the interior test; else inside the outer, the ink; else
+    // untouched — which is exactly the test below, evaluated on the same
+    // BarRows and the same [lo, hi], for the same owned columns
+    // [col_lo, col_hi). Only the order of the stores changed, and no store
+    // reads a pixel, so the order cannot change a word.
+    struct ColumnRows {
+        int o0, o1;   // the outer (or dark) bar
+        int i0, i1;   // the lit inner bar; empty (i0 > i1) when dark
+        int lo, hi;   // the inner's interior; lo > hi when empty
+    };
+    std::vector<ColumnRows> cols(static_cast<size_t>(col_hi - col_lo));
+    int row_top = y_hi;
+    int row_bot = y_lo - 1;
+    for (int x = col_lo; x < col_hi; ++x) {
+        const int i = x - area.x;
+        const BarRows& o = outer_rows[static_cast<size_t>(i)];
+        ColumnRows& cw = cols[static_cast<size_t>(x - col_lo)];
+        cw.o0 = o.r0;
+        cw.o1 = o.r1;
+        cw.i0 = y_hi;
+        cw.i1 = y_lo - 1;
+        cw.lo = y_hi;
+        cw.hi = y_lo - 1;
+        if (gain_or_null) {
+            const BarRows& b = inner_rows[static_cast<size_t>(i)];
+            const BarRows in = inner_interior(i, inner_rows);
+            cw.i0 = b.r0;
+            cw.i1 = b.r1;
+            cw.lo = in.r0;
+            cw.hi = in.r1;
+        }
+        row_top = std::min({row_top, cw.o0, cw.i0});
+        row_bot = std::max({row_bot, cw.o1, cw.i1});
+    }
+    for (int y = row_top; y <= row_bot; ++y) {
+        auto* const row = reinterpret_cast<uint32_t*>(
+            surf_data + static_cast<size_t>(y) * surf_stride) + col_lo;
+        const int n = col_hi - col_lo;
+        for (int j = 0; j < n; ++j) {
+            const ColumnRows& cw = cols[static_cast<size_t>(j)];
+            if (y >= cw.i0 && y <= cw.i1)
+                row[j] = (y >= cw.lo && y <= cw.hi) ? ink_word : outline_word;
+            else if (y >= cw.o0 && y <= cw.o1)
+                row[j] = ink_word;
+        }
     }
 
     // Last CPU write is done — hand the buffer back to cairo.

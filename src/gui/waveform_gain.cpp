@@ -1,6 +1,7 @@
 #include "waveform_gain.h"
 
 #include <algorithm>
+#include <bit>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -227,6 +228,34 @@ private:
     double              min_fraction_;
 };
 
+// THE EXPANDER'S RANGE-MAXIMUM INDEX over `m` (WaveformRangeMaxIndex,
+// waveform_gain.h, owns the structure and its exactness): level 0 the whole
+// blocks' maxima, level j the larger of level j - 1's entries b and
+// b + 2^(j-1). A partial last block takes no entry; the query scans it.
+WaveformRangeMaxIndex build_range_max_index(const std::vector<float>& m) {
+    WaveformRangeMaxIndex idx;
+    const int64_t nb = static_cast<int64_t>(m.size()) / kExpanderRangeBlock;
+    if (nb <= 0) return idx;
+    idx.blocks = nb;
+    idx.levels = std::bit_width(static_cast<uint64_t>(nb));
+    idx.table.resize(static_cast<size_t>(idx.levels) * static_cast<size_t>(nb));
+    for (int64_t b = 0; b < nb; ++b) {
+        const size_t base = static_cast<size_t>(b * kExpanderRangeBlock);
+        float best = m[base];
+        for (int64_t k = 1; k < kExpanderRangeBlock; ++k)
+            best = std::max(best, m[base + static_cast<size_t>(k)]);
+        idx.table[static_cast<size_t>(b)] = best;
+    }
+    for (int j = 1; j < idx.levels; ++j) {
+        const float* prev = idx.table.data() + static_cast<size_t>(j - 1) * nb;
+        float*       cur  = idx.table.data() + static_cast<size_t>(j) * nb;
+        const int64_t half = int64_t{1} << (j - 1);
+        for (int64_t b = 0; b + 2 * half <= nb; ++b)
+            cur[b] = std::max(prev[b], prev[b + half]);
+    }
+    return idx;
+}
+
 }  // namespace
 
 WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_frames,
@@ -346,6 +375,7 @@ WaveformGainCurve derive_waveform_gain(const float* interleaved, int64_t total_f
         out.expander_multiplier[static_cast<size_t>(k)] =
             static_cast<float>(std::pow(10.0, -expander_reduction_db(x) / 20));
     }
+    out.expander_range_max = build_range_max_index(out.expander_multiplier);
     return out;
 }
 
@@ -382,7 +412,20 @@ float waveform_expander_multiplier_over(const WaveformGainCurve& curve, int64_t 
     const int64_t last = static_cast<int64_t>(m.size()) - 1;
     const int64_t k0 = std::clamp<int64_t>(s0 / curve.column_frames, 0, last);
     const int64_t k1 = std::clamp<int64_t>((std::max(s1, s0 + 1) - 1) / curve.column_frames, k0, last);
-    float best = m[static_cast<size_t>(k0)];
-    for (int64_t k = k0 + 1; k <= k1; ++k) best = std::max(best, m[static_cast<size_t>(k)]);
-    return best;
+    // THE INDEX (WaveformRangeMaxIndex, waveform_gain.h): the whole blocks
+    // [b_lo, b_hi] inside [k0, k1] through the table, the partial ends
+    // scanned; a run with no whole block inside it is scanned whole.
+    const WaveformRangeMaxIndex& idx = curve.expander_range_max;
+    const int64_t b_lo = (k0 + kExpanderRangeBlock - 1) / kExpanderRangeBlock;
+    const int64_t b_hi = (k1 + 1) / kExpanderRangeBlock - 1;
+    const auto scan = [&](int64_t a, int64_t b, float best) {
+        for (int64_t k = a; k <= b; ++k) best = std::max(best, m[static_cast<size_t>(k)]);
+        return best;
+    };
+    if (b_lo > b_hi) return scan(k0 + 1, k1, m[static_cast<size_t>(k0)]);
+    const int j = std::bit_width(static_cast<uint64_t>(b_hi - b_lo + 1)) - 1;
+    const float* level = idx.table.data() + static_cast<size_t>(j) * idx.blocks;
+    float best = std::max(level[b_lo], level[b_hi - (int64_t{1} << j) + 1]);
+    best = scan(k0, b_lo * kExpanderRangeBlock - 1, best);
+    return scan((b_hi + 1) * kExpanderRangeBlock, k1, best);
 }

@@ -588,19 +588,15 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 //      coalesce to one action per pointer frame, and key repeat is compositor-
 //      throttled, so a full inline render per event is affordable. The pyramid
 //      bounds the peak read per-column cost unconditionally, in both views
-//      (the bound and its proof live at GuiAudio::level_for_span). Since
-//      09d34221 a magnified plate also pays waveform_expander_multiplier_over
-//      (waveform_gain.cpp) per plate column: a loop over the working-zoom
-//      columns that column's source span covers, so its length grows with
-//      the source seconds per plate column — about 240 at full zoom-out on
-//      the 40th's first movement (25.4 M frames), roughly 240 x 1920 x 2
-//      float compares for that stereo plate there, and one at working zoom.
-//      A synchronous render at full zoom-out therefore scales with the
-//      source's duration divided by the plate width, not with area_width
-//      alone — modest for this corpus (the figure above) and recorded
-//      rather than bounded (architect 2026-09-24). Flat plates (the
-//      magnification lamp dark, gain_or_null null) are unchanged:
-//      O(area_width) at any zoom level, as before.
+//      (the bound and its proof live at GuiAudio::level_for_span). A
+//      magnified plate also pays waveform_expander_multiplier_over
+//      (waveform_gain.cpp) per plate column, the largest multiplier over the
+//      working-zoom columns that column's source span covers — CONSTANT TIME
+//      at every zoom since 2026-10-13 through the curve's range-maximum
+//      index (WaveformRangeMaxIndex, waveform_gain.h; a plain loop before,
+//      its length growing with the source seconds per plate column). So the
+//      synchronous render is O(area_width) at every zoom level with the
+//      magnification lamp lit or dark.
 //
 //      PAN JOINED THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
 //      (ie, no special handling for during movement and at-standstill — ableton
