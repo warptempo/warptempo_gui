@@ -2288,9 +2288,11 @@ enum class RedesignButton {
     // render, undo and every sidecar are untouched. The bit is
     // AppState::show_waveform_magnification, DARK AT EVERY PROJECT OPEN like
     // the rest of this group's lamps. LIVE in both audio views, on a locked
-    // tab and under the read-only lock; DEAD in the `h` view, whose allowlist
-    // does not name the backtick (Restrict Undo to Current View's answer
-    // there), through the derived partition.
+    // tab, under the read-only lock and, since 2026-10-12 (architect: he
+    // wants to magnify while walking history), in the `h` view, whose
+    // allowlist admits the backtick (history_mode_key_blocked), so the derived
+    // partition shows the button beside Full Zoom Out there; Follow and
+    // Restrict Undo to Current View stay refused and hidden in the view.
     IconWaveformMagnification,
     // (THE WAVEFORM MAGNIFICATION PAIR — Magnify on bare `=` and Reduce on
     // bare `-`, 2026-08-26 — closed this group until 2026-09-14, when the
@@ -15999,9 +16001,11 @@ inline bool redesign_button_enabled(const AppState& a,
             return true;
         // THE WAVEFORM MAGNIFICATION LAMP IS LIVE IN BOTH AUDIO VIEWS
         // (architect 2026-09-24): the lock admits the chord (a display
-        // posture authors nothing), and the `h` view greys it through the
-        // derived partition above, the backtick being off that mode's
-        // allowlist as `f` and `z` are. IT MIRRORS ONE REFUSAL, THE CURVE'S
+        // posture authors nothing), and the `h` view admits it too since
+        // 2026-10-12 (architect: he wants to magnify while walking history —
+        // the backtick is on that mode's allowlist beside the tooltip lamp,
+        // so the derived partition above leaves it lit and standing, where
+        // `f` and `z` stay refused). IT MIRRORS ONE REFUSAL, THE CURVE'S
         // READINESS (architect 2026-09-24): the gain curve is derived on its
         // own thread after the load, the backtick refuses on a card until it
         // stands, and this face greys on the same predicate

@@ -928,8 +928,8 @@ constexpr IconRowDef kIconRowButtons[] = {
 // and the render-entry group right of it sits one case (31 Windows px)
 // further left there than outside — further still since 2026-10-07, the
 // zoom group and the render-entry group each standing on the one member the
-// view does not refuse in every session (Full Zoom Out, Enable Tooltips),
-// their others hidden (history_mode_hides_button, paint_icon_row's walk). The history opener and the view group
+// view does not refuse in every session (Full Zoom Out and, since 2026-10-12,
+// Waveform Magnification; Enable Tooltips), their others hidden (history_mode_hides_button, paint_icon_row's walk). The history opener and the view group
 // are right-anchored and do not move (kIconRowHistoryOpener).
 //
 // THE COMPANIONS' GLYPHS: the CUMULATIVE toggle wears BlackSum, the
@@ -2118,8 +2118,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the view refuses whole (the companions publish empty rects outside the
     // view, the replaced members inside it), and inside the view every other
     // member whose chord it refuses in EVERY session is not painted
-    // (history_mode_hides_button, input_pointer.cpp) — the magnification
-    // lamp, Follow and Restrict Undo behind Full Zoom Out, and Listen, the
+    // (history_mode_hides_button, input_pointer.cpp) — Follow and Restrict
+    // Undo behind Full Zoom Out and the magnification lamp (which the view
+    // admits since 2026-10-12, architect: he wants to magnify while walking
+    // history), and Listen, the
     // padlock and Settings ahead of Enable Tooltips — its neighbours closing
     // up and its group standing while any member does. What the view refuses
     // only BY STATE (Save with nothing to commit, Revert with no subject,
@@ -2138,14 +2140,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // band's dark right edge column. Outside the `h` view the LEFT WALK is
     // seventeen members in five panes,
     //   1 + 17·23 + 5·12 = 452,
-    // and inside it eight in five, 1 + 8·23 + 60 = 245 (Older and Newer
-    // row 8's since 2026-10-11); the RIGHT-ANCHORED
+    // and inside it nine in five, 1 + 9·23 + 60 = 268 (Older and Newer
+    // row 8's since 2026-10-11; the magnification lamp joined the view's nine
+    // 2026-10-12); the RIGHT-ANCHORED
     // span — the edge column, the view group's pane (3 cases), its dark
     // column, the history opener's pane, the dark column the left panes stop
     // at — is
     //   1 + 80 + 1 + 34 + 1 = 117,
     // so the band holds every pane in any window at least 571 Windows px
-    // wide outside the view (362 inside it), the band standing one program
+    // wide outside the view (385 inside it), the band standing one program
     // frame line in from each side (2026-10-10) — the tablet's 768 at 300 %
     // a band of 766 with a recess of 197 between. IN DEVICE PX, off the
     // painted walk (each line one relief line, each face and the glyph its
@@ -2261,11 +2264,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // checkpoint in flight), Revert and Load in Place on their session
         // terms (below); what the view refuses in EVERY session does not
         // stand in it since 2026-10-07 (history_mode_hides_button: the zoom
-        // group behind Full Zoom Out, Listen, the read-only toggle,
-        // Settings), and the two groups it consumes WHOLE since 2026-10-05,
+        // group behind Full Zoom Out and the magnification lamp, Listen, the
+        // read-only toggle, Settings), and the two groups it consumes WHOLE since 2026-10-05,
         // the history companions standing in their slots
         // (kIconRowHistoryStandIns). The view group, Full Zoom Out, the
-        // tooltip lamp and the history opener stay live, as do the history
+        // magnification lamp, the tooltip lamp and the history opener stay live, as do the history
         // COMPANIONS — each
         // on the derivation's own answer, which is not one reason but two:
         // bare `u`, `,` and `.` are the mode's own VOCABULARY and answer live

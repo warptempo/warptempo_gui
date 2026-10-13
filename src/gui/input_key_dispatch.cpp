@@ -3012,12 +3012,23 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // — and touches nothing the view froze, so the view admits it and the
     // Enable Tooltips button stays lit in here by the derived partition.
     const bool is_tooltip_lamp = is_tooltip_lamp_key(key, mods);
+    // THE MAGNIFICATION LAMP (architect 2026-10-12: he wants to magnify while
+    // walking history), the bare backtick through the shared predicate: a
+    // display posture about the picture, authoring nothing the view froze, so
+    // the view admits it and the Waveform Magnification button stands beside
+    // Full Zoom Out in there by the derived partition (it was refused here,
+    // Restrict Undo's and Follow's answer, from 2026-09-24 until then). It
+    // ADMITS UNCONDITIONALLY, the chord's membership alone; the curve's
+    // readiness is the act's and the face's own (waveform_magnification_
+    // toggle_actionable), as outside the view.
+    const bool is_waveform_magnification =
+        is_waveform_magnification_key(key, mods);
     return !(is_zero || is_page_updown ||
              is_view_selector || is_add_to_selection || is_esc || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
              is_save || is_publish || is_ctrl_q || is_open_project ||
              is_revert_project ||
-             is_tooltip_lamp);
+             is_tooltip_lamp || is_waveform_magnification);
 }
 
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
@@ -9213,7 +9224,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // GuiInputHandler::set_show_waveform_magnification, shared with the
         // icon-row button's synthesized chord and with nothing else.
         // History-less, one-shot, legal on a locked tab and under the
-        // read-only lock; refused in the `h` view at that mode's allowlist.
+        // read-only lock and in the `h` view (admitted at that mode's
+        // allowlist since 2026-10-12).
         //
         // NOT BEFORE THE CURVE IS READY (architect 2026-09-24): the gain curve
         // is derived on its own thread after the load (GuiAudio::gain_curve),

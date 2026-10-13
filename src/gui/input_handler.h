@@ -1449,9 +1449,10 @@ struct GuiInputHandler {
     //   in the iteration group's — kIconRowHistoryStandIns), the history
     //   opener right-anchored (kIconRowHistoryOpener) and the VIEW GROUP's
     //   three flush right — 21 standing outside the `h` view (the four
-    //   stand-ins publishing empty rects) and 12 inside it (the stand-ins in,
+    //   stand-ins publishing empty rects) and 13 inside it (the stand-ins in,
     //   the two authoring groups they replace out, and the view's hide
-    //   leaving Full Zoom Out and Enable Tooltips alone of their groups);
+    //   leaving Full Zoom Out and Waveform Magnification (since 2026-10-12)
+    //   and Enable Tooltips alone of their groups);
     //   ROW 8, 8 + 4 + 5 + 2 = 19 — the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
     //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle

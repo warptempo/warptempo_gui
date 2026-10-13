@@ -826,9 +826,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Toggle Waveform Magnification (architect 2026-09-22), on the
         // bare BACKTICK since 2026-09-23 (architect: the bracket sits on the
         // far side of the keyboard and belongs to trim by feel), bound in
-        // both modes as `f` and `z` are: it toggles in both audio views, and
-        // the `h` view's allowlist refuses it on a card rather than falling
-        // silent. Every modified backtick is unbound. (The backtick was the S+M view selector from 2026-09-19
+        // both modes as `f` and `z` are: it toggles in both audio views, the
+        // `h` view's allowlist admitting it since 2026-10-12 (architect: he
+        // wants to magnify while walking history). Every modified backtick is
+        // unbound. (The backtick was the S+M view selector from 2026-09-19
         // until the magnification level markers column's deletion 2026-09-23;
         // the lamp was on bare `]` for its first hours, then on bare `[`.)
         case GuiKeys::Grave: return bare;
@@ -1301,12 +1302,13 @@ inline bool is_publish_key(GuiKey key, GuiInputState mods) {
 // (repeat-ineligible: a held toggle
 // would flicker). The lamp governs both audio views (the arm is Grave's case
 // in handle_plain_bare_keys, input_key_dispatch.cpp, which the bare road
-// alone reaches). ITS ONE READER is the read-only allowlist (read_only_key_blocked,
+// alone reaches). TWO READERS: the read-only allowlist (read_only_key_blocked,
 // which ADMITS it — a view posture — and which the
-// grid-iterations lock's gate falls through to). The `h` view's allowlist
-// (history_mode_key_blocked) deliberately does NOT name it: Restrict Undo to
-// Current View, its group's other lamp, is refused there too, so the view
-// cards it like every chord it does not name.
+// grid-iterations lock's gate falls through to) and, since 2026-10-12
+// (architect: he wants to magnify while walking history), the `h` view's
+// allowlist (history_mode_key_blocked), which admits it beside the tooltip
+// lamp; Restrict Undo to Current View and Follow, its group's other lamps,
+// stay refused there and card like every chord the view does not name.
 inline bool is_waveform_magnification_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Grave && !mods.ctrl && !mods.shift && !mods.alt;
 }
