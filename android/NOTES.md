@@ -1794,3 +1794,36 @@ Both share the package and the key, so installing one replaces the other.
 Written without a device and without a compile on this side: the planner
 builds both APKs, installs them and runs the screencap comparison, the frame
 counter's measurement and the dataspace check in `dumpsys SurfaceFlinger`.
+
+### 16.4 Milestone 2 — the canvas drawn from a list (2026-10-13)
+
+The canvas interior (`waveform_area` within the keyboard's cut,
+`onscreen_keyboard::waveform_paint_area`) leaves the CPU under `gl`: the
+canvas painters paint through ONE sink (`src/gui/canvas_sink.h`, whose head
+owns the rule, the transparency invariant and where identity rests) — the
+cairo sink on `cpu` and on Wayland, the same cairo calls as before, and the
+list sink on `gl`, which records rects, dotted runs and the plate as
+per-column bar bounds (`render_waveform_columns`, the one producer both roads
+read; the cache keeps `GuiPlateColumns` in place of a surface under `gl`, no
+write pass). The design record's §3.3–3.7.
+
+- **The backbuffer**: the chrome ground and the column's face skip the canvas
+  paint area and one `CAIRO_OPERATOR_CLEAR` empties it, so every CPU pixel
+  there is alpha 0 or an opaque overlay's.
+- **The list**: built once per frame by `on_redraw`'s first damage rect that
+  meets the canvas, whole; its clip and floater bit written on the frame's
+  first rect; handed over by `GuiPlatform::set_canvas_frame` (a no-op on
+  Wayland). The list is the process's (`gui_canvas_frame`).
+- **Present**: each damage rect uploads minus the clip (up to four rects),
+  whole while the floater bit stands or stood at the last walk, when the clip
+  moved, and at a remade texture's first walk; the frame is cleared; the list
+  is drawn as one instanced draw under a scissor to the clip (rects, dotted
+  runs by an integer modulo, the plate by `texelFetch` on a `GL_RGBA16I`
+  bounds texture — signed because the cairo road's empty-interval sentinel
+  `y_lo − 1` is −1 on the first band); then the texture triangle, its shader
+  discarding alpha-0 texels.
+
+Not verified on this side: neither APK was compiled here (the Linux build
+compiles the shared code and the list road's GUI half); the planner builds
+both variants and runs the screencap identity harness (the design record's
+§5).

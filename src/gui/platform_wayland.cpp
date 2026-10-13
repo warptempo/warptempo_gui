@@ -1511,6 +1511,10 @@ GuiPlatform::ShmBuffer* GuiPlatform::acquire_free_buffer() {
     return nullptr;
 }
 
+// The GL canvas's frame has no reader here (the declaration): the cairo
+// sink paints this backend's canvas whole.
+void GuiPlatform::set_canvas_frame(const GuiCanvasDrawList* /*frame*/) {}
+
 // ---------------------------------------------------------------------------
 // Frame callback flow
 // ---------------------------------------------------------------------------

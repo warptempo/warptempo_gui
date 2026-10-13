@@ -3359,6 +3359,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // made (a Follow page among them) and before the damage list is
         // read (GuiPaintHandler::settle_owed_lane_damage, where the rule is).
         paint_handler.settle_owed_lane_damage();
+        // THE GL CANVAS'S FRAME OPENS (2026-10-13, canvas_sink.h): the frame
+        // about to paint writes its draw list's clip again and builds the
+        // list at its first rect meeting the canvas (begin_canvas_frame).
+        paint_handler.begin_canvas_frame();
     });
 
     // THE GEOMETRY, REDELIVERED: a reopened set's window sends no configure

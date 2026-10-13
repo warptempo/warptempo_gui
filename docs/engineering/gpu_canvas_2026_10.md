@@ -33,6 +33,15 @@ about 20. The GPU canvas attacks the paint (the plate blit, the canvas fill,
 the present copy — 60 % of the frame after 94d92f3b); one rebuild per frame
 (P4) attacks the other half.
 
+MILESTONE 1 MEASURED the same way (his pinch, 55 seconds of touch, the
+build ce3cee66 with the counter): 46 frames per second mean, 81 max; the
+swap blocked 0.7 ms mean; the paint 12.9 ms mean against 9.0 before. The
+texture road alone is SLOWER than the memcpy present: a pan step's damage
+is canvas-sized (~10 MB) and the driver's upload costs more per byte than
+the NEON row copy did. This is the hazard §6 names, and Milestone 2's
+reason: once the canvas leaves the upload (§3.5) a step uploads ~1.4 MB and
+the plate blit, the canvas fills and the present copy leave the CPU frame.
+
 ## 2. The inventory (HEAD 7d275895)
 
 Every road that puts pixels inside `waveform_area` was enumerated and read
@@ -79,7 +88,12 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    full-screen textured triangle; the canvas interior is drawn by GL
    primitives; the frame is swapped. There is no second surface and no
    SurfaceView.
-2. **The texture is placed, never filtered.** The fragment shader fetches
+2. **The texture is placed, never filtered.** (Milestone 1 proved this on
+   the tablet 2026-10-13: eleven screencap states byte-identical between
+   the CPU and GL variants; the driver ANGLE on Vulkan over the Xclipse
+   540, OpenGL ES 3.2; the Display-P3 passthrough accepted and the layer's
+   dataspace DISPLAY_P3 in the compositor's dump under both.) The fragment
+   shader fetches
    texels by integer coordinate (`texelFetch`, the row flipped against GL's
    bottom-up framebuffer) and swizzles cairo's BGRA bytes to RGBA, writing
    alpha 1. Dithering is disabled, blending is off, the framebuffer is plain
@@ -89,7 +103,8 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    sink with two implementations: the cairo sink (the CPU reference, today's
    pixels) and the GL sink, which records solid rects and dotted runs
    (column or row, period, phase origin, color word) and the plate's
-   per-column bar bounds. The GL frame draws, after the texture: the canvas
+   per-column bar bounds. The GL frame draws the canvas FIRST and the
+   texture over it (its alpha-0 texels discarded, §3.4): the canvas
    ground, the grid, the plate (one quad over the canvas with a per-column
    bounds texture and the same priority select `render_waveform` makes —
    the lit inner bar's interior ink, its boundary rows outline, the outer

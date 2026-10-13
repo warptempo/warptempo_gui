@@ -1,5 +1,6 @@
 #include "paint_handler.h"
 
+#include "canvas_sink.h"   // kGuiCanvasDrawList, the plate slot's road
 #include "render.h"
 #include "viewport.h"   // damage_window_top_rows
 #include "text_editor.h"
@@ -142,6 +143,49 @@ void render_waveform_to_cache_surface(
     clear_rows(b1.y + b1.h, area_h - (b1.y + b1.h));
     if (!whole0) clear_rows(b0.y, b0.h);
     if (!whole1) clear_rows(b1.y, b1.h);
+}
+
+// -- render_waveform_to_plate_columns (2026-10-13, the GL canvas) ----------
+//
+// The function above with the store left out (the contract at the
+// declaration, waveform_worker.h): the same two bands of the same
+// layout (waveform_channel_band), the same basis, gain and outline width,
+// through the writer's own column producer (render_waveform_columns) at the
+// plate's own size, the size the surface above would have. A band is STORED
+// exactly where that surface would hold its words: its call returned the
+// band whole — a refused or partial call is the band the surface clears —
+// and every row outside both bands is transparent there and here alike.
+void render_waveform_to_plate_columns(
+    GuiPlateColumns& dest,
+    int area_w,
+    int area_h,
+    int line_px,
+    const GuiAudio& audio,
+    int64_t vp_start,
+    double  painter_spp,
+    bool    magnified,
+    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
+    dest.rendered = true;
+    dest.width    = area_w;
+    dest.height   = area_h;
+    dest.band[0].stored = false;
+    dest.band[1].stored = false;
+    if (area_w <= 0 || area_h <= 0) return;
+    const WaveformChannelBand b0 = waveform_channel_band(area_h, 0);
+    const WaveformChannelBand b1 = waveform_channel_band(area_h, 1);
+    if (b0.h <= 0) return;
+    const WaveformBasis basis{vp_start, painter_spp, area_w};
+    const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
+    const GuiRect ch[2] = {GuiRect{0, b0.y, area_w, b0.h},
+                           GuiRect{0, b1.y, area_w, b1.h}};
+    for (int c = 0; c < 2; ++c) {
+        GuiPlateColumns::Band& band = dest.band[c];
+        band.stored =
+            render_waveform_columns(ch[c], /*col0=*/0, audio, c, basis, gain,
+                                    line_px, area_w, area_h,
+                                    warp_frame_map_or_null, band.columns) &&
+            band.columns.whole;
+    }
 }
 
 // -- Waveform-worker dirty-detect and completion -------------------------
@@ -332,8 +376,13 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     }
 
     // Idle: dispatch immediately. Reuse pending_surface if dimensions
-    // match; recreate on mismatch (window resize, first allocation).
-    if (!wf_cache.pending_surface ||
+    // match; recreate on mismatch (window resize, first allocation). UNDER
+    // THE GL CANVAS no surface is made: the pending slot is the column
+    // bounds (WaveformCache::columns), sized by its producer.
+    if constexpr (kGuiCanvasDrawList) {
+        wf_cache.pending_width  = in.area_w;
+        wf_cache.pending_height = in.area_h;
+    } else if (!wf_cache.pending_surface ||
         wf_cache.pending_width  != in.area_w ||
         wf_cache.pending_height != in.area_h) {
         if (wf_cache.pending_surface) {
@@ -363,6 +412,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_warp_frame_map = in.warp_frame_map;
     job.warp_frame_map        = std::move(in.warp_frame_map);
     job.surface        = wf_cache.pending_surface;
+    if constexpr (kGuiCanvasDrawList) job.columns = &wf_cache.pending_columns;
     // The audio the worker reads: always the project's one source audio, fixed
     // for the whole lifetime of this cache and this worker.
     job.audio          = in.audio;
@@ -467,7 +517,12 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         const int sw = wf_cache.supersede_area_w;
         const int sh = wf_cache.supersede_area_h;
 
-        if (!wf_cache.pending_surface ||
+        if constexpr (kGuiCanvasDrawList) {
+            // The GL canvas's slot is the column bounds (the idle path's
+            // rule).
+            wf_cache.pending_width  = sw;
+            wf_cache.pending_height = sh;
+        } else if (!wf_cache.pending_surface ||
             wf_cache.pending_width  != sw ||
             wf_cache.pending_height != sh) {
             if (wf_cache.pending_surface) {
@@ -500,6 +555,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_warp_frame_map = wf_cache.supersede_warp_frame_map;
         job.warp_frame_map        = std::move(wf_cache.supersede_warp_frame_map);
         job.surface        = wf_cache.pending_surface;
+        if constexpr (kGuiCanvasDrawList)
+            job.columns = &wf_cache.pending_columns;
         // The superseding job reads the project's one source audio, fixed for
         // the whole lifetime of this cache and this worker.
         job.audio          = &audio;
@@ -530,6 +587,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // through a context already destroyed, so the buffer and cairo agree
     // before the swap.
     std::swap(wf_cache.surface,        wf_cache.pending_surface);
+    std::swap(wf_cache.columns,        wf_cache.pending_columns);
     std::swap(wf_cache.width,          wf_cache.pending_width);
     std::swap(wf_cache.height,         wf_cache.pending_height);
 
@@ -727,27 +785,40 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.supersede_warp_frame_map.clear();
 
     // Render into the LIVE surface directly. Reuse-or-recreate on
-    // dimension mismatch, mirroring the dispatch path.
-    if (!wf_cache.surface ||
-        wf_cache.width  != in.area_w ||
-        wf_cache.height != in.area_h) {
-        if (wf_cache.surface) {
-            cairo_surface_destroy(wf_cache.surface);
-            wf_cache.surface = nullptr;
-        }
-        wf_cache.surface = cairo_image_surface_create(
-            CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
+    // dimension mismatch, mirroring the dispatch path. UNDER THE GL CANVAS
+    // the live slot is the column bounds (WaveformCache::columns), filled by
+    // the same producer the worker runs.
+    if constexpr (kGuiCanvasDrawList) {
+        render_waveform_to_plate_columns(
+            wf_cache.columns,
+            in.area_w, in.area_h, in.line_px,
+            *in.audio,
+            in.vp_start, in.painter_spp, in.gain_hash != 0,
+            in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
         wf_cache.width  = in.area_w;
         wf_cache.height = in.area_h;
-    }
+    } else {
+        if (!wf_cache.surface ||
+            wf_cache.width  != in.area_w ||
+            wf_cache.height != in.area_h) {
+            if (wf_cache.surface) {
+                cairo_surface_destroy(wf_cache.surface);
+                wf_cache.surface = nullptr;
+            }
+            wf_cache.surface = cairo_image_surface_create(
+                CAIRO_FORMAT_ARGB32, in.area_w, in.area_h);
+            wf_cache.width  = in.area_w;
+            wf_cache.height = in.area_h;
+        }
 
-    // in.audio is the source audio.
-    render_waveform_to_cache_surface(
-        wf_cache.surface,
-        in.area_w, in.area_h, in.line_px, in.inks,
-        *in.audio,
-        in.vp_start, in.painter_spp, in.gain_hash != 0,
-        in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+        // in.audio is the source audio.
+        render_waveform_to_cache_surface(
+            wf_cache.surface,
+            in.area_w, in.area_h, in.line_px, in.inks,
+            *in.audio,
+            in.vp_start, in.painter_spp, in.gain_hash != 0,
+            in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+    }
 
     // Publish the displayed fingerprint NOW so the flag rebuild at
     // the tail of this function reads the current viewport. Keep pending_fp_*

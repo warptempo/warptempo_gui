@@ -88,6 +88,13 @@ struct WaveformJob {
     // destroy/recreate.
     cairo_surface_t* surface = nullptr;
 
+    // THE GL CANVAS'S PLATE SLOT (2026-10-13; WaveformCache::columns,
+    // paint_handler.h): under kGuiCanvasDrawList the job carries the cache's
+    // pending COLUMN BOUNDS in place of a surface (surface null) and the
+    // worker fills them (render_waveform_to_plate_columns, below). Owned by
+    // the cache like the surface; null on the cairo road.
+    GuiPlateColumns* columns = nullptr;
+
     // Audio handle the render reads (see lifetime invariant above). Always
     // main.cpp's single long-lived source audio — the one GuiAudio for the
     // process lifetime. It outlives every in-flight job, so the job needs no
@@ -98,8 +105,8 @@ struct WaveformJob {
 
 class GuiWaveformWorker {
 public:
-    // ok=true on a clean render; ok=false on dispatch with a null surface
-    // or null audio. The completion handler is responsible for the
+    // ok=true on a clean render; ok=false on dispatch with neither a surface
+    // nor columns, or null audio. The completion handler is responsible for the
     // swap-or-redispatch state machine.
     using DoneCallback = std::function<void(bool ok)>;
 
@@ -205,6 +212,25 @@ void render_waveform_to_cache_surface(
     int area_h,
     int line_px,
     WaveformPlateInks inks,
+    const GuiAudio& audio,
+    int64_t vp_start,
+    double  painter_spp,
+    bool    magnified,
+    const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null);
+
+// THE SAME PLATE AS COLUMN BOUNDS (2026-10-13, the GL canvas;
+// GuiPlateColumns, render.h): the two bands through the one producer
+// render_waveform_to_cache_surface's writer reads (render_waveform_columns),
+// at the plate's size, each band stored exactly where that function's
+// surface would hold its words — the inks ride the paint instead (the
+// published fingerprint's, GuiListCanvasSink::plate), so none is taken here.
+// Thread-agnostic on the same terms: the worker or the synchronous rebuild,
+// the dest slot the cache's.
+void render_waveform_to_plate_columns(
+    GuiPlateColumns& dest,
+    int area_w,
+    int area_h,
+    int line_px,
     const GuiAudio& audio,
     int64_t vp_start,
     double  painter_spp,

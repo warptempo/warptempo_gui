@@ -12,6 +12,8 @@
 #include <string_view>
 #include <vector>
 
+struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
+
 // GuiPlatform: the platform abstraction for the GUI's window, event loop,
 // and presentation. The Wayland backend opens a window via libwayland-client,
 // paints cairo surfaces directly into wl_shm buffers in response to compositor
@@ -278,6 +280,12 @@ public:
     // (GuiUpperRowsRecord, app_state.h). 0 outside a paint.
     static constexpr int kPaintTargetCount = 2;
     int painting_target() const { return painting_target_; }
+    // THE GL CANVAS'S FRAME (2026-10-13; the seam's contract at platform.h's
+    // loop contract): A NO-OP HERE — this backend presents wl_shm buffers
+    // the cairo sink paints whole (canvas_sink.h), so no list ever reaches
+    // it; the member exists because on_redraw compiles against either
+    // backend.
+    void set_canvas_frame(const GuiCanvasDrawList* frame);
     // begin_window_move / begin_window_resize: hand the pointer press being
     // delivered right now to the compositor's interactive move / resize
     // (xdg_toplevel.move / .resize, under that press's serial) — the caption

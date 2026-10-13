@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <vector>
 
+struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
+
 // GuiPlatform: the platform abstraction for the GUI's window, event loop and
 // presentation — THE ANDROID BACKEND, the glass half of the seam whose other
 // implementation is platform_wayland.h's. It runs inside a NativeActivity over the NDK's stock android_native_app_glue:
@@ -278,6 +280,12 @@ public:
     // persistent backbuffer every frame paints into.
     static constexpr int kPaintTargetCount = 1;
     int painting_target() const { return 0; }
+    // THE GL CANVAS'S FRAME (2026-10-13; the seam's contract at platform.h's
+    // loop contract): under the gl build present() reads the list it names —
+    // its records drawn under a scissor to its clip, its clip left out of
+    // every upload unless a floater stands — until the next call names
+    // another; the cpu build stores it and reads nothing.
+    void set_canvas_frame(const GuiCanvasDrawList* frame);
     void begin_window_move() {}
     void begin_window_resize(unsigned /*edges*/) {}
     void minimize_window();
@@ -600,12 +608,39 @@ private:
     int                   gl_texture_h_ = 0;
     // The one-time line naming the driver (adopt_window's road).
     bool                  gl_identity_logged_ = false;
+    // THE CANVAS LIST'S OBJECTS (2026-10-13; the draw at present, the
+    // records at canvas_sink.h): the program and its two uniforms, its own
+    // vertex array over the instance buffer, the plate's bounds texture and
+    // its size — made with the texture program, living in the context — and
+    // the instances' count and the list generation they were made from.
+    unsigned int          gl_list_program_        = 0;
+    int                   gl_list_size_uniform_   = -1;
+    int                   gl_list_height_uniform_ = -1;
+    unsigned int          gl_list_vao_            = 0;
+    unsigned int          gl_list_vbo_            = 0;
+    int                   gl_list_instances_      = 0;
+    uint64_t              gl_list_generation_     = 0;
+    bool                  gl_list_uploaded_       = false;
+    unsigned int          gl_columns_texture_     = 0;
+    int                   gl_columns_w_           = 0;
+    int                   gl_columns_h_           = 0;
+    // THE LAST UPLOAD WALK'S CANVAS (present's upload rule): its clip in
+    // surface px, its floater bit, and whether the texture has had a walk
+    // since it was made (ensure_canvas_texture clears it).
+    int                   gl_upload_clip_[4]      = {0, 0, 0, 0};
+    bool                  gl_upload_floater_      = false;
+    bool                  gl_upload_seeded_       = false;
     void ensure_gl_context();
     void ensure_gl_surface();
     void destroy_gl_surface();
     void ensure_canvas_texture();
     void destroy_gl();
+    void upload_canvas_list(const GuiCanvasDrawList& list);
 #endif
+    // The GL canvas's frame (set_canvas_frame): the GUI's one process-wide
+    // list (gui_canvas_frame, canvas_sink.h), null until the first frame
+    // names it.
+    const GuiCanvasDrawList* canvas_frame_ = nullptr;
 
     // -- Window state --
     // THE SURFACE IS THE WINDOW (architect 2026-10-01, with full screen):

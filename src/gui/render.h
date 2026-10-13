@@ -20,6 +20,7 @@
 #include <vector>
 
 class GuiAudio;
+class GuiCanvasSink;   // the canvas interior's one paint road (canvas_sink.h)
 struct AppState;
 struct DragOverlay;
 namespace text_shape { struct ShapedRun; }
@@ -674,7 +675,7 @@ void install_true_colors(bool on);
 // color (2026-10-09 ~14:25, "on waveform → unscaled") on the canvas's rows
 // ≡ 1 (mod 4), the cues' two colors on rows ≡ 3 and
 // ≡ 7 (mod 8), so they interleave on one column (paint_playheads,
-// fill_dotted_waveform_line). Across the view bar (architect 2026-10-09
+// dotted_waveform_line_run). Across the view bar (architect 2026-10-09
 // ~14:30, "no dots on the trim bar"), the marker lane and the canvas's top
 // frame row it draws nothing (Cool Edit puts no dot on its frame row). IT MAY STAND ON A MARKER'S COLUMN — NO SNAP, NO AVOIDANCE (architect
 // 2026-10-09): the head and a cue's triangle stand in different lanes and
@@ -1935,13 +1936,21 @@ inline int waveform_line_px() {
 // belongs to its column), and its width is CLIPPED at the right edge, so a
 // line at w − 1 paints that one column and nothing reaches the face beside
 // the canvas.
+// The two edge rules' one statement: the line's painted width in columns
+// from `col`, 0 where the column gate refuses it.
+inline int waveform_line_width(int area_w, int col,
+                               int t = waveform_line_px()) {
+    if (col < 0 || col >= area_w) return 0;
+    const int end = (col + t < area_w) ? col + t : area_w;
+    return end - col;
+}
 inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
                                double y0, double y1,
                                int t = waveform_line_px()) {
-    if (col < 0 || col >= area_w) return;
-    const int end = (col + t < area_w) ? col + t : area_w;
+    const int width = waveform_line_width(area_w, col, t);
+    if (width <= 0) return;
     cairo_rectangle(cr, static_cast<double>(area_x + col), y0,
-                    static_cast<double>(end - col), y1 - y0);
+                    static_cast<double>(width), y1 - y0);
     cairo_fill(cr);
 }
 // THE DOTTED LINE (architect 2026-10-09, Cool Edit's cue and cursor columns,
@@ -1954,22 +1963,34 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
 // playhead on 1 of 4 (program_spec.h's dot fields), so they interleave on one
 // column. The column is the item's own painted column, the dot one px on it
 // — the stem the cue's triangle and the playhead's head stand centred on
-// (paint_ce_cue_triangle, ~14:35). In the caller's source color.
-inline void fill_dotted_waveform_line(cairo_t* cr, int area_x, int area_w,
-                                      int col, int y0, int y1, int period,
-                                      int phase) {
-    if (col < 0 || col >= area_w || period <= 0) return;
-    const int t   = waveform_line_px();
-    const int end = (col + t < area_w) ? col + t : area_w;
-    for (int k = phase; y0 + k * t < y1; k += period) {
-        const int top = y0 + k * t;
-        const int bot = top + t < y1 ? top + t : y1;
-        cairo_rectangle(cr, static_cast<double>(area_x + col),
-                        static_cast<double>(top),
-                        static_cast<double>(end - col),
-                        static_cast<double>(bot - top));
-    }
-    cairo_fill(cr);
+// (paint_ce_cue_triangle, ~14:35). Painted through the canvas sink
+// (2026-10-13): dotted_waveform_line_run below makes the line's run, and
+// GuiCanvasSink::dots paints it — on the cairo road one 1 x 1 rectangle a
+// dot and one fill, the shape this line always drew.
+//
+// ONE DOTTED RUN ON THE CANVAS (2026-10-13, the canvas sink's record,
+// canvas_sink.h): the one-device-px cells of a column (`vertical`, rows
+// [y, y + len) at column x) or of a row (columns [x, x + len) at row y)
+// whose coordinate c satisfies (c - origin) mod period = phase, the modulo
+// the non-negative one and 0 <= phase < period — `origin` the coordinate
+// the phase counts from: the canvas's top row for the stems, the cursor and
+// the lead-in ring's right side, the reset's or the left stem's own column
+// for the ring's and the nudged pairs' horizontal runs.
+struct GuiCanvasDotRun {
+    bool vertical = true;
+    int  x = 0, y = 0, len = 0;
+    int  period = 0, origin = 0, phase = 0;
+};
+// The dotted line's run: rows [y0, y1) of column `col` of a strip whose
+// columns are [0, area_w) at window x `area_x`, the phase counted from y0,
+// the line's column gate applied (waveform_line_width) — false, and nothing
+// to paint, where it refuses the column or the period is not positive.
+inline bool dotted_waveform_line_run(int area_x, int area_w, int col, int y0,
+                                     int y1, int period, int phase,
+                                     GuiCanvasDotRun& out) {
+    if (waveform_line_width(area_w, col) <= 0 || period <= 0) return false;
+    out = GuiCanvasDotRun{true, area_x + col, y0, y1 - y0, period, y0, phase};
+    return true;
 }
 // THE SCALE IS THE ONE THING A FLAG CUTS (architect 2026-09-19, replacing the
 // nine-glyph budget this lane carried from the retired marker-text lane). A
@@ -2758,9 +2779,13 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // lines stay these two painters' and the plate keeps baking its two inks
 // alone (WaveformPlateInks). The canvas's frame round the area is
 // paint_canvas_column_frame's (paint_handler.cpp).
+// THE TWO CANVAS PAINTERS PAINT THROUGH THE CANVAS SINK (2026-10-13,
+// canvas_sink.h): the cairo sink on the cpu road and on Wayland, the same
+// rectangles and fills as ever; the draw list under the tablet's GL canvas,
+// where the backbuffer's interior is cleared instead and the GPU draws them.
 void render_background(cairo_t* cr, int x, int y, int w, int h);
-void render_canvas(cairo_t* cr, const GuiRect& area);
-void render_center_lines(cairo_t* cr, const GuiRect& area);
+void render_canvas(GuiCanvasSink& sink, const GuiRect& area);
+void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
 
 // THE RELIEF HELPERS — the chrome's one painter family for the Windows-95
 // edge grammar (architect 2026-10-02; the grammar and the family table at the
@@ -2822,7 +2847,8 @@ void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // THE DIRECT ROAD (2026-10-13): the context's own target as pixel words, and
 // the clip it holds in device pixels, for a painter that writes the words
 // cairo would leave instead of asking cairo for them — the marker stems'
-// dots (paint_marker_stems, paint_handler.cpp) and the cues' triangles
+// dots (paint_marker_stems through the cairo canvas sink's stem_dots,
+// canvas_sink.cpp, since 2026-10-13) and the cues' triangles
 // (paint_ce_cue_triangle, cool_edit_paint.cpp), each stating at its site why
 // its words are cairo's. Taken only where such a write can be cairo's
 // result: the target an ARGB32 image surface with no group open on it, no
@@ -3221,6 +3247,14 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // is immutable once its derivation is ready — GuiAudio::gain_curve — so the job
 // carries only whether to apply it).
 // NULL is the untouched picture, gain 1.0 everywhere.
+//
+// THE COLUMNS AND THE WRITER ARE TWO FUNCTIONS (2026-10-13, the GPU canvas):
+// render_waveform_columns, below, is everything above but the store — the
+// band's rows and columns clamped to the surface, every column's bars and the
+// lit inner's interior — and the one producer of the column bounds both roads
+// read: render_waveform's write pass consumes them on the cairo road, and the
+// tablet's GL canvas keeps them as the plate (GuiPlateColumns) and draws the
+// same priority select per pixel on the GPU (canvas_sink.h).
 [[nodiscard]]
 bool render_waveform(cairo_surface_t* dest,
                      GuiRect area,
@@ -3233,13 +3267,74 @@ bool render_waveform(cairo_surface_t* dest,
                      WaveformPlateInks inks,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr);
 
+// ONE PLATE COLUMN'S ROWS (2026-10-13), in the plate's own rows (row 0 its
+// top, the canvas's first row): the outer (or dark) bar [o0, o1], the lit
+// inner bar [i0, i1] — empty, i0 > i1, under the dark lamp — and the inner's
+// interior [lo, hi], empty where lo > hi. A pixel's word is the priority
+// select render_waveform's write pass states: inside the inner, the ink
+// within the interior and the outline elsewhere; else inside the outer, the
+// ink; else nothing (the zero word).
+struct WaveformColumnRows {
+    int o0, o1;
+    int i0, i1;
+    int lo, hi;
+};
+// ONE CHANNEL BAND'S COLUMNS as render_waveform_columns produced them: the
+// region a write stores, rows [y_lo, y_hi) and columns [col_lo, col_hi) of
+// the surface (the band clamped to it), `cols` one entry per column from
+// col_lo, and whether that region is the asked area whole (`whole`, the
+// writer's return).
+struct WaveformBandColumns {
+    int  y_lo = 0, y_hi = 0;
+    int  col_lo = 0, col_hi = 0;
+    bool whole = false;
+    std::vector<WaveformColumnRows> cols;
+};
+// THE COLUMN BOUNDS' ONE PRODUCER (2026-10-13; the contract is
+// render_waveform's above, less the store): `area`, `col0`, the basis, the
+// gain, the outline width and the map as render_waveform takes them, and
+// the surface's size the band is clamped to (surf_w x surf_h). False exactly
+// where render_waveform returns false without writing — a degenerate area,
+// basis or pyramid, or a band that misses the surface — `out` then
+// unspecified. Thread-agnostic like the writer.
+[[nodiscard]]
+bool render_waveform_columns(GuiRect area,
+                             int col0,
+                             const GuiAudio& audio,
+                             int channel,
+                             const WaveformBasis& basis,
+                             const WaveformGainCurve* gain_or_null,
+                             int outline_px,
+                             int surf_w,
+                             int surf_h,
+                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
+                             WaveformBandColumns& out);
+
+// THE PLATE AS COLUMN BOUNDS (2026-10-13, the tablet's GL canvas; the cache's
+// slot at WaveformCache::columns, paint_handler.h): the two channel bands of
+// a plate width x height, each `stored` exactly where the cairo road's plate
+// surface holds that band's words — its render_waveform call stored the band
+// whole — and transparent otherwise (the rows outside both bands, an odd
+// plate's last, included). `rendered` stands where the cairo road's surface
+// would exist: set by the producer, cleared by the cache's destroy.
+struct GuiPlateColumns {
+    bool rendered = false;
+    int  width  = 0;
+    int  height = 0;
+    struct Band {
+        bool                stored = false;
+        WaveformBandColumns columns;
+    };
+    Band band[2];
+};
+
 // Draws a waveform_line_px()-wide vertical LINE down the CANVAS, `area`
 // whole (row 6's canvas paragraph), at the column nearest `playhead_pixel_x` (offset
 // from area.x), [col, col + t), in `color`, in the FORM the caller picks
 // (architect 2026-10-09, the program is Cool Edit): THE SCANNER SOLID
 // (PlayheadForm::Solid, Cool Edit's playback cursor a solid 1-px line), THE
-// RESTING CURSOR DOTTED (PlayheadForm::Dotted, fill_dotted_waveform_line on
-// the playhead's phase, its dots interleaving with the cues'), painted
+// RESTING CURSOR DOTTED (PlayheadForm::Dotted, dotted_waveform_line_run on
+// the playhead's phase through the sink's dots, its dots interleaving with the cues'), painted
 // straight over whatever it crosses — waveform ink included. No-op if
 // outside; the line is gated on its own column and clipped at the right
 // edge, so it never leaks into an adjacent region.
@@ -3253,8 +3348,10 @@ bool render_waveform(cairo_surface_t* dest,
 // crossed an opaque sample) is retired too: architect 2026-07-26, the notch
 // retired with the polarity inversion — the contrast problem it patched is
 // solved by the scheme, so that parameter went with it.
+// Through the canvas sink (2026-10-13, canvas_sink.h), as is the anchor stem
+// below.
 enum class PlayheadForm { Solid, Dotted };
-void render_playhead(cairo_t* cr,
+void render_playhead(GuiCanvasSink& sink,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
@@ -3274,7 +3371,7 @@ void render_playhead(cairo_t* cr,
 // its plate parameter are retired (architect 2026-07-26, with the polarity
 // inversion). The line is an aliased integer rect waveform_line_px() wide,
 // [col, col + t), clipped at the right edge (fill_waveform_line).
-void render_strip_anchor_stem(cairo_t* cr,
+void render_strip_anchor_stem(GuiCanvasSink& sink,
                               GuiRect area,
                               int col);
 
@@ -3523,7 +3620,7 @@ inline GuiColor cue_dot_color(GuiCueDot d) {
 // two live columns', and the `h` view's diff lane, which replaces them
 // wholesale while the mode stands; the one reader is the per-frame waveform
 // pass GuiPaintHandler::paint_marker_stems, which paints each phase's dotted
-// column (fill_dotted_waveform_line, program_spec.h's dot fields) in the
+// column (the canvas sink's stem_dots, program_spec.h's dot fields) in the
 // palette's live role, so the dots and their triangle can never disagree
 // about a column or a class.
 // A DISABLED marker publishes NO ENTRY AT ALL — disabled markers have no stem

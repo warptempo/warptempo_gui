@@ -1,4 +1,5 @@
 #include "paint_handler.h"
+#include "canvas_sink.h"
 #include "target_render.h"
 #include "notifications.h"
 #include "chrome_spec.h"
@@ -4577,7 +4578,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
 
 // -- GuiPaintHandler::paint_waveform_plate -------------------------------
 
-void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
+void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
+                                           const GuiRect& area) {
     // wf_cache.surface is produced by one of two paths, both of which
     // leave this paint path blit-only:
     //   1. Worker full render — maybe_enqueue_waveform_render
@@ -4623,15 +4625,13 @@ void GuiPaintHandler::paint_waveform_plate(cairo_t* cr, const GuiRect& area) {
     // The clip is the AREA, the canvas's interior (2026-10-09: the canvas's
     // frame stands outside it), so a plate published at a stale size never
     // paints over the frame.
-    if (wf_cache.surface) {
-        cairo_save(cr);
-        cairo_rectangle(cr, area.x, area.y, area.w, area.h);
-        cairo_clip(cr);
-        cairo_set_source_surface(cr, wf_cache.surface,
-                                 area.x, area.y);
-        cairo_paint(cr);
-        cairo_restore(cr);
-    }
+    //
+    // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): the cairo road
+    // blits the live surface as above; the GL canvas's list takes the live
+    // COLUMN BOUNDS instead (WaveformCache::columns, the plate it keeps in
+    // place of a surface) and the published inks, the GPU drawing the same
+    // select the writer stores (GuiListCanvasSink::plate).
+    sink.plate(area, wf_cache.surface, wf_cache.columns, wf_cache.fp_inks);
 }
 
 // -- GuiPaintHandler::plate_viewport_basis ------------------------------
@@ -4935,8 +4935,8 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 //   THE RIGHT SIDE on the band's last column, the stem's rule exactly
 //     (program_spec.h's dot fields: the blue on the canvas rows ≡
 //     range_dot_phase and the red on ≡ cue_dot_phase, mod cue_dot_period,
-//     counted from the canvas's first row) — fill_dotted_waveform_line, the
-//     stem's own painter. A band clipped at the area's right edge draws it
+//     counted from the canvas's first row) — the dotted line's run
+//     (dotted_waveform_line_run, render.h), the stem's own rule. A band clipped at the area's right edge draws it
 //     there, flush, as the trim bridge's clipped fill reads.
 //   THE TOP RUN on the canvas's first row and THE BOTTOM RUN on its last:
 //     the same two phases turned through the corners, counted in device
@@ -4961,8 +4961,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // cache's fingerprint, whose rebuild damages the waveform with the strip
 // (maybe_rebuild_flag_cache, waveform_cache.cpp) — the stem's own repaint;
 // a palette install damages the whole window.
+// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): the top and bottom
+// runs one dots call (one fill on the cairo road, as before), the right side
+// another, under the one aliased scope.
 void GuiPaintHandler::paint_phase_reset_overlay_ring(
-    cairo_t* cr, const GuiRect& area) {
+    GuiCanvasSink& sink, const GuiRect& area) {
     const PhaseResetOverlayBand band = phase_reset_overlay_band(area);
     if (!band.valid) return;
 
@@ -4976,32 +4979,26 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
     const int y_top  = area.y;
     const int y_bot  = area.y + area.h - t;
 
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    sink.begin(/*aliased=*/true);
     const auto paint_dots = [&](const GuiColor& color, int phase) {
-        set_palette_source(cr, color);
-        // The top and bottom runs: the first column at or past x0 whose
-        // offset from the stem is ≡ phase (mod period).
-        const int off   = x0 - stem;
-        const int first = x0 + (((phase - off) % period) + period) % period;
-        for (int x = first; x < x1; x += period) {
-            cairo_rectangle(cr, static_cast<double>(x),
-                            static_cast<double>(y_top),
-                            static_cast<double>(t), static_cast<double>(t));
-            cairo_rectangle(cr, static_cast<double>(x),
-                            static_cast<double>(y_bot),
-                            static_cast<double>(t), static_cast<double>(t));
-        }
-        cairo_fill(cr);
+        // The top and bottom runs: the columns of [x0, x1) whose offset from
+        // the stem is ≡ phase (mod period).
+        const GuiCanvasDotRun runs[2] = {
+            GuiCanvasDotRun{false, x0, y_top, x1 - x0, period, stem, phase},
+            GuiCanvasDotRun{false, x0, y_bot, x1 - x0, period, stem, phase},
+        };
+        sink.dots(runs, color);
         // The right side on the band's last column.
-        fill_dotted_waveform_line(cr, area.x, area.w, x1 - t - area.x,
-                                  area.y, area.y + area.h, period, phase);
+        GuiCanvasDotRun side;
+        if (dotted_waveform_line_run(area.x, area.w, x1 - t - area.x, area.y,
+                                     area.y + area.h, period, phase, side))
+            sink.dots(std::span<const GuiCanvasDotRun>(&side, 1), color);
     };
     if (dots.range_phase_dots != GuiCueDot::None)
         paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
     if (dots.cue_phase_dots != GuiCueDot::None)
         paint_dots(cue_dot_color(dots.cue_phase_dots), ps.cue_dot_phase);
-    cairo_restore(cr);
+    sink.end();
 }
 
 // -- GuiPaintHandler::paint_trim -----------------------------------------
@@ -5152,37 +5149,6 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
 
-// THE DOT COLUMN'S MASK (paint_marker_stems): a one-px-wide A8 strip `h`
-// rows tall, 255 on rows k ≡ `phase` (mod `period`) counting from its top
-// (k from `phase` up, as fill_dotted_waveform_line's loop runs), 0 elsewhere.
-// Cached by (h, period, phase) for the process; a size change replaces the
-// cache whole. Cost cut only (architect 2026-10-12): it paints the rectangles'
-// pixels. Since 2026-10-13 it is THE MASK ROAD, taken only where the direct
-// road (direct_pixel_target, render.h) is refused.
-static cairo_surface_t* dot_column_mask(int h, int period, int phase) {
-    struct Entry {
-        int h, period, phase;
-        cairo_surface_t* surface;
-    };
-    static std::vector<Entry> cache;
-    for (const Entry& e : cache)
-        if (e.h == h && e.period == period && e.phase == phase)
-            return e.surface;
-    if (cache.size() >= 4) {
-        for (const Entry& e : cache) cairo_surface_destroy(e.surface);
-        cache.clear();
-    }
-    cairo_surface_t* surface =
-        cairo_image_surface_create(CAIRO_FORMAT_A8, 1, std::max(h, 1));
-    unsigned char* data = cairo_image_surface_get_data(surface);
-    const int stride = cairo_image_surface_get_stride(surface);
-    std::memset(data, 0, static_cast<std::size_t>(stride) * std::max(h, 1));
-    for (int k = phase; k < h; k += period) data[k * stride] = 255;
-    cairo_surface_mark_dirty(surface);
-    cache.push_back(Entry{h, period, phase, surface});
-    return surface;
-}
-
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
 // what stems and in which of the two cue colors — is at the declaration.
@@ -5198,7 +5164,7 @@ static cairo_surface_t* dot_column_mask(int h, int period, int phase) {
 // THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE COLORS (architect
 // 2026-10-09, METRICS §4.2; the two colors ~11:50; the invalid color
 // 2026-10-11; render.h's marker-lane paragraph): one-device-px dots on the
-// CANVAS'S device rows from its top row (fill_dotted_waveform_line, the
+// CANVAS'S device rows from its top row (the canvas sink's stem_dots, the
 // area whole) — none on the canvas's frame row and none in the lane — on
 // rows ≡ cue_dot_phase (the red's phase) and on rows ≡ range_dot_phase (the
 // blue's; mod cue_dot_period, program_spec.h), each phase in the role the
@@ -5219,24 +5185,30 @@ static cairo_surface_t* dot_column_mask(int h, int period, int phase) {
 // a one-px-wide mask costs pixman a scanline setup per row, the canvas
 // height twice a stem), the same pixels as the mask op they replace — the
 // two roads and why they agree are at the body's dotted_stem.
-void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
+// THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): both roads live
+// in the cairo sink's stem_dots, unchanged in bytes, and the GL canvas's
+// list takes each stem's phase as a dotted column.
+void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
+                                         const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    paint_marker_stem_runs(cr, area);
+    paint_marker_stem_runs(sink, area);
     if (app.marker_stems.empty()) return;
 
     // THE STEMS PAINT AS PUBLISHED (architect 2026-10-03): an open editor's
     // refused commit recolors nothing, so no paint-time override stands
     // here — the stash's two phases are the marker's resolved class, the
     // whole answer, and the colors the palette's live roles.
-    cairo_save(cr);
+    sink.begin(/*aliased=*/false);
     const GuiRect& band = area;   // the canvas, the area whole (2026-10-09)
     const ProgramSpec& ps = kProgramSpec;
     // THE DOTS WRITTEN AS PIXEL WORDS, NOT ONE RECTANGLE A DOT (architect
     // 2026-10-12, the marker slowdown at coarse zoom; 2026-10-13 the words:
     // cost cuts that paint the same pixels). The dots are
-    // fill_dotted_waveform_line's rule — rows ≡ phase (mod period) from the
-    // band's top, one device px, at the stem's column — and the same column
-    // gate (fill_dotted_waveform_line's) applies on both roads.
+    // the dotted line's rule (render.h's dotted_waveform_line_run) — rows
+    // ≡ phase (mod period) from the band's top, one device px, at the stem's
+    // column — and the same column gate applies on both roads. Both roads are
+    // the cairo sink's stem_dots (canvas_sink.cpp) since 2026-10-13, the
+    // context's clip read once at stems_begin.
     //   THE DIRECT ROAD (2026-10-13): each dot's word stored straight into
     // the context's target inside its clip (direct_pixel_target says when
     // that is cairo's own result). The tablet's profile of a pan put 16 % of
@@ -5253,35 +5225,11 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     // one-px-wide A8 mask, laid at the stem's column with the source color;
     // an opaque source through a 0 / 255 mask is the rectangles' pixels
     // exactly.
-    DirectPixelTarget direct;
-    const bool direct_ok = direct_pixel_target(cr, direct);
+    sink.stems_begin();
     const auto dotted_stem = [&](int col, int phase, GuiColor color) {
         if (col < 0 || col >= area.w || ps.cue_dot_period <= 0) return;
-        const int period = ps.cue_dot_period;
-        if (direct_ok) {
-            const uint32_t word = argb32_opaque_word(display_color(color));
-            const int x = area.x + col + direct.dx;
-            const int y_first = band.y + phase + direct.dy;
-            const int y_end   = band.y + band.h + direct.dy;   // exclusive
-            for (const GuiRect& r : direct.clip) {
-                if (x < r.x || x >= r.x + r.w) continue;
-                const int lo = std::max(y_first, r.y);
-                const int hi = std::min(y_end, r.y + r.h);       // exclusive
-                if (lo >= hi) continue;
-                int y = y_first;
-                if (y < lo) y += (lo - y + period - 1) / period * period;
-                for (; y < hi; y += period)
-                    reinterpret_cast<uint32_t*>(
-                        direct.data +
-                        static_cast<std::size_t>(y) * direct.stride)[x] = word;
-            }
-            return;
-        }
-        cairo_surface_t* mask =
-            dot_column_mask(band.h, period, phase);
-        set_palette_source(cr, color);
-        cairo_mask_surface(cr, mask, static_cast<double>(area.x + col),
-                           static_cast<double>(band.y));
+        sink.stem_dots(area.x + col, band.y, band.h, ps.cue_dot_period, phase,
+                       color);
     };
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
@@ -5298,8 +5246,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
             dotted_stem(col, ps.range_dot_phase,
                         cue_dot_color(stem.range_phase_dots));
     }
-    if (direct_ok) cairo_surface_mark_dirty(direct.surface);
-    cairo_restore(cr);
+    sink.stems_end();
+    sink.end();
 }
 
 // THE NUDGED PAIRS' RECTANGLE RUNS (MarkerStemRun, render.h, owns the look;
@@ -5315,7 +5263,11 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
 // aliased integer cells, clipped to the area. Read as published, before
 // the stems paint their sides (paint_marker_stems), whose dots never share
 // a row with these (the stems' phases are rows 3 and 7 of 8).
-void GuiPaintHandler::paint_marker_stem_runs(cairo_t* cr,
+// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): each color's runs,
+// every pair's top and bottom, one dots call — one fill on the cairo road,
+// as before — the columns from the left stem's own (the phase's origin)
+// through the right stem's, cut to the area's columns.
+void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
                                              const GuiRect& area) {
     if (app.marker_stem_runs.empty()) return;
     const ProgramSpec& ps = kProgramSpec;
@@ -5325,32 +5277,29 @@ void GuiPaintHandler::paint_marker_stem_runs(cairo_t* cr,
     const int y_bot  = area.y + area.h - t;
     const int clip_lo = area.x;
     const int clip_hi = area.x + area.w - t;   // the last whole dot's column
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    sink.begin(/*aliased=*/true);
+    std::vector<GuiCanvasDotRun> runs;
+    runs.reserve(2 * app.marker_stem_runs.size());
     const auto paint_dots = [&](const GuiColor& color, int phase) {
-        set_palette_source(cr, color);
+        runs.clear();
         for (const MarkerStemRun& run : app.marker_stem_runs) {
             const int x0 = static_cast<int>(std::nearbyint(run.x0));
             const int x1 = static_cast<int>(std::nearbyint(run.x1));
-            const int hi = std::min(x1, clip_hi);
-            int x = x0 + phase;
-            if (x < clip_lo) x += ((clip_lo - x + period - 1) / period) * period;
-            for (; x <= hi; x += period) {
-                cairo_rectangle(cr, static_cast<double>(x),
-                                static_cast<double>(y_top),
-                                static_cast<double>(t), static_cast<double>(t));
-                cairo_rectangle(cr, static_cast<double>(x),
-                                static_cast<double>(y_bot),
-                                static_cast<double>(t), static_cast<double>(t));
-            }
+            const int lo = std::max(x0, clip_lo);
+            const int hi = std::min(x1, clip_hi);   // inclusive
+            if (hi < lo) continue;
+            runs.push_back(GuiCanvasDotRun{false, lo, y_top, hi + 1 - lo,
+                                           period, x0, phase});
+            runs.push_back(GuiCanvasDotRun{false, lo, y_bot, hi + 1 - lo,
+                                           period, x0, phase});
         }
-        cairo_fill(cr);
+        sink.dots(runs, color);
     };
     paint_dots(cue_dot_color(history_half_dots(/*added=*/true).range_phase_dots),
                ps.range_dot_phase);
     paint_dots(cue_dot_color(history_half_dots(/*added=*/false).cue_phase_dots),
                ps.cue_dot_phase);
-    cairo_restore(cr);
+    sink.end();
 }
 
 // -- GuiPaintHandler::paint_strip_drag_anchor ----------------------------
@@ -5425,7 +5374,8 @@ void GuiPaintHandler::paint_marker_stem_runs(cairo_t* cr,
 // committed act. (With two producers the selection is a ternary again; it was
 // an if/else chain while there were three, and the rule it expresses is the
 // same either way.) One stem is painted either way.
-void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) {
+void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
+                                              const GuiRect& area) {
     const bool nav_zoom    = app.scroll_drag.active && app.scroll_drag.zooming;
     const bool touch_pinch = app.touch_nav_zoom.seated;
     if (!nav_zoom && !touch_pinch) return;
@@ -5441,12 +5391,13 @@ void GuiPaintHandler::paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area) 
     // displayed_column_at, warp_frame_map_view.h), on the PLATE basis.
     const int col = strip_anchor_stem_column(anchor_sample, basis.vp_start,
                                              basis.spp, area.w);
-    render_strip_anchor_stem(cr, area, col);
+    render_strip_anchor_stem(sink, area, col);
 }
 
 // -- GuiPaintHandler::paint_playheads ------------------------------------
 
-void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
+void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
+                                      const GuiRect& area) {
     // Use the displayed viewport AND its samples-per-pixel
     // (wf_cache.fp_vp_start, derived spp) so the cursor stays in
     // lockstep with the cached waveform / stem / flag layers during
@@ -5473,7 +5424,7 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
     // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
     // runs, this cursor included.
-    render_playhead(cr, area, px_x, palette().playhead_stem,
+    render_playhead(sink, area, px_x, palette().playhead_stem,
                     PlayheadForm::Dotted);
 }
 
@@ -5506,13 +5457,13 @@ void GuiPaintHandler::paint_playheads(cairo_t* cr, const GuiRect& area) {
 // Same displayed-plate basis the cursor uses, so both ride the blitted pixels
 // through a worker rebuild; the value fields it reads are meaningful only while
 // active, which is exactly what the gate asks.
-void GuiPaintHandler::paint_scanner(cairo_t* cr, const GuiRect& area) {
+void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
     if (!app.playhead_scanner_active) return;
 
     const PlateViewportBasis basis = plate_viewport_basis();
     const double scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp);
-    render_playhead(cr, area, scan_px, palette().scanner,
+    render_playhead(sink, area, scan_px, palette().scanner,
                     PlayheadForm::Solid);
 }
 
@@ -8268,8 +8219,31 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // interior this face covered; the view bar's and the ruler's own side
 // columns are their painters' (render_trim_flags, paint_ruler_row). THE
 // SAME UNDER EVERY CHROME; the program's colors alone.
+// UNDER THE GL CANVAS (2026-10-13, canvas_sink.h's transparency invariant)
+// the face skips `hole`, the canvas's paint area, which on_redraw clears for
+// the GPU; null on the cairo road, the face whole as ever.
 namespace {
-void paint_canvas_column_frame(cairo_t* cr, const AppState& app) {
+// `r` less `hole` as up to four rects — the rows above the hole, the rows
+// below it, and beside it on its own rows the parts left and right — or `r`
+// whole where the two do not meet (an empty hole included).
+template <typename F>
+void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
+    const int x0 = std::max(r.x, hole.x);
+    const int y0 = std::max(r.y, hole.y);
+    const int x1 = std::min(r.x + r.w, hole.x + hole.w);
+    const int y1 = std::min(r.y + r.h, hole.y + hole.h);
+    if (x1 <= x0 || y1 <= y0) {
+        f(r);
+        return;
+    }
+    if (y0 > r.y) f(GuiRect{r.x, r.y, r.w, y0 - r.y});
+    if (r.y + r.h > y1) f(GuiRect{r.x, y1, r.w, r.y + r.h - y1});
+    if (x0 > r.x) f(GuiRect{r.x, y0, x0 - r.x, y1 - y0});
+    if (r.x + r.w > x1) f(GuiRect{x1, y0, r.x + r.w - x1, y1 - y0});
+}
+
+void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
+                               const GuiRect* hole) {
     const GuiRect area = waveform_area(app);
     const GuiRect top  = top_canvas_frame_area(app);
     const GuiRect foot = bottom_column_foot_area(app);
@@ -8279,7 +8253,13 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app) {
     const int lw = program_line_px();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, GuiRect{top.x, top.y, top.w, y1 - top.y}, p.face);
+    const GuiRect face{top.x, top.y, top.w, y1 - top.y};
+    if (hole)
+        for_each_part_outside(face, *hole, [&](const GuiRect& part) {
+            paint_cell_rect(cr, part, p.face);
+        });
+    else
+        paint_cell_rect(cr, face, p.face);
     paint_relief_frame(cr,
                        GuiRect{area.x - lw, top.y, area.w + 2 * lw,
                                foot.y + lw - top.y},
@@ -8684,11 +8664,58 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // every painter below reads.
     note_upper_rows_painted(GuiRect{x, y, w, h});
 
+    // THE CANVAS'S TWO ROADS (2026-10-13; canvas_sink.h's head owns the rule):
+    // on the cairo road every canvas pass below paints through `cairo_sink`
+    // where it always painted; under the GL canvas (kGuiCanvasDrawList) the
+    // canvas's paint area — the waveform area less the keyboard slot's and
+    // the bottom overlays' slice (onscreen_keyboard::waveform_paint_area),
+    // `canvas_paint` — is left to the GPU: the chrome ground and the
+    // column's face skip it, one CLEAR empties it, no canvas pass paints on
+    // the CPU, and the frame's draw list is built instead — ONCE PER FRAME,
+    // by the first damage rect that meets that area, WHOLE (never cut to the
+    // rect) from the state every pass reads, the later rects of the frame
+    // skipping it (the flags reset at the pre-paint hook,
+    // begin_canvas_frame). The list's clip and floater bit are written on the
+    // frame's first rect whatever it meets, so the platform's scissor and
+    // upload rule follow a paint area that shrank or emptied under no
+    // canvas damage (the keyboard rising, the folder overlay standing).
+    GuiCairoCanvasSink cairo_sink(cr);
+    const GuiRect exposed_rect{x, y, w, h};
+    const GuiRect canvas_paint =
+        onscreen_keyboard::waveform_paint_area(app, gui);
+    const bool canvas_paint_whole = canvas_paint.w > 0 && canvas_paint.h > 0;
+    const bool plate_branch = audio.total_frames() > 0 && !app.loading;
+    if constexpr (kGuiCanvasDrawList) {
+        GuiCanvasDrawList& frame = gui_canvas_frame();
+        if (!canvas_frame_seen) {
+            canvas_frame_seen = true;
+            frame.clip    = canvas_paint_whole ? canvas_paint : GuiRect{0, 0, 0, 0};
+            frame.floater = floating_surface_stands(app);
+            gui.set_canvas_frame(&frame);
+        }
+        if (!canvas_list_built && canvas_paint_whole &&
+            std::max(x, canvas_paint.x) <
+                std::min(x + w, canvas_paint.x + canvas_paint.w) &&
+            std::max(y, canvas_paint.y) <
+                std::min(y + h, canvas_paint.y + canvas_paint.h)) {
+            canvas_list_built = true;
+            build_canvas_list(frame, plate_branch);
+        }
+    }
+
     cairo_save(cr);
     cairo_rectangle(cr, x, y, w, h);
     cairo_clip(cr);
 
-    render_background(cr, x, y, w, h);
+    if constexpr (kGuiCanvasDrawList) {
+        for_each_part_outside(exposed_rect, canvas_paint,
+                              [&](const GuiRect& part) {
+                                  render_background(cr, part.x, part.y,
+                                                    part.w, part.h);
+                              });
+    } else {
+        render_background(cr, x, y, w, h);
+    }
     // THE GROUND SPLIT: the chrome erase above covers the whole exposed rect;
     // the canvas's frame and the column's margins then take the panel's face
     // and the frame's ring (paint_canvas_column_frame, above), and the
@@ -8707,9 +8734,22 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // lines still painted there); with none — no source, or a load running,
     // the branch's own condition `plate_branch` — they paint here, directly
     // over the canvas and its grid, under the same keyboard clip.
-    const bool plate_branch = audio.total_frames() > 0 && !app.loading;
-    {
-        paint_canvas_column_frame(cr, app);
+    // UNDER THE GL CANVAS the CPU leaves all of it to the GPU (the block
+    // above): the face skips the canvas's paint area and one CLEAR empties
+    // it, so its pixels are alpha 0 until an overlay paints over them
+    // (canvas_sink.h's transparency invariant).
+    if constexpr (kGuiCanvasDrawList) {
+        paint_canvas_column_frame(cr, app, &canvas_paint);
+        if (canvas_paint_whole) {
+            cairo_save(cr);
+            cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+            cairo_rectangle(cr, canvas_paint.x, canvas_paint.y,
+                            canvas_paint.w, canvas_paint.h);
+            cairo_fill(cr);
+            cairo_restore(cr);
+        }
+    } else {
+        paint_canvas_column_frame(cr, app, nullptr);
         const GuiRect canvas = waveform_area(app);
         // AND NOT UNDER THE ON-SCREEN KEYBOARD. The painted rect's one owner is
         // onscreen_keyboard::waveform_paint_area (the rule is stated there):
@@ -8727,8 +8767,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             cairo_rectangle(cr, painted.x, painted.y, painted.w, painted.h);
             cairo_clip(cr);
         }
-        render_canvas(cr, canvas);
-        if (!plate_branch) render_center_lines(cr, canvas);
+        render_canvas(cairo_sink, canvas);
+        if (!plate_branch) render_center_lines(cairo_sink, canvas);
         if (band_cuts) cairo_restore(cr);
     }
 
@@ -8837,7 +8877,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // the ONE full enumeration in the tree — every other site states its
         // own pass's class plus a pointer here — and it is derived from the
         // call sequence below plus the two unconditional passes above this
-        // branch:
+        // branch. UNDER THE GL CANVAS (2026-10-13, canvas_sink.h) the canvas
+        // interior's share of it — step 2's canvas and grid (and center
+        // lines without audio), step 4, steps 6 to 8 and step 11 — is the
+        // frame's draw list in this same order, drawn by the GPU under
+        // everything the CPU paints (build_canvas_list); the CPU's share
+        // leaves that interior alpha 0:
         //   1. render_background — the chrome erase over the whole exposed
         //      rect (above, unconditional).
         //   2. paint_canvas_column_frame — the panel's face from the canvas's
@@ -8932,19 +8977,22 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     stems, so the moving line does not blink out at every marker it
         //     crosses.)
 
-        if (rects_intersect(exposed, wave_paint)) {
-            paint_waveform_plate(cr, area);
+        // THE CANVAS PASSES BELOW PAINT ON THE CAIRO ROAD ALONE: under the GL
+        // canvas the frame's list carries them, built once, whole, in this
+        // order (build_canvas_list).
+        if (!kGuiCanvasDrawList && rects_intersect(exposed, wave_paint)) {
+            paint_waveform_plate(cairo_sink, area);
             // THE CENTER LINES OVER THE INK (architect 2026-10-09 evening;
             // render_center_lines, render.h's row-6 canvas paragraph): each
             // channel's zero row, one device px in `center`, right after the
             // blit and under every dot, ring and line that follows.
-            render_center_lines(cr, area);
+            render_center_lines(cairo_sink, area);
             // The overlay band's dotted ring — the phase-reset overlay's whole
             // visual — over the plate and under the stems and the cursor's
             // dots: its left side is the focused reset's own stem, which
             // paint_marker_stems lays down, the playhead's dots interleaving
             // there as on any stem.
-            paint_phase_reset_overlay_ring(cr, area);
+            paint_phase_reset_overlay_ring(cairo_sink, area);
         }
 
         // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
@@ -8961,8 +9009,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // MARKER STEMS BEFORE THE CURSOR (architect 2026-09-23): the cursor's
         // dots paint after them; on a shared column the two dot phases never
         // touch (2026-10-09, the paint-order block above).
-        if (rects_intersect(exposed, wave_paint)) {
-            paint_marker_stems(cr, area);
+        if (!kGuiCanvasDrawList && rects_intersect(exposed, wave_paint)) {
+            paint_marker_stems(cairo_sink, area);
         }
 
         // The CURSOR'S CANVAS DOTS AFTER THE MARKER STEMS (the
@@ -8971,8 +9019,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // under it as before. (The scanner paints after it, below.) Its head
         // is the ruler pass's and its view-bar dots the trim pass's, so this
         // pass is the waveform's alone.
-        if (rects_intersect(exposed, wave_paint)) {
-            paint_playheads(cr, area);
+        if (!kGuiCanvasDrawList && rects_intersect(exposed, wave_paint)) {
+            paint_playheads(cairo_sink, area);
         }
 
         // THE SCANNER LAST OF THE WAVEFORM VERTICALS (architect 2026-08-01):
@@ -8982,8 +9030,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // too, just before this pass, and stays under the flags. Where the two
         // playheads meet the scanner is on top. Waveform-only, so no top_strip
         // arm.
-        if (rects_intersect(exposed, wave_paint)) {
-            paint_scanner(cr, area);
+        if (!kGuiCanvasDrawList && rects_intersect(exposed, wave_paint)) {
+            paint_scanner(cairo_sink, area);
         }
 
         if (rects_intersect(exposed, top_strip)) {
@@ -9002,8 +9050,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // this overlap is transient and the pivot affordance reading on top is
         // acceptable. The flag editor's box likewise ends up after the
         // playheads, but on the non-overlapping marker lane.
-        if (rects_intersect(exposed, wave_paint)) {
-            paint_strip_drag_anchor(cr, area);
+        if (!kGuiCanvasDrawList && rects_intersect(exposed, wave_paint)) {
+            paint_strip_drag_anchor(cairo_sink, area);
         }
 
         if (band_cuts) cairo_restore(cr);
@@ -9105,6 +9153,36 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // GuiPlatform::paint_one_frame does after the paint loop is
     // wl_surface_attach + wl_surface_commit.
     cairo_surface_flush(cairo_get_target(cr));
+}
+
+// -- THE GL CANVAS'S FRAME (2026-10-13; canvas_sink.h owns the rule) -----
+//
+// The frame's draw list, built by on_redraw's first damage rect that meets
+// the canvas's paint area: the canvas passes in on_redraw's paint order
+// (its authoritative block), each through the list sink, WHOLE — no damage
+// rect cuts it and no exposure gates a pass — so the GPU redraws the
+// canvas entire at every swap from one coherent state.
+void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
+                                        bool plate_branch) {
+    GuiListCanvasSink sink(frame);
+    const GuiRect area = waveform_area(app);
+    render_canvas(sink, area);
+    if (!plate_branch) {
+        render_center_lines(sink, area);
+        return;
+    }
+    paint_waveform_plate(sink, area);
+    render_center_lines(sink, area);
+    paint_phase_reset_overlay_ring(sink, area);
+    paint_marker_stems(sink, area);
+    paint_playheads(sink, area);
+    paint_scanner(sink, area);
+    paint_strip_drag_anchor(sink, area);
+}
+
+void GuiPaintHandler::begin_canvas_frame() {
+    canvas_frame_seen = false;
+    canvas_list_built = false;
 }
 
 // -- GuiPaintHandler::on_resize ------------------------------------------

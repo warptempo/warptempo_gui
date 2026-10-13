@@ -1,6 +1,7 @@
 #include "render.h"
 #include "app_state.h"
 #include "audio.h"
+#include "canvas_sink.h"    // the canvas painters' one road (GuiCanvasSink)
 #include "gui_display_context.h"
 #include "gui_font.h"
 #include "text_shape.h"
@@ -13,11 +14,13 @@
 #include "warp_frame_map_view.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstring>
 #include <limits>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -157,27 +160,43 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 }
 
 namespace {
+// THE CANVAS'S LINES' RECTANGLES, collected for one sink fill (the grid and
+// its seam: 2 channels x 3 lines x 2 sides + 1; the center lines: 2).
+struct CanvasLines {
+    std::array<GuiRect, 16> rects{};
+    int count = 0;
+    std::span<const GuiRect> span() const {
+        return std::span<const GuiRect>(rects.data(),
+                                        static_cast<std::size_t>(count));
+    }
+};
 // ONE CANVAS LINE ACROSS THE AREA on area-local row `row`, `t` device rows
-// thick, as an aliased rect appended to the current path and cut to the
+// thick, as an aliased rect appended to the lines of one fill and cut to the
 // area's rows: rows [row − t / 2, row − t / 2 + t). The grid's and the
 // center lines' one row rule (render_canvas, render_center_lines).
-void canvas_hline(cairo_t* cr, const GuiRect& area, int row, int t) {
+void canvas_hline(CanvasLines& lines, const GuiRect& area, int row, int t) {
     const int top = std::max(area.y, area.y + row - t / 2);
     const int bot = std::min(area.y + area.h, area.y + row - t / 2 + t);
-    if (bot > top) cairo_rectangle(cr, area.x, top, area.w, bot - top);
+    if (bot > top) {
+        assert(lines.count < static_cast<int>(lines.rects.size()));
+        lines.rects[static_cast<std::size_t>(lines.count++)] =
+            GuiRect{area.x, top, area.w, bot - top};
+    }
 }
 } // namespace
 
-void render_canvas(cairo_t* cr, const GuiRect& area) {
+// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): on the cairo road the
+// one aliased scope, the ground's fill and the lines' one fill exactly as
+// before; on the GL canvas the same rectangles as list records.
+void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    sink.begin(/*aliased=*/true);
     const GuiPalette& pal = palette();
     // The ground is the `waveform_canvas` role (the palette's row-6 block),
-    // through the waveform's chokepoint (set_waveform_source, render.h).
-    set_waveform_source(cr, pal.waveform_canvas);
-    cairo_rectangle(cr, area.x, area.y, area.w, area.h);
-    cairo_fill(cr);
+    // through the waveform's chokepoint (set_waveform_source, render.h — the
+    // cairo sink's source).
+    sink.rects(std::span<const GuiRect>(&area, 1), pal.waveform_canvas);
+    CanvasLines lines;
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
     // horizontal grid and the press seam's line — t = waveform_line_px() thick, ONE DEVICE PX
     // ("on waveform → unscaled", the class's one inventory), each an aliased
@@ -196,7 +215,7 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
     // whole (no inset, architect 2026-10-09), so H is half a band, the band
     // the canvas's halved and floored height.
     const auto hline = [&](int row) {
-        canvas_hline(cr, area, row, t);
+        canvas_hline(lines, area, row, t);
     };
     for (int ch = 0; ch < 2; ++ch) {
         const WaveformChannelBand band = waveform_channel_band(area.h, ch);
@@ -215,13 +234,12 @@ void render_canvas(cairo_t* cr, const GuiRect& area) {
     // (waveform_press_seam_row, the same call waveform_lower_half reads, so
     // the line and the press cannot drift), appended to the grid's path and
     // filled with it; it coincides with the channels' meeting row.
-    canvas_hline(cr, area, waveform_press_seam_row(area) - area.y, t);
-    set_waveform_source(cr, pal.grid);
-    cairo_fill(cr);
-    cairo_restore(cr);
+    canvas_hline(lines, area, waveform_press_seam_row(area) - area.y, t);
+    sink.rects(lines.span(), pal.grid);
+    sink.end();
 }
 
-void render_center_lines(cairo_t* cr, const GuiRect& area) {
+void render_center_lines(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     // THE CENTER LINE per channel ON ITS ZERO ROW, OVER THE WAVEFORM'S INK
     // (architect 2026-10-09 evening: "it's supposed to be visible over the
@@ -230,17 +248,17 @@ void render_center_lines(cairo_t* cr, const GuiRect& area) {
     // order at render.h's row-6 canvas paragraph): one device px, the grid's
     // row rule (canvas_hline), in the palette's `center`, the channels'
     // bands the plate's own (waveform_channel_band), so it stands on the row
-    // the plate's bars straddle.
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // the plate's bars straddle. Through the canvas sink (2026-10-13), one
+    // aliased scope and one fill on the cairo road as before.
+    sink.begin(/*aliased=*/true);
     const int t = waveform_line_px();
+    CanvasLines lines;
     for (int ch = 0; ch < 2; ++ch) {
         const WaveformChannelBand band = waveform_channel_band(area.h, ch);
-        if (band.h > 0) canvas_hline(cr, area, band.zero_row(), t);
+        if (band.h > 0) canvas_hline(lines, area, band.zero_row(), t);
     }
-    set_waveform_source(cr, palette().center);
-    cairo_fill(cr);
-    cairo_restore(cr);
+    sink.rects(lines.span(), palette().center);
+    sink.end();
 }
 
 // -- The relief helpers (the contract at the declaration, render.h) ---------
@@ -668,17 +686,21 @@ void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w) {
     cairo_restore(cr);
 }
 
-bool render_waveform(cairo_surface_t* dest,
-                     GuiRect area,
-                     int col0,
-                     const GuiAudio& audio,
-                     int channel,
-                     const WaveformBasis& basis,
-                     const WaveformGainCurve* gain_or_null,
-                     int outline_px,
-                     WaveformPlateInks inks,
-                     const std::vector<WarpFrameMapSegment>* warp_frame_map) {
-    if (!dest) return false;
+// THE COLUMN BOUNDS (2026-10-13; the contract is at the declaration, render.h):
+// every step of the plate's render but the store, so the cairo road's writer
+// below and the GL canvas's plate (waveform_cache.cpp's
+// render_waveform_to_plate_columns) read one set of bounds.
+bool render_waveform_columns(GuiRect area,
+                             int col0,
+                             const GuiAudio& audio,
+                             int channel,
+                             const WaveformBasis& basis,
+                             const WaveformGainCurve* gain_or_null,
+                             int outline_px,
+                             int surf_w,
+                             int surf_h,
+                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
+                             WaveformBandColumns& out) {
     if (area.w <= 0 || area.h <= 2) return false;
     if (basis.full_width <= 0) return false;
     // The lattice step must be numeric and positive; a degenerate zoom refuses
@@ -687,25 +709,6 @@ bool render_waveform(cairo_surface_t* dest,
 
     const int num_levels = audio.num_levels();
     if (num_levels <= 0) return false;
-
-    // ARGB32 ONLY: the writer stores 32-bit premultiplied words, so any other
-    // format would be silently misinterpreted. Both plate surfaces are created
-    // CAIRO_FORMAT_ARGB32 (waveform_cache.cpp); this is the guard that keeps
-    // that true. Geometry comes from the surface itself — the stride accessor,
-    // never width*4, since cairo is free to pad rows.
-    if (cairo_image_surface_get_format(dest) != CAIRO_FORMAT_ARGB32)
-        return false;
-    // Flush BEFORE the first CPU access so any pending cairo drawing on the
-    // surface has landed in the buffer (the one caller draws none before this
-    // call since the band is written whole; the flush is the surface
-    // contract, kept). Paired with the cairo_surface_mark_dirty after the
-    // last write.
-    cairo_surface_flush(dest);
-    unsigned char* const surf_data = cairo_image_surface_get_data(dest);
-    if (!surf_data) return false;
-    const int surf_stride = cairo_image_surface_get_stride(dest);
-    const int surf_w      = cairo_image_surface_get_width(dest);
-    const int surf_h      = cairo_image_surface_get_height(dest);
     if (surf_w <= 0 || surf_h <= 0) return false;
 
     // THE AUTHORING LATTICE (see WaveformBasis). Recover the viewport's lattice
@@ -801,18 +804,6 @@ bool render_waveform(cairo_surface_t* dest,
     // A bar depends on nothing but its own interval, so every column is now
     // self-contained and there is nothing for an offscreen neighbour to
     // contribute: pan invariance strengthened rather than weakened here.
-    //
-    // THE PREMULTIPLIED WORDS, each built once per call through the one word
-    // owner (argb32_opaque_word, render.h — its byte-order and rounding
-    // contract lives there): the plate's ink (`inks`, the job's snapshot of
-    // the `waveform_ink` role), worn by the dark lamp's raw bar and by both lit
-    // bars' fills, and the inner bar's outline (the `waveform_outline` role;
-    // built always, written only when lit).
-    // Each is already the window's word (WaveformPlateInks, converted on the
-    // GUI thread by waveform_plate_inks; display_transform.h's head), so the
-    // worker reads no switch.
-    const uint32_t ink_word     = argb32_opaque_word(hex(inks.ink_rgb));
-    const uint32_t outline_word = argb32_opaque_word(hex(inks.outline_rgb));
 
     // Row bounds: this channel's band, intersected with the surface.
     int y_lo = area.y;
@@ -1000,6 +991,98 @@ bool render_waveform(cairo_surface_t* dest,
         g_prev = g1;
     }
 
+    // EACH OWNED COLUMN'S ROWS (WaveformColumnRows, render.h): the outer
+    // [o0, o1], the lit inner [i0, i1] and its interior [lo, hi], an empty
+    // inner (the dark lamp's) never matching — the bounds the writer's word
+    // and the GL canvas's select both read.
+    const int ncols = col_hi - col_lo;
+    out.y_lo   = y_lo;
+    out.y_hi   = y_hi;
+    out.col_lo = col_lo;
+    out.col_hi = col_hi;
+    out.whole  = y_lo == area.y && y_hi == area.y + area.h &&
+                 col_lo == area.x && col_hi == area.x + area.w;
+    out.cols.resize(static_cast<size_t>(ncols));
+    for (int x = col_lo; x < col_hi; ++x) {
+        const int i = x - area.x;
+        const BarRows& o = outer_rows[static_cast<size_t>(i)];
+        WaveformColumnRows& cw = out.cols[static_cast<size_t>(x - col_lo)];
+        cw.o0 = o.r0;
+        cw.o1 = o.r1;
+        cw.i0 = y_hi;
+        cw.i1 = y_lo - 1;
+        cw.lo = y_hi;
+        cw.hi = y_lo - 1;
+        if (gain_or_null) {
+            const BarRows& b = inner_rows[static_cast<size_t>(i)];
+            const BarRows in = inner_interior(i, inner_rows);
+            cw.i0 = b.r0;
+            cw.i1 = b.r1;
+            cw.lo = in.r0;
+            cw.hi = in.r1;
+        }
+    }
+    return true;
+}
+
+bool render_waveform(cairo_surface_t* dest,
+                     GuiRect area,
+                     int col0,
+                     const GuiAudio& audio,
+                     int channel,
+                     const WaveformBasis& basis,
+                     const WaveformGainCurve* gain_or_null,
+                     int outline_px,
+                     WaveformPlateInks inks,
+                     const std::vector<WarpFrameMapSegment>* warp_frame_map) {
+    if (!dest) return false;
+
+    // ARGB32 ONLY: the writer stores 32-bit premultiplied words, so any other
+    // format would be silently misinterpreted. Both plate surfaces are created
+    // CAIRO_FORMAT_ARGB32 (waveform_cache.cpp); this is the guard that keeps
+    // that true. Geometry comes from the surface itself — the stride accessor,
+    // never width*4, since cairo is free to pad rows.
+    if (cairo_image_surface_get_format(dest) != CAIRO_FORMAT_ARGB32)
+        return false;
+    // Flush BEFORE the first CPU access so any pending cairo drawing on the
+    // surface has landed in the buffer (the one caller draws none before this
+    // call since the band is written whole; the flush is the surface
+    // contract, kept). Paired with the cairo_surface_mark_dirty after the
+    // last write. (The column producer's refusals now come after it; a flush
+    // with nothing pending changes no pixel.)
+    cairo_surface_flush(dest);
+    unsigned char* const surf_data = cairo_image_surface_get_data(dest);
+    if (!surf_data) return false;
+    const int surf_stride = cairo_image_surface_get_stride(dest);
+    const int surf_w      = cairo_image_surface_get_width(dest);
+    const int surf_h      = cairo_image_surface_get_height(dest);
+    if (surf_w <= 0 || surf_h <= 0) return false;
+
+    // THE BOUNDS, the one producer's (render_waveform_columns, render.h).
+    WaveformBandColumns band;
+    if (!render_waveform_columns(area, col0, audio, channel, basis,
+                                 gain_or_null, outline_px, surf_w, surf_h,
+                                 warp_frame_map, band))
+        return false;
+    const int y_lo   = band.y_lo;
+    const int y_hi   = band.y_hi;
+    const int col_lo = band.col_lo;
+    const int col_hi = band.col_hi;
+    const std::vector<WaveformColumnRows>& cols = band.cols;
+    const int ncols = col_hi - col_lo;
+
+    // THE PREMULTIPLIED WORDS, each built once per call through the one word
+    // owner (argb32_opaque_word, render.h — its byte-order and rounding
+    // contract lives there): the plate's ink (`inks`, the job's snapshot of
+    // the `waveform_ink` role), worn by the dark lamp's raw bar and by both lit
+    // bars' fills, and the inner bar's outline (the `waveform_outline` role;
+    // built always, written only when lit).
+    // Each is already the window's word (WaveformPlateInks, converted on the
+    // GUI thread by waveform_plate_inks; display_transform.h's head), so the
+    // worker reads no switch.
+    const uint32_t ink_word     = argb32_opaque_word(hex(inks.ink_rgb));
+    const uint32_t outline_word = argb32_opaque_word(hex(inks.outline_rgb));
+
     // THE WRITE PASS: DELTA ROWS, THE BAND WRITTEN WHOLE (2026-10-13, a cost
     // cut that writes the same words). Each owned column's rows are gathered
     // first — the outer [o0, o1], the lit inner [i0, i1] and its interior
@@ -1033,8 +1116,8 @@ bool render_waveform(cairo_surface_t* dest,
     // to the zero word 0x00000000. The word it left at (x, y) is therefore
     // decided by priority alone: inside the inner, the interior test; else
     // inside the outer, the ink; else the zero word — `word_at` below,
-    // evaluated on the same BarRows and the same [lo, hi], for the same owned
-    // columns. Between two boundary rows no interval's membership changes, so
+    // evaluated on the bounds render_waveform_columns gathered from the same
+    // BarRows and the same [lo, hi], for the same owned columns. Between two boundary rows no interval's membership changes, so
     // the scratch word re-decided at the last boundary IS word_at at every
     // row up to the next; no store reads a pixel, so the order cannot change
     // a word. THE BAND IS THIS CALL'S WHOLE: every pixel of [y_lo, y_hi) x
@@ -1045,33 +1128,7 @@ bool render_waveform(cairo_surface_t* dest,
     // stored region is `area` whole; THE CALLER CLEARS whatever no call
     // stored (render_waveform_to_cache_surface, waveform_cache.cpp: the
     // spare row of an odd plate and a band whose call returned early).
-    struct ColumnRows {
-        int o0, o1;   // the outer (or dark) bar
-        int i0, i1;   // the lit inner bar; empty (i0 > i1) when dark
-        int lo, hi;   // the inner's interior; lo > hi when empty
-    };
-    const int ncols = col_hi - col_lo;
-    std::vector<ColumnRows> cols(static_cast<size_t>(ncols));
-    for (int x = col_lo; x < col_hi; ++x) {
-        const int i = x - area.x;
-        const BarRows& o = outer_rows[static_cast<size_t>(i)];
-        ColumnRows& cw = cols[static_cast<size_t>(x - col_lo)];
-        cw.o0 = o.r0;
-        cw.o1 = o.r1;
-        cw.i0 = y_hi;
-        cw.i1 = y_lo - 1;
-        cw.lo = y_hi;
-        cw.hi = y_lo - 1;
-        if (gain_or_null) {
-            const BarRows& b = inner_rows[static_cast<size_t>(i)];
-            const BarRows in = inner_interior(i, inner_rows);
-            cw.i0 = b.r0;
-            cw.i1 = b.r1;
-            cw.lo = in.r0;
-            cw.hi = in.r1;
-        }
-    }
-    const auto word_at = [&](const ColumnRows& cw, int y) -> uint32_t {
+    const auto word_at = [&](const WaveformColumnRows& cw, int y) -> uint32_t {
         if (y >= cw.i0 && y <= cw.i1)
             return (y >= cw.lo && y <= cw.hi) ? ink_word : outline_word;
         if (y >= cw.o0 && y <= cw.o1) return ink_word;
@@ -1082,7 +1139,7 @@ bool render_waveform(cairo_surface_t* dest,
     // indices in `events`, which opens at ends[r - 1].
     const int nrows = y_hi - y_lo;
     std::vector<int> ends(static_cast<size_t>(nrows), 0);
-    const auto for_each_boundary = [&](const ColumnRows& cw, auto&& f) {
+    const auto for_each_boundary = [&](const WaveformColumnRows& cw, auto&& f) {
         const int iv[3][2] = {{cw.o0, cw.o1}, {cw.i0, cw.i1}, {cw.lo, cw.hi}};
         for (const auto& ab : iv) {
             if (ab[0] > ab[1]) continue;
@@ -1090,7 +1147,7 @@ bool render_waveform(cairo_surface_t* dest,
             if (ab[1] + 1 > y_lo && ab[1] + 1 < y_hi) f(ab[1] + 1 - y_lo);
         }
     };
-    for (const ColumnRows& cw : cols)
+    for (const WaveformColumnRows& cw : cols)
         for_each_boundary(cw, [&](int r) { ++ends[static_cast<size_t>(r)]; });
     int total = 0;
     for (int& e : ends) {
@@ -1125,11 +1182,10 @@ bool render_waveform(cairo_surface_t* dest,
 
     // Last CPU write is done — hand the buffer back to cairo.
     cairo_surface_mark_dirty(dest);
-    return y_lo == area.y && y_hi == area.y + area.h &&
-           col_lo == area.x && col_hi == area.x + area.w;
+    return band.whole;
 }
 
-void render_playhead(cairo_t* cr,
+void render_playhead(GuiCanvasSink& sink,
                      GuiRect area,
                      double  playhead_pixel_x,
                      GuiColor color,
@@ -1173,24 +1229,33 @@ void render_playhead(cairo_t* cr,
     // alternative that was declined.
     const int col = static_cast<int>(std::nearbyint(playhead_pixel_x));
 
-    cairo_save(cr);
+    // The sink's scope with the antialias left as it stands (the integral
+    // rect under the integral translation is what makes these cells exact,
+    // canvas_sink.h's head).
+    sink.begin(/*aliased=*/false);
     // The waveform_line_px()-wide line (render.h) paints whenever its column
     // is onscreen (gated on its own column and clipped at the right edge), so
     // it never leaks into an adjacent region, straight over whatever it
     // crosses — waveform ink included. THE CANVAS'S ROWS, the area whole
     // (2026-10-09): the scanner solid, the resting cursor Cool Edit's dotted
     // column on its own phase (the declaration).
-    set_palette_source(cr, color);
-    if (form == PlayheadForm::Dotted)
-        fill_dotted_waveform_line(cr, area.x, area.w, col, area.y,
-                                  area.y + area.h, kProgramSpec.dot_period,
-                                  kProgramSpec.playhead_dot_phase);
-    else
-        fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
-    cairo_restore(cr);
+    if (form == PlayheadForm::Dotted) {
+        GuiCanvasDotRun run;
+        if (dotted_waveform_line_run(area.x, area.w, col, area.y,
+                                     area.y + area.h, kProgramSpec.dot_period,
+                                     kProgramSpec.playhead_dot_phase, run))
+            sink.dots(std::span<const GuiCanvasDotRun>(&run, 1), color);
+    } else {
+        const int width = waveform_line_width(area.w, col);
+        if (width > 0) {
+            const GuiRect line{area.x + col, area.y, width, area.h};
+            sink.rects(std::span<const GuiRect>(&line, 1), color);
+        }
+    }
+    sink.end();
 }
 
-void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
+void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, int col) {
     if (area.w <= 0 || area.h <= 0) return;
     // The clamp is where the affordance lives: an anchor pushed to (or past) a
     // song edge pins to the edge column, so the stem draws exactly there.
@@ -1200,7 +1265,7 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     if (col < 0)          col = 0;
     if (col >= area.w)    col = area.w - 1;
 
-    cairo_save(cr);
+    sink.begin(/*aliased=*/false);
     // THE ANCHOR STEM IS THE SCANNER'S WHITE (architect 2026-10-09: "the zoom
     // stem and the scanner are both white, which unifies them: the
     // non-playhead stems that are related to the controls should be white,
@@ -1211,9 +1276,12 @@ void render_strip_anchor_stem(cairo_t* cr, GuiRect area, int col) {
     // and the cursor's are dotted.
     // The canvas's rows, the area whole (2026-10-09: the frame row above it
     // is the canvas's frame, which no line crosses).
-    set_palette_source(cr, palette().scanner);
-    fill_waveform_line(cr, area.x, area.w, col, area.y, area.y + area.h);
-    cairo_restore(cr);
+    const int width = waveform_line_width(area.w, col);
+    if (width > 0) {
+        const GuiRect line{area.x + col, area.y, width, area.h};
+        sink.rects(std::span<const GuiRect>(&line, 1), palette().scanner);
+    }
+    sink.end();
 }
 
 // -- Trim bound geometry owners -------------------------------------------

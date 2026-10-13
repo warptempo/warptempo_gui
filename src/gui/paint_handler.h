@@ -13,6 +13,8 @@
 
 namespace color_picker { struct ComboList; }
 
+class GuiCanvasSink;        // canvas_sink.h
+struct GuiCanvasDrawList;   // canvas_sink.h
 class GuiWaveformWorker;
 struct GuiTargetRender;
 
@@ -139,6 +141,20 @@ struct WaveformCache {
     int              width   = 0;     // surface width  (== area.w when valid)
     int              height  = 0;     // surface height (== area.h when valid)
 
+    // THE PLATE AS COLUMN BOUNDS, THE GL CANVAS'S SLOT (2026-10-13;
+    // GuiPlateColumns, render.h): under kGuiCanvasDrawList (canvas_sink.h)
+    // the plate is kept as the two bands' per-column bar bounds IN PLACE OF
+    // the surface — no surface is ever made and no write pass runs; the GPU
+    // draws the writer's select from them (GuiListCanvasSink::plate). The
+    // live `columns` and the worker's `pending_columns` follow the surface
+    // pair's whole life — the worker writes the pending slot, the completion
+    // swaps the two, the synchronous rebuild writes the live one after the
+    // drain — and width / height stand for them as for the surfaces; the
+    // fingerprints, the publish and the supersede rule are untouched. Both
+    // stay unrendered on the cairo road.
+    GuiPlateColumns columns;
+    GuiPlateColumns pending_columns;
+
     // Fingerprint of the LIVE surface (what the next blit will draw). Set
     // at completion-swap time, not at dispatch. fp_target discriminates
     // the source-view and target-view caches: a `t` toggle flips it
@@ -260,6 +276,8 @@ struct WaveformCache {
             cairo_surface_destroy(pending_surface);
             pending_surface = nullptr;
         }
+        columns.rendered         = false;
+        pending_columns.rendered = false;
         width  = 0;
         height = 0;
         pending_width  = 0;
@@ -629,6 +647,15 @@ struct GuiPaintHandler {
     // (app_state.h).
     void settle_owed_lane_damage();
 
+    // THE GL CANVAS'S FRAME BOUNDARY (2026-10-13, canvas_sink.h): clears the
+    // two per-frame bits on_redraw's canvas block keeps — the list's clip and
+    // floater bit written, the list built — so the next frame's first damage
+    // rect writes them again and its first rect meeting the canvas's paint
+    // area builds the list. Called from the pre-paint hook (main.cpp), the
+    // one seat that opens every painted frame on both backends; a no-op's
+    // worth of work on the cairo road, which reads neither bit.
+    void begin_canvas_frame();
+
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
     // viewport change, so every live overlay stays
@@ -681,6 +708,15 @@ private:
     // head): the owed rebuild publishes the live fingerprint before the next
     // paint, so a job dispatched in between would only be drained unfinished.
     bool waveform_rebuild_owed = false;
+
+    // THE GL CANVAS'S PER-FRAME BITS (begin_canvas_frame above, on_redraw's
+    // canvas block): the frame's list clip and floater bit written, and the
+    // frame's list built. Read and written under kGuiCanvasDrawList alone.
+    bool canvas_frame_seen = false;
+    bool canvas_list_built = false;
+    // The frame's draw list from the canvas passes, through the list sink, in
+    // on_redraw's paint order (the definition, paint_handler.cpp).
+    void build_canvas_list(GuiCanvasDrawList& frame, bool plate_branch);
 
     // The two as-painted fingerprints and the paint's half of their record
     // (settle_owed_lane_damage's block, paint_handler.cpp).
@@ -892,13 +928,18 @@ private:
     // painter's class ladder, pads, baseline and shaping. on_redraw calls the
     // free function directly, in the floating-surfaces slot and for their
     // reason: it publishes geometry the pointer path reads.)
-    void paint_waveform_plate(cairo_t* cr, const GuiRect& area);
+    // THE CANVAS PASSES PAINT THROUGH THE CANVAS SINK (2026-10-13,
+    // canvas_sink.h): the plate, the ring, the stems and their runs, the
+    // cursor, the scanner and the anchor below — the cairo sink on the cairo
+    // road, the list sink under the GL canvas (build_canvas_list).
+    void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
     // The overlay band's DOTTED ring — the phase-reset overlay's whole
     // visual, its right side and its top and bottom runs one-device-px dots
     // in the reset's own stem pattern (its left side is the stem itself;
     // architect 2026-10-09) — painted AFTER the plate and before the stems,
     // over the ink like every dot on the canvas.
-    void paint_phase_reset_overlay_ring(cairo_t* cr, const GuiRect& area);
+    void paint_phase_reset_overlay_ring(GuiCanvasSink& sink,
+                                        const GuiRect& area);
     // The LIVE trim pass: paints EVERY trim pixel per frame — the view bar
     // whole (its lines, its black field and the span; no playhead, architect
     // 2026-10-09 ~14:30) and the column's air above it — in ONE pass, entirely inside
@@ -936,23 +977,23 @@ private:
     // It paints the `h` view's nudged pairs' rectangle runs first
     // (paint_marker_stem_runs, AppState::marker_stem_runs), the stems their
     // sides.
-    void paint_marker_stems(cairo_t* cr, const GuiRect& area);
+    void paint_marker_stems(GuiCanvasSink& sink, const GuiRect& area);
     // The nudged pairs' rectangle runs (MarkerStemRun, render.h; the body
     // owns the form), paint_marker_stems' first act.
-    void paint_marker_stem_runs(cairo_t* cr, const GuiRect& area);
+    void paint_marker_stem_runs(GuiCanvasSink& sink, const GuiRect& area);
     // THE RESTING CURSOR's canvas run (its head is paint_ruler_row's; nothing
     // over the view bar, architect 2026-10-09 ~14:30): Cool Edit's dotted
     // column in the palette's `playhead_stem` (its Curs yellow by default),
     // one-device-px dots on the canvas's device rows ≡ 1 (mod 4), painted
     // after the marker stems, whose dots stand between its own.
-    void paint_playheads(cairo_t* cr, const GuiRect& area);
+    void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_marker_stems and paint_playheads: the scanner draws OVER the stems
     // (and over the cursor where they meet) instead of being erased by every
     // marker it sweeps past. Waveform-only, gated on playhead_scanner_active —
     // see the definition for the ruling.
-    void paint_scanner(cairo_t* cr, const GuiRect& area);
-    void paint_strip_drag_anchor(cairo_t* cr, const GuiRect& area);
+    void paint_scanner(GuiCanvasSink& sink, const GuiRect& area);
+    void paint_strip_drag_anchor(GuiCanvasSink& sink, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
     // THE MODAL (2026-08-13): the BOTTOM ROW, hosting the prompts and the
     // two modal editors (settings / BPM) while one

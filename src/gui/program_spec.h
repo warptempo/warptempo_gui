@@ -244,7 +244,7 @@ struct ProgramSpec {
     // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and
-    // fill_dotted_waveform_line): THE PLAYHEAD'S every `dot_period`
+    // dotted_waveform_line_run): THE PLAYHEAD'S every `dot_period`
     // rows on its phase; A CUE'S TWO COLORS each every `cue_dot_period` rows
     // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
     // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
