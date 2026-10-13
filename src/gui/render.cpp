@@ -668,7 +668,7 @@ void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w) {
     cairo_restore(cr);
 }
 
-void render_waveform(cairo_surface_t* dest,
+bool render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
                      const GuiAudio& audio,
@@ -678,32 +678,35 @@ void render_waveform(cairo_surface_t* dest,
                      int outline_px,
                      WaveformPlateInks inks,
                      const std::vector<WarpFrameMapSegment>* warp_frame_map) {
-    if (!dest) return;
-    if (area.w <= 0 || area.h <= 2) return;
-    if (basis.full_width <= 0) return;
+    if (!dest) return false;
+    if (area.w <= 0 || area.h <= 2) return false;
+    if (basis.full_width <= 0) return false;
     // The lattice step must be numeric and positive; a degenerate zoom refuses
     // here exactly as the old empty-viewport check did.
-    if (!(basis.spp > 0.0)) return;
+    if (!(basis.spp > 0.0)) return false;
 
     const int num_levels = audio.num_levels();
-    if (num_levels <= 0) return;
+    if (num_levels <= 0) return false;
 
     // ARGB32 ONLY: the writer stores 32-bit premultiplied words, so any other
     // format would be silently misinterpreted. Both plate surfaces are created
     // CAIRO_FORMAT_ARGB32 (waveform_cache.cpp); this is the guard that keeps
     // that true. Geometry comes from the surface itself — the stride accessor,
     // never width*4, since cairo is free to pad rows.
-    if (cairo_image_surface_get_format(dest) != CAIRO_FORMAT_ARGB32) return;
-    // Flush BEFORE the first CPU access so any pending cairo drawing (the
-    // caller's CLEAR of the columns this call regenerates) has landed in the
-    // buffer. Paired with the cairo_surface_mark_dirty after the last write.
+    if (cairo_image_surface_get_format(dest) != CAIRO_FORMAT_ARGB32)
+        return false;
+    // Flush BEFORE the first CPU access so any pending cairo drawing on the
+    // surface has landed in the buffer (the one caller draws none before this
+    // call since the band is written whole; the flush is the surface
+    // contract, kept). Paired with the cairo_surface_mark_dirty after the
+    // last write.
     cairo_surface_flush(dest);
     unsigned char* const surf_data = cairo_image_surface_get_data(dest);
-    if (!surf_data) return;
+    if (!surf_data) return false;
     const int surf_stride = cairo_image_surface_get_stride(dest);
     const int surf_w      = cairo_image_surface_get_width(dest);
     const int surf_h      = cairo_image_surface_get_height(dest);
-    if (surf_w <= 0 || surf_h <= 0) return;
+    if (surf_w <= 0 || surf_h <= 0) return false;
 
     // THE AUTHORING LATTICE (see WaveformBasis). Recover the viewport's lattice
     // index with the SAME expression clamp_viewport_start uses to snap onto it,
@@ -772,7 +775,7 @@ void render_waveform(cairo_surface_t* dest,
     // filled inclusively with the opaque ink word (with the lamp lit, the
     // inner bar stands over the outer, both in the ink word, the inner's
     // outline (outline_px thick) in the outline word — the rule is at this
-    // function's declaration; the row-major write pass below).
+    // function's declaration; the write pass below).
     // There is no fractional coverage and no inter-column connectivity of
     // any kind — a spike stands alone, exactly as in a classic min/max
     // renderer; the inner's outline READS the neighbouring columns' rows to
@@ -816,7 +819,7 @@ void render_waveform(cairo_surface_t* dest,
     int y_hi = area.y + area.h;          // exclusive
     if (y_lo < 0)      y_lo = 0;
     if (y_hi > surf_h) y_hi = surf_h;
-    if (y_hi <= y_lo) return;
+    if (y_hi <= y_lo) return false;
 
     // COLUMNS THIS CALL OWNS. Every write is clipped to them, so a partial
     // render, if one is ever reintroduced, cannot bleed into a neighbour's
@@ -826,7 +829,7 @@ void render_waveform(cairo_surface_t* dest,
     int col_hi = area.x + area.w;
     if (col_lo < 0)      col_lo = 0;
     if (col_hi > surf_w) col_hi = surf_w;
-    if (col_hi <= col_lo) return;
+    if (col_hi <= col_lo) return false;
 
     // Global column c's display-domain edge, AS THE LATTICE POINT ITSELF:
     // g(k0+c) = nearbyint((k0+c)*spp), bit-for-bit the integer
@@ -997,99 +1000,133 @@ void render_waveform(cairo_surface_t* dest,
         g_prev = g1;
     }
 
-    // THE WRITE PASS, ROW-MAJOR AND BRANCH-FREE (2026-10-13, cost cuts that
-    // write the same words: the tablet's profile of a magnified pan put 12.8 %
-    // of all CPU on the old column-major store — one word per row of a column
-    // at the surface's row stride, a cache miss a row — and, once the pass
-    // went row-major, 34 % on its per-pixel branch chain). Each owned
-    // column's rows are gathered first into six int32 arrays, structure of
-    // arrays so the row loop vectorizes (compare, select, store over
-    // contiguous lanes): the outer [o0, o1], the lit inner [i0, i1] and its
-    // interior [lo, hi] (an empty inner, the dark lamp's, never matches).
-    // Then the surface is written one row at a time, EVERY owned column of
-    // every row in [row_top, row_bot] stored, so the stores run along memory
-    // with no branch per pixel.
+    // THE WRITE PASS: DELTA ROWS, THE BAND WRITTEN WHOLE (2026-10-13, a cost
+    // cut that writes the same words). Each owned column's rows are gathered
+    // first — the outer [o0, o1], the lit inner [i0, i1] and its interior
+    // [lo, hi] (an empty inner, the dark lamp's, never matches). A column's
+    // word is then PIECEWISE CONSTANT down the band: it changes only where
+    // one of its three intervals starts or ends, row a and row b + 1 of
+    // [a, b]. So one scratch row holds every owned column's word at the
+    // current row: it is computed whole at the band's first row, each later
+    // row first re-decides only the columns with an interval boundary on it
+    // (the boundaries bucketed by row in one counting pass), and the scratch
+    // row is copied onto EVERY row of the band [y_lo, y_hi) across the owned
+    // columns [col_lo, col_hi) — contiguous row copies, no per-pixel work.
+    // THE SHAPE IS THE TABLET'S MEASUREMENT (2026-10-13, a standalone bench
+    // of the write pass at the tablet's plate, 2256 x 960 in two 480-row
+    // bands, median ms per whole plate on a Cortex-A720 core, the NDK's
+    // clang at -O3, each variant's buffer asserted equal; lit plate with
+    // outer bars over 70–95 % of the band / dark plate with short bars; a
+    // variant that needs the whole-surface clear carries the clear's 0.39):
+    // column-major runs (each bar's rows at the row stride) 3.33 / 0.65,
+    // row-major branchy per pixel 3.32 / 1.19, row-major vectorized select
+    // over the bars' rows 4.53 / 1.77 (slower than the branchy loop under
+    // that compiler), the same select on unsigned ranges over the whole band
+    // 1.38 / 1.38, NEON tiles of 16 columns with their bounds in registers
+    // 1.84 / 0.70 (whole band 1.66 / 1.66), DELTA ROWS, this code, 0.47 /
+    // 0.48 — about the clear's own cost, the store bandwidth.
     //
-    // THE IDENTITY, the one statement of it: the column-major writer this
-    // replaces REPLACE-wrote the outer bar's rows with the ink word, then
-    // (lit) every row of the inner bar once — the ink word inside its
-    // interior, the outline word elsewhere in it — over the outer, and left
-    // every other pixel as the caller's clear had it. The word that writer
-    // leaves at (x, y) is therefore decided by priority alone: inside the
-    // inner, the interior test; else inside the outer, the ink; else the
-    // cleared word. THE CLEAR CONTRACT: the one caller,
-    // render_waveform_to_cache_surface (waveform_cache.cpp), clears the WHOLE
-    // surface with CAIRO_OPERATOR_CLEAR before its first call, so every pixel
-    // here holds the zero word 0x00000000 when this pass runs — and the two
-    // channels' bands are disjoint (waveform_channel_band) while every row
-    // this pass stores lies in this call's band [y_lo, y_hi), so neither
-    // channel's call stores over the other's words. Storing the zero word
-    // where no bar covers a pixel is therefore the cleared word itself. The
-    // select below is exactly that priority, evaluated on the same BarRows
-    // and the same [lo, hi], for the same owned columns [col_lo, col_hi);
-    // only the order of the stores changed and zeros are stored over zeros,
-    // and no store reads a pixel, so neither can change a word. A caller
-    // that stops clearing the whole surface first breaks this pass.
+    // THE IDENTITY, the one statement of it: the column-major writer of
+    // record REPLACE-wrote the outer bar's rows with the ink word, then (lit)
+    // every row of the inner bar once — the ink word inside its interior, the
+    // outline word elsewhere in it — over the outer, onto a surface cleared
+    // to the zero word 0x00000000. The word it left at (x, y) is therefore
+    // decided by priority alone: inside the inner, the interior test; else
+    // inside the outer, the ink; else the zero word — `word_at` below,
+    // evaluated on the same BarRows and the same [lo, hi], for the same owned
+    // columns. Between two boundary rows no interval's membership changes, so
+    // the scratch word re-decided at the last boundary IS word_at at every
+    // row up to the next; no store reads a pixel, so the order cannot change
+    // a word. THE BAND IS THIS CALL'S WHOLE: every pixel of [y_lo, y_hi) x
+    // [col_lo, col_hi) is stored, the zero word where no bar covers, so the
+    // pass reads nothing the surface held before it and needs no clear; the
+    // two channels' bands are disjoint (waveform_channel_band), so neither
+    // call stores over the other's. The return value says whether that
+    // stored region is `area` whole; THE CALLER CLEARS whatever no call
+    // stored (render_waveform_to_cache_surface, waveform_cache.cpp: the
+    // spare row of an odd plate and a band whose call returned early).
+    struct ColumnRows {
+        int o0, o1;   // the outer (or dark) bar
+        int i0, i1;   // the lit inner bar; empty (i0 > i1) when dark
+        int lo, hi;   // the inner's interior; lo > hi when empty
+    };
     const int ncols = col_hi - col_lo;
-    std::vector<int32_t> c_o0(static_cast<size_t>(ncols));
-    std::vector<int32_t> c_o1(static_cast<size_t>(ncols));
-    std::vector<int32_t> c_i0(static_cast<size_t>(ncols));
-    std::vector<int32_t> c_i1(static_cast<size_t>(ncols));
-    std::vector<int32_t> c_lo(static_cast<size_t>(ncols));
-    std::vector<int32_t> c_hi(static_cast<size_t>(ncols));
-    int row_top = y_hi;
-    int row_bot = y_lo - 1;
+    std::vector<ColumnRows> cols(static_cast<size_t>(ncols));
     for (int x = col_lo; x < col_hi; ++x) {
         const int i = x - area.x;
-        const size_t j = static_cast<size_t>(x - col_lo);
         const BarRows& o = outer_rows[static_cast<size_t>(i)];
-        c_o0[j] = o.r0;
-        c_o1[j] = o.r1;
-        c_i0[j] = y_hi;
-        c_i1[j] = y_lo - 1;
-        c_lo[j] = y_hi;
-        c_hi[j] = y_lo - 1;
+        ColumnRows& cw = cols[static_cast<size_t>(x - col_lo)];
+        cw.o0 = o.r0;
+        cw.o1 = o.r1;
+        cw.i0 = y_hi;
+        cw.i1 = y_lo - 1;
+        cw.lo = y_hi;
+        cw.hi = y_lo - 1;
         if (gain_or_null) {
             const BarRows& b = inner_rows[static_cast<size_t>(i)];
             const BarRows in = inner_interior(i, inner_rows);
-            c_i0[j] = b.r0;
-            c_i1[j] = b.r1;
-            c_lo[j] = in.r0;
-            c_hi[j] = in.r1;
+            cw.i0 = b.r0;
+            cw.i1 = b.r1;
+            cw.lo = in.r0;
+            cw.hi = in.r1;
         }
-        row_top = std::min({row_top, c_o0[j], c_i0[j]});
-        row_bot = std::max({row_bot, c_o1[j], c_i1[j]});
     }
-    {
-        const int32_t* const o0 = c_o0.data();
-        const int32_t* const o1 = c_o1.data();
-        const int32_t* const i0 = c_i0.data();
-        const int32_t* const i1 = c_i1.data();
-        const int32_t* const lo = c_lo.data();
-        const int32_t* const hi = c_hi.data();
-        for (int y = row_top; y <= row_bot; ++y) {
-            uint32_t* const row = reinterpret_cast<uint32_t*>(
-                surf_data + static_cast<size_t>(y) * surf_stride) + col_lo;
-            for (int j = 0; j < ncols; ++j) {
-                // Each test a 0 / all-ones mask, blended with & and |: inside
-                // the inner, ink on the interior and outline on its border;
-                // else inside the outer, ink; else the zero word.
-                const uint32_t in_inner =
-                    0u - static_cast<uint32_t>((y >= i0[j]) & (y <= i1[j]));
-                const uint32_t in_int =
-                    0u - static_cast<uint32_t>((y >= lo[j]) & (y <= hi[j]));
-                const uint32_t in_outer =
-                    0u - static_cast<uint32_t>((y >= o0[j]) & (y <= o1[j]));
-                const uint32_t inner_word =
-                    (ink_word & in_int) | (outline_word & ~in_int);
-                row[j] = (inner_word & in_inner)
-                       | (ink_word & in_outer & ~in_inner);
+    const auto word_at = [&](const ColumnRows& cw, int y) -> uint32_t {
+        if (y >= cw.i0 && y <= cw.i1)
+            return (y >= cw.lo && y <= cw.hi) ? ink_word : outline_word;
+        if (y >= cw.o0 && y <= cw.o1) return ink_word;
+        return 0u;
+    };
+    // The boundary rows strictly inside the band (the first row is computed
+    // whole), bucketed by row: `ends[r]` closes row y_lo + r's run of column
+    // indices in `events`, which opens at ends[r - 1].
+    const int nrows = y_hi - y_lo;
+    std::vector<int> ends(static_cast<size_t>(nrows), 0);
+    const auto for_each_boundary = [&](const ColumnRows& cw, auto&& f) {
+        const int iv[3][2] = {{cw.o0, cw.o1}, {cw.i0, cw.i1}, {cw.lo, cw.hi}};
+        for (const auto& ab : iv) {
+            if (ab[0] > ab[1]) continue;
+            if (ab[0] > y_lo && ab[0] < y_hi) f(ab[0] - y_lo);
+            if (ab[1] + 1 > y_lo && ab[1] + 1 < y_hi) f(ab[1] + 1 - y_lo);
+        }
+    };
+    for (const ColumnRows& cw : cols)
+        for_each_boundary(cw, [&](int r) { ++ends[static_cast<size_t>(r)]; });
+    int total = 0;
+    for (int& e : ends) {
+        const int k = e;
+        e = total;   // for now, the row's first slot
+        total += k;
+    }
+    std::vector<int> events(static_cast<size_t>(total));
+    for (int j = 0; j < ncols; ++j)
+        for_each_boundary(cols[static_cast<size_t>(j)], [&](int r) {
+            events[static_cast<size_t>(ends[static_cast<size_t>(r)]++)] = j;
+        });
+    std::vector<uint32_t> scratch(static_cast<size_t>(ncols));
+    for (int j = 0; j < ncols; ++j)
+        scratch[static_cast<size_t>(j)] =
+            word_at(cols[static_cast<size_t>(j)], y_lo);
+    const size_t row_bytes = static_cast<size_t>(ncols) * sizeof(uint32_t);
+    for (int r = 0; r < nrows; ++r) {
+        const int y = y_lo + r;
+        if (r > 0) {
+            for (int e = ends[static_cast<size_t>(r - 1)];
+                 e < ends[static_cast<size_t>(r)]; ++e) {
+                const size_t j =
+                    static_cast<size_t>(events[static_cast<size_t>(e)]);
+                scratch[j] = word_at(cols[j], y);
             }
         }
+        uint32_t* const row = reinterpret_cast<uint32_t*>(
+            surf_data + static_cast<size_t>(y) * surf_stride) + col_lo;
+        std::memcpy(row, scratch.data(), row_bytes);
     }
 
     // Last CPU write is done — hand the buffer back to cairo.
     cairo_surface_mark_dirty(dest);
+    return y_lo == area.y && y_hi == area.y + area.h &&
+           col_lo == area.x && col_hi == area.x + area.w;
 }
 
 void render_playhead(cairo_t* cr,

@@ -3018,19 +3018,23 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE WRITER: this function does NOT draw through cairo. It writes `dest`'s
 // ARGB32 pixel words directly, which is why it takes the surface rather than a
 // context. ONE COMPOSITING RULE, where there were two: every write REPLACES,
-// and no write reads. The caller cleared every column this call regenerates;
-// with the lamp dark a pixel takes its column's one bar, and lit the inner
-// bar's word where the inner covers it, else the outer's (the inner over the
-// outer where they overlap is the magnification rule's order) — a priority,
-// so replacing is correct and idempotent, and the surface is written
-// ROW-MAJOR and BRANCH-FREE, one row at a time along memory, after every
-// column's rows are gathered, storing the zero word wherever no bar covers a
-// pixel of the rows it writes — the caller's whole-surface clear left that
-// word there (2026-10-13, cost cuts; the identity with the column-by-column
-// order it replaced, and the clear contract it rests on, are stated once, at
-// the write pass in render.cpp) — the
+// and no write reads. With the lamp dark a pixel takes its column's one bar,
+// and lit the inner bar's word where the inner covers it, else the outer's
+// (the inner over the outer where they overlap is the magnification rule's
+// order), else the zero word — a priority, so replacing is correct and
+// idempotent. THE CALL WRITES ITS BAND WHOLE: every pixel of `area`'s rows
+// across its columns (both clamped to the surface) is stored, row by row
+// from one scratch row re-decided only where a column's bar starts or ends
+// (2026-10-13, a cost cut measured on the tablet; the identity with the
+// column-by-column order of record and the measurement are stated once, at
+// the write pass in render.cpp), so nothing the surface held before the call
+// survives in that region and the caller clears nothing under it — the
 // max-compositing that the segments needed (they wrote into an
-// already-rendered neighbour) went with them.
+// already-rendered neighbour) went with them. RETURNS whether the stored
+// region is `area` whole: false when the call returned early without
+// writing (a degenerate area, basis or surface) or `area` overhangs the
+// surface, and the caller clears what no call stored
+// (render_waveform_to_cache_surface, waveform_cache.cpp).
 //
 // The words are PREMULTIPLIED ARGB32 (argb32_opaque_word): each ink's word is
 // built once per call; at full coverage each is its colour
@@ -3145,9 +3149,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // its outer containing the inner; a column wholly on one side of zero (low
 // material at working zoom) has its outer pushed outward, with a gap between
 // it and the inner. Intended — that is what a true magnification looks like.
-// THE COST is one extra row fill and one lookup (the scale) per column — the
-// read,
-// the map walk and the gain lookup are shared; no second pyramid, no second
+// THE COST is one extra bar's rows (its boundaries in the write pass) and one
+// lookup (the scale) per column — the read, the map walk and the gain lookup are shared; no second pyramid, no second
 // plate and no new cache field (waveform_gain_fingerprint flips with the
 // lamp). The outline adds one row-extent pair per column for the inner, held
 // for the call so the write can see its neighbours, and a handful of
@@ -3213,7 +3216,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // is immutable once its derivation is ready — GuiAudio::gain_curve — so the job
 // carries only whether to apply it).
 // NULL is the untouched picture, gain 1.0 everywhere.
-void render_waveform(cairo_surface_t* dest,
+[[nodiscard]]
+bool render_waveform(cairo_surface_t* dest,
                      GuiRect area,
                      int col0,
                      const GuiAudio& audio,

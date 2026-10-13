@@ -49,27 +49,32 @@ void render_waveform_to_cache_surface(
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null) {
     if (!dest || area_w <= 0 || area_h <= 0) return;
 
-    // Clear to transparent — the canvas ground render_canvas lays under
-    // the plate shows through wherever the waveform samples don't paint. No
-    // ground color is ever baked into the plate: its alpha is exactly what
-    // composites the ink over that ground through its gaps (binary alpha since
-    // the aliasing deletion), so the canvas has one painter. Nothing recolours
-    // that ground under the plate since the sweep's region highlight retired
-    // (2026-10-03); the remaining reason is that one-painter rule, and the
-    // plate stays as it is (the record is at render_waveform, render.h).
-    // This is the LAST cairo drawing on the surface: render_waveform writes the
-    // pixel words directly, so the context is destroyed before those CPU writes
-    // begin (render_waveform still flushes defensively, per its contract).
-    // THE WRITE PASS DEPENDS ON THIS CLEAR covering the WHOLE surface: it
-    // stores the zero word wherever no bar covers a pixel of its rows, which
-    // is the picture only because the clear left zeros there (the clear
-    // contract, render_waveform's write pass, render.cpp).
-    {
+    // TRANSPARENT where no bar covers — the canvas ground render_canvas lays
+    // under the plate shows through wherever the waveform samples don't
+    // paint. No ground color is ever baked into the plate: its alpha is
+    // exactly what composites the ink over that ground through its gaps
+    // (binary alpha since the aliasing deletion), so the canvas has one
+    // painter. Nothing recolours that ground under the plate since the
+    // sweep's region highlight retired (2026-10-03); the remaining reason is
+    // that one-painter rule, and the plate stays as it is (the record is at
+    // render_waveform, render.h).
+    // THE CLEAR CONTRACT (2026-10-13): there is NO WHOLE-SURFACE CLEAR — each
+    // render_waveform call stores every pixel of its channel's band, the zero
+    // word where no bar covers (the write pass, render.cpp, where the cost
+    // measured on the tablet is recorded: the clear alone cost nearly as much
+    // as the whole write that replaces it). The surface is reused frame to
+    // frame, so whatever no call stored is cleared after the calls
+    // (`clear_rows` below): the rows outside both bands — the spare last row
+    // of an odd plate — and the band of a call that returned false. The bands
+    // span the surface's full width, so no column lies outside them.
+    const auto clear_rows = [dest](int y, int h) {
+        if (h <= 0) return;
         cairo_t* ccr = cairo_create(dest);
         cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);
-        cairo_paint(ccr);
+        cairo_rectangle(ccr, 0, y, cairo_image_surface_get_width(dest), h);
+        cairo_fill(ccr);
         cairo_destroy(ccr);
-    }
+    };
     // THE CHANNELS FILL THE PLATE, WHICH IS THE CANVAS (architect 2026-10-09,
     // "remove": the waveform's 6-W vertical inset is gone — it paid for a
     // stem-only band over the samples, where the retired tip-down playhead
@@ -98,7 +103,10 @@ void render_waveform_to_cache_surface(
     // stand on these bands' zero rows.
     const WaveformChannelBand b0 = waveform_channel_band(area_h, 0);
     const WaveformChannelBand b1 = waveform_channel_band(area_h, 1);
-    if (b0.h <= 0) return;
+    if (b0.h <= 0) {
+        clear_rows(0, area_h);
+        return;
+    }
     const GuiRect ch0{0, b0.y, area_w, b0.h};
     const GuiRect ch1{0, b1.y, area_w, b1.h};
     // The full render IS the basis: global column 0 at the plate's own width.
@@ -123,10 +131,16 @@ void render_waveform_to_cache_surface(
     // waveform_line_px() snapshot (render.h): the outline erodes at that
     // distance (render_waveform), so it is a render input and a fingerprint
     // field like the area's dimensions.
-    render_waveform(dest, ch0, /*col0=*/0, audio, 0,
-                    basis, gain, line_px, inks, warp_frame_map_or_null);
-    render_waveform(dest, ch1, /*col0=*/0, audio, 1,
-                    basis, gain, line_px, inks, warp_frame_map_or_null);
+    const bool whole0 = render_waveform(dest, ch0, /*col0=*/0, audio, 0,
+                                        basis, gain, line_px, inks,
+                                        warp_frame_map_or_null);
+    const bool whole1 = render_waveform(dest, ch1, /*col0=*/0, audio, 1,
+                                        basis, gain, line_px, inks,
+                                        warp_frame_map_or_null);
+    clear_rows(0, b0.y);
+    clear_rows(b1.y + b1.h, area_h - (b1.y + b1.h));
+    if (!whole0) clear_rows(b0.y, b0.h);
+    if (!whole1) clear_rows(b1.y, b1.h);
 }
 
 // -- Waveform-worker dirty-detect and completion -------------------------
@@ -501,9 +515,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
     // Swap the pending surface into the live slot. Cairo surface ownership
     // transfers cleanly via pointer swap; no flush needed because the worker's
-    // render already committed the surface fully — its CLEAR context was
-    // destroyed and render_waveform's direct pixel writes end in a
-    // cairo_surface_mark_dirty, so the buffer and cairo agree before the swap.
+    // render already committed the surface fully — render_waveform's direct
+    // pixel writes end in a cairo_surface_mark_dirty and any leftover CLEAR
+    // after them (render_waveform_to_cache_surface's clear_rows) was drawn
+    // through a context already destroyed, so the buffer and cairo agree
+    // before the swap.
     std::swap(wf_cache.surface,        wf_cache.pending_surface);
     std::swap(wf_cache.width,          wf_cache.pending_width);
     std::swap(wf_cache.height,         wf_cache.pending_height);
