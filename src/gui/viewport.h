@@ -101,13 +101,14 @@ struct Viewport {
     // produced by one path.)
 
     // One-shot synchronous rebuild kick: for a discrete viewport/view jump,
-    // render the waveform plate inline and publish the displayed fingerprint in
-    // the same handler, so every layer reflects the new state in one frame. Set
-    // from main.cpp to paint_handler.force_synchronous_waveform_rebuild(). Held
-    // as a std::function for the same no-compile-time-edge-to-paint_handler.h
-    // reason as the kicks above. Null-safe: when unset (before main.cpp wires
-    // it) it falls back to the async worker kick, so the path stays correct
-    // either way.
+    // owe the frame's synchronous plate rebuild, so every layer reflects the
+    // new state in the one frame that paints. Set from main.cpp to
+    // paint_handler.owe_waveform_rebuild(); the debt is paid at the pre-paint
+    // hook, or by an event-time flush where a reader needs the output sooner
+    // (THE REBUILD IS OWED, below, owns the contract). Held as a std::function
+    // for the same no-compile-time-edge-to-paint_handler.h reason as the kicks
+    // above. Null-safe: when unset (before main.cpp wires it) it falls back to
+    // the async worker kick, so the path stays correct either way.
     //
     // THE CALLER INVENTORY (grep-derived; this is the ONE authoritative copy —
     // every other site carries only its own class statement plus a pointer here,
@@ -283,18 +284,23 @@ struct Viewport {
     // promoted only by on_redraw, so a press resolving against the displayed
     // geometry (displayed_or_live_target_map, item_viewport_basis, the
     // promoted hit rects) reads the same thing either way and needs none.
-    // TWO SITES FLUSH, by inventory 2026-10-13 (every caller class above and
+    // THREE SITES FLUSH, by inventory 2026-10-13 (every caller class above and
     // every event-time reader of the rebuild's output examined; no caller
     // reads that output after its own kick in the same event — the drop, the
     // camera moves and the edit tails all read live or displayed state — and
-    // the two readers below read it in a LATER event of the same drain):
+    // the readers below read it in a LATER event of the same drain):
     //   * GuiInputHandler::run_waveform_lane_playhead_step, ahead of its
     //     plate-basis read: a held arrow's next repeat in the same drain must
     //     read the column the previous step's camera write placed, which the
     //     inline rebuild had published;
     //   * GuiInputHandler::republish_history_lane_now, after its kick: the
     //     history edge's drop and refill of the lane's list stay one swap in
-    //     the press, for the keyboard and click readers of that list.
+    //     the press, for the keyboard and click readers of that list;
+    //   * GuiInputHandler::on_key's bare 1 / 2 / 3 selector arm, inside the
+    //     `h` view alone, after both switches: Tab's cycle, Center and Revert
+    //     in a later event of the drain read the lane's list, which must be
+    //     the entering column's (the reason at drop_lane_stash_across_history_edge's
+    //     view-switch paragraph).
     std::function<void()> request_waveform_sync_;
     void kick_waveform_sync() {
         // Render FINAL clamped geometry: reclamp through the one zoom/viewport

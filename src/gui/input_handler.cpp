@@ -1228,6 +1228,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (column_changes) {
             active_views.select_active_markers_view(want_markers);
         }
+        // INSIDE THE `h` VIEW THE SWITCH FLUSHES ITS OWED REBUILD (2026-10-13):
+        // the rebuild's history arm replaces app.history_mode.flags with the
+        // entering column's list, and a later key of the same drain (Tab's
+        // cycle, Center, Revert) reads that list, so it must be the entering
+        // one before this press returns — one rebuild per press, as while
+        // every kick rendered inline. Outside the mode nothing reads the
+        // rebuild's output at event time, so the pre-paint hook pays it.
+        if (app.history_mode.active) paint_handler.flush_owed_waveform_rebuild();
         return;
     }
 
@@ -2852,10 +2860,11 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // reads the cursor we just set and scrolls once to center it, emitting one
     // coherent set of waveform + top-strip damage against the final viewport.
     // center_viewport_on_playhead routes through kick_waveform_sync (whose
-    // installed callback IS force_synchronous_waveform_rebuild) inside its
-    // own moved guard, so a recenter that scrolls already gets its one
-    // synchronous rebuild here — no second call in this function's tail. The
-    // unmoved path (EOF-clamped no-op) needs none.
+    // installed callback OWES the frame's synchronous rebuild,
+    // GuiPaintHandler::owe_waveform_rebuild) inside its own moved guard, so a
+    // recenter that scrolls already gets its one rebuild before the frame —
+    // no second call in this function's tail. The unmoved path (EOF-clamped
+    // no-op) needs none.
     //
     // `frame` IS THE CALLER'S TOO (architect 2026-09-04), and it selects among the switch's arms and nothing else:
     // the land above already happened, so a Land that moves no camera still

@@ -2074,29 +2074,26 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     // THE LABELS, LEFT TO RIGHT: a later cue's box masks an earlier cue's
     // text across its own extent alone.
     //
-    // THE TEXT PAINTS ONLY WHERE NO LATER BOX WILL COVER IT (architect
-    // 2026-10-12, the marker slowdown at coarse zoom: a cost cut that paints
-    // the same pixels — every later box is opaque, the same rows, and its
-    // left edge never lies left of this one's, the cues being ordered by
-    // column): the VISIBLE SPANS of [a, b) less every later non-empty box,
-    // found in one walk over the later boxes that start inside it, and the
-    // text clipped to their union. A long label before a short one keeps its
-    // span past the short one's end.
+    // THE BOX AND THE TEXT PAINT ONLY WHERE NO LATER BOX WILL COVER THEM
+    // (architect 2026-10-12 for the text, the marker slowdown at coarse zoom;
+    // 2026-10-13 for the box, the flag cache's solid fills measuring 12.8 % of
+    // the CPU with most boxes covered whole by later ones): a cost cut that
+    // paints the same pixels — every later box is opaque, the same rows and
+    // the same face color, and its left edge never lies left of this one's,
+    // the cues being ordered by column, so a pixel of this box that a later
+    // box covers ends as that box's face whether or not this one painted it.
+    // The VISIBLE SPANS of [a, b) less every later non-empty box, found in
+    // one walk over the later boxes that start inside it, are therefore the
+    // whole of what this label paints: the face box over their union, then
+    // the text clipped to it; the union of every label's spans equals the
+    // union of every box. A long label before a short one keeps its span past
+    // the short one's end; a label whose spans are empty paints nothing.
     std::vector<std::pair<int, int>> spans;
     for (int i = 0; i < n; ++i) {
         const CueDraw& c = cues[static_cast<std::size_t>(i)];
         const int a = lo[static_cast<std::size_t>(i)];
         const int b = hi[static_cast<std::size_t>(i)];
         if (b <= a) continue;
-        cairo_save(cr);
-        cairo_rectangle(cr, a, lane.y, b - a, fill_h);
-        cairo_clip(cr);
-        // THE OPAQUE FACE BOX, the overlap rule's, under every segment
-        // whatever its state: A SELECTED SEGMENT TAKES NO FILL (architect
-        // 2026-10-09 ~23:30, render.h's SELECTED row), its text alone
-        // changing color.
-        paint_cell_rect(cr, GuiRect{a, lane.y, b - a, fill_h}, pal.face);
-        cairo_restore(cr);
 
         spans.clear();
         int cursor = a;
@@ -2117,6 +2114,14 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             cairo_rectangle(cr, sp.first, lane.y, sp.second - sp.first,
                             fill_h);
         cairo_clip(cr);
+        // THE OPAQUE FACE BOX, the overlap rule's, under every segment
+        // whatever its state: A SELECTED SEGMENT TAKES NO FILL (architect
+        // 2026-10-09 ~23:30, render.h's SELECTED row), its text alone
+        // changing color.
+        for (const auto& sp : spans)
+            paint_cell_rect(cr, GuiRect{sp.first, lane.y, sp.second - sp.first,
+                                        fill_h},
+                            pal.face);
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
             const double tx = static_cast<double>(

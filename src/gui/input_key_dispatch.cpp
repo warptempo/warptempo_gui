@@ -1109,11 +1109,19 @@ void GuiInputHandler::close_history_mode() {
 // does.
 //
 // A VIEW SWITCH INSIDE THE MODE IS DELIBERATELY NOT ONE OF THESE EDGES
-// (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist): it
-// already ends in kick_waveform_sync, whose owed rebuild rebuilds the flag
-// cache before the next frame paints (the pre-paint hook, 2026-10-13) — the
-// same republication every edge now reaches for, arrived at as part of the
-// switch itself — so there is no frame to protect.
+// (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist; the
+// three bare selectors 1 / 2 / 3 are its whole keyboard road since 2026-09-15):
+// it already ends in kick_waveform_sync, whose owed rebuild rebuilds the flag
+// cache before the next frame paints — the same republication every edge now
+// reaches for, arrived at as part of the switch itself — so there is no frame
+// to protect. THE SWITCH FLUSHES THAT OWED REBUILD ITSELF (2026-10-13, the
+// selector arm at on_key's bare 1 / 2 / 3), the way republish_history_lane_now
+// does, though it drops nothing: the rebuild is what replaces
+// app.history_mode.flags with the ENTERING column's list, and a later key of
+// the same drain — Tab's cycle (cycle_history_diff_flag_focus), Center,
+// Revert — reads that list at event time, so it has to be the entering
+// column's before the press returns, never the departing one the pre-paint
+// hook would otherwise leave standing until the frame.
 // Nor is there a domain change to protect against: on both sides of a view
 // switch `marker_index` indexes app.history_mode.flags, the mode owning the lane
 // throughout. Dropping anyway would be worse than redundant if it ran after a
