@@ -8,6 +8,7 @@
 #include <expected>
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -248,7 +249,8 @@ public:
     // false if it was refused (the layer then stays sRGB and nothing is
     // converted). init() adopts the live window, so the answer stands by the
     // time gui_main reads it; every later adoption asks the same of the same
-    // panel.
+    // panel (under the GL canvas a later surface answering otherwise is
+    // fatal, ensure_gl_surface: gui_main reads the first answer alone).
     bool window_is_display_p3() const { return window_display_p3_; }
 
     // WINDOW ACTIVATION (keyboard focus), driven by APP_CMD_GAINED_FOCUS /
@@ -608,6 +610,9 @@ private:
     int                   gl_texture_h_ = 0;
     // The one-time line naming the driver (adopt_window's road).
     bool                  gl_identity_logged_ = false;
+    // THE FIRST SURFACE'S DISPLAY-P3 ANSWER, the one gui_main read; a later
+    // surface answering otherwise is fatal (ensure_gl_surface, 2026-10-13).
+    std::optional<bool>   gl_first_display_p3_;
     // THE CANVAS LIST'S OBJECTS (2026-10-13; the draw at present, the
     // records at canvas_sink.h): the program and its two uniforms, its own
     // vertex array over the instance buffer, the plate's bounds texture and

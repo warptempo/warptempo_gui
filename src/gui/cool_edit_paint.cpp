@@ -229,8 +229,6 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     cairo_restore(cr);
 }
 
-namespace {
-
 // THE TRIANGLE'S COVERAGE STAMP (2026-10-13, a cost cut that paints the same
 // pixels: the tablet's profile of a pinch put 11 % of all CPU on the cues'
 // antialiased triangle fills, cairo's scan converter run twice per marker
@@ -264,13 +262,16 @@ namespace {
 // cutting and multi-box clips, triangles overlapping, at scales 100 to
 // 400 % (2026-10-13). Taken only where direct_pixel_target holds (render.h);
 // anything else fills through cairo as before. The one cached coverage is
-// the GUI thread's (the flag cache and the frame's playhead head).
+// the GUI thread's (the flag cache and the frame's playhead head). At file
+// scope so CueTrianglePass (cool_edit_paint.h) can hold the one it looked up.
 struct CueTriangleCoverage {
     int u = 0, rows = 0;
     int dx = 0, dy = 0;   // the box's origin relative to (col, top)
     int w = 0, h = 0;
     std::vector<uint8_t> cov;
 };
+
+namespace {
 
 // The triangle's path at axis `axis`, top `y`, offset `dx` — the one
 // construction both the fill and the coverage read.
@@ -397,10 +398,10 @@ void stamp_cue_triangle(const DirectPixelTarget& t, const CueTriangleCoverage& c
     }
 }
 
-} // namespace
-
-void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
-                           GuiColor shadow) {
+// THE ORDINARY TRIANGLE ON CAIRO'S ROAD: the two antialiased fills, the
+// shadow first — where the target is refused, and for a box the clip cuts.
+void paint_cue_triangle_cairo(cairo_t* cr, int col, int top, GuiColor color,
+                              GuiColor shadow) {
     const double u    = cue_unit_px();
     const int    rows = kProgramSpec.cue_triangle_rows;
     // THE AXIS IS THE STEM PIXEL'S CENTRE (architect 2026-10-09 ~14:35: "at
@@ -410,23 +411,6 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
     const double axis = col + 0.5;
     const double half = (2 * rows - 1) * u / 2.0;   // 4.5u
     const double y    = top;
-    // THE STAMP where the target takes it (the identity is at
-    // CueTriangleCoverage): the shadow one quantum right, then the color.
-    DirectPixelTarget t;
-    if (direct_pixel_target(cr, t)) {
-        const int ui = cue_unit_px();
-        const CueTriangleCoverage& c = cue_triangle_coverage(ui, rows);
-        const int dcol = col + t.dx, dtop = top + t.dy;
-        // The box both fills reach (the shadow's quantum to the right).
-        const GuiRect box{dcol + c.dx, dtop + c.dy, c.w + ui, c.h};
-        if (cue_triangle_box_uncut(t, box)) {
-            stamp_cue_triangle(t, c, dcol + ui, dtop, cue_fill_pixel(shadow));
-            stamp_cue_triangle(t, c, dcol, dtop, cue_fill_pixel(color));
-            cairo_surface_mark_dirty_rectangle(t.surface, box.x, box.y, box.w,
-                                               box.h);
-            return;
-        }
-    }
     // THE STAIRCASE'S ENVELOPE, offset `dx`: (axis − 4.5u, top),
     // (axis + 4.5u, top) and the apex (axis, top + 5u).
     const auto triangle = [&](double dx, GuiColor c) {
@@ -441,9 +425,11 @@ void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
     cairo_restore(cr);
 }
 
-void paint_ce_cue_split_triangle(cairo_t* cr, double axis, int top,
-                                 GuiColor left, GuiColor right,
-                                 GuiColor shadow) {
+// THE SPLIT TRIANGLE, always cairo's road (its group's arithmetic is not the
+// stamp's): the rule at CueTrianglePass::split.
+void paint_cue_split_triangle_cairo(cairo_t* cr, double axis, int top,
+                                    GuiColor left, GuiColor right,
+                                    GuiColor shadow) {
     const double u    = cue_unit_px();
     const int    rows = kProgramSpec.cue_triangle_rows;
     const double half = (2 * rows - 1) * u / 2.0;   // 4.5u, as above
@@ -491,6 +477,93 @@ void paint_ce_cue_split_triangle(cairo_t* cr, double axis, int top,
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
     cairo_paint(cr);
     cairo_restore(cr);
+}
+
+} // namespace
+
+// THE PASS (the rule and the identity at the declaration, cool_edit_paint.h).
+void CueTrianglePass::begin(cairo_t* cr) {
+    cr_         = cr;
+    u_          = cue_unit_px();
+    direct_     = direct_pixel_target(cr, target_);
+    cov_        = direct_ ? &cue_triangle_coverage(
+                                u_, kProgramSpec.cue_triangle_rows)
+                          : nullptr;
+    dirty_      = GuiRect{};
+    dirty_any_  = false;
+    flush_owed_ = false;
+}
+
+void CueTrianglePass::triangle(int col, int top, GuiColor color,
+                               GuiColor shadow) {
+    // THE STAMP where the target takes it (the identity is at
+    // CueTriangleCoverage): the shadow one quantum right, then the color.
+    if (direct_) {
+        const CueTriangleCoverage& c = *cov_;
+        const int dcol = col + target_.dx, dtop = top + target_.dy;
+        // The box both fills reach (the shadow's quantum to the right).
+        const GuiRect box{dcol + c.dx, dtop + c.dy, c.w + u_, c.h};
+        if (cue_triangle_box_uncut(target_, box)) {
+            if (flush_owed_) {
+                cairo_surface_flush(target_.surface);
+                flush_owed_ = false;
+            }
+            stamp_cue_triangle(target_, c, dcol + u_, dtop,
+                               cue_fill_pixel(shadow));
+            stamp_cue_triangle(target_, c, dcol, dtop, cue_fill_pixel(color));
+            if (!dirty_any_) {
+                dirty_     = box;
+                dirty_any_ = true;
+            } else {
+                const int x0 = std::min(dirty_.x, box.x);
+                const int y0 = std::min(dirty_.y, box.y);
+                const int x1 = std::max(dirty_.x + dirty_.w, box.x + box.w);
+                const int y1 = std::max(dirty_.y + dirty_.h, box.y + box.h);
+                dirty_ = GuiRect{x0, y0, x1 - x0, y1 - y0};
+            }
+            return;
+        }
+    }
+    fallback_begin();
+    paint_cue_triangle_cairo(cr_, col, top, color, shadow);
+    fallback_end();
+}
+
+void CueTrianglePass::split(double axis, int top, GuiColor left,
+                            GuiColor right, GuiColor shadow) {
+    fallback_begin();
+    paint_cue_split_triangle_cairo(cr_, axis, top, left, right, shadow);
+    fallback_end();
+}
+
+void CueTrianglePass::end() {
+    if (dirty_any_)
+        cairo_surface_mark_dirty_rectangle(target_.surface, dirty_.x, dirty_.y,
+                                           dirty_.w, dirty_.h);
+    dirty_any_ = false;
+}
+
+// THE HAND-OVER BEFORE A CAIRO FILL: the stamped words so far given back to
+// cairo (marked dirty) before cairo reads or writes the buffer.
+void CueTrianglePass::fallback_begin() {
+    if (!direct_ || !dirty_any_) return;
+    cairo_surface_mark_dirty_rectangle(target_.surface, dirty_.x, dirty_.y,
+                                       dirty_.w, dirty_.h);
+    dirty_any_ = false;
+}
+
+// THE HAND-OVER AFTER IT: the surface flushed before the next stamp writes
+// (owed, so a pass whose last act is a cairo fill ends as that fill left it).
+void CueTrianglePass::fallback_end() {
+    if (direct_) flush_owed_ = true;
+}
+
+void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
+                           GuiColor shadow) {
+    CueTrianglePass pass;
+    pass.begin(cr);
+    pass.triangle(col, top, color, shadow);
+    pass.end();
 }
 
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,

@@ -1167,6 +1167,24 @@ void GuiPlatform::ensure_gl_surface() {
         if (surf == EGL_NO_SURFACE)
             gl_fatal("eglCreateWindowSurface failed", eglGetError());
     }
+    // THE ANSWER IS THE FIRST SURFACE'S FOR THE PROCESS (2026-10-13): every
+    // surface made here — the first adoption's, and each after a window's
+    // loss (background and return, doze, rotation) — asks the passthrough
+    // again, but gui_main reads window_is_display_p3 ONCE, at the first
+    // window (main.cpp, display_transform::set_window_display_p3), and every
+    // painter converts by that reading. A later surface answering otherwise
+    // would leave every color converted for the wrong space — silently wrong
+    // bytes on the glass — so it is a program fault caught at the last point
+    // before them: fatal, naming both answers, with no re-conversion road.
+    // Under this canvas this is window_display_p3_'s one write (adopt_window's
+    // data-space write is the cpu canvas's alone).
+    if (gl_first_display_p3_ && *gl_first_display_p3_ != p3)
+        gl_fatal(p3 ? "Display-P3 passthrough: the first surface refused it, "
+                      "this surface accepted it"
+                    : "Display-P3 passthrough: the first surface accepted it, "
+                      "this surface refused it",
+                 static_cast<int>(p3));
+    gl_first_display_p3_ = p3;
     window_display_p3_ = p3;
     if (!eglMakeCurrent(dpy, surf, surf, static_cast<EGLContext>(egl_context_)))
         gl_fatal("eglMakeCurrent failed", eglGetError());

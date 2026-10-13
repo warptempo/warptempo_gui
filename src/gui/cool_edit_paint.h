@@ -215,16 +215,65 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // (2026-10-10, cool_edit_derive.h's faded look). Where the target allows it
 // the two fills are one cached coverage composited by cairo's own arithmetic
 // (2026-10-13, the same pixels; CueTriangleCoverage, cool_edit_paint.cpp).
+// One triangle alone (the playhead's head): a one-triangle CueTrianglePass.
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
                            GuiColor shadow);
 
-// THE SPLIT TRIANGLE of the `h` view's changed pair (architect 2026-10-10 /
-// 2026-10-11; render_history_diff_flags): the same triangle and shadow,
-// its axis at window x `axis` — a stem's centre col + 0.5, or on a nudged
-// pair the midpoint between its two stems' centres, which may fall on a
-// column boundary — SPLIT ON THE VERTICAL THROUGH ITS APEX (the stem's
-// centre rule above): the half left of the axis in `left`, the half right
-// of it in `right`, antialiased, the axis column's coverage shared.
-void paint_ce_cue_split_triangle(cairo_t* cr, double axis, int top,
-                                 GuiColor left, GuiColor right,
-                                 GuiColor shadow);
+struct CueTriangleCoverage;   // cool_edit_paint.cpp, the stamp's coverage
+
+// THE TRIANGLE PASS (2026-10-13, a cost cut that paints the same pixels): the
+// cues' triangles, one consecutive run on one context (paint_cues, render.cpp,
+// left to right over every label), share ONE PREPARED STAMP TARGET instead of
+// each taking its own. begin() takes direct_pixel_target once — the surface
+// flushed, the clip's rectangle list copied, the translation read — and looks
+// the coverage up once at the quantum read once; triangle() stamps as
+// paint_ce_cue_triangle's road does and GROWS ONE DIRTY BOX; end() marks that
+// box dirty once.
+// THE CALLER'S CONTRACT: between begin() and end() nothing changes the
+// context's clip, matrix, operator or group (each cairo road below saves and
+// restores its own), so the one target holds the clip list and translation
+// each triangle's own direct_pixel_target would have answered; and nothing
+// else asks the coverage cache, whose one entry the pass holds (the quantum
+// and the rows do not change within a paint).
+// THE IDENTITY RESTS ON: the same coverage bytes, the same cue_lerp8x4, the
+// same stamp order — the shadow then the color, triangles in call order — the
+// same clip list, the same cue_fill_pixel words of the same colors, and THE
+// HAND-OVER where a cairo fill falls inside the run (a box the clip cuts, the
+// split triangle, a refused target taking every triangle to cairo): before
+// the fill the stamped box is marked dirty and emptied, after it the surface
+// is flushed before the next stamp. The direct writes and cairo's fills land
+// in the one image buffer in the pass's own call order, each handed over
+// before the other road reads it — the per-triangle mark and flush they had,
+// at the only seams where the other road runs.
+class CueTrianglePass {
+public:
+    void begin(cairo_t* cr);
+    // The ordinary triangle: the stamp where the target was taken and the
+    // box is uncut (cue_triangle_box_uncut), else cairo's two fills,
+    // antialias DEFAULT.
+    void triangle(int col, int top, GuiColor color, GuiColor shadow);
+    // THE SPLIT TRIANGLE of the `h` view's changed pair (architect
+    // 2026-10-10 / 2026-10-11; render_history_diff_flags through paint_cues):
+    // the same triangle and shadow, its axis at window x `axis` — a stem's
+    // centre col + 0.5, or on a nudged pair the midpoint between its two
+    // stems' centres, which may fall on a column boundary — SPLIT ON THE
+    // VERTICAL THROUGH ITS APEX (the stem's centre rule above): the half left
+    // of the axis in `left`, the half right of it in `right`, antialiased,
+    // the axis column's coverage shared. Always cairo's road (its group's
+    // arithmetic is not the stamp's), inside the hand-over.
+    void split(double axis, int top, GuiColor left, GuiColor right,
+               GuiColor shadow);
+    void end();
+
+private:
+    void fallback_begin();
+    void fallback_end();
+    cairo_t*                   cr_         = nullptr;
+    DirectPixelTarget          target_{};
+    bool                       direct_     = false;
+    const CueTriangleCoverage* cov_        = nullptr;
+    int                        u_          = 0;
+    GuiRect                    dirty_{};
+    bool                       dirty_any_  = false;
+    bool                       flush_owed_ = false;
+};

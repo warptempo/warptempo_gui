@@ -2848,8 +2848,8 @@ void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // the clip it holds in device pixels, for a painter that writes the words
 // cairo would leave instead of asking cairo for them — the marker stems'
 // dots (paint_marker_stems through the cairo canvas sink's stem_dots,
-// canvas_sink.cpp, since 2026-10-13) and the cues' triangles
-// (paint_ce_cue_triangle, cool_edit_paint.cpp), each stating at its site why
+// canvas_sink.cpp, since 2026-10-13) and the cues' triangles (CueTrianglePass,
+// one target per pass, cool_edit_paint.h), each stating at its site why
 // its words are cairo's. Taken only where such a write can be cairo's
 // result: the target an ARGB32 image surface with no group open on it, no
 // device offset and unit device scale; the operator OVER; the matrix a pure
@@ -2860,7 +2860,8 @@ void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
 // translation carries them to device pixels; each is intersected with the
 // surface). Anything else answers false and the caller takes cairo's road.
 // The surface is flushed here; the caller marks it dirty after its last
-// write.
+// write, and around any cairo drawing it lets fall between its writes marks
+// before and flushes after (CueTrianglePass's hand-over).
 struct DirectPixelTarget {
     unsigned char* data = nullptr;
     int stride = 0;

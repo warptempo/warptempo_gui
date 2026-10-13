@@ -2142,16 +2142,23 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         cairo_restore(cr);
     }
 
-    // THE TRIANGLES, LEFT TO RIGHT, over every label.
+    // THE TRIANGLES, LEFT TO RIGHT, over every label: ONE PASS on one
+    // prepared target (CueTrianglePass, cool_edit_paint.h). Its contract
+    // holds here: every label above closed its own save / restore, and the
+    // pass's cairo roads keep theirs, so the clip, the matrix, the operator
+    // and the group are the caller's throughout.
+    CueTrianglePass triangles;
+    triangles.begin(cr);
     for (const CueDraw& c : cues) {
         if (c.split)
-            paint_ce_cue_split_triangle(
-                cr, static_cast<double>(c.col) + c.axis_offset, tri_top,
-                c.face.triangle, c.split_right, c.face.shadow);
+            triangles.split(static_cast<double>(c.col) + c.axis_offset,
+                            tri_top, c.face.triangle, c.split_right,
+                            c.face.shadow);
         else
-            paint_ce_cue_triangle(cr, c.col, tri_top, c.face.triangle,
-                                  c.face.shadow);
+            triangles.triangle(c.col, tri_top, c.face.triangle,
+                               c.face.shadow);
     }
+    triangles.end();
 
     // THE PUBLICATION, left to right.
     for (int i = 0; i < n; ++i) {
