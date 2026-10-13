@@ -29,6 +29,9 @@ struct GuiRect {
     int y;
     int w;
     int h;
+    // Memberwise, for the as-painted fingerprints that carry a lane's rect
+    // (GuiUpperRowsFingerprint and GuiClockFingerprint, app_state.h).
+    bool operator==(const GuiRect&) const = default;
 };
 
 // Point-in-rect on the tree's ONE containment convention: half-open on both

@@ -26,6 +26,25 @@ class GuiPlayback;
 // neighbours.
 enum class LandingKind { Walk, Restore };
 
+// THE WINDOW-TOP RECT [0, y1) AT THE WINDOW'S WIDTH, SPLIT AT THE VIEWPORT'S
+// LANES (2026-10-13): the rows from viewport_lanes_top_y down are damaged
+// now, and the rows above it — the caption, the menu row, the program
+// frame's top row, the toolbar band — are OWED to every paint target a check
+// (GuiUpperRowsRecord::owed_y1, app_state.h), which the pre-paint hook pays
+// (GuiPaintHandler::settle_owed_lane_damage): the whole rect where the rows'
+// fingerprint has moved past what the target shows or a floating surface
+// stands, nothing more where it has not. The ONE road for every rect that ran
+// from the window's top to cover the lanes of the viewport, the zoom or the
+// cursor: Viewport::invalidate_waveform_area (whose declaration below holds
+// the lane inventory), the viewport routes' top-strip damage, and the
+// waveform cache's four (the async publish, the synchronous rebuild, the
+// deferred basis repair and the flag cache's stage, waveform_cache.cpp).
+// THE SPLIT ROW IS CLEAN: nothing a lane paints crosses the toolbar band's
+// foot — the band ends there and the column's air and the folder overlay's
+// band begin there — so the two halves paint exactly the pixels the one rect
+// did (the floating surfaces, which do cross it, take the whole rect).
+void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1);
+
 // Viewport mutators and invalidation helpers. The struct holds references
 // to the long-lived state the methods read and write.
 struct Viewport {
@@ -430,6 +449,30 @@ struct Viewport {
     void clamp_display_state_to_live_domain();
 
     // Invalidation.
+    //
+    // THE VIEWPORT'S LANES (2026-10-13, ON SCREEN IS AS PAINTED): the rect
+    // runs, at the window's whole width, from the toolbar band's foot
+    // (viewport_lanes_top_y, app_state.h) through the waveform's bottom, and
+    // holds every lane that DRAWS the viewport, the zoom or the cursor — the
+    // column's air and the view bar (paint_trim: the trim window is the
+    // span), the ruler (its ticks and digits, the cursor's head), the marker
+    // lane (the cues and their labels), the canvas's top frame row, and the
+    // canvas (the plate, the grid, the center lines, the stems, the
+    // playheads, the overlays) — with the floating surfaces over them and
+    // the folder overlay's band, which starts at the same row. THE ROWS
+    // ABOVE IT DRAW NONE OF THOSE: the caption, the menu row, the program
+    // frame's top row and the toolbar band paint the window's state, the
+    // project's name, the menus and the roster's faces. Some of those FACES
+    // are predicates over the view (Full Zoom Out greys where the view
+    // already frames what it would), and many more move with the acts that
+    // reach this rect beside a viewport change (Undo / Redo and Save after
+    // an edit, an undo or a load in place), so the rows are not dropped
+    // from the damage but OWED A CHECK (damage_window_top_rows, above the
+    // struct): their fingerprint, every input they read enumerated at
+    // upper_rows_fingerprint (paint_handler.cpp), is compared before the
+    // frame paints, and the rows repaint when it has moved — so every
+    // caller of this owner that relied on its rect reaching the window's
+    // top is covered by one check rather than by a list.
     void invalidate_waveform_area();
     // ROW 8'S STATE CELL — the clock's neighbour (architect 2026-08-29, the
     // evening the STATUS BAR folded back into this row). The cell carries what
@@ -563,17 +606,12 @@ struct Viewport {
     //     restore's no-scroll re-land, 2026-09-22, and the marker drag's
     //     no-scroll tow, 2026-09-24) and
     //     clamp_display_state_to_live_domain's playhead repair.
-    //   * Viewport's three ZOOM APPLIERS (apply_zoom_change,
-    //     apply_strip_drag_zoom, apply_zoom_to_start): HARMLESS OVER-DAMAGE,
-    //     kept as truth-over-churn. All three move the VIEWPORT AND ZOOM
-    //     ONLY — none contains a playhead write or a playhead clamp (the
-    //     earlier "through their playhead clamp" description here was
-    //     false), and the `c` command's centring READS the resting cursor
-    //     without moving it — so the clock's value cannot change under
-    //     them. The calls are 66d2ec58's rename-in-place of the
-    //     whole-status-lane damage these sites carried while the timestamp
-    //     lived on that lane; one small always-clean rect per discrete zoom
-    //     is cheaper than the churn of removing them.
+    //   (Viewport's three ZOOM APPLIERS — apply_zoom_change,
+    //     apply_strip_drag_zoom, apply_zoom_to_start — are NOT members since
+    //     2026-10-13: they move the VIEWPORT AND ZOOM ONLY — none contains a
+    //     playhead write or a playhead clamp, and the `c` command's centring
+    //     READS the resting cursor without moving it — so they owe the cell
+    //     a check instead, owe_clock_check below.)
     //   * The playback lifecycle's stop and launch: each flips which value
     //     the clock reads (scanner vs cursor).
     //   * target_render's TRIGGER-FREEZE stop (the target-view edit halt),
@@ -585,13 +623,14 @@ struct Viewport {
     //     backstops behind the S/T toggle's own lifecycle stop
     //     (input_handler.cpp's "before mutating playhead state" call) and
     //     deliberately carry no clock call.
-    //   * main.cpp's three tick sites: the pre-paint scanner advance (the
-    //     value advances), the playing heartbeat's OFFSCREEN FALLBACK (the
+    //   * main.cpp's two tick sites: the pre-paint scanner advance (the
+    //     value advances) and the playing heartbeat's OFFSCREEN FALLBACK (the
     //     always-onscreen honest rect that keeps the paint clock running
-    //     when the scanner column yields no damage), and the
-    //     resize/total-change repair's geometry-moved arm (over-damage like
-    //     the zoom appliers'; the cursor clamp that CAN move the value
-    //     damages the clock itself inside clamp_display_state_to_live_domain).
+    //     when the scanner column yields no damage). (The resize/total-change
+    //     repair's geometry-moved arm owes the cell a check since 2026-10-13,
+    //     like the zoom appliers — owe_clock_check below; the cursor clamp
+    //     that CAN move the value damages the clock itself inside
+    //     clamp_display_state_to_live_domain.)
     //   * input_pointer's two direct cursor writes:
     //     seat_playhead_on_domain_frame — the direct writer every marker land,
     //     Tab/`c` jump and history diff-flag click rides (history lands call
@@ -621,6 +660,17 @@ struct Viewport {
     // seat_playhead_on_domain_frame (via seat_playhead_on_source_frame), the nudges through their shared tail)
     // need no row of their own.
     void invalidate_clock_area();
+    // THE CLOCK CELL'S CHECK (2026-10-13), the zoom appliers' clock damage —
+    // apply_zoom_change, apply_strip_drag_zoom and apply_zoom_to_start —
+    // and main.cpp's tick repair's geometry-moved arm: each moves the
+    // viewport and the zoom and never the playhead or the scanner (the
+    // cursor clamp that can move the value damages the clock itself, inside
+    // clamp_display_state_to_live_domain), so the cell is owed a check of
+    // its fingerprint (clock_fingerprint, paint_handler.cpp) rather than a
+    // repaint, and repaints only where what it shows has moved. Each caller
+    // damages the viewport's lanes beside it, so a frame — and its pre-paint
+    // check (GuiPaintHandler::settle_owed_lane_damage) — follows.
+    void owe_clock_check();
     // Narrow playhead/scanner damage: the union (or the pair) of the two given
     // COLUMNS' rects. The columns must be resolved on the PLATE basis — the
     // playheads' pixels are plate-registered, and damage follows the basis of

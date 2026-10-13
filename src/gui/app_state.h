@@ -5111,6 +5111,114 @@ struct GuiAuditionSequence {
     int64_t launch_due_ms = 0;
 };
 
+// THE AS-PAINTED FINGERPRINTS OF THE ROWS ABOVE THE VIEWPORT'S LANES AND OF
+// ROW 8'S CLOCK CELL (2026-10-13, ON SCREEN IS AS PAINTED). A viewport step
+// damages the lanes that read the viewport, the zoom or the cursor
+// (Viewport::invalidate_waveform_area's rect, viewport.h, where the lanes
+// above it are inventoried) and OWES the rows above them — the caption, the
+// menu row, the program frame's top row and the toolbar band — a check
+// instead of a repaint: each fingerprint is the WHOLE of what the paint of
+// those rows reads, so rows whose painted fingerprint equals the live one
+// would repaint exactly the pixels they already show, and rows whose
+// fingerprint moved get the rect the route declared before 2026-10-13. The
+// clock cell takes the same check for the zoom appliers' clock damage
+// (Viewport::owe_clock_check). The live fingerprints are computed by ONE
+// function each (upper_rows_fingerprint and clock_fingerprint,
+// paint_handler.cpp), which both the paint (publishing what it painted) and
+// the pre-paint check (GuiPaintHandler::settle_owed_lane_damage, comparing)
+// call; their members are enumerated, painter line by painter line, at
+// those functions.
+//
+// The globals every row reads: the window's size, the scale and the palette
+// (palette_generation, which also moves with True Colors). The one face set
+// and the one icon set are compiled in and move nothing.
+struct GuiChromeGlobalsFingerprint {
+    int      width         = 0;
+    int      height        = 0;
+    int      scale_percent = 0;
+    uint64_t palette_generation = 0;
+    bool operator==(const GuiChromeGlobalsFingerprint&) const = default;
+};
+// The caption (paint_caption_row): its row, the activation, the title, the
+// Maximize glyph's state, and each box's face — the enabled bit and the
+// pushed face.
+struct GuiCaptionFingerprint {
+    GuiRect     row{0, 0, 0, 0};
+    bool        active    = false;
+    bool        maximized = false;
+    std::string title;
+    std::array<bool, kCaptionButtonCount> enabled{};
+    std::array<bool, kCaptionButtonCount> pushed{};
+    bool operator==(const GuiCaptionFingerprint&) const = default;
+};
+// The menu row (paint_menu_row): its row and each title's two faces, bit i
+// the i-th title — enabled, and the open title's sunken box.
+struct GuiMenuRowFingerprint {
+    GuiRect  row{0, 0, 0, 0};
+    uint32_t enabled = 0;
+    uint32_t open    = 0;
+    bool operator==(const GuiMenuRowFingerprint&) const = default;
+};
+// The toolbar band (paint_icon_row): its lane, the `h` view (the stand-ins
+// and the hide), and each STANDING member in the walk's order with its pane,
+// its four face terms and its glyph index (redesign_button_glyph, which with
+// the id names the drawing redesign_button_icon picks).
+struct GuiIconRowMember {
+    RedesignButton id{};
+    int  pane     = 0;
+    bool enabled  = false;
+    bool selected = false;
+    bool pressed  = false;
+    int  glyph    = 0;
+    bool operator==(const GuiIconRowMember&) const = default;
+};
+struct GuiIconRowFingerprint {
+    GuiRect lane{0, 0, 0, 0};
+    bool    history = false;
+    int     count   = 0;
+    std::array<GuiIconRowMember, kRedesignButtonCount> members{};
+    bool operator==(const GuiIconRowFingerprint&) const = default;
+};
+struct GuiUpperRowsFingerprint {
+    GuiChromeGlobalsFingerprint globals;
+    GuiCaptionFingerprint       caption;
+    GuiMenuRowFingerprint       menu;
+    GuiIconRowFingerprint       band;
+    bool operator==(const GuiUpperRowsFingerprint&) const = default;
+};
+// Row 8's clock cell (paint_bottom_row_buttons_and_clock): the cell as
+// published, the timestamp-and-pipe run and the tab letter it shows, and
+// whether the row yields (to a modal or under the on-screen keyboard), the
+// cell's ground and field being the globals'.
+struct GuiClockFingerprint {
+    GuiChromeGlobalsFingerprint globals;
+    GuiRect     cell{0, 0, 0, 0};
+    std::string time_text;
+    char        letter = 'A';
+    bool        yields = false;
+    bool operator==(const GuiClockFingerprint&) const = default;
+};
+// ONE RECORD PER PAINT TARGET: the Wayland backend paints into one of its
+// two shm buffers per frame and the Android backend into its one
+// backbuffer (GuiPlatform::kPaintTargetCount), and a check must hold for
+// the buffer that will be shown, so each target keeps what IT shows and
+// what it is owed. `valid` false means the target's rows may show a mix of
+// states (a partial paint whose live fingerprint differed from the record),
+// which only a repaint settles.
+inline constexpr int kGuiPaintTargetSlots = 2;
+struct GuiUpperRowsRecord {
+    GuiUpperRowsFingerprint painted;
+    bool valid    = false;
+    // The bottom of the window-top rect [0, owed_y1) a narrowed route
+    // declared before 2026-10-13 and owes this target a check of; 0 = none.
+    int  owed_y1  = 0;
+};
+struct GuiClockRecord {
+    GuiClockFingerprint painted;
+    bool valid = false;
+    bool owed  = false;
+};
+
 struct AppState {
     int     width                 = 1400;
     int     height                = 800;
@@ -7220,6 +7328,16 @@ struct AppState {
     // painted then, so the painter publishes no cell and the owner widens to
     // the lane, which is the modal's own surface.
     GuiRect clock_cell_rect{0, 0, 0, 0};
+
+    // THE AS-PAINTED RECORDS OF THE ROWS ABOVE THE VIEWPORT'S LANES AND OF THE
+    // CLOCK CELL, one per paint target, with what each target is owed
+    // (2026-10-13; the contract at GuiUpperRowsFingerprint, above AppState).
+    // Written by on_redraw (the upper rows) and by the clock's painter (the
+    // cell) on the target being painted, owed by Viewport's narrowed routes
+    // and checked by GuiPaintHandler::settle_owed_lane_damage in the
+    // pre-paint hook; a target's debt clears when that target paints.
+    std::array<GuiUpperRowsRecord, kGuiPaintTargetSlots> upper_rows_painted{};
+    std::array<GuiClockRecord, kGuiPaintTargetSlots>     clock_painted{};
 
     // THE ARMED CHROME PRESS — the redesigned rows' ACT-AT-RELEASE record, and
     // the CLICK FACE with it (architect 2026-08-13, generalizing the modal
@@ -10640,6 +10758,12 @@ inline int dropdown_hang_y(const AppState& a, DropdownMenu /*m*/) {
     return content.y + content.h;
 }
 GuiRect top_icon_row_area(const AppState& a);
+// THE VIEWPORT'S LANES' TOP ROW — the toolbar band's foot, the first row of
+// the column's air (2026-10-13). Every lane from here through the waveform's
+// bottom reads the viewport, the zoom or the cursor and every row above it
+// reads none of them; the inventory is at Viewport::invalidate_waveform_area
+// (viewport.h), whose rect starts here.
+int viewport_lanes_top_y(const AppState& a);
 // GAP 1's band — the flexible band BETWEEN THE ICON ROW AND THE TRIM LANE (the
 // vertical rule, main.cpp), window ground. ONE reader: the wheel-inert band
 // list (the band lies inside top_strip_area, which is a pan surface, so it

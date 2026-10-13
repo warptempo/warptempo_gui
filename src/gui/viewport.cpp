@@ -126,16 +126,31 @@ bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
 // Viewport changes repaint the waveform area and the top strip together:
 // flag positions depend on the viewport, so any pan/zoom has to refresh
 // flags as well as waveform. Playhead-only moves keep using the narrow
-// column invalidation below.
-//
-// ONE RECT, from the window top through the waveform's bottom: every lane
-// whose content mirrors the viewport, the zoom or the cursor is inside it by
-// construction, so no caller here owes a second rect.
+// column invalidation below. The rect and the lanes it holds are at the
+// declaration (viewport.h); the rows above it are owed a check
+// (damage_window_top_rows).
 void Viewport::invalidate_waveform_area() {
     const GuiRect a = waveform_area(app);
-    const int y0 = 0;
-    const int y1 = a.y + a.h;
-    gui.invalidate_region(0, y0, app.width, y1 - y0);
+    damage_window_top_rows(app, gui, a.y + a.h);
+}
+
+// THE WINDOW-TOP RECT, SPLIT AT THE VIEWPORT'S LANES (2026-10-13; the rule
+// at the declaration, viewport.h): the rows from viewport_lanes_top_y down
+// are damaged now, the rows above it owed to every paint target's check.
+void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1) {
+    const int top = viewport_lanes_top_y(app);
+    // A rect that reaches no viewport lane brings no frame of its own to
+    // check at, so it is declared as it stands (unreached by the callers,
+    // each of which reaches the waveform's top or the top strip's foot).
+    if (y1 <= top || top <= 0) {
+        gui.invalidate_region(0, 0, app.width, y1);
+        return;
+    }
+    gui.invalidate_region(0, top, app.width, y1 - top);
+    for (int t = 0; t < GuiPlatform::kPaintTargetCount; ++t) {
+        int& owed = app.upper_rows_painted[static_cast<std::size_t>(t)].owed_y1;
+        owed = std::max(owed, y1);
+    }
 }
 
 // THE STATE CELL'S DAMAGE — the BOTTOM ROW'S lane whole (the cell is the
@@ -204,6 +219,13 @@ void Viewport::invalidate_notification_stack() {
 void Viewport::invalidate_clock_area() {
     const GuiRect c = clock_invalidate_rect(app);
     gui.invalidate_region(c.x, c.y, c.w, c.h);
+}
+
+// The clock cell's check owed to every paint target (the rule and the
+// callers at the declaration, viewport.h).
+void Viewport::owe_clock_check() {
+    for (int t = 0; t < GuiPlatform::kPaintTargetCount; ++t)
+        app.clock_painted[static_cast<std::size_t>(t)].owed = true;
 }
 
 void Viewport::invalidate_playhead_columns(double old_px, double new_px) {
@@ -634,16 +656,17 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     clamp_viewport_start(app, audio);
 
     invalidate_waveform_area();
-    // Harmless over-damage: a zoom moves the viewport, never the playhead or
-    // the scanner, so the clock's value cannot change here — the true-reason
-    // record for all three zoom appliers is at invalidate_clock_area's
-    // inventory (viewport.h).
-    invalidate_clock_area();
+    // A CHECK, NOT A REPAINT, OF THE CLOCK: a zoom moves the viewport, never
+    // the playhead or the scanner, so the clock's value cannot change here —
+    // the record for all three zoom appliers is at owe_clock_check's
+    // declaration (viewport.h).
+    owe_clock_check();
     // Flags live in the top strip — rect positions change when the viewport
     // scale changes (the selected marker's lane text rides its flag there;
-    // row 8's state cell says nothing a zoom can move).
+    // row 8's state cell says nothing a zoom can move). The top strip's rows
+    // above the viewport's lanes are owed a check (damage_window_top_rows).
     const GuiRect ts = top_strip_area(app);
-    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    damage_window_top_rows(app, gui, ts.y + ts.h);
     if (playback.is_playing()) playback.resync_predictor();
     // Reaching here means the zoom level changed (early-return above guards
     // the no-op case), so the waveform fingerprint differs. Zoom is a one-shot
@@ -709,13 +732,14 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // cannot read a wall-saturated no-op as movement.
 
     invalidate_waveform_area();
-    // Harmless over-damage, like apply_zoom_change's (the record is at
-    // invalidate_clock_area's inventory, viewport.h).
-    invalidate_clock_area();
+    // A check of the clock, like apply_zoom_change's (the record is at
+    // owe_clock_check's declaration, viewport.h).
+    owe_clock_check();
     // Flags live in the top strip — rect positions change when the viewport
-    // scale or start changes.
+    // scale or start changes (the rows above the viewport's lanes owed a
+    // check, damage_window_top_rows).
     const GuiRect ts = top_strip_area(app);
-    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    damage_window_top_rows(app, gui, ts.y + ts.h);
 
     // Rest state (final) re-anchors the playback predictor once, like the
     // continuous pan's release; mid-gesture events do NOT resync (the predictor
@@ -768,12 +792,14 @@ void Viewport::apply_zoom_to_start(double new_zoom_level, int64_t new_start) {
     // `0`'s restore being what reach here.
 
     invalidate_waveform_area();
-    // Harmless over-damage, like apply_zoom_change's (the record is at
-    // invalidate_clock_area's inventory, viewport.h).
-    invalidate_clock_area();
-    // Flags live in the top strip — rect positions change with the viewport.
+    // A check of the clock, like apply_zoom_change's (the record is at
+    // owe_clock_check's declaration, viewport.h).
+    owe_clock_check();
+    // Flags live in the top strip — rect positions change with the viewport
+    // (the rows above the viewport's lanes owed a check,
+    // damage_window_top_rows).
     const GuiRect ts = top_strip_area(app);
-    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    damage_window_top_rows(app, gui, ts.y + ts.h);
     if (playback.is_playing()) playback.resync_predictor();
     // A discrete one-shot viewport jump: render the plate synchronously and
     // publish the displayed fingerprint now so the top-strip flags and the
@@ -797,9 +823,10 @@ void Viewport::scroll_viewport(int64_t delta_samples, bool continuous) {
         invalidate_waveform_area();
         // Flag positions move with the viewport, so the top strip must
         // repaint too — the flags carry their own text now, so this one
-        // invalidation covers every marker pixel the move affects.
+        // invalidation covers every marker pixel the move affects (the rows
+        // above the viewport's lanes owed a check, damage_window_top_rows).
         const GuiRect ts = top_strip_area(app);
-        gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+        damage_window_top_rows(app, gui, ts.y + ts.h);
         // A discrete pan (the plain wheel, PageUp/PageDown) re-anchors here -
         // a single snap is invisible. A continuous drag pan passes
         // continuous=true and does NOT resync per motion event: the
@@ -911,7 +938,7 @@ void Viewport::center_viewport_on_playhead() {
 void Viewport::finish_discrete_viewport_move() {
     invalidate_waveform_area();
     const GuiRect ts = top_strip_area(app);
-    gui.invalidate_region(ts.x, ts.y, ts.w, ts.h);
+    damage_window_top_rows(app, gui, ts.y + ts.h);
     if (playback.is_playing()) playback.resync_predictor();
     kick_waveform_sync();
 }

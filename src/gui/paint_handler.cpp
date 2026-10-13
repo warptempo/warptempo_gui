@@ -525,6 +525,24 @@ static bool clip_covers_drawable(cairo_t* cr, const AppState& app,
            static_cast<double>(x2) <= cx2 && static_cast<double>(y2) <= cy2;
 }
 
+// WHETHER THE CLIP REACHES A RECT AT ALL (2026-10-13): a drawing bounded by
+// `rect` under a clip whose extents miss it lays down no pixel, so a painter
+// may skip it — the same pixels by construction, the cost of cairo walking a
+// fully clipped path saved (the toolbar band's and row 8's cases, the
+// caption's boxes, row 8's clock group and state line, under the narrow
+// damage a frame most often carries). Never a gate on a PUBLICATION: the
+// faces, rects and records a painter stashes are written whether or not
+// their pixels are drawn.
+static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
+    if (rect.w <= 0 || rect.h <= 0) return false;
+    double cx1 = 0.0, cy1 = 0.0, cx2 = 0.0, cy2 = 0.0;
+    cairo_clip_extents(cr, &cx1, &cy1, &cx2, &cy2);
+    return static_cast<double>(rect.x) < cx2 &&
+           static_cast<double>(rect.x + rect.w) > cx1 &&
+           static_cast<double>(rect.y) < cy2 &&
+           static_cast<double>(rect.y + rect.h) > cy1;
+}
+
 // THE BUTTON-FACE PUBLICATION, one writer so a row cannot forget a field: the
 // painter stashes the rect it painted plus the three face bits it is painting
 // (redesign_button_enabled / redesign_button_selected /
@@ -1485,6 +1503,22 @@ std::array<GuiRect, kCaptionButtonCount> caption_button_rects(
 
 } // namespace
 
+// THE CAPTION'S TITLE, ITS BOXES' ENABLED BIT AND THEIR PUSHED FACE — each
+// spelled once, read by the painter and by the caption's as-painted
+// fingerprint (caption_row_fingerprint, below), so the two cannot disagree.
+static std::string caption_title(const AppState& app) {
+    return app.project_name.empty() ? std::string("Warptempo")
+                                    : app.project_name + " - Warptempo";
+}
+static bool caption_button_enabled(const GuiPlatform& gui,
+                                   GuiCaptionButton id) {
+    return id != GuiCaptionButton::Maximize || gui.window_restorable();
+}
+static bool caption_button_pushed(const AppState& app, int i) {
+    return app.chrome_press.kind == AppState::ChromePress::Kind::Caption &&
+           app.chrome_press.index == i && app.chrome_press.inside;
+}
+
 void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // THE CAPTION (top lane 0; the record at render.h's caption block and
     // the declaration, every seat the chrome spec's caption_* fields). Four passes on the lane: the ground, the icon, the
@@ -1527,9 +1561,7 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // longest prefix whose own run and the ellipsis's fit; a room too narrow
     // for even the ellipsis paints no title.
     const GuiFont font = gui_font(GuiFace::Bold);
-    const std::string title = app.project_name.empty()
-                                  ? std::string("Warptempo")
-                                  : app.project_name + " - Warptempo";
+    const std::string title = caption_title(app);
     const int title_x = row.x + scaled_px(spec.caption_title_x_px);
     const double room = static_cast<double>(
         rects[static_cast<size_t>(GuiCaptionButton::Minimize)].x -
@@ -1580,11 +1612,10 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         const GuiRect& b = rects[static_cast<size_t>(i)];
         face.rect = b;
         if (clip_covers_drawable(cr, app, b))
-            face.enabled = id != GuiCaptionButton::Maximize ||
-                           gui.window_restorable();
-        const bool pushed =
-            app.chrome_press.kind == AppState::ChromePress::Kind::Caption &&
-            app.chrome_press.index == i && app.chrome_press.inside;
+            face.enabled = caption_button_enabled(gui, id);
+        // A box the clip does not reach is skipped (clip_meets).
+        if (!clip_meets(cr, b)) continue;
+        const bool pushed = caption_button_pushed(app, i);
         const ButtonBoxFace box =
             paint_button_box(cr, b, /*lamp=*/false, pushed,
                              ButtonFamily::Toolbar);
@@ -1593,6 +1624,12 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     }
 
     cairo_restore(cr);
+}
+
+// THE OPEN TITLE — the menu whose pull-down stands — spelled once for the
+// painter and the menu row's as-painted fingerprint (menu_row_fingerprint).
+static bool menu_title_open(const AppState& app, RedesignButton id) {
+    return app.dropdown.open() && id == dropdown_anchor_button(app.dropdown.menu);
 }
 
 void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
@@ -1755,9 +1792,7 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // DISABLED EMBOSS, the product's one disabled word (the partition and
         // its derivation are at history_mode_disables_button,
         // input_pointer.cpp; this reads only the published bit).
-        const bool open_anchor =
-            app.dropdown.open() &&
-            def.id == dropdown_anchor_button(app.dropdown.menu);
+        const bool open_anchor = menu_title_open(app, def.id);
         int push = 0;
         if (open_anchor) {
             paint_relief_sunken_outer(
@@ -1960,6 +1995,72 @@ static std::string history_walk_line(AppState& app) {
 // READOUT retired whole — Ctrl+C copies the value and Ctrl+J goes to the
 // marker it came from. `history_walk_line` above is untouched: the composer
 // still stands beside its one caller, which is now that cell.)
+
+// THE BAND'S STANDING MEMBERS, IN PANES (2026-10-13: lifted out of
+// paint_icon_row so the painter and the band's as-painted fingerprint,
+// icon_row_fingerprint below, walk ONE membership): every member that stands
+// in this state laid into its pane — a pane's width is its standing members'
+// — in the walk's order, and every member that does not stand into `absent`.
+// A group LEADER (redesign_button_opens_icon_group, app_state.h — the
+// roster's own divider owner) opens a new pane and everything else joins the
+// open one. The membership forks are the history stand-ins' (2026-10-05) and
+// the `h` view's hide (2026-10-07), which asks a group whether it stands
+// before its pane is opened. The right-anchored opener and view group are
+// not in this walk: neither is ever hidden.
+static void icon_row_walk(const AppState& app,
+                          std::vector<std::vector<IconRowDef>>& panes,
+                          std::vector<RedesignButton>& absent) {
+    // THE STAND-IN SWAP (kIconRowHistoryStandIns, its one owner): in the `h`
+    // view a leader that names a stand-in group paints that group in its
+    // place, as its pane, and the rest of the replaced group is skipped up to
+    // the next leader; outside the view the stand-in groups never paint.
+    const bool history = app.history_mode.active;
+    const auto stand_in_for =
+        [&](RedesignButton leader) -> const IconRowStandIn* {
+        if (!history) return nullptr;
+        for (const IconRowStandIn& si : kIconRowHistoryStandIns)
+            if (si.replaces == leader) return &si;
+        return nullptr;
+    };
+    // THE HIDE (history_mode_hides_button, input_pointer.cpp, architect
+    // 2026-10-07): in the `h` view a member whose chord the view refuses in
+    // every session is skipped — no case, no width, its empty rect published
+    // — and its neighbours close up; a group STANDS, as a pane, while any
+    // member of it does, which this asks of the group led by the table's
+    // entry `lead` before the walk reaches its members.
+    const auto group_stands = [&](std::size_t lead_i) {
+        for (std::size_t j = lead_i; j < std::size(kIconRowButtons); ++j) {
+            const RedesignButton id = kIconRowButtons[j].id;
+            if (j != lead_i && redesign_button_opens_icon_group(id)) break;
+            if (!history_mode_hides_button(app, id)) return true;
+        }
+        return false;
+    };
+    bool replacing = false;
+    for (std::size_t i = 0; i < std::size(kIconRowButtons); ++i) {
+        const IconRowDef& def = kIconRowButtons[i];
+        if (redesign_button_opens_icon_group(def.id)) {
+            const IconRowStandIn* si = stand_in_for(def.id);
+            replacing = (si != nullptr);
+            if (replacing) {
+                panes.emplace_back(std::begin(si->members),
+                                   std::end(si->members));
+            } else if (group_stands(i)) {
+                panes.emplace_back();
+            }
+        }
+        if (replacing || history_mode_hides_button(app, def.id)) {
+            absent.push_back(def.id);
+            continue;
+        }
+        if (panes.empty()) panes.emplace_back();
+        panes.back().push_back(def);
+    }
+    if (!history) {
+        for (const IconRowStandIn& si : kIconRowHistoryStandIns)
+            for (const IconRowDef& m : si.members) absent.push_back(m.id);
+    }
+}
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 3, directly under the program frame's top row;
@@ -2203,6 +2304,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // The press face is gated on the live bit rather than trusted: the
         // claim never records a press on a disabled button, but a button can
         // go dead UNDER a held press with no pointer event to refresh it.
+        // A case the clip does not reach is skipped, its face published
+        // above (clip_meets).
+        if (!clip_meets(cr, GuiRect{bx, btn_y, btn_w, btn_h})) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const ButtonBoxFace box = paint_roster_case(
@@ -2244,14 +2348,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
                                        box.shift);
     };
 
-    // THE LEFT PANES, IN TWO PASSES: the walk below lays out every standing
-    // member into its pane first — a pane's width is its standing members'
-    // — and the panes are then painted, each its ground before its cases. A
-    // group LEADER (redesign_button_opens_icon_group, app_state.h — the
-    // roster's own divider owner) opens a new pane and everything else joins
-    // the open one. The membership forks are the history stand-ins'
-    // (2026-10-05) and the `h` view's hide (2026-10-07), which asks a group
-    // whether it stands before its pane is opened. Everything paints under
+    // THE LEFT PANES, IN TWO PASSES: the walk (icon_row_walk, above) lays
+    // out every standing member into its pane first, and the panes are then
+    // painted, each its ground before its cases. Everything paints under
     // the clip that ends at the left panes' limit, and each member PUBLISHES
     // ITS RECT CUT AT THAT COLUMN — whole at every width the band fits (the
     // laptop's and the tablet's included), its painted columns alone when the
@@ -2262,61 +2361,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // rect, which contains no point and refreshes its bits unconditionally
     // (publish_button_face), so neither a press nor the drift comparator
     // (main.cpp's tick) reads a rect or a bit from the other state's row.
-    const auto publish_absent = [&](RedesignButton id) {
+    std::vector<std::vector<IconRowDef>> panes;
+    std::vector<RedesignButton>          absent;
+    icon_row_walk(app, panes, absent);
+    for (const RedesignButton id : absent)
         (void)publish_button_face(cr, app, audio, playback, target_render, id,
                                   GuiRect{});
-    };
-    // THE STAND-IN SWAP (kIconRowHistoryStandIns, its one owner): in the `h`
-    // view a leader that names a stand-in group paints that group in its
-    // place, as its pane, and the rest of the replaced group is skipped up to
-    // the next leader; outside the view the stand-in groups never paint.
-    const bool history = app.history_mode.active;
-    const auto stand_in_for =
-        [&](RedesignButton leader) -> const IconRowStandIn* {
-        if (!history) return nullptr;
-        for (const IconRowStandIn& si : kIconRowHistoryStandIns)
-            if (si.replaces == leader) return &si;
-        return nullptr;
-    };
-    // THE HIDE (history_mode_hides_button, input_pointer.cpp, architect
-    // 2026-10-07): in the `h` view a member whose chord the view refuses in
-    // every session is skipped — no case, no width, its empty rect published
-    // — and its neighbours close up; a group STANDS, as a pane, while any
-    // member of it does, which this asks of the group led by the table's
-    // entry `lead` before the walk reaches its members.
-    const auto group_stands = [&](std::size_t lead_i) {
-        for (std::size_t j = lead_i; j < std::size(kIconRowButtons); ++j) {
-            const RedesignButton id = kIconRowButtons[j].id;
-            if (j != lead_i && redesign_button_opens_icon_group(id)) break;
-            if (!history_mode_hides_button(app, id)) return true;
-        }
-        return false;
-    };
-    std::vector<std::vector<IconRowDef>> panes;
-    bool replacing = false;
-    for (std::size_t i = 0; i < std::size(kIconRowButtons); ++i) {
-        const IconRowDef& def = kIconRowButtons[i];
-        if (redesign_button_opens_icon_group(def.id)) {
-            const IconRowStandIn* si = stand_in_for(def.id);
-            replacing = (si != nullptr);
-            if (replacing) {
-                panes.emplace_back(std::begin(si->members),
-                                   std::end(si->members));
-            } else if (group_stands(i)) {
-                panes.emplace_back();
-            }
-        }
-        if (replacing || history_mode_hides_button(app, def.id)) {
-            publish_absent(def.id);
-            continue;
-        }
-        if (panes.empty()) panes.emplace_back();
-        panes.back().push_back(def);
-    }
-    if (!history) {
-        for (const IconRowStandIn& si : kIconRowHistoryStandIns)
-            for (const IconRowDef& m : si.members) publish_absent(m.id);
-    }
 
     cairo_save(cr);
     cairo_rectangle(cr, lane.x, lane.y,
@@ -2714,6 +2764,33 @@ constexpr const char* kTimeShape = "DD:DD.DDD";
 // The tab letters row 8's clock ends with (AppState::active_tab_view's two
 // values) — the set the letter slot is measured over.
 constexpr std::string_view kClockTabLetters = "AB";
+// The ` | ` between the timestamp and the letter (the cell's order above).
+constexpr const char* kClockSeparator = " | ";
+
+// THE CLOCK'S RUN — the timestamp and the separator, the one string the cell
+// shows ahead of the tab letter — spelled once for the painter and the
+// cell's as-painted fingerprint (GuiPaintHandler::clock_fingerprint).
+// THE SPLIT-PLAYHEAD READ, carried over from the status line whole: track
+// the SCANNER during playback (what the user hears), the CURSOR otherwise —
+// the scanner's value is meaningful only while active, so the ternary takes
+// the cursor at rest. The sample rate is the loaded file's and the playhead
+// samples are source frames. There is no paint-site clamp: one owner caps
+// the clock and it is format_timestamp (at 59:59.999 — a longer source
+// truncates, the architect's ruling, recorded there).
+static std::string clock_time_text(const AppState& app,
+                                   const GuiAudio& audio) {
+    const int64_t ts_sample = app.playhead_scanner_active
+        ? app.playhead_scanner_sample
+        : app.playhead_cursor_sample;
+    const int sr = audio.sample_rate();
+    double seconds = 0.0;
+    if (sr > 0) {
+        seconds = static_cast<double>(ts_sample) /
+                  static_cast<double>(sr);
+    }
+    if (seconds < 0.0) seconds = 0.0;
+    return format_timestamp(seconds) + kClockSeparator;
+}
 
 // THE FIELD'S HEIGHT AND ITS PAD, each one element rounded once (scaled_px): 17 W tall (51 device rows at 300 %, 23
 // at 138 %; program_spec.h's field_h_px) and THE TIME FIELD'S PAD, 5 W
@@ -2857,6 +2934,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             def.id,
             GuiRect{x, btn_y, btn_w, btn_h});
 
+        // A case the clip does not reach is skipped, its face published
+        // above (clip_meets).
+        if (!clip_meets(cr, GuiRect{x, btn_y, btn_w, btn_h})) return;
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const ButtonBoxFace box = paint_roster_case(
@@ -3021,8 +3101,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // the digits and the ` | ` start at the cell's left edge and the
         // letter stands left-aligned after them (kTimeShape's block), so no
         // tab switch moves the pipe or the digits.
-        const std::string sep = " | ";
-        const double sep_w = text_shape::shape_text_run(font, sep).width_px;
+        const double sep_w =
+            text_shape::shape_text_run(font, kClockSeparator).width_px;
         const double cell_w = tm.time_w + sep_w + tm.letter_w;
         // THE CLOCK'S GROUP: two W of face in from the lane's left edge, the
         // gripper, the group's 5-W air, the field (its widest string and its
@@ -3033,8 +3113,14 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const int field_w = time_field_w_px(cell_w);
         const GuiRect clock_field =
             time_field_rect(field_x, field_w, btn_y, btn_h);
-        paint_ce_time_field(cr, clock_field);
         const int end_x = field_x + field_w + end_face;
+        // THE FIELD AND ITS RUN ARE SKIPPED WHERE THE CLIP MISSES THE GROUP
+        // (clip_meets): both lie inside the group's content band, the run
+        // inside the cell published below.
+        const bool clock_drawn = clip_meets(
+            cr, GuiRect{group_x, content_y, end_x + end_w - group_x,
+                        content_h});
+        if (clock_drawn) paint_ce_time_field(cr, clock_field);
         paint_ce_end_bar(cr, end_x, content_y, content_h);
         // THE STATE LINE: on the row's free face, no panel, ITS FIRST INK
         // the state air (5 W) past the clock group's end bar — the field's
@@ -3077,24 +3163,23 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             cell_x - 1, content_y,
             static_cast<int>(std::ceil(cell_w)) + 2, content_h};
 
-        // THE SPLIT-PLAYHEAD READ, carried over from the status line whole:
-        // track the SCANNER during playback (what the user hears), the CURSOR
-        // otherwise — the scanner's value is meaningful only while active, so
-        // the ternary takes the cursor at rest. The sample rate is the loaded
-        // file's and the playhead samples are source frames. There is no
-        // paint-site clamp: one owner caps the clock and it is format_timestamp
-        // (at 59:59.999 — a longer source truncates, the architect's ruling,
-        // recorded there).
-        const int64_t ts_sample = app.playhead_scanner_active
-            ? app.playhead_scanner_sample
-            : app.playhead_cursor_sample;
-        const int sr = audio.sample_rate();
-        double seconds = 0.0;
-        if (sr > 0) {
-            seconds = static_cast<double>(ts_sample) /
-                      static_cast<double>(sr);
+        // THE CELL'S AS-PAINTED RECORD on the target being painted
+        // (GuiClockFingerprint, app_state.h): a clip covering the cell
+        // paints it whole from the live inputs, so the record takes them; a
+        // clip reaching part of it under inputs other than the record's
+        // leaves a mix, which only a repaint settles.
+        {
+            const GuiClockFingerprint live = clock_fingerprint();
+            GuiClockRecord& rec = app.clock_painted[static_cast<std::size_t>(
+                gui.painting_target())];
+            if (clip_covers_drawable(cr, app, app.clock_cell_rect)) {
+                rec.painted = live;
+                rec.valid   = true;
+            } else if (rec.valid && clip_meets(cr, app.clock_cell_rect) &&
+                       !(live == rec.painted)) {
+                rec.valid = false;
+            }
         }
-        if (seconds < 0.0) seconds = 0.0;
 
         // THE FIELD AND THE LINE, THEIR CONTENT AND ITS PRECEDENCE: the field
         // carries the clock's run, the line the STATE — the `h` walk line,
@@ -3138,30 +3223,37 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // load-under-a-running-render refusal says its sentence on a CARD:
         // the explanation the state line would have carried is not on screen
         // under that modal.
+        // The line is skipped whole where the clip misses its span
+        // (clip_meets; it paints under its own clip to that span).
+        const GuiRect state_span{state_x, lane.y, state_w, lane.h};
+        const bool state_drawn = state_w > 0 && clip_meets(cr, state_span);
         std::string state;
-        if (app.history_mode.active) {
-            state = history_walk_line(app);
-        } else {
+        if (state_drawn) {
             // The process line — the render/batch/queue status and the
             // startup "Loading..." line, empty when there is nothing to
-            // report. It is one of the reasons this body runs on every frame
-            // class (it is the only feedback on the loading frame).
-            state = app.queue_progress_text;
+            // report — unless the walk line wins. It is one of the reasons
+            // this body runs on every frame class (it is the only feedback on
+            // the loading frame).
+            state = app.history_mode.active ? history_walk_line(app)
+                                            : app.queue_progress_text;
         }
         // THE CLOCK, UNCLIPPED, IN THE FIXED CELL — the digits and ` | ` as
         // one run starting at the cell's left edge, then the tab letter
         // starting where that run ends, so the digits and the pipe stand
         // still whatever the letter.
-        const text_shape::ShapedRun time_run =
-            text_shape::shape_text_run(font, format_timestamp(seconds) + sep);
-        const text_shape::ShapedRun letter_run = text_shape::shape_text_run(
-            font, std::string(1, app.active_tab_view));
-        const double run_x = static_cast<double>(cell_x);
-        set_palette_source(cr, palette().ce_field_text);
-        text_shape::show_shaped_run(cr, time_run, run_x, baseline);
-        text_shape::show_shaped_run(cr, letter_run,
-                                    run_x + time_run.width_px, baseline);
-        if (state_w > 0 && !state.empty()) {
+        if (clock_drawn) {
+            const text_shape::ShapedRun time_run =
+                text_shape::shape_text_run(font, clock_time_text(app, audio));
+            const text_shape::ShapedRun letter_run =
+                text_shape::shape_text_run(
+                    font, std::string(1, app.active_tab_view));
+            const double run_x = static_cast<double>(cell_x);
+            set_palette_source(cr, palette().ce_field_text);
+            text_shape::show_shaped_run(cr, time_run, run_x, baseline);
+            text_shape::show_shaped_run(cr, letter_run,
+                                        run_x + time_run.width_px, baseline);
+        }
+        if (state_drawn && !state.empty()) {
             // The clock's face on THE CLOCK'S BASELINE (the block above), its
             // FIRST INK at the clip's left edge: the origin stands the run's
             // own left bearing short of state_x.
@@ -4159,8 +4251,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // nothing to grab) when the clip covers the head last published, whose
     // pixels this run erased. Every move of the playhead damages the head's
     // old and new columns from the window's top (playhead_invalidate_rect,
-    // main.cpp; the discrete moves' Viewport::invalidate_waveform_area), so
-    // the frame that shows a moved head is always a publishing one.
+    // main.cpp) or the viewport's lanes whole (the discrete moves'
+    // Viewport::invalidate_waveform_area), so the frame that shows a moved
+    // head is always a publishing one.
     const auto publish_head = [&](const GuiRect& head) {
         const GuiRect last = app.playhead_head_hit;
         if (head.w > 0 && head.h > 0) {
@@ -4950,8 +5043,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // and for its reason: on_redraw runs once per damage rect and this pass
     // runs whole under each, so a narrow rect (the playhead's) would otherwise
     // stamp the stash with bounds whose pixels it never redrew. Every trim
-    // write damages at least the window top through the waveform's bottom
-    // (commit_trim_mutation, the sweep's and the drag's per-motion writes, the
+    // write damages at least the viewport's lanes, the toolbar band's foot
+    // through the waveform's bottom at the window's width, which hold this
+    // lane whole (commit_trim_mutation, the sweep's and the drag's per-motion writes, the
     // maximizer, and the tab, load and load-in-place roads), so the frame that
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
@@ -5620,6 +5714,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};
+        // The cell's pixels are the modal's or the keyboard's now, so this
+        // target's record of the clock no longer holds (GuiClockRecord).
+        app.clock_painted[static_cast<std::size_t>(gui.painting_target())]
+            .valid = false;
         return;
     }
 
@@ -8173,6 +8271,232 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app) {
 }
 } // namespace
 
+// -- THE AS-PAINTED FINGERPRINTS AND THE OWED CHECK (2026-10-13) ----------
+//
+// The contract is at GuiUpperRowsFingerprint (app_state.h): a viewport step
+// damages the viewport's lanes and owes the rows above them, and row 8's
+// clock cell under the zoom appliers, a CHECK; this is the check and the
+// two functions it compares with.
+
+// WHETHER A FLOATING SURFACE MAY STAND OVER THE ROWS THE CHECK SPARES — the
+// upper rows or the clock cell. Re-derived from on_redraw's paint sequence
+// 2026-10-13: past the lane painters, the ground, the program frame and the
+// canvas column (each inside its own rows), the passes that paint OUTSIDE
+// their lane are the floating surfaces — the notification cards (row 1
+// down), the dropdown (the menu row's foot down), the tooltip (under the
+// pointer, or above its button), the modal dialog's dropped choice list
+// (above row 8) and the color picker's card and its lists. (The keyboard
+// slot and the folder overlay start at the toolbar band's foot and yield
+// the clock's row, GuiClockFingerprint::yields; the flag surface's blit
+// over the top strip is transparent above the marker lane.) A floater's
+// own publications ride a clip that covers it, so while one stands the
+// check declares the rect the route declared before 2026-10-13, whole.
+static bool floating_surface_stands(const AppState& app) {
+    return app.dropdown.open() || app.redesign_tooltip.visible ||
+           !app.notifications.cards.empty() || app.color_picker.active ||
+           (app.modal_dialog.combo_list.w > 0 &&
+            app.modal_dialog.combo_list.h > 0);
+}
+
+// THE UPPER ROWS' LIVE FINGERPRINT — the ONE function the paint (publishing
+// what it painted, note_upper_rows_painted) and the owed check (comparing,
+// settle_owed_lane_damage) both call. EVERY INPUT THE ROWS' PIXELS READ,
+// enumerated from their painters:
+//   * the GROUND and the PROGRAM FRAME'S TOP ROW AND COLUMNS (render_background,
+//     paint_program_frame): the palette and the window's geometry — the
+//     globals, with the scale every length and the one face read;
+//   * THE CAPTION (paint_caption_row): its row; the activation
+//     (gui.caption_active: the gradient's pair and the title's ink); the
+//     title (caption_title, its shaping and ellipsis a function of it, the
+//     face and the room); per box the enabled bit (caption_button_enabled,
+//     the stash a covering clip refreshes), the pushed face
+//     (caption_button_pushed) and the Maximize glyph's state
+//     (gui.window_maximized); the AppIcon and the glyph cells are compiled;
+//   * THE MENU ROW (paint_menu_row): its row; per title the enabled bit
+//     (redesign_button_enabled, through publish_button_face) and the open
+//     title (menu_title_open); the labels and access keys are kMenuButtons';
+//   * THE TOOLBAR BAND (paint_icon_row): its lane; the `h` view; the
+//     standing members in the walk's order and their panes (icon_row_walk,
+//     the opener and the view group after it); per member the enabled and
+//     selected bits (publish_button_face's stash, refreshed by a covering
+//     clip), the pressed face (redesign_button_pressed_face, worn only
+//     enabled) and the glyph index (redesign_button_glyph, which with the id
+//     names the drawing redesign_button_icon returns); the cases' tones are
+//     the palette's.
+// NONE OF THEM IS A PAINT-TIME PUBLICATION of another surface or the
+// displayed basis that on_redraw's head promotes (re-derived by a call-graph
+// walk 2026-10-13: the roster predicates reach the promoted map only through
+// row 8's Drop and Left / Right arms), so the fingerprint the pre-paint
+// check computes is the one the frame paints.
+GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
+    GuiUpperRowsFingerprint fp;
+    fp.globals = GuiChromeGlobalsFingerprint{
+        app.width, app.height, gui_scale_percent(), palette_generation()};
+
+    fp.caption.row       = top_caption_row_area(app);
+    fp.caption.active    = gui.caption_active();
+    fp.caption.maximized = gui.window_maximized();
+    fp.caption.title     = caption_title(app);
+    for (int i = 0; i < kCaptionButtonCount; ++i) {
+        const std::size_t k = static_cast<std::size_t>(i);
+        fp.caption.enabled[k] =
+            caption_button_enabled(gui, static_cast<GuiCaptionButton>(i));
+        fp.caption.pushed[k] = caption_button_pushed(app, i);
+    }
+
+    static_assert(std::size(kMenuButtons) <= 32,
+                  "the menu row's fingerprint is one bit per title");
+    fp.menu.row = top_menu_row_area(app);
+    for (std::size_t i = 0; i < std::size(kMenuButtons); ++i) {
+        const RedesignButton id = kMenuButtons[i].id;
+        if (redesign_button_enabled(app, audio, audio.total_frames(),
+                                    playback, target_render, id))
+            fp.menu.enabled |= 1u << i;
+        if (menu_title_open(app, id)) fp.menu.open |= 1u << i;
+    }
+
+    fp.band.lane    = top_icon_row_area(app);
+    fp.band.history = app.history_mode.active;
+    const auto add = [&](RedesignButton id, int pane) {
+        assert(fp.band.count < kRedesignButtonCount);
+        GuiIconRowMember& m =
+            fp.band.members[static_cast<std::size_t>(fp.band.count++)];
+        m.id       = id;
+        m.pane     = pane;
+        m.enabled  = redesign_button_enabled(app, audio, audio.total_frames(),
+                                             playback, target_render, id);
+        m.selected = redesign_button_selected(app, id);
+        m.pressed  = m.enabled && redesign_button_pressed_face(app, id);
+        m.glyph    = redesign_button_glyph(app, id);
+    };
+    std::vector<std::vector<IconRowDef>> panes;
+    std::vector<RedesignButton>          absent;
+    icon_row_walk(app, panes, absent);
+    int pane = 0;
+    for (const std::vector<IconRowDef>& members : panes) {
+        for (const IconRowDef& def : members) add(def.id, pane);
+        ++pane;
+    }
+    add(kIconRowHistoryOpener.id, pane++);
+    for (const IconRowDef& def : kIconRowViewGroup) add(def.id, pane);
+    return fp;
+}
+
+// THE CLOCK CELL'S LIVE FINGERPRINT — the one function the clock's painter
+// (publishing) and the owed check (comparing) call. The cell's pixels,
+// enumerated from paint_bottom_strip and paint_bottom_row_buttons_and_clock:
+// the row content's face and the time field (the palette and the geometry,
+// the globals), the cell as published (AppState::clock_cell_rect), the run
+// (clock_time_text: the scanner or the cursor, the sample rate) and the tab
+// letter in the field's ink; and whether the row yields, when the cell is
+// not the clock's at all (modal_owns_bottom_row, or the on-screen keyboard
+// standing over the row).
+GuiClockFingerprint GuiPaintHandler::clock_fingerprint() {
+    GuiClockFingerprint fp;
+    fp.globals = GuiChromeGlobalsFingerprint{
+        app.width, app.height, gui_scale_percent(), palette_generation()};
+    fp.cell      = app.clock_cell_rect;
+    fp.time_text = clock_time_text(app, audio);
+    fp.letter    = app.active_tab_view;
+    fp.yields    = modal_owns_bottom_row(app) ||
+                   onscreen_keyboard::stands(app, gui);
+    return fp;
+}
+
+// THE UPPER ROWS' AS-PAINTED RECORD, kept by every on_redraw call on the
+// target it paints (GuiUpperRowsRecord, app_state.h). The target is painting
+// now, so what it was owed is paid: its debts clear here, whether or not
+// this frame's rects reach the upper rows. A rect COVERING the rows repaints
+// every pixel of them from the live inputs — each face whose clip covers it
+// refreshes its stash live (publish_button_face) — so the record takes the
+// live fingerprint; a rect reaching only part of them under inputs other
+// than the record's leaves a mix of states, which only a repaint settles
+// (the record goes invalid). Under the record's own inputs a partial repaint
+// changes no pixel: every face's stash equals the record (a valid record's
+// invariant, kept by this rule), and the live glyph and pressed face are the
+// record's.
+void GuiPaintHandler::note_upper_rows_painted(const GuiRect& exposed) {
+    const std::size_t t = static_cast<std::size_t>(gui.painting_target());
+    GuiUpperRowsRecord& rec = app.upper_rows_painted[t];
+    rec.owed_y1 = 0;
+    app.clock_painted[t].owed = false;
+    const int top = std::min(viewport_lanes_top_y(app), app.height);
+    if (top <= 0 || !rects_intersect(exposed, GuiRect{0, 0, app.width, top}))
+        return;
+    const bool covers = exposed.x <= 0 && exposed.y <= 0 &&
+                        exposed.x + exposed.w >= app.width &&
+                        exposed.y + exposed.h >= top;
+    if (!covers && !rec.valid) return;
+    const GuiUpperRowsFingerprint live = upper_rows_fingerprint();
+    if (covers) {
+        rec.painted = live;
+        rec.valid   = true;
+    } else if (!(live == rec.painted)) {
+        rec.valid = false;
+    }
+}
+
+// THE OWED CHECK, run at the END OF THE PRE-PAINT HOOK (main.cpp), the one
+// seat that precedes every painted frame on both backends and may still add
+// damage (paint_one_frame's rule): after the hook's own writes (the
+// scanner's advance, Follow's page), and with nothing able to run between it
+// and the paint. Each target that still owes is checked against what IT
+// shows; any target whose record is invalid or differs from the live
+// fingerprint, or a floating surface standing over the rows, declares the
+// rect the routes declared before 2026-10-13 — the window top through the
+// largest owed foot, the lanes below already damaged by the routes — and
+// with it in every target's pending damage the debts are paid. A target
+// that matches keeps nothing to repaint: its rows already show exactly what
+// the repaint would put there. A frame that does not paint after the check
+// (no free buffer, Wayland) keeps its debts, re-checked at the next hook.
+// The clock cell the same, its rect clock_invalidate_rect's, a cell the row
+// has not published (before the first paint, or under a yield) passing
+// straight through as the lane.
+void GuiPaintHandler::settle_owed_lane_damage() {
+    static_assert(GuiPlatform::kPaintTargetCount <= kGuiPaintTargetSlots,
+                  "one as-painted record per paint target");
+    constexpr int n = GuiPlatform::kPaintTargetCount;
+    const bool overlaid = floating_surface_stands(app);
+
+    int owed_y1 = 0;
+    for (int t = 0; t < n; ++t)
+        owed_y1 = std::max(owed_y1, app.upper_rows_painted[t].owed_y1);
+    if (owed_y1 > 0) {
+        bool stale = overlaid;
+        if (!stale) {
+            const GuiUpperRowsFingerprint live = upper_rows_fingerprint();
+            for (int t = 0; t < n && !stale; ++t) {
+                const GuiUpperRowsRecord& rec = app.upper_rows_painted[t];
+                stale = rec.owed_y1 > 0 &&
+                        (!rec.valid || !(rec.painted == live));
+            }
+        }
+        if (stale) {
+            gui.invalidate_region(0, 0, app.width, owed_y1);
+            for (int t = 0; t < n; ++t) app.upper_rows_painted[t].owed_y1 = 0;
+        }
+    }
+
+    bool clock_owed = false;
+    for (int t = 0; t < n; ++t) clock_owed |= app.clock_painted[t].owed;
+    if (clock_owed) {
+        const GuiRect cell = app.clock_cell_rect;
+        bool stale = overlaid || cell.w <= 0 || cell.h <= 0;
+        if (!stale) {
+            const GuiClockFingerprint live = clock_fingerprint();
+            for (int t = 0; t < n && !stale; ++t) {
+                const GuiClockRecord& rec = app.clock_painted[t];
+                stale = rec.owed && (!rec.valid || !(rec.painted == live));
+            }
+        }
+        if (stale) {
+            const GuiRect c = clock_invalidate_rect(app);
+            gui.invalidate_region(c.x, c.y, c.w, c.h);
+            for (int t = 0; t < n; ++t) app.clock_painted[t].owed = false;
+        }
+    }
+}
+
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
@@ -8331,6 +8655,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         app.displayed_area_w   = app.staged_displayed_area_w;
         app.staged_displayed_valid = false;
     }
+
+    // THE UPPER ROWS' AS-PAINTED RECORD for the target this frame paints, and
+    // its debts paid (note_upper_rows_painted; the contract at
+    // GuiUpperRowsFingerprint, app_state.h) — before any pixel, on the state
+    // every painter below reads.
+    note_upper_rows_painted(GuiRect{x, y, w, h});
 
     cairo_save(cr);
     cairo_rectangle(cr, x, y, w, h);

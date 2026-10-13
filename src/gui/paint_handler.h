@@ -606,6 +606,14 @@ struct GuiPaintHandler {
     // playhead line — the reasoning is at Viewport::follow_scroll_if_needed).
     void force_synchronous_waveform_rebuild();
 
+    // THE PRE-PAINT CHECK OF WHAT THE NARROWED ROUTES OWE (2026-10-13): the
+    // rows above the viewport's lanes and row 8's clock cell, each repainted
+    // only where the live fingerprint has moved past what the target shows.
+    // Called at the end of the pre-paint hook (main.cpp); the rule is at the
+    // definition (paint_handler.cpp), the contract at GuiUpperRowsFingerprint
+    // (app_state.h).
+    void settle_owed_lane_damage();
+
     // THE PLATE PAINT BASIS: vp_start and samples-per-pixel LOCKED
     // to the blitted plate (wf_cache.fp_*) while the worker rebuilds against a
     // viewport change, so every live overlay stays
@@ -652,6 +660,12 @@ struct GuiPaintHandler {
     PlateViewportBasis plate_viewport_basis() const;
 
 private:
+    // The two as-painted fingerprints and the paint's half of their record
+    // (settle_owed_lane_damage's block, paint_handler.cpp).
+    GuiUpperRowsFingerprint upper_rows_fingerprint();
+    GuiClockFingerprint     clock_fingerprint();
+    void note_upper_rows_painted(const GuiRect& exposed);
+
     // Waveform fingerprint inputs derived from current app state. This is
     // the single source of truth for the desired waveform fingerprint —
     // both maybe_enqueue_waveform_render (async path) and

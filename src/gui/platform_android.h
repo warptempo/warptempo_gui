@@ -268,6 +268,11 @@ public:
     bool window_maximized() const { return true; }
     bool window_restorable() const { return false; }
     bool caption_active() const { return true; }
+
+    // THE PAINT TARGETS (2026-10-13; the Wayland twin's contract): ONE — the
+    // persistent backbuffer every frame paints into.
+    static constexpr int kPaintTargetCount = 1;
+    int painting_target() const { return 0; }
     void begin_window_move() {}
     void begin_window_resize(unsigned /*edges*/) {}
     void minimize_window();

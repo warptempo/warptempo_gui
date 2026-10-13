@@ -931,9 +931,11 @@ void PhaseResetPropagate::paste_state_apply() {
 //     discrete rare command.
 //   * W+TARGET entry — the audio switch is skipped entirely, so the tail kick is
 //     the paste's ONLY synchronous rebuild.
-// The ordinary damage stays beside it: the rebuild damages y=0 through the
-// waveform's bottom (top strip included), so invalidate_top_strip and
-// invalidate_waveform_area are coalesced duplicates. (A THIRD CALL STOOD HERE
+// The ordinary damage stays beside it: the rebuild damages the window-top
+// rect through the waveform's bottom on invalidate_waveform_area's road
+// (damage_window_top_rows, viewport.h), so invalidate_waveform_area is a
+// coalesced duplicate (invalidate_top_strip, which repaints the rows above
+// the viewport's lanes outright, is not). (A THIRD CALL STOOD HERE
 // and is deleted with the RESOLVED READOUT it served, 2026-08-29: this route's
 // landing selection used to move that readout, which sat one lane below the
 // rebuild's rect. No state surface displays a resolved value any more, and the

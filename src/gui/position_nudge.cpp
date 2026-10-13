@@ -232,8 +232,9 @@ void finish_position_nudge(
     undo.record_gesture(kind, merged);
     // (b) dirty flags.
     undo.recompute_dirty();
-    // (c, d) damage, and it is FULL: invalidate_waveform_area spans y=0 through
-    // the waveform's bottom across the whole window width, so ONE call covers
+    // (c, d) damage, and it is FULL: invalidate_waveform_area spans the
+    // viewport's lanes through the waveform's bottom across the whole window
+    // width (the rows above them owed a check, viewport.h), so ONE call covers
     // both halves of a moved marker — the flag box (a top-strip pixel, blitted
     // from the flag cache) and its stem (a waveform pixel, painted live from the
     // same pass's stash). That pairing is why the call cannot narrow: row 5 made

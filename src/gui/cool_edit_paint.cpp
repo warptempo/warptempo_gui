@@ -384,10 +384,12 @@ void stamp_cue_triangle(const DirectPixelTarget& t, const CueTriangleCoverage& c
         for (int y = y0; y < y1; ++y) {
             uint32_t* const row =
                 reinterpret_cast<uint32_t*>(t.data + static_cast<std::size_t>(y) * t.stride);
+            // The coverage row's own start, read at x − bx0 (never a pointer
+            // formed before the array, 2026-10-13).
             const uint8_t* const cov =
-                c.cov.data() + static_cast<std::size_t>((y - by0) * c.w - bx0);
+                c.cov.data() + static_cast<std::size_t>((y - by0) * c.w);
             for (int x = x0; x < x1; ++x) {
-                const uint8_t a = cov[x];
+                const uint8_t a = cov[x - bx0];
                 if (a == 0) continue;
                 row[x] = a == 0xff ? pixel : cue_lerp8x4(pixel, a, row[x]);
             }

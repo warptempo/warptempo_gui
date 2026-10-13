@@ -1,6 +1,7 @@
 #include "paint_handler.h"
 
 #include "render.h"
+#include "viewport.h"   // damage_window_top_rows
 #include "text_editor.h"
 #include "warp_frame_map_view.h"
 #include "waveform_worker.h"
@@ -563,11 +564,13 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 
     // Invalidate the waveform area so the next paint blits the new
     // pixels. Matches the rect Viewport::invalidate_waveform_area uses (the
-    // rationale lives there). This is the
+    // rationale lives there), through the same road: the viewport's lanes
+    // damaged, the rows above them owed a check (damage_window_top_rows,
+    // viewport.h). This is the
     // ASYNC publish (resize, drift catch-up — follow scroll left for the
     // synchronous route 2026-09-02), whose viewport moved undriven.
     const GuiRect a = waveform_area(app);
-    gui.invalidate_region(0, 0, app.width, a.y + a.h);
+    damage_window_top_rows(app, gui, a.y + a.h);
 }
 
 // -- Synchronous waveform rebuild (THE user-driven render route) ---------
@@ -750,13 +753,17 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_warp_frame_map      = in.warp_frame_map;
 
     const GuiRect a = waveform_area(app);
-    // ONE RECT, the window top through the waveform's bottom: several
-    // kick_waveform_sync tails — undo, the load-in-places, the tempo step —
-    // reach this route without passing Viewport::invalidate_waveform_area, and
-    // each may have moved the viewport, the domain or the map a top-strip lane
-    // reads, so the rect covers every lane whose content those inputs shape
-    // (the record is at that owner).
-    gui.invalidate_region(0, 0, app.width, a.y + a.h);
+    // THE WINDOW-TOP RECT through the waveform's bottom, on
+    // Viewport::invalidate_waveform_area's road (damage_window_top_rows,
+    // viewport.h): several kick_waveform_sync tails — undo, the
+    // load-in-places, the tempo step — reach this route without passing that
+    // owner, and each may have moved the viewport, the domain or the map a
+    // top-strip lane reads, so the rect covers every lane whose content those
+    // inputs shape (the record is at that owner). THEIR OTHER EFFECTS ON THE
+    // ROWS ABOVE — an undo's Undo / Redo and Save greys, a load-in-place's
+    // faces — ride the owed check, which compares the rows' whole
+    // fingerprint and repaints them where any face moved.
+    damage_window_top_rows(app, gui, a.y + a.h);
 
     // Rebuild the flag cache inline, against the fingerprint just
     // published. Without this the plate leads its overlays: the run loop
@@ -1070,8 +1077,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     if (app.deferred_basis_repaint_due && !displayed_basis_frozen(app)) {
         app.deferred_basis_repaint_due = false;
         const GuiRect wave_repair = waveform_area(app);
-        gui.invalidate_region(0, 0, app.width,
-                              wave_repair.y + wave_repair.h);
+        damage_window_top_rows(app, gui, wave_repair.y + wave_repair.h);
     }
 
     if (app.loading || audio.total_frames() <= 0) return;
@@ -1490,13 +1496,14 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // can rot; this is one rect at the one producer.
     //
     // The rect is the top strip PLUS the waveform — Viewport::invalidate_-
-    // waveform_area's waveform rect, re-spelled because this struct holds no
-    // Viewport (the same widening that free helper documents). It CONTAINS the
+    // waveform_area's waveform rect, on its road (damage_window_top_rows,
+    // viewport.h: the viewport's lanes damaged, the rows above them owed a
+    // check) because this struct holds no Viewport. It CONTAINS the
     // old strip-only rect by construction (waveform_area.y IS the top strip's
     // height and its own height floors at 0), so it replaces rather than joins
     // it; and the platform's containment coalescing drops it wholesale on the
     // paths that already damaged the waveform this frame — every marker
     // mutation, every pan/zoom, every drag motion event — so those pay nothing.
     const GuiRect wave = waveform_area(app);
-    gui.invalidate_region(0, 0, app.width, wave.y + wave.h);
+    damage_window_top_rows(app, gui, wave.y + wave.h);
 }

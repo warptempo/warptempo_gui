@@ -270,6 +270,14 @@ public:
     bool window_maximized() const { return window_maximized_; }
     bool window_restorable() const { return true; }
     bool caption_active() const { return window_activated_; }
+
+    // THE PAINT TARGETS (2026-10-13): the buffers this backend paints into —
+    // the two shm buffers, each holding only what was painted into it — and,
+    // inside the paint loop (paint_one_frame), the one this frame paints:
+    // the index the GUI's as-painted records keep per target
+    // (GuiUpperRowsRecord, app_state.h). 0 outside a paint.
+    static constexpr int kPaintTargetCount = 2;
+    int painting_target() const { return painting_target_; }
     // begin_window_move / begin_window_resize: hand the pointer press being
     // delivered right now to the compositor's interactive move / resize
     // (xdg_toplevel.move / .resize, under that press's serial) — the caption
@@ -778,6 +786,10 @@ private:
     // acquire, destroy). Change it here only.
     static constexpr int kShmBufferCount = 2;
     ShmBuffer shm_buffers_[kShmBufferCount];
+    static_assert(kPaintTargetCount == kShmBufferCount,
+                  "the paint targets are the shm buffers");
+    // The buffer paint_one_frame's loop is painting (painting_target).
+    int       painting_target_ = 0;
     int       shm_pool_fd_   = -1;
     void*     shm_pool_map_  = nullptr;
     size_t    shm_pool_size_ = 0;

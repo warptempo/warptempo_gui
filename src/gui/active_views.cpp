@@ -124,9 +124,10 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // it exactly, as it did under the hand-spelled pair this replaced (and which
     // the two stop edges themselves collapsed onto this same call in 2026-07-30's
     // one-stop-body ruling). Its damage is fully
-    // redundant here either way: the kick_waveform_sync at the tail invalidates
-    // the window from y=0 through the waveform's bottom, top strip included,
-    // which is a superset of the stop's own full waveform-area invalidate.
+    // redundant here either way: the kick_waveform_sync at the tail damages
+    // the window-top rect through the waveform's bottom on
+    // invalidate_waveform_area's road (damage_window_top_rows, viewport.h),
+    // which is the stop's own full waveform-area invalidate.
     playback_lifecycle.stop_playback_if_playing();
     // (THE TAB SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19: the
     // ENTERING tab has a trim of its own, so a switch has nothing to put away.)
@@ -290,7 +291,7 @@ void GuiActiveViews::select_active_markers_view(char target_mode) {
     // only through it; the redundant plate render is one discrete keypress's
     // cost, exactly what `t` and Ctrl+Tab already pay. It subsumes the
     // invalidate_waveform_area this replaces — the rebuild damages the identical
-    // rect (y=0 through the waveform's bottom, top strip included) — and it
+    // rect on the same road (damage_window_top_rows, viewport.h) — and it
     // covers the settings active_markers_view= twin by construction, that key
     // routing through this same function. THE SYNC ALONE below, with no second
     // damage owner at all: this route MOVES NO PLAYHEAD — the coincidence

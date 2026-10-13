@@ -856,6 +856,12 @@ GuiRect top_icon_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, kTopProgramLane);
 }
 
+int viewport_lanes_top_y(const AppState& a) {
+    // The inventory is at Viewport::invalidate_waveform_area (viewport.h).
+    const GuiRect band = top_icon_row_area(a);
+    return band.y + band.h;
+}
+
 GuiRect top_column_air_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, kTopFlexGapLane);
 }
@@ -1365,8 +1371,12 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
     // ~14:30). The top strip is where the cursor's
     // non-waveform pixels live, and the envelope
     // covers the whole lane band above the waveform rather than tracking the
-    // head's own rows, exactly as Viewport::invalidate_waveform_area (the
-    // discrete moves' damage) starts at the window top.
+    // head's own rows. (The discrete moves' damage,
+    // Viewport::invalidate_waveform_area, starts at the window top too but
+    // owes the rows above the viewport's lanes a check rather than a repaint
+    // since 2026-10-13, damage_window_top_rows; these per-frame columns keep
+    // the window-top start, a column rect being no full-width row band the
+    // check replays.)
     const int y0 = 0;
     const int y1 = area.y + area.h;
     return GuiRect{x0, y0, x1 - x0, y1 - y0};
@@ -2531,7 +2541,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 if (app.zoom_level != old_zoom ||
                     app.viewport_start_sample != old_vp) {
                     viewport.invalidate_waveform_area();
-                    viewport.invalidate_clock_area();
+                    // A check of the clock, not a repaint (the record is at
+                    // owe_clock_check's declaration, viewport.h).
+                    viewport.owe_clock_check();
                     viewport.kick_waveform_sync();
                 }
             }
@@ -3184,7 +3196,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         ab_audition.advance_after_natural_end(ended_audition);
     });
 
-    gui.set_on_pre_paint([&]() {
+    // THE PRE-PAINT HOOK'S ADVANCE — everything the hook writes before a frame
+    // paints; the hook below runs it, then the owed check.
+    const auto pre_paint_advance = [&]() {
         // THE ON-SCREEN KEYBOARD'S SESSION OWNER RUNS AHEAD OF EVERY FRAME,
         // and this hook is the one place a write may still happen with a paint
         // already committed to: it runs before the damage list is read and is
@@ -3263,8 +3277,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // of them published on paths that then discovered they had moved nothing.
         // Nor is a stash needed: every viewport mutator that could reflow the
         // scanner's column pairs its write with full waveform-area damage AND a
-        // synchronous plate rebuild (kick_waveform_sync, which damages y=0 through
-        // the waveform's bottom itself), so the old line is erased wholesale in the
+        // synchronous plate rebuild (kick_waveform_sync, which damages the
+        // viewport's lanes through the waveform's bottom itself), so the old
+        // line is erased wholesale in the
         // mutating frame and this narrow pair only ever has to cover the ordinary
         // per-frame advance.
         const double old_px = scanner_pixel_x(app, pb_vp, pb.spp);
@@ -3323,6 +3338,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             !audition_sequence_standing(app) &&
             !any_pointer_gesture_active(app) && !gui.touch_contact_active())
             follow_scroll_if_needed();
+    };
+    gui.set_on_pre_paint([&]() {
+        pre_paint_advance();
+        // THE OWED CHECK LAST (2026-10-13): the rows above the viewport's
+        // lanes and the clock cell, which the narrowed routes owe a check
+        // rather than a repaint, are compared after every write the advance
+        // made (a Follow page among them) and before the damage list is
+        // read (GuiPaintHandler::settle_owed_lane_damage, where the rule is).
+        paint_handler.settle_owed_lane_damage();
     });
 
     // THE GEOMETRY, REDELIVERED: a reopened set's window sends no configure

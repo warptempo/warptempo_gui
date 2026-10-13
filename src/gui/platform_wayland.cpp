@@ -1582,6 +1582,7 @@ void GuiPlatform::paint_one_frame() {
     // frame and clipped to that part — so the app paints its own geometry
     // and never a frame pixel. Maximised, the frame is 0 and both are the
     // surface's.
+    painting_target_ = static_cast<int>(buf - shm_buffers_);
     const int f = frame_px_;
     cairo_t* cr = cairo_create(buf->surface);
     for (const DamageRect& d : buf->pending) {
