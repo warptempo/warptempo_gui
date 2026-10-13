@@ -856,8 +856,8 @@ private:
     // THE THREE REDESIGNED BUTTON ROWS — the MENU ROW (top lane 1, row 1: the
     // flat sampled ground, the three menu anchors flush left and nothing
     // flush right), the ICON ROW (top lane 3, row 4: the
-    // twenty-five view/mode/action buttons, no border of its own since
-    // 2026-10-01, twenty-one standing outside the `h` view and twelve
+    // twenty-six view/mode/action buttons, no border of its own since
+    // 2026-10-01, twenty-two standing outside the `h` view and thirteen
     // inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
     // history_mode_hides_button, since 2026-10-07), and the
     // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the program

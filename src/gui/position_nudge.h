@@ -16,7 +16,8 @@ struct GuiTargetRender;
 // HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
 // 2026-07-29). Both position nudges (bare Left/Right in the marker lane: the warp
 // nudge GuiWarpMarkersOps::nudge_selected_markers in source home, the phase reset
-// nudge GuiPhaseResetMarkersOps::nudge_selected_phase_resets in target home) and
+// nudge GuiPhaseResetMarkersOps::nudge_selected_phase_resets in either audio
+// view, S+P and T+P since 2026-10-12) and
 // the pointer marker DRAG act on ONE marker, the FOCUS: a 2+ selection COLLAPSES
 // TO ITS FOCUS and the focus takes the step (here, in the shared prologue below),
 // and a click on a member of a 2+ selection single-selects it like a click on
@@ -363,7 +364,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     the call went with it.);
 // (e) PLAYHEAD FOLLOW: move_playhead_to the nudged marker's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —
-//     identity in warp's source home, a real map in phase's target home;
+//     identity in source view, warp's home and S+P, a real map in T+P;
 //     committed_focused_frame is reorder-independent). The movement owner owns
 //     the clamp, invalidation, and keep-visible edge-align, writing the
 //     cursor field only (playback was stopped by the prologue, past its

@@ -287,16 +287,16 @@ void GuiSettingsEditor::choice_pick(int index) {
 // engine-key arm in commit() asks authoring_locked for both locks at once —
 // but its keyboard gate refuses SIX chords the read-only allowlist admits
 // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp: bare `o`,
-// the three absolute view selectors and the paired march — bare `k` left that
+// the four absolute view selectors and the paired march — bare `k` left that
 // delta 2026-09-19 with the sticky ctrl's narrowing, and bare
 // `t`/`p`, the individual axis toggles, were deleted with their view lamps
-// 2026-09-15, so the three selectors are the column/audio-view switch's only
+// 2026-09-15, so the four selectors are the column/audio-view switch's only
 // keys now),
 // so a GUI-kind key whose chokepoint is one of those chords owes a gate of
 // its own right here. RE-GREPPED AGAINST THAT DELTA AND AGAINST
 // validate_gui_setting's whole key set (2026-09-13), THREE KEYS OWE ONE AND
 // ALL THREE CARRY IT, EACH IN THE SHAPE ITS OWN CHORD REFUSES IN:
-//   * `active_markers_view=` — the column half of the three selectors (bare `p`, the
+//   * `active_markers_view=` — the column half of the four selectors (bare `p`, the
 //     individual toggle, is gone) — BOTH DIRECTIONS, the gate standing AHEAD
 //     of the no-op gate: the chord refuses whichever column it is pressed in,
 //     so a typed same-column commit is that same press asking the same
@@ -307,7 +307,7 @@ void GuiSettingsEditor::choice_pick(int index) {
 //     an UNLOCK commits, an unlock only widening what is reachable; the
 //     other tab's key commits either way, the lamp's exclusion being the
 //     active tab's; and an unchanged value is the ordinary no-op.
-//   * `active_audio_view=` — the audio half of the three selectors (bare `t`, the
+//   * `active_audio_view=` — the audio half of the four selectors (bare `t`, the
 //     individual toggle, is gone), since 2026-09-13, when grid iterations
 //     became target-view-only — asking the REQUESTED value, `S` refused:
 //     under a lit lamp the view IS target (AppState::iteration_mode_enabled's
@@ -474,10 +474,10 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         if (gv.c == app.active_audio_view) { unchanged(); return true; }
         // THE BODY BARE `t` USED TO CALL (no editor-state guard); it flips
         // S<->T. Bare `t` itself was deleted with its view lamp 2026-09-15;
-        // the view selectors reach this same body now. A typed `S` from T+P
-        // lands the column on W inside that body (its S-never-pairs-with-P
-        // owner, 2026-09-21), with no coincidence auto-select — a typed
-        // audio view is no column entry.
+        // the view selectors reach this same body now. The column stays
+        // where it is, both columns pairing with both audio views (architect
+        // 2026-10-12, S+P's return), and no coincidence auto-select runs — a
+        // typed audio view is no column entry.
         input->handle_active_audio_view_toggle();
         applied(); return true;
     }
@@ -486,7 +486,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // — the typed spelling of bare `p`'s own refusal at the keyboard gate
         // until the architect deleted that key with its view lamp 2026-09-15
         // (iteration_lock_key_blocked's delta (a), input_key_dispatch.cpp,
-        // which still eats the three absolute view selectors): the mode is
+        // which still eats the four absolute view selectors): the mode is
         // LIT FOR THE COLUMN IT WAS PRESSED IN and the column is frozen with
         // it, so a typed `active_markers_view=P` under a lit lamp would leave
         // the cells painted and the sweep aimed at a column the brackets were
@@ -512,18 +512,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             return true;
         }
         if (gv.c == app.active_markers_view) { unchanged(); return true; }
-        // THE TYPED `P` CROSSES TO TARGET FIRST (architect 2026-09-21: the
-        // phase-reset column is target view only) — bare 3's
-        // shape, the audio switch before the column entry. Entering target
-        // CAN refuse (the tripwire class, silent on screen with its stderr
-        // line), and a refused crossing changes nothing, so the commit reports
-        // unchanged rather than applying a column the writer would refuse.
-        if (gv.c == 'P') {
-            input->switch_active_audio_view_to('T');
-            if (app.active_audio_view != 'T') { unchanged(); return true; }
-        }
-        // The absolute column entry the three view selectors take
-        // (GuiActiveViews::select_active_markers_view).
+        // The absolute column entry the four view selectors take
+        // (GuiActiveViews::select_active_markers_view), in the audio view
+        // that stands: both columns pair with both audio views (architect
+        // 2026-10-12, S+P's return — a typed `P` crossed to target first
+        // from 2026-09-21 until then).
         active_views.select_active_markers_view(gv.c);
         applied(); return true;
     }

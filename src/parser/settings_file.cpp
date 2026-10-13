@@ -279,10 +279,10 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
         return R(out);
     }
     if (key == "active_markers_view") {
-        // One ASCII letter per column, W / P. P is TARGET VIEW ONLY
-        // (architect approval 2026-09-21) — a PAIR rule this per-key grammar
-        // cannot see; read_settings_file refuses active_audio_view=S beside P
-        // once the whole file has scanned. The third column's letter M left
+        // One ASCII letter per column, W / P, each beside either audio view
+        // (S+P legal again, architect approval 2026-10-13, ruled
+        // 2026-10-12; P was target view only from 2026-09-21, a whole-file
+        // pair refusal until then). The third column's letter M left
         // with the magnification level markers column (architect approval
         // 2026-09-23): a file carrying it takes this value refusal, no
         // migration.
@@ -449,17 +449,6 @@ std::expected<SettingsFile, std::string> read_settings_file(
         return {};
     });
     if (!scan) return std::unexpected(std::move(scan.error()));
-    // S+P IS A STATE THE GUI CAN NEVER PRODUCE (architect approval
-    // 2026-09-21, a granted parser touch): the phase-reset column
-    // belongs to TARGET view — a phase reset is heard accurately only there,
-    // and S+P has no use — so every GUI road into source view lands the
-    // column on W first and every road into P crosses to target first. A
-    // file carrying the pair is adversarial by the two-category rule —
-    // load-fatal in both products, no migration — and the refusal is
-    // whole-file because the pair spans two keys.
-    if (out.active_markers_view == 'P' && out.active_audio_view == 'S') {
-        return std::unexpected<std::string>(
-            "active_markers_view=P requires active_audio_view=T");
-    }
+    // S+P is a GUI state again, its load wall deleted (architect approval 2026-10-13: S+P returns, ruled 2026-10-12).
     return out;
 }

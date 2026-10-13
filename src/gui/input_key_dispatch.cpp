@@ -270,7 +270,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
     // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
     // and admitted here on that standard until the architect deleted both
-    // keys whole with their view lamps on 2026-09-15 (the three view selectors
+    // keys whole with their view lamps on 2026-09-15 (the four view selectors
     // are the axes' only keyboard road now, immediately below). Before that: each
     // used to write the warp store on one edge — entering target view exited
     // iteration mode through wipe_iter_state, clearing every bracket and
@@ -286,7 +286,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // local walk's frozen-stack premise) and both are re-derived by this
     // history.
     //
-    // Bare 1 / 2 / 3, the ABSOLUTE view selectors (S+W / T+W / T+P). They are
+    // Bare 1 / 2 / 3 / 4, the ABSOLUTE view selectors (S+W / S+P / T+W / T+P). They are
     // admitted for exactly the reason `t` and `p` were, and by exactly the same
     // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
     // switch_active_markers_view_to) and nothing else, so they reach no
@@ -294,7 +294,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // deleted — see above). Nothing new to weigh.
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-          key == GuiKeys::Digit3) &&
+          key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
          !ctrl && !shift && !alt);
     // THE WALK: bare Tab / Shift+Tab / IsoLeftTab — pure navigation, its
     // camera the landing owner's (Viewport::land_subject). No ctrl: Ctrl+Tab
@@ -453,7 +453,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
         (key == GuiKeys::I && !ctrl && !shift && !alt &&
          app.iteration_mode_enabled);
     // SHIFT+S IS BLOCKED, and it needs no term of its own to be: it drops a
-    // phase reset from any view (2026-08-28) — authored content, exactly what
+    // phase reset from the warp column (2026-08-28) — authored content, exactly what
     // bare `s` drops and exactly what this gate refuses — and the is_save
     // entry above is ctrl-exact, so the shifted spelling reaches no admission
     // and falls out at the default. THE FACE FOLLOWS THE KEY WITH NO SECOND
@@ -525,8 +525,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // paragraph below carrying its record; bare `t`/`p`, the individual axis
 // toggles, were deleted whole with their view lamps on 2026-09-15, so the
 // column switch's only remaining road is the selectors below — see the S/T
-// paragraph's retirement note further down): THE COLUMN SWITCH's three chords — the
-// ABSOLUTE VIEW SELECTORS, bare 1 / 2 / 3, which run the `t` and `p` handler
+// paragraph's retirement note further down): THE COLUMN SWITCH's four chords — the
+// ABSOLUTE VIEW SELECTORS, bare 1 / 2 / 3 / 4, which run the `t` and `p` handler
 // BODIES (unchanged; only their bare keys are gone) and so carry the column
 // with them (architect 2026-09-10: the mode is lit for the column you are IN,
 // which is also what retired the stamped column that stood beside the mode
@@ -680,7 +680,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
 // 2026-09-10 — THE VIEW GROUP'S THREE SELECTORS, the column
-// switch's three chords, THE PADLOCK, delta (a)'s third member (WALK
+// switch's four chords, THE PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14, and ADD
 // TO SELECTION was its fourth until 2026-09-19, when the narrowed sticky ctrl
 // retired that refusal and this membership lost the button with it), and BPM
@@ -700,7 +700,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // answer for its ON edge. A change here needs a hand edit there.
 //
 // TWO ROSTER SURFACES THE GATE EATS ANSWER IT IN THEIR OWN WAY. THE VIEW
-// GROUP'S three selectors ARE in the membership since 2026-09-10, so their
+// GROUP'S four selectors ARE in the membership since 2026-09-10, so their
 // PRESS dies at arm_redesign_press's disabled line as a standing overlay's
 // does and their FACE is the icon row's disabled face; their hint names the
 // act, so this gate's card is the only thing that SPEAKS the reason (the
@@ -712,7 +712,7 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // DELTA (a), ahead of every admission: the column switch (bare 1/2/3 —
+    // DELTA (a), ahead of every admission: the column switch (bare 1/2/3/4 —
     // bare `t`/`p`, the two individual axis toggles, were deleted
     // whole with their view lamps on 2026-09-15, so the selectors are its only
     // road now), BARE `o` ON A WRITABLE TAB (the lock direction alone, the
@@ -724,7 +724,7 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     if (!alt && !ctrl && !shift &&
         ((key == GuiKeys::O && !active_view_state(app).read_only) ||
          key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-         key == GuiKeys::Digit3))
+         key == GuiKeys::Digit3 || key == GuiKeys::Digit4))
         return true;
     if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
     // Bare `i` — the off edge, bare-exact as its dispatch arm is.
@@ -1123,12 +1123,12 @@ void GuiInputHandler::close_history_mode() {
 //
 // A VIEW SWITCH INSIDE THE MODE IS DELIBERATELY NOT ONE OF THESE EDGES
 // (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist; the
-// three bare selectors 1 / 2 / 3 are its whole keyboard road since 2026-09-15):
+// four bare selectors 1 / 2 / 3 / 4 are its whole keyboard road since 2026-09-15):
 // it already ends in kick_waveform_sync, whose owed rebuild rebuilds the flag
 // cache before the next frame paints — the same republication every edge now
 // reaches for, arrived at as part of the switch itself — so there is no frame
 // to protect. THE SWITCH FLUSHES THAT OWED REBUILD ITSELF (2026-10-13, the
-// selector arm at on_key's bare 1 / 2 / 3), the way republish_history_lane_now
+// selector arm at on_key's bare 1 / 2 / 3 / 4), the way republish_history_lane_now
 // does, though it drops nothing: the rebuild is what replaces
 // app.history_mode.flags with the ENTERING column's list, and a later key of
 // the same drain — Tab's cycle (cycle_history_diff_flag_focus), Center,
@@ -1185,7 +1185,7 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // (app.history_mode.flags plus the two pointer stashes over it) being that
 // rebuild's history arm's output. THIS CALL FLUSHES IT IN THE PRESS
 // (2026-10-13), where a view switch OUTSIDE the history mode leaves it to the
-// pre-paint hook (inside the mode the selector arm at on_key's bare 1 / 2 / 3
+// pre-paint hook (inside the mode the selector arm at on_key's bare 1 / 2 / 3 / 4
 // flushes in its press too, as the paragraph above records): the
 // edge has just DROPPED the list (drop_lane_stash_across_history_edge), and
 // its keyboard and click readers (AppState::HistoryMode::flags names them)
@@ -2445,7 +2445,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             it. PageUp/PageDown are PURE viewport moves; `0`'s
 //                             restore lands the playhead, which the mode's
 //                             diff-flag click and Tab cycle already do.
-//   - t / p / 1 / 2 / 3     → THE VIEW SWITCHES (architect 2026-08-04, from his
+//   - t / p / 1 / 2 / 3 / 4 → THE VIEW SWITCHES (architect 2026-08-04, from his
 //     (bare)                  first real session with the mode). THE DELTA IS
 //                             VIEW-INDEPENDENT AND THE PAINTED SUBSET IS NOT,
 //                             which is the whole reason they belong here: a
@@ -2964,15 +2964,15 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // keeps no dead row in the view.
     const bool is_revert_project = is_revert_project_key(key, mods);
     // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
-    // bare-exact, read off its own arm in on_key: the three absolute selectors
-    // on bare 1/2/3, which compose the `t`/`p` handler bodies
+    // bare-exact, read off its own arm in on_key: the four absolute selectors
+    // on bare 1/2/3/4, which compose the `t`/`p` handler bodies
     // and are their only road since the architect deleted the individual
     // `t`/`p` keys and their view lamps 2026-09-15. Admitting a shape the
     // dispatch does not bind would admit a press that then does nothing, which
     // is the allowlist telling a lie about itself.
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
-          key == GuiKeys::Digit3) && bare);
+          key == GuiKeys::Digit3 || key == GuiKeys::Digit4) && bare);
     // ADD TO SELECTION (architect 2026-09-17), bare-exact — exactly the
     // dispatch arm's own spelling and the roster row's, so the key, the button
     // and this admission cannot drift. The argument is in the header's bullet:
@@ -7694,20 +7694,20 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // looking, and they stay there for the duration of the lamp being
         // lit."). It needs NO STAMP to be, and had one for a few hours of that
         // day: THE W/P SWITCH IS ONE OF THE ACTS THE ITERATION LOCK REFUSES
-        // (the three absolute view selectors, bare 1/2/3, at
-        // iteration_lock_key_blocked; the view group's three buttons grey with
+        // (the four absolute view selectors, bare 1/2/3/4, at
+        // iteration_lock_key_blocked; the view group's four buttons grey with
         // the key carding the sentence), so the column cannot move while the lamp stands
         // and `iteration_column_lit` reads the LIVE column. There is no
         // second lamp, no second key and no column term on this button — and
         // no other column to stand on while lit.
         //
         // AND THE MODE LIVES IN TARGET VIEW ALONE (architect 2026-09-13), so
-        // the ON edge pressed in SOURCE view CROSSES TO TARGET FIRST — Shift+S's
-        // crossing shape (drop_phase_reset_in_target_view, input_handler.cpp),
-        // below, past every refusal. The column is unchanged: S+W lights in
-        // T+W, and S+W is the one source view this crossing starts from (the
-        // P column stands in target alone since 2026-09-21). While the lamp
-        // stands the lock refuses every road back to source (the three
+        // the ON edge pressed in SOURCE view CROSSES TO TARGET FIRST, through
+        // the S/T chokepoint, below, past every refusal, a refused entry
+        // stopping the whole press. The column is unchanged: S+W lights in
+        // T+W and S+P in T+P (both source views again since S+P's return,
+        // architect 2026-10-12). While the lamp
+        // stands the lock refuses every road back to source (the four
         // selectors are iteration_lock_key_blocked's
         // delta (a)), so the OFF edge always runs in target and needs no
         // crossing;

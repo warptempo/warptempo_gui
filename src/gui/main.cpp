@@ -787,10 +787,10 @@ GuiRect top_flex_gap_area(const AppState& a) {
 // three menu anchors flush left and nothing flush right, architect
 // 2026-10-05), directly under the caption. Lane 2 is THE PROGRAM FRAME'S TOP
 // ROW (2026-10-10, render.h's program_frame_rect). Lane 3 is the ICON row
-// (the twenty-seven
+// (the twenty-eight
 // view/mode/action buttons — kIconRowButtons, kIconRowViewGroup and the
-// history stand-ins, paint_handler.cpp, are the count's authority; twenty-one
-// stand outside the `h` view and fourteen inside it), directly under the
+// history stand-ins, paint_handler.cpp, are the count's authority; twenty-two
+// stand outside the `h` view and fifteen inside it), directly under the
 // frame's top row, Cool Edit's band. Lane 4 is THE COLUMN'S AIR (5 W of
 // the panel face, 2026-10-09), the first lane UNDER GAP 1 and the CENTERED
 // BLOCK's cap; lane 5 is the TRIM lane (Cool Edit's view bar: the span and

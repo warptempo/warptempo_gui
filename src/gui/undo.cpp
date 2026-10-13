@@ -905,35 +905,16 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // copy that used to stand at this spot went with the move onto the owner).
     // THE COLUMN WRITTEN IS THE ENTRY'S LANDING COLUMN, never its op_mode
     // (UndoEntry::landing_column, app_state.h, which carries the split and its
-    // inventory): the one store kind whose landing can differ — a phase paste
-    // whose target entry refused — lands W here, the column the paste ended
-    // in, and the lamp's verdict reads the same tag. Gated off 'S' because
-    // op_mode is that entry kind's MARKER rather than a column: a
+    // inventory), and the lamp's verdict reads the same tag. Gated off 'S'
+    // because op_mode is that entry kind's MARKER rather than a column: a
     // settings-only entry carries no authoring column to return to.
     //
-    // A 'P' ENTRY TAKES ITS AUDIO VIEW FIRST (architect 2026-09-21: the
-    // phase-reset column is target view only, the column writer refusing 'P'
-    // outside it and the audio writer landing T+P on W before it leaves for
-    // source). Its audio tag is 'T', the view the act landed in — read off the
-    // live view at the push for every act that stays where it is, and
-    // RESTAMPED after the landing for the one pair that pushes before
-    // crossing, the phase-reset pastes (the rule is at
-    // Undo::stamp_top_entry_with_landing_view, undo.h). The order is what
-    // lets the column write land: restored from S+W, audio first enters
-    // target and then the writer admits 'P', where column first would have
-    // been refused and left T+W; the selection is cleared first so the flip
-    // has no focus to re-express (the column switch would clear it one line
-    // later anyway). Entering target CAN refuse (the tripwire class); the
-    // column write then refuses in turn, the restore goes on in the view it
-    // has — the audio restore's best-effort rule — and the post-restore rules
-    // below stand down, the column the entry names not being the one shown.
-    // "A 'P' entry" is read off the LANDING COLUMN, not op_mode: the phase
-    // paste whose own target entry refused carries a 'P' store change that
-    // landed in W, and it takes the W order (column, then audio).
-    if (entry.op_mode != 'S' && entry.landing_column == 'P') {
-        selection.clear_selection();
-        if (input) input->switch_active_audio_view_to(entry.audio_view);
-    }
+    // EVERY ENTRY TAKES ITS COLUMN FIRST AND ITS AUDIO VIEW AFTER (below),
+    // whichever column it names: both columns pair with both audio views
+    // (architect 2026-10-12, S+P's return), so the writer refuses no column
+    // for the audio view standing. (A 'P' entry took its audio view first
+    // from 2026-09-21 until then, while the writer refused 'P' outside
+    // target view.)
     if (entry.op_mode != 'S') {
         active_views.switch_active_markers_view_to(entry.landing_column);
     }
@@ -943,21 +924,13 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // THE RULES RUN ONLY WHERE THE ENTRY'S COLUMN STANDS. They install STORE
     // INDICES of the entry's column into the one selection, and every reader
     // after this point — the sanitize, the visual tail's land, the flag
-    // pass — resolves them through the ACTIVE column's store. The column
-    // write above can refuse (a 'P' entry whose target entry failed its
-    // tripwire-class gate leaves the session off P), and indices installed
-    // then would name the same-numbered rows of another column, where a
-    // Delete, a disable or a nudge would act on an unrelated marker. So a
-    // column that did not land takes the empty set's own clear instead — the
-    // phase-reset paste's landing guards its created set on the same
-    // question (land_paste_in_target_view). The store itself is restored
-    // either way; only the selection's claim on it stands down. THE SAME ARM
-    // CONTAINS THE PASTE'S REFUSED LANDING: a phase paste from S+W whose
-    // target entry refused honestly records the view it ended in, S+W, over a
-    // 'P' store change (audio_view 'S', landing_column 'W'), and its restore
-    // lands S+W, the column shown is not the entry's store, and the selection
-    // clears here — so no tripwire guards the 'P'-says-'T' claim, which would
-    // only turn this contained case into a crash. (The rules compare the
+    // pass — resolves them through the ACTIVE column's store. The entry's
+    // landing column can differ from the store kind (UndoEntry::landing_column's
+    // inventory), and indices installed then would name the same-numbered rows
+    // of another column, where a Delete, a disable or a nudge would act on an
+    // unrelated marker. So a column that is not the entry's store takes the
+    // empty set's own clear instead. The store itself is restored either way;
+    // only the selection's claim on it stands down. (The rules compare the
     // STORE KIND, op_mode, against the column shown: the indices they would
     // install are that store's.)
     if (entry.op_mode != 'S' && app.active_markers_view != entry.op_mode) {
@@ -1009,14 +982,10 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // entry is already popped.
     //
     // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
-    // recorded, a restore lands the combination the op LANDED in. Before
-    // this tag existed the restore MANUFACTURED S+P out of a T+P entry undone
-    // from S+W, which is the defect it closed; since 2026-09-21 S+P is no
-    // state at all (the phase-reset column is target view only), the two
-    // writers holding it unreachable on this road as on every other — a 'P'
-    // entry has taken its audio view above, and this call is then the
-    // same-view no-op, while any other entry leaving T+P for source lands the
-    // column on W inside the switch.
+    // recorded, a restore lands the combination the op LANDED in — S+P among
+    // the four since its return (architect 2026-10-12). Before this tag
+    // existed the restore MANUFACTURED S+P out of a T+P entry undone from
+    // S+W, which is the defect it closed.
     if (input) input->switch_active_audio_view_to(entry.audio_view);
 
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual

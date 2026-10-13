@@ -767,7 +767,7 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // from (architect 2026-09-29, Jump to Defining Marker's own chord).
         // Bare `j` and Shift+J bind nothing; the copy is Ctrl+C.
         case GuiKeys::J: return cl;
-        // Drop on the live column / drop a phase reset from any view / save,
+        // Drop on the live column / drop a phase reset from the warp column / save,
         // Alt+S, the Settings title's access key (2026-10-10), and
         // CTRL+SHIFT+S, THE PUBLISH CHORD, in both modes (architect
         // 2026-10-10, is_publish_key; it dropped a magnification level marker
@@ -815,10 +815,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // the magnification lamp; `0` already means "the whole song" to the
         // camera, and its shifted form says it to the trim).
         case GuiKeys::Digit0: return bare || sh;
-        // The three absolute view selectors: bare 1 is S+W, bare 2 T+W, bare 3
-        // T+P, and 4..9 bind nothing.
-        case GuiKeys::Digit1:
-        case GuiKeys::Digit2: case GuiKeys::Digit3:
+        // The four absolute view selectors: bare 1 is S+W, bare 2 S+P, bare 3
+        // T+W, bare 4 T+P (architect 2026-10-12), and 5..9 bind nothing.
+        case GuiKeys::Digit1: case GuiKeys::Digit2:
+        case GuiKeys::Digit3: case GuiKeys::Digit4:
             return bare;
 
         // The settings editor, and the load in place / render player.
@@ -907,11 +907,11 @@ static_assert(!chord_is_bound(kLeftClickKey, GuiInputState{}, false),
               "bare `e` is the left mouse button at the platform boundary and "
               "must never become a key binding");
 static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
-                  chord_is_bound(GuiKeys::Digit3, GuiInputState{}, false) &&
-                  !chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false) &&
+                  !chord_is_bound(GuiKeys::Digit5, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit9, GuiInputState{}, false),
-              "bare 1 is the S+W view selector and bare 3 the T+P one; "
-              "digits 4..9 are unbound");
+              "bare 1 is the S+W view selector and bare 4 the T+P one; "
+              "digits 5..9 are unbound");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound; it is one of the eight-place contract's own "
               "arms (the notification stack's clear), and its top-level "
@@ -1248,22 +1248,22 @@ inline bool is_revert_project_key(GuiKey key, GuiInputState mods) {
 // True for the chord that DROPS A PHASE RESET FROM THE WARP COLUMN'S EITHER
 // VIEW (architect 2026-08-28, born "from any view"; the P column refuses it
 // whole since 2026-08-30 — the paragraph below): SHIFT+S exactly — no ctrl,
-// no alt. It lands the session in
-// T+P, the lead-in's own view, and drops the lead-in reset at the playhead's own
-// musical instant there, so the reset the architect wants while he is looking
-// at the warp column costs one key instead of a view trip and back. Ctrl+S is
+// no alt. It switches the column to P IN THE AUDIO VIEW IT IS PRESSED IN
+// (architect 2026-10-12: S+W lands in S+P, T+W in T+P; it tripped to T+P
+// until then) and drops the lead-in reset kN/2 output samples before the
+// playhead there, so the reset the architect wants while he is looking at
+// the warp column costs one key instead of a view trip and back. Ctrl+S is
 // the save on this letter and Shift+S was the strict rule's consumed no-op
 // until this date; the shifted `s` is the only decoration on it that binds.
 //
-// IT IS BARE `s`'s ACT WITH THE VIEW TRIP IN FRONT, not a second one: from
-// the W column the difference is exactly the two view chokepoints Shift+S
+// IT IS BARE `s`'s ACT WITH THE COLUMN SWITCH IN FRONT, not a second one:
+// from the W column the difference is exactly the column writer Shift+S
 // runs first, and then the same one drop body (the act is
-// GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp). IN
+// GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp). IN
 // THE P COLUMN THE CHORD REFUSES WHOLE since 2026-08-30 (architect): the
 // command IS the crossing from warp view, so with phase resets already
-// showing there is nothing to cross and the act answers "Already in phase
-// reset view" before any switch (the P column stands in T+P alone since
-// 2026-09-21), bare `s` untouched
+// showing — S+P or T+P — there is nothing to cross and the act answers
+// "Already in phase reset view" before any switch, bare `s` untouched
 // (the leading refusal is phase_reset_drop_crossing_actionable,
 // app_state.h).
 // The same two readers as the Space pair above — on_key's dispatch arm

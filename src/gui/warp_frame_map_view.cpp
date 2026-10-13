@@ -254,9 +254,24 @@ int64_t drop_at_playhead_source_frame(const AppState& a,
                                       const GuiAudio& audio) {
     // The rule is at the declaration (app_state.h).
     int64_t ph = a.playhead_cursor_sample;
-    if (a.active_markers_view == 'P')
+    if (a.active_markers_view != 'P')
+        return active_domain_to_source_frame(a, audio, ph);
+    if (a.active_audio_view == 'T') {
         ph = std::max<int64_t>(0, ph - kPhaseResetLeadInSamples);
-    return active_domain_to_source_frame(a, audio, ph);
+        return active_domain_to_source_frame(a, audio, ph);
+    }
+    // S+P: forward to the target image through the live map, rounded to a
+    // whole target frame as the S -> T switch rounds the playhead, the same
+    // subtraction, and back to a whole source frame. An empty map (a build
+    // the tripwire class refused) is the identity both ways.
+    const auto& map = target_view_warp_frame_map_cached(
+        a, audio.sample_rate(),
+        static_cast<long>(audio.total_frames())).warp_frame_map;
+    const double t = std::nearbyint(map_source_to_target(
+        static_cast<double>(std::max<int64_t>(0, ph)), map));
+    const double lead_in = std::max(
+        0.0, t - static_cast<double>(kPhaseResetLeadInSamples));
+    return snap_authored_frame(map_target_to_source(lead_in, map));
 }
 
 bool drop_at_playhead_off_edge(const AppState& a, const GuiAudio& audio) {

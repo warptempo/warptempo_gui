@@ -345,15 +345,15 @@ inline constexpr const char* kDefaultProjectsRepo =
 // waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 569
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 592
 // Windows px of window at 100 % (408 in the `h` view) the icon row — Cool
-// Edit's band since 2026-10-09, its twenty-one standing members in seven
-// panes round the program's 23-W case (fourteen in the view, its history
+// Edit's band since 2026-10-09, its twenty-two standing members in seven
+// panes round the program's 23-W case (fifteen in the view, its history
 // stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07) — no
 // longer fits, and its flush-right view group covers the panes to its left
 // (the overflow rule at kIconRowViewGroup, paint_handler.cpp). The tablet's
-// 2304-px panel holds the row whole in both states up to about 404 % —
-// 1356 + 351 device px at 300 % outside the view (the arithmetic is at
+// 2304-px panel holds the row whole in both states up to about 389 % —
+// 1356 + 420 device px at 300 % outside the view (the arithmetic is at
 // paint_icon_row, paint_handler.cpp, its one statement, re-derived
 // 2026-10-09 for the program's band; the earlier fit ceilings and their
 // succession are git history) — and past that ceiling the overflow rule

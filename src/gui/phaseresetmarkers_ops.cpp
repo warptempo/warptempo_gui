@@ -42,9 +42,9 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // so marker gestures and playhead syncs agree exactly.
     // SILENT, AND IT HAS NO PRODUCER (re-derived 2026-08-30, the warp twin's
     // finding): every drop road authors at or BEFORE the playhead — the
-    // target arm subtracts kN/2 output samples, the source arm authors at
-    // the cursor exactly, and the playhead rests in [0, total-1] by every
-    // writer's clamp — so no press can reach this wall.
+    // lead-in drop subtracts kN/2 output samples in either audio view, and the
+    // playhead rests in [0, total-1] by every writer's clamp — so no press
+    // can reach this wall.
     // An error arm exists iff a producer exists: a silent breach wall.
     if (drop_frame > audio.total_frames() - 1)
         return;
@@ -68,10 +68,9 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     viewport.invalidate_waveform_area();
     // Match drop_marker: re-affirm the playhead on the new phase reset. The one
     // create path is the drop below (bare `s`, the empty-lane double-click
-    // and Shift+S all take it), whose TARGET arm authors kN/2 BEFORE the
-    // playhead — this seat lands the playhead back on the seeded reset — and
-    // whose SOURCE arm authors at the cursor exactly, the seat then a
-    // same-value re-affirm. This is a drop
+    // and Shift+S all take it), which authors kN/2 output samples BEFORE the
+    // playhead in either audio view — this seat lands the playhead back on
+    // the seeded reset. This is a drop
     // consequence (the
     // reset is created for the playhead), not a selection sync.
     const int64_t sample = source_frame_to_active_domain(app, audio, drop_frame);
@@ -91,11 +90,10 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     target_render.trigger();
 }
 
-// The phase column's drop (it was FORKED ON THE AUDIO VIEW from 2026-08-30,
-// when the P column authored in both views, until 2026-09-21, when the column
-// became target view only and the source arm left with S+P — below).
+// The phase column's drop, THE LEAD-IN DROP IN BOTH AUDIO VIEWS (architect
+// 2026-10-12, S+P's return: "the drop in S+P takes the offset").
 //
-// TARGET VIEW — the LEAD-IN drop: place the reset kPhaseResetLeadInSamples
+// THE LEAD-IN: place the reset kPhaseResetLeadInSamples
 // (kN/2) OUTPUT samples BEFORE the playhead. THE DERIVATION'S ONE PROSE HOME
 // (architect 2026-09-02, the requirement stated and the number derived from
 // it; the constant and its static_assert are at app_state.h, and Space's
@@ -218,20 +216,27 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // playhead is an integer frame, so the offset is plain integer arithmetic
 // (no snap needed); clamped to 0.
 //
-// TARGET VIEW IS THE BODY'S ONE VIEW (architect 2026-09-21): the phase-reset
-// column exists in target view alone — a phase reset is heard accurately only
-// there, so S+P has no use and is load-fatal — and the
-// source-view arm that stood here (S+P's STUB of 2026-09-02: no lead-in, the
-// reset seated exactly at the source cursor) had no producer left and is
-// deleted; the assert below is its breach belt (an error arm exists iff a
-// producer exists). Every route reaches it with T+P standing:
-// bare `s` and the empty-lane double-click are P-column routes, and the
-// column writer refuses 'P' outside target view
-// (GuiActiveViews::switch_active_markers_view_to) while the audio writer lands
-// T+P on W before it leaves for source; SHIFT+S SWITCHES the session into T+P
-// first (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp)
-// and reads the audio switch back before it drops, so the column write that
-// follows cannot refuse.
+// IN SOURCE VIEW THE SAME OFFSET, ONE CALCULATION AT THE DROP (architect
+// 2026-10-12: he stands the playhead on the transient in S+P and drops, and
+// the reset lands kN/2 OUTPUT samples before it): the source playhead goes
+// forward through the live target map to its target image, rounded to a
+// whole target frame as the S -> T switch rounds it, takes the same
+// subtraction, and comes back through the same map to a whole source frame
+// (drop_at_playhead_source_frame, warp_frame_map_view.cpp) — so the reset
+// lands exactly where the same press in T+P, or Shift+S's old trip there,
+// would have put it. The forward rounding is a fourth residue term of its
+// own, at most half an output sample between the source playhead's exact
+// image and the protected point, slope-free (the residue's prose home is
+// above). Only the DROP takes it: a drag in S+P applies no offset
+// (a varying offset would be expensive and not smooth) and S+P paints no
+// lead-in overlay ("the purpose of the overlay is fine-tuning", the overlay
+// band's own gate, paint_handler.cpp). The routes are three, in either audio
+// view: bare `s` and the empty-lane double-click, both P-column routes, and
+// SHIFT+S, which switches the column to P in the standing audio view first
+// (GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp).
+// (From 2026-08-30 to 2026-09-21 S+P's drop took no lead-in, the reset
+// seated exactly at the source cursor; from then until 2026-10-12 S+P was no
+// state.)
 //
 // The body reuses drop_phase_reset_at_position, so the created reset takes the
 // full create path — the EOF wall, undo, the single-select and the playhead
@@ -246,7 +251,6 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
 // (warp_frame_map_view.cpp), the one frame the refusal and the drop share.
 GuiOpRefusal GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead() {
     if (audio.sample_rate() <= 0) return std::nullopt;
-    assert(app.active_audio_view == 'T');
     assert(app.active_markers_view == 'P');
     if (drop_at_playhead_off_edge(app, audio))
         return GuiOpRefusal{kMarkerDropOffEdgeCard};
@@ -407,9 +411,10 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // are all argued at its declaration). This column's step is ALWAYS A HOP
     // (the landing owner's hop arm, which asks the LIVE map — a hop is the
     // render's quantum, not a painted one — and then clamps onto the same
-    // walls the column step clamps onto); phase resets author in their TARGET
-    // home view only (the home-view binding), a mapped (non-identity) domain,
-    // and the EOF wall is the one every column shares. Crossing a neighbor is
+    // walls the column step clamps onto) — the same hop in S+P and T+P, the
+    // live map being the render's whatever the view (architect 2026-10-12:
+    // "nudges as in the other views") — and the EOF wall is the one every
+    // column shares. Crossing a neighbor is
     // legal and goes through the reorder-and-remap below.
     int64_t committed_f =
         position_nudge_landing(app, audio, orig_f, step);
@@ -467,7 +472,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     }
     // Shared commit tail: record/dirty/invalidate (its full-waveform damage moves
     // the nudged reset's always-on stem), playhead follow (committed_f is
-    // reorder-independent; the target home maps), the point command's region
+    // reorder-independent; T+P maps, S+P is the identity), the point command's region
     // collapse, and the view-independent target trigger. Ordering rationale at the
     // declaration.
     finish_position_nudge(app, audio, viewport, undo,

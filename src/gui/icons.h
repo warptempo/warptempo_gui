@@ -80,10 +80,14 @@ enum class Icon {
                          // checkpoint publishes
     VcsPull,             // Save's face in the history view while GitHub is
                          // ahead
-    // THE VIEW GROUP (bare 1 / 2 / 3): one family of three.
+    // THE VIEW GROUP (bare 1 / 2 / 3 / 4): one family of four, the warp pair
+    // the indents and the phase pair the justifications (architect
+    // 2026-10-12, when S+P returned; Target+Phase wore format-justify-fill,
+    // the ChronometerStart file, until then).
     DocumentExport,      // Source+Warp
+    FormatJustifyLeft,   // Source+Phase
     DocumentImport,      // Target+Warp
-    ChronometerStart,    // Target+Phase
+    FormatJustifyRight,  // Target+Phase
     // THE MAGNIFIERS.
     ZoomFitBest,         // Full Zoom Out (bare `0`)
     ZoomOriginal,        // Center on Focus (bare `c`)
@@ -174,7 +178,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 60;
+inline constexpr int kIconCount = 61;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -182,7 +186,8 @@ inline constexpr int kIconCount = 60;
 inline constexpr const char* kIconNames[] = {
     "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
     "VcsCommit",
-    "VcsPull", "DocumentExport", "DocumentImport", "ChronometerStart",
+    "VcsPull", "DocumentExport", "FormatJustifyLeft", "DocumentImport",
+    "FormatJustifyRight",
     "ZoomFitBest", "ZoomOriginal", "ZoomInY", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
     "TimelineLift", "MusicNote16th", "Mathmode", "PreviewRenderOn",

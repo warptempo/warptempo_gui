@@ -262,7 +262,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the radio-pair collapse, to 2026-09-15 — one button per axis where
     // IconS/IconT and IconW/IconP were four radios over the bare `t`/`p`
     // chords, each a plain TOGGLE carrying NO radio flag. The architect
-    // deleted the whole category with those two keys; the three view selectors
+    // deleted the whole category with those two keys; the four view selectors
     // below are the axes' only keyboard road now.)
     // (THE SHOW TRIM REGION BUTTON'S ROW IS DELETED — 2026-09-22, with its
     // button and its bare `[` chord: the architect uses the tablet's pen,
@@ -526,7 +526,8 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::Apostrophe, false, false, false, false},  // bare '
     // THE VIEW GROUP, the icon row's last, flush at its right edge (architect
     // 2026-10-01): the ABSOLUTE view
-    // selectors Source+Warp, Target+Warp, Target+Phase on bare 1 / 2 / 3, in
+    // selectors Source+Warp, Source+Phase, Target+Warp, Target+Phase on bare
+    // 1 / 2 / 3 / 4 (architect 2026-10-12, when S+P returned), in
     // the painter's order (kIconRowViewGroup, paint_handler.cpp). Everything
     // the selectors own arrives by construction through on_key's own handler —
     // the audio-first-then-markers order, the refused-target-entry abort of
@@ -535,8 +536,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // keep in step. RADIOS, with the row's click face (the flag's
     // justification is at the struct's `radio` column).
     {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true}, // bare 1
-    {RedesignButton::ViewTW,     GuiKeys::Digit2, false, false, false, true}, // bare 2
-    {RedesignButton::ViewTP,     GuiKeys::Digit3, false, false, false, true}, // bare 3
+    {RedesignButton::ViewSP,     GuiKeys::Digit2, false, false, false, true}, // bare 2
+    {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true}, // bare 3
+    {RedesignButton::ViewTP,     GuiKeys::Digit4, false, false, false, true}, // bare 4
     // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
@@ -575,7 +577,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // THE COLLAPSE REMOVES THE PROBLEM RATHER THAN SOLVING IT AGAIN: two
     // buttons over one chord was the whole difficulty, and one button has no
     // wrong half. The flag is deleted from these rows and the GENERIC radio
-    // consume is untouched — the view group's three use it.
+    // consume is untouched — the view group's four use it.
     // bare Space, toggle_playback and playback_launch_playable are untouched
     // by construction, as they were under the radio.
     //
@@ -1353,7 +1355,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the icon row's view group, ViewSW/ViewTW/ViewTP (bare 1/2/3, the admitted
+//   LIVE — the icon row's view group, ViewSW/ViewSP/ViewTW/ViewTP (bare 1/2/3/4, the admitted
 //   view selectors), Save (its lift Ctrl+Shift+S in this mode since
 //   2026-10-10, Ctrl+S before — save_button_publishes — the
 //   save-and-commit checkpoint act, wearing the "Save and Commit" face — LIVE
@@ -6923,8 +6925,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // Mouse authoring is home-view gated like the keyboard: the marker DRAG
     // never moves a warp flag in T+W — selecting and landing but MOVING
     // NOTHING, the one off-home state left since the P column opened to both
-    // audio views (2026-08-30; the column is target view only again since
-    // 2026-09-21, where it is home) — the crossing's value-drag posture claiming
+    // audio views (2026-08-30, and again with S+P's return, 2026-10-12) — the
+    // crossing's value-drag posture claiming
     // that state whole since 2026-09-13. W+target used
     // to arm the TEMPO drag on an eligible marker instead of the reposition drag
     // (the pointer half of the home-view binding's tempo exception); that whole
@@ -7915,8 +7917,8 @@ void GuiInputHandler::create_marker_at_empty_lane(int click_rel_x) {
         playhead_frame_at_click_column(app, audio, click_rel_x), app, audio);
     viewport.move_playhead_to(sample);
     // active_column_authoring_allowed admits W only in source view (warp
-    // drops legal there alone) and P wherever it exists, which is target view
-    // alone (2026-09-21; both audio views from 2026-08-30 until then), so the
+    // drops legal there alone) and P in both audio views (S+P and T+P, each
+    // with the lead-in, architect 2026-10-12), so the
     // view dispatch below needs no extra audio-view guard on either column.
     // The drops' reason channel carries one sentence, the off-edge refusal
     // (kMarkerDropOffEdgeCard), which this road cannot meet: the playhead was
@@ -11544,7 +11546,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // does, and silently for the same reason. THE HOME-VIEW BINDING'S ONE
         // OFF-HOME FLAG DRAG — a WARP flag in target view (the tempo drag that
         // once armed there is deleted, see marker_drag.h; the P column drags
-        // wherever it stands, which is T+P alone since 2026-09-21) — is the
+        // in both audio views, S+P and T+P since 2026-10-12) — is the
         // view refusal's below, behind the lamp's fork.
         // THE VALUE DRAG FORKS AHEAD OF THE LOCK (architect 2026-09-10): while
         // the VALUE DRAG LAMP stands lit (value_drag_posture, app_state.h,
@@ -11585,9 +11587,10 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // Until that day the view made the drag the value drag there, which
         // is how a sideways drag changed a tempo unnoticed.
         if (horizontal_flag_drag_refused(app)) return;
-        // No home-view test: T+W returned above, so S+W and T+P with grid
-        // iterations dark (T+P the phase-reset column's only view since
-        // 2026-09-21) reach here, both of them authoring views.
+        // No home-view test: T+W returned above, so S+W, S+P (its drag
+        // taking no lead-in offset and riding no overlay, architect
+        // 2026-10-12) and T+P with grid iterations dark reach here, all of
+        // them authoring views.
         if (authoring_locked(app)) return;
         // Begin the drag anchored at the PRESS column so the marker tracks the
         // pointer 1:1, this first apply folding the whole press->crossing delta

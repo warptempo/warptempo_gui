@@ -40,7 +40,7 @@
 // Revert grey there since 2026-09-24, the overlay's routers consuming their
 // chords) — while Edit and Settings grey through
 // menu_anchor_live and refuse on that painted face, and every icon-row
-// button — the view group's three included — greys through
+// button — the view group's four included — greys through
 // redesign_button_enabled's first arm. The header behind them keeps its one
 // ground, the content ground, which has no unfocused face. The waveform's own
 // passes paint nothing

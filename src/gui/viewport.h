@@ -138,7 +138,7 @@ struct Viewport {
     //    route that lands the flag rebuild in the damaged frame; it joins the
     //    class rather than growing a second flag-only kick (the reason is stated
     //    at its site, active_views.cpp), and the settings active_markers_view=
-    //    key rides it through the same function. Bare 1/2/3, the ABSOLUTE VIEW
+    //    key rides it through the same function. Bare 1/2/3/4, the ABSOLUTE VIEW
     //    SELECTORS (2026-08-01), add NO fourth site: they run the audio
     //    view's and the column's handlers themselves, so their kicks are those
     //    two entries and this list is unchanged by them.
@@ -155,15 +155,15 @@ struct Viewport {
     //    selector, so it kicks at its own tail — after the created selection, so the
     //    column and the selection hash rebuild together — and on its W+source
     //    entry that is a harmless SECOND kick, the audio-view toggle's own having
-    //    run before the column swap. SHIFT+S — THE DROP FROM ANY VIEW
-    //    (2026-08-28, GuiInputHandler::drop_phase_reset_in_target_view,
-    //    input_handler.cpp) — is that same case through a third door and takes
-    //    the same tail for the same reason: it calls
-    //    switch_active_markers_view_to('P') directly (the writer's selection
-    //    clear has to land before the drop's single-select) and kicks after
-    //    the drop, so the column, the plate and the new reset's flag land in
-    //    one frame; entered from W its audio switch kicked before the column
-    //    swap, making this the harmless second. Also here: the
+    //    run before the column swap. SHIFT+S — THE DROP FROM THE WARP COLUMN
+    //    (2026-08-28, staying in its audio view since 2026-10-12,
+    //    GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp) — is
+    //    that same case through a third door and takes the same tail for the
+    //    same reason: it calls switch_active_markers_view_to('P') directly
+    //    (the writer's selection clear has to land before the drop's
+    //    single-select) and kicks after the drop, so the column, the plate
+    //    and the new reset's flag land in one frame — its only kick, no
+    //    audio switch running ahead of it. Also here: the
     //    settings tab_X_viewport_start commit
     //    (GuiSettingsEditor::commit_gui_setting),
     //    the nav drag's ZOOM-PHASE FORCE-END (finalize_active_drags,
@@ -296,7 +296,7 @@ struct Viewport {
     //   * GuiInputHandler::republish_history_lane_now, after its kick: the
     //     history edge's drop and refill of the lane's list stay one swap in
     //     the press, for the keyboard and click readers of that list;
-    //   * GuiInputHandler::on_key's bare 1 / 2 / 3 selector arm, inside the
+    //   * GuiInputHandler::on_key's bare 1 / 2 / 3 / 4 selector arm, inside the
     //     `h` view alone, after both switches: Tab's cycle, Center and Revert
     //     in a later event of the drain read the lane's list, which must be
     //     the entering column's (the reason at drop_lane_stash_across_history_edge's

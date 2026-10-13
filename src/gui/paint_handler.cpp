@@ -989,17 +989,19 @@ constexpr IconRowDef kIconRowHistoryOpener =
     {RedesignButton::IconHistory, icons::Icon::VcsDiff};
 
 // THE VIEW GROUP — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
-// 2026-10-01): the three ABSOLUTE VIEW SELECTORS, Source+Warp, Target+Warp and
-// Target+Phase on bare 1 / 2 / 3, in their keys' order. THE ACTS CAME FROM
+// 2026-10-01): the four ABSOLUTE VIEW SELECTORS, Source+Warp, Source+Phase,
+// Target+Warp and Target+Phase on bare 1 / 2 / 3 / 4, in their keys' order
+// (Source+Phase since S+P's return, architect 2026-10-12). THE ACTS CAME FROM
 // THE ROW-1 VIEW BAR (2026-08-02..2026-10-01), itself kdenlive's workspace
 // switcher — the blue "Logging | Editing | Audio | Effects | Color" bar at the
-// far right of its menu row — reborn as the selectors; the bar's three
-// labelled buttons are gone and the acts wear the architect's 2026-08-11
-// glyphs (icons.h). THE BAND'S OWN METRICS, NONE NEW: the program's case
+// far right of its menu row — reborn as the selectors; the bar's
+// labelled buttons are gone and the acts wear the architect's glyphs
+// (icons.h: the warp pair GNOME's indents, the phase pair its left and
+// right justifications, 2026-10-12). THE BAND'S OWN METRICS, NONE NEW: the program's case
 // (render.h's program block), the members abutting in their own pane (its
 // leader is Source+Warp at redesign_button_opens_icon_group), the pane
 // ending at the band's dark right edge column (paint_icon_row). THE BAND'S
-// FACES, and a RADIO OF THREE: the
+// FACES, and a RADIO OF FOUR: the
 // lit button is the current view (redesign_button_selected reads the live
 // combination) and a press on it is the consumed nothing at its lift (the
 // `radio` column, kToolbarChords), the hold showing the pressed face over the
@@ -1014,17 +1016,18 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the opener and
 // the view group cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
-// walks). The band holds every pane down to 571 Windows px of window at
-// 100 % outside the `h` view and 362 inside it (the width math at
-// paint_icon_row, its one statement, re-derived 2026-10-09 for the
-// program's 23-W case), so neither host reaches the rule at its scale: the
-// tablet's 2304 device px hold the row in both states up to about 404 % and
-// the laptop's 1920 up to about 337 % (the W arithmetic over the device
+// walks). The band holds every pane down to 592 Windows px of window at
+// 100 % outside the `h` view and 408 inside it (the width math at
+// paint_icon_row, its one statement, re-derived 2026-10-13 for the view
+// group's fourth case), so neither host reaches the rule at its scale: the
+// tablet's 2304 device px hold the row in both states up to about 389 % and
+// the laptop's 1920 up to about 324 % (the W arithmetic over the device
 // width; each element's own rounding moves the edge by a pixel or so).
 constexpr IconRowDef kIconRowViewGroup[] = {
     {RedesignButton::ViewSW, icons::Icon::DocumentExport},
+    {RedesignButton::ViewSP, icons::Icon::FormatJustifyLeft},
     {RedesignButton::ViewTW, icons::Icon::DocumentImport},
-    {RedesignButton::ViewTP, icons::Icon::ChronometerStart},
+    {RedesignButton::ViewTP, icons::Icon::FormatJustifyRight},
 };
 
 // A BUTTON'S ICON, by state — the tooltip overload's sibling (app_state.h,
@@ -2133,7 +2136,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // forks are the stand-in table's and the hide's.
     //
     // THE WIDTH MATH, RE-DERIVED for the program's band (2026-10-09, the
-    // case Cool Edit's own 23 round its 20-W seat): in Windows px, the
+    // case Cool Edit's own 23 round its 20-W seat; the view group's fourth
+    // case 2026-10-13): in Windows px, the
     // band's dark left edge column, then per pane its light column + 5 of
     // face + its cases at 23 + 4 of face + its mid column and the dark
     // column after it (23n + 12); the right-anchored pair the same from the
@@ -2143,18 +2147,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // and inside it nine in five, 1 + 9·23 + 60 = 268 (Older and Newer
     // row 8's since 2026-10-11; the magnification lamp joined the view's nine
     // 2026-10-12); the RIGHT-ANCHORED
-    // span — the edge column, the view group's pane (3 cases), its dark
+    // span — the edge column, the view group's pane (4 cases), its dark
     // column, the history opener's pane, the dark column the left panes stop
     // at — is
-    //   1 + 80 + 1 + 34 + 1 = 117,
-    // so the band holds every pane in any window at least 571 Windows px
-    // wide outside the view (385 inside it), the band standing one program
+    //   1 + 103 + 1 + 34 + 1 = 140,
+    // so the band holds every pane in any window at least 592 Windows px
+    // wide outside the view (408 inside it), the band standing one program
     // frame line in from each side (2026-10-10) — the tablet's 768 at 300 %
-    // a band of 766 with a recess of 197 between. IN DEVICE PX, off the
+    // a band of 766 with a recess of 174 between. IN DEVICE PX, off the
     // painted walk (each line one relief line, each face and the glyph its
-    // own scaled_px): at the tablet's 300 % (cases 69) 1356 + 351 of its
+    // own scaled_px): at the tablet's 300 % (cases 69) 1356 + 420 of its
     // band's 2298; at the laptop's 138 % (lines 1, faces 7 and 6, cases 31)
-    // 608 + 157 of its 1918. A roster move restates these numbers.
+    // 608 + 188 of its 1918. A roster move restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -2409,7 +2413,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // column after it — each of those two the pane's own outer edge, mitred
     // (paint_ce_pane).
     // NEITHER IS EVER HIDDEN (history_mode_hides_button): bare `h` is the
-    // view's own vocabulary and bare 1 / 2 / 3 its admitted selectors, so
+    // view's own vocabulary and bare 1 / 2 / 3 / 4 its admitted selectors, so
     // the hide does not reach this walk.
     paint_ce_band_dark_column(cr, lane, left_limit);
     paint_ce_pane(cr, lane, history_x0, history_x0 + pane_w(1) + lw);
@@ -4752,24 +4756,25 @@ GuiPaintHandler::plate_viewport_basis() const {
 // an opaque ground recolor under the plate, until the ring became the overlay's
 // whole visual — architect 2026-07-27.)
 //
-// Painted in TARGET view, never source view, and this is a
+// Painted in T+P ALONE, never in S+P, and this is a
 // phase-reset-only surface with no warp sibling (naming-symmetry asymmetry,
 // recorded here per CLAUDE.md). The seed grain is an OUTPUT-domain extent —
 // the engine's window, on the engine's output lattice — so target time is
 // where it is a fixed picture; source view would show a map-dependent,
-// varying width, misrepresenting it. Since 2026-09-21 the question no longer
-// arises: the phase-reset column exists in target view alone (S+P is
-// load-fatal), so the P-column gate below implies target view
-// and the source-view refusal that stood beside it is an assert.
+// varying width, misrepresenting it. And S+P is the ROUGH-PLACEMENT view
+// (architect 2026-10-12, S+P's return: "the purpose of the overlay is
+// fine-tuning", which T+P alone does): S+P's drop takes the lead-in but
+// paints no band, and its drag rides no ring.
 // A seed grain is a phase-reset-only concept, so there is nothing on the
 // warp axis to mirror.
 GuiPaintHandler::PhaseResetOverlayBand
 GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     PhaseResetOverlayBand out;
     // Visibility: always-on for the focused enabled marker while the global
-    // W/P mode is on P, which is target view by construction. Everything
+    // W/P mode is on P, in target view; never source view. Everything
     // downstream is domain-agnostic.
     if (app.active_markers_view != 'P') return out;
+    if (app.active_audio_view != 'T') return out;
     if (area.w <= 0 || area.h <= 0) return out;
     // THE `h` HISTORY VIEW SUPPRESSES THE RING (architect 2026-08-05). The view
     // paints the DELTA and no live marker surface at all — the lane's flags and
@@ -4811,8 +4816,6 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // only its proposal, so the ring and the stem share one class throughout.
     bool red_class = false;
     {
-        assert(app.active_audio_view == 'T');   // P stands in target alone
-
         const auto& markers = app.phaseresetmarkers.markers();
         const int idx = app.last_selected_marker;
         if (idx < 0 || idx >= static_cast<int>(markers.size())) return out;

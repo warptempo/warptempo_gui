@@ -481,9 +481,9 @@ RenderOutcome do_render(const RenderRequest& req,
 
                 // THE ENTRY'S AUDIO VIEW IS TARGET BY CONSTRUCTION — the render
                 // is a target-domain artefact and the two positions above were
-                // captured on the target axis. Every live column pairs with
-                // target (W and P; S+P is no state), so the dispatch's own
-                // column is written as it stands.
+                // captured on the target axis. Both columns pair with target
+                // (W and P), so the dispatch's own column is written as it
+                // stands, a dispatch from S+P writing T+P.
                 const NonEngineSettingsSnapshot gui{
                     tab_a, tab_b,
                     /*active_audio_view=*/'T',

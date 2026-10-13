@@ -326,8 +326,9 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // motion events over a swept zoom range. Rounding here first makes the two
     // one expression; it also matches the COMMIT below, which maps an integer
     // frame by construction, so the ride and its landing now agree too.
-    // Reachable through the PHASE-RESET column in target view (its only view
-    // since 2026-09-21) — a warp drag is source-home
+    // Reachable through the PHASE-RESET column in either audio view (S+P
+    // since 2026-10-12, where the map below is the identity and the drag
+    // takes no lead-in offset) — a warp drag is source-home
     // because the THRESHOLD CROSSING drops T+W (horizontal_flag_drag_refused,
     // or the lit lamp's value drag, value_drag_posture) before it begins this
     // one; the gate lives there,
@@ -536,7 +537,7 @@ void MarkerDragOps::commit_drag() {
     // (post-commit truth). A warp marker drag authors in the source home view
     // (home-view binding, architect 2026-07-22), where that call is identity, so
     // the playhead lands on the committed frame directly; a phase reset drag
-    // in its target home maps through the post-commit map.
+    // in T+P maps through the post-commit map (identity in S+P).
     if (land_playhead) {
         viewport.move_playhead_to(
             source_frame_to_active_domain(app, audio, ridden_final_frame));

@@ -104,9 +104,10 @@ namespace {
 // reset's anchor is "near the marker" rather than on it; the paste carries
 // that nearness across as a musical offset and the destination's own seed
 // quantizes it back onto its lattice — linear is the accepted approximation. A
-// reset dropped in S+P while that view existed (it left the product
-// 2026-09-21, the phase-reset column becoming target view only) took no
-// lead-in at all, and such resets still stand in authored files; the round
+// reset dropped in S+P takes the same kN/2 output-sample lead-in through the
+// live map since S+P's return (architect 2026-10-12), but one dropped there
+// before 2026-09-21 took no lead-in at all, and such resets still stand in
+// authored files; the round
 // trip is uniform either way and stays self-consistent, its only residue the second-order
 // difference in the lead-in's SOURCE length between the two sections.
 //
@@ -872,11 +873,11 @@ void PhaseResetPropagate::paste_state_apply() {
 // (source) view and ends in target view, and this tail is shared by the paste
 // actions — BY EVERY RUN THAT WROTE A BLOCK, and by no other since 2026-08-31
 // (the produced-nothing arms skip it and stand still, the ruling and its
-// two halves at the declaration). IT IS NO LONGER THE ONLY ACT OF THAT SHAPE — SHIFT+S, the
-// drop from any view (2026-08-28,
-// GuiInputHandler::drop_phase_reset_in_target_view), does the same trip for
-// the same reason and takes this tail's own order verbatim, the reasoning
-// below reading straight across.
+// two halves at the declaration). SHIFT+S, the drop from the warp column
+// (2026-08-28, GuiInputHandler::drop_phase_reset_crossing), took this
+// tail's own order verbatim until 2026-10-12, when it stopped crossing the
+// audio view (architect); its column switch and last kick are still this
+// tail's, for this tail's reasons.
 //
 // Order — audio-view switch FIRST, then marker-view switch to P, then the
 // selection set (the playhead land rides with it, after the swap):
@@ -943,19 +944,17 @@ void PhaseResetPropagate::paste_state_apply() {
 void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
     if (input) input->switch_active_audio_view_to('T');
     active_views.switch_active_markers_view_to('P');
-    // A REFUSED TARGET ENTRY MOVES NO COLUMN (the column writer refuses 'P'
-    // outside target view since 2026-09-21, the phase-reset column's one
-    // view): the entry can fail only its tripwire-class validity gate, and
-    // then the session stays where the paste was pressed with its own
-    // selection standing, so the created-set arm below — whose indices name
-    // PHASE-RESET rows — must not install them over another column. The paste
-    // itself has landed in the store; the kick at the tail still paints it.
-    const bool landed_in_phase_reset_view = (app.active_markers_view == 'P');
+    // A REFUSED TARGET ENTRY (its tripwire-class validity gate, unreachable
+    // from program-written input) leaves the audio view in source, and the
+    // column write lands S+P — a view of its own since 2026-10-12 (architect;
+    // the writer refused 'P' there from 2026-09-21 until then, and this tail
+    // guarded its created set on that refusal) — so the created set below
+    // always names rows of the column shown.
     // The CREATED-SET arm below LANDS the playhead on the first created reset,
     // through the land, a movement owner. The NO-CREATED arm lands nothing — a
     // paste that materialized no reset moved no playhead and touched no
     // marker.
-    if (!created.empty() && landed_in_phase_reset_view) {
+    if (!created.empty()) {
         // FIRST created reset as the focus. This is a PROGRAMMATIC group
         // selection, and the product's other one — undo/redo's touched-set
         // restore — focuses the earliest for the same reason: all members are

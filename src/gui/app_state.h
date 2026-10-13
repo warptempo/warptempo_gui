@@ -365,19 +365,18 @@ struct SettingsSnapshot {
 // restore, as visual feedback for what is being undone. The third one was
 // missing until that report, and its absence had
 // a name: a restore could only half-restore, so undoing a T+P op from S+W landed
-// the COLUMN in P and left the audio view at S — the keyless S+P combination, all
-// three view lamps dark, the phase-reset lane drawn over the source-domain
-// waveform, and (until the P column opened on 2026-08-30) the authoring
-// predicate false for the column just handed
+// the COLUMN in P and left the audio view at S — S+P, a view the user was
+// never in (keyless then, all three view lamps dark), and (until the P
+// column opened on 2026-08-30) the authoring predicate false for the column
+// just handed
 // back. With the third tag recorded, a restore lands the view the act LANDED in
 // and can synthesize no other (architect 2026-09-21 — the tags are read off the
 // live view at push, which is the landing view for every act that stays where
 // it is; the one class that pushes and then crosses, the two phase-reset paste
 // bodies, restamps its own entry's tab/audio-view tags after the landing;
-// Undo::stamp_top_entry_with_landing_view). S+P itself is no state since
-// 2026-09-21 (the phase-reset column is target view only): a 'P' entry takes
-// its audio view before its column at the restore, and the two writers refuse
-// the pair on every road (undo.cpp carries the order).
+// Undo::stamp_top_entry_with_landing_view). S+P is one of the four views
+// again since 2026-10-12 (architect), so a 'P' entry authored there restores
+// there, column and audio view each through its own writer.
 //
 // Carry-everywhere shape: every entry — marker, phase reset, or settings
 // — populates `settings` from app at push time, so do_undo/do_redo can
@@ -395,9 +394,13 @@ struct UndoEntry {
     // entry changed and so its KIND: the dirty walk (recompute_dirty) and the
     // post-restore rules' store selection read op_mode, and every question of
     // "which column does this entry land in" reads THIS. The two agree on
-    // every entry but one shape: a phase-reset paste whose target entry
-    // refused (the tripwire class) changed the P store while the session
-    // stayed in S+W, and its restamp records 'W' here over op_mode 'P'.
+    // every entry the product writes since S+P's return (architect
+    // 2026-10-12): the one shape that parted them — a phase-reset paste whose
+    // target entry refused (the tripwire class), the session staying in S+W
+    // with the column writer refusing 'P' there, 2026-09-21 to 2026-10-12 —
+    // lands S+P now, the column write no longer refusing. The tag stays the
+    // one road for the column question, so a future parting needs no reader
+    // edit.
     // Meaningful on a MARKER entry only; a settings-only entry carries 'S',
     // the kind's marker, and every reader gates it off before asking.
     // PRODUCERS (re-grepped 2026-09-23): the five push helpers (undo.cpp),
@@ -406,7 +409,7 @@ struct UndoEntry {
     // Undo::stamp_top_entry_with_landing_view, writing the live column after
     // a phase paste's landing; and the redo counter-entry, copying it
     // verbatim (restore_history_entry). READERS: the restore's column write
-    // and its audio-before-column order (restore_history_entry, undo.cpp) and
+    // (restore_history_entry, undo.cpp) and
     // the lamp's verdict, undo_restore_stays_in_current_view (below), so the
     // step the lamp permits and the column the restore writes are one answer.
     char                      landing_column       = 'W';
@@ -1695,7 +1698,7 @@ struct ScrollDragState {
 //     for the next pair to pinch about a song point the fingers had left.
 //   * AND AT EVERY WRITE OF THE ACTIVE VIEW STATE, ON THE WRITERS
 //     THEMSELVES — the S/T, W/P and A/B assignment sites,
-//     with every command that reaches one (the three view selectors, Ctrl+Tab,
+//     with every command that reaches one (the four view selectors, Ctrl+Tab,
 //     the icon row's view group, the settings keys, the
 //     propagate pastes and undo/redo) inheriting it by
 //     composition rather than by remembering. THE FIELD IS A SONG FRAME IN THE
@@ -2012,7 +2015,7 @@ struct TrimBarPressSeed {
 // below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
 // re-greped against kDropdownMenus and the chord table (45 chord rows + 3
-// anchors = 48 = kRedesignButtonCount, re-counted 2026-10-09; the count's
+// anchors = 48 = kRedesignButtonCount, re-counted 2026-10-13; the count's
 // own statement is at kRedesignButtonCount below);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
@@ -2147,7 +2150,7 @@ enum class RedesignButton {
     // their own group here from 2026-09-04 to 2026-09-15, one button per
     // axis toggling Source/Target and Warp/Phase Reset away from home. The
     // architect deleted the category whole (bare `t` and bare `p` with it):
-    // the axes stay reachable through the three view selectors alone — the
+    // the axes stay reachable through the four view selectors alone — the
     // keys and the view group at this row's right end — which is what a
     // two-button group bought nothing over.)
     //
@@ -2666,17 +2669,18 @@ enum class RedesignButton {
     IconLoadInPlace,
     // THE VIEW GROUP (architect 2026-10-01) — THE ROW'S LAST, FLUSH AT ITS
     // RIGHT EDGE, painted last and winning any overlap (the overflow rule is
-    // at paint_icon_row): the three ABSOLUTE VIEW SELECTORS, Source+Warp,
-    // Target+Warp and Target+Phase on bare 1 / 2 / 3, the acts of the row-1
-    // view bar that stood 2026-08-02..2026-10-01 — kdenlive's workspace
-    // switcher reborn — unchanged in meaning and dispatch, its three labelled
-    // buttons gone and the acts wearing the architect's 2026-08-11 glyphs
-    // (icons.h). A RADIO OF THREE: the lit button is the
+    // at paint_icon_row): the four ABSOLUTE VIEW SELECTORS, Source+Warp,
+    // Source+Phase, Target+Warp and Target+Phase on bare 1 / 2 / 3 / 4
+    // (Source+Phase since S+P's return, architect 2026-10-12), the acts of
+    // the row-1 view bar that stood 2026-08-02..2026-10-01 — kdenlive's
+    // workspace switcher reborn — unchanged in meaning and dispatch, its
+    // labelled buttons gone and the acts wearing the architect's glyphs
+    // (icons.h). A RADIO OF FOUR: the lit button is the
     // current view and a press on it is the consumed nothing at its lift
-    // (the `radio` column, kToolbarChords). LIVE in the `h` view (the three are on the
+    // (the `radio` column, kToolbarChords). LIVE in the `h` view (the four are on the
     // mode's allowlist) and on a locked tab (navigation); DEAD under the grid
     // iterations lamp (iteration_lock_greys).
-    ViewSW, ViewTW, ViewTP,
+    ViewSW, ViewSP, ViewTW, ViewTP,
     // The BOTTOM ROW's transport cluster (row 8, architect-ratified
     // 2026-08-11, the touch arc's first surface; a tenant of the unified
     // bottom row directly under the waveform since the 2026-08-12 row
@@ -2834,10 +2838,11 @@ enum class RedesignButton {
     // 2026-08-29 until the jump became Ctrl+J on its own button and Copy
     // Value went up to the icon row (2026-09-29). The membership is
     // redesign_button_shift_admits' alone, never a count restated here. Its
-    // own twin is SHIFT+S, THE PHASE-RESET DROP FROM ANY
-    // VIEW, so a shift-click or a LONG PRESS lands the session in T+P and
-    // drops the lead-in reset there — bare `s`'s own act with the view trip in
-    // front of it (drop_phase_reset_in_target_view, input_handler.cpp; the
+    // own twin is SHIFT+S, THE PHASE-RESET DROP FROM THE WARP COLUMN, so a
+    // shift-click or a LONG PRESS switches to the P column in the standing
+    // audio view (S+W to S+P, T+W to T+P — architect 2026-10-12) and drops
+    // the lead-in reset there — bare `s`'s own act with the column switch in
+    // front of it (drop_phase_reset_crossing, input_handler.cpp; the
     // membership is redesign_button_shift_admits below, and the tooltip's
     // second line is bound to it by the static_assert). The long press is
     // WANTED here for the play button's reason: a phase reset dropped without
@@ -2855,12 +2860,12 @@ enum class RedesignButton {
     // the 2026-08-15 no-blink ruling under which their home-view and
     // empty-selection refusals stayed consumed no-ops behind a lit face):
     // DELETE and DISABLE grey on an empty selection in every column
-    // (marker_selection_verb_actionable, the arms' own refusal — their
-    // off-home arm in the P column went with S+P, 2026-09-21, the column
-    // standing in its one home), TOGGLE INHERIT greys in the P view and with no selection or
+    // (marker_selection_verb_actionable, the arms' own refusal — the P
+    // column has no off-home arm, authoring in both audio views),
+    // TOGGLE INHERIT greys in the P view and with no selection or
     // focus (inherit_toggle_actionable, the op's own leading return). THE
     // DROP IS THE ONE THAT DOES NOT GREY OFF HOME, and its arm says why: its
-    // shift twin drops from ANY view, and that twin is the long press — glass's
+    // shift twin drops from either warp view, and that twin is the long press — glass's
     // only road to it. The occupied-frame refusal stays a consumed no-op
     // (a frame fact the lane shows). They keep their Icon* names: a roster id
     // names the button, not the lane it sits in.
@@ -3088,17 +3093,17 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-12, when
-// Go to Start and Go to End left the bottom row):
-// THREE in row 1 (the menu anchors), TWENTY-SEVEN in row 4 and
-// SEVENTEEN in the bottom row — 47. Of
-// those, FORTY-FOUR carry a chord in kToolbarChords
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-13, when
+// Source+Phase joined the view group):
+// THREE in row 1 (the menu anchors), TWENTY-EIGHT in row 4 and
+// SEVENTEEN in the bottom row — 48. Of
+// those, FORTY-FIVE carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 48;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3266,7 +3271,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // leaving a hollowed group behind: IconAudioView stopped opening a group and
 // nothing takes its place, so the leader count fell by one and no other
 // group's membership moved (bare `t`/`p` and the lamps bought the group
-// nothing the three view selectors do not already answer). The paragraphs
+// nothing the four view selectors do not already answer). The paragraphs
 // below are the group's history up to that deletion, kept for the record.
 //
 // SIX SINCE 2026-09-04'S ITERATIONS DELETION, which OPENED one group and moved
@@ -5405,7 +5410,7 @@ struct AppState {
     //     page-in — a camera move not on the subject — the landing owner's
     //     page-in, the span framer, the tab switch at the chokepoint, which
     //     then derives the bit afresh, and THE S/T SWITCH, which derives
-    //     nothing — so bare 1/2/3 across S and T drop the hold, the arrival
+    //     nothing — so bare 1/2/3/4 across S and T drop the hold, the arrival
     //     derivation having been tried there and removed the night it was
     //     made, 2026-09-29), by THE UNDO /
     //     REDO GROUP RESTORE, explicitly at its arm whether or not its camera
@@ -6014,22 +6019,21 @@ struct AppState {
     // Active markers view — THE COLUMN AXIS, two letters: 'W' = warp markers,
     // 'P' = phase reset markers (a third, M, left with the magnification
     // level markers column, architect 2026-09-23). Selected absolutely by the
-    // three view selectors (the keys and the icon row's view group).
+    // four view selectors (the keys and the icon row's view group).
     // Determines which marker
     // collection is visible / edited / hit-tested and which colour set its
-    // flags wear. 'P' PAIRS WITH TARGET VIEW ALONE (architect 2026-09-21: a
-    // phase reset is heard accurately only in target view):
-    // GuiActiveViews::switch_active_markers_view_to refuses 'P' outside target
-    // view, and GuiInputHandler::switch_active_audio_view_to lands the column
-    // on 'W' before it leaves for source — the two writers holding the one
-    // invariant between them. The three live combinations are therefore S+W,
-    // T+W, T+P — the three view selectors' — and S+P is load-fatal.
+    // flags wear. BOTH LETTERS PAIR WITH BOTH AUDIO VIEWS (architect
+    // 2026-10-12, S+P's return: the phase-reset column authors in source view
+    // for transcription, with the lead-in at the drop and no lead-in overlay),
+    // so the four combinations S+W, S+P, T+W, T+P are the four view
+    // selectors' and the writers hold no pair invariant. (S+P was load-fatal
+    // from 2026-09-21 to 2026-10-12.)
     char active_markers_view = 'W';
 
     // Active audio view: 'S' = source (the authored timeline), 'T' =
     // target (the engine's deformed-output timeline). Orthogonal to
     // active_markers_view ('W'/'P'), and written by the same writers that
-    // axis has: the three absolute view selectors (with the icon row's view
+    // axis has: the four absolute view selectors (with the icon row's view
     // group, which synthesizes them) and the settings editor's typed
     // `active_audio_view=`.
     // While 'T', app.viewport_start_sample / playhead_cursor_sample /
@@ -8023,7 +8027,7 @@ struct AppState {
     //   the SETTINGS anchor — the one anchor left in this column since
     //   2026-08-08, and the one entry here that is not a chord's refusal but the
     //   toggle_dropdown lockout's.
-    //   LIT — the view group's three (bare 1/2/3), the
+    //   LIT — the view group's four (bare 1/2/3/4), the
     //   COMMIT-FACED SAVE (Ctrl+Shift+S since 2026-10-10, the act itself), SWITCH TAB
     //   (Ctrl+Tab, which the ALLOWLIST admits since
     //   2026-08-18 — a tab switch works in here like everywhere else), the
@@ -8404,7 +8408,7 @@ struct AppState {
         //     lists, and the S/T flip re-lays the same list on another domain.
         //     The clear sits at each axis's own chokepoint — switch_active_-
         //     audio_view_to and GuiActiveViews::select_active_markers_view — which is
-        //     what makes the three view selectors and the view group inherit it by
+        //     what makes the four view selectors and the view group inherit it by
         //     composition.
         //   - entry and exit (the whole-struct reset at both owners)
         //   - bare HOME / END (2026-08-05), the mode's SHIFT FORMER's press,
@@ -9497,10 +9501,10 @@ struct AppState {
     // 'T'. Two roads hold it and nothing else needs to: bare `i` pressed in
     // SOURCE view CROSSES TO TARGET FIRST, through the S/T chokepoint, and a
     // refused entry stops the whole press with the mode still dark (the arm
-    // in input_key_dispatch.cpp, Shift+S's crossing shape); and while the lamp
+    // in input_key_dispatch.cpp); and while the lamp
     // stands every road back to source refuses — bare 1 and its three
     // fellow selectors at the iteration lock's gate
-    // (iteration_lock_key_blocked's delta (a)), the view group's three greying
+    // (iteration_lock_key_blocked's delta (a)), the view group's four greying
     // with them,
     // the settings editor's typed `active_audio_view=S` on the lock's card,
     // and the undo/redo restore, Shift+S, the load in place and the `h` entry
@@ -11110,21 +11114,27 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // THE HOME-VIEW BINDING, NARROWED TO THE WARP COLUMN (architect 2026-08-30):
 // warp markers author in SOURCE view only. Born two-sided (architect
 // 2026-07-22: each column in its home view alone — warp in source, phase
-// resets in target); the P side opened to both audio views 2026-08-30, and
-// on 2026-09-21 the P COLUMN ITSELF BECAME TARGET VIEW ONLY (architect: a
-// phase reset is heard accurately only in target view, so S+P has no use,
-// S+P load-fatal), so the P column's home is again the only view it
-// exists in and the predicate owes it no audio-view term. The block that
-// remains is exactly what the rationale
+// resets in target); the P side opened to both audio views 2026-08-30, the
+// P column was target view only from 2026-09-21, and since 2026-10-12 it
+// AUTHORS IN BOTH AUDIO VIEWS AGAIN (architect, S+P's return: S+P authors
+// for TRANSCRIPTION — laying the resets down over the steady source waveform
+// in the rough pattern of the exposition's, fine-tuned later in T+P, "the
+// same as S+W and T+W"; T+P alone reveals a reset's effect). THE ANALOGY HE
+// GAVE: T+W allows no horizontal movement, while S+P allows the normal
+// phase-reset operations — drop (with the lead-in), drag (no offset) and
+// nudge — but paints NO LEAD-IN OVERLAY ("the purpose of the overlay is
+// fine-tuning"). So the predicate owes the P column no audio-view term.
+// The block that remains is exactly what the rationale
 // below argues: positional acts are refused in T+W. There the warp column is
 // display/navigation-only (selection, Tab and the selection-only readout all
 // live — the retired hover popup and lane readouts are recorded at the
 // HoverPopupState deletion note above; every placement mutation this
 // predicate still gates refuses without authoring anything — silently where
 // a POINTER gesture asked, on a card naming the warp column's home where a
-// KEY did). (THE S+P DROP'S NO-LEAD-IN ARM went with S+P itself on
-// 2026-09-21: drop_phase_reset_lead_in_at_playhead has one arm, the target
-// view's.) WHAT IT GATES IS
+// KEY did). (THE S+P DROP TAKES THE LEAD-IN since 2026-10-12, one
+// calculation through the live map at the drop —
+// drop_at_playhead_source_frame; it took none from 2026-08-30 to
+// 2026-09-21.) WHAT IT GATES IS
 // THE POSITIONAL FAMILY (architect 2026-08-24, with the fifth exception
 // below): the rationale above is about PLACEMENT — an edit that moves a marker
 // inside the very map the view is drawn from — and it says nothing about a
@@ -11153,8 +11163,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // ruled "add the ones we can, and omit the ones we must omit"). FOUR MEMBERS,
 // all in the WARP column: Ctrl+D (GuiWarpMarkersOps::toggle_disabled — the
 // warp arm alone; the phase-reset arm carried the home-view gate until the P
-// column opened to both views and needed no exception after, and needs none
-// now that the column exists in target view alone),
+// column opened to both views and needed no exception after),
 // Ctrl+N (toggle_inherits), Delete (delete_selected_marker — again the warp
 // arm alone) and THE FLAG EDITOR'S PAYLOAD SURFACE through both of its open
 // routes, bare Return / KpEnter and the flag double-click (bracket authoring
@@ -11180,8 +11189,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // stated once at the head of warpmarkers_ops.cpp and the re-warp inventory
 // they join is owned by Viewport::kick_waveform_sync's declaration.
 // WHAT IS OMITTED, and it is the positional family entire — all of it the
-// WARP column's block since the P side opened (and the P column's home is the
-// one view it exists in since 2026-09-21): the marker DROP (bare `s` and
+// WARP column's block since the P side opened: the marker DROP (bare `s` and
 // the empty-lane double-click), the flag DRAG, the bare Left/Right position
 // nudge, and the `m` BPM open — which is omitted for a reason of its own,
 // rewriting tempo through a derivation over a SPAN rather than editing one
@@ -11198,8 +11206,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // THE FOUR P-COLUMN CARDS RETIRED with the opening ("Phase resets are
 // placed / moved / edited / deleted in target view"): their acts run now.
 // SEVEN CALL SITES, re-grepped 2026-09-13 (every one answers TRUE in
-// every P-column state through this body's own P arm, the column standing in
-// T+P alone):
+// every P-column state through this body's own P arm, S+P and T+P alike):
 // the keyboard drop (input_handler.cpp), the `m` bpm open
 // (bpm_sweep_plan, warpmarkers_ops.cpp — its own warp-column test sits ahead,
 // so `m` is W-only regardless), the empty-lane double-click drop
@@ -11223,13 +11230,14 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // became structurally true and the predicate is the selection atom alone
 // (its site records the succession).
 // SHIFT+S IS NOT AN EXCEPTION and must not be read as one (2026-08-28): the
-// chord is the CROSSING from the warp column — it runs the two view
-// chokepoints first and then the one drop body in T+P, under this
+// chord is the CROSSING from the warp column — it runs the column writer
+// first and then the one drop body in the P column of the standing audio
+// view (architect 2026-10-12), under this
 // predicate's ordinary answer, and it refuses whole with the P column
 // already standing ("Already in phase reset view",
 // phase_reset_drop_crossing_actionable). The omitted list above is
 // unchanged: the WARP drop is still positional and source-only. (The act is
-// GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp.)
+// GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp.)
 // The list
 // SHRANK to two on 2026-07-29, grew back to three on 2026-08-07, to four on
 // 2026-08-19 and to five on 2026-08-24: the
@@ -11245,11 +11253,12 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // re-open that question — it admits no gesture that moves a marker.) The rest
 // of the positional family stays home-view-only through this predicate, and
 // the flag DRAG through the value-drag posture's claim on T+W.
-// THE PHASE-RESET COLUMN ANSWERS YES (architect 2026-09-21): it exists in
-// TARGET VIEW ALONE — the S switch lands it on W and the column writer
-// refuses 'P' off target, the two writers holding that invariant between
-// them — so target IS its home and there is nothing for an audio-view term to
-// say on this column that the column's own existence does not already say.
+// THE PHASE-RESET COLUMN ANSWERS YES IN BOTH AUDIO VIEWS (architect
+// 2026-10-12, S+P's return; target view was its only view from 2026-09-21
+// until then): every positional act is legal on it in S+P and T+P alike —
+// the drop, the flag drag, the empty-lane create and the Left/Right nudge —
+// and what S+P leaves out is the lead-in overlay, a display matter owned at
+// the overlay band (paint_handler.cpp), never a refusal.
 // The arms are spelled per column so warp is never the else-branch.
 inline bool active_column_authoring_allowed(const AppState& app) {
     switch (app.active_markers_view) {
@@ -11306,11 +11315,12 @@ inline bool center_command_lands_on_focus(const AppState& a) {
 }
 
 // SHIFT+S'S OWN LEADING REFUSAL (architect 2026-08-30): the chord IS the
-// crossing from the warp column into T+P, the lead-in drop's view, so with the P
-// column already standing there is nothing to cross and the act refuses
-// WHOLE — "Already in phase reset view", before any view switch (the P
-// column stands in T+P alone since 2026-09-21); bare `s` is untouched. THREE READERS: the act's head
-// (GuiInputHandler::drop_phase_reset_in_target_view, input_handler.cpp), the
+// crossing from the warp column into the P column of the standing audio view
+// (architect 2026-10-12: S+W to S+P, T+W to T+P), so with the P
+// column already standing — S+P or T+P — there is nothing to cross and the
+// act refuses WHOLE — "Already in phase reset view", before any switch; bare
+// `s` is untouched. THREE READERS: the act's head
+// (GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp), the
 // Drop marker button's face (redesign_button_enabled — the twin rule's arm,
 // which never greys past the lock since the P column opened 2026-08-30: one
 // form is always live), and since 2026-09-01 the button's tooltip
@@ -11324,7 +11334,10 @@ inline bool phase_reset_drop_crossing_actionable(const AppState& a) {
 // drop bodies and the off-edge refusal below ask of the same frame: on the P
 // column the LEAD-IN — kPhaseResetLeadInSamples output samples before the
 // playhead, floored at 0, mapped to source (the derivation's prose home is at
-// GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead) — and on the
+// GuiPhaseResetMarkersOps::drop_phase_reset_lead_in_at_playhead) — in BOTH
+// audio views (architect 2026-10-12: in S+P the source playhead goes forward
+// through the live map to its whole target frame, takes the subtraction and
+// comes back, one calculation at the drop) — and on the
 // W column the playhead's own source frame. Defined in
 // warp_frame_map_view.cpp. READERS: the two drop bodies
 // (drop_copy_previous_at_playhead, drop_phase_reset_lead_in_at_playhead) and
@@ -11340,7 +11353,8 @@ int64_t drop_at_playhead_source_frame(const AppState& a,
 // column and Shift+S's lead-in drop past its crossing), and the Drop marker
 // button's face (redesign_button_enabled), whose PLAIN form greys on it — so
 // the face greys where the plain drop would refuse and the crossing is not
-// live (T+P), and stays lit in S+W, where the shifted press still crosses.
+// live (the P column, S+P and T+P), and stays lit in S+W, where the shifted
+// press still crosses.
 bool drop_at_playhead_off_edge(const AppState& a, const GuiAudio& audio);
 
 // THE TEMPO CENT STEP'S COLUMN GATE — Up / Down on the PAYLOAD author TEMPO,
@@ -12405,8 +12419,8 @@ bool marker_nudge_actionable(const AppState& a, const GuiAudio& audio,
 // where the adjacent column's frame is the frame it already rests on — while
 // a standing selection puts the press in the MARKER lane, where it nudges the
 // focused marker and refuses for a WARP marker in target view
-// (active_column_authoring_allowed — the P column nudges wherever it stands,
-// which is T+P alone since 2026-09-21) and, since 2026-08-31, AT THE MARKER'S OWN WALL
+// (active_column_authoring_allowed — the P column nudges in both audio
+// views, S+P and T+P) and, since 2026-08-31, AT THE MARKER'S OWN WALL
 // (marker_nudge_actionable above — the singleton whose clamped step lands the
 // frame it already holds), with no fallback to the waveform step. THE TWO
 // LANES NOW GREY ALIKE: the inversion that stood for a day — the plain lane
@@ -12518,9 +12532,8 @@ inline bool horizontal_arrow_step_lock_admits(const AppState& app) {
 // THE BATCH VERBS' REFUSAL (architect 2026-08-30): Delete and the DISABLE
 // toggle (Ctrl+D) act on the whole selection, so an EMPTY one is their one
 // refusal — in every column and every view the column exists in. IT LOST
-// ITS VIEW TERM when the P column opened to both audio views (2026-08-30;
-// the column is target view only again since 2026-09-21, and needs no term
-// for it): the warp arms
+// ITS VIEW TERM when the P column opened to both audio views (2026-08-30,
+// and both again since S+P's return, 2026-10-12): the warp arms
 // were already the fifth ruled exception (a status or existence edit is not
 // a placement), and the opening made the phase-reset arms' home-view term
 // structurally true, so it left — this is the selection atom under a name
@@ -13195,7 +13208,7 @@ inline bool authoring_locked(const AppState& a) {
 //     verbs, Up/Down, Open Text Editor);
 //   * SEVERAL MEMBERS HAVE NO READ-ONLY HALF AT ALL — the
 //     Toggle History View button (a locked tab reads history exactly as a
-//     writable one does), the view group's three (bare 1/2/3 are on
+//     writable one does), the view group's four (bare 1/2/3/4 are on
 //     read_only_key_blocked's allowlist) and the
 //     PADLOCK — so those arms read this predicate and nothing else. On a
 //     locked tab under a lit lamp (a switch there, authoring_locked above)
@@ -13228,7 +13241,7 @@ inline bool authoring_locked(const AppState& a) {
 //     The tab switch is admitted into a locked tab too (2026-10-13).
 //   * THE VIEW GROUP'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10
 //     (architect, that morning, while they were the row-1 view bar): bare
-//     1/2/3 are refused under the lamp, so the three wear the icon row's own
+//     1/2/3/4 are refused under the lamp, so the four wear the icon row's own
 //     disabled face (2026-10-01) — the glyph saturated
 //     (icons::draw_disabled), the selected view's checked face still saying
 //     where you stand — and the KEY's card
@@ -13298,8 +13311,8 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // and the face greys — its read-only half is the tab's bare bit, at
         // its enabled arm.
         case RedesignButton::IconSettings:
-        // THE VIEW GROUP'S THREE (architect 2026-09-10): bare 1/2/3 run the
-        // audio-view and column switches, so the delta blocks all three
+        // THE VIEW GROUP'S FOUR (architect 2026-09-10): bare 1/2/3/4 run the
+        // audio-view and column switches, so the delta blocks all four
         // unconditionally
         // — iteration_lock_key_blocked's first test is a flat chord list
         // and not a "would this press move the column" question, which is why
@@ -13308,6 +13321,7 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // silently, the road a standing overlay's greys already take, and the
         // KEY carries the sentence — and the icon row's disabled face.
         case RedesignButton::ViewSW:
+        case RedesignButton::ViewSP:
         case RedesignButton::ViewTW:
         case RedesignButton::ViewTP:
         // (WALK BOTH TABS WAS A MEMBER from 2026-09-10 until its deletion on
@@ -14228,9 +14242,9 @@ std::set<int> restore_touched_indices(const UndoEntry& entry,
 //   * THE TAB and THE AUDIO VIEW are compared on every entry kind — a
 //     settings-only ('S') entry carries both and its restore writes both.
 //   * THE COLUMN is `landing_column` — the column tag, never op_mode, which
-//     names the store the entry changed (the two part on a phase paste whose
-//     target entry refused: a 'P' store change landed in S+W, and its restore
-//     writes W) — and it is compared only on a MARKER entry: an 'S' entry
+//     names the store the entry changed (the two agree on every entry since
+//     S+P's return, 2026-10-12, UndoEntry::landing_column says why the tag
+//     stays) — and it is compared only on a MARKER entry: an 'S' entry
 //     carries no column, and its restore writes none (the column restore is
 //     gated off 'S').
 // NO CAMERA TERM, by the same ruling: the restore's camera answers to what it
@@ -15283,8 +15297,9 @@ inline bool playback_launch_playable(const AppState& a,
 // it: the two SKIPS (playhead_end_jump_actionable asked of the bare and the
 // whole-piece form alike), PLAY (the A/B audition's press-time preflight,
 // ab_audition_preflight_ok, as the arm's third term) and DROP MARKER (lit
-// wherever bare `s` or Shift+S would act — which is every view since S+P
-// left the product, so it greys only past the lock). The members
+// wherever bare `s` or Shift+S would act — in every view one of the two
+// acts, so it greys past the lock and past the painted edge in the P column
+// alone). The members
 // whose twin already refuses exactly where the plain form does — Copy value
 // on its one shared gate, the history walk pair at its walls, Render on a
 // blank piece — satisfy it with nothing added.
@@ -15462,8 +15477,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     answer never moved either time, only whether a face existed to wear it.) The mirror is a membership, never an equivalence, in both
 //     directions.
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
-//     the VIEW GROUP'S THREE
-//     (bare 1/2/3), Full zoom out and Center, follow, the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
+//     the VIEW GROUP'S FOUR
+//     (bare 1/2/3/4), Full zoom out and Center, follow, the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
 //     (The last of those is on the list although the UNDO PAIR it governs is
 //     not: the lamp is a posture switch that authors nothing, so its own chord
@@ -15812,7 +15827,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // available in history mode. Leave that for the player, the picker and
     // the AV stats"). The anchors answered above, from the ANCHOR OWNER
     // (menu_anchor_live), which File alone survives; every other button on
-    // the row and off it — the view group's three included — is dead. The
+    // the row and off it — the view group's four included — is dead. The
     // anchors' OPEN
     // reads that same owner at toggle_dropdown's guard, and the veil consumes
     // every press but a live anchor's (press_on_live_menu_anchor,
@@ -16197,14 +16212,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // opening's own consequence — no face edit was needed, the twin
         // rule's arm inverting by the predicate alone): bare `s` refuses
         // only in T+W (active_column_authoring_allowed — the P column drops
-        // in the one view it exists in, T+P since 2026-09-21), and exactly
-        // there Shift+S, the crossing from the warp column, is live
-        // (phase_reset_drop_crossing_actionable), so one form always acts and
-        // the plain press's refusal stays the chord's own card. The arm
-        // greyed exactly in S+P for the hours the twin rule and the closed P
-        // column coexisted — bare `s` off home and the crossing already
-        // crossed — and S+P itself is no state since 2026-09-21, so no dead
-        // pair is left. The
+        // in both audio views, S+P and T+P since S+P's return, 2026-10-12),
+        // and exactly there Shift+S, the crossing from the warp column, is
+        // live (phase_reset_drop_crossing_actionable), so one form always
+        // acts and the plain press's refusal stays the chord's own card. The
+        // arm greyed exactly in S+P for the hours the twin rule and the closed
+        // P column coexisted — bare `s` off home and the crossing already
+        // crossed — and no dead pair is left. The
         // composition stays: it is the twin rule's one spelling here, and it
         // is what greys again if either predicate ever narrows. (An earlier
         // reading here named an "occupied-frame refusal" as a second reason
@@ -16351,17 +16365,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // (iteration_lock_greys) with no read-only term — bare `p` and bare
         // `t` were each read-only-legal, a column or S/T switch authoring
         // nothing. The architect deleted both buttons whole that day; the
-        // view group's three below carry the same delta on for the selectors.)
-        // THE VIEW GROUP'S THREE TAKE THAT SAME DELTA (architect 2026-09-10),
-        // and they left the never-grey group above for it: the three selectors COMPOSE
-        // the column chokepoint, so they are the three chords the column
+        // view group's four below carry the same delta on for the selectors.)
+        // THE VIEW GROUP'S FOUR TAKE THAT SAME DELTA (architect 2026-09-10),
+        // and they left the never-grey group above for it: the four selectors COMPOSE
+        // the column chokepoint, so they are the four chords the column
         // selectors block (iteration_lock_key_blocked's first test), and a
         // press that cannot act must not act — the roster's own rule, applied
         // here through arm_redesign_press's disabled line, which consumes the
         // press silently and lets the KEY's card be the one sentence.
         //
         // A `false` HERE WEARS THE ICON ROW'S DISABLED FACE (2026-10-01, the
-        // three having come down from row 1 to the icon row's view group):
+        // three having come down from row 1 to the icon row's view group,
+        // four since S+P's return, 2026-10-12):
         // the glyph saturated (icons::draw_disabled), as on every dead
         // button of that row (paint_icon_row), the selected view's checked
         // face still saying where you stand; the hint names the act and the
@@ -16372,14 +16387,15 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // NO READ-ONLY TERM, the column lamp's reading of the gate exactly:
         // the selectors are navigation, on read_only_key_blocked's allowlist,
-        // so a locked tab with the lamp dark leaves all three live — and with
+        // so a locked tab with the lamp dark leaves all four live — and with
         // it lit (a locked tab reached by a switch under it, 2026-10-13) the
         // iteration membership greys them whatever the bit. AND THE `h` VIEW
         // NEVER REACHES
-        // THIS ARM: bare 1/2/3 are on the mode's allowlist,
-        // so the derived partition above answers LIVE for all three and the two
+        // THIS ARM: bare 1/2/3/4 are on the mode's allowlist,
+        // so the derived partition above answers LIVE for all four and the two
         // modes' greys never meet on this row.
         case RedesignButton::ViewSW:
+        case RedesignButton::ViewSP:
         case RedesignButton::ViewTW:
         case RedesignButton::ViewTP:
             return !iteration_lock_greys(a, b);
@@ -17163,7 +17179,7 @@ inline bool redesign_button_enabled(const AppState& a,
 }
 
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 4's
-// TOGGLES and its view group's three radios — the two VIEW LAMPS and the WALK
+// TOGGLES and its view group's four radios — the two VIEW LAMPS and the WALK
 // LAMP, which were three radio PAIRS until the architect collapsed them on
 // 2026-09-04; follow, iteration,
 // read-only, history, and the CUMULATIVE reading, which came back to this row
@@ -17206,13 +17222,15 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // THE VIEW GROUP READS THE LIVE COMBINATION — both axes at once, which is
         // what an ABSOLUTE selector reports — so a button lights however the
         // state was reached: a selector key, a restore, a typed setting or one
-        // of these three. EXACTLY ONE IS EVER LIT since 2026-09-21: the three
-        // are the product's whole view space, S+P being no state at all (the
-        // phase-reset column is target view only, the pair load-fatal and
-        // refused by the two writers). Until that ruling S+P was the keyless
-        // combination that lit none of them.
+        // of these four. EXACTLY ONE IS EVER LIT: the four are the product's
+        // whole view space, both columns pairing with both audio views since
+        // S+P's return (architect 2026-10-12, Source+Phase its own button).
+        // (S+P was the keyless combination that lit none of the buttons until
+        // 2026-09-21, and no state at all from then until its return.)
         case RedesignButton::ViewSW:     return a.active_audio_view   == 'S' &&
                                                 a.active_markers_view == 'W';
+        case RedesignButton::ViewSP:     return a.active_audio_view   == 'S' &&
+                                                a.active_markers_view == 'P';
         case RedesignButton::ViewTW:     return a.active_audio_view   == 'T' &&
                                                 a.active_markers_view == 'W';
         case RedesignButton::ViewTP:     return a.active_audio_view   == 'T' &&
@@ -17221,7 +17239,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // 2026-09-15 — Source + Warp is view 1 and the home state, so the
         // audio lamp lit in TARGET and the marker lamp in PHASE RESET, each
         // reading the very axis its own chord flipped. The architect deleted
-        // both buttons whole with bare `t`/`p`; the view group's three above
+        // both buttons whole with bare `t`/`p`; the view group's four above
         // are the axes' one remaining face.)
         // FOLLOW'S LAMP (architect 2026-09-23): the same toggle pattern,
         // reading the live bit bare `f` flips. It reports the lamp, not
@@ -17584,7 +17602,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // BARE form has a button admits that button's shift press and its long press,
 // and says so on its second line — the architect's rule, stated here because
 // this is the membership it is about. The drop's shifted twin drops a phase
-// reset from any view, so the button reaches both columns' drops the way the
+// reset from the warp column, so the button reaches both columns' drops the way the
 // letter does.)
 // (COPY RESOLVED VALUE WAS A MEMBER FROM 2026-08-29 TO 2026-09-29, with
 // Shift+`j`: its plain act copies the focused marker's resolved value and its
@@ -18010,7 +18028,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (THE TWO VIEW LAMPS — Toggle Audio View (T) and Toggle Marker
         // Column (P), one line each, neither with a shifted twin — stood here
         // from 2026-09-04 to 2026-09-15, when the architect deleted the whole
-        // category: their axes are the three view selectors' alone now.)
+        // category: their axes are the four view selectors' alone now.)
         // FULL ZOOM OUT AND CENTER (2026-08-12, the icon row's zoom pair until
         // Center moved to the bottom row's walk group on 2026-09-29 with its
         // words unchanged); the accelerators are the table's own
@@ -18215,10 +18233,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE VIEW GROUP (architect 2026-10-01): each hint is its view's name
         // and its bare digit, the acts' own names in Title Case. A radio's
         // lit button keeps its name too — the press there is the consumed
-        // nothing the lamp shows.
+        // nothing the lamp shows. The digits renumbered with Source+Phase's
+        // return (architect 2026-10-12).
         case RedesignButton::ViewSW:     return {"Source+Warp (1)", nullptr};
-        case RedesignButton::ViewTW:     return {"Target+Warp (2)", nullptr};
-        case RedesignButton::ViewTP:     return {"Target+Phase (3)", nullptr};
+        case RedesignButton::ViewSP:     return {"Source+Phase (2)", nullptr};
+        case RedesignButton::ViewTW:     return {"Target+Warp (3)", nullptr};
+        case RedesignButton::ViewTP:     return {"Target+Phase (4)", nullptr};
         // THE BOTTOM ROW (2026-08-11 for the transport, 2026-08-15 for the
         // marker-walk group, 2026-08-18 for the four MARKER VERBS below).
         // The accelerators are the table's own convention (a NAMED key by
@@ -18267,10 +18287,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // THE DROP'S SHIFT LINE (2026-08-28) names the act and the modifier
         // and not a key, this table's rule for second lines; the
         // static_assert below keeps the line and the admission one fact. It
-        // says "in target view" because that is what the shifted press DOES
-        // beyond dropping — it takes the reader to target view, where the
-        // lead-in seed and its overlay live,
-        // and drops the reset at the cursor's own instant once it arrives.
+        // names no view since 2026-10-12 (architect: the shifted press stays
+        // in the audio view it is pressed in, crossing only the column; it
+        // said "in target view" while the press tripped there).
         // THE OVERLOAD TOUCHES THE SECOND LINE ALONE (2026-09-01): in the P
         // column the shifted press refuses as already crossed, so the line
         // drops. (It forked the FIRST line too until 2026-09-12, saying
@@ -18280,7 +18299,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // twin rule, so the plain lift reaches the chord and the chord cards.)
         case RedesignButton::IconMarkerDrop:
             return {"Drop Marker (S)",
-                    "Press Shift to drop a phase reset in target view."};
+                    "Press Shift to drop a phase reset."};
         case RedesignButton::IconMarkerDelete:
             return {"Delete Markers (Del)", nullptr};
         // TOGGLE DISABLED, Toggle inherit's own shape (architect 2026-09-01,
@@ -19050,7 +19069,7 @@ inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
 // carry:
 //
 // SELECTED BUTTONS DO HOVER (for the tooltip), so the icon row's toggles — the Cumulative one included — and
-// its view group's three radios are hoverable in both states, and a radio's already-selected press is refused in the ACTION — at
+// its view group's four radios are hoverable in both states, and a radio's already-selected press is refused in the ACTION — at
 // its lift (the chord table's `radio` flag, whose users are the view group's
 // three) — not in its hoverability.
 //

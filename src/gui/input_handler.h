@@ -342,9 +342,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     crossing, bare `i`'s own, the undo restore's tag and the phase-reset
 //     propagate paste's audio half), below its own refusals.
 //   * GuiActiveViews::switch_active_markers_view_to — the W/P writer, below
-//     its same-mode and P-outside-target refusals (the three view selectors
-//     and the settings key through select_active_markers_view, the S/T
-//     writer's landing on W from T+P, the Shift+S crossing and the phase-reset
+//     its same-mode refusal (the four view selectors
+//     and the settings key through select_active_markers_view, the Shift+S
+//     crossing and the phase-reset
 //     propagate paste, which reach this helper direct, and
 //     Undo's column restore, which reached it 2026-08-28 when the hand-kept copy
 //     of this body in restore_history_entry was deleted for it).
@@ -365,7 +365,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
-// The three view selectors, the icon row's view group (the two icon-row
+// The four view selectors, the icon row's view group (the two icon-row
 // VIEW LAMPS deleted 2026-09-15) and the settings keys all compose those
 // writers and inherit it.
 //
@@ -1437,10 +1437,10 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors, the icon row's twenty-five and row 8's twenty-one
+    // three menu anchors, the icon row's twenty-six and row 8's twenty-one
     // (the painter's tables in paint_handler.cpp own each membership; the
     // counts re-derived from them 2026-10-11, Older / Newer moving down):
-    //   THE ICON ROW, 17 + 4 + 1 + 3 = 25 — the left walk's seventeen
+    //   THE ICON ROW, 17 + 4 + 1 + 4 = 26 — the left walk's seventeen
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Value and
     //   Render; Full Zoom Out, Waveform Magnification, Follow and Restrict
     //   Undo; BPM, Iteration and Flatten; Listen, the padlock, Settings and
@@ -1448,8 +1448,9 @@ struct GuiInputHandler {
     //   in Place in Undo's slots, the walk lamp and Cumulative
     //   in the iteration group's — kIconRowHistoryStandIns), the history
     //   opener right-anchored (kIconRowHistoryOpener) and the VIEW GROUP's
-    //   three flush right — 21 standing outside the `h` view (the four
-    //   stand-ins publishing empty rects) and 13 inside it (the stand-ins in,
+    //   four flush right (Source+Phase since 2026-10-12) — 22 standing
+    //   outside the `h` view (the four
+    //   stand-ins publishing empty rects) and 14 inside it (the stand-ins in,
     //   the two authoring groups they replace out, and the view's hide
     //   leaving Full Zoom Out and Waveform Magnification (since 2026-10-12)
     //   and Enable Tooltips alone of their groups);
@@ -3895,57 +3896,55 @@ private:
     // commit — and it is one line over the set-to
     // form, so both spellings own the same translation, the same target-view
     // entry gate, the same flag-editor teardown and the same history-focus
-    // clear — AND THE SAME S-NEVER-PAIRS-WITH-P LANDING (architect 2026-09-21:
-    // a phase reset is heard accurately only in target view): leaving target
-    // view while the phase-reset column stands lands the column on W first,
-    // through its writer, the column writer's own refusal of 'P' outside
-    // target view being the invariant's other half.
+    // clear. THE COLUMN IS NOT ITS BUSINESS: both columns pair with both
+    // audio views (architect 2026-10-12, S+P's return; from 2026-09-21 until
+    // then leaving target view landed the phase-reset column on W), so the
+    // switch carries either column across the flip.
     // The SET-TO form exists for the callers that name a view rather than
-    // an axis: the three absolute view selectors (and the settings editor's
-    // typed `active_markers_view=P`, which crosses to target through it), the
-    // phase-reset propagate's land-in-target tail, and — both since 2026-08-28 —
+    // an axis: the four absolute view selectors, the
+    // phase-reset propagate's land-in-target tail, — since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
-    // each through that axis's owner, drop_phase_reset_in_target_view,
-    // Shift+S's trip to target view ahead of its lead-in drop, and — since
+    // each through that axis's owner, and — since
     // 2026-09-13 — bare `i`'s ON edge in source view, which crosses to target
     // before it lights grid iterations (handle_mode_keys'
-    // `i` arm, input_key_dispatch.cpp).
+    // `i` arm, input_key_dispatch.cpp). (Shift+S tripped to target through
+    // it ahead of its lead-in drop from 2026-08-28 to 2026-10-12; the chord
+    // stays in its audio view since.)
     void switch_active_audio_view_to(char target_view);
     void handle_active_audio_view_toggle();
 
-    // SHIFT+S — DROP A PHASE RESET FROM ANY VIEW (architect 2026-08-28):
-    // "Shift+S should set a phase reset marker in T+P from S+W at the current
-    // playhead frame, switch to T+P, and highlight the marker that was just
-    // created — which it would automatically do because it's the one under the
-    // playhead." The act lands the session in T+P through the two view
-    // chokepoints and then runs the ONE lead-in drop bare `s` runs there, so
-    // it is bare `s` with a view trip in front of it and never a second drop
-    // body. In T+P the two chords are the same one call, the trip having
-    // nothing to do.
+    // SHIFT+S — DROP A PHASE RESET FROM THE WARP COLUMN, STAYING IN THE AUDIO
+    // VIEW (architect 2026-10-12: "source stays source, target stays target"
+    // — S+W lands in S+P, T+W in T+P; born 2026-08-28 as "set a phase reset
+    // marker in T+P from S+W at the current playhead frame, switch to T+P, and
+    // highlight the marker that was just created"). The act switches the
+    // column to P through its writer and then runs the ONE lead-in drop bare
+    // `s` runs there, so it is bare `s` with a column switch in front of it
+    // and never a second drop body; the drop takes the kN/2 lead-in in either
+    // audio view (drop_at_playhead_source_frame, app_state.h). In the P
+    // column it refuses whole as already crossed.
     //
     // WHAT IT LEAVES BEHIND: the new reset SELECTED and the playhead ON it —
     // both the drop's own doing, which is why the column switch (whose
     // selection clear would undo them) has to run first. ONE undo entry, the
-    // drop's, tagged T / P / the standing tab.
+    // drop's, tagged the standing audio view / P / the standing tab.
     //
     // THE REFUSALS ARE EVERY GATE THE CHORD ALREADY PASSES, none of them new:
     // the read-only lock (read_only_key_blocked drops Shift+S beside bare `s`
     // — a phase reset is authored content), the `h` view (its allowlist admits
-    // neither), a standing modal (on_key's ranked dispatch above the arm), a
-    // blank session, and a target-view ENTRY that refuses its validity gate,
-    // which stops the whole act rather than dropping into a half-applied view.
-    // The drop's own two refusals stay its.
+    // neither), a standing modal (on_key's ranked dispatch above the arm) and
+    // a blank session. The drop's own refusals stay its.
     //
     // THE HOME-VIEW BINDING IS NOT INVOLVED and this is not a sixth exception
-    // to it: the act does not author off home, it GOES home first (the note
-    // is at active_column_authoring_allowed, app_state.h).
+    // to it: the act authors in the P column, which authors in both audio
+    // views (the note is at active_column_authoring_allowed, app_state.h).
     //
     // TWO CALLERS: on_key's Shift+S arm, and the bottom row's Drop marker
     // button through the ordinary chord dispatch — its shift-click and its
     // long press synthesize this very chord (redesign_button_shift_admits),
     // so glass reaches the act with no keyboard and there is no second road.
-    void drop_phase_reset_in_target_view();
+    void drop_phase_reset_crossing();
 
     // Apply a new GUI scale (percent), running the shared live sequence:
     // assign app.gui_scale, push it to the renderer

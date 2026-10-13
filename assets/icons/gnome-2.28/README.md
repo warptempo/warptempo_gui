@@ -42,7 +42,7 @@ change and the date; the original `TabDetach.svg` stays byte-identical to the ta
 
 ## The import check
 
-All 59 tarball files (TabDetachB, derived, added 2026-10-12) were rendered through rsvg-convert at 60 px onto one contact sheet and looked at (the product's own
+All 59 tarball files (TabDetachB, derived, added 2026-10-12) were rendered through rsvg-convert at 60 px onto one contact sheet and looked at; FormatJustifyLeft and FormatJustifyRight (2026-10-13, replacing ChronometerStart — 60 tarball files now) were rendered the same way beside the view group's indents (the product's own
 resvg road was not run for this import).
 
 ## The icons
@@ -55,7 +55,6 @@ resvg road was not run for this import).
 | BboxNext | `go-last` | `scalable/actions/go-last.svg` | — | `2d695d317dff9ad2543c35cb8df73d19151dd57fda4dd7856f5033ca62167ae2` |
 | BboxPrev | `go-first` | `scalable/actions/go-first.svg` | — | `beff3e1fdf8cc9b0078716394681834f22e57c229e665a11dbe27c3875179d33` |
 | BlackSum | `accessories-calculator` | `scalable/apps/accessories-calculator.svg` | — | `fd31f314578f455ed3fe8a42e028bbf2343d6e91d0cdf7912cf8505162f18981` |
-| ChronometerStart | `format-justify-fill` | `scalable/actions/format-justify-fill.svg` | — | `dc10d73948994bcdfc58671aacc22e8c34d8a12b0472e05bee14e075692ce868` |
 | DialogCancel | `process-stop` | `scalable/actions/process-stop.svg` | DialogError | `d8197817011686293296a6db05aa09140e9eb4a848572193658695062008bec0` |
 | DialogError | `process-stop` | `scalable/actions/process-stop.svg` | DialogCancel | `d8197817011686293296a6db05aa09140e9eb4a848572193658695062008bec0` |
 | DialogInformation | `dialog-information` | `scalable/status/dialog-information.svg` | — | `1b6a744e60e9781b55f44c768f7a1d5c2c17ad85eedab15e6c44506e629be304` |
@@ -71,6 +70,8 @@ resvg road was not run for this import).
 | EditSelect | `edit-select-all` | `scalable/actions/edit-select-all.svg` | — | `ee70e1b5911d35a82ac7feecf1cd0add3721dd92557295356750681accde234d` |
 | EditUndo | `edit-undo` | `scalable/actions/edit-undo.svg` | — | `f3a284c14061c8058a977899155f2467e79d8085ccff2dc7b39ff9cf049b3358` |
 | Folder | `folder` | `scalable/places/folder.svg` | — | `e33653b29756f4f6f76d7f57e010c62fadc061b1ad9dcfa5fd57fd7fc7f54aca` |
+| FormatJustifyLeft | `format-justify-left` (architect 2026-10-12: Source+Phase) | `scalable/actions/format-justify-left.svg` | — | `a380b382ea062f0b509bb445701e615cb49802e6c04204c3d4dda4187da9dc40` |
+| FormatJustifyRight | `format-justify-right` (architect 2026-10-12: Target+Phase, which wore `format-justify-fill` as ChronometerStart until then) | `scalable/actions/format-justify-right.svg` | — | `15963f2e53a4685b4d04ed5b4f37cef541f733af0bf923ac7c4a5a8a565a280d` |
 | GoDown | `go-down` | `scalable/actions/go-down.svg` | — | `8fabac55ce593bcc03bf40bfe7bf8e41f93a0818328bf296c4bdc97ed7c5109c` |
 | GoJump | `start-here` | `scalable/places/start-here.svg` | — | `4811e6060d88fa7b921a786732cc4227c43b1cc448071b2c52af5a20741e8bbc` |
 | GoJumpDeclaration | `go-jump` | `scalable/actions/go-jump.svg` | — | `4d53f8358b6c0f9f5a4155f8a6b012286a942e0e3c047133b8dbe2d154ba538d` |

@@ -831,14 +831,9 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
                          "warptempo_gui: Target view entry refused: %s\n",
                          entry.error().c_str());
             app.active_audio_view = 'S';
-            // AND SOURCE VIEW NEVER PAIRS WITH THE PHASE-RESET COLUMN
-            // (architect 2026-09-21: the column is target view only, S+P
-            // load-fatal at the parser), so a file that opened on
-            // T+P lands on W with the forced source view — the audio switch's
-            // own landing, spelled here because this is a values-only write
-            // before any input exists (no selection to clear, the auto-select
-            // below still to run).
-            if (app.active_markers_view == 'P') app.active_markers_view = 'W';
+            // The column stays as the file names it: T+P forced to source is
+            // S+P, a view in its own right since 2026-10-12 (architect; this
+            // arm landed it on W while S+P was load-fatal, 2026-09-21 to then).
             // The tab-activation and playhead clamps above ran against the
             // target-domain total (live_total_frames consults the target map
             // cache while active_audio_view=='T'); with the view forced back
