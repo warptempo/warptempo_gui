@@ -4760,7 +4760,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
     // The click face, before the act: the act can close the editor and take the
     // surface with it, and a damage queued after that would name a rect nothing
     // paints. One key's rect — the discrete-command rule applies to the SHOW
-    // and HIDE of the whole surface (the tick comparator's, main.cpp), not to a
+    // and HIDE of the whole surface (onscreen_keyboard::
+    // reconcile_slot_standing's), not to a
     // key changing face.
     viewport.invalidate_rect(
         onscreen_keyboard::key_rect(app, page, hit));
@@ -4811,7 +4812,7 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
     // up on a page it is not on (the reason is at page_of_key_index).
     // The surface may be GONE altogether (the press's own Enter or Esc closed
     // the editor), in which case the rect is empty and this is a no-op — the
-    // show/hide damage is the tick comparator's, not this path's.
+    // show/hide damage is the slot comparator's, not this path's.
     if (onscreen_keyboard::stands(app, gui)) {
         viewport.invalidate_rect(onscreen_keyboard::key_rect(
             app, onscreen_keyboard::page_of_key_index(held), held));

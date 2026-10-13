@@ -2805,56 +2805,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 viewport.invalidate_modal_dialog_area();
         }
 
-        // THE ON-SCREEN KEYBOARD'S SHOW AND HIDE (2026-08-27), the roster
-        // comparator's own mechanism applied to a whole surface rather than to
-        // a face. The keyboard appears and disappears with the EDITORS'
-        // open and close, and those routes damage the marker lane or the bottom
-        // row — never the band this surface paints in, which is the waveform
-        // area's lower part. So the live answer is compared against the
-        // as-painted bit, which the painter refreshes only on a frame whose
-        // rect FULLY COVERS that band (the roster publisher's own rule, argued
-        // at the painter): every other frame leaves the drift standing, and
-        // this is where it is paid.
-        //
-        // THE DAMAGE IS BOTH RECTS ON EITHER EDGE, and the reason is the
-        // discrete-command rule: on the HIDE the waveform under the surface has
-        // to come back whole, and on the SHOW the surface's own band has to be
-        // covered — the band overhangs the waveform's bottom into gap 2, so
-        // neither rect contains the other. Two cheap calls the platform
-        // coalesces, exactly as the tooltip's show edge pays.
-        //
-        // It costs one platform query and one integer compare per tick with the
-        // surface down, which on the laptop is its permanent state.
-        //
-        // THE SHOW AND HIDE ARE NOT THE WHOLE OF IT: this comparator watches
-        // STANDING and nothing else, and the live editor SESSION can change
-        // without it moving — a flag-editor retarget, or a close and a reopen
-        // inside one drained batch. That change has its own owner and IS NOT
-        // CALLED HERE: a tick with no paint behind it has nothing to correct on
-        // screen, and every frame that does paint runs the owner in the
-        // PRE-PAINT hook below, which is strictly earlier and strictly more
-        // often than this (the caller list is at reconcile_session).
-        // THE SLOT HAS TWO TENANTS SINCE 2026-08-28 (the folder overlay
-        // replaces the keyboard in the same band while the render player
-        // stands), so the live answer is the OR of the two standing
-        // predicates against the ONE as-painted bit the slot's paint dispatch
-        // writes (AppState::keyboard_slot_painted_standing).
-        {
-            const bool slot_live = onscreen_keyboard::stands(app, gui) ||
-                                   folder_overlay::stands(app);
-            if (slot_live != app.keyboard_slot_painted_standing) {
-                viewport.invalidate_waveform_area();
-                // THE SLOT'S BAND AT ITS TALLEST, not either tenant's own:
-                // on the HIDE the rect has to erase a surface that no longer
-                // stands (so there is nothing to ask its height of), and the
-                // overlay's band is the ceiling whenever it stands while the
-                // keyboard's is its band on the window's foot with the
-                // overlay's line and any dialog on it (2026-10-10) — one rect
-                // that contains both (onscreen_keyboard::slot_damage_rect).
-                viewport.invalidate_rect(
-                    onscreen_keyboard::slot_damage_rect(app));
-            }
-        }
+        // THE KEYBOARD SLOT'S SHOW AND HIDE: the comparator's one owner,
+        // onscreen_keyboard::reconcile_slot_standing, where the rule, the
+        // damage and its two callers are — this tick, for a standing change
+        // that declares no damage of its own, and the pre-paint hook below,
+        // which pays every other change ahead of the frame that first paints
+        // it (2026-10-13). The live editor SESSION can change without the
+        // standing moving (a flag-editor retarget, a close and a reopen in
+        // one drained batch); that is the lamps' owner, reconcile_session,
+        // the pre-paint's and the press router's alone.
+        onscreen_keyboard::reconcile_slot_standing(app, gui, viewport);
 
         // THE ROSTER WALK IS NOT MOTION-ONLY. It resolves the tooltip's owner
         // and the armed press's inside bit (recompute_redesign_button_hover;
@@ -3212,6 +3172,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // not change, and it sits ABOVE the playback guards below because it
         // has nothing to do with playback.
         onscreen_keyboard::reconcile_session(app, gui, viewport);
+        // THE SLOT'S SHOW AND HIDE, ahead of the frame for the same reason
+        // (2026-10-13): an editor closed by this pass's press is painted in
+        // this pass, before any tick, and the band it leaves must be in this
+        // frame's damage (the owner's record, reconcile_slot_standing).
+        onscreen_keyboard::reconcile_slot_standing(app, gui, viewport);
 
         if (app.loading || audio.total_frames() <= 0) return;
         // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the

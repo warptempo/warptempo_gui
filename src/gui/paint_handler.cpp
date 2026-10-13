@@ -7975,8 +7975,8 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
 
 void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // THE AS-PAINTED BIT, AND IT DESCRIBES PIXELS — the roster publisher's own
-    // rule (publish_button_face, above), taken for its own reason. The tick
-    // comparator (main.cpp) pays the slot's show and hide off the drift
+    // rule (publish_button_face, above), taken for its own reason. The slot
+    // comparator (onscreen_keyboard::reconcile_slot_standing) pays the slot's show and hide off the drift
     // between the live answer and this bit, and on_redraw runs ONCE PER DAMAGE
     // RECT under a clip to exactly that rect, so a bit stamped from a frame
     // whose rect never touched the band would be a claim about pixels this pass
@@ -9091,7 +9091,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //
     // NOT exposure-gated: the dispatch's own gate is the tenants' standing
     // predicates, and it must run on EVERY frame class to write the
-    // as-painted bit the tick comparator reads (the contract is at the
+    // as-painted bit the slot comparator reads (the contract is at the
     // declaration). With the slot down that is one platform query and two
     // bit reads; with it up the outer Cairo clip makes a narrow damage cheap.
     paint_keyboard_slot(cr, GuiRect{x, y, w, h});

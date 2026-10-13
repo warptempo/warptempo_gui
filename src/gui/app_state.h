@@ -7069,7 +7069,8 @@ struct AppState {
     // widened 2026-08-28 to the slot): does a KEYBOARD-SLOT SURFACE — the
     // on-screen keyboard or the folder overlay, which replaces the keyboard in
     // its band (folder_overlay.h) — stand as of the last frame that painted
-    // the whole band? The tick comparator (main.cpp) reads it against the
+    // the whole band? The slot comparator (onscreen_keyboard::
+    // reconcile_slot_standing, at pre-paint and tick) reads it against the
     // live OR of the two standing predicates, the roster faces' own
     // mechanism: a surface appears and disappears with facts that damage no
     // pixel of its own band, so the drift between this and the live answer is

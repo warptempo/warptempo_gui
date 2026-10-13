@@ -704,8 +704,9 @@ inline GuiRect overlay_rect(const AppState& a, const GuiPlatform& gui) {
 // at the ceiling (keyboard_slot_band, app_state.h) united with the keyboard
 // at its tallest — its band, its line and a dialog standing on it — so one
 // rect contains every tenant's pixels in every form.
-// THE SHOW/HIDE COMPARATOR TAKES IT (main.cpp): those two edges damage a band
-// whose tenant is arriving or has already gone, so the rect cannot be either
+// THE SHOW/HIDE COMPARATOR TAKES IT (reconcile_slot_standing, below): those
+// two edges damage a band whose tenant is arriving or has already gone, so
+// the rect cannot be either
 // tenant's own — on the hide the departed surface's pixels are exactly what
 // has to be erased, and on the show the arriving one's whole band has to be
 // covered. A damage INSIDE a standing band takes that tenant's own rect
@@ -772,6 +773,54 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
     a.onscreen_keyboard.shift_armed  = false;
     a.onscreen_keyboard.page         = Page::Letters;
     viewport.invalidate_rect(surface_rect(a));
+}
+
+// THE SLOT'S SHOW AND HIDE (2026-08-27 for the keyboard, 2026-08-28 for the
+// slot's two tenants), the roster comparator's own mechanism applied to a
+// whole surface: the keyboard appears and disappears with the editors' open
+// and close, the folder overlay with the render player and the picker, and
+// those routes damage the marker lane, the bottom row or the dialog — never
+// the band this slot paints in. So the live answer (either tenant standing)
+// is compared against the AS-PAINTED bit, which the slot's paint dispatch
+// refreshes only on a frame whose rect FULLY COVERS the band
+// (AppState::keyboard_slot_painted_standing, GuiPaintHandler::
+// paint_keyboard_slot), and the drift is paid here. THIS IS THE ONE PLACE
+// THE KEYBOARD'S HIDE IS PAID, whatever closed its editor: standing is
+// derived (stands, above), so every close road — the dialog editors' OK,
+// Cancel, Esc and Return, the flag editor's, the picker's hex field's, a
+// choice editor taking the session — moves this comparison and nothing else
+// has to remember the band.
+//
+// THE DAMAGE IS THE SLOT'S BAND AT ITS TALLEST (slot_damage_rect), and only
+// that: on the HIDE the departed surface no longer stands, so there is
+// nothing to ask its height of, and the one rect contains every tenant's
+// pixels in every form — the folder overlay's ceiling band, the keyboard's
+// band, its line and a dialog standing on it — and with them the waveform
+// they covered (the ceiling band spans the waveform area whole).
+//
+// TWO CALLERS (2026-10-13, the tablet's stale keyboard): the PRE-PAINT HOOK
+// (main.cpp), ahead of every frame either backend paints, and the TICK. The
+// pre-paint call is the fix: a pointer release or a key closes an editor and
+// the Android pump paints in the SAME pass, before its next tick, so a
+// tick-only comparator let the first frame after a hide paint without the
+// band. On the cairo road that cost one stale frame; under the GL CANVAS it
+// stranded the keyboard for good — that frame's canvas clip grew back over
+// the band with no damage there, so the band's old texels inside the new
+// clip were never uploaded (the upload rule skips the clip unless it moved
+// on that frame, GuiPlatform::present), and the GPU showed the departed keys
+// over a canvas that answered the press. Paid at pre-paint, the clip moves
+// on the very frame whose damage covers the band, so the whole rect goes up
+// cleared. The tick call stays for a standing change that declares no damage
+// of its own: a frame paints only with damage, so the pre-paint would never
+// run for it.
+//
+// One platform query and a bit compare per call with the slot down, which
+// on the laptop is its permanent state.
+inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
+                                    Viewport& viewport) {
+    const bool live = stands(a, gui) || folder_overlay::stands(a);
+    if (live == a.keyboard_slot_painted_standing) return;
+    viewport.invalidate_rect(slot_damage_rect(a));
 }
 
 // THE WAVEFORM'S PAINTED RECT — waveform_area minus the KEYBOARD SLOT's

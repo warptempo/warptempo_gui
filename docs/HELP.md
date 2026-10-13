@@ -30,11 +30,11 @@ This is the program's reason to exist. A marker can define a named label, and a 
 
 ### Phase resets
 
-Phase resets are a separate collection of markers, authored in target view alone. The vocoder's frame-to-frame phase coherence keeps sustained sound clean but smears an attack; at a phase reset it re-seats its phase instead, so the attack (an entry, a pizzicato, a timpani stroke) arrives clean. A reset belongs a lead-in ahead of its transient, and the drop does that arithmetic for you. Each one trades a little local coherence for the clean attack, so they are placed one by one, and nudged only when a dip, pop or crackle is heard.
+Phase resets are a separate collection of markers, authored in either audio view: in target view, where they are protected by ear, and in source view, where they are transcribed against the recording's own attacks. The vocoder's frame-to-frame phase coherence keeps sustained sound clean but smears an attack; at a phase reset it re-seats its phase instead, so the attack (an entry, a pizzicato, a timpani stroke) arrives clean. A reset belongs a lead-in ahead of its transient, and the drop does that arithmetic for you in either view, taking the lead-in once; a drag or a nudge moves a reset exactly where it is put, and the lead-in's dotted outline is drawn in target view alone. Each one trades a little local coherence for the clean attack, so they are placed one by one, and nudged only when a dip, pop or crackle is heard.
 
-### Two tabs, three views
+### Two tabs, four views
 
-The two tabs, A and B, are two viewpoints (viewport, zoom, playhead and trim) over one shared set of markers, so one can sit at a definition while the other sits at its reference. The active tab's letter ends the clock at the bottom left (`00:45.115 | A`), and Switch Tab in the bottom row flips to the other one. The three views are source + warp, where warp markers are placed; target + warp, where tempos are judged; and target + phase reset, where the transients are protected.
+The two tabs, A and B, are two viewpoints (viewport, zoom, playhead and trim) over one shared set of markers, so one can sit at a definition while the other sits at its reference. The active tab's letter ends the clock at the bottom left (`00:45.115 | A`), and Switch Tab in the bottom row flips to the other one. The four views, on the bare keys 1 to 4, are source + warp, where warp markers are placed; source + phase reset, where resets are transcribed against the recording; target + warp, where tempos are judged; and target + phase reset, where the transients are protected.
 
 Save is the unsaved-work mark: it lights when the markers or the piece's settings block (the scale, the BPM and the rest) change, and is dimmed again once saved or undone back to the saved state. The tabs' viewpoints, their trims and their read-only locks never light it; they are written with the next save of such a change, and a trim or lock changed on its own is not kept.
 
@@ -55,7 +55,7 @@ Every text is set in Liberation Sans, a stand-in for Arial, in one Windows text 
 How a movement actually gets authored, in the order that works:
 
 1. Find the introduction measures that define the tempo. Set warp markers there, set the corresponding phase resets, then run BPM iterations and pick the tempo that sits right.
-2. Work down the piece in chronological order, moving between the three views: source + warp to place markers, target + warp for tempo adjustments by ear, and target + phase reset to protect the transients.
+2. Work down the piece in chronological order, moving between the views: source + warp to place markers, target + warp for tempo adjustments by ear, and target + phase reset to protect the transients (source + phase reset when a reset is better placed against the recording itself).
 3. Once some headway is made, copy label definitions into references (the exposition into the repeat and the recapitulation), and paste the definition's phase resets across with the propagate commands in the Edit menu.
 4. Phase resets are set with the phase-reset drop and nudged only when the phase alignment causes an audible dip, pop or crackle.
 5. The A/B audition is crucial for confirming that label references match their definitions: it is the crux of the tempo-locking mechanism, which lets precise timing be replicated in the sonata-form fashion of repeated rhythmic motifs and phrases, at both large and small scale.

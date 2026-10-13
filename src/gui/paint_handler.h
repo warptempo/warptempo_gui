@@ -1096,8 +1096,8 @@ private:
     // the on-screen keyboard and the FOLDER OVERLAY (folder_overlay.h) share
     // — the overlay replaces the keyboard there, so at most one tenant
     // stands. This dispatch is the slot's one paint entry and THE ONE WRITER
-    // of AppState::keyboard_slot_painted_standing (the tick comparator's
-    // as-painted bit, main.cpp): it refreshes the bit only on a rect that
+    // of AppState::keyboard_slot_painted_standing (the slot comparator's
+    // as-painted bit, onscreen_keyboard::reconcile_slot_standing): it refreshes the bit only on a rect that
     // FULLY COVERS the band — the roster publisher's own rule, for the two
     // edges the keyboard's body used to carry (a show whose route damaged
     // only the marker lane or the bottom row, a hide painted first by an

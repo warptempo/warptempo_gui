@@ -180,7 +180,7 @@ void Viewport::invalidate_status_cell_area() {
 // DIALOG STANDING ON IT too (a prompt raised or answered over a dialog
 // editor with the keyboard up repaints there). A dialog editor's close
 // takes the keyboard with it, and the slot's hide edge damages that form
-// (onscreen_keyboard::slot_damage_rect, main.cpp's comparator).
+// (onscreen_keyboard::slot_damage_rect, reconcile_slot_standing's).
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t     = bottom_row_area(app);
     const GuiRect alone = onscreen_keyboard::dialog_rect(app,
