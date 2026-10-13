@@ -242,7 +242,7 @@ std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
     // The built-ins. Under Waveform Cool Edit's presets ALPHABETICALLY BY
     // THEIR DISPLAY NAMES WITH THE DEFAULT (Midnight since 2026-10-12) PINNED FIRST (architect 2026-10-11:
     // "because it's called default, we should support it as a default"; the
-    // default palette, kGuiBuiltinPalettes' first row).
+    // default palette, kGuiDefaultPaletteKey).
     first = true;
     if (s == Scope::Waveform) {
         std::vector<const GuiBuiltinPalette*> others;

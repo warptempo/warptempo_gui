@@ -921,9 +921,11 @@ void install_true_colors(bool on);
 // 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
 // magnified and the compressed bars, the ink's hides it. The default
-// palette's, Cool Edit's "Default" (`cool-edit-default`, one of the twenty
-// since 2026-10-12, palette_presets.inc), is #0A9757 under its #4BF3A7 ink on
-// black — the ink at HLS lightness 0.3157, the generator's outline rule
+// palette is Cool Edit's "Midnight" (`cool-edit-midnight`,
+// kGuiDefaultPaletteKey, palette_presets.inc since 2026-10-12): the outline
+// #1D847F under the #4FD8D1 ink on black (the named "Default" preset, which
+// was the default until 2026-10-12, is #0A9757 under #4BF3A7) — each outline
+// the ink at HLS lightness 0.3157, the generator's outline rule
 // (tools/theme_catalog/gen_cool_edit_presets.py). THE PLATE
 // BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the
 // pair rides each render job and the cache's fingerprint

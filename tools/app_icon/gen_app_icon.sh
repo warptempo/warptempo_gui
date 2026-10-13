@@ -38,8 +38,15 @@ RES=android/app/res
 RAMP=(F6F7FD F0F1F8 E9EAF8 E3E4F4 E0E1F1 D8D9E9 D4D4E4 CFD0DF CCCDDB C6C6D3
       BEBFCA B8B9C6 B8B8C4 B1B1BC ABACB7 A6A7B0 A1A2AB 9D9DA7 9898A1 90919A)
 
-# nearbyint(i * G / 20) for G even and every i here (no ties): round half up in integers.
-edge() { echo $(( (2 * $2 * $1 + 20) / 40 )); }   # edge i G
+# nearbyint(i * G / 20), the recorded rule: ties to even, in integers. An exact half occurs (at the hdpi
+# canvas, G = 162, i = 5 is 40.5 and lands on 40; until 2026-10-13 this rounded half up and began that band on
+# row 41, the one row the regeneration of that day moved, in mipmap-hdpi's background alone).
+edge() {   # edge i G
+    local n=$(( 2 * $2 * $1 )) q r
+    q=$(( n / 40 )); r=$(( n % 40 ))
+    if (( r > 20 || (r == 20 && q % 2 == 1) )); then q=$(( q + 1 )); fi
+    echo "$q"
+}
 
 # The source's shape: line 1 the XML declaration, a 48 x 48 root (its start tag read whole, across lines as Inkscape
 # writes it). This drawing's root is 48 x 48 as the old one was, so nothing else changes; anything else is a hard fail.

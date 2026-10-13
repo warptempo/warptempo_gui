@@ -2465,8 +2465,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // Defining Marker and Open Text Editor — and publishes an empty rect, the
 // block closing up from
 // the right margin and the state line taking the room; the row in there is
-// ADD TO SELECTION alone, the walk group's four, OLDER and NEWER, and the two
-// skips: nine cases in four groups. THE STAND-IN (architect 2026-10-11,
+// ADD TO SELECTION alone, the walk group's four, and OLDER and NEWER: seven
+// cases in three groups (the two skips, Go to Start and Go to End, left the
+// row 2026-10-12; Home and End stay keys, the mode's own absolute jumps). THE STAND-IN (architect 2026-10-11,
 // kTransportHistoryStepGroup): in the view Older / Newer take the seat Left
 // and Right hold outside it, the four arrows publishing empty rects, and
 // outside it the two publish empty rects. THE STAND-INS DO NOT INHERIT THE
@@ -2502,16 +2503,18 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // them be, kTransportHistoryStepGroup removing the arrow buttons from the
 // view, Older / Newer the painted, state-greyed pair there); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
 // being on that mode's allowlist now and the lamp producing the view's own
-// multi-selection; the two
-// SKIPS and THE WALK GROUP'S FOUR stay lit, Home/End being the mode's
-// own absolute jumps, Tab/Shift+Tab its diff-flag cycle, `c` its centring and
-// Ctrl+Tab on its allowlist (architect-confirmed for the skips). PREVIOUS
+// multi-selection; THE WALK GROUP'S FOUR stay lit, Tab/Shift+Tab being the
+// mode's diff-flag cycle, `c` its centring and Ctrl+Tab on its allowlist
+// (Home / End, its own absolute jumps, are keys alone since 2026-10-12, the
+// two skip buttons gone; Play / Stop is the transport's one button and is not
+// painted in the view). PREVIOUS
 // MARKER greys only under a lit grid iterations with no reverse step left
 // (its twin, the march, refusing there too). Outside the view the four VERBS
 // and OPEN TEXT EDITOR grey on a locked tab, their own
 // gate — JUMP TO DEFINING MARKER, seated among them, does NOT, its chord being
-// navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT THE
-// TRANSPORT THREE AND ADD TO SELECTION greys on the
+// navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT PLAY /
+// STOP (the transport's one button since the skips left, 2026-10-12; its own
+// launch and A/B predicates) AND ADD TO SELECTION greys on the
 // selection's state where its press would be a consumed no-op (the
 // truthful-buttons ruling, reversing the architect's 2026-08-15 always-on
 // ruling, which was made about the RESTING face of the ten members the row
@@ -2681,9 +2684,11 @@ constexpr TransportRowDef kTransportArrowGroup[] = {
 // (architect 2026-10-11 ~02:40): while the view stands this group paints in
 // the arrow group's place, Older where Left stands and Newer where Right
 // does (Up and Down are hidden there anyway, history_mode_hides_button), and
-// the arrow four publish empty rects; outside the view the arrows stand and
-// these two publish empty rects. The seat is the row's MOST-USED ACTION'S,
-// second group left of the transport's — stepping left / right outside the
+// the arrow group's five members (Play / Stop among them) publish empty
+// rects; outside the view the arrows stand and these two publish empty rects.
+// Older / Newer take the final group's seat at the far right (since
+// 2026-10-12 the arrow group, Play included, is the row's last). The seat is
+// the row's MOST-USED ACTION'S — stepping left / right outside the
 // view, stepping older / newer in it — and the nudge pair has no seat in the
 // view at all ("I never use that … the nudge was for precision placement
 // and history view has no placement"); the marker walk stays the neighbor.
@@ -2712,7 +2717,8 @@ constexpr TransportRowDef kTransportHistoryStepGroup[] = {
 // (17 W), CENTRED ON THE CASE'S ROWS (a half-row tie toward the top, the cap
 // rule's own), its run in THE BODY FACE (gui_font.h; no period field used a
 // monospace face), its cap band centred in the field by redesign_baseline.
-// The digits are TABULAR — Tahoma's every digit 0.545 em less the one
+// The digits are TABULAR — Liberation Sans's every digit 0.556 em (Tahoma's
+// was 0.545 before 2026-10-12) less the one
 // tracking (gui_tracking_px, gui_font.h, which every glyph takes alike),
 // with no kerning between the digits, the colon and the point — so the
 // colon and the point stand still as the time runs.
@@ -2731,8 +2737,10 @@ constexpr TransportRowDef kTransportHistoryStepGroup[] = {
 // width ceiled, AND NOTHING MORE: row 8's clock exactly as the render
 // player's two fields (architect 2026-10-10, "the media player's fields look
 // good"; the 85-W floor of Cool Edit's mock, 2026-10-09, removed 2026-10-10).
-// At 300 % under Tahoma the clock is its cell of about 201 device px plus
-// 2 · 15.
+// At 300 % under Liberation Sans the clock is its cell of about 202 device
+// px plus 2 · 15 (re-derived 2026-10-13: 7 digits at 0.556 em, the colon and
+// the point at 0.278, the ` | ` at 0.815 and the letter slot at 0.667, 5.93 em
+// in all; the Tahoma specimen of 2026-10-10 was about 201).
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2747,9 +2755,11 @@ constexpr TransportRowDef kTransportHistoryStepGroup[] = {
 // letter is painted LEFT-ALIGNED IN ITS SLOT at that run's end, the cell's
 // last part (architect 2026-10-09 ~21:20): switching tab moves at most the
 // letter's own right edge and nothing else — no letter's kerning can reach
-// the pipe, the two being shaped apart. (Tahoma's A is 0.600 em and its B
-// 0.589, less the tracking, measured 2026-10-06; the slot is the widest, so
-// where they differ the narrower letter stands left-aligned in A's room.)
+// the pipe, the two being shaped apart. (Liberation Sans's A and B advance
+// alike, 0.667 em, so the slot costs the narrower letter nothing today;
+// Tahoma's A was 0.600 em and its B 0.589, measured 2026-10-06, and the slot
+// is the widest, so where letters differ the narrower stands left-aligned in
+// the widest's room.)
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
@@ -2860,8 +2870,9 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
 // where the modal rows' right-aligned clusters end — the lane's one pad
 // (icon_row_pad_x) from each edge; CASES_RIGHT is where row 8's last case
 // ends (the right block packed against the lane's edge, its last end bar
-// and the group's air before it — 2026-10-09; that air 5 W since
-// 2026-10-09 evening, program_spec.h's group fields), where the player's
+// and the group's air before it — 2026-10-09; that air 4 W from the case to
+// the end bar since 2026-10-12, 6 W after the gripper, program_spec.h's group
+// fields), where the player's
 // right pair ends too. Every BUTTON on either row is THE PROGRAM'S CASE (render.h's
 // program block) at the row's four W of face under the content's top
 // (row8_air_above_px); the faces are paint_roster_case's on both rows. What
@@ -2913,9 +2924,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     const int glyph_px  = icon_glyph_px();
     const int btn_y     = seats.case_y;
     // COOL EDIT'S GROUP (program_spec.h, METRICS §5.2): the gripper, its
-    // air, the cases abutting, the same air, the end bar — the air the
-    // product's symmetric 5 W (architect 2026-10-09 evening, the group fields'
-    // paragraph); two W of face before the first group and between two.
+    // air, the cases abutting, the air, the end bar — the air Cool Edit's
+    // measured 6 W after the gripper and 4 W before the end bar (architect
+    // 2026-10-12, program_spec.h's group fields; the product's symmetric 5 W
+    // of 2026-10-09 evening retired); two W of face before the first group
+    // and between two.
     const int group_gap = scaled_px(kProgramSpec.row8_group_gap_px);
     const int grip_w    = ce_gripper_w_px();
     const int grip_face = scaled_px(kProgramSpec.gripper_to_case_px);
@@ -2990,13 +3003,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // walk's 113 and the arrows' 136 with two gaps of 2, 458 W — on the
     // tablet's 768 at 300 %, the lane W 1..766 inside the
     // program frame's columns (2026-10-10), starting at W 309, the clock's
-    // group W 3..100 (Tahoma's ~67-W cell and its two 5-W pads, a ~77-W
-    // field; 2026-10-10), the state line's first ink at W 106, clipped at
+    // group W 3..100 (the ~67-W cell — 67.4 W re-derived for Liberation
+    // Sans, 2026-10-13: 5.93 em of advances at its 11.357-W em — and its two
+    // 5-W pads, a ~77-W field; 2026-10-10), the state line's first ink at W 106, clipped at
     // W 307 (~201 W of line). IN THE `h` VIEW (the hide, 2026-10-07; Play,
     // Open Text Editor and Toggle Value Drag hidden there with the verbs)
     // the block is 1 verb + 4 walk + Older / Newer in the arrows' seat
     // (2026-10-11) in three groups, Play not standing, 44 + 113 +
-    // 67 + 4 = 228 W, the line's room 433 W. THE ROW CARRIES NO COLLISION
+    // 67 + 4 = 228 W, the clip standing at W 537 (767 - 228 - 2), the line's
+    // room 431 W from its first ink at W 106. THE ROW CARRIES NO COLLISION
     // RULE — none of the redesign does — and the crop-at-the-floor allowance
     // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
     // the clock's group once the window falls below about 1 + 2 + 98 + 458 +
@@ -3105,8 +3120,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             text_shape::shape_text_run(font, kClockSeparator).width_px;
         const double cell_w = tm.time_w + sep_w + tm.letter_w;
         // THE CLOCK'S GROUP: two W of face in from the lane's left edge, the
-        // gripper, the group's 5-W air, the field (its widest string and its
-        // pads), the same air, the end bar.
+        // gripper, the 6-W air, the field (its widest string and its pads),
+        // the 4-W air, the end bar (program_spec.h's group fields).
         const int group_x = content.x + group_gap;
         paint_ce_gripper(cr, group_x, btn_y, btn_h);
         const int field_x = group_x + grip_w + grip_face;
@@ -8542,7 +8557,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // below, whose committing frame is some later frame: the deferral records
     // the owed rect on deferred_basis_repaint_due (app_state.h) and the promote
     // is BLOCKED until that bit is honored, so the committing frame is by
-    // construction one carrying the full strip+waveform rect. No input dispatches
+    // construction one carrying the strip+waveform rect (since 2026-10-13 the
+    // viewport lanes' rect from the band's foot, the rows above owed a
+    // fingerprint check, damage_window_top_rows; every item-basis surface lies
+    // below the band's foot). No input dispatches
     // mid-loop (single-threaded) and the whole frame still commits atomically
     // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
     // the last COMMITTED frame's geometry — that guarantee is unchanged.
@@ -8604,8 +8622,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // whole window.
     //
     // AND THE PROMOTE WAITS FOR THE DEBT TOO (2026-08-22, the same day's final
-    // verification round): the deferral OWES a full strip+waveform repaint (the
-    // bit set below), and a basis may not promote onto pixels the frame did not
+    // verification round): the deferral OWES a strip+waveform repaint (the
+    // viewport lanes' rect from the band's foot since 2026-10-13, the rows
+    // above it owed a fingerprint check, damage_window_top_rows; the bit set
+    // below), and a basis may not promote onto pixels the frame did not
     // repaint. So the promote's condition is the freeze AND the outstanding
     // debt — a standing debt defers exactly like a standing freeze. Without the
     // second condition the hole reopens the instant the gesture ends: a staged

@@ -541,9 +541,11 @@ constexpr ToolbarChord kToolbarChords[] = {
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
     // ADD TO SELECTION landed behind them later that day).
-    // NINETEEN
-    // rows (re-counted 2026-10-11, when Toggle Value Drag joined the verb
-    // group; the succession is in git history),
+    // SEVENTEEN
+    // ordinary rows (re-counted 2026-10-13: nineteen from 2026-10-11, when
+    // Toggle Value Drag joined the verb group, until the two skips left the
+    // row 2026-10-12; Older / Newer, the history stand-ins, stand apart; the
+    // succession is in git history),
     // every chord already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
     // of the roster, so the keyboard-modal editor gate, the history-mode
@@ -918,8 +920,8 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // (the alt vocabulary at chord_is_bound, gui_input.h).
 //
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
-// two SKIPS, whose ctrl-click is Ctrl+Home / Ctrl+End, the Up / Down step
-// ladder's Ctrl rung, the WALK's Ctrl+Tab, PREVIOUS
+// Up / Down step ladder's Ctrl rung (the two skip buttons, whose ctrl-click
+// was Ctrl+Home / Ctrl+End, left the row 2026-10-12), the WALK's Ctrl+Tab, PREVIOUS
 // MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl, 2026-09-29), CENTER's
 // Ctrl+C and RESTRICT UNDO's Ctrl+Z (2026-09-29) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
@@ -8992,7 +8994,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // redesign_button_enabled reads the predicate its act refuses on — the
         // verbs on the selection and the lock, the arrows on the tempo step,
         // the lane fork and the walls, the walk pair on the cycle's landing,
-        // the skips on the jump's landing, Play on the launch, Copy value on
+        // Play on its launch and A/B predicates, Copy value on
         // its eligibility — so this line consumes exactly the presses whose
         // chord would be a consumed no-op. Inside the view the derived
         // partition adds its own: the PLAY/STOP button, UP and DOWN, the four
@@ -9000,8 +9002,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // the verbs' chords are consumed there) — all of them dead by
         // construction, so since 2026-10-07 none of them is PAINTED in the
         // view (history_mode_hides_button: an empty rect, which no press
-        // reaches) — while the two skips (the mode's absolute jumps), the
-        // LEFT / RIGHT chords (its own playhead step since 2026-09-26, admitted;
+        // reaches) — while the LEFT / RIGHT chords (its own playhead step since 2026-09-26, admitted;
         // the arrow buttons are not painted in the view, Older / Newer being
         // the painted, state-greyed pair) and the
         // marker-walk group's four (its diff-flag cycle, its centring, the
@@ -9320,12 +9321,12 @@ void GuiInputHandler::finish_chrome_press_release(
         // (AppState::RedesignTooltip), the press being one of its hard ends.
         //
         // AND IT REACHES NO CTRL-ADMITTING BUTTON THAT ADMITS NO SHIFT, by
-        // construction rather than by an exclusion: the two SKIPS admit CTRL
-        // for the whole-piece jump and admit no shift at all, so this term's
-        // own predicate answers false for them and a held skip gives the
-        // trim-bound jump exactly as a tap does. Their ctrl road on glass is
-        // the S Pen's side button held on the skip, a real ctrl bit carried
-        // by the press like a held Ctrl key, never this hold.
+        // construction rather than by an exclusion: such a button's own
+        // predicate answers false (Previous Marker, Center and Restrict Undo
+        // today; the two skips were of them until their buttons left the row
+        // 2026-10-12), so a held press is the ordinary press. The ctrl road on
+        // glass is the S Pen's side button held on the button, a real ctrl
+        // bit carried by the press like a held Ctrl key, never this hold.
         //
         // WITH A CARRIED CTRL IT COMPOSES ONLY WHERE THE PAIR IS ADMITTED
         // (redesign_button_shift_admits_with, which asks

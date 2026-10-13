@@ -1048,7 +1048,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //   epoch with no rect left to repair them. So the promote gate READS this
     //   bit too and defers while it stands, and the clear below is what makes
     //   the frame this honor schedules the FIRST promote-eligible one. The rect
-    //   is the same full strip+waveform rect every stage site queues, and it
+    //   is the same one every stage site queues — since 2026-10-13 the
+    //   viewport lanes' rect from the band's foot, the rows above it owed a
+    //   fingerprint check (damage_window_top_rows, viewport.cpp), every
+    //   item-basis surface lying below the band's foot — and it
     //   goes into the global damage list and both shm buffers' pending lists
     //   (invalidate_region), so whatever frame comes next carries it in its
     //   damage union — an interleaved narrow request coalesces INTO it rather
@@ -1468,7 +1471,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // damage never followed.
     //
     // THE LAG, in the order the loop actually runs it: a nudge press mutates the
-    // store and queues its own full strip+waveform damage; THE FRAME PAINTS
+    // store and queues its own strip+waveform damage (the viewport lanes' rect
+    // from the band's foot since 2026-10-13, the rows above owed a fingerprint
+    // check, damage_window_top_rows); THE FRAME PAINTS
     // BEFORE THE NEXT TICK (the run loop services the compositor's frame
     // callback, and this rebuild lives in on_tick — the same
     // paint-outruns-the-fingerprint-check ordering the `p` view switch was

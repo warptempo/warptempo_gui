@@ -6148,8 +6148,11 @@ struct AppState {
     // freeze gate in GuiPaintHandler::on_redraw). A frame that finds a staged
     // basis while displayed_basis_frozen holds does NOT promote — the staged
     // pair waits for the gesture to end — and sets this bit. The bit is a
-    // DAMAGE REQUEST, not basis state: the stage sites each queued the full
-    // strip+waveform rect when they staged, and the frames painted INSIDE the
+    // DAMAGE REQUEST, not basis state: the stage sites each queued the
+    // strip+waveform rect when they staged (since 2026-10-13 the viewport
+    // lanes' rect from the band's foot, the rows above owed a fingerprint
+    // check, damage_window_top_rows, viewport.cpp; every item-basis surface
+    // lies below the band's foot), and the frames painted INSIDE the
     // freeze consume that damage while painting the OLD promoted epoch, so
     // nothing is left to repaint the item-basis surfaces (the trim bar's
     // bar/endcaps, the flag editor's box) at the epoch the promote finally
@@ -6472,8 +6475,10 @@ struct AppState {
     // FREEZE, unlike the basis pair's: the flag SURFACE blits unconditionally
     // (a marker or value drag rebuilds it every tick and the dragged flag must
     // move on screen), so the stash that describes it promotes with it. The
-    // rebuild's own damage is the full strip+waveform rect, so the promoting
-    // frame repaints the whole lane and every stem. Every reader — the hit
+    // rebuild's own damage is the strip+waveform rect (since 2026-10-13 the
+    // viewport lanes' rect from the band's foot, the rows above it owed a
+    // fingerprint check, damage_window_top_rows), so the promoting frame
+    // repaints the whole lane and every stem. Every reader — the hit
     // walk (topmost_flag_rect, app_state.cpp), the stem painter and the
     // playhead's stem suppression — reads THESE promoted copies; nothing
     // reads the staged pair but the promote.
@@ -12881,21 +12886,21 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
     return frame;
 }
 
-// WHERE Home / End WOULD LAND THE CURSOR — the two skip commands' one
-// answer, hoisted 2026-08-15 so the dispatch arms that jump share one
+// WHERE Home / End WOULD LAND THE CURSOR — the two skip commands' (the keys';
+// their buttons left the row 2026-10-12) one answer, hoisted 2026-08-15 so the dispatch arms that jump share one
 // arithmetic instead of hand-spelling it per arm. `forward` selects End over
 // Home. Defined in viewport.cpp beside the navigation range it reads.
 //
-// FOUR READERS: the shared jump body run_playhead_end_jump
+// THREE READERS: the shared jump body run_playhead_end_jump
 // (input_key_dispatch.cpp), which every live Home / End route funnels
-// through, the `h` view's own jump arm, playhead_end_jump_actionable
+// through, the `h` view's own jump arm, and playhead_end_jump_actionable
 // (below), the jump acts' one "would this form change anything" owner,
-// through which the two SKIP buttons' FACE and the acts' own no-op refusals
-// read this compare rather than reading it bare, and the skips' stateful
-// tooltip, which drops the ctrl line where the two arms land on one frame.
+// through which the acts' own no-op refusals read this compare rather than
+// reading it bare. (The two skip buttons' face and stateful tooltip were the
+// other readers until the buttons left the row 2026-10-12.)
 // A Home / End press is not a pure jump (it also stops a live audition and
 // clears the marker selection, even when the jump moves nothing), which is
-// why the face reads the actionability owner and not this landing alone.
+// why the acts read the actionability owner and not this landing alone.
 // The header stays here, beside the predicate that reads it, rather than in
 // viewport.h.
 //
@@ -12916,9 +12921,9 @@ int64_t playhead_skip_landing_frame(const AppState& a, const GuiAudio& audio,
                                     bool forward, bool whole_piece);
 
 // WOULD THIS FORM OF THE Home / End JUMP CHANGE ANYTHING (architect
-// 2026-08-30, the twin rule) — the jump acts' one refusal owner and the two
-// SKIP buttons' face term, defined in viewport.cpp beside the landing
-// arithmetic it composes. TRUE iff the press would do something: a live
+// 2026-08-30, the twin rule) — the jump acts' one refusal owner (the two
+// SKIP buttons' face term too, until the buttons left the row 2026-10-12),
+// defined in viewport.cpp beside the landing arithmetic it composes. TRUE iff the press would do something: a live
 // transport session (the press stops it — transport_session_live), a
 // standing selection for the act's unconditional clear (the live arms'
 // selection-or-focus pair; inside the `h` view the MODE's diff-flag
@@ -12926,12 +12931,12 @@ int64_t playhead_skip_landing_frame(const AppState& a, const GuiAudio& audio,
 // history_mode_revert_subject_standing — the same two fields
 // clear_history_mode_focus tests), or a landing that differs from the
 // resting cursor. Every term is an act write read from the act's own owner,
-// never a restatement. FOUR READERS: run_playhead_end_jump and the `h` view's
+// never a restatement. TWO READERS: run_playhead_end_jump and the `h` view's
 // own jump arm (each refusing SILENTLY when its form would change nothing — a
 // benign one-dimensional refusal already at its state, the 2026-08-31 ruling,
-// the playhead's own position being the tell) and the two skip faces
+// the playhead's own position being the tell); the two skip faces
 // (redesign_button_enabled, asking both forms and greying only when neither
-// would act). A tooltip states no state; the grey is the button's whole cue.
+// would act) read it until their buttons left the row 2026-10-12.
 bool playhead_end_jump_actionable(const AppState& a, const GuiAudio& audio,
                                   bool forward, bool whole_piece);
 
@@ -15346,7 +15351,9 @@ inline bool playback_launch_playable(const AppState& a,
 // fa68da52 (the verbs on the selection's state, the walk at an empty store,
 // the history companions), its addendum 77a1dde0 (the lock's arrows, planner
 // decision 52) and the transport three (the skips at their landing frame,
-// Play at an unplayable launch), each arm carrying its own succession.
+// Play at an unplayable launch), each arm carrying its own succession. (The
+// two skips left the row 2026-10-12, Home / End keeping their keys; PLAY
+// ALONE of the three keeps its loaded-piece arm.)
 //
 // WHAT EACH ENTRY MIRRORS, read off the routes themselves:
 //   * ALL FOUR toolbar chords (Save / Undo / Redo / Render — icon-row members
@@ -15587,12 +15594,17 @@ inline bool playback_launch_playable(const AppState& a,
 // the arm, and THE PARAMETER LEFT WITH ITS ONE PRODUCER RATHER THAN RESTING
 // UNREAD; on 2026-08-30 the truthful-buttons ruling put both arms back and
 // the objects returned with them, plus a third.
-//   * GuiAudio is the skips' — they call playhead_end_jump_actionable,
-//     which composes playhead_skip_landing_frame and needs the object rather
-//     than the frame count (this header only FORWARD-DECLARES GuiAudio, so
-//     `total_frames` stays a separate parameter for the inline arms that
-//     want the count alone) — gone 2026-08-15 with the skips' plain `true`,
-//     back with their landing compare; the audition preflight reads it too.
+//   * GuiAudio is read by the arms that need the object rather than the frame
+//     count — the arrows' steps, the drop's edge test, the value jump's
+//     source, the magnification lamp, and Play's A/B audition preflight
+//     (ab_audition_preflight_ok);
+//     this header only FORWARD-DECLARES GuiAudio, so `total_frames` stays a
+//     separate parameter for the inline arms that want the count alone. It
+//     was the skips' first — they called playhead_end_jump_actionable, which
+//     composes playhead_skip_landing_frame — gone 2026-08-15 with the skips'
+//     plain `true`, back with their landing compare, and the skips' buttons
+//     left the row 2026-10-12 (the jump's owner stays, read by the Home / End
+//     keys alone).
 //   * GuiPlayback is PLAY'S — it reads the bound preview buffer's domain
 //     through playback_launch_playable, state that deliberately lives on
 //     GuiPlayback rather than AppState (the domain anchor travels with the
@@ -16495,12 +16507,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // 2026-09-26 (admitted; the hide predicate leaves them be, but
         // kTransportHistoryStepGroup removes the arrow buttons in the view,
         // Older / Newer being the painted, state-greyed pair).
-        // The two SKIPS and
         // THE WALK GROUP'S FOUR stay lit, being the mode's own
-        // absolute jumps, its diff-flag cycle both ways, its `c` and the
+        // diff-flag cycle both ways, its `c` and the
         // allowlisted Ctrl+Tab (Switch Tab's shifted press
         // carries the march that composes that cycle with a round trip
-        // through the other tab, Switch Tab being never-grey); the architect
+        // through the other tab, Switch Tab being never-grey); HOME AND END,
+        // the mode's own absolute jumps, stay allowed as KEYS (their two skip
+        // buttons left the row 2026-10-12); the architect
         // confirmed the split explicitly — "making play and stop disabled in h
         // history view, but allowing home and end, that makes sense". OUTSIDE
         // THE VIEW: the four VERBS, OPEN TEXT EDITOR and TOGGLE VALUE DRAG
@@ -16514,12 +16527,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // tempo bracket's two ends and the group step's whole refusal under
         // UP / DOWN, the nudged marker's frame walls under LEFT / RIGHT in the
         // marker lane (2026-08-31; each pair's arm names its owner) — and
-        // THE TRANSPORT THREE at the second switch below the loading guard —
-        // the two SKIPS where the jump would change nothing ("even the transport's back/forward when
-        // you're already at the home or the beginning of the trim", read
-        // through the acts' own actionability owner), PLAY where the plain
-        // launch AND the A/B audition would both refuse — their predicates
-        // needing a loaded piece, which is what that switch is for.
+        // PLAY / STOP at the second switch below the loading guard —
+        // lit for a live session, or at rest where the plain launch or the
+        // A/B audition would act (greyed where both would refuse), their
+        // predicates needing a loaded piece, which is what that switch is for.
+        // (The two SKIPS' arms, "even the transport's back/forward when
+        // you're already at the home or the beginning of the trim", left with
+        // their buttons 2026-10-12; Home / End keep their keys.)
         //
         // WHAT THE ROW DOES NOT GREY, and why, so nobody "completes" it:
         //   (THE WALLS AND THE WALK'S "NOTHING AHEAD" WERE ON THIS LIST for the
@@ -16994,8 +17008,8 @@ inline bool redesign_button_enabled(const AppState& a,
     }
     // (THE LOADING/BLANK GUARD stood here until 2026-09-24 and is the head
     // term now — no_audio_to_dispatch_on, above every arm — so every member
-    // reaching this switch has a loaded piece, which is what the transport
-    // three's predicates below still need. "The loading/blank guard" in this
+    // reaching this switch has a loaded piece, which is what Play's launch
+    // and A/B predicates below still need. "The loading/blank guard" in this
     // body's comments names that head term.)
     // THE READ-ONLY TERM IS UNDO'S AND REDO'S ALONE among the toolbar four
     // since 2026-08-07 (it stood
@@ -17012,9 +17026,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // THAT RULING (architect 2026-08-30, "Any time a button would be a
         // no-op, grey it"): the selection-state terms sit in the first
         // switch's transport block, each refusing AHEAD of the break, and THE
-        // TRANSPORT THREE HAVE THEIR ARMS HERE, below the guard, because their
-        // predicates ask about a loaded piece — playhead_skip_landing_frame
-        // and playback_launch_playable have nothing to say about a blank one.
+        // PLAY'S ARM IS HERE, below the guard, because its launch and A/B
+        // predicates ask about a loaded piece — playback_launch_playable and
+        // ab_audition_preflight_ok have nothing to say about a blank one. (The
+        // two skips' arms, through playhead_skip_landing_frame, left with
+        // their buttons 2026-10-12.)
         // (The four MARKER VERBS are not
         // among the members here: their read-only term and their selection
         // terms are in the arm above, carried down from the icon row with
@@ -17145,9 +17161,11 @@ inline bool redesign_button_enabled(const AppState& a,
             // twelve earlier that day, before the transport three took arms
             // of their own above) — the bottom
             // row's members that break out of the first switch to take the
-            // loading/blank guard and have nothing further to say here: the
-            // walk, the four arrows, COPY VALUE and ADD TO
-            // SELECTION. All seven
+            // loading/blank guard and have nothing further to say here (the
+            // roster re-grepped from the first switch's breaks 2026-10-13: the
+            // four arrows, COPY VALUE, JUMP TO DEFINING MARKER and ADD TO
+            // SELECTION; the walk buttons return in the first switch and Play
+            // takes its own arm above). All seven
             // refuse ahead of that break on their own predicate since the
             // truthful-buttons ruling, save ADD TO SELECTION: it left
             // iteration_lock_greys's membership 2026-09-19 (above) and its
@@ -17712,17 +17730,17 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
            b == RedesignButton::TransportDown;
 }
 
-// THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two SKIPS,
-// the two VERTICAL ARROWS, THE WALK and, since 2026-09-29, PREVIOUS MARKER,
+// THE CTRL-AUGMENTED BUTTONS — the set above one axis over: the two
+// VERTICAL ARROWS, THE WALK and, since 2026-09-29, PREVIOUS MARKER,
 // whose ctrl press is its own Shift+Tab under ctrl, Ctrl+Shift+Tab, the paired
 // march (the lift ORs the carried ctrl into the row's own shift; on glass the
 // S Pen's side button), CENTER, whose ctrl press is CTRL+C, Copy Resolved
 // Value, and RESTRICT UNDO, whose ctrl press is CTRL+Z, Undo (architect
-// 2026-09-29, both). The SKIPS dispatch bare Home / End, and the act their
-// modified press owes is the WHOLE-PIECE jump, whose keyboard spelling is
-// CTRL+Home / CTRL+End (architect 2026-09-26, restated 2026-09-29): the jump
-// ignores the trim window, a different axis from anything shift means
-// elsewhere on the roster. The VERTICAL ARROWS' ctrl-click (2026-08-31)
+// 2026-09-29, both). (The two skips, whose bare presses dispatched Home /
+// End and whose ctrl press the WHOLE-PIECE jump, Ctrl+Home / Ctrl+End
+// (architect 2026-09-26, restated 2026-09-29), left the row 2026-10-12: Home /
+// End and Ctrl+Home / Ctrl+End have their keys alone.) The VERTICAL ARROWS'
+// ctrl-click (2026-08-31)
 // is the step ladder's THREE-unit rung (since 2026-09-21; the ten before
 // shift became the long stride) and dispatches Ctrl+Up / Ctrl+Down. THE
 // WALK'S ctrl-click (architect 2026-09-26) dispatches Ctrl+Tab, the one-shot
@@ -17744,17 +17762,15 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // ON GLASS THE CTRL IS THE S PEN'S SIDE BUTTON (architect 2026-09-25; the
 // Ctrl bit's sampling is platform_android.cpp's on_motion_event): held on a
 // chrome button it carries the ctrl bit into the press like a held Ctrl key,
-// so the skips' whole-piece jump, the arrows' three-step and the walk's tab
+// so the arrows' three-step and the walk's tab
 // switch are reachable on the tablet with the pen. NO CTRL ADMISSION IS BUILT
 // FOR GLASS ALONE: the pen reaches the roster's own admissions and nothing
 // more. The SHIFT LONG PRESS — glass's
 // held shift — COMPOSES WITH THAT CARRIED CTRL ONLY WHERE THE PAIR IS
 // ADMITTED: the pen's button held through a long press on the walk is its
 // ctrl-shift press, the march (the lift's hold-as-shift term,
-// finish_chrome_press_release). It reaches no other ctrl: the skips admit no
-// shift, so the hold stays off them BY CONSTRUCTION and a held skip gives the
-// ordinary trim-bound jump just as a tap does, and on the arrows a held
-// repeat outranks the long-press shift (ToolbarChord::repeats,
+// finish_chrome_press_release). It reaches no other ctrl, and on the arrows a
+// held repeat outranks the long-press shift (ToolbarChord::repeats,
 // input_pointer.cpp).
 //
 // TWO READERS, both in input_pointer.cpp: the band claims' MODIFIER GATE, which
@@ -18588,10 +18604,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // tmp/uniformity_survey_tooltips.md is its record — under
 // redesign_button_enabled's own standing rule): a hint forks on the predicate
 // the act or the face already reads, and several of those need what the
-// enabled predicate needs — the skips' landing owner reads GuiAudio, the
-// trim's full-window owner the frame count, the overview command's resolve
-// the audio again — so the two share those three objects in the same order
-// and the painter passes them once. IT SHIPPED WITH THE ENABLED PREDICATE'S
+// enabled predicate needs — the overview command's resolve and the step
+// kind refusals read GuiAudio, the trim's full-window owner the frame count
+// (the skips' landing owner read GuiAudio too, until their buttons left the
+// row 2026-10-12) — so the two share those objects in the same order and
+// the painter passes them once. IT SHIPPED WITH THE ENABLED PREDICATE'S
 // WHOLE SIGNATURE that morning, `playback` and `target_render` carried
 // UNREAD "for the shape", and both left the same day: the rule says an object
 // arrives WITH the arm that reads it, and a fork that comes to need one adds
@@ -18931,7 +18948,7 @@ inline RedesignTooltipText redesign_button_tooltip(
         // where `,` and Shift+`,` both choose count − 1 and `.` and Shift+`.`
         // both choose 0. THE COMPARE IS THE ACT'S OWN LANDING OWNER
         // (history_walk_step_landing, asked in both forms) rather than the
-        // arithmetic restated here, the two skips' shape exactly.
+        // arithmetic restated here (the shape the two skips' landing compare had).
         //
         // A DEAD ARROW KEEPS ITS LINE, the recorded behaviour at the constant
         // table (2026-08-30, the walls' grey: standing AT a wall, the step and
@@ -18984,8 +19001,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // twin is dead in the current state — the maximizer over a full window, the
 // crossing in the P column, the audition's shift over a standing sequence
 // (the jump with no eligible focus or no source was a member while it was
-// Copy Value's twin, until 2026-09-29), the skips' ctrl form where
-// the two landings coincide, since 2026-09-02 UP / DOWN'S STEP
+// Copy Value's twin, until 2026-09-29), since 2026-09-02 UP / DOWN'S STEP
 // LADDER where every
 // rung refuses alike (the step's kind refusals), THE WALK'S TWO ARROWS one step
 // from a wall, where the jump names the member the step already reaches, and

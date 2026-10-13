@@ -1008,8 +1008,8 @@ void Viewport::invalidate_surface() {
 // places is the one the next frame paints.
 //
 // Every caller has stopped playback before its write, so the cursor is the
-// subject. THREE CALLERS, re-derived by grep 2026-09-25, each on its
-// NudgeCamera::HoldColumn arm:
+// subject. FOUR CALLERS, re-derived by grep 2026-10-13 (three on 2026-09-25;
+// the drop road joined 2026-10-12), each on its hold arm:
 //   * THE MARKER NUDGE'S COMMIT TAIL (finish_position_nudge,
 //     position_nudge.cpp) passes the PAINTED COLUMN — the focused marker's
 //     pre-write frame through painted_column_of_source_frame_on_basis over
@@ -1033,12 +1033,18 @@ void Viewport::invalidate_surface() {
 //     reach the paint handler's plate basis), both read at the restore's head
 //     before any of its writes; it calls this only when the restore moved
 //     the cursor, in place of the landing owner's Restore.
+//   * THE MARKER DROP'S SEAT (Viewport::seat_playhead_on_drop, below;
+//     architect 2026-10-12) calls it when a drop under the hold moved the
+//     cursor (the P column's lead-in drop), passing the column the cursor
+//     painted in before the drop on the item basis, read before the seat,
+//     and then re-arms the bit like the restore.
 // A held arrow's repeats and a held arrow button's fires reach the first two
 // through the same act bodies, so the hold runs at every step. The write
 // below changes the camera, so the chokepoint puts the posture out; the nudge
 // keeps it across its whole act at its dispatch (AppState::camera_hold's
 // first exemption), which is what makes the next step hold too, and the
-// restore re-arms it after (the second). The P column's
+// restore and the drop re-arm it after (the second and the third). The P
+// column's
 // unit is a HOP, so there the held subject slides
 // the waveform a hop's width per step. NO VIEW TERM:
 // in target view on the warp column the marker nudge is refused upstream
