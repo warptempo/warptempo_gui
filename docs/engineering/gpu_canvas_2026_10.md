@@ -42,6 +42,26 @@ the NEON row copy did. This is the hazard §6 names, and Milestone 2's
 reason: once the canvas leaves the upload (§3.5) a step uploads ~1.4 MB and
 the plate blit, the canvas fills and the present copy leave the CPU frame.
 
+MILESTONE 2 AND THE FACE-BOX CUT MEASURED the same way, his pinches of
+2026-10-13 (the frame rate per second depends on the gesture; the latency
+and the paint are the stable columns):
+
+| build | frames/s mean | max | latest touch → post | paint per frame |
+|---|---|---|---|---|
+| 7d275895, the CPU canvas | 52 | 87 | 18.6 ms | 9.0 ms |
+| ce3cee66, the texture alone | 46 | 81 | 22.0 ms | 12.9 ms |
+| 2b12b9fb, the GPU canvas | 56 | 90 | 10.9 ms | 7.5 ms |
+| 4c991a4b, + the face boxes over their unmasked spans | 52 | 87 | 10.0 ms | 6.7 ms |
+
+His verdict on the glass (2026-10-13 ~14:50): the pinch over ~670 markers
+"feels close to flagless history walk". The profile of 2b12b9fb under
+injected pans (the canvas gone from the frame): the flag cache rebuild
+30 % — the face boxes 12.8 (cut in 4c991a4b), the triangles 8, the text
+7.8 — the plate columns 5.4, present 9.8 (the swap 5.1), the lanes' paint
+14.7. What stays on the CPU and is accepted: the flag cache rebuilt per
+step (P3 rejected, re-openable), the lanes' paint and their upload, the
+plate's column bounds.
+
 ## 2. The inventory (HEAD 7d275895)
 
 Every road that puts pixels inside `waveform_area` was enumerated and read
