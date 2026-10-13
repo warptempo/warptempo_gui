@@ -4,6 +4,11 @@
 #include <hb-ft.h>
 #include <hb.h>
 
+#include <cstddef>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
 namespace text_shape {
 
 namespace {
@@ -147,6 +152,29 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
     if (utf8.empty()) return run;
     append_glyphs(font, utf8, run);
     return run;
+}
+
+SharedRun memoized_run(const GuiFont& font, std::string_view utf8) {
+    // The contract, the premise identity rests on and the clear's harmlessness
+    // are at the declaration. The key is the font's two fields' bytes, then
+    // the text's: the two lanes' faces differ in the first, so the Small
+    // face's timestamps and the Program face's labels never collide.
+    constexpr std::size_t kMemoCap = 4096;
+    static std::unordered_map<std::string, SharedRun> memo;
+    std::string key;
+    key.reserve(utf8.size() + 2 * sizeof(int));
+    const int face = static_cast<int>(font.face);
+    key.append(reinterpret_cast<const char*>(&face), sizeof face);
+    key.append(reinterpret_cast<const char*>(&font.percent),
+               sizeof font.percent);
+    key.append(utf8);
+    const auto it = memo.find(key);
+    if (it != memo.end()) return it->second;
+    if (memo.size() >= kMemoCap) memo.clear();
+    return memo
+        .emplace(std::move(key),
+                 std::make_shared<const ShapedRun>(shape_text_run(font, utf8)))
+        .first->second;
 }
 
 // THE RUN'S GLYPHS PLACED at the baseline origin (x, y) into `placed_glyphs`,

@@ -50,6 +50,7 @@
 
 #include <cairo/cairo.h>
 
+#include <memory>
 #include <string_view>
 #include <vector>
 
@@ -87,6 +88,37 @@ struct ShapedRun {
 // script and language guessed from the text, full GPOS/GSUB). An empty
 // string shapes to an empty run of width 0.
 ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
+
+// A SHARED HANDLE on one memoized run (memoized_run below): its holders read
+// the memo's own run, never a copy of its glyphs, and the run is const behind
+// the handle, so no holder can change what another reads.
+using SharedRun = std::shared_ptr<const ShapedRun>;
+
+// THE LABEL RUNS' SHAPING MEMO (2026-10-13, a cost cut that paints the same
+// pixels), ONE BOUNDED MAP FOR TWO LANES: THE CUE LABELS on the Program face
+// (render.cpp: the cue passes and the cell measurer, measure_iter_cells — the
+// tablet's profile of a pinch put 3.5 % of all CPU on shaping the visible
+// labels at every flag-cache rebuild) and THE RULER'S TIMESTAMPS on the Small
+// face (paint_handler.cpp's paint_ruler_row, whose majors re-shaped the same
+// strings at every repaint a pan's damage reached the ruler). A run is a pure
+// function of its font and its text — HarfBuzz on the face's own scaled font,
+// the tracking and the lifts all the font's (this file's head, gui_font.h),
+// and a GuiFont is its face and percent alone — so a run is looked up here by
+// the face, the percent and the text's bytes, and only a text not yet seen
+// under that font is shaped. IDENTITY RESTS ON THAT PREMISE: a hit returns
+// the very run shape_text_run returned for the same font and bytes, so the
+// caller's show_shaped_run puts down the same glyphs at the same offsets as a
+// fresh shape would. THE ANSWER IS A HANDLE (SharedRun), so a hit hands out
+// the run without copying its glyph vector — into a cue layout and again into
+// each segment, hundreds of labels a rebuild. Keyed in this file because the
+// premise is the chokepoint's own and both lanes already shape through it.
+// THE BOUNDING CLEAR (4096 entries, all at once) IS HARMLESS TO A HOLDER: it
+// drops the memo's references alone, and a run a caller still holds lives on
+// by ownership until its last handle goes. GUI THREAD ONLY, as the scaled
+// font every shape runs on is (gui_outline_scaled_font): every caller paints
+// the flag cache, the editor or the ruler on it, and the handles never leave
+// that thread.
+SharedRun memoized_run(const GuiFont& font, std::string_view utf8);
 
 // Paint `run` with its baseline origin at (x, y) in cairo's current source,
 // on the run's own font. Cairo state and the current path are not modified.

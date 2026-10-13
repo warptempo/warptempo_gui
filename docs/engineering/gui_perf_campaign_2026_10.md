@@ -146,7 +146,7 @@ triangles 10.9, shaping 3.5, glyphs 2.2; paint 21.4 %).
   other context fills through cairo as before. Triangles 10.9 % to 4.2 % (the
   stamp 2.3 % self). `direct_pixel_target` (render.h) is the one check the
   stems and the triangles share.
-- `cue_label_run` memoizes a label's shaped run by font and text: shaping
+- `cue_label_run` (since 2026-10-13 `text_shape::memoized_run`, shared with the ruler's timestamps) memoizes a label's shaped run by font and text: shaping
   3.5 % to 0.3 %. A per-label sprite cache tried alongside was dropped, its
   identity leaning on cairo's internal clip handling for a small gain.
 

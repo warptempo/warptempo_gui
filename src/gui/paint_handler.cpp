@@ -4451,9 +4451,15 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         // cast makes the same integral-valued claim.)
         const int64_t label_ms = static_cast<int64_t>(std::llrint(step_ms));
         if (label_ms < 0) return;
+        // THE RUN FROM THE LABEL RUNS' MEMO (text_shape::memoized_run,
+        // 2026-10-13, shared with the cues): a pan repaints the ruler on
+        // every frame its damage reaches, and the same timestamps on the same
+        // Small face shaped afresh each time. IDENTITY RESTS ON THE MEMO'S
+        // PREMISE — a hit is the run shape_text_run returns for this font and
+        // these bytes — handed to the same two show_shaped_run calls below.
         const std::string txt = ruler_label_text(label_ms, step);
-        const text_shape::ShapedRun run =
-            text_shape::shape_text_run(font, txt.c_str());
+        const text_shape::SharedRun handle = text_shape::memoized_run(font, txt);
+        const text_shape::ShapedRun& run = *handle;
         const int run_w = static_cast<int>(std::ceil(run.width_px));
         const int lx = col + t / 2 - run_w / 2;   // within the columns
         if (lx < 0 || lx + run_w + t > wave_w) return;   // the edge-drop

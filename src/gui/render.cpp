@@ -1794,12 +1794,13 @@ static IterCellText phase_iter_cells(
 // out through this one body, off the one composer and the one font, so no
 // two of them can disagree about where a cell begins or how wide it is.
 //
-// A CUE RUN IS A SHARED HANDLE on one memoized shaping (cue_label_run below):
-// the layout, every CueSegment and the producers' locals hold the same run,
-// never a copy of its glyphs. A NULL HANDLE stands where no run is (no cells,
-// an absent history half), and no reader dereferences one: every read is
-// behind its segment's `present` or the layout's.
-using CueRun = std::shared_ptr<const text_shape::ShapedRun>;
+// A CUE RUN IS A SHARED HANDLE on one memoized shaping (text_shape::
+// memoized_run, the label runs' memo the ruler's timestamps share): the
+// layout, every CueSegment and the producers' locals hold the same run, never
+// a copy of its glyphs. A NULL HANDLE stands where no run is (no cells, an
+// absent history half), and no reader dereferences one: every read is behind
+// its segment's `present` or the layout's.
+using CueRun = text_shape::SharedRun;
 struct IterCellLayout {
     bool   present = false;
     CueRun lower_run;              // null unless `present`
@@ -1808,49 +1809,13 @@ struct IterCellLayout {
     int    upper_w = 0;
 };
 
-// THE CUE LABELS' SHAPING MEMO (2026-10-13, a cost cut that paints the same
-// pixels: the tablet's profile of a pinch put 3.5 % of all CPU on shaping the
-// visible labels at every flag-cache rebuild). A run is a pure function of
-// its font and its text — HarfBuzz on the face's own scaled font, the
-// tracking and the lifts all the font's (text_shape.h, gui_font.h) — so the
-// cue passes and the cell measurer look each run up here by the font (its
-// face and percent) and the text's bytes, and shape only a text not yet
-// seen. THE ANSWER IS A HANDLE (2026-10-13), the memo's own shared run, so a
-// hit hands out the run without copying its glyph vector into the layout and
-// again into each segment — hundreds of labels a rebuild, every pinch step.
-// THE BOUNDING CLEAR (kCueRunMemoCap entries, all at once) IS HARMLESS TO A
-// HOLDER: it drops the memo's references alone, and a run a caller still
-// holds within the same rebuild lives on by ownership until its last handle
-// goes. The run is const behind the handle, so no holder can change what
-// another reads. GUI thread only: every caller paints the flag cache or the
-// editor on it, and the handles never leave that thread.
-static CueRun cue_label_run(const GuiFont& font, std::string_view text) {
-    constexpr std::size_t kCueRunMemoCap = 4096;
-    static std::unordered_map<std::string, CueRun> memo;
-    std::string key;
-    key.reserve(text.size() + 2 * sizeof(int));
-    const int face = static_cast<int>(font.face);
-    key.append(reinterpret_cast<const char*>(&face), sizeof face);
-    key.append(reinterpret_cast<const char*>(&font.percent),
-               sizeof font.percent);
-    key.append(text);
-    const auto it = memo.find(key);
-    if (it != memo.end()) return it->second;
-    if (memo.size() >= kCueRunMemoCap) memo.clear();
-    return memo
-        .emplace(std::move(key),
-                 std::make_shared<const text_shape::ShapedRun>(
-                     text_shape::shape_text_run(font, text)))
-        .first->second;
-}
-
 static IterCellLayout measure_iter_cells(const GuiFont& font,
                                          const IterCellText& cells) {
     IterCellLayout l;
     if (!cells.present) return l;
     l.present   = true;
-    l.lower_run = cue_label_run(font, cells.lower);
-    l.upper_run = cue_label_run(font, cells.upper);
+    l.lower_run = text_shape::memoized_run(font, cells.lower);
+    l.upper_run = text_shape::memoized_run(font, cells.upper);
     l.lower_w   = static_cast<int>(std::nearbyint(l.lower_run->width_px));
     l.upper_w   = static_cast<int>(std::nearbyint(l.upper_run->width_px));
     return l;
@@ -2418,7 +2383,7 @@ void render_flag_boxes_impl(
             // label (architect 2026-09-19: the leader's numbers, not this
             // marker's to author; the Windows emboss retired from cue text
             // 2026-10-10); a disabled marker's every segment does.
-            const CueRun payload = cue_label_run(font, label_of(i));
+            const CueRun payload = text_shape::memoized_run(font, label_of(i));
             const IterCellLayout cl = measure_iter_cells(font, cells);
             const bool present[3] = {pass_paints(MarkerCell::Payload),
                                      cells.present &&
@@ -2724,9 +2689,9 @@ void render_history_diff_flags(
             CueRun run_removed;
             CueRun run_added;
             if (f.removed)
-                run_removed = cue_label_run(font, f.removed_text);
+                run_removed = text_shape::memoized_run(font, f.removed_text);
             if (f.added)
-                run_added = cue_label_run(font, f.added_text);
+                run_added = text_shape::memoized_run(font, f.added_text);
             const CueRun& run0 = added_first ? run_added : run_removed;
             const CueRun& run1 = added_first ? run_removed : run_added;
             const bool present[3] = {
