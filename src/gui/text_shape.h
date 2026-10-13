@@ -90,6 +90,8 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 
 // Paint `run` with its baseline origin at (x, y) in cairo's current source,
 // on the run's own font. Cairo state and the current path are not modified.
+// The placement goes through one reused per-thread buffer (text_shape.cpp,
+// 2026-10-13), so a paint allocates nothing once that buffer has grown.
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 
 // A RUN'S FIRST INK, in pixels from the run's pen origin to the left edge of

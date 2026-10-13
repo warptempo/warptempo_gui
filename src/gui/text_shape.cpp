@@ -149,12 +149,17 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
     return run;
 }
 
-// THE RUN'S GLYPHS PLACED at the baseline origin (x, y) — the one placement
-// the painter hands cairo and the ink measure below reads, so the two cannot
-// part.
-static std::vector<cairo_glyph_t> placed_glyphs_of(const ShapedRun& run,
-                                                   double x, double y) {
-    std::vector<cairo_glyph_t> placed_glyphs;
+// THE RUN'S GLYPHS PLACED at the baseline origin (x, y) into `placed_glyphs`,
+// emptied first and refilled — the one placement the painter hands cairo and
+// the ink measure below reads, so the two cannot part. THE ARITHMETIC IS
+// FIXED, in this order: the pen starts AT x, each glyph stands at the pen
+// plus its x offset, then the pen takes its advance. Never reassociated and
+// never a run placed at origin zero and translated after: the placement is
+// fractional, and a glyph whose x differs in its last bit can land on a
+// different subpixel phase and change its antialiased pixels.
+static void place_glyphs(const ShapedRun& run, double x, double y,
+                         std::vector<cairo_glyph_t>& placed_glyphs) {
+    placed_glyphs.clear();
     placed_glyphs.reserve(run.glyphs.size());
     double pen_x = x;
     for (const ShapedGlyph& glyph : run.glyphs) {
@@ -166,12 +171,24 @@ static std::vector<cairo_glyph_t> placed_glyphs_of(const ShapedRun& run,
         placed_glyphs.push_back(placed);
         pen_x += glyph.x_advance_px;
     }
-    return placed_glyphs;
 }
 
 void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
     if (run.glyphs.empty()) return;
-    const std::vector<cairo_glyph_t> placed_glyphs = placed_glyphs_of(run, x, y);
+    // THE PAINTER'S ONE REUSED PLACEMENT BUFFER (2026-10-13, a cost cut that
+    // paints the same pixels): every paint refills it (place_glyphs) instead
+    // of allocating a vector of its own, which a cue label did twice (its
+    // shadow, then its ink) and the ruler's labels once each. It keeps its
+    // capacity, so the steady state allocates nothing. NOTHING ELSE TOUCHES
+    // IT: the fill and the cairo_show_glyphs that reads it are back to back
+    // here, this function calls only cairo between them and is never
+    // re-entered from inside itself, and the ink measure (ink_left_px) places
+    // into a local of its own. THREAD-LOCAL because the declaration states no
+    // thread contract: today's callers are all the GUI thread's (the flag
+    // cache, the lanes, the dialogs, the picker), and a thread that ever
+    // paints text pays one vector for it.
+    thread_local std::vector<cairo_glyph_t> placed_glyphs;
+    place_glyphs(run, x, y, placed_glyphs);
     cairo_save(cr);
     cairo_set_scaled_font(cr, gui_outline_scaled_font(run.font));
     cairo_show_glyphs(cr, placed_glyphs.data(),
@@ -181,9 +198,13 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
 
 double ink_left_px(const ShapedRun& run) {
     // The contract is at the declaration: the paint's own placement at pen
-    // origin (0, 0), measured on the run's own font.
+    // origin (0, 0), measured on the run's own font. It places into a local
+    // of its own, never the painter's buffer, so the two cannot alias
+    // whatever the call order; its one consumer (row 8's state line, the
+    // declaration) measures a single run, not worth sharing the buffer for.
     if (run.glyphs.empty()) return 0.0;
-    const std::vector<cairo_glyph_t> placed = placed_glyphs_of(run, 0.0, 0.0);
+    std::vector<cairo_glyph_t> placed;
+    place_glyphs(run, 0.0, 0.0, placed);
     cairo_text_extents_t ext;
     cairo_scaled_font_glyph_extents(gui_outline_scaled_font(run.font),
                                     placed.data(),

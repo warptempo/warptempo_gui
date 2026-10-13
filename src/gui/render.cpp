@@ -19,6 +19,7 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <span>
 #include <string>
@@ -1792,12 +1793,19 @@ static IterCellText phase_iter_cells(
 // editor's RE-PAINT of whatever rides its unrolled right edge all lay them
 // out through this one body, off the one composer and the one font, so no
 // two of them can disagree about where a cell begins or how wide it is.
+//
+// A CUE RUN IS A SHARED HANDLE on one memoized shaping (cue_label_run below):
+// the layout, every CueSegment and the producers' locals hold the same run,
+// never a copy of its glyphs. A NULL HANDLE stands where no run is (no cells,
+// an absent history half), and no reader dereferences one: every read is
+// behind its segment's `present` or the layout's.
+using CueRun = std::shared_ptr<const text_shape::ShapedRun>;
 struct IterCellLayout {
-    bool                  present = false;
-    text_shape::ShapedRun lower_run;
-    text_shape::ShapedRun upper_run;
-    int                   lower_w = 0;   // the token's run, whole columns
-    int                   upper_w = 0;
+    bool   present = false;
+    CueRun lower_run;              // null unless `present`
+    CueRun upper_run;              // null unless `present`
+    int    lower_w = 0;   // the token's run, whole columns
+    int    upper_w = 0;
 };
 
 // THE CUE LABELS' SHAPING MEMO (2026-10-13, a cost cut that paints the same
@@ -1807,13 +1815,18 @@ struct IterCellLayout {
 // tracking and the lifts all the font's (text_shape.h, gui_font.h) — so the
 // cue passes and the cell measurer look each run up here by the font (its
 // face and percent) and the text's bytes, and shape only a text not yet
-// seen. The answer is returned BY VALUE, so no caller holds into the memo
-// across the plain clear that bounds it (kCueRunMemoCap entries). GUI
-// thread only: every caller paints the flag cache or the editor on it.
-static text_shape::ShapedRun cue_label_run(const GuiFont& font,
-                                           std::string_view text) {
+// seen. THE ANSWER IS A HANDLE (2026-10-13), the memo's own shared run, so a
+// hit hands out the run without copying its glyph vector into the layout and
+// again into each segment — hundreds of labels a rebuild, every pinch step.
+// THE BOUNDING CLEAR (kCueRunMemoCap entries, all at once) IS HARMLESS TO A
+// HOLDER: it drops the memo's references alone, and a run a caller still
+// holds within the same rebuild lives on by ownership until its last handle
+// goes. The run is const behind the handle, so no holder can change what
+// another reads. GUI thread only: every caller paints the flag cache or the
+// editor on it, and the handles never leave that thread.
+static CueRun cue_label_run(const GuiFont& font, std::string_view text) {
     constexpr std::size_t kCueRunMemoCap = 4096;
-    static std::unordered_map<std::string, text_shape::ShapedRun> memo;
+    static std::unordered_map<std::string, CueRun> memo;
     std::string key;
     key.reserve(text.size() + 2 * sizeof(int));
     const int face = static_cast<int>(font.face);
@@ -1824,7 +1837,10 @@ static text_shape::ShapedRun cue_label_run(const GuiFont& font,
     const auto it = memo.find(key);
     if (it != memo.end()) return it->second;
     if (memo.size() >= kCueRunMemoCap) memo.clear();
-    return memo.emplace(std::move(key), text_shape::shape_text_run(font, text))
+    return memo
+        .emplace(std::move(key),
+                 std::make_shared<const text_shape::ShapedRun>(
+                     text_shape::shape_text_run(font, text)))
         .first->second;
 }
 
@@ -1835,8 +1851,8 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
     l.present   = true;
     l.lower_run = cue_label_run(font, cells.lower);
     l.upper_run = cue_label_run(font, cells.upper);
-    l.lower_w   = static_cast<int>(std::nearbyint(l.lower_run.width_px));
-    l.upper_w   = static_cast<int>(std::nearbyint(l.upper_run.width_px));
+    l.lower_w   = static_cast<int>(std::nearbyint(l.lower_run->width_px));
+    l.upper_w   = static_cast<int>(std::nearbyint(l.upper_run->width_px));
     return l;
 }
 
@@ -1963,19 +1979,20 @@ FlagFace resolve_flag_face(GuiFlagKind kind, bool disabled, bool red) {
                     false};
 }
 
-// ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run, its
-// face box [x0, x1) in window x (the text at x0 plus the pad quantum), and
-// its look — the chrome's selected text on the face, the faded inert label,
-// or the panel's light tone.
+// ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
+// memo's shared handle, CueRun — null exactly when the segment is absent),
+// its face box [x0, x1) in window x (the text at x0 plus the pad quantum),
+// and its look — the chrome's selected text on the face, the faded inert
+// label, or the panel's light tone.
 struct CueSegment {
-    bool                  present  = false;
-    text_shape::ShapedRun run;
-    int                   x0       = 0;
-    int                   x1       = 0;
-    bool                  selected = false;
+    bool   present  = false;
+    CueRun run;
+    int    x0       = 0;
+    int    x1       = 0;
+    bool   selected = false;
     // INERT: a disabled marker's segment or a tie follower's cell, the faded
     // label (ce_off_label) unless selected (2026-10-10).
-    bool                  inert    = false;
+    bool   inert    = false;
 };
 // THE CUE LABEL'S ONE TEXT PAINTER (architect 2026-10-11, "make the text stand
 // out a little more because it's a little small, but that's on purpose"; Cool
@@ -2020,6 +2037,26 @@ struct CueDraw {
     std::array<MarkerStem, 2> stems{};
 };
 
+// THE CUE PASS'S SCRATCH (2026-10-13, a cost cut that paints the same
+// pixels): the cues one producer lays out and paint_cues' three working
+// vectors, kept across rebuilds so each pass clear()s and refills them
+// instead of allocating and freeing them afresh. THE GUI THREAD'S ALONE, and
+// used by one pass at a time: the three producers (render_flags,
+// render_phase_reset_flags, render_history_diff_flags) each run whole on the
+// GUI thread inside the flag cache's rebuild, one after another, and none is
+// re-entered from inside itself or from paint_cues. Each producer clears
+// `cues` before it fills it; the elements of the last pass stay until the
+// next pass's clear, holding their runs' handles (CueRun) that long. NO
+// HIGH-WATER BOUND: a project's worst case is a few hundred cues, so the
+// kept capacity is a few hundred elements of each.
+struct CuePassScratch {
+    std::vector<CueDraw>             cues;
+    std::vector<int>                 lo;
+    std::vector<int>                 hi;
+    std::vector<std::pair<int, int>> spans;
+};
+static CuePassScratch g_cue_pass_scratch;
+
 // THE CUES' ONE PAINTER (render.h's marker-lane paragraph: the overlap rule,
 // the states; the lengths program_spec.h's), shared by both marker columns
 // and the `h` view's lane: the labels LEFT TO RIGHT, each on its opaque face
@@ -2054,9 +2091,12 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     // Each label's OCCLUDING BOX [lo, hi): from its own triangle's left edge
     // (its column less the triangle's half width) to its last segment's end;
     // empty where no segment paints. The text stands where its segments put
-    // it; the box only reaches back to the triangle.
-    std::vector<int> lo(static_cast<std::size_t>(n), 0);
-    std::vector<int> hi(static_cast<std::size_t>(n), 0);
+    // it; the box only reaches back to the triangle. The three working
+    // vectors are the pass's kept scratch (CuePassScratch), refilled here.
+    std::vector<int>& lo = g_cue_pass_scratch.lo;
+    std::vector<int>& hi = g_cue_pass_scratch.hi;
+    lo.assign(static_cast<std::size_t>(n), 0);
+    hi.assign(static_cast<std::size_t>(n), 0);
     for (int i = 0; i < n; ++i) {
         const CueDraw& c = cues[static_cast<std::size_t>(i)];
         int b = 0;
@@ -2088,7 +2128,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     // the text clipped to it; the union of every label's spans equals the
     // union of every box. A long label before a short one keeps its span past
     // the short one's end; a label whose spans are empty paints nothing.
-    std::vector<std::pair<int, int>> spans;
+    std::vector<std::pair<int, int>>& spans = g_cue_pass_scratch.spans;
     for (int i = 0; i < n; ++i) {
         const CueDraw& c = cues[static_cast<std::size_t>(i)];
         const int a = lo[static_cast<std::size_t>(i)];
@@ -2131,7 +2171,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
             // included (2026-10-11), else the faded inert label, an invalid
             // cue's resting invalid color, or the light tone — a selected
             // inert segment the chrome's text, so its selection shows.
-            show_cue_label(cr, s.run, tx, base,
+            show_cue_label(cr, *s.run, tx, base,
                            s.selected ? pal.label
                            : s.inert  ? pal.ce_off_label
                            : c.face.invalid_label
@@ -2326,7 +2366,9 @@ void render_flag_boxes_impl(
     // THE PROGRAM FACE for the whole pass (gui_font.h; the cues' cap 7),
     // every run carrying it (text_shape.h).
     const GuiFont font = gui_font(GuiFace::Program);
-    std::vector<CueDraw> cues;
+    // The pass's kept scratch (CuePassScratch), emptied for this pass.
+    std::vector<CueDraw>& cues = g_cue_pass_scratch.cues;
+    cues.clear();
 
     iterate_visible_flags_impl(lanes.columns_x, waveform_width, markers,
                                viewport_start_sample, viewport_end_sample,
@@ -2376,8 +2418,7 @@ void render_flag_boxes_impl(
             // label (architect 2026-09-19: the leader's numbers, not this
             // marker's to author; the Windows emboss retired from cue text
             // 2026-10-10); a disabled marker's every segment does.
-            const text_shape::ShapedRun payload =
-                cue_label_run(font, label_of(i));
+            const CueRun payload = cue_label_run(font, label_of(i));
             const IterCellLayout cl = measure_iter_cells(font, cells);
             const bool present[3] = {pass_paints(MarkerCell::Payload),
                                      cells.present &&
@@ -2385,7 +2426,7 @@ void render_flag_boxes_impl(
                                      cells.present &&
                                          pass_paints(MarkerCell::Upper)};
             const int widths[3] = {
-                static_cast<int>(std::nearbyint(payload.width_px)),
+                static_cast<int>(std::nearbyint(payload->width_px)),
                 cl.lower_w, cl.upper_w};
             const CueSegmentBoxes boxes = cue_segment_boxes(widths, present);
             const MarkerCell order[3] = {MarkerCell::Payload, MarkerCell::Lower,
@@ -2622,7 +2663,9 @@ void render_history_diff_flags(
             if (span > widest_pair_px) widest_pair_px = span;
         }
     }
-    std::vector<CueDraw> cues;
+    // The pass's kept scratch (CuePassScratch), emptied for this pass.
+    std::vector<CueDraw>& cues = g_cue_pass_scratch.cues;
+    cues.clear();
 
     iterate_visible_flags_impl(
         lanes.columns_x, waveform_width, flags,
@@ -2676,22 +2719,23 @@ void render_history_diff_flags(
             // 1; a selected flag's two halves both turn the selected text,
             // no fill (render.h's SELECTED row).
             const bool added_first = f.added_left();
-            text_shape::ShapedRun run_removed;
-            text_shape::ShapedRun run_added;
+            // An absent half holds the null handle; its width reads 0, as
+            // the empty run it stood for read, and no segment takes it.
+            CueRun run_removed;
+            CueRun run_added;
             if (f.removed)
                 run_removed = cue_label_run(font, f.removed_text);
             if (f.added)
                 run_added = cue_label_run(font, f.added_text);
-            const text_shape::ShapedRun& run0 =
-                added_first ? run_added : run_removed;
-            const text_shape::ShapedRun& run1 =
-                added_first ? run_removed : run_added;
+            const CueRun& run0 = added_first ? run_added : run_removed;
+            const CueRun& run1 = added_first ? run_removed : run_added;
             const bool present[3] = {
                 added_first ? f.added : f.removed,
                 added_first ? f.removed : f.added, false};
             const int widths[3] = {
-                static_cast<int>(std::nearbyint(run0.width_px)),
-                static_cast<int>(std::nearbyint(run1.width_px)), 0};
+                run0 ? static_cast<int>(std::nearbyint(run0->width_px)) : 0,
+                run1 ? static_cast<int>(std::nearbyint(run1->width_px)) : 0,
+                0};
             const CueSegmentBoxes boxes = cue_segment_boxes(widths, present);
             c.segments_are_cells = false;
 
@@ -3541,9 +3585,10 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                            dis ? pal.ce_off_cue_shadow : pal.ce_cue_shadow);
             cursor_x = x0 + w;
         };
-        if (ride_lower) ride(cl.lower_run, cl.lower_w);
+        // Both handles stand: either ride needs cl.present.
+        if (ride_lower) ride(*cl.lower_run, cl.lower_w);
         const int upper_seam = cursor_x;
-        if (ride_upper) ride(cl.upper_run, cl.upper_w);
+        if (ride_upper) ride(*cl.upper_run, cl.upper_w);
 
         // THE RUN IS PUBLISHED AS A FLAG HIT RECT, keyed to the marker being
         // edited: its rect is the WHOLE re-painted run's extent, the gaps
