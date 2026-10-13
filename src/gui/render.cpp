@@ -19,6 +19,8 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -242,6 +244,61 @@ void render_center_lines(cairo_t* cr, const GuiRect& area) {
 }
 
 // -- The relief helpers (the contract at the declaration, render.h) ---------
+
+// THE DIRECT ROAD'S CONDITIONS (the contract is at the declaration).
+bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out) {
+    cairo_surface_t* target = cairo_get_target(cr);
+    if (cairo_status(cr) != CAIRO_STATUS_SUCCESS) return false;
+    if (cairo_get_group_target(cr) != target) return false;
+    if (cairo_surface_get_type(target) != CAIRO_SURFACE_TYPE_IMAGE) return false;
+    if (cairo_image_surface_get_format(target) != CAIRO_FORMAT_ARGB32)
+        return false;
+    double ox = 0.0, oy = 0.0;
+    cairo_surface_get_device_offset(target, &ox, &oy);
+    double sx = 1.0, sy = 1.0;
+    cairo_surface_get_device_scale(target, &sx, &sy);
+    if (ox != 0.0 || oy != 0.0 || sx != 1.0 || sy != 1.0) return false;
+    if (cairo_get_operator(cr) != CAIRO_OPERATOR_OVER) return false;
+    cairo_matrix_t m;
+    cairo_get_matrix(cr, &m);
+    if (m.xx != 1.0 || m.yy != 1.0 || m.xy != 0.0 || m.yx != 0.0) return false;
+    if (m.x0 != std::floor(m.x0) || m.y0 != std::floor(m.y0)) return false;
+    if (std::fabs(m.x0) > 1e6 || std::fabs(m.y0) > 1e6) return false;
+    const int surf_w = cairo_image_surface_get_width(target);
+    const int surf_h = cairo_image_surface_get_height(target);
+    out.dx = static_cast<int>(m.x0);
+    out.dy = static_cast<int>(m.y0);
+    out.clip.clear();
+    cairo_rectangle_list_t* list = cairo_copy_clip_rectangle_list(cr);
+    bool ok = list->status == CAIRO_STATUS_SUCCESS;
+    for (int i = 0; ok && i < list->num_rectangles; ++i) {
+        const cairo_rectangle_t& r = list->rectangles[i];
+        if (r.x != std::floor(r.x) || r.y != std::floor(r.y) ||
+            r.width != std::floor(r.width) ||
+            r.height != std::floor(r.height)) {
+            ok = false;
+            break;
+        }
+        const double x0 = std::max(r.x + out.dx, 0.0);
+        const double y0 = std::max(r.y + out.dy, 0.0);
+        const double x1 = std::min(r.x + r.width + out.dx,
+                                   static_cast<double>(surf_w));
+        const double y1 = std::min(r.y + r.height + out.dy,
+                                   static_cast<double>(surf_h));
+        if (x1 > x0 && y1 > y0)
+            out.clip.push_back(GuiRect{static_cast<int>(x0),
+                                       static_cast<int>(y0),
+                                       static_cast<int>(x1 - x0),
+                                       static_cast<int>(y1 - y0)});
+    }
+    cairo_rectangle_list_destroy(list);
+    if (!ok) return false;
+    cairo_surface_flush(target);
+    out.data = cairo_image_surface_get_data(target);
+    out.stride = cairo_image_surface_get_stride(target);
+    out.surface = target;
+    return out.data != nullptr;
+}
 
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
     if (r.w <= 0 || r.h <= 0) return;
@@ -940,15 +997,18 @@ void render_waveform(cairo_surface_t* dest,
         g_prev = g1;
     }
 
-    // THE WRITE PASS, ROW-MAJOR (2026-10-13, a cost cut that writes the same
-    // words: the tablet's profile of a magnified pan put 12.8 % of all CPU on
-    // the old column-major store — one word per row of a column at the
-    // surface's row stride, a cache miss a row, the lit outer's tall bars
-    // several times the dark plate's rows). Each owned column's rows are
-    // gathered first — the outer [o0, o1], the lit inner [i0, i1] and its
-    // interior [lo, hi] (an empty inner, the dark lamp's, never matches) —
-    // then the surface is written one row at a time, the columns in order, so
-    // the stores run along memory.
+    // THE WRITE PASS, ROW-MAJOR AND BRANCH-FREE (2026-10-13, cost cuts that
+    // write the same words: the tablet's profile of a magnified pan put 12.8 %
+    // of all CPU on the old column-major store — one word per row of a column
+    // at the surface's row stride, a cache miss a row — and, once the pass
+    // went row-major, 34 % on its per-pixel branch chain). Each owned
+    // column's rows are gathered first into six int32 arrays, structure of
+    // arrays so the row loop vectorizes (compare, select, store over
+    // contiguous lanes): the outer [o0, o1], the lit inner [i0, i1] and its
+    // interior [lo, hi] (an empty inner, the dark lamp's, never matches).
+    // Then the surface is written one row at a time, EVERY owned column of
+    // every row in [row_top, row_bot] stored, so the stores run along memory
+    // with no branch per pixel.
     //
     // THE IDENTITY, the one statement of it: the column-major writer this
     // replaces REPLACE-wrote the outer bar's rows with the ink word, then
@@ -956,50 +1016,75 @@ void render_waveform(cairo_surface_t* dest,
     // interior, the outline word elsewhere in it — over the outer, and left
     // every other pixel as the caller's clear had it. The word that writer
     // leaves at (x, y) is therefore decided by priority alone: inside the
-    // inner, the interior test; else inside the outer, the ink; else
-    // untouched — which is exactly the test below, evaluated on the same
-    // BarRows and the same [lo, hi], for the same owned columns
-    // [col_lo, col_hi). Only the order of the stores changed, and no store
-    // reads a pixel, so the order cannot change a word.
-    struct ColumnRows {
-        int o0, o1;   // the outer (or dark) bar
-        int i0, i1;   // the lit inner bar; empty (i0 > i1) when dark
-        int lo, hi;   // the inner's interior; lo > hi when empty
-    };
-    std::vector<ColumnRows> cols(static_cast<size_t>(col_hi - col_lo));
+    // inner, the interior test; else inside the outer, the ink; else the
+    // cleared word. THE CLEAR CONTRACT: the one caller,
+    // render_waveform_to_cache_surface (waveform_cache.cpp), clears the WHOLE
+    // surface with CAIRO_OPERATOR_CLEAR before its first call, so every pixel
+    // here holds the zero word 0x00000000 when this pass runs — and the two
+    // channels' bands are disjoint (waveform_channel_band) while every row
+    // this pass stores lies in this call's band [y_lo, y_hi), so neither
+    // channel's call stores over the other's words. Storing the zero word
+    // where no bar covers a pixel is therefore the cleared word itself. The
+    // select below is exactly that priority, evaluated on the same BarRows
+    // and the same [lo, hi], for the same owned columns [col_lo, col_hi);
+    // only the order of the stores changed and zeros are stored over zeros,
+    // and no store reads a pixel, so neither can change a word. A caller
+    // that stops clearing the whole surface first breaks this pass.
+    const int ncols = col_hi - col_lo;
+    std::vector<int32_t> c_o0(static_cast<size_t>(ncols));
+    std::vector<int32_t> c_o1(static_cast<size_t>(ncols));
+    std::vector<int32_t> c_i0(static_cast<size_t>(ncols));
+    std::vector<int32_t> c_i1(static_cast<size_t>(ncols));
+    std::vector<int32_t> c_lo(static_cast<size_t>(ncols));
+    std::vector<int32_t> c_hi(static_cast<size_t>(ncols));
     int row_top = y_hi;
     int row_bot = y_lo - 1;
     for (int x = col_lo; x < col_hi; ++x) {
         const int i = x - area.x;
+        const size_t j = static_cast<size_t>(x - col_lo);
         const BarRows& o = outer_rows[static_cast<size_t>(i)];
-        ColumnRows& cw = cols[static_cast<size_t>(x - col_lo)];
-        cw.o0 = o.r0;
-        cw.o1 = o.r1;
-        cw.i0 = y_hi;
-        cw.i1 = y_lo - 1;
-        cw.lo = y_hi;
-        cw.hi = y_lo - 1;
+        c_o0[j] = o.r0;
+        c_o1[j] = o.r1;
+        c_i0[j] = y_hi;
+        c_i1[j] = y_lo - 1;
+        c_lo[j] = y_hi;
+        c_hi[j] = y_lo - 1;
         if (gain_or_null) {
             const BarRows& b = inner_rows[static_cast<size_t>(i)];
             const BarRows in = inner_interior(i, inner_rows);
-            cw.i0 = b.r0;
-            cw.i1 = b.r1;
-            cw.lo = in.r0;
-            cw.hi = in.r1;
+            c_i0[j] = b.r0;
+            c_i1[j] = b.r1;
+            c_lo[j] = in.r0;
+            c_hi[j] = in.r1;
         }
-        row_top = std::min({row_top, cw.o0, cw.i0});
-        row_bot = std::max({row_bot, cw.o1, cw.i1});
+        row_top = std::min({row_top, c_o0[j], c_i0[j]});
+        row_bot = std::max({row_bot, c_o1[j], c_i1[j]});
     }
-    for (int y = row_top; y <= row_bot; ++y) {
-        auto* const row = reinterpret_cast<uint32_t*>(
-            surf_data + static_cast<size_t>(y) * surf_stride) + col_lo;
-        const int n = col_hi - col_lo;
-        for (int j = 0; j < n; ++j) {
-            const ColumnRows& cw = cols[static_cast<size_t>(j)];
-            if (y >= cw.i0 && y <= cw.i1)
-                row[j] = (y >= cw.lo && y <= cw.hi) ? ink_word : outline_word;
-            else if (y >= cw.o0 && y <= cw.o1)
-                row[j] = ink_word;
+    {
+        const int32_t* const o0 = c_o0.data();
+        const int32_t* const o1 = c_o1.data();
+        const int32_t* const i0 = c_i0.data();
+        const int32_t* const i1 = c_i1.data();
+        const int32_t* const lo = c_lo.data();
+        const int32_t* const hi = c_hi.data();
+        for (int y = row_top; y <= row_bot; ++y) {
+            uint32_t* const row = reinterpret_cast<uint32_t*>(
+                surf_data + static_cast<size_t>(y) * surf_stride) + col_lo;
+            for (int j = 0; j < ncols; ++j) {
+                // Each test a 0 / all-ones mask, blended with & and |: inside
+                // the inner, ink on the interior and outline on its border;
+                // else inside the outer, ink; else the zero word.
+                const uint32_t in_inner =
+                    0u - static_cast<uint32_t>((y >= i0[j]) & (y <= i1[j]));
+                const uint32_t in_int =
+                    0u - static_cast<uint32_t>((y >= lo[j]) & (y <= hi[j]));
+                const uint32_t in_outer =
+                    0u - static_cast<uint32_t>((y >= o0[j]) & (y <= o1[j]));
+                const uint32_t inner_word =
+                    (ink_word & in_int) | (outline_word & ~in_int);
+                row[j] = (inner_word & in_inner)
+                       | (ink_word & in_outer & ~in_inner);
+            }
         }
     }
 
@@ -1610,13 +1695,41 @@ struct IterCellLayout {
     int                   upper_w = 0;
 };
 
+// THE CUE LABELS' SHAPING MEMO (2026-10-13, a cost cut that paints the same
+// pixels: the tablet's profile of a pinch put 3.5 % of all CPU on shaping the
+// visible labels at every flag-cache rebuild). A run is a pure function of
+// its font and its text — HarfBuzz on the face's own scaled font, the
+// tracking and the lifts all the font's (text_shape.h, gui_font.h) — so the
+// cue passes and the cell measurer look each run up here by the font (its
+// face and percent) and the text's bytes, and shape only a text not yet
+// seen. The answer is returned BY VALUE, so no caller holds into the memo
+// across the plain clear that bounds it (kCueRunMemoCap entries). GUI
+// thread only: every caller paints the flag cache or the editor on it.
+static text_shape::ShapedRun cue_label_run(const GuiFont& font,
+                                           std::string_view text) {
+    constexpr std::size_t kCueRunMemoCap = 4096;
+    static std::unordered_map<std::string, text_shape::ShapedRun> memo;
+    std::string key;
+    key.reserve(text.size() + 2 * sizeof(int));
+    const int face = static_cast<int>(font.face);
+    key.append(reinterpret_cast<const char*>(&face), sizeof face);
+    key.append(reinterpret_cast<const char*>(&font.percent),
+               sizeof font.percent);
+    key.append(text);
+    const auto it = memo.find(key);
+    if (it != memo.end()) return it->second;
+    if (memo.size() >= kCueRunMemoCap) memo.clear();
+    return memo.emplace(std::move(key), text_shape::shape_text_run(font, text))
+        .first->second;
+}
+
 static IterCellLayout measure_iter_cells(const GuiFont& font,
                                          const IterCellText& cells) {
     IterCellLayout l;
     if (!cells.present) return l;
     l.present   = true;
-    l.lower_run = text_shape::shape_text_run(font, cells.lower);
-    l.upper_run = text_shape::shape_text_run(font, cells.upper);
+    l.lower_run = cue_label_run(font, cells.lower);
+    l.upper_run = cue_label_run(font, cells.upper);
     l.lower_w   = static_cast<int>(std::nearbyint(l.lower_run.width_px));
     l.upper_w   = static_cast<int>(std::nearbyint(l.upper_run.width_px));
     return l;
@@ -2147,7 +2260,7 @@ void render_flag_boxes_impl(
             // marker's to author; the Windows emboss retired from cue text
             // 2026-10-10); a disabled marker's every segment does.
             const text_shape::ShapedRun payload =
-                text_shape::shape_text_run(font, label_of(i));
+                cue_label_run(font, label_of(i));
             const IterCellLayout cl = measure_iter_cells(font, cells);
             const bool present[3] = {pass_paints(MarkerCell::Payload),
                                      cells.present &&
@@ -2449,9 +2562,9 @@ void render_history_diff_flags(
             text_shape::ShapedRun run_removed;
             text_shape::ShapedRun run_added;
             if (f.removed)
-                run_removed = text_shape::shape_text_run(font, f.removed_text);
+                run_removed = cue_label_run(font, f.removed_text);
             if (f.added)
-                run_added = text_shape::shape_text_run(font, f.added_text);
+                run_added = cue_label_run(font, f.added_text);
             const text_shape::ShapedRun& run0 =
                 added_first ? run_added : run_removed;
             const text_shape::ShapedRun& run1 =

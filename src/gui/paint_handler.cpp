@@ -5047,7 +5047,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // Cached by (h, period, phase) for the process; a size change replaces the
 // cache whole. Cost cut only (architect 2026-10-12): it paints the rectangles'
 // pixels. Since 2026-10-13 it is THE MASK ROAD, taken only where the direct
-// road (stem_direct_target, below) is refused.
+// road (direct_pixel_target, render.h) is refused.
 static cairo_surface_t* dot_column_mask(int h, int period, int phase) {
     struct Entry {
         int h, period, phase;
@@ -5071,80 +5071,6 @@ static cairo_surface_t* dot_column_mask(int h, int period, int phase) {
     cache.push_back(Entry{h, period, phase, surface});
     return surface;
 }
-
-// THE STEMS' DIRECT ROAD (paint_marker_stems): the context's own target as
-// pixel words, and the clip it holds in device pixels. Taken only where a
-// direct write is provably the pixels cairo's mask op would leave: the target
-// an ARGB32 image surface with no group open on it, no device offset and unit
-// device scale; the operator OVER; the matrix a pure integral translation
-// (both platforms hand on_redraw a context translated by the integral frame
-// width, platform_wayland.cpp / platform_android.cpp's paint loops); the clip
-// a list of integral rectangles (cairo_copy_clip_rectangle_list, in user
-// space, so the translation carries them to device pixels; each is
-// intersected with the surface). Anything else answers false and the caller
-// takes the mask road. The surface is flushed here; the caller marks it dirty
-// after its last write.
-struct StemDirectTarget {
-    unsigned char* data = nullptr;
-    int stride = 0;
-    int dx = 0, dy = 0;               // user -> device: + (dx, dy)
-    std::vector<GuiRect> clip;        // device pixels, inside the surface
-    cairo_surface_t* surface = nullptr;
-};
-static bool stem_direct_target(cairo_t* cr, StemDirectTarget& out) {
-    cairo_surface_t* target = cairo_get_target(cr);
-    if (cairo_status(cr) != CAIRO_STATUS_SUCCESS) return false;
-    if (cairo_get_group_target(cr) != target) return false;
-    if (cairo_surface_get_type(target) != CAIRO_SURFACE_TYPE_IMAGE) return false;
-    if (cairo_image_surface_get_format(target) != CAIRO_FORMAT_ARGB32)
-        return false;
-    double ox = 0.0, oy = 0.0;
-    cairo_surface_get_device_offset(target, &ox, &oy);
-    double sx = 1.0, sy = 1.0;
-    cairo_surface_get_device_scale(target, &sx, &sy);
-    if (ox != 0.0 || oy != 0.0 || sx != 1.0 || sy != 1.0) return false;
-    if (cairo_get_operator(cr) != CAIRO_OPERATOR_OVER) return false;
-    cairo_matrix_t m;
-    cairo_get_matrix(cr, &m);
-    if (m.xx != 1.0 || m.yy != 1.0 || m.xy != 0.0 || m.yx != 0.0) return false;
-    if (m.x0 != std::floor(m.x0) || m.y0 != std::floor(m.y0)) return false;
-    if (std::fabs(m.x0) > 1e6 || std::fabs(m.y0) > 1e6) return false;
-    const int surf_w = cairo_image_surface_get_width(target);
-    const int surf_h = cairo_image_surface_get_height(target);
-    out.dx = static_cast<int>(m.x0);
-    out.dy = static_cast<int>(m.y0);
-    out.clip.clear();
-    cairo_rectangle_list_t* list = cairo_copy_clip_rectangle_list(cr);
-    bool ok = list->status == CAIRO_STATUS_SUCCESS;
-    for (int i = 0; ok && i < list->num_rectangles; ++i) {
-        const cairo_rectangle_t& r = list->rectangles[i];
-        if (r.x != std::floor(r.x) || r.y != std::floor(r.y) ||
-            r.width != std::floor(r.width) ||
-            r.height != std::floor(r.height)) {
-            ok = false;
-            break;
-        }
-        const double x0 = std::max(r.x + out.dx, 0.0);
-        const double y0 = std::max(r.y + out.dy, 0.0);
-        const double x1 = std::min(r.x + r.width + out.dx,
-                                   static_cast<double>(surf_w));
-        const double y1 = std::min(r.y + r.height + out.dy,
-                                   static_cast<double>(surf_h));
-        if (x1 > x0 && y1 > y0)
-            out.clip.push_back(GuiRect{static_cast<int>(x0),
-                                       static_cast<int>(y0),
-                                       static_cast<int>(x1 - x0),
-                                       static_cast<int>(y1 - y0)});
-    }
-    cairo_rectangle_list_destroy(list);
-    if (!ok) return false;
-    cairo_surface_flush(target);
-    out.data = cairo_image_surface_get_data(target);
-    out.stride = cairo_image_surface_get_stride(target);
-    out.surface = target;
-    return out.data != nullptr;
-}
-
 
 // EVERY ENABLED MARKER STEMS, ALWAYS (row 5, architect): the per-frame waveform
 // overlay that replaced the singleton selected-marker stem. The full contract —
@@ -5201,7 +5127,7 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     // band's top, one device px, at the stem's column — and the same column
     // gate (fill_dotted_waveform_line's) applies on both roads.
     //   THE DIRECT ROAD (2026-10-13): each dot's word stored straight into
-    // the context's target inside its clip (stem_direct_target says when
+    // the context's target inside its clip (direct_pixel_target says when
     // that is cairo's own result). The tablet's profile of a pan put 16 % of
     // all CPU here (31 % with the lamp dark) while the road below stood:
     // pixman pays its per-scanline setup on every row of a mask a pixel
@@ -5216,8 +5142,8 @@ void GuiPaintHandler::paint_marker_stems(cairo_t* cr, const GuiRect& area) {
     // one-px-wide A8 mask, laid at the stem's column with the source color;
     // an opaque source through a 0 / 255 mask is the rectangles' pixels
     // exactly.
-    StemDirectTarget direct;
-    const bool direct_ok = stem_direct_target(cr, direct);
+    DirectPixelTarget direct;
+    const bool direct_ok = direct_pixel_target(cr, direct);
     const auto dotted_stem = [&](int col, int phase, GuiColor color) {
         if (col < 0 || col >= area.w || ps.cue_dot_period <= 0) return;
         const int period = ps.cue_dot_period;

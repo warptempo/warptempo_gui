@@ -60,6 +60,10 @@ void render_waveform_to_cache_surface(
     // This is the LAST cairo drawing on the surface: render_waveform writes the
     // pixel words directly, so the context is destroyed before those CPU writes
     // begin (render_waveform still flushes defensively, per its contract).
+    // THE WRITE PASS DEPENDS ON THIS CLEAR covering the WHOLE surface: it
+    // stores the zero word wherever no bar covers a pixel of its rows, which
+    // is the picture only because the clear left zeros there (the clear
+    // contract, render_waveform's write pass, render.cpp).
     {
         cairo_t* ccr = cairo_create(dest);
         cairo_set_operator(ccr, CAIRO_OPERATOR_CLEAR);

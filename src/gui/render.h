@@ -2813,6 +2813,31 @@ void paint_relief_line_frame(cairo_t* cr, const GuiRect& r, GuiColor c);
 void paint_relief_etched_hline(cairo_t* cr, int x, int y, int w);
 // One flat cell rect in `c` — the face fill every relief caller lays first.
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c);
+
+// THE DIRECT ROAD (2026-10-13): the context's own target as pixel words, and
+// the clip it holds in device pixels, for a painter that writes the words
+// cairo would leave instead of asking cairo for them — the marker stems'
+// dots (paint_marker_stems, paint_handler.cpp) and the cues' triangles
+// (paint_ce_cue_triangle, cool_edit_paint.cpp), each stating at its site why
+// its words are cairo's. Taken only where such a write can be cairo's
+// result: the target an ARGB32 image surface with no group open on it, no
+// device offset and unit device scale; the operator OVER; the matrix a pure
+// integral translation (both platforms hand on_redraw a context translated
+// by the integral frame width, platform_wayland.cpp / platform_android.cpp's
+// paint loops; the flag cache's is the identity); the clip a list of
+// integral rectangles (cairo_copy_clip_rectangle_list, in user space, so the
+// translation carries them to device pixels; each is intersected with the
+// surface). Anything else answers false and the caller takes cairo's road.
+// The surface is flushed here; the caller marks it dirty after its last
+// write.
+struct DirectPixelTarget {
+    unsigned char* data = nullptr;
+    int stride = 0;
+    int dx = 0, dy = 0;               // user -> device: + (dx, dy)
+    std::vector<GuiRect> clip;        // device pixels, inside the surface
+    cairo_surface_t* surface = nullptr;
+};
+bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // THE CHECKED DITHER (architect 2026-10-02, Windows' checked toolbar button
 // and its scroll-bar track): `r` filled as a checkerboard of `lit` and
 // `ground`, both theme roles the caller passes (Hilight and the ground at
@@ -2998,9 +3023,12 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // bar's word where the inner covers it, else the outer's (the inner over the
 // outer where they overlap is the magnification rule's order) — a priority,
 // so replacing is correct and idempotent, and the surface is written
-// ROW-MAJOR, one row at a time along memory, after every column's rows are
-// gathered (2026-10-13, a cost cut; the identity with the column-by-column
-// order it replaced is stated once, at the write pass in render.cpp) — the
+// ROW-MAJOR and BRANCH-FREE, one row at a time along memory, after every
+// column's rows are gathered, storing the zero word wherever no bar covers a
+// pixel of the rows it writes — the caller's whole-surface clear left that
+// word there (2026-10-13, cost cuts; the identity with the column-by-column
+// order it replaced, and the clear contract it rests on, are stated once, at
+// the write pass in render.cpp) — the
 // max-compositing that the segments needed (they wrote into an
 // already-rendered neighbour) went with them.
 //

@@ -212,7 +212,9 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // apex on the u-wide cell's centre, col + u / 2, until ~14:35.)
 // `shadow` is the shadow's color: `ce_cue_shadow` for a live cue and the
 // playhead's head, the faded `ce_off_cue_shadow` for a disabled cue
-// (2026-10-10, cool_edit_derive.h's faded look).
+// (2026-10-10, cool_edit_derive.h's faded look). Where the target allows it
+// the two fills are one cached coverage composited by cairo's own arithmetic
+// (2026-10-13, the same pixels; CueTriangleCoverage, cool_edit_paint.cpp).
 void paint_ce_cue_triangle(cairo_t* cr, int col, int top, GuiColor color,
                            GuiColor shadow);
 
