@@ -329,16 +329,17 @@ struct WaveformCache {
 // y, `origin_y`) through the top strip's bottom (the canvas's top frame row's
 // foot) — the ruler lane, the marker lane and the frame row, 90 device rows
 // at 300 % where the whole strip from row 0 was 345. Every cue pixel is
-// placed off the marker lane's top (paint_cues, render.cpp: the face boxes,
-// the triangles, the text on cue_baseline_px with its shadow one quantum
-// down); the only ink that can leave the lane is a glyph's overshoot, above
-// the baseline at most the program face's em (THE PREMISE: FreeType's
-// outline bounds never pass the em for the bundled face), which the lane's
-// rows above the baseline and the ruler lane above them hold with room to
-// spare (the surface's top stands more than twice the em over the baseline:
-// 73 rows against a 30.5-row em at 300 %, 24 W against 10.2 at 100 %), and
-// below it the descent and the shadow's quantum inside the lane's own rows.
-// maybe_rebuild_flag_cache asserts both bounds at every rebuild.
+// inside the marker lane's rows BY THE PAINTERS' OWN CLIPS, not by a bound on
+// the font: in paint_cues (render.cpp) every label's face box and its text,
+// shadow and ink alike, are painted under a clip of the label's span
+// rectangles, each the lane's top row and cue_fill_h_px() tall (the marker
+// lane's composite height), so no cached label pixel leaves those rows
+// however far a glyph overshoots; the triangles stand on the lane's own rows
+// (CueTriangleCoverage's box, cool_edit_paint.cpp, the shadow one quantum
+// right and never down); and the flag editor and its riding cells paint
+// later onto the frame, never into this surface. The ruler lane above is in
+// the band as its clean upper boundary, with margin, not because anything
+// there is inked by a cue; the frame row is the strip's own foot.
 // THE PAINTERS STILL WORK IN CLIENT COORDINATES: the rebuild translates its
 // context by -origin_y and hands each pass the band the surface holds as its
 // `top_strip_area`, so every published hit rect and stem is client-coordinate
@@ -352,8 +353,8 @@ struct WaveformCache {
 // a translation in the font's ctm, and both platforms already hand on_redraw
 // a context translated by an integral frame; the direct road,
 // direct_pixel_target, carries the translation and the clip list through);
-// the pass's clip loses only rows no painter can ink (the em bound,
-// asserted); and the blit puts the same bytes on the same client rows — the
+// each pass's clip loses only rows above the marker lane, which its own
+// span clip (paint_cues) already excluded; and the blit puts the same bytes on the same client rows — the
 // rows above origin_y held only transparent pixels, which the OVER blit left
 // untouched.
 struct FlagCache {

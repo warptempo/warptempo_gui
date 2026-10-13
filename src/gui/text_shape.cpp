@@ -205,8 +205,9 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
     if (run.glyphs.empty()) return;
     // THE PAINTER'S ONE REUSED PLACEMENT BUFFER (2026-10-13, a cost cut that
     // paints the same pixels): every paint refills it (place_glyphs) instead
-    // of allocating a vector of its own, which a cue label did twice (its
-    // shadow, then its ink) and the ruler's labels once each. It keeps its
+    // of allocating a vector of its own, which both label kinds did twice
+    // (a cue label and the ruler's major label each place their shadow and
+    // their ink as two separate runs). It keeps its
     // capacity, so the steady state allocates nothing. NOTHING ELSE TOUCHES
     // IT: the fill and the cairo_show_glyphs that reads it are back to back
     // here, this function calls only cairo between them and is never

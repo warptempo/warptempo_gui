@@ -10,7 +10,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -1211,7 +1210,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     // THE SURFACE'S BAND (2026-10-13, FlagCache's head): the window's width,
     // the client rows from the ruler lane's top through the top strip's
-    // bottom — the rows the cues' ink can reach.
+    // bottom — the rows the cues' ink can reach, by the painters' own clips
+    // (FlagCache's head).
     const GuiRect top_strip = top_strip_area(app);
     const int origin_y  = top_ruler_row_area(app).y;
     const int surface_w = top_strip.w;
@@ -1364,26 +1364,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // which the fingerprint keys (fp_gui_scale_percent, fp_area_w).
     const FlagLaneRects flag_lanes{top_marker_row_area(app),
                                    waveform_area(app).x};
-
-    // THE TRIPWIRES OF THE BAND (class 4; FlagCache's head carries the bound
-    // and the premise): every cue row is placed off the marker lane's top,
-    // the label's baseline at cue_baseline_px. ABOVE, a glyph's ink reaches
-    // at most the program face's em over the baseline, which must stand at
-    // or under the surface's first row; BELOW, the recorded descent and the
-    // label shadow's one quantum must end at or above the surface's last row
-    // (true by the lane's own geometry; stated here beside its twin).
-    {
-        const GuiFont program = gui_font(GuiFace::Program);
-        [[maybe_unused]] const int baseline =
-            flag_lanes.marker_lane.y + cue_baseline_px();
-        [[maybe_unused]] const int em_rows = static_cast<int>(std::ceil(
-            gui_face_em_px(GuiFace::Program) * gui_font_scale(program)));
-        [[maybe_unused]] const int descent_rows =
-            static_cast<int>(std::ceil(gui_font_descent_px(program)));
-        assert(baseline - em_rows >= origin_y);
-        assert(baseline + descent_rows + cue_unit_px() <=
-               origin_y + surface_h);
-    }
 
     cairo_t* ccr = cairo_create(flag_cache.surface);
     cairo_save(ccr);
