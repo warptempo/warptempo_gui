@@ -585,19 +585,14 @@ bool read_only_key_blocked(const AppState& app, GuiKey key, GuiInputState mods);
 
 // THE ITERATION LOCK'S ALLOWLIST — the same gate for the other reason
 // (architect 2026-09-10). Returns true if key+mods should be dropped while
-// GRID ITERATIONS stands; the gate asks exactly one of the two lists,
-// because the two locks are MUTUALLY EXCLUSIVE (authoring_locked,
-// app_state.h — a lit lamp cannot be locked and a locked tab cannot be
-// lit). It is written as
+// GRID ITERATIONS stands; the gate asks both lists, the two locks
+// composing on a locked tab reached by a switch under the lamp
+// (authoring_locked, app_state.h, 2026-10-13). It is written as
 // read_only_key_blocked's answer plus its own deltas rather than as a
 // second copy of that list, and both deltas are stated at the definition.
 // Input routing like it, judging no data; the composed predicate
 // authoring_locked (app_state.h) and its card authoring_lock_card
 // (notifications.h) add no class.
-// (A SECOND PREDICATE STOOD BESIDE IT until 2026-09-10, spelling delta (a)
-// on its own so the gate could ask it BESIDE the wider list on a locked
-// tab. Bare `o`'s refusal under a lit lamp made that state unreachable and
-// the predicate went with it, its members becoming plain first tests.)
 bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
                                 GuiInputState mods);
 

@@ -490,14 +490,10 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // than the key and its modifiers, so this header needs nothing of the
 // speller's; every caller reaches spell_chord (gui_input.h) for itself.
 //
-// TWO CALLERS, and the second is why it is a composer at all: the keyboard
-// gate (on_key), whose subject is the ACTIVE tab's bit, and BARE `i`'s OWN
-// ARM (input_key_dispatch.cpp), whose subject is the PIECE — grid iterations
-// refuse to light while EITHER tab is locked, the two A/B tabs sharing both
-// marker stores (any_tab_read_only, app_state.h). The two subjects differ and
-// the SENTENCE MUST NOT: one press of `i` says one thing whichever tab is the
-// locked one, which is exactly what a second spelling of this English would
-// have drifted away from.
+// ONE CALLER, the keyboard gate (on_key), whose subject is the ACTIVE tab's
+// bit — bare `i`'s ON edge included (architect 2026-10-13: the lamp's
+// exclusion is the active tab's like every other read-only refusal,
+// authoring_locked, app_state.h).
 //
 // THE TAIL IS A CONSTANT IN app_state.h SINCE 2026-09-10
 // (kReadOnlyChordCardSuffix), for that header's own third-home reason: a FACE
@@ -519,12 +515,11 @@ inline std::string read_only_chord_card(const std::string& chord) {
 // it stands. It is the read-only sentence's sibling all the same, and the
 // composer below is where the two meet.
 
-// THE ONE COMPOSER THE LOCK'S CARD FORKS AT, and the fork CHOOSES rather than
-// ranks: the two locks are MUTUALLY EXCLUSIVE since 2026-09-10
-// (authoring_locked, app_state.h — a lit lamp cannot be locked and a locked
-// tab cannot be lit), so exactly one arm can ever be reached. It was ORDERED
-// until then, read-only first, a tab being lockable while the lamp was already
-// lit; the body did not change with the ruling, only what it means.
+// THE ONE COMPOSER THE LOCK'S CARD FORKS AT, and READ-ONLY RANKS FIRST: the
+// two locks compose since 2026-10-13 (authoring_locked, app_state.h — the
+// lamp lit on a writable tab, a switch under it onto a locked one), and
+// there the active tab's lock is the reason the user can fix where he
+// stands, so its sentence is the one said.
 // Its readers are TWO of the three
 // sites that KNOW THEIR ACT and so need no chord in the sentence — the
 // settings editor's engine-key commit arm and the render player's Load in

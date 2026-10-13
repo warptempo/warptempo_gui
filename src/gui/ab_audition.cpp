@@ -57,10 +57,9 @@ bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
 // all but the act's STOP: a standing sequence is transport_session_live, which
 // the face reads ahead of this and answers with its lit STOP glyph, so a press
 // on that face always does something. It sits beside start() so the two read as
-// one; a gate added there must be added here. (AN ITERATION-LOCK TAB GATE
-// arrived that way on 2026-09-10 and left the same day, with the per-tab
-// switch refusal it read: the lamp cannot be lit while any tab is locked, so
-// there is no locked tab for this act to switch into.) THE DEVICE TERM IS A
+// one; a gate added there must be added here. (NO ITERATION-LOCK TAB GATE:
+// no tab switch is refused under a lit lamp, into a locked tab included,
+// architect 2026-10-13.) THE DEVICE TERM IS A
 // READ,
 // NEVER A REOPEN, AND THE READ IS THE NEVER-CAME-UP HALF (2026-09-02, the
 // truthful-buttons rule): start() asks ensure_device_available_for_play,
@@ -102,13 +101,10 @@ void GuiAbAudition::start() {
         playback_lifecycle.stop_playback_if_playing();
         return;
     }
-    // (AN ITERATION-LOCK GATE STOOD HERE for one afternoon on 2026-09-10,
-    // ahead of the device, refusing the act while the OTHER tab was locked
-    // under a lit lamp: the act switches tabs and an interrupted audition
-    // rests there, so it installed that composed state as durably as Ctrl+Tab
-    // did. The piece-wide exclusion ruled that evening deleted the state
-    // itself — the lamp cannot be lit while ANY tab is locked — so the act
-    // has nothing to ask, and the ask-ahead above lost the same term.)
+    // NO ITERATION-LOCK GATE, though the act switches tabs and an
+    // interrupted audition rests on the other one: no tab switch is refused
+    // under a lit lamp, INTO A LOCKED TAB included (architect 2026-10-13;
+    // the composed state's account is at authoring_locked, app_state.h).
     // THE DEVICE IS THE PREFLIGHT'S FIRST QUESTION (2026-08-30), AND THE
     // QUESTION REOPENS IT (2026-09-02, architect: a dead AAudio stream
     // is closed and reopened at this press through

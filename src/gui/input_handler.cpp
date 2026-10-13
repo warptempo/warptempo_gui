@@ -878,12 +878,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // MINUS THE Ctrl+Shift+Tab PAIRED MARCH, whose own tab switch clears the
     // selection, so its second step could never walk the bound cells honestly
     // (architect 2026-09-10; Ctrl+Tab stays admitted in every state, the two
-    // tabs sharing both stores) — MINUS BARE `o`, the
-    // read-only toggle (architect 2026-09-10: the padlock refuses under a lit
-    // lamp, half of what makes the two locks mutually exclusive; the other
-    // half is bare `i`'s own arm, which refuses to LIGHT the lamp while
-    // either tab is locked and is no allowlist's business, any_tab_read_only
-    // in app_state.h) —
+    // tabs sharing both stores) — MINUS BARE `o` ON A WRITABLE TAB, the
+    // read-only toggle's lock direction (architect 2026-09-10; narrowed
+    // 2026-10-13: the padlock cannot lock the tab the lamp stands lit on, and
+    // its unlock is admitted) —
     // AND PLUS FOUR ADMISSIONS: bare `i` (the off edge must always be
     // reachable — the BPM opener, bare `m` then and Ctrl+B now, was a fifth
     // until 2026-09-10, when the architect ruled its own swap-the-mode exit
@@ -896,16 +894,17 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // no interest in it; the TWO ALT-BEARING PASTES stay refused). That
     // list has ONE owner, iteration_lock_key_blocked (input_key_dispatch.cpp),
     // written as this one's complement plus its deltas rather than as a second
-    // copy. EXACTLY ONE OF THE TWO LISTS IS ASKED PER PRESS, the two locks
-    // being mutually exclusive (the fork below states it). BARE `h` IS REFUSED UNDER
+    // copy. BOTH LISTS ARE ASKED, the two locks composing on a locked tab
+    // reached by a switch under the lamp (the fork below states it). BARE `h`
+    // IS REFUSED UNDER
     // THAT LOCK TOO and is not on either list:
     // the history vocabulary is claimed a dispatch above this gate, so the
     // view's entry arm carries the refusal.
     //   - Bare o                 → toggle read-only off (escape chord).
-    //                              THE ITERATION LIST SUBTRACTS IT (2026-09-10):
-    //                              the padlock cannot lock a tab under a lit
-    //                              lamp, which is what keeps the two locks
-    //                              from ever standing together
+    //                              THE ITERATION LIST SUBTRACTS ITS LOCK
+    //                              DIRECTION (2026-09-10; 2026-10-13): the
+    //                              padlock cannot lock the tab the lamp
+    //                              stands lit on
     //   - Space (no mods)        → playback toggle
     //   - Left/Right (bare)      → playhead step, and ONLY with an
     //                              EMPTY selection (the waveform lane): with one
@@ -1006,29 +1005,20 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (iteration_lock_key_blocked, input_key_dispatch.cpp, where both deltas
     // are stated).
     //
-    // THE TWO REASONS ARE MUTUALLY EXCLUSIVE (architect 2026-09-10, ruling
-    // bare `o` refused under a lit lamp), which is why the fork below is a
-    // plain either/or: NO TAB can be locked while the lamp is lit — the
-    // padlock is on the iteration list's refusals and the settings editor's
-    // typed self-lock refuses beside it for BOTH tabs' keys
-    // (settings_editor.cpp) — and THE LAMP CANNOT BE LIT WHILE ANY TAB IS
-    // LOCKED, bare `i`'s own arm asking any_tab_read_only (app_state.h)
-    // beyond what this gate's per-tab read can say. So
-    // at most one of the two terms below is ever true, and the card fork
-    // CHOOSES the sentence rather than ranking it. THE EXCLUSION IS
-    // PIECE-WIDE for the subject's sake: the two A/B tabs share both marker
-    // stores, so a lock on either is a lock on the markers iterations author.
-    //
-    // IT WAS ORDERED UNTIL THAT MORNING, read-only first, because `i` then `o`
-    // reached the composed state: there the wider list applied, the iteration
-    // side's admissions (bare `i`, bare `m`, the clipboard copy, the
-    // bound axis) stayed refused, and the lamp could not be put out until the
-    // tab was unlocked. That fork asked delta (a) BESIDE the wider list — a
-    // wider list cannot answer for a refusal it does not carry, and read-only
-    // ADMITS the column switch and the paired march — through a predicate of
-    // delta (a)'s own. Both the carve-out and that predicate are gone with the
-    // state they described — as is the per-tab switch refusal that stood
-    // between the two rulings for one afternoon of the same day.
+    // THE TWO REASONS COMPOSE AND READ-ONLY RANKS FIRST (architect
+    // 2026-10-13: the lamp lights on a writable ACTIVE tab whatever the other
+    // tab's bit, so a tab switch under it can stand on a locked tab; the
+    // account is at authoring_locked, app_state.h). The verdict drops a chord
+    // either list drops — the wider list carries the read-only refusals, the
+    // iteration list delta (a), which read-only admits — and the card names
+    // the read-only lock whenever its list is the one that said no: on a
+    // locked tab that is the reason the user can fix there. THE OFF EDGE IS
+    // NEVER EATEN: bare `i` under a lit lamp is the wider list's own
+    // state-dependent admission (is_iteration_off_edge, read_only_key_blocked)
+    // and the iteration list admits it too, so the lamp goes out from either
+    // tab. The iteration side's other admissions (the bound axis, the undo
+    // pair, the clipboard copy, the tie, bare `[`) stay refused on a locked
+    // tab, the wider list eating them as it does with the lamp dark.
     if (authoring_lock_refuses_chord(key, mods)) {
         // THE LOCK SAYS SO, AND THE CARD NAMES THE CHORD (architect
         // 2026-08-30): "<chord> is not available on a read-only tab", said
@@ -1036,10 +1026,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // kept over a bare "This tab is read-only" because it names what was
         // pressed, which is what the user is looking for after a press that
         // did nothing. THE ENGLISH IS read_only_chord_card's (notifications.h)
-        // and not this site's, because bare `i`'s own arm says it too: that
-        // arm's subject is the PIECE where this gate's is the ACTIVE TAB
-        // (any_tab_read_only, app_state.h), and one press of `i` has to say
-        // one thing whichever tab is the locked one.
+        // and not this site's: the English has one owner beside its knowing
+        // siblings (kTabReadOnlyCard, notifications.h).
         //
         // THE SECOND CLASS IT WAS BUILT FOR HAS GONE SILENT — TWICE OVER, in
         // two rulings a day apart — and with it the cost the wording was chosen
@@ -1103,9 +1091,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // player's Load in place, and the `h` view's bare `v` fork above.
         //
         // AND THE CARD FORKS ON THE REASON AT THIS ONE SITE (architect
-        // 2026-09-10), on the REASON THAT ACTUALLY STOOD — which since that
-        // morning is the only reason standing, the two locks being mutually
-        // exclusive (the fork's own note above). The
+        // 2026-09-10), on the REASON THAT ACTUALLY STOOD — the read-only
+        // list first where both stand (2026-10-13, the fork's own note
+        // above). The
         // read-only sentence names the chord for the reason
         // above — this gate drops unbound chords with bound ones, so it has to
         // say which it ate. THE ITERATION SENTENCE NAMES THE WAY OUT INSTEAD
@@ -2493,7 +2481,7 @@ std::string GuiInputHandler::modal_editor_swallow_card(GuiKey key,
 }
 
 // THE AUTHORING LOCK'S KEYBOARD VERDICT AND ITS CARD (the ruling, the
-// mutual exclusion that makes the fork an either/or, and the card's two
+// composition that ranks the read-only sentence first, and the card's two
 // sentences are stated at the gate in on_key): true when the lock drops the
 // chord, the card raised for a bound chord alone.
 bool GuiInputHandler::authoring_lock_refuses_chord(GuiKey key,

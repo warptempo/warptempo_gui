@@ -301,11 +301,12 @@ void GuiSettingsEditor::choice_pick(int index) {
 //     of the no-op gate: the chord refuses whichever column it is pressed in,
 //     so a typed same-column commit is that same press asking the same
 //     question, and the mode is lit for the column it was pressed in.
-//   * `tab_X_read_only=` — bare `o`, PIECE-WIDE — ONE DIRECTION, the gate
-//     standing BEHIND the no-op gate and asking the REQUESTED value: a lock
-//     of either tab refuses while an UNLOCK commits, an unlock only widening
-//     what is reachable, and an unchanged value is the ordinary no-op with
-//     nothing for the lock to exclude.
+//   * `tab_X_read_only=` — bare `o`, THE ACTIVE TAB'S KEY ALONE (architect
+//     2026-10-13) — ONE DIRECTION, the gate standing BEHIND the no-op gate
+//     and asking the REQUESTED value: a lock of the active tab refuses while
+//     an UNLOCK commits, an unlock only widening what is reachable; the
+//     other tab's key commits either way, the lamp's exclusion being the
+//     active tab's; and an unchanged value is the ordinary no-op.
 //   * `active_audio_view=` — the audio half of the three selectors (bare `t`, the
 //     individual toggle, is gone), since 2026-09-13, when grid iterations
 //     became target-view-only — asking the REQUESTED value, `S` refused:
@@ -528,12 +529,9 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     }
     if (key == "active_tab_view") {
         if (gv.c == app.active_tab_view) { unchanged(); return true; }
-        // (AN ITERATION-LOCK REFUSAL STOOD HERE for one afternoon on
-        // 2026-09-10, this arm being the typed spelling of Ctrl+Tab and that
-        // chord having been refused INTO A LOCKED TAB. The piece-wide
-        // exclusion ruled that evening deleted the state it answered — the
-        // lamp cannot be lit while any tab is locked — so this commits under
-        // a lit lamp exactly as Ctrl+Tab does.)
+        // NO ITERATION-LOCK REFUSAL: this commits under a lit lamp exactly
+        // as Ctrl+Tab does, INTO A LOCKED TAB included (architect 2026-10-13;
+        // authoring_locked, app_state.h).
         // Exactly the Ctrl+Tab pair.
         active_views.switch_active_tab_view_to(gv.c);
         target_render.trigger();
@@ -647,24 +645,22 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // standing right there. Bare `;` still cannot open the editor on a
         // locked tab at all, being off that allowlist one level up.
         if (gv.b == band.read_only) { unchanged(); return true; }
-        // THE ITERATION LOCK REFUSES A LOCK OF EITHER TAB (architect
-        // 2026-09-10), the typed spelling of bare `o`'s own refusal and
-        // scoped as the exclusion is scoped — PIECE-WIDE, not per tab: the
-        // two A/B tabs SHARE both marker stores, so a lock ANYWHERE is a
-        // lock on the markers the bound cells would tune, and bare `i` refuses
-        // to light the lamp while either bit stands (any_tab_read_only,
+        // THE ITERATION LOCK REFUSES A LOCK OF THE ACTIVE TAB (architect
+        // 2026-09-10; scoped to the active tab 2026-10-13), the typed
+        // spelling of bare `o`'s own refusal and scoped as the exclusion is
+        // scoped — the ACTIVE TAB's, like every other read-only refusal
+        // (architect 2026-10-13: "allow iterations mode … on a tab if it does
+        // not have readonly set, even if the other does"; authoring_locked,
         // app_state.h). A REMOTE lock (`tab_B_read_only=true` typed from tab
-        // A) therefore refuses with a self-lock; it was admitted for one
-        // afternoon that day, under a per-tab rule in which the switch INTO
-        // the locked tab is what refused afterwards, and that rule is gone.
-        // AN UNLOCK IN EITHER DIRECTION COMMITS under a lit lamp: it can only
-        // widen what is reachable, which is why the `gv.b` term is the whole
-        // of the direction test. The refused field plus card, this surface's shape,
-        // with the sentence forked at the one composer. Without this arm the
-        // editor — which the Settings dropdown opens under a lit lamp, the
-        // lock governing the keys and not the surface — would be a second
-        // road onto the state the ruling exists to delete.
-        if (gv.b && app.iteration_mode_enabled) {
+        // A) therefore COMMITS under a lit lamp, as the lamp could have been
+        // lit with tab B already locked. AN UNLOCK IN EITHER DIRECTION
+        // COMMITS: it can only widen what is reachable, which is why the
+        // `gv.b` term is the whole of the direction test. The refused field
+        // plus card, this surface's shape, on the gate's own sentence.
+        // Without this arm the editor — which the Settings dropdown opens
+        // under a lit lamp, the lock governing the keys and not the surface —
+        // would be a second road onto the state the padlock refuses.
+        if (gv.b && active && app.iteration_mode_enabled) {
             text_editor::refuse(app.settings_editor);
             viewport.invalidate_modal_dialog_area();
             std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
