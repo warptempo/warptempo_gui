@@ -42,16 +42,30 @@ the NEON row copy did. This is the hazard §6 names, and Milestone 2's
 reason: once the canvas leaves the upload (§3.5) a step uploads ~1.4 MB and
 the plate blit, the canvas fills and the present copy leave the CPU frame.
 
-MILESTONE 2 AND THE FACE-BOX CUT MEASURED the same way, his pinches of
-2026-10-13 (the frame rate per second depends on the gesture; the latency
-and the paint are the stable columns):
+MILESTONE 2 AND THE FACE-BOX CUT MEASURED with the same counter, his pinches
+of 2026-10-13 (the frame rate per second depends on the gesture; the latency
+and the paint are the stable columns). THE SAMPLE SELECTION DIFFERS from the
+first table above, which takes every second with touch motion at all
+(`motion > 0`, 99 seconds); this table takes the seconds of ACTIVE gesture,
+`motion >= 50` touch events in the second, each value the unweighted mean of
+the per-second means over the intervals counted in its row. That is why its
+7d275895 row (the same archived log, 95 of the 99 seconds) reads 52 / 18.6 /
+9.0 where the first table reads 50 / 18.4 / 8.9; every row reproduces from its
+archived log under the stated filter:
 
-| build | frames/s mean | max | latest touch → post | paint per frame |
-|---|---|---|---|---|
-| 7d275895, the CPU canvas | 52 | 87 | 18.6 ms | 9.0 ms |
-| ce3cee66, the texture alone | 46 | 81 | 22.0 ms | 12.9 ms |
-| 2b12b9fb, the GPU canvas | 56 | 90 | 10.9 ms | 7.5 ms |
-| 4c991a4b, + the face boxes over their unmasked spans | 52 | 87 | 10.0 ms | 6.7 ms |
+| build | intervals | frames/s mean | max | latest touch → post | paint per frame |
+|---|---|---|---|---|---|
+| 7d275895, the CPU canvas | 95 | 52 | 87 | 18.6 ms | 9.0 ms |
+| ce3cee66, the texture alone | 55 | 46 | 81 | 22.0 ms | 12.9 ms |
+| 2b12b9fb, the GPU canvas | 48 | 56 | 90 | 10.9 ms | 7.5 ms |
+| 4c991a4b, + the face boxes over their unmasked spans | 40 | 52 | 87 | 10.0 ms | 6.7 ms |
+
+(Under `motion > 0` the 2b12b9fb run is 51 seconds at 52.6 frames/s, 10.5 ms,
+7.3 ms, and the 4c991a4b run 41 seconds at 51.7, 10.0, 6.7; ce3cee66's 55
+seconds all qualify under both filters, so its row is the same either way.
+The latency and paint orderings of the four builds hold under either filter;
+the frames-per-second ordering does not, 7d275895 and 4c991a4b tying at 52
+under `motion >= 50` but reading 50.2 against 51.7 under `motion > 0`.)
 
 His verdict on the glass (2026-10-13 ~14:50): the pinch over ~670 markers
 "feels close to flagless history walk". The profile of 2b12b9fb under

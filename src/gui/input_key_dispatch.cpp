@@ -1171,7 +1171,9 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // tail is the whole point of this call, the mode's lane content
 // (app.history_mode.flags plus the two pointer stashes over it) being that
 // rebuild's history arm's output. THIS CALL FLUSHES IT IN THE PRESS
-// (2026-10-13), where the view switch leaves it to the pre-paint hook: the
+// (2026-10-13), where a view switch OUTSIDE the history mode leaves it to the
+// pre-paint hook (inside the mode the selector arm at on_key's bare 1 / 2 / 3
+// flushes in its press too, as the paragraph above records): the
 // edge has just DROPPED the list (drop_lane_stash_across_history_edge), and
 // its keyboard and click readers (AppState::HistoryMode::flags names them)
 // in a later event of the same drain must find the arriving list, not the
