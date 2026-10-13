@@ -1405,6 +1405,8 @@ The `<activity>` carries `android:colorMode="wideColorGamut"` and
 `adopt_window` tags the buffers `ADATASPACE_DISPLAY_P3` beside their format, so
 the display hardware treats the app's layer as it treats a gallery viewer's
 (the rule and the measurement are at the call and platform_android.cpp's head).
+Since 2026-10-13 that call is the cpu canvas's; the gl canvas tags the EGL
+surface's colorspace instead (§16).
 
 ## 13. The on-screen keyboard (M5, 2026-08-27)
 
@@ -1736,3 +1738,59 @@ Nothing has run on the device: the APK is the planner's. The arm64 renders
 were not compared pixel for pixel with the laptop's (resvg's README claims
 identical output across platforms; tiny-skia has per-architecture SIMD
 pipelines, so the claim is the project's, unchecked here).
+
+## 16. The GL canvas, milestone 1 — EGL / GLES 3.0, the backbuffer as one texture (2026-10-13)
+
+The window is presented through EGL and GLES 3.0 instead of the
+`ANativeWindow_lock` copy: the persistent cairo backbuffer is uploaded into ONE
+`GL_RGBA8` texture by damage rect and drawn whole every swap as one full-screen
+triangle whose fragment shader places each texel unfiltered (`texelFetch`, the
+row flipped, cairo's B,G,R,A swizzled to R,G,B, alpha 1). The design record is
+`docs/engineering/gpu_canvas_2026_10.md` (§3.1, §3.2, §3.8, §3.9, §3.11,
+§3.12, §4.1); `GuiPlatform::present` and `ensure_gl_surface`
+(`platform_android.cpp`) own the rules. The picture is meant to be
+byte-identical to the CPU copy by construction; the screencap comparison is
+the proof (the design record's §5).
+
+### 16.1 Two builds, one choice
+
+`WARPTEMPO_ANDROID_CANVAS` (CMakeLists.txt): `gl`, the product, or `cpu`, the
+reference — today's road byte for byte, the copy with its R/B swap and the
+two adoption calls (`setBuffersGeometry`, `setBuffersDataSpace`). A build
+choice, never a device key. `build_apk.sh` and `configure.sh` read
+`WT_CANVAS` (default `gl`):
+
+    bash android/app/build_apk.sh                 # gl: android/app/build-android/warptempo.apk
+    WT_CANVAS=cpu bash android/app/build_apk.sh   # cpu: android/app/build-android-cpu/warptempo-cpu.apk
+
+Both share the package and the key, so installing one replaces the other.
+
+### 16.2 What changed at the seams
+
+- **Adoption**: no `setBuffersGeometry`, no `setBuffersDataSpace` (EGL owns
+  the format and the dataspace); `setFrameRate(90)` unchanged. One display,
+  one exact RGBA 8/8/8/8 ES 3 window config and one ES 3 context per process,
+  made at the first adoption; one surface per window, created with
+  `EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT` — on `EGL_BAD_ATTRIBUTE` /
+  `EGL_BAD_MATCH` retried plain, the window sRGB, one line (the data-space
+  refusal's twin). Every other setup failure is fatal. The EGL vendor and
+  version, the GL renderer and version and the P3 verdict are logged once.
+- **Present**: every rect of the damage list uploaded in place from the cairo
+  surface (`GL_UNPACK_ROW_LENGTH` = the stride), then the draw and
+  `eglSwapBuffers` (interval 1), which blocks where `ANativeWindow_lock`
+  blocked — the one-wakeup loop is unchanged. A lost context is fatal; any
+  other failed swap keeps the damage.
+- **Window loss**: the surface is destroyed at `APP_CMD_TERM_WINDOW` (the
+  context released from it first, so EGL lets go of the window before the glue
+  releases it); the context, the program and the texture stay, and the full
+  damage of the next adoption re-uploads the picture. Shutdown destroys the
+  surface and the context and terminates the display.
+- **DT_NEEDED**, exact per variant (`build_apk.sh`'s VERIFY 4/5): cpu the
+  seven (`libc libdl libm libaaudio libandroid libnativewindow liblog`), gl
+  those and `libEGL libGLESv3` — nine, both NDK stable-ABI libraries.
+
+### 16.3 What is NOT verified
+
+Written without a device and without a compile on this side: the planner
+builds both APKs, installs them and runs the screencap comparison, the frame
+counter's measurement and the dataspace check in `dumpsys SurfaceFlinger`.

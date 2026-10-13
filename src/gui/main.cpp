@@ -1722,12 +1722,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // worker's undriven work — a compositor resize and the launch load, both of
     // which run on_resize, which only stores the new dimensions, re-clamps
     // zoom/viewport, and re-anchors the playback predictor if the level moved:
-    // no enqueue and no cache rebuild there, except the synchronous plate
-    // rebuild when the clamp moved the effective gain (the reasoning at
-    // GuiPaintHandler::on_resize) — is discovered when
+    // no enqueue and no cache rebuild there, a resize owing the gain nothing
+    // (the reasoning at GuiPaintHandler::on_resize) — is discovered when
     // maybe_enqueue_waveform_render's dirty-detect sees the changed fingerprint
     // on the next tick, which is also where the cache rebuild happens. (Pan, zoom, center and the one-shot jumps do NOT come here at
-    // all: they are user-driven and render synchronously through
+    // all: they are user-driven and owe the synchronous render through
     // request_waveform_sync_ below.) maybe_enqueue_waveform_render is
     // main-thread-safe and idempotent
     // against the on_tick backstop, so a call here would only shorten

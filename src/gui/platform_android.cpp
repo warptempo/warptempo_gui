@@ -15,6 +15,12 @@
 #include <android/window.h>
 #include <android_native_app_glue.h>
 
+#if WARPTEMPO_ANDROID_CANVAS_GL
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#endif
+
 #include <arm_neon.h>
 #include <jni.h>
 
@@ -42,7 +48,8 @@
 #include <vector>
 
 // THE ANDROID BACKEND. What is here is class A of the seam — the mechanics:
-// the glue's lifecycle, the ALooper run loop, the cairo -> ANativeWindow blit,
+// the glue's lifecycle, the ALooper run loop, the cairo -> window present
+// (the GL texture or the ANativeWindow blit, present),
 // the AMotionEvent decode and this platform's stubs. THE WINDOW IT PRESENTS TO
 // THE GUI IS THE WHOLE SURFACE LESS THE CHROME'S FRAME: the activity is full
 // screen with both system bars hidden (MainActivity.java's head, architect
@@ -74,6 +81,13 @@
 // to the window are the converted ones — the copy itself stays byte for byte.
 // (While the Settings menu's True Colors is unchecked, for a screenshot, the
 // painters convert nothing and the bytes are the authored sRGB ones.)
+// UNDER THE GL CANVAS (2026-10-13, the product build) THE TAG IS EGL'S: the
+// window surface is created with EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT,
+// the EGL twin of the data-space call (adopt_window's road), and the bytes
+// reach the layer through a texture that places them unfiltered (present), so
+// the measurement rests on that attribute's acceptance — logged once at the
+// first adoption — and on the layer's dataspace in `dumpsys SurfaceFlinger`,
+// which a screencap does not show. The cpu build keeps the data-space call.
 
 // ---------------------------------------------------------------------------
 // The logcat sink for the GUI's own diagnostics
@@ -234,7 +248,10 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
 // R,G,B,A. R and B are transposed and the copy fixes it. Every buffer this
 // backend accepts is one of those two — the format the window ACTUALLY hands
 // back is checked at each lock (present), never assumed from what was
-// requested — so the swap is on every row of every frame.
+// requested — so the swap is on every row of every frame. THE CPU CANVAS'S
+// ALONE: under the GL canvas the fragment shader makes the same swap
+// (kCanvasFragmentShader, below).
+#if !WARPTEMPO_ANDROID_CANVAS_GL
 void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
     int x = 0;
     for (; x + 16 <= n; x += 16) {
@@ -249,6 +266,72 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
         dst[x] = (v & 0xFF00FF00u) | ((v >> 16) & 0xFFu) | ((v & 0xFFu) << 16);
     }
 }
+#endif
+
+#if WARPTEMPO_ANDROID_CANVAS_GL
+// ---------------------------------------------------------------------------
+// The GL canvas's fixed parts (2026-10-13; the road is at present)
+// ---------------------------------------------------------------------------
+
+// A FAILURE OF THE GL ROAD'S SETUP IS FATAL, the buffer-format gate's shape:
+// the display, the config, the context, the plain window surface, the make
+// current and the shaders have no fallback at run time — the cpu canvas is a
+// BUILD (WARPTEMPO_ANDROID_CANVAS=cpu), never a road this binary switches to.
+[[noreturn]] void gl_fatal(const char* what, int code) {
+    __android_log_print(ANDROID_LOG_FATAL, kLogTag,
+                        "the GL canvas: %s (0x%x)", what, code);
+    abort();
+}
+
+// ONE TRIANGLE OVER THE WHOLE VIEWPORT, its corners from gl_VertexID alone
+// ((-1,-1), (3,-1), (-1,3)), so no vertex buffer and no attribute exists:
+// the default vertex array draws it.
+constexpr const char* kCanvasVertexShader =
+    "#version 300 es\n"
+    "void main() {\n"
+    "    vec2 p = vec2(float((gl_VertexID & 1) << 2) - 1.0,\n"
+    "                  float((gl_VertexID & 2) << 1) - 1.0);\n"
+    "    gl_Position = vec4(p, 0.0, 1.0);\n"
+    "}\n";
+
+// THE TEXEL IS PLACED, NEVER FILTERED: texelFetch at the fragment's own
+// integer pixel, the row flipped (cairo's row 0 is the top, GL's window row 0
+// the bottom; u_height is the texture's height), and the cairo bytes B,G,R,A
+// — uploaded as GL_RGBA, so the texel reads (B,G,R,A) — swizzled to R,G,B
+// with alpha written 1, the cpu canvas's copy_swap_rb in the shader. The
+// sampler is highp so the fetched value carries the 8-bit UNORM texel
+// exactly, and k/255 written to an RGBA8 framebuffer converts back to k.
+constexpr const char* kCanvasFragmentShader =
+    "#version 300 es\n"
+    "precision highp float;\n"
+    "precision highp int;\n"
+    "uniform highp sampler2D u_tex;\n"
+    "uniform int u_height;\n"
+    "out vec4 o_color;\n"
+    "void main() {\n"
+    "    ivec2 p = ivec2(int(gl_FragCoord.x), u_height - 1 - int(gl_FragCoord.y));\n"
+    "    o_color = vec4(texelFetch(u_tex, p, 0).bgr, 1.0);\n"
+    "}\n";
+
+GLuint compile_canvas_shader(GLenum kind, const char* source) {
+    const GLuint s = glCreateShader(kind);
+    glShaderSource(s, 1, &source, nullptr);
+    glCompileShader(s);
+    GLint ok = GL_FALSE;
+    glGetShaderiv(s, GL_COMPILE_STATUS, &ok);
+    if (ok != GL_TRUE) {
+        char info[1024] = {};
+        glGetShaderInfoLog(s, static_cast<GLsizei>(sizeof(info)), nullptr,
+                           info);
+        __android_log_print(ANDROID_LOG_FATAL, kLogTag,
+                            "the GL canvas: the %s shader failed to compile: %s",
+                            kind == GL_VERTEX_SHADER ? "vertex" : "fragment",
+                            info);
+        abort();
+    }
+    return s;
+}
+#endif
 
 // ---------------------------------------------------------------------------
 // The looper identifiers this backend adds
@@ -719,6 +802,15 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     window_ = app_->window;
     if (!window_) return;
 
+#if WARPTEMPO_ANDROID_CANVAS_GL
+    // THE GL CANVAS ADOPTS THROUGH EGL (2026-10-13): EGL owns the buffers'
+    // format and their dataspace, so neither of the cpu canvas's two calls
+    // below is made — the window surface's config sets RGBA_8888, and its
+    // colorspace attribute is the Display-P3 tag (ensure_gl_surface, where
+    // the refusal rule is). A re-adoption of the same window keeps its
+    // surface.
+    ensure_gl_surface();
+#else
     // 0,0 for the geometry means "the window's own size"; the FORMAT is the
     // one thing asked for. A REFUSAL IS REPORTED AND NOT FATAL HERE, because
     // it is not yet the question that matters: the window may still hand back
@@ -752,6 +844,7 @@ void GuiPlatform::adopt_window(bool fire_resize) {
                      "warptempo_gui: ANativeWindow_setBuffersDataSpace"
                      "(DISPLAY_P3) refused (%d)\n", static_cast<int>(space_rc));
     }
+#endif
 
     // PIN THE PANEL TO 90 Hz (architect 2026-08-27). One device, one rate: the
     // Tab S10 FE's panel is variable-refresh and the system otherwise picks a
@@ -845,20 +938,219 @@ void GuiPlatform::deliver_owed_resize() {
 }
 
 void GuiPlatform::ensure_backbuffer(int w, int h) {
-    if (back_ && back_w_ == w && back_h_ == h) return;
-    destroy_backbuffer();
-    back_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-    if (cairo_surface_status(back_) != CAIRO_STATUS_SUCCESS) {
-        std::fprintf(stderr,
-                     "warptempo_gui: backbuffer %dx%d could not be created\n",
-                     w, h);
-        cairo_surface_destroy(back_);
-        back_ = nullptr;
-        return;
+    if (!(back_ && back_w_ == w && back_h_ == h)) {
+        destroy_backbuffer();
+        back_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+        if (cairo_surface_status(back_) != CAIRO_STATUS_SUCCESS) {
+            std::fprintf(stderr,
+                         "warptempo_gui: backbuffer %dx%d could not be created\n",
+                         w, h);
+            cairo_surface_destroy(back_);
+            back_ = nullptr;
+            return;
+        }
+        back_w_ = w;
+        back_h_ = h;
     }
-    back_w_ = w;
-    back_h_ = h;
+#if WARPTEMPO_ANDROID_CANVAS_GL
+    // The texture follows the backbuffer (ensure_canvas_texture's rule).
+    ensure_canvas_texture();
+#endif
 }
+
+#if WARPTEMPO_ANDROID_CANVAS_GL
+// THE PROCESS'S EGL OBJECTS (the members' comment, platform_android.h): made
+// once, at the first adoption. The config is RGBA 8/8/8/8 EXACTLY, no depth,
+// no stencil, window-renderable under ES 3 — taken from eglChooseConfig's
+// list by an exact compare of the four sizes, because the list is sorted
+// with the deepest color first and a 10-bit config would sort ahead of the
+// one asked for.
+void GuiPlatform::ensure_gl_context() {
+    if (egl_display_) return;
+    EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (dpy == EGL_NO_DISPLAY) gl_fatal("eglGetDisplay failed", eglGetError());
+    if (!eglInitialize(dpy, nullptr, nullptr))
+        gl_fatal("eglInitialize failed", eglGetError());
+    if (!eglBindAPI(EGL_OPENGL_ES_API))
+        gl_fatal("eglBindAPI(EGL_OPENGL_ES_API) failed", eglGetError());
+    const EGLint want[] = {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+        EGL_SURFACE_TYPE,    EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0,
+        EGL_NONE,
+    };
+    EGLConfig configs[64];
+    EGLint n = 0;
+    if (!eglChooseConfig(dpy, want, configs, 64, &n))
+        gl_fatal("eglChooseConfig failed", eglGetError());
+    EGLConfig chosen = nullptr;
+    for (EGLint i = 0; i < n && !chosen; ++i) {
+        EGLint r = 0, g = 0, b = 0, a = 0;
+        eglGetConfigAttrib(dpy, configs[i], EGL_RED_SIZE,   &r);
+        eglGetConfigAttrib(dpy, configs[i], EGL_GREEN_SIZE, &g);
+        eglGetConfigAttrib(dpy, configs[i], EGL_BLUE_SIZE,  &b);
+        eglGetConfigAttrib(dpy, configs[i], EGL_ALPHA_SIZE, &a);
+        if (r == 8 && g == 8 && b == 8 && a == 8) chosen = configs[i];
+    }
+    if (!chosen) gl_fatal("no RGBA 8/8/8/8 ES 3 window config", n);
+    const EGLint ctx_attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
+    EGLContext ctx = eglCreateContext(dpy, chosen, EGL_NO_CONTEXT, ctx_attribs);
+    if (ctx == EGL_NO_CONTEXT) gl_fatal("eglCreateContext failed", eglGetError());
+    egl_display_ = dpy;
+    egl_config_  = chosen;
+    egl_context_ = ctx;
+}
+
+// THE WINDOW'S SURFACE, made at an adoption of a window this object has no
+// surface for (the first, and each after a loss) and bound current with the
+// process's context. THE DISPLAY-P3 TAG IS THE SURFACE'S COLORSPACE ATTRIBUTE
+// (architect 2026-10-02 for the tag, the file head for its measurement;
+// 2026-10-13 for this road): EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT is
+// the EGL twin of the cpu canvas's ANativeWindow_setBuffersDataSpace(
+// DISPLAY_P3) — the layer is tagged P3 and the bytes written go out as they
+// are, never encoded — and window_display_p3_ reads true iff it was accepted.
+// A REFUSAL IS REPORTED AND NOT FATAL, the data-space refusal's twin: an
+// EGL_BAD_ATTRIBUTE or EGL_BAD_MATCH retries the plain surface, the flag
+// reads false, one line names it, and the painters convert nothing. Any
+// other failure, and a failure of the plain surface or of the make current,
+// is fatal (gl_fatal). The shaders are built at the first make current; the
+// context's fixed state (no dither, no blend, no depth or scissor test) is set
+// at each, and the swap interval 1 per surface.
+void GuiPlatform::ensure_gl_surface() {
+    ensure_gl_context();
+    EGLDisplay dpy = egl_display_;
+    if (egl_surface_ && egl_window_ == window_) return;
+    destroy_gl_surface();
+    const EGLint p3_attribs[] = {
+        EGL_GL_COLORSPACE_KHR, EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT,
+        EGL_NONE,
+    };
+    EGLSurface surf = eglCreateWindowSurface(dpy, egl_config_, window_,
+                                             p3_attribs);
+    bool p3 = surf != EGL_NO_SURFACE;
+    if (!p3) {
+        const EGLint err = eglGetError();
+        if (err != EGL_BAD_ATTRIBUTE && err != EGL_BAD_MATCH)
+            gl_fatal("eglCreateWindowSurface (Display-P3 passthrough) failed",
+                     err);
+        std::fprintf(stderr,
+                     "warptempo_gui: EGL_GL_COLORSPACE_DISPLAY_P3_PASSTHROUGH_EXT "
+                     "refused (0x%x); the window stays sRGB\n",
+                     static_cast<unsigned>(err));
+        surf = eglCreateWindowSurface(dpy, egl_config_, window_, nullptr);
+        if (surf == EGL_NO_SURFACE)
+            gl_fatal("eglCreateWindowSurface failed", eglGetError());
+    }
+    window_display_p3_ = p3;
+    if (!eglMakeCurrent(dpy, surf, surf, static_cast<EGLContext>(egl_context_)))
+        gl_fatal("eglMakeCurrent failed", eglGetError());
+    egl_surface_ = surf;
+    egl_window_  = window_;
+    glDisable(GL_DITHER);
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    eglSwapInterval(dpy, 1);
+    if (!gl_program_) {
+        const GLuint vs = compile_canvas_shader(GL_VERTEX_SHADER,
+                                                kCanvasVertexShader);
+        const GLuint fs = compile_canvas_shader(GL_FRAGMENT_SHADER,
+                                                kCanvasFragmentShader);
+        const GLuint prog = glCreateProgram();
+        glAttachShader(prog, vs);
+        glAttachShader(prog, fs);
+        glLinkProgram(prog);
+        GLint ok = GL_FALSE;
+        glGetProgramiv(prog, GL_LINK_STATUS, &ok);
+        if (ok != GL_TRUE) {
+            char info[1024] = {};
+            glGetProgramInfoLog(prog, static_cast<GLsizei>(sizeof(info)),
+                                nullptr, info);
+            __android_log_print(ANDROID_LOG_FATAL, kLogTag,
+                                "the GL canvas: the program failed to link: %s",
+                                info);
+            abort();
+        }
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+        glUseProgram(prog);
+        glUniform1i(glGetUniformLocation(prog, "u_tex"), 0);
+        gl_height_uniform_ = glGetUniformLocation(prog, "u_height");
+        gl_program_ = prog;
+    }
+    // THE DRIVER NAMED ONCE, permanently (the frame-rate line's shape): the
+    // EGL vendor and version, the GL renderer and version, and the P3
+    // attribute's verdict at the first surface.
+    if (!gl_identity_logged_) {
+        gl_identity_logged_ = true;
+        std::fprintf(stderr,
+                     "warptempo_gui: EGL %s %s; GL %s, %s; Display-P3 "
+                     "passthrough %s\n",
+                     eglQueryString(dpy, EGL_VENDOR),
+                     eglQueryString(dpy, EGL_VERSION),
+                     reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
+                     reinterpret_cast<const char*>(glGetString(GL_VERSION)),
+                     p3 ? "accepted" : "refused");
+    }
+}
+
+// THE WINDOW'S LOSS (APP_CMD_TERM_WINDOW) and a new window's adoption: the
+// surface goes, the context and everything in it — the program, the texture
+// — stay. The context is released from the surface first, because EGL
+// destroys a CURRENT surface only once it stops being current, and the glue
+// releases the window when the command returns: the surface must let go of
+// it now. The next adoption makes the context current on its new surface.
+void GuiPlatform::destroy_gl_surface() {
+    if (!egl_surface_) return;
+    EGLDisplay dpy = egl_display_;
+    eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroySurface(dpy, static_cast<EGLSurface>(egl_surface_));
+    egl_surface_ = nullptr;
+    egl_window_  = nullptr;
+}
+
+// THE CANVAS TEXTURE FOLLOWS THE BACKBUFFER: one GL_RGBA8 texture of its
+// size, immutable storage, one level, NEAREST both ways (texelFetch reads no
+// filter; the parameters keep the texture plainly complete), remade when the
+// size moves. Its content is the backbuffer's as uploaded by damage rect
+// (present); a remade texture is filled by the full damage every adoption
+// declares, the adoption being the one road a size moves by. Asked with the
+// context current on a surface (adopt_window, after ensure_gl_surface).
+void GuiPlatform::ensure_canvas_texture() {
+    if (!egl_surface_ || !back_) return;
+    if (gl_texture_ && gl_texture_w_ == back_w_ && gl_texture_h_ == back_h_)
+        return;
+    if (gl_texture_) glDeleteTextures(1, &gl_texture_);
+    glGenTextures(1, &gl_texture_);
+    glBindTexture(GL_TEXTURE_2D, gl_texture_);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, back_w_, back_h_);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    gl_texture_w_ = back_w_;
+    gl_texture_h_ = back_h_;
+}
+
+// THE PROCESS'S EXIT (shutdown): the surface, then the context — the program
+// and the texture with it — and the display.
+void GuiPlatform::destroy_gl() {
+    destroy_gl_surface();
+    if (egl_display_) {
+        EGLDisplay dpy = egl_display_;
+        if (egl_context_)
+            eglDestroyContext(dpy, static_cast<EGLContext>(egl_context_));
+        eglTerminate(dpy);
+    }
+    egl_display_  = nullptr;
+    egl_config_   = nullptr;
+    egl_context_  = nullptr;
+    gl_program_   = 0;
+    gl_height_uniform_ = -1;
+    gl_texture_   = 0;
+    gl_texture_w_ = 0;
+    gl_texture_h_ = 0;
+}
+#endif
 
 void GuiPlatform::destroy_backbuffer() {
     if (back_) cairo_surface_destroy(back_);
@@ -965,6 +1257,9 @@ void GuiPlatform::shutdown() {
     waveform_worker_completion_fd_  = -1;
     history_worker_completion_fd_   = -1;
     history_prefetch_completion_fd_ = -1;
+#if WARPTEMPO_ANDROID_CANVAS_GL
+    destroy_gl();
+#endif
     destroy_backbuffer();
     window_ = nullptr;
     app_    = nullptr;
@@ -1040,7 +1335,8 @@ void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
  * bounding box. THE POST IS ONE RECT rather than the list because
  * ANativeWindow_lock takes a single dirty region and is free to widen it; the
  * backbuffer holds the whole frame, so the copy is correct for whatever it
- * hands back.
+ * hands back. (That is the cpu canvas's post; the GL canvas uploads the
+ * damage list rect by rect and swaps the whole frame — present.)
  */
 void GuiPlatform::paint_one_frame() {
     // BEFORE ANY PIXEL: the owed first resize, so the layout the frame is
@@ -1118,6 +1414,82 @@ void GuiPlatform::paint_one_frame() {
 bool GuiPlatform::present(int x, int y, int w, int h) {
     if (!window_ || !back_ || w <= 0 || h <= 0) return false;
 
+#if WARPTEMPO_ANDROID_CANVAS_GL
+    // THE GL CANVAS (2026-10-13; the design record is
+    // docs/engineering/gpu_canvas_2026_10.md). The bounding box this was
+    // handed is the cpu canvas's single dirty region; this road reads THE
+    // DAMAGE LIST ITSELF, the rects paint_one_frame just painted, and is that
+    // list's one upload walk.
+    //
+    // THE UPLOAD: every rect of damage_, clamped to the backbuffer, goes into
+    // the texture at its own place, sourced in place from the cairo surface
+    // (GL_UNPACK_ROW_LENGTH = cairo's stride in pixels, the pointer at the
+    // rect's first word; GL_UNPACK_ALIGNMENT 4, cairo's stride being a
+    // multiple of 4) as GL_RGBA bytes — cairo's B,G,R,A, swizzled by the
+    // shader. The texture therefore holds the backbuffer whole: every pixel
+    // the backbuffer changes is in a painted rect, and a failed swap keeps the
+    // damage for the next frame (paint_one_frame's tail), so the rect goes up
+    // again.
+    //
+    // THE DRAW: one full-screen triangle over the surface's own viewport, the
+    // fragment shader placing each texel at its pixel (kCanvasFragmentShader).
+    // THE PICTURE IS THE BACKBUFFER'S BYTES EXACTLY: an 8-bit UNORM texel
+    // fetched without a filter round-trips to the same 8-bit value in the
+    // RGBA8 framebuffer, dithering is off, nothing blends, and the framebuffer
+    // is plain RGBA (the passthrough colorspace encodes nothing — never an
+    // sRGB framebuffer).
+    //
+    // THE SWAP BLOCKS WHERE ANativeWindow_lock BLOCKED (swap interval 1, the
+    // queue full): the loop keeps its ONE WAKEUP (architect 2026-08-27, the
+    // timerfd at detect_refresh_rate_ms; no Choreographer, no second
+    // cadence). THE FRAME IS REDRAWN WHOLE at every swap, so neither EGL's
+    // buffer age nor a partial update is depended on. No glFinish, no
+    // glFlush beyond the swap's own, no readback.
+    //
+    // A FAILED SWAP: a lost context is a rare non-silent fault and is fatal
+    // (no recovery code); any other failure is one line and false, the
+    // damage kept and re-posted (paint_one_frame's tail).
+    {
+        (void)x;   // the bounding box's origin: the cpu canvas's alone
+        (void)y;
+        EGLDisplay dpy  = egl_display_;
+        EGLSurface surf = egl_surface_;
+        if (!surf || !gl_texture_) return false;
+        const int stride_px = cairo_image_surface_get_stride(back_) / 4;
+        const auto* src = reinterpret_cast<const uint32_t*>(
+            cairo_image_surface_get_data(back_));
+        if (!src) return false;
+        glBindTexture(GL_TEXTURE_2D, gl_texture_);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, stride_px);
+        for (const DamageRect& d : damage_) {
+            const int x0 = std::max(d.x, 0);
+            const int y0 = std::max(d.y, 0);
+            const int x1 = std::min(d.x + d.w, gl_texture_w_);
+            const int y1 = std::min(d.y + d.h, gl_texture_h_);
+            if (x1 <= x0 || y1 <= y0) continue;
+            glTexSubImage2D(GL_TEXTURE_2D, 0, x0, y0, x1 - x0, y1 - y0,
+                            GL_RGBA, GL_UNSIGNED_BYTE,
+                            src + static_cast<size_t>(y0) * stride_px + x0);
+        }
+        EGLint sw = 0, sh = 0;
+        eglQuerySurface(dpy, surf, EGL_WIDTH,  &sw);
+        eglQuerySurface(dpy, surf, EGL_HEIGHT, &sh);
+        glViewport(0, 0, sw, sh);
+        glUseProgram(gl_program_);
+        glUniform1i(gl_height_uniform_, gl_texture_h_);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        if (!eglSwapBuffers(dpy, surf)) {
+            const EGLint err = eglGetError();
+            if (err == EGL_CONTEXT_LOST) gl_fatal("the context was lost", err);
+            std::fprintf(stderr, "warptempo_gui: eglSwapBuffers failed (0x%x)\n",
+                         static_cast<unsigned>(err));
+            return false;
+        }
+        return true;
+    }
+#else
+
     // THE GUI'S COORDINATES ARE THE SURFACE'S (the window is the whole
     // surface, width_'s rule), so the damage rect goes to lock() as it is.
     // The window keeps the area OUTSIDE the dirty rect it hands back (it
@@ -1190,6 +1562,7 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
         return false;
     }
     return true;
+#endif
 }
 
 void GuiPlatform::paint_now() {
@@ -1468,6 +1841,14 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // same size re-posts without a repaint. Input state is untouched:
             // a lost window is not a lost touch stream (the hard end has its
             // own edge, APP_CMD_LOST_FOCUS below and touch_cancel).
+#if WARPTEMPO_ANDROID_CANVAS_GL
+            // THE GL CANVAS LETS GO OF THE WINDOW HERE: its EGL surface is
+            // destroyed before the glue releases the window, the context and
+            // the texture kept — the texture's content goes back up with the
+            // full damage the next adoption declares, as the backbuffer is
+            // re-posted (destroy_gl_surface).
+            destroy_gl_surface();
+#endif
             window_ = nullptr;
             break;
 

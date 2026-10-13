@@ -9,6 +9,10 @@
 #
 #     adb install -r android/app/build-android/warptempo.apk
 #
+# THE REFERENCE CANVAS (2026-10-13) is the same command with WT_CANVAS=cpu: it
+# builds in android/app/build-android-cpu/ and stages warptempo-cpu.apk there
+# (the canvas block below).
+#
 # Idempotent: the packaging tree is wiped first. The CMake build tree is NOT
 # wiped -- a re-run is an incremental rebuild, which is the whole point of
 # having one -- so `rm -rf android/app/build-android` is the clean-build gesture.
@@ -28,7 +32,23 @@ APPDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "$APPDIR/../toolchain/00_env.sh"
 
+# THE CANVAS (2026-10-13; CMakeLists.txt's WARPTEMPO_ANDROID_CANVAS owns the
+# rule): WT_CANVAS=gl (the default, the product) or cpu (the reference build
+# the screencap comparison installs in turn). The cpu variant builds in its
+# own tree, "<build dir>-cpu" (configure.sh derives the same one), and stages
+# its own APK, warptempo-cpu.apk, so both exist side by side; the two share
+# the package name and the key, so installing either replaces the other.
+CANVAS="${WT_CANVAS:-gl}"
+case "$CANVAS" in
+    gl|cpu) ;;
+    *) wt_die "WT_CANVAS must be gl or cpu, not '$CANVAS'" ;;
+esac
 BUILD="${WT_ANDROID_BUILD_DIR:-$APPDIR/build-android}"
+APKNAME="warptempo.apk"
+if [ "$CANVAS" = cpu ]; then
+    BUILD="$BUILD-cpu"
+    APKNAME="warptempo-cpu.apk"
+fi
 PKGDIR="$BUILD/package"
 ASSETS="$PKGDIR/assets"
 STAGING="$PKGDIR/staging"
@@ -38,7 +58,7 @@ CLASSES="$PKGDIR/classes"
 DEXDIR="$PKGDIR/dex"
 PKG="com.warptempo.gui"
 ACTIVITY=".MainActivity"
-APK="$BUILD/warptempo.apk"
+APK="$BUILD/$APKNAME"
 
 KEYSTORE="${WT_KEYSTORE:-$HOME/.android/debug.keystore}"
 KEYALIAS="androiddebugkey"
@@ -129,7 +149,9 @@ done
 [ "$ICON_SETS" -gt 0 ] || wt_die "no icon set under $ICON_ROOT"
 
 # --- 2/3. configure + build ----------------------------------------------
-bash "$APPDIR/configure.sh"
+# WT_CANVAS is in the environment, so configure.sh reads the same canvas and
+# configures the same tree.
+WT_CANVAS="$CANVAS" bash "$APPDIR/configure.sh"
 wt_say "building $LIBNAME"
 cmake --build "$BUILD" -j"$(nproc)"
 
@@ -248,11 +270,17 @@ wt_say "VERIFY 4/5 -- DT_NEEDED is exactly the NDK stable-ABI set (nothing that 
 # records how it was measured): an extra entry or a missing one fails the
 # build. libnativewindow is in it since the frame-rate pin
 # (ANativeWindow_setFrameRate lives there, not in libandroid); the git stack
-# added nothing, zlib being libgit2's bundled copy.
-wt_check_dt_needed "$STAGING/lib/$WT_ABI/$LIBNAME" \
-    libc.so libdl.so libm.so libaaudio.so libandroid.so libnativewindow.so \
-    liblog.so \
-    || wt_die "DT_NEEDED of $LIBNAME is not the allowlist (above)"
+# added nothing, zlib being libgit2's bundled copy. THE SET IS PER CANVAS
+# (2026-10-13): the cpu canvas's is the seven below; the gl canvas adds
+# libEGL.so and libGLESv3.so, its two NDK stable-ABI libraries
+# (CMakeLists.txt's canvas block) — nine.
+DT_SET=(libc.so libdl.so libm.so libaaudio.so libandroid.so libnativewindow.so
+        liblog.so)
+if [ "$CANVAS" = gl ]; then
+    DT_SET+=(libEGL.so libGLESv3.so)
+fi
+wt_check_dt_needed "$STAGING/lib/$WT_ABI/$LIBNAME" "${DT_SET[@]}" \
+    || wt_die "DT_NEEDED of $LIBNAME is not the $CANVAS canvas's allowlist (above)"
 "$READELF" -d "$STAGING/lib/$WT_ABI/$LIBNAME" | grep -E "SONAME" || true
 
 echo

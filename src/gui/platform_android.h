@@ -18,8 +18,11 @@
 // implementation is platform_wayland.h's. It runs inside a NativeActivity over the NDK's stock android_native_app_glue:
 // the glue's thread owns an ALooper, this class adds its own periodic timerfd
 // and the four worker eventfds to it, paints cairo into a persistent ARGB32
-// backbuffer and blits the damaged rectangle into ANativeWindow_lock's buffer
-// (the window the GUI sees is the whole surface; the rule is at width_).
+// backbuffer and presents it — uploaded by damage rect into one GLES texture
+// drawn over an EGL window surface (the `gl` canvas, the product), or blitted
+// as the damaged rectangle into ANativeWindow_lock's buffer (the `cpu`
+// canvas, the reference build; 2026-10-13, present) — (the window the GUI
+// sees is the whole surface; the rule is at width_).
 // No Android headers appear here on purpose; member pointer types are spelled
 // `struct foo*` so the compiler treats them as forward declarations and the
 // real interface headers stay private to platform_android.cpp — the same rule
@@ -237,7 +240,9 @@ public:
     int display_width_px() const;
 
     // THE WINDOW'S COLOR SPACE (contract at platform_wayland.h, which owns
-    // it): true once adopt_window's ADATASPACE_DISPLAY_P3 tag was accepted,
+    // it): true once adopt_window's ADATASPACE_DISPLAY_P3 tag was accepted —
+    // under the GL canvas, the EGL surface's Display-P3 passthrough
+    // colorspace (ensure_gl_surface) —
     // false if it was refused (the layer then stays sRGB and nothing is
     // converted). init() adopts the live window, so the answer stands by the
     // time gui_main reads it; every later adoption asks the same of the same
@@ -571,6 +576,37 @@ private:
     int              back_w_ = 0;
     int              back_h_ = 0;
 
+#if WARPTEMPO_ANDROID_CANVAS_GL
+    // -- THE GL CANVAS (2026-10-13; the build's `gl` value of
+    // WARPTEMPO_ANDROID_CANVAS, CMakeLists.txt; the road at present) --
+    // The window goes through EGL / GLES 3.0: the backbuffer above is
+    // uploaded into ONE texture by damage rect and drawn whole every swap.
+    // The EGL handles are spelled void* (each EGL type is one on this
+    // platform) so no EGL header reaches this file. THE DISPLAY, CONFIG,
+    // CONTEXT AND PROGRAM ARE THE PROCESS'S, made at the first adoption and
+    // kept until shutdown; THE SURFACE IS THE WINDOW'S (egl_window_ names
+    // the window it was made on): made at an adoption of a new window,
+    // destroyed at the window's loss. The texture lives in the context and
+    // follows the backbuffer's size (ensure_canvas_texture).
+    void*                 egl_display_ = nullptr;
+    void*                 egl_config_  = nullptr;
+    void*                 egl_context_ = nullptr;
+    void*                 egl_surface_ = nullptr;
+    struct ANativeWindow* egl_window_  = nullptr;
+    unsigned int          gl_program_  = 0;
+    int                   gl_height_uniform_ = -1;
+    unsigned int          gl_texture_  = 0;
+    int                   gl_texture_w_ = 0;
+    int                   gl_texture_h_ = 0;
+    // The one-time line naming the driver (adopt_window's road).
+    bool                  gl_identity_logged_ = false;
+    void ensure_gl_context();
+    void ensure_gl_surface();
+    void destroy_gl_surface();
+    void ensure_canvas_texture();
+    void destroy_gl();
+#endif
+
     // -- Window state --
     // THE SURFACE IS THE WINDOW (architect 2026-10-01, with full screen):
     // width_/height_ are the size ANativeWindow reports, what the GUI is told
@@ -782,7 +818,9 @@ private:
     void paint_one_frame();
     // Blit the damaged rectangle out of the backbuffer into the window,
     // honoring the stride and the (possibly widened) dirty rect lock hands
-    // back. Silent false with no window or no backbuffer. TRUE MEANS THE
+    // back — or, under the GL canvas, upload every rect of damage_ into the
+    // texture and swap the whole frame (the definition). Silent false with no
+    // window or no backbuffer. TRUE MEANS THE
     // PIXELS REACHED THE WINDOW — the caller clears its damage on that answer
     // and on no other (the rule is at the call site).
     bool present(int x, int y, int w, int h);

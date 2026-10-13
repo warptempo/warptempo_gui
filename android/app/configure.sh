@@ -5,6 +5,9 @@
 #     bash android/app/configure.sh          # configure (idempotent)
 #     cmake --build android/app/build-android -j$(nproc)
 #
+# WT_CANVAS=cpu configures the reference canvas into android/app/build-android-cpu/
+# instead (the canvas block below).
+#
 # build_apk.sh calls this itself, so packaging from a clean tree is one command.
 #
 # WHAT THIS SCRIPT OWNS, and why it rather than CMakeLists.txt: every path into
@@ -31,7 +34,18 @@ APPDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "$APPDIR/../toolchain/00_env.sh"
 
+# THE CANVAS (2026-10-13; CMakeLists.txt's WARPTEMPO_ANDROID_CANVAS owns the
+# rule): WT_CANVAS=gl (the default, the product: EGL / GLES 3.0) or cpu (the
+# reference: the ANativeWindow_lock copy). The cpu variant configures its own
+# tree beside the product's, "<build dir>-cpu", so the two builds and their
+# APKs stand side by side; build_apk.sh derives the same directory.
+CANVAS="${WT_CANVAS:-gl}"
+case "$CANVAS" in
+    gl|cpu) ;;
+    *) wt_die "WT_CANVAS must be gl or cpu, not '$CANVAS'" ;;
+esac
 BUILD="${WT_ANDROID_BUILD_DIR:-$APPDIR/build-android}"
+if [ "$CANVAS" = cpu ]; then BUILD="$BUILD-cpu"; fi
 
 [ -x "$WT_PKGCONFIG_WRAPPER" ] ||
     wt_die "missing $WT_PKGCONFIG_WRAPPER (run android/toolchain/40_gen_cross_file.sh)"
@@ -40,7 +54,7 @@ BUILD="${WT_ANDROID_BUILD_DIR:-$APPDIR/build-android}"
 [ -f "$WT_NDK/build/cmake/android.toolchain.cmake" ] ||
     wt_die "no NDK cmake toolchain file under $WT_NDK"
 
-wt_say "configuring $BUILD (NDK $WT_NDK_RELEASE, $WT_ABI, android-$WT_API)"
+wt_say "configuring $BUILD (NDK $WT_NDK_RELEASE, $WT_ABI, android-$WT_API, canvas $CANVAS)"
 
 # CMAKE_BUILD_TYPE is deliberately EMPTY. The project appends its own
 # -O3 -ffp-contract=off to every target (the flag block at the bottom of
@@ -58,6 +72,7 @@ cmake -S "$WT_REPO_ROOT" -B "$BUILD" \
     -DWARPTEMPO_BUILD_CLI=OFF \
     -DPKG_CONFIG_EXECUTABLE="$WT_PKGCONFIG_WRAPPER" \
     -DFFTW3_THREADS_LIB="$WT_PREFIX/lib/libfftw3_threads.a" \
+    -DWARPTEMPO_ANDROID_CANVAS="$CANVAS" \
     "$@"
 
 wt_say "configured. Build with: cmake --build $BUILD -j\$(nproc)"

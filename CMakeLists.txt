@@ -18,6 +18,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(WARPTEMPO_BUILD_GUI "Build the Cairo/Wayland GUI application" ON)
 option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
 option(WARPTEMPO_GUI_GIT "Link libgit2 for the history view's git road (OFF builds a stub: every git act reports no repository)" ON)
+# THE ANDROID CANVAS (2026-10-13; the design record is
+# docs/engineering/gpu_canvas_2026_10.md, the road at GuiPlatform::present,
+# platform_android.cpp): `gl`, the product, presents the cairo backbuffer
+# through EGL / GLES 3.0 as one texture uploaded by damage rect; `cpu`, the
+# reference, keeps the ANativeWindow_lock copy. A BUILD CHOICE, never a device
+# key and nothing the user picks — the two builds exist to be compared byte
+# for byte by screencap. Read by the Android branch alone (the compile
+# definition WARPTEMPO_ANDROID_CANVAS_GL, 1 or 0, and the GL libraries);
+# android/app/build_apk.sh chooses it through WT_CANVAS.
+set(WARPTEMPO_ANDROID_CANVAS "gl" CACHE STRING
+    "Android canvas: gl (EGL/GLES 3.0 texture present, the product) or cpu (the ANativeWindow_lock copy, the reference)")
+set_property(CACHE WARPTEMPO_ANDROID_CANVAS PROPERTY STRINGS gl cpu)
 
 # --- FFTW: needed by the engine sources, so required unconditionally. The GUI
 # default compiles the engine sources, and a headless WARPTEMPO_BUILD_CLI build
@@ -355,6 +367,26 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # a missing library.
     target_compile_definitions(warptempo_gui PRIVATE
         __ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__)
+    # THE CANVAS (the cache entry's comment at the top of this file). The
+    # definition is TARGET-WIDE, never a source property: it shapes
+    # GuiPlatform's private members (platform_android.h), so every
+    # translation unit that sees the class must agree on it. Under `gl` the
+    # target links libEGL and libGLESv3, both NDK stable-ABI libraries, which
+    # is the whole of what the choice adds to DT_NEEDED (build_apk.sh's
+    # allowlist per variant).
+    if(WARPTEMPO_ANDROID_CANVAS STREQUAL "gl")
+        target_compile_definitions(warptempo_gui PRIVATE
+            WARPTEMPO_ANDROID_CANVAS_GL=1)
+        set(WARPTEMPO_ANDROID_CANVAS_LIBRARIES EGL GLESv3)
+    elseif(WARPTEMPO_ANDROID_CANVAS STREQUAL "cpu")
+        target_compile_definitions(warptempo_gui PRIVATE
+            WARPTEMPO_ANDROID_CANVAS_GL=0)
+        set(WARPTEMPO_ANDROID_CANVAS_LIBRARIES "")
+    else()
+        message(FATAL_ERROR
+            "WARPTEMPO_ANDROID_CANVAS must be gl or cpu, not "
+            "'${WARPTEMPO_ANDROID_CANVAS}'")
+    endif()
     # --start-group covers the freetype <-> harfbuzz static cycle (cairo pulls
     # freetype, freetype's autohinter reaches back into harfbuzz), which a
     # single-pass static link cannot resolve on its own. --no-undefined makes a
@@ -381,6 +413,8 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         # and --no-undefined turns its absence into the build failure it should
         # be rather than a launch-time surprise.
         nativewindow
+        # The gl canvas's two (empty under cpu; the block above).
+        ${WARPTEMPO_ANDROID_CANVAS_LIBRARIES}
         log
         m
         dl
