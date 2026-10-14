@@ -2395,6 +2395,43 @@ private:
     // to the entry to run.
     void dispatch_next_batch_entry();
 
+    // -- THE PROGRESS MODAL (architect 2026-10-14; the model and its three
+    //    terminals at AppState::BatchProgress) -------------------------------
+    //
+    // open_batch_progress: THE OPENER, at the batch's Render press — its two
+    //   seats are start_render_batch (the batch dispatching at once) and
+    //   kill_running_render_and_park for a batch command (the batch waiting
+    //   out a killed render's drain), so every batch opens it at the press
+    //   whichever road it takes. Idempotent: the parked batch's later start
+    //   finds it standing and keeps its session (and its focus). The modal
+    //   stop (stop_playback_for_modal_open), the roster hint's end, a fresh
+    //   session, entry 1 of `total`, and a whole-window damage — a modal has
+    //   no rect before its first paint, the prompts' own open.
+    // set_batch_progress_index: the entry now starting (1-based), from
+    //   dispatch_next_batch_entry at each dispatch, with the box's interior
+    //   damaged when the sentence changes.
+    // close_batch_progress: the CANCELLED and SHORT terminals' close, and the
+    //   parked batch's cancel — the state reset and a whole-window damage,
+    //   as a prompt's answer takes, which brings the lanes, the canvas and
+    //   row 8 back from under the box.
+    // swap_batch_progress_for_player: the COMPLETE terminal's swap — THE HELD
+    //   PRESS DROPS FIRST (the dialog's pointer arm and its keyboard arm, so a
+    //   press held on Cancel or anywhere on the modal is released as a no-op
+    //   and no lift lands on the player), then the modal closes and the
+    //   render player opens on the newest batch folder, which is this batch's
+    //   (GuiRenderPlayer::open's own seat: the highest leading index, the
+    //   number the sweep minted its folder with).
+    // cancel_batch_progress: CANCEL'S ACT — the button's lift, Enter or Space
+    //   on its ring focus at the release, bare Esc at the press: the render
+    //   cancel road (cancel_archival_session, which also disarms a parked
+    //   batch), and, when the batch was still PARKED and so will reach no
+    //   terminal of its own, the close here.
+    void open_batch_progress(int total);
+    void set_batch_progress_index(int index);
+    void close_batch_progress();
+    void swap_batch_progress_for_player();
+    void cancel_batch_progress();
+
     // Finalize the current single-render-or-batch run on the GUI thread:
     // clear queue_running, take down the state-cell text if this session put
     // one there (status_promoted_ is that test, so a rung-served single render

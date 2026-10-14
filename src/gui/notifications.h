@@ -34,7 +34,12 @@
 // the clock's time field (architect 2026-10-03: the normal face,
 // left-aligned a group space past the field, clipped a group space short of
 // the right block; paint_bottom_row_buttons_and_clock, paint_handler.cpp,
-// owns that line); an
+// owns that line) — A BATCH'S PROGRESS IS THE PROGRESS MODAL'S since
+// 2026-10-14 ("Rendering X of Y..." in the modal family's box from the Render
+// press to the batch's terminal, AppState::BatchProgress): the state line
+// still carries the sweep's line, but behind the modal, row 8 yielding to it
+// whole, so on screen the line is a single render's "Rendering..." and a
+// preview's "Updating..."; an
 // EVENT is an act answered with a sentence, or a background act that
 // finished badly — a CARD. The state surface has NO TIMEOUTS because nothing
 // in it is a claim about a past moment, so nothing there can go stale.
@@ -234,7 +239,9 @@
 //     cards only where nothing shows (the clipboard writes above) or where
 //     what shows would MISLEAD (kTrimFallbackCard) — and in the second case
 //     the misleading thing is fixed where it can be. So: a render's
-//     completion ("that would get annoying") and a cancelled one; THE SAVE,
+//     completion ("that would get annoying") and a cancelled one — a
+//     complete BATCH's answer is the render player opening on its folder,
+//     a cancelled one's the progress modal closing (2026-10-14); THE SAVE,
 //     the dirty mark going out being its answer (architect 2026-08-30: "the
 //     disc writes — there is something that paints"), the Save button
 //     greying since 2026-10-05 (plain_save_actionable); a clean
@@ -412,7 +419,8 @@
 // arms nothing else, moves nothing, lands no playhead and reaches nothing
 // underneath (a non-left press is the consumed nothing it always was, and
 // arms no card). The claim ranks ABOVE EVERY VEIL (the prompt's, the
-// player's, the picker's, the dialog editors') and above the open dropdown's
+// progress modal's, the player's, the picker's, the dialog editors') and
+// above the open dropdown's
 // claim, and THE RELEASE IS TAKEN AT THE SAME RANK — above the dropdown's
 // release, which would otherwise consume it, and above every veil's —
 // because a card is not a reach into the veiled surface: it is the message

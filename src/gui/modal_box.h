@@ -10,7 +10,9 @@
 // overlay's two contents, folder_overlay.h), and since the same day's second
 // ruling THE PROMPTS AND THE DIALOG EDITORS (mock_modal_progress_v2.png and
 // mock_modal_settings_osk_v2.png: the taskbar dialog laid over the window's
-// foot, 2026-10-10 to 2026-10-14, is retired — "we should stop doing that").
+// foot, 2026-10-10 to 2026-10-14, is retired — "we should stop doing that"),
+// and since that evening THE PROGRESS MODAL, a batch's "Rendering X of Y..."
+// (AppState::BatchProgress; mock_modal_progress_v2.png's own subject).
 //
 // A MODAL TAKES THE AREA FROM THE VIEW BAR'S TOP ROW DOWN: the top strip
 // above it and THE COLUMN'S 5 W AIR under the band stay as the main window
@@ -59,7 +61,7 @@
 // THE INTERIOR'S GROUND SAYS WHAT THE SURFACE IS (ModalBoxGround): THE FIELD
 // GROUND, the list's dark field pair, where you pick or type — the render
 // player's and the picker's lists, a dialog editor's line; THE FACE where you
-// only read — a prompt's question.
+// only read — a prompt's question, the progress modal's sentence.
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);
@@ -81,15 +83,18 @@ inline GuiColor modal_box_ground_color(ModalBoxGround g) {
 
 // THE BOX'S DIALOG MEMBERS STAND (architect 2026-10-14): A PROMPT — over any
 // surface, the render player's and the picker's lists included, its question
-// taking the box for as long as it is asked — or A DIALOG EDITOR
+// taking the box for as long as it is asked — A DIALOG EDITOR
 // (AppState::dialog_editor_session's set, the settings editor and the BPM
-// bracket editor). Their box is paint_modal_dialog's; the folder overlay's two
-// contents paint their own (paint_folder_overlay). (The taskbar dialog's
-// standing predicate, chrome_tenant_owns_bottom_row, 2026-10-10 to
-// 2026-10-14, named the same set less a prompt over the player or the
-// picker, which stood on that member's controls row.)
+// bracket editor) or THE PROGRESS MODAL (AppState::BatchProgress, a batch's
+// "Rendering X of Y..." from its Render press to its terminal). Their box is
+// paint_modal_dialog's; the folder overlay's two contents paint their own
+// (paint_folder_overlay). (The taskbar dialog's standing predicate,
+// chrome_tenant_owns_bottom_row, 2026-10-10 to 2026-10-14, named the prompt
+// and the editors less a prompt over the player or the picker, which stood
+// on that member's controls row.)
 inline bool modal_box_dialog_stands(const AppState& a) {
-    return a.prompt.active || a.dialog_editor_session() != 0;
+    return a.prompt.active || a.batch_progress.active ||
+           a.dialog_editor_session() != 0;
 }
 
 // DOES ANY MEMBER'S BOX STAND — the folder overlay's or a dialog's. The

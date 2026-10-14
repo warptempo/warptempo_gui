@@ -92,7 +92,10 @@ struct GuiInputHandler;
 //
 // WHERE THE CAR ACTS AND WHERE IT IS DROPPED — admits(), one predicate: a
 // command is DROPPED under a prompt (a question on screen is answered there,
-// the player's own rule), while the folder overlay stands (the Open project
+// the player's own rule), under THE PROGRESS MODAL (2026-10-14: a batch's
+// modal stopped playback at its open and covers the waveform; the render
+// player it swaps to at a complete batch takes the commands from there, the
+// hook's fork), while the folder overlay stands (the Open project
 // picker — the player is forked ahead at the hook, so its owner tag never
 // reaches this test), under a DIALOG modal
 // editor (modal_dialog_editor_active: the settings editor and the BPM

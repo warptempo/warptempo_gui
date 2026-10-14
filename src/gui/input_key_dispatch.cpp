@@ -4502,6 +4502,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         return !mods.ctrl && !mods.shift && !mods.alt &&
                (key == GuiKeys::Up || key == GuiKeys::Down);
     }
+    // THE PROGRESS MODAL (2026-10-14): only the ring's Tab repeats, as every
+    // ring's does; Enter, Space and Esc are its Cancel, one-shot. A prompt
+    // over it is the prompt's own answer.
+    if (app.batch_progress.active && !app.prompt.active)
+        return modal_ring_tab_shape(key, mods) != ModalRingTab::None;
     // EVERY OTHER KEY IS REFUSED OUTRIGHT WHILE A PROMPT STANDS, and that
     // blanket stays exactly as it was: a prompt's one-key answers must be
     // one-shot, because a held response key repeating is the destructive shape
@@ -6440,7 +6445,10 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (!dlg.valid || dlg.buttons.empty()) return false;
     if (!modal_dialog_stash_current()) return false;
-    const bool prompt_up = app.prompt.active;
+    // A BUTTONS-ONLY RING — a prompt's, and THE PROGRESS MODAL'S since
+    // 2026-10-14 (its one Cancel, focused at the raise like a prompt's last
+    // button): the buttons alone, wrapping, no field and no list.
+    const bool prompt_up = app.prompt.active || app.batch_progress.active;
     // THE RENDER PLAYER'S RING (architect 2026-08-28) is [LIST, buttons…]:
     // the folder overlay's list is one member, standing where an editor's
     // field stands (-1) with one difference — the player OPENS with the ring

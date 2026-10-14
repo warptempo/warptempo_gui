@@ -31,6 +31,9 @@ std::string car_transport_title_line(const UndoHistory& history) {
 // bit ahead of this cluster, so the overlay term below is the picker's.
 bool GuiCarTransport::admits() const {
     if (app.prompt.active) return false;
+    // THE PROGRESS MODAL (2026-10-14): a batch's modal stops playback at its
+    // open and covers the waveform, so the console starts nothing under it.
+    if (app.batch_progress.active) return false;
     if (folder_overlay_stands(app)) return false;
     if (input_handler.modal_dialog_editor_active()) return false;
     if (app.history_mode.active) return false;

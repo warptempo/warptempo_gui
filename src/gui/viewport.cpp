@@ -172,8 +172,9 @@ void Viewport::invalidate_status_cell_area() {
 // The OPENERS do not come through here — nothing is
 // painted before a surface's first paint, so they invalidate the whole
 // window. Caller inventory at the declaration.
-// A PROMPT OR A DIALOG EDITOR STANDS IN THE MODAL FAMILY'S BOX (2026-10-14,
-// modal_box.h): its question or its line in the box over the canvas column,
+// A PROMPT, A DIALOG EDITOR OR THE PROGRESS MODAL STANDS IN THE MODAL
+// FAMILY'S BOX (2026-10-14, modal_box.h): its question, its line or its
+// sentence in the box over the canvas column,
 // its buttons on the controls row — so while one stands, OR WHILE THE LAST
 // PAINT DREW ONE (the stash's owner, which a closer reads before any paint:
 // its surface is gone from the state but not yet from the screen), the
@@ -193,7 +194,8 @@ void Viewport::invalidate_modal_dialog_area() {
     const AppState::ModalDialogOwner painted = app.modal_dialog.owner;
     if (modal_box_dialog_stands(app) ||
         painted == AppState::ModalDialogOwner::Prompt ||
-        painted == AppState::ModalDialogOwner::Editor)
+        painted == AppState::ModalDialogOwner::Editor ||
+        painted == AppState::ModalDialogOwner::Progress)
         invalidate_rect(modal_area_rect(app, /*keyboard_h=*/0));
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
     // published rect and the band it can hang into, the show edge's own pair

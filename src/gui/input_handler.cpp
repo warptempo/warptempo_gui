@@ -260,6 +260,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // THE PROGRESS MODAL IS KEYBOARD-MODAL (architect 2026-10-14, AppState::
+    // BatchProgress), ranked directly under the prompt (a WM close's
+    // unsaved-work question can stand over a running batch) and above every
+    // other gate — no dropdown, list owner or editor stands beside it. ITS
+    // VOCABULARY IS ITS CANCEL: bare Esc cancels at the press (the batch's
+    // cancel road, cancel_batch_progress — the render cancel's own act, (d)
+    // in the bare-Esc enumeration below), and the focus ring's Tab / Left /
+    // Right / Enter / Space walk and press its one button, Enter or Space
+    // cancelling at the key's release (route_modal_dialog_focus_key). Ctrl+Q
+    // FALLS THROUGH to the close road, every modal's hatch; EVERY OTHER KEY
+    // IS CONSUMED, silently — a key the modal does not bind is the unbound
+    // silence, and authoring stays locked for the batch's whole run.
+    if (app.batch_progress.active) {
+        if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
+            if (route_modal_dialog_focus_key(key, mods)) return;
+            if (!ctrl && !shift && !alt && key == GuiKeys::Escape)
+                cancel_batch_progress();
+            return;
+        }
+    }
+
     // THE OPEN DROPDOWN IS KEYBOARD-MODAL, in the editors' shape and ranked
     // directly under the prompt (a prompt still wins: it is the older modal and
     // Ctrl+Q below can open one). While the popup is up NO COMMAND RUNS — the
@@ -1294,7 +1315,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       from 2026-09-03 and went with the panel on 2026-09-30.)
     //   ((c6), THE COLOR PICKER's own router, was the ninth place again
     //       from 2026-10-07 and went with the picker on 2026-10-14.)
-    //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
+    //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above,
+    //       for a single render; a BATCH's Esc is answered higher, at the
+    //       progress modal's own block under the prompt gate (2026-10-14),
+    //       and it is this same act — cancel_batch_progress runs
+    //       cancel_archival_session, the one body both reach — so the place
+    //       moved up and the count did not move;
     //   (e) THE NOTIFICATION STACK, WHOLE (architect 2026-09-01, superseding
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
     //       rung, at the bare-key tail (handle_plain_bare_keys' Escape arm,
@@ -3374,6 +3400,10 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // (notification_card_at), so the two floaters need no ordering here.
     if (notification_card_at(app, x, y) != 0) return -1;
     if (app.prompt.active) return -1;
+    // THE PROGRESS MODAL SWALLOWS THE WHEEL (2026-10-14): its box covers the
+    // canvas column and nothing under it scrolls; the touch pinch reads this
+    // refusal too (apply_touch_nav_update).
+    if (app.batch_progress.active) return -1;
     // AN OPEN DROPDOWN SWALLOWS THE WHEEL. It cannot close from here — this
     // predicate is const and the platform probes it speculatively — so on_wheel
     // owns the close and this owns only the swallow, which is also what keeps

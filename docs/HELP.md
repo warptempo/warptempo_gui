@@ -59,7 +59,7 @@ How a movement actually gets authored, in the order that works:
 3. Once some headway is made, copy label definitions into references (the exposition into the repeat and the recapitulation), and paste the definition's phase resets across with the propagate commands in the Edit menu.
 4. Phase resets are set with the phase-reset drop and nudged only when the phase alignment causes an audible dip, pop or crackle.
 5. The A/B audition is crucial for confirming that label references match their definitions: it is the crux of the tempo-locking mechanism, which lets precise timing be replicated in the sonata-form fashion of repeated rhythmic motifs and phrases, at both large and small scale.
-6. Grid and BPM iterations, trimmed target previews and the history view carry the rest: render a spread, listen in the render player, load the winner in place, checkpoint.
+6. Grid and BPM iterations, trimmed target previews and the history view carry the rest: render a spread (a box counts the cells as they render, its Cancel stops the spread, and the render player opens on the spread when the last cell is done), listen in the render player, load the winner in place, checkpoint.
 
 On timing: the scanner's smooth movement lets a warp marker land essentially at the onset of an attack, so place against what you see and hear together.
 

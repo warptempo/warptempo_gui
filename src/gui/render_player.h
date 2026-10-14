@@ -250,7 +250,12 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 //
 // ENTER AND LEAVE. open() is the ONE opener — bare `l`, bare `'` outside the
 // `h` view and, since 2026-09-01, ONE icon-row button (Play renders) all reach
-// it through on_key; the LOAD IN PLACE button was the second until that day,
+// it through on_key, and since 2026-10-14 A COMPLETE BATCH reaches it at its
+// terminal: the progress modal that stood from the Render press is replaced
+// by the player on the batch's folder — the newest, which is the open's own
+// seat below — with the held press dropped first
+// (GuiInputHandler::swap_batch_progress_for_player; architect 2026-10-14,
+// reversing 2026-09-15's "a finished sweep opens nothing"); the LOAD IN PLACE button was the second until that day,
 // when the architect moved it to the history group, its press out here having
 // been Play renders' act under a second name (the record is at its roster
 // entry, app_state.h). The KEYS are unchanged, an alias being a keyboard fact
@@ -346,7 +351,9 @@ struct GuiRenderPlayer {
           notifications(notifications_) {}
 
     // THE OPENER (the contract above). Returns whether the mode opened; a
-    // refusal has already raised its card or has nothing to say.
+    // refusal has already raised its card or has nothing to say. Its roads:
+    // on_key's (bare `l`, bare `'`, the Play renders lift) and a complete
+    // batch's terminal (swap_batch_progress_for_player, 2026-10-14).
     bool open();
     // THE CLOSER (the contract above). A no-op when the mode is down.
     //

@@ -2136,6 +2136,9 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
                                : GuiCursorKind::WindowSizeWE;
     }
     if (app.prompt.active) return GuiCursorKind::Arrow;
+    // AND SO IS THE PROGRESS MODAL (2026-10-14): one button, and everything
+    // else behind its veil.
+    if (app.batch_progress.active) return GuiCursorKind::Arrow;
     // THE RENDER PLAYER IS THE ARROW EVERYWHERE (2026-08-28): its three
     // pointer surfaces — the overlay's rows, the scrub, the modal row's
     // buttons — are buttons and a list, which carry no cue anywhere in the
@@ -3442,6 +3445,8 @@ void GuiInputHandler::begin_touch_region(int x, int y) {
     // for the gesture that skips the press path: a held finger on the band or
     // the waveform under either mode begins no sweep.
     if (app.render_player.active || app.picker.active) return;
+    // AND THE PROGRESS MODAL'S (2026-10-14), for the same gesture's reason.
+    if (app.batch_progress.active) return;
     if (keyboard_modal_editor_active()) return;
     if (app.dropdown.open()) return;
     if (app.loading || audio.total_frames() <= 0) return;
@@ -3875,12 +3880,15 @@ bool GuiInputHandler::modal_dialog_stash_current() const {
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (!dlg.valid || dlg.session == 0) return false;
     // THE LIVE OWNER'S CLASS, in the painter's own precedence (prompt over
-    // player over picker over editor — paint_modal_dialog's fork; the two
+    // the progress modal over player over picker over editor —
+    // paint_modal_dialog's fork; the progress modal stands beside none of
+    // the lower three, ModalDialogOwner's block; the two
     // list owners never stand together and neither stands beside an editor,
     // so their order is free). THIS IS ONE
     // OF THE THREE PLACES THE RANKING IS SPELLED and they must agree.
     const AppState::ModalDialogOwner live =
         app.prompt.active         ? AppState::ModalDialogOwner::Prompt
+      : app.batch_progress.active ? AppState::ModalDialogOwner::Progress
       : app.render_player.active  ? AppState::ModalDialogOwner::Player
       : app.picker.active         ? AppState::ModalDialogOwner::Picker
                                   : AppState::ModalDialogOwner::Editor;
@@ -3942,6 +3950,14 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             }
         }
         return false;
+    }
+    // THE PROGRESS MODAL'S ONE BUTTON (2026-10-14): Cancel, and its act is
+    // the batch's cancel road (cancel_batch_progress) — reached at the lift
+    // of a press armed on it or at the release of Enter or Space on its ring
+    // focus, as Esc reaches it at the key's press.
+    if (app.batch_progress.active) {
+        cancel_batch_progress();
+        return true;
     }
     // THE RENDER PLAYER'S BUTTONS (2026-08-28): the act the stash names,
     // decided against the live player — each act's own body re-asks its own
@@ -5711,6 +5727,25 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
         return;
     }
 
+    // THE PROGRESS MODAL'S VEIL (architect 2026-10-14, AppState::
+    // BatchProgress): while a batch's modal stands the pointer has ONE target
+    // of its own, the controls row's Cancel (the arm every dialog button
+    // takes, its act at the lift), and the CAPTION above it (the window's
+    // verbs, as under the two list owners); EVERY OTHER PRESS IS CONSUMED —
+    // the box, the lanes, the roster and the menu row's anchors alike, the
+    // prompt's own veil (no File anchor is admitted: a menu over a running
+    // batch has nothing the batch would let it do). Ranked with the two list
+    // owners' veils, none of which can stand beside it; the cards, the
+    // keyboard, the sizing frame and a prompt over it answer above.
+    if (app.batch_progress.active && !caption_press_admitted) {
+        if (button != GuiMouseButton::Left) return;
+        if (!mods.ctrl && !mods.shift && !mods.alt &&
+            modal_dialog_stash_current()) {
+            arm_modal_dialog_press(x, y);
+        }
+        return;
+    }
+
     // (THE MODAL-TRAP REACH-THROUGH STOOD HERE, 2026-08-11..08-13, and is
     // RETIRED — architect: "we can drop the Save reach through". It let a
     // plain left press on a roster button whose chord the editors' modal
@@ -7272,6 +7307,17 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
         }
         return;
     }
+    // THE PROGRESS MODAL'S RELEASE (2026-10-14), its press block's mirror:
+    // the controls row's armed Cancel through the one shared dispatch, every
+    // other lift consumed — the veil's answer. (A lift that arrives AFTER THE
+    // BATCH'S COMPLETION SWAPPED THE MODAL FOR THE RENDER PLAYER finds no arm:
+    // the swap drops it, GuiInputHandler::swap_batch_progress_for_player.)
+    if (app.batch_progress.active) {
+        if (button == GuiMouseButton::Left) {
+            dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
+        }
+        return;
+    }
     // THE FOLDER OVERLAY'S ROW ARM ENDS HERE, the hoisted claim's mirror and
     // at the same rank: a motionless lift HIGHLIGHTS THE ROW AND OPENS IT (a
     // click activates, 2026-08-29), a scroll drag simply
@@ -8376,7 +8422,8 @@ void GuiInputHandler::finish_chrome_press_release(
     // PICKER's, whose release blocks return above this call the same way; the
     // term below is the editor OPENED MID-HOLD's, and any of the three
     // opened mid-hold (bare `l`, Ctrl+O or `'` typed under a held button)
-    // takes the same refusal through it.
+    // takes the same refusal through it — and so does THE PROGRESS MODAL
+    // (2026-10-14), a batch's render chord typed under a held button.
     // THE PLAYER IS NO TERM FOR THE PLAY RENDERS ARM (architect 2026-10-13):
     // that button, lit under the player, is the one roster arm the player's
     // veil admits and its lift is the player's close; any other arm is the
@@ -8384,7 +8431,7 @@ void GuiInputHandler::finish_chrome_press_release(
     if (modal_dialog_editor_active() ||
         (app.render_player.active &&
          arm.index != redesign_button_index(RedesignButton::IconListen)) ||
-        app.picker.active) return;
+        app.picker.active || app.batch_progress.active) return;
     switch (arm.kind) {
     case AppState::ChromePress::Kind::None:
         return;
@@ -9902,14 +9949,15 @@ void GuiInputHandler::tick_tooltip() {
 }
 
 // NO DWELL RUNS UNDER A KEYBOARD-MODAL SURFACE OR A PROMPT — the rule's one
-// expression, read by the roster's hover walk. The two list owners are terms
-// because each takes the keyboard whole; the pointer-transparent FLAG editor is
+// expression, read by the roster's hover walk. The two list owners and the
+// progress modal (2026-10-14) are terms because each takes the keyboard whole; the pointer-transparent FLAG editor is
 // a term through keyboard_modal_editor_active for the same reason, and it is
 // the case the walk's veil cannot see: the roster stays hoverable under one
 // (that editor raises no veil).
 bool GuiInputHandler::tooltip_dwell_suppressed() const {
     return app.prompt.active || keyboard_modal_editor_active() ||
-           app.render_player.active || app.picker.active;
+           app.render_player.active || app.picker.active ||
+           app.batch_progress.active;
 }
 
 // THE ARMED CHROME PRESS, dropped — the pointer-leave / capability-loss hook's
@@ -10306,6 +10354,13 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
     // roster walk (no roster hint, the no-wait rule), nothing else — no
     // field, no drag, no scrub; the overlay's own arm ran above.
     if (app.picker.active) {
+        update_modal_dialog_hover(mouse_x, mouse_y);
+        recompute_redesign_button_hover();
+        return;
+    }
+    // THE PROGRESS MODAL'S MOTION (2026-10-14): the picker's — the modal
+    // buttons' walk and the roster walk, nothing else.
+    if (app.batch_progress.active) {
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;

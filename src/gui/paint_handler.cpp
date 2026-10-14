@@ -5588,7 +5588,9 @@ static std::string_view dialog_editor_label(const AppState& app,
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
 // owner since 2026-08-28: its transport row takes the lane whole), the PICKER
-// (the fourth, the same day: its Cancel-alone row) or any dialog editor. The
+// (the fourth, the same day: its Cancel-alone row), THE PROGRESS MODAL (the
+// fifth, 2026-10-14: a batch's Cancel alone, AppState::BatchProgress) or any
+// dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
 // EVERY ONE OF THEM STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
@@ -5597,6 +5599,7 @@ static std::string_view dialog_editor_label(const AppState& app,
 // no keyboard standing the row's content rows ARE the family's controls row.
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
+    if (app.batch_progress.active) return true;
     if (app.render_player.active) return true;
     if (app.picker.active) return true;
     return dialog_editor_to_paint(app) != nullptr;
@@ -5821,6 +5824,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   on their FIRST (PromptState's PromptInitialFocus owns the choice); Enter answers whichever it is, the
 //   assignment site is a few dozen lines into the body below and the whole
 //   supersession is at PromptState.
+//   THE PROGRESS MODAL (2026-10-14, AppState::BatchProgress) — a prompt's
+//   shape with a sentence for its question: "Rendering X of Y..." on the box's
+//   first row on the face, and Cancel alone flush right on the controls row,
+//   no access letter, raised with passive focus on it.
 //   AN EDITOR — THE BOX IS ITS EDIT CONTROL (mock_modal_settings_osk_v2.png):
 //   the whole pending line on the theme's FIELD pair (ModalBoxGround::Field),
 //   from the box's first row at the list's row metrics, SOFT-WRAPPED at the
@@ -6038,21 +6045,28 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // reads too (dialog_editor_to_paint, above), so the row cannot stand its
     // tenants down for a dialog this body then declines to paint.
     const bool prompt_up = app.prompt.active;
+    // THE PROGRESS MODAL, the fifth owner (2026-10-14, AppState::
+    // BatchProgress): directly under the prompt and above the three lower
+    // ranks, none of which stands beside it (ModalDialogOwner's block).
+    const bool progress_up = !prompt_up && app.batch_progress.active;
     // THE RENDER PLAYER, the third owner (2026-08-28): under the prompt like
     // the editors, and never live beside one (its opener refuses under any
     // editor, its key router consumes every opener).
-    const bool player_up = !prompt_up && app.render_player.active;
+    const bool player_up = !prompt_up && !progress_up &&
+                           app.render_player.active;
     // THE PICKER, the fourth owner (2026-08-28): the same rank as the player,
     // the two never live together (each opener refuses under the other) and
     // neither live beside an editor. THIS IS ONE OF THE THREE PLACES THE
     // RANKING IS SPELLED (AppState::modal_dialog_live_session and
     // modal_dialog_stash_current are the others) and they must agree or the
     // owner-tag doctrine breaks.
-    const bool picker_up = !prompt_up && !player_up && app.picker.active;
+    const bool picker_up = !prompt_up && !progress_up && !player_up &&
+                           app.picker.active;
     text_editor::State* ed =
-        (prompt_up || player_up || picker_up)
+        (prompt_up || progress_up || player_up || picker_up)
             ? nullptr : dialog_editor_to_paint(app);
-    if (!prompt_up && !player_up && !picker_up && ed == nullptr) {
+    if (!prompt_up && !progress_up && !player_up && !picker_up &&
+        ed == nullptr) {
         // No dialog: the three pointer/keyboard face indices reset WITH the
         // stash, so a fresh dialog cannot inherit the previous one's lit
         // button, its armed button or its keyboard focus.
@@ -6096,7 +6110,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // that day — the chrome's ground laid over row 8, the border and the
     // frame's bottom row under one Hilight line, its controls centered in it
     // or standing on the keyboard — is retired: "we should stop doing that".)
-    const bool    boxed   = prompt_up || ed != nullptr;
+    // THE PROGRESS MODAL TAKES THE BOX TOO, on the face (2026-10-14): its
+    // sentence is read, never picked or typed.
+    const bool    boxed   = prompt_up || progress_up || ed != nullptr;
     const int     kb_h    = onscreen_keyboard::modal_keyboard_h_px(app, gui);
     const GuiRect lane    = bottom_row_area(app);
     const GuiRect content = modal_controls_row_rect(app, kb_h);
@@ -6115,7 +6131,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // laid first, the controls after it on the row it leaves.
     if (boxed)
         paint_modal_box(cr, app,
-                        prompt_up ? ModalBoxGround::Face : ModalBoxGround::Field,
+                        (prompt_up || progress_up) ? ModalBoxGround::Face
+                                                   : ModalBoxGround::Field,
                         kb_h);
 
     const int bgap  = scaled_px(kModalButtonGapPx);
@@ -6392,7 +6409,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // "Cancel (Esc)" follows for free, those being the two routers'
         // own keys under the product's one spelling (spell_chord's head,
         // gui_input.h).
-        if (!picker_up) {
+        // THE PROGRESS MODAL'S ROW IS **Cancel** ALONE TOO (architect
+        // 2026-10-14): the batch's one act a user owns is stopping it, and its
+        // lift is the batch's cancel road (dispatch_modal_dialog_button's
+        // progress arm). No access letter: Cancel is Esc, Windows strict.
+        if (!picker_up && !progress_up) {
             DialogButtonPlan ok;
             ok.label     = "OK";
             ok.editor_ok = true;
@@ -6456,6 +6477,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 : static_cast<int>(plan.size()) - 1;
         app.modal_dialog_focus_active = false;
     }
+    // THE PROGRESS MODAL IS RAISED WITH PASSIVE FOCUS ON ITS CANCEL
+    // (2026-10-14), a prompt's LastButton raise on a one-button row: Windows'
+    // progress dialog, whose Cancel is its default button, so bare Enter or
+    // Space presses it and cancels at the key's release, as Esc cancels at
+    // its press. The same one assignment edge as the prompt's (a fresh
+    // session), so a key arm a previous surface left cannot carry over.
+    if (face_state_reset && progress_up && !plan.empty()) {
+        app.modal_dialog_focus        = static_cast<int>(plan.size()) - 1;
+        app.modal_dialog_focus_active = false;
+    }
 
     // -- THE CONTROLS ROW'S LAYOUT (architect 2026-10-14, modal_box.h) --
     //
@@ -6504,6 +6535,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const int     row_h      = folder_overlay::button_row_height_px();
     const int     row_pitch  = row_h + folder_overlay::button_row_gap_px();
     const int     row0_y     = interior.y + folder_overlay::pad_px();
+    // ONE LINE ON THE BOX'S FIRST ROW, in the chrome's text on the face —
+    // a prompt's question and the progress modal's sentence alike — CLIPPED
+    // at the text inset short of the interior's right edge: a line longer
+    // than the box's width is cut there, the buttons under it on the
+    // controls row always whole.
+    const auto paint_first_row_line = [&](const std::string& text) {
+        const text_shape::ShapedRun msg =
+            text_shape::shape_text_run(font, text);
+        if (text_w <= 0 || interior.h <= 0) return;
+        cairo_save(cr);
+        cairo_rectangle(cr, text_x0, interior.y, text_w, interior.h);
+        cairo_clip(cr);
+        set_palette_source(cr, palette().label);
+        text_shape::show_shaped_run(
+            cr, msg, static_cast<double>(text_x0),
+            redesign_baseline(font, static_cast<double>(row0_y),
+                              static_cast<double>(row_h)));
+        cairo_restore(cr);
+    };
 
     if (prompt_up) {
         // THE PAINTED GATE'S ONE WRITER OF TRUE (2026-08-13): this branch is
@@ -6520,23 +6570,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         app.prompt.painted = true;
         dlg.owner = AppState::ModalDialogOwner::Prompt;
         // THE QUESTION ON THE BOX'S FIRST ROW (architect 2026-10-14, the
-        // progress mock's shape): one line in the chrome's text on the face,
-        // CLIPPED at the text inset short of the interior's right edge — a
-        // question longer than the box's width is cut there, the buttons
-        // under it on the controls row always whole.
-        const text_shape::ShapedRun msg =
-            text_shape::shape_text_run(font, app.prompt.text);
-        if (text_w > 0 && interior.h > 0) {
-            cairo_save(cr);
-            cairo_rectangle(cr, text_x0, interior.y, text_w, interior.h);
-            cairo_clip(cr);
-            set_palette_source(cr, palette().label);
-            text_shape::show_shaped_run(
-                cr, msg, static_cast<double>(text_x0),
-                redesign_baseline(font, static_cast<double>(row0_y),
-                                  static_cast<double>(row_h)));
-            cairo_restore(cr);
-        }
+        // progress mock's shape), the one-line rule above.
+        paint_first_row_line(app.prompt.text);
+    } else if (progress_up) {
+        // -- THE PROGRESS MODAL (architect 2026-10-14, AppState::
+        //    BatchProgress): its sentence, "Rendering X of Y...", on the box's
+        //    first row at the prompt's own seat — the mock's subject — and
+        //    Cancel alone flush right on the controls row (the walk below).
+        //    The sentence repaints as each entry starts
+        //    (GuiInputHandler::set_batch_progress_index's damage). --
+        dlg.owner = AppState::ModalDialogOwner::Progress;
+        paint_first_row_line(app.batch_progress.sentence());
     } else if (player_up) {
         // -- THE RENDER PLAYER'S ROW (architect 2026-08-28 — the relaid
         //    row): TRANSPORT · SCRUB · CLOCK · REPEAT ONE · UP ......... LOAD
@@ -7167,8 +7211,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.buttons.push_back(out);
     }
 
-    // THE MODAL'S SURFACE IS THE BOX: a prompt's and a dialog editor's the
-    // modal family's whole area (modal_area_rect, 2026-10-14 — the box, its
+    // THE MODAL'S SURFACE IS THE BOX: a prompt's, the progress modal's and a
+    // dialog editor's the modal family's whole area (modal_area_rect, 2026-10-14 — the box, its
     // margins and foot, the controls row and, on the keyboard, the lifted
     // border; the taskbar overlay's line and ground 2026-10-10 to
     // 2026-10-14), and the player's and the picker's the controls row

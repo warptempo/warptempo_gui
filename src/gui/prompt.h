@@ -152,7 +152,12 @@ struct GuiPrompt {
     // live gesture through their release bodies, hiding the floating hint and
     // closing the popup — so the honest rule is that nothing asynchronous
     // raises a modal without doing that, rather than that nothing
-    // asynchronous raises one at all.)
+    // asynchronous raises one at all. THE SECOND, since 2026-10-14, is a
+    // batch's completion opening the RENDER PLAYER, and it raises no modal
+    // over the user's work: it REPLACES the progress modal that has stood
+    // since the Render press (GuiInputHandler::swap_batch_progress_for_player),
+    // and it clears the way the same way — the held press on that modal
+    // dropped and the hint hidden before the player opens.)
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
     // prompt and clear the pending paste anchor, which is the phase reset

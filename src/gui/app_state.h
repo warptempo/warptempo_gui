@@ -6709,11 +6709,19 @@ struct AppState {
     // other, and neither is an editor), as neither is live beside an editor
     // (both openers refuse under one, both routers consume every editor
     // opener) — so the order among the three lower ranks is free. (A FIFTH
-    // OWNER stood twice: the AV Sync Stats panel, 2026-09-03..30, and the
-    // color picker's card on the well, 2026-10-07..14 — each deleted with
+    // OWNER stood twice before: the AV Sync Stats panel, 2026-09-03..30, and
+    // the color picker's card on the well, 2026-10-07..14 — each deleted with
     // its surface.)
+    // THE FIFTH OWNER IS THE PROGRESS MODAL since 2026-10-14
+    // (AppState::BatchProgress): a batch's "Rendering X of Y..." on the box's
+    // face with Cancel alone on the controls row. Ranked directly UNDER THE
+    // PROMPT (a WM close can raise the unsaved-work question over a running
+    // batch) and above the other three, none of which stands beside it: the
+    // player's and the picker's openers are unreachable under its router and
+    // its veil, and no dialog editor stands at a batch's dispatch (the BPM
+    // editor's Enter closes the editor before its sweep dispatches).
     enum class ModalDialogOwner {
-        None, Prompt, Editor, Player, Picker
+        None, Prompt, Editor, Player, Picker, Progress
     };
     // THE PLAYER'S NINE BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
@@ -6908,8 +6916,11 @@ struct AppState {
     // THE RANKING IS SPELLED and they must agree (paint_modal_dialog's `*_up`
     // fork and modal_dialog_stash_current's live ladder are the others), or the
     // owner-tag doctrine above breaks.
+    // THE PROGRESS MODAL (2026-10-14) ranks directly under the prompt, above
+    // the three lower ranks (ModalDialogOwner's fifth-owner block).
     uint64_t modal_dialog_live_session() const {
         if (prompt.active) return prompt.session;
+        if (batch_progress.active) return batch_progress.session;
         if (render_player.active) return render_player.session;
         if (picker.active) return picker.session;
         return dialog_editor_session();
@@ -9093,6 +9104,49 @@ struct AppState {
     // is set by Esc during a run and read between batch entries.
     bool queue_running           = false;
     bool queue_cancel_requested  = false;
+
+    // THE PROGRESS MODAL (architect 2026-10-10 evening; its shape 2026-10-14
+    // on tmp/modal_arc/mock_modal_progress_v2.png) — THE MODAL FAMILY'S FIFTH
+    // MEMBER (modal_box.h, ModalDialogOwner::Progress). EVERY BATCH — the grid
+    // iterations and the BPM sweep — opens it AT THE RENDER PRESS: the box with
+    // THE FACE INSIDE (a surface you only read), the sentence on its first row
+    // at the list's row metrics, and CANCEL ALONE flush right on the controls
+    // row, no access letter (Cancel is Esc, Windows strict). The sentence is
+    // `sentence()` below, rewritten as each entry starts.
+    //   `active`   it stands — from the press (GuiInputHandler::
+    //              open_batch_progress: at the batch's first dispatch, or at
+    //              the park when the batch waits out a killed render's drain)
+    //              to the batch's terminal;
+    //   `session`  its modal session id from the one counter
+    //              (text_editor::next_session_id), minted at the open;
+    //   `index`    the 1-based entry now rendering (1 while the batch is
+    //              parked: the first entry is the one it waits to start);
+    //   `total`    the batch's count, the entries the build produced — the
+    //              same M the terminal's "Rendered N of M" counts.
+    // ITS END IS THE BATCH'S TERMINAL, one of three (dispatch_next_batch_entry
+    // owns each): COMPLETE — every entry rendered — swaps the modal for THE
+    // RENDER PLAYER on the batch's folder; CANCELLED closes it back to the main
+    // window; SHORT — fewer cells than counted, the failure road — closes it
+    // under the existing "Rendered N of M" card. A cancel while the batch is
+    // still PARKED closes it at the cancel (GuiInputHandler::
+    // cancel_batch_progress): the parked batch is disarmed and never runs.
+    // While it stands the state line's batch text (queue_progress_text) is
+    // still written but not on screen: row 8 yields to the modal whole.
+    struct BatchProgress {
+        bool     active  = false;
+        uint64_t session = 0;
+        int      index   = 0;
+        int      total   = 0;
+        // THE SENTENCE (architect 2026-10-14: "Rendering 3 of 11...", WITH THE
+        // ELLIPSIS, his word), spelled as the product spells every ellipsis it
+        // paints: three periods, as "Updating...", a single render's
+        // "Rendering..." and the flag truncation's "..." are.
+        std::string sentence() const {
+            return "Rendering " + std::to_string(index) + " of " +
+                   std::to_string(total) + "...";
+        }
+    };
+    BatchProgress batch_progress;
 
     // Non-interactive status text — ROW 8'S STATE CELL, right of the clock
     // (2026-08-29's evening fold; it was the one-day STATUS BAR's left cell

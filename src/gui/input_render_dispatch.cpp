@@ -1,6 +1,7 @@
 #include "input_handler.h"
 
 #include "directory_walk.h"     // the one non-throwing listing walk
+#include "modal_box.h"          // the progress modal's interior (its damage)
 #include "phaseresetmarkers.h"
 #include "render_cache.h"          // fingerprint_sidecar_path
 #include "render_output_naming.h"  // the deliverable's path composition
@@ -579,6 +580,12 @@ void GuiInputHandler::kill_running_render_and_park(
         AppState::PendingArchivalCommand cmd) {
     async_renderer.request_cancel();
     app.queue_cancel_requested = true;
+    // A PARKED BATCH OPENS ITS PROGRESS MODAL HERE, AT THE PRESS (architect
+    // 2026-10-14), not at the start the drain's pump gives it later: the
+    // modal is the Render press's answer whichever road the batch takes
+    // (open_batch_progress's contract).
+    if (!cmd.single)
+        open_batch_progress(static_cast<int>(cmd.reqs.size()));
     cmd.armed = true;
     app.pending_archival = std::move(cmd);
 }
@@ -627,7 +634,87 @@ void GuiInputHandler::start_render_batch(std::vector<RenderRequest> reqs,
     app.queue_cancel_requested = false;
     app.queue_running          = true;
 
+    // THE PROGRESS MODAL OPENS WITH THE BATCH (architect 2026-10-14) — or is
+    // already standing, opened at the park when this batch waited out a
+    // killed render (kill_running_render_and_park), the opener keeping that
+    // session.
+    open_batch_progress(static_cast<int>(batch_.reqs.size()));
+
     dispatch_next_batch_entry();
+}
+
+// -- THE PROGRESS MODAL (architect 2026-10-14; the contracts at the
+//    declarations, input_handler.h, and the model at AppState::BatchProgress)
+
+void GuiInputHandler::open_batch_progress(int total) {
+    AppState::BatchProgress& bp = app.batch_progress;
+    if (bp.active) return;
+    // A modal surface is opening: the shared modal stop (the picker's and the
+    // player's openers take the same one), and the roster hint goes with the
+    // activation (the dwell stays suppressed while it stands,
+    // tooltip_dwell_suppressed).
+    playback_lifecycle.stop_playback_for_modal_open();
+    hide_shift_tooltip();
+    bp.active  = true;
+    bp.session = text_editor::next_session_id();
+    bp.index   = 1;
+    bp.total   = total;
+    // A modal OPEN damages the whole window: the box covers the canvas column
+    // and the modal has no rect before its first paint.
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::set_batch_progress_index(int index) {
+    AppState::BatchProgress& bp = app.batch_progress;
+    if (!bp.active || bp.index == index) return;
+    bp.index = index;
+    // THE SENTENCE'S DAMAGE: the box's interior, where it stands (no keyboard
+    // stands under this modal — the keyboard is an editor's alone).
+    viewport.invalidate_rect(modal_box_interior_rect(app, /*keyboard_h=*/0));
+}
+
+void GuiInputHandler::close_batch_progress() {
+    if (!app.batch_progress.active) return;
+    app.batch_progress = AppState::BatchProgress{};
+    // The box leaves the canvas column whole: the lanes, the waveform and row
+    // 8 come back — a whole-window damage, as a prompt's answer takes.
+    viewport.invalidate_all();
+}
+
+void GuiInputHandler::swap_batch_progress_for_player() {
+    // THE HELD PRESS DROPS FIRST, CLEANLY (architect 2026-10-14): a pointer
+    // press armed on Cancel and a keyboard press held on its ring focus are
+    // both released here as no-ops, so the lift that follows finds no arm
+    // under the player (on_button_release's player branch takes -1 and
+    // dispatches nothing) and the key's release none (on_key_release). A
+    // press held anywhere else on the modal armed nothing to drop: the veil
+    // consumed it.
+    app.modal_dialog_pressed      = -1;
+    app.modal_dialog_press_inside = false;
+    app.modal_dialog_press_shift  = false;
+    app.modal_dialog_press_ms     = 0;
+    clear_modal_dialog_key_press();
+    hide_shift_tooltip();
+    close_batch_progress();
+    // THE RENDER PLAYER ON THE NEW FOLDER: open() enters the newest batch
+    // folder (max_renders_batch_index, renders_dir.h), which is this batch's
+    // — the sweep minted its folder with that very next index, and nothing
+    // can write a newer one under the modal. Its refusals card as they do on
+    // every road; with the batch finalized, the run-standing one cannot fire.
+    render_player.open();
+}
+
+void GuiInputHandler::cancel_batch_progress() {
+    if (!app.batch_progress.active) return;
+    // THE RENDER CANCEL ROAD, unchanged (cancel_archival_session): the
+    // running render interrupted, the batch told to stop at its next
+    // completion, and a parked batch command disarmed.
+    (void)cancel_archival_session();
+    // A BATCH THAT NEVER STARTED reaches no terminal of its own — it was the
+    // parked command the road just disarmed — so its modal closes here; a
+    // started batch's closes at its terminal (dispatch_next_batch_entry),
+    // once the worker has acknowledged the cancel.
+    if (!batch_.active) close_batch_progress();
 }
 
 void GuiInputHandler::dispatch_next_batch_entry() {
@@ -637,13 +724,20 @@ void GuiInputHandler::dispatch_next_batch_entry() {
 
     // Batch terminates if Esc was pressed since the last dispatch OR if
     // we ran out of entries. Either way: log a summary and clean up.
-    // A FINISHED SWEEP OPENS NOTHING (architect 2026-09-15): the terminal
-    // raises no modal and does not open the render player, because an
-    // asynchronous modal would interrupt whatever the user is doing at that
-    // moment; the cells stay on disk and bare `l` opens the player.
+    // A FINISHED SWEEP OPENS THE RENDER PLAYER ON ITS FOLDER (architect
+    // 2026-10-14, reversing 2026-09-15's "a finished sweep opens nothing":
+    // an asynchronous modal would have interrupted whatever the user was
+    // doing, and the batch is not asynchronous any more — THE PROGRESS MODAL
+    // opens at the Render press and stands until this terminal, so the
+    // player's arrival interrupts nothing). THREE TERMINALS, the modal's three
+    // ends (AppState::BatchProgress): COMPLETE — every counted cell rendered —
+    // swaps the modal for the player; CANCELLED closes it; SHORT — fewer cells
+    // than counted, the failure road's card below — closes it.
     const bool out_of_entries = (batch_.next_index >= total);
     const bool cancelled      = app.queue_cancel_requested;
     if (out_of_entries || cancelled) {
+        const bool complete = !cancelled && total > 0 &&
+                              batch_.rendered >= total;
         if (cancelled) {
             std::fprintf(stderr,
                 "warptempo_gui: %s: Rendered %d of %d entries (cancelled)\n",
@@ -658,11 +752,12 @@ void GuiInputHandler::dispatch_next_batch_entry() {
             // exactly like one that produced them all — the progress line is
             // gone by then either way. A COMPLETE sweep says nothing (a
             // render's completion is not notified), and a CANCELLED one says
-            // nothing either: the cancel is his deliberate act, and the state
-            // cell going blank as the cancel lands is its answer — the sweep's
-            // line stands from its first cell's dispatch until this terminal,
-            // whichever branch reaches it, and this clear (finalize_render_run,
-            // just below) is the one that takes it down.
+            // nothing either: the cancel is his deliberate act, and the
+            // progress modal closing as the cancel lands is its answer
+            // (2026-10-14; the state cell going blank was until then) — the
+            // sweep's line stands from its first cell's dispatch until this
+            // terminal, whichever branch reaches it, and this clear
+            // (finalize_render_run, just below) is the one that takes it down.
             // WHAT M COUNTS IS DISPATCHED CELLS (recorded 2026-09-02):
             // `batch_.reqs` holds the cells the BUILD produced, and a cell the
             // build itself rejected (compute_base_tempo_scale or
@@ -697,9 +792,6 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                 }
             }
         }
-        // A finished batch just leaves its artifacts on disk; nothing
-        // auto-opens. The user presses `l` to listen or `'` to load an
-        // entry in place by name.
         batch_.active = false;
         batch_.folder.clear();
         batch_.reqs.clear();
@@ -711,8 +803,21 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         // batch stays symmetric with the single Cancelled outcome and never
         // re-establishes (Esc means the user took control; any edit re-previews).
         if (!cancelled) maybe_reestablish_target_buffer();
+        // THE PROGRESS MODAL'S END, LAST — after the run is finalized, so the
+        // player's open meets no standing run (its run refusal,
+        // load_in_place_render_blocked, reads the flags finalize just
+        // cleared). A COMPLETE batch swaps the modal for the render player
+        // on the batch's folder, the held press dropped first; a cancelled or
+        // short one closes it back to the main window, the short one under
+        // its "Rendered N of M" card above.
+        if (complete) swap_batch_progress_for_player();
+        else          close_batch_progress();
         return;
     }
+
+    // THE PROGRESS MODAL'S SENTENCE FOLLOWS THE ENTRY NOW STARTING
+    // (2026-10-14): "Rendering X of Y...", X this dispatch's 1-based entry.
+    set_batch_progress_index(batch_.next_index + 1);
 
     // THE BATCH LABEL NAMES WHAT IS BEING COUNTED (architect 2026-08-29):
     // "Rendering 3 of 8 grid iterations..." / "Rendering 3 of 8 BPM
@@ -746,6 +851,10 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                   "Rendering %d of %d %s...",
                   batch_.next_index + 1, total,
                   batch_.label.c_str());
+    // (ON SCREEN THE BATCH IS THE PROGRESS MODAL'S since 2026-10-14 — its
+    // sentence above, row 8 yielding to the modal whole — so this line is
+    // written and taken down as before but stands behind the modal for the
+    // batch's whole run; the mechanics below are unchanged.)
     // A SWEEP'S LINE IS STATE, WRITTEN STRAIGHT INTO THE SLOT (architect
     // 2026-09-11, on the tablet's 90 Hz panel, where the line BLINKED once per
     // cell). The single render's park/promote machinery is the wrong shape for
