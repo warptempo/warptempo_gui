@@ -16,7 +16,9 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.Display;
+import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import java.nio.charset.StandardCharsets;
@@ -62,7 +64,9 @@ import java.nio.charset.StandardCharsets;
  * Java object with no NDK surface, so copy and paste reach every other app on
  * the tablet over the same JNI road the session opened. A THIRD, 2026-10-07,
  * is no new method: onDestroy's last act ENDS THE PROCESS, so every launch is
- * cold (the reason at that act). One need is still
+ * cold (the reason at that act). A FOURTH, 2026-10-14, is no new method
+ * either: onCreate's request for UNBUFFERED touch and stylus dispatch (the
+ * reason at the call). One need is still
  * known and unbuilt: the SAF picker's onActivityResult, which is
  * exactly why a subclass is required at all, NativeActivity never forwarding
  * it. The key-repeat cadence stays hard-coded from labwc's numbers in
@@ -242,6 +246,40 @@ public class MainActivity extends NativeActivity {
         // class), AFTER super: NativeActivity's own onCreate installs the
         // decor (setContentView), and the insets controller is the decor's.
         hideSystemBars();
+
+        // UNBUFFERED TOUCH AND STYLUS DISPATCH (2026-10-14). The window's
+        // ViewRootImpl otherwise BATCHES motion: it consumes the queued MOVE
+        // samples once per Choreographer vsync, one MotionEvent per vsync with
+        // the rest in its history (the S Pen samples every ~2 ms, so five to an
+        // event), and that consumption occasionally STALLS three to seven
+        // vsyncs, after which ONE event arrives carrying 16 to 37 history
+        // samples and the picture jumps by the whole travel. Measured on the
+        // tablet under the pen: 30 such holes in 4 min of panning, the native
+        // loop idle through every one (no damage, no stall, no failed post) --
+        // the pan hitch was this input hole, not app work; flags only made the
+        // jump visible, a flag being a landmark on a near-uniform waveform.
+        // Unbuffered, every sample comes down as it arrives (2.04 ms apart,
+        // history 0): no hole in 2 min of the same panning, and the
+        // architect's glass, "no stutter".
+        //
+        // THE SOURCE OVERLOAD ON THE DECOR VIEW, because NativeActivity takes
+        // the window's InputQueue: events pass the ViewRootImpl's receiver
+        // into the native queue and never reach the View hierarchy, so the
+        // per-event overload (which needs an event dispatched to the view) has
+        // nothing to act on, while the source overload on the decor sets the
+        // ViewRootImpl's unbuffered source mask that the batching consults.
+        // POSTED, because the request needs the view attached to its
+        // ViewRootImpl, which happens after onCreate returns. API 30; minSdk
+        // is 30.
+        //
+        // THE COST: events at the digitizer's own rate (~500/s for the pen)
+        // and unresampled, which the native loop absorbs -- its
+        // PRESENT-PER-VSYNC COALESCER (platform_android.cpp, pump) paints at
+        // most once per display period, so the extra events cost a drain and
+        // the core's motion coalescing, never an extra frame.
+        final View decor = getWindow().getDecorView();
+        decor.post(() -> decor.requestUnbufferedDispatch(
+                InputDevice.SOURCE_TOUCHSCREEN | InputDevice.SOURCE_STYLUS));
 
         // THE MEDIA SESSION, through its ONE owner below and on the UI thread,
         // which is why the call is here and not on the native side's road: a

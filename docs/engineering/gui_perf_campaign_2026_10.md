@@ -309,3 +309,58 @@ them re-derivable.
 - **The identity harness** (host-side, per change): the real function from the
   built tree against the previous HEAD's over random inputs, on pre-filled
   garbage surfaces, byte-compared.
+
+## 7. The close, 2026-10-14: the cadence and the pan hitch
+
+**(a) The cadence observation.** After the GPU canvas (`dbb8da35`), a
+throwaway per-second counter on the tablet (frame interval return to return,
+histogrammed in 11.11-ms vsync buckets; event to post; the swap's own time)
+over two minutes of his pans and pinches: 96.5 % of consecutive frames one
+vsync apart at 90 Hz, 3.1 % two, event to post 7.8 ms mean — against 17 to
+20 ms and 15 to 44 fps before the arc. A vsync-driven frame start
+(`AChoreographer_postFrameCallback64` / `postVsyncCallback`, the external
+review's item for the cadence) could only have touched the ~3 % slips, and
+the stutter it was meant for turned out to be (b). RULED OUT BY MEASUREMENT;
+the loop keeps its one wakeup (`closed_questions.md`).
+
+**(b) The pan hitch.** The symptom, his glass of the same day: an occasional
+jump in a pen pan, felt with flags on screen and not without. The first
+reading was confounded twice: the per-second `in_int` statistic (the largest
+interval between consecutive motion events) counted the air time across a
+stroke boundary as a hole, and the tool type was not logged, so pen and
+finger strokes were mixed. A read-only investigation of the pan road found
+nothing flags-conditional on it — the loop idle through every hole, damage
+empty, no stall (iteration max 12.4 ms), no failed post; the flags' only cost
+the pre-paint's 1.0 to 2.8 ms — and named the batched input as the candidate.
+THE HOLE MEASUREMENT: at every MOVE more than 24 ms after the previous
+delivered event with a pointer down, one line with the tool and the event's
+history. 30 holes in 4 min of pen panning (22 in 65 s with flags, 8 in 40 s
+in `h` without), every one the pen's, every one ONE event carrying 16 to 37
+history samples 2.1 ms apart from the gap's first ms to its last: the
+digitizer's stream had no gap; Android's ViewRootImpl, which consumes the
+batched MOVE samples once per Choreographer vsync (one MotionEvent per vsync,
+the rest in its history, five to an event at the pen's ~2-ms sampling), had
+stalled that consumption three to seven vsyncs, and the picture jumped by the
+whole travel when it resumed. Flags made the jump visible, not more frequent:
+a flag is a landmark on a near-uniform waveform, and without one a jump of
+the same size reads as nothing.
+
+**THE TRIAL** (one throwaway build, two edits): unbuffered dispatch requested
+on the decor view, and a present-per-vsync coalescer in the pump (presents at
+least 10.5 ms apart). Every sample then arrived as its own event, 2.04 ms
+apart, history 0; over 2 min of the same panning: no hole, event to post
+6.5 ms mean (7 to 9 before), consecutive frames one vsync apart 1476 times to
+one two-vsync frame, no blocked swap. His glass: "no stutter".
+
+**THE FIX** is the trial's two edits in owned form: `MainActivity.onCreate`'s
+`requestUnbufferedDispatch(SOURCE_TOUCHSCREEN | SOURCE_STYLUS)` on the decor
+view (the source overload, NativeActivity's events never reaching the View
+hierarchy), and the PRESENT-PER-VSYNC COALESCER at `GuiPlatform::pump`'s tail
+(`platform_android.cpp`): damage painted at most once per display period, the
+spacing derived from the panel's pinned rate (`kPanelRefreshHz`, the
+setFrameRate vote's number) less a 0.6-ms slack. Without the coalescer the
+unbuffered pen's ~500 events a second would each present, fill the swap
+queue and block the loop in the swap. The Wayland backend needs neither: the
+compositor's frame callback paces its presents. The investigation's other
+leads — the camera hold, the touch window, the flag hit tests, the paint —
+are closed with it (`closed_questions.md`).

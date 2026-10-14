@@ -408,6 +408,50 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// The panel's rate and the present coalescer's clock
+// ---------------------------------------------------------------------------
+
+// THE PANEL'S RATE, ONE NUMBER WITH TWO READERS: adopt_window's setFrameRate
+// vote (the pin and its ruling are there) and the present coalescer's least
+// spacing below (its rule at pump's tail). detect_refresh_rate_ms's 5-ms tick
+// is a choice made against this rate and says so there; it reads no number.
+constexpr int kPanelRefreshHz = 90;
+
+// THE LEAST SPACING BETWEEN TWO PRESENTS: the panel's period less a SLACK.
+// The coalescer's clock is the present's return, not the vsync, and the wait
+// from it runs long by the wake and the poll's whole-millisecond timeout
+// (rounded up, pump's head), so a spacing of the full period would land each
+// frame a little later than the last against the vsync grid and lose a vsync
+// whenever that drift crossed one; 0.6 ms under the period lets the next
+// present arrive inside the next vsync. Measured at 10.5 ms, within 0.02 ms
+// of this spacing (2026-10-14): consecutive frames one vsync apart 1476 times
+// to one two-vsync frame, no blocked swap.
+constexpr int64_t kPanelPeriodNs       = 1000000000LL / kPanelRefreshHz;
+constexpr int64_t kPresentSlackNs      = 600000LL;
+constexpr int64_t kMinPresentSpacingNs = kPanelPeriodNs - kPresentSlackNs;
+
+int64_t monotonic_now_ns() {
+    timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return static_cast<int64_t>(ts.tv_sec) * 1000000000LL + ts.tv_nsec;
+}
+
+// THE LAST PRESENT, stamped by paint_one_frame's tail at every successful
+// present (pump's, paint_now's and drain_events' alike, since all three go
+// out through it); 0 before the first. File scope because there is one window
+// per process and the stamp is its presents' clock, whichever GuiPlatform
+// painted them.
+int64_t g_last_present_ns = 0;
+
+// What is left of the least spacing since the last present: positive while
+// the coalescer holds a paint, zero or less once a present may go (and
+// always before the first).
+int64_t present_hold_left_ns() {
+    if (g_last_present_ns == 0) return 0;
+    return kMinPresentSpacingNs - (monotonic_now_ns() - g_last_present_ns);
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -811,7 +855,9 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     }
 #endif
 
-    // PIN THE PANEL TO 90 Hz (architect 2026-08-27). One device, one rate: the
+    // PIN THE PANEL TO 90 Hz (architect 2026-08-27; kPanelRefreshHz, the
+    // number's one owner, which the present coalescer reads too). One device,
+    // one rate: the
     // Tab S10 FE's panel is variable-refresh and the system otherwise picks a
     // rate from what it sees the app doing, which for a program that paints
     // only on damage reads as "hardly ever" and lands on 60. The playhead and
@@ -831,10 +877,12 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // is owed.
     {
         const int32_t rate_rc = ANativeWindow_setFrameRate(
-            window_, 90.0f, ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
+            window_, static_cast<float>(kPanelRefreshHz),
+            ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
         std::fprintf(stderr,
-                     "warptempo_gui: ANativeWindow_setFrameRate(90, "
-                     "FIXED_SOURCE) -> %d\n", static_cast<int>(rate_rc));
+                     "warptempo_gui: ANativeWindow_setFrameRate(%d, "
+                     "FIXED_SOURCE) -> %d\n", kPanelRefreshHz,
+                     static_cast<int>(rate_rc));
     }
 
     // THE SURFACE IS THE WINDOW (the rule is at width_, platform_android.h):
@@ -1350,7 +1398,13 @@ void GuiPlatform::paint_one_frame() {
     // failed post would leave the displayed buffer stale with nothing left to
     // re-post it, and a later, disjoint invalidation would never copy the lost
     // rectangle. Kept, it simply goes out again with the next frame.
-    if (present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y)) damage_.clear();
+    // A SUCCESSFUL PRESENT STAMPS THE COALESCER'S CLOCK (g_last_present_ns;
+    // the rule at pump's tail); a failed one leaves it, so the kept damage
+    // is never held behind a frame that did not go out.
+    if (present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y)) {
+        damage_.clear();
+        g_last_present_ns = monotonic_now_ns();
+    }
 }
 
 bool GuiPlatform::present(int x, int y, int w, int h) {
@@ -1370,7 +1424,11 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     // THE SWAP BLOCKS WHERE ANativeWindow_lock BLOCKED (swap interval 1, the
     // queue full): the loop keeps its ONE WAKEUP (architect 2026-08-27, the
     // timerfd at detect_refresh_rate_ms; no Choreographer, no second
-    // cadence). THE FRAME IS REDRAWN WHOLE at every swap, so neither EGL's
+    // cadence — a vsync-driven frame start was measured and ruled out
+    // 2026-10-14, the reason at pump's tail). The present coalescer (pump's
+    // tail) is no second cadence: it times the same poll and only spaces the
+    // presents, one per display period, so the queue does not fill under the
+    // unbuffered pen's ~500 events a second. THE FRAME IS REDRAWN WHOLE at every swap, so neither EGL's
     // buffer age nor a partial update is depended on. No glFinish, no
     // glFlush beyond the swap's own, no readback.
     //
@@ -1627,7 +1685,8 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *      its frame paints in this same pass (the reasoning is at the block);
  *   5. the loop-settled hook, at the tail, so it observes the pass's FULLY
  *      settled state;
- *   6. paint-if-dirty.
+ *   6. paint-if-dirty, AT MOST ONCE PER DISPLAY PERIOD (the present-per-vsync
+ *      coalescer, the rule at the tail; step 1's poll waits out what it holds).
  *
  * WHEN THE SETTLED HOOK DOES NOT FIRE: once should_exit_ or the run stop is
  * set. The pass is the last one of this run — the objects the consumer reads
@@ -1646,7 +1705,22 @@ void GuiPlatform::pump() {
     // deliver_owed_resize).
     deliver_owed_resize();
 
-    drain_looper(/*timeout_ms=*/-1);
+    // THE COALESCER'S WAIT (the rule at the tail): damage the last pass held
+    // back polls only for what is left of the least spacing, so the pass
+    // that paints it comes when the spacing is up even with nothing else
+    // arriving; input still drains and reaches the core in the meantime.
+    // ROUNDED UP to the poll's whole milliseconds, because a round down would
+    // poll at 0 and spin through the last fraction; the lateness that costs
+    // (under a millisecond, and less whenever an event or the tick wakes the
+    // pass first) is what the slack beside kMinPresentSpacingNs is set
+    // against. With no damage held the poll
+    // blocks as it always has, the timerfd its one wakeup.
+    int timeout_ms = -1;
+    if (!damage_.empty()) {
+        const int64_t left = present_hold_left_ns();
+        if (left > 0) timeout_ms = static_cast<int>((left + 999999LL) / 1000000LL);
+    }
+    drain_looper(timeout_ms);
 
     if (timer_fired_) {
         timer_fired_ = false;
@@ -1690,13 +1764,47 @@ void GuiPlatform::pump() {
     if (!should_exit_ && !run_stop_requested_)
         loop_settled_hook_(input_.current_mods());
 
-    paint_one_frame();
+    // THE PRESENT-PER-VSYNC COALESCER (2026-10-14). Damage is painted at most
+    // once per display period: a pass that finds damage less than
+    // kMinPresentSpacingNs after the last present (g_last_present_ns) does not
+    // paint it, and the next pass's poll waits for the remainder (the head)
+    // while input keeps draining into the core, which coalesces motion as it
+    // always has; damage with no present inside the last period paints at
+    // once. NOTHING ELSE SKIPS OR DELAYS A PAINT: paint_now's and
+    // drain_events' paints, a blocking load's, go out unheld (and stamp the
+    // clock like any other).
+    //
+    // ITS REASON IS THE UNBUFFERED PEN (MainActivity.onCreate's request, the
+    // finding there): the tablet's pan hitch of 2026-10-14 was an input hole
+    // upstream of this loop — the ViewRootImpl's once-per-vsync batching
+    // stalling three to seven vsyncs and then handing down one event with 16
+    // to 37 history samples (30 holes in 4 min of pen panning, this loop idle
+    // through every one) — fixed by asking for unbuffered dispatch, which
+    // hands every sample down as it arrives, ~500 a second for the pen. One
+    // present per event would then outrun the panel, fill the swap queue and
+    // block the loop in the swap; this spacing keeps the presents at the
+    // vsync cadence instead. Measured together (2026-10-14): no hole in 2 min,
+    // event to present 6.5 ms mean (7 to 9 before), consecutive frames one
+    // vsync apart 1476 times to one two-vsync frame, no blocked swap; his
+    // glass, "no stutter". THE SAME DAY A VSYNC-DRIVEN FRAME START
+    // (AChoreographer) WAS RULED OUT BY MEASUREMENT: after the GPU canvas
+    // 96.5 % of frames already landed one vsync apart at 90 Hz and 3.1 % two,
+    // event to present 7.8 ms mean, so it could only have touched those slips,
+    // and the stutter it was meant for was the input hole above.
+    //
+    // THE WAYLAND BACKEND NEEDS NONE OF THIS: its paint is the compositor's to
+    // invite — paint_one_frame runs at the wl_surface.frame callback, one
+    // commit per painted frame (platform_wayland.cpp's head) — so its presents
+    // are paced at the source.
+    if (damage_.empty() || present_hold_left_ns() <= 0) paint_one_frame();
 }
 
 void GuiPlatform::run() {
     // THE LOOP'S ONE WAKEUP is the periodic timerfd, so the blocking poll
     // never waits longer than one tick period and damage declared with no
-    // event under it still paints within that period. The stop bit is this
+    // event under it still paints within that period — or, behind a present
+    // inside the last display period, when that period's spacing is up (the
+    // coalescer, pump's tail). The stop bit is this
     // run's alone (platform.h): cleared here, set by the reopen, never by an
     // exit — which sets should_exit_ and is never cleared.
     run_stop_requested_ = false;
