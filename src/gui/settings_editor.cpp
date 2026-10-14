@@ -182,8 +182,10 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     // autocomplete_value already performs — no parallel opener and no second
     // serializer. Seed `<key>=`, then let autocomplete_value fill the value
     // side through format_engine_setting_value / recall_gui_setting_value,
-    // which is byte-identical to what a Ctrl+S writes; it leaves the cursor at
-    // the line end and no-ops on an unrecallable key, so the bare `<key>=` is
+    // which is byte-identical to what the writer writes except for the two
+    // color keys, which recall the effective preset where no line stands
+    // (architect 2026-10-14, recall_gui_setting_value); it leaves the cursor
+    // at the line end and no-ops on an unrecallable key, so the bare `<key>=` is
     // the honest fallback rather than an error. Its bool answer is the TAB
     // arm's question and means nothing here, so this caller drops it.
     //
@@ -1372,15 +1374,19 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // Recall the current live value for ANY settable key. Engine keys read
     // through format_engine_setting_value; GUI-kind keys (view state,
-    // gui_scale, projects_repo, projects_path, icons, font — gui_scale
+    // gui_scale, projects_repo, projects_path, chrome, caption — gui_scale
     // and the last four the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
-    // output to what a Ctrl+S would write, so recall and save never diverge.
+    // output to what a Ctrl+S would write, so recall and save never diverge,
+    // except that chrome and caption recall the effective preset where the
+    // device config holds no line (architect 2026-10-14).
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).
     // Only a truly unknown key is not recallable.
     //
-    // THE RECALL IS BYTE-EXACT WITH NO EXCEPTION (architect 2026-08-02, the
-    // UTF-8 relaxation). The seed below lands through
+    // THE RECALL PRESERVES EVERY BYTE OF A VALUE, NO UTF-8 EXCEPTION
+    // (architect 2026-08-02, the UTF-8 relaxation; the two color keys'
+    // effective default is the one departure, in WHICH value recalls, never
+    // in how bytes are kept). The seed below lands through
     // text_editor::replace_selection, whose filter now passes well-formed UTF-8
     // verbatim — and the free-text provenance values (title/bpm/notes/url/cover)
     // are exactly what the strict load takes verbatim

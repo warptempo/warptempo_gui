@@ -173,10 +173,11 @@ GuiRect   combo_list_item(const ComboList& l, int i);
 //     row out (2026-10-09 evening; the rule at settings_choice_motion);
 //     the combo takes no hover face. The press
 //     gives the combo the focus back from a button.
-//     IT IS ONE OF THE THREE LIST POPUPS (render.h's popup scroll block, the
-//     rule's one owner, 2026-10-08): placed by the window's room and
-//     SCROLLING when its rows outgrow it, its scroll bar inside it at its
-//     right, the shown row at the top at the open.
+//     IT IS THE ONE REMAINING SCROLLABLE LIST POPUP (render.h's popup scroll
+//     block, the rule's one owner, 2026-10-08; the color picker's element
+//     list and preset menu, the other two, went 2026-10-14): placed by the
+//     window's room and SCROLLING when its rows outgrow it, its scroll bar
+//     inside it at its right, the shown row at the top at the open.
 //   * WHILE THE LIST IS DOWN IT OWNS THE POINTER (the dropdown's ONE PRESS,
 //     ONE ACT): a press on its scroll bar scrolls (the scroll block's input),
 //     a press on a row ARMS it and THE LIFT ON THAT ROW SHOWS IT — the act
@@ -256,8 +257,11 @@ struct GuiSettingsEditor {
     void open();
     // Open the settings prompt PREFILLED with `<key>=<current value>`, the
     // settings dropdown's item click. Identical to open() plus the same recall
-    // autocomplete_value performs, so the value is byte-identical to what a
-    // Ctrl+S would write and there is no second serializer. The cursor rests at
+    // autocomplete_value performs, so there is no second serializer: the
+    // value is what the writer writes, byte for byte, EXCEPT on the two color
+    // keys (`chrome`, `caption`), which recall the EFFECTIVE preset where the
+    // device config holds no line (recall_gui_setting_value, the one recorded
+    // exception). The cursor rests at
     // the end of the line, ready to be edited or replaced; an unknown or
     // unrecallable key opens with the bare `<key>=` so the surface still tells
     // the user which key they picked. A CHOICE ROW'S KEY (settings_choice_item,
@@ -287,6 +291,10 @@ struct GuiSettingsEditor {
     // editing — byte-identical to what a Ctrl+S would write, UTF-8 provenance
     // text included since the 2026-08-02 relaxation (the old non-ASCII
     // exception is closed; the remaining edge is stated at the definition).
+    // The two color keys (`chrome`, `caption`) are the one departure: with no
+    // line in the device config they recall the effective default preset
+    // (architect 2026-10-14; recall_gui_setting_value), which the writer
+    // omits.
     // No-op when the value side is already non-empty, when there is no `=`, or
     // when the key is unknown — EXCEPT on the path key (2026-09-02), where
     // a NON-EMPTY value side is a path prefix and Tab completes it against the
