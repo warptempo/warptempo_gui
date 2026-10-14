@@ -81,18 +81,13 @@ inline int icon_row_pad_x() {
     return scaled_px(8.0);
 }
 
-// THE BPM EDITOR'S LABEL, the one dialog editor label left (2026-10-14): its
-// buffer is the bracket alone (`<beats>@[<lo>,<hi>]`, empty at a fresh
-// open), so with no label the modal family's box would open blank with
-// nothing saying what it asks; the label stands in the box on the line's
-// first row, ahead of the line, in the field text — not editable, no byte of
-// the buffer (paint_modal_dialog's editor arm). THE SETTINGS EDITOR'S
-// "Setting:" IS REMOVED (architect 2026-10-14: "pointless that far away. just
-// remove it") — its line names its own key. (Each dialog editor's label
-// stood at the bottom row's left pad beside its inset field 2026-08-12 to
-// 2026-10-14, the bottom-strip prefixes from row 7 before; the `h` view's
-// commit-title editor's "Commit:" beside them 2026-08-07 to 2026-10-10.)
-constexpr const char* kBpmEditorPrefix = "BPM:";
+// NO DIALOG EDITOR CARRIES A LABEL (2026-10-14): the Settings editor's
+// "Setting:" ("pointless that far away. just remove it") and the BPM editor's
+// "BPM:" ("drop") are both removed; the box shows its line alone. (Each
+// dialog editor's label stood at the bottom row's left pad beside its inset
+// field 2026-08-12 to 2026-10-14, the bottom-strip prefixes from row 7
+// before; the `h` view's commit-title editor's "Commit:" beside them
+// 2026-08-07 to 2026-10-10.)
 // The OPEN PROJECT prompt's label (File → Open project, 2026-08-27) — ONE WAY TO SHOW
 // (The Open project prompt's `Open: <projects_path>/` label and the `h`
 // view's `Load: ` label stood here until 2026-08-28, when both prompts lost

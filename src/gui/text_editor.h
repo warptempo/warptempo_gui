@@ -327,9 +327,9 @@ struct State {
 
     // Editable text — the whole of what the editor holds and the whole of what
     // its painter draws. A surface whose value has uneditable neighbours (the
-    // marker's position and disabled bit for the flag payload, the "BPM:"
-    // label for the bracket editor) leaves them to the marker's own fields and
-    // to the painter; this buffer never carries them.
+    // marker's position and disabled bit for the flag payload) leaves them to
+    // the marker's own fields and to the painter; this buffer never carries
+    // them.
     std::string pending;
 
     // Byte index into `pending`, always on a UTF-8 CODEPOINT BOUNDARY (the

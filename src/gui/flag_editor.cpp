@@ -927,9 +927,9 @@ void GuiFlagEditor::wipe_bpm_state() {
 // fresh open is a blank field the whole value is typed into
 // (format_bpm_bracket_text, warpmarkers.h, carries that ruling).
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
-// swaps to digits + `@`/`,`/`[`/`]`; the dialog painter supplies the visible
-// "BPM:" LABEL ahead of the line in the box (kBpmEditorPrefix,
-// paint_handler.h), so the buffer holds the bracket text alone.
+// swaps to digits + `@`/`,`/`[`/`]`; the box shows the bracket line alone,
+// no label (the Settings editor's shape), so the buffer holds the bracket
+// text alone.
 void GuiFlagEditor::enter_bpm_edit(int idx) {
     if (idx < 0) return;
     if (!app.bpm_mode_enabled) return;

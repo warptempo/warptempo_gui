@@ -14,6 +14,11 @@
 // and since that evening THE PROGRESS MODAL, a batch's "Rendering X of Y..."
 // (AppState::BatchProgress; mock_modal_progress_v2.png's own subject).
 //
+// (INTERFACE VERSUS MODAL, architect 2026-10-14: the player and the picker
+// stand in the box but are interface, so what they leave dead greys; the
+// prompts, editors and progress modal are modal and grey nothing — the rule
+// is recorded at redesign_button_enabled's head, app_state.h.)
+//
 // A MODAL TAKES THE AREA FROM THE VIEW BAR'S TOP ROW DOWN: the top strip
 // above it and THE COLUMN'S 5 W AIR under the band stay as the main window
 // paints them; the border under row 8 and the program frame's bottom row stay

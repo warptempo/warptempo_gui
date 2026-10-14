@@ -14913,6 +14913,10 @@ bool dropdown_item_enabled(const AppState& a, const GuiAudio& audio,
 //     nothing but greyed rows does not open. Edit therefore greys whenever
 //     no propagate command can act (no selection, for one).
 //
+// (The mode partition's first clause is the INTERFACE half of the greying rule
+// recorded at redesign_button_enabled's head: the player and the picker grey
+// what they leave dead, a modal does not.)
+//
 // It replaces menu_anchor_dead_in_mode (2026-09-02 .. 2026-09-24), which
 // carried the first clause alone; the two clauses are one verdict now.
 inline bool menu_anchor_live(const AppState& a, const GuiAudio& audio,
@@ -15536,6 +15540,19 @@ inline bool redesign_button_enabled(const AppState& a,
                                     const GuiPlayback& playback,
                                     const GuiTargetRender& target_render,
                                     RedesignButton b) {
+    // INTERFACE GREYS, A MODAL DOES NOT (architect 2026-10-14: "picker/player
+    // stay truthful b/c they are interface and not modal. modals are modal so
+    // by definition they steal focus and control"). THE RENDER PLAYER AND THE
+    // PROJECT PICKER are INTERFACE: they stand in the modal box (modal_box.h)
+    // but they are not modal, so every button they leave dead wears the grey
+    // face (the folder-overlay arm below, and menu_anchor_live's mode
+    // partition for Edit and Settings): on screen is as painted, the roster's
+    // truthful rule. THE PROMPTS, THE DIALOG EDITORS AND THE PROGRESS MODAL
+    // are MODAL: they take focus and control by definition, so what they cover
+    // — the menu row and the toolbar — is dead behind their veil WITHOUT
+    // greying, and this body has no arm for them. This is the one record of the
+    // rule.
+    //
     // THE THREE MENU ANCHORS ANSWER FIRST, IN EVERY STATE, FROM THEIR ONE
     // VERDICT (menu_anchor_live, above: the mode partition, then "an anchor
     // greys when every item under it greys" — architect 2026-09-24). Ranked

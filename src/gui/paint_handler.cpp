@@ -5569,11 +5569,10 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // this one's. (The `h` view's load editor and the Open project editor had
 // arms here until 2026-08-28, when both became the field-less PICKER — a
 // modal owner of its own, painted by the picker branch below, never an
-// editor.) THE SETTINGS EDITOR CARRIES NO LABEL since 2026-10-14 (architect:
-// "Setting:" "pointless that far away. just remove it"): the box is the edit
-// control and the `key=value` line is the whole of it. The BPM editor keeps
-// "BPM:" inside the box ahead of its line (kBpmEditorPrefix, paint_handler.h,
-// where the reason stands; dialog_editor_label below).
+// editor.) NO DIALOG EDITOR CARRIES A LABEL since 2026-10-14 (architect: the
+// Settings editor's "Setting:" "pointless that far away. just remove it", the
+// BPM editor's "BPM:" "drop"): the box is the edit control and the line is the
+// whole of it.
 //
 // IT HANDS BACK A MUTABLE STATE for the painter's sake (the editor's own
 // state is the caret and the selection it paints); the boolean caller below
@@ -5585,14 +5584,6 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
         app.top_flag_editor.kind == text_editor::Kind::BpmBracket)
         return &app.top_flag_editor;
     return nullptr;
-}
-
-// THE LABEL A DIALOG EDITOR'S LINE STANDS BEHIND IN THE BOX: "BPM:" for the
-// BPM editor, nothing for the settings editor (the block above).
-static std::string_view dialog_editor_label(const AppState& app,
-                                            const text_editor::State* ed) {
-    return ed == &app.top_flag_editor ? std::string_view(kBpmEditorPrefix)
-                                      : std::string_view{};
 }
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
@@ -5847,7 +5838,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   the whole pending line on the theme's FIELD pair (ModalBoxGround::Field),
 //   from the box's first row at the list's row metrics, SOFT-WRAPPED at the
 //   box's width and never scrolling (text_editor::soft_wrap_rows), NO LABEL
-//   but the BPM editor's "BPM:" ahead of its bracket (kBpmEditorPrefix);
+//   (the Settings and BPM editors share one shape);
 //   then OK and Cancel flush right on the controls row, Cancel's right edge
 //   the ring's outer edge and OK one button gap before it. The line is the
 //   existing text_editor machinery — selection, caret, click-to-caret,
@@ -6895,33 +6886,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // is that start less its first byte's pen. A line taller
             // than the box is cut at the box's interior — nothing scrolls, and
             // the 1024-byte cap keeps a real line inside it.
-            // THE BPM EDITOR'S LABEL (kBpmEditorPrefix's block) stands at the
-            // text inset on the first row, and the line starts one button gap
-            // past its ink — on every row, the rows' room narrowed by it (the
-            // bracket's 44-byte cap never wraps). The settings editor's line
-            // starts at the inset itself.
-            const std::string_view label = dialog_editor_label(app, ed);
-            int line_x0 = text_x0;
-            if (!label.empty()) {
-                const text_shape::ShapedRun lrun =
-                    text_shape::shape_text_run(font, label);
-                if (text_w > 0) {
-                    cairo_save(cr);
-                    cairo_rectangle(cr, text_x0, interior.y, text_w,
-                                    interior.h);
-                    cairo_clip(cr);
-                    set_palette_source(cr, palette().field_text);
-                    text_shape::show_shaped_run(
-                        cr, lrun, static_cast<double>(text_x0),
-                        redesign_baseline(font, static_cast<double>(row0_y),
-                                          static_cast<double>(row_h)));
-                    cairo_restore(cr);
-                }
-                // CEIL: the label's measured width places the line after it,
-                // so it rounds UP and the line never starts inside its ink.
-                line_x0 += static_cast<int>(std::ceil(lrun.width_px)) + bgap;
-            }
-            const int line_w = std::max(0, text_x0 + text_w - line_x0);
+            // NO DIALOG EDITOR CARRIES A LABEL (2026-10-14: the Settings
+            // editor's "Setting:" and the BPM editor's "BPM:" both removed,
+            // architect "drop"): the two editors share one shape, the line
+            // starting at the text inset on every row.
+            const int line_x0 = text_x0;
+            const int line_w = std::max(0, text_w);
             const int caret_px = scaled_px(1.0, 1);
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, ed->pending);
