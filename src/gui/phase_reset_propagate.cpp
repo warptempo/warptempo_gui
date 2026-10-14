@@ -785,6 +785,15 @@ void PhaseResetPropagate::paste_state_apply() {
             const bool want_disabled = windowed_clip[j]->disabled;
             auto& m = out[dest_indices[j]];
             if (m.disabled != want_disabled) {
+                // THE STATE PASTE IS A MARKER MUTATION AND STOPS (architect
+                // 2026-10-14, "a paste state is included"; the keyboard stop
+                // rule at stop_playback_if_playing's declaration) — at its
+                // FIRST FLIP, the run's first real write: the walk decides
+                // what changes as it goes, so this is the one place both
+                // halves of the gating hold, past every belt and the
+                // divergence and count stops, and a run that flips nothing
+                // stops nothing. Later flips find nothing playing.
+                if (!any_change) playback_lifecycle.stop_playback_if_playing();
                 m.disabled = want_disabled;
                 // (A HOP-BRACKET CLEAR RODE THIS ARM for a few hours on
                 // 2026-09-10 — the third road that disables a reset, beside
@@ -890,10 +899,11 @@ void PhaseResetPropagate::paste_state_apply() {
 // and the playhead stay exactly where the reader holds them (the created-set
 // arm's land below is the playhead's one move, onto the first created reset
 // as the column shows it; a paste that created nothing leaves the playhead
-// where it rested); no playback stop (the placement paste's confirmation
-// stopped any play at its open; the state paste leaves a live play running
-// from S+W exactly as it always did from T+W, the S->T switch having been its
-// only stop); no target render is asked for by the landing (the store
+// where it rested); no playback stop of the tail's own (the placement
+// paste's confirmation stopped any play at its open, and the state paste
+// stops at its first flipped flag — both pastes are marker mutations,
+// architect 2026-10-14 — so a state paste that flipped nothing leaves a play
+// running, the tail adding no stop); no target render is asked for by the landing (the store
 // change already triggered one at the push); and the reset a paste
 // materializes from S+W shows in S+P exactly where the same reset dropped
 // there would, the anchor's re-derivation being the drop's own lead-in

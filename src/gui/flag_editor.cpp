@@ -186,7 +186,9 @@ void GuiFlagEditor::enter_text_edit(int idx,
 // and the flag box's double-click) end here. NO PLAYBACK STOP, and that is
 // an explicit exemption rather than an omission: the top-strip flag editor
 // is the one modal surface that keeps playing, so a live audition survives
-// the open. The decision and its rationale are recorded at
+// the open — and the editing; a commit that changes the marker stops
+// (architect 2026-10-14, commit_top_flag_edit). The decision and its
+// rationale are recorded at
 // GuiPlaybackLifecycle::stop_playback_for_modal_open, the one owner of the
 // modal-open stop the dialog surfaces call.
 //
@@ -730,6 +732,13 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // clears nothing and no commit here is bracket-only. `canonical_changed`
     // is the whole store-change question now.)
 
+    // A COMMIT THAT CHANGES THE MARKER IS A MARKER MUTATION AND STOPS (architect
+    // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
+    // declaration): past the refusal above and ahead of the write, and only on
+    // a changed commit, so a commit of the text already standing leaves a play
+    // running as the open did (the open's exemption, stop_playback_for_modal_
+    // open's decision table).
+    if (canonical_changed) playback_lifecycle.stop_playback_if_playing();
     // Capture pre-state for undo BEFORE mutating.
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);

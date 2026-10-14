@@ -104,13 +104,36 @@ struct GuiPlaybackLifecycle {
     //     (run_center_command), so the centring is on the resting playhead and
     //     the hold the key and the audition arm stands on it. Follow, not `c`, keeps the
     //     scanner in view.
-    //   * VALUE STEPS DO NOT STOP: the Up/Down value step on the addressed
-    //     cell edits a value. Its tempo arm is GROUP-PRESERVING, leaving the
-    //     selection and its span exactly as they stood, so the audition plays
-    //     on under the edit; the bound arm collapses
-    //     a group to its focus and stops nothing either. The step ladder's
+    //   * MARKER MUTATIONS STOP, IN BOTH VIEWS (architect 2026-10-14, "we
+    //     want to aggressively stop audio"): every act that writes either
+    //     marker store — the warp or the phase-reset one — inside the undo
+    //     domain stops a live play. The classes: the drops; the deletes; the
+    //     status toggles (Ctrl+D, Ctrl+N's pass/owner conversion); the flatten;
+    //     the Up/Down tempo step, singleton and group, and its pointer hand
+    //     the value drag; the marker drag; the flag editor's payload commit;
+    //     both phase-reset pastes (the placement paste and the state paste,
+    //     which flips disabled flags); the position nudges; undo and redo; and
+    //     the whole-store rewrites (the history revert, load in place). Each
+    //     pays once, at the act's own body — the one place every road onto that
+    //     act passes, key, button and pointer alike — past its refusals and
+    //     ahead of its first store write; where an earlier stop already
+    //     stands on the road (the marker press's click act ahead of either
+    //     flag drag, the paste confirmation's open, the restore body, the
+    //     load in place's self-guard) that stop is the act's. NOT in the
+    //     class: the SESSION-ONLY ITERATION STATE — the bound cells' step, drag
+    //     and typed commit, the tie toggle, the mode's wipe — and the BPM
+    //     dialog's owner fields. None of them is a map input or a render
+    //     input, so none changes what plays (the bracket feeds the grid
+    //     iterations' own sidecars alone, AppState::iteration_mode_enabled),
+    //     and they stand outside the undo domain for that same reason.
+    //   * VALUE STEPS STOP (architect 2026-10-14, reversing the 2026-07-30
+    //     "value steps do not stop"): the Up/Down tempo step on the addressed
+    //     cell writes the warp store, so it is a marker mutation and stops,
+    //     its group arm as well as its singleton — the group-preserving shape
+    //     of the tempo arm no longer buys a play-on. The step ladder's
     //     magnitude (bare one cent, three with ctrl, ten shifted) changes the
-    //     number and not the class.
+    //     number and not the class. The BOUND arm still stops nothing, being
+    //     iteration state (the bullet above).
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,
     //     PageUp/PageDown, the zoom gestures — they move the window onto the audio,
     //     not the audio. `0`'s RESTORE (architect 2026-09-23) puts the stamped
@@ -218,6 +241,9 @@ struct GuiPlaybackLifecycle {
     //     wheel-transparent), and editing flag text while listening to the
     //     passage is a workflow the architect uses. Its open site
     //     (GuiFlagEditor::enter_top_flag_edit) carries a pointer back here.
+    //     THE EXEMPTION IS THE OPEN'S ALONE: the payload COMMIT that changes
+    //     the marker is a marker mutation and stops (architect 2026-10-14, the
+    //     keyboard stop rule above; GuiFlagEditor::commit_top_flag_edit).
     // REFUSAL-GATED (the standing rule): the stop is the price of an OPEN, so
     // each site calls this only once its own guards have passed — a refused open
     // must leave a listening session untouched. Do NOT hoist a call above a

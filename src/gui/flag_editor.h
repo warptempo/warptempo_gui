@@ -43,6 +43,12 @@ struct GuiFlagEditor {
     // freeze-adjacent ops clusters, which return their sentences instead
     // (GuiOpRefusal, warpmarkers_ops.h).
     GuiNotifications&     notifications;
+    // THE PAYLOAD COMMIT'S STOP (architect 2026-10-14): a commit that changes
+    // the marker is a marker mutation and stops a live play (the keyboard stop
+    // rule at stop_playback_if_playing's declaration). Its one reader is
+    // commit_top_flag_edit; the opens keep their recorded exemption, and the
+    // bound and BPM commits write session-only state outside the class.
+    GuiPlaybackLifecycle& playback_lifecycle;
 
     GuiFlagEditor(AppState&             app_,
                   GuiAudio&             audio_,
@@ -50,14 +56,16 @@ struct GuiFlagEditor {
                   Selection&            selection_,
                   Undo&                 undo_,
                   GuiTargetRender&   target_render_,
-                  GuiNotifications&     notifications_)
+                  GuiNotifications&     notifications_,
+                  GuiPlaybackLifecycle& playback_lifecycle_)
         : app(app_),
           audio(audio_),
           viewport(viewport_),
           selection(selection_),
           undo(undo_),
           target_render(target_render_),
-          notifications(notifications_) {}
+          notifications(notifications_),
+          playback_lifecycle(playback_lifecycle_) {}
 
     void exit_top_flag_edit_no_commit();
     // THE FLAG EDITOR'S OPEN: the marker's plain canonical payload — tempo,

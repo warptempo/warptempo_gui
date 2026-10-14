@@ -153,10 +153,11 @@ struct GuiWarpMarkersOps {
     // `synthesized_repeat` is
     // the dispatching key event's platform repeat bit, read only by the
     // undo-coalesce verdict (undo.h).
-    // NEITHER ARM STOPS PLAYBACK, and that is the ruling rather than an omission:
-    // the cent step is a GROUP-PRESERVING VALUE STEP, the class that plays on under
-    // the edit (the keyboard stop rule, at stop_playback_if_playing's declaration in
-    // playback_lifecycle.h).
+    // BOTH ARMS STOP A LIVE PLAY on a press that writes (architect 2026-10-14,
+    // reversing the 2026-07-30 play-on): the cent step is a marker mutation
+    // (the keyboard stop rule, at stop_playback_if_playing's declaration in
+    // playback_lifecycle.h), each arm stopping past its refusals and ahead of
+    // its first write.
     GuiOpRefusal adjust_tempo_cents(int64_t delta_cents,
                                     bool synthesized_repeat);
     // THE VERTICAL ARROWS' SECOND STEP BODY (architect 2026-09-04): steps one
@@ -177,8 +178,11 @@ struct GuiWarpMarkersOps {
     // stepping. Its write goes through iter_bound_step_write (app_state.h),
     // which is where a pair landing on two zeroes clears back to the blank
     // bracket. It changes no map: no render trigger, no re-land, no
-    // target-view refusal — a bracket is target-legal. Never stops playback,
-    // for the tempo step's own reason.
+    // target-view refusal — a bracket is target-legal. Never stops playback:
+    // a bracket is session-only iteration state, no map or render input, so
+    // the step changes nothing that plays and stands outside the marker
+    // mutations the keyboard stop rule stops on (stop_playback_if_playing's
+    // declaration, architect 2026-10-14).
     GuiOpRefusal adjust_iter_bound_cents(MarkerCell side, int64_t delta_cents);
     // `step` is the press's one step in its unit (horizontal_arrow_step,
     // gui_input.h): on this column always ONE PAINTED COLUMN (the horizontal

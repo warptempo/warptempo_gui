@@ -132,6 +132,12 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // arm exists iff a producer exists, so this breach wall is silent.
     if (drop_frame > audio.total_frames() - 1)
         return;
+    // A DROP IS A MARKER MUTATION AND STOPS (architect 2026-10-14, the keyboard
+    // stop rule at stop_playback_if_playing's declaration): past both refusals
+    // above and ahead of the insert, so a refused drop leaves a play running.
+    // Every drop road (bare `s`, the Drop button, the empty-lane double-click)
+    // reaches this body.
+    playback_lifecycle.stop_playback_if_playing();
     const auto& mv = app.warpmarkers.markers();
     GuiWarpMarker nm;
     nm.time_frame    = drop_frame;
@@ -334,6 +340,10 @@ void GuiWarpMarkersOps::delete_selected_marker() {
     // Nothing live to delete: no snapshot, no undo entry, no damage — the
     // "only on real change" shape the sibling group verbs already have.
     if (live_idx.empty()) return;
+    // A DELETE IS A MARKER MUTATION AND STOPS (architect 2026-10-14, the
+    // keyboard stop rule at stop_playback_if_playing's declaration), past the
+    // two returns above and ahead of the first removal.
+    playback_lifecycle.stop_playback_if_playing();
 
     // THE PLAYHEAD'S OWN MUSICAL INSTANT, in SOURCE frames and read while the
     // OLD map still stands — the subject of this op's target-view re-land (the
@@ -418,6 +428,13 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // the refusal on a card (input_handler.cpp), and one press owes one card,
     // so this stays the belt.
     if (!inherit_toggle_actionable(app)) return;
+    // A PASS/OWNER CONVERSION IS A MARKER MUTATION AND STOPS (architect
+    // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
+    // declaration). Past the one refusal, and AHEAD OF THE COLLAPSE AND THE
+    // LAND below, which are this act's first writes: past the predicate every
+    // press changes its focus (each of the three arms writes the marker), so
+    // the `changed` belt further down never returns on a live focus.
+    playback_lifecycle.stop_playback_if_playing();
     // FOCUS-COLLAPSE, and this gesture is the group-verb doctrine's own example of
     // COUPLED members (the doctrine is at the head of position_nudge.h): the
     // pass -> owner freeze below reads the RESOLVED inheritance walk, so what a
@@ -602,6 +619,10 @@ void GuiWarpMarkersOps::toggle_disabled() {
         changed = true;
     }
     if (!changed) return;
+    // A STATUS TOGGLE IS A MARKER MUTATION AND STOPS (architect 2026-10-14, the
+    // keyboard stop rule at stop_playback_if_playing's declaration), past the
+    // refusal and the no-change return and ahead of the store write.
+    playback_lifecycle.stop_playback_if_playing();
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     undo.push_undo_warp(std::move(pre_state));
@@ -698,6 +719,12 @@ void GuiWarpMarkersOps::flatten_tempo_deviations(TempoFlattenKind kind) {
     // A REAL COMPARISON, not a loop-ran flag: a piece whose every marker is
     // already flat pushes no undo entry and leaves no dirty mark.
     if (!changed) return;
+    // A FLATTEN IS A MARKER MUTATION AND STOPS (architect 2026-10-14, the
+    // keyboard stop rule at stop_playback_if_playing's declaration) — though it
+    // changes nothing that plays, the deviation chain being spelling: the class
+    // is every write inside the undo domain, and this one pushes an entry.
+    // Past the refusal and the no-change return, ahead of the store write.
+    playback_lifecycle.stop_playback_if_playing();
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     undo.push_undo_warp(std::move(pre_state));
@@ -1009,6 +1036,13 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // nothing (GuiOpRefusal's contract), and the loop's label-ref `continue`
     // is the same belt.
     if (!changed) return std::nullopt;
+    // THE STEP STOPS A LIVE PLAY (architect 2026-10-14, reversing the
+    // 2026-07-30 "value steps do not stop": a tempo step is a marker mutation —
+    // the keyboard stop rule at stop_playback_if_playing's declaration). Past
+    // every exit above — the refusals, the wall's accepted no-op, which writes
+    // no store, and the belt — and ahead of the write, so a press that lands
+    // where it stands stops nothing.
+    playback_lifecycle.stop_playback_if_playing();
     // THE ACCEPTED SINGLETON PATH SPENDS THE SELECTION, and it says so HERE,
     // past the belt above, so that nothing reaches this line but a step that
     // moved the value (selection_consumed, app_state.h, where the
@@ -1375,6 +1409,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // produces that refusal and its arm is deleted.)
     if (!tempo_cent_step_group_actionable(app, audio, delta_cents))
         return "One of the selected markers cannot take this tempo change";
+    // THE GROUP STEP STOPS A LIVE PLAY, the singleton's clause (architect
+    // 2026-10-14; the keyboard stop rule at stop_playback_if_playing's
+    // declaration): past the arm's one refusal every member steps by the whole
+    // delta, so every accepted press writes, and the stop stands ahead of
+    // every write the press makes.
+    playback_lifecycle.stop_playback_if_playing();
     // AND THE GROUP'S ACCEPTED PATH SPENDS THE SELECTION, past the one refusal
     // this arm has (the verdict above) and ahead of its changed-path belt: a
     // group step that acts is exactly the press Add to selection was built

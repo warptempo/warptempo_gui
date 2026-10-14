@@ -48,6 +48,9 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // An error arm exists iff a producer exists: a silent breach wall.
     if (drop_frame > audio.total_frames() - 1)
         return;
+    // A DROP IS A MARKER MUTATION AND STOPS (architect 2026-10-14), the warp
+    // drop's clause: past both refusals, ahead of the insert.
+    playback_lifecycle.stop_playback_if_playing();
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     GuiPhaseResetMarker nm;
     nm.time_frame = drop_frame;
@@ -284,6 +287,9 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     }
     // Nothing live to delete: no snapshot, no undo entry, no damage.
     if (live_idx.empty()) return;
+    // A DELETE IS A MARKER MUTATION AND STOPS (architect 2026-10-14), the warp
+    // delete's clause: past both returns, ahead of the first removal.
+    playback_lifecycle.stop_playback_if_playing();
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     // Descending order so earlier indices stay valid (live_idx is ascending —
     // app.selected_markers is an ordered set and the skip above preserves it).
@@ -322,6 +328,11 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
     // app_state.h) and is SILENT for the delete's reason: the Ctrl+D dispatch
     // arm cards the composed refusal ahead of this call.
     if (!marker_selection_standing(app)) return;
+    // A STATUS TOGGLE IS A MARKER MUTATION AND STOPS (architect 2026-10-14), the
+    // warp toggle's clause. Ahead of the loop rather than past a no-change
+    // test, because this body writes in place: past the refusal every standing
+    // selection flips a flag, the loop's stale skip being a belt.
+    playback_lifecycle.stop_playback_if_playing();
     std::vector<GuiPhaseResetMarker> pre_state = app.phaseresetmarkers.markers();
     bool changed = false;
     for (int idx : app.selected_markers) {

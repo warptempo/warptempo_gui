@@ -77,6 +77,8 @@ struct GuiPhaseResetMarkersOps {
     // (app_state.h), which is where a pair landing on two zeroes clears back
     // to the blank bracket. It changes no map and no position: no render
     // trigger, no re-land, no damage but the top strip's. Never stops
-    // playback, for the tempo step's own reason.
+    // playback, the warp twin's reason: a bracket is session-only iteration
+    // state that changes nothing that plays, outside the marker mutations the
+    // keyboard stop rule stops on (stop_playback_if_playing's declaration).
     GuiOpRefusal adjust_iter_bound_hops(MarkerCell side, int delta_hops);
 };

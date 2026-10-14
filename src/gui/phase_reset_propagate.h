@@ -89,7 +89,9 @@ struct PhaseResetPropagate {
     // wiring.
     GuiActiveViews&     active_views;
     // The paste-confirm prompt is a modal surface; its open stops playback
-    // through this lifecycle handle.
+    // through this lifecycle handle — the placement paste's stop — and the
+    // state paste, which raises no prompt, stops through it at its first
+    // flipped flag (both pastes marker mutations, architect 2026-10-14).
     GuiPlaybackLifecycle& playback_lifecycle;
     // The two pastes' "Stopped at …" reports are notification cards
     // (2026-08-29); this is the one push chokepoint they reach.
