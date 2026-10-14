@@ -385,7 +385,8 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // byte-exact recall (the icon set's of 2026-10-09..10-12 its precedent) —
     // with no line the kind's default (effective_palette_name: the default
     // palette; effective_scheme_name: the chrome's own scheme), so the row's
-    // combo shows the preset on screen. The commit writes no line for the
+    // line opens on the preset on screen (the choice combo's shown value
+    // until its removal, 2026-10-14). The commit writes no line for the
     // default (commit_device_setting), so the recall commits back as an
     // unchanged no-op either way.
     if (key == "chrome" && app.device_config != nullptr)

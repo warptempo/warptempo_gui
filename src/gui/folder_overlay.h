@@ -250,8 +250,10 @@ inline int content_height_px(const AppState& a) {
 // rows in it — no content can stand empty anyway (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open).
+// THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
+// so its stack is the unlifted one, keyboard height 0.
 inline GuiRect surface_rect(const AppState& a) {
-    return modal_panel_rect(a);
+    return modal_panel_rect(a, /*keyboard_h=*/0);
 }
 
 // The rows' band: THE BOX'S INTERIOR, inside the canvas column's ring
@@ -269,7 +271,7 @@ inline GuiRect surface_rect(const AppState& a) {
 // car's MediaSession artist line keeps its own folder name, the playing
 // item's, GuiRenderPlayer's.)
 inline GuiRect content_rect(const AppState& a) {
-    return modal_box_interior_rect(a);
+    return modal_box_interior_rect(a, /*keyboard_h=*/0);
 }
 
 // -- The scroll state --------------------------------------------------------

@@ -1076,10 +1076,10 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 //
 // AND ONLY WHERE THE WAVEFORM IS PAINTED (2026-10-10, ON SCREEN IS AS
 // PAINTED): the extent is the waveform's painted rect,
-// onscreen_keyboard::waveform_paint_area — waveform_area less the folder
-// overlay's band and the standing bottom overlay, the keyboard with its line
-// and any dialog standing on it (onscreen_keyboard.h's overlay block). Those
-// rows answer nothing: what lies under an overlay is covered. ONE RECT FOR
+// onscreen_keyboard::waveform_paint_area — waveform_area less the modal
+// family's box (nothing at all while a modal stands, modal_box.h) or the
+// keyboard's band (onscreen_keyboard.h's placement block). Those rows answer
+// nothing: what lies under a surface is covered. ONE RECT FOR
 // THE PIXELS AND THE PRESS, rather than a press rect of its
 // own beside the paint rect: the press then cannot answer where the waveform
 // is not painted, whatever later stands over it. The COORDINATES stay
@@ -1154,9 +1154,15 @@ struct ActiveEditorText {
     // top-strip flag editor. Selects the claim
     // region and the repaint owner.
     bool                dialog       = false;
-    // THE FIELD'S ONE RECT — where a press seats a caret: the dialog's inset
-    // field (modal_dialog.field, the painter's published rect; the box
-    // around it is chrome) or the marker lane's whole published box
+    // THE DIALOG EDITOR'S WRAPPED ROWS AS PAINTED (DialogEditorText's
+    // contract, 2026-10-14), null for the flag editor: a dialog editor's
+    // press picks the row under it before the boundary on it
+    // (dialog_editor_byte_at), the flag editor's one row reads `text_left`.
+    const AppState::DialogEditorText* wrap = nullptr;
+    // THE FIELD'S ONE RECT — where a press seats a caret: the dialog editor's
+    // edit control, the modal family's box's interior (modal_dialog.field,
+    // the painter's published rect; the ring round it is chrome) or the
+    // marker lane's whole published box
     // (flag_editor_box.box — the unrolled flag under the payload editor, the
     // cell under a bound editor, pads included: the box is
     // the field, and a click in its padding puts the caret at the nearest
@@ -1185,7 +1191,7 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
         g.ed = text_editor::is_active(app.settings_editor)
                    ? &app.settings_editor
                    : &app.top_flag_editor;
-        g.text_left    = be.text_origin_x;
+        g.wrap         = &be;
         g.byte_x       = &be.byte_x;
         g.dialog       = true;
         g.field        = app.modal_dialog.field;
@@ -1214,11 +1220,17 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     return g;
 }
 
-// The ONE click-x -> byte owner (see ActiveEditorText): a nearest-boundary
-// search over the painter's published per-byte pen offsets. Every caret and
-// drag-select site funnels through it, and since row 7 there is one family of
-// editors rather than two, so there is nothing left for them to drift apart on.
-int editor_byte_index_at(const ActiveEditorText& g, int mouse_x) {
+// The ONE pointer -> byte owner (see ActiveEditorText): a nearest-boundary
+// search over the painter's published per-byte pen offsets — on the flag
+// editor's one row by x alone, on a dialog editor's wrapped line on the row
+// under the pointer first (dialog_editor_byte_at, app_state.h, 2026-10-14).
+// Every caret and drag-select site funnels through it, and since row 7 there
+// is one family of editors rather than two, so there is nothing left for
+// them to drift apart on.
+int editor_byte_index_at(const ActiveEditorText& g, int mouse_x, int mouse_y) {
+    if (g.wrap != nullptr)
+        return dialog_editor_byte_at(*g.wrap, g.ed->pending,
+                                     static_cast<double>(mouse_x), mouse_y);
     return text_editor::byte_index_from_shaped_x(
         static_cast<double>(mouse_x), g.text_left, *g.byte_x);
 }
@@ -1231,8 +1243,9 @@ int editor_byte_index_at(const ActiveEditorText& g, int mouse_x) {
 // possibly caught in the dark half of a period. The one seat that is NOT a
 // pointer byte — the double-click-drag's word boundary — goes through
 // text_editor::extend_selection_by_words instead, which blinks for itself.
-void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x) {
-    g.ed->cursor_pos = editor_byte_index_at(g, mouse_x);
+void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x,
+                             int mouse_y) {
+    g.ed->cursor_pos = editor_byte_index_at(g, mouse_x, mouse_y);
     text_editor::touch_blink(*g.ed);
 }
 
@@ -2161,8 +2174,10 @@ GuiCursorKind GuiInputHandler::pointer_cursor_kind(int x, int y,
     // THE VEIL'S ONE EXCEPTION IS THE FIELD (architect 2026-08-13, with the
     // Text kind). The blanket above it is unchanged in kind: a dialog editor
     // consumes every press outside its own box, so every zone this map would
-    // otherwise answer is a lie while one stands. But the INSET FIELD is the
-    // one place inside the veil that TAKES a pointer act — the click-to-caret
+    // otherwise answer is a lie while one stands. But the EDIT CONTROL — the
+    // modal family's box's interior since 2026-10-14, the inset field on the
+    // bottom row before — is the one place inside the veil that TAKES a
+    // pointer act — the click-to-caret
     // and the text drag claim exactly this published rect (on_button_press's
     // caret block reads app.modal_dialog.field, the painter's own stash) — so
     // naming the I-beam there is the map's own rule (the cue promises the
@@ -3018,12 +3033,10 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // current centroid. <= 0 covers both the modal refusals (-1) and the
     // outside-both-areas 0 that handle_wheel itself no-ops on — the gesture
     // navigates exactly the wheel's two surfaces. A refused frame navigates
-    // nothing AND SEATS NOTHING.
-    // AND A SCROLLING POPUP LIST'S CONTEXT 6 TAKES NONE (2026-10-08): the
-    // list's scroll is a wheel act with no two-finger meaning, and the
-    // waveform behind the list is veiled (render.h's popup scroll block).
+    // nothing AND SEATS NOTHING. (A scrolling popup list's context 6 took
+    // none either, 2026-10-08 to 2026-10-14, and went with the list.)
     const int nav_ctx = wheel_context(f.x, f.y);
-    if (nav_ctx <= 0 || nav_ctx == 6) return;
+    if (nav_ctx <= 0) return;
     // AND THE FOLDER OVERLAY TAKES NONE EITHER (2026-08-28): the wheel's
     // context answers 4 over the band under EITHER content — the LIST's
     // scroll, a wheel act with no two-finger meaning — and every other
@@ -3035,17 +3048,18 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // waveform behind it (this gesture skips the press road entirely, so no
     // veil refuses it).
     if (folder_overlay_stands(app)) return;
-    // AND THE BOTTOM OVERLAY TAKES NONE EITHER — the keyboard, the dialog, or
-    // the dialog on the keyboard, their line on top — and that answer is the
-    // wheel context's own -1 above, no clause here (2026-10-10): wheel_context
-    // swallows the overlay's whole painted rect (onscreen_keyboard::
-    // overlay_rect) and reads the waveform where it is painted (waveform_paint_
-    // area), so a pinch whose centroid travels onto the keys or the line above
-    // them navigates nothing, the press road's and the pan zone's own extent
-    // (point_on_nav_surface). The clause that stood here from 2026-08-29 asked
-    // the keyboard's band alone and let a centroid on its line zoom the
-    // waveform behind it. A key is not a navigation surface at any finger
-    // count.
+    // AND THE KEYBOARD TAKES NONE EITHER, nor a prompt's or a dialog
+    // editor's box — and that answer is the wheel context's own -1 above, no
+    // clause here (2026-10-10): wheel_context swallows the keyboard's whole
+    // band (onscreen_keyboard::standing_rect), refuses under a prompt and a
+    // dialog editor outright, and reads the waveform where it is painted
+    // (waveform_paint_area), so a pinch whose centroid travels onto the keys
+    // navigates nothing, the press road's and the pan zone's own extent
+    // (point_on_nav_surface). (From 2026-10-10 to 2026-10-14 the swallowed
+    // rect was the taskbar overlay's, its line on top; the clause that stood
+    // here from 2026-08-29 asked the keyboard's band alone and let a centroid
+    // on that line zoom the waveform behind it.) A key is not a navigation
+    // surface at any finger count.
     // Defensive only: the platform guarantees a positive ratio (a degenerate
     // finger distance delivers 1.0).
     double dist_ratio = f.dist_ratio;
@@ -3332,12 +3346,9 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // claims its own rect only and is never a mode, so a drag beside a card
     // pans (the clause below yields under the card alone).
     if (app.dropdown.open()) return false;
-    // AND WHILE THE SETTINGS CHOICE EDITOR'S LIST IS DOWN (2026-10-07
-    // evening), for the dropdown's reason: it is a popup hanging over the
-    // well, so its row's press must arm at the down and a touch elsewhere
-    // must close it as a press does (claim_settings_choice_press).
-    if (app.settings_choice_live() && app.settings_choice.list_open)
-        return false;
+    // (A CLAUSE FOR THE SETTINGS CHOICE EDITOR'S DROPPED LIST stood here
+    // 2026-10-07 to 2026-10-14, for the dropdown's reason, and went with the
+    // list.)
     // THE ZONE YIELDS UNDER A NOTIFICATION CARD (2026-08-29), for the
     // keyboard clause's reason below: the cards stack over the waveform's
     // upper right, the whole waveform is the pan zone, and a finger landing
@@ -3375,8 +3386,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
     // Answering false lets the finger resolve to the pointer translation and
     // reach the keyboard's own press claim, which is where a key acts.
     // ONE SPELLING OF "ON THE KEYBOARD": this asks the same rect the press
-    // claim asks (claim_rect, the band and its line), so the two cannot
-    // disagree.
+    // claim asks (claim_rect, the band), so the two cannot disagree.
     if (onscreen_keyboard::stands(app, gui) &&
         rect_contains(onscreen_keyboard::claim_rect(app), x, y))
         return false;
@@ -3509,7 +3519,6 @@ GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(int x,
 }
 
 void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
-    (void)y;
     // THE STREAM'S ONE RECORD: the editing session it begins on, so the
     // frames behind it can tell the editor under the finger from any other
     // editor a physical keyboard opens meanwhile (the contract at the
@@ -3530,13 +3539,12 @@ void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
     // frames apply); the stream's own end seeds nothing.
     app.double_click = DoubleClickCandidate{};
     g.ed->selection_anchor = -1;
-    set_editor_caret_from_x(g, x);
+    set_editor_caret_from_x(g, x, y);
     if (g.dialog) viewport.invalidate_modal_dialog_area();
     else          viewport.invalidate_top_strip();
 }
 
 void GuiInputHandler::update_touch_caret_drag(int x, int y) {
-    (void)y;
     const ActiveEditorText g = active_editor_text(app, audio);
     // THE SESSION IS THE GATE, not "is an editor open": the editor this
     // stream began on may have been committed and a different one opened
@@ -3547,7 +3555,7 @@ void GuiInputHandler::update_touch_caret_drag(int x, int y) {
     // dropped at every seat, so a selection a physical keyboard made
     // mid-stream cannot be dragged either.
     g.ed->selection_anchor = -1;
-    set_editor_caret_from_x(g, x);
+    set_editor_caret_from_x(g, x, y);
     if (g.dialog) viewport.invalidate_modal_dialog_area();
     else          viewport.invalidate_top_strip();
 }
@@ -4580,9 +4588,9 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(GuiMouseButton button,
                                                     int x, int y) {
     if (!onscreen_keyboard::stands(app, gui)) return false;
     const GuiRect surf = onscreen_keyboard::surface_rect(app);
-    // THE CLAIM IS THE BAND AND, WITH NO DIALOG ON IT, THE OVERLAY'S LINE
-    // ABOVE IT (2026-10-10, onscreen_keyboard::claim_rect): row 8 and the
-    // waveform under the overlay answer nothing.
+    // THE CLAIM IS THE BAND (onscreen_keyboard::claim_rect; with the taskbar
+    // overlay's line above it, 2026-10-10 to 2026-10-14): row 8 and the
+    // waveform under the band answer nothing.
     if (!rect_contains(onscreen_keyboard::claim_rect(app), x, y)) return false;
 
     // CONSUMED FROM HERE, whatever it lands on and whichever button it was —
@@ -5302,162 +5310,6 @@ void GuiInputHandler::clear_player_scrub_drag() {
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
 }
 
-// -- THE POPUP LIST'S SCROLL BAR (render.h's popup scroll block) -----------
-
-namespace {
-// THE POPUP LIST'S SCROLL BAR UNDER THE POINTER (render.h's popup scroll
-// block, the rule's one owner; the settings choice editor's list — the
-// color picker's two lists shared this body 2026-10-08..14): a press on the
-// PUBLISHED bar `bar` is the bar's whatever its modifiers — a plain one
-// scrolls a row (an arrow, held for its pressed face until the lift), a page
-// (the track) or starts the thumb's drag (the press's offset on the thumb
-// kept); a modified one is a consumed nothing. Returns whether the press was
-// on the bar; the caller damages the box.
-bool popup_scroll_press(PopupScroll& sc, const PopupScrollBar& bar, int x,
-                        int y, bool plain) {
-    if (!bar.present || !rect_contains(bar.bar, x, y)) return false;
-    if (!plain) return true;
-    const PopupScrollPart part = popup_scroll_hit(bar, x, y);
-    sc.top = popup_scroll_step(bar, part);
-    sc.held = PopupScrollPart::None;
-    if (part == PopupScrollPart::Up || part == PopupScrollPart::Down)
-        sc.held = part;
-    if (part == PopupScrollPart::Thumb) {
-        sc.held    = PopupScrollPart::Thumb;
-        sc.grab_dy = y - bar.thumb.y;
-    }
-    return true;
-}
-// The thumb drag's carry: the rows follow the thumb under the pointer's row
-// less the grab (popup_scroll_top_at_thumb on the published bar). Returns
-// whether the shown rows moved.
-bool popup_scroll_drag(PopupScroll& sc, const PopupScrollBar& bar, int y) {
-    if (sc.held != PopupScrollPart::Thumb) return false;
-    const int top = popup_scroll_top_at_thumb(bar, y - sc.grab_dy);
-    if (top == sc.top) return false;
-    sc.top = top;
-    return true;
-}
-} // namespace
-
-void GuiInputHandler::clear_popup_scroll_holds() {
-    PopupScroll& ls = app.settings_choice.list_scroll;
-    if (ls.live()) {
-        ls.held = PopupScrollPart::None;
-        viewport.invalidate_modal_dialog_area();
-    }
-}
-
-// -- THE SETTINGS CHOICE EDITOR'S POINTER BODIES (2026-10-07 evening; the
-//    contract at the declarations, input_handler.h; the design and the acts
-//    at GuiSettingsEditor, settings_editor.h) -----------------------------
-
-namespace {
-// The dropped list's row under (x, y) as painted, or -1.
-int settings_choice_list_hit(const AppState::ModalDialogGeometry& dlg, int x,
-                             int y) {
-    if (dlg.combo_list.w <= 0 || dlg.combo_list.h <= 0) return -1;
-    for (std::size_t i = 0; i < dlg.combo_list_items.size(); ++i)
-        if (rect_contains(dlg.combo_list_items[i], x, y))
-            return static_cast<int>(i);
-    return -1;
-}
-} // namespace
-
-bool GuiInputHandler::claim_settings_choice_press(GuiMouseButton button,
-                                                  int x, int y,
-                                                  GuiInputState mods) {
-    if (!app.settings_choice_live()) return false;
-    const bool plain_left = button == GuiMouseButton::Left && !mods.ctrl &&
-                            !mods.shift && !mods.alt;
-    // PUBLISHED GEOMETRY MAY ONLY SELECT, and only the live session's (the
-    // owner-tag doctrine, ModalDialogGeometry): a stale stash holds no row
-    // and no combo.
-    const bool current = modal_dialog_stash_current();
-    if (app.settings_choice.list_open) {
-        // ITS SCROLL BAR FIRST (render.h's popup scroll block), as painted:
-        // a press on it scrolls and keeps the list down.
-        if (current &&
-            popup_scroll_press(app.settings_choice.list_scroll,
-                               app.modal_dialog.combo_list_bar, x, y,
-                               plain_left)) {
-            viewport.invalidate_modal_dialog_area();
-            return true;
-        }
-        const int hit = current ? settings_choice_list_hit(app.modal_dialog, x, y)
-                                : -1;
-        if (plain_left && hit >= 0) settings_editor.choice_arm_row(hit);
-        else                        settings_editor.set_choice_list_open(false);
-        return true;
-    }
-    if (plain_left && current && rect_contains(app.modal_dialog.combo, x, y)) {
-        // THE COMBO TAKES THE FOCUS BACK AT THE PRESS, the field's own rule
-        // (return_modal_focus_to_field), then drops its list.
-        (void)return_modal_focus_to_field();
-        settings_editor.set_choice_list_open(true);
-        return true;
-    }
-    return false;
-}
-
-bool GuiInputHandler::finish_settings_choice_release(int x, int y) {
-    if (!app.settings_choice_live()) return false;
-    const AppState::SettingsChoice& ch = app.settings_choice;
-    // A SCROLL PART'S LIFT ends its hold and selects nothing (render.h's
-    // popup scroll block).
-    if (ch.list_scroll.live()) {
-        clear_popup_scroll_holds();
-        return true;
-    }
-    if (!ch.list_open || !ch.list_press_began_on_item) return false;
-    const int hit = modal_dialog_stash_current()
-                        ? settings_choice_list_hit(app.modal_dialog, x, y)
-                        : -1;
-    // THE LIFT ON A ROW SHOWS IT AND COMMITS NOTHING (architect 2026-10-09:
-    // OK commits, Cancel discards — GuiSettingsEditor::choice_pick).
-    if (hit >= 0) settings_editor.choice_pick(hit);
-    else          settings_editor.set_choice_list_open(false);
-    return true;
-}
-
-void GuiInputHandler::settings_choice_motion(int x, int y) {
-    if (!app.settings_choice_live() || !app.settings_choice.list_open) return;
-    // A HELD SCROLL PART owns the motion (its button-lost end at
-    // on_motion's head).
-    if (app.settings_choice.list_scroll.live()) {
-        if (popup_scroll_drag(app.settings_choice.list_scroll,
-                              app.modal_dialog.combo_list_bar, y))
-            viewport.invalidate_modal_dialog_area();
-        return;
-    }
-    // THE LIT ROW HOLDS WHILE THE PEN'S HOT-FACE LATCH DOES
-    // (pen_hot_latch_holds, the rule at pen_hot_latch_, 2026-10-09): the
-    // walk is skipped, the row and its damage left alone, until the pen
-    // moves off its anchor.
-    if (pen_hot_latch_holds()) return;
-    // THE LIT ROW FOLLOWS THE POINTER ONTO THE ROWS AND HOLDS OFF THEM
-    // (2026-10-09 evening, his S Pen on the Icons / Font combo (the Chrome row stood then): "as
-    // soon as the pen touches the drop-down button, the entry blinks"):
-    // Windows' combo list moves its highlight only under a pointer over its
-    // items, and a pointer anywhere else — the combo the list dropped from
-    // among it — leaves the last lit row lit. So the press drops the list
-    // with the shown row lit (choice's seed, set_choice_list_open), and the
-    // contact's motions over the combo — the tip's jitter, or the restore
-    // motion at its lift, which runs before the latch arms — change no face;
-    // no leave of either reason clears this list's lit row at all (the
-    // pull-down menus' row, which a leave does clear, is kept across the
-    // pen's hover end — GuiPointerLeaveReason's PenHoverEnd, input_core.h).
-    // A pointer off the rows is no act on the list, so
-    // it changes no face (the pen latch's own principle, pen_hot_latch_);
-    // the lift off the rows still closes the list with nothing shown
-    // (finish_settings_choice_release), the lit row being a face, not a
-    // pick.
-    const int hit = modal_dialog_stash_current()
-                        ? settings_choice_list_hit(app.modal_dialog, x, y)
-                        : -1;
-    if (hit >= 0) settings_editor.choice_hover(hit);
-}
-
 
 void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                                       GuiInputState mods) {
@@ -5899,11 +5751,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // (The claim needs no modal_dialog_editor_active term of its own and lost
     // the one it carried: the prompt gate above has already returned, so a
     // CURRENT stash here is an editor's by construction.)
-    // THE SETTINGS CHOICE EDITOR'S COMBO AND ITS LIST (2026-10-07 evening),
-    // ahead of the buttons: a dropped list owns every press (the dropdown's
-    // ONE PRESS, ONE ACT — even one on OK or Cancel only closes it), and
-    // the combo's press drops it. Anything else goes on to the claims below.
-    if (claim_settings_choice_press(button, x, y, mods)) return;
+    // (THE SETTINGS CHOICE EDITOR'S COMBO AND ITS LIST took their presses
+    // here, ahead of the buttons, 2026-10-07 to 2026-10-14.)
     if (button == GuiMouseButton::Left && !mods.ctrl && !mods.shift &&
         !mods.alt && modal_dialog_stash_current()) {
         if (arm_modal_dialog_press(x, y)) return;
@@ -5923,8 +5772,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     if (button == GuiMouseButton::Left) {
         const ActiveEditorText g = active_editor_text(app, audio);
         if (g.valid) {
-            // THE FIELD IS ONE RECT (ActiveEditorText::field): the dialog's
-            // inset field — the box around it is chrome, and its buttons were
+            // THE FIELD IS ONE RECT (ActiveEditorText::field): the dialog
+            // editor's edit control, the modal family's box's interior — the
+            // ring round it is chrome, and its buttons were
             // claimed above, so claiming more would map a chrome press to an
             // editor byte — or the marker lane's whole published box, pads
             // included. Any press OUTSIDE it is a non-caret click, which
@@ -5969,7 +5819,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 if (mods.shift && !mods.ctrl && !mods.alt) {
                     if (g.ed->selection_anchor < 0)
                         g.ed->selection_anchor = g.ed->cursor_pos;
-                    set_editor_caret_from_x(g, x);
+                    set_editor_caret_from_x(g, x, y);
                     app.editor_text_drag = EditorTextDragState{};
                     app.editor_text_drag.active       = true;
                     app.editor_text_drag.shift_extend = true;
@@ -5995,19 +5845,19 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // field, not a drag gesture on the canvas.
                 if (editor_double_press_at(dc_at_press, x, y)) {
                     text_editor::select_word_at(
-                        *g.ed, editor_byte_index_at(g, x));
+                        *g.ed, editor_byte_index_at(g, x, y));
                     app.editor_text_drag = EditorTextDragState{
                         .active     = true,
                         .by_words   = true,
                         .word_start = text_editor::selection_start(*g.ed),
                         .word_end   = text_editor::selection_end(*g.ed)};
-                    // The dialog editors' repaint owner is the bottom row's
-                    // lane (invalidate_modal_dialog_area).
+                    // The dialog editors' repaint owner is the modal's
+                    // (invalidate_modal_dialog_area: the family's area).
                     if (g.dialog) viewport.invalidate_modal_dialog_area();
                     else          viewport.invalidate_top_strip();
                     return;
                 }
-                set_editor_caret_from_x(g, x);
+                set_editor_caret_from_x(g, x, y);
                 // Collapsed anchor — extends to a real selection only if the
                 // pointer then moves.
                 g.ed->selection_anchor = g.ed->cursor_pos;
@@ -6243,8 +6093,8 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     const GuiRect top  = top_strip_area(app);
     // The waveform BAND is the navigation surface, point_on_nav_surface
     // exactly — the canvas's interior where the waveform is painted
-    // (2026-10-09; a bottom overlay's line and a dialog on the keyboard
-    // carved out 2026-10-10): the column's margins beside it are the
+    // (2026-10-09; the keyboard's band carved out 2026-10-10, inside the
+    // frame since 2026-10-14): the column's margins beside it are the
     // program's panel, and a press there falls to the tail's consumed
     // nothing. `area` stays the coordinate origin.
     const bool inside_waveform = point_on_nav_surface(app, gui, x, y);
@@ -7472,13 +7322,6 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
     // mutually exclusive by construction (a press on a button never reaches
     // the field claim), and above the four editor swallows below, which is
     // where an unarmed release still ends.
-    // THE SETTINGS CHOICE EDITOR'S ROW LIFT (2026-10-07 evening), its press
-    // claim's mirror: the armed list row's lift shows that row and commits
-    // nothing — OK's lift below, or Enter, commits (architect 2026-10-09) —
-    // or closes the list off the row. Ahead of the dialog's buttons, which no
-    // press armed while the list was down.
-    if (button == GuiMouseButton::Left && finish_settings_choice_release(x, y))
-        return;
     if (button == GuiMouseButton::Left && modal_dialog_editor_active()) {
         if (dispatch_modal_dialog_button(take_modal_dialog_release(x, y)))
             return;
@@ -7739,18 +7582,18 @@ void GuiInputHandler::on_button_release(GuiMouseButton button, int x,
 // 2026-09-16): the two lists must agree, because a caller's whole promise is
 // that what follows lands on a gesture-free state, and that predicate is what
 // "gesture-free" means to the keyboard, the wheel and the cursor. THE
-// TWELVE, in this body's order: the editor text drag, the marker reposition
+// ELEVEN, in this body's order: the editor text drag, the marker reposition
 // drag, THE VALUE DRAG (2026-09-10, the flag's vertical one), the
 // trim drag, the sweep (region_drag), the nav drag (scroll_drag),
-// the three pendings (marker press, trim, deferred click), THE RENDER
+// the three pendings (marker press, trim, deferred click), and THE RENDER
 // PLAYER'S TWO ARMS — the folder overlay's row press and the play-scrub's
 // marker drag, which joined this body 2026-08-28 through their own hard-end
-// clears — and THE POPUP LIST'S SCROLL HOLD (2026-10-08: the choice editor's
-// list, clear_popup_scroll_holds; the color picker's gesture and its two
-// lists' holds stood beside it 2026-10-07..14). WHAT EACH LEAVES DIFFERS AND
-// EACH ARM SAYS SO: the drags COMMIT what stands, the pendings and the
-// player's arms commit NOTHING (a force-end is not a click — the standing
-// abnormal-end rule), and the scroll hold has applied every step live.
+// clears. (THE POPUP LIST'S SCROLL HOLD was a twelfth 2026-10-08 to
+// 2026-10-14, the choice editor's list's, the color picker's gesture and its
+// two lists' holds beside it until that morning.) WHAT EACH LEAVES DIFFERS
+// AND EACH ARM SAYS SO: the drags COMMIT what stands, and the pendings and
+// the player's arms commit NOTHING (a force-end is not a click — the
+// standing abnormal-end rule).
 // NO CALLER OWES THE CURSOR ANYTHING, and the three that used to are the reason
 // the model changed: every one of them does MORE after this returns — the two
 // prompt routes raise the unsaved-work box (which the zone map answers with the
@@ -7853,9 +7696,8 @@ void GuiInputHandler::finalize_active_drags() {
     // hook's caller does not, which is why the damage lives in the clears.
     clear_folder_overlay_press();
     clear_player_scrub_drag();
-    // THE POPUP LIST'S SCROLL HOLD (2026-10-08: an arrow's face, the thumb's
-    // drag, every row already scrolled) ends with nothing to commit.
-    clear_popup_scroll_holds();
+    // (THE POPUP LIST'S SCROLL HOLD ended here 2026-10-08 to 2026-10-14 and
+    // went with the settings choice editor's list.)
     // A force-end is not a clean click sequence, so no candidate may survive to
     // pair with a later click (the standing rule at every non-release gesture
     // end) — and neither may the trim bar's press record, which would otherwise
@@ -9259,7 +9101,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // longer a special case and there is nothing left for a mode term to say.
     // It is also the plain press's waveform band at the walk's foot below
     // (2026-10-10, the live router's own reading): where the waveform is
-    // painted, so a bottom overlay's rows over the canvas take no press.
+    // painted, so the keyboard's rows over the canvas take no press.
     const bool on_nav_surface = point_on_nav_surface(app, gui, x, y);
 
     // THE MULTI-SELECTION'S TWO MODIFIED CLICKS (architect 2026-08-05), asked
@@ -10128,7 +9970,6 @@ void GuiInputHandler::clear_release_time_press_arms() {
     // with nothing committed — the chrome arm's own rule, on the same edge.
     clear_folder_overlay_press();
     clear_player_scrub_drag();
-    clear_popup_scroll_holds();
     if (app.chrome_press.kind == AppState::ChromePress::Kind::None &&
         app.modal_dialog_pressed < 0 &&
         app.dropdown.pressed_item < 0 &&
@@ -10496,7 +10337,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 // second press already decided what this drag is.
                 text_editor::extend_selection_by_words(
                     *g.ed, d.word_start, d.word_end,
-                    editor_byte_index_at(g, mouse_x));
+                    editor_byte_index_at(g, mouse_x, mouse_y));
             } else {
                 // The anchor set at press stays put; moving cursor_pos
                 // extends the selection. IT IS THE SAME MOTION FOR BOTH ARMS
@@ -10509,7 +10350,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 // (restored 2026-09-05 after one day under a press-age fork
                 // — the glass's caret drag is the touch translation's own
                 // stream and never arrives here).
-                set_editor_caret_from_x(g, mouse_x);
+                set_editor_caret_from_x(g, mouse_x, mouse_y);
             }
             if (g.dialog) viewport.invalidate_modal_dialog_area();
             else          viewport.invalidate_top_strip();
@@ -10525,8 +10366,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
         // swallowed): the dialog buttons' walk, then the roster walk, whose
         // veil term refuses the whole roster since the modal-trap
         // reach-through's retirement, so no roster hint starts under the
-        // pointer. A choice editor's dropped list takes its hover first.
-        settings_choice_motion(mouse_x, mouse_y);
+        // pointer.
         update_modal_dialog_hover(mouse_x, mouse_y);
         recompute_redesign_button_hover();
         return;

@@ -25,75 +25,6 @@
 #include <utility>
 #include <vector>
 
-// -- THE CHOICE EDITOR'S COMBO GEOMETRY (settings_editor.h's choice_combo) ----
-
-namespace choice_combo {
-
-GuiRect combo_drop_button(const GuiRect& r) {
-    // the sunken field's two lines
-    const int fb = 2 * relief_line_px();
-    const int bw = scaled_px(kComboButtonWPx);
-    return GuiRect{r.x + r.w - fb - bw, r.y + fb, bw, r.h - 2 * fb};
-}
-
-// ONE DROP-DOWN PADDING — THIS COMMENT IS THE RULE'S ONE OWNER (architect
-// 2026-10-09 ~00:30, ruled on the color picker's drop-downs of the day:
-// STANDARDIZE THEM TO WINDOWS' DROP-DOWN PADDING, APPROXIMATELY, the padding
-// one number "especially on the left"). Windows' own combo lists — ReactOS
-// WordPad's font combo — inset their text a few px with no check-mark
-// column; the combo's text stands inside the sunken field's two lines and
-// the dialog field's 5-W pad (kModalFieldPadXPx). That is THE DROP-DOWN
-// INSET, kComboTextInsetPx = 2 + 5 = 7 W (the planner's reading of
-// "approximately Windows' padding"). It is:
-//   THE FACE'S TEXT INSET, from the combo's outer left edge to the name
-//     (paint_choice_combo);
-//   THE LIST'S ROW INSET, the name in every row standing directly under the
-//     name on the face (paint_combo_list).
-// The menus' 22-W pads (kPopupPadXPx, render.h) are the menu row's
-// pull-downs' alone.
-int combo_text_inset_px() {
-    return scaled_px(kComboTextInsetPx);
-}
-
-// THE LIST IS EXACTLY THE COMBO'S OUTER BOX WIDE, FLUSH AT BOTH EDGES
-// (architect 2026-10-08: "the drop-down looks longer than the button you
-// press"): Windows' ComboLBox takes the combo's own width
-// (CB_SETDROPPEDWIDTH's default), its frame flush with the combo's sunken
-// edge.
-//
-// AN UPWARD BOX CARRIES ITS OWN TOP LINE as a hanging one does
-// (popup_border_top_px(upward), render.h: the whole frame either way).
-//
-// THE SIDE AND THE SCROLL ARE THE POPUP LISTS' (render.h's popup scroll
-// block, 2026-10-08): place_popup_list picks the side and the shown count,
-// and the bar stands inside the box at its right — the box keeping the
-// combo's width (the flush ruling above), the rows ending at the bar.
-ComboList combo_list(const GuiRect& combo, int count, int window_h, int top) {
-    ComboList l;
-    const PopupListPlacement p =
-        place_popup_list(combo, window_h, count * popup_item_h_px());
-    l.box    = GuiRect{combo.x, p.y, combo.w, p.h};
-    l.upward = p.upward;
-    l.count  = count;
-    l.bar    = popup_scroll_bar(
-        l.box, p.upward,
-        std::vector<int>(static_cast<std::size_t>(count), popup_item_h_px()),
-        p.room_h, top);
-    return l;
-}
-
-GuiRect combo_list_item(const ComboList& l, int i) {
-    if (i < l.bar.top || i >= l.bar.top + l.bar.visible || i >= l.count)
-        return GuiRect{0, 0, 0, 0};
-    return popup_item_rect(l.box,
-                           l.box.y + popup_border_top_px(l.upward) +
-                               popup_item_margin_y_px() +
-                               (i - l.bar.top) * popup_item_h_px(),
-                           l.bar.present);
-}
-
-} // namespace choice_combo
-
 namespace {
 
 // The commit line's interactive latitude: strip surrounding whitespace from the
@@ -139,6 +70,13 @@ bool is_key_char(char c) {
 // deliberately not one: a host/path, not a folder here.
 bool is_path_completed_key(const std::string& key) {
     return key == "projects_path";
+}
+
+// THE TWO COLOR KEYS — the device config's `chrome` and `caption`, whose Tab
+// completion is their kind's built-in preset names (complete_preset_value,
+// architect 2026-10-14).
+bool is_preset_completed_key(const std::string& key) {
+    return key == "chrome" || key == "caption";
 }
 
 // The longest common prefix of the matches, cut back to a CODEPOINT BOUNDARY:
@@ -206,116 +144,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
         static_cast<int>(app.settings_editor.pending.size());
     app.settings_editor.selection_anchor = -1;
     (void)autocomplete_value();
-    // A CHOICE ROW'S KEY OPENS THE CHOICE EDITOR (the head): the recall
-    // above has seeded `<key>=<live value>` exactly as for a text row, and
-    // the combo shows that value's place in the domain. The live value is
-    // always in the domain — the config's reader judged it under the key's
-    // one grammar owner, whose vocabulary the domain is.
-    if (const SettingsPopupItem* row = settings_choice_item(key)) {
-        AppState::SettingsChoice& ch = app.settings_choice;
-        ch.active = true;
-        ch.item   = static_cast<int>(row - kSettingsPopupItems);
-        const std::string& pending = app.settings_editor.pending;
-        const std::string live = pending.substr(pending.find('=') + 1);
-        ch.shown = -1;
-        for (int i = 0; i < row->choices->count(); ++i)
-            if (live == row->choices->value(i)) ch.shown = i;
-        assert(ch.shown >= 0);
-    }
     viewport.invalidate_modal_dialog_area();
-}
-
-// THE CHOICE EDITOR'S ACTS (the head). The shown value is written into the
-// line as `<key>=<value>`, so the two roads that commit the line — OK and
-// Enter — commit it through commit() and commit_device_setting unchanged;
-// a list row, Up and Down only move it (architect 2026-10-09).
-void GuiSettingsEditor::choice_show(int index) {
-    if (!app.settings_choice_live()) return;
-    AppState::SettingsChoice& ch = app.settings_choice;
-    const int n = app.settings_choice_count();
-    // NO WRAP: an end stays an end (Windows' combo stops there), though a
-    // list hovered elsewhere still takes its lit row back to the shown one.
-    index = std::clamp(index, 0, n - 1);
-    const bool hover_moves = ch.list_open && ch.list_hover != index;
-    if (ch.list_open) ch.list_hover = index;
-    // THE LIT ROW KEPT IN VIEW (render.h's popup scroll block): a step past
-    // the shown block scrolls it by one row, against the list as painted.
-    bool scroll_moves = false;
-    const PopupScrollBar& bar = app.modal_dialog.combo_list_bar;
-    if (ch.list_open && bar.present) {
-        const int top = popup_scroll_reveal(bar, ch.list_scroll.top, index);
-        scroll_moves = top != ch.list_scroll.top;
-        ch.list_scroll.top = top;
-    }
-    const bool shown_moves = index != ch.shown;
-    if (shown_moves) {
-        ch.shown = index;
-        text_editor::State& ed = app.settings_editor;
-        ed.pending = std::string(app.settings_choice_row().key) + "=" +
-                     app.settings_choice_value(index);
-        ed.cursor_pos       = static_cast<int>(ed.pending.size());
-        ed.selection_anchor = -1;
-    }
-    if (hover_moves || shown_moves || scroll_moves)
-        viewport.invalidate_modal_dialog_area();
-}
-
-void GuiSettingsEditor::choice_step(int delta) {
-    if (!app.settings_choice_live()) return;
-    choice_show(app.settings_choice.shown + delta);
-}
-
-void GuiSettingsEditor::set_choice_list_open(bool open) {
-    if (!app.settings_choice_live()) return;
-    AppState::SettingsChoice& ch = app.settings_choice;
-    if (ch.list_open == open) return;
-    // THE CLOSE'S DAMAGE is the modal's, which covers the list as painted
-    // (Viewport::invalidate_modal_dialog_area); THE OPEN'S is the rect the
-    // next paint will give the list — derived from the combo AS PAINTED, for
-    // damage and the scroll's seat alone, never for a hit. THE SCROLL STARTS
-    // AT THE HEAD, but for the shown value, which opens AT THE TOP (render.h's
-    // popup scroll block: a combo's one exception).
-    viewport.invalidate_modal_dialog_area();
-    ch.list_open    = open;
-    ch.list_hover   = open ? ch.shown : -1;
-    ch.list_pressed = -1;
-    ch.list_press_began_on_item = false;
-    ch.list_scroll  = PopupScroll{};
-    if (open) {
-        const choice_combo::ComboList l = choice_combo::combo_list(
-            app.modal_dialog.combo, app.settings_choice_count(), app.height,
-            /*top=*/0);
-        ch.list_scroll.top = popup_scroll_top_at(l.bar, ch.shown);
-        viewport.invalidate_rect(l.box);
-    }
-}
-
-void GuiSettingsEditor::choice_hover(int row) {
-    if (!app.settings_choice_live()) return;
-    AppState::SettingsChoice& ch = app.settings_choice;
-    if (!ch.list_open || row == ch.list_hover) return;
-    ch.list_hover = row;
-    viewport.invalidate_modal_dialog_area();
-}
-
-void GuiSettingsEditor::choice_arm_row(int row) {
-    if (!app.settings_choice_live()) return;
-    AppState::SettingsChoice& ch = app.settings_choice;
-    if (!ch.list_open) return;
-    ch.list_pressed = row;
-    ch.list_press_began_on_item = true;
-    viewport.invalidate_modal_dialog_area();
-}
-
-// THE LIFT ON A LIST ROW SHOWS THE ROW AND COMMITS NOTHING (architect
-// 2026-10-09: "it should not pick the font until I hit OK"): the list
-// closes onto the combo and the line takes the row's value, so OK or Enter
-// commits it and Cancel or Esc leaves the config and the screen as they
-// stood — for every choice row alike.
-void GuiSettingsEditor::choice_pick(int index) {
-    if (!app.settings_choice_live()) return;
-    set_choice_list_open(false);
-    choice_show(index);
 }
 
 // The one opener, and it carries no read-only decision at all: the lock
@@ -404,9 +233,6 @@ void GuiSettingsEditor::open() {
     // caller-side stop would have made a refused open kill a live audition and
     // open nothing.
     playback_lifecycle.stop_playback_for_modal_open();
-    // EVERY OPEN IS A TEXT EDITOR UNTIL open_prefilled SAYS OTHERWISE: the
-    // choice state of an earlier session dies here, the one reset it owes.
-    app.settings_choice = AppState::SettingsChoice{};
     text_editor::enter(app.settings_editor,
                        /*target=*/0,
                        /*initial_pending=*/"",
@@ -1122,8 +948,9 @@ void GuiSettingsEditor::commit() {
 // `caption` (architect 2026-10-14): AT ONCE, live, no card — their arm below.
 // (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
-// with its key.) For a choice row "the commit" is the OK's or Enter's,
-// never a list row's (architect 2026-10-09, settings_editor.h's head).
+// with its key.) The commit is the OK's or Enter's, as on every row (the
+// choice rows' list rows, which showed a value and committed nothing, went
+// with the choice editor, 2026-10-14).
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
     // ONE COMPOSER, TWO READERS — commit_gui_setting's own shape, the
@@ -1339,6 +1166,42 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
     return app.settings_editor.pending != before;
 }
 
+// THE PRESET COMPLETER (the ruling and its examples at the declaration,
+// architect 2026-10-14): the path completer's model over the kind's closed
+// list of built-in names. The value side is matched as typed — a name is
+// ASCII, so the byte compare is the character compare, and the common prefix
+// needs no codepoint cut (common_prefix_on_codepoint_boundary cuts nothing
+// on ASCII and is called for the one rule's sake). A unique match takes NO
+// trailing character, unlike the path's `/`: a preset name ends the line.
+bool GuiSettingsEditor::complete_preset_value(const std::string& key,
+                                              const std::string& value) {
+    std::vector<std::string> matches;
+    const auto offer = [&](std::string_view name) {
+        if (name.size() >= value.size() &&
+            name.compare(0, value.size(), value) == 0)
+            matches.emplace_back(name);
+    };
+    if (key == "chrome") {
+        for (const auto& p : kGuiBuiltinPalettes) offer(p.key);
+    } else {
+        for (const auto& s : kGuiChromeSchemes) offer(s.key);
+    }
+    if (matches.empty()) return false;
+    const std::string lcp = common_prefix_on_codepoint_boundary(matches);
+    if (lcp.size() <= value.size()) return false;
+    const std::string append = lcp.substr(value.size());
+
+    // The append lands at the LINE'S END, through the one incoming filter,
+    // as the path completer's does (its reasons there).
+    const std::string before = app.settings_editor.pending;
+    app.settings_editor.cursor_pos       =
+        static_cast<int>(app.settings_editor.pending.size());
+    app.settings_editor.selection_anchor = -1;
+    (void)text_editor::replace_selection(app.settings_editor, append);
+    viewport.invalidate_modal_dialog_area();
+    return app.settings_editor.pending != before;
+}
+
 // Returns whether the buffer CHANGED — the one autocomplete model's question
 // (the rule is stated at route_modal_editor_key's Tab arm,
 // input_key_dispatch.cpp): true consumes the Tab that ran it, false lets that
@@ -1362,14 +1225,21 @@ bool GuiSettingsEditor::autocomplete_value() {
     // behave as every other key's do, and the path road opens only once
     // something has been typed. The path completer's own no-advance cases
     // (an ambiguous prefix already at the common prefix, no match, a relative
-    // or unlistable head) are Tabs that walk, exactly as here.
+    // or unlistable head) are Tabs that walk, exactly as here. THE TWO COLOR
+    // KEYS TAKE THE SAME ROAD (architect 2026-10-14): a non-empty value side
+    // there is a preset-name prefix, completed against the kind's built-in
+    // names (complete_preset_value), its no-advance cases Tabs that walk.
     if (!trim_ws(pending.substr(eq + 1)).empty()) {
-        if (!is_path_completed_key(key)) return false;
         // Leading whitespace off, trailing whitespace kept — the reasons are
         // at ltrim_ws. The completer used to be handed the raw substring, so a
         // `projects_path= /home` never completed although commit() trims and
         // accepts exactly that value.
-        return complete_path_value(ltrim_ws(pending.substr(eq + 1)));
+        if (is_path_completed_key(key))
+            return complete_path_value(ltrim_ws(pending.substr(eq + 1)));
+        if (is_preset_completed_key(key))
+            return complete_preset_value(key,
+                                         ltrim_ws(pending.substr(eq + 1)));
+        return false;
     }
 
     // Recall the current live value for ANY settable key. Engine keys read

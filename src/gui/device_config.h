@@ -233,7 +233,8 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`, `Projects Repository`,
 // `Projects Path` and, since 2026-10-14, `Chrome` and `Caption` — the
-// `chrome` and `caption` keys' choice rows (a `Chrome` row of the retired
+// `chrome` and `caption` keys' rows, line editors like the rest since the
+// same day's removal of their choice drop-downs (a `Chrome` row of the retired
 // vocabulary key stood 2026-10-07..10-10, `Icons` and `Font`
 // 2026-10-09..10-12 and `Theme` 2026-10-03..10-08; the two color keys were
 // the color picker's preset menu's 2026-10-07..14; kSettingsPopupItems,

@@ -164,7 +164,9 @@ struct ProgramSpec {
     // fields look good"; the 85-W floor round row 8's clock, Cool Edit's mock
     // of 2026-10-09, removed 2026-10-10). THE PAD from its outer edge to the
     // reserved cell on each side,
-    // `field_pad_px`, IS 5 W, the dialog field's own pad (kModalFieldPadXPx)
+    // `field_pad_px`, IS 5 W, the dialog field's own pad then
+    // (kModalFieldPadXPx, which went with that field 2026-10-14, the dialog
+    // editors' line standing in the modal family's box since)
     // — the time field in line with the text box (architect 2026-10-09
     // evening, "bring the timestamp in line with the text box used for the
     // regular text boxes"; 2026-10-10: "let's add back one pixel on the left

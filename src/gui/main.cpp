@@ -196,10 +196,12 @@ namespace {
 // rows again, 6 W, architect 2026-10-14) and THE PROGRAM FRAME'S BOTTOM ROW
 // (program_frame_line_px(), one Hilight line), ON THE WINDOW'S FOOT under
 // the border, the window's lowest line (render.h's program_frame_rect) — the
-// flexible gap 2 above all four. NO TENANT MOVES A LANE: a dialog and the
-// on-screen keyboard are BOTTOM OVERLAYS laid over the design at the
-// window's foot, Cool Edit's status bar (2026-10-10, onscreen_keyboard.h's
-// overlay block), and every lane here keeps its rows under them.
+// flexible gap 2 above all four. NO TENANT MOVES A LANE: the modal family's
+// box and controls row (modal_box.h) and the on-screen keyboard's band
+// (onscreen_keyboard.h's placement block) stand over the lanes inside the
+// frame, and every lane here keeps its rows under them (the dialog and the
+// keyboard were overlays laid over the window's foot, Cool Edit's status
+// bar, from 2026-10-10 to 2026-10-14).
 // ACROSS, EVERY PROGRAM LANE STANDS ONE FRAME LINE IN FROM EACH SIDE
 // (2026-10-10, strip_row_rect): the band, the canvas column's five, its
 // foot, the bottom row and the border under it; the caption, the menu row
@@ -360,8 +362,9 @@ namespace {
 // top - bottom arithmetic yield W with no second expression of the rule) — so
 // every consumer (hit tests, paint, damage, the wheel probe, the touch pan
 // zone, the notification stack under row 1, the dropdown boxes hanging off the
-// anchors, the folder overlay's band starting under the icon row) inherits the
-// shifted y's through the lane accessors with no second site.
+// anchors, the modal family's box starting at the view bar's top row,
+// modal_box.h) inherits the shifted y's through the lane accessors with no
+// second site.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps kFlagBottomLiftPx are all 0 — and the derivation
 // below keeps them explicit so the stack reappears correct if either constant
@@ -483,9 +486,10 @@ int top_lane_height(int lane) {
 // rows 8 and 9 merged: the clock left, the buttons flush right; the layout
 // is paint_bottom_row_buttons_and_clock's) and lane 3 THE COLUMN'S FOOT
 // (2026-10-09: the canvas's bottom frame row and its face, the program's).
-// THE ORDER IS FIXED: no tenant of the row moves a lane — a dialog and the
-// on-screen keyboard are overlays laid over these rows (2026-10-10,
-// onscreen_keyboard.h's overlay block). GAP 2 sits ABOVE the four, in
+// THE ORDER IS FIXED: no tenant of the row moves a lane — the modal family's
+// box and controls row stand over these rows (modal_box.h) and the
+// on-screen keyboard's band over lanes 1 to 3 (onscreen_keyboard.h's
+// placement block, 2026-10-14). GAP 2 sits ABOVE the four, in
 // bottom_strip_h's total rather than in a lane's inset, so lane 0 is flush
 // with the window edge like the top strip's own lane 0 (and gap 2 being 0,
 // lane 3's top is the waveform's bottom). (THE STATUS BAR was bottom lane 0
@@ -850,8 +854,8 @@ unsigned window_frame_edges_at(const AppState& a, int x, int y) {
     return e;
 }
 
-// THE PROGRAM'S FRAME (2026-10-10; the law, the geometry and the chrome
-// overlays laid over it at render.h's program_frame_rect): its top row, top
+// THE PROGRAM'S FRAME (2026-10-10; the law, the geometry and what stands
+// inside it at render.h's program_frame_rect): its top row, top
 // lane 2; its bottom row, bottom lane 0 on the window's foot, under the
 // border under row 8 (bottom lane 1, 2026-10-14); and the ring,
 // the client's whole width from the top row's first line to the bottom row's
@@ -927,9 +931,10 @@ GuiRect bottom_column_foot_area(const AppState& a) {
 // the column's foot (lane 3, bottom_column_foot_area above, the canvas's
 // light bottom frame row and 5 W of face) and the border under row 8 (lane
 // 1, bottom_border_area, over the program frame's bottom row on the window's
-// foot), one frame line in from each side, whatever stands over it (a
-// dialog or the on-screen keyboard is an overlay, never a lane:
-// onscreen_keyboard.h's overlay block, 2026-10-10). Gap 2 stands above lane
+// foot), one frame line in from each side, whatever stands over it (the
+// modal family's controls row on its content band and the on-screen
+// keyboard's band over it are never lanes: modal_box.h, onscreen_keyboard.h's
+// placement block, 2026-10-14). Gap 2 stands above lane
 // 3 inside bottom_strip_h and is zero since the waveform became the whole
 // leftover.
 // THE ROW CARRIES NO DIRTY MARK: Save's grey is the mark (architect
@@ -2209,9 +2214,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // at the button-lost edge (clear_release_time_press_arms).
         input_handler.clear_folder_overlay_press();
         input_handler.clear_player_scrub_drag();
-        // AND THE POPUP LIST'S SCROLL HOLD (2026-10-08): every row already
-        // scrolled, the held arrow's face and the thumb's drag dropped.
-        input_handler.clear_popup_scroll_holds();
         // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), this hook's hover
         // half: a pointer that has left rests on no card, so every card the
         // hover paused has its clock re-armed here (a card a press still holds
@@ -2919,11 +2921,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
         // Same shape for the settings prompt (a dialog editor); the
-        // modal's own owner is the bottom row's lane.
-        // A CHOICE EDITOR HAS NO CARET (settings_editor.h's head), so its
-        // blink wakes nothing.
-        if (text_editor::is_active(app.settings_editor) &&
-            !app.settings_choice_live()) {
+        // modal's own owner is the modal family's area (the box the line
+        // stands in, modal_box.h).
+        if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
                 dialog_field_focused &&
                 text_editor::cursor_visible_now(app.settings_editor);

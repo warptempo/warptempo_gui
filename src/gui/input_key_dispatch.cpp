@@ -2941,10 +2941,11 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // everything, and the admitted Ctrl+Q already ends the view the same way.
     // The picker it raises stands OVER the mode — its router runs ahead of
     // this gate in on_key, its veil consumes the view's presses, and its band
-    // starts under the ICON ROW and runs to the bottom row, covering gap 1
-    // and lanes 2..4 (the diff lane with them), the waveform and gap 2, with
-    // only the two toolbar rows standing above it, dead but for File — so a
-    // Cancel or an
+    // — the modal family's box since 2026-10-14 (modal_box.h) — starts at the
+    // view bar's top row and runs to row 8, covering the canvas column's
+    // lanes (the diff lane with them) and the waveform, with only the menu
+    // row, the toolbar band and the column's air standing above it, dead but
+    // for File — so a Cancel or an
     // Esc leaves the view exactly as it stood, this view owning no navigation
     // state to disturb. Until this date the chord fell through this list as a
     // consumed no-op, which left the File menu's Open row dead in here.
@@ -6679,8 +6680,8 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // before it — so every key's behaviour with the focus in the field is
 // byte-identical to what it has always been.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
-// `autocomplete` it is called unconditionally, with no emptiness test: the four
-// dialog surfaces pass invalidate_modal_dialog_area (the bottom row's lane,
+// `autocomplete` it is called unconditionally, with no emptiness test: the two
+// dialog surfaces pass invalidate_modal_dialog_area (the modal family's area,
 // which IS the modal's surface, viewport.cpp), the top-strip flag editor
 // invalidate_top_strip. Commit and cancel own their own invalidations.
 bool GuiInputHandler::route_modal_editor_key(
@@ -6747,6 +6748,41 @@ bool GuiInputHandler::route_modal_editor_key(
             return false;  // let on_key run the close routing
         }
         return true;       // modal: swallow, and the field never sees it
+    }
+    // HOME AND END WALK A DIALOG EDITOR'S WRAPPED ROWS (architect 2026-10-14:
+    // the line soft-wraps in the modal family's box, and the caret, the
+    // selection, the press and Home / End walk the rows consistently): bare
+    // or shifted, they land on the caret's own row as painted
+    // (DialogEditorText, app_state.h) — Home its first byte, End its last
+    // stop (dialog_editor_row_last_stop: a wrapped row's end before the
+    // space its break stands after, the last row's the buffer's end) — the
+    // shift extending the selection from the standing anchor exactly as the
+    // editor's own Shift+Home / Shift+End do. CTRL+HOME AND CTRL+END keep the
+    // whole text's extremes (text_editor::handle_key, below), a multiline
+    // edit's own pair. The flag editor's one-row field is not a member: its
+    // session is no dialog editor's.
+    if (!ctrl && !alt && (key == GuiKeys::Home || key == GuiKeys::End) &&
+        app.dialog_editor_text.valid &&
+        !app.dialog_editor_text.rows.empty() &&
+        app.dialog_editor_session() == ed.session) {
+        const AppState::DialogEditorText& t = app.dialog_editor_text;
+        const int size = static_cast<int>(ed.pending.size());
+        const int pos  = std::clamp(ed.cursor_pos, 0, size);
+        const int row  = dialog_editor_row_of(t, pos);
+        const int to   = std::clamp(
+            key == GuiKeys::Home
+                ? t.rows[static_cast<std::size_t>(row)].begin
+                : dialog_editor_row_last_stop(t, ed.pending, row),
+            0, size);
+        if (shift) {
+            if (ed.selection_anchor < 0) ed.selection_anchor = pos;
+        } else {
+            ed.selection_anchor = -1;
+        }
+        ed.cursor_pos = to;
+        text_editor::touch_blink(ed);
+        repaint();
+        return true;
     }
     const auto action = text_editor::handle_key(ed, key, mods);
     if (action == text_editor::KeyAction::CommitRequested) {
@@ -6862,10 +6898,11 @@ void GuiInputHandler::open_project_picker() {
     // and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
     // everything — Ctrl+Q, which is admitted, ends the view the same way. The
     // picker stands OVER the view (its router runs ahead of the mode's gate in
-    // on_key, its veil consumes the view's presses, and its band starts under
-    // the icon row and covers gap 1 and lanes 2..4 — the diff lane
-    // with them — the waveform and gap 2, the two toolbar rows alone above it
-    // with File live on the menu row), a Cancel or Esc leaves
+    // on_key, its veil consumes the view's presses, and its band — the modal
+    // family's box since 2026-10-14 — starts at the view bar's top row and
+    // covers the canvas column's lanes — the diff lane with them — and the
+    // waveform, the menu row, the toolbar band and the column's air alone
+    // above it with File live on the menu row), a Cancel or Esc leaves
     // the view exactly as it stood — this view owns no navigation state — and
     // a successful open reaches the reopen through the one close request,
     // whose teardown joins the prefetch and the commit worker with everything
@@ -9252,54 +9289,9 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // every second Tab — and an unknown key) are exactly the Tabs that step.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {
-    if (app.settings_choice_live()) return handle_settings_choice_key(key, mods);
     return route_modal_editor_key(
         app.settings_editor, key, mods,
         [this] { return settings_editor.autocomplete_value(); },
-        [this] { settings_editor.commit(); },
-        [this] { settings_editor.exit_no_commit(); },
-        [this] { viewport.invalidate_modal_dialog_area(); });
-}
-
-// THE CHOICE EDITOR'S KEYS (the contract at the declaration; the design at
-// GuiSettingsEditor's head). The combo holds the focus where the field would
-// (the ring's -1), so the arrows and Enter are its only while it does; a
-// button's focus leaves every key to the shared route, whose wall admits the
-// ring and the modal contract's three commands and swallows the rest.
-bool GuiInputHandler::handle_settings_choice_key(GuiKey key,
-                                                 GuiInputState mods) {
-    const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
-    const bool on_combo = modal_dialog_focus_live() < 0;
-    if (bare && key == GuiKeys::Escape && app.settings_choice.list_open) {
-        settings_editor.set_choice_list_open(false);
-        return true;
-    }
-    const bool tab = modal_ring_tab_shape(key, mods) != ModalRingTab::None;
-    if (tab) settings_editor.set_choice_list_open(false);
-    if (on_combo && !tab) {
-        if (bare && (key == GuiKeys::Up || key == GuiKeys::Down)) {
-            settings_editor.choice_step(key == GuiKeys::Down ? 1 : -1);
-            return true;
-        }
-        // ENTER IS THE DIALOG'S DEFAULT BUTTON, OK: it commits the shown
-        // value (a dropped list closing with it), the one commit a choice
-        // row has besides OK's press — the arrows above and a list row only
-        // move the shown value (architect 2026-10-09, GuiSettingsEditor's
-        // head).
-        if (bare && (key == GuiKeys::Return || key == GuiKeys::KpEnter)) {
-            settings_editor.set_choice_list_open(false);
-            settings_editor.commit();
-            return true;
-        }
-        const bool ctrl_only = mods.ctrl && !mods.shift && !mods.alt;
-        const bool passes = (bare && key == GuiKeys::Escape) ||
-                            (ctrl_only && (key == GuiKeys::S ||
-                                           key == GuiKeys::Q));
-        if (!passes) return true;   // nothing to type: a consumed nothing
-    }
-    return route_modal_editor_key(
-        app.settings_editor, key, mods,
-        /*autocomplete=*/nullptr,
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
         [this] { viewport.invalidate_modal_dialog_area(); });

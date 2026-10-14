@@ -220,26 +220,8 @@ static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
 // chrome's own scheme.
 static_assert(DeviceConfig{}.palette.empty());
 static_assert(DeviceConfig{}.scheme.empty());
-
-// THE CHOICE ROWS' ORDERS (palette_file.h): each a permutation of its table,
-// its first row the kind's default.
-static_assert(kGuiBuiltinPalettes[kGuiPaletteMenuOrder[0]].words ==
-              default_palette_words());
-static_assert(is_chrome_own_scheme(kGuiChromeSchemes[kGuiSchemeMenuOrder[0]].key));
-constexpr bool menu_orders_are_permutations() {
-    std::array<bool, std::size(kGuiBuiltinPalettes)> p{};
-    for (const std::size_t i : kGuiPaletteMenuOrder) {
-        if (i >= p.size() || p[i]) return false;
-        p[i] = true;
-    }
-    std::array<bool, std::size(kGuiChromeSchemes)> c{};
-    for (const std::size_t i : kGuiSchemeMenuOrder) {
-        if (i >= c.size() || c[i]) return false;
-        c[i] = true;
-    }
-    return true;
-}
-static_assert(menu_orders_are_permutations());
+// (THE CHOICE ROWS' ORDERS' PROOFS — each a permutation of its table, its
+// first row the kind's default — went with the orders, 2026-10-14.)
 
 } // namespace
 

@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-namespace choice_combo { struct ComboList; }
 
 class GuiCanvasSink;        // canvas_sink.h
 struct GuiCanvasDrawList;   // canvas_sink.h
@@ -82,20 +81,18 @@ inline int icon_row_pad_x() {
     return scaled_px(8.0);
 }
 
-// Single source for the modal editor prefixes, read by the modal painter
-// (paint_modal_dialog) alone since the editors became dialogs (2026-08-12;
-// they were the bottom-strip prefixes from row 7 until then, and the modal is
-// back on that row since 2026-08-13). Each is the modal's LABEL, painted at
-// the row's left pad beside the inset field; the
-// pointer path never measures one — the painter publishes the field's own
-// click-to-caret origin (AppState::DialogEditorText), so the mapped
-// geometry IS the painted one rather than a re-derivation that could drift.
-// NO TRAILING SPACE on any label here (2026-10-08): the air after the colon is
-// the editor row's one gap (paint_modal_dialog's editor arm), never a space
-// inside the label. (The `h` view's commit-title editor's "Commit:" stood
-// here 2026-08-07 to 2026-10-10, when the editor retired.)
-constexpr const char* kSettingsEditorPrefix = "Setting:";
-constexpr const char* kBpmEditorPrefix      = "BPM:";
+// THE BPM EDITOR'S LABEL, the one dialog editor label left (2026-10-14): its
+// buffer is the bracket alone (`<beats>@[<lo>,<hi>]`, empty at a fresh
+// open), so with no label the modal family's box would open blank with
+// nothing saying what it asks; the label stands in the box on the line's
+// first row, ahead of the line, in the field text — not editable, no byte of
+// the buffer (paint_modal_dialog's editor arm). THE SETTINGS EDITOR'S
+// "Setting:" IS REMOVED (architect 2026-10-14: "pointless that far away. just
+// remove it") — its line names its own key. (Each dialog editor's label
+// stood at the bottom row's left pad beside its inset field 2026-08-12 to
+// 2026-10-14, the bottom-strip prefixes from row 7 before; the `h` view's
+// commit-title editor's "Commit:" beside them 2026-08-07 to 2026-10-10.)
+constexpr const char* kBpmEditorPrefix = "BPM:";
 // The OPEN PROJECT prompt's label (File → Open project, 2026-08-27) — ONE WAY TO SHOW
 // (The Open project prompt's `Open: <projects_path>/` label and the `h`
 // view's `Load: ` label stood here until 2026-08-28, when both prompts lost
@@ -905,17 +902,14 @@ private:
     // after them touches their lanes, the flag cache being transparent there.
     void paint_menu_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
-    // THE PROGRAM'S FRAME (2026-10-10; the law, the geometry and the overlays
-    // laid over it at render.h's program_frame_rect): THE RING
-    // (program_frame_rect, one sunken line in the chrome's Shadow and Hilight,
-    // mitred), painted with the rows on every frame class. It publishes
-    // nothing: the frame is inert ground for input.
+    // THE PROGRAM'S FRAME (2026-10-10; the law and the geometry at render.h's
+    // program_frame_rect): THE RING (program_frame_rect, one sunken line in
+    // the chrome's Shadow and Hilight, mitred), painted with the rows on
+    // every frame class. It publishes nothing: the frame is inert ground for
+    // input. (THE BOTTOM OVERLAYS' painter, paint_bottom_overlays — the
+    // taskbar line and the dialog's ground, 2026-10-10 to 2026-10-14 — is
+    // retired with the taskbars.)
     void paint_program_frame(cairo_t* cr);
-    // THE BOTTOM OVERLAYS (2026-10-10; the law and every rect at
-    // onscreen_keyboard.h's overlay block): the overlay's Hilight line and
-    // the dialog's ground, painted after the keyboard slot — nothing while
-    // neither the dialog nor the keyboard stands. Publishes nothing.
-    void paint_bottom_overlays(cairo_t* cr);
     // THE CAPTION (top lane 0, architect 2026-10-05; the geometry and its
     // record at render.h's caption block): the gradient in the
     // caption roles of the window's activation (GuiPlatform::caption_active),
@@ -1063,35 +1057,24 @@ private:
     void paint_scanner(GuiCanvasSink& sink, const GuiRect& area);
     void paint_strip_drag_anchor(GuiCanvasSink& sink, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
-    // THE MODAL (2026-08-13): the BOTTOM ROW, hosting the prompts and the
-    // two modal editors (settings / BPM) while one
-    // stands — the row's own painter yields the lane to it. Painted LAST from
-    // on_redraw's tail, unconditionally: it publishes AppState::modal_dialog
-    // and AppState::dialog_editor_text, the geometry the pointer path's veil,
+    // THE MODAL (2026-08-13): every modal's controls on the modal family's
+    // controls row, and a prompt's question or a dialog editor's line in the
+    // family's box (modal_box.h, 2026-10-14) — row 8's own painter yields the
+    // lane to it. Painted from on_redraw right after the keyboard slot,
+    // unconditionally: it publishes AppState::modal_dialog and
+    // AppState::dialog_editor_text, the geometry the pointer path's veil,
     // button claims and click-to-caret read. The full design record is at the
-    // definition; the field's sampled chrome is at render.h's kModal* block.
+    // definition.
     void paint_modal_dialog(cairo_t* cr);
-    // THE SETTINGS EDITOR'S CHOICE COMBO (2026-10-07 evening; the design at
-    // GuiSettingsEditor's head): the chrome's combo at `combo` — the dialog
-    // field's seat — showing the live choice, and its list above it while
-    // down; publishes both into the modal stash. Called from
-    // paint_modal_dialog's editor branch alone, in place of the text field.
-    void paint_settings_choice(cairo_t* cr, const GuiFont& font,
-                               const GuiRect& combo);
-    // THE COMBO'S LIST — the settings choice editor's (the definition's
-    // head), its rows and its scroll bar as choice_combo::combo_list placed
-    // them, `held` the bar's held part.
-    void paint_combo_list(cairo_t* cr, const GuiFont& font,
-                          const choice_combo::ComboList& list, int pressed,
-                          int hover, PopupScrollPart held,
-                          const char* (*label_of)(const AppState&, int));
 
-    // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — full
-    // window width, directly above the bottom row, over the waveform area's
-    // lower part. It paints AFTER every waveform pass and BEFORE the three
-    // floating surfaces, which is where it sits in the picture: the flag editor
-    // is above it in the marker lane, a dialog editor below it in the bottom
-    // row, and the waveform under it is simply not painted where this paints.
+    // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — across
+    // the program lanes inside the frame, standing on the frame's bottom row
+    // (2026-10-14, onscreen_keyboard.h's placement block), over row 8 and the
+    // waveform area's lower part. It paints AFTER every waveform pass and
+    // BEFORE the modal and the floating surfaces, which is where it sits in
+    // the picture: the flag editor is above it in the marker lane, a dialog
+    // editor's stack above it in the modal family's box, and the waveform
+    // under it is simply not painted where this paints.
     //
     // GATED WHOLE ON onscreen_keyboard::stands (onscreen_keyboard.h — the
     // layout table, the geometry and the two lamps all live there): this body

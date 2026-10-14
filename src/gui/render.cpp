@@ -1369,57 +1369,9 @@ GuiRect trim_endcap_rect(bool is_begin, int strip_x,
     return r;
 }
 
-namespace {
-
-// THE SCROLL ARROW'S DIRECTION: the popup lists' up and down
-// (paint_popup_scroll_bar, below; the trim caps' left and right went with
-// the view bar, 2026-10-09).
-enum class ScrollArrowDir { Up, Down };
-
-// ONE ARROW BUTTON (the glyph's rule at kTrimArrowGlyphWPx, render.h) on a
-// popup list's scroll bar: the ground under the plain raised edge, then the
-// scroll arrow as ONE FILLED TRIANGLE in the theme's LABEL (a chrome glyph
-// on a chrome face, architect 2026-10-03; a triangle since 2026-10-06),
-// antialiased, centred in device px (an odd difference flooring toward the
-// top-left), pointing UP or DOWN (2026-10-08, the glyph's 4 x 7 turned: 7
-// wide and 4 tall). PRESSED (a popup arrow's press until its lift): the
-// ground under one Shadow ring instead of the raised edge, the glyph one
-// Windows px right and down.
-void paint_trim_arrow_button(cairo_t* cr, const GuiRect& b, ScrollArrowDir dir,
-                             bool pressed) {
-    paint_cell_rect(cr, b, palette().ground);
-    if (pressed)
-        paint_relief_line_frame(cr, b, palette().shadow);
-    else
-        paint_relief_plain_raised(cr, b);
-    const int u = scaled_px(1, 1);
-    const int glyph_w = kTrimArrowGlyphHPx * u;
-    const int glyph_h = kTrimArrowGlyphWPx * u;
-    const int push = pressed ? relief_line_px() : 0;
-    const double gx = b.x + (b.w - glyph_w) / 2 + push;
-    const double gy = b.y + (b.h - glyph_h) / 2 + push;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    cairo_new_path(cr);
-    switch (dir) {
-        case ScrollArrowDir::Up:
-            cairo_move_to(cr, gx + glyph_w / 2.0, gy);
-            cairo_line_to(cr, gx, gy + glyph_h);
-            cairo_line_to(cr, gx + glyph_w, gy + glyph_h);
-            break;
-        case ScrollArrowDir::Down:
-            cairo_move_to(cr, gx + glyph_w / 2.0, gy + glyph_h);
-            cairo_line_to(cr, gx, gy);
-            cairo_line_to(cr, gx + glyph_w, gy);
-            break;
-    }
-    cairo_close_path(cr);
-    set_palette_source(cr, palette().label);
-    cairo_fill(cr);
-    cairo_restore(cr);
-}
-
-} // namespace
+// (THE POPUP LISTS' SCROLL ARROW BUTTON — paint_trim_arrow_button, up and
+// down, the trim caps' left and right gone with the view bar 2026-10-09 —
+// went with the popup lists' scroll bar, 2026-10-14.)
 
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
@@ -1528,31 +1480,6 @@ void render_trim_flags(cairo_t* cr,
         out_hit->bridge_hi = lane_x + std::min(gap.hi, lane_w);
     }
 
-    cairo_restore(cr);
-}
-
-// THE POPUP LIST'S SCROLL BAR (the rule and the geometry at render.h's popup
-// scroll block; the picture at the declaration): the trim lane's vocabulary
-// turned upright — the track's checker, the plain raised thumb and the two
-// plain raised arrow buttons (paint_trim_arrow_button, up and down, pressed
-// while `held` names one). Painted over the list box's ground, after its
-// frame, beside its rows.
-void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
-                            PopupScrollPart held) {
-    if (!b.present || b.bar.w <= 0 || b.bar.h <= 0) return;
-    const bool up_held   = held == PopupScrollPart::Up;
-    const bool down_held = held == PopupScrollPart::Down;
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    paint_cell_rect(cr, b.track, palette().ground);
-    paint_checker_rect(cr, b.track, b.bar.x, b.bar.y, palette().hilight,
-                       palette().ground);
-    if (b.thumb.h > 0) {
-        paint_cell_rect(cr, b.thumb, palette().ground);
-        paint_relief_plain_raised(cr, b.thumb);
-    }
-    paint_trim_arrow_button(cr, b.up, ScrollArrowDir::Up, up_held);
-    paint_trim_arrow_button(cr, b.down, ScrollArrowDir::Down, down_held);
     cairo_restore(cr);
 }
 

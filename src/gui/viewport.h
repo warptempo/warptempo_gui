@@ -572,9 +572,10 @@ struct Viewport {
     void invalidate_status_cell_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole), WITH THE
-    // DIALOG'S OVERLAY since 2026-10-10 (the lane down to the window's foot
-    // across the client, and the dialog standing on a standing keyboard —
-    // the definition says why). ITS CALLERS,
+    // MODAL FAMILY'S WHOLE AREA while a prompt or a dialog editor stands or
+    // was last painted (2026-10-14, modal_box.h — the box over the canvas
+    // column and its controls row; the taskbar dialog's overlay to the
+    // window's foot 2026-10-10 to 2026-10-14 — the definition says why). ITS CALLERS,
     // re-greped 2026-08-28, are the TWO DIALOG EDITORS' repaint sites plus the
     // RENDER PLAYER's three, the player being the row's third owner:
     //
@@ -607,10 +608,11 @@ struct Viewport {
     //
     // The PROMPTS are deliberately absent: every raise and every answer
     // damages the whole window (prompt.cpp), which is what a surface with no
-    // published rect before its first paint owes. The rect is the lane whole
-    // rather than the modal's stashed box, so a CLOSER that runs between
-    // paints still erases what the last frame drew and the row's own tenants
-    // come back with it.
+    // published rect before its first paint owes; their CLOSERS that come
+    // through here take the family's area by the stash's painted owner. The
+    // rect is the lane whole and the family's area rather than the modal's
+    // stashed box, so a CLOSER that runs between paints still erases what the
+    // last frame drew and the row's own tenants come back with it.
     //
     // A STANDING DIALOG TOOLTIP RIDES THIS DAMAGE (2026-09-29):
     // a modal button's hint is composed by the row's own paint

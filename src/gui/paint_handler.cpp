@@ -4,7 +4,6 @@
 #include "notifications.h"
 #include "chrome_spec.h"
 #include "cool_edit_paint.h"
-#include "settings_editor.h"   // choice_combo: the choice editor's combo geometry
 
 #include "gui_font.h"
 #include "folder_overlay.h"
@@ -41,7 +40,7 @@
 // THE BOTTOM ROW IS ONE FACE — THE BODY FACE (architect 2026-10-05, after
 // his ACID Pro 3.0 and Vegas screenshots: "no monospace face anywhere";
 // gui_font.h): the clock and the render player's two time fields are the
-// body face in their own sunken fields (kTimeFieldHeightPx below), the state
+// body face in their own dark fields (kTimeFieldHeightPx below), the state
 // line and every modal string the same face. There is no monospace face;
 // the no-wiggle guarantee is the fields' own fixed widths.
 //
@@ -66,26 +65,13 @@
 // it.
 
 // (The bottom row's face is the body face, gui_font(GuiFace::Body), named
-// at each of its sites — the MODAL DIALOG's labels, field text and button
-// words, the time fields and the state line; a run carries the font it was
-// laid out on, so no context state needs selecting first.)
+// at each of its sites — the MODAL DIALOG's question, line and button words,
+// the time fields and the state line; a run carries the font it was laid out
+// on, so no context state needs selecting first.)
 
-// Shape and paint one run at (x, baseline) in `color`. The row's plain-text
-// tier — the successor of text_display::draw_line, which died with the
-// monospace path it drew in.
-//
-// Every caller lays out from a reserved cell, a panel or a button rect, so
-// the run's advance is nobody's (it was returned while row 8's state text
-// butted against the clock's run, 2026-08-31 .. 2026-10-02; the clock's
-// panel places it now).
-static void show_row_text(cairo_t* cr, const GuiFont& font,
-                          double x, double baseline,
-                          std::string_view text, GuiColor color) {
-    if (text.empty()) return;
-    const text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
-    set_palette_source(cr, color);
-    text_shape::show_shaped_run(cr, run, x, baseline);
-}
+// (show_row_text, the row's plain-text tier — one run shaped and painted at
+// (x, baseline) — lost its last two callers 2026-10-14: the dialog editor's
+// label, removed, and the choice list's rows, gone with the list.)
 
 // THE STATE TEXT IS ROW 8'S LINE ON THE GROUND (architect 2026-08-29, folding
 // the STATUS BAR that had stood for that one day back into the toolbar he
@@ -133,13 +119,13 @@ static void show_row_text(cairo_t* cr, const GuiFont& font,
 // (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
 // DIED 2026-08-12 when the editors became dialogs: the settings, load,
 // commit-title and BPM editors painted as a label + dark inset field + OK/Cancel
-// buttons in paint_modal_dialog (the two left since: the settings and BPM) at the tail of this file, and the prompt's
-// text-plus-labels line became a message + real buttons. The one-run
-// prefix+pending shaping died with it — the prefix is a LABEL outside the
-// field now, so the pending run shapes alone and the published click-to-caret
-// geometry (AppState::DialogEditorText) is the field's own. THE MODAL IS BACK
-// ON THIS ROW since 2026-08-13, but as a surface the row YIELDS WHOLE to, not
-// as a tenant of the chain above: the chain's own layout has no modal term.)
+// buttons in paint_modal_dialog (the two left since: the settings and BPM), and
+// the prompt's text-plus-labels line became a message + real buttons. The
+// one-run prefix+pending shaping died with it, the pending run shaping alone
+// and the published click-to-caret geometry (AppState::DialogEditorText) the
+// editor's own. Since 2026-10-14 the two editors' line stands in the modal
+// family's box with no label and the prompt's question on its first row
+// (modal_box.h); row 8 YIELDS WHOLE to the modal, which is no tenant of it.)
 
 // -- GuiPaintHandler::paint_flag_annotations -----------------------------
 
@@ -1197,8 +1183,8 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 
 // (THE DROPDOWN'S HORIZONTAL PADS, kPopupPadXPx and kPopupHotkeyGapPx, are
 // render.h's since 2026-10-07, beside the vertical metrics; the menu row's
-// pull-downs alone take them — the choice editor's drop-down takes
-// choice_combo::combo_text_inset_px, 2026-10-09.)
+// pull-downs alone take them — the settings choice editor's drop-down took
+// its own 7-W inset, 2026-10-09 to 2026-10-14.)
 
 // THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
 // the face's own CAP BAND in the box, a half-row tie going toward the TOP
@@ -1228,14 +1214,14 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
-// rule is not asked. THE BOX SEATS (the settings choice's combo and list
-// and the dialog fields seat the same way): the
+// rule is not asked. THE BOX SEATS: the
 // caption's title, the row-8 clock (in its time field) and the
 // state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
 // is at paint_bottom_row_buttons_and_clock), the notification
-// card's first line, the dropdown items, the prompt's message, the render player's
-// two time fields, the modal field's INK, the modal field's LABEL (on the BUTTONS' box —
-// the reasoning is at that site), the modal buttons' own labels, the on-screen
+// card's first line, the dropdown items, the prompt's question and the
+// dialog editor's line in the modal family's box (each row on the list's
+// row box, 2026-10-14), the render player's
+// two time fields, the modal buttons' own labels, the on-screen
 // keyboard's caps, the folder overlay's rows, the menu row's anchors
 // (the plain menu bar's seat, a capture of the real OS
 // beating ReactOS's band, architect 2026-10-09 ~17:40). ONE LINE SEAT: the
@@ -1262,9 +1248,9 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // row 50 (eighteen rows above it, eighteen below — a 4-row line and 14 of
 // face each side), the 51-row field at 300 % its 24-row band at row 37, the
 // 23-row field at 138 % its 11.04-row band at row 17.
-// AND THE MODAL FIELD LABEL'S 1px: that label now reads THE BUTTONS' OWN SEAT
-// rather than the field band's plus a drop, which is what levels it with OK
-// and Cancel at every scale (the reasoning is at the modal's own site).
+// AND THE MODAL FIELD LABEL'S 1px: that label read THE BUTTONS' OWN SEAT
+// rather than the field band's plus a drop until the label's removal
+// (2026-10-14).
 } // namespace
 double redesign_baseline(const GuiFont& font, double box_y,
                          double box_h) {
@@ -1287,8 +1273,9 @@ double line_baseline(const GuiFont& font, double line_y) {
 // app_state.h's, dropdown_title_access_key), ALWAYS DRAWN: on the menu row's
 // titles, on every row of their three pull-downs and, since the same day, on
 // the dialog buttons' words (Windows strict, PromptState's block;
-// show_button_word), nowhere else (not the tooltips, the cards or the
-// choice editor's list). Windows 2000 hides it until Alt is held; ReactOS
+// show_button_word), nowhere else (not the tooltips or the cards; nor the
+// settings choice editor's list while it stood). Windows 2000 hides it until
+// Alt is held; ReactOS
 // always draws it, and so does this product — the tablet has no Alt to
 // reveal it (the departure, win2000_deviations.md).
 //
@@ -1844,53 +1831,27 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 //
 // COOL EDIT'S FRAME WINDOW ROUND THE PROGRAM: one sunken line, Shadow on the
 // top and left and Hilight on the bottom and right, in the chrome's roles,
-// mitred — the law (his Cool Edit captures), the geometry and the overlays
-// laid over it at render.h's program_frame_rect, its one statement.
+// mitred — the law (his Cool Edit captures), the geometry and what stands
+// inside it at render.h's program_frame_rect, its one statement.
 // paint_program_frame paints THE RING, program_frame_rect whole, with the
 // rows (on_redraw's step 3): its top row is its own lane under the menu row,
 // its bottom row its own lane under row 8, and its columns stand in the line
 // every program lane leaves on each side, so nothing else paints them; the
-// keyboard slot, the bottom overlays and the floating surfaces cover it where
-// they stand. The outer damage clip bounds it; the ring is a handful of
-// rects, so it is not exposure-gated.
+// floating surfaces cover it where they stand (the keyboard and the modal
+// family's box stand inside it since 2026-10-14). The outer damage clip
+// bounds it; the ring is a handful of rects, so it is not exposure-gated.
 void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
     const GuiRect ring = program_frame_rect(app);
     if (ring.w <= 0 || ring.h <= 0) return;
     paint_relief_sunken_outer(cr, ring);
 }
 
-// -- THE BOTTOM OVERLAYS (architect 2026-10-10) -------------------------------
-//
-// THE DIALOG AND THE ON-SCREEN KEYBOARD AS COOL EDIT'S STATUS BAR — the law,
-// the mocks and every rect at onscreen_keyboard.h's overlay block. This
-// painter lays what the overlay owns beyond the keys and the controls: THE
-// LINE, one relief line in the chrome's Hilight across the window's whole
-// width on the overlay's top row (over the keyboard alone, over the dialog
-// alone, or over the pair), and THE DIALOG'S GROUND in the chrome's ground
-// under it. The keyboard's band is paint_onscreen_keyboard's (its ground and
-// its keys, through the keyboard slot just before this), the dialog's
-// controls paint_modal_dialog's (after the floating surfaces). No bottom or
-// side border: the overlay ends at the window's foot and edges as Cool
-// Edit's status bar does. Not exposure-gated — two fills, the outer damage
-// clip bounding them — and it publishes nothing: a press on the dialog's
-// ground meets the dialog's veil, a press on the keyboard's line the
-// keyboard's claim.
-void GuiPaintHandler::paint_bottom_overlays(cairo_t* cr) {
-    const GuiRect over = onscreen_keyboard::overlay_rect(app, gui);
-    if (over.w <= 0 || over.h <= 0) return;
-    const GuiPalette& p = palette();
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (onscreen_keyboard::dialog_stands(app)) {
-        paint_cell_rect(cr,
-                        onscreen_keyboard::dialog_ground_rect(
-                            app, onscreen_keyboard::stands(app, gui)),
-                        p.ground);
-    }
-    const int line = std::min(onscreen_keyboard::overlay_line_px(), over.h);
-    paint_cell_rect(cr, GuiRect{over.x, over.y, over.w, line}, p.hilight);
-    cairo_restore(cr);
-}
+// (THE BOTTOM OVERLAYS' PAINTER — paint_bottom_overlays, the taskbar line in
+// the chrome's Hilight across the window's whole width over the keyboard and
+// the dialog, and the dialog's ground, 2026-10-10 to 2026-10-14 — is retired
+// with the taskbars, architect 2026-10-14: the keyboard draws no line and
+// the prompts and the dialog editors stand in the modal family's box,
+// paint_modal_box.)
 
 // -- history_walk_line ----------------------------------------------------
 //
@@ -2831,7 +2792,8 @@ static std::string clock_time_text(const AppState& app,
 // at 138 %; program_spec.h's field_h_px) and THE TIME FIELD'S PAD, 5 W
 // (15 device px at 300 %, 7 at 138 % — 6.9 rounded — and 18 at 360 %;
 // program_spec.h's field_pad_px, architect 2026-10-10 — the dialog field's
-// own 5, kModalFieldPadXPx), one constant at every time field.
+// own 5 then, kModalFieldPadXPx, which went with that field 2026-10-14),
+// one constant at every time field.
 static int time_field_h_px() {
     return scaled_px(kProgramSpec.field_h_px);
 }
@@ -2920,14 +2882,15 @@ static BottomRowSeats bottom_row_seats(const GuiRect& content) {
 }
 
 // THE MODAL FAMILY'S CONTROLS ROW'S SEATS (architect 2026-10-14,
-// modal_box.h): the render player's and the picker's controls stand on row
-// 8's content rows at row 8's case seat, but their OUTERMOST CASES AND
-// BUTTONS ARE FLUSH WITH THE BOX'S RING'S OUTER EDGES — the left pad, the
-// right pad and the cases' end all the ring's outer columns, no row-8 pad, no
-// tail. At 300 %: the first column 21, one past the last 2283.
-static BottomRowSeats modal_controls_seats(const AppState& app) {
-    const GuiRect row = modal_controls_row_rect(app);
-    const GuiRect box = modal_box_rect(app);
+// modal_box.h): every modal's controls stand on the controls row at row 8's
+// case seat, their OUTERMOST CASES AND BUTTONS FLUSH WITH THE BOX'S RING'S
+// OUTER EDGES — the left pad, the right pad and the cases' end all the ring's
+// outer columns, no row-8 pad, no tail. At 300 %: the first column 21, one
+// past the last 2283. `keyboard_h` the stack's lift (modal_box.h's head).
+static BottomRowSeats modal_controls_seats(const AppState& app,
+                                           int keyboard_h) {
+    const GuiRect row = modal_controls_row_rect(app, keyboard_h);
+    const GuiRect box = modal_box_rect(app, keyboard_h);
     const int x0 = box.w > 0 ? box.x : row.x;
     const int x1 = box.w > 0 ? box.x + box.w : row.x + row.w;
     return BottomRowSeats{x0, x1, x1, row.y + row8_air_above_px(),
@@ -5590,37 +5553,37 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // the editor itself, at the tail of this file) — one answer, so the row
 // cannot yield to a dialog the modal painter would then decline to paint.
 
-// The dialog editor the modal would paint, or nullptr, with its LABEL out.
-// The editors' precedence order. Only one dialog editor can be open at a time
-// — every opener refuses while another owns the keyboard — so the order is
-// free. A standing PROMPT outranks every editor and is the caller's own test,
-// not this one's. (The `h` view's load editor and the Open project editor
-// had arms here until 2026-08-28, when both became the field-less PICKER —
-// a modal owner of its own, painted by the picker branch below, never an
-// editor.)
+// The dialog editor the modal would paint, or nullptr. The editors'
+// precedence order. Only one dialog editor can be open at a time — every
+// opener refuses while another owns the keyboard — so the order is free. A
+// standing PROMPT outranks every editor and is the caller's own test, not
+// this one's. (The `h` view's load editor and the Open project editor had
+// arms here until 2026-08-28, when both became the field-less PICKER — a
+// modal owner of its own, painted by the picker branch below, never an
+// editor.) THE SETTINGS EDITOR CARRIES NO LABEL since 2026-10-14 (architect:
+// "Setting:" "pointless that far away. just remove it"): the box is the edit
+// control and the `key=value` line is the whole of it. The BPM editor keeps
+// "BPM:" inside the box ahead of its line (kBpmEditorPrefix, paint_handler.h,
+// where the reason stands; dialog_editor_label below).
 //
-// IT HANDS BACK A MUTABLE STATE because the field's painter WRITES one field
-// of it: the horizontal view offset (text_editor::State::view_offset_px, whose
-// minimal-travel rule the painter owns for the flag editor too). The boolean
-// caller below wants only the null test and is unaffected.
-static text_editor::State* dialog_editor_to_paint(AppState& app,
-                                                  std::string& prefix) {
-    if (text_editor::is_active(app.settings_editor)) {
-        // A CHOICE EDITOR'S LABEL IS ITS ROW'S (2026-10-07 evening): the
-        // menu row's own word ("Icons") in the dialogs' `<word>:` form, the
-        // combo beside it carrying no key to read; the text editor keeps
-        // "Setting:" before its `key=value` line.
-        prefix = app.settings_choice_live()
-                     ? std::string(app.settings_choice_row().label) + ":"
-                     : std::string(kSettingsEditorPrefix);
+// IT HANDS BACK A MUTABLE STATE for the painter's sake (the editor's own
+// state is the caret and the selection it paints); the boolean caller below
+// wants only the null test.
+static text_editor::State* dialog_editor_to_paint(AppState& app) {
+    if (text_editor::is_active(app.settings_editor))
         return &app.settings_editor;
-    }
     if (text_editor::is_active(app.top_flag_editor) &&
-        app.top_flag_editor.kind == text_editor::Kind::BpmBracket) {
-        prefix = kBpmEditorPrefix;
+        app.top_flag_editor.kind == text_editor::Kind::BpmBracket)
         return &app.top_flag_editor;
-    }
     return nullptr;
+}
+
+// THE LABEL A DIALOG EDITOR'S LINE STANDS BEHIND IN THE BOX: "BPM:" for the
+// BPM editor, nothing for the settings editor (the block above).
+static std::string_view dialog_editor_label(const AppState& app,
+                                            const text_editor::State* ed) {
+    return ed == &app.top_flag_editor ? std::string_view(kBpmEditorPrefix)
+                                      : std::string_view{};
 }
 
 // "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
@@ -5628,18 +5591,15 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // (the fourth, the same day: its Cancel-alone row) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
-// THIS SET LESS THE RENDER PLAYER AND THE PICKER IS THE ROW'S CHROME TENANTS
-// (chrome_tenant_owns_bottom_row, app_state.h, 2026-10-10; the picker left
-// them 2026-10-14 for the modal family's controls row, modal_box.h), which
-// stand in THE DIALOG, the bottom overlay laid over the row
-// (onscreen_keyboard.h's overlay block). Under the player and the picker the
-// row's content rows ARE the family's controls row.
+// EVERY ONE OF THEM STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
+// since 2026-10-14 (modal_box.h; a prompt and a dialog editor stood in the
+// taskbar dialog laid over the row from 2026-10-10 until that day), so with
+// no keyboard standing the row's content rows ARE the family's controls row.
 static bool modal_owns_bottom_row(AppState& app) {
     if (app.prompt.active) return true;
     if (app.render_player.active) return true;
     if (app.picker.active) return true;
-    std::string prefix;
-    return dialog_editor_to_paint(app, prefix) != nullptr;
+    return dialog_editor_to_paint(app) != nullptr;
 }
 
 // -- THE BORDER UNDER ROW 8 ------------------------------------------------
@@ -5649,10 +5609,11 @@ static bool modal_owns_bottom_row(AppState& app) {
 // frame's bottom row: THE DOCK BAR'S OWN SIX ROWS, painted by the dock bar's
 // own painter on the lane — its light row, its face, its mid and dark rows,
 // its left column light and its right column mid, inside the frame's two
-// columns. ON EVERY FRAME WHATEVER STANDS OVER IT, as row 8's lane is: a
-// dialog or the on-screen keyboard is a bottom overlay laid over it after
-// (paint_bottom_overlays, onscreen_keyboard.h's overlay block). Publishes
-// nothing: the lane is inert ground for input.
+// columns. ON EVERY FRAME WHATEVER STANDS OVER IT, as row 8's lane is: the
+// on-screen keyboard's band covers it after (paint_keyboard_slot), and under
+// a dialog editor on the glass the modal family paints the same six rows
+// again on the keyboard's band (paint_modal_box, modal_box.h's
+// modal_border_rect). Publishes nothing: the lane is inert ground for input.
 static void paint_bottom_border(cairo_t* cr, const AppState& app) {
     const GuiRect lane = bottom_border_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -5677,9 +5638,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // from here onto the grounded band (the cluster's tables and the clock's
     // metrics live beside that body).
     // THE ROW HAS A MODAL STATE since 2026-08-13, in which those tenants
-    // stand down and the render player takes the lane, or the dialog overlay
-    // laid over it carries the prompt or the dialog editor (2026-10-10; the
-    // ruling and the fork are at modal_owns_bottom_row,
+    // stand down and the modal family's controls row takes the content band
+    // (2026-10-14; the ruling and the fork are at modal_owns_bottom_row,
     // just above; the modal's own layout is paint_modal_dialog's) — and with
     // the chain gone there is nothing left on the lane to negotiate with,
     // which is what makes that yield clean.
@@ -5707,18 +5667,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // stands straight on its light row) and the content band under it in THE
     // PANEL'S FACE, the lane one frame line in from each side inside the
     // program's frame. The row's tenants are the program's (row 8, and the
-    // modal family's controls row — the render player's and the picker's,
-    // modal_box.h, 2026-10-14 — whose panel then covers the dock bar); a
-    // CHROME TENANT — a prompt or a dialog editor — is THE DIALOG, a bottom
-    // overlay laid over the content band,
-    // the border under the row (paint_bottom_border, 2026-10-14) and the
-    // frame's bottom row with the dock bar left in view above it as Cool
-    // Edit's ridge (onscreen_keyboard.h's overlay block, its ground and line
-    // paint_bottom_overlays'), so this lane never changes for it. The ground
-    // erases whatever render_background laid down, so the strip does not
-    // depend on that erase happening to hold the same value. The render
-    // player and the picker paint their controls on this ground and lay none
-    // of their own (paint_modal_dialog).
+    // modal family's controls row — every modal's, modal_box.h, 2026-10-14 —
+    // whose panel then covers the dock bar), so this lane never changes for
+    // them. The ground erases whatever render_background laid down, so the
+    // strip does not depend on that erase happening to hold the same value.
+    // The modals paint their controls on this ground and lay none of their
+    // own (paint_modal_dialog) — but under a dialog editor on the glass,
+    // whose stack stands on the keyboard's band, the controls row is lifted
+    // off this lane and laid by the family's painter (paint_modal_box).
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -5755,8 +5711,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // this row is measured from a button stash at all, the status chain having
     // taken its right anchor to the tab row with it.
     // AND THE ROW YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-10-10, ON SCREEN
-    // IS AS PAINTED): the keyboard is a bottom overlay standing on the
-    // window's foot, its band always taller than the row, so row 8 is under
+    // IS AS PAINTED): the keyboard's band stands on the program frame's
+    // bottom row, always taller than the row, so row 8 is under
     // it whole — the flag editor's case, the one editor that raises the
     // keyboard with no dialog — and a button nothing shows must not hover,
     // wear a tooltip or answer a press (the keyboard's claim takes the press
@@ -5839,20 +5795,20 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // stands — modal_owns_bottom_row, above, is the shared fork, and this body
 // paints into the lane the row's tenants left.
 //
-// THE DIALOG IS A BOTTOM OVERLAY SINCE 2026-10-10 (architect, Cool Edit's
-// status bar: onscreen_keyboard.h's overlay block): a prompt's, an editor's
-// and the picker's controls stand on the chrome's ground laid over row 8's
-// content band, the border under it and the frame's bottom row under one
-// Hilight line
-// (paint_bottom_overlays), centered in that ground, or on the on-screen
-// keyboard with one pad between; the render player keeps the row's own face.
-// CONTENT PER KIND, on that ground (there is no box, no frame and no
-// window margin), EVERYTHING FLUSH LEFT since the architect's live look later
-// on 2026-08-13 ("your eyes have to go the whole distance of the screen") —
-// the layout rule and what gives when the row runs out of width are at the
-// layout block below:
-//   A PROMPT — the message at the row's left pad, one pad, then the answer
-//   buttons in painted order. Each button wears its answer's PLAIN WORD
+// EVERY MODAL STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW SINCE
+// 2026-10-14 (architect, modal_box.h, the one owner of the shape; the
+// render player and the picker that morning, the prompts and the dialog
+// editors that afternoon — "we should stop doing" the taskbar dialog laid
+// over the window's foot, 2026-10-10 to 2026-10-14): the controls on the
+// controls row (row 8's content rows on the face, or the same row lifted onto
+// the on-screen keyboard under a dialog editor on the glass), their outermost
+// cases or buttons flush with the box's ring's outer edges
+// (modal_controls_seats). CONTENT PER KIND:
+//   A PROMPT — its question on the box's FIRST ROW at the list's row metrics,
+//   the box's interior THE FACE (a surface you only read, ModalBoxGround::
+//   Face; mock_modal_progress_v2.png's shape), the chrome's text color, and
+//   the answer buttons FLUSH RIGHT on the controls row in painted order, the
+//   last one's right edge the ring's outer edge. Each button wears its answer's PLAIN WORD
 //   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Reload", "Keep",
 //   "Delete") with Windows' UNDERLINED ACCESS KEY (architect 2026-10-10,
 //   Windows strict; OK and Cancel none) — the bracketed accelerators stay
@@ -5865,16 +5821,19 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   on their FIRST (PromptState's PromptInitialFocus owns the choice); Enter answers whichever it is, the
 //   assignment site is a few dozen lines into the body below and the whole
 //   supersession is at PromptState.
-//   AN EDITOR — its prefix as the LABEL at the left pad, then the pending
-//   buffer in a SUNKEN FIELD on the theme's field pair, then OK and Cancel.
-//   The field is the existing text_editor machinery — selection, caret,
-//   click-to-caret, byte-identical editing — and a refused Enter selects the
-//   whole text, the edge unchanged, its owner's card saying why (architect
+//   AN EDITOR — THE BOX IS ITS EDIT CONTROL (mock_modal_settings_osk_v2.png):
+//   the whole pending line on the theme's FIELD pair (ModalBoxGround::Field),
+//   from the box's first row at the list's row metrics, SOFT-WRAPPED at the
+//   box's width and never scrolling (text_editor::soft_wrap_rows), NO LABEL
+//   but the BPM editor's "BPM:" ahead of its bracket (kBpmEditorPrefix);
+//   then OK and Cancel flush right on the controls row, Cancel's right edge
+//   the ring's outer edge and OK one button gap before it. The line is the
+//   existing text_editor machinery — selection, caret, click-to-caret,
+//   byte-identical editing — on the wrapped rows, and a refused Enter selects
+//   the whole text, nothing recolored, its owner's card saying why (architect
 //   2026-10-03; render.h's palette block, A REFUSED ENTER RECOLOURS NOTHING).
-//   THE SETTINGS CHOICE EDITOR (2026-10-07 evening) is the one editor whose
-//   field is a COMBO: its row's word as the label, the chrome's combo at the
-//   field's seat, its list dropping upward (paint_settings_choice; the
-//   design at GuiSettingsEditor's head).
+//   (THE SETTINGS CHOICE EDITOR's combo stood at the field's seat 2026-10-07
+//   to 2026-10-14 and went with its rows' drop-downs.)
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
@@ -5904,62 +5863,37 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // since the chrome conversion but a different index space (the reasoning is
 // at the field's declaration).
 //
-// METRICS. The row's own pad (icon_row_pad_x, paint_handler.h — the icon row's
-// 8, which the bottom row's tenants have always walked from and which the
-// modal took over on 2026-08-14, retiring the separately-measured 13 it had
-// inherited from the status chain) is the left and right margin,
-// which is what makes the modal sit on the same margins as the tenants it
-// displaced; the rest are the surviving sampled constants, sampled in laptop
-// px and each re-authored in Windows px at the block below (the field colors
-// and their derivations are at the kModal* block, render.h):
+// METRICS. The seats are the controls row's (modal_controls_seats: the box's
+// ring's outer columns, no row-8 pad, no tail); the rest are the surviving
+// sampled constants, sampled in laptop px and each re-authored in Windows px
+// at the block below:
 //   kModalButtonGapPx 6 W — modal_popup.png's inter-button gap, 8 laptop px
 //                          (Save ends x=504, Do Not Save begins x=513;
 //                          identically 619..626): 8 device px at 138 %
 //                          (6 · 1.38 = 8.28 → 8), 18 at 300 %.
-//   kModalFieldHeightPx 23 W — editor.png's field, borders included
-//                          (y=5..35, 31 laptop px), vertically centred in the
-//                          row's content band: 32 device px at 138 %
-//                          (23 · 1.38 = 31.74 → 32), 69 at 300 %.
-//   kModalFieldPadXPx 5 W — its border-to-ink inset (x=86..92), 7 laptop px:
-//                          7 device px at 138 % (5 · 1.38 = 6.9 → 7), 15 at
-//                          300 %.
-//   (the label-to-field gap is NOT a constant of its own: since 2026-10-08
-//    it is kModalButtonGapPx, the editor row's ONE GAP — label → field,
-//    field → OK, OK → Cancel; the rule at the editor arm. From 2026-08-29
-//    it was the window-edge pad read twice, which with the label's trailing
-//    space read wider than the field's other end.)
-//   kModalFieldWidthPx 378 W — AUTHORED, not sampled (the crop's field width is
-//                          its dialog's layout, not a rule): wide enough for
-//                          every render-entry id and settings line met in
-//                          practice. AN OVER-LONG BUFFER SCROLLS since
-//                          2026-08-13 (architect at his live test; the
-//                          standing "the dialog editors do not scroll"
-//                          accepted cost recorded here is RETIRED): the field
-//                          travels horizontally to keep the caret inside it,
-//                          through the flag editor's own mechanism and rule
-//                          (text_editor::State::view_offset_px), while the
-//                          published byte geometry stays the painter's
-//                          unclipped truth.
-//   kModalFocusFramePx 1 W — the keyboard focus frame, RESERVED around every
-//                          button and painted for the focused one (the
-//                          reflow-free rule is at the constant).
-// THE FIELD ABSORBS THE SHRINK on a narrow window exactly as it did in the
-// box — it takes whatever is left between the label and the buttons, floored
-// at 29 W (kModalFieldMinWidthPx) so it stays a field.
+//   kModalFocusFramePx 1 W — the keyboard focus frame, painted for the
+//                          focused button in the gap or the face beside it
+//                          (the rule is at the constant).
+// The text in the box stands at the box's own inset (modal_box.h's
+// modal_box_text_inset_px) on the list's rows (folder_overlay.h's row box).
+// (The editor's one-row field — kModalFieldWidthPx 378 W authored, floored
+// at 29 W, kModalFieldHeightPx 23 W tall with its text kModalFieldPadXPx 5 W
+// in, its label before it and its horizontal travel — stood on the bottom
+// row from 2026-08-12 to 2026-10-14.)
 //
 // THE PUBLICATION is the floating surfaces' own convention: this runs
-// UNCONDITIONALLY from on_redraw's tail, rewrites AppState::modal_dialog and
-// AppState::dialog_editor_text every run (zero/invalid with no dialog up), so
-// the pointer path always reads what is actually on screen and a closed
-// dialog strands nothing. `box` is the modal's surface — the dialog's whole
-// overlay, its line and its ground (onscreen_keyboard::dialog_rect, since
-// 2026-10-10 the dialog is a bottom overlay laid over the row), or the lane
-// under the render player — and it is what the hover invalidation and the
-// damage ride. Damage: the openers invalidate the whole window (no surface
-// exists before the first paint); every later edit, blink, flash and closer
-// rides invalidate_modal_dialog_area, which takes this row's lane and the
-// dialog's overlay whole — the modal's surface, and the rect a closer owes
-// (viewport.cpp).
+// UNCONDITIONALLY from on_redraw (after the keyboard slot since 2026-10-14),
+// rewrites AppState::modal_dialog and AppState::dialog_editor_text every run
+// (zero/invalid with no dialog up), so the pointer path always reads what is
+// actually on screen and a closed dialog strands nothing. `box` is the
+// modal's surface — the modal family's whole area under a prompt or a dialog
+// editor (modal_area_rect), the controls row under the render player and the
+// picker — and it is what the hover invalidation and the damage ride.
+// Damage: the openers invalidate the whole window (no surface exists before
+// the first paint); every later edit, blink, flash and closer rides
+// invalidate_modal_dialog_area, which takes row 8's lane and, while a prompt
+// or a dialog editor stands or was last painted, the modal family's whole
+// area — the modal's surface, and the rect a closer owes (viewport.cpp).
 
 namespace {
 
@@ -5974,13 +5908,10 @@ namespace {
 // field → OK → Cancel; the rule at paint_modal_dialog's editor arm).
 constexpr double kModalButtonGapPx    = 6.0;
 // (THE FIELD'S HEIGHT AND PAD, kModalFieldHeightPx 23 and kModalFieldPadXPx
-// 5, are render.h's since 2026-10-08: the settings choice's combo takes them
-// too (and the color picker's hex field did until 2026-10-14), so their one
-// source is where every reader sees it; the time fields, which took them
-// 2026-10-08 to 2026-10-09,
-// are Cool Edit's dark field with program_spec.h's own height and pad.)
-constexpr double kModalFieldWidthPx   = 378.0;  // authored; see the block above
-constexpr double kModalFieldMinWidthPx = 29.0;  // the field's floor
+// 5, render.h's from 2026-10-08, went with the editor's one-row field
+// 2026-10-14, the line standing in the modal family's box. The time fields,
+// which took them 2026-10-08 to 2026-10-09, are Cool Edit's dark field with
+// program_spec.h's own height and pad.)
 // THE DIALOG BUTTONS' BOX — the deleted toolbar row's own anatomy, OWNED here
 // since the 2026-08-12 relayout dissolved that row (these buttons read row
 // 2's constants until then; the architect's original mix — "the size should
@@ -6010,17 +5941,14 @@ constexpr double kModalBtnMinWidthPx  = 75.0;
 // THE FOCUS FRAME'S WIDTH — the keyboard-focused button's frame, ONE
 // DkShadow line OUTSIDE its raised box (architect 2026-10-02, the planner's
 // reading of the Windows default-button frame; the face at the button walk
-// below). RESERVED FOR EVERY BUTTON AND PAINTED FOR ONE, which is what makes
-// moving the focus reflow nothing: the cluster's right anchor spends it, the
-// row's one 6-W gap absorbs it on the cluster's left (a prompt's message, an
-// editor's field — 2026-10-08) as between two buttons, and the buttons
-// themselves never move.
-// THE RENDER PLAYER'S RIGHT PAIR SPENDS NONE (architect 2026-10-05): it ends
-// where row 8's last case ends (bottom_row_seats), so its frame paints in
-// the face beyond it. One relief line (relief_line_px), so it fits at every
-// scale by construction: the vertical margin is (32 − 23) / 2 Windows px
-// (row 8's content round the spec's push button) against its 1,
-// and the 6-px inter-button gap absorbs one frame from each neighbour.
+// below). PAINTED FOR ONE AND MOVING NOTHING: between two buttons the
+// row's 6-W gap absorbs it, and at the row's ends — every owner's cluster
+// flush with the box's ring since 2026-10-14 (modal_controls_seats; the
+// render player's right pair since 2026-10-05) — it paints in the face
+// beyond the ring's outer edge, so the buttons never move. One relief line
+// (relief_line_px), so it fits at every scale by construction: the vertical
+// margin is (32 − 23) / 2 Windows px (the controls row's content round the
+// spec's push button) against its 1.
 constexpr double kModalFocusFramePx   = 1.0;
 // THE PLAYER ROW'S GLYPH GAP — between two of the render player's glyph
 // boxes, the player's own since the roster's buttons began to touch
@@ -6032,6 +5960,15 @@ constexpr double kPlayerGlyphGapPx    = 1.0;
 // stood at from 2026-10-02 until the roster's groups became Cool Edit's
 // (2026-10-09), kept as the player's own.
 constexpr double kPlayerGroupGapPx    = 8.0;
+
+} // namespace
+
+// THE MODAL FAMILY'S BOX'S PAINTER (defined with the folder overlay's
+// painter below, its other caller).
+static void paint_modal_box(cairo_t* cr, const AppState& app,
+                            ModalBoxGround ground, int keyboard_h);
+
+namespace {
 
 // THE MODAL'S FACE STATE, dropped together. The three indices all name slots
 // in modal_dialog.buttons and the field bit names modal_dialog.field, so they
@@ -6091,10 +6028,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.scrub   = GuiRect{0, 0, 0, 0};
     dlg.clock   = GuiRect{0, 0, 0, 0};
     dlg.scrub_thumb_x = -1;
-    dlg.combo      = GuiRect{0, 0, 0, 0};
-    dlg.combo_list = GuiRect{0, 0, 0, 0};
-    dlg.combo_list_items.clear();
-    dlg.combo_list_bar = PopupScrollBar{};
     dlg.buttons.clear();
     app.dialog_editor_text = AppState::DialogEditorText{};
 
@@ -6116,10 +6049,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // modal_dialog_stash_current are the others) and they must agree or the
     // owner-tag doctrine breaks.
     const bool picker_up = !prompt_up && !player_up && app.picker.active;
-    std::string prefix;
     text_editor::State* ed =
         (prompt_up || player_up || picker_up)
-            ? nullptr : dialog_editor_to_paint(app, prefix);
+            ? nullptr : dialog_editor_to_paint(app);
     if (!prompt_up && !player_up && !picker_up && ed == nullptr) {
         // No dialog: the three pointer/keyboard face indices reset WITH the
         // stash, so a fresh dialog cannot inherit the previous one's lit
@@ -6150,30 +6082,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         reset_modal_dialog_face_state(app);
     }
 
-    // THE MODAL'S SURFACE: the RENDER PLAYER'S and the PICKER'S is THE MODAL
-    // FAMILY'S CONTROLS ROW (architect 2026-10-14, modal_box.h: row 8's
-    // content rows under the box and its foot, on the row's own face, which
-    // paint_bottom_strip lays on every frame class), and a prompt raised over
-    // either stands there with it — and every chrome tenant's
-    // (onscreen_keyboard::dialog_stands: a prompt or a dialog editor) is THE
-    // DIALOG, the bottom overlay laid over the row (architect
-    // 2026-10-10; onscreen_keyboard.h's overlay block): its ground and line
-    // are paint_bottom_overlays', already painted, so nothing here draws a
-    // ground of its own. The dialog's controls are laid out in its BAND
-    // (dialog_band_rect: the ground's top, the alone band's height) — alone
-    // the ground under the line down to the window's foot, on the keyboard
-    // the same top pad with the keyboard's edge pad as the gap below — and
-    // keep the row's own x and width, so they stand where the row's tenants'
-    // margins stand.
-    const GuiRect lane        = bottom_row_area(app);
-    const GuiRect row_band    = bottom_row_content_area(app);
-    const bool    dialog      = onscreen_keyboard::dialog_stands(app);
-    const bool    on_keyboard = onscreen_keyboard::stands(app, gui);
-    const GuiRect dialog_band =
-        onscreen_keyboard::dialog_band_rect(app, on_keyboard);
-    const GuiRect content = dialog
-        ? GuiRect{row_band.x, dialog_band.y, row_band.w, dialog_band.h}
-        : modal_controls_row_rect(app);
+    // THE MODAL'S SURFACE IS THE MODAL FAMILY'S (architect 2026-10-14,
+    // modal_box.h): every owner's controls stand on THE CONTROLS ROW — row
+    // 8's content rows under the box and its foot, on the row's own face,
+    // which paint_bottom_strip lays on every frame class; or, under a dialog
+    // editor on the glass, the same row lifted onto the on-screen keyboard's
+    // band (`kb_h`, onscreen_keyboard::modal_keyboard_h_px), its face the
+    // family's painter's. A PROMPT AND A DIALOG EDITOR (`boxed`) ALSO TAKE
+    // THE BOX: this body paints it (paint_modal_box) — the face for a prompt's
+    // question, the field for an editor's line — where the render player's
+    // and the picker's list is the folder overlay's painter's. (THE TASKBAR
+    // DIALOG, the prompts' and the editors' surface from 2026-10-10 until
+    // that day — the chrome's ground laid over row 8, the border and the
+    // frame's bottom row under one Hilight line, its controls centered in it
+    // or standing on the keyboard — is retired: "we should stop doing that".)
+    const bool    boxed   = prompt_up || ed != nullptr;
+    const int     kb_h    = onscreen_keyboard::modal_keyboard_h_px(app, gui);
+    const GuiRect lane    = bottom_row_area(app);
+    const GuiRect content = modal_controls_row_rect(app, kb_h);
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) {
         // A degenerate row publishes nothing, the cold answer the pointer path
         // already reads correctly (a zero stash contains no point) — and it
@@ -6185,28 +6111,32 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     cairo_save(cr);
     const GuiFont font = gui_font(GuiFace::Body);
 
+    // THE BOX, for a prompt and a dialog editor (the surface block above):
+    // laid first, the controls after it on the row it leaves.
+    if (boxed)
+        paint_modal_box(cr, app,
+                        prompt_up ? ModalBoxGround::Face : ModalBoxGround::Field,
+                        kb_h);
+
     const int bgap  = scaled_px(kModalButtonGapPx);
     // The deleted toolbar row's button box, owned by the dialog since the
     // 2026-08-12 relayout (the spec's push_button_box_px — the record at the
     // kModal* block) — on every
     // owner's row but THE PLAYER'S, whose buttons are row 8's case, the
-    // program's, at row 8's seat (architect 2026-10-05). THE PLAYER'S AND THE
-    // PICKER'S SEATS ARE THE FAMILY'S CONTROLS ROW'S (modal_controls_seats,
-    // architect 2026-10-14: the outermost cases and buttons flush with the
-    // box's ring), every other owner's row 8's pads (bottom_row_seats).
-    // `btn_y` and `btn_h` are the one band the walk, the scrub and the
-    // editor's label all read.
-    const BottomRowSeats seats = (player_up || picker_up)
-                                     ? modal_controls_seats(app)
-                                     : bottom_row_seats(content);
+    // program's, at row 8's seat (architect 2026-10-05). EVERY OWNER'S SEATS
+    // ARE THE FAMILY'S CONTROLS ROW'S (modal_controls_seats, architect
+    // 2026-10-14: the outermost cases and buttons flush with the box's ring;
+    // the prompts and the editors took row 8's pads until that afternoon).
+    // `btn_y` and `btn_h` are the one band the walk and the scrub read.
+    const BottomRowSeats seats = modal_controls_seats(app, kb_h);
     const ChromeSpec& spec = live_chrome_spec();
     const int btn_h = player_up ? seats.case_h
                                 : scaled_px(spec.push_button_box_px);
     const int btn_pad_l = scaled_px(spec.push_button_pad_left_px);
     const int btn_pad_r = scaled_px(spec.push_button_pad_right_px);
-    // The focus frame's reserved band (kModalFocusFramePx, above): spent by
-    // the layout for EVERY button whether or not one is focused, so the frame
-    // can never push the row around when the focus moves. One relief line.
+    // The focus frame's width (kModalFocusFramePx, above): painted in the gap
+    // or beside the ring, never reserved, so the frame can never push the row
+    // around when the focus moves. One relief line.
     const int ring = scaled_px(kModalFocusFramePx, 1);
 
     // -- The buttons' words and widths, shaped up front (the layout needs the
@@ -6474,7 +6404,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
     // EVERY BUTTON'S WIDTH, and the ONE CLUSTER'S total behind it — the total
     // is the SINGLE-CLUSTER owners' (a prompt, the picker, an editor), whose
-    // cap `buttons_x_max` is measured against it; the player spends the same
+    // flush-right start is measured against it; the player spends the same
     // widths on its own two-cluster arrangement and reads no total.
     int buttons_w = 0;
     for (size_t i = 0; i < plan.size(); ++i) {
@@ -6527,84 +6457,53 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         app.modal_dialog_focus_active = false;
     }
 
-    // -- THE ROW LAYOUT: ONE LEFT-FLUSHED BLOCK (architect 2026-08-13, at his
-    //    live look: "right now you have to read the bottom left and then the
-    //    bottom right — your eyes have to go the whole distance of the screen.
-    //    Everything should be just flushed left"). --
+    // -- THE CONTROLS ROW'S LAYOUT (architect 2026-10-14, modal_box.h) --
     //
-    // The row reads left to right from its own left pad: a PROMPT is its
-    // message and the buttons in painted order, an EDITOR its label, the
-    // field and the buttons, the button gap between each (the one-gap rule
-    // at the editor arm, 2026-10-08; the prompt's at its arm, the same day).
-    // The right-aligned cluster
-    // of hours earlier is retired with the reserved right-pad ring that
-    // anchored it.
+    // THE ALIGNMENT RULE: the WORD BUTTONS SIT FLUSH RIGHT on every owner's
+    // row — a prompt's answers, an editor's OK and Cancel and the picker's
+    // Cancel — the last one's right edge the box's ring's outer edge (x 2282
+    // at 300 %), today's button gap between them; the render player's row
+    // reads from the left, its transport first and its right pair flush
+    // right (its branch below). (From 2026-08-13 a prompt's message and an
+    // editor's label and field sat FLUSH LEFT on the bottom row with their
+    // buttons after them — "your eyes have to go the whole distance of the
+    // screen" — and from 2026-08-29 the picker's list kept its button flush
+    // right, "if I'm using the picker my hand stays on the right"; since the
+    // message and the line moved into the box over the row, every word row is
+    // the list's.)
     //
-    // THE ALIGNMENT RULE, ONE SENTENCE FOR EVERY OWNER (architect 2026-08-29,
-    // and its full statement is in the PICKER's branch below): a modal that
-    // carries A FIELD OR A MESSAGE sits FLUSH LEFT with it — the prompts, the
-    // dialog editors, and the player, whose transport is that row's left-hand
-    // content — while a LIST's buttons sit FLUSH RIGHT, the picker's one
-    // button being the whole of that case.
+    // THE BUTTONS STAY WHOLE: in the pathological case where they are wider
+    // than the row, the cluster starts at the row's left seat and runs past
+    // the right one.
     //
-    // NOTHING OVERFLOWS THE LANE, and the primacy is ROW 8'S STATE CELL'S OWN
-    // (one collision discipline across the product — a text cell anchors at
-    // its own edge and clips when it overflows, that cell against the row's
-    // right button block): THE
-    // BUTTONS STAY WHOLE AND THE CONTENT GIVES. A prompt with no reachable
-    // button is a modal with no way out, while a clipped message is still
-    // readable to its clip — so the cluster's left edge is capped at
-    // `buttons_x_max`, the rightmost start that still leaves the last button
-    // and its focus frame inside the right pad, and whatever precedes it CLIPS (the
-    // message) or SHRINKS (the field) against that cap. In the pathological
-    // case where the buttons alone are wider than the lane, the cap floors at
-    // the left pad and the cluster runs past the right one: the content is
-    // then zero-wide and the buttons are what is left, which is the same
-    // choice made twice.
-    //
-    // THE FOCUS FRAME IS RESERVED, NOT PAINTED, on both ends of the cluster —
-    // one frame line inside the right pad so the last button's cannot touch
-    // the window edge. Between neighbours the 6-W gap absorbs both
-    // (kModalFocusFramePx), and since 2026-10-08 between an editor's field
-    // and its OK and between a prompt's message and its first button too
-    // (the two arms). (The player's and the picker's row is the modal
-    // family's controls row and reserves no ring at its right edge — their
-    // branches below.) So the focus can
-    // move anywhere on the row without reflowing it, which is the whole point
-    // of reserving.
-    const int cx0 = seats.left_x;                       // content left
-    const int cx1 = seats.right_x;                      // the row's right pad
-    const int buttons_x_max = std::max(cx0, cx1 - ring - buttons_w);
-    // Centred in the content band on every owner's row but the player's,
-    // which takes row 8's case seat (above).
-    // EVERY CONTROL ON A DIALOG ROW IS CENTRED ON THE ROW'S VERTICAL CENTRE
-    // (architect 2026-10-08, on the editor row: "they don't look quite
-    // aligned vertically") — the push buttons here, an editor's field and
-    // the choice editor's combo at the editor arm below — through this one
-    // expression, so two controls of one height share their rows exactly
-    // and a shorter one stands centred on the taller (where two heights
-    // differ by an odd count of device px the floor leaves the odd row
-    // below, the same for every control). UNDER
-    // WIN2000 THE FIELD AND THE BUTTON ARE BOTH 23 W (Windows' 14 dialog
-    // units, kModalBtnMinWidthPx's block and kModalFieldHeightPx) and their
-    // boxes coincide row for row; the button only READS 1 W shorter at the
-    // top (and narrower at the left) because a raised push button's outer
-    // top-left line is 3DLight, which the Windows Standard scheme sets equal
-    // to the face (render.h's palette block), while the sunken field's outer
-    // top-left line is Shadow — Windows 2000's own push button beside its
-    // own edit box, measured on his tablet capture (2026-10-08, 300 %: the
-    // field's box y 1351–1419, OK's visible edge from 1354, its 3DLight
-    // rows 1351–1353 on the ground).
-    const auto row_centred_y = [&](int h) {
-        return content.y + (content.h - h) / 2;
-    };
-    // THE PICKER'S CANCEL IS CENTRED ON THE CASE ROWS (architect 2026-10-14,
-    // the family's controls row): the push button on the rows the player's
-    // cases take, 23 W on 23 W under win2000, so the two rows coincide.
-    const int btn_y = player_up   ? seats.case_y
-                    : picker_up   ? seats.case_y + (seats.case_h - btn_h) / 2
-                                  : row_centred_y(btn_h);
-    int buttons_x0 = cx0;   // set by whichever branch runs, below
+    // THE FOCUS FRAME RESERVES NOTHING: between neighbours the 6-W gap
+    // absorbs it (kModalFocusFramePx) and at the row's ends it paints in the
+    // face beyond the ring's outer edge, so the focus can move anywhere on
+    // the row without reflowing it.
+    const int cx0 = seats.left_x;                       // the row's left seat
+    const int cx1 = seats.right_x;                      // one past its right seat
+    // EVERY BUTTON IS CENTRED ON THE CASE ROWS (architect 2026-10-14, the
+    // family's controls row): the push button on the rows the player's cases
+    // take, 23 W on 23 W under win2000, so the rows coincide. (Centred in the
+    // bottom row's content band, the taskbar dialog's centred band before it,
+    // until that day.)
+    const int btn_y = player_up ? seats.case_y
+                                : seats.case_y + (seats.case_h - btn_h) / 2;
+    int buttons_x0 = std::max(cx0, cx1 - buttons_w);   // flush right
+
+    // THE TEXT IN THE BOX — a prompt's question, an editor's line — stands on
+    // the list's rows (folder_overlay.h's row box: the first row its pad under
+    // the ring, each further row one row pitch below) at the box's text inset
+    // from the interior's left (modal_box_text_inset_px, the same inset short
+    // of its right), the cap centred on each row's band.
+    const GuiRect interior   = boxed ? modal_box_interior_rect(app, kb_h)
+                                     : GuiRect{0, 0, 0, 0};
+    const int     text_inset = modal_box_text_inset_px();
+    const int     text_x0    = interior.x + text_inset;
+    const int     text_w     = std::max(0, interior.w - 2 * text_inset);
+    const int     row_h      = folder_overlay::button_row_height_px();
+    const int     row_pitch  = row_h + folder_overlay::button_row_gap_px();
+    const int     row0_y     = interior.y + folder_overlay::pad_px();
 
     if (prompt_up) {
         // THE PAINTED GATE'S ONE WRITER OF TRUE (2026-08-13): this branch is
@@ -6620,37 +6519,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // runs this branch (idempotent).
         app.prompt.painted = true;
         dlg.owner = AppState::ModalDialogOwner::Prompt;
-        // THE MESSAGE SETS WHERE THE BUTTONS START — the row's ONE GAP past
-        // its ink — up to the cap, which is where an over-long message stops
-        // pushing and starts CLIPPING instead.
-        // THE PROMPT ROW HAS THE EDITOR ROW'S ONE GAP (architect 2026-10-08):
-        // the message → first button air is `bgap`, kModalButtonGapPx's 6 W,
-        // the same 6 W that stands between two of its buttons and on every
-        // gap of the editor row (the rule at the editor arm) — Windows' 4
-        // dialog units. The focus frame's one line spends itself inside the
-        // gap, as it does between two buttons (kModalFocusFramePx). Until
-        // this day it was the row's pad plus the reserved ring, 9 W.
-        // Shaped once here and shown from the run: the width is needed for the
-        // layout, and re-shaping it to paint would measure the same string
-        // twice.
+        // THE QUESTION ON THE BOX'S FIRST ROW (architect 2026-10-14, the
+        // progress mock's shape): one line in the chrome's text on the face,
+        // CLIPPED at the text inset short of the interior's right edge — a
+        // question longer than the box's width is cut there, the buttons
+        // under it on the controls row always whole.
         const text_shape::ShapedRun msg =
             text_shape::shape_text_run(font, app.prompt.text);
-        // CEIL: the shaped width is fractional and it sets where the buttons
-        // may start, so it rounds UP — a nearest-rounded width could place the
-        // cluster inside the message's last column. The round-up rule again
-        // (the buttons' widths above, the clock cell's damage box).
-        const int msg_w = static_cast<int>(std::ceil(msg.width_px));
-        buttons_x0 = std::min(cx0 + msg_w + bgap, buttons_x_max);
-        const int msg_clip = std::max(0, (buttons_x0 - bgap) - cx0);
-        cairo_save(cr);
-        cairo_rectangle(cr, cx0, content.y, msg_clip, content.h);
-        cairo_clip(cr);
-        set_palette_source(cr, palette().label);
-        text_shape::show_shaped_run(
-            cr, msg, static_cast<double>(cx0),
-            redesign_baseline(font, static_cast<double>(content.y),
-                              static_cast<double>(content.h)));
-        cairo_restore(cr);
+        if (text_w > 0 && interior.h > 0) {
+            cairo_save(cr);
+            cairo_rectangle(cr, text_x0, interior.y, text_w, interior.h);
+            cairo_clip(cr);
+            set_palette_source(cr, palette().label);
+            text_shape::show_shaped_run(
+                cr, msg, static_cast<double>(text_x0),
+                redesign_baseline(font, static_cast<double>(row0_y),
+                                  static_cast<double>(row_h)));
+            cairo_restore(cr);
+        }
     } else if (player_up) {
         // -- THE RENDER PLAYER'S ROW (architect 2026-08-28 — the relaid
         //    row): TRANSPORT · SCRUB · CLOCK · REPEAT ONE · UP ......... LOAD
@@ -6891,115 +6777,31 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    and the prompt's `<projects_path>/` prefix went with the field it
         //    labelled.
         //
-        //    THE ALIGNMENT RULE (architect 2026-08-29, stated here because
-        //    this body is where every owner's row is laid out): A MODAL THAT
-        //    CARRIES A FIELD OR A MESSAGE SITS FLUSH LEFT WITH IT — the
-        //    prompts, the dialog editors and the player's transport, whose
-        //    row reads from the left because that is where the thing being
-        //    read or typed into begins ("if my hand is on the left edge to
-        //    type, the buttons should be right there") — WHILE A LIST'S
-        //    BUTTONS SIT FLUSH RIGHT ("if I'm using the picker my hand stays
-        //    on the right"; "I am right-handed", 2026-08-28, on seeing the
-        //    picker on the tablet). With nothing to its left the row is that
-        //    one button, ON THE MODAL FAMILY'S CONTROLS ROW since 2026-10-14
-        //    (architect, modal_box.h; the taskbar dialog carried it from
-        //    2026-10-10): ALONE, FLUSH RIGHT, ITS RIGHT EDGE THE BOX'S RING'S
-        //    OUTER EDGE (x 2282 at 300 %) — the row's right seat, with no
-        //    focus-frame reserve inside it, as the player's Close ends there;
-        //    the frame, when worn, stands in the face beside the ring. --
+        //    A LIST'S BUTTONS SIT FLUSH RIGHT (architect 2026-08-29, "if I'm
+        //    using the picker my hand stays on the right"; "I am
+        //    right-handed", 2026-08-28, on seeing the picker on the tablet),
+        //    the rule every word row keeps since 2026-10-14 (the layout
+        //    block above). With nothing to its left the row is that one
+        //    button, ON THE MODAL FAMILY'S CONTROLS ROW (architect,
+        //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
+        //    ALONE, FLUSH RIGHT, ITS RIGHT EDGE THE BOX'S RING'S OUTER EDGE
+        //    (x 2282 at 300 %), as the player's Close ends there; the focus
+        //    frame, when worn, stands in the face beside the ring. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
-        buttons_x0 = std::max(cx0, cx1 - buttons_w);
     } else {
-        // -- The editor: the label at the left pad, then the inset field,
-        //    then the buttons after it. The field absorbs whatever the label
-        //    and the buttons leave (floored so it stays a field — the box's
-        //    own narrow-window rule, now measured against the row instead of
-        //    a window margin), and its width is what places the cluster. --
+        // -- The editor: THE BOX IS ITS EDIT CONTROL (architect 2026-10-14,
+        //    the head's AN EDITOR), its line from the box's first row,
+        //    soft-wrapped, OK and Cancel flush right on the controls row
+        //    (the layout block above). --
         dlg.owner = AppState::ModalDialogOwner::Editor;
-        // CEIL, for the reason the message width above takes it: the label's
-        // measured width places the field after it, so it rounds UP and the
-        // field can never start inside the label's last column.
-        const int label_w = static_cast<int>(
-            std::ceil(text_shape::shape_text_run(font, prefix.c_str()).width_px));
-        // The field's frame is the PLAIN SUNKEN edge, two relief lines (the
-        // chrome below).
-        const int fbord = 2 * relief_line_px();
-        // THE EDITOR ROW HAS ONE GAP (architect 2026-10-08: "make sure the
-        // spacing from the word Setting: to the input box is even — it looks
-        // like there's more space there"): the label → field, the field →
-        // OK and the OK → Cancel air are ALL `bgap`, kModalButtonGapPx's 6 W
-        // — Windows' 4 dialog units between related controls and between
-        // command buttons at MS Sans Serif 8's 1.5-px horizontal unit (the
-        // Windows layout guidelines; their 3-DLU label-to-control figure,
-        // 4.5 px, is not taken, the ruling being one gap). The label is
-        // measured WITHOUT A TRAILING SPACE (every prefix is `<word>:`,
-        // paint_handler.h), so the air after the colon is this gap alone —
-        // until this day it was the row's pad PLUS the prefix's space, 17 W
-        // of air at the label against 10 W at the field's other end. The
-        // field → OK gap carries no reserved ring: the focus frame's one line
-        // spends itself inside the gap, as it does between two buttons
-        // (kModalFocusFramePx). The choice editor alike — its combo takes
-        // the field's seat. UNDER WIN2000 THE BUTTONS' AIR
-        // READS 1 W WIDER than the label's: a raised push button's outer
-        // top-left line is 3DLight, which the Windows Standard scheme sets
-        // equal to the face, so its left edge shows 1 W inside its box (the
-        // same reading as the vertical one at btn_y, below).
-        const int fx    = cx0 + label_w + bgap;
-        // The room a field may take before the buttons would have to give:
-        // the cluster's cap, less the gap.
-        const int field_room = (buttons_x_max - bgap) - fx;
-        const int field_w = std::max(std::min(scaled_px(kModalFieldWidthPx),
-                                              field_room),
-                                     scaled_px(kModalFieldMinWidthPx, 1));
-        // The width floor is the ONE thing that can push past the cap (a window
-        // too narrow for label + field + buttons), and the cap is what stops
-        // it there — the buttons stay whole and the field is the surface that
-        // has already given everything it can.
-        buttons_x0 = std::min(fx + field_w + bgap, buttons_x_max);
-        const int field_h = scaled_px(kModalFieldHeightPx);
-        const int field_y = row_centred_y(field_h);
-        const GuiRect field_outer{fx, field_y, field_w, field_h};
-        const GuiRect field_inner{fx + fbord, field_y + fbord,
-                                  field_w - 2 * fbord, field_h - 2 * fbord};
-        // TWO SEATS, EACH SOLVED ON THE BOX IT BELONGS TO. The FIELD'S INK
-        // takes the FIELD's band, so the buffer sits centred in its own box
-        // (the field metrics are ruled correct and this is what keeps them
-        // so). THE LABEL TAKES THE BUTTONS' OWN SEAT — the same `btn_y` and
-        // `btn_h` the button loop and the scrub read — because what the label
-        // must read level with is the row's words, "Setting:" beside OK and
-        // Cancel, and the two boxes are different heights centred in one band,
-        // which land a row or two apart by their own parity at some scales
-        // (the laptop-pixel field's 31 against the buttons' 32 put the label
-        // visibly under the buttons at 225 % until this; both are 23 Windows
-        // px since 2026-10-02, the field's edge two lines). Reading the
-        // buttons' box makes the two
-        // level at every scale by construction rather than by an authored
-        // correction, which is why the label's own 1px drop is gone.
-        const double baseline =
-            redesign_baseline(font, static_cast<double>(field_y),
-                              static_cast<double>(field_h));
-
-        show_row_text(cr, font, static_cast<double>(cx0),
-                      redesign_baseline(font, static_cast<double>(btn_y),
-                                        static_cast<double>(btn_h)),
-                      prefix.c_str(), palette().label);
-
-        // THE CHOICE EDITOR'S COMBO STANDS WHERE THE FIELD STANDS
-        // (2026-10-07 evening; GuiSettingsEditor's head): field_outer's seat
-        // and size — THE FIELD'S 23 W, the field's cell being the row's —
-        // and no text field, no caret, no
-        // click-to-caret publication (dialog_editor_text stays invalid, so
-        // the field claim and the I-beam find nothing).
-        if (app.settings_choice_live()) {
-            paint_settings_choice(cr, font, field_outer);
-        } else {
-            // THE FIELD CHROME (architect 2026-10-02, the Windows text field): a
-            // PLAIN SUNKEN edge (EDGE_SUNKEN, two relief lines) on the theme's
-            // FIELD ground (architect 2026-10-03; the flag editor is the selected
-            // flag opened for edit and keeps no field pair), square. No outline
-            // says hover or focus: a
-            // FOCUSED FIELD SHOWS ITS CARET and nothing else, the caret painting
-            // only while the ring has not stepped onto a button (below).
+        {
+            // THE EDIT CONTROL'S CHROME IS THE BOX (paint_modal_box, laid at
+            // this body's head): the canvas column's ring round the theme's
+            // FIELD ground (architect 2026-10-03, the field pair; the sunken
+            // two-line field of 2026-10-02 stood on the bottom row until
+            // 2026-10-14), square. No outline says hover or focus: a FOCUSED
+            // FIELD SHOWS ITS CARET and nothing else, the caret painting only
+            // while the ring has not stepped onto a button (below).
             //
             // FOCUS IS `modal_dialog_focus < 0` and needs no term of its own: on
             // an editor dialog -1 IS the field, the ring's own meaning for it
@@ -7008,8 +6810,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             //
             // A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03: "a red
             // outline and the card is redundant"; the red frame retired from both
-            // editors): the edge stays its plain sunken pair and the face the
-            // field ground, the whole text is selected (text_editor::refuse) so
+            // editors): the ring stays its pair and the ground the field
+            // ground, the whole text is selected (text_editor::refuse) so
             // the first keystroke replaces it, and the reason card the refusing
             // commit posts (the owner's own sentence, GuiFlagEditor::notifications
             // and the settings editor's equivalent) says why. The flag editor
@@ -7019,177 +6821,204 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const GuiColor ink_text     = palette().field_text;
             const GuiColor ink_sel_fill = palette().selected_fill;
             const GuiColor ink_sel_text = palette().selected_text;
-            paint_cell_rect(cr, field_inner, palette().field_ground);
-            paint_relief_plain_sunken(cr, field_outer);
 
+            // THE LINE IS SOFT-WRAPPED AT THE BOX'S WIDTH AND NEVER SCROLLS
+            // (architect 2026-10-14: "looks like a multiline edit but that's ok
+            // — long lines can wrap"; the one-row field's horizontal travel of
+            // 2026-08-13 retired with the field). ONE SHAPED RUN, the rows cut
+            // from its own pen (text_shape::byte_offsets_px) by the one wrap
+            // rule, text_editor::soft_wrap_rows: each row the most text that
+            // fits the room between the two text insets less THE CARET'S
+            // COLUMN, reserved at the right so a caret at a full row's end
+            // stands inside the room. Row i stands on the list's row i
+            // (row0_y + i · row_pitch), its bytes painting from the line's start
+            // (`line_x0`, the text inset or past the label below): its origin
+            // is that start less its first byte's pen. A line taller
+            // than the box is cut at the box's interior — nothing scrolls, and
+            // the 1024-byte cap keeps a real line inside it.
+            // THE BPM EDITOR'S LABEL (kBpmEditorPrefix's block) stands at the
+            // text inset on the first row, and the line starts one button gap
+            // past its ink — on every row, the rows' room narrowed by it (the
+            // bracket's 44-byte cap never wraps). The settings editor's line
+            // starts at the inset itself.
+            const std::string_view label = dialog_editor_label(app, ed);
+            int line_x0 = text_x0;
+            if (!label.empty()) {
+                const text_shape::ShapedRun lrun =
+                    text_shape::shape_text_run(font, label);
+                if (text_w > 0) {
+                    cairo_save(cr);
+                    cairo_rectangle(cr, text_x0, interior.y, text_w,
+                                    interior.h);
+                    cairo_clip(cr);
+                    set_palette_source(cr, palette().field_text);
+                    text_shape::show_shaped_run(
+                        cr, lrun, static_cast<double>(text_x0),
+                        redesign_baseline(font, static_cast<double>(row0_y),
+                                          static_cast<double>(row_h)));
+                    cairo_restore(cr);
+                }
+                // CEIL: the label's measured width places the line after it,
+                // so it rounds UP and the line never starts inside its ink.
+                line_x0 += static_cast<int>(std::ceil(lrun.width_px)) + bgap;
+            }
+            const int line_w = std::max(0, text_x0 + text_w - line_x0);
+            const int caret_px = scaled_px(1.0, 1);
             const text_shape::ShapedRun run =
                 text_shape::shape_text_run(font, ed->pending);
             const std::vector<double> bx_off =
                 text_shape::byte_offsets_px(run, ed->pending.size());
+            const std::vector<std::pair<int, int>> ranges =
+                text_editor::soft_wrap_rows(
+                    ed->pending, bx_off,
+                    std::max(1.0, static_cast<double>(line_w - caret_px)));
 
-            // THE FIELD SCROLLS HORIZONTALLY (architect 2026-08-13, at his live
-            // test — `notes=` Tab recalls a long value and "the text field has no
-            // viewport scroll... it should allow me to, just like in a regular
-            // text editor, use left and right or home and end to go to the end of
-            // the string"). The standing "the dialog editors do not scroll"
-            // accepted cost, recorded here and at kModalFieldWidthPx, is RETIRED
-            // BY THAT RULING: the caret and the editing always worked, only the
-            // VIEW never followed, so a caret walked past the right pad went on
-            // editing text nobody could see.
-            //
-            // The mechanism is the FLAG EDITOR'S, called not copied in the only
-            // sense a painter can call one — the same state field
-            // (text_editor::State::view_offset_px, whose contract and whose
-            // minimal-travel rule live at that declaration) and the same four
-            // lines of arithmetic, which is what keeps the two surfaces' scrolling
-            // identical. Scroll only as far as the caret demands, in whichever
-            // direction it left the window, then clamp to the run's own travel: a
-            // caret walking right pushes the view right one glyph at a time and
-            // walking back left pulls it back the same way, never jumping and
-            // never showing blank space past the end of the text.
-            //
-            // ITS HOME IS THE EDITOR SESSION, not this painter and not the modal
-            // stash, and that is the deliberate choice: the offset must survive
-            // frame to frame (recomputing it from nothing each paint would jitter
-            // a caret resting mid-string) and must die with the edit. enter() and
-            // deactivate() already zero it, so it RESETS when a dialog opens and
-            // when it closes, with no reset site of its own to keep in step — and
-            // since each dialog editor owns its own State, a change
-            // of the stash's owner is structurally a change of offset too. A
-            // prompt has no field and writes none.
-            //
-            // The caret's own column is RESERVED at the right edge, so the travel
-            // is measured against (view_w - caret) rather than view_w: a caret at
-            // end-of-text stops with its column inside the field instead of half
-            // past it.
-            const double pad_x    = scaled_px(kModalFieldPadXPx);
-            const int    caret_px = scaled_px(1.0, 1);
-            const double view_x0  = static_cast<double>(field_inner.x) + pad_x;
-            const double view_w   =
-                std::max(1.0, static_cast<double>(field_inner.w) - 2.0 * pad_x);
-            const int cursor_pos = std::clamp(
-                ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
-            const double caret_off = bx_off[static_cast<size_t>(cursor_pos)];
-            const double travel_w  = view_w - static_cast<double>(caret_px);
-            double vo = ed->view_offset_px;
-            if (caret_off - vo < 0.0)      vo = caret_off;
-            if (caret_off - vo > travel_w) vo = caret_off - travel_w;
-            const double max_vo =
-                run.width_px + static_cast<double>(caret_px) - view_w;
-            if (vo > max_vo) vo = max_vo;
-            if (vo < 0.0)    vo = 0.0;
-            ed->view_offset_px = vo;
-
-            const double tx = view_x0 - vo;
-
-            // PUBLISH the click-to-caret geometry: origin at pending's byte 0,
-            // the same shape as FlagEditorBox's pair, so editor_byte_index_at
-            // searches this exactly as it searches the flag editor's. IT CARRIES
-            // THE SCROLL OFFSET, which is the whole reason it is an origin and not
-            // a pad: byte 0 is where byte 0 PAINTS, so a click, the F2.1 text drag
-            // and the double-click's word select all land on the byte under the
-            // pointer however far the field has travelled — the same rule, and the
-            // same one origin, the flag editor's scrolled box has always followed.
+            // PUBLISH the click-to-caret geometry (DialogEditorText's
+            // contract): the rows, each with its band and its origin, and the
+            // run's pen — so a click, the F2.1 text drag, the double-click's
+            // word select and Home / End land on the rows painted here.
             AppState::DialogEditorText& out = app.dialog_editor_text;
-            out.valid         = true;
-            out.text_origin_x = tx;
-            out.byte_x        = bx_off;
+            out.valid  = true;
+            out.byte_x = bx_off;
+            out.rows.clear();
+            for (std::size_t r = 0; r < ranges.size(); ++r) {
+                AppState::DialogEditorText::Row row;
+                row.begin    = ranges[r].first;
+                row.end      = ranges[r].second;
+                row.origin_x = static_cast<double>(line_x0) -
+                               bx_off[static_cast<std::size_t>(row.begin)];
+                row.y        = row0_y + static_cast<int>(r) * row_pitch;
+                row.h        = row_h;
+                out.rows.push_back(row);
+            }
 
-            const int band_y =
-                static_cast<int>(std::nearbyint(baseline -
-                                                gui_font_ascent_px(font)));
-            const int band_h =
-                static_cast<int>(std::nearbyint(gui_font_line_px(font)));
-
-            // Everything from here paints CLIPPED TO THE TEXT VIEWPORT — the band
-            // between the pads, not the whole interior — so scrolled-out glyphs,
-            // the selection highlight and the caret all stop where the ink is
-            // allowed to start instead of bleeding into the pad the border needs.
-            // It is the clip that hides the overflow, and the PUBLISHED byte
-            // geometry above stays the painter's UNCLIPPED truth: a click outside
-            // the visible run still resolves through the nearest-boundary search,
-            // exactly as it did before the field travelled.
+            // Everything from here paints CLIPPED TO THE BOX'S INTERIOR, and
+            // each row's run under its own row's clip (its text range's
+            // columns), so a row shows its own bytes and no other row's.
             cairo_save(cr);
-            cairo_rectangle(cr, view_x0, static_cast<double>(field_inner.y),
-                            view_w, static_cast<double>(field_inner.h));
+            cairo_rectangle(cr, interior.x, interior.y, interior.w,
+                            interior.h);
             cairo_clip(cr);
 
-            const bool   has_sel = text_editor::has_selection(*ed);
-            const size_t s0 = static_cast<size_t>(text_editor::selection_start(*ed));
-            const size_t s1 = static_cast<size_t>(text_editor::selection_end(*ed));
-            // THE SELECTION IS THE THEME'S SELECTED PAIR OVER THE FIELD PAIR
-            // (architect 2026-10-03, unified fields; render.h's palette block) —
-            // the selected fill behind the selected substring, the selected text
-            // for its glyphs, the field text for the rest: the flag editor's
-            // marker-lane box paints the same four. ONE INK PER PIXEL, the flag
-            // editor's rule (render_flag_editor_box): with a selection standing,
-            // the field-text run is clipped to the band's complement and the
-            // selected run to the band, two disjoint regions, so every
-            // antialiased edge blends against exactly the ground it sits on.
-            if (has_sel) {
-                const int hx0 = static_cast<int>(std::nearbyint(tx + bx_off[s0]));
-                const int hx1 = static_cast<int>(std::nearbyint(tx + bx_off[s1]));
-                const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
-                cairo_save(cr);
-                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                set_palette_source(cr, ink_sel_fill);
-                cairo_rectangle(cr, hx0, band_y, hw, band_h);
-                cairo_fill(cr);
-                cairo_restore(cr);
-                // The complement: the columns left and right of the band, and the
-                // rows above and below it (the band is the face's line, not the
-                // field's interior), as one clip path.
-                cairo_save(cr);
-                const double fy0 = static_cast<double>(field_inner.y);
-                const double fy1 = static_cast<double>(field_inner.y + field_inner.h);
-                cairo_rectangle(cr, view_x0, fy0, hx0 - view_x0, fy1 - fy0);
-                cairo_rectangle(cr, hx0 + hw, fy0,
-                                (view_x0 + view_w) - (hx0 + hw), fy1 - fy0);
-                cairo_rectangle(cr, hx0, fy0, hw, band_y - fy0);
-                cairo_rectangle(cr, hx0, band_y + band_h, hw,
-                                fy1 - (band_y + band_h));
-                cairo_clip(cr);
-                set_palette_source(cr, ink_text);
-                text_shape::show_shaped_run(cr, run, tx, baseline);
-                cairo_restore(cr);
-                cairo_save(cr);
-                cairo_rectangle(cr, hx0, band_y, hw, band_h);
-                cairo_clip(cr);
-                set_palette_source(cr, ink_sel_text);
-                text_shape::show_shaped_run(cr, run, tx, baseline);
-                cairo_restore(cr);
-            } else {
-                set_palette_source(cr, ink_text);
-                text_shape::show_shaped_run(cr, run, tx, baseline);
+            const bool has_sel = text_editor::has_selection(*ed);
+            const int  s0 = text_editor::selection_start(*ed);
+            const int  s1 = text_editor::selection_end(*ed);
+            const int  cursor_pos = std::clamp(
+                ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
+            const int  caret_row  = dialog_editor_row_of(out, cursor_pos);
+            for (std::size_t r = 0; r < out.rows.size(); ++r) {
+                const AppState::DialogEditorText::Row& row = out.rows[r];
+                const double baseline =
+                    redesign_baseline(font, static_cast<double>(row.y),
+                                      static_cast<double>(row.h));
+                // THE SELECTION AND CARET BAND IS THE FACE'S LINE BOX on the
+                // text's own rows (the flag editor's, brief 69 — ascent +
+                // descent), as the one-row field took it.
+                const int band_y =
+                    static_cast<int>(std::nearbyint(baseline -
+                                                    gui_font_ascent_px(font)));
+                const int band_h =
+                    static_cast<int>(std::nearbyint(gui_font_line_px(font)));
+                const double tx    = row.origin_x;
+                const double row_w =
+                    bx_off[static_cast<std::size_t>(row.end)] -
+                    bx_off[static_cast<std::size_t>(row.begin)];
+                // THE ROW'S OWN COLUMNS: from the line's start to its last
+                // byte's pen — the last row's to the interior's edge, nothing
+                // following it there.
+                const bool   last_row = r + 1 == out.rows.size();
+                const double clip_x0  = static_cast<double>(line_x0);
+                const double clip_x1  =
+                    last_row ? static_cast<double>(interior.x + interior.w)
+                             : clip_x0 + row_w;
+                const double ry0 = static_cast<double>(row.y);
+                const double ry1 = static_cast<double>(row.y + row.h);
+                // THE SELECTION IS THE THEME'S SELECTED PAIR OVER THE FIELD
+                // PAIR (architect 2026-10-03, unified fields; render.h's
+                // palette block) — the selected fill behind the selected
+                // substring's part on this row, the selected text for its
+                // glyphs, the field text for the rest: the flag editor's
+                // marker-lane box paints the same four. ONE INK PER PIXEL, the
+                // flag editor's rule (render_flag_editor_box): with a
+                // selection on the row, the field-text run is clipped to the
+                // band's complement and the selected run to the band, two
+                // disjoint regions, so every antialiased edge blends against
+                // exactly the ground it sits on.
+                const int a = std::max(s0, row.begin);
+                const int b = std::min(s1, row.end);
+                if (has_sel && a < b) {
+                    const int hx0 = static_cast<int>(std::nearbyint(
+                        tx + bx_off[static_cast<std::size_t>(a)]));
+                    const int hx1 = static_cast<int>(std::nearbyint(
+                        tx + bx_off[static_cast<std::size_t>(b)]));
+                    const int hw  = (hx1 > hx0) ? (hx1 - hx0) : 1;
+                    cairo_save(cr);
+                    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                    set_palette_source(cr, ink_sel_fill);
+                    cairo_rectangle(cr, hx0, band_y, hw, band_h);
+                    cairo_fill(cr);
+                    cairo_restore(cr);
+                    // The complement inside the row's columns: the columns
+                    // left and right of the band, and the rows above and
+                    // below it (the band is the face's line, not the row's
+                    // box), as one clip path.
+                    cairo_save(cr);
+                    cairo_rectangle(cr, clip_x0, ry0, hx0 - clip_x0, ry1 - ry0);
+                    cairo_rectangle(cr, hx0 + hw, ry0,
+                                    clip_x1 - (hx0 + hw), ry1 - ry0);
+                    cairo_rectangle(cr, hx0, ry0, hw, band_y - ry0);
+                    cairo_rectangle(cr, hx0, band_y + band_h, hw,
+                                    ry1 - (band_y + band_h));
+                    cairo_clip(cr);
+                    set_palette_source(cr, ink_text);
+                    text_shape::show_shaped_run(cr, run, tx, baseline);
+                    cairo_restore(cr);
+                    cairo_save(cr);
+                    cairo_rectangle(cr, hx0, band_y, hw, band_h);
+                    cairo_clip(cr);
+                    set_palette_source(cr, ink_sel_text);
+                    text_shape::show_shaped_run(cr, run, tx, baseline);
+                    cairo_restore(cr);
+                } else {
+                    cairo_save(cr);
+                    cairo_rectangle(cr, clip_x0, ry0, clip_x1 - clip_x0,
+                                    ry1 - ry0);
+                    cairo_clip(cr);
+                    set_palette_source(cr, ink_text);
+                    text_shape::show_shaped_run(cr, run, tx, baseline);
+                    cairo_restore(cr);
+                }
+                // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE
+                // FIELD HAS IT (architect 2026-08-13, at his live test: "the
+                // blinking caret, the I-beam, continues to blink in the text
+                // field even though it has lost focus"). `field_focused` is
+                // the ring's own -1, resolved above, so this needs no term of
+                // its own; the caret is the field's ONE focus cue (architect
+                // 2026-10-02). THE SELECTION HIGHLIGHT IS DELIBERATELY NOT
+                // GATED: it is buffer STATE, not focus, and it must still be
+                // visible when the user walks back onto the field to act on
+                // it. The blink's TICK carries the same gate (main.cpp), so an
+                // unfocused field wakes the loop for nothing either. IT
+                // STANDS ON ITS BYTE'S ROW (dialog_editor_row_of: a row's end
+                // is the next row's begin, and its caret stands there), in
+                // the column the wrap reserved.
+                if (static_cast<int>(r) == caret_row && field_focused &&
+                    text_editor::cursor_visible_now(*ed)) {
+                    const double caret_x =
+                        tx + bx_off[static_cast<std::size_t>(cursor_pos)];
+                    cairo_save(cr);
+                    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+                    // THE CARET IS ITS FIELD'S TEXT (architect 2026-10-03).
+                    set_palette_source(cr, ink_text);
+                    cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
+                                    band_y, caret_px, band_h);
+                    cairo_fill(cr);
+                    cairo_restore(cr);
+                }
             }
-            // THE CARET IS THE FIELD'S FOCUS, SO IT PAINTS ONLY WHILE THE FIELD HAS
-            // IT (architect 2026-08-13, at his live test: "the blinking caret, the
-            // I-beam, continues to blink in the text field even though it has lost
-            // focus"). `field_focused` is the ring's own -1, resolved above, so
-            // this needs no term of its own; the caret is the field's ONE focus
-            // cue (architect 2026-10-02). THE SELECTION HIGHLIGHT IS
-            // DELIBERATELY NOT GATED: it is buffer STATE, not focus, and it must
-            // still be visible when the user walks back onto the field to act on
-            // it. The blink's TICK carries the same gate (main.cpp), so an
-            // unfocused field wakes the loop for nothing either.
-            if (field_focused && text_editor::cursor_visible_now(*ed)) {
-                // The caret's column is the one the scroll arithmetic RESERVED
-                // above, so the two cannot disagree about how wide it is: the
-                // travel stops with exactly this many pixels of room left at the
-                // right pad, and the caret fills exactly them.
-                const double caret_x = tx + caret_off;
-                cairo_save(cr);
-                cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-                // THE CARET IS ITS FIELD'S TEXT (architect 2026-10-03).
-                set_palette_source(cr, ink_text);
-                cairo_rectangle(cr, static_cast<int>(std::nearbyint(caret_x)),
-                                band_y, caret_px, band_h);
-                cairo_fill(cr);
-                cairo_restore(cr);
-            }
-            cairo_restore(cr);   // the field clip
+            cairo_restore(cr);   // the interior clip
 
-            dlg.field = field_inner;
+            dlg.field = interior;
         }
     }
 
@@ -7338,179 +7167,27 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.buttons.push_back(out);
     }
 
-    // THE MODAL'S SURFACE IS THE BOX: the dialog's its whole overlay, the
-    // line and the ground (onscreen_keyboard::dialog_rect, 2026-10-10), and
-    // the player's and the picker's (and a prompt's over either) the modal
-    // family's controls row (modal_controls_row_rect, 2026-10-14; the list
-    // above it is the folder overlay's own rect) — because that is the
-    // rectangle the modal owns and the rectangle its damage must erase.
+    // THE MODAL'S SURFACE IS THE BOX: a prompt's and a dialog editor's the
+    // modal family's whole area (modal_area_rect, 2026-10-14 — the box, its
+    // margins and foot, the controls row and, on the keyboard, the lifted
+    // border; the taskbar overlay's line and ground 2026-10-10 to
+    // 2026-10-14), and the player's and the picker's the controls row
+    // (modal_controls_row_rect; the list above it is the folder overlay's own
+    // rect) — because that is the rectangle the modal owns and the rectangle
+    // its damage must erase.
     // THE SESSION IS STAMPED HERE, one write for both branches at the moment
     // the geometry becomes readable: it is the id of the surface these rects
     // belong to, and every input site that reads them compares it against the
     // live one (modal_dialog_stash_current, input_pointer.cpp).
-    dlg.box     = dialog ? onscreen_keyboard::dialog_rect(app, on_keyboard)
-                         : content;
+    dlg.box     = boxed ? modal_area_rect(app, kb_h) : content;
     dlg.session = live_session;
     dlg.valid   = true;
     cairo_restore(cr);
 }
 
-// -- THE CHOICE EDITOR'S COMBO (2026-10-07 evening; shared with the color picker until
-// 2026-10-14, the choice editor's alone since) -------------------------------
-//
-// THE SETTINGS EDITOR'S CHOICE COMBO AND ITS LIST (the design at
-// GuiSettingsEditor's head, settings_editor.h; the geometry is choice_combo's,
-// settings_editor.h): ONE COMBO DRAWING (paint_choice_combo below) — a sunken
-// field in the field pair with Windows' 16-W drop-down button and Marlett's
-// wedge, the text at the drop-down inset cut with "..." where it does not
-// fit — and, when down, ITS LIST (paint_combo_list), the menu-row popup's box
-// and rows. The drawing is the one the color picker's chooser, scope combo
-// and preset button wore until the picker's removal (architect 2026-10-14),
-// kept byte for byte for the choice rows it served beside them.
-namespace {
-// THE COMBO'S DOWN WEDGE at (ax, ay), aw x ah, in the ink.
-void paint_combo_wedge(cairo_t* cr, double ax, double ay, int aw, int ah,
-                       GuiColor ink) {
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-    cairo_new_path(cr);
-    cairo_move_to(cr, ax, ay);
-    cairo_line_to(cr, ax + aw, ay);
-    cairo_line_to(cr, ax + aw / 2.0, ay + ah);
-    cairo_close_path(cr);
-    set_palette_source(cr, ink);
-    cairo_fill(cr);
-    cairo_restore(cr);
-}
-
-// THE COMBO'S TEXT in `room` from (x, baseline): whole when it fits, else
-// CUT AT A CODEPOINT with Windows' "..." after the longest prefix that fits
-// with it — the caption title's rule (paint_caption_row) — and nothing when
-// even the "..." does not fit. In `ink`.
-void show_combo_text(cairo_t* cr, const GuiFont& font, double x,
-                     double baseline, double room, std::string_view text,
-                     GuiColor ink) {
-    const auto show = [&](const text_shape::ShapedRun& r, double rx) {
-        set_palette_source(cr, ink);
-        text_shape::show_shaped_run(cr, r, rx, baseline);
-    };
-    text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
-    if (run.width_px <= room) {
-        show(run, x);
-        return;
-    }
-    const text_shape::ShapedRun ellipsis = text_shape::shape_text_run(font, "...");
-    if (ellipsis.width_px > room) return;
-    size_t cut = text.size();
-    while (cut > 0) {
-        do { --cut; } while (cut > 0 &&
-                             (static_cast<unsigned char>(text[cut]) & 0xC0) ==
-                                 0x80);
-        run = text_shape::shape_text_run(font, text.substr(0, cut));
-        if (run.width_px + ellipsis.width_px <= room) break;
-    }
-    show(run, x);
-    show(ellipsis, x + run.width_px);
-}
-} // namespace
-
-// THE CHROME'S COMBO (2026-10-07; the choice editor's alone since
-// 2026-10-14): `r` the whole control, `button` the drop-down button inside it
-// (choice_combo::combo_drop_button), `open` while its list is down (the
-// button pushed). The field in the field pair inside the plain sunken edge,
-// the text at the drop-down inset (choice_combo::combo_text_inset_px)
-// stopping kComboTextGapPx short of the button.
-static void paint_choice_combo(cairo_t* cr, const GuiFont& font,
-                               const GuiRect& r, const GuiRect& button,
-                               std::string_view text, bool open) {
-    const int lw = relief_line_px();
-    const int aw_gap = scaled_px(choice_combo::kComboTextGapPx);
-    const int fb = 2 * lw;
-    paint_cell_rect(cr, GuiRect{r.x + fb, r.y + fb, r.w - 2 * fb, r.h - 2 * fb},
-                    palette().field_ground);
-    paint_relief_plain_sunken(cr, r);
-    cairo_save(cr);
-    cairo_rectangle(cr, r.x + fb, r.y + fb, button.x - (r.x + fb), r.h - 2 * fb);
-    cairo_clip(cr);
-    const double tx = r.x + choice_combo::combo_text_inset_px();
-    show_combo_text(cr, font, tx, redesign_baseline(font, r.y, r.h),
-                    button.x - aw_gap - tx, text, palette().field_text);
-    cairo_restore(cr);
-    // THE DROP-DOWN BUTTON: Windows' scroll-arrow button, pushed while the
-    // list is down, its wedge Marlett's 7 x 4.
-    const ButtonBoxFace box = paint_button_box(
-        cr, button, /*lamp=*/false, /*pressed=*/open, ButtonFamily::Push);
-    const int aw = scaled_px(choice_combo::kComboArrowWPx,
-                             choice_combo::kComboArrowMinWPx);
-    const int ah = scaled_px(choice_combo::kComboArrowHPx,
-                             choice_combo::kComboArrowMinHPx);
-    const double ax = button.x + (button.w - aw) / 2 + box.shift;
-    const double ay = button.y + (button.h - ah) / 2 + box.shift;
-    paint_combo_wedge(cr, ax, ay, aw, ah, palette().label);
-}
-
-// THE COMBO'S LIST (2026-10-07 evening): the dropdown's box
-// (paint_dropdown's composition, the popup's Menu face) at the placed box,
-// then the SHOWN rows at combo_list_item (choice_combo, settings_editor.h;
-// the popup lists' scroll, render.h's popup scroll block), each LIT — the
-// selected pair — when it is the pressed row or the hovered one; then the
-// scroll bar when it stands. Every row is live (no grayed row: a choice
-// domain is wholly choosable). ITS LABELS STAND AT THE DROP-DOWN INSET
-// (choice_combo::combo_text_inset_px, 2026-10-09), each row's name under the
-// face's.
-void GuiPaintHandler::paint_combo_list(
-        cairo_t* cr, const GuiFont& font, const choice_combo::ComboList& list,
-        int pressed, int hover, PopupScrollPart held,
-        const char* (*label_of)(const AppState&, int)) {
-    paint_popup_chrome(cr, list.box, PopupFace::Menu);
-    const int pad_l = choice_combo::combo_text_inset_px();
-    for (int i = 0; i < list.count; ++i) {
-        const GuiRect item = choice_combo::combo_list_item(list, i);
-        if (item.w <= 0 || item.h <= 0) continue;   // scrolled out of view
-        const bool lit = pressed == i || hover == i;
-        if (lit) paint_cell_rect(cr, item, palette().selected_fill);
-        show_row_text(cr, font, list.box.x + pad_l,
-                      redesign_baseline(font, item.y, item.h),
-                      label_of(app, i),
-                      lit ? palette().selected_text : palette().label);
-    }
-    paint_popup_scroll_bar(cr, list.bar, held);
-}
-
-// THE SETTINGS EDITOR'S CHOICE COMBO (the design at GuiSettingsEditor's
-// head, settings_editor.h): paint_choice_combo at the dialog field's seat and
-// size — the field's 23-W cell: the combo stands where the field stands, in
-// the row's cell (paint_modal_dialog's caller says so) — showing the shown
-// choice, its button pushed while the list is down. No hover face on the
-// combo. The list, when down, is paint_combo_list's at combo_list — standing
-// on the combo's head, the row being the window's foot, and scrolling by the
-// popup lists' rule — the shown row seeded lit at the open and the lit row
-// following the pointer over the rows and holding off them
-// (settings_choice_motion). The combo, the list, its rows (the zero rect for
-// a row scrolled out of view) and its bar publish into the modal stash, the
-// press road's only geometry.
-void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
-                                            const GuiRect& combo) {
-    const AppState::SettingsChoice& ch = app.settings_choice;
-    AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    paint_choice_combo(cr, font, combo, choice_combo::combo_drop_button(combo),
-                       app.settings_choice_label(ch.shown), ch.list_open);
-    dlg.combo = combo;
-    if (!ch.list_open) return;
-    const int n = app.settings_choice_count();
-    const choice_combo::ComboList list =
-        choice_combo::combo_list(combo, n, app.height, ch.list_scroll.top);
-    paint_combo_list(cr, font, list, ch.list_pressed, ch.list_hover,
-                     ch.list_scroll.held,
-                     [](const AppState& a, int i) {
-                         return a.settings_choice_label(i);
-                     });
-    dlg.combo_list = list.box;
-    dlg.combo_list_bar = list.bar;
-    dlg.combo_list_items.clear();
-    for (int i = 0; i < n; ++i)
-        dlg.combo_list_items.push_back(choice_combo::combo_list_item(list, i));
-}
+// (THE CHOICE EDITOR'S COMBO AND ITS LIST — paint_choice_combo,
+// paint_combo_list and paint_settings_choice, 2026-10-07 to 2026-10-14 —
+// went with the choice editor, architect 2026-10-14.)
 
 // -- GuiPaintHandler::paint_onscreen_keyboard ----------------------------
 //
@@ -7576,11 +7253,12 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     cairo_save(cr);
 
     // The band's ground, one fill across the whole band in the chrome's
-    // ground. The overlay's Hilight line above it (or above the dialog
-    // standing on it) is paint_bottom_overlays' (2026-10-10,
-    // onscreen_keyboard.h's overlay block), and there is no line at its foot
-    // or its sides: it ends at the window's edges as Cool Edit's status bar
-    // does.
+    // ground, and NO LINE on any side (architect 2026-10-14,
+    // onscreen_keyboard.h's placement block): the band stands inside the
+    // program frame's columns on its bottom row, the frame round it and the
+    // modal family's border, when a dialog editor's stack stands on it,
+    // above it. (The taskbar overlay's raised Hilight line on its top,
+    // 2026-10-10 to 2026-10-14, is gone with the overlay.)
     set_palette_source(cr, palette().ground);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
@@ -7699,23 +7377,35 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
 // face (the box's margins and the foot under it), THE BOX'S RING — exactly
 // paint_canvas_column_frame's, one program line, `ce_dark` top and left,
 // `ce_hilight` right and bottom, mitred — and the interior in the ground the
-// member names (ModalBoxGround: the field where you pick, the face where you
-// only read). The controls row under the panel stands on row 8's content
-// band, whose face paint_bottom_strip lays (the row standing down under the
-// modal, modal_owns_bottom_row). Publishes nothing.
+// member names (ModalBoxGround: the field where you pick or type, the face
+// where you only read). The controls row under the panel stands on row 8's
+// content band, whose face paint_bottom_strip lays (the row standing down
+// under the modal, modal_owns_bottom_row) — UNLESS THE STACK STANDS ON THE
+// ON-SCREEN KEYBOARD (`keyboard_h` > 0, a dialog editor on the glass,
+// modal_box.h's head): then this lays the lifted controls row's face and
+// the border under row 8 again at its lifted rows, the dock bar's own six
+// (paint_ce_dock_bar, the border lane's painter). The render player and the
+// picker never stand with the keyboard and pass 0 (paint_folder_overlay);
+// the prompts and the dialog editors pass the live lift
+// (paint_modal_dialog). Publishes nothing.
 static void paint_modal_box(cairo_t* cr, const AppState& app,
-                            ModalBoxGround ground) {
-    const GuiRect panel = modal_panel_rect(app);
+                            ModalBoxGround ground, int keyboard_h) {
+    const GuiRect panel = modal_panel_rect(app, keyboard_h);
     if (panel.w <= 0 || panel.h <= 0) return;
-    const GuiRect box = modal_box_rect(app);
+    const GuiRect box = modal_box_rect(app, keyboard_h);
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     paint_cell_rect(cr, panel, p.face);
     if (box.w > 0 && box.h > 0) {
-        paint_cell_rect(cr, modal_box_interior_rect(app),
+        paint_cell_rect(cr, modal_box_interior_rect(app, keyboard_h),
                         modal_box_ground_color(ground));
         paint_relief_frame(cr, box, p.ce_dark, p.ce_hilight);
+    }
+    if (keyboard_h > 0) {
+        paint_cell_rect(cr, modal_controls_row_rect(app, keyboard_h), p.face);
+        const GuiRect border = modal_border_rect(app, keyboard_h);
+        if (border.w > 0 && border.h > 0) paint_ce_dock_bar(cr, border);
     }
     cairo_restore(cr);
 }
@@ -7785,7 +7475,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // EVERYTHING ELSE UNDER THE CONTENT RECT'S CLIP, because a scrolled
     // listing's first and last rows straddle the content's edges and must not
     // paint into the ring or the controls row below.
-    paint_modal_box(cr, app, ModalBoxGround::Field);
+    paint_modal_box(cr, app, ModalBoxGround::Field, /*keyboard_h=*/0);
     // THE ROW WALK'S CLIP IS THE CONTENT RECT AND row_at'S CONTAINMENT IS THE
     // SAME RECT (folder_overlay.h's content_rect, the box's interior), so
     // paint and hit agree about every pixel at any scroll offset. The surface
@@ -7971,33 +7661,29 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // canvas column (each inside its own rows), the passes that paint OUTSIDE
 // their lane are the floating surfaces — the notification cards (row 1
 // down), the dropdown (the menu row's foot down), the tooltip (under the
-// pointer, or above its button), the modal dialog's dropped choice list
-// (above row 8). (The keyboard
-// slot starts below the toolbar band's foot and the folder overlay at the
-// view bar's top row, under the column's air (modal_box.h, 2026-10-14), and
-// both yield the clock's row, GuiClockFingerprint::yields; the flag
-// surface's blit
-// over the top strip is transparent above the marker lane.) A floater's
-// own publications ride a clip that covers it, so while one stands the
-// check declares the rect the route declared before 2026-10-13, whole.
+// pointer, or above its button). (The keyboard slot starts below the toolbar
+// band's foot, and the folder overlay and the modal family's box of a prompt
+// or a dialog editor at the view bar's top row, under the column's air
+// (modal_box.h, 2026-10-14), and all yield the clock's row,
+// GuiClockFingerprint::yields; the flag surface's blit over the top strip is
+// transparent above the marker lane.) A floater's own publications ride a
+// clip that covers it, so while one stands the check declares the rect the
+// route declared before 2026-10-13, whole.
 // THE GL CANVAS READS IT TOO (on_redraw's canvas block), for the pixels a
 // floating surface puts over the canvas: the draw list's floater bit (the
 // upload walk's) and the canvas paint area's known-clear record.
 // EVERY TERM IS STATE THE INPUT WROTE, NEVER A RECT THE PAINT PUBLISHED
 // (architect 2026-10-14): the canvas's bit is decided at the frame's first
 // damage rect, BEFORE any pass paints, so a term read off a painter's
-// publication (the modal stash's `combo_list`) lags a frame — on the frame
-// a list drops it reads empty, and the list's rows over the canvas would be
-// cut out of the upload with nothing damaging them again. The dropped
-// choice list is therefore the choice editor's own `list_open` on a
-// standing choice editor (AppState::SettingsChoice); the published rect
-// stays the press router's hit geometry alone. The term may stand on a
-// frame whose dialog paints no list (a prompt outranking the editor): a
-// whole upload and an uncleared skip are only cost, never a wrong pixel.
+// publication lags a frame — on the frame a floater appears it would read
+// empty, and the floater's pixels over the canvas would be cut out of the
+// upload with nothing damaging them again. (The settings choice editor's
+// dropped list was a fourth term, its own `list_open`, 2026-10-07 to
+// 2026-10-14; it went with the list. THE MODAL FAMILY'S BOX IS NO FLOATER:
+// it empties the canvas's paint area outright, waveform_paint_area.)
 static bool floating_surface_stands(const AppState& app) {
     return app.dropdown.open() || app.redesign_tooltip.visible ||
-           !app.notifications.cards.empty() ||
-           (app.settings_choice_live() && app.settings_choice.list_open);
+           !app.notifications.cards.empty();
 }
 
 // THE UPPER ROWS' LIVE FINGERPRINT — the ONE function the paint (publishing
@@ -8372,8 +8058,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // THE CANVAS'S TWO ROADS (2026-10-13; canvas_sink.h's head owns the rule):
     // on the cairo road every canvas pass below paints through `cairo_sink`
     // where it always painted; under the GL canvas (kGuiCanvasDrawList) the
-    // canvas's paint area — the waveform area less the keyboard slot's and
-    // the bottom overlays' slice (onscreen_keyboard::waveform_paint_area),
+    // canvas's paint area — the waveform area less the keyboard's slice, or
+    // nothing under the modal family's box
+    // (onscreen_keyboard::waveform_paint_area),
     // `canvas_paint` — is left to the GPU: the chrome ground and the
     // column's face skip it, one CLEAR empties it, no canvas pass paints on
     // the CPU, and the frame's draw list is built instead — ONCE PER FRAME,
@@ -8383,7 +8070,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // begin_canvas_frame). The list's clip and floater bit are written on the
     // frame's first rect whatever it meets, so the platform's scissor and
     // upload rule follow a paint area that shrank or emptied under no
-    // canvas damage (the keyboard rising, the folder overlay standing).
+    // canvas damage (the keyboard rising, the modal family's box standing).
     GuiCairoCanvasSink cairo_sink(cr);
     const GuiRect exposed_rect{x, y, w, h};
     const GuiRect canvas_paint =
@@ -8474,15 +8161,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     it covered the area whole (its clear, or its skip, left every
     //     pixel 0), or the frame skipped (it began known clear). Nothing
     //     else in a frame writes inside the area: THE PAINTERS OVER THE
-    //     WELL, re-derived by grep from the passes below, are the cards
-    //     (paint_notifications), the pull-downs (paint_dropdown), the
-    //     Settings choice editor's dropped list (paint_modal_dialog), and the
-    //     tooltip (paint_shift_tooltip) — the floater bit's four; the keyboard, a
-    //     dialog on it and the dialog alone (paint_keyboard_slot,
-    //     paint_bottom_overlays, paint_modal_dialog's band) stand below the
-    //     area's foot, which waveform_paint_area cuts at their line; the
-    //     folder overlay empties the area (nothing is cleared or skipped
-    //     under it); the column's face above skips the area (its hole);
+    //     WELL, re-derived from the passes below (2026-10-14), are the cards
+    //     (paint_notifications), the pull-downs (paint_dropdown) and the
+    //     tooltip (paint_shift_tooltip) — the floater bit's three; the
+    //     keyboard alone (paint_keyboard_slot) stands below the area's foot,
+    //     which waveform_paint_area cuts at its band's top; the modal
+    //     family's box — the folder overlay's (paint_keyboard_slot) and a
+    //     prompt's or a dialog editor's (paint_modal_dialog), with the
+    //     keyboard under a dialog editor's stack — empties the area (nothing
+    //     is cleared or skipped under it); the column's face above skips the
+    //     area (its hole);
     //     every other pass keeps to its own lane (the caption, the menu
     //     row, the band, row 8, the border under it and the program frame;
     //     paint_trim, the ruler and the flag blit in the top strip; the flag
@@ -8492,8 +8180,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     the client area).
     //   * UNKNOWN — the frame clears as before — when a floating surface
     //     stands now or stood in the last painted frame, when the area
-    //     differs from the last painted frame's (the keyboard, a dialog on
-    //     it or the folder overlay came or went), at the first frame (a
+    //     differs from the last painted frame's (the keyboard or the modal
+    //     family's box came or went), at the first frame (a
     //     project set's paint handler starts unknown, the backbuffer being
     //     the process's), and after any on_resize (on_resize forgets the
     //     record): the backbuffer is remade only at a size it does not
@@ -8715,23 +8403,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      because their painters own the roster's HIT RECTS and a row
         //      that skipped a frame would strand them (the reasoning is at
         //      step 3). The overdraw is a mode's cost, paid only while the
-        //      panel stands. Both tenants stand over the program's frame
-        //      (full window width, 2026-10-10), and AFTER THE SLOT the bottom
-        //      overlays' line and the dialog's ground (paint_bottom_overlays,
-        //      2026-10-10: the keyboard and the dialog laid over row 8, the
-        //      border under it and the frame's bottom row as Cool Edit's
-        //      status bar, the line
-        //      above the pair, which the waveform's painted rect also leaves
-        //      out).
-        //  13. the flag editor's box, then THE NOTIFICATION CARDS
-        //      (paint_notifications, 2026-08-29 — the top-right stack, above
-        //      every lane and the keyboard slot), then the dropdown — the
-        //      floating surfaces, after every pass above and outside this
-        //      branch — then the MODAL DIALOG (paint_modal_dialog,
-        //      2026-08-12; the bottom row the prompts and the five modal
-        //      editors paint in since 2026-08-13, the dialog overlay's ground
-        //      since 2026-10-10), and LAST the TOOLTIP,
-        //      which reads that stash.
+        //      panel stands. Both tenants stand inside the program's frame
+        //      (2026-10-14; over its columns and its bottom row from
+        //      2026-10-10 to then).
+        //  13. the MODAL DIALOG (paint_modal_dialog, 2026-08-12; since
+        //      2026-10-14 here, the modal family's box for a prompt or a
+        //      dialog editor over everything from the view bar's top row
+        //      down, which the waveform's painted rect leaves out, and every
+        //      modal's controls row), then the flag editor's box, then THE
+        //      NOTIFICATION CARDS (paint_notifications, 2026-08-29 — the
+        //      top-right stack, above every lane, the keyboard slot and the
+        //      modal's box), then the dropdown — the floating surfaces, after
+        //      every pass above and outside this branch — and LAST the
+        //      TOOLTIP, which reads the modal's stash.
         // (The bottom row left the tail of this sequence in row 7 — it paints
         // with the other redesigned rows at step 3, on every frame class, and
         // overlaps none of these passes.)
@@ -8845,7 +8529,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // every pass that paints there
     // (the top button rows, the plate, the
     // trim, the ruler, the flags, the stems, the scanner, the anchor) and
-    // precede the flag editor's box, the dropdown and the modal, which float
+    // precede the modal, the flag editor's box and the dropdown, which float
     // over it by design. It is OUTSIDE the loading /
     // total>0 branch above for the flag editor's own reason: an editor can
     // stand with no audio loaded, and the keyboard must stand with it.
@@ -8856,12 +8540,23 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // declaration). With the slot down that is one platform query and two
     // bit reads; with it up the outer Cairo clip makes a narrow damage cheap.
     paint_keyboard_slot(cr, GuiRect{x, y, w, h});
-    // THE BOTTOM OVERLAYS' LINE AND THE DIALOG'S GROUND (2026-10-10,
-    // onscreen_keyboard.h's overlay block): after the slot, whose keyboard
-    // band they head, and before the floating surfaces; the dialog's
-    // controls paint on this ground at paint_modal_dialog. Nothing while
-    // neither overlay stands.
-    paint_bottom_overlays(cr);
+
+    // THE MODAL DIALOG PAINTS NEXT (2026-08-12; here since 2026-10-14): a
+    // prompt's and a dialog editor's box over the canvas column and every
+    // modal's controls row — after the keyboard slot, on whose band a dialog
+    // editor's stack stands, and BELOW THE FLOATING SURFACES, so a refusal's
+    // notification card hangs over the box it answers (the cards' press
+    // claim already ranked above the modal, notification_card_at). It cannot
+    // coexist with the dropdown (a dropdown and a modal are never open
+    // together by the standing two-mechanism claim) nor with the flag editor
+    // (ended by any dialog's open). UNCONDITIONAL for the floating surfaces'
+    // own reason: it publishes the geometry the pointer path reads
+    // (AppState::modal_dialog), and a run that skipped would strand a stale
+    // box. (From 2026-08-12 it painted after the dropdown, last but the
+    // tooltip, the modal on the bottom row below every floater's reach; the
+    // taskbar overlay's line and ground, paint_bottom_overlays, stood between
+    // the slot and the floaters 2026-10-10 to 2026-10-14.)
+    paint_modal_dialog(cr);
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
     // the waveform, because both hang outside their strips (the dropdown below
@@ -8872,9 +8567,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // read. Hidden, each costs one boolean. THE NOTIFICATION CARDS (2026-08-29)
     // are a third floater of the same kind — they hang from row 1 down over
     // the lanes and the waveform and publish what they drew on every run —
-    // and paint BELOW these two and the modal row: a dropdown or a hint the
-    // pointer just raised belongs on top of a message, and the modal row is
-    // the modal row.
+    // and paint BELOW these two and ABOVE the modal (2026-10-14, the modal's
+    // block above): a dropdown or a hint the pointer just raised belongs on
+    // top of a message, and a message on top of the box it answers.
     //
     // THE DROPDOWN AND THE TOOLTIP CANNOT COEXIST, so their order between
     // themselves is moot: the dropdown opens on a PRESS and a press hides the
@@ -8892,26 +8587,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     render_flag_editor_box(cr, app, audio);
     // THE NOTIFICATION CARDS (2026-08-29) paint after the flag editor's box
     // and before the dropdown: above every lane, the waveform, the keyboard
-    // slot and the folder overlay's band, below the three surfaces that stay
-    // topmost — the dropdown and the tooltip (the two pointer-transient
-    // floaters) and the modal row. Unconditional for the floating surfaces'
-    // reason: it publishes the geometry the pointer path reads.
+    // slot, the folder overlay's band and the modal family's box (2026-10-14),
+    // below the two surfaces that stay topmost — the dropdown and the tooltip,
+    // the two pointer-transient floaters. Unconditional for the floating
+    // surfaces' reason: it publishes the geometry the pointer path reads.
     paint_notifications(cr);
     paint_dropdown(cr);
 
-    // THE MODAL DIALOG PAINTS AFTER THOSE TWO (2026-08-12): it owns the bottom
-    // row while it stands and cannot coexist with either (a dropdown and a
-    // modal are never open together by the standing two-mechanism claim, and
-    // the flag editor is ended by any dialog's open), so the order costs
-    // nothing and states the stack honestly. UNCONDITIONAL for the floating
-    // surfaces' own reason: it publishes the geometry the pointer path reads
-    // (AppState::modal_dialog), and a run that skipped would strand a stale
-    // box.
-    paint_modal_dialog(cr);
-
     // THE TOOLTIP IS LAST OF ALL since 2026-08-13, when the MODAL's buttons
-    // took hints of their own: this body READS the modal stash the call above
-    // publishes — the hovered dialog button's composed hint and its rect — so
+    // took hints of their own: this body READS the modal stash
+    // paint_modal_dialog publishes — the hovered dialog button's composed
+    // hint and its rect — so
     // running after it is what makes the hint hang off the box THIS frame
     // draws rather than the previous one's. It also puts the one surface that
     // floats OUT of its lane on top of everything, which is what a tooltip is.

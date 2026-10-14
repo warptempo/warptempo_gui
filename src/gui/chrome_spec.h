@@ -90,12 +90,10 @@ struct ChromeSpec {
     double             menu_band_lead_px;
     // (THE RULER LANE'S FIELDS left the spec 2026-10-09: the ruler is the
     // program's, Cool Edit's under every chrome, program_spec.h.)
-    // THE SCROLL BAR'S THICKNESS in Windows px — the popup lists' vertical
-    // bar's width (render.h's popup scroll block): Windows' SM_CXVSCROLL 16
-    // under win2000. (It was the trim lane's
-    // height and its caps' square too, 2026-10-08 to 2026-10-09; the trim
-    // lane is the program's view bar since.)
-    int                scroll_bar_px;
+    // (THE SCROLL BAR'S THICKNESS, scroll_bar_px — Windows' SM_CXVSCROLL 16,
+    // the popup lists' vertical bar's width from 2026-10-08 and the trim
+    // lane's height and its caps' square 2026-10-08 to 2026-10-09 — left the
+    // spec 2026-10-14 with the popup lists' scroll bar, its last reader.)
     // THE PUSH BUTTON — the dialogs' word buttons (paint_handler.cpp's
     // kModal* block): the box's height and the label's pads left and right.
     double             push_button_box_px;
@@ -179,7 +177,6 @@ inline constexpr ChromeSpec kChromeSpecWin2000 = {
     .menu_label_pad_left_px       = 9.0,
     .menu_label_pad_right_px      = 7.0,
     .menu_band_lead_px            = 2.0,
-    .scroll_bar_px                = 16,
     .push_button_box_px           = 23.0,
     .push_button_pad_left_px      = 7.0,
     .push_button_pad_right_px     = 7.0,

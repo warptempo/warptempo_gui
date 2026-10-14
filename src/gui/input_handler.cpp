@@ -5,7 +5,7 @@
 #include "gui_display_context.h"
 #include "paint_handler.h"
 #include "icons.h"                  // drop_rasters on a scale change
-#include "onscreen_keyboard.h"      // the bottom overlay's wheel swallow
+#include "onscreen_keyboard.h"      // the keyboard band's wheel swallow
 #include "render.h"
 #include "device_config.h"
 #include "settings_io.h"
@@ -178,7 +178,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // The modal prompt (painted on the bottom row since 2026-08-13) owns input
+    // The modal prompt (painted on the bottom row from 2026-08-13, in the
+    // modal family's box and controls row since 2026-10-14) owns input
     // while active. Only the prompt's own ACCESS KEYS, Esc and its focus ring
     // do anything; everything else is swallowed so marker edits / playback /
     // viewport keys cannot sneak in while the prompt is up. The dialog's
@@ -3386,12 +3387,6 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // list out from under the arm the lift re-hits. Its rank against the
     // editor and loading tests below is free (all three refuse).
     if (any_pointer_gesture_active(app)) return -1;
-    // A SCROLLING POPUP LIST'S WHEEL (2026-10-08; render.h's popup scroll
-    // block) — context 6, kPopupWheelRows a notch — over the published box
-    // of a list that is down and scrolls: the choice editor's list. Ranked
-    // above the dialog editor's swallow below, whose surface the list floats
-    // over; a list that shows every row takes no wheel and falls to it.
-    if (popup_list_wheel_hit(x, y) != 0) return 6;
     // THE FOLDER OVERLAY'S WHEEL (2026-08-28): live over the BAND alone —
     // context 4, the list's one-row-per-detent scroll — and swallowed
     // everywhere else, the veil's own answer for the wheel under the player
@@ -3401,15 +3396,16 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     if (folder_overlay_stands(app)) {
         return rect_contains(folder_overlay::surface_rect(app), x, y) ? 4 : -1;
     }
-    // THE BOTTOM OVERLAY SWALLOWS THE WHEEL (2026-10-10, ON SCREEN IS AS
-    // PAINTED): the keyboard alone, the dialog alone or the dialog on the
-    // keyboard, their line on top (onscreen_keyboard.h's overlay block) —
+    // THE ON-SCREEN KEYBOARD SWALLOWS THE WHEEL (2026-10-10, ON SCREEN IS AS
+    // PAINTED): its band (onscreen_keyboard.h's placement block; with the
+    // overlay's line and a dialog standing on it until 2026-10-14) is
     // opaque, not a scroll surface, and what lies under it is covered, so a
     // detent over its painted rect reaches neither the waveform nor row 8
     // behind it. -1 for the inert bands' reason. The touch pinch asks this
     // context per frame (apply_touch_nav_update), so this is its refusal
-    // over the overlay too.
-    if (rect_contains(onscreen_keyboard::overlay_rect(app, gui), x, y))
+    // over the band too. Under a dialog editor the line below swallows
+    // everything, the modal family's box over the canvas with it.
+    if (rect_contains(onscreen_keyboard::standing_rect(app, gui), x, y))
         return -1;
     if (modal_dialog_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
@@ -3498,15 +3494,6 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     return 0;
 }
 
-int GuiInputHandler::popup_list_wheel_hit(int x, int y) const {
-    if (app.settings_choice_live() && app.settings_choice.list_open &&
-        modal_dialog_stash_current() &&
-        app.modal_dialog.combo_list_bar.present &&
-        rect_contains(app.modal_dialog.combo_list, x, y))
-        return 1;
-    return 0;
-}
-
 // Coalesced wheel entry point. The platform delivers one of these per
 // pointer frame carrying the net detent count (>= 1), instead of pumping a
 // WheelUp/WheelDown through on_button_press once per detent. The gating —
@@ -3554,26 +3541,9 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
         }
         return;
     }
-    // ctx 6 — A SCROLLING POPUP LIST (2026-10-08; render.h's popup scroll
-    // block): the PLAIN wheel scrolls the list under the pointer
-    // kPopupWheelRows rows a notch, down the later rows, against its
-    // published bar; every MODIFIED wheel is a swallowed no-op, the
-    // overlay's rule.
-    if (ctx == 6) {
-        if (mods.ctrl || mods.shift || mods.alt) return;
-        const int rows = (dir == GuiMouseButton::WheelDown ? count : -count) *
-                         kPopupWheelRows;
-        switch (popup_list_wheel_hit(x, y)) {
-            case 1:
-                if (popup_scroll_wheel_rows(app.settings_choice.list_scroll,
-                                            app.modal_dialog.combo_list_bar,
-                                            rows))
-                    viewport.invalidate_modal_dialog_area();
-                return;
-            default:
-                return;
-        }
-    }
+    // (ctx 6, A SCROLLING POPUP LIST's wheel — the settings choice editor's
+    // list, kPopupWheelRows a notch — stood 2026-10-08 to 2026-10-14 and went
+    // with the list.)
     // ctx 5 — A FLAG CELL (architect 2026-09-14): the PLAIN wheel selects the
     // flag under the pointer and steps that cell (run_flag_cell_wheel); every
     // MODIFIED wheel is a swallowed no-op here as on the other surfaces.

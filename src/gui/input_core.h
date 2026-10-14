@@ -72,7 +72,9 @@
 // over editable text, worn over the ONE thing in this product that is editable
 // text under the pointer — the top-strip flag editor's unrolled box (which wore
 // the navigation surface's PAN until this kind existed, the marker lane being
-// nav surface under it) and the modal dialog's inset FIELD. It is the only kind
+// nav surface under it) and the dialog editor's edit control, the modal
+// family's box's interior since 2026-10-14 (its inset FIELD on the bottom row
+// before). It is the only kind
 // with a SECOND name to try (`text`, then the older `xterm`) before the per-kind
 // degrade, the two spellings being one shape with two conventional names; the
 // fallback chain is the loader's, at kCursorKindNames.
@@ -201,8 +203,9 @@ enum GuiWindowEdge : unsigned {
 //     moving it); with the hold, no face changed on any of the six taps.
 //     Everything else the leave does it still does: the tooltip goes at once
 //     as on leaving any tool (architect 2026-10-06), the in-window bit drops,
-//     the press arms, the scroll holds, the drags, the cards' hover and the
-//     pen latch clear. A mouse leaving the window (OrdinaryLeave) still
+//     the press arms, the drags, the cards' hover and the pen latch clear
+//     (the popup list's scroll holds beside them until 2026-10-14). A mouse
+//     leaving the window (OrdinaryLeave) still
 //     darkens.
 // The distinction is read in one place, main.cpp's hook body, by two
 // consumers: the tooltip's leave (end_tooltip_hover), which the contact's lift
@@ -220,9 +223,9 @@ enum class GuiPointerLeaveReason {
 // above; 2026-10-10): true where the leave keeps every hover-lit face as
 // painted. Of the hover-lit faces in the pen latch's inventory
 // (GuiInputHandler::pen_hot_latch_) the pull-down menus' lit row is the one
-// a leave darkens (clear_dropdown_pointer_state, main.cpp's hook); the
-// Settings combo's list is cleared by no leave, and the two toolbars store
-// no hot face.
+// a leave darkens (clear_dropdown_pointer_state, main.cpp's hook), and the
+// two toolbars store no hot face (the Settings combo's list, which no leave
+// cleared, went with the choice editor 2026-10-14).
 inline bool pointer_leave_keeps_lit_rows(GuiPointerLeaveReason reason) {
     return reason == GuiPointerLeaveReason::PenHoverEnd;
 }
@@ -787,13 +790,15 @@ public:
     //     finger's down, beside the pan-zone query, captured beside the
     //     down point and cleared with them. It reads the field rect the
     //     GUI's own press claim reads — the marker lane's unrolled flag box
-    //     or the bottom-row dialog's inset field, whichever editor is open —
+    //     or the dialog editor's edit control, the modal family's box's
+    //     interior (2026-10-14), whichever editor is open —
     //     and the GUI's own double-click seed, so the platform keeps no
     //     memory of taps and no second spelling of the field. It forks THREE
     //     things. (1) The window's SLOP CROSSING resolves to the CARET DRAG
     //     (below) — the field is off the pan zone, which is the waveform
-    //     alone on the GUI's answer (the marker lane's box and the bottom
-    //     row's field both lie outside it), so no pan and no region hold can
+    //     alone on the GUI's answer (the marker lane's box lies outside it,
+    //     and the box empties it while a dialog editor stands), so no pan
+    //     and no region hold can
     //     be meant there. (2) A Field answer
     //     TAKES THE WINDOW'S DEADLINE AWAY (kTouchWindowNoExpiry,
     //     input_core.cpp's constants block): the architect's field

@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Generic in-place text editor for a small constrained vocabulary, used
@@ -207,16 +208,14 @@ constexpr int kMaxPendingCharsBpm = 44;
 // commits and persists unchanged, and can be shortened, but the editor will not
 // grow any pending past the cap.
 //
-// HORIZONTAL SCROLLING EXISTS ON EVERY EDITOR (the flag editor from row 5,
-// 2026-08-01; the DIALOG editors' field from 2026-08-13, architect at his
-// live test — a recalled `notes=` value is longer than the field and "the
-// viewport in the text field is always stuck on the left edge of the text").
-// This note used to record "running off the right edge while typing — no
-// horizontal scroll" as the settings prompt's accepted behaviour, and then
-// recorded the feature as scoped to the flag editor alone; both readings are
-// retired. ONE mechanism serves both surfaces — `view_offset_px` below, whose
-// minimal-travel rule each painter applies — so the two cannot scroll
-// differently.
+// THE DIALOG EDITORS' LINE WRAPS AND NEVER SCROLLS (architect 2026-10-14:
+// the modal family's box is the edit control, the whole line soft-wrapped at
+// its width, soft_wrap_rows below); it scrolled horizontally in its one-row
+// field from 2026-08-13 (architect at his live test — a recalled `notes=`
+// value is longer than the field and "the viewport in the text field is
+// always stuck on the left edge of the text") until then. The flag editor
+// keeps `view_offset_px` below, its minimal-travel rule the marker lane's
+// painter's.
 constexpr int kMaxPendingCharsSettings = 1024;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
@@ -349,11 +348,12 @@ struct State {
     // scrolled right through `pending`. Byte 0 paints at (text origin -
     // view_offset_px), so a positive value hides text off the box's left edge.
     //
-    // THE PAINTERS WRITE IT AND THE PAINTERS READ IT — two of them since
-    // 2026-08-13, one rule. THE DIALOG EDITORS' inset field is a fixed 520px,
-    // so a long buffer does not fit it and the view must travel glyph by
-    // glyph to keep the caret visible. THE MARKER-LANE FIELD IS THE OTHER
-    // CASE ENTIRELY SINCE 2026-09-06: its box is its own two pads and its own
+    // THE MARKER LANE'S PAINTER WRITES IT AND READS IT — the one painter
+    // since 2026-10-14, when the DIALOG EDITORS' line moved into the modal
+    // family's box and took a soft wrap instead (soft_wrap_rows; their fixed
+    // one-row field traveled glyph by glyph from 2026-08-13 until then).
+    // THE MARKER-LANE FIELD'S TRAVEL IS SUB-PIXEL SINCE 2026-09-06: its box
+    // is its own two pads and its own
     // run — no lane cap, no on-window clamp — so the whole run is always
     // inside it and the travel it asks for is SUB-PIXEL, the box having
     // rounded the shaped width down to a whole column and left the caret's
@@ -362,7 +362,7 @@ struct State {
     // and the VIEWPORT PAN is what brings it into view (render.h's
     // render_flag_editor_box carries the ruling).
     //
-    // THE MINIMAL-TRAVEL RULE, which both painters apply and neither may
+    // THE MINIMAL-TRAVEL RULE, which the painter applies and may not
     // reinvent: each frame, scroll only as far as the caret demands and in
     // whichever direction it left the window, then clamp to the run's own
     // travel (so the view never shows blank space past the end of the text).
@@ -372,10 +372,10 @@ struct State {
     // own column is RESERVED at the right edge so a caret at end-of-text
     // stands fully inside rather than half past it.
     //
-    // THE CLICK-TO-BYTE PATH NEEDS NO TERM FOR IT: each painter folds the
+    // THE CLICK-TO-BYTE PATH NEEDS NO TERM FOR IT: the painter folds the
     // offset into the ORIGIN it publishes (FlagEditorBox::text_origin_x,
-    // AppState::DialogEditorText::text_origin_x — both "the window x byte 0
-    // paints at"), so editor_byte_index_at's nearest-boundary search, the
+    // "the window x byte 0 paints at"), so editor_byte_index_at's
+    // nearest-boundary search, the
     // F2.1 text drag and the double-click word select all land correctly on a
     // scrolled field with no knowledge that it scrolled.
     //
@@ -602,6 +602,63 @@ int byte_index_from_shaped_x(double click_x, double text_origin_x,
 // calls this after mapping the click x to a byte index
 // (byte_index_from_shaped_x).
 void select_word_at(State& s, int pos);
+
+// THE SOFT WRAP — the one rule that breaks a dialog editor's line into the
+// rows the modal family's box shows (architect 2026-10-14: "looks like a
+// multiline edit but that's ok — long lines can wrap"; nothing scrolls).
+// `boundaries` is the shaped run's per-byte pen offsets
+// (text_shape::byte_offsets_px, pending.size()+1 entries), `width` the room a
+// row has. Returns the rows as byte ranges [begin, end), in order, each row's
+// end the next row's begin and the last row's the text's size — one row, [0,
+// 0), for an empty text. EACH ROW TAKES THE MOST TEXT THAT FITS, BREAKING
+// AFTER ITS LAST SPACE (the space stays on the row it ends, Windows' edit
+// control's word wrap), or — a row with no space that fits — AT THE LAST
+// CODEPOINT BOUNDARY THAT FITS, and always at least one codepoint, so a glyph
+// wider than the room still advances. Every end is a codepoint boundary by
+// construction (the walk steps only on them), so the caret, the selection and
+// the press, which address the rows by byte, can never split a character.
+// Measured on the ONE run (a row's width is boundaries[end] -
+// boundaries[begin]), so the rows paint and hit on the pen the run was shaped
+// with.
+inline std::vector<std::pair<int, int>> soft_wrap_rows(
+        const std::string& text, const std::vector<double>& boundaries,
+        double width) {
+    std::vector<std::pair<int, int>> rows;
+    const int n = static_cast<int>(text.size());
+    if (static_cast<int>(boundaries.size()) < n + 1 || n == 0) {
+        rows.emplace_back(0, n);
+        return rows;
+    }
+    const auto at = [&](int i) {
+        return boundaries[static_cast<std::size_t>(i)];
+    };
+    const auto boundary = [&](int i) {
+        return i >= n || (static_cast<unsigned char>(
+                              text[static_cast<std::size_t>(i)]) & 0xC0) != 0x80;
+    };
+    int begin = 0;
+    while (begin < n) {
+        if (at(n) - at(begin) <= width) {
+            rows.emplace_back(begin, n);
+            return rows;
+        }
+        int fit = begin, space_break = -1;
+        for (int i = begin + 1; i <= n; ++i) {
+            if (!boundary(i)) continue;
+            if (at(i) - at(begin) > width) break;
+            fit = i;
+            if (text[static_cast<std::size_t>(i - 1)] == ' ') space_break = i;
+        }
+        int end = space_break > begin ? space_break : fit;
+        if (end <= begin) {   // not one codepoint fits: take one anyway
+            end = begin + 1;
+            while (end < n && !boundary(end)) ++end;
+        }
+        rows.emplace_back(begin, end);
+        begin = end;
+    }
+    return rows;
+}
 
 // THE DOUBLE-CLICK-DRAG'S EXTENSION (2026-09-05): grow the selection BY WORDS
 // from a fixed anchor run — [anchor_start, anchor_end), the run

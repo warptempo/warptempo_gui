@@ -899,9 +899,10 @@ bool notification_visible(const AppState& a, uint64_t id);
 // and a press on the stale rect falls through to whatever the NEXT paint will
 // put there, which is what the user is about to see. A card under ANY LIST
 // POPUP'S PUBLISHED BOX yields to it (2026-10-08,
-// floater_above_cards_at, app_state.h: the menu row's drop-down and the
-// settings choice editor's list — the pointer-owning surfaces that paint
-// above the cards), so every reader agrees on the z-order in one place too.
+// floater_above_cards_at, app_state.h: the menu row's drop-down, the one
+// pointer-owning surface that paints above the cards since the settings
+// choice editor's list went, 2026-10-14), so every reader agrees on the
+// z-order in one place too.
 //
 // THE READERS ARE THE CARD'S OPACITY, re-greped at this declaration: the
 // press claim (claim_notification_press) and its lift

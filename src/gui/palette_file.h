@@ -13,9 +13,11 @@
 
 // THE TWO KINDS OF COMPILED-IN PRESET (architect 2026-10-07; split in two
 // 2026-10-08 ~18:15; compiled in alone since 2026-10-14) — the colors the
-// app installs, of TWO KINDS, EACH CHOSEN BY A SETTINGS CHOICE ROW AND NAMED
-// BY ITS DEVICE KEY (kSettingsPopupItems, app_state.h: the Chrome and
-// Caption rows; committed at OK alone, settings_editor.h's head).
+// app installs, of TWO KINDS, EACH CHOSEN BY A SETTINGS ROW AND NAMED BY ITS
+// DEVICE KEY (kSettingsPopupItems, app_state.h: the Chrome and Caption rows,
+// line editors whose Tab completes a typed prefix against this file's
+// built-in names since 2026-10-14 — GuiSettingsEditor::complete_preset_value;
+// committed at OK or Enter, settings_editor.h's head).
 // THE KINDS' USER WORDS (architect 2026-10-11 ~03:05, go 2026-10-13): the
 // program's-eleven kind is called CHROME (through the Face it drives the whole
 // window) and the caption's-six kind CAPTION (the old `chrome` device key,
@@ -125,9 +127,9 @@
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
 //
-// THE CHOICE ROWS' ORDERS (architect 2026-10-11, kept for the rows
-// 2026-10-14): kGuiPaletteMenuOrder and kGuiSchemeMenuOrder below, each the
-// one owner of its row's order.
+// (THE CHOICE ROWS' ORDERS, kGuiPaletteMenuOrder and kGuiSchemeMenuOrder,
+// architect 2026-10-11, went with the rows' drop-downs 2026-10-14; the record
+// below, where they stood.)
 
 // THE ROLE TABLE — THE ONE ENUMERATION of the program's roles (architect
 // 2026-10-07), in GuiPalette's order: the role's name (the generator's and
@@ -343,43 +345,14 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
     return builtin_palette(name) != nullptr;
 }
 
-// THE MENU ORDER'S NAME COMPARE (architect 2026-10-11, the alphabetical
-// rule): case-insensitive by the display name (ASCII), ties by bytes so the
-// order is total.
-constexpr bool menu_name_less(std::string_view a, std::string_view b) {
-    const auto lower = [](char c) {
-        return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
-    };
-    const bool less = std::ranges::lexicographical_compare(
-        a, b, {}, lower, lower);
-    const bool more = std::ranges::lexicographical_compare(
-        b, a, {}, lower, lower);
-    return less || (!more && a < b);
-}
-
-// THE CHROME ROW'S ORDER — ITS ONE OWNER (architect 2026-10-11 for the
-// color picker's preset menu, kept for the Settings Chrome row 2026-10-14):
-// indices into kGuiBuiltinPalettes, THE DEFAULT (Midnight since 2026-10-12)
-// PINNED FIRST ("because it's called default, we should support it as a
-// default"), then the other nineteen ALPHABETICALLY BY THEIR DISPLAY NAMES
-// (menu_name_less). Read by the row's domain (kChromeChoiceSource,
-// app_state.h).
-inline constexpr auto kGuiPaletteMenuOrder = [] {
-    std::array<std::size_t, std::size(kGuiBuiltinPalettes)> order{};
-    std::size_t n = 0;
-    for (std::size_t i = 0; i < order.size(); ++i)
-        if (std::string_view(kGuiBuiltinPalettes[i].key) == kGuiDefaultPaletteKey)
-            order[n++] = i;
-    for (std::size_t i = 0; i < order.size(); ++i)
-        if (std::string_view(kGuiBuiltinPalettes[i].key) != kGuiDefaultPaletteKey)
-            order[n++] = i;
-    std::sort(order.begin() + 1, order.end(),
-              [](std::size_t a, std::size_t b) {
-                  return menu_name_less(kGuiBuiltinPalettes[a].display_name,
-                                        kGuiBuiltinPalettes[b].display_name);
-              });
-    return order;
-}();
+// (THE CHROME ROW'S ORDER — kGuiPaletteMenuOrder, the default pinned first
+// and the other nineteen alphabetically by display name through
+// menu_name_less, architect 2026-10-11 — and THE CAPTION ROW'S ORDER below
+// it, kGuiSchemeMenuOrder, the chrome's own scheme first and the rest in the
+// catalog's order, were the color picker's preset menu's and then the
+// Settings choice rows' domains; they went with the choice drop-downs,
+// architect 2026-10-14. The rows' Tab completion matches the built-in names
+// in the tables' own order, GuiSettingsEditor::complete_preset_value.)
 
 // THE BUILT-IN SCHEMES (the head) — every windows and windows-plus catalog
 // entry in the catalog's order, GENERATED (chrome_schemes.inc; never hand-edited): the key, the
@@ -421,26 +394,10 @@ constexpr bool is_builtin_scheme_name(std::string_view name) {
     return builtin_scheme(name) != nullptr;
 }
 // Whether `name` is a CHROME'S OWN SCHEME'S key (a ChromeSpec's own_scheme,
-// chrome_spec.h) — the Caption row's first row (kGuiSchemeMenuOrder).
+// chrome_spec.h).
 constexpr bool is_chrome_own_scheme(std::string_view name) {
     return name == kChromeSpecWin2000.own_scheme;
 }
-
-// THE CAPTION ROW'S ORDER — ITS ONE OWNER (architect 2026-10-08 ~19:30 and
-// 2026-10-11 for the color picker's preset menu, kept for the Settings
-// Caption row 2026-10-14): indices into kGuiChromeSchemes, THE CHROME'S OWN
-// SCHEME FIRST, then every other scheme GROUPED BY FAMILY IN THE CATALOG'S
-// ORDER (his word: the built-in schemes are not alphabetized). Read by the
-// row's domain (kCaptionChoiceSource, app_state.h).
-inline constexpr auto kGuiSchemeMenuOrder = [] {
-    std::array<std::size_t, std::size(kGuiChromeSchemes)> order{};
-    std::size_t n = 0;
-    for (std::size_t i = 0; i < order.size(); ++i)
-        if (is_chrome_own_scheme(kGuiChromeSchemes[i].key)) order[n++] = i;
-    for (std::size_t i = 0; i < order.size(); ++i)
-        if (!is_chrome_own_scheme(kGuiChromeSchemes[i].key)) order[n++] = i;
-    return order;
-}();
 
 // THE ACTIVE PRESETS THE INSTALL TAKES (architect 2026-10-07; the scheme
 // 2026-10-08): the device config's key as written, or — EMPTY, no line —
@@ -452,7 +409,7 @@ std::string_view effective_palette_name(std::string_view palette);
 std::string_view effective_scheme_name(std::string_view scheme);
 
 // THE `chrome` AND `caption` KEYS' REFUSALS (the device config's reader and
-// the choice rows' commit): a word naming no built-in of its kind.
+// the two rows' commit): a word naming no built-in of its kind.
 inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in chrome's key (cool-edit-midnight, cool-edit-xp-blue, "
     "...)";

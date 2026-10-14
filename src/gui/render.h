@@ -228,19 +228,19 @@ struct TrimRange {
 // THE MAPPING (architect 2026-10-03; the roles 2026-10-04), role -> what it
 // paints:
 //   ground        every chrome surface: the menu row and the chrome's lanes
-//                 under the band, the caption's buttons, THE BOTTOM
-//                 OVERLAYS — the dialog (a prompt, a dialog editor or the
-//                 picker's Cancel) and the on-screen keyboard, laid over the
-//                 design at the window's foot since 2026-10-10 — the
-//                 dropdowns, every chrome button face, a DISABLED
-//                 cue's triangle (the band, row 8 and the canvas column's
-//                 lanes are the program's panel since 2026-10-09, below);
-//   label         chrome text and glyphs, the popup scroll bar's arrow
-//                 glyph;
+//                 under the band, the caption's buttons, the on-screen
+//                 keyboard's band (inside the program frame since 2026-10-14;
+//                 the dialog's taskbar ground beside it 2026-10-10 to
+//                 2026-10-14) — the dropdowns, every chrome button face, a
+//                 DISABLED cue's triangle (the band, row 8, the canvas
+//                 column's lanes and the modal family's box are the program's
+//                 panel since 2026-10-09, below);
+//   label         chrome text and glyphs, a prompt's question in the modal
+//                 family's box;
 //   the quartet   every relief line, the families unchanged; Hilight also the
 //                 light copy of THE DISABLED EMBOSS (below), a disabled cue
-//                 label's included, and THE BOTTOM OVERLAYS' ONE TOP LINE
-//                 (2026-10-10, paint_bottom_overlays); DkShadow also the
+//                 label's included (the taskbar overlays' one top line,
+//                 2026-10-10 to 2026-10-14, is retired); DkShadow also the
 //                 dialog focus frame;
 //   selected pair a dropdown's lit row, the folder
 //                 overlay's and the picker's highlighted row (its name; the
@@ -851,8 +851,9 @@ void install_true_colors(bool on);
 // the bottom, only on the sides. Although it feels like here the font is
 // small enough that we should be able to show a little white at the top and
 // the bottom"): the program face's recorded ascent above the baseline and
-// its descent below it (gui_face_metrics, 10 + 2 W), the dialog field's own
-// band rule (paint_modal_dialog) — Windows fills the line, and the 17-W
+// its descent below it (gui_face_metrics, 10 + 2 W), the dialog editor's own
+// band rule on each of its rows (paint_modal_dialog) — Windows fills the
+// line, and the 17-W
 // field round a 12-W line leaves rows of field above and below it. THE LINE
 // BOX IS CENTRED IN THE LANE (architect 2026-10-09 evening, on the glass at
 // 300 %: the band stood three rows of field above and six below, and he
@@ -1311,24 +1312,17 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 // from 2026-10-02; 32 and 9 / 10 laptop px before) — which used to read row
 // 2's. The row's crop record is git history.)
 
-// THE DIALOG FIELD — ONE SHAPE UNDER EVERY CHROME: every text field of the
-// modal dialogs (paint_modal_dialog's editor arm, the choice editor's combo
-// at its seat) is this tall, its edge
-// included, with its text this far in from its outer edge — not a chrome
-// spec field, a field to be made only when a later vocabulary's differs.
-// WIN2000 Windows' 14-dialog-unit edit box beside its 14-unit push button,
-// 23 W (the laptop pixel's 31 re-authored at the unit's change, 2026-10-02,
-// the pad's 7 as 5 — paint_handler.cpp's kModal* block keeps the sampled
-// record). THE TIME FIELDS are not this field: row 8's clock and the render
-// player's position and length are Cool Edit's dark field, its height and
-// its pad program_spec.h's own (architect 2026-10-09 evening, "the other
-// ones are Windows chrome whereas this one is a Cool Edit chrome") — the
-// pad 5 W, equal to this field's since 2026-10-10 ("let's add back one
-// pixel on the left and one on the right side for that input box";
-// program_spec.h's field_pad_px holds why). (They took this whole shape
-// 2026-10-08 to 2026-10-09.)
-inline constexpr double kModalFieldHeightPx = 23.0;
-inline constexpr double kModalFieldPadXPx   = 5.0;
+// (THE DIALOG FIELD — kModalFieldHeightPx 23 W and kModalFieldPadXPx 5 W,
+// Windows' 14-dialog-unit edit box with its text 5 W in from its outer edge,
+// the one shape of every text field of the modal dialogs, the choice
+// editor's combo at its seat, from 2026-10-02 (the laptop pixel's 31 and 7
+// re-authored) — IS GONE with the field, architect 2026-10-14: a dialog
+// editor's line stands in the modal family's box, its text at the box's own
+// inset (modal_box.h's modal_box_text_inset_px, the field's two lines and
+// 5-W pad read as one 7-W number). THE TIME FIELDS were never this field:
+// row 8's clock and the render player's position and length are Cool Edit's
+// dark field, its height and its pad program_spec.h's own, the pad 5 W
+// since 2026-10-10, equal to this field's then.)
 
 // THE RELIEF LINE — ONE WINDOWS PX, the width of every line of a raised,
 // sunken, status or etched edge in the chrome, and of one cell of the checked
@@ -1380,23 +1374,18 @@ inline int relief_line_px() {
 // band starts at 117, the ring's columns are 0–2 and 2301–2303 and its
 // bottom row the window's last three rows, 1437–1439, under the border's
 // 1419–1436.
-// THE CHROME SURFACES AT THE BOTTOM ARE OVERLAYS LAID OVER IT, as Cool Edit's
-// status bar stands under its panels (architect 2026-10-10: "they're
-// analogous to the taskbar, basically, but they sit on top of the design.
-// They don't move anything below them"): THE DIALOG — a chrome tenant of the
-// bottom row (chrome_tenant_owns_bottom_row, app_state.h: a prompt or a
-// dialog editor; the render player and the picker are the modal family's
-// box and controls row, modal_box.h, 2026-10-14) — and THE ON-SCREEN
-// KEYBOARD each stand at the window's foot,
-// the window's whole width over the ring's columns, the border under row 8
-// and the ring's bottom row in their rows, one Hilight line on top and the
-// chrome's ground below, no border at the foot or the sides; the ring, the
-// lanes and row 8 keep their geometry
-// and paint as always, and the overlay covers them (the law, the three cases
-// and every rect at onscreen_keyboard.h's overlay block). The painters:
-// paint_program_frame (the ring, beside the menu row's painter) and
-// paint_bottom_overlays (the overlay's line and the dialog's ground, after
-// the keyboard slot).
+// WHAT STANDS OVER THE PROGRAM STANDS INSIDE THE RING (architect
+// 2026-10-14): every modal — the render player, the picker, a prompt, a
+// dialog editor — is the modal family's box and controls row (modal_box.h),
+// in the program lanes' columns from the view bar's top row down, the border
+// under row 8 and the ring's bottom row left in view; the on-screen
+// keyboard's band stands on the ring's bottom row across the program lanes
+// (onscreen_keyboard.h's placement block), a dialog editor's stack on it.
+// (The dialog and the keyboard were overlays laid over the ring at the
+// window's foot, its whole width under one Hilight line — "they're
+// analogous to the taskbar, basically, but they sit on top of the design" —
+// from 2026-10-10 until then.) The ring's painter is paint_program_frame,
+// beside the menu row's painter.
 inline int program_frame_line_px() {
     return relief_line_px();
 }
@@ -1811,19 +1800,16 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // program_spec.h's group fields) — save THE ROW'S LAST GROUP, which has no
 // end bar and closes the row 5 W of face short of the program frame's line
 // (architect 2026-10-14, program_spec.h's row8_tail_px); the time field's
-// pads 5 W each side, the dialog field's own (program_spec.h's
-// field_pad_px, 2026-10-10).
-// The render player and the project picker stand their controls on the
-// content band below the dock bar's rows, on the row's face — THE MODAL
-// FAMILY'S CONTROLS ROW, the family's box covering the dock bar above it
-// (modal_box.h, architect 2026-10-14). A CHROME
-// TENANT (chrome_tenant_owns_bottom_row, app_state.h: a prompt or a dialog
-// editor) is THE DIALOG, a bottom overlay laid over the
-// content band, the border under the row and the program frame's bottom row
-// from the dock bar's foot to the window's foot, the dock bar left standing
-// above it (2026-10-10, program_frame_rect's overlay paragraph and
-// onscreen_keyboard.h's overlay block); the lane under it is the program's
-// as always.
+// pads 5 W each side, the dialog field's own then (program_spec.h's
+// field_pad_px, 2026-10-10; that field went 2026-10-14).
+// Every modal — the render player, the project picker, a prompt, a dialog
+// editor — stands its controls on the content band below the dock bar's
+// rows, on the row's face — THE MODAL FAMILY'S CONTROLS ROW, the family's
+// box covering the dock bar above it (modal_box.h, architect 2026-10-14) —
+// or, under a dialog editor on the glass, on the same row lifted onto the
+// on-screen keyboard's band, which then covers this lane (the taskbar
+// dialog laid over the content band, the border and the frame's bottom row,
+// 2026-10-10 to 2026-10-14, is retired).
 // bottom_row_content_h_px() is the band the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Each term its own
 // rounded part.
@@ -2145,24 +2131,9 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 inline int view_bar_grab_w_px() {
     return trim_lane_h_px();
 }
-// THE ARROW GLYPH, Windows' scroll arrow — THE POPUP LISTS' SCROLL BAR'S
-// since 2026-10-09 (the trim caps that first wore it are gone): its pixel form is four columns
-// 1, 3, 5 and 7 Windows rows tall from the tip, each centred on the middle
-// row — a 4 x 7 triangle. THE CHROME IS SCALABLE (architect 2026-10-06, his
-// glass: "still the pixelated icon versions"), so it is drawn as ONE FILLED
-// TRIANGLE over that outline, smooth at any scale as Marlett's scroll arrows
-// are at high DPI: the BASE the far column's outer edge, the full 7 rows
-// tall, the TIP the tip column's outer edge at the middle row's centre —
-// kTrimArrowGlyphWPx x kTrimArrowGlyphHPx Windows px, the pixel glyph's own
-// width and height. Its coordinates are in the unit u = scaled_px(1, 1),
-// the glyph 4u x 7u device px; it is CENTRED IN THE BUTTON in device px, an
-// odd difference flooring toward the top-left (the extra pixel right of or
-// below the glyph). Antialiased (the lane paints aliased; the triangle alone
-// takes cairo's default). At 400 % (u 4): 16 x 28 in the 64 x 64 case, at
-// (+24, +18); at 138 % (u 1): 4 x 7 in 22 x 22 at (+9, +7). The arrows have
-// no disabled face.
-inline constexpr int kTrimArrowGlyphWPx = 4;
-inline constexpr int kTrimArrowGlyphHPx = 7;
+// (THE ARROW GLYPH, Windows' scroll arrow as one filled 4 x 7 W triangle —
+// the trim caps' until 2026-10-09, then the popup lists' scroll bar's —
+// went with that bar, 2026-10-14. Git history.)
 
 // (THE PLAYHEAD HEAD WAS WORDPAD'S RULER INDENT MARKER — a 9 x 8 W glyph in
 // the chrome's label, hilight, shadow and ground, drawn as nested rings and
@@ -2300,7 +2271,7 @@ inline int popup_border_px() {
 }
 // The rows the frame spends at the box's TOP: the whole frame, whether the
 // box hangs from its opener or stands on its head (`upward`: the settings
-// choice editor's list) — the parameter
+// choice editor's list, 2026-10-07 to 2026-10-14) — the parameter
 // kept for a later vocabulary whose hanging menu draws its top line on its
 // opener's last row (GtkMenu's did, 2026-10-07 to 2026-10-09).
 inline int popup_border_top_px(bool /*upward*/) {
@@ -2339,333 +2310,24 @@ inline int popup_item_margin_y_px() {
 //    their space as plain padding. It is the right margin the kdenlive crop
 //    measured (30 laptop px, re-authored at the unit's change); the crop's
 //    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
-//    mirror. THEY ARE THE MENU ROW'S PULL-DOWNS' ALONE: the DROP-DOWN — the
-//    settings editor's choice list — takes THE DROP-DOWN INSET on both
-//    sides (choice_combo::combo_text_inset_px, settings_editor.cpp, the
-//    rule's one owner, architect 2026-10-09).
+//    mirror. THEY ARE THE MENU ROW'S PULL-DOWNS' ALONE (the settings
+//    editor's choice list, 2026-10-07 to 2026-10-14, took the drop-down
+//    inset of 7 W on both sides and went with its editor).
 //  - THE COLUMN GAP is the guaranteed minimum separation between the widest
 //    label and the widest accelerator, the kdenlive crop's 13 laptop px
 //    re-authored as 9 Windows px (architect 2026-10-02: the gap kept).
-//  - A LIST STANDING A SCROLL BAR (the scroll block below, 2026-10-08)
-//    keeps its left pad from its left edge, its rows ending at the BAR'S
-//    LEFT EDGE (the color picker's preset menu, 2026-10-08..14, widened by
-//    the bar; the choice list keeps the combo's width).
 inline constexpr double kPopupPadXPx      = 22.0;
 inline constexpr double kPopupHotkeyGapPx = 9.0;
 
-// THE POPUP LISTS SCROLL (architect 2026-10-08 ~11:20, "expand the
-// drop-downs so we can scroll up and down"; closed_questions.md records the
-// reversal of the 2026-10-07 bound). THIS BLOCK IS THE RULE'S ONE OWNER for
-// the LIST popup — the settings choice editor's list (settings_editor.h's
-// head), whose head points here; the color picker's element list and its
-// preset menu took it too, 2026-10-08..14. The menu row's dropdowns never
-// outgrow the window and take none of it.
-//  * THE PLACEMENT (place_popup_list): hung from the opener's foot where every
-//    row fits whole below it to the window's foot, else standing on the
-//    opener's head where every row fits whole above it to the window's head,
-//    else on the ROOMIER side (the one showing more whole rows; below on a
-//    tie) SHOWING THE MOST WHOLE ROWS THAT FIT and scrolling the rest — no
-//    box ever passes the window.
-//  * THE ROWS SCROLL BY ROW, EVERY ROW ALIKE (Windows' list box scrolls
-//    everything), none pinned. THE BOX'S ROOM is the most
-//    whole ITEM rows that fit on its side (place_popup_list), and THE SHOWN
-//    ROWS ARE EVERY ROW FROM THE TOP WHOSE SUMMED HEIGHTS FIT IN THAT ROOM,
-//    each row at its own height — a separator counted at its separator
-//    block's (architect 2026-10-08 ~12:50, his palette-menu captures
-//    _061454 and _062506: "it omits some lines when you first open it; as
-//    soon as you start scrolling they show up properly and take up the
-//    entire space" — the shown count had been the room's item count, so the
-//    separators in view left ground at the foot). So the block is always
-//    full to within less than one item: the only ground at its foot is the
-//    remainder no further row fits. THE ONE FUNCTION is popup_scroll_shown;
-//    every reader of the shown count follows it — the item rects, the page
-//    step (Windows' list box with mixed heights pages by the rows shown,
-//    SB_PAGE), the reveal, the thumb's proportion (shown / total at the
-//    current top) — and THE LAST TOP is the least top from which every
-//    remaining row fits (popup_scroll_max_top, from the heights, not total
-//    less shown). THE STATE is PopupScroll, one per popup: the top row and
-//    the bar's held part. IT IS RESET TO THE HEAD AT EACH OPEN (a reopened
-//    list starts at its head), with ONE EXCEPTION, Windows' combo's own
-//    (architect 2026-10-11): a list that opens with a current value lit —
-//    the choice editor's — opens with that row AT THE TOP, clamped at the end
-//    (popup_scroll_top_at).
-//  * THE PICTURE IS A VERTICAL SCROLL BAR INSIDE THE LIST, AT ITS RIGHT, UNDER
-//    EVERY CHROME (architect 2026-10-08, his ReactOS WordPad font-combo
-//    capture: "exactly as we would expect, just a scroll bar on the side"; and
-//    of a combo's scroll ARROWS top and bottom: "I'd much rather have the
-//    scroll bar inside, and we can use the canonical scroll bar"). 16 W WIDE
-//    (Windows' SM_CXVSCROLL — the spec's scroll_bar_px, below),
-//    INSIDE THE FRAME AND FLUSH ON ITS RIGHT LINE: Windows' list box has no
-//    margin, so under win2000 THE BAR TOUCHES THE FRAME, taking the item
-//    block's one-W ground margin's place on that side and running over the
-//    margin's top and bottom rows — the item block's full height, from the
-//    frame's lines to the frame's lines. The items end at
-//    the bar's left edge less the margin, inside their margin as ever
-//    (popup_item_rect). TWO ARROW BUTTONS square on the bar's width at its ends, up on
-//    top and down at the bottom (each half the bar where the bar is shorter
-//    than two, Windows' own halving); the TRACK between them; the THUMB's
-//    length the track's times shown / total, FLOORED AT 8 W
-//    (kPopupScrollThumbMinPx: half SM_CYVTHUMB's 16, THE PRODUCT'S CHOICE —
-//    no source for Windows 2000's own minimum thumb is at hand), its seat
-//    (track − thumb) x top / the last top — both by nearbyint
-//    (popup_scroll_bar); a track too short for the floor shows no thumb, as
-//    Windows shows none. The chrome draws it in its own scroll bar's
-//    vocabulary (paint_popup_scroll_bar, beside the trim bar's painters).
-//  * THE WIDTH: a combo's list stays the combo's own width (the flush
-//    ruling at choice_combo::combo_list, settings_editor.cpp) with the bar
-//    inside it — its labels are a closed domain the combo already fits.
-//  * THE INPUT — the pointer, the pen and one finger alike, every zone the
-//    PUBLISHED bar's (ON SCREEN IS AS PAINTED; popup_scroll_hit): a press on
-//    an ARROW scrolls ONE ROW and wears the pressed face until the lift — ONE
-//    STEP A PRESS, NO AUTOREPEAT, the product's simplification of Windows'
-//    held repeat; a press on the TRACK above or below the thumb scrolls ONE
-//    PAGE (the shown count) toward the press; a press on the THUMB starts
-//    A THUMB DRAG, the thumb following the pointer with the press's offset on
-//    it kept and the rows following the thumb live (Windows' tracking;
-//    popup_scroll_top_at_thumb) — a live gesture
-//    (any_pointer_gesture_active, its motion claimed wherever it goes), whose
-//    lift ends it and selects nothing. THE LAPTOP'S WHEEL over a scrolling
-//    list scrolls kPopupWheelRows a notch (Windows' default wheel lines),
-//    the modified wheel a swallowed nothing. The choice editor's Up / Down
-//    keep the lit row in view by least travel, a step past the shown block
-//    scrolling by one row (popup_scroll_reveal). A press anywhere else is the popup's own, as
-//    before: a row arms, outside closes.
-//  * THE DAMAGE: a scroll, an arrow's pressed face and the thumb drag repaint
-//    the whole box.
-inline constexpr int kPopupScrollThumbMinPx  = 8;
-inline constexpr int kPopupWheelRows         = 3;
-// THE WIDTH IS THE CHROME SPEC'S scroll_bar_px (2026-10-08): the 16 above
-// under win2000.
-inline int popup_scroll_bar_w_px() {
-    return scaled_px(live_chrome_spec().scroll_bar_px, 3);
-}
-// The thumb floor, device px (the picture bullet).
-inline int popup_scroll_thumb_min_px() {
-    return scaled_px(kPopupScrollThumbMinPx, 1);
-}
-// The bar's parts — a held part (an arrow's pressed face, the thumb's drag)
-// or a press's zone (the two arrows, the track's two pages, the thumb).
-enum class PopupScrollPart { None, Up, Down, PageUp, PageDown, Thumb };
-// ONE POPUP'S SCROLL STATE: `top` the first shown row (clamped against the
-// published bar at every read and every act), `held` the arrow whose press
-// stands (Up / Down) or the thumb whose drag does (Thumb), and `grab_dy` the
-// drag's press offset from the thumb's top.
-struct PopupScroll {
-    int             top     = 0;
-    PopupScrollPart held    = PopupScrollPart::None;
-    int             grab_dy = 0;
-    bool live() const { return held != PopupScrollPart::None; }
-};
-// THE PLACEMENT (the block's first bullet) of rows whose heights sum to
-// `content_h`, against `opener` in a window `window_h` tall: the side, the
-// ROOM the rows stand in (device px: `content_h` when nothing scrolls, else
-// the most whole item rows that fit on that side, at least one), the box's
-// rows y and h (its frame's lines, the item block's two margins and the
-// room). Which rows show in the room is the scroll's (popup_scroll_shown);
-// the columns are the caller's.
-struct PopupListPlacement {
-    bool upward  = false;
-    bool scrolls = false;
-    int  room_h  = 0;
-    int  y       = 0;
-    int  h       = 0;
-};
-inline PopupListPlacement place_popup_list(const GuiRect& opener, int window_h,
-                                           int content_h) {
-    const int item_h  = popup_item_h_px();
-    const int margins = 2 * popup_item_margin_y_px();
-    const auto frame = [&](bool upward) {
-        return popup_border_top_px(upward) + popup_border_px() + margins;
-    };
-    const int room_below = window_h - (opener.y + opener.h);
-    const int room_above = opener.y;
-    PopupListPlacement p;
-    p.room_h = content_h;
-    if (frame(false) + content_h <= room_below) {
-        p.upward = false;
-    } else if (frame(true) + content_h <= room_above) {
-        p.upward = true;
-    } else {
-        const int below = (room_below - frame(false)) / item_h;
-        const int above = (room_above - frame(true)) / item_h;
-        p.upward  = above > below;
-        p.room_h  = std::min(content_h, std::max(1, std::max(below, above)) * item_h);
-        p.scrolls = p.room_h < content_h;
-    }
-    p.h = frame(p.upward) + p.room_h;
-    p.y = p.upward ? opener.y - p.h : opener.y + opener.h;
-    return p;
-}
-// AN ITEM'S RECT in the list box `box` at row `y`: inside the frame and the
-// margin on the left, and on the right the same — or, with the bar (`bar`),
-// the bar's left edge less the margin (the block's picture bullet).
-inline GuiRect popup_item_rect(const GuiRect& box, int y, bool bar) {
-    const int side_b   = popup_border_px();
-    const int margin_x = live_chrome_spec().popup_margin_px;
-    const int inset    = scaled_px(margin_x, margin_x > 0 ? 1 : 0);
-    const int left     = box.x + side_b + inset;
-    const int right    = bar ? box.x + box.w - popup_border_px() -
-                                   popup_scroll_bar_w_px() - inset
-                             : box.x + box.w - side_b - inset;
-    return GuiRect{left, y, right - left, popup_item_h_px()};
-}
-// THE BAR OF A PLACED LIST (the block's picture bullet), device px: absent
-// (`present` false, every rect zero) when every row shows; the rows' own
-// heights (`row_h`, in their order) and the `room` they stand in, so every
-// count below is popup_scroll_shown's; `top` the clamped first row,
-// `max_top` the last top, `visible` the rows shown from `top`; the bar, its
-// two arrows, the track between and the thumb (zero where the track is too
-// short for its floor). Published with the box, so every press reads it as
-// painted.
-struct PopupScrollBar {
-    bool             present = false;
-    int              total   = 0;
-    int              visible = 0;
-    int              top     = 0;
-    int              max_top = 0;
-    int              room    = 0;
-    std::vector<int> row_h;
-    GuiRect bar{0, 0, 0, 0};
-    GuiRect up{0, 0, 0, 0};
-    GuiRect down{0, 0, 0, 0};
-    GuiRect track{0, 0, 0, 0};
-    GuiRect thumb{0, 0, 0, 0};
-};
-// THE ONE COUNT (the rows bullet): the rows from `top` whose summed heights
-// fit in `room`, at least one while any row remains.
-inline int popup_rows_fitting(const std::vector<int>& row_h, int room, int top) {
-    const int total = static_cast<int>(row_h.size());
-    int n = 0, used = 0;
-    for (int i = std::max(0, top); i < total; ++i) {
-        used += row_h[static_cast<std::size_t>(i)];
-        if (used > room && n > 0) break;
-        ++n;
-        if (used >= room) break;
-    }
-    return n;
-}
-// THE LAST TOP: the least top from which every remaining row fits.
-inline int popup_rows_max_top(const std::vector<int>& row_h, int room) {
-    int top = static_cast<int>(row_h.size());
-    int used = 0;
-    while (top > 0 && used + row_h[static_cast<std::size_t>(top - 1)] <= room) {
-        used += row_h[static_cast<std::size_t>(top - 1)];
-        --top;
-    }
-    return top;
-}
-inline int popup_scroll_clamp(const PopupScrollBar& b, int top) {
-    return std::clamp(top, 0, b.max_top);
-}
-// The rows `b` shows from `top` (clamped).
-inline int popup_scroll_shown(const PopupScrollBar& b, int top) {
-    return popup_rows_fitting(b.row_h, b.room, popup_scroll_clamp(b, top));
-}
-// The top a list opens on when `row` is its current value: that row at the
-// very top of the shown rows, clamped so the last page stays full (architect
-// 2026-10-11; Windows' combo, CBDropDown's LB_SETTOPINDEX on the dropped
-// index, listbox.c clamping to the last top).
-inline int popup_scroll_top_at(const PopupScrollBar& b, int row) {
-    return popup_scroll_clamp(b, row);
-}
-// The top that shows row `row`: unchanged when it already shows, else the
-// least travel that does (one row per step past the block's edge).
-inline int popup_scroll_reveal(const PopupScrollBar& b, int top, int row) {
-    top = popup_scroll_clamp(b, top);
-    if (row < top) return popup_scroll_clamp(b, row);
-    while (top < b.max_top && row >= top + popup_scroll_shown(b, top)) ++top;
-    return top;
-}
-// The bar over `row_h` (every row's height, device px, in order) in the
-// `room` of a box placed upward or not, its first row `top`.
-inline PopupScrollBar popup_scroll_bar(const GuiRect& box, bool upward,
-                                       std::vector<int> row_h, int room,
-                                       int top) {
-    PopupScrollBar b;
-    b.total   = static_cast<int>(row_h.size());
-    b.room    = room;
-    b.row_h   = std::move(row_h);
-    b.max_top = popup_rows_max_top(b.row_h, room);
-    b.top     = popup_scroll_clamp(b, top);
-    b.visible = popup_scroll_shown(b, b.top);
-    if (b.max_top == 0) return b;
-    b.present = true;
-    const int border = popup_border_px();
-    const int top_b  = popup_border_top_px(upward);
-    const int bw     = popup_scroll_bar_w_px();
-    b.bar   = GuiRect{box.x + box.w - border - bw, box.y + top_b, bw,
-                      box.h - top_b - border};
-    const int ah = std::min(bw, b.bar.h / 2);
-    b.up    = GuiRect{b.bar.x, b.bar.y, bw, ah};
-    b.down  = GuiRect{b.bar.x, b.bar.y + b.bar.h - ah, bw, ah};
-    b.track = GuiRect{b.bar.x, b.up.y + ah, bw, b.down.y - (b.up.y + ah)};
-    const int len = std::max(
-        popup_scroll_thumb_min_px(),
-        static_cast<int>(std::nearbyint(static_cast<double>(b.track.h) *
-                                        b.visible / b.total)));
-    if (len <= b.track.h) {
-        const int seat = static_cast<int>(std::nearbyint(
-            static_cast<double>(b.track.h - len) * b.top / b.max_top));
-        b.thumb = GuiRect{b.bar.x, b.track.y + seat, bw, len};
-    }
-    return b;
-}
-// THE ZONE under (x, y) of a published bar: an arrow, the thumb, the track
-// above it (PageUp) or below it (PageDown); None off the bar and on a
-// thumbless track.
-inline PopupScrollPart popup_scroll_hit(const PopupScrollBar& b, int x, int y) {
-    if (!b.present || !rect_contains(b.bar, x, y)) return PopupScrollPart::None;
-    if (rect_contains(b.up, x, y))   return PopupScrollPart::Up;
-    if (rect_contains(b.down, x, y)) return PopupScrollPart::Down;
-    if (b.thumb.h <= 0) return PopupScrollPart::None;
-    if (rect_contains(b.thumb, x, y)) return PopupScrollPart::Thumb;
-    return y < b.thumb.y ? PopupScrollPart::PageUp : PopupScrollPart::PageDown;
-}
-// THE TOP A PRESS ON `part` SCROLLS TO: a row for an arrow, a page (the
-// shown count at the published top, Windows' SB_PAGE) for the track,
-// clamped; the thumb and None leave it.
-inline int popup_scroll_step(const PopupScrollBar& b, PopupScrollPart part) {
-    int d = 0;
-    switch (part) {
-        case PopupScrollPart::Up:       d = -1; break;
-        case PopupScrollPart::Down:     d = 1; break;
-        case PopupScrollPart::PageUp:   d = -b.visible; break;
-        case PopupScrollPart::PageDown: d = b.visible; break;
-        case PopupScrollPart::None:
-        case PopupScrollPart::Thumb:    break;
-    }
-    return popup_scroll_clamp(b, b.top + d);
-}
-// THE WHEEL'S SCROLL: `rows` (the notches times kPopupWheelRows, down the
-// later rows) from the state's own top — so notches arriving between two
-// paints add up — clamped against the published bar, written to `sc`;
-// whether it moved the shown rows.
-inline bool popup_scroll_wheel_rows(PopupScroll& sc, const PopupScrollBar& b,
-                                    int rows) {
-    const int from = popup_scroll_clamp(b, sc.top);
-    const int top  = popup_scroll_clamp(b, from + rows);
-    if (top == from) return false;
-    sc.top = top;
-    return true;
-}
-// THE TOP THE THUMB'S DRAG SHOWS with the thumb's top at `thumb_y`: the
-// seat's inverse, by nearbyint, clamped.
-inline int popup_scroll_top_at_thumb(const PopupScrollBar& b, int thumb_y) {
-    const int room = b.track.h - b.thumb.h;
-    if (!b.present || b.thumb.h <= 0 || room <= 0) return b.top;
-    const double t = static_cast<double>(thumb_y - b.track.y) / room;
-    return std::clamp(static_cast<int>(std::nearbyint(t * b.max_top)), 0,
-                      b.max_top);
-}
-// THE BAR'S PICTURE (defined in render.cpp beside the view bar's painter):
-// under win2000 Windows' vertical scroll bar — the track Windows' checker
-// (Hilight over the ground at one device px a cell, its phase the bar's
-// top-left), the thumb a PLAIN RAISED box on the ground with no grip, the
-// two arrows Windows' scroll-arrow buttons (paint_trim_arrow_button: plain
-// raised, the arrow pointing up and down, the pressed face while `held`
-// names one). No hover face.
-void paint_popup_scroll_bar(cairo_t* cr, const PopupScrollBar& b,
-                            PopupScrollPart held);
+// (THE POPUP LISTS' SCROLL ROAD — architect 2026-10-08 ~11:20, "expand the
+// drop-downs so we can scroll up and down": a list popup placed by the
+// window's room, scrolling by row when its rows outgrew it, with Windows'
+// vertical scroll bar inside it at its right — its placement, its bar's
+// geometry and picture, its input and its wheel — IS REMOVED, architect
+// 2026-10-14: its last reader, the settings choice editor's list, went with
+// the choice editor; the color picker's element list and preset menu, its
+// other two, the same morning. The menu row's dropdowns never outgrew the
+// window and took none of it. Git history.)
 
 
 // (THE WAVEFORM'S VERTICAL INSET IS GONE — architect 2026-10-09, "remove":
@@ -2821,23 +2483,25 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
 //                         (2026-10-05), an on-screen keyboard key.
 //   paint_relief_soft_sunken  — SOFT SUNKEN: a caption button pressed, a
 //                         keyboard key checked or pressed.
-//   paint_relief_plain_raised — PLAIN RAISED: a push button, the popup
-//                         scroll bar's thumb and arrows, a menu's and a
+//   paint_relief_plain_raised — PLAIN RAISED: a push button, a menu's and a
 //                         dropdown's frame, the restored window's sizing
-//                         frame. (The scrub's pointed thumb draws its own
-//                         soft raised pentagon, paint_scrub_thumb.)
-//   paint_relief_plain_sunken — PLAIN SUNKEN: a field and the scrub's
-//                         channel (the folder overlay's list wore it
-//                         2026-10-06 to 2026-10-14; it stands in the modal
-//                         family's box since, the canvas column's ring,
+//                         frame (the popup scroll bar's thumb and arrows
+//                         until 2026-10-14). (The scrub's pointed thumb draws
+//                         its own soft raised pentagon, paint_scrub_thumb.)
+//   paint_relief_plain_sunken — PLAIN SUNKEN: the scrub's channel (the
+//                         dialog editor's field and the choice combo wore it
+//                         until 2026-10-14, the folder overlay's list
+//                         2026-10-06 to 2026-10-14; the modal family's box
+//                         wears the canvas column's ring since,
 //                         paint_relief_frame, modal_box.h).
 //   paint_relief_sunken_outer — SUNKEN OUTER, ONE ring (DrawEdge's
 //                         BDR_SUNKENOUTER, Shadow / Hilight): the open menu
 //                         title and the program's frame (paint_program_frame).
 //   paint_relief_line_frame — one colour all round, square (no mitre
 //                         between one tone and itself): the dialog's
-//                         default-button frame, the list's focus frame and
-//                         the popup scroll bar's pressed arrow button.
+//                         default-button frame and the list's focus frame
+//                         (the popup scroll bar's pressed arrow button until
+//                         2026-10-14).
 //   (The CARD FRAME — the tooltip's and the cards' — is no relief: its
 //   lines in `card_frame`, square, on all four sides, at paint_popup_chrome.)
 //   paint_relief_etched_hline — an ETCHED line: a Shadow line on rows
@@ -3954,7 +3618,7 @@ struct FlagEditorBox {
 // the cells riding its right edge keep their resting look. THE TRIANGLE AND
 // THE DOTS stay the cached pass's. A REFUSED COMMIT recolours nothing: the
 // whole text is selected (text_editor::refuse) and the refusing owner's card
-// says why, the dialog field's rule on this surface.
+// says why, the dialog editor's rule on this surface.
 //
 // THE TEXT IS THE PROGRAM FACE, matching the labels it replaces.
 //
@@ -3974,16 +3638,18 @@ struct FlagEditorBox {
 // State::view_offset_px survives on this surface for the sub-pixel case alone
 // (a run's width rounded down to a whole column, which would otherwise clip
 // the caret's reserved column at end-of-text); the glyph-by-glyph travel its
-// minimal-travel rule describes belongs to the DIALOG field, whose box is
-// fixed. Left/Right/Home/End navigate exactly like any one-line field.
+// minimal-travel rule describes belonged to the DIALOG field, whose box was
+// fixed, until that field gave way to the modal family's box and its soft
+// wrap (2026-10-14). Left/Right/Home/End navigate exactly like any one-line
+// field.
 //
 // Takes AppState by NON-CONST reference, alone among the renderers here, and
 // for two honest reasons: it advances the editor's view offset (session state
 // that must persist across frames) and it publishes app.flag_editor_box. Both
-// are the painter owning what only the painter can compute. (The DIALOG field's
-// painter — paint_modal_dialog, paint_handler.cpp — does exactly the same two
-// things for exactly the same reasons since 2026-08-13, when that field grew
-// this scroll; it is a GuiPaintHandler method and already holds an AppState&.)
+// are the painter owning what only the painter can compute. (The dialog
+// editor's painter — paint_modal_dialog, paint_handler.cpp — publishes its
+// wrapped rows the same way; it is a GuiPaintHandler method and already holds
+// an AppState&.)
 void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 
 // The phase-reset column's cues: the identical cue, the identical class ladder

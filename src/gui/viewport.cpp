@@ -2,7 +2,7 @@
 
 #include "audio.h"
 #include "notifications.h"   // notification_stack_bound (the stack's damage rect)
-#include "onscreen_keyboard.h"   // the bottom overlays' rects (the modal's damage)
+#include "onscreen_keyboard.h"   // the keyboard's band; modal_box.h through it (the modal's damage)
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
@@ -165,38 +165,36 @@ void Viewport::invalidate_status_cell_area() {
 // THE MODAL'S DAMAGE — every rect the modal can paint and every rect its
 // close must give back, the unified bottom row's lane among them (the modal
 // has stood in the row since 2026-08-13, and the row's own tenants come back
-// on a close). No stash rider and no cell arithmetic: the rects below are the
-// overlay's own geometry, the lane alone covering only what keeps to the
-// row, which the dialog does not (below). The OPENERS do not come through here — nothing is
+// on a close). No cell arithmetic: the rects below are the modal family's own
+// geometry, the lane alone covering only what keeps to the row, which a
+// prompt's and a dialog editor's box does not (below) — the stash's owner the
+// one published bit read, and only to say whether a box stood last frame.
+// The OPENERS do not come through here — nothing is
 // painted before a surface's first paint, so they invalidate the whole
 // window. Caller inventory at the declaration.
-// THE DIALOG IS A BOTTOM OVERLAY (2026-10-10, onscreen_keyboard.h's overlay
-// block): a chrome tenant's surface is laid over the row's content band, the
-// border under the row and the program frame's bottom row at the window's
-// whole width, its line on the content band's first row — so the damage is
-// the lane UNITED WITH THE DIALOG ALONE (the lane's top down to the window's
-// foot, the whole width), which erases the dialog and brings the row's
-// tenants, the border, the frame's columns and its bottom row back on a
-// close; and, while the keyboard stands, THE
-// DIALOG STANDING ON IT too (a prompt raised or answered over a dialog
-// editor with the keyboard up repaints there). A dialog editor's close
-// takes the keyboard with it, and the slot's hide edge damages that form
-// (onscreen_keyboard::slot_damage_rect, reconcile_slot_standing's).
+// A PROMPT OR A DIALOG EDITOR STANDS IN THE MODAL FAMILY'S BOX (2026-10-14,
+// modal_box.h): its question or its line in the box over the canvas column,
+// its buttons on the controls row — so while one stands, OR WHILE THE LAST
+// PAINT DREW ONE (the stash's owner, which a closer reads before any paint:
+// its surface is gone from the state but not yet from the screen), the
+// damage is the lane UNITED WITH THE MODAL FAMILY'S WHOLE AREA without the
+// keyboard (modal_area_rect at keyboard height 0 — the view bar's top row to
+// row 8's content foot, which contains the stack's lifted form over a
+// standing keyboard too), so a close erases the box and brings the lanes,
+// the canvas and row 8 back. A dialog editor's close takes the keyboard with
+// it, and the slot's hide edge damages that band (onscreen_keyboard::
+// slot_damage_rect, reconcile_slot_standing's). Under the render player and
+// the picker the controls row is the lane's own content band, and their
+// list's damage is the folder overlay's. (The taskbar dialog, 2026-10-10 to
+// 2026-10-14, took the lane united with its overlay to the window's foot.)
 void Viewport::invalidate_modal_dialog_area() {
-    const GuiRect t     = bottom_row_area(app);
-    const GuiRect alone = onscreen_keyboard::dialog_rect(app,
-                                                         /*on_keyboard=*/false);
-    const GuiRect span  = alone.w > 0 ? union_rect(t, alone) : t;
-    gui.invalidate_region(span.x, span.y, span.w, span.h);
-    if (onscreen_keyboard::stands(app, gui))
-        invalidate_rect(onscreen_keyboard::dialog_rect(app,
-                                                       /*on_keyboard=*/true));
-    // THE CHOICE EDITOR'S DROPPED LIST AS PAINTED (2026-10-07 evening): it
-    // stands over the well above the row, so every repaint and every closer
-    // of the modal covers it too — a list closed by the editor's own close
-    // leaves no pixels behind.
-    const GuiRect list = app.modal_dialog.combo_list;
-    if (list.w > 0 && list.h > 0) invalidate_rect(list);
+    const GuiRect t = bottom_row_area(app);
+    gui.invalidate_region(t.x, t.y, t.w, t.h);
+    const AppState::ModalDialogOwner painted = app.modal_dialog.owner;
+    if (modal_box_dialog_stands(app) ||
+        painted == AppState::ModalDialogOwner::Prompt ||
+        painted == AppState::ModalDialogOwner::Editor)
+        invalidate_rect(modal_area_rect(app, /*keyboard_h=*/0));
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
     // published rect and the band it can hang into, the show edge's own pair
     // (tooltip_hang_bands), one of which holds the recomposed box whole.

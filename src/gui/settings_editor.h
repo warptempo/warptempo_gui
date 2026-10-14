@@ -15,67 +15,16 @@ struct Undo;
 struct GuiTargetRender;
 struct GuiInputHandler;
 
-// THE CHOICE EDITOR'S COMBO AND ITS LIST — THE GEOMETRY (2026-10-07
-// evening; the color picker's chooser shared it until the picker's removal,
-// architect 2026-10-14, and the choice editor below is its one reader since):
-// the combo stands at the dialog field's seat (the head's THE CHOICE
-// EDITOR), its list drops from it. Device px, rounded at the element; the
-// painters are paint_handler.cpp's (paint_settings_choice, paint_combo_list).
-namespace choice_combo {
-// THE COMBO'S DROP-DOWN BUTTON: Windows' SM_CXVSCROLL 16, and its arrow
-// Marlett's 7 x 4 wedge, each side rounded AT THE ELEMENT through
-// scaled_px's floored form, floored at a 3 x 2 device-px wedge so a small
-// scale cannot zero the triangle (paint_choice_combo, paint_handler.cpp).
-inline constexpr int kComboButtonWPx   = 16;
-inline constexpr int kComboArrowWPx    = 7;
-inline constexpr int kComboArrowHPx    = 4;
-inline constexpr int kComboArrowMinWPx = 3;
-inline constexpr int kComboArrowMinHPx = 2;
-// THE COMBO'S TEXT stops this far short of its drop-down button, where a
-// long name is cut with "..." (2026-10-07).
-inline constexpr int kComboTextGapPx   = 4;
-// THE DROP-DOWN INSET, ONE NUMBER (architect 2026-10-09; the rule's one
-// owner is combo_text_inset_px's comment, settings_editor.cpp): Windows'
-// combo inset, the sunken field's two lines + the dialog field's 5-W pad
-// (kModalFieldPadXPx) = 7 W — the face's text inset and the list's row
-// inset, both sides.
-inline constexpr int kComboTextInsetPx = 7;
-//   combo_drop_button — the drop-down button inside the combo `r`
-//     (kComboButtonWPx wide, inside the sunken field's two lines).
-//   combo_text_inset_px — THE DROP-DOWN INSET, kComboTextInsetPx: the
-//     face's text inset from the combo's left edge, and the list's row inset
-//     on both sides. Device px.
-//   combo_list — the list of `count` rows dropped from `combo`, its width,
-//     flush (the definition's ruling), placed and scrolled by the popup
-//     lists' rule (render.h's popup scroll block, place_popup_list): below
-//     the combo's foot where every row fits, else standing on its head (the
-//     choice editor's: the row is the window's foot, and Windows' combo opens
-//     above when no room lies below), else the roomier side scrolled. The
-//     dropdown's own arithmetic (dropdown_h_px, render.h): the frame, the
-//     item block's two margins, the rows' room. `top` is the popup's scroll;
-//     the result's `bar` carries the clamped top and the shown count whether
-//     or not it is present.
-//   combo_list_item — row `i` of the domain as placed: the dropdown's item
-//     rect (popup_item_rect, short of the bar when one stands), or the zero
-//     rect for a row scrolled out of view.
-struct ComboList {
-    GuiRect        box{0, 0, 0, 0};
-    bool           upward = false;
-    int            count  = 0;
-    PopupScrollBar bar;
-};
-GuiRect   combo_drop_button(const GuiRect& r);
-int       combo_text_inset_px();
-ComboList combo_list(const GuiRect& combo, int count, int window_h, int top);
-GuiRect   combo_list_item(const ComboList& l, int i);
-} // namespace choice_combo
-
 // Settings-prompt editor cluster. Opens on `;`, accepts a single
 // `key=value` line, applies it on Enter, and closes. Same primitive as
 // the flag editor (text_editor::State, kind-dispatched keyboard
-// vocabulary, the whole text selected and a card on a refusal) but painted as
-// a MODAL ON THE BOTTOM ROW (2026-08-13 — its prefix the label at the row's
-// left pad, the buffer in the sunken field, OK and Cancel right-aligned)
+// vocabulary, the whole text selected and a card on a refusal) but painted
+// IN THE MODAL FAMILY'S BOX (architect 2026-10-14, modal_box.h: the box is
+// the edit control, the whole `key=value` line on its field ground from the
+// box's first row, soft-wrapped at its width and never scrolling, OK and
+// Cancel flush right on the controls row under it, NO LABEL — "Setting:"
+// removed, "pointless that far away"; a modal on the bottom row from
+// 2026-08-13, its label, its sunken field and its two buttons in one row)
 // instead of over the flag rect.
 //
 // The editor is a keyboard front-end to EVERY key the product persists that a
@@ -137,70 +86,21 @@ GuiRect   combo_list_item(const ComboList& l, int i);
 //    the device keys and the band — commit on a locked tab. The opener
 //    refuses no lock; the account is at GuiSettingsEditor::open.
 //
-// THE CHOICE EDITOR (architect 2026-10-07 evening, "a drop-down for chrome
-// and theme at the very least"; the design the planner's, delegated) STANDS
-// BESIDE THE TEXT EDITOR: a Settings row whose key's domain is a SHORT
-// CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — the Chrome
-// and Caption rows since 2026-10-14; the vocabulary Chrome row stood
-// 2026-10-07..10-10, the Icons and Font rows 2026-10-09..10-12, each leaving
-// with its key) opens
-// THE SAME BOTTOM-ROW EDITOR — the same text_editor session
-// underneath, so the modal rank, OK and Cancel, the focus ring, the playback
-// stop and every closer are the text editor's — with its row's word as the
-// label ("Chrome: ") and, WHERE THE FIELD STANDS, THE PROGRAM'S COMBO BOX
-// showing the shown value: the combo drawing (paint_choice_combo,
-// paint_handler.cpp; the geometry choice_combo's, above — the color
-// picker's chooser shared both until 2026-10-14) at the field's seat and its
-// 23-W height. THE BUFFER IS KEPT AT `<key>=<shown value>`, so EVERY COMMIT IS THE
-// TEXT ROAD'S — commit() and commit_device_setting, the one road: the
-// grammar, the config write and the unchanged value's
-// quiet no-op are untouched. THE COMMIT IS OK'S ALONE, EVERY CHOICE ROW'S
-// (architect 2026-10-09, the Font row judged on the glass: "it should not
-// pick the font until I hit OK"; re-confirmed for the two color rows
-// 2026-10-14, "OK alone"): a row of the list, a press and its lift,
-// and Up / Down each MOVE THE SHOWN VALUE and nothing else — no config
-// written, no preset installed, no card; OK (and Enter, the dialog's default
-// button) commits the shown value through commit(); Cancel (and Esc) closes
-// with nothing written and nothing applied, the shown value dying with the
-// session. One road for the two rows, Chrome and Caption. THE ROADS:
-//   * A PRESS ON THE COMBO DROPS ITS LIST UPWARD over the well (the row is
-//     the window's foot; Windows' combo opens above when no room lies
-//     below) — the list's painter and geometry
-//     (paint_combo_list, combo_list), as wide as the combo, the domain in
-//     its source's order, the shown row lit at the open and the lit row then
-//     following the pointer over the rows and HOLDING OFF THEM — Windows'
-//     combo list, so the pen's contact on the combo cannot put the seeded
-//     row out (2026-10-09 evening; the rule at settings_choice_motion);
-//     the combo takes no hover face. The press
-//     gives the combo the focus back from a button.
-//     IT IS THE ONE REMAINING SCROLLABLE LIST POPUP (render.h's popup scroll
-//     block, the rule's one owner, 2026-10-08; the color picker's element
-//     list and preset menu, the other two, went 2026-10-14): placed by the
-//     window's room and SCROLLING when its rows outgrow it, its scroll bar
-//     inside it at its right, the shown row at the top at the open.
-//   * WHILE THE LIST IS DOWN IT OWNS THE POINTER (the dropdown's ONE PRESS,
-//     ONE ACT): a press on its scroll bar scrolls (the scroll block's input),
-//     a press on a row ARMS it and THE LIFT ON THAT ROW SHOWS IT — the act
-//     at the lift, as every menu row acts — closing
-//     the list onto the combo, the editor standing for OK or Cancel
-//     (2026-10-09, above); a press anywhere else closes the list and is
-//     consumed, the combo standing.
-//   * KEYS, with the combo focused: Up / Down walk the shown value, list
-//     down or not (Windows' combo moves its selection without dropping), no
-//     wrap, a dropped list keeping the lit row in view; Enter commits the
-//     shown value (the list closing with it); Esc
-//     closes a dropped list, and a second Esc is the editor's own Esc. Tab
-//     closes the list and walks the ring as ever. NOTHING ELSE REACHES THE
-//     BUFFER: there is nothing to type, so no key edits the line, and the
-//     modal contract's Ctrl+S and Ctrl+Q keep their own road.
-//   * THE ON-SCREEN KEYBOARD DOES NOT RISE for a choice editor (its standing
-//     predicate, onscreen_keyboard::stands), and the caret's blink tick
-//     sleeps (main.cpp): there is no caret.
-// The state is AppState::SettingsChoice, live only while this editor stands
-// (settings_choice_live); the geometry is the modal stash's combo and list,
-// as painted (ModalDialogGeometry), which the press, the lift and the hover
-// read (input_pointer.cpp's choice bodies); the keys are
-// handle_settings_choice_key (input_key_dispatch.cpp).
+// EVERY ROW IS THIS ONE LINE EDITOR (architect 2026-10-14, ~12:25: "we can
+// remove dropdowns for chrome/caption and leave the autocomplete as the only
+// help. dropdowns would need more work to make them real win95 style
+// dropdowns and it's just not worth it"). THE CHOICE EDITOR — a Settings row
+// whose key's domain was a short closed list opening this editor with a
+// combo box where the field stood and its list dropping over the well, the
+// shown value moved by the list and the arrows and committed at OK alone —
+// stood 2026-10-07 to 2026-10-14 (the vocabulary Chrome row 2026-10-07..10,
+// the Icons and Font rows 2026-10-09..12, the Chrome and Caption rows its
+// last); it is removed whole with its combo, its list, the popup lists'
+// scroll road it was the last reader of and the on-screen keyboard's term for
+// it. THE CHROME AND CAPTION ROWS' HELP IS TAB (complete_preset_value,
+// below): a typed prefix completes against the kind's built-in names, and
+// the commit is OK's and Enter's as on every row — the screen changing at
+// the commit, never before.
 struct GuiSettingsEditor {
     AppState&             app;
     GuiAudio&             audio;
@@ -264,26 +164,10 @@ struct GuiSettingsEditor {
     // exception). The cursor rests at
     // the end of the line, ready to be edited or replaced; an unknown or
     // unrecallable key opens with the bare `<key>=` so the surface still tells
-    // the user which key they picked. A CHOICE ROW'S KEY (settings_choice_item,
-    // app_state.h) opens the CHOICE EDITOR on the same seeded line, the combo
-    // showing the live value (the head).
+    // the user which key they picked.
     void open_prefilled(const char* key);
     void exit_no_commit();
     void commit();
-    // THE CHOICE EDITOR'S ACTS (the head), each a no-op unless a choice
-    // editor stands. choice_show seats the shown value (clamped to the
-    // domain, the line rewritten, a dropped list's lit row following);
-    // choice_step moves it by one; set_choice_list_open drops or closes the
-    // list; choice_hover and choice_arm_row are the list's lit and pressed
-    // rows; choice_pick is the lift on a row: the list closed and the row
-    // shown, NOTHING COMMITTED — OK and Enter commit, through commit()
-    // (architect 2026-10-09, the head).
-    void choice_show(int index);
-    void choice_step(int delta);
-    void set_choice_list_open(bool open);
-    void choice_hover(int row);
-    void choice_arm_row(int row);
-    void choice_pick(int index);
     // The value completion, run on BARE TAB in the field and by open_prefilled:
     // when any settable key is typed with an empty
     // value side (e.g. `notes=`, `gui_scale=`, `tab_a_trim_begin=`),
@@ -298,7 +182,10 @@ struct GuiSettingsEditor {
     // No-op when the value side is already non-empty, when there is no `=`, or
     // when the key is unknown — EXCEPT on the path key (2026-09-02), where
     // a NON-EMPTY value side is a path prefix and Tab completes it against the
-    // filesystem through complete_path_value below.
+    // filesystem through complete_path_value below, and on THE TWO COLOR KEYS
+    // (architect 2026-10-14), where a non-empty value side is a preset-name
+    // prefix and Tab completes it against the kind's built-in names through
+    // complete_preset_value below — the path key's model.
     //
     // IT RETURNS WHETHER THE BUFFER CHANGED, which is the ONE AUTOCOMPLETE
     // MODEL's whole question (architect 2026-08-13: "we should use one model
@@ -344,6 +231,26 @@ private:
     // model's question; `value` is the raw value side (untrimmed: the
     // completion works on what is literally typed).
     bool complete_path_value(const std::string& value);
+    // THE PRESET COMPLETER (architect 2026-10-14 afternoon, CONFIRMED: "ok to
+    // add autocomplete", "agree all"), autocomplete_value's arm for the two
+    // color keys — `chrome` and `caption` — when the value side is NON-EMPTY,
+    // the path completer's model on a closed list: the value side is a
+    // PREFIX (byte compare, the names being ASCII) of the kind's compiled-in
+    // preset names — Cool Edit's twenty for `chrome` (kGuiBuiltinPalettes'
+    // keys), the 42 Windows and Plus! schemes for `caption`
+    // (kGuiChromeSchemes' keys), palette_file.h — and the buffer advances by
+    // the matches' longest common prefix past it: a UNIQUE match completes
+    // the name WITH NO TRAILING CHARACTER (a name is not a folder), an
+    // ambiguous prefix stops at the common prefix (`caption=w` stops at
+    // `windows-`; he accepts that a prefix completer cannot show the list),
+    // and no advance — no match, or a prefix already at the common prefix —
+    // is a Tab that walks. The empty value side keeps recalling the effective
+    // preset (the recall above). The commit's grammar and its live apply
+    // (commit_device_setting, install_color_preset) are unchanged. Returns
+    // whether the buffer advanced; `key` is the trimmed key, `value` the raw
+    // value side less its leading whitespace (ltrim_ws's reasons).
+    bool complete_preset_value(const std::string& key,
+                               const std::string& value);
     // GUI-kind key router. Returns true when `key` is a recognized GUI-kind
     // key, in which case the commit is fully handled inside (applied +
     // deactivated, or refused with a card); false when `key` is not a

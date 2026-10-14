@@ -1014,12 +1014,9 @@ struct GuiInputHandler {
     // completed-detent gate and the platform's per-frame sub-detent accumulator
     // probe both consult it so the two surfaces can never drift.
     int wheel_context(int x, int y) const;
-    // THE SCROLLING POPUP LIST UNDER (x, y), as published (render.h's popup
-    // scroll block): 1 the settings choice editor's list — only while it is
-    // down and its bar stands — else 0 (2 and 3 were the color picker's
-    // element list and preset menu, 2026-10-08..14). wheel_context's context
-    // 6 and on_wheel's arm both read it, so the two cannot disagree.
-    int popup_list_wheel_hit(int x, int y) const;
+    // (popup_list_wheel_hit, the scrolling popup list under the pointer —
+    // context 6 — stood 2026-10-08 to 2026-10-14 and went with the settings
+    // choice editor's list, the last popup list that scrolled.)
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
     // THE TOUCH NAVIGATION BODY (touch phase 1, 2026-08-11; the phone
@@ -1320,7 +1317,8 @@ struct GuiInputHandler {
     // text stand here (GuiTouchEditorField, gui_input.h, is the answer's
     // contract)? It reads the ONE field rect the press claim reads
     // (ActiveEditorText::field — the marker lane's published box, or the
-    // bottom-row dialog's inset field) and the double-click seed the release
+    // dialog editor's edit control, the modal family's box's interior since
+    // 2026-10-14) and the double-click seed the release
     // already keeps, through the press arm's own predicate, so the platform
     // learns nothing about text and keeps no memory of taps. Wired at
     // main.cpp's set_touch_nav_hooks call. Non-const because the active
@@ -1786,12 +1784,8 @@ struct GuiInputHandler {
     // the player's block below.
     void clear_folder_overlay_press();
     void clear_player_scrub_drag();
-    // THE POPUP LIST'S SCROLL HOLD'S end (2026-10-08; render.h's popup scroll
-    // block): the held arrow's face and the thumb's drag of the choice
-    // editor's list, dropped on the same three edges and at the hold's own
-    // lift (finish_settings_choice_release) — every row already scrolled
-    // live, so nothing is lost; the box it frees damaged.
-    void clear_popup_scroll_holds();
+    // (clear_popup_scroll_holds, the choice list's scroll hold's end on the
+    // same three edges, 2026-10-08 to 2026-10-14, went with the list.)
     // THE NOTIFICATION CARDS' POINTER HALVES (2026-08-29; the rule is at
     // notifications.h). The CLAIM ranks above every veil in on_button_press:
     // a press on a published card is consumed whole, and since 2026-10-01
@@ -2749,7 +2743,7 @@ private:
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit and
     // cancel are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the two dialog surfaces
-    // pass the modal's own owner (the bottom row's lane,
+    // pass the modal's own owner (the modal family's area,
     // viewport.cpp), the flag editor the top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
     // there would throw; the route carries no null check for it deliberately (a
@@ -2783,36 +2777,11 @@ private:
     // ring when it did not advance; the typed-`=` trigger it wore for part of
     // that day is reverted with the ruling).
     bool handle_settings_editor_key(GuiKey key, GuiInputState mods);
-    // THE CHOICE EDITOR'S KEYS (2026-10-07 evening; settings_editor.h's
-    // head), handle_settings_editor_key's fork while a choice editor stands:
-    // Esc closes a dropped list; with the combo focused Up / Down walk the
-    // shown value, committing nothing, and Enter — the dialog's default
-    // button, OK — commits it (architect 2026-10-09); Tab (the list closing), Esc and the
-    // modal contract's Ctrl+S / Ctrl+Q take the shared route with no
-    // completion, as does every key while a button holds the focus; any
-    // other key with the combo focused is a consumed nothing — no key edits
-    // the line.
-    bool handle_settings_choice_key(GuiKey key, GuiInputState mods);
-    // THE CHOICE EDITOR'S POINTER (input_pointer.cpp; every target read from
-    // the modal stash as painted):
-    //   claim_settings_choice_press — a dropped list owns every press: one
-    //     on its scroll bar is the bar's (render.h's popup scroll block), a
-    //     plain left press on a row arms it, any other press closes the list,
-    //     consumed; with the list closed, a plain left press on the combo
-    //     takes the focus back and drops the list. False for every other
-    //     press, which goes on to the dialog's own claims and its veil.
-    //   finish_settings_choice_release — a scroll hold's lift ends it,
-    //     selecting nothing; the armed row's lift: on that row it shows the
-    //     row and commits nothing (choice_pick — OK and Enter commit,
-    //     architect 2026-10-09), elsewhere it closes the list. False when
-    //     neither stood.
-    //   settings_choice_motion — a scroll hold's carry (the thumb's drag),
-    //     else a dropped list's lit row follows the pointer over its rows
-    //     and holds off them (2026-10-09 evening, the rule at the body).
-    bool claim_settings_choice_press(GuiMouseButton button, int x, int y,
-                                     GuiInputState mods);
-    bool finish_settings_choice_release(int x, int y);
-    void settings_choice_motion(int x, int y);
+    // (THE CHOICE EDITOR'S KEYS AND POINTER — handle_settings_choice_key,
+    // claim_settings_choice_press, finish_settings_choice_release and
+    // settings_choice_motion, 2026-10-07 to 2026-10-14 — went with the choice
+    // editor, architect 2026-10-14: the Chrome and Caption rows are line
+    // editors, their help Tab's completion.)
 
     // -- THE PICKER (architect 2026-08-28; bodies in
     //    input_key_dispatch.cpp) ---------------------------------------------
@@ -3008,9 +2977,9 @@ private:
     //     Cool Edit's toolbar has no hover face under any chrome,
     //     program_spec.h's case_hot_face, and the walks store none);
     //   the pull-down menus' lit row (AppState::Dropdown::hovered_item; its
-    //     walk recompute_dropdown_hover, run per motion and per iteration);
-    //   the Settings combo's lit row (AppState::SettingsChoice::list_hover;
-    //     its walk settings_choice_motion).
+    //     walk recompute_dropdown_hover, run per motion and per iteration).
+    //   (The Settings combo's lit row was the second, 2026-10-07 to
+    //   2026-10-14, and went with the choice editor.)
     //   NOTHING ELSE LIGHTS BY HOVER: a flag has no hover face (render.h's
     //   flag block); the folder overlay's rows, the project picker's among
     //   them, none (folder_overlay.h); the menu row, the caption buttons and
@@ -3030,7 +2999,7 @@ private:
     // moves away makes it too slow"; the new state must read right after the
     // tap). Their answer is kept so a hot face, were one ruled back, would
     // hold under the latch as before. THE LIT ROWS —
-    // the menus and the lists — SKIP THEIR RECOMPUTE while it stands, the
+    // the menus' — SKIP THEIR RECOMPUTE while it stands, the
     // previous value kept and no damage requested: nothing darkened them
     // under the contact, so the restore motion at the lift re-answered the
     // row the contact last lit, which is the face painted at the lift.
@@ -3045,12 +3014,9 @@ private:
     // switch onto another anchor is an act, not a face, and stays live.
     // THE TOUCH-DOWN IS NOT THE LATCH'S (2026-10-09 evening, his blink on
     // the Settings combo at the pen's contact): the latch stands only after
-    // a lift, and the lists' lit rows answer the contact by their own rule —
-    // a list's lit row follows the pointer onto its rows and HOLDS OFF THEM
-    // (Windows' combo list; settings_choice_motion), so
-    // the contact's motions over the combo that dropped it, and the lift's
-    // restore motion before the latch arms, change no face. The pull-down
-    // menus go dark off their rows (Windows' menu).
+    // a lift. The pull-down menus go dark off their rows (Windows' menu); the
+    // Settings combo's list, whose lit row held off its rows (Windows' combo
+    // list), went with the choice editor 2026-10-14.
     // THE PEN'S HOVER END DARKENS NOTHING (architect 2026-10-10, his S Pen
     // touching down on the open Settings menu's row: "the word Pick Colors
     // blinks"): the platform sends a HOVER_EXIT just before every tip DOWN,
@@ -3645,7 +3611,9 @@ private:
     // - Text: EDITABLE TEXT UNDER THE POINTER, which in this product is two
     //   published rects and nothing else (2026-08-13) — the open top-strip
     //   FLAG EDITOR's unrolled box (which wore the nav surface's Pan before
-    //   the kind existed) and the MODAL DIALOG's inset FIELD. Both are the
+    //   the kind existed) and the dialog editor's EDIT CONTROL, the modal
+    //   family's box's interior (2026-10-14; the modal dialog's inset FIELD
+    //   on the bottom row before). Both are the
     //   click-to-caret / text-drag claim regions the press path reads, so the
     //   cue is that claim's own shape. The field's arm is THE VEIL'S ONE
     //   EXCEPTION, stated at the gate below; the flag editor's sits ABOVE the

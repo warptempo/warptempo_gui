@@ -3511,7 +3511,7 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // edits (the metadata), then the editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
 // `last_project` is the program's own and has no row), then the COLORS'
-// group — the `chrome` and `caption` keys' two choice rows, Chrome first
+// group — the `chrome` and `caption` keys' two rows, Chrome first
 // (architect 2026-10-14: the program's colors before the title bar's), and
 // the True Colors command.
 //
@@ -3527,69 +3527,21 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // EditKey prefills the settings editor with `key`, TrueColors flips the
 // bit, and a command row's `key` is unread (nullptr).
 enum class SettingsPopupAct { EditKey, TrueColors };
-// THE ROW'S EDITOR (architect 2026-10-07 evening: "a drop-down for chrome
-// and theme at the very least"): an EditKey row opens the settings editor
-// in one of two KINDS. TEXT is the `key=value` line in the sunken field,
-// every key's editor until that evening and still all but two's. CHOICE is
-// for a key whose domain is A SHORT CLOSED LIST: the same bottom-row editor
-// with the chrome's COMBO BOX where the field stands, its list dropping
-// UPWARD over the well (the design at GuiSettingsEditor's head,
-// settings_editor.h). A CHOICE row names its DOMAIN'S SOURCE — the count
-// and the i-th value, in the order the list shows them — so a domain is
-// read from its own owner and never copied into this table; a TEXT row
-// names none (static_asserted below). THE VALUE IS WHAT THE COMMIT WRITES,
-// THE LABEL WHAT THE COMBO AND ITS LIST SHOW (TEXT: names Title Case) — both
-// read from the domain's owner.
-enum class SettingsEditorKind { Text, Choice };
-struct SettingsChoiceSource {
-    int         (*count)();
-    const char* (*value)(int);
-    const char* (*label)(int);
-};
-// THE CHROME'S DOMAIN (architect 2026-10-14, "remove picker and preset file
-// road"): Cool Edit Pro 2.1's twenty color presets (kGuiBuiltinPalettes,
-// palette_file.h) in THE CHROME ROW'S ORDER (kGuiPaletteMenuOrder: Midnight
-// first, then the other nineteen alphabetically by display name), the key
-// the value and the display name the label. The combo shows THE EFFECTIVE
-// PRESET, the default's when the config has no `chrome` line
-// (recall_gui_setting_value, settings_io.cpp).
-inline constexpr SettingsChoiceSource kChromeChoiceSource{
-    +[]() -> int { return static_cast<int>(std::size(kGuiPaletteMenuOrder)); },
-    +[](int i) -> const char* {
-        return kGuiBuiltinPalettes[kGuiPaletteMenuOrder[
-            static_cast<std::size_t>(i)]].key;
-    },
-    +[](int i) -> const char* {
-        return kGuiBuiltinPalettes[kGuiPaletteMenuOrder[
-            static_cast<std::size_t>(i)]].display_name;
-    },
-};
-// THE CAPTION'S DOMAIN (architect 2026-10-14): the 42 Windows and Plus!
-// schemes (kGuiChromeSchemes, palette_file.h) in THE CAPTION ROW'S ORDER
-// (kGuiSchemeMenuOrder: the chrome's own `windows-storm` first, then the 41
-// others in the catalog's order, grouped by family — the list has no
-// separators, the rows run straight on), the key the value and the display
-// name the label. The combo shows the effective scheme, the chrome's own
-// when the config has no `caption` line.
-inline constexpr SettingsChoiceSource kCaptionChoiceSource{
-    +[]() -> int { return static_cast<int>(std::size(kGuiSchemeMenuOrder)); },
-    +[](int i) -> const char* {
-        return kGuiChromeSchemes[kGuiSchemeMenuOrder[
-            static_cast<std::size_t>(i)]].key;
-    },
-    +[](int i) -> const char* {
-        return kGuiChromeSchemes[kGuiSchemeMenuOrder[
-            static_cast<std::size_t>(i)]].display_name;
-    },
-};
+// EVERY EditKey ROW OPENS THE ONE LINE EDITOR, the `key=value` line in the
+// modal family's box (GuiSettingsEditor's head, settings_editor.h). (A second
+// KIND, the CHOICE editor — a combo box where the field stood and its list
+// dropping over the well, for a key whose domain is a short closed list —
+// stood 2026-10-07 to 2026-10-14, the Chrome and Caption rows its last;
+// removed by the architect 2026-10-14, "we can remove dropdowns for
+// chrome/caption and leave the autocomplete as the only help": the two keys'
+// Tab completes a typed prefix against their built-in names,
+// GuiSettingsEditor::complete_preset_value.)
 struct SettingsPopupItem {
     const char*                 label;
     int                         access;   // the access key's byte in `label`
     const char*                 key;
     bool                        separator_before;
     SettingsPopupAct            act     = SettingsPopupAct::EditKey;
-    SettingsEditorKind          editor  = SettingsEditorKind::Text;
-    const SettingsChoiceSource* choices = nullptr;
 };
 // (THE "Font size" ITEM LEFT WITH ITS KEY — row 7, 2026-08-01. "Playback speed"
 // was the widest label from then until 2026-08-26; only the item count and the
@@ -3651,18 +3603,22 @@ struct SettingsPopupItem {
 // icon sets, the face sets) and LEFT WITH THEIR KEYS (architect 2026-10-12:
 // GNOME 2.28 and Liberation Sans the only options, hard-coded).
 //
-// `Chrome` AND `Caption` ARE THE CHOICE ROWS (architect 2026-10-14, "remove
-// picker and preset file road": the in-app color picker and the preset
-// files, 2026-10-07..14, removed whole — the families landed are what
-// exists), the `chrome` and `caption` device keys' one road, AFTER Projects
-// Path BEHIND A SEPARATOR, their own group with True Colors: `Chrome` the
-// program's eleven (kChromeChoiceSource, Cool Edit's twenty presets) and
-// `Caption` the title bar's six (kCaptionChoiceSource, the Windows and Plus!
-// schemes) — each domain its owner's compiled table, each commit the text
-// road's (commit_device_setting) with its own difference: THE PRESET IS
-// INSTALLED LIVE AT THE OK, no card (the screen is the answer), and a pick of
-// the kind's default (the default palette, the chrome's own scheme) writes
-// no line.
+// `Chrome` AND `Caption` (architect 2026-10-14, "remove picker and preset
+// file road": the in-app color picker and the preset files, 2026-10-07..14,
+// removed whole — the families landed are what exists), the `chrome` and
+// `caption` device keys' one road, AFTER Projects Path BEHIND A SEPARATOR,
+// their own group with True Colors: `Chrome` the program's eleven (Cool
+// Edit's twenty presets, kGuiBuiltinPalettes) and `Caption` the title bar's
+// six (the Windows and Plus! schemes, kGuiChromeSchemes) — LINE EDITORS LIKE
+// EVERY OTHER ROW since the same day's later ruling (their choice drop-downs
+// removed: "dropdowns would need more work to make them real win95 style
+// dropdowns and it's just not worth it"), Tab completing a typed prefix
+// against the kind's built-in names (GuiSettingsEditor::
+// complete_preset_value), each commit the text road's
+// (commit_device_setting) with its own difference: THE PRESET IS INSTALLED
+// LIVE AT THE OK, no card (the screen is the answer), and a pick of the
+// kind's default (the default palette, the chrome's own scheme) writes no
+// line.
 //
 // `True Colors` IS THE LAST ROW (architect 2026-10-08 ~05:35, his "show true
 // colors / sRGB color conversion", Windows' own "True Color" word): the sRGB
@@ -3690,39 +3646,13 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI Scale",           0,  "gui_scale",     true},
     {"Projects Repository", 9,  "projects_repo", false},
     {"Projects Path",       9,  "projects_path", false},
-    {"Chrome",              0,  "chrome",        true,
-     SettingsPopupAct::EditKey, SettingsEditorKind::Choice,
-     &kChromeChoiceSource},
-    {"Caption",             1,  "caption",       false,
-     SettingsPopupAct::EditKey, SettingsEditorKind::Choice,
-     &kCaptionChoiceSource},
+    {"Chrome",              0,  "chrome",        true},
+    {"Caption",             1,  "caption",       false},
     {"True Colors",         6,  nullptr,         false,
      SettingsPopupAct::TrueColors},
 };
 inline constexpr int kSettingsPopupItemCount =
     static_cast<int>(std::size(kSettingsPopupItems));
-// A CHOICE ROW NAMES ITS SOURCE AND NO OTHER ROW DOES (the editor kinds'
-// rule, above), and a choice row edits a key.
-static_assert([] {
-    for (const SettingsPopupItem& it : kSettingsPopupItems) {
-        const bool choice = it.editor == SettingsEditorKind::Choice;
-        if (choice != (it.choices != nullptr)) return false;
-        if (choice && (it.act != SettingsPopupAct::EditKey || it.key == nullptr))
-            return false;
-    }
-    return true;
-}());
-// THE CHOICE ROW FOR A KEY, or nullptr when the key's row is a text row
-// (or the key has no row) — the settings editor's opener asks it
-// (GuiSettingsEditor::open_prefilled).
-inline constexpr const SettingsPopupItem* settings_choice_item(
-        std::string_view key) {
-    for (const SettingsPopupItem& it : kSettingsPopupItems)
-        if (it.editor == SettingsEditorKind::Choice && it.key != nullptr &&
-            key == it.key)
-            return &it;
-    return nullptr;
-}
 
 // THE COMMAND MENU'S ITEMS — the row type a menu of COMMANDS uses (the settings
 // menu is the other kind, a list of keys to edit). It carries the row's LABEL,
@@ -4460,12 +4390,14 @@ enum class DialogTrigger {
     DELETE_FOLDER_CONFIRM,
 };
 
-// In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
-// PROMPT (paint_modal_dialog, 2026-08-13 — the row's tenants stand down whole
-// and the lane carries the prompt's text at its left pad with one REAL BUTTON
-// per response right-aligned at its right pad; the centered box of 2026-08-12
-// is scrapped, and before that arc the prompts were a tier in this same row's
-// status span).
+// In-window modal prompt state. When `active` is true, THE PROMPT STANDS IN
+// THE MODAL FAMILY'S BOX (paint_modal_dialog, architect 2026-10-14,
+// modal_box.h — its question on the box's first row on the face, one REAL
+// BUTTON per response flush right on the controls row under it, row 8's
+// tenants standing down whole). It stood on the bottom row from 2026-08-13
+// (the text at the left pad, the buttons after it, the taskbar dialog laid
+// over the row from 2026-10-10); the centered box of 2026-08-12 is scrapped,
+// and before that arc the prompts were a tier in this same row's status span.
 // Keyboard input is owned by the prompt exactly as it always was: only its
 // answers' ACCESS KEYS, Esc (the last answer, Cancel) and the focus ring's
 // Tab / arrows / Enter / Space do anything; everything else is swallowed.
@@ -6625,45 +6557,61 @@ struct AppState {
     // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
     // geometry contract for the settings and BPM editors (the load and
     // commit-title editors stood among them until 2026-08-28 and 2026-10-10),
-    // which paint inside the MODAL's inset field since 2026-08-12 (they wrote
-    // straight onto the status lane, row 9, from row 7 until then; the press
-    // region is the published FIELD rect, modal_dialog.field, and it stays the
-    // field alone now that the modal paints on the bottom row — the rest of
-    // the lane is the row, not the editor).
+    // which paint THEIR LINE IN THE MODAL FAMILY'S BOX since 2026-10-14 — the
+    // box is the edit control (architect: the whole `key=value` line from the
+    // box's first row, "looks like a multiline edit but that's ok — long
+    // lines can wrap"); an inset field on the bottom row from 2026-08-12, the
+    // status lane before. The press region is the published field rect,
+    // modal_dialog.field, the box's interior.
     //
-    // `text_origin_x` is the window x of PENDING's byte 0 — the field's own
-    // left pad AND ITS HORIZONTAL SCROLL OFFSET are already spent in it (the
-    // field travels to keep the caret visible since 2026-08-13; the rule is at
-    // text_editor::State::view_offset_px) — and `byte_x` holds
-    // pending.size()+1 pen offsets RELATIVE to that origin, so the pair reads
-    // exactly like FlagEditorBox's and editor_byte_index_at searches either
-    // the same way. That is what makes the click, the F2.1 text drag and the
-    // double-click word select land on the right byte however far the field
-    // has scrolled: byte 0 is where byte 0 PAINTS, never where the pad is.
+    // THE LINE IS SOFT-WRAPPED AT THE BOX'S WIDTH (text_editor::
+    // soft_wrap_rows, the one wrap rule) and NOTHING SCROLLS: `rows` are the
+    // visual rows in order, each a byte range [begin, end) of PENDING — a
+    // row's end the next row's begin, the last row's the buffer's size —
+    // with its band (`y`, `h`: the list row's box the row stands on) and
+    // `origin_x`, the window x byte 0 WOULD paint at for that row, so the
+    // row's own bytes paint at origin_x + byte_x[i]. `byte_x` holds
+    // pending.size()+1 pen offsets of the ONE shaped run, relative to its
+    // byte 0. The caret at a byte stands on the row whose range holds it,
+    // the buffer's end on the last row (dialog_editor_row_of); a press picks
+    // the row under it and the nearest boundary on it (dialog_editor_byte_at)
+    // — so the click, the F2.1 text drag, the double-click word select and
+    // Home / End walk the rows the painter drew.
     // Written by paint_modal_dialog: zeroed at the top of every run, filled by
     // whichever editor the dialog actually paints. That makes it a statement
     // about what is ON SCREEN — an editor the dialog's precedence hides (a
     // prompt is up) publishes nothing and takes no clicks, which is the
     // correct answer.
     struct DialogEditorText {
-        bool                valid         = false;
-        double              text_origin_x = 0.0;
+        struct Row {
+            int    begin    = 0;
+            int    end      = 0;
+            double origin_x = 0.0;
+            int    y        = 0;
+            int    h        = 0;
+        };
+        bool                valid = false;
+        std::vector<Row>    rows;
         std::vector<double> byte_x;
     };
     DialogEditorText dialog_editor_text;
 
     // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the two dialog
-    // editors, the render player and the picker paint ON THE BOTTOM ROW since
-    // 2026-08-13 (architect, scrapping
-    // the centered box of 2026-08-12: "it looks sloppy — no compositor drop
-    // shadow, and faking one wouldn't work"): while one stands the row's
-    // tenants stand down whole and the modal has the lane. This is the
+    // editors, the render player and the picker paint IN THE MODAL FAMILY'S
+    // BOX AND ON ITS CONTROLS ROW since 2026-10-14 (modal_box.h; on the
+    // bottom row from 2026-08-13, the architect scrapping the centered box of
+    // 2026-08-12: "it looks sloppy — no compositor drop shadow, and faking one
+    // wouldn't work"): while one stands row 8's tenants stand down whole and
+    // the modal has the area. This is the
     // painter's stash of what was drawn, the roster model:
     // paint_modal_dialog rewrites it every run (zero/invalid when no dialog
     // stands), and the pointer path reads it instead of re-deriving layout.
-    // `box` is the modal's whole SURFACE — the bottom row's lane, which is
-    // what the hover invalidation and the damage ride; `field` is the editor
-    // field's INTERIOR (zero for prompts) — the click-to-caret / text-drag
+    // `box` is the modal's whole SURFACE — the controls row under the render
+    // player and the picker, the modal family's whole area under a prompt or
+    // a dialog editor (modal_area_rect, modal_box.h, 2026-10-14; the taskbar
+    // overlay 2026-10-10 to 2026-10-14) — which is what the hover
+    // invalidation and the damage ride; `field` is the editor's edit control,
+    // the box's INTERIOR (zero for prompts) — the click-to-caret / text-drag
     // claim region; `buttons` are the answer buttons in painted order.
     //
     // A BUTTON CARRIES ITS DISPATCH, not a label: for a PROMPT,
@@ -6743,8 +6691,9 @@ struct AppState {
     // became glyphs; nine buttons since the highlight pair) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
-    // still outranks it (the load confirmation paints over the player's row
-    // exactly as the quit prompt paints over an editor); the player and an
+    // still outranks it (the load confirmation takes the box and the
+    // controls row over the player's list exactly as the quit prompt does
+    // over an editor's line, 2026-10-14); the player and an
     // editor are never live together (its opener refuses under any editor and
     // its key router consumes every editor opener).
     // THE FOURTH OWNER IS THE PICKER (architect 2026-08-28): the
@@ -6906,21 +6855,9 @@ struct AppState {
         // tick ahead. A frame whose clip does not cover the track carries
         // the last painted column (paint_modal_dialog's player branch).
         int                            scrub_thumb_x = -1;
-        // THE SETTINGS EDITOR'S CHOICE COMBO (2026-10-07 evening), zero under
-        // every other owner and under the text editor: the combo standing
-        // where the field stands (a press drops its list) and, while the
-        // list is down, the list's box and its rows in the domain's order.
-        // The press, the lift and the hover read these and never a live
-        // derivation (ON SCREEN IS AS PAINTED; GuiSettingsEditor's head),
-        // under the owner-tag doctrine above; the modal's damage covers the
-        // published list (Viewport::invalidate_modal_dialog_area).
-        // The list's rows are by domain index, the zero rect for a row
-        // scrolled out of view, and its scroll bar is published with it
-        // (render.h's popup scroll block; absent while every row shows).
-        GuiRect                        combo{0, 0, 0, 0};
-        GuiRect                        combo_list{0, 0, 0, 0};
-        std::vector<GuiRect>           combo_list_items;
-        PopupScrollBar                 combo_list_bar;
+        // (THE SETTINGS EDITOR'S CHOICE COMBO — the combo, its dropped list,
+        // the list's rows and its scroll bar, 2026-10-07 to 2026-10-14 — went
+        // with the choice editor, architect 2026-10-14.)
         std::vector<ModalDialogButton> buttons;
         // THE BUTTON A KEY'S ACCESS LETTER NAMES, by index, or -1 — read off
         // the published buttons (ON SCREEN IS AS PAINTED), the dialog
@@ -7001,9 +6938,9 @@ struct AppState {
 
     // -- THE ON-SCREEN KEYBOARD'S WHOLE STATE (2026-08-27) -----------------
     //
-    // The painted keyboard (onscreen_keyboard.h) stands while any of the five
-    // editor kinds does (the settings choice editor excepted, stands()), on a
-    // backend that asks for one, and it holds NOTHING
+    // The painted keyboard (onscreen_keyboard.h) stands while any of the four
+    // editor kinds does (stands()), on a backend that asks for one, and it
+    // holds NOTHING
     // that is not here. THE TWO LAMPS ARE THE FEATURE'S ONLY REAL STATE — the shift
     // arm and the PAGE (letters, symbols 1/2, symbols 2/2; plasma-keyboard's
     // three, onscreen_keyboard.h) — and both are SESSION-SCOPED: `lamp_session`
@@ -8946,49 +8883,9 @@ struct AppState {
     // flag editor swallowing all keys while active).
     text_editor::State settings_editor;
     bool settings_editor_blink_last = false;
-    // THE SETTINGS EDITOR AS A CHOICE EDITOR (architect 2026-10-07 evening;
-    // the design at GuiSettingsEditor's head, settings_editor.h). It RIDES
-    // the text editor above, which stands as it always does — the modal
-    // rank, the session, OK and Cancel, the focus ring, the commit and every
-    // closer are its — with `pending` kept at `<key>=<shown value>`, so the
-    // commit is the text road's byte for byte. Its fields:
-    //   `active`  the open editor is a choice editor — MEANINGFUL ONLY WHILE
-    //             `settings_editor` stands (settings_choice_live): the
-    //             opener resets this struct and seeds it, and no closer
-    //             owes it a reset;
-    //   `item`    its kSettingsPopupItems row (the label and the domain);
-    //   `shown`   the domain index the combo shows, which Up / Down and a
-    //             list row move and Enter commits;
-    //   the list's state — `list_open`, the hovered and pressed rows and the
-    //             press-began bit — and `list_scroll`, its scroll (render.h's popup scroll
-    //             block), reset with the list at each open.
-    struct SettingsChoice {
-        bool active       = false;
-        int  item         = -1;
-        int  shown        = 0;
-        bool list_open    = false;
-        int  list_hover   = -1;
-        int  list_pressed = -1;
-        bool list_press_began_on_item = false;
-        PopupScroll list_scroll;
-    };
-    SettingsChoice settings_choice;
-    bool settings_choice_live() const {
-        return settings_choice.active && text_editor::is_active(settings_editor);
-    }
-    // The live choice's row and its domain (precondition: settings_choice_live).
-    const SettingsPopupItem& settings_choice_row() const {
-        return kSettingsPopupItems[static_cast<std::size_t>(settings_choice.item)];
-    }
-    int settings_choice_count() const {
-        return settings_choice_row().choices->count();
-    }
-    const char* settings_choice_value(int i) const {
-        return settings_choice_row().choices->value(i);
-    }
-    const char* settings_choice_label(int i) const {
-        return settings_choice_row().choices->label(i);
-    }
+    // (THE SETTINGS EDITOR AS A CHOICE EDITOR — AppState::SettingsChoice,
+    // riding this editor with a combo and its dropped list, 2026-10-07 to
+    // 2026-10-14 — went with the choice rows, architect 2026-10-14.)
 
     // -- THE PICKER'S WHOLE STATE (architect 2026-08-28) -------------------
     //
@@ -9780,16 +9677,16 @@ struct AppState {
 
 // EVERY LIST POPUP'S PUBLISHED BOX UNDER A POINT (2026-10-08, ON SCREEN IS AS
 // PAINTED): the menu row's drop-down (AppState::Dropdown's rect while it is
-// open) and the settings choice editor's list (ModalDialogGeometry's
-// `combo_list`, zeroed at every paint_modal_dialog run and written only while
-// the list is painted down). Both paint ABOVE the notification cards
-// (paint_notifications runs before paint_dropdown and paint_modal_dialog), so
-// a card under one is hidden there and notification_card_at yields to this
-// one predicate's family (floater_above_cards_at, below) — the popups'
-// published boxes the truth, no state of its own.
+// open) — the one list popup since 2026-10-14, the settings choice editor's
+// list (2026-10-07..14) gone with its editor. It paints ABOVE the
+// notification cards (paint_notifications runs before paint_dropdown), so a
+// card under it is hidden there and notification_card_at yields to this one
+// predicate's family (floater_above_cards_at, below) — the popup's published
+// box the truth, no state of its own. (The modal family's box paints BELOW
+// the cards since 2026-10-14 — paint_modal_dialog runs before
+// paint_notifications — so a card over the box takes its press as it shows.)
 inline bool list_popup_at(const AppState& a, int x, int y) {
-    if (a.dropdown.open() && rect_contains(a.dropdown.rect, x, y)) return true;
-    return rect_contains(a.modal_dialog.combo_list, x, y);
+    return a.dropdown.open() && rect_contains(a.dropdown.rect, x, y);
 }
 
 // EVERY POINTER-OWNING SURFACE THAT PAINTS ABOVE THE NOTIFICATION CARDS
@@ -9809,7 +9706,8 @@ inline bool floater_above_cards_at(const AppState& a, int x, int y) {
 // other file states a count of its own. `::` marks a read through
 // folder_overlay::stands (the panel's own name for it, forwarding to this),
 // the rest read this directly:
-//   waveform_paint_area — the waveform's paint gate (::, onscreen_keyboard.h)
+//   modal_box_stands — the modal family's box standing, the waveform's
+//     paint gate's term (waveform_paint_area, onscreen_keyboard.h; modal_box.h)
 //   paint_keyboard_slot — the slot's paint dispatch (::, paint_handler.cpp)
 //   paint_folder_overlay — the panel's painter (::, paint_handler.cpp)
 //   claim_folder_overlay_press — the row press claim (::, input_pointer.cpp)
@@ -10576,9 +10474,9 @@ GuiRect top_marker_row_area(const AppState& a);
 // lane 2, over the border under row 8 (bottom lane 1, 2026-10-14,
 // bottom_border_area in render.h) and the program frame's bottom row on the
 // window's foot, one frame line in from each side, whatever stands over it
-// (2026-10-10: a dialog and
-// the on-screen keyboard are overlays laid over it, onscreen_keyboard.h's
-// overlay block). (It was row 7's single
+// (2026-10-14: the modal family's box and controls row, modal_box.h, and the
+// on-screen keyboard's band inside the frame, onscreen_keyboard.h's
+// placement block). (It was row 7's single
 // status lane from 2026-08-01, one of two lanes while the transport row
 // stood, 2026-08-11..12, the strip's whole surface at the unification, the strip's
 // one lane resting on the WINDOW'S FOOT from commit B, one of two for the one
@@ -10593,25 +10491,76 @@ GuiRect bottom_row_content_area(const AppState& a);
 // program_frame_rect; and the border under row 8 beside its height,
 // bottom_border_area, 2026-10-14.)
 
-// DOES A CHROME TENANT OWN THE BOTTOM ROW — a prompt or a dialog editor,
-// never the render player or the project picker, the two members of the
-// modal family's box (modal_box.h, architect 2026-10-14; the picker's Cancel
-// was a tenant here from 2026-10-10 until it moved onto the family's controls
-// row that day): while this answers true THE DIALOG stands, a BOTTOM OVERLAY
-// laid over the design at the window's foot as Cool Edit's status bar stands
-// under its panels (architect 2026-10-10; the overlays' geometry at
-// onscreen_keyboard.h's overlay block, their painter paint_bottom_overlays):
-// one Hilight line on top, the chrome's ground to the window's foot, no
-// lane moved. The row's modal owners (modal_owns_bottom_row,
-// paint_handler.cpp — the prompt, the render player, the picker, the three
-// dialog editors, AppState::dialog_editor_session's set) less the family's
-// two. A prompt raised over either (the player's load confirmation, the
-// picker's reopen's unsaved-tab question) stands on that member's controls
-// row, on
-// the program's face, as the member does.
-inline bool chrome_tenant_owns_bottom_row(const AppState& a) {
-    if (a.render_player.active || a.picker.active) return false;
-    return a.prompt.active || a.dialog_editor_session() != 0;
+// (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
+// a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
+// laid over the window's foot, 2026-10-10 to 2026-10-14 — IS GONE with the
+// overlay: the prompts and the dialog editors stand in the modal family's
+// box and controls row (modal_box.h, modal_box_dialog_stands), as the render
+// player and the picker do.)
+
+// THE DIALOG EDITOR'S WRAPPED LINE AS PAINTED (DialogEditorText's contract):
+// the row a byte's caret stands on — the row whose range holds it, the
+// buffer's end on the last row; -1 with no rows.
+inline int dialog_editor_row_of(const AppState::DialogEditorText& t, int pos) {
+    const int n = static_cast<int>(t.rows.size());
+    for (int i = 0; i < n; ++i)
+        if (pos < t.rows[static_cast<std::size_t>(i)].end) return i;
+    return n - 1;
+}
+
+// THE LAST CARET STOP ON A ROW: the buffer's end on the last row; on a row
+// the wrap broke, the codepoint boundary BEFORE its end — the caret after
+// the row's last word, ahead of the space the break stands after — since the
+// end itself is the next row's begin and its caret stands there (the
+// soft-wrap's one affinity, text_editor::soft_wrap_rows). End lands here and
+// a press past a row's text does.
+inline int dialog_editor_row_last_stop(const AppState::DialogEditorText& t,
+                                       const std::string& text, int row) {
+    const AppState::DialogEditorText::Row& r =
+        t.rows[static_cast<std::size_t>(row)];
+    if (row == static_cast<int>(t.rows.size()) - 1 || r.end <= r.begin)
+        return r.end;
+    int p = std::min(r.end, static_cast<int>(text.size()));
+    do {
+        --p;
+    } while (p > r.begin &&
+             (static_cast<unsigned char>(text[static_cast<std::size_t>(p)]) &
+              0xC0) == 0x80);
+    return std::max(p, r.begin);
+}
+
+// THE BYTE UNDER A PRESS: the row under `y` (the first whose band's foot lies
+// below it, else the last — a press between two rows takes the lower one),
+// then on that row the NEAREST BOUNDARY to `x` among its caret stops, ties to
+// the lower index — text_editor::byte_index_from_shaped_x's rule read on one
+// row, so a multi-byte character's interior bytes, which carry its start's
+// offset, never win.
+inline int dialog_editor_byte_at(const AppState::DialogEditorText& t,
+                                 const std::string& text, double x, int y) {
+    const int n = static_cast<int>(t.rows.size());
+    if (n == 0) return 0;
+    int row = n - 1;
+    for (int i = 0; i < n; ++i) {
+        const AppState::DialogEditorText::Row& r =
+            t.rows[static_cast<std::size_t>(i)];
+        if (y < r.y + r.h) { row = i; break; }
+    }
+    const AppState::DialogEditorText::Row& r =
+        t.rows[static_cast<std::size_t>(row)];
+    const int last = std::min({dialog_editor_row_last_stop(t, text, row),
+                               static_cast<int>(text.size()),
+                               static_cast<int>(t.byte_x.size()) - 1});
+    int    best   = std::max(0, std::min(r.begin, last));
+    double best_d = std::numeric_limits<double>::infinity();
+    for (int i = best; i <= last; ++i) {
+        const double d = std::abs(
+            r.origin_x + t.byte_x[static_cast<std::size_t>(i)] - x);
+        if (d < best_d) {
+            best_d = d;
+            best   = i;
+        }
+    }
+    return best;
 }
 
 // THE HOVER TOOLTIP'S SEAT AND THE BAND IT CAN HANG INTO (architect
@@ -10643,9 +10592,10 @@ TooltipHangBands tooltip_hang_bands(const AppState& a);
 // keyboard_slot_max_height_px, the folder overlay's band from under the icon
 // row down to the bottom row's top, 2026-08-28 to 2026-10-14 — IS GONE: the
 // folder overlay stands in the modal family's box since 2026-10-14
-// (modal_box.h, its one owner), and the on-screen keyboard is a bottom
-// overlay on the window's foot since 2026-10-10 (onscreen_keyboard.h's
-// overlay block). The two still never both stand — the overlay's owners are
+// (modal_box.h, its one owner), and the on-screen keyboard's band stands on
+// the program frame's bottom row inside the frame since the same day
+// (onscreen_keyboard.h's placement block; a taskbar overlay on the window's
+// foot from 2026-10-10). The two still never both stand — the overlay's owners are
 // not editors, the record at onscreen_keyboard::stands — and still share the
 // slot's one show-and-hide damage rect, onscreen_keyboard::slot_damage_rect.)
 
@@ -10779,14 +10729,14 @@ inline int64_t snap_authored_frame(double frame) {
 // Nothing ASYNCHRONOUS asks this question now.)
 // THE FORCE-END FINALIZER IS NOT A CONSUMER EITHER — it asks this question
 // nowhere — but it is the one body whose MEMBERSHIP must equal this one:
-// finalize_active_drags (input_pointer.cpp) ends all TWELVE members (the
-// VALUE DRAG joined 2026-09-10; the settings choice list's scroll hold
-// 2026-10-08 — the color picker's gesture and its two lists' scroll holds
-// stood beside it until the picker's removal, 2026-10-14), because
+// finalize_active_drags (input_pointer.cpp) ends all ELEVEN members (the
+// VALUE DRAG joined 2026-09-10; the settings choice list's scroll hold stood
+// 2026-10-08 to 2026-10-14, the color picker's gesture and its two lists'
+// scroll holds beside it until the picker's removal the same day), because
 // its callers' whole promise is that a resize, a WM close or the Ctrl+Q hatch
 // lands on a state this predicate calls free. The two lists are grepped
 // against each other whenever either grows; the finalizer's own head comment
-// spells its twelve in its own order.
+// spells its eleven in its own order.
 // THE DISPLAYED-BASIS FREEZE IS NOT A CONSUMER AT ALL: displayed_basis_frozen
 // (beside the basis owners, below) tests a SUBSET of these members under its
 // own derivation — the absolute painted-subject drags, the two pendings that
@@ -10805,8 +10755,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.pending_click.active() ||
            app.pending_trim_drag.active ||
            app.folder_overlay.press.armed ||
-           app.render_player.scrub.armed ||
-           app.settings_choice.list_scroll.live();
+           app.render_player.scrub.armed;
 }
 
 // THE HOME-VIEW BINDING, NARROWED TO THE WARP COLUMN (architect 2026-08-30):
@@ -15516,8 +15465,9 @@ inline bool redesign_button_enabled(const AppState& a,
     //
     // THE MENU ROW STANDS ABOVE THE BAND AND TAKES THE `h` VIEW'S OWN
     // PARTITION (architect 2026-09-03 evening; the band started at the tab
-    // row's first pixel then and starts at the ICON ROW'S FOOT since
-    // 2026-09-09, so the menu row — its three anchors — and
+    // row's first pixel then, at the ICON ROW'S FOOT from 2026-09-09 and at
+    // the view bar's top row since 2026-10-14, the modal family's box, so the
+    // menu row — its three anchors — and
     // the icon row are the roster lanes on screen while a content stands,
     // and "everything
     // else like what we do with history: all the commands in File are

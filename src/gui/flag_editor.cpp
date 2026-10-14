@@ -920,15 +920,16 @@ void GuiFlagEditor::wipe_bpm_state() {
     }
 }
 
-// Open the BPM editor on `idx` — a modal on the bottom row since 2026-08-13.
-// Seed pending is the
+// Open the BPM editor on `idx` — a modal on the bottom row from 2026-08-13,
+// in the modal family's box since 2026-10-14 (modal_box.h). Seed pending is
+// the
 // current bracket text (EMPTY when blank, else `"<beats>@[<lo>,<hi>]"`) — a
 // fresh open is a blank field the whole value is typed into
 // (format_bpm_bracket_text, warpmarkers.h, carries that ruling).
 // Reuses top_flag_editor with Kind::BpmBracket so the keyboard vocabulary
 // swaps to digits + `@`/`,`/`[`/`]`; the dialog painter supplies the visible
-// "BPM:" LABEL beside the field (kBpmEditorPrefix, paint_handler.h), so the
-// buffer holds the bracket text alone.
+// "BPM:" LABEL ahead of the line in the box (kBpmEditorPrefix,
+// paint_handler.h), so the buffer holds the bracket text alone.
 void GuiFlagEditor::enter_bpm_edit(int idx) {
     if (idx < 0) return;
     if (!app.bpm_mode_enabled) return;
@@ -940,7 +941,7 @@ void GuiFlagEditor::enter_bpm_edit(int idx) {
         text_editor::Kind::BpmBracket,
         format_bpm_bracket_text(mv[idx]));
     // enter_text_edit's tail invalidates the top strip, but the BPM editor
-    // draws in the bottom row's modal, whose rect does not exist before its
+    // draws in the modal family's box, whose rect does not exist before its
     // first paint — so a MODAL OPEN damages the whole window (the settings
     // opener carries the rule).
     viewport.invalidate_all();
