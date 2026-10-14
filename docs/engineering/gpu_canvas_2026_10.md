@@ -252,6 +252,21 @@ sequence — capturing after each, then compares every pair. Any difference is
 a defect until the architect rules otherwise. The P3 dataspace is checked in
 `dumpsys SurfaceFlinger` separately.
 
+THE LAPTOP'S PROOF (2026-10-14, the twin's first day): the same method over
+`grim` on labwc, the builds `build/` (gl) and `build-cpu/` (cpu) launched
+in turn on the session's display, the acts injected as KEYS through
+ydotool (its uinput device is relative-only, so the pointer is pinned off
+the window by one large relative move and never clicked): the launch,
+Full Zoom Out, two zoom steps, two walks right and one left, the tab
+switch and back, the `h` view and back, the Settings pull-down over the
+canvas and its Esc, the folder overlay and its Esc — fifteen states on
+the MAXIMIZED window (the app's own launch request) and eleven on the
+RESTORED one (labwc's Ctrl+F10, ToggleMaximize), the sizing frame
+standing. Every pair identical over the whole output above the desktop's
+taskbar (its clock and a terminal title's spinner move; the window never
+reaches it). The harness lives in tmp/ (`laptop_identity.sh`,
+`laptop_identity_restored.sh`), a measurement and never a test suite.
+
 ## 6. Hazards named at the design
 
 The EGL surface's colorspace attribute on this driver (a refusal makes the
@@ -260,5 +275,7 @@ the upload cost of the texture road at milestone 1 before the canvas leaves
 the upload at milestone 2; any future overlay that is translucent or not a
 rectangle (it breaks §3.4's discard rule and must composite on the CPU); the
 CTM under a non-zero frame (the Wayland twin's restored window) for the
-three canvas painters that never set antialias — exact today because every
-rect and the translation are integral.
+three canvas painters that never set antialias — exact because every rect
+and the translation are integral, and MEASURED SO on 2026-10-14: the
+restored window's eleven states are identical between the two laptop
+builds (§5).
