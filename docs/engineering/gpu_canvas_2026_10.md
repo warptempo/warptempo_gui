@@ -272,6 +272,10 @@ sequence — capturing after each, then compares every pair. Any difference is
 a defect until the architect rules otherwise. The P3 dataspace is checked in
 `dumpsys SurfaceFlinger` separately.
 
+A SIXTEENTH STATE IS OWED at the next tablet proof (2026-10-14): the
+Settings Chrome or Caption row's dropped list over the canvas, absent from
+the fifteen.
+
 THE LAPTOP'S PROOF (2026-10-14, the twin's first day): the same method over
 `grim` on labwc, the builds `build/` (gl) and `build-cpu/` (cpu) launched
 in turn on the session's display, the acts injected as KEYS through

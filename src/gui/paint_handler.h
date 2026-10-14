@@ -769,7 +769,7 @@ private:
     // it: `canvas_clear_open` (a painted frame's summary is pending), the
     // frame's decision `canvas_clear_skip`, whether a rect of it covered the
     // area whole (`canvas_clear_covered`), and whether a floating surface
-    // stood at its start or after any of its rects (`canvas_clear_floater`).
+    // stood over it (`canvas_clear_floater`, the frame's floater bit).
     // Read and written under kGuiCanvasDrawList alone; on_resize forgets it.
     bool    canvas_clear_known   = false;
     GuiRect canvas_clear_area{0, 0, 0, 0};

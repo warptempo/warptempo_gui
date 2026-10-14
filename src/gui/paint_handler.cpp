@@ -7901,11 +7901,21 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // THE GL CANVAS READS IT TOO (on_redraw's canvas block), for the pixels a
 // floating surface puts over the canvas: the draw list's floater bit (the
 // upload walk's) and the canvas paint area's known-clear record.
+// EVERY TERM IS STATE THE INPUT WROTE, NEVER A RECT THE PAINT PUBLISHED
+// (architect 2026-10-14): the canvas's bit is decided at the frame's first
+// damage rect, BEFORE any pass paints, so a term read off a painter's
+// publication (the modal stash's `combo_list`) lags a frame — on the frame
+// a list drops it reads empty, and the list's rows over the canvas would be
+// cut out of the upload with nothing damaging them again. The dropped
+// choice list is therefore the choice editor's own `list_open` on a
+// standing choice editor (AppState::SettingsChoice); the published rect
+// stays the press router's hit geometry alone. The term may stand on a
+// frame whose dialog paints no list (a prompt outranking the editor): a
+// whole upload and an uncleared skip are only cost, never a wrong pixel.
 static bool floating_surface_stands(const AppState& app) {
     return app.dropdown.open() || app.redesign_tooltip.visible ||
            !app.notifications.cards.empty() ||
-           (app.modal_dialog.combo_list.w > 0 &&
-            app.modal_dialog.combo_list.h > 0);
+           (app.settings_choice_live() && app.settings_choice.list_open);
 }
 
 // THE UPPER ROWS' LIVE FINGERPRINT — the ONE function the paint (publishing
@@ -8376,10 +8386,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // known clear clears nothing — its rects' clears would write 0 on
     // pixels already 0, so every byte is the clearing frame's.
     //   * KNOWN CLEAR after a painted frame that stood no floating surface
-    //     (floating_surface_stands at the frame's first rect and after each
-    //     of its rects — the after read catches the Settings choice
-    //     editor's dropped list, whose bit is the modal stash its own
-    //     painter publishes) and whose area was clear at its end: a rect of
+    //     (floating_surface_stands at the frame's first rect, the frame's
+    //     floater bit — its terms are live state, which no pass of the
+    //     frame writes) and whose area was clear at its end: a rect of
     //     it covered the area whole (its clear, or its skip, left every
     //     pixel 0), or the frame skipped (it began known clear). Nothing
     //     else in a frame writes inside the area: THE PAINTERS OVER THE
@@ -8818,12 +8827,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     paint_shift_tooltip(cr);
 
     cairo_restore(cr);
-
-    // THE KNOWN-CLEAR RECORD'S FLOATER, read after the rect's passes (the
-    // rule at the CLEAR above): a surface whose bit is its own painter's
-    // publication shows in it here, on the frame that painted it.
-    if constexpr (kGuiCanvasDrawList)
-        canvas_clear_floater |= floating_surface_stands(app);
 
     // The target here IS memory something outside cairo will read: under the
     // Wayland cpu canvas each buffer's surface is a cairo IMAGE surface
