@@ -8305,6 +8305,9 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // over the top strip is transparent above the marker lane.) A floater's
 // own publications ride a clip that covers it, so while one stands the
 // check declares the rect the route declared before 2026-10-13, whole.
+// THE GL CANVAS READS IT TOO (on_redraw's canvas block), for the pixels a
+// floating surface puts over the canvas: the draw list's floater bit (the
+// upload walk's) and the canvas paint area's known-clear record.
 static bool floating_surface_stands(const AppState& app) {
     return app.dropdown.open() || app.redesign_tooltip.visible ||
            !app.notifications.cards.empty() || app.color_picker.active ||
@@ -8709,6 +8712,23 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             frame.clip    = canvas_paint_whole ? canvas_paint : GuiRect{0, 0, 0, 0};
             frame.floater = floating_surface_stands(app);
             gui.set_canvas_frame(&frame);
+            // THE KNOWN-CLEAR RECORD'S FOLD AND THE FRAME'S DECISION (the
+            // rule at the CLEAR below): the last painted frame's summary
+            // becomes the record, and this frame skips its clears only on a
+            // known-clear area it shares with that frame, no floating
+            // surface standing.
+            if (canvas_clear_open)
+                canvas_clear_known = !canvas_clear_floater &&
+                                     (canvas_clear_skip ||
+                                      canvas_clear_covered);
+            canvas_clear_open = true;
+            canvas_clear_skip = canvas_clear_known && canvas_paint_whole &&
+                                canvas_paint == canvas_clear_area &&
+                                !frame.floater;
+            canvas_clear_area    = canvas_paint_whole ? canvas_paint
+                                                      : GuiRect{0, 0, 0, 0};
+            canvas_clear_covered = false;
+            canvas_clear_floater = frame.floater;
         }
         if (!canvas_list_built && canvas_paint_whole &&
             std::max(x, canvas_paint.x) <
@@ -8755,15 +8775,63 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // above): the face skips the canvas's paint area and one CLEAR empties
     // it, so its pixels are alpha 0 until an overlay paints over them
     // (canvas_sink.h's transparency invariant).
+    //
+    // THE CLEAR OF AN ALREADY-CLEAR AREA IS SKIPPED (2026-10-14): the GUI
+    // keeps, in the paint handler and never from the platform's upload
+    // state, whether the backbuffer's canvas paint area is KNOWN CLEAR
+    // (canvas_clear_known, paint_handler.h), and a frame whose area is
+    // known clear clears nothing — its rects' clears would write 0 on
+    // pixels already 0, so every byte is the clearing frame's.
+    //   * KNOWN CLEAR after a painted frame that stood no floating surface
+    //     (floating_surface_stands at the frame's first rect and after each
+    //     of its rects — the after read catches the Settings choice
+    //     editor's dropped list, whose bit is the modal stash its own
+    //     painter publishes) and whose area was clear at its end: a rect of
+    //     it covered the area whole (its clear, or its skip, left every
+    //     pixel 0), or the frame skipped (it began known clear). Nothing
+    //     else in a frame writes inside the area: THE PAINTERS OVER THE
+    //     WELL, re-derived by grep from the passes below, are the cards
+    //     (paint_notifications), the pull-downs (paint_dropdown), the color
+    //     picker's card and lists, veiled or not, and the Settings choice
+    //     editor's dropped list (paint_modal_dialog), and the tooltip
+    //     (paint_shift_tooltip) — the floater bit's five; the keyboard, a
+    //     dialog on it and the dialog alone (paint_keyboard_slot,
+    //     paint_bottom_overlays, paint_modal_dialog's band) stand below the
+    //     area's foot, which waveform_paint_area cuts at their line; the
+    //     folder overlay empties the area (nothing is cleared or skipped
+    //     under it); the column's face above skips the area (its hole);
+    //     every other pass keeps to its own lane (the caption, the menu
+    //     row, the band, row 8 and the program frame; paint_trim, the ruler
+    //     and the flag blit in the top strip; the flag editor's field in the
+    //     marker lane). Nothing writes the backbuffer between frames (the
+    //     platform paints only through this pass, its sizing frame outside
+    //     the client area).
+    //   * UNKNOWN — the frame clears as before — when a floating surface
+    //     stands now or stood in the last painted frame, when the area
+    //     differs from the last painted frame's (the keyboard, a dialog on
+    //     it or the folder overlay came or went), at the first frame (a
+    //     project set's paint handler starts unknown, the backbuffer being
+    //     the process's), and after any on_resize (on_resize forgets the
+    //     record): the backbuffer is remade only at a size it does not
+    //     have, and the client area moves inside it only with the frame,
+    //     both platforms firing the resize for either; an Android window
+    //     adoption that moves nothing keeps the backbuffer and its bytes.
+    // The cairo road clears nothing and keeps no record.
     if constexpr (kGuiCanvasDrawList) {
         paint_canvas_column_frame(cr, app, &canvas_paint);
         if (canvas_paint_whole) {
-            cairo_save(cr);
-            cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
-            cairo_rectangle(cr, canvas_paint.x, canvas_paint.y,
-                            canvas_paint.w, canvas_paint.h);
-            cairo_fill(cr);
-            cairo_restore(cr);
+            if (!canvas_clear_skip) {
+                cairo_save(cr);
+                cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+                cairo_rectangle(cr, canvas_paint.x, canvas_paint.y,
+                                canvas_paint.w, canvas_paint.h);
+                cairo_fill(cr);
+                cairo_restore(cr);
+            }
+            if (x <= canvas_paint.x && y <= canvas_paint.y &&
+                x + w >= canvas_paint.x + canvas_paint.w &&
+                y + h >= canvas_paint.y + canvas_paint.h)
+                canvas_clear_covered = true;
         }
     } else {
         paint_canvas_column_frame(cr, app, nullptr);
@@ -9158,6 +9226,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     cairo_restore(cr);
 
+    // THE KNOWN-CLEAR RECORD'S FLOATER, read after the rect's passes (the
+    // rule at the CLEAR above): a surface whose bit is its own painter's
+    // publication shows in it here, on the frame that painted it.
+    if constexpr (kGuiCanvasDrawList)
+        canvas_clear_floater |= floating_surface_stands(app);
+
     // The target here IS memory something outside cairo will read: under the
     // Wayland cpu canvas each buffer's surface is a cairo IMAGE surface
     // created over the mmap'd wl_shm pool (GuiPlatform::recreate_shm_pool),
@@ -9211,6 +9285,13 @@ void GuiPaintHandler::begin_canvas_frame() {
 void GuiPaintHandler::on_resize(int w, int h) {
     app.width  = w;
     app.height = h;
+    // THE CANVAS'S KNOWN-CLEAR RECORD IS FORGOTTEN (2026-10-14; the rule at
+    // on_redraw's CLEAR): the backbuffer may be new, or the client area moved
+    // inside it, so the next frame clears.
+    if constexpr (kGuiCanvasDrawList) {
+        canvas_clear_known = false;
+        canvas_clear_open  = false;
+    }
     if (app.loading || audio.total_frames() <= 0) return;
 
     // A zoom level valid at the old width may exceed the per-file effective

@@ -17,7 +17,9 @@
 // (2026-10-14) so every platform's present drives the same ones. The calls,
 // their order and their arguments are the tablet's of 2026-10-13: the GL
 // canvas's identity proof (docs/engineering/gpu_canvas_2026_10.md §5) holds
-// across the move by construction.
+// across the move by construction. One reduction since, pixel-neutral by its
+// key: the plate's bounds texture is re-sent only when its key moved
+// (upload_list, 2026-10-14).
 
 namespace {
 
@@ -272,6 +274,8 @@ void GuiGlCanvas::ensure_programs() {
                      GL_SHORT, seed);
         columns_w_ = 1;
         columns_h_ = 2;
+        // The seed is no upload: the first plate packs whatever its key.
+        columns_uploaded_ = false;
         glActiveTexture(GL_TEXTURE0);
     }
 }
@@ -333,8 +337,9 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // (kListVertexShader's head; GuiCanvasPrimitive, canvas_sink.h): its
 // records as instances in list order, one instanced draw, the scissor
 // the canvas clip (the cpu road's own clip of every canvas pass) — its
-// instances and the plate's bounds texture re-made only when the list's
-// generation moved (upload_list). THE TEXTURE: one full-screen
+// instances re-made only when the list's generation moved, and the plate's
+// bounds texture, inside that, only when the plate's key moved
+// (upload_list). THE TEXTURE: one full-screen
 // triangle over the surface's own viewport, the fragment shader placing
 // each texel at its pixel and DISCARDING an alpha-0 one, so the canvas
 // shows wherever the backbuffer's interior is clear and every other
@@ -466,32 +471,58 @@ void GuiGlCanvas::forget() {
     columns_texture_     = 0;
     columns_w_           = 0;
     columns_h_           = 0;
+    columns_uploaded_    = false;
+    columns_revision_    = 0;
+    columns_spans_.clear();
     upload_seeded_       = false;
 }
 
 // THE LIST'S UPLOAD (2026-10-13; present_frame's draw): every record one
 // instance in list order, its coordinates moved by the frame into surface px (a
-// rect, a run's origin, a plate's row 0 alike), and THE PLATE'S BOUNDS
+// rect, a run's origin, a plate's row 0 alike), the instance buffer rewritten
+// whole — asked only when the list's generation moved, so at every rebuild of
+// the records (the scanner's and the cursor's among them; the buffer is small).
+// A plate record's `period` is re-pointed at its rows of THE PLATE'S BOUNDS
 // TEXTURE — two rows per plate record, the record's columns left to right:
 // row 2k {o0, o1, i0, i1}, row 2k + 1 {lo, hi, 0, 0}, the plate's rows as
 // render_waveform_columns gathered them (the cairo road's empty sentinels,
 // y_lo − 1 among them, are why the format is signed, GL_RGBA16I — every
-// value a plate row of a canvas far under 32767 rows) — the instance's
-// `period` re-pointed at its first row. Remade at a size change, else
-// rewritten whole. Asked only when the list's generation moved.
+// value a plate row of a canvas far under 32767 rows), zero past a record's
+// width and below the last record's rows.
+// THE BOUNDS TEXTURE HAS ITS OWN LIFETIME (2026-10-14): it is packed and sent
+// only when its KEY moved — the list's plate revision, the plate records'
+// spans in list order (each its offset into the list's columns and its
+// width, so their count too), and the dimensions those spans give it — or
+// when the texture holds no upload yet (the seed of ensure_programs, a
+// context remade after forget()); remade at a size change, else rewritten
+// whole. THE KEY IS COMPLETE: every texel is a function of the spans, the
+// dimensions and the list's columns at those spans, and the list's columns
+// are a function of the revision alone — the list sink copies the live
+// plate's stored bands into them once per revision, and the live plate's
+// bounds change only at a publication, which takes a new revision
+// (GuiPlateColumns::revision, render.h; GuiListCanvasSink::plate). A list
+// with no plate record leaves the texture and its key as they are: nothing
+// samples it, and its texels still answer the key.
 void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list, int frame_px) {
-    static std::vector<CanvasInstance> instances;
-    static std::vector<GLshort>        texels;
+    static std::vector<CanvasInstance>      instances;
+    static std::vector<GLshort>             texels;
+    static std::vector<std::pair<int, int>> spans;
     const int f = frame_px;
-    int plates = 0;
-    int max_w  = 1;
+    spans.clear();
+    int max_w = 1;
     for (const GuiCanvasPrimitive& p : list.prims) {
         if (p.kind != GuiCanvasKind::Plate) continue;
-        ++plates;
+        spans.emplace_back(p.period, p.r.w);
         max_w = std::max(max_w, p.r.w);
     }
-    const int rows = std::max(2, 2 * plates);
-    if (plates > 0)
+    const int plates = static_cast<int>(spans.size());
+    const int rows   = std::max(2, 2 * plates);
+    const bool pack =
+        plates > 0 &&
+        !(columns_uploaded_ && list.plate_revision == columns_revision_ &&
+          spans == columns_spans_ && max_w == columns_w_ &&
+          rows == columns_h_);
+    if (pack)
         texels.assign(static_cast<size_t>(max_w) * rows * 4, 0);
     const auto texel = [&](int row, int col) {
         return &texels[(static_cast<size_t>(row) * max_w + col) * 4];
@@ -524,17 +555,19 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list, int frame_px) {
             in.param[2] = p.origin + f;
             break;
         case GuiCanvasKind::Plate:
-            for (int j = 0; j < p.r.w; ++j) {
-                const WaveformColumnRows& c =
-                    list.columns[static_cast<size_t>(p.period + j)];
-                GLshort* a = texel(row, j);
-                a[0] = clamp16(c.o0);
-                a[1] = clamp16(c.o1);
-                a[2] = clamp16(c.i0);
-                a[3] = clamp16(c.i1);
-                GLshort* b = texel(row + 1, j);
-                b[0] = clamp16(c.lo);
-                b[1] = clamp16(c.hi);
+            if (pack) {
+                for (int j = 0; j < p.r.w; ++j) {
+                    const WaveformColumnRows& c =
+                        list.columns[static_cast<size_t>(p.period + j)];
+                    GLshort* a = texel(row, j);
+                    a[0] = clamp16(c.o0);
+                    a[1] = clamp16(c.o1);
+                    a[2] = clamp16(c.i0);
+                    a[3] = clamp16(c.i1);
+                    GLshort* b = texel(row + 1, j);
+                    b[0] = clamp16(c.lo);
+                    b[1] = clamp16(c.hi);
+                }
             }
             in.param[1] = row;
             in.param[2] = p.origin + f;
@@ -551,7 +584,7 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list, int frame_px) {
                      instances.data(), GL_STREAM_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
-    if (plates > 0) {
+    if (pack) {
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, columns_texture_);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -566,6 +599,9 @@ void GuiGlCanvas::upload_list(const GuiCanvasDrawList& list, int frame_px) {
                             GL_RGBA_INTEGER, GL_SHORT, texels.data());
         }
         glActiveTexture(GL_TEXTURE0);
+        columns_uploaded_ = true;
+        columns_revision_ = list.plate_revision;
+        columns_spans_    = spans;
     }
     list_instances_  = static_cast<int>(instances.size());
     list_generation_ = list.generation;

@@ -166,9 +166,10 @@ void GuiCairoCanvasSink::plate(const GuiRect& area, cairo_surface_t* surface,
 
 // -- THE LIST SINK -----------------------------------------------------------
 
+// THE COLUMNS ARE NOT CLEARED HERE (2026-10-14): they belong to the plate's
+// revision, not to the rebuild (plate, below).
 GuiListCanvasSink::GuiListCanvasSink(GuiCanvasDrawList& list) : list_(list) {
     list_.prims.clear();
-    list_.columns.clear();
     ++list_.generation;
 }
 
@@ -220,12 +221,22 @@ void GuiListCanvasSink::stem_dots(int x, int y, int len, int period,
 // the area's origin — at the plate's own size, so a plate published at a
 // stale size is drawn exactly as the blit draws it, the scissor (inside the
 // blit's area clip) cutting what overhangs.
+// THE BOUNDS ARE COPIED ONCE PER REVISION (2026-10-14; GuiCanvasDrawList's
+// plate payload): a plate whose revision the list already holds keeps the
+// held copy — the same bands' bounds, since the live slot changes only at a
+// publication and every publication takes a new revision — and each record's
+// offset into it is the running sum of the stored bands' widths either way,
+// the offsets the copy made.
 void GuiListCanvasSink::plate(const GuiRect& area, cairo_surface_t* /*surface*/,
                               const GuiPlateColumns& columns,
                               WaveformPlateInks inks) {
     if (!columns.rendered) return;
+    assert(columns.revision != 0);
+    const bool copy = columns.revision != list_.plate_revision;
+    if (copy) list_.columns.clear();
     const uint32_t ink     = argb32_opaque_word(hex(inks.ink_rgb));
     const uint32_t outline = argb32_opaque_word(hex(inks.outline_rgb));
+    std::size_t offset = 0;
     for (const GuiPlateColumns::Band& b : columns.band) {
         if (!b.stored) continue;
         const WaveformBandColumns& c = b.columns;
@@ -236,12 +247,16 @@ void GuiListCanvasSink::plate(const GuiRect& area, cairo_surface_t* /*surface*/,
         GuiCanvasPrimitive p;
         p.kind   = GuiCanvasKind::Plate;
         p.r      = GuiRect{area.x + c.col_lo, area.y + c.y_lo, w, h};
-        p.period = static_cast<int>(list_.columns.size());
+        p.period = static_cast<int>(offset);
         p.origin = area.y;
         p.word   = ink;
         p.word2  = outline;
-        list_.columns.insert(list_.columns.end(), c.cols.begin(),
-                             c.cols.end());
+        if (copy)
+            list_.columns.insert(list_.columns.end(), c.cols.begin(),
+                                 c.cols.end());
+        offset += c.cols.size();
         list_.prims.push_back(p);
     }
+    assert(offset == list_.columns.size());
+    list_.plate_revision = columns.revision;
 }

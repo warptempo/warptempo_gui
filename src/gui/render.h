@@ -3319,10 +3319,23 @@ bool render_waveform_columns(GuiRect area,
 // whole — and transparent otherwise (the rows outside both bands, an odd
 // plate's last, included). `rendered` stands where the cairo road's surface
 // would exist: set by the producer, cleared by the cache's destroy.
+// THE PLATE'S OWN REVISION (2026-10-14): `revision` names the live slot's
+// bounds — a process-wide counter the GUI thread stamps at every PUBLICATION
+// of a plate (next_plate_revision, waveform_cache.cpp: the worker's
+// completion swap and the synchronous rebuild, the only two writers of the
+// live slot), never 0 once published, and never repeated in the process, so
+// one revision names one set of bounds whatever project set or cache
+// produced it. An owned number rather than an address: the slots swap, and
+// a pointer would name the slot, not the plate in it. The pending slot's
+// revision is stale and read by nobody; the producer never writes it.
+// Its readers are the GL canvas's alone: the list sink copies the bounds only
+// when the revision moved, and the GL canvas re-uploads its bounds texture only
+// when it moved (GuiGlCanvas::upload_list).
 struct GuiPlateColumns {
-    bool rendered = false;
-    int  width  = 0;
-    int  height = 0;
+    bool     rendered = false;
+    int      width  = 0;
+    int      height = 0;
+    uint64_t revision = 0;
     struct Band {
         bool                stored = false;
         WaveformBandColumns columns;

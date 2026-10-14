@@ -754,6 +754,22 @@ private:
     // frame's list built. Read and written under kGuiCanvasDrawList alone.
     bool canvas_frame_seen = false;
     bool canvas_list_built = false;
+    // THE CANVAS PAINT AREA'S KNOWN-CLEAR RECORD (2026-10-14; the rule at
+    // on_redraw's canvas block, where the CLEAR it skips stands). Between
+    // painted frames: `canvas_clear_known` — every backbuffer pixel of
+    // `canvas_clear_area` (the last painted frame's paint area, client px) is
+    // 0. Through a frame, the summary the next frame's first rect folds into
+    // it: `canvas_clear_open` (a painted frame's summary is pending), the
+    // frame's decision `canvas_clear_skip`, whether a rect of it covered the
+    // area whole (`canvas_clear_covered`), and whether a floating surface
+    // stood at its start or after any of its rects (`canvas_clear_floater`).
+    // Read and written under kGuiCanvasDrawList alone; on_resize forgets it.
+    bool    canvas_clear_known   = false;
+    GuiRect canvas_clear_area{0, 0, 0, 0};
+    bool    canvas_clear_open    = false;
+    bool    canvas_clear_skip    = false;
+    bool    canvas_clear_covered = false;
+    bool    canvas_clear_floater = false;
     // The frame's draw list from the canvas passes, through the list sink, in
     // on_redraw's paint order (the definition, paint_handler.cpp).
     void build_canvas_list(GuiCanvasDrawList& frame, bool plate_branch);

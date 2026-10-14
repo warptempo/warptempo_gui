@@ -47,8 +47,9 @@
 //     GuiGlCanvas::present_frame), the CPU never paints these pixels at all.
 //
 // THE TRANSPARENCY INVARIANT (design record §3.4): under the GL canvas the
-// backbuffer's canvas paint area is CLEARED (CAIRO_OPERATOR_CLEAR, on_redraw)
-// where the cpu road fills and paints it — the chrome ground and the
+// backbuffer's canvas paint area is CLEARED (CAIRO_OPERATOR_CLEAR, on_redraw;
+// skipped where it is known clear already, 2026-10-14) where the cpu road
+// fills and paints it — the chrome ground and the
 // column's face skip it — so every CPU pixel inside the canvas paint area is
 // EITHER ALPHA 0 (the GPU's: the texture shader discards it and the canvas
 // drawn from the list shows) OR ALPHA 255 (an overlay's: every overlay over
@@ -125,12 +126,21 @@ struct GuiCanvasPrimitive {
 // moved makes the platform's next walk whole. THE PROCESS'S ONE OBJECT
 // (gui_canvas_frame below), because the platform reads it at present and
 // outlives every project set (platform.h's loop contract). `generation`
-// moves at every rebuild of the records, so the platform re-reads what it
-// uploads (the plate's columns) only when they changed.
+// moves at every rebuild of the records, so the platform re-reads the
+// records (its instance buffer) only when they changed.
+// THE PLATE'S PAYLOAD HAS ITS OWN LIFETIME (2026-10-14): `columns` holds the
+// bounds of the plate whose revision is `plate_revision`
+// (GuiPlateColumns::revision, render.h; 0 before the first plate), kept
+// across rebuilds and recopied by the list sink only when a plate of another
+// revision arrives — a revision's bounds never change, so the kept copy is
+// the copy a rebuild would make. The list's Plate records, when it has any,
+// draw that plate, and the platform re-uploads its bounds texture only when
+// the revision or the records' spans moved (GuiGlCanvas::upload_list).
 struct GuiCanvasDrawList {
     GuiRect  clip{};
     bool     floater = false;
     uint64_t generation = 0;
+    uint64_t plate_revision = 0;
     std::vector<GuiCanvasPrimitive>  prims;
     std::vector<WaveformColumnRows>  columns;
 };
@@ -183,7 +193,8 @@ private:
 };
 
 // Rebuilds `list`'s records from empty (the clip and the floater bit are the
-// caller's), the generation moved at construction.
+// caller's), the generation moved at construction; the plate's columns are
+// kept while their revision holds (GuiCanvasDrawList's plate payload).
 class GuiListCanvasSink final : public GuiCanvasSink {
 public:
     explicit GuiListCanvasSink(GuiCanvasDrawList& list);

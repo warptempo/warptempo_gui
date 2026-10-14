@@ -146,6 +146,22 @@ void render_waveform_to_cache_surface(
     if (!whole1) clear_rows(b1.y, b1.h);
 }
 
+// -- next_plate_revision (2026-10-14, the GL canvas) -----------------------
+//
+// THE PLATE'S REVISION COUNTER (GuiPlateColumns::revision, render.h): one per
+// process — a project set's cache is torn down with it, the GL canvas and its
+// draw list are not — advanced on the GUI thread at each of the live slot's
+// two writes, the completion swap (on_waveform_render_done) and the
+// synchronous rebuild (force_synchronous_waveform_rebuild). The first value
+// is 1, so 0 stays "never published". Unreferenced on the cpu canvas, whose
+// publications reach it only under kGuiCanvasDrawList.
+namespace {
+[[maybe_unused]] uint64_t next_plate_revision() {
+    static uint64_t revision = 0;
+    return ++revision;
+}
+} // namespace
+
 // -- render_waveform_to_plate_columns (2026-10-13, the GL canvas) ----------
 //
 // The function above with the store left out (the contract at the
@@ -591,6 +607,11 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     std::swap(wf_cache.columns,        wf_cache.pending_columns);
     std::swap(wf_cache.width,          wf_cache.pending_width);
     std::swap(wf_cache.height,         wf_cache.pending_height);
+    // A NEW PLATE IS LIVE: its bounds take a revision of their own
+    // (GuiPlateColumns::revision), the GL canvas's key for its copy and its
+    // upload.
+    if constexpr (kGuiCanvasDrawList)
+        wf_cache.columns.revision = next_plate_revision();
 
     wf_cache.fp_vp_start     = wf_cache.pending_fp_vp_start;
     wf_cache.fp_vp_end       = wf_cache.pending_fp_vp_end;
@@ -796,6 +817,9 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
             *in.audio,
             in.vp_start, in.painter_spp, in.gain_hash != 0,
             in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
+        // The live slot rewritten in place is a new plate: a revision of
+        // its own (the completion swap's rule).
+        wf_cache.columns.revision = next_plate_revision();
         wf_cache.width  = in.area_w;
         wf_cache.height = in.area_h;
     } else {

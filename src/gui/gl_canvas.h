@@ -2,6 +2,8 @@
 #include <cairo/cairo.h>
 #include <cstdint>
 #include <span>
+#include <utility>
+#include <vector>
 
 struct GuiCanvasDrawList;
 
@@ -83,6 +85,11 @@ private:
     // over the instance buffer, the plate's bounds texture and its size —
     // made with the texture program, living in the context — and the
     // instances' count and the list generation they were made from.
+    // THE BOUNDS TEXTURE'S KEY (2026-10-14, upload_list's rule): whether its
+    // texels are an upload's at all (false while it holds the seed, after
+    // forget()), and the plate revision and the plate records' spans —
+    // each record's offset into the list's columns and its width, in list
+    // order — that upload packed.
     unsigned int list_program_        = 0;
     int          list_size_uniform_   = -1;
     int          list_height_uniform_ = -1;
@@ -94,6 +101,9 @@ private:
     unsigned int columns_texture_     = 0;
     int          columns_w_           = 0;
     int          columns_h_           = 0;
+    bool         columns_uploaded_    = false;
+    uint64_t     columns_revision_    = 0;
+    std::vector<std::pair<int, int>> columns_spans_;
     // THE LAST UPLOAD WALK'S CANVAS (present_frame's upload rule): its clip
     // in surface px, its floater bit, and whether the texture has had a walk
     // since it was made (ensure_texture clears it).

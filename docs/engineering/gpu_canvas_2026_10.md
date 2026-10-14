@@ -147,10 +147,24 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    order, every write opaque, later wins. Dot runs discard by
    `(row − origin) mod period ≠ phase` in integer math. Every color is the
    same converted word the cairo sink would store (`argb32_opaque_word` of
-   `display_color`).
+   `display_color`). THE PLATE'S BOUNDS HAVE A LIFETIME OF THEIR OWN
+   (2026-10-14): every publication of a plate stamps it with a process-wide
+   revision (`GuiPlateColumns::revision`, `next_plate_revision`), the list
+   sink copies the bounds into the list only when the revision moved, and
+   the GL owner repacks and re-uploads the bounds texture only when its key
+   — the revision, the plate records' spans in list order, the texture's
+   dimensions — differs from the texture's; a scanner-only frame rebuilds
+   the list and re-uploads the instances alone.
 4. **The canvas interior is transparent in the backbuffer.** Under the GL
    build the CPU clears the interior inside the canvas's paint area to
-   0x00000000 instead of filling and painting it; the overlays paint over
+   0x00000000 instead of filling and painting it — AND SKIPS THAT CLEAR
+   WHEN THE AREA IS KNOWN CLEAR (2026-10-14): the paint handler records
+   that the last painted frame stood no floating surface and left the
+   whole area 0, and a frame on the same area with no floater standing
+   clears nothing; a floater now or last frame, a changed paint area, the
+   first frame of a project set and any resize make it unknown and the
+   frame clears as before (the rule and the overlay inventory at
+   on_redraw's canvas block, paint_handler.cpp); the overlays paint over
    it opaque as today. The texture draw DISCARDS alpha-0 texels, so wherever
    the CPU painted an overlay the overlay shows and everywhere else the GL
    canvas shows. A texel with alpha strictly between 0 and 255 inside the
