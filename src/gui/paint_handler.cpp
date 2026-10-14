@@ -5536,17 +5536,26 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
 //
-// THE MODAL LIVES ON THE BOTTOM ROW (architect 2026-08-13, scrapping the
-// centered box of 2026-08-12: "it looks sloppy — no compositor drop shadow,
-// and faking one wouldn't work"). NOTHING ABOUT THE RENDERER MOVED — one
-// window, one surface, one frame, one painter, exactly as before; only the
-// modal's RECTANGLE moved from the window's centre onto this row, so this is
-// emphatically not the scrapped second-toplevel model (closed_questions.md
-// carries that do-not-re-propose). WHILE A PROMPT OR A DIALOG EDITOR STANDS THE ROW
-// YIELDS WHOLE: all SEVENTEEN buttons — the VERB GROUP'S EIGHT, the marker
-// walk group's four and the four arrows with Play — plus the clock's
-// time field and the state line beside it stand down, nothing negotiates for
-// space, and paint_modal_dialog paints the modal into the lane they left.
+// EVERY MODAL STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
+// (architect 2026-10-14, modal_box.h, the one owner of the shape): a sunken
+// box in the canvas column's ring from the view bar's top row down, and
+// under it the controls row on row 8's content band. NOTHING ABOUT THE
+// RENDERER MOVED for it — one window, one surface, one frame, one painter —
+// so this is emphatically not the scrapped second-toplevel model
+// (closed_questions.md carries that do-not-re-propose). WHILE ANY MODAL
+// STANDS ROW 8 YIELDS WHOLE: all SEVENTEEN buttons — the VERB GROUP'S EIGHT,
+// the marker walk group's four and the four arrows with Play — plus the
+// clock's time field and the state line beside it stand down, nothing
+// negotiates for space, and the modal's controls take the content band they
+// left (paint_modal_dialog, every modal's controls row; the box is
+// paint_modal_box's, laid by paint_modal_dialog for the prompts, the dialog
+// editors and the progress modal and by paint_folder_overlay for the render
+// player and the picker). (HISTORY: from 2026-08-13 to 2026-10-14 the modal lived ON THIS
+// ROW ALONE — the architect scrapping the centered box of 2026-08-12, "it
+// looks sloppy — no compositor drop shadow, and faking one wouldn't work" —
+// its rectangle moved from the window's centre into the lane the tenants
+// left, and from 2026-10-10 the prompts and dialog editors stood in the
+// taskbar dialog laid over the window's foot.)
 //
 // The two helpers below are that fork, shared by the row's painter (which
 // wants the boolean, just under here) and by paint_modal_dialog (which wants
@@ -5630,8 +5639,9 @@ static void paint_bottom_border(cairo_t* cr, const AppState& app) {
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
-    // into ONE lane on the WINDOW'S FOOT; COOL EDIT'S ROW 8 UNDER ITS DOCK BAR
-    // since 2026-10-09): the clock in its time field and THE STATE LINE on
+    // into ONE lane, then on the WINDOW'S FOOT; COOL EDIT'S ROW 8 UNDER ITS
+    // DOCK BAR since 2026-10-09; bottom lane 2 since 2026-10-14, over the
+    // border under row 8 and the program frame's bottom row): the clock in its time field and THE STATE LINE on
     // the face beside it at the left, and — packed against the right edge —
     // the MARKER-VERB GROUP, the marker walk and the cardinal
     // arrows with Play last, each Cool Edit's group (the tables above own
@@ -5689,10 +5699,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 
     // THE ROW YIELDS TO THE MODAL (2026-08-13; the fork and the ruling are at
     // modal_owns_bottom_row just above). The ground above is the ROW'S
-    // whatever it carries — the modal paints on the row's own
-    // ground, having no box of its own — and every other tenant stands down
-    // here: paint_modal_dialog owns the lane from this frame until the
-    // dialog's closer.
+    // whatever it carries — the modal's CONTROLS ROW paints on the row's own
+    // ground, laying none of its own (its box stands above the row, over the
+    // canvas column, modal_box.h, 2026-10-14; from 2026-08-13 until then the
+    // modal had no box and this lane was its whole surface) — and every other
+    // tenant stands down here: paint_modal_dialog owns the content band from
+    // this frame until the modal's closer.
     //
     // THE ROW'S BUTTONS PUBLISH ZERO RECTS rather than stranding the last
     // frame's (the roster's own model — a zero/invalid stash contains no
@@ -5709,7 +5721,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     //
     // THE CLOCK'S CELL ZEROES WITH THEM, which is what makes the row's one
     // rect owner degrade HONESTLY: a zero cell answers the WHOLE LANE at
-    // clock_invalidate_rect (main.cpp), which is exactly the modal's surface.
+    // clock_invalidate_rect (main.cpp), which covers the modal's controls row
+    // standing on it (the modal's whole surface from 2026-08-13 until its box
+    // of 2026-10-14; the box takes the modal family's area,
+    // invalidate_modal_dialog_area).
     // NOTHING READS THESE ZEROES as a bound — since 2026-08-13 nothing on
     // this row is measured from a button stash at all, the status chain having
     // taken its right anchor to the tab row with it.
@@ -6912,7 +6927,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 text_shape::shape_text_run(font, ed->pending);
             const std::vector<double> bx_off =
                 text_shape::byte_offsets_px(run, ed->pending.size());
-            const std::vector<std::pair<int, int>> ranges =
+            const std::vector<text_editor::WrapRow> ranges =
                 text_editor::soft_wrap_rows(
                     ed->pending, bx_off,
                     std::max(1.0, static_cast<double>(line_w - caret_px)));
@@ -6927,8 +6942,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             out.rows.clear();
             for (std::size_t r = 0; r < ranges.size(); ++r) {
                 AppState::DialogEditorText::Row row;
-                row.begin    = ranges[r].first;
-                row.end      = ranges[r].second;
+                row.begin    = ranges[r].begin;
+                row.end      = ranges[r].end;
+                row.hard     = ranges[r].hard;
                 row.origin_x = static_cast<double>(line_x0) -
                                bx_off[static_cast<std::size_t>(row.begin)];
                 row.y        = row0_y + static_cast<int>(r) * row_pitch;
@@ -6949,7 +6965,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const int  s1 = text_editor::selection_end(*ed);
             const int  cursor_pos = std::clamp(
                 ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
-            const int  caret_row  = dialog_editor_row_of(out, cursor_pos);
+            const int  caret_row  =
+                dialog_editor_row_of(out, cursor_pos, ed->caret_row_end);
             for (std::size_t r = 0; r < out.rows.size(); ++r) {
                 const AppState::DialogEditorText::Row& row = out.rows[r];
                 const double baseline =
@@ -7044,8 +7061,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 // it. The blink's TICK carries the same gate (main.cpp), so an
                 // unfocused field wakes the loop for nothing either. IT
                 // STANDS ON ITS BYTE'S ROW (dialog_editor_row_of: a row's end
-                // is the next row's begin, and its caret stands there), in
-                // the column the wrap reserved.
+                // is the next row's begin, and its caret stands there — but
+                // a HARD row's end at that row's end while the caret carries
+                // the row-end affinity, 2026-10-14, the rule at
+                // dialog_editor_row_last_stop), in the column the wrap
+                // reserved.
                 if (static_cast<int>(r) == caret_row && field_focused &&
                     text_editor::cursor_visible_now(*ed)) {
                     const double caret_x =
@@ -7632,7 +7652,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // §4.1, the mock of record's set 3; program_spec.h's column_margin_px and
 // column_foot_px, render.h's canvas-frame accessors.) ONE PAINTER for the
 // rows from the canvas's top frame row (top lane 8) through the column's
-// foot (bottom lane 2): the panel's FACE across them, the program's columns
+// foot (bottom lane 3 since the border under row 8 took lane 1, 2026-10-14):
+// the panel's FACE across them, the program's columns
 // inside its frame (2026-10-10) — the margins beside the canvas, the frame
 // rows' own ground and the foot's 5 W — then THE CANVAS'S FRAME, one ring
 // round the waveform area: the

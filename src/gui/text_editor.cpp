@@ -7,8 +7,13 @@
 
 namespace text_editor {
 
-void touch_blink(State& s) {
+void restart_blink(State& s) {
     s.blink_epoch = std::chrono::steady_clock::now();
+}
+
+void touch_blink(State& s) {
+    restart_blink(s);
+    s.caret_row_end = false;
 }
 
 namespace {
@@ -329,7 +334,9 @@ bool replace_selection(State& s, const std::string& raw) {
     const int ins      = static_cast<int>(clean.size());
     const int new_size = old_size - sel + ins;
     if (new_size > cap && new_size > old_size) {
-        touch_blink(s);
+        // Nothing moved and nothing changed: the blink restarts, the caret's
+        // row-end affinity stands.
+        restart_blink(s);
         // The one refusal this primitive has, reported so the caller can say
         // why nothing was inserted (the contract is at the declaration).
         return false;
@@ -356,6 +363,7 @@ void deactivate(State& s) {
     s.cursor_pos        = 0;
     s.selection_anchor  = -1;
     s.view_offset_px    = 0.0;
+    s.caret_row_end     = false;
 }
 
 // The modal session id source (contract at the declaration, text_editor.h).

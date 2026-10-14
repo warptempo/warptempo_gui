@@ -572,8 +572,8 @@ struct Viewport {
     void invalidate_status_cell_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole), WITH THE
-    // MODAL FAMILY'S WHOLE AREA while a prompt or a dialog editor stands or
-    // was last painted (2026-10-14, modal_box.h — the box over the canvas
+    // MODAL FAMILY'S WHOLE AREA while a prompt, a dialog editor or the
+    // progress modal stands or was last painted (2026-10-14, modal_box.h — the box over the canvas
     // column and its controls row; the taskbar dialog's overlay to the
     // window's foot 2026-10-10 to 2026-10-14 — the definition says why). ITS CALLERS,
     // re-greped 2026-08-28, are the TWO DIALOG EDITORS' repaint sites plus the
@@ -616,10 +616,15 @@ struct Viewport {
     //
     // A STANDING DIALOG TOOLTIP RIDES THIS DAMAGE (2026-09-29):
     // a modal button's hint is composed by the row's own paint
-    // (paint_modal_dialog publishes it on the stash) and its box hangs ABOVE
-    // the lane (the lane rests on the window's foot, so the box seated under
-    // the pointer flips above its button), outside this rect — so a row
-    // repaint alone would recompose
+    // (paint_modal_dialog publishes it on the stash) and its box hangs OFF
+    // the modal's controls row, past this rect — above it where the row
+    // stands on the border under row 8 (bottom lane 2, over bottom lane 1 and
+    // the program frame's bottom row on the window's foot, too few rows for
+    // the box, which flips above its button; the lane rested on the window's
+    // foot itself until the program frame's row, 2026-10-10, and the border,
+    // 2026-10-14, came under it), below it over the keyboard's band where
+    // a dialog editor's stack stands on the keyboard (modal_box.h) — so a
+    // row repaint alone would recompose
     // the words (the Play/Pause face's "Pause" becoming "Play" at a folder's
     // end, "Resume" at a pause) and leave the old box's pixels standing.
     // While a tooltip stands on a Dialog owner this owner also damages the

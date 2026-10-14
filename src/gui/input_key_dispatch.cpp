@@ -6718,8 +6718,9 @@ bool GuiInputHandler::route_modal_editor_key(
         // focus is on a button, so a field re-focused mid-period could
         // otherwise show nothing for up to half a second. One site, with the
         // editor already in hand — the ring's other caller is the prompt gate,
-        // which has no field at all.
-        if (app.modal_dialog_focus < 0) text_editor::touch_blink(ed);
+        // which has no field at all. The caret did not move, so its row-end
+        // affinity stands (restart_blink, not touch_blink).
+        if (app.modal_dialog_focus < 0) text_editor::restart_blink(ed);
         return true;
     }
     // NO KEY REACHES THE FIELD WHILE THE FOCUS IS ON A BUTTON (architect
@@ -6761,11 +6762,15 @@ bool GuiInputHandler::route_modal_editor_key(
     // the line soft-wraps in the modal family's box, and the caret, the
     // selection, the press and Home / End walk the rows consistently): bare
     // or shifted, they land on the caret's own row as painted
-    // (DialogEditorText, app_state.h) — Home its first byte, End its last
-    // stop (dialog_editor_row_last_stop: a wrapped row's end before the
-    // space its break stands after, the last row's the buffer's end) — the
-    // shift extending the selection from the standing anchor exactly as the
-    // editor's own Shift+Home / Shift+End do. CTRL+HOME AND CTRL+END keep the
+    // (DialogEditorText and dialog_editor_row_of, app_state.h, the caret's
+    // row-end affinity read, so a caret painted at a hard row's end is on
+    // that row) — Home its first byte, End its last stop
+    // (dialog_editor_row_last_stop: a space-broken row's end before the
+    // space its break stands after; a hard-broken row's end itself, WITH THE
+    // ROW-END AFFINITY SET so the caret paints at that row's end, 2026-10-14;
+    // the last row's the buffer's end) — the shift extending the selection
+    // from the standing anchor exactly as the editor's own Shift+Home /
+    // Shift+End do. CTRL+HOME AND CTRL+END keep the
     // whole text's extremes (text_editor::handle_key, below), a multiline
     // edit's own pair. The flag editor's one-row field is not a member: its
     // session is no dialog editor's.
@@ -6776,7 +6781,7 @@ bool GuiInputHandler::route_modal_editor_key(
         const AppState::DialogEditorText& t = app.dialog_editor_text;
         const int size = static_cast<int>(ed.pending.size());
         const int pos  = std::clamp(ed.cursor_pos, 0, size);
-        const int row  = dialog_editor_row_of(t, pos);
+        const int row  = dialog_editor_row_of(t, pos, ed.caret_row_end);
         const int to   = std::clamp(
             key == GuiKeys::Home
                 ? t.rows[static_cast<std::size_t>(row)].begin
@@ -6789,6 +6794,8 @@ bool GuiInputHandler::route_modal_editor_key(
         }
         ed.cursor_pos = to;
         text_editor::touch_blink(ed);
+        ed.caret_row_end = key == GuiKeys::End &&
+                           dialog_editor_stop_is_row_end(t, row, to);
         repaint();
         return true;
     }

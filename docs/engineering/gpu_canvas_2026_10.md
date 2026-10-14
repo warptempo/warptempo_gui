@@ -103,6 +103,12 @@ picker card, a tooltip flipped above row 8, a tall pull-down, the Settings
 combo list, the on-screen keyboard and a dialog on it, the folder overlay —
 is an OPAQUE INTEGRAL RECTANGLE whose antialiasing (text, mitred bevels,
 icons) blends only against its own ground, never against a canvas pixel.
+(That list is the inventory of its time, HEAD 7d275895. The color picker
+card, the Settings combo list and the dialog standing on the keyboard were
+removed 2026-10-14 — the picker with the preset files, the combo list and
+the taskbar dialog in e7a77ddb, when every modal took the modal family's
+box over the canvas column, the keyboard inside the frame; the box is the
+same kind of opaque rectangle, and the property stands.)
 
 The display transform (sRGB → Display-P3 while True Colors is on) runs AT
 THE SOURCE, per color word, at each painter's entry; `present()` copies
@@ -272,9 +278,15 @@ sequence — capturing after each, then compares every pair. Any difference is
 a defect until the architect rules otherwise. The P3 dataspace is checked in
 `dumpsys SurfaceFlinger` separately.
 
-A SIXTEENTH STATE IS OWED at the next tablet proof (2026-10-14): the
-Settings Chrome or Caption row's dropped list over the canvas, absent from
-the fifteen.
+THE PROOF RE-RUN AT b93f7178 (2026-10-14, the modal family's arc, on the
+tablet): SEVENTEEN states — the original fifteen's states 0–10, then the
+Settings menu, the Chrome row's dialog editor standing in the modal box with
+the on-screen keyboard inside the frame, its Cancel, the render player in
+the box, its Close, and the project picker in the box — ALL IDENTICAL, cpu
+against gl, over the whole frame. The sixteenth state this section owed
+from earlier that day (the Settings Chrome or Caption row's dropped list
+over the canvas) is moot: the list was removed in e7a77ddb with the choice
+drop-downs.
 
 THE LAPTOP'S PROOF (2026-10-14, the twin's first day): the same method over
 `grim` on labwc, the builds `build/` (gl) and `build-cpu/` (cpu) launched

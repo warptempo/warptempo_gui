@@ -374,7 +374,7 @@ struct State {
     //
     // THE CLICK-TO-BYTE PATH NEEDS NO TERM FOR IT: the painter folds the
     // offset into the ORIGIN it publishes (FlagEditorBox::text_origin_x,
-    // "the window x byte 0 paints at"), so editor_byte_index_at's
+    // "the window x byte 0 paints at"), so editor_stop_at's
     // nearest-boundary search, the
     // F2.1 text drag and the double-click word select all land correctly on a
     // scrolled field with no knowledge that it scrolled.
@@ -386,6 +386,22 @@ struct State {
     // and are its only reset sites; a change of which editor a dialog hosts is
     // structurally a change of State, so nothing else needs keeping in step.
     double view_offset_px = 0.0;
+
+    // THE CARET'S ROW-END AFFINITY on a dialog editor's HARD-WRAPPED row
+    // (architect 2026-10-14, Windows' multiline edit control's own affinity;
+    // the rule and every reader at dialog_editor_row_last_stop, app_state.h):
+    // a row soft_wrap_rows broke at a codepoint because no space fit ends at
+    // the byte the next row begins at, so that one byte is two caret places —
+    // after the row's last character, or before the next row's first. TRUE
+    // means the former: the caret got there FROM THAT ROW (End, Shift+End, a
+    // press or a drag past the row's text) and paints at that row's end;
+    // false, everywhere else, paints it on the next row's start. Set by those
+    // three seats alone, after their blink restart; CLEARED BY EVERY OTHER
+    // CARET MOTION AND EVERY EDIT through touch_blink, which each of them
+    // calls, and by enter / deactivate. Meaningless off a hard break's end
+    // (the readers ignore it there), and never set by the flag editor's one
+    // row.
+    bool caret_row_end = false;
 
     // Cursor blink: monotonic timestamp at which the cursor became
     // visible. The renderer tests `(now - blink_epoch) % period < period/2`
@@ -558,13 +574,22 @@ std::string encode_utf8(uint32_t cp);
 // keystroke.
 bool cursor_visible_now(const State& s);
 
-// RESTART THE BLINK PHASE — the caret becomes visible NOW and the period runs
-// from here. Every editing key inside this module calls it for the reason
-// above; it is PUBLIC for one caller outside (2026-08-13), the modal dialog's
-// focus ring, which restarts the phase when the ring walks back onto the FIELD
-// so a field that has just been focused shows its caret at once rather than
-// possibly landing in the dark half of a period it kept running through.
+// THE CARET MOVED OR THE TEXT CHANGED — restart the blink phase (the caret
+// becomes visible NOW and the period runs from here) AND DROP THE ROW-END
+// AFFINITY (State::caret_row_end, 2026-10-14): every caret motion and every
+// edit inside this module calls it, and so do the pointer's caret seats and
+// the dialog editors' Home / End route, which then set the affinity again
+// where their own stop holds it.
 void touch_blink(State& s);
+
+// RESTART THE BLINK PHASE ALONE, the caret unmoved and the affinity kept —
+// for the callers that move nothing: the modal dialog's focus ring walking
+// back onto the FIELD (2026-08-13), the field taking the focus back at a
+// press, a finger's caret drag ending where its last frame seated the caret,
+// and an insert the capacity refused. Each restarts the phase so the caret
+// shows at once rather than possibly landing in the dark half of a period it
+// kept running through.
+void restart_blink(State& s);
 
 // THE ONE CLICK-X -> BYTE MAPPING (row 7 deleted its monospace predecessor,
 // byte_index_from_click_x, with the face): `boundaries` is the per-byte pen offset vector the
@@ -614,19 +639,27 @@ void select_word_at(State& s, int pos);
 // AFTER ITS LAST SPACE (the space stays on the row it ends, Windows' edit
 // control's word wrap), or — a row with no space that fits — AT THE LAST
 // CODEPOINT BOUNDARY THAT FITS, and always at least one codepoint, so a glyph
-// wider than the room still advances. Every end is a codepoint boundary by
-// construction (the walk steps only on them), so the caret, the selection and
-// the press, which address the rows by byte, can never split a character.
-// Measured on the ONE run (a row's width is boundaries[end] -
+// wider than the room still advances. EACH ROW SAYS WHICH BREAK ENDS IT
+// (`hard`, 2026-10-14): a codepoint break is hard, a space break and the last
+// row are not — the caret's last stop on a row differs between the two
+// (dialog_editor_row_last_stop, app_state.h). Every end is a codepoint
+// boundary by construction (the walk steps only on them), so the caret, the
+// selection and the press, which address the rows by byte, can never split a
+// character. Measured on the ONE run (a row's width is boundaries[end] -
 // boundaries[begin]), so the rows paint and hit on the pen the run was shaped
 // with.
-inline std::vector<std::pair<int, int>> soft_wrap_rows(
+struct WrapRow {
+    int  begin = 0;
+    int  end   = 0;
+    bool hard  = false;
+};
+inline std::vector<WrapRow> soft_wrap_rows(
         const std::string& text, const std::vector<double>& boundaries,
         double width) {
-    std::vector<std::pair<int, int>> rows;
+    std::vector<WrapRow> rows;
     const int n = static_cast<int>(text.size());
     if (static_cast<int>(boundaries.size()) < n + 1 || n == 0) {
-        rows.emplace_back(0, n);
+        rows.push_back(WrapRow{0, n, false});
         return rows;
     }
     const auto at = [&](int i) {
@@ -639,7 +672,7 @@ inline std::vector<std::pair<int, int>> soft_wrap_rows(
     int begin = 0;
     while (begin < n) {
         if (at(n) - at(begin) <= width) {
-            rows.emplace_back(begin, n);
+            rows.push_back(WrapRow{begin, n, false});
             return rows;
         }
         int fit = begin, space_break = -1;
@@ -649,12 +682,13 @@ inline std::vector<std::pair<int, int>> soft_wrap_rows(
             fit = i;
             if (text[static_cast<std::size_t>(i - 1)] == ' ') space_break = i;
         }
-        int end = space_break > begin ? space_break : fit;
+        const bool hard = space_break <= begin;
+        int end = hard ? fit : space_break;
         if (end <= begin) {   // not one codepoint fits: take one anyway
             end = begin + 1;
             while (end < n && !boundary(end)) ++end;
         }
-        rows.emplace_back(begin, end);
+        rows.push_back(WrapRow{begin, end, hard});
         begin = end;
     }
     return rows;

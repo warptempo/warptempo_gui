@@ -1148,8 +1148,9 @@ struct ActiveEditorText {
     // The painter's per-byte pen offsets for that editor's own shaped run.
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
-    // true = one of the two DIALOG editors (settings / BPM, painting in the BOTTOM ROW'S modal since
-    // 2026-08-13 — centered for the one day from 2026-08-12, and the field
+    // true = one of the two DIALOG editors (settings / BPM, painting in the
+    // modal family's box since 2026-10-14 — in the bottom row's modal from
+    // 2026-08-13, centered for the one day from 2026-08-12, and the field
     // was `bottom_strip` while they lived on the status lane); false = the
     // top-strip flag editor. Selects the claim
     // region and the repaint owner.
@@ -1220,19 +1221,41 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     return g;
 }
 
-// The ONE pointer -> byte owner (see ActiveEditorText): a nearest-boundary
-// search over the painter's published per-byte pen offsets — on the flag
-// editor's one row by x alone, on a dialog editor's wrapped line on the row
-// under the pointer first (dialog_editor_byte_at, app_state.h, 2026-10-14).
-// Every caret and drag-select site funnels through it, and since row 7 there
-// is one family of editors rather than two, so there is nothing left for
-// them to drift apart on.
-int editor_byte_index_at(const ActiveEditorText& g, int mouse_x, int mouse_y) {
+// The ONE pointer -> caret stop owner (see ActiveEditorText): a
+// nearest-boundary search over the painter's published per-byte pen offsets
+// — on the flag editor's one row by x alone, on a dialog editor's wrapped
+// line on the row under the pointer first, with the stop's row-end affinity
+// at a hard-wrapped row's end (dialog_editor_byte_at and its rule at
+// dialog_editor_row_last_stop, app_state.h, 2026-10-14). Every caret and
+// drag-select site funnels through it, and since row 7 there is one family
+// of editors rather than two, so there is nothing left for them to drift
+// apart on.
+DialogEditorStop editor_stop_at(const ActiveEditorText& g, int mouse_x,
+                                int mouse_y) {
     if (g.wrap != nullptr)
         return dialog_editor_byte_at(*g.wrap, g.ed->pending,
                                      static_cast<double>(mouse_x), mouse_y);
-    return text_editor::byte_index_from_shaped_x(
-        static_cast<double>(mouse_x), g.text_left, *g.byte_x);
+    return {text_editor::byte_index_from_shaped_x(
+                static_cast<double>(mouse_x), g.text_left, *g.byte_x),
+            false};
+}
+
+// THE BYTE A WORD SELECT CLASSIFIES under the pointer — the double-click's
+// select and its drag by words (text_editor::select_word_at,
+// extend_selection_by_words): the stop's own byte, EXCEPT a stop carrying the
+// row-end affinity, a press PAST a hard-wrapped row's text, whose character is
+// the row's last — the one before the stop — never the next row's first,
+// which is what the bare byte would name (2026-10-14).
+int editor_word_probe_at(const ActiveEditorText& g, int mouse_x,
+                         int mouse_y) {
+    const DialogEditorStop s = editor_stop_at(g, mouse_x, mouse_y);
+    if (!s.row_end || s.byte <= 0) return s.byte;
+    int p = s.byte - 1;
+    while (p > 0 && (static_cast<unsigned char>(
+                         g.ed->pending[static_cast<std::size_t>(p)]) &
+                     0xC0) == 0x80)
+        --p;
+    return p;
 }
 
 // THE ONE POINTER SEAT: every press and every drag motion that puts the caret
@@ -1240,13 +1263,17 @@ int editor_byte_index_at(const ActiveEditorText& g, int mouse_x, int mouse_y) {
 // mouse's selection sweep and the finger's caret drag (the touch trio's
 // bodies below) — and it restarts the blink phase as the keyboard's own
 // motion keys do, so a caret being dragged is lit where it lands rather than
-// possibly caught in the dark half of a period. The one seat that is NOT a
+// possibly caught in the dark half of a period, then sets the stop's
+// row-end affinity (a press past a hard-wrapped row's text keeps the caret
+// painted at that row's end, 2026-10-14). The one seat that is NOT a
 // pointer byte — the double-click-drag's word boundary — goes through
 // text_editor::extend_selection_by_words instead, which blinks for itself.
 void set_editor_caret_from_x(const ActiveEditorText& g, int mouse_x,
                              int mouse_y) {
-    g.ed->cursor_pos = editor_byte_index_at(g, mouse_x, mouse_y);
+    const DialogEditorStop s = editor_stop_at(g, mouse_x, mouse_y);
+    g.ed->cursor_pos = s.byte;
     text_editor::touch_blink(*g.ed);
+    g.ed->caret_row_end = s.row_end;
 }
 
 // IS THIS PRESS THE EDITOR'S DOUBLE-CLICK'S SECOND HALF — a candidate on the
@@ -3514,6 +3541,18 @@ GuiTouchEditorField GuiInputHandler::touch_point_in_editor_field(int x,
     const ActiveEditorText g = active_editor_text(app, audio);
     if (!g.valid || !rect_contains(g.field, x, y))
         return GuiTouchEditorField::Outside;
+    // A NOTIFICATION CARD STANDING OVER THE FIELD OWNS THE GLASS UNDER IT
+    // (2026-10-14): the cards paint above the modal family's box, and a
+    // refusal card stands over the very editor that refused, so a point on
+    // a card is the card's, never the field's — the same as-painted lookup
+    // the pan zone yields to (touch_point_in_pan_zone). Answering Outside
+    // lets the contact resolve to the pointer translation ON CONTACT and
+    // reach the card's own press claim at the down, where its hold clock
+    // starts (a held card dismisses the stack); answered Field, the contact
+    // stayed pending to the lift, measured no hold, and a drifting one
+    // dragged the editor's caret through the card.
+    if (notification_card_at(app, x, y) != 0)
+        return GuiTouchEditorField::Outside;
     // The seed is read LIVE: a finger's down delivers nothing, so the
     // top-of-press clear has not run and the candidate the last lift seeded
     // still stands — exactly what the press arm's own predicate will see
@@ -3580,8 +3619,9 @@ void GuiInputHandler::end_touch_caret_drag() {
     // route), nothing seeds, and the editor stays open. What the end owes
     // is the modal focus ring's own courtesy — a blink restart, so the
     // resting caret is lit the instant the finger leaves rather than caught
-    // in the dark half of a period the drag's last seat started.
-    text_editor::touch_blink(*g.ed);
+    // in the dark half of a period the drag's last seat started — the blink
+    // alone, so the row-end affinity that seat set stands.
+    text_editor::restart_blink(*g.ed);
     if (g.dialog) viewport.invalidate_modal_dialog_area();
     else          viewport.invalidate_top_strip();
 }
@@ -5819,9 +5859,10 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // THE FIELD TAKES THE FOCUS BACK AT THE PRESS (architect
                 // 2026-10-02; the rule at return_modal_focus_to_field), ahead
                 // of all three arms below, the caret's blink restarted so it
-                // is lit at once.
+                // is lit at once (the blink alone: the arm that follows
+                // seats the caret).
                 if (g.dialog && return_modal_focus_to_field())
-                    text_editor::touch_blink(*g.ed);
+                    text_editor::restart_blink(*g.ed);
                 // SHIFT+CLICK EXTENDS THE SELECTION (architect 2026-08-30) —
                 // the pointer's FIRST shift binding on an editor field, and
                 // exactly what Shift+Left/Right and Ctrl+Shift+Left/Right do
@@ -5880,7 +5921,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 // field, not a drag gesture on the canvas.
                 if (editor_double_press_at(dc_at_press, x, y)) {
                     text_editor::select_word_at(
-                        *g.ed, editor_byte_index_at(g, x, y));
+                        *g.ed, editor_word_probe_at(g, x, y));
                     app.editor_text_drag = EditorTextDragState{
                         .active     = true,
                         .by_words   = true,
@@ -6101,11 +6142,13 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     }
     // THE UNIFIED BOTTOM ROW (row 8's claim since 2026-08-11; the whole
     // merged lane since the 2026-08-12 unification), the block's fifth member
-    // on the block's own terms: the band is the bottom strip's ONE lane, on
-    // the window's foot, and everything else is the shape above —
-    // below the modal gates (a prompt or a dialog editor swallows the
-    // press; the pointer-transparent flag editor does not, and its KEYBOARD
-    // modality then answers the dispatched chord exactly as it answers the
+    // on the block's own terms: the band is bottom lane 2 (bottom_row_area,
+    // over the border under row 8 and the program frame's bottom row; the
+    // strip's one lane on the window's foot from the unification until the
+    // frame, 2026-10-10, and the border, 2026-10-14), and everything else is
+    // the shape above — below the modal gates (a prompt, a dialog editor or
+    // the progress modal swallows the press; the pointer-transparent flag
+    // editor does not, and its KEYBOARD modality then answers the dispatched chord exactly as it answers the
     // key), above the loading/empty guard, ctrl/alt strict no-ops, and every
     // press in the band that is not on a button a consumed nothing — which
     // since the unification includes the clock cell and the bare ground
@@ -10392,7 +10435,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 // second press already decided what this drag is.
                 text_editor::extend_selection_by_words(
                     *g.ed, d.word_start, d.word_end,
-                    editor_byte_index_at(g, mouse_x, mouse_y));
+                    editor_word_probe_at(g, mouse_x, mouse_y));
             } else {
                 // The anchor set at press stays put; moving cursor_pos
                 // extends the selection. IT IS THE SAME MOTION FOR BOTH ARMS
