@@ -1,5 +1,0 @@
-act: Go to Start
-what it does: moves the playhead to the start
-status: CANDIDATE - redraw as is
-image: 34_go_to_start.png (from 0927 r5c7)
-prompt line: go to start - a teal bar and triangle pointing left

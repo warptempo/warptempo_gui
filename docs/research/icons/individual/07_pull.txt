@@ -1,6 +1,0 @@
-act: Pull
-what it does: pulls from GitHub when it is ahead (Save's face then)
-status: CANDIDATE - redraw as is
-image: 07_pull_a.png (from 0951 sheet 2 r1c2)
-image: 07_pull_b.png (from 0951 sheet 2 r1c3)
-prompt line: pull - a diskette receiving from a cloud

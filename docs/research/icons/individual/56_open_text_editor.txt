@@ -1,5 +1,0 @@
-act: Open Text Editor
-what it does: opens the marker's text editor (Enter)
-status: CANDIDATE - redraw as is
-image: 56_open_text_editor.png (from 0927 r3c9)
-prompt line: open text editor - a pencil writing on a purple bar

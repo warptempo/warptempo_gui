@@ -1,5 +1,0 @@
-act: Program Icon
-what it does: the caption icon and the launcher icon
-status: CANDIDATE - redraw as is
-image: 59_program_icon.png (from 0951 sheet 2 r3c8)
-prompt line: program icon - a waveform mark in a square

@@ -1,6 +1,0 @@
-act: Down
-what it does: steps the value down the ladder
-status: DERIVATIVE - the image is the parent to derive from
-image: 40_down.png (from 0927 r5c5)
-derive: derive from Fast Forward: one triangle, same teal, turned to point down
-prompt line: down - one teal triangle pointing down

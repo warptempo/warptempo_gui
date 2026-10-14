@@ -1,5 +1,0 @@
-act: Switch Tab
-what it does: switches between the two tabs
-status: CANDIDATE - redraw as is
-image: 46_switch_tab.png (from 0951 sheet 2 r3c5)
-prompt line: switch tab - two tabs with the back one coming forward

@@ -1,9 +1,0 @@
-family: the magnifiers
-
-PROMPT (attach 6_magnifiers.png):
-This sheet is one family of a Cool Edit Pro icon theme - audio-editing glyphs for a graphical digital audio workstation in Windows Millennium Edition. Redraw the whole family as SVGs, one per cell, each labeled with its name: a modern translation of the old style, not pixelated, the lines drawn for hiDPI devices but in late eighties / nineties style. Keep exactly this style, line weight and palette, and keep the members consistent with each other. Cells marked * are rough mock-ups of glyphs the original set lacks: keep their idea, draw them properly so they match their siblings.
-
-full zoom out - a magnifier over a whole page
-center on focus - a magnifier on a yellow square
-waveform magnification - a vertical double arrow beside a zoom-in magnifier
-toggle value drag - a vertical double-headed arrow beside a cue marker (*mock-up)

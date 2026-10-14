@@ -1,5 +1,0 @@
-act: Folder
-what it does: a folder row; Up a Folder in the render player
-status: CANDIDATE - redraw as is
-image: 48_folder.png (from 0927 r1c1)
-prompt line: folder - a closed yellow folder

@@ -1,5 +1,0 @@
-act: Toggle Repeat One
-what it does: repeats the current render in the player
-status: CANDIDATE - redraw as is
-image: 50_toggle_repeat_one.png (from 0927 r1c7)
-prompt line: toggle repeat one - a teal arrow circling back over a ring

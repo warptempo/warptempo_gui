@@ -1,6 +1,0 @@
-act: Play
-what it does: plays from the playhead
-status: DERIVATIVE - the image is the parent to derive from
-image: 35_play.png (from 0927 r5c5)
-derive: derive from Fast Forward: ONE of its two triangles, same teal, no bar
-prompt line: play - one teal triangle pointing right

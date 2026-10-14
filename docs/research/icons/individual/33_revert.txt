@@ -1,5 +1,0 @@
-act: Revert
-what it does: reverts to the viewed checkpoint
-status: CANDIDATE - redraw as is
-image: 33_revert.png (from 0951 sheet 2 r1c4)
-prompt line: revert - a document with an arrow turning back

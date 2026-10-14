@@ -1,5 +1,0 @@
-act: Center on Focus
-what it does: centers the view on the focused marker
-status: CANDIDATE - redraw as is
-image: 12_center_on_focus.png (from 0927 r4c9)
-prompt line: center on focus - a magnifier on a yellow square

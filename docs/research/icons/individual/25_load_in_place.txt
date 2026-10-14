@@ -1,5 +1,0 @@
-act: Load in Place
-what it does: loads the viewed checkpoint in place
-status: CANDIDATE - redraw as is
-image: 25_load_in_place.png (from 0951 sheet 2 r1c5)
-prompt line: load in place - a document dropping into a frame

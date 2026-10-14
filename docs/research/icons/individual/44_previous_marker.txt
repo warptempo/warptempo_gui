@@ -1,5 +1,0 @@
-act: Previous Marker
-what it does: selects the previous marker
-status: CANDIDATE - redraw as is
-image: 44_previous_marker.png (from 0927 r8c2)
-prompt line: previous marker - a purple bar and triangle pointing left

@@ -1,5 +1,0 @@
-act: Next Marker
-what it does: selects the next marker
-status: CANDIDATE - redraw as is
-image: 45_next_marker.png (from 0927 r8c3)
-prompt line: next marker - a purple triangle and bar pointing right

@@ -1,5 +1,0 @@
-act: Toggle Follow
-what it does: toggles the view following the playhead
-status: CANDIDATE - redraw as is
-image: 20_toggle_follow.png (from 0951 sheet 2 r3c1)
-prompt line: toggle follow - an eye following a waveform

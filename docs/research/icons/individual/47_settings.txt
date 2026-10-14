@@ -1,5 +1,0 @@
-act: Settings
-what it does: opens Settings
-status: CANDIDATE - redraw as is
-image: 47_settings.png (from 0927 r11c1)
-prompt line: settings - a small window with a yellow gear

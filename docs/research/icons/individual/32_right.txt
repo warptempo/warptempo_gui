@@ -1,5 +1,0 @@
-act: Right
-what it does: steps the playhead right
-status: CANDIDATE - redraw as is
-image: 32_right.png (from 0927 r5c5)
-prompt line: right - two teal triangles pointing right

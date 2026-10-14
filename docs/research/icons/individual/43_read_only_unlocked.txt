@@ -1,6 +1,0 @@
-act: Read-Only Unlocked
-what it does: the project is writable (tap to lock)
-status: DERIVATIVE - the image is the parent to derive from
-image: 43_read_only_unlocked.png (from 0927 r6c7)
-derive: derive from the locked one: the same padlock and waveform, the shackle swung open
-prompt line: read-only unlocked - an open padlock on a waveform

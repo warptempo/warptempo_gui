@@ -1,5 +1,0 @@
-act: Read-Only Locked
-what it does: the project is read-only (tap to unlock)
-status: CANDIDATE - redraw as is
-image: 42_read_only_locked.png (from 0927 r6c7)
-prompt line: read-only locked - a closed padlock on a waveform

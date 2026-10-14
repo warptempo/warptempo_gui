@@ -1,6 +1,0 @@
-act: Cancel - Close
-what it does: cancels a render; closes the render player
-status: DERIVATIVE - the image is the parent to derive from
-image: 39_cancel_close.png (from 0927 r4c5)
-derive: derive from the red diamond: the same red as a round disc, a white X on it
-prompt line: cancel - close - a red circle with a white X

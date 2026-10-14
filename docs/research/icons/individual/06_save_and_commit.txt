@@ -1,5 +1,0 @@
-act: Save and Commit
-what it does: saves and commits to GitHub (Save in history view)
-status: CANDIDATE - redraw as is
-image: 06_save_and_commit.png (from 0951 sheet 2 r1c1)
-prompt line: save and commit - a diskette with a small git commit mark

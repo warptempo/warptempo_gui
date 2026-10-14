@@ -1,6 +1,0 @@
-act: Pause
-what it does: pauses the render player
-status: DERIVATIVE - the image is the parent to derive from
-image: 37_pause.png (from 0927 r5c8)
-derive: derive from Go to End: its bar, doubled side by side, same teal
-prompt line: pause - two teal vertical bars

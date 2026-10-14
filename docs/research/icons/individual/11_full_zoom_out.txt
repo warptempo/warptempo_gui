@@ -1,5 +1,0 @@
-act: Full Zoom Out
-what it does: zooms out to the whole file
-status: CANDIDATE - redraw as is
-image: 11_full_zoom_out.png (from 0927 r5c2)
-prompt line: full zoom out - a magnifier over a whole page

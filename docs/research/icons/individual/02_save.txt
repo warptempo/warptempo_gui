@@ -1,5 +1,0 @@
-act: Save
-what it does: saves the project
-status: CANDIDATE - redraw as is
-image: 02_save.png (from 0927 r1c3)
-prompt line: save - a yellow diskette

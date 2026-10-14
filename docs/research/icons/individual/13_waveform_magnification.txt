@@ -1,5 +1,0 @@
-act: Waveform Magnification
-what it does: toggles vertical magnification of the waveform
-status: CANDIDATE - redraw as is
-image: 13_waveform_magnification.png (from 0927 r8c6)
-prompt line: waveform magnification - a vertical double arrow beside a zoom-in magnifier

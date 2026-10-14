@@ -1,5 +1,0 @@
-act: Error Card
-what it does: the icon on an error card
-status: CANDIDATE - redraw as is
-image: 52_error_card.png (from 0951 sheet 2 r3c7)
-prompt line: error card - a speech card with an exclamation mark

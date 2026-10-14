@@ -1,5 +1,0 @@
-act: Toggle Tooltips
-what it does: toggles tooltips
-status: CANDIDATE - redraw as is
-image: 54_toggle_tooltips.png (from 0927 r4c3)
-prompt line: toggle tooltips - a yellow question mark
