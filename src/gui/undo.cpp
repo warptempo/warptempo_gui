@@ -218,9 +218,10 @@ void Undo::stamp_top_entry_with_landing_view() {
     UndoEntry& top = app.history.undo_stack.back();
     top.tab        = app.active_tab_view;
     top.audio_view = app.active_audio_view;
-    // The column tag too — the live column, which is P after a landing that
-    // ran and the pressed column (W) after a refused target entry; op_mode
-    // keeps naming the store the entry changed (UndoEntry::landing_column).
+    // The column tag too — the live column, P after the paste's landing (the
+    // column writer refuses no column since 2026-10-12, and the paste stays
+    // in its audio view since 2026-10-14); op_mode keeps naming the store the
+    // entry changed (UndoEntry::landing_column).
     if (top.op_mode != 'S') top.landing_column = app.active_markers_view;
 }
 

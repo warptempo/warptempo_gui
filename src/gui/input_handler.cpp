@@ -4014,14 +4014,15 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // seats that cursor where the readout says it is. The trim bar paints
     // from the trim's source-frame bounds every frame, crossing them into
     // whichever domain is live, so the flip owes it nothing.
-    // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped 2026-10-13: the four
+    // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped 2026-10-14: the four
     // absolute view selectors on bare 1/2/3/4 (and the icon row's view group,
     // which synthesizes them),
     // the settings editor's `active_audio_view=` GUI-key twin, bare `i`'s own
-    // crossing into target, the undo/redo restore's audio-view tag, and the
-    // phase-reset propagate paste's landing tail into target view. (Shift+S
-    // called it until 2026-10-12, when the crossing chord learned to stay in
-    // its audio view.) A carried PHASE-RESET selection rides it exactly as a
+    // crossing into target, and the undo/redo restore's audio-view tag.
+    // (Shift+S called it until 2026-10-12, when the crossing chord learned to
+    // stay in its audio view, and the phase-reset propagate paste's landing
+    // tail until 2026-10-14, when the paste learned the same.) A carried
+    // PHASE-RESET selection rides it exactly as a
     // warp one does, both columns pairing with both views since that day.
 
     // The S/T toggle translates the active tab's live playhead across the
@@ -4234,7 +4235,8 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 //   * THE KICK IS LAST, after the drop: the column swap moves a flag-cache
 //     FINGERPRINT field, and this kick lands the plate, the column and the
 //     new selection's flag in the same frame (the paste's reason,
-//     land_paste_in_target_view).
+//     land_paste_in_phase_reset_view — the paste stays in its audio view
+//     too since 2026-10-14, this act's symmetry).
 void GuiInputHandler::drop_phase_reset_crossing() {
     // The blank/loading guard near the top of on_key already covers this; the
     // helper is defensive for the same reason the S/T chokepoint's own copy is

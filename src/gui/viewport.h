@@ -148,14 +148,14 @@ struct Viewport {
     //    `,`/`.` walk's steps — moves flag-cache FINGERPRINT fields (the
     //    history_mode state) and no viewport, and kicks so the arriving lane
     //    lands in the damaged frame (the reason is stated at its site).
-    //    The PROPAGATE PASTE'S TARGET-VIEW TAIL
-    //    (land_paste_in_target_view, phase_reset_propagate.cpp) is the
+    //    The PROPAGATE PASTE'S LANDING TAIL
+    //    (land_paste_in_phase_reset_view, phase_reset_propagate.cpp) is the
     //    column-switch case reached by a different door and joined 2026-07-30: it calls
     //    switch_active_markers_view_to('P') directly rather than through the
     //    selector, so it kicks at its own tail — after the created selection, so the
-    //    column and the selection hash rebuild together — and on its W+source
-    //    entry that is a harmless SECOND kick, the audio-view toggle's own having
-    //    run before the column swap. SHIFT+S — THE DROP FROM THE WARP COLUMN
+    //    column and the selection hash rebuild together — its only kick since it
+    //    stopped crossing the audio view (architect 2026-10-14, Shift+S's
+    //    symmetry). SHIFT+S — THE DROP FROM THE WARP COLUMN
     //    (2026-08-28, staying in its audio view since 2026-10-12,
     //    GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp) — is
     //    that same case through a third door and takes the same tail for the

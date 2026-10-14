@@ -431,13 +431,14 @@ void PhaseResetPropagate::paste_apply() {
         // AND IT SAYS SO WITHOUT MOVING (architect 2026-08-30 for the sentence,
         // 2026-08-31 for the stillness). A paste that paired no block wrote
         // nothing, so it raises its card — the second case kNothingMatched, the
-        // first its own `Stopped at …` report — AND IT DOES NOT SWITCH VIEWS:
-        // the always-switch tail below is a change of scene that looks exactly
-        // like a paste, which is the "what shows would mislead" half of the
-        // success rule, so THE SWITCH RETIRES ON THIS PATH rather than the
-        // card. The view stays exactly where the user left it and the sentence
-        // is the whole answer. THE LAND IS SKIPPED, NOT STUBBED: every caller
-        // that DID paste still runs land_paste_in_target_view unchanged.
+        // first its own `Stopped at …` report — AND IT DOES NOT SWITCH TO THE
+        // P COLUMN: the always-switch tail below is a change of scene that
+        // looks exactly like a paste, which is the "what shows would mislead"
+        // half of the success rule, so THE SWITCH RETIRES ON THIS PATH rather
+        // than the card. The view stays exactly where the user left it and the
+        // sentence is the whole answer. THE LAND IS SKIPPED, NOT STUBBED: every
+        // caller that DID paste still runs land_paste_in_phase_reset_view
+        // unchanged.
         // A CLEAN PARTIAL WALK (one side simply ran out, with blocks matched)
         // is not this path at all: it pasted what it had, so it lands, and a
         // success says nothing.
@@ -526,7 +527,7 @@ void PhaseResetPropagate::paste_apply() {
     // per collapsed timestamp), and insert_marker keeps the in-memory list
     // sorted.
     // Track the exact final index of every reset this paste materializes, so
-    // the target-view landing can select precisely them. insert_marker keeps
+    // the P-column landing can select precisely them. insert_marker keeps
     // the store time-sorted and returns the insertion index; a later insert at
     // index k shifts every earlier recorded index >= k by one, so adjust as we
     // go rather than re-resolving by time (coincident resets would be
@@ -626,14 +627,15 @@ void PhaseResetPropagate::paste_apply() {
                              std::move(stop_message));
     }
 
-    // Land in target view (the lead-in overlay's view) with exactly the newly pasted
-    // resets selected, so the architect can inspect the paste by eye. The set
-    // was built with insert-time index adjustment above, so it names the final
-    // post-insert indices.
-    land_paste_in_target_view(
+    // Land in the P column of the audio view the paste was pressed in (S+W to
+    // S+P, T+W to T+P — architect 2026-10-14, Shift+S's symmetry) with
+    // exactly the newly pasted resets selected, so the architect can inspect
+    // the paste by eye. The set was built with insert-time index adjustment
+    // above, so it names the final post-insert indices.
+    land_paste_in_phase_reset_view(
         std::set<int>(created_indices.begin(), created_indices.end()));
     // THE ENTRY NAMES THE VIEW THE PASTE LANDED IN, and this act pushed it
-    // BEFORE the crossing above, so its tags are rewritten now that the
+    // BEFORE the column crossing above, so its tags are rewritten now that the
     // landing has run (the rule is at Undo::stamp_top_entry_with_landing_view,
     // undo.h). ONLY ON A PRESS THAT PUSHED: store_changed is the push's own
     // condition, so an entry is this press's exactly when it is true, and a
@@ -799,7 +801,7 @@ void PhaseResetPropagate::paste_state_apply() {
     // An undo entry represents a state change, not a gesture: a paste-
     // state run that flips no flag leaves the store byte-equal, so it
     // pushes nothing and touches no dirty/render state. The stop message still
-    // fires unconditionally; the P-view switch fires for every run that WROTE
+    // fires unconditionally; the P-column switch fires for every run that WROTE
     // a block — byte-equal or not — a run that wrote none keeping the view
     // still (the ruling and its two halves are below).
     if (any_change) {
@@ -826,8 +828,8 @@ void PhaseResetPropagate::paste_state_apply() {
     }
 
     // AND A RUN THAT WROTE NO BLOCK DOES NOT MOVE (architect 2026-08-31 —
-    // the twin of paste_apply's matched==0 arm above). The switch to target
-    // view is a change of scene that looks exactly like a paste, so on the
+    // the twin of paste_apply's matched==0 arm above). The switch to the P
+    // column is a change of scene that looks exactly like a paste, so on the
     // produced-nothing path it retires and the card stands alone: the view
     // stays exactly where the user left it. THE LAND IS SKIPPED, NOT STUBBED —
     // every run that wrote a block still reaches it unchanged below.
@@ -847,21 +849,22 @@ void PhaseResetPropagate::paste_state_apply() {
     // flag already in the clipboard's state, the any_change == false path —
     // STILL LANDS. A paste that paired stands as a paste: it walked its blocks
     // and wrote the state they were asked for, and the switch shows a TRUE
-    // result (the destination in target view, already carrying what was
+    // result (the destination in the P column, already carrying what was
     // pasted). It is not the misleading scene the switch was retired for, which
     // is a paste that touched no block at all. This is a RULING, not an
     // oversight, and the same line holds for paste_apply's byte-equal
     // self-paste, which lands too.
     if (applied_pairs == 0) return;
 
-    // Land in target view (the lead-in overlay's view) at the end of a
+    // Land in the P column of the standing audio view (paste_apply's landing,
+    // architect 2026-10-14) at the end of a
     // paste-state run that wrote at least one block — a run stopped LATER by a
     // divergence or a count mismatch, and a run that flipped no flag because
     // every one already matched, both included (the ruling above). State paste
     // creates no resets (it only flips disabled flags on existing ones), so
     // there is no selection to set and the tail leaves none: the column swap it
     // runs clears the selection, and nothing restores one.
-    land_paste_in_target_view({});
+    land_paste_in_phase_reset_view({});
     // THE ENTRY NAMES THE VIEW THE PASTE LANDED IN — paste_apply's restamp
     // read across, on this act's own push condition (any_change): a run that
     // flipped no flag pushed nothing, and the entry beneath is not its.
@@ -870,43 +873,41 @@ void PhaseResetPropagate::paste_state_apply() {
 
 // The architect inspects a propagate paste by eye instead of the old
 // Ctrl+Z/Ctrl+Shift+Z round-trip: the PHASE RESET propagate starts in the warp
-// (source) view and ends in target view, and this tail is shared by the paste
+// column and ends in the P COLUMN OF THE SAME AUDIO VIEW — S+W lands in S+P,
+// T+W in T+P (architect 2026-10-14: "the phase-reset paste stays in the
+// current audio view, S+P stays S+P, like Shift+S"; it crossed into T+P
+// until then) — and this tail is shared by the paste
 // actions — BY EVERY RUN THAT WROTE A BLOCK, and by no other since 2026-08-31
 // (the produced-nothing arms skip it and stand still, the ruling and its
 // two halves at the declaration). SHIFT+S, the drop from the warp column
-// (2026-08-28, GuiInputHandler::drop_phase_reset_crossing), took this
-// tail's own order verbatim until 2026-10-12, when it stopped crossing the
-// audio view (architect); its column switch and last kick are still this
+// (GuiInputHandler::drop_phase_reset_crossing), is this tail's twin and
+// stays in its audio view for the same reason ("source stays source, target
+// stays target", 2026-10-12): its column switch and last kick are this
 // tail's, for this tail's reasons.
 //
-// Order — audio-view switch FIRST, then marker-view switch to P, then the
-// selection set (the playhead land rides with it, after the swap):
-//   * switch_active_audio_view_to is the SAME chokepoint the view selectors run
-//     (validate_target_view_entry, the S<->T re-express of playhead/viewport,
-//     kick_waveform_sync, and target_render.ensure_ready all
-//     fire exactly once). It is the SET-TO spelling, so naming 'T' from a
-//     session already in target view is the chokepoint's own no-op and this
-//     tail spells no guard of its own.
+// WHAT STAYING IN THE AUDIO VIEW MEANS FOR THE PASTE, each point the S->T
+// switch that led this tail used to carry: no domain flip, so the viewport
+// and the playhead stay exactly where the reader holds them (the created-set
+// arm's land below is the playhead's one move, onto the first created reset
+// as the column shows it; a paste that created nothing leaves the playhead
+// where it rested); no playback stop (the placement paste's confirmation
+// stopped any play at its open; the state paste leaves a live play running
+// from S+W exactly as it always did from T+W, the S->T switch having been its
+// only stop); no target render is asked for by the landing (the store
+// change already triggered one at the push); and the reset a paste
+// materializes from S+W shows in S+P exactly where the same reset dropped
+// there would, the anchor's re-derivation being the drop's own lead-in
+// arithmetic through the live target map in either view (the anchor block
+// above; drop_at_playhead_source_frame). The "Stopped at …" report was
+// already composed in the view the paste was pressed in
+// (format_domain_timestamp, before this tail), which is now the view it
+// lands in too.
+//
+// Order — the marker-view switch to P first, then the selection set (the
+// playhead land rides with it, after the swap):
 //   * switch_active_markers_view_to('P') CLEARS the selection (a column switch
 //     clears) — so the selection must be set AFTER it or that clear would wipe
 //     the new one.
-//   * the S/T switch DOES touch the selection since 2026-07-29
-//     (it collapses a 2+ selection to its focus, the point-form view-switch
-//     rule), but its placement here is still free — SELECTION-NEUTRAL for every
-//     reachable paste, and that is GATE-DERIVED rather than incidental: both
-//     paste entries refuse unless EXACTLY ONE warp marker is selected, and the
-//     confirmation prompt swallows every mutation while it is up, so the
-//     selection this call sees is always that singleton and the collapse is a
-//     no-op. That same toggle now also LANDS the playhead on a surviving focus
-//     (the lane owns the playhead across the domain flip), which here means the
-//     paste ANCHOR's target image. Harmless either way: a created-set paste lands
-//     again over the top, and a paste that created nothing rests with the anchor's
-//     own target image as its cursor — a better resting spot than a generic
-//     re-express of wherever the cursor happened to be, and the only playhead cue
-//     left, since the swap's clear means no flag claims the position. Running it
-//     first keeps the heavier re-express (and its full-window invalidate) ahead of
-//     the lightweight mode swap and leaves every side effect (hover clear, the
-//     selection clear) coherent.
 //
 // Invalidation, and why the tail ends in a SYNCHRONOUS rebuild rather than plain
 // damage: on_redraw is blit-only, and the run loop services the frame callback
@@ -917,21 +918,8 @@ void PhaseResetPropagate::paste_state_apply() {
 // W flag pixels (and the pre-paste selection's) under P-live text / stem / overlay
 // passes for one frame. kick_waveform_sync commits plate, fingerprint and flag
 // cache before that paint, which is exactly what the column switch itself takes
-// for the same reason (active_views.cpp).
-// IT COVERS BOTH ENTRY CONTEXTS, and it is needed in both:
-//   * W+SOURCE entry — the S/T switch runs and kicks, but it
-//     kicks BEFORE the column swap below, so its rebuild reads the OLD
-//     active_markers_view and the stale-flag frame stands. The tail kick is then
-//     the SECOND on this path, and a second kick is harmless: kick_waveform_sync's
-//     two clamps (clamp_viewport_start, clamp_display_state_to_live_domain) are
-//     idempotent, and force_synchronous_waveform_rebuild re-renders the plate into
-//     the same surface, republishes the identical fingerprint (pending_fp_* in
-//     lockstep, so no worker re-dispatch), and re-runs the fingerprint-guarded flag
-//     rebuild — which is precisely the work that must happen again, the column
-//     having changed in between. Cost: one extra full plate render per paste, a
-//     discrete rare command.
-//   * W+TARGET entry — the audio switch is skipped entirely, so the tail kick is
-//     the paste's ONLY synchronous rebuild.
+// for the same reason (active_views.cpp). It is the paste's ONLY synchronous
+// rebuild in either audio view, no audio switch running ahead of it.
 // The ordinary damage stays beside it: the rebuild damages the window-top
 // rect through the waveform's bottom on invalidate_waveform_area's road
 // (damage_window_top_rows, viewport.h), so invalidate_waveform_area is a
@@ -941,15 +929,12 @@ void PhaseResetPropagate::paste_state_apply() {
 // landing selection used to move that readout, which sat one lane below the
 // rebuild's rect. No state surface displays a resolved value any more, and the
 // paste's "Stopped at …" report is a notification card with its own owner.)
-void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created) {
-    if (input) input->switch_active_audio_view_to('T');
+void PhaseResetPropagate::land_paste_in_phase_reset_view(
+        const std::set<int>& created) {
     active_views.switch_active_markers_view_to('P');
-    // A REFUSED TARGET ENTRY (its tripwire-class validity gate, unreachable
-    // from program-written input) leaves the audio view in source, and the
-    // column write lands S+P — a view of its own since 2026-10-12 (architect;
-    // the writer refused 'P' there from 2026-09-21 until then, and this tail
-    // guarded its created set on that refusal) — so the created set below
-    // always names rows of the column shown.
+    // The column write lands in either audio view (S+P a view of its own
+    // since 2026-10-12, the writer refusing no column), so the created set
+    // below always names rows of the column shown.
     // The CREATED-SET arm below LANDS the playhead on the first created reset,
     // through the land, a movement owner. The NO-CREATED arm lands nothing — a
     // paste that materialized no reset moved no playhead and touched no
@@ -992,16 +977,17 @@ void PhaseResetPropagate::land_paste_in_target_view(const std::set<int>& created
     // produced no reset reaches here too) — NEEDS NOTHING AT ALL, and that is the
     // whole arm: the column swap above cleared the selection and nothing restored
     // one, so there is no group to collapse, no focus to land on, and no lane. The
-    // cursor is the playhead, resting where the S->T re-express put the paste
-    // anchor's image, and a paste that did nothing changes nothing. (The collapse
+    // cursor is the playhead, resting where it rested before the press (no
+    // domain flip re-expresses it since 2026-10-14), and a paste that did
+    // nothing changes nothing. (The collapse
     // and the land that stood here existed only to clean up the P-column selection
     // the swap used to restore, deleted 2026-07-29 with the parked slots.)
     viewport.invalidate_top_strip();
     viewport.invalidate_waveform_area();
     // LAST, after the created selection is installed, so
     // the flag cache rebuilds against the final column AND the final selection
-    // hash in one pass (the reasoning, and the two entry contexts it covers, are
-    // in the head comment above; the authoritative caller inventory for this kick
+    // hash in one pass (the reasoning is in the head comment above; the
+    // authoritative caller inventory for this kick
     // lives at Viewport::kick_waveform_sync's declaration, viewport.h).
     viewport.kick_waveform_sync();
 }

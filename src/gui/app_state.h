@@ -373,7 +373,8 @@ struct SettingsSnapshot {
 // and can synthesize no other (architect 2026-09-21 — the tags are read off the
 // live view at push, which is the landing view for every act that stays where
 // it is; the one class that pushes and then crosses, the two phase-reset paste
-// bodies, restamps its own entry's tab/audio-view tags after the landing;
+// bodies, restamps its own entry's tags after the landing — the column, W to
+// P, since the paste stays in its audio view (architect 2026-10-14);
 // Undo::stamp_top_entry_with_landing_view). S+P is one of the four views
 // again since 2026-10-12 (architect), so a 'P' entry authored there restores
 // there, column and audio view each through its own writer.
@@ -398,7 +399,8 @@ struct UndoEntry {
     // 2026-10-12): the one shape that parted them — a phase-reset paste whose
     // target entry refused (the tripwire class), the session staying in S+W
     // with the column writer refusing 'P' there, 2026-09-21 to 2026-10-12 —
-    // lands S+P now, the column write no longer refusing. The tag stays the
+    // is gone, the column write no longer refusing and the paste no longer
+    // entering target view at all (architect 2026-10-14). The tag stays the
     // one road for the column question, so a future parting needs no reader
     // edit.
     // Meaningful on a MARKER entry only; a settings-only entry carries 'S',
@@ -11147,8 +11149,11 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // pass to owning as it does in source view since 2026-09-13), which is
 // the WHOLE tempo surface now and is dispatched without consulting this
 // predicate; (2) the
-// phase-reset propagate (a warp-view gesture that authors phase resets; its
-// paste lands in target view); (3) THE ITERATION-BRACKET WIPE IN TARGET VIEW
+// phase-reset propagate (a warp-column gesture that authors phase resets and
+// moves no warp marker, so pressed in W+target it places nothing inside the
+// map the view is drawn from; its paste lands in the P column of the audio
+// view it was pressed in, architect 2026-10-14, a column that authors in both
+// views); (3) THE ITERATION-BRACKET WIPE IN TARGET VIEW
 // (granted 2026-08-07 with the ruling that iteration mode is TARGET-LEGAL — two
 // sites, the iteration sweep's success tail and the `i` toggle's OFF branch,
 // both reachable in W+target now that the mode rests there; the class is argued

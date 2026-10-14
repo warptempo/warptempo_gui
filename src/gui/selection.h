@@ -32,8 +32,8 @@ struct Selection {
     // 2026-09-10, when that lamp became a tool posture no Selection body
     // writes; the contract is at AppState::add_to_selection.) TWO CALLERS,
     // re-grepped 2026-09-23, in two classes. THE PASTE LANDING installs a
-    // set it just created: the phase-reset propagate's target-view landing
-    // (PhaseResetPropagate::land_paste_in_target_view), for which this arity
+    // set it just created: the phase-reset propagate's landing in the P column
+    // (PhaseResetPropagate::land_paste_in_phase_reset_view), for which this arity
     // was added — it wrote the two fields directly until 2026-08-29, leaning
     // on the column switch two lines above it to clear them (behaviour-neutral
     // — the paste is W-gated, so that switch always fires — but a property of

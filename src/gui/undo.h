@@ -241,10 +241,18 @@ struct Undo {
     // entry's three view tags (tab, audio view, landing column) from the
     // live view. The caller calls it only on a
     // press that pushed (its own push condition), so it can never touch an
-    // older entry beneath. ITS CALLERS, re-grepped 2026-09-21: the two
+    // older entry beneath. ITS CALLERS, re-grepped 2026-10-14: the two
     // phase-reset pastes (paste_apply / paste_state_apply,
-    // phase_reset_propagate.cpp), W-column acts that land in T+P through
-    // land_paste_in_target_view — every other crossing act (Shift+S,
+    // phase_reset_propagate.cpp), W-column acts that land in the SAME audio
+    // view's P column through land_paste_in_phase_reset_view (architect
+    // 2026-10-14, the symmetry with Shift+S: S+W lands in S+P, T+W in T+P;
+    // they crossed into T+P until then) — so of the three tags only the
+    // column crosses, W to P, and the tab and the audio view are rewritten
+    // with the values they already hold. (push_undo_phase_reset already
+    // writes landing column 'P', so on today's two callers every tag the
+    // restamp writes holds its value already; the call keeps the entry's
+    // landing view the landing's word rather than the push helper's
+    // constant.) Every other crossing act (Shift+S,
     // bare `i`, the typed view keys) crosses before it pushes
     // or pushes nothing. op_mode is NOT restamped: it names the store the
     // entry changed, which recompute_dirty's per-column walk and the

@@ -12,7 +12,6 @@
 
 struct GuiTargetRender;
 struct GuiActiveViews;
-struct GuiInputHandler;
 
 // THE PROPAGATE FAMILY'S STOP-MESSAGE TIMESTAMP. Formats a stop message's timestamp
 // in whichever audio domain the user is currently in. The input is a
@@ -95,7 +94,7 @@ struct PhaseResetPropagate {
     // The two pastes' "Stopped at …" reports are notification cards
     // (2026-08-29); this is the one push chokepoint they reach.
     GuiNotifications&     notifications;
-    // THE SELECTION CHOKEPOINT, held for one line (2026-08-29): the target-view
+    // THE SELECTION CHOKEPOINT, held for one line (2026-08-29): the P-column
     // landing REPLACES the membership with the set the paste created, and a
     // replace must run through a Selection mutator or the shift anchor
     // outlives it (Selection::replace_selection carries the whole reasoning;
@@ -103,14 +102,6 @@ struct PhaseResetPropagate {
     // became a tool posture no Selection body writes). Every other
     // selection effect on this path is already the column switch's own clear.
     Selection&            selection;
-
-    // Back-pointer to the input handler, wired in main.cpp after both are
-    // constructed (the input handler holds this propagate by reference, so the
-    // dependency is a pointer set after construction, mirroring the settings
-    // editor's `input` back-wire). Reaches switch_active_audio_view_to so a
-    // completed paste can land in target view through the SAME chokepoint the
-    // view selectors use.
-    GuiInputHandler*      input = nullptr;
 
     PhaseResetPropagate(AppState& app_, Viewport& viewport_, Undo& undo_,
                         GuiTargetRender& target_render_,
@@ -160,8 +151,11 @@ struct PhaseResetPropagate {
     // card (GuiNotifications::notify); a clean or empty run is silent.
     void paste_state_apply();
 
-    // Shared end-of-paste tail: land the completed paste in TARGET view (where
-    // the lead-in overlay lives) with the newly created resets selected.
+    // Shared end-of-paste tail: land the completed paste in the P COLUMN OF
+    // THE AUDIO VIEW IT WAS PRESSED IN — S+W to S+P, T+W to T+P — with the
+    // newly created resets selected (architect 2026-10-14, the symmetry with
+    // Shift+S, which stays in its audio view the same way; the tail crossed
+    // into T+P until then). The audio view never changes.
     // `created` is the exact post-insert index set of the resets this paste
     // materialized (empty for the state-only tail, which flips flags on resets
     // that already exist).
@@ -178,5 +172,5 @@ struct PhaseResetPropagate {
     // that paired stands as a paste and the switch shows a true result. What
     // the switch was retired for is a paste that touched no block at all:
     // pair_count 0 on either side, or a divergence / count mismatch at block 0.
-    void land_paste_in_target_view(const std::set<int>& created);
+    void land_paste_in_phase_reset_view(const std::set<int>& created);
 };

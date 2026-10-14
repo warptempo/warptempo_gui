@@ -337,10 +337,11 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // replaces S/T, W/P and A/B wholesale. So the rule now
 // sits at every site that assigns app.active_audio_view / active_markers_view /
 // active_tab_view — grep those three names and this list is what comes back:
-//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (the three
-//     view selectors, the settings `active_audio_view=` key, the Shift+S
-//     crossing, bare `i`'s own, the undo restore's tag and the phase-reset
-//     propagate paste's audio half), below its own refusals.
+//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (the four
+//     view selectors, the settings `active_audio_view=` key, bare `i`'s own
+//     and the undo restore's tag; Shift+S since 2026-10-12 and the
+//     phase-reset propagate paste since 2026-10-14 stay in their audio view),
+//     below its own refusals.
 //   * GuiActiveViews::switch_active_markers_view_to — the W/P writer, below
 //     its same-mode refusal (the four view selectors
 //     and the settings key through select_active_markers_view, the Shift+S
@@ -913,11 +914,11 @@ struct GuiInputHandler {
     // commit_trim_mutation); the friendship lets the editor reach them
     // through its back-pointer without a parallel writer.
     friend struct GuiSettingsEditor;
-    // The propagate's paste tail lands in target view through the same S/T
-    // chokepoint in its set-to spelling (switch_active_audio_view_to); the
-    // friendship lets it reach that private method through its back-pointer.
-    friend struct PhaseResetPropagate;
-    // AND THE UNDO RESTORE, for the same private method (2026-08-28): an undo
+    // (THE PROPAGATE PASTE'S FRIENDSHIP AND BACK-POINTER went 2026-10-14: its
+    // landing tail crossed into target view through the set-to spelling until
+    // the paste was ruled to stay in its audio view, Shift+S's symmetry.)
+    // THE UNDO RESTORE, for the S/T chokepoint's set-to spelling,
+    // switch_active_audio_view_to (2026-08-28): an undo
     // entry records the S/T view beside the tab and the column, and the restore
     // hands each axis to its own owner — the other two live on GuiActiveViews,
     // which Undo holds outright, and this one lives here.
@@ -3901,16 +3902,16 @@ private:
     // then leaving target view landed the phase-reset column on W), so the
     // switch carries either column across the flip.
     // The SET-TO form exists for the callers that name a view rather than
-    // an axis: the four absolute view selectors, the
-    // phase-reset propagate's land-in-target tail, — since 2026-08-28 —
+    // an axis: the four absolute view selectors, — since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
     // each through that axis's owner, and — since
     // 2026-09-13 — bare `i`'s ON edge in source view, which crosses to target
     // before it lights grid iterations (handle_mode_keys'
     // `i` arm, input_key_dispatch.cpp). (Shift+S tripped to target through
-    // it ahead of its lead-in drop from 2026-08-28 to 2026-10-12; the chord
-    // stays in its audio view since.)
+    // it ahead of its lead-in drop from 2026-08-28 to 2026-10-12, and the
+    // phase-reset propagate's paste tail landed in target through it until
+    // 2026-10-14; both stay in their audio view since.)
     void switch_active_audio_view_to(char target_view);
     void handle_active_audio_view_toggle();
 
