@@ -1,7 +1,8 @@
 #pragma once
 
-// THE FOLDER OVERLAY — the keyboard-slot LIST PANEL (architect design
-// 2026-08-28). ONE WIDGET, TWO CONTENTS: the RENDER PLAYER's output folders
+// THE FOLDER OVERLAY — the LIST PANEL (architect design 2026-08-28; the
+// keyboard slot's band until 2026-10-14, the modal family's box since,
+// modal_box.h). ONE WIDGET, TWO CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, and the OPEN PROJECT PICKER's valid project folders. (A third
 // stood 2026-09-03..30, the AV Sync Stats panel's inert text lines, and went
 // with the panel; a fourth for one day, the `h` view's history picker, retired
@@ -23,15 +24,16 @@
 // icon and a name (a glyph-less TEXT kind went with the AV Sync Stats panel
 // on 2026-09-30, and an UP row, `..`, was a kind until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
-// row) — painted in THE ON-SCREEN KEYBOARD'S OWN BAND:
-// full window width, standing from DIRECTLY UNDER THE ICON ROW
-// down to the bottom row — the whole area below the toolbar, the flexible
-// gap 1 included (architect 2026-09-09, the top strip relayout that put the
-// icon row under the menu row, after his 2026-09-03 ruling that an overlay
-// could start right under the header and "go all the way down to the bottom
-// strip") — so EVERY LANE BUT THE TWO
-// TOOLBAR ROWS AND THE BOTTOM ROW is under it, and THE MENU ROW AND THE ICON
-// ROW STAND ABOVE IT, VISIBLE AND CARRYING THE `h` VIEW'S OWN PARTITION
+// row) — painted in THE MODAL FAMILY'S BOX (architect 2026-10-14,
+// modal_box.h, the one owner of the shape: "overlays/modals can take over the
+// area from the trim bar on down, with just the bottom new border
+// remaining"): from THE VIEW BAR'S TOP ROW down, one sunken box in the canvas
+// column's own ring and columns, the main window's 5 W foot under it, and
+// under that the CONTROLS ROW on row 8's content rows (the modal dialog's,
+// paint_modal_dialog) — so EVERY LANE FROM THE VIEW BAR TO ROW 8 is under
+// it, and THE MENU ROW, THE ICON ROW AND THE COLUMN'S AIR UNDER THE BAND
+// STAND ABOVE IT, as the main window paints them, the menu and icon rows
+// CARRYING THE `h` VIEW'S OWN PARTITION
 // (architect 2026-09-03 evening: "leave File open, because Quit should still
 // be enabled — everything else like what we do with history ... Leave that
 // for the player, the picker and the AV stats"). So FILE IS LIVE above the
@@ -41,16 +43,16 @@
 // chords) — while Edit and Settings grey through
 // menu_anchor_live and refuse on that painted face, and every icon-row
 // button — the view group's four included — greys through
-// redesign_button_enabled's first arm. The header behind them keeps its one
-// ground, the content ground, which has no unfocused face. The waveform's own
+// redesign_button_enabled's first arm (the render player's Play Renders
+// button excepted, its own closer, 2026-10-13). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
 // whose clip reads the STANDING one's own rect, and which this band reduces
-// to a zero-height rect) while the lanes it covers paint and are covered.
-// NOTHING MARKS THE BAND'S TOP (architect 2026-10-01): the icon row it
-// starts under has no border-bottom since that day, and the band draws no line
-// of its own — "just nothing at first; we can mock something up if it bothers
-// us". The content rect is the surface rect whole.
+// to a zero-height rect, its top above the canvas's) while the lanes it
+// covers paint and are covered. THE BOX'S RING IS THE BAND'S ONE EDGE; the
+// FIRST ROW STANDS AT THE BOX'S TOP, one pad under the ring (the folder-name
+// header that stood above the player's list 2026-10-10 to 2026-10-14 is
+// removed, content_rect's note).
 // The architect's ruling (2026-08-28):
 // "the overlay sits in the on-screen keyboard's place above the bottom strip,
 // replacing the keyboard there" — on glass the keyboard would occupy that
@@ -64,29 +66,23 @@
 // row visible. No header row, no columns, no scrollbar: the offset is the
 // whole scroll state, and an over-long listing simply scrolls.
 //
-// THE BAND IS THE SLOT'S AND THE ROW IS THE LIST'S (architect 2026-08-28,
-// the row then the icon row's button; Windows' list row since 2026-10-02;
-// before 2026-08-28 both were the keyboard's). Two owners, neither
-// restated here:
-//   * THE BAND takes the SLOT's x, its width and its BOTTOM EDGE — the bottom
-//     row's top, the window's whole width (keyboard_slot_band, app_state.h;
-//     the keyboard stands on the window's foot instead since 2026-10-10, a
-//     bottom overlay, onscreen_keyboard.h). ITS HEIGHT IS THE CEILING'S WHOLE
-//     EXTENT, every time it stands: from DIRECTLY UNDER THE ICON ROW
-//     (keyboard_slot_max_height_px, the same header — the bottom row's top
-//     less the icon row's foot) down to the bottom row,
-//     whatever the listing's length — architect 2026-08-28: "we should
-//     automatically make the height ... so that it's not a fluid height —
-//     it's always a fixed height", 2026-09-03 for a fixed start under the
-//     header and 2026-09-09 for the toolbar's foot. A
-//     SHORT LISTING LEAVES THE REST OF THE BAND AS GROUND and a long one
+// THE BAND IS THE MODAL FAMILY'S AND THE ROW IS THE LIST'S (architect
+// 2026-08-28, the row then the icon row's button; Windows' list row since
+// 2026-10-02; the band the keyboard slot's from 2026-08-28 and the modal
+// family's box since 2026-10-14). Two owners, neither restated here:
+//   * THE BAND is the family's PANEL and its rows live in the BOX'S INTERIOR
+//     (modal_box.h: modal_panel_rect, modal_box_interior_rect). ITS HEIGHT IS
+//     FIXED, every time it stands, whatever the listing's length — architect
+//     2026-08-28: "we should automatically make the height ... so that it's
+//     not a fluid height — it's always a fixed height". A
+//     SHORT LISTING LEAVES THE REST OF THE BOX AS GROUND and a long one
 //     scrolls. The fixed height retired the growing half of the day's
 //     earlier ceiling ruling (which read "it grows with its content up to
 //     that cap, then scrolls") the same day, the panel having jumped under
 //     the pointer as the listings changed size; the rest of it stands, and
-//     only WHERE the ceiling sits has moved — the earlier ruling's waveform
-//     midpoint until 2026-09-02 and the icon row's foot since 2026-09-09. The
-//     content's height
+//     only WHERE the band starts has moved — the waveform's midpoint until
+//     2026-09-02, the icon row's foot from 2026-09-09 and the view bar's top
+//     row since 2026-10-14. The content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
 //   * THE ROW IS WINDOWS' LIST ROW (architect 2026-10-02): 17 Windows px
 //     tall at the normal face, as Windows' list boxes with 16-px icons, the
@@ -103,15 +99,15 @@
 // The panel's own authored numbers are the four below.
 //
 // THE FACES ARE WINDOWS' LIST VIEW (architect 2026-10-02, the ladder at the
-// painter; the field 2026-10-06): the band is a SUNKEN WHITE FIELD, Windows
-// 95 Explorer's list — the theme's field pair inside the PLAIN SUNKEN edge
-// (content_rect below spends the edge), "like a file explorer, not popping
-// out like a rising bevel", over the 2026-10-02 ground inside the plain
-// raised edge, which it replaced on the same two lines a side, so no row and
-// no band edge moved. IT COVERS BOTH CONTENTS, this one widget being every
+// painter; the field 2026-10-06): the box's interior is THE FIELD GROUND, the
+// field pair, "like a file explorer, not popping out like a rising bevel" —
+// a surface you pick from (ModalBoxGround::Field, modal_box.h) — inside the
+// canvas column's sunken ring since 2026-10-14 (the plain sunken two-line
+// edge round the keyboard slot's band before it). IT COVERS BOTH CONTENTS,
+// this one widget being every
 // Windows list in the product (the player's folders and wavs, the project
-// picker's projects); the modal row under it — the transport, the scrub, the
-// buttons — keeps the chrome, as Explorer's toolbar and status bar do. A
+// picker's projects); the controls row under it — the transport, the scrub,
+// the buttons — stands on the face. A
 // resting row paints no fill at all, and the highlighted row is a flat fill
 // in the theme's selected pair (render.h's palette block), focused or not.
 // No hover face and NO ALTERNATING ROWS.
@@ -137,11 +133,11 @@
 // THIS HEADER DELIBERATELY DOES NOT INCLUDE onscreen_keyboard.h, and the
 // dependency runs the other way (that header includes this one, for the
 // standing tenant's rect in waveform_paint_area): since the rows became
-// buttons the panel borrows nothing from the keyboard, and the band the two
-// share is app_state.h's.
+// buttons the panel borrows nothing from the keyboard, and its band is the
+// modal family's (modal_box.h).
 #include "app_state.h"
+#include "modal_box.h"
 #include "render.h"
-#include "renders_dir.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -199,8 +195,8 @@ inline int row_icon_px()          { return scaled_px(kRowIconPx); }
 inline int row_icon_gap_px()      { return scaled_px(kRowIconGapPx); }
 inline int row_icon_inset_px()    { return scaled_px(kRowIconInsetPx); }
 
-// (THE BAND OWNS NO LINE AT ALL — the head prose carries the 2026-10-01
-// ruling that nothing marks its top.)
+// (THE BAND OWNS NO LINE OF ITS OWN — its one edge is the modal family's
+// ring, modal_box.h.)
 
 // -- Standing ----------------------------------------------------------------
 
@@ -230,11 +226,11 @@ inline int content_height_px(const AppState& a) {
            (n - 1) * button_row_gap_px();
 }
 
-// THE BAND: the slot's band (its x, its width and its bottom edge — one
-// owner, app_state.h) AT THE CEILING'S WHOLE EXTENT, a FIXED height
-// (2026-08-28, the ruling above), from under the icon row to the
-// bottom row. Like the keyboard's own accessor it does not ask whether the
-// panel stands.
+// THE BAND: THE MODAL FAMILY'S PANEL (architect 2026-10-14, modal_box.h —
+// the box in the canvas column's ring, its face margins and the foot under
+// it, from the view bar's top row to the controls row's top), a FIXED height
+// whatever the listing's length (2026-08-28, the ruling above). Like the
+// keyboard's own accessor it does not ask whether the panel stands.
 //
 // IT IS THE PANEL'S ONE RECT, and that is what the fixed height bought: the
 // band a damage must erase is the band that was painted, so a listing that
@@ -245,8 +241,9 @@ inline int content_height_px(const AppState& a) {
 // answers a question, and the two answers are now the same rect.) It is what
 // the painter grounds, what a damage erases and what the band's OUTER CLAIM
 // contains — the press router asks this rect to decide that the band, not the
-// waveform under it, owns the press. The rows are painted and hit inside the
-// content rect below, this band inside its frame.
+// waveform under it, owns the press. The controls row under it is the modal
+// dialog's (paint_modal_dialog), never this claim's. The rows are painted
+// and hit inside the content rect below, the box's interior.
 //
 // A degenerate stack answers a zero-height rect, which the painter and the hit
 // test already read as nothing. An EMPTY LISTING is a painted band with no
@@ -254,80 +251,32 @@ inline int content_height_px(const AppState& a) {
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open).
 inline GuiRect surface_rect(const AppState& a) {
-    return keyboard_slot_band(a, keyboard_slot_max_height_px(a));
+    return modal_panel_rect(a);
 }
 
-// The rows' band: THE SURFACE INSIDE ITS SUNKEN EDGE (architect 2026-10-06:
-// the list is the field inside the PLAIN SUNKEN edge, two relief lines a
-// side, relief_line_px each — the 2026-10-02 raised frame's own lines). Every
-// geometry below reads this and not the surface — the rows, the scroll
-// ceiling, the keep-visible walk, the painter's row-walk clip and row_at's
-// containment — so the edge is spelled here once and a row can never paint
-// over it or be pressed through it.
+// The rows' band: THE BOX'S INTERIOR, inside the canvas column's ring
+// (modal_box_interior_rect; the list's ground the field, ModalBoxGround::
+// Field). Every geometry below reads this and not the surface — the rows,
+// the scroll ceiling, the keep-visible walk, the painter's row-walk clip and
+// row_at's containment — so a row can never paint over the ring or be
+// pressed through it. THE FIRST ROW STANDS AT THE BOX'S TOP, one pad under
+// the ring.
+// (THE FOLDER NAME ABOVE THE PLAYLIST — the viewed folder's name in one list
+// row and an etched pair under it, the render player's alone, 2026-10-10 to
+// 2026-10-14 — IS REMOVED, architect 2026-10-14: "it was icon padding but no
+// icon, the dividing line sits awkwardly". If it is ever wanted back, the one
+// road that breaks no pattern is the folder name in the caption's title. The
+// car's MediaSession artist line keeps its own folder name, the playing
+// item's, GuiRenderPlayer's.)
 inline GuiRect content_rect(const AppState& a) {
-    const GuiRect s  = surface_rect(a);
-    const int     lw = 2 * relief_line_px();
-    if (s.w <= 2 * lw || s.h <= 2 * lw) return GuiRect{s.x, s.y, 0, 0};
-    return GuiRect{s.x + lw, s.y + lw, s.w - 2 * lw, s.h - 2 * lw};
-}
-
-// THE FOLDER NAME ABOVE THE PLAYLIST (architect 2026-10-10 ~23:00, "the path
-// field … should just show the name of the folder that you're currently
-// looking at … just stick the title above the playlist and put a separator";
-// the render player is not front-facing, so it is minimal — no field box, no
-// style of its own): WHILE THE RENDER PLAYER STANDS the content rect's top
-// gives up ONE LIST ROW (kRowHeightPx) to a line naming the VIEWED folder —
-// where Up a Folder and entering a folder land, `tmp` at the top level — and
-// under it an ETCHED separator pair. It is not a row: no hit, no highlight, no
-// scroll. The project picker, which shares the panel, has none (header_px is
-// zero there). THE NAME IS THE VIEWED FOLDER'S, NOT THE PLAYING ITEM'S: the
-// car's artist line (GuiRenderPlayer's media-session push) names the item's
-// folder while one sounds, and the two differ only while the listener browses
-// another folder during playback.
-inline bool has_header(const AppState& a) {
-    return a.folder_overlay.owner == AppState::FolderOverlay::Owner::Player;
-}
-
-// The header's height under the content's top: the panel pad, the name's row
-// and the separator's two lines; zero where the panel carries no header.
-inline int header_px(const AppState& a) {
-    if (!has_header(a)) return 0;
-    return pad_px() + button_row_height_px() + 2 * relief_line_px();
-}
-
-// The viewed folder's own name (the root listing is the project's `tmp/`).
-inline std::string viewed_folder_name(const AppState& a) {
-    const AppState::RenderPlayer& rp = a.render_player;
-    return (rp.folder == AppState::RenderPlayer::Folder::Root
-                ? project_batch_root(a.source_audio_path)
-                : rp.batch_dir)
-        .filename()
-        .string();
-}
-
-// The name's row: the first row slot of the content, the rows' own width.
-inline GuiRect header_name_rect(const AppState& a) {
-    const GuiRect band = content_rect(a);
-    return GuiRect{band.x + pad_px(), band.y + pad_px(),
-                   band.w - 2 * pad_px(), button_row_height_px()};
-}
-
-// THE ROWS' BAND: the content rect under the header. EVERY ROW GEOMETRY
-// (the row rects, the scroll ceiling, the keep-visible walk, the painter's
-// row clip and row_at's containment) reads this and not the content rect, so
-// paint and hit agree on the header's moved edge. Equal to content_rect
-// where there is no header.
-inline GuiRect rows_rect(const AppState& a) {
-    const GuiRect c = content_rect(a);
-    const int     h = std::min(header_px(a), c.h);
-    return GuiRect{c.x, c.y + h, c.w, c.h - h};
+    return modal_box_interior_rect(a);
 }
 
 // -- The scroll state --------------------------------------------------------
 
 // The scroll offset's ceiling: how much of the content lies past the band.
 inline int max_scroll_px(const AppState& a) {
-    const GuiRect band = rows_rect(a);
+    const GuiRect band = content_rect(a);
     return std::max(0, content_height_px(a) - band.h);
 }
 
@@ -346,7 +295,7 @@ inline void clamp_scroll(AppState& a) {
 // press router read their rects from here and nowhere else). It may lie partly or wholly
 // outside the band; the painter clips and the hit test asks the band first.
 inline GuiRect row_rect(const AppState& a, int index) {
-    const GuiRect band = rows_rect(a);
+    const GuiRect band = content_rect(a);
     const int h = button_row_height_px();
     const int y = band.y + pad_px() + index * (h + button_row_gap_px()) -
                   a.folder_overlay.scroll_px;
@@ -364,17 +313,16 @@ inline void for_each_row(const AppState& a, Fn&& fn) {
     }
 }
 
-// The row under (x, y), or -1 — a point outside the ROWS' BAND (rows_rect: the
-// content rect under the render player's folder-name header) answers -1
-// whatever row's rect would contain it, so a row scrolled out of the band
-// cannot be pressed through the waveform above or the bottom row below. It is
-// the content rect and not the surface because the surface is the band's
-// outer CLAIM (the press router's own test, one call up) while the rows live
-// in the content — the surface inside its frame (content_rect).
+// The row under (x, y), or -1 — a point outside the ROWS' BAND (content_rect,
+// the box's interior) answers -1 whatever row's rect would contain it, so a
+// row scrolled out of the band cannot be pressed through the ring or the
+// controls row below. It is the content rect and not the surface because the
+// surface is the band's outer CLAIM (the press router's own test, one call
+// up) while the rows live in the content — the box inside its ring.
 // The painter clips its row walk to this same rect, so paint and hit agree on
 // every pixel of the band.
 inline int row_at(const AppState& a, int x, int y) {
-    const GuiRect band = rows_rect(a);
+    const GuiRect band = content_rect(a);
     if (!rect_contains(band, x, y)) return -1;
     int hit = -1;
     for_each_row(a, [&](int i, const AppState::FolderOverlayRow&,
@@ -391,7 +339,7 @@ inline int row_at(const AppState& a, int x, int y) {
 inline void scroll_row_into_view(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    const GuiRect band = rows_rect(a);
+    const GuiRect band = content_rect(a);
     const GuiRect r    = row_rect(a, index);
     const int top      = band.y + pad_px();
     const int bottom   = band.y + band.h - pad_px();

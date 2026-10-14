@@ -78,10 +78,14 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 
 // THE RENDER PLAYER (architect design 2026-08-28, the in-app player for the
 // car) — the operations cluster for the MODE that plays the project's own
-// renders through the one playback engine: the folder overlay above the
-// bottom row (folder_overlay.h) lists `tmp/` — its batch folders and their
+// renders through the one playback engine: the folder overlay — THE MODAL
+// FAMILY'S BOX since 2026-10-14 (folder_overlay.h, modal_box.h: from the view
+// bar's top row down, its first row at the box's top, no folder-name header)
+// — lists `tmp/` — its batch folders and their
 // cells, THE PLAYER'S WHOLE SUBJECT since 2026-09-01 (the ruling below) — and
-// the bottom row's modal carries the transport (THE MAIN WINDOW'S OWN
+// the family's CONTROLS ROW under it (row 8's content rows, no dock bar above
+// it, its outermost cases flush with the box's ring) carries the transport
+// (THE MAIN WINDOW'S OWN
 // TRANSPORT TRIPLE since 2026-09-01 — Home / Play-Pause / End, the same three
 // keys as the roster's, and the same three acts until 2026-09-04, when the
 // right one became the NEXT TRACK (home() / next_track(), the pair's contract

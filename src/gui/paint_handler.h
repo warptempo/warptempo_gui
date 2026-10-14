@@ -928,16 +928,20 @@ private:
     // its own exposure.
     void paint_caption_row(cairo_t* cr);
     // THE UNIFIED BOTTOM ROW'S BUTTON-AND-CLOCK HALF (rows 8 and 9 merged,
-    // 2026-08-12; the layout architect 2026-09-29): the clock in its time
-    // field (2026-10-05), one field pad in from the lane's left edge, with THE
-    // STATE LINE on the ground one field pad past it (2026-10-08; architect
-    // 2026-10-03: the `h` walk line or the render's
-    // progress line at the normal face, clipped one group space short of the
-    // right block), then the right
-    // margin's block — the MARKER-VERB GROUP (its membership is
+    // 2026-08-12; the layout architect 2026-09-29; Cool Edit's row 8 since
+    // 2026-10-09): the clock in its dark time field (2026-10-05) in a
+    // grippered group of its own at the left, with THE STATE LINE on the
+    // face its own air past that group's end bar (architect 2026-10-03: the
+    // `h` walk line or the render's progress line at the normal face, clipped
+    // short of the right block), then the right block packed against the
+    // lane's edge — the MARKER-VERB GROUP (its membership is
     // kMarkerVerbGroup's, in the .cpp), the marker walk, the arrow four and
-    // Play / Stop (the arrow group's last case), eight Windows px of bare ground between groups —
-    // at the icon row's boxes, painted onto the lane paint_bottom_strip has
+    // Play / Stop (the arrow group's last case) — each Cool Edit's group of
+    // gripper, air, the program's cases, air and end bar, the row's last
+    // group with no end bar (2026-10-14), two W of face between groups
+    // (program_spec.h's group fields; eight Windows px of bare ground between
+    // groups 2026-09-29 to 2026-10-09) — painted onto the lane
+    // paint_bottom_strip has
     // already grounded — that painter is the lane's one chrome owner and the
     // only caller of this body, which keeps the family's fifth button-row
     // painter separate only because the button cluster's tables and the

@@ -1384,9 +1384,10 @@ inline int relief_line_px() {
 // status bar stands under its panels (architect 2026-10-10: "they're
 // analogous to the taskbar, basically, but they sit on top of the design.
 // They don't move anything below them"): THE DIALOG — a chrome tenant of the
-// bottom row (chrome_tenant_owns_bottom_row, app_state.h: a prompt, a dialog
-// editor, the picker's Cancel; the render player is the program's and stays
-// in the row) — and THE ON-SCREEN KEYBOARD each stand at the window's foot,
+// bottom row (chrome_tenant_owns_bottom_row, app_state.h: a prompt or a
+// dialog editor; the render player and the picker are the modal family's
+// box and controls row, modal_box.h, 2026-10-14) — and THE ON-SCREEN
+// KEYBOARD each stand at the window's foot,
 // the window's whole width over the ring's columns, the border under row 8
 // and the ring's bottom row in their rows, one Hilight line on top and the
 // chrome's ground below, no border at the foot or the sides; the ring, the
@@ -1773,8 +1774,11 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // field and the state line on the ground beside it at the left pad
 // (architect 2026-10-02 / 2026-10-03 / 2026-10-05),
 // and the MARKER-VERB GROUP, the marker walk, the four cardinal arrows and
-// Play / Stop (the arrow group's last case) flush right, eight Windows px of bare ground between
-// groups (architect 2026-09-29; kMarkerVerbGroup in
+// Play / Stop (the arrow group's last case) flush right, each Cool Edit's
+// group (its gripper, air, cases, air and end bar, the last with no end bar)
+// with two W of face between groups (program_spec.h's group fields, since
+// 2026-10-09; eight Windows px of bare ground between them from 2026-09-29;
+// kMarkerVerbGroup in
 // paint_handler.cpp owns that group's membership, which does not bear
 // restating here), all one line ON THE WINDOW'S FOOT — which it holds again
 // since
@@ -1809,10 +1813,12 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // (architect 2026-10-14, program_spec.h's row8_tail_px); the time field's
 // pads 5 W each side, the dialog field's own (program_spec.h's
 // field_pad_px, 2026-10-10).
-// The render player, the program's tenant, stands in the content band below
-// the dock bar's rows, on the row's face (paint_bottom_strip). A CHROME
-// TENANT (chrome_tenant_owns_bottom_row, app_state.h: a prompt, a dialog
-// editor, the picker's Cancel) is THE DIALOG, a bottom overlay laid over the
+// The render player and the project picker stand their controls on the
+// content band below the dock bar's rows, on the row's face — THE MODAL
+// FAMILY'S CONTROLS ROW, the family's box covering the dock bar above it
+// (modal_box.h, architect 2026-10-14). A CHROME
+// TENANT (chrome_tenant_owns_bottom_row, app_state.h: a prompt or a dialog
+// editor) is THE DIALOG, a bottom overlay laid over the
 // content band, the border under the row and the program frame's bottom row
 // from the dock bar's foot to the window's foot, the dock bar left standing
 // above it (2026-10-10, program_frame_rect's overlay paragraph and
@@ -2820,8 +2826,11 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
 //                         dropdown's frame, the restored window's sizing
 //                         frame. (The scrub's pointed thumb draws its own
 //                         soft raised pentagon, paint_scrub_thumb.)
-//   paint_relief_plain_sunken — PLAIN SUNKEN: a field, the list (the folder
-//                         overlay's band, 2026-10-06), the scrub's channel.
+//   paint_relief_plain_sunken — PLAIN SUNKEN: a field and the scrub's
+//                         channel (the folder overlay's list wore it
+//                         2026-10-06 to 2026-10-14; it stands in the modal
+//                         family's box since, the canvas column's ring,
+//                         paint_relief_frame, modal_box.h).
 //   paint_relief_sunken_outer — SUNKEN OUTER, ONE ring (DrawEdge's
 //                         BDR_SUNKENOUTER, Shadow / Hilight): the open menu
 //                         title and the program's frame (paint_program_frame).

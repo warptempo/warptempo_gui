@@ -54,8 +54,8 @@
 // THE SLOT'S OTHER TENANT (2026-08-28): this header reads the folder
 // overlay's own rect in waveform_paint_area, the one gate and clip both
 // tenants share, so the include runs THIS way — the panel borrows nothing
-// from the keyboard since its rows became buttons, and what the two share
-// (the band, the ceiling) is app_state.h's.
+// from the keyboard since its rows became buttons, and its band is the modal
+// family's (modal_box.h, 2026-10-14).
 #include "folder_overlay.h"
 #include "gui_input.h"
 #include "platform.h"
@@ -545,9 +545,11 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // bottom or side border, and NOTHING BENEATH IT MOVES: the program lanes, the
 // program frame, the dock bar, row 8 and the border under it keep their
 // geometry and paint as always, and the overlay covers them. Two exist:
-//   THE DIALOG — a chrome tenant of the bottom row (dialog_stands: a prompt,
-//     a dialog editor, the picker's Cancel; the render player is the
-//     program's and is no overlay). ALONE its top is the dock bar's bottom,
+//   THE DIALOG — a chrome tenant of the bottom row (dialog_stands: a prompt
+//     or a dialog editor; the render player and the project picker are the
+//     modal family's box with its own controls row since 2026-10-14,
+//     modal_box.h, and no overlay — the picker's Cancel stood here from
+//     2026-10-10 until then). ALONE its top is the dock bar's bottom,
 //     the dock bar painted above it as Cool Edit's ridge: the line takes row
 //     8's content band's first line and the ground runs to the window's foot
 //     — row 8's content band less that line plus the border under row 8 and
@@ -707,10 +709,11 @@ inline GuiRect overlay_rect(const AppState& a, const GuiPlatform& gui) {
                    std::max(0, window_foot_y(a) - top)};
 }
 
-// THE SLOT'S DAMAGE RECT, the slot AT ITS TALLEST: the folder overlay's band
-// at the ceiling (keyboard_slot_band, app_state.h) united with the keyboard
-// at its tallest — its band, its line and a dialog standing on it — so one
-// rect contains every tenant's pixels in every form.
+// THE SLOT'S DAMAGE RECT, the slot AT ITS TALLEST: the whole area the modal
+// family takes — the folder overlay's box, its margins and foot, and the
+// controls row under them (modal_area_rect, modal_box.h, 2026-10-14) —
+// united with the keyboard at its tallest — its band, its line and a dialog
+// standing on it — so one rect contains every tenant's pixels in every form.
 // THE SHOW/HIDE COMPARATOR TAKES IT (reconcile_slot_standing, below): those
 // two edges damage a band whose tenant is arriving or has already gone, so
 // the rect cannot be either
@@ -719,7 +722,7 @@ inline GuiRect overlay_rect(const AppState& a, const GuiPlatform& gui) {
 // covered. A damage INSIDE a standing band takes that tenant's own rect
 // instead.
 inline GuiRect slot_damage_rect(const AppState& a) {
-    const GuiRect band = keyboard_slot_band(a, keyboard_slot_max_height_px(a));
+    const GuiRect band = modal_area_rect(a);
     const GuiRect kb   = surface_rect(a);
     if (kb.w <= 0 || kb.h <= 0) return band;
     const int top = std::min(kb.y - overlay_line_px(),
@@ -801,9 +804,10 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // THE DAMAGE IS THE SLOT'S BAND AT ITS TALLEST (slot_damage_rect), and only
 // that: on the HIDE the departed surface no longer stands, so there is
 // nothing to ask its height of, and the one rect contains every tenant's
-// pixels in every form — the folder overlay's ceiling band, the keyboard's
-// band, its line and a dialog standing on it — and with them the waveform
-// they covered (the ceiling band spans the waveform area whole).
+// pixels in every form — the modal family's whole area (the folder overlay's
+// box and the controls row under it), the keyboard's band, its line and a
+// dialog standing on it — and with them the waveform they covered (the box
+// spans the waveform area whole).
 //
 // TWO CALLERS (2026-10-13, the tablet's stale keyboard): the PRE-PAINT HOOK
 // (main.cpp), ahead of every frame either backend paints, and the TICK. The
@@ -836,8 +840,9 @@ inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
 // ONE OWNER of the rule that THE WAVEFORM IS NOT PAINTED WHERE THE SLOT
 // PAINTS. IT SUBTRACTS THE STANDING TENANT'S OWN RECT, which since
 // 2026-08-28 is a real fork rather than a formality: the overlay's band is the
-// CEILING every time it stands (the icon row's foot down since 2026-09-09,
-// whatever its listing's length) and the keyboard's is its band, its line and
+// modal family's panel every time it stands (the view bar's top row down
+// since 2026-10-14, modal_box.h, whatever its listing's length) and the
+// keyboard's is its band, its line and
 // any dialog standing on it (overlay_rect), so a rect borrowed from the other
 // tenant would either hide waveform nothing paints over or leave the panel
 // painting where the waveform still runs.
@@ -860,8 +865,9 @@ inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
 // and paint and hit cannot drift. This rect says WHERE THE PIXELS MAY LAND,
 // and so where the waveform takes a press.
 //
-// Every band is full width and runs down to the window's foot or to the
-// bottom row (the folder overlay), so what it hides off the waveform is
+// Every band spans the waveform's columns and runs down to the window's foot
+// or to the controls row (the folder overlay's box, the canvas column's own
+// columns), so what it hides off the waveform is
 // always a BOTTOM SLICE and the answer is a rect. A
 // band that reaches no higher than the waveform's own bottom subtracts
 // nothing (the dialog standing alone, below; the keyboard always overlaps it
@@ -871,12 +877,13 @@ inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
 // can still answer true for an empty rect an exposure straddles — it compares
 // edges, not areas). THAT LAST CASE IS THE OVERLAY'S ORDINARY ONE SINCE
 // 2026-09-02, when the panel's ceiling first moved above the waveform (the
-// icon row's foot since 2026-09-09):
+// view bar's top row since 2026-10-14, the modal family's box):
 // its band starts ABOVE the waveform, so
 // every waveform pass is clipped out whole while it stands, and the LANES it
-// also covers (every lane below the icon row; the menu row AND the icon row
-// stand above the band since 2026-09-09, File lit and the other two anchors
-// and every icon greyed) are not
+// also covers (the view bar, the ruler, the marker lane, the canvas's frame,
+// the column's foot and row 8; the menu row, the icon row and the column's
+// air stand above the box, File lit and the other two anchors and every icon
+// greyed) are not
 // spared this way — their painters run and the panel covers them, because
 // they publish the roster's hit rects (the record is at the paint-order
 // block, paint_handler.cpp).
@@ -884,7 +891,7 @@ inline void reconcile_slot_standing(AppState& a, const GuiPlatform& gui,
 // block above): its band, the dialog standing on it and the line on top of
 // the pair, overlay_rect — the waveform stops above the line. A dialog alone
 // starts under the dock bar, below the waveform's foot, and subtracts
-// nothing; the folder overlay (the render player's and the picker's band)
+// nothing; the folder overlay (the render player's and the picker's box)
 // starts above the waveform and subtracts it whole.
 inline GuiRect waveform_paint_area(const AppState& a, const GuiPlatform& gui) {
     const GuiRect area  = waveform_area(a);

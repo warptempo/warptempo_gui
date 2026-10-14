@@ -3382,8 +3382,9 @@ bool GuiInputHandler::touch_point_in_pan_zone(int x, int y) const {
         return false;
     // AND IT YIELDS UNDER THE FOLDER OVERLAY'S BAND (2026-08-28), for the two
     // clauses above's reason exactly and for one more: the panel paints over
-    // the waveform whole (its band runs from under the icon row to the
-    // bottom row), the whole waveform is the pan zone, and
+    // the waveform whole (its band is the modal family's panel, from the view
+    // bar's top row to the controls row, modal_box.h, 2026-10-14), the whole
+    // waveform is the pan zone, and
     // BOTH of the band's gestures live on the POINTER — the row press, whose
     // act is at the lift, and the band's own SCROLL DRAG, which is that same
     // arm past the vertical gate. Left in the zone, a finger crossing the
@@ -4823,10 +4824,11 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // nothing on a row reads kHoldBeatMs either: the load is the modal row's
     // own button (strict modifier validation's answer, and the roster's
     // shift-hold is elsewhere). A press on the pad or on a gap between rows
-    // arms nothing — the claim is this SURFACE rect, while row_at contains
-    // against the content rect (the surface whole while the band owns no
-    // line, folder_overlay.h), so the pad is claimed and inert by construction
-    // at every scroll offset.
+    // arms nothing — the claim is this SURFACE rect (the modal family's
+    // panel), while row_at contains against the content rect (the box's
+    // interior inside its ring, folder_overlay.h), so the ring, the margins,
+    // the foot and the pad are claimed and inert by construction at every
+    // scroll offset.
     //
     // A MODIFIED PRESS ON A ROW IS SILENT LIKE ONE ANYWHERE ELSE ON THE BAND
     // (architect 2026-08-30, the unbound-keys ruling read on the pointer:
