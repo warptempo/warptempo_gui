@@ -6884,7 +6884,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // COLUMN, reserved at the right so a caret at a full row's end
             // stands inside the room. Row i stands on the list's row i
             // (row0_y + i · row_pitch), its bytes painting from the line's start
-            // (`line_x0`, the text inset or past the label below): its origin
+            // (`line_x0`, the text inset): its origin
             // is that start less its first byte's pen. A line taller
             // than the box is cut at the box's interior — nothing scrolls, and
             // the 1024-byte cap keeps a real line inside it.

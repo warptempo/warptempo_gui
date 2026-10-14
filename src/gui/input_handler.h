@@ -2780,8 +2780,10 @@ private:
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit and
     // cancel are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the two dialog surfaces
-    // pass the modal's own owner (the modal family's area,
-    // viewport.cpp), the flag editor the top strip. `repaint` is
+    // pass `invalidate_dialog_editor_box` (the box's interior at the live
+    // keyboard height, viewport.h owning the rule; the whole modal area stays
+    // the opens', closes' and geometry changes' damage), the flag editor the
+    // top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
     // there would throw; the route carries no null check for it deliberately (a
     // caller that forgets it is a program bug, not a runtime condition to guard).

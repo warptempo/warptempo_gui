@@ -295,13 +295,36 @@ ydotool (its uinput device is relative-only, so the pointer is pinned off
 the window by one large relative move and never clicked): the launch,
 Full Zoom Out, two zoom steps, two walks right and one left, the tab
 switch and back, the `h` view and back, the Settings pull-down over the
-canvas and its Esc, the folder overlay and its Esc — fifteen states on
+canvas and its Esc, bare `o` and its Esc (the read-only toggle's key, not
+Open Project, which is Ctrl+O: those two states captured another view act,
+so the project picker was first proved on the laptop at f538345e below) —
+fifteen states on
 the MAXIMIZED window (the app's own launch request) and eleven on the
 RESTORED one (labwc's Ctrl+F10, ToggleMaximize), the sizing frame
 standing. Every pair identical over the whole output above the desktop's
 taskbar (its clock and a terminal title's spinner move; the window never
 reaches it). The harness lives in tmp/ (`laptop_identity.sh`,
 `laptop_identity_restored.sh`), a measurement and never a test suite.
+
+THE LAPTOP'S PROOF RE-RUN AT f538345e (2026-10-14 evening, after the Fable
+review's two fixes): the fifteen maximized and eleven restored states again
+(the harness now pressing Ctrl+O for the project picker), plus a second
+sequence (`laptop_identity2.sh`) of thirteen maximized and ten restored — the
+Settings pull-down, the Chrome row's dialog editor in the modal box, two
+typed letters, its Esc, the render player (bare `l`) and its Esc, the project
+picker (Ctrl+O) and its Esc, then restore and maximize captured 0.2 s after
+the grow and again settled (the backbuffer-size viewport of f538345e). All
+identical, cpu against gl, above the taskbar; every consecutive pair of states
+verified to differ where the act changes the screen.
+
+THE TYPING AND CARET-BLINK PROOF ON THE TABLET AT f538345e: `identity3.sh` —
+the Settings menu, the Chrome editor with the keyboard inside the frame, two
+Backspaces and two letters on the glass keyboard, Cancel — seven states
+identical, cpu against gl; and eight rapid captures of the standing editor on
+each build caught both blink phases (caret shown and hidden), every gl frame
+byte-identical to a cpu frame of the same phase. This measures the box-interior
+damage of f538345e (`Viewport::invalidate_dialog_editor_box`) for typing and
+the blink.
 
 THE LIFECYCLE PASS (2026-10-14, the session's closing install, HEAD's
 build): on the tablet, after the fifteen tap states came out identical to
