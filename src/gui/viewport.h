@@ -576,25 +576,16 @@ struct Viewport {
     // progress modal stands or was last painted (2026-10-14, modal_box.h — the box over the canvas
     // column and its controls row; the taskbar dialog's overlay to the
     // window's foot 2026-10-10 to 2026-10-14 — the definition says why). ITS CALLERS,
-    // re-greped 2026-08-28, are the TWO DIALOG EDITORS' repaint sites plus the
-    // RENDER PLAYER's three, the player being the row's third owner:
+    // re-greped 2026-10-14, are the TWO DIALOG EDITORS' closers plus the
+    // RENDER PLAYER's three, the player being the row's third owner (A
+    // STANDING EDITOR'S EDITS — typing, the completions, the caret blink, a
+    // refusal, the pointer's text drag — take the box's interior alone since
+    // 2026-10-14, invalidate_dialog_editor_box below):
     //
-    //   * TYPING and the autocompletes — route_modal_editor_key's `repaint`
-    //     argument, passed by both dialog editor key handlers
-    //     (input_key_dispatch), plus the settings editor's own prefill and
-    //     value-recall writes (settings_editor).
-    //   * THE CARET BLINK — main.cpp's per-tick blink transitions, one per
-    //     dialog editor (the flag editor's BPM arm among them, its other two
-    //     kinds damaging the top strip instead).
-    //   * THE REFUSAL — every refused commit in settings_editor,
-    //     and flag_editor's BPM commit (text_editor::refuse selects the
-    //     whole text).
     //   * THE CLOSERS — every commit / abandon that deactivates a dialog
     //     editor (settings_editor's applied / unchanged / exit_no_commit,
-    //     and flag_editor's BPM commit and exit_bpm_mode).
-    //   * THE POINTER'S TEXT DRAG — input_pointer's four `g.dialog` sites
-    //     (click-to-caret, the double-click word select, the drag's motion
-    //     and its release).
+    //     and flag_editor's BPM commit and exit_bpm_mode), and the settings
+    //     editor's prefill, part of its open.
     //   * THE RENDER PLAYER'S ROW (2026-08-28), which paints into the same
     //     lane and damages it through the same owner — TWO sites:
     //     GuiRenderPlayer::damage_row for every transport, highlight and
@@ -636,6 +627,34 @@ struct Viewport {
     // for the hint changes no row damage carries (the previous-track window's
     // edge under a playing item, which only the clock's cell damages).
     void invalidate_modal_dialog_area();
+    // A STANDING DIALOG EDITOR'S EDIT (2026-10-14): THE BOX'S INTERIOR ALONE
+    // (modal_box_interior_rect at the live keyboard height), never the
+    // family's whole area. WHY: under a box the GL canvas's clip is empty and
+    // every damage rect uploads whole (GuiGlCanvas::present_frame), so the
+    // family's area on every keystroke was ~11.8 MB at 300 %, sustained under
+    // key repeat. WHAT AN EDIT CAN CHANGE, re-derived from the painters: the
+    // line's text, its soft-wrapped rows, the selection and the caret, all
+    // painted clipped to the interior (paint_modal_dialog's editor arm); the
+    // box's geometry is a fact of the lanes and the keyboard, never of the
+    // text, so the wrap never resizes it. Nothing outside it moves with an
+    // edit: the controls row's OK and Cancel never grey or relabel, their
+    // hints with them; a refusal's or a full field's card damages its own
+    // stack (GuiNotifications::notify); the focus ring's walk, the button
+    // press arms and their lifts damage the stash's box themselves
+    // (route_modal_dialog_focus_key, return_modal_focus_to_field,
+    // take_modal_dialog_release); the on-screen keyboard's keys and lamps
+    // damage their own band. THE OPEN, THE CLOSE, the keyboard's show and
+    // hide and every geometry change keep their whole damage. ITS CALLERS
+    // (re-greped 2026-10-14): TYPING and the completions —
+    // route_modal_editor_key's `repaint` argument from both dialog editor key
+    // handlers (input_key_dispatch) and the settings editor's three
+    // completers (settings_editor); THE CARET BLINK — main.cpp's per-tick
+    // transitions, one per dialog editor; THE REFUSAL — every refused commit
+    // in settings_editor and the BPM commit's three (flag_editor), the text
+    // selected whole; THE POINTER'S TEXT DRAG — input_pointer's `g.dialog`
+    // sites (the glass's caret drag, click-to-caret, the shift extend, the
+    // double-click word select, the drag's motion and its release).
+    void invalidate_dialog_editor_box();
     // The unified bottom row's CLOCK CELL, and the authoritative inventory of
     // who wants it
     // (2026-08-11, when the timestamp moved off the status line and the one

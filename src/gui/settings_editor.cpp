@@ -273,7 +273,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
     // field saying nothing of why (its whole text selected, nothing more).
     auto reject = [&](const std::string& reason) {
         text_editor::refuse(app.settings_editor);
-        viewport.invalidate_modal_dialog_area();
+        viewport.invalidate_dialog_editor_box();
         const std::string refusal = "Settings edit rejected: " + reason;
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
@@ -357,7 +357,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // field plus card, the column arm's own shape and sentence.
         if (app.iteration_mode_enabled && gv.c == 'S') {
             text_editor::refuse(app.settings_editor);
-            viewport.invalidate_modal_dialog_area();
+            viewport.invalidate_dialog_editor_box();
             std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
             notifications.notify(AppState::NotificationClass::Normal,
                                  kIterationLockCard);
@@ -397,7 +397,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // (kIterationLockCard) the gate itself says for every chord it eats.
         if (app.iteration_mode_enabled) {
             text_editor::refuse(app.settings_editor);
-            viewport.invalidate_modal_dialog_area();
+            viewport.invalidate_dialog_editor_box();
             std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
             notifications.notify(AppState::NotificationClass::Normal,
                                  kIterationLockCard);
@@ -547,7 +547,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // would be a second road onto the state the padlock refuses.
         if (gv.b && active && app.iteration_mode_enabled) {
             text_editor::refuse(app.settings_editor);
-            viewport.invalidate_modal_dialog_area();
+            viewport.invalidate_dialog_editor_box();
             std::fprintf(stderr, "warptempo_gui: %s\n", kIterationLockCard);
             notifications.notify(AppState::NotificationClass::Normal,
                                  kIterationLockCard);
@@ -668,7 +668,7 @@ void GuiSettingsEditor::commit() {
     // sentence, the stderr line and the card its two readers.
     auto reject = [&](const char* reason) {
         text_editor::refuse(app.settings_editor);
-        viewport.invalidate_modal_dialog_area();
+        viewport.invalidate_dialog_editor_box();
         const std::string refusal =
             std::string("Settings edit rejected: ") + reason;
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
@@ -711,7 +711,7 @@ void GuiSettingsEditor::commit() {
     // the unknown key's sentence.
     if (!is_canonical_engine_key(key)) {
         text_editor::refuse(app.settings_editor);
-        viewport.invalidate_modal_dialog_area();
+        viewport.invalidate_dialog_editor_box();
         const std::string refusal =
             "Settings edit rejected: unknown settings key '" + key + "'";
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
@@ -746,7 +746,7 @@ void GuiSettingsEditor::commit() {
     if (authoring_locked(app)) {
         const char* card = authoring_lock_card(app);
         text_editor::refuse(app.settings_editor);
-        viewport.invalidate_modal_dialog_area();
+        viewport.invalidate_dialog_editor_box();
         std::fprintf(stderr, "warptempo_gui: %s\n", card);
         notifications.notify(AppState::NotificationClass::Normal, card);
         return;
@@ -756,7 +756,7 @@ void GuiSettingsEditor::commit() {
     std::string reason;
     if (!validate_engine_setting(key, value, candidate, reason)) {
         text_editor::refuse(app.settings_editor);
-        viewport.invalidate_modal_dialog_area();
+        viewport.invalidate_dialog_editor_box();
         const std::string refusal =
             "Settings edit rejected: key '" + key + "' has invalid value '" +
             value + "': " + reason;
@@ -776,7 +776,7 @@ void GuiSettingsEditor::commit() {
     // app.engine_settings.
     if (render_output_source_collision(candidate, app.source_audio_path)) {
         text_editor::refuse(app.settings_editor);
-        viewport.invalidate_modal_dialog_area();
+        viewport.invalidate_dialog_editor_box();
         // The path names its BASENAME on the card, SINGLE-QUOTED as every
         // name is (notifications.h's card rules), and the stderr line has always named the
         // same.
@@ -960,7 +960,7 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // refused field saying nothing of why.
     auto reject = [&](const char* reason) {
         text_editor::refuse(app.settings_editor);
-        viewport.invalidate_modal_dialog_area();
+        viewport.invalidate_dialog_editor_box();
         const std::string refusal =
             std::string("Settings edit rejected: ") + reason;
         std::fprintf(stderr, "warptempo_gui: %s\n", refusal.c_str());
@@ -1162,7 +1162,7 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
         static_cast<int>(app.settings_editor.pending.size());
     app.settings_editor.selection_anchor = -1;
     (void)text_editor::replace_selection(app.settings_editor, append);
-    viewport.invalidate_modal_dialog_area();
+    viewport.invalidate_dialog_editor_box();
     return app.settings_editor.pending != before;
 }
 
@@ -1198,7 +1198,7 @@ bool GuiSettingsEditor::complete_preset_value(const std::string& key,
         static_cast<int>(app.settings_editor.pending.size());
     app.settings_editor.selection_anchor = -1;
     (void)text_editor::replace_selection(app.settings_editor, append);
-    viewport.invalidate_modal_dialog_area();
+    viewport.invalidate_dialog_editor_box();
     return app.settings_editor.pending != before;
 }
 
@@ -1291,7 +1291,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     // above).
     (void)text_editor::replace_selection(app.settings_editor, *cur);
 
-    viewport.invalidate_modal_dialog_area();
+    viewport.invalidate_dialog_editor_box();
     // The literal answer, compared against the buffer this call started from:
     // recalling an EMPTY value (a blank free-text key such as `projects_repo=`
     // or an empty `title=`)

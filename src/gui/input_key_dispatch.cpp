@@ -6689,9 +6689,10 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // byte-identical to what it has always been.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
 // `autocomplete` it is called unconditionally, with no emptiness test: the two
-// dialog surfaces pass invalidate_modal_dialog_area (the modal family's area,
-// which IS the modal's surface, viewport.cpp), the top-strip flag editor
-// invalidate_top_strip. Commit and cancel own their own invalidations.
+// dialog surfaces pass invalidate_dialog_editor_box (the box's interior, all
+// an edit can change — the rule at its declaration, viewport.h), the
+// top-strip flag editor invalidate_top_strip. Commit and cancel own their own
+// invalidations.
 bool GuiInputHandler::route_modal_editor_key(
         text_editor::State& ed, GuiKey key, GuiInputState mods,
         const std::function<bool()>& autocomplete,
@@ -9267,7 +9268,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                 flag_editor.exit_bpm_mode();
                 viewport.invalidate_modal_dialog_area();
             },
-            [this] { viewport.invalidate_modal_dialog_area(); });
+            [this] { viewport.invalidate_dialog_editor_box(); });
     }
     if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {
         // The ITERATION BOUND editor: the payload editor's route — the same
@@ -9309,5 +9310,5 @@ bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
         [this] { return settings_editor.autocomplete_value(); },
         [this] { settings_editor.commit(); },
         [this] { settings_editor.exit_no_commit(); },
-        [this] { viewport.invalidate_modal_dialog_area(); });
+        [this] { viewport.invalidate_dialog_editor_box(); });
 }

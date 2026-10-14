@@ -1891,7 +1891,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // accepts it and never fires it).
     gui.set_pen_lift_hook([&]() { input_handler.arm_pen_hot_latch(); });
 
-    auto invalidate_modal_dialog_area = [&]() { viewport.invalidate_modal_dialog_area(); };
+    auto invalidate_dialog_editor_box = [&]() { viewport.invalidate_dialog_editor_box(); };
     auto invalidate_clock_area       = [&]() { viewport.invalidate_clock_area(); };
     auto invalidate_playhead_columns = [&](double a, double b) { viewport.invalidate_playhead_columns(a, b); };
     auto follow_scroll_if_needed     = [&]() { viewport.follow_scroll_if_needed(); };
@@ -2915,21 +2915,21 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             if (now_visible != app.top_flag_editor_blink_last) {
                 app.top_flag_editor_blink_last = now_visible;
                 if (is_dialog)
-                    invalidate_modal_dialog_area();
+                    invalidate_dialog_editor_box();
                 else
                     invalidate_top_strip();
             }
         }
-        // Same shape for the settings prompt (a dialog editor); the
-        // modal's own owner is the modal family's area (the box the line
-        // stands in, modal_box.h).
+        // Same shape for the settings prompt (a dialog editor); a dialog
+        // editor's caret damages the box's interior alone, where it paints
+        // (Viewport::invalidate_dialog_editor_box, the edits' one owner).
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
                 dialog_field_focused &&
                 text_editor::cursor_visible_now(app.settings_editor);
             if (now_visible != app.settings_editor_blink_last) {
                 app.settings_editor_blink_last = now_visible;
-                invalidate_modal_dialog_area();
+                invalidate_dialog_editor_box();
             }
         }
         // (THE DEFERRED CHECKPOINT NOTICE'S POLL stood here from 2026-08-07 until

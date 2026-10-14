@@ -971,7 +971,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
     double lo = 0.0, hi = 0.0;
     if (!parse_bpm_bracket(s, beats, lo, hi)) {
         text_editor::refuse(app.top_flag_editor);
-        viewport.invalidate_modal_dialog_area();
+        viewport.invalidate_dialog_editor_box();
         const std::string refusal = "BPM edit rejected: invalid syntax";
         std::fprintf(stderr, "warptempo_gui: %s: %s\n",
             refusal.c_str(), s.c_str());
@@ -1020,7 +1020,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
                     compute_base_tempo_scale(duration_seconds, beats, hi);
                 if (!at_lo || !at_hi) {
                     text_editor::refuse(app.top_flag_editor);
-                    viewport.invalidate_modal_dialog_area();
+                    viewport.invalidate_dialog_editor_box();
                     const std::string refusal =
                         "BPM edit rejected: derived tempo or scale outside "
                         "its bracket (tempo [" +
@@ -1049,7 +1049,7 @@ bool GuiFlagEditor::commit_bpm_edit() {
                     !bpm_cell_warp_markers(mv_const, idx, endpoint_idx,
                                            at_hi->base_tempo_cents)) {
                     text_editor::refuse(app.top_flag_editor);
-                    viewport.invalidate_modal_dialog_area();
+                    viewport.invalidate_dialog_editor_box();
                     const std::string refusal =
                         "BPM edit rejected: a marker outside the span would "
                         "leave the tempo bracket [" +

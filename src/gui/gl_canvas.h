@@ -59,7 +59,9 @@ public:
     // under the scissor; the texture's draw over it. `frame_px` the window's
     // frame (the GUI's client px plus it are surface px); `list` the GUI's
     // canvas frame, null before the first; `surface_w` x `surface_h` the
-    // surface's size, the viewport. FALSE, with no GL call made, when there
+    // surface's size, the viewport — the platform hands its BACKBUFFER'S
+    // size, which is the whole surface's (each present's comment says why
+    // not EGL's own answer). FALSE, with no GL call made, when there
     // is no texture yet or the backbuffer has no data: the platform then
     // swaps nothing and keeps its damage. The platform swaps on true.
     bool present_frame(cairo_surface_t* back, std::span<const GuiGlRect> damage,

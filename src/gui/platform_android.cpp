@@ -1383,11 +1383,13 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
         EGLDisplay dpy  = egl_display_;
         EGLSurface surf = egl_surface_;
         if (!surf) return false;
-        EGLint sw = 0, sh = 0;
-        eglQuerySurface(dpy, surf, EGL_WIDTH,  &sw);
-        eglQuerySurface(dpy, surf, EGL_HEIGHT, &sh);
+        // THE VIEWPORT IS THE BACKBUFFER'S SIZE (back_w_ x back_h_, the size
+        // the frame was painted at and the texture follows), never
+        // eglQuerySurface's answer — the laptop's present's rule, where Mesa
+        // can latch a stale surface size; here the two are equal at every
+        // adoption (the window's own size, setBuffersGeometry(0, 0)).
         if (!gl_canvas_.present_frame(back_, damage_, frame_px_, canvas_frame_,
-                                      sw, sh))
+                                      back_w_, back_h_))
             return false;
         if (!eglSwapBuffers(dpy, surf)) {
             const EGLint err = eglGetError();

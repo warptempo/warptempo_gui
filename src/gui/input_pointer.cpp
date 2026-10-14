@@ -3584,7 +3584,7 @@ void GuiInputHandler::begin_touch_caret_drag(int x, int y) {
     app.double_click = DoubleClickCandidate{};
     g.ed->selection_anchor = -1;
     set_editor_caret_from_x(g, x, y);
-    if (g.dialog) viewport.invalidate_modal_dialog_area();
+    if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
 
@@ -3600,7 +3600,7 @@ void GuiInputHandler::update_touch_caret_drag(int x, int y) {
     // mid-stream cannot be dragged either.
     g.ed->selection_anchor = -1;
     set_editor_caret_from_x(g, x, y);
-    if (g.dialog) viewport.invalidate_modal_dialog_area();
+    if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
 
@@ -3622,7 +3622,7 @@ void GuiInputHandler::end_touch_caret_drag() {
     // in the dark half of a period the drag's last seat started — the blink
     // alone, so the row-end affinity that seat set stands.
     text_editor::restart_blink(*g.ed);
-    if (g.dialog) viewport.invalidate_modal_dialog_area();
+    if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
 
@@ -5899,7 +5899,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                     app.editor_text_drag = EditorTextDragState{};
                     app.editor_text_drag.active       = true;
                     app.editor_text_drag.shift_extend = true;
-                    if (g.dialog) viewport.invalidate_modal_dialog_area();
+                    if (g.dialog) viewport.invalidate_dialog_editor_box();
                     else          viewport.invalidate_top_strip();
                     return;
                 }
@@ -5927,9 +5927,9 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                         .by_words   = true,
                         .word_start = text_editor::selection_start(*g.ed),
                         .word_end   = text_editor::selection_end(*g.ed)};
-                    // The dialog editors' repaint owner is the modal's
-                    // (invalidate_modal_dialog_area: the family's area).
-                    if (g.dialog) viewport.invalidate_modal_dialog_area();
+                    // The dialog editors' edit damage is the box's interior
+                    // (invalidate_dialog_editor_box, viewport.h).
+                    if (g.dialog) viewport.invalidate_dialog_editor_box();
                     else          viewport.invalidate_top_strip();
                     return;
                 }
@@ -5939,7 +5939,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
                 g.ed->selection_anchor = g.ed->cursor_pos;
                 app.editor_text_drag = EditorTextDragState{};
                 app.editor_text_drag.active = true;
-                if (g.dialog) viewport.invalidate_modal_dialog_area();
+                if (g.dialog) viewport.invalidate_dialog_editor_box();
                 else          viewport.invalidate_top_strip();
                 return;
             }
@@ -6937,7 +6937,7 @@ void GuiInputHandler::finalize_editor_text_drag() {
         // like every other empty span.
         if (g.ed->selection_anchor == g.ed->cursor_pos)
             g.ed->selection_anchor = -1;
-        if (g.dialog) viewport.invalidate_modal_dialog_area();
+        if (g.dialog) viewport.invalidate_dialog_editor_box();
         else          viewport.invalidate_top_strip();
     }
     app.editor_text_drag = EditorTextDragState{};
@@ -10450,7 +10450,7 @@ void GuiInputHandler::on_motion(int mouse_x, int mouse_y, GuiInputState mods) {
                 // stream and never arrives here).
                 set_editor_caret_from_x(g, mouse_x, mouse_y);
             }
-            if (g.dialog) viewport.invalidate_modal_dialog_area();
+            if (g.dialog) viewport.invalidate_dialog_editor_box();
             else          viewport.invalidate_top_strip();
         }
         // !g.valid (only an invalid editor target — the lane text stays

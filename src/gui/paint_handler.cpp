@@ -5903,7 +5903,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // editor (modal_area_rect), the controls row under the render player and the
 // picker — and it is what the hover invalidation and the damage ride.
 // Damage: the openers invalidate the whole window (no surface exists before
-// the first paint); every later edit, blink, flash and closer rides
+// the first paint); a standing dialog editor's edits and caret blink take the
+// box's interior alone (Viewport::invalidate_dialog_editor_box, the editor
+// arm below painting nothing outside it); every closer rides
 // invalidate_modal_dialog_area, which takes row 8's lane and, while a prompt
 // or a dialog editor stands or was last painted, the modal family's whole
 // area — the modal's surface, and the rect a closer owes (viewport.cpp).

@@ -1232,8 +1232,9 @@ void GuiPlatform::destroy_wayland_state() {
 void GuiPlatform::resize_surface_buffers() {
 #if WARPTEMPO_CANVAS_GL
     // The EGL window takes the surface's new size (its next buffer is made at
-    // it; Mesa updates the EGL surface's EGL_WIDTH / EGL_HEIGHT at once), no
-    // attach offset; the backbuffer follows, and the texture with it.
+    // it), no attach offset; the backbuffer follows, and the texture with it.
+    // The frame's viewport is the BACKBUFFER'S size, never EGL's answer for
+    // the surface (present's rule).
     if (egl_window_) wl_egl_window_resize(egl_window_, width_, height_, 0, 0);
     ensure_backbuffer(width_, height_);
 #else
@@ -1424,17 +1425,19 @@ bool GuiPlatform::present() {
     EGLDisplay dpy  = egl_display_;
     EGLSurface surf = egl_surface_;
     if (!surf || !back_) return false;
-    EGLint sw = 0, sh = 0;
-    eglQuerySurface(dpy, surf, EGL_WIDTH,  &sw);
-    eglQuerySurface(dpy, surf, EGL_HEIGHT, &sh);
     // THE SIZING FRAME (the design record's §6 hazard; frame_px_, the
     // header): the backbuffer is the WHOLE SURFACE, frame included, and the
     // GUI's list is in client px, so the frame is handed over and the owner
     // offsets the list's clip and records by it, exactly as Android's
     // present hands its own frame_px_. The restored laptop window is this
     // hazard's one instance; maximised the frame is 0.
+    // THE VIEWPORT IS THE BACKBUFFER'S SIZE (back_w_ x back_h_, the size the
+    // frame was painted at and the texture follows), never eglQuerySurface's
+    // answer: Mesa moves EGL_WIDTH / EGL_HEIGHT at wl_egl_window_resize only
+    // while it holds no back buffer, and at the first configure it holds the
+    // one eglMakeCurrent made at the init size. Android's present the same.
     if (!gl_canvas_.present_frame(back_, damage_, frame_px_, canvas_frame_,
-                                  sw, sh))
+                                  back_w_, back_h_))
         return false;
     if (!eglSwapBuffers(dpy, surf)) {
         const EGLint err = eglGetError();

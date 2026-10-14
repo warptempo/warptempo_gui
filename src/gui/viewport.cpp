@@ -169,6 +169,8 @@ void Viewport::invalidate_status_cell_area() {
 // geometry, the lane alone covering only what keeps to the row, which a
 // prompt's and a dialog editor's box does not (below) — the stash's owner the
 // one published bit read, and only to say whether a box stood last frame.
+// A STANDING DIALOG EDITOR'S EDITS do not come through here either: they
+// take the box's interior alone (invalidate_dialog_editor_box, below).
 // The OPENERS do not come through here — nothing is
 // painted before a surface's first paint, so they invalidate the whole
 // window. Caller inventory at the declaration.
@@ -208,6 +210,14 @@ void Viewport::invalidate_modal_dialog_area() {
         invalidate_rect(bands.below);
         invalidate_rect(bands.above);
     }
+}
+
+// A STANDING DIALOG EDITOR'S EDIT — the box's interior at the keyboard height
+// it stands on, the box the editor's line paints in (the rule and the caller
+// inventory at the declaration, viewport.h).
+void Viewport::invalidate_dialog_editor_box() {
+    invalidate_rect(modal_box_interior_rect(
+        app, onscreen_keyboard::modal_keyboard_h_px(app, gui)));
 }
 
 // THE NOTIFICATION STACK'S DAMAGE — its room, whole; the callers and the
