@@ -16,19 +16,27 @@
 // the color files the app reads, of TWO KINDS IN TWO FOLDERS UNDER TWO
 // DEVICE KEYS ("saving a waveform theme requires saving the entire chrome
 // theme as well … one more drop-down that shows what you're picking, whether
-// it's the waveform or the chrome"; the picker's scope, color_picker.h):
-//   A PALETTE — THE PROGRAM'S ELEVEN (kGuiPaletteRoles below; twelve from
-//     2026-10-09, when the cues took Cool Edit's two colors and the canvas
-//     its grid and center line, eleven since 2026-10-11, when the invalid
-//     label's selected red retired) and nothing else: `palettes/<name>.palette`,
-//     the `palette` device key.
-//   A SCHEME — THE CAPTION'S SIX KEYS (kGuiChromeLines below; the chrome's
-//     twelve keys until 2026-10-10, when every other chrome color came to
-//     inherit the palette's Cool Edit tones, chrome_derive.h), Windows' own
-//     word for a set of chrome colors (the Appearance dialog's "scheme"),
-//     and NO FACE (architect 2026-10-09 ~21:20: "the scheme's
-//     default font should stop being honored — it should only be honored
-//     from the font picker"; the face is the product's one, gui_font.h): `schemes/<name>.scheme`, the `scheme` device key.
+// it's the waveform or the chrome"; the picker's scope, color_picker.h).
+// THE KINDS' USER WORDS (architect 2026-10-11 ~03:05, go 2026-10-13): the
+// program's-eleven kind is called CHROME (through the Face it drives the whole
+// window) and the caption's-six kind CAPTION (the old `chrome` device key,
+// retired 2026-10-10, returns with this meaning); the identifiers below keep
+// `palette` and `scheme` ("scheme" is also the period word for the built-in
+// Windows color schemes, "palette" names the role machinery): THE scheme_*
+// FAMILY SERVES THE CAPTION KIND AND THE palette_* FAMILY THE CHROME KIND:
+//   A CHROME (identifiers: palette) — THE PROGRAM'S ELEVEN (kGuiPaletteRoles
+//     below; twelve from 2026-10-09, when the cues took Cool Edit's two colors
+//     and the canvas its grid and center line, eleven since 2026-10-11, when
+//     the invalid label's selected red retired) and nothing else:
+//     `chromes/<name>.chrome`, the `chrome` device key.
+//   A CAPTION (identifiers: scheme) — THE CAPTION'S SIX KEYS (kGuiChromeLines
+//     below; the chrome's twelve keys until 2026-10-10, when every other
+//     chrome color came to inherit the palette's Cool Edit tones,
+//     chrome_derive.h), Windows' own word (COLOR_ACTIVECAPTION; the Appearance
+//     dialog's "scheme" for a set of them), and NO FACE (architect 2026-10-09
+//     ~21:20: "the scheme's default font should stop being honored — it
+//     should only be honored from the font picker"; the face is the product's
+//     one, gui_font.h): `captions/<name>.caption`, the `caption` device key.
 // The two are independent: loading, saving, renaming or deleting one never
 // touches the other, and either applies under any chrome.
 //
@@ -507,11 +515,11 @@ std::vector<std::string> scheme_file_names();
 bool is_palette_name(std::string_view name);
 bool is_scheme_name(std::string_view name);
 inline constexpr const char* kPaletteGrammarReason =
-    "must be a built-in palette's key (cool-edit-midnight, cool-edit-xp-blue, "
-    "...) or the name of a palette file read at launch";
+    "must be a built-in chrome's key (cool-edit-midnight, cool-edit-xp-blue, "
+    "...) or the name of a chrome file read at launch";
 inline constexpr const char* kSchemeGrammarReason =
-    "must be a built-in scheme's key (windows-storm, "
-    "windows-rainy-day, ...) or the name of a scheme file read at launch";
+    "must be a built-in caption's key (windows-storm, "
+    "windows-rainy-day, ...) or the name of a caption file read at launch";
 
 // The eleven the palette `name` names — a built-in palette's row, or a
 // loaded file's words (a file names every role, the head). Precondition:

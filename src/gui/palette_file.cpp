@@ -245,11 +245,16 @@ struct PresetKind {
     bool (*is_builtin)(std::string_view);
     std::map<std::string, Record, std::less<>> loaded;
 };
+// THE KINDS' USER WORDS (architect 2026-10-11 ~03:05, his go 2026-10-13): the
+// program's-eleven kind is the CHROME (`chromes/`, `.chrome`: through the Face
+// it drives the whole window) and the caption's-six kind the CAPTION
+// (`captions/`, `.caption`). The identifiers (g_palettes, palette_*,
+// scheme_*) keep their role-machinery names.
 PresetKind<GuiPaletteWords> g_palettes{
-    "palettes", ".palette", "palette",
+    "chromes", ".chrome", "chrome",
     [](std::string_view n) { return is_builtin_palette_name(n); }, {}};
 PresetKind<GuiChromePick> g_schemes{
-    "schemes", ".scheme", "scheme",
+    "captions", ".caption", "caption",
     [](std::string_view n) { return is_builtin_scheme_name(n); }, {}};
 
 template <class Record>

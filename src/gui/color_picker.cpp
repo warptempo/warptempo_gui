@@ -1,6 +1,6 @@
 #include "color_picker.h"
 
-#include "device_config.h"     // the `palette` and `scheme` keys' writer (write_device_config)
+#include "device_config.h"     // the `chrome` and `caption` keys' writer (write_device_config)
 #include "notifications.h"
 #include "playback_lifecycle.h"
 #include "text_shape.h"
@@ -83,16 +83,16 @@ Element element_at(std::size_t e) {
 }
 
 Scope element_scope(std::size_t e) {
-    return element_at(e).chrome ? Scope::Chrome : Scope::Waveform;
+    return element_at(e).chrome ? Scope::Caption : Scope::Chrome;
 }
 
 std::size_t scope_element_count(Scope s) {
-    return s == Scope::Chrome ? kGuiChromeLineCount : kGuiPaletteRoleCount;
+    return s == Scope::Caption ? kGuiChromeLineCount : kGuiPaletteRoleCount;
 }
 
 std::size_t scope_element_at(Scope s, std::size_t i) {
     assert(i < scope_element_count(s));
-    return s == Scope::Chrome ? i : kGuiChromeLineCount + i;
+    return s == Scope::Caption ? i : kGuiChromeLineCount + i;
 }
 
 std::size_t element_row(std::size_t e) {
@@ -141,7 +141,7 @@ static_assert(text_editor::kMaxPendingCharsPaletteName ==
 // A BUILT-IN IS SHOWN BY ITS GENERATED DISPLAY NAME (palette_file.h's
 // kGuiChromeSchemes and kGuiBuiltinPalettes), a file by its name.
 std::string preset_display_name(Scope s, std::string_view name) {
-    if (s == Scope::Chrome) {
+    if (s == Scope::Caption) {
         if (const GuiChromeScheme* b = builtin_scheme(name))
             return std::string(b->display_name);
     } else if (const GuiBuiltinPalette* b = builtin_palette(name)) {
@@ -151,7 +151,7 @@ std::string preset_display_name(Scope s, std::string_view name) {
 }
 
 bool is_builtin_display_name(Scope s, std::string_view name) {
-    if (s == Scope::Chrome) {
+    if (s == Scope::Caption) {
         for (const GuiChromeScheme& b : kGuiChromeSchemes)
             if (name == b.display_name) return true;
         return false;
@@ -162,17 +162,17 @@ bool is_builtin_display_name(Scope s, std::string_view name) {
 }
 
 bool is_builtin_preset(Scope s, std::string_view name) {
-    return s == Scope::Chrome ? is_builtin_scheme_name(name)
+    return s == Scope::Caption ? is_builtin_scheme_name(name)
                               : is_builtin_palette_name(name);
 }
 
 bool is_preset_name(Scope s, std::string_view name) {
-    return s == Scope::Chrome ? is_scheme_name(name) : is_palette_name(name);
+    return s == Scope::Caption ? is_scheme_name(name) : is_palette_name(name);
 }
 
 std::string_view active_preset(const AppState& app, Scope s) {
     assert(app.device_config != nullptr);
-    return s == Scope::Chrome
+    return s == Scope::Caption
                ? effective_scheme_name(app.device_config->scheme)
                : effective_palette_name(app.device_config->palette);
 }
@@ -184,7 +184,7 @@ bool preset_act_enabled(const AppState& app, PresetAct a) {
     switch (a) {
         case PresetAct::Save:
             if (builtin) return false;
-            return scope == Scope::Chrome
+            return scope == Scope::Caption
                        ? live_chrome_pick() != scheme_record(active)
                        : program_palette_words() != palette_record(active);
         case PresetAct::SaveAs:
@@ -231,7 +231,7 @@ std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
     };
     // His files, ALPHABETICALLY under either scope (2026-10-11; a file's
     // display name is its name).
-    std::vector<std::string> files = s == Scope::Chrome ? scheme_file_names()
+    std::vector<std::string> files = s == Scope::Caption ? scheme_file_names()
                                                         : palette_file_names();
     std::ranges::stable_sort(files, alphabetical_less);
     bool first = true;
@@ -244,7 +244,7 @@ std::vector<PresetMenuRow> preset_menu_rows(Scope s) {
     // "because it's called default, we should support it as a default"; the
     // default palette, kGuiDefaultPaletteKey).
     first = true;
-    if (s == Scope::Waveform) {
+    if (s == Scope::Chrome) {
         std::vector<const GuiBuiltinPalette*> others;
         for (const GuiBuiltinPalette& b : kGuiBuiltinPalettes)
             if (std::string_view(b.key) != kGuiDefaultPaletteKey)
@@ -523,7 +523,8 @@ Layout layout(const AppState& app, const GuiFont& font) {
         const int t = ceil_px(text_w);
         const int inset = combo_text_inset_px();
         // THE FACE IS SYMMETRIC (architect 2026-10-08 ~22:25: "the Chrome
-        // versus Waveform picker is short on the right-hand side"): the
+        // versus Waveform picker is short on the right-hand side", the scope
+        // combo then; Caption and Chrome since 2026-10-13): the
         // drop-down inset from the outer edge to the name, and the same air
         // inside the field's edge after it before the drop-down button's
         // edge (the inset less the field's lines, combo_drop_button), then
@@ -1072,9 +1073,9 @@ void GuiColorPicker::open(int tap_x) {
     cp.active   = true;
     cp.session  = text_editor::next_session_id();
     cp.on_right = tap_x < 0 || tap_x < app.width / 2;
-    // THE SCOPE AT EVERY OPEN IS WAVEFORM (the declaration): a chrome
-    // element kept from the last session is parked for the Chrome scope.
-    cp.scope = AppState::ColorPicker::Scope::Waveform;
+    // THE SCOPE AT EVERY OPEN IS Scope::Chrome (the declaration): a caption
+    // element kept from the last session is parked for Scope::Caption.
+    cp.scope = AppState::ColorPicker::Scope::Chrome;
     if (color_picker::element_scope(cp.element) != cp.scope)
         std::swap(cp.element, cp.parked_element);
     assert(color_picker::element_scope(cp.element) == cp.scope);
@@ -1320,21 +1321,23 @@ void report_preset_failure(GuiNotifications& notifications,
     std::fprintf(stderr, "warptempo_gui: %s\n", line.c_str());
     notifications.notify(AppState::NotificationClass::Normal, display);
 }
-// The card's clause for the scope's kind ("Could not save the scheme").
+// The card's clause for the scope's kind ("Could not save the caption"; the
+// parameters keep the file families' names, palette = the chrome kind,
+// scheme = the caption kind, 2026-10-13).
 const char* failure_words(color_picker::Scope s, const char* palette,
                           const char* scheme) {
-    return s == color_picker::Scope::Chrome ? scheme : palette;
+    return s == color_picker::Scope::Caption ? scheme : palette;
 }
 } // namespace
 
 void GuiColorPicker::write_preset_key(std::string_view name) {
     DeviceConfig& cfg = *app.device_config;
-    const bool chrome = app.color_picker.scope == color_picker::Scope::Chrome;
-    std::string& key = chrome ? cfg.scheme : cfg.palette;
+    const bool caption = app.color_picker.scope == color_picker::Scope::Caption;
+    std::string& key = caption ? cfg.scheme : cfg.palette;
     // What no line means for the kind (palette_file.h's effective names:
     // the live chrome's own scheme, the default palette) is written as no
     // line.
-    const std::string_view no_line = chrome ? effective_scheme_name({})
+    const std::string_view no_line = caption ? effective_scheme_name({})
                                             : effective_palette_name({});
     const std::string value =
         name == no_line ? std::string() : std::string(name);
@@ -1399,7 +1402,7 @@ void GuiColorPicker::load_preset(std::string_view name) {
     assert(color_picker::is_preset_name(scope, name));
     const std::string held(name);   // the menu's row may not outlive the call
     // ONE KIND MOVES (the declaration): the other kind's live words stand.
-    if (scope == color_picker::Scope::Chrome)
+    if (scope == color_picker::Scope::Caption)
         apply_live_words(program_palette_words(), scheme_record(held));
     else
         apply_live_words(palette_record(held), live_chrome_pick());
@@ -1410,7 +1413,7 @@ void GuiColorPicker::save_preset() {
     const color_picker::Scope scope = app.color_picker.scope;
     const std::string active(color_picker::active_preset(app, scope));
     std::optional<std::string> failure;
-    if (scope == color_picker::Scope::Chrome) {
+    if (scope == color_picker::Scope::Caption) {
         // A file's load always seats its keys (scheme_record), and Save is
         // gray on a built-in, so a live scheme stands here.
         assert(live_chrome_pick().has_value());
@@ -1420,8 +1423,8 @@ void GuiColorPicker::save_preset() {
     }
     if (failure) {
         report_preset_failure(notifications, *failure,
-                              failure_words(scope, "Could not save the palette",
-                                            "Could not save the scheme"));
+                              failure_words(scope, "Could not save the chrome",
+                                            "Could not save the caption"));
     }
     damage_card();   // the button's label, the menu's Save once reopened
 }
@@ -1445,7 +1448,7 @@ void GuiColorPicker::begin_name_ask(AppState::ColorPicker::NameAsk ask) {
 void GuiColorPicker::commit_name() {
     AppState::ColorPicker& cp = app.color_picker;
     const color_picker::Scope scope = cp.scope;
-    const bool chrome = scope == color_picker::Scope::Chrome;
+    const bool caption = scope == color_picker::Scope::Caption;
     const std::string name = cp.field_editor.pending;
     const std::string active(color_picker::active_preset(app, scope));
     const bool rename = cp.name_ask == AppState::ColorPicker::NameAsk::Rename;
@@ -1476,16 +1479,16 @@ void GuiColorPicker::commit_name() {
     end_ask();
     std::optional<std::string> failure;
     if (rename) {
-        failure = chrome ? rename_scheme_file(active, name)
-                         : rename_palette_file(active, name);
+        failure = caption ? rename_scheme_file(active, name)
+                          : rename_palette_file(active, name);
         if (failure) {
             report_preset_failure(
                 notifications, *failure,
-                failure_words(scope, "Could not rename the palette",
-                              "Could not rename the scheme"));
+                failure_words(scope, "Could not rename the chrome",
+                              "Could not rename the caption"));
             return;
         }
-    } else if (chrome) {
+    } else if (caption) {
         // THE KEYS ON SCREEN (the declaration): the live scheme, or the
         // chrome's own built-in's six, installed live with the write (the
         // compiled caption exactly, so nothing on screen moves); a save
@@ -1499,8 +1502,8 @@ void GuiColorPicker::commit_name() {
     }
     if (failure) {
         report_preset_failure(notifications, *failure,
-                              failure_words(scope, "Could not save the palette",
-                                            "Could not save the scheme"));
+                              failure_words(scope, "Could not save the chrome",
+                                            "Could not save the caption"));
         return;
     }
     write_preset_key(name);
@@ -1532,20 +1535,20 @@ void GuiColorPicker::confirm_delete() {
     // GuiPrompt::request_close returns while a prompt stands), so the scope
     // is the one the question was raised under.
     assert(cp.active && !name.empty());
-    const bool chrome = scope == color_picker::Scope::Chrome;
+    const bool caption = scope == color_picker::Scope::Caption;
     if (const std::optional<std::string> failure =
-            chrome ? remove_scheme_file(name) : remove_palette_file(name)) {
+            caption ? remove_scheme_file(name) : remove_palette_file(name)) {
         report_preset_failure(notifications, *failure,
                               failure_words(scope,
-                                            "Could not delete the palette",
-                                            "Could not delete the scheme"));
+                                            "Could not delete the chrome",
+                                            "Could not delete the caption"));
         return;
     }
     // WHAT NO LINE MEANS for the scope's kind (the declaration): the live
     // chrome's own scheme, or the default palette.
-    const std::string_view fallback = chrome ? effective_scheme_name({})
-                                             : effective_palette_name({});
-    if (chrome)
+    const std::string_view fallback = caption ? effective_scheme_name({})
+                                              : effective_palette_name({});
+    if (caption)
         apply_live_words(program_palette_words(), scheme_record(fallback));
     else
         apply_live_words(palette_record(fallback), live_chrome_pick());

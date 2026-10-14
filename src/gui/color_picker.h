@@ -40,12 +40,16 @@ struct Viewport;
 //
 // THE SCOPE (architect 2026-10-08 ~18:15: "saving a waveform theme requires
 // saving the entire chrome theme as well … one more drop-down that shows
-// what you're picking, whether it's the waveform or the chrome"): ONE
-// DROP-DOWN OF TWO ROWS, "Chrome" and "Waveform" (his words), choosing which
+// what you're picking, whether it's the waveform or the chrome"; the rows'
+// words "Caption" and "Chrome" since 2026-10-13, architect 2026-10-11 ~03:05,
+// the older "Chrome" and "Waveform" retold; in the comments below the old
+// words "Chrome scope" and "Waveform scope" name the Caption and the Chrome
+// scope respectively, and `scheme` / `palette` the kinds the same way): ONE
+// DROP-DOWN OF TWO ROWS, choosing which
 // of the two preset kinds the picker works on (palette_file.h's head: a
-// SCHEME, the caption's six keys, and a PALETTE, the program's eleven).
-// The scope sets THE ELEMENT CHOOSER'S ROWS — the six under Chrome, the
-// eleven under Waveform, never a mixed list — and THE PRESET BUTTON: its
+// CAPTION, the caption's six keys, and a CHROME, the program's eleven).
+// The scope sets THE ELEMENT CHOOSER'S ROWS — the six under Caption, the
+// eleven under Chrome, never a mixed list — and THE PRESET BUTTON: its
 // label (the scope's active preset) and its menu's rows (its kind's files
 // and built-ins), the four acts acting on that kind alone. OLD | NEW, Copy /
 // Paste, the hex field and the wheel are the scope's live element's, with
@@ -531,17 +535,19 @@ int channel_value(const AppState::ColorPicker& cp, Channel c);
 
 // -- THE SCOPE AND THE ELEMENTS (the chooser row's two lists) -----------------
 
-// THE SCOPE'S TWO ROWS (the head's THE SCOPE), in the list's order: his
-// words, "Chrome" then "Waveform" — the chrome's elements lead, as they led
-// the single list of 2026-10-08 ~11:00.
+// THE SCOPE'S TWO ROWS (the head's THE SCOPE), in the list's order: "Caption"
+// then "Chrome" (architect 2026-10-11 ~03:05, go 2026-10-13; "Chrome" then
+// "Waveform" before) — the caption's elements lead, as they led the single
+// list of 2026-10-08 ~11:00. The enumerators carry the same words
+// (Scope::Caption, Scope::Chrome; renamed 2026-10-13).
 using Scope = AppState::ColorPicker::Scope;
 inline constexpr int kScopeCount = 2;
 constexpr Scope scope_at(int i) {
-    return i == 0 ? Scope::Chrome : Scope::Waveform;
+    return i == 0 ? Scope::Caption : Scope::Chrome;
 }
-constexpr int scope_index(Scope s) { return s == Scope::Chrome ? 0 : 1; }
+constexpr int scope_index(Scope s) { return s == Scope::Caption ? 0 : 1; }
 constexpr const char* scope_display_name(Scope s) {
-    return s == Scope::Chrome ? "Chrome" : "Waveform";
+    return s == Scope::Caption ? "Caption" : "Chrome";
 }
 
 // THE ELEMENTS (architect 2026-10-08, the chrome knob; under every chrome

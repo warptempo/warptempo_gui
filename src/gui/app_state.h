@@ -9133,8 +9133,11 @@ struct AppState {
     struct ColorPicker {
         bool        active  = false;
         uint64_t    session = 0;
-        enum class Scope { Chrome, Waveform };
-        Scope       scope   = Scope::Waveform;
+        // THE SCOPE'S TWO KINDS (architect 2026-10-11, go 2026-10-13):
+        // Caption (the title bar's six keys) and Chrome (the program's
+        // eleven, which through the Face drive the whole window).
+        enum class Scope { Caption, Chrome };
+        Scope       scope   = Scope::Chrome;
         std::size_t element = kGuiChromeLineCount;   // Canvas, Waveform's first
         std::size_t parked_element = 0;              // Chrome, Chrome's first
         uint32_t    old_rgb = 0;

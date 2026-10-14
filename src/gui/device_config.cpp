@@ -36,25 +36,27 @@ namespace {
 // key could be written and not demanded — the absent-able keys are the
 // deliberate exception, each saying what its absence means).
 //
-// `scheme` FOLLOWS last_project (2026-10-08 ~18:15), the chrome's colors, and
-// `palette` FOLLOWS THAT (2026-10-07), the program's colors after the
-// chrome's; `role` is APPENDED after it
-// (2026-10-10). (`chrome` stood after last_project 2026-10-07 to
-// 2026-10-10, `theme` 2026-10-03..10-08, `icons` and `font` 2026-10-09 to
-// 2026-10-12, the header's record.)
+// THE KINDS' KEYS RENAMED (architect 2026-10-11 ~03:05, go 2026-10-13): the
+// key `caption` (formerly `scheme`) FOLLOWS last_project, the caption's six,
+// and the key `chrome` (formerly `palette`; the OLD `chrome` key, retired
+// 2026-10-10, returns with this meaning) FOLLOWS THAT, the program's colors
+// after the caption's; `role` is APPENDED after it (2026-10-10). The struct's
+// members keep their old names, `scheme` and `palette`. (`theme` stood
+// 2026-10-03..10-08, `icons` and `font` 2026-10-09 to 2026-10-12, the
+// header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
     "projects_path",
     "last_project",
-    "scheme",
-    "palette",
+    "caption",
+    "chrome",
     "role",
 };
 // THE REQUIRED SET — every key above but the two that may be ABSENT
-// (architect 2026-10-07): `scheme` (2026-10-08), absent meaning the chrome's
-// own scheme, and `palette`, absent meaning the default palette (Cool Edit's
-// "Midnight" under every chrome). `role` (2026-10-10) IS REQUIRED, the one key
+// (architect 2026-10-07): `caption`, absent meaning the chrome's own caption
+// (windows-storm), and `chrome`, absent meaning the default chrome (Cool Edit's
+// "Midnight"). `role` (2026-10-10) IS REQUIRED, the one key
 // appended since that is: "if one of these lines is not in place, it means
 // something's wrong with the config or the setup" (architect). The scanner
 // checks presence against this list and duplicates against every key.
@@ -94,12 +96,12 @@ std::filesystem::path device_config_path() {
 std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
-        // AN UNSET PALETTE OR SCHEME WRITES NO LINE (2026-10-07; the scheme
+        // AN UNSET CHROME OR CAPTION WRITES NO LINE (2026-10-07; the caption
         // 2026-10-08): its one spelling is the line's absence, so the file
-        // keeps following the chrome (the scheme) or the default palette.
-        if (std::string_view(key) == "palette" && cfg.palette.empty())
+        // keeps following the own caption or the default chrome.
+        if (std::string_view(key) == "chrome" && cfg.palette.empty())
             continue;
-        if (std::string_view(key) == "scheme" && cfg.scheme.empty())
+        if (std::string_view(key) == "caption" && cfg.scheme.empty())
             continue;
         // AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
         // alone carries it, and the program never invents a role — the
@@ -124,10 +126,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "last_project") {
             // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
-        } else if (k == "scheme") {
+        } else if (k == "caption") {
             // The name verbatim (printable ASCII, palette_file.h's grammar).
             s += cfg.scheme;
-        } else if (k == "palette") {
+        } else if (k == "chrome") {
             // The name verbatim (printable ASCII, palette_file.h's grammar).
             s += cfg.palette;
         } else if (k == "role") {
@@ -206,20 +208,21 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.last_project = value;
             return {};
         }
-        // THE SCHEME (2026-10-08) AND THE PALETTE (2026-10-07): a built-in's
-        // key or a file's read at launch, each under its one grammar owner
-        // (is_scheme_name, is_palette_name, palette_file.h) — which is why
-        // gui_main reads the two folders BEFORE this file. An EMPTY value is
-        // refused like any other non-name: the unset key is the line's
-        // absence.
-        if (key == "scheme") {
+        // THE CAPTION (2026-10-08) AND THE CHROME (2026-10-07; both words
+        // 2026-10-13): a built-in's key or a file's read at launch, each under
+        // its one grammar owner (is_scheme_name, is_palette_name,
+        // palette_file.h) — which is why gui_main reads the two folders BEFORE
+        // this file. An EMPTY value is refused like any other non-name: the
+        // unset key is the line's absence. An old `scheme=` or `palette=`
+        // line is the unknown key below.
+        if (key == "caption") {
             if (!is_scheme_name(value)) {
                 return bad_value(ln, key, value, kSchemeGrammarReason);
             }
             out.scheme = value;
             return {};
         }
-        if (key == "palette") {
+        if (key == "chrome") {
             if (!is_palette_name(value)) {
                 return bad_value(ln, key, value, kPaletteGrammarReason);
             }

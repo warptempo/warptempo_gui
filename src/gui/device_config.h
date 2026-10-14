@@ -19,22 +19,28 @@
 //                            projects (project_model.h owns the model)
 //   last_project=<name>      the folder NAME opened last, written at every
 //                            successful open; blank until the first
-//   scheme=<name>            THE SCHEME the caption is painted in, its six
-//                            keys (the caption alone since 2026-10-10): a
-//                            built-in scheme (`windows-storm`, the
-//                            catalog's others) or a scheme file read
+//   caption=<name>          THE CAPTION PRESET the title bar is painted in, its
+//                            six keys (the caption alone since 2026-10-10): a
+//                            built-in (`windows-storm`, the
+//                            catalog's others) or a caption file read
 //                            at launch (is_scheme_name, palette_file.h); MAY
 //                            BE ABSENT — the first run's state — meaning the
-//                            chrome's own scheme, the compiled caption
-//                            exactly (effective_scheme_name)
-//   palette=<name>           THE PALETTE the program is painted in: a built-in
-//                            palette, one of Cool Edit's presets
+//                            chrome's own caption, the compiled caption
+//                            exactly (effective_scheme_name). Named `scheme`
+//                            until 2026-10-13 (architect 2026-10-11 ~03:05);
+//                            the struct's member keeps that name.
+//   chrome=<name>            THE CHROME PRESET the program (and, through the
+//                            Face, the whole window) is painted in: a built-in,
+//                            one of Cool Edit's presets
 //                            (`cool-edit-midnight`, `cool-edit-xp-blue`, ...)
-//                            or a palette file read at launch
+//                            or a chrome file read at launch
 //                            (is_palette_name, palette_file.h); MAY BE ABSENT
-//                            — the first run's state — meaning the default
-//                            palette, Cool Edit's "Midnight", under every
-//                            chrome (effective_palette_name, 2026-10-09)
+//                            — the first run's state — meaning the default,
+//                            Cool Edit's "Midnight"
+//                            (effective_palette_name, 2026-10-09). Named
+//                            `palette` until 2026-10-13, and the key `chrome`
+//                            of 2026-10-07 to 2026-10-10 was another thing
+//                            (retired); the struct's member keeps `palette`.
 //   role=<role>              THE DEVICE'S PART IN THE PROJECTS REPOSITORY
 //                            (architect 2026-10-10): `author` (the tablet:
 //                            it authors every movement, commits and pushes,
@@ -196,9 +202,9 @@
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven
-// keys and each at most once, every key REQUIRED but `scheme` and `palette`
-// (`palette` absent is the default palette, `scheme` absent (2026-10-08) the
-// chrome's own scheme, each the one spelling of that state, which the writer
+// keys and each at most once, every key REQUIRED but `caption` and `chrome`
+// (`chrome` absent is the default chrome, `caption` absent (2026-10-08) the
+// chrome's own caption, each the one spelling of that state, which the writer
 // emits by leaving the line out), one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
@@ -231,8 +237,8 @@
 // editor commits each through this file's writer under the key's own
 // grammar below. `role` (2026-10-10) is NOT EDITABLE
 // IN THE APP: the planner sets it on each device by hand, the program not
-// running, and the program only carries it through its rewrites. `palette` (2026-10-07) and
-// `scheme` (2026-10-08) HAVE NO SETTINGS ROW: the color picker's preset menu
+// running, and the program only carries it through its rewrites. `chrome` (2026-10-07) and
+// `caption` (2026-10-08) HAVE NO SETTINGS ROW: the color picker's preset menu
 // is their road (color_picker.h's THE PRESETS), which writes each key
 // through the same writer. Until
 // 2026-09-02 the path keys
@@ -581,7 +587,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the path
 // arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the chrome's 2026-10-07..10-10); the
-// color picker's `palette=` and `scheme=` write
+// color picker's `chrome=` and `caption=` write
 // (GuiColorPicker::write_preset_key, color_picker.cpp, 2026-10-07; the
 // scheme's 2026-10-08: a load, a Save As, a Rename and a Delete each name
 // the new active preset of the picker's scope); and
