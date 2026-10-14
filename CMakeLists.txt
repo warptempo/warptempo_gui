@@ -377,8 +377,12 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # translation unit that sees the class must agree on it. Under `gl` the
     # target links libEGL and libGLESv3, both NDK stable-ABI libraries, which
     # is the whole of what the choice adds to DT_NEEDED (build_apk.sh's
-    # allowlist per variant).
+    # allowlist per variant). Under `gl` the target also compiles the GL
+    # canvas's platform-neutral owner (src/gui/gl_canvas.cpp, GuiGlCanvas:
+    # the programs, the textures, the upload walk and the frame's draw); the
+    # cpu build compiles none of it.
     if(WARPTEMPO_ANDROID_CANVAS STREQUAL "gl")
+        target_sources(warptempo_gui PRIVATE src/gui/gl_canvas.cpp)
         target_compile_definitions(warptempo_gui PRIVATE
             WARPTEMPO_ANDROID_CANVAS_GL=1)
         set(WARPTEMPO_ANDROID_CANVAS_LIBRARIES EGL GLESv3)

@@ -3,6 +3,9 @@
 #include "gui_input.h"
 #include "gui_media.h"
 #include "input_core.h"
+#if WARPTEMPO_ANDROID_CANVAS_GL
+#include "gl_canvas.h"   // GuiGlCanvas, the GL canvas's owner
+#endif
 #include <cairo/cairo.h>
 #include <cstdint>
 #include <expected>
@@ -569,7 +572,13 @@ private:
     // -- Damage accumulator --
     // Set by invalidate_region() at any time; consumed by the next paint pass
     // and cleared once the damaged pixels have been posted.
+    // Under the GL canvas the rect is the GL owner's own (GuiGlRect, the same
+    // x, y, w, h), so present hands the list to it in place.
+#if WARPTEMPO_ANDROID_CANVAS_GL
+    using DamageRect = GuiGlRect;
+#else
     struct DamageRect { int x, y, w, h; };
+#endif
     std::vector<DamageRect> damage_;
 
     // -- The backbuffer (pattern: ONE persistent surface, not a pool) --
@@ -593,54 +602,29 @@ private:
     // uploaded into ONE texture by damage rect and drawn whole every swap.
     // The EGL handles are spelled void* (each EGL type is one on this
     // platform) so no EGL header reaches this file. THE DISPLAY, CONFIG,
-    // CONTEXT AND PROGRAM ARE THE PROCESS'S, made at the first adoption and
+    // CONTEXT AND PROGRAMS ARE THE PROCESS'S, made at the first adoption and
     // kept until shutdown; THE SURFACE IS THE WINDOW'S (egl_window_ names
     // the window it was made on): made at an adoption of a new window,
-    // destroyed at the window's loss. The texture lives in the context and
-    // follows the backbuffer's size (ensure_canvas_texture).
+    // destroyed at the window's loss. EVERYTHING GLES AND NEITHER EGL NOR
+    // WINDOW — the programs, the texture that follows the backbuffer's size,
+    // the canvas list's objects, the upload walk and the frame's draw — is
+    // gl_canvas_'s (GuiGlCanvas, gl_canvas.h, 2026-10-14), the one owner
+    // every platform's present drives; what stays here is the platform's.
     void*                 egl_display_ = nullptr;
     void*                 egl_config_  = nullptr;
     void*                 egl_context_ = nullptr;
     void*                 egl_surface_ = nullptr;
     struct ANativeWindow* egl_window_  = nullptr;
-    unsigned int          gl_program_  = 0;
-    int                   gl_height_uniform_ = -1;
-    unsigned int          gl_texture_  = 0;
-    int                   gl_texture_w_ = 0;
-    int                   gl_texture_h_ = 0;
     // The one-time line naming the driver (adopt_window's road).
     bool                  gl_identity_logged_ = false;
     // THE FIRST SURFACE'S DISPLAY-P3 ANSWER, the one gui_main read; a later
     // surface answering otherwise is fatal (ensure_gl_surface, 2026-10-13).
     std::optional<bool>   gl_first_display_p3_;
-    // THE CANVAS LIST'S OBJECTS (2026-10-13; the draw at present, the
-    // records at canvas_sink.h): the program and its two uniforms, its own
-    // vertex array over the instance buffer, the plate's bounds texture and
-    // its size — made with the texture program, living in the context — and
-    // the instances' count and the list generation they were made from.
-    unsigned int          gl_list_program_        = 0;
-    int                   gl_list_size_uniform_   = -1;
-    int                   gl_list_height_uniform_ = -1;
-    unsigned int          gl_list_vao_            = 0;
-    unsigned int          gl_list_vbo_            = 0;
-    int                   gl_list_instances_      = 0;
-    uint64_t              gl_list_generation_     = 0;
-    bool                  gl_list_uploaded_       = false;
-    unsigned int          gl_columns_texture_     = 0;
-    int                   gl_columns_w_           = 0;
-    int                   gl_columns_h_           = 0;
-    // THE LAST UPLOAD WALK'S CANVAS (present's upload rule): its clip in
-    // surface px, its floater bit, and whether the texture has had a walk
-    // since it was made (ensure_canvas_texture clears it).
-    int                   gl_upload_clip_[4]      = {0, 0, 0, 0};
-    bool                  gl_upload_floater_      = false;
-    bool                  gl_upload_seeded_       = false;
+    GuiGlCanvas           gl_canvas_;
     void ensure_gl_context();
     void ensure_gl_surface();
     void destroy_gl_surface();
-    void ensure_canvas_texture();
     void destroy_gl();
-    void upload_canvas_list(const GuiCanvasDrawList& list);
 #endif
     // The GL canvas's frame (set_canvas_frame): the GUI's one process-wide
     // list (gui_canvas_frame, canvas_sink.h), null until the first frame

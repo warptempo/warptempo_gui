@@ -43,8 +43,8 @@
 //     n/255, and cairo stores the byte n; cue_fill_pixel, cool_edit_paint.cpp,
 //     spells the identity) — the plate's two words its published inks' as the
 //     cairo road bakes them. The platform draws the list under a scissor to
-//     the list's clip (GuiPlatform::set_canvas_frame; platform_android.cpp's
-//     present), the CPU never paints these pixels at all.
+//     the list's clip (GuiPlatform::set_canvas_frame; gl_canvas.cpp's
+//     GuiGlCanvas::present_frame), the CPU never paints these pixels at all.
 //
 // THE TRANSPARENCY INVARIANT (design record §3.4): under the GL canvas the
 // backbuffer's canvas paint area is CLEARED (CAIRO_OPERATOR_CLEAR, on_redraw)
