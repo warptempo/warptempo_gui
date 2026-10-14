@@ -1705,20 +1705,25 @@ void GuiPlatform::pump() {
     // deliver_owed_resize).
     deliver_owed_resize();
 
-    // THE COALESCER'S WAIT (the rule at the tail): damage the last pass held
-    // back polls only for what is left of the least spacing, so the pass
-    // that paints it comes when the spacing is up even with nothing else
-    // arriving; input still drains and reaches the core in the meantime.
-    // ROUNDED UP to the poll's whole milliseconds, because a round down would
-    // poll at 0 and spin through the last fraction; the lateness that costs
-    // (under a millisecond, and less whenever an event or the tick wakes the
-    // pass first) is what the slack beside kMinPresentSpacingNs is set
-    // against. With no damage held the poll
-    // blocks as it always has, the timerfd its one wakeup.
+    // THE COALESCER'S WAIT (the rule at the tail), three arms. DAMAGE HELD
+    // AND THE HOLD STILL RUNNING: the poll waits only for what is left of the
+    // least spacing, so the pass that paints it comes when the spacing is up
+    // even with nothing else arriving; input still drains and reaches the
+    // core in the meantime. ROUNDED UP to the poll's whole milliseconds,
+    // because a round down would poll at 0 and spin through the last
+    // fraction; the lateness that costs (under a millisecond, and less
+    // whenever an event or the tick wakes the pass first) is what the slack
+    // beside kMinPresentSpacingNs is set against. DAMAGE HELD AND THE HOLD
+    // ALREADY UP: the poll is 0 — it drains what is there and falls through
+    // to the tail, which paints in this pass. The deadline can pass between
+    // the last pass's tail and this head, and a blocking poll there would
+    // hold an owed paint until the next event or the 5-ms tick. NO DAMAGE
+    // HELD: the poll blocks as it always has, the timerfd its one wakeup.
     int timeout_ms = -1;
     if (!damage_.empty()) {
         const int64_t left = present_hold_left_ns();
-        if (left > 0) timeout_ms = static_cast<int>((left + 999999LL) / 1000000LL);
+        timeout_ms = left > 0 ? static_cast<int>((left + 999999LL) / 1000000LL)
+                              : 0;
     }
     drain_looper(timeout_ms);
 

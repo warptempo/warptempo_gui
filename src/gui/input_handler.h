@@ -1429,23 +1429,24 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors, the icon row's twenty-six and row 8's nineteen
+    // three menu anchors, the icon row's twenty-five and row 8's nineteen
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-14, after 2026-10-11's Older / Newer moving down):
-    //   THE ICON ROW, 17 + 4 + 1 + 4 = 26 — the left walk's seventeen
-    //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Value and
-    //   Render; Full Zoom Out, Waveform Magnification, Follow and Restrict
-    //   Undo; BPM, Iteration and Flatten; Listen, the padlock, Settings and
-    //   Enable Tooltips), the history view's four stand-ins (Revert and Load
-    //   in Place in Undo's slots, the walk lamp and Cumulative
-    //   in the iteration group's — kIconRowHistoryStandIns), the history
-    //   opener right-anchored (kIconRowHistoryOpener) and the VIEW GROUP's
-    //   four flush right (Source+Phase since 2026-10-12) — 22 standing
-    //   outside the `h` view (the four
-    //   stand-ins publishing empty rects) and 14 inside it (the stand-ins in,
-    //   the two authoring groups they replace out, and the view's hide
-    //   leaving Full Zoom Out and Waveform Magnification (since 2026-10-12)
-    //   and Enable Tooltips alone of their groups);
+    // counts re-derived from them 2026-10-14, after Copy Value left the band
+    // that day):
+    //   THE ICON ROW, 16 + 4 + 1 + 4 = 25 — the left walk's sixteen
+    //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
+    //   Full Zoom Out, Waveform Magnification, Follow and Restrict Undo;
+    //   BPM, Iteration and Flatten; Listen, the padlock, Settings and Enable
+    //   Tooltips), the history view's four stand-ins (Revert and Load in
+    //   Place in Undo's slots, the walk lamp and Cumulative in the iteration
+    //   group's — kIconRowHistoryStandIns), the history opener
+    //   right-anchored (kIconRowHistoryOpener) and the VIEW GROUP's four
+    //   flush right (kIconRowViewGroup, Source+Phase since 2026-10-12) — 21
+    //   standing outside the `h` view (the four stand-ins publishing empty
+    //   rects) and 14 inside it (the stand-ins in, the two authoring groups
+    //   they replace out, and the view's hide leaving Open Project and
+    //   Save's group whole and Full Zoom Out and Waveform Magnification
+    //   (since 2026-10-12) and Enable Tooltips alone of theirs);
     //   ROW 8, 8 + 4 + 5 + 2 = 19 — the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
     //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle

@@ -2050,10 +2050,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // Revert twin with it) and SAVE beside it in one group, no separator
     // between ("separator in the drop-down, no separator in the toolbar"),
     // then the rest of the toolbar four (Undo / Redo / Render, the deleted
-    // row 2's, in a group of their own since 2026-09-29) with COPY
-    // VALUE between Redo and Render in that group (up from the bottom row,
-    // 2026-09-29 evening; EDIT FLAG stood behind Render for that evening's
-    // hour and was deleted), THE ZOOM
+    // row 2's, in a group of their own since 2026-09-29; COPY VALUE stood
+    // between Redo and Render from 2026-09-29 evening until 2026-10-14, when
+    // its act became Jump to Defining Marker's shift twin, and EDIT FLAG
+    // stood behind Render for that evening's hour and was deleted), THE ZOOM
     // GROUP — the VIEWPORT CLASS whole since the
     // architect's 2026-08-27 merge: FULL ZOOM OUT (2026-08-12; the stepped
     // zoom buttons in front of it removed 2026-09-25, and CENTER behind it
@@ -2418,8 +2418,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   row's two lamps). The four verbs, Open Text Editor and Toggle Value Drag
 //   are the row's resting greys on a locked tab; the jump and Add to
 //   selection are not, both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood
-//   between Toggle inherit and Add to selection until 2026-09-29; Copy is
-//   the icon row's since, and Edit Flag was deleted);
+//   between Toggle inherit and Add to selection until 2026-09-29; Copy was
+//   the icon row's from then until 2026-10-14, its act now the jump's shift
+//   twin, and Edit Flag was deleted);
 //   THE MARKER WALK (kTransportWalkGroup) — PREVIOUS MARKER (Shift+Tab, its
 //   ctrl press the paired march), NEXT MARKER (Tab, its shifted press
 //   Shift+Tab), CENTER (bare `c`, down from the icon row) and SWITCH TAB
