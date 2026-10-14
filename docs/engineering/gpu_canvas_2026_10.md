@@ -287,6 +287,17 @@ taskbar (its clock and a terminal title's spinner move; the window never
 reaches it). The harness lives in tmp/ (`laptop_identity.sh`,
 `laptop_identity_restored.sh`), a measurement and never a test suite.
 
+THE LIFECYCLE PASS (2026-10-14, the session's closing install, HEAD's
+build): on the tablet, after the fifteen tap states came out identical to
+the build before it, the app was sent home and brought back, put to sleep
+(KEYCODE_SLEEP, the panel reporting Dozing) and woken, and asked to
+rotate (the system's user_rotation; the activity is landscape-locked and
+the system left it alone) — each a new surface adoption where the
+system makes one, observed by screencap and logcat, no recovery code
+anywhere. The same process stood through all of it, and the frame after
+the return and the frame after the wake are byte-identical to the launch
+frame (tmp/gpu_arc/lifecycle.sh, id_life_*.png).
+
 ## 6. Hazards named at the design
 
 The EGL surface's colorspace attribute on this driver (a refusal makes the
