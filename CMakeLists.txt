@@ -180,8 +180,8 @@ set(WARPTEMPO_GUI_SOURCES
     # case, the same under every chrome (cool_edit_paint.h).
     src/gui/cool_edit_paint.cpp
     # THE CANVAS SINK (2026-10-13): the canvas interior's one paint road,
-    # cairo on the cpu canvas and Wayland, a draw list for the GL canvas
-    # (canvas_sink.h).
+    # cairo on either platform's cpu canvas, a draw list on either
+    # platform's gl canvas (canvas_sink.h).
     src/gui/canvas_sink.cpp
     src/gui/warpmarkers.cpp
     src/gui/text_editor.cpp

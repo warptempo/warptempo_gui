@@ -171,9 +171,15 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    canvas is a design violation (§2's opaque-rectangle property); the
    harness is its detector.
 5. **The upload excludes the canvas.** Each damage rect uploads minus the
-   canvas's paint area; while a floating surface stands
-   (`floating_surface_stands` and the keyboard slot) the whole rect uploads,
-   because a floater's change rides a containing rect. A pan step uploads
+   canvas's paint area, the canvas's clip. The whole rect uploads only
+   when `GuiGlCanvas::present_frame` says so: a remade texture's first walk,
+   a changed clip, a floating surface standing now or at the last walk
+   (`floating_surface_stands`; a floater's change rides a containing rect),
+   or an empty clip. The on-screen keyboard is no floater: it cuts the
+   list's clip through `waveform_paint_area`, so its show and hide change the
+   clip (one whole walk), and later walks with the same clip upload each rect
+   minus the clip, the keyboard's own pixels outside the clip uploading
+   normally. A pan step uploads
    the lanes above the canvas and the two frame columns (~1.4 MB) where
    today's present copies ~10 MB.
 6. **The GL canvas is scissored to the canvas's paint area**

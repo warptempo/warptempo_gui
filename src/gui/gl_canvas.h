@@ -18,10 +18,12 @@ struct GuiCanvasDrawList;
 // rule (GuiPlatform's EGL members; platform_android.cpp's ensure_gl_surface
 // and present). Every call here is made with the platform's context current.
 //
-// NO GL HEADER REACHES ANOTHER TRANSLATION UNIT: GL object names are spelled
-// `unsigned int` and uniform locations `int` (GLuint and GLint on every
-// platform this builds for), and <GLES3/gl3.h> is included by gl_canvas.cpp
-// alone.
+// THIS HEADER EXPOSES NO GL TYPE AND INCLUDES NO GL HEADER TO ITS CONSUMERS:
+// GL object names are spelled `unsigned int` and uniform locations `int`
+// (GLuint and GLint on every platform this builds for). The GL RENDERING
+// calls are gl_canvas.cpp's alone; each platform's translation unit includes
+// <GLES3/gl3.h> itself under the GL fence for its one driver-identity line
+// (glGetString), never for a render call.
 
 // THE LOG SEAM: the owner names no platform's log. A failure of its setup —
 // a shader that fails to compile, a program that fails to link — is fatal

@@ -1300,10 +1300,14 @@ void GuiPlatform::destroy_backbuffer() {
 // wl_surface.frame at every swap and waits inside the NEXT eglSwapBuffers for
 // that callback, which would block this loop where it already paces itself
 // by its own frame callback (request_frame_callback, the paint invited by
-// the compositor) and wakes on the one timerfd. At 0 the swap waits for
-// nothing but a free buffer; the backend's own callback stays the pacing
-// signal and nothing in run() changes. A refusal is one advisory line (the
-// swap then throttles itself, slower but correct).
+// the compositor) and wakes on the one timerfd. Interval 0 removes Mesa's
+// frame-callback throttle; what remains is Mesa's private wl_display_sync
+// (created after its commit, throttling the next swap) and its buffer-release
+// waits, both dispatched on Mesa's own wrapped queue, never this backend's
+// default queue, so no listener of ours re-enters mid-paint. The backend's
+// own callback stays the pacing signal and nothing in run() changes. A
+// refusal is one advisory line (the swap then throttles itself, slower but
+// correct).
 void GuiPlatform::ensure_gl() {
     if (egl_display_) return;
     EGLDisplay dpy = eglGetPlatformDisplay(EGL_PLATFORM_WAYLAND_KHR,
