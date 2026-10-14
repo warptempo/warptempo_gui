@@ -1785,8 +1785,12 @@ Both share the package and the key, so installing one replaces the other.
 - **Present**: every rect of the damage list uploaded in place from the cairo
   surface (`GL_UNPACK_ROW_LENGTH` = the stride), then the draw and
   `eglSwapBuffers` (interval 1), which blocks where `ANativeWindow_lock`
-  blocked — the one-wakeup loop is unchanged. A lost context is fatal; any
-  other failed swap keeps the damage.
+  blocked — the one-wakeup loop is unchanged. *(SUPERSEDED 2026-10-14: the
+  vsync gate paces the normal paints, AChoreographer's frame callback, and the
+  loop has two wake sources, the 5-ms tick and the callback; the spacing clock
+  of 5b303871 lived one commit — `GuiPlatform::pump`'s tail,
+  `docs/engineering/gui_perf_campaign_2026_10.md` §7(c).)* A lost context is
+  fatal; any other failed swap keeps the damage.
 - **Window loss**: the surface is destroyed at `APP_CMD_TERM_WINDOW` (the
   context released from it first, so EGL lets go of the window before the glue
   releases it); the context, the program and the texture stay, and the full

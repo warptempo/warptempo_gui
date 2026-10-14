@@ -1711,8 +1711,10 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *      fixed order (key repeat, then the touch window) is inside tick();
  *   3. the four worker completions, in registration order;
  *   4. the MEDIA COMMANDS, drained under the mutex and dispatched outside it,
- *      after the workers and before the settled hook, so a car button acts and
- *      its frame paints in this same pass (the reasoning is at the block);
+ *      after the workers and before the settled hook, so a car button acts before
+ *      the pass's paint decision (the reasoning is at the block; since
+ *      2026-10-14 its frame joins this pass IF a vsync is due, else the next
+ *      callback's, one vsync at most);
  *   5. the loop-settled hook, at the tail, so it observes the pass's FULLY
  *      settled state;
  *   6. paint-if-dirty AT THE VSYNC CALLBACK (2026-10-14): the pass paints
@@ -1764,8 +1766,11 @@ void GuiPlatform::pump() {
     }
 
     // THE CAR'S COMMANDS, after the workers and before the settled hook and
-    // the paint, so a button acts and its frame paints in this same pass
-    // (the hook's contract, platform_wayland.h). The queue is swapped out
+    // the paint, so a button acts before the pass's paint decision (the
+    // hook's contract, platform_wayland.h; amended 2026-10-14: the tail paints
+    // only with the vsync bit, so the command's frame joins this pass if a
+    // vsync is due and otherwise the next callback's, one vsync at most — the
+    // dispatch order is unchanged and still the reason it sits here). The queue is swapped out
     // under the one mutex and the hook fired per command OUTSIDE it — a
     // command synthesizes keys, and that road is long. With no hook installed
     // (between two projects) the commands are discarded: the third drop
