@@ -229,27 +229,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::Save,       GuiKeys::S,   true,  false, false, false},   // Ctrl+S (+Shift, and in `h`: Ctrl+Shift+S, save_button_publishes)
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false,  true},   // Ctrl+Shift+Z
-    // THE COPY RESOLVED VALUE BUTTON (architect 2026-08-29), the value pair's
-    // pointer home for the copy, BETWEEN REDO AND RENDER since 2026-09-29
-    // (kdenlive's own order — Save | Undo, Redo, Copy, …): CTRL+C, which the
-    // main window binds to nothing else (bare `c` is the centre key; the text
-    // editors' own Ctrl+C is their router's).
-    // Its lift copies the focused marker's resolved value to the system
-    // clipboard, exactly as the key does — button-is-its-chord literally, the
-    // press dispatching Ctrl+C through on_key at the LIFT while the KEY acts at
-    // the press. The row carries the ctrl, Undo's shape, so a ctrl-click is the
-    // consumed nothing the band's modifier gate makes it on any button that
-    // does not admit ctrl, and the long press reaches nothing.
-    //
-    // NOT A RADIO AND NO LAMP (an act, not a mode), and it does NOT repeat: a
-    // copy repeats onto itself, so the key is one-shot at repeat_eligible and
-    // the button carries no `repeats`. ITS GATES ARE NOT THE VERBS': the
-    // READ-ONLY lock ADMITS Ctrl+C (a clipboard write authors nothing), so
-    // the button stays lit on a locked tab, while the `h` view consumes the
-    // chord and greys it through the derived partition. (Bare `j` was its chord
-    // until 2026-09-29 and binds nothing now.)
-    {RedesignButton::IconCopyValue,
-     GuiKeys::C,      true,  false, false, false},                             // Ctrl+C
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false},   // Ctrl+Alt+R (+Shift)
     // (THE EDIT FLAG BUTTON — bare Return on a button, the flag editor's third
     // road — stood in the bottom row's verb group from 2026-08-27 and in the
@@ -628,21 +607,25 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::IconMarkerDelete,  GuiKeys::Delete, false, false, false, false}, // Delete
     {RedesignButton::IconMarkerDisable, GuiKeys::D,      true,  false, false, false}, // Ctrl+D
     {RedesignButton::IconMarkerInherit, GuiKeys::N,      true,  false, false, false}, // Ctrl+N
-    // JUMP TO DEFINING MARKER (architect 2026-09-29), the verb group's FIFTH
-    // since Edit Flag and Copy Value went up to the icon row that day: CTRL+J,
-    // the jump to the marker the focused value came from on the other A/B tab
-    // (jump_to_value_source) — Copy Value's shifted twin, Shift+`j`, until that
-    // day, a dedicated button now under the dissolved shift-twin rule. Its row
-    // carries the ctrl as Ctrl+D's and Ctrl+N's do; it ADMITS NO MODIFIER, so a
-    // modified press is refused at the band gate and the long press reaches
-    // nothing. NOT A RADIO AND NO LAMP (an act), and it does NOT repeat (a jump
-    // has one destination). ITS GATES ARE NOT THE VERBS': both locks admit the
-    // chord (a tab switch, a select, a land and two `c`s author nothing), so it
-    // is lit on a locked tab and under grid iterations wherever the jump would
-    // land (jump_to_value_source_actionable), while the `h` view consumes Ctrl+J
-    // and greys it through the derived partition.
+    // JUMP TO DEFINING MARKER (architect 2026-09-29), the verb group's FIFTH:
+    // CTRL+J, the jump to the marker the focused value came from on the other
+    // A/B tab (jump_to_value_source). Its row carries the ctrl as Ctrl+D's and
+    // Ctrl+N's do. IT ADMITS SHIFT (architect 2026-10-14,
+    // redesign_button_shift_admits), Toggle Inherit's shape: the shift-click
+    // and the long press OR the shift into the row's ctrl and dispatch
+    // CTRL+SHIFT+J, COPY RESOLVED VALUE — the focused marker's resolved value
+    // to the system clipboard (copy_focused_marker_value), the copy's own
+    // refusals and card. A ctrl press is refused at the band gate (the row
+    // already carries its ctrl). NOT A RADIO AND NO LAMP (an act), and it does
+    // NOT repeat (a jump has one destination, a copy repeats onto itself), so
+    // its long press is its shift. ITS GATES ARE NOT THE VERBS': both locks
+    // admit both chords (a tab switch, a select, a land, two `c`s and a
+    // clipboard write author nothing), so it is lit on a locked tab and under
+    // grid iterations wherever either act would run (the twin rule at its
+    // enabled arm), while the `h` view consumes both chords and greys it
+    // through the derived partition.
     {RedesignButton::IconJumpToDefiningMarker,
-     GuiKeys::J,      true,  false, false, false},                             // Ctrl+J
+     GuiKeys::J,      true,  false, false, false},                             // Ctrl+J (+Shift: Ctrl+Shift+J)
     // OPEN TEXT EDITOR (architect 2026-10-09: "resurrect the Open Text Editor
     // button. It should go between jump to defining marker and toggle add to
     // selection and the shortcut of course is enter"), the verb group's SIXTH:
@@ -763,13 +746,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // CENTER (bare `c`), moved here from the icon row's zoom group on
     // 2026-09-29 (architect) with its row unchanged: a momentary navigation
     // chord, no radio, no repeat. LIVE in the `h` view, `c` being that mode's
-    // own vocabulary. IT ADMITS CTRL (architect 2026-09-29,
-    // redesign_button_ctrl_admits): a modified press spells the button's own
-    // key under that modifier, so its ctrl-click dispatches CTRL+C, COPY
-    // RESOLVED VALUE — the copy's own refusals and card, the icon row's Copy
-    // Value button's act exactly (on glass the S Pen's side button with a
-    // tap). A shift press, and the long press, reach nothing: Shift+C binds
-    // nothing.
+    // own vocabulary. IT ADMITS NO MODIFIER (2026-10-14: no modified `c`
+    // binds in the main window), so a modified press is refused at the band
+    // gate and the long press reaches nothing.
     {RedesignButton::IconZoomOriginal,
      GuiKeys::C,      false, false, false, false},                             // bare c
     // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the one-shot other-tab
@@ -924,8 +903,8 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
 // Up / Down step ladder's Ctrl rung (the two skip buttons, whose ctrl-click
 // was Ctrl+Home / Ctrl+End, left the row 2026-10-12), the WALK's Ctrl+Tab, PREVIOUS
-// MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl, 2026-09-29), CENTER's
-// Ctrl+C and RESTRICT UNDO's Ctrl+Z (2026-09-29) — which is why
+// MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl, 2026-09-29) and
+// RESTRICT UNDO's Ctrl+Z (2026-09-29) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
 // of any row, or on one of the three dropdown anchors (which carry no chord row
@@ -1535,10 +1514,10 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // admissions) wears the grey face. ONE SWAP STANDS beside it (architect
 // 2026-10-05): in the `h` view the history companions stand in the icon
 // row's slots of the two groups THIS WALK answers DEAD whole — Undo's (Undo,
-// Redo, Copy Value, Render) and the iteration group — and outside it the
+// Redo, Render) and the iteration group — and outside it the
 // companions do not stand (kIconRowHistoryStandIns, paint_handler.cpp,
 // which names this walk as the membership's derivation). A change here that
-// answers one of those seven LIVE in the view is a change to that table too.
+// answers one of those six LIVE in the view is a change to that table too.
 // ROW 8 HAS ITS OWN SINCE 2026-10-11 (architect): in the view Older / Newer
 // stand in the Left / Right arrows' seat (kTransportHistoryStepGroup,
 // paint_handler.cpp) — a seat ruling, not this walk's: the arrows' chords
@@ -8282,8 +8261,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // redesign_button_enabled reads the predicate its act refuses on — the
         // verbs on the selection and the lock, the arrows on the tempo step,
         // the lane fork and the walls, the walk pair on the cycle's landing,
-        // Play on its launch and A/B predicates, Copy value on
-        // its eligibility — so this line consumes exactly the presses whose
+        // Play on its launch and A/B predicates, Jump to Defining Marker on
+        // the jump's and its copy twin's — so this line consumes exactly the presses whose
         // chord would be a consumed no-op. Inside the view the derived
         // partition adds its own: the PLAY/STOP button, UP and DOWN, the four
         // verbs and Jump to Defining Marker (Space, the bare verticals and
@@ -8689,27 +8668,6 @@ void GuiInputHandler::finish_chrome_press_release(
         // THE `h` VIEW'S SAVE IS THE PUBLISH CHORD (save_button_publishes).
         if (save_button_publishes(tc.id, app.history_mode.active))
             chord.shift = true;
-        // A LIFT THAT SPELLS CTRL+C UNDER A STANDING MARKER-LANE EDITOR IS
-        // REFUSED ON THE EDITOR'S OWN SWALLOW CARD (architect 2026-09-29): the
-        // flag editor, in every kind, raises no veil, so the roster stays
-        // pressable under it, and the chord would reach on_key as the
-        // editor's own copy (text_editor's ctrl-exact Ctrl+C) — the field's
-        // selection copied, or nothing, silently, behind a face named Copy
-        // Resolved Value or Center. A face named for the resolved value never
-        // copies something else, so its lift says what the same button said
-        // while its chord was one the editor does not own. Both roads meet
-        // here: Copy Resolved Value's plain lift and Center's ctrl press.
-        // THE KEYBOARD IS UNTOUCHED: Ctrl+C typed in the field copies the
-        // field's selection, the editor's key classifier being the keyboard's
-        // owner, not this. The faces do not grey for it. The dialog editors
-        // need no term: the veil at this body's head already refused the lift,
-        // so a keyboard-modal editor standing here is the marker lane's.
-        if (tc.key == GuiKeys::C && chord.ctrl && !chord.shift &&
-            !chord.alt && keyboard_modal_editor_active()) {
-            notifications.notify(AppState::NotificationClass::Normal,
-                                 modal_editor_swallow_card(tc.key, chord));
-            return;
-        }
         on_key(tc.key, chord);
         return;
     }

@@ -54,7 +54,6 @@
 {"DialogInformation", -1.7f, 0.5f},
 {"DialogError", 0.0f, 0.0f},
 {"WindowClose", -0.7f, 0.7f},
-{"EditCopy", -1.5f, 0.0f},
 {"HelpWhatsthis", 0.2f, 0.5f},
 {"GoJumpDeclaration", -0.3f, 0.4f},
 {"AccessoriesTextEditor", -1.5f, -2.4f},

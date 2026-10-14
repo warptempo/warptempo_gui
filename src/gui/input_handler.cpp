@@ -607,11 +607,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         if (handle_settings_editor_key(key, mods)) return;
     }
 
-    // (CTRL+C COPIES THE FOCUSED MARKER'S RESOLVED VALUE — architect
-    // 2026-09-29, Copy Resolved Value's chord (is_copy_value_key, gui_input.h;
-    // the arm is in the ordinary dispatch below, beside Ctrl+J's jump). The
-    // editors' own ctrl-exact Ctrl+C / Ctrl+X / Ctrl+V are handled in the
-    // editor blocks above and never reach it.)
+    // (THE EDITORS' OWN ctrl-exact Ctrl+C / Ctrl+X / Ctrl+V are handled in the
+    // editor blocks above. Past them Ctrl+C binds nothing since 2026-10-14:
+    // the resolved value's copy is Ctrl+Shift+J, beside Ctrl+J's jump in the
+    // ordinary dispatch below — is_copy_value_key, gui_input.h.)
 
     // Drag-modal input: a pointer drag owns the keyboard exactly as the
     // prompt and the text editors above do. While any drag gesture is in
@@ -1463,19 +1462,18 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // THE VALUE PAIR (architect 2026-08-29) — CTRL+C copies the FOCUSED
-    // marker's resolved value to the system clipboard, CTRL+J jumps to the
-    // marker that value came from on the OTHER A/B tab (both chords since
-    // 2026-09-29). They took the place of the retired resolved readout,
+    // THE VALUE PAIR (architect 2026-08-29) — CTRL+SHIFT+J copies the FOCUSED
+    // marker's resolved value to the system clipboard (since 2026-10-14),
+    // CTRL+J jumps to the marker that value came from on the OTHER A/B tab
+    // (since 2026-09-29). They took the place of the retired resolved readout,
     // and they sit here, in the ordinary dispatch below the read-only gate and
     // below the mode's own claim, because both are read-only-LEGAL (the
     // allowlist admits them, so the gate above passes them through) and both
     // are refused in the `h` view by that view's allowlist, which never names
-    // them. Ctrl-exact through the shared predicates (gui_input.h), so these
+    // them. Exact through the shared predicates (gui_input.h), so these
     // arms and the allowlist cannot drift; every refusal is the act's own
-    // card. The icon row's Copy Resolved Value button and the Center button's
-    // ctrl press dispatch Ctrl+C through here at their lift, and the bottom
-    // row's Jump to Defining Marker dispatches Ctrl+J.
+    // card. The bottom row's Jump to Defining Marker dispatches Ctrl+J through
+    // here at its lift, and Ctrl+Shift+J at its shift-click or long press.
     if (is_copy_value_key(key, mods)) {
         copy_focused_marker_value();
         return;
@@ -3603,7 +3601,8 @@ bool GuiInputHandler::apply_editor_clipboard(
         // editor is its own world (notifications.h), the text it did not take is
         // still sitting there selected, and the paste that follows shows the
         // truth the moment it is asked for. The CARDED copy is the one whose
-        // result nothing paints at all (the main window's Ctrl+C).
+        // result nothing paints at all (the main window's Ctrl+Shift+J, the
+        // resolved value's copy).
         //
         // A FAILED CUT IS DIFFERENT IN KIND, because a cut is a copy AND a
         // deletion: erasing on a refused claim would destroy the bytes with

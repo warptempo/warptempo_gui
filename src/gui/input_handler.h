@@ -2555,7 +2555,7 @@ private:
     // when there is nothing to paste. Returns false for any other action so the
     // caller can fall through to its remaining branches.
     //
-    // This and Ctrl+C's value copy (copy_focused_marker_value,
+    // This and Ctrl+Shift+J's value copy (copy_focused_marker_value,
     // input_key_dispatch.cpp) are the whole of the GUI's clipboard reach; no
     // other site copies or pastes.
     bool apply_editor_clipboard(text_editor::KeyAction action,
@@ -4280,8 +4280,9 @@ private:
     // for the same hook and the same finalizer.)
 
     // THE VALUE PAIR (architect 2026-08-29), the two acts that took the
-    // retired resolved readout's place: Ctrl+C COPIES the focused marker's
-    // resolved value to the system clipboard, Ctrl+J JUMPS to the marker
+    // retired resolved readout's place: Ctrl+Shift+J COPIES the focused
+    // marker's resolved value to the system clipboard (2026-10-14), Ctrl+J
+    // JUMPS to the marker
     // that value came from — the pass's owner or the ref's definition — ON THE
     // OTHER A/B TAB, so a reference and its definition stand one Ctrl+Tab
     // apart. One composer answers both (resolved_marker_payload, the value and
@@ -4297,10 +4298,9 @@ private:
     // half of the pair (the order and what each step is for are at the body).
     // Both are
     // read-only-legal, both live in S and T, both refused in the `h` view at
-    // its allowlist; the icon row's Copy Resolved Value button is Ctrl+C at
-    // its lift and the bottom row's Jump to Defining Marker is Ctrl+J at its
-    // (2026-09-29; the jump rode Copy Value's shift press, as Shift+J, until
-    // then). Definitions and the whole
+    // its allowlist; the bottom row's Jump to Defining Marker is Ctrl+J at
+    // its lift and Ctrl+Shift+J, the copy, at its shift-click or long press
+    // (2026-10-14). Definitions and the whole
     // reasoning are in input_key_dispatch.cpp.
     void copy_focused_marker_value();
     void jump_to_value_source();

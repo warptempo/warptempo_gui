@@ -97,8 +97,9 @@
 // stands, and the render's progress line is what it carries otherwise. THE
 // RESOLVED READOUT — the third state string, and the bar's right cell for its
 // one day — RETIRED WHOLE with the bar: no state surface displays a resolved
-// value any more, Ctrl+C copies it (its card, an event, naming the copied
-// value — architect 2026-09-13) and Ctrl+J goes to the marker it came from.
+// value any more, Ctrl+Shift+J copies it (its card, an event, naming the
+// copied value — architect 2026-09-13; the chord 2026-10-14) and Ctrl+J goes
+// to the marker it came from.
 //
 // THE STRINGS' EARLIER HOMES, as history: they were the bottom-LEFT
 // lead-in until the 2026-08-12 unification, the bottom row's right end after
@@ -706,14 +707,6 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::Save,       icons::Icon::DocumentSave},
     {RedesignButton::Undo,       icons::Icon::EditUndo},
     {RedesignButton::Redo,       icons::Icon::EditRedo},
-    // COPY RESOLVED VALUE (architect 2026-09-29), BETWEEN REDO AND RENDER —
-    // kdenlive's own order, Save | Undo, Redo, Copy, …: Ctrl+C (edit-copy,
-    // the focused marker's resolved value to the clipboard). It came up from
-    // the bottom row's verb group that evening and stood after Render for an
-    // hour beside EDIT FLAG (text-field, bare Return), which the architect
-    // then deleted — the flag editor's roads are Return and the double-click
-    // on the flag. One box and one 2px gap off the walk, no separator moving.
-    {RedesignButton::IconCopyValue, icons::Icon::EditCopy},
     {RedesignButton::Render,     icons::Icon::MediaRecord},
     // (THE TWO VIEW LAMPS SHARED ONE GROUP here from 2026-09-04 to 2026-09-15
     // — IconAudioView wearing document-import lit in Target, IconMarkerColumn
@@ -905,16 +898,17 @@ constexpr IconRowDef kIconRowButtons[] = {
 // that leader's gap. The two are the groups every member of which the view
 // greys through the derived partition (history_mode_disables_button,
 // input_pointer.cpp — none of their chords is the mode's vocabulary or on its
-// allowlist): UNDO'S (Undo, Redo, Copy Value, Render — Ctrl+Z, Ctrl+Shift+Z,
-// Ctrl+C, Ctrl+Alt+R) and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F).
+// allowlist): UNDO'S (Undo, Redo, Render — Ctrl+Z, Ctrl+Shift+Z,
+// Ctrl+Alt+R) and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F).
 // No other group is grey whole in the view: the zoom group keeps Full Zoom
 // Out (bare `0`) and the render-entry group the tooltip lamp (bare
-// backslash). A ruling that admits one of those seven chords into the view
+// backslash). A ruling that admits one of those six chords into the view
 // removes its group from this table.
 //
-// THE SLOTS: seven, the four companions using four of them. UNDO'S FOUR take
-// the view's two acts, Revert and Load in Place, so that group stands two
-// cases narrower in the view — OLDER AND NEWER LEFT IT FOR ROW 8 (architect
+// THE SLOTS: six, the four companions using four of them. UNDO'S THREE take
+// the view's two acts, Revert and Load in Place, so that group stands one
+// case narrower in the view (two until 2026-10-14, when Copy Resolved
+// Value's button left it) — OLDER AND NEWER LEFT IT FOR ROW 8 (architect
 // 2026-10-11 ~02:40; they stood in Undo's and Redo's slots from 2026-10-05):
 // they take the Left / Right arrows' seat there, the row's stand-in
 // (kTransportHistoryStepGroup); THE ITERATION
@@ -1973,8 +1967,8 @@ static std::string history_walk_line(AppState& app) {
 // LANE, its two rect accessors, its three height accessors and the window-foot
 // seam went with the painter; THE STATE TEXT is row 8's own cell, painted by
 // paint_bottom_row_buttons_and_clock right of the clock, and THE RESOLVED
-// READOUT retired whole — Ctrl+C copies the value and Ctrl+J goes to the
-// marker it came from. `history_walk_line` above is untouched: the composer
+// READOUT retired whole — Ctrl+Shift+J copies the value and Ctrl+J goes to
+// the marker it came from. `history_walk_line` above is untouched: the composer
 // still stands beside its one caller, which is now that cell.)
 
 // THE BAND'S STANDING MEMBERS, IN PANES (2026-10-13: lifted out of
@@ -2579,15 +2573,16 @@ struct TransportRowDef {
 // history.
 //
 // THE GROUP IS SIX SINCE 2026-09-29 EVENING (architect): EDIT FLAG and COPY
-// RESOLVED VALUE went up to the icon row (Copy's record is at
-// kIconRowButtons; Edit Flag was deleted later that evening), and JUMP TO
-// DEFINING MARKER — Ctrl+J,
+// RESOLVED VALUE went up to the icon row (Edit Flag was deleted later that
+// evening), and JUMP TO DEFINING MARKER — Ctrl+J,
 // GoJumpDeclaration's jump arc — took the seat
-// after Toggle Inherit, Add to Selection closing the group behind it. The jump
-// was Copy Value's shifted twin until that day; it is a dedicated button now
-// under the dissolved shift-twin rule (closed_questions.md). It is an act, wears no
-// lamp, and greys where Ctrl+J would refuse (jump_to_value_source_actionable)
-// and in the `h` view; neither lock greys it, the jump authoring nothing.
+// after Toggle Inherit, Add to Selection closing the group behind it. It is an
+// act, wears no lamp, and SINCE 2026-10-14 CARRIES THE COPY AS ITS SHIFT TWIN
+// (architect: "it's a marker action and the marker row is the bottom row"):
+// its shift-click and long press are Ctrl+Shift+J, Copy Resolved Value, whose
+// icon-row button left that day. It greys where the jump and the copy both
+// refuse (the twin rule at its enabled arm) and in the `h` view; neither lock
+// greys it, neither act authoring anything.
 //
 // THE GROUP IS SEVEN SINCE 2026-10-09 (architect: "resurrect the Open Text
 // Editor button. It should go between jump to defining marker and toggle add

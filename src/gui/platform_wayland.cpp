@@ -2778,7 +2778,7 @@ void GuiPlatform::on_keyboard_key(uint32_t serial, uint32_t /*time*/,
                                   uint32_t keycode, uint32_t state) {
     // Cache the serial for wl_data_device.set_selection (the field's comment
     // is the inventory of the events that cache): a key-triggered copy —
-    // Ctrl+C / Ctrl+X in an editor, the main window's Ctrl+C —
+    // Ctrl+C / Ctrl+X in an editor, the main window's Ctrl+Shift+J —
     // runs synchronously under this event, so the serial stored here IS the
     // triggering event's own by the time clipboard_set_text runs. Cached
     // BEFORE the xkb and release gates below so a release, a key with no
@@ -2913,8 +2913,8 @@ void GuiPlatform::on_pointer_motion(uint32_t /*time*/,
 void GuiPlatform::on_pointer_button(uint32_t serial, uint32_t /*time*/,
                                     uint32_t button, uint32_t state) {
     // Cache the serial BEFORE the delivery, as on_keyboard_key does: a
-    // button's lift runs its act synchronously under this event (the roster's
-    // Copy resolved value), and the
+    // button's lift runs its act synchronously under this event (Jump to
+    // Defining Marker's shifted lift, the resolved value's copy), and the
     // claim that act issues must ride THIS event's serial — labwc refuses a
     // stale key serial, and a pointer-only session had none at all before
     // 2026-09-03. Cached ahead of the translation too: an untranslated button

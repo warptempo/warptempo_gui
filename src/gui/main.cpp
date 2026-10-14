@@ -1002,7 +1002,8 @@ TooltipHangBands tooltip_hang_bands(const AppState& a) {
 // `kStatusBarContentPx`, the three height accessors, `paint_status_bar` and
 // the window-foot seam `kRedesignBottomLine` all went with it; the STATE TEXT
 // is row 8's own cell, right of the clock, and the RESOLVED READOUT retired
-// whole — Ctrl+C copies the value and Ctrl+J goes to its source.)
+// whole — Ctrl+Shift+J copies the value (2026-10-14) and Ctrl+J goes to its
+// source.)
 
 // Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
 // pair. (`Viewport::trim_range` is not "the target-view half" of a pair with
@@ -1957,12 +1958,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // payload_eligibility is a free function in app_state.{h,cpp} (its
     // boolean face payload_eligible_marker beside it). The two acts reach it
-    // directly with the (app, audio, idx) signature — Ctrl+C, which copies
-    // the focused marker's resolved value, and Ctrl+J, which jumps to the
-    // marker that value came from (both in input_key_dispatch.cpp); the Copy
-    // Value button's face and Jump to Defining Marker's
-    // (jump_to_value_source_actionable) are the other two readers. They are
-    // what the RESOLVED READOUT and its Ctrl+C became on 2026-08-29: no
+    // directly with the (app, audio, idx) signature — Ctrl+Shift+J, which
+    // copies the focused marker's resolved value (2026-10-14), and Ctrl+J,
+    // which jumps to the marker that value came from (both in
+    // input_key_dispatch.cpp); Jump to Defining Marker's face and tooltip,
+    // the button carrying both, are the other readers. They are
+    // what the RESOLVED READOUT and its copy became on 2026-08-29: no
     // surface DISPLAYS a resolved value any more, which is why the gate lost
     // the "popup" half of its old name. Its terms are documented above its
     // declaration in app_state.h.
@@ -2889,7 +2890,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // cache had stamped — the backstop for a store mutation or a silent map
         // promotion under a stationary cursor. There is no hover cache to keep
         // honest any more: a marker's value is painted on its own flag, and
-        // Ctrl+C's copy and Ctrl+J's jump both read the live store through
+        // Ctrl+Shift+J's copy and Ctrl+J's jump both read the live store through
         // the selection.
 
         // Blink the editor cursor independently of playback. Compare the

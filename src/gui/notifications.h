@@ -98,7 +98,7 @@
 //     change", the singleton's "That marker shares its frame with another" and
 //     "A label reference has no tempo of its own"); the clipboard chords'
 //     (kSelectOneRun and its siblings, input_key_dispatch.cpp); the value
-//     pair's three (payload_eligibility — Ctrl+C and Ctrl+J); undo and redo's
+//     pair's three (payload_eligibility — Ctrl+Shift+J and Ctrl+J); undo and redo's
 //     ("There is nothing to undo" / "…redo", "That step belongs to the other
 //     tab, which is read-only", the Restrict Undo lamp's "That undo would
 //     switch the view" / "That redo …", ranked last); the `h` view's
@@ -165,7 +165,7 @@
 //     no block skips the switch to target view, the card being the whole
 //     answer, while a paste that paired blocks lands even byte-equal.
 //   * THE CLIPBOARD WRITES, the one class of success that cards (nothing
-//     paints a clipboard): "Copied the resolved value '<payload>'" (Ctrl+C)
+//     paints a clipboard): "Copied the resolved value '<payload>'" (Ctrl+Shift+J)
 //     and "Copied the selected markers' phase resets" (Ctrl+P); a refused
 //     system-clipboard write cards through card_clipboard_refusal ("The
 //     clipboard did not take the copy" / "…the cut" — the editors' Ctrl+X,

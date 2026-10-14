@@ -419,18 +419,19 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     const bool is_load_in_place_player =
         (!ctrl && !shift && !alt && key == GuiKeys::Apostrophe &&
          !app.history_mode.active);
-    // THE VALUE PAIR — Ctrl+C and Ctrl+J (2026-08-29; both chords since
-    // 2026-09-29) — is admitted on the header's own standard:
-    // neither authors anything. Ctrl+C composes the focused marker's resolved
-    // value and hands it to the compositor's clipboard; Ctrl+J switches the A/B
-    // tab, selects the marker that value came from, lands the playhead on it
-    // and centres it — a tab switch, a selection, a playhead and a camera,
-    // every one of them navigation this gate has never blocked.
+    // THE VALUE PAIR — Ctrl+Shift+J and Ctrl+J (2026-08-29; the copy on
+    // Ctrl+Shift+J since 2026-10-14, the jump on Ctrl+J since 2026-09-29) — is
+    // admitted on the header's own standard: neither authors anything. The
+    // copy composes the focused marker's resolved value and hands it to the
+    // compositor's clipboard; the jump switches the A/B tab, selects the
+    // marker that value came from, lands the playhead on it and centres it —
+    // a tab switch, a selection, a playhead and a camera, every one of them
+    // navigation this gate has never blocked.
     // Exact through the shared predicates, so these two entries and the
-    // dispatch arms cannot drift. THE FACES FOLLOW THE KEYS: neither Copy
-    // Resolved Value nor Jump to Defining Marker is in redesign_button_enabled's
-    // read-only arm, so a locked tab leaves both lit exactly as it leaves both
-    // chords live.
+    // dispatch arms cannot drift. THE FACE FOLLOWS THE KEYS: Jump to Defining
+    // Marker, the button that carries both (the copy its shift twin), is not
+    // in redesign_button_enabled's read-only arm, so a locked tab leaves it
+    // lit exactly as it leaves both chords live.
     const bool is_copy_value          = is_copy_value_key(key, mods);
     const bool is_jump_to_value_source = is_jump_to_value_source_key(key, mods);
     // THE TOOLTIP LAMP, bare backslash (architect 2026-09-29): a chrome
@@ -7348,7 +7349,7 @@ bool GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
 // Android: a missing Java method or setPrimaryClip's own refusal).
 //
 // THE VERB IS THE ONE VARIABLE and the sentence is not: "copy" for the
-// resolved value's copy (Ctrl+C in the main window), "cut" for the editor's, so the reader is told which act the
+// resolved value's copy (Ctrl+Shift+J in the main window), "cut" for the editor's, so the reader is told which act the
 // clipboard turned down. THE EDITOR'S COPY STILL CARDS NOTHING — an editor is
 // its own world, a refused copy changes nothing on screen and the paste that
 // follows will show it — but a refused CUT is not silent, because its own
@@ -7547,7 +7548,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         selection_consumed(app);
         phase_reset_propagate.copy_from_selection();
         // THE COPY SAYS SO: a clipboard write paints nothing (the reasoning
-        // is at Ctrl+C's own card, copy_focused_marker_value). The card is
+        // is at the value copy's own card, copy_focused_marker_value). The card is
         // the ARM'S: the propagate's COPY body carries no sentence of its own
         // (unlike the pastes beside it). THE MENU ROW INHERITS IT: Edit ->
         // Copy Phase Resets dispatches this chord.
@@ -8298,10 +8299,11 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
     }
 }
 
-// -- THE VALUE PAIR: Ctrl+C copies, Ctrl+J jumps -------------------------
+// -- THE VALUE PAIR: Ctrl+Shift+J copies, Ctrl+J jumps ---------------------
 //
 // (architect 2026-08-29, replacing the resolved readout, which retired with
-// the status bar the same day; the copy is on Ctrl+C again since 2026-09-29.)
+// the status bar the same day; the copy is on Ctrl+Shift+J since 2026-10-14,
+// Jump to Defining Marker's shift twin.)
 // BOTH ACT ON THE SELECTION'S FOCUS, and both compose through the ONE parser
 // composer resolved_marker_payload (warp_frame_map_build.h), which returns the
 // pasteable value and — through its out-parameter — the marker that value came
@@ -8325,13 +8327,11 @@ bool GuiInputHandler::route_render_player_key(GuiKey key, GuiInputState mods) {
 // sentence for both chords, the jump refusing on the same ground: the marker a
 // render-inert value "came from" is nowhere to stand). Iteration mode stopped
 // being a term the same day — the line was the retired readout's, and under it
-// the copy carded "no resolved value" on a marker that had one. THE COPY VALUE
-// BUTTON GREYS ON THE GATE'S ANSWER since 2026-08-30 (redesign_button_enabled,
-// the truthful-buttons ruling — for its first day it never greyed on the
-// selection's state, the refusal changing at interaction cadence), so the
-// gate's cards are the KEY's; the empty payload alone stays behind a lit
-// face, needing the composer run, and is the one refusal a button lift can
-// reach.
+// the copy carded "no resolved value" on a marker that had one. THE JUMP TO
+// DEFINING MARKER BUTTON, which carries both acts (the copy its shift twin,
+// 2026-10-14), GREYS ONLY WHERE BOTH REFUSE (redesign_button_enabled, the twin
+// rule), so a lift can reach either act's cards wherever the other would act;
+// the empty payload stays behind a lit face, needing the composer run.
 
 // THE COPY'S ONE SENTENCE, said by BOTH of its no-value refusals
 // (2026-08-30); the stack refusal has its own, app_state.h.
@@ -8381,10 +8381,10 @@ void GuiInputHandler::copy_focused_marker_value() {
     // value is the very `payload` handed to the clipboard, single-quoted as
     // every named thing on a card is. The save and a render stay silent by
     // ruling: each has its own visible answer (row 8's clock
-    // suffix — the `*` a save clears — and the file on disk). THE BUTTONS
-    // INHERIT IT: the icon row's Copy Resolved Value and the Center button's
-    // ctrl press dispatch this same Ctrl+C through on_key at their lift, so
-    // the sentence lives once and every road says it.
+    // suffix — the `*` a save clears — and the file on disk). THE BUTTON
+    // INHERITS IT: Jump to Defining Marker's shift-click and long press
+    // dispatch this same Ctrl+Shift+J through on_key at their lift
+    // (2026-10-14), so the sentence lives once and every road says it.
     notifications.notify(AppState::NotificationClass::Normal,
                          "Copied the resolved value '" + payload + "'");
 }

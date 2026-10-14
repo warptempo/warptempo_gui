@@ -43,7 +43,8 @@ change and the date; the original `TabDetach.svg` stays byte-identical to the ta
 ## The import check
 
 All 59 tarball files (TabDetachB, derived, added 2026-10-12) were rendered through rsvg-convert at 60 px onto one contact sheet and looked at; FormatJustifyLeft and FormatJustifyRight (2026-10-13, replacing ChronometerStart — 60 tarball files now) were rendered the same way beside the view group's indents (the product's own
-resvg road was not run for this import).
+resvg road was not run for this import). EditCopy left the set 2026-10-14 with the Copy Resolved Value button (59
+tarball files now).
 
 ## The icons
 
@@ -64,7 +65,6 @@ resvg road was not run for this import).
 | DocumentOpen | `document-open` | `scalable/actions/document-open.svg` | — | `037f0c8f2909644b0059e1c2414b02b3ebf262298a43ffb82d79ae0c8b3b92f5` |
 | DocumentRevert | `document-revert` | `scalable/actions/document-revert.svg` | — | `dd62fd39c75eb80b5a712c5e17a5bbf3c1fe6d2ffe7bdddab08cdbe841050984` |
 | DocumentSave | `media-floppy` | `scalable/devices/media-floppy.svg` | — | `3ec9d7715ac3f89f1d744e91855ba0b8fb6047c3bb7c98440619fffbdfe42f9d` |
-| EditCopy | `edit-copy` | `scalable/actions/edit-copy.svg` | — | `c3f9b6de81b5bf81052baf716e1ff085d0c56ee4c4b3fed7face875a9db6eeca` |
 | EditDelete | `user-trash` | `scalable/places/user-trash.svg` | — | `f7d4b0408b6fd7cb773d321deaa43b671c218b8c4b44055adabc9e77a3cf0403` |
 | EditRedo | `edit-redo` | `scalable/actions/edit-redo.svg` | — | `917d726b47cba84752a96c7496f7d965ccf07e544b8c57abefdf0dfb643fd368` |
 | EditSelect | `edit-select-all` | `scalable/actions/edit-select-all.svg` | — | `ee70e1b5911d35a82ac7feecf1cd0add3721dd92557295356750681accde234d` |

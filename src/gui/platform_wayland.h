@@ -1016,8 +1016,9 @@ private:
     // the seat's recent serials and silently refuses when stale or zero.
     // Cached from EVERY accepted input event that can trigger a copy, before
     // the event reaches the core: a keyboard key (Ctrl+C / Ctrl+X in an
-    // editor, the main window's Ctrl+C), a pointer button (a modal or
-    // roster button's lift, Copy resolved value's among them; cached since
+    // editor, the main window's Ctrl+Shift+J), a pointer button (a modal or
+    // roster button's lift, Jump to Defining Marker's shifted one — the
+    // resolved value's copy — among them; cached since
     // 2026-09-03 — a pointer-only session had no serial at all until then,
     // and a stale key serial otherwise) and a touch down / up (the Wayland
     // touch path is the pointer's twin). Motion, axis and frame events carry

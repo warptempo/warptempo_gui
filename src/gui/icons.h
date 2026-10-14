@@ -162,9 +162,9 @@ enum class Icon {
     DialogInformation,   // a NORMAL card's glyph
     DialogError,         // a CRITICAL card's glyph
     WindowClose,         // Close (the render player)
-    EditCopy,            // Copy Resolved Value (Ctrl+C)
     HelpWhatsthis,       // Toggle Tooltips (bare backslash)
-    GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J)
+    GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J; its shift twin
+                         // Ctrl+Shift+J, Copy Resolved Value, 2026-10-14)
     AccessoriesTextEditor, // Open Text Editor (bare Enter) — the sets'
                            // accessories-text-editor (architect 2026-10-09)
     EditDelete,          // Delete Folder (the render player)
@@ -178,7 +178,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 61;
+inline constexpr int kIconCount = 60;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -198,7 +198,7 @@ inline constexpr const char* kIconNames[] = {
     "DialogCancel", "GoDown", "GoUp", "Lock", "BboxPrev",
     "BboxNext", "TabDetach", "TabDetachB", "SettingsConfigure", "Folder", "AudioXWav",
     "MediaRepeatSingle", "DialogInformation", "DialogError", "WindowClose",
-    "EditCopy", "HelpWhatsthis",
+    "HelpWhatsthis",
     "GoJumpDeclaration", "AccessoriesTextEditor", "EditDelete", "ValueDrag",
     "AppIcon",
 };
