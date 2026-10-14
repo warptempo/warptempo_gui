@@ -22,8 +22,8 @@
 // (the per-column bar bounds, GuiPlateColumns, with its two inks).
 //
 // TWO IMPLEMENTATIONS, one per road:
-//   * THE CAIRO SINK (GuiCairoCanvasSink) — the cpu canvas on the tablet and
-//     the Wayland build, the reference: each primitive is the cairo calls the
+//   * THE CAIRO SINK (GuiCairoCanvasSink) — the cpu canvas on both
+//     platforms, the reference: each primitive is the cairo calls the
 //     painter made before the sink existed — begin / end the painter's
 //     cairo_save / cairo_restore with ANTIALIAS_NONE exactly where it set it
 //     (render_canvas, the center lines, the ring, the runs) and the default
@@ -35,8 +35,8 @@
 //     its clip) and their A8 MASK ROAD where it is refused, both moved here
 //     unchanged in bytes; the plate the cache surface blitted OVER at the
 //     area's origin under the area's clip.
-//   * THE LIST SINK (GuiListCanvasSink) — the tablet's GL canvas (the build's
-//     WARPTEMPO_ANDROID_CANVAS=gl, kGuiCanvasDrawList): each primitive
+//   * THE LIST SINK (GuiListCanvasSink) — the GL canvas on both platforms
+//     (the build's WARPTEMPO_CANVAS=gl, kGuiCanvasDrawList): each primitive
 //     appended to the frame's GuiCanvasDrawList in paint order, every word
 //     argb32_opaque_word(display_color(color)) — the word the cairo sink's
 //     source stores for that opaque color (display_color's channels are
@@ -58,7 +58,7 @@
 // composite on the CPU — and the screencap harness is its detector.
 //
 // WHERE IDENTITY RESTS, the three claims:
-//   * THE CPU CANVAS AND WAYLAND AGAINST THE TREE BEFORE THE SINK: the cairo
+//   * THE CPU CANVAS AGAINST THE TREE BEFORE THE SINK: the cairo
 //     sink's calls are the painters' own, argument for argument; where a
 //     painter's one path became a primitive's (the ring's top and bottom runs
 //     share one fill as before, the runs' cells now ordered run by run),
@@ -83,12 +83,12 @@
 //     damage shows at once on the GL canvas and stays stale on the cpu one —
 //     a damage defect on either build, never a road's difference.
 
-// THE ROAD, A BUILD CHOICE (CMakeLists.txt's WARPTEMPO_ANDROID_CANVAS, the
-// compile definition WARPTEMPO_ANDROID_CANVAS_GL): true on the tablet's gl
-// build alone, false on its cpu build and on Wayland, whose sink is always
-// the cairo one. A constexpr rather than a preprocessor fork, so the Linux
-// build compiles the list road too.
-#if defined(WARPTEMPO_ANDROID_CANVAS_GL) && WARPTEMPO_ANDROID_CANVAS_GL
+// THE ROAD, A BUILD CHOICE (CMakeLists.txt's WARPTEMPO_CANVAS, the compile
+// definition WARPTEMPO_CANVAS_GL, 2026-10-14 for both platforms): true on
+// either platform's gl build, false on either's cpu build, whose sink is
+// always the cairo one. A constexpr rather than a preprocessor fork, so the
+// cpu builds compile the list road too.
+#if defined(WARPTEMPO_CANVAS_GL) && WARPTEMPO_CANVAS_GL
 inline constexpr bool kGuiCanvasDrawList = true;
 #else
 inline constexpr bool kGuiCanvasDrawList = false;

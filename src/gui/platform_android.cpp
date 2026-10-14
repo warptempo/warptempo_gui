@@ -16,7 +16,7 @@
 #include <android/window.h>
 #include <android_native_app_glue.h>
 
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES3/gl3.h>
@@ -254,7 +254,7 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
 // requested — so the swap is on every row of every frame. THE CPU CANVAS'S
 // ALONE: under the GL canvas the fragment shader makes the same swap
 // (kCanvasFragmentShader, gl_canvas.cpp).
-#if !WARPTEMPO_ANDROID_CANVAS_GL
+#if !WARPTEMPO_CANVAS_GL
 void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
     int x = 0;
     for (; x + 16 <= n; x += 16) {
@@ -271,7 +271,7 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
 }
 #endif
 
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
 // ---------------------------------------------------------------------------
 // The GL canvas's fatal lines (2026-10-13; the road is at present, its GL
 // calls GuiGlCanvas's, gl_canvas.cpp)
@@ -280,7 +280,7 @@ void copy_swap_rb(uint32_t* dst, const uint32_t* src, int n) {
 // A FAILURE OF THE GL ROAD'S SETUP IS FATAL, the buffer-format gate's shape:
 // the display, the config, the context, the plain window surface, the make
 // current and the shaders have no fallback at run time — the cpu canvas is a
-// BUILD (WARPTEMPO_ANDROID_CANVAS=cpu), never a road this binary switches to.
+// BUILD (WARPTEMPO_CANVAS=cpu), never a road this binary switches to.
 [[noreturn]] void gl_fatal(const char* what, int code) {
     __android_log_print(ANDROID_LOG_FATAL, kLogTag,
                         "the GL canvas: %s (0x%x)", what, code);
@@ -767,7 +767,7 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     window_ = app_->window;
     if (!window_) return;
 
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
     // THE GL CANVAS ADOPTS THROUGH EGL (2026-10-13): EGL owns the buffers'
     // format and their dataspace, so neither of the cpu canvas's two calls
     // below is made — the window surface's config sets RGBA_8888, and its
@@ -917,14 +917,14 @@ void GuiPlatform::ensure_backbuffer(int w, int h) {
         back_w_ = w;
         back_h_ = h;
     }
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
     // The texture follows the backbuffer (GuiGlCanvas::ensure_texture's
     // rule), asked with the context current on a surface.
     if (egl_surface_ && back_) gl_canvas_.ensure_texture(back_w_, back_h_);
 #endif
 }
 
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
 // THE PROCESS'S EGL OBJECTS (the members' comment, platform_android.h): made
 // once, at the first adoption. The config is RGBA 8/8/8/8 EXACTLY, no depth,
 // no stencil, window-renderable under ES 3 — taken from eglChooseConfig's
@@ -1199,7 +1199,7 @@ void GuiPlatform::shutdown() {
     waveform_worker_completion_fd_  = -1;
     history_worker_completion_fd_   = -1;
     history_prefetch_completion_fd_ = -1;
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
     destroy_gl();
 #endif
     destroy_backbuffer();
@@ -1356,7 +1356,7 @@ void GuiPlatform::paint_one_frame() {
 bool GuiPlatform::present(int x, int y, int w, int h) {
     if (!window_ || !back_ || w <= 0 || h <= 0) return false;
 
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
     // THE GL CANVAS (2026-10-13; the design record is
     // docs/engineering/gpu_canvas_2026_10.md). The bounding box this was
     // handed is the cpu canvas's single dirty region; this road hands THE
@@ -1751,7 +1751,7 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // same size re-posts without a repaint. Input state is untouched:
             // a lost window is not a lost touch stream (the hard end has its
             // own edge, APP_CMD_LOST_FOCUS below and touch_cancel).
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
             // THE GL CANVAS LETS GO OF THE WINDOW HERE: its EGL surface is
             // destroyed before the glue releases the window, the context and
             // the texture kept — the texture's content goes back up with the

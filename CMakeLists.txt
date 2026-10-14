@@ -18,18 +18,33 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(WARPTEMPO_BUILD_GUI "Build the Cairo/Wayland GUI application" ON)
 option(WARPTEMPO_BUILD_CLI "Build the headless warptempo_cli render binary" OFF)
 option(WARPTEMPO_GUI_GIT "Link libgit2 for the history view's git road (OFF builds a stub: every git act reports no repository)" ON)
-# THE ANDROID CANVAS (2026-10-13; the design record is
-# docs/engineering/gpu_canvas_2026_10.md, the road at GuiPlatform::present,
-# platform_android.cpp): `gl`, the product, presents the cairo backbuffer
-# through EGL / GLES 3.0 as one texture uploaded by damage rect; `cpu`, the
-# reference, keeps the ANativeWindow_lock copy. A BUILD CHOICE, never a device
-# key and nothing the user picks — the two builds exist to be compared byte
-# for byte by screencap. Read by the Android branch alone (the compile
-# definition WARPTEMPO_ANDROID_CANVAS_GL, 1 or 0, and the GL libraries);
-# android/app/build_apk.sh chooses it through WT_CANVAS.
-set(WARPTEMPO_ANDROID_CANVAS "gl" CACHE STRING
-    "Android canvas: gl (EGL/GLES 3.0 texture present, the product) or cpu (the ANativeWindow_lock copy, the reference)")
-set_property(CACHE WARPTEMPO_ANDROID_CANVAS PROPERTY STRINGS gl cpu)
+# THE CANVAS (2026-10-13 on the tablet, 2026-10-14 on the laptop; the design
+# record is docs/engineering/gpu_canvas_2026_10.md, the road at each
+# backend's present — GuiPlatform::present, platform_android.cpp and
+# platform_wayland.cpp — over the one GL owner, GuiGlCanvas, gl_canvas.h):
+# `gl`, the product on both platforms, presents the cairo backbuffer through
+# EGL / GLES 3.0 as one texture uploaded by damage rect, the canvas drawn from
+# the draw list; `cpu`, the reference on both, keeps the cairo sink and the
+# platform's own copy (the tablet's ANativeWindow_lock, the laptop's two
+# wl_shm buffers). A BUILD CHOICE, never a device key and nothing the user
+# picks — the two builds exist to be compared byte for byte by screenshot.
+# Read by both GUI branches below (the compile definition WARPTEMPO_CANVAS_GL,
+# 1 or 0, TARGET-WIDE because it shapes GuiPlatform's private members on both
+# platforms, and the GL libraries); android/app/build_apk.sh chooses it
+# through WT_CANVAS, and a Linux host without EGL, GLES or wayland-egl (the
+# cloud) configures with -DWARPTEMPO_CANVAS=cpu, as it does
+# -DWARPTEMPO_GUI_GIT=OFF.
+set(WARPTEMPO_CANVAS "gl" CACHE STRING
+    "Canvas: gl (EGL/GLES 3.0 texture present, the product) or cpu (the platform's own copy, the reference)")
+set_property(CACHE WARPTEMPO_CANVAS PROPERTY STRINGS gl cpu)
+if(WARPTEMPO_CANVAS STREQUAL "gl")
+    set(WARPTEMPO_CANVAS_GL 1)
+elseif(WARPTEMPO_CANVAS STREQUAL "cpu")
+    set(WARPTEMPO_CANVAS_GL 0)
+else()
+    message(FATAL_ERROR
+        "WARPTEMPO_CANVAS must be gl or cpu, not '${WARPTEMPO_CANVAS}'")
+endif()
 
 # --- FFTW: needed by the engine sources, so required unconditionally. The GUI
 # default compiles the engine sources, and a headless WARPTEMPO_BUILD_CLI build
@@ -381,19 +396,12 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
     # canvas's platform-neutral owner (src/gui/gl_canvas.cpp, GuiGlCanvas:
     # the programs, the textures, the upload walk and the frame's draw); the
     # cpu build compiles none of it.
-    if(WARPTEMPO_ANDROID_CANVAS STREQUAL "gl")
+    target_compile_definitions(warptempo_gui PRIVATE
+        WARPTEMPO_CANVAS_GL=${WARPTEMPO_CANVAS_GL})
+    set(WARPTEMPO_CANVAS_LIBRARIES "")
+    if(WARPTEMPO_CANVAS_GL)
         target_sources(warptempo_gui PRIVATE src/gui/gl_canvas.cpp)
-        target_compile_definitions(warptempo_gui PRIVATE
-            WARPTEMPO_ANDROID_CANVAS_GL=1)
-        set(WARPTEMPO_ANDROID_CANVAS_LIBRARIES EGL GLESv3)
-    elseif(WARPTEMPO_ANDROID_CANVAS STREQUAL "cpu")
-        target_compile_definitions(warptempo_gui PRIVATE
-            WARPTEMPO_ANDROID_CANVAS_GL=0)
-        set(WARPTEMPO_ANDROID_CANVAS_LIBRARIES "")
-    else()
-        message(FATAL_ERROR
-            "WARPTEMPO_ANDROID_CANVAS must be gl or cpu, not "
-            "'${WARPTEMPO_ANDROID_CANVAS}'")
+        set(WARPTEMPO_CANVAS_LIBRARIES EGL GLESv3)
     endif()
     # --start-group covers the freetype <-> harfbuzz static cycle (cairo pulls
     # freetype, freetype's autohinter reaches back into harfbuzz), which a
@@ -422,7 +430,7 @@ if(WARPTEMPO_BUILD_GUI AND ANDROID)
         # be rather than a launch-time surprise.
         nativewindow
         # The gl canvas's two (empty under cpu; the block above).
-        ${WARPTEMPO_ANDROID_CANVAS_LIBRARIES}
+        ${WARPTEMPO_CANVAS_LIBRARIES}
         log
         m
         dl
@@ -498,6 +506,30 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         pkg_check_modules(LIBGIT2 REQUIRED libgit2)
         set(WARPTEMPO_GIT_INCLUDE_DIRS ${LIBGIT2_INCLUDE_DIRS})
         set(WARPTEMPO_GIT_LIBRARIES ${LIBGIT2_LIBRARIES})
+    endif()
+
+    # THE CANVAS ON THE LAPTOP (the cache entry's comment at the top of this
+    # file; 2026-10-14): under `gl` the Wayland backend presents through EGL
+    # on the Wayland display — Mesa's own libEGL and GLES, and libwayland-egl
+    # for the wl_egl_window, nothing else — and the target compiles the GL
+    # canvas's platform-neutral owner (src/gui/gl_canvas.cpp, GuiGlCanvas),
+    # as the Android branch does; under `cpu` none of the three is discovered
+    # or linked and the backend keeps its two wl_shm buffers, the reference.
+    # Plain variables, as the git road's above, so a tree switched to cpu
+    # links nothing left over from a gl run.
+    set(WARPTEMPO_CANVAS_SOURCES "")
+    set(WARPTEMPO_CANVAS_INCLUDE_DIRS "")
+    set(WARPTEMPO_CANVAS_LIBRARIES "")
+    if(WARPTEMPO_CANVAS_GL)
+        pkg_check_modules(EGL         REQUIRED egl)
+        pkg_check_modules(GLESV2      REQUIRED glesv2)
+        pkg_check_modules(WAYLAND_EGL REQUIRED wayland-egl)
+        set(WARPTEMPO_CANVAS_SOURCES src/gui/gl_canvas.cpp)
+        set(WARPTEMPO_CANVAS_INCLUDE_DIRS
+            ${EGL_INCLUDE_DIRS} ${GLESV2_INCLUDE_DIRS}
+            ${WAYLAND_EGL_INCLUDE_DIRS})
+        set(WARPTEMPO_CANVAS_LIBRARIES
+            ${EGL_LIBRARIES} ${GLESV2_LIBRARIES} ${WAYLAND_EGL_LIBRARIES})
     endif()
 
     # THE ICON RENDERER (svg_icon.cpp): resvg's C API, BUILT HERE FROM THE
@@ -632,6 +664,8 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         src/gui/platform_wayland.cpp
         src/gui/playback.cpp
         src/gui/gui_font_embedded.cpp
+        # The GL canvas's owner under `gl` (empty under cpu; the block above).
+        ${WARPTEMPO_CANVAS_SOURCES}
         ${WARPTEMPO_AUDIO_IO_SOURCES}
         ${WARPTEMPO_PARSER_SOURCES}
         ${WARPTEMPO_ENGINE_SOURCES}
@@ -656,7 +690,14 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${CAIRO_FT_INCLUDE_DIRS}
         ${JACK_INCLUDE_DIRS}
         ${WARPTEMPO_GIT_INCLUDE_DIRS}
+        ${WARPTEMPO_CANVAS_INCLUDE_DIRS}
     )
+    # THE CANVAS (the cache entry's comment at the top of this file): the
+    # definition TARGET-WIDE, as the Android branch's, because it shapes
+    # GuiPlatform's private members (platform_wayland.h) as well as the
+    # paint road (canvas_sink.h's kGuiCanvasDrawList).
+    target_compile_definitions(warptempo_gui PRIVATE
+        WARPTEMPO_CANVAS_GL=${WARPTEMPO_CANVAS_GL})
     # THE BUNDLED ICON SET'S SOURCE ON THE LAPTOP (architect 2026-10-06,
     # icons.h's load_svg_set): the repository's own assets/icons/, its
     # absolute path compiled in, since the laptop runs the executable from its
@@ -678,6 +719,7 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
         ${CAIRO_FT_LIBRARIES}
         ${JACK_LIBRARIES}
         ${WARPTEMPO_GIT_LIBRARIES}
+        ${WARPTEMPO_CANVAS_LIBRARIES}
         warptempo_resvg
         pthread
         dl

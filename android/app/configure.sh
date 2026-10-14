@@ -34,7 +34,7 @@ APPDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "$APPDIR/../toolchain/00_env.sh"
 
-# THE CANVAS (2026-10-13; CMakeLists.txt's WARPTEMPO_ANDROID_CANVAS owns the
+# THE CANVAS (2026-10-13; CMakeLists.txt's WARPTEMPO_CANVAS owns the
 # rule): WT_CANVAS=gl (the default, the product: EGL / GLES 3.0) or cpu (the
 # reference: the ANativeWindow_lock copy). The cpu variant configures its own
 # tree beside the product's, "<build dir>-cpu", so the two builds and their
@@ -72,7 +72,7 @@ cmake -S "$WT_REPO_ROOT" -B "$BUILD" \
     -DWARPTEMPO_BUILD_CLI=OFF \
     -DPKG_CONFIG_EXECUTABLE="$WT_PKGCONFIG_WRAPPER" \
     -DFFTW3_THREADS_LIB="$WT_PREFIX/lib/libfftw3_threads.a" \
-    -DWARPTEMPO_ANDROID_CANVAS="$CANVAS" \
+    -DWARPTEMPO_CANVAS="$CANVAS" \
     "$@"
 
 wt_say "configured. Build with: cmake --build $BUILD -j\$(nproc)"

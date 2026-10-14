@@ -197,14 +197,34 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
     are those no display ever showed. A caller that must read the rebuilt
     geometry inside its own event flushes the owed rebuild first (the
     inventory at the kick's declaration names them).
-11. **The platform seam.** Android only: EGL and GLES 3.0 inside
-    `platform_android.cpp` behind `GuiPlatform`; `libEGL.so` and
-    `libGLESv3.so` join the APK's DT_NEEDED allowlist. The Wayland backend
-    keeps wl_shm and the cairo sink — THE REFERENCE — until the laptop's own
-    EGL road (the week of 2026-10-20, for parity). The CLI paints nothing
-    and is untouched.
+11. **The platform seam.** THE GL OWNER IS ONE FILE, `src/gui/gl_canvas.{h,cpp}`
+    (`GuiGlCanvas`, 2026-10-14): everything GLES 3.0 and neither EGL nor a
+    window — the two programs, the backbuffer's texture, the list's
+    instance buffer and the plate's bounds texture, the upload walk less the
+    canvas clip, the clear, the list's draw under the scissor and the
+    texture's draw — driven by each platform's `present` with its context
+    current; the platform keeps the display, the config, the context, the
+    window's surface, the make current, the swap interval, the swap and its
+    failure rule. Android: EGL on the ANativeWindow with the Display-P3
+    passthrough and its tripwire; `libEGL.so` and `libGLESv3.so` on the
+    APK's DT_NEEDED allowlist. THE LAPTOP (the Wayland backend, 2026-10-14,
+    for parity — the two code bases sit as equals): EGL on the Wayland
+    display (`eglGetPlatformDisplay`, a `wl_egl_window` over the one
+    `wl_surface`, Mesa's own EGL and GLES, nothing third-party), ONE
+    persistent cairo backbuffer of the surface's size in place of the two
+    wl_shm buffers (`kPaintTargetCount` 1, as on Android), no colorspace
+    attribute (the desktop is sRGB; the bytes go out as painted), SWAP
+    INTERVAL 0 — Mesa's interval-1 swap waits inside `eglSwapBuffers` for
+    the previous frame callback, which would block a loop that already
+    paces itself by its own frame request and one timerfd wakeup — the
+    frame request issued before the swap so it rides the swap's own commit,
+    the frame redrawn whole at every swap (no buffer age, no partial
+    update, no `wl_surface_damage_buffer`), the restored window's sizing
+    frame painted into the backbuffer and its thickness handed to
+    `present_frame` as the canvas clip's offset (§6's hazard, the laptop's
+    one instance of it). The CLI paints nothing and is untouched.
 12. **The CPU build stays buildable on Android** for the comparison: a CMake
-    option, never a device key (`WARPTEMPO_ANDROID_CANVAS`, `gl` the
+    option, never a device key (`WARPTEMPO_CANVAS`, `gl` the
     product, `cpu` the reference), nothing the user picks.
 
 ## 4. The milestones

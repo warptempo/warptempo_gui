@@ -11,6 +11,13 @@
 #include <relative-pointer-unstable-v1-client-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
+#if WARPTEMPO_CANVAS_GL
+#include <wayland-egl.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES3/gl3.h>
+#endif
+
 #include <linux/input-event-codes.h>
 #include <sys/mman.h>
 #include <sys/timerfd.h>
@@ -63,9 +70,11 @@
 // When a frame callback fires, paint_one_frame runs: it invokes the pre-paint
 // hook (where the playhead's painted position is resolved from the playback
 // predictor at paint time, so the rendered position is fresh as of the paint
-// moment), consumes the damage list, paints into the next wl_shm buffer, then
-// requests the next frame callback, damages, attaches and commits — ONE commit
-// per painted frame (the ordering note is at paint_one_frame).
+// moment), consumes the damage list, paints into the next wl_shm buffer (the
+// cpu canvas) or the one backbuffer (the gl canvas), then requests the next
+// frame callback, damages, attaches and commits — under the gl canvas the
+// upload, the draw and the swap, whose own commit attaches — ONE commit per
+// painted frame (the ordering note is at paint_one_frame).
 //
 // The two cadences (tick and paint) drift independently. Conflating them
 // by driving the tick off frame callbacks would mean that whenever the
@@ -134,7 +143,9 @@ bool append_coalesced_rect(std::vector<Rect>& rects, const Rect& nr) {
     return true;
 }
 
-// Open an anonymous, in-memory file for the wl_shm pool. memfd IS the path
+#if !WARPTEMPO_CANVAS_GL
+// Open an anonymous, in-memory file for the wl_shm pool (the cpu canvas's
+// alone). memfd IS the path
 // (Linux >= 3.17; the target is current Arch). The pre-3.17 shm_open + unlink
 // fallback is DELETED (architect 2026-07-30): it was unreachable on any kernel
 // this program runs on, and on a genuine memfd_create failure it bought nothing
@@ -150,6 +161,34 @@ int open_shm_fd(size_t size) {
     }
     return fd;
 }
+#endif
+
+#if WARPTEMPO_CANVAS_GL
+// ---------------------------------------------------------------------------
+// The GL canvas's fatal lines (2026-10-14; the road is at present, its GL
+// calls GuiGlCanvas's, gl_canvas.cpp) — the Android backend's twins
+// ---------------------------------------------------------------------------
+
+// A FAILURE OF THE GL ROAD'S SETUP IS FATAL: the display, the config, the
+// context, the wl_egl_window, the window surface, the make current and the
+// shaders have no fallback at run time — the cpu canvas is a BUILD
+// (WARPTEMPO_CANVAS=cpu), never a road this binary switches to. A rare
+// non-silent fault: one stderr line and the abort, no recovery code.
+[[noreturn]] void gl_fatal(const char* what, int code) {
+    std::fprintf(stderr, "warptempo_gui: the GL canvas: %s (0x%x)\n", what,
+                 static_cast<unsigned>(code));
+    std::abort();
+}
+
+// THE GL CANVAS OWNER'S FATAL LINE (GuiGlCanvasHost, gl_canvas.h): a shader
+// that fails to compile or a program that fails to link reaches stderr here,
+// the owner's message whole (it opens "the GL canvas: "), and the process
+// stops (gl_fatal's rule).
+[[noreturn]] void gl_canvas_fatal(const char* message) {
+    std::fprintf(stderr, "warptempo_gui: %s\n", message);
+    std::abort();
+}
+#endif
 
 // THE ACCEPTED CLIPBOARD TEXT MIMES, ranked. text/plain;charset=utf-8 is the
 // preferred token and bare text/plain the fallback; anything else is not text
@@ -276,10 +315,13 @@ struct WaylandListeners {
         static_cast<GuiPlatform*>(data)->on_frame_done(cb);
     }
 
-    // wl_buffer (release)
+#if !WARPTEMPO_CANVAS_GL
+    // wl_buffer (release) — the cpu canvas's shm buffers; under the gl
+    // canvas EGL owns its buffers and their releases.
     static void buffer_release(void* data, struct wl_buffer*) {
         static_cast<GuiPlatform::ShmBuffer*>(data)->busy = false;
     }
+#endif
 
     // wl_seat
     static void seat_capabilities(void* data, struct wl_seat*, uint32_t caps) {
@@ -534,9 +576,11 @@ const struct wl_callback_listener s_frame_listener = {
     WaylandListeners::frame_done,
 };
 
+#if !WARPTEMPO_CANVAS_GL
 const struct wl_buffer_listener s_buffer_listener = {
     WaylandListeners::buffer_release,
 };
+#endif
 
 const struct wl_seat_listener s_seat_listener = {
     WaylandListeners::seat_capabilities,
@@ -846,7 +890,16 @@ bool GuiPlatform::init(int width, int height, const char* title) {
         xdg_toplevel_decoration_,
         ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE);
 
-    recreate_shm_pool(width_, height_);
+#if WARPTEMPO_CANVAS_GL
+    // THE GL CANVAS'S EGL OBJECTS, made HERE: after the wl_surface and its
+    // xdg roles exist (the wl_egl_window wraps the surface) and before the
+    // first configure — making the window surface attaches and commits
+    // nothing, so the first commit with content still waits for the
+    // configure (has_initial_configure_), as the shm road's does. Once per
+    // process (the members' comment, platform_wayland.h).
+    ensure_gl();
+#endif
+    resize_surface_buffers();
 
     // Cursor theme load is best-effort: failure leaves every kind's surface
     // NULL, and apply_cursor_kind then passes NULL to wl_pointer.set_cursor
@@ -1079,6 +1132,13 @@ void GuiPlatform::destroy_wayland_state() {
         xkb_context_ = nullptr;
     }
 
+#if WARPTEMPO_CANVAS_GL
+    // THE GL CANVAS GOES BEFORE THE SURFACE AND THE DISPLAY (destroy_gl):
+    // the EGL window surface and the wl_egl_window wrap wl_surface_, and
+    // Mesa's EGL display holds its own proxies and event queue on
+    // wl_display_, so both must be let go of while those still stand.
+    destroy_gl();
+#endif
     if (frame_callback_) {
         wl_callback_destroy(frame_callback_);
         frame_callback_ = nullptr;
@@ -1115,7 +1175,11 @@ void GuiPlatform::destroy_wayland_state() {
         wl_cursor_theme_ = nullptr;
     }
 
+#if WARPTEMPO_CANVAS_GL
+    destroy_backbuffer();
+#else
     destroy_shm_pool();
+#endif
 
     if (pointer_constraints_) {
         zwp_pointer_constraints_v1_destroy(pointer_constraints_);
@@ -1160,7 +1224,226 @@ void GuiPlatform::destroy_wayland_state() {
 }
 
 // ---------------------------------------------------------------------------
-// Shared-memory pool (double-buffered)
+// The surface's buffers
+// ---------------------------------------------------------------------------
+
+// THE SURFACE'S BUFFERS FOLLOW ITS SIZE (the declaration): one call per road
+// at init and at every configure that moves width_ / height_.
+void GuiPlatform::resize_surface_buffers() {
+#if WARPTEMPO_CANVAS_GL
+    // The EGL window takes the surface's new size (its next buffer is made at
+    // it; Mesa updates the EGL surface's EGL_WIDTH / EGL_HEIGHT at once), no
+    // attach offset; the backbuffer follows, and the texture with it.
+    if (egl_window_) wl_egl_window_resize(egl_window_, width_, height_, 0, 0);
+    ensure_backbuffer(width_, height_);
+#else
+    recreate_shm_pool(width_, height_);
+#endif
+}
+
+#if WARPTEMPO_CANVAS_GL
+// ---------------------------------------------------------------------------
+// The GL canvas (2026-10-14; the design record is
+// docs/engineering/gpu_canvas_2026_10.md, the Android backend's road the
+// model: platform_android.cpp's ensure_gl_context, ensure_gl_surface,
+// destroy_gl and present)
+// ---------------------------------------------------------------------------
+
+// THE BACKBUFFER (the members' comment, platform_wayland.h), Android's
+// ensure_backbuffer: remade at a size it does not have, zero-filled — every
+// road that moves the size declares the whole surface's damage (the
+// configure) — and THE TEXTURE FOLLOWS IT (GuiGlCanvas::ensure_texture's
+// rule), asked with the context current on the window surface, which it is
+// from init to shutdown.
+void GuiPlatform::ensure_backbuffer(int w, int h) {
+    if (w <= 0 || h <= 0) return;
+    if (!(back_ && back_w_ == w && back_h_ == h)) {
+        destroy_backbuffer();
+        back_ = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+        if (cairo_surface_status(back_) != CAIRO_STATUS_SUCCESS) {
+            std::fprintf(stderr,
+                         "warptempo_gui: backbuffer %dx%d could not be created\n",
+                         w, h);
+            cairo_surface_destroy(back_);
+            back_ = nullptr;
+            return;
+        }
+        back_w_ = w;
+        back_h_ = h;
+    }
+    if (egl_surface_ && back_) gl_canvas_.ensure_texture(back_w_, back_h_);
+}
+
+void GuiPlatform::destroy_backbuffer() {
+    if (back_) cairo_surface_destroy(back_);
+    back_   = nullptr;
+    back_w_ = 0;
+    back_h_ = 0;
+}
+
+// THE PROCESS'S EGL OBJECTS (the members' comment, platform_wayland.h), made
+// once, at init. THE DISPLAY IS THE WAYLAND CONNECTION'S OWN:
+// eglGetPlatformDisplay over wl_display_ (EGL 1.5 core; Mesa then talks to
+// the compositor on its own event queue, which this loop never dispatches —
+// eglSwapBuffers does). The config is RGBA 8/8/8/8 EXACTLY, no depth, no
+// stencil, window-renderable under ES 3 — taken from eglChooseConfig's list
+// by an exact compare of the four sizes, Android's rule, because the list is
+// sorted with the deepest color first and a 10-bit config would sort ahead
+// of the one asked for. The context ES 3.0.
+//
+// THE WINDOW SURFACE TAKES NO COLORSPACE ATTRIBUTE: the desktop is sRGB and
+// the bytes go out as painted (window_is_display_p3 is false here, so the
+// painters convert nothing). Android's Display-P3 passthrough is Android's
+// policy alone (ensure_gl_surface, platform_android.cpp), its panel's tag.
+//
+// SWAP INTERVAL 0: Mesa's Wayland EGL under interval 1 asks its own
+// wl_surface.frame at every swap and waits inside the NEXT eglSwapBuffers for
+// that callback, which would block this loop where it already paces itself
+// by its own frame callback (request_frame_callback, the paint invited by
+// the compositor) and wakes on the one timerfd. At 0 the swap waits for
+// nothing but a free buffer; the backend's own callback stays the pacing
+// signal and nothing in run() changes. A refusal is one advisory line (the
+// swap then throttles itself, slower but correct).
+void GuiPlatform::ensure_gl() {
+    if (egl_display_) return;
+    EGLDisplay dpy = eglGetPlatformDisplay(EGL_PLATFORM_WAYLAND_KHR,
+                                           wl_display_, nullptr);
+    if (dpy == EGL_NO_DISPLAY)
+        gl_fatal("eglGetPlatformDisplay(EGL_PLATFORM_WAYLAND_KHR) failed",
+                 eglGetError());
+    if (!eglInitialize(dpy, nullptr, nullptr))
+        gl_fatal("eglInitialize failed", eglGetError());
+    if (!eglBindAPI(EGL_OPENGL_ES_API))
+        gl_fatal("eglBindAPI(EGL_OPENGL_ES_API) failed", eglGetError());
+    const EGLint want[] = {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT,
+        EGL_SURFACE_TYPE,    EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 0, EGL_STENCIL_SIZE, 0,
+        EGL_NONE,
+    };
+    EGLConfig configs[64];
+    EGLint n = 0;
+    if (!eglChooseConfig(dpy, want, configs, 64, &n))
+        gl_fatal("eglChooseConfig failed", eglGetError());
+    EGLConfig chosen = nullptr;
+    for (EGLint i = 0; i < n && !chosen; ++i) {
+        EGLint r = 0, g = 0, b = 0, a = 0;
+        eglGetConfigAttrib(dpy, configs[i], EGL_RED_SIZE,   &r);
+        eglGetConfigAttrib(dpy, configs[i], EGL_GREEN_SIZE, &g);
+        eglGetConfigAttrib(dpy, configs[i], EGL_BLUE_SIZE,  &b);
+        eglGetConfigAttrib(dpy, configs[i], EGL_ALPHA_SIZE, &a);
+        if (r == 8 && g == 8 && b == 8 && a == 8) chosen = configs[i];
+    }
+    if (!chosen) gl_fatal("no RGBA 8/8/8/8 ES 3 window config", n);
+    const EGLint ctx_attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
+    EGLContext ctx = eglCreateContext(dpy, chosen, EGL_NO_CONTEXT, ctx_attribs);
+    if (ctx == EGL_NO_CONTEXT) gl_fatal("eglCreateContext failed", eglGetError());
+    egl_display_ = dpy;
+    egl_config_  = chosen;
+    egl_context_ = ctx;
+    // THE GL CANVAS'S LOG SEAM (GuiGlCanvasHost, gl_canvas.h), named with
+    // the process's context, before the surface builds its programs.
+    gl_canvas_.set_host(GuiGlCanvasHost{&gl_canvas_fatal});
+
+    egl_window_ = wl_egl_window_create(wl_surface_, width_, height_);
+    if (!egl_window_) gl_fatal("wl_egl_window_create failed", 0);
+    EGLSurface surf = eglCreatePlatformWindowSurface(dpy, chosen, egl_window_,
+                                                     nullptr);
+    if (surf == EGL_NO_SURFACE)
+        gl_fatal("eglCreatePlatformWindowSurface failed", eglGetError());
+    if (!eglMakeCurrent(dpy, surf, surf, ctx))
+        gl_fatal("eglMakeCurrent failed", eglGetError());
+    egl_surface_ = surf;
+    gl_canvas_.bind_fixed_state();
+    if (!eglSwapInterval(dpy, 0)) {
+        std::fprintf(stderr,
+                     "warptempo_gui: eglSwapInterval(0) refused (0x%x)\n",
+                     static_cast<unsigned>(eglGetError()));
+    }
+    gl_canvas_.ensure_programs();
+    // THE DRIVER NAMED ONCE (Android's identity line, less its P3 verdict):
+    // the EGL vendor and version, the GL renderer and version.
+    std::fprintf(stderr, "warptempo_gui: EGL %s %s; GL %s, %s\n",
+                 eglQueryString(dpy, EGL_VENDOR),
+                 eglQueryString(dpy, EGL_VERSION),
+                 reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
+                 reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+}
+
+// THE PROCESS'S EXIT (destroy_wayland_state, ahead of the wl_surface and the
+// display): the context released from the surface first — EGL destroys a
+// CURRENT surface only once it stops being current — then the window
+// surface, the wl_egl_window it was made on (only after the surface that
+// uses it), the context — the programs and the textures with it, their names
+// then forgotten (GuiGlCanvas::forget, which makes no GL call) — and the
+// display. Android's destroy_gl in one body, this window's surface being the
+// process's.
+void GuiPlatform::destroy_gl() {
+    if (egl_display_) {
+        EGLDisplay dpy = egl_display_;
+        eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (egl_surface_)
+            eglDestroySurface(dpy, static_cast<EGLSurface>(egl_surface_));
+        if (egl_window_) wl_egl_window_destroy(egl_window_);
+        if (egl_context_)
+            eglDestroyContext(dpy, static_cast<EGLContext>(egl_context_));
+        eglTerminate(dpy);
+    }
+    egl_display_ = nullptr;
+    egl_config_  = nullptr;
+    egl_context_ = nullptr;
+    egl_surface_ = nullptr;
+    egl_window_  = nullptr;
+    gl_canvas_.forget();
+}
+
+// THE FRAME'S PRESENT (2026-10-14; Android's present, its gl arm, whose
+// rules hold here): THE DAMAGE LIST ITSELF, the rects paint_one_frame just
+// painted into the backbuffer, handed to the GL canvas's frame — the upload
+// walk less the canvas clip, the clear, the list's draw and the texture's
+// (GuiGlCanvas::present_frame, gl_canvas.cpp, where the upload and draw
+// rules are) — and the swap. A false from it (no texture yet, a backbuffer
+// without data) swaps nothing and keeps the damage.
+//
+// THE SWAP IS THE COMMIT: eglSwapBuffers attaches the new buffer, damages
+// the whole surface and commits it, carrying the frame request
+// paint_one_frame issued ahead of it. THE FRAME IS REDRAWN WHOLE at every
+// swap, so neither EGL's buffer age nor a partial update is depended on, and
+// no wl_surface_damage_buffer or wl_surface_attach is made here. No glFinish,
+// no glFlush beyond the swap's own, no readback.
+//
+// A FAILED SWAP: a lost context is a rare non-silent fault and is fatal (no
+// recovery code); any other failure is one line and false, the damage kept
+// and re-posted (paint_one_frame's tail).
+bool GuiPlatform::present() {
+    EGLDisplay dpy  = egl_display_;
+    EGLSurface surf = egl_surface_;
+    if (!surf || !back_) return false;
+    EGLint sw = 0, sh = 0;
+    eglQuerySurface(dpy, surf, EGL_WIDTH,  &sw);
+    eglQuerySurface(dpy, surf, EGL_HEIGHT, &sh);
+    // THE SIZING FRAME (the design record's §6 hazard; frame_px_, the
+    // header): the backbuffer is the WHOLE SURFACE, frame included, and the
+    // GUI's list is in client px, so the frame is handed over and the owner
+    // offsets the list's clip and records by it, exactly as Android's
+    // present hands its own frame_px_. The restored laptop window is this
+    // hazard's one instance; maximised the frame is 0.
+    if (!gl_canvas_.present_frame(back_, damage_, frame_px_, canvas_frame_,
+                                  sw, sh))
+        return false;
+    if (!eglSwapBuffers(dpy, surf)) {
+        const EGLint err = eglGetError();
+        if (err == EGL_CONTEXT_LOST) gl_fatal("the context was lost", err);
+        std::fprintf(stderr, "warptempo_gui: eglSwapBuffers failed (0x%x)\n",
+                     static_cast<unsigned>(err));
+        return false;
+    }
+    return true;
+}
+#else
+// ---------------------------------------------------------------------------
+// Shared-memory pool (double-buffered; THE CPU CANVAS)
 // ---------------------------------------------------------------------------
 
 void GuiPlatform::recreate_shm_pool(int w, int h) {
@@ -1245,6 +1528,7 @@ void GuiPlatform::destroy_shm_pool() {
         shm_pool_fd_ = -1;
     }
 }
+#endif
 
 namespace {
 
@@ -1504,6 +1788,12 @@ void GuiPlatform::set_cursor_kind(GuiCursorKind kind) {
     apply_cursor_kind();
 }
 
+#if WARPTEMPO_CANVAS_GL
+// THE GL CANVAS'S FRAME, named (the declaration; read at present).
+void GuiPlatform::set_canvas_frame(const GuiCanvasDrawList* frame) {
+    canvas_frame_ = frame;
+}
+#else
 GuiPlatform::ShmBuffer* GuiPlatform::acquire_free_buffer() {
     for (int i = 0; i < kShmBufferCount; ++i) {
         if (!shm_buffers_[i].busy && shm_buffers_[i].buffer) return &shm_buffers_[i];
@@ -1511,9 +1801,11 @@ GuiPlatform::ShmBuffer* GuiPlatform::acquire_free_buffer() {
     return nullptr;
 }
 
-// The GL canvas's frame has no reader here (the declaration): the cairo
-// sink paints this backend's canvas whole.
+// The GL canvas's frame has no reader under the cpu canvas (the
+// declaration): the cairo sink paints this backend's canvas whole, and the
+// call never comes.
 void GuiPlatform::set_canvas_frame(const GuiCanvasDrawList* /*frame*/) {}
+#endif
 
 // ---------------------------------------------------------------------------
 // Frame callback flow
@@ -1535,12 +1827,19 @@ void GuiPlatform::schedule_frame_callback() {
 }
 
 /*
- * Each buffer's pending list is the damage accumulated since that buffer was
- * last attached. Painting and surface-damaging exactly that list makes an
- * attach correct regardless of which buffer the compositor was holding.
+ * THE CPU CANVAS: each buffer's pending list is the damage accumulated since
+ * that buffer was last attached. Painting and surface-damaging exactly that
+ * list makes an attach correct regardless of which buffer the compositor was
+ * holding. THE GL CANVAS: the one damage list painted into the one
+ * persistent backbuffer, uploaded and swapped (present) — Android's
+ * paint_one_frame, its swap the commit.
  */
 void GuiPlatform::paint_one_frame() {
+#if WARPTEMPO_CANVAS_GL
+    if (!has_initial_configure_ || !back_) return;
+#else
     if (!has_initial_configure_) return;
+#endif
 
     if (damage_.empty()) {
         schedule_frame_callback();
@@ -1561,6 +1860,59 @@ void GuiPlatform::paint_one_frame() {
         in_pre_paint_ = false;
     }
 
+#if WARPTEMPO_CANVAS_GL
+    // THE PAINT LOOP MUST NOT DECLARE DAMAGE (the cpu arm's rule below, the
+    // vector being damage_ itself here), and THE SIZING FRAME AND THE CLIENT
+    // AREA are walked as there: each surface rect paints the frame's band
+    // and hands the app the rect's part inside the client area, translated
+    // by the frame. The as-painted records' target is the one backbuffer
+    // (painting_target() 0).
+    {
+        const int f = frame_px_;
+        cairo_t* cr = cairo_create(back_);
+        for (const DamageRect& d : damage_) {
+            cairo_save(cr);
+            cairo_rectangle(cr, d.x, d.y, d.w, d.h);
+            cairo_clip(cr);
+            if (f > 0)
+                paint_window_sizing_frame(cr, width_, height_, f,
+                                          window_activated_);
+            const int cx0 = std::max(d.x, f);
+            const int cy0 = std::max(d.y, f);
+            const int cx1 = std::min(d.x + d.w, width_ - f);
+            const int cy1 = std::min(d.y + d.h, height_ - f);
+            if (on_redraw_ && cx1 > cx0 && cy1 > cy0) {
+                cairo_rectangle(cr, cx0, cy0, cx1 - cx0, cy1 - cy0);
+                cairo_clip(cr);
+                cairo_translate(cr, f, f);
+                on_redraw_(cr, cx0 - f, cy0 - f, cx1 - cx0, cy1 - cy0);
+            }
+            cairo_restore(cr);
+        }
+        cairo_destroy(cr);
+        cairo_surface_flush(back_);
+    }
+
+    // THE COMMIT ORDER, the cpu arm's: the frame request FIRST — it is
+    // double-buffered surface state and rides the next commit, which is the
+    // swap's own inside eglSwapBuffers — then the upload, the draw and the
+    // swap (present).
+    request_frame_callback();
+    // THE DAMAGE LIVES UNTIL THE SWAP SUCCEEDS (Android's tail): the pixels
+    // are in the backbuffer either way, but the damage list is the only
+    // record of what the window has not yet been shown, so a failed present
+    // keeps it and the next frame re-posts it. ONE DEPARTURE FROM ANDROID,
+    // which a periodic pass retries on its own: here only a frame callback
+    // invites the next paint, and the request just issued rides no commit
+    // when the swap made none — so a failed present sends it by a bare
+    // commit (no attach: the surface keeps its last buffer), and the
+    // callback's paint retries.
+    if (present()) {
+        damage_.clear();
+    } else {
+        wl_surface_commit(wl_surface_);
+    }
+#else
     ShmBuffer* buf = acquire_free_buffer();
     if (!buf) {
         // Both buffers in flight — try again next compositor frame.
@@ -1633,6 +1985,7 @@ void GuiPlatform::paint_one_frame() {
 
     buf->pending.clear();
     damage_.clear();
+#endif
 }
 
 void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
@@ -1654,12 +2007,16 @@ void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
     if (w <= 0 || h <= 0) return;
     // Each surviving rect costs one on_redraw call downstream, so the
     // global damage signal and every per-buffer pending list use the same
-    // containment coalescing.
+    // containment coalescing. Under the gl canvas the global list is the one
+    // list (the backbuffer is persistent, so no rect is ever replayed for a
+    // second buffer that missed it — Android's rule).
     const DamageRect nr{x, y, w, h};
     if (!append_coalesced_rect(damage_, nr)) return;
+#if !WARPTEMPO_CANVAS_GL
     for (int i = 0; i < kShmBufferCount; ++i) {
         append_coalesced_rect(shm_buffers_[i].pending, nr);
     }
+#endif
 
     if (in_pre_paint_) return;  // paint_one_frame will commit shortly
     if (has_initial_configure_ && !frame_callback_) {
@@ -2092,9 +2449,11 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     auto queue_full_surface_damage = [&]() {
         const DamageRect full{0, 0, width_, height_};
         append_coalesced_rect(damage_, full);
+#if !WARPTEMPO_CANVAS_GL
         for (int i = 0; i < kShmBufferCount; ++i) {
             append_coalesced_rect(shm_buffers_[i].pending, full);
         }
+#endif
     };
     // THE MAXIMISED STATE AND THE FRAME IT DECIDES land with the size
     // (frame_px_, the header): no frame while maximised, else Windows 95's
@@ -2132,7 +2491,7 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
             (want_w != width_ || want_h != height_)) {
             width_  = want_w;
             height_ = want_h;
-            recreate_shm_pool(width_, height_);
+            resize_surface_buffers();
         }
         frame_px_ = frame;
         input_.set_surface_width(client_w());
@@ -2150,7 +2509,7 @@ void GuiPlatform::on_xdg_surface_configure(struct xdg_surface* xs,
     if (size_changed) {
         width_  = want_w;
         height_ = want_h;
-        recreate_shm_pool(width_, height_);
+        resize_surface_buffers();
     }
     if (size_changed || frame != frame_px_) {
         frame_px_ = frame;

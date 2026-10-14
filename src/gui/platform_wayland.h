@@ -3,6 +3,9 @@
 #include "gui_input.h"
 #include "gui_media.h"
 #include "input_core.h"
+#if WARPTEMPO_CANVAS_GL
+#include "gl_canvas.h"   // GuiGlCanvas, the GL canvas's owner
+#endif
 #include <cairo/cairo.h>
 #include <cstdint>
 #include <expected>
@@ -16,8 +19,13 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 
 // GuiPlatform: the platform abstraction for the GUI's window, event loop,
 // and presentation. The Wayland backend opens a window via libwayland-client,
-// paints cairo surfaces directly into wl_shm buffers in response to compositor
-// frame callbacks, drives a separate playback tick on a timerfd, and requests
+// paints cairo in response to compositor frame callbacks and presents it —
+// into ONE persistent ARGB32 backbuffer uploaded by damage rect into one GLES
+// texture drawn over an EGL window surface on the Wayland display (the `gl`
+// canvas, the product, 2026-10-14: the tablet's road, driven through the same
+// GuiGlCanvas), or directly into two wl_shm buffers (the `cpu` canvas, the
+// reference build; CMakeLists.txt's WARPTEMPO_CANVAS) — drives a separate
+// playback tick on a timerfd, and requests
 // CLIENT-SIDE decorations via the xdg-decoration unstable protocol (architect
 // 2026-10-05: the app paints its own Windows 95 caption, top lane 0, and the
 // sizing frame round a restored window, so labwc draws no second bar). No
@@ -273,18 +281,28 @@ public:
     bool window_restorable() const { return true; }
     bool caption_active() const { return window_activated_; }
 
-    // THE PAINT TARGETS (2026-10-13): the buffers this backend paints into —
-    // the two shm buffers, each holding only what was painted into it — and,
-    // inside the paint loop (paint_one_frame), the one this frame paints:
-    // the index the GUI's as-painted records keep per target
-    // (GuiUpperRowsRecord, app_state.h). 0 outside a paint.
+    // THE PAINT TARGETS (2026-10-13): the buffers this backend paints into
+    // and, inside the paint loop (paint_one_frame), the one this frame
+    // paints: the index the GUI's as-painted records keep per target
+    // (GuiUpperRowsRecord, app_state.h). Under the gl canvas ONE — the
+    // persistent backbuffer every frame paints into, Android's count
+    // (2026-10-14); under the cpu canvas the two shm buffers, each holding
+    // only what was painted into it, 0 outside a paint.
+#if WARPTEMPO_CANVAS_GL
+    static constexpr int kPaintTargetCount = 1;
+    int painting_target() const { return 0; }
+#else
     static constexpr int kPaintTargetCount = 2;
     int painting_target() const { return painting_target_; }
-    // THE GL CANVAS'S FRAME (2026-10-13; the seam's contract at platform.h's
-    // loop contract): A NO-OP HERE — this backend presents wl_shm buffers
-    // the cairo sink paints whole (canvas_sink.h), so no list ever reaches
-    // it; the member exists because on_redraw compiles against either
-    // backend.
+#endif
+    // THE GL CANVAS'S FRAME (the seam's contract at platform.h's loop
+    // contract). Under the gl canvas (2026-10-14) paint_one_frame's present
+    // reads the list it names — its records drawn under a scissor to its
+    // clip, its clip left out of every upload unless a floater stands —
+    // until the next call names another, Android's body. Under the cpu
+    // canvas A NO-OP: the cairo sink paints the canvas whole into the shm
+    // buffers (canvas_sink.h), the call never comes, and the member exists
+    // because on_redraw compiles against either road.
     void set_canvas_frame(const GuiCanvasDrawList* frame);
     // begin_window_move / begin_window_resize: hand the pointer press being
     // delivered right now to the compositor's interactive move / resize
@@ -767,11 +785,62 @@ private:
 
     // -- Damage accumulator --
     // Set by invalidate_region() at any time; consumed at the next
-    // frame-callback paint and cleared after attach + commit.
+    // frame-callback paint and cleared after the content commit (the cpu
+    // canvas's attach + commit; the gl canvas's successful swap, a failed one
+    // keeping it for the next frame). Under the gl canvas THE ONE LIST and
+    // its rect the GL owner's own (GuiGlRect, the same x, y, w, h), so the
+    // present hands it to the owner in place — Android's shape.
+#if WARPTEMPO_CANVAS_GL
+    using DamageRect = GuiGlRect;
+#else
     struct DamageRect { int x, y, w, h; };
+#endif
     std::vector<DamageRect> damage_;
 
-    // -- Buffer pool (pattern B: double-buffered wl_shm) --
+#if WARPTEMPO_CANVAS_GL
+    // -- THE GL CANVAS (2026-10-14; the build's `gl` value of
+    // WARPTEMPO_CANVAS, CMakeLists.txt; the road at present) --
+    // THE BACKBUFFER (pattern: ONE persistent surface, not a pool, Android's
+    // twin): an ARGB32 image surface of the SURFACE's size, the sizing frame
+    // included, that every frame paints into and the present uploads by
+    // damage rect into the GL owner's texture. Its persistence is what makes
+    // partial damage correct: the texture is the backbuffer's whole picture,
+    // and a rect the swap failed to show goes up again with the kept damage.
+    // (Re)made at init and at every size change, beside the EGL window's
+    // resize (resize_surface_buffers).
+    cairo_surface_t* back_   = nullptr;
+    int              back_w_ = 0;
+    int              back_h_ = 0;
+    void ensure_backbuffer(int w, int h);
+    void destroy_backbuffer();
+    // THE EGL OBJECTS, all the PROCESS'S: the window is made once per
+    // process and stands across every run (platform.h's loop contract), so
+    // the display, config, context, wl_egl_window and window surface are
+    // made at init() and destroyed at shutdown (destroy_wayland_state),
+    // never per project. The EGL handles are spelled void* (each EGL type is
+    // one under Mesa's headers as under the NDK's) so no EGL header reaches
+    // this file; the wl_egl_window is an incomplete type. EVERYTHING GLES
+    // AND NEITHER EGL NOR WINDOW — the programs, the texture that follows
+    // the backbuffer's size, the canvas list's objects, the upload walk and
+    // the frame's draw — is gl_canvas_'s (GuiGlCanvas, gl_canvas.h), the one
+    // owner both platforms' presents drive.
+    void*                 egl_display_ = nullptr;
+    void*                 egl_config_  = nullptr;
+    void*                 egl_context_ = nullptr;
+    void*                 egl_surface_ = nullptr;
+    struct wl_egl_window* egl_window_  = nullptr;
+    GuiGlCanvas           gl_canvas_;
+    // The GL canvas's frame (set_canvas_frame): the GUI's one process-wide
+    // list (gui_canvas_frame, canvas_sink.h), null until the first frame
+    // names it.
+    const GuiCanvasDrawList* canvas_frame_ = nullptr;
+    void ensure_gl();
+    void destroy_gl();
+    // THE FRAME'S PRESENT: GuiGlCanvas::present_frame over damage_ and the
+    // swap; true when the swap succeeded (paint_one_frame's tail).
+    bool present();
+#else
+    // -- Buffer pool (pattern B: double-buffered wl_shm; THE CPU CANVAS) --
     // Pattern X: cairo surfaces are created directly on the wl_shm buffer's
     // mmap'd memory. The cairo_t* the on_redraw callback receives is a
     // context on whichever buffer paint_one_frame just acquired. No
@@ -802,6 +871,12 @@ private:
     void*     shm_pool_map_  = nullptr;
     size_t    shm_pool_size_ = 0;
     struct wl_shm_pool* shm_pool_ = nullptr;
+#endif
+    // THE SURFACE'S BUFFERS FOLLOW ITS SIZE (init and every configure that
+    // moves width_ / height_): the cpu canvas's shm pool remade, or the gl
+    // canvas's EGL window resized and its backbuffer remade (the texture
+    // following it, ensure_backbuffer).
+    void resize_surface_buffers();
 
     // -- Window state --
     int  width_  = 0;
@@ -841,10 +916,11 @@ private:
     int frame_px_ = 0;
     int client_w() const { return width_  - 2 * frame_px_; }
     int client_h() const { return height_ - 2 * frame_px_; }
-    // One rect of SURFACE damage, coalesced into the global list and every
-    // buffer's pending list, and the frame callback armed (invalidate_region's
-    // body, the app's client rect offset by the frame; invalidate_surface's
-    // whole surface) — the Android twin's one road of the same name.
+    // One rect of SURFACE damage, coalesced into the global list and, under
+    // the cpu canvas, every buffer's pending list, and the frame callback
+    // armed (invalidate_region's body, the app's client rect offset by the
+    // frame; invalidate_surface's whole surface) — the Android twin's one
+    // road of the same name.
     void invalidate_surface_rect(int x, int y, int w, int h);
     // A COMPOSITOR GRAB TOOK THE PRESS (begin_window_move / _resize): the
     // compositor owns the pointer until the lift, and nothing guarantees the
@@ -1034,8 +1110,10 @@ private:
     PrePaintCallback     on_pre_paint_;
 
     // -- Internal helpers --
+#if !WARPTEMPO_CANVAS_GL
     void recreate_shm_pool(int w, int h);
     void destroy_shm_pool();
+#endif
     bool load_cursor_theme();
     // Look one theme cursor up by its xcursor NAME and give it a surface with
     // the theme image's buffer and the image's OWN hotspot. False when the theme
@@ -1048,19 +1126,23 @@ private:
     // enter serial. Silent no-op while a capture holds the cursor hidden, and
     // while there is no wl_pointer.
     void apply_cursor_kind();
+#if !WARPTEMPO_CANVAS_GL
     ShmBuffer* acquire_free_buffer();
+#endif
     // THE FRAME REQUEST'S TWO SHAPES (2026-09-02). request_frame_callback
     // issues wl_surface.frame and NOTHING ELSE — the request is double-
     // buffered surface state and rides whatever commit follows, which in
     // paint_one_frame is the content commit itself (frame → damage → attach
     // → ONE commit, the conventional order; two commits per painted
-    // frame in the reverse order until this day). schedule_frame_callback is
+    // frame in the reverse order until this day — under the gl canvas the
+    // swap's own commit, inside eglSwapBuffers). schedule_frame_callback is
     // the STANDALONE form — the request plus a commit of its own — for the
     // callers that have no content to attach and still need the request sent:
-    // the empty-damage and both-buffers-busy returns inside paint_one_frame,
-    // invalidate_region's first damage after an idle stretch, and a
-    // reconfigure with nothing pending. Both are no-ops while a callback is in
-    // flight.
+    // the empty-damage and both-buffers-busy (cpu) returns inside
+    // paint_one_frame, invalidate_region's first damage after an idle
+    // stretch, and a reconfigure with nothing pending. Both are no-ops while a
+    // callback is in flight. (The gl canvas's failed present sends its
+    // already-issued request by a bare commit of its own: paint_one_frame.)
     void request_frame_callback();
     void schedule_frame_callback();
     void paint_one_frame();

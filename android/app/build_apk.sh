@@ -32,7 +32,7 @@ APPDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 . "$APPDIR/../toolchain/00_env.sh"
 
-# THE CANVAS (2026-10-13; CMakeLists.txt's WARPTEMPO_ANDROID_CANVAS owns the
+# THE CANVAS (2026-10-13; CMakeLists.txt's WARPTEMPO_CANVAS owns the
 # rule): WT_CANVAS=gl (the default, the product) or cpu (the reference build
 # the screencap comparison installs in turn). The cpu variant builds in its
 # own tree, "<build dir>-cpu" (configure.sh derives the same one), and stages

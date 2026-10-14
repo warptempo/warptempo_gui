@@ -5205,9 +5205,10 @@ struct GuiClockFingerprint {
     bool        yields = false;
     bool operator==(const GuiClockFingerprint&) const = default;
 };
-// ONE RECORD PER PAINT TARGET: the Wayland backend paints into one of its
-// two shm buffers per frame and the Android backend into its one
-// backbuffer (GuiPlatform::kPaintTargetCount), and a check must hold for
+// ONE RECORD PER PAINT TARGET: the Wayland cpu build paints into one of its
+// two shm buffers per frame, and the Android backend and the Wayland gl
+// build (2026-10-14) into their one backbuffer
+// (GuiPlatform::kPaintTargetCount), and a check must hold for
 // the buffer that will be shown, so each target keeps what IT shows and
 // what it is owed. `valid` false means the target's rows may show a mix of
 // states (a partial paint whose live fingerprint differed from the record),

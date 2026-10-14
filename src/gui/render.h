@@ -2780,9 +2780,9 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // alone (WaveformPlateInks). The canvas's frame round the area is
 // paint_canvas_column_frame's (paint_handler.cpp).
 // THE TWO CANVAS PAINTERS PAINT THROUGH THE CANVAS SINK (2026-10-13,
-// canvas_sink.h): the cairo sink on the cpu road and on Wayland, the same
-// rectangles and fills as ever; the draw list under the tablet's GL canvas,
-// where the backbuffer's interior is cleared instead and the GPU draws them.
+// canvas_sink.h): the cairo sink on the cpu road, the same rectangles and
+// fills as ever; the draw list under the GL canvas (both platforms' gl
+// builds since 2026-10-14), where the backbuffer's interior is cleared instead and the GPU draws them.
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(GuiCanvasSink& sink, const GuiRect& area);
 void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
@@ -3255,7 +3255,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // band's rows and columns clamped to the surface, every column's bars and the
 // lit inner's interior — and the one producer of the column bounds both roads
 // read: render_waveform's write pass consumes them on the cairo road, and the
-// tablet's GL canvas keeps them as the plate (GuiPlateColumns) and draws the
+// GL canvas keeps them as the plate (GuiPlateColumns) and draws the
 // same priority select per pixel on the GPU (canvas_sink.h).
 [[nodiscard]]
 bool render_waveform(cairo_surface_t* dest,
@@ -3312,7 +3312,7 @@ bool render_waveform_columns(GuiRect area,
                              const std::vector<WarpFrameMapSegment>* warp_frame_map,
                              WaveformBandColumns& out);
 
-// THE PLATE AS COLUMN BOUNDS (2026-10-13, the tablet's GL canvas; the cache's
+// THE PLATE AS COLUMN BOUNDS (2026-10-13, the GL canvas; the cache's
 // slot at WaveformCache::columns, paint_handler.h): the two channel bands of
 // a plate width x height, each `stored` exactly where the cairo road's plate
 // surface holds that band's words — its render_waveform call stored the band

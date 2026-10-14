@@ -3,7 +3,7 @@
 #include "gui_input.h"
 #include "gui_media.h"
 #include "input_core.h"
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
 #include "gl_canvas.h"   // GuiGlCanvas, the GL canvas's owner
 #endif
 #include <cairo/cairo.h>
@@ -574,7 +574,7 @@ private:
     // and cleared once the damaged pixels have been posted.
     // Under the GL canvas the rect is the GL owner's own (GuiGlRect, the same
     // x, y, w, h), so present hands the list to it in place.
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
     using DamageRect = GuiGlRect;
 #else
     struct DamageRect { int x, y, w, h; };
@@ -588,16 +588,16 @@ private:
     // through several buffers, and lock() may widen the dirty rect it was
     // asked for, so the copy answers from a surface that holds the WHOLE last
     // frame rather than from a pool entry that holds part of an older one.
-    // (The Wayland backend's double-buffered wl_shm pool exists because the
+    // (The Wayland cpu build's double-buffered wl_shm pool exists because the
     // compositor reads OUR memory; here the copy is explicit, so one buffer
-    // does.)
+    // does — as on the Wayland gl build, whose backbuffer is this one's twin.)
     cairo_surface_t* back_   = nullptr;
     int              back_w_ = 0;
     int              back_h_ = 0;
 
-#if WARPTEMPO_ANDROID_CANVAS_GL
+#if WARPTEMPO_CANVAS_GL
     // -- THE GL CANVAS (2026-10-13; the build's `gl` value of
-    // WARPTEMPO_ANDROID_CANVAS, CMakeLists.txt; the road at present) --
+    // WARPTEMPO_CANVAS, CMakeLists.txt; the road at present) --
     // The window goes through EGL / GLES 3.0: the backbuffer above is
     // uploaded into ONE texture by damage rect and drawn whole every swap.
     // The EGL handles are spelled void* (each EGL type is one on this

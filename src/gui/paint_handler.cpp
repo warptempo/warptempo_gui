@@ -9158,17 +9158,21 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     cairo_restore(cr);
 
-    // The target here IS the memory the compositor will read: each buffer's
-    // surface is a cairo IMAGE surface created over the mmap'd wl_shm pool
-    // (GuiPlatform::recreate_shm_pool), and the pool pages are shared with the
-    // compositor. Flushing is cairo's handshake before anything outside cairo
-    // reads that memory — it lands whatever the backend is still holding in
-    // internal state, so the backing bytes are complete. This is the last point
-    // where that can happen: nothing between here and the publish flushes the
-    // surface again (destroying the context ends the drawing, not the surface,
-    // which outlives every frame with the pool), and the very next thing
+    // The target here IS memory something outside cairo will read: under the
+    // Wayland cpu canvas each buffer's surface is a cairo IMAGE surface
+    // created over the mmap'd wl_shm pool (GuiPlatform::recreate_shm_pool),
+    // whose pages are shared with the compositor; under every other road it
+    // is the backend's persistent backbuffer, which the present uploads into
+    // the GL texture or copies into the window's buffer. Flushing is cairo's
+    // handshake before anything outside cairo reads that memory — it lands
+    // whatever the backend is still holding in internal state, so the backing
+    // bytes are complete. On the shm road this is the last point where that
+    // can happen: nothing between here and the publish flushes the surface
+    // again (destroying the context ends the drawing, not the surface, which
+    // outlives every frame with the pool), and the very next thing
     // GuiPlatform::paint_one_frame does after the paint loop is
-    // wl_surface_attach + wl_surface_commit.
+    // wl_surface_attach + wl_surface_commit (the backbuffer roads flush the
+    // surface once more themselves before their present).
     cairo_surface_flush(cairo_get_target(cr));
 }
 

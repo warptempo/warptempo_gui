@@ -1169,8 +1169,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //   viewport lanes' rect from the band's foot, the rows above it owed a
     //   fingerprint check (damage_window_top_rows, viewport.cpp), every
     //   item-basis surface lying below the band's foot — and it
-    //   goes into the global damage list and both shm buffers' pending lists
-    //   (invalidate_region), so whatever frame comes next carries it in its
+    //   goes into the global damage list (and, on the Wayland cpu build, both
+    //   shm buffers' pending lists; invalidate_region), so whatever frame comes next carries it in its
     //   damage union — an interleaved narrow request coalesces INTO it rather
     //   than racing it, and the frame that promotes repaints every item-basis
     //   surface on the promoted basis.

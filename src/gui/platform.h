@@ -63,14 +63,16 @@
 // set_canvas_frame(list) names the GUI's one process-wide draw list
 // (gui_canvas_frame) — its records, its clip and its floater bit, all the
 // GUI's — and on_redraw calls it on the first damage rect of every frame
-// under the tablet's gl build, after which the backend reads the list at
-// that frame's present and at every later one until the next call: the
-// records drawn under a scissor to the clip, the clip left out of every
-// upload unless the floater bit stands. The list outlives every project set
-// (it is the process's), so a run stop strands no pointer. The Android cpu
-// build stores it and reads nothing; THE WAYLAND BACKEND'S BODY IS A NO-OP —
-// its canvas is always the cairo sink's (the member exists because on_redraw
-// compiles against either backend).
+// under a gl build (CMakeLists.txt's WARPTEMPO_CANVAS, both platforms since
+// 2026-10-14), after which the backend reads the list at that frame's
+// present and at every later one until the next call — GuiGlCanvas's frame
+// (gl_canvas.h), which both backends drive alike: the records drawn under a
+// scissor to the clip, the clip left out of every upload unless the floater
+// bit stands. The list outlives every project set (it is the process's), so
+// a run stop strands no pointer. Under a cpu build no list is ever built and
+// the call never comes: the Android cpu build's body stores the pointer and
+// reads nothing, the Wayland cpu build's is a no-op (its canvas the cairo
+// sink's; the member exists because on_redraw compiles against either road).
 #ifdef __ANDROID__
 #include "platform_android.h"
 #else

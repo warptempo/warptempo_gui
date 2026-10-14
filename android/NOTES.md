@@ -1754,7 +1754,7 @@ the proof (the design record's §5).
 
 ### 16.1 Two builds, one choice
 
-`WARPTEMPO_ANDROID_CANVAS` (CMakeLists.txt): `gl`, the product, or `cpu`, the
+`WARPTEMPO_CANVAS` (CMakeLists.txt): `gl`, the product, or `cpu`, the
 reference — today's road byte for byte, the copy with its R/B swap and the
 two adoption calls (`setBuffersGeometry`, `setBuffersDataSpace`). A build
 choice, never a device key. `build_apk.sh` and `configure.sh` read
