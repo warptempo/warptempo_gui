@@ -23,7 +23,11 @@ namespace {
 // against the displayed map `dmap` on the ITEM viewport basis — the viewport
 // the flag was painted on, which the freeze has held since the aimed press
 // (architect 2026-09-24, strictly as painted; cold, the basis is the live
-// viewport by its own contract) — then takes the integer walls.
+// viewport by its own contract) — then takes the integer walls. THE LAST
+// COLUMN KEEPS ITS LEFT EDGE TOO, never the last frame (architect
+// 2026-10-14): a marker at EOF is useless and snapping is avoided; the trim
+// bound's landing on total-1 is the recorded exception, a full render needing
+// its end at EOF (trim_bound_frame_at_column, input_trim.cpp).
 int64_t committed_frame_for_proposal(
     const AppState& app, const GuiAudio& audio,
     const std::vector<WarpFrameMapSegment>& dmap,

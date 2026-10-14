@@ -208,6 +208,15 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // column past that one lands on the wall already. Either bound, the mirror of
 // the start's: an end landing in the column holding frame 0 lands on frame 0.
 //
+// A DELIBERATE ASYMMETRY WITH THE MARKER DRAG (architect 2026-10-14), which
+// lands a marker on its column's left edge in every column, the last one
+// included (committed_frame_for_proposal, marker_drag.cpp): snapping is
+// something the product avoids, and a marker at EOF is useless, but a trim
+// end at EOF is REQUIRED — the full render is the window [0, total-1], and
+// the act that reaches it by hand is to zoom out full and drag the end as far
+// as it goes ("trim at EOF is required for full render, marker at EOF is
+// useless"). So the trim is the one exception, and its arm is this one.
+//
 // SO A FULL DRAG LEAVES THE FULL WINDOW [0, total-1] EXACTLY, the integer
 // pair Shift+0 writes, and every full-window compare (trim_is_full_window —
 // Shift+0's already-full guard, the render's sub-window test, the crossed

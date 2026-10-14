@@ -3052,14 +3052,41 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.
+    //
+    // THE BLOCK WINS IN Z (architect 2026-10-14, on a restored laptop window
+    // about 392 W wide: "icons row should win in z-index … msg goes under it.
+    // It should be fully opaque"): the block is MEASURED here, ahead of the
+    // clock, because the state line's clip reads its left edge, but it is
+    // PAINTED LAST — after the clock's group and the state line, on its own
+    // span of the panel's face laid fresh — so where the window is narrow
+    // enough for it to walk over the clock's group, the block is what shows,
+    // whole and opaque, and nothing of the field, its digits, its gripper or
+    // its end bar comes through, exactly as the state line already goes under
+    // it. The press agrees by construction: the clock and the line are
+    // pointer-inert ground and the press resolves against the cases' published
+    // rects alone (claim_button_row_press, input_pointer.cpp). Every repaint
+    // of the clock is this body run whole under the damage clip (the clock
+    // cell's rect, clock_invalidate_rect, main.cpp — there is no field-only
+    // path), so the per-frame clock damage repaints the block over the clock
+    // inside the clip too and cannot put the clock back on top mid-play. At a
+    // width where nothing overlaps the order changes no byte: the clock's
+    // group and the clipped line lie wholly left of the block, and the block's
+    // fresh face is paint_bottom_strip's own face over the same band, so the
+    // cases, grippers and end bars land on the very ground they landed on
+    // before.
     int right_block_x = content.x + content.w;
+    // THE THREE GROUPS IN PAINTED ORDER, each read off its own table, so a
+    // box joining or leaving moves the block with no second edit.
+    // IN THE `h` VIEW the arrows' seat is the walk's two steps
+    // (kTransportHistoryStepGroup, its one owner): the group that does
+    // not stand publishes its members' empty rects here.
+    const bool history = app.history_mode.active;
+    const std::span<const TransportRowDef> groups[] = {
+        kMarkerVerbGroup, kTransportWalkGroup,
+        history ? std::span<const TransportRowDef>(
+                      kTransportHistoryStepGroup)
+                : std::span<const TransportRowDef>(kTransportArrowGroup)};
     {
-        // THE THREE GROUPS IN PAINTED ORDER, each read off its own table, so a
-        // box joining or leaving moves the block with no second edit.
-        // IN THE `h` VIEW the arrows' seat is the walk's two steps
-        // (kTransportHistoryStepGroup, its one owner): the group that does
-        // not stand publishes its members' empty rects here.
-        const bool history = app.history_mode.active;
         const std::span<const TransportRowDef> absent =
             history ? std::span<const TransportRowDef>(kTransportArrowGroup)
                     : std::span<const TransportRowDef>(
@@ -3067,11 +3094,6 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         for (const TransportRowDef& def : absent)
             (void)publish_button_face(cr, app, audio, playback,
                                       target_render, def.id, GuiRect{});
-        const std::span<const TransportRowDef> groups[] = {
-            kMarkerVerbGroup, kTransportWalkGroup,
-            history ? std::span<const TransportRowDef>(
-                          kTransportHistoryStepGroup)
-                    : std::span<const TransportRowDef>(kTransportArrowGroup)};
         // THE BLOCK'S WIDTH IS THE PAINTED GROUPS' (architect 2026-10-07): in
         // the `h` view a button whose chord the view refuses in every session
         // is not painted (history_mode_hides_button, input_pointer.cpp), so
@@ -3089,39 +3111,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             ++standing_groups;
         }
         block_w += std::max(0, standing_groups - 1) * group_gap;
-        int ax = content.x + content.w - block_w;
         // THE STATE LINE'S RIGHT BOUND (below) is this block's own left
         // edge, published out of the scope so the line cannot guess it — so
-        // the line widens by construction when the `h` view hides members.
-        right_block_x = ax;
-        // A HIDDEN MEMBER PUBLISHES THE EMPTY RECT (the band's absent
-        // members' shape): no point is inside it, so no press, hover or
-        // tooltip reaches it, and its bits refresh unconditionally
-        // (publish_button_face) — the same rect the modal yield publishes
-        // for the whole row.
-        for (const std::span<const TransportRowDef> g : groups) {
-            bool group_open = false;
-            for (const TransportRowDef& def : g) {
-                if (history_mode_hides_button(app, def.id)) {
-                    (void)publish_button_face(cr, app, audio, playback,
-                                              target_render, def.id,
-                                              GuiRect{});
-                    continue;
-                }
-                if (!group_open) {
-                    paint_ce_gripper(cr, ax, btn_y, btn_h);
-                    ax += grip_w + grip_face;
-                    group_open = true;
-                }
-                paint_button(def, ax);
-                ax += btn_w;
-            }
-            if (group_open) {
-                ax += end_face;
-                paint_ce_end_bar(cr, ax, content_y, content_h);
-                ax += end_w + group_gap;
-            }
-        }
+        // the line widens by construction when the `h` view hides members;
+        // the block's painting (after the clock) starts from it too.
+        right_block_x = content.x + content.w - block_w;
     }
 
     // THE CLOCK — the first TIME FIELD (the shape, the face and the
@@ -3244,7 +3238,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //     Cool Edit's field ink, on the field's own seat. IT IS NEVER
         //     CLIPPED: the row's crop-at-its-floor allowance (the block above)
         //     is what covers the narrow window where the right block has
-        //     already walked over this ground.
+        //     already walked over this ground, and there the block, painted
+        //     after it, covers it (the z rule, 2026-10-14).
         //   * THE STATE — THE BODY FACE (gui_font(GuiFace::Body)) IN COOL
         //     EDIT'S PANEL LABEL PAIR (show_ce_label: the label tone with the
         //     dark tone one line right and down, METRICS §6 — 2026-10-09;
@@ -3315,6 +3310,54 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                               text_shape::ink_left_px(state_run),
                           baseline);
             cairo_restore(cr);
+        }
+    }
+
+    // THE RIGHT BLOCK, PAINTED LAST (the z rule at THE NUMBERS above): its
+    // span of the content band laid in the panel's face first — the cell
+    // fill paint_bottom_strip lays, so at a width where nothing overlaps it
+    // rewrites the face that is already there — then the groups left to
+    // right on it, so no pixel of the clock's group survives under the block.
+    {
+        const int block_x0 = std::max(right_block_x, content.x);
+        const int block_x1 = content.x + content.w;
+        if (block_x1 > block_x0) {
+            cairo_save(cr);
+            cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+            paint_cell_rect(cr,
+                            GuiRect{block_x0, content_y, block_x1 - block_x0,
+                                    content_h},
+                            palette().face);
+            cairo_restore(cr);
+        }
+        int ax = right_block_x;
+        // A HIDDEN MEMBER PUBLISHES THE EMPTY RECT (the band's absent
+        // members' shape): no point is inside it, so no press, hover or
+        // tooltip reaches it, and its bits refresh unconditionally
+        // (publish_button_face) — the same rect the modal yield publishes
+        // for the whole row.
+        for (const std::span<const TransportRowDef> g : groups) {
+            bool group_open = false;
+            for (const TransportRowDef& def : g) {
+                if (history_mode_hides_button(app, def.id)) {
+                    (void)publish_button_face(cr, app, audio, playback,
+                                              target_render, def.id,
+                                              GuiRect{});
+                    continue;
+                }
+                if (!group_open) {
+                    paint_ce_gripper(cr, ax, btn_y, btn_h);
+                    ax += grip_w + grip_face;
+                    group_open = true;
+                }
+                paint_button(def, ax);
+                ax += btn_w;
+            }
+            if (group_open) {
+                ax += end_face;
+                paint_ce_end_bar(cr, ax, content_y, content_h);
+                ax += end_w + group_gap;
+            }
         }
     }
 

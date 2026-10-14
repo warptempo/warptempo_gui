@@ -1405,7 +1405,11 @@ GuiRect playhead_invalidate_rect(const GuiRect& area, double px_x) {
 // (kStatusPanelPadPx, paint_handler.cpp) right of the field — fall outside the
 // clip and cost nothing (the field's top and bottom lines and the ground
 // round them cross the box and are repainted identically under it), which is what makes this
-// affordable at the pre-paint hook's per-frame cadence. The
+// affordable at the pre-paint hook's per-frame cadence. At a window narrow
+// enough for the right block to cover the clock, the cases the box reaches
+// are inside the clip and repaint over the clock in it, the block painted
+// last (the z rule, architect 2026-10-14, at paint_bottom_row_buttons_and_clock),
+// so this damage never puts the clock back on top. The
 // cell's width is the shaped widest specimen (one width on every tab and at
 // every time) and only the painter knows its origin,
 // so a move of the cell moves nothing here. What stands beside the clock is THE
