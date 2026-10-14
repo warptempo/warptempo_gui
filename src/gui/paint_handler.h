@@ -346,7 +346,13 @@ struct WaveformCache {
 // as it was, and each pass's own clip (clip_to_waveform_columns over that
 // band's rows) bounds its ink to the surface. The blit
 // (paint_flag_annotations) lands the surface at (top_strip.x, origin_y),
-// clipped to the top strip.
+// clipped to the top strip — AND ONLY WHILE ITS BAND IS THE LIVE BAND
+// (2026-10-14): origin_y and height equal to the ruler lane's live top and
+// the rows from it through the strip's bottom. A gui_scale commit moves the
+// band before the next tick rebuilds the surface, and a surface blitted at
+// its old origin would stamp the old scale's cues into the toolbar band,
+// above every lane the rebuild's damage repaints; the reasoning is at the
+// blit.
 // IDENTITY RESTS ON (2026-10-13) — the bytes are the whole-strip surface's
 // of before, by construction: the same painters paint the same
 // client-coordinate geometry through an integral translation (cairo ignores
@@ -363,7 +369,8 @@ struct FlagCache {
     int              height  = 0;
     // THE SURFACE'S ORIGIN (2026-10-13): the first client row it holds, the
     // ruler lane's top — row 0 of the surface is this client row. Written at
-    // every rebuild with the surface it describes; read by the blit. A
+    // every rebuild with the surface it describes; read by the blit, which
+    // refuses a surface whose origin or height is not the live band's. A
     // function of the scale alone (the lanes above the ruler are scaled
     // lengths and gap 1 is zero, the top lanes outweighing the bottom's), so
     // fp_gui_scale_percent keys it and the rebuild asserts as much at a match.

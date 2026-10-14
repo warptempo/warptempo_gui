@@ -174,7 +174,25 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // flag_cache.origin_y, clipped as ever to the top strip: the clip's rows
     // above the origin take no source, and the rows it holds are the bytes
     // the whole-strip surface put there.
-    if (flag_cache.surface) {
+    // ONLY ONTO THE ROWS IT WAS LAID OUT FOR (2026-10-14, ON SCREEN IS AS
+    // PAINTED): a surface whose band — its origin row and its height — is
+    // not the live band (top_ruler_row_area's top through the strip's
+    // bottom) is not blitted. A live gui_scale commit (apply_gui_scale)
+    // moves the band at once and repaints the whole window, while the
+    // surface is rebuilt only at the next tick (maybe_rebuild_flag_cache);
+    // a frame painted between the two blitted the old scale's cues at the
+    // old origin, inside the new, taller toolbar band — a lane the rebuild's
+    // damage never reaches (it starts at the band's foot,
+    // damage_window_top_rows), so the old text stood there for good. Refused,
+    // that frame shows the marker lane's face without cues, and the
+    // rebuild's own damage covers the lane on the frame that lands the new
+    // surface. A WIDTH alone is not refused: a resize keeps the rows, the
+    // surface stays inside the lanes that damage repaints, and the flags
+    // ride one frame behind the window as the plate does.
+    const int live_origin = top_ruler_row_area(app).y;
+    const int live_h      = top_strip.y + top_strip.h - live_origin;
+    if (flag_cache.surface && flag_cache.origin_y == live_origin &&
+        flag_cache.height == live_h) {
         cairo_save(cr);
         cairo_rectangle(cr, top_strip.x, top_strip.y,
                         top_strip.w, top_strip.h);
@@ -8873,8 +8891,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // canvas ground above: these passes shape labels through HarfBuzz, which the
     // outer Cairo clip would not elide, so a narrow per-frame playhead damage
     // must not pay for them. Nothing painted after this point touches the two
-    // top button lanes (the flag cache is transparent over them, every other
-    // pass owns a lane below them), so painting them first overdraws nothing.
+    // top button lanes (the flag cache is transparent over them and lands
+    // only on its own band, paint_flag_annotations; every other pass owns a
+    // lane below them), so painting them first overdraws nothing.
     // GAP 1 has no painter: it is window ground, render_background's erase
     // above (main.cpp's vertical rule).
     //
