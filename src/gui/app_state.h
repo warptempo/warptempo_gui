@@ -10573,8 +10573,10 @@ GuiRect top_ruler_row_area(const AppState& a);
 GuiRect top_marker_row_area(const AppState& a);
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): the lane
 // including its dock bar, and the content band under the dock bar — bottom
-// lane 1 over the program frame's bottom row on the window's foot, one frame
-// line in from each side, whatever stands over it (2026-10-10: a dialog and
+// lane 2, over the border under row 8 (bottom lane 1, 2026-10-14,
+// bottom_border_area in render.h) and the program frame's bottom row on the
+// window's foot, one frame line in from each side, whatever stands over it
+// (2026-10-10: a dialog and
 // the on-screen keyboard are overlays laid over it, onscreen_keyboard.h's
 // overlay block). (It was row 7's single
 // status lane from 2026-08-01, one of two lanes while the transport row
@@ -10588,7 +10590,8 @@ GuiRect bottom_row_area(const AppState& a);
 GuiRect bottom_row_content_area(const AppState& a);
 // (The program frame's two lanes and its ring are declared in render.h,
 // beside the frame's rule: top_program_frame_area, bottom_program_frame_area,
-// program_frame_rect.)
+// program_frame_rect; and the border under row 8 beside its height,
+// bottom_border_area, 2026-10-14.)
 
 // DOES A CHROME TENANT OWN THE BOTTOM ROW — a prompt, a dialog editor or the
 // picker's Cancel, never the render player, which is the program's tenant:
@@ -10685,9 +10688,10 @@ inline GuiRect keyboard_slot_band(const AppState& a, int height) {
 // floor and width from, so the two cannot disagree about where the band
 // begins. Zero on a degenerate stack, which every consumer already reads as
 // "no room". ON THE TABLET (2304x1440 at gui_scale 300, gap 1 zero) the band
-// runs [216, 1323): under the 54 caption, 60 menu, the program frame's 3-row
-// top and the 99 icon rows, down to the 114-tall bottom row over the frame's
-// 3-row bottom, under the render player and the picker alike.
+// runs [216, 1305): under the 54 caption, 60 menu, the program frame's 3-row
+// top and the 99 icon rows, down to the 114-tall bottom row over the border
+// under it (18 rows, 2026-10-14) and the frame's 3-row bottom, under the
+// render player and the picker alike.
 //
 // THE CEILING RULING'S FIXED-HEIGHT HALF STANDS AND ITS MIDPOINT HALF DOES NOT
 // (architect 2026-08-28: "from the bottom strip up to the middle of the

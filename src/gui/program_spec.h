@@ -30,8 +30,10 @@
 // row 8 stood for the morning of 2026-10-09; git history.)
 //
 // THE PROGRAM'S LANES (2026-10-09): THE TOOLBAR BAND (the top strip's lane
-// 2) and ROW 8 under its DOCK BAR (the bottom strip's lane 0, on the
-// window's foot), the
+// 3, under the program frame's top row) and ROW 8 under its DOCK BAR (the
+// bottom strip's lane 2) over COOL EDIT'S BORDER UNDER ROW 8 (bottom lane 1,
+// 2026-10-14, the program frame's bottom row under it on the window's foot),
+// the
 // roster's; and, from the band down to the well, the CANVAS COLUMN'S THREE
 // in ORDER R (architect 2026-10-09 ~09:40, the mock of record
 // tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; its generator mock_ce_s3.py,
@@ -104,6 +106,21 @@ struct ProgramSpec {
     // light row, this much face, a mid row and a dark row; its left column
     // light, its right column mid.
     int  dock_bar_face_px;
+    // THE BORDER UNDER ROW 8 (architect 2026-10-14, on his mock over a tablet
+    // capture, tmp/modal_arc/mock_main_bottom_border_v2.png; the source Cool
+    // Edit's own border under its row 8 on his 1:1 capture
+    // tmp/Screenshot_2026-10-14_11-20-10.png): THE DOCK BAR'S OWN SIX ROWS —
+    // a light row, this much face, a mid row and a dark row, its left column
+    // light and its right column mid — painted by the dock bar's own painter
+    // (paint_ce_dock_bar) on a bottom lane of its own between row 8 and the
+    // program frame's bottom row, which stays the window's lowest line ("the
+    // window's own 1-W frame line stays the lowest line … the Cool Edit
+    // border goes above it"). It runs inside the frame's two columns like
+    // every program lane ("the border must not cross the furthest-right and
+    // furthest-left pixel columns"), NO FACE ROW between its dark row and
+    // the frame's line ("an added spacing gap that doesn't need to exist"),
+    // and its six W come out of the waveform, the canvas being the flex.
+    int  bottom_border_face_px;
     // ROW 8 (METRICS §5.1 at one button row: Cool Edit's 55 rows hold two
     // rows of 23 cases; the product's one row of the same 23): the face
     // above the case and below it.
@@ -124,12 +141,20 @@ struct ProgramSpec {
     // much air as 6 W after the gripper, the same 5-before / 4-after he
     // measured in the toolbar band ("the Cool Edit row spacing has had a
     // purpose for being asymmetrical"). METRICS §5.2's chain is the source.
+    // ROW 8'S LAST GROUP HAS NO END BAR (architect 2026-10-14, Cool Edit's
+    // row 8 measured on his 1:1 capture tmp/Screenshot_2026-10-14_11-20-10.png:
+    // its last group — the Begin / End / Length fields, x 1675..1913 — ends
+    // in five columns of face, 1914..1918, and the frame at 1919, no end
+    // bar): the row closes with `row8_tail_px` of face from the last case to
+    // the program frame's line. The clock's group and every other group keep
+    // their end bars (Cool Edit's clock group has one).
     int  row8_group_gap_px;
     int  gripper_cols;
     int  gripper_reach_px;
     int  gripper_to_case_px;
     int  case_to_end_bar_px;
     int  end_bar_face_px;
+    int  row8_tail_px;
     // THE DARK TIME FIELD (METRICS §5.4: 72 x 17, its TL line, its ground,
     // its BR line): its height. Every time field takes the shape — row 8's
     // clock and the render player's position and length — and EVERY TIME
@@ -175,8 +200,12 @@ struct ProgramSpec {
     // area to the column's frame column, the frame column one line, then the
     // column's interior — the view bar's field, the ruler's ground and the
     // canvas. THE COLUMN'S FOOT: this much face under the canvas's light
-    // bottom frame row before the dock bar's light row (Cool Edit's 5 rows
-    // above the dock bar, mirroring the column's air above the view bar).
+    // bottom frame row before the dock bar's light row — THE PRODUCT'S OWN
+    // 5 W, mirroring the column's air above the view bar (the assert below).
+    // Cool Edit has no such run: the 8 rows of face it shows above its dock
+    // bar (METRICS §4.1's rows 907..914) are its LOWER CUE LANE, which the
+    // product does not have, and the waveform keeps those rows (architect
+    // 2026-10-14, "agree").
     int  column_margin_px;
     int  column_foot_px;
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
@@ -284,6 +313,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .pane_lead_px       = 5,
     .pane_trail_px      = 4,
     .dock_bar_face_px   = 3,
+    .bottom_border_face_px = 3,
     .row8_air_above_px  = 4,
     .row8_air_below_px  = 5,
     .row8_group_gap_px  = 2,
@@ -292,6 +322,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .gripper_to_case_px = 6,
     .case_to_end_bar_px = 4,
     .end_bar_face_px    = 3,
+    .row8_tail_px       = 5,
     .field_h_px         = 17.0,
     .field_pad_px       = 5.0,
     .state_air_px       = 5.0,
@@ -331,6 +362,9 @@ constexpr int program_band_authored_h(const ProgramSpec& p) {
 constexpr int program_dock_bar_authored_h(const ProgramSpec& p) {
     return 1 + p.dock_bar_face_px + 1 + 1;
 }
+constexpr int program_bottom_border_authored_h(const ProgramSpec& p) {
+    return 1 + p.bottom_border_face_px + 1 + 1;
+}
 constexpr int program_row8_authored_h(const ProgramSpec& p) {
     return p.row8_air_above_px + program_case_authored_px(p) +
            p.row8_air_below_px;
@@ -360,14 +394,21 @@ constexpr int program_column_foot_authored_h(const ProgramSpec& p) {
 static_assert(program_case_authored_px(kProgramSpec) == 23);
 static_assert(program_band_authored_h(kProgramSpec) == 33);
 static_assert(program_dock_bar_authored_h(kProgramSpec) == 6);
+// THE BORDER UNDER ROW 8 IS THE DOCK BAR'S STACK EXACTLY (its field's
+// ruling), so the dock bar's painter draws it.
+static_assert(kProgramSpec.bottom_border_face_px ==
+              kProgramSpec.dock_bar_face_px);
+static_assert(program_bottom_border_authored_h(kProgramSpec) == 6);
 static_assert(program_row8_authored_h(kProgramSpec) == 32);
 static_assert(program_view_bar_authored_h(kProgramSpec) == 8);
 static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);
 static_assert(program_column_authored_h(kProgramSpec) == 43);
 static_assert(program_column_foot_authored_h(kProgramSpec) == 6);
-// The column's foot mirrors its air (METRICS §4.1: 5 rows of face above the
-// view bar, 5 under the canvas's bottom frame row).
+// The column's foot mirrors its air — the product's own 5 W under the
+// canvas's bottom frame row against Cool Edit's 5 rows of face above the
+// view bar (METRICS §4.1); Cool Edit's lower cue lane, its 8 rows above the
+// dock bar, the product does not have (column_foot_px, architect 2026-10-14).
 static_assert(kProgramSpec.column_foot_px == kProgramSpec.column_air_px);
 // THE RULER'S ROWS (2026-10-09 ~21:00): the six the ruler gave are the six
 // the marker lane took, so the column and every stack keep their totals.

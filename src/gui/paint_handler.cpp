@@ -2894,10 +2894,11 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
 // left-aligned transport starts and the modal row's content, the RIGHT PAD
 // where the modal rows' right-aligned clusters end — the lane's one pad
 // (icon_row_pad_x) from each edge; CASES_RIGHT is where row 8's last case
-// ends (the right block packed against the lane's edge, its last end bar
-// and the group's air before it — 2026-10-09; that air 4 W from the case to
-// the end bar since 2026-10-12, 6 W after the gripper, program_spec.h's group
-// fields), where the player's
+// ends — the right block packed against the lane's edge, its LAST GROUP
+// WITH NO END BAR and 5 W of face from the last case to the program frame's
+// line (architect 2026-10-14, Cool Edit's own row 8; program_spec.h's
+// row8_tail_px; the last end bar and the 4-W air before it, 2026-10-09 to
+// 2026-10-14, stood there before) — where the player's
 // right pair ends too. Every BUTTON on either row is THE PROGRAM'S CASE (render.h's
 // program block) at the row's four W of face under the content's top
 // (row8_air_above_px); the faces are paint_roster_case's on both rows. What
@@ -2916,7 +2917,7 @@ static BottomRowSeats bottom_row_seats(const GuiRect& content) {
     const int right = content.x + content.w;
     return BottomRowSeats{
         content.x + pad, right - pad,
-        right - ce_end_bar_w_px() - scaled_px(kProgramSpec.case_to_end_bar_px),
+        right - scaled_px(kProgramSpec.row8_tail_px),
         content.y + row8_air_above_px(), icon_case_w_px(), icon_case_h_px()};
 }
 
@@ -2953,12 +2954,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // measured 6 W after the gripper and 4 W before the end bar (architect
     // 2026-10-12, program_spec.h's group fields; the product's symmetric 5 W
     // of 2026-10-09 evening retired); two W of face before the first group
-    // and between two.
+    // and between two. THE ROW'S LAST GROUP HAS NO END BAR: its last case
+    // stands `tail` (5 W) of face short of the lane's right edge, the
+    // program frame's line (architect 2026-10-14, program_spec.h's
+    // row8_tail_px — bottom_row_seats' cases_right, the one expression).
     const int group_gap = scaled_px(kProgramSpec.row8_group_gap_px);
     const int grip_w    = ce_gripper_w_px();
     const int grip_face = scaled_px(kProgramSpec.gripper_to_case_px);
     const int end_face  = scaled_px(kProgramSpec.case_to_end_bar_px);
     const int end_w     = ce_end_bar_w_px();
+    const int tail      = content.x + content.w - seats.cases_right;
 
     // One button, the band's face logic verbatim (paint_roster_case). THE
     // CHECKED FACE'S SUBJECT ON THIS ROW IS ADD TO SELECTION (2026-08-18),
@@ -3022,24 +3027,28 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
     // case; the case 23 since 2026-10-09 ~10:25, the verbs eight since Toggle
     // Value Drag joined 2026-10-11, the arrows five with Play, the air Cool Edit's measured 6 before the
-    // first case and 4 after the last since 2026-10-12): a group of n is
-    // 5 + 6 + 23n + 4 + 6 = 23n + 21, so the block is the 8 verbs' 205, the
-    // walk's 113 and the arrows' 136 with two gaps of 2, 458 W — on the
-    // tablet's 768 at 300 %, the lane W 1..766 inside the
-    // program frame's columns (2026-10-10), starting at W 309, the clock's
+    // first case and 4 after the last since 2026-10-12, the last group's end
+    // bar gone since 2026-10-14): a group of n is 5 + 6 + 23n + 4 + 6 =
+    // 23n + 21, THE LAST 5 + 6 + 23n + 5 = 23n + 16, so the block is the 8
+    // verbs' 205, the walk's 113 and the arrows' 131 with two gaps of 2,
+    // 453 W — on the tablet's 768 at 300 %, the lane W 1..766 inside the
+    // program frame's columns (2026-10-10), starting at W 314, Play's case
+    // ending at W 761 (device x 2285) and its 5 W of face W 762..766 (2286..
+    // 2300) before the frame's line at W 767, the clock's
     // group W 3..100 (the ~67-W cell — 67.4 W re-derived for Liberation
     // Sans, 2026-10-13: 5.93 em of advances at its 11.357-W em — and its two
     // 5-W pads, a ~77-W field; 2026-10-10), the state line's first ink at W 106, clipped at
-    // W 307 (~201 W of line). IN THE `h` VIEW (the hide, 2026-10-07; Play,
+    // W 312 (~206 W of line). IN THE `h` VIEW (the hide, 2026-10-07; Play,
     // Open Text Editor and Toggle Value Drag hidden there with the verbs)
     // the block is 1 verb + 4 walk + Older / Newer in the arrows' seat
-    // (2026-10-11) in three groups, Play not standing, 44 + 113 +
-    // 67 + 4 = 228 W, the clip standing at W 537 (767 - 228 - 2), the line's
-    // room 431 W from its first ink at W 106. THE ROW CARRIES NO COLLISION
+    // (2026-10-11), the row's last group, in three groups, Play not
+    // standing, 44 + 113 + 62 + 4 = 223 W, the clip standing at W 542 (767 -
+    // 223 - 2), the line's room 436 W from its first ink at W 106. THE ROW
+    // CARRIES NO COLLISION
     // RULE — none of the redesign does — and the crop-at-the-floor allowance
     // recorded at kMinWindowWidthPx covers a narrow window: the block reaches
-    // the clock's group once the window falls below about 1 + 2 + 98 + 458 +
-    // 1 = 560 W outside the view (the program frame's two lines among them).
+    // the clock's group once the window falls below about 1 + 2 + 98 + 453 +
+    // 1 = 555 W outside the view (the program frame's two lines among them).
     // THE STATE
     // LINE CANNOT PUSH ANYTHING: it is clipped short of the block, so a long
     // line is cut rather than colliding.
@@ -3072,11 +3081,23 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (kTransportHistoryStepGroup, its one owner): the group that does
     // not stand publishes its members' empty rects here.
     const bool history = app.history_mode.active;
-    const std::span<const TransportRowDef> groups[] = {
+    constexpr int kGroupCount = 3;
+    const std::span<const TransportRowDef> groups[kGroupCount] = {
         kMarkerVerbGroup, kTransportWalkGroup,
         history ? std::span<const TransportRowDef>(
                       kTransportHistoryStepGroup)
                 : std::span<const TransportRowDef>(kTransportArrowGroup)};
+    // EACH GROUP'S STANDING MEMBERS (the hide, below) and THE ROW'S LAST
+    // STANDING GROUP — the one with no end bar (the group block above): the
+    // arrows with Play outside the `h` view, Older / Newer in their seat
+    // inside it.
+    int standing[kGroupCount] = {};
+    int last_group = -1;
+    for (int gi = 0; gi < kGroupCount; ++gi) {
+        for (const TransportRowDef& def : groups[gi])
+            if (!history_mode_hides_button(app, def.id)) ++standing[gi];
+        if (standing[gi] > 0) last_group = gi;
+    }
     {
         const std::span<const TransportRowDef> absent =
             history ? std::span<const TransportRowDef>(kTransportArrowGroup)
@@ -3090,15 +3111,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // is not painted (history_mode_hides_button, input_pointer.cpp), so
         // the count is of the members that stand, and a group stands only
         // while it keeps a member. Outside the view nothing is hidden and this
-        // is every table's whole length.
+        // is every table's whole length. THE LAST STANDING GROUP closes the
+        // row with the tail and no end bar (the group block above).
         int block_w = 0;
         int standing_groups = 0;
-        for (const std::span<const TransportRowDef> g : groups) {
-            int n = 0;
-            for (const TransportRowDef& def : g)
-                if (!history_mode_hides_button(app, def.id)) ++n;
+        for (int gi = 0; gi < kGroupCount; ++gi) {
+            const int n = standing[gi];
             if (n == 0) continue;
-            block_w += grip_w + grip_face + n * btn_w + end_face + end_w;
+            block_w += grip_w + grip_face + n * btn_w;
+            block_w += gi == last_group ? tail : end_face + end_w;
             ++standing_groups;
         }
         block_w += std::max(0, standing_groups - 1) * group_gap;
@@ -3326,9 +3347,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // tooltip reaches it, and its bits refresh unconditionally
         // (publish_button_face) — the same rect the modal yield publishes
         // for the whole row.
-        for (const std::span<const TransportRowDef> g : groups) {
+        for (int gi = 0; gi < kGroupCount; ++gi) {
             bool group_open = false;
-            for (const TransportRowDef& def : g) {
+            for (const TransportRowDef& def : groups[gi]) {
                 if (history_mode_hides_button(app, def.id)) {
                     (void)publish_button_face(cr, app, audio, playback,
                                               target_render, def.id,
@@ -3343,7 +3364,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                 paint_button(def, ax);
                 ax += btn_w;
             }
-            if (group_open) {
+            // THE LAST GROUP ENDS AT ITS LAST CASE, the tail of face after
+            // it the block's own ground (the group block above).
+            if (group_open && gi != last_group) {
                 ax += end_face;
                 paint_ce_end_bar(cr, ax, content_y, content_h);
                 ax += end_w + group_gap;
@@ -5604,6 +5627,26 @@ static bool modal_owns_bottom_row(AppState& app) {
     return dialog_editor_to_paint(app, prefix) != nullptr;
 }
 
+// -- THE BORDER UNDER ROW 8 ------------------------------------------------
+//
+// (architect 2026-10-14; program_spec.h's bottom_border_face_px, where the
+// ruling and its source stand.) Bottom lane 1, between row 8 and the program
+// frame's bottom row: THE DOCK BAR'S OWN SIX ROWS, painted by the dock bar's
+// own painter on the lane — its light row, its face, its mid and dark rows,
+// its left column light and its right column mid, inside the frame's two
+// columns. ON EVERY FRAME WHATEVER STANDS OVER IT, as row 8's lane is: a
+// dialog or the on-screen keyboard is a bottom overlay laid over it after
+// (paint_bottom_overlays, onscreen_keyboard.h's overlay block). Publishes
+// nothing: the lane is inert ground for input.
+static void paint_bottom_border(cairo_t* cr, const AppState& app) {
+    const GuiRect lane = bottom_border_area(app);
+    if (lane.w <= 0 || lane.h <= 0) return;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    paint_ce_dock_bar(cr, lane);
+    cairo_restore(cr);
+}
+
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
@@ -5650,8 +5693,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // PANEL'S FACE, the lane one frame line in from each side inside the
     // program's frame. The row's tenants are the program's (row 8, the render
     // player); a CHROME TENANT — a prompt, a dialog editor or the picker's
-    // Cancel — is THE DIALOG, a bottom overlay laid over the content band and
-    // the frame's bottom row with the dock bar left in view above it as Cool
+    // Cancel — is THE DIALOG, a bottom overlay laid over the content band,
+    // the border under the row (paint_bottom_border, 2026-10-14) and the
+    // frame's bottom row with the dock bar left in view above it as Cool
     // Edit's ridge (onscreen_keyboard.h's overlay block, its ground and line
     // paint_bottom_overlays'), so this lane never changes for it. The ground
     // erases whatever render_background laid down, so the strip does not
@@ -5781,7 +5825,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // THE DIALOG IS A BOTTOM OVERLAY SINCE 2026-10-10 (architect, Cool Edit's
 // status bar: onscreen_keyboard.h's overlay block): a prompt's, an editor's
 // and the picker's controls stand on the chrome's ground laid over row 8's
-// content band and the frame's bottom row under one Hilight line
+// content band, the border under it and the frame's bottom row under one
+// Hilight line
 // (paint_bottom_overlays), centered in that ground, or on the on-screen
 // keyboard with one pad between; the render player keeps the row's own face.
 // CONTENT PER KIND, on that ground (there is no box, no frame and no
@@ -8402,9 +8447,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     folder overlay empties the area (nothing is cleared or skipped
     //     under it); the column's face above skips the area (its hole);
     //     every other pass keeps to its own lane (the caption, the menu
-    //     row, the band, row 8 and the program frame; paint_trim, the ruler
-    //     and the flag blit in the top strip; the flag editor's field in the
-    //     marker lane). Nothing writes the backbuffer between frames (the
+    //     row, the band, row 8, the border under it and the program frame;
+    //     paint_trim, the ruler and the flag blit in the top strip; the flag
+    //     editor's field in the marker lane). Nothing writes the backbuffer
+    //     between frames (the
     //     platform paints only through this pass, its sizing frame outside
     //     the client area).
     //   * UNKNOWN — the frame clears as before — when a floating surface
@@ -8514,6 +8560,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, bottom_row_area(app))) {
             paint_bottom_strip(cr);
         }
+        // THE BORDER UNDER ROW 8 (2026-10-14, paint_bottom_border): its own
+        // lane on its own exposure, before the frame that wraps it.
+        if (rects_intersect(exposed, bottom_border_area(app))) {
+            paint_bottom_border(cr, app);
+        }
         // THE PROGRAM'S FRAME (2026-10-10, render.h's program_frame_rect):
         // the ring round the program, with the rows it wraps — its columns
         // stand in the line every program lane leaves, so no lane painter
@@ -8580,9 +8631,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      frame with no audio loaded (no source, or a load running:
         //      !plate_branch), THE CENTER LINES straight over it
         //      (render_center_lines), so the grid never stands without them.
-        //   3. the two redesigned top button rows and the
+        //   3. the two redesigned top button rows, the
         //      unified bottom row (its chrome, buttons, clock AND state cell
-        //      in one painter),
+        //      in one painter) and the border under it (paint_bottom_border,
+        //      2026-10-14),
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on), then THE PROGRAM'S FRAME round the
@@ -8628,8 +8680,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      panel stands. Both tenants stand over the program's frame
         //      (full window width, 2026-10-10), and AFTER THE SLOT the bottom
         //      overlays' line and the dialog's ground (paint_bottom_overlays,
-        //      2026-10-10: the keyboard and the dialog laid over row 8 and
-        //      the frame's bottom row as Cool Edit's status bar, the line
+        //      2026-10-10: the keyboard and the dialog laid over row 8, the
+        //      border under it and the frame's bottom row as Cool Edit's
+        //      status bar, the line
         //      above the pair, which the waveform's painted rect also leaves
         //      out).
         //  13. the flag editor's box, then THE NOTIFICATION CARDS

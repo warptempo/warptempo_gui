@@ -1370,13 +1370,16 @@ inline int relief_line_px() {
 // ring's TOP ROW is a top lane of its own between the menu row and the band,
 // its BOTTOM ROW a bottom lane of its own, and its two COLUMNS stand on the
 // client's first and last line — every program lane (the band, the canvas
-// column's lanes and its foot, the dock bar and row 8) inset one line on each
-// side inside them (strip_row_rect). The ring spans the client, inside the
-// restored laptop's sizing frame. The pair's two lines became the ring's top
-// and bottom rows, so the well keeps its height: 960 device rows at 300 %.
+// column's lanes and its foot, the dock bar and row 8, and the border under
+// row 8 since 2026-10-14) inset one line on each side inside them
+// (strip_row_rect). The ring spans the client, inside the restored laptop's
+// sizing frame. The pair's two lines became the ring's top and bottom rows,
+// so the well kept its height that day (the border under row 8 took 18 of
+// its rows at 300 % on 2026-10-14: 942).
 // At 300 % the menu row ends at row 114, the ring's top row is 114–116, the
 // band starts at 117, the ring's columns are 0–2 and 2301–2303 and its
-// bottom row the window's last three rows.
+// bottom row the window's last three rows, 1437–1439, under the border's
+// 1419–1436.
 // THE CHROME SURFACES AT THE BOTTOM ARE OVERLAYS LAID OVER IT, as Cool Edit's
 // status bar stands under its panels (architect 2026-10-10: "they're
 // analogous to the taskbar, basically, but they sit on top of the design.
@@ -1384,9 +1387,10 @@ inline int relief_line_px() {
 // bottom row (chrome_tenant_owns_bottom_row, app_state.h: a prompt, a dialog
 // editor, the picker's Cancel; the render player is the program's and stays
 // in the row) — and THE ON-SCREEN KEYBOARD each stand at the window's foot,
-// the window's whole width over the ring's columns and bottom row in their
-// rows, one Hilight line on top and the chrome's ground below, no border at
-// the foot or the sides; the ring, the lanes and row 8 keep their geometry
+// the window's whole width over the ring's columns, the border under row 8
+// and the ring's bottom row in their rows, one Hilight line on top and the
+// chrome's ground below, no border at the foot or the sides; the ring, the
+// lanes and row 8 keep their geometry
 // and paint as always, and the overlay covers them (the law, the three cases
 // and every rect at onscreen_keyboard.h's overlay block). The painters:
 // paint_program_frame (the ring, beside the menu row's painter) and
@@ -1798,25 +1802,41 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // drift apart) and five W of face: 32 W, the lane 38 under every chrome.
 // Its groups — the grippers, the end bars, the dark time field — are
 // paint_bottom_row_buttons_and_clock's walk (cool_edit_paint.h draws them):
-// each group the gripper, 5 W of face, its cases or the time field, 5 W of
-// face and the end bar — the product's symmetric air where Cool Edit's
-// movable panes measure 6 and 4 (architect 2026-10-09 evening,
-// program_spec.h's group fields) — and the time field's pads 5 W each side,
-// the dialog field's own (program_spec.h's field_pad_px, 2026-10-10).
+// each group the gripper, 6 W of face, its cases or the time field, 4 W of
+// face and the end bar — Cool Edit's measured air (architect 2026-10-12,
+// program_spec.h's group fields) — save THE ROW'S LAST GROUP, which has no
+// end bar and closes the row 5 W of face short of the program frame's line
+// (architect 2026-10-14, program_spec.h's row8_tail_px); the time field's
+// pads 5 W each side, the dialog field's own (program_spec.h's
+// field_pad_px, 2026-10-10).
 // The render player, the program's tenant, stands in the content band below
 // the dock bar's rows, on the row's face (paint_bottom_strip). A CHROME
 // TENANT (chrome_tenant_owns_bottom_row, app_state.h: a prompt, a dialog
 // editor, the picker's Cancel) is THE DIALOG, a bottom overlay laid over the
-// content band and the program frame's bottom row from the dock bar's foot to
-// the window's foot, the dock bar left standing above it (2026-10-10,
-// program_frame_rect's overlay paragraph and onscreen_keyboard.h's overlay
-// block); the lane under it is the program's as always.
+// content band, the border under the row and the program frame's bottom row
+// from the dock bar's foot to the window's foot, the dock bar left standing
+// above it (2026-10-10, program_frame_rect's overlay paragraph and
+// onscreen_keyboard.h's overlay block); the lane under it is the program's
+// as always.
 // bottom_row_content_h_px() is the band the buttons and text sit on;
 // bottom_row_h_px() is the lane the strip stack allocates. Each term its own
 // rounded part.
 inline int dock_bar_h_px() {
     return 3 * program_line_px() + scaled_px(kProgramSpec.dock_bar_face_px);
 }
+// THE BORDER UNDER ROW 8 (architect 2026-10-14; program_spec.h's
+// bottom_border_face_px, where the ruling and its source stand): bottom lane
+// 1, between row 8 and the program frame's bottom row, the dock bar's six
+// rows again — a light row, three W of face, a mid row, a dark row —
+// painted by the dock bar's painter (paint_ce_dock_bar) inside the frame's
+// columns: 18 device rows at 300 %, 7 at 138 %, 23 at 360 %. Inert ground
+// for input, as the frame's bottom row under it is.
+inline int bottom_border_h_px() {
+    return 3 * program_line_px() +
+           scaled_px(kProgramSpec.bottom_border_face_px);
+}
+// The lane (main.cpp, beside the other lane accessors).
+GuiRect bottom_border_area(const AppState& a);
 inline int row8_air_above_px() {
     return scaled_px(kProgramSpec.row8_air_above_px);
 }
@@ -1853,8 +1873,9 @@ inline int bottom_row_h_px() {
 // 2026-10-10), the band 33, the canvas column's 43 above the canvas (the
 // air 5, the view bar 8, the ruler 12, the marker lane 17, the canvas's top
 // frame row 1), the column's foot 6 under it (the bottom frame row and 5 W
-// of face), the dock bar and row 8 38 and the frame's bottom row 1. At 300 %
-// every term is a whole multiple of 3 device px.
+// of face), the dock bar and row 8 38, the border under row 8 6
+// (2026-10-14) and the frame's bottom row 1. At 300 % every term is a whole
+// multiple of 3 device px.
 constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
     const int frame = s.window_frame_maximized
         ? 2 * (s.window_frame_lines * kReliefLinePx + kWindowFramePx -
@@ -1867,13 +1888,15 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
            s.menu_row_content_px + program_frame +
            program_band_authored_h(kProgramSpec) +
            program_column_authored_h(kProgramSpec) +
-           program_column_foot_authored_h(kProgramSpec) + row8;
+           program_column_foot_authored_h(kProgramSpec) + row8 +
+           program_bottom_border_authored_h(kProgramSpec);
 }
 // THE STACK (2026-10-09, the canvas column Cool Edit's, its canvas framed;
-// the program's frame 2026-10-10): WIN2000 115 above and 45 below, 160 —
-// the tablet's well at 300 % 960 rows (320 W) of the surface's 1440 (a
-// vocabulary's well its own lanes' leftover, main.cpp's rule).
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 160);
+// the program's frame 2026-10-10; the border under row 8 2026-10-14):
+// WIN2000 115 above and 51 below, 166 — the tablet's well at 300 % 942 rows
+// (314 W) of the surface's 1440 (a vocabulary's well its own lanes'
+// leftover, main.cpp's rule).
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 166);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect

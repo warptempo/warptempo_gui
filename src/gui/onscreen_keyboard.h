@@ -538,24 +538,28 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 // basically, but they sit on top of the design. They don't move anything
 // below them." A BOTTOM OVERLAY is a chrome surface laid over the design at
 // the window's foot: the window's whole width (over the program frame's side
-// columns and bottom row in its rows), its top edge ONE relief line in the
+// columns, the border under row 8 and the frame's bottom row in its rows),
+// its top edge ONE relief line in the
 // chrome's Hilight — the light of the program frame's bottom and right sides,
 // "not a bevel … just a one pixel border" — the chrome's ground below it, no
 // bottom or side border, and NOTHING BENEATH IT MOVES: the program lanes, the
-// program frame, the dock bar and row 8 keep their geometry and paint as
-// always, and the overlay covers them. Two exist:
+// program frame, the dock bar, row 8 and the border under it keep their
+// geometry and paint as always, and the overlay covers them. Two exist:
 //   THE DIALOG — a chrome tenant of the bottom row (dialog_stands: a prompt,
 //     a dialog editor, the picker's Cancel; the render player is the
 //     program's and is no overlay). ALONE its top is the dock bar's bottom,
 //     the dock bar painted above it as Cool Edit's ridge: the line takes row
 //     8's content band's first line and the ground runs to the window's foot
-//     — row 8's content band less that line plus the frame's bottom row, 32 W
-//     at every scale (dialog_band_h_px). Its controls are VERTICALLY CENTERED
+//     — row 8's content band less that line plus the border under row 8 and
+//     the frame's bottom row, 38 W at every scale (dialog_band_h_px; 32 W
+//     until the border's six came under row 8, 2026-10-14, the ground
+//     covering them and its controls centered in the taller ground). Its
+//     controls are VERTICALLY CENTERED
 //     in that ground, the half-row tie to the top (the cap rule's own;
-//     paint_modal_dialog's row_centred_y). At 300 %: the line 1341–1343, the
-//     ground 1344–1439, the field 1357–1425 (13 above, 14 below); at the
-//     laptop's 138 % on 1920 x 1080 the line row 1035, the ground 1036–1079,
-//     the field 1042–1073 (6 above, 6 below).
+//     paint_modal_dialog's row_centred_y). At 300 %: the line 1323–1325, the
+//     ground 1326–1439, the field 1348–1416 (22 above, 23 below); at the
+//     laptop's 138 % on 1920 x 1080 the line row 1028, the ground 1029–1079,
+//     the field 1038–1069 (9 above, 10 below).
 //   THE KEYBOARD — ALONE at the window's foot, its band the edge pad, the
 //     four key rows and their three gaps, the edge pad (surface_height_px),
 //     the line directly above it. At 300 %: the line 1034–1036, the band
@@ -568,10 +572,11 @@ inline bool stands(const AppState& a, const GuiPlatform& gui) {
 //     two: the dialog keeps its own top pad (the centered pad of the dialog
 //     alone, dialog_top_pad_px) and drops its bottom pad, and the keyboard's
 //     edge pad is the gap — his words, "if they're both the same, then they
-//     just combine into one". At 300 % the two are both 14; THE KEYBOARD'S
-//     PAD IS THE ONE ROAD, so they never double at a scale where they differ.
-//     At 300 %: the line 952–954, the dialog 955–1036 (its pad 955–967, the
-//     field 968–1036), the keyboard 1037–1439.
+//     just combine into one". THE KEYBOARD'S PAD IS THE ONE ROAD below the
+//     controls, so the two pads never double. At 300 %: the line 943–945,
+//     the dialog 946–1036 (its top pad 946–967, 22 rows since the alone
+//     band grew by the border under row 8, 2026-10-14; the field 968–1036),
+//     the keyboard 1037–1439.
 // ON SCREEN IS AS PAINTED: nothing under an overlay answers a press, a cursor
 // zone or the touch pan zone — the waveform's painted rect stops at the
 // overlay's line (waveform_paint_area below, which point_on_nav_surface
@@ -625,15 +630,17 @@ inline int dialog_content_h_px() {
 }
 
 // THE DIALOG'S BAND HEIGHT: its ground when it stands alone — from under the
-// line on row 8's content band's first line down to the window's foot. 96
-// device rows at 300 %, 44 at the laptop's 138 %.
+// line on row 8's content band's first line down to the window's foot, over
+// the border under row 8 and the frame's bottom row. 114 device rows at
+// 300 %, 51 at the laptop's 138 %.
 inline int dialog_band_h_px(const AppState& a) {
     const GuiRect c = bottom_row_content_area(a);
     return std::max(0, window_foot_y(a) - (c.y + overlay_line_px()));
 }
 
 // THE DIALOG'S TOP PAD: its controls centered in the band, the half-row tie
-// to the top — 13 at 300 % (27 rows of air, 13 over 14), 6 at 138 %.
+// to the top — 22 at 300 % (45 rows of air, 22 over 23), 9 at 138 % (19
+// rows, 9 over 10).
 inline int dialog_top_pad_px(const AppState& a) {
     return std::max(0, (dialog_band_h_px(a) - dialog_content_h_px()) / 2);
 }

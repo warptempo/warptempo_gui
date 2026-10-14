@@ -6225,12 +6225,12 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // beside it, the lane's pointer-inert span (the status chain that shared
     // that ground until 2026-08-13 took no clicks either, and took none away
     // with it) — and the STATE CELL right of the clock since 2026-08-29 is that
-    // same inert ground, a text cell with no rect of its own to test. THE LANE
-    // RESTS ON THE WINDOW'S FOOT (from the relayout's commit B, apart from the
-    // one day a STATUS BAR stood under it), so there is nothing below it at
-    // all, and ABOVE it lies GAP 2's blank window ground — outside every band
-    // here and falling through to the tail's consumed nothing, as window ground
-    // by the vertical rule (main.cpp).
+    // same inert ground, a text cell with no rect of its own to test. BELOW
+    // THE LANE stand only the border under row 8 (2026-10-14) and the program
+    // frame's bottom row on the window's foot, inert ground falling through
+    // to the tail's consumed nothing, and ABOVE it lies GAP 2's blank window
+    // ground — outside every band here and falling through the same way, as
+    // window ground by the vertical rule (main.cpp).
     // (THE BODY IS claim_button_row_press, above the veils.)
     if (rect_contains(bottom_row_area(app), x, y)) {
         claim_button_row_press();

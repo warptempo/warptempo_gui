@@ -171,12 +171,13 @@ void Viewport::invalidate_status_cell_area() {
 // painted before a surface's first paint, so they invalidate the whole
 // window. Caller inventory at the declaration.
 // THE DIALOG IS A BOTTOM OVERLAY (2026-10-10, onscreen_keyboard.h's overlay
-// block): a chrome tenant's surface is laid over the row's content band and
-// the program frame's bottom row at the window's whole width, its line on
-// the content band's first row — so the damage is the lane UNITED WITH THE
-// DIALOG ALONE (the lane's top down to the window's foot, the whole width),
-// which erases the dialog and brings the row's tenants, the frame's columns
-// and its bottom row back on a close; and, while the keyboard stands, THE
+// block): a chrome tenant's surface is laid over the row's content band, the
+// border under the row and the program frame's bottom row at the window's
+// whole width, its line on the content band's first row — so the damage is
+// the lane UNITED WITH THE DIALOG ALONE (the lane's top down to the window's
+// foot, the whole width), which erases the dialog and brings the row's
+// tenants, the border, the frame's columns and its bottom row back on a
+// close; and, while the keyboard stands, THE
 // DIALOG STANDING ON IT too (a prompt raised or answered over a dialog
 // editor with the keyboard up repaints there). A dialog editor's close
 // takes the keyboard with it, and the slot's hide edge damages that form

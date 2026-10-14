@@ -883,8 +883,9 @@ private:
     // 2026-10-01, twenty-two standing outside the `h` view and thirteen
     // inside it — kIconRowHistoryStandIns since 2026-10-05, the hide,
     // history_mode_hides_button, since 2026-10-07), and the
-    // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the program
-    // frame's bottom row on the window's foot: the clock cell and the STATE
+    // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the border
+    // under row 8 and the program frame's bottom row on the window's foot,
+    // 2026-10-14: the clock cell and the STATE
     // CELL left, then the marker verbs, the marker walk, the arrow four and
     // Play / Stop (the arrow group's last case) flush right in their groups, declared below; in
     // the `h` view Older / Newer stand in the arrows' seat, 2026-10-11).
