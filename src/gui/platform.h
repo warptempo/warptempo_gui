@@ -53,8 +53,8 @@
 // keeps on the maximized window on both devices, window_frame_maximized);
 // invalidate_surface damages the WHOLE SURFACE, the band with it. The band
 // paints in the chrome's roles, so the one GUI event that changes them with
-// the window standing — a live chrome pick, the color picker's install of
-// the eleven (GuiColorPicker::install_live_words) — asks for it; every other
+// the window standing — a live chrome pick, the Settings Chrome or Caption
+// row's install (GuiSettingsEditor::install_color_preset) — asks for it; every other
 // repaint of the band rides the backend's own full damage (a configure or a
 // window adoption). Both
 // backends implement the pair alike.

@@ -33,8 +33,8 @@
 # THE KEY is `cool-edit-` and the display name lowercased, every run of other characters one hyphen ("CEPro 1.2" ->
 # `cool-edit-cepro-1-2`), the `palette` device key's word; THE DISPLAY NAME is Cool Edit's own, "Default" for its
 # "(Default Scheme)". Keys and display names are checked unique, every key in the catalog key grammar and every
-# display name printable ASCII within the palette name grammar's 40 bytes (a typed preset name equal to one is
-# refused as taken, color_picker.cpp's commit_name).
+# display name printable ASCII within 40 bytes (the color picker's typed-name grammar, 2026-10-07..14; the check
+# stays as the names' bound).
 #
 # BYTE-STABLE: the presets in the file's order, the roles in the table's, uppercase hex, LF, no timestamp; run it twice
 # and the include is identical. THE INCLUDE IS ITS OUTPUT, NEVER HAND-EDITED: a change is the text, then this, the

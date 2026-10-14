@@ -4,14 +4,71 @@
 #include "app_state.h"
 #include "audio.h"
 #include "notifications.h"
+#include "palette_file.h"   // GuiPaletteWords, GuiChromePick: the color rows' install
 #include "playback_lifecycle.h"
 #include "viewport.h"
 
+#include <optional>
 #include <string>
 
 struct Undo;
 struct GuiTargetRender;
 struct GuiInputHandler;
+
+// THE CHOICE EDITOR'S COMBO AND ITS LIST — THE GEOMETRY (2026-10-07
+// evening; the color picker's chooser shared it until the picker's removal,
+// architect 2026-10-14, and the choice editor below is its one reader since):
+// the combo stands at the dialog field's seat (the head's THE CHOICE
+// EDITOR), its list drops from it. Device px, rounded at the element; the
+// painters are paint_handler.cpp's (paint_settings_choice, paint_combo_list).
+namespace choice_combo {
+// THE COMBO'S DROP-DOWN BUTTON: Windows' SM_CXVSCROLL 16, and its arrow
+// Marlett's 7 x 4 wedge, each side rounded AT THE ELEMENT through
+// scaled_px's floored form, floored at a 3 x 2 device-px wedge so a small
+// scale cannot zero the triangle (paint_choice_combo, paint_handler.cpp).
+inline constexpr int kComboButtonWPx   = 16;
+inline constexpr int kComboArrowWPx    = 7;
+inline constexpr int kComboArrowHPx    = 4;
+inline constexpr int kComboArrowMinWPx = 3;
+inline constexpr int kComboArrowMinHPx = 2;
+// THE COMBO'S TEXT stops this far short of its drop-down button, where a
+// long name is cut with "..." (2026-10-07).
+inline constexpr int kComboTextGapPx   = 4;
+// THE DROP-DOWN INSET, ONE NUMBER (architect 2026-10-09; the rule's one
+// owner is combo_text_inset_px's comment, settings_editor.cpp): Windows'
+// combo inset, the sunken field's two lines + the dialog field's 5-W pad
+// (kModalFieldPadXPx) = 7 W — the face's text inset and the list's row
+// inset, both sides.
+inline constexpr int kComboTextInsetPx = 7;
+//   combo_drop_button — the drop-down button inside the combo `r`
+//     (kComboButtonWPx wide, inside the sunken field's two lines).
+//   combo_text_inset_px — THE DROP-DOWN INSET, kComboTextInsetPx: the
+//     face's text inset from the combo's left edge, and the list's row inset
+//     on both sides. Device px.
+//   combo_list — the list of `count` rows dropped from `combo`, its width,
+//     flush (the definition's ruling), placed and scrolled by the popup
+//     lists' rule (render.h's popup scroll block, place_popup_list): below
+//     the combo's foot where every row fits, else standing on its head (the
+//     choice editor's: the row is the window's foot, and Windows' combo opens
+//     above when no room lies below), else the roomier side scrolled. The
+//     dropdown's own arithmetic (dropdown_h_px, render.h): the frame, the
+//     item block's two margins, the rows' room. `top` is the popup's scroll;
+//     the result's `bar` carries the clamped top and the shown count whether
+//     or not it is present.
+//   combo_list_item — row `i` of the domain as placed: the dropdown's item
+//     rect (popup_item_rect, short of the bar when one stands), or the zero
+//     rect for a row scrolled out of view.
+struct ComboList {
+    GuiRect        box{0, 0, 0, 0};
+    bool           upward = false;
+    int            count  = 0;
+    PopupScrollBar bar;
+};
+GuiRect   combo_drop_button(const GuiRect& r);
+int       combo_text_inset_px();
+ComboList combo_list(const GuiRect& combo, int count, int window_h, int top);
+GuiRect   combo_list_item(const ComboList& l, int i);
+} // namespace choice_combo
 
 // Settings-prompt editor cluster. Opens on `;`, accepts a single
 // `key=value` line, applies it on Enter, and closes. Same primitive as
@@ -24,10 +81,11 @@ struct GuiInputHandler;
 // The editor is a keyboard front-end to EVERY key the product persists that a
 // user edits in-app: every key that can appear in a `.settings` file, plus the
 // FIVE editable ones the per-device config carries — gui_scale and
-// projects_repo, which left the sidecar 2026-08-27 and kept this surface, and
+// projects_repo, which left the sidecar 2026-08-27 and kept this surface,
 // since 2026-09-02 (architect) projects_path,
-// which had been hand-edited only, since
-// 2026-10-09 icons and since 2026-10-09 ~21:20 font (chrome,
+// which had been hand-edited only, and since 2026-10-14 (architect) the two
+// color keys chrome and caption, the color picker's until that day (icons
+// and font, editable 2026-10-09..10-12, the vocabulary chrome,
 // editable 2026-10-07..10-10, and theme,
 // editable 2026-10-03..10-08, its level and the twelve
 // program colour keys, editable 2026-10-03..04, left with their keys; the
@@ -41,16 +99,17 @@ struct GuiInputHandler;
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    icons and font — in ONE body,
+//    chrome and caption — in ONE body,
 //    commit_device_setting: the key's own grammar
-//    owner in device_config.h decides (a refused commit and its card), the
+//    owner in device_config.h (palette_file.h for the two color keys)
+//    decides (a refused commit and its card), the
 //    live struct takes the value, and the commit WRITES THE DEVICE CONFIG —
 //    that write is the whole persist, Ctrl+S carrying only the sidecar keys.
 //    projects_repo is in force at once (every reader reads the
 //    live field); projects_path is in force for the next Open project and the
 //    next launch, the open project staying open, and the commit says so on a
-//    card; the icon set at the next launch, its card saying so; the font at once, live, at the OK, no card (the screen is the
-//    answer).
+//    card; chrome and caption at once, the preset installed live at the OK,
+//    no card (the screen is the answer).
 //    gui_scale, the
 //    one other
 //    editable device key, stays in the GUI-kind router
@@ -76,42 +135,43 @@ struct GuiInputHandler;
 //    keys, not the surface): an engine key IS the piece, so a locked active
 //    tab refuses it with the lock's own card, while items 1 and 2 above —
 //    the device keys and the band — commit on a locked tab. The opener
-//    refuses no lock (only a standing color picker, 2026-10-08); the
-//    account is at GuiSettingsEditor::open.
+//    refuses no lock; the account is at GuiSettingsEditor::open.
 //
 // THE CHOICE EDITOR (architect 2026-10-07 evening, "a drop-down for chrome
-// and theme at the very least"; the design the planner's, delegated; the
-// Chrome row removed 2026-10-10 with the `chrome` key) STANDS
+// and theme at the very least"; the design the planner's, delegated) STANDS
 // BESIDE THE TEXT EDITOR: a Settings row whose key's domain is a SHORT
-// CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — no row today:
-// the Icons row (2026-10-09) and the Font row (2026-10-09 ~21:20) left with
-// their keys 2026-10-12, the theme having left with its key 2026-10-08) opens
+// CLOSED LIST (SettingsEditorKind::Choice, kSettingsPopupItems — the Chrome
+// and Caption rows since 2026-10-14; the vocabulary Chrome row stood
+// 2026-10-07..10-10, the Icons and Font rows 2026-10-09..10-12, each leaving
+// with its key) opens
 // THE SAME BOTTOM-ROW EDITOR — the same text_editor session
 // underneath, so the modal rank, OK and Cancel, the focus ring, the playback
 // stop and every closer are the text editor's — with its row's word as the
-// label ("Icons: ") and, WHERE THE FIELD STANDS, THE PROGRAM'S COMBO BOX
-// showing the shown value: the color picker's combo drawing
-// (paint_picker_combo, a second reader) at the field's seat and its 23-W
-// height. THE BUFFER IS KEPT AT `<key>=<shown value>`, so EVERY COMMIT IS THE
+// label ("Chrome: ") and, WHERE THE FIELD STANDS, THE PROGRAM'S COMBO BOX
+// showing the shown value: the combo drawing (paint_choice_combo,
+// paint_handler.cpp; the geometry choice_combo's, above — the color
+// picker's chooser shared both until 2026-10-14) at the field's seat and its
+// 23-W height. THE BUFFER IS KEPT AT `<key>=<shown value>`, so EVERY COMMIT IS THE
 // TEXT ROAD'S — commit() and commit_device_setting, the one road: the
-// grammar, the config write, the next-launch card and the unchanged value's
+// grammar, the config write and the unchanged value's
 // quiet no-op are untouched. THE COMMIT IS OK'S ALONE, EVERY CHOICE ROW'S
 // (architect 2026-10-09, the Font row judged on the glass: "it should not
-// pick the font until I hit OK"): a row of the list, a press and its lift,
+// pick the font until I hit OK"; re-confirmed for the two color rows
+// 2026-10-14, "OK alone"): a row of the list, a press and its lift,
 // and Up / Down each MOVE THE SHOWN VALUE and nothing else — no config
-// written, no face swapped, no card; OK (and Enter, the dialog's default
+// written, no preset installed, no card; OK (and Enter, the dialog's default
 // button) commits the shown value through commit(); Cancel (and Esc) closes
 // with nothing written and nothing applied, the shown value dying with the
-// session. One road for the two rows, Icons and Font. THE ROADS:
+// session. One road for the two rows, Chrome and Caption. THE ROADS:
 //   * A PRESS ON THE COMBO DROPS ITS LIST UPWARD over the well (the row is
 //     the window's foot; Windows' combo opens above when no room lies
-//     below) — the picker list's painter and geometry
+//     below) — the list's painter and geometry
 //     (paint_combo_list, combo_list), as wide as the combo, the domain in
 //     its source's order, the shown row lit at the open and the lit row then
 //     following the pointer over the rows and HOLDING OFF THEM — Windows'
 //     combo list, so the pen's contact on the combo cannot put the seeded
-//     row out (2026-10-09 evening; the rule at settings_choice_motion, the
-//     picker's chooser's too); the combo takes no hover face. The press
+//     row out (2026-10-09 evening; the rule at settings_choice_motion);
+//     the combo takes no hover face. The press
 //     gives the combo the focus back from a button.
 //     IT IS ONE OF THE THREE LIST POPUPS (render.h's popup scroll block, the
 //     rule's one owner, 2026-10-08): placed by the window's room and
@@ -120,7 +180,7 @@ struct GuiInputHandler;
 //   * WHILE THE LIST IS DOWN IT OWNS THE POINTER (the dropdown's ONE PRESS,
 //     ONE ACT): a press on its scroll bar scrolls (the scroll block's input),
 //     a press on a row ARMS it and THE LIFT ON THAT ROW SHOWS IT — the act
-//     at the lift, as the picker's list and every menu row act — closing
+//     at the lift, as every menu row acts — closing
 //     the list onto the combo, the editor standing for OK or Cancel
 //     (2026-10-09, above); a press anywhere else closes the list and is
 //     consumed, the combo standing.
@@ -244,13 +304,24 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // — in one body (the head's
+    // `chrome=` and `caption=` — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the
     // routers.
     bool commit_device_setting(const std::string& key,
                                const std::string& value);
+    // THE COLOR ROWS' INSTALL (architect 2026-10-14; the color picker's
+    // install_live_words until that day, its shape kept): the eleven
+    // installed (install_program_palette, palette_file.h) and the caption's
+    // keys (install_chrome_pick, render.h), then the apply shape run once, as
+    // install_program_palette's declaration states it — the plate kicked when
+    // its inks moved, else the flag cache refreshed; ITS DAMAGE a changed
+    // chrome's whole surface, the window's sizing frame with it
+    // (Viewport::invalidate_surface), any other palette change the client
+    // alone (invalidate_all) — the rule at the body.
+    void install_color_preset(const GuiPaletteWords& words,
+                              const std::optional<GuiChromePick>& scheme);
     // THE PATH COMPLETER (2026-09-02), autocomplete_value's arm for the path
     // key — `projects_path` — when the value side is
     // NON-EMPTY: the value side is split at its last `/`, the directory the

@@ -787,7 +787,7 @@ inline void reconcile_session(AppState& a, const GuiPlatform& gui,
 // paint_keyboard_slot), and the drift is paid here. THIS IS THE ONE PLACE
 // THE KEYBOARD'S HIDE IS PAID, whatever closed its editor: standing is
 // derived (stands, above), so every close road — the dialog editors' OK,
-// Cancel, Esc and Return, the flag editor's, the picker's hex field's, a
+// Cancel, Esc and Return, the flag editor's, a
 // choice editor taking the session — moves this comparison and nothing else
 // has to remember the band.
 //

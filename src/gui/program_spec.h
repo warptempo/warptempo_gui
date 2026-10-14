@@ -4,8 +4,8 @@
 // THE PROGRAM SPEC (architect 2026-10-09 ~06:55, "chrome means chrome, the
 // program is Cool Edit"; the go ~09:40): THE CHROME is the OS part — the
 // caption, the menu row, the window frame, the pull-downs, the cards, the
-// prompts, the picker's and the Settings dialogs with their fields and
-// buttons — each chrome's own (chrome_spec.h). THE PROGRAM is COOL EDIT PRO
+// prompts, the project picker's and the Settings dialogs with their fields
+// and buttons — each chrome's own (chrome_spec.h). THE PROGRAM is COOL EDIT PRO
 // 2.1'S EDIT VIEW FROM THE TOOLBAR DOWN, THE SAME UNDER EVERY CHROME
 // (windows-2000 today, Windows XP's to come). This header is the one owner of the
 // program's lengths, in Windows px, read by the lane table (main.cpp), the

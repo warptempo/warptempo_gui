@@ -4,7 +4,7 @@
 #include "notifications.h"
 #include "chrome_spec.h"
 #include "cool_edit_paint.h"
-#include "color_picker.h"
+#include "settings_editor.h"   // choice_combo: the choice editor's combo geometry
 
 #include "gui_font.h"
 #include "folder_overlay.h"
@@ -85,15 +85,6 @@ static void show_row_text(cairo_t* cr, const GuiFont& font,
     const text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
     set_palette_source(cr, color);
     text_shape::show_shaped_run(cr, run, x, baseline);
-}
-
-// The same run in THE DISABLED EMBOSS (show_embossed_run, render.h) — the
-// row tier's dead word.
-static void show_row_text_embossed(cairo_t* cr, const GuiFont& font,
-                                   double x, double baseline,
-                                   std::string_view text) {
-    if (text.empty()) return;
-    show_embossed_run(cr, text_shape::shape_text_run(font, text), x, baseline);
 }
 
 // THE STATE TEXT IS ROW 8'S LINE ON THE GROUND (architect 2026-08-29, folding
@@ -334,8 +325,8 @@ namespace {
 //     therefore important"; the letters at dropdown_title_access_key,
 //     app_state.h, the line at access_underline_rect below), and since the
 //     same day on THE DIALOG BUTTONS' WORDS (Windows strict; the prompts'
-//     letters at PromptState, app_state.h, the color picker's Copy and Paste
-//     in its plan; OK, Cancel and Close carry none). It is an underline under
+//     letters at PromptState, app_state.h; OK, Cancel and Close carry
+//     none). It is an underline under
 //     a letter of the plain word, never a bracket (the `[S]ave` spelling
 //     stays retired), and the label strings stay the plain words.
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
@@ -1175,9 +1166,8 @@ constexpr double kTooltipLineGapPx       = 3.0;   // between the two bands
 constexpr double kPopupSepInsetPx    = 5.0;   // the separator, per side
 
 // THE POPUP SEPARATOR — ONE PAINTER, EVERY POPUP MENU'S (2026-10-08 ~21:20:
-// the menu row's pull-downs, paint_dropdown, and the color picker's preset
-// menu, paint_color_picker, read it alike; a later vocabulary's own kind
-// forks here). `x0` is the box's left edge and `x1` its right edge, or the
+// the menu row's pull-downs, paint_dropdown, read it; a later vocabulary's
+// own kind forks here). `x0` is the box's left edge and `x1` its right edge, or the
 // scroll bar's left edge while a bar stands (`at_bar`, which a vocabulary
 // whose separator runs to the frame reads); `y` the pair's top row, below
 // the block's margin (popup_sep_margin_y_px). Windows' etched pair,
@@ -1207,8 +1197,8 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 
 // (THE DROPDOWN'S HORIZONTAL PADS, kPopupPadXPx and kPopupHotkeyGapPx, are
 // render.h's since 2026-10-07, beside the vertical metrics; the menu row's
-// pull-downs alone take them — the color picker's drop-downs take
-// color_picker::combo_text_inset_px, 2026-10-09.)
+// pull-downs alone take them — the choice editor's drop-down takes
+// choice_combo::combo_text_inset_px, 2026-10-09.)
 
 // THE BASELINE FOR A LABEL VERTICALLY CENTRED IN A BOX: the row that centres
 // the face's own CAP BAND in the box, a half-row tie going toward the TOP
@@ -1238,8 +1228,8 @@ constexpr double kPopupItemMinWidthPx = 176.0;
 // TWO SEATS, AND NO CALLER SOLVES A LINE AS A BOX. A BOX has margins to
 // centre a cap band in; a LINE is exactly the face's own ascent-plus-descent
 // band and has none, so a line's baseline is line_baseline() below and the cap
-// rule is not asked. THE BOX SEATS (the color picker's and the settings
-// choice's combos, lists and fields seat the same way): the
+// rule is not asked. THE BOX SEATS (the settings choice's combo and list
+// and the dialog fields seat the same way): the
 // caption's title, the row-8 clock (in its time field) and the
 // state line beside it (on THE FIELD's box since 2026-10-07 — the reasoning
 // is at paint_bottom_row_buttons_and_clock), the notification
@@ -1297,8 +1287,8 @@ double line_baseline(const GuiFont& font, double line_y) {
 // app_state.h's, dropdown_title_access_key), ALWAYS DRAWN: on the menu row's
 // titles, on every row of their three pull-downs and, since the same day, on
 // the dialog buttons' words (Windows strict, PromptState's block;
-// show_button_word), nowhere else (not the tooltips, the cards or the color
-// picker's preset menu). Windows 2000 hides it until Alt is held; ReactOS
+// show_button_word), nowhere else (not the tooltips, the cards or the
+// choice editor's list). Windows 2000 hides it until Alt is held; ReactOS
 // always draws it, and so does this product — the tablet has no Alt to
 // reveal it (the departure, win2000_deviations.md).
 //
@@ -3026,8 +3016,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (architect 2026-10-11, kTransportHistoryStepGroup): Older / Newer in
     // the arrows' seat; every other button
     // on this row publishes a real rect on every frame, except under a modal
-    // that owns the row — every one but the color picker
-    // (modal_owns_bottom_row) — where the row yields whole
+    // that owns the row (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
@@ -3263,8 +3252,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // IS THE MARK on both machines (plain_save_actionable, app_state.h).
         // THE ROW YIELDS WHOLE TO A MODAL, so the field and the line are
         // hidden while a prompt, a dialog editor, the render player or the
-        // picker stands — not the color picker, which leaves the row standing
-        // (modal_owns_bottom_row). It is why the render player's
+        // picker stands (modal_owns_bottom_row). It is why the render player's
         // load-under-a-running-render refusal says its sentence on a CARD:
         // the explanation the state line would have carried is not on screen
         // under that modal.
@@ -5604,30 +5592,7 @@ static text_editor::State* dialog_editor_to_paint(AppState& app,
 // (the fourth, the same day: its Cancel-alone row) or any dialog editor. The
 // top-strip FLAG editor is deliberately absent: it is positional and
 // pointer-transparent, not a dialog, and it never takes this row.
-//
-// THE COLOR PICKER IS ABSENT TOO, the fifth ModalDialogOwner and the one
-// that leaves the row standing (architect 2026-10-07 evening, "a different
-// type of modal"): its surface is the card on the well, so ROW 8 STAYS
-// PAINTED AND ACTING under it exactly as without it — the clock, the state
-// line and every roster button with its truthful enabling, its hot face,
-// its tooltip, its press-and-lift and its hold-repeat — AND SO DOES THE
-// ICON ROW (architect 2026-10-08, "the fact that the top row is disabled
-// under the picker also needs to be updated"). THE DELIBERATE ASYMMETRY,
-// recorded here: under the color picker THE TWO BUTTON ROWS ARE ON for the
-// POINTER AND THE PEN ALONE, and the picker veils THE WELL, THE MENU ROW and
-// THE KEYBOARD — the keyboard stays the picker's (its router consumes every
-// key, on_key, so the hex field types on glass), a press on the well is the
-// card's or consumed, and the menu row is the list owners' (its Edit and
-// Settings anchors dead, File live for Quit, the caption passing). Each
-// button grays only where its own act refuses under the picker — the
-// openers of another list owner or an editor (redesign_button_enabled's
-// color picker terms) — never wholesale. A roster lift's chord passes the
-// picker's key layer as the pointer's own
-// (GuiInputHandler::roster_chord_in_flight_); the card's preset menu and
-// element list, drawn last, cover a row where they hang over it, and while
-// either is down the press is theirs (the press router's veil). A PROMPT
-// over the picker (the palette Delete question) owns the row as every
-// prompt does. THIS SET LESS THE RENDER PLAYER IS THE ROW'S CHROME TENANTS
+// THIS SET LESS THE RENDER PLAYER IS THE ROW'S CHROME TENANTS
 // (chrome_tenant_owns_bottom_row, app_state.h, 2026-10-10), which stand in
 // THE DIALOG, the bottom overlay laid over the row (onscreen_keyboard.h's
 // overlay block).
@@ -5947,9 +5912,10 @@ namespace {
 // field → OK → Cancel; the rule at paint_modal_dialog's editor arm).
 constexpr double kModalButtonGapPx    = 6.0;
 // (THE FIELD'S HEIGHT AND PAD, kModalFieldHeightPx 23 and kModalFieldPadXPx
-// 5, are render.h's since 2026-10-08: the color picker's hex field and the
-// settings choice's combo take them too, so their one source is where every
-// reader sees it; the time fields, which took them 2026-10-08 to 2026-10-09,
+// 5, are render.h's since 2026-10-08: the settings choice's combo takes them
+// too (and the color picker's hex field did until 2026-10-14), so their one
+// source is where every reader sees it; the time fields, which took them
+// 2026-10-08 to 2026-10-09,
 // are Cool Edit's dark field with program_spec.h's own height and pad.)
 constexpr double kModalFieldWidthPx   = 378.0;  // authored; see the block above
 constexpr double kModalFieldMinWidthPx = 29.0;  // the field's floor
@@ -6088,22 +6054,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // modal_dialog_stash_current are the others) and they must agree or the
     // owner-tag doctrine breaks.
     const bool picker_up = !prompt_up && !player_up && app.picker.active;
-    // THE COLOR PICKER, the fifth owner (2026-10-07): the same rank as the
-    // two list owners, none of the three ever live with another, and its
-    // own one field is no dialog editor — so it forks here, before the
-    // editor fork, and paints ITS CARD ON THE WELL through
-    // paint_color_picker below, which publishes this stash (the card as the
-    // box, its field as the field, Copy / Paste / Close as the buttons)
-    // and the picker's own. THIS IS ONE OF THE THREE PLACES THE RANKING IS
-    // SPELLED (the other two are named above).
-    const bool color_picker_up =
-        !prompt_up && !player_up && !picker_up && app.color_picker.active;
     std::string prefix;
     text_editor::State* ed =
-        (prompt_up || player_up || picker_up || color_picker_up)
+        (prompt_up || player_up || picker_up)
             ? nullptr : dialog_editor_to_paint(app, prefix);
-    if (!prompt_up && !player_up && !picker_up && !color_picker_up &&
-        ed == nullptr) {
+    if (!prompt_up && !player_up && !picker_up && ed == nullptr) {
         // No dialog: the three pointer/keyboard face indices reset WITH the
         // stash, so a fresh dialog cannot inherit the previous one's lit
         // button, its armed button or its keyboard focus.
@@ -6132,22 +6087,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     if (face_state_reset) {
         reset_modal_dialog_face_state(app);
     }
-
-    // THE COLOR PICKER'S FORK: its surface is the card on the well, not the
-    // row, so the row's layout below is not its business — the row stays
-    // painted under it as without it (modal_owns_bottom_row's asymmetry),
-    // and the card, painted after the row, covers it only where its preset
-    // menu or chooser-row list hangs over it.
-    if (color_picker_up) {
-        paint_color_picker(cr, live_session, /*veiled=*/false);
-        return;
-    }
-    // AND UNDER ITS DELETE QUESTION (2026-10-07): the prompt owns the row and
-    // the stash below, and the card still stands on the well, VEILED —
-    // painted, publishing nothing (paint_color_picker's head) — so the
-    // question is asked over the picker it is about.
-    if (prompt_up && app.color_picker.active)
-        paint_color_picker(cr, 0, /*veiled=*/true);
 
     // THE MODAL'S SURFACE: the RENDER PLAYER'S is the bottom row's content
     // band — the program's tenant, on the row's own face, which
@@ -6966,8 +6905,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 
         // THE CHOICE EDITOR'S COMBO STANDS WHERE THE FIELD STANDS
         // (2026-10-07 evening; GuiSettingsEditor's head): field_outer's seat
-        // and size — THE FIELD'S 23 W, not the picker chooser's 21, the
-        // field's cell being the row's — and no text field, no caret, no
+        // and size — THE FIELD'S 23 W, the field's cell being the row's —
+        // and no text field, no caret, no
         // click-to-caret publication (dialog_editor_text stays invalid, so
         // the field claim and the I-beam find nothing).
         if (app.settings_choice_live()) {
@@ -7334,89 +7273,44 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// -- GuiPaintHandler::paint_color_picker (architect 2026-10-07) ---------------
+// -- THE CHOICE EDITOR'S COMBO (2026-10-07 evening; shared with the color picker until
+// 2026-10-14, the choice editor's alone since) -------------------------------
 //
-// THE COLOR PICKER'S CARD ON THE WELL — the anatomy, every length and the
-// seat are at color_picker.h's head; the layout is color_picker::layout,
-// read here and by the press router alike. This body PAINTS and PUBLISHES:
-// the modal stash (the card as `box`, the one field's interior as `field`,
-// the three push buttons as `buttons`, so the dialogs' shared machinery —
-// the hover walk, the press arm, the lift's dispatch, the tooltip wait, the
-// pressed and disabled faces — serves them unchanged) and the picker's own
-// (AppState::ColorPicker::Stash: the scope combo and the element chooser,
-// the chooser row's list, the sliders' tracks
-// and thumb columns, the field's run, the swatches, the wheel's circles,
-// the preset button and its menu's rows with their enabled bits). AS
-// PAINTED: everything is republished every run from the same layout the
-// pixels came from.
-//
-// VEILED (architect 2026-10-07, the preset menu's Delete question): under a
-// prompt the card still paints, so the question stands over the picker it
-// asks about, and publishes NOTHING — the modal stash is the prompt's, the
-// picker's stash goes invalid (a press under the prompt is the prompt's),
-// and no button wears a pressed face (the dialogs' indices name the
-// prompt's buttons then).
-//
-// THE LOOK: the GROUND with the PLAIN RAISED two-line edge; the wheel
-// (color_picker::paint_wheel, the one non-role painter); the scope combo,
-// the element chooser and the preset button — ONE COMBO DRAWING
-// (paint_picker_combo below): a sunken field in the field pair with
-// Windows' 16-W drop-down button and Marlett's wedge, the text at the
-// field's pad cut with "..." where it does not fit; the six slider rows —
-// the label cap-centered in `label`, the slider in the scrub's painters
-// (the channel's four lines and the pointed thumb on a 4 / 4 / 9 seat
-// filling the row), the value's tabular digits right-aligned in `label`;
-// the one field — the dialog field's size (kModalFieldHeightPx, render.h)
-// in the field pair inside one sunken-outer line, its run, selection and
-// caret the dialog field's own painting and its minimal-travel scroll
-// (text_editor::State::view_offset_px), and, under the name ask, the act's
-// word left of it in `label`; the swatch pair in a one-line sunken frame,
-// each swatch a flat fill of its word; the three push buttons
-// the dialogs' (the disabled face where their bits say); and the chooser's
-// list or the preset menu, when down, the menu-row popup's box and rows,
-// the menu's separator and grayed rows the dropdown's.
+// THE SETTINGS EDITOR'S CHOICE COMBO AND ITS LIST (the design at
+// GuiSettingsEditor's head, settings_editor.h; the geometry is choice_combo's,
+// settings_editor.h): ONE COMBO DRAWING (paint_choice_combo below) — a sunken
+// field in the field pair with Windows' 16-W drop-down button and Marlett's
+// wedge, the text at the drop-down inset cut with "..." where it does not
+// fit — and, when down, ITS LIST (paint_combo_list), the menu-row popup's box
+// and rows. The drawing is the one the color picker's chooser, scope combo
+// and preset button wore until the picker's removal (architect 2026-10-14),
+// kept byte for byte for the choice rows it served beside them.
 namespace {
-// THE COMBO'S DOWN WEDGE at (ax, ay), aw x ah: the ink when live, and when
-// grayed THE DISABLED EMBOSS's two copies (show_embossed_run's inks) —
-// Windows' inactive scroll-arrow glyph.
-void paint_picker_wedge(cairo_t* cr, double ax, double ay, int aw, int ah,
-                        bool enabled, GuiColor ink) {
-    const auto wedge = [&](double x, double y, GuiColor c) {
-        cairo_save(cr);
-        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
-        cairo_new_path(cr);
-        cairo_move_to(cr, x, y);
-        cairo_line_to(cr, x + aw, y);
-        cairo_line_to(cr, x + aw / 2.0, y + ah);
-        cairo_close_path(cr);
-        set_palette_source(cr, c);
-        cairo_fill(cr);
-        cairo_restore(cr);
-    };
-    if (enabled) {
-        wedge(ax, ay, ink);
-        return;
-    }
-    const double off = static_cast<double>(relief_line_px());
-    wedge(ax + off, ay + off, palette().hilight);
-    wedge(ax, ay, palette().shadow);
+// THE COMBO'S DOWN WEDGE at (ax, ay), aw x ah, in the ink.
+void paint_combo_wedge(cairo_t* cr, double ax, double ay, int aw, int ah,
+                       GuiColor ink) {
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    cairo_move_to(cr, ax, ay);
+    cairo_line_to(cr, ax + aw, ay);
+    cairo_line_to(cr, ax + aw / 2.0, ay + ah);
+    cairo_close_path(cr);
+    set_palette_source(cr, ink);
+    cairo_fill(cr);
+    cairo_restore(cr);
 }
 
 // THE COMBO'S TEXT in `room` from (x, baseline): whole when it fits, else
 // CUT AT A CODEPOINT with Windows' "..." after the longest prefix that fits
 // with it — the caption title's rule (paint_caption_row) — and nothing when
-// even the "..." does not fit. Live in `ink`, grayed in the emboss.
-void show_picker_combo_text(cairo_t* cr, const GuiFont& font, double x,
-                            double baseline, double room,
-                            std::string_view text, bool enabled,
-                            GuiColor ink) {
+// even the "..." does not fit. In `ink`.
+void show_combo_text(cairo_t* cr, const GuiFont& font, double x,
+                     double baseline, double room, std::string_view text,
+                     GuiColor ink) {
     const auto show = [&](const text_shape::ShapedRun& r, double rx) {
-        if (enabled) {
-            set_palette_source(cr, ink);
-            text_shape::show_shaped_run(cr, r, rx, baseline);
-        } else {
-            show_embossed_run(cr, r, rx, baseline);
-        }
+        set_palette_source(cr, ink);
+        text_shape::show_shaped_run(cr, r, rx, baseline);
     };
     text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
     if (run.width_px <= room) {
@@ -7438,66 +7332,58 @@ void show_picker_combo_text(cairo_t* cr, const GuiFont& font, double x,
 }
 } // namespace
 
-// THE CHROME'S COMBO — the chooser's drawing, the preset button's too
-// (2026-10-07, the planner's "reuse it"), the scope combo's (2026-10-08),
-// and since 2026-10-07 evening the
-// settings editor's CHOICE COMBO's, a reader outside the picker
-// (paint_settings_choice): `r` the whole control, `button`
-// the drop-down button inside it, `open` while its list or menu is down
-// (the button pushed), `enabled` false for the grayed face (the field takes
-// the ground, as a disabled Windows combo's edit does; the text and the
-// wedge the emboss).
-static void paint_picker_combo(cairo_t* cr, const GuiFont& font,
+// THE CHROME'S COMBO (2026-10-07; the choice editor's alone since
+// 2026-10-14): `r` the whole control, `button` the drop-down button inside it
+// (choice_combo::combo_drop_button), `open` while its list is down (the
+// button pushed). The field in the field pair inside the plain sunken edge,
+// the text at the drop-down inset (choice_combo::combo_text_inset_px)
+// stopping kComboTextGapPx short of the button.
+static void paint_choice_combo(cairo_t* cr, const GuiFont& font,
                                const GuiRect& r, const GuiRect& button,
-                               std::string_view text, bool open,
-                               bool enabled) {
+                               std::string_view text, bool open) {
     const int lw = relief_line_px();
-    const int aw_gap = scaled_px(color_picker::kComboTextGapPx);
+    const int aw_gap = scaled_px(choice_combo::kComboTextGapPx);
     const int fb = 2 * lw;
     paint_cell_rect(cr, GuiRect{r.x + fb, r.y + fb, r.w - 2 * fb, r.h - 2 * fb},
-                    enabled ? palette().field_ground : palette().ground);
+                    palette().field_ground);
     paint_relief_plain_sunken(cr, r);
     cairo_save(cr);
     cairo_rectangle(cr, r.x + fb, r.y + fb, button.x - (r.x + fb), r.h - 2 * fb);
     cairo_clip(cr);
-    const double tx = r.x + color_picker::combo_text_inset_px();
-    show_picker_combo_text(cr, font, tx, redesign_baseline(font, r.y, r.h),
-                           button.x - aw_gap - tx, text, enabled,
-                           palette().field_text);
+    const double tx = r.x + choice_combo::combo_text_inset_px();
+    show_combo_text(cr, font, tx, redesign_baseline(font, r.y, r.h),
+                    button.x - aw_gap - tx, text, palette().field_text);
     cairo_restore(cr);
     // THE DROP-DOWN BUTTON: Windows' scroll-arrow button, pushed while the
     // list is down, its wedge Marlett's 7 x 4.
     const ButtonBoxFace box = paint_button_box(
-        cr, button, /*lamp=*/false, /*pressed=*/open && enabled,
-        ButtonFamily::Push);
-    const int aw = scaled_px(color_picker::kComboArrowWPx,
-                             color_picker::kComboArrowMinWPx);
-    const int ah = scaled_px(color_picker::kComboArrowHPx,
-                             color_picker::kComboArrowMinHPx);
+        cr, button, /*lamp=*/false, /*pressed=*/open, ButtonFamily::Push);
+    const int aw = scaled_px(choice_combo::kComboArrowWPx,
+                             choice_combo::kComboArrowMinWPx);
+    const int ah = scaled_px(choice_combo::kComboArrowHPx,
+                             choice_combo::kComboArrowMinHPx);
     const double ax = button.x + (button.w - aw) / 2 + box.shift;
     const double ay = button.y + (button.h - ah) / 2 + box.shift;
-    paint_picker_wedge(cr, ax, ay, aw, ah, enabled, palette().label);
+    paint_combo_wedge(cr, ax, ay, aw, ah, palette().label);
 }
 
-// THE COMBO'S LIST — ONE PAINTER, TWO READERS (2026-10-07 evening, lifted
-// from the picker's chooser for the settings editor's choice editor, its
-// second reader): the dropdown's box (paint_dropdown's composition, the
-// popup's Menu face) at the placed box, then the SHOWN rows at
-// combo_list_item (color_picker.h; the popup lists' scroll, render.h's popup
-// scroll block), each LIT — the selected pair — when it is the pressed row
-// or the hovered one; then the scroll bar when it stands. Every row is live (no
-// grayed row: both lists' domains are wholly choosable). ITS LABELS STAND AT
-// THE DROP-DOWN INSET (color_picker::combo_text_inset_px, the one padding
-// rule of every drop-down under every chrome, 2026-10-09), each row's name
-// under the face's.
+// THE COMBO'S LIST (2026-10-07 evening): the dropdown's box
+// (paint_dropdown's composition, the popup's Menu face) at the placed box,
+// then the SHOWN rows at combo_list_item (choice_combo, settings_editor.h;
+// the popup lists' scroll, render.h's popup scroll block), each LIT — the
+// selected pair — when it is the pressed row or the hovered one; then the
+// scroll bar when it stands. Every row is live (no grayed row: a choice
+// domain is wholly choosable). ITS LABELS STAND AT THE DROP-DOWN INSET
+// (choice_combo::combo_text_inset_px, 2026-10-09), each row's name under the
+// face's.
 void GuiPaintHandler::paint_combo_list(
-        cairo_t* cr, const GuiFont& font, const color_picker::ComboList& list,
+        cairo_t* cr, const GuiFont& font, const choice_combo::ComboList& list,
         int pressed, int hover, PopupScrollPart held,
         const char* (*label_of)(const AppState&, int)) {
     paint_popup_chrome(cr, list.box, PopupFace::Menu);
-    const int pad_l = color_picker::combo_text_inset_px();
+    const int pad_l = choice_combo::combo_text_inset_px();
     for (int i = 0; i < list.count; ++i) {
-        const GuiRect item = color_picker::combo_list_item(list, i);
+        const GuiRect item = choice_combo::combo_list_item(list, i);
         if (item.w <= 0 || item.h <= 0) continue;   // scrolled out of view
         const bool lit = pressed == i || hover == i;
         if (lit) paint_cell_rect(cr, item, palette().selected_fill);
@@ -7510,31 +7396,28 @@ void GuiPaintHandler::paint_combo_list(
 }
 
 // THE SETTINGS EDITOR'S CHOICE COMBO (the design at GuiSettingsEditor's
-// head, settings_editor.h): THE PICKER'S COMBO DRAWING, paint_picker_combo
-// read from outside the picker, at the dialog field's seat and size — the field's
-// 23-W cell, not the picker's 21: the combo stands where the field stands,
-// in the row's cell (paint_modal_dialog's caller says so) — showing the
-// shown choice, its button pushed while the list is down. No hover face on
-// the combo (the picker's chooser takes none). The list, when down, is
-// paint_combo_list's at combo_list — standing on the combo's head, the row
-// being the window's foot, and scrolling by the popup lists' rule — the
-// shown row seeded lit at the open and the lit row following the pointer
-// over the rows and holding off them (the chooser's rule,
-// settings_choice_motion). The combo, the list, its rows (the zero rect for a row
-// scrolled out of view) and its bar publish into the modal stash, the press
-// road's only geometry.
+// head, settings_editor.h): paint_choice_combo at the dialog field's seat and
+// size — the field's 23-W cell: the combo stands where the field stands, in
+// the row's cell (paint_modal_dialog's caller says so) — showing the shown
+// choice, its button pushed while the list is down. No hover face on the
+// combo. The list, when down, is paint_combo_list's at combo_list — standing
+// on the combo's head, the row being the window's foot, and scrolling by the
+// popup lists' rule — the shown row seeded lit at the open and the lit row
+// following the pointer over the rows and holding off them
+// (settings_choice_motion). The combo, the list, its rows (the zero rect for
+// a row scrolled out of view) and its bar publish into the modal stash, the
+// press road's only geometry.
 void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
                                             const GuiRect& combo) {
     const AppState::SettingsChoice& ch = app.settings_choice;
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    paint_picker_combo(cr, font, combo, color_picker::combo_drop_button(combo),
-                       app.settings_choice_label(ch.shown), ch.list_open,
-                       /*enabled=*/true);
+    paint_choice_combo(cr, font, combo, choice_combo::combo_drop_button(combo),
+                       app.settings_choice_label(ch.shown), ch.list_open);
     dlg.combo = combo;
     if (!ch.list_open) return;
     const int n = app.settings_choice_count();
-    const color_picker::ComboList list =
-        color_picker::combo_list(combo, n, app.height, ch.list_scroll.top);
+    const choice_combo::ComboList list =
+        choice_combo::combo_list(combo, n, app.height, ch.list_scroll.top);
     paint_combo_list(cr, font, list, ch.list_pressed, ch.list_hover,
                      ch.list_scroll.held,
                      [](const AppState& a, int i) {
@@ -7544,360 +7427,7 @@ void GuiPaintHandler::paint_settings_choice(cairo_t* cr, const GuiFont& font,
     dlg.combo_list_bar = list.bar;
     dlg.combo_list_items.clear();
     for (int i = 0; i < n; ++i)
-        dlg.combo_list_items.push_back(color_picker::combo_list_item(list, i));
-}
-
-void GuiPaintHandler::paint_color_picker(cairo_t* cr, uint64_t live_session,
-                                         bool veiled) {
-    using color_picker::Channel;
-    AppState::ColorPicker&          cp  = app.color_picker;
-    AppState::ModalDialogGeometry&  dlg = app.modal_dialog;
-    const GuiFont font = gui_font(GuiFace::Body);
-    const color_picker::Layout L = color_picker::layout(app, font);
-    const bool asking = text_editor::is_active(cp.field_editor) &&
-                        cp.field_editor.kind == text_editor::Kind::PaletteName;
-    if (!veiled) dlg.owner = AppState::ModalDialogOwner::ColorPicker;
-
-    cairo_save(cr);
-
-    // THE CARD.
-    paint_cell_rect(cr, L.card, palette().ground);
-    paint_relief_plain_raised(cr, L.card);
-
-    // THE WHEEL.
-    {
-        const uint32_t r = (cp.rgb >> 16) & 0xFF, g = (cp.rgb >> 8) & 0xFF,
-                       b = cp.rgb & 0xFF;
-        const double v = std::max({r, g, b}) / 255.0;
-        color_picker::paint_wheel(cr, L, cp.hue_deg, cp.sat, v, cp.rgb);
-    }
-
-    // THE CHOOSER ROW: the scope combo, then the element chooser, each
-    // pushed while its own list is down (the row's one list,
-    // `chooser_scope` saying whose).
-    paint_picker_combo(cr, font, L.scope, L.scope_button,
-                       color_picker::scope_display_name(cp.scope),
-                       cp.chooser_open && cp.chooser_scope, /*enabled=*/true);
-    paint_picker_combo(cr, font, L.chooser, L.chooser_button,
-                       color_picker::element_display_name(cp.element),
-                       cp.chooser_open && !cp.chooser_scope, /*enabled=*/true);
-
-    // THE SIX SLIDERS.
-    for (int i = 0; i < color_picker::kChannelCount; ++i) {
-        const Channel c = color_picker::channel_at(i);
-        const GuiRect& row   = L.slider_row[i];
-        const GuiRect& track = L.slider_track[i];
-        const int max   = color_picker::channel_max(c);
-        const int value = color_picker::channel_value(cp, c);
-        show_row_text(cr, font, L.slider_label[i].x,
-                      redesign_baseline(font, row.y, row.h),
-                      color_picker::channel_label(c), palette().label);
-        const int thumb_x = color_picker::slider_thumb_x(track, value, max);
-        {
-            const int above = scaled_px(color_picker::kSliderThumbAbovePx, 1);
-            const int channel_h = scrub_channel_h_px();
-            paint_relief_plain_sunken(
-                cr, GuiRect{track.x, row.y + above, track.w, channel_h});
-            const int tw = scrub_thumb_w_px();
-            paint_scrub_thumb(cr, GuiRect{thumb_x - tw / 2, row.y, tw, row.h});
-        }
-        {
-            const std::string digits = std::to_string(value);
-            const text_shape::ShapedRun run = text_shape::shape_text_run(font, digits);
-            set_palette_source(cr, palette().label);
-            text_shape::show_shaped_run(
-                cr, run,
-                static_cast<double>(L.slider_value[i].x + L.slider_value[i].w) -
-                    run.width_px,
-                redesign_baseline(font, row.y, row.h));
-        }
-        cp.stash.sliders[static_cast<size_t>(i)] =
-            AppState::ColorPicker::SliderStash{row, track, thumb_x};
-    }
-
-    // THE NAME ASK'S WORD, cap-centered on the button band at the row's
-    // left (color_picker.h's THE NAME ASK).
-    if (asking) {
-        show_row_text(cr, font, L.name_label.x,
-                      redesign_baseline(font, L.name_label.y, L.name_label.h),
-                      color_picker::preset_act_label(
-                          cp.name_ask == AppState::ColorPicker::NameAsk::Rename
-                              ? color_picker::PresetAct::Rename
-                              : color_picker::PresetAct::SaveAs),
-                      palette().label);
-    }
-
-    // THE ONE FIELD — the hex field, or the name ask's wide field: the
-    // field pair inside Windows' one sunken-outer line.
-    {
-        text_editor::State& ed = cp.field_editor;
-        const bool editing = text_editor::is_active(ed);
-        paint_cell_rect(cr, L.field, palette().field_ground);
-        paint_relief_sunken_outer(cr, L.field);
-        const std::string shown =
-            editing ? ed.pending : color_picker::hex_spelling(cp.rgb);
-        const text_shape::ShapedRun run = text_shape::shape_text_run(font, shown);
-        const std::vector<double> bx =
-            text_shape::byte_offsets_px(run, shown.size());
-        const GuiColor ink_text     = palette().field_text;
-        const GuiColor ink_sel_fill = palette().selected_fill;
-        const GuiColor ink_sel_text = palette().selected_text;
-        // THE VIEW: the field's two pads in, scrolled by THE MINIMAL-TRAVEL
-        // RULE (text_editor::State::view_offset_px, the dialog field's four
-        // lines) — the hex spelling always fits, so only a long name ever
-        // travels.
-        const double pad_x    = scaled_px(kModalFieldPadXPx);
-        const int    caret_px = scaled_px(1.0, 1);
-        const double view_x0  = L.field.x + pad_x;
-        const double view_w   = std::max(1.0, L.field.w - 2.0 * pad_x);
-        double vo = 0.0;
-        if (editing) {
-            const int cursor_pos =
-                std::clamp(ed.cursor_pos, 0, static_cast<int>(shown.size()));
-            const double caret_off = bx[static_cast<size_t>(cursor_pos)];
-            const double travel_w  = view_w - static_cast<double>(caret_px);
-            vo = ed.view_offset_px;
-            if (caret_off - vo < 0.0)      vo = caret_off;
-            if (caret_off - vo > travel_w) vo = caret_off - travel_w;
-            const double max_vo =
-                run.width_px + static_cast<double>(caret_px) - view_w;
-            if (vo > max_vo) vo = max_vo;
-            if (vo < 0.0)    vo = 0.0;
-            ed.view_offset_px = vo;
-        }
-        const double tx = view_x0 - vo;
-        const double baseline = redesign_baseline(font, L.field.y, L.field.h);
-        const int band_y = static_cast<int>(
-            std::nearbyint(baseline - gui_font_ascent_px(font)));
-        const int band_h = static_cast<int>(std::nearbyint(gui_font_line_px(font)));
-        cairo_save(cr);
-        cairo_rectangle(cr, view_x0, L.field_inner.y, view_w, L.field_inner.h);
-        cairo_clip(cr);
-        const bool has_sel = editing && text_editor::has_selection(ed);
-        if (has_sel) {
-            const size_t s0 =
-                static_cast<size_t>(text_editor::selection_start(ed));
-            const size_t s1 =
-                static_cast<size_t>(text_editor::selection_end(ed));
-            const int hx0 = static_cast<int>(std::nearbyint(tx + bx[s0]));
-            const int hx1 = static_cast<int>(std::nearbyint(tx + bx[s1]));
-            const int hw  = hx1 > hx0 ? hx1 - hx0 : 1;
-            paint_cell_rect(cr, GuiRect{hx0, band_y, hw, band_h}, ink_sel_fill);
-            cairo_save(cr);
-            cairo_rectangle(cr, view_x0, L.field_inner.y, hx0 - view_x0,
-                            L.field_inner.h);
-            cairo_rectangle(cr, hx0 + hw, L.field_inner.y,
-                            (view_x0 + view_w) - (hx0 + hw), L.field_inner.h);
-            cairo_clip(cr);
-            set_palette_source(cr, ink_text);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-            cairo_restore(cr);
-            cairo_save(cr);
-            cairo_rectangle(cr, hx0, band_y, hw, band_h);
-            cairo_clip(cr);
-            set_palette_source(cr, ink_sel_text);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-            cairo_restore(cr);
-        } else {
-            set_palette_source(cr, ink_text);
-            text_shape::show_shaped_run(cr, run, tx, baseline);
-        }
-        if (editing && !veiled && text_editor::cursor_visible_now(ed)) {
-            const int pos = std::clamp(ed.cursor_pos, 0,
-                                       static_cast<int>(shown.size()));
-            paint_cell_rect(
-                cr,
-                GuiRect{static_cast<int>(std::nearbyint(tx + bx[static_cast<size_t>(pos)])),
-                        band_y, caret_px, band_h},
-                ink_text);
-        }
-        cairo_restore(cr);
-        cp.stash.field_text_origin_x = tx;
-        cp.stash.field_byte_x        = bx;
-    }
-
-    // OLD | NEW (not under the name ask, whose field stands over them).
-    if (!asking) {
-        paint_cell_rect(cr, L.swatch_old, hex(cp.old_rgb));
-        paint_cell_rect(cr, L.swatch_new, hex(cp.rgb));
-        paint_relief_sunken_outer(cr, L.swatch_frame);
-    }
-
-    // THE PRESET BUTTON, labeled with the active preset's shown name,
-    // gray while the name ask stands.
-    const bool menu_button_enabled = !asking;
-    paint_picker_combo(
-        cr, font, L.menu_button, L.menu_button_arrow,
-        color_picker::preset_display_name(
-            cp.scope, color_picker::active_preset(app, cp.scope)),
-        cp.menu_open, menu_button_enabled);
-
-    // THE THREE PUSH BUTTONS, published on the modal stash; all three gray
-    // while the name ask stands, Paste while the slot is empty. THEIR ACCESS
-    // KEYS (architect 2026-10-10, Windows strict; PromptState's block owns
-    // the rule): &Copy and &Paste, Close none — it is the card's Esc, as
-    // Cancel is a dialog's; the keys at route_color_picker_key and
-    // handle_color_picker_field_key.
-    {
-        struct Plan {
-            const char* label;
-            int access;   // the access key's byte in `label`, -1 for none
-            AppState::ColorPickerButtonAct act;
-            bool enabled;
-        };
-        const Plan plan[3] = {
-            {"Copy",  0, AppState::ColorPickerButtonAct::Copy,  !asking},
-            {"Paste", 0, AppState::ColorPickerButtonAct::Paste,
-             !asking && cp.slot_full},
-            {"Close", -1, AppState::ColorPickerButtonAct::Close, !asking},
-        };
-        static_assert(access_key_of("Copy", 0) != access_key_of("Paste", 0),
-                      "the picker's access letters must differ");
-        for (int i = 0; i < 3; ++i) {
-            const GuiRect& r = L.buttons[i];
-            const bool enabled = plan[i].enabled;
-            const bool armed   = !veiled && enabled && i == app.modal_dialog_pressed;
-            const bool pressed = !veiled && enabled &&
-                ((armed && app.modal_dialog_press_inside) ||
-                 i == app.modal_dialog_key_pressed);
-            const ButtonBoxFace box =
-                paint_button_box(cr, r, /*lamp=*/false, pressed,
-                                 ButtonFamily::Push);
-            const text_shape::ShapedRun run =
-                text_shape::shape_text_run(font, plan[i].label);
-            const double lx = r.x + (r.w - std::ceil(run.width_px)) / 2 + box.shift;
-            const double ly = redesign_baseline(font, r.y, r.h) + box.shift;
-            show_button_word(cr, run, plan[i].label, plan[i].access, lx, ly,
-                             enabled);
-            if (veiled) continue;
-            AppState::ModalDialogButton out;
-            out.rect             = r;
-            out.access_key       = plan[i].access >= 0
-                                       ? access_key_of(plan[i].label,
-                                                       plan[i].access)
-                                       : 0;
-            out.color_picker_act = plan[i].act;
-            out.enabled          = enabled;
-            out.tooltip          = plan[i].label;   // the act's name, nothing else
-            dlg.buttons.push_back(out);
-        }
-    }
-
-    // THE LIST, when down: the dropdown's box and rows (paint_dropdown's
-    // own composition one surface over), floating over whatever lies under
-    // the chooser.
-    cp.stash.list = GuiRect{0, 0, 0, 0};
-    cp.stash.list_items = {};
-    cp.stash.list_bar = PopupScrollBar{};
-    if (cp.chooser_open) {
-        const auto label_of =
-            cp.chooser_scope
-                ? +[](const AppState&, int i) {
-                      return color_picker::scope_display_name(
-                          color_picker::scope_at(i));
-                  }
-                : +[](const AppState& a, int i) {
-                      return color_picker::element_display_name(
-                          color_picker::scope_element_at(
-                              a.color_picker.scope,
-                              static_cast<std::size_t>(i)));
-                  };
-        paint_combo_list(cr, font, L.list, cp.chooser_pressed,
-                         cp.chooser_hover, cp.chooser_scroll.held, label_of);
-        for (int i = 0; i < L.list.count; ++i)
-            cp.stash.list_items[static_cast<std::size_t>(i)] = L.list_items[i];
-        cp.stash.list = L.list.box;
-        cp.stash.list_bar = L.list.bar;
-    }
-
-    // THE PRESET MENU, when down: the same box and THE ROWS THE LAYOUT
-    // SHOWS (the scroll's block — color_picker.h's THE PRESET MENU; the
-    // popup lists' scroll, render.h), its separators — one before each
-    // group — the pull-downs' own (paint_popup_separator, etched and
-    // inset) where each is in view — every label at THE
-    // DROP-DOWN INSET (color_picker::combo_text_inset_px, 2026-10-09, the
-    // scope and element lists' own), each act's enabled bit asked once here
-    // (preset_act_enabled) and published with its row; a grayed row wears
-    // no lit face and its label the emboss (paint_dropdown's rules); then the
-    // scroll bar when it stands. EVERY ROW IS PUBLISHED, a row scrolled out
-    // of view with the zero rect, so the lit and pressed indexes are the
-    // menu's own.
-    cp.stash.menu = GuiRect{0, 0, 0, 0};
-    cp.stash.menu_rows.clear();
-    cp.stash.menu_bar = PopupScrollBar{};
-    if (cp.menu_open) {
-        const std::vector<color_picker::PresetMenuRow>& rows = L.menu_rows;
-        assert(rows.size() == L.menu_items.size());
-        paint_popup_chrome(cr, L.menu, PopupFace::Menu);
-        // The pull-downs' separator (paint_popup_separator), from the box's left edge to its right
-        // edge — the bar's left edge while the bar stands.
-        for (const int sep_y : L.menu_sep_ys) {
-            const bool at_bar = L.menu_bar.present;
-            const int sep_r = at_bar ? L.menu_bar.bar.x : L.menu.x + L.menu.w;
-            paint_popup_separator(cr, L.menu.x, sep_r, at_bar,
-                                  sep_y + popup_sep_margin_y_px());
-        }
-        const int pad_l = color_picker::combo_text_inset_px();
-        for (std::size_t i = 0; i < rows.size(); ++i) {
-            const color_picker::PresetMenuRow& row = rows[i];
-            const GuiRect& item = L.menu_items[i];
-            const bool enabled =
-                !row.is_act || color_picker::preset_act_enabled(app, row.act);
-            const bool shown = item.w > 0 && item.h > 0;
-            const bool lit = enabled && (cp.menu_pressed == static_cast<int>(i) ||
-                                         cp.menu_hover == static_cast<int>(i));
-            if (shown) {
-                if (lit) paint_cell_rect(cr, item, palette().selected_fill);
-                const std::string label =
-                    row.is_act
-                        ? std::string(color_picker::preset_act_label(row.act))
-                        : color_picker::preset_display_name(cp.scope, row.name);
-                const double base = redesign_baseline(font, item.y, item.h);
-                if (enabled)
-                    show_row_text(cr, font, L.menu.x + pad_l, base, label,
-                                  lit ? palette().selected_text
-                                      : palette().label);
-                else
-                    show_row_text_embossed(cr, font, L.menu.x + pad_l, base,
-                                           label);
-            }
-            AppState::ColorPicker::MenuRowStash out;
-            out.rect    = item;
-            out.is_act  = row.is_act;
-            out.act     = static_cast<int>(row.act);
-            out.name    = row.name;
-            out.enabled = enabled;
-            cp.stash.menu_rows.push_back(std::move(out));
-        }
-        paint_popup_scroll_bar(cr, L.menu_bar, cp.menu_scroll.held);
-        cp.stash.menu = L.menu;
-        cp.stash.menu_bar = L.menu_bar;
-    }
-
-    // THE PUBLICATION.
-    cp.stash.valid     = !veiled;
-    cp.stash.session   = cp.session;
-    cp.stash.card      = L.card;
-    cp.stash.scope     = L.scope;
-    cp.stash.chooser   = L.chooser;
-    cp.stash.field     = L.field;
-    cp.stash.field_inner = L.field_inner;
-    cp.stash.swatch_old = L.swatch_old;
-    cp.stash.swatch_new = L.swatch_new;
-    cp.stash.menu_button = L.menu_button;
-    cp.stash.menu_button_enabled = menu_button_enabled;
-    cp.stash.wheel     = L.wheel;
-    cp.stash.wheel_cx  = L.cx;
-    cp.stash.wheel_cy  = L.cy;
-    cp.stash.wheel_outer_r = L.outer_r;
-    cp.stash.wheel_inner_r = L.inner_r;
-    if (!veiled) {
-        dlg.box     = L.card;
-        dlg.field   = L.field_inner;
-        dlg.session = live_session;
-        dlg.valid   = true;
-    }
-    cairo_restore(cr);
+        dlg.combo_list_items.push_back(choice_combo::combo_list_item(list, i));
 }
 
 // -- GuiPaintHandler::paint_onscreen_keyboard ----------------------------
@@ -8362,7 +7892,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // their lane are the floating surfaces — the notification cards (row 1
 // down), the dropdown (the menu row's foot down), the tooltip (under the
 // pointer, or above its button), the modal dialog's dropped choice list
-// (above row 8) and the color picker's card and its lists. (The keyboard
+// (above row 8). (The keyboard
 // slot and the folder overlay start at the toolbar band's foot and yield
 // the clock's row, GuiClockFingerprint::yields; the flag surface's blit
 // over the top strip is transparent above the marker lane.) A floater's
@@ -8373,7 +7903,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // upload walk's) and the canvas paint area's known-clear record.
 static bool floating_surface_stands(const AppState& app) {
     return app.dropdown.open() || app.redesign_tooltip.visible ||
-           !app.notifications.cards.empty() || app.color_picker.active ||
+           !app.notifications.cards.empty() ||
            (app.modal_dialog.combo_list.w > 0 &&
             app.modal_dialog.combo_list.h > 0);
 }
@@ -8854,10 +8384,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     pixel 0), or the frame skipped (it began known clear). Nothing
     //     else in a frame writes inside the area: THE PAINTERS OVER THE
     //     WELL, re-derived by grep from the passes below, are the cards
-    //     (paint_notifications), the pull-downs (paint_dropdown), the color
-    //     picker's card and lists, veiled or not, and the Settings choice
-    //     editor's dropped list (paint_modal_dialog), and the tooltip
-    //     (paint_shift_tooltip) — the floater bit's five; the keyboard, a
+    //     (paint_notifications), the pull-downs (paint_dropdown), the
+    //     Settings choice editor's dropped list (paint_modal_dialog), and the
+    //     tooltip (paint_shift_tooltip) — the floater bit's four; the keyboard, a
     //     dialog on it and the dialog alone (paint_keyboard_slot,
     //     paint_bottom_overlays, paint_modal_dialog's band) stand below the
     //     area's foot, which waveform_paint_area cuts at their line; the

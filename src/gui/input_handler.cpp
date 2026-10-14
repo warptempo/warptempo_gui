@@ -117,17 +117,13 @@ struct AtScopeExit {
 
 // IS THIS KEY A MENU TITLE'S ACCESS KEY (architect 2026-10-10 ~17:20)? Alt
 // alone with the File, Edit or Settings letter (dropdown_title_access_key,
-// app_state.h) — the one predicate on_key's three overlay routers (the render
-// player's, the project picker's, the color picker's) ask before taking a key
-// and its access-key arm asks again, so the keys follow the tap wherever a
-// title's tap opens its menu. NOT WHILE THE COLOR PICKER'S ONE FIELD STANDS
-// (the hex field, the preset name ask): the field owns the keyboard, an
-// Alt+letter there reaching its router and falling silent as it does in the
-// main editors (whose gate stands above the arm).
+// app_state.h) — the one predicate on_key's two overlay routers (the render
+// player's, the project picker's) ask before taking a key and its
+// access-key arm asks again, so the keys follow the tap wherever a title's
+// tap opens its menu.
 bool GuiInputHandler::menu_title_access_key(GuiKey key,
                                             GuiInputState mods) const {
     if (!mods.alt || mods.ctrl || mods.shift) return false;
-    if (app.color_picker.active && color_picker.field_active()) return false;
     return dropdown_menu_for_access_key(key) != DropdownMenu::None;
 }
 
@@ -335,8 +331,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (GuiPrompt::request_close), and the close drops both arms with the
     // overlay and the scrub state — the force-end every other gesture takes.
     //
-    // THE MENU TITLES' ACCESS KEYS PASS THIS BLOCK AND THE PICKER'S AND THE
-    // COLOR PICKER'S BELOW (architect 2026-10-10 ~17:20: wherever a title's tap
+    // THE MENU TITLES' ACCESS KEYS PASS THIS BLOCK AND THE PICKER'S
+    // BELOW (architect 2026-10-10 ~17:20: wherever a title's tap
     // opens its menu, its Alt+letter does): menu_title_access_key skips the
     // router, and the key meets the access-key arm further down — the same
     // road as everywhere, toggle_dropdown, whose guard is the anchor's painted
@@ -385,35 +381,6 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             }
         } else if (!menu_title_access_key(key, mods) &&
                    route_picker_key(key, mods)) {
-            return;
-        }
-    }
-
-    // THE COLOR PICKER IS KEYBOARD-MODAL THE SAME WAY (architect 2026-10-07),
-    // at the two list owners' rank with their shape — ITS ROUTER IS THE
-    // WHOLE VOCABULARY (route_color_picker_key: while its one field stands
-    // the keys are that field's alone, else Esc closes an open list or menu
-    // first and the picker at the next press, Ctrl+S saves, Ctrl+Q
-    // falls through with the picker closed by the close road, and every
-    // other chord is a consumed silence), and the gesture clause is the
-    // player's own: its slider and wheel drags are members of
-    // any_pointer_gesture_active, and while one stands every key is
-    // swallowed but the drag-modal gate's Ctrl+Q hatch.
-    // A ROSTER BUTTON'S OWN CHORD PASSES (architect 2026-10-07 evening for
-    // row 8, 2026-10-08 for the icon row): a button's lift or hold-repeat
-    // fire under the picker is the POINTER's dispatch, not a key, and the two
-    // button rows stay on under the picker (modal_owns_bottom_row's
-    // asymmetry, paint_handler.cpp), so it skips this block and meets every
-    // other gate as without the picker (roster_chord_in_flight_).
-    if (app.color_picker.active && !roster_chord_in_flight_) {
-        if (any_pointer_gesture_active(app)) {
-            if (!(ctrl && !shift && !alt && key == GuiKeys::Q)) {
-                notifications.notify(AppState::NotificationClass::Normal,
-                                     kKeysDuringDrag);
-                return;
-            }
-        } else if (!menu_title_access_key(key, mods) &&
-                   route_color_picker_key(key, mods)) {
             return;
         }
     }
@@ -741,13 +708,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // letters at dropdown_title_access_key, app_state.h): Alt+F, Alt+E and
     // Alt+S are the File, Edit and Settings titles' PRESS — toggle_dropdown,
     // the one open road, which refuses a dead anchor on its painted face as
-    // the press does (menu_anchor_live: in the `h` view, under the folder
-    // overlay and the color picker only File is live). AT THE PRESS, as
+    // the press does (menu_anchor_live: in the `h` view and under the folder
+    // overlay only File is live). AT THE PRESS, as
     // every hotkey (the timing doctrine, input_handler.h). RANKED HERE,
     // under the prompt, the open menu's own gate (where a row's letter and
     // the titles' switch are dropdown_key_blocked's), the load, the editors (a
     // field types or swallows; never a menu) and the gestures, and over the
-    // render player's, the picker's and the color picker's routers, which
+    // render player's and the picker's routers, which
     // let these keys by (menu_title_access_key — the keys follow the tap,
     // 2026-10-10 ~17:20), and above the `h` view's allowlist and the
     // authoring locks, neither of which governs a menu's open. Alt alone:
@@ -1324,18 +1291,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //       2026-08-29 — that key raises a PROMPT there now, rung (c);
     //   ((c5), THE AV SYNC STATS PANEL's own router, was the ninth place
     //       from 2026-09-03 and went with the panel on 2026-09-30.)
-    //   (c6) THE COLOR PICKER (2026-10-07, the ninth place again — one
-    //       router, route_color_picker_key, at the two list owners' rank):
-    //       Esc closes it — or, while its element list or preset menu is
-    //       down, CLOSES THAT LIST first (architect 2026-10-07, Windows' and
-    //       GTK's order: a second Esc closes the picker); or, while its one
-    //       field stands (the hex field or the name ask), ENDS THAT EDIT
-    //       first, through
-    //       route_modal_editor_key as every editor's Esc does (so that
-    //       press is (b)'s, and the next one this one's). It cannot collide
-    //       with the other editors: none opens under it and its router
-    //       admits no editor opener; a prompt over it (the preset menu's
-    //       Delete question, DELETE_PRESET_CONFIRM) is rung (c).
+    //   ((c6), THE COLOR PICKER's own router, was the ninth place again
+    //       from 2026-10-07 and went with the picker on 2026-10-14.)
     //   (d) THE RENDER / BATCH CANCEL — handle_escape_cancels, just above;
     //   (e) THE NOTIFICATION STACK, WHOLE (architect 2026-09-01, superseding
     //       the 2026-08-31 arm that took the oldest card alone) — the LAST
@@ -1816,8 +1773,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // act in the view from 2026-08-08, and the plain save had no key
         // there). Both chords are admitted by the read-only gate — a save and
         // a checkpoint of the state the tab already holds author nothing —
-        // and by the `h` view's allowlist; inside a standing PICKER, player or
-        // color picker the router answers Ctrl+S as the plain save and
+        // and by the `h` view's allowlist; inside a standing PICKER or player
+        // the router answers Ctrl+S as the plain save and
         // Ctrl+Shift+S as a consumed nothing, and under an editor the
         // keyboard-modal gate swallows Ctrl+Shift+S on its card.
         if (is_publish_key(key, mods)) {
@@ -3431,11 +3388,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     if (any_pointer_gesture_active(app)) return -1;
     // A SCROLLING POPUP LIST'S WHEEL (2026-10-08; render.h's popup scroll
     // block) — context 6, kPopupWheelRows a notch — over the published box
-    // of a list that is down and scrolls: the choice editor's list or the
-    // color picker's element list or preset menu. Ranked above the two
-    // swallows below (the picker's and the dialog editor's), whose surfaces
-    // these lists float over; a list that shows every row takes no wheel and
-    // falls to them.
+    // of a list that is down and scrolls: the choice editor's list. Ranked
+    // above the dialog editor's swallow below, whose surface the list floats
+    // over; a list that shows every row takes no wheel and falls to it.
     if (popup_list_wheel_hit(x, y) != 0) return 6;
     // THE FOLDER OVERLAY'S WHEEL (2026-08-28): live over the BAND alone —
     // context 4, the list's one-row-per-detent scroll — and swallowed
@@ -3456,10 +3411,6 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // over the overlay too.
     if (rect_contains(onscreen_keyboard::overlay_rect(app, gui), x, y))
         return -1;
-    // THE COLOR PICKER SWALLOWS THE WHEEL (2026-10-07): the well under it
-    // is for looking at, and its veil consumes the pointer's acts alike;
-    // the touch pan asks this context too, so a pan dies here with it.
-    if (app.color_picker.active) return -1;
     if (modal_dialog_editor_active()) return -1;
     if (app.loading || audio.total_frames() <= 0) return -1;
 
@@ -3553,13 +3504,6 @@ int GuiInputHandler::popup_list_wheel_hit(int x, int y) const {
         app.modal_dialog.combo_list_bar.present &&
         rect_contains(app.modal_dialog.combo_list, x, y))
         return 1;
-    const AppState::ColorPicker& cp = app.color_picker;
-    const AppState::ColorPicker::Stash& st = cp.stash;
-    if (!cp.active || !st.valid || st.session != cp.session) return 0;
-    if (cp.chooser_open && st.list_bar.present && rect_contains(st.list, x, y))
-        return 2;
-    if (cp.menu_open && st.menu_bar.present && rect_contains(st.menu, x, y))
-        return 3;
     return 0;
 }
 
@@ -3625,18 +3569,6 @@ void GuiInputHandler::on_wheel(GuiMouseButton dir, int count, int x, int y,
                                             app.modal_dialog.combo_list_bar,
                                             rows))
                     viewport.invalidate_modal_dialog_area();
-                return;
-            case 2:
-                if (popup_scroll_wheel_rows(app.color_picker.chooser_scroll,
-                                            app.color_picker.stash.list_bar,
-                                            rows))
-                    color_picker.damage_card();
-                return;
-            case 3:
-                if (popup_scroll_wheel_rows(app.color_picker.menu_scroll,
-                                            app.color_picker.stash.menu_bar,
-                                            rows))
-                    color_picker.damage_card();
                 return;
             default:
                 return;

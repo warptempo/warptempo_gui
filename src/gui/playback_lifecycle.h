@@ -176,9 +176,9 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-10 — NINE
-    // sites (the color picker's open, GuiColorPicker::open in
-    // color_picker.cpp, joined 2026-10-07 among them): GuiSettingsEditor::open (settings_editor.cpp); in
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-14 — EIGHT
+    // sites (the color picker's open was a ninth 2026-10-07..14):
+    // GuiSettingsEditor::open (settings_editor.cpp); in
     // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
     // (history_load_in_place — the history picker it replaced on 2026-08-29
     // was this caller before it), the `m`

@@ -8,7 +8,8 @@
 #include "target_render.h"
 #include "text_editor.h"
 #include "undo.h"
-#include "color_picker.h"      // combo_list: the choice list's open damage and seat
+#include "chrome_derive.h"     // live_chrome_words: whether a color commit moved the chrome
+#include "palette_file.h"      // the two color rows' presets (palette_record, scheme_record)
 
 #include "settings_file.h"     // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -23,6 +24,75 @@
 #include <system_error>
 #include <utility>
 #include <vector>
+
+// -- THE CHOICE EDITOR'S COMBO GEOMETRY (settings_editor.h's choice_combo) ----
+
+namespace choice_combo {
+
+GuiRect combo_drop_button(const GuiRect& r) {
+    // the sunken field's two lines
+    const int fb = 2 * relief_line_px();
+    const int bw = scaled_px(kComboButtonWPx);
+    return GuiRect{r.x + r.w - fb - bw, r.y + fb, bw, r.h - 2 * fb};
+}
+
+// ONE DROP-DOWN PADDING — THIS COMMENT IS THE RULE'S ONE OWNER (architect
+// 2026-10-09 ~00:30, ruled on the color picker's drop-downs of the day:
+// STANDARDIZE THEM TO WINDOWS' DROP-DOWN PADDING, APPROXIMATELY, the padding
+// one number "especially on the left"). Windows' own combo lists — ReactOS
+// WordPad's font combo — inset their text a few px with no check-mark
+// column; the combo's text stands inside the sunken field's two lines and
+// the dialog field's 5-W pad (kModalFieldPadXPx). That is THE DROP-DOWN
+// INSET, kComboTextInsetPx = 2 + 5 = 7 W (the planner's reading of
+// "approximately Windows' padding"). It is:
+//   THE FACE'S TEXT INSET, from the combo's outer left edge to the name
+//     (paint_choice_combo);
+//   THE LIST'S ROW INSET, the name in every row standing directly under the
+//     name on the face (paint_combo_list).
+// The menus' 22-W pads (kPopupPadXPx, render.h) are the menu row's
+// pull-downs' alone.
+int combo_text_inset_px() {
+    return scaled_px(kComboTextInsetPx);
+}
+
+// THE LIST IS EXACTLY THE COMBO'S OUTER BOX WIDE, FLUSH AT BOTH EDGES
+// (architect 2026-10-08: "the drop-down looks longer than the button you
+// press"): Windows' ComboLBox takes the combo's own width
+// (CB_SETDROPPEDWIDTH's default), its frame flush with the combo's sunken
+// edge.
+//
+// AN UPWARD BOX CARRIES ITS OWN TOP LINE as a hanging one does
+// (popup_border_top_px(upward), render.h: the whole frame either way).
+//
+// THE SIDE AND THE SCROLL ARE THE POPUP LISTS' (render.h's popup scroll
+// block, 2026-10-08): place_popup_list picks the side and the shown count,
+// and the bar stands inside the box at its right — the box keeping the
+// combo's width (the flush ruling above), the rows ending at the bar.
+ComboList combo_list(const GuiRect& combo, int count, int window_h, int top) {
+    ComboList l;
+    const PopupListPlacement p =
+        place_popup_list(combo, window_h, count * popup_item_h_px());
+    l.box    = GuiRect{combo.x, p.y, combo.w, p.h};
+    l.upward = p.upward;
+    l.count  = count;
+    l.bar    = popup_scroll_bar(
+        l.box, p.upward,
+        std::vector<int>(static_cast<std::size_t>(count), popup_item_h_px()),
+        p.room_h, top);
+    return l;
+}
+
+GuiRect combo_list_item(const ComboList& l, int i) {
+    if (i < l.bar.top || i >= l.bar.top + l.bar.visible || i >= l.count)
+        return GuiRect{0, 0, 0, 0};
+    return popup_item_rect(l.box,
+                           l.box.y + popup_border_top_px(l.upward) +
+                               popup_item_margin_y_px() +
+                               (i - l.bar.top) * popup_item_h_px(),
+                           l.bar.present);
+}
+
+} // namespace choice_combo
 
 namespace {
 
@@ -121,9 +191,8 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     // whole, so whatever that one owner decides is what this route gets, and
     // the is_active test on the next line is the belt that turns an open which
     // did not take into this route's silent return — the seed never runs.
-    // Since 2026-09-04 the opener refuses nothing but a standing editor and
-    // (2026-10-08) a standing color picker — whose Settings menu is dead, so
-    // this route never meets it — the read-only decision
+    // Since 2026-09-04 the opener refuses nothing but a standing editor, the
+    // read-only decision
     // having moved to the key's own commit arm (the account is at open()), so
     // a locked tab's menu click raises the editor like any other and the
     // commit says the lock's sentence where the key is the piece's.
@@ -211,7 +280,7 @@ void GuiSettingsEditor::set_choice_list_open(bool open) {
     ch.list_press_began_on_item = false;
     ch.list_scroll  = PopupScroll{};
     if (open) {
-        const color_picker::ComboList l = color_picker::combo_list(
+        const choice_combo::ComboList l = choice_combo::combo_list(
             app.modal_dialog.combo, app.settings_choice_count(), app.height,
             /*top=*/0);
         ch.list_scroll.top = popup_scroll_top_at(l.bar, ch.shown);
@@ -263,7 +332,7 @@ void GuiSettingsEditor::choice_pick(int index) {
 // is that road. The decision sits at each key's own commit arm now: the
 // engine-key path in commit() refuses under the lock with kTabReadOnlyCard and
 // the selected text every other refusal there leaves, while commit_device_setting's
-// five keys and the `gui_scale` arm commit regardless. So every Settings
+// four keys and the `gui_scale` arm commit regardless. So every Settings
 // dropdown row opens on a locked tab, and the four sidecar rows (Title, Notes,
 // URL, Cover) say the lock's sentence when they commit.
 //
@@ -325,11 +394,6 @@ void GuiSettingsEditor::open() {
     // ALREADY OPEN IS SILENT: the editor is on screen, which is the whole
     // answer — a second `;` asks for what is already there.
     if (text_editor::is_active(app.settings_editor)) return;
-    // A STANDING COLOR PICKER IS SILENT (2026-10-08; the openers refuse under
-    // each other): the picker's router consumes `;`, and the icon row's
-    // Settings button, acting under the picker since 2026-10-08, is grayed
-    // there on this refusal (redesign_button_enabled).
-    if (app.color_picker.active) return;
     // THE MODAL PLAYBACK STOP IS THE OPENER'S, past the return above — the
     // `h` view's own load raise takes the same shape ("playback halts only
     // when the modal actually opens, so a refused open leaves a listening
@@ -790,7 +854,7 @@ void GuiSettingsEditor::commit() {
         if (!is_key_char(c)) { reject("invalid character in key"); return; }
     }
 
-    // 2. The five device keys other than the scale — one body, ahead of the
+    // 2. The four device keys other than the scale — one body, ahead of the
     //    routers (the head's item 1; the body's own comment carries the
     //    rest).
     if (commit_device_setting(key, value)) return;
@@ -1052,7 +1116,9 @@ void GuiSettingsEditor::commit() {
 // THE ONE RECORDED EDGE: the picker's same-project no-op compares NAMES
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
-// project is opened first — a rename-by-hand case, accepted. (`theme`, in force at once with the palette repainted whole, had an arm
+// project is opened first — a rename-by-hand case, accepted. `chrome` and
+// `caption` (architect 2026-10-14): AT ONCE, live, no card — their arm below.
+// (`theme`, in force at once with the palette repainted whole, had an arm
 // here 2026-10-03..10-08, `icons` and `font` 2026-10-09..10-12; each left
 // with its key.) For a choice row "the commit" is the OK's or Enter's,
 // never a list row's (architect 2026-10-09, settings_editor.h's head).
@@ -1098,6 +1164,43 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         text_editor::deactivate(app.settings_editor);
     };
 
+    // THE TWO COLOR KEYS (architect 2026-10-14, "remove picker and preset
+    // file road"; the Settings Chrome and Caption rows): a built-in's key
+    // under its kind's one grammar owner (is_builtin_palette_name,
+    // is_builtin_scheme_name, palette_file.h), A PICK OF THE KIND'S DEFAULT
+    // WRITING NO LINE — the default palette, the chrome's own scheme: "no
+    // line for a chrome's own default of either kind" (the empty value,
+    // device_config.h) — and, unlike the path keys and like the font of
+    // 2026-10-09..10-12, APPLIED LIVE AT THE COMMIT, which is the OK's (or
+    // Enter's), never a list row's (architect 2026-10-14, "OK alone";
+    // settings_editor.h's head): the preset is installed and the screen
+    // repainted (install_color_preset), so NO CARD — the color is on screen,
+    // the answer; these two keys apply at the commit, every other device key
+    // at the next open or launch. A failed write keeps the live colors for
+    // the session, the card saying the persist failed. A pick that leaves
+    // the file as it stands is the unchanged no-op.
+    if (key == "chrome" || key == "caption") {
+        const bool chrome = key == "chrome";
+        if (chrome ? !is_builtin_palette_name(value)
+                   : !is_builtin_scheme_name(value)) {
+            reject(chrome ? kPaletteGrammarReason : kSchemeGrammarReason);
+            return true;
+        }
+        std::string& field = chrome ? app.device_config->palette
+                                    : app.device_config->scheme;
+        const std::string_view no_line = chrome ? effective_palette_name({})
+                                                : effective_scheme_name({});
+        const std::string line = value == no_line ? std::string() : value;
+        if (line == field) { unchanged(); return true; }
+        field = line;
+        // ONE KIND MOVES: the other kind's live words stand.
+        if (chrome) install_color_preset(palette_record(value), live_chrome_pick());
+        else        install_color_preset(program_palette_words(), scheme_record(value));
+        (void)persist();
+        applied();
+        return true;
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1133,6 +1236,38 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                              kProjectsPathAppliesCard);
     }
     return true;
+}
+
+void GuiSettingsEditor::install_color_preset(
+        const GuiPaletteWords& words,
+        const std::optional<GuiChromePick>& scheme) {
+    // The shape and why it is enough are at install_program_palette's
+    // declaration (palette_file.h) and, for the caption, install_chrome_pick's
+    // (render.h).
+    const WaveformPlateInks before = waveform_plate_inks();
+    const GuiThemeWords chrome_before = live_chrome_words(
+        program_palette_words(), live_chrome_pick());
+    install_program_palette(words);
+    install_chrome_pick(scheme);
+    if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
+    else                                 viewport.refresh_flag_cache();
+    // A CHANGED CHROME — THE SCHEME'S CAPTION KEYS (kGuiChromeLines), OR THE
+    // PALETTE'S FACE OR INK, WHICH EVERY OTHER CHROME ROLE DERIVES FROM
+    // SINCE 2026-10-10 (chrome_derive.h) — DAMAGES THE WHOLE SURFACE
+    // (2026-10-09): the window's sizing frame — the restored laptop's —
+    // paints in the chrome's roles outside the client area, which
+    // invalidate_all never reaches (platform.h's two damage calls). A
+    // PALETTE CHANGE THAT MOVES NO CHROME ROLE NEEDS NO MORE THAN THE CLIENT:
+    // those roles paint in the program's panels, the well and what enters
+    // it, never on the frame. Neither kind touches an icon (every glyph
+    // wears its drawing's own inks, icons.h's head) or the face (a scheme
+    // carries none, gui_font.h's one).
+    if (live_chrome_words(program_palette_words(),
+                          live_chrome_pick()) != chrome_before) {
+        viewport.invalidate_surface();
+    } else {
+        viewport.invalidate_all();
+    }
 }
 
 bool GuiSettingsEditor::complete_path_value(const std::string& value) {

@@ -21,7 +21,7 @@
 //
 // THE COLORS ARE TWO KINDS. THE PANEL'S are the palette's: the `face` role
 // and the tones Cool Edit derives from it (cool_edit_derive.h, the COOL EDIT
-// BLOCK of palette()), so a pick of Face moves the whole panel — the time
+// BLOCK of palette()), so a new Face moves the whole panel — the time
 // field's digits and the panel label's swapping pair among them, and since
 // 2026-10-10 THE BUTTON CASE'S face ramp, highlight, shadow ramp and corner
 // (the per-row case tones, cool_edit_derive.h's head with the fit's worst

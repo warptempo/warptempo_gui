@@ -26,13 +26,13 @@
 // the tones Cool Edit derives from it, the waveform's ink — by Cool Edit's
 // own arithmetic (cool_edit_derive.h, whose head has the measurements and
 // the proofs), re-derived at every install of the palette (render.cpp's
-// install family), so a Waveform-scope pick of the Face or the ink moves the
-// chrome live.
+// install family), so a new Face or ink (the Settings Chrome row's commit)
+// moves the chrome live.
 //
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's 21, each decided
 // once — the build proves every role is listed exactly once, the caption's
 // six from the scheme and no other role from it; palette_file.cpp proves
-// each scheme key moves the role its picker OLD reads):
+// each scheme key moves the role its `role` column names):
 //   ground, light_3d, clock_ground       = the Face (Cool Edit's "Dockable
 //                                          Window 3D Color"; 3DLight the face,
 //                                          as Windows' own schemes record it)

@@ -15,7 +15,6 @@
 #include "selection.h"
 #include "active_views.h"
 #include "ab_audition.h"
-#include "color_picker.h"
 #include "render_player.h"
 #include "notifications.h"
 #include "settings_editor.h"
@@ -702,11 +701,6 @@ struct GuiInputHandler {
     // are — the threshold crossing, the motion arm and the two end roads
     // (release and finalize_active_drags) — all in input_pointer.cpp.
     ValueDragOps             value_drag;
-    // THE COLOR PICKER'S ACTS (2026-10-07, color_picker.h), owned here as
-    // the value drag is and for its reason: four of this handler's own
-    // references, no consumer outside this handler but GuiPrompt's close
-    // road, which reaches it through close_color_picker.
-    GuiColorPicker           color_picker;
     GuiFlagEditor&           flag_editor;
     GuiRendersDir&           renders_dir;
     GuiActiveViews&          active_views;
@@ -881,7 +875,6 @@ struct GuiInputHandler {
           // members beside it: a reference member initialised from another
           // member depends on declaration order, and this one must not.
           value_drag(app_, audio_, viewport_, undo_, target_render_),
-          color_picker(app_, viewport_, notifications_, playback_lifecycle_),
           flag_editor(flag_editor_),
           renders_dir(renders_dir_),
           active_views(active_views_),
@@ -1022,10 +1015,10 @@ struct GuiInputHandler {
     // probe both consult it so the two surfaces can never drift.
     int wheel_context(int x, int y) const;
     // THE SCROLLING POPUP LIST UNDER (x, y), as published (render.h's popup
-    // scroll block): 1 the settings choice editor's list, 2 the color
-    // picker's element list, 3 its preset menu — each only while it is
-    // down and its bar stands — else 0. wheel_context's context 6 and
-    // on_wheel's arm both read it, so the two cannot disagree.
+    // scroll block): 1 the settings choice editor's list — only while it is
+    // down and its bar stands — else 0 (2 and 3 were the color picker's
+    // element list and preset menu, 2026-10-08..14). wheel_context's context
+    // 6 and on_wheel's arm both read it, so the two cannot disagree.
     int popup_list_wheel_hit(int x, int y) const;
     void on_motion(int mouse_x, int mouse_y, GuiInputState mods);
 
@@ -1596,8 +1589,8 @@ struct GuiInputHandler {
     // The open menu's row `item` RUN — close first, then the menu's own
     // action — the release's body, shared since 2026-10-10 with the row's
     // access key (dropdown_key_blocked). The caller has asked the row's
-    // painted enabled bit; `x` is the window x Pick Colors opens against.
-    void activate_dropdown_item(int item, int x);
+    // painted enabled bit.
+    void activate_dropdown_item(int item);
     // Drop the popup's POINTER-DERIVED state — the hovered face, the armed
     // face and the press claim — at the hook fired by both the pointer-leave
     // and capability-loss edges (its only caller). Only capability loss ends
@@ -1793,15 +1786,11 @@ struct GuiInputHandler {
     // the player's block below.
     void clear_folder_overlay_press();
     void clear_player_scrub_drag();
-    // THE COLOR PICKER'S GESTURE's hard end (2026-10-07), the same edge and
-    // the same reason; its drag applied every step live, so nothing is lost.
-    void clear_color_picker_drag();
-    // THE POPUP LISTS' SCROLL HOLDS' end (2026-10-08; render.h's popup scroll
+    // THE POPUP LIST'S SCROLL HOLD'S end (2026-10-08; render.h's popup scroll
     // block): the held arrow's face and the thumb's drag of the choice
-    // editor's list, the picker's element list and its preset menu, dropped
-    // on the same three edges and at each hold's own lift
-    // (color_picker_release, finish_settings_choice_release) — every row
-    // already scrolled live, so nothing is lost; each box it frees damaged.
+    // editor's list, dropped on the same three edges and at the hold's own
+    // lift (finish_settings_choice_release) — every row already scrolled
+    // live, so nothing is lost; the box it frees damaged.
     void clear_popup_scroll_holds();
     // THE NOTIFICATION CARDS' POINTER HALVES (2026-08-29; the rule is at
     // notifications.h). The CLAIM ranks above every veil in on_button_press:
@@ -1907,16 +1896,6 @@ struct GuiInputHandler {
     // picker cluster below, private beside its openers); public for that one
     // caller, exactly as the editors' body above is.
     void close_picker();
-    // THE COLOR PICKER'S ONE CLOSE BODY (2026-10-07): Close, Esc, the close
-    // road's head — GuiColorPicker::close through this handler.
-    void close_color_picker();
-    // THE COLOR PICKER DELETE'S TWO ANSWERS (architect 2026-10-07), called
-    // by GuiPrompt when DELETE_PRESET_CONFIRM answers — GuiColorPicker's
-    // confirm_delete and cancel_delete through this handler, the render
-    // player Delete's pair one surface over. The raise is
-    // GuiColorPicker::raise_delete.
-    void confirm_color_picker_delete();
-    void cancel_color_picker_delete();
 
     // THE THREE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // — THE DEFECT IS WHY THIS EXISTS, and it is worth stating before the
@@ -2208,24 +2187,12 @@ struct GuiInputHandler {
     // WHETHER A PLAIN PRESS ON CELL `cell` OF A FLAG IS THE MEMBERSHIP
     // TOGGLE — the Add to Selection lamp's fold (architect 2026-08-18; it
     // stops at the payload box, 2026-09-19), the term's one spelling: read by
-    // run_marker_click_act's `toggle`, by run_marker_select_alone and by
+    // run_marker_click_act's `toggle` and by
     // pointer_cursor_kind's flag arm (2026-10-09), so the cue promises what
     // the press does.
     bool plain_marker_press_toggles(MarkerCell cell) const {
         return app.add_to_selection && cell == MarkerCell::Payload;
     }
-
-    // THE PLAIN CLICK'S SELECTION ALONE (2026-10-08 ~21:20 / ~23:00) — a
-    // plain press on a flag through the color picker's veil: the selection
-    // fork the plain click runs AS THE ADD TO SELECTION LAMP RULES IT
-    // (plain_marker_press_toggles: the membership toggle on the payload
-    // with the lamp lit, Selection::toggle_selection_membership; else the
-    // single select, Selection::set_single_selection), then the addressed
-    // cell `cell` — and NOTHING ELSE the click does: no playback stop, no
-    // playhead land, no arm, no double-click seed or consume. ONE caller,
-    // the color picker's veil in on_button_press. Definition in
-    // input_pointer.cpp.
-    void run_marker_select_alone(int hit, MarkerCell cell);
 
     // THE PLAIN WHEEL OVER A FLAG CELL (architect 2026-09-14): on_wheel's
     // context 5. A standing marker-lane editor closes as an outside press
@@ -2279,7 +2246,7 @@ struct GuiInputHandler {
     bool cancel_archival_session();
 
     // True when ANY text editor is consuming printable keys — the settings
-    // editor, the color picker's field, or the top-strip flag editor in ANY of
+    // editor or the top-strip flag editor in ANY of
     // its kinds (unlike modal_dialog_editor_active, which names the two
     // DIALOG-hosted surfaces — the settings editor and the flag editor's
     // BpmBracket kind — and omits
@@ -2767,7 +2734,7 @@ private:
     void run_playhead_end_jump(bool forward, bool whole_piece);
 
     // Shared key route for EVERY keyboard-modal editor — the settings prompt,
-    // the bpm bracket editor, the color picker's field and (architect
+    // the bpm bracket editor and (architect
     // 2026-07-28) the top-strip flag editor. The modal contract is stated once
     // at the definition; returns true if the editor consumed the key (on_key
     // then returns), false on Ctrl+Q so on_key runs the close routing.
@@ -2826,8 +2793,8 @@ private:
     // other key with the combo focused is a consumed nothing — no key edits
     // the line.
     bool handle_settings_choice_key(GuiKey key, GuiInputState mods);
-    // THE CHOICE EDITOR'S POINTER (input_pointer.cpp, the bodies beside the
-    // color picker's; every target read from the modal stash as painted):
+    // THE CHOICE EDITOR'S POINTER (input_pointer.cpp; every target read from
+    // the modal stash as painted):
     //   claim_settings_choice_press — a dropped list owns every press: one
     //     on its scroll bar is the bar's (render.h's popup scroll block), a
     //     plain left press on a row arms it, any other press closes the list,
@@ -3019,93 +2986,6 @@ private:
     // what they mean, exactly as render_player_active below does.
     bool picker_active() const { return app.picker.active; }
 
-    // -- THE COLOR PICKER (architect 2026-10-07; the cluster is
-    //    color_picker.h, the acts GuiColorPicker above, the bodies here in
-    //    input_pointer.cpp and input_key_dispatch.cpp) ----------------------
-    //
-    // THE FIFTH ModalDialogOwner, the two list owners' shape one surface
-    // over: its predicate is the mode bit (color_picker_active), its veil
-    // consumes every press outside its card but the live File anchor's, the
-    // caption's and — the two button rows staying on under it for the
-    // pointer (row 8 since 2026-10-07 evening, the icon row since
-    // 2026-10-08; modal_owns_bottom_row, paint_handler.cpp) — THE ICON ROW'S
-    // AND ROW 8'S while neither its list nor its menu is down and the card
-    // does not cover the press, and a plain press on a flag outside the
-    // card, the marker click's select alone (2026-10-08 ~21:20; the veil in
-    // on_button_press, color_picker.h's head), its router is
-    // the whole
-    // plastic vocabulary while it
-    // stands (route_color_picker_key: Esc closes an open list or menu first
-    // and the picker at the next press, Ctrl+S saves, Ctrl+Q falls
-    // through with the picker closed by the close road, every other chord a
-    // consumed silence; while its one field stands — the hex field or the
-    // name ask — the keyboard is that field's alone,
-    // handle_color_picker_field_key, Tab doing nothing — the card has no
-    // focus ring), and its one close body is close_color_picker (Close,
-    // Esc, the close road's head). The press router's three bodies:
-    //   color_picker_press — the veil's left press: the scroll bar's (an
-    //     arrow, a page, the thumb's drag — render.h's popup scroll block),
-    //     a preset menu row's arm (a grayed row a consumed nothing) or the
-    //     menu's dismissal while the menu is down; the bar's, a list row's
-    //     arm or the list's dismissal while the list is down; a standing edit abandoned by any press
-    //     outside its field; then, on the card, the field's focus (a
-    //     double press on a standing edit its word select), the scope
-    //     combo's or the element chooser's list open, the preset button's open (when painted
-    //     live), a slider track's thumb seat-and-arm (the scrub's rule), the
-    //     ring's or the triangle's arm, OLD's revert, or a push button's arm
-    //     through the dialogs' shared arm; off the card, consumed (a press
-    //     on the icon row or row 8 never reaches it unless a popup is down —
-    //     the veil hands it to the rows' own claim — nor a plain press on a
-    //     flag, the veil's select). Every target is read
-    //     from the
-    //     published stash, never derived live.
-    //   color_picker_motion — a scroll hold's carry (the thumb's drag), a
-    //     live gesture's carry (the slider, the ring, the triangle; the
-    //     button lost ends it), else the list's and the menu's lit rows
-    //     (following the pointer over their rows, holding off them,
-    //     2026-10-09 evening), the dialog buttons' walk and the roster's.
-    //   color_picker_release — the gesture's end (already applied), a scroll
-    //     hold's end, a menu row's act (GuiColorPicker's preset acts) or a
-    //     list row's select (the scope's set_scope or the element's
-    //     set_element),
-    //     or the dialog buttons' shared dispatch (a roster arm's lift goes
-    //     to finish_chrome_press_release instead, on_button_release's block).
-    //   clear_color_picker_drag — the gesture's hard end (the pointer-leave
-    //     hook, the button-lost arms).
-    // (close_color_picker and clear_color_picker_drag are declared public
-    // beside close_picker and clear_player_scrub_drag, for GuiPrompt::
-    // request_close and main.cpp's pointer-leave hook.)
-    bool color_picker_active() const { return app.color_picker.active; }
-    void color_picker_press(int x, int y, GuiInputState mods,
-                            const DoubleClickCandidate& dc_at_press);
-    void color_picker_motion(int x, int y, GuiInputState mods);
-    void color_picker_release(int x, int y);
-    bool route_color_picker_key(GuiKey key, GuiInputState mods);
-    bool handle_color_picker_field_key(GuiKey key, GuiInputState mods);
-    // The chooser row's list: open (`scope` the scope combo's, its live
-    // scope lit, else the element chooser's, the live element lit) or
-    // close, damaging the list's area either way.
-    void set_color_picker_list_open(bool open, bool scope = false);
-    // The preset menu: open (the active preset's name lit) or close, the
-    // list's damage rule.
-    void set_color_picker_menu_open(bool open);
-    // THE ROSTER'S CHORD IN FLIGHT (architect 2026-10-07 evening for row 8,
-    // 2026-10-08 for the icon row: the two button rows stay on under the
-    // color picker, the asymmetry recorded at modal_owns_bottom_row,
-    // paint_handler.cpp): true for the span of one ROSTER button's own
-    // dispatch — its lift's chord (finish_chrome_press_release), each fire
-    // of its hold-repeat (tick_chrome_press_repeat) and the arm's
-    // eligibility probe (arm_redesign_press) — and false everywhere else.
-    // Its TWO READERS are the color picker's key layer: on_key's router
-    // block and repeat_eligible's picker arm, which let the chord through as
-    // the pointer's own, so the button's act and its hold-repeat run exactly
-    // as without the picker while every PHYSICAL key stays the picker's.
-    // (Set for every roster dispatch, picker or not: both readers ask the
-    // picker's bit first, so outside it the flag answers nothing.)
-    // Saved and restored around each span (RosterChordScope,
-    // input_pointer.cpp), never cleared.
-    bool roster_chord_in_flight_ = false;
-
     // AFTER A PEN LIFT EVERY HOVER-LIT FACE HOLDS UNTIL THE PEN MOVES
     // (architect 2026-10-07 for the roster's hot face, the first; 2026-10-09
     // for every hover-lit face, under every chrome). The pen's lift keeps
@@ -3130,10 +3010,7 @@ private:
     //   the pull-down menus' lit row (AppState::Dropdown::hovered_item; its
     //     walk recompute_dropdown_hover, run per motion and per iteration);
     //   the Settings combo's lit row (AppState::SettingsChoice::list_hover;
-    //     its walk settings_choice_motion);
-    //   the color picker's list — the scope's and the element's, one list —
-    //     and its preset menu (AppState::ColorPicker::chooser_hover and
-    //     menu_hover; their walk color_picker_motion).
+    //     its walk settings_choice_motion).
     //   NOTHING ELSE LIGHTS BY HOVER: a flag has no hover face (render.h's
     //   flag block); the folder overlay's rows, the project picker's among
     //   them, none (folder_overlay.h); the menu row, the caption buttons and
@@ -3170,7 +3047,7 @@ private:
     // the Settings combo at the pen's contact): the latch stands only after
     // a lift, and the lists' lit rows answer the contact by their own rule —
     // a list's lit row follows the pointer onto its rows and HOLDS OFF THEM
-    // (Windows' combo list; settings_choice_motion, color_picker_motion), so
+    // (Windows' combo list; settings_choice_motion), so
     // the contact's motions over the combo that dropped it, and the lift's
     // restore motion before the latch arms, change no face. The pull-down
     // menus go dark off their rows (Windows' menu).
@@ -4151,7 +4028,7 @@ private:
     // the keyboard, so every chord outside the admitted set is a silent no-op.
     // EVERY editor does — the single-State dialog one (settings; the commit
     // title stood beside it 2026-08-07 to 2026-10-10), the bpm bracket, the
-    // bound editor, the color picker's field and the
+    // bound editor and the
     // top-strip FlagPayload flag editor, which this ruling brought in, reversing
     // the old "commands punch through" design and deleting the tail that
     // discarded an edit on the way to a command.
@@ -4609,7 +4486,7 @@ private:
     // (ModalDialogGeometry::button_for_access_key, as painted), asked only
     // of the live surface's stash; the caller fires the index through
     // dispatch_modal_dialog_button, the one act road. Callers: the prompt
-    // gate (input_handler.cpp) and the color picker's two key routes.
+    // gate (input_handler.cpp).
     int  modal_dialog_access_button(GuiKey key, GuiInputState mods,
                                     bool field_focused) const;
 

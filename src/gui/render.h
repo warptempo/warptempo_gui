@@ -112,12 +112,13 @@ struct TrimRange {
 // (kGuiThemeRoles, theme_file.h).
 // The program's roles are kGuiPaletteRoles and the compiled built-in
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
-// active palette is the device config's `chrome` — a built-in or a
-// `<name>.chrome` file from the `chromes/` folder beside it — or, with no
+// active palette is the device config's `chrome` — a built-in's key, chosen
+// by the Settings Chrome row (architect 2026-10-14; files from a `chromes/`
+// folder were read 2026-10-07..14) — or, with no
 // `chrome` line, the default palette, Cool Edit's "Midnight" under every
 // chrome (2026-10-12); the active SCHEME, the caption's six keys, is its
-// `caption` — a built-in or a `<name>.caption` file from the `captions/`
-// folder — or, with no line, the live chrome's own, which carries no keys
+// `caption` — a built-in's key, chosen by the Settings Caption row
+// — or, with no line, the live chrome's own, which carries no keys
 // and paints the chrome's COMPILED CAPTION (palette_file.h's
 // kGuiCaptionOwn: Windows Storm's, architect 2026-10-12). There is
 // NO LEVEL (architect 2026-10-04): a dark look, like any look made official,
@@ -151,12 +152,8 @@ struct TrimRange {
 // (Cool Edit's toolbar has none, program_spec.h's case_hot_face, 2026-10-09)
 // and the chrome's buttons never had one; the menus' and lists' lit rows are
 // a selection, not a button face. Every colour is a solid fill of integer
-// cells. THE
-// COLOR PICKER'S WHEEL IS THE ONE PLACE THE PRODUCT PAINTS COLORS THAT ARE
-// NOT ROLES (architect 2026-10-07, by necessity — the wheel IS the color
-// space, as the icons are their own inks: color_picker::paint_wheel, whose
-// head owns the rule; its two swatches and the live colors it installs are
-// the palette's own words). THE ONE
+// cells. (The color picker's hue ring and SV triangle, 2026-10-07..14, were
+// the one place the product painted colors that were not roles.) THE ONE
 // EXCEPTION IS THE CAPTION'S GRADIENT (architect 2026-10-05), Windows 98 and
 // 2000's title bar where a theme records a gradient end: a SMOOTH 24-bit
 // ramp, each device column its own rounded colour (architect 2026-10-06,
@@ -177,10 +174,10 @@ struct TrimRange {
 // THIS PARAGRAPH IS THE RULE'S ONE STATEMENT; every other chrome length stays
 // in Windows px (scaled_px).
 //
-// A HEX HERE IS AN sRGB BYTE TRIPLE, AS EVERY SCREENSHOT AND SCHEME FILE
-// RECORDS IT (architect 2026-10-08 ~05:15: "if I open that image in the web
+// A HEX HERE IS AN sRGB BYTE TRIPLE, AS EVERY SCREENSHOT RECORDS IT
+// (architect 2026-10-08 ~05:15: "if I open that image in the web
 // browser, it would have the identical color on the GUI") — a palette role, a
-// chrome role, the picker's hex, a catalog theme's byte. The tablet's window
+// chrome role, a catalog theme's byte. The tablet's window
 // is a Display-P3 layer (GuiPlatform::adopt_window, platform_android.cpp), so
 // THE TABLET CONVERTS sRGB -> DISPLAY-P3 AT THE PAINTER'S ENTRY
 // (display_color; the math and every converting site at
@@ -212,7 +209,7 @@ struct TrimRange {
 //   PLAIN SUNKEN  Shadow / Hilight, DkShadow / 3DLight — a field
 //                 (EDGE_SUNKEN);
 //   SUNKEN OUTER  ONE line, Shadow / Hilight (BDR_SUNKENOUTER) — the open
-//                 menu title, the color picker's field and swatch, and THE
+//                 menu title and THE
 //                 PROGRAM'S FRAME round the program (Cool Edit's frame
 //                 window, program_frame_rect, 2026-10-10);
 //   ETCHED        a Shadow line with a Hilight line immediately beside it —
@@ -463,7 +460,7 @@ struct GuiPalette {
 // state in render.cpp, written by the install family below alone:
 // install_palette at its ONE application point, gui_main's startup, before
 // the window exists; and install_program_palette and install_chrome_pick,
-// the picker's live road. Before the first install it is construction state
+// the Settings Chrome and Caption rows' live road. Before the first install it is construction state
 // (black), never painted.
 const GuiPalette& palette();
 
@@ -491,8 +488,8 @@ GuiColor surface_text(GuiSurface surface);
 // Edit"; "scheme files shrink to the caption's keys"; every other chrome
 // role inherits the palette's Cool Edit tones, chrome_derive.h): the title's
 // start, end and text, and the inactive caption's three — palette_file.h
-// owns their file grammar (kGuiChromeLines: the three of the block, all
-// required, and the three inactive, each optional), chrome_derive.h the
+// owns their table (kGuiChromeLines: the three of the block and the three
+// inactive, each optional in a pick), chrome_derive.h the
 // mapping onto the caption's roles. "WE SHOULD NEVER HAVE A TOGGLE"
 // (2026-10-08): the caption's text is a picked word, never a rule's
 // white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
@@ -520,23 +517,23 @@ struct GuiChromePick {
 };
 
 // Install every color: THE PROGRAM'S off `program`, THE LIVE WORDS
-// (2026-10-07, the color picker's round): the eleven program colors as they
+// (2026-10-07): the eleven program colors as they
 // stand in the process, which the caller hands in explicitly — and THE
 // CHROME'S, DERIVED FROM THEM (2026-10-10, the chrome inherits Cool Edit:
 // every role but the caption's six a tone of the palette's face or ink,
 // live_chrome_words, chrome_derive.h), the caption's six off `chrome`, the
 // scheme's keys, or with none the compiled caption
 // (chrome_caption(), palette_file.h). AT LAUNCH the palette the config's `chrome`
-// key names and the scheme its `caption` key names (2026-10-08; through
-// is_palette_name and is_scheme_name — a built-in or a file read at launch —
-// or, with no line, the default palette and the live chrome's own scheme,
+// key names and the scheme its `caption` key names (2026-10-08; built-ins
+// alone since 2026-10-14, is_builtin_palette_name and is_builtin_scheme_name
+// — or, with no line, the default palette and the live chrome's own scheme,
 // effective_palette_name and effective_scheme_name, palette_file.h: gui_main
 // resolves them with palette_record and scheme_record and passes the two).
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
-// `chrome` and `caption` keys name THE ACTIVE PRESETS (color_picker.h's THE
-// PRESETS) and give the words at launch alone; a preset's load or Delete
-// installs words, and a load, Save As, Rename or Delete writes its key
-// (GuiColorPicker). This resolves and never refuses. It bumps
+// `chrome` and `caption` keys name THE ACTIVE PRESETS and give the words at
+// launch; the Settings Chrome and Caption rows' commit installs a preset's
+// words live and writes its key (GuiSettingsEditor::commit_device_setting,
+// architect 2026-10-14). This resolves and never refuses. It bumps
 // palette_generation below, the flag cache's fingerprint term, and the
 // plate's two baked inks (waveform_plate_inks) move with it. The words type
 // is palette_file.h's. `chrome` is the scheme's keys (GuiChromePick above),
@@ -548,9 +545,10 @@ void install_palette(const std::array<uint32_t, 11>& program,
 // caption alone since 2026-10-10): the chrome's members re-derived off
 // live_chrome_words(the live program words, `chrome`)
 // (chrome_derive.h) and palette_generation bumped, the program's eleven
-// untouched — only the caption's six can move. THE PICKER'S LIVE ROAD
-// beside install_program_palette (GuiColorPicker::install_live_words, which
-// runs that member's apply shape after both). Why that shape is enough for
+// untouched — only the caption's six can move. THE LIVE ROAD beside
+// install_program_palette is the Settings rows' commit
+// (GuiSettingsEditor::install_color_preset, which runs that member's apply
+// shape after both; the color picker's until 2026-10-14). Why that shape is enough for
 // the chrome: the chrome's colors bake into one cached thing, the flag cache
 // (a disabled flag's ground), keyed by the generation; the caption's ramp
 // image keys its two words itself (paint_caption_gradient); no icon raster
@@ -561,8 +559,9 @@ void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
 // THE LIVE CHROME PICK AS INSTALLED — the caption keys the install family
 // last wrote (install_palette's or install_chrome_pick's `chrome`), carried
 // as given under every chrome — THE LIVE SCHEME, as program_palette_words is THE LIVE
-// PALETTE (what the picker's Save writes and its enabled bit compares,
-// color_picker.h), file-scope for the same reason.
+// PALETTE, file-scope for the same reason. Its readers: the Settings rows'
+// commit (the other kind's words passed through unchanged, and the chrome's
+// before-and-after compare, GuiSettingsEditor::install_color_preset).
 const std::optional<GuiChromePick>& live_chrome_pick();
 
 // THE LIVE WORDS AS INSTALLED — the program's eleven the install family
@@ -571,17 +570,14 @@ const std::optional<GuiChromePick>& live_chrome_pick();
 // spelled as its array type here because palette_file.h includes this
 // header, which static_asserts the 11 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
-// reopen (gui_main's loop) while the installed palette is not, and the
-// picker's picks are the PROCESS's until a preset is saved (color_picker.h's
-// THE PRESETS) — so a reopen keeps them exactly as a Close does. THREE
-// READERS: the color picker (every pick starts from these and writes one
-// word), the picker's open (the live element's OLD color) and its presets
-// (Save and Save As write these words, and Save's enabled bit compares them
-// with the active preset's).
+// reopen (gui_main's loop) while the installed palette is not — so a reopen
+// keeps them. ITS READER: the Settings rows' commit
+// (GuiSettingsEditor::install_color_preset — the Caption row passes them
+// through unchanged, and the chrome's before-and-after compare reads them).
 const std::array<uint32_t, 11>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
-// program's eleven alone, the picker's live road — is declared in
+// program's eleven alone, the Chrome row's live road — is declared in
 // palette_file.h beside the words it takes and defined in render.cpp beside
 // install_palette.)
 
@@ -601,9 +597,8 @@ uint64_t palette_generation();
 // PIXEL IS REBUILT, re-grepped 2026-10-08 against the head's list of
 // converting sites: the flag cache by the generation bumped here; the
 // waveform plate by its inks' fingerprint (waveform_plate_inks hands the
-// window's words); the caption ramp and the color picker's ring and
-// triangle by the conversion state in their own cache keys
-// (paint_caption_gradient, color_picker.cpp's RingCache / TriangleCache);
+// window's words); the caption ramp by the conversion state in its own
+// cache key (paint_caption_gradient);
 // the checker's tile is built per fill and keeps nothing. THE APPLY SHAPE THE
 // CALLER OWES, after the call (GuiInputHandler::toggle_true_colors): the
 // icon rasters dropped (icons::drop_rasters — they convert at raster time
@@ -1318,7 +1313,7 @@ inline GuiRect menu_row_content_rect(const GuiRect& lane) {
 
 // THE DIALOG FIELD — ONE SHAPE UNDER EVERY CHROME: every text field of the
 // modal dialogs (paint_modal_dialog's editor arm, the choice editor's combo
-// at its seat) and the color picker's hex field is this tall, its edge
+// at its seat) is this tall, its edge
 // included, with its text this far in from its outer edge — not a chrome
 // spec field, a field to be made only when a later vocabulary's differs.
 // WIN2000 Windows' 14-dialog-unit edit box beside its 14-unit push button,
@@ -2276,7 +2271,7 @@ inline int popup_border_px() {
 }
 // The rows the frame spends at the box's TOP: the whole frame, whether the
 // box hangs from its opener or stands on its head (`upward`: the settings
-// choice editor's list, the preset menu's upper placement) — the parameter
+// choice editor's list) — the parameter
 // kept for a later vocabulary whose hanging menu draws its top line on its
 // opener's last row (GtkMenu's did, 2026-10-07 to 2026-10-09).
 inline int popup_border_top_px(bool /*upward*/) {
@@ -2315,31 +2310,27 @@ inline int popup_item_margin_y_px() {
 //    their space as plain padding. It is the right margin the kdenlive crop
 //    measured (30 laptop px, re-authored at the unit's change); the crop's
 //    57-px left indent, kdenlive's checkbox-and-icon gutter, retired for the
-//    mirror. THEY ARE THE MENU ROW'S PULL-DOWNS' ALONE: every DROP-DOWN —
-//    the picker's scope and element lists, ITS PRESET MENU, the settings
-//    editor's choice list — takes THE DROP-DOWN INSET on both sides, one
-//    number under every chrome (color_picker::combo_text_inset_px, the
+//    mirror. THEY ARE THE MENU ROW'S PULL-DOWNS' ALONE: the DROP-DOWN — the
+//    settings editor's choice list — takes THE DROP-DOWN INSET on both
+//    sides (choice_combo::combo_text_inset_px, settings_editor.cpp, the
 //    rule's one owner, architect 2026-10-09).
 //  - THE COLUMN GAP is the guaranteed minimum separation between the widest
 //    label and the widest accelerator, the kdenlive crop's 13 laptop px
 //    re-authored as 9 Windows px (architect 2026-10-02: the gap kept).
 //  - A LIST STANDING A SCROLL BAR (the scroll block below, 2026-10-08)
-//    keeps its left pad from its left edge and measures the right pad to
-//    the BAR'S LEFT EDGE: the picker's preset menu, whose width is its
-//    labels' between the drop-down inset's two pads, widens by the bar so
-//    the labels keep both.
+//    keeps its left pad from its left edge, its rows ending at the BAR'S
+//    LEFT EDGE (the color picker's preset menu, 2026-10-08..14, widened by
+//    the bar; the choice list keeps the combo's width).
 inline constexpr double kPopupPadXPx      = 22.0;
 inline constexpr double kPopupHotkeyGapPx = 9.0;
 
 // THE POPUP LISTS SCROLL (architect 2026-10-08 ~11:20, "expand the
-// drop-downs so we can scroll up and down" — reversing the 2026-10-07 bound,
-// under which the window bounded the preset menu, the names' tail was cut
-// and Save As refused when no name fit; closed_questions.md records the
-// reversal). THIS BLOCK IS THE RULE'S ONE OWNER for the three LIST popups —
-// the settings choice editor's list (settings_editor.h's head), the color
-// picker's element list and its preset menu (color_picker.h's head) — whose
-// heads point here. The menu row's dropdowns never outgrow the window and
-// take none of it.
+// drop-downs so we can scroll up and down"; closed_questions.md records the
+// reversal of the 2026-10-07 bound). THIS BLOCK IS THE RULE'S ONE OWNER for
+// the LIST popup — the settings choice editor's list (settings_editor.h's
+// head), whose head points here; the color picker's element list and its
+// preset menu took it too, 2026-10-08..14. The menu row's dropdowns never
+// outgrow the window and take none of it.
 //  * THE PLACEMENT (place_popup_list): hung from the opener's foot where every
 //    row fits whole below it to the window's foot, else standing on the
 //    opener's head where every row fits whole above it to the window's head,
@@ -2347,8 +2338,7 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    tie) SHOWING THE MOST WHOLE ROWS THAT FIT and scrolling the rest — no
 //    box ever passes the window.
 //  * THE ROWS SCROLL BY ROW, EVERY ROW ALIKE (Windows' list box scrolls
-//    everything): the preset menu's four acts and its separators are ordinary
-//    rows that scroll with the names, none pinned. THE BOX'S ROOM is the most
+//    everything), none pinned. THE BOX'S ROOM is the most
 //    whole ITEM rows that fit on its side (place_popup_list), and THE SHOWN
 //    ROWS ARE EVERY ROW FROM THE TOP WHOSE SUMMED HEIGHTS FIT IN THAT ROOM,
 //    each row at its own height — a separator counted at its separator
@@ -2368,8 +2358,7 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    the bar's held part. IT IS RESET TO THE HEAD AT EACH OPEN (a reopened
 //    list starts at its head), with ONE EXCEPTION, Windows' combo's own
 //    (architect 2026-10-11): a list that opens with a current value lit —
-//    the choice editor's, the element list and the preset menu (its active
-//    preset) — opens with that row AT THE TOP, clamped at the end
+//    the choice editor's — opens with that row AT THE TOP, clamped at the end
 //    (popup_scroll_top_at).
 //  * THE PICTURE IS A VERTICAL SCROLL BAR INSIDE THE LIST, AT ITS RIGHT, UNDER
 //    EVERY CHROME (architect 2026-10-08, his ReactOS WordPad font-combo
@@ -2393,12 +2382,9 @@ inline constexpr double kPopupHotkeyGapPx = 9.0;
 //    (popup_scroll_bar); a track too short for the floor shows no thumb, as
 //    Windows shows none. The chrome draws it in its own scroll bar's
 //    vocabulary (paint_popup_scroll_bar, beside the trim bar's painters).
-//  * THE WIDTH: a box whose width is its labels' (the preset menu, its pads
-//    the drop-down inset, color_picker::combo_text_inset_px) widens by the
-//    bar (the pads block's last term, beside kPopupPadXPx); a combo's list
-//    stays the combo's own width (the flush ruling at color_picker::combo_list)
-//    with the bar inside it — its labels are a closed domain the combo
-//    already fits.
+//  * THE WIDTH: a combo's list stays the combo's own width (the flush
+//    ruling at choice_combo::combo_list, settings_editor.cpp) with the bar
+//    inside it — its labels are a closed domain the combo already fits.
 //  * THE INPUT — the pointer, the pen and one finger alike, every zone the
 //    PUBLISHED bar's (ON SCREEN IS AS PAINTED; popup_scroll_hit): a press on
 //    an ARROW scrolls ONE ROW and wears the pressed face until the lift — ONE
@@ -2815,8 +2801,7 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
 //                         overlay's band, 2026-10-06), the scrub's channel.
 //   paint_relief_sunken_outer — SUNKEN OUTER, ONE ring (DrawEdge's
 //                         BDR_SUNKENOUTER, Shadow / Hilight): the open menu
-//                         title, the color picker's field and swatch, the
-//                         program's frame (paint_program_frame).
+//                         title and the program's frame (paint_program_frame).
 //   paint_relief_line_frame — one colour all round, square (no mitre
 //                         between one tone and itself): the dialog's
 //                         default-button frame, the list's focus frame and

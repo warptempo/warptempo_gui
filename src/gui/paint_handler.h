@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace color_picker { struct ComboList; }
+namespace choice_combo { struct ComboList; }
 
 class GuiCanvasSink;        // canvas_sink.h
 struct GuiCanvasDrawList;   // canvas_sink.h
@@ -187,8 +187,8 @@ struct WaveformCache {
     int       fp_line_px = -1;
     // THE TWO BAKED INKS the live pixels were written in (the `waveform_ink`
     // and `waveform_outline` roles, waveform_plate_inks, render.h): the plate
-    // writes their words, so an install that moves either (the color
-    // picker's live words, install_program_palette, palette_file.h)
+    // writes their words, so an install that moves either (the Settings
+    // Chrome row's commit, install_program_palette, palette_file.h)
     // re-renders it BY FIELD, keyed directly like the line width (architect
     // 2026-10-03; palette roles since 2026-10-07).
     WaveformPlateInks fp_inks{};
@@ -398,7 +398,7 @@ struct FlagCache {
     // render.h — architect 2026-10-03; the palette's roles since
     // 2026-10-07): every flag pixel is a palette colour (the kind's face, its
     // label, the outline, the ground of a disabled box), so an install (the
-    // color picker's live words, install_program_palette) re-renders the
+    // Settings color rows' commit, install_program_palette) re-renders the
     // surface BY FIELD, the scale's shape. (The KIND needs no field of
     // its own: it is the column, which fp_active_markers_view keys, or the
     // diff half, which the history fields key.)
@@ -1066,14 +1066,6 @@ private:
     // button claims and click-to-caret read. The full design record is at the
     // definition; the field's sampled chrome is at render.h's kModal* block.
     void paint_modal_dialog(cairo_t* cr);
-    // THE COLOR PICKER'S CARD (2026-10-07; color_picker.h owns the anatomy),
-    // paint_modal_dialog's fifth fork: paints the card on the well and
-    // publishes the modal stash (the card, the one field, the three push
-    // buttons) and the picker's own (AppState::ColorPicker::Stash). Called
-    // from paint_modal_dialog alone, with the live session it stamps — or
-    // VEILED, under the prompt its preset menu's Delete raises: painted,
-    // publishing nothing (the definition's head).
-    void paint_color_picker(cairo_t* cr, uint64_t live_session, bool veiled);
     // THE SETTINGS EDITOR'S CHOICE COMBO (2026-10-07 evening; the design at
     // GuiSettingsEditor's head): the chrome's combo at `combo` — the dialog
     // field's seat — showing the live choice, and its list above it while
@@ -1081,12 +1073,11 @@ private:
     // paint_modal_dialog's editor branch alone, in place of the text field.
     void paint_settings_choice(cairo_t* cr, const GuiFont& font,
                                const GuiRect& combo);
-    // THE COMBO'S LIST — one painter, two readers: the picker's chooser and
-    // the settings choice editor (the definition's head), its rows and its
-    // scroll bar as color_picker::combo_list placed them, `held` the bar's
-    // held part.
+    // THE COMBO'S LIST — the settings choice editor's (the definition's
+    // head), its rows and its scroll bar as choice_combo::combo_list placed
+    // them, `held` the bar's held part.
     void paint_combo_list(cairo_t* cr, const GuiFont& font,
-                          const color_picker::ComboList& list, int pressed,
+                          const choice_combo::ComboList& list, int pressed,
                           int hover, PopupScrollPart held,
                           const char* (*label_of)(const AppState&, int));
 

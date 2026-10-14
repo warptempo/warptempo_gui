@@ -10,7 +10,7 @@
 #include "render.h"
 #include "settings_file.h"
 #include "text_editor.h"
-#include "palette_file.h"   // kGuiPaletteRoleCount: the color picker's chooser
+#include "palette_file.h"   // the Chrome and Caption rows' domains (kGuiBuiltinPalettes, kGuiChromeSchemes)
 #include "phase_reset_clipboard.h"
 #include "phaseresetmarkers.h"
 #include "warp_frame_map_view.h"
@@ -3463,9 +3463,8 @@ inline constexpr RedesignButton dropdown_anchor_button(DropdownMenu m) {
 // (activate_dropdown_item), a greyed row's letter consumed doing nothing as
 // its press is, and another title's Alt+letter switches menus. THE OPEN
 // MENU'S ROWS ANSWER FIRST, Windows' own precedence (user32's menu loop
-// matches a key in the deepest open menu): Settings' Font (F) answers Alt+F
-// before the File title does, Edit's Paste Phase Reset State (S) Alt+S
-// before Settings.
+// matches a key in the deepest open menu): Edit's Paste Phase Reset State
+// (S) answers Alt+S before the Settings title does.
 //
 // AN ASCII LETTER'S KEY: the letter folded to the lowercase keysym every
 // GuiKeys letter is (gui_input.h), the platform case-folding alike.
@@ -3511,25 +3510,27 @@ inline constexpr bool redesign_button_is_menu_anchor(RedesignButton b) {
 // `separator_before` marks where a group parts: the four SIDECAR keys a hand
 // edits (the metadata), then the editable DEVICE CONFIG keys
 // in that file's own writer order (kDeviceConfigKeys, device_config.cpp;
-// `last_project` is the program's own and has no row).
+// `last_project` is the program's own and has no row), then the COLORS'
+// group — the `chrome` and `caption` keys' two choice rows, Chrome first
+// (architect 2026-10-14: the program's colors before the title bar's), and
+// the True Colors command.
 //
 // It lives here rather than in the painter because three domains read it — the
 // painter (labels, layout), the press claim (which key a click prefills) and
 // the popup's own geometry (item count). The keys are the canonical spellings
 // the settings editor takes, so the prefill goes through the ordinary recall
 // serializer with nothing translated on the way.
-// THE ROW'S ACT (2026-10-07): the menu carries COMMAND ROWS beside its keys
-// — "Pick Colors", the color picker's opener (GuiColorPicker::open; the
-// only road to it, no chord), and since 2026-10-08 "True Colors", the
-// conversion's toggle (GuiInputHandler::toggle_true_colors) — so a row says
-// which it is: EditKey prefills the settings editor with `key`, PickColors
-// opens the picker, TrueColors flips the bit, and a command row's `key` is
-// unread (nullptr).
-enum class SettingsPopupAct { EditKey, PickColors, TrueColors };
+// THE ROW'S ACT (2026-10-07): the menu carries A COMMAND ROW beside its keys
+// — since 2026-10-08 "True Colors", the conversion's toggle
+// (GuiInputHandler::toggle_true_colors; "Pick Colors", the color picker's
+// opener, stood beside it 2026-10-07..14) — so a row says which it is:
+// EditKey prefills the settings editor with `key`, TrueColors flips the
+// bit, and a command row's `key` is unread (nullptr).
+enum class SettingsPopupAct { EditKey, TrueColors };
 // THE ROW'S EDITOR (architect 2026-10-07 evening: "a drop-down for chrome
 // and theme at the very least"): an EditKey row opens the settings editor
 // in one of two KINDS. TEXT is the `key=value` line in the sunken field,
-// every key's editor until that evening and still all but one's. CHOICE is
+// every key's editor until that evening and still all but two's. CHOICE is
 // for a key whose domain is A SHORT CLOSED LIST: the same bottom-row editor
 // with the chrome's COMBO BOX where the field stands, its list dropping
 // UPWARD over the well (the design at GuiSettingsEditor's head,
@@ -3544,6 +3545,42 @@ struct SettingsChoiceSource {
     int         (*count)();
     const char* (*value)(int);
     const char* (*label)(int);
+};
+// THE CHROME'S DOMAIN (architect 2026-10-14, "remove picker and preset file
+// road"): Cool Edit Pro 2.1's twenty color presets (kGuiBuiltinPalettes,
+// palette_file.h) in THE CHROME ROW'S ORDER (kGuiPaletteMenuOrder: Midnight
+// first, then the other nineteen alphabetically by display name), the key
+// the value and the display name the label. The combo shows THE EFFECTIVE
+// PRESET, the default's when the config has no `chrome` line
+// (recall_gui_setting_value, settings_io.cpp).
+inline constexpr SettingsChoiceSource kChromeChoiceSource{
+    +[]() -> int { return static_cast<int>(std::size(kGuiPaletteMenuOrder)); },
+    +[](int i) -> const char* {
+        return kGuiBuiltinPalettes[kGuiPaletteMenuOrder[
+            static_cast<std::size_t>(i)]].key;
+    },
+    +[](int i) -> const char* {
+        return kGuiBuiltinPalettes[kGuiPaletteMenuOrder[
+            static_cast<std::size_t>(i)]].display_name;
+    },
+};
+// THE CAPTION'S DOMAIN (architect 2026-10-14): the 42 Windows and Plus!
+// schemes (kGuiChromeSchemes, palette_file.h) in THE CAPTION ROW'S ORDER
+// (kGuiSchemeMenuOrder: the chrome's own `windows-storm` first, then the 41
+// others in the catalog's order, grouped by family — the list has no
+// separators, the rows run straight on), the key the value and the display
+// name the label. The combo shows the effective scheme, the chrome's own
+// when the config has no `caption` line.
+inline constexpr SettingsChoiceSource kCaptionChoiceSource{
+    +[]() -> int { return static_cast<int>(std::size(kGuiSchemeMenuOrder)); },
+    +[](int i) -> const char* {
+        return kGuiChromeSchemes[kGuiSchemeMenuOrder[
+            static_cast<std::size_t>(i)]].key;
+    },
+    +[](int i) -> const char* {
+        return kGuiChromeSchemes[kGuiSchemeMenuOrder[
+            static_cast<std::size_t>(i)]].display_name;
+    },
 };
 struct SettingsPopupItem {
     const char*                 label;
@@ -3598,43 +3635,41 @@ struct SettingsPopupItem {
 // files — no list could show; it LEFT WITH ITS KEY when every chrome's
 // colors were compiled in (architect 2026-10-08, theme_file.h). No theme
 // file ships now: the catalog's entries are the built-in SCHEMES, compiled
-// from it by tools/theme_catalog/gen_theme_files.py, chosen in the color
-// picker: 42 since 2026-10-12 (103 until the KDE 3 and CDE families
+// from it by tools/theme_catalog/gen_theme_files.py, chosen by the Caption
+// row below: 42 since 2026-10-12 (103 until the KDE 3 and CDE families
 // were dropped) — chrome_schemes.inc's rows, one per catalog entry of the
 // windows (26) and windows-plus (16) families, the windows-2000 chrome's own `windows-storm` among them
-// rather than beside them (palette_file.h's kGuiChromeSchemes; the picker's
-// menu lists it first and the other 41 after its separator; the product's
+// rather than beside them (palette_file.h's kGuiChromeSchemes; the Caption
+// row lists it first and the other 41 after it; the product's
 // own `cool-edit-pro-me` of 2026-10-10 removed 2026-10-11).
 //
 // `Chrome` STOOD 2026-10-07..10-10 (the vocabulary choice) and LEFT WITH ITS
 // KEY (architect 2026-10-10, chrome_spec.h's head): Windows 2000 is the one
 // chrome.
 //
-// `chrome` (2026-10-07 as `palette`, the sixth device key) and `caption` HAVE NO ROW:
-// the in-app color picker is their chooser.
-//
 // `Icons` AND `Font` STOOD 2026-10-09..10-12 (the choice rows: the bundled
 // icon sets, the face sets) and LEFT WITH THEIR KEYS (architect 2026-10-12:
-// GNOME 2.28 and Liberation Sans the only options, hard-coded). The Choice
-// editor kind (the combo of settings_editor.h) has no row now; its machinery
-// stands for a future closed-list key.
+// GNOME 2.28 and Liberation Sans the only options, hard-coded).
 //
-// `Pick Colors` IS THE MENU'S FIRST COMMAND ROW (architect 2026-10-07: the
-// in-app color picker, "a full-fledged part of the project"), behind its own
-// separator — a command parting from the keys above it — Title Case and no
-// ellipsis (kdenlive's convention). Its release opens the color picker on
-// the half of the window opposite the lift's x (GuiColorPicker::open),
-// refusing as the project picker's opener refuses; it grays as every
-// Settings row does, during a load alone (dropdown_item_enabled), and the
-// whole anchor is dead under the two list owners, the `h` view and the
-// color picker itself (menu_anchor_live).
+// `Chrome` AND `Caption` ARE THE CHOICE ROWS (architect 2026-10-14, "remove
+// picker and preset file road": the in-app color picker and the preset
+// files, 2026-10-07..14, removed whole — the families landed are what
+// exists), the `chrome` and `caption` device keys' one road, AFTER Projects
+// Path BEHIND A SEPARATOR, their own group with True Colors: `Chrome` the
+// program's eleven (kChromeChoiceSource, Cool Edit's twenty presets) and
+// `Caption` the title bar's six (kCaptionChoiceSource, the Windows and Plus!
+// schemes) — each domain its owner's compiled table, each commit the text
+// road's (commit_device_setting) with its own difference: THE PRESET IS
+// INSTALLED LIVE AT THE OK, no card (the screen is the answer), and a pick of
+// the kind's default (the default palette, the chrome's own scheme) writes
+// no line.
 //
 // `True Colors` IS THE LAST ROW (architect 2026-10-08 ~05:35, his "show true
 // colors / sRGB color conversion", Windows' own "True Color" word): the sRGB
 // conversion's toggle, CHECKED while it is on — at every launch — and
 // unchecked by a press only for a screenshot whose bytes are the colors as
 // typed (the ruling at display_transform.h's head). A command row in the
-// same group as Pick Colors, no separator between them. Its state is
+// same group as Chrome and Caption, no separator between them. Its state is
 // Windows' menu check mark in the popup's check-mark column
 // (dropdown_item_checked; the dropdown painter); its release flips the bit
 // (GuiInputHandler::toggle_true_colors) and cards nothing; it grays as every
@@ -3642,7 +3677,8 @@ struct SettingsPopupItem {
 //
 // THE ACCESS KEYS (architect 2026-10-10; the rule at
 // dropdown_title_access_key): &Title, &Notes, &URL, Co&ver, &GUI Scale,
-// Projects &Repository, Projects &Path, Pick &Colors and True
+// Projects &Repository, Projects &Path, &Chrome, C&aption (2026-10-14: the
+// C free once Pick &Colors left, the A Caption's first free letter) and True
 // C&olors — the O of Colors, not the planner's E of True: bare `e` is the
 // left mouse button at the platform boundary (kLeftClickKey, gui_input.h),
 // so an E row could never answer its own letter while the menu stands.
@@ -3654,8 +3690,12 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"GUI Scale",           0,  "gui_scale",     true},
     {"Projects Repository", 9,  "projects_repo", false},
     {"Projects Path",       9,  "projects_path", false},
-    {"Pick Colors",         5,  nullptr,         true,
-     SettingsPopupAct::PickColors},
+    {"Chrome",              0,  "chrome",        true,
+     SettingsPopupAct::EditKey, SettingsEditorKind::Choice,
+     &kChromeChoiceSource},
+    {"Caption",             1,  "caption",       false,
+     SettingsPopupAct::EditKey, SettingsEditorKind::Choice,
+     &kCaptionChoiceSource},
     {"True Colors",         6,  nullptr,         false,
      SettingsPopupAct::TrueColors},
 };
@@ -4418,12 +4458,6 @@ enum class DialogTrigger {
     // `d`, Delete's letter, never the Delete key itself, so a second press of
     // the key that raised the question cannot answer it.
     DELETE_FOLDER_CONFIRM,
-    // THE COLOR PICKER'S DELETE (architect 2026-10-07): "Delete '<preset
-    // name>'?", Delete / Cancel, raised by the preset menu's Delete row over
-    // the standing picker (GuiColorPicker::raise_delete), the name parked at
-    // AppState::ColorPicker::pending_delete — the render player's question
-    // above in every term: CANCEL FOCUSED, `d` the one-key answer.
-    DELETE_PRESET_CONFIRM,
 };
 
 // In-window modal prompt state. When `active` is true, THE BOTTOM ROW IS THE
@@ -6726,43 +6760,11 @@ struct AppState {
     // other, and neither is an editor), as neither is live beside an editor
     // (both openers refuse under one, both routers consume every editor
     // opener) — so the order among the three lower ranks is free. (A FIFTH
-    // OWNER, the AV Sync Stats panel, stood 2026-09-03..30 and was deleted
-    // with the panel.)
-    // THE FIFTH OWNER IS THE COLOR PICKER (architect 2026-10-07; the
-    // cluster is color_picker.h, the state AppState::ColorPicker below): the
-    // in-app picker's CARD ON THE WELL — the element chooser, GNOME 2's hue
-    // ring and SV triangle, six sliders, the hex field, OLD | NEW, the
-    // preset button and the three push buttons Copy / Paste / Close.
-    // Ranked WITH the player and the project picker, under the prompt (its
-    // preset menu's Delete question stands over it, DELETE_PRESET_CONFIRM),
-    // and NEVER BESIDE AN EDITOR OTHER THAN ITS OWN ONE FIELD —
-    // its opener refuses under every editor, its router consumes every
-    // editor opener's key, and the three never stand together (each opener
-    // refuses under the others: the Settings menu that opens this one is
-    // dead under the two list owners, their keys are consumed by this one's
-    // router, and the icon-row buttons that would open them or an editor —
-    // acting under this one since 2026-10-08 — refuse in their openers'
-    // bodies and gray, redesign_button_enabled). ITS STASH IS THIS ONE'S: the
-    // card is the
-    // modal's `box`, its one field's interior its `field` and the three
-    // push buttons its `buttons` (color_picker_act below), so the hover
-    // walk, the press arm, the lift's dispatch, the tooltip wait and the
-    // pressed face are the dialogs' own; everything else it publishes (the
-    // chooser, the sliders, the swatches, the wheel, the preset menu
-    // button and its menu) is its own stash
-    // (ColorPicker::Stash). IT IS THE ONE OWNER THE BUTTON ROWS DO NOT
-    // YIELD TO (architect 2026-10-07 evening for row 8, "a different type of
-    // modal"; 2026-10-08 for the icon row, "the fact that the top row is
-    // disabled under the picker also needs to be updated"): the icon row
-    // and row 8 stay painted and acting under it for the pointer and the
-    // pen, while the picker veils THE WELL, THE MENU ROW and THE KEYBOARD —
-    // the asymmetry is recorded at modal_owns_bottom_row (paint_handler.cpp)
-    // — save ONE PRESS: a plain press on a flag outside the card is the
-    // marker click's select alone (2026-10-08 ~21:20; the list of what
-    // reaches through the card is color_picker.h's head, the road the veil
-    // in on_button_press).
+    // OWNER stood twice: the AV Sync Stats panel, 2026-09-03..30, and the
+    // color picker's card on the well, 2026-10-07..14 — each deleted with
+    // its surface.)
     enum class ModalDialogOwner {
-        None, Prompt, Editor, Player, Picker, ColorPicker
+        None, Prompt, Editor, Player, Picker
     };
     // THE PLAYER'S NINE BUTTONS, the third dispatch vocabulary beside a
     // prompt's response key and the OK bit two-button dialogs share: what a
@@ -6839,17 +6841,6 @@ struct AppState {
         None, Home, PlayPause, NextTrack, RepeatOne, HighlightDown,
         HighlightUp, Up, LoadInPlace, Delete, Close
     };
-    // THE COLOR PICKER'S THREE BUTTONS (2026-10-07), the fourth dispatch
-    // vocabulary: what a card button DOES at its lift
-    // (dispatch_modal_dialog_button reads it under the ColorPicker owner;
-    // the other three vocabularies are zero/false there). The order is the
-    // row's — Close LAST, the escape sentinel as every row has it. THEIR
-    // DISABLED FACE, the one outside the player (every button truthful):
-    // PASTE grays while the picker's one-color slot is empty
-    // (ColorPicker::slot_full), and ALL THREE gray while the name ask
-    // stands (color_picker.h), each bit published as painted and read by
-    // the claim like the player's.
-    enum class ColorPickerButtonAct { None, Copy, Paste, Close };
     // THE OK BIT IS THE EDITOR DIALOGS' ALONE again (2026-08-29): it is that
     // session's own Enter / Esc. The picker shared it for a day, its OK being
     // the open act on the highlight, and lost the button rather than the bit
@@ -6861,8 +6852,6 @@ struct AppState {
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
         bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
-        ColorPickerButtonAct color_picker_act =
-            ColorPickerButtonAct::None;                      // the color picker's
         // THE PLAYER ROW'S DISABLED FACE (architect 2026-08-30: the
         // transport keys are their own class), published per frame exactly
         // as the rects are, from render_player_button_enabled (whose
@@ -6982,18 +6971,14 @@ struct AppState {
     // THE RANKING IS SPELLED and they must agree (paint_modal_dialog's `*_up`
     // fork and modal_dialog_stash_current's live ladder are the others), or the
     // owner-tag doctrine above breaks.
-    // THE COLOR PICKER (2026-10-07) is the fifth rank, with the two list
-    // owners: none of the three stands with another, so its place among
-    // them is free too; its one field is its own and no dialog editor.
     uint64_t modal_dialog_live_session() const {
         if (prompt.active) return prompt.session;
         if (render_player.active) return render_player.session;
         if (picker.active) return picker.session;
-        if (color_picker.active) return color_picker.session;
         return dialog_editor_session();
     }
 
-    // THE LIVE TEXT EDITOR'S SESSION ID across ALL SEVEN editor kinds, 0 when
+    // THE LIVE TEXT EDITOR'S SESSION ID across ALL FOUR editor kinds, 0 when
     // none stands — the accessor above widened by the two top-strip kinds it
     // names as deliberate non-members. It exists for
     // the ON-SCREEN KEYBOARD (onscreen_keyboard.h), whose two lamps must die
@@ -7004,19 +6989,13 @@ struct AppState {
     // different number here.
     // At most one editor stands at a time (every opener refuses or ends what
     // was standing), so the fall-through order is free exactly as it is above.
-    // THE COLOR PICKER'S ONE FIELD IS THE SIXTH MEMBER (2026-10-07,
-    // text_editor::Kind::PaletteHex, and Kind::PaletteName for its name ask
-    // the same day — one State, so one member): it owns the keyboard while it stands
-    // (so the on-screen keyboard rises for it and the keyboard-modal gate
-    // holds) and it is NOT a dialog editor — its host is the color picker,
-    // a modal owner of its own (ModalDialogOwner::ColorPicker).
+    // (The color picker's one field, its hex field and its name ask, was a
+    // member 2026-10-07..14 and left with the picker.)
     uint64_t text_editor_session() const {
         const uint64_t dialog = dialog_editor_session();
         if (dialog != 0) return dialog;
         if (text_editor::is_active(top_flag_editor))
             return top_flag_editor.session;
-        if (text_editor::is_active(color_picker.field_editor))
-            return color_picker.field_editor.session;
         return 0;
     }
 
@@ -7248,10 +7227,7 @@ struct AppState {
     //   POINTER PRESS on a button (architect 2026-10-03, Windows' rule:
     //   arm_modal_dialog_press, at the press; the rule is at
     //   modal_dialog_pressed). A press's assignment REPLACES whatever focus
-    //   the dialog had, of either strength. THE COLOR PICKER'S BUTTONS ARE
-    //   THE ONE EXCEPTION (2026-10-08): the card has no ring, so its presses
-    //   assign none and the index stays -1 under it (the rule at
-    //   arm_modal_dialog_press).
+    //   the dialog had, of either strength.
     //   ACTIVE is reached only by a DELIBERATE KEYBOARD WALK — Tab, its two
     //   reverse spellings, Left, Right — so its one producer is
     //   route_modal_dialog_focus_key's walk, which sets it on every landing.
@@ -8984,8 +8960,7 @@ struct AppState {
     //   `shown`   the domain index the combo shows, which Up / Down and a
     //             list row move and Enter commits;
     //   the list's state — `list_open`, the hovered and pressed rows and the
-    //             press-began bit, the color picker's chooser's own four —
-    //             and `list_scroll`, its scroll (render.h's popup scroll
+    //             press-began bit — and `list_scroll`, its scroll (render.h's popup scroll
     //             block), reset with the list at each open.
     struct SettingsChoice {
         bool active       = false;
@@ -9054,193 +9029,6 @@ struct AppState {
         uint64_t session = 0;
     };
     Picker picker;
-
-    // -- THE COLOR PICKER'S WHOLE STATE (architect 2026-10-07) -----------
-    //
-    // THE IN-APP PICKER OF THE PROGRAM'S ELEVEN COLORS (kGuiPaletteRoles,
-    // palette_file.h: a PALETTE) AND, UNDER EVERY CHROME, THE CAPTION'S SIX
-    // KEYS (kGuiChromeLines: a SCHEME; chrome_derive.h), ONE KIND AT
-    // A TIME BY ITS SCOPE — a slim card on the well, chrome-branded, the FIFTH
-    // ModalDialogOwner (its rank and its modal shape are at
-    // ModalDialogOwner). Everything about the card that is not pixels is in
-    // color_picker.h — the lengths, the layout, the color math, the wheel's
-    // raster and the acts (GuiColorPicker) — and the painter is
-    // GuiPaintHandler::paint_color_picker (paint_handler.cpp, called from
-    // paint_modal_dialog's fork). This struct holds:
-    //   `active` / `session`  the mode bit and its modal session id from the
-    //              one counter (text_editor::next_session_id), minted at
-    //              every open (GuiColorPicker::open);
-    //   `scope`    THE SCOPE (2026-10-08 ~18:15, color_picker.h's THE
-    //              SCOPE): Chrome or Waveform, which kind the element
-    //              chooser lists and the preset button works on; set to
-    //              Waveform at every open (GuiColorPicker::open);
-    //   `element`  THE LIVE ELEMENT, an index into the elements' one space
-    //              (color_picker::element_at: the scheme's six keys, then
-    //              kGuiPaletteRoles), always one of the scope's;
-    //   `parked_element`  THE OTHER SCOPE'S live element, swapped with
-    //              `element` at a scope's change (GuiColorPicker::set_scope).
-    //              BOTH KEPT ACROSS OPENS: the first open lands on the
-    //              Chrome scope's first row (Canvas) with Caption parked on
-    //              its first (Title), a later open returns to the elements
-    //              last picked — the picker remembers where the work was;
-    //   `old_rgb`  OLD — the live element's color WHEN IT BECAME the live
-    //              element (the open, or the chooser's change); a tap on the
-    //              OLD swatch writes it back, live;
-    //   `rgb`      NEW — a mirror of the live element's live color
-    //              (color_picker::element_color: program_palette_words or
-    //              the live chrome pick, render.h), the truth; ONE
-    //              WRITER, GuiColorPicker::set_color, which writes the live
-    //              words, installs them and keeps this in step;
-    //   `hue_deg`, `sat`  THE HSV MEMORIES: the hue in degrees [0, 360) and
-    //              the saturation [0, 1] the HSV controls last wrote or the
-    //              bytes last gave — GtkHSV's own behavior, so a gray keeps
-    //              its hue and a black its saturation and the sliders do not
-    //              jump (the rule is at GuiColorPicker::set_color);
-    //   `slot_full` / `slot_rgb`  THE ONE-COLOR SLOT Copy fills and Paste
-    //              writes — PROCESS-LOCAL, never the system clipboard (that
-    //              stays the hex field's, so a hex copied in GIMP survives a
-    //              Copy here); kept across closes and opens; empty until the
-    //              first Copy, and Paste grays while it is;
-    //   `on_right` WHICH HALF the card stands on: the half opposite the
-    //              opening tap's x (a keyboard open has no tap: the right);
-    //   the chooser row's list state (`chooser_open`, the hovered, the
-    //              pressed and the press-began bits — the menu-row popup's
-    //              own road one surface over — and `chooser_scroll`, its
-    //              scroll, render.h's popup scroll block), ONE LIST FOR THE
-    //              ROW'S TWO COMBOS, `chooser_scope` saying whose is down
-    //              (the scope's two rows, else the scope's elements;
-    //              color_picker.h's THE RIGHT COLUMN);
-    //   the preset menu's state (`menu_open` and its three bits, the same
-    //              road again — color_picker.h's THE PRESET MENU — and
-    //              `menu_scroll`); the hovered and pressed rows of both are
-    //              INDEXES INTO THE WHOLE LIST (the list's row, the menu
-    //              row), never into the shown block, so a scroll moves no
-    //              lit row;
-    //   `field_editor`  THE CARD'S ONE TEXT FIELD'S EDITOR, a member of
-    //              text_editor_session while it stands: Kind::PaletteHex
-    //              for the hex field, Kind::PaletteName for THE NAME ASK,
-    //              `name_ask` saying which act asks (color_picker.h);
-    //   `pending_delete`  the preset of the scope's kind the standing Delete
-    //              prompt names, empty otherwise (GuiColorPicker::raise_delete);
-    //   `drag`     THE LIVE GESTURE on a slider's thumb, the ring or the
-    //              triangle (a member of any_pointer_gesture_active);
-    //   `stash`    WHAT WAS PAINTED, the roster model (ColorPicker::Stash).
-    // It authors nothing: no undo, no dirty; legal on a read-only tab and in
-    // the `h` view (it changes colors, not state). THE ACTIVE PRESETS ARE NOT
-    // HERE: each is the live device config's `caption` or `chrome` resolved
-    // (color_picker::active_preset — the config outlives this struct, which
-    // a reopen rebuilds).
-    struct ColorPicker {
-        bool        active  = false;
-        uint64_t    session = 0;
-        // THE SCOPE'S TWO KINDS (architect 2026-10-11, go 2026-10-13):
-        // Caption (the title bar's six keys) and Chrome (the program's
-        // eleven, which through the Face drive the whole window).
-        enum class Scope { Caption, Chrome };
-        Scope       scope   = Scope::Chrome;
-        std::size_t element = kGuiChromeLineCount;   // Canvas, Waveform's first
-        std::size_t parked_element = 0;              // Chrome, Chrome's first
-        uint32_t    old_rgb = 0;
-        uint32_t    rgb     = 0;
-        double      hue_deg = 0.0;
-        double      sat     = 0.0;
-        bool        slot_full = false;
-        uint32_t    slot_rgb  = 0;
-        bool        on_right  = true;
-        bool        chooser_open    = false;
-        bool        chooser_scope   = false;   // the list down is the scope's
-        int         chooser_hover   = -1;
-        int         chooser_pressed = -1;
-        bool        chooser_press_began_on_item = false;
-        bool        menu_open    = false;
-        int         menu_hover   = -1;
-        int         menu_pressed = -1;
-        bool        menu_press_began_on_item = false;
-        PopupScroll chooser_scroll;
-        PopupScroll menu_scroll;
-        text_editor::State field_editor;
-        // A PLAIN PRESS SEATED THE FIELD'S CARET (2026-10-08): set by
-        // color_picker_press's caret arm, read and cleared by the release,
-        // which seeds the double tap's candidate from it (the rule there).
-        bool        field_caret_press = false;
-        enum class NameAsk { None, SaveAs, Rename };
-        NameAsk     name_ask = NameAsk::None;
-        std::string pending_delete;
-        // THE LIVE GESTURE: which surface the press took, the slider's
-        // index when a slider's, and the press's offset from the thumb's
-        // center (zero on an off-thumb press, which jumps the thumb — the
-        // scrub's rule, claim_player_scrub_press). A drag outside the card
-        // keeps the gesture.
-        struct Drag {
-            enum class Kind { None, Slider, Hue, Triangle };
-            Kind kind    = Kind::None;
-            int  slider  = -1;
-            int  grab_dx = 0;
-            bool armed() const { return kind != Kind::None; }
-        };
-        Drag drag;
-        // THE PUBLISHED GEOMETRY AS PAINTED (ON SCREEN IS AS PAINTED): the
-        // press router reads these and never a live derivation. Rewritten
-        // by the painter every run; zero/invalid when the picker is not
-        // painted. The card itself, the field's interior and the three push
-        // buttons are ALSO the modal stash's box, field and buttons
-        // (ModalDialogGeometry) — the dialogs' shared machinery reads those.
-        // The preset button is the picker's own (a press drops the
-        // menu, the chooser's road, not a dialog button's lift).
-        struct SliderStash {
-            GuiRect row{0, 0, 0, 0};     // the whole slider row (label to value)
-            GuiRect track{0, 0, 0, 0};   // the track: a press here seats the thumb
-            int     thumb_x = -1;        // the thumb's center column as painted
-        };
-        // ONE ROW OF THE PRESET MENU AS PAINTED: its rect, what it does (a
-        // name's load, or the act's index in color_picker::PresetAct's
-        // order) and its enabled bit — the lift acts on these, never on a
-        // live re-derivation.
-        struct MenuRowStash {
-            GuiRect     rect{0, 0, 0, 0};
-            bool        is_act  = false;
-            int         act     = 0;
-            std::string name;
-            bool        enabled = true;
-        };
-        struct Stash {
-            bool     valid   = false;
-            uint64_t session = 0;
-            GuiRect  card{0, 0, 0, 0};
-            GuiRect  scope{0, 0, 0, 0};        // the scope combo: a press drops its list
-            GuiRect  chooser{0, 0, 0, 0};      // the element combo: a press drops its list
-            GuiRect  list{0, 0, 0, 0};         // zero while the list is closed
-            // The list's rows, the dropped list's every one (the scope's
-            // two, or the scope's elements — at most the palette's eleven,
-            // color_picker::kListRowMax, asserted there), by row — the zero
-            // rect for a row scrolled out of view, and past the list's
-            // count — and its scroll bar (absent while every row shows).
-            std::array<GuiRect, std::max(kGuiChromeLineCount, kGuiPaletteRoleCount)>
-                     list_items{};
-            PopupScrollBar list_bar;
-            std::array<SliderStash, 6> sliders{};   // color_picker::kChannelCount (static_asserted there)
-            GuiRect  field{0, 0, 0, 0};        // the one field's outer box
-            GuiRect  field_inner{0, 0, 0, 0};  // its interior (the I-beam, the caret)
-            double   field_text_origin_x = 0.0;  // where the shown run's byte 0 paints
-            std::vector<double> field_byte_x;  // its per-byte pen offsets
-            GuiRect  menu_button{0, 0, 0, 0};  // a press drops the menu
-            bool     menu_button_enabled = false;
-            GuiRect  menu{0, 0, 0, 0};         // zero while the menu is closed
-            // Every row of the menu, by row index (a row scrolled out of
-            // view with the zero rect), and its scroll bar.
-            std::vector<MenuRowStash> menu_rows;
-            PopupScrollBar menu_bar;
-            GuiRect  swatch_old{0, 0, 0, 0};
-            GuiRect  swatch_new{0, 0, 0, 0};
-            GuiRect  wheel{0, 0, 0, 0};        // the wheel's square
-            double   wheel_cx = 0.0;
-            double   wheel_cy = 0.0;
-            double   wheel_outer_r = 0.0;
-            double   wheel_inner_r = 0.0;
-        };
-        Stash stash;
-    };
-    ColorPicker color_picker;
 
     // IS A CHECKPOINT ACT IN FLIGHT? (architect 2026-08-07, with the act's move
     // onto a background worker.) Written on the MAIN THREAD at exactly two
@@ -9990,58 +9778,27 @@ struct AppState {
     RenderPlayer render_player;
 };
 
-// THE COLOR PICKER'S OPEN LIST UNDER A POINT (2026-10-08): the card's element
-// list or its preset menu, whichever is down, as the painter last published
-// it (ColorPicker::Stash's `list` and `menu` — each zeroed by every live
-// paint while its list is up, and the whole stash by the picker's open and
-// close, paint_color_picker) — read under the live session, as every stash
-// reader reads it. The bar stands inside the box (render.h's popup scroll
-// block). Readers: the color picker's veil (on_button_press,
-// input_pointer.cpp), where the box outranks the caption's and the menu
-// row's exemptions, and list_popup_at below.
-inline bool color_picker_list_at(const AppState& a, int x, int y) {
-    const AppState::ColorPicker& cp = a.color_picker;
-    const AppState::ColorPicker::Stash& st = cp.stash;
-    if (!cp.active || !st.valid || st.session != cp.session) return false;
-    return (cp.chooser_open && rect_contains(st.list, x, y)) ||
-           (cp.menu_open && rect_contains(st.menu, x, y));
-}
-
 // EVERY LIST POPUP'S PUBLISHED BOX UNDER A POINT (2026-10-08, ON SCREEN IS AS
 // PAINTED): the menu row's drop-down (AppState::Dropdown's rect while it is
-// open), the settings choice editor's list (ModalDialogGeometry's
+// open) and the settings choice editor's list (ModalDialogGeometry's
 // `combo_list`, zeroed at every paint_modal_dialog run and written only while
-// the list is painted down) and the color picker's chooser-row list and
-// preset menu (color_picker_list_at). Every one paints ABOVE the notification cards
+// the list is painted down). Both paint ABOVE the notification cards
 // (paint_notifications runs before paint_dropdown and paint_modal_dialog), so
 // a card under one is hidden there and notification_card_at yields to this
 // one predicate's family (floater_above_cards_at, below) — the popups'
 // published boxes the truth, no state of its own.
 inline bool list_popup_at(const AppState& a, int x, int y) {
     if (a.dropdown.open() && rect_contains(a.dropdown.rect, x, y)) return true;
-    if (rect_contains(a.modal_dialog.combo_list, x, y)) return true;
-    return color_picker_list_at(a, x, y);
-}
-
-// THE COLOR PICKER'S CARD UNDER A POINT (2026-10-08): the card as the
-// painter last published it (ColorPicker::Stash's `card`), under the live
-// session — it paints with the modal surfaces, ABOVE the notification cards,
-// so a notification card under it is hidden there exactly as under a list
-// popup (floater_above_cards_at below).
-inline bool color_picker_card_at(const AppState& a, int x, int y) {
-    const AppState::ColorPicker& cp = a.color_picker;
-    const AppState::ColorPicker::Stash& st = cp.stash;
-    if (!cp.active || !st.valid || st.session != cp.session) return false;
-    return rect_contains(st.card, x, y);
+    return rect_contains(a.modal_dialog.combo_list, x, y);
 }
 
 // EVERY POINTER-OWNING SURFACE THAT PAINTS ABOVE THE NOTIFICATION CARDS
 // UNDER A POINT (2026-10-08, ON SCREEN IS AS PAINTED): the list popups
-// (list_popup_at) and the color picker's card (color_picker_card_at), the
-// one predicate notification_card_at yields to — the published boxes the
-// truth, no state of its own.
+// (list_popup_at), the one predicate notification_card_at yields to — the
+// published boxes the truth, no state of its own. (The color picker's card
+// stood beside them 2026-10-08..14.)
 inline bool floater_above_cards_at(const AppState& a, int x, int y) {
-    return list_popup_at(a, x, y) || color_picker_card_at(a, x, y);
+    return list_popup_at(a, x, y);
 }
 
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
@@ -11086,13 +10843,14 @@ inline int64_t snap_authored_frame(double frame) {
 // Nothing ASYNCHRONOUS asks this question now.)
 // THE FORCE-END FINALIZER IS NOT A CONSUMER EITHER — it asks this question
 // nowhere — but it is the one body whose MEMBERSHIP must equal this one:
-// finalize_active_drags (input_pointer.cpp) ends all FIFTEEN members (the
-// VALUE DRAG joined 2026-09-10; the color picker's gesture and the three
-// popup lists' scroll holds 2026-10-08), because
+// finalize_active_drags (input_pointer.cpp) ends all TWELVE members (the
+// VALUE DRAG joined 2026-09-10; the settings choice list's scroll hold
+// 2026-10-08 — the color picker's gesture and its two lists' scroll holds
+// stood beside it until the picker's removal, 2026-10-14), because
 // its callers' whole promise is that a resize, a WM close or the Ctrl+Q hatch
 // lands on a state this predicate calls free. The two lists are grepped
 // against each other whenever either grows; the finalizer's own head comment
-// spells its fifteen in its own order.
+// spells its twelve in its own order.
 // THE DISPLAYED-BASIS FREEZE IS NOT A CONSUMER AT ALL: displayed_basis_frozen
 // (beside the basis owners, below) tests a SUBSET of these members under its
 // own derivation — the absolute painted-subject drags, the two pendings that
@@ -11112,9 +10870,6 @@ inline bool any_pointer_gesture_active(const AppState& app) {
            app.pending_trim_drag.active ||
            app.folder_overlay.press.armed ||
            app.render_player.scrub.armed ||
-           app.color_picker.drag.armed() ||
-           app.color_picker.chooser_scroll.live() ||
-           app.color_picker.menu_scroll.live() ||
            app.settings_choice.list_scroll.live();
 }
 
@@ -15179,13 +14934,8 @@ inline bool menu_anchor_live(const AppState& a, const GuiAudio& audio,
     for (const DropdownMenu m : kDropdownMenus)
         if (dropdown_anchor_button(m) == b) menu = m;
     if (menu == DropdownMenu::None) return false;
-    // THE COLOR PICKER (2026-10-07) takes the two list owners' partition —
-    // Edit and Settings dead, File live for Quit — stated symmetric with the
-    // overlay's (the Settings menu is what opened it, and Edit's chords are
-    // consumed by its router).
     if (menu != DropdownMenu::File &&
-        (folder_overlay_stands(a) || a.history_mode.active ||
-         a.color_picker.active))
+        (folder_overlay_stands(a) || a.history_mode.active))
         return false;
     for (int i = 0; i < dropdown_item_count(menu); ++i)
         if (dropdown_item_enabled(a, audio, menu, i)) return true;
@@ -15859,18 +15609,6 @@ inline bool redesign_button_enabled(const AppState& a,
     // finish_chrome_press_release's head).
     if (folder_overlay_stands(a))
         return b == RedesignButton::IconListen && a.render_player.active;
-    // THE COLOR PICKER GRAYS NOTHING WHOLESALE (architect 2026-10-07 evening
-    // for row 8, 2026-10-08 for the icon row): the two button rows stay on
-    // under it, painted and acting as without it (the asymmetry at
-    // modal_owns_bottom_row, paint_handler.cpp), so every button answers at
-    // its own arm. THE ACTS THE PICKER MAKES A NO-OP are the openers of
-    // another list owner or an editor, which refuse under it as the openers
-    // refuse under each other — each carries its own `color_picker.active`
-    // term below: Open Project, Save inside the `h` view, Listen, Settings,
-    // BPM Iterations and Load in Place (re-derived 2026-10-08 by reading
-    // every icon-row act's body; no row-8 act opens anything). The menu
-    // anchors answered above (menu_anchor_live: Edit and Settings dead under
-    // the picker, File live for Quit).
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -15974,12 +15712,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // REVERT, ADDS NOTHING HERE under the twin rule: the plain act is
         // live wherever the roster is, and Revert's own refusals (a
         // publishing checkpoint, the folder checks) card at revert_project.
-        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the opener refuses
-        // under it (open_project_picker's color picker arm), and the File
-        // menu's two rows this button carries, Open Project and Revert, are
-        // both grayed under it (dropdown_item_enabled), so neither half acts.
         case RedesignButton::OpenProject:
-            return !a.color_picker.active;
+            return true;
         // THE WALK, UNDER THE TWIN RULE (architect 2026-09-26): its
         // ctrl-click is Ctrl+Tab, the same tab switch, whose arm
         // (handle_tab_switch_keys) has no refusal in any state the roster is
@@ -16098,11 +15832,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // panel on 2026-09-30, and the face reads the plain act alone. The
         // per-tick roster comparator (main.cpp) carries the run's start and
         // end onto the face.
-        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the player is a
-        // list owner, and its opener refuses under the picker
-        // (GuiRenderPlayer::open).
         case RedesignButton::IconListen:
-            return !load_in_place_render_blocked(a) && !a.color_picker.active;
+            return !load_in_place_render_blocked(a);
         // THE READ-ONLY TOGGLE MIRRORED NOTHING UNTIL 2026-09-10 (2026-08-14):
         // bare `o` was always meaningful on a loaded piece — it locks a
         // writable tab and unlocks a locked one — so there was nothing to
@@ -16296,7 +16027,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // payload axis, a tie follower's cell — the tie's sentence is the
         // key's card ranked ahead of the shared one, the face one grey for
         // both); and A STANDING TEXT EDITOR (text_editor_session — the
-        // marker-lane editor in every kind, the color picker's hex field, a
+        // marker-lane editor in every kind, a
         // dialog editor), where Return is that editor's own commit and never
         // an open: the button raises no veil of its own and the marker-lane
         // editor raises none either, so its lift would dispatch the commit
@@ -16341,14 +16072,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // admissions and this button is in the lock's membership, so the face
         // greys with the lamp and wears the lock's card. THE LOCK RANKS FIRST
         // here as it does at the key, ahead of the sweep's own ten sentences.
-        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the act opens the
-        // flag's BPM editor, a keyboard-modal editor the picker's router
-        // would starve, so the Ctrl+B arm refuses under the picker
-        // (handle_mode_keys).
         case RedesignButton::IconBpm:
             return !active_view_state(a).read_only &&
                    !iteration_lock_greys(a, b) &&
-                   !a.color_picker.active &&
                    bpm_sweep_open_actionable(a, audio);
         // THE SETTINGS BUTTON (architect 2026-09-29) IS BARE `;` AND GREYS
         // EXACTLY WHERE THE KEY REFUSES: `;` is off read_only_key_blocked's
@@ -16356,18 +16082,13 @@ inline bool redesign_button_enabled(const AppState& a,
         // tab"), the iteration gate inherits that refusal (the membership
         // predicate names it), and the `h` view consumes it through the
         // derived partition at the head of this body. The opener itself
-        // (GuiSettingsEditor::open) refuses nothing past those gates but a
-        // standing color picker (below) — an editor already standing is the
-        // veil's, whose press never reaches this button. It is NOT the menu
-        // row's Settings anchor, whose rows open on a locked tab; that anchor
-        // answers at the head of this body.
-        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the settings
-        // editor is a dialog editor, and its opener refuses under the picker
-        // (GuiSettingsEditor::open).
+        // (GuiSettingsEditor::open) refuses nothing past those gates — an
+        // editor already standing is the veil's, whose press never reaches
+        // this button. It is NOT the menu row's Settings anchor, whose rows
+        // open on a locked tab; that anchor answers at the head of this body.
         case RedesignButton::IconSettings:
             return !active_view_state(a).read_only &&
-                   !iteration_lock_greys(a, b) &&
-                   !a.color_picker.active;
+                   !iteration_lock_greys(a, b);
         // FLATTEN READS ONE PREDICATE AND NOTHING ELSE (2026-09-19):
         // tempo_flatten_actionable composes BOTH LOCKS itself, so this arm
         // asks neither separately — the rule against a face restating an
@@ -17007,14 +16728,10 @@ inline bool redesign_button_enabled(const AppState& a,
         //     inside the view and the one that cards. So this term is the
         //     face's own mirror of that gate — the read-only arm above said it
         //     for this button until the move.
-        // A STANDING COLOR PICKER GRAYS IT (2026-10-08): the load's
-        // confirmation refuses to rise under the picker
-        // (history_load_in_place's list-owner arm).
         case RedesignButton::IconLoadInPlace:
             return a.history_mode.active &&
                    a.history_mode.walk_count() > 0 &&
-                   !active_view_state(a).read_only &&
-                   !a.color_picker.active;
+                   !active_view_state(a).read_only;
         case RedesignButton::Save:
         case RedesignButton::Undo:
         case RedesignButton::Redo:
@@ -17090,13 +16807,6 @@ inline bool redesign_button_enabled(const AppState& a,
         // one predicate the keys read too (the ruling and its trade-off are
         // there).
         //
-        // AND IN THE VIEW A STANDING COLOR PICKER GRAYS IT (2026-10-08): the
-        // act refuses whole under the picker (run_publish_chord's color
-        // picker arm; the openers refuse under each other, and the pull's
-        // question is a modal) — the picker's own Ctrl+S being the plain disk
-        // save (route_color_picker_key), never this act. Outside the view
-        // the button is that plain save and acts under the picker.
-        //
         // AND IN THE VIEW THE BUTTON IS THE PUBLISH CHORD'S (architect
         // 2026-10-10: "the icons in history remain the same"): its lift spells
         // Ctrl+Shift+S there (finish_chrome_press_release), Ctrl+S being the
@@ -17116,10 +16826,9 @@ inline bool redesign_button_enabled(const AppState& a,
                    !a.history_checkpoint_in_flight &&
                    (!a.history_mode.active
                         ? plain_save_actionable(a)
-                        : (!a.color_picker.active &&
-                           (history_checkpoint_actionable(a) ||
-                            history_pull_actionable(a) ||
-                            history_github_recheck_actionable(a))));
+                        : (history_checkpoint_actionable(a) ||
+                           history_pull_actionable(a) ||
+                           history_github_recheck_actionable(a)));
         // UNDO'S AND REDO'S THIRD TERM IS THE RESTRICT-UNDO-TO-CURRENT-VIEW
         // LAMP (architect 2026-09-04; its question the view since 2026-09-22),
         // and it is the truthful-button rule's own shape: with the lamp lit
@@ -19071,20 +18780,9 @@ static_assert(redesign_button_modifier_hint_agrees(),
 // which this term is what makes structural. Row 1 needs no exemption: it
 // holds the anchors alone, and an ANCHOR's open frame is the painter's own
 // open condition (paint_menu_row), not this term.
-//
-// AND UNDER THE COLOR PICKER THE TWO BUTTON ROWS ARE IN THE ZONE — the icon
-// row and row 8, never the menu row's anchors — and none of them while the
-// card's element list or preset menu is down (architect 2026-10-07 evening
-// for row 8, 2026-10-08 for the icon row, both on under the picker —
-// modal_owns_bottom_row, paint_handler.cpp): the menu row is behind the
-// picker's veil, and a popup of the card owns the pointer as the dropdown
-// does (a press anywhere off its rows puts it away, color_picker_press).
-inline bool redesign_button_hover_zone(const AppState& a, RedesignButton b) {
-    if (a.dropdown.open()) return false;
-    if (a.color_picker.active)
-        return !redesign_button_is_menu_anchor(b) &&
-               !a.color_picker.chooser_open && !a.color_picker.menu_open;
-    return true;
+inline bool redesign_button_hover_zone(const AppState& a,
+                                       RedesignButton /*b*/) {
+    return !a.dropdown.open();
 }
 
 // TWO NOTES THE ZONE KEEPS, both about the terms it deliberately does NOT

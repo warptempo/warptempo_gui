@@ -53,7 +53,7 @@
 // for a generated block of tones): every measured tone stands in the table below as the record, and
 // those the painters read carry a GuiPalette member (the COOL EDIT BLOCK,
 // render.h's palette struct), filled at every install of the program's words
-// (fill_program_palette, render.cpp) — a pick of Face moves them all live.
+// (fill_program_palette, render.cpp) — a new Face moves them all live.
 // The toolbar band and row 8 read eight: the recess, the mid, the dark, the
 // hilight, the time field's two lines and its digits (the never-swapping
 // `text`), and the panel label's pair (the label's swap below, its two
@@ -594,7 +594,7 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 // THE PANEL'S FACE, "an opacity look … not actually opaque" — three DERIVED
 // SOLID COLORS (the palette composites nothing at paint time; each a
 // precomputed per-channel mix, round(a + t·(b − a)), filled at every install
-// of the program's words so a pick of Face, `cue` or `invalid_label` moves
+// of the program's words so a new Face, `cue` or `invalid_label` moves
 // them live; render.cpp's fill_program_palette):
 //   the TRIANGLE   the live triangle's color (the `cue` red, or the invalid
 //                  color of an invalid cue or a history REMOVED flag,

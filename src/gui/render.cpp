@@ -2871,9 +2871,9 @@ void fill_program_palette(const GuiPaletteWords& w) {
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         g_palette.*(kGuiPaletteRoles[i].member) = hex(w[i]);
     // THE COOL EDIT BLOCK, derived from the panel's face by Cool Edit's own
-    // rule (cool_edit_derive.h), so a pick of Face moves every tone live.
+    // rule (cool_edit_derive.h), so a new Face moves every tone live.
     // The view bar's span bevels derive from the waveform's ink instead
-    // (ToneSource::Ink), so a pick of the ink moves them live too.
+    // (ToneSource::Ink), so a new ink moves them live too.
     static constexpr std::size_t kFace = palette_role_index("face");
     static constexpr std::size_t kInk = palette_role_index("waveform_ink");
     static_assert(kFace < kGuiPaletteRoleCount);
@@ -2945,7 +2945,7 @@ void install_palette(const GuiPaletteWords& program,
 
 void install_chrome_pick(const std::optional<GuiChromePick>& chrome) {
     // The contract is at the declaration (render.h); the apply shape is the
-    // caller's (GuiColorPicker::install_live_words).
+    // caller's (GuiSettingsEditor::install_color_preset).
     fill_chrome_palette(chrome);
     ++g_palette_generation;
 }

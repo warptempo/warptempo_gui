@@ -4,7 +4,7 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "palette_file.h"      // is_palette_name, is_scheme_name and their reasons
+#include "palette_file.h"      // is_builtin_palette_name, is_builtin_scheme_name and their reasons
 
 #include <cstddef>
 #include <cstdio>
@@ -127,10 +127,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
         } else if (k == "caption") {
-            // The name verbatim (printable ASCII, palette_file.h's grammar).
+            // The built-in's key verbatim (palette_file.h's key grammar).
             s += cfg.scheme;
         } else if (k == "chrome") {
-            // The name verbatim (printable ASCII, palette_file.h's grammar).
+            // The built-in's key verbatim (palette_file.h's key grammar).
             s += cfg.palette;
         } else if (k == "role") {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
@@ -209,21 +209,23 @@ std::expected<DeviceConfig, std::string> read_device_config(
             return {};
         }
         // THE CAPTION (2026-10-08) AND THE CHROME (2026-10-07; both words
-        // 2026-10-13): a built-in's key or a file's read at launch, each under
-        // its one grammar owner (is_scheme_name, is_palette_name,
-        // palette_file.h) — which is why gui_main reads the two folders BEFORE
-        // this file. An EMPTY value is refused like any other non-name: the
+        // 2026-10-13): A BUILT-IN'S KEY ALONE since 2026-10-14 (architect,
+        // "remove picker and preset file road": the preset files are gone),
+        // each under its one grammar owner (is_builtin_scheme_name,
+        // is_builtin_palette_name, palette_file.h) — any other word, a former
+        // file's name included, the ordinary bad-value hard fail with no
+        // migration. An EMPTY value is refused like any other non-name: the
         // unset key is the line's absence. An old `scheme=` or `palette=`
         // line is the unknown key below.
         if (key == "caption") {
-            if (!is_scheme_name(value)) {
+            if (!is_builtin_scheme_name(value)) {
                 return bad_value(ln, key, value, kSchemeGrammarReason);
             }
             out.scheme = value;
             return {};
         }
         if (key == "chrome") {
-            if (!is_palette_name(value)) {
+            if (!is_builtin_palette_name(value)) {
                 return bad_value(ln, key, value, kPaletteGrammarReason);
             }
             out.palette = value;

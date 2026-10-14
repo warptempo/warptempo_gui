@@ -194,7 +194,7 @@ public:
     // this damages every surface pixel, so the next paint repaints the
     // sizing frame (paint_window_sizing_frame) along
     // with the client. ONE CALLER, A LIVE CHROME PICK
-    // (GuiColorPicker::install_live_words, through
+    // (GuiSettingsEditor::install_color_preset, through
     // Viewport::invalidate_surface): the frame paints in the chrome's roles,
     // and nothing else changes them while the window stands (platform.h).
     void invalidate_surface();

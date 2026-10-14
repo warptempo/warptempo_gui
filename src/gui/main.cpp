@@ -2181,10 +2181,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // at the button-lost edge (clear_release_time_press_arms).
         input_handler.clear_folder_overlay_press();
         input_handler.clear_player_scrub_drag();
-        // AND THE COLOR PICKER'S GESTURE (2026-10-07): its slider or wheel
-        // drag has already applied every step, so the drop loses nothing.
-        input_handler.clear_color_picker_drag();
-        // AND THE POPUP LISTS' SCROLL HOLDS (2026-10-08): every row already
+        // AND THE POPUP LIST'S SCROLL HOLD (2026-10-08): every row already
         // scrolled, the held arrow's face and the thumb's drag dropped.
         input_handler.clear_popup_scroll_holds();
         // AND THE NOTIFICATION CARDS' HOVER (2026-08-29), this hook's hover
@@ -3457,22 +3454,9 @@ int gui_main(const char* argument) {
     // down, and a failed persist (advisory) loses nothing the user committed.
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
-    //
-    // THE CHROMES AND CAPTIONS FOLDERS ARE READ FIRST, ONCE (architect
-    // 2026-10-07; the second kind 2026-10-08, palette_file.h): the config's
-    // `chrome` and `caption` keys are judged against the compiled built-ins
-    // and the files loaded here, so they precede the config's reader. A
-    // failure is the config's own road — a bad file is a hand edit, the same
-    // adversarial class — one blunt line naming the file and no window.
-    // Nothing is copied in: each folder holds his own presets alone. (The
-    // chrome's own colors are compiled in: theme_file.h.)
-    for (std::optional<std::string> (*read)() :
-         {read_palette_folder, read_scheme_folder}) {
-        if (const std::optional<std::string> err = read()) {
-            std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-            return 1;
-        }
-    }
+    // (The chromes and captions folders were read ahead of it 2026-10-07..14,
+    // the preset files the color picker wrote; every preset is compiled in
+    // since, palette_file.h's head.)
     DeviceConfig device_config;
     {
         auto cfg = load_device_config(GuiPlatform::device_config_defaults());
@@ -3504,16 +3488,16 @@ int gui_main(const char* argument) {
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE SCHEME the
-    // config names (a built-in or a file read above; 2026-10-08 ~18:15) —
+    // config names (a built-in; 2026-10-08 ~18:15) —
     // its six caption keys (the caption alone since 2026-10-10) — or, with no
     // `caption` line, THE LIVE CHROME'S OWN SCHEME, which carries none and
     // paints the chrome's compiled caption (effective_scheme_name,
     // scheme_record; chrome_caption, palette_file.h), every other chrome color
     // derived from the palette's Cool Edit tones (live_chrome_words,
     // chrome_derive.h); and the palette the config
-    // names (a built-in, one of Cool Edit's presets, or a file read above)
+    // names (a built-in, one of Cool Edit's presets)
     // — or, with no `chrome` line, THE DEFAULT PALETTE, Cool Edit's
-    // "Default" under every chrome (effective_palette_name, 2026-10-09) —
+    // "Midnight" under every chrome (effective_palette_name, 2026-10-12) —
     // for the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here
     // through palette_record and handed to the install explicitly —
     // render.h's install_palette) — the scheme resolved against the chrome

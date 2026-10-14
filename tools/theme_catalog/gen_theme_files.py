@@ -32,8 +32,8 @@
 # THE DISPLAY NAME is the family's word, then the catalog name in Title Case (SCHEME_FAMILY_WORD,
 # scheme_display_name): "Windows Rainy Day", "Plus Space" (the Plus! themes' colour-depth tag dropped); a name that already opens with the family's
 # word takes it once ("Windows 2000 Standard").
-# Keys and display names are checked unique, and every display name printable ASCII within the palette name grammar's
-# 40 bytes (a typed preset name equal to one is refused as taken, color_picker.cpp's commit_name).
+# Keys and display names are checked unique, and every display name printable ASCII within 40 bytes (the color
+# picker's typed-name grammar, 2026-10-07..14; the check stays as the names' bound).
 # NO PRODUCT'S OWN SCHEMES (architect 2026-10-11 ~01:30, "Let's get rid of Cool Edit Pro ME as a Chrome … Those are
 # effectively the same now, now that Chrome only sets the caption"): the `warptempo` family's one entry and the second
 # include that listed its keys (chrome_schemes_product.inc, 2026-10-10) are gone; git history keeps them.

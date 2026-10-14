@@ -59,8 +59,9 @@ GuiRect notification_stack_bound(const AppState& a) {
     // top row (render_trim_flags paints its sunken ring from the lane's top),
     // so the frame's top line hides under the first card (architect
     // 2026-10-11, judged on a tablet mock). The cards have no bevels, so
-    // they sit over the bar's well and not in it, unlike the color picker,
-    // whose bevelled card is tucked inside the waveform's well; the right
+    // they sit over the bar's well and not in it (the color picker's
+    // bevelled card, 2026-10-07..14, was tucked inside the waveform's well);
+    // the right
     // edge keeps the panel's margin just inside the program frame's one-line
     // sunken edge. It is anchored on the trim lane and not on the icon row,
     // so whatever stands between the band's cases and the trim lane — the
@@ -106,11 +107,10 @@ bool notification_visible(const AppState& a, uint64_t id) {
 }
 
 uint64_t notification_card_at(const AppState& a, int x, int y) {
-    // A CARD UNDER A LIST POPUP OR THE COLOR PICKER'S CARD IS HIDDEN THERE
-    // (floater_above_cards_at, app_state.h: the menu row's drop-down, the
-    // settings choice editor's list, the color picker's element list, its
-    // preset menu and its card — each painting above the cards), so the
-    // press, the hover and the cursor reach the surface on top.
+    // A CARD UNDER A LIST POPUP IS HIDDEN THERE (floater_above_cards_at,
+    // app_state.h: the menu row's drop-down and the settings choice editor's
+    // list — each painting above the cards), so the press, the hover and the
+    // cursor reach the surface on top.
     if (floater_above_cards_at(a, x, y)) return 0;
     for (const AppState::NotificationPainted& p : a.notifications.painted) {
         if (!rect_contains(p.rect, x, y)) continue;

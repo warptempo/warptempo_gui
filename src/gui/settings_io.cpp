@@ -3,6 +3,7 @@
 #include "app_state.h"
 #include "device_config.h"
 #include "frame_format.h"
+#include "palette_file.h"   // effective_palette_name, effective_scheme_name
 #include "value_format.h"
 
 #include <cassert>
@@ -379,6 +380,18 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "projects_repo") return app.projects_repo;
     if (key == "projects_path" && app.device_config != nullptr)
         return app.device_config->projects_path;
+    // THE TWO COLOR KEYS (architect 2026-10-14, the Chrome and Caption
+    // rows): THE EFFECTIVE PRESET, the one deliberate departure from the
+    // byte-exact recall (the icon set's of 2026-10-09..10-12 its precedent) —
+    // with no line the kind's default (effective_palette_name: the default
+    // palette; effective_scheme_name: the chrome's own scheme), so the row's
+    // combo shows the preset on screen. The commit writes no line for the
+    // default (commit_device_setting), so the recall commits back as an
+    // unchanged no-op either way.
+    if (key == "chrome" && app.device_config != nullptr)
+        return std::string(effective_palette_name(app.device_config->palette));
+    if (key == "caption" && app.device_config != nullptr)
+        return std::string(effective_scheme_name(app.device_config->scheme));
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

@@ -205,17 +205,12 @@ set(WARPTEMPO_GUI_SOURCES
     # role table and each chrome's compiled theme, no files.
     # GUI-ONLY like the config: the CLI paints nothing.
     src/gui/theme_file.cpp
-    # THE PALETTE AND SCHEME FILES (2026-10-07; the schemes 2026-10-08): the
-    # program's role table (twelve roles since 2026-10-09), the built-in
-    # palettes (Cool Edit's twenty presets, the one default
-    # `cool-edit-default`) and schemes, and the palettes and schemes folders
-    # beside the device config, read once at launch and kept in step by the
-    # picker's writes. GUI-ONLY.
+    # THE COMPILED-IN PRESETS (2026-10-07; the schemes 2026-10-08; compiled
+    # in alone since 2026-10-14): the program's role table (eleven roles
+    # since 2026-10-11), the built-in palettes (Cool Edit's twenty presets,
+    # the one default `cool-edit-midnight`) and schemes, and the lookups the
+    # device config and the Settings Chrome and Caption rows read. GUI-ONLY.
     src/gui/palette_file.cpp
-    # THE COLOR PICKER (2026-10-07): the in-app picker of the program's
-    # twelve colors and the chrome's twelve scheme keys — the card's layout,
-    # the color math, the wheel's raster and the acts. GUI-ONLY.
-    src/gui/color_picker.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
     src/gui/phaseresetmarkers_ops.cpp

@@ -25,7 +25,7 @@
 // THE LIVE PALETTE — the panel's `face` and the tones Cool Edit derives from
 // it, the waveform's ink and its darkened text (cool_edit_derive.h's tones;
 // the per-role mapping is chrome_derive.h's, the one owner) — re-derived at
-// every install of the palette, so a pick of the Face or the ink moves the
+// every install of the palette, so a new Face or ink moves the
 // chrome live. THE CAPTION'S SIX ARE A SCHEME'S (palette_file.h's head: a
 // scheme is the caption alone since 2026-10-10), or, with no scheme keys
 // live, the live chrome's COMPILED CAPTION below.
@@ -107,48 +107,7 @@ constexpr std::size_t theme_role_index(std::string_view name) {
 // answers and install_palette reads.
 using GuiThemeWords = std::array<uint32_t, kGuiThemeRoleCount>;
 
-// THE ONE COLOUR GRAMMAR (architect 2026-10-03) — the palette files'
-// (palette_file.h): `#` and six hexadecimal digits, either case, OR one of
-// WINDOWS' TWENTY ALWAYS-SOLID COLOURS by name, lowercase — the colours a
-// 256-colour display's system palette reserved, so every program of the era
-// could count on them drawing solid:
-//   THE VGA SIXTEEN under their HTML 4.01 names (the W3C HTML 4.01
-//   Recommendation, 1999, section 6.5 "Colors"): black #000000, maroon
-//   #800000, green #008000, olive #808000, navy #000080, purple #800080, teal
-//   #008080, silver #C0C0C0, gray #808080, red #FF0000, lime #00FF00, yellow
-//   #FFFF00, blue #0000FF, fuchsia #FF00FF, aqua #00FFFF, white #FFFFFF;
-//   THE FOUR WINDOWS RESERVES under Delphi VCL's names (Graphics.pas's
-//   clMoneyGreen, clSkyBlue, clCream, clMedGray, without the `cl`):
-//   moneygreen #C0DCC0, skyblue #A6CAF0, cream #FFFBF0, medgray #A0A0A4.
-// The word is the value's 0xRRGGBB, an sRGB triple (display_transform.h's
-// head); nothing else is a colour.
-struct NamedThemeColour {
-    const char* name;
-    uint32_t    rgb;
-};
-inline constexpr NamedThemeColour kNamedThemeColours[] = {
-    {"black", 0x000000},  {"maroon", 0x800000}, {"green", 0x008000},
-    {"olive", 0x808000},  {"navy", 0x000080},   {"purple", 0x800080},
-    {"teal", 0x008080},   {"silver", 0xC0C0C0}, {"gray", 0x808080},
-    {"red", 0xFF0000},    {"lime", 0x00FF00},   {"yellow", 0xFFFF00},
-    {"blue", 0x0000FF},   {"fuchsia", 0xFF00FF}, {"aqua", 0x00FFFF},
-    {"white", 0xFFFFFF},
-    {"moneygreen", 0xC0DCC0}, {"skyblue", 0xA6CAF0}, {"cream", 0xFFFBF0},
-    {"medgray", 0xA0A0A4},
-};
-inline std::optional<uint32_t> theme_colour_word(std::string_view v) {
-    for (const NamedThemeColour& n : kNamedThemeColours)
-        if (v == n.name) return n.rgb;
-    if (v.size() != 7 || v[0] != '#') return std::nullopt;
-    uint32_t w = 0;
-    for (size_t i = 1; i < 7; ++i) {
-        const char c = v[i];
-        uint32_t d = 0;
-        if (c >= '0' && c <= '9')      d = static_cast<uint32_t>(c - '0');
-        else if (c >= 'A' && c <= 'F') d = static_cast<uint32_t>(c - 'A' + 10);
-        else if (c >= 'a' && c <= 'f') d = static_cast<uint32_t>(c - 'a' + 10);
-        else return std::nullopt;
-        w = (w << 4) | d;
-    }
-    return w;
-}
+// (THE ONE COLOUR GRAMMAR — `#rrggbb` or one of Windows' twenty always-solid
+// colours by name — was the theme files' and then the preset files' value
+// grammar, 2026-10-03..10-14, and left with the preset files, architect
+// 2026-10-14: every color is compiled in.)

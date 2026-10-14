@@ -218,15 +218,6 @@ constexpr int kMaxPendingCharsBpm = 44;
 // minimal-travel rule each painter applies — so the two cannot scroll
 // differently.
 constexpr int kMaxPendingCharsSettings = 1024;
-// THE COLOR PICKER'S HEX FIELD (2026-10-07, color_picker.h): one color as
-// `#RRGGBB`, the widest spelling the commit admits — seven bytes, the `#`
-// optional at the commit, so a pasted `83D798` fits too.
-constexpr int kMaxPendingCharsPaletteHex = 7;
-// THE COLOR PICKER'S NAME ASK (2026-10-07, color_picker.h: Save As and
-// Rename): a palette's name, THE NAME GRAMMAR'S 40-BYTE CAP
-// (palette_file.h's kPaletteNameMaxBytes, asserted equal in
-// color_picker.cpp) — the grammar is judged at the commit, the length here.
-constexpr int kMaxPendingCharsPaletteName = 40;
 
 // Vocabulary the editor accepts on the keyboard. Different call sites
 // edit different payload shapes; the kind now selects only the length cap
@@ -242,16 +233,11 @@ constexpr int kMaxPendingCharsPaletteName = 40;
 // State::iter_hops says which — one kind because the two are the same surface,
 // the same open, the same modal contract and the same commit route, differing
 // only in what the bytes mean, exactly as the side bit differs in which bound
-// they name. THERE ARE SIX KINDS AND TWO OF THEM ARE
+// they name. THERE ARE FOUR KINDS AND TWO OF THEM ARE
 // DIALOG EDITORS (SettingsAssignment, BpmBracket); the two top-strip kinds (FlagPayload, IterBound) share the
-// flag editor's State and paint in the marker lane; THE FIFTH AND SIXTH,
-// PaletteHex and PaletteName (2026-10-07), are THE COLOR PICKER'S ONE FIELD
-// — one line of `#RRGGBB` on the picker's card, or a palette's name while
-// its name ask stands (AppState::ColorPicker::field_editor, one State for
-// both, color_picker.h), hosted by the color picker, which is a modal owner
-// of its own and not a dialog editor: it is a member of
-// AppState::text_editor_session (so the on-screen keyboard rises for it and
-// the keyboard-modal gate stands) and NOT of dialog_editor_session. (A sixth,
+// flag editor's State and paint in the marker lane. (The color picker's
+// one field — its hex field and its name ask, two kinds — stood
+// 2026-10-07..14 and left with the picker. A fifth,
 // MagnificationLevelText, the magnification level markers column's one-digit
 // editor, stood from 2026-09-15 until that column's deletion 2026-09-23;
 // CommitTitle, the `h` view's commit-title editor, from 2026-08-07 until the
@@ -273,8 +259,6 @@ enum class Kind {
     BpmBracket,
     SettingsAssignment,
     IterBound,
-    PaletteHex,
-    PaletteName,
 };
 
 // THE MODAL SESSION ID SOURCE — one monotonic counter for the whole program,

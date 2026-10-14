@@ -2,10 +2,10 @@
 
 // THE DISPLAY TRANSFORM (architect 2026-10-08 ~05:15): EVERY AUTHORED COLOR IS
 // AN sRGB BYTE TRIPLE — a palette role, a chrome role (Windows' own scheme
-// bytes are sRGB records), the picker's hex, a catalog theme's byte, an
+// bytes are sRGB records), a catalog theme's byte, an
 // icon's own inks — "if I open that image in the web browser, it would have
 // the identical color on the GUI". A screenshot he lifts a hex from is
-// unprofiled, which a browser and GIMP take as sRGB; so is every scheme file.
+// unprofiled, which a browser and GIMP take as sRGB.
 // THE TABLET'S WINDOW IS A DISPLAY-P3 LAYER (GuiPlatform::adopt_window,
 // platform_android.cpp), so a byte handed to it untouched reads as a P3
 // coordinate — more saturated than the browser shows the same hex ("ours
@@ -22,8 +22,7 @@
 // waveform plate's two inks, converted on the GUI thread as
 // waveform_plate_inks hands them to the job, so the worker writes them
 // as they come); the icon rasters (icons.cpp, through
-// svg_icon::convert_to_display); the color picker's ring and triangle
-// (color_picker.cpp's premultiplied). THE CONVERSION IS AT THE
+// svg_icon::convert_to_display). THE CONVERSION IS AT THE
 // SOURCE, never a frame-level pass: the window buffer is copied byte for
 // byte, every flat color is exact, and an antialiased edge or a ramp's
 // in-between level is the renderer's blend of converted colors (render.h's

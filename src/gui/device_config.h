@@ -21,20 +21,22 @@
 //                            successful open; blank until the first
 //   caption=<name>          THE CAPTION PRESET the title bar is painted in, its
 //                            six keys (the caption alone since 2026-10-10): a
-//                            built-in (`windows-storm`, the
-//                            catalog's others) or a caption file read
-//                            at launch (is_scheme_name, palette_file.h); MAY
-//                            BE ABSENT — the first run's state — meaning the
+//                            built-in's key alone (`windows-storm`, the
+//                            catalog's others; is_builtin_scheme_name,
+//                            palette_file.h; a caption file's name until
+//                            2026-10-14), chosen by the Settings Caption
+//                            row; MAY BE ABSENT — the first run's state — meaning the
 //                            chrome's own caption, the compiled caption
 //                            exactly (effective_scheme_name). Named `scheme`
 //                            until 2026-10-13 (architect 2026-10-11 ~03:05);
 //                            the struct's member keeps that name.
 //   chrome=<name>            THE CHROME PRESET the program (and, through the
 //                            Face, the whole window) is painted in: a built-in,
-//                            one of Cool Edit's presets
-//                            (`cool-edit-midnight`, `cool-edit-xp-blue`, ...)
-//                            or a chrome file read at launch
-//                            (is_palette_name, palette_file.h); MAY BE ABSENT
+//                            one of Cool Edit's presets' keys alone
+//                            (`cool-edit-midnight`, `cool-edit-xp-blue`, ...;
+//                            is_builtin_palette_name, palette_file.h; a
+//                            chrome file's name until 2026-10-14), chosen by
+//                            the Settings Chrome row; MAY BE ABSENT
 //                            — the first run's state — meaning the default,
 //                            Cool Edit's "Midnight"
 //                            (effective_palette_name, 2026-10-09). Named
@@ -186,7 +188,7 @@
 // catalog shipped as bundled files, copied in at every launch), absent the
 // chrome's own, with a Settings row; every chrome's colors are compiled in
 // since (theme_file.h), and THE SCHEME AND THE PALETTE (palette_file.h)
-// are the colors' workshop. A config still carrying `theme=` is unknown-key fatal, no
+// choose among compiled-in presets. A config still carrying `theme=` is unknown-key fatal, no
 // migration (neither install's carried one).
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
@@ -230,17 +232,16 @@
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`, `Projects Repository`,
-// `Projects Path` (`Chrome` stood 2026-10-07..10-10, `Icons` and `Font`
-// 2026-10-09..10-12 and `Theme` 2026-10-03..10-08;
-// kSettingsPopupItems,
-// app_state.h) as rows that open the settings editor prefilled, and the
+// `Projects Path` and, since 2026-10-14, `Chrome` and `Caption` — the
+// `chrome` and `caption` keys' choice rows (a `Chrome` row of the retired
+// vocabulary key stood 2026-10-07..10-10, `Icons` and `Font`
+// 2026-10-09..10-12 and `Theme` 2026-10-03..10-08; the two color keys were
+// the color picker's preset menu's 2026-10-07..14; kSettingsPopupItems,
+// app_state.h) — as rows that open the settings editor prefilled, and the
 // editor commits each through this file's writer under the key's own
 // grammar below. `role` (2026-10-10) is NOT EDITABLE
 // IN THE APP: the planner sets it on each device by hand, the program not
-// running, and the program only carries it through its rewrites. `chrome` (2026-10-07) and
-// `caption` (2026-10-08) HAVE NO SETTINGS ROW: the color picker's preset menu
-// is their road (color_picker.h's THE PRESETS), which writes each key
-// through the same writer. Until
+// running, and the program only carries it through its rewrites. Until
 // 2026-09-02 the path keys
 // were hand-edited only, and HELP told the user to edit one without
 // telling him to quit first — which mattered, because A HAND EDIT UNDER A
@@ -463,13 +464,12 @@ inline constexpr const char* kDeviceRoleMirror = "mirror";
 inline constexpr const char* kDeviceRoleGrammarReason =
     "must be author or mirror";
 
-// (THE palette AND scheme GRAMMARS are palette_file.h's is_palette_name and
-// kPaletteGrammarReason, is_scheme_name and kSchemeGrammarReason, with THE
-// ONE COLOUR GRAMMAR every palette role's and scheme key's value takes,
-// theme_file.h's theme_colour_word. The `theme_level` grammar
-// and the program color grammar of the twelve keys left with those keys
-// 2026-10-04, the colour grammar moving whole to the theme files; the
-// `theme` key's own grammar left with the key 2026-10-08.)
+// (THE palette AND scheme GRAMMARS are palette_file.h's
+// is_builtin_palette_name and kPaletteGrammarReason, is_builtin_scheme_name
+// and kSchemeGrammarReason — a built-in's key alone since 2026-10-14. The
+// `theme_level` grammar and the program color grammar of the twelve keys
+// left with those keys 2026-10-04; the `theme` key's own grammar left with
+// the key 2026-10-08.)
 
 // HOW A PATH UNDER THE PROJECTS PATH IS NAMED IN A SENTENCE — the basename
 // rule's composer for everything the project model and the loaders say
@@ -580,18 +580,16 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// FOUR CALL SITES CARRY THE KEY COMMITS, and this is their inventory
-// (re-grepped 2026-10-12):
+// THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
+// (re-grepped 2026-10-14):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves two keys —
-// `projects_repo=` and `projects_path=`
-// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp; the path
-// arm joined 2026-09-02;
-// the theme's stood 2026-10-03..10-08, the chrome's 2026-10-07..10-10); the
-// color picker's `chrome=` and `caption=` write
-// (GuiColorPicker::write_preset_key, color_picker.cpp, 2026-10-07; the
-// scheme's 2026-10-08: a load, a Save As, a Rename and a Delete each name
-// the new active preset of the picker's scope); and
+// the settings editor's ONE device-key body, which serves four keys —
+// `projects_repo=`, `projects_path=`, and since 2026-10-14 `chrome=` and
+// `caption=` (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
+// the path arm joined 2026-09-02;
+// the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
+// 2026-10-07..10-10; the color picker's preset menu wrote the two color
+// keys 2026-10-07..14); and
 // gui_main's `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value

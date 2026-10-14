@@ -221,8 +221,8 @@ enum class GuiPointerLeaveReason {
 // painted. Of the hover-lit faces in the pen latch's inventory
 // (GuiInputHandler::pen_hot_latch_) the pull-down menus' lit row is the one
 // a leave darkens (clear_dropdown_pointer_state, main.cpp's hook); the
-// Settings combo's list and the color picker's list and preset menu are
-// cleared by no leave, and the two toolbars store no hot face.
+// Settings combo's list is cleared by no leave, and the two toolbars store
+// no hot face.
 inline bool pointer_leave_keeps_lit_rows(GuiPointerLeaveReason reason) {
     return reason == GuiPointerLeaveReason::PenHoverEnd;
 }

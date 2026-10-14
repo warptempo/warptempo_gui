@@ -152,7 +152,10 @@ std::string format_settings_text(
 // free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`),
 // the same "recall
 // and the file can never diverge" rule the
-// `.settings` keys keep, only against a different file. (`last_project` is
-// not editable and recalls nothing: it is the program's own.)
+// `.settings` keys keep, only against a different file — EXCEPT the two
+// color keys (`chrome` and `caption`, 2026-10-14), which recall THE
+// EFFECTIVE PRESET, the kind's default when the file has no line (the
+// definition). (`last_project` is not editable and recalls nothing: it is
+// the program's own.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);
