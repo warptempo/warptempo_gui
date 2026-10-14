@@ -1438,9 +1438,9 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors, the icon row's twenty-six and row 8's twenty-one
+    // three menu anchors, the icon row's twenty-six and row 8's nineteen
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-11, Older / Newer moving down):
+    // counts re-derived from them 2026-10-14, after 2026-10-11's Older / Newer moving down):
     //   THE ICON ROW, 17 + 4 + 1 + 4 = 26 — the left walk's seventeen
     //   (kIconRowButtons: Open Project and Save; Undo, Redo, Copy Value and
     //   Render; Full Zoom Out, Waveform Magnification, Follow and Restrict

@@ -3610,7 +3610,7 @@ struct SettingsPopupItem {
 // KEY (architect 2026-10-10, chrome_spec.h's head): Windows 2000 is the one
 // chrome.
 //
-// `palette` (2026-10-07, the sixth device key) and `scheme` HAVE NO ROW:
+// `chrome` (2026-10-07 as `palette`, the sixth device key) and `caption` HAVE NO ROW:
 // the in-app color picker is their chooser.
 //
 // `Icons` AND `Font` STOOD 2026-10-09..10-12 (the choice rows: the bundled
@@ -9080,7 +9080,7 @@ struct AppState {
     //   `parked_element`  THE OTHER SCOPE'S live element, swapped with
     //              `element` at a scope's change (GuiColorPicker::set_scope).
     //              BOTH KEPT ACROSS OPENS: the first open lands on the
-    //              Waveform scope's first row (Canvas) with Chrome parked on
+    //              Chrome scope's first row (Canvas) with Caption parked on
     //              its first (Title), a later open returns to the elements
     //              last picked — the picker remembers where the work was;
     //   `old_rgb`  OLD — the live element's color WHEN IT BECAME the live
@@ -9127,7 +9127,7 @@ struct AppState {
     //   `stash`    WHAT WAS PAINTED, the roster model (ColorPicker::Stash).
     // It authors nothing: no undo, no dirty; legal on a read-only tab and in
     // the `h` view (it changes colors, not state). THE ACTIVE PRESETS ARE NOT
-    // HERE: each is the live device config's `scheme` or `palette` resolved
+    // HERE: each is the live device config's `caption` or `chrome` resolved
     // (color_picker::active_preset — the config outlives this struct, which
     // a reopen rebuilds).
     struct ColorPicker {
@@ -13206,7 +13206,7 @@ inline bool authoring_locked(const AppState& a) {
 //
 // THE MEMBERS FALL IN THREE GROUPS, as the keyboard gate's own admissions do:
 // the marker verbs, History, BPM iterations, Settings and the view group's
-// three GREY OUTRIGHT under a lit lamp, the padlock on a writable tab (its
+// four GREY OUTRIGHT under a lit lamp, the padlock on a writable tab (its
 // lock direction); Up/Down and Open Text
 // Editor grey UNLESS A BOUND CELL (Lower or Upper) IS ADDRESSED, the gate's
 // bound-axis admission;
@@ -13249,8 +13249,9 @@ inline bool authoring_locked(const AppState& a) {
 //     which the lock ADMITS (the allowlist's two deltas are stated once at
 //     GuiInputHandler::iteration_lock_key_blocked, input_key_dispatch.cpp).
 //     The tab switch is admitted into a locked tab too (2026-10-13).
-//   * THE VIEW GROUP'S THREE SELECTORS ARE MEMBERS SINCE 2026-09-10
-//     (architect, that morning, while they were the row-1 view bar): bare
+//   * THE VIEW GROUP'S FOUR SELECTORS ARE MEMBERS (three since 2026-09-10,
+//     architect, that morning, while they were the row-1 view bar; the
+//     fourth, S+P, since 2026-10-12): bare
 //     1/2/3/4 are refused under the lamp, so the four wear the icon row's own
 //     disabled face (2026-10-01) — the glyph saturated
 //     (icons::draw_disabled), the selected view's checked face still saying
@@ -15436,7 +15437,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     read-only term to compose: TOGGLE READ-ONLY (under a lit lamp no tab is
 //     locked at all), TOGGLE HISTORY VIEW, whose arm adds the publishing
 //     refusal (its mode is claimed above the gate and a locked tab reads
-//     history as a writable one does), and THE VIEW GROUP'S THREE SELECTORS on
+//     history as a writable one does), and THE VIEW GROUP'S FOUR SELECTORS on
 //     one arm of their own. THREE ARMS ASK A READ-ONLY BIT WITH NO
 //     ITERATION TERM, AND THEY ASK TWO DIFFERENT BITS: TOGGLE INHERIT reads
 //     the ACTIVE TAB's, then FORKS on the lamp rather than greying on it —

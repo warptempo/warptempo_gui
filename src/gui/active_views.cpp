@@ -50,8 +50,9 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // the selection emptied this helper owes the marker lane no land at all. ITS
 // CALLERS OWN WHAT HAPPENS NEXT, and this is their inventory:
 // select_active_markers_view (the column entry, below) runs the coincidence
-// auto-select; the phase-reset propagate's landing tail into target view
-// (phase_reset_propagate.cpp) writes its OWN selection and lands on that; the
+// auto-select; the phase-reset paste's landing (land_paste_in_phase_reset_view,
+// phase_reset_propagate.cpp: the W column to the P column of the audio view
+// the paste stands in) writes its OWN selection and lands on that; the
 // undo restore (undo.cpp) writes the entry's column tag with its data already
 // installed; and the crossing Shift+S into the P column of the audio view it
 // is pressed in (input_handler.cpp) lands its own drop after the clear
@@ -247,8 +248,8 @@ void GuiActiveViews::select_active_markers_view(char target_mode) {
     // marker selected — the lane re-entered by coincidence rather than by memory.
     // It lives HERE rather than in
     // switch_active_markers_view_to because that helper has other callers (its
-    // own comment owns the inventory) — the propagate paste's target-view tail
-    // writes its own selection one line later, and an auto-select there would
+    // own comment owns the inventory) — the propagate paste's column landing
+    // (land_paste_in_phase_reset_view) writes its own selection one line later, and an auto-select there would
     // be overwritten for nothing.
     // (NO clear_touch_zoom_seat call here: it moved down onto the W/P WRITER,
     // switch_active_markers_view_to above — this toggle's own

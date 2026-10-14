@@ -669,7 +669,7 @@ inline std::string spell_chord(GuiKey key, GuiInputState mods) {
 //
 // WHAT IS DELIBERATELY ABSENT: bare `e`, which the platform boundary turns
 // into the left mouse button before a key event exists (kLeftClickKey — it
-// reaches on_key only as a character inside an editor); the digits 4..9;
+// reaches on_key only as a character inside an editor); the digits 5..9;
 // Backspace, and every letter the ladder never tests (A, T, W, X, Y — E
 // left the class 2026-10-10 for Alt+E, the Edit title's access key, its bare
 // form staying the mouse; Y

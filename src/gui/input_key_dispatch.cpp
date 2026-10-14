@@ -679,7 +679,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // Toggle History View button, the
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
-// 2026-09-10 — THE VIEW GROUP'S THREE SELECTORS, the column
+// 2026-09-10 — THE VIEW GROUP'S FOUR SELECTORS (three until S+P, 2026-10-12), the column
 // switch's four chords, THE PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14, and ADD
 // TO SELECTION was its fourth until 2026-09-19, when the narrowed sticky ctrl
@@ -5691,9 +5691,10 @@ void GuiInputHandler::apply_recipe_in_place(
     // ONE cross-file undo entry: the two marker columns plus the OUTGOING engine
     // settings, which push_undo_both captures from `app` — so it must run
     // BEFORE the incoming block is applied below. It files under the LIVE tab
-    // and the LIVE column — W or P (the restore takes a 'P' entry's target
-    // view ahead of its column, undo.cpp) — which are the only ones this act touches now that it performs no tab or column
-    // switch at all.
+    // and the LIVE column — W or P (the restore writes the entry's column
+    // first and its own audio-view tag after, whichever column it names,
+    // Undo::restore_history_entry) — which are the only ones this act touches
+    // now that it performs no tab or column switch at all.
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
                         app.active_markers_view);
     undo.recompute_dirty();

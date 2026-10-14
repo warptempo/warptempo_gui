@@ -90,7 +90,7 @@
 // tools/theme_catalog/gen_cool_edit_presets.py from the committed text
 // tools/theme_catalog/cool_edit_presets.txt (the transcription's rules are
 // its head's; regenerate, never hand-edit): each a KEY (`cool-edit-` and the
-// scheme's name in the key grammar — the `palette` key's word for it), a
+// scheme's name in the key grammar — the `chrome` key's word for it), a
 // DISPLAY NAME (Cool Edit's own, "Default" for its "(Default Scheme)") and
 // THE ELEVEN. THE DEFAULT PALETTE IS ONE UNDER EVERY CHROME, Cool Edit's
 // "Midnight" (`cool-edit-midnight`, kGuiDefaultPaletteKey; architect
@@ -103,7 +103,7 @@
 // below, EVERY ENTRY OF docs/themes/catalog.json, GENERATED into
 // chrome_schemes.inc by tools/theme_catalog/gen_theme_files.py (the
 // transcription's rules are its head's; regenerate, never hand-edit): each a
-// KEY (the catalog's verbatim — the `scheme` key's word for it), a DISPLAY
+// KEY (the catalog's verbatim — the `caption` key's word for it), a DISPLAY
 // NAME and THE SIX CAPTION KEYS (the product's own `cool-edit-pro-me` of
 // 2026-10-10 removed 2026-10-11, "effectively the same now, now that Chrome
 // only sets the caption"); the catalog's
@@ -182,8 +182,8 @@
 // bearing a display name loads; and a palette and a scheme may share a name.
 //
 // THE FOLDERS ARE READ ONCE AT LAUNCH (read_palette_folder,
-// read_scheme_folder, gui_main, before the device config, so its `palette`
-// and `scheme` keys are judged against what loaded; the names taken in
+// read_scheme_folder, gui_main, before the device config, so its `chrome`
+// and `caption` keys are judged against what loaded; the names taken in
 // sorted order, so the first error is the same file on every launch) into
 // two live maps. A MISSING FOLDER IS NO FILES. EVERY VIOLATION IS THE
 // LAUNCH'S FIRST-ERROR HARD FAIL (NO BACKSTOPS FOR ADVERSARIAL USE: a
@@ -202,7 +202,7 @@
 // GuiColorPicker::save_preset, commit_name, confirm_delete), its picks
 // themselves writing THE LIVE WORDS alone (install_program_palette,
 // install_chrome_pick) and no file. None of the writers below touches the
-// device config — the `palette` and `scheme` keys are the caller's, which
+// device config — the `chrome` and `caption` keys are the caller's, which
 // owes its own rewrite when it renames or removes the preset a key names
 // (GuiColorPicker::write_preset_key). Each answers nothing on success and
 // the failure's whole line otherwise, which the caller cards (the
@@ -400,7 +400,7 @@ inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 };
 // THE DEFAULT PALETTE, ONE UNDER EVERY CHROME (the head): Cool Edit's
 // "Midnight" (architect 2026-10-12; "Default" is one of the others now) —
-// the palette a config with no `palette` line takes
+// the palette a config with no `chrome` line takes
 // (effective_palette_name).
 inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-midnight";
 
@@ -471,7 +471,7 @@ constexpr bool is_builtin_scheme_name(std::string_view name) {
     return builtin_scheme(name) != nullptr;
 }
 // Whether `name` is a CHROME'S OWN SCHEME'S key (a ChromeSpec's own_scheme,
-// chrome_spec.h) — the Chrome scope's first group of built-ins, its head
+// chrome_spec.h) — the Caption scope's first group of built-ins, its head
 // (color_picker::preset_menu_rows).
 constexpr bool is_chrome_own_scheme(std::string_view name) {
     return name == kChromeSpecWin2000.own_scheme;
@@ -485,15 +485,16 @@ constexpr bool is_chrome_own_scheme(std::string_view name) {
 std::string_view effective_palette_name(std::string_view palette);
 std::string_view effective_scheme_name(std::string_view scheme);
 
-// The two folders: `palettes/` and `schemes/` in device_config_path()'s
-// folder, or an EMPTY path when the config home does not resolve (the
+// The two folders: `chromes/` (the palette kind) and `captions/` (the scheme
+// kind) in device_config_path()'s folder, or an EMPTY path when the config home does not resolve (the
 // config's own load then refuses with its own line).
 std::filesystem::path palette_folder_path();
 std::filesystem::path scheme_folder_path();
 
 // THE LAUNCH'S ONE READ of each folder (gui_main, before the device config
-// is read): every `*.palette` / `*.scheme` regular file parsed under its
-// kind's grammar above into its live map. Answers nothing on success and the
+// is read): every `*.chrome` / `*.caption` regular file parsed under its
+// kind's grammar above (the palette kind's, the scheme kind's) into its live
+// map. Answers nothing on success and the
 // first error's whole line otherwise, the file named — FATAL at the caller.
 // Each called once per process.
 std::optional<std::string> read_palette_folder();
@@ -506,12 +507,13 @@ std::optional<std::string> read_scheme_folder();
 std::vector<std::string> palette_file_names();
 std::vector<std::string> scheme_file_names();
 
-// THE `palette` AND `scheme` KEYS' GRAMMARS — each kind's ONE owner, asked by
+// THE `chrome` AND `caption` KEYS' GRAMMARS — each kind's ONE owner, asked by
 // the device config's reader (a hand-edited key naming no preset of its
 // kind is the launch's hard fail): a built-in's key or a loaded file's name,
-// byte for byte — for a palette a built-in palette's key (Cool Edit's
-// presets; a catalog scheme's key is the `scheme` key's word alone,
-// 2026-10-08 ~18:15), for a scheme any built-in scheme's.
+// byte for byte — for a palette (the `chrome` key) a built-in palette's key
+// (Cool Edit's presets; a catalog scheme's key is the `caption` key's word
+// alone, 2026-10-08 ~18:15), for a scheme (the `caption` key) any built-in
+// scheme's.
 bool is_palette_name(std::string_view name);
 bool is_scheme_name(std::string_view name);
 inline constexpr const char* kPaletteGrammarReason =
@@ -543,8 +545,8 @@ std::optional<GuiChromePick> scheme_record(std::string_view name);
 // holds, the writers ASSERT their name preconditions (a breach is a program
 // bug) and their one error arm is I/O.
 //
-// write_palette_file: create or overwrite `<name>.palette` with all eleven
-// roles; write_scheme_file: create or overwrite `<name>.scheme` with the
+// write_palette_file: create or overwrite `<name>.chrome` with all eleven
+// roles; write_scheme_file: create or overwrite `<name>.caption` with the
 // pick's keys — each uppercase `#RRGGBB` in its table's order, through the
 // atomic writer (atomic_write_string_to_path), the folder created on the
 // first write. Precondition: `name` in the grammar and no built-in's of the

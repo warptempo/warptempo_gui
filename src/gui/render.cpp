@@ -2933,7 +2933,7 @@ void install_palette(const GuiPaletteWords& program,
                      const std::optional<GuiChromePick>& chrome) {
     // The program's fields are filled off `program`, THE LIVE WORDS the
     // caller resolved (render.h: the launch's palette_record of the
-    // `palette` key, beside the scheme_record of the `scheme` key), then the
+    // `chrome` key, beside the scheme_record of the `caption` key), then the
     // chrome's derived from them with the scheme's keys (live_chrome_words,
     // chrome_derive.h, which never misses), the two tables covering the
     // struct exactly (palette_file.cpp), so a role cannot be valued and not

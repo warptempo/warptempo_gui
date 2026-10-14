@@ -69,7 +69,7 @@ struct Viewport;
 // scheme (render.h's live_chrome_pick) — and installs them; the presets are
 // NAMED PALETTES AND SCHEMES (palette_file.h: the compiled-in built-ins and
 // his files) and EACH SCOPE'S ACTIVE PRESET is the device config's
-// `palette` or `scheme` resolved (effective_palette_name,
+// `chrome` or `caption` resolved (effective_palette_name,
 // effective_scheme_name) — NOT A FIELD HERE: the live config is its one
 // truth, read at every paint, so the picker's first open after a launch
 // lands on the config's presets (or, with no line, the chrome's own scheme
@@ -82,7 +82,7 @@ struct Viewport;
 // and THE NEXT LAUNCH RETURNS TO THE TWO NAMED PRESETS — the menu's Save,
 // lit while the scope's live words differ from its active file's, is the
 // cue (architect 2026-10-07). The picker is the two folders' one writer and
-// the `palette` and `scheme` keys' one writer (GuiColorPicker's preset acts,
+// the `chrome` and `caption` keys' one writer (GuiColorPicker's preset acts,
 // below).
 //
 // WHAT IT IS. ONE CARD IN THE WELL, on the half of the window opposite the
@@ -107,12 +107,12 @@ struct Viewport;
 //     +240, turning with the hue.
 //   THE RIGHT COLUMN — (a) THE CHOOSER ROW, two of the chrome's combo
 //     boxes side by side (2026-10-08 ~18:15; THE GRID and THE WIDTH below
-//     have the arithmetic): THE SCOPE COMBO at the left, showing "Chrome" or
-//     "Waveform" (scope_display_name), then THE ELEMENT CHOOSER showing the
+//     have the arithmetic): THE SCOPE COMBO at the left, showing "Caption" or
+//     "Chrome" (scope_display_name), then THE ELEMENT CHOOSER showing the
 //     live element's name (element_display_name), each with its arrow
 //     button; a press on either drops ITS list — the scope's two rows, or
-//     THE SCOPE'S ELEMENTS (scope_element_at: under Chrome the six in
-//     kGuiChromeLines' order, "Title" first; under Waveform the eleven in
+//     THE SCOPE'S ELEMENTS (scope_element_at: under Caption the six in
+//     kGuiChromeLines' order, "Title" first; under Chrome the eleven in
 //     kGuiPaletteRoles' order) — the menu-row popup's painters and press
 //     road, and a tap on a row selects. THE TWO SHARE ONE LIST: one is down
 //     at a time (AppState::ColorPicker's `chooser_scope` says whose), so the
@@ -631,8 +631,8 @@ constexpr const char* preset_act_label(PresetAct a) {
     }
     return "";
 }
-// THE SCOPE'S ACTIVE PRESET — the live device config's `scheme` or
-// `palette` resolved (effective_scheme_name, effective_palette_name): the
+// THE SCOPE'S ACTIVE PRESET — the live device config's `caption` or
+// `chrome` resolved (effective_scheme_name, effective_palette_name): the
 // name as written, or for no line the live chrome's own scheme or the
 // default palette (the head: no field holds it).
 std::string_view active_preset(const AppState& app, Scope s);
@@ -975,7 +975,7 @@ struct GuiColorPicker {
     // through set_color).
     void damage_card();
 
-    // THE `scheme` AND `palette` KEYS' ONE WRITER (the presets' acts): `name`
+    // THE `caption` AND `chrome` KEYS' ONE WRITER (the presets' acts): `name`
     // becomes THE LIVE SCOPE'S ACTIVE PRESET — its key's value the name, or
     // EMPTY (NO LINE) when it is what no line means, the live chrome's own
     // scheme or the default palette (device_config.h); a same-value write

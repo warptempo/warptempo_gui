@@ -23,7 +23,7 @@
 #include "history_prefetch.h"
 #include "audio.h"
 #include "device_config.h"
-#include "palette_file.h"  // the palettes and schemes folders' launch reads
+#include "palette_file.h"  // the chromes and captions folders' launch reads
 #include "icons.h"         // the icon set's launch load
 #include "waveform_worker.h"
 #include "file_loader.h"
@@ -3458,9 +3458,9 @@ int gui_main(const char* argument) {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     //
-    // THE PALETTES AND SCHEMES FOLDERS ARE READ FIRST, ONCE (architect
-    // 2026-10-07; the schemes 2026-10-08, palette_file.h): the config's
-    // `palette` and `scheme` keys are judged against the compiled built-ins
+    // THE CHROMES AND CAPTIONS FOLDERS ARE READ FIRST, ONCE (architect
+    // 2026-10-07; the second kind 2026-10-08, palette_file.h): the config's
+    // `chrome` and `caption` keys are judged against the compiled built-ins
     // and the files loaded here, so they precede the config's reader. A
     // failure is the config's own road — a bad file is a hand edit, the same
     // adversarial class — one blunt line naming the file and no window.
@@ -3506,13 +3506,13 @@ int gui_main(const char* argument) {
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE SCHEME the
     // config names (a built-in or a file read above; 2026-10-08 ~18:15) —
     // its six caption keys (the caption alone since 2026-10-10) — or, with no
-    // `scheme` line, THE LIVE CHROME'S OWN SCHEME, which carries none and
+    // `caption` line, THE LIVE CHROME'S OWN SCHEME, which carries none and
     // paints the chrome's compiled caption (effective_scheme_name,
     // scheme_record; chrome_caption, palette_file.h), every other chrome color
     // derived from the palette's Cool Edit tones (live_chrome_words,
     // chrome_derive.h); and the palette the config
     // names (a built-in, one of Cool Edit's presets, or a file read above)
-    // — or, with no `palette` line, THE DEFAULT PALETTE, Cool Edit's
+    // — or, with no `chrome` line, THE DEFAULT PALETTE, Cool Edit's
     // "Default" under every chrome (effective_palette_name, 2026-10-09) —
     // for the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here
     // through palette_record and handed to the install explicitly —

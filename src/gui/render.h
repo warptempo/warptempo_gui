@@ -112,11 +112,11 @@ struct TrimRange {
 // (kGuiThemeRoles, theme_file.h).
 // The program's roles are kGuiPaletteRoles and the compiled built-in
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
-// active palette is the device config's `palette` — a built-in or a
-// `<name>.palette` file from the `palettes/` folder beside it — or, with no
-// `palette` line, the default palette, Cool Edit's "Midnight" under every
+// active palette is the device config's `chrome` — a built-in or a
+// `<name>.chrome` file from the `chromes/` folder beside it — or, with no
+// `chrome` line, the default palette, Cool Edit's "Midnight" under every
 // chrome (2026-10-12); the active SCHEME, the caption's six keys, is its
-// `scheme` — a built-in or a `<name>.scheme` file from the `schemes/`
+// `caption` — a built-in or a `<name>.caption` file from the `captions/`
 // folder — or, with no line, the live chrome's own, which carries no keys
 // and paints the chrome's COMPILED CAPTION (palette_file.h's
 // kGuiCaptionOwn: Windows Storm's, architect 2026-10-12). There is
@@ -526,14 +526,14 @@ struct GuiChromePick {
 // every role but the caption's six a tone of the palette's face or ink,
 // live_chrome_words, chrome_derive.h), the caption's six off `chrome`, the
 // scheme's keys, or with none the compiled caption
-// (chrome_caption(), palette_file.h). AT LAUNCH the palette the config's `palette`
-// key names and the scheme its `scheme` key names (2026-10-08; through
+// (chrome_caption(), palette_file.h). AT LAUNCH the palette the config's `chrome`
+// key names and the scheme its `caption` key names (2026-10-08; through
 // is_palette_name and is_scheme_name — a built-in or a file read at launch —
 // or, with no line, the default palette and the live chrome's own scheme,
 // effective_palette_name and effective_scheme_name, palette_file.h: gui_main
 // resolves them with palette_record and scheme_record and passes the two).
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
-// `palette` and `scheme` keys name THE ACTIVE PRESETS (color_picker.h's THE
+// `chrome` and `caption` keys name THE ACTIVE PRESETS (color_picker.h's THE
 // PRESETS) and give the words at launch alone; a preset's load or Delete
 // installs words, and a load, Save As, Rename or Delete writes its key
 // (GuiColorPicker). This resolves and never refuses. It bumps

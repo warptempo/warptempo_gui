@@ -516,8 +516,11 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
 // write off that chokepoint (the shape this replaced), and feeding this source
 // value into the cursor would jump a target-view playhead into source
 // coordinates — hence two values per column. In source view the two agree
-// frame for frame (the same rounding under the same grid) at rest; in target
-// view this is the inverse image the cursor's value only names. THE TWO HALVES
+// frame for frame (the same rounding under the same grid) at rest — EXCEPT IN
+// THE COLUMN THAT HOLDS THE LAST FRAME, where the trim half lands on
+// total - 1 (the end wall, as Shift+0 writes it; trim_bound_frame_at_column
+// owns the landing) and the playhead half keeps the column's lattice frame;
+// in target view this is the inverse image the cursor's value only names. THE TWO HALVES
 // SIT ON ONE PAINTED VIEWPORT (architect 2026-09-24, strictly as painted): the
 // TRIM half here and the PLAYHEAD half (playhead_frame_at_click_column, the
 // click-placement family's one conversion) both read the ITEM viewport basis

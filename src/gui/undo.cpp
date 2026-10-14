@@ -794,11 +794,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // the S/T domain translation of playhead and viewport with its target-view
     // entry gate and its flag-editor teardown, the column's selection clear.
     //
-    // THE ORDER IS TAB, DATA, COLUMN, SELECTION, AUDIO VIEW for an entry
-    // landing in W (and for a settings-only entry, which writes no column),
-    // and TAB, DATA, AUDIO VIEW, COLUMN, SELECTION for one landing in P or M
-    // (the column that exists in one audio view only; the reason is at the
-    // column write below). Every step of it is decided rather than chosen:
+    // THE ORDER IS TAB, DATA, COLUMN, SELECTION, AUDIO VIEW for every entry
+    // (a settings-only entry writes no column), whichever column it lands in:
+    // both columns pair with both audio views, so the column write never waits
+    // on the audio view (the reason is at the column write below). Every step
+    // of it is decided rather than chosen:
     //   * THE TAB FIRST, because the S/T switch treats the two tabs
     //     DIFFERENTLY: the ACTIVE tab's playhead is translated and re-anchored
     //     on its own painted column (and re-expressed onto a focused marker),

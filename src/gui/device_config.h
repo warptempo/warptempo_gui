@@ -255,9 +255,10 @@
 // fallbacks, for the four required keys: a successful read always assigns
 // them. THE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
 // (the palette 2026-10-07; the scheme 2026-10-08): `scheme` and `palette`
-// empty (no line: the chrome's own). Both backends stamp a
+// (the struct's members of the `caption` and `chrome` keys) empty (no line:
+// the chrome's own). Both backends stamp a
 // default-constructed struct's (GuiPlatform::device_config_defaults), so the
-// first-run file of either device names no scheme or palette line. THE ROLE'S
+// first-run file of either device names no caption or chrome line. THE ROLE'S
 // DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
 // (architect 2026-10-10: the program never invents a device's role), so a
 // first run stamps a file WITHOUT `role` and its read-back refuses the launch
@@ -295,13 +296,13 @@ struct DeviceConfig {
     std::string projects_path;
     std::string last_project;
     // THE SCHEME, UNSET BY DEFAULT (2026-10-08 ~18:15): empty while the
-    // config has no `scheme` line, which RESOLVES AT EACH INSTALL to the live
+    // config has no `caption` line, which RESOLVES AT EACH INSTALL to the live
     // chrome's own scheme (effective_scheme_name, palette_file.h:
     // `windows-storm`, the compiled caption exactly) — never written
     // back.
     std::string scheme;
     // THE PALETTE, UNSET BY DEFAULT (architect 2026-10-07): empty while the
-    // config has no `palette` line, which RESOLVES AT EACH INSTALL to the
+    // config has no `chrome` line, which RESOLVES AT EACH INSTALL to the
     // default palette (effective_palette_name, palette_file.h: Cool Edit's
     // `cool-edit-midnight` under every chrome, 2026-10-12) — never written
     // back.

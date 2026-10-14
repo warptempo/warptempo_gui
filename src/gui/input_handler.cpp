@@ -1033,7 +1033,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // two rulings a day apart — and with it the cost the wording was chosen
         // to cover. read_only_key_blocked is the COMPLEMENT OF AN ALLOWLIST, so
         // it answers true both for a bound authoring chord the lock is holding
-        // back AND for a chord that binds nothing at all (bare `4`, an unbound
+        // back AND for a chord that binds nothing at all (bare `5`, an unbound
         // modifier decoration); when every unbound press elsewhere was answered
         // with "<chord> is not bound", saying nothing at all here would have
         // been the one place that class went unanswered, and a bare "This tab
@@ -1134,9 +1134,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 2026-07-29, when the pointer tempo drag and the bare Left/Right
     // tempo-image step were deleted, marker_drag.h, leaving bare Left/Right in
     // W+target a consumed refusal at the split below), the phase-reset
-    // propagate paste (it starts in source view and lands in target through
-    // handle_active_audio_view_toggle, the view selectors' own chokepoint now that
-    // bare `t` is deleted), the iteration-bracket wipe, and — since
+    // propagate paste (a W-column act that lands in the P column of the audio
+    // view it was pressed in, land_paste_in_phase_reset_view, and switches no
+    // audio view), the iteration-bracket wipe, and — since
     // 2026-08-24 — the WARP STATUS/VALUE FAMILY: Ctrl+D,
     // Ctrl+N, Delete and the flag editor's Return open, each admitted in
     // W+target with the cent step's re-land contract in its own tail.

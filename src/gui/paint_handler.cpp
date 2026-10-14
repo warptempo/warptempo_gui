@@ -1034,12 +1034,13 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the opener and
 // the view group cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
-// walks). The band holds every pane down to 592 Windows px of window at
-// 100 % outside the `h` view and 408 inside it (the width math at
+// walks). The band holds every pane down to 592 Windows px of BAND width
+// outside the `h` view and 408 inside it, the window two program frame lines
+// wider (594 / 410 at 100 %; the width math at
 // paint_icon_row, its one statement, re-derived 2026-10-13 for the view
 // group's fourth case), so neither host reaches the rule at its scale: the
-// tablet's 2304 device px hold the row in both states up to about 389 % and
-// the laptop's 1920 up to about 324 % (the W arithmetic over the device
+// tablet's 2304 device px hold the row in both states up to about 388 % and
+// the laptop's 1920 up to about 323 % (the W arithmetic over the device
 // width; each element's own rounding moves the edge by a pixel or so).
 constexpr IconRowDef kIconRowViewGroup[] = {
     {RedesignButton::ViewSW, icons::Icon::DocumentExport},
@@ -2169,10 +2170,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // column, the history opener's pane, the dark column the left panes stop
     // at — is
     //   1 + 103 + 1 + 34 + 1 = 140,
-    // so the band holds every pane in any window at least 592 Windows px
-    // wide outside the view (408 inside it), the band standing one program
-    // frame line in from each side (2026-10-10) — the tablet's 768 at 300 %
-    // a band of 766 with a recess of 174 between. IN DEVICE PX, off the
+    // so the band holds every pane when it is at least 592 Windows px wide
+    // outside the view (408 inside it); the band stands one program frame
+    // line in from each side (2026-10-10, program_frame_rect), so the WINDOW
+    // holds it from two frame lines more, 594 (410) at 100 % — the tablet's
+    // 768 at 300 % a band of 766 with a recess of 174 between. IN DEVICE PX, off the
     // painted walk (each line one relief line, each face and the glyph its
     // own scaled_px): at the tablet's 300 % (cases 69) 1356 + 420 of its
     // band's 2298; at the laptop's 138 % (lines 1, faces 7 and 6, cases 31)
