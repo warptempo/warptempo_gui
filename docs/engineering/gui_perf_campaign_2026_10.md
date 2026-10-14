@@ -314,14 +314,18 @@ them re-derivable.
 
 **(a) The cadence observation.** After the GPU canvas (`dbb8da35`), a
 throwaway per-second counter on the tablet (frame interval return to return,
-histogrammed in 11.11-ms vsync buckets; event to post; the swap's own time)
+histogrammed in buckets read as vsyncs, their edges ≤ 13 ms, 13 to 24 ms and
+on; event to post; the swap's own time)
 over two minutes of his pans and pinches: 96.5 % of consecutive frames one
 vsync apart at 90 Hz, 3.1 % two, event to post 7.8 ms mean — against 17 to
 20 ms and 15 to 44 fps before the arc. A vsync-driven frame start
 (`AChoreographer_postFrameCallback64` / `postVsyncCallback`, the external
 review's item for the cadence) could only have touched the ~3 % slips, and
-the stutter it was meant for turned out to be (b). RULED OUT BY MEASUREMENT;
-the loop keeps its one wakeup (`closed_questions.md`).
+the stutter it was meant for turned out to be (b), so it was ruled out the
+same day and the loop kept its one wakeup. THAT RULING WAS REVERSED THAT
+NIGHT (§7(c)): the counter's buckets (≤ 13 ms, 13 to 24 ms, …) are not vsync
+counts, and once the coalescer of (b) was in, the display's own record showed
+what they hid.
 
 **(b) The pan hitch.** The symptom, his glass of the same day: an occasional
 jump in a pen pan, felt with flags on screen and not without. The first
@@ -349,8 +353,13 @@ the same size reads as nothing.
 on the decor view, and a present-per-vsync coalescer in the pump (presents at
 least 10.5 ms apart). Every sample then arrived as its own event, 2.04 ms
 apart, history 0; over 2 min of the same panning: no hole, event to post
-6.5 ms mean (7 to 9 before), consecutive frames one vsync apart 1476 times to
-one two-vsync frame, no blocked swap. His glass: "no stutter".
+6.5 ms mean (7 to 9 before), no blocked swap. His glass: "no stutter". THE
+CADENCE CLAIM RECORDED HERE WITH IT WAS FALSE: "consecutive frames one vsync
+apart 1476 times to one two-vsync frame" read the counter's first two buckets
+as one vsync and two, but its buckets were ≤ 13 ms and 13 to 24 ms, so the
+1476 were the 13-to-24-ms bucket — every interval longer than a vsync — and
+the alternation of one-vsync and two-vsync display frames the coalescer
+produced was invisible in it (§7(c)).
 
 **THE FIX** is the trial's two edits in owned form: `MainActivity.onCreate`'s
 `requestUnbufferedDispatch(SOURCE_TOUCHSCREEN | SOURCE_STYLUS)` on the decor
@@ -358,9 +367,52 @@ view (the source overload, NativeActivity's events never reaching the View
 hierarchy), and the PRESENT-PER-VSYNC COALESCER at `GuiPlatform::pump`'s tail
 (`platform_android.cpp`): damage painted at most once per display period, the
 spacing derived from the panel's pinned rate (`kPanelRefreshHz`, the
-setFrameRate vote's number) less a 0.6-ms slack. Without the coalescer the
-unbuffered pen's ~500 events a second would each present, fill the swap
-queue and block the loop in the swap. The Wayland backend needs neither: the
-compositor's frame callback paces its presents. The investigation's other
-leads — the camera hold, the touch window, the flag hit tests, the paint —
-are closed with it (`closed_questions.md`).
+setFrameRate vote's number) less a 0.6-ms slack (`5b303871`). Without some
+pacing the unbuffered pen's ~500 events a second would each present, fill the
+swap queue and block the loop in the swap. The Wayland backend needs neither:
+the compositor's frame callback paces its presents. THE COALESCER WAS THE
+WRONG PACING and was replaced that night by the vsync-gated paint (c). The
+investigation's other leads — the camera hold, the touch window, the flag hit
+tests, the paint — are closed with it (`closed_questions.md`).
+
+**(c) The close: the coalescer's error and the vsync-gated paint (brief
+174, the same night).** SurfaceFlinger's own per-layer statistics
+(`dumpsys SurfaceFlinger --timestats`, the display side: the interval
+between the app layer's consecutive presented frames, histogrammed per layer
+by the compositor) during a pen pan at `5b303871`, on his glass: WITH FLAGS
+52 % of intervals one vsync and 39 % TWO; FLAGLESS 74 % and 20 %. The GPU was not the limit (post to acquire
+3 ms). THE COALESCER'S ERROR: its 10.51-ms spacing ran from the previous
+present's RETURN to the next paint's START, so present to present was the
+spacing plus the paint (3 ms flagless, 4 to 7 ms with flags), 14 to 17 ms,
+free-running against the 11.11-ms vsync — every other display frame doubled,
+and worse with flags because the paint's cost added to the spacing. On the
+app's own counter, re-read with the bucket edges in view: before the
+coalescer 93 to 95 % of consecutive presents were ≤ 13 ms apart (the
+ViewRootImpl's per-vsync input batching had aligned the paints for free);
+after it 0 % were, 92 % at 13 to 24 ms. The unbuffered request was right (it
+removed the input holes) and stays; the coalescer's design was wrong and is
+gone.
+
+THE DESIGN BUILT (his ruling that night, REVERSING the 2026-08-27 "one
+wakeup, no Choreographer, no second cadence" ruling and §7(a)'s ruling-out):
+THE PAINT'S GATE IS THE VSYNC CALLBACK, `AChoreographer_postFrameCallback64`
+on the loop thread's instance. A pass that ends with damage and no callback
+in flight posts one; the callback (run inside the next drain) marks a frame
+due; the tail of the pass it woke paints iff damage stands, with the latest
+input already in the core. One paint per vsync while damage keeps arriving,
+the first damage after idle waiting at most one vsync; the blocking-load
+paints (`paint_now`, `drain_events`) stay ungated. The loop's wake sources
+are two: the 5-ms timerfd tick and the vsync callback. The spacing clock
+(`kMinPresentSpacingNs` and its stamp and hold) is removed. This is the
+Wayland backend's pacing in the tablet's terms — there `invalidate_region`
+arms a `wl_surface.frame` request and `paint_one_frame` runs at its done
+event, one paint per compositor frame — parity in mechanism. The state
+machine and its edge cases (a blocking paint between callbacks, a surface
+loss, the teardown's late callback) are at `GuiPlatform::pump`'s tail
+(`platform_android.cpp`).
+
+THE INSTRUMENT LESSON: THE PROOF OF RECORD FOR CADENCE IS `dumpsys
+SurfaceFlinger --timestats`, the display's own record, never the app's
+CPU-side counter, whose bucket edges hid the coalescer's 11/22-ms
+alternation from the trial's verdict; the same day's ruling-out was read off
+that counter too.

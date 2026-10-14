@@ -6,6 +6,7 @@
 #include "render.h"   // window_frame_px, paint_window_sizing_frame
 
 #include <android/asset_manager.h>
+#include <android/choreographer.h>
 #include <android/configuration.h>
 #include <android/data_space.h>
 #include <android/input.h>
@@ -409,48 +410,27 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
 }
 
 // ---------------------------------------------------------------------------
-// The panel's rate and the present coalescer's clock
+// The panel's rate and the vsync callback's sink
 // ---------------------------------------------------------------------------
 
-// THE PANEL'S RATE, ONE NUMBER WITH TWO READERS: adopt_window's setFrameRate
-// vote (the pin and its ruling are there) and the present coalescer's least
-// spacing below (its rule at pump's tail). detect_refresh_rate_ms's 5-ms tick
-// is a choice made against this rate and says so there; it reads no number.
+// THE PANEL'S RATE, ONE NUMBER WITH ONE READER: adopt_window's setFrameRate
+// vote (the pin and its ruling are there). The present coalescer's least
+// spacing was its second reader for one commit and went with the coalescer
+// (2026-10-14; the paint's gate is the vsync callback now, pump's tail).
+// detect_refresh_rate_ms's 5-ms tick is a choice made against this rate and
+// says so there; it reads no number.
 constexpr int kPanelRefreshHz = 90;
 
-// THE LEAST SPACING BETWEEN TWO PRESENTS: the panel's period less a SLACK.
-// The coalescer's clock is the present's return, not the vsync, and the wait
-// from it runs long by the wake and the poll's whole-millisecond timeout
-// (rounded up, pump's head), so a spacing of the full period would land each
-// frame a little later than the last against the vsync grid and lose a vsync
-// whenever that drift crossed one; 0.6 ms under the period lets the next
-// present arrive inside the next vsync. Measured at 10.5 ms, within 0.02 ms
-// of this spacing (2026-10-14): consecutive frames one vsync apart 1476 times
-// to one two-vsync frame, no blocked swap.
-constexpr int64_t kPanelPeriodNs       = 1000000000LL / kPanelRefreshHz;
-constexpr int64_t kPresentSlackNs      = 600000LL;
-constexpr int64_t kMinPresentSpacingNs = kPanelPeriodNs - kPresentSlackNs;
-
-int64_t monotonic_now_ns() {
-    timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return static_cast<int64_t>(ts.tv_sec) * 1000000000LL + ts.tv_nsec;
-}
-
-// THE LAST PRESENT, stamped by paint_one_frame's tail at every successful
-// present (pump's, paint_now's and drain_events' alike, since all three go
-// out through it); 0 before the first. File scope because there is one window
-// per process and the stamp is its presents' clock, whichever GuiPlatform
-// painted them.
-int64_t g_last_present_ns = 0;
-
-// What is left of the least spacing since the last present: positive while
-// the coalescer holds a paint, zero or less once a present may go (and
-// always before the first).
-int64_t present_hold_left_ns() {
-    if (g_last_present_ns == 0) return 0;
-    return kMinPresentSpacingNs - (monotonic_now_ns() - g_last_present_ns);
-}
+// THE VSYNC CALLBACK'S SINK (2026-10-14; the gate's rule at pump's tail).
+// The callback is posted with no data pointer and reaches its platform
+// through this pointer, which init() sets and shutdown() clears, because a
+// posted frame callback CANNOT BE WITHDRAWN: one still pending when the GUI
+// is torn down fires inside android_main's tail (pump_glue_until polls the
+// same looper after gui_main has destroyed the GuiPlatform), and a `this`
+// carried in the post would then be a dangling pointer. Cleared, the late
+// callback finds nothing and returns. No lock: the callback runs on this
+// thread, inside ALooper_pollOnce, as every reader and writer here does.
+GuiPlatform* g_vsync_sink = nullptr;
 
 } // namespace
 
@@ -484,6 +464,20 @@ struct AndroidCallbacks {
         if (fd < 0) return;
         const uint64_t one = 1;
         (void)write(fd, &one, sizeof(one));
+    }
+    // THE VSYNC CALLBACK (AChoreographer_postFrameCallback64's, posted at
+    // pump's tail, where the gate's rule is). It runs on the loop thread
+    // inside drain_looper's ALooper_pollOnce, and its whole body is the two
+    // bits: the post is spent (vsync_pending_) and a frame is due
+    // (vsync_due_) — the paint itself waits for the pass's tail, so the frame
+    // carries every event the same drain delivers. The frame time is not
+    // kept: nothing reads it. No sink (after shutdown, g_vsync_sink's rule):
+    // nothing.
+    static void vsync(int64_t /*frame_time_ns*/, void* /*data*/) {
+        GuiPlatform* self = g_vsync_sink;
+        if (!self) return;
+        self->vsync_pending_ = false;
+        self->vsync_due_     = true;
     }
 };
 
@@ -691,6 +685,24 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     if (!arm_playback_timer()) return false;
     watch_fd(timerfd_, kIdentTimer);
 
+    // THE LOOP'S SECOND WAKE SOURCE, THE VSYNC CALLBACK (2026-10-14; the
+    // gate's rule at pump's tail). AChoreographer_getInstance answers THIS
+    // THREAD's instance and needs this thread's ALooper: the glue's thread
+    // made it (ALooper_prepare, app_->looper) before android_main ran, and
+    // this thread — the glue's, which runs the whole loop — is the one every
+    // callback must land on, so the instance is taken here, once per process
+    // (the platform is), and kept. No instance is a thread without a looper,
+    // which the glue cannot hand us: the same refusal as the timer's. The
+    // sink is parked beside it (g_vsync_sink's rule).
+    choreographer_ = AChoreographer_getInstance();
+    if (!choreographer_) {
+        std::fprintf(stderr,
+                     "warptempo_gui: AChoreographer_getInstance answered "
+                     "null on the loop thread\n");
+        return false;
+    }
+    g_vsync_sink = this;
+
     // The screen stays lit: this is a kiosk instrument on a stand, and the
     // whole implementation of that is one flag.
     ANativeActivity_setWindowFlags(app_->activity,
@@ -856,8 +868,10 @@ void GuiPlatform::adopt_window(bool fire_resize) {
 #endif
 
     // PIN THE PANEL TO 90 Hz (architect 2026-08-27; kPanelRefreshHz, the
-    // number's one owner, which the present coalescer reads too). One device,
-    // one rate: the
+    // number's one owner, this vote its one reader). One device, one rate —
+    // and the vsync callback that gates the paint (pump's tail, since
+    // 2026-10-14) arrives at the panel's rate, so the pin is also the paint's
+    // cadence: the
     // Tab S10 FE's panel is variable-refresh and the system otherwise picks a
     // rate from what it sees the app doing, which for a program that paints
     // only on damage reads as "hardly ever" and lands on 60. The playhead and
@@ -1239,6 +1253,12 @@ void GuiPlatform::shutdown() {
         close(timerfd_);
         timerfd_ = -1;
     }
+    // THE VSYNC SINK COMES DOWN: a callback still pending cannot be
+    // withdrawn and finds nothing when it fires (g_vsync_sink's rule).
+    if (g_vsync_sink == this) g_vsync_sink = nullptr;
+    choreographer_ = nullptr;
+    vsync_pending_ = false;
+    vsync_due_     = false;
     unwatch_fd(worker_completion_fd_);
     unwatch_fd(waveform_worker_completion_fd_);
     unwatch_fd(history_worker_completion_fd_);
@@ -1314,10 +1334,15 @@ void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {
     const DamageRect nr{x, y, w, h};
     append_coalesced_rect(damage_, nr);
 
-    // Nothing is scheduled: the loop's own settled tail paints whatever has
-    // accumulated, and the periodic tick guarantees a pass within one tick
-    // period. (The Wayland backend must arm a frame callback here because its
-    // paint is the compositor's to invite.)
+    // Nothing is scheduled HERE: a declaration lands inside a loop pass (an
+    // event, the tick, a worker, the car, the settled hook, the pre-paint),
+    // and that pass's tail posts the vsync callback the damage waits for
+    // (the gate's rule, pump's tail) — one post site where the Wayland
+    // backend arms its frame callback at the declaration itself
+    // (schedule_frame_callback), the same one-callback-in-flight rule. A
+    // declaration ahead of a pass's drain (the owed resize at pump's head, a
+    // reopen's set-up between two runs) is posted for at that pass's tail,
+    // the drain's block bounded by the tick.
 }
 
 /*
@@ -1398,13 +1423,10 @@ void GuiPlatform::paint_one_frame() {
     // failed post would leave the displayed buffer stale with nothing left to
     // re-post it, and a later, disjoint invalidation would never copy the lost
     // rectangle. Kept, it simply goes out again with the next frame.
-    // A SUCCESSFUL PRESENT STAMPS THE COALESCER'S CLOCK (g_last_present_ns;
-    // the rule at pump's tail); a failed one leaves it, so the kept damage
-    // is never held behind a frame that did not go out.
-    if (present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y)) {
-        damage_.clear();
-        g_last_present_ns = monotonic_now_ns();
-    }
+    // Under the vsync gate (pump's tail) the kept damage posts the next
+    // callback at the same pass's tail, so the retry is the next vsync's
+    // frame.
+    if (present(lo_x, lo_y, hi_x - lo_x, hi_y - lo_y)) damage_.clear();
 }
 
 bool GuiPlatform::present(int x, int y, int w, int h) {
@@ -1421,14 +1443,13 @@ bool GuiPlatform::present(int x, int y, int w, int h) {
     // texture yet, a backbuffer without data) swaps nothing and keeps the
     // damage.
     //
-    // THE SWAP BLOCKS WHERE ANativeWindow_lock BLOCKED (swap interval 1, the
-    // queue full): the loop keeps its ONE WAKEUP (architect 2026-08-27, the
-    // timerfd at detect_refresh_rate_ms; no Choreographer, no second
-    // cadence — a vsync-driven frame start was measured and ruled out
-    // 2026-10-14, the reason at pump's tail). The present coalescer (pump's
-    // tail) is no second cadence: it times the same poll and only spaces the
-    // presents, one per display period, so the queue does not fill under the
-    // unbuffered pen's ~500 events a second. THE FRAME IS REDRAWN WHOLE at every swap, so neither EGL's
+    // THE SWAP WOULD BLOCK WHERE ANativeWindow_lock BLOCKED (swap interval
+    // 1, the queue full), and the paint's gate keeps the queue from filling:
+    // since 2026-10-14 a gated paint runs only at the vsync callback, one per
+    // display period (pump's tail, where the reversal of the 2026-08-27 "one
+    // wakeup, no Choreographer" ruling and its measurement are), so the
+    // unbuffered pen's ~500 events a second cost drains and never an extra
+    // swap. THE FRAME IS REDRAWN WHOLE at every swap, so neither EGL's
     // buffer age nor a partial update is depended on. No glFinish, no
     // glFlush beyond the swap's own, no readback.
     //
@@ -1539,7 +1560,10 @@ void GuiPlatform::paint_now() {
     // Synchronous paint + post for the one case that cannot wait for run()'s
     // next pass: a blocking load. paint_one_frame no-ops before the first
     // window and on empty damage, and the post is immediate, so there is no
-    // flush counterpart to call.
+    // flush counterpart to call. NOT GATED BY THE VSYNC CALLBACK (pump's
+    // tail) and touching neither of its bits: a load blocks the loop, so no
+    // callback could land before it returns, and a callback already pending
+    // fires at the next drain like any other.
     paint_one_frame();
 }
 
@@ -1550,9 +1574,10 @@ void GuiPlatform::paint_now() {
 int GuiPlatform::detect_refresh_rate_ms() {
     // 5 ms (architect 2026-08-27), and stated as a CHOICE rather than a
     // reading: the NDK exposes no display refresh rate to a native activity
-    // below the Choreographer's own vsync callbacks, and standing up a
-    // Choreographer to time two frames would buy one number at the cost of a
-    // second cadence in a loop whose whole design is ONE wakeup.
+    // below the Choreographer's own vsync callbacks. Those callbacks are the
+    // paint's gate since 2026-10-14 (pump's tail), but they come only while
+    // damage asks for one, and the tick is the other cadence — it runs
+    // whether or not anything paints — so it stays a number of its own.
     //
     // IT IS THE PINNED 90 Hz PANEL'S HALF-PERIOD, ROUNDED DOWN. adopt_window
     // asks the window for 90 Hz outright (the ruling and the call are there),
@@ -1564,8 +1589,8 @@ int GuiPlatform::detect_refresh_rate_ms() {
     // THE DIRECTION THAT COSTS NOTHING is still downward: the tick only POLLS
     // deadlines (key repeat, the touch window, the audition's rests) and drives
     // the playback scanner, so a tick faster than half the refresh is wasted
-    // work and never a wrong frame, while a slower one would visibly step the
-    // playhead. It was 8 ms — 60 Hz's half-period — until the pin.
+    // work and never a wrong frame (the paint waits for the vsync callback
+    // either way), while a slower one would visibly step the playhead. It was 8 ms — 60 Hz's half-period — until the pin.
     return 5;
 }
 
@@ -1619,7 +1644,12 @@ void GuiPlatform::drain_looper(int timeout_ms) {
         void* data   = nullptr;
         const int ident =
             ALooper_pollOnce(timeout, nullptr, &events, &data);
-        if (ident < 0) break;   // WAKE, TIMEOUT, CALLBACK or ERROR: nothing owed
+        // WAKE, TIMEOUT, CALLBACK or ERROR: nothing owed. A CALLBACK has
+        // already run inside the poll that returns it — the vsync callback's
+        // two bits are set (AndroidCallbacks::vsync), the pass's tail reads
+        // them — and the looper hands back every ident-carrying fd its poll
+        // found before that answer, so the break strands none.
+        if (ident < 0) break;
         timeout = 0;            // the rest of the drain never waits
 
         if (ident == LOOPER_ID_MAIN || ident == LOOPER_ID_INPUT) {
@@ -1685,8 +1715,9 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *      its frame paints in this same pass (the reasoning is at the block);
  *   5. the loop-settled hook, at the tail, so it observes the pass's FULLY
  *      settled state;
- *   6. paint-if-dirty, AT MOST ONCE PER DISPLAY PERIOD (the present-per-vsync
- *      coalescer, the rule at the tail; step 1's poll waits out what it holds).
+ *   6. paint-if-dirty AT THE VSYNC CALLBACK (2026-10-14): the pass paints
+ *      only when damage stands and a vsync callback landed in its drain, and
+ *      damage with no callback in flight posts one (the rule at the tail).
  *
  * WHEN THE SETTLED HOOK DOES NOT FIRE: once should_exit_ or the run stop is
  * set. The pass is the last one of this run — the objects the consumer reads
@@ -1705,27 +1736,12 @@ void GuiPlatform::pump() {
     // deliver_owed_resize).
     deliver_owed_resize();
 
-    // THE COALESCER'S WAIT (the rule at the tail), three arms. DAMAGE HELD
-    // AND THE HOLD STILL RUNNING: the poll waits only for what is left of the
-    // least spacing, so the pass that paints it comes when the spacing is up
-    // even with nothing else arriving; input still drains and reaches the
-    // core in the meantime. ROUNDED UP to the poll's whole milliseconds,
-    // because a round down would poll at 0 and spin through the last
-    // fraction; the lateness that costs (under a millisecond, and less
-    // whenever an event or the tick wakes the pass first) is what the slack
-    // beside kMinPresentSpacingNs is set against. DAMAGE HELD AND THE HOLD
-    // ALREADY UP: the poll is 0 — it drains what is there and falls through
-    // to the tail, which paints in this pass. The deadline can pass between
-    // the last pass's tail and this head, and a blocking poll there would
-    // hold an owed paint until the next event or the 5-ms tick. NO DAMAGE
-    // HELD: the poll blocks as it always has, the timerfd its one wakeup.
-    int timeout_ms = -1;
-    if (!damage_.empty()) {
-        const int64_t left = present_hold_left_ns();
-        timeout_ms = left > 0 ? static_cast<int>((left + 999999LL) / 1000000LL)
-                              : 0;
-    }
-    drain_looper(timeout_ms);
+    // THE POLL BLOCKS until the first of the loop's wake sources: the
+    // window-system sources, the four workers, the car's eventfd, and the
+    // loop's TWO CADENCES since 2026-10-14 — the 5-ms timerfd tick (key
+    // repeat, the touch window, the settled hook's pass) and the vsync
+    // callback, posted only while damage waits (the tail).
+    drain_looper(-1);
 
     if (timer_fired_) {
         timer_fired_ = false;
@@ -1769,47 +1785,92 @@ void GuiPlatform::pump() {
     if (!should_exit_ && !run_stop_requested_)
         loop_settled_hook_(input_.current_mods());
 
-    // THE PRESENT-PER-VSYNC COALESCER (2026-10-14). Damage is painted at most
-    // once per display period: a pass that finds damage less than
-    // kMinPresentSpacingNs after the last present (g_last_present_ns) does not
-    // paint it, and the next pass's poll waits for the remainder (the head)
-    // while input keeps draining into the core, which coalesces motion as it
-    // always has; damage with no present inside the last period paints at
-    // once. NOTHING ELSE SKIPS OR DELAYS A PAINT: paint_now's and
-    // drain_events' paints, a blocking load's, go out unheld (and stamp the
-    // clock like any other).
+    // THE PAINT'S GATE IS THE VSYNC CALLBACK (architect 2026-10-14
+    // evening; AChoreographer_postFrameCallback64, the instance taken in
+    // init()). THE STATE MACHINE, two bits: a pass that ends with damage and
+    // no callback in flight posts one (vsync_pending_); the callback, run
+    // inside the next drain, spends the post and sets vsync_due_
+    // (AndroidCallbacks::vsync); the tail of the pass it woke paints iff
+    // damage stands and the bit is set, clearing the bit, with every event
+    // the same drain delivered already in the core's coalesced motion. Damage
+    // that arrives while a callback is in flight accumulates into that
+    // frame; damage left after a paint (a failed present keeps its damage,
+    // paint_one_frame's tail) or arriving later posts the next callback at
+    // its own pass's tail, so the first damage after idle waits at most one
+    // vsync and a pan paints once per vsync. A CALLBACK WITH NO DAMAGE TO
+    // PAINT (a blocking paint took it first, or none came) simply clears the
+    // bit: a vsync with nothing to show is gone, and the next
+    // damage waits for its own. NOTHING ELSE IS GATED: paint_now's and
+    // drain_events' paints (a blocking load's) go out at once and touch
+    // neither bit. NO WINDOW, NO POST: with the window gone (TERM_WINDOW,
+    // or an adoption that read a zero size) the post is withheld, so a
+    // backgrounded app's damage does not spin the callback at the panel's
+    // rate; a callback already in flight still lands, its pass calls
+    // paint_one_frame, which returns at once without a window and keeps the
+    // damage, and the bit clears; the next adoption's full damage posts
+    // afresh. A run stop leaves both bits to the next run() on this same
+    // object; shutdown clears them and the sink (g_vsync_sink's rule).
     //
-    // ITS REASON IS THE UNBUFFERED PEN (MainActivity.onCreate's request, the
-    // finding there): the tablet's pan hitch of 2026-10-14 was an input hole
-    // upstream of this loop — the ViewRootImpl's once-per-vsync batching
-    // stalling three to seven vsyncs and then handing down one event with 16
-    // to 37 history samples (30 holes in 4 min of pen panning, this loop idle
-    // through every one) — fixed by asking for unbuffered dispatch, which
-    // hands every sample down as it arrives, ~500 a second for the pen. One
-    // present per event would then outrun the panel, fill the swap queue and
-    // block the loop in the swap; this spacing keeps the presents at the
-    // vsync cadence instead. Measured together (2026-10-14): no hole in 2 min,
-    // event to present 6.5 ms mean (7 to 9 before), consecutive frames one
-    // vsync apart 1476 times to one two-vsync frame, no blocked swap; his
-    // glass, "no stutter". THE SAME DAY A VSYNC-DRIVEN FRAME START
-    // (AChoreographer) WAS RULED OUT BY MEASUREMENT: after the GPU canvas
-    // 96.5 % of frames already landed one vsync apart at 90 Hz and 3.1 % two,
-    // event to present 7.8 ms mean, so it could only have touched those slips,
-    // and the stutter it was meant for was the input hole above.
+    // WHY (measured 2026-10-14 ~19:15 on his glass with `dumpsys
+    // SurfaceFlinger --timestats`, the display's own per-layer record):
+    // the present-per-vsync COALESCER that stood here for one commit
+    // (5b303871) spaced the presents by a clock — at least 10.51 ms, the
+    // pinned period less a 0.6-ms slack, measured from the previous
+    // present's RETURN to the next paint's START — so present to present ran
+    // that spacing PLUS the paint (3 ms flagless, 4 to 7 ms with flags),
+    // 14 to 17 ms, free-running against the 11.11-ms vsync: on the display,
+    // during a pen pan, 52 % of frame-to-frame intervals one vsync and 39 %
+    // TWO with flags, 74 % and 20 % flagless — every other display frame
+    // doubled, worse with flags because the paint's cost added to the
+    // spacing. The GPU was never the limit (post to acquire 3 ms). Before
+    // the coalescer the ViewRootImpl's per-vsync input batching had aligned
+    // the paints for free (93 to 95 % of presents ≤ 13 ms apart; after it
+    // none, 92 % at 13 to 24 ms). THE INSTRUMENT LESSON: the coalescer's own
+    // trial was read off an app-side counter (return to return) whose
+    // buckets ran ≤ 13 ms, 13 to 24 ms and on, so its "one vsync apart 1476
+    // times" was the 13-to-24-ms bucket and hid exactly this 11/22-ms
+    // alternation. THE PROOF OF RECORD FOR CADENCE IS SurfaceFlinger's
+    // timestats, never the app's own counter.
     //
-    // THE WAYLAND BACKEND NEEDS NONE OF THIS: its paint is the compositor's to
-    // invite — paint_one_frame runs at the wl_surface.frame callback, one
-    // commit per painted frame (platform_wayland.cpp's head) — so its presents
-    // are paced at the source.
-    if (damage_.empty() || present_hold_left_ns() <= 0) paint_one_frame();
+    // THE REVERSAL: this REVERSES the architect's 2026-08-27 "one wakeup, no
+    // Choreographer, no second cadence" ruling, and the same day's earlier
+    // ruling-out of a vsync-driven frame start, which was read off the same
+    // counter: the loop now has two wake sources, the tick and the vsync
+    // callback. The unbuffered dispatch MainActivity.onCreate requests stays
+    // — it removed the input holes, and this gate is what makes its ~500 pen
+    // events a second cost drains and not frames.
+    //
+    // PARITY IN MECHANISM WITH THE WAYLAND BACKEND, which paces this way:
+    // its invalidate_region arms a wl_surface.frame request when none is in
+    // flight (schedule_frame_callback), paint_one_frame runs at the
+    // compositor's done event (on_frame_done) and requests the next callback
+    // on its own commit, so it paints at most once per compositor frame,
+    // invited, never by a clock (platform_wayland.cpp's head; under the gl
+    // canvas its swap interval 0, ensure_gl, takes Mesa's own frame-callback
+    // throttle away so the backend's callback stays the pacing signal). The
+    // one difference is where the paint runs: there inside the callback's
+    // dispatch, here at the tail of the pass the callback woke, so this
+    // frame also carries the input the same drain delivered.
+    if (damage_.empty()) {
+        vsync_due_ = false;
+    } else if (vsync_due_) {
+        vsync_due_ = false;
+        paint_one_frame();
+    }
+    if (!damage_.empty() && !vsync_pending_ && window_) {
+        AChoreographer_postFrameCallback64(choreographer_,
+                                           &AndroidCallbacks::vsync, nullptr);
+        vsync_pending_ = true;
+    }
 }
 
 void GuiPlatform::run() {
-    // THE LOOP'S ONE WAKEUP is the periodic timerfd, so the blocking poll
-    // never waits longer than one tick period and damage declared with no
-    // event under it still paints within that period — or, behind a present
-    // inside the last display period, when that period's spacing is up (the
-    // coalescer, pump's tail). The stop bit is this
+    // THE LOOP HAS TWO WAKE SOURCES of its own since 2026-10-14 (the
+    // 2026-08-27 "one wakeup" ruling reversed; the reason at pump's tail):
+    // the periodic timerfd, so the blocking poll never waits longer than one
+    // tick period for the tick's work (key repeat, the touch window, the
+    // settled hook's pass), and the vsync callback, posted while damage
+    // waits, so declared damage paints at the next vsync. The stop bit is this
     // run's alone (platform.h): cleared here, set by the reopen, never by an
     // exit — which sets should_exit_ and is never cleared.
     run_stop_requested_ = false;
@@ -1842,7 +1903,9 @@ void GuiPlatform::drain_events() {
     //
     // paint_now()'s contract is unchanged and is the other half of this pair:
     // that one is the synchronous paint asked for outright, this one is the
-    // progress paint a load takes on its way through.
+    // progress paint a load takes on its way through. Like it, NOT GATED BY
+    // THE VSYNC CALLBACK and touching neither of its bits (pump's tail): no
+    // looper source is processed here, so no callback can land.
     paint_one_frame();
 }
 

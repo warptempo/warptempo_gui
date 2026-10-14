@@ -432,7 +432,10 @@ because `FT_New_Memory_Face` does not copy.
 `ALooper_pollOnce` of an iteration blocks for one tick period (5 ms since
 2026-08-27, 8 ms when this was written) and the rest drain with a 0 timeout,
 so a busy event source can never starve the repaint; `unlockAndPost`'s blocking on
-buffer availability is the real pacer. `ANativeActivity_setWindowFlags(…
+buffer availability is the real pacer. *(SUPERSEDED 2026-10-14: the paint's
+gate is AChoreographer's frame callback, one paint per vsync, beside the tick —
+`GuiPlatform::pump`'s tail, `docs/engineering/gui_perf_campaign_2026_10.md`
+§7(c).)* `ANativeActivity_setWindowFlags(…
 AWINDOW_FLAG_KEEP_SCREEN_ON, 0)` is the whole kiosk stay-awake implementation.
 
 **`android_main` state is a LOCAL, not a global.** `android_main` runs again when
@@ -641,7 +644,9 @@ keyboard. SUPERSEDED 2026-08-27: both backends now declare `synthesize_key` and
 consumer, and the seam has no addition at all — §13.3.)*
 
 - **Run loop**: a periodic `timerfd` at 5 ms (8 ms until 2026-08-27; §10.4
-  carries the pin that moved it) is the ONE wakeup, added to the
+  carries the pin that moved it) is the ONE wakeup (two since 2026-10-14:
+  the tick and AChoreographer's frame callback, the paint's gate — §7(c) of
+  the campaign record), added to the
   glue's own `ALooper` alongside the four worker eventfds (idents
   `LOOPER_ID_USER`..`+4`) and the glue's cmd/input sources.
   `ALooper_pollOnce(-1)` blocks, then the pass drains everything pending. The
@@ -923,7 +928,9 @@ and nothing else notices).
   app wakes 125 times a second to paint nothing (`paint_one_frame` no-ops with
   no window) until Android's own cached-app freezer stops the process. Left as
   it is for M3 — suspending and re-arming the timer on the window edges is a
-  behaviour change to the ONE wakeup and wants the architect's word.
+  behaviour change to the ONE wakeup and wants the architect's word. *(The
+  second wake source of 2026-10-14, the vsync callback, is never posted
+  without a window, so it adds nothing here.)*
 - **The NDK's stock `android_native_app_glue.c` is compiled in place** (r29's
   `process_input` already drains with a while loop, so there is no fork to
   maintain) with `-Wno-unused-parameter` scoped to that one file — it is

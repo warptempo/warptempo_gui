@@ -273,10 +273,11 @@ public class MainActivity extends NativeActivity {
         // is 30.
         //
         // THE COST: events at the digitizer's own rate (~500/s for the pen)
-        // and unresampled, which the native loop absorbs -- its
-        // PRESENT-PER-VSYNC COALESCER (platform_android.cpp, pump) paints at
-        // most once per display period, so the extra events cost a drain and
-        // the core's motion coalescing, never an extra frame.
+        // and unresampled, which the native loop absorbs -- since 2026-10-14
+        // its paint is gated by the vsync callback (AChoreographer;
+        // platform_android.cpp, pump's tail, where the measurement is), one
+        // paint per vsync, so the extra events cost a drain and the core's
+        // motion coalescing, never an extra frame.
         final View decor = getWindow().getDecorView();
         decor.post(() -> decor.requestUnbufferedDispatch(
                 InputDevice.SOURCE_TOUCHSCREEN | InputDevice.SOURCE_STYLUS));

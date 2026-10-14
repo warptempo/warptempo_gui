@@ -209,7 +209,12 @@ today, and the GPU only places those pixels. Pixel identity is PROVED by
    it (the 2026-10-02 finding).
 9. **The frame loop keeps its one wakeup.** `eglSwapBuffers` (swap interval
    1) blocks when the queue is full exactly where `ANativeWindow_lock`
-   blocked; no Choreographer, no second cadence (architect 2026-08-27). The
+   blocked; no Choreographer, no second cadence (architect 2026-08-27).
+   *(REVERSED 2026-10-14 evening: the paint's gate is now AChoreographer's
+   frame callback, one paint per vsync, and the loop has two wake sources,
+   the tick and the callback — a clock-spaced coalescer had doubled every
+   other display frame, measured by SurfaceFlinger's timestats;
+   `gui_perf_campaign_2026_10.md` §7(c), `GuiPlatform::pump`'s tail.)* The
    GL frame is redrawn WHOLE every swap (a textured triangle and the canvas
    list are trivial for the GPU), so EGL buffer age and partial-update are
    NOT depended on; `eglSwapBuffersWithDamageKHR` may pass the damage union

@@ -768,11 +768,26 @@ private:
     struct _jmethodID* move_task_to_back_method_ = nullptr;
 
     // -- Idle-tick timing --
-    // The ONE wakeup: a periodic timerfd (bionic has them), exactly the
-    // Wayland model. The number and its whole rationale are at
+    // The tick: a periodic timerfd (bionic has them), exactly the Wayland
+    // model — one of the loop's TWO wake sources since 2026-10-14, the vsync
+    // callback below the other (the 2026-08-27 "one wakeup" ruling reversed;
+    // the reason at pump's tail). The number and its whole rationale are at
     // detect_refresh_rate_ms().
     int  playback_tick_ms_ = 5;
     int  timerfd_ = -1;
+
+    // -- THE PAINT'S GATE, THE VSYNC CALLBACK (2026-10-14) --
+    // The loop thread's AChoreographer, taken once in init(); the two bits
+    // of the gate's state machine, whose whole rule is at pump's tail:
+    // vsync_pending_ — a frame callback is posted and has not fired (set at
+    // the post, cleared by the callback); vsync_due_ — a callback fired and
+    // its frame is not yet painted (set by the callback, cleared at the
+    // tail's paint, or there when no damage stands). The callback reaches
+    // this object through a file-scope sink, never a `this` in the post
+    // (g_vsync_sink, platform_android.cpp, has the reason).
+    struct AChoreographer* choreographer_ = nullptr;
+    bool vsync_pending_ = false;
+    bool vsync_due_     = false;
 
     // -- Async renderer completion fd (owned by GuiAsyncRenderer; this is just
     // a watch handle, not a lifetime claim). -1 when none is registered.
@@ -872,7 +887,7 @@ private:
     // whatever is already there.
     void drain_looper(int timeout_ms);
     // One pass of the loop body: the blocking drain, then the fixed dispatch
-    // order, the settled hook and the paint.
+    // order, the settled hook and the paint at the vsync callback (its gate).
     void pump();
 
     // -- Lifecycle and input handlers (called from the file-static glue hooks) --
