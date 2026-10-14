@@ -3460,7 +3460,9 @@ private:
     // THE SWEEP'S ONE COLUMN->TRIM ROUTE: the whole SOURCE frame a
     // waveform-relative column authors, through
     // authored_frame_at_column_on_basis over the displayed-or-live target map
-    // on the item viewport basis with the song walls applied after —
+    // on the item viewport basis with the song walls applied after and the
+    // column holding the last frame landing on it (trim_bound_frame_at_column,
+    // input_trim.cpp, the family's one owner) —
     // the lattice every other trim former commits on. Both of the sweep's
     // trim ends (the arm's anchor, the motion path's moving end) come from
     // here and nowhere else; the PLAYHEAD those same columns seat and carry

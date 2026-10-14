@@ -19,6 +19,11 @@
 // marker columns and both trim bounds) share the inclusive [0, total-1]
 // domain — the end bound's old exclusive-at-total wall is retired. Every wall
 // check is a plain integer compare — literally the load guard's comparison.
+// EACH WALL IS REACHED BY THE COLUMN THAT PAINTS IT (architect 2026-10-14):
+// every former that lands a bound by column lands the column holding frame 0
+// on frame 0 and the column holding the last frame on total-1, so a bound
+// dragged as far as it goes rests where Shift+0 puts it — the rule and why
+// the start needs no arm at trim_bound_frame_at_column, the one owner.
 //
 // PARTNER WALLS ARE NOW PER-ROUTE (architect 2026-08-02, splitting what used to
 // be one blanket "there are no partner walls" clause). What is unchanged
@@ -175,6 +180,59 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
         if (v < partner) v = partner;
     }
     return v;
+}
+
+// THE TRIM FORMERS' ONE COLUMN->BOUND LANDING, AND HOW EACH WALL IS REACHED
+// (architect 2026-10-14: "the full drag should be the same as shift plus
+// zero"). Every trim former that lands a bound by column takes its frame
+// here, so the family authors on one lattice: the endcap and bridge drags'
+// release snap (commit_trim_drag), the sweep's two ends
+// (sweep_trim_frame_at_column, the shift+drag and the touch region hold) and
+// the ctrl / ctrl+shift bound-set click (trim_bound_click_frame). The frame
+// is the column's authored time — authored_frame_at_column_on_basis over the
+// displayed-or-live target map on the item viewport basis, the column's LEFT
+// edge, where the waveform painter starts that column's span — with the
+// absolute walls [0, total-1] after, plain integer compares.
+//
+// BOTH WALLS ARE REACHED BY THE COLUMN THAT PAINTS THEM: the column holding
+// frame 0 lands ON frame 0, and the column holding the source's last frame
+// lands ON the last frame, total-1 — what Shift+0 writes. THE START HOLDS BY
+// CONSTRUCTION: the grid is anchored at frame 0 of the displayed domain and
+// frame 0 maps to frame 0, so that column's left edge IS frame 0. THE END
+// NEEDS THIS ARM: that column's left edge stands up to one column's span
+// before total-1, so a bound dragged as far as it goes would rest that far
+// short of the source's end. A column holds the last frame when its RIGHT edge — its
+// successor's authored time, the painter's own span end (edge_at through the
+// map, render_waveform_columns) — lies past it, in both views, the target
+// view's columns read through the same displayed map the painter used; a
+// column past that one lands on the wall already. Either bound, the mirror of
+// the start's: an end landing in the column holding frame 0 lands on frame 0.
+//
+// SO A FULL DRAG LEAVES THE FULL WINDOW [0, total-1] EXACTLY, the integer
+// pair Shift+0 writes, and every full-window compare (trim_is_full_window —
+// Shift+0's already-full guard, the render's sub-window test, the crossed
+// reset's one-frame exception) reads it as full: it renders untrimmed and
+// plays to the natural end. The accepted cost is the release snap's own kind,
+// at most one column: that last column's left edge is no longer a frame a
+// column authors, and a begin landing there meets an end at total-1 (the
+// drag's coincident reset, the click's strictly-inside refusal), as an end
+// landing in column 0 meets a begin at frame 0. Degenerate geometry is the
+// callers' to refuse first.
+int64_t trim_bound_frame_at_column(const AppState& app, const GuiAudio& audio,
+                                   int col) {
+    const int64_t wall = audio.total_frames() - 1;
+    const ItemViewportBasis basis = item_viewport_basis(app, audio);
+    const std::vector<WarpFrameMapSegment>& map =
+        displayed_or_live_target_map(app, audio);
+    if (authored_frame_at_column_on_basis(app, audio, col + 1, map,
+                                          basis.vp_start_frame, basis.spp) >
+        wall)
+        return wall;
+    int64_t frame = authored_frame_at_column_on_basis(
+        app, audio, col, map, basis.vp_start_frame, basis.spp);
+    if (frame < 0)    frame = 0;
+    if (frame > wall) frame = wall;
+    return frame;
 }
 
 } // namespace
@@ -461,16 +519,11 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
 // Returns 0 on degenerate geometry (unloaded audio, no strip width), which no
 // caller reaches: every arm refuses unloaded audio and the gutter, and the
 // motion path returns on an empty strip.
+// The landing itself, the walls and the end wall's reach are the family's one
+// owner, trim_bound_frame_at_column (this file's anonymous namespace).
 int64_t GuiInputHandler::sweep_trim_frame_at_column(int col) const {
     if (audio.total_frames() <= 0) return 0;
-    const int64_t wall = audio.total_frames() - 1;
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
-    int64_t frame = authored_frame_at_column_on_basis(
-        app, audio, col, displayed_or_live_target_map(app, audio),
-        basis.vp_start_frame, basis.spp);
-    if (frame < 0)    frame = 0;
-    if (frame > wall) frame = wall;
-    return frame;
+    return trim_bound_frame_at_column(app, audio, col);
 }
 
 // Shift+0 MAXIMIZES the trim to the full window — RESET TRIM (architect
@@ -883,7 +936,13 @@ void GuiInputHandler::commit_trim_drag() {
         // live viewport by the basis's own contract). The absolute walls
         // — both bounds 0..EOF-1, plain integer compares —
         // re-apply AFTER the snap so the walls win over the pixel grid and a
-        // wall-clamped release rests exactly on its wall. Degenerate paint
+        // wall-clamped release rests exactly on its wall; and a bound released
+        // in the column holding the source's last frame lands ON that frame
+        // (architect 2026-10-14, trim_bound_frame_at_column's rule), so an end
+        // dragged as far as it goes rests where Shift+0 puts it. THE BRIDGE
+        // takes it too: when its end reaches that column the pair stops there
+        // and the end lands on total-1, the span deforming by at most one
+        // column, the same accepted kind as the snap's own. Degenerate paint
         // geometry (no strip width / zoom, unloaded audio) skips the snap and
         // keeps the tracked value: trim has no undo, so routing a bound
         // through the helpers' 0-fallback would be unrecoverable.
@@ -893,17 +952,16 @@ void GuiInputHandler::commit_trim_drag() {
             current_samples_per_pixel(app, audio) > 0.0 && basis.spp > 0.0) {
             const std::vector<WarpFrameMapSegment>& map =
                 displayed_or_live_target_map(app, audio);
-            const auto snap_moved_bound = [&](int64_t& field, int64_t orig,
-                                              int64_t wall) {
+            // The column -> frame half, the walls and the end wall's reach
+            // (the column holding the source's last frame lands ON it, as
+            // Shift+0 writes it) are the family's one owner,
+            // trim_bound_frame_at_column (this file's anonymous namespace).
+            const auto snap_moved_bound = [&](int64_t& field, int64_t orig) {
                 if (field == orig) return;  // untouched: bit-exact, no snap
                 const int c = painted_column_of_source_frame_on_basis(
                     app, audio, static_cast<double>(field), map,
                     basis.vp_start, basis.spp);
-                int64_t v = authored_frame_at_column_on_basis(
-                    app, audio, c, map, basis.vp_start_frame, basis.spp);
-                if (v < 0)    v = 0;
-                if (v > wall) v = wall;
-                field = v;
+                field = trim_bound_frame_at_column(app, audio, c);
             };
             // THE COINCIDENCE IS JUDGED BEFORE THE SNAP (architect-ruled
             // behavior delivered 2026-08-22). update_trim_drag's partner clamp
@@ -926,11 +984,9 @@ void GuiInputHandler::commit_trim_drag() {
                  (app.trim_drag.is_begin ? app.trim.end_frame
                                          : app.trim.begin_frame));
             snap_moved_bound(app.trim.begin_frame,
-                             app.trim_drag.orig_begin_frame,
-                             audio.total_frames() - 1);
+                             app.trim_drag.orig_begin_frame);
             snap_moved_bound(app.trim.end_frame,
-                             app.trim_drag.orig_end_frame,
-                             audio.total_frames() - 1);
+                             app.trim_drag.orig_end_frame);
             // AFTER THE SNAP, THE SINGLE-BOUND ARM RESTORES WHAT THE SNAP CAN
             // BREAK, in two ranked steps:
             //
@@ -1050,7 +1106,8 @@ void GuiInputHandler::commit_trim_drag() {
 // paint map on the ITEM viewport basis — the same release-snap basis
 // commit_trim_drag uses (its snap_moved_bound goes source_frame ->
 // painted_column -> authored_frame; a click carries the column directly). The
-// absolute walls [0, total-1] apply after the snap.
+// absolute walls [0, total-1] apply after the snap, and a click in the column
+// holding the source's last frame sets total-1 (trim_bound_frame_at_column).
 // ADJUST-ONLY is a statement about what the click DOES — it moves one bound of the
 // window that always rests — rather than a condition it tests, the pair gate
 // having died with the unset state (2026-07-30).
@@ -1144,13 +1201,10 @@ std::optional<int64_t> GuiInputHandler::trim_bound_click_frame(
     int col = mouse_x - area.x;
     if (col < 0)         col = 0;
     if (col >= area.w)   col = area.w - 1;
-    const std::vector<WarpFrameMapSegment>& dmap =
-        displayed_or_live_target_map(app, audio);
-    int64_t frame = authored_frame_at_column_on_basis(
-        app, audio, col, dmap, basis.vp_start_frame, basis.spp);
-    const int64_t wall = audio.total_frames() - 1;
-    if (frame < 0)    frame = 0;
-    if (frame > wall) frame = wall;
+    // The landing, the walls and the end wall's reach (a click in the column
+    // holding the source's last frame sets total-1) are the family's one
+    // owner, trim_bound_frame_at_column (this file's anonymous namespace).
+    const int64_t frame = trim_bound_frame_at_column(app, audio, col);
     // THE STRICTLY-INSIDE GUARD (see the header). Exact integer compares against
     // the partner as it rests, in the SOURCE domain both the store and `frame`
     // already live in — no mapping, no tolerance. On a one-frame source (canonical
