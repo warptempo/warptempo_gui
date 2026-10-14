@@ -416,3 +416,41 @@ SurfaceFlinger --timestats`, the display's own record, never the app's
 CPU-side counter, whose bucket edges hid the coalescer's 11/22-ms
 alternation from the trial's verdict; the same day's ruling-out was read off
 that counter too.
+
+**(d) The arc's close: the residue measurement (2026-10-14 ~19:50, on
+`d595a668`).** His two pen pans, flags and then flagless, "no snags", under a
+throwaway residue logger (snapshot only, `tmp/gpu_arc/fc_instrumentation_residue.diff`;
+the run's log `tmp/gpu_arc/fc_logcat_residue_d595a668_2026-10-14.txt`, the
+compositor's record `tmp/gpu_arc/sf3/`). The logger reports: input holes (the
+tool, the history size, a gap over 24 ms with a contact down); vsync
+callbacks arriving over 24 ms after the previous one for a live post
+(`posted_age`); no-damage posts over 24 ms after the last paint with a
+contact down; paints over 11 ms.
+
+INPUT: 262 pen strokes, ZERO holes (one 27-ms gap, a finger tap, history 0).
+The unbuffered road is proven. PAINT: never over 11 ms mid-pan; the two long
+paints (19.4 and 14.5 ms) were the `h` view's first frames after a 9-s idle.
+DISPLAY (SurfaceFlinger's per-layer stats, the whole run): 3447 frames, 3186
+one-vsync intervals (92.4 % of all, stroke boundaries included), 9 two-vsync
+(0.3 %), zero jank, zero dropped, zero late acquire. The 13 holds of 24 to
+150 ms are attributed by the logger: (i) STROKE STARTS: the first vsync
+callback after an idle arrives 25 to 48 ms after the post, the panel at its
+30-Hz idle rate ramping to 90 (SurfaceFlinger reports displayRefreshRate 30
+fps at idle, renderRate 90), inherent to the display; (ii) ONE MID-PAN EVENT
+in about two minutes (19:50:47): damage stood, the post was made, the
+callback came 55 ms later, the system's vsync delivery and nothing the app
+can reach; this is what the holds of §7(c)'s first after-measurement were
+(five of 33 to 66 ms in 45 s of the flags pan); (iii) 38 to 131 ms stretches
+with the pen down, the stream intact and no damage: the file-edge clamp or a
+paused pen, by design.
+
+THE COMPARISON, from the display's own record: before the arc (`5263c592`)
+52 % one-vsync and 39 % two-vsync with flags, 74 % and 20 % flagless; after
+(`d595a668`) about 97 % and 0.3 % with flags, about 99 % and 0.1 % flagless,
+post to present a tight 15 to 19 ms (the fixed phase) against the earlier 11
+to 22 spread.
+
+THE VERDICT: the tablet's pan now matches the laptop's in mechanism (the
+input unbatched, a paint per display frame at the display's own callback);
+what remains is the display's (the idle ramp, a missed vsync every couple of
+minutes). The arc is closed.
