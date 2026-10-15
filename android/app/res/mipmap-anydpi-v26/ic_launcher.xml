@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture (architect 2026-10-12; the set Adwaita 3.22
-     since 2026-10-14): the set's audio-x-generic, the caption's icon and the
-     drawing the BPM Iterations button wears, assets/icons/adwaita-3.22/AppIcon.svg, rasterised
+     recents card). Its picture (architect 2026-10-12; the metronome since
+     2026-10-15): the digital metronome, the caption's icon and the glyph Warp
+     wears, the icon set's one own file, assets/icons/adwaita-3.22/AppIcon.svg, rasterised
      ANTIALIASED by rsvg-convert (librsvg on the laptop; a vector, not pixel
      art) and centered over THE BUTTON CASE'S GRADIENT, the Cool Edit case's 20
      face-ramp stops under Midnight's Face #272B6D (cool_edit_derive.h's

@@ -2,7 +2,8 @@
 # a drop shadow is the live glyph's raised fiction; Cool Edit's flat bitmaps never had one). The list the architect
 # approved icon by icon on a sheet, 2026-10-15; extract.py's prune_shadows removes each id with every <use> of a
 # removed element and fails if any listed id is missing or a reference to a removed element remains. One row per
-# icons::Icon enumerator (build_set.py requires every mapping.tsv row here); '-' = the drawing has none.
+# icons::Icon enumerator (build_set.py requires every mapping.tsv row here); '-' = the drawing has none. An `own` row
+# (mapping.tsv's treatment: the set's own file, copied, not extracted) is always '-'.
 # enumerator	source_icon	shadow_ids (removed by id; - = none)	note
 DocumentOpen	document-open	use28040 use28042 path4789	floor shadow (2); the paper's shadow on the folder's back panel
 DocumentSave	document-save	rect2846-1-9-0 rect2846-1-9-0-1 path3960-3-8-4-0-5-5-9-33	floor shadow (2); the arrow's shadow cast on the cabinet
@@ -13,8 +14,8 @@ VcsCommit	go-top	path6460-6-4-4-0-5 path6460-6-4-4-3-55-3	floor shadow (2)
 VcsPull	go-bottom	g6324	floor shadow
 AccessoriesDictionary	accessories-dictionary	path2284	floor shadow
 InputTablet	input-tablet	path8537-6 path23244-7 path46799-7-4	floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy
-MailMarkJunk	mail-mark-junk	path4275	floor shadow
-WeatherFog	weather-fog	path4121-7-8-2-7	the dark halo round the waves (a 5 % black stroke)
+DigitalMetronome	own	-	the own file: no drop shadow (the ground shadow removed by hand, 2026-10-15)
+CameraPhoto	camera-photo	g9724 g9730	floor shadow (blurred); the lens's shadow cast on the foot
 ZoomFitBest	zoom-fit-best	g6668	floor shadow
 ZoomOriginal	zoom-original	g7884	floor shadow
 ZoomInY	zoom-in	g11744	floor shadow
@@ -64,4 +65,4 @@ GoJumpDeclaration	go-jump	g4690	floor shadow
 AccessoriesTextEditor	accessories-text-editor	path9687 path4331 path2334	blurred halo behind the pad; the pencil's shadows cast on the page
 EditDelete	user-trash	path12888 path12886	floor shadow and the contact ellipse under the base
 ValueDrag	object-flip-vertical	g10278	floor shadow
-AppIcon	audio-x-generic	path8186 path8188 path8190	floor shadow (3)
+AppIcon	own	-	the own file, DigitalMetronome's: no drop shadow

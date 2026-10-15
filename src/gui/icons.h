@@ -6,7 +6,10 @@
 // adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/ artwork at its 48
 // slot, extracted as a standalone 48-unit file by
 // tools/icon_set_adwaita_322/, nothing redrawn and nothing from another
-// release, EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
+// release — but ONE OWN FILE, the digital metronome (architect 2026-10-15:
+// Warp's glyph and the program icon, the architect's own drawing, NOT
+// Adwaita's, copied by the same tool; the set's README its provenance) —
+// EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
 // (architect 2026-10-15, "we'll go with none": a drop shadow is the live
 // glyph's raised fiction, and Cool Edit's flat bitmaps never had one — the
 // approved list tools/icon_set_adwaita_322/shadows.tsv); hard-coded (the `icons` device key and the Settings Icons row were
@@ -88,8 +91,13 @@ enum class Icon {
     // 1 / 2) and the Warp / Phase-reset pair (bare 3 / 4), one glyph each.
     AccessoriesDictionary, // Source — the primary source
     InputTablet,         // Target — the authoring surface
-    MailMarkJunk,        // Warp — the warped sheet
-    WeatherFog,          // Phase Reset — the waves in phase
+    DigitalMetronome,    // Warp — a digital metronome, the tempo an
+                         // integer on its display (architect 2026-10-15;
+                         // the set's one own file, its README)
+    CameraPhoto,         // Phase Reset — the set's camera-photo, the phase
+                         // snapshot: a reset re-grounds the synthesis phase
+                         // to the source's at one frame and it decoheres
+                         // from there (architect 2026-10-15)
     // THE MAGNIFIERS.
     ZoomFitBest,         // Full Zoom Out (bare `0`)
     ZoomOriginal,        // Center on Focus (bare `c`)
@@ -175,7 +183,10 @@ enum class Icon {
                          // arrow, the drag it arms (architect 2026-10-11:
                          // "a double-sided arrow with an up and a down";
                          // never a zoom glyph)
-    AppIcon,             // the caption's icon
+    AppIcon,             // the caption's icon — the digital metronome,
+                         // DigitalMetronome's file byte for byte, the program
+                         // icon outside the window too (architect
+                         // 2026-10-15; tools/app_icon/)
 };
 
 // Roster size, the names' and the load's count (load_svg_set parses one
@@ -189,8 +200,8 @@ inline constexpr int kIconCount = 61;
 inline constexpr const char* kIconNames[] = {
     "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
     "VcsCommit",
-    "VcsPull", "AccessoriesDictionary", "InputTablet", "MailMarkJunk",
-    "WeatherFog",
+    "VcsPull", "AccessoriesDictionary", "InputTablet", "DigitalMetronome",
+    "CameraPhoto",
     "ZoomFitBest", "ZoomOriginal", "ZoomInY", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
     "TimelineLift", "MusicNote16th", "Mathmode", "PreviewRenderOn",
@@ -226,8 +237,8 @@ inline constexpr const char* kIconSet = "adwaita-3.22";
 // tools/icon_center/gen_icon_shifts.py (never hand-edited), in kIconNames
 // order. Where a shifted drawing crosses the canvas edge it clips, accepted.
 // The shift is the product's, not the file's:
-// the files are the extraction tool's output (two of them changed files, the
-// set's README).
+// the files are the extraction tool's output (two of them changed files and
+// one the set's own, the set's README).
 struct IconShift {
     const char* name;   // the enumerator's name, kIconNames' spelling
     float       dx;

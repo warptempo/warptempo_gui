@@ -2,7 +2,8 @@
 
 adwaita-icon-theme 3.22.0, alone (architect 2026-10-14): every drawing is the 3.22.0 tarball's own `src/fullcolor/`
 artwork at its 48 slot, nothing redrawn and nothing from any other release; gnome-icon-theme 2.28, the set before it,
-retired whole the same day. One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator.
+retired whole the same day. THE ONE EXCEPTION is the set's OWN FILE (architect 2026-10-15): the digital metronome,
+Warp's glyph and the program icon (`DigitalMetronome.svg`, `AppIcon.svg`), NOT Adwaita's (below, "The own file"). One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator.
 The set is hard-coded (`icons::kIconSet`, `adwaita-3.22`; the `icons` device key and the Settings Icons row were
 removed 2026-10-12). The program parses the files at launch, in place, through resvg (`src/gui/svg_icon.h`): on the
 laptop from this folder, on the tablet from the APK's `icons/adwaita-3.22/` assets (`android/app/build_apk.sh`); a
@@ -13,7 +14,8 @@ the licence texts) are not read.
 
 The tarball ships its scalable artwork as SHEETS (`src/fullcolor/<sheet>.svg`, each carrying an icon's drawings at
 every size, often several icons), so every file here is EXTRACTED by `tools/icon_set_adwaita_322/` (`build_set.py`
-over `mapping.tsv`, its README the usage) and is that tool's byte-identical output: the sheet PRUNED IN PLACE —
+over `mapping.tsv`, its README the usage) and is that tool's byte-identical output (the own file, below, COPIED by
+the same tool from its tracked source with its notice inserted, never extracted): the sheet PRUNED IN PLACE —
 hidden layers, the editor's metadata and every element that puts no ink in the 48 slot are removed, every remaining
 element keeping its ancestors exactly; the slot NESTED as its own `<svg>` viewport inside a 48-unit root (an app
 icon with no 48 drawing nests its 256 slot, scaled by that viewport as the theme renders its 48 PNG); a mask or
@@ -30,6 +32,8 @@ checked against the sheet cropped to its slot and against the theme's own shippe
   (https://download.gnome.org/sources/adwaita-icon-theme/3.22/), sha256
   `c18bf6e26087d9819a962c77288b291efab25d0419b73d909dd771716a45dcb7`. Each file's source sheet and its sha256 are in
   the table below.
+- The own file, `DigitalMetronome.svg` and its copy `AppIcon.svg`: the project's own, its source
+  `tools/icon_set_adwaita_322/own/DigitalMetronome.svg` (below, "The own file").
 
 ## Licence
 
@@ -41,12 +45,27 @@ attributing the artwork, using 'GNOME Project' is enough." The two licence texts
 
 How the files sit beside the GPL-3 program: each SVG is a separate data file under its own licence, read at run time
 and never linked or compiled into the program's code; the repository distributes source only (THIRD_PARTY.md's own
-statement). Under LGPL-3 or CC BY-SA 3.0 there is no GPL-2-only concern.
+statement). Under LGPL-3 or CC BY-SA 3.0 there is no GPL-2-only concern. The own file is placed under the same terms
+(below), so the folder carries one licence story.
+
+## The own file
+
+`DigitalMetronome.svg` (2026-10-15), and `AppIcon.svg` byte for byte, is NOT from adwaita-icon-theme. PROVENANCE: the
+architect's own work, a 48 x 48 drawing made with Google's Gemini at his prompt — Adwaita 3.22's phone,
+accessories-calculator and camera-photo 48 drawings the style inputs, and a product photograph of a Korg MA-1 the
+subject: a generic digital metronome, "WARP" in place of the maker's name — then cleaned by hand: the ground shadow,
+the "MA-1" legend and every small legend removed, WARP moved to the speaker grille's right edge, the power button a
+flat `#dabe2f`. No `<text>`, no filter. LICENCE: placed under THE SAME TERMS AS THE SET, the GNU LGPL v3 or Creative
+Commons Attribution-Share Alike 3.0 United States, so the folder carries one licence story. Its tracked source is
+`tools/icon_set_adwaita_322/own/DigitalMetronome.svg`; the tool copies it with a dated notice inserted as one XML
+comment after the root's start tag, every other byte verbatim (`mapping.tsv`'s `own` treatment). It is the program
+icon outside the window too (`tools/app_icon/gen_app_icon.sh`).
 
 ## The two changed files
 
-Every file is changed in one respect, its drop shadows removed (2026-10-15, the section below, recorded here and in
-`tools/icon_set_adwaita_322/shadows.tsv`). Two files carry further changes, each recorded under the licence with a
+Every extracted file is changed in one respect, its drop shadows removed (2026-10-15, the section below, recorded here
+and in `tools/icon_set_adwaita_322/shadows.tsv`; the own file, above, is no extraction and has none). Two files carry
+further changes, each recorded under the licence with a
 dated notice in an XML comment at its head; every other file is the extraction alone.
 
 - `TabDetachB.svg` (2026-10-14) is `preferences-system-windows` with the element order changed alone: the lower-right
@@ -63,12 +82,16 @@ dated notice in an XML comment at its head; every other file is the extraction a
 ## The deliberate seats
 
 The architect's (2026-10-14): Source wears `accessories-dictionary` (the primary source), Target `input-tablet` (the
-authoring surface), Warp `mail-mark-junk` (the warped sheet), Phase Reset `weather-fog` (the waves in phase); the
+authoring surface); since 2026-10-15 Warp the own file, the digital metronome (the tempo an integer on its display),
+and Phase Reset `camera-photo` (the phase snapshot: a reset re-grounds the synthesis phase to the source's at one
+frame, and it decoheres from there), its 48 slot (300, 50) — the sheet's 256 "hires" slot is never preferred over a 48
+drawing, which is tuned for the seats; the
 Read-Only toggle the padlock pair, `changes-allow` unlocked and `changes-prevent` locked; Save `document-save` (the
 floppy retired); Flatten `edit-clear-all` (3.22's own broom); Load in Place `edit-paste`. DialogError wears
 `process-stop`, as DialogCancel does. Every other seat keeps its freedesktop name.
 
-REPEATS, the files byte-identical: AppIcon, AudioXWav and MusicNote16th (`audio-x-generic`); DialogCancel and
+REPEATS, the files byte-identical: AppIcon and DigitalMetronome (the own file); AudioXWav and MusicNote16th
+(`audio-x-generic`; the BPM Iterations button keeps the note, the program icon until 2026-10-15); DialogCancel and
 DialogError (`process-stop`).
 
 ## Findings
@@ -88,6 +111,8 @@ candidate, draws nothing in resvg and is not seated.) The extraction's own check
 crop or within d ≤ 3.0 (mean, of 255) of the shipped 48 PNG, but `user-trash` (EditDelete): its mesh pattern sits at 3.03
 from the shipped PNG, and the sheet's own crop at 7.7 from it (the crop clips the rim highlight's mask region, so it is
 no reference there) — the one seat the tool prints for a look, accepted on the contact sheet. No file carries an `<image>`.
+The two files of 2026-10-15, `DigitalMetronome.svg` and `CameraPhoto.svg`, rendered at 240 px through the same resvg
+0.48.1: every ink pixel of rsvg's render drawn, the mean difference 0.2 / 0.3 of 255 (antialiased edges alone).
 
 ## The drop shadows
 
@@ -112,8 +137,8 @@ reference left dangling. The disabled face has no file of its own: the product b
 | VcsPull | `go-bottom` | `g6324` | floor shadow |
 | AccessoriesDictionary | `accessories-dictionary` | `path2284` | floor shadow |
 | InputTablet | `input-tablet` | `path8537-6` `path23244-7` `path46799-7-4` | floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy |
-| MailMarkJunk | `mail-mark-junk` | `path4275` | floor shadow |
-| WeatherFog | `weather-fog` | `path4121-7-8-2-7` | the dark halo round the waves (a 5 % black stroke) |
+| DigitalMetronome | the own file | — | no drop shadow (its ground shadow removed by hand at its making) |
+| CameraPhoto | `camera-photo` | `g9724` `g9730` | floor shadow (blurred); the lens's shadow cast on the foot |
 | ZoomFitBest | `zoom-fit-best` | `g6668` | floor shadow |
 | ZoomOriginal | `zoom-original` | `g7884` | floor shadow |
 | ZoomInY | `zoom-in` | `g11744` | floor shadow |
@@ -163,7 +188,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | AccessoriesTextEditor | `accessories-text-editor` | `path9687` `path4331` `path2334` | blurred halo behind the pad; the pencil's shadows cast on the page |
 | EditDelete | `user-trash` | `path12888` `path12886` | floor shadow and the contact ellipse under the base |
 | ValueDrag | `object-flip-vertical` | `g10278` | floor shadow |
-| AppIcon | `audio-x-generic` | `path8186` `path8188` `path8190` | floor shadow (3) |
+| AppIcon | the own file | — | DigitalMetronome's: no drop shadow |
 
 ## The shift
 
@@ -174,22 +199,23 @@ shift is the product's, not the file's.
 
 ## The icons
 
-| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | note |
+| enumerator | 3.22 name | source sheet (src/fullcolor, or own/ beside this tool) | slot (x, y, w, h) | sheet sha256 | note |
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
+| AppIcon | — | `own/DigitalMetronome.svg` | — | `1248a1febe7dd39082afca4d4a014df3803e5367f3734187e1195419dc758cc9` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-15) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | BboxPrev | `go-first` | `navigation-icons.svg` | 456, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | BlackSum | `accessories-calculator` | `accessories-calculator.svg` | 296, 50, 48, 48 | `aeafa0e25eb404c73da589337ddb6dfb1aeec8ab2663a7038702c9379de912fb` |  |
-| WeatherFog | `weather-fog` | `weather-icons.svg` | 296, 350, 48, 48 | `aa8311297490b3270f4fbdbe12b05dd5c005349be2109413611e2db97d9919fa` | NEW: Phase reset (architect 2026-10-14: the waves in phase) |
+| CameraPhoto | `camera-photo` | `camera-photo.svg` | 300, 50, 48, 48 | `ef5055cdc4061107476cab8265bebe6e7ddea7c257d844f3d2a54b477e9c194a` | NEW: Phase reset (architect 2026-10-15: the phase snapshot) |
 | ChangesAllow | `changes-allow` | `changes.svg` | 696, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | NEW: Read-Only while unlocked (architect 2026-10-14) |
 | ChangesPrevent | `changes-prevent` | `changes.svg` | 296, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | NEW: Read-Only while locked (architect 2026-10-14) |
 | DialogCancel | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | DialogError | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | DialogInformation | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` |  |
 | DialogOkApply | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
+| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `1248a1febe7dd39082afca4d4a014df3803e5367f3734187e1195419dc758cc9` | OWN FILE, not Adwaita's: Warp (architect 2026-10-15), below |
 | DocumentOpen | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
 | DocumentRevert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
 | DocumentSave | `document-save` | `cabinets.svg` | 696, 50, 48, 48 | `abefcd60460b10ac8be532acb78197132f8e90b3db97e6d3812c555914f0517f` | the floppy retired (architect 2026-10-14) |
@@ -220,7 +246,6 @@ shift is the product's, not the file's.
 | MediaSkipBackward | `media-skip-backward` | `media-control-icons.svg` | 156, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
 | MediaSkipForward | `media-skip-forward` | `media-control-icons.svg` | 456, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
 | Merge | `edit-clear-all` | `edit-clear-all.svg` | 296, 50, 48, 48 | `0e014a4f4050e704872ff34a0b9680d08a42063ff2c7b6e42b3c5d66fb27855d` | Flatten: the broom (architect 2026-10-14) |
-| MailMarkJunk | `mail-mark-junk` | `mail-mark-junk.svg` | 296, 50, 48, 48 | `31a04d08638ca657945e2d1f956ce7b4280bb3628e73d8342a8eff4aec8e91b4` | NEW: Warp (architect 2026-10-14: the warped sheet) |
 | MusicNote16th | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | PreviewRenderOn | `applications-multimedia` | `applications-multimedia.svg` | 296, 50, 48, 48 | `b4551addc300f3ca7d6c5c9f22044c7db2dc227e3987877cb0b99de634508ed2` |  |
 | SettingsConfigure | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` |  |
