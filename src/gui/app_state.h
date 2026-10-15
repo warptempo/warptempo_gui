@@ -5981,14 +5981,15 @@ struct AppState {
     // Active markers view — THE COLUMN AXIS, two letters: 'W' = warp markers,
     // 'P' = phase reset markers (a third, M, left with the magnification
     // level markers column, architect 2026-09-23). Selected absolutely by the
-    // four view selectors (the keys and the icon row's view pairs).
+    // Warp / Phase Reset selectors, bare 3 / 4 and the icon row's Warp /
+    // Phase reset pair (one of the two radio pairs since 2026-10-14).
     // Determines which marker
     // collection is visible / edited / hit-tested and which colour set its
     // flags wear. BOTH LETTERS PAIR WITH BOTH AUDIO VIEWS (architect
     // 2026-10-12, S+P's return: the phase-reset column authors in source view
     // for transcription, with the lead-in at the drop and no lead-in overlay),
-    // so the four combinations S+W, S+P, T+W, T+P are the four view
-    // selectors' and the writers hold no pair invariant. (S+P was load-fatal
+    // so the four combinations S+W, S+P, T+W, T+P are the two pairs' product
+    // and the writers hold no pair invariant. (S+P was load-fatal
     // from 2026-09-21 to 2026-10-12.)
     char active_markers_view = 'W';
 
@@ -16104,10 +16105,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // nothing. The architect deleted both buttons whole that day; the
         // view pairs' four below carry the same delta on for the selectors.)
         // THE VIEW PAIRS' FOUR TAKE THAT SAME DELTA (architect 2026-09-10),
-        // and they left the never-grey group above for it: the four selectors COMPOSE
-        // the column chokepoint, so they are the four chords the column
-        // selectors block (iteration_lock_key_blocked's first test), and a
-        // press that cannot act must not act — the roster's own rule, applied
+        // and they left the never-grey group above for it: two radio pairs
+        // since 2026-10-14, Warp / Phase reset (bare 3 / 4) COMPOSING the
+        // column chokepoint and Source / Target (bare 1 / 2) the audio view,
+        // and the iteration lock blocks all four chords
+        // (iteration_lock_key_blocked's first test), and a press that cannot
+        // act must not act — the roster's own rule, applied
         // here through arm_redesign_press's disabled line, which consumes the
         // press silently and lets the KEY's card be the one sentence.
         //

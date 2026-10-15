@@ -58,12 +58,6 @@
    <stop id="stop4592-0-8" offset="0.69999999" style="stop-color:#babdb6;stop-opacity:1" />
    <stop style="stop-color:#babdb6;stop-opacity:1" offset="1" id="stop4594-8-6" />
   </linearGradient>
-  <clipPath clipPathUnits="userSpaceOnUse" id="clipPath6000">
-   <path style="color:#000000;fill:#808080;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="path6002" d="M 268.96875,160 C 267.41469,160 266,161.41469 266,162.96875 l 0,22.0625 c 0,1.55406 1.41469,2.96875 2.96875,2.96875 l 7.0625,0 C 277.58531,188 279,186.58531 279,185.03125 l 0,-22.0625 C 279,161.41469 277.58531,160 276.03125,160 l -7.0625,0 z m 15,0 C 282.41469,160 281,161.41469 281,162.96875 l 0,22.0625 c 0,1.55406 1.41469,2.96875 2.96875,2.96875 l 7.0625,0 C 292.58531,188 294,186.58531 294,185.03125 l 0,-22.0625 C 294,161.41469 292.58531,160 291.03125,160 l -7.0625,0 z" transform="translate(0,-40)" />
-  </clipPath>
-  <filter id="filter6004" color-interpolation-filters="sRGB">
-   <feGaussianBlur stdDeviation="0.42" id="feGaussianBlur6006" />
-  </filter>
   <linearGradient xlink:href="#linearGradient4636-9-87" id="linearGradient4642-6-96" x1="245" y1="238" x2="213" y2="206" gradientUnits="userSpaceOnUse" />
   <linearGradient id="linearGradient4636-9-87">
    <stop style="stop-color:#eeeeec;stop-opacity:1" offset="0" id="stop4638-7-96" />
@@ -89,10 +83,6 @@
  <svg id="icon" x="0" y="0" width="48" height="48" viewBox="256 150 48 48">
   <g id="g4026" style="display:inline">
    <g id="g4048" style="display:inline">
-    <g id="g5996" clip-path="url(#clipPath6000)" style="opacity:0.5;filter:url(#filter6004)" transform="translate(0,40)">
-     <path transform="translate(0,-40)" d="M 268.96875,160 C 267.41469,160 266,161.41469 266,162.96875 l 0,22.0625 c 0,1.55406 1.41469,2.96875 2.96875,2.96875 l 7.0625,0 C 277.58531,188 279,186.58531 279,185.03125 l 0,-22.0625 C 279,161.41469 277.58531,160 276.03125,160 l -7.0625,0 z m 15,0 C 282.41469,160 281,161.41469 281,162.96875 l 0,22.0625 c 0,1.55406 1.41469,2.96875 2.96875,2.96875 l 7.0625,0 C 292.58531,188 294,186.58531 294,185.03125 l 0,-22.0625 C 294,161.41469 292.58531,160 291.03125,160 l -7.0625,0 z" id="path5861-2" style="opacity:0.15;color:#000000;fill:none;stroke:#000000;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" />
-     <path id="rect7865-5" d="m 269.96875,124.5 c -0.26425,0 -0.46875,0.2045 -0.46875,0.46875 l 0,22.0625 c 0,0.26425 0.2045,0.46875 0.46875,0.46875 l 7.0625,0 c 0.26425,0 0.46875,-0.2045 0.46875,-0.46875 l 0,-22.0625 c 0,-0.26425 -0.2045,-0.46875 -0.46875,-0.46875 l -7.0625,0 z m 15,0 c -0.26425,0 -0.46875,0.2045 -0.46875,0.46875 l 0,22.0625 c 0,0.26425 0.2045,0.46875 0.46875,0.46875 l 7.0625,0 c 0.26425,0 0.46875,-0.2045 0.46875,-0.46875 l 0,-22.0625 c 0,-0.26425 -0.2045,-0.46875 -0.46875,-0.46875 l -7.0625,0 z" style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:#ffffff;stroke-width:2;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" />
-    </g>
     <g id="g48-6" style="display:inline;enable-background:new" transform="translate(256,150)">
      <g id="g7104" transform="translate(50,0)">
       <g id="g7451">

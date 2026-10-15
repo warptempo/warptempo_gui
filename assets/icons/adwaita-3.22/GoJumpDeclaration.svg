@@ -84,16 +84,6 @@
    <stop style="stop-color:#555753;stop-opacity:1" offset="0" id="stop4024-7-7-0-5-4-1-8-0-8-0-5" />
    <stop style="stop-color:#babdb6;stop-opacity:1" offset="1" id="stop4026-3-3-0-9-2-5-5-2-8-3-1" />
   </linearGradient>
-  <radialGradient r="4.84375" fy="197.29688" fx="33.875" cy="197.29688" cx="33.875" gradientTransform="matrix(1,0,0,0.33870968,0,130.47051)" gradientUnits="userSpaceOnUse" id="radialGradient5147-7-6-8-6" xlink:href="#linearGradient6462-6-8-548-9-2-5-5-8-6" />
-  <linearGradient id="linearGradient6462-6-8-548-9-2-5-5-8-6">
-   <stop style="stop-color:#000000;stop-opacity:1;" offset="0" id="stop6464-5-9-94-5-4-2-4-0-4" />
-   <stop style="stop-color:#000000;stop-opacity:0;" offset="1" id="stop6466-3-6-1-7-2-1-4-4-46" />
-  </linearGradient>
-  <linearGradient id="linearGradient6462-6-8-548-9-29-2-1-6">
-   <stop style="stop-color:#000000;stop-opacity:1;" offset="0" id="stop6464-5-9-94-5-47-4-6-3" />
-   <stop style="stop-color:#000000;stop-opacity:0;" offset="1" id="stop6466-3-6-1-7-01-2-7-8" />
-  </linearGradient>
-  <radialGradient r="4.84375" fy="197.29688" fx="33.875" cy="197.29688" cx="33.875" gradientTransform="matrix(1,0,0,0.33870968,0,130.47051)" gradientUnits="userSpaceOnUse" id="radialGradient4539" xlink:href="#linearGradient6462-6-8-548-9-29-2-1-6" />
   <radialGradient xlink:href="#linearGradient4869-4-0-3-3-3-0" id="radialGradient4705" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0,1.0074968,-1.0074968,0,140.68888,228.44407)" cx="-41.974152" cy="177.42114" fx="-41.974152" fy="177.42114" r="2.3554697" />
   <linearGradient xlink:href="#linearGradient4022-8-8-2-7-5-0-5-4-6-8-9" id="linearGradient4707" gradientUnits="userSpaceOnUse" gradientTransform="matrix(0,0.75000315,-0.75000315,0,92.836498,223.98845)" x1="-39.666138" y1="198.90807" x2="-52.333862" y2="176.96693" />
   <linearGradient id="linearGradient4869-4-0-3-3-3-0-5">
@@ -242,10 +232,6 @@
     <path transform="matrix(0.47761203,0,0,0.47761203,55.93284,93.470133)" d="m -36.5,186.40625 a 2.09375,2.09375 0 1 1 -4.1875,0 2.09375,2.09375 0 1 1 4.1875,0 z" id="path3724-7" style="color:#000000;fill:none;stroke:url(#linearGradient3894);stroke-width:2.09374976;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" />
     <path transform="matrix(0,-1,1,0,-184,-97)" d="m -318.5,220.5 a 1,1 0 1 1 -2,0 1,1 0 1 1 2,0 z" id="path3738-0" style="color:#000000;fill:#eeeeec;fill-opacity:1;fill-rule:nonzero;stroke:#888a85;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" />
     <rect transform="matrix(0,-1,1,0,0,0)" ry="0" rx="0" y="36" x="-223" height="1.0000001" width="1.000001" id="rect3744-2" style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" />
-    <g id="g4690" transform="translate(4,0)">
-     <path transform="matrix(3.4064508,0,0,1.9809503,-64.89352,-299.08531)" d="m 38.71875,197.29687 a 4.84375,1.640625 0 1 1 -9.6875,0 4.84375,1.640625 0 1 1 9.6875,0 z" id="path6460-6-4-4-0-1" style="opacity:0.1;color:#000000;fill:url(#radialGradient4539);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:3;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" />
-     <path transform="matrix(1.96129,0,0,1.3714358,-15.9387,-178.83001)" d="m 38.71875,197.29687 a 4.84375,1.640625 0 1 1 -9.6875,0 4.84375,1.640625 0 1 1 9.6875,0 z" id="path6460-6-4-4-3-55-7" style="opacity:0.2;color:#000000;fill:url(#radialGradient5147-7-6-8-6);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:3;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" />
-    </g>
     <g id="g4018-5-5-8-09" style="stroke:url(#linearGradient4794);display:inline;enable-background:new" transform="matrix(0,-1,1,0,-133,39.99998)">
      <path id="path3169-2-38-0-24" d="m -37.5,178.5 -9,9 9,9" style="fill:none;stroke:url(#linearGradient4792);stroke-width:9;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;display:inline;enable-background:new" />
     </g>

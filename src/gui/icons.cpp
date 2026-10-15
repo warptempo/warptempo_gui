@@ -20,10 +20,11 @@ namespace {
 // load_svg_set before the window exists and never changed after.
 //
 // THE CACHE: per (glyph, device px) the LIVE raster and, the first time a
-// disabled face asks, its DISABLED copy, Cool Edit's emboss (draw_disabled)
-// — two sizes per scale in use (the toolbar seat, icon_glyph_px, and the
-// small icon's scaled 16 of the caption, the cards and the list rows), at
-// most 4 x kIconCount surfaces. Main thread only: every draw is the
+// disabled face asks, its DISABLED copy, Cool Edit's emboss of the live mask
+// over the drawing's own one-unit translate (draw_disabled) — two sizes per
+// scale in use (the toolbar seat, icon_glyph_px, and the small icon's scaled
+// 16 of the caption, the cards and the list rows), at most 4 x kIconCount
+// surfaces. Main thread only: every draw is the
 // painter's.
 struct SurfaceDeleter {
     void operator()(cairo_surface_t* s) const { cairo_surface_destroy(s); }
@@ -115,15 +116,27 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
     if (px <= 0) return;
     Faces& f = faces_for(icon, px);
     if (!f.disabled) {
-        // THE MASK IS THE LIVE RASTER'S ALPHA, which the window's conversion
-        // keeps (svg_icon.h's convert_to_display), so the copy is built from
-        // the cached live face on any window; its two sRGB tones are
-        // converted after. THE OFFSET IS ONE WINDOWS PX, the case's own line
-        // (program_line_px), at the live scale: the cache is per device px
-        // and drop_rasters empties it at a scale change.
+        // THE SHADOW MASK IS THE LIVE RASTER'S ALPHA, which the window's
+        // conversion keeps (svg_icon.h's convert_to_display). THE LIGHT MASK
+        // IS THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down
+        // (architect 2026-10-15, "the glyph's own line thickness"), composed
+        // into the render transform beside the glyph's kIconShifts entry and
+        // rasterised at that offset — exact antialiasing, never a shifted
+        // raster, never rounded to a device px (1.25 px at 300 %, 0.58 at
+        // 138) — onto a surface widened by the offset's ceiling so nothing it
+        // carries past the cell is lost; only its alpha is read, so it is
+        // never converted. The two sRGB tones are converted after; the cache
+        // is per device px and drop_rasters empties it at a scale change.
+        LoadedSet& set = *loaded_set();
+        const int index = static_cast<int>(icon);
+        const auto [sx, sy] = set.shifts[static_cast<size_t>(index)];
+        const svg_icon::Document& doc = document(index);
+        const int margin =
+            static_cast<int>(std::ceil(svg_icon::unit_px(doc, px)));
+        Surface light(
+            svg_icon::rasterise(doc, px, sx + 1.0, sy + 1.0, margin));
         f.disabled.reset(svg_icon::embossed_copy(
-            f.live.get(), program_line_px(), kCeDisabledLight,
-            kCeDisabledShadow));
+            f.live.get(), light.get(), kCeDisabledLight, kCeDisabledShadow));
         svg_icon::convert_to_display(f.disabled.get());
     }
     paint_raster(cr, f.disabled.get(), x, y);

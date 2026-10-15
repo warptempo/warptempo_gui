@@ -18,9 +18,6 @@
    <stop style="stop-color:#e1e4de;stop-opacity:1" offset="0.63548738" id="stop5268" />
    <stop id="stop3913" offset="1" style="stop-color:#ffffff;stop-opacity:1" />
   </linearGradient>
-  <filter id="filter4311">
-   <feGaussianBlur stdDeviation="0.76799988" id="feGaussianBlur4313" />
-  </filter>
   <linearGradient xlink:href="#linearGradient3909" id="linearGradient4357" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1.0869565,0,0,1.0952381,83.17408,-16.047617)" x1="320" y1="82.985046" x2="320" y2="63.788734" />
   <linearGradient xlink:href="#linearGradient3957" id="linearGradient4359" gradientUnits="userSpaceOnUse" x1="448" y1="62.219887" x2="448" y2="55.873928" />
   <linearGradient xlink:href="#linearGradient3915" id="linearGradient4361" gradientUnits="userSpaceOnUse" gradientTransform="translate(-10,0)" x1="443.98404" y1="62.071323" x2="443.98404" y2="53.323627" />
@@ -72,7 +69,6 @@
   <g id="layer1">
    <g id="layer4" style="display:inline">
     <g id="g5270">
-     <path style="opacity:0.3;color:#000000;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:1.00000095;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;filter:url(#filter4311);enable-background:new" d="m 300.50012,54.5 29,0 c 1.108,0 2,0.892 2,2 l 0,28.99999 -33,0 0,-28.99999 c 0,-1.108 0.892,-2 2,-2 z" id="rect4667-1-5-6-2" />
      <g id="g4068" transform="translate(-120,-1)">
       <path id="rect4667-1-5-6" d="m 420.50012,54.5 29,0 c 1.108,0 2,0.892 2,2 l 0,28.99999 -33,0 0,-28.99999 c 0,-1.108 0.892,-2 2,-2 z" style="color:#000000;fill:url(#linearGradient4357);fill-opacity:1;stroke:#888a85;stroke-width:1.00000095000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" />
       <path style="opacity:0.42671012;color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:2;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" d="m 445,56 4.5625,0 C 450.35887,56 451,56.641125 451,57.4375 L 451,62 446.4375,62 C 445.64112,62 445,61.358875 445,60.5625 z" id="rect3118-8" />

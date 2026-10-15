@@ -162,9 +162,6 @@
   <filter color-interpolation-filters="sRGB" id="filter6328-6-0" height="1.8271441" y="-0.4135721" width="1.1702315" x="-0.085115738">
    <feGaussianBlur id="feGaussianBlur6330-8-1" stdDeviation="0.42546784" />
   </filter>
-  <filter color-interpolation-filters="sRGB" id="filter6051-7-5" height="1.9436275" y="-0.47181374" width="1.1499805" x="-0.074990258">
-   <feGaussianBlur id="feGaussianBlur6053-86-9" stdDeviation="1.4154412" />
-  </filter>
   <linearGradient y2="32.161697" x2="40.938126" y1="32.161697" x1="6.72682" gradientTransform="matrix(0.9715125,0,0,1.1298556,2.1851685,-5.9391361)" gradientUnits="userSpaceOnUse" id="linearGradient6225-2-6" xlink:href="#linearGradient6215-6-9" />
   <linearGradient id="linearGradient6215-6-9">
    <stop style="stop-color:#ead200;stop-opacity:1;" offset="0" id="stop6217-9-0" />
@@ -296,7 +293,6 @@
      </g>
     </g>
     <g style="display:inline;enable-background:new" id="layer1-81" transform="translate(293.04568,49.114093)">
-     <rect transform="matrix(1.0264901,0,0,1,-0.1655629,0)" ry="1.9748279" rx="3.1708715" y="39.75" x="6.25" height="6" width="37.75" id="rect5961-79" style="opacity:0.45882353;color:#000000;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;filter:url(#filter6051-7-5);enable-background:accumulate" />
      <path id="rect1314-87" d="m 10.671306,17.5 c 9.794546,-1.443399 19.693309,-1.219316 29.654275,0 1.202904,0 2.171306,1.04357 2.171306,2.339844 l 0,23.320312 c 0,1.296274 -1.030902,2.152344 -2.171306,2.339844 -10.327183,1.208603 -19.18205,1.199062 -29.654275,0 C 9.2809025,45.0625 8.5,44.45643 8.5,43.160156 l 0,-23.320312 C 8.5,18.54357 9.4684025,17.5 10.671306,17.5 z" style="fill:url(#linearGradient6225-2-6);fill-opacity:1;fill-rule:evenodd;stroke:#7d6400;stroke-width:0.99999952;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dashoffset:0" />
      <g id="g4695-7">
       <path style="opacity:0.14117647;color:#000000;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" d="m 41.940271,24.444505 c -0.398206,1.330312 -4.534152,1.670412 -5.302076,1.773431 0,0 -16.308875,0.480472 -16.308875,0.480472 0,0 16.26324,0.159134 16.26324,0.159134 0.825913,-0.09712 5.218651,0.103389 5.4361,-1.70593 l -0.08839,-0.707107 z" id="path6193-7" />

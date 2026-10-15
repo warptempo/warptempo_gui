@@ -19,8 +19,10 @@ element keeping its ancestors exactly; the slot NESTED as its own `<svg>` viewpo
 icon with no 48 drawing nests its 256 slot, scaled by that viewport as the theme renders its 48 PNG); a mask or
 filter in user space with no region of its own GIVEN, EXPLICITLY, THE REGION THE FULL SHEET'S VIEWPORT GAVE IT
 (−10 % / 120 % of the sheet), because the 3.22 `edit-undo` / `edit-redo` masks otherwise clip the arrow to nothing in
-every current renderer; the defs pruned to those referenced. Nothing is redrawn. Each seat is checked against the
-sheet cropped to its slot and against the theme's own shipped 48 PNG (`Adwaita/48x48/<context>/<name>.png`).
+every current renderer; EVERY DROP SHADOW REMOVED by id (below, `shadows.tsv`), every `<use>` of a removed element
+with it; the defs pruned to those referenced. Nothing is redrawn. Each seat's faithful drawing (shadows kept) is
+checked against the sheet cropped to its slot and against the theme's own shipped 48 PNG
+(`Adwaita/48x48/<context>/<name>.png`).
 
 ## Provenance
 
@@ -43,8 +45,9 @@ statement). Under LGPL-3 or CC BY-SA 3.0 there is no GPL-2-only concern.
 
 ## The two changed files
 
-Both are recorded as changed files under the licence, each with a dated notice in an XML comment at its head; every
-other file is the extraction alone.
+Every file is changed in one respect, its drop shadows removed (2026-10-15, the section below, recorded here and in
+`tools/icon_set_adwaita_322/shadows.tsv`). Two files carry further changes, each recorded under the licence with a
+dated notice in an XML comment at its head; every other file is the extraction alone.
 
 - `TabDetachB.svg` (2026-10-14) is `preferences-system-windows` with the element order changed alone: the lower-right
   window copy `use5281` moved after the front window `g5270`, every coordinate unchanged — the same derivation 2.28's
@@ -70,7 +73,8 @@ DialogError (`process-stop`).
 
 ## Findings
 
-- `multimedia-volume-control`, the dial, is excluded: its knob is a 512-px bitmap inside the SVG, not a drawing.
+- `multimedia-volume-control`, the dial, is excluded (again 2026-10-15): every slot's knob (16, 22, 32, 48 and the
+  hires) is an embedded raster inside the SVG, a 512-px bitmap at the large slots; no vector knob exists.
 - `format-text-direction-ltr` is PNG-only in 3.22 (no scalable source) and is not a mirror of `-rtl`, so the two are
   no Source / Target pair.
 - The clock's digits (`document-open-recent`) are `<text>`, which the product's resvg does not draw — hence VcsDiff's
@@ -85,11 +89,87 @@ crop or within d ≤ 3.0 (mean, of 255) of the shipped 48 PNG, but `user-trash` 
 from the shipped PNG, and the sheet's own crop at 7.7 from it (the crop clips the rim highlight's mask region, so it is
 no reference there) — the one seat the tool prints for a look, accepted on the contact sheet. No file carries an `<image>`.
 
+## The drop shadows
+
+EVERY DROP SHADOW IS REMOVED STRUCTURALLY, none kept (architect 2026-10-15, "we'll go with none"): a drop shadow is
+the live glyph's raised fiction; Cool Edit's flat bitmaps never had one. Removed: the floor shadows under each
+drawing, the blurred halos behind it, the etched halo pairs round the media glyphs, and the shadows one part casts on
+another; kept: shading inside a drawing that is no shadow (preferences-system's screwdriver on the wrench). The list
+is the one the architect approved icon by icon on a sheet the same day, tracked as
+`tools/icon_set_adwaita_322/shadows.tsv`; the extraction removes each id with every `<use>` of a removed element
+(DialogOkApply's `use6187`, Folder's eleven, VcsDiff's `use6074-7`) and fails on a listed id that is missing or a
+reference left dangling. The disabled face has no file of its own: the product builds it from the live raster's mask
+(`icons::draw_disabled`).
+
+| enumerator | 3.22 name | removed ids | what |
+|---|---|---|---|
+| DocumentOpen | `document-open` | `use28040` `use28042` `path4789` | floor shadow (2); the paper's shadow on the folder's back panel |
+| DocumentSave | `document-save` | `rect2846-1-9-0` `rect2846-1-9-0-1` `path3960-3-8-4-0-5-5-9-33` | floor shadow (2); the arrow's shadow cast on the cabinet |
+| EditUndo | `edit-undo` | `g9944-7-9` | floor shadow |
+| EditRedo | `edit-redo` | `g4285` | floor shadow |
+| MediaRecord | `media-record` | `g8159` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| VcsCommit | `go-top` | `path6460-6-4-4-0-5` `path6460-6-4-4-3-55-3` | floor shadow (2) |
+| VcsPull | `go-bottom` | `g6324` | floor shadow |
+| AccessoriesDictionary | `accessories-dictionary` | `path2284` | floor shadow |
+| InputTablet | `input-tablet` | `path8537-6` `path23244-7` `path46799-7-4` | floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy |
+| MailMarkJunk | `mail-mark-junk` | `path4275` | floor shadow |
+| WeatherFog | `weather-fog` | `path4121-7-8-2-7` | the dark halo round the waves (a 5 % black stroke) |
+| ZoomFitBest | `zoom-fit-best` | `g6668` | floor shadow |
+| ZoomOriginal | `zoom-original` | `g7884` | floor shadow |
+| ZoomInY | `zoom-in` | `g11744` | floor shadow |
+| ListAdd | `list-add` | `rect4899-2` | floor shadow |
+| ListRemove | `list-remove` | `rect4899-2-1` | floor shadow |
+| ViewHidden | `audio-volume-muted` | `path11644` `path10707` | floor shadow (blurred core and the wide radial) |
+| InsertLink | `insert-link` | `path4121` | floor shadow under the triangle |
+| Merge | `edit-clear-all` | `path6017` | floor shadow |
+| BlackSum | `accessories-calculator` | `rect12531` | blurred halo behind the calculator |
+| GoJump | `start-here` | — | no drop shadow |
+| TimelineLift | `view-fullscreen` | `rect4667-1-5-6-45-3-7` | blurred halo behind the window |
+| MusicNote16th | `audio-x-generic` | `path8186` `path8188` `path8190` | floor shadow (3) |
+| Mathmode | `x-office-spreadsheet` | `g12362` | floor shadow |
+| PreviewRenderOn | `applications-multimedia` | `path8036` | floor shadow under the note |
+| DialogOkApply | `edit-paste` | `rect5387` `rect5796` `path5674` `rect5984` | floor shadow (2); the clip's and the paper's shadows cast on the board |
+| VcsDiff | `document-open-recent` | `use6074` `use6388-7-7` `g4531` `path7099` | floor shadow (two stacked instances of g6384: use6074 and use6388-7-7); the hands' and the arrow's shadows cast on the dial |
+| ShallowHistory | `x-office-calendar` | `g7610` | floor shadow |
+| EditSelect | `edit-select-all` | `g12362` | floor shadow |
+| KeyframePrevious | `media-seek-backward` | `g6598` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| KeyframeNext | `media-seek-forward` | `g5161` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| GoPrevious | `go-previous` | `path6460-6-4-4` `path6460-6-4-4-3` | floor shadow (2) |
+| GoNext | `go-next` | `path6460-6-4-4-48` `path6460-6-4-4-3-2` | floor shadow (2) |
+| DocumentRevert | `document-revert` | `g12362` | floor shadow |
+| MediaSkipBackward | `media-skip-backward` | `g4795` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| MediaPlaybackStart | `media-playback-start` | `g5075` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| MediaPlaybackStop | `media-playback-stop` | `g5666` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| MediaPlaybackPause | `media-playback-pause` | `g5996` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| MediaSkipForward | `media-skip-forward` | `g5937` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| DialogCancel | `process-stop` | `g6501` | floor shadow |
+| GoDown | `go-down` | `path6460-6-4-4-0` `path6460-6-4-4-3-55` | floor shadow (2) |
+| GoUp | `go-up` | `path6460-6-4-4-0-5-8` `path6460-6-4-4-3-55-3-3` | floor shadow (2) |
+| ChangesAllow | `changes-allow` | `rect5961` | floor shadow |
+| ChangesPrevent | `changes-prevent` | `rect5961-79` | floor shadow |
+| BboxPrev | `go-first` | `path6460-6-4-4-1` `path6460-6-4-4-3-5` `path6460-6-4-4-1-9` `path6460-6-4-4-3-5-5` | floor shadow (4: bar and arrow) |
+| BboxNext | `go-last` | `g4226` `g4222` | floor shadow (2 groups: bar and arrow) |
+| TabDetach | `preferences-system-windows` | `rect4667-1-5-6-2` | blurred halo behind each window (one rect, two uses) |
+| TabDetachB | `preferences-system-windows` | `rect4667-1-5-6-2` | blurred halo behind each window (one rect, two uses) |
+| SettingsConfigure | `preferences-system` | `path6896` `path3562` | floor shadow (2); the screwdriver's shading on the wrench (rect7166, path7356) kept |
+| Folder | `folder` | `g5806` | floor shadow |
+| AudioXWav | `audio-x-generic` | `path8186` `path8188` `path8190` | floor shadow (3) |
+| MediaRepeatSingle | `media-playlist-repeat` | `g7767` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
+| DialogInformation | `dialog-information` | `path4908-7` | floor shadow under the base |
+| DialogError | `process-stop` | `g6501` | floor shadow |
+| WindowClose | `window-close` | `path3819` `path2183` `path2187` | floor shadow (3) |
+| HelpWhatsthis | `help-browser` | `path3662` `path3688` | floor shadow (2, one seen through the hole) |
+| GoJumpDeclaration | `go-jump` | `g4690` | floor shadow |
+| AccessoriesTextEditor | `accessories-text-editor` | `path9687` `path4331` `path2334` | blurred halo behind the pad; the pencil's shadows cast on the page |
+| EditDelete | `user-trash` | `path12888` `path12886` | floor shadow and the contact ellipse under the base |
+| ValueDrag | `object-flip-vertical` | `g10278` | floor shadow |
+| AppIcon | `audio-x-generic` | `path8186` `path8188` `path8190` | floor shadow (3) |
+
 ## The shift
 
 The product draws every glyph BODY-CENTERED in its seat (architect 2026-10-12): a user-unit translate per file,
-`src/gui/icon_shifts.inc`, generated by `tools/icon_center/gen_icon_shifts.py` (the body is the drawing with its
-shadows stripped structurally; the nested slot is walked like any group). The files stay as the tool writes them; the
+`src/gui/icon_shifts.inc`, generated by `tools/icon_center/gen_icon_shifts.py` (the body is the shipped file itself,
+shadow-less by construction). The files stay as the tool writes them; the
 shift is the product's, not the file's.
 
 ## The icons

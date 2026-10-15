@@ -56,9 +56,6 @@
    <stop id="stop5381-4-1" offset="0" style="stop-color:#ffffff;stop-opacity:1;" />
    <stop id="stop5383-3-4" offset="1" style="stop-color:#ffffff;stop-opacity:0;" />
   </linearGradient>
-  <filter height="1.6375035" id="filter5766-5" width="1.1813331" x="-0.090666525" y="-0.31875175" color-interpolation-filters="sRGB">
-   <feGaussianBlur id="feGaussianBlur5768-2" stdDeviation="0.79295562" />
-  </filter>
   <linearGradient id="linearGradient3881-64">
    <stop style="stop-color:#babdb6;stop-opacity:1" offset="0" id="stop3883-9" />
    <stop id="stop3895-0" offset="0.13349205" style="stop-color:#eeeeec;stop-opacity:1" />
@@ -246,9 +243,6 @@
   <linearGradient xlink:href="#linearGradient5772-1" id="linearGradient5021" gradientUnits="userSpaceOnUse" gradientTransform="translate(296,-52)" x1="25.5" y1="-13.625" x2="26" y2="-39.125" />
   <linearGradient xlink:href="#linearGradient3968-1" id="linearGradient5023" gradientUnits="userSpaceOnUse" gradientTransform="translate(296,-50)" x1="18.397352" y1="-37.160858" x2="10.831841" y2="4.0281115" />
   <linearGradient xlink:href="#linearGradient5788-6" id="linearGradient5025" gradientUnits="userSpaceOnUse" gradientTransform="translate(296,-52)" x1="14.787762" y1="-9.017684" x2="14.787762" y2="-69.468956" />
-  <filter color-interpolation-filters="sRGB" height="1.9040724" id="filter5830-3" width="1.1673017" x="-0.083650827" y="-0.4520362">
-   <feGaussianBlur id="feGaussianBlur5832-2" stdDeviation="1.4691176" />
-  </filter>
   <linearGradient id="linearGradient3-paper-sheet-orig-08-1-7-9-4-5-4-8-5-3-6-9-8">
    <stop style="stop-color: rgb(255, 255, 255); stop-opacity: 1;" offset="0" id="stop6-paper-sheet-orig-1-0-9-5-1-7-5-9-9-3-6-0-5" />
    <stop style="stop-color: rgb(211, 215, 207); stop-opacity: 1;" offset="1" id="stop7-paper-sheet-orig-2-0-1-5-7-0-3-8-3-7-6-7-02" />
@@ -319,8 +313,6 @@
   <g id="layer1" style="display:inline" transform="translate(0,300)">
    <g id="layer5" style="display:inline">
     <g transform="translate(-2.000004,-302)" style="display:inline;enable-background:new" id="g5617">
-     <rect height="6.5" id="rect5387" rx="3.2499998" ry="5.28125" style="opacity:0.62650601;color:#000000;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:block;overflow:visible;filter:url(#filter5830-5);enable-background:accumulate" transform="matrix(0.9065836,0,0,0.3078976,298.03286,80.266006)" width="35.125" x="6.8749995" y="35.875" />
-     <rect height="6.5" id="rect5796" rx="3.2499998" ry="5.28125" style="opacity:0.1927711;color:#000000;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:block;overflow:visible;filter:url(#filter5830-5);enable-background:accumulate" transform="matrix(1.1565836,0,0,0.7117438,291.92349,64.153025)" width="35.125" x="6.8749995" y="35.875" />
      <rect height="31.999998" id="rect4613" rx="2.5" ry="2.5" style="color:#000000;fill:url(#linearGradient5021);fill-opacity:1;fill-rule:nonzero;stroke:url(#linearGradient5023);stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" transform="scale(1,-1)" width="29.999996" x="305.5" y="-92.5" />
      <rect height="30.000004" id="rect5786" rx="1.5" ry="1.5" style="opacity:0.3;color:#000000;fill:none;stroke:url(#linearGradient5025);stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" transform="scale(1,-1)" width="28.000013" x="306.5" y="-91.5" />
     </g>
@@ -341,7 +333,6 @@
      <rect height="12.000001" id="rect181" rx="0" ry="0" style="opacity:0.4;color:#000000;fill:none;stroke:url(#linearGradient5007);stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" transform="scale(1,-1)" width="12.000004" x="304.5" y="-233.5" />
     </g>
     <g transform="translate(-2.000004,-302)" style="display:inline;enable-background:new" id="g4458">
-     <path d="m 16.722015,14.506832 15.632463,0 c 0.972272,0.04419 1.026805,-1.889084 1.026805,-1.889084 l -2.88421,-2.310477 0.0091,-0.7545235 c 0,0 -12.01513,-0.02055 -12.01513,-0.02055 l 0,0.8902015 -2.600867,2.242637 c 0,0 -0.05203,1.797602 0.83185,1.841796 z" id="path5674" style="opacity:0.44117647;color:#000000;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:block;overflow:visible;filter:url(#filter5766-5);enable-background:accumulate" transform="matrix(1.0502474,0,0,1.0502474,294.76213,50.333532)" />
      <path d="m 312.72201,64.506832 15.63247,0 c 0.97227,0.04419 1.0268,-1.889084 1.0268,-1.889084 l -2.88421,-2.310477 0.009,-3.754524 c 0,-0.822614 -0.6918,-1.933278 -1.6988,-1.933278 l -8.52005,-0.08839 c -1.21242,0 -1.79628,1.188151 -1.79628,2.001117 l 0,3.890201 -2.60086,2.242637 c 0,0 -0.052,1.797602 0.83185,1.841796 z" id="path5584" style="color:#000000;fill:url(#linearGradient4997);fill-opacity:1;fill-rule:nonzero;stroke:url(#linearGradient4999);stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" />
      <rect height="1.0416322" id="rect5594" rx="0.52081609" ry="0.52081609" style="opacity:0.5;color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" width="15" x="313" y="62" />
      <path d="m 316,60 0,-3 c -0.0394,-0.631556 0.20798,-1.033615 1,-1 l 7,0 c 0.46307,0.07386 0.94201,0.11598 1,1 l 0,3 -1,-3 -7,0 -1,3 z" id="path5377" style="color:#000000;fill:url(#linearGradient5001);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
@@ -394,7 +385,6 @@
       <rect style="color:#000000;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="rect4660-8-50-3" width="7" height="0.99999565" x="317" y="194" rx="0" ry="0" />
      </g>
     </g>
-    <rect height="6.5" id="rect5984" rx="4.4858322" ry="7.272984" style="opacity:0.35294118;color:#000000;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:block;overflow:visible;filter:url(#filter5830-3);enable-background:accumulate" transform="matrix(0.7245031,0,0,0.4468592,300.17217,-226.71955)" width="35.125" x="19.514534" y="38.438263" />
     <g id="g5579">
      <g id="g5703-0-5-1" style="display:inline;enable-background:new" transform="matrix(1.7479808,0,0,1.6158109,-214.00396,-583.17332)">
       <rect ry="0.5" rx="0.5" y="219.5" x="303.50027" width="11.999842" style="color:#000000;fill:url(#radialGradient6305);fill-opacity:1;fill-rule:nonzero;stroke:url(#linearGradient6307);stroke-width:0.59502667;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="rect5524-5-6-3" height="13.000183" />
@@ -432,7 +422,6 @@
    <g style="display:inline" id="g5049">
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g4338" id="use5592" width="1" height="1" transform="translate(400.00002,0)" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5205" id="use5594" width="1" height="1" transform="translate(399.00002,0)" />
-    <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#rect5984" id="use6187" width="1" height="1" transform="translate(400.00049,-1.4265137e-6)" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5579" id="use5596" width="1" height="1" transform="translate(400.00002,0)" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#rect67" id="use6087" width="1" height="1" transform="translate(398,-2.0000003)" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5549" id="use5598" width="1" height="1" transform="translate(398.00002,-2)" />

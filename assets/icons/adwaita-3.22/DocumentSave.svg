@@ -1,8 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 48 48" width="48" height="48">
  <defs>
   <g id="g8707" transform="matrix(1.1405628,0,0,1.1405628,-46.050343,-11.593442)">
-   <path transform="matrix(1.152439,0,0,1,-48.780492,1)" id="rect2846-1-9-0" d="m 310.5,87.5 19.86772,0 4,4 -27.86772,0 4,-4 z" style="opacity:0.3;color:#000000;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:0.81671751;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;filter:url(#filter4434-9);enable-background:accumulate" />
-   <path transform="matrix(1.0381141,0,0,1,-12.196542,0.999998)" id="rect2846-1-9-0-1" d="m 310.5,87.5 19.96329,0 4,4 -27.96329,0 4,-4 z" style="opacity:0.3;color:#000000;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:0.8605147;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;filter:url(#filter4487-7);enable-background:accumulate" />
    <path id="rect2846" d="m 310.49999,54.5 -4,4 0,33.671215 28,0 0,-33.671215 -4,-4 z" style="color:#000000;fill:url(#linearGradient7880);fill-opacity:1;fill-rule:nonzero;stroke:url(#linearGradient7882);stroke-width:0.87676013;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
    <path style="opacity:0.14588862;color:#000000;fill:#555753;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.99999994;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" d="m 307,59 0,33 27,0 0,-33 -27,0 z m 2.5,2.5 22,0 0,12 -22,0 0,-12 z m 0,15 22,0 0,12 -22,0 0,-12 z" id="rect2846-5-9-5" />
    <path id="rect2846-7-9" d="m 307.51921,58.887477 25.96155,0" style="color:#000000;fill:#d3d7cf;fill-opacity:1;fill-rule:nonzero;stroke:url(#radialGradient7884);stroke-width:0.87676013;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
@@ -41,12 +39,6 @@
    <stop style="stop-color:#888a85;stop-opacity:1" offset="0" id="stop4049-5" />
    <stop style="stop-color:#babdb6;stop-opacity:1" offset="1" id="stop4051-7" />
   </linearGradient>
-  <filter color-interpolation-filters="sRGB" id="filter4487-7" x="-0.072651193" width="1.1453024" y="-0.49039555" height="1.9807911">
-   <feGaussianBlur stdDeviation="0.81732593" id="feGaussianBlur4489-5" />
-  </filter>
-  <filter color-interpolation-filters="sRGB" id="filter4434-9" x="-0.13811325" width="1.2762265" y="-0.93226445" height="2.8645289">
-   <feGaussianBlur stdDeviation="1.553774" id="feGaussianBlur4436-5" />
-  </filter>
   <filter color-interpolation-filters="sRGB" id="filter5197-2-5-1-1" x="-0.027228072" width="1.0544561" y="-0.25204131" height="1.5040826">
    <feGaussianBlur stdDeviation="0.20421055" id="feGaussianBlur5199-1-0-6-2" />
   </filter>
@@ -199,12 +191,6 @@
    <stop id="stop5159-5-5-1-3" offset="0.42161116" style="stop-color:#69c014;stop-opacity:1" />
    <stop style="stop-color:#76d01e;stop-opacity:1" offset="1" id="stop5161-7-3-6-6" />
   </linearGradient>
-  <clipPath clipPathUnits="userSpaceOnUse" id="clipPath10063-0">
-   <path style="color:#000000;fill:#808080;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.99999994;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="path10065-5" d="m 369.40625,54 a 0.50005,0.50005 0 0 0 -0.25,0.15625 l -4,4 A 0.50005,0.50005 0 0 0 365,58.5 l 0,34 a 0.50005,0.50005 0 0 0 0.5,0.5 l 28,0 a 0.50005,0.50005 0 0 0 0.5,-0.5 l 0,-34 a 0.50005,0.50005 0 0 0 -0.15625,-0.34375 l -4,-4 A 0.50005,0.50005 0 0 0 389.5,54 l -20,0 a 0.50005,0.50005 0 0 0 -0.0937,0 z" />
-  </clipPath>
-  <filter color-interpolation-filters="sRGB" id="filter10184-0" x="-0.1176" width="1.2352" y="-0.088200003" height="1.1763999">
-   <feGaussianBlur stdDeviation="0.882" id="feGaussianBlur10186-2" />
-  </filter>
   <linearGradient y2="229.36679" x2="369.9375" y1="236.19002" x1="369.9375" gradientTransform="translate(-17,-91)" gradientUnits="userSpaceOnUse" id="linearGradient5505-3-2-6-4" xlink:href="#linearGradient4573-7-3" />
   <linearGradient id="linearGradient4573-7-3">
    <stop style="stop-color:#3a7404;stop-opacity:1" offset="0" id="stop4575-5-5" />
@@ -451,7 +437,6 @@
      <path transform="matrix(0.81012567,0,0,0.81012611,110.50027,176.41141)" d="m 317.23438,66.765625 c 0,0.681727 -0.55265,1.234376 -1.23438,1.234376 -0.68173,0 -1.23438,-0.552649 -1.23438,-1.234376 0,-0.681727 0.55265,-1.234376 1.23438,-1.234376 0.68173,0 1.23438,0.552649 1.23438,1.234376 z" id="path7085-2" style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:3;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" />
     </g>
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g8707" id="use8725" width="1" height="1" transform="translate(400,1)" />
-    <path id="path3960-3-8-4-0-5-5-9-33" style="opacity:0.35;fill:none;stroke:#000000;stroke-width:7;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;display:inline;filter:url(#filter10184-0);enable-background:new" d="m 380.5,78.5 0,-23 m -9,17 9,7 9,-7" clip-path="url(#clipPath10063-0)" transform="translate(340,0)" />
     <g style="display:inline;enable-background:new" id="g9285" transform="translate(339,0)">
      <rect transform="scale(1,-1)" style="color:#000000;fill:url(#linearGradient7629);fill-opacity:1;stroke:url(#linearGradient7631);stroke-width:0.99999988;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="rect2846-4-5-0-7" width="22.000002" height="12" x="369.50003" y="-88.5" />
      <rect style="opacity:0.34210528;fill:url(#linearGradient4889);fill-opacity:1;stroke:none;display:inline;enable-background:new" id="rect4765-9" width="3.0511169" height="11" x="369.94888" y="77" />

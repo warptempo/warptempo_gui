@@ -49,9 +49,6 @@
    <stop id="stop6975" offset="0" style="stop-color:#ffffff;stop-opacity:1;" />
    <stop id="stop6977" offset="1" style="stop-color:#ffffff;stop-opacity:0;" />
   </linearGradient>
-  <radialGradient cx="3" cy="43" fx="3" fy="43" gradientTransform="matrix(2,0,0,2,-13,-129)" gradientUnits="userSpaceOnUse" id="radialGradient7662" r="2" xlink:href="#linearGradient3414" />
-  <radialGradient cx="3" cy="43" fx="3" fy="43" gradientTransform="matrix(2,0,0,2,35,-43)" gradientUnits="userSpaceOnUse" id="radialGradient7664" r="2" xlink:href="#linearGradient3414" />
-  <linearGradient gradientUnits="userSpaceOnUse" id="linearGradient7666" x1="11.507806" x2="11.507806" xlink:href="#linearGradient3428" y1="39" y2="47.015659" />
   <linearGradient gradientTransform="matrix(1.0491852,0,0,0.8387099,-32.656,5.6935475)" gradientUnits="userSpaceOnUse" id="linearGradient7668" x1="42.75" x2="80" xlink:href="#linearGradient7497" y1="13.875" y2="72" />
   <linearGradient gradientUnits="userSpaceOnUse" id="linearGradient7670" x1="21.860727" x2="24" xlink:href="#linearGradient6973" y1="40.659435" y2="-6.7934427" />
   <radialGradient cx="3" cy="43" fx="3" fy="43" gradientTransform="matrix(2,0,0,2,-13,-129)" gradientUnits="userSpaceOnUse" id="radialGradient7672" r="2" xlink:href="#linearGradient3414" />
@@ -71,11 +68,6 @@
  <svg id="icon" x="0" y="0" width="48" height="48" viewBox="296 50 48 48">
   <g id="layer2" style="display:inline">
    <g id="g48" style="display:inline;enable-background:new" transform="translate(296,50) scale(1.000000,1.000000)">
-    <g id="g7610" style="opacity:0.56716416;display:inline" transform="matrix(1.1428572,0,0,0.875,-3.4285707,1.875)">
-     <rect height="8" id="rect7612" style="opacity:1;color:#000000;fill:url(#radialGradient7662);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:square;stroke-linejoin:round;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:6;stroke-dasharray:none;stroke-dashoffset:1.4;stroke-opacity:1;visibility:visible;display:inline;overflow:visible" transform="scale(-1,-1)" width="4" x="-7" y="-47" />
-     <rect height="8" id="rect7614" style="opacity:1;color:#000000;fill:url(#radialGradient7664);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:square;stroke-linejoin:round;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:6;stroke-dasharray:none;stroke-dashoffset:1.4;stroke-opacity:1;visibility:visible;display:inline;overflow:visible" width="4" x="41" y="39" />
-     <rect height="8" id="rect7616" style="opacity:1;color:#000000;fill:url(#linearGradient7666);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;stroke-linecap:square;stroke-linejoin:round;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:6;stroke-dasharray:none;stroke-dashoffset:1.4;stroke-opacity:1;visibility:visible;display:inline;overflow:visible" width="34" x="7" y="39" />
-    </g>
     <rect height="3" id="rect6029" style="opacity:1;fill:#888a85;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.99999994;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.99236642" width="3" x="17" y="10" />
     <rect height="3" id="rect7000" style="opacity:1;fill:#888a85;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.99999994;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.99236642;display:inline" width="3" x="29" y="10" />
     <path d="M 9.7376397,14.5 C 8.4532492,14.5 7.2981613,15.238825 7.1146767,16.148217 L 2.5244914,38.851791 C 2.3410068,39.761182 3.2073232,40.500005 4.4917137,40.500005 L 43.508288,40.500005 C 44.792679,40.500005 45.658995,39.761182 45.475511,38.851791 L 40.885325,16.148217 C 40.701842,15.238825 39.546753,14.5 38.262362,14.5 L 9.7376397,14.5 z " id="path7618" style="fill:url(#linearGradient7668);fill-opacity:1;fill-rule:evenodd;stroke:#8f5902;stroke-width:1;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;display:inline" />

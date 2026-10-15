@@ -1,0 +1,67 @@
+# The Adwaita 3.22.0 set's DROP SHADOWS, removed from every seat by id (architect 2026-10-15, "we'll go with none":
+# a drop shadow is the live glyph's raised fiction; Cool Edit's flat bitmaps never had one). The list the architect
+# approved icon by icon on a sheet, 2026-10-15; extract.py's prune_shadows removes each id with every <use> of a
+# removed element and fails if any listed id is missing or a reference to a removed element remains. One row per
+# icons::Icon enumerator (build_set.py requires every mapping.tsv row here); '-' = the drawing has none.
+# enumerator	source_icon	shadow_ids (removed by id; - = none)	note
+DocumentOpen	document-open	use28040 use28042 path4789	floor shadow (2); the paper's shadow on the folder's back panel
+DocumentSave	document-save	rect2846-1-9-0 rect2846-1-9-0-1 path3960-3-8-4-0-5-5-9-33	floor shadow (2); the arrow's shadow cast on the cabinet
+EditUndo	edit-undo	g9944-7-9	floor shadow
+EditRedo	edit-redo	g4285	floor shadow
+MediaRecord	media-record	g8159	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+VcsCommit	go-top	path6460-6-4-4-0-5 path6460-6-4-4-3-55-3	floor shadow (2)
+VcsPull	go-bottom	g6324	floor shadow
+AccessoriesDictionary	accessories-dictionary	path2284	floor shadow
+InputTablet	input-tablet	path8537-6 path23244-7 path46799-7-4	floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy
+MailMarkJunk	mail-mark-junk	path4275	floor shadow
+WeatherFog	weather-fog	path4121-7-8-2-7	the dark halo round the waves (a 5 % black stroke)
+ZoomFitBest	zoom-fit-best	g6668	floor shadow
+ZoomOriginal	zoom-original	g7884	floor shadow
+ZoomInY	zoom-in	g11744	floor shadow
+ListAdd	list-add	rect4899-2	floor shadow
+ListRemove	list-remove	rect4899-2-1	floor shadow
+ViewHidden	audio-volume-muted	path11644 path10707	floor shadow (blurred core and the wide radial)
+InsertLink	insert-link	path4121	floor shadow under the triangle
+Merge	edit-clear-all	path6017	floor shadow
+BlackSum	accessories-calculator	rect12531	blurred halo behind the calculator
+GoJump	start-here	-	no drop shadow
+TimelineLift	view-fullscreen	rect4667-1-5-6-45-3-7	blurred halo behind the window
+MusicNote16th	audio-x-generic	path8186 path8188 path8190	floor shadow (3)
+Mathmode	x-office-spreadsheet	g12362	floor shadow
+PreviewRenderOn	applications-multimedia	path8036	floor shadow under the note
+DialogOkApply	edit-paste	rect5387 rect5796 path5674 rect5984	floor shadow (2); the clip's and the paper's shadows cast on the board
+VcsDiff	document-open-recent	use6074 use6388-7-7 g4531 path7099	floor shadow (two stacked instances of g6384: use6074 and use6388-7-7); the hands' and the arrow's shadows cast on the dial
+ShallowHistory	x-office-calendar	g7610	floor shadow
+EditSelect	edit-select-all	g12362	floor shadow
+KeyframePrevious	media-seek-backward	g6598	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+KeyframeNext	media-seek-forward	g5161	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+GoPrevious	go-previous	path6460-6-4-4 path6460-6-4-4-3	floor shadow (2)
+GoNext	go-next	path6460-6-4-4-48 path6460-6-4-4-3-2	floor shadow (2)
+DocumentRevert	document-revert	g12362	floor shadow
+MediaSkipBackward	media-skip-backward	g4795	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+MediaPlaybackStart	media-playback-start	g5075	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+MediaPlaybackStop	media-playback-stop	g5666	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+MediaPlaybackPause	media-playback-pause	g5996	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+MediaSkipForward	media-skip-forward	g5937	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+DialogCancel	process-stop	g6501	floor shadow
+GoDown	go-down	path6460-6-4-4-0 path6460-6-4-4-3-55	floor shadow (2)
+GoUp	go-up	path6460-6-4-4-0-5-8 path6460-6-4-4-3-55-3-3	floor shadow (2)
+ChangesAllow	changes-allow	rect5961	floor shadow
+ChangesPrevent	changes-prevent	rect5961-79	floor shadow
+BboxPrev	go-first	path6460-6-4-4-1 path6460-6-4-4-3-5 path6460-6-4-4-1-9 path6460-6-4-4-3-5-5	floor shadow (4: bar and arrow)
+BboxNext	go-last	g4226 g4222	floor shadow (2 groups: bar and arrow)
+TabDetach	preferences-system-windows	rect4667-1-5-6-2	blurred halo behind each window (one rect, two uses)
+TabDetachB	preferences-system-windows	rect4667-1-5-6-2	blurred halo behind each window (one rect, two uses)
+SettingsConfigure	preferences-system	path6896 path3562	floor shadow (2); the screwdriver's shading on the wrench (rect7166, path7356) kept
+Folder	folder	g5806	floor shadow
+AudioXWav	audio-x-generic	path8186 path8188 path8190	floor shadow (3)
+MediaRepeatSingle	media-playlist-repeat	g7767	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
+DialogInformation	dialog-information	path4908-7	floor shadow under the base
+DialogError	process-stop	g6501	floor shadow
+WindowClose	window-close	path3819 path2183 path2187	floor shadow (3)
+HelpWhatsthis	help-browser	path3662 path3688	floor shadow (2, one seen through the hole)
+GoJumpDeclaration	go-jump	g4690	floor shadow
+AccessoriesTextEditor	accessories-text-editor	path9687 path4331 path2334	blurred halo behind the pad; the pencil's shadows cast on the page
+EditDelete	user-trash	path12888 path12886	floor shadow and the contact ellipse under the base
+ValueDrag	object-flip-vertical	g10278	floor shadow
+AppIcon	audio-x-generic	path8186 path8188 path8190	floor shadow (3)

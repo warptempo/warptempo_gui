@@ -83,8 +83,10 @@ inline constexpr uint32_t kCeRingLight = 0xF8F8F8;
 // BITMAP 221's toolbar strips, each glyph's right 20x20 half drawn on the
 // C0C0C0 button face: the silhouette in 808080 over a F8F8F8 copy one px
 // right and down, byte for byte on B84 (Play), B8 (Undo), B87 (Stop) and
-// B88 (Pause), and on most of the Edit view's B100-B138. Constants, as the
-// rings are: face-independent.
+// B88 (Pause), and on most of the Edit view's B100-B138 — two tones, no dark
+// copy. Constants, as the rings are: face-independent. The product's offset
+// is the bitmap px read as the glyph's own line, ONE ICON UNIT (the drawing's
+// 1 / 48), not one Windows px (architect 2026-10-15).
 inline constexpr uint32_t kCeDisabledShadow = 0x808080;
 inline constexpr uint32_t kCeDisabledLight  = 0xF8F8F8;
 
@@ -128,7 +130,8 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 //   DISABLED — the face its state gives, the glyph EMBOSSED (the caller's
 //              icons::draw_cased_disabled — Cool Edit's own disabled art,
 //              its silhouette in kCeDisabledShadow over a kCeDisabledLight
-//              copy one line right and down, built from the glyph's mask).
+//              copy of the drawing one icon unit right and down, icons.h's
+//              THE DISABLED GLYPH).
 //   HOT      — none: Cool Edit's toolbar has no hover face (program_spec.h's
 //              case_hot_face).
 // Answers the glyph's shift in device px (one line when down).

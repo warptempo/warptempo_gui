@@ -59,18 +59,31 @@ std::expected<Document, std::string> parse(std::string_view bytes);
 // scale (positive right / down), composed into resvg's one render transform;
 // a user-unit shift scales with the raster, so it holds at every px. Zero
 // leaves the drawing exactly as the file centers it.
+//
+// `margin_px` widens the SURFACE alone, right and bottom (px + margin_px a
+// side): the fit is still the px cell's, so a drawing shifted right and down
+// keeps the ink that crosses the cell's edge — the disabled glyph's light
+// copy (icons.h's THE DISABLED GLYPH).
 cairo_surface_t* rasterise(const Document& doc, int px, double shift_x = 0.0,
-                           double shift_y = 0.0);
+                           double shift_y = 0.0, int margin_px = 0);
+
+// ONE USER UNIT OF THE DRAWING in device px at `px` — rasterise's scale (the
+// smaller of px / its width and px / its height); px / 48 for every bundled
+// file, each a 48-unit root.
+double unit_px(const Document& doc, int px);
 
 // THE EMBOSSED COPY — Cool Edit's disabled glyph (icons.h's THE DISABLED
 // GLYPH, architect 2026-10-15): Windows' DSS_DISABLED emboss of the glyph's
-// silhouette, built from `live`'s ALPHA ALONE (its coverage, so antialiased
-// edges stay soft; its colors are never read): a NEW surface the caller owns,
-// `offset_px` device px wider and taller than `live`, holding the mask filled
-// with `light_rgb` at (+offset_px, +offset_px) under the mask filled with
-// `shadow_rgb` at (0, 0) — a premultiplied OVER of the two flat tones (each a
-// straight 0xRRGGBB), std::nearbyint at each channel (the rounding doctrine).
-cairo_surface_t* embossed_copy(cairo_surface_t* live, int offset_px,
+// silhouette, built from TWO MASKS, each a raster's ALPHA ALONE (its
+// coverage, so antialiased edges stay soft; colors are never read): `live`,
+// the glyph's own raster, and `light`, the same drawing rasterised already
+// translated by its offset (rasterise's shift and margin — the offset is the
+// drawing's, antialiased exactly, never a shifted raster). A NEW surface the
+// caller owns, `light`'s size (at least `live`'s), holding the `light` mask
+// filled with `light_rgb` under the `live` mask filled with `shadow_rgb`, both
+// at (0, 0) — a premultiplied OVER of the two flat tones (each a straight
+// 0xRRGGBB), std::nearbyint at each channel (the rounding doctrine).
+cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
                                uint32_t light_rgb, uint32_t shadow_rgb);
 
 // THE WINDOW'S COPY (architect 2026-10-08, display_transform.h's head): an
@@ -80,7 +93,7 @@ cairo_surface_t* embossed_copy(cairo_surface_t* live, int offset_px,
 // premultiplied again (display_transform::display_premultiplied, which keeps
 // a neutral's word whole); off a P3 window it touches nothing. The
 // conversion keeps every pixel's alpha, so the embossed copy above reads its
-// mask off the converted raster as well as the unconverted one; its tones are
+// masks off a converted raster as well as an unconverted one; its tones are
 // sRGB constants and the copy is converted after (icons.cpp).
 void convert_to_display(cairo_surface_t* s);
 

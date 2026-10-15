@@ -851,8 +851,9 @@ static_assert(std::size(kToolbarChords) + 3 ==
 // Is (x, y) inside the PUBLISHED INTERACTION RECT of a redesigned button? The
 // rect is the painter's stash and nothing here re-shapes or re-measures, so the
 // pointer reads exactly what the painter published, which is the box it drew
-// — and where the icon row's overflow rule clips a member under the view
-// group, only the columns it painted (paint_icon_row). A zero rect (before
+// — and where the icon row's overflow rule clips a member under the two view
+// pairs (and the history opener seated with them), only the columns it
+// painted (paint_icon_row). A zero rect (before
 // that row's first paint, or a member the overflow hides whole) contains no
 // point, which is the correct answer.
 bool redesign_button_hit(const AppState& app, RedesignButton id, int x, int y) {
@@ -8242,7 +8243,8 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // button whose act it consumes across all the rows
         // (history_mode_disables_button, above) — row 4's history group
         // aside, which carries resting greys of its own. AND SINCE 2026-09-10 THE
-        // ITERATION LOCK: the VIEW GROUP'S THREE answer false while grid
+        // ITERATION LOCK: the VIEW PAIRS' FOUR (Source / Target and Warp /
+        // Phase reset, two radio pairs since 2026-10-14) answer false while grid
         // iterations stands (iteration_lock_greys, app_state.h), so the press
         // dies here, the icon row's disabled face shows it, and the KEY's card
         // carries the sentence (the account is at their arm in

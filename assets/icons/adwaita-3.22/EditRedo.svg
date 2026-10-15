@@ -70,15 +70,10 @@
     <rect style="color:#000000;fill:url(#linearGradient4141);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="rect4139" width="8" height="10" x="38" y="184" />
    </g>
   </mask>
-  <linearGradient id="linearGradient9760-6-0-9-8">
-   <stop style="stop-color:#000000;stop-opacity:1;" offset="0" id="stop9762-3-2-5-4" />
-   <stop style="stop-color:#000000;stop-opacity:0;" offset="1" id="stop9764-4-1-2-1" />
-  </linearGradient>
   <linearGradient id="linearGradient9760-6-0-9-8-5">
    <stop style="stop-color:#000000;stop-opacity:1;" offset="0" id="stop9762-3-2-5-4-3" />
    <stop style="stop-color:#000000;stop-opacity:0;" offset="1" id="stop9764-4-1-2-1-3" />
   </linearGradient>
-  <radialGradient xlink:href="#linearGradient9760-6-0-9-8" id="radialGradient4387" gradientUnits="userSpaceOnUse" cx="319.5" cy="93.5" fx="319.5" fy="93.5" r="1.5" />
   <linearGradient xlink:href="#linearGradient4457" id="linearGradient4389" gradientUnits="userSpaceOnUse" x1="41.000004" y1="141.00201" x2="41.000004" y2="120.99799" />
   <linearGradient xlink:href="#linearGradient4463" id="linearGradient4391" gradientUnits="userSpaceOnUse" x1="41" y1="140.25212" x2="41" y2="108" />
   <linearGradient xlink:href="#linearGradient4642" id="linearGradient4393" gradientUnits="userSpaceOnUse" x1="60.75" y1="124.49657" x2="60.75" y2="133.62611" />
@@ -118,9 +113,6 @@
      </g>
     </g>
     <g id="g4364" transform="matrix(-1,0,0,1,200,0)">
-     <g id="g4285" style="opacity:0.16326527;display:inline;enable-background:new" transform="matrix(0.65170138,0,0,0.75605525,-101.17838,298.33659)">
-      <path transform="matrix(10.637148,0,0,3.3333315,-3071.2746,-519.66649)" d="m 321,93.5 a 1.5,1.5 0 1 1 -3,0 1.5,1.5 0 1 1 3,0 z" id="path4287" style="color:#000000;fill:url(#radialGradient4387);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" />
-     </g>
      <g transform="translate(60,0)" id="g4289" mask="url(#mask4478)">
       <path d="m 58.499999,130 c 0,4.14214 -3.581722,7.5 -8,7.5 L 41.5,137.5 m -15,-15 24,0 c 4.418277,1e-5 7.999999,3.35785 7.999999,7.5 M 32.5,113.5 l -9,9 9,9" style="color:#000000;fill:none;stroke:url(#linearGradient4389);stroke-width:9;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="path4291" />
       <path d="m 58.499999,130 c 0,4.14214 -3.581722,7.5 -8,7.5 L 41.5,137.5 m -15,-15 24,0 c 4.418277,1e-5 7.999999,3.35785 7.999999,7.5 M 32.5,113.5 l -9,9 9,9" style="color:#000000;fill:none;stroke:url(#linearGradient4391);stroke-width:7;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="path4293" />

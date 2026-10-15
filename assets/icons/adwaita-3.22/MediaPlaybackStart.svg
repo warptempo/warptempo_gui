@@ -67,12 +67,6 @@
    <stop style="stop-color:#babdb6;stop-opacity:1" offset="0.69999999" id="stop4415-7-9" />
    <stop id="stop4417-9-7" offset="1" style="stop-color:#babdb6;stop-opacity:1" />
   </linearGradient>
-  <clipPath clipPathUnits="userSpaceOnUse" id="clipPath5079">
-   <path style="color:#000000;fill:#999999;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" id="path5081" d="M 319.3125,158 A 2.50025,2.50025 0 0 0 317,160.5 l 0,27 a 2.50025,2.50025 0 0 0 3.75,2.15625 l 23,-13.5 a 2.50025,2.50025 0 0 0 0,-4.3125 l -23,-13.5 A 2.50025,2.50025 0 0 0 319.3125,158 z" transform="translate(0,-40)" />
-  </clipPath>
-  <filter id="filter5083" color-interpolation-filters="sRGB">
-   <feGaussianBlur stdDeviation="0.44985728" id="feGaussianBlur5085" />
-  </filter>
   <clipPath clipPathUnits="userSpaceOnUse" id="clipPath10144">
    <path style="color:#000000;fill:#808080;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" id="path10146" d="M 261.40625,211.5 A 1.5027521,1.5027521 0 0 0 260,213 l 0,18 a 1.5027521,1.5027521 0 0 0 2.25,1.28125 l 15.3125,-9 a 1.5027521,1.5027521 0 0 0 0,-2.5625 l -15.3125,-9 A 1.5027521,1.5027521 0 0 0 261.40625,211.5 z" transform="translate(0,-20)" />
   </clipPath>
@@ -83,10 +77,6 @@
  <svg id="icon" x="0" y="0" width="48" height="48" viewBox="306 150 48 48">
   <g id="layer1" style="display:inline">
    <g id="layer4" style="display:inline">
-    <g id="g5075" clip-path="url(#clipPath5079)" style="opacity:0.5;filter:url(#filter5083)" transform="translate(0,40)">
-     <path transform="translate(-7.2957073e-7,-39.999995)" d="M 319.3125,158 A 2.50025,2.50025 0 0 0 317,160.5 l 0,27 a 2.50025,2.50025 0 0 0 3.75,2.15625 l 23,-13.5 a 2.50025,2.50025 0 0 0 0,-4.3125 l -23,-13.5 A 2.50025,2.50025 0 0 0 319.3125,158 z" id="path4979-7" style="opacity:0.15;color:#000000;fill:none;stroke:#000000;stroke-width:3;stroke-miterlimit:4;stroke-dasharray:none;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" />
-     <path style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:#ffffff;stroke-width:2;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" id="path7812-2" d="m 320.5,149.50001 0,-26.99955 23,13.512 -23,13.48755 z" />
-    </g>
     <g id="g48" style="display:inline;enable-background:new" transform="translate(306,150)">
      <g id="g7138" transform="translate(200,0)">
       <g id="g7515">

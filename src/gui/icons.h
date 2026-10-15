@@ -6,7 +6,10 @@
 // adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/ artwork at its 48
 // slot, extracted as a standalone 48-unit file by
 // tools/icon_set_adwaita_322/, nothing redrawn and nothing from another
-// release; hard-coded (the `icons` device key and the Settings Icons row were
+// release, EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
+// (architect 2026-10-15, "we'll go with none": a drop shadow is the live
+// glyph's raised fiction, and Cool Edit's flat bitmaps never had one — the
+// approved list tools/icon_set_adwaita_322/shadows.tsv); hard-coded (the `icons` device key and the Settings Icons row were
 // removed 2026-10-12, docs/engineering/closed_questions.md). One scalable
 // file per enumerator under assets/icons/<set>/ (its README the mapping, the
 // provenance and the licences), PARSED AT LAUNCH through resvg, the one renderer of every set
@@ -16,7 +19,8 @@
 // an ARGB32 surface that a draw copies at an integer device px, no
 // resample. THE INKS ARE THE DRAWINGS' OWN (gradients, strokes and
 // opacities included), never a theme role; a DISABLED glyph is Cool Edit's
-// emboss of its mask (draw_disabled).
+// emboss built from the live raster's mask and the drawing's own one-unit
+// translate (draw_disabled) — no file of its own.
 //
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in the program's case the
@@ -213,15 +217,15 @@ inline constexpr const char* kIconSet = "adwaita-3.22";
 // exceptions, "the simpler rule is just center all of them"): each is drawn
 // translated by (dx, dy) in the SVG's own user units (every file a 48-unit
 // root; +x right, +y down), composed into resvg's render transform
-// (svg_icon::rasterise) so it scales with the raster, the disabled copy
-// derived from the shifted render. THE BODY-CENTERING TEST: the body is the
-// drawing with its shadows removed STRUCTURALLY (an element under a
-// feGaussianBlur filter, a fill of a radial gradient fading to transparent,
-// an id or inkscape:label containing "shadow"); its alpha >= 0.1 bounds at
-// 240 px give a bbox whose center the shift puts at the canvas centre. The
-// table is GENERATED into icon_shifts.inc by tools/icon_center/gen_icon_shifts.py
-// (never hand-edited), in kIconNames order. Where a shifted shadow crosses the
-// canvas edge it clips, accepted. The shift is the product's, not the file's:
+// (svg_icon::rasterise) so it scales with the raster, the disabled copy's
+// light half one more unit on the same shift (draw_disabled). THE BODY-CENTERING TEST: the body is the
+// shipped file itself, shadow-less by construction (the head: every drop
+// shadow removed at the extraction, architect 2026-10-15); its alpha >= 0.1
+// bounds at 240 px give a bbox whose center the shift puts at the canvas
+// centre. The table is GENERATED into icon_shifts.inc by
+// tools/icon_center/gen_icon_shifts.py (never hand-edited), in kIconNames
+// order. Where a shifted drawing crosses the canvas edge it clips, accepted.
+// The shift is the product's, not the file's:
 // the files are the extraction tool's output (two of them changed files, the
 // set's README).
 struct IconShift {
@@ -272,21 +276,27 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // 2026-10-15). Cool Edit Pro 2.1 ships a disabled bitmap beside every
 // toolbar glyph (BITMAP 221's strips, enabled | disabled), and that art is
 // Windows' DSS_DISABLED emboss of the glyph's silhouette: the silhouette in
-// 808080 over a F8F8F8 copy one px right and down (cool_edit_paint.h's
-// kCeDisabledShadow / kCeDisabledLight, the measured bytes and the bitmaps).
-// The product builds the same thing from the live raster's ALPHA MASK,
-// mechanically, for every glyph of the set (svg_icon::embossed_copy): the
-// mask's coverage kept, so antialiased edges stay soft; the light copy offset
-// by one Windows px, the case's line (program_line_px), at the live scale.
-// Built the first time a disabled face asks and cached beside the live
-// raster, copied at the same seat. THE COPY IS ONE LINE WIDER AND TALLER
-// than the cell, and in the case that line lands INSIDE THE CASE (render.h's
-// THE CASE: the light line, the 20-W seat, the shadow line, the black line) —
-// on the shadow line at rest, on the black line when a dead case stays
-// checked (+1) — over the case its painter already put down, so the case's
-// own damage covers it and nothing reaches a neighbor. Every dead
-// glyph takes it — the band, row 8, the history groups, the render player's
-// transport, the dialogs' cases. A disabled WORD keeps the chrome's own rule
+// 808080 over a F8F8F8 copy one bitmap px right and down
+// (cool_edit_paint.h's kCeDisabledShadow / kCeDisabledLight, the measured
+// bytes and the bitmaps) — two tones, no dark copy. The product builds the
+// same thing mechanically, for every glyph of the set
+// (svg_icon::embossed_copy): the shadow the live raster's ALPHA MASK, the
+// light copy THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down
+// (architect 2026-10-15, "the glyph's own line thickness": one of the file's
+// 48 user units, seat_px / 48 device px — 1.25 at 300 %, 0.58 at 138 —
+// universal), composed into the render transform as kIconShifts is and
+// RASTERISED AT THAT OFFSET with exact antialiasing, never a shifted raster
+// and never rounded to a device px; each mask's coverage kept, so
+// antialiased edges stay soft. Built the first time a disabled face asks and
+// cached beside the live raster, copied at the same seat. THE COPY REACHES
+// ONE ICON UNIT PAST THE CELL, under one Windows px at every scale (20 / 48
+// W in the case), and in the case it lands INSIDE THE CASE (render.h's THE
+// CASE: the light line, the 20-W seat, the shadow line, the black line) — on
+// the shadow line at rest, on the black line when a dead case stays checked
+// (+1) — over the case its painter already put down, so the case's own
+// damage covers it and nothing reaches a neighbor. Every dead glyph takes it
+// — the band, row 8, the history groups, the render player's transport, the
+// dialogs' cases. A disabled WORD keeps the chrome's own rule
 // (show_embossed_run, render.h: the same Windows emboss in the chrome's
 // roles); cue text keeps its fade (cool_edit_derive.h).
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,

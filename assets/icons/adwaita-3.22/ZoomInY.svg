@@ -50,12 +50,6 @@
    <stop id="stop4644-5-2-7-9-2-2-4-1-8-1" offset="0.76745707" style="stop-color:#dfe0dd;stop-opacity:1" />
    <stop style="stop-color:#f0f0f0;stop-opacity:1" offset="1" id="stop4646-3-2-3-7-3-7-9-8-5-0" />
   </linearGradient>
-  <filter id="filter11726" x="-0.059439378" width="1.1188788" y="-0.36238848" height="1.724777">
-   <feGaussianBlur stdDeviation="2.5252787" id="feGaussianBlur11728" />
-  </filter>
-  <filter id="filter11740" x="-0.24667342" width="1.4933468" y="-1.5039122" height="4.0078244">
-   <feGaussianBlur stdDeviation="10.479907" id="feGaussianBlur11742" />
-  </filter>
   <filter color-interpolation-filters="sRGB" id="filter11726-7" x="-0.05943938" width="1.1188788" y="-0.36238849" height="1.724777">
    <feGaussianBlur stdDeviation="2.5252787" id="feGaussianBlur11728-0" />
   </filter>
@@ -173,10 +167,6 @@
     </g>
     <rect style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate" id="rect3372" width="24.25" height="22.25" x="307.75" y="-235.75" rx="4.6655145" ry="4.6655145" />
     <g style="display:inline;enable-background:new" id="layer1-5-5" transform="matrix(-0.23169972,0,0,0.23169972,352.82784,-251.90592)" clip-path="url(#clipPath6022)">
-     <g id="g11744" style="opacity:0.57142861" transform="matrix(1,0,0,0.79073192,0.53949137,35.697349)">
-      <rect ry="10.575159" rx="8.3621159" transform="scale(-1,1)" y="167.37578" x="-192.39487" height="16.724232" width="101.96387" id="rect11716" style="color:#000000;fill:#000000;fill-opacity:1;stroke:none;stroke-width:7;marker:none;visibility:visible;display:inline;overflow:visible;filter:url(#filter11726);enable-background:new" />
-      <rect style="color:#000000;fill:#000000;fill-opacity:1;stroke:none;stroke-width:7;marker:none;visibility:visible;display:inline;overflow:visible;filter:url(#filter11740);enable-background:new" id="rect11730" width="101.96387" height="16.724232" x="-192.39487" y="167.37578" transform="matrix(-1.2196692,0,0,0.5521289,-31.064068,83.483803)" rx="6.8560524" ry="19.153423" />
-     </g>
      <rect style="color:#000000;fill:url(#linearGradient12840);fill-opacity:1;stroke:url(#linearGradient12842);stroke-width:4.31593084;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" id="rect10672" width="125.162" height="125.16199" x="-204.26369" y="53.543095" rx="24.816605" ry="24.816605" transform="scale(-1,1)" />
      <path style="color:#000000;fill:none;stroke:url(#linearGradient4811);stroke-width:4.31593084000000005;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new;fill-opacity:1" id="path11822" d="m -179.4375,57.34375 c -11.69598,0 -21,9.329495 -21,21.03125 l 0,75.5 c 0,11.70176 9.30402,21.03125 21,21.03125 l 75.53125,0 c 11.695975,0 21,-9.32949 21,-21.03125 l 0,-75.5 c 0,-11.701755 -9.304025,-21.03125 -21,-21.03125 l -75.53125,0 z" transform="scale(-1,1)" />
     </g>

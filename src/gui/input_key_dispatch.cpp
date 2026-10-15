@@ -681,8 +681,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // Toggle History View button, the
 // Up/Down pair on a PAYLOAD axis, Left/Right in the marker
 // lane, and — since
-// 2026-09-10 — THE VIEW GROUP'S FOUR SELECTORS (three until S+P, 2026-10-12), the column
-// switch's four chords, THE PADLOCK, delta (a)'s third member (WALK
+// 2026-09-10 — THE VIEW PAIRS' FOUR SELECTORS (two radio pairs since
+// 2026-10-14: bare 1 / 2 the audio view, bare 3 / 4 the column switch), THE
+// PADLOCK, delta (a)'s third member (WALK
 // BOTH TABS was its second until that button's deletion on 2026-09-14, and ADD
 // TO SELECTION was its fourth until 2026-09-19, when the narrowed sticky ctrl
 // retired that refusal and this membership lost the button with it), and BPM
@@ -702,7 +703,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // answer for its ON edge. A change here needs a hand edit there.
 //
 // TWO ROSTER SURFACES THE GATE EATS ANSWER IT IN THEIR OWN WAY. THE VIEW
-// GROUP'S four selectors ARE in the membership since 2026-09-10, so their
+// PAIRS' four selectors ARE in the membership since 2026-09-10, so their
 // PRESS dies at arm_redesign_press's disabled line as a standing overlay's
 // does and their FACE is the icon row's disabled face; their hint names the
 // act, so this gate's card is the only thing that SPEAKS the reason (the
@@ -714,10 +715,11 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     const bool ctrl  = mods.ctrl;
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
-    // DELTA (a), ahead of every admission: the column switch (bare 1/2/3/4 —
-    // bare `t`/`p`, the two individual axis toggles, were deleted
-    // whole with their view lamps on 2026-09-15, so the selectors are its only
-    // road now), BARE `o` ON A WRITABLE TAB (the lock direction alone, the
+    // DELTA (a), ahead of every admission: the view selectors (bare 1/2/3/4,
+    // two radio pairs since 2026-10-14 — 1 / 2 the audio view, 3 / 4 the
+    // column switch; bare `t`/`p`, the two individual axis toggles, were
+    // deleted whole with their view lamps on 2026-09-15, so the selectors are
+    // the only road now), BARE `o` ON A WRITABLE TAB (the lock direction alone, the
     // header; on a locked tab it falls through to the base, which admits the
     // unlock) and the paired march. Bare-exact on all four and
     // ctrl-and-shift exact on the march, exactly as their dispatch arms spell
@@ -2505,8 +2507,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             — which the commit act already answers by
 //                             rebuilding the now side fresh (the drift inventory
 //                             is at AppState::HistoryMode).
-//                             THE ICON ROW'S VIEW GROUP needs no rule
-//                             of its own: its buttons synthesize these very chords
+//                             THE ICON ROW'S TWO VIEW PAIRS need no rule
+//                             of their own: their buttons synthesize these very chords
 //                             through the chrome press's release half
 //                             (finish_chrome_press_release), like every other
 //                             redesigned button.

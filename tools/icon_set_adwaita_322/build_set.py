@@ -1,9 +1,11 @@
 """The Adwaita 3.22.0 icon set by enumerator (architect 2026-10-14): for every row of mapping.tsv, extract.py's
-pruned 48-unit file from the row's sheet and slot; the two treated files, the clock's text to outlines
+pruned 48-unit file from the row's sheet and slot, its drop shadows removed by shadows.tsv's ids (architect
+2026-10-15); the two treated files, the clock's text to outlines
 (text_to_paths.py, VcsDiff) and the derived TabDetachB (preferences-system-windows with the lower-right window copy,
 use5281, moved after the front window g5270: element order alone, every coordinate unchanged), each with its dated
 changed-file comment at the head; the tarball's four licence texts; and README_table.md, each sheet with its sha256.
-One line per seat reports the checks: identical to the sheet cropped to the slot (rgb <= 1.5, alpha <= 3 at 240 px),
+One line per seat reports the shadow elements removed and the checks of the faithful drawing (shadows kept):
+identical to the sheet cropped to the slot (rgb <= 1.5, alpha <= 3 at 240 px),
 or within d <= 3.0 of the theme's shipped 48 PNG (user-trash's mesh pattern sits at 3.0 and its crop at 7.7, because
 the crop clips the rim highlight's mask region).
 usage: python3 -I tools/icon_set_adwaita_322/build_set.py <tarball-root> <out-dir>"""
@@ -27,12 +29,21 @@ def derive_tab_b(p):
     g=par[use]; assert par[front] is g; g.remove(use); g.insert(list(g).index(front)+1,use)
     r.insert(0,ET.Comment(TAB_B_NOTICE))
     t.write(p)
+def shadow_table():
+    """shadows.tsv: enumerator -> the drop-shadow ids to remove ('-' = none)."""
+    t={}
+    for line in open(f'{HERE}/shadows.tsv'):
+        if line.startswith('#') or not line.strip(): continue
+        enum,_src,field=line.rstrip('\n').split('\t')[:3]
+        t[enum]=[i for i in field.split() if i!='-']
+    return t
 def main(root,out):
     os.makedirs(out,exist_ok=True); tmp=tempfile.mkdtemp(); rows=[]; bad=0
-    lines=open(f'{HERE}/mapping.tsv').read().splitlines()
+    lines=open(f'{HERE}/mapping.tsv').read().splitlines(); shadows=shadow_table()
     for line in lines[1:]:
         enum,name,sheet,x,y,w,h,treat=line.split('\t'); slot=(float(x),float(y),float(w),float(h)); p=f'{out}/{enum}.svg'
-        r=X.extract(root,name,sheet,slot,p,tmp); note=NOTES.get(enum,'')
+        if enum not in shadows: sys.exit(f'{enum}: no row in shadows.tsv')
+        r=X.extract(root,name,sheet,slot,p,tmp,shadows[enum]); note=NOTES.get(enum,'')
         if treat=='text-to-outlines':
             n=TP.convert(p,p,VCS_DIFF_NOTICE); note=f'TEXT TO OUTLINES: {n} text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf'
         elif treat=='tab-b': derive_tab_b(p)
@@ -40,7 +51,8 @@ def main(root,out):
         ok=(r['max_rgb_diff']<=1.5 and r['max_alpha_diff']<=3) or 0<=r['d_shipped_png']<=3.0
         bad+=not ok
         rows.append((enum,name,sheet,slot,sha(f'{root}/src/fullcolor/{sheet}'),note))
-        print(f'{enum:24s} {name:28s} {"ok" if ok else "CHECK"}  crop rgb {r["max_rgb_diff"]:5.1f} alpha {r["max_alpha_diff"]:5.1f}  shipped png d {r["d_shipped_png"]:5.1f}')
+        ns=len(shadows[enum])+len(r['shadow_copies'])
+        print(f'{enum:24s} {name:28s} {"ok" if ok else "CHECK"}  shadows -{ns:<2d} crop rgb {r["max_rgb_diff"]:5.1f} alpha {r["max_alpha_diff"]:5.1f}  shipped png d {r["d_shipped_png"]:5.1f}')
     with open(f'{out}/README_table.md','w') as f:
         f.write('| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | note |\n|---|---|---|---|---|---|\n')
         for enum,name,sheet,sl,hs,note in rows: f.write(f'| {enum} | `{name}` | `{sheet}` | {", ".join("%g"%v for v in sl)} | `{hs}` | {note} |\n')

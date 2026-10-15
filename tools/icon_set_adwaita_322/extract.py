@@ -4,10 +4,13 @@ hidden layers, the editor's metadata and every element that puts no ink in the s
 element keeps its ancestors exactly, the drawing is nested once as an <svg> whose viewport IS the slot inside the
 48-unit root (a 256-unit slot, an app icon with no 48 drawing, scaled by that viewport as the theme renders its 48
 PNG), a mask or filter in user space with no region of its own is given, explicitly, the region the full sheet's
-viewport gave it, and the defs are pruned to those referenced. Nothing is redrawn. Each file is checked against the
-sheet cropped to the slot (rsvg, 240 px) and against the theme's own shipped 48 PNG.
-The slot rect comes from mapping.tsv; this module is driven by build_set.py."""
-import os, re, copy, subprocess, numpy as np, xml.etree.ElementTree as ET, glob
+viewport gave it, every DROP SHADOW of the seat's drawing is removed by id (shadows.tsv, architect 2026-10-15: "a drop
+shadow is the live glyph's raised fiction; Cool Edit's flat bitmaps never had one"), every <use> of a removed element
+with it, and the defs are pruned to those referenced. Nothing is redrawn. The faithful drawing (shadows kept) is
+checked against the sheet cropped to the slot (rsvg, 240 px) and against the theme's own shipped 48 PNG; the
+shadow-less file is the one written.
+The slot rect comes from mapping.tsv, the shadow ids from shadows.tsv; this module is driven by build_set.py."""
+import os, re, sys, copy, subprocess, numpy as np, xml.etree.ElementTree as ET, glob
 from PIL import Image
 SVGNS='http://www.w3.org/2000/svg'; SV='{%s}'%SVGNS; XL='http://www.w3.org/1999/xlink'
 ET.register_namespace('',SVGNS); ET.register_namespace('xlink',XL)
@@ -55,9 +58,57 @@ def ink_nonempty(tree,el,vbox,tmp):
             st=e.attrib.get('style',''); e.attrib['style']=(st+';' if st else '')+'display:none'
     p=f'{tmp}/_cand.svg'; t.write(p); rsvg(p,p[:-4]+'.png',240)
     return np.array(Image.open(p[:-4]+'.png').convert('RGBA'))[...,3].max()>=8
-def extract(tarball_root,name,sheet_file,slot,out,tmp):
-    """sheet_file the basename under src/fullcolor/, slot (x, y, w, h) in the sheet's user units; writes out and
-    returns the record of its checks."""
+def prune_shadows(trees,ids,label):
+    """remove the listed elements (each must exist) from the drawing and its defs, then every <use> that references a
+    removed element (a copy of a shadow is the same shadow), repeated until none is left; exit if any element left
+    still references (href or url(#...)) a removed one. Returns the removed copies' ids."""
+    par={c:p for t in trees for p in t.iter() for c in p}
+    byid={e.attrib['id']:e for t in trees for e in t.iter() if 'id' in e.attrib}
+    for i in ids:
+        if i not in byid: sys.exit(f'{label}: no element with id {i}')
+    gone=set(); todo=list(ids); copies=[]
+    while todo:
+        for i in todo:
+            e=byid[i]
+            if e in par and e in list(par[e]): par[e].remove(e)
+            gone|={d.attrib['id'] for d in e.iter() if 'id' in d.attrib}
+        todo=[u.attrib['id'] for t in trees for u in t.iter(SV+'use')
+              if (u.attrib.get('{%s}href'%XL) or u.attrib.get('href') or '#')[1:] in gone and u.attrib['id'] not in gone]
+        copies+=todo
+    for t in trees:
+        for e in t.iter():
+            for v in e.attrib.values():
+                for a,b in re.findall(r'^#(\S+)$|url\(#([^)]+)\)',v):
+                    if (a or b) in gone: sys.exit(f'{label}: {e.attrib.get("id")} still references removed {a or b}')
+    return copies
+def serialise(icon,defs_all):
+    """steps 4 and 5 and the file's bytes: the 48-unit root over the pruned defs and the drawing."""
+    # 4. the defs: every referenced one, transitively, in the sheet's order
+    D={}
+    for d in defs_all:
+        for e in d: D[e.attrib['id']]=e
+    for e in icon.iter():                       # gradients etc. defined inside the drawing count too
+        if tag(e) in ('linearGradient','radialGradient','filter','clipPath','mask','pattern','symbol','marker'): D.setdefault(e.attrib['id'],e)
+    need=set(); todo=refs(icon)
+    while todo:
+        i=todo.pop()
+        if i in need or i not in D: continue
+        need.add(i); todo|=refs(D[i])
+    defs=ET.Element(SV+'defs')
+    for d in defs_all:
+        for e in d:
+            if e.attrib['id'] in need: defs.append(e)
+    # 5. the editor's attributes, the anonymous ids
+    for e in list(defs.iter())+list(icon.iter()):
+        for a in list(e.attrib):
+            if a.startswith('{') and not a.startswith('{'+XL+'}'): del e.attrib[a]
+        if e.attrib.get('id','').startswith('anon'): del e.attrib['id']
+    root=ET.Element(SV+'svg',{'viewBox':'0 0 48 48','width':'48','height':'48'})
+    root.append(defs); root.append(icon)
+    ET.indent(root,space=' '); return ET.tostring(root,encoding='unicode')+'\n'
+def extract(tarball_root,name,sheet_file,slot,out,tmp,shadow_ids=()):
+    """sheet_file the basename under src/fullcolor/, slot (x, y, w, h) in the sheet's user units, shadow_ids the
+    seat's drop-shadow elements (shadows.tsv); writes out and returns the record of its checks."""
     sheet=f'{tarball_root}/src/fullcolor/{sheet_file}'; x,y,w,h=slot
     tree=ET.parse(sheet); root=tree.getroot(); sheet_root_attrs=dict(root.attrib)
     for e in root.iter():
@@ -112,33 +163,15 @@ def extract(tarball_root,name,sheet_file,slot,out,tmp):
         # (a pattern's width and height are its tile, never a region: left alone)
         if t in ('mask','filter') and e.attrib.get({'mask':'maskUnits','filter':'filterUnits'}[t],'objectBoundingBox')=='userSpaceOnUse' and not any(k in e.attrib for k in ('x','y','width','height')):
             e.attrib.update({'x':'%g'%(SX-0.1*SW),'y':'%g'%(SY-0.1*SH),'width':'%g'%(1.2*SW),'height':'%g'%(1.2*SH)})
-    # 4. the defs: every referenced one, transitively, in the sheet's order
-    D={}
-    for d in defs_all:
-        for e in d: D[e.attrib['id']]=e
-    for e in icon.iter():                       # gradients etc. defined inside the drawing count too
-        if tag(e) in ('linearGradient','radialGradient','filter','clipPath','mask','pattern','symbol','marker'): D.setdefault(e.attrib['id'],e)
-    need=set(); todo=refs(icon)
-    while todo:
-        i=todo.pop()
-        if i in need or i not in D: continue
-        need.add(i); todo|=refs(D[i])
-    defs=ET.Element(SV+'defs')
-    for d in defs_all:
-        for e in d:
-            if e.attrib['id'] in need: defs.append(e)
-    # 5. the editor's attributes, the anonymous ids
-    for e in list(defs.iter())+list(icon.iter()):
-        for a in list(e.attrib):
-            if a.startswith('{') and not a.startswith('{'+XL+'}'): del e.attrib[a]
-        if e.attrib.get('id','').startswith('anon'): del e.attrib['id']
-    root.attrib.clear(); root.attrib.update({'viewBox':'0 0 48 48','width':'48','height':'48'})
-    root.append(defs); root.append(icon)
-    ET.indent(root,space=' '); open(out,'w').write(ET.tostring(root,encoding='unicode')+'\n')
+    # 4-5 twice: the faithful drawing for the checks, then the drop shadows removed for the file
+    faithful=f'{tmp}/_faithful.svg'
+    open(faithful,'w').write(serialise(copy.deepcopy(icon),copy.deepcopy(defs_all)))
+    copies=prune_shadows([icon]+defs_all,list(shadow_ids),f'{name} ({sheet_file})')
+    open(out,'w').write(serialise(icon,defs_all))
     # the checks: against the sheet cropped to the slot, and against the theme's shipped 48 PNG
-    rsvg(out,f'{tmp}/_x1.png',240); a=load(f'{tmp}/_x1.png')
+    rsvg(faithful,f'{tmp}/_x1.png',240); a=load(f'{tmp}/_x1.png')
     rsvg(slot_svg(sheet,slot,f'{tmp}/_crop.svg'),f'{tmp}/_x2.png',240); b=load(f'{tmp}/_x2.png')
     pa=a[...,:3]*a[...,3:]/255; pb=b[...,:3]*b[...,3:]/255
-    sp=shipped(tarball_root,name); dpng=dist(load(rsvg(out,f'{tmp}/_x3.png',48)),load(sp)) if sp else -1
-    return {'d_shipped_png':dpng,'sheet':f'src/fullcolor/{sheet_file}','slot':[x,y,w,h],'kept':kept,
+    sp=shipped(tarball_root,name); dpng=dist(load(rsvg(faithful,f'{tmp}/_x3.png',48)),load(sp)) if sp else -1
+    return {'shadow_copies':copies,'d_shipped_png':dpng,'sheet':f'src/fullcolor/{sheet_file}','slot':[x,y,w,h],'kept':kept,
             'max_rgb_diff':float(np.abs(pa-pb).max()),'max_alpha_diff':float(np.abs(a[...,3]-b[...,3]).max()),'bytes':os.path.getsize(out)}

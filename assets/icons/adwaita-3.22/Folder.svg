@@ -270,10 +270,6 @@
      <path transform="translate(-1,40)" style="display:inline;overflow:visible;visibility:visible;opacity:0.40639271;fill:none;stroke:url(#linearGradient4742);stroke-width:0.9999997;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:new" d="m 310.9375,183.5 c -0.74659,0.74659 -1.60864,2 -2.40625,2 l -2.6875,0 c -0.20314,0 -0.22418,0.0344 -0.25,0.0625 -0.0258,0.0281 -0.0937,0.12531 -0.0937,0.40625 l 0,7.53125 13,0 0,-10 -7.5625,0 -5e-5,0 z" id="path4659" />
      <path style="display:inline;overflow:visible;visibility:visible;opacity:0.3;fill:url(#radialGradient4744);fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.99999988;marker:none;filter:url(#filter4375-3-0);enable-background:new" d="m 250.0625,476.75 c -0.0458,1.33554 -0.49131,2.35705 -1.21875,3.0625 -0.72744,0.70545 -1.76871,1.125 -3.1875,1.125 l -197.25,0 c -1.418904,0 -2.480488,-0.44927 -3.21875,-1.15625 -0.738262,-0.70698 -1.186879,-1.70494 -1.21875,-3.03125 l 0,3 c 0.03187,1.32631 0.480488,2.32427 1.21875,3.03125 0.738262,0.70698 1.799846,1.15625 3.21875,1.15625 l 197.25,0 c 1.41879,0 2.46006,-0.41955 3.1875,-1.125 0.72744,-0.70545 1.17291,-1.72696 1.21875,-3.0625 l 0,-3 z" id="path6066-1-1" transform="matrix(0.06533091,0,0,0.2941173,301.14534,90.449312)" />
     </g>
-    <g transform="matrix(1.0414202,0,0,0.9247512,-13.77519,-291.96829)" style="display:inline;opacity:0.7;enable-background:new" id="g5806">
-     <rect transform="matrix(0.1836956,0,0,0.157768,296.61958,58.796009)" ry="10" rx="8.1534395" y="201" x="15" height="20" width="230" id="rect5808" style="opacity:0.5;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4496)" />
-     <rect transform="matrix(0.1836956,0,0,0.157768,296.61958,58.796009)" ry="10" rx="8.1534395" y="201" x="15" height="20" width="230" id="rect5810" style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" />
-    </g>
     <g id="g7235" transform="matrix(0.9558116,0,0,0.96875,14.139974,-297.125)">
      <g transform="matrix(0.20312963,0,0,0.20149043,289.47835,-6.1834815)" clip-path="none" id="g4071-8-16" style="display:inline;enable-background:new">
       <path id="path4073-6-9" style="color:#000000;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;opacity:1;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:url(#linearGradient24766);fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.99733192;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate" d="M 52.094352,285.96023 C 49.758741,285.96023 48,287.23866 48,289.9099 l 0,193.50539 C 48,487.36726 50.446761,490 53.771787,490 L 243.327,490 c 3.34438,0 4.673,-2.46074 4.673,-5.90535 l 0,-173.56154 c 0,-2.95096 -2.01067,-4.54661 -4.51602,-4.54661 l -93.98741,0 c -1.69284,0 -4.43377,-0.2055 -6.49302,-2.5614 l -13.0712,-14.95423 c -1.75748,-2.01066 -4.22518,-2.51056 -6.08975,-2.51056 z" clip-path="none" />
@@ -358,7 +354,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25626" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7290" id="use7313" transform="matrix(0.9999948,0,0,1,0.001595,600.00048)" width="1600" height="900" />
-    <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5806" id="use7299" width="1600" height="900" transform="translate(0,600)" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7235" id="use7303" width="1600" height="900" transform="translate(0,600)" />
     <g id="g5681">
      <g transform="translate(0,1)" style="opacity:0.5;stroke:#ffffff" id="g5677">
@@ -401,7 +396,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25632" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use height="900" width="1600" transform="matrix(0.9999948,0,0,1,400.0016,600.00048)" id="use9294" xlink:href="#g7290" y="0" x="0" style="display:inline;enable-background:new" />
-    <use height="900" width="1600" transform="translate(400,600)" id="use9308" xlink:href="#g5806" y="0" x="0" style="display:inline;enable-background:new" />
     <use height="900" width="1600" transform="translate(400,600)" id="use9312" xlink:href="#g7235" y="0" x="0" style="display:inline;enable-background:new" />
     <g id="g12569">
      <g style="opacity:0.8;fill:#dadbce;fill-opacity:1" id="g10905">
@@ -455,7 +449,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25638" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7290" id="use6063" transform="matrix(0.9999948,0,0,1,400.0016,900.00048)" width="1600" height="900" />
-    <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5806" id="use6067" transform="translate(400,900)" width="1600" height="900" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7235" id="use6071" transform="translate(400,900)" width="1600" height="900" />
     <g transform="translate(310.00062,569)" style="display:inline;enable-background:new" id="g4202">
      <g transform="translate(0,-10)" style="opacity:0.5;stroke:#fbfbfb;stroke-opacity:1" id="g4196">
@@ -506,7 +499,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25644" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use height="900" width="1600" transform="matrix(0.9999948,0,0,1,0.0016,900.00048)" id="use7046" xlink:href="#g7290" y="0" x="0" style="display:inline;enable-background:new" />
-    <use height="900" width="1600" transform="translate(0,900)" id="use7050" xlink:href="#g5806" y="0" x="0" style="display:inline;enable-background:new" />
     <use height="900" width="1600" transform="translate(0,900)" id="use7054" xlink:href="#g7235" y="0" x="0" style="display:inline;enable-background:new" />
     <g transform="translate(-27,540.99995)" style="display:inline;enable-background:new" id="g4654-4">
      <g transform="translate(0,1)" style="opacity:0.5;stroke:#ffffff" id="g3739-8">
@@ -552,7 +544,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25650" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7290" id="use7827" transform="matrix(0.9999948,0,0,1,800.0016,900.00048)" width="1600" height="900" />
-    <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5806" id="use7831" transform="translate(800,900)" width="1600" height="900" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7235" id="use7835" transform="translate(800,900)" width="1600" height="900" />
     <g transform="translate(1.4698194e-5,-5.9604531e-8)" style="display:inline;enable-background:new" id="g5582">
      <path style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:medium;line-height:normal;font-family:'Bitstream Vera Sans';-inkscape-font-specification:'Bitstream Vera Sans';text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;text-anchor:start;display:inline;overflow:visible;visibility:visible;opacity:0.5;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1;marker:none;enable-background:new" d="m 1108.3444,826 a 0.50005,0.50005 0 0 0 -0.3438,0.5 l 0,1.03125 a 0.50005,0.50005 0 1 0 1,0 l 0,-0.53125 3.0313,0 0,1.96875 1.9687,0.0312 0,4.5 a 0.50005,0.50005 0 1 0 1,0 l 0,-4.875 a 0.50005,0.50005 0 0 0 -0.1562,-0.375 l -2.0938,-2.09375 A 0.50005,0.50005 0 0 0 1112.4069,826 l -3.9063,0 a 0.50005,0.50005 0 0 0 -0.094,0 0.50005,0.50005 0 0 0 -0.062,0 z m -0.3438,3 0,1 1,0 0,-1 -1,0 z m 0,2 0,1 1,0 0,-1 -1,0 z m 0,2 0,1 1,0 0,-1 -1,0 z m 2,0 0,1 1,0 0,-1 -1,0 z m 2,0 0,1 1,0 0,-1 -1,0 z" id="rect3367-1-3-4-6-6" />
@@ -615,7 +606,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25656" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use height="900" width="1600" transform="matrix(0.9999948,0,0,1,1200.0017,900.00048)" id="use4913" xlink:href="#g7290" y="0" x="0" style="display:inline;enable-background:new" />
-    <use height="900" width="1600" transform="translate(1200.0001,900)" id="use4917" xlink:href="#g5806" y="0" x="0" style="display:inline;enable-background:new" />
     <use height="900" width="1600" transform="translate(1200.0001,900)" id="use4921" xlink:href="#g7235" y="0" x="0" style="display:inline;enable-background:new" />
     <g id="g29401" style="opacity:0.5;fill:none;stroke:#ffffff" transform="translate(20,0.99436905)">
      <circle transform="matrix(1.0443418,0,0,1.0443418,-66.929961,-350.88713)" style="color:#000000;display:inline;overflow:visible;visibility:visible;fill:none;stroke:#ffffff;stroke-width:0.95754087;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker:none;enable-background:new" id="path29403" cx="1510.9325" cy="1127.8751" r="1.4363106" />
@@ -672,7 +662,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25662" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7290" id="use4841" transform="matrix(0.9999948,0,0,1,1600.0017,900.00048)" width="1600" height="900" />
-    <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5806" id="use4845" transform="translate(1600.0001,900)" width="1600" height="900" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7235" id="use4849" transform="translate(1600.0001,900)" width="1600" height="900" />
     <g id="g4888" transform="translate(389.23745,-155.67172)" />
    </g>
@@ -696,7 +685,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25668" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7290" id="use9461" transform="matrix(0.9999948,0,0,1,800.0016,600.00048)" width="1600" height="900" />
-    <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5806" id="use9465" transform="translate(800,600)" width="1600" height="900" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7235" id="use9469" transform="translate(800,600)" width="1600" height="900" />
     <g transform="translate(739.95579,270)" style="display:inline;enable-background:new" id="g4819">
      <path id="path15969" style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:0.5;fill:none;stroke:#ffffff;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker:none;enable-background:new" d="m 378.54419,222.99142 c 0,0.83031 -0.68879,1.50341 -1.53846,1.50341 -0.84966,0 -1.53846,-0.6731 -1.53846,-1.50341 0,-0.83031 0.6888,-1.50341 1.53846,-1.50341 0.84967,0 1.53846,0.6731 1.53846,1.50341 z m -4.96726,0 c 0,0.83031 -0.68879,1.50341 -1.53846,1.50341 -0.84968,0 -1.53847,-0.6731 -1.53847,-1.50341 0,-0.83031 0.68879,-1.50341 1.53847,-1.50341 0.84967,0 1.53846,0.6731 1.53846,1.50341 z m 4.96726,0.0376 0,-4.52902 -4.96726,0 0,4.56661" />
@@ -734,7 +722,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25674" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use height="900" width="1600" transform="matrix(0.9999948,0,0,1,1200.0016,600.00048)" id="use9517" xlink:href="#g7290" y="0" x="0" style="display:inline;enable-background:new" />
-    <use height="900" width="1600" transform="translate(1200,600)" id="use9521" xlink:href="#g5806" y="0" x="0" style="display:inline;enable-background:new" />
     <use height="900" width="1600" transform="translate(1200,600)" id="use9525" xlink:href="#g7235" y="0" x="0" style="display:inline;enable-background:new" />
     <g id="g20811" transform="translate(-29.9375,0.6875)">
      <path id="path20287" style="color:#000000;display:inline;overflow:visible;visibility:visible;opacity:0.5;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.92399997;marker:none;enable-background:new" d="m 1546,445.8443 -3.4693,-3.4693 -0.5309,0 0,7 0.5,0 z m 8.9689,-4.4693 -7.9691,0 c -0.5539,0 -0.9998,0.446 -0.9998,1 l 0,7 c 0,0.554 0.4459,1 0.9998,1 l 7.9691,0 c 0.5539,0 0.9999,-0.446 0.9999,-1 l 0,-7 c 0,-0.554 -0.446,-1 -0.9999,-1 z" />
@@ -761,7 +748,6 @@
      <rect style="display:inline;opacity:0.3;fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:none;filter:url(#filter4508);enable-background:new" id="rect25680" width="230" height="20" x="15" y="201" rx="8.1534395" ry="10" transform="matrix(0.1836956,0,0,0.157768,296.61958,56.633265)" />
     </g>
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7290" id="use4940" transform="matrix(0.9999948,0,0,1,1600.0017,600.00048)" width="1600" height="900" />
-    <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5806" id="use4944" transform="translate(1600.0001,600)" width="1600" height="900" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7235" id="use4948" transform="translate(1600.0001,600)" width="1600" height="900" />
     <g id="g9808" transform="translate(-30,0)">
      <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#path4653" id="use9810" transform="translate(1630.0001,300)" width="1600" height="600" />
@@ -836,7 +822,6 @@
       <rect style="display:inline;fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:none" id="rect6575" width="1.016466" height="0.99436891" x="308.9892" y="831.00769" />
      </g>
     </g>
-    <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g5806" id="use7342" transform="translate(0,300.00048)" width="1600" height="900" />
     <use style="display:inline;enable-background:new" x="0" y="0" xlink:href="#g7235" id="use7346" transform="translate(0,300.00048)" width="1600" height="900" />
     <g style="display:inline;enable-background:new" id="g6800" transform="translate(-63.00001,-604.00001)">
      <circle transform="matrix(1.14985,0,0,1.14985,352.40467,653.4909)" id="path2388" style="display:inline;fill:url(#radialGradient7572);fill-opacity:1;fill-rule:evenodd;stroke:none" cx="38.658855" cy="9.3411446" r="8.341651" />

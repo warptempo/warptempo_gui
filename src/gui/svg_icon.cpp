@@ -35,32 +35,39 @@ std::expected<Document, std::string> parse(std::string_view bytes) {
                                                        resvg_tree_destroy)};
 }
 
+double unit_px(const Document& doc, int px) {
+    const resvg_size size = resvg_get_image_size(doc.tree.get());
+    return std::min(px / static_cast<double>(size.width),
+                    px / static_cast<double>(size.height));
+}
+
 cairo_surface_t* rasterise(const Document& doc, int px, double shift_x,
-                           double shift_y) {
+                           double shift_y, int margin_px) {
+    assert(margin_px >= 0);
     // A new image surface is cleared to transparent, which resvg's render
-    // composites onto. Its stride is exactly 4 * px: cairo aligns ARGB32
+    // composites onto. Its stride is exactly 4 * side: cairo aligns ARGB32
     // rows to 4 bytes, and resvg's pixmap is packed rows of 4 bytes.
+    const int side = px + margin_px;
     cairo_surface_t* s =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, px, px);
-    assert(cairo_image_surface_get_stride(s) == 4 * px);
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, side, side);
+    assert(cairo_image_surface_get_stride(s) == 4 * side);
     cairo_surface_flush(s);
     unsigned char* data = cairo_image_surface_get_data(s);
 
     const resvg_size size = resvg_get_image_size(doc.tree.get());
-    const double k = std::min(px / static_cast<double>(size.width),
-                              px / static_cast<double>(size.height));
+    const double k = unit_px(doc, px);
     const resvg_transform fit{
         static_cast<float>(k), 0.0f, 0.0f, static_cast<float>(k),
         static_cast<float>((px - size.width * k) / 2.0 + k * shift_x),
         static_cast<float>((px - size.height * k) / 2.0 + k * shift_y)};
-    resvg_render(doc.tree.get(), fit, static_cast<uint32_t>(px),
-                 static_cast<uint32_t>(px), reinterpret_cast<char*>(data));
+    resvg_render(doc.tree.get(), fit, static_cast<uint32_t>(side),
+                 static_cast<uint32_t>(side), reinterpret_cast<char*>(data));
 
     // resvg writes RGBA8888 premultiplied, byte by byte; cairo's ARGB32 is
     // one native-endian 32-bit word per pixel, premultiplied too. Same
     // values, another order: each pixel is reread as bytes and rewritten as
     // the word.
-    const int n = px * px;
+    const int n = side * side;
     for (int i = 0; i < n; ++i) {
         unsigned char* p = data + 4 * i;
         const uint32_t word = (static_cast<uint32_t>(p[3]) << 24) |
@@ -73,26 +80,28 @@ cairo_surface_t* rasterise(const Document& doc, int px, double shift_x,
     return s;
 }
 
-cairo_surface_t* embossed_copy(cairo_surface_t* live, int offset_px,
+cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
                                uint32_t light_rgb, uint32_t shadow_rgb) {
-    assert(offset_px >= 0);
     cairo_surface_flush(live);
+    cairo_surface_flush(light);
     const int w = cairo_image_surface_get_width(live);
     const int h = cairo_image_surface_get_height(live);
-    const int ow = w + offset_px;
-    const int oh = h + offset_px;
+    const int ow = cairo_image_surface_get_width(light);
+    const int oh = cairo_image_surface_get_height(light);
+    assert(ow >= w && oh >= h);
     cairo_surface_t* out =
         cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ow, oh);
     cairo_surface_flush(out);
-    const unsigned char* src = cairo_image_surface_get_data(live);
     unsigned char* dst = cairo_image_surface_get_data(out);
-    const int src_stride = cairo_image_surface_get_stride(live);
     const int dst_stride = cairo_image_surface_get_stride(out);
-    // The mask's coverage at (x, y) of the live raster, 0 outside it.
-    const auto coverage = [&](int x, int y) -> double {
-        if (x < 0 || y < 0 || x >= w || y >= h) return 0.0;
-        const auto* row =
-            reinterpret_cast<const uint32_t*>(src + y * src_stride);
+    // A mask's coverage at (x, y) of surface `s`, 0 outside it.
+    const auto coverage = [](cairo_surface_t* s, int x, int y) -> double {
+        if (x < 0 || y < 0 || x >= cairo_image_surface_get_width(s) ||
+            y >= cairo_image_surface_get_height(s))
+            return 0.0;
+        const auto* row = reinterpret_cast<const uint32_t*>(
+            cairo_image_surface_get_data(s) +
+            y * cairo_image_surface_get_stride(s));
         return static_cast<double>((row[x] >> 24) & 0xFF) / 255.0;
     };
     const auto channel = [](uint32_t rgb, int shift) {
@@ -102,9 +111,9 @@ cairo_surface_t* embossed_copy(cairo_surface_t* live, int offset_px,
         auto* drow = reinterpret_cast<uint32_t*>(dst + y * dst_stride);
         for (int x = 0; x < ow; ++x) {
             // The light copy under, the shadow copy OVER it: premultiplied
-            // OVER of two flat tones, each at its copy's coverage.
-            const double as = coverage(x, y);
-            const double al = coverage(x - offset_px, y - offset_px) * (1.0 - as);
+            // OVER of two flat tones, each at its mask's coverage.
+            const double as = coverage(live, x, y);
+            const double al = coverage(light, x, y) * (1.0 - as);
             uint32_t word = static_cast<uint32_t>(
                                 std::nearbyint((as + al) * 255.0))
                             << 24;

@@ -31,12 +31,6 @@
    <stop id="stop5488-4" offset="0.60000002" style="stop-color:#ffffff;stop-opacity:0.70588237;" />
    <stop style="stop-color:#ffffff;stop-opacity:1" offset="1" id="stop5480-2" />
   </linearGradient>
-  <clipPath clipPathUnits="userSpaceOnUse" id="clipPath8163">
-   <path d="m 22.98097,16.134291 a 7.115262,7.115262 0 1 1 -14.2305237,0 7.115262,7.115262 0 1 1 14.2305237,0 z" id="path8165" style="color:#000000;fill:#999999;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.52702755;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" transform="matrix(2.2485487,0,0,2.248973,494.32605,97.71645)" />
-  </clipPath>
-  <filter id="filter8167" color-interpolation-filters="sRGB">
-   <feGaussianBlur stdDeviation="0.48001568" id="feGaussianBlur8169" />
-  </filter>
   <clipPath clipPathUnits="userSpaceOnUse" id="clipPath12037">
    <path d="m 22.98097,16.134291 a 7.115262,7.115262 0 1 1 -14.2305237,0 7.115262,7.115262 0 1 1 14.2305237,0 z" id="path12039" style="color:#000000;fill:#666666;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.83674252;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:new" transform="matrix(1.4010985,0,0,1.4032116,406.77145,229.34439)" />
   </clipPath>
@@ -47,10 +41,6 @@
  <svg id="icon" x="0" y="0" width="48" height="48" viewBox="506 150 48 48">
   <g id="g5279" style="display:inline">
    <g id="g5301" style="display:inline">
-    <g id="g8159" clip-path="url(#clipPath8163)" style="opacity:0.5;filter:url(#filter8167)" transform="translate(0,40)">
-     <path transform="matrix(2.2485487,0,0,2.248973,494.32605,97.716448)" style="opacity:0.15;color:#000000;fill:none;stroke:#000000;stroke-width:1.33406806;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" id="path7968-2-0" d="m 22.98097,16.134291 a 7.115262,7.115262 0 1 1 -14.2305237,0 7.115262,7.115262 0 1 1 14.2305237,0 z" />
-     <path transform="matrix(1.897257,0,0,1.897615,500.89954,105.38536)" style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:#ffffff;stroke-width:1.05405402;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:block;overflow:visible;enable-background:accumulate" id="path7968-8" d="m 22.98097,16.134291 a 7.115262,7.115262 0 1 1 -14.2305237,0 7.115262,7.115262 0 1 1 14.2305237,0 z" />
-    </g>
     <g id="g48-11" style="display:inline;enable-background:new" transform="translate(506,150)">
      <g id="g7170" transform="translate(350,0)">
       <g id="g7564">
