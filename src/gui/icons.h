@@ -15,8 +15,8 @@
 // (load_svg_set, below) — and rasterised lazily per (glyph, device px) into
 // an ARGB32 surface that a draw copies at an integer device px, no
 // resample. THE INKS ARE THE DRAWINGS' OWN (gradients, strokes and
-// opacities included), never a theme role; a DISABLED glyph is ReactOS's
-// saturate (draw_disabled).
+// opacities included), never a theme role; a DISABLED glyph is Cool Edit's
+// emboss of its mask (draw_disabled).
 //
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in the program's case the
@@ -268,16 +268,27 @@ void drop_rasters();
 // parsed every drawing.
 void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 
-// THE DISABLED GLYPH — a dead button's face: REACTOS'S SATURATE (architect
-// 2026-10-06; comctl32's toolbar draws a disabled 32-bpp image with
-// ILS_SATURATE | ILS_ALPHA at 192, imagelist.c's saturate_image,
-// svg_icon::saturated_copy) UNDER EVERY CHROME since the cased glyphs became
-// the program's (architect 2026-10-09: Cool Edit's disabled art is drawn per
-// glyph and the product has no such art, so its dead case takes this saturate
-// of the live drawing; cool_edit_paint.h) — of the live raster, built the
-// first time a disabled face asks and cached beside it, copied at the same
-// seat. A disabled WORD keeps the chrome's own rule (show_embossed_run,
-// render.h: Windows' DSS_DISABLED emboss).
+// THE DISABLED GLYPH — a dead button's face: COOL EDIT'S OWN (architect
+// 2026-10-15). Cool Edit Pro 2.1 ships a disabled bitmap beside every
+// toolbar glyph (BITMAP 221's strips, enabled | disabled), and that art is
+// Windows' DSS_DISABLED emboss of the glyph's silhouette: the silhouette in
+// 808080 over a F8F8F8 copy one px right and down (cool_edit_paint.h's
+// kCeDisabledShadow / kCeDisabledLight, the measured bytes and the bitmaps).
+// The product builds the same thing from the live raster's ALPHA MASK,
+// mechanically, for every glyph of the set (svg_icon::embossed_copy): the
+// mask's coverage kept, so antialiased edges stay soft; the light copy offset
+// by one Windows px, the case's line (program_line_px), at the live scale.
+// Built the first time a disabled face asks and cached beside the live
+// raster, copied at the same seat. THE COPY IS ONE LINE WIDER AND TALLER
+// than the cell, and in the case that line lands INSIDE THE CASE (render.h's
+// THE CASE: the light line, the 20-W seat, the shadow line, the black line) —
+// on the shadow line at rest, on the black line when a dead case stays
+// checked (+1) — over the case its painter already put down, so the case's
+// own damage covers it and nothing reaches a neighbor. Every dead
+// glyph takes it — the band, row 8, the history groups, the render player's
+// transport, the dialogs' cases. A disabled WORD keeps the chrome's own rule
+// (show_embossed_run, render.h: the same Windows emboss in the chrome's
+// roles); cue text keeps its fade (cool_edit_derive.h).
 void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
                    double size_px);
 

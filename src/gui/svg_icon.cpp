@@ -73,30 +73,47 @@ cairo_surface_t* rasterise(const Document& doc, int px, double shift_x,
     return s;
 }
 
-cairo_surface_t* saturated_copy(cairo_surface_t* live) {
+cairo_surface_t* embossed_copy(cairo_surface_t* live, int offset_px,
+                               uint32_t light_rgb, uint32_t shadow_rgb) {
+    assert(offset_px >= 0);
     cairo_surface_flush(live);
     const int w = cairo_image_surface_get_width(live);
     const int h = cairo_image_surface_get_height(live);
-    cairo_surface_t* out = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+    const int ow = w + offset_px;
+    const int oh = h + offset_px;
+    cairo_surface_t* out =
+        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ow, oh);
     cairo_surface_flush(out);
     const unsigned char* src = cairo_image_surface_get_data(live);
     unsigned char* dst = cairo_image_surface_get_data(out);
     const int src_stride = cairo_image_surface_get_stride(live);
     const int dst_stride = cairo_image_surface_get_stride(out);
-    constexpr double kFrame = 192.0 / 255.0;
-    for (int y = 0; y < h; ++y) {
-        const auto* srow = reinterpret_cast<const uint32_t*>(src + y * src_stride);
+    // The mask's coverage at (x, y) of the live raster, 0 outside it.
+    const auto coverage = [&](int x, int y) -> double {
+        if (x < 0 || y < 0 || x >= w || y >= h) return 0.0;
+        const auto* row =
+            reinterpret_cast<const uint32_t*>(src + y * src_stride);
+        return static_cast<double>((row[x] >> 24) & 0xFF) / 255.0;
+    };
+    const auto channel = [](uint32_t rgb, int shift) {
+        return static_cast<double>((rgb >> shift) & 0xFF);
+    };
+    for (int y = 0; y < oh; ++y) {
         auto* drow = reinterpret_cast<uint32_t*>(dst + y * dst_stride);
-        for (int x = 0; x < w; ++x) {
-            const uint32_t p = srow[x];
-            const double a = static_cast<double>((p >> 24) & 0xFF);
-            const double r = static_cast<double>((p >> 16) & 0xFF);
-            const double g = static_cast<double>((p >> 8) & 0xFF);
-            const double b = static_cast<double>(p & 0xFF);
-            const double lum = 0.30 * r + 0.59 * g + 0.11 * b;
-            const auto l = static_cast<uint32_t>(std::nearbyint(lum * kFrame));
-            const auto a2 = static_cast<uint32_t>(std::nearbyint(a * kFrame));
-            drow[x] = (a2 << 24) | (l << 16) | (l << 8) | l;
+        for (int x = 0; x < ow; ++x) {
+            // The light copy under, the shadow copy OVER it: premultiplied
+            // OVER of two flat tones, each at its copy's coverage.
+            const double as = coverage(x, y);
+            const double al = coverage(x - offset_px, y - offset_px) * (1.0 - as);
+            uint32_t word = static_cast<uint32_t>(
+                                std::nearbyint((as + al) * 255.0))
+                            << 24;
+            for (int shift = 16; shift >= 0; shift -= 8) {
+                const double v = channel(shadow_rgb, shift) * as +
+                                 channel(light_rgb, shift) * al;
+                word |= static_cast<uint32_t>(std::nearbyint(v)) << shift;
+            }
+            drow[x] = word;
         }
     }
     cairo_surface_mark_dirty(out);

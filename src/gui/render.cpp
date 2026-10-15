@@ -618,7 +618,7 @@ void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
         // One row of rounded ramp words, then every row a copy of it. Each
         // level rounds by std::nearbyint, the tree's one rounding (a level
         // is not a grid point; this is symmetry with svg_icon's
-        // saturated_copy, not a pixel). It parts from std::lround only on an
+        // embossed_copy, not a pixel). It parts from std::lround only on an
         // exact half, which takes the even level: no compiled theme's pair
         // lands on one at the two devices' full-width
         // captions (1920 and 2304 device px), so those ramps are unchanged;

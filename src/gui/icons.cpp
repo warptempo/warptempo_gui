@@ -1,7 +1,7 @@
 #include "icons.h"
 
 #include "platform.h"   // GuiPlatform::bundled_icon_files
-#include "display_transform.h"
+#include "cool_edit_paint.h"   // the disabled glyph's two tones
 #include "svg_icon.h"
 
 #include <array>
@@ -20,7 +20,7 @@ namespace {
 // load_svg_set before the window exists and never changed after.
 //
 // THE CACHE: per (glyph, device px) the LIVE raster and, the first time a
-// disabled face asks, its DISABLED copy, ReactOS's saturate (draw_disabled)
+// disabled face asks, its DISABLED copy, Cool Edit's emboss (draw_disabled)
 // — two sizes per scale in use (the toolbar seat, icon_glyph_px, and the
 // small icon's scaled 16 of the caption, the cards and the list rows), at
 // most 4 x kIconCount surfaces. Main thread only: every draw is the
@@ -115,20 +115,15 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
     if (px <= 0) return;
     Faces& f = faces_for(icon, px);
     if (!f.disabled) {
-        // THE DISABLED FACE IS DERIVED FROM THE sRGB RASTER (svg_icon.h's
-        // convert_to_display): on a P3 window the live face is already
-        // converted, so the derivation takes a fresh render of the same tree,
-        // and its result is converted after (ReactOS's grays pass whole).
-        Surface fresh;
-        cairo_surface_t* source = f.live.get();
-        if (display_transform::active()) {
-            const auto [sx, sy] =
-                loaded_set()->shifts[static_cast<size_t>(icon)];
-            fresh.reset(svg_icon::rasterise(
-                document(static_cast<int>(icon)), px, sx, sy));
-            source = fresh.get();
-        }
-        f.disabled.reset(svg_icon::saturated_copy(source));
+        // THE MASK IS THE LIVE RASTER'S ALPHA, which the window's conversion
+        // keeps (svg_icon.h's convert_to_display), so the copy is built from
+        // the cached live face on any window; its two sRGB tones are
+        // converted after. THE OFFSET IS ONE WINDOWS PX, the case's own line
+        // (program_line_px), at the live scale: the cache is per device px
+        // and drop_rasters empties it at a scale change.
+        f.disabled.reset(svg_icon::embossed_copy(
+            f.live.get(), program_line_px(), kCeDisabledLight,
+            kCeDisabledShadow));
         svg_icon::convert_to_display(f.disabled.get());
     }
     paint_raster(cr, f.disabled.get(), x, y);

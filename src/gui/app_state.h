@@ -12988,7 +12988,7 @@ inline bool authoring_locked(const AppState& a) {
 //     architect, that morning, while they were the row-1 view bar; the
 //     fourth, S+P, since 2026-10-12): bare
 //     1/2/3/4 are refused under the lamp, so the four wear the icon row's own
-//     disabled face (2026-10-01) — the glyph saturated
+//     disabled face (2026-10-01) — the glyph embossed
 //     (icons::draw_disabled), the selected view's checked face still saying
 //     where you stand — and the KEY's card
 //     carries the sentence.
@@ -16114,7 +16114,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // A `false` HERE WEARS THE ICON ROW'S DISABLED FACE (2026-10-01, the
         // view selectors having come down from row 1 to the icon row, two
         // radio pairs since 2026-10-14):
-        // the glyph saturated (icons::draw_disabled), as on every dead
+        // the glyph embossed (icons::draw_disabled), as on every dead
         // button of that row (paint_icon_row), the selected view's checked
         // faces still saying where you stand; the hint names the act and the
         // grey is the message. The repaint is the roster's per-tick
@@ -16570,7 +16570,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // GRID ITERATIONS, LIT (architect 2026-10-11 ~01:45: the lamp is
         // permanent there, value_drag_armed): the press could change nothing,
         // so the face is the view selectors' under the same mode — the
-        // checked face still saying the drag is armed over the saturated
+        // checked face still saying the drag is armed over the embossed
         // glyph (iteration_lock_greys' account) — and bare `[`, which the
         // iteration gate admits (its delta (b)), cards the reason at its own
         // arm (kValueDragIterationsCard). THE `h` VIEW greys and
@@ -16659,7 +16659,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // since 2026-10-05 (from 2026-08-18 it also composed DISABLED +
         // SELECTED on every frame outside it, which the shared face
         // expressions handle: a dead checked button stays checked, its glyph
-        // saturated (icons::draw_disabled)).
+        // embossed (icons::draw_disabled)).
         //
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
         // loading piece, so `false` is already this arm's answer there.

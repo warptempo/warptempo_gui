@@ -78,6 +78,15 @@ inline constexpr uint32_t kCeCaseOuter = 0x000000;
 inline constexpr uint32_t kCeRingOuter = 0x000000;
 inline constexpr uint32_t kCeRingMid   = 0x808080;
 inline constexpr uint32_t kCeRingLight = 0xF8F8F8;
+// THE DISABLED GLYPH'S TWO TONES (architect 2026-10-15; icons.h's THE
+// DISABLED GLYPH), measured off Cool Edit Pro 2.1's own disabled art —
+// BITMAP 221's toolbar strips, each glyph's right 20x20 half drawn on the
+// C0C0C0 button face: the silhouette in 808080 over a F8F8F8 copy one px
+// right and down, byte for byte on B84 (Play), B8 (Undo), B87 (Stop) and
+// B88 (Pause), and on most of the Edit view's B100-B138. Constants, as the
+// rings are: face-independent.
+inline constexpr uint32_t kCeDisabledShadow = 0x808080;
+inline constexpr uint32_t kCeDisabledLight  = 0xF8F8F8;
 
 // -- THE CANVAS COLUMN'S CONSTANTS (METRICS §3, §4; 2026-10-09) ---------------
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
@@ -116,9 +125,10 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 //              top row and left column, 808080 inside it, the ramp on the
 //              seat one line further in, F8F8F8 on the bottom row and right
 //              column, mitred against the black; the glyph at (+2, +2).
-//   DISABLED — the face its state gives, the glyph saturated (the caller's
-//              icons::draw_cased_disabled — Cool Edit's per-glyph disabled
-//              art has no counterpart for the product's icon sets).
+//   DISABLED — the face its state gives, the glyph EMBOSSED (the caller's
+//              icons::draw_cased_disabled — Cool Edit's own disabled art,
+//              its silhouette in kCeDisabledShadow over a kCeDisabledLight
+//              copy one line right and down, built from the glyph's mask).
 //   HOT      — none: Cool Edit's toolbar has no hover face (program_spec.h's
 //              case_hot_face).
 // Answers the glyph's shift in device px (one line when down).

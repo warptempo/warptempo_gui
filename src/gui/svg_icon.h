@@ -62,23 +62,26 @@ std::expected<Document, std::string> parse(std::string_view bytes);
 cairo_surface_t* rasterise(const Document& doc, int px, double shift_x = 0.0,
                            double shift_y = 0.0);
 
-// THE SATURATED COPY — ReactOS's disabled glyph (comctl32's ILS_SATURATE |
-// ILS_ALPHA at 192, imagelist.c's saturate_image): a NEW surface the caller
-// owns, `live`'s every pixel's colour replaced by .30 R + .59 G + .11 B, its
-// alpha kept, then all four channels times 192 / 255. Run directly on
-// cairo's premultiplied channels: the luminance is a convex combination, so
-// it never exceeds the alpha, and the frame's scale commutes with the
-// premultiply. std::nearbyint at each channel (the rounding doctrine).
-cairo_surface_t* saturated_copy(cairo_surface_t* live);
+// THE EMBOSSED COPY — Cool Edit's disabled glyph (icons.h's THE DISABLED
+// GLYPH, architect 2026-10-15): Windows' DSS_DISABLED emboss of the glyph's
+// silhouette, built from `live`'s ALPHA ALONE (its coverage, so antialiased
+// edges stay soft; its colors are never read): a NEW surface the caller owns,
+// `offset_px` device px wider and taller than `live`, holding the mask filled
+// with `light_rgb` at (+offset_px, +offset_px) under the mask filled with
+// `shadow_rgb` at (0, 0) — a premultiplied OVER of the two flat tones (each a
+// straight 0xRRGGBB), std::nearbyint at each channel (the rounding doctrine).
+cairo_surface_t* embossed_copy(cairo_surface_t* live, int offset_px,
+                               uint32_t light_rgb, uint32_t shadow_rgb);
 
 // THE WINDOW'S COPY (architect 2026-10-08, display_transform.h's head): an
 // icon's own inks are sRGB, as every authored color, so on the tablet's
 // Display-P3 window each pixel of a raster is converted IN PLACE once, at
 // raster time — cairo's premultiplied word un-premultiplied, converted and
 // premultiplied again (display_transform::display_premultiplied, which keeps
-// a neutral's word whole); off a P3 window it touches nothing. The disabled
-// copies above are derived from the UNCONVERTED raster (their arithmetic is
-// the period's, on sRGB bytes) and converted after (icons.cpp).
+// a neutral's word whole); off a P3 window it touches nothing. The
+// conversion keeps every pixel's alpha, so the embossed copy above reads its
+// mask off the converted raster as well as the unconverted one; its tones are
+// sRGB constants and the copy is converted after (icons.cpp).
 void convert_to_display(cairo_surface_t* s);
 
 } // namespace svg_icon

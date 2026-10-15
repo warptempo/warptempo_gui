@@ -128,8 +128,8 @@ struct TrimRange {
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
 // PAINTER CONSTANTS (cool_edit_paint.h: Cool Edit's measured bytes that do
-// not follow its preset — the case's black outline and down rings, the view
-// bar's black field, the ruler's ticks and digits and their black shadow;
+// not follow its preset — the case's black outline and down rings, the
+// disabled glyph's two tones, the view bar's black field, the ruler's ticks and digits and their black shadow;
 // the case's ramps and the time field's digits derive from the Face, ce_case_*
 // and ce_field_text) — or THE ICON SET'S
 // OWN INKS (architect 2026-10-06): the icon drawings' colours,
@@ -137,9 +137,10 @@ struct TrimRange {
 // artwork, not roles, so such a glyph is never recoloured by a theme — the
 // one place an antialiased, translucent picture is copied whole, no glyph
 // ever wearing a role (the bound monochrome set that wore its surface's
-// text role left 2026-10-09, icons.h's head). A DISABLED icon is
-// ReactOS's saturate of that picture under every chrome (icons::draw_disabled,
-// the program case's dead glyph), no role entering.
+// text role left 2026-10-09, icons.h's head). A DISABLED icon is Cool
+// Edit's emboss of that picture's mask in its two constant tones under every
+// chrome (icons::draw_disabled, the program case's dead glyph, architect
+// 2026-10-15), no role entering.
 // TEXT OVER A FILL IS THE FILL'S OWN PAIR — a text role beside every ground
 // role — AND COOL EDIT'S: the chrome's text is Cool Edit's program text off
 // the Face, light on a dark Face and swapped dark past Cool Edit's own
@@ -323,15 +324,16 @@ struct TrimRange {
 // right and down, then the same word in Shadow at its place over it (the
 // light copy is Hilight by Windows' own rule, architect 2026-10-04, the
 // separate light-copy role leaving with the dark level), show_embossed_run
-// (below). A disabled GLYPH is ReactOS's saturate since the first icon set
-// (architect 2026-10-06, icons::draw_disabled); nothing else dims — the dims of the kdenlive design (the disabled
+// (below). A disabled GLYPH is the same emboss in Cool Edit's own constant
+// tones, of the glyph's mask (architect 2026-10-15, icons::draw_disabled);
+// nothing else dims — the dims of the kdenlive design (the disabled
 // mix, the accelerator column's and the tooltip line's) retired with the
 // luminance rule the same day. (A CUE'S LABEL IS THE ONE EXCEPTION: an inert
 // cue label is the faded tone, not the emboss — the marker-lane paragraph.)
 // A DROPDOWN'S ACCELERATOR COLUMN takes its
 // item's own ink: the item's label ink, the selected text on a lit row, the
-// emboss on a disabled one. A disabled glyph is the program's case's,
-// ReactOS's saturate under every chrome (icons::draw_disabled, 2026-10-09).
+// emboss on a disabled one. A disabled glyph is the program's case's, Cool
+// Edit's emboss under every chrome (icons::draw_disabled, 2026-10-15).
 //
 // WHAT WAS HERE BEFORE, in one sentence, because the file's shape is its
 // residue: from 2026-10-03 to 2026-10-04 the chrome was a row of a generated

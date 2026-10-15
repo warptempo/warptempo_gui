@@ -453,7 +453,7 @@ static_assert([] {
 //   REST     — RAISED on the ground, glyph unshifted. EVERY button rests
 //              raised, enabled or disabled: a disabled button keeps its edge
 //              and changes only its glyph (its disabled face,
-//              icons::draw_disabled, ReactOS's saturate) or its label
+//              icons::draw_disabled, Cool Edit's emboss) or its label
 //              (embossed, show_embossed_run — Windows' DSS_DISABLED).
 //   CHECKED  — a toggled-on button (the player's Repeat One, the keyboard's
 //              armed keys): SUNKEN over Windows'
@@ -493,7 +493,7 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
 // roster's `selected`) wear Cool Edit's one down face, the glyph one line
 // further right and down; a DISABLED button keeps the face its state gives —
 // a dead checked button still reads checked (the roster's rule at
-// paint_icon_row), only its glyph saturated (icons::draw_cased_disabled).
+// paint_icon_row), only its glyph embossed (icons::draw_cased_disabled).
 // NO HOT FACE: Cool Edit's toolbar has none (program_spec.h's
 // case_hot_face). Answers the glyph's shift.
 ButtonBoxFace paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
@@ -2285,8 +2285,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // the three.
         //
         // THE FACE IS THE GLYPH'S ALONE (architect 2026-10-02, the AB set):
-        // its disabled face, ReactOS's saturate (icons::draw_disabled,
-        // architect 2026-10-06), its case the face its state gives
+        // its disabled face, Cool Edit's emboss (icons::draw_disabled,
+        // architect 2026-10-15), its case the face its state gives
         // (paint_roster_case). A dead CHECKED button (the
         // cumulative reading, say) stays checked: the mode cannot change that
         // state, so hiding it would be a lie, and the greyed glyph says
@@ -7118,7 +7118,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // 2026-08-30) — every other owner's buttons are always live while
         // their dialog stands and publish enabled=true, and the player's are
         // all glyph buttons: the glyph's disabled face (icons::draw_disabled,
-        // ReactOS's saturate), the case the face its state gives, the
+        // Cool Edit's emboss), the case the face its state gives, the
         // roster's rule (architect 2026-10-02 and 2026-10-09). The press face is gated on
         // the bit rather than trusted — a button can go dead UNDER a hold —
         // while the focus frame is not: a stale focus must stay visible where
