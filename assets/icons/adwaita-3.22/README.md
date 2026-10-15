@@ -2,8 +2,7 @@
 
 adwaita-icon-theme 3.22.0, alone (architect 2026-10-14): every drawing is the 3.22.0 tarball's own `src/fullcolor/`
 artwork at its 48 slot, nothing redrawn and nothing from any other release; gnome-icon-theme 2.28, the set before it,
-retired whole the same day. THE ONE EXCEPTION is the set's OWN FILE (architect 2026-10-15): the digital metronome,
-Warp's glyph and the program icon (`DigitalMetronome.svg`, `AppIcon.svg`), NOT Adwaita's (below, "The own file"). One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator.
+retired whole the same day. One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator.
 The set is hard-coded (`icons::kIconSet`, `adwaita-3.22`; the `icons` device key and the Settings Icons row were
 removed 2026-10-12). The program parses the files at launch, in place, through resvg (`src/gui/svg_icon.h`): on the
 laptop from this folder, on the tablet from the APK's `icons/adwaita-3.22/` assets (`android/app/build_apk.sh`); a
@@ -14,15 +13,14 @@ the licence texts) are not read.
 
 The tarball ships its scalable artwork as SHEETS (`src/fullcolor/<sheet>.svg`, each carrying an icon's drawings at
 every size, often several icons), so every file here is EXTRACTED by `tools/icon_set_adwaita_322/` (`build_set.py`
-over `mapping.tsv`, its README the usage) and is that tool's byte-identical output (the own file, below, COPIED by
-the same tool from its tracked source with its notice inserted, never extracted): the sheet PRUNED IN PLACE —
+over `mapping.tsv`, its README the usage) and is that tool's byte-identical output: the sheet PRUNED IN PLACE —
 hidden layers, the editor's metadata and every element that puts no ink in the 48 slot are removed, every remaining
 element keeping its ancestors exactly; the slot NESTED as its own `<svg>` viewport inside a 48-unit root (an app
 icon with no 48 drawing nests its 256 slot, scaled by that viewport as the theme renders its 48 PNG); a mask or
 filter in user space with no region of its own GIVEN, EXPLICITLY, THE REGION THE FULL SHEET'S VIEWPORT GAVE IT
 (−10 % / 120 % of the sheet), because the 3.22 `edit-undo` / `edit-redo` masks otherwise clip the arrow to nothing in
-every current renderer; EVERY DROP SHADOW REMOVED by id (below, `shadows.tsv`), every `<use>` of a removed element
-with it; the defs pruned to those referenced. Nothing is redrawn. Each seat's faithful drawing (shadows kept) is
+every current renderer; EVERY DROP SHADOW REMOVED by id (below, `shadows.tsv`), and the few other elements the
+architect ruled out (`removed.tsv`: appointment-new's star, below), every `<use>` of a removed element with it; the defs pruned to those referenced. Nothing is redrawn. Each seat's faithful drawing (shadows kept) is
 checked against the sheet cropped to its slot and against the theme's own shipped 48 PNG
 (`Adwaita/48x48/<context>/<name>.png`).
 
@@ -32,8 +30,6 @@ checked against the sheet cropped to its slot and against the theme's own shippe
   (https://download.gnome.org/sources/adwaita-icon-theme/3.22/), sha256
   `c18bf6e26087d9819a962c77288b291efab25d0419b73d909dd771716a45dcb7`. Each file's source sheet and its sha256 are in
   the table below.
-- The own file, `DigitalMetronome.svg` and its copy `AppIcon.svg`: the project's own, its source
-  `tools/icon_set_adwaita_322/own/DigitalMetronome.svg` (below, "The own file").
 
 ## Licence
 
@@ -45,28 +41,14 @@ attributing the artwork, using 'GNOME Project' is enough." The two licence texts
 
 How the files sit beside the GPL-3 program: each SVG is a separate data file under its own licence, read at run time
 and never linked or compiled into the program's code; the repository distributes source only (THIRD_PARTY.md's own
-statement). Under LGPL-3 or CC BY-SA 3.0 there is no GPL-2-only concern. The own file is placed under the same terms
-(below), so the folder carries one licence story.
+statement). Under LGPL-3 or CC BY-SA 3.0 there is no GPL-2-only concern.
 
-## The own file
+## The changed files
 
-`DigitalMetronome.svg` (2026-10-15), and `AppIcon.svg` byte for byte, is NOT from adwaita-icon-theme. PROVENANCE: the
-architect's own work, a 48 x 48 drawing made with Google's Gemini at his prompt — Adwaita 3.22's phone,
-accessories-calculator and camera-photo 48 drawings the style inputs, and a product photograph of a Korg MA-1 the
-subject: a generic digital metronome, "WARP" in place of the maker's name — then cleaned by hand: the ground shadow,
-the "MA-1" legend and every small legend removed, WARP moved to the speaker grille's right edge, the power button a
-flat `#dabe2f`. No `<text>`, no filter. LICENCE: placed under THE SAME TERMS AS THE SET, the GNU LGPL v3 or Creative
-Commons Attribution-Share Alike 3.0 United States, so the folder carries one licence story. Its tracked source is
-`tools/icon_set_adwaita_322/own/DigitalMetronome.svg`; the tool copies it with a dated notice inserted as one XML
-comment after the root's start tag, every other byte verbatim (`mapping.tsv`'s `own` treatment). It is the program
-icon outside the window too (`tools/app_icon/gen_app_icon.sh`).
-
-## The two changed files
-
-Every extracted file is changed in one respect, its drop shadows removed (2026-10-15, the section below, recorded here
-and in `tools/icon_set_adwaita_322/shadows.tsv`; the own file, above, is no extraction and has none). Two files carry
-further changes, each recorded under the licence with a
-dated notice in an XML comment at its head; every other file is the extraction alone.
+Every file is changed in one respect, its drop shadows removed (2026-10-15, the section below, recorded here and in
+`tools/icon_set_adwaita_322/shadows.tsv`). Three drawings carry further changes (four files: AppIcon is
+AppointmentNew's), each recorded under the licence with a dated notice in an XML comment at its head; every other file
+is the extraction alone.
 
 - `TabDetachB.svg` (2026-10-14) is `preferences-system-windows` with the element order changed alone: the lower-right
   window copy `use5281` moved after the front window `g5270`, every coordinate unchanged — the same derivation 2.28's
@@ -78,19 +60,26 @@ dated notice in an XML comment at its head; every other file is the extraction a
   pair kerning, text-anchor honored), because the product's resvg is built without text and draws none. The outline
   geometry is what a text renderer lays down from the same file, measured 0.26/255 mean against rsvg's own text
   rendering.
+- `AppointmentNew.svg` (2026-10-15), and `AppIcon.svg` byte for byte, is `appointment-new` (the same clock in
+  `clocks.svg` as document-open-recent, a red slice from 11 to 12 in place of the yellow arrow) with THE GLOWING STAR
+  EMBLEM REMOVED — `g6800`, the star `path1345` and its glow `path2388`, the architect's "minus the star" (listed in
+  `tools/icon_set_adwaita_322/removed.tsv`) — its drop shadows removed as every file's (the floor shadow `use6074`
+  and the hands' shadow on the dial `g5525-8`; the red slice casts none), and its 24 clock-digit `<text>` elements
+  turned into Liberation Sans Bold outlines exactly as VcsDiff's. The dial, the bezel, the glass, the hands and the
+  red slice are unchanged ("it reminds me of a speedometer, so I'd keep it").
 
 ## The deliberate seats
 
 The architect's (2026-10-14): Source wears `accessories-dictionary` (the primary source), Target `input-tablet` (the
-authoring surface); since 2026-10-15 Warp the own file, the digital metronome (the tempo an integer on its display),
-and Phase Reset `camera-photo` (the phase snapshot: a reset re-grounds the synthesis phase to the source's at one
-frame, and it decoheres from there), its 48 slot (300, 50) — the sheet's 256 "hires" slot is never preferred over a 48
+authoring surface); since 2026-10-15 Warp `appointment-new`'s clock (its red slice the tempo change, which reads
+as a speedometer; the digital metronome of the same day retired), and Phase Reset `camera-photo` (the phase
+snapshot: a reset re-grounds the synthesis phase to the source's at one frame, and it decoheres from there), its 48 slot (300, 50) — the sheet's 256 "hires" slot is never preferred over a 48
 drawing, which is tuned for the seats; the
 Read-Only toggle the padlock pair, `changes-allow` unlocked and `changes-prevent` locked; Save `document-save` (the
 floppy retired); Flatten `edit-clear-all` (3.22's own broom); Load in Place `edit-paste`. DialogError wears
 `process-stop`, as DialogCancel does. Every other seat keeps its freedesktop name.
 
-REPEATS, the files byte-identical: AppIcon and DigitalMetronome (the own file); AudioXWav and MusicNote16th
+REPEATS, the files byte-identical: AppIcon and AppointmentNew (the program icon is Warp's clock); AudioXWav and MusicNote16th
 (`audio-x-generic`; the BPM Iterations button keeps the note, the program icon until 2026-10-15); DialogCancel and
 DialogError (`process-stop`).
 
@@ -100,8 +89,8 @@ DialogError (`process-stop`).
   hires) is an embedded raster inside the SVG, a 512-px bitmap at the large slots; no vector knob exists.
 - `format-text-direction-ltr` is PNG-only in 3.22 (no scalable source) and is not a mirror of `-rtl`, so the two are
   no Source / Target pair.
-- The clock's digits (`document-open-recent`) are `<text>`, which the product's resvg does not draw — hence VcsDiff's
-  outlines, above.
+- The clocks' digits (`document-open-recent`, `appointment-new`) are `<text>`, which the product's resvg does not
+  draw — hence VcsDiff's and AppointmentNew's outlines, above.
 
 ## The import check
 
@@ -111,8 +100,11 @@ candidate, draws nothing in resvg and is not seated.) The extraction's own check
 crop or within d ≤ 3.0 (mean, of 255) of the shipped 48 PNG, but `user-trash` (EditDelete): its mesh pattern sits at 3.03
 from the shipped PNG, and the sheet's own crop at 7.7 from it (the crop clips the rim highlight's mask region, so it is
 no reference there) — the one seat the tool prints for a look, accepted on the contact sheet. No file carries an `<image>`.
-The two files of 2026-10-15, `DigitalMetronome.svg` and `CameraPhoto.svg`, rendered at 240 px through the same resvg
-0.48.1: every ink pixel of rsvg's render drawn, the mean difference 0.2 / 0.3 of 255 (antialiased edges alone).
+`CameraPhoto.svg` (2026-10-15), rendered at 240 px through the same resvg 0.48.1: every ink pixel of rsvg's render
+drawn, the mean difference 0.3 of 255 (antialiased edges alone); `AppointmentNew.svg` (2026-10-15) the same, 99.9 % of
+the ink pixels drawn and the mean 0.6 (antialiased edges alone). Its removals are proved against the slot's own crop
+(rsvg, 240 px): outside the removed elements' footprint the extraction with the star and the shadows removed is the
+crop exactly (mean and max 0), the outlined digits adding 0.23 of 255 mean there, as VcsDiff's.
 
 ## The drop shadows
 
@@ -137,7 +129,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | VcsPull | `go-bottom` | `g6324` | floor shadow |
 | AccessoriesDictionary | `accessories-dictionary` | `path2284` | floor shadow |
 | InputTablet | `input-tablet` | `path8537-6` `path23244-7` `path46799-7-4` | floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy |
-| DigitalMetronome | the own file | — | no drop shadow (its ground shadow removed by hand at its making) |
+| AppointmentNew | `appointment-new` | `use6074` `g5525-8` | floor shadow (one instance of g6384); the hands' shadow cast on the dial; the red slice casts none |
 | CameraPhoto | `camera-photo` | `g9724` `g9730` | floor shadow (blurred); the lens's shadow cast on the foot |
 | ZoomFitBest | `zoom-fit-best` | `g6668` | floor shadow |
 | ZoomOriginal | `zoom-original` | `g7884` | floor shadow |
@@ -188,7 +180,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | AccessoriesTextEditor | `accessories-text-editor` | `path9687` `path4331` `path2334` | blurred halo behind the pad; the pencil's shadows cast on the page |
 | EditDelete | `user-trash` | `path12888` `path12886` | floor shadow and the contact ellipse under the base |
 | ValueDrag | `object-flip-vertical` | `g10278` | floor shadow |
-| AppIcon | the own file | — | DigitalMetronome's: no drop shadow |
+| AppIcon | `appointment-new` | `use6074` `g5525-8` | AppointmentNew's |
 
 ## The shift
 
@@ -199,11 +191,12 @@ shift is the product's, not the file's.
 
 ## The icons
 
-| enumerator | 3.22 name | source sheet (src/fullcolor, or own/ beside this tool) | slot (x, y, w, h) | sheet sha256 | note |
+| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | note |
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/DigitalMetronome.svg` | — | `1248a1febe7dd39082afca4d4a014df3803e5367f3734187e1195419dc758cc9` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-15) |
+| AppIcon | `appointment-new` | `clocks.svg` | 296.062, 55.9963, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | AppointmentNew's file: the program icon (architect 2026-10-15); REMOVED (removed.tsv): g6800; TEXT TO OUTLINES: 24 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
+| AppointmentNew | `appointment-new` | `clocks.svg` | 296.062, 55.9963, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | NEW: Warp (architect 2026-10-15: the red slice reads as a speedometer); REMOVED (removed.tsv): g6800; TEXT TO OUTLINES: 24 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | BboxPrev | `go-first` | `navigation-icons.svg` | 456, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
@@ -215,7 +208,6 @@ shift is the product's, not the file's.
 | DialogError | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | DialogInformation | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` |  |
 | DialogOkApply | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
-| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `1248a1febe7dd39082afca4d4a014df3803e5367f3734187e1195419dc758cc9` | OWN FILE, not Adwaita's: Warp (architect 2026-10-15), below |
 | DocumentOpen | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
 | DocumentRevert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
 | DocumentSave | `document-save` | `cabinets.svg` | 696, 50, 48, 48 | `abefcd60460b10ac8be532acb78197132f8e90b3db97e6d3812c555914f0517f` | the floppy retired (architect 2026-10-14) |

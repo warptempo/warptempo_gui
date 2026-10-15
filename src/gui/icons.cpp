@@ -116,7 +116,7 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
     if (px <= 0) return;
     Faces& f = faces_for(icon, px);
     if (!f.disabled) {
-        // THE SHADOW MASK IS THE LIVE RASTER'S ALPHA, which the window's
+        // THE SILHOUETTE MASK IS THE LIVE RASTER'S ALPHA, which the window's
         // conversion keeps (svg_icon.h's convert_to_display). THE LIGHT MASK
         // IS THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down
         // (architect 2026-10-15, "the glyph's own line thickness"), composed
@@ -125,7 +125,7 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
         // raster, never rounded to a device px (1.25 px at 300 %, 0.58 at
         // 138) — onto a surface widened by the offset's ceiling so nothing it
         // carries past the cell is lost; only its alpha is read, so it is
-        // never converted. The two sRGB tones are converted after; the cache
+        // never converted. The three sRGB tones are converted after; the cache
         // is per device px and drop_rasters empties it at a scale change.
         LoadedSet& set = *loaded_set();
         const int index = static_cast<int>(icon);
@@ -136,7 +136,8 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
         Surface light(
             svg_icon::rasterise(doc, px, sx + 1.0, sy + 1.0, margin));
         f.disabled.reset(svg_icon::embossed_copy(
-            f.live.get(), light.get(), kCeDisabledLight, kCeDisabledShadow));
+            f.live.get(), light.get(), kCeDisabledLight, kCeDisabledShadow,
+            kCeDisabledInset));
         svg_icon::convert_to_display(f.disabled.get());
     }
     paint_raster(cr, f.disabled.get(), x, y);

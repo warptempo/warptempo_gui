@@ -6,10 +6,7 @@
 // adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/ artwork at its 48
 // slot, extracted as a standalone 48-unit file by
 // tools/icon_set_adwaita_322/, nothing redrawn and nothing from another
-// release — but ONE OWN FILE, the digital metronome (architect 2026-10-15:
-// Warp's glyph and the program icon, the architect's own drawing, NOT
-// Adwaita's, copied by the same tool; the set's README its provenance) —
-// EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
+// release — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
 // (architect 2026-10-15, "we'll go with none": a drop shadow is the live
 // glyph's raised fiction, and Cool Edit's flat bitmaps never had one — the
 // approved list tools/icon_set_adwaita_322/shadows.tsv); hard-coded (the `icons` device key and the Settings Icons row were
@@ -91,9 +88,10 @@ enum class Icon {
     // 1 / 2) and the Warp / Phase-reset pair (bare 3 / 4), one glyph each.
     AccessoriesDictionary, // Source — the primary source
     InputTablet,         // Target — the authoring surface
-    DigitalMetronome,    // Warp — a digital metronome, the tempo an
-                         // integer on its display (architect 2026-10-15;
-                         // the set's one own file, its README)
+    AppointmentNew,      // Warp — appointment-new's clock, its red slice
+                         // the tempo change (the architect: it reads as a
+                         // speedometer); the star and the shadows removed
+                         // (architect 2026-10-15)
     CameraPhoto,         // Phase Reset — the set's camera-photo, the phase
                          // snapshot: a reset re-grounds the synthesis phase
                          // to the source's at one frame and it decoheres
@@ -183,8 +181,8 @@ enum class Icon {
                          // arrow, the drag it arms (architect 2026-10-11:
                          // "a double-sided arrow with an up and a down";
                          // never a zoom glyph)
-    AppIcon,             // the caption's icon — the digital metronome,
-                         // DigitalMetronome's file byte for byte, the program
+    AppIcon,             // the caption's icon — appointment-new's clock,
+                         // AppointmentNew's file byte for byte, the program
                          // icon outside the window too (architect
                          // 2026-10-15; tools/app_icon/)
 };
@@ -200,7 +198,7 @@ inline constexpr int kIconCount = 61;
 inline constexpr const char* kIconNames[] = {
     "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
     "VcsCommit",
-    "VcsPull", "AccessoriesDictionary", "InputTablet", "DigitalMetronome",
+    "VcsPull", "AccessoriesDictionary", "InputTablet", "AppointmentNew",
     "CameraPhoto",
     "ZoomFitBest", "ZoomOriginal", "ZoomInY", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
@@ -291,7 +289,14 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // (cool_edit_paint.h's kCeDisabledShadow / kCeDisabledLight, the measured
 // bytes and the bitmaps) — two tones, no dark copy. The product builds the
 // same thing mechanically, for every glyph of the set
-// (svg_icon::embossed_copy): the shadow the live raster's ALPHA MASK, the
+// (svg_icon::embossed_copy), AND ADDS A THIRD TONE OF ITS OWN, not Cool
+// Edit's (architect 2026-10-15 evening): THE INSET RIM, 505050
+// (kCeDisabledInset), on the silhouette's pixels the light copy does not
+// reach — a one-unit band inside the silhouette along its top-left edges,
+// so the shadow line falls down and to the right as the pressed case goes;
+// inside the silhouette because a dark copy peeking out up-left grew the
+// glyph. The silhouette the live raster's ALPHA MASK (the body grey where
+// the light copy overlaps it, the rim where it does not), the
 // light copy THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down
 // (architect 2026-10-15, "the glyph's own line thickness": one of the file's
 // 48 user units, seat_px / 48 device px — 1.25 at 300 %, 0.58 at 138 —

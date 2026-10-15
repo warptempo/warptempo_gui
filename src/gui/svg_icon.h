@@ -72,19 +72,25 @@ cairo_surface_t* rasterise(const Document& doc, int px, double shift_x = 0.0,
 // file, each a 48-unit root.
 double unit_px(const Document& doc, int px);
 
-// THE EMBOSSED COPY — Cool Edit's disabled glyph (icons.h's THE DISABLED
-// GLYPH, architect 2026-10-15): Windows' DSS_DISABLED emboss of the glyph's
-// silhouette, built from TWO MASKS, each a raster's ALPHA ALONE (its
-// coverage, so antialiased edges stay soft; colors are never read): `live`,
-// the glyph's own raster, and `light`, the same drawing rasterised already
-// translated by its offset (rasterise's shift and margin — the offset is the
-// drawing's, antialiased exactly, never a shifted raster). A NEW surface the
-// caller owns, `light`'s size (at least `live`'s), holding the `light` mask
-// filled with `light_rgb` under the `live` mask filled with `shadow_rgb`, both
-// at (0, 0) — a premultiplied OVER of the two flat tones (each a straight
-// 0xRRGGBB), std::nearbyint at each channel (the rounding doctrine).
+// THE EMBOSSED COPY — the disabled glyph (icons.h's THE DISABLED GLYPH,
+// architect 2026-10-15): Windows' DSS_DISABLED emboss of the glyph's
+// silhouette as Cool Edit draws it, plus the product's own inset rim, built
+// from TWO MASKS, each a raster's ALPHA ALONE (its coverage, so antialiased
+// edges stay soft; colors are never read): `live`, the glyph's own raster
+// (S), and `light`, the same drawing rasterised already translated by its
+// offset (L: rasterise's shift and margin — the offset is the drawing's,
+// antialiased exactly, never a shifted raster). A NEW surface the caller
+// owns, `light`'s size (at least `live`'s), both masks at (0, 0), holding
+// three flat tones (each a straight 0xRRGGBB) premultiplied at their
+// coverages: `light_rgb` at L·(1 − S), the copy outside the silhouette;
+// `shadow_rgb` at min(S, L), the silhouette's body; `inset_rgb` at
+// max(0, S − L), the silhouette's pixels the copy does not reach — a rim
+// one offset wide INSIDE S along its top-left edges. The footprint is
+// S + L·(1 − S), the two-tone emboss's: the rim never grows the glyph.
+// std::nearbyint at each channel (the rounding doctrine).
 cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
-                               uint32_t light_rgb, uint32_t shadow_rgb);
+                               uint32_t light_rgb, uint32_t shadow_rgb,
+                               uint32_t inset_rgb);
 
 // THE WINDOW'S COPY (architect 2026-10-08, display_transform.h's head): an
 // icon's own inks are sRGB, as every authored color, so on the tablet's

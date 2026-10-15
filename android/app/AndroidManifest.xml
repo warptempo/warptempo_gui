@@ -29,10 +29,10 @@
   <!-- The OTG stick is M6's, and a device without one must still install. -->
   <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
-  <!-- android:icon is the launcher and recents icon: the digital
-       metronome, the caption's icon and Warp's glyph,
+  <!-- android:icon is the launcher and recents icon: Adwaita 3.22's
+       appointment-new clock, the caption's icon and Warp's glyph,
        assets/icons/adwaita-3.22/AppIcon.svg (architect 2026-10-12; the
-       metronome since 2026-10-15),
+       clock since 2026-10-15),
        rasterised antialiased over the button case's gradient, the adaptive icon's background layer
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the sizes and the ground's
        reason). The Linux desktop's launcher icon

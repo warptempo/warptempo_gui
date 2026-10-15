@@ -81,7 +81,8 @@ cairo_surface_t* rasterise(const Document& doc, int px, double shift_x,
 }
 
 cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
-                               uint32_t light_rgb, uint32_t shadow_rgb) {
+                               uint32_t light_rgb, uint32_t shadow_rgb,
+                               uint32_t inset_rgb) {
     cairo_surface_flush(live);
     cairo_surface_flush(light);
     const int w = cairo_image_surface_get_width(live);
@@ -110,15 +111,24 @@ cairo_surface_t* embossed_copy(cairo_surface_t* live, cairo_surface_t* light,
     for (int y = 0; y < oh; ++y) {
         auto* drow = reinterpret_cast<uint32_t*>(dst + y * dst_stride);
         for (int x = 0; x < ow; ++x) {
-            // The light copy under, the shadow copy OVER it: premultiplied
-            // OVER of two flat tones, each at its mask's coverage.
-            const double as = coverage(live, x, y);
-            const double al = coverage(light, x, y) * (1.0 - as);
+            // Three flat tones from the two coverages S (live) and L
+            // (light), premultiplied: the light copy OUTSIDE the silhouette,
+            // L·(1 − S); the silhouette's body where the copy overlaps it,
+            // min(S, L); THE INSET RIM, the silhouette's coverage the copy
+            // does not reach, max(0, S − L) — a one-unit band inside S along
+            // its top-left edges. The grey and the rim sum to S, so the
+            // footprint is the plain emboss's, S + L·(1 − S).
+            const double s = coverage(live, x, y);
+            const double l = coverage(light, x, y);
+            const double al = l * (1.0 - s);
+            const double ag = std::min(s, l);
+            const double ad = std::max(0.0, s - l);
             uint32_t word = static_cast<uint32_t>(
-                                std::nearbyint((as + al) * 255.0))
+                                std::nearbyint((s + al) * 255.0))
                             << 24;
             for (int shift = 16; shift >= 0; shift -= 8) {
-                const double v = channel(shadow_rgb, shift) * as +
+                const double v = channel(shadow_rgb, shift) * ag +
+                                 channel(inset_rgb, shift) * ad +
                                  channel(light_rgb, shift) * al;
                 word |= static_cast<uint32_t>(std::nearbyint(v)) << shift;
             }

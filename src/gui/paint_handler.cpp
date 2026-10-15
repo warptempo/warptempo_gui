@@ -982,8 +982,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // blue "Logging | Editing | Audio | Effects | Color" bar at the far right of
 // its menu row — reborn as the selectors; the bar's labelled buttons are gone
 // and the acts wear the architect's glyphs (icons.h: Source the dictionary,
-// Target the tablet, 2026-10-14; Warp the digital metronome, Phase Reset the
-// camera's phase snapshot, 2026-10-15). THE BAND'S OWN METRICS, NONE NEW: the program's case
+// Target the tablet, 2026-10-14; Warp appointment-new's clock, its red slice
+// a speedometer's, Phase Reset the camera's phase snapshot, 2026-10-15). THE BAND'S OWN METRICS, NONE NEW: the program's case
 // (render.h's program block), each pair's members abutting in their own pane
 // (its leader the pair's first at redesign_button_opens_icon_group), the
 // program's grooved recess between the panes, the Warp pane ending at the
@@ -1014,7 +1014,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource, icons::Icon::AccessoriesDictionary},
      {RedesignButton::ViewTarget, icons::Icon::InputTablet}},
-    {{RedesignButton::ViewWarp,   icons::Icon::DigitalMetronome},
+    {{RedesignButton::ViewWarp,   icons::Icon::AppointmentNew},
      {RedesignButton::ViewPhase,  icons::Icon::CameraPhoto}},
 };
 

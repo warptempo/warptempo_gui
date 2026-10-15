@@ -1,7 +1,8 @@
 enumerator	name	sheet	x	y	w	h	treatment
 AccessoriesDictionary	accessories-dictionary	accessories-dictionary.svg	296	50	48	48	-
 AccessoriesTextEditor	accessories-text-editor	accessories-text-editor.svg	296.062	39.9963	48	48	-
-AppIcon	-	DigitalMetronome.svg	-	-	-	-	own
+AppIcon	appointment-new	clocks.svg	296.0625	55.99633	48	48	text-to-outlines
+AppointmentNew	appointment-new	clocks.svg	296.0625	55.99633	48	48	text-to-outlines
 AudioXWav	audio-x-generic	audio-x-generic.svg	296.062	49.9963	48	48	-
 BboxNext	go-last	navigation-icons.svg	856	50	48	48	-
 BboxPrev	go-first	navigation-icons.svg	456	50	48	48	-
@@ -13,7 +14,6 @@ DialogCancel	process-stop	navigation-icons.svg	696	50	48	48	-
 DialogError	process-stop	navigation-icons.svg	696	50	48	48	-
 DialogInformation	dialog-information	dialog-information.svg	296	50	48	48	-
 DialogOkApply	edit-paste	copy-paste-tasks.svg	296	50	48	48	-
-DigitalMetronome	-	DigitalMetronome.svg	-	-	-	-	own
 DocumentOpen	document-open	folders.svg	1496	350	48	48	-
 DocumentRevert	document-revert	paper-sheets.svg	1900	654	48	48	-
 DocumentSave	document-save	cabinets.svg	696	50	48	48	-

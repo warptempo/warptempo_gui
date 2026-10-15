@@ -87,8 +87,16 @@ inline constexpr uint32_t kCeRingLight = 0xF8F8F8;
 // copy. Constants, as the rings are: face-independent. The product's offset
 // is the bitmap px read as the glyph's own line, ONE ICON UNIT (the drawing's
 // 1 / 48), not one Windows px (architect 2026-10-15).
+// THE INSET RIM, THE PRODUCT'S OWN THIRD TONE (architect 2026-10-15 evening),
+// not Cool Edit's: the silhouette's pixels the light copy does not reach —
+// a one-unit band INSIDE the silhouette along its top-left edges — in
+// kCeDisabledInset, the shadow line falling down and to the right as the
+// pressed case goes. Inside, never a dark copy peeking out up-left, which
+// grew the glyph. The tone his pick off a 70 / 60 / 50 / 40 / 30 / 20 / 10 /
+// 00 series judged on the glass the same evening.
 inline constexpr uint32_t kCeDisabledShadow = 0x808080;
 inline constexpr uint32_t kCeDisabledLight  = 0xF8F8F8;
+inline constexpr uint32_t kCeDisabledInset  = 0x505050;
 
 // -- THE CANVAS COLUMN'S CONSTANTS (METRICS §3, §4; 2026-10-09) ---------------
 // The bytes Cool Edit draws whatever its preset: THE VIEW BAR'S FIELD, black
@@ -130,8 +138,9 @@ inline constexpr uint32_t kCeRulerShadow    = 0x000000;
 //   DISABLED — the face its state gives, the glyph EMBOSSED (the caller's
 //              icons::draw_cased_disabled — Cool Edit's own disabled art,
 //              its silhouette in kCeDisabledShadow over a kCeDisabledLight
-//              copy of the drawing one icon unit right and down, icons.h's
-//              THE DISABLED GLYPH).
+//              copy of the drawing one icon unit right and down, with the
+//              product's kCeDisabledInset rim inside the silhouette's
+//              top-left edges, icons.h's THE DISABLED GLYPH).
 //   HOT      — none: Cool Edit's toolbar has no hover face (program_spec.h's
 //              case_hot_face).
 // Answers the glyph's shift in device px (one line when down).
