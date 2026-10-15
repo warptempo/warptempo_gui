@@ -6,8 +6,8 @@
 // a literal at the painter. The colors are the palette's (palette_file.h),
 // the chrome inheriting its Cool Edit tones (chrome_derive.h), and the
 // caption's the scheme's or the compiled caption (theme_file.h's
-// chrome_caption); the spec chooses shapes and seats, and names the scheme a
-// config with no `caption` line takes. It names NO FACE: the face is the
+// chrome_caption); the spec chooses shapes and seats, and names the default
+// scheme, the one the first-run templates spell. It names NO FACE: the face is the
 // product's one (gui_font.h's gui_live_face_set).
 //
 // THE CHROME ENDS AT THE MENU ROW (architect 2026-10-09 ~06:55, "chrome
@@ -46,9 +46,11 @@
 
 struct ChromeSpec {
     // THE CHROME'S OWN BUILT-IN SCHEME'S KEY (2026-10-08 ~11:10: the catalog
-    // key verbatim, `windows-storm`; palette_file.h's head): THE
-    // SCHEME A CONFIG WITH NO `caption` LINE TAKES (effective_scheme_name,
-    // 2026-10-08 ~18:15), which carries no keys under this chrome — the
+    // key verbatim, `windows-storm`; palette_file.h's head): THE DEFAULT
+    // SCHEME, the `caption=` value both first-run templates spell
+    // (kGuiDefaultSchemeKey, palette_file.h; the key required since architect
+    // 2026-10-14, a config with no `caption` line taking it 2026-10-08..14),
+    // which carries no keys under this chrome — the
     // compiled caption exactly. Storm since architect 2026-10-12 (it was
     // `windows-2000-standard`). It names no palette: the default palette is
     // Cool Edit's one "Midnight" under every chrome (2026-10-12,

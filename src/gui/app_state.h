@@ -3570,7 +3570,10 @@ struct SettingsPopupItem {
 // were dropped) — chrome_schemes.inc's rows, one per catalog entry of the
 // windows (26) and windows-plus (16) families, the windows-2000 chrome's own `windows-storm` among them
 // rather than beside them (palette_file.h's kGuiChromeSchemes; the Caption
-// row lists it first and the other 41 after it; the product's
+// row is a line editor since 2026-10-14, its list removed — it listed the
+// own scheme first and the other 41 after it — and Tab completes a typed
+// prefix over the 42 keys in the table's order, GuiSettingsEditor::
+// complete_preset_value; the product's
 // own `cool-edit-pro-me` of 2026-10-10 removed 2026-10-11).
 //
 // `Chrome` STOOD 2026-10-07..10-10 (the vocabulary choice) and LEFT WITH ITS
@@ -3594,9 +3597,9 @@ struct SettingsPopupItem {
 // against the kind's built-in names (GuiSettingsEditor::
 // complete_preset_value), each commit the text road's
 // (commit_device_setting) with its own difference: THE PRESET IS INSTALLED
-// LIVE AT THE OK, no card (the screen is the answer), and a pick of the
-// kind's default (the default palette, the chrome's own scheme) writes no
-// line.
+// LIVE AT THE OK, no card (the screen is the answer), and every pick writes
+// its key, the kind's default included (architect 2026-10-14: every device
+// key required; a pick of the default wrote no line until then).
 //
 // `True Colors` IS THE LAST ROW (architect 2026-10-08 ~05:35, his "show true
 // colors / sRGB color conversion", Windows' own "True Color" word): the sRGB

@@ -3517,24 +3517,23 @@ int gui_main(const char* argument) {
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE SCHEME the
-    // config names (a built-in; 2026-10-08 ~18:15) —
-    // its six caption keys (the caption alone since 2026-10-10) — or, with no
-    // `caption` line, THE LIVE CHROME'S OWN SCHEME, which carries none and
-    // paints the chrome's compiled caption (effective_scheme_name,
-    // scheme_record; chrome_caption, palette_file.h), every other chrome color
+    // config's `caption` key names (a built-in; 2026-10-08 ~18:15) —
+    // its six caption keys (the caption alone since 2026-10-10), or none for
+    // THE LIVE CHROME'S OWN SCHEME, which paints the chrome's compiled caption
+    // (scheme_record; chrome_caption, palette_file.h), every other chrome color
     // derived from the palette's Cool Edit tones (live_chrome_words,
-    // chrome_derive.h); and the palette the config
+    // chrome_derive.h); and the palette the config's `chrome` key
     // names (a built-in, one of Cool Edit's presets)
-    // — or, with no `chrome` line, THE DEFAULT PALETTE, Cool Edit's
-    // "Midnight" under every chrome (effective_palette_name, 2026-10-12) —
-    // for the program's, THE LIVE WORDS' SEED (2026-10-07: resolved here
+    // for the program's — both keys REQUIRED (architect 2026-10-14: the
+    // read refuses an absent line, so there is no default to resolve here) —
+    // THE LIVE WORDS' SEED (2026-10-07: resolved here
     // through palette_record and handed to the install explicitly —
     // render.h's install_palette) — the scheme resolved against the chrome
     // set above;
     // installed once, before the first paint. Every painter reads it through
     // palette() (render.h's palette block).
-    install_palette(palette_record(effective_palette_name(device_config.palette)),
-                    scheme_record(effective_scheme_name(device_config.scheme)));
+    install_palette(palette_record(device_config.palette),
+                    scheme_record(device_config.scheme));
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

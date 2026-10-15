@@ -120,9 +120,7 @@ void GuiSettingsEditor::open_prefilled(const char* key) {
     // autocomplete_value already performs — no parallel opener and no second
     // serializer. Seed `<key>=`, then let autocomplete_value fill the value
     // side through format_engine_setting_value / recall_gui_setting_value,
-    // which is byte-identical to what the writer writes except for the two
-    // color keys, which recall the effective preset where no line stands
-    // (architect 2026-10-14, recall_gui_setting_value); it leaves the cursor
+    // which is byte-identical to what the writer writes; it leaves the cursor
     // at the line end and no-ops on an unrecallable key, so the bare `<key>=` is
     // the honest fallback rather than an error. Its bool answer is the TAB
     // arm's question and means nothing here, so this caller drops it.
@@ -996,10 +994,10 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
     // THE TWO COLOR KEYS (architect 2026-10-14, "remove picker and preset
     // file road"; the Settings Chrome and Caption rows): a built-in's key
     // under its kind's one grammar owner (is_builtin_palette_name,
-    // is_builtin_scheme_name, palette_file.h), A PICK OF THE KIND'S DEFAULT
-    // WRITING NO LINE — the default palette, the chrome's own scheme: "no
-    // line for a chrome's own default of either kind" (the empty value,
-    // device_config.h) — and, unlike the path keys and like the font of
+    // is_builtin_scheme_name, palette_file.h), THE KEY WRITTEN WHATEVER THE
+    // PICK, the kind's default included (architect 2026-10-14: every device
+    // key required, the default spelled — a pick of the default wrote no line
+    // until then, device_config.h) — and, unlike the path keys and like the font of
     // 2026-10-09..10-12, APPLIED LIVE AT THE COMMIT, which is the OK's (or
     // Enter's), never a list row's (architect 2026-10-14, "OK alone";
     // settings_editor.h's head): the preset is installed and the screen
@@ -1017,11 +1015,8 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         }
         std::string& field = chrome ? app.device_config->palette
                                     : app.device_config->scheme;
-        const std::string_view no_line = chrome ? effective_palette_name({})
-                                                : effective_scheme_name({});
-        const std::string line = value == no_line ? std::string() : value;
-        if (line == field) { unchanged(); return true; }
-        field = line;
+        if (value == field) { unchanged(); return true; }
+        field = value;
         // ONE KIND MOVES: the other kind's live words stand.
         if (chrome) install_color_preset(palette_record(value), live_chrome_pick());
         else        install_color_preset(program_palette_words(), scheme_record(value));
@@ -1247,16 +1242,13 @@ bool GuiSettingsEditor::autocomplete_value() {
     // gui_scale, projects_repo, projects_path, chrome, caption — gui_scale
     // and the last four the device config's — per-tab trim / read_only)
     // read through recall_gui_setting_value — which produces byte-identical
-    // output to what a Ctrl+S would write, so recall and save never diverge,
-    // except that chrome and caption recall the effective preset where the
-    // device config holds no line (architect 2026-10-14).
+    // output to what a Ctrl+S (or, for a device key, the config's writer)
+    // would write, so recall and save never diverge.
     // A trim bound recalls as its actual frame (`tab_a_trim_begin=0`).
     // Only a truly unknown key is not recallable.
     //
     // THE RECALL PRESERVES EVERY BYTE OF A VALUE, NO UTF-8 EXCEPTION
-    // (architect 2026-08-02, the UTF-8 relaxation; the two color keys'
-    // effective default is the one departure, in WHICH value recalls, never
-    // in how bytes are kept). The seed below lands through
+    // (architect 2026-08-02, the UTF-8 relaxation). The seed below lands through
     // text_editor::replace_selection, whose filter now passes well-formed UTF-8
     // verbatim — and the free-text provenance values (title/bpm/notes/url/cover)
     // are exactly what the strict load takes verbatim

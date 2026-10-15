@@ -10,7 +10,9 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Nine keys live here and nowhere else:
+// piece (architect 2026-08-27). Seven keys live here and nowhere else,
+// EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
+// strictness paragraph below):
 //
 //   gui_scale=<percent>      the GUI's one scale axis, an integer [50, 1000]
 //   projects_repo=<host/path> the repository that is the PROJECTS HOME — the
@@ -25,9 +27,13 @@
 //                            catalog's others; is_builtin_scheme_name,
 //                            palette_file.h; a caption file's name until
 //                            2026-10-14), chosen by the Settings Caption
-//                            row; MAY BE ABSENT — the first run's state — meaning the
+//                            row; REQUIRED (architect 2026-10-14; absent
+//                            meant the chrome's own caption 2026-10-08..14),
+//                            the default SPELLED: both first-run templates
+//                            write `caption=windows-storm`
+//                            (kGuiDefaultSchemeKey, palette_file.h), the
 //                            chrome's own caption, the compiled caption
-//                            exactly (effective_scheme_name). Named `scheme`
+//                            exactly (scheme_record). Named `scheme`
 //                            until 2026-10-13 (architect 2026-10-11 ~03:05);
 //                            the struct's member keeps that name.
 //   chrome=<name>            THE CHROME PRESET the program (and, through the
@@ -36,10 +42,13 @@
 //                            (`cool-edit-midnight`, `cool-edit-xp-blue`, ...;
 //                            is_builtin_palette_name, palette_file.h; a
 //                            chrome file's name until 2026-10-14), chosen by
-//                            the Settings Chrome row; MAY BE ABSENT
-//                            — the first run's state — meaning the default,
-//                            Cool Edit's "Midnight"
-//                            (effective_palette_name, 2026-10-09). Named
+//                            the Settings Chrome row; REQUIRED (architect
+//                            2026-10-14; absent meant the default
+//                            2026-10-07..14), the default SPELLED: both
+//                            first-run templates write
+//                            `chrome=cool-edit-midnight`, Cool Edit's
+//                            "Midnight" (kGuiDefaultPaletteKey,
+//                            palette_file.h). Named
 //                            `palette` until 2026-10-13, and the key `chrome`
 //                            of 2026-10-07 to 2026-10-10 was another thing
 //                            (retired); the struct's member keeps `palette`.
@@ -204,10 +213,16 @@
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the seven
-// keys and each at most once, every key REQUIRED but `caption` and `chrome`
-// (`chrome` absent is the default chrome, `caption` absent (2026-10-08) the
-// chrome's own caption, each the one spelling of that state, which the writer
-// emits by leaving the line out), one canonical spelling per
+// keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
+// deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
+// means something's wrong with the config or the setup" — `caption` and
+// `chrome` were the two that might be absent 2026-10-07..14, the absence
+// spelling the default; the default is SPELLED since, the writer emitting
+// every line and the first-run templates naming `caption=windows-storm` and
+// `chrome=cool-edit-midnight`, so an absent line is the shared scanner's
+// missing-required-key refusal like any other, with no migration and no
+// launch-time repair — the planner edits the two devices' configs at the
+// install), one canonical spelling per
 // value, and the FIRST error is fatal at startup with a blunt terminal line
 // naming the path and the offending line. No repair, no partial apply, no
 // silent fallback to defaults — a fallback would silently discard a value the
@@ -254,13 +269,15 @@
 // writes — it is the program's own.
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
-// fallbacks, for the four required keys: a successful read always assigns
-// them. THE ABSENT-ABLE KEYS' DEFAULTS ARE THEIR ABSENCES' MEANINGS
-// (the palette 2026-10-07; the scheme 2026-10-08): `scheme` and `palette`
-// (the struct's members of the `caption` and `chrome` keys) empty (no line:
-// the chrome's own). Both backends stamp a
-// default-constructed struct's (GuiPlatform::device_config_defaults), so the
-// first-run file of either device names no caption or chrome line. THE ROLE'S
+// fallbacks, for every key: each is required, so a successful read always
+// assigns them. `scheme` and `palette` (the struct's members of the
+// `caption` and `chrome` keys) are EMPTY as construction state, never a
+// read's (an empty value is refused); both backends' templates
+// (GuiPlatform::device_config_defaults) SPELL THE DEFAULTS into them
+// (architect 2026-10-14: every key required) — kGuiDefaultSchemeKey and
+// kGuiDefaultPaletteKey (palette_file.h), `windows-storm` and
+// `cool-edit-midnight` — so the first-run file of either device names its
+// caption and its chrome. THE ROLE'S
 // DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
 // (architect 2026-10-10: the program never invents a device's role), so a
 // first run stamps a file WITHOUT `role` and its read-back refuses the launch
@@ -279,10 +296,12 @@
 // The members are in the writer's order.
 //
 // THE SCHEME AND THE PALETTE ARE THEIR KEYS VERBATIM (the palette
-// 2026-10-07, the scheme 2026-10-08); the install resolves the palette and the scheme (install_palette, render.h, through
-// effective_palette_name and effective_scheme_name, palette_file.h) and
+// 2026-10-07, the scheme 2026-10-08); the install resolves the palette and
+// the scheme (install_palette, render.h, through palette_record and
+// scheme_record, palette_file.h) and
 // derives the chrome's colors from the palette's Cool Edit tones and the
-// scheme's caption keys, or with none the compiled caption
+// scheme's caption keys, or with none — the chrome's own scheme — the
+// compiled caption
 // (live_chrome_words, chrome_derive.h; chrome_caption, palette_file.h).
 // THE DEVICE'S ROLE (architect 2026-10-10; the key's ruling is in the head's
 // list): what this device may do to the projects repository. `Unset` is
@@ -297,17 +316,13 @@ struct DeviceConfig {
     std::string projects_repo;
     std::string projects_path;
     std::string last_project;
-    // THE SCHEME, UNSET BY DEFAULT (2026-10-08 ~18:15): empty while the
-    // config has no `caption` line, which RESOLVES AT EACH INSTALL to the live
-    // chrome's own scheme (effective_scheme_name, palette_file.h:
-    // `windows-storm`, the compiled caption exactly) — never written
-    // back.
+    // THE SCHEME, the `caption` key's built-in name (2026-10-08 ~18:15):
+    // required since 2026-10-14, so empty only before a read; the templates
+    // spell the default, `windows-storm` (kGuiDefaultSchemeKey).
     std::string scheme;
-    // THE PALETTE, UNSET BY DEFAULT (architect 2026-10-07): empty while the
-    // config has no `chrome` line, which RESOLVES AT EACH INSTALL to the
-    // default palette (effective_palette_name, palette_file.h: Cool Edit's
-    // `cool-edit-midnight` under every chrome, 2026-10-12) — never written
-    // back.
+    // THE PALETTE, the `chrome` key's built-in name (architect 2026-10-07):
+    // required since 2026-10-14, so empty only before a read; the templates
+    // spell the default, `cool-edit-midnight` (kGuiDefaultPaletteKey).
     std::string palette;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
@@ -605,9 +620,10 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
-// both stamp no scheme, palette or role line (the role is
-// never invented, so the first run's read-back refuses on it — the struct's
-// role paragraph), kDefaultProjectsRepo and
+// both stamp `caption=windows-storm` and `chrome=cool-edit-midnight` (the
+// defaults spelled, every key required since 2026-10-14) and no role line
+// (the role is never invented, so the first run's read-back refuses on it —
+// the struct's role paragraph), kDefaultProjectsRepo and
 // a blank
 // last_project),
 // so a first run on either device lands a

@@ -18,8 +18,8 @@
 
 namespace {
 
-// The file's key set, in on-disk order — the writer's order, the required
-// set below its subset (SEVEN keys since 2026-10-12, `icons` and
+// The file's key set, in on-disk order — the writer's order, and THE
+// REQUIRED SET, every one of them (SEVEN keys since 2026-10-12, `icons` and
 // `font` gone; nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
 // `chrome` gone; nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09,
 // `icons` appended; seven 2026-10-08, `theme` gone; the
@@ -30,11 +30,14 @@ namespace {
 // last_project. The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
-// schema paragraph owns that ruling). The writer's list and the required
-// list stand side by side below, the second the first less its two keys
-// that may be absent (2026-10-07; until then one list served both, so no
-// key could be written and not demanded — the absent-able keys are the
-// deliberate exception, each saying what its absence means).
+// schema paragraph owns that ruling). ONE LIST SERVES BOTH, the writer's
+// order and the scanner's presence check (architect 2026-10-14, every key
+// required): from 2026-10-07 to 2026-10-14 a second, required list stood
+// beside it less `caption` and `chrome`, whose absence spelled the default;
+// the default is spelled in the line since, so no key can be written and not
+// demanded. `role` (2026-10-10) was the first appended key to be required:
+// "if one of these lines is not in place, it means something's wrong with
+// the config or the setup" (architect), the rule every key follows now.
 //
 // THE KINDS' KEYS RENAMED (architect 2026-10-11 ~03:05, go 2026-10-13): the
 // key `caption` (formerly `scheme`) FOLLOWS last_project, the caption's six,
@@ -53,21 +56,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "chrome",
     "role",
 };
-// THE REQUIRED SET — every key above but the two that may be ABSENT
-// (architect 2026-10-07): `caption`, absent meaning the chrome's own caption
-// (windows-storm), and `chrome`, absent meaning the default chrome (Cool Edit's
-// "Midnight"). `role` (2026-10-10) IS REQUIRED, the one key
-// appended since that is: "if one of these lines is not in place, it means
-// something's wrong with the config or the setup" (architect). The scanner
-// checks presence against this list and duplicates against every key.
-constexpr const char* kDeviceConfigRequiredKeys[] = {
-    "gui_scale",
-    "projects_repo",
-    "projects_path",
-    "last_project",
-    "role",
-};
-
 } // namespace
 
 std::string format_gui_scale_percent(int percent) {
@@ -96,13 +84,9 @@ std::filesystem::path device_config_path() {
 std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
-        // AN UNSET CHROME OR CAPTION WRITES NO LINE (2026-10-07; the caption
-        // 2026-10-08): its one spelling is the line's absence, so the file
-        // keeps following the own caption or the default chrome.
-        if (std::string_view(key) == "chrome" && cfg.palette.empty())
-            continue;
-        if (std::string_view(key) == "caption" && cfg.scheme.empty())
-            continue;
+        // EVERY KEY WRITES ITS LINE but an unset role (architect
+        // 2026-10-14: the caption and the chrome, which wrote none while
+        // unset 2026-10-07..14, are required and always named).
         // AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
         // alone carries it, and the program never invents a role — the
         // read-back then refuses on the required key (device_config.h).
@@ -214,9 +198,11 @@ std::expected<DeviceConfig, std::string> read_device_config(
         // each under its one grammar owner (is_builtin_scheme_name,
         // is_builtin_palette_name, palette_file.h) — any other word, a former
         // file's name included, the ordinary bad-value hard fail with no
-        // migration. An EMPTY value is refused like any other non-name: the
-        // unset key is the line's absence. An old `scheme=` or `palette=`
-        // line is the unknown key below.
+        // migration. An EMPTY value is refused like any other non-name, and
+        // an ABSENT line is the scanner's missing-required-key refusal
+        // (architect 2026-10-14: every key required, the default spelled —
+        // `caption=windows-storm`, `chrome=cool-edit-midnight`). An old
+        // `scheme=` or `palette=` line is the unknown key below.
         if (key == "caption") {
             if (!is_builtin_scheme_name(value)) {
                 return bad_value(ln, key, value, kSchemeGrammarReason);
@@ -232,7 +218,8 @@ std::expected<DeviceConfig, std::string> read_device_config(
             return {};
         }
         // THE ROLE (architect 2026-10-10): one of the two words, required
-        // (kDeviceConfigRequiredKeys); any other word the launch's hard fail.
+        // like every key (kDeviceConfigKeys); any other word the launch's
+        // hard fail.
         if (key == "role") {
             if (value == kDeviceRoleAuthor) {
                 out.role = GuiDeviceRole::Author;
@@ -245,7 +232,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
         }
         return warptempo_parse::prefix_line_error(
             ln, "unknown key '" + key + "'");
-    }, kDeviceConfigRequiredKeys);
+    }, kDeviceConfigKeys);
     if (!scan) return std::unexpected(std::move(scan.error()));
     return out;
 }

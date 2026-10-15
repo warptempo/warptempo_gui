@@ -158,10 +158,10 @@ struct GuiSettingsEditor {
     // Open the settings prompt PREFILLED with `<key>=<current value>`, the
     // settings dropdown's item click. Identical to open() plus the same recall
     // autocomplete_value performs, so there is no second serializer: the
-    // value is what the writer writes, byte for byte, EXCEPT on the two color
-    // keys (`chrome`, `caption`), which recall the EFFECTIVE preset where the
-    // device config holds no line (recall_gui_setting_value, the one recorded
-    // exception). The cursor rests at
+    // value is what the writer writes, byte for byte, the two color keys
+    // (`chrome`, `caption`) included — required since 2026-10-14, so their
+    // line is the preset on screen (recall_gui_setting_value). The cursor
+    // rests at
     // the end of the line, ready to be edited or replaced; an unknown or
     // unrecallable key opens with the bare `<key>=` so the surface still tells
     // the user which key they picked.
@@ -175,10 +175,6 @@ struct GuiSettingsEditor {
     // editing — byte-identical to what a Ctrl+S would write, UTF-8 provenance
     // text included since the 2026-08-02 relaxation (the old non-ASCII
     // exception is closed; the remaining edge is stated at the definition).
-    // The two color keys (`chrome`, `caption`) are the one departure: with no
-    // line in the device config they recall the effective default preset
-    // (architect 2026-10-14; recall_gui_setting_value), which the writer
-    // omits.
     // No-op when the value side is already non-empty, when there is no `=`, or
     // when the key is unknown — EXCEPT on the path key (2026-09-02), where
     // a NON-EMPTY value side is a path prefix and Tab completes it against the
@@ -244,8 +240,8 @@ private:
     // ambiguous prefix stops at the common prefix (`caption=w` stops at
     // `windows-`; he accepts that a prefix completer cannot show the list),
     // and no advance — no match, or a prefix already at the common prefix —
-    // is a Tab that walks. The empty value side keeps recalling the effective
-    // preset (the recall above). The commit's grammar and its live apply
+    // is a Tab that walks. The empty value side keeps recalling the live
+    // preset's key (the recall above). The commit's grammar and its live apply
     // (commit_device_setting, install_color_preset) are unchanged. Returns
     // whether the buffer advanced; `key` is the trimmed key, `value` the raw
     // value side less its leading whitespace (ltrim_ws's reasons).

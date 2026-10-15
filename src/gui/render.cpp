@@ -6,7 +6,7 @@
 #include "gui_font.h"
 #include "text_shape.h"
 #include "theme_file.h"
-#include "palette_file.h"   // kGuiPaletteRoles, effective_palette_name
+#include "palette_file.h"   // kGuiPaletteRoles
 #include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "chrome_derive.h"  // live_chrome_words (the chrome off the palette)

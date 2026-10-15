@@ -1,6 +1,5 @@
 #include "palette_file.h"
 
-#include "device_config.h"     // DeviceConfig (the defaults)
 #include "theme_file.h"        // kGuiThemeRoles (the chrome's members)
 #include "chrome_derive.h"     // derive_chrome: the keys' mapping check
 #include "cool_edit_derive.h"  // the Cool Edit block's tones: the coverage check
@@ -215,25 +214,10 @@ static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
     return b.words[palette_role_index("invalid_label")] ==
            b.words[palette_role_index("center")];
 }));
-// The device config's default (both templates stamp a default-constructed
-// struct's): no palette and no scheme — the default palette and the live
-// chrome's own scheme.
-static_assert(DeviceConfig{}.palette.empty());
-static_assert(DeviceConfig{}.scheme.empty());
 // (THE CHOICE ROWS' ORDERS' PROOFS — each a permutation of its table, its
 // first row the kind's default — went with the orders, 2026-10-14.)
 
 } // namespace
-
-std::string_view effective_palette_name(std::string_view palette) {
-    return palette.empty() ? std::string_view(kGuiDefaultPaletteKey) : palette;
-}
-
-std::string_view effective_scheme_name(std::string_view scheme) {
-    return scheme.empty()
-               ? std::string_view(live_chrome_spec().own_scheme)
-               : scheme;
-}
 
 GuiPaletteWords palette_record(std::string_view name) {
     const GuiBuiltinPalette* b = builtin_palette(name);

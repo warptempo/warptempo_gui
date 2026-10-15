@@ -114,12 +114,11 @@ struct TrimRange {
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
 // active palette is the device config's `chrome` — a built-in's key, chosen
 // by the Settings Chrome row (architect 2026-10-14; files from a `chromes/`
-// folder were read 2026-10-07..14) — or, with no
-// `chrome` line, the default palette, Cool Edit's "Midnight" under every
-// chrome (2026-10-12); the active SCHEME, the caption's six keys, is its
-// `caption` — a built-in's key, chosen by the Settings Caption row
-// — or, with no line, the live chrome's own, which carries no keys
-// and paints the chrome's COMPILED CAPTION (palette_file.h's
+// folder were read 2026-10-07..14), the first-run default Cool Edit's
+// "Midnight" under every chrome (2026-10-12); the active SCHEME, the
+// caption's six keys, is its `caption` — a built-in's key, chosen by the
+// Settings Caption row, the first-run default the live chrome's own, which
+// carries no keys and paints the chrome's COMPILED CAPTION (palette_file.h's
 // kGuiCaptionOwn: Windows Storm's, architect 2026-10-12). There is
 // NO LEVEL (architect 2026-10-04): a dark look, like any look made official,
 // would be a chrome variant of its own (2026-10-08). The app computes no
@@ -525,10 +524,9 @@ struct GuiChromePick {
 // scheme's keys, or with none the compiled caption
 // (chrome_caption(), palette_file.h). AT LAUNCH the palette the config's `chrome`
 // key names and the scheme its `caption` key names (2026-10-08; built-ins
-// alone since 2026-10-14, is_builtin_palette_name and is_builtin_scheme_name
-// — or, with no line, the default palette and the live chrome's own scheme,
-// effective_palette_name and effective_scheme_name, palette_file.h: gui_main
-// resolves them with palette_record and scheme_record and passes the two).
+// alone since 2026-10-14, is_builtin_palette_name and is_builtin_scheme_name,
+// both keys required: gui_main resolves them with palette_record and
+// scheme_record, palette_file.h, and passes the two).
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
 // `chrome` and `caption` keys name THE ACTIVE PRESETS and give the words at
 // launch; the Settings Chrome and Caption rows' commit installs a preset's

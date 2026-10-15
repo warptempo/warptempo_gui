@@ -3,6 +3,7 @@
 #include "canvas_sink.h"   // GuiCanvasDrawList, the GL canvas's frame
 #include "gui_font.h"
 #include "gui_main.h"
+#include "palette_file.h"   // kGuiDefaultSchemeKey, kGuiDefaultPaletteKey: the template's defaults
 #include "render.h"   // window_frame_px, paint_window_sizing_frame
 
 #include <android/asset_manager.h>
@@ -563,6 +564,11 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_path = (std::filesystem::path(dir) / "projects").string();
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
+    // THE DEFAULTS SPELLED (architect 2026-10-14: every key required):
+    // `caption=windows-storm` and `chrome=cool-edit-midnight`, the laptop's
+    // template the same (palette_file.h owns both names).
+    cfg.scheme        = kGuiDefaultSchemeKey;
+    cfg.palette       = kGuiDefaultPaletteKey;
     // NO ROLE (architect 2026-10-10): the program never invents one, so the
     // first start's read-back refuses on the required `role` key;
     // `warptempo_sync setup` writes `role=author` (GuiDeviceRole,

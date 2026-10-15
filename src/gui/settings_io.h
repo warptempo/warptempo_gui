@@ -149,13 +149,11 @@ std::string format_settings_text(
 // config file carries, through that file's own serializers
 // (format_gui_scale_percent, device_config.h)
 // or verbatim for the two
-// free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`),
-// the same "recall
-// and the file can never diverge" rule the
-// `.settings` keys keep, only against a different file — EXCEPT the two
-// color keys (`chrome` and `caption`, 2026-10-14), which recall THE
-// EFFECTIVE PRESET, the kind's default when the file has no line (the
-// definition). (`last_project` is not editable and recalls nothing: it is
+// free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`)
+// and the two color keys (`chrome` and `caption`, 2026-10-14; required
+// since the same day, so the line is always there to recall), the same
+// "recall and the file can never diverge" rule the
+// `.settings` keys keep, only against a different file. (`last_project` is not editable and recalls nothing: it is
 // the program's own.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

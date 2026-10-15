@@ -98,7 +98,9 @@
 // DISPLAY NAME (Cool Edit's own, "Default" for its "(Default Scheme)") and
 // THE ELEVEN. THE DEFAULT PALETTE IS ONE UNDER EVERY CHROME, Cool Edit's
 // "Midnight" (`cool-edit-midnight`, kGuiDefaultPaletteKey; architect
-// 2026-10-12, replacing "Default") — THE PROGRAM'S ELEVEN whenever the device config names no palette
+// 2026-10-12, replacing "Default") — THE PROGRAM'S ELEVEN both first-run
+// templates spell (`chrome=cool-edit-midnight`; the key required since
+// architect 2026-10-14, a config naming no palette until then taking it)
 // (the per-chrome default palettes of 2026-10-07 to 2026-10-09 retired the
 // same day: the program is no chrome's).
 //
@@ -118,8 +120,10 @@
 // (install_chrome_pick, at the Caption row's commit). THE CHROME'S OWN
 // SCHEME — the one its `own_scheme` names (chrome_spec.h: `windows-storm`) —
 // CARRIES NO KEYS under that chrome (scheme_record): the compiled caption
-// exactly (kGuiCaptionOwn, the scheme's six by construction), so a config
-// naming no scheme and one naming the chrome's own paint alike. THE
+// exactly (kGuiCaptionOwn, the scheme's six by construction) — THE DEFAULT
+// CAPTION both first-run templates spell (`caption=windows-storm`,
+// kGuiDefaultSchemeKey; the key required since architect 2026-10-14, a
+// config naming no scheme until then taking it). THE
 // INACTIVE CAPTION'S THREE are each optional in a pick, an absent one
 // FOLLOWING the active caption's (GuiChromePick's accessors); every built-in
 // records them (the generator's head).
@@ -323,8 +327,10 @@ inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 };
 // THE DEFAULT PALETTE, ONE UNDER EVERY CHROME (the head): Cool Edit's
 // "Midnight" (architect 2026-10-12; "Default" is one of the others now) —
-// the palette a config with no `chrome` line takes
-// (effective_palette_name).
+// the `chrome=` value both first-run templates SPELL
+// (GuiPlatform::device_config_defaults; every device key required,
+// architect 2026-10-14 — a config with no `chrome` line took it
+// 2026-10-07..14).
 inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-midnight";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
@@ -393,20 +399,23 @@ inline constexpr const GuiChromePick& chrome_caption() {
 constexpr bool is_builtin_scheme_name(std::string_view name) {
     return builtin_scheme(name) != nullptr;
 }
+// THE DEFAULT CAPTION (the head): the chrome's own scheme, `windows-storm`
+// (chrome_spec.h's own_scheme) — the `caption=` value both first-run
+// templates SPELL (GuiPlatform::device_config_defaults; every device key
+// required, architect 2026-10-14 — a config with no `caption` line took it
+// 2026-10-08..14). kGuiDefaultPaletteKey's twin.
+inline constexpr const char* kGuiDefaultSchemeKey =
+    kChromeSpecWin2000.own_scheme;
 // Whether `name` is a CHROME'S OWN SCHEME'S key (a ChromeSpec's own_scheme,
 // chrome_spec.h).
 constexpr bool is_chrome_own_scheme(std::string_view name) {
     return name == kChromeSpecWin2000.own_scheme;
 }
 
-// THE ACTIVE PRESETS THE INSTALL TAKES (architect 2026-10-07; the scheme
-// 2026-10-08): the device config's key as written, or — EMPTY, no line —
-// for a palette THE DEFAULT PALETTE, `cool-edit-midnight` under every chrome
-// (2026-10-12), and for a scheme THE LIVE CHROME'S OWN (chrome_spec.h's
-// own_scheme of live_chrome_spec(): `windows-storm`). The struct
-// keeps the empty value, so the file never pins a default.
-std::string_view effective_palette_name(std::string_view palette);
-std::string_view effective_scheme_name(std::string_view scheme);
+// THE ACTIVE PRESETS THE INSTALL TAKES ARE THE DEVICE CONFIG'S KEYS AS
+// WRITTEN (architect 2026-10-14: every key required, the default spelled):
+// effective_palette_name and effective_scheme_name, which resolved an
+// absent line to the default 2026-10-07..14, went with the absent state.
 
 // THE `chrome` AND `caption` KEYS' REFUSALS (the device config's reader and
 // the two rows' commit): a word naming no built-in of its kind.

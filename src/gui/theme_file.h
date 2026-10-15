@@ -38,8 +38,8 @@
 // tooltip's border, and the six of the caption), the chrome's painters
 // written against them; the values are no longer Windows'.
 //
-// THE COMPILED CAPTION (chrome_caption, palette_file.h): the caption a config
-// with no `caption` line paints, the six caption keys of the chrome's own
+// THE COMPILED CAPTION (chrome_caption, palette_file.h): the caption the
+// default `caption=windows-storm` paints, the six caption keys of the chrome's own
 // scheme (chrome_spec.h's own_scheme), which since architect 2026-10-12 is
 // `windows-storm`. It is read straight from the generated built-in table
 // (chrome_schemes.inc), never retyped.
