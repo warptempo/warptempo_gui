@@ -15,8 +15,10 @@
 #   --no-default-features --features raster-images
 #                       no text (an icon of the period draws no <text>, and
 #                       the default pulls a font database and system fonts),
-#                       no svgz; raster-images for an embedded <image> (GNOME
-#                       2.30's sheets carry PNGs).
+#                       no svgz; raster-images for an embedded <image>: no
+#                       file of the shipped set (Adwaita 3.22) carries one,
+#                       and the feature stays (a pinned build of both devices,
+#                       changed by its own ruling).
 #   --profile production  the workspace's own profile: LTO, codegen-units 1
 #                       (1.40 MB in the product's stripped .so against 2.93 MB
 #                       for --release). Rust never contracts a float multiply

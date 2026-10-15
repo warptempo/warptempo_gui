@@ -283,8 +283,8 @@
 // first run stamps a file WITHOUT `role` and its read-back refuses the launch
 // on the missing key — the file is already there for the hand to add
 // `role=author` or `role=mirror` to. (The `icons` and `font` keys left
-// 2026-10-12: GNOME 2.28 and Liberation Sans are the only options,
-// hard-coded.)
+// 2026-10-12: one icon set — Adwaita 3.22 since 2026-10-14 — and
+// Liberation Sans, hard-coded.)
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -370,19 +370,18 @@ inline constexpr const char* kDefaultProjectsRepo =
 // height waveform_area's floor answers (the arithmetic and the guard at
 // waveform_area, main.cpp).
 //
-// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 592
-// Windows px of window at 100 % (408 in the `h` view) the icon row — Cool
-// Edit's band since 2026-10-09, its twenty-two standing members in seven
-// panes round the program's 23-W case (fifteen in the view, its history
-// stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07) — no
-// longer fits, and its flush-right view group covers the panes to its left
-// (the overflow rule at kIconRowViewGroup, paint_handler.cpp). The tablet's
-// 2304-px panel holds the row whole in both states up to about 389 % —
-// 1356 + 420 device px at 300 % outside the view (the arithmetic is at
-// paint_icon_row, paint_handler.cpp, its one statement, re-derived
-// 2026-10-09 for the program's band; the earlier fit ceilings and their
-// succession are git history) — and past that ceiling the overflow rule
-// answers. The
+// THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: below 606
+// Windows px of window at 100 % (422 in the `h` view) the icon row — Cool
+// Edit's band since 2026-10-09, its twenty-one standing members in eight
+// panes round the program's 23-W case (fourteen in the view, its history
+// stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
+// view pairs two panes since 2026-10-14) — no longer fits, and its
+// flush-right view pairs cover the panes to their left (the overflow rule at
+// kIconRowViewPairs, paint_handler.cpp). The tablet's 2304-px panel holds
+// the row whole in both states up to about 380 % — 1356 + 456 device px at
+// 300 % outside the view (the arithmetic is at paint_icon_row,
+// paint_handler.cpp, its one statement, re-derived 2026-10-14 for the two
+// view panes) — and past that ceiling the overflow rule answers. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
 // kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A

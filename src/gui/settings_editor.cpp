@@ -364,7 +364,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         if (gv.c == app.active_audio_view) { unchanged(); return true; }
         // THE BODY BARE `t` USED TO CALL (no editor-state guard); it flips
         // S<->T. Bare `t` itself was deleted with its view lamp 2026-09-15;
-        // the view selectors reach this same body now. The column stays
+        // bare 1 / 2 reach this same body now. The column stays
         // where it is, both columns pairing with both audio views (architect
         // 2026-10-12, S+P's return), and no coincidence auto-select runs — a
         // typed audio view is no column entry.
@@ -402,7 +402,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             return true;
         }
         if (gv.c == app.active_markers_view) { unchanged(); return true; }
-        // The absolute column entry the four view selectors take
+        // The absolute column entry bare 3 / 4 take
         // (GuiActiveViews::select_active_markers_view), in the audio view
         // that stands: both columns pair with both audio views (architect
         // 2026-10-12, S+P's return — a typed `P` crossed to target first
@@ -554,7 +554,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         // The bit's one setter, shared with bare `o` (the contract is at
         // GuiInputHandler::set_tab_read_only, input_handler.h): it writes the
         // named band and, when that band is the active one, damages the top
-        // strip so the icon row's Lock glyph stops showing the state the tab
+        // strip so the icon row's Read-Only glyph stops showing the state the tab
         // just left. applied() below damages the modal area alone, so a typed
         // self-lock or self-unlock would otherwise close the editor onto a
         // stale padlock.

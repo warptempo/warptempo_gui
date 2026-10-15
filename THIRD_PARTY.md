@@ -6,7 +6,7 @@ laptop builds its own (`CMakeLists.txt`), the tablet's libraries are cross-built
 `android/NOTES.md` §6) and the APK is installed on one tablet only. The licence texts live in each pinned source; this
 file is the list. Libraries the laptop's binary loads from the system at run time (cairo, HarfBuzz, FreeType, fftw,
 Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. The faces and the icons are data, not
-code: `fonts/README.md`, `assets/icons/gnome-2.28/README.md` and `tools/app_icon/README.md` (the launcher's one drawing) carry their provenance and
+code: `fonts/README.md`, `assets/icons/adwaita-3.22/README.md` and `tools/app_icon/README.md` (the launcher's one drawing) carry their provenance and
 licence texts. The face is compiled into `warptempo_gui` (and packed into the APK): Liberation Sans and Liberation Sans Bold
 (2.1.5; SIL Open Font License 1.1, the text in `fonts/LICENSE-Liberation-OFL.txt`, since 2026-10-09, the product's only face since
 2026-10-12); the repository distributes no binary.

@@ -37,7 +37,7 @@ struct Faces {
 
 struct LoadedSet {
     std::array<svg_icon::Document, kIconCount> docs;
-    std::array<std::pair<float, float>, kIconCount> shifts{};   // kGnome228Shifts
+    std::array<std::pair<float, float>, kIconCount> shifts{};   // kIconShifts
     std::map<std::pair<int, int>, Faces>      rasters;
 };
 
@@ -90,10 +90,10 @@ std::optional<std::string> load_svg_set(std::string_view set) {
         auto doc = svg_icon::parse(found->second);
         if (!doc) return label + file + ": " + doc.error();
         loaded.docs[static_cast<size_t>(i)] = std::move(*doc);
-        if (set == "gnome-2.28")
-            for (const IconShift& s : kGnome228Shifts)
-                if (std::string_view(s.name) == kIconNames[i])
-                    loaded.shifts[static_cast<size_t>(i)] = {s.dx, s.dy};
+        // The one set's shift table, matched by name (kIconShifts).
+        for (const IconShift& s : kIconShifts)
+            if (std::string_view(s.name) == kIconNames[i])
+                loaded.shifts[static_cast<size_t>(i)] = {s.dx, s.dy};
     }
     loaded_set() = std::move(loaded);
     return std::nullopt;

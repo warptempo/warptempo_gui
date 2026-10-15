@@ -915,11 +915,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              working zoom centered on the playhead;
     //                              arms the hold posture
     //   - f (no mods)            → toggle the follow lamp (toggle_follow)
-    //   - 1/2/3/4 (no mods)      → the absolute view selectors (S+W / S+P /
-    //                              T+W / T+P), the ONE road onto both view
-    //                              axes: each composes the S/T chokepoint
-    //                              switch_active_audio_view_to with the column
-    //                              entry GuiActiveViews::select_active_markers_view
+    //   - 1/2/3/4 (no mods)      → the absolute selectors, one axis each
+    //                              (Source / Target / Warp / Phase Reset), the
+    //                              ONE road onto the two view axes: 1 / 2 the
+    //                              S/T chokepoint switch_active_audio_view_to,
+    //                              3 / 4 the column entry
+    //                              GuiActiveViews::select_active_markers_view
     //   - Tab/Shift+Tab/IsoLeftTab → cycle marker focus, the landing's camera
     //                              the landing owner's (Viewport::land_subject)
     //   - Ctrl+Tab               → switch A/B tab (the other escape)
@@ -1129,80 +1130,42 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Ctrl+N, Delete and the flag editor's Return open, each admitted in
     // W+target with the cent step's re-land contract in its own tail.
 
-    // (BARE `t` TOGGLED VIEW-DOMAIN (S <-> T) HERE FROM 2026-08-01 TO
-    // 2026-09-15, when the architect deleted the key whole with its icon-row
-    // view lamp: source/target is reachable through the four view selectors
-    // alone now (the keys and the icon row's view group). handle_active_audio_view_toggle is the body
-    // it called — it stays, and the selectors below are its only remaining
-    // keyboard road.)
+    // (Bare `t` and `p`, the S <-> T and W <-> P toggles, are gone: the two
+    // axes are reachable through the four selectors below alone — the keys
+    // and the icon row's two view pairs. handle_active_audio_view_toggle is
+    // the body `t` called; it stays.)
 
-    // BARE 1 / 2 / 3 / 4 ARE ABSOLUTE VIEW SELECTORS (architect 2026-08-01):
-    // `1` is S+W, `2` is S+P, `3` is T+W, `4` is T+P (architect 2026-10-12,
-    // when S+P returned: the four renumbered source first, warp before phase
-    // within each audio view). (The backtick was a fifth, S+M, from
-    // 2026-09-19 until the magnification level markers column's deletion,
-    // architect 2026-09-23.) They name a COMBINATION rather than flipping an axis, so pressing the key for the combination you are already in is a
-    // consumed no-op — that is the whole difference from the deleted `t` and
-    // `p` toggles. The four are the product's WHOLE view space, both columns
-    // pairing with both audio views, and the icon row's view group
-    // synthesizes the four keys in the same order.
+    // BARE 1 / 2 / 3 / 4 ARE ABSOLUTE SELECTORS, ONE AXIS EACH (architect
+    // 2026-10-14, the icon row's two radio pairs): `1` is Source and `2`
+    // Target (the audio view, the markers view untouched), `3` is Warp and
+    // `4` Phase Reset (the markers view, the audio view untouched); the view
+    // is the product of the two, both columns pairing with both audio views.
+    // Each names a VALUE rather than flipping its axis, so pressing the key
+    // for the value already standing is a consumed no-op, and the icon row's
+    // pairs synthesize the four keys in the same order.
     //
-    // COMPOSED, NEVER RE-SPELLED: each axis is applied by the very chokepoint
-    // its own key used to use — switch_active_audio_view_to for S/T (the body
-    // bare `t` flipped through before its 2026-09-15 deletion) and
-    // GuiActiveViews::select_active_markers_view for the column (the absolute
-    // form of bare `p`'s toggle, deleted the same day) — and only when that
-    // axis actually differs, which the S/T
-    // chokepoint's own same-view no-op decides rather than a guard spelled
-    // here. Every invariant those two own therefore
-    // arrives by construction: the target-view entry validation and its error
-    // notice, the domain translation of viewport / playhead / zoom, the flag
-    // editor teardown and the iter wipe, the selection clear, the coincidence
-    // auto-select, and the synchronous plate rebuild. There is
-    // no third view-switch route to keep in step with the other two.
-    //
-    // THE ORDER IS AUDIO FIRST, THEN MARKERS, and it is decided by the
-    // COINCIDENCE AUTO-SELECT rather than by taste. Exactly one of the two
-    // switches runs that scan — the W/P one (the entry chokepoint list is at
-    // auto_select_marker_at_playhead; `t` is not on it) — and the scan converts
-    // marker frames into the ACTIVE AUDIO DOMAIN before comparing them with the
-    // playhead. So when both axes change, the scan must run after the audio
-    // switch has translated the domain, or it would compare source frames
-    // against a playhead about to be re-expressed in target frames and select
-    // the wrong marker (or none). Audio-then-markers puts the scan last and
-    // makes it read the FINISHED combination. The reverse order has no
-    // compensating advantage: `t` performs no selection scan of its own that
-    // would want the final column.
-    //
-    // A REFUSED AUDIO SWITCH STOPS THE WHOLE PRESS. Entering target view can
-    // fail its validation gate (the tripwire class, unreachable from
-    // program-written input, silent on screen), and half-applying an ABSOLUTE
-    // selector would leave
-    // the user in a combination they did not ask for. The verdict is read off
-    // the state the handler writes rather than through a new return value —
-    // one owner, no signature change.
-    //
-    // THE COLUMN ENTRY IS ASKED BEFORE THE AUDIO SWITCH AND RUN AFTER IT:
-    // the column change is what this press asked for, so it is decided off
-    // the state the press started in, and the entry
-    // (GuiActiveViews::select_active_markers_view) runs its own tail. (The
-    // audio switch moved the column itself while S+P was no state, 2026-09-21
-    // to 2026-10-12, which is why the question is asked first; it moves none
-    // now, and the order stays the safe one.) A refused target entry stops
-    // the press ahead of the column, so the view the press started in stays
-    // whole.
+    // COMPOSED, NEVER RE-SPELLED: each axis is applied by its own chokepoint —
+    // switch_active_audio_view_to for S/T and
+    // GuiActiveViews::select_active_markers_view for the column — the S/T
+    // chokepoint's own same-view no-op deciding that axis, and the column's
+    // entry run only when the column differs. Every invariant those two own
+    // therefore arrives by construction: the target-view entry validation and
+    // its error notice, the domain translation of viewport / playhead / zoom,
+    // the flag editor teardown and the iter wipe, the selection clear, the
+    // coincidence auto-select (the column entry's; the audio switch runs none,
+    // auto_select_marker_at_playhead), and the synchronous plate rebuild.
+    // There is no third view-switch route to keep in step with the other two.
+    // A refused target entry (the tripwire class, unreachable from
+    // program-written input, silent on screen) leaves the view as it was.
     if ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
          key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
         !ctrl && !shift && !alt) {
-        const char want_audio =
-            (key == GuiKeys::Digit1 || key == GuiKeys::Digit2) ? 'S' : 'T';
-        const char want_markers =
-            (key == GuiKeys::Digit2 || key == GuiKeys::Digit4) ? 'P' : 'W';
-        const bool column_changes = (app.active_markers_view != want_markers);
-        switch_active_audio_view_to(want_audio);
-        if (app.active_audio_view != want_audio) return;   // refused
-        if (column_changes) {
-            active_views.select_active_markers_view(want_markers);
+        if (key == GuiKeys::Digit1 || key == GuiKeys::Digit2) {
+            switch_active_audio_view_to(key == GuiKeys::Digit1 ? 'S' : 'T');
+        } else {
+            const char want_markers = (key == GuiKeys::Digit3) ? 'W' : 'P';
+            if (app.active_markers_view != want_markers)
+                active_views.select_active_markers_view(want_markers);
         }
         // INSIDE THE `h` VIEW THE SWITCH FLUSHES ITS OWED REBUILD (2026-10-13):
         // the rebuild's history arm replaces app.history_mode.flags with the
@@ -1221,7 +1184,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (architect): the padlock cannot lock a tab under a lit lamp, because
     // that state left the mode's own cells refusing with the TAB's sentence
     // and bare `i` — off the read-only list — unable to put the lamp out. The
-    // refusal is the gate's, on kIterationLockCard, with the icon row's Lock
+    // refusal is the gate's, on kIterationLockCard, with the icon row's Read-Only
     // button greyed beside it (iteration_lock_greys, app_state.h); nothing
     // here forks, the chord never arriving under a lit lamp.
     // Pure view-state mutation: not undoable, not dirty;
@@ -1691,9 +1654,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // trim / whole-song span); C remains the DIRECT working-zoom-and-center
     // gesture, while
     // the Tab family changes no zoom (2026-08-05), so `0` is
-    // the one command that reaches the whole song. DIGITS 1, 2
-    // and 3 are the ABSOLUTE VIEW SELECTORS since 2026-08-01 (their block is
-    // up beside the axis handlers they compose); 4..9 are unbound. SHIFT+0 is RESET TRIM (architect 2026-09-22; its arm
+    // the one command that reaches the whole song. DIGITS 1 TO 4
+    // are the ABSOLUTE VIEW SELECTORS, one axis each (architect 2026-10-14;
+    // their block is up beside the axis handlers they compose); 5..9 are
+    // unbound. SHIFT+0 is RESET TRIM (architect 2026-09-22; its arm
     // is further down this body, where the trim bracket family stood).
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         run_overview_command();
@@ -3945,9 +3909,9 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // seats that cursor where the readout says it is. The trim bar paints
     // from the trim's source-frame bounds every frame, crossing them into
     // whichever domain is live, so the flip owes it nothing.
-    // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped 2026-10-14: the four
-    // absolute view selectors on bare 1/2/3/4 (and the icon row's view group,
-    // which synthesizes them),
+    // EVERY CALLER OF THIS CHOKEPOINT GETS IT, re-greped 2026-10-14: the
+    // absolute Source / Target selectors on bare 1 / 2 (and the icon row's
+    // Source / Target pair, which synthesizes them),
     // the settings editor's `active_audio_view=` GUI-key twin, bare `i`'s own
     // crossing into target, and the undo/redo restore's audio-view tag.
     // (Shift+S called it until 2026-10-12, when the crossing chord learned to
@@ -4257,7 +4221,7 @@ void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     // The contract — sole writer, band resolved by tab, damage only when the
     // named band is the active one, history-less — is at the declaration
     // (input_handler.h). The two callers are the bare-`o` arm above, which the
-    // icon row's Lock button reaches by synthesizing that press, and the
+    // icon row's Read-Only button reaches by synthesizing that press, and the
     // settings editor's per-tab read_only commit.
     ViewState& band = (tab_view == 'B') ? app.tab_b : app.tab_a;
     if (band.read_only == value) return;

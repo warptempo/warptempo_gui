@@ -336,13 +336,13 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // replaces S/T, W/P and A/B wholesale. So the rule now
 // sits at every site that assigns app.active_audio_view / active_markers_view /
 // active_tab_view — grep those three names and this list is what comes back:
-//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (the four
-//     view selectors, the settings `active_audio_view=` key, bare `i`'s own
+//   * GuiInputHandler::switch_active_audio_view_to — the S/T writer (the
+//     Source / Target selectors, bare 1 / 2, the settings `active_audio_view=` key, bare `i`'s own
 //     and the undo restore's tag; Shift+S since 2026-10-12 and the
 //     phase-reset propagate paste since 2026-10-14 stay in their audio view),
 //     below its own refusals.
 //   * GuiActiveViews::switch_active_markers_view_to — the W/P writer, below
-//     its same-mode refusal (the four view selectors
+//     its same-mode refusal (the Warp / Phase Reset selectors, bare 3 / 4,
 //     and the settings key through select_active_markers_view, the Shift+S
 //     crossing and the phase-reset
 //     propagate paste, which reach this helper direct, and
@@ -365,7 +365,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // handle_active_audio_view_toggle each lost (or never had) a call of their own
 // to the writer they delegate to, so there is ONE spelling of the rule per
 // write.
-// The four view selectors, the icon row's view group (the two icon-row
+// The four view selectors, the icon row's view pairs (the two icon-row
 // VIEW LAMPS deleted 2026-09-15) and the settings keys all compose those
 // writers and inherit it.
 //
@@ -1440,8 +1440,9 @@ struct GuiInputHandler {
     //   Tooltips), the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, the walk lamp and Cumulative in the iteration
     //   group's — kIconRowHistoryStandIns), the history opener
-    //   right-anchored (kIconRowHistoryOpener) and the VIEW GROUP's four
-    //   flush right (kIconRowViewGroup, Source+Phase since 2026-10-12) — 21
+    //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
+    //   flush right in two panes (kIconRowViewPairs, Source / Target and
+    //   Warp / Phase Reset since 2026-10-14) — 21
     //   standing outside the `h` view (the four stand-ins publishing empty
     //   rects) and 14 inside it (the stand-ins in, the two authoring groups
     //   they replace out, and the view's hide leaving Open Project and
@@ -1471,7 +1472,7 @@ struct GuiInputHandler {
     // — inside the view every member of either row whose chord the view
     // refuses in every session; row 8 whole under a modal that owns the
     // bottom row (modal_owns_bottom_row, paint_bottom_strip); and a window
-    // too narrow for the icon row, where a member the view group's overflow
+    // too narrow for the icon row, where a member the view pairs' overflow
     // covers whole publishes the empty rect and one it covers in part only
     // its painted columns (paint_icon_row). (The bottom row's cluster swap,
     // which published zero rects for whichever four it hid, went with the
@@ -3789,7 +3790,7 @@ private:
     // then leaving target view landed the phase-reset column on W), so the
     // switch carries either column across the flip.
     // The SET-TO form exists for the callers that name a view rather than
-    // an axis: the four absolute view selectors, — since 2026-08-28 —
+    // an axis: the Source / Target selectors (bare 1 / 2), — since 2026-08-28 —
     // Undo::restore_history_entry, which restores the entry's own S/T tag
     // (UndoEntry::audio_view) exactly as it restores the tab and the column,
     // each through that axis's owner, and — since
@@ -3856,7 +3857,7 @@ private:
 
     // The read-only bit's one setter (2026-09-04, after the two roads
     // had drifted apart on damage). Two roads write the
-    // bit: bare `o` on the active tab, which the icon row's Lock button
+    // bit: bare `o` on the active tab, which the icon row's Read-Only button
     // reaches by synthesizing that press, and the settings editor's
     // `tab_a_read_only=` / `tab_b_read_only=` commit, which may name either
     // tab. Both come here, so the damage is decided once. `tab_view` is 'A' or
@@ -3865,11 +3866,12 @@ private:
     // live field.
     //
     // What it does: writes the named band's bit, and invalidates the top strip
-    // when that band is the active one. The damage is for the icon row's Lock
-    // button, whose glyph swaps closed-for-open on this flag with no stashed
-    // bit behind it, so the tick comparator cannot catch it; the button's lamp
-    // and the toolbar faces that also move with the flag do ride the
-    // comparator and merely arrive after this. A write to the parked band
+    // when that band is the active one. The damage is for the icon row's
+    // Read-Only button, whose lamp and glyph (the padlock pair, architect
+    // 2026-10-14) move with the flag: both ride the tick comparator's stashed
+    // bits (redesign_button_selected, redesign_button_glyph), and the damage
+    // repaints them with the write rather than a tick after, the toolbar
+    // faces that also move with the flag arriving on the comparator. A write to the parked band
     // changes no painted pixel and so takes no damage at all.
     //
     // The tab row's own lane took a second damage call until 2026-08-29, on

@@ -286,7 +286,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // local walk's frozen-stack premise) and both are re-derived by this
     // history.
     //
-    // Bare 1 / 2 / 3 / 4, the ABSOLUTE view selectors (S+W / S+P / T+W / T+P). They are
+    // Bare 1 / 2 / 3 / 4, the ABSOLUTE selectors, one axis each (Source /
+    // Target / Warp / Phase Reset, architect 2026-10-14). They are
     // admitted for exactly the reason `t` and `p` were, and by exactly the same
     // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
     // switch_active_markers_view_to) and nothing else, so they reach no
@@ -2779,7 +2780,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // UNCHANGED, which is why they need no rule of their own: both synthesize a
 // chord and call on_key (finish_chrome_press_release and
 // finish_dropdown_release, each at its own lift),
-// so Save, Undo, Redo, Render and the view group drop at this gate exactly as
+// so Save, Undo, Redo, Render and the view pairs drop at this gate exactly as
 // their keys do. AND A MENU'S ITEMS DO IT FOR REAL SINCE 2026-08-08, not
 // merely in principle: a command menu OPENS inside the view (the architect
 // narrowed toggle_dropdown's lockout to the Settings anchor, whose items reach
@@ -2967,7 +2968,8 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     const bool is_revert_project = is_revert_project_key(key, mods);
     // THE VIEW SWITCH, in EXACTLY the shape the ordinary dispatch requires —
     // bare-exact, read off its own arm in on_key: the four absolute selectors
-    // on bare 1/2/3/4, which compose the `t`/`p` handler bodies
+    // on bare 1/2/3/4 (one axis each, architect 2026-10-14), which run the
+    // `t`/`p` handler bodies
     // and are their only road since the architect deleted the individual
     // `t`/`p` keys and their view lamps 2026-09-15. Admitting a shape the
     // dispatch does not bind would admit a press that then does nothing, which
@@ -7619,7 +7621,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // lit."). It needs NO STAMP to be, and had one for a few hours of that
         // day: THE W/P SWITCH IS ONE OF THE ACTS THE ITERATION LOCK REFUSES
         // (the four absolute view selectors, bare 1/2/3/4, at
-        // iteration_lock_key_blocked; the view group's four buttons grey with
+        // iteration_lock_key_blocked; the view pairs' four buttons grey with
         // the key carding the sentence), so the column cannot move while the lamp stands
         // and `iteration_column_lit` reads the LIVE column. There is no
         // second lamp, no second key and no column term on this button — and

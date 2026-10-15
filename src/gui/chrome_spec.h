@@ -157,8 +157,8 @@ struct ChromeSpec {
 // BUTTON Windows' 75 x 23 with 7-px pads; THE TOOLTIP comctl32's 2-px pad
 // (tmp/reactos-tooltips.png); THE DROPDOWN Windows' popup menu, 17-px items
 // one px inside the frame, hanging from the menu bar's bottom row over the
-// program frame's top row (dropdown_hang_y); THE ICONS GNOME 2.28's scalable drawings
-// (icons.h's head; architect 2026-10-12). (Explorer's
+// program frame's top row (dropdown_hang_y); THE ICONS Adwaita 3.22's drawings
+// (icons.h's head; architect 2026-10-14). (Explorer's
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)
 inline constexpr ChromeSpec kChromeSpecWin2000 = {

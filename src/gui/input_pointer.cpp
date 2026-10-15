@@ -110,21 +110,18 @@ struct ToolbarChord {
     // face a leave touches, and the pen latch holds that row after a lift —
     // and the arm stays because it is the toggles' own reading: armed, the
     // selected radio reads press, release exactly as a toggle does, its
-    // pressed face held under the tip. THE ICON ROW'S VIEW
-    // GROUP is the flag's one user since the tab pair's deletion
-    // (2026-10-01); the walk lamp, read-only, history and
-    // Cumulative are TOGGLES and press through in both directions, which is why
-    // this is a flag and not `selected` alone. (THE BOTTOM ROW'S PLAY / STOP
-    // PAIR was a radio for hours on 2026-08-15, and the S/T, W/P and WALK pairs
-    // were radios until 2026-09-04; all four collapsed into single stateful
-    // buttons, which is the only reason any of them ever needed the flag: two
-    // buttons over one chord. The consume itself is untouched and stayed
-    // GENERIC throughout — keyed on the flag plus the lamp, with no id list
-    // anywhere.)
+    // pressed face held under the tip. THE ICON ROW'S TWO VIEW
+    // PAIRS are the flag's one user (architect 2026-10-14: Source / Target and
+    // Warp / Phase Reset, each member its own absolute chord); the walk lamp,
+    // read-only, history and Cumulative are TOGGLES and press through in both
+    // directions, which is why this is a flag and not `selected` alone. The
+    // consume is GENERIC — keyed on the flag plus the lamp, with no id list
+    // anywhere — so a pair's lit member, pressed again, stays down: no release,
+    // no re-press, not greyed.
     //
-    // THE VIEW GROUP'S THREE ARE RADIOS for the LIFT'S SILENCE: their chords
-    // are the ABSOLUTE selectors, which are IDEMPOTENT — on_key's own handler
-    // already makes a press on the current combination a no-op, so dispatching
+    // THE VIEW PAIRS' FOUR ARE RADIOS for the LIFT'S SILENCE: their chords
+    // are ABSOLUTE selectors, each of one axis, which are IDEMPOTENT — on_key's
+    // own handler already makes a press on the axis's current value a no-op, so dispatching
     // would be harmless rather than wrong. The flag keeps the lift on the lit
     // button a plain consumed nothing, the radio's own reading, rather than
     // leaning on the act's idempotence. (It once kept the CLAIM too, for a
@@ -237,12 +234,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // when a double tap on the flag does it, and the double-click is safe since
     // the first click arms and waits and the grab gate doubled. The editor's two
     // roads, the Return key and the double-click on the flag, are unchanged.)
-    // Row 4 — the icon row. (THE TWO VIEW LAMPS stood here from 2026-09-04,
-    // the radio-pair collapse, to 2026-09-15 — one button per axis where
-    // IconS/IconT and IconW/IconP were four radios over the bare `t`/`p`
-    // chords, each a plain TOGGLE carrying NO radio flag. The architect
-    // deleted the whole category with those two keys; the four view selectors
-    // below are the axes' only keyboard road now.)
+    // Row 4 — the icon row. (The view axes' buttons are the two radio pairs
+    // below, architect 2026-10-14, each member its own absolute chord; the
+    // bare `t` / `p` toggles are gone, and the four selectors are the axes'
+    // only keyboard road.)
     // (THE SHOW TRIM REGION BUTTON'S ROW IS DELETED — 2026-09-22, with its
     // button and its bare `[` chord: the architect uses the tablet's pen,
     // which reaches the trim bar, so a toggle for the waveform overlay at rest
@@ -409,8 +404,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // dispatches on both edges because the icon row's band claim sits ABOVE the
     // mode's pointer gate (the rows' presses are covered by the KEYBOARD gate
     // instead, which admits `h` through handle_history_mode_key one line before
-    // the allowlist). It stands right-anchored, one group gap left of the
-    // view group, since 2026-10-06 (kIconRowHistoryOpener, paint_handler.cpp).
+    // the allowlist). It stands right-anchored, one groove left of the
+    // view pairs, since 2026-10-06 (kIconRowHistoryOpener, paint_handler.cpp).
     {RedesignButton::IconHistory, GuiKeys::H, false, false, false, false},     // bare h
     // THE WALK LAMP (architect 2026-08-18 as a radio pair, one button since the
     // 2026-09-04 collapse) — which walk the `h` view's lane reads: Git is the
@@ -503,21 +498,21 @@ constexpr ToolbarChord kToolbarChords[] = {
     // refused below the mode gate exactly as the key is, Revert's own shape.
     {RedesignButton::IconLoadInPlace,
      GuiKeys::Apostrophe, false, false, false, false},  // bare '
-    // THE VIEW GROUP, the icon row's last, flush at its right edge (architect
-    // 2026-10-01): the ABSOLUTE view
-    // selectors Source+Warp, Source+Phase, Target+Warp, Target+Phase on bare
-    // 1 / 2 / 3 / 4 (architect 2026-10-12, when S+P returned), in
-    // the painter's order (kIconRowViewGroup, paint_handler.cpp). Everything
+    // THE VIEW PAIRS, the icon row's last, flush at its right edge (architect
+    // 2026-10-14): Source and Target on bare 1 / 2 (the audio view, the
+    // markers view untouched), Warp and Phase Reset on bare 3 / 4 (the markers
+    // view, the audio view untouched), in the painter's order
+    // (kIconRowViewPairs, paint_handler.cpp). Everything
     // the selectors own arrives by construction through on_key's own handler —
-    // the audio-first-then-markers order, the refused-target-entry abort of
-    // the whole press, the coincidence auto-select, the read-only admission
-    // (they are navigation), the modal swallow. There is no second route to
+    // each key's one axis, the refused target entry, the coincidence
+    // auto-select, the read-only admission (they are navigation), the modal
+    // swallow. There is no second route to
     // keep in step. RADIOS, with the row's click face (the flag's
     // justification is at the struct's `radio` column).
-    {RedesignButton::ViewSW,     GuiKeys::Digit1, false, false, false, true}, // bare 1
-    {RedesignButton::ViewSP,     GuiKeys::Digit2, false, false, false, true}, // bare 2
-    {RedesignButton::ViewTW,     GuiKeys::Digit3, false, false, false, true}, // bare 3
-    {RedesignButton::ViewTP,     GuiKeys::Digit4, false, false, false, true}, // bare 4
+    {RedesignButton::ViewSource, GuiKeys::Digit1, false, false, false, true}, // bare 1
+    {RedesignButton::ViewTarget, GuiKeys::Digit2, false, false, false, true}, // bare 2
+    {RedesignButton::ViewWarp,   GuiKeys::Digit3, false, false, false, true}, // bare 3
+    {RedesignButton::ViewPhase,  GuiKeys::Digit4, false, false, false, true}, // bare 4
     // The BOTTOM ROW (the transport half architect-ratified 2026-08-11 as the
     // touch arc's first surface; the marker-walk group added 2026-08-15, the
     // four SINGLE-MARKER VERBS moved down from the icon row 2026-08-18, and
@@ -556,7 +551,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // THE COLLAPSE REMOVES THE PROBLEM RATHER THAN SOLVING IT AGAIN: two
     // buttons over one chord was the whole difficulty, and one button has no
     // wrong half. The flag is deleted from these rows and the GENERIC radio
-    // consume is untouched — the view group's four use it.
+    // consume is untouched — the view pairs' four use it.
     // bare Space, toggle_playback and playback_launch_playable are untouched
     // by construction, as they were under the radio.
     //
@@ -1374,7 +1369,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // hand-answered with the ONE other anchor, and the Ctrl+Q admission it rested
 // on is unchanged; the hand entries were three until the Navigation anchor left
 // with its menu on 2026-08-15):
-//   LIVE — the icon row's view group, ViewSW/ViewSP/ViewTW/ViewTP (bare 1/2/3/4, the admitted
+//   LIVE — the icon row's view pairs, ViewSource/ViewTarget/ViewWarp/ViewPhase (bare 1/2/3/4, the admitted
 //   view selectors), Save (its lift Ctrl+Shift+S in this mode since
 //   2026-10-10, Ctrl+S before — save_button_publishes — the
 //   save-and-commit checkpoint act, wearing the "Save and Commit" face — LIVE
@@ -6178,7 +6173,7 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // PLACED BELOW THE FOUR REDESIGNED ROWS' BAND CLAIMS ON PURPOSE. Those rows
     // dispatch their buttons as synthesized CHORDS through on_key, so they are
     // already covered by the keyboard gate — Save, Undo, Redo, Render and the
-    // view group drop there exactly as their keys do, with no second membership to
+    // view pairs drop there exactly as their keys do, with no second membership to
     // keep in step — and letting them through here is what keeps that single
     // coverage true. ONE PRESS ROUTE IN THESE ROWS DISPATCHES NO CHORD
     // (re-derived 2026-08-06, again 2026-08-15 when the Navigation anchor left,

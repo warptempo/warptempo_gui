@@ -11,8 +11,8 @@
 // face: fontconfig is never consulted on the laptop and the tablet has
 // nothing to consult.
 //
-// ONE FACE, HARD-CODED (architect 2026-10-12: "making Liberation Sans and
-// GNOME 2.28 the only options, hard-coded, and drop their config keys"; the
+// ONE FACE, HARD-CODED (architect 2026-10-12: "making Liberation Sans ...
+// the only options, hard-coded, and drop their config keys"; the
 // Tahoma and FreeSans sets and the `font` device key with its Settings row
 // were removed that day, docs/engineering/closed_questions.md). Liberation
 // Sans is Arial's metric twin, a stand-in for Arial (architect 2026-10-09:

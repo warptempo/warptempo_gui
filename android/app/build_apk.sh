@@ -125,9 +125,9 @@ for f in $FONT_FILES; do
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done
-# THE BUNDLED ICON SET (architect 2026-10-06; GNOME 2.28 alone since
-# 2026-10-12, icons.h's kIconSet): each folder under the
-# repository's assets/icons/ copied whole
+# THE BUNDLED ICON SET (architect 2026-10-06; one set since 2026-10-12,
+# Adwaita 3.22 since 2026-10-14, icons.h's kIconSet): each folder under the
+# repository's assets/icons/ (assets/icons/adwaita-3.22/ alone) copied whole
 # as SVG into the package's assets/icons/<set>/, which aapt2 link's -A packs
 # (deflated) as the APK's `icons/<set>/` asset directory. The app reads them in
 # place at launch, never copying them out (icons.h's load_svg_set;
@@ -191,12 +191,12 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 compile + link ----------------------------------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, GNOME 2.28's BPM icon
-# (assets/icons/gnome-2.28/MusicNote16th.svg) over the button case's 20-band
+# layers per density, the set's audio-x-generic, the caption's and the BPM
+# button's note (assets/icons/adwaita-3.22/AppIcon.svg) over the button case's 20-band
 # gradient under Midnight's Face (architect 2026-10-12), written by
 # tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
 # comment states the sizes; nothing here renders). Every GUI pixel is painted
-# by cairo, the roster's icons included (the GNOME 2.28 set's SVG assets above,
+# by cairo, the roster's icons included (the Adwaita 3.22 set's SVG assets above,
 # rasterised by resvg, svg_icon.cpp, and copied by cairo); the app declares no
 # @string, no style, no res/values. aapt2 compile turns the
 # directory into res.zip, which link takes as a positional input.

@@ -18,6 +18,7 @@
 #include "engine/engine_geometry.h"  // kN, kRs — the seed frame mirror
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -580,8 +581,8 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 // comparator from thrashing under a standing modal. TWO PRODUCERS of an empty
 // rect: THE MODAL YIELD (since 2026-08-18; the contract is at
 // paint_bottom_strip's yield branch), since 2026-10-01 the icon row's
-// OVERFLOW RULE at a window too narrow for the row, a member the view group
-// covers whole (kIconRowViewGroup), since 2026-10-05 the icon row's
+// OVERFLOW RULE at a window too narrow for the row, a member the view pairs
+// cover whole (kIconRowViewPairs), since 2026-10-05 the icon row's
 // HISTORY STAND-INS, a member that does not stand in the current state
 // (kIconRowHistoryStandIns), and since 2026-10-07 THE `h` VIEW'S HIDE on
 // both toolbars, a member whose chord the view refuses in every session
@@ -702,21 +703,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     // the toolbar": the File menu's line parts Open and Revert from Quit,
     // the toolbar's Open and Save touch; redesign_button_opens_icon_group),
     // then Undo's group behind its separator as before. It wears
-    // DocumentOpen, the sets' document-open (icons.h).
+    // DocumentOpen, the set's document-open (icons.h).
     {RedesignButton::OpenProject, icons::Icon::DocumentOpen},
     {RedesignButton::Save,       icons::Icon::DocumentSave},
     {RedesignButton::Undo,       icons::Icon::EditUndo},
     {RedesignButton::Redo,       icons::Icon::EditRedo},
     {RedesignButton::Render,     icons::Icon::MediaRecord},
-    // (THE TWO VIEW LAMPS SHARED ONE GROUP here from 2026-09-04 to 2026-09-15
-    // — IconAudioView wearing document-import lit in Target, IconMarkerColumn
-    // chronometer-start lit in Phase Reset, one button per axis where four
-    // radios had stood before that day's collapse. The architect deleted the
-    // whole category 2026-09-15, group slot and separator with it: the three
-    // view selectors — the keys and the VIEW GROUP at this row's right end
-    // (kIconRowViewGroup below) — are the axes' only faces now, and that
-    // group wears the radios' 2026-08-11 glyphs again; the picks and their
-    // runners-up are recorded at icons.h's enum.)
+    // (The view axes' faces are the two radio pairs at this row's right end,
+    // architect 2026-10-14 — kIconRowViewPairs below, their glyphs at icons.h's
+    // enum; no view button stands in this group.)
     // (THE ROW'S GROWTH, in brief: an earlier ZOOM PAIR sat after the radios
     // 2026-08-01..02 and was deleted under the no-duplicate-commands ruling —
     // superseded for today's zoom GROUP by the 2026-08-12 relayout order, at
@@ -859,10 +854,11 @@ constexpr IconRowDef kIconRowButtons[] = {
     // outside the `h` view having been Play renders' own; the two that stay
     // keep his order and Listen still opens the group.
     {RedesignButton::IconListen, icons::Icon::PreviewRenderOn},
-    // The read-only toggle wears the closed padlock under every set and in
-    // both states (architect 2026-10-12); its lit / sunken face alone says
-    // read-only, like Toggle Tooltips.
-    {RedesignButton::IconReadOnly,       icons::Icon::Lock},
+    // The read-only toggle wears the open padlock here, while unlocked, and
+    // the closed one while locked (architect 2026-10-14,
+    // redesign_button_icon); its lit / sunken face says read-only too, as
+    // every toggle's does.
+    {RedesignButton::IconReadOnly,       icons::Icon::ChangesAllow},
     // SETTINGS (architect 2026-09-29), right after the padlock and ahead of
     // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
     // `;`, the settings prompt, wearing SettingsConfigure —
@@ -918,7 +914,7 @@ constexpr IconRowDef kIconRowButtons[] = {
 // further left there than outside — further still since 2026-10-07, the
 // zoom group and the render-entry group each standing on the one member the
 // view does not refuse in every session (Full Zoom Out and, since 2026-10-12,
-// Waveform Magnification; Enable Tooltips), their others hidden (history_mode_hides_button, paint_icon_row's walk). The history opener and the view group
+// Waveform Magnification; Enable Tooltips), their others hidden (history_mode_hides_button, paint_icon_row's walk). The history opener and the view pairs
 // are right-anchored and do not move (kIconRowHistoryOpener).
 //
 // THE COMPANIONS' GLYPHS: the CUMULATIVE toggle wears BlackSum, the
@@ -963,61 +959,63 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // a separator before the history button, and place cumulative/etc after the
 // history button") and alone since 2026-10-05, when its six companions went
 // to the stand-in slots above. IT TAKES NO PART IN THE LEFT WALK: it seats
-// flush against the view group's left, its right edge one 8-px group gap
-// short of view_x0, and the left groups' limit stands one gap further left
+// flush against the view pairs' left, its pane one groove short of the
+// first view pane, and the left groups' limit stands one groove further left
 // again (paint_icon_row). THE REASON IS THE PEN: while the opener closed the
 // left walk, the stand-in swap's one-case-narrower iteration group put its x
 // 31 Windows px further left inside the view than outside, so the button
 // that toggles the view moved out from under the pen at its own press;
 // anchored to the lane's right edge, which no state moves, it stands at one x
-// in both. It paints whole beside the view group under the same overflow
-// rule (kIconRowViewGroup), the left groups yielding to both. Its seat is
+// in both. It paints whole beside the view pairs under the same overflow
+// rule (kIconRowViewPairs), the left groups yielding to both. Its seat is
 // the same in both states, and the mode's two edges damage the whole window
 // anyway (THE REPAINT, above).
 constexpr IconRowDef kIconRowHistoryOpener =
     {RedesignButton::IconHistory, icons::Icon::VcsDiff};
 
-// THE VIEW GROUP — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
-// 2026-10-01): the four ABSOLUTE VIEW SELECTORS, Source+Warp, Source+Phase,
-// Target+Warp and Target+Phase on bare 1 / 2 / 3 / 4, in their keys' order
-// (Source+Phase since S+P's return, architect 2026-10-12). THE ACTS CAME FROM
-// THE ROW-1 VIEW BAR (2026-08-02..2026-10-01), itself kdenlive's workspace
-// switcher — the blue "Logging | Editing | Audio | Effects | Color" bar at the
-// far right of its menu row — reborn as the selectors; the bar's
-// labelled buttons are gone and the acts wear the architect's glyphs
-// (icons.h: the warp pair GNOME's indents, the phase pair its left and
-// right justifications, 2026-10-12). THE BAND'S OWN METRICS, NONE NEW: the program's case
-// (render.h's program block), the members abutting in their own pane (its
-// leader is Source+Warp at redesign_button_opens_icon_group), the pane
-// ending at the band's dark right edge column (paint_icon_row). THE BAND'S
-// FACES, and a RADIO OF FOUR: the
-// lit button is the current view (redesign_button_selected reads the live
-// combination) and a press on it is the consumed nothing at its lift (the
-// `radio` column, kToolbarChords), the hold showing the pressed face over the
-// lit one (paint_roster_case: Cool Edit's one down face for both).
+// THE VIEW PAIRS — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
+// 2026-10-01; two radio pairs since 2026-10-14): the Source / Target pair on
+// bare 1 / 2 (the audio view) and the Warp / Phase-reset pair on bare 3 / 4
+// (the markers view), each in a pane of its own, the view the product of the
+// two lit members, in their keys' order. THE ACTS CAME FROM THE ROW-1 VIEW
+// BAR (2026-08-02..2026-10-01), itself kdenlive's workspace switcher — the
+// blue "Logging | Editing | Audio | Effects | Color" bar at the far right of
+// its menu row — reborn as the selectors; the bar's labelled buttons are gone
+// and the acts wear the architect's glyphs (icons.h: Source the dictionary,
+// Target the tablet, Warp the warped sheet, Phase Reset the fog's waves in
+// phase, 2026-10-14). THE BAND'S OWN METRICS, NONE NEW: the program's case
+// (render.h's program block), each pair's members abutting in their own pane
+// (its leader the pair's first at redesign_button_opens_icon_group), the
+// program's grooved recess between the panes, the Warp pane ending at the
+// band's dark right edge column (paint_icon_row). THE BAND'S FACES, and EACH
+// PAIR A RADIO: its lit member is its axis's current value
+// (redesign_button_selected reads one axis per button) and a press on it is
+// the consumed nothing at its lift (the `radio` column, kToolbarChords) — it
+// stays down, never greyed — the hold showing the pressed face over the lit
+// one (paint_roster_case: Cool Edit's one down face for both).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
-// CANNOT HOLD EVERY GROUP, THE VIEW GROUP WINS — and since 2026-10-06 the
-// history opener seated against its left with it (kIconRowHistoryOpener).
-// Both paint LAST, whole, at their right-anchored places; the groups to
-// their left yield, clipped where the opener's eight-px gap begins, and each
+// CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
+// history opener seated against their left with them (kIconRowHistoryOpener).
+// All paint LAST, whole, at their right-anchored places; the groups to
+// their left yield, clipped where the opener's groove begins, and each
 // yielding member PUBLISHES ONLY WHAT IT
 // PAINTED — its box cut at that column, or an empty rect when the opener and
-// the view group cover it whole — so a press, a hover and a tooltip land on
+// the view pairs cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
-// walks). The band holds every pane down to 592 Windows px of BAND width
-// outside the `h` view and 408 inside it, the window two program frame lines
-// wider (594 / 410 at 100 %; the width math at
-// paint_icon_row, its one statement, re-derived 2026-10-13 for the view
-// group's fourth case), so neither host reaches the rule at its scale: the
-// tablet's 2304 device px hold the row in both states up to about 388 % and
-// the laptop's 1920 up to about 323 % (the W arithmetic over the device
-// width; each element's own rounding moves the edge by a pixel or so).
-constexpr IconRowDef kIconRowViewGroup[] = {
-    {RedesignButton::ViewSW, icons::Icon::DocumentExport},
-    {RedesignButton::ViewSP, icons::Icon::FormatJustifyLeft},
-    {RedesignButton::ViewTW, icons::Icon::DocumentImport},
-    {RedesignButton::ViewTP, icons::Icon::FormatJustifyRight},
+// walks). The band holds every pane down to 604 Windows px of BAND width
+// outside the `h` view and 420 inside it, the window two program frame lines
+// wider (606 / 422 at 100 %; the width math at paint_icon_row, its one
+// statement, re-derived 2026-10-14 for the two view panes), so neither host
+// reaches the rule at its scale: the tablet's 2304 device px hold the row in
+// both states up to about 380 % and the laptop's 1920 up to about 317 % (the
+// W arithmetic over the device width; each element's own rounding moves the
+// edge by a pixel or so).
+constexpr IconRowDef kIconRowViewPairs[2][2] = {
+    {{RedesignButton::ViewSource, icons::Icon::AccessoriesDictionary},
+     {RedesignButton::ViewTarget, icons::Icon::InputTablet}},
+    {{RedesignButton::ViewWarp,   icons::Icon::MailMarkJunk},
+     {RedesignButton::ViewPhase,  icons::Icon::WeatherFog}},
 };
 
 // A BUTTON'S ICON, by state — the tooltip overload's sibling (app_state.h,
@@ -1038,7 +1036,7 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
     // THE CONDITION IS NOT ASKED HERE (2026-08-15): whether a button wears its
     // second glyph is redesign_button_glyph_swapped's (app_state.h), because
     // the roster's face STASH carries that bit for the drift comparator and a
-    // second spelling of the same four conditions is exactly what would drift.
+    // second spelling of the same conditions is exactly what would drift.
     // This body owns only WHICH glyph the swap gives.
     if (!redesign_button_glyph_swapped(app, b)) return table_icon;
     switch (b) {
@@ -1068,6 +1066,10 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         // with the other in front; tab A wears the table's TabDetach.
         case RedesignButton::TransportSwitchTab:
             return icons::Icon::TabDetachB;
+        // THE READ-ONLY TOGGLE WHILE LOCKED (architect 2026-10-14): the closed
+        // padlock; unlocked it wears the table's open one.
+        case RedesignButton::IconReadOnly:
+            return icons::Icon::ChangesPrevent;
         default:
             return table_icon;
     }
@@ -1980,7 +1982,7 @@ static std::string history_walk_line(AppState& app) {
 // roster's own divider owner) opens a new pane and everything else joins the
 // open one. The membership forks are the history stand-ins' (2026-10-05) and
 // the `h` view's hide (2026-10-07), which asks a group whether it stands
-// before its pane is opened. The right-anchored opener and view group are
+// before its pane is opened. The right-anchored opener and view pairs are
 // not in this walk: neither is ever hidden.
 static void icon_row_walk(const AppState& app,
                           std::vector<std::vector<IconRowDef>>& panes,
@@ -2073,9 +2075,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-09-29, help after settings since 2026-10-01) — then, RIGHT-ANCHORED
     // since 2026-10-06, THE HISTORY OPENER alone in its group
     // (kIconRowHistoryOpener, where the reason is stated) one group gap left
-    // of THE VIEW GROUP, FLUSH AT THE ROW'S RIGHT EDGE since 2026-10-01
-    // (kIconRowViewGroup, where its provenance and the overflow rule are
-    // stated). IN THE `h` VIEW the history group's six
+    // of THE VIEW PAIRS, FLUSH AT THE ROW'S RIGHT EDGE since 2026-10-01, two
+    // panes since 2026-10-14 (kIconRowViewPairs, where their provenance and
+    // the overflow rule are stated). IN THE `h` VIEW the history group's six
     // companions stand in the slots of the toolbar group behind Save and of
     // the iteration group (kIconRowHistoryStandIns, the swap's one owner).
     //
@@ -2094,36 +2096,38 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // only BY STATE (Save with nothing to commit, Revert with no subject,
     // Load in Place over an empty walk, Older / Newer at the walls) and what
     // any other mode refuses wears the DEAD FACE, and a window too narrow for
-    // the row covers members otherwise, under the view group's overflow rule
+    // the row covers members otherwise, under the view pairs' overflow rule
     // — a width, never a state. The mode-collapsing roster of 2026-08-12
     // stays deleted; the walk below is a left-to-right accumulation whose two
     // forks are the stand-in table's and the hide's.
     //
     // THE WIDTH MATH, RE-DERIVED for the program's band (2026-10-09, the
-    // case Cool Edit's own 23 round its 20-W seat; the view group's fourth
-    // case 2026-10-13): in Windows px, the
+    // case Cool Edit's own 23 round its 20-W seat; the two view panes
+    // 2026-10-14): in Windows px, the
     // band's dark left edge column, then per pane its light column + 5 of
     // face + its cases at 23 + 4 of face + its mid column and the dark
-    // column after it (23n + 12); the right-anchored pair the same from the
+    // column after it (23n + 12); the right-anchored panes the same from the
     // band's dark right edge column. Outside the `h` view the LEFT WALK is
     // seventeen members in five panes,
     //   1 + 17·23 + 5·12 = 452,
     // and inside it nine in five, 1 + 9·23 + 60 = 268 (Older and Newer
     // row 8's since 2026-10-11; the magnification lamp joined the view's nine
     // 2026-10-12); the RIGHT-ANCHORED
-    // span — the edge column, the view group's pane (4 cases), its dark
-    // column, the history opener's pane, the dark column the left panes stop
-    // at — is
-    //   1 + 103 + 1 + 34 + 1 = 140,
-    // so the band holds every pane when it is at least 592 Windows px wide
-    // outside the view (408 inside it); the band stands one program frame
-    // line in from each side (2026-10-10, program_frame_rect), so the WINDOW
-    // holds it from two frame lines more, 594 (410) at 100 % — the tablet's
-    // 768 at 300 % a band of 766 with a recess of 174 between. IN DEVICE PX, off the
-    // painted walk (each line one relief line, each face and the glyph its
-    // own scaled_px): at the tablet's 300 % (cases 69) 1356 + 420 of its
-    // band's 2298; at the laptop's 138 % (lines 1, faces 7 and 6, cases 31)
-    // 608 + 188 of its 1918. A roster move restates these numbers.
+    // span — the edge column, the Warp / Phase pane (2 cases), its dark
+    // column, the Source / Target pane (2 cases), its dark column, the
+    // history opener's pane, the dark column the left panes stop at — is
+    //   1 + 57 + 1 + 57 + 1 + 34 + 1 = 152
+    // (two panes of two cost 12 more than one pane of four: the second pane's
+    // side air and lines), so the band holds every pane when it is at least
+    // 604 Windows px wide outside the view (420 inside it); the band stands
+    // one program frame line in from each side (2026-10-10,
+    // program_frame_rect), so the WINDOW holds it from two frame lines more,
+    // 606 (422) at 100 % — the tablet's 768 at 300 % a band of 766 with a
+    // recess of 162 between. IN DEVICE PX, off the painted walk (each line one
+    // relief line, each face and the glyph its own scaled_px): at the tablet's
+    // 300 % (cases 69) 1356 + 456 of its band's 2298; at the laptop's 138 %
+    // (lines 1, faces 7 and 6, cases 31) 608 + 204 of its 1918. A roster move
+    // restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
     // (render.h's palette says so), and so has the menu row's.
@@ -2131,7 +2135,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE FACES ARE THE PROGRAM'S CASE (paint_roster_case, above, where the
     // faces stand): the rest face, Cool Edit's one down face for a press and
     // for a CHECKED button — the live fact its chord flips
-    // (redesign_button_selected), the view group's lit view among them —
+    // (redesign_button_selected), the view pairs' lit members among them —
     // and no hot face. The pointer walk finds the tooltip's button
     // (recompute_redesign_button_hover).
     // THE DISABLED FACE IS THE TWO MODES' AND THE TOOLBAR MIGRANTS':
@@ -2201,17 +2205,23 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 
     // THE RIGHT-ANCHORED PANES ARE RESOLVED FIRST, because they decide where
     // every pane to their left may paint (the overflow rule at
-    // kIconRowViewGroup): the view group's pane ends at the band's dark right
-    // edge column, the HISTORY OPENER's pane stands one groove left of it
-    // (kIconRowHistoryOpener, architect 2026-10-06), and the dark column left
-    // of the opener's pane is THE LEFT PANES' LIMIT: they paint under a clip
-    // ending there and publish only the columns they painted, so a window
-    // too narrow for the band covers them and never the opener or the view
-    // group.
-    const int view_n     = static_cast<int>(std::size(kIconRowViewGroup));
+    // kIconRowViewPairs): the Warp / Phase pane ends at the band's dark right
+    // edge column, the Source / Target pane stands one groove left of it, the
+    // HISTORY OPENER's pane one groove left of that (kIconRowHistoryOpener,
+    // architect 2026-10-06), and the dark column left of the opener's pane is
+    // THE LEFT PANES' LIMIT: they paint under a clip ending there and publish
+    // only the columns they painted, so a window too narrow for the band
+    // covers them and never the opener or the view pairs.
+    constexpr int view_panes = static_cast<int>(std::size(kIconRowViewPairs));
     const int right_edge = lane.x + lane.w - lw;   // the band's dark edge column
-    const int view_x0    = right_edge - pane_w(view_n);
-    const int history_x0 = view_x0 - lw - pane_w(1);
+    std::array<int, view_panes> view_x0{};          // each view pane's light column
+    int pane_end = right_edge;                      // the dark column after it
+    for (int p = view_panes - 1; p >= 0; --p) {
+        view_x0[static_cast<std::size_t>(p)] =
+            pane_end - pane_w(static_cast<int>(std::size(kIconRowViewPairs[p])));
+        pane_end = view_x0[static_cast<std::size_t>(p)] - lw;
+    }
+    const int history_x0 = pane_end - pane_w(1);
     const int history_x  = history_x0 + lw + lead;  // the opener's case
     const int left_limit = history_x0 - lw;         // the dark column before it
 
@@ -2236,7 +2246,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // group behind Full Zoom Out and the magnification lamp, Listen, the
         // read-only toggle, Settings), and the two groups it consumes WHOLE since 2026-10-05,
         // the history companions standing in their slots
-        // (kIconRowHistoryStandIns). The view group, Full Zoom Out, the
+        // (kIconRowHistoryStandIns). The view pairs, Full Zoom Out, the
         // magnification lamp, the tooltip lamp and the history opener stay live, as do the history
         // COMPANIONS — each
         // on the derivation's own answer, which is not one reason but two:
@@ -2374,9 +2384,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // publishing the full case it paints: the dark column the left panes stop
     // at (a lone column, square: no pane of its own stands left of it), the
     // history opener's pane at one x in both states with the groove's dark
-    // column after it, the view group's pane with the band's dark right edge
-    // column after it — each of those two the pane's own outer edge, mitred
-    // (paint_ce_pane).
+    // column after it, the Source / Target pane the same, the Warp / Phase
+    // pane with the band's dark right edge column after it — each the pane's
+    // own outer edge, mitred (paint_ce_pane).
     // NEITHER IS EVER HIDDEN (history_mode_hides_button): bare `h` is the
     // view's own vocabulary and bare 1 / 2 / 3 / 4 its admitted selectors, so
     // the hide does not reach this walk.
@@ -2384,11 +2394,15 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     paint_ce_pane(cr, lane, history_x0, history_x0 + pane_w(1) + lw);
     paint_member(kIconRowHistoryOpener, history_x,
                  GuiRect{history_x, btn_y, btn_w, btn_h});
-    paint_ce_pane(cr, lane, view_x0, view_x0 + pane_w(view_n) + lw);
-    int vx = view_x0 + lw + lead;
-    for (const IconRowDef& def : kIconRowViewGroup) {
-        paint_member(def, vx, GuiRect{vx, btn_y, btn_w, btn_h});
-        vx += btn_w;
+    for (int p = 0; p < view_panes; ++p) {
+        const int x0 = view_x0[static_cast<std::size_t>(p)];
+        const int n  = static_cast<int>(std::size(kIconRowViewPairs[p]));
+        paint_ce_pane(cr, lane, x0, x0 + pane_w(n) + lw);
+        int vx = x0 + lw + lead;
+        for (const IconRowDef& def : kIconRowViewPairs[p]) {
+            paint_member(def, vx, GuiRect{vx, btn_y, btn_w, btn_h});
+            vx += btn_w;
+        }
     }
 
     cairo_restore(cr);
@@ -5645,8 +5659,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // which is what makes that yield clean.
     //
     // WHAT IS NOT HERE, and why it is not missing: an S/T · W/P view readout
-    // and a "(read-only)" token. The icon row's view group shows the view as
-    // a lit button and its read-only toggle shows the lock, so letters would
+    // and a "(read-only)" token. The icon row's view pairs show the view as
+    // two lit buttons and its read-only toggle shows the lock, so letters would
     // restate what that row says in its own vocabulary. THE A / B LETTER IS
     // HERE, though, since 2026-10-01: the tab row that showed it is deleted,
     // and the letter ends the clock cell, after the timestamp and the pipe
@@ -7738,7 +7752,7 @@ static bool floating_surface_stands(const AppState& app) {
 //     title (menu_title_open); the labels and access keys are kMenuButtons';
 //   * THE TOOLBAR BAND (paint_icon_row): its lane; the `h` view; the
 //     standing members in the walk's order and their panes (icon_row_walk,
-//     the opener and the view group after it); per member the enabled and
+//     the opener and the two view panes after it); per member the enabled and
 //     selected bits (publish_button_face's stash, refreshed by a covering
 //     clip), the pressed face (redesign_button_pressed_face, worn only
 //     enabled) and the glyph index (redesign_button_glyph, which with the id
@@ -7799,7 +7813,10 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
         ++pane;
     }
     add(kIconRowHistoryOpener.id, pane++);
-    for (const IconRowDef& def : kIconRowViewGroup) add(def.id, pane);
+    for (const auto& pair : kIconRowViewPairs) {
+        for (const IconRowDef& def : pair) add(def.id, pane);
+        ++pane;
+    }
     return fp;
 }
 

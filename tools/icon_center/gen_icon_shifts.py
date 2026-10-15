@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """GENERATOR of src/gui/icon_shifts.inc: the body-centering shift of every
-assets/icons/gnome-2.28/*.svg glyph (architect 2026-10-12). Run from anywhere:
+glyph of the one set, assets/icons/adwaita-3.22/*.svg (architect 2026-10-12;
+the set Adwaita 3.22.0 since 2026-10-14). Run from anywhere:
     python3 tools/icon_center/gen_icon_shifts.py
 The body is the drawing with its shadows removed STRUCTURALLY (an element under a
 feGaussianBlur filter, a fill of a radial gradient fading to transparent, an id or
 inkscape:label containing "shadow"); its alpha >= 0.1 bounds at 240 px; the shift
-puts the bbox center at the viewBox center, in the SVG's user units."""
+puts the bbox center at the viewBox center, in the SVG's user units. The slot
+nested in each file as its own <svg> viewport is walked like any group."""
 import re, sys, io, subprocess, os, tempfile, numpy as np
 import xml.etree.ElementTree as ET
 from PIL import Image
 R=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))+'/'
-SET=R+'assets/icons/gnome-2.28/'
+SET=R+'assets/icons/adwaita-3.22/'
 SV='{http://www.w3.org/2000/svg}'; XL='{http://www.w3.org/1999/xlink}'
 INK='{http://www.inkscape.org/namespaces/inkscape}'
 def url(v):

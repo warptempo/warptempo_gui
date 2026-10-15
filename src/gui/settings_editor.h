@@ -73,7 +73,7 @@ struct GuiInputHandler;
 //    chokepoint. These are launch/view state: no undo entry, no dirty; a
 //    same-value commit no-op-deactivates like the engine no-op gate.
 //    per-tab read_only was the one arm that wrote its band directly, and so
-//    left the icon row's Lock glyph stale on a typed self-lock or self-unlock;
+//    left the icon row's Read-Only glyph stale on a typed self-lock or self-unlock;
 //    since 2026-09-04 it goes through set_tab_read_only (input_handler.h) with
 //    bare `o`, and the promise above holds for every key in the list.
 // 3. Canonical engine keys go through validate_engine_setting; on success

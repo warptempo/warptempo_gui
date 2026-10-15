@@ -1,16 +1,15 @@
 #pragma once
 
 // THE ICON SET AND ITS ONE ROAD (architect 2026-10-06). An Icon is a GLYPH,
-// one per enumerator below, drawn from THE ONE SET (kIconSet below): GNOME
-// 2.28, gnome-icon-theme 2.28.0's scalable drawings alone, nothing from
-// another release - hard-coded since architect 2026-10-12 ("making Liberation
-// Sans and GNOME 2.28 the only options, hard-coded, and drop their config
-// keys"; the Tango and Mist sets, the `icons` device key and the Settings
-// Icons row were removed that day, docs/engineering/closed_questions.md).
-// One scalable
-// file per enumerator under
-// assets/icons/<set>/ (its README the mapping, the provenance and the
-// licences), PARSED AT LAUNCH through resvg, the one renderer of every set
+// one per enumerator below, drawn from THE ONE SET (kIconSet below):
+// ADWAITA 3.22.0 ALONE (architect 2026-10-14), every drawing the
+// adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/ artwork at its 48
+// slot, extracted as a standalone 48-unit file by
+// tools/icon_set_adwaita_322/, nothing redrawn and nothing from another
+// release; hard-coded (the `icons` device key and the Settings Icons row were
+// removed 2026-10-12, docs/engineering/closed_questions.md). One scalable
+// file per enumerator under assets/icons/<set>/ (its README the mapping, the
+// provenance and the licences), PARSED AT LAUNCH through resvg, the one renderer of every set
 // (svg_icon.h: the wrapper, the error rule and why a set is checked at its
 // import), straight from the bundle — never copied into the config folder
 // (load_svg_set, below) — and rasterised lazily per (glyph, device px) into
@@ -21,8 +20,8 @@
 //
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in the program's case the
-// drawing's square cell (48 units)
-// fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20),
+// drawing's square cell (every file a 48-unit root, the sheet's slot nested
+// in it as its own viewport) fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20),
 // Cool Edit's own seat since 2026-10-09 ~10:25, program_spec.h's head — 60
 // device px at 300 %, 72 at 360); elsewhere its site's own scaled 16 (the
 // caption's icon, the list rows, the cards — Windows' small icon). The
@@ -70,8 +69,9 @@ namespace icons {
 enum class Icon {
     // THE ICON ROW'S FIRST GROUP.
     DocumentOpen,        // Open Project (and its shift twin, Revert) — the
-                         // sets' document-open (architect 2026-10-07)
-    DocumentSave,        // Save
+                         // set's document-open (architect 2026-10-07)
+    DocumentSave,        // Save — the set's document-save (architect
+                         // 2026-10-14: the floppy retired)
     EditUndo,            // Undo
     EditRedo,            // Redo
     MediaRecord,         // Render (and the iteration sweep: the tooltip
@@ -80,14 +80,12 @@ enum class Icon {
                          // checkpoint publishes
     VcsPull,             // Save's face in the history view while GitHub is
                          // ahead
-    // THE VIEW GROUP (bare 1 / 2 / 3 / 4): one family of four, the warp pair
-    // the indents and the phase pair the justifications (architect
-    // 2026-10-12, when S+P returned; Target+Phase wore format-justify-fill,
-    // the ChronometerStart file, until then).
-    DocumentExport,      // Source+Warp
-    FormatJustifyLeft,   // Source+Phase
-    DocumentImport,      // Target+Warp
-    FormatJustifyRight,  // Target+Phase
+    // THE VIEW PAIRS (architect 2026-10-14): the Source / Target pair (bare
+    // 1 / 2) and the Warp / Phase-reset pair (bare 3 / 4), one glyph each.
+    AccessoriesDictionary, // Source — the primary source
+    InputTablet,         // Target — the authoring surface
+    MailMarkJunk,        // Warp — the warped sheet
+    WeatherFog,          // Phase Reset — the waves in phase
     // THE MAGNIFIERS.
     ZoomFitBest,         // Full Zoom Out (bare `0`)
     ZoomOriginal,        // Center on Focus (bare `c`)
@@ -97,7 +95,8 @@ enum class Icon {
     ListRemove,          // Delete Markers (`Delete`)
     ViewHidden,          // Toggle Disabled (`Ctrl+D`)
     InsertLink,          // Toggle Inherit (`Ctrl+N`)
-    Merge,               // Flatten (`Ctrl+F`)
+    Merge,               // Flatten (`Ctrl+F`) — the set's edit-clear-all,
+                         // the broom (architect 2026-10-14)
     BlackSum,            // Toggle Cumulative (`u`)
     GoJump,              // Toggle Follow (`f`)
     TimelineLift,        // Toggle Restrict Undo (`z`)
@@ -106,12 +105,11 @@ enum class Icon {
     PreviewRenderOn,     // Play Renders
     DialogOkApply,       // Load in Place (the icon row and the render
                          // player's row): the walked version loaded into
-                         // the editor in place. GNOME's emblem-default,
-                         // the green check, GNOME's accept (architect
-                         // 2026-10-07 ~17:00).
+                         // the editor in place. The set's edit-paste
+                         // (architect 2026-10-14).
     VcsDiff,             // Toggle History View (`h`)
     ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
-                         // the sets' x-office-calendar, the dated page:
+                         // the set's x-office-calendar, the dated page:
                          // the walk through dated commits (architect
                          // 2026-10-07)
     EditSelect,          // Toggle Add to Selection
@@ -120,10 +118,8 @@ enum class Icon {
     GoPrevious,          // Row 8's left arrow (bare Left)
     GoNext,              // Row 8's right arrow (bare Right)
     DocumentRevert,      // Revert (bare `v`): back to the viewed
-                         // checkpoint. GNOME's document-revert, the page
-                         // with the yellow return arrow, GNOME's revert,
-                         // rhyming with Load in Place's accept (architect
-                         // 2026-10-07 ~17:00)
+                         // checkpoint. The set's document-revert
+                         // (architect 2026-10-07 ~17:00)
     // ROW 8'S TRANSPORT. PLAY AND STOP ARE ONE BUTTON'S TWO FACES
     // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
     // pause state); the render player's own Play/Pause button wears
@@ -136,9 +132,12 @@ enum class Icon {
     DialogCancel,        // Render's mid-render Cancel face
     GoDown,              // Row 8's down arrow (bare Down)
     GoUp,                // Row 8's up arrow (bare Up)
-    // THE READ-ONLY TOGGLE'S ONE GLYPH (architect 2026-10-12): the closed
-    // padlock under every set; its lit / sunken face alone says read-only.
-    Lock,                // Toggle Read-Only
+    // THE READ-ONLY TOGGLE'S PADLOCK PAIR (architect 2026-10-14): the open
+    // padlock while unlocked, the closed one while locked
+    // (redesign_button_icon); its lit / sunken face still says locked, as
+    // every toggle's does.
+    ChangesAllow,        // Toggle Read-Only while unlocked
+    ChangesPrevent,      // Toggle Read-Only while locked
     // THE MARKER WALK AND THE TAB SWITCH.
     BboxPrev,            // Previous Marker (Shift+Tab)
     BboxNext,            // Next Marker (Tab)
@@ -147,8 +146,8 @@ enum class Icon {
     TabDetachB,          // Switch Tab on tab B (architect 2026-10-12): the
                          // same two windows with the lower right one in
                          // front, so the front window is the tab shown
-                         // (redesign_button_icon); the set's one derived
-                         // file, its README
+                         // (redesign_button_icon); a changed file of the
+                         // set (element order alone), its README
     SettingsConfigure,   // Settings (bare `;`)
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
     Folder,              // a folder row; Up a Folder (the render player,
@@ -165,7 +164,7 @@ enum class Icon {
     HelpWhatsthis,       // Toggle Tooltips (bare backslash)
     GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J; its shift twin
                          // Ctrl+Shift+J, Copy Resolved Value, 2026-10-14)
-    AccessoriesTextEditor, // Open Text Editor (bare Enter) — the sets'
+    AccessoriesTextEditor, // Open Text Editor (bare Enter) — the set's
                            // accessories-text-editor (architect 2026-10-09)
     EditDelete,          // Delete Folder (the render player)
     ValueDrag,           // Toggle Value Drag (bare `[`) — a vertical double
@@ -178,7 +177,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 60;
+inline constexpr int kIconCount = 61;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -186,8 +185,8 @@ inline constexpr int kIconCount = 60;
 inline constexpr const char* kIconNames[] = {
     "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
     "VcsCommit",
-    "VcsPull", "DocumentExport", "FormatJustifyLeft", "DocumentImport",
-    "FormatJustifyRight",
+    "VcsPull", "AccessoriesDictionary", "InputTablet", "MailMarkJunk",
+    "WeatherFog",
     "ZoomFitBest", "ZoomOriginal", "ZoomInY", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
     "TimelineLift", "MusicNote16th", "Mathmode", "PreviewRenderOn",
@@ -195,7 +194,8 @@ inline constexpr const char* kIconNames[] = {
     "KeyframePrevious", "KeyframeNext", "GoPrevious", "GoNext",
     "DocumentRevert", "MediaSkipBackward", "MediaPlaybackStart",
     "MediaPlaybackStop", "MediaPlaybackPause", "MediaSkipForward",
-    "DialogCancel", "GoDown", "GoUp", "Lock", "BboxPrev",
+    "DialogCancel", "GoDown", "GoUp", "ChangesAllow", "ChangesPrevent",
+    "BboxPrev",
     "BboxNext", "TabDetach", "TabDetachB", "SettingsConfigure", "Folder", "AudioXWav",
     "MediaRepeatSingle", "DialogInformation", "DialogError", "WindowClose",
     "HelpWhatsthis",
@@ -205,13 +205,14 @@ inline constexpr const char* kIconNames[] = {
 static_assert(std::size(kIconNames) == kIconCount);
 
 // THE ONE SET, a folder under assets/icons/ (the APK packs it,
-// android/app/build_apk.sh): GNOME 2.28, hard-coded (architect 2026-10-12).
-inline constexpr const char* kIconSet = "gnome-2.28";
+// android/app/build_apk.sh): Adwaita 3.22.0, hard-coded (architect
+// 2026-10-14).
+inline constexpr const char* kIconSet = "adwaita-3.22";
 
-// THE GNOME 2.28 GLYPHS BODY-CENTERED (architect 2026-10-12: every glyph, no
+// THE GLYPHS BODY-CENTERED (architect 2026-10-12: every glyph, no
 // exceptions, "the simpler rule is just center all of them"): each is drawn
-// translated by (dx, dy) in the SVG's own user units (the files are 48-unit
-// canvases; +x right, +y down), composed into resvg's render transform
+// translated by (dx, dy) in the SVG's own user units (every file a 48-unit
+// root; +x right, +y down), composed into resvg's render transform
 // (svg_icon::rasterise) so it scales with the raster, the disabled copy
 // derived from the shifted render. THE BODY-CENTERING TEST: the body is the
 // drawing with its shadows removed STRUCTURALLY (an element under a
@@ -220,15 +221,15 @@ inline constexpr const char* kIconSet = "gnome-2.28";
 // 240 px give a bbox whose center the shift puts at the canvas centre. The
 // table is GENERATED into icon_shifts.inc by tools/icon_center/gen_icon_shifts.py
 // (never hand-edited), in kIconNames order. Where a shifted shadow crosses the
-// canvas edge it clips, accepted. THE FILES STAY BYTE-IDENTICAL to
-// gnome-icon-theme 2.28.0's (TabDetachB alone is a derived file, its README):
-// the shift is the product's, not the file's.
+// canvas edge it clips, accepted. The shift is the product's, not the file's:
+// the files are the extraction tool's output (two of them changed files, the
+// set's README).
 struct IconShift {
     const char* name;   // the enumerator's name, kIconNames' spelling
     float       dx;
     float       dy;
 };
-inline constexpr IconShift kGnome228Shifts[] = {
+inline constexpr IconShift kIconShifts[] = {
 #include "icon_shifts.inc"
 };
 
@@ -244,7 +245,7 @@ inline std::string_view gui_live_icon_set() { return kIconSet; }
 // then every enumerator's `<name>.svg` parsed in enum order before any draw
 // (svg_icon::parse; files of other names, the README among them, ignored).
 // THE ERROR ARM'S PRODUCERS: the bundle unreadable (IO), a file missing or
-// not well-formed SVG (a build defect) — "icon set 'gnome-2.28': EditDelete.svg:
+// not well-formed SVG (a build defect) — "icon set 'adwaita-3.22': EditDelete.svg:
 // not well-formed SVG (resvg error 7)", the first only, which gui_main
 // prints and exits on (the validation doctrine's class (1)). A construct
 // resvg does not draw passes the load: the set's import sheet is that check
