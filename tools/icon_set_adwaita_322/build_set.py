@@ -34,8 +34,14 @@ DOCUMENT_OPEN_RECENT_NOTICE=(" DocumentOpenRecent: adwaita-icon-theme 3.22.0 doc
 TEXT_NOTICES={'DocumentOpenRecent':DOCUMENT_OPEN_RECENT_NOTICE}
 OWN_NOTICE=(' DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. The architect\'s own drawing (2026-10-16), '
  'made with Google\'s Gemini at his prompt after a Korg MA-1 in Adwaita 3.22\'s phone / calculator manner, WARP in place '
- 'of the maker\'s name, then cleaned on tablet mocks: the drop-shadow filters and every small legend removed, the body\'s '
- 'shapes rounded rectangles, the caps flat, the display\'s note a quarter note, WARP moved. The drawing is licensed '
+ 'of the maker\'s name, cleaned on tablet mocks (the drop-shadow filters and every small legend removed, the body\'s '
+ 'shapes rounded rectangles, the caps flat, the display\'s note a quarter note), then RE-LAID the same day on the '
+ 'Korg\'s proportions, fewer elements and the remaining ones bigger: every shape the cleaned drawing\'s own, the case '
+ '800 x 600 of the 1024 units; the display\'s four triangles, the four pill buttons, the power legend and the caption '
+ 'removed; the display on a row of its own across the face, the 120 and the note at its right, the stick at its left '
+ 'as thin as a digit\'s stroke, leaning left with its swing room clear; WARP\'s cap band centered above the display; '
+ 'the speaker grill eight columns by two of holes a quarter of a round button (the MA-1\'s ratio) at the left of the '
+ 'bottom row, the two round buttons and the power button at its right. The drawing is licensed '
  'under the GNU LGPL v3, the set\'s licence (architect 2026-10-15); its lettering is the outlines of DejaVu Sans Bold, '
  'fonts/DejaVuSans-Bold.ttf, under the Bitstream Vera licence (fonts/LICENSE-DejaVu.txt). Warp, and the program icon. ')
 TEXTS=['COPYING','COPYING_LGPL','COPYING_CCBYSA3','AUTHORS']
