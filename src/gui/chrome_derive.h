@@ -197,23 +197,23 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program,
 
 // -- THE CHECKS ----------------------------------------------------------------
 
-// THE DEFAULT PALETTE (Cool Edit's "CEPro 1.2": Face 7088A0, ink 1BF0AB)
-// under Windows Storm's caption: the chrome it paints, role by role.
+// THE DEFAULT PALETTE (Cool Edit's "(Default Scheme)": Face 626C7B, ink
+// 4BF3A7) under Windows Storm's caption: the chrome it paints, role by role.
 inline constexpr GuiThemeWords kDefaultCheck =
     derive_chrome(default_palette_words(), chrome_caption());
-static_assert(kDefaultCheck[theme_role_index("ground")] == 0x7088A0);
-static_assert(kDefaultCheck[theme_role_index("light_3d")] == 0x7088A0);
-static_assert(kDefaultCheck[theme_role_index("hilight")] == 0xB6C2CF);
-static_assert(kDefaultCheck[theme_role_index("shadow")] == 0x47596B);
+static_assert(kDefaultCheck[theme_role_index("ground")] == 0x626C7B);
+static_assert(kDefaultCheck[theme_role_index("light_3d")] == 0x626C7B);
+static_assert(kDefaultCheck[theme_role_index("hilight")] == 0xAEB4BE);
+static_assert(kDefaultCheck[theme_role_index("shadow")] == 0x404750);
 static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
-static_assert(kDefaultCheck[theme_role_index("label")] == 0xF1F1F2);
-static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x47596B);
-static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xF1F1F2);
-static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x1BF0AB);
-static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x101C28);
-static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x7088A0);
-static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xF1F1F2);
-static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x2F3B47);
+static_assert(kDefaultCheck[theme_role_index("label")] == 0xEFEFEF);
+static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x404750);
+static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xEFEFEF);
+static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x4BF3A7);
+static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x0F1621);
+static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x626C7B);
+static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xEFEFEF);
+static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x2A2F35);
 static_assert(kDefaultCheck[theme_role_index("caption_active")] == 0x800080);
 static_assert(kDefaultCheck[theme_role_index("caption_inactive_text")] == 0xC0C0C0);
 // A LIGHT FACE SWAPS THE TEXT AND NOT THE FIELD'S (Arctic Freeze's C0C0C0,

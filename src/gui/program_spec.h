@@ -52,7 +52,9 @@
 // THE CANVAS (architect 2026-10-09, the third part, "accurate to the
 // mock-up"; METRICS §4.1, the mock's set 3): its dark top frame row under
 // the marker lane (1), the canvas itself — the waveform area, its grid and
-// its center lines — and its light bottom frame row and 5 W of face under
+// its center lines, its two channels' wells with Cool Edit's stereo divider
+// between them since 2026-10-16 (stereo_divider_face_px) — and its light
+// bottom frame row and 5 W of face under
 // it before the dock bar (the column's foot, 6). THE COLUMN STANDS 6 W IN
 // FROM EACH SIDE of the window's client area on the panel's face
 // (column_margin_px): the view bar, the ruler and the canvas share its
@@ -216,6 +218,16 @@ struct ProgramSpec {
     // division above and below the zero row (render_canvas, render.h's row-6
     // canvas paragraph).
     int  grid_divisions;
+    // THE STEREO DIVIDER'S FACE (architect 2026-10-16, on his Wine captures
+    // of Cool Edit Pro 2.1 in stereo, tmp/Screenshot_2026-10-16_15-50-05.png
+    // rows 521-523): Cool Edit draws a stereo file as TWO SUNKEN WELLS, one
+    // per channel, each its own ring, and between the upper well's light
+    // bottom line and the lower well's dark top line THIS MUCH OF THE
+    // PANEL'S FACE — the three rows running through the canvas's side frame
+    // columns to the column's margins, no separation from the panel. The
+    // whole divider is program_stereo_divider_authored_h below; render.h's
+    // waveform_divider owns its rows.
+    int  stereo_divider_face_px;
     // THE VIEW BAR'S FIELD between its two lines (METRICS §3: Cool Edit's
     // 10; architect 2026-10-09, mock set 1's axis, 6): the trim lane is a
     // line, this field and a line.
@@ -275,7 +287,7 @@ struct ProgramSpec {
     // DEVICE ROWS from the canvas's first row (architect 2026-10-09 ~14:25,
     // "on waveform → unscaled": Cool Edit's 1-px dot every 4 rows at 1:1, at
     // every gui_scale; render.h's waveform_line_px and
-    // dotted_waveform_line_run): THE PLAYHEAD'S every `dot_period`
+    // dotted_waveform_line_runs): THE PLAYHEAD'S every `dot_period`
     // rows on its phase; A CUE'S TWO COLORS each every `cue_dot_period` rows
     // (architect 2026-10-09 ~11:50, Cool Edit's two cue colors) — THE RED
     // (`cue`) on `cue_dot_phase` 7, THE BLUE (`range`) on `range_dot_phase`
@@ -332,6 +344,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .column_margin_px      = 6,
     .column_foot_px        = 5,
     .grid_divisions        = 4,
+    .stereo_divider_face_px = 1,
     .view_bar_field_px     = 6,
     .ruler_ground_px       = 11,
     .ruler_minor_tick_px   = 2,
@@ -393,6 +406,11 @@ constexpr int program_column_authored_h(const ProgramSpec& p) {
 constexpr int program_column_foot_authored_h(const ProgramSpec& p) {
     return 1 + p.column_foot_px;
 }
+// The stereo divider inside the canvas: the upper well's light bottom line,
+// the face, the lower well's dark top line, one W each (the field's head).
+constexpr int program_stereo_divider_authored_h(const ProgramSpec& p) {
+    return 1 + p.stereo_divider_face_px + 1;
+}
 static_assert(program_case_authored_px(kProgramSpec) == 23);
 static_assert(program_band_authored_h(kProgramSpec) == 33);
 static_assert(program_dock_bar_authored_h(kProgramSpec) == 6);
@@ -407,6 +425,7 @@ static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);
 static_assert(program_column_authored_h(kProgramSpec) == 43);
 static_assert(program_column_foot_authored_h(kProgramSpec) == 6);
+static_assert(program_stereo_divider_authored_h(kProgramSpec) == 3);
 // The column's foot mirrors its air — the product's own 5 W under the
 // canvas's bottom frame row against Cool Edit's 5 rows of face above the
 // view bar (METRICS §4.1); Cool Edit's lower cue lane, its 8 rows above the

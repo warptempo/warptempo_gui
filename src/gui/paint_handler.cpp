@@ -5015,9 +5015,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 //   THE RIGHT SIDE on the band's last column, the stem's rule exactly
 //     (program_spec.h's dot fields: the blue on the canvas rows ≡
 //     range_dot_phase and the red on ≡ cue_dot_phase, mod cue_dot_period,
-//     counted from the canvas's first row) — the dotted line's run
-//     (dotted_waveform_line_run, render.h), the stem's own rule. A band clipped at the area's right edge draws it
-//     there, flush, as the trim bridge's clipped fill reads.
+//     counted from the canvas's first row), down both wells and not across
+//     the stereo divider's rows (2026-10-16) — the dotted line's runs
+//     (dotted_waveform_line_runs, render.h), the stem's own rule. A band
+//     clipped at the area's right edge draws it there, flush, as the trim
+//     bridge's clipped fill reads.
 //   THE TOP RUN on the canvas's first row and THE BOTTOM RUN on its last:
 //     the same two phases turned through the corners, counted in device
 //     columns from the reset's own column (band.stem_x, unclipped, so the
@@ -5031,8 +5033,10 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // band's edges are whole columns by construction (displayed_column_at's
 // integers off the area's x).
 // THE CANVAS'S ROWS (architect 2026-10-06; the area whole since
-// 2026-10-09): the runs land on the canvas's first and last rows, the
-// canvas's frame round the area staying whole under a reset's span. No
+// 2026-10-09): the runs land on the canvas's first and last rows — the upper
+// well's first and the lower well's last, the two wells' rings staying whole
+// under a reset's span and the right side skipping the stereo divider's rows
+// (2026-10-16). No
 // other reader takes the ring's cells: it is no hit target, and its damage
 // is the whole waveform area's (the flag cache's rebuild and
 // Selection::damage_overlay_on_subject_change), which holds it whole.
@@ -5068,11 +5072,15 @@ void GuiPaintHandler::paint_phase_reset_overlay_ring(
             GuiCanvasDotRun{false, x0, y_bot, x1 - x0, period, stem, phase},
         };
         sink.dots(runs, color);
-        // The right side on the band's last column.
-        GuiCanvasDotRun side;
-        if (dotted_waveform_line_run(area.x, area.w, x1 - t - area.x, area.y,
-                                     area.y + area.h, period, phase, side))
-            sink.dots(std::span<const GuiCanvasDotRun>(&side, 1), color);
+        // The right side on the band's last column, one run per well (the
+        // stereo divider's rows carry none, 2026-10-16).
+        GuiCanvasDotRun side[2];
+        const int n = dotted_waveform_line_runs(area, x1 - t - area.x, period,
+                                                phase, side);
+        if (n > 0)
+            sink.dots(std::span<const GuiCanvasDotRun>(
+                          side, static_cast<std::size_t>(n)),
+                      color);
     };
     if (dots.range_phase_dots != GuiCueDot::None)
         paint_dots(cue_dot_color(dots.range_phase_dots), ps.range_dot_phase);
@@ -5244,8 +5252,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // THE STEM IS COOL EDIT'S DOTTED COLUMN IN ITS CUE COLORS (architect
 // 2026-10-09, METRICS §4.2; the two colors ~11:50; the invalid color
 // 2026-10-11; render.h's marker-lane paragraph): one-device-px dots on the
-// CANVAS'S device rows from its top row (the canvas sink's stem_dots, the
-// area whole) — none on the canvas's frame row and none in the lane — on
+// CANVAS'S device rows counted from its top row (the canvas sink's
+// stem_dots, one run per well, waveform_well_rows) — none on the canvas's
+// frame row, none on the stereo divider's rows (2026-10-16) and none in the
+// lane — on
 // rows ≡ cue_dot_phase (the red's phase) and on rows ≡ range_dot_phase (the
 // blue's; mod cue_dot_period, program_spec.h), each phase in the role the
 // stash names for it (GuiCueDot, cue_dot_color; resolve_flag_face's table:
@@ -5279,14 +5289,19 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
     // here — the stash's two phases are the marker's resolved class, the
     // whole answer, and the colors the palette's live roles.
     sink.begin(/*aliased=*/false);
-    const GuiRect& band = area;   // the canvas, the area whole (2026-10-09)
+    // THE TWO WELLS (the canvas's rows less the stereo divider's,
+    // 2026-10-16): each stem one run per non-empty well, its phase counted
+    // from the canvas's first row, so a dot keeps its row and the divider
+    // carries none.
+    const std::array<WaveformWellRows, 2> wells = waveform_well_rows(area);
     const ProgramSpec& ps = kProgramSpec;
     // THE DOTS WRITTEN AS PIXEL WORDS, NOT ONE RECTANGLE A DOT (architect
     // 2026-10-12, the marker slowdown at coarse zoom; 2026-10-13 the words:
     // cost cuts that paint the same pixels). The dots are
-    // the dotted line's rule (render.h's dotted_waveform_line_run) — rows
-    // ≡ phase (mod period) from the band's top, one device px, at the stem's
-    // column — and the same column gate applies on both roads. Both roads are
+    // the dotted line's rule (render.h's dotted_waveform_line_runs) — rows
+    // ≡ phase (mod period) from the canvas's top, one device px, at the
+    // stem's column, in the two wells — and the same column gate applies on
+    // both roads. Both roads are
     // the cairo sink's stem_dots (canvas_sink.cpp) since 2026-10-13, the
     // context's clip read once at stems_begin.
     //   THE DIRECT ROAD (2026-10-13): each dot's word stored straight into
@@ -5308,8 +5323,15 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
     sink.stems_begin();
     const auto dotted_stem = [&](int col, int phase, GuiColor color) {
         if (col < 0 || col >= area.w || ps.cue_dot_period <= 0) return;
-        sink.stem_dots(area.x + col, band.y, band.h, ps.cue_dot_period, phase,
-                       color);
+        for (const WaveformWellRows& w : wells) {
+            if (w.y1 <= w.y0) continue;
+            // stem_dots counts its phase from the run's first row: the
+            // canvas-top phase restated from this well's first row.
+            const int p = ps.cue_dot_period;
+            const int well_phase = ((phase - (w.y0 - area.y)) % p + p) % p;
+            sink.stem_dots(area.x + col, w.y0, w.y1 - w.y0, p, well_phase,
+                           color);
+        }
     };
     for (const MarkerStem& stem : app.marker_stems) {
         // Column-gate exactly like render_playhead's line does. The producers
@@ -7640,18 +7662,21 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // foot (bottom lane 3 since the border under row 8 took lane 1, 2026-10-14):
 // the panel's FACE across them, the program's columns
 // inside its frame (2026-10-10) — the margins beside the canvas, the frame
-// rows' own ground and the foot's 5 W — then THE CANVAS'S FRAME, one ring
-// round the waveform area: the
+// rows' own ground and the foot's 5 W — then THE CANVAS'S FRAME, A RING
+// ROUND EACH CHANNEL'S WELL (Cool Edit's stereo divider, architect
+// 2026-10-16; one ring round the waveform area 2026-10-09 to then): the
 // `ce_dark` top row and left column, the `ce_hilight` right column and
 // bottom row, MITRED at the top-right and bottom-left corner blocks where
 // the dark meets the light (paint_relief_frame, cool_edit_paint.h's diagonal
-// rule). It runs before render_canvas, which lays the canvas over the
+// rule), the face row between the two rings running through the frame
+// columns to the margins. It runs before render_canvas, which lays the canvas over the
 // interior this face covered; the view bar's and the ruler's own side
 // columns are their painters' (render_trim_flags, paint_ruler_row). THE
 // SAME UNDER EVERY CHROME; the program's colors alone.
 // UNDER THE GL CANVAS (2026-10-13, canvas_sink.h's transparency invariant)
-// the face skips `hole`, the canvas's paint area, which on_redraw clears for
-// the GPU; null on the cairo road, the face whole as ever.
+// the face and the rings skip `hole`, the canvas's paint area, which
+// on_redraw clears for the GPU; null on the cairo road, the face and the
+// rings whole, render_canvas laying the area over them.
 namespace {
 // `r` less `hole` as up to four rects — the rows above the hole, the rows
 // below it, and beside it on its own rows the parts left and right — or `r`
@@ -7684,15 +7709,38 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     const GuiRect face{top.x, top.y, top.w, y1 - top.y};
-    if (hole)
+    if (hole) {
+        // THE HOLE IS LEFT ALONE WHOLE: the face and the rings below paint
+        // under one clip of the column's rows less the hole, so the rings'
+        // divider lines, which cross the area, write nothing inside it (the
+        // GL canvas's known-clear record counts on that, on_redraw).
         for_each_part_outside(face, *hole, [&](const GuiRect& part) {
-            paint_cell_rect(cr, part, p.face);
+            cairo_rectangle(cr, part.x, part.y, part.w, part.h);
         });
-    else
-        paint_cell_rect(cr, face, p.face);
+        cairo_clip(cr);
+    }
+    paint_cell_rect(cr, face, p.face);
+    // THE TWO WELLS' RINGS (the stereo divider, render.h's waveform_divider;
+    // architect 2026-10-16): the upper from the top frame row through its
+    // light bottom line, the divider's first rows; the lower from its dark
+    // top line, the divider's last rows, through the bottom frame row; the
+    // face row between them is the face laid above, through the frame
+    // columns to the margins. Each ring is paint_relief_frame's, so each
+    // well closes its own corners — the upper's bottom-left and the lower's
+    // top-right mitred, the other two square. Inside the area the divider's
+    // rows are render_canvas's too (through the canvas sink), so on the GL
+    // canvas, whose hole this painter's lines cross before on_redraw clears
+    // it, the list draws them.
+    const WaveformDivider d = waveform_divider(area.h);
+    const int ring_x = area.x - lw;
+    const int ring_w = area.w + 2 * lw;
+    const int upper_end = area.y + d.y + d.line;        // past its light line
+    const int lower_top = area.y + d.y + d.line + d.face;
+    paint_relief_frame(cr, GuiRect{ring_x, top.y, ring_w, upper_end - top.y},
+                       p.ce_dark, p.ce_hilight);
     paint_relief_frame(cr,
-                       GuiRect{area.x - lw, top.y, area.w + 2 * lw,
-                               foot.y + lw - top.y},
+                       GuiRect{ring_x, lower_top, ring_w,
+                               foot.y + lw - lower_top},
                        p.ce_dark, p.ce_hilight);
     cairo_restore(cr);
 }
@@ -8180,9 +8228,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     }
     // THE GROUND SPLIT: the chrome erase above covers the whole exposed rect;
     // the canvas's frame and the column's margins then take the panel's face
-    // and the frame's ring (paint_canvas_column_frame, above), and the
+    // and the two wells' rings (paint_canvas_column_frame, above), and the
     // waveform area its own `waveform_canvas` ground with the horizontal grid
-    // over it (render_canvas, render.h's row-6 canvas paragraph). Unconditional and
+    // and the stereo divider over it (render_canvas, render.h's row-6 canvas
+    // paragraph). Unconditional and
     // ahead of every content branch, so a cold frame (loading, no audio, or a
     // null plate before the first worker publish) shows canvas where the
     // waveform will be rather than a chrome-colored hole. The outer clip already
@@ -8222,8 +8271,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     family's box — the folder overlay's (paint_keyboard_slot) and a
     //     prompt's or a dialog editor's (paint_modal_dialog), with the
     //     keyboard under a dialog editor's stack — empties the area (nothing
-    //     is cleared or skipped under it); the column's face above skips the
-    //     area (its hole);
+    //     is cleared or skipped under it); the column's face and its two
+    //     wells' rings above skip the area (its hole, a clip);
     //     every other pass keeps to its own lane (the caption, the menu
     //     row, the band, row 8, the border under it and the program frame;
     //     paint_trim, the ruler and the flag blit in the top strip; the flag
@@ -8402,9 +8451,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   1. render_background — the chrome erase over the whole exposed
         //      rect (above, unconditional).
         //   2. paint_canvas_column_frame — the panel's face from the canvas's
-        //      top frame row through the column's foot and the canvas's
-        //      frame ring — then render_canvas — the waveform area's ground
-        //      and the horizontal grid (above, unconditional; 2026-10-09; no
+        //      top frame row through the column's foot and the two wells'
+        //      rings — then render_canvas — the waveform area's ground, the
+        //      horizontal grid and the stereo divider's rows (above,
+        //      unconditional; 2026-10-09, the divider 2026-10-16; no
         //      vertical grid, render.h's row-6 canvas paragraph) — and, on a
         //      frame with no audio loaded (no source, or a load running:
         //      !plate_branch), THE CENTER LINES straight over it

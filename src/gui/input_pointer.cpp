@@ -958,13 +958,13 @@ bool roster_index_click_face(int index) {
 // architect asked for — "get rid of the crosshairs but retain the scrub
 // action".
 //
-// The split row is waveform_press_seam_row (render.h), the one owner the
-// canvas's seam line reads too (architect 2026-10-10: the 1-px line the
-// 2026-08-03 retirement removed returned on this row, so the scrub half is
-// visible — in the grid's color, the center lines' since 2026-10-16; the
-// cursor half stays closed) — integer
-// division, so an odd-height area gives the lower half the extra row, which is
-// what the press has always done.
+// The split row is waveform_press_seam_row (render.h): the stereo divider's
+// face row (architect 2026-10-16, Cool Edit's two wells — the divider is the
+// seam's picture, so the scrub half is visible, as the 1-px seam line of
+// 2026-10-10 made it; the cursor half stays closed), so a press on the
+// divider's light line is the upper half's and one on its face or its dark
+// line the lower's, the odd spare row at the canvas's foot the lower's as
+// it always was.
 bool waveform_lower_half(const GuiRect& area, int y) {
     return y >= waveform_press_seam_row(area);
 }

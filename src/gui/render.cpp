@@ -162,8 +162,7 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 
 namespace {
 // THE CANVAS'S LINES' RECTANGLES, collected for one sink fill (the grid:
-// 2 channels x 3 lines x 2 sides; the press seam's line: 1; the center
-// lines: 2).
+// 2 channels x 3 lines x 2 sides; the center lines: 2).
 struct CanvasLines {
     std::array<GuiRect, 16> rects{};
     int count = 0;
@@ -188,8 +187,8 @@ void canvas_hline(CanvasLines& lines, const GuiRect& area, int row, int t) {
 } // namespace
 
 // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): on the cairo road the
-// one aliased scope, the ground's fill and the lines' one fill exactly as
-// before; on the GL canvas the same rectangles as list records.
+// one aliased scope, the ground's fill, the lines' one fill and the divider's
+// three; on the GL canvas the same rectangles as list records.
 void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     sink.begin(/*aliased=*/true);
@@ -200,9 +199,9 @@ void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
     sink.rects(std::span<const GuiRect>(&area, 1), pal.waveform_canvas);
     CanvasLines lines;
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
-    // horizontal grid, then the press seam's line — t = waveform_line_px()
-    // thick, ONE DEVICE PX ("on waveform → unscaled", the class's one
-    // inventory), each an aliased integer rect inside the area. THE CENTER LINES STAND OVER THE WAVEFORM
+    // horizontal grid — t = waveform_line_px() thick, ONE DEVICE PX ("on
+    // waveform → unscaled", the class's one inventory), each an aliased
+    // integer rect inside its band. THE CENTER LINES STAND OVER THE WAVEFORM
     // (architect 2026-10-09 evening), render_center_lines below, a pass after
     // the plate's blit. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the
     // rule and its reason at render.h's row-6 canvas paragraph).
@@ -213,14 +212,16 @@ void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
     // zero row being the row the plate's bars straddle; the k-th grid line
     // stands t · nearbyint(k · (H / t) / 4) = nearbyint(k · H / 4) device rows
     // from the zero row, H the channel's half height in device rows — k = 1 ..
-    // 3, the fourth on the band's edge not drawn. The bands split the canvas
-    // whole (no inset, architect 2026-10-09), so H is half a band, the band
-    // the canvas's halved and floored height.
+    // 3, the fourth on the band's edge not drawn. Each band is its well's
+    // interior (no inset, architect 2026-10-09; the two wells 2026-10-16), so
+    // H is half a band, every line inside it.
     const auto hline = [&](int row) {
         canvas_hline(lines, area, row, t);
     };
+    const WaveformDivider div = waveform_divider(area.h);
     for (int ch = 0; ch < 2; ++ch) {
-        const WaveformChannelBand band = waveform_channel_band(area.h, ch);
+        const WaveformChannelBand band =
+            waveform_channel_band(area.h, div.h(), ch);
         if (band.h <= 0) continue;
         const int zero = band.zero_row();
         const double half_q = static_cast<double>(band.h) / 2.0 / t;
@@ -232,17 +233,26 @@ void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
         }
     }
     sink.rects(lines.span(), pal.grid);
-    // THE PRESS SEAM'S LINE (architect 2026-10-10 ~15:45, "so that you know
-    // that's the scrub"): one device px on the row where a press changes act
-    // (waveform_press_seam_row, the same call waveform_lower_half reads, so
-    // the line and the press cannot drift); it coincides with the channels'
-    // meeting row. IN THE PALETTE'S `center` (architect 2026-10-16, "make the
-    // middle line, the one between the waveforms, the same color as the
-    // waveform's midline"), its own fill after the grid's, still UNDER the
-    // waveform in this pass — only its color is the center lines'.
-    CanvasLines seam;
-    canvas_hline(seam, area, waveform_press_seam_row(area) - area.y, t);
-    sink.rects(seam.span(), pal.center);
+    // THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; the
+    // rule and its rows at render.h's waveform_divider): across the area's
+    // columns, the upper well's light bottom line in `ce_hilight`, the face
+    // row in `face` and the lower well's dark top line in `ce_dark`, each
+    // its scaled rows, cut to the area's rows — CHROME ON THE CANVAS, painted
+    // here through the sink so the GL canvas draws it from its list exactly
+    // as the cairo road fills it (canvas_sink.h's head), the frame columns'
+    // share being paint_canvas_column_frame's. Every later canvas painter
+    // leaves these rows alone (the wells' runs, waveform_well_rows), and the
+    // press seam stands on the face row (waveform_press_seam_row).
+    const auto divider_row = [&](int y, int h, GuiColor color) {
+        const int top = std::max(area.y, area.y + y);
+        const int bot = std::min(area.y + area.h, area.y + y + h);
+        if (bot <= top) return;
+        const GuiRect r{area.x, top, area.w, bot - top};
+        sink.rects(std::span<const GuiRect>(&r, 1), color);
+    };
+    divider_row(div.y, div.line, pal.ce_hilight);
+    divider_row(div.y + div.line, div.face, pal.face);
+    divider_row(div.y + div.line + div.face, div.line, pal.ce_dark);
     sink.end();
 }
 
@@ -259,9 +269,11 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area) {
     // aliased scope and one fill on the cairo road as before.
     sink.begin(/*aliased=*/true);
     const int t = waveform_line_px();
+    const int divider_px = waveform_divider_px();
     CanvasLines lines;
     for (int ch = 0; ch < 2; ++ch) {
-        const WaveformChannelBand band = waveform_channel_band(area.h, ch);
+        const WaveformChannelBand band =
+            waveform_channel_band(area.h, divider_px, ch);
         if (band.h > 0) canvas_hline(lines, area, band.zero_row(), t);
     }
     sink.rects(lines.span(), palette().center);
@@ -1192,6 +1204,24 @@ bool render_waveform(cairo_surface_t* dest,
     return band.whole;
 }
 
+namespace {
+// ONE SOLID CANVAS LINE IN THE TWO WELLS: the waveform_line_px()-wide line
+// at column `col` (its column gate and right-edge clip, waveform_line_width)
+// as one rect per non-empty well (waveform_well_rows), so the stereo
+// divider's rows carry none — the scanner's and the zoom anchor's one form,
+// one sink fill.
+void well_line_rects(GuiCanvasSink& sink, const GuiRect& area, int col,
+                     GuiColor color) {
+    const int width = waveform_line_width(area.w, col);
+    if (width <= 0) return;
+    std::array<GuiRect, 2> rs{};
+    std::size_t n = 0;
+    for (const WaveformWellRows& w : waveform_well_rows(area))
+        if (w.y1 > w.y0) rs[n++] = GuiRect{area.x + col, w.y0, width, w.y1 - w.y0};
+    if (n > 0) sink.rects(std::span<const GuiRect>(rs.data(), n), color);
+}
+} // namespace
+
 void render_playhead(GuiCanvasSink& sink,
                      GuiRect area,
                      double  playhead_pixel_x,
@@ -1243,21 +1273,21 @@ void render_playhead(GuiCanvasSink& sink,
     // The waveform_line_px()-wide line (render.h) paints whenever its column
     // is onscreen (gated on its own column and clipped at the right edge), so
     // it never leaks into an adjacent region, straight over whatever it
-    // crosses — waveform ink included. THE CANVAS'S ROWS, the area whole
-    // (2026-10-09): the scanner solid, the resting cursor Cool Edit's dotted
-    // column on its own phase (the declaration).
+    // crosses — waveform ink included. THE CANVAS'S TWO WELLS (2026-10-09;
+    // the stereo divider's rows left to it since 2026-10-16,
+    // waveform_well_rows): the scanner solid, the resting cursor Cool Edit's
+    // dotted column on its own phase (the declaration), one run per well.
     if (form == PlayheadForm::Dotted) {
-        GuiCanvasDotRun run;
-        if (dotted_waveform_line_run(area.x, area.w, col, area.y,
-                                     area.y + area.h, kProgramSpec.dot_period,
-                                     kProgramSpec.playhead_dot_phase, run))
-            sink.dots(std::span<const GuiCanvasDotRun>(&run, 1), color);
+        GuiCanvasDotRun runs[2];
+        const int n = dotted_waveform_line_runs(
+            area, col, kProgramSpec.dot_period,
+            kProgramSpec.playhead_dot_phase, runs);
+        if (n > 0)
+            sink.dots(std::span<const GuiCanvasDotRun>(runs,
+                                                       static_cast<std::size_t>(n)),
+                      color);
     } else {
-        const int width = waveform_line_width(area.w, col);
-        if (width > 0) {
-            const GuiRect line{area.x + col, area.y, width, area.h};
-            sink.rects(std::span<const GuiRect>(&line, 1), color);
-        }
+        well_line_rects(sink, area, col, color);
     }
     sink.end();
 }
@@ -1281,13 +1311,10 @@ void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, int col) {
     // alone wears `playhead_stem` (render.h's playhead paragraph). It is
     // deliberately as loud as a marker stem, a solid line where the cues'
     // and the cursor's are dotted.
-    // The canvas's rows, the area whole (2026-10-09: the frame row above it
-    // is the canvas's frame, which no line crosses).
-    const int width = waveform_line_width(area.w, col);
-    if (width > 0) {
-        const GuiRect line{area.x + col, area.y, width, area.h};
-        sink.rects(std::span<const GuiRect>(&line, 1), palette().scanner);
-    }
+    // The canvas's two wells (2026-10-09: the frame row above it is the
+    // canvas's frame, which no line crosses; the stereo divider's rows
+    // likewise since 2026-10-16, waveform_well_rows).
+    well_line_rects(sink, area, col, palette().scanner);
     sink.end();
 }
 

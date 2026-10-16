@@ -47,6 +47,10 @@ struct WaveformJob {
     double    painter_spp      = 0.0;
     int       area_w           = 0;
     int       area_h           = 0;
+    // THE STEREO DIVIDER'S HEIGHT (waveform_divider_px(), render.h), a
+    // scaled length snapshotted with the rest of the geometry (the line
+    // width's reason below): channel 1's band starts under it.
+    int       divider_px       = 0;
     bool      target           = false;
     uint64_t  warp_frame_map_hash     = 0;
 
@@ -56,8 +60,8 @@ struct WaveformJob {
     // g_gui_scale_percent itself — the GUI thread mutates that via
     // set_gui_scale_percent without draining in-flight jobs — so ALL
     // geometry is snapshotted here for a coherent render. (The waveform's
-    // vertical inset rode here too until its removal, architect 2026-10-09:
-    // the channels split the area whole, waveform_channel_band.)
+    // vertical inset rode here too until its removal, architect 2026-10-09;
+    // the bands are waveform_channel_band's off area_h and divider_px.)
     int       line_px          = 0;
     // The plate's two INKS (waveform_plate_inks, render.h), captured beside
     // the line width for the same reason: the worker reads no live palette.
@@ -193,7 +197,7 @@ private:
 // the GUI thread (force_synchronous_waveform_rebuild), touching only the
 // supplied dest surface, the audio handle's peak pyramid (read-only after
 // load), the caller's warp_frame_map snapshot, and the job-captured geometry
-// scalars (area_w/area_h/line_px) and inks — no other shared or
+// scalars (area_w/area_h/divider_px/line_px) and inks — no other shared or
 // main-thread state. The line width, the inks and the
 // MAGNIFICATION are passed in rather than read off live state so
 // the render touches no gui_scale and no settings state: ALL scale-dependent
@@ -210,6 +214,7 @@ void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
     int area_h,
+    int divider_px,
     int line_px,
     WaveformPlateInks inks,
     const GuiAudio& audio,
@@ -230,6 +235,7 @@ void render_waveform_to_plate_columns(
     GuiPlateColumns& dest,
     int area_w,
     int area_h,
+    int divider_px,
     int line_px,
     const GuiAudio& audio,
     int64_t vp_start,

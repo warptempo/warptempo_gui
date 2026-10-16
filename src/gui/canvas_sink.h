@@ -11,12 +11,14 @@
 // puts inside the canvas's interior — waveform_area, the canvas's paint area
 // onscreen_keyboard::waveform_paint_area within it — goes through ONE sink,
 // and every canvas painter is written once against it: render_canvas (the
-// ground, the grid and the press seam), the plate (paint_waveform_plate),
+// ground, the grid and the stereo divider's three rows — chrome on the
+// canvas, 2026-10-16, render.h's waveform_divider), the plate (paint_waveform_plate),
 // render_center_lines, the phase-reset lead-in ring, the nudged pairs' runs,
 // the marker stems, the cursor's dots, the scanner and the zoom anchor's
 // stem, in that order (on_redraw's paint-order block, paint_handler.cpp).
 // Each is a solid converted color on whole device pixels (ON WAVEFORM →
-// UNSCALED, waveform_line_px), so the sink's vocabulary is three records:
+// UNSCALED, waveform_line_px; the divider's rows scaled chrome, but solid
+// integral rects all the same), so the sink's vocabulary is three records:
 // a RECT, a DOTTED RUN (GuiCanvasDotRun, render.h: a column or a row of
 // one-px cells on a period's phase, counted from an origin) and THE PLATE
 // (the per-column bar bounds, GuiPlateColumns, with its two inks).

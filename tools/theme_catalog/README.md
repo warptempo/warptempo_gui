@@ -43,7 +43,7 @@ under Wine (2026-10-09, the file's head).
 by default) transcribes each into the eleven program roles (`kGuiPaletteRoles`, `src/gui/palette_file.h`, read off the
 header and checked) and writes `src/gui/palette_presets.inc`, the rows of `kGuiBuiltinPalettes` — never hand-edited.
 Its head is the transcription's statement: WvBk, WvFg, GrdL, Cntr, CueM, RngM, Curs and Face to their roles (a scheme
-without a Face takes the default's 626C7B), THE LIT OUTLINE the ink at HLS lightness 0.3157 (the view bar span's shadow
+without a Face, Classic Cool alone, takes Windows 95's button face C0C0C0, architect 2026-10-16), THE LIT OUTLINE the ink at HLS lightness 0.3157 (the view bar span's shadow
 rule, `src/gui/cool_edit_derive.h`, ported operation for operation; `palette_file.cpp` proves every row against the
 C++ tone()), THE INVALID COLOR its Cntr too, the preset's own center line (architect 2026-10-11), and the
 one role Cool Edit has no key for, the scanner, the same in every preset; the keys `cool-edit-<name>`, the

@@ -43,6 +43,7 @@ void render_waveform_to_cache_surface(
     cairo_surface_t* dest,
     int area_w,
     int area_h,
+    int divider_px,
     int line_px,
     WaveformPlateInks inks,
     const GuiAudio& audio,
@@ -67,8 +68,9 @@ void render_waveform_to_cache_surface(
     // measured on the tablet is recorded: the clear alone cost nearly as much
     // as the whole write that replaces it). The surface is reused frame to
     // frame, so whatever no call stored is cleared after the calls
-    // (`clear_rows` below): the rows outside both bands — the spare last row
-    // of an odd plate — and the band of a call that returned false. The bands
+    // (`clear_rows` below): the rows outside both bands — the stereo
+    // divider's rows between them and the spare last row of an odd plate —
+    // and the band of a call that returned false. The bands
     // span the surface's full width, so no column lies outside them.
     const auto clear_rows = [dest](int y, int h) {
         if (h <= 0) return;
@@ -84,28 +86,25 @@ void render_waveform_to_cache_surface(
     // triangle hung, and since the canvas became Cool Edit's the head and the
     // cues' triangles stand above the canvas's frame, so nothing needed it).
     // The surface is area_w x area_h, blitted at area.y; the two channels
-    // split it whole, and the leveler's headroom (waveform_gain.h) is the only
-    // thing keeping peaks off its first and last rows.
+    // fill its two wells, and the leveler's headroom (waveform_gain.h) is the
+    // only thing keeping peaks off their edge rows.
     // Stereo is structural — channels != 2 refuses at load (see file_loader) —
-    // so both channels always render. No channel gap: the 1972 Krips material
-    // is effectively never unity, so the two channels' inner excursions do
-    // not visually collide at the shared midline; a plain halve of the
-    // canvas is clean.
+    // so both channels always render.
     //
-    // THE TWO BANDS ARE EXACTLY EQUAL AND THEY MEET FLUSH (architect
-    // 2026-08-03, when the 1px channel-split line was retired): each channel
-    // takes the halved-and-floored height and the bottom one begins
-    // immediately below the top one, so there is no row between them — with
-    // no line on it, a spare row between the channels would read as a
-    // one-pixel gap in the ink. At an odd height the spare row is the plate's
-    // LAST, under channel 1, where no ink reaches. Purely a vertical band
-    // offset: no column's frame span moves, so plate column purity and both
-    // views' identity are untouched.
+    // THE TWO BANDS ARE EXACTLY EQUAL, COOL EDIT'S STEREO DIVIDER BETWEEN THEM
+    // (architect 2026-10-16; the channels met flush from 2026-08-03 until
+    // then): each channel takes the area less the divider, halved and floored,
+    // and the bottom one begins under the divider's `divider_px` rows — the
+    // job's snapshot of waveform_divider_px (render.h's waveform_divider),
+    // which the plate leaves transparent and the canvas paints. At an odd
+    // remainder the spare row is the plate's LAST, under channel 1, where no
+    // ink reaches. Purely a vertical band offset: no column's frame span
+    // moves, so plate column purity and both views' identity are untouched.
     // THE TWO BANDS' ONE LAYOUT is waveform_channel_band (render.h), which the
     // canvas's grid and center lines read too (render_canvas), so the lines
     // stand on these bands' zero rows.
-    const WaveformChannelBand b0 = waveform_channel_band(area_h, 0);
-    const WaveformChannelBand b1 = waveform_channel_band(area_h, 1);
+    const WaveformChannelBand b0 = waveform_channel_band(area_h, divider_px, 0);
+    const WaveformChannelBand b1 = waveform_channel_band(area_h, divider_px, 1);
     if (b0.h <= 0) {
         clear_rows(0, area_h);
         return;
@@ -141,6 +140,7 @@ void render_waveform_to_cache_surface(
                                         basis, gain, line_px, inks,
                                         warp_frame_map_or_null);
     clear_rows(0, b0.y);
+    clear_rows(b0.y + b0.h, b1.y - (b0.y + b0.h));
     clear_rows(b1.y + b1.h, area_h - (b1.y + b1.h));
     if (!whole0) clear_rows(b0.y, b0.h);
     if (!whole1) clear_rows(b1.y, b1.h);
@@ -176,6 +176,7 @@ void render_waveform_to_plate_columns(
     GuiPlateColumns& dest,
     int area_w,
     int area_h,
+    int divider_px,
     int line_px,
     const GuiAudio& audio,
     int64_t vp_start,
@@ -188,8 +189,8 @@ void render_waveform_to_plate_columns(
     dest.band[0].stored = false;
     dest.band[1].stored = false;
     if (area_w <= 0 || area_h <= 0) return;
-    const WaveformChannelBand b0 = waveform_channel_band(area_h, 0);
-    const WaveformChannelBand b1 = waveform_channel_band(area_h, 1);
+    const WaveformChannelBand b0 = waveform_channel_band(area_h, divider_px, 0);
+    const WaveformChannelBand b1 = waveform_channel_band(area_h, divider_px, 1);
     if (b0.h <= 0) return;
     const WaveformBasis basis{vp_start, painter_spp, area_w};
     const WaveformGainCurve* gain = magnified ? &audio.gain_curve() : nullptr;
@@ -216,7 +217,8 @@ void render_waveform_to_plate_columns(
 // is also consumed by force_synchronous_waveform_rebuild(). on_redraw's
 // consumer derivation must stay in sync with the helper the same way it
 // tracked the prior inline block. It also snapshots the GUI thread's
-// geometry (area_w / area_h and line_px = waveform_line_px()) so the worker
+// geometry (area_w / area_h, divider_px = waveform_divider_px() and line_px =
+// waveform_line_px()) so the worker
 // render never reads live GUI state directly.
 
 GuiPaintHandler::WaveformRenderInputs
@@ -252,6 +254,7 @@ GuiPaintHandler::compute_waveform_render_inputs() const {
     in.painter_spp   = painter_q;
     in.area_w        = area.w;
     in.area_h        = area.h;
+    in.divider_px    = waveform_divider_px();
     in.line_px       = waveform_line_px();
     in.inks          = waveform_plate_inks();
     // The waveform PICTURE's gain field — the gate's whole answer off the
@@ -333,15 +336,18 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
 
-    // THE PLATE'S GEOMETRY IS THE AREA'S TWO DIMENSIONS ALONE since the
-    // waveform's vertical inset went (architect 2026-10-09): the channels
-    // split the area whole (waveform_channel_band), so the area's width and
-    // height are the whole layout input, keyed directly. (The inset was keyed
-    // as a field of its own until then, and the measured MONOSPACE font size
+    // THE PLATE'S GEOMETRY IS THE AREA'S TWO DIMENSIONS AND THE STEREO
+    // DIVIDER'S HEIGHT (the inset gone 2026-10-09; the divider 2026-10-16):
+    // the channels' bands are the area less the divider, halved
+    // (waveform_channel_band), so those three are the whole layout input,
+    // each keyed directly — the divider's rows a scaled length, moving with
+    // gui_scale where the area's height need not. (The inset was keyed as a
+    // field of its own until 2026-10-09, and the measured MONOSPACE font size
     // before row 7, as a proxy for it while it was font-derived.)
     auto fingerprint_differs = [&](
         int64_t fp_vp_s, int64_t fp_vp_e,
         int     fp_aw,   int     fp_ah,
+        int     fp_div,
         int     fp_line,
         WaveformPlateInks fp_ink,
         uint64_t fp_gain,
@@ -351,6 +357,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         if (fp_vp_e != in.vp_end)          return true;
         if (fp_aw   != in.area_w)          return true;
         if (fp_ah   != in.area_h)          return true;
+        if (fp_div  != in.divider_px)      return true;
         if (fp_line  != in.line_px)        return true;
         if (fp_ink   != in.inks)           return true;
         if (fp_gain != in.gain_hash) return true;
@@ -364,6 +371,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.pending_fp_vp_end,
         wf_cache.pending_fp_area_w,
         wf_cache.pending_fp_area_h,
+        wf_cache.pending_fp_divider_px,
         wf_cache.pending_fp_line_px,
         wf_cache.pending_fp_inks,
         wf_cache.pending_fp_gain_hash,
@@ -383,6 +391,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
         wf_cache.supersede_painter_spp = in.painter_spp;
         wf_cache.supersede_area_w      = in.area_w;
         wf_cache.supersede_area_h      = in.area_h;
+        wf_cache.supersede_divider_px  = in.divider_px;
         wf_cache.supersede_line_px     = in.line_px;
         wf_cache.supersede_inks        = in.inks;
         wf_cache.supersede_gain_hash = in.gain_hash;
@@ -418,6 +427,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     job.painter_spp    = in.painter_spp;
     job.area_w         = in.area_w;
     job.area_h         = in.area_h;
+    job.divider_px     = in.divider_px;
     job.line_px        = in.line_px;
     job.inks           = in.inks;
     job.gain_hash = in.gain_hash;
@@ -438,6 +448,7 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     wf_cache.pending_fp_vp_end      = in.vp_end;
     wf_cache.pending_fp_area_w      = in.area_w;
     wf_cache.pending_fp_area_h      = in.area_h;
+    wf_cache.pending_fp_divider_px  = in.divider_px;
     wf_cache.pending_fp_line_px  = in.line_px;
     wf_cache.pending_fp_inks     = in.inks;
     wf_cache.pending_fp_gain_hash = in.gain_hash;
@@ -498,6 +509,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_vp_end              = wf_cache.fp_vp_end;
         wf_cache.pending_fp_area_w              = wf_cache.fp_area_w;
         wf_cache.pending_fp_area_h              = wf_cache.fp_area_h;
+        wf_cache.pending_fp_divider_px          = wf_cache.fp_divider_px;
         wf_cache.pending_fp_line_px             = wf_cache.fp_line_px;
         wf_cache.pending_fp_inks                = wf_cache.fp_inks;
         wf_cache.pending_fp_gain_hash   = wf_cache.fp_gain_hash;
@@ -560,6 +572,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         job.painter_spp    = wf_cache.supersede_painter_spp;
         job.area_w         = sw;
         job.area_h         = sh;
+        job.divider_px     = wf_cache.supersede_divider_px;
         job.line_px        = wf_cache.supersede_line_px;
         job.inks           = wf_cache.supersede_inks;
         job.gain_hash = wf_cache.supersede_gain_hash;
@@ -582,6 +595,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
         wf_cache.pending_fp_vp_end      = wf_cache.supersede_vp_end;
         wf_cache.pending_fp_area_w      = sw;
         wf_cache.pending_fp_area_h      = sh;
+        wf_cache.pending_fp_divider_px  = wf_cache.supersede_divider_px;
         wf_cache.pending_fp_line_px  = wf_cache.supersede_line_px;
         wf_cache.pending_fp_inks     = wf_cache.supersede_inks;
         wf_cache.pending_fp_gain_hash = wf_cache.supersede_gain_hash;
@@ -617,6 +631,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     wf_cache.fp_vp_end       = wf_cache.pending_fp_vp_end;
     wf_cache.fp_area_w       = wf_cache.pending_fp_area_w;
     wf_cache.fp_area_h       = wf_cache.pending_fp_area_h;
+    wf_cache.fp_divider_px   = wf_cache.pending_fp_divider_px;
     wf_cache.fp_line_px  = wf_cache.pending_fp_line_px;
     wf_cache.fp_inks     = wf_cache.pending_fp_inks;
     wf_cache.fp_gain_hash = wf_cache.pending_fp_gain_hash;
@@ -813,7 +828,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     if constexpr (kGuiCanvasDrawList) {
         render_waveform_to_plate_columns(
             wf_cache.columns,
-            in.area_w, in.area_h, in.line_px,
+            in.area_w, in.area_h, in.divider_px, in.line_px,
             *in.audio,
             in.vp_start, in.painter_spp, in.gain_hash != 0,
             in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
@@ -839,7 +854,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
         // in.audio is the source audio.
         render_waveform_to_cache_surface(
             wf_cache.surface,
-            in.area_w, in.area_h, in.line_px, in.inks,
+            in.area_w, in.area_h, in.divider_px, in.line_px, in.inks,
             *in.audio,
             in.vp_start, in.painter_spp, in.gain_hash != 0,
             in.warp_frame_map.empty() ? nullptr : &in.warp_frame_map);
@@ -853,6 +868,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.fp_vp_end       = in.vp_end;
     wf_cache.fp_area_w       = in.area_w;
     wf_cache.fp_area_h       = in.area_h;
+    wf_cache.fp_divider_px   = in.divider_px;
     wf_cache.fp_line_px  = in.line_px;
     wf_cache.fp_inks     = in.inks;
     wf_cache.fp_gain_hash = in.gain_hash;
@@ -864,6 +880,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.pending_fp_vp_end       = in.vp_end;
     wf_cache.pending_fp_area_w       = in.area_w;
     wf_cache.pending_fp_area_h       = in.area_h;
+    wf_cache.pending_fp_divider_px   = in.divider_px;
     wf_cache.pending_fp_line_px  = in.line_px;
     wf_cache.pending_fp_inks     = in.inks;
     wf_cache.pending_fp_gain_hash = in.gain_hash;

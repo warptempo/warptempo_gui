@@ -159,18 +159,24 @@ struct WaveformCache {
     // THE FINGERPRINT'S MEMBERS, in full and in one place (the dirty-detect
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
-    // vp_start, vp_end, area_w, area_h, line_px, the plate's two INKS, the
-    // GAIN field, target, and the warp_frame_map hash. Every one is an input the plate's PIXELS depend
+    // vp_start, vp_end, area_w, area_h, divider_px, line_px, the plate's two
+    // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is
+    // an input the plate's PIXELS depend
     // on, and each is keyed BY FIELD rather than through whatever else happens
-    // to move with it. THE AREA'S TWO DIMENSIONS ARE THE PLATE'S WHOLE LAYOUT
-    // since the waveform's vertical inset went (architect 2026-10-09): the
-    // channels split the area whole (waveform_channel_band, render.h). (The
-    // inset was a field of its own until then, and the measured MONOSPACE
-    // font size before row 7, its proxy while it was font-derived.)
+    // to move with it. THE AREA'S TWO DIMENSIONS AND THE STEREO DIVIDER'S
+    // HEIGHT ARE THE PLATE'S WHOLE LAYOUT (the inset gone 2026-10-09, the
+    // divider 2026-10-16): the channels' bands are the area less the divider,
+    // halved (waveform_channel_band, render.h). (The inset was a field of its
+    // own until 2026-10-09, and the measured MONOSPACE font size before row
+    // 7, its proxy while it was font-derived.)
     int64_t   fp_vp_start    = 0;
     int64_t   fp_vp_end      = 0;
     int       fp_area_w      = 0;
     int       fp_area_h      = 0;
+    // THE STEREO DIVIDER'S HEIGHT the live pixels were laid out with
+    // (waveform_divider_px(), render.h): channel 1's band starts under it, so
+    // a scale that moves it re-renders the plate BY FIELD, keyed directly.
+    int       fp_divider_px  = -1;
     // THE LINE WIDTH the live pixels were rendered with (waveform_line_px(),
     // render.h): the lit inner bar's outline erodes at that distance, so a
     // change that moves it re-renders the plate BY FIELD, keyed directly. (One
@@ -225,6 +231,7 @@ struct WaveformCache {
     int64_t   pending_fp_vp_end      = 0;
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
+    int       pending_fp_divider_px  = -1;
     int       pending_fp_line_px = -1;
     WaveformPlateInks pending_fp_inks{};
     uint64_t  pending_fp_gain_hash = 0;
@@ -248,6 +255,7 @@ struct WaveformCache {
     double    supersede_painter_spp = 0.0;  // the lattice q, like the job's
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
+    int       supersede_divider_px  = 0;   // GUI-captured divider height
     int       supersede_line_px     = 0;   // GUI-captured waveform line width
     WaveformPlateInks supersede_inks{};    // GUI-captured plate inks
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
@@ -796,13 +804,18 @@ private:
         double   painter_spp   = 0.0;
         int      area_w        = 0;
         int      area_h        = 0;
+        // The stereo divider's height (waveform_divider_px(), render.h),
+        // captured beside the area's for the same reason as the line width
+        // below: channel 1's band starts under it, so it is both a render
+        // input and a fingerprint field.
+        int      divider_px    = 0;
         // The waveform LINE WIDTH (waveform_line_px()), captured on the GUI
         // thread beside area_w/area_h so the worker render reads no scale
         // state (the GUI thread mutates that without draining jobs): the lit
         // inner bar's outline erodes at that distance, so it is both a render
         // input and a fingerprint field. (The waveform's vertical inset rode
-        // here until its removal, architect 2026-10-09: the channels split the
-        // area whole, so area_w and area_h are the plate's whole layout.)
+        // here until its removal, architect 2026-10-09; the area's dimensions
+        // and divider_px above are the plate's whole layout.)
         int      line_px       = 0;
         // The plate's two INKS (waveform_plate_inks), captured the same way
         // and for the same reason: the plate bakes their words, so they are

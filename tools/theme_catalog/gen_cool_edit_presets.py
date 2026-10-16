@@ -6,10 +6,9 @@
 # Cool Edit Pro palettes for waveform needed now"; the program is Cool Edit under every chrome): EVERY scheme Cool Edit
 # Pro 2.1 carries in coolpro.exe, in its own order, each a KEY, a DISPLAY NAME and THE ELEVEN PROGRAM ROLES
 # (kGuiPaletteRoles, read off palette_file.h and checked against ROLE_ORDER). Its first is Cool Edit's "(Default
-# Scheme)", `cool-edit-default` (DEFAULT_KEY below, the transcription's check on the first row; it was the product's
-# default palette until 2026-10-12, Midnight until 2026-10-16). THE DEFAULT PALETTE under every chrome is Cool Edit's
-# "CEPro 1.2", `cool-edit-cepro-1-2` (architect 2026-10-16; palette_file.h's kGuiDefaultPaletteKey, which this
-# tool does not read).
+# Scheme)", `cool-edit-default` (DEFAULT_KEY below, the transcription's check on the first row), THE DEFAULT PALETTE
+# under every chrome (architect 2026-10-16, "make default the default theme"; palette_file.h's kGuiDefaultPaletteKey,
+# which this tool does not read; Midnight was the default 2026-10-12 to 2026-10-16).
 #
 # THE SOURCE (cool_edit_presets.txt's own head says where it came from): the first line is "(Default Scheme)" and its
 # values on the same line; after it EVERY values line is followed by its name line (the two the exe's text lacks come
@@ -20,8 +19,10 @@
 # THE TRANSCRIPTION, each role <- the scheme's key, nothing derived but the outline:
 #   waveform_canvas <- WvBk          waveform_ink <- WvFg          grid <- GrdL          center <- Cntr
 #   cue <- CueM                      range <- RngM                 playhead_stem <- Curs
-#   face <- Face, and a scheme recording no Face ("Classic Cool") takes THE DEFAULT SCHEME'S, 626C7B — Cool Edit's own
-#     fallback, the panel then wearing the default's face;
+#   face <- Face, and a scheme recording no Face ("Classic Cool", the one preset with UseW=1, every other 2) takes
+#     WINDOWS 95'S BUTTON FACE, C0C0C0 (NO_FACE below; architect 2026-10-16, "win95"): such a scheme makes Cool Edit
+#     follow the Windows 3D face (under Wine's D4D0C8 its registry recorded a darkened UserFace 9F9785), and the
+#     product takes the period's own Windows face over both;
 #   waveform_outline <- THE INK AT HLS LIGHTNESS 0.3157, hue and saturation kept: Cool Edit records no outline, and the
 #     lit outline takes the view bar span's shadow rule (src/gui/cool_edit_derive.h's `span_shadow` tone, its (a, b)
 #     read off that file and checked to be (0, 0.3157)), its round trip ported below operation for operation, so the
@@ -68,6 +69,8 @@ FROM_KEY = {'waveform_canvas': 'WvBk', 'waveform_ink': 'WvFg', 'grid': 'GrdL', '
             'range': 'RngM', 'playhead_stem': 'Curs', 'face': 'Face'}
 # the role Cool Edit has no key for (the head)
 FIXED = {'scanner': 0xFFFFFF}
+# the face of a scheme recording none (the head): Windows 95's button face
+NO_FACE = 0xC0C0C0
 DEFAULT_LINE = '(Default Scheme),'
 DEFAULT_NAME = 'Default'
 DEFAULT_KEY = 'cool-edit-default'
@@ -184,11 +187,11 @@ def word(values, key, name):
     return int(v, 16)
 
 
-def preset_words(name, values, default_face):
+def preset_words(name, values):
     """One preset -> its eleven words in ROLE_ORDER (the head's transcription)."""
     w = {}
     for role, key in FROM_KEY.items():
-        if role == 'face' and key not in values: w[role] = default_face
+        if role == 'face' and key not in values: w[role] = NO_FACE
         else: w[role] = word(values, key, name)
     w['waveform_outline'] = tone(w['waveform_ink'], *OUTLINE)
     w['invalid_label'] = w['center']
@@ -211,7 +214,6 @@ def main():
         raise SystemExit(f'gen_cool_edit_presets: {COOL_EDIT_DERIVE_H}\'s span_shadow is {span_shadow_fit()}, '
                          f'not {OUTLINE}')
     ps = presets(source)
-    default_face = word(ps[0][1], 'Face', DEFAULT_NAME)
     names = [n for n, _ in ps]
     keys = [preset_key(n) for n in names]
     if keys[0] != DEFAULT_KEY: raise SystemExit(f'gen_cool_edit_presets: the default\'s key is {keys[0]}')
@@ -225,7 +227,7 @@ def main():
         if not (0 < len(n) <= 40 and all(0x20 <= ord(c) <= 0x7E for c in n) and n == n.strip() and '/' not in n
                 and '"' not in n and '\\' not in n):
             raise SystemExit(f'gen_cool_edit_presets: the display name {n!r} is outside the palette name grammar')
-    rows = ''.join(f'    {{"{k}", "{n}", {{{", ".join(f"0x{w:06X}" for w in preset_words(n, v, default_face))}}}}},\n'
+    rows = ''.join(f'    {{"{k}", "{n}", {{{", ".join(f"0x{w:06X}" for w in preset_words(n, v))}}}}},\n'
                    for k, (n, v) in zip(keys, ps))
     with open(PRESETS_INC, 'w', newline='\n') as f:
         f.write(GENERATED +

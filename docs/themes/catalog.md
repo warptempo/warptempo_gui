@@ -7,20 +7,20 @@ The program's colors come in two built-in kinds, each chosen on its own.
 
 To choose one, open the Settings menu and pick Chrome or Caption: the Settings line opens on the key in use. Type another key from the lists below (Tab completes a typed beginning) and press OK or Enter: it applies at once and is kept for the next launch. Cancel or Esc leaves the colors as they were. A word that is no preset's key is refused.
 
-The defaults: the chrome CEPro 1.2 (`cool-edit-cepro-1-2`) and the caption Windows Storm (`windows-storm`).
+The defaults: the chrome Default (`cool-edit-default`) and the caption Windows Storm (`windows-storm`).
 
 ## Chromes
 
 Cool Edit Pro 2.1's twenty color presets, in Cool Edit's own order, as their text stands inside its program file (coolpro.exe). Two of them carry no name there; 3D and Easy on the Eyes are their names in Cool Edit's own registry entries.
 
-- Classic Cool records no Panel Face and wears Default's, as Cool Edit itself does.
+- Classic Cool records no Panel Face, so Cool Edit follows Windows' button face for it: here Windows 95's.
 - The waveform's outline is not one of Cool Edit's colors: each chrome's is its waveform color darkened, the same hue at a fixed lightness.
 - The Invalid color, which marks an invalid marker, is each chrome's own center-line color.
 - The scanner (the line that moves during playback) and the zoom's anchor line are white in every chrome, as Cool Edit's scanner is on every one of its presets.
 
 | Chrome | Key |
 |---|---|
-| Default | `cool-edit-default` |
+| Default (the default) | `cool-edit-default` |
 | XP Blue | `cool-edit-xp-blue` |
 | XP Silver | `cool-edit-xp-silver` |
 | XP Olive | `cool-edit-xp-olive` |
@@ -30,7 +30,7 @@ Cool Edit Pro 2.1's twenty color presets, in Cool Edit's own order, as their tex
 | Seattle Blues | `cool-edit-seattle-blues` |
 | Midnight | `cool-edit-midnight` |
 | Periwinkle | `cool-edit-periwinkle` |
-| CEPro 1.2 (the default) | `cool-edit-cepro-1-2` |
+| CEPro 1.2 | `cool-edit-cepro-1-2` |
 | 3D | `cool-edit-3d` |
 | Stealth | `cool-edit-stealth` |
 | Grape, Lime, and Tangerine | `cool-edit-grape-lime-and-tangerine` |

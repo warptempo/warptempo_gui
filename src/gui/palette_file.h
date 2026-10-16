@@ -98,10 +98,10 @@
 // scheme's name in the key grammar — the `chrome` key's word for it), a
 // DISPLAY NAME (Cool Edit's own, "Default" for its "(Default Scheme)") and
 // THE ELEVEN. THE DEFAULT PALETTE IS ONE UNDER EVERY CHROME, Cool Edit's
-// "CEPro 1.2" (`cool-edit-cepro-1-2`, kGuiDefaultPaletteKey; architect
-// 2026-10-16, replacing "Midnight", the default since 2026-10-12, which
-// replaced "Default") — THE PROGRAM'S ELEVEN both first-run
-// templates spell (`chrome=cool-edit-cepro-1-2`; the key required since
+// own "(Default Scheme)" (`cool-edit-default`, kGuiDefaultPaletteKey;
+// architect 2026-10-16, "make default the default theme"; "Midnight" was
+// the default 2026-10-12 to 2026-10-16) — THE PROGRAM'S ELEVEN both
+// first-run templates spell (`chrome=cool-edit-default`; the key required since
 // architect 2026-10-14, a config naming no palette until then taking it)
 // (the per-chrome default palettes of 2026-10-07 to 2026-10-09 retired the
 // same day: the program is no chrome's).
@@ -156,8 +156,9 @@
 // THE PANEL'S FACE its Face (Cool Edit's "Dockable Window 3D Color": the
 // ground of the program's panel — the toolbar band, the dock bar, row 8 and
 // the canvas column's lanes — whose every other tone derives from it,
-// cool_edit_derive.h; a scheme recording none takes the default's 626C7B,
-// Cool Edit's own fallback); THE INVALID COLOR `invalid_label` ITS Cntr
+// cool_edit_derive.h; a scheme recording none — Classic Cool, for which
+// Cool Edit follows the Windows 3D face — takes WINDOWS 95'S BUTTON FACE,
+// C0C0C0, architect 2026-10-16, "win95"); THE INVALID COLOR `invalid_label` ITS Cntr
 // TOO, the preset's own center-line color (architect 2026-10-11 ~01:00–01:20;
 // Windows' dark red 800000 and the selected FF0000 of 2026-10-09 retired,
 // the selected role with them: "No flags change color when you select them
@@ -178,10 +179,8 @@
 // playhead is yellow"; render.h's playhead paragraph). `grid` paints the quarter lines of each
 // channel's half — the horizontals alone, Cool Edit's verticals not drawn
 // (architect 2026-10-09 ~18:40) — and `center` each channel's center line
-// over the waveform (render_center_lines) and THE PRESS SEAM'S LINE where
-// the channels meet, under the waveform after the grid (render_canvas;
-// architect 2026-10-16, "the same color as the waveform's midline";
-// render.h's row-6 block); Cool Edit's
+// over the waveform (render_center_lines, render.h's row-6 block; the
+// stereo divider between the channels wears the panel's tones); Cool Edit's
 // boundary line (Bndy) is not drawn and has no role. Every built-in names
 // every role (the generator's rows).
 //
@@ -335,13 +334,13 @@ inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 #include "palette_presets.inc"
 };
 // THE DEFAULT PALETTE, ONE UNDER EVERY CHROME (the head): Cool Edit's
-// "CEPro 1.2" (architect 2026-10-16; Midnight and Default are among the
-// others now) —
+// "(Default Scheme)", "Default" (architect 2026-10-16, "make default the
+// default theme"; Midnight is among the others now) —
 // the `chrome=` value both first-run templates SPELL
 // (GuiPlatform::device_config_defaults; every device key required,
 // architect 2026-10-14 — a config with no `chrome` line took it
 // 2026-10-07..14).
-inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-cepro-1-2";
+inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-default";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
 constexpr const GuiBuiltinPalette* builtin_palette(std::string_view name) {
@@ -430,7 +429,7 @@ constexpr bool is_chrome_own_scheme(std::string_view name) {
 // THE `chrome` AND `caption` KEYS' REFUSALS (the device config's reader and
 // the two rows' commit): a word naming no built-in of its kind.
 inline constexpr const char* kPaletteGrammarReason =
-    "must be a built-in chrome's key (cool-edit-cepro-1-2, "
+    "must be a built-in chrome's key (cool-edit-default, "
     "cool-edit-midnight, ...)";
 inline constexpr const char* kSchemeGrammarReason =
     "must be a built-in caption's key (windows-storm, windows-rainy-day, ...)";

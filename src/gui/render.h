@@ -115,7 +115,7 @@ struct TrimRange {
 // active palette is the device config's `chrome` — a built-in's key, chosen
 // by the Settings Chrome row (architect 2026-10-14; files from a `chromes/`
 // folder were read 2026-10-07..14), the first-run default Cool Edit's
-// "CEPro 1.2" under every chrome (2026-10-16); the active SCHEME, the
+// "Default" under every chrome (2026-10-16); the active SCHEME, the
 // caption's six keys, is its `caption` — a built-in's key, chosen by the
 // Settings Caption row, the first-run default the live chrome's own, which
 // carries no keys and paints the chrome's COMPILED CAPTION (palette_file.h's
@@ -314,10 +314,12 @@ struct TrimRange {
 // is not drawn on it (paint_popup_chrome's Info face). THIS PARAGRAPH IS THE
 // RULE'S ONE STATEMENT.
 // THE CANVAS'S FRAME IS THE PROGRAM'S (architect 2026-10-09, Cool Edit's
-// canvas, the same under every chrome): one ring of the panel's tones round
-// the waveform area — dark top and left, light right and bottom, mitred —
-// with no chrome edge (paint_canvas_column_frame, paint_handler.cpp; the
-// chrome's sunken well stood until that day).
+// canvas, the same under every chrome): a ring of the panel's tones round
+// each channel's well — dark top and left, light right and bottom, mitred —
+// TWO WELLS with one row of the face between them since 2026-10-16 (Cool
+// Edit's stereo divider, waveform_divider), with no chrome edge
+// (paint_canvas_column_frame, paint_handler.cpp; the chrome's sunken well
+// stood until 2026-10-09).
 //
 // THE DISABLED EMBOSS — EVERY DISABLED WORD (architect 2026-10-03, Windows'
 // DrawState DSS_DISABLED): the word in the theme's HILIGHT one Windows px
@@ -670,7 +672,7 @@ void install_true_colors(bool on);
 // color (2026-10-09 ~14:25, "on waveform → unscaled") on the canvas's rows
 // ≡ 1 (mod 4), the cues' two colors on rows ≡ 3 and
 // ≡ 7 (mod 8), so they interleave on one column (paint_playheads,
-// dotted_waveform_line_run). Across the view bar (architect 2026-10-09
+// dotted_waveform_line_runs; the stereo divider's rows carry none). Across the view bar (architect 2026-10-09
 // ~14:30, "no dots on the trim bar"), the marker lane and the canvas's top
 // frame row it draws nothing (Cool Edit puts no dot on its frame row). IT MAY STAND ON A MARKER'S COLUMN — NO SNAP, NO AVOIDANCE (architect
 // 2026-10-09): the head and a cue's triangle stand in different lanes and
@@ -923,10 +925,11 @@ void install_true_colors(bool on);
 // 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
 // magnified and the compressed bars, the ink's hides it. The default
-// palette is Cool Edit's "CEPro 1.2" (`cool-edit-cepro-1-2`,
-// kGuiDefaultPaletteKey, palette_presets.inc; architect 2026-10-16): the outline
-// #0A9769 under the #1BF0AB ink on black (the named "Default" preset is
-// #0A9757 under #4BF3A7, "Midnight" #1D847F under #4FD8D1) — each outline
+// palette is Cool Edit's "Default" (`cool-edit-default`, its "(Default
+// Scheme)", kGuiDefaultPaletteKey, palette_presets.inc; architect
+// 2026-10-16): the outline #0A9757 under the #4BF3A7 ink on black
+// ("Midnight" #1D847F under #4FD8D1, "CEPro 1.2" #0A9769 under #1BF0AB) —
+// each outline
 // the ink at HLS lightness 0.3157, the generator's outline rule
 // (tools/theme_catalog/gen_cool_edit_presets.py). THE PLATE
 // BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the
@@ -948,9 +951,9 @@ void install_true_colors(bool on);
 // zero row ± nearbyint(k · H / 4) device rows for k = 1, 2, 3, H the
 // channel's half height (its zero row to its band's edge; the k = 4 line
 // would stand on the band's edge and is not drawn), the canvas's full width,
-// Cool Edit's grid under the ink; then, in the same pass, THE PRESS SEAM'S
-// LINE in `center`, one device px on the channels' meeting row, under the ink
-// too (architect 2026-10-16, its color; below); then THE WAVEFORM'S PLATE; then THE CENTER
+// Cool Edit's grid under the ink; then, in the same pass, THE STEREO
+// DIVIDER'S THREE ROWS between the two wells (architect 2026-10-16, chrome
+// rows on the canvas, waveform_divider); then THE WAVEFORM'S PLATE; then THE CENTER
 // LINE per channel on its zero row, one device px, in `center`, OVER THE INK
 // (architect 2026-10-09 evening: "it's supposed to be visible over the
 // waveform. Otherwise, in a project like this with tape hiss, there's never
@@ -973,39 +976,37 @@ void install_true_colors(bool on);
 // A recorded departure from Cool Edit (win2000_deviations.md), as THE CENTER
 // LINE OVER THE INK is (the mock of record drew it under the waveform with
 // the grid).
-// The waveform's plate is blitted over the ground, the grid and the seam's
-// line, the ink over every one of them, the center lines over the ink. Each
+// The waveform's plate is blitted over the ground and the grid, the ink over
+// every grid line, the center lines over the ink. Each
 // channel's band and zero row are the plate's own (waveform_channel_band
-// below), so the lines stand where the plate's zero is. THE CHANNELS FILL THE
-// CANVAS (architect 2026-10-09, "remove", the mock of record's channels top
-// to bottom): each takes the canvas's halved and floored height, channel 0
-// from its first row and channel 1 under it (an odd canvas's last row below
-// channel 1, no ink reaching it), with NO INSET above or below — the 6-W
-// band that stood there was the tip-down playhead triangle's seat (deleted
-// 2026-08-02) kept as a symmetric margin, and the playhead's head and the
-// cues' triangles stand above the canvas's frame, so nothing needs it; the
-// dots, the lead-in ring and the scanner paint over the ink there as they do
-// everywhere on the canvas. The leveler's headroom (waveform_gain.h's
-// constants: its target, and the inner bar's foreground half) is the only
-// thing keeping the peaks off the edges; an outer bar the clamp clips flat
-// (the loud body, accepted there) stands on its band's edge row — the
-// canvas's first or last row against the frame, or the row where the
-// channels meet. NO BOUNDARY LINES
-// AND NO GAP BETWEEN THE CHANNELS (architect 2026-10-09, "we have very
-// limited vertical real estate"): the two channels abut, Cool Edit's Bndy
-// clip guides are not drawn — ONE LINE STANDS ON THE PRESS SEAM (architect
-// 2026-10-10 ~15:45, "so that you know that's the scrub": a horizontal line,
-// one device px, under the waveform after the grid, on
-// waveform_press_seam_row, the row where a press's act changes; it stands on
-// the channels' meeting row and takes no row from either, the ink painting
-// over it as over every grid line), IN THE CENTER LINES' `center` (architect
-// 2026-10-16, "make the middle line, the one between the waveforms, the same
-// color as the waveform's midline"; the `grid` role 2026-10-10..16), its own
-// fill in render_canvas after the grid's — and the chrome's two-line sunken well that stood
-// round the area (the theme's quartet, 2026-10-02 to 2026-10-09) is gone
-// with the content band it carved out of the area. THE CUES' AND THE
-// PLAYHEAD'S DOTS and the scanner span the canvas, their dot rows counted from
-// its first row; THE ZOOM ANCHOR'S STEM spans it too.
+// below), so the lines stand where the plate's zero is. THE CHANNELS FILL
+// THEIR WELLS (architect 2026-10-09, "remove", the mock of record's channels
+// top to bottom; the two wells 2026-10-16): each takes the canvas's height
+// less the stereo divider, halved and floored, channel 0 from the canvas's
+// first row and channel 1 under the divider (an odd remainder the canvas's
+// last row, below channel 1, no ink reaching it), with NO INSET above or
+// below — the 6-W band that stood there was the tip-down playhead
+// triangle's seat (deleted 2026-08-02) kept as a symmetric margin, and the
+// playhead's head and the cues' triangles stand above the canvas's frame,
+// so nothing needs it; the dots, the lead-in ring and the scanner paint over
+// the ink there as they do everywhere in the wells. The leveler's headroom
+// (waveform_gain.h's constants: its target, and the inner bar's foreground
+// half) is the only thing keeping the peaks off the edges; an outer bar the
+// clamp clips flat (the loud body, accepted there) stands on its band's edge
+// row — against its well's ring. NO BOUNDARY LINES (architect 2026-10-09,
+// "we have very limited vertical real estate"): Cool Edit's Bndy clip guides
+// are not drawn. BETWEEN THE CHANNELS STANDS COOL EDIT'S STEREO DIVIDER
+// (architect 2026-10-16, waveform_divider below): the upper well's light
+// line, one row of the face and the lower well's dark line, one Windows px
+// each, chrome rows the canvas painters leave alone — and the press seam
+// (waveform_press_seam_row) on its face row, the divider the seam's picture
+// (the one-device-px seam line on the channels' meeting row, 2026-10-10 to
+// 2026-10-16, in `grid` and then `center`, retired with it). The chrome's
+// two-line sunken well that stood round the area (the theme's quartet,
+// 2026-10-02 to 2026-10-09) is gone with the content band it carved out of
+// the area. THE CUES' AND THE PLAYHEAD'S DOTS and the scanner span the two
+// wells, their dot rows counted from the canvas's first row and skipping the
+// divider; THE ZOOM ANCHOR'S STEM spans them too.
 
 // THE PLATE'S TWO BAKED INKS, as words: the fingerprint field and the job
 // field that carry the active ink and outline to the worker (the worker reads
@@ -1939,7 +1940,9 @@ inline int scrub_thumb_h_px() {
 // its left side is the reset's stem), the lit plate's inner OUTLINE,
 // an erosion at distance 1 (render_waveform's inner_interior, render.cpp, the width riding the
 // plate job and its fingerprint), and the canvas's GRID AND CENTER LINES
-// (render_canvas, render_center_lines). EVERYTHING OFF THE CANVAS keeps THE PROGRAM'S QUANTUM u =
+// (render_canvas, render_center_lines). EVERYTHING OFF THE CANVAS — and THE
+// STEREO DIVIDER, chrome standing on it (architect 2026-10-16, "scaled";
+// waveform_divider) — keeps THE PROGRAM'S QUANTUM u =
 // scaled_px(1, 1) (program_line_px, cue_unit_px): the cues' triangles and the
 // playhead's head (paint_ce_cue_triangle) and the ruler's ticks
 // (paint_ruler_row, fill_waveform_line's `t`).
@@ -1977,17 +1980,19 @@ inline void fill_waveform_line(cairo_t* cr, int area_x, int area_w, int col,
 // THE DOTTED LINE (architect 2026-10-09, Cool Edit's cue and cursor columns,
 // METRICS §4.2 / §4.3), A PERIOD TECHNIQUE AT THE DEVICE'S RESOLUTION
 // (~14:20 / ~14:25, waveform_line_px's rule: "on waveform → unscaled"): the
-// line's own column and edge rules (fill_waveform_line), its rows [y0, y1)
-// counted in DEVICE ROWS from y0, a dot one device px square on every row k
+// line's own column and edge rules (fill_waveform_line), its rows the two
+// wells' (waveform_well_rows: the stereo divider's rows carry none, 2026-10-16)
+// counted in DEVICE ROWS from the canvas's first row, a dot one device px square on every row k
 // with k ≡ `phase` (mod `period`) — Cool Edit's own 1-px dot every 4 rows at
 // 1:1, at every gui_scale — the cues' red on 7 and blue on 3 of 8 and the
 // playhead on 1 of 4 (program_spec.h's dot fields), so they interleave on one
 // column. The column is the item's own painted column, the dot one px on it
 // — the stem the cue's triangle and the playhead's head stand centred on
 // (paint_ce_cue_triangle, ~14:35). Painted through the canvas sink
-// (2026-10-13): dotted_waveform_line_run below makes the line's run, and
-// GuiCanvasSink::dots paints it — on the cairo road one 1 x 1 rectangle a
-// dot and one fill, the shape this line always drew.
+// (2026-10-13): dotted_waveform_line_runs (after waveform_well_rows) makes
+// the line's runs, one per well, and GuiCanvasSink::dots paints them — on
+// the cairo road one 1 x 1 rectangle a dot and one fill, the shape this line
+// always drew.
 //
 // ONE DOTTED RUN ON THE CANVAS (2026-10-13, the canvas sink's record,
 // canvas_sink.h): the one-device-px cells of a column (`vertical`, rows
@@ -2002,17 +2007,6 @@ struct GuiCanvasDotRun {
     int  x = 0, y = 0, len = 0;
     int  period = 0, origin = 0, phase = 0;
 };
-// The dotted line's run: rows [y0, y1) of column `col` of a strip whose
-// columns are [0, area_w) at window x `area_x`, the phase counted from y0,
-// the line's column gate applied (waveform_line_width) — false, and nothing
-// to paint, where it refuses the column or the period is not positive.
-inline bool dotted_waveform_line_run(int area_x, int area_w, int col, int y0,
-                                     int y1, int period, int phase,
-                                     GuiCanvasDotRun& out) {
-    if (waveform_line_width(area_w, col) <= 0 || period <= 0) return false;
-    out = GuiCanvasDotRun{true, area_x + col, y0, y1 - y0, period, y0, phase};
-    return true;
-}
 // THE SCALE IS THE ONE THING A FLAG CUTS (architect 2026-09-19, replacing the
 // nine-glyph budget this lane carried from the retired marker-text lane). A
 // warp payload's TEMPO — its base and its whole deviation chain — is the
@@ -2459,9 +2453,10 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // render_canvas ALSO owns THE CANVAS'S LINES UNDER THE WAVEFORM (architect
 // 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, each
 // channel's horizontal grid, the channels' bands the plate's own
-// (waveform_channel_band) — no vertical grid — then THE PRESS SEAM'S LINE in
-// `center` (architect 2026-10-10, waveform_press_seam_row; its color
-// 2026-10-16). render_center_lines owns THE
+// (waveform_channel_band) — no vertical grid — then THE STEREO DIVIDER'S
+// THREE ROWS across the area (architect 2026-10-16, waveform_divider: chrome
+// on the canvas, through the sink so both roads paint them alike).
+// render_center_lines owns THE
 // CENTER LINES, OVER THE WAVEFORM (architect 2026-10-09 evening): each
 // channel's zero row, one device px in `center`, painted live after the
 // plate's blit and before the dots (on_redraw's paint order) — the canvas's
@@ -2590,48 +2585,147 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 
 
 // THE WAVEFORM AREA IS THE CANVAS: the plate blit, the canvas's lines, the
-// lead-in ring and the zoom anchor's stem each span it whole (row 6's
-// canvas paragraph).
+// lead-in ring and the zoom anchor's stem each span its columns (row 6's
+// canvas paragraph), and every vertical line on it spans its two wells.
 //
+// THE STEREO DIVIDER (architect 2026-10-16, on his Wine captures of Cool
+// Edit Pro 2.1 in stereo — tmp/Screenshot_2026-10-16_15-50-05.png, the law:
+// rows 521-523, the left join at x 208, the right at x 1872 — "ok to
+// implement the bevel divider, but make sure it has no separation from the
+// main chrome"): Cool Edit draws a stereo file as TWO SUNKEN WELLS, one per
+// channel, each with its own ring of the panel's tones, and between them
+// THREE ROWS — the upper well's LIGHT BOTTOM LINE (`ce_hilight`), ONE ROW OF
+// THE PANEL'S FACE (`face`) and the lower well's DARK TOP LINE (`ce_dark`)
+// — that run THROUGH the canvas's side frame columns, so the face row meets
+// the column's margin on both sides and each well closes its own corners
+// (the upper's bottom-left mitred, its bottom-right square; the lower's
+// top-left square, its top-right mitred; paint_canvas_column_frame). CHROME,
+// NOT A WAVEFORM LINE, SO SCALED (his word, "scaled"; the rounding rule's "on
+// waveform → unscaled, otherwise scaled"): each row one Windows px through
+// scaled_px — program_line_px for the two lines, program_spec.h's
+// stereo_divider_face_px for the face, each its own rounded part — 3 device
+// rows each at 300 %, 9 in all. THE ROWS STAND INSIDE THE WAVEFORM AREA,
+// which stays the canvas's interior inside the OUTER ring (every column
+// mapping, hit test and damage box reads it as before), and come out of the
+// two channels' rows: the area's height less the divider, halved and floored,
+// is each channel's band (below). Across the area's columns the divider's
+// three rows are painted through the canvas sink (render_canvas, after the
+// grid), so the GL canvas draws them from its list exactly as the cairo road
+// fills them (canvas_sink.h's head); across the frame columns they are the
+// frame painter's. EVERY OTHER CANVAS PAINTER PAINTS NOTHING ON THEM: the
+// plate's bands, the grid and the center lines stand inside the two bands,
+// and every vertical line — the cues' and the cursor's dots, the lead-in
+// ring's right side, the scanner and the zoom anchor's stem — is cut into
+// one run per well (waveform_well_rows), its dots keeping the rows they
+// stand on, counted from the canvas's first row as ever (Cool Edit's own
+// dotted cursor keeps its phase across its divider on the capture: rows
+// 517, then 525). At 300 % on the tablet the canvas keeps its 942 rows,
+// 345-1286 (main.cpp's lane table): the upper well's band 466 rows
+// (345-810), the divider 811-819 (the light line 811-813, the face 814-816,
+// the dark line 817-819), the lower well's band 466 rows (820-1285) and the
+// canvas's spare last row 1286; on the laptop at 138 % the divider is three
+// rows of one device px and the two bands 429 each of the 861.
+//
+// THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
+// divider of `divider_px` rows (waveform_divider_px live, the job's snapshot
+// in the plate's worker — the worker reads no gui_scale): `y` its first row,
+// directly under channel 0's band.
+inline int waveform_divider_px() {
+    return program_line_px() +
+           scaled_px(kProgramSpec.stereo_divider_face_px, 1) +
+           program_line_px();
+}
+struct WaveformDivider {
+    int y    = 0;   // the first row, area-local: the upper well's light line
+    int line = 0;   // each well's line, device rows
+    int face = 0;   // the face between them, device rows
+    int h() const { return line + face + line; }
+};
+inline int waveform_channel_band_h(int area_h, int divider_px) {
+    const int h = (area_h - divider_px) / 2;
+    return h > 0 ? h : 0;
+}
+inline WaveformDivider waveform_divider(int area_h) {
+    const int line = program_line_px();
+    const int face = scaled_px(kProgramSpec.stereo_divider_face_px, 1);
+    return WaveformDivider{
+        waveform_channel_band_h(area_h, line + face + line), line, face};
+}
+
 // ONE CHANNEL'S BAND, area-local rows: the plate's (render_waveform_to_cache_
 // surface, its one layout) and the canvas's grid and center lines'
 // (render_canvas), so the lines stand on the zero row the plate's bars
-// straddle. THE TWO CHANNELS FILL THE CANVAS (architect 2026-10-09, the
-// inset removed; the mock of record's channels fill it top to bottom): each
-// takes the canvas's halved-and-floored height, channel 0 [0, h) and channel
-// 1 [h, 2h), EXACTLY EQUAL AND ABUTTING — no row between them (architect
-// 2026-08-03, when the channel-split line retired: a spare row between would
-// read as a one-px gap in the ink; the line that returned 2026-10-10 stands
-// ON the meeting row, waveform_press_seam_row, and takes no row of its own). At an odd canvas height the spare row is
-// the canvas's LAST, under channel 1, where the canvas's ground and lines
-// paint and no ink reaches. Its ZERO ROW is y + h / 2, the row
+// straddle. EACH CHANNEL'S BAND IS ITS WELL'S INTERIOR (architect
+// 2026-10-16, the stereo divider above): (area_h − divider_px) / 2 rows,
+// floored, EXACTLY EQUAL — channel 0 [0, h) under the canvas's top frame
+// row, channel 1 [h + divider_px, 2h + divider_px) under the divider. AN ODD
+// REMAINDER IS THE CANVAS'S LAST ROW, inside the lower well under channel 1,
+// where the canvas's ground paints and no ink reaches (the rule since the
+// channels first filled the canvas, 2026-10-09: the two bands stay equal, so
+// the plate's layout is one height). Its ZERO ROW is y + h / 2, the row
 // render_waveform's centre y + h · 0.5 floors to; its HALF HEIGHT H, the
 // grid's (row 6's canvas paragraph), runs from that row to the band's edge.
-// h <= 0 only on a canvas under two rows.
+// h is 0 only on a canvas under the divider and two rows.
 struct WaveformChannelBand {
     int y = 0;
     int h = 0;
     int zero_row() const { return y + h / 2; }
 };
-inline WaveformChannelBand waveform_channel_band(int area_h, int channel) {
-    const int ch_h = area_h / 2;
-    return WaveformChannelBand{channel == 0 ? 0 : ch_h, ch_h};
+inline WaveformChannelBand waveform_channel_band(int area_h, int divider_px,
+                                                 int channel) {
+    const int ch_h = waveform_channel_band_h(area_h, divider_px);
+    return WaveformChannelBand{channel == 0 ? 0 : ch_h + divider_px, ch_h};
 }
 
-// THE PRESS SEAM'S ROW, the ONE owner (architect 2026-10-10 ~15:45): the
-// first row of the waveform's lower half, `area.y + area.h / 2` — where a
-// press on the waveform changes act (above it a motionless release places the
-// playhead, from it down the release scrubs; waveform_lower_half,
-// input_pointer.cpp, reads this row, and render_canvas paints its line on it
-// from the same call, so the line and the press cannot drift). Integer
-// division, so an odd canvas gives the lower half the extra row. It is also
-// channel 1's first row (waveform_channel_band: band 1 starts at area.h / 2)
-// and the row where each channel's k = n grid line would fall (the band's
-// edge, the one the grid skips), so the seam line is the one grid-edge line
-// drawn, one device px, in the center lines' `center` role (architect
-// 2026-10-16; render_canvas, after the grid's fill).
+// THE TWO WELLS' ROWS, window y, [y0, y1): the upper well's from the
+// area's first row to the divider, the lower well's from under the divider
+// to the area's last row (its band and the spare row) — the rows every
+// vertical line on the canvas paints, one run per well (the divider's
+// rule above). An empty well has y1 <= y0.
+struct WaveformWellRows {
+    int y0 = 0;
+    int y1 = 0;
+};
+inline std::array<WaveformWellRows, 2> waveform_well_rows(const GuiRect& area) {
+    const WaveformDivider d = waveform_divider(area.h);
+    const int top = area.y + std::min(d.y, area.h);
+    const int bot = area.y + std::min(d.y + d.h(), area.h);
+    return {WaveformWellRows{area.y, top},
+            WaveformWellRows{bot, area.y + area.h}};
+}
+
+// THE DOTTED LINE'S RUNS (the rule at the dotted line's paragraph above):
+// column `col` of `area`, the line's column gate applied (waveform_line_width),
+// ONE RUN PER NON-EMPTY WELL (waveform_well_rows), each counting its phase
+// from the area's first row (`origin` area.y), so a dot keeps the row it
+// stands on and the divider's rows carry none. Writes 0, 1 or 2 runs into
+// `out` and returns the count — 0 where the gate refuses the column or the
+// period is not positive.
+inline int dotted_waveform_line_runs(const GuiRect& area, int col, int period,
+                                     int phase, GuiCanvasDotRun (&out)[2]) {
+    if (waveform_line_width(area.w, col) <= 0 || period <= 0) return 0;
+    int n = 0;
+    for (const WaveformWellRows& w : waveform_well_rows(area))
+        if (w.y1 > w.y0)
+            out[n++] = GuiCanvasDotRun{true, area.x + col, w.y0, w.y1 - w.y0,
+                                       period, area.y, phase};
+    return n;
+}
+
+// THE PRESS SEAM'S ROW, the ONE owner (architect 2026-10-10 ~15:45; at the
+// divider since 2026-10-16): the first row of the waveform's lower half —
+// where a press on the waveform changes act (above it a motionless release
+// places the playhead, from it down the release scrubs; waveform_lower_half,
+// input_pointer.cpp, reads this row). THE SPLIT FALLS AT THE DIVIDER, ON
+// ITS FACE ROW'S FIRST DEVICE ROW: the upper well and its light bottom line
+// are the upper half, the face, the lower well's dark top line and the lower
+// well the lower half, so a press on the divider resolves by that one row.
+// The divider IS the seam's picture (the 1-px seam line that stood on the
+// channels' meeting row 2026-10-10 to 2026-10-16 retired with it): the
+// press and the paint read one geometry, waveform_divider.
 inline int waveform_press_seam_row(const GuiRect& area) {
-    return area.y + area.h / 2;
+    const WaveformDivider d = waveform_divider(area.h);
+    return area.y + d.y + d.line;
 }
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's
@@ -3037,12 +3131,13 @@ struct GuiPlateColumns {
     Band band[2];
 };
 
-// Draws a waveform_line_px()-wide vertical LINE down the CANVAS, `area`
-// whole (row 6's canvas paragraph), at the column nearest `playhead_pixel_x` (offset
+// Draws a waveform_line_px()-wide vertical LINE down the CANVAS, its two
+// wells (row 6's canvas paragraph; waveform_well_rows, the stereo divider's
+// rows left to the divider, 2026-10-16), at the column nearest `playhead_pixel_x` (offset
 // from area.x), [col, col + t), in `color`, in the FORM the caller picks
 // (architect 2026-10-09, the program is Cool Edit): THE SCANNER SOLID
 // (PlayheadForm::Solid, Cool Edit's playback cursor a solid 1-px line), THE
-// RESTING CURSOR DOTTED (PlayheadForm::Dotted, dotted_waveform_line_run on
+// RESTING CURSOR DOTTED (PlayheadForm::Dotted, dotted_waveform_line_runs on
 // the playhead's phase through the sink's dots, its dots interleaving with the cues'), painted
 // straight over whatever it crosses — waveform ink included. No-op if
 // outside; the line is gated on its own column and clipped at the right
@@ -3068,7 +3163,8 @@ void render_playhead(GuiCanvasSink& sink,
 
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot
 // column `col` (window pixels within `area`, clamped here to [0, area.w-1]),
-// spanning the canvas, `area` whole, solid, in the `scanner` role — the
+// spanning the canvas's two wells (waveform_well_rows, the stereo divider's
+// rows left to it), solid, in the `scanner` role — the
 // white of the stems that belong to the controls, the playhead alone being
 // yellow (architect 2026-10-09; the palette block's playhead paragraph owns
 // the rule).

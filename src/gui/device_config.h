@@ -39,15 +39,15 @@
 //   chrome=<name>            THE CHROME PRESET the program (and, through the
 //                            Face, the whole window) is painted in: a built-in,
 //                            one of Cool Edit's presets' keys alone
-//                            (`cool-edit-cepro-1-2`, `cool-edit-midnight`, ...;
+//                            (`cool-edit-default`, `cool-edit-midnight`, ...;
 //                            is_builtin_palette_name, palette_file.h; a
 //                            chrome file's name until 2026-10-14), chosen by
 //                            the Settings Chrome row; REQUIRED (architect
 //                            2026-10-14; absent meant the default
 //                            2026-10-07..14), the default SPELLED: both
 //                            first-run templates write
-//                            `chrome=cool-edit-cepro-1-2`, Cool Edit's
-//                            "CEPro 1.2" since 2026-10-16 (kGuiDefaultPaletteKey,
+//                            `chrome=cool-edit-default`, Cool Edit's
+//                            "Default" since 2026-10-16 (kGuiDefaultPaletteKey,
 //                            palette_file.h). Named
 //                            `palette` until 2026-10-13, and the key `chrome`
 //                            of 2026-10-07 to 2026-10-10 was another thing
@@ -219,7 +219,7 @@
 // `chrome` were the two that might be absent 2026-10-07..14, the absence
 // spelling the default; the default is SPELLED since, the writer emitting
 // every line and the first-run templates naming `caption=windows-storm` and
-// `chrome=cool-edit-cepro-1-2`, so an absent line is the shared scanner's
+// `chrome=cool-edit-default`, so an absent line is the shared scanner's
 // missing-required-key refusal like any other, with no migration and no
 // launch-time repair — the planner edits the two devices' configs at the
 // install), one canonical spelling per
@@ -276,7 +276,7 @@
 // (GuiPlatform::device_config_defaults) SPELL THE DEFAULTS into them
 // (architect 2026-10-14: every key required) — kGuiDefaultSchemeKey and
 // kGuiDefaultPaletteKey (palette_file.h), `windows-storm` and
-// `cool-edit-cepro-1-2` — so the first-run file of either device names its
+// `cool-edit-default` — so the first-run file of either device names its
 // caption and its chrome. THE ROLE'S
 // DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
 // (architect 2026-10-10: the program never invents a device's role), so a
@@ -322,7 +322,7 @@ struct DeviceConfig {
     std::string scheme;
     // THE PALETTE, the `chrome` key's built-in name (architect 2026-10-07):
     // required since 2026-10-14, so empty only before a read; the templates
-    // spell the default, `cool-edit-cepro-1-2` (kGuiDefaultPaletteKey).
+    // spell the default, `cool-edit-default` (kGuiDefaultPaletteKey).
     std::string palette;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
@@ -619,7 +619,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
-// both stamp `caption=windows-storm` and `chrome=cool-edit-cepro-1-2` (the
+// both stamp `caption=windows-storm` and `chrome=cool-edit-default` (the
 // defaults spelled, every key required since 2026-10-14) and no role line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

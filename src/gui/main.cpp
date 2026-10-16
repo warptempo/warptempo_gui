@@ -385,9 +385,11 @@ namespace {
 // row|border, border|program frame, and both outer
 // kFlagBottomLiftPx gaps — is honored structurally by the loop below and by
 // every consumer. (The cues' and the playhead's DOTS are the canvas's, below
-// its top frame row; the canvas's frame is one ring across three lanes and
-// the waveform's rows, painted by paint_canvas_column_frame off the lanes'
-// rects, paint_handler.cpp; the program's frame is one ring across every
+// its top frame row; the canvas's frame is two rings, one per channel's
+// well, across three lanes and the waveform's rows, the stereo divider
+// between them inside the waveform area (render.h's waveform_divider),
+// painted by paint_canvas_column_frame off the lanes' rects,
+// paint_handler.cpp; the program's frame is one ring across every
 // program lane, its two rows lanes of their own and its two columns the
 // lanes' insets, painted by paint_program_frame off program_frame_rect.) ONE
 // shared helper — strip_row_rect — is the single
