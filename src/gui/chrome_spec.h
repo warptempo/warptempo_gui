@@ -53,7 +53,7 @@ struct ChromeSpec {
     // which carries no keys under this chrome — the
     // compiled caption exactly. Storm since architect 2026-10-12 (it was
     // `windows-2000-standard`). It names no palette: the default palette is
-    // Cool Edit's one "Midnight" under every chrome (2026-10-12,
+    // Cool Edit's one "CEPro 1.2" under every chrome (2026-10-16,
     // palette_file.h's head).
     const char*        own_scheme;
     // (THE VOCABULARY'S FACE SET left the spec 2026-10-09: the face is the

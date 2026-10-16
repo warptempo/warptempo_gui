@@ -153,7 +153,7 @@ shopt -s nocaseglob
 #      line is made to read github.com/warptempo/warptempo_projects, the role
 #      line role=author (the tablet authors; the key is required, so the app's
 #      first start refuses without it), a caption= and a chrome= line added with
-#      the defaults (caption=windows-storm, chrome=cool-edit-midnight) where the
+#      the defaults (caption=windows-storm, chrome=cool-edit-cepro-1-2) where the
 #      file has none -- every key is required since 2026-10-14, and an app of
 #      before that day wrote neither; a line already there is kept --, and every
 #      line of a retired key the app refuses to start with is removed -- sync_path,
@@ -197,7 +197,7 @@ ROLE_LINE="role=author"
 # 2026-10-14; src/gui/palette_file.h's kGuiDefaultSchemeKey and
 # kGuiDefaultPaletteKey): added only where the tablet's file has no line.
 CAPTION_LINE="caption=windows-storm"
-CHROME_LINE="chrome=cool-edit-midnight"
+CHROME_LINE="chrome=cool-edit-cepro-1-2"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; and the

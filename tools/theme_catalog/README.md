@@ -2,8 +2,10 @@
 
 THE CATALOG RECORDS IMPORTED THEMES ONLY, NO DERIVATION (architect 2026-10-03: "no derived, imported only; derivation
 stays in git history"; "I don't want to be designing my own theme"). This tool turns the era's own theme files into
-`docs/themes/catalog.json` — every colour a recorded byte with its provenance — and lists them in
-`docs/themes/CATALOG.md` (the crops of the app that once stood beside each entry left the repository 2026-10-08). THE
+`docs/themes/catalog.json` — every colour a recorded byte with its provenance (the crops of the app that once stood
+beside each entry left the repository 2026-10-08). `docs/themes/catalog.md` is THE USER'S LIST OF THE BUILT-IN
+PRESETS (architect 2026-10-16): the twenty chromes and the 42 captions by title and key, each family's provenance and
+small deviations, no colors (catalog_md.py's head). THE
 CATALOG IS A RECORD AND THE SOURCE OF EACH CHROME'S COMPILED BYTES, NOT A SHIPPED SET (architect 2026-10-08: "okay to
 retire the color theme catalog"; "we just need hard-coded chromes"): no theme file ships and the app reads none, no
 device key or Settings row chooses one; each chrome vocabulary wears its own theme, compiled in (`src/gui/theme_file.h`;
@@ -24,7 +26,7 @@ python3 tools/theme_catalog/fetch.py [--refresh]   # the pinned sources -> tmp/t
 python3 tools/theme_catalog/build.py               # -> docs/themes/catalog.json (runs the checks, prints the families)
 python3 tools/theme_catalog/build.py --check-only  # no sources: the checks on the committed catalog, nothing written
 python3 tools/theme_catalog/gen_theme_files.py     # -> src/gui/chrome_schemes.inc (committed), the Windows 2000 column checked
-python3 tools/theme_catalog/catalog_md.py          # -> docs/themes/CATALOG.md
+python3 -I tools/theme_catalog/catalog_md.py       # -> docs/themes/catalog.md (the user's list of the built-ins)
 python3 -I tools/theme_catalog/gen_cool_edit_presets.py [text]  # cool_edit_presets.txt -> src/gui/palette_presets.inc (committed)
 ```
 
@@ -136,7 +138,7 @@ nothing since the retired renderer's "bevelled" style: `{"id":
 ## The display tier (`display_tier`; architect 2026-10-03, late)
 
 Each entry is tagged by the smallest period colour set holding every colour its roles use (build.py `display_tier`;
-the sets are also catalog.json's `display_tiers`, and each entry's CATALOG.md block names its tier):
+the sets are also catalog.json's `display_tiers`; the record's alone, the user's page names none):
 
 | tier | the set |
 |---|---|
@@ -215,5 +217,5 @@ tiers' counts and the schemes not imported.
 `docs/themes/crops/<key>.png` were the app as the mock-up renderer drew it on 2026-10-05 and 06 in the tablet's
 geometry, one per entry but `clearlooks`, cropped, never scaled; they showed the retired Windows 95 chrome in Nimbus
 Sans and were never re-rendered (the render road broke at the Windows 2000 pivot and retired with the mock-up renderer
-on 2026-10-07). They left the repository with their lines in CATALOG.md on 2026-10-08 (the git history keeps them);
-`catalog_md.py` leaves an empty slot where an entry's crop stood, and CATALOG.md's head still tells their story.
+on 2026-10-07). They left the repository with their lines in the catalog page on 2026-10-08 (the git history keeps
+them).

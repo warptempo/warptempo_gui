@@ -23,7 +23,8 @@
 // Edit"; "whatever luminous rules we previously had are superseded by the
 // Cool Edit follow"): EVERY CHROME ROLE BUT THE CAPTION'S SIX IS A TONE OF
 // THE LIVE PALETTE — the panel's `face` and the tones Cool Edit derives from
-// it, the waveform's ink and its darkened text (cool_edit_derive.h's tones;
+// it, the waveform's ink, and the program text's two members, the selection
+// taking the other one (cool_edit_derive.h's tones;
 // the per-role mapping is chrome_derive.h's, the one owner) — re-derived at
 // every install of the palette, so a new Face or ink moves the
 // chrome live. THE CAPTION'S SIX ARE A SCHEME'S (palette_file.h's head: a

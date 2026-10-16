@@ -201,7 +201,7 @@ std::expected<DeviceConfig, std::string> read_device_config(
         // migration. An EMPTY value is refused like any other non-name, and
         // an ABSENT line is the scanner's missing-required-key refusal
         // (architect 2026-10-14: every key required, the default spelled —
-        // `caption=windows-storm`, `chrome=cool-edit-midnight`). An old
+        // `caption=windows-storm`, `chrome=cool-edit-cepro-1-2`). An old
         // `scheme=` or `palette=` line is the unknown key below.
         if (key == "caption") {
             if (!is_builtin_scheme_name(value)) {

@@ -112,11 +112,18 @@
 // are no tone of Face: Cool Edit's E0E0E0 on every preset, never swapping
 // (§2d; kCeRulerTick, cool_edit_paint.h).
 //
-// THE SELECTED TEXT (architect 2026-10-10, "I agree with your call"): the
-// chrome's selection fill is THE WAVEFORM'S INK and its text the ink
-// darkened, `selected_text` — the ink at HLS L 0.10, hue and saturation
-// kept (ToneSource::Ink, as the span's bevels). A ruling, not a measurement:
-// Cool Edit draws no text on its ink; the default ink's byte is pinned below.
+// THE SELECTED TEXT (architect 2026-10-16, on tablet mocks of his own
+// screenshots: "if all presets have both a light and dark font from Cool
+// Edit, then the selection should be opposite of the regular face"): the
+// chrome's selection fill is THE WAVEFORM'S INK (architect 2026-10-10) and
+// its text THE PROGRAM TEXT'S OTHER MEMBER — every Face has both, `text` and
+// `text_dark`, and the selection takes the one program_text does NOT pick,
+// on the same swap (text_swaps): `text_dark` where the Face keeps the light
+// text, `text` where it swaps (selected_text below). A ruling, not a
+// measurement: Cool Edit draws no text on its ink. The contrast it loses on
+// some presets' inks is accepted ("I can read at low contrast, it's more of
+// an aesthetic choice"; Grape, Lime and Tangerine's light text on its mint
+// ink judged and taken). (The ink at HLS L 0.10, 2026-10-10..16, retired.)
 
 namespace cool_edit_derive {
 
@@ -268,7 +275,9 @@ inline constexpr Tone kTones[] = {
     // every Face (chrome_derive.h), and THE PROGRAM'S TIME FIELDS' DIGITS at
     // every Face (`ce_field_text`: the field's ground is the dark `mid`, so
     // it never swaps) — and Cool Edit's swapped dark ink above the
-    // threshold, measured on Safari So Good (C1B791, its clock 312A10).
+    // threshold, measured on Safari So Good (C1B791, its clock 312A10). The
+    // chrome's selected text is the pair's other member (selected_text,
+    // architect 2026-10-16).
     {"text",          0xEFF0F0, 0.086,  0.900, &GuiPalette::ce_field_text,
      ToneSource::Face, 0.2, 0.0},
     {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
@@ -287,11 +296,6 @@ inline constexpr Tone kTones[] = {
      ToneSource::Ink},
     {"span_shadow",   0x0A9757, 0.0,    0.3157, &GuiPalette::ce_span_shadow,
      ToneSource::Ink},
-    // THE CHROME'S SELECTED TEXT (2026-10-10, the head): the ink at HLS L
-    // 0.10 over the selection fill, which is the ink itself
-    // (chrome_derive.h). `measured` is the rule's byte on the default ink
-    // 4BF3A7 — a ruling, nothing captured — pinned below.
-    {"selected_text", 0x03301C, 0.0,    0.100, nullptr, ToneSource::Ink},
 };
 
 constexpr std::size_t painted_tone_count() {
@@ -385,6 +389,13 @@ constexpr bool text_swaps(uint32_t face) {
 // threshold — the chrome's label, clock and card text (chrome_derive.h).
 constexpr uint32_t program_text(uint32_t face) {
     return tone_of(named_tone(text_swaps(face) ? "text_dark" : "text"), face, 0);
+}
+// THE SELECTED TEXT ON `face` (architect 2026-10-16, the head): the program
+// text's OTHER member, on the same swap — the dark ink where program_text
+// keeps the light one, the light ink where it swaps — the chrome's
+// `selected_text`, over the waveform's ink (chrome_derive.h).
+constexpr uint32_t selected_text(uint32_t face) {
+    return tone_of(named_tone(text_swaps(face) ? "text" : "text_dark"), face, 0);
 }
 // THE FIELD TEXT ON `face`: the light ink at every Face — the fields' ground
 // is the dark `mid`, which never swaps (the head).
@@ -503,8 +514,20 @@ static_assert([] {
     return true;
 }());
 
-// THE SELECTED TEXT'S PIN (the ruling's byte on the default ink).
-static_assert(tone_of(named_tone("selected_text"), 0, 0x4BF3A7) == 0x03301C);
+// THE SELECTED TEXT IS THE PROGRAM TEXT'S OTHER MEMBER on every captured
+// Face: never the program text, and the pair the two text tones, one each.
+static_assert([] {
+    for (const TextPreset& p : kTextPresets) {
+        const uint32_t light = tone_of(named_tone("text"), p.face, 0);
+        const uint32_t dark = tone_of(named_tone("text_dark"), p.face, 0);
+        const uint32_t t = program_text(p.face);
+        const uint32_t sel = selected_text(p.face);
+        if (sel == t) return false;
+        if (!((t == light && sel == dark) || (t == dark && sel == light)))
+            return false;
+    }
+    return true;
+}());
 
 // -- THE BUTTON CASE (2026-10-10, the head) ----------------------------------
 

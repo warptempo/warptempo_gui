@@ -115,7 +115,7 @@ struct TrimRange {
 // active palette is the device config's `chrome` — a built-in's key, chosen
 // by the Settings Chrome row (architect 2026-10-14; files from a `chromes/`
 // folder were read 2026-10-07..14), the first-run default Cool Edit's
-// "Midnight" under every chrome (2026-10-12); the active SCHEME, the
+// "CEPro 1.2" under every chrome (2026-10-16); the active SCHEME, the
 // caption's six keys, is its `caption` — a built-in's key, chosen by the
 // Settings Caption row, the first-run default the live chrome's own, which
 // carries no keys and paints the chrome's COMPILED CAPTION (palette_file.h's
@@ -699,8 +699,12 @@ void install_true_colors(bool on);
 // measured 2026-10-09; unscaled on the canvas since ~14:25,
 // waveform_line_px's rule), and THE ZOOM ANCHOR'S STEM
 // (render_strip_anchor_stem), the same solid one-px line at the pivot;
-// WHITE in every built-in palette (architect 2026-10-07: "let's go back to a
-// white scanner").
+// WHITE in every built-in palette — COOL EDIT'S OWN CONSTANT (architect
+// 2026-10-16, observed in Cool Edit Pro 2.1 under Wine on the laptop: the
+// scanner is white on every preset he tried, so its preset text records no
+// key for it; the zoom anchor's stem is the same design, so both are
+// canonical), his rulings of 2026-10-07 ("let's go back to a white scanner")
+// and 2026-10-09 now its confirmation.
 
 // -- THE MARKER LANE: COOL EDIT'S CUES ---------------------------------------------
 //
@@ -799,8 +803,8 @@ void install_true_colors(bool on);
 //             text turn white. That's it. That's the only thing") — Cool
 //             Edit's program text, EFEFEF on the default Face, against the
 //             light tone at rest (the chrome's `selected_text` until
-//             2026-10-10, when it became the ink darkened for the ink's
-//             fill, chrome_derive.h); the segment's resting face box (the
+//             2026-10-10, when it became a text for the ink's fill,
+//             chrome_derive.h); the segment's resting face box (the
 //             overlap rule's, below) stays as it is, the text not moving,
 //             on the baseline of its line box centred in the lane as at
 //             rest (cue_baseline_px, 2026-10-09 evening) (an invalid cue's
@@ -883,7 +887,8 @@ void install_true_colors(bool on);
 // light text on the panel's face, no fill and no box (SELECTED, above); the
 // open editor shows its whole text selected in the selected pair inside the
 // field — "a fully highlighted white text editor" under Windows 2000's pair,
-// the ink under its darkened text since 2026-10-10 (chrome_derive.h).
+// the ink (2026-10-10) under the program text's other member (2026-10-16;
+// chrome_derive.h).
 //
 // A REFUSED ENTER RECOLORS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it
@@ -918,10 +923,10 @@ void install_true_colors(bool on);
 // 2026-10-09 ~14:25, "on waveform → unscaled"), in the `waveform_outline` role — ITS OWN COLOUR
 // (architect 2026-10-03): the canvas's value widens the divide between the
 // magnified and the compressed bars, the ink's hides it. The default
-// palette is Cool Edit's "Midnight" (`cool-edit-midnight`,
-// kGuiDefaultPaletteKey, palette_presets.inc since 2026-10-12): the outline
-// #1D847F under the #4FD8D1 ink on black (the named "Default" preset, which
-// was the default until 2026-10-12, is #0A9757 under #4BF3A7) — each outline
+// palette is Cool Edit's "CEPro 1.2" (`cool-edit-cepro-1-2`,
+// kGuiDefaultPaletteKey, palette_presets.inc; architect 2026-10-16): the outline
+// #0A9769 under the #1BF0AB ink on black (the named "Default" preset is
+// #0A9757 under #4BF3A7, "Midnight" #1D847F under #4FD8D1) — each outline
 // the ink at HLS lightness 0.3157, the generator's outline rule
 // (tools/theme_catalog/gen_cool_edit_presets.py). THE PLATE
 // BAKES THE INK AND THE OUTLINE (render_waveform writes their words), so the
@@ -943,7 +948,9 @@ void install_true_colors(bool on);
 // zero row ± nearbyint(k · H / 4) device rows for k = 1, 2, 3, H the
 // channel's half height (its zero row to its band's edge; the k = 4 line
 // would stand on the band's edge and is not drawn), the canvas's full width,
-// Cool Edit's grid under the ink; then THE WAVEFORM'S PLATE; then THE CENTER
+// Cool Edit's grid under the ink; then, in the same pass, THE PRESS SEAM'S
+// LINE in `center`, one device px on the channels' meeting row, under the ink
+// too (architect 2026-10-16, its color; below); then THE WAVEFORM'S PLATE; then THE CENTER
 // LINE per channel on its zero row, one device px, in `center`, OVER THE INK
 // (architect 2026-10-09 evening: "it's supposed to be visible over the
 // waveform. Otherwise, in a project like this with tape hiss, there's never
@@ -966,8 +973,8 @@ void install_true_colors(bool on);
 // A recorded departure from Cool Edit (win2000_deviations.md), as THE CENTER
 // LINE OVER THE INK is (the mock of record drew it under the waveform with
 // the grid).
-// The waveform's plate is blitted over the ground and the grid, the ink over
-// every grid line, the center lines over the ink. Each
+// The waveform's plate is blitted over the ground, the grid and the seam's
+// line, the ink over every one of them, the center lines over the ink. Each
 // channel's band and zero row are the plate's own (waveform_channel_band
 // below), so the lines stand where the plate's zero is. THE CHANNELS FILL THE
 // CANVAS (architect 2026-10-09, "remove", the mock of record's channels top
@@ -984,14 +991,17 @@ void install_true_colors(bool on);
 // (the loud body, accepted there) stands on its band's edge row — the
 // canvas's first or last row against the frame, or the row where the
 // channels meet. NO BOUNDARY LINES
-// AND NOTHING BETWEEN THE CHANNELS (architect 2026-10-09, "we have very
+// AND NO GAP BETWEEN THE CHANNELS (architect 2026-10-09, "we have very
 // limited vertical real estate"): the two channels abut, Cool Edit's Bndy
-// clip guides are not drawn — EXCEPT ONE ROW OF THE GRID'S OWN COLOR ON THE
-// PRESS SEAM (architect 2026-10-10 ~15:45, "so that you know that's the
-// scrub": a horizontal line in the `grid` role, one device px, under the
-// waveform with the grid, on waveform_press_seam_row, the row where a press's
-// act changes; it stands on the channels' meeting row and takes no row from
-// either, the ink painting over it as over every grid line) — and the chrome's two-line sunken well that stood
+// clip guides are not drawn — ONE LINE STANDS ON THE PRESS SEAM (architect
+// 2026-10-10 ~15:45, "so that you know that's the scrub": a horizontal line,
+// one device px, under the waveform after the grid, on
+// waveform_press_seam_row, the row where a press's act changes; it stands on
+// the channels' meeting row and takes no row from either, the ink painting
+// over it as over every grid line), IN THE CENTER LINES' `center` (architect
+// 2026-10-16, "make the middle line, the one between the waveforms, the same
+// color as the waveform's midline"; the `grid` role 2026-10-10..16), its own
+// fill in render_canvas after the grid's — and the chrome's two-line sunken well that stood
 // round the area (the theme's quartet, 2026-10-02 to 2026-10-09) is gone
 // with the content band it carved out of the area. THE CUES' AND THE
 // PLAYHEAD'S DOTS and the scanner span the canvas, their dot rows counted from
@@ -2449,8 +2459,9 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // render_canvas ALSO owns THE CANVAS'S LINES UNDER THE WAVEFORM (architect
 // 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, each
 // channel's horizontal grid, the channels' bands the plate's own
-// (waveform_channel_band) — no vertical grid — plus THE PRESS SEAM'S LINE
-// (architect 2026-10-10, waveform_press_seam_row). render_center_lines owns THE
+// (waveform_channel_band) — no vertical grid — then THE PRESS SEAM'S LINE in
+// `center` (architect 2026-10-10, waveform_press_seam_row; its color
+// 2026-10-16). render_center_lines owns THE
 // CENTER LINES, OVER THE WAVEFORM (architect 2026-10-09 evening): each
 // channel's zero row, one device px in `center`, painted live after the
 // plate's blit and before the dots (on_redraw's paint order) — the canvas's
@@ -2617,7 +2628,8 @@ inline WaveformChannelBand waveform_channel_band(int area_h, int channel) {
 // channel 1's first row (waveform_channel_band: band 1 starts at area.h / 2)
 // and the row where each channel's k = n grid line would fall (the band's
 // edge, the one the grid skips), so the seam line is the one grid-edge line
-// drawn, in the grid's `grid` role, one device px.
+// drawn, one device px, in the center lines' `center` role (architect
+// 2026-10-16; render_canvas, after the grid's fill).
 inline int waveform_press_seam_row(const GuiRect& area) {
     return area.y + area.h / 2;
 }

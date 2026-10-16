@@ -698,7 +698,7 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
     // THE DEFAULTS SPELLED (architect 2026-10-14: every key required):
-    // `caption=windows-storm` and `chrome=cool-edit-midnight`, the tablet's
+    // `caption=windows-storm` and `chrome=cool-edit-cepro-1-2`, the tablet's
     // template the same (palette_file.h owns both names).
     cfg.scheme        = kGuiDefaultSchemeKey;
     cfg.palette       = kGuiDefaultPaletteKey;

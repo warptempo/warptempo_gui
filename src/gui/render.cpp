@@ -161,8 +161,9 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 }
 
 namespace {
-// THE CANVAS'S LINES' RECTANGLES, collected for one sink fill (the grid and
-// its seam: 2 channels x 3 lines x 2 sides + 1; the center lines: 2).
+// THE CANVAS'S LINES' RECTANGLES, collected for one sink fill (the grid:
+// 2 channels x 3 lines x 2 sides; the press seam's line: 1; the center
+// lines: 2).
 struct CanvasLines {
     std::array<GuiRect, 16> rects{};
     int count = 0;
@@ -199,9 +200,9 @@ void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
     sink.rects(std::span<const GuiRect>(&area, 1), pal.waveform_canvas);
     CanvasLines lines;
     // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
-    // horizontal grid and the press seam's line — t = waveform_line_px() thick, ONE DEVICE PX
-    // ("on waveform → unscaled", the class's one inventory), each an aliased
-    // integer rect inside the area. THE CENTER LINES STAND OVER THE WAVEFORM
+    // horizontal grid, then the press seam's line — t = waveform_line_px()
+    // thick, ONE DEVICE PX ("on waveform → unscaled", the class's one
+    // inventory), each an aliased integer rect inside the area. THE CENTER LINES STAND OVER THE WAVEFORM
     // (architect 2026-10-09 evening), render_center_lines below, a pass after
     // the plate's blit. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the
     // rule and its reason at render.h's row-6 canvas paragraph).
@@ -230,13 +231,18 @@ void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
             hline(zero + d);
         }
     }
-    // THE PRESS SEAM'S LINE (architect 2026-10-10 ~15:45): one device px in
-    // the grid's role on the row where a press changes act
-    // (waveform_press_seam_row, the same call waveform_lower_half reads, so
-    // the line and the press cannot drift), appended to the grid's path and
-    // filled with it; it coincides with the channels' meeting row.
-    canvas_hline(lines, area, waveform_press_seam_row(area) - area.y, t);
     sink.rects(lines.span(), pal.grid);
+    // THE PRESS SEAM'S LINE (architect 2026-10-10 ~15:45, "so that you know
+    // that's the scrub"): one device px on the row where a press changes act
+    // (waveform_press_seam_row, the same call waveform_lower_half reads, so
+    // the line and the press cannot drift); it coincides with the channels'
+    // meeting row. IN THE PALETTE'S `center` (architect 2026-10-16, "make the
+    // middle line, the one between the waveforms, the same color as the
+    // waveform's midline"), its own fill after the grid's, still UNDER the
+    // waveform in this pass — only its color is the center lines'.
+    CanvasLines seam;
+    canvas_hline(seam, area, waveform_press_seam_row(area) - area.y, t);
+    sink.rects(seam.span(), pal.center);
     sink.end();
 }
 
@@ -1831,9 +1837,9 @@ struct FlagFace {
 // derivation's owner); "light" the panel's `ce_hilight`, "white" the
 // chrome's `label` — Cool Edit's program text, EFEFEF on the default Face,
 // dark past its light-face swap (2026-10-10: the chrome's `selected_text` it
-// read until then became the ink darkened, a text for the ink's fill, not
-// for the face; chrome_derive.h) — every label on the panel's face with no
-// fill in either state. THE TRIANGLE AND THE DOTS NEVER CHANGE WITH
+// read until then became a text for the ink's fill, not for the face — the
+// program text's other member since 2026-10-16; chrome_derive.h) — every
+// label on the panel's face with no fill in either state. THE TRIANGLE AND THE DOTS NEVER CHANGE WITH
 // SELECTION (Cool Edit's never do): the label carries the selection — ITS
 // TEXT ALONE, the chrome's `label` on the panel's face, no fill (architect
 // 2026-10-09 ~23:30: "clicking on a flag to select it makes the text turn

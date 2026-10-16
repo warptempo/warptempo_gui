@@ -53,11 +53,15 @@
 //                                          (cool_edit_derive::field_text: the
 //                                          field's ground is dark at every
 //                                          Face)
-//   selected_fill                        = the waveform's ink
-//   selected_text                        = the ink at HLS L 0.10 (the
-//                                          `selected_text` tone; architect
-//                                          2026-10-10, "I agree with your
-//                                          call")
+//   selected_fill                        = the waveform's ink (architect
+//                                          2026-10-10)
+//   selected_text                        = the program text's OTHER member
+//                                          (cool_edit_derive::selected_text:
+//                                          dark where the Face keeps the
+//                                          light text, light where it swaps;
+//                                          architect 2026-10-16, "the
+//                                          selection should be opposite of
+//                                          the regular face")
 //   card_ground                          = the Face
 //   card_frame                           = the `dark` tone (Cool Edit's box
 //                                          outline and the label's shadow)
@@ -77,7 +81,7 @@
 namespace chrome_derive {
 
 enum class Source {
-    Face, Hilight, Mid, Dark, Black, Text, FieldText, Ink, InkText,
+    Face, Hilight, Mid, Dark, Black, Text, FieldText, Ink, SelectedText,
     TitleStart, TitleEnd, TitleText,
     InactiveTitleStart, InactiveTitleEnd, InactiveTitleText,
 };
@@ -107,7 +111,7 @@ inline constexpr ChromeRole kChromeRoles[] = {
     {"shadow",                    Source::Mid},
     {"dk_shadow",                 Source::Black},
     {"selected_fill",             Source::Ink},
-    {"selected_text",             Source::InkText},
+    {"selected_text",             Source::SelectedText},
     {"field_ground",              Source::Mid},
     {"field_text",                Source::FieldText},
     {"clock_ground",              Source::Face},
@@ -178,8 +182,7 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program,
             case Source::Text:       v = program_text(face);                    break;
             case Source::FieldText:  v = field_text(face);                      break;
             case Source::Ink:        v = ink;                                   break;
-            case Source::InkText:
-                v = tone_of(named_tone("selected_text"), face, ink);            break;
+            case Source::SelectedText: v = selected_text(face);                 break;
             case Source::TitleStart:         v = caption.title_start;          break;
             case Source::TitleEnd:           v = caption.title_end;            break;
             case Source::TitleText:          v = caption.title_text;           break;
@@ -194,27 +197,28 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program,
 
 // -- THE CHECKS ----------------------------------------------------------------
 
-// THE DEFAULT PALETTE (Cool Edit's "Midnight": Face 272B6D, ink 4FD8D1) under
-// Windows Storm's caption: the chrome it paints, role by role.
+// THE DEFAULT PALETTE (Cool Edit's "CEPro 1.2": Face 7088A0, ink 1BF0AB)
+// under Windows Storm's caption: the chrome it paints, role by role.
 inline constexpr GuiThemeWords kDefaultCheck =
     derive_chrome(default_palette_words(), chrome_caption());
-static_assert(kDefaultCheck[theme_role_index("ground")] == 0x272B6D);
-static_assert(kDefaultCheck[theme_role_index("light_3d")] == 0x272B6D);
-static_assert(kDefaultCheck[theme_role_index("hilight")] == 0x797ECF);
-static_assert(kDefaultCheck[theme_role_index("shadow")] == 0x191C47);
+static_assert(kDefaultCheck[theme_role_index("ground")] == 0x7088A0);
+static_assert(kDefaultCheck[theme_role_index("light_3d")] == 0x7088A0);
+static_assert(kDefaultCheck[theme_role_index("hilight")] == 0xB6C2CF);
+static_assert(kDefaultCheck[theme_role_index("shadow")] == 0x47596B);
 static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
-static_assert(kDefaultCheck[theme_role_index("label")] == 0xEAEAEE);
-static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x191C47);
-static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xEAEAEE);
-static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x4FD8D1);
-static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x092A28);
-static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x272B6D);
-static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xEAEAEE);
-static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x11122F);
+static_assert(kDefaultCheck[theme_role_index("label")] == 0xF1F1F2);
+static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x47596B);
+static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xF1F1F2);
+static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x1BF0AB);
+static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x101C28);
+static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x7088A0);
+static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xF1F1F2);
+static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x2F3B47);
 static_assert(kDefaultCheck[theme_role_index("caption_active")] == 0x800080);
 static_assert(kDefaultCheck[theme_role_index("caption_inactive_text")] == 0xC0C0C0);
 // A LIGHT FACE SWAPS THE TEXT AND NOT THE FIELD'S (Arctic Freeze's C0C0C0,
-// METRICS_PRESETS_1010.md §3a): the label dark, the field text light.
+// METRICS_PRESETS_1010.md §3a): the label dark, the field text light — and
+// the selected text the light member, the program text's other (2026-10-16).
 static_assert([] {
     GuiPaletteWords p = default_palette_words();
     p[palette_role_index("face")] = 0xC0C0C0;
@@ -222,7 +226,8 @@ static_assert([] {
     return w[theme_role_index("label")] == 0x311919 &&
            w[theme_role_index("card_text")] == 0x311919 &&
            w[theme_role_index("field_text")] == 0xF6F6F6 &&
-           w[theme_role_index("field_ground")] == 0x7F7F7F;
+           w[theme_role_index("field_ground")] == 0x7F7F7F &&
+           w[theme_role_index("selected_text")] == 0xF6F6F6;
 }());
 // THE INACTIVE CAPTION FOLLOWS while unpicked.
 static_assert([] {

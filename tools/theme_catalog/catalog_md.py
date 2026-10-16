@@ -1,165 +1,158 @@
 #!/usr/bin/env python3
-# tools/theme_catalog/catalog_md.py — docs/themes/catalog.json -> docs/themes/CATALOG.md, the page the architect
-# chooses a theme from (architect 2026-10-03): per family its entries, darkest ground first, each with its key, name,
-# provenance, display tier and crop.
+# tools/theme_catalog/catalog_md.py — the built-in presets -> docs/themes/catalog.md, THE USER'S LIST OF THE CHROMES AND
+# CAPTIONS (architect 2026-10-16: "caption and chrome options should not clutter install.md; they go in
+# docs/themes/catalog.md and simply list the themes and their provenance, as well as small deviations … No colors or
+# hex codes — just the titles; the user can type one in and try it out").
 #
-# THE CROPS HAVE LEFT THE REPOSITORY (architect 2026-10-08, commit 4fba3952: docs/themes/crops/ deleted whole with their
-# lines in CATALOG.md): they were rendered 2026-10-05 and 06 by the mock-up renderer, which retired on 2026-10-07, and
-# were never re-rendered. The page keeps the head's account of them and an empty slot where an entry's crop was; the
-# git history keeps the PNGs.
+# THE PAGE: a short head (what a chrome and a caption are, how to choose one, the two defaults); then THE CHROMES, Cool
+# Edit Pro 2.1's twenty presets in Cool Edit's own order, read from the committed cool_edit_presets.txt through
+# gen_cool_edit_presets.py's own transcription (its head is the rule), each one line — its display name and its key;
+# then THE CAPTIONS, every catalog.json entry of gen_theme_files.py's KEPT_FAMILIES in the catalog's order (the
+# built-ins' own order), grouped by family, each one line — its display name (gen_theme_files.scheme_display_name)
+# and its key. Each section and family carries its provenance once and its small deviations; the defaults are marked,
+# read off the sources that own them: kGuiDefaultPaletteKey (src/gui/palette_file.h) and the chrome's own_scheme
+# (src/gui/chrome_spec.h, kGuiDefaultSchemeKey's source). No colors, no hex, no ground order, no display tiers, no
+# faces, no dates or rulings: catalog.json stays the RECORD of every entry's bytes and provenance, the KDE 3, CDE and
+# GNOME 2 families among them, none of which this page lists.
 #
-# COOL EDIT'S PRESETS (architect 2026-10-09) close the page: the program's built-in palettes, no catalog entries, listed
-# from the committed cool_edit_presets.txt through gen_cool_edit_presets.py's own transcription (its head is the rule),
-# one table row each in Cool Edit's order — the key, the name, the ink, the canvas and the face.
+# BYTE-STABLE: no timestamp, the sources' own orders, LF; run it twice and the page is identical. THE PAGE IS ITS
+# OUTPUT, NEVER HAND-EDITED.
 #
-#   python3 tools/theme_catalog/catalog_md.py
-import json, os, sys
+#   python3 -I tools/theme_catalog/catalog_md.py
+import json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import gen_cool_edit_presets as cool_edit                                # noqa: E402
+import gen_theme_files as schemes                                        # noqa: E402
 
 CATALOG = os.path.join(REPO, 'docs', 'themes', 'catalog.json')
-MD = os.path.join(REPO, 'docs', 'themes', 'CATALOG.md')
+MD = os.path.join(REPO, 'docs', 'themes', 'catalog.md')
+PALETTE_FILE_H = os.path.join(REPO, 'src', 'gui', 'palette_file.h')
+CHROME_SPEC_H = os.path.join(REPO, 'src', 'gui', 'chrome_spec.h')
 
 
-def unhex(s): return tuple(int(s[i:i + 2], 16) for i in (1, 3, 5))
+def read_one(path, pattern, what):
+    """The one match of `pattern`'s group 1 in `path`, else the run's hard fail naming `what`."""
+    ms = re.findall(pattern, open(path).read())
+    if len(ms) != 1: raise SystemExit(f'catalog_md: {what}: {len(ms)} matches in {os.path.relpath(path, REPO)}')
+    return ms[0]
 
 
-def relative_luminance(rgb):
-    """The Rec. 709 weights over the sRGB-linearized channels of the bytes as given, each byte / 255: the families'
-    sort key, darkest ground first."""
-    def lin(c): return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
-    r, g, b = (lin(v / 255.0) for v in rgb)
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+def default_chrome_key():
+    return read_one(PALETTE_FILE_H, r'kGuiDefaultPaletteKey = "([a-z0-9-]+)";', 'kGuiDefaultPaletteKey')
 
 
-FAMILY_HEAD = {
-    'windows': 'Windows: the Appearance schemes (ReactOS hivedef.inf, corroborated by the Windows XP classic schemes '
-               'saved as .theme files; Windows 2000 Standard from Windows 2000\'s own setup hive; Windows 95 Standard '
-               'and the six Windows 95 flavours from the Windows 95 CD\'s own shell2.inf; Windows Me Standard, '
-               'Windows 2000 Standard\'s bytes in MS Sans Serif, checked on his two WordPad captures)',
-    'windows-plus': 'Windows 98 / Plus! desktop themes (the shipped .theme files)',
-    'kde3': 'KDE 3.5 colour schemes, as Trinity\'s tdebase carries them (relief by KDE 3\'s own rule at each scheme\'s contrast)',
-    'cde': 'CDE palettes (colour set 5 the ground; foreground and shadows by Motif\'s own rule)',
-    'gnome2': 'GNOME 2: Clearlooks as Debian 6 squeeze shipped it (its gtkrc\'s colour scheme; the relief, the tooltip '
-              'border and the unfocused title by the engine\'s and metacity\'s own rules)',
-}
+def default_caption_key():
+    return read_one(CHROME_SPEC_H, r'\.own_scheme\s*=\s*"([a-z0-9-]+)"', 'own_scheme')
 
 
-# A family's one-paragraph note under its count line.
-FAMILY_NOTE = {
-    'windows': 'The Windows 95 CD carries 27 Appearance schemes (shell2.inf); only the six whose bytes differ from '
-               'Windows 2000\'s of the same name are entries here, under a `windows-95-` prefix — Maple, Wheat, Marine, '
-               'Storm, Rose and Plum — the other 21 being equal to an entry (Windows Standard, Brick, Spruce, Teal, Red, '
-               'White, and Blue, Pumpkin, Eggplant, Rainy Day, Desert, Lilac, Slate), a size variant of one, or a '
-               'usability scheme (`not_imported.windows_95_cd`, catalog.json).',
-}
+def head(chrome_name, chrome_key, caption_name, caption_key):
+    return [
+        '# Chromes and captions', '',
+        'The program\'s colors come in two built-in kinds, each chosen on its own.', '',
+        '- A **chrome** is one of Cool Edit Pro 2.1\'s own color presets. It colors the waveform and its canvas, the '
+        'grid and center lines, the markers, the playhead, and the Panel Face that the toolbar, the panels round the '
+        'waveform, the menus, the dialogs and the cards are all drawn from.',
+        '- A **caption** is a Windows color scheme of the period, of which the title bar\'s colors alone are used: the '
+        'title, its gradient end and its text, and the same three for a window without the focus.', '',
+        'To choose one, open the Settings menu and pick Chrome or Caption: the Settings line opens on the key in use. '
+        'Type another key from the lists below (Tab completes a typed beginning) and press OK or Enter: it applies at '
+        'once and is kept for the next launch. Cancel or Esc leaves the colors as they were. A word that is no '
+        'preset\'s key is refused.', '',
+        f'The defaults: the chrome {chrome_name} (`{chrome_key}`) and the caption {caption_name} (`{caption_key}`).',
+        '']
 
 
-COOL_EDIT_HEAD = 'Cool Edit Pro 2.1\'s color presets: the program\'s built-in palettes (architect 2026-10-09)'
-COOL_EDIT_NOTE = ('Not desktop themes and not catalog entries: the WAVEFORM\'s built-in palettes, compiled into the app '
-                  '(src/gui/palette_file.h\'s kGuiBuiltinPalettes, generated by '
-                  'tools/theme_catalog/gen_cool_edit_presets.py into src/gui/palette_presets.inc). SOURCE: the color '
-                  'schemes Cool Edit Pro 2.1 (Syntrillium Software) carries as text in coolpro.exe, extracted from the '
-                  'architect\'s own copy on 2026-10-09 and committed as tools/theme_catalog/cool_edit_presets.txt, in '
-                  'Cool Edit\'s own order, the two names the exe\'s text lacks (3D, Easy on the Eyes) from Cool Edit\'s '
-                  'own registry entries written under Wine the same day; Default (Cool Edit\'s "(Default Scheme)") is the default palette under every '
-                  'chrome. Each sets the canvas (WvBk), the ink (WvFg), the grid (GrdL), the center line (Cntr), the cue '
-                  'and range colors (CueM, RngM), the playhead (Curs) and the panel\'s face (Face; Classic Cool records '
-                  'none and takes the default\'s); the waveform outline is the ink at HLS lightness 0.3157, and the '
-                  'invalid label\'s pair (#800000, #FF0000) and the scanner (#FFFFFF) are the same in all.')
+CHROMES_PROVENANCE = (
+    'Cool Edit Pro 2.1\'s twenty color presets, in Cool Edit\'s own order, as their text stands inside its program '
+    'file (coolpro.exe). Two of them carry no name there; 3D and Easy on the Eyes are their names in Cool Edit\'s own '
+    'registry entries.')
+CHROMES_DEVIATIONS = [
+    'Classic Cool records no Panel Face and wears Default\'s, as Cool Edit itself does.',
+    'The waveform\'s outline is not one of Cool Edit\'s colors: each chrome\'s is its waveform color darkened, the '
+    'same hue at a fixed lightness.',
+    'The Invalid color, which marks an invalid marker, is each chrome\'s own center-line color.',
+    'The scanner (the line that moves during playback) and the zoom\'s anchor line are white in every chrome, as Cool '
+    'Edit\'s scanner is on every one of its presets.',
+]
 
 
-def cool_edit_section():
-    """The page's last section (the head): Cool Edit's presets, one table row each in the source's order."""
+def chromes_section(default_key):
     ps = cool_edit.presets(cool_edit.SOURCE)
-    default_face = cool_edit.word(ps[0][1], 'Face', cool_edit.DEFAULT_NAME)
-    L = [f'## {COOL_EDIT_HEAD}', '', COOL_EDIT_NOTE, '', '| key | name | ink | canvas | face |', '|---|---|---|---|---|']
-    for name, values in ps:
-        w = dict(zip(cool_edit.ROLE_ORDER, cool_edit.preset_words(name, values, default_face)))
-        L.append(f"| `{cool_edit.preset_key(name)}` | {name} | #{w['waveform_ink']:06X} | "
-                 f"#{w['waveform_canvas']:06X} | #{w['face']:06X} |")
+    keys = [cool_edit.preset_key(name) for name, _ in ps]
+    if default_key not in keys: raise SystemExit(f'catalog_md: the default chrome {default_key} is no preset')
+    L = ['## Chromes', '', CHROMES_PROVENANCE, '']
+    L += [f'- {d}' for d in CHROMES_DEVIATIONS] + ['', '| Chrome | Key |', '|---|---|']
+    for (name, _), key in zip(ps, keys):
+        L.append(f'| {name}{" (the default)" if key == default_key else ""} | `{key}` |')
+    return L + ['']
+
+
+# Each kept family's heading, provenance and small deviations (the head): the family's word as the display names
+# carry it, the source once, the notes.
+CAPTION_FAMILIES = {
+    'windows': (
+        'Windows',
+        'The Appearance schemes of Windows 95, 98, 2000 and Me. Most are Windows 2000\'s and Windows XP\'s classic '
+        'schemes as ReactOS\'s setup data records them, checked against the same schemes saved from Windows XP\'s '
+        'Display Properties as .theme files, which are also the source of Desert, Spruce and Windows 98 Standard; '
+        'Windows 2000 Standard is Windows 2000\'s own setup data; Windows 95 Standard and the six Windows 95 schemes '
+        'are the Windows 95 CD\'s own (shell2.inf).',
+        [
+            'The Windows 95 CD carries 27 Appearance schemes. Only the six whose colors differ from Windows 2000\'s of '
+            'the same name are listed, as Windows 95 Maple, Wheat, Marine, Storm, Rose and Plum; the other 21 are '
+            'equal to a scheme listed here (Windows Standard, Brick, Spruce, Teal, Red, White, and Blue, Pumpkin, '
+            'Eggplant, Rainy Day, Desert, Lilac, Slate), a size variant of one, or a high-contrast scheme.',
+            'Windows Me Standard is Windows 2000 Standard\'s colors: Windows Me changed only the font.',
+            'ReactOS\'s own "ReactOS Standard" and "ReactOS Classic" are Windows 2000 Standard and Windows 98 Standard '
+            'under other names, listed under those.',
+            'Windows 98\'s own default scheme records no title-bar gradient; Windows 98 Standard\'s gradient is the '
+            'one Windows 2000 and Windows XP record for the same scheme.',
+            'A scheme that records no gradient (every Windows 95 one) draws its title bar in one flat color.',
+        ]),
+    'windows-plus': (
+        'Windows 98 and Plus! desktop themes',
+        'The color schemes of the desktop themes Windows 98 and Microsoft Plus! shipped, from their own .theme files.',
+        [
+            'The names leave out the themes\' color-depth tag, "(256 color)" or "(high color)".',
+            'None of the themes records a title-bar gradient: their title bars are one flat color.',
+        ]),
+}
+
+
+def captions_section(cat, default_key):
+    es = [e for e in cat['entries'] if e['family'] in schemes.KEPT_FAMILIES]
+    if default_key not in {e['key'] for e in es}: raise SystemExit(f'catalog_md: the default caption {default_key} is no scheme')
+    L = ['## Captions', '',
+         f'The {len(es)} captions are the Windows color schemes of the period, grouped by where they come from.', '']
+    for fam in schemes.KEPT_FAMILIES:
+        title, prov, notes = CAPTION_FAMILIES[fam]
+        L += [f'### {title}', '', prov, ''] + [f'- {n}' for n in notes] + ['', '| Caption | Key |', '|---|---|']
+        for e in (e for e in es if e['family'] == fam):
+            mark = ' (the default)' if e['key'] == default_key else ''
+            L.append(f'| {schemes.scheme_display_name(e)}{mark} | `{e["key"]}` |')
+        L.append('')
     return L
 
 
-def prov_line(e):
-    p = e['provenance']; s = p['sources'][0]
-    where = s.get('repository') or s.get('image') or s.get('project')
-    ref = (s.get('commit') or '')[:8]
-    line = f"{where}{'@' + ref if ref else ''} `{s['file']}`" if 'file' in s else where
-    if len(p['sources']) > 1: line += f" + {len(p['sources']) - 1} more"
-    if 'rule' in p: line += f"; {p['rule']['id']} rule" + (f" at contrast {p['rule']['contrast']}" if 'contrast' in p['rule'] else '')
-    return line
-
-
 def write_md(cat):
-    """catalog.json -> CATALOG.md: the head, then per family its entries darkest ground first (the windows family's
-    note on the Windows 95 CD after its heading)."""
-    L = ['# The theme catalog', '',
-         'Every entry below is a desktop theme of the era IMPORTED, not designed (architect '
-         '2026-10-03: "no derived, imported only"; the product\'s own `warptempo` family of 2026-10-10 left the '
-         'catalog 2026-10-11): its colours are the bytes its source records, each with '
-         'its provenance in '
-         '[catalog.json](catalog.json); where the source records only base colours and its own toolkit computed the '
-         'relief at run time (KDE 3, CDE / Motif, GNOME 2\'s Clearlooks and metacity), that toolkit\'s rule ran once '
-         'at import and is named. A theme is the CHROME\'s colors alone (2026-10-07): the program\'s own colors are '
-         'its palettes, compiled into the app (src/gui/palette_file.h), and the program\'s own family of chosen '
-         'entries left the catalog with them. THE CATALOG IS A RECORD, NOT A SHIPPED SET (2026-10-08): no theme '
-         'ships as a file and none is chosen in the app; each chrome\'s colors are compiled in, and the catalog is '
-         'their source — `windows-2000-standard` the windows-2000 chrome\'s '
-         '(tools/theme_catalog/gen_theme_files.py, src/gui/theme_file.h), every '
-         'entry also a built-in scheme — and the record a look made official as a '
-         'new chrome variant is drawn from. Each entry once had a crop, the app as the retired mock-up renderer drew it on 2026-10-05 and 06 in the '
-         'tablet\'s geometry (the tablet\'s 2304 x 1440 at gui_scale 275, cropped, never scaled: the top strip in two '
-         'halves over the well\'s bottom lines and the bottom row, transparent between them), before the product\'s '
-         'Windows 2000 pivot of 2026-10-06 evening, so the crops showed the retired Windows 95 chrome in Nimbus Sans; '
-         'that render road broke with the pivot and retired on 2026-10-07, the crops were frozen as last rendered (a '
-         'theme\'s colours read true in them, and a theme imported since had none), and they left the repository on '
-         '2026-10-08 (the git history keeps them). The chrome was the theme\'s as '
-         'recorded; the waveform pane, '
-         'the flags and the playhead were the program\'s own elements in the colors of the crop\'s day (the lime '
-         'waveform on black with its green outline, the warp flag purple #800080 and its selected face fuchsia '
-         '#FF00FF, the invalid flag maroon #800000 and its selected face red #FF0000, white labels, the playhead\'s '
-         'white stem; a theme names none of them since 2026-10-07: they are the app\'s palettes), its playhead\'s head '
-         'was the renderer\'s older grey head, not the app\'s WordPad ruler marker in the theme\'s chrome. The well '
-         'kept the app\'s two-line sunken edge (the theme\'s Shadow and DkShadow above, its 3DLight and Hilight below); '
-         'the flags were the flat Acid flag (the scene\'s flags were warp markers, so the warp pair), the face with a '
-         'one-px outline in the theme\'s DkShadow, the stem leaving the face across the bottom outline, shown left to '
-         'right editing (the in-place editor: the selected face under a black frame, its text in the selected pair), '
-         'selected (the selected face under the selected label, the stem with it), invalid (the removed pair), disabled '
-         '(the ground, the label embossed) and unselected; the playhead\'s head carried a one-px outline in the '
-         'theme\'s label; disabled words and glyphs were Windows\' emboss; the ruler label and the trim arrow were the '
-         'theme\'s label, the ruler ticks its Shadow. The DISPLAY TIER is the smallest period colour set holding '
-         'every colour the entry\'s roles use: vga (the 16 VGA colours), windows-20 (those and Windows\' four static '
-         'extras #C0DCC0, #A6CAF0, #FFFBF0, #A0A0A4, always solid on a 256-colour display), else high-colour. Not imported: '
-         'catalog.json\'s `not_imported`. Built by `tools/theme_catalog/` (fetch.py, build.py, catalog_md.py; the theme '
-         'files by gen_theme_files.py).', '']
-    fams = []
-    for e in cat['entries']:
-        if e['family'] not in fams: fams.append(e['family'])
-    for fam in fams:
-        es = sorted((e for e in cat['entries'] if e['family'] == fam), key=lambda e: relative_luminance(unhex(e['roles']['ground'])))
-        noun = 'entry' if len(es) == 1 else 'entries'
-        L += [f'## {FAMILY_HEAD[fam]}', '', f'{len(es)} {noun}, darkest ground first.', '']
-        if fam in FAMILY_NOTE: L += [FAMILY_NOTE[fam], '']
-        for e in es:
-            imit = f" — imitates {e['imitates']}" if e.get('imitates') else ''
-            # the font record (build.py's font_record), a Windows entry's alone: the face class and the menu font its
-            # source names — the catalog's record, no face the app reads (its face is the `font` device key since
-            # 2026-10-09 ~21:20, src/gui/gui_font.h)
-            face = (f" · Face: {e['font']['face']} (the source's menu font: {e['font']['named']})"
-                    if 'font' in e else '')
-            L += [f"### `{e['key']}`", '', f"**{e['name']}**{imit} · ground {e['roles']['ground']} · {prov_line(e)}", '',
-                  f"Display tier: {e['display_tier']}{face}", '', '']
-    L += cool_edit_section()
-    open(MD, 'w').write('\n'.join(L) + '\n')
+    chrome_key = default_chrome_key()
+    caption_key = default_caption_key()
+    chrome_name = next(name for name, _ in cool_edit.presets(cool_edit.SOURCE)
+                       if cool_edit.preset_key(name) == chrome_key)
+    caption_name = next(schemes.scheme_display_name(e) for e in cat['entries'] if e['key'] == caption_key)
+    L = head(chrome_name, chrome_key, caption_name, caption_key)
+    L += chromes_section(chrome_key)
+    L += captions_section(cat, caption_key)
+    while L and L[-1] == '': L.pop()
+    with open(MD, 'w', newline='\n') as f: f.write('\n'.join(L) + '\n')
 
 
 def main():
     cat = json.load(open(CATALOG))
     write_md(cat)
-    print(f'wrote {os.path.relpath(MD, REPO)} ({len(cat["entries"])} entries)')
+    print(f'wrote {os.path.relpath(MD, REPO)}')
 
 
 if __name__ == '__main__':

@@ -960,8 +960,9 @@ bool roster_index_click_face(int index) {
 //
 // The split row is waveform_press_seam_row (render.h), the one owner the
 // canvas's seam line reads too (architect 2026-10-10: the 1-px line the
-// 2026-08-03 retirement removed returned in the grid's color on this row, so
-// the scrub half is visible; the cursor half stays closed) — integer
+// 2026-08-03 retirement removed returned on this row, so the scrub half is
+// visible — in the grid's color, the center lines' since 2026-10-16; the
+// cursor half stays closed) — integer
 // division, so an odd-height area gives the lower half the extra row, which is
 // what the press has always done.
 bool waveform_lower_half(const GuiRect& area, int y) {

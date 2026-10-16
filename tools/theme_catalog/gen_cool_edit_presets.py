@@ -7,8 +7,9 @@
 # Pro 2.1 carries in coolpro.exe, in its own order, each a KEY, a DISPLAY NAME and THE ELEVEN PROGRAM ROLES
 # (kGuiPaletteRoles, read off palette_file.h and checked against ROLE_ORDER). Its first is Cool Edit's "(Default
 # Scheme)", `cool-edit-default` (DEFAULT_KEY below, the transcription's check on the first row; it was the product's
-# default palette until 2026-10-12). THE DEFAULT PALETTE under every chrome is Cool Edit's "Midnight",
-# `cool-edit-midnight` (architect 2026-10-12; palette_file.h's kGuiDefaultPaletteKey, which this tool does not read).
+# default palette until 2026-10-12, Midnight until 2026-10-16). THE DEFAULT PALETTE under every chrome is Cool Edit's
+# "CEPro 1.2", `cool-edit-cepro-1-2` (architect 2026-10-16; palette_file.h's kGuiDefaultPaletteKey, which this
+# tool does not read).
 #
 # THE SOURCE (cool_edit_presets.txt's own head says where it came from): the first line is "(Default Scheme)" and its
 # values on the same line; after it EVERY values line is followed by its name line (the two the exe's text lacks come
@@ -29,7 +30,10 @@
 #     color is each palette's center line, the triangle, the dots and the resting label of an invalid cue and the `h`
 #     view's removed half; Windows' dark red 800000 and the selected FF0000 of 2026-10-09 retired, the selected role
 #     with it — a selected invalid label is the chrome's text as every selected label's);
-#   THE ONE COOL EDIT HAS NO KEY FOR, the same in every preset: scanner FFFFFF (architect 2026-10-07).
+#   THE ONE COOL EDIT HAS NO KEY FOR, the same in every preset: scanner FFFFFF, COOL EDIT'S OWN CONSTANT WHITE (architect
+#     2026-10-16, observed in Cool Edit Pro 2.1 under Wine on the laptop: the scanner is white on every preset he tried,
+#     so the preset text records no key for it; the zoom anchor's stem is the same design — his rulings of 2026-10-07
+#     and 2026-10-09 now its confirmation).
 #   UNUSED, no role, AND NONE WILL GAIN ONE (architect 2026-10-14, "drop": the question whether any of these keys
 #     should get a palette role is closed; they are read past and never generated): Bndy (the boundary lines are not
 #     drawn), _Sel, ChLi, ChBk, ChGr, ChDt, SpHi, SpLo, SpRv, SpGm, _LED, Edit, UseW, PBSg, prog, STWa, STSp, AnyL,
