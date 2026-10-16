@@ -155,7 +155,7 @@ from the shipped PNG, and the sheet's own crop at 7.7 from it (the crop clips th
 no reference there) — the one seat the tool prints for a look, accepted on the contact sheet. No file carries an `<image>`.
 `CameraPhoto.svg` (2026-10-15), rendered at 240 px through the same resvg 0.48.1: every ink pixel of rsvg's render
 drawn, the mean difference 0.3 of 255 (antialiased edges alone). The files of 2026-10-15 / 16 the same, mean difference
-to rsvg at 240 px: `DigitalMetronome.svg` 0.28 (its 18 `<use>` with plain `href` drawn),
+to rsvg at 240 px: `DigitalMetronome.svg` 0.39 in its 120 % frame (re-measured 2026-10-16 with the resvg 0.48.1 command line; 0.28 in the 48 frame before; its 18 `<use>` with plain `href` drawn; eight of rsvg's 37,882 ink pixels, the case's rounded corners' faintest edge pixels at alpha 1–10, resvg leaves blank — antialiasing, nothing drawn lost),
 `NetworkWiredDisconnected.svg` 0.37, `EditFind.svg` 0.34, `ViewRestore.svg` 0.14, `AudioVolumeHigh.svg` 0.30.
 
 ## The drop shadows
