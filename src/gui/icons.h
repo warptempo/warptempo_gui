@@ -103,7 +103,8 @@ enum class Icon {
                          // snapshot: a reset re-grounds the synthesis phase
                          // to the source's at one frame and it decoheres
                          // from there (architect 2026-10-15)
-    // THE MAGNIFIERS.
+    // THE VIEWPORT CONTROLS: Full Zoom Out, Center, the magnification
+    // lamp (zoom.svg's three magnifiers retired 2026-10-16, "low contrast").
     ViewRestore,         // Full Zoom Out (bare `0`) — the set's
                          // view-restore, the view shrunk back whole
                          // (architect 2026-10-16)

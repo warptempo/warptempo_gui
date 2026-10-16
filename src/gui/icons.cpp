@@ -1,7 +1,7 @@
 #include "icons.h"
 
 #include "platform.h"   // GuiPlatform::bundled_icon_files
-#include "cool_edit_paint.h"   // the disabled glyph's two tones
+#include "cool_edit_paint.h"   // the disabled glyph's three tones
 #include "svg_icon.h"
 
 #include <array>

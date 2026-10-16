@@ -4,7 +4,7 @@ repository's own font files: one <path> per text element carrying the text's own
 advance widths plus its GPOS pair kerning plus the letter-spacing between them. The font properties are read from the
 text's style, its presentation attributes and its ancestors' (inherited, the nearest winning); a font-family LIST
 resolves to its first family FACES has (as a text renderer falls through the list to an installed face), and a
-numeric weight of 600 or more, or bold / bolder, takes the bold face (each family here has two weights). The text's
+numeric weight of 600 or more, or bold / bolder, takes the bold face (Liberation Sans has regular and bold files, DejaVu Sans its bold alone). The text's
 own `transform`, when it has one, is carried onto the path verbatim, ahead of the pen's translate. FACES: Liberation
 Sans for the history clock's digits (document-open-recent, run by build_set.py's `text-to-outlines` treatment;
 history's again since 2026-10-16); DejaVu Sans Bold for the own metronome's WARP (architect 2026-10-16:
