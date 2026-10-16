@@ -72,17 +72,27 @@ longer references pruned. No `<text>`, no filter, no CSS class. LICENCE: above. 
 `tools/icon_set_adwaita_322/own/DigitalMetronome.svg`; the tool copies it with a dated notice inserted as one XML
 comment after the root's start tag, every other byte verbatim (`mapping.tsv`'s `own` treatment).
 
-## The changed file
+## The changed files
 
 Every extracted file is changed in one respect, its drop shadows removed (2026-10-15, the section below, recorded here
-and in `tools/icon_set_adwaita_322/shadows.tsv`; the own file, above, is no extraction and has none). One drawing
-carries a further change, recorded under the licence with a dated notice in an XML comment at its head; every other
-file is the extraction alone.
+and in `tools/icon_set_adwaita_322/shadows.tsv`; the own file, above, is no extraction and has none). Two drawings
+carry a further change, each recorded under the licence with a dated notice in an XML comment at its head; every other
+file is the extraction alone. Two files carry outlined lettering, the clock's digits here (Liberation Sans Bold) and
+the own metronome's WARP above (DejaVu Sans Bold).
 
 - `TabDetachB.svg` (2026-10-14) is `preferences-system-windows` with the element order changed alone: the lower-right
   window copy `use5281` moved after the front window `g5270`, every coordinate unchanged — the same derivation 2.28's
   TabDetachB had. Switch Tab wears `TabDetach.svg` on tab A and this file on tab B: the same two windows, the one in
   front the tab shown.
+- `DocumentOpenRecent.svg` (2026-10-14; history's again since 2026-10-16) is `document-open-recent` (the clock in
+  `clocks.svg`, its yellow arrow turned counter-clockwise) with its 48 clock-digit `<text>` elements replaced by the
+  glyph outlines of the face the sheet names, Liberation Sans Bold, from the repository's own
+  `fonts/LiberationSans-Bold.ttf` (`tools/icon_set_adwaita_322/text_to_paths.py`, `mapping.tsv`'s `text-to-outlines`
+  treatment: the face's own advances and its GPOS pair kerning, text-anchor honored), because the product's resvg is
+  built without text and draws none. The outline geometry is what a text renderer lays down from the same file,
+  measured 0.26/255 mean against rsvg's own text rendering. It is the drawing history wore 2026-10-14 to 2026-10-15
+  as `VcsDiff.svg`, rendered identically (rsvg at 240 and 60 px, byte-identical PNGs); its bytes differ from that
+  file's in the notice alone, which names the new enumerator and the drop shadows' removal.
 
 ## The deliberate seats
 
@@ -90,8 +100,9 @@ The architect's (2026-10-14): Source wears `accessories-dictionary` (the primary
 authoring surface); since 2026-10-16 Warp the own file, the digital metronome (appointment-new's clock of 2026-10-15
 retired: "it fits in theory, but it just didn't fit in practice"), and since 2026-10-15 Phase Reset `camera-photo` (the phase
 snapshot: a reset re-grounds the synthesis phase to the source's at one frame, and it decoheres from there), its 48 slot (300, 50) — the sheet's 256 "hires" slot is never preferred over a 48
-drawing, which is tuned for the seats; Toggle History View `x-office-calendar` (history is dated entries,
-2026-10-15; document-open-recent's clock retired) and Toggle Session History `network-wired-disconnected` (Session
+drawing, which is tuned for the seats; Toggle History View `document-open-recent`, the clock turned back (architect
+2026-10-16, "give history the clock with backarrow back"; `x-office-calendar`, history's for the night of 2026-10-15,
+retired) and Toggle Session History `network-wired-disconnected` (Session
 shuts off git and stays local: the cable unplugged, 2026-10-15); since 2026-10-16 Center `edit-find` (the magnifier
 finds the playhead; its 48 slot (300, 50), the sheet's other being edit-find-replace's), Full Zoom Out `view-restore`
 (the view shrunk back; the second 48 slot of `view-fullscreen-restore.svg`, (696.00012, 50.000008), proved against the
@@ -114,6 +125,8 @@ DialogError (`process-stop`).
 - `network-wired-disconnected` is VECTOR at its 48 slot (2026-10-16): its sheet carries no `<image>`, no `<pattern>` and
   no `data:` URI, the extraction is the slot's crop exactly (rsvg, 240 px, max difference 0) and within d 1.0 of the
   theme's shipped 48 PNG — the PNG is the theme's render of this drawing.
+- The clock's digits (`document-open-recent`) are `<text>`, which the product's resvg does not draw — hence
+  DocumentOpenRecent's outlines, above.
 - `find.svg` carries an `<image>` and a `<pattern>`, neither in edit-find's 48 slot nor in `EditFind.svg`. That file
   does carry one `<text>` ("TAN-GO", the edit-find-replace pencil's legend in the same layer) outside its 48 viewport:
   it puts no ink in the slot, and the product's resvg skips text.
@@ -128,7 +141,7 @@ from the shipped PNG, and the sheet's own crop at 7.7 from it (the crop clips th
 no reference there) — the one seat the tool prints for a look, accepted on the contact sheet. No file carries an `<image>`.
 `CameraPhoto.svg` (2026-10-15), rendered at 240 px through the same resvg 0.48.1: every ink pixel of rsvg's render
 drawn, the mean difference 0.3 of 255 (antialiased edges alone). The files of 2026-10-15 / 16 the same, mean difference
-to rsvg at 240 px: `DigitalMetronome.svg` 0.32 (its 42 `<use>` with plain `href` drawn), `XOfficeCalendar.svg` 0.22,
+to rsvg at 240 px: `DigitalMetronome.svg` 0.32 (its 42 `<use>` with plain `href` drawn),
 `NetworkWiredDisconnected.svg` 0.37, `EditFind.svg` 0.34, `ViewRestore.svg` 0.14, `AudioVolumeHigh.svg` 0.30.
 
 ## The drop shadows
@@ -139,7 +152,7 @@ drawing, the blurred halos behind it, the etched halo pairs round the media glyp
 another; kept: shading inside a drawing that is no shadow (preferences-system's screwdriver on the wrench). The list
 is the one the architect approved icon by icon on a sheet the same day, tracked as
 `tools/icon_set_adwaita_322/shadows.tsv`; the extraction removes each id with every `<use>` of a removed element
-(DialogOkApply's `use6187`, Folder's eleven) and fails on a listed id that is missing or a
+(DialogOkApply's `use6187`, Folder's eleven, DocumentOpenRecent's `use6074-7`) and fails on a listed id that is missing or a
 reference left dangling. The disabled face has no file of its own: the product builds it from the live raster's mask
 (`icons::draw_disabled`).
 
@@ -171,7 +184,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | Mathmode | `x-office-spreadsheet` | `g12362` | floor shadow |
 | PreviewRenderOn | `applications-multimedia` | `path8036` | floor shadow under the note |
 | DialogOkApply | `edit-paste` | `rect5387` `rect5796` `path5674` `rect5984` | floor shadow (2); the clip's and the paper's shadows cast on the board |
-| XOfficeCalendar | `x-office-calendar` | `g7610` | floor shadow |
+| DocumentOpenRecent | `document-open-recent` | `use6074` `use6388-7-7` `g4531` `path7099` | floor shadow (two stacked instances of g6384: use6074 and use6388-7-7); the hands' and the arrow's shadows cast on the dial |
 | NetworkWiredDisconnected | `network-wired-disconnected` | `path7840` `rect7696` `path7678` | floor shadow under the plug; the blurred halo behind the wall plate; the cable's blurred shadow |
 | EditSelect | `edit-select-all` | `g12362` | floor shadow |
 | KeyframePrevious | `media-seek-backward` | `g6598` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
@@ -235,6 +248,7 @@ shift is the product's, not the file's.
 | DialogOkApply | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
 | DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `d25b61a2b80c4a775bbc707ea11ae84a75dbef9b2346e2377454e585d6826a22` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
 | DocumentOpen | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
+| DocumentOpenRecent | `document-open-recent` | `clocks.svg` | 696.062, 355.996, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | History: the clock turned back (architect 2026-10-16); TEXT TO OUTLINES: 48 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
 | DocumentRevert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
 | DocumentSave | `document-save` | `cabinets.svg` | 696, 50, 48, 48 | `abefcd60460b10ac8be532acb78197132f8e90b3db97e6d3812c555914f0517f` | the floppy retired (architect 2026-10-14) |
 | EditDelete | `user-trash` | `trash.svg` | 696, 50, 48, 48 | `940cae7ced59edf15322f1e92cfa1636dade79dff9ecdea5f3dff6b9bfcd72d1` |  |
@@ -278,4 +292,3 @@ shift is the product's, not the file's.
 | ViewHidden | `audio-volume-muted` | `audio-volume.svg` | 421, 335, 256, 256 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` |  |
 | ViewRestore | `view-restore` | `view-fullscreen-restore.svg` | 696, 50, 48, 48 | `dd9a137b1779bd454c300d351e50ba2f1458c729cb2fc49e890173989409a688` | NEW: Full zoom out (architect 2026-10-16: the view shrunk back) |
 | WindowClose | `window-close` | `window-close.svg` | 296, 50, 48, 48 | `3145ee5b93477957dca1f8235c612e8eff2148227c95ffc53186c78b891a73b2` |  |
-| XOfficeCalendar | `x-office-calendar` | `x-office-calendar.svg` | 296, 50, 48, 48 | `9559baa48d2eae10a3307d477c5d7436d4a911ed28cf815344ac85808c165bc8` | History (architect 2026-10-15: history is dated entries) |

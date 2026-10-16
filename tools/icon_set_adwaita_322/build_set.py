@@ -4,8 +4,10 @@ pruned 48-unit file from the row's sheet and slot, its drop shadows removed by s
 `own` treatment (architect 2026-10-16): own/<sheet>, the architect's digital metronome, NOT Adwaita's, COPIED with its
 dated notice inserted as one XML comment after the root's start tag and every other byte verbatim (DigitalMetronome
 and AppIcon both from it, no tarball check; its lettering already outlines, text_to_paths.py's work at its making);
-the derived TabDetachB (preferences-system-windows with the lower-right window copy, use5281, moved after the front
-window g5270: element order alone, every coordinate unchanged), with its dated changed-file comment at the head; the
+the `text-to-outlines` treatment, DocumentOpenRecent's (history's clock with the back arrow, architect 2026-10-16):
+its clock digits turned into Liberation Sans Bold outlines by text_to_paths.py at the build; the derived TabDetachB
+(preferences-system-windows with the lower-right window copy, use5281, moved after the front window g5270: element
+order alone, every coordinate unchanged), each with its dated changed-file comment at the head; the
 tarball's four licence texts; and README_table.md, each sheet with its sha256.
 One line per seat reports the shadow and other elements removed and the checks of the faithful drawing (nothing
 removed): identical to the sheet cropped to the slot (rgb <= 1.5, alpha <= 3 at 240 px),
@@ -14,17 +16,22 @@ the crop clips the rim highlight's mask region).
 usage: python3 -I tools/icon_set_adwaita_322/build_set.py <tarball-root> <out-dir>"""
 import os, sys, hashlib, shutil, tempfile, xml.etree.ElementTree as ET
 HERE=os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0,HERE)
-import extract as X
+import extract as X, text_to_paths as TP
 NOTES={'AccessoriesDictionary':'NEW: Source (architect 2026-10-14)','CameraPhoto':'NEW: Phase reset (architect 2026-10-15: the phase snapshot)',
 'ChangesAllow':'NEW: Read-Only while unlocked (architect 2026-10-14)','ChangesPrevent':'NEW: Read-Only while locked (architect 2026-10-14)',
 'DialogOkApply':'Load in Place (architect 2026-10-14)','DocumentSave':'the floppy retired (architect 2026-10-14)','InputTablet':'NEW: Target (architect 2026-10-14)',
 'Merge':'Flatten: the broom (architect 2026-10-14)','TabDetachB':'DERIVED, below',
 'DigitalMetronome':'OWN FILE, not Adwaita\'s: Warp (architect 2026-10-16), above','AppIcon':'OWN FILE, DigitalMetronome\'s: the program icon (architect 2026-10-16)',
-'XOfficeCalendar':'History (architect 2026-10-15: history is dated entries)','NetworkWiredDisconnected':'NEW: Session (architect 2026-10-15: shut off git and stay local)',
+'DocumentOpenRecent':'History: the clock turned back (architect 2026-10-16)','NetworkWiredDisconnected':'NEW: Session (architect 2026-10-15: shut off git and stay local)',
 'EditFind':'NEW: Center (architect 2026-10-16: the magnifier finds the playhead)','ViewRestore':'NEW: Full zoom out (architect 2026-10-16: the view shrunk back)',
 'AudioVolumeHigh':'NEW: Waveform magnification (architect 2026-10-16: the louder waveform)'}
 TAB_B_NOTICE=(' TabDetachB: adwaita-icon-theme 3.22.0 preferences-system-windows, CHANGED 2026-10-14 (LGPL-3 / CC BY-SA 3.0): the '
  'lower-right window copy use5281 moved after the front window g5270, element order alone, every coordinate unchanged; Switch Tab on tab B. ')
+DOCUMENT_OPEN_RECENT_NOTICE=(" DocumentOpenRecent: adwaita-icon-theme 3.22.0 document-open-recent (src/fullcolor/clocks.svg), CHANGED 2026-10-14 (LGPL-3 / CC BY-SA 3.0): "
+ "its 48 clock-digit text elements replaced by the glyph outlines of the face they name, Liberation Sans Bold, from the repository's "
+ "fonts/LiberationSans-Bold.ttf (the product's resvg draws no text); its drop shadows removed, as from every seat of the set "
+ "(2026-10-15); every other element unchanged. ")
+TEXT_NOTICES={'DocumentOpenRecent':DOCUMENT_OPEN_RECENT_NOTICE}
 OWN_NOTICE=(' DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. The architect\'s own drawing (2026-10-16), '
  'made with Google\'s Gemini at his prompt after a Korg MA-1 in Adwaita 3.22\'s phone / calculator manner, WARP in place '
  'of the maker\'s name, then cleaned on tablet mocks: the drop-shadow filters and every small legend removed, the body\'s '
@@ -69,7 +76,10 @@ def main(root,out):
         slot=(float(x),float(y),float(w),float(h)); gone=removed.get(enum,[])
         r=X.extract(root,name,sheet,slot,p,tmp,shadows[enum]+gone); note=NOTES.get(enum,'')
         if gone: note=(note+'; ' if note else '')+f'REMOVED (removed.tsv): {" ".join(gone)}'
-        if treat=='tab-b': derive_tab_b(p)
+        if treat=='text-to-outlines':
+            n=TP.convert(p,p,TEXT_NOTICES[enum])
+            note=(note+'; ' if note else '')+f'TEXT TO OUTLINES: {n} text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf'
+        elif treat=='tab-b': derive_tab_b(p)
         else: assert treat=='-',treat
         ok=(r['max_rgb_diff']<=1.5 and r['max_alpha_diff']<=3) or 0<=r['d_shipped_png']<=3.0
         bad+=not ok

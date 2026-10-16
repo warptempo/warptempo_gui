@@ -131,10 +131,12 @@ enum class Icon {
                          // player's row): the walked version loaded into
                          // the editor in place. The set's edit-paste
                          // (architect 2026-10-14).
-    XOfficeCalendar,     // Toggle History View (`h`) — the set's
-                         // x-office-calendar: history is dated entries
-                         // (architect 2026-10-15, "the calendar works for
-                         // history")
+    DocumentOpenRecent,  // Toggle History View (`h`) — the set's
+                         // document-open-recent, the clock turned back
+                         // (architect 2026-10-16, the calendar of the
+                         // night before retired: "give history the clock
+                         // with backarrow back"); its digits Liberation
+                         // Sans Bold outlines
     NetworkWiredDisconnected, // Toggle Session History (bare `g`, lit in
                          // Session) — the set's network-wired-disconnected,
                          // the unplugged cable: local means git off (the
@@ -221,7 +223,7 @@ inline constexpr const char* kIconNames[] = {
     "ViewRestore", "EditFind", "AudioVolumeHigh", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
     "TimelineLift", "MusicNote16th", "Mathmode", "PreviewRenderOn",
-    "DialogOkApply", "XOfficeCalendar", "NetworkWiredDisconnected",
+    "DialogOkApply", "DocumentOpenRecent", "NetworkWiredDisconnected",
     "EditSelect",
     "KeyframePrevious", "KeyframeNext", "GoPrevious", "GoNext",
     "DocumentRevert", "MediaSkipBackward", "MediaPlaybackStart",

@@ -973,7 +973,7 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // the same in both states, and the mode's two edges damage the whole window
 // anyway (THE REPAINT, above).
 constexpr IconRowDef kIconRowHistoryOpener =
-    {RedesignButton::IconHistory, icons::Icon::XOfficeCalendar};
+    {RedesignButton::IconHistory, icons::Icon::DocumentOpenRecent};
 
 // THE VIEW PAIRS — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
 // 2026-10-01; two radio pairs since 2026-10-14): the Source / Target pair on

@@ -31,7 +31,7 @@ MusicNote16th	audio-x-generic	path8186 path8188 path8190	floor shadow (3)
 Mathmode	x-office-spreadsheet	g12362	floor shadow
 PreviewRenderOn	applications-multimedia	path8036	floor shadow under the note
 DialogOkApply	edit-paste	rect5387 rect5796 path5674 rect5984	floor shadow (2); the clip's and the paper's shadows cast on the board
-XOfficeCalendar	x-office-calendar	g7610	floor shadow
+DocumentOpenRecent	document-open-recent	use6074 use6388-7-7 g4531 path7099	floor shadow (two stacked instances of g6384: use6074 and use6388-7-7); the hands' and the arrow's shadows cast on the dial
 NetworkWiredDisconnected	network-wired-disconnected	path7840 rect7696 path7678	floor shadow under the plug; the blurred halo behind the wall plate; the cable's blurred shadow
 EditSelect	edit-select-all	g12362	floor shadow
 KeyframePrevious	media-seek-backward	g6598	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)

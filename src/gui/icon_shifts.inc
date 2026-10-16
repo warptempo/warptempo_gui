@@ -26,7 +26,7 @@
 {"Mathmode", -0.1f, 1.0f},
 {"PreviewRenderOn", 0.0f, -0.3f},
 {"DialogOkApply", -0.5f, 1.5f},
-{"XOfficeCalendar", 0.0f, 2.9f},
+{"DocumentOpenRecent", 0.1f, 1.0f},
 {"NetworkWiredDisconnected", 0.1f, -0.5f},
 {"EditSelect", -0.1f, 1.0f},
 {"KeyframePrevious", -0.2f, 0.0f},

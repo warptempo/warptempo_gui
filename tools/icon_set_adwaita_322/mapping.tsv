@@ -16,6 +16,7 @@ DialogInformation	dialog-information	dialog-information.svg	296	50	48	48	-
 DialogOkApply	edit-paste	copy-paste-tasks.svg	296	50	48	48	-
 DigitalMetronome	-	DigitalMetronome.svg	-	-	-	-	own
 DocumentOpen	document-open	folders.svg	1496	350	48	48	-
+DocumentOpenRecent	document-open-recent	clocks.svg	696.062	355.996	48	48	text-to-outlines
 DocumentRevert	document-revert	paper-sheets.svg	1900	654	48	48	-
 DocumentSave	document-save	cabinets.svg	696	50	48	48	-
 EditDelete	user-trash	trash.svg	696	50	48	48	-
@@ -59,4 +60,3 @@ VcsPull	go-bottom	navigation-icons.svg	106	50	48	48	-
 ViewHidden	audio-volume-muted	audio-volume.svg	421	335	256	256	-
 ViewRestore	view-restore	view-fullscreen-restore.svg	696.00012	50.000008	48	48	-
 WindowClose	window-close	window-close.svg	296	50	48	48	-
-XOfficeCalendar	x-office-calendar	x-office-calendar.svg	296	50	48	48	-

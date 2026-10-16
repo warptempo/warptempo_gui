@@ -6,7 +6,8 @@ text's style, its presentation attributes and its ancestors' (inherited, the nea
 resolves to its first family FACES has (as a text renderer falls through the list to an installed face), and a
 numeric weight of 600 or more, or bold / bolder, takes the bold face (each family here has two weights). The text's
 own `transform`, when it has one, is carried onto the path verbatim, ahead of the pen's translate. FACES: Liberation
-Sans for the clocks' digits of 2026-10-14 / 15; DejaVu Sans Bold for the own metronome's WARP (architect 2026-10-16:
+Sans for the history clock's digits (document-open-recent, run by build_set.py's `text-to-outlines` treatment;
+history's again since 2026-10-16); DejaVu Sans Bold for the own metronome's WARP (architect 2026-10-16:
 the lettering judged as rsvg drew it on the authoring laptop, where fontconfig resolves Gemini's list to DejaVu Sans
 Bold; fonts/DejaVuSans-Bold.ttf, an outline source alone, never a product face). The product's resvg is built without
 text and draws none; the outlines are the geometry a text renderer lays down from the same file, measured 0.26/255
