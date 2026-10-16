@@ -998,10 +998,8 @@ void install_true_colors(bool on);
 // are not drawn. BETWEEN THE CHANNELS STANDS COOL EDIT'S STEREO DIVIDER
 // (architect 2026-10-16, waveform_divider below): the upper well's light
 // line, one row of the face and the lower well's dark line, one Windows px
-// each, chrome rows the canvas painters leave alone — and the press seam
-// (waveform_press_seam_row) on its face row, the divider the seam's picture
-// (the one-device-px seam line on the channels' meeting row, 2026-10-10 to
-// 2026-10-16, in `grid` and then `center`, retired with it). The chrome's
+// each, chrome rows the canvas painters leave alone and every input leaves
+// alone too (point_on_waveform_divider). The chrome's
 // two-line sunken well that stood round the area (the theme's quartet,
 // 2026-10-02 to 2026-10-09) is gone with the content band it carved out of
 // the area. THE CUES' AND THE PLAYHEAD'S DOTS and the scanner span the two
@@ -2712,20 +2710,22 @@ inline int dotted_waveform_line_runs(const GuiRect& area, int col, int period,
     return n;
 }
 
-// THE PRESS SEAM'S ROW, the ONE owner (architect 2026-10-10 ~15:45; at the
-// divider since 2026-10-16): the first row of the waveform's lower half —
-// where a press on the waveform changes act (above it a motionless release
-// places the playhead, from it down the release scrubs; waveform_lower_half,
-// input_pointer.cpp, reads this row). THE SPLIT FALLS AT THE DIVIDER, ON
-// ITS FACE ROW'S FIRST DEVICE ROW: the upper well and its light bottom line
-// are the upper half, the face, the lower well's dark top line and the lower
-// well the lower half, so a press on the divider resolves by that one row.
-// The divider IS the seam's picture (the 1-px seam line that stood on the
-// channels' meeting row 2026-10-10 to 2026-10-16 retired with it): the
-// press and the paint read one geometry, waveform_divider.
-inline int waveform_press_seam_row(const GuiRect& area) {
-    const WaveformDivider d = waveform_divider(area.h);
-    return area.y + d.y + d.line;
+// THE DIVIDER IS CHROME, INERT TO EVERY INPUT (architect 2026-10-16:
+// "chrome is not waveform, for any surface"): window row `y` lies on the
+// divider's rows across `area` — between the upper well's last row and the
+// lower well's first (waveform_well_rows, so the press and the paint read
+// one geometry, waveform_divider). A press, a touch-down, a pen-down or a
+// wheel there answers exactly as the canvas column's margins do: nothing
+// (point_on_nav_surface, input_pointer.cpp, the one reader for every claim
+// — the press, the pen's and the finger's pan zone, the cursor map — and
+// wheel_context's waveform term for the wheel). A gesture that began in a
+// well keeps running when it crosses these rows (the captured drags read
+// motion alone; the touch navigation's per-frame gate re-admits them,
+// apply_touch_nav_update). Columns are not tested: the caller asks inside
+// the area.
+inline bool point_on_waveform_divider(const GuiRect& area, int y) {
+    const std::array<WaveformWellRows, 2> w = waveform_well_rows(area);
+    return y >= w[0].y1 && y < w[1].y0;
 }
 
 // THE COLUMN MAPPING BASIS — the plate's viewport start, the PAINTER's

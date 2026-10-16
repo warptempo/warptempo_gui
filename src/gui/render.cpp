@@ -241,8 +241,8 @@ void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
     // here through the sink so the GL canvas draws it from its list exactly
     // as the cairo road fills it (canvas_sink.h's head), the frame columns'
     // share being paint_canvas_column_frame's. Every later canvas painter
-    // leaves these rows alone (the wells' runs, waveform_well_rows), and the
-    // press seam stands on the face row (waveform_press_seam_row).
+    // leaves these rows alone (the wells' runs, waveform_well_rows), and so
+    // does every input (point_on_waveform_divider: chrome, inert).
     const auto divider_row = [&](int y, int h, GuiColor color) {
         const int top = std::max(area.y, area.y + y);
         const int bot = std::min(area.y + area.h, area.y + y + h);

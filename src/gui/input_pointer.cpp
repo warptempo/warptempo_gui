@@ -958,15 +958,15 @@ bool roster_index_click_face(int index) {
 // architect asked for — "get rid of the crosshairs but retain the scrub
 // action".
 //
-// The split row is waveform_press_seam_row (render.h): the stereo divider's
-// face row (architect 2026-10-16, Cool Edit's two wells — the divider is the
-// seam's picture, so the scrub half is visible, as the 1-px seam line of
-// 2026-10-10 made it; the cursor half stays closed), so a press on the
-// divider's light line is the upper half's and one on its face or its dark
-// line the lower's, the odd spare row at the canvas's foot the lower's as
-// it always was.
+// THE HALVES ARE THE TWO WELLS (architect 2026-10-16, Cool Edit's stereo
+// divider): the upper well's rows are the upper half, the lower well's —
+// the odd spare row at the canvas's foot among them — the lower half, the
+// rows read off waveform_well_rows (render.h). The divider between them is
+// chrome and owns nothing: a press there never reaches this split
+// (point_on_nav_surface refuses it, point_on_waveform_divider). The cursor
+// half stays closed.
 bool waveform_lower_half(const GuiRect& area, int y) {
-    return y >= waveform_press_seam_row(area);
+    return y >= waveform_well_rows(area)[1].y0;
 }
 
 // THE TOP STRIP'S TWO PLACEMENT LANES — the RULER and the MARKER lane — the
@@ -1050,6 +1050,14 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 // while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
 // BAR, the lanes and the flexible GAP band are outside it.
 //
+// LESS THE STEREO DIVIDER'S ROWS (architect 2026-10-16, "chrome is not
+// waveform, for any surface"): the divider is drawn at the chrome's scale in
+// the chrome's bevel, so it is chrome, and its rows answer every surface —
+// the mouse, the pen and the finger — exactly as the margins do: no claim,
+// no pan zone, no cursor cue, no wheel (point_on_waveform_divider, render.h,
+// read here for every claim and in wheel_context for the wheel). A gesture
+// that began in a well runs on when it crosses them.
+//
 // AND ONLY WHERE THE WAVEFORM IS PAINTED (2026-10-10, ON SCREEN IS AS
 // PAINTED): the extent is the waveform's painted rect,
 // onscreen_keyboard::waveform_paint_area — waveform_area less the modal
@@ -1072,7 +1080,8 @@ bool point_on_playhead_head(const AppState& app, int x, int y) {
 bool point_on_nav_surface(const AppState& app, const GuiPlatform& gui, int x,
                           int y) {
     return rect_contains(onscreen_keyboard::waveform_paint_area(app, gui), x,
-                         y);
+                         y) &&
+           !point_on_waveform_divider(waveform_area(app), y);
 }
 
 // Active-domain playhead frame at click column `col`: the single-rounding
@@ -3041,7 +3050,21 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // navigates exactly the wheel's two surfaces. A refused frame navigates
     // nothing AND SEATS NOTHING. (A scrolling popup list's context 6 took
     // none either, 2026-10-08 to 2026-10-14, and went with the list.)
-    const int nav_ctx = wheel_context(f.x, f.y);
+    // THE STEREO DIVIDER IS RE-ADMITTED HERE (architect 2026-10-16: a
+    // gesture that began in a well keeps running when it crosses the
+    // divider): its rows are chrome and the wheel's 0 there
+    // (point_on_waveform_divider, render.h), but this gesture opened on the
+    // pan zone, and a pinch straddling the two channels sets its centroid on
+    // those rows, so a frame whose point lies on them inside the painted
+    // waveform navigates as the waveform's. Only a running gesture reaches
+    // this body: a down on the divider opens no window (the pan zone,
+    // point_on_nav_surface).
+    int nav_ctx = wheel_context(f.x, f.y);
+    if (nav_ctx == 0 &&
+        rect_contains(onscreen_keyboard::waveform_paint_area(app, gui), f.x,
+                      f.y) &&
+        point_on_waveform_divider(waveform_area(app), f.y))
+        nav_ctx = 1;
     if (nav_ctx <= 0) return;
     // AND THE FOLDER OVERLAY TAKES NONE EITHER (2026-08-28): the wheel's
     // context answers 4 over the band under EITHER content — the LIST's

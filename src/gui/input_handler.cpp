@@ -3447,7 +3447,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // press road's own navigation surface (point_on_nav_surface,
     // input_pointer.cpp) — the overlay's rows over the canvas answered -1
     // above, and this reads the same one geometry rather than the whole
-    // canvas interior.
+    // canvas interior — LESS THE STEREO DIVIDER'S ROWS (architect
+    // 2026-10-16, point_on_waveform_divider, render.h): chrome, so a wheel
+    // there falls to the no-context 0 as on the frame's columns beside the
+    // waveform (the touch navigation re-admits a running gesture's frames
+    // there, apply_touch_nav_update).
     // THE TOP STRIP LESS THE PROGRAM'S FRAME (2026-10-10, inert ground —
     // paint_program_frame publishes nothing): the frame's top row spans the
     // client inside the strip and its two columns stand outside every
@@ -3459,7 +3463,9 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     const GuiRect top   = top_strip_area(app);
     const GuiRect frame = top_program_frame_area(app);
     const GuiRect lanes = top_trim_row_area(app);
-    const bool inside_waveform = rect_contains(area, x, y);
+    const bool inside_waveform =
+        rect_contains(area, x, y) &&
+        !point_on_waveform_divider(waveform_area(app), y);
     const bool inside_top      = rect_contains(top, x, y) &&
                                  !rect_contains(frame, x, y) &&
                                  x >= lanes.x && x < lanes.x + lanes.w;
