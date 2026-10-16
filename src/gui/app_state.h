@@ -1674,7 +1674,7 @@ struct ScrollDragState {
 //     carrying ctrl — and, for a one-finger seat alone, across the pen's
 //     lifts while it stands retained (the last bullet).
 //   * SEATED AT THE FIRST ZOOM FRAME (two-finger, or one-finger with ctrl)
-//     THAT SURVIVES THE wheel_context
+//     THAT SURVIVES THE BODY'S STATE
 //     REFUSAL — so a frame the gesture refuses seats nothing, seating being a
 //     navigation act — at the song frame under THAT frame's centroid column.
 //     It is deliberately NOT gated on the frame APPLYING anything (2026-08-14,

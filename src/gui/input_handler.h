@@ -381,7 +381,7 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // but a reader should know which is which.
 //
 // REACHABILITY, so none of this reads as theoretical: a two-finger frame under a
-// MODAL returns at apply_touch_nav_update's wheel_context refusal WITHOUT
+// MODAL returns at apply_touch_nav_update's state refusal WITHOUT
 // clearing anything (the only per-frame clear is the one-finger arm), so a
 // seated pinch survives a whole modal editor session and resumes when the modal
 // closes — which is exactly how a settings editor's `active_audio_view=T` commit
@@ -389,8 +389,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //
 // AND THE TEMPTING FIX IS THE WRONG ONE, recorded here so it is not tried: DO
 // NOT add touch navigation to any_pointer_gesture_active to make the above
-// "impossible". apply_touch_nav_update asks wheel_context per frame, and
-// wheel_context READS that predicate — a live pinch would refuse itself into a
+// "impossible". apply_touch_nav_update's per-frame state refusal READS that
+// predicate (as wheel_context does) — a live pinch would refuse itself into a
 // dead gesture.
 //
 // A live pinch simply re-seats on its next frame, which is the same fresh grip
@@ -1158,18 +1158,24 @@ struct GuiInputHandler {
     // pinch. So the arms are pointer-coupled in exactly the
     // sense the ruling anticipated.
     //
-    // THE REFUSAL ANSWER IS THE WHEEL'S, not the press path's, and per frame
-    // rather than at entry: the gesture is the wheel's navigation-class
-    // sibling (it never delivers pointer events, punches through the
-    // keyboard-modal flag editor exactly as the wheel does, and navigates the
-    // same two surfaces), so wheel_context — the SINGLE wheel routing
-    // predicate — is asked at each frame's centroid, refusing under the
-    // prompt, an open dropdown, the dialog modal editors, loading/empty
-    // audio and any live pointer gesture, and applying only over the waveform
-    // or the top strip. A modal opening MID-gesture therefore freezes it (the
-    // wheel's own behavior), and a live mouse gesture freezes it too (no two
-    // writers). The wheel's dismissal pair (dropdown close, tooltip hide) is
-    // deliberately NOT copied — this is a refusal, not a press act — but the
+    // THE REFUSAL ANSWER IS THE WHEEL'S MODAL STATE, not the press path's,
+    // and per frame rather than at entry: the gesture is the wheel's
+    // navigation-class sibling (it never delivers pointer events and punches
+    // through the keyboard-modal flag editor exactly as the wheel does), so
+    // each frame refuses under the wheel's own modal states — the prompt,
+    // the progress modal, an open dropdown, the folder overlay, the dialog
+    // modal editors, loading/empty audio and any live pointer gesture. A
+    // modal opening MID-gesture therefore freezes it (the wheel's own
+    // behavior), and a live mouse gesture freezes it too (no two writers).
+    // BUT NEVER THE WHEEL'S PLACE (architect 2026-10-16, "all gestures that
+    // start on waveform can continue on chrome"): the gesture's surface is
+    // decided at its start — the platform opens a navigation window only on
+    // the pan zone (touch_point_in_pan_zone) — so a frame whose point has
+    // travelled onto chrome, a card or the keys navigates the waveform as
+    // the mouse's captured drags do; the list is at the body's gate
+    // (input_pointer.cpp). The wheel's dismissal pair (dropdown close,
+    // tooltip hide) is deliberately NOT copied — this is a refusal, not a
+    // press act — but the
     // DOUBLE-CLICK CANDIDATE IS CLEARED on every applied frame (the C8 rule: a
     // navigation that moves content between two clicks must not let the second
     // consume as a double-click).
@@ -1241,12 +1247,14 @@ struct GuiInputHandler {
     // downstream would only freeze the pan under a menu that stays): every
     // other refusal (modal, prompt, loading/empty audio, live
     // pointer gesture) deliberately stays downstream — at
-    // apply_touch_nav_update's per-frame
-    // wheel_context answer, so a refused pan FREEZES exactly as a refused
-    // two-finger frame does rather than falling back to a pointer drag, and
-    // in begin_touch_region's gate list for the hold. Asked ONCE at the
-    // first finger's down; the answer also decides whether the platform
-    // opens a WINDOW at all (the region-hold beat on the zone; off it, and
+    // apply_touch_nav_update's per-frame state refusal, so a refused pan
+    // FREEZES exactly as a refused two-finger frame does rather than falling
+    // back to a pointer drag, and in begin_touch_region's gate list for the
+    // hold. Asked ONCE at the first finger's down, and IT IS THE GESTURE'S
+    // ONE SURFACE ANSWER (architect 2026-10-16): a pan or pinch the zone
+    // admitted navigates wherever its point travels until the lift, and
+    // one it refused never navigates; the answer also decides whether the
+    // platform opens a WINDOW at all (the region-hold beat on the zone; off it, and
     // outside an editor's field, the down is the pointer on contact,
     // 2026-09-25) — the platform state block owns those edges. Wired at main.cpp's set_touch_nav_hooks call.
     bool touch_point_in_pan_zone(int x, int y) const;

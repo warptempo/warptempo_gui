@@ -20,9 +20,10 @@
 #   waveform_canvas <- WvBk          waveform_ink <- WvFg          grid <- GrdL          center <- Cntr
 #   cue <- CueM                      range <- RngM                 playhead_stem <- Curs
 #   face <- Face, and a scheme recording no Face ("Classic Cool", the one preset with UseW=1, every other 2) takes
-#     WINDOWS 95'S BUTTON FACE, C0C0C0 (NO_FACE below; architect 2026-10-16, "win95"): such a scheme makes Cool Edit
-#     follow the Windows 3D face (under Wine's D4D0C8 its registry recorded a darkened UserFace 9F9785), and the
-#     product takes the period's own Windows face over both;
+#     THE DEFAULT PRESET'S FACE, read off Default's own row (626C7B; architect 2026-10-16, "make classic cool inherit
+#     from default again. default is the chrome so it's internally consistent"): such a scheme makes Cool Edit follow
+#     the Windows 3D face (under Wine's D4D0C8 its registry recorded a darkened UserFace 9F9785), and the product's
+#     "Windows" is its default chrome, Default — Windows 95's C0C0C0 stood for one afternoon of the same day;
 #   waveform_outline <- THE INK AT HLS LIGHTNESS 0.3157, hue and saturation kept: Cool Edit records no outline, and the
 #     lit outline takes the view bar span's shadow rule (src/gui/cool_edit_derive.h's `span_shadow` tone, its (a, b)
 #     read off that file and checked to be (0, 0.3157)), its round trip ported below operation for operation, so the
@@ -69,8 +70,6 @@ FROM_KEY = {'waveform_canvas': 'WvBk', 'waveform_ink': 'WvFg', 'grid': 'GrdL', '
             'range': 'RngM', 'playhead_stem': 'Curs', 'face': 'Face'}
 # the role Cool Edit has no key for (the head)
 FIXED = {'scanner': 0xFFFFFF}
-# the face of a scheme recording none (the head): Windows 95's button face
-NO_FACE = 0xC0C0C0
 DEFAULT_LINE = '(Default Scheme),'
 DEFAULT_NAME = 'Default'
 DEFAULT_KEY = 'cool-edit-default'
@@ -187,11 +186,12 @@ def word(values, key, name):
     return int(v, 16)
 
 
-def preset_words(name, values):
-    """One preset -> its eleven words in ROLE_ORDER (the head's transcription)."""
+def preset_words(name, values, default_face):
+    """One preset -> its eleven words in ROLE_ORDER (the head's transcription); `default_face` the Default preset's
+    own Face, taken by a scheme recording none."""
     w = {}
     for role, key in FROM_KEY.items():
-        if role == 'face' and key not in values: w[role] = NO_FACE
+        if role == 'face' and key not in values: w[role] = default_face
         else: w[role] = word(values, key, name)
     w['waveform_outline'] = tone(w['waveform_ink'], *OUTLINE)
     w['invalid_label'] = w['center']
@@ -227,7 +227,9 @@ def main():
         if not (0 < len(n) <= 40 and all(0x20 <= ord(c) <= 0x7E for c in n) and n == n.strip() and '/' not in n
                 and '"' not in n and '\\' not in n):
             raise SystemExit(f'gen_cool_edit_presets: the display name {n!r} is outside the palette name grammar')
-    rows = ''.join(f'    {{"{k}", "{n}", {{{", ".join(f"0x{w:06X}" for w in preset_words(n, v))}}}}},\n'
+    # the face a scheme recording none takes (the head): Default's own, the first row's recorded Face
+    default_face = word(ps[0][1], FROM_KEY['face'], ps[0][0])
+    rows = ''.join(f'    {{"{k}", "{n}", {{{", ".join(f"0x{w:06X}" for w in preset_words(n, v, default_face))}}}}},\n'
                    for k, (n, v) in zip(keys, ps))
     with open(PRESETS_INC, 'w', newline='\n') as f:
         f.write(GENERATED +

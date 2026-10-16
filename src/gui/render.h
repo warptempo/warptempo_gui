@@ -2720,7 +2720,7 @@ inline int dotted_waveform_line_runs(const GuiRect& area, int col, int period,
 // — the press, the pen's and the finger's pan zone, the cursor map — and
 // wheel_context's waveform term for the wheel). A gesture that began in a
 // well keeps running when it crosses these rows (the captured drags read
-// motion alone; the touch navigation's per-frame gate re-admits them,
+// motion alone; the touch navigation's surface is decided at its start,
 // apply_touch_nav_update). Columns are not tested: the caller asks inside
 // the area.
 inline bool point_on_waveform_divider(const GuiRect& area, int y) {

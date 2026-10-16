@@ -157,8 +157,10 @@
 // ground of the program's panel — the toolbar band, the dock bar, row 8 and
 // the canvas column's lanes — whose every other tone derives from it,
 // cool_edit_derive.h; a scheme recording none — Classic Cool, for which
-// Cool Edit follows the Windows 3D face — takes WINDOWS 95'S BUTTON FACE,
-// C0C0C0, architect 2026-10-16, "win95"); THE INVALID COLOR `invalid_label` ITS Cntr
+// Cool Edit follows the Windows 3D face — takes THE DEFAULT PRESET'S FACE,
+// 626C7B, read off Default's own row by the generator (architect 2026-10-16:
+// "make classic cool inherit from default again. default is the chrome so
+// it's internally consistent")); THE INVALID COLOR `invalid_label` ITS Cntr
 // TOO, the preset's own center-line color (architect 2026-10-11 ~01:00–01:20;
 // Windows' dark red 800000 and the selected FF0000 of 2026-10-09 retired,
 // the selected role with them: "No flags change color when you select them

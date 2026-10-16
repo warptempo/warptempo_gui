@@ -756,12 +756,16 @@ public:
     //     yields the whole zone so the first touch outside it is the press
     //     that closes it (architect 2026-10-01; the carve-outs are the GUI's,
     //     at touch_point_in_pan_zone); every other refusal (prompt, editors,
-    //     loading/empty audio, live pointer gesture) stays downstream — at the per-frame
-    //     wheel-context answer inside the update body for the nav gestures,
-    //     in the region begin body for the hold — so a refused pan freezes
-    //     and a refused hold is a dead stream rather than a fallback pointer
-    //     drag. Null — or answering false — means no pan surface: the
-    //     pointer on contact everywhere outside an editor's field.
+    //     loading/empty audio, live pointer gesture) stays downstream — at the
+    //     update body's per-frame state refusal for the nav gestures, in the
+    //     region begin body for the hold — so a refused pan freezes and a
+    //     refused hold is a dead stream rather than a fallback pointer drag.
+    //     THIS ANSWER IS THE GESTURE'S ONE SURFACE ANSWER (architect
+    //     2026-10-16): a nav gesture born of the zone's window navigates
+    //     wherever its point later travels — chrome, a card, the keys —
+    //     until its end; nothing here or in the GUI re-asks the place.
+    //     Null — or answering false — means no pan surface: the pointer on
+    //     contact everywhere outside an editor's field.
     //   * region_begin(x, y): the hold resolved on the pan zone at the beat —
     //     the GUI arms its region former at the DOWN point (the former's own
     //     press half: deselect, playhead seat, the drag arm), or refuses
@@ -842,8 +846,8 @@ public:
     // The hooks carry ONE modifier bit, the nav frame's ctrl (the one-finger
     // zoom's fork, read on single-finger frames only); the GUI bodies read
     // nothing else modal from them, and their refusal answers are their own
-    // (the per-frame wheel-context predicate; the region begin's gate list;
-    // the caret bodies' own no-editor guard). Null-safe.
+    // (the update body's per-frame state refusal; the region begin's gate
+    // list; the caret bodies' own no-editor guard). Null-safe.
     void set_touch_nav_hooks(
         std::function<void(const GuiTouchNavFrame&)> update,
         std::function<void()> end,

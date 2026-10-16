@@ -3044,51 +3044,40 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // decided afresh at this gesture's end.
     app.touch_nav_zoom.retained = false;
 
-    // The refusal answer, per frame: the wheel's own routing predicate at the
-    // current centroid. <= 0 covers both the modal refusals (-1) and the
-    // outside-both-areas 0 that handle_wheel itself no-ops on — the gesture
-    // navigates exactly the wheel's two surfaces. A refused frame navigates
-    // nothing AND SEATS NOTHING. (A scrolling popup list's context 6 took
-    // none either, 2026-10-08 to 2026-10-14, and went with the list.)
-    // THE STEREO DIVIDER IS RE-ADMITTED HERE (architect 2026-10-16: a
-    // gesture that began in a well keeps running when it crosses the
-    // divider): its rows are chrome and the wheel's 0 there
-    // (point_on_waveform_divider, render.h), but this gesture opened on the
-    // pan zone, and a pinch straddling the two channels sets its centroid on
-    // those rows, so a frame whose point lies on them inside the painted
-    // waveform navigates as the waveform's. Only a running gesture reaches
-    // this body: a down on the divider opens no window (the pan zone,
-    // point_on_nav_surface).
-    int nav_ctx = wheel_context(f.x, f.y);
-    if (nav_ctx == 0 &&
-        rect_contains(onscreen_keyboard::waveform_paint_area(app, gui), f.x,
-                      f.y) &&
-        point_on_waveform_divider(waveform_area(app), f.y))
-        nav_ctx = 1;
-    if (nav_ctx <= 0) return;
-    // AND THE FOLDER OVERLAY TAKES NONE EITHER (2026-08-28): the wheel's
-    // context answers 4 over the band under EITHER content — the LIST's
-    // scroll, a wheel act with no two-finger meaning — and every other
-    // position -1, so this one line is what keeps a pinch over the band from
-    // reaching the waveform behind the veil. IT ASKS THE STANDING PREDICATE
-    // AND NOT THE PLAYER'S BIT: the question is whether the BAND is there, and
-    // the pickers raise the same band under their own mode — asking the
-    // player alone let two fingers on the picker's list pan and zoom the
-    // waveform behind it (this gesture skips the press road entirely, so no
-    // veil refuses it).
-    if (folder_overlay_stands(app)) return;
-    // AND THE KEYBOARD TAKES NONE EITHER, nor a prompt's or a dialog
-    // editor's box — and that answer is the wheel context's own -1 above, no
-    // clause here (2026-10-10): wheel_context swallows the keyboard's whole
-    // band (onscreen_keyboard::standing_rect), refuses under a prompt and a
-    // dialog editor outright, and reads the waveform where it is painted
-    // (waveform_paint_area), so a pinch whose centroid travels onto the keys
-    // navigates nothing, the press road's and the pan zone's own extent
-    // (point_on_nav_surface). (From 2026-10-10 to 2026-10-14 the swallowed
-    // rect was the taskbar overlay's, its line on top; the clause that stood
-    // here from 2026-08-29 asked the keyboard's band alone and let a centroid
-    // on that line zoom the waveform behind it.) A key is not a navigation
-    // surface at any finger count.
+    // THE GESTURE'S SURFACE IS DECIDED AT ITS START (architect 2026-10-16:
+    // "all gestures that start on waveform can continue on chrome"). Every
+    // frame reaching this body belongs to a gesture that OPENED ON THE PAN
+    // ZONE — the platform opens a window only on the zone's down answer, and
+    // the pan, the pinch and the pen's pan and zoom are all born in that
+    // window (touch_point_in_pan_zone; the touch state block, input_core.h) —
+    // so where the frame's point lies now decides nothing: the finger, the
+    // pair's centroid or the pen may travel over the frame's columns, the
+    // stereo divider, the lanes, the toolbar, row 8, a card or the keys and
+    // the gesture keeps navigating the waveform until the lift, exactly as
+    // the mouse's captured drags read motion alone and the pinch's zoom
+    // holds its seated pivot. (The wheel's routing predicate, wheel_context,
+    // was asked at each frame's point until this ruling, so a pan wandering
+    // off the waveform froze there; the stereo divider's rows, re-admitted
+    // alone earlier the same day, are one case of the rule.)
+    // WHAT THE FRAME STILL ASKS IS STATE, NEVER PLACE — the wheel's modal
+    // refusals, which can come to stand mid-gesture without the finger
+    // choosing a surface: a prompt, the progress modal, an open dropdown, a
+    // live pointer gesture (a mouse press on the laptop — no two writers), a
+    // dialog editor, loading or empty audio, and THE FOLDER OVERLAY, the
+    // render player or the picker, standing whole (a complete batch swaps the
+    // progress modal for the player; the wheel's context 4 there is the
+    // list's scroll, a wheel act with no gesture meaning, and the band's
+    // veil would otherwise be punched by a pan from under it). A refused
+    // frame navigates nothing AND SEATS NOTHING; the gesture resumes when the
+    // state clears. The `h` view refuses nothing, entered before the
+    // gesture or toggled under it (the laptop's bare `h`): the same
+    // waveform navigates either way. The keyboard-modal flag
+    // editor is punched through as the wheel punches it.
+    if (app.prompt.active || app.batch_progress.active ||
+        app.dropdown.open() || any_pointer_gesture_active(app) ||
+        folder_overlay_stands(app) || modal_dialog_editor_active() ||
+        app.loading || audio.total_frames() <= 0)
+        return;
     // Defensive only: the platform guarantees a positive ratio (a degenerate
     // finger distance delivers 1.0).
     double dist_ratio = f.dist_ratio;
@@ -3331,7 +3320,10 @@ void GuiInputHandler::release_pen_zoom_anchor() {
 // the lower half's arrival on the zone did NOT follow for free — it followed
 // once the copy became a call. Surface geometry only, save the open menu (the
 // first clause, 2026-10-01); every other refusal stays downstream (the update
-// body's per-frame wheel_context answer, the region begin's gate list).
+// body's per-frame state refusal, the region begin's gate list). The
+// zone's answer at the down is the nav gesture's one surface answer
+// (architect 2026-10-16): what it admits navigates until the lift wherever
+// the point travels (apply_touch_nav_update).
 //
 // SO THE WHOLE WAVEFORM IS THE PAN ZONE NOW (architect 2026-08-13, embracing
 // the consequence: "currently finger down works in the upper half by waiting

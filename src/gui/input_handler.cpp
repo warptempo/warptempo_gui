@@ -3363,8 +3363,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     if (notification_card_at(app, x, y) != 0) return -1;
     if (app.prompt.active) return -1;
     // THE PROGRESS MODAL SWALLOWS THE WHEEL (2026-10-14): its box covers the
-    // canvas column and nothing under it scrolls; the touch pinch reads this
-    // refusal too (apply_touch_nav_update).
+    // canvas column and nothing under it scrolls; the touch navigation
+    // refuses under it too (apply_touch_nav_update's state list).
     if (app.batch_progress.active) return -1;
     // AN OPEN DROPDOWN SWALLOWS THE WHEEL. It cannot close from here — this
     // predicate is const and the platform probes it speculatively — so on_wheel
@@ -3393,10 +3393,10 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // overlay's line and a dialog standing on it until 2026-10-14) is
     // opaque, not a scroll surface, and what lies under it is covered, so a
     // detent over its painted rect reaches neither the waveform nor row 8
-    // behind it. -1 for the inert bands' reason. The touch pinch asks this
-    // context per frame (apply_touch_nav_update), so this is its refusal
-    // over the band too. Under a dialog editor the line below swallows
-    // everything, the modal family's box over the canvas with it.
+    // behind it. -1 for the inert bands' reason. (A running touch gesture
+    // that crosses the keys navigates on: its surface was decided at its
+    // start, apply_touch_nav_update.) Under a dialog editor the line below
+    // swallows everything, the modal family's box over the canvas with it.
     if (rect_contains(onscreen_keyboard::standing_rect(app, gui), x, y))
         return -1;
     if (modal_dialog_editor_active()) return -1;
@@ -3450,8 +3450,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // canvas interior — LESS THE STEREO DIVIDER'S ROWS (architect
     // 2026-10-16, point_on_waveform_divider, render.h): chrome, so a wheel
     // there falls to the no-context 0 as on the frame's columns beside the
-    // waveform (the touch navigation re-admits a running gesture's frames
-    // there, apply_touch_nav_update).
+    // waveform (a running touch gesture navigates on across them, its
+    // surface decided at its start, apply_touch_nav_update).
     // THE TOP STRIP LESS THE PROGRAM'S FRAME (2026-10-10, inert ground —
     // paint_program_frame publishes nothing): the frame's top row spans the
     // client inside the strip and its two columns stand outside every
@@ -3480,9 +3480,8 @@ int GuiInputHandler::wheel_context(int x, int y) const {
     // EDITOR'S OWN FIELD, which is caret work for the pointer, not a cell
     // (close_top_flag_editor_for_outside_press refuses on the same rect); its
     // riding boxes ARE cells (the one flag walk resolves them). THE TOUCH
-    // ROAD IS UNCHANGED: apply_touch_nav_update admits every positive context,
-    // so a nav frame over a flag navigates exactly as it did while this
-    // answered 2 — the tablet gets nothing new.
+    // ROAD NEVER READS THIS ANSWER: apply_touch_nav_update asks state alone,
+    // so a nav frame over a flag navigates as it does anywhere else.
     if (inside_top && !app.history_mode.active &&
         !(text_editor::is_active(app.top_flag_editor) &&
           rect_contains(app.flag_editor_box.box, x, y)) &&

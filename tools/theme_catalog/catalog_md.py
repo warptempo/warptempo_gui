@@ -69,7 +69,8 @@ CHROMES_PROVENANCE = (
     'file (coolpro.exe). Two of them carry no name there; 3D and Easy on the Eyes are their names in Cool Edit\'s own '
     'registry entries.')
 CHROMES_DEVIATIONS = [
-    'Classic Cool records no Panel Face, so Cool Edit follows Windows\' button face for it: here Windows 95\'s.',
+    'Classic Cool records no Panel Face, so Cool Edit follows Windows\' button face for it: here it takes Default\'s '
+    'Face, the program\'s default chrome.',
     'The waveform\'s outline is not one of Cool Edit\'s colors: each chrome\'s is its waveform color darkened, the '
     'same hue at a fixed lightness.',
     'The Invalid color, which marks an invalid marker, is each chrome\'s own center-line color.',
