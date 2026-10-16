@@ -20,8 +20,10 @@
 #   android/app/res/mipmap-<density>/ic_launcher_{foreground,background}.png
 #                                   the Android adaptive icon's two layers (ic_launcher.xml's head holds the
 #                                   per-density table and the safe-zone arithmetic): the foreground the drawing
-#                                   rasterised ANTIALIASED by rsvg-convert (librsvg) at 64 dp square, centred on
-#                                   the transparent 108 dp canvas; the background the 108 dp canvas flat in
+#                                   rasterised ANTIALIASED by rsvg-convert (librsvg) at 52 dp square (architect
+#                                   2026-10-16, his pick off a 60 / 56 / 52 / 48 / 44 / 40 dp series on the
+#                                   glass: the 64 dp art filled ~86 % of the launcher's visible tile and nearly
+#                                   touched its corners), centred on the transparent 108 dp canvas; the background the 108 dp canvas flat in
 #                                   GROUND, which the launcher's mask cuts to its shape.
 # A ONE-SHOT, NOT A BUILD STEP: the outputs are committed and build_apk.sh only compiles res/. Re-run after any
 # change of the drawing or the ground; never hand-edit an output. Byte-stable: rsvg-convert writes no timestamp and
@@ -59,8 +61,8 @@ grep -q -E '[[:space:]]width="48(\.0+)?(px)?"' <<< "$ROOT" && grep -q -E '[[:spa
 } > "$OUT_SVG"
 echo "wrote $OUT_SVG"
 
-# density f -> the 64 dp art A = 64f px and the 108 dp canvas C = 108f px (ic_launcher.xml's table).
-for row in mdpi:64:108 hdpi:96:162 xhdpi:128:216 xxhdpi:192:324 xxxhdpi:256:432; do
+# density f -> the 52 dp art A = 52f px and the 108 dp canvas C = 108f px (ic_launcher.xml's table).
+for row in mdpi:52:108 hdpi:78:162 xhdpi:104:216 xxhdpi:156:324 xxxhdpi:208:432; do
     IFS=: read -r density art canvas <<< "$row"
     dir="$RES/mipmap-$density"
     rsvg-convert --format=png --width="$art" --height="$art" "$SRC" \
