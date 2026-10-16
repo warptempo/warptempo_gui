@@ -41,7 +41,9 @@ OWN_NOTICE=(' DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. 
  'removed; the display on a row of its own across the face, the 120 and the note at its right, the stick at its left '
  'as thin as a digit\'s stroke, leaning left with its swing room clear; WARP\'s cap band centered above the display; '
  'the speaker grill eight columns by two of holes a quarter of a round button (the MA-1\'s ratio) at the left of the '
- 'bottom row, the two round buttons and the power button at its right. The drawing is licensed '
+ 'bottom row, the two round buttons and the power button at its right. The drawing stands at 120 % in its 48 frame '
+ '(the nested viewport 57.6 units, the body 45 x 33.75 centered at 24, 24.3; architect 2026-10-16, Warp the primary '
+ 'glyph and the project\'s name). The drawing is licensed '
  'under the GNU LGPL v3, the set\'s licence (architect 2026-10-15); its lettering is the outlines of DejaVu Sans Bold, '
  'fonts/DejaVuSans-Bold.ttf, under the Bitstream Vera licence (fonts/LICENSE-DejaVu.txt). Warp, and the program icon. ')
 TEXTS=['COPYING','COPYING_LGPL','COPYING_CCBYSA3','AUTHORS']

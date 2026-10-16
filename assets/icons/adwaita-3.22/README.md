@@ -55,7 +55,7 @@ repository's `fonts/README.md`).
 `DigitalMetronome.svg` (2026-10-16), and `AppIcon.svg` byte for byte, is NOT from adwaita-icon-theme: Warp's glyph and
 the program icon (`tools/app_icon/gen_app_icon.sh`), the tempo instrument. PROVENANCE: the architect's own work, drawn
 with Google's Gemini at his prompt after a Korg MA-1 in Adwaita 3.22's phone / calculator manner (its second redo, a
-1024-unit drawing nested in the 48-unit frame at x 0, y 0.3), cleaned on tablet mocks step by step (Gemini's two
+1024-unit drawing nested in the 48-unit frame), cleaned on tablet mocks step by step (Gemini's two
 `feDropShadow` filters unreferenced, the shadows out as every file's; the small legends removed; the body's three
 shapes — the rim, the bevel, the faceplate and its sheen clip — rounded rectangles with the belly tucked in; the round
 buttons' cap flat `#2c3036`, the power cap flat in his muted yellow `#dabe2f`; the display's note a quarter note), then
@@ -71,7 +71,11 @@ center (247.5, 581) to tip center (221, 530), the tip four fifths of the base); 
 face's top and the display; the speaker grill eight columns by two of holes a quarter of a round button's diameter
 (18.7 units at a pitch of 41, the MA-1's ratio) at the left of the bottom row, 28 units right of the display's left
 edge; the two round buttons and the power button 108 units apart at its right. One gradient of the cleaned drawing,
-the pills' `pill-body`, stays defined and unreferenced. THE LETTERING: the one `<text>`, "WARP" (weight 900, Gemini's
+the pills' `pill-body`, stays defined and unreferenced. THE FRAME: the drawing stands at 120 % in its 48-unit frame
+(architect 2026-10-16, his pick off a 114–128 % series on his pressed-case capture: "Warp is primary. Phase is
+auxiliary … warp should be a little bigger. It's also the project name"): the nested viewport 57.6 units square at
+x −4.8, y −4.5 (48 × 48 at x 0, y 0.3 before), so the body is 45 × 33.75 units centered at (24, 24.3), 1.5 units
+inside the frame each side; the drawing's empty margin overflows the frame and is clipped, nothing drawn lost. THE LETTERING: the one `<text>`, "WARP" (weight 900, Gemini's
 family list "Cantarell, 'DejaVu Sans', 'Segoe UI', Arial, sans-serif"), was judged on the glass as rsvg drew it on
 the authoring laptop, where fontconfig resolves the list to DejaVu Sans Bold ("dejavu looks like what gemini used —
 let's use that"); the product's resvg draws no text, so the file carries DejaVu Sans Bold's OUTLINES
@@ -243,7 +247,7 @@ shift is the product's, not the file's.
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/DigitalMetronome.svg` | — | `93ec3d2004fd679b022fa3c55b91de066f1e84b7a730166a4da392b2c7e8f778` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
+| AppIcon | — | `own/DigitalMetronome.svg` | — | `b1324af4879534881d10d62829bf2590e99494aa52ff546ebf5bb4e11647281c` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
 | AudioVolumeHigh | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
@@ -256,7 +260,7 @@ shift is the product's, not the file's.
 | DialogError | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | DialogInformation | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` |  |
 | DialogOkApply | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
-| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `93ec3d2004fd679b022fa3c55b91de066f1e84b7a730166a4da392b2c7e8f778` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
+| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `b1324af4879534881d10d62829bf2590e99494aa52ff546ebf5bb4e11647281c` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
 | DocumentOpen | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
 | DocumentOpenRecent | `document-open-recent` | `clocks.svg` | 696.062, 355.996, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | History: the clock turned back (architect 2026-10-16); TEXT TO OUTLINES: 48 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
 | DocumentRevert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |

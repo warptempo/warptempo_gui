@@ -4,18 +4,19 @@
      2026-10-16): the architect's digital metronome, the caption's icon and
      the glyph Warp wears, assets/icons/adwaita-3.22/AppIcon.svg, rasterised
      ANTIALIASED by rsvg-convert (librsvg on the laptop; a vector, not pixel
-     art) and centered over THE BUTTON CASE'S GRADIENT, the Cool Edit case's 20
-     face-ramp stops under Midnight's Face #272B6D (cool_edit_derive.h's
-     kCaseRamp), flat bands spread over the whole canvas as the app spreads them
-     over the glyph seat, so the mask shows a gradient shape carrying the
-     drawing. An ADAPTIVE icon, the whole of it: minSdk is 30, so
+     art) and centered over THE CHROME'S OWN CAPTION START, FLAT (architect
+     2026-10-16: "just the title start color, flat, as the bg"): Windows
+     Storm's active title start #800080 (chrome_schemes.inc's windows-storm
+     row, the compiled scheme), one color over the whole canvas, so the mask
+     shows a purple shape carrying the drawing (the Cool Edit case's 20
+     face-ramp bands under Midnight's Face from 2026-10-12 until then). An
+     ADAPTIVE icon, the whole of it: minSdk is 30, so
      no legacy ic_launcher.png set exists beside it.
 
      Two layers per density under res/mipmap-<density>/, BOTH written by
      tools/app_icon/gen_app_icon.sh (which also writes the Linux desktop icon,
      packaging/warptempo_gui.svg, the same drawing bare):
-       ic_launcher_background.png  the full 108 dp canvas in the 20 gradient
-                                   bands;
+       ic_launcher_background.png  the full 108 dp canvas flat in #800080;
        ic_launcher_foreground.png  the drawing rendered at the 64 dp art size,
                                    centred on a transparent canvas of the
                                    density's full 108 dp.
@@ -34,7 +35,7 @@
        xxxhdpi  4    432            256      88
 
      A ONE-SHOT, NOT A BUILD STEP: the PNGs are rendered once on the laptop
-     and committed; a change of the drawing or the ramp is a re-run of the generator
+     and committed; a change of the drawing or the ground is a re-run of the generator
      (bash tools/app_icon/gen_app_icon.sh, byte-stable), never a build step
      (build_apk.sh only compiles res/). -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
