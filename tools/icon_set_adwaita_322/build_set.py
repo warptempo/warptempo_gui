@@ -1,10 +1,12 @@
 """The Adwaita 3.22.0 icon set by enumerator (architect 2026-10-14): for every row of mapping.tsv, extract.py's
 pruned 48-unit file from the row's sheet and slot, its drop shadows removed by shadows.tsv's ids (architect
-2026-10-15) and any other element the architect ruled out by removed.tsv's (appointment-new's star, 2026-10-15); the
-treated files, the clock's text to outlines (text_to_paths.py: VcsDiff, AppointmentNew and AppIcon) and the derived
-TabDetachB (preferences-system-windows with the lower-right window copy, use5281, moved after the front window g5270:
-element order alone, every coordinate unchanged), each with its dated changed-file comment at the head; the tarball's
-four licence texts; and README_table.md, each sheet with its sha256.
+2026-10-15) and any other element the architect rules out by removed.tsv's (no row today); THE SET'S ONE OWN FILE, the
+`own` treatment (architect 2026-10-16): own/<sheet>, the architect's digital metronome, NOT Adwaita's, COPIED with its
+dated notice inserted as one XML comment after the root's start tag and every other byte verbatim (DigitalMetronome
+and AppIcon both from it, no tarball check; its lettering already outlines, text_to_paths.py's work at its making);
+the derived TabDetachB (preferences-system-windows with the lower-right window copy, use5281, moved after the front
+window g5270: element order alone, every coordinate unchanged), with its dated changed-file comment at the head; the
+tarball's four licence texts; and README_table.md, each sheet with its sha256.
 One line per seat reports the shadow and other elements removed and the checks of the faithful drawing (nothing
 removed): identical to the sheet cropped to the slot (rgb <= 1.5, alpha <= 3 at 240 px),
 or within d <= 3.0 of the theme's shipped 48 PNG (user-trash's mesh pattern sits at 3.0 and its crop at 7.7, because
@@ -12,25 +14,30 @@ the crop clips the rim highlight's mask region).
 usage: python3 -I tools/icon_set_adwaita_322/build_set.py <tarball-root> <out-dir>"""
 import os, sys, hashlib, shutil, tempfile, xml.etree.ElementTree as ET
 HERE=os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0,HERE)
-import extract as X, text_to_paths as TP
+import extract as X
 NOTES={'AccessoriesDictionary':'NEW: Source (architect 2026-10-14)','CameraPhoto':'NEW: Phase reset (architect 2026-10-15: the phase snapshot)',
 'ChangesAllow':'NEW: Read-Only while unlocked (architect 2026-10-14)','ChangesPrevent':'NEW: Read-Only while locked (architect 2026-10-14)',
 'DialogOkApply':'Load in Place (architect 2026-10-14)','DocumentSave':'the floppy retired (architect 2026-10-14)','InputTablet':'NEW: Target (architect 2026-10-14)',
 'Merge':'Flatten: the broom (architect 2026-10-14)','TabDetachB':'DERIVED, below',
-'AppointmentNew':'NEW: Warp (architect 2026-10-15: the red slice reads as a speedometer)','AppIcon':'AppointmentNew\'s file: the program icon (architect 2026-10-15)'}
+'DigitalMetronome':'OWN FILE, not Adwaita\'s: Warp (architect 2026-10-16), above','AppIcon':'OWN FILE, DigitalMetronome\'s: the program icon (architect 2026-10-16)',
+'XOfficeCalendar':'History (architect 2026-10-15: history is dated entries)','NetworkWiredDisconnected':'NEW: Session (architect 2026-10-15: shut off git and stay local)',
+'EditFind':'NEW: Center (architect 2026-10-16: the magnifier finds the playhead)','ViewRestore':'NEW: Full zoom out (architect 2026-10-16: the view shrunk back)',
+'AudioVolumeHigh':'NEW: Waveform magnification (architect 2026-10-16: the louder waveform)'}
 TAB_B_NOTICE=(' TabDetachB: adwaita-icon-theme 3.22.0 preferences-system-windows, CHANGED 2026-10-14 (LGPL-3 / CC BY-SA 3.0): the '
  'lower-right window copy use5281 moved after the front window g5270, element order alone, every coordinate unchanged; Switch Tab on tab B. ')
-VCS_DIFF_NOTICE=(" VcsDiff: adwaita-icon-theme 3.22.0 document-open-recent (src/fullcolor/clocks.svg), CHANGED 2026-10-14 (LGPL-3 / CC BY-SA 3.0): "
- "its 48 clock-digit text elements replaced by the glyph outlines of the face they name, Liberation Sans Bold, from the repository's "
- "fonts/LiberationSans-Bold.ttf (the product's resvg draws no text); every other element unchanged. ")
-# AppointmentNew and AppIcon are one file byte for byte, so they carry one notice naming both.
-APPOINTMENT_NOTICE=(" AppointmentNew and AppIcon: adwaita-icon-theme 3.22.0 appointment-new (src/fullcolor/clocks.svg), CHANGED "
- "2026-10-15 (LGPL-3 / CC BY-SA 3.0): the glowing star emblem g6800 (the star and its glow) removed; the drop shadows "
- "removed, as from every seat of the set; its 24 clock-digit text elements replaced by the glyph outlines of the face "
- "they name, Liberation Sans Bold, from the repository's fonts/LiberationSans-Bold.ttf (the product's resvg draws no "
- "text); the dial, the hands and the red slice unchanged. Warp, and the program icon. ")
-TEXT_NOTICES={'VcsDiff':VCS_DIFF_NOTICE,'AppointmentNew':APPOINTMENT_NOTICE,'AppIcon':APPOINTMENT_NOTICE}
+OWN_NOTICE=(' DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. The architect\'s own drawing (2026-10-16), '
+ 'made with Google\'s Gemini at his prompt after a Korg MA-1 in Adwaita 3.22\'s phone / calculator manner, WARP in place '
+ 'of the maker\'s name, then cleaned on tablet mocks: the drop-shadow filters and every small legend removed, the body\'s '
+ 'shapes rounded rectangles, the caps flat, the display\'s note a quarter note, WARP moved. The drawing is licensed '
+ 'under the GNU LGPL v3, the set\'s licence (architect 2026-10-15); its lettering is the outlines of DejaVu Sans Bold, '
+ 'fonts/DejaVuSans-Bold.ttf, under the Bitstream Vera licence (fonts/LICENSE-DejaVu.txt). Warp, and the program icon. ')
 TEXTS=['COPYING','COPYING_LGPL','COPYING_CCBYSA3','AUTHORS']
+def copy_own(src,p):
+    """the own file, its bytes verbatim but for OWN_NOTICE inserted as one comment after the root's start tag (line 1,
+    as tools/app_icon/gen_app_icon.sh requires)."""
+    raw=open(src,'rb').read(); assert raw.startswith(b'<svg') and b'--' not in OWN_NOTICE.encode()
+    end=raw.index(b'>')+1
+    open(p,'wb').write(raw[:end]+b'\n  <!--'+OWN_NOTICE.encode('ascii')+b'-->'+raw[end:])
 def sha(p): return hashlib.sha256(open(p,'rb').read()).hexdigest()
 def derive_tab_b(p):
     t=ET.parse(p); r=t.getroot(); par={c:p for p in r.iter() for c in p}
@@ -55,13 +62,14 @@ def main(root,out):
     for line in lines[1:]:
         enum,name,sheet,x,y,w,h,treat=line.split('\t'); p=f'{out}/{enum}.svg'
         if enum not in shadows: sys.exit(f'{enum}: no row in shadows.tsv')
+        if treat=='own':
+            assert not shadows[enum] and enum not in removed,enum; src=f'{HERE}/own/{sheet}'; copy_own(src,p)
+            rows.append((enum,name,f'own/{sheet}',None,sha(src),NOTES.get(enum,'')))
+            print(f'{enum:24s} {"own/"+sheet:28s} own   copied, the notice inserted'); continue
         slot=(float(x),float(y),float(w),float(h)); gone=removed.get(enum,[])
         r=X.extract(root,name,sheet,slot,p,tmp,shadows[enum]+gone); note=NOTES.get(enum,'')
         if gone: note=(note+'; ' if note else '')+f'REMOVED (removed.tsv): {" ".join(gone)}'
-        if treat=='text-to-outlines':
-            n=TP.convert(p,p,TEXT_NOTICES[enum])
-            note=(note+'; ' if note else '')+f'TEXT TO OUTLINES: {n} text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf'
-        elif treat=='tab-b': derive_tab_b(p)
+        if treat=='tab-b': derive_tab_b(p)
         else: assert treat=='-',treat
         ok=(r['max_rgb_diff']<=1.5 and r['max_alpha_diff']<=3) or 0<=r['d_shipped_png']<=3.0
         bad+=not ok
@@ -69,9 +77,9 @@ def main(root,out):
         ns=len(shadows[enum])+len(r['shadow_copies'])
         print(f'{enum:24s} {name:28s} {"ok" if ok else "CHECK"}  shadows -{ns:<2d} removed -{len(gone)}  crop rgb {r["max_rgb_diff"]:5.1f} alpha {r["max_alpha_diff"]:5.1f}  shipped png d {r["d_shipped_png"]:5.1f}')
     with open(f'{out}/README_table.md','w') as f:
-        f.write('| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | note |\n|---|---|---|---|---|---|\n')
+        f.write('| enumerator | 3.22 name | source sheet (src/fullcolor, or own/ beside this tool) | slot (x, y, w, h) | sheet sha256 | note |\n|---|---|---|---|---|---|\n')
         for enum,name,sheet,sl,hs,note in rows:
-            f.write(f'| {enum} | `{name}` | `{sheet}` | {", ".join("%g"%v for v in sl)} | `{hs}` | {note} |\n')
+            f.write(f'| {enum} | {"—" if sl is None else f"`{name}`"} | `{sheet}` | {"—" if sl is None else ", ".join("%g"%v for v in sl)} | `{hs}` | {note} |\n')
     for t in TEXTS: shutil.copyfile(f'{root}/{t}',f'{out}/{t}-adwaita-icon-theme-3.22.0')
     shutil.rmtree(tmp); print(f'{len(rows)} files, {bad} to check')
 if __name__=='__main__':

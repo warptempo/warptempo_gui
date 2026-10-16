@@ -10,7 +10,7 @@ with it, and the defs are pruned to those referenced. Nothing is redrawn. The fa
 checked against the sheet cropped to the slot (rsvg, 240 px) and against the theme's own shipped 48 PNG; the
 shadow-less file is the one written.
 The slot rect comes from mapping.tsv, the shadow ids from shadows.tsv and any other removed element's from removed.tsv
-(appointment-new's star, architect 2026-10-15), removed the same way; this module is driven by build_set.py."""
+(none today), removed the same way; this module is driven by build_set.py."""
 import os, re, sys, copy, subprocess, numpy as np, xml.etree.ElementTree as ET, glob
 from PIL import Image
 SVGNS='http://www.w3.org/2000/svg'; SV='{%s}'%SVGNS; XL='http://www.w3.org/1999/xlink'

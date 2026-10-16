@@ -3,5 +3,3 @@
 # id must exist; every <use> of a removed element goes with it; a reference left to a removed element fails the build).
 # Rows are optional: an enumerator absent here removes nothing more. Every enumerator named must be a mapping.tsv row.
 # enumerator	source_icon	removed_ids	note
-AppointmentNew	appointment-new	g6800	the glowing star emblem: path1345 the star, path2388 its glow (architect 2026-10-15: "minus the star")
-AppIcon	appointment-new	g6800	AppointmentNew's: the glowing star emblem (architect 2026-10-15)

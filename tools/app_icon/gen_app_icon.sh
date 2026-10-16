@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # tools/app_icon/gen_app_icon.sh — assets/icons/adwaita-3.22/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
-# THE ICON (architect 2026-10-15): Adwaita 3.22's appointment-new clock, its star and shadows removed, the red slice
-# kept (AppIcon.svg, byte-identical to AppointmentNew.svg, the glyph Warp wears; the caption's icon;
-# assets/icons/adwaita-3.22/README.md the extraction and its changes) — the BPM Iterations button keeps Adwaita 3.22's
+# THE ICON (architect 2026-10-16): the architect's digital metronome, the icon set's one own file (AppIcon.svg,
+# byte-identical to DigitalMetronome.svg, the glyph Warp wears; the caption's icon; assets/icons/adwaita-3.22/README.md
+# its provenance and licence) — the BPM Iterations button keeps Adwaita 3.22's
 # audio-x-generic note (MusicNote16th.svg), the program icon's drawing from 2026-10-12 until then — over THE BUTTON
 # CASE'S GRADIENT:
 # the Cool Edit case's face ramp at rest, its 20 stops under the default palette's Face (Cool Edit's Midnight,
@@ -61,9 +61,9 @@ grep -q -E '[[:space:]]width="48(\.0+)?(px)?"' <<< "$ROOT" && grep -q -E '[[:spa
 {
     printf '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">\n'
     printf '  <!-- The program icon outside the window, the Linux desktop icon (the .desktop'"'"'s\n'
-    printf '       Icon=warptempo_gui): Adwaita 3.22'"'"'s appointment-new clock, the caption'"'"'s icon\n'
-    printf '       and the glyph Warp wears (assets/icons/adwaita-3.22/README.md),\n'
-    printf '       bare on transparency (architect 2026-10-12; the clock since 2026-10-15). GENERATED\n'
+    printf '       Icon=warptempo_gui): the digital metronome, the caption'"'"'s icon and the glyph\n'
+    printf '       Warp wears, the icon set'"'"'s one own file (assets/icons/adwaita-3.22/README.md),\n'
+    printf '       bare on transparency (architect 2026-10-12; the metronome since 2026-10-16). GENERATED\n'
     printf '       by tools/app_icon/gen_app_icon.sh from %s,\n' "$SRC"
     printf '       the drawing verbatim: regenerate, never hand-edit. -->\n'
     cat "$SRC"

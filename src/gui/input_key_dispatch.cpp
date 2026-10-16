@@ -1805,7 +1805,7 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //   * BARE Home / BARE End and CTRL+HOME / CTRL+END — keys alone since
 //     2026-10-12 (the bottom row's skip buttons left), claimed above beside
 //     the march;
-//   * BARE `c` — the icon row's zoom-original button since the 2026-08-12
+//   * BARE `c` — the icon row's Center button since the 2026-08-12
 //     relayout, likewise;
 //   * BARE Tab (with its shifted form, the walk button's shift press) — the
 //     bottom row's WALK BUTTON (since 2026-08-15), answered LIVE in the view

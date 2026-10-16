@@ -2566,8 +2566,8 @@ enum class RedesignButton {
     //
     // The lamp lights AWAY FROM HOME, which is the collapse's own rule across
     // all three: Git is the walk's default reading, so the lamp is LIT IN
-    // SESSION and it wears the Session glyph, ShallowHistory — the sets'
-    // calendar since 2026-10-07 (icons.h).
+    // SESSION and it wears the Session glyph, NetworkWiredDisconnected — the
+    // unplugged cable since 2026-10-15, Session shutting off git (icons.h).
     //
     // It STANDS ONLY IN THE `h` VIEW since 2026-10-05 (the stand-ins) and
     // its arm still answers DEAD outside it, the same answer its neighbours
@@ -2581,7 +2581,9 @@ enum class RedesignButton {
     // state reset to Commit at every entry — so a lit lamp outside the view
     // would advertise a selection that is not a live fact. It is unlit out
     // there whatever the last visit left (redesign_button_selected).
-    HistoryWalk,
+    // NAMED FOR ITS LIT STATE, Toggle Session History, since 2026-10-16 (the
+    // tooltip table, redesign_button_tooltip).
+    SessionHistory,
     // THE FOUR COMPANIONS, behind the walk lamp in the order they have always
     // held
     // — how the delta READS, what you can DO from inside the view, then where
@@ -3043,7 +3045,8 @@ enum class RedesignButton {
     // ctrl form switches the tab and its ctrl-shift form is the diff-flag
     // march.
     TransportWalk,
-    // CENTER (bare `c`, working-zoom center, wearing zoom-original) — in the
+    // CENTER (bare `c`, working-zoom center, wearing edit-find since
+    // 2026-10-16, icons.h) — in the
     // walk group since 2026-09-29 (architect), MOVED from the icon row's
     // viewport-class group where it stood beside Full zoom out from the
     // 2026-08-12 grand relayout. The id keeps its Icon* name, a roster id
@@ -14157,7 +14160,7 @@ inline bool device_is_mirror(const AppState& a) {
 // no glyph can disagree with its key: the WALK LAMP'S ACT
 // (GuiInputHandler::set_history_delta, which refuses a switch toward the
 // remote walk and cards the reason) and its FACE (redesign_button_enabled's
-// HistoryWalk arm); the CHECKPOINT ACT (run_publish_chord, which
+// SessionHistory arm); the CHECKPOINT ACT (run_publish_chord, which
 // cards this fact as its OUTERMOST premise) and SAVE'S FACE through the two
 // predicates below; row 8's GitHub SEGMENT (history_walk_line), which stands
 // only on a visit that has a clone; and the FAILED-SCAN ARRIVAL
@@ -16681,7 +16684,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // refused, and the truthful-buttons ruling greys it. The KEY still
         // cards the bootstrap's reason — the grey is the message for the
         // button, the sentence is the key's.
-        case RedesignButton::HistoryWalk:
+        case RedesignButton::SessionHistory:
             return a.history_mode.active && history_remote_walk_available(a);
         case RedesignButton::HistoryRevert:
         case RedesignButton::HistoryCumulative:
@@ -17029,7 +17032,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // SOURCE is per-visit state reset to Commit at every entry — so a lit
         // lamp outside the view would advertise a selection that is not a live
         // fact. Out there it is unlit and dead, which is the honest face.
-        case RedesignButton::HistoryWalk:
+        case RedesignButton::SessionHistory:
             return a.history_mode.active &&
                    a.history_mode.source == GuiHistoryWalkSource::Local;
         case RedesignButton::File:
@@ -17863,17 +17866,22 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // one button over a two-state axis — the two radios it replaced named
         // their own walks, "Git (G)" for the committed checkpoint history and
         // "Session (G)" for this session's own undo/redo timeline, and either
-        // word alone would lie half the time now. WALK is the tree's word for
-        // this axis (GuiHistoryWalkSource, history_walk_older_actionable); the
-        // Cumulative toggle beside it owns "reading". The hint shows over a
+        // word alone would lie half the time now. THE ACT IS "TOGGLE SESSION
+        // HISTORY" since 2026-10-16 (architect, agreed 2026-10-14): a lamp names
+        // its LIT state, and it lights in Session (the walk reading this
+        // session's own timeline; unlit, Git) — "Toggle History Walk" named
+        // the axis, and "walk" already means walking both tabs. WALK stays the
+        // tree's word for the axis (GuiHistoryWalkSource,
+        // history_walk_older_actionable); the Cumulative toggle beside it owns
+        // "reading". The hint shows over a
         // DEAD button outside the `h` view, the tooltips-on-disabled ruling's
         // own case (architect 2026-08-07), exactly as its four neighbours' do.
         // IT IS THIS ONE STRING IN EVERY STATE: the stateful overload forked
         // it inside the view until 2026-09-12, naming the bootstrap where a
         // visit had opened on the local fallback, and that line went with the
         // reason class — the button greys there and bare `g` cards the reason.
-        case RedesignButton::HistoryWalk:
-            return {"Toggle History Walk (G)", nullptr};
+        case RedesignButton::SessionHistory:
+            return {"Toggle Session History (G)", nullptr};
         // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
         // twin; the text names the toggle (the lamp rule at this table's
         // head — it read "Cumulative (U)" until 2026-09-01). Like the three

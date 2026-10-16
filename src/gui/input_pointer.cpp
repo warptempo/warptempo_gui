@@ -419,7 +419,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // in every state on this row, and outside the view it wears the dead face
     // and the press is consumed at arm_redesign_press's disabled line. Even
     // reached, bare `g` is bound in handle_history_mode_key alone.
-    {RedesignButton::HistoryWalk,
+    {RedesignButton::SessionHistory,
      GuiKeys::G,      false, false, false, false},                             // bare g
     // THE HISTORY COMPANIONS — the icon row's last group behind the opener
     // again since 2026-08-18 (they were this row's from 2026-08-04, the bottom
@@ -1318,7 +1318,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // toggle; 2026-08-08 — bare `u`, the reading's own toggle), and it did not have
 // to move when the ROSTER later grew buttons for those same shapes either:
 // bare Home / End became the bottom row's SKIPS (2026-08-11), bare `c` the icon
-// row's zoom-original (2026-08-12; the bottom row's walk group's since
+// row's Center button (2026-08-12; the bottom row's walk group's since
 // 2026-09-29), and bare Tab / Shift+Tab / Ctrl+Shift+Tab
 // the bottom row's MARKER-WALK GROUP (2026-08-15; Shift+Tab a dedicated
 // Previous Marker again since 2026-09-29). Every one of them is a chord
@@ -1411,7 +1411,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   DEDICATED ROADS: PREVIOUS MARKER (Shift+Tab, the mode's own, its ctrl
 //   press the mode's march) and SWITCH TAB (Ctrl+Tab, on the allowlist, its
 //   shifted press the mode's march), both LIVE for free,
-//   and THE BOTTOM ROW'S SKIPS and THE ZOOM-ORIGINAL button (Center, the
+//   and THE BOTTOM ROW'S SKIPS and THE CENTER button (the
 //   walk group's third since 2026-09-29) on the same terms
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
 //   and THE BOTTOM ROW'S LEFT / RIGHT CHORDS since 2026-09-26 (bare Left /

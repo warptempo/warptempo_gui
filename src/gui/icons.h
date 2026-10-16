@@ -6,7 +6,10 @@
 // adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/ artwork at its 48
 // slot, extracted as a standalone 48-unit file by
 // tools/icon_set_adwaita_322/, nothing redrawn and nothing from another
-// release — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
+// release — but ONE OWN FILE, the digital metronome (architect 2026-10-16:
+// Warp's glyph and the program icon, the architect's own drawing, NOT
+// Adwaita's, copied by the same tool; the set's README its provenance and
+// licence) — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
 // (architect 2026-10-15, "we'll go with none": a drop shadow is the live
 // glyph's raised fiction, and Cool Edit's flat bitmaps never had one — the
 // approved list tools/icon_set_adwaita_322/shadows.tsv); hard-coded (the `icons` device key and the Settings Icons row were
@@ -88,18 +91,29 @@ enum class Icon {
     // 1 / 2) and the Warp / Phase-reset pair (bare 3 / 4), one glyph each.
     AccessoriesDictionary, // Source — the primary source
     InputTablet,         // Target — the authoring surface
-    AppointmentNew,      // Warp — appointment-new's clock, its red slice
-                         // the tempo change (the architect: it reads as a
-                         // speedometer); the star and the shadows removed
-                         // (architect 2026-10-15)
+    DigitalMetronome,    // Warp — the architect's own digital metronome,
+                         // the set's one own file (architect 2026-10-16:
+                         // the tempo instrument; drawn with Gemini after a
+                         // Korg MA-1 in Adwaita 3.22's phone / calculator
+                         // manner, WARP on its faceplate in DejaVu Sans
+                         // Bold outlines); appointment-new's clock retired
+                         // ("it fits in theory, but it just didn't fit in
+                         // practice")
     CameraPhoto,         // Phase Reset — the set's camera-photo, the phase
                          // snapshot: a reset re-grounds the synthesis phase
                          // to the source's at one frame and it decoheres
                          // from there (architect 2026-10-15)
     // THE MAGNIFIERS.
-    ZoomFitBest,         // Full Zoom Out (bare `0`)
-    ZoomOriginal,        // Center on Focus (bare `c`)
-    ZoomInY,             // Toggle Waveform Magnification
+    ViewRestore,         // Full Zoom Out (bare `0`) — the set's
+                         // view-restore, the view shrunk back whole
+                         // (architect 2026-10-16)
+    EditFind,            // Center on Focus (bare `c`) — the set's
+                         // edit-find, the magnifier that finds the playhead
+                         // (architect 2026-10-16)
+    AudioVolumeHigh,     // Toggle Waveform Magnification — the set's
+                         // audio-volume-high, the loud speaker for the
+                         // louder waveform (architect 2026-10-16; zoom.svg's
+                         // three magnifiers retired, "low contrast")
     // THE SINGLE-MARKER VERBS.
     ListAdd,             // Drop Marker (bare `s`)
     ListRemove,          // Delete Markers (`Delete`)
@@ -117,11 +131,15 @@ enum class Icon {
                          // player's row): the walked version loaded into
                          // the editor in place. The set's edit-paste
                          // (architect 2026-10-14).
-    VcsDiff,             // Toggle History View (`h`)
-    ShallowHistory,      // Toggle History Walk (bare `g`, lit in Session) —
-                         // the set's x-office-calendar, the dated page:
-                         // the walk through dated commits (architect
-                         // 2026-10-07)
+    XOfficeCalendar,     // Toggle History View (`h`) — the set's
+                         // x-office-calendar: history is dated entries
+                         // (architect 2026-10-15, "the calendar works for
+                         // history")
+    NetworkWiredDisconnected, // Toggle Session History (bare `g`, lit in
+                         // Session) — the set's network-wired-disconnected,
+                         // the unplugged cable: local means git off (the
+                         // architect: "local means shut off git and stay
+                         // local, so disconnect internet", 2026-10-15)
     EditSelect,          // Toggle Add to Selection
     KeyframePrevious,    // Older checkpoint (`,`)
     KeyframeNext,        // Newer checkpoint (`.`)
@@ -181,10 +199,10 @@ enum class Icon {
                          // arrow, the drag it arms (architect 2026-10-11:
                          // "a double-sided arrow with an up and a down";
                          // never a zoom glyph)
-    AppIcon,             // the caption's icon — appointment-new's clock,
-                         // AppointmentNew's file byte for byte, the program
-                         // icon outside the window too (architect
-                         // 2026-10-15; tools/app_icon/)
+    AppIcon,             // the caption's icon — the digital metronome,
+                         // DigitalMetronome's file byte for byte, the
+                         // program icon outside the window too (architect
+                         // 2026-10-16; tools/app_icon/)
 };
 
 // Roster size, the names' and the load's count (load_svg_set parses one
@@ -198,12 +216,13 @@ inline constexpr int kIconCount = 61;
 inline constexpr const char* kIconNames[] = {
     "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
     "VcsCommit",
-    "VcsPull", "AccessoriesDictionary", "InputTablet", "AppointmentNew",
+    "VcsPull", "AccessoriesDictionary", "InputTablet", "DigitalMetronome",
     "CameraPhoto",
-    "ZoomFitBest", "ZoomOriginal", "ZoomInY", "ListAdd", "ListRemove",
+    "ViewRestore", "EditFind", "AudioVolumeHigh", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
     "TimelineLift", "MusicNote16th", "Mathmode", "PreviewRenderOn",
-    "DialogOkApply", "VcsDiff", "ShallowHistory", "EditSelect",
+    "DialogOkApply", "XOfficeCalendar", "NetworkWiredDisconnected",
+    "EditSelect",
     "KeyframePrevious", "KeyframeNext", "GoPrevious", "GoNext",
     "DocumentRevert", "MediaSkipBackward", "MediaPlaybackStart",
     "MediaPlaybackStop", "MediaPlaybackPause", "MediaSkipForward",

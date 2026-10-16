@@ -767,17 +767,19 @@ constexpr IconRowDef kIconRowButtons[] = {
     // front of it and their keys `=` / `-` were removed 2026-09-25
     // (architect: zoom is on every surface — the Ctrl+drag, the pinch, the S
     // Pen's button-held drag), two boxes and two 2px gaps off the walk and no
-    // separator moving. WORKING-ZOOM CENTER (bare `c`, zoom-original) stood
+    // separator moving. WORKING-ZOOM CENTER (bare `c`) stood
     // behind it until 2026-09-29, when the architect moved it to the bottom
     // row's walk group (kTransportWalkGroup) — one box and one 2px gap off
-    // this walk, no separator moving.
-    {RedesignButton::IconZoomFitBest,  icons::Icon::ZoomFitBest},
+    // this walk, no separator moving. It wears view-restore, the view shrunk
+    // back whole (architect 2026-10-16, icons.h).
+    {RedesignButton::IconZoomFitBest,  icons::Icon::ViewRestore},
     // WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
-    // lamp, after Full zoom out in the same group: ZoomInY, the magnifier
-    // with a plus — the picture's vertical scale grown.
+    // lamp, after Full zoom out in the same group: AudioVolumeHigh, the loud
+    // speaker — the louder waveform, its vertical scale grown (architect
+    // 2026-10-16; zoom.svg's magnifiers retired, "low contrast").
     // It joins the group rather than opening one, so it adds one box and one
     // 2px gap to the walk and no separator.
-    {RedesignButton::IconWaveformMagnification, icons::Icon::ZoomInY},
+    {RedesignButton::IconWaveformMagnification, icons::Icon::AudioVolumeHigh},
     // (THE WAVEFORM MAGNIFICATION PAIR closed the same group from 2026-08-26
     // to 2026-09-14 — magnify wearing zoom-in-y and reduce wearing
     // zoom-out-y — and left with the setting it stepped (architect
@@ -937,11 +939,11 @@ constexpr IconRowDef kIconRowHistoryActGroup[] = {
 constexpr IconRowDef kIconRowHistoryReadingGroup[] = {
     // THE WALK LAMP (architect 2026-08-18 as a radio pair, one button since
     // the 2026-09-04 collapse). It wears the LIT state's glyph,
-    // SHALLOW-HISTORY, because Git is the walk's default and the lamp reports
-    // Session — the sets' x-office-calendar since 2026-10-07 (icons.h), the
-    // dated page: the walk through dated commits. The Git half's
-    // deep-history glyph left icons::Icon with that half.
-    {RedesignButton::HistoryWalk,       icons::Icon::ShallowHistory},
+    // the Session glyph, because Git is the walk's default and the lamp
+    // reports Session — network-wired-disconnected since 2026-10-15
+    // (icons.h): Session shuts off git and stays local, the cable unplugged.
+    // The Git half's deep-history glyph left icons::Icon with that half.
+    {RedesignButton::SessionHistory,       icons::Icon::NetworkWiredDisconnected},
     {RedesignButton::HistoryCumulative, icons::Icon::BlackSum},
 };
 struct IconRowStandIn {
@@ -971,7 +973,7 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // the same in both states, and the mode's two edges damage the whole window
 // anyway (THE REPAINT, above).
 constexpr IconRowDef kIconRowHistoryOpener =
-    {RedesignButton::IconHistory, icons::Icon::VcsDiff};
+    {RedesignButton::IconHistory, icons::Icon::XOfficeCalendar};
 
 // THE VIEW PAIRS — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
 // 2026-10-01; two radio pairs since 2026-10-14): the Source / Target pair on
@@ -982,8 +984,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // blue "Logging | Editing | Audio | Effects | Color" bar at the far right of
 // its menu row — reborn as the selectors; the bar's labelled buttons are gone
 // and the acts wear the architect's glyphs (icons.h: Source the dictionary,
-// Target the tablet, 2026-10-14; Warp appointment-new's clock, its red slice
-// a speedometer's, Phase Reset the camera's phase snapshot, 2026-10-15). THE BAND'S OWN METRICS, NONE NEW: the program's case
+// Target the tablet, 2026-10-14; Warp the architect's digital metronome,
+// 2026-10-16; Phase Reset the camera's phase snapshot, 2026-10-15). THE BAND'S OWN METRICS, NONE NEW: the program's case
 // (render.h's program block), each pair's members abutting in their own pane
 // (its leader the pair's first at redesign_button_opens_icon_group), the
 // program's grooved recess between the panes, the Warp pane ending at the
@@ -1014,7 +1016,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource, icons::Icon::AccessoriesDictionary},
      {RedesignButton::ViewTarget, icons::Icon::InputTablet}},
-    {{RedesignButton::ViewWarp,   icons::Icon::AppointmentNew},
+    {{RedesignButton::ViewWarp,   icons::Icon::DigitalMetronome},
      {RedesignButton::ViewPhase,  icons::Icon::CameraPhoto}},
 };
 
@@ -2631,8 +2633,9 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
 // group between the verbs and the arrows — FOUR SINCE 2026-09-29 (architect),
 // in this order: PREVIOUS MARKER (Shift+Tab, BboxPrev; its ctrl press is the
 // paired march), NEXT MARKER (the walk: Tab, its shifted press Shift+Tab;
-// its camera the audio view's; BboxNext), CENTER (bare `c`, ZoomOriginal,
-// moved down from the icon row's zoom group) and SWITCH TAB (Ctrl+Tab,
+// its camera the audio view's; BboxNext), CENTER (bare `c`, EditFind — the
+// magnifier that finds the playhead, architect 2026-10-16 — moved down from
+// the icon row's zoom group) and SWITCH TAB (Ctrl+Tab,
 // TabDetach; its shifted press is the paired march).
 // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON since
 // that day (architect: "an artificial constraint; the tablet is the only
@@ -2644,7 +2647,7 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
 constexpr TransportRowDef kTransportWalkGroup[] = {
     {RedesignButton::TransportWalkPrevious, icons::Icon::BboxPrev},
     {RedesignButton::TransportWalk,         icons::Icon::BboxNext},
-    {RedesignButton::IconZoomOriginal,      icons::Icon::ZoomOriginal},
+    {RedesignButton::IconZoomOriginal,      icons::Icon::EditFind},
     {RedesignButton::TransportSwitchTab,    icons::Icon::TabDetach},
 };
 // DOWN, UP, LEFT, RIGHT — the architect's order, 2026-08-14, superseding the
