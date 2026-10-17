@@ -83,9 +83,10 @@ Every road that puts pixels inside `waveform_area` was enumerated and read
 
 | painter | draws | antialias | class |
 |---|---|---|---|
-| `render_background`, `paint_canvas_column_frame` (interior part: its face and, since 2026-10-16, the two wells' divider lines, which render_canvas repaints) | ground fills the canvas covers | integral rects | overdraw |
-| `render_canvas` | canvas ground, the grid rows, the stereo divider's three rows (2026-10-16; the press seam's line until then) | NONE | solid |
+| `render_background`, `paint_canvas_column_frame` (interior part: its face and, since 2026-10-16, the two wells' divider lines, which render_waveform_divider repaints) | ground fills the canvas covers | integral rects | overdraw |
+| `render_canvas` | canvas ground, the grid rows | NONE | solid |
 | `render_center_lines` | one row per channel | NONE | solid |
+| `render_waveform_divider` | the stereo divider's three rows (2026-10-16; the press seam's line until then), painted after the plate and the center lines so a plate from before a resize never crosses them | NONE | solid |
 | `paint_waveform_plate` | the plate surface blitted OVER at an integral offset | binary alpha | solid |
 | `paint_phase_reset_overlay_ring` | dotted runs on the first and last row and the band's last column | NONE | solid |
 | `paint_marker_stem_runs`, `paint_marker_stems` | dotted columns (rows ≡ 7 and ≡ 3 mod 8 from the canvas top), the `h` view's joining runs | NONE / direct words | solid |

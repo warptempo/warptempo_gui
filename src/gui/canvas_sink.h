@@ -11,9 +11,11 @@
 // puts inside the canvas's interior — waveform_area, the canvas's paint area
 // onscreen_keyboard::waveform_paint_area within it — goes through ONE sink,
 // and every canvas painter is written once against it: render_canvas (the
-// ground, the grid and the stereo divider's three rows — chrome on the
-// canvas, 2026-10-16, render.h's waveform_divider), the plate (paint_waveform_plate),
-// render_center_lines, the phase-reset lead-in ring, the nudged pairs' runs,
+// ground and the grid), the plate (paint_waveform_plate),
+// render_center_lines, render_waveform_divider (the stereo divider's three
+// rows — chrome on the canvas, 2026-10-16, render.h's waveform_divider — over
+// the plate, so a plate from before a resize never crosses them), the
+// phase-reset lead-in ring, the nudged pairs' runs,
 // the marker stems, the cursor's dots, the scanner and the zoom anchor's
 // stem, in that order (on_redraw's paint-order block, paint_handler.cpp).
 // Each is a solid converted color on whole device pixels (ON WAVEFORM →
@@ -28,7 +30,7 @@
 //     platforms, the reference: each primitive is the cairo calls the
 //     painter made before the sink existed — begin / end the painter's
 //     cairo_save / cairo_restore with ANTIALIAS_NONE exactly where it set it
-//     (render_canvas, the center lines, the ring, the runs) and the default
+//     (render_canvas, the center lines, the divider, the ring, the runs) and the default
 //     where it set none (the cursor, the scanner, the anchor, the stems); a
 //     rects call ONE fill of its rectangles under set_waveform_source (the
 //     body set_palette_source shares, render.cpp); a dots call ONE fill of

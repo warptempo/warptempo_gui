@@ -187,8 +187,9 @@ void canvas_hline(CanvasLines& lines, const GuiRect& area, int row, int t) {
 } // namespace
 
 // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): on the cairo road the
-// one aliased scope, the ground's fill, the lines' one fill and the divider's
-// three; on the GL canvas the same rectangles as list records.
+// one aliased scope, the ground's fill and the lines' one fill; on the GL
+// canvas the same rectangles as list records. The stereo divider's rows are
+// render_waveform_divider's, a pass of their own over the plate (below).
 void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     sink.begin(/*aliased=*/true);
@@ -233,26 +234,6 @@ void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
         }
     }
     sink.rects(lines.span(), pal.grid);
-    // THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; the
-    // rule and its rows at render.h's waveform_divider): across the area's
-    // columns, the upper well's light bottom line in `ce_hilight`, the face
-    // row in `face` and the lower well's dark top line in `ce_dark`, each
-    // its scaled rows, cut to the area's rows — CHROME ON THE CANVAS, painted
-    // here through the sink so the GL canvas draws it from its list exactly
-    // as the cairo road fills it (canvas_sink.h's head), the frame columns'
-    // share being paint_canvas_column_frame's. Every later canvas painter
-    // leaves these rows alone (the wells' runs, waveform_well_rows), and so
-    // does every input (point_on_waveform_divider: chrome, inert).
-    const auto divider_row = [&](int y, int h, GuiColor color) {
-        const int top = std::max(area.y, area.y + y);
-        const int bot = std::min(area.y + area.h, area.y + y + h);
-        if (bot <= top) return;
-        const GuiRect r{area.x, top, area.w, bot - top};
-        sink.rects(std::span<const GuiRect>(&r, 1), color);
-    };
-    divider_row(div.y, div.line, pal.ce_hilight);
-    divider_row(div.y + div.line, div.face, pal.face);
-    divider_row(div.y + div.line + div.face, div.line, pal.ce_dark);
     sink.end();
 }
 
@@ -277,6 +258,41 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area) {
         if (band.h > 0) canvas_hline(lines, area, band.zero_row(), t);
     }
     sink.rects(lines.span(), palette().center);
+    sink.end();
+}
+
+// THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; the rule
+// and its rows at render.h's waveform_divider, the one geometry owner):
+// across the area's columns, the upper well's light bottom line in
+// `ce_hilight`, the face row in `face` and the lower well's dark top line in
+// `ce_dark`, each its scaled rows, cut to the area's rows — CHROME ON THE
+// CANVAS, painted through the sink so the GL canvas draws it from its list
+// exactly as the cairo road fills it (canvas_sink.h's head), the frame
+// columns' share being paint_canvas_column_frame's. ITS OWN PASS, AFTER THE
+// PLATE AND THE CENTER LINES (on_redraw's paint order, both roads): nothing
+// legitimate paints on these rows — the plate's bands and the lines stand
+// inside the wells, every vertical run is cut per well (waveform_well_rows)
+// and every input leaves them alone (point_on_waveform_divider: chrome,
+// inert) — so in the steady state the order changes no pixel; it is there
+// for A PLATE FROM BEFORE A RESIZE, which stands at its old bands until the
+// worker republishes (paint_waveform_plate blits whatever plate is
+// published), and whose ink would otherwise cross the live divider's rows.
+// Painted last of the two, the live divider is on top whatever plate stands.
+void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area) {
+    if (area.w <= 0 || area.h <= 0) return;
+    sink.begin(/*aliased=*/true);
+    const GuiPalette& pal = palette();
+    const WaveformDivider div = waveform_divider(area.h);
+    const auto divider_row = [&](int y, int h, GuiColor color) {
+        const int top = std::max(area.y, area.y + y);
+        const int bot = std::min(area.y + area.h, area.y + y + h);
+        if (bot <= top) return;
+        const GuiRect r{area.x, top, area.w, bot - top};
+        sink.rects(std::span<const GuiRect>(&r, 1), color);
+    };
+    divider_row(div.y, div.line, pal.ce_hilight);
+    divider_row(div.y + div.line, div.face, pal.face);
+    divider_row(div.y + div.line + div.face, div.line, pal.ce_dark);
     sink.end();
 }
 

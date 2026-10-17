@@ -3114,11 +3114,15 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // FIRST CHANGES (architect 2026-08-14, from the rig: "when the two-finger
     // touch is first registered, it picks the point on the waveform"). ITS
     // ORDERING RULE, the matched half of the clear's at the top of the body:
-    // the seat sits ABOVE the exact-no-op return and BELOW the wheel refusal.
+    // the seat sits ABOVE the exact-no-op return and BELOW the state refusal.
     // Seating is a NAVIGATION act, so it takes the refusal with everything else
-    // — a pinch beginning off the wheel's surfaces anchors nothing, and the
-    // gesture keeps its "it navigates exactly the wheel's two surfaces"
-    // property. But "this frame's deltas apply nothing" is a statement about
+    // — a pinch whose frame lands under a prompt, the progress modal, a
+    // drop-down, the folder overlay, a dialog editor or a load anchors
+    // nothing, and seats once the state clears. Where the pair lands is no
+    // question here: the gesture's one surface answer was the pan zone's at
+    // its down (architect 2026-10-16, the refusal's paragraph above), so a
+    // second finger joining over a lane or the toolbar seats as it would over
+    // the waveform. But "this frame's deltas apply nothing" is a statement about
     // the FRAME and says nothing about where the GESTURE is anchored, and
     // letting it decide was a real defect: the zoom-only ruling forces eff_dx to
     // a literal zero on every two-finger frame, so a pair landing and sliding

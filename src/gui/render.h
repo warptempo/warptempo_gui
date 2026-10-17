@@ -951,21 +951,22 @@ void install_true_colors(bool on);
 // zero row ± nearbyint(k · H / 4) device rows for k = 1, 2, 3, H the
 // channel's half height (its zero row to its band's edge; the k = 4 line
 // would stand on the band's edge and is not drawn), the canvas's full width,
-// Cool Edit's grid under the ink; then, in the same pass, THE STEREO
-// DIVIDER'S THREE ROWS between the two wells (architect 2026-10-16, chrome
-// rows on the canvas, waveform_divider); then THE WAVEFORM'S PLATE; then THE CENTER
+// Cool Edit's grid under the ink; then THE WAVEFORM'S PLATE; then THE CENTER
 // LINE per channel on its zero row, one device px, in `center`, OVER THE INK
 // (architect 2026-10-09 evening: "it's supposed to be visible over the
 // waveform. Otherwise, in a project like this with tape hiss, there's never
 // enough zero that the red line would become visible ever";
 // render_center_lines, a live pass after the plate's blit, the plate baking
-// its two inks alone); then the lead-in ring, the dots, the scanner and the
+// its two inks alone); then THE STEREO DIVIDER'S THREE ROWS between the two
+// wells (architect 2026-10-16, chrome rows on the canvas, waveform_divider;
+// render_waveform_divider, over the plate so a plate from before a resize
+// never crosses them); then the lead-in ring, the dots, the scanner and the
 // zoom anchor (on_redraw's paint order). THE PICTURE IS ONE THING — the
 // canvas, the grid, the ink if any, the center lines — SO THE CENTER LINES
 // PAINT WHENEVER THE GRID DOES: over the plate while audio is loaded (a null
 // plate's frame included, its blit skipped), and with none loaded — no
 // source, or a load running — directly over the canvas and its grid, right
-// after render_canvas (on_redraw's `plate_branch`).
+// after render_canvas, the divider after them (on_redraw's `plate_branch`).
 // NO VERTICAL GRID (architect 2026-10-09 ~18:40: Cool Edit's verticals on
 // the ruler's major ticks, drawn that afternoon, were "solid versus the
 // markers dotted, they compete" — "drop them"). HIS PRINCIPLE, recorded
@@ -2451,23 +2452,26 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // render_canvas ALSO owns THE CANVAS'S LINES UNDER THE WAVEFORM (architect
 // 2026-10-09; row 6's canvas paragraph owns the rule): after its fill, each
 // channel's horizontal grid, the channels' bands the plate's own
-// (waveform_channel_band) — no vertical grid — then THE STEREO DIVIDER'S
-// THREE ROWS across the area (architect 2026-10-16, waveform_divider: chrome
-// on the canvas, through the sink so both roads paint them alike).
-// render_center_lines owns THE
+// (waveform_channel_band) — no vertical grid. render_waveform_divider owns
+// THE STEREO DIVIDER'S THREE ROWS across the area (architect 2026-10-16,
+// waveform_divider: chrome on the canvas, through the sink so both roads
+// paint them alike), a pass AFTER THE PLATE and the center lines (its
+// reason at its definition, render.cpp: a plate from before a resize stands
+// until the worker republishes). render_center_lines owns THE
 // CENTER LINES, OVER THE WAVEFORM (architect 2026-10-09 evening): each
 // channel's zero row, one device px in `center`, painted live after the
 // plate's blit and before the dots (on_redraw's paint order) — the canvas's
 // lines stay these two painters' and the plate keeps baking its two inks
 // alone (WaveformPlateInks). The canvas's frame round the area is
 // paint_canvas_column_frame's (paint_handler.cpp).
-// THE TWO CANVAS PAINTERS PAINT THROUGH THE CANVAS SINK (2026-10-13,
+// THE THREE CANVAS PAINTERS PAINT THROUGH THE CANVAS SINK (2026-10-13,
 // canvas_sink.h): the cairo sink on the cpu road, the same rectangles and
 // fills as ever; the draw list under the GL canvas (both platforms' gl
 // builds since 2026-10-14), where the backbuffer's interior is cleared instead and the GPU draws them.
 void render_background(cairo_t* cr, int x, int y, int w, int h);
 void render_canvas(GuiCanvasSink& sink, const GuiRect& area);
 void render_center_lines(GuiCanvasSink& sink, const GuiRect& area);
+void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 
 // THE RELIEF HELPERS — the chrome's one painter family for the Windows-95
 // edge grammar (architect 2026-10-02; the grammar and the family table at the
@@ -2607,10 +2611,11 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // mapping, hit test and damage box reads it as before), and come out of the
 // two channels' rows: the area's height less the divider, halved and floored,
 // is each channel's band (below). Across the area's columns the divider's
-// three rows are painted through the canvas sink (render_canvas, after the
-// grid), so the GL canvas draws them from its list exactly as the cairo road
-// fills them (canvas_sink.h's head); across the frame columns they are the
-// frame painter's. EVERY OTHER CANVAS PAINTER PAINTS NOTHING ON THEM: the
+// three rows are painted through the canvas sink (render_waveform_divider,
+// after the plate and the center lines, on_redraw's paint order on both
+// roads), so the GL canvas draws them from its list exactly as the cairo
+// road fills them (canvas_sink.h's head); across the frame columns they are
+// the frame painter's. EVERY OTHER CANVAS PAINTER PAINTS NOTHING ON THEM: the
 // plate's bands, the grid and the center lines stand inside the two bands,
 // and every vertical line — the cues' and the cursor's dots, the lead-in
 // ring's right side, the scanner and the zoom anchor's stem — is cut into

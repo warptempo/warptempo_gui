@@ -5451,7 +5451,9 @@ void GuiPaintHandler::paint_marker_stem_runs(GuiCanvasSink& sink,
 // saturated is exactly that frame). So the SEAT damages at its own
 // site, the mouse arms' rule, and the CLEAR damages through
 // clear_touch_zoom_seat, because a clear can land on a frame that applies
-// nothing at all (a survivor's pan refused off the wheel's surfaces).
+// nothing at all (a survivor's pan refused under a modal state — the
+// per-frame refusal asks state alone, the gesture's surface decided once at
+// its down, architect 2026-10-16, apply_touch_nav_update).
 // BOTH PRODUCERS ANCHOR THE SAME WAY AND ALWAYS DID (all three did, while
 // there were three), which is why there
 // is ONE expression (the nav drag's pivot went back to a SONG position
@@ -7728,7 +7730,8 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
     // columns to the margins. Each ring is paint_relief_frame's, so each
     // well closes its own corners — the upper's bottom-left and the lower's
     // top-right mitred, the other two square. Inside the area the divider's
-    // rows are render_canvas's too (through the canvas sink), so on the GL
+    // rows are render_waveform_divider's too (through the canvas sink, over
+    // the canvas's ground and the plate, on_redraw's paint order), so on the GL
     // canvas, whose hole this painter's lines cross before on_redraw clears
     // it, the list draws them.
     const WaveformDivider d = waveform_divider(area.h);
@@ -8230,8 +8233,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // the canvas's frame and the column's margins then take the panel's face
     // and the two wells' rings (paint_canvas_column_frame, above), and the
     // waveform area its own `waveform_canvas` ground with the horizontal grid
-    // and the stereo divider over it (render_canvas, render.h's row-6 canvas
-    // paragraph). Unconditional and
+    // over it (render_canvas, render.h's row-6 canvas paragraph). Unconditional and
     // ahead of every content branch, so a cold frame (loading, no audio, or a
     // null plate before the first worker publish) shows canvas where the
     // waveform will be rather than a chrome-colored hole. The outer clip already
@@ -8244,7 +8246,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // the plate in the branch below (its blit skipped on a null plate, the
     // lines still painted there); with none — no source, or a load running,
     // the branch's own condition `plate_branch` — they paint here, directly
-    // over the canvas and its grid, under the same keyboard clip.
+    // over the canvas and its grid, under the same keyboard clip — and THE
+    // STEREO DIVIDER LIKEWISE (render_waveform_divider, after the center
+    // lines on both branches: over the plate where one stands, its reason at
+    // its definition, render.cpp).
     // UNDER THE GL CANVAS the CPU leaves all of it to the GPU (the block
     // above): the face skips the canvas's paint area and one CLEAR empties
     // it, so its pixels are alpha 0 until an overlay paints over them
@@ -8327,7 +8332,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             cairo_clip(cr);
         }
         render_canvas(cairo_sink, canvas);
-        if (!plate_branch) render_center_lines(cairo_sink, canvas);
+        if (!plate_branch) {
+            render_center_lines(cairo_sink, canvas);
+            render_waveform_divider(cairo_sink, canvas);
+        }
         if (band_cuts) cairo_restore(cr);
     }
 
@@ -8444,7 +8452,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // call sequence below plus the two unconditional passes above this
         // branch. UNDER THE GL CANVAS (2026-10-13, canvas_sink.h) the canvas
         // interior's share of it — step 2's canvas and grid (and center
-        // lines without audio), step 4, steps 6 to 8 and step 11 — is the
+        // lines and divider without audio), step 4, steps 6 to 8 and step 11 — is the
         // frame's draw list in this same order, drawn by the GPU under
         // everything the CPU paints (build_canvas_list); the CPU's share
         // leaves that interior alpha 0:
@@ -8452,13 +8460,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      rect (above, unconditional).
         //   2. paint_canvas_column_frame — the panel's face from the canvas's
         //      top frame row through the column's foot and the two wells'
-        //      rings — then render_canvas — the waveform area's ground, the
-        //      horizontal grid and the stereo divider's rows (above,
-        //      unconditional; 2026-10-09, the divider 2026-10-16; no
+        //      rings — then render_canvas — the waveform area's ground and
+        //      the horizontal grid (above, unconditional; 2026-10-09; no
         //      vertical grid, render.h's row-6 canvas paragraph) — and, on a
         //      frame with no audio loaded (no source, or a load running:
         //      !plate_branch), THE CENTER LINES straight over it
-        //      (render_center_lines), so the grid never stands without them.
+        //      (render_center_lines), so the grid never stands without them,
+        //      then THE STEREO DIVIDER'S ROWS (render_waveform_divider,
+        //      2026-10-16).
         //   3. the two redesigned top button rows, the
         //      unified bottom row (its chrome, buttons, clock AND state cell
         //      in one painter) and the border under it (paint_bottom_border,
@@ -8471,7 +8480,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   4. waveform plate -> THE CENTER LINES over the ink
         //      (render_center_lines, architect 2026-10-09 evening; with audio
         //      loaded they paint here and not at step 2, a null plate's frame
-        //      included) -> phase-reset overlay ring.
+        //      included) -> THE STEREO DIVIDER'S ROWS (render_waveform_divider,
+        //      2026-10-16; likewise here and not at step 2 with audio loaded,
+        //      OVER THE PLATE so a plate from before a resize, standing at its
+        //      old bands until the worker republishes, never crosses the live
+        //      divider — in the steady state nothing paints there, so the
+        //      order changes no pixel) -> phase-reset overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the column's air and the
         //      trim lane: Cool Edit's view bar and its span (2026-10-09; no
         //      cursor mark in the bar, ~14:30).
@@ -8552,6 +8566,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // channel's zero row, one device px in `center`, right after the
             // blit and under every dot, ring and line that follows.
             render_center_lines(cairo_sink, area);
+            // THE STEREO DIVIDER OVER THE PLATE (2026-10-16, its reason at
+            // render_waveform_divider, render.cpp): the live rows on top
+            // whatever plate stands.
+            render_waveform_divider(cairo_sink, area);
             // The overlay band's dotted ring — the phase-reset overlay's whole
             // visual — over the plate and under the stems and the cursor's
             // dots: its left side is the focused reset's own stem, which
@@ -8740,10 +8758,12 @@ void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
     render_canvas(sink, area);
     if (!plate_branch) {
         render_center_lines(sink, area);
+        render_waveform_divider(sink, area);
         return;
     }
     paint_waveform_plate(sink, area);
     render_center_lines(sink, area);
+    render_waveform_divider(sink, area);
     paint_phase_reset_overlay_ring(sink, area);
     paint_marker_stems(sink, area);
     paint_playheads(sink, area);

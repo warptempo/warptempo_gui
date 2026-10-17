@@ -315,8 +315,11 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // the damage fire exactly ONCE per phase however often the clear is reached,
 // and it is reached on every one-finger frame of the survivor's pan; (2) the
 // damage is owed at all because a clear can land on a frame that APPLIES
-// NOTHING and therefore rebuilds nothing — a survivor pan refused off the
-// wheel's surfaces is exactly that frame, and it is the case the clear's own
+// NOTHING and therefore rebuilds nothing — a survivor pan whose frame lands
+// under a modal state (a prompt, the progress modal, a drop-down, the folder
+// overlay, a dialog editor, a load: the body's per-frame refusal asks state
+// alone, the gesture's surface decided once at its down, architect
+// 2026-10-16) is exactly that frame, and it is the case the clear's own
 // ordering rule already names (the clear leads apply_touch_nav_update's body,
 // above the refusal). Full waveform-area damage, the discrete shape the mouse's
 // own mode edges spell.
