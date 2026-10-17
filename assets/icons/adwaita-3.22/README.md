@@ -76,8 +76,12 @@ head's vertical tangent with its foot at the tangent point, the junction seamles
 the morning's place, leaving 3.5 units of air right of the room an eighth's or sixteenth's flag would take (2.2 × 5.3
 units from the stem's top-right, engraving's proportions; the real MA-1's display swaps its one note glyph for the
 rhythm set), never drawn ("it looked crowded to its right"). THE BOTTOM ROW: the speaker grill
-eight holes by two at the left; two round buttons, flat discs `#2c3036` with a dark ring `#060c18`, and the yellow
-power button, the smallest, `#dabe2f` ringed `#0c1930`, at the right. Every tone is the earlier drawing's own gradient
+ten holes by two at the left (x 6–25, its left edge on the display frame's; eight holes until 2026-10-17 evening, widened
+into the room the power cap left); two round buttons, flat discs `#2c3036` with a dark ring `#060c18`, at x 31.5 and
+38.5 on y 33.5 (the row lowered half a unit that evening off a 33–35 series, "the buttons sit a little high"; the yellow
+power cap `#dabe2f` at the right REMOVED the same evening — "it's just the power button, it really doesn't need to be
+there; tempo up, tempo down and the grill are the key features" — two dark buttons moved right into its room, his pick
+off a sheet of button rows). Every tone is the earlier drawing's own gradient
 stops. No `<text>`, no filter, no CSS class, no font's outlines. HISTORY: the digital metronome of 2026-10-16, drawn
 with Google's Gemini at his prompt after a Korg MA-1 in Adwaita 3.22's phone / calculator manner, cleaned on tablet
 mocks and re-laid the same day on the MA-1's proportions in a nested 1024-unit viewport seated at 120 %, WARP on its
@@ -247,7 +251,7 @@ shift is the product's, not the file's.
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/DigitalMetronome.svg` | — | `cf136e38803dab48c19ef32bab4d8e6cb0d637218b0186201157874bf5365567` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
+| AppIcon | — | `own/DigitalMetronome.svg` | — | `eb779bdc300bb79a1ee839be6e2764cb9b1ae2a7ba3fbb277f970aacf0c29f07` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
 | AudioVolumeHigh | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
@@ -260,7 +264,7 @@ shift is the product's, not the file's.
 | DialogError | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | DialogInformation | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` |  |
 | DialogOkApply | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
-| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `cf136e38803dab48c19ef32bab4d8e6cb0d637218b0186201157874bf5365567` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
+| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `eb779bdc300bb79a1ee839be6e2764cb9b1ae2a7ba3fbb277f970aacf0c29f07` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
 | DocumentOpen | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
 | DocumentOpenRecent | `document-open-recent` | `clocks.svg` | 696.062, 355.996, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | History: the clock turned back (architect 2026-10-16); TEXT TO OUTLINES: 48 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
 | DocumentRevert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |

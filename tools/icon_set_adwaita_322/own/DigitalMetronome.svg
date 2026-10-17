@@ -21,6 +21,8 @@
 <rect x="16" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
 <rect x="18" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
 <rect x="20" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="22" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="24" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
 <rect x="6" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
 <rect x="8" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
 <rect x="10" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
@@ -29,7 +31,8 @@
 <rect x="16" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
 <rect x="18" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
 <rect x="20" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
-<circle cx="28" cy="33" r="2.0" fill="#2c3036" stroke="#060c18" stroke-width="1"/>
-<circle cx="34.5" cy="33" r="2.0" fill="#2c3036" stroke="#060c18" stroke-width="1"/>
-<circle cx="40.5" cy="33" r="1.5" fill="#dabe2f" stroke="#0c1930" stroke-width="1"/>
+<rect x="22" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="24" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<circle cx="31.5" cy="33.5" r="2.0" fill="#2c3036" stroke="#060c18" stroke-width="1"/>
+<circle cx="38.5" cy="33.5" r="2.0" fill="#2c3036" stroke="#060c18" stroke-width="1"/>
 </svg>
