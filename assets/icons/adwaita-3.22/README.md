@@ -61,13 +61,17 @@ vertical gradient `#2d5fae` → `#173a73`, lighter at the top; a white highlight
 bottom, at .3; a dark line at .12 inside the foot and the right edge; the pda's gloss sweep, a white region at .1 from
 the left edge two thirds down, one S-curve to the top-right corner. THE DISPLAY across the face's upper half: a soft
 gradient `#adb4a7` → `#949b8e` in a 1-unit dark frame `#10213d`, a black line at .16 just inside it and the recess's
-light line just outside, the same gloss sweep over it. THE SWING, the Korg MA-2's persistence: one stick 16.8 units
-long swinging ±36° about a pivot 6 units below the window (an LCD's projection, not an object), eight positions in the
-period of which three are drawn in `#353934` — the current tick solid and the two before it at .5 and .25 (the
-sixth, fifth and fourth of the eight from the left) — the fan centred between the window's left edge and the note and
-then 1 unit right, the ticks cut 2 units above the window's foot (the MA-2's gap), 1.6 units wide tapering to .8 at
-the tip; the quarter note in `#2d302c`, Gemini's own (the head rx 7.5, ry 5.5 at −20°), its stem's right edge on the
-head's vertical tangent with its foot at the tangent point, the junction seamless. THE BOTTOM ROW: the speaker grill
+light line just outside, the same gloss sweep over it. THE PENDULUM at the end of its swing, the Korg MA-1's one tick (architect 2026-10-17, the swing's second round — "just
+show the last frame"; the MA-2's three-tick persistence, ±36° about a pivot 6 units below the window, was the morning's):
+one stick 10.5 units long in `#353934`, 1.6 units wide tapering to .8 at the tip, leaning 45° AWAY from the note (left)
+about a pivot on the window's foot, centred between the window's left edge and the note's head (4.9 units of air each
+side of the fan); the swing is ±45° and its whole arc stays inside the window — the vertical position would end 3.5
+units under the top ("realistic: the swing must not cause the pendulum to fall offscreen"); the stick cut 2 units above
+the window's foot (the MA-2's gap); the quarter note in `#2d302c`, Gemini's own (the head rx 7.5, ry 5.5 at −20°), its stem's right edge on the
+head's vertical tangent with its foot at the tangent point, the junction seamless, the stem at x 35.3 — .7 unit left of
+the morning's place, leaving 3.5 units of air right of the room an eighth's or sixteenth's flag would take (2.2 × 5.3
+units from the stem's top-right, engraving's proportions; the real MA-1's display swaps its one note glyph for the
+rhythm set), never drawn ("it looked crowded to its right"). THE BOTTOM ROW: the speaker grill
 eight holes by two at the left; two round buttons, flat discs `#2c3036` with a dark ring `#060c18`, and the yellow
 power button, the smallest, `#dabe2f` ringed `#0c1930`, at the right. Every tone is the earlier drawing's own gradient
 stops. No `<text>`, no filter, no CSS class, no font's outlines. HISTORY: the digital metronome of 2026-10-16, drawn
@@ -239,7 +243,7 @@ shift is the product's, not the file's.
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/DigitalMetronome.svg` | — | `422d702e1e96be4faaa1ccd45742bbcb9a6d52ac89a352fac739a30323261db3` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
+| AppIcon | — | `own/DigitalMetronome.svg` | — | `68a73aa34c1c00e7391ea29ee0a295ec18d1f4875253b8db15510894fadc096f` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
 | AudioVolumeHigh | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
@@ -252,7 +256,7 @@ shift is the product's, not the file's.
 | DialogError | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | DialogInformation | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` |  |
 | DialogOkApply | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
-| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `422d702e1e96be4faaa1ccd45742bbcb9a6d52ac89a352fac739a30323261db3` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
+| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `68a73aa34c1c00e7391ea29ee0a295ec18d1f4875253b8db15510894fadc096f` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
 | DocumentOpen | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
 | DocumentOpenRecent | `document-open-recent` | `clocks.svg` | 696.062, 355.996, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | History: the clock turned back (architect 2026-10-16); TEXT TO OUTLINES: 48 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
 | DocumentRevert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
