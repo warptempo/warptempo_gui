@@ -12,14 +12,11 @@ user units and its treatment (`-`, `tab-b`, `text-to-outlines`, `own`). THE SET'
 `own/DigitalMetronome.svg`, the digital metronome, the architect's own drawing and NOT Adwaita's (the set's README its
 provenance and licence) — an `own` row names it in the sheet column (name and slot `-`) and is COPIED, not extracted:
 its bytes verbatim but for a dated notice inserted as one XML comment after the root's start tag, no tarball check;
-DigitalMetronome and AppIcon (the program icon, `tools/app_icon/`) are both that copy. The drawing is the cleaned
-metronome RE-LAID on the Korg MA-1's proportions (2026-10-16; the set's README the measurements), every shape its own,
-its geometry never hand-edited here but for the nested viewport that seats it at 120 % in the 48 frame (2026-10-16). Its lettering is already
-outlines: `text_to_paths.py` turned the approved drawing's one `<text>` ("WARP", Gemini's family list resolved to the
-first face the tool has, DejaVu Sans, weight 900 to its Bold, the letter-spacing and the element's own transform
-carried) into DejaVu Sans Bold outlines from `fonts/DejaVuSans-Bold.ttf`, measured against rsvg's own text rendering of
-the approved file at 0.001/255 mean at 240 px and 0.000 at 60; the defs the cleaned drawing no longer references (its
-two drop-shadow filters, the pill highlight, the round and power caps' radials) were pruned with it. `shadows.tsv` is
+DigitalMetronome and AppIcon (the program icon, `tools/app_icon/`) are both that copy. The drawing (2026-10-17) is drawn straight in the 48-unit
+frame at Adwaita 3.22's level of detail on the grammar of its `pda` (the set's README the description), no lettering,
+no `<text>`, no nested viewport; it replaced the metronome of 2026-10-16, Gemini's drawing cleaned and re-laid on the
+Korg MA-1's proportions in a nested 1024-unit viewport at 120 %, its WARP outlined from DejaVu Sans Bold (git
+history). `shadows.tsv` is
 the drop-shadow list (architect 2026-10-15, "we'll go with none"; approved icon by icon on a sheet): one row per
 enumerator, the ids of the seat's drop shadows (`-` none; an `own` row always `-`). `removed.tsv` lists the OTHER
 elements the architect rules out of a drawing (optional rows, the same columns, removed with the shadows and

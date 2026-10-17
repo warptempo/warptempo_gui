@@ -93,10 +93,10 @@ enum class Icon {
     InputTablet,         // Target — the authoring surface
     DigitalMetronome,    // Warp — the architect's own digital metronome,
                          // the set's one own file (architect 2026-10-16:
-                         // the tempo instrument; drawn with Gemini after a
-                         // Korg MA-1 in Adwaita 3.22's phone / calculator
-                         // manner, WARP on its faceplate in DejaVu Sans
-                         // Bold outlines); appointment-new's clock retired
+                         // the tempo instrument; re-rendered 2026-10-17 at
+                         // Adwaita 3.22's level of detail on the pda's
+                         // grammar, its display the swing beside a quarter
+                         // note, no lettering); appointment-new's clock retired
                          // ("it fits in theory, but it just didn't fit in
                          // practice")
     CameraPhoto,         // Phase Reset — the set's camera-photo, the phase

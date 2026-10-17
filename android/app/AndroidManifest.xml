@@ -32,8 +32,8 @@
   <!-- android:icon is the launcher and recents icon: the architect's
        digital metronome, the caption's icon and Warp's glyph,
        assets/icons/adwaita-3.22/AppIcon.svg (architect 2026-10-12; the
-       metronome since 2026-10-16),
-       rasterised antialiased over the button case's gradient, the adaptive icon's background layer
+       metronome since 2026-10-16, re-rendered 2026-10-17),
+       rasterised antialiased over flat white, the adaptive icon's background layer
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the sizes and the ground's
        reason). The Linux desktop's launcher icon
        (packaging/warptempo_gui.svg) is the same drawing bare; both are

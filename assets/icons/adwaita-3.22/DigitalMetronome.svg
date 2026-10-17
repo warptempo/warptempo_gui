@@ -1,108 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-  <!-- DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. The architect's own drawing (2026-10-16), made with Google's Gemini at his prompt after a Korg MA-1 in Adwaita 3.22's phone / calculator manner, WARP in place of the maker's name, cleaned on tablet mocks (the drop-shadow filters and every small legend removed, the body's shapes rounded rectangles, the caps flat, the display's note a quarter note), then RE-LAID the same day on the Korg's proportions, fewer elements and the remaining ones bigger: every shape the cleaned drawing's own, the case 800 x 600 of the 1024 units; the display's four triangles, the four pill buttons, the power legend and the caption removed; the display on a row of its own across the face, the 120 and the note at its right, the stick at its left as thin as a digit's stroke, leaning left with its swing room clear; WARP's cap band centered above the display; the speaker grill eight columns by two of holes a quarter of a round button (the MA-1's ratio) at the left of the bottom row, the two round buttons and the power button at its right. The drawing stands at 120 % in its 48 frame (the nested viewport 57.6 units, the body 45 x 33.75 centered at 24, 24.3; architect 2026-10-16, Warp the primary glyph and the project's name). The drawing is licensed under the GNU LGPL v3, the set's licence (architect 2026-10-15); its lettering is the outlines of DejaVu Sans Bold, fonts/DejaVuSans-Bold.ttf, under the Bitstream Vera licence (fonts/LICENSE-DejaVu.txt). Warp, and the program icon. -->
-<svg x="-4.8" y="-4.5" width="57.6" height="57.6" viewBox="0 0 1024 1024">
-<defs><linearGradient id="outer-rim-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#0f2547" />
-        <stop offset="50%" stop-color="#0b1d3a" />
-        <stop offset="100%" stop-color="#08152c" />
-      </linearGradient><linearGradient id="bevel-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#4e7ec4" />
-        <stop offset="25%" stop-color="#2c5aa0" />
-        <stop offset="75%" stop-color="#193d75" />
-        <stop offset="100%" stop-color="#112a54" />
-      </linearGradient><linearGradient id="face-grad" x1="15%" y1="5%" x2="85%" y2="95%">
-        <stop offset="0%" stop-color="#2d5fae" />
-        <stop offset="45%" stop-color="#234f96" />
-        <stop offset="100%" stop-color="#173a73" />
-      </linearGradient><linearGradient id="face-sheen" x1="0%" y1="0%" x2="70%" y2="100%">
-        <stop offset="0%" stop-color="#6fa0eb" stop-opacity="0.22" />
-        <stop offset="50%" stop-color="#4f83d1" stop-opacity="0.08" />
-        <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03" />
-      </linearGradient><linearGradient id="lcd-recess-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#13284c" />
-        <stop offset="45%" stop-color="#1f3f73" />
-        <stop offset="100%" stop-color="#446eb0" />
-      </linearGradient><linearGradient id="lcd-frame-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#636b64" />
-        <stop offset="100%" stop-color="#838b83" />
-      </linearGradient><linearGradient id="lcd-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#adb4a7" />
-        <stop offset="55%" stop-color="#a2a99c" />
-        <stop offset="100%" stop-color="#949b8e" />
-      </linearGradient><linearGradient id="hole-rim" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0b1c38" />
-        <stop offset="100%" stop-color="#3463ab" />
-      </linearGradient><radialGradient id="hole-inner" cx="45%" cy="45%" r="55%">
-        <stop offset="0%" stop-color="#13294f" />
-        <stop offset="70%" stop-color="#0b1b36" />
-        <stop offset="100%" stop-color="#061024" />
-      </radialGradient><linearGradient id="pill-body" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#333840" />
-        <stop offset="50%" stop-color="#1c1f24" />
-        <stop offset="100%" stop-color="#0d0f12" />
-      </linearGradient><linearGradient id="round-btn-rim" x1="20%" y1="10%" x2="80%" y2="90%">
-        <stop offset="0%" stop-color="#383d45" />
-        <stop offset="100%" stop-color="#0e1014" />
-      </linearGradient><linearGradient id="pwr-recess" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#122444" />
-        <stop offset="100%" stop-color="#3c67ab" />
-      </linearGradient><g id="speaker-hole">
-        <circle cx="0" cy="0" r="12.5" fill="url(#hole-rim)" />
-        <circle cx="0" cy="0" r="11" fill="url(#hole-inner)" />
-      </g><g id="round-button">
-        <circle cx="0" cy="0" r="38" fill="#060c18" stroke="#274e87" stroke-width="1" />
-        <circle cx="0" cy="0" r="34" fill="url(#round-btn-rim)" />
-        <circle cx="0" cy="0" r="28.5" fill="#2c3036" stroke="#484d56" stroke-width="0.75" />
-      </g></defs>
-<path d="M 182.0,212.0 L 842.0,212.0 A 70.0,70.0 0 0 1 912.0,282.0 L 912.0,742.0 A 70.0,70.0 0 0 1 842.0,812.0 L 182.0,812.0 A 70.0,70.0 0 0 1 112.0,742.0 L 112.0,282.0 A 70.0,70.0 0 0 1 182.0,212.0 Z" fill="url(#outer-rim-grad)"/>
-<path d="M 184.0,229.0 L 840.0,229.0 A 60.0,60.0 0 0 1 900.0,289.0 L 900.0,735.0 A 60.0,60.0 0 0 1 840.0,795.0 L 184.0,795.0 A 60.0,60.0 0 0 1 124.0,735.0 L 124.0,289.0 A 60.0,60.0 0 0 1 184.0,229.0 Z" fill="url(#bevel-grad)"/>
-<path d="M 185.0,230.0 L 839.0,230.0 C 875.0,230.0 893.0,248.0 898.0,284.0" fill="none" stroke="#7aa7eb" stroke-width="2" opacity="0.6"/>
-<path d="M 186.0,236.0 L 838.0,236.0 A 55.0,55.0 0 0 1 893.0,291.0 L 893.0,733.0 A 55.0,55.0 0 0 1 838.0,788.0 L 186.0,788.0 A 55.0,55.0 0 0 1 131.0,733.0 L 131.0,291.0 A 55.0,55.0 0 0 1 186.0,236.0 Z" fill="url(#face-grad)" stroke="#132e5c" stroke-width="2"/>
-<clipPath id="face-clip"><path d="M 186.0,236.0 L 838.0,236.0 A 55.0,55.0 0 0 1 893.0,291.0 L 893.0,733.0 A 55.0,55.0 0 0 1 838.0,788.0 L 186.0,788.0 A 55.0,55.0 0 0 1 131.0,733.0 L 131.0,291.0 A 55.0,55.0 0 0 1 186.0,236.0 Z"/></clipPath>
-<g clip-path="url(#face-clip)"><path d="M 105.0,228.0 L 824.0,228.0 L 432.0,796.0 L 105.0,796.0 Z" fill="url(#face-sheen)"/></g>
-<g fill="#f2f6fc"><path d="M1.99560546875 -48.84326171875H14.0673828125L22.5078125 -13.34765625L30.8828125 -48.84326171875H43.02001953125L51.39501953125 -13.34765625L59.83544921875 -48.84326171875H71.80908203125L60.29345703125 0.0H45.76806640625L36.90234375 -37.13134765625L28.134765625 0.0H13.609375Z M107.18310546875 -8.8984375H87.48876953125L84.380859375 0.0H71.72021484375L89.8115234375 -48.84326171875H104.82763671875L122.9189453125 0.0H110.25830078125ZM90.62939453125 -17.96044921875H104.009765625L97.3359375 -37.39306640625Z M147.79150390625 -27.18603515625Q151.75 -27.18603515625 153.467529296875 -28.658203125Q155.18505859375 -30.13037109375 155.18505859375 -33.5Q155.18505859375 -36.8369140625 153.467529296875 -38.2763671875Q151.75 -39.7158203125 147.79150390625 -39.7158203125H142.49169921875V-27.18603515625ZM142.49169921875 -18.48388671875V0.0H129.896484375V-48.84326171875H149.1328125Q158.78369140625 -48.84326171875 163.281982421875 -45.6044921875Q167.7802734375 -42.36572265625 167.7802734375 -35.36474609375Q167.7802734375 -30.52294921875 165.441162109375 -27.4150390625Q163.10205078125 -24.30712890625 158.39111328125 -22.8349609375Q160.9755859375 -22.24609375 163.020263671875 -20.168701171875Q165.06494140625 -18.09130859375 167.15869140625 -13.87109375L173.99609375 0.0H160.5830078125L154.62890625 -12.13720703125Q152.82958984375 -15.80126953125 150.981201171875 -17.142578125Q149.1328125 -18.48388671875 146.0576171875 -18.48388671875Z M181.98779296875 -48.84326171875H202.892578125Q212.21630859375 -48.84326171875 217.205322265625 -44.704833984375Q222.1943359375 -40.56640625 222.1943359375 -32.9111328125Q222.1943359375 -25.22314453125 217.205322265625 -21.084716796875Q212.21630859375 -16.9462890625 202.892578125 -16.9462890625H194.5830078125V0.0H181.98779296875ZM194.5830078125 -39.7158203125V-26.07373046875H201.55126953125Q205.21533203125 -26.07373046875 207.2109375 -27.856689453125Q209.20654296875 -29.6396484375 209.20654296875 -32.9111328125Q209.20654296875 -36.1826171875 207.2109375 -37.94921875Q205.21533203125 -39.7158203125 201.55126953125 -39.7158203125Z" transform="translate(624.229387755102,318.5) scale(0.9887755102040816,1.0408163265306123) translate(-2,0)" fill="#ffffff"/></g>
-<rect x="167.0" y="344.0" width="690.0" height="228.0" rx="26" fill="url(#lcd-recess-grad)"/>
-<rect x="180.0" y="357.0" width="664.0" height="202.0" rx="15" fill="#10213d"/>
-<rect x="182.0" y="359.0" width="660.0" height="198.0" rx="13" fill="url(#lcd-frame-grad)"/>
-<rect x="189.0" y="367.0" width="646.0" height="182.0" rx="9" fill="url(#lcd-bg-grad)" stroke="#7a8275" stroke-width="1.5"/>
-<clipPath id="lcd-clip"><rect x="189.0" y="367.0" width="646.0" height="182.0" rx="9"/></clipPath>
-<g clip-path="url(#lcd-clip)"><polygon points="182.0,362.0 634.74,362.0 505.54,554.0 182.0,554.0" fill="#ffffff" opacity="0.13"/><rect x="189.0" y="367.0" width="646.0" height="182.0" rx="9" fill="none" stroke="#5d6359" stroke-width="3" opacity="0.45"/></g>
-<g fill="#2d302c" transform="translate(568.8696551724138,399.76) scale(2.008275862068966) translate(-393,-425)">
-        <polygon points="395,427 401,432 401,451 397,454 393,451 393,430" />
-        <polygon points="397,456 401,459 401,478 395,483 393,480 393,459" />
-        <polygon points="409,425 433,425 429,432 413,432" />
-        <polygon points="435,427 435,452 431,454 427,450 427,433" />
-        <polygon points="413,451 428,451 432,455 428,458 413,458 409,455" />
-        <polygon points="407,457 411,459 415,463 415,476 407,481" />
-        <polygon points="409,483 433,483 429,476 415,476" />
-        <polygon points="445,425 469,425 465,432 449,432" />
-        <polygon points="443,427 449,433 449,450 445,453 442,450" />
-        <polygon points="471,427 471,451 468,453 464,450 464,433" />
-        <polygon points="442,457 445,455 449,458 449,475 443,481" />
-        <polygon points="468,455 471,457 471,481 464,475 464,458" />
-        <polygon points="445,483 469,483 465,476 449,476" />
-      
-        <ellipse cx="495" cy="475" rx="7.5" ry="5.5" transform="rotate(-20 495 475)" />
-        <rect x="499.5" y="432" width="3.5" height="41" />
-      </g>
-<g transform="translate(-119.33000000000004,407.03999999999996) scale(1.8200000000000003) translate(0,-525)"><polygon points="251.4,579.0 224.1,528.4 217.9,531.6 243.6,583.0" fill="#353934" stroke="#353934" stroke-width="1" stroke-linejoin="round"/></g>
-<use href="#speaker-hole" transform="translate(204.35,659.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(245.35,659.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(286.35,659.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(327.35,659.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(368.35,659.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(409.35,659.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(450.35,659.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(491.35,659.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(204.35,700.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(245.35,700.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(286.35,700.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(327.35,700.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(368.35,700.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(409.35,700.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(450.35,700.5) scale(0.7480000000000001)"/>
-<use href="#speaker-hole" transform="translate(491.35,700.5) scale(0.7480000000000001)"/>
-<use href="#round-button" transform="translate(596.95,680.0) scale(1.1)"/>
-<use href="#round-button" transform="translate(704.95,680.0) scale(1.1)"/>
-<g transform="translate(812.95,680.0) scale(1.45)"><circle r="24" fill="url(#pwr-recess)"/><circle r="20" fill="#0c1930"/><circle r="17.5" fill="#dabe2f"/></g>
-</svg></svg>
+  <!-- DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. The architect's own drawing (2026-10-17), a digital metronome drawn in the 48-unit frame at Adwaita 3.22's level of detail on the grammar of its pda: one dark outline on the pixel grid round a case 44 x 34 units with a vertical gradient lighter at the top, a white highlight line 1 unit inside fading top to bottom at .3, a dark line at .12 inside the foot and right edge, the pda's gloss sweep on the case and the display alike; the display a soft gradient in a 1-unit dark frame with a black line at .16 just inside and the recess's light line just outside; the speaker grill eight holes by two; the buttons flat discs with a dark ring, the yellow power button the smallest. The display shows the swing, the Korg MA-2's persistence: one stick swinging 36 degrees each way about a pivot 6 units below the window, three of its eight positions drawn (the current tick solid, the two before it at .5 and .25), cut 2 units above the window's foot, beside a quarter note. Every tone is the earlier drawing's own. History: the metronome of 2026-10-16, drawn with Google's Gemini at his prompt after a Korg MA-1, cleaned on tablet mocks and re-laid on the MA-1's proportions in a nested 1024-unit viewport at 120 %, its WARP lettering, its 120 digits and its two sheens removed with this re-render ("too detailed; needs to be more like GNOME icons"). The drawing is licensed under the GNU LGPL v3, the set's licence (architect 2026-10-15). Warp, and the program icon. -->
+<defs><linearGradient id="case" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d5fae"/><stop offset="1" stop-color="#173a73"/></linearGradient><linearGradient id="hi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="1"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.31"/></linearGradient><linearGradient id="lcd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#adb4a7"/><stop offset="1" stop-color="#949b8e"/></linearGradient></defs>
+<rect x="2.5" y="7.5" width="43" height="33" rx="3.5" fill="url(#case)" stroke="#0b1d3a" stroke-width="1"/>
+<clipPath id="casec"><rect x="3" y="8" width="42" height="32" rx="3.0"/></clipPath>
+<rect x="3.5" y="8.5" width="41" height="31" rx="2.5" fill="none" stroke="url(#hi)" stroke-width="1" opacity="0.3"/>
+<rect x="3.5" y="8.5" width="41" height="31" rx="2.5" fill="none" stroke="#000000" stroke-width="1" opacity="0.12"/>
+<path d="M 3,29.12 C 3,29.12 5.1,21.0944 24.84,21.0944 C 45.0,21.0944 45,8 45,8 L 3,8 Z" fill="#ffffff" opacity="0.1" clip-path="url(#casec)"/>
+<rect x="5.5" y="10.5" width="37" height="17" rx="2.0" fill="none" stroke="#4e7ec4" stroke-width="1" opacity="0.35"/>
+<rect x="6.5" y="11.5" width="35" height="15" rx="1.5" fill="url(#lcd)" stroke="#10213d" stroke-width="1"/>
+<rect x="7.5" y="12.5" width="33" height="13" rx="0.5" fill="none" stroke="#000000" stroke-width="1" opacity="0.16"/>
+<clipPath id="lcdc"><rect x="7" y="12" width="34" height="14" rx="1.0"/></clipPath>
+<clipPath id="swingc"><rect x="7" y="12" width="34" height="12.0"/></clipPath>
+<g clip-path="url(#swingc)"><polygon points="22.13,31.93 20.46,15.21 19.19,15.33 20.54,32.07" fill="#353934" opacity="0.25"/><polygon points="22.13,32.07 23.48,15.33 22.20,15.21 20.54,31.93" fill="#353934" opacity="0.50"/><polygon points="22.10,32.21 26.42,15.98 25.18,15.64 20.56,31.79" fill="#353934" opacity="1.00"/></g>
+<g fill="#2d302c" transform="translate(19,14.5) scale(0.15517241379310345) translate(-393,-425)"><ellipse cx="495" cy="475" rx="7.5" ry="5.5" transform="rotate(-20 495 475)"/><rect x="498.79" y="432" width="3.5" height="41.85"/></g>
+<path d="M 7,21.240000000000002 C 7,21.240000000000002 8.7,17.7288 24.68,17.7288 C 41.0,17.7288 41,12 41,12 L 7,12 Z" fill="#ffffff" opacity="0.1" clip-path="url(#lcdc)"/>
+<rect x="6" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="8" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="10" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="12" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="14" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="16" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="18" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="20" y="32" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="6" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="8" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="10" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="12" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="14" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="16" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="18" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<rect x="20" y="34" width="1" height="1" rx="0" fill="#0b1c38"/>
+<circle cx="28" cy="33" r="2.0" fill="#2c3036" stroke="#060c18" stroke-width="1"/>
+<circle cx="34.5" cy="33" r="2.0" fill="#2c3036" stroke="#060c18" stroke-width="1"/>
+<circle cx="40.5" cy="33" r="1.5" fill="#dabe2f" stroke="#0c1930" stroke-width="1"/>
+</svg>

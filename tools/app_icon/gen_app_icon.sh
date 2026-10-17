@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # tools/app_icon/gen_app_icon.sh — assets/icons/adwaita-3.22/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
-# THE ICON (architect 2026-10-16): the architect's digital metronome, the icon set's one own file (AppIcon.svg,
-# byte-identical to DigitalMetronome.svg, the glyph Warp wears; the caption's icon; assets/icons/adwaita-3.22/README.md
-# its provenance and licence) — the BPM Iterations button keeps Adwaita 3.22's
-# audio-x-generic note (MusicNote16th.svg), the program icon's drawing from 2026-10-12 until then — over THE CHROME'S
-# OWN CAPTION START, FLAT (architect 2026-10-16: "just the title start color, flat, as the bg"): the compiled scheme's
-# active title start, Windows Storm's #800080 (src/gui/chrome_schemes.inc's windows-storm row, its first value;
-# palette_file.h's kGuiCaptionOwn names the scheme), one color over the whole square, no gradient; the Cool Edit
-# case's 20 face-ramp bands under Midnight's Face were the ground from 2026-10-12 until then. The ground is the
-# ANDROID background alone, the Linux icon wears none. It writes, from the
+# THE ICON (architect 2026-10-16; re-rendered 2026-10-17): the architect's digital metronome, the icon set's one own
+# file (AppIcon.svg, byte-identical to DigitalMetronome.svg, the glyph Warp wears; the caption's icon;
+# assets/icons/adwaita-3.22/README.md its provenance and licence) — the BPM Iterations button keeps Adwaita 3.22's
+# audio-x-generic note (MusicNote16th.svg), the program icon's drawing from 2026-10-12 until then — over WHITE, FLAT
+# (architect 2026-10-17): #FFFFFF, one color over the whole square, no gradient (Windows Storm's caption start #800080
+# from 2026-10-16 until then, the Cool Edit case's 20 face-ramp bands under Midnight's Face from 2026-10-12 before
+# it). The ground is the ANDROID background alone, the Linux icon wears none. It writes, from the
 # repo root's point of view:
 #   packaging/warptempo_gui.svg     the Linux desktop icon (the .desktop's Icon=warptempo_gui; docs/INSTALL.md
 #                                   installs it into hicolor's scalable/apps): a 48 x 48 document carrying the
@@ -37,8 +35,8 @@ cd "$(dirname "$0")/../.."
 SRC=assets/icons/adwaita-3.22/AppIcon.svg
 OUT_SVG=packaging/warptempo_gui.svg
 RES=android/app/res
-# Windows Storm's active title start, the chrome's own caption (the head).
-GROUND=800080
+# White, flat (the head).
+GROUND=FFFFFF
 
 # The source's shape, the extraction tool's (tools/icon_set_adwaita_322/): no XML declaration, line 1 the root's start
 # tag, a 48 x 48 root; anything else is a hard fail.

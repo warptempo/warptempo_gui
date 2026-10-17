@@ -4,12 +4,11 @@ repository's own font files: one <path> per text element carrying the text's own
 advance widths plus its GPOS pair kerning plus the letter-spacing between them. The font properties are read from the
 text's style, its presentation attributes and its ancestors' (inherited, the nearest winning); a font-family LIST
 resolves to its first family FACES has (as a text renderer falls through the list to an installed face), and a
-numeric weight of 600 or more, or bold / bolder, takes the bold face (Liberation Sans has regular and bold files, DejaVu Sans its bold alone). The text's
+numeric weight of 600 or more, or bold / bolder, takes the bold face (Liberation Sans has regular and bold files). The text's
 own `transform`, when it has one, is carried onto the path verbatim, ahead of the pen's translate. FACES: Liberation
 Sans for the history clock's digits (document-open-recent, run by build_set.py's `text-to-outlines` treatment;
-history's again since 2026-10-16); DejaVu Sans Bold for the own metronome's WARP (architect 2026-10-16:
-the lettering judged as rsvg drew it on the authoring laptop, where fontconfig resolves Gemini's list to DejaVu Sans
-Bold; fonts/DejaVuSans-Bold.ttf, an outline source alone, never a product face). The product's resvg is built without
+history's again since 2026-10-16), the one face the tool knows (the own metronome's WARP, outlined from DejaVu Sans
+Bold 2026-10-16, left with its lettering 2026-10-17, and the font file with it). The product's resvg is built without
 text and draws none; the outlines are the geometry a text renderer lays down from the same file, measured 0.26/255
 mean against rsvg's own text rendering of document-open-recent. A notice, when given, is the changed-file comment
 written at the file's head.
@@ -21,8 +20,7 @@ from fontTools.pens.transformPen import TransformPen
 SVGNS='http://www.w3.org/2000/svg'; SV='{%s}'%SVGNS; XL='http://www.w3.org/1999/xlink'
 ET.register_namespace('',SVGNS); ET.register_namespace('xlink',XL)
 ROOT=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))+'/'
-FACES={('Liberation Sans','bold'):ROOT+'fonts/LiberationSans-Bold.ttf',('Liberation Sans','normal'):ROOT+'fonts/LiberationSans-Regular.ttf',
-       ('DejaVu Sans','bold'):ROOT+'fonts/DejaVuSans-Bold.ttf'}
+FACES={('Liberation Sans','bold'):ROOT+'fonts/LiberationSans-Bold.ttf',('Liberation Sans','normal'):ROOT+'fonts/LiberationSans-Regular.ttf'}
 FONTPROPS=('font-size','font-style','font-variant','font-weight','font-stretch','text-align','text-anchor','font-family','-inkscape-font-specification','line-height','writing-mode','letter-spacing','word-spacing')
 def style_dict(s): return dict(kv.split(':',1) for kv in s.split(';') if ':' in kv)
 def style_str(d): return ';'.join(f'{k}:{v}' for k,v in d.items())

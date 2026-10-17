@@ -193,8 +193,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
 # layers per density, the architect's digital metronome, the caption's icon
 # and Warp's glyph (assets/icons/adwaita-3.22/AppIcon.svg, architect
-# 2026-10-16) over the
-# button case's 20-band gradient under Midnight's Face (architect 2026-10-12), written by
+# 2026-10-16) over flat white (architect 2026-10-17), written by
 # tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
 # comment states the sizes; nothing here renders). Every GUI pixel is painted
 # by cairo, the roster's icons included (the Adwaita 3.22 set's SVG assets above,

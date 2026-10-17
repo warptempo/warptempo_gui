@@ -9,9 +9,7 @@ Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. Th
 code: `fonts/README.md`, `assets/icons/adwaita-3.22/README.md` and `tools/app_icon/README.md` (the launcher's one drawing) carry their provenance and
 licence texts. The face is compiled into `warptempo_gui` (and packed into the APK): Liberation Sans and Liberation Sans Bold
 (2.1.5; SIL Open Font License 1.1, the text in `fonts/LICENSE-Liberation-OFL.txt`, since 2026-10-09, the product's only face since
-2026-10-12); the repository distributes no binary. `fonts/DejaVuSans-Bold.ttf` (DejaVu 2.37, the Bitstream Vera Fonts
-licence with the DejaVu changes in the public domain, `fonts/LICENSE-DejaVu.txt`) is no product face: it is the outline
-source of the own icon's lettering, read by `tools/icon_set_adwaita_322/text_to_paths.py`, never loaded by either binary.
+2026-10-12); the repository distributes no binary.
 
 ## Both devices
 

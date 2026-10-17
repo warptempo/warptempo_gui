@@ -14,7 +14,7 @@ VcsCommit	go-top	path6460-6-4-4-0-5 path6460-6-4-4-3-55-3	floor shadow (2)
 VcsPull	go-bottom	g6324	floor shadow
 AccessoriesDictionary	accessories-dictionary	path2284	floor shadow
 InputTablet	input-tablet	path8537-6 path23244-7 path46799-7-4	floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy
-DigitalMetronome	own	-	the own file: no drop shadow (Gemini's two feDropShadow filters unreferenced and removed at its cleaning, 2026-10-16)
+DigitalMetronome	own	-	the own file: no drop shadow (drawn without one, 2026-10-17)
 CameraPhoto	camera-photo	g9724 g9730	floor shadow (blurred); the lens's shadow cast on the foot
 ViewRestore	view-restore	rect4667-1-5-6-45-3-7-0	blurred halo behind each window (one rect, two instances; TimelineLift's analogue)
 EditFind	edit-find	g5595	floor shadow under the handle (path4263-5 and path5575, two blurred radials)

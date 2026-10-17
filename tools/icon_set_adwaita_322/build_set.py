@@ -3,7 +3,7 @@ pruned 48-unit file from the row's sheet and slot, its drop shadows removed by s
 2026-10-15) and any other element the architect rules out by removed.tsv's (no row today); THE SET'S ONE OWN FILE, the
 `own` treatment (architect 2026-10-16): own/<sheet>, the architect's digital metronome, NOT Adwaita's, COPIED with its
 dated notice inserted as one XML comment after the root's start tag and every other byte verbatim (DigitalMetronome
-and AppIcon both from it, no tarball check; its lettering already outlines, text_to_paths.py's work at its making);
+and AppIcon both from it, no tarball check; drawn in the 48 frame with no lettering since 2026-10-17);
 the `text-to-outlines` treatment, DocumentOpenRecent's (history's clock with the back arrow, architect 2026-10-16):
 its clock digits turned into Liberation Sans Bold outlines by text_to_paths.py at the build; the derived TabDetachB
 (preferences-system-windows with the lower-right window copy, use5281, moved after the front window g5270: element
@@ -32,20 +32,20 @@ DOCUMENT_OPEN_RECENT_NOTICE=(" DocumentOpenRecent: adwaita-icon-theme 3.22.0 doc
  "fonts/LiberationSans-Bold.ttf (the product's resvg draws no text); its drop shadows removed, as from every seat of the set "
  "(2026-10-15); every other element unchanged. ")
 TEXT_NOTICES={'DocumentOpenRecent':DOCUMENT_OPEN_RECENT_NOTICE}
-OWN_NOTICE=(' DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. The architect\'s own drawing (2026-10-16), '
- 'made with Google\'s Gemini at his prompt after a Korg MA-1 in Adwaita 3.22\'s phone / calculator manner, WARP in place '
- 'of the maker\'s name, cleaned on tablet mocks (the drop-shadow filters and every small legend removed, the body\'s '
- 'shapes rounded rectangles, the caps flat, the display\'s note a quarter note), then RE-LAID the same day on the '
- 'Korg\'s proportions, fewer elements and the remaining ones bigger: every shape the cleaned drawing\'s own, the case '
- '800 x 600 of the 1024 units; the display\'s four triangles, the four pill buttons, the power legend and the caption '
- 'removed; the display on a row of its own across the face, the 120 and the note at its right, the stick at its left '
- 'as thin as a digit\'s stroke, leaning left with its swing room clear; WARP\'s cap band centered above the display; '
- 'the speaker grill eight columns by two of holes a quarter of a round button (the MA-1\'s ratio) at the left of the '
- 'bottom row, the two round buttons and the power button at its right. The drawing stands at 120 % in its 48 frame '
- '(the nested viewport 57.6 units, the body 45 x 33.75 centered at 24, 24.3; architect 2026-10-16, Warp the primary '
- 'glyph and the project\'s name). The drawing is licensed '
- 'under the GNU LGPL v3, the set\'s licence (architect 2026-10-15); its lettering is the outlines of DejaVu Sans Bold, '
- 'fonts/DejaVuSans-Bold.ttf, under the Bitstream Vera licence (fonts/LICENSE-DejaVu.txt). Warp, and the program icon. ')
+OWN_NOTICE=(' DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. The architect\'s own drawing (2026-10-17), '
+ 'a digital metronome drawn in the 48-unit frame at Adwaita 3.22\'s level of detail on the grammar of its pda: one dark '
+ 'outline on the pixel grid round a case 44 x 34 units with a vertical gradient lighter at the top, a white highlight '
+ 'line 1 unit inside fading top to bottom at .3, a dark line at .12 inside the foot and right edge, the pda\'s gloss sweep '
+ 'on the case and the display alike; the display a soft gradient in a 1-unit dark frame with a black line at .16 just '
+ 'inside and the recess\'s light line just outside; the speaker grill eight holes by two; the buttons flat discs with a '
+ 'dark ring, the yellow power button the smallest. The display shows the swing, the Korg MA-2\'s persistence: one stick '
+ 'swinging 36 degrees each way about a pivot 6 units below the window, three of its eight positions drawn (the current '
+ 'tick solid, the two before it at .5 and .25), cut 2 units above the window\'s foot, beside a quarter note. Every '
+ 'tone is the earlier drawing\'s own. History: the metronome of 2026-10-16, drawn with Google\'s Gemini at his prompt '
+ 'after a Korg MA-1, cleaned on tablet mocks and re-laid on the MA-1\'s proportions in a nested 1024-unit viewport at '
+ '120 %, its WARP lettering, its 120 digits and its two sheens removed with this re-render ("too detailed; needs to be '
+ 'more like GNOME icons"). The drawing is licensed under the GNU LGPL v3, the set\'s licence (architect 2026-10-15). '
+ 'Warp, and the program icon. ')
 TEXTS=['COPYING','COPYING_LGPL','COPYING_CCBYSA3','AUTHORS']
 def copy_own(src,p):
     """the own file, its bytes verbatim but for OWN_NOTICE inserted as one comment after the root's start tag (line 1,
