@@ -58,8 +58,9 @@ grammar of the set's own `pda` at 48 (architect 2026-10-17: the drawing before i
 like GNOME icons — fewer, thicker lines and elements, like the 3.22 icons at 48 px"). THE CASE, 44 × 34 units (x 2–46,
 y 7–41; the 120 % seat of 2026-10-16 had the body 45 × 33.75): one dark outline `#0b1d3a` on the pixel grid round a
 vertical gradient `#2d5fae` → `#173a73`, lighter at the top; a white highlight line 1 unit inside fading top to
-bottom, at .5 (architect 2026-10-17 evening, tuning the drawing toward the pda's gentle steps on 2x / 4x phone sheets —
-"the transitions are not harsh"; .3 until then); a dark line at .12 inside the foot and the right edge; the pda's gloss sweep, a white region at .1 from
+bottom, at .4 (architect 2026-10-17 evening, tuning the drawing toward the pda's gentle steps on 2x / 4x phone sheets —
+"the transitions are not harsh"; .3 until then, .5 for one commit (7f1a6119) and softened to .4 the same evening off a
+.45 / .40 / .35 / .30 series — the pda's own .3 sits over a grey body, where white reads brighter than over our blue); a dark line at .12 inside the foot and the right edge; the pda's gloss sweep, a white region at .1 from
 the left edge two thirds down, one S-curve to the top-right corner. THE DISPLAY across the face's upper half: a soft
 radial gradient `#adb4a7` → `#949b8e` from the window's bottom centre on the pda's geometry (the centre 77 % down, the
 radius 1.08 × the width and .45 × the height; the same evening — a diagonal linear gradient until then) in a 1-unit dark
@@ -246,7 +247,7 @@ shift is the product's, not the file's.
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/DigitalMetronome.svg` | — | `c63355cfbb164dc2d83b0bb7d80b83851279d76b969f7dd6b172d3f6b4446f7c` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
+| AppIcon | — | `own/DigitalMetronome.svg` | — | `cf136e38803dab48c19ef32bab4d8e6cb0d637218b0186201157874bf5365567` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
 | AudioVolumeHigh | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
@@ -259,7 +260,7 @@ shift is the product's, not the file's.
 | DialogError | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | DialogInformation | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` |  |
 | DialogOkApply | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
-| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `c63355cfbb164dc2d83b0bb7d80b83851279d76b969f7dd6b172d3f6b4446f7c` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
+| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `cf136e38803dab48c19ef32bab4d8e6cb0d637218b0186201157874bf5365567` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
 | DocumentOpen | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
 | DocumentOpenRecent | `document-open-recent` | `clocks.svg` | 696.062, 355.996, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | History: the clock turned back (architect 2026-10-16); TEXT TO OUTLINES: 48 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
 | DocumentRevert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
