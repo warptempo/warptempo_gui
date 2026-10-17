@@ -113,7 +113,7 @@ struct GuiInputHandler;
 //     pointer drag the chord is swallowed with the key's card, a read-only tab
 //     cards the chord, the iteration lock cards undo's own sentence — and then
 //     they meet the command's own refusals and cards (the empty stack, the
-//     other tab's lock, the restrict-undo lamp). Each of those refusals ends
+//     other tab's lock). Each of those refusals ends
 //     the press where it ends today and plays NOTHING (the block below).
 //   THE PLAY TAKES BARE SPACE'S GATES
 //     (GuiInputHandler::car_play_refused_by_key_gates) — the gates alone,
@@ -155,7 +155,7 @@ struct GuiInputHandler;
 // TWO RULES, and the first is the whole safety of it:
 //   1. A REFUSED STEP PLAYS NOTHING, and leaves a running loop running.
 //      Nothing was stepped to, so there is nothing new to hear — an empty
-//      stack, the other tab's lock, the restrict-undo lamp, the iteration
+//      stack, the other tab's lock, the iteration
 //      lock, a read-only tab, an open editor, a pointer drag: every one ends
 //      the press exactly where it ends today, with today's card and nothing
 //      else. The bool that carries the answer runs all the way from

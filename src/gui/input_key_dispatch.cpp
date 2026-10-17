@@ -243,13 +243,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
          !ctrl && !shift && !alt);
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt);
-    // RESTRICT UNDO TO CURRENT VIEW, bare `z` (2026-09-04): a posture — the
-    // bit decides whether an undo RUNS and authors nothing the lock protects, so the switch is admitted on a locked tab and its button
-    // stays lit there. Ctrl+Z and Ctrl+Shift+Z are NOT on this allowlist and
-    // do not join it: the acts the lamp governs are exactly what the lock
-    // refuses.
-    const bool is_restrict_undo =
-        (key == GuiKeys::Z && !ctrl && !shift && !alt);
     // WAVEFORM MAGNIFICATION, the bare backtick (architect 2026-09-22;
     // on the backtick since 2026-09-23): a display
     // posture about the picture, authoring nothing the lock protects, so it
@@ -486,7 +479,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_playhead_step ||
              is_home_end || is_page_updown ||
              is_zero ||
-             is_restrict_undo || is_waveform_magnification ||
+             is_waveform_magnification ||
              is_center || is_follow ||
              is_view_selector ||
              is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
@@ -3023,7 +3016,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // display posture about the picture, authoring nothing the view froze, so
     // the view admits it and the Waveform Magnification button stands beside
     // Full Zoom Out in there by the derived partition (it was refused here,
-    // Restrict Undo's and Follow's answer, from 2026-09-24 until then). It
+    // Follow's answer, from 2026-09-24 until then). It
     // ADMITS UNCONDITIONALLY, the chord's membership alone; the curve's
     // readiness is the act's and the face's own (waveform_magnification_
     // toggle_actionable), as outside the view.
@@ -9124,14 +9117,6 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // legal on a locked tab and under the grid-iterations lock; refused in
         // the `h` view at that mode's allowlist.
         playback_lifecycle.toggle_follow();
-        break;
-    case GuiKeys::Z:
-        // Toggle the Restrict undo to current view lamp (2026-09-04). The setter
-        // is GuiInputHandler::set_restrict_undo_to_current_view, shared with the
-        // icon-row button's synthesized chord and with nothing else.
-        // History-less, one-shot — and nothing moves at the press: the bit is read at the NEXT Ctrl+Z, through
-        // undo_step_permitted_by_current_view_lamp, and by nothing else.
-        set_restrict_undo_to_current_view(!app.restrict_undo_to_current_view);
         break;
     case GuiKeys::Grave:
         // Toggle the Waveform Magnification lamp (architect 2026-09-22,

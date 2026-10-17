@@ -144,10 +144,8 @@ One line per question the architect has closed: what was asked or tried, the rul
 - **The off-edge marker (in the last half-column) as adversarial** — ruled out, 2026-09-26: visibility depends on the zoom, not the data; only the nudge and the drop refuse to author one. Owner: `source_frame_off_right_edge` (warp_frame_map_view.h).
 - **The streamed-WAV `0xffffffff` size placeholders** — removed: `8 + riff_size == file size` is required and such files hard-fail. Owner: the RIFF size check in `src/audio_io/wav_io.cpp`.
 - **A special refusal for a `.samples` / `.peaks` path** — deleted, 2026-09-02 (no producer): such a file takes the generic unknown-magic refusal. Owner: `GuiFileLoader::load_file` (file_loader.cpp).
-- **Deriving the Restrict Undo lamp from the zoom** — rejected, 2026-09-16: the lamp is held by hand. Owner: `AppState::restrict_undo_to_current_view`.
-- **A camera term in the Restrict Undo verdict (Restrict Undo to Viewport)** — removed, 2026-09-22: the restore's camera answers to what it restores, and the lamp asks the view alone. Owner: `undo_restore_stays_in_current_view` (app_state.h).
+- **The Restrict Undo to Current View lamp (bare `z`, its button and glyph, its refusal of a step that would switch the view)** — removed, 2026-10-17 (architect: "remove the Restrict Undo to View button, icon, and gesture altogether"): the lamp, its bare z, its glyph and its refusal; Undo and Redo keep the stack and the other tab's lock. Owner: `history_step_button_actionable` (app_state.h), `GuiInputHandler::run_undo_redo_command` (input_handler.cpp).
 - **`op_mode` as the undo entry's column tag** — superseded, 2026-09-23: the column tag is `landing_column`, `op_mode` the store kind. Owner: `UndoEntry::landing_column` (app_state.h).
-- **A partial restore under the Restrict Undo lamp** — ruled out, 2026-09-04: the lamp refuses the step whole. Owner: `AppState::restrict_undo_to_current_view`.
 - **A restore classifying itself to keep or clear camera lamps (`RestorePostureClass`, the `warp_rows_equal` + scale gate)** — deleted, 2026-09-11 / 2026-09-13: a restore writes no camera lamp. Owner: `Undo::restore_history_entry` (undo.cpp).
 
 ## Settings and the device config

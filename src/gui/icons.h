@@ -124,7 +124,6 @@ enum class Icon {
                          // the broom (architect 2026-10-14)
     BlackSum,            // Toggle Cumulative (`u`)
     GoJump,              // Toggle Follow (`f`)
-    TimelineLift,        // Toggle Restrict Undo (`z`)
     MusicNote16th,       // BPM Iterations (Ctrl+B)
     Mathmode,            // Toggle Grid Iterations (bare `i`)
     PreviewRenderOn,     // Play Renders
@@ -211,7 +210,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_svg_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 61;
+inline constexpr int kIconCount = 60;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
@@ -223,7 +222,7 @@ inline constexpr const char* kIconNames[] = {
     "CameraPhoto",
     "ViewRestore", "EditFind", "AudioVolumeHigh", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
-    "TimelineLift", "MusicNote16th", "Mathmode", "PreviewRenderOn",
+    "MusicNote16th", "Mathmode", "PreviewRenderOn",
     "DialogOkApply", "DocumentOpenRecent", "NetworkWiredDisconnected",
     "EditSelect",
     "KeyframePrevious", "KeyframeNext", "GoPrevious", "GoNext",

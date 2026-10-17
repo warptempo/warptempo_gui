@@ -100,8 +100,7 @@
 //     (kSelectOneRun and its siblings, input_key_dispatch.cpp); the value
 //     pair's three (payload_eligibility — Ctrl+Shift+J and Ctrl+J); undo and redo's
 //     ("There is nothing to undo" / "…redo", "That step belongs to the other
-//     tab, which is read-only", the Restrict Undo lamp's "That undo would
-//     switch the view" / "That redo …", ranked last); the `h` view's
+//     tab, which is read-only"); the `h` view's
 //     kHistoryViewMovesNoMarkersCard; the off-edge pair below; bare `m`'s
 //     NINE-arm BPM gate, one card per press carrying the first failure (the
 //     tenth arm, enter_bpm_mode's own bail, is unreachable and silent).

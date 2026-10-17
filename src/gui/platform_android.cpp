@@ -526,8 +526,8 @@ GuiPlatform::~GuiPlatform() {
 // stood at 275 from 2026-10-02 — the tablet's glyph at its 200 % before the
 // unit's change, 44 device px — and its earlier values are git history and
 // a closed question.) The icon row fits this panel whole (the arithmetic is
-// at paint_icon_row, paint_handler.cpp: 1356 + 351 of the 2304 device px
-// outside the `h` view at 300), clearing it by 597.
+// at paint_icon_row, paint_handler.cpp: 1218 + 456 of the 2304 device px
+// outside the `h` view at 300), clearing it by 630.
 //
 // THE PROJECTS PATH IS THE ACTIVITY'S EXTERNAL FILES DIR, `projects/` under it
 // — `/sdcard/Android/data/<pkg>/files/projects`, the folder adb can push into

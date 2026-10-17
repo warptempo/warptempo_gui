@@ -1411,7 +1411,7 @@ GuiRect program_frame_rect(const AppState& a);
 // program is Cool Edit from the toolbar down, the same under every chrome;
 // the frame 2026-10-10, program_frame_rect above; program_spec.h's
 // head, where every length below is authored and its source named). The
-// roster's twenty-five view/mode/action buttons stand in it — the
+// roster's twenty-four view/mode/action buttons stand in it — the
 // kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs and history
 // stand-in tables are the
 // count's one authority (paint_handler.cpp); icons::kIconCount is a

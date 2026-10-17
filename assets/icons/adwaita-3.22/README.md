@@ -187,7 +187,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | InputTablet | `input-tablet` | `path8537-6` `path23244-7` `path46799-7-4` | floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy |
 | DigitalMetronome | the own file | — | no drop shadow (drawn without one, 2026-10-17) |
 | CameraPhoto | `camera-photo` | `g9724` `g9730` | floor shadow (blurred); the lens's shadow cast on the foot |
-| ViewRestore | `view-restore` | `rect4667-1-5-6-45-3-7-0` | blurred halo behind each window (one rect, two instances; TimelineLift's analogue) |
+| ViewRestore | `view-restore` | `rect4667-1-5-6-45-3-7-0` | blurred halo behind each window (one rect, two instances) |
 | EditFind | `edit-find` | `g5595` | floor shadow under the handle (`path4263-5` and `path5575`, two blurred radials) |
 | AudioVolumeHigh | `audio-volume-high` | `path16236` | floor shadow (the wide radial under the speaker) |
 | ListAdd | `list-add` | `rect4899-2` | floor shadow |
@@ -197,7 +197,6 @@ reference left dangling. The disabled face has no file of its own: the product b
 | Merge | `edit-clear-all` | `path6017` | floor shadow |
 | BlackSum | `accessories-calculator` | `rect12531` | blurred halo behind the calculator |
 | GoJump | `start-here` | — | no drop shadow |
-| TimelineLift | `view-fullscreen` | `rect4667-1-5-6-45-3-7` | blurred halo behind the window |
 | MusicNote16th | `audio-x-generic` | `path8186` `path8188` `path8190` | floor shadow (3) |
 | Mathmode | `x-office-spreadsheet` | `g12362` | floor shadow |
 | PreviewRenderOn | `applications-multimedia` | `path8036` | floor shadow under the note |
@@ -303,7 +302,6 @@ shift is the product's, not the file's.
 | SettingsConfigure | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` |  |
 | TabDetach | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` |  |
 | TabDetachB | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` | DERIVED, below |
-| TimelineLift | `view-fullscreen` | `view-fullscreen-restore.svg` | 296, 50, 48, 48 | `dd9a137b1779bd454c300d351e50ba2f1458c729cb2fc49e890173989409a688` |  |
 | ValueDrag | `object-flip-vertical` | `object-flip-rotate.svg` | 76.0001, 300, 48, 48 | `cd9be5ee2271c9a797d49aa9749f70c4ad48f53768f651c166560baba865afa1` |  |
 | VcsCommit | `go-top` | `navigation-icons.svg` | 276, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | VcsPull | `go-bottom` | `navigation-icons.svg` | 106, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |

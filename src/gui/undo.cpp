@@ -27,14 +27,9 @@ namespace {
 // THE ROW EQUALITY BASIS AND THE TOUCHED-SET RECONSTRUCTION BOTH LIVE IN
 // app_state.h — warp_row_fields_differ, phase_reset_row_fields_differ,
 // restore_touched_indices and the whole-list pair built on the first two
-// (warp_rows_equal / phase_reset_rows_equal). They moved there 2026-09-04 so
-// the Restrict undo to viewport lamp's face could ask the touched set a
-// restore WOULD produce; that measurement left with the camera restriction on
-// 2026-09-22 (the lamp is Restrict Undo to Current View now and reads the
-// entry's view tags alone), and they stay where they are because the header
-// is a neutral home and nothing gains from the move back. This file is still
-// their applier, and entry_restores_live_marker_stores below is still where a
-// whole store is asked the row question.
+// (warp_rows_equal / phase_reset_rows_equal); the header is a neutral home.
+// This file is their applier, and entry_restores_live_marker_stores below is
+// where a whole store is asked the row question.
 
 // True when restoring `entry` would write back the marker stores THAT ARE
 // ALREADY LIVE — the question the coalesced burst's net-zero pop asks

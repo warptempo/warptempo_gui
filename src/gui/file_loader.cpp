@@ -449,12 +449,11 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // mutators are the anchor's only owners).
     app.shift_range_anchor = -1;
     // The STICKY CTRL does NOT ride that belt (architect 2026-09-10). It is a
-    // session TOOL POSTURE now, in the family the lamp beside it is already
-    // in — this body clears neither (`add_to_selection` and
-    // `restrict_undo_to_current_view`), and it has nothing to clear either: this
-    // is the FRESH AppState's own first load, load_file having exactly one
-    // caller (main.cpp's project entry), so both are already dark when it
-    // runs. Their writers are their own toggles — plus, for the sticky ctrl,
+    // session TOOL POSTURE now, in the session lamps' family (AppState::follow
+    // among them) — this body does not clear `add_to_selection`, and it has
+    // nothing to clear either: this is the FRESH AppState's own first load,
+    // load_file having exactly one caller (main.cpp's project entry), so the
+    // bit is already dark when it runs. Its writers are its own toggle and
     // the act class at selection_consumed — and a project reopen builds a new
     // AppState rather than loading into this one; the contract is at
     // AppState::add_to_selection.

@@ -21,7 +21,6 @@
 {"Merge", 2.6f, 0.6f},
 {"BlackSum", 0.0f, 1.1f},
 {"GoJump", 0.0f, 0.0f},
-{"TimelineLift", 0.0f, 0.0f},
 {"MusicNote16th", 0.8f, 1.9f},
 {"Mathmode", -0.1f, 1.0f},
 {"PreviewRenderOn", 0.0f, -0.3f},

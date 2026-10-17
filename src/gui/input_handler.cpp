@@ -2448,7 +2448,7 @@ bool GuiInputHandler::authoring_lock_refuses_chord(GuiKey key,
 // chord on on_key, so the gates above hold for them unchanged.
 //
 // RETURNS WHETHER A RESTORE RAN (the contract and the car's reason at the
-// declaration): false at each of the three refusal arms below, otherwise the
+// declaration): false at each of the two refusal arms below, otherwise the
 // ops' own answer. on_key's arm drops it on the floor.
 bool GuiInputHandler::run_undo_redo_command(bool redo,
                                             bool synthesized_repeat) {
@@ -2509,26 +2509,6 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
                   "read-only");
         return false;
     }
-    // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP'S REFUSAL (architect 2026-09-04,
-    // its question narrowed 2026-09-22 from the camera to the view), ranked
-    // behind the two terms above because emptiness and the other tab's lock
-    // are the older answers and one press owes one card. With the lamp lit, a
-    // step whose restore would SWITCH THE VIEW — the tab, the audio view or
-    // the marker column the entry landed in differing from the live one — is
-    // a CONSUMED NO-OP: nothing is popped, nothing is pushed, and both stacks
-    // are byte-identical afterwards — the ops are never reached. The verdict
-    // is the one owner both buttons grey on
-    // (undo_step_permitted_by_current_view_lamp, app_state.h), vacuous while
-    // the lamp is dark. A HELD Ctrl+Z CARDS ONCE PER BURST with nothing
-    // added here: on_key's HeldRepeatDispatchScope is the one seam, and a
-    // synthesized repeat MOVES this card to the top of the stack rather
-    // than adding one.
-    if (!undo_step_permitted_by_current_view_lamp(app, stack)) {
-        notifications.notify(AppState::NotificationClass::Normal,
-                             redo ? kRedoSwitchesViewCard
-                                  : kUndoSwitchesViewCard);
-        return false;
-    }
     return redo ? undo.do_redo() : undo.do_undo();
 }
 
@@ -2549,7 +2529,7 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
 //
 // IT ANSWERS THE CAR'S OWN QUESTION (architect 2026-09-18): true iff a
 // restore actually ran — false at each head gate below, otherwise the
-// command's answer, which is false at each of its three refusal arms and at
+// command's answer, which is false at each of its two refusal arms and at
 // the ops' belt. THE SKIP PLAYS ONLY WHAT IT ACTUALLY STEPPED TO, so a
 // refused press ends here with today's card and nothing else, a running loop
 // left running (nothing new was stepped to, so there is nothing new to hear;
@@ -4232,16 +4212,6 @@ void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
     if (band.read_only == value) return;
     band.read_only = value;
     if (tab_view == app.active_tab_view) viewport.invalidate_top_strip();
-}
-
-void GuiInputHandler::set_restrict_undo_to_current_view(bool desired) {
-    // The contract — sole writer, per-project, history-less, no damage — is at
-    // the declaration (input_handler.h), which also states the scope: this bit
-    // is read by undo_step_permitted_by_current_view_lamp and by nothing else. The
-    // ONE caller is the bare-`z` arm, which the icon row's button reaches by
-    // synthesizing that press, and there is nothing else: there is no settings
-    // key to commit it from.
-    app.restrict_undo_to_current_view = desired;
 }
 
 void GuiInputHandler::set_show_waveform_magnification(bool desired) {

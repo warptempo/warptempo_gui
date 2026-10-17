@@ -16,7 +16,7 @@ AccessoriesDictionary	accessories-dictionary	path2284	floor shadow
 InputTablet	input-tablet	path8537-6 path23244-7 path46799-7-4	floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy
 DigitalMetronome	own	-	the own file: no drop shadow (drawn without one, 2026-10-17)
 CameraPhoto	camera-photo	g9724 g9730	floor shadow (blurred); the lens's shadow cast on the foot
-ViewRestore	view-restore	rect4667-1-5-6-45-3-7-0	blurred halo behind each window (one rect, two instances; TimelineLift's analogue)
+ViewRestore	view-restore	rect4667-1-5-6-45-3-7-0	blurred halo behind each window (one rect, two instances)
 EditFind	edit-find	g5595	floor shadow under the handle (path4263-5 and path5575, two blurred radials)
 AudioVolumeHigh	audio-volume-high	path16236	floor shadow (the wide radial under the speaker)
 ListAdd	list-add	rect4899-2	floor shadow
@@ -26,7 +26,6 @@ InsertLink	insert-link	path4121	floor shadow under the triangle
 Merge	edit-clear-all	path6017	floor shadow
 BlackSum	accessories-calculator	rect12531	blurred halo behind the calculator
 GoJump	start-here	-	no drop shadow
-TimelineLift	view-fullscreen	rect4667-1-5-6-45-3-7	blurred halo behind the window
 MusicNote16th	audio-x-generic	path8186 path8188 path8190	floor shadow (3)
 Mathmode	x-office-spreadsheet	g12362	floor shadow
 PreviewRenderOn	applications-multimedia	path8036	floor shadow under the note

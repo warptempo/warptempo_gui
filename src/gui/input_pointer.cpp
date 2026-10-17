@@ -213,7 +213,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (history_step_actionable's empty-stack term, through
     // redesign_button_enabled) and rests there under the held pointer, the
     // retired magnification pair's ladder end in the same shape; the same pause holds
-    // for the Restrict-undo lamp's verdict and the other tab's lock. The
+    // for the other tab's lock. The
     // held KEY's own wall is silent at the dispatch arm (input_handler.cpp).
     // OPEN PROJECT (architect 2026-10-07), the row's first button, a group
     // of its own: Ctrl+O, the project picker, the File menu row's own chord.
@@ -298,28 +298,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     // admission to move, which is why both rows come back below unchanged when
     // the architect deleted that menu. They are kept in the ROW'S OWN ORDER,
     // which puts them past the viewport group rather than here.)
-    // RESTRICT UNDO TO CURRENT VIEW (architect 2026-09-04) — a lamp
-    // closing the same group: bare `z`, a TOGGLE reading the live bit its own
-    // chord flips. It shares its letter with the pair it governs, which is the
-    // whole argument for the key, and it stood beside that pair in the toolbar
-    // group for the hours of its first day before the architect moved it here
-    // because it is a viewport gesture too. Live on a locked tab (the switch
-    // authors nothing, so its chord is on the lock's allowlist even though
-    // Ctrl+Z is not) and DEAD in the `h` view, where both undo stacks are
-    // frozen and the mode's allowlist drops the chord, so the derived partition
-    // greys this face in there.
-    //
-    // IT ADMITS CTRL AND THE PAIR (architect 2026-09-29): a modified press
-    // spells the button's own key under those modifiers, so its ctrl-click is
-    // CTRL+Z, UNDO, and its ctrl-shift press CTRL+SHIFT+Z, REDO — the keys'
-    // own acts with every refusal they carry (the lock, the lamp's own
-    // verdict, an empty stack), each carding where the key cards. It admits no
-    // shift alone, Shift+Z binding nothing (redesign_button_ctrl_admits /
-    // redesign_button_ctrl_shift_admits). On glass the ctrl is the S Pen's
-    // side button, and the side button held through a long press is the redo.
-    // The row does not repeat, so a held modified press acts once at the lift.
-    {RedesignButton::IconRestrictUndo,
-     GuiKeys::Z, false, false, false, false},                                // bare z
     // THE ITERATION GROUP (architect 2026-09-04) — two rows back from the menu
     // row, and their 2026-08-27 rows verbatim: the architect deleted the
     // Iterations dropdown once the icon row had room again, so both commands
@@ -898,9 +876,9 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 //
 // CTRL BINDS ONLY WHERE redesign_button_ctrl_admits SAYS SO (app_state.h) — the
 // Up / Down step ladder's Ctrl rung (the two skip buttons, whose ctrl-click
-// was Ctrl+Home / Ctrl+End, left the row 2026-10-12), the WALK's Ctrl+Tab, PREVIOUS
-// MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl, 2026-09-29) and
-// RESTRICT UNDO's Ctrl+Z (2026-09-29) — which is why
+// was Ctrl+Home / Ctrl+End, left the row 2026-10-12), the WALK's Ctrl+Tab and
+// PREVIOUS MARKER's Ctrl+Shift+Tab (its own Shift+Tab under ctrl,
+// 2026-09-29) — which is why
 // the gate asks the BUTTON under the pointer rather than the band: the
 // admission is the roster's, so a ctrl press anywhere else, on the bare ground
 // of any row, or on one of the three dropdown anchors (which carry no chord row
@@ -910,9 +888,8 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 //
 // CTRL+SHIFT TOGETHER BIND ONLY WHERE redesign_button_ctrl_shift_admits SAYS
 // SO (app_state.h) — THE WALK, whose ctrl-shift press is its own key under
-// both modifiers, Ctrl+Shift+Tab, the paired march (architect 2026-09-26),
-// and RESTRICT UNDO, whose ctrl-shift press is Ctrl+Shift+Z, redo (architect
-// 2026-09-29). On every other button the pair spells no roster chord — strict modifier
+// both modifiers, Ctrl+Shift+Tab, the paired march (architect 2026-09-26).
+// On every other button the pair spells no roster chord — strict modifier
 // validation, and Ctrl+Shift+Up is unbound on the keyboard too — so it dies
 // here and the lift's chord build never sees it there. The gate asks the
 // roster, never a named button.
@@ -920,8 +897,7 @@ bool press_on_live_menu_anchor(const AppState& app, int x, int y) {
 // A SHIFT press is deliberately NOT judged here: its admission is a press-time
 // refusal of the arm body's (arm_redesign_press), where a non-admitting button
 // consumes the press rather than letting the band answer for it. A CTRL+SHIFT
-// press that passes here is the pair's admission and asks no shift-alone one:
-// Restrict Undo admits the pair while Shift+Z binds nothing
+// press that passes here is the pair's admission and asks no shift-alone one
 // (redesign_button_shift_admits_with, app_state.h).
 bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
                                    GuiInputState mods) {
@@ -8238,8 +8214,7 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // the modifier did (the flag's rationale is at its declaration). No
         // arm, no face: the release could only refuse it again. A shift
         // carried WITH a ctrl asks the pair's admission instead of the
-        // shift-alone one (redesign_button_shift_admits_with): Restrict Undo
-        // admits Ctrl+Shift+Z while Shift+Z binds nothing.
+        // shift-alone one (redesign_button_shift_admits_with).
         if (mods.shift &&
             !redesign_button_shift_admits_with(tc.id, mods.ctrl)) return true;
         // A DISABLED BUTTON'S PRESS IS A CONSUMED NOTHING: nothing arms, so
@@ -8603,8 +8578,7 @@ void GuiInputHandler::finish_chrome_press_release(
         //
         // AND IT REACHES NO CTRL-ADMITTING BUTTON THAT ADMITS NO SHIFT, by
         // construction rather than by an exclusion: such a button's own
-        // predicate answers false (Previous Marker, Center and Restrict Undo
-        // today; the two skips were of them until their buttons left the row
+        // predicate answers false (Previous Marker today; the two skips were of them until their buttons left the row
         // 2026-10-12), so a held press is the ordinary press. The ctrl road on
         // glass is the S Pen's side button held on the button, a real ctrl
         // bit carried by the press like a held Ctrl key, never this hold.
@@ -8618,10 +8592,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // carries ctrl, the hold adds shift, and the lift dispatches
         // Ctrl+Shift+Tab, the paired march — the pen's road to it, the tab
         // row's long press being the fingertip's. Without the pen's button the
-        // same hold is Shift+Tab, the previous marker, as before. RESTRICT
-        // UNDO IS THE OTHER (architect 2026-09-29): the side button held
-        // through a long press is Ctrl+Shift+Z, redo, while the bare hold
-        // reaches nothing, the lamp admitting no shift alone. (Up / Down admit
+        // same hold is Shift+Tab, the previous marker, as before. (Up / Down admit
         // both modifiers but not the pair, and they repeat, so the term below
         // excludes them twice over.)
         //
@@ -8662,7 +8633,7 @@ void GuiInputHandler::finish_chrome_press_release(
         // reaches this build only on a button that admits the pair (the gate,
         // the re-ask above and the hold's own term), so the chord it spells
         // is that button's key under both modifiers — the walk's
-        // Ctrl+Shift+Tab, Restrict Undo's Ctrl+Shift+Z.
+        // Ctrl+Shift+Tab.
         GuiInputState chord{};
         chord.ctrl  = tc.ctrl ||
                       (arm.ctrl && redesign_button_ctrl_admits(tc.id));
@@ -8743,8 +8714,8 @@ void GuiInputHandler::finish_chrome_press_release(
 // the history to its end meets the dead bit on its next fire and rests there
 // under the held pointer, greyed, nothing un-pausing it while the hold
 // stands, and the lift that ends a fired burst is consumed, their faces
-// greying on an empty stack, a locked target tab and the Restrict-undo lamp's
-// verdict through history_step_actionable and its companions), a
+// greying on an empty stack and a locked target tab through
+// history_step_actionable and its companions), a
 // rate of 0 PAUSES (stated at its own line), and lost eligibility DISARMS — a
 // context that revoked the burst ends it
 // rather than parking it. One fire per due tick, the next scheduled from NOW

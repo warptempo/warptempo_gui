@@ -410,10 +410,8 @@ struct UndoEntry {
     // live column, which is what it passes as op_mode; the one restamp,
     // Undo::stamp_top_entry_with_landing_view, writing the live column after
     // a phase paste's landing; and the redo counter-entry, copying it
-    // verbatim (restore_history_entry). READERS: the restore's column write
-    // (restore_history_entry, undo.cpp) and
-    // the lamp's verdict, undo_restore_stays_in_current_view (below), so the
-    // step the lamp permits and the column the restore writes are one answer.
+    // verbatim (restore_history_entry). READER: the restore's column write
+    // (restore_history_entry, undo.cpp).
     char                      landing_column       = 'W';
     char                      tab                  = 'A';
     // The S/T audio view the act LANDED in — the third context tag (with
@@ -1986,7 +1984,7 @@ struct TrimBarPressSeed {
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus),
-// row 4's TWENTY-FIVE
+// row 4's TWENTY-FOUR
 // view / mode / action buttons (OPEN PROJECT leading them since 2026-10-07,
 // the deleted toolbar row's four behind it since the 2026-08-12 relayout;
 // the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
@@ -2017,8 +2015,8 @@ struct TrimBarPressSeed {
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
 // below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped against kDropdownMenus and the chord table (45 chord rows + 3
-// anchors = 48 = kRedesignButtonCount, re-counted 2026-10-13; the count's
+// re-greped against kDropdownMenus and the chord table (43 chord rows + 3
+// anchors = 46 = kRedesignButtonCount, re-counted 2026-10-17; the count's
 // own statement is at kRedesignButtonCount below);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
@@ -2256,12 +2254,12 @@ enum class RedesignButton {
     // BOTH audio views; dark (the default), it is the raw picture. The
     // render, undo and every sidecar are untouched. The bit is
     // AppState::show_waveform_magnification, DARK AT EVERY PROJECT OPEN like
-    // the rest of this group's lamps. LIVE in both audio views, on a locked
+    // Follow, the group's other lamp. LIVE in both audio views, on a locked
     // tab, under the read-only lock and, since 2026-10-12 (architect: he
     // wants to magnify while walking history), in the `h` view, whose
     // allowlist admits the backtick (history_mode_key_blocked), so the derived
-    // partition shows the button beside Full Zoom Out there; Follow and
-    // Restrict Undo to Current View stay refused and hidden in the view.
+    // partition shows the button beside Full Zoom Out there; Follow stays
+    // refused and hidden in the view.
     IconWaveformMagnification,
     // (THE WAVEFORM MAGNIFICATION PAIR — Magnify on bare `=` and Reduce on
     // bare `-`, 2026-08-26 — closed this group until 2026-09-14, when the
@@ -2286,32 +2284,6 @@ enum class RedesignButton {
     // at the landing, and the lamp, its chord and this box were deleted; the
     // walk's camera is the landing owner's (Viewport::land_subject), no lamp
     // deciding it.)
-    //
-    // RESTRICT UNDO TO CURRENT VIEW (architect 2026-09-04 as Restrict Undo to
-    // Viewport; renamed and re-scoped 2026-09-22) — the `z` lamp, closing the
-    // viewport-class group, because it is also a viewport
-    // gesture. That is the architect's own reason for moving it here later the
-    // same day it landed, from the toolbar group, where it had stood between
-    // Redo and Render touching the pair it governs. Lit, a step whose restore
-    // would SWITCH THE VIEW — land on the other A/B tab, the other audio view
-    // or another marker column — refuses instead, cards, and leaves both
-    // stacks exactly as they were. (Until 2026-09-22 it refused a step whose
-    // restore would move the CAMERA; the restore's camera answers to what it
-    // restores, and the lamp asks the view alone.)
-    //
-    // A PER-PROJECT SESSION POSTURE like every other lamp in this group: the
-    // bit is AppState::restrict_undo_to_current_view, DARK AT EVERY PROJECT OPEN
-    // (architect 2026-09-14, with the other lamps — the fresh per-project
-    // AppState is the reset), in no settings file and in no vocabulary. It is
-    // a working posture — "hold my place while I take these back" — not a
-    // property of the piece.
-    //
-    // LIVE ON A LOCKED TAB (bare `z` authors nothing; the lamp's own chord is
-    // on the lock's allowlist even though the undo pair it governs is not) and
-    // DEAD IN THE `h` VIEW, where both undo stacks are frozen and the mode's
-    // allowlist drops the chord — the derived partition greys the face with
-    // nothing hand-listed.
-    IconRestrictUndo,
     // THE ITERATION GROUP (architect 2026-09-04) — TWO BUTTONS BACK FROM THE
     // MENU ROW, in a separator-led group of their own just ahead of the
     // render-entry pair. The Iterations dropdown carried both commands from
@@ -3079,20 +3051,18 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-14, when
-// Copy Resolved Value's button left the icon row; unchanged when the view
-// group became two radio pairs the same day, four buttons still):
-// THREE in row 1 (the menu anchors), TWENTY-SEVEN in row 4's enum block and
-// SEVENTEEN in the bottom row's — 47. PAINTED, the split is 3 + 25 + 19:
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-17):
+// THREE in row 1 (the menu anchors), TWENTY-SIX in row 4's enum block and
+// SEVENTEEN in the bottom row's — 46. PAINTED, the split is 3 + 24 + 19:
 // HistoryOlder and HistoryNewer, enumerated in row 4's block, paint in row 8
 // (kTransportHistoryStepGroup). Of
-// those, FORTY-FOUR carry a chord in kToolbarChords
+// those, FORTY-THREE carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 47;
+inline constexpr int kRedesignButtonCount = 46;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3227,7 +3197,7 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // then UNDO, REDO and RENDER (members joining and leaving and no boundary
 // moving), THE
 // VIEWPORT-CLASS GROUP (Full zoom out leading, the
-// magnification lamp, FOLLOW and the restrict-undo lamp), THE ITERATION
+// magnification lamp and FOLLOW), THE ITERATION
 // GROUP (the BPM opener, the grid-iterations lamp and, since 2026-09-19,
 // FLATTEN), the render-entry group (listen, the read-only toggle and, since
 // 2026-09-29, SETTINGS and ENABLE TOOLTIPS, help after settings since
@@ -3275,15 +3245,10 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // when it left the roster and Follow, the survivor, fell into the zoom group.
 //
 // FIVE FOR THE HOURS BETWEEN THE SECOND OF 2026-09-04'S ROW RULINGS AND THE
-// FOURTH, which deleted ONE LEADER
-// and moved ONE MEMBER between groups. IconMarkerColumn stopped opening a
+// FOURTH, which deleted ONE LEADER: IconMarkerColumn stopped opening a
 // group, so the two view lamps the radio-pair collapse had left as a group of
 // one each are one group of two, which is what they read as: one lamp per view
-// axis, side by side. And the RESTRICT UNDO lamp (to Viewport then, to
-// Current View since 2026-09-22) left the toolbar
-// group for the viewport-class group's tail — the architect's reason is that
-// "it is also a viewport gesture" — putting the toolbar group back at the four
-// it had held all day. No box was added or taken away; exactly one separator
+// axis, side by side. No box was added or taken away; exactly one separator
 // went.
 //
 // (THE RADIO-PAIR COLLAPSE EARLIER THAT DAY COST NO BOUNDARY, and the
@@ -5477,30 +5442,6 @@ struct AppState {
     };
     CameraPostureIdentity camera_posture_identity;
 
-    // RESTRICT UNDO TO CURRENT VIEW — the lamp on bare `z` (architect
-    // 2026-09-04; to Viewport until 2026-09-22).
-    // SESSION-ONLY AND NEVER SERIALIZED, which is what it SHARES with the
-    // hold posture and the follow lamp above it: they are session postures, in no settings
-    // vocabulary, uncarried by `'`, and dark at every project open.
-    //
-    // WHAT IT DOES: while it stands, an undo or redo whose restore would
-    // switch the view (the tab, the audio view or the marker column) is a
-    // consumed no-op that cards, and the stacks are left untouched. The
-    // question "would it switch the view" has ONE owner,
-    // undo_restore_stays_in_current_view (below), which the refusal and the
-    // Undo/Redo buttons' faces read. Nothing else in the
-    // product asks this bit: it does not reach the camera, the walk or any
-    // other act — it only decides whether one step runs at all.
-    // IT REFUSES AND NEVER PARTIALLY RESTORES: a step that runs puts back all
-    // three axes exactly as a dark lamp's does, so a half-restored view cannot
-    // exist. HELD BY HAND AND DERIVED FROM NOTHING — deriving it from the zoom
-    // was considered and rejected (architect 2026-09-16). THE LOCK OUTRANKS
-    // IT: on a read-only tab Ctrl+Z never reaches the lamp, the refusal being
-    // the lock's. A HELD Ctrl+Z cards once per burst (HeldRepeatDispatchScope,
-    // input_handler.cpp, moves the standing card), and a held Undo / Redo
-    // BUTTON never cards, its face greying on this same verdict.
-    bool    restrict_undo_to_current_view = false;
-
     // WAVEFORM MAGNIFICATION — the lamp on the bare backtick (architect
     // 2026-09-22; the backtick since 2026-09-23; reversed and universal
     // 2026-09-24), the only exceptions road to the derived gain. A session
@@ -5872,11 +5813,11 @@ struct AppState {
     // the lamp is still lit after it; a Tab walk, `p`, Ctrl+Tab, a waveform
     // click, a marker drop, an undo restore and a LOAD IN PLACE all leave it
     // lit, and the plain flag press keeps taking the ctrl branch until an act
-    // consumes what was built. That is bare `z`'s posture exactly
-    // (restrict_undo_to_current_view): the two session lamps are one family, in
-    // no settings vocabulary, never serialized, and per-project state for as
-    // long as the project stays open. `restrict_undo_to_current_view` is written
-    // by its own toggle alone; this bit took a COMPANION WRITE, the act class
+    // consumes what was built. That is bare `f`'s posture exactly
+    // (AppState::follow): the session lamps are one family, in no settings
+    // vocabulary, never serialized, and per-project state for as long as the
+    // project stays open. `follow` is written by its own toggle alone; this
+    // bit took a COMPANION WRITE, the act class
     // below (selection_consumed), a USE CASE ending rather than one lamp's
     // toggle reaching across to another. (Bare `x`'s VALUE DRAG lamp was the
     // family's third member from 2026-09-10 until 2026-09-13, when the
@@ -7358,7 +7299,7 @@ struct AppState {
     // changes nothing. EACH ADMISSION IS THE ROSTER'S — the shift-admitting
     // set, the ctrl-admitting one (redesign_button_ctrl_admits, which names
     // its members) and the pair's (redesign_button_ctrl_shift_admits: the
-    // walk's Ctrl+Shift+Tab and Restrict Undo's Ctrl+Shift+Z) — asked
+    // walk's Ctrl+Shift+Tab) — asked
     // at the press by the band claims' modifier gate and again at the lift's
     // chord build, so a carried bit, or the carried pair, can only ever reach
     // a button that spells something with it.
@@ -12640,12 +12581,6 @@ inline void reset_displayed_target_basis(AppState& a) {
 // passes through unchanged. An empty live domain (total <= 0 — unreachable
 // once audio is loaded, zero-frame sources refuse) has no in-domain frame
 // and clamps to 0.
-//
-// (THE CLAMP HAD A SECOND FACE from 2026-09-04 to 2026-09-22 —
-// clamp_frame_to_domain, taking its domain as a number so the Restrict undo to
-// viewport lamp could ask it of the domain a restore WOULD install. The lamp
-// stopped measuring the camera and the face went with its one other reader;
-// the body is this one again.)
 inline int64_t clamp_playhead_to_live_domain(int64_t frame,
                                              const AppState& a,
                                              const GuiAudio& audio) {
@@ -13747,10 +13682,7 @@ inline bool history_step_actionable(const AppState& a,
 // post-restore matcher's own two lambdas 2026-09-01, when the net-zero pop
 // needed the same question asked of a whole store and a second spelling of a
 // field list would have been exactly the drift the "one authoritative
-// enumeration per concept" preference exists to prevent; hoisted again into
-// this header 2026-09-04, when the Restrict undo to viewport lamp's face —
-// compiled here — measured a restore's touched set; that measurement left
-// 2026-09-22 and the comparators stayed).
+// enumeration per concept" preference exists to prevent).
 // `differ(a, b)` is false exactly when the two rows are identical in EVERY
 // field the store holds, serialized and session-only alike — row identity means
 // the WHOLE struct. THE READERS, re-grepped 2026-09-22: restore_touched_indices
@@ -13815,10 +13747,7 @@ inline bool phase_reset_row_fields_differ(const GuiPhaseResetMarker& a,
 // length and every row equal, which is what "these two stores hold the same
 // state" means wherever the question is asked of a list rather than a row.
 // ONE READER, re-grepped 2026-09-22: the coalesced burst's net-zero pop, which
-// asks both faces at once (entry_restores_live_marker_stores, undo.cpp). (The
-// warp face had a second from 2026-09-04 to 2026-09-22, the Restrict undo to
-// viewport lamp's proposed target map, deleted with the lamp's camera
-// measurement.)
+// asks both faces at once (entry_restores_live_marker_stores, undo.cpp).
 inline bool warp_rows_equal(const std::vector<GuiWarpMarker>& a,
                             const std::vector<GuiWarpMarker>& b) {
     if (a.size() != b.size()) return false;
@@ -13840,10 +13769,7 @@ inline bool phase_reset_rows_equal(const std::vector<GuiPhaseResetMarker>& a,
 // it writes back, and `before` the store that is live now. PURE: it reads two
 // vectors and returns a set. ONE READER, re-grepped 2026-09-22: the
 // post-restore selection (undo.cpp's apply_post_restore_rules_impl, this
-// function's applier). It came to this header 2026-09-04 so the Restrict undo
-// to viewport lamp's face could ask it before a restore ran; the lamp stopped
-// measuring the touched set 2026-09-22 (it reads the entry's view tags alone)
-// and the body stayed where it is.
+// function's applier).
 //
 // THE ARMS, in the order they rank:
 //   * EXPLICIT IDENTITY HINTS FIRST: entry.touched_snapshot names the touched
@@ -13972,79 +13898,15 @@ std::set<int> restore_touched_indices(const UndoEntry& entry,
     return target_set;
 }
 
-// THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP'S ONE PREDICATE (architect
-// 2026-09-22, replacing the 2026-09-04 Restrict Undo to Viewport measurement):
-// true when restoring `entry` would leave the VIEW as it stands — the A/B tab,
-// the S/T audio view and the W/P marker column. TWO READERS and no third
-// answer anywhere, both through the step read below — the act's refusal (the
-// Ctrl+Z arm, GuiInputHandler::run_undo_redo_command) and the Undo and Redo
-// BUTTONS' faces (redesign_button_enabled). The face does not restate the
-// act's condition; it asks it.
-//
-// IT IS ASKED ONLY WHILE THE LAMP STANDS. Dark, no caller consults it and every
-// step runs as it always has.
-//
-// THE ENTRY'S OWN THREE VIEW TAGS ARE THE WHOLE QUESTION: they record THE VIEW
-// THE ACT LANDED IN (UndoEntry, and the one restamp at
-// Undo::stamp_top_entry_with_landing_view), and a restore writes exactly those
-// three back before it lands anything (restore_history_entry, undo.cpp), so a
-// tag that differs from the live axis is a view switch the restore would make.
-//   * THE TAB and THE AUDIO VIEW are compared on every entry kind — a
-//     settings-only ('S') entry carries both and its restore writes both.
-//   * THE COLUMN is `landing_column` — the column tag, never op_mode, which
-//     names the store the entry changed (the two agree on every entry since
-//     S+P's return, 2026-10-12, UndoEntry::landing_column says why the tag
-//     stays) — and it is compared only on a MARKER entry: an 'S' entry
-//     carries no column, and its restore writes none (the column restore is
-//     gated off 'S').
-// NO CAMERA TERM, by the same ruling: the restore's camera answers to what it
-// restores (the visual tail, undo.cpp) and the lamp no longer asks where that
-// is — the camera restriction left whole, the touched-span measurement under
-// the map a restore would install with it.
-//
-// UNDO AND REDO ASK THE SAME QUESTION OF THE SAME TAGS. The step reads the TOP
-// ENTRY OF THE STACK IT WOULD POP — the undo stack for an undo, the redo stack
-// for a redo — and the redo stack's entries are the counter-entries the undo
-// pushed, which carry the undone entry's three tags VERBATIM (the counter's
-// construction in restore_history_entry: it is the same op in the opposite
-// direction, so redoing it lands the view undoing it did). So a redo is refused
-// exactly when re-applying the op would switch the view, the symmetric twin of
-// the undo's verdict, with no direction term here.
-inline bool undo_restore_stays_in_current_view(const AppState& a,
-                                               const UndoEntry& entry) {
-    if (entry.tab != a.active_tab_view) return false;
-    if (entry.audio_view != a.active_audio_view) return false;
-    if (entry.op_mode == 'S') return true;
-    return entry.landing_column == a.active_markers_view;
-}
-
-// THE LAMP READ OF A WHOLE STEP: true when the step from `stack` is permitted
-// to run — vacuously true while the lamp is dark, and true with it lit only
-// when the step's top entry would leave the view as it stands. It exists so its
-// readers ask ONE question rather than each spelling "the lamp is up AND the
-// entry switches the view" — the Ctrl+Z arm's refusal and the two buttons'
-// faces; an EMPTY stack answers true here and is refused by
-// history_step_actionable, which is the term that owns emptiness.
-inline bool undo_step_permitted_by_current_view_lamp(
-        const AppState& a, const std::vector<UndoEntry>& stack) {
-    if (!a.restrict_undo_to_current_view) return true;
-    if (stack.empty()) return true;
-    return undo_restore_stays_in_current_view(a, stack.back());
-}
-
 // THE UNDO / REDO BUTTONS' FACE, one step's whole question: the active tab
-// writable (the read-only lock drops Ctrl+Z on it), the step actionable
+// writable (the read-only lock drops Ctrl+Z on it) and the step actionable
 // (history_step_actionable: the stack, the target tab's lock, grid
-// iterations) and permitted by the Restrict Undo lamp. TWO READERS
-// (2026-09-29): the Undo and Redo arms of redesign_button_enabled, and the
-// Restrict Undo lamp's modifier line (redesign_button_tooltip's stateful
-// overload), which names Ctrl+Z and Ctrl+Shift+Z and drops where neither
-// would act.
+// iterations). ONE READER: the Undo and Redo arms of
+// redesign_button_enabled.
 inline bool history_step_button_actionable(
         const AppState& a, const std::vector<UndoEntry>& stack) {
     return !active_view_state(a).read_only &&
-           history_step_actionable(a, stack) &&
-           undo_step_permitted_by_current_view_lamp(a, stack);
+           history_step_actionable(a, stack);
 }
 
 // DROP THE HISTORY VIEW'S OWN FOCUS AND SELECTION — the ONE clearer for the
@@ -14438,16 +14300,6 @@ inline constexpr const char* kIterSweepUnloadableCellCard =
 // bracket stands the mode is lit, and while it is lit the piece is locked.)
 static_assert(kMaxIterSweepCells == 1000,
               "kIterSweepOverCapCard spells the cap; move both together");
-// THE RESTRICT-UNDO-TO-CURRENT-VIEW REFUSAL'S TWO SENTENCES (architect
-// 2026-09-04, reworded 2026-09-22 when the lamp's question became the view
-// rather than the camera): one clause per direction, sentence case, raised by
-// the key that refuses (GuiInputHandler::run_undo_redo_command's lamp arm).
-// No tooltip carries them: a tooltip names the act, the grey says the press
-// would do nothing, and the reason is the key's card.
-inline constexpr const char* kUndoSwitchesViewCard =
-    "That undo would switch the view";
-inline constexpr const char* kRedoSwitchesViewCard =
-    "That redo would switch the view";
 
 // THE ITERATION LOCK'S SENTENCE (architect 2026-09-10, on what grid iterations
 // admits: "Nothing that can ever land in the undo history should be allowed,
@@ -14508,8 +14360,8 @@ inline constexpr const char* kValueDragPhaseResetViewCard =
 
 // THE ITERATION LOCK'S UNDO PAIR (architect 2026-09-10: "They just don't go in
 // the undo stack at all; they're considered transient by design" — so while
-// grid iterations stands the history is frozen whole). It is the lamp's shape
-// one lock over: a CARD sentence per direction, one clause, sentence case,
+// grid iterations stands the history is frozen whole): a CARD sentence per
+// direction, one clause, sentence case,
 // raised by the key that refuses (input_handler.cpp's Ctrl+Z arm, ahead of the
 // empty-stack and other-tab terms because the lock is the outermost state).
 //
@@ -15228,12 +15080,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     directions.
 //   * THE READ-ONLY-LEGAL BUTTONS ARE DELIBERATELY NOT GREYED — Save, Render,
 //     the VIEW PAIRS' FOUR
-//     (bare 1/2/3/4), Full zoom out and Center, follow, the RESTRICT-UNDO-TO-CURRENT-VIEW lamp, and the
+//     (bare 1/2/3/4), Full zoom out and Center, follow and the
 //     read-only toggle, each one an allowlist entry in read_only_key_blocked.
-//     (The last of those is on the list although the UNDO PAIR it governs is
-//     not: the lamp is a posture switch that authors nothing, so its own chord
-//     is admitted, while Ctrl+Z stays blocked on a locked tab as it always
-//     was.)
 //     (THE TRIM
 //     SCISSORS were on this list, their chord being read-only-legal like every
 //     trim gesture, until their button was deleted on 2026-08-18; the chord is
@@ -15775,7 +15623,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // 2026-10-12 (architect: he wants to magnify while walking history —
         // the backtick is on that mode's allowlist beside the tooltip lamp,
         // so the derived partition above leaves it lit and standing, where
-        // `f` and `z` stay refused). IT MIRRORS ONE REFUSAL, THE CURVE'S
+        // `f` stays refused). IT MIRRORS ONE REFUSAL, THE CURVE'S
         // READINESS (architect 2026-09-24): the gain curve is derived on its
         // own thread after the load, the backtick refuses on a card until it
         // stands, and this face greys on the same predicate
@@ -15791,22 +15639,6 @@ inline bool redesign_button_enabled(const AppState& a,
         // is the `h` view's, whose allowlist does not name `f`, and the
         // derived partition above greys it there.
         case RedesignButton::IconFollow:
-            return true;
-        // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP MIRRORS NOTHING (2026-09-04),
-        // the next on this answer: bare `z` toggles the posture in either
-        // direction on any loaded piece and the lock admits it — the lamp
-        // authors nothing, it only decides whether a step runs. What the lamp
-        // makes conditional is UNDO and REDO, and those two faces carry the
-        // term (below), which is the truthful-button rule working as intended:
-        // the button whose ACT the bit can refuse is the button that greys,
-        // never the switch. It GREYS IN THE `h` VIEW, through the
-        // derived partition and with nothing hand-listed — bare
-        // `z` is off the mode's allowlist, both undo stacks being frozen while
-        // the view stands. ITS CTRL AND CTRL+SHIFT TWINS (Ctrl+Z / Ctrl+Shift+Z,
-        // architect 2026-09-29) change nothing under the twin rule: the plain
-        // toggle always acts, so the lamp never greys for them, and a
-        // modified press whose step would refuse reaches the key's own card.
-        case RedesignButton::IconRestrictUndo:
             return true;
         // PLAY RENDERS IGNORES THE LOCK (2026-08-28, when bare `l` became the
         // RENDER PLAYER's opener): the player plays a rendered wav and authors
@@ -16819,18 +16651,10 @@ inline bool redesign_button_enabled(const AppState& a,
                         : (history_checkpoint_actionable(a) ||
                            history_pull_actionable(a) ||
                            history_github_recheck_actionable(a)));
-        // UNDO'S AND REDO'S THIRD TERM IS THE RESTRICT-UNDO-TO-CURRENT-VIEW
-        // LAMP (architect 2026-09-04; its question the view since 2026-09-22),
-        // and it is the truthful-button rule's own shape: with the lamp lit
-        // the key refuses a step whose restore would switch the tab, the audio
-        // view or the marker column, so the face has to grey exactly there. It
-        // ASKS the act's predicate rather than restating it —
-        // undo_step_permitted_by_current_view_lamp (above) is the one owner
-        // the refusal and this face read — and it is vacuously true while the
-        // lamp is dark, so nothing changes for a user who never lights it.
-        // Ranked after the stack term because emptiness is the older and
-        // simpler answer. A held button's burst rests on this grey as it rests
-        // on the empty stack's (tick_chrome_press_repeat).
+        // UNDO AND REDO ASK ONE OWNER, history_step_button_actionable
+        // (above): the active tab writable and the step actionable (the
+        // stack, the target tab's lock, grid iterations). A held button's
+        // burst rests on this grey (tick_chrome_press_repeat).
         case RedesignButton::Undo:
             return history_step_button_actionable(a, a.history.undo_stack);
         case RedesignButton::Redo:
@@ -16956,11 +16780,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // that play's paging with the lamp still lit (AppState::follow).
         case RedesignButton::IconFollow:
             return a.follow;
-        // The restrict-undo-to-current-view lamp (2026-09-04): the same toggle
-        // pattern, reading the live bit bare `z` flips, so the lit
-        // face and the refusal cannot drift.
-        case RedesignButton::IconRestrictUndo:
-            return a.restrict_undo_to_current_view;
         // The Waveform Magnification lamp (architect 2026-09-22, reversed
         // 2026-09-24): the same toggle pattern, reading the live bit the bare
         // backtick flips — lit is the magnified picture, in both audio views.
@@ -17449,8 +17268,7 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // VERTICAL ARROWS, THE WALK and, since 2026-09-29, PREVIOUS MARKER,
 // whose ctrl press is its own Shift+Tab under ctrl, Ctrl+Shift+Tab, the paired
 // march (the lift ORs the carried ctrl into the row's own shift; on glass the
-// S Pen's side button), and RESTRICT UNDO, whose ctrl press is CTRL+Z, Undo
-// (architect 2026-09-29). (CENTER admits no ctrl since 2026-10-14: no
+// S Pen's side button). (CENTER admits no ctrl since 2026-10-14: no
 // modified `c` binds. The two skips, whose bare presses dispatched Home /
 // End and whose ctrl press the WHOLE-PIECE jump, Ctrl+Home / Ctrl+End
 // (architect 2026-09-26, restated 2026-09-29), left the row 2026-10-12: Home /
@@ -17495,31 +17313,27 @@ inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
 // moves the carried bit into the dispatched chord (the hold-repeat's arm and
 // fire build the same chord).
 inline constexpr bool redesign_button_ctrl_admits(RedesignButton b) {
-    return b == RedesignButton::IconRestrictUndo ||
-           b == RedesignButton::TransportWalkPrevious ||
+    return b == RedesignButton::TransportWalkPrevious ||
            b == RedesignButton::TransportWalk ||
            b == RedesignButton::TransportUp ||
            b == RedesignButton::TransportDown;
 }
-// THE CTRL+SHIFT-ADMITTING BUTTONS — THE WALK (architect 2026-09-26), whose
+// THE CTRL+SHIFT-ADMITTING BUTTON — THE WALK (architect 2026-09-26), whose
 // ctrl-shift press is its own key under both modifiers, Ctrl+Shift+Tab, the
-// paired march, and RESTRICT UNDO (architect 2026-09-29), whose ctrl-shift
-// press is Ctrl+Shift+Z, Redo. Everywhere else ctrl+shift together spell no
+// paired march. Everywhere else ctrl+shift together spell no
 // roster chord (strict modifier validation; Ctrl+Shift+Up, Ctrl+Shift+Home
 // and the rest are unbound on the keyboard too), so the band claims' modifier
 // gate refuses the pair on every other button and the lift's chord build
 // never sees it there. A button in this set admits CTRL alone as well (the
 // assert below) — the pair is the ctrl admission with a shift beside it —
-// but NOT NECESSARILY SHIFT ALONE: the walk does (Shift+Tab), Restrict Undo
-// does not (Shift+Z binds nothing), so a shift press on the lamp is the
-// consumed nothing any non-admitting button's is.
+// and the walk admits SHIFT alone too (Shift+Tab), though the set's rule does
+// not ask that of a member.
 inline constexpr bool redesign_button_ctrl_shift_admits(RedesignButton b) {
-    return b == RedesignButton::IconRestrictUndo ||
-           b == RedesignButton::TransportWalk;
+    return b == RedesignButton::TransportWalk;
 }
 // THE SHIFT A PRESS CARRIES, ASKED IN ONE PLACE: alone it is the shift
-// admission, and beside a carried ctrl it is the PAIR's — so Restrict Undo's
-// Ctrl+Shift+Z is admitted while its Shift+Z is not. THREE READERS, all in
+// admission, and beside a carried ctrl it is the PAIR's — so beside a
+// carried ctrl a shift is admitted on the walk alone. THREE READERS, all in
 // input_pointer.cpp: the arm's shift refusal (arm_redesign_press), the lift's
 // re-ask and its long-press term (finish_chrome_press_release).
 inline constexpr bool redesign_button_shift_admits_with(RedesignButton b,
@@ -17538,8 +17352,7 @@ inline constexpr bool redesign_button_shift_admits_with(RedesignButton b,
 // key's three modified forms, each spelled on the key). Left / Right admit
 // neither since 2026-09-21, the horizontal ladder retired. The walk states the
 // pair's implication too: a pair admission without the ctrl admission fails
-// here (Restrict Undo admits ctrl and the pair, its line naming both forms,
-// and no shift alone).
+// here.
 constexpr bool redesign_button_dual_modifier_is_ladder_or_pair() {
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const RedesignButton b = static_cast<RedesignButton>(i);
@@ -17586,12 +17399,6 @@ static_assert(!redesign_button_ctrl_admits(RedesignButton::IconZoomOriginal) &&
                   !redesign_button_ctrl_shift_admits(RedesignButton::IconZoomOriginal),
     "Center (bare `c`) admits no modifier: Ctrl+C, Shift+C and Ctrl+Shift+C "
     "bind nothing in the main window (chord_is_bound, gui_input.h)");
-static_assert(redesign_button_ctrl_admits(RedesignButton::IconRestrictUndo) &&
-                  redesign_button_ctrl_shift_admits(RedesignButton::IconRestrictUndo) &&
-                  !redesign_button_shift_admits(RedesignButton::IconRestrictUndo),
-    "Restrict Undo (bare `z`) admits Ctrl (Ctrl+Z, undo) and the pair "
-    "(Ctrl+Shift+Z, redo) and no Shift alone, Shift+Z binding nothing "
-    "(chord_is_bound, gui_input.h)");
 static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMarker) &&
                   !redesign_button_ctrl_admits(RedesignButton::IconJumpToDefiningMarker) &&
                   !redesign_button_ctrl_shift_admits(RedesignButton::IconJumpToDefiningMarker),
@@ -17650,7 +17457,7 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMar
 // Iterations, the three lamp exclusions, the since-deleted keep-centered
 // lamp's audition sentence; then Save's "Committing the checkpoint (Ctrl+S)", the walk lamp's
 // and Save's "History is unavailable", the iteration sweep's two verdicts on
-// Render, the restrict-undo lamp's "Undo/Redo is outside the view", the drop's
+// Render, the drop's
 // "Markers are placed in source view (S)", Copy Resolved Value's
 // collapsed-stack sentence and the two skips' "At the trim start/end".
 //
@@ -17678,7 +17485,7 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMar
 // verb and its opposite. Toggle inherit's own shape, worn since that day by
 // every lamp-carried toggle here — re-greped 2026-09-16 against the arms whose
 // line 1 begins "Toggle " and which redesign_button_selected lights:
-// waveform magnification, restrict undo to current view, grid iterations, read-only,
+// waveform magnification, grid iterations, read-only,
 // history view, history walk, cumulative and add to selection — and by the
 // render player's Repeat one. Until then those rows named a CONSTANT ACT while
 // the lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
@@ -17776,18 +17583,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // and has no shifted twin; the name is the toggle's.
         case RedesignButton::IconFollow:
             return {"Toggle Follow (F)", nullptr};
-        // THE UNDO POSTURE'S LAMP (2026-09-04): bare `z` toggles and has no
-        // shifted twin. It NAMES THE TOGGLE like every lamp — the state is the
-        // lamp's to tell — and it names the SWITCH, never what the switch
-        // makes conditional. Where the lamp refuses a step, the Undo or Redo
-        // button simply greys and Ctrl+Z cards the reason; no tooltip anywhere
-        // says it (the rule at this table's head). ITS SECOND LINE (architect
-        // 2026-09-29) names its two modified presses in one sentence, the
-        // walk's shape: ctrl is Ctrl+Z, undo, and ctrl+shift Ctrl+Shift+Z,
-        // redo. The overload drops it where neither step would act.
-        case RedesignButton::IconRestrictUndo:
-            return {"Toggle Restrict Undo to Current View (Z)",
-                    "Press Ctrl to undo, Ctrl+Shift to redo."};
         // THE ITERATION PAIR (2026-09-04, back from the deleted Iterations
         // menu), one line each: neither chord has a shifted twin, so neither
         // carries a second line. THESE TWO STRINGS ARE THE VOCABULARY'S OWNER
@@ -18266,15 +18061,14 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   never add a sentence.
 //
 // A MULTI-FORM LINE STANDS WHOLE WHILE ANY ONE OF ITS FORMS IS LIVE
-// (architect 2026-09-29). Two second lines name more than one modified form —
-// Next Marker's three (Shift, Ctrl, Ctrl+Shift) and Restrict Undo's two (Ctrl,
-// Ctrl+Shift) — and since this overload may drop a line but never rewrite
+// (architect 2026-09-29). One second line names more than one modified form —
+// Next Marker's three (Shift, Ctrl, Ctrl+Shift) — and since this overload may
+// drop a line but never rewrite
 // one, a line naming several forms cannot be shortened to its live ones: it
 // stands whole while any of its forms would act, and drops only where none
 // would. So Next Marker's stands under a lit grid iterations, where its
 // Ctrl+Shift form is the refused march (its Ctrl form switches the tab in
-// every state, so it never drops), and Restrict Undo's stands with an empty
-// redo stack, dropping only where neither step would act (its arm below). A
+// every state, so it never drops). A
 // greyed-out half of a sentence has no face to carry it. The single-form
 // march lines (Previous Marker's and Switch Tab's) are rule (2)'s
 // plain case and drop under that lamp.
@@ -18283,7 +18077,7 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // and the lamps' "Turn off … first" lines went on 2026-09-12 with the class's
 // first half, and the rest went with its second — "History is unavailable",
 // "Committing the checkpoint (Ctrl+S)", the iteration sweep's two refusals,
-// "Undo/Redo is outside the view", "Markers are placed in source view (S)",
+// "Markers are placed in source view (S)",
 // the collapsed-stack sentence, and the two skips' "At the trim start/end".
 // THE GREY IS THE MESSAGE AND THE REASON LIVES AT THE KEY'S CARD: a greyed
 // button raises no card, so nothing was lost by its hint going quiet, while
@@ -18411,21 +18205,14 @@ inline RedesignTooltipText redesign_button_tooltip(
     // iteration_lock_greys that gave every other greyed member the same
     // sentence, the three lamp-exclusion lines, Grid Iterations' read-only
     // line and Undo's and Redo's "Turn off grid iterations to undo/redo".
-    // THEN the rest of the class, the restrict-undo lamp's pair among
-    // them: from 2026-09-04 Undo and Redo wore "Undo is outside the view
-    // (Ctrl+Z)" / "Redo is outside the view (Ctrl+Shift+Z)" wherever the lamp
-    // greyed the face, with two lock terms spelled into the condition to keep
-    // the rank once the lock's own fork went — and both terms went with the
-    // fork they ranked against. THE ARCHITECT RULED THE WHOLE CLASS OUT: that
+    // THEN the rest of the class. THE ARCHITECT RULED THE WHOLE CLASS OUT: that
     // kind of language "belongs in a card", and it was applied inconsistently —
     // some greyed buttons wore a reason and others did not — so A TOOLTIP NAMES
     // THE ACT, THE GREY IS THE MESSAGE, AND THE REASON LIVES AT THE KEY'S CARD.
     // Nothing about the cards changed: every one of those chords still says its
     // sentence when the KEY is pressed, which is the road that has a press to
-    // answer — the lamp's pair at input_handler.cpp's Ctrl+Z arm
-    // (kUndoSwitchesViewCard / kRedoSwitchesViewCard since the 2026-09-22
-    // rewording) like all the others. A
-    // greyed button raises no card and now states no reason either.)
+    // answer. A greyed button raises no card and now states no reason
+    // either.)
     // THE TRANSPORT BUTTON'S OTHER HALF (2026-08-15, the play/stop collapse):
     // one button over bare Space, so the hint names whichever act the press
     // will run — "Stop" while the transport is live (a plain audition, or an
@@ -18494,18 +18281,6 @@ inline RedesignTooltipText redesign_button_tooltip(
         case RedesignButton::IconJumpToDefiningMarker:
             if (a.history_mode.active ||
                 !payload_eligible_marker(a, audio, a.last_selected_marker))
-                return {redesign_button_tooltip(b).line1, nullptr};
-            break;
-        // RESTRICT UNDO'S MODIFIER LINE (architect 2026-09-29) DROPS WHERE
-        // NEITHER STEP WOULD ACT — the Undo and Redo buttons' own faces, read
-        // through their one owner (history_step_button_actionable): an empty
-        // stack, a locked tab or target tab, grid iterations, or the lamp's
-        // own verdict. The `h` view refuses both chords at its allowlist, both
-        // stacks being frozen there.
-        case RedesignButton::IconRestrictUndo:
-            if (a.history_mode.active ||
-                (!history_step_button_actionable(a, a.history.undo_stack) &&
-                 !history_step_button_actionable(a, a.history.redo_stack)))
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
         // DROP MARKER: in the P column the shifted press refuses as already
@@ -18695,7 +18470,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // the walk at redesign_button_ctrl_shift_admits is what holds the buttons
 // admitting both to the two shapes whose one line names every form (Up and
 // Down's names both rungs of the step ladder, the walk's its key's three
-// modified forms; Restrict Undo's names its ctrl and its ctrl+shift form).
+// modified forms).
 //
 // IT HOLDS ON THE CONSTANT TABLE, the state-free truth. THE STATEFUL OVERLOAD
 // MAY DROP A LINE, NEVER ADD ONE (2026-09-01, the truthful-tooltips ruling,
@@ -18708,7 +18483,7 @@ inline RedesignTooltipText redesign_button_tooltip(
 // from a wall, where the jump names the member the step already reaches, and
 // since 2026-09-29 the MARCH LINE of PREVIOUS MARKER, SWITCH TAB and the two
 // TABS under a lit grid iterations, where the lock refuses the march,
-// RESTRICT UNDO's line where neither step would act, since 2026-10-11 SAVE's
+// since 2026-10-11 SAVE's
 // publish line in the `h` view, where the plain press is already the publish
 // chord (on a mirror outside it the line is renamed Pull, the twin's name by
 // the role, never added), and since 2026-10-14 JUMP TO DEFINING MARKER's

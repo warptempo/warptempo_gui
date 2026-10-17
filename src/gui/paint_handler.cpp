@@ -751,9 +751,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     // deleted on 2026-09-22 (the tablet's pen reaches the trim bar), one box
     // and one 2px gap
     // off the walk, no separator moving; FULL ZOOM OUT leads the group. What
-    // the group collects is the VIEWPORT CLASS — the two zoom commands, the
-    // magnification lamp, FOLLOW and RESTRICT UNDO — all in one
-    // separator-led run. THIS TABLE IS THE
+    // the group collects is the VIEWPORT CLASS — Full Zoom Out, the
+    // magnification lamp and FOLLOW — all in one separator-led run. THIS TABLE IS THE
     // ROW'S PAINTED ORDER — the walk
     // below is a plain accumulation over it — so a reorder is rows swapping,
     // plus the group's leader in redesign_button_opens_icon_group
@@ -811,16 +810,6 @@ constexpr IconRowDef kIconRowButtons[] = {
     // posture replaced it, and back that evening with its glyph: one box and
     // one 2px gap onto the walk, no separator moving.
     {RedesignButton::IconFollow, icons::Icon::GoJump},
-    // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP (2026-09-04; to Viewport until
-    // 2026-09-22) closes the same group, "it is also a viewport
-    // gesture" being the architect's own reason for moving it here from the
-    // toolbar group, where it had stood between Redo and Render for the hours
-    // of its first day. What it decides is whether an undo or redo may SWITCH
-    // THE VIEW — the tab, the audio view or the marker column. It wears
-    // TimelineLift, the sheaf under its clip (icons.h): the view held where it stands. It joins the group rather than opening one, so the move adds
-    // no box and no gap; what the same ruling took off the walk is one
-    // separator, the view lamps' own.
-    {RedesignButton::IconRestrictUndo, icons::Icon::TimelineLift},
     // THE ITERATION GROUP (architect 2026-09-04): the BPM opener (bare `m`)
     // and grid iteration mode (bare `i`), back from the menu row behind a
     // separator of their own, just ahead of the render-entry pair. The
@@ -1005,12 +994,12 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // PAINTED — its box cut at that column, or an empty rect when the opener and
 // the view pairs cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
-// walks). The band holds every pane down to 604 Windows px of BAND width
+// walks). The band holds every pane down to 558 Windows px of BAND width
 // outside the `h` view and 420 inside it, the window two program frame lines
-// wider (606 / 422 at 100 %; the width math at paint_icon_row, its one
-// statement, re-derived 2026-10-14 for the two view panes), so neither host
-// reaches the rule at its scale: the tablet's 2304 device px hold the row in
-// both states up to about 380 % and the laptop's 1920 up to about 317 % (the
+// wider (560 / 422 at 100 %; the width math at paint_icon_row, its one
+// statement, re-derived 2026-10-17), so neither host reaches the rule at its
+// scale: the tablet's 2304 device px hold the row in both states up to about
+// 410 % and the laptop's 1920 up to about 343 % (the
 // W arithmetic over the device width; each element's own rounding moves the
 // edge by a pixel or so).
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
@@ -2046,8 +2035,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // row 4 of the redesign; one frame line in from each side since
     // 2026-10-10): COOL EDIT'S TOOLBAR BAND since 2026-10-09 (the roster block
     // above), its groups the band's panes, the cases abutting within a pane,
-    // a groove between two panes — TWENTY-ONE members in
-    // SEVEN groups outside the `h` view and FOURTEEN in seven inside it (the
+    // a groove between two panes — TWENTY members in
+    // EIGHT groups outside the `h` view and FOURTEEN in eight inside it (the
     // width math below is the count's one statement), RE-COUNTED off the
     // roster enum, the painter's tables and the divider owner rather than
     // adjusted: OPEN PROJECT at the row's head (architect 2026-10-07, its
@@ -2063,11 +2052,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // zoom buttons in front of it removed 2026-09-25, and CENTER behind it
     // moved to the bottom row's walk group 2026-09-29) leading since the Show
     // trim region button that led it was deleted on 2026-09-22, THE
-    // WAVEFORM MAGNIFICATION LAMP behind it (2026-09-22), FOLLOW (in from
-    // the dissolved mass-marker group on 2026-08-27; out for the hours of
-    // 2026-09-23) and THE RESTRICT UNDO TO CURRENT VIEW LAMP closing the group
-    // (2026-09-04, arriving from the toolbar group later that day
-    // because it is a viewport gesture too) — THE ITERATION GROUP (the BPM
+    // WAVEFORM MAGNIFICATION LAMP behind it (2026-09-22) and FOLLOW closing
+    // the group (in from the dissolved mass-marker group on 2026-08-27; out
+    // for the hours of 2026-09-23) — THE ITERATION GROUP (the BPM
     // opener and grid iteration mode, back from the deleted menu row later
     // that same day, with FLATTEN behind them since 2026-09-19) — the
     // RENDER-ENTRY group
@@ -2089,8 +2076,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the view refuses whole (the companions publish empty rects outside the
     // view, the replaced members inside it), and inside the view every other
     // member whose chord it refuses in EVERY session is not painted
-    // (history_mode_hides_button, input_pointer.cpp) — Follow and Restrict
-    // Undo behind Full Zoom Out and the magnification lamp (which the view
+    // (history_mode_hides_button, input_pointer.cpp) — Follow behind Full
+    // Zoom Out and the magnification lamp (which the view
     // admits since 2026-10-12, architect: he wants to magnify while walking
     // history), and Listen, the
     // padlock and Settings ahead of Enable Tooltips — its neighbours closing
@@ -2110,8 +2097,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // face + its cases at 23 + 4 of face + its mid column and the dark
     // column after it (23n + 12); the right-anchored panes the same from the
     // band's dark right edge column. Outside the `h` view the LEFT WALK is
-    // seventeen members in five panes,
-    //   1 + 17·23 + 5·12 = 452,
+    // fifteen members in five panes,
+    //   1 + 15·23 + 5·12 = 406,
     // and inside it nine in five, 1 + 9·23 + 60 = 268 (Older and Newer
     // row 8's since 2026-10-11; the magnification lamp joined the view's nine
     // 2026-10-12); the RIGHT-ANCHORED
@@ -2121,14 +2108,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     //   1 + 57 + 1 + 57 + 1 + 34 + 1 = 152
     // (two panes of two cost 12 more than one pane of four: the second pane's
     // side air and lines), so the band holds every pane when it is at least
-    // 604 Windows px wide outside the view (420 inside it); the band stands
+    // 558 Windows px wide outside the view (420 inside it); the band stands
     // one program frame line in from each side (2026-10-10,
     // program_frame_rect), so the WINDOW holds it from two frame lines more,
-    // 606 (422) at 100 % — the tablet's 768 at 300 % a band of 766 with a
-    // recess of 162 between. IN DEVICE PX, off the painted walk (each line one
+    // 560 (422) at 100 % — the tablet's 768 at 300 % a band of 766 with a
+    // recess of 208 between. IN DEVICE PX, off the painted walk (each line one
     // relief line, each face and the glyph its own scaled_px): at the tablet's
-    // 300 % (cases 69) 1356 + 456 of its band's 2298; at the laptop's 138 %
-    // (lines 1, faces 7 and 6, cases 31) 608 + 204 of its 1918. A roster move
+    // 300 % (cases 69) 1218 + 456 of its band's 2298; at the laptop's 138 %
+    // (lines 1, faces 7 and 6, cases 31) 546 + 204 of its 1918. A roster move
     // restates these numbers.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused

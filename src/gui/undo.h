@@ -258,9 +258,7 @@ struct Undo {
     // entry changed, which recompute_dirty's per-column walk and the
     // post-restore rules read; the column the restore returns to is the
     // landing column (2026-09-23 — before it, a paste
-    // whose target entry refused kept op_mode 'P' as its column, and the
-    // Restrict Undo to Current View lamp refused its undo from the S+W the
-    // restore would never have left). Nothing between the push and
+    // whose target entry refused kept op_mode 'P' as its column). Nothing between the push and
     // this call reads the tags — the push clears the coalesce stamp, the
     // dirty walk reads op_mode alone, and the saved reference counts
     // entries — and the redo counter-entry copies them VERBATIM from the

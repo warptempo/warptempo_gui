@@ -265,15 +265,6 @@ int64_t source_frame_to_active_domain(const AppState& app, const GuiAudio& audio
 int64_t active_domain_to_source_frame(const AppState& app, const GuiAudio& audio,
                                       int64_t domain_frame);
 
-// (A CONTEXT-PARAMETERIZED FORWARD FACE, source_frame_to_domain, and
-// proposed_display_context — the context a state that is NOT live would
-// display, over a two-slot memo of proposed target maps — stood here from
-// 2026-09-04 to 2026-09-22 for one reader, the Restrict undo to viewport lamp,
-// which measured a restore's touched markers under the map the restore would
-// install. The lamp asks the entry's view tags alone since 2026-09-22 and all
-// three went with it; source_frame_to_active_domain above has its one body
-// again.)
-
 // The stem painters' samples-per-pixel and the single source of truth for the
 // on-screen column grid: the live level's spp on the sixteenth-frame grid
 // (painter_quantized_spp below), so the visible span w·q is a whole number of

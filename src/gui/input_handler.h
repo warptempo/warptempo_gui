@@ -1440,20 +1440,19 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors, the icon row's twenty-five and row 8's nineteen
+    // three menu anchors, the icon row's twenty-four and row 8's nineteen
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-14, after Copy Value left the band
-    // that day):
-    //   THE ICON ROW, 16 + 4 + 1 + 4 = 25 — the left walk's sixteen
+    // counts re-derived from them 2026-10-17):
+    //   THE ICON ROW, 15 + 4 + 1 + 4 = 24 — the left walk's fifteen
     //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
-    //   Full Zoom Out, Waveform Magnification, Follow and Restrict Undo;
+    //   Full Zoom Out, Waveform Magnification and Follow;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings and Enable
     //   Tooltips), the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, the walk lamp and Cumulative in the iteration
     //   group's — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
     //   flush right in two panes (kIconRowViewPairs, Source / Target and
-    //   Warp / Phase Reset since 2026-10-14) — 21
+    //   Warp / Phase Reset since 2026-10-14) — 20
     //   standing outside the `h` view (the four stand-ins publishing empty
     //   rects) and 14 inside it (the stand-ins in, the two authoring groups
     //   they replace out, and the view's hide leaving Open Project and
@@ -3897,8 +3896,8 @@ private:
 
     // THE UNDO / REDO COMMAND, ONE BODY (factored out of on_key's Ctrl+Z arm
     // 2026-09-17): the iteration lock's pair of cards, the empty-stack and
-    // other-tab-read-only refusals (history_step_actionable), the
-    // restrict-undo lamp's refusal, then Undo::do_undo / do_redo. The caller
+    // other-tab-read-only refusals (history_step_actionable), then
+    // Undo::do_undo / do_redo. The caller
     // has passed on_key's head gates; `synthesized_repeat` is a held key's
     // repeat bit (a held Ctrl+Z meeting the empty stack stops silently).
     // TWO CALLERS: the Ctrl+Z arm, and run_undo_redo_without_key below.
@@ -3914,8 +3913,8 @@ private:
     // order are at the definition.
     //
     // BOTH ANSWER WHETHER A RESTORE RAN (architect 2026-09-18): false at every
-    // refusal arm of their own — the command's three (the iteration lock,
-    // history_step_actionable's pair, the restrict-undo lamp) and the
+    // refusal arm of their own — the command's two (the iteration lock and
+    // history_step_actionable's pair) and the
     // key-less road's head gates — otherwise the ops' own answer
     // (Undo::do_undo / do_redo, which return false on their belt). THE ANSWER
     // IS THE CAR'S: with the render player closed the head unit's Previous and
@@ -3950,32 +3949,8 @@ private:
     std::string modal_editor_swallow_card(GuiKey key, GuiInputState mods);
     bool authoring_lock_refuses_chord(GuiKey key, GuiInputState mods);
 
-    // THE RESTRICT-UNDO-TO-CURRENT-VIEW LAMP'S ONE SETTER (architect 2026-09-04) —
-    // set_tab_read_only's shape with ONE road: bare `z`, which the
-    // icon row's own button reaches by synthesizing that press. There is no
-    // settings-editor road, because there is no key: the bit is a per-project
-    // SESSION POSTURE (AppState::restrict_undo_to_current_view), dark at every
-    // project open, in no sidecar and in no vocabulary.
-    //
-    // WHAT THE BIT GOVERNS IS UNDO AND REDO AND NOTHING ELSE. Lit, a step whose
-    // restore would switch the view — the tab, the audio view or the marker
-    // column the entry landed in (architect 2026-09-22; it asked whether the
-    // restore would move the camera until then) — refuses, cards and leaves
-    // both stacks untouched; the verdict has one owner,
-    // undo_step_permitted_by_current_view_lamp (app_state.h), which the Ctrl+Z
-    // arm and the two buttons' faces read. The bit reaches no camera, no walk
-    // and no other act.
-    //
-    // What it does: writes the field. No damage call — the lamp's face and the
-    // two faces it can grey all ride the per-tick comparator like every other
-    // stateful button face, and no glyph swaps on this bit. History-less: no
-    // undo entry, no dirty bit, and nothing to persist. Nothing moves at the
-    // toggle either way — the bit is read at the NEXT Ctrl+Z, so lighting it
-    // changes nothing already on screen.
-    void set_restrict_undo_to_current_view(bool desired);
-
     // THE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect 2026-09-22,
-    // reversed and universal 2026-09-24) — the restrict-undo lamp's shape
+    // reversed and universal 2026-09-24) — set_tab_read_only's shape
     // with ONE road: the bare backtick, which the icon row's button reaches
     // by synthesizing that press, in either audio view. The bit
     // (AppState::show_waveform_magnification) is a per-project session
