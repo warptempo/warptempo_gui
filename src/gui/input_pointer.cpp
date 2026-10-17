@@ -3057,8 +3057,7 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     // the mouse's captured drags read motion alone and the pinch's zoom
     // holds its seated pivot. (The wheel's routing predicate, wheel_context,
     // was asked at each frame's point until this ruling, so a pan wandering
-    // off the waveform froze there; the stereo divider's rows, re-admitted
-    // alone earlier the same day, are one case of the rule.)
+    // off the waveform froze there.)
     // WHAT THE FRAME STILL ASKS IS STATE, NEVER PLACE — the wheel's modal
     // refusals, which can come to stand mid-gesture without the finger
     // choosing a surface: a prompt, the progress modal, an open dropdown, a
