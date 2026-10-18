@@ -7,8 +7,9 @@ resolves to its first family FACES has (as a text renderer falls through the lis
 numeric weight of 600 or more, or bold / bolder, takes the bold face (Liberation Sans has regular and bold files). The text's
 own `transform`, when it has one, is carried onto the path verbatim, ahead of the pen's translate. FACES: Liberation
 Sans for the history clock's digits (document-open-recent, run by build_set.py's `text-to-outlines` treatment;
-history's again since 2026-10-16), the one face the tool knows (the own metronome's WARP, outlined from DejaVu Sans
-Bold 2026-10-16, left with its lettering 2026-10-17, and the font file with it). The product's resvg is built without
+history's again since 2026-10-16), the one face the tool knows (the digital metronome's WARP, Warp's own file of
+2026-10-16/17, outlined from DejaVu Sans Bold 2026-10-16, left with its lettering 2026-10-17, and the font file with
+it; the speedometer, Warp's since 2026-10-17 evening, carries no lettering). The product's resvg is built without
 text and draws none; the outlines are the geometry a text renderer lays down from the same file, measured 0.26/255
 mean against rsvg's own text rendering of document-open-recent. A notice, when given, is the changed-file comment
 written at the file's head.

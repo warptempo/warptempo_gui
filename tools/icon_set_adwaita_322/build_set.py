@@ -1,9 +1,9 @@
 """The Adwaita 3.22.0 icon set by enumerator (architect 2026-10-14): for every row of mapping.tsv, extract.py's
 pruned 48-unit file from the row's sheet and slot, its drop shadows removed by shadows.tsv's ids (architect
 2026-10-15) and any other element the architect rules out by removed.tsv's (no row today); THE SET'S ONE OWN FILE, the
-`own` treatment (architect 2026-10-16): own/<sheet>, the architect's digital metronome, NOT Adwaita's, COPIED with its
-dated notice inserted as one XML comment after the root's start tag and every other byte verbatim (DigitalMetronome
-and AppIcon both from it, no tarball check; drawn in the 48 frame with no lettering since 2026-10-17);
+`own` treatment (architect 2026-10-16): own/<sheet>, Warp's speedometer (architect 2026-10-17 evening), NOT
+Adwaita's, COPIED with its dated notice inserted as one XML comment after the root's start tag and every other byte
+verbatim (Speedometer and AppIcon both from it, no tarball check; drawn in the 48 frame with no lettering);
 the `text-to-outlines` treatment, DocumentOpenRecent's (history's clock with the back arrow, architect 2026-10-16):
 its clock digits turned into Liberation Sans Bold outlines by text_to_paths.py at the build; the derived TabDetachB
 (preferences-system-windows with the lower-right window copy, use5281, moved after the front window g5270: element
@@ -21,7 +21,7 @@ NOTES={'AccessoriesDictionary':'NEW: Source (architect 2026-10-14)','CameraPhoto
 'ChangesAllow':'NEW: Read-Only while unlocked (architect 2026-10-14)','ChangesPrevent':'NEW: Read-Only while locked (architect 2026-10-14)',
 'DialogOkApply':'Load in Place (architect 2026-10-14)','DocumentSave':'the floppy retired (architect 2026-10-14)','InputTablet':'NEW: Target (architect 2026-10-14)',
 'Merge':'Flatten: the broom (architect 2026-10-14)','TabDetachB':'DERIVED, below',
-'DigitalMetronome':'OWN FILE, not Adwaita\'s: Warp (architect 2026-10-16), above','AppIcon':'OWN FILE, DigitalMetronome\'s: the program icon (architect 2026-10-16)',
+'Speedometer':'OWN FILE, not Adwaita\'s: Warp (architect 2026-10-17 evening), above','AppIcon':'OWN FILE, Speedometer\'s: the program icon (architect 2026-10-17 evening)',
 'DocumentOpenRecent':'History: the clock turned back (architect 2026-10-16)','NetworkWiredDisconnected':'NEW: Session (architect 2026-10-15: shut off git and stay local)',
 'EditFind':'NEW: Center (architect 2026-10-16: the magnifier finds the playhead)','ViewRestore':'NEW: Full zoom out (architect 2026-10-16: the view shrunk back)',
 'AudioVolumeHigh':'NEW: Waveform magnification (architect 2026-10-16: the louder waveform)'}
@@ -32,30 +32,18 @@ DOCUMENT_OPEN_RECENT_NOTICE=(" DocumentOpenRecent: adwaita-icon-theme 3.22.0 doc
  "fonts/LiberationSans-Bold.ttf (the product's resvg draws no text); its drop shadows removed, as from every seat of the set "
  "(2026-10-15); every other element unchanged. ")
 TEXT_NOTICES={'DocumentOpenRecent':DOCUMENT_OPEN_RECENT_NOTICE}
-OWN_NOTICE=(' DigitalMetronome and AppIcon: NOT from adwaita-icon-theme 3.22.0. The architect\'s own drawing (2026-10-17), '
- 'a digital metronome drawn in the 48-unit frame at Adwaita 3.22\'s level of detail on the grammar of its pda: one dark '
- 'outline on the pixel grid round a case 44 x 34 units with a vertical gradient lighter at the top, a white highlight '
- 'line 1 unit inside fading top to bottom at .4 (.3 until 2026-10-17 evening, when the architect tuned the drawing toward '
- 'the pda\'s gentle steps on 2x / 4x phone sheets: the highlight lighter, the display\'s gradient a radial; .5 for one '
- 'commit, then softened to .4 off a .45 / .40 / .35 / .30 series), a dark line '
- 'at .12 inside the foot and right edge, the pda\'s gloss sweep on the case and the display alike; the display a soft '
- 'radial gradient from its bottom centre on the pda\'s geometry (the centre 77 % down, the radius 1.08 x the width and '
- '.45 x the height; a diagonal linear gradient until that evening) in a 1-unit dark frame with a black line at .16 just '
- 'inside and the recess\'s light line just outside; the speaker grill ten holes by two (eight until 2026-10-17 evening, '
- 'widened into the room the power cap left); two buttons, flat discs with a dark ring, at x 31.5 and 38.5 on y 33.5 '
- '(the row lowered half a unit that evening off a 33 - 35 series; the yellow power cap REMOVED the same evening: "it is '
- 'just the power button, it really does not need to be there - tempo up, tempo down and the grill are the key features"). '
- 'The display shows the pendulum at the end of its swing, the Korg MA-1\'s '
- 'one tick: a stick 10.5 units long leaning 45 degrees away from the note about a pivot on the window\'s foot, centred '
- 'between the window\'s left edge and the note (the swing 45 degrees each way, its whole arc inside the window), cut 2 '
- 'units above the foot, beside a quarter note with room right of its stem for the flag a metronome\'s eighth or '
- 'sixteenth would carry, never drawn (architect 2026-10-17, the swing\'s second round; the MA-2\'s three-tick persistence '
- 'and the pivot 6 units below the window were the morning\'s). Every '
- 'tone is the earlier drawing\'s own. History: the metronome of 2026-10-16, drawn with Google\'s Gemini at his prompt '
- 'after a Korg MA-1, cleaned on tablet mocks and re-laid on the MA-1\'s proportions in a nested 1024-unit viewport at '
- '120 %, its WARP lettering, its 120 digits and its two sheens removed with this re-render ("too detailed; needs to be '
- 'more like GNOME icons"). The drawing is licensed under the GNU LGPL v3, the set\'s licence (architect 2026-10-15). '
- 'Warp, and the program icon. ')
+OWN_NOTICE=(' Speedometer and AppIcon: NOT from adwaita-icon-theme 3.22.0. Warp\'s glyph and the program icon, a speedometer '
+ '(architect 2026-10-17 evening, "c1. ok to implement and install"): drawn with Google\'s Gemini at his prompt against a '
+ 'style sheet of Lapo Calamandrei\'s glossy Adwaita 3.22 drawings, the second of four drawings, in the 48-unit frame '
+ 'with no nested viewport. Cleaned the same evening: its three numerals (0, 120, 240) deleted with their empty group '
+ '(the product\'s resvg draws no text), its ground-shadow ellipse deleted with its unused gradient; its chrome gradients '
+ '(the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap) re-tinted from Tango aluminium (hue '
+ '60 to 90, saturation 3 to 9 %) to hue 210 at saturation 6 %, every stop\'s HLS lightness kept (variant C1); every '
+ 'other element as drawn, the needle\'s and the hub\'s dark copies on the face among them. The drawing: centre (24, 23), '
+ 'a chrome bezel r 20.5 with a .8 stroke round a dark face r 16.2 under a glass gloss; nine white majors and ten minors '
+ 'on a 270 degree arc from -135 to +135 degrees, its last 45 degrees a red gradient arc with a glow; a tapered red needle '
+ 'at +52 degrees from twelve o\'clock with a bright ridge line; a chrome hub cap. The drawing is licensed under the GNU '
+ 'LGPL v3, the set\'s licence (architect 2026-10-15). Warp, and the program icon. ')
 TEXTS=['COPYING','COPYING_LGPL','COPYING_CCBYSA3','AUTHORS']
 def copy_own(src,p):
     """the own file, its bytes verbatim but for OWN_NOTICE inserted as one comment after the root's start tag (line 1,

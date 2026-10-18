@@ -9,14 +9,14 @@ Builds `assets/icons/adwaita-3.22/` (architect 2026-10-14) from the adwaita-icon
 `<tarball-root>` is the extracted `adwaita-icon-theme-3.22.0/` folder. `mapping.tsv` is the set: one row per
 `icons::Icon` enumerator, its freedesktop name, its sheet under `src/fullcolor/`, the 48 slot's rect in the sheet's
 user units and its treatment (`-`, `tab-b`, `text-to-outlines`, `own`). THE SET'S ONE OWN FILE (architect 2026-10-16):
-`own/DigitalMetronome.svg`, the digital metronome, the architect's own drawing and NOT Adwaita's (the set's README its
+`own/Speedometer.svg`, Warp's speedometer (architect 2026-10-17 evening), NOT Adwaita's (the set's README its
 provenance and licence) — an `own` row names it in the sheet column (name and slot `-`) and is COPIED, not extracted:
 its bytes verbatim but for a dated notice inserted as one XML comment after the root's start tag, no tarball check;
-DigitalMetronome and AppIcon (the program icon, `tools/app_icon/`) are both that copy. The drawing (2026-10-17) is drawn straight in the 48-unit
-frame at Adwaita 3.22's level of detail on the grammar of its `pda` (the set's README the description), no lettering,
-no `<text>`, no nested viewport; it replaced the metronome of 2026-10-16, Gemini's drawing cleaned and re-laid on the
-Korg MA-1's proportions in a nested 1024-unit viewport at 120 %, its WARP outlined from DejaVu Sans Bold (git
-history). `shadows.tsv` is
+Speedometer and AppIcon (the program icon, `tools/app_icon/`) are both that copy. The drawing was made with Google's
+Gemini at the architect's prompt against a style sheet of Adwaita 3.22's glossy drawings, in the 48-unit frame with
+no nested viewport, then cleaned (its numerals and ground shadow deleted, no `<text>`) and its chrome re-tinted cool
+(the set's README the description).
+`shadows.tsv` is
 the drop-shadow list (architect 2026-10-15, "we'll go with none"; approved icon by icon on a sheet): one row per
 enumerator, the ids of the seat's drop shadows (`-` none; an `own` row always `-`). `removed.tsv` lists the OTHER
 elements the architect rules out of a drawing (optional rows, the same columns, removed with the shadows and

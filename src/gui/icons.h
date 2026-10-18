@@ -6,10 +6,10 @@
 // adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/ artwork at its 48
 // slot, extracted as a standalone 48-unit file by
 // tools/icon_set_adwaita_322/, nothing redrawn and nothing from another
-// release — but ONE OWN FILE, the digital metronome (architect 2026-10-16:
-// Warp's glyph and the program icon, the architect's own drawing, NOT
-// Adwaita's, copied by the same tool; the set's README its provenance and
-// licence) — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
+// release — but ONE OWN FILE (architect 2026-10-16), the speedometer since
+// 2026-10-17 evening (Warp's glyph and the program icon, drawn with Gemini
+// at the architect's prompt, NOT Adwaita's, copied by the same tool; the
+// set's README its provenance and licence) — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
 // (architect 2026-10-15, "we'll go with none": a drop shadow is the live
 // glyph's raised fiction, and Cool Edit's flat bitmaps never had one — the
 // approved list tools/icon_set_adwaita_322/shadows.tsv); hard-coded (the `icons` device key and the Settings Icons row were
@@ -91,14 +91,12 @@ enum class Icon {
     // 1 / 2) and the Warp / Phase-reset pair (bare 3 / 4), one glyph each.
     AccessoriesDictionary, // Source — the primary source
     InputTablet,         // Target — the authoring surface
-    DigitalMetronome,    // Warp — the architect's own digital metronome,
-                         // the set's one own file (architect 2026-10-16:
-                         // the tempo instrument; re-rendered 2026-10-17 at
-                         // Adwaita 3.22's level of detail on the pda's
-                         // grammar, its display the swing beside a quarter
-                         // note, no lettering); appointment-new's clock retired
-                         // ("it fits in theory, but it just didn't fit in
-                         // practice")
+    Speedometer,         // Warp — the speedometer, the architect's pick
+                         // drawn with Gemini at his prompt, the set's one
+                         // own file (architect 2026-10-17 evening, "c1. ok
+                         // to implement and install"): the tempo
+                         // instrument; the digital metronome of
+                         // 2026-10-16/17 retired 2026-10-17 evening
     CameraPhoto,         // Phase Reset — the set's camera-photo, the phase
                          // snapshot: a reset re-grounds the synthesis phase
                          // to the source's at one frame and it decoheres
@@ -201,10 +199,10 @@ enum class Icon {
                          // arrow, the drag it arms (architect 2026-10-11:
                          // "a double-sided arrow with an up and a down";
                          // never a zoom glyph)
-    AppIcon,             // the caption's icon — the digital metronome,
-                         // DigitalMetronome's file byte for byte, the
-                         // program icon outside the window too (architect
-                         // 2026-10-16; tools/app_icon/)
+    AppIcon,             // the caption's icon — the speedometer,
+                         // Speedometer's file byte for byte, the program
+                         // icon outside the window too (architect
+                         // 2026-10-17 evening; tools/app_icon/)
 };
 
 // Roster size, the names' and the load's count (load_svg_set parses one
@@ -218,7 +216,7 @@ inline constexpr int kIconCount = 60;
 inline constexpr const char* kIconNames[] = {
     "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
     "VcsCommit",
-    "VcsPull", "AccessoriesDictionary", "InputTablet", "DigitalMetronome",
+    "VcsPull", "AccessoriesDictionary", "InputTablet", "Speedometer",
     "CameraPhoto",
     "ViewRestore", "EditFind", "AudioVolumeHigh", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",

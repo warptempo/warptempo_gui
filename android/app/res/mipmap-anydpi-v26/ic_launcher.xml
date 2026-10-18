@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture (architect 2026-10-12; the metronome since
-     2026-10-16, re-rendered 2026-10-17): the architect's digital metronome,
+     recents card). Its picture (architect 2026-10-12; the speedometer
+     since 2026-10-17 evening): the speedometer drawn with Gemini at his prompt,
      the caption's icon and the glyph Warp wears,
      assets/icons/adwaita-3.22/AppIcon.svg, rasterised ANTIALIASED by
      rsvg-convert (librsvg on the laptop; a vector, not pixel art) and

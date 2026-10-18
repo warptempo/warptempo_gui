@@ -2,8 +2,8 @@
 
 adwaita-icon-theme 3.22.0, alone (architect 2026-10-14): every drawing is the 3.22.0 tarball's own `src/fullcolor/`
 artwork at its 48 slot, nothing redrawn and nothing from any other release; gnome-icon-theme 2.28, the set before it,
-retired whole the same day. THE ONE EXCEPTION is the set's OWN FILE (architect 2026-10-16): the digital metronome,
-Warp's glyph and the program icon (`DigitalMetronome.svg`, `AppIcon.svg`), NOT Adwaita's (below, "The own file"). One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator.
+retired whole the same day. THE ONE EXCEPTION is the set's OWN FILE (architect 2026-10-16): the speedometer since
+2026-10-17 evening, Warp's glyph and the program icon (`Speedometer.svg`, `AppIcon.svg`), NOT Adwaita's (below, "The own file"). One SVG per `icons::Icon` enumerator (`src/gui/icons.h`), each named by its enumerator.
 The set is hard-coded (`icons::kIconSet`, `adwaita-3.22`; the `icons` device key and the Settings Icons row were
 removed 2026-10-12). The program parses the files at launch, in place, through resvg (`src/gui/svg_icon.h`): on the
 laptop from this folder, on the tablet from the APK's `icons/adwaita-3.22/` assets (`android/app/build_apk.sh`); a
@@ -32,8 +32,8 @@ checked against the sheet cropped to its slot and against the theme's own shippe
   (https://download.gnome.org/sources/adwaita-icon-theme/3.22/), sha256
   `c18bf6e26087d9819a962c77288b291efab25d0419b73d909dd771716a45dcb7`. Each file's source sheet and its sha256 are in
   the table below.
-- The own file, `DigitalMetronome.svg` and its copy `AppIcon.svg`: the project's own, its source
-  `tools/icon_set_adwaita_322/own/DigitalMetronome.svg` (below, "The own file").
+- The own file, `Speedometer.svg` and its copy `AppIcon.svg`: the project's own, its source
+  `tools/icon_set_adwaita_322/own/Speedometer.svg` (below, "The own file").
 
 ## Licence
 
@@ -51,44 +51,26 @@ carries no lettering and no font's outlines.
 
 ## The own file
 
-`DigitalMetronome.svg` (2026-10-17), and `AppIcon.svg` byte for byte, is NOT from adwaita-icon-theme: Warp's glyph and
-the program icon (`tools/app_icon/gen_app_icon.sh`), the tempo instrument. PROVENANCE: the architect's own work, a
-digital metronome drawn straight in the 48-unit frame (no nested viewport) at Adwaita 3.22's level of detail on the
-grammar of the set's own `pda` at 48 (architect 2026-10-17: the drawing before it was "too detailed; needs to be more
-like GNOME icons — fewer, thicker lines and elements, like the 3.22 icons at 48 px"). THE CASE, 44 × 34 units (x 2–46,
-y 7–41; the 120 % seat of 2026-10-16 had the body 45 × 33.75): one dark outline `#0b1d3a` on the pixel grid round a
-vertical gradient `#2d5fae` → `#173a73`, lighter at the top; a white highlight line 1 unit inside fading top to
-bottom, at .4 (architect 2026-10-17 evening, tuning the drawing toward the pda's gentle steps on 2x / 4x phone sheets —
-"the transitions are not harsh"; .3 until then, .5 for one commit (7f1a6119) and softened to .4 the same evening off a
-.45 / .40 / .35 / .30 series — the pda's own .3 sits over a grey body, where white reads brighter than over our blue); a dark line at .12 inside the foot and the right edge; the pda's gloss sweep, a white region at .1 from
-the left edge two thirds down, one S-curve to the top-right corner. THE DISPLAY across the face's upper half: a soft
-radial gradient `#adb4a7` → `#949b8e` from the window's bottom centre on the pda's geometry (the centre 77 % down, the
-radius 1.08 × the width and .45 × the height; the same evening — a diagonal linear gradient until then) in a 1-unit dark
-frame `#10213d`, a black line at .16 just inside it and the recess's
-light line just outside, the same gloss sweep over it. THE PENDULUM at the end of its swing, the Korg MA-1's one tick (architect 2026-10-17, the swing's second round — "just
-show the last frame"; the MA-2's three-tick persistence, ±36° about a pivot 6 units below the window, was the morning's):
-one stick 10.5 units long in `#353934`, 1.6 units wide tapering to .8 at the tip, leaning 45° AWAY from the note (left)
-about a pivot on the window's foot, centred between the window's left edge and the note's head (4.9 units of air each
-side of the fan); the swing is ±45° and its whole arc stays inside the window — the vertical position would end 3.5
-units under the top ("realistic: the swing must not cause the pendulum to fall offscreen"); the stick cut 2 units above
-the window's foot (the MA-2's gap); the quarter note in `#2d302c`, Gemini's own (the head rx 7.5, ry 5.5 at −20°), its stem's right edge on the
-head's vertical tangent with its foot at the tangent point, the junction seamless, the stem at x 35.3 — .7 unit left of
-the morning's place, leaving 3.5 units of air right of the room an eighth's or sixteenth's flag would take (2.2 × 5.3
-units from the stem's top-right, engraving's proportions; the real MA-1's display swaps its one note glyph for the
-rhythm set), never drawn ("it looked crowded to its right"). THE BOTTOM ROW: the speaker grill
-ten holes by two at the left (x 6–25, its left edge on the display frame's; eight holes until 2026-10-17 evening, widened
-into the room the power cap left); two round buttons, flat discs `#2c3036` with a dark ring `#060c18`, at x 31.5 and
-38.5 on y 33.5 (the row lowered half a unit that evening off a 33–35 series, "the buttons sit a little high"; the yellow
-power cap `#dabe2f` at the right REMOVED the same evening — "it's just the power button, it really doesn't need to be
-there; tempo up, tempo down and the grill are the key features" — two dark buttons moved right into its room, his pick
-off a sheet of button rows). Every tone is the earlier drawing's own gradient
-stops. No `<text>`, no filter, no CSS class, no font's outlines. HISTORY: the digital metronome of 2026-10-16, drawn
-with Google's Gemini at his prompt after a Korg MA-1 in Adwaita 3.22's phone / calculator manner, cleaned on tablet
-mocks and re-laid the same day on the MA-1's proportions in a nested 1024-unit viewport seated at 120 %, WARP on its
-faceplate in DejaVu Sans Bold outlines and 120 on its display (git history); this drawing re-renders it, the WARP
-lettering, the 120 digits, Gemini's two unlike sheens and the recess ring removed. LICENCE: above. Its tracked source
-is `tools/icon_set_adwaita_322/own/DigitalMetronome.svg`; the tool copies it with a dated notice inserted as one XML
-comment after the root's start tag, every other byte verbatim (`mapping.tsv`'s `own` treatment).
+`Speedometer.svg` (2026-10-17 evening), and `AppIcon.svg` byte for byte, is NOT from adwaita-icon-theme: Warp's
+glyph and the program icon (`tools/app_icon/gen_app_icon.sh`), the tempo instrument (architect 2026-10-17 evening, on
+laptop sheets: "c1. ok to implement and install"). PROVENANCE: drawn with Google's Gemini at the architect's prompt,
+2026-10-17, against a style sheet of Lapo Calamandrei's glossy Adwaita 3.22 drawings; the second of four drawings,
+in the 48-unit frame (viewBox 0 0 48 48, no nested viewport). THE CLEANUP, the same evening: its three `<text>`
+numerals (0, 120, 240) deleted with their emptied group and its font attributes (the product's resvg draws no text);
+its ground-shadow ellipse deleted with the radial gradient that filled it (the set carries no drop shadow, below);
+every other element as drawn, Gemini's comments kept. THE TINT, variant C1 of a one-axis sheet: the five chrome
+gradients — the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap — re-tinted from Tango
+aluminium (hue 60–90, saturation 3–9 %, a faint warmth) to hue 210 at saturation 6 %, every stop's HLS lightness kept
+(a stop at lightness .02 or less, or .98 or more, stays grey). THE DRAWING: centre (24, 23); a chrome bezel r 20.5
+with a .8 stroke and a white specular ring inside it, an inner bevel ring and a dark recessed frame round the dark
+radial face r 16.2, a glass gloss over its upper part; a white scale arc and nine white majors with ten minors on a
+270° arc from −135° to +135°, its last 45° a red gradient arc with red ticks and a soft red glow; a tapered red needle
+at +52° from twelve o'clock with a bright ridge line and a dark offset copy under it at .45; a chrome hub cap over a
+dark offset disc at .45 (the needle's and the hub's dark copies are a part's shadow on the face, kept as mocked).
+No `<text>`, no filter, no CSS class, no font's outlines. LICENCE: above. Its tracked source is
+`tools/icon_set_adwaita_322/own/Speedometer.svg`; the tool copies it with a dated notice inserted as one XML comment
+after the root's start tag, every other byte verbatim (`mapping.tsv`'s `own` treatment). HISTORY: the architect's
+digital metronome, Warp's glyph and the program icon from 2026-10-16 to 2026-10-17 evening (git history).
 
 ## The changed files
 
@@ -96,7 +78,7 @@ Every extracted file is changed in one respect, its drop shadows removed (2026-1
 and in `tools/icon_set_adwaita_322/shadows.tsv`; the own file, above, is no extraction and has none). Two drawings
 carry a further change, each recorded under the licence with a dated notice in an XML comment at its head; every other
 file is the extraction alone. One file carries outlined lettering, the clock's digits here (Liberation Sans Bold); the
-own metronome's WARP (DejaVu Sans Bold outlines) left with its lettering 2026-10-17, and the font file with it.
+own file carries none.
 
 - `TabDetachB.svg` (2026-10-14) is `preferences-system-windows` with the element order changed alone: the lower-right
   window copy `use5281` moved after the front window `g5270`, every coordinate unchanged — the same derivation 2.28's
@@ -115,8 +97,8 @@ own metronome's WARP (DejaVu Sans Bold outlines) left with its lettering 2026-10
 ## The deliberate seats
 
 The architect's (2026-10-14): Source wears `accessories-dictionary` (the primary source), Target `input-tablet` (the
-authoring surface); since 2026-10-16 Warp the own file, the digital metronome (appointment-new's clock of 2026-10-15
-retired: "it fits in theory, but it just didn't fit in practice"), and since 2026-10-15 Phase Reset `camera-photo` (the phase
+authoring surface); since 2026-10-16 Warp the own file, the speedometer since 2026-10-17 evening (its history above;
+appointment-new's clock of 2026-10-15 retired: "it fits in theory, but it just didn't fit in practice"), and since 2026-10-15 Phase Reset `camera-photo` (the phase
 snapshot: a reset re-grounds the synthesis phase to the source's at one frame, and it decoheres from there), its 48 slot (300, 50) — the sheet's 256 "hires" slot is never preferred over a 48
 drawing, which is tuned for the seats; Toggle History View `document-open-recent`, the clock turned back (architect
 2026-10-16, "give history the clock with backarrow back"; `x-office-calendar`, history's for the night of 2026-10-15,
@@ -130,7 +112,7 @@ Read-Only toggle the padlock pair, `changes-allow` unlocked and `changes-prevent
 floppy retired); Flatten `edit-clear-all` (3.22's own broom); Load in Place `edit-paste`. DialogError wears
 `process-stop`, as DialogCancel does. Every other seat keeps its freedesktop name.
 
-REPEATS, the files byte-identical: AppIcon and DigitalMetronome (the own file); AudioXWav and MusicNote16th
+REPEATS, the files byte-identical: AppIcon and Speedometer (the own file); AudioXWav and MusicNote16th
 (`audio-x-generic`; the BPM Iterations button keeps the note, the program icon until 2026-10-15); DialogCancel and
 DialogError (`process-stop`).
 
@@ -159,7 +141,7 @@ from the shipped PNG, and the sheet's own crop at 7.7 from it (the crop clips th
 no reference there) — the one seat the tool prints for a look, accepted on the contact sheet. No file carries an `<image>`.
 `CameraPhoto.svg` (2026-10-15), rendered at 240 px through the same resvg 0.48.1: every ink pixel of rsvg's render
 drawn, the mean difference 0.3 of 255 (antialiased edges alone). The files of 2026-10-15 / 16 the same, mean difference
-to rsvg at 240 px: `DigitalMetronome.svg` 0.10 (re-measured 2026-10-17 with the resvg 0.48.1 command line on the re-rendered drawing; every pixel past 20 levels on the case's rounded corners, sixteen of rsvg's 37,124 ink pixels, faint edge pixels at alpha 5 or less, left blank by resvg — antialiasing, nothing drawn lost),
+to rsvg at 240 px: `Speedometer.svg` 0.37 (measured 2026-10-17 evening with the resvg 0.48.1 command line, premultiplied; 273 of rsvg's 34,710 ink pixels past 20 levels, at most 42, every one on an antialiased edge — the bezel's outer rim and the scale's ticks and arcs — nothing drawn lost; against Inkscape at 480 px max 51, 99.9th percentile 25, mean 0.29, the maxima on the red glow's gradient edge),
 `NetworkWiredDisconnected.svg` 0.37, `EditFind.svg` 0.34, `ViewRestore.svg` 0.14, `AudioVolumeHigh.svg` 0.30.
 
 ## The drop shadows
@@ -185,7 +167,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | VcsPull | `go-bottom` | `g6324` | floor shadow |
 | AccessoriesDictionary | `accessories-dictionary` | `path2284` | floor shadow |
 | InputTablet | `input-tablet` | `path8537-6` `path23244-7` `path46799-7-4` | floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy |
-| DigitalMetronome | the own file | — | no drop shadow (drawn without one, 2026-10-17) |
+| Speedometer | the own file | — | no drop shadow (the ground-shadow ellipse removed before the file entered the tree, 2026-10-17 evening) |
 | CameraPhoto | `camera-photo` | `g9724` `g9730` | floor shadow (blurred); the lens's shadow cast on the foot |
 | ViewRestore | `view-restore` | `rect4667-1-5-6-45-3-7-0` | blurred halo behind each window (one rect, two instances) |
 | EditFind | `edit-find` | `g5595` | floor shadow under the handle (`path4263-5` and `path5575`, two blurred radials) |
@@ -235,7 +217,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | AccessoriesTextEditor | `accessories-text-editor` | `path9687` `path4331` `path2334` | blurred halo behind the pad; the pencil's shadows cast on the page |
 | EditDelete | `user-trash` | `path12888` `path12886` | floor shadow and the contact ellipse under the base |
 | ValueDrag | `object-flip-vertical` | `g10278` | floor shadow |
-| AppIcon | the own file | — | DigitalMetronome's: no drop shadow |
+| AppIcon | the own file | — | Speedometer's: no drop shadow |
 
 ## The shift
 
@@ -250,7 +232,7 @@ shift is the product's, not the file's.
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/DigitalMetronome.svg` | — | `eb779bdc300bb79a1ee839be6e2764cb9b1ae2a7ba3fbb277f970aacf0c29f07` | OWN FILE, DigitalMetronome's: the program icon (architect 2026-10-16) |
+| AppIcon | — | `own/Speedometer.svg` | — | `bf66c02e5a8ac51bcc0c44bfa7705f4e3e2a2887eff2c5a0e1644100a14de0f9` | OWN FILE, Speedometer's: the program icon (architect 2026-10-17 evening) |
 | AudioVolumeHigh | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
@@ -263,7 +245,6 @@ shift is the product's, not the file's.
 | DialogError | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | DialogInformation | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` |  |
 | DialogOkApply | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
-| DigitalMetronome | — | `own/DigitalMetronome.svg` | — | `eb779bdc300bb79a1ee839be6e2764cb9b1ae2a7ba3fbb277f970aacf0c29f07` | OWN FILE, not Adwaita's: Warp (architect 2026-10-16), above |
 | DocumentOpen | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
 | DocumentOpenRecent | `document-open-recent` | `clocks.svg` | 696.062, 355.996, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | History: the clock turned back (architect 2026-10-16); TEXT TO OUTLINES: 48 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
 | DocumentRevert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
@@ -300,6 +281,7 @@ shift is the product's, not the file's.
 | NetworkWiredDisconnected | `network-wired-disconnected` | `network-wired-disconnected.svg` | 296, 50, 48, 48 | `4c9d212cedd9877315cc1e0b05685a582bea53d517ff798bf734e6be9639047e` | NEW: Session (architect 2026-10-15: shut off git and stay local) |
 | PreviewRenderOn | `applications-multimedia` | `applications-multimedia.svg` | 296, 50, 48, 48 | `b4551addc300f3ca7d6c5c9f22044c7db2dc227e3987877cb0b99de634508ed2` |  |
 | SettingsConfigure | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` |  |
+| Speedometer | — | `own/Speedometer.svg` | — | `bf66c02e5a8ac51bcc0c44bfa7705f4e3e2a2887eff2c5a0e1644100a14de0f9` | OWN FILE, not Adwaita's: Warp (architect 2026-10-17 evening), above |
 | TabDetach | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` |  |
 | TabDetachB | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` | DERIVED, below |
 | ValueDrag | `object-flip-vertical` | `object-flip-rotate.svg` | 76.0001, 300, 48, 48 | `cd9be5ee2271c9a797d49aa9749f70c4ad48f53768f651c166560baba865afa1` |  |
