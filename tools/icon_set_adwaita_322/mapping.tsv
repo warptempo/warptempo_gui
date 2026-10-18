@@ -1,7 +1,7 @@
 enumerator	name	sheet	x	y	w	h	treatment
 AccessoriesDictionary	accessories-dictionary	accessories-dictionary.svg	296	50	48	48	-
 AccessoriesTextEditor	accessories-text-editor	accessories-text-editor.svg	296.062	39.9963	48	48	-
-AppIcon	-	Speedometer.svg	-	-	-	-	own
+AppIcon	document-open-recent	clocks.svg	696.062	355.996	48	48	text-to-outlines-forward
 AudioVolumeHigh	audio-volume-high	audio-volume.svg	296	50	48	48	-
 AudioXWav	audio-x-generic	audio-x-generic.svg	296.062	49.9963	48	48	-
 BboxNext	go-last	navigation-icons.svg	856	50	48	48	-
@@ -15,7 +15,7 @@ DialogError	process-stop	navigation-icons.svg	696	50	48	48	-
 DialogInformation	dialog-information	dialog-information.svg	296	50	48	48	-
 DialogOkApply	edit-paste	copy-paste-tasks.svg	296	50	48	48	-
 DocumentOpen	document-open	folders.svg	1496	350	48	48	-
-DocumentOpenRecent	document-open-recent	clocks.svg	696.062	355.996	48	48	text-to-outlines
+DocumentOpenRecentForward	document-open-recent	clocks.svg	696.062	355.996	48	48	text-to-outlines-forward
 DocumentRevert	document-revert	paper-sheets.svg	1900	654	48	48	-
 DocumentSave	document-save	cabinets.svg	696	50	48	48	-
 EditDelete	user-trash	trash.svg	696	50	48	48	-
@@ -50,7 +50,6 @@ MusicNote16th	audio-x-generic	audio-x-generic.svg	296.062	49.9963	48	48	-
 NetworkWiredDisconnected	network-wired-disconnected	network-wired-disconnected.svg	296	50	48	48	-
 PreviewRenderOn	applications-multimedia	applications-multimedia.svg	296	50	48	48	-
 SettingsConfigure	preferences-system	preferences-system.svg	296.062	49.9963	48	48	-
-Speedometer	-	Speedometer.svg	-	-	-	-	own
 TabDetach	preferences-system-windows	preferences-system-windows.svg	296	50	48	48	-
 TabDetachB	preferences-system-windows	preferences-system-windows.svg	296	50	48	48	tab-b
 ValueDrag	object-flip-vertical	object-flip-rotate.svg	76.0001	300	48	48	-
@@ -59,3 +58,4 @@ VcsPull	go-bottom	navigation-icons.svg	106	50	48	48	-
 ViewHidden	audio-volume-muted	audio-volume.svg	421	335	256	256	-
 ViewRestore	view-restore	view-fullscreen-restore.svg	696.00012	50.000008	48	48	-
 WindowClose	window-close	window-close.svg	296	50	48	48	-
+XOfficeCalendar	x-office-calendar	x-office-calendar.svg	296	50	48	48	-

@@ -6,13 +6,14 @@ text's style, its presentation attributes and its ancestors' (inherited, the nea
 resolves to its first family FACES has (as a text renderer falls through the list to an installed face), and a
 numeric weight of 600 or more, or bold / bolder, takes the bold face (Liberation Sans has regular and bold files). The text's
 own `transform`, when it has one, is carried onto the path verbatim, ahead of the pen's translate. FACES: Liberation
-Sans for the history clock's digits (document-open-recent, run by build_set.py's `text-to-outlines` treatment;
-history's again since 2026-10-16), the one face the tool knows (the digital metronome's WARP, Warp's own file of
-2026-10-16/17, outlined from DejaVu Sans Bold 2026-10-16, left with its lettering 2026-10-17, and the font file with
-it; the speedometer, Warp's since 2026-10-17 evening, carries no lettering). The product's resvg is built without
+Sans for the clock's digits (document-open-recent, run by build_set.py's `text-to-outlines-forward`
+treatment: Warp's glyph and the program icon, the clock with its back arrow turned forward, since 2026-10-17 late
+evening; the history button's 2026-10-14 to 2026-10-17 but the night of 2026-10-15), the one face the tool knows
+(the digital metronome's WARP, Warp's own file of 2026-10-16/17, was outlined from DejaVu Sans Bold and left with
+its lettering 2026-10-17, the font file with it). The product's resvg is built without
 text and draws none; the outlines are the geometry a text renderer lays down from the same file, measured 0.26/255
 mean against rsvg's own text rendering of document-open-recent. A notice, when given, is the changed-file comment
-written at the file's head.
+written at the file's head (build_set.py passes none: its mirror writes the notice after).
 usage: text_to_paths.py <in.svg> <out.svg>"""
 import os, sys, re, xml.etree.ElementTree as ET
 from fontTools.ttLib import TTFont

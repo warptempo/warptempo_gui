@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # tools/app_icon/gen_app_icon.sh — assets/icons/adwaita-3.22/AppIcon.svg -> THE PROGRAM ICON OUTSIDE THE WINDOW
-# THE ICON (architect 2026-10-17 evening): the speedometer, drawn with Gemini at the architect's prompt, the icon set's
-# one own file (AppIcon.svg, byte-identical to Speedometer.svg, the glyph Warp wears; the caption's icon;
-# assets/icons/adwaita-3.22/README.md its provenance and licence) — the BPM Iterations button keeps Adwaita 3.22's
-# audio-x-generic note (MusicNote16th.svg), the program icon's drawing from 2026-10-12 until then — over WHITE, FLAT
+# THE ICON (architect 2026-10-17 late evening): Adwaita 3.22's document-open-recent clock with its back arrow turned
+# forward, clockwise, its digits outlined (AppIcon.svg, byte-identical to DocumentOpenRecentForward.svg, the glyph Warp
+# wears; the caption's icon; assets/icons/adwaita-3.22/README.md the extraction and its changes) — the BPM Iterations
+# button keeps Adwaita 3.22's audio-x-generic note (MusicNote16th.svg), the program icon's drawing from 2026-10-12 to
+# 2026-10-15 — over WHITE, FLAT
 # (architect 2026-10-17): #FFFFFF, one color over the whole square, no gradient (Windows Storm's caption start #800080
 # from 2026-10-16 until then, the Cool Edit case's 20 face-ramp bands under Midnight's Face from 2026-10-12 before
 # it). The ground is the ANDROID background alone, the Linux icon wears none. It writes, from the
@@ -48,9 +49,9 @@ grep -q -E '[[:space:]]width="48(\.0+)?(px)?"' <<< "$ROOT" && grep -q -E '[[:spa
 {
     printf '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">\n'
     printf '  <!-- The program icon outside the window, the Linux desktop icon (the .desktop'"'"'s\n'
-    printf '       Icon=warptempo_gui): the speedometer, the caption'"'"'s icon and the glyph\n'
-    printf '       Warp wears, the icon set'"'"'s one own file (assets/icons/adwaita-3.22/README.md),\n'
-    printf '       bare on transparency (architect 2026-10-12; the speedometer since 2026-10-17). GENERATED\n'
+    printf '       Icon=warptempo_gui): the clock with its arrow turned forward, the caption'"'"'s\n'
+    printf '       icon and the glyph Warp wears (assets/icons/adwaita-3.22/README.md),\n'
+    printf '       bare on transparency (architect 2026-10-12; the forward clock since 2026-10-17). GENERATED\n'
     printf '       by tools/app_icon/gen_app_icon.sh from %s,\n' "$SRC"
     printf '       the drawing verbatim: regenerate, never hand-edit. -->\n'
     cat "$SRC"
