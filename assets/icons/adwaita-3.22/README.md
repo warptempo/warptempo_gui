@@ -37,7 +37,7 @@ checked against the sheet cropped to its slot and against the theme's own shippe
   the table below.
 - The own file, `Baton.png` and its copy `AppIcon.png`: the project's own, its source
   `tools/icon_set_adwaita_322/own/Baton.png`, sha256
-  `c1cb3c42f656f1b58a76e903a9cca77b6cf9efcf51b212b6cc8be7ee9e33903c` (below, "The own file").
+  `30541ba274b914d7c3a9e6ed01aaada0412ddc09dfc593b8f17587a794989c3c` (below, "The own file").
 
 ## Licence
 
@@ -63,17 +63,22 @@ plain and have it scaled by the gui scale and the button casing"; the rule itsel
 bitmap knob stays ruled out, below — and the exception is this file alone). PROVENANCE: drawn with Google's Gemini
 (Flash, a raster drawing) at the architect's prompt, 2026-10-18, against a style sheet of the set's own glyphs as the
 GUI draws them (the history clock, the dictionary, the tablet, the camera, the two padlocks, Settings' tools, the
-broom); cut out by him in GIMP the same morning (fuzzy select at 40, the shadow removed separately) and SHIPPED EXACTLY
-AS CUT: 2048 x 2048 RGBA with a hard alpha, no ground, no shadow, no feathering and no erosion ("this one looks
-better next to the tablet especially — the argon one is too cartoony": Gemini's SVG batons were not taken). THE
+broom); THE FILE IS FLASH'S REDO OF 13:41 (architect 2026-10-18 ~14:15, "ok to implement b1"): the same baton
+redrawn at his prompt asking for the set's one-unit dark outline weight, his pick B1 of three cutouts (B2's grey
+outline and B3's heavy near-black one not taken) off a sheet mocked on his tablet screenshot; cut out by him in GIMP
+as the first was (fuzzy select, the shadow removed separately) and SHIPPED EXACTLY AS CUT: 2048 x 2048 RGBA with a
+hard alpha, no ground, no shadow, no feathering and no erosion. Its predecessor for one landing, the morning's first
+cutout of 11:11 (painterly, no outline: "this one looks better next to the tablet especially — the argon one is too
+cartoony", Gemini's SVG batons not taken), read "a little thin / anemic" beside the outlined 3.22 glyphs at 60 px. THE
 SCALE: the program decodes the PNG once at launch through its own resvg pin (`svg_icon::parse_png`) and scales it at
 every seat by a LANCZOS-3 AREA FILTER from the full raster (`svg_icon::rasterise`, PIL's `Image.LANCZOS` construction,
 the mock he judged), never resampled by resvg's `<image>`; its user space is the set's 48-unit frame, so the body
 shift and the disabled copy's one-unit translate hold. LICENCE: above. Its tracked source is
 `tools/icon_set_adwaita_322/own/Baton.png`; the tool copies it verbatim, every byte (`mapping.tsv`'s `own` treatment).
 HISTORY: the set's earlier own files — the architect's digital metronome, 2026-10-16 to 2026-10-17, and the
-speedometer, the evening of 2026-10-17, both drawn with Gemini — and the history clock with its arrow turned forward,
-Warp's from 2026-10-17 late evening to 2026-10-18, retired (git history).
+speedometer, the evening of 2026-10-17, both drawn with Gemini — the history clock with its arrow turned forward,
+Warp's from 2026-10-17 late evening to 2026-10-18, and the baton's first cutout, the morning of 2026-10-18, retired
+(git history).
 
 ## The changed files
 
@@ -152,8 +157,8 @@ drawn, the mean difference 0.3 of 255 (antialiased edges alone). The files of 20
 to rsvg at 240 px (the resvg 0.48.1 command line, premultiplied): `DocumentOpenRecent.svg` 0.63,
 `NetworkWiredDisconnected.svg` 0.37, `EditFind.svg` 0.34, `ViewRestore.svg` 0.14, `AudioVolumeHigh.svg` 0.30; and
 `ValueDrag.svg` (2026-10-18) 0.10. `Baton.png` (2026-10-18): the product's decode (resvg 0.48.1 at identity) is
-byte-identical to PIL's premultiplied decode, and its Lanczos resample within 0.15 of 255 mean of PIL's
-`Image.LANCZOS` at 60 px (0.29 at 28, 0.33 at 22).
+byte-identical to PIL's premultiplied decode, and its Lanczos resample within 0.14 of 255 mean of PIL's
+`Image.LANCZOS` at 60 px (0.27 at 28, 0.34 at 22).
 
 ## The drop shadows
 
@@ -243,10 +248,10 @@ shift is the product's, not the file's.
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/Baton.png` | — | `c1cb3c42f656f1b58a76e903a9cca77b6cf9efcf51b212b6cc8be7ee9e33903c` | OWN FILE, Baton's: the program icon (architect 2026-10-18) |
+| AppIcon | — | `own/Baton.png` | — | `30541ba274b914d7c3a9e6ed01aaada0412ddc09dfc593b8f17587a794989c3c` | OWN FILE, Baton's: the program icon (architect 2026-10-18) |
 | AudioVolumeHigh | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
-| Baton | — | `own/Baton.png` | — | `c1cb3c42f656f1b58a76e903a9cca77b6cf9efcf51b212b6cc8be7ee9e33903c` | OWN FILE, not Adwaita's, a RASTER: Warp, his GIMP cutout (architect 2026-10-18), above |
+| Baton | — | `own/Baton.png` | — | `30541ba274b914d7c3a9e6ed01aaada0412ddc09dfc593b8f17587a794989c3c` | OWN FILE, not Adwaita's, a RASTER: Warp, his GIMP cutout (architect 2026-10-18), above |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | BboxPrev | `go-first` | `navigation-icons.svg` | 456, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | BlackSum | `accessories-calculator` | `accessories-calculator.svg` | 296, 50, 48, 48 | `aeafa0e25eb404c73da589337ddb6dfb1aeec8ab2663a7038702c9379de912fb` |  |

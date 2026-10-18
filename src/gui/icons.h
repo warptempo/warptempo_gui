@@ -100,7 +100,10 @@ enum class Icon {
     InputTablet,         // Target — the authoring surface
     Baton,               // Warp — the conductor's baton: the architect's
                          // GIMP cutout of Gemini Flash's drawing
-                         // (2026-10-18), a RASTER own file of the set
+                         // (2026-10-18; since ~14:15 Flash's redo at the
+                         // set's outline weight, his pick B1 — the
+                         // morning's outline-less cutout read thin beside
+                         // the outlined glyphs), a RASTER own file of the set
                          // (Baton.png, 2048 x 2048), THE ONE EXCEPTION TO
                          // THE SCALABLE RULE (the head; "the argon one is
                          // too cartoony", the SVG batons not taken); the
