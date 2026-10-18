@@ -928,6 +928,17 @@ bool GuiTargetRender::trim_would_fall_back() const {
         .trim_fell_back;
 }
 
+GuiTargetRender::PreviewDomain GuiTargetRender::preview_domain_for(
+    int64_t begin_frame, int64_t end_frame) const {
+    // The A/B audition's one line of it (2026-10-18) — contract at the
+    // declaration. A thin read of the verdict owner below, never a second
+    // computation: the begin is the anchor the dispatch stamps, the end the
+    // same body's.
+    const BufferStartVerdict verdict =
+        compute_buffer_start_frame_for(begin_frame, end_frame);
+    return {verdict.start_frame, verdict.end_frame};
+}
+
 GuiTargetRender::BufferStartVerdict
 GuiTargetRender::compute_buffer_start_frame_for(
     int64_t begin_frame, int64_t end_frame) const {
@@ -967,6 +978,35 @@ GuiTargetRender::compute_buffer_start_frame_for(
     // the orchestrators' vocabulary. Callers pass the trim pair the produced
     // samples embody and stamp the result at production time, so no
     // buffer-frames gate: the buffer may still be empty at the stamp.
+    //
+    // THE END OF AN UNTRIMMED BUFFER (a full window or either fallback,
+    // 2026-10-18) IS THE TARGET VIEW'S OWN DOMAIN TOTAL — the cached map's
+    // tgt_total_frames, which is target_total_frames_for_map(total, map)
+    // (warp_frame_map.h) — AND THAT IS THE ENGINE'S EMISSION LENGTH EXACTLY.
+    // The engine's output is llrint of its map's LAST ANCHOR TARGET on every
+    // path (its emit cap, engine.cpp, which binds because the uncapped stream
+    // always exceeds it, synthesis.cpp; do_render's projection reads the same
+    // number for validate_render_projection, trimmer.h), and nothing past it
+    // changes the length of an untrimmed buffer (no post_trim plan exists;
+    // the limiter chain works in place). The cached map is
+    // build_warp_frame_map over the resolved store, do_render's construction,
+    // and its last anchor sits at src_frame == total exactly: the resolver
+    // always seeds a frame-0 owner, so the map has at least one segment past
+    // {0, 0}, and the last segment's src is the source total by the builder's
+    // own loop. map_source_to_target at that src lands on the last anchor
+    // itself (the upper_bound walks past the end and the identity tail adds
+    // total - src = 0), so map_source_to_target(total) IS the last anchor's
+    // tgt bit for bit, and nearbyint and llrint round it alike under the
+    // default rounding mode. The two differ only where the build FAILED (an
+    // empty map, tripwire-class): there the total falls back to the source's,
+    // but the render refuses that recipe too, so no preview is ever bound —
+    // and the store is common to both tabs, so the active tab's own preview
+    // gate already refuses whatever asks.
+    const auto full_target_total = [&]() -> int64_t {
+        return target_view_warp_frame_map_cached(
+            app, audio.sample_rate(),
+            static_cast<long>(audio.total_frames())).tgt_total_frames;
+    };
     if (!trim_window_is_full(begin_frame, end_frame, audio.total_frames()) &&
         audio.sample_rate() > 0 && audio.total_frames() > 0) {
         const int64_t b = begin_frame;
@@ -989,17 +1029,26 @@ GuiTargetRender::compute_buffer_start_frame_for(
         // to open it. The re-derivation itself is minimal coupling: the reuse
         // rungs never run plan_trim and the dispatch stamp precedes it.
         if (e <= b) {
-            return {0, true, "Trim end at or before trim begin"};
+            return {0, full_target_total(), true,
+                    "Trim end at or before trim begin"};
         }
         if (t_end - t_begin < 1) {
             // Fallback: the FULL deliverable, anchor 0.
-            return {0, true,
+            return {0, full_target_total(), true,
                     "Trim target span rounds below one output sample"};
         }
-        // The anchor is the sub-window begin's target image — llrint(T_b).
-        return {t_begin, false, nullptr};
+        // The anchor is the sub-window begin's target image — llrint(T_b) —
+        // and the end its end's, llrint(T_e): the crop keeps
+        // llrint(T_e) - llrint(T_b) samples from the anchor (plan_trim's
+        // post.samples, trimmer.cpp), so anchor + length is t_end exactly.
+        return {t_begin, t_end, false, nullptr};
     }
-    return {0, false, nullptr};
+    if (audio.sample_rate() <= 0 || audio.total_frames() <= 0) {
+        // No audio: no preview, an empty domain (the guard the sub-window arm
+        // above takes for its map read).
+        return {0, 0, false, nullptr};
+    }
+    return {0, full_target_total(), false, nullptr};
 }
 
 void GuiTargetRender::ensure_ready() {

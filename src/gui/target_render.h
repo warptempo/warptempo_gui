@@ -150,9 +150,12 @@ struct GuiTargetRender {
     // the callers that must tell "still settling" from "settled with
     // nothing" — the scrub's silent target-view refusal
     // (input_pointer.cpp), this class's own status and re-establishment
-    // paths, and, since 2026-09-18, THE PENDING CAR PLAY
+    // paths, since 2026-09-18, THE PENDING CAR PLAY
     // (GuiCarTransport::run_pending_play, which keeps WAITING while this is
-    // true and decides on preview_ready() the moment it goes false).
+    // true and decides on preview_ready() the moment it goes false), and since
+    // 2026-10-18 THE A/B AUDITION'S DUE REST (GuiAbAudition::fire_if_due,
+    // which waits on it the same way after the act's switch re-dispatched
+    // the preview, then launches through the preview gate once).
     bool is_updating() const {
         return pending_ || in_flight_;
     }
@@ -170,8 +173,10 @@ struct GuiTargetRender {
     // play its tick fires — the one reader that WAITS on this rather than
     // refusing on it, is_updating() being how it tells settling from settled),
     // the A/B
-    // audition's press-time gate (GuiAbAudition, which asks it for BOTH tabs
-    // before its first switch and again at every launch) and, since
+    // audition's press-time gate (GuiAbAudition, which asks it for the ACTIVE
+    // tab before its first switch — since 2026-10-18 the other tab has no
+    // preview yet, its switch dispatching one — and again at every launch)
+    // and, since
     // 2026-08-30, the play/stop button's enabled face (redesign_button_enabled
     // through the trampoline target_preview_ready, target_render.cpp — the
     // truthful-buttons ruling greys Play at rest in target view with no
@@ -206,6 +211,27 @@ struct GuiTargetRender {
     // identity, never on active_audio_view, and snapshot_current_authoring_state
     // already reads it from source view for the same reason.
     bool trim_would_fall_back() const;
+
+    // THE PREVIEW DOMAIN A TRIM PAIR PRODUCES (2026-10-18), the A/B
+    // audition's read of the verdict below and the second reason it is
+    // public: `{begin, end}`, exclusive end, in full-target frames — the
+    // domain playback.domain_begin() / domain_end() would report once the
+    // preview for THAT pair is bound. The audition asks it about the OTHER
+    // tab's trim (ViewState::trim) at the press, before the switch whose
+    // trigger() dispatches that tab's preview, so its gate judges the other
+    // tab's playhead against the buffer the launch will actually find there
+    // (GuiAbAudition::start, ab_audition.cpp). Like trim_would_fall_back it
+    // asks compute_buffer_start_frame_for and nothing else: the anchor is the
+    // very start_frame the dispatch stamps into dispatched_buffer_start_frame_,
+    // and the end is the same body's end_frame, so the two cannot drift.
+    // View-independent for trim_would_fall_back's reason (the cached map is
+    // keyed on the warp store, never on active_audio_view).
+    struct PreviewDomain {
+        int64_t begin = 0;
+        int64_t end   = 0;
+    };
+    PreviewDomain preview_domain_for(int64_t begin_frame,
+                                     int64_t end_frame) const;
 
     // True iff app.target_buffer is potentially stale relative to the current
     // engine input (set by trigger() on any output-affecting mutation, cleared
@@ -353,8 +379,21 @@ private:
     // ARCHIVAL CHORDS' card through trim_would_fall_back above. Only the
     // stderr readers consult fallback_reason: the card names the outcome, not
     // the producer.
+    //
+    // end_frame IS THE BUFFER'S EXCLUSIVE END in the same full-target
+    // coordinates (2026-10-18; its one reader is preview_domain_for above), so
+    // start_frame and end_frame together are the domain the bind reports
+    // (GuiPlayback::domain_begin / domain_end, offset and offset + frames).
+    // A surviving sub-window ends at llrint(T_e): the post_trim crop keeps
+    // llrint(T_e) - llrint(T_b) samples from llrint(T_b) (plan_trim's crop,
+    // trimmer.cpp). A full window or a fallback is the full deliverable, whose
+    // length is the target view's own domain total, target_total_frames_for_map
+    // over the same cached map (the identity with the engine's emit cap is
+    // stated at the definition). 0 where no audio is loaded — an empty domain
+    // every gate refuses.
     struct BufferStartVerdict {
         int64_t     start_frame = 0;
+        int64_t     end_frame = 0;
         bool        trim_fell_back = false;
         const char* fallback_reason = nullptr;
     };

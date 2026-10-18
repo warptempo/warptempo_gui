@@ -4841,8 +4841,11 @@ struct ViewState {
 //     play's natural end, ahead of the rest, so the tab flips at once and the
 //     rest is silence on the tab about to play.
 // NO REST PRECEDES THE FIRST PLAY: the architect's rest is between SOUNDS and
-// nothing sounded before it, so GuiAbAudition::start launches straight after
-// its switch.
+// nothing sounded before it, so GuiAbAudition::start arms it behind a rest of
+// ZERO after its switch (2026-10-18; it launched straight away until then) —
+// one road for every play after a switch, so the first play too waits for
+// the entering tab's preview where the switch's re-dispatch went
+// asynchronous — and it fires on the next deadline tick.
 // These three values are the architect's own hand pacing. A RETUNE IS THIS
 // NUMBER AND NOTHING ELSE: change it here alone — no doc or comment elsewhere
 // spells a value.
@@ -4880,7 +4883,8 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 // scanner's.
 //
 // THE PHASES are the four plays in order, and `phase` is non-Idle EXACTLY
-// WHILE THE ACT STANDS — from the first successful launch to whatever ends it.
+// WHILE THE ACT STANDS — from the press's arm of the first play's rest (a rest
+// of zero, 2026-10-18) to whatever ends it.
 // `waiting` says which half of the act that phase is in, and it is the ONE
 // running/not-running question there is, so `phase != Idle` is the whole test
 // everywhere:
@@ -4916,24 +4920,32 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //     called (waiting = false; since 2026-09-01 — it followed a true return
 //     until then). A refused launch
 //     clears the sequence again, so a phase whose play could not start (a
-//     playhead at or past the domain end, a preview that went stale) simply
-//     ends the act — silently, the tab staying where it is.
-//     THE REST, GuiAbAudition::advance_after_natural_end, which arms the NEXT
-//     phase with waiting = true and its deadline (edge below).
+//     playhead at or past the domain end, a preview whose render failed)
+//     simply ends the act — silently, the tab staying where it is.
+//     THE REST, GuiAbAudition::arm_rest, from two callers: GuiAbAudition::start
+//     for the first play (a rest of zero, 2026-10-18, after the press's switch
+//     and its `c`) and GuiAbAudition::advance_after_natural_end, which arms
+//     the NEXT phase with waiting = true and its deadline (edge below).
 //   * ADVANCED at ONE site: the tick's natural-end branch (main.cpp), which
 //     reads the phase, takes the one stop body, and hands what it read to
 //     GuiAbAudition::advance_after_natural_end. That call no longer launches:
 //     it switches the tab where the phase asks — synchronously, inside this
-//     same tick, so the flip is seen at once — runs the `c` command on the tab
-//     it just entered, and then arms the REST that precedes the next play
-//     (kAuditionPairGapMs inside a pair, kAuditionSwitchGapMs across the
-//     switch), AFTER both, because the switch's own stop body clears the
-//     sequence and `c` can clear it through the movement owner below.
+//     same tick, so the flip is seen at once — through Ctrl+Tab's whole road
+//     (the switch, then GuiTargetRender::trigger(), so the preview follows the
+//     tab; 2026-10-18), runs the `c` command on the tab it just entered, and
+//     then arms the REST that precedes the next play (kAuditionPairGapMs
+//     inside a pair, kAuditionSwitchGapMs across the switch), AFTER all three,
+//     because the switch's own stop body clears the sequence, the trigger's
+//     target-view path clears it (owner (3) below), and `c` can clear it
+//     through the movement owner below.
 //   * FIRED at ONE site: GuiAbAudition::fire_if_due, called from the run
 //     loop's deadline tick (main.cpp's on_tick, above its playing-only guard,
 //     beside the key-repeat and touch-window deadline samplers). It ends the
 //     rest and launches the phase it named; a launch refusal ends the act, the
-//     interrupt rule's own answer.
+//     interrupt rule's own answer. A DUE REST STANDS, unfired, while the
+//     target preview updates (2026-10-18): the play after a switch waits for
+//     the switch's re-dispatch to land — its completion rebinds under the
+//     stopped device and clears no sequence — and is then attempted once.
 //   * CLEARED TO IDLE at FOUR OWNERS ACROSS EIGHT CALL SITES (re-derived by
 //     grepping every clear_audition_sequence call), so no interrupt path can
 //     forget it. A REST IS INTERRUPTED EXACTLY AS A PLAY IS: the two owners
@@ -4992,7 +5004,11 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         guard — the sub-tick window between a play's natural end and the tick
 //         that observes it is precisely where a clear behind that guard would
 //         miss, and a synchronous reuse rung can rebind a fresh preview inside
-//         it; and ensure_ready's and rebind_to_source's, which stay behind their
+//         it — THE ACT'S OWN TWO TRIGGERS (2026-10-18, each switch taking
+//         Ctrl+Tab's trigger() tail) reach this clear with the sequence
+//         already Idle, the press's ahead of its first arm and the advance's
+//         after the tick's stop, so it ends nothing of the act's own; and
+//         ensure_ready's and rebind_to_source's, which stay behind their
 //         own conditional stops because the S/T flip has already taken the stop
 //         body ahead of them and no other caller reaches them with an act
 //         standing (the reachability argument is written out at both sites).
@@ -5025,8 +5041,9 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         the stop body, at every call (the command stops playback before it
 //         centres, on both its arms), which is why all three of its calls are
 //         placed in windows where the sequence is already Idle and none of
-//         the act's plays sounds — before the first launch, and after a
-//         switch but ahead of the arm.
+//         the act's plays sounds — at the press before the switch, and after
+//         a switch (and its trigger) but ahead of the arm, the press's first
+//         play included since it is armed (2026-10-18).
 //         The ordering is stated at GuiAbAudition::apply_working_zoom.
 //     The source file loads once, at startup, so a file load finds this Idle by
 //     construction and needs no site.
@@ -14838,13 +14855,18 @@ inline bool menu_anchor_live(const AppState& a, const GuiAudio& audio,
 // (the body's other refusal is the dead device, asked ahead of this one and
 // not a term of it; since 2026-08-30 both say so on a card);
 // since 2026-08-26 the A/B audition's PRESS-TIME GATE
-// (GuiAbAudition::tab_launch_ready), which asks it about the OTHER tab's
-// playhead before the act's first switch — a frame no launch body can be
-// asked about yet, a refusal-shaped read; and since 2026-08-30 the bottom
-// row's PLAY button's FACE (redesign_button_enabled), which asks it about the
-// RESTING CURSOR. That face reader is the one this was first hoisted FOR: it
-// read the predicate for the day of 2026-08-15 the whole-row honesty ruling
-// stood, the architect reversed that ruling the same day ("there's not a
+// (GuiAbAudition::active_tab_launch_ready), which since 2026-10-18 asks it
+// about the ACTIVE tab alone — the bound buffer is that tab's own trim's
+// render at the press; the OTHER tab's playhead, which it asked about from
+// 2026-08-26 until then, is judged against the domain that tab's own trim
+// will produce (GuiTargetRender::preview_domain_for, the twin of the target
+// arm below), because the act's switch re-dispatches the preview for it and
+// the bound buffer's crop is the wrong tab's (in source view the source arm
+// below still answers for both, ab_audition.cpp); and since 2026-08-30 the
+// bottom row's PLAY button's FACE (redesign_button_enabled), which asks it
+// about the RESTING CURSOR. That face reader is the one this was first hoisted
+// FOR: it read the predicate for the day of 2026-08-15 the whole-row honesty
+// ruling stood, the architect reversed that ruling the same day ("there's not a
 // whole lot of value derived from the icon faces changing... the user is
 // expected to know that with the playhead outside trim it's not going to play
 // in target view") and only the FACE read went, the shape

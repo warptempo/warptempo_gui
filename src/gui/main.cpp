@@ -3153,9 +3153,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // one stop body every interrupt path also takes) and handed to the
         // advance after. The advance does NOT launch: it switches tabs where
         // the phase asks — synchronously, inside this same tick, so the flip
-        // is seen at once — and then ARMS THE REST that precedes the next play
-        // (kAuditionPairGapMs inside a pair, kAuditionSwitchGapMs across the
-        // switch; the pacing is the architect's own hand, app_state.h). The
+        // is seen at once, through Ctrl+Tab's whole road, its preview
+        // trigger() included (2026-10-18) — and then ARMS THE REST that
+        // precedes the next play (kAuditionPairGapMs inside a pair,
+        // kAuditionSwitchGapMs across the switch; the pacing is the
+        // architect's own hand, app_state.h). The
         // rest's deadline is sampled by ab_audition.fire_if_due earlier in
         // this same tick body, which is where the launch now happens. A play that
         // was not the act's hands over Idle and the advance does nothing; the

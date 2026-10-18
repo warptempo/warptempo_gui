@@ -8824,10 +8824,12 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // at the next Ctrl+Tab. Do not collapse the two steps into one.
     //
     // NO PREVIEW TRIGGER: Ctrl+Tab's target_render.trigger() re-dispatches the
-    // preview for the ENTERING tab's trim, and the round trip enters the tab
-    // whose trim the preview is already bound to, the audition's own reason
-    // for switching without it (ab_audition.h). The playback stop is the
-    // switch's own (switch_active_tab_view_to).
+    // preview for the ENTERING tab's trim, and the round trip ENDS on the tab
+    // whose trim the preview is already bound to, and plays nothing on the
+    // other one in between, so there is nothing for a re-dispatch to serve.
+    // (The A/B audition, which PLAYS on the other tab, takes the trigger at
+    // both of its switches since 2026-10-18, ab_audition.h.) The playback
+    // stop is the switch's own (switch_active_tab_view_to).
     //
     // IT NEVER MEETS A BOUND CELL, because it never runs while grid iterations
     // is lit (architect 2026-09-10): the march is one of delta (a)'s members

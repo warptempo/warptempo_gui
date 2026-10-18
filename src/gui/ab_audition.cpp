@@ -14,23 +14,32 @@ int64_t GuiAbAudition::audition_span_frames() const {
 }
 
 namespace {
-// The preview gate is the SAME predicate Space's play edge reads
-// (GuiTargetRender::preview_ready), and the frame gate is the launch body's own
-// (playback_launch_playable) asked ahead of time for a tab that is not active
-// yet — the switch itself takes no gate, so the other tab's frame must be
-// judged here or not at all. In source view the predicate has no preview term
-// and only the two-frame remainder gate answers. THE DEVICE IS NOT ASKED HERE:
-// it is not a per-tab fact, so start() asks it once for the pair, ahead of
-// this. File-static so the member gate, start()'s carded preflight and the
-// PLAY face's ask-ahead (ab_audition_preflight_ok below) read one spelling.
-bool tab_launch_ready_impl(const AppState& app, const GuiAudio& audio,
-                           const GuiPlayback& playback,
-                           const GuiTargetRender& target_render,
-                           int64_t frame) {
+// THE ACTIVE TAB'S TERM. The preview gate is the SAME predicate Space's play
+// edge reads (GuiTargetRender::preview_ready), and the frame gate is the
+// launch body's own (playback_launch_playable) asked at the press: with the
+// preview ready, the bound buffer is exactly this tab's trim's render, and
+// the switch back re-dispatches that same recipe (the same trim over the same
+// shared stores — a render-cache hit in practice), so the launch there finds
+// a buffer of the domain this answers about. In source view the predicate has
+// no preview term and only the two-frame remainder gate answers. THE DEVICE IS
+// NOT ASKED HERE: it is not a per-tab fact, so start() asks it once for the
+// pair, ahead of this.
+// File-static so the member gate, start()'s carded preflight and the PLAY
+// face's ask-ahead (ab_audition_preflight_ok below) read one spelling.
+bool active_tab_launch_ready_impl(const AppState& app, const GuiAudio& audio,
+                                  const GuiPlayback& playback,
+                                  const GuiTargetRender& target_render,
+                                  int64_t frame) {
     if (app.active_audio_view == 'T' && !target_render.preview_ready()) {
         return false;
     }
     return playback_launch_playable(app, playback, audio.total_frames(), frame);
+}
+
+// The tab the act is not standing on, through its own ViewState — the band
+// switch_active_tab_view_to will restore on entry.
+const ViewState& other_tab_view(const AppState& app) {
+    return (app.active_tab_view == 'A') ? app.tab_b : app.tab_a;
 }
 
 // THE OTHER TAB'S PLAYHEAD, read through its own ViewState and clamped
@@ -38,21 +47,61 @@ bool tab_launch_ready_impl(const AppState& app, const GuiAudio& audio,
 // (clamp_playhead_to_live_domain reads the live domain, which both tabs
 // share), so the verdict here is the verdict the launch would reach there.
 int64_t other_tab_playhead(const AppState& app, const GuiAudio& audio) {
-    const char other = (app.active_tab_view == 'A') ? 'B' : 'A';
-    const ViewState& other_tab = (other == 'A') ? app.tab_a : app.tab_b;
-    return clamp_playhead_to_live_domain(other_tab.playhead_cursor_sample,
-                                         app, audio);
+    return clamp_playhead_to_live_domain(
+        other_tab_view(app).playhead_cursor_sample, app, audio);
+}
+
+// THE OTHER TAB'S TERM (2026-10-18). A DELIBERATE ASYMMETRY with the active
+// tab's term above: the other tab HAS NO BUFFER YET. The two tabs share both
+// marker stores, so the target audio is one and only the trim differs per tab
+// (ViewState::trim), and the act's switch into this tab takes Ctrl+Tab's
+// trigger() tail, which dispatches the preview for THIS tab's trim. So the
+// frame is judged against the domain that preview will have, derived here
+// from the other tab's trim pair through GuiTargetRender::preview_domain_for
+// — the very verdict owner (compute_buffer_start_frame_for) whose anchor the
+// dispatch stamps into the bind — and the answer here is the answer the
+// launch reaches after the switch. Judging it against the BOUND buffer (the
+// active tab's preview, its trim's crop) refused an other-tab playhead
+// outside the active tab's window though that tab plays alone (architect
+// 2026-10-18, on his saved state). The predicate is the twin of
+// playback_launch_playable's target arm — `begin <= frame < end - 1`, the
+// same two-frame remainder gate — over the derived domain in place of
+// domain_begin() / domain_end(); no preview-ready term, there being no
+// preview yet to be ready (the act waits for it after the switch,
+// GuiAbAudition::fire_if_due). IN SOURCE VIEW the launch body's own source
+// arm answers, unchanged: source playback ignores trim and the arm has no
+// domain term, so the other tab's frame is judged against the song end as
+// it always was.
+bool other_tab_launch_ready_impl(const AppState& app, const GuiAudio& audio,
+                                 const GuiPlayback& playback,
+                                 const GuiTargetRender& target_render) {
+    const int64_t frame = other_tab_playhead(app, audio);
+    if (app.active_audio_view == 'T') {
+        const TrimState& trim = other_tab_view(app).trim;
+        const GuiTargetRender::PreviewDomain domain =
+            target_render.preview_domain_for(trim.begin_frame,
+                                             trim.end_frame);
+        return frame >= domain.begin && frame < domain.end - 1;
+    }
+    return playback_launch_playable(app, playback, audio.total_frames(), frame);
 }
 }  // namespace
 
-bool GuiAbAudition::tab_launch_ready(int64_t frame) const {
-    return tab_launch_ready_impl(app, audio, playback, target_render, frame);
+bool GuiAbAudition::active_tab_launch_ready() const {
+    return active_tab_launch_ready_impl(app, audio, playback, target_render,
+                                        app.playhead_cursor_sample);
+}
+
+bool GuiAbAudition::other_tab_launch_ready() const {
+    return other_tab_launch_ready_impl(app, audio, playback, target_render);
 }
 
 // THE PLAY FACE'S ASK-AHEAD (architect 2026-08-30, the twin rule; the
 // contract and the one reader are at the declaration, app_state.h): start()'s
 // press-time gates asked without acting, in start()'s own order — the device
-// once for the pair, then both tabs' launch readiness. The running-sequence
+// once for the pair, then both tabs' launch readiness, the active tab's term
+// and the other tab's derived-domain term (2026-10-18), the same two
+// spellings start() reads. The running-sequence
 // arm is deliberately not here — and since 2026-08-31 it is not a refusal at
 // all but the act's STOP: a standing sequence is transport_session_live, which
 // the face reads ahead of this and answers with its lit STOP glyph, so a press
@@ -70,10 +119,9 @@ bool ab_audition_preflight_ok(const AppState& app, const GuiAudio& audio,
                               const GuiPlayback& playback,
                               const GuiTargetRender& target_render) {
     if (playback.device_absent()) return false;
-    return tab_launch_ready_impl(app, audio, playback, target_render,
-                                 app.playhead_cursor_sample) &&
-           tab_launch_ready_impl(app, audio, playback, target_render,
-                                 other_tab_playhead(app, audio));
+    return active_tab_launch_ready_impl(app, audio, playback, target_render,
+                                        app.playhead_cursor_sample) &&
+           other_tab_launch_ready_impl(app, audio, playback, target_render);
 }
 
 void GuiAbAudition::start() {
@@ -128,17 +176,21 @@ void GuiAbAudition::start() {
     }
     const char home  = app.active_tab_view;
     const char other = (home == 'A') ? 'B' : 'A';
-    // THE OTHER TAB'S PLAYHEAD comes from the file's one spelling above
-    // (other_tab_playhead — the clamp is the switch's own, so the verdict
-    // here is the verdict the launch would reach there); the active tab's is
-    // the live cursor.
-    const int64_t other_playhead = other_tab_playhead(app, audio);
     // BOTH TABS ARE GATED BEFORE THE FIRST SWITCH — and, since 2026-08-30, so
     // is the device above: an act that could only half-run must not move the
     // user off his tab and then fall silent, and the promise holds only if
     // EVERY reason the launch body can refuse for has been asked before the
     // first camera write. Those reasons are the device and the playable
-    // predicate, which is what this pair and the check above are between them.
+    // predicate, which is what this pair and the check above are between them
+    // — the active tab's through the launch body's own predicate against the
+    // bound preview (its own trim's render), the other tab's against the
+    // domain ITS trim's preview will have (2026-10-18; the asymmetry and why
+    // the answer is the launch's are at other_tab_launch_ready_impl above;
+    // the playhead is the switch's own clamp, other_tab_playhead). SO THE
+    // PROMISE IS: a refused act moves nothing, and an admitted act plays
+    // unless a render fails (the wait for an asynchronous preview is
+    // fire_if_due's; a failed render is non-silent on its own road and ends
+    // the act at its next launch).
     // AND THE GATE SAYS SO, ONCE, FOR EITHER TAB (architect 2026-08-30): the
     // act is one act over a pair, so which half of the pair could not play is
     // not the answer — that it cannot run is. The Play button's shift-click
@@ -146,8 +198,7 @@ void GuiAbAudition::start() {
     // road. (The sentence deliberately does not name the target preview: in
     // target view the readiness gate is the preview's, and a Space pressed
     // for itself already says that in its own words.)
-    if (!tab_launch_ready(app.playhead_cursor_sample) ||
-        !tab_launch_ready(other_playhead)) {
+    if (!active_tab_launch_ready() || !other_tab_launch_ready()) {
         notifications.notify(
             AppState::NotificationClass::Normal,
             "One of the two tabs has nothing to play from here");
@@ -181,22 +232,37 @@ void GuiAbAudition::start() {
     // its camera writes leave behind is cleared by the next launch
     // (AppState::follow_suspended).
     apply_working_zoom();
-    // Step 1: the ordinary tab switch (the stop of any live audition, the
-    // selection clear, the band swap, the coincidence auto-select and the
-    // synchronous rebuild are all its own). Not Ctrl+Tab's trigger() tail —
-    // the header says why.
+    // Step 1: Ctrl+Tab's WHOLE ROAD (2026-10-18) — the ordinary tab switch
+    // (the stop of any live audition, the selection clear, the band swap, the
+    // coincidence auto-select and the synchronous rebuild are all its own),
+    // then target_render.trigger(), so the preview follows the tab and the
+    // other tab plays ITS OWN trim's render, exactly as after a Ctrl+Tab. The
+    // trigger is called unconditionally, as Ctrl+Tab calls it: in source view
+    // it returns after the dirty bit and the generation, the same cost
+    // Ctrl+Tab pays. Its target-view path clears the sequence
+    // unconditionally (the target_render clears, GuiAuditionSequence's third
+    // owner) — a no-op here, the sequence being Idle by construction until
+    // the arm below. In the common case the dispatch resolves SYNCHRONOUSLY
+    // on the render cache's rung (each tab's preview was cached the first
+    // time it played) and the preview is in hand at once; on a synthesis
+    // miss it is updating, and the arm below waits for it (fire_if_due).
     active_views.switch_active_tab_view_to(other);
+    target_render.trigger();
     // And `c` on the tab just entered, IN THE SWITCH'S OWN FRAME: no paint has
-    // happened between the two lines, so the flip and the working zoom land
-    // together. Still ahead of the launch, so the play below starts from the
-    // cursor `c` left (a no-op land after a switch — the header says why).
+    // happened between these lines, so the flip and the working zoom land
+    // together. Still ahead of the arm, so the play starts from the cursor `c`
+    // left (a no-op land after a switch — the header says why), and so `c`'s
+    // stop body and land clear nothing the arm has written.
     apply_working_zoom();
-    // Step 2's first play, launched STRAIGHT AWAY — no rest precedes it. The
-    // architect's rest is between SOUNDS and nothing sounded before this one
-    // (the constants' own note, app_state.h). A refusal here is unreachable in
-    // practice (the frame was just validated against the same domain) and
-    // would end the act on the other tab, the interrupt rule's own answer.
-    launch_phase(Phase::OtherFirst, home);
+    // Step 2's first play, ARMED THROUGH THE REST MACHINERY (2026-10-18), its
+    // rest zero: the architect's rest is between SOUNDS and nothing sounded
+    // before this one (the constants' own note, app_state.h), but every play
+    // after a switch takes ONE road, so this one too stands until the preview
+    // the trigger above dispatched has landed. It fires on the run loop's
+    // next deadline tick (the timer's period, every rest's granularity), and
+    // a launch that then refuses — a render that failed — ends the act on the
+    // other tab, the interrupt rule's own answer.
+    arm_rest(Phase::OtherFirst, home, 0);
 }
 
 void GuiAbAudition::advance_after_natural_end(
@@ -222,7 +288,13 @@ void GuiAbAudition::advance_after_natural_end(
             // of it would be wiped.
             // The `c` behind the switch arms the hold posture on the home tab
             // over the switch's own derivation, the act's rule at start().
+            // CTRL+TAB'S WHOLE ROAD, as at start() (2026-10-18): the switch,
+            // then trigger(), so the home tab plays its own trim's preview
+            // again. The trigger's unconditional clear of the sequence is a
+            // no-op here — the tick's stop body cleared it before this call —
+            // and the arm below follows it, so nothing it clears was written.
             active_views.switch_active_tab_view_to(ended.home_tab);
+            target_render.trigger();
             // `c` on the tab just re-entered, in that same switch's frame
             // — and BEFORE the arm below, which is the second half of
             // this arm's ordering rule: the command can clear the
@@ -245,9 +317,10 @@ void GuiAbAudition::advance_after_natural_end(
 void GuiAbAudition::arm_rest(GuiAuditionSequence::Phase phase, char home_tab,
                              int gap_ms) {
     // THE REST HALF'S NON-IDLE WRITE. Nothing is playing at this point (the
-    // tick took the stop body just before calling the advance), so the act
-    // stands on this state alone until fire_if_due launches it or an interrupt
-    // clears it.
+    // tick took the stop body just before calling the advance; at the press,
+    // the switch's and `c`'s stop bodies ended whatever the press found), so
+    // the act stands on this state alone until fire_if_due launches it or an
+    // interrupt clears it.
     app.audition_sequence.phase         = phase;
     app.audition_sequence.home_tab      = home_tab;
     app.audition_sequence.waiting       = true;
@@ -306,6 +379,18 @@ void GuiAbAudition::fire_if_due() {
     // rest that stands.
     if (!seq.waiting) return;
     if (monotonic_ms() < seq.launch_due_ms) return;
+    // A DUE REST STANDS WHILE THE PREVIEW UPDATES (2026-10-18): the act's two
+    // switches take Ctrl+Tab's trigger() tail, and where that dispatch went
+    // asynchronous (a synthesis miss — the first audition after a marker
+    // edit, a trim never rendered) the preview the play needs is still on its
+    // way. The rest simply goes on standing, transport-live as every rest
+    // is, until the preview lands: the completion
+    // (complete_successful_buffer) rebinds under the stopped device — nothing
+    // plays during a rest — and clears no sequence, so the act is still here
+    // on the tick after it. Then the launch is attempted ONCE, and a refusal
+    // (a render that failed: rare, carded on its own road) ends the act as
+    // below. An interrupt in the meantime ends it as it ends any rest.
+    if (app.active_audio_view == 'T' && target_render.is_updating()) return;
     const Phase phase    = seq.phase;
     const char  home_tab = seq.home_tab;
     // END THE REST BEFORE THE LAUNCH IS ATTEMPTED, and read the two fields
@@ -313,8 +398,9 @@ void GuiAbAudition::fire_if_due() {
     // giving way to the play's (waiting = false), and launch_phase writes the
     // play's phase itself before it launches and clears it again on a
     // refusal. The clear here still matters for the one refusal launch_phase
-    // takes BEFORE its write — the preview gate — which must leave the act
-    // ENDED rather than a due rest re-tried on every tick from here on. (The
+    // takes BEFORE its write — the preview gate, which past the wait above
+    // means a preview that FAILED — and which must leave the act ENDED
+    // rather than a due rest re-tried on every tick from here on. (The
     // launch body clears nothing since 2026-09-01; the user launches' clear is
     // launch_playback_from's, which the act's road never passes.)
     clear_audition_sequence(app);
@@ -325,14 +411,18 @@ bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
                                  char home_tab) {
     // RE-ASK THE PREVIEW GATE at every launch, not only at the press: this
     // launch has its own precondition and does not inherit the press-time
-    // verdict, and a refusal here simply ends the act, the interrupt rule's own
-    // answer. The window it was first written for — a target-view mutation
-    // landing after a play's natural end and before the tick observes it — is
-    // now closed at the source instead: GuiTargetRender::trigger() clears the
-    // sequence UNCONDITIONALLY on its target-view path, so such a mutation ends
-    // the act outright and the tick hands the advance an Idle phase rather than
-    // reaching this line against a stale or re-bound preview. The frame gate is
-    // the launch body's.
+    // verdict — every launch now follows a rest, and the rest after a switch
+    // waited for the switch's own re-dispatch (fire_if_due), so past that
+    // wait the one state this refuses is a preview whose render FAILED, and a
+    // refusal here simply ends the act, the interrupt rule's own answer. The
+    // window it was first written for — a target-view mutation landing after
+    // a play's natural end and before the tick observes it — is closed at the
+    // source: GuiTargetRender::trigger() clears the sequence UNCONDITIONALLY
+    // on its target-view path, so such a mutation ends the act outright and
+    // the tick hands the advance an Idle phase rather than reaching this line
+    // against a stale or re-bound preview (the act's own two triggers run
+    // while the sequence is Idle, ahead of their arms). The frame gate is
+    // the launch body's, against the buffer this tab's trim produced.
     if (app.active_audio_view == 'T' && !target_render.preview_ready()) {
         return false;
     }
@@ -344,14 +434,15 @@ bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
     // standing on this phase, and the body clears no sequence on this road
     // (launch_bounded_audition runs none; the user launches' clear is
     // launch_playback_from's). The sequence is Idle at this line by both
-    // callers' construction — start() past its running guard, fire_if_due past
-    // its clear — so this is a write onto Idle, not a re-arm. Nothing between
+    // callers' construction — fire_if_due past its clear, its one caller
+    // since 2026-10-18 (start() arms the first play's rest instead) — so this
+    // is a write onto Idle, not a re-arm. Nothing between
     // here and the launch body paints or dispatches, so the phase standing a
     // call earlier reaches no face and no fork. waiting = false is the whole
     // difference from arm_rest's write: the phase named here is SOUNDING, not
-    // owed. Both `c` calls the act makes ahead of its first play precede this
-    // write (start), and the switch-back call precedes the arm (the advance),
-    // so the header's ordering rule holds unchanged.
+    // owed. Every `c` call the act makes precedes an arm — start's two the
+    // first play's rest, the switch-back call the advance's — and every arm
+    // precedes this write, so the header's ordering rule holds unchanged.
     app.audition_sequence.phase         = phase;
     app.audition_sequence.home_tab      = home_tab;
     app.audition_sequence.waiting       = false;

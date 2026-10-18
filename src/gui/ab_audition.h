@@ -26,12 +26,16 @@ struct GuiInputHandler;
 // the REST before the next play) and the FIRE (fire_if_due — the run loop's
 // deadline tick, which ends that rest and launches). The ONE PLAY
 // each phase makes is GuiPlaybackLifecycle::launch_bounded_audition, the tab
-// switch between plays is GuiActiveViews::switch_active_tab_view_to (the
-// ordinary Ctrl+Tab act, selection clear and synchronous rebuild included),
-// and the preview readiness gate is GuiTargetRender::preview_ready — nothing
-// here plays, switches or renders on its own. NO AUDIO CHANGES: each play is
-// an ordinary session over the buffer the view already plays, at the level it
-// already plays it; no new audio path, no render.
+// switch between plays is Ctrl+Tab's whole road —
+// GuiActiveViews::switch_active_tab_view_to (selection clear and synchronous
+// rebuild included) and then GuiTargetRender::trigger() — and the preview
+// readiness gate is GuiTargetRender::preview_ready — nothing here plays,
+// switches or renders on its own. NO NEW AUDIO: each play is an ordinary
+// session over the preview the tab plays after a Ctrl+Tab, at the level it
+// already plays it; no new audio path. The one render the act causes is the
+// switch's own re-dispatch (2026-10-18), Ctrl+Tab's, which in the common case
+// is a render-cache hit (each tab's preview cached the first time it played)
+// and otherwise a synthesis the next play waits for.
 //
 // WHAT THE ACT DOES, in order: (0) run the `c` command on the tab the press
 // found; (1) switch to the OTHER tab and run `c` there; (2) play kAuditionMs
@@ -86,14 +90,17 @@ struct GuiInputHandler;
 // sequence too (a land is a movement, the inventory at GuiAuditionSequence).
 // So every one of the three calls sits in a window where the sequence is
 // already Idle and none of the act's plays sounds — the press-time pair
-// before the first launch (the refusal guard has returned by then, and
-// launch_phase's own phase write comes after both; the first call's stop ends
-// a play the press found, which the switch behind it would end anyway), and
-// the switch-back call after the tick's stop and the switch and BEFORE
-// arm_rest, which is the same reason the switch itself must precede the arm.
-// A call placed after an arm — or after launch_phase's write — would wipe the
-// phase just written, or stop the play just launched, and silently end the
-// act.
+// before the first play's arm (the refusal guard has returned by then; the
+// first call's stop ends a play the press found, which the switch behind it
+// would end anyway), and the switch-back call after the tick's stop and the
+// switch and BEFORE arm_rest. SINCE 2026-10-18 THE RULE IS ONE AT BOTH ENDS:
+// start() no longer launches its first play but ARMS it (a rest of zero),
+// so the second `c` at the press precedes an arm exactly as the switch-back
+// call does, and each switch's trigger() — whose target-view path clears the
+// sequence unconditionally — precedes it too, which is the same reason the
+// switch itself must precede the arm. A call placed after an arm — or after
+// launch_phase's write — would wipe the phase just written, or stop the play
+// just launched, and silently end the act.
 //
 // SEQUENCING IS PACED AND TAKES NO TIMER OF ITS OWN: the audio thread ends a
 // play, the tick observes it (the same natural-end branch every audition ends
@@ -105,13 +112,16 @@ struct GuiInputHandler;
 // on the run loop's existing deadline tick — the one the key-repeat and touch
 // region-hold deadlines already ride — so no timer is added and the
 // granularity is that tick's (up to one timer period beyond each rest's own
-// milliseconds). The scanner paints during each
+// milliseconds; the first play's rest of zero is that one period). A rest
+// after a switch may also outlast its milliseconds while the entering tab's
+// preview updates (fire_if_due, 2026-10-18). The scanner paints during each
 // play exactly as it does under Space, and during a rest nothing plays at all —
 // but THE ACT IS ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST
-// (architect 2026-08-26), so a rest is transport-LIVE where the user can see or
-// press it: the play/stop button wears its STOP face for the act's whole
-// duration and bare Space is the act's stop throughout (the fork at
-// GuiPlaybackLifecycle::toggle_playback, the face at
+// (architect 2026-08-26; since 2026-10-18 from the press, whose first play
+// is armed behind that rest of zero), so a rest is transport-LIVE where the
+// user can see or press it: the play/stop button wears its STOP face for the
+// act's whole duration and bare Space is the act's stop throughout (the fork
+// at GuiPlaybackLifecycle::toggle_playback, the face at
 // redesign_button_glyph_swapped, both reading `phase != Idle` beside the
 // scanner bit). The alternative would flip the glyph to Play and back three
 // times per act, and the transport row must never lie about live state.
@@ -121,16 +131,23 @@ struct GuiInputHandler;
 // button's shift-click and long press agree with the STOP face it already
 // wears, and the "An audition is already running" card retires with the arm.
 //
-// THE SWITCH IS switch_active_tab_view_to ALONE, NOT Ctrl+Tab's trigger()
-// tail. Ctrl+Tab re-dispatches the preview for the entering tab's trim; here
-// the bound buffer IS what the act plays and BOTH tabs' playheads were
-// validated against it before the first switch — the target domain is
-// full-target frames on either tab, so the one bound preview plays the right
-// audio for both, and a re-dispatch mid-act would take the buffer away under
-// the very play about to launch (asynchronously where the two trims differ).
-// The recorded cost: an act INTERRUPTED on the other tab leaves the preview
-// bound as rendered for the starting tab's trim window until the user's next
-// mutation or Ctrl+Tab triggers, exactly as an in-flight re-render leaves it.
+// THE SWITCH IS CTRL+TAB'S WHOLE ROAD (architect 2026-10-18, on his saved
+// state: each tab played alone, the act carded): switch_active_tab_view_to
+// and then GuiTargetRender::trigger(), at both of the act's switches, so THE
+// PREVIEW FOLLOWS THE TAB as it does after a Ctrl+Tab and each tab plays its
+// OWN trim's render. The two tabs share both marker stores, so the target
+// audio is one and only the trim differs per tab — but the preview EMBODIES
+// the trim (its domain is the trim's crop), so one bound preview cannot play
+// a tab whose playhead lies outside the other tab's window. The order at both
+// sites is the switch, the trigger, `c`, then the arm (the ordering rule
+// above). Where the dispatch goes asynchronous the next play WAITS for it:
+// a due rest stands while the preview updates (fire_if_due), so the first
+// play after each switch launches against the entering tab's own buffer.
+// The trigger is called unconditionally, as Ctrl+Tab calls it, and carries
+// Ctrl+Tab's costs with it: in source view it returns after the dirty bit,
+// and in target view it cancels a running archival render, as a Ctrl+Tab
+// would. An act INTERRUPTED on the other tab therefore leaves that tab's own
+// preview bound, exactly as a Ctrl+Tab would have.
 //
 // INTERRUPTION ends the whole act and leaves the tab where it is — the user is
 // already acting, so no return to the starting tab. A REST IS INTERRUPTED
@@ -181,14 +198,22 @@ struct GuiInputHandler;
 // a dead AAudio stream first (GuiPlayback::ensure_device_available_for_play,
 // the reopen at the press), so it cards only a device that stayed dead after
 // the reopen or never came up at all;
-// in TARGET VIEW, a preview not ready (GuiTargetRender::preview_ready) or
-// EITHER tab's playhead outside the bound buffer's playable range — the other
-// tab's read through its own ViewState, clamped exactly as the switch would
-// clamp it, WITHOUT switching; in SOURCE VIEW, either playhead at or past the
-// two-frame remainder gate — the last two answering in ONE sentence, the act
-// being one act over a pair. THE ORDER IS THE PROMISE: every reason the launch
-// body could refuse for is asked here, before the first `c` and the switch, so
-// a refused act moves nothing. The `h` view consumes the chord at its allowlist
+// in TARGET VIEW, a preview not ready (GuiTargetRender::preview_ready) or the
+// ACTIVE tab's playhead outside the bound buffer's playable range (the launch
+// body's own predicate — at the press the bound buffer is this tab's trim's
+// render), or the OTHER tab's playhead outside the playable range of the
+// domain ITS OWN trim's preview will have (2026-10-18:
+// GuiTargetRender::preview_domain_for, the verdict owner the switch's
+// dispatch stamps, so the answer is the one the launch reaches after the
+// switch), the other tab's read through its own ViewState, clamped exactly as
+// the switch would clamp it, WITHOUT switching; in SOURCE VIEW, either
+// playhead at or past the two-frame remainder gate against the song end —
+// the last two answering in ONE sentence, the act being one act over a pair.
+// THE ORDER IS THE PROMISE: every reason the launch body could refuse for is
+// asked here, before the first `c` and the switch, so a refused act moves
+// nothing, and an admitted act plays unless a render fails (the failure is
+// carded on the preview's own road, and the launch it refuses ends the act).
+// The `h` view consumes the chord at its allowlist
 // (playback is removed from the view whole); loading-or-absent audio consumes
 // it at on_key's head. A read-only tab admits it (it authors nothing). SINCE
 // THE SAME EVENING the same press-time gates are composed for the PLAY
@@ -232,9 +257,12 @@ struct GuiAbAudition {
           notifications(notifications_) {}
 
     // THE PRESS-TIME ACT (the refusals at the head comment): gate both tabs,
-    // run `c` on this tab, switch to the other one, run `c` there, launch the
-    // first play — OR, where the press finds the act already standing, STOP it
-    // through the one stop body and launch nothing (the toggle, 2026-08-31).
+    // run `c` on this tab, switch to the other one (Ctrl+Tab's whole road,
+    // trigger() included), run `c` there, ARM the first play behind a rest of
+    // zero (2026-10-18; fire_if_due launches it once the entering tab's
+    // preview is in hand) — OR, where the press finds the act already standing,
+    // STOP it through the one stop body and launch nothing (the toggle,
+    // 2026-08-31).
     // ONE CALLER: on_key's Shift+Space arm (input_handler.cpp), which the play
     // button's shift-click and long press also reach.
     void start();
@@ -243,13 +271,14 @@ struct GuiAbAudition {
     // read BEFORE taking the one stop body (which clears it). Idle means the
     // play that ended was not the act's — nothing to do. Otherwise ARM THE
     // REST before the next phase (it launches nothing itself), switching back
-    // to the starting tab ahead of the switch rest; HomeSecond ending is the
-    // act's own end. THE SWITCH RUNS FIRST AND THE ARM AFTER IT, because the
-    // switch takes the one stop body and that body clears the sequence — the
-    // same ordering the launch used to need, and the same ordering the
-    // apply_working_zoom that follows the switch needs for its own reason (the
-    // head comment). ONE CALLER: that branch (main.cpp), the sequence's one
-    // advance site.
+    // to the starting tab ahead of the switch rest — Ctrl+Tab's whole road,
+    // trigger() included (2026-10-18); HomeSecond ending is the act's own
+    // end. THE SWITCH RUNS FIRST AND THE ARM AFTER IT, because the switch
+    // takes the one stop body and that body clears the sequence, as does the
+    // trigger's target-view path — the same ordering start() keeps for the
+    // first play's arm, and the same ordering the apply_working_zoom that
+    // follows the switch needs for its own reason (the head comment). ONE
+    // CALLER: that branch (main.cpp), the sequence's one advance site.
     void advance_after_natural_end(const GuiAuditionSequence& ended);
 
     // THE REST'S DEADLINE SAMPLER AND THE ACT'S DEVICE WATCH: launch the phase
@@ -261,6 +290,9 @@ struct GuiAbAudition {
     // architect 2026-09-04). It reads
     // monotonic_ms() itself rather than taking a `now`, so the caller need not
     // sample a clock on every tick for a state that is almost never standing.
+    // A DUE REST STANDS WHILE THE TARGET PREVIEW UPDATES (2026-10-18): the
+    // play after a switch waits for the switch's own re-dispatch to land, and
+    // the launch is then attempted once.
     // The rest is cleared BEFORE the launch is attempted, so a refusal ahead
     // of launch_phase's own write ends the act (the interrupt rule's own
     // answer) instead of leaving a due rest to retry on every tick;
@@ -279,23 +311,30 @@ private:
     // kAuditionMs at the active domain's sample rate, std::nearbyint — the one
     // conversion site (the target buffer is bound at the source's rate).
     int64_t audition_span_frames() const;
-    // Press-time readiness of ONE tab's launch frame: the preview gate in
-    // target view, then the launch body's own playable predicate on the frame.
-    bool tab_launch_ready(int64_t frame) const;
+    // Press-time readiness of the ACTIVE tab's resting playhead: the preview
+    // gate in target view, then the launch body's own playable predicate.
+    bool active_tab_launch_ready() const;
+    // Press-time readiness of the OTHER tab's playhead (the switch's clamp):
+    // in target view against the domain its own trim's preview will have
+    // (GuiTargetRender::preview_domain_for, 2026-10-18), in source view the
+    // launch body's own predicate. The asymmetry is at the definition.
+    bool other_tab_launch_ready() const;
     // Launch one phase's play from the active tab's resting playhead. THE
     // SEQUENCE IS WRITTEN WITH `phase`, waiting = false, BEFORE THE LAUNCH
     // (the play half's non-Idle writer; 2026-09-01 — it followed a true
     // return until then), so the launch body finds the act standing; called
-    // only where the sequence is Idle (start past its guard,
-    // fire_if_due past its clear). Returns whether it launched; a refusal
-    // clears the sequence again, so the act is ended and the tab stays where
-    // it is.
+    // only where the sequence is Idle — fire_if_due past its clear, its one
+    // caller since start() arms its first play (2026-10-18). Returns whether it
+    // launched; a refusal clears the sequence again, so the act is ended and
+    // the tab stays where it is.
     bool launch_phase(GuiAuditionSequence::Phase phase, char home_tab);
     // Arm the REST that precedes `phase`: the sequence takes that phase with
     // waiting = true and a deadline `gap_ms` out (the rest half's non-Idle
-    // writer). Called only from the advance, and only after any tab switch
-    // that transition owes — that switch's stop body would clear what this
-    // wrote.
+    // writer). Called from the advance and, since 2026-10-18, from start()
+    // for the first play (a gap of zero), and at both only after the tab
+    // switch, its trigger() and the `c` that transition owes — the switch's
+    // stop body, the trigger's target-view clear and `c`'s stop would each
+    // clear what this wrote.
     void arm_rest(GuiAuditionSequence::Phase phase, char home_tab, int gap_ms);
     // THE `c` COMMAND ON THE ACTIVE TAB (architect 2026-08-28; the rule, the
     // same-frame claim and the ordering it owes the sequence are at the head
