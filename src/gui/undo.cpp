@@ -1026,9 +1026,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     the cursor's pre-restore frame on the item basis, both read at this
     //     body's head. A restore that moved no cursor moves no camera and
     //     keeps the bit. It holds the column at the working zoom too: the
-    //     marker nudge's working-zoom centring (architect 2026-10-18,
-    //     nudge_camera) names the selected marker's nudge, not the restore,
-    //     which asks the posture alone (nudge_posture_camera).
+    //     restore is not a nudge, so the nudges' working-zoom centring
+    //     (architect 2026-10-18, nudge_camera) never reaches it, and it asks
+    //     the posture alone (nudge_posture_camera).
     //   * A RESTORE THAT CROSSED THE TAB OR THE AUDIO VIEW NEVER HOLDS THE
     //     COLUMN (architect 2026-09-29): the held column was painted in the
     //     view the restore left, so the arm reads the tab and the audio view
@@ -1093,8 +1093,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // when it moves the cursor;
                 // the camera is read before it through the posture's
                 // two-answer fork (nudge_posture_camera, app_state.h — the
-                // rule above; the working-zoom centring of 2026-10-18 names
-                // the marker nudge, so the restore never receives it).
+                // rule above; the restore is not a nudge, so the nudges'
+                // working-zoom centring of 2026-10-18 never reaches it).
                 // Playback is already stopped above, so land's
                 // scanner-inactive premise holds and the camera's subject is
                 // the cursor it seats.

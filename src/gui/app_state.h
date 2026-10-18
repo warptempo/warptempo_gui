@@ -5243,13 +5243,13 @@ struct AppState {
     // repeats, and the arrow buttons, which dispatch those chords) HOLD THE
     // SUBJECT'S COLUMN (Viewport::hold_subject_column_after_nudge) in
     // whichever column the subject is; dark, the nudge follows the edge
-    // through the movement owner's own keep-visible edge-align — EXCEPT THE
-    // MARKER NUDGE AT THE WORKING ZOOM, which centres the nudged marker
-    // whatever the bit says (architect 2026-10-18; nudge_camera). ITS ONE
-    // READER is nudge_posture_camera (below), asked by the waveform lane's
-    // playhead step, by the undo / redo singleton restore
-    // (restore_history_entry, undo.cpp) and, past its zoom term, by the
-    // marker nudge's nudge_camera.
+    // through the movement owner's own keep-visible edge-align — EXCEPT AT
+    // THE WORKING ZOOM, where the nudge (the marker nudge and the waveform
+    // lane's playhead step alike) centres its subject whatever the bit says
+    // (architect 2026-10-18; nudge_camera). ITS ONE READER is
+    // nudge_posture_camera (below), asked by the undo / redo singleton
+    // restore (restore_history_entry, undo.cpp) and, past its zoom term, by
+    // the two nudge dispatch sites' nudge_camera.
     // WHY: an explicit centring means "I want to stay right here", so the
     // nudges that follow it keep the subject where the centring put it and
     // the waveform slides under it.
@@ -5299,8 +5299,8 @@ struct AppState {
     //     middle, so its derivation answers what that tab's picture already
     //     says.
     //   * NOT SET by arrival at the centre by any other road (an arrow step,
-    //     THE WORKING-ZOOM MARKER NUDGE'S CENTRING included (2026-10-18:
-    //     it arms nothing, Viewport::centre_subject_after_nudge), a drop, a
+    //     THE WORKING-ZOOM NUDGE'S CENTRING included (2026-10-18: it arms
+    //     nothing, Viewport::centre_subject_after_nudge), a drop, a
     //     click, an S/T flip — the 2026-09-24 reason above stands
     //     for every road but the tab switch), by THE UNDO / REDO RESTORE from a dark bit in any
     //     arm (its singleton centring of an off-screen marker included: the
@@ -5318,8 +5318,8 @@ struct AppState {
     //     play and every stop that moves no camera (a stop moves no
     //     playhead), by THE NUDGE ITSELF, the first exemption from the
     //     movement-owner clear: it lands the playhead through a movement
-    //     owner and holds the column (or, the marker nudge at the working
-    //     zoom, centres its marker), so it reads the bit before its act and
+    //     owner and holds the column (or, at the working zoom, centres its
+    //     subject), so it reads the bit before its act and
     //     leaves it standing after (the two nudge dispatch sites); and by
     //     THE UNDO / REDO SINGLETON RESTORE UNDER THE HOLD (architect
     //     2026-09-25), the second exemption, which is a nudge for the
@@ -13523,25 +13523,28 @@ enum class MarkerLandingFrame { Center, Land };
 // AppState::camera_hold stands (an explicit centring armed it: bare `c`, the
 // paired march, the A/B audition's centrings, Ctrl+J or the walk's centring;
 // or a tab switch derived it on arrival, hold_derived_on_arrival below),
-// FollowEdge otherwise. Asked directly by the two readers THE 2026-10-18
-// RULING DOES NOT NAME, which can take only these two: the waveform lane's
-// playhead step (run_waveform_lane_playhead_step, input_key_dispatch.cpp —
-// not centred by the ruling, which names the selected marker) and the undo /
-// redo singleton restore (restore_history_entry's visual tail, undo.cpp,
-// where FollowEdge means the landing owner's Restore; architect 2026-09-25).
+// FollowEdge otherwise. Asked directly by the one reader that is NOT A NUDGE
+// and can take only these two: the undo / redo singleton restore
+// (restore_history_entry's visual tail, undo.cpp, where FollowEdge means the
+// landing owner's Restore; architect 2026-09-25) — the working zoom's
+// centring of 2026-10-18 rules the nudges, never the restore.
 inline NudgeCamera nudge_posture_camera(const AppState& a) {
     return a.camera_hold ? NudgeCamera::HoldColumn : NudgeCamera::FollowEdge;
 }
 
-// nudge_camera — THE MARKER NUDGE'S THREE ANSWERS (architect 2026-10-18:
-// "Nudge left, nudge right in working zoom should center. On the selected
-// marker."): Centre AT THE WORKING ZOOM, AS PAINTED (painted_at_working_zoom,
-// warp_frame_map_view.h), whatever the posture says; at every other zoom,
-// finer or coarser, the posture's two answers above. Its one reader is the
-// marker lane's arm (input_handler.cpp; row 8's two arrow buttons synthesize
-// the same chord), carried through both twins to the shared tail
-// (finish_position_nudge (f), position_nudge.cpp). Since the hold stands only
-// at the working zoom (AppState::camera_hold), the marker nudge receives
+// nudge_camera — THE NUDGE'S THREE ANSWERS (architect 2026-10-18: "Nudge
+// left, nudge right in working zoom should center. On the selected marker.";
+// ~14:00 the same day for the playhead: "yes, playhead centers — left/right
+// nudge always center at working zoom"): Centre AT THE WORKING ZOOM, AS
+// PAINTED (painted_at_working_zoom, warp_frame_map_view.h), whatever the
+// posture says; at every other zoom, finer or coarser, the posture's two
+// answers above. Its two readers are the two nudge dispatch sites, bare Left
+// / Right and row 8's two arrow buttons (which synthesize the same chord)
+// alike: the marker lane's arm (input_handler.cpp), carried through both
+// twins to the shared tail (finish_position_nudge (f), position_nudge.cpp),
+// and the waveform lane's playhead step (run_waveform_lane_playhead_step,
+// input_key_dispatch.cpp, live and in the `h` view). Since the hold stands
+// only at the working zoom (AppState::camera_hold), a nudge receives
 // HoldColumn only where the hold outlives that zoom — `c`'s clamped level on
 // a file too short for the working zoom.
 inline NudgeCamera nudge_camera(const AppState& a, const GuiAudio& audio) {
@@ -13582,11 +13585,12 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 // read at a keystroke does not pop, and his hand expected the walk to answer
 // the level he works at, so the landing owner's walk (Viewport::land_subject,
 // LandingKind::Walk) centres at the working zoom and pages an off-screen
-// landing in at every other zoom, finer or coarser. THE MARKER NUDGE READS
-// THE SAME TERM since 2026-10-18 (nudge_camera above: it centres at the
-// working zoom), superseding 2026-09-22's "the nudge reads no zoom level" for
-// it; the waveform lane's playhead step and the singleton restore still read
-// none (nudge_posture_camera). (The first zoom-derived walk, a
+// landing in at every other zoom, finer or coarser. THE NUDGE READS THE SAME
+// TERM since 2026-10-18 (nudge_camera above: the marker nudge and the
+// waveform lane's playhead step centre at the working zoom), superseding
+// 2026-09-22's "the nudge reads no zoom level"; the undo / redo singleton
+// restore, which is no nudge, still reads none (nudge_posture_camera). (The
+// first zoom-derived walk, a
 // predicate and a frame chooser of 2026-09-13 to 2026-09-22, was deleted with
 // the placement-instrument principle; closed_questions.md and git keep its
 // record.)

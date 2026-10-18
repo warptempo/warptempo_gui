@@ -759,7 +759,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // retired; their one step is the active column's unit, a hop on P), and
     // Ctrl+Left / Ctrl+Right bind nothing since 2026-09-23 — the camera their
     // step takes is the bare chord's (NudgeCamera, gui_input.h: the working
-    // zoom's centring of a marker nudge, else the hold posture's).
+    // zoom's centring, marker nudge and playhead step alike, else the hold
+    // posture's).
     // Setting a column here instead would make the modified form the
     // button's ONLY act.
     {RedesignButton::TransportDown,

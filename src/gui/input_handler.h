@@ -2740,10 +2740,9 @@ private:
     // Ctrl+Right were a second road 2026-09-22 to 2026-09-23). `step` is
     // the press's one step in the active column's unit (horizontal_arrow_step,
     // gui_input.h) — one painted column, or ONE HOP on the phase-reset
-    // column; the camera is the hold posture's alone at every zoom
-    // (nudge_posture_camera, app_state.h — the working zoom's centring of
-    // 2026-10-18 names the selected marker, not the playhead), read and kept
-    // by the body. Reached only with an empty selection: the
+    // column; the camera is the nudge's (nudge_camera, app_state.h — Centre
+    // at the working zoom, 2026-10-18, the marker nudge's answer; else the
+    // hold posture's), read and kept by the body. Reached only with an empty selection: the
     // marker-lane branch claims the press first. The `h` view's Left / Right
     // arm (handle_history_mode_key) is the second caller since 2026-09-26,
     // reached with no diff flag focused and clearing no live selection. The

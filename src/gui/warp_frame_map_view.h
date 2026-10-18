@@ -292,8 +292,9 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 // picture, finer or coarser, does not. Degenerate geometry (no strip width,
 // no zoom) answers false. Its three readers: the landing owner's walk
 // (Viewport::land_subject), the hold derived on arrival
-// (hold_derived_on_arrival, viewport.cpp) and the marker nudge's camera
-// (nudge_camera, app_state.h; architect 2026-10-18).
+// (hold_derived_on_arrival, viewport.cpp) and the nudges' camera
+// (nudge_camera, app_state.h — the marker nudge and the waveform lane's
+// playhead step; architect 2026-10-18).
 bool painted_at_working_zoom(const AppState& app, const GuiAudio& audio);
 
 // THE QUANTIZATION ITSELF, for a samples-per-pixel the caller already holds:

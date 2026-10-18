@@ -2377,8 +2377,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // playhead_end_jump_actionable reads as the live selection's analog) the
     // press is the live waveform lane's step, the SAME BODY
     // (run_waveform_lane_playhead_step): one step in the active column's unit
-    // (a painted column on W, a hop on P), the camera the hold posture's
-    // (nudge_posture_camera — `c`, the diff-flag walk's centring and the march arm it
+    // (a painted column on W, a hop on P), the camera the nudge's
+    // (nudge_camera — Centre at the working zoom, 2026-10-18; else the hold
+    // posture's, which `c`, the diff-flag walk's centring and the march arm
     // in here), the hold kept across the step, the key repeating as live.
     // That body's live-selection clear is skipped in the view: the live
     // selection is the live world's and the view writes none of it, and the
@@ -8965,14 +8966,15 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
 // with no diff flag focused or selected, the mode's arm refusing otherwise.
 void GuiInputHandler::run_waveform_lane_playhead_step(
     HorizontalArrowStep step) {
-    // THE CAMERA IS THE HOLD POSTURE'S, read BEFORE the act, and the posture
-    // is KEPT across it — the nudge's exemption (AppState::camera_hold):
-    // the step lands through a movement owner and may move the camera, each
-    // of which would otherwise put it out. THE PLAYHEAD STEP IS NOT CENTRED
-    // at the working zoom: the 2026-10-18 ruling names the selected marker,
-    // so this step asks the posture's two-answer fork alone
-    // (nudge_posture_camera, app_state.h), at every zoom.
-    const NudgeCamera camera = nudge_posture_camera(app);
+    // THE CAMERA IS THE NUDGE'S (nudge_camera, app_state.h — the marker
+    // lane's own fork: Centre at the working zoom as painted, else the hold
+    // posture's two answers; architect 2026-10-18 ~14:00, "yes, playhead
+    // centers — left/right nudge always center at working zoom"), read
+    // BEFORE the act, and the posture is KEPT across it — the nudge's
+    // exemption (AppState::camera_hold): the step lands through a movement
+    // owner and may move the camera, each of which would otherwise put it
+    // out.
+    const NudgeCamera camera = nudge_camera(app, audio);
     const bool hold_before = app.camera_hold;
     // The membership half of the clear below is therefore already satisfied;
     // the FOCUS half is not — last_selected_marker survives an empty selection
@@ -9005,7 +9007,14 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // live domain, so a hop near the end lands exactly ON the end and one
     // already resting there moves nothing; the buttons' face asks the same
     // step the press takes (horizontal_arrow_step_actionable).
-    // THE CAMERA, AT EVERY ZOOM, IS THE HOLD POSTURE'S (architect 2026-09-23;
+    // THE CAMERA AT THE WORKING ZOOM, AS PAINTED, CENTRES (architect
+    // 2026-10-18 ~14:00, the marker nudge's answer extended to the playhead):
+    // a step that moved the cursor places the viewport so the cursor paints
+    // at the window's centre, whatever the posture says
+    // (Viewport::centre_subject_after_nudge — the zoom never written, the
+    // posture written back below and armed by nothing), on the changed path
+    // alone, as the hold; a walled step moves no camera. AT EVERY OTHER ZOOM
+    // THE CAMERA IS THE HOLD POSTURE'S (architect 2026-09-23;
     // the press's modifier chose it from 2026-09-22): dark, the step follows
     // the edge — the landing's own keep-visible edge-align and nothing more,
     // so the camera holds while the cursor stays on screen and walks with it
@@ -9057,11 +9066,14 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
         painted_spp      = basis.spp;
     }
     viewport.move_playhead_by_arrow_step(step);
-    if (camera == NudgeCamera::HoldColumn && painted_spp > 0.0 &&
-        app.playhead_cursor_sample != cursor_before)
-        viewport.hold_subject_column_after_nudge(displayed_column_at(
-            static_cast<double>(cursor_before), painted_vp_start,
-            painted_spp));
+    if (app.playhead_cursor_sample != cursor_before) {
+        if (camera == NudgeCamera::Centre)
+            viewport.centre_subject_after_nudge();
+        else if (camera == NudgeCamera::HoldColumn && painted_spp > 0.0)
+            viewport.hold_subject_column_after_nudge(displayed_column_at(
+                static_cast<double>(cursor_before), painted_vp_start,
+                painted_spp));
+    }
     app.camera_hold = hold_before;
 }
 
