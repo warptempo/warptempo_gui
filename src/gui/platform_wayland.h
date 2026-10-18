@@ -82,11 +82,12 @@ public:
     // exists — gui_main resolves the config ahead of init().
     static DeviceConfig device_config_defaults();
 
-    // THE BUNDLED ICON SET'S FILES — the SVG drawings of the set `set`
+    // THE BUNDLED ICON SET'S FILES — the drawings of the set `set`
     // (assets/icons/<set>/, icons::kIconCount per set), as a map from FILE NAME
-    // (`<Enumerator>.svg`, no folder) to the file's whole bytes, every file of
-    // the set's folder whose name ends `.svg`. Read by the launch's icon load
-    // alone (icons::load_svg_set, icons.h), IN PLACE: nothing is copied into
+    // (`<Enumerator>.svg`, or `<Enumerator>.png` for the one raster seat,
+    // icons.h; no folder) to the file's whole bytes, every file of the set's
+    // folder whose name ends `.svg` or `.png`. Read by the launch's icon load
+    // alone (icons::load_set, icons.h), IN PLACE: nothing is copied into
     // the config folder (nobody authors an icon set on the device). A
     // PLATFORM FACT and on the seam for that reason: where the bundle lives
     // is the backend's answer — THIS BACKEND reads the repository's own

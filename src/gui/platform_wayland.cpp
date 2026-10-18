@@ -29,6 +29,7 @@
 #include <time.h>
 
 #include <algorithm>
+#include <initializer_list>
 #include <cerrno>
 #include <cmath>
 #include <cstdio>
@@ -711,14 +712,14 @@ DeviceConfig GuiPlatform::device_config_defaults() {
 // THE LAPTOP'S ICON BUNDLE IS THE REPOSITORY'S OWN FOLDER (contract at the
 // declaration): the absolute path CMakeLists.txt compiles in, so the build
 // tree's executable reads the files beside the sources it was built from.
-// The reader: every regular file of `folder` whose name ends `suffix`,
-// whole. A folder
+// The reader: every regular file of `folder` whose name ends one of
+// `suffixes`, whole. A folder
 // that cannot be read (the repository moved or deleted under a built
 // executable) or a file that will not open is the error arm, with the
 // system's words.
 static std::expected<std::map<std::string, std::string>, std::string>
 read_bundle_folder(const std::filesystem::path& folder,
-                   std::string_view suffix) {
+                   std::initializer_list<std::string_view> suffixes) {
     std::map<std::string, std::string> out;
     std::error_code ec;
     std::filesystem::directory_iterator it(folder, ec);
@@ -729,7 +730,10 @@ read_bundle_folder(const std::filesystem::path& folder,
     for (; it != std::filesystem::directory_iterator(); it.increment(ec)) {
         if (ec) break;
         const std::string name = it->path().filename().string();
-        if (!name.ends_with(suffix)) continue;
+        if (std::ranges::none_of(suffixes, [&](std::string_view sfx) {
+                return name.ends_with(sfx);
+            }))
+            continue;
         std::error_code tec;
         if (!it->is_regular_file(tec)) continue;
         std::ifstream f(it->path(), std::ios::binary);
@@ -747,11 +751,13 @@ read_bundle_folder(const std::filesystem::path& folder,
     return out;
 }
 
-// An icon set: assets/icons/<set>/, every `.svg`.
+// An icon set: assets/icons/<set>/, every `.svg` and `.png` (the one raster
+// seat, icons.h).
 std::expected<std::map<std::string, std::string>, std::string>
 GuiPlatform::bundled_icon_files(std::string_view set) {
     return read_bundle_folder(
-        std::filesystem::path(WARPTEMPO_BUNDLED_ICONS_DIR) / set, ".svg");
+        std::filesystem::path(WARPTEMPO_BUNDLED_ICONS_DIR) / set,
+        {".svg", ".png"});
 }
 
 bool GuiPlatform::init(int width, int height, const char* title) {

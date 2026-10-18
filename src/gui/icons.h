@@ -6,20 +6,26 @@
 // adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/ artwork at its 48
 // slot, extracted as a standalone 48-unit file by
 // tools/icon_set_adwaita_322/, nothing redrawn and nothing from another
-// release, NO OWN FILE (the own files of 2026-10-15 to 2026-10-17 retired);
-// three seats DERIVED by the same tool and recorded under the licence in the
-// set's README: TabDetachB by element order, and Warp's glyph with the
-// program icon from the clock's slot, its digits outlined and its back
-// arrow mirrored (2026-10-17 late evening) — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
+// release — BUT ONE OWN FILE, A RASTER: Warp's baton (Icon::Baton) and its
+// copy the program icon (AppIcon), the architect's GIMP cutout of Gemini
+// Flash's drawing, a 2048 x 2048 PNG shipped plain — HIS RECORDED EXCEPTION
+// TO THE SET'S SCALABLE RULE (2026-10-18: "it's already very high res, so we
+// can ship it plain and have it scaled by the gui scale and the button
+// casing"), that file alone (the volume dial's bitmap knob stays ruled out,
+// docs/engineering/closed_questions.md); three seats CHANGED by the same tool
+// and recorded under the licence in the set's README: TabDetachB by element
+// order, History's clock with its digits outlined, and Value Drag's pen with
+// its arrow removed (2026-10-18) — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
 // (architect 2026-10-15, "we'll go with none": a drop shadow is the live
 // glyph's raised fiction, and Cool Edit's flat bitmaps never had one — the
 // approved list tools/icon_set_adwaita_322/shadows.tsv); hard-coded (the `icons` device key and the Settings Icons row were
 // removed 2026-10-12, docs/engineering/closed_questions.md). One scalable
-// file per enumerator under assets/icons/<set>/ (its README the mapping, the
+// file per enumerator under assets/icons/<set>/ — the raster seat's a PNG,
+// the file name saying the kind (kIconNames) — (its README the mapping, the
 // provenance and the licences), PARSED AT LAUNCH through resvg, the one renderer of every set
-// (svg_icon.h: the wrapper, the error rule and why a set is checked at its
-// import), straight from the bundle — never copied into the config folder
-// (load_svg_set, below) — and rasterised lazily per (glyph, device px) into
+// (svg_icon.h: the wrapper, the error rule, why a set is checked at its
+// import, and the raster seat's decode and area filter), straight from the bundle — never copied into the config folder
+// (load_set, below) — and rasterised lazily per (glyph, device px) into
 // an ARGB32 surface that a draw copies at an integer device px, no
 // resample. THE INKS ARE THE DRAWINGS' OWN (gradients, strokes and
 // opacities included), never a theme role; a DISABLED glyph is Cool Edit's
@@ -29,7 +35,7 @@
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in the program's case the
 // drawing's square cell (every file a 48-unit root, the sheet's slot nested
-// in it as its own viewport) fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20),
+// in it as its own viewport; the raster's N px read as the same 48 units) fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20),
 // Cool Edit's own seat since 2026-10-09 ~10:25, program_spec.h's head — 60
 // device px at 300 %, 72 at 360); elsewhere its site's own scaled 16 (the
 // caption's icon, the list rows, the cards — Windows' small icon). The
@@ -92,14 +98,13 @@ enum class Icon {
     // 1 / 2) and the Warp / Phase-reset pair (bare 3 / 4), one glyph each.
     AccessoriesDictionary, // Source — the primary source
     InputTablet,         // Target — the authoring surface
-    DocumentOpenRecentForward, // Warp — the history clock (the set's
-                         // document-open-recent, its digits Liberation Sans
-                         // Bold outlines) with its back arrow turned
-                         // forward, clockwise, the hands at 3:00 as drawn
-                         // (architect 2026-10-17 late evening, "implement
-                         // AW3": the commoner act is speeding up, which
-                         // the algorithm renders better); a derived file
-                         // of the set, its README
+    Baton,               // Warp — the conductor's baton: the architect's
+                         // GIMP cutout of Gemini Flash's drawing
+                         // (2026-10-18), a RASTER own file of the set
+                         // (Baton.png, 2048 x 2048), THE ONE EXCEPTION TO
+                         // THE SCALABLE RULE (the head; "the argon one is
+                         // too cartoony", the SVG batons not taken); the
+                         // set's README its provenance
     CameraPhoto,         // Phase Reset — the set's camera-photo, the phase
                          // snapshot: a reset re-grounds the synthesis phase
                          // to the source's at one frame and it decoheres
@@ -132,11 +137,13 @@ enum class Icon {
                          // player's row): the walked version loaded into
                          // the editor in place. The set's edit-paste
                          // (architect 2026-10-14).
-    XOfficeCalendar,     // Toggle History View (`h`) — the set's
-                         // x-office-calendar, history's again since
-                         // 2026-10-17 late evening (architect: "use
-                         // calendar for history"; 2026-10-15/16 before,
-                         // the clock turned back between)
+    DocumentOpenRecent,  // Toggle History View (`h`) — the set's
+                         // document-open-recent, the clock turned back (its
+                         // digits Liberation Sans Bold outlines), history's
+                         // again since 2026-10-18 (architect: "go back to
+                         // using the original git clock icon"; the calendar
+                         // 2026-10-17 late evening to 2026-10-18); a changed
+                         // file of the set, its README
     NetworkWiredDisconnected, // Toggle Session History (bare `g`, lit in
                          // Session) — the set's network-wired-disconnected,
                          // the unplugged cable: local means git off (the
@@ -197,34 +204,38 @@ enum class Icon {
     AccessoriesTextEditor, // Open Text Editor (bare Enter) — the set's
                            // accessories-text-editor (architect 2026-10-09)
     EditDelete,          // Delete Folder (the render player)
-    ValueDrag,           // Toggle Value Drag (bare `[`) — a vertical double
-                         // arrow, the drag it arms (architect 2026-10-11:
-                         // "a double-sided arrow with an up and a down";
-                         // never a zoom glyph)
-    AppIcon,             // the caption's icon — Warp's forward clock,
-                         // DocumentOpenRecentForward's file byte for
-                         // byte, the program icon outside the window too
-                         // (architect 2026-10-17 late evening;
+    ValueDrag,           // Toggle Value Drag (bare `[`) — the pen, the
+                         // drag it arms: the set's format-text-direction-rtl
+                         // with its arrow and its shadows out, the nib at
+                         // the lower left as drawn (architect 2026-10-18:
+                         // "drop the arrows altogether"; the double arrow of
+                         // 2026-10-11 retired); a changed file of the set,
+                         // its README
+    AppIcon,             // the caption's icon — Warp's baton, Baton.png
+                         // byte for byte, the program icon outside the
+                         // window too (architect 2026-10-18;
                          // tools/app_icon/)
 };
 
-// Roster size, the names' and the load's count (load_svg_set parses one
+// Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
 inline constexpr int kIconCount = 60;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
-// `<name>.svg` (load_svg_set reads them). A misspelling is a missing file at
-// the next launch, which fails it.
+// `<name>.svg` — or `<name>.png` for the one raster seat (Baton and its copy
+// AppIcon, the head's exception): THE FILE NAME SAYS THE KIND, exactly one
+// file per enumerator (load_set reads them). A misspelling is a missing file
+// at the next launch, which fails it.
 inline constexpr const char* kIconNames[] = {
     "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
     "VcsCommit",
-    "VcsPull", "AccessoriesDictionary", "InputTablet", "DocumentOpenRecentForward",
+    "VcsPull", "AccessoriesDictionary", "InputTablet", "Baton",
     "CameraPhoto",
     "ViewRestore", "EditFind", "AudioVolumeHigh", "ListAdd", "ListRemove",
     "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
     "MusicNote16th", "Mathmode", "PreviewRenderOn",
-    "DialogOkApply", "XOfficeCalendar", "NetworkWiredDisconnected",
+    "DialogOkApply", "DocumentOpenRecent", "NetworkWiredDisconnected",
     "EditSelect",
     "KeyframePrevious", "KeyframeNext", "GoPrevious", "GoNext",
     "DocumentRevert", "MediaSkipBackward", "MediaPlaybackStart",
@@ -246,10 +257,11 @@ inline constexpr const char* kIconSet = "adwaita-3.22";
 
 // THE GLYPHS BODY-CENTERED (architect 2026-10-12: every glyph, no
 // exceptions, "the simpler rule is just center all of them"): each is drawn
-// translated by (dx, dy) in the SVG's own user units (every file a 48-unit
-// root; +x right, +y down), composed into resvg's render transform
-// (svg_icon::rasterise) so it scales with the raster, the disabled copy's
-// light half one more unit on the same shift (draw_disabled). THE BODY-CENTERING TEST: the body is the
+// translated by (dx, dy) in the drawing's own user units (every file a
+// 48-unit root, the raster seat's 48-unit frame; +x right, +y down), composed
+// into resvg's render transform or the raster's filter (svg_icon::rasterise)
+// so it scales with the raster, the disabled copy's light half one more unit
+// on the same shift (draw_disabled). THE BODY-CENTERING TEST: the body is the
 // shipped file itself, shadow-less by construction (the head: every drop
 // shadow removed at the extraction, architect 2026-10-15); its alpha >= 0.1
 // bounds at 240 px give a bbox whose center the shift puts at the canvas
@@ -257,8 +269,9 @@ inline constexpr const char* kIconSet = "adwaita-3.22";
 // tools/icon_center/gen_icon_shifts.py (never hand-edited), in kIconNames
 // order. Where a shifted drawing crosses the canvas edge it clips, accepted.
 // The shift is the product's, not the file's:
-// the files are the extraction tool's output (two of them changed files and
-// one the set's own, the set's README).
+// the files are the extraction tool's output (three of them changed files and
+// one, the raster, the set's own, the set's README). The generator measures
+// the raster as the mock tool did: PIL's Lanczos to 240 px, the same bounds.
 struct IconShift {
     const char* name;   // the enumerator's name, kIconNames' spelling
     float       dx;
@@ -269,7 +282,7 @@ inline constexpr IconShift kIconShifts[] = {
 };
 
 // THE SET (architect 2026-10-12): the one bundled set, loaded once at launch
-// (load_svg_set, below).
+// (load_set, below).
 inline std::string_view gui_live_icon_set() { return kIconSet; }
 
 // THE SET'S LOAD, once, in gui_main before the window: `set`'s files fetched from the bundle
@@ -277,15 +290,17 @@ inline std::string_view gui_live_icon_set() { return kIconSet; }
 // the laptop, the APK's icons/<set>/ assets on the tablet; READ IN PLACE,
 // never copied into the config folder: nobody authors an icon set on the
 // device),
-// then every enumerator's `<name>.svg` parsed in enum order before any draw
-// (svg_icon::parse; files of other names, the README among them, ignored).
-// THE ERROR ARM'S PRODUCERS: the bundle unreadable (IO), a file missing or
-// not well-formed SVG (a build defect) — "icon set 'adwaita-3.22': EditDelete.svg:
+// then every enumerator's `<name>.svg` (svg_icon::parse) or `<name>.png`
+// (svg_icon::parse_png, the raster seat) parsed in enum order before any draw
+// (files of other names, the README among them, ignored).
+// THE ERROR ARM'S PRODUCERS: the bundle unreadable (IO), a file missing, an
+// enumerator with both files, a file not well-formed SVG or not a square PNG
+// (a build defect) — "icon set 'adwaita-3.22': EditDelete.svg:
 // not well-formed SVG (resvg error 7)", the first only, which gui_main
 // prints and exits on (the validation doctrine's class (1)). A construct
 // resvg does not draw passes the load: the set's import sheet is that check
 // (svg_icon.h's error rule).
-std::optional<std::string> load_svg_set(std::string_view set);
+std::optional<std::string> load_set(std::string_view set);
 
 // THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale)
 // and on a flip of True Colors (GuiInputHandler::toggle_true_colors — the

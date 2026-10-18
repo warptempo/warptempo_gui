@@ -23,8 +23,10 @@
 // 24-W seat is ReactOS's large toolbar glyph, the base's seat for a chrome
 // vocabulary (chrome_spec.h's head, where it stays the chrome's rule), and
 // the program takes no chrome's toolbar; the set's drawings are scalable
-// SVG (Adwaita 3.22's and the one own file alike, rasterised by resvg at
-// the seat's device size), so a glyph loses nothing at 20. THE
+// SVG (Adwaita 3.22's, rasterised by resvg at the seat's device size) but
+// one, the baton, a 2048-px raster scaled down by an area filter (the
+// architect's exception of 2026-10-18, icons.h), so a glyph loses nothing at
+// 20. THE
 // SIZE ON THE GLASS is gui_scale's (300 x 24 / 20 = 360 puts the glyph at
 // the 72 device px the 24-W seat drew at 300; the device's choice, never
 // this header's). (The 24-W seat round a 27-W case, a 37-W band and a 36-W

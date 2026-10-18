@@ -3,3 +3,4 @@
 # id must exist; every <use> of a removed element goes with it; a reference left to a removed element fails the build).
 # Rows are optional: an enumerator absent here removes nothing more. Every enumerator named must be a mapping.tsv row.
 # enumerator	source_icon	removed_ids	note
+ValueDrag	format-text-direction-rtl	g7348	the arrow out, the pen alone, architect 2026-10-18

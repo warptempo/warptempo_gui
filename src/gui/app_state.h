@@ -2934,8 +2934,8 @@ enum class RedesignButton {
     // them). Bare `[`, a ONE-SHOT LAMP over AppState::value_drag_lamp: lit,
     // every flag drag is the value drag in every view; dark, none is; the
     // lift of a value drag that began puts it out (the rule is at
-    // value_drag_posture). It wears the sets' vertical double arrow
-    // (icons::Icon::ValueDrag). ITS FACE: the selected face while ARMED
+    // value_drag_posture). It wears the set's pen (icons::Icon::ValueDrag,
+    // architect 2026-10-18). ITS FACE: the selected face while ARMED
     // (value_drag_armed: the lamp lit, or grid iterations standing), the
     // roster's lamp rule; GREY ON A LOCKED TAB, where no flag drag of either
     // axis can act and bare `[` drops at read_only_key_blocked with the lock's

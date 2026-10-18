@@ -29,14 +29,14 @@
   <!-- The OTG stick is M6's, and a device without one must still install. -->
   <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
-  <!-- android:icon is the launcher and recents icon: the clock with its
-       arrow turned forward, the caption's icon and Warp's glyph,
-       assets/icons/adwaita-3.22/AppIcon.svg (architect 2026-10-12; the
-       forward clock since 2026-10-17 late evening),
-       rasterised antialiased over flat white, the adaptive icon's background layer
+  <!-- android:icon is the launcher and recents icon: the conductor's
+       baton, the caption's icon and Warp's glyph,
+       assets/icons/adwaita-3.22/AppIcon.png (architect 2026-10-12; the
+       baton, a raster, since 2026-10-18),
+       resized by a Lanczos filter over flat white, the adaptive icon's background layer
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the sizes and the ground's
        reason). The Linux desktop's launcher icon
-       (packaging/warptempo_gui.svg) is the same drawing bare; both are
+       (packaging/warptempo_gui.png) is the same drawing bare; both are
        written by tools/app_icon/gen_app_icon.sh. -->
   <application
       android:label="Warptempo"

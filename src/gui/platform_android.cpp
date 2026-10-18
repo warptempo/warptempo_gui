@@ -34,6 +34,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <initializer_list>
 #include <cassert>
 #include <cerrno>
 #include <clocale>
@@ -578,9 +579,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
 
 // THE TABLET'S ICON BUNDLES ARE THE APK'S ASSET DIRECTORIES (contract at
 // platform_wayland.h's declaration): build_apk.sh copies each of the
-// repository's assets/icons/<set>/*.svg into assets/icons/<set>/, and one
-// reader lists an asset directory (AAssetManager_openDir lists FILES only) and reads every
-// name ending `suffix` whole. The manager is the activity's, off the
+// repository's assets/icons/<set>/*.svg and *.png (the one raster seat,
+// icons.h) into assets/icons/<set>/, and one reader lists an asset directory
+// (AAssetManager_openDir lists FILES only) and reads every name ending one of
+// `suffixes` whole. The manager is the activity's, off the
 // file-scope pointer android_main parks before gui_main asks (the road
 // device_config_defaults takes). THE ERROR ARM'S PRODUCERS: an asset listed
 // but not opened or not read whole (IO on the installed APK), a directory
@@ -588,7 +590,8 @@ DeviceConfig GuiPlatform::device_config_defaults() {
 // install_fonts_or_die has already aborted on a missing manager before
 // gui_main runs).
 static std::expected<std::map<std::string, std::string>, std::string>
-read_asset_dir(const std::string& dir_name, std::string_view suffix) {
+read_asset_dir(const std::string& dir_name,
+               std::initializer_list<std::string_view> suffixes) {
     AAssetManager* mgr = (g_android_app && g_android_app->activity)
                              ? g_android_app->activity->assetManager
                              : nullptr;
@@ -602,7 +605,10 @@ read_asset_dir(const std::string& dir_name, std::string_view suffix) {
     std::string failure;
     while (const char* entry = AAssetDir_getNextFileName(dir)) {
         const std::string name = entry;
-        if (!name.ends_with(suffix)) continue;
+        if (std::ranges::none_of(suffixes, [&](std::string_view sfx) {
+                return name.ends_with(sfx);
+            }))
+            continue;
         const std::string path = dir_name + "/" + name;
         AAsset* asset = AAssetManager_open(mgr, path.c_str(),
                                            AASSET_MODE_STREAMING);
@@ -636,7 +642,7 @@ read_asset_dir(const std::string& dir_name, std::string_view suffix) {
 // load as missing files, the first named — the same hard fail.
 std::expected<std::map<std::string, std::string>, std::string>
 GuiPlatform::bundled_icon_files(std::string_view set) {
-    return read_asset_dir("icons/" + std::string(set), ".svg");
+    return read_asset_dir("icons/" + std::string(set), {".svg", ".png"});
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {

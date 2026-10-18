@@ -960,10 +960,10 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // in both. It paints whole beside the view pairs under the same overflow
 // rule (kIconRowViewPairs), the left groups yielding to both. Its seat is
 // the same in both states, and the mode's two edges damage the whole window
-// anyway (THE REPAINT, above). Its glyph is the set's x-office-calendar,
-// history's again since 2026-10-17 late evening (icons.h).
+// anyway (THE REPAINT, above). Its glyph is the set's document-open-recent,
+// the clock turned back, history's again since 2026-10-18 (icons.h).
 constexpr IconRowDef kIconRowHistoryOpener =
-    {RedesignButton::IconHistory, icons::Icon::XOfficeCalendar};
+    {RedesignButton::IconHistory, icons::Icon::DocumentOpenRecent};
 
 // THE VIEW PAIRS — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
 // 2026-10-01; two radio pairs since 2026-10-14): the Source / Target pair on
@@ -974,8 +974,9 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // blue "Logging | Editing | Audio | Effects | Color" bar at the far right of
 // its menu row — reborn as the selectors; the bar's labelled buttons are gone
 // and the acts wear the architect's glyphs (icons.h: Source the dictionary,
-// Target the tablet, 2026-10-14; Warp the history clock with its arrow
-// turned forward, 2026-10-17 late evening; Phase Reset the camera's phase snapshot, 2026-10-15). THE BAND'S OWN METRICS, NONE NEW: the program's case
+// Target the tablet, 2026-10-14; Warp the conductor's baton, the set's one
+// raster, 2026-10-18; Phase Reset the camera's phase snapshot, 2026-10-15).
+// THE BAND'S OWN METRICS, NONE NEW: the program's case
 // (render.h's program block), each pair's members abutting in their own pane
 // (its leader the pair's first at redesign_button_opens_icon_group), the
 // program's grooved recess between the panes, the Warp pane ending at the
@@ -1006,7 +1007,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource, icons::Icon::AccessoriesDictionary},
      {RedesignButton::ViewTarget, icons::Icon::InputTablet}},
-    {{RedesignButton::ViewWarp,   icons::Icon::DocumentOpenRecentForward},
+    {{RedesignButton::ViewWarp,   icons::Icon::Baton},
      {RedesignButton::ViewPhase,  icons::Icon::CameraPhoto}},
 };
 
@@ -2598,7 +2599,7 @@ struct TransportRowDef {
 // tab, and the `h` view does not paint it (its roster entry, app_state.h).
 //
 // THE GROUP IS EIGHT SINCE 2026-10-11 (architect ~00:40): TOGGLE VALUE DRAG —
-// bare `[`, the sets' vertical double arrow (ValueDrag) — IMMEDIATELY RIGHT
+// bare `[`, the set's pen (ValueDrag, since 2026-10-18) — IMMEDIATELY RIGHT
 // OF ADD TO SELECTION, the group's second lamp and its last member ("arm Add
 // to Selection, pick several flags, then arm this and drag them"). A
 // one-shot: the drag it arms puts it out; under grid iterations permanently

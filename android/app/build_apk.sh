@@ -128,9 +128,11 @@ done
 # THE BUNDLED ICON SET (architect 2026-10-06; one set since 2026-10-12,
 # Adwaita 3.22 since 2026-10-14, icons.h's kIconSet): each folder under the
 # repository's assets/icons/ (assets/icons/adwaita-3.22/ alone) copied whole
-# as SVG into the package's assets/icons/<set>/, which aapt2 link's -A packs
+# -- every SVG and the one raster seat's PNG (Warp's baton and its copy
+# AppIcon, the architect's recorded exception of 2026-10-18, icons.h) --
+# into the package's assets/icons/<set>/, which aapt2 link's -A packs
 # (deflated) as the APK's `icons/<set>/` asset directory. The app reads them in
-# place at launch, never copying them out (icons.h's load_svg_set;
+# place at launch, never copying them out (icons.h's load_set;
 # GuiPlatform::bundled_icon_files, platform_android.cpp). An empty set folder is
 # a build defect and stops the script here.
 ICON_ROOT="$APPDIR/../../assets/icons"
@@ -138,9 +140,9 @@ ICON_SETS=0
 for SET_DIR in "$ICON_ROOT"/*/; do
     SET_NAME="$(basename "$SET_DIR")"
     shopt -s nullglob
-    SET_FILES=("$SET_DIR"*.svg)
+    SET_FILES=("$SET_DIR"*.svg "$SET_DIR"*.png)
     shopt -u nullglob
-    [ "${#SET_FILES[@]}" -gt 0 ] || wt_die "no .svg files under $SET_DIR"
+    [ "${#SET_FILES[@]}" -gt 0 ] || wt_die "no .svg or .png files under $SET_DIR"
     mkdir -p "$ASSETS/icons/$SET_NAME"
     cp -f "${SET_FILES[@]}" "$ASSETS/icons/$SET_NAME/"
     wt_say "assets: icon set $SET_NAME, ${#SET_FILES[@]} files"
@@ -191,14 +193,14 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # --- 5. aapt2 compile + link ----------------------------------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, the clock with its arrow turned forward, the caption's
-# icon and Warp's glyph (assets/icons/adwaita-3.22/AppIcon.svg, architect
-# 2026-10-17 late evening)
+# layers per density, the conductor's baton, the caption's icon and Warp's
+# glyph (assets/icons/adwaita-3.22/AppIcon.png, architect 2026-10-18)
 # over flat white (architect 2026-10-17), written by
 # tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
 # comment states the sizes; nothing here renders). Every GUI pixel is painted
 # by cairo, the roster's icons included (the Adwaita 3.22 set's SVG assets above,
-# rasterised by resvg, svg_icon.cpp, and copied by cairo); the app declares no
+# rasterised by resvg, and the one PNG, decoded by resvg and scaled by an area
+# filter, svg_icon.cpp; each copied by cairo); the app declares no
 # @string, no style, no res/values. aapt2 compile turns the
 # directory into res.zip, which link takes as a positional input.
 # (targetSdk stays 34 rather than opting out of Android 15's edge-to-edge

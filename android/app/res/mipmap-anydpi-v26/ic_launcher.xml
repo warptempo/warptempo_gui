@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture (architect 2026-10-12; the forward clock
-     since 2026-10-17 late evening): Adwaita 3.22's clock with its back arrow
-     turned forward, the caption's icon and the glyph Warp wears,
-     assets/icons/adwaita-3.22/AppIcon.svg, rasterised ANTIALIASED by
-     rsvg-convert (librsvg on the laptop; a vector, not pixel art) and
-     centered over WHITE, FLAT (architect 2026-10-17): #FFFFFF, one color
+     recents card). Its picture (architect 2026-10-12; the baton since
+     2026-10-18): the conductor's baton, the icon set's one raster own file,
+     the caption's icon and the glyph Warp wears,
+     assets/icons/adwaita-3.22/AppIcon.png (2048 x 2048), resized by
+     ImageMagick's Lanczos filter from the full raster (the GUI's own filter
+     family) and centered over WHITE, FLAT (architect 2026-10-17): #FFFFFF, one color
      over the whole canvas, so the mask shows a white shape carrying the
      drawing (Windows Storm's caption start #800080 from 2026-10-16 until
      then, the Cool Edit case's 20 face-ramp bands under Midnight's Face
@@ -15,7 +15,7 @@
 
      Two layers per density under res/mipmap-<density>/, BOTH written by
      tools/app_icon/gen_app_icon.sh (which also writes the Linux desktop icon,
-     packaging/warptempo_gui.svg, the same drawing bare):
+     packaging/warptempo_gui.png, the same drawing bare):
        ic_launcher_background.png  the full 108 dp canvas flat in #FFFFFF;
        ic_launcher_foreground.png  the drawing rendered at the 52 dp art size,
                                    centred on a transparent canvas of the
@@ -26,12 +26,11 @@
      canvas. The 48-unit drawing at 52 dp square (13/12 dp a unit; architect
      2026-10-16, his pick off a 60 / 56 / 52 / 48 / 44 / 40 dp series on the
      glass: at 64 dp the art filled ~86 % of the launcher's visible tile and
-     nearly touched its corners) puts the case about 68 % of the visible tile.
-     The 52 dp square's own corners (half-diagonal 36.8 dp) lie outside the
-     33 dp radius of that circle, but they are empty: the drawing's case is
-     44 x 34 of its 48 units centered in them, 47.67 x 36.83 dp, whose
-     corners lie 30.1 dp from the center, inside the circle with 2.9 dp to
-     spare. The same 52 dp
+     nearly touched its corners). The 52 dp square's own corners
+     (half-diagonal 36.8 dp) lie outside the 33 dp radius of that circle,
+     but they are empty: the baton's farthest ink (its tip, toward the
+     upper right corner) lies 29.1 of its 48 units, 31.5 dp, from the
+     center, inside the circle with 1.5 dp to spare. The same 52 dp
      at every density (the per-density PNG pixel size scales with the density
      factor f alone):
 

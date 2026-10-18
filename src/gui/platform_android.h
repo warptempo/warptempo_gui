@@ -54,9 +54,9 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // is the one portable body driving either (the loop contract, platform.h). IT
 // LAST SHRANK ON 2026-10-08 (the theme files' member, below) and LAST GREW ON
 // 2026-10-06, twice: by bundled_icon_files (the icon set's SVG
-// files the build ships, read in place at launch: the repository's
+// files and its one PNG the build ships, read in place at launch: the repository's
 // assets/icons/<set>/ on the laptop, the APK's assets here — icons.h's
-// load_svg_set) and by display_width_px (the display's horizontal
+// load_set) and by display_width_px (the display's horizontal
 // resolution, the working column's held width — working_column_frames,
 // app_state.h: the output's current mode on the laptop, the surface here),
 // before that on 2026-10-05 by the bundled theme files' member (the theme
@@ -156,7 +156,7 @@ public:
 
     // THE BUNDLED ICON SET'S FILES, the seam's own member (contract at
     // platform_wayland.h): this backend answers the APK's `icons/<set>/`
-    // assets — the repository's `assets/icons/<set>/*.svg`, which
+    // assets — the repository's `assets/icons/<set>/*.svg` and `*.png`, which
     // build_apk.sh's asset step packs — listed and read through the
     // activity's AAssetManager, reached off the backend's one file-scope
     // pointer (g_android_app), which android_main parks before gui_main asks,

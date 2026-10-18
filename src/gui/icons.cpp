@@ -17,7 +17,7 @@ namespace {
 // -- The loaded set and its rasters -------------------------------------------
 //
 // THE SET: per glyph, in enum order, its one parse, loaded once by
-// load_svg_set before the window exists and never changed after.
+// load_set before the window exists and never changed after.
 //
 // THE CACHE: per (glyph, device px) the LIVE raster and, the first time a
 // disabled face asks, its DISABLED copy, Cool Edit's emboss of the live mask
@@ -78,17 +78,27 @@ void paint_raster(cairo_t* cr, cairo_surface_t* s, double x, double y) {
 
 } // namespace
 
-std::optional<std::string> load_svg_set(std::string_view set) {
+std::optional<std::string> load_set(std::string_view set) {
     const std::string label = "icon set '" + std::string(set) + "': ";
     auto bundle = GuiPlatform::bundled_icon_files(set);
     if (!bundle) return label + bundle.error();
     LoadedSet loaded;
     for (int i = 0; i < kIconCount; ++i) {
-        const std::string file = std::string(kIconNames[i]) + ".svg";
-        const auto found = bundle->find(file);
-        if (found == bundle->end()) return label + file + ": missing";
+        // THE FILE NAME SAYS THE KIND (icons.h's kIconNames): `<name>.svg`,
+        // or `<name>.png` for the raster seat, exactly one of the two.
+        const std::string svg = std::string(kIconNames[i]) + ".svg";
+        const std::string png = std::string(kIconNames[i]) + ".png";
+        const auto found_svg = bundle->find(svg);
+        const auto found_png = bundle->find(png);
+        const bool is_png = found_svg == bundle->end();
+        if (is_png && found_png == bundle->end())
+            return label + svg + ": missing";
+        if (!is_png && found_png != bundle->end())
+            return label + svg + " and " + png + ": two files for one glyph";
+        const std::string& file = is_png ? png : svg;
         // Every file is parsed here, the error arm's one producer.
-        auto doc = svg_icon::parse(found->second);
+        auto doc = is_png ? svg_icon::parse_png(found_png->second)
+                          : svg_icon::parse(found_svg->second);
         if (!doc) return label + file + ": " + doc.error();
         loaded.docs[static_cast<size_t>(i)] = std::move(*doc);
         // The one set's shift table, matched by name (kIconShifts).

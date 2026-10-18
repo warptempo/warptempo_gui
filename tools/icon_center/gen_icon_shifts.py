@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """GENERATOR of src/gui/icon_shifts.inc: the body-centering shift of every
-glyph of the one set, assets/icons/adwaita-3.22/*.svg (architect 2026-10-12;
-the set Adwaita 3.22.0 since 2026-10-14). Run from anywhere:
+glyph of the one set, assets/icons/adwaita-3.22/*.svg and the one raster seat's
+*.png (architect 2026-10-12; the set Adwaita 3.22.0 since 2026-10-14; the raster
+2026-10-18). Run from anywhere:
     python3 tools/icon_center/gen_icon_shifts.py
 The body is the shipped file itself: every drop shadow was removed structurally
 at the set's extraction (tools/icon_set_adwaita_322/shadows.tsv, architect
 2026-10-15), so the drawing is shadow-less by construction. Its alpha >= 0.1
 bounds at 240 px; the shift puts the bbox center at the viewBox center, in the
-SVG's user units."""
+SVG's user units. THE RASTER SEAT (`<name>.png` where no `<name>.svg` is, the
+architect's recorded exception, icons.h): the PNG resized to 240 by PIL's
+Image.LANCZOS (the area filter the product scales it by, and the mock tool's
+measure), the same alpha >= 0.1 bounds, its viewBox the 48-unit frame."""
 import re, io, subprocess, os, numpy as np
 import xml.etree.ElementTree as ET
 from PIL import Image
@@ -26,8 +30,13 @@ def main():
     lines=[]
     for n in names:
         p=SET+n+'.svg'
-        vb=[float(x) for x in ET.parse(p).getroot().get('viewBox','0 0 48 48').replace(',',' ').split()]
-        b=bbox(rsvg(p,240),0.1); u=vb[2]/240
+        if not os.path.exists(p) and os.path.exists(SET+n+'.png'):
+            vb=[0.0,0.0,48.0,48.0]
+            b=bbox(Image.open(SET+n+'.png').convert('RGBA').resize((240,240),Image.LANCZOS),0.1)
+        else:
+            vb=[float(x) for x in ET.parse(p).getroot().get('viewBox','0 0 48 48').replace(',',' ').split()]
+            b=bbox(rsvg(p,240),0.1)
+        u=vb[2]/240
         cx=(b[0]+b[1])/2*u+vb[0]; cy=(b[2]+b[3])/2*u+vb[1]
         dx=round(vb[0]+vb[2]/2-cx,1)+0.0; dy=round(vb[1]+vb[3]/2-cy,1)+0.0
         lines.append('{"%s", %.1ff, %.1ff},'%(n,dx,dy))
