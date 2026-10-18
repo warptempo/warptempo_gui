@@ -701,10 +701,15 @@ struct Viewport {
     //     backstops behind the S/T toggle's own lifecycle stop
     //     (input_handler.cpp's "before mutating playhead state" call) and
     //     deliberately carry no clock call.
-    //   * main.cpp's two tick sites: the pre-paint scanner advance (the
-    //     value advances) and the playing heartbeat's OFFSCREEN FALLBACK (the
-    //     always-onscreen honest rect that keeps the paint clock running
-    //     when the scanner column yields no damage). (The resize/total-change
+    //   * main.cpp's tick sites: the pre-paint scanner advance (the value
+    //     advances), the car's loop wrap (the scanner jumps back to the
+    //     trim's start, beside its full-area waveform damage), and the two
+    //     PAINT-CLOCK KEEPERS, which change nothing the clock shows and are
+    //     members because the cell is the always-onscreen rect: the playing
+    //     heartbeat's OFFSCREEN FALLBACK (when the scanner column yields no
+    //     damage) and the A/B audition's REST (every tick while a rest
+    //     stands, so the display's idle timer never fires inside the act,
+    //     2026-10-18). (The resize/total-change
     //     repair's geometry-moved arm owes the cell a check since 2026-10-13,
     //     like the zoom appliers — owe_clock_check below; the cursor clamp
     //     that CAN move the value damages the clock itself inside

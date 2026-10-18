@@ -2990,6 +2990,36 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner heartbeat rather than waiting for the next.
         ab_audition.fire_if_due();
 
+        // A REST KEEPS THE PAINT CLOCK RUNNING (2026-10-18): while a rest of
+        // the act stands, every tick damages the CLOCK CELL, so a frame is
+        // presented at every vsync through the rest. THE DISPLAY HAS AN IDLE
+        // TIMER: the tablet's SurfaceFlinger drops the panel from 90 Hz to
+        // 30 Hz once no layer has presented for 250 ms, and the first frame
+        // presented after that brings 90 Hz back only a frame or two later —
+        // the app's explicit frame-rate vote does not outrank the idle timer.
+        // Inside the act a rest is the one silent gap, and the one the app can
+        // keep awake itself: nothing is damaged during it (the scanner is
+        // down, and the clock's own damage is the pre-paint hook's while
+        // playing), so nothing would be painted. The pair rest is under the
+        // timer and the switch rest is not, and the press's touch-control
+        // window holds 90 Hz through the first two beats, so the third beat —
+        // the home tab's first play — started under a 30 Hz panel: its first
+        // frames landed 33 ms apart, the scanner stepping three times coarser
+        // until 90 Hz returned, which the architect saw as the scanner
+        // skipping ahead and then playing smoothly. THE CLOCK CELL is the
+        // OFFSCREEN FALLBACK's rect below — row 8 is always onscreen, the
+        // smallest rect that always produces a paint — and its repaint during
+        // a rest changes no pixel (the field shows the resting cursor's
+        // time). EVERY REST TAKES IT, the pair rests with the switch rest:
+        // one rule rather than a threshold against one device's timer. The
+        // laptop pays the same small frames for symmetry (labwc has no idle
+        // refresh timer of its own). It sits AFTER fire_if_due: a rest that
+        // fired this tick is waiting no longer, and the launch's own
+        // full-area damage covers that frame.
+        if (app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle &&
+            app.audition_sequence.waiting)
+            invalidate_clock_area();
+
         // THE PLAYING BIT, ONE READ: the audio thread's own flag, which
         // drops at the natural end — the fence/bypass reasoning below is
         // stated on it. Nothing is read ahead of it and nothing is deferred

@@ -115,7 +115,9 @@ struct GuiInputHandler;
 // milliseconds; the first play's rest of zero is that one period). A rest
 // after a switch may also outlast its milliseconds while the entering tab's
 // preview updates (fire_if_due, 2026-10-18). The scanner paints during each
-// play exactly as it does under Space, and during a rest nothing plays at all —
+// play exactly as it does under Space, and during a rest nothing plays at all
+// (a rest is not paint-idle: the tick damages the clock cell every tick while
+// a rest stands, main.cpp's tick body says why, 2026-10-18) —
 // but THE ACT IS ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST
 // (architect 2026-08-26; since 2026-10-18 from the press, whose first play
 // is armed behind that rest of zero), so a rest is transport-LIVE where the
