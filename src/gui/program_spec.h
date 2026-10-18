@@ -217,26 +217,32 @@ struct ProgramSpec {
     // over it (his mocks, the recess "taken whole" at the tabs' own heights).
     // THE TABS IN IT, in W from the lane's top and left (the page edge is the
     // lane's first column, the program frame's inner neighbour): AN INACTIVE
-    // TAB 16 W tall from row `tab_inactive_top_px`, its footprint ONE LINE
-    // in from the page edge (Cool Edit's Files at x 7 against the page's
-    // x 6), the footprints `tab_gap_px` LINES apart (Cool Edit's 2 px, one
-    // line each at every scale, never a rounded 2 W: at 138 % scaled_px(2)
-    // is 3 against two 1-px lines); THE ACTIVE TAB grows ONE LINE
-    // each side and `tab_inactive_top_px − tab_active_top_px` up over its own
-    // footprint — the lead, the gap's lines and the growth the same line, so
-    // the gap beside it closes to one line (its shadow on the right), the tab
-    // line's run under the unlit tabs meets its light column on the left,
-    // and with the first tab active its light column
-    // stands flush on the page edge, against the frame line. Inside a tab's edge
+    // TAB 16 W tall from row `tab_inactive_top_px`, its footprint
+    // `tab_lead_px` in from the page edge (Cool Edit's Files at x 7 against
+    // the page's x 6), the footprints `tab_gap_px` apart; THE ACTIVE TAB
+    // grows `tab_growth_px` each side (its right growth the drop shadow's
+    // column) and `tab_inactive_top_px − tab_active_top_px` up over its own
+    // footprint, so the gap beside it closes to one W and with the first tab
+    // active its light column stands flush on the page edge, against the
+    // frame line; the tab line under the unlit tabs runs `tab_line_reach_px`
+    // past each end of their footprints. EVERY ONE OF THESE IS ITS OWN
+    // ROUNDED PART THROUGH scaled_px, like every chrome length (architect
+    // 2026-10-18 ~19:55: "if the gap is supposed to be two Windows pixels,
+    // then just make it two Windows pixels … we just follow the scaling. Hit
+    // areas are defined by what's painted" — the tabs' press targets are the
+    // painted boxes, ce_tab_strip_layout). Inside a tab's edge
     // columns its label's INK stands `tab_pad_left_px` from the left column
     // and `tab_pad_right_px` from the right (the active tab's growth adding
-    // its own line on each side: 7 / 5 on Cool Edit's capture). The painter
+    // its own W on each side: 7 / 5 on Cool Edit's capture). The painter
     // is cool_edit_paint.h's paint_ce_tab_strip, the tones
     // cool_edit_derive.h's (the tab table, kTabBodies).
     int  tab_recess_px;
     int  tab_inactive_top_px;
     int  tab_active_top_px;
+    int  tab_lead_px;
     int  tab_gap_px;
+    int  tab_growth_px;
+    int  tab_line_reach_px;
     int  tab_pad_left_px;
     int  tab_pad_right_px;
     // THE COLUMN'S SIDE MARGIN (METRICS §4.1, Cool Edit's x = 202..207 of
@@ -385,7 +391,10 @@ inline constexpr ProgramSpec kProgramSpec = {
     .tab_recess_px         = 20,
     .tab_inactive_top_px   = 4,
     .tab_active_top_px     = 2,
+    .tab_lead_px           = 1,
     .tab_gap_px            = 2,
+    .tab_growth_px         = 1,
+    .tab_line_reach_px     = 1,
     .tab_pad_left_px       = 6,
     .tab_pad_right_px      = 5,
     .column_margin_px      = 6,
@@ -485,6 +494,12 @@ static_assert(kProgramSpec.tab_recess_px - kProgramSpec.tab_inactive_top_px ==
               16);
 static_assert(kProgramSpec.tab_recess_px - kProgramSpec.tab_active_top_px ==
               18);
+// The lit first tab stands on the page edge: its growth is the lead; the
+// tab line's run reaches past an unlit footprint by the growth, so it meets
+// a lit neighbour's light column across the gap.
+static_assert(kProgramSpec.tab_growth_px == kProgramSpec.tab_lead_px &&
+              kProgramSpec.tab_line_reach_px == kProgramSpec.tab_growth_px &&
+              kProgramSpec.tab_gap_px == 2 * kProgramSpec.tab_growth_px);
 static_assert(1 + kProgramSpec.tab_pad_left_px + kProgramSpec.tab_pad_right_px +
                   1 ==
               13);

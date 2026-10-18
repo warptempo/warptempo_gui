@@ -226,29 +226,31 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // neighbour):
 //   THE GROUND — the dock's RECESS over the lane's first 20 W, then THE
 //     PAGE'S TOP LIGHT LINE, one line in the hilight tone; under the
-//     inactive tabs it is THE TAB LINE (ce_tab_line), ONE RUN from one line
-//     before the first inactive footprint to one line after the last, across
+//     inactive tabs it is THE TAB LINE (ce_tab_line), ONE RUN from one W
+//     before the first inactive footprint to one W after the last, across
 //     the gaps (with the active tab last, the line under and past its shadow
 //     is the plain hilight — the lone tab-line cell Cool Edit's own rule
 //     leaves under the shadow, x 87 on the capture, ruled an artifact).
-//   A FOOTPRINT per tab, the first one line in from the page edge, each its
+//   A FOOTPRINT per tab, the first one W in from the page edge, each its
 //     label's INK width plus 13 W — its two edge columns, `tab_pad_left_px`
 //     before the ink and `tab_pad_right_px` after it — the footprints
-//     `tab_gap_px` lines apart.
+//     `tab_gap_px` apart (every length its own scaled_px part,
+//     program_spec.h's tab fields, architect 2026-10-18 ~19:55).
 //   AN INACTIVE TAB on its footprint from row 4 to the recess's last row
 //     (16 W): its top row and left column in ce_tab_light, its right column
 //     in ce_tab_dark, the body inside them the Face's measured 15 stops
 //     (ce_tab_body, one stop per W row, never resampled — kCaseRamp's rule,
 //     cool_edit_derive.h's kTabBodies), the label in ce_tab_label.
-//   THE ACTIVE TAB one line wider each side and from row 2 (18 W), its face
+//   THE ACTIVE TAB one W wider each side and from row 2 (18 W), its face
 //     the panel's Face running down THROUGH THE PAGE LINE (the tab merges
 //     into the page), its left column in the hilight running through the
 //     page line too, its top row the hilight, its right column the mid tone
-//     and beside it THE SHADOW, the page-dark tone (ce_page_dark), Cool
-//     Edit's one drop shadow — SQUARE, NO MITRE, from one line under the
+//     and beside it THE SHADOW on the right growth's columns, the page-dark
+//     tone (ce_page_dark), Cool Edit's one drop shadow — SQUARE, NO MITRE,
+//     from one line under the
 //     tab's top (the recess in the cell above it) to the recess's last row,
 //     the page line running under it; the label the program text (ce_text).
-//     So the gap beside it closes to one line, and the first tab active
+//     So the gap beside it closes to one W, and the first tab active
 //     stands flush on the page edge.
 //   THE LABELS in the body face, no shadow, no hover face (Cool Edit's
 //     F6F6F6 hover does not apply, program_spec.h's case_hot_face), the cap
@@ -256,7 +258,7 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 //     light row — 15 W inactive, 17 W active, so the active label lands one
 //     W higher by the rule alone — the first ink column `tab_pad_left_px`
 //     past the footprint's left column on both (the active tab's growth its
-//     extra line). A DEAD TAB — the render player or the picker standing —
+//     extra W). A DEAD TAB — the render player or the picker standing —
 //     wears Windows' DSS_DISABLED emboss on its label (show_embossed_run,
 //     the disabled-word rule, its light copy the hilight), its body and
 //     edges unchanged (architect 2026-10-18 ~19:05). A TAB HAS NO PRESSED
@@ -265,23 +267,32 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 // block — its light top row against its right column (the mid tone active,
 // ce_tab_dark inactive) — the standard mitre, one line square (never spread
 // over the shadow column, which is no part of a mitre). THE ACTIVE TAB'S TWO
-// FEET on the page-line row both split DOWN-RIGHT (his two yellow strokes
-// on the capture's zoom, tmp/Screenshot_2026-10-18_16-07-45-zoom.png): the
-// LEFT FOOT the hilight column against the tab line arriving from the left,
-// a ring's bottom-right mitre — the column's tone above the diagonal, the
+// FEET on the page-line row are ONE RING'S TWO BOTTOM CORNERS, each the
+// standard mitre, antialiased: the LEFT FOOT the hilight column against the
+// tab line arriving from the left, a bottom-right corner — the diagonal from
+// the cell's top left to its bottom right, the column's tone above it, the
 // line's below — and none when nothing arrives (the first tab active, the
-// frame line beside it); the RIGHT FOOT the mid column's foot stepping
-// down-right into the line's head, the odd one out (a ring's bottom-left
-// corner would run up-right): the mid tone above the diagonal and THE FACE
-// below it, as the capture has the face under the mid column (x 86 on row
-// 111) and the line starting under the shadow (x 87). (The mock of record
-// put the line's tone below that diagonal, a sliver of the page line
-// sticking out past the reverse mitre — his note on v11, the capture
-// followed here instead.)
+// frame line beside it); THE RIGHT FOOT ITS MIRROR, the mid column against
+// the page line running on to the right, a bottom-left corner — the
+// diagonal from the cell's bottom left (outer) to its top right (inner), the
+// mid tone above-left of it, the line's tone below-right: the tone the page
+// line shows in the cell right of the foot, under the shadow (the hilight
+// there by the ground's rule above). COOL EDIT DRAWS NO CONNECTING PIXEL AT
+// THAT ONE CORNER (on the capture the face stands under the mid column, x
+// 86 on row 111, and the line begins under the shadow, x 87), and THE
+// PRODUCT IMAGINES IT (architect 2026-10-18 ~19:55: "imagine that there's a
+// pixel connecting it, just like every other corner … draw a mitred corner
+// there, just as we would normally with the same angle, just as the bottom
+// left has, but in mirrored form, because it's on the opposite side").
 // ONE GEOMETRY FOR PAINT AND HIT: ce_tab_strip_layout answers each tab's
 // painted box (the press target the roster publishes, paint_tab_strip in
 // paint_handler.cpp) and its label's origin; the painter takes it whole.
 inline constexpr int kCeTabCount = 2;
+// The lit tab's growth each side, one W, its own rounded part (program_spec.h's
+// tab_growth_px): the left one widens its face, the right one is its shadow.
+inline int ce_tab_growth_px() {
+    return scaled_px(kProgramSpec.tab_growth_px);
+}
 struct CeTabStripLayout {
     // Each tab's painted box: the lit tab its grown box through the page
     // line, an unlit tab its footprint from its top row to the recess's last.

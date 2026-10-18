@@ -252,10 +252,11 @@ void mitre_top_right(cairo_t* cr, int bx, int by, int lw, GuiColor top,
     cairo_restore(cr);
 }
 
-// A FOOT BLOCK at (bx, by), `lw` square, split DOWN-RIGHT — the diagonal from
-// its top left to its bottom right — `column` above it, `below` under it,
-// antialiased (the active tab's two feet, the declaration).
-void foot_down_right(cairo_t* cr, int bx, int by, int lw, GuiColor column,
+// THE LIT TAB'S LEFT FOOT at (bx, by), `lw` square: a ring's BOTTOM-RIGHT
+// corner, mitred — the diagonal from its top left (inner) to its bottom
+// right (outer) — `column` above it, `below` under it, antialiased (the
+// declaration).
+void foot_bottom_right(cairo_t* cr, int bx, int by, int lw, GuiColor column,
                      GuiColor below) {
     cell(cr, bx, by, lw, lw, below);
     cairo_save(cr);
@@ -264,6 +265,25 @@ void foot_down_right(cairo_t* cr, int bx, int by, int lw, GuiColor column,
     cairo_move_to(cr, bx, by);
     cairo_line_to(cr, bx + lw, by);
     cairo_line_to(cr, bx + lw, by + lw);
+    cairo_close_path(cr);
+    set_palette_source(cr, column);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+// THE LIT TAB'S RIGHT FOOT at (bx, by), `lw` square: the left foot's mirror,
+// a ring's BOTTOM-LEFT corner, mitred — the diagonal from its bottom left
+// (outer) to its top right (inner) — `column` above-left of it, `line`
+// below-right, antialiased (the declaration).
+void foot_bottom_left(cairo_t* cr, int bx, int by, int lw, GuiColor column,
+                      GuiColor line) {
+    cell(cr, bx, by, lw, lw, line);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    cairo_move_to(cr, bx, by);
+    cairo_line_to(cr, bx + lw, by);
+    cairo_line_to(cr, bx, by + lw);
     cairo_close_path(cr);
     set_palette_source(cr, column);
     cairo_fill(cr);
@@ -283,14 +303,13 @@ CeTabStripLayout ce_tab_strip_layout(
     const int top_a  = lane.y + scaled_px(p.tab_active_top_px);
     const int pad_l  = scaled_px(p.tab_pad_left_px);
     const int pad_r  = scaled_px(p.tab_pad_right_px);
-    // THE GAP IS LINES, NOT A ROUNDED LENGTH (program_spec.h's tab fields):
-    // the lit tab's growth takes one of them, so the tab line's run meets
-    // its left column and its shadow fills the other at every scale.
-    const int gap    = p.tab_gap_px * lw;
+    const int gap    = scaled_px(p.tab_gap_px);
+    const int grow   = ce_tab_growth_px();
     CeTabStripLayout out;
-    // The first footprint one line in from the page edge; the active tab's
-    // growth is the same line, so the first tab lit stands on the edge.
-    int x = lane.x + lw;
+    // The first footprint one W in from the page edge, its own rounded part
+    // (the lit tab's growth the same W, so the first tab lit stands on the
+    // edge).
+    int x = lane.x + scaled_px(p.tab_lead_px);
     for (int i = 0; i < kCeTabCount; ++i) {
         const std::size_t k = static_cast<std::size_t>(i);
         // THE INK, NOT THE ADVANCE (Cool Edit's measure on his capture: the
@@ -304,7 +323,7 @@ CeTabStripLayout ce_tab_strip_layout(
         const int ink_w = std::max(0, i1 - i0);
         const int wid = lw + pad_l + ink_w + pad_r + lw;
         const bool lit = i == active;
-        out.tab[k] = lit ? GuiRect{x - lw, top_a, wid + 2 * lw,
+        out.tab[k] = lit ? GuiRect{x - grow, top_a, wid + 2 * grow,
                                    page_y + lw - top_a}
                          : GuiRect{x, top_i, wid, page_y - top_i};
         out.label_x[k] = static_cast<double>(x + lw + pad_l - i0);
@@ -332,14 +351,16 @@ void paint_ce_tab_strip(
     // THE GROUND: the recess, then the page's top light line.
     cell(cr, lane.x, lane.y, lane.w, recess_h, p.ce_recess);
     cell(cr, lane.x, page_y, lane.w, lane.h - recess_h, p.ce_hilight);
-    // THE TAB LINE, one run under the inactive tabs, a line past each end.
+    // THE TAB LINE, one run under the inactive tabs, one W past each end
+    // (its own rounded part).
+    const int reach = scaled_px(kProgramSpec.tab_line_reach_px);
     int run0 = lane.x + lane.w;
     int run1 = lane.x;
     for (int i = 0; i < kCeTabCount; ++i) {
         if (i == active) continue;
         const GuiRect& t = layout.tab[static_cast<std::size_t>(i)];
-        run0 = std::min(run0, t.x - lw);
-        run1 = std::max(run1, t.x + t.w + lw);
+        run0 = std::min(run0, t.x - reach);
+        run1 = std::max(run1, t.x + t.w + reach);
     }
     if (run1 > run0) cell(cr, run0, page_y, run1 - run0, lw, p.ce_tab_line);
     const auto run_covers = [&](int col) { return col >= run0 && col < run1; };
@@ -369,30 +390,35 @@ void paint_ce_tab_strip(
                             p.ce_tab_dark);
             continue;
         }
+        // The right growth is the drop shadow's column, the mid right column
+        // one line inside it.
+        const int grow = ce_tab_growth_px();
         const int end = t.x + t.w;          // past the shadow column
-        const int mid_x = end - 2 * lw;     // the mid right column
-        const int shadow_x = end - lw;      // the drop shadow
+        const int shadow_x = end - grow;    // the drop shadow
+        const int mid_x = shadow_x - lw;    // the mid right column
         // THE FACE through the page line (the tab merges into the page), the
         // hilight left column through it too, the hilight top row, the mid
         // right column under its mitred top-right block.
-        cell(cr, t.x, t.y, t.w - lw, t.h, p.face);
+        cell(cr, t.x, t.y, shadow_x - t.x, t.h, p.face);
         cell(cr, t.x, t.y, lw, t.h, p.ce_hilight);
-        cell(cr, t.x, t.y, t.w - 2 * lw, lw, p.ce_hilight);
+        cell(cr, t.x, t.y, mid_x - t.x, lw, p.ce_hilight);
         cell(cr, mid_x, t.y + lw, lw, page_y - t.y - lw, p.ce_mid);
         mitre_top_right(cr, mid_x, t.y, lw, p.ce_hilight, p.ce_mid);
         // THE SHADOW, square: the recess in its top cell, the page-dark tone
         // to the recess's last row, the page line under it.
-        cell(cr, shadow_x, t.y, lw, lw, p.ce_recess);
-        cell(cr, shadow_x, t.y + lw, lw, page_y - t.y - lw, p.ce_page_dark);
-        cell(cr, shadow_x, page_y, lw, lw,
-             run_covers(shadow_x) ? p.ce_tab_line : p.ce_hilight);
-        // THE TWO FEET, down-right: the mid column's foot over the face (the
-        // capture's face under it; the declaration's departure from the
-        // mock), and the hilight column's over the tab line arriving from the
-        // left, where one arrives.
-        foot_down_right(cr, mid_x, page_y, lw, p.ce_mid, p.face);
+        const GuiColor under_shadow =
+            run_covers(shadow_x) ? p.ce_tab_line : p.ce_hilight;
+        cell(cr, shadow_x, t.y, grow, lw, p.ce_recess);
+        cell(cr, shadow_x, t.y + lw, grow, page_y - t.y - lw, p.ce_page_dark);
+        cell(cr, shadow_x, page_y, grow, lw, under_shadow);
+        // THE TWO FEET, one ring's two bottom corners (the declaration): the
+        // right foot the mid column against the page line running on under
+        // the shadow, mitred as a bottom-left corner; the left foot the
+        // hilight column against the tab line arriving from the left, mitred
+        // as a bottom-right corner, where one arrives.
+        foot_bottom_left(cr, mid_x, page_y, lw, p.ce_mid, under_shadow);
         if (run_covers(t.x - 1))
-            foot_down_right(cr, t.x, page_y, lw, p.ce_hilight, p.ce_tab_line);
+            foot_bottom_right(cr, t.x, page_y, lw, p.ce_hilight, p.ce_tab_line);
     }
     // THE LABELS, the lit tab's in the program text, an unlit tab's in its
     // measured ink, a dead tab's embossed.
