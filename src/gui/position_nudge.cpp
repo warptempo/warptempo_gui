@@ -249,7 +249,8 @@ void finish_position_nudge(
     viewport.invalidate_waveform_area();
     viewport.invalidate_clock_area();
     // (e) playhead follows the nudged marker's committed frame through the
-    // movement owner. THE SUBJECT'S PRIOR PLACE is captured first, for (f):
+    // movement owner. THE SUBJECT'S PRIOR PLACE is captured first, for (f)'s
+    // hold (the centring reads none):
     // THE COLUMN THE FOCUSED MARKER PAINTED IN before the write, on the SAME
     // painted basis its step anchored on (stepped_anchor_frame, above) — the
     // displayed map and its twin item_viewport_basis (architect 2026-09-24,
@@ -266,21 +267,28 @@ void finish_position_nudge(
         displayed_or_live_target_map(app, audio), basis.vp_start, basis.spp);
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
-    // (f) THE CAMERA IS THE PRESS'S (NudgeCamera, gui_input.h — at every zoom
-    // and on every column; the hold posture's answer since 2026-09-23,
-    // nudge_camera, read at the dispatch before this act and kept across it):
-    // with the posture dark the press follows the edge and needs nothing
-    // beyond (e)'s own keep-visible edge-align; with it standing the press
-    // holds the column — the viewport is placed so the playhead (e)
-    // just landed on the nudged marker paints in the column the marker
-    // painted in before the nudge, clamped to the waveform's edge columns — at
-    // every step, a held key's repeats and a held button's fires included,
-    // because each of them runs this tail. This tail is the nudge's CHANGED
-    // path (each twin returns on its post-clamp identity no-op before reaching
-    // it), so a walled press moves no camera — a 2+ press walled after its
-    // collapse keeps the collapse and the land, and nothing more. The hold's
-    // rule and body are at Viewport::hold_subject_column_after_nudge.
-    if (camera == NudgeCamera::HoldColumn)
+    // (f) THE CAMERA IS THE PRESS'S (NudgeCamera, gui_input.h — nudge_camera,
+    // read at the dispatch before this act, the hold posture kept across it;
+    // on every column). THREE ANSWERS: AT THE WORKING ZOOM, AS PAINTED, the
+    // press CENTRES the nudged marker whatever the posture says (architect
+    // 2026-10-18: "Nudge left, nudge right in working zoom should center. On
+    // the selected marker.") — the viewport placed so the playhead (e) just
+    // landed on it paints at the window's centre, arming nothing
+    // (Viewport::centre_subject_after_nudge); at every other zoom, finer or
+    // coarser, the posture's two answers (since 2026-09-23): dark, the press
+    // follows the edge and needs nothing beyond (e)'s own keep-visible
+    // edge-align; standing, the press holds the column — the viewport is
+    // placed so the playhead (e) just landed on the nudged marker paints in
+    // the column the marker painted in before the nudge, clamped to the
+    // waveform's edge columns (Viewport::hold_subject_column_after_nudge).
+    // Every step runs it, a held key's repeats and a held button's fires
+    // included, because each of them runs this tail. This tail is the nudge's
+    // CHANGED path (each twin returns on its post-clamp identity no-op before
+    // reaching it), so a walled press moves no camera — a 2+ press walled
+    // after its collapse keeps the collapse and the land, and nothing more.
+    if (camera == NudgeCamera::Centre)
+        viewport.centre_subject_after_nudge();
+    else if (camera == NudgeCamera::HoldColumn)
         viewport.hold_subject_column_after_nudge(prior_subject_column);
     // (g) A POSITION NUDGE ENDS AN A/B AUDITION, needing no call of its own:
     // the follow at (e) and the prologue's collapse land both go through a

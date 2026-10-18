@@ -122,7 +122,8 @@ struct Viewport {
     //    (the offscreen-follow shift inside reseat_playhead_to, which
     //    move_playhead_to and the cent steps' re-land both reach,
     //    apply_zoom_change,
-    //    apply_zoom_to_start, center_viewport_on_playhead, the discrete move's
+    //    apply_zoom_to_start, center_viewport_on_playhead (and
+    //    centre_subject_after_nudge through it), the discrete move's
     //    other three callers (hold_subject_column_after_nudge,
     //    follow_scroll_if_needed and land_subject),
     //    apply_strip_drag_zoom,
@@ -449,6 +450,14 @@ struct Viewport {
     // offset and written through clamp_viewport_start. The clamp derivation
     // and the three callers are at the definition.
     void hold_subject_column_after_nudge(int prior_column);
+    // THE WORKING-ZOOM MARKER NUDGE CENTRES ITS MARKER (architect 2026-10-18,
+    // NudgeCamera::Centre): a position nudge that moved the selected marker
+    // places the viewport so the playhead it just landed on the marker paints
+    // at the window's centre, whatever the hold posture says — the centring's
+    // own placement (center_viewport_on_playhead). The zoom is never written
+    // and the hold bit neither armed nor written here. The rule and its one
+    // caller are at the definition.
+    void centre_subject_after_nudge();
     // The changed-path tail the one-shot playhead camera moves share (the two
     // above and the two below).
     void finish_discrete_viewport_move();

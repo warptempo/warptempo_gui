@@ -220,6 +220,13 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
     return painter_quantized_spp(current_samples_per_pixel(app, audio));
 }
 
+// Definition; the rule and why its compare is exact live at the declaration
+// in warp_frame_map_view.h.
+bool painted_at_working_zoom(const AppState& app, const GuiAudio& audio) {
+    const double q = painter_samples_per_pixel(app, audio, waveform_area(app));
+    return q > 0.0 && q == static_cast<double>(audio.working_column());
+}
+
 int painted_column_of_source_frame_on_basis(
     const AppState& app, const GuiAudio& audio, double source_frame,
     const std::vector<WarpFrameMapSegment>& warp_frame_map,

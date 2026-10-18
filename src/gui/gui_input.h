@@ -238,7 +238,7 @@ struct GuiInputState {
 // below); key repeat and the buttons' hold-repeat are the way to go further.
 // NO MODIFIER IS THE CAMERA EITHER: Ctrl+Left / Ctrl+Right held the subject's
 // column from 2026-09-22 to 2026-09-23 and BIND NOTHING now — the nudge's
-// camera is the hold posture's (NudgeCamera below), so this function is never
+// camera is the zoom's and the hold posture's (NudgeCamera below), so this function is never
 // asked about a horizontal press.
 //
 // SHIFT IS THE LONG STRIDE (architect 2026-09-21, swapping the 2026-08-31
@@ -311,10 +311,21 @@ constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
     return HorizontalArrowStep::columns(direction);
 }
 
-// THE HORIZONTAL ARROW'S CAMERA IS THE HOLD POSTURE'S (architect 2026-09-23:
-// camera behaviour follows from what the user already did; the nudge reads
-// no zoom level, 2026-09-22). Two answers, at every zoom, on
-// every column and for the playhead alike:
+// THE HORIZONTAL ARROW'S CAMERA (architect 2026-09-23: camera behaviour
+// follows from what the user already did; 2026-10-18: "Nudge left, nudge
+// right in working zoom should center. On the selected marker."). THREE
+// ANSWERS:
+//   * Centre — THE MARKER NUDGE AT THE WORKING ZOOM, AS PAINTED (the
+//     selected marker's position nudge, both columns' twins; the waveform
+//     lane's playhead step never receives it): whatever the hold posture
+//     says, the viewport is placed so the nudged marker — the playhead the
+//     step just landed on it — paints at the window's centre
+//     (Viewport::centre_subject_after_nudge), the zoom never written and the
+//     posture neither armed nor put out by it. 2026-09-22's "the nudge reads
+//     no zoom level" is SUPERSEDED 2026-10-18 for the marker nudge.
+// At every other zoom, finer or coarser, for the marker nudge, and AT EVERY
+// ZOOM for the playhead step and the restore, the HOLD POSTURE'S two
+// answers, on every column:
 //   * FollowEdge — the posture dark: the camera holds while the subject is
 //     on screen, and a step that would carry it off the window scrolls the
 //     viewport so it stands at the edge column and walks there — the
@@ -325,15 +336,17 @@ constexpr HorizontalArrowStep horizontal_arrow_step(int direction,
 //     waveform slides under it (Viewport::hold_subject_column_after_nudge).
 // The camera changes NOTHING ELSE: the step, its unit, its walls, its
 // refusals, its cards, its locks and its undo coalescing are the same under
-// either answer. THE ONE OWNER OF THE FORK is nudge_camera (app_state.h,
-// beside AppState::camera_hold, the bit it reads), asked by the two nudge
-// dispatch sites — the marker lane's arm (input_handler.cpp) and the
-// waveform lane's step (run_waveform_lane_playhead_step,
-// input_key_dispatch.cpp) — and by the undo / redo singleton restore
-// (restore_history_entry, undo.cpp; architect 2026-09-25), whose FollowEdge
-// answer is the landing owner's Restore rather than the edge. It was the Ctrl modifier's choice from 2026-09-22
-// to 2026-09-23; Ctrl+Left / Ctrl+Right bind nothing now.
-enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn };
+// every answer. THE ONE OWNER OF THE FORK is in app_state.h beside
+// AppState::camera_hold, the bit it reads, in two layers: nudge_camera, the
+// three answers, asked by the marker lane's arm (input_handler.cpp), and
+// nudge_posture_camera, the posture's two, asked by the waveform lane's step
+// (run_waveform_lane_playhead_step, input_key_dispatch.cpp) and by the undo /
+// redo singleton restore (restore_history_entry, undo.cpp; architect
+// 2026-09-25), whose FollowEdge answer is the landing owner's Restore rather
+// than the edge — so no site carries an answer it cannot take. It was the
+// Ctrl modifier's choice from 2026-09-22 to 2026-09-23; Ctrl+Left /
+// Ctrl+Right bind nothing now.
+enum class NudgeCamera : uint8_t { FollowEdge, HoldColumn, Centre };
 
 // -- THE CLIPBOARD READ'S ONE PAYLOAD BOUND (2026-09-03) --------------------
 //
@@ -885,7 +898,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // is graphical; the step's unit is the active column's,
         // horizontal_arrow_step above). Shift spells nothing, and CTRL SPELLS
         // NOTHING since 2026-09-23: it was the held-column camera for a day,
-        // and the camera is the hold posture's now (NudgeCamera above).
+        // and the camera is the zoom's and the hold posture's now
+        // (NudgeCamera above).
         case GuiKeys::Left: case GuiKeys::Right:
             return bare;
         // The trim bounds bare, and the WHOLE-PIECE ends under ctrl

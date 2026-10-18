@@ -371,8 +371,14 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     refusal verdict and ahead of the first write, so this tail always runs
 //     stopped).
 // (f) THE CAMERA, the press's REQUIRED NudgeCamera (gui_input.h, no default;
-//     at every zoom and on every column; the hold posture's answer since
-//     2026-09-23, nudge_camera, read at the dispatch): FollowEdge (the
+//     on every column; nudge_camera, read at the dispatch): Centre AT THE
+//     WORKING ZOOM, AS PAINTED (architect 2026-10-18: "Nudge left, nudge
+//     right in working zoom should center. On the selected marker."),
+//     whatever the hold posture says — Viewport::centre_subject_after_nudge
+//     places the viewport so the playhead (e) just landed on the nudged
+//     marker paints at the window's centre, the zoom unwritten and the
+//     posture neither armed nor put out; at every other zoom, finer or
+//     coarser, the hold posture's answer (since 2026-09-23): FollowEdge (the
 //     posture dark) adds nothing to (e)'s keep-visible edge-align, so the
 //     camera holds while the marker stays on screen and walks with it at the
 //     edge once it would leave; HoldColumn (the posture an explicit centring

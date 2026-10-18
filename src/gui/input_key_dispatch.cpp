@@ -2378,7 +2378,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // press is the live waveform lane's step, the SAME BODY
     // (run_waveform_lane_playhead_step): one step in the active column's unit
     // (a painted column on W, a hop on P), the camera the hold posture's
-    // (nudge_camera — `c`, the diff-flag walk's centring and the march arm it
+    // (nudge_posture_camera — `c`, the diff-flag walk's centring and the march arm it
     // in here), the hold kept across the step, the key repeating as live.
     // That body's live-selection clear is skipped in the view: the live
     // selection is the live world's and the view writes none of it, and the
@@ -8968,8 +8968,11 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // THE CAMERA IS THE HOLD POSTURE'S, read BEFORE the act, and the posture
     // is KEPT across it — the nudge's exemption (AppState::camera_hold):
     // the step lands through a movement owner and may move the camera, each
-    // of which would otherwise put it out.
-    const NudgeCamera camera = nudge_camera(app);
+    // of which would otherwise put it out. THE PLAYHEAD STEP IS NOT CENTRED
+    // at the working zoom: the 2026-10-18 ruling names the selected marker,
+    // so this step asks the posture's two-answer fork alone
+    // (nudge_posture_camera, app_state.h), at every zoom.
+    const NudgeCamera camera = nudge_posture_camera(app);
     const bool hold_before = app.camera_hold;
     // The membership half of the clear below is therefore already satisfied;
     // the FOCUS half is not — last_selected_marker survives an empty selection
