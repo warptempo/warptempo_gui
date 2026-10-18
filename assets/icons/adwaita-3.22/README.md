@@ -60,10 +60,13 @@ numerals (0, 120, 240) deleted with their emptied group and its font attributes 
 its ground-shadow ellipse deleted with the radial gradient that filled it (the set carries no drop shadow, below);
 the needle's dark offset copy and the hub's dark disc, the shadows they cast on the face, deleted from the tracked
 source the same evening by the same rule (architect: "follow the rule"; kept as mocked for the first landing); every
-other element as drawn, Gemini's other comments kept. THE TINT, variant C1 of a one-axis sheet: the five chrome
-gradients — the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap — re-tinted from Tango
-aluminium (hue 60–90, saturation 3–9 %, a faint warmth) to hue 210 at saturation 6 %, every stop's HLS lightness kept
-(a stop at lightness .02 or less, or .98 or more, stays grey). THE DRAWING: centre (24, 23); a chrome bezel r 20.5
+other element as drawn, Gemini's other comments kept. THE CHROME, as Gemini drew it: the five chrome
+gradients — the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap — in Gemini's own Tango
+aluminium stops, f7f8f7 / d3d7cf / 888a85 / 555753 / 3c3e3b and babdb6 / 2e3436, the set's own greys (architect
+2026-10-17 night, on the glass beside the history clock: "implemented as Gemini drew it ... only in regards to the
+outer ring" — the grey matches the speaker, the chain and the clock itself); a cool re-tint, hue 210 at saturation
+6 % with every stop's HLS lightness kept (variant C1 of a one-axis sheet), was the landing's for one evening,
+5198ed92 to dfa65d9f, and was reverted the same night. THE DRAWING: centre (24, 23); a chrome bezel r 20.5
 with a .8 stroke and a white specular ring inside it, an inner bevel ring and a dark recessed frame round the dark
 radial face r 16.2, a glass gloss over its upper part; a white scale arc and nine white majors with ten minors on a
 270° arc from −135° to +135°, its last 45° a red gradient arc with red ticks and a soft red glow; a tapered red needle
@@ -233,7 +236,7 @@ shift is the product's, not the file's.
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/Speedometer.svg` | — | `28790b819d460fc4527ee3e4e1893db2318a09c889080a967a4a9d6a8e009609` | OWN FILE, Speedometer's: the program icon (architect 2026-10-17 evening) |
+| AppIcon | — | `own/Speedometer.svg` | — | `7f2225c445d9e9899c1240e2cfbf5875fdbe05fb3f0d777076dc20dd2aa64865` | OWN FILE, Speedometer's: the program icon (architect 2026-10-17 evening) |
 | AudioVolumeHigh | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
@@ -282,7 +285,7 @@ shift is the product's, not the file's.
 | NetworkWiredDisconnected | `network-wired-disconnected` | `network-wired-disconnected.svg` | 296, 50, 48, 48 | `4c9d212cedd9877315cc1e0b05685a582bea53d517ff798bf734e6be9639047e` | NEW: Session (architect 2026-10-15: shut off git and stay local) |
 | PreviewRenderOn | `applications-multimedia` | `applications-multimedia.svg` | 296, 50, 48, 48 | `b4551addc300f3ca7d6c5c9f22044c7db2dc227e3987877cb0b99de634508ed2` |  |
 | SettingsConfigure | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` |  |
-| Speedometer | — | `own/Speedometer.svg` | — | `28790b819d460fc4527ee3e4e1893db2318a09c889080a967a4a9d6a8e009609` | OWN FILE, not Adwaita's: Warp (architect 2026-10-17 evening), above |
+| Speedometer | — | `own/Speedometer.svg` | — | `7f2225c445d9e9899c1240e2cfbf5875fdbe05fb3f0d777076dc20dd2aa64865` | OWN FILE, not Adwaita's: Warp (architect 2026-10-17 evening), above |
 | TabDetach | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` |  |
 | TabDetachB | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` | DERIVED, below |
 | ValueDrag | `object-flip-vertical` | `object-flip-rotate.svg` | 76.0001, 300, 48, 48 | `cd9be5ee2271c9a797d49aa9749f70c4ad48f53768f651c166560baba865afa1` |  |

@@ -15,7 +15,7 @@ its bytes verbatim but for a dated notice inserted as one XML comment after the 
 Speedometer and AppIcon (the program icon, `tools/app_icon/`) are both that copy. The drawing was made with Google's
 Gemini at the architect's prompt against a style sheet of Adwaita 3.22's glossy drawings, in the 48-unit frame with
 no nested viewport, then cleaned (its numerals, its ground shadow and the two shadows its needle and hub cast on the face deleted, no
-`<text>`) and its chrome re-tinted cool
+`<text>`), its chrome Gemini's own Tango aluminium
 (the set's README the description).
 `shadows.tsv` is
 the drop-shadow list (architect 2026-10-15, "we'll go with none"; approved icon by icon on a sheet): one row per

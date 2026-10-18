@@ -2,24 +2,24 @@
   <defs>
     <!-- Outer Bezel Metallic Gradient -->
     <linearGradient id="outerBezel" x1="24" y1="2" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#f7f8f8" />
-      <stop offset="18%" stop-color="#d0d3d6" />
-      <stop offset="55%" stop-color="#80888f" />
-      <stop offset="85%" stop-color="#50555a" />
-      <stop offset="100%" stop-color="#393c40" />
+      <stop offset="0%" stop-color="#f7f8f7" />
+      <stop offset="18%" stop-color="#d3d7cf" />
+      <stop offset="55%" stop-color="#888a85" />
+      <stop offset="85%" stop-color="#555753" />
+      <stop offset="100%" stop-color="#3c3e3b" />
     </linearGradient>
 
     <!-- Outer Bezel Rim Contour -->
     <linearGradient id="bezelBorder" x1="24" y1="2" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#b5babe" />
-      <stop offset="100%" stop-color="#2f3235" />
+      <stop offset="0%" stop-color="#babdb6" />
+      <stop offset="100%" stop-color="#2e3436" />
     </linearGradient>
 
     <!-- Inner Bevel Highlight Ring -->
     <linearGradient id="innerBevel" x1="24" y1="5.5" x2="24" y2="40.5" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#212325" />
-      <stop offset="45%" stop-color="#50555a" />
-      <stop offset="90%" stop-color="#ecedee" />
+      <stop offset="0%" stop-color="#202426" />
+      <stop offset="45%" stop-color="#555753" />
+      <stop offset="90%" stop-color="#eeeeec" />
       <stop offset="100%" stop-color="#ffffff" />
     </linearGradient>
 
@@ -60,14 +60,14 @@
     <!-- Center Metallic Hub Cap -->
     <radialGradient id="hubCap" cx="22.8" cy="21.8" r="3.6" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="35%" stop-color="#d0d3d6" />
-      <stop offset="75%" stop-color="#737a81" />
+      <stop offset="35%" stop-color="#d3d7cf" />
+      <stop offset="75%" stop-color="#767b7e" />
       <stop offset="100%" stop-color="#3c4043" />
     </radialGradient>
 
     <linearGradient id="hubRim" x1="24" y1="19.5" x2="24" y2="26.5" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#d0d3d6" />
-      <stop offset="100%" stop-color="#2f3235" />
+      <stop offset="0%" stop-color="#d3d7cf" />
+      <stop offset="100%" stop-color="#2e3436" />
     </linearGradient>
 
     <!-- Clip Path for Dial Face -->

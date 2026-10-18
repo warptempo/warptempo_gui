@@ -1,26 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <!-- Speedometer and AppIcon: NOT from adwaita-icon-theme 3.22.0. Warp's glyph and the program icon, a speedometer (architect 2026-10-17 evening, "c1. ok to implement and install"): drawn with Google's Gemini at his prompt against a style sheet of Lapo Calamandrei's glossy Adwaita 3.22 drawings, the second of four drawings, in the 48-unit frame with no nested viewport. Cleaned the same evening: its three numerals (0, 120, 240) deleted with their empty group (the product's resvg draws no text), its ground-shadow ellipse deleted with its unused gradient; its chrome gradients (the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap) re-tinted from Tango aluminium (hue 60 to 90, saturation 3 to 9 %) to hue 210 at saturation 6 %, every stop's HLS lightness kept (variant C1); the needle's and the hub's dark copies cast on the face removed the same evening by the set's shadow rule (architect, "follow the rule"); every other element as drawn. The drawing: centre (24, 23), a chrome bezel r 20.5 with a .8 stroke round a dark face r 16.2 under a glass gloss; nine white majors and ten minors on a 270 degree arc from -135 to +135 degrees, its last 45 degrees a red gradient arc with a glow; a tapered red needle at +52 degrees from twelve o'clock with a bright ridge line; a chrome hub cap. The drawing is licensed under the GNU LGPL v3, the set's licence (architect 2026-10-15). Warp, and the program icon. -->
+  <!-- Speedometer and AppIcon: NOT from adwaita-icon-theme 3.22.0. Warp's glyph and the program icon, a speedometer (architect 2026-10-17 evening, "c1. ok to implement and install"): drawn with Google's Gemini at his prompt against a style sheet of Lapo Calamandrei's glossy Adwaita 3.22 drawings, the second of four drawings, in the 48-unit frame with no nested viewport. Cleaned the same evening: its three numerals (0, 120, 240) deleted with their empty group (the product's resvg draws no text), its ground-shadow ellipse deleted with its unused gradient; its chrome gradients (the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap) Gemini's own Tango aluminium stops, f7f8f7 / d3d7cf / 888a85 / 555753 / 3c3e3b and babdb6 / 2e3436, the set's own greys (a cool re-tint, hue 210 at saturation 6 %, was the landing's for one evening, 5198ed92 to dfa65d9f, and was reverted the same night on the glass beside the history clock, "as Gemini drew it ... only in regards to the outer ring"); the needle's and the hub's dark copies cast on the face removed the same evening by the set's shadow rule (architect, "follow the rule"); every other element as drawn. The drawing: centre (24, 23), a chrome bezel r 20.5 with a .8 stroke round a dark face r 16.2 under a glass gloss; nine white majors and ten minors on a 270 degree arc from -135 to +135 degrees, its last 45 degrees a red gradient arc with a glow; a tapered red needle at +52 degrees from twelve o'clock with a bright ridge line; a chrome hub cap. The drawing is licensed under the GNU LGPL v3, the set's licence (architect 2026-10-15). Warp, and the program icon. -->
   <defs>
     <!-- Outer Bezel Metallic Gradient -->
     <linearGradient id="outerBezel" x1="24" y1="2" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#f7f8f8" />
-      <stop offset="18%" stop-color="#d0d3d6" />
-      <stop offset="55%" stop-color="#80888f" />
-      <stop offset="85%" stop-color="#50555a" />
-      <stop offset="100%" stop-color="#393c40" />
+      <stop offset="0%" stop-color="#f7f8f7" />
+      <stop offset="18%" stop-color="#d3d7cf" />
+      <stop offset="55%" stop-color="#888a85" />
+      <stop offset="85%" stop-color="#555753" />
+      <stop offset="100%" stop-color="#3c3e3b" />
     </linearGradient>
 
     <!-- Outer Bezel Rim Contour -->
     <linearGradient id="bezelBorder" x1="24" y1="2" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#b5babe" />
-      <stop offset="100%" stop-color="#2f3235" />
+      <stop offset="0%" stop-color="#babdb6" />
+      <stop offset="100%" stop-color="#2e3436" />
     </linearGradient>
 
     <!-- Inner Bevel Highlight Ring -->
     <linearGradient id="innerBevel" x1="24" y1="5.5" x2="24" y2="40.5" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#212325" />
-      <stop offset="45%" stop-color="#50555a" />
-      <stop offset="90%" stop-color="#ecedee" />
+      <stop offset="0%" stop-color="#202426" />
+      <stop offset="45%" stop-color="#555753" />
+      <stop offset="90%" stop-color="#eeeeec" />
       <stop offset="100%" stop-color="#ffffff" />
     </linearGradient>
 
@@ -61,14 +61,14 @@
     <!-- Center Metallic Hub Cap -->
     <radialGradient id="hubCap" cx="22.8" cy="21.8" r="3.6" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="35%" stop-color="#d0d3d6" />
-      <stop offset="75%" stop-color="#737a81" />
+      <stop offset="35%" stop-color="#d3d7cf" />
+      <stop offset="75%" stop-color="#767b7e" />
       <stop offset="100%" stop-color="#3c4043" />
     </radialGradient>
 
     <linearGradient id="hubRim" x1="24" y1="19.5" x2="24" y2="26.5" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#d0d3d6" />
-      <stop offset="100%" stop-color="#2f3235" />
+      <stop offset="0%" stop-color="#d3d7cf" />
+      <stop offset="100%" stop-color="#2e3436" />
     </linearGradient>
 
     <!-- Clip Path for Dial Face -->
