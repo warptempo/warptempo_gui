@@ -2872,6 +2872,18 @@ void fill_program_palette(const GuiPaletteWords& w) {
             hex(case_tone(kCaseShadowLast, w[kFace]));
         g_palette.ce_case_corner = hex(case_tone(kCaseCorner, w[kFace]));
     }
+    // The tab strip's inactive body and label, the Face's measured row
+    // (2026-10-18, cool_edit_derive.h's kTabBodies — every built-in's Face
+    // has one, palette_file.cpp's proof), and the active label, the program
+    // text.
+    {
+        using namespace cool_edit_derive;
+        const TabBody& t = tab_body(w[kFace]);
+        for (std::size_t i = 0; i < t.rows.size(); ++i)
+            g_palette.ce_tab_body[i] = hex(t.rows[i]);
+        g_palette.ce_tab_label = hex(t.label);
+        g_palette.ce_text = hex(program_text(w[kFace]));
+    }
     // The disabled cue's faded triangles, shadow and label (2026-10-10).
     {
         using namespace cool_edit_derive;

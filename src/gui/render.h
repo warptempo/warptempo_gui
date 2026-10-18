@@ -439,6 +439,22 @@ struct GuiPalette {
     // the view bar's span bevels, off the waveform's ink (2026-10-09)
     GuiColor ce_span_hilight;
     GuiColor ce_span_shadow;
+    // THE TAB STRIP'S EDGES (2026-10-18; cool_edit_derive.h's tones): an
+    // inactive tab's light top row and left column and its dark right
+    // column, the page line's run under the inactive tabs, and the active
+    // tab's drop shadow.
+    GuiColor ce_tab_light;
+    GuiColor ce_tab_dark;
+    GuiColor ce_tab_line;
+    GuiColor ce_page_dark;
+    // THE TAB STRIP'S BODIES AND LABELS (2026-10-18; cool_edit_derive.h's
+    // tab table, kTabBodies, a measured row per preset Face, not a tone of
+    // the table above): the inactive tab's 15-row body, one stop per W row,
+    // and its label's ink; and THE PROGRAM TEXT (program_text: the light ink,
+    // the dark past the swap), the active tab's label.
+    std::array<GuiColor, 15> ce_tab_body;
+    GuiColor ce_tab_label;
+    GuiColor ce_text;
     // THE BUTTON CASE, tinted by `face` (2026-10-10; cool_edit_derive.h's
     // case tones, the per-row fit): the glyph seat's ramp, one stop per W
     // row, the highlight, the shadow ramp's two ends and the shadow's corner
@@ -614,7 +630,7 @@ void install_true_colors(bool on);
 // THE CANVAS COLUMN IS COOL EDIT'S, THE SAME UNDER EVERY CHROME (architect
 // 2026-10-09, the program is Cool Edit; the mock of record
 // tmp/mocks/cool_edit/mock_CE_S3_GRID_4.png; program_spec.h owns every
-// length): the column's 5 W of face under the band, THE VIEW BAR, THE RULER
+// length): the column's 5 W of face under the tab strip, THE VIEW BAR, THE RULER
 // FLIPPED and THE MARKER LANE OF CUES, THE CANVAS under them in its frame
 // (row 6's canvas paragraph), the view bar, the ruler and the canvas 6 W in
 // from each side on the panel's face. Its colors are
@@ -1379,7 +1395,7 @@ inline int relief_line_px() {
 // (strip_row_rect). The ring spans the client, inside the restored laptop's
 // sizing frame. The pair's two lines became the ring's top and bottom rows,
 // so the well kept its height that day (the border under row 8 took 18 of
-// its rows at 300 % on 2026-10-14: 942).
+// its rows at 300 % on 2026-10-14, the tab strip 63 on 2026-10-18: 879).
 // At 300 % the menu row ends at row 114, the ring's top row is 114–116, the
 // band starts at 117, the ring's columns are 0–2 and 2301–2303 and its
 // bottom row the window's last three rows, 1437–1439, under the border's
@@ -1558,9 +1574,29 @@ inline int scrub_handle_box_px() {
     return scaled_px(live_chrome_spec().scrub_handle_box_px, 2);
 }
 
+// THE TAB STRIP — COOL EDIT'S ORGANIZER TABS, top lane 4, between the
+// toolbar band and the column's air (architect 2026-10-18; program_spec.h's
+// tab fields, where the law and the mocks of record are named): the dock's
+// recess, 20 W, then the page's top light line, one line — 21 W, 63 device
+// rows at 300 %, 29 at 138 % (28 + 1), 76 at 360 % (72 + 4) and 84 at
+// 400 % (80 + 4), each part its own rounding. It stands above gap 1 with
+// the band (main.cpp's kTopFlexGapLane), a program lane one frame line in
+// from each side, so the page edge is the lane's first column. Its painter
+// is paint_ce_tab_strip (cool_edit_paint.h), its tabs two roster buttons,
+// TabA and TabB (app_state.h); its ground — the recess, the gaps, the page
+// line — is chrome, inert to every surface (on_button_press's strip claim).
+inline int tab_strip_recess_h_px() {
+    return scaled_px(kProgramSpec.tab_recess_px);
+}
+inline int tab_strip_h_px() {
+    return tab_strip_recess_h_px() + program_line_px();
+}
+// The strip's lane (main.cpp, beside the other lane accessors).
+GuiRect top_tab_strip_area(const AppState& a);
+
 // THE CANVAS COLUMN'S LANES — THE COLUMN'S AIR, the TRIM lane (the view
 // bar), the RULER lane, the MARKER lane and THE CANVAS'S TOP FRAME ROW,
-// stacked in that order under the icon row (main.cpp's lane table), the
+// stacked in that order under the tab strip (main.cpp's lane table), the
 // frame row's bottom edge the waveform's top with no gap: THE PROGRAM'S,
 // COOL EDIT'S, THE SAME UNDER
 // EVERY CHROME (architect 2026-10-09; program_spec.h owns every length and
@@ -1726,12 +1762,12 @@ inline int cue_triangle_reach_right_px() {
     return ((2 * rows + 1) * cue_unit_px() + 2) / 2;
 }
 static_assert(kProgramSpec.cue_triangle_rows == 5);   // 9u and 11u above
-// THE COLUMN'S AIR LANE (top lane 4, main.cpp; defined there beside the
+// THE COLUMN'S AIR LANE (top lane 5, main.cpp; defined there beside the
 // other lane accessors).
 GuiRect top_column_air_area(const AppState& a);
 // THE CANVAS'S FRAME AND THE COLUMN'S MARGINS (architect 2026-10-09, the
 // third part; program_spec.h's column_margin_px and column_foot_px, METRICS
-// §4.1): the canvas's TOP FRAME ROW is a lane of its own, top lane 8, one
+// §4.1): the canvas's TOP FRAME ROW is a lane of its own, top lane 9, one
 // line (canvas_top_frame_h_px), directly under the marker lane; the COLUMN'S
 // FOOT is a bottom lane of its own, the bottom frame row and 5 W of face
 // (column_foot_h_px), between the canvas and the dock bar. Across, the column
@@ -1873,7 +1909,8 @@ inline int bottom_row_h_px() {
 // under win2000): the chrome's caption and the menu row's
 // two terms, then THE PROGRAM'S (program_spec.h, the same under every
 // chrome since 2026-10-09): its frame's top row 1 (program_frame_rect,
-// 2026-10-10), the band 33, the canvas column's 43 above the canvas (the
+// 2026-10-10), the band 33, the tab strip 21 (2026-10-18), the canvas
+// column's 43 above the canvas (the
 // air 5, the view bar 8, the ruler 12, the marker lane 17, the canvas's top
 // frame row 1), the column's foot 6 under it (the bottom frame row and 5 W
 // of face), the dock bar and row 8 38, the border under row 8 6
@@ -1890,16 +1927,17 @@ constexpr int chrome_stack_authored_h(const ChromeSpec& s) {
     return frame + s.caption_height_px + s.menu_row_head_px +
            s.menu_row_content_px + program_frame +
            program_band_authored_h(kProgramSpec) +
+           program_tab_strip_authored_h(kProgramSpec) +
            program_column_authored_h(kProgramSpec) +
            program_column_foot_authored_h(kProgramSpec) + row8 +
            program_bottom_border_authored_h(kProgramSpec);
 }
 // THE STACK (2026-10-09, the canvas column Cool Edit's, its canvas framed;
-// the program's frame 2026-10-10; the border under row 8 2026-10-14):
-// WIN2000 115 above and 51 below, 166 — the tablet's well at 300 % 942 rows
-// (314 W) of the surface's 1440 (a vocabulary's well its own lanes'
-// leftover, main.cpp's rule).
-static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 166);
+// the program's frame 2026-10-10; the border under row 8 2026-10-14; the tab
+// strip 2026-10-18): WIN2000 136 above and 51 below, 187 — the tablet's well
+// at 300 % 879 rows (293 W) of the surface's 1440 (a vocabulary's well its
+// own lanes' leftover, main.cpp's rule).
+static_assert(chrome_stack_authored_h(kChromeSpecWin2000) == 187);
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -2622,12 +2660,14 @@ void show_embossed_run(cairo_t* cr, const text_shape::ShapedRun& run,
 // one run per well (waveform_well_rows), its dots keeping the rows they
 // stand on, counted from the canvas's first row as ever (Cool Edit's own
 // dotted cursor keeps its phase across its divider on the capture: rows
-// 517, then 525). At 300 % on the tablet the canvas keeps its 942 rows,
-// 345-1286 (main.cpp's lane table): the upper well's band 466 rows
-// (345-810), the divider 811-819 (the light line 811-813, the face 814-816,
-// the dark line 817-819), the lower well's band 466 rows (820-1285) and the
-// canvas's spare last row 1286; on the laptop at 138 % the divider is three
-// rows of one device px and the two bands 429 each of the 861.
+// 517, then 525). At 300 % on the tablet the canvas keeps its 879 rows,
+// 408-1286 (main.cpp's lane table, re-derived 2026-10-18 for the tab
+// strip): the upper well's band 435 rows (408-842), the divider 843-851 (the
+// light line 843-845, the face 846-848, the dark line 849-851) and the lower
+// well's band 435 rows (852-1286), no spare row (879 less the divider's 9 is
+// even); on the laptop at 138 % the divider is three rows of one device px
+// and the two bands 414 each of the 832, the canvas's spare last row its
+// 832nd.
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot

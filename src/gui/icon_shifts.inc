@@ -46,7 +46,6 @@
 {"BboxPrev", -0.5f, -0.5f},
 {"BboxNext", 0.5f, -0.5f},
 {"TabDetach", 0.0f, 0.5f},
-{"TabDetachB", 0.0f, 0.5f},
 {"SettingsConfigure", -0.2f, 0.9f},
 {"Folder", 0.5f, 1.0f},
 {"AudioXWav", 0.8f, 1.9f},

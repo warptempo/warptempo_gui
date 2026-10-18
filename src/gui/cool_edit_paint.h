@@ -9,8 +9,9 @@
 // THE PROGRAM'S PAINTERS — COOL EDIT PRO 2.1'S PANEL (architect 2026-10-09,
 // "chrome means chrome, the program is Cool Edit"; program_spec.h's head):
 // the button case in its faces, the toolbar band's lines and panes and
-// grooves, the dock bar, row 8's grippers and end bars, the dark time field,
-// the shadowed panel label and the cue's triangle — THE SAME UNDER EVERY
+// grooves, the tab strip (2026-10-18), the dock bar, row 8's grippers and end
+// bars, the dark time field, the shadowed panel label and the cue's
+// triangle — THE SAME UNDER EVERY
 // CHROME (the canvas column's lanes — the view bar, the ruler, the cues —
 // are painted by render_trim_flags, paint_ruler_row and the flag pass out of
 // these and the constants below). The lengths
@@ -44,12 +45,14 @@
 // edge, the groove's dark column its outer bottom-right (Cool Edit's one mid
 // pixel atop the groove is that ring's corner at one capture px); the dock
 // bar's and the end bar's light / mid rings; the time field's ring; the
-// view bar's span (render_trim_flags). A two-line staircase that is no ring
+// view bar's span (render_trim_flags); each tab's top-right block and the
+// lit tab's two feet (paint_ce_tab_strip, whose declaration says which way
+// each foot runs). A two-line staircase that is no ring
 // — the gripper's etched pairs, the cue's and the playhead head's
 // 9-7-5-3-1 rows — is drawn as its diagonal (their painters say how). A
 // one-tone line stays square: the case's black outline, the down face's
 // 808080 line, the dock bar's dark row, the end bar's dark column, the
-// band's edge columns. The dots are cells (a dot is not a line). (Every
+// band's edge columns, the lit tab's drop shadow. The dots are cells (a dot is not a line). (Every
 // line square-joined as the capture's pixels show stood the morning of
 // 2026-10-09; git history.)
 // NOT DRAWN: the face's brushed grain (METRICS §1.4: a ±5 2-px texture over
@@ -210,6 +213,96 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& field);
 // cool_edit_derive.h's label_ink / label_shadow).
 void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
                    double baseline);
+
+// -- THE TAB STRIP (architect 2026-10-18) ---------------------------------------
+
+// COOL EDIT'S ORGANIZER TAB STRIP, top lane 4 (render.h's tab strip block;
+// program_spec.h's tab fields, where the law — his Wine capture
+// tmp/Screenshot_2026-10-18_16-07-45.png and METRICS §2.3 — and the mocks of
+// record, tmp/tabs_mock/tabs_v11_A.png / _B.png and their generator
+// make11.py, the construction this painter follows, are named). Two tabs,
+// "Tab A" and "Tab B", the lit one the active tab. In W, from the lane's top
+// and its first column, THE PAGE EDGE (the program frame's inner
+// neighbour):
+//   THE GROUND — the dock's RECESS over the lane's first 20 W, then THE
+//     PAGE'S TOP LIGHT LINE, one line in the hilight tone; under the
+//     inactive tabs it is THE TAB LINE (ce_tab_line), ONE RUN from one line
+//     before the first inactive footprint to one line after the last, across
+//     the gaps (with the active tab last, the line under and past its shadow
+//     is the plain hilight — the lone tab-line cell Cool Edit's own rule
+//     leaves under the shadow, x 87 on the capture, ruled an artifact).
+//   A FOOTPRINT per tab, the first one line in from the page edge, each its
+//     label's INK width plus 13 W — its two edge columns, `tab_pad_left_px`
+//     before the ink and `tab_pad_right_px` after it — the footprints
+//     `tab_gap_px` lines apart.
+//   AN INACTIVE TAB on its footprint from row 4 to the recess's last row
+//     (16 W): its top row and left column in ce_tab_light, its right column
+//     in ce_tab_dark, the body inside them the Face's measured 15 stops
+//     (ce_tab_body, one stop per W row, never resampled — kCaseRamp's rule,
+//     cool_edit_derive.h's kTabBodies), the label in ce_tab_label.
+//   THE ACTIVE TAB one line wider each side and from row 2 (18 W), its face
+//     the panel's Face running down THROUGH THE PAGE LINE (the tab merges
+//     into the page), its left column in the hilight running through the
+//     page line too, its top row the hilight, its right column the mid tone
+//     and beside it THE SHADOW, the page-dark tone (ce_page_dark), Cool
+//     Edit's one drop shadow — SQUARE, NO MITRE, from one line under the
+//     tab's top (the recess in the cell above it) to the recess's last row,
+//     the page line running under it; the label the program text (ce_text).
+//     So the gap beside it closes to one line, and the first tab active
+//     stands flush on the page edge.
+//   THE LABELS in the body face, no shadow, no hover face (Cool Edit's
+//     F6F6F6 hover does not apply, program_spec.h's case_hot_face), the cap
+//     band centred by redesign_baseline in the tab's body under its top
+//     light row — 15 W inactive, 17 W active, so the active label lands one
+//     W higher by the rule alone — the first ink column `tab_pad_left_px`
+//     past the footprint's left column on both (the active tab's growth its
+//     extra line). A DEAD TAB — the render player or the picker standing —
+//     wears Windows' DSS_DISABLED emboss on its label (show_embossed_run,
+//     the disabled-word rule, its light copy the hilight), its body and
+//     edges unchanged (architect 2026-10-18 ~19:05). A TAB HAS NO PRESSED
+//     FACE (Cool Edit's tabs show none; redesign_button_is_tab).
+// THE CORNERS (the diagonal rule, this file's head): each tab's TOP-RIGHT
+// block — its light top row against its right column (the mid tone active,
+// ce_tab_dark inactive) — the standard mitre, one line square (never spread
+// over the shadow column, which is no part of a mitre). THE ACTIVE TAB'S TWO
+// FEET on the page-line row both split DOWN-RIGHT (his two yellow strokes
+// on the capture's zoom, tmp/Screenshot_2026-10-18_16-07-45-zoom.png): the
+// LEFT FOOT the hilight column against the tab line arriving from the left,
+// a ring's bottom-right mitre — the column's tone above the diagonal, the
+// line's below — and none when nothing arrives (the first tab active, the
+// frame line beside it); the RIGHT FOOT the mid column's foot stepping
+// down-right into the line's head, the odd one out (a ring's bottom-left
+// corner would run up-right): the mid tone above the diagonal and THE FACE
+// below it, as the capture has the face under the mid column (x 86 on row
+// 111) and the line starting under the shadow (x 87). (The mock of record
+// put the line's tone below that diagonal, a sliver of the page line
+// sticking out past the reverse mitre — his note on v11, the capture
+// followed here instead.)
+// ONE GEOMETRY FOR PAINT AND HIT: ce_tab_strip_layout answers each tab's
+// painted box (the press target the roster publishes, paint_tab_strip in
+// paint_handler.cpp) and its label's origin; the painter takes it whole.
+inline constexpr int kCeTabCount = 2;
+struct CeTabStripLayout {
+    // Each tab's painted box: the lit tab its grown box through the page
+    // line, an unlit tab its footprint from its top row to the recess's last.
+    std::array<GuiRect, kCeTabCount> tab{};
+    // Each label's pen origin (its first ink `tab_pad_left_px` past the
+    // footprint's left column) and baseline.
+    std::array<double, kCeTabCount> label_x{};
+    std::array<double, kCeTabCount> baseline{};
+};
+// The layout on the lane `lane` (top_tab_strip_area) for the shaped labels
+// `labels` in the body face `font`, tab `active` lit.
+CeTabStripLayout ce_tab_strip_layout(
+    const GuiRect& lane, const GuiFont& font,
+    const std::array<const text_shape::ShapedRun*, kCeTabCount>& labels,
+    int active);
+// The strip on `lane` from `layout`, tab `active` lit and each tab's label
+// live or embossed by `enabled`.
+void paint_ce_tab_strip(
+    cairo_t* cr, const GuiRect& lane, const CeTabStripLayout& layout,
+    const std::array<const text_shape::ShapedRun*, kCeTabCount>& labels,
+    int active, const std::array<bool, kCeTabCount>& enabled);
 
 // -- THE CUE'S TRIANGLE ---------------------------------------------------------
 

@@ -20,7 +20,8 @@
 // is recorded at redesign_button_enabled's head, app_state.h.)
 //
 // A MODAL TAKES THE AREA FROM THE VIEW BAR'S TOP ROW DOWN: the top strip
-// above it and THE COLUMN'S 5 W AIR under the band stay as the main window
+// above it — the tab strip among it — and THE COLUMN'S 5 W AIR under the
+// strip stay as the main window
 // paints them; the border under row 8 and the program frame's bottom row stay
 // visible under it. Across, it runs inside the program frame's two columns,
 // as every program lane does. Top to bottom:
@@ -40,9 +41,10 @@
 // SO THE BOX'S BOTTOM IS DERIVED FROM THE BOTTOM UP (the frame's line, the
 // border, the controls row, the foot), and it lands 6 W below the main
 // window's canvas bottom: the mock's picture, intended. At the tablet's
-// 2304 x 1440 and 300 %: the ring's top row 231–233 and bottom row
+// 2304 x 1440 and 300 %: the ring's top row 294–296 (the view bar's, under
+// the tab strip's 63 rows since 2026-10-18) and bottom row
 // 1305–1307, its columns 21–23 and 2280–2282, the interior x 24..2279 and
-// y 234..1304 (the main canvas's own rows end at 1286, its bottom frame row
+// y 297..1304 (the main canvas's own rows end at 1286, its bottom frame row
 // 1287–1289); the foot 1308–1322; the controls row 1323–1418, its case rows
 // 1335–1403, its first case's columns 21–89 and its last 2214–2282; the
 // border 1419–1436 and the frame's line 1437–1439.
@@ -61,7 +63,7 @@
 // 1437–1439, the keyboard's band 1034–1436 (its first key row's top 1048),
 // the border 1016–1033, the controls row 920–1015 (its case rows 932–1000),
 // the foot 905–919 and the ring's bottom row 902–904, the interior y
-// 234..901.
+// 297..901.
 //
 // THE INTERIOR'S GROUND SAYS WHAT THE SURFACE IS (ModalBoxGround): THE FIELD
 // GROUND, the list's dark field pair, where you pick or type — the render

@@ -3404,8 +3404,11 @@ int GuiInputHandler::wheel_context(int x, int y) const {
             // covers its four buttons now.)
             top_caption_row_area(app),
             top_menu_row_area(app),  top_icon_row_area(app),
-            // GAP 1's band, the ONE non-lane member (between the icon row
-            // and the trim lane, window ground): it sits inside the
+            // THE TAB STRIP (2026-10-18), Cool Edit's Organizer tabs under
+            // the band: chrome, its two tabs buttons and its ground inert.
+            top_tab_strip_area(app),
+            // GAP 1's band, the ONE non-lane member (between the tab strip
+            // and the column's air, window ground): it sits inside the
             // top-strip area below, which
             // pans, so without this entry a wheel over that ground would
             // scroll the song — exactly the fault row 1's ruling named. Not

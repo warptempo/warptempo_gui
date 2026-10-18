@@ -33,7 +33,9 @@
 // row 8 stood for the morning of 2026-10-09; git history.)
 //
 // THE PROGRAM'S LANES (2026-10-09): THE TOOLBAR BAND (the top strip's lane
-// 3, under the program frame's top row) and ROW 8 under its DOCK BAR (the
+// 3, under the program frame's top row), THE TAB STRIP under it (lane 4,
+// 2026-10-18: Cool Edit's Organizer tabs, the two tabs' own lane, its
+// fields below) and ROW 8 under its DOCK BAR (the
 // bottom strip's lane 2) over COOL EDIT'S BORDER UNDER ROW 8 (bottom lane 1,
 // 2026-10-14, the program frame's bottom row under it on the window's foot),
 // the
@@ -197,10 +199,46 @@ struct ProgramSpec {
     double state_air_px;
 
     // -- THE CANVAS COLUMN (METRICS §3, §4; NOTES.md sets 2 and 3) ----------
-    // THE COLUMN'S AIR: the face between the band's last line and the view
-    // bar's top line (METRICS §4.1, Cool Edit's y = 79..83), a lane of its
-    // own above the trim lane (main.cpp's lane table).
+    // THE COLUMN'S AIR: the face between the line above it — the tab
+    // strip's page line since 2026-10-18, the band's last line before — and
+    // the view bar's top line (METRICS §4.1, Cool Edit's y = 79..83), a lane
+    // of its own above the trim lane (main.cpp's lane table).
     int  column_air_px;
+    // THE TAB STRIP (architect 2026-10-18, the go "proceed"; the law
+    // tmp/Screenshot_2026-10-18_16-07-45.png, Cool Edit Pro 2.1's Organizer
+    // tab strip on his Wine 1:1 capture, METRICS §2.3, and the mocks of
+    // record tmp/tabs_mock/tabs_v11_A.png / _B.png with their generator
+    // make11.py): A TOP LANE OF ITS OWN BETWEEN THE BAND AND THE COLUMN'S
+    // AIR — `tab_recess_px` of the dock's RECESS tone under the band's last
+    // light line, then THE PAGE'S TOP LIGHT LINE, one line in the hilight
+    // tone, the page the column's face below it. Cool Edit's Organizer stands
+    // its Files / Effects / Favorites tabs in 32 rows of recess over its page
+    // line; the product's 20 W hold the active tab's 18 and two rows of air
+    // over it (his mocks, the recess "taken whole" at the tabs' own heights).
+    // THE TABS IN IT, in W from the lane's top and left (the page edge is the
+    // lane's first column, the program frame's inner neighbour): AN INACTIVE
+    // TAB 16 W tall from row `tab_inactive_top_px`, its footprint ONE LINE
+    // in from the page edge (Cool Edit's Files at x 7 against the page's
+    // x 6), the footprints `tab_gap_px` LINES apart (Cool Edit's 2 px, one
+    // line each at every scale, never a rounded 2 W: at 138 % scaled_px(2)
+    // is 3 against two 1-px lines); THE ACTIVE TAB grows ONE LINE
+    // each side and `tab_inactive_top_px − tab_active_top_px` up over its own
+    // footprint — the lead, the gap's lines and the growth the same line, so
+    // the gap beside it closes to one line (its shadow on the right), the tab
+    // line's run under the unlit tabs meets its light column on the left,
+    // and with the first tab active its light column
+    // stands flush on the page edge, against the frame line. Inside a tab's edge
+    // columns its label's INK stands `tab_pad_left_px` from the left column
+    // and `tab_pad_right_px` from the right (the active tab's growth adding
+    // its own line on each side: 7 / 5 on Cool Edit's capture). The painter
+    // is cool_edit_paint.h's paint_ce_tab_strip, the tones
+    // cool_edit_derive.h's (the tab table, kTabBodies).
+    int  tab_recess_px;
+    int  tab_inactive_top_px;
+    int  tab_active_top_px;
+    int  tab_gap_px;
+    int  tab_pad_left_px;
+    int  tab_pad_right_px;
     // THE COLUMN'S SIDE MARGIN (METRICS §4.1, Cool Edit's x = 202..207 of
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
     // and FX1 = WW − 7): this much face from each side of the window's client
@@ -344,6 +382,12 @@ inline constexpr ProgramSpec kProgramSpec = {
     .field_pad_px       = 5.0,
     .state_air_px       = 5.0,
     .column_air_px         = 5,
+    .tab_recess_px         = 20,
+    .tab_inactive_top_px   = 4,
+    .tab_active_top_px     = 2,
+    .tab_gap_px            = 2,
+    .tab_pad_left_px       = 6,
+    .tab_pad_right_px      = 5,
     .column_margin_px      = 6,
     .column_foot_px        = 5,
     .grid_divisions        = 4,
@@ -406,6 +450,10 @@ constexpr int program_column_authored_h(const ProgramSpec& p) {
            program_ruler_authored_h(p) + program_marker_lane_authored_h(p) +
            1;
 }
+// THE TAB STRIP (2026-10-18): the recess and the page's top light line.
+constexpr int program_tab_strip_authored_h(const ProgramSpec& p) {
+    return p.tab_recess_px + 1;
+}
 constexpr int program_column_foot_authored_h(const ProgramSpec& p) {
     return 1 + p.column_foot_px;
 }
@@ -428,6 +476,18 @@ static_assert(program_ruler_authored_h(kProgramSpec) == 12);
 static_assert(program_marker_lane_authored_h(kProgramSpec) == 17);
 static_assert(program_column_authored_h(kProgramSpec) == 43);
 static_assert(program_column_foot_authored_h(kProgramSpec) == 6);
+static_assert(program_tab_strip_authored_h(kProgramSpec) == 21);
+// THE TAB STRIP'S ROWS (2026-10-18): an inactive tab is 16 W tall from its
+// top row to the recess's last — its light top row and a 15-row body — and
+// the active tab 18, its face running on through the page line; a tab's
+// width is its label's ink plus 13 W (the two edge columns and the pads).
+static_assert(kProgramSpec.tab_recess_px - kProgramSpec.tab_inactive_top_px ==
+              16);
+static_assert(kProgramSpec.tab_recess_px - kProgramSpec.tab_active_top_px ==
+              18);
+static_assert(1 + kProgramSpec.tab_pad_left_px + kProgramSpec.tab_pad_right_px +
+                  1 ==
+              13);
 static_assert(program_stereo_divider_authored_h(kProgramSpec) == 3);
 // The column's foot mirrors its air — the product's own 5 W under the
 // canvas's bottom frame row against Cool Edit's 5 rows of face above the

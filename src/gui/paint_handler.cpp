@@ -60,7 +60,7 @@
 // row (paint_notifications, 2026-08-29). (The dirty mark that rode this row
 // retired 2026-10-05, Save's grey being the mark.)
 //
-// The no-wiggle DERIVATION — the widest digit, the widest tab letter, the
+// The no-wiggle DERIVATION — the widest digit, the
 // "DD:DD.DDD" specimen — belongs to the time fields and lives at their own
 // metrics (time_field_metrics), measured on the face rather than trusted to
 // it.
@@ -161,7 +161,7 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // surface is rebuilt only at the next tick (maybe_rebuild_flag_cache);
     // a frame painted between the two blitted the old scale's cues at the
     // old origin, inside the new, taller toolbar band — a lane the rebuild's
-    // damage never reaches (it starts at the band's foot,
+    // damage never reaches (it starts at the tab strip's foot,
     // damage_window_top_rows), so the old text stood there for good. Refused,
     // that frame shows the marker lane's face without cues, and the
     // rebuild's own damage covers the lane on the frame that lands the new
@@ -1055,10 +1055,6 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         // needs no chord exception, because Space already toggles.
         case RedesignButton::TransportPlayStop:
             return icons::Icon::MediaPlaybackStop;
-        // SWITCH TAB ON TAB B (architect 2026-10-12): the same two windows
-        // with the other in front; tab A wears the table's TabDetach.
-        case RedesignButton::TransportSwitchTab:
-            return icons::Icon::TabDetachB;
         // THE READ-ONLY TOGGLE WHILE LOCKED (architect 2026-10-14): the closed
         // padlock; unlocked it wears the table's open one.
         case RedesignButton::IconReadOnly:
@@ -2399,6 +2395,50 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
+// THE TAB STRIP'S TWO TABS AND THEIR LABELS (architect 2026-10-18): the
+// roster ids and the words each tab paints, in the strip's order — "Tab A"
+// and "Tab B" for AppState::active_tab_view's two values.
+constexpr std::array<RedesignButton, kCeTabCount> kTabStripButtons = {
+    RedesignButton::TabA, RedesignButton::TabB};
+constexpr std::array<const char*, kCeTabCount> kTabStripLabels = {"Tab A",
+                                                                  "Tab B"};
+
+// WHICH TAB IS LIT — the live selected bit (redesign_button_selected: the
+// active tab), the one input the strip's geometry reads beyond the scale and
+// the labels: the lit tab grows, so the layout and the press targets follow
+// it, and the tab switch damages the lane (GuiActiveViews' switch) while the
+// per-tick comparator catches any other writer.
+static int tab_strip_lit_index(const AppState& app) {
+    return redesign_button_selected(app, kTabStripButtons[1]) ? 1 : 0;
+}
+
+void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
+    // THE TAB STRIP (top lane 4; the picture and its rules at
+    // cool_edit_paint.h's paint_ce_tab_strip): the layout first, each tab's
+    // painted box PUBLISHED as its press target and its bits stashed
+    // (publish_button_face), then the strip painted from the same layout —
+    // ON SCREEN IS AS PAINTED, one geometry for paint and hit. The labels are
+    // the body face's (gui_font.h), the widths their ink.
+    const GuiRect lane = top_tab_strip_area(app);
+    const GuiFont font = gui_font(GuiFace::Body);
+    std::array<text_shape::ShapedRun, kCeTabCount> runs;
+    std::array<const text_shape::ShapedRun*, kCeTabCount> labels{};
+    for (std::size_t i = 0; i < runs.size(); ++i) {
+        runs[i] = text_shape::shape_text_run(font, kTabStripLabels[i]);
+        labels[i] = &runs[i];
+    }
+    const int lit = tab_strip_lit_index(app);
+    const CeTabStripLayout layout =
+        ce_tab_strip_layout(lane, font, labels, lit);
+    std::array<bool, kCeTabCount> enabled{};
+    for (std::size_t i = 0; i < kTabStripButtons.size(); ++i)
+        enabled[i] = publish_button_face(cr, app, audio, playback,
+                                         target_render, kTabStripButtons[i],
+                                         layout.tab[i])
+                         .enabled;
+    paint_ce_tab_strip(cr, lane, layout, labels, lit, enabled);
+}
+
 // THE BOTTOM ROW'S BUTTON CLUSTER AND CLOCK — THE UNIFIED BOTTOM ROW (rows 8
 // and 9 merged 2026-08-12): permanent on every host — ordinary
 // mouse-clickable buttons, no touch mode, no flag, no detection. LEFT TO
@@ -2715,8 +2755,7 @@ constexpr TransportRowDef kTransportHistoryStepGroup[] = {
 // "a 1 is skinnier than a 0", nothing in the field or right of it may move as
 // the time runs). The reserved cell is measured from the widest string the
 // field can ever show in this face — the widest digit in every digit slot of
-// "DD:DD.DDD" (kTimeShape) and, on row 8, the widest TAB LETTER in the
-// letter's slot (kClockTabLetters) — shaped through the one chokepoint at the
+// "DD:DD.DDD" (kTimeShape) — shaped through the one chokepoint at the
 // live size, so nothing is trusted to the face. The field is that cell plus
 // the field's pad either side — 5 W, THE DIALOG FIELD'S OWN (program_spec.h's
 // field_pad_px, where the reason it is 5 and not the 4 of 2026-10-09 evening
@@ -2725,10 +2764,11 @@ constexpr TransportRowDef kTransportHistoryStepGroup[] = {
 // width ceiled, AND NOTHING MORE: row 8's clock exactly as the render
 // player's two fields (architect 2026-10-10, "the media player's fields look
 // good"; the 85-W floor of Cool Edit's mock, 2026-10-09, removed 2026-10-10).
-// At 300 % under Liberation Sans the clock is its cell of about 202 device
-// px plus 2 · 15 (re-derived 2026-10-13: 7 digits at 0.556 em, the colon and
-// the point at 0.278, the ` | ` at 0.815 and the letter slot at 0.667, 5.93 em
-// in all; the Tahoma specimen of 2026-10-10 was about 201).
+// At 300 % under Liberation Sans the clock is its cell of about 152 device
+// px plus 2 · 15 (re-derived 2026-10-18: 7 digits at 0.556 em and the colon
+// and the point at 0.278, 4.448 em in all at the body's em of 34.07 device
+// px; the tab letter's slot and the ` | ` before it left the cell that day,
+// the clock reading `02:47.233` alone, "like the media player cells").
 //
 // A PLAYER FIELD'S RUN IS RIGHT-ALIGNED IN ITS FIXED CELL (architect
 // 2026-10-05, the period's ACID / Vegas fields): it ENDS AT THE RESERVED
@@ -2736,18 +2776,14 @@ constexpr TransportRowDef kTransportHistoryStepGroup[] = {
 // the rule, which the fixed cell keeps (row 8's composition below). THE
 // CELL'S RIGHT EDGE IS THE FIELD'S RIGHT PAD in every time field, the field
 // being the cell and its two pads (the floor's centering of 2026-10-09 went
-// with the floor). On row 8 THE DIGITS AND THE PIPE ARE ONE RUN, the
-// timestamp and ` | `, STARTING AT THE CELL'S LEFT EDGE — the digits are
-// tabular, so the run is the specimen's width plus the separator's at every
-// time and the pipe never moves as the time runs — and the tab
-// letter is painted LEFT-ALIGNED IN ITS SLOT at that run's end, the cell's
-// last part (architect 2026-10-09 ~21:20): switching tab moves at most the
-// letter's own right edge and nothing else — no letter's kerning can reach
-// the pipe, the two being shaped apart. (Liberation Sans's A and B advance
-// alike, 0.667 em, so the slot costs the narrower letter nothing today;
-// Tahoma's A was 0.600 em and its B 0.589, measured 2026-10-06, and the slot
-// is the widest, so where letters differ the narrower stands left-aligned in
-// the widest's room.)
+// with the floor). ROW 8'S CLOCK IS THE TIMESTAMP ALONE (architect
+// 2026-10-18, with the tab strip: "like the media player cells" — the active
+// tab's letter and the ` | ` before it left the cell, the strip naming the
+// tab), ITS RUN STARTING AT THE CELL'S LEFT EDGE; the digits are tabular, so
+// the run is the specimen's width at every time and nothing in the cell
+// moves as the time runs. (The letter, `00:45.115 | A` from 2026-10-09
+// ~21:20 and `A | 00:45.115` before it, stood from the tab row's deletion of
+// 2026-10-01 until the strip; git history.)
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
@@ -2759,15 +2795,9 @@ constexpr TransportRowDef kTransportHistoryStepGroup[] = {
 // is scratched, "the little one is fine", architect 2026-10-09.)
 constexpr const char* kTimeShape = "DD:DD.DDD";
 
-// The tab letters row 8's clock ends with (AppState::active_tab_view's two
-// values) — the set the letter slot is measured over.
-constexpr std::string_view kClockTabLetters = "AB";
-// The ` | ` between the timestamp and the letter (the cell's order above).
-constexpr const char* kClockSeparator = " | ";
-
-// THE CLOCK'S RUN — the timestamp and the separator, the one string the cell
-// shows ahead of the tab letter — spelled once for the painter and the
-// cell's as-painted fingerprint (GuiPaintHandler::clock_fingerprint).
+// THE CLOCK'S RUN — the timestamp, the one string the cell shows — spelled
+// once for the painter and the cell's as-painted fingerprint
+// (GuiPaintHandler::clock_fingerprint).
 // THE SPLIT-PLAYHEAD READ, carried over from the status line whole: track
 // the SCANNER during playback (what the user hears), the CURSOR otherwise —
 // the scanner's value is meaningful only while active, so the ternary takes
@@ -2787,7 +2817,7 @@ static std::string clock_time_text(const AppState& app,
                   static_cast<double>(sr);
     }
     if (seconds < 0.0) seconds = 0.0;
-    return format_timestamp(seconds) + kClockSeparator;
+    return format_timestamp(seconds);
 }
 
 // THE FIELD'S HEIGHT AND ITS PAD, each one element rounded once (scaled_px): 17 W tall (51 device rows at 300 %, 23
@@ -2811,20 +2841,18 @@ static int time_field_pad_px() {
 constexpr double kTimeFieldGapPx = 3.0;
 
 // The time fields' metrics, MEMOISED ON THE SCALE —
-// thirteen tiny shaping passes (ten digits, the two letters and the
-// specimen) that answer the same thing on every frame until the scale moves
-// (the widths are the face's own).
+// eleven tiny shaping passes (ten digits and the specimen) that answer the
+// same thing on every frame until the scale moves (the widths are the
+// face's own).
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
-// THE CELLS ARE ADVANCES: `time_w` is the specimen's advance sum and
-// `letter_w` the widest letter's, so no glyph ever walks; row 8's cell is
-// time_w + the shaped ` | ` + letter_w, each player field's time_w, and each
+// THE CELLS ARE ADVANCES: `time_w` is the specimen's advance sum, so no
+// glyph ever walks; row 8's cell and each player field's is time_w, and each
 // cell is its field's damage box too.
 struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
-    double letter_w = 0.0;    // the widest tab letter's shaped width
 };
 static TimeFieldMetrics g_time_field_metrics;
 
@@ -2841,12 +2869,6 @@ static const TimeFieldMetrics& time_field_metrics(const GuiFont& font) {
     std::string specimen(kTimeShape);
     for (char& c : specimen) if (c == 'D') c = widest;
     m.time_w = text_shape::shape_text_run(font, specimen).width_px;
-    m.letter_w = 0.0;
-    for (char l : kClockTabLetters) {
-        const char one[2] = {l, '\0'};
-        m.letter_w = std::max(m.letter_w,
-                              text_shape::shape_text_run(font, one).width_px);
-    }
     m.percent = font.percent;
     return m;
 }
@@ -3119,23 +3141,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const GuiFont font = gui_font(GuiFace::Body);
         const TimeFieldMetrics& tm =
             time_field_metrics(font);
-        // THE ACTIVE TAB'S LETTER ENDS THE CELL (the tab row deleted
-        // 2026-10-01 as "a waste of space", the letter moving here; the order
-        // architect 2026-10-09 ~21:20, "let's try putting the timestamp
-        // first, and then the pipe, and then the tab letter"): `00:45.115 | A`
-        // — the timestamp, a space, the LITERAL pipe, a space, then the
-        // letter. With the letter leading, its left side bearing stood at the
-        // field's left pad and the digits' at the right, and the two pads read
-        // unequal ("the spacing does bother me"); with the digits leading and
-        // the letter last, the letter's bearing sits at the right pad. THE
-        // RESERVED CELL IS THE DIGITS' SPECIMEN, THE ` | ` AND THE WIDEST
-        // LETTER'S SLOT, so it is ONE WIDTH ON EVERY TAB AND AT EVERY TIME;
-        // the digits and the ` | ` start at the cell's left edge and the
-        // letter stands left-aligned after them (kTimeShape's block), so no
-        // tab switch moves the pipe or the digits.
-        const double sep_w =
-            text_shape::shape_text_run(font, kClockSeparator).width_px;
-        const double cell_w = tm.time_w + sep_w + tm.letter_w;
+        // THE CELL IS THE DIGITS' SPECIMEN ALONE (architect 2026-10-18: the
+        // tab letter and its pipe left the clock with the tab strip's
+        // arrival, "like the media player cells"), so it is ONE WIDTH AT
+        // EVERY TIME, the run starting at its left edge (kTimeShape's block).
+        const double cell_w = tm.time_w;
         // THE CLOCK'S GROUP: two W of face in from the lane's left edge, the
         // gripper, the 6-W air, the field (its widest string and its pads),
         // the 4-W air, the end bar (program_spec.h's group fields).
@@ -3224,7 +3234,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         //
         // ONE FACE, ONE BASELINE (the line architect 2026-10-03; the clock's
         // face 2026-10-05; the one baseline 2026-10-07):
-        //   * THE CLOCK — the tab letter and the digits in the body face,
+        //   * THE CLOCK — the digits in the body face,
         //     Cool Edit's field ink, on the field's own seat. IT IS NEVER
         //     CLIPPED: the row's crop-at-its-floor allowance (the block above)
         //     is what covers the narrow window where the right block has
@@ -3269,21 +3279,14 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             state = app.history_mode.active ? history_walk_line(app)
                                             : app.queue_progress_text;
         }
-        // THE CLOCK, UNCLIPPED, IN THE FIXED CELL — the digits and ` | ` as
-        // one run starting at the cell's left edge, then the tab letter
-        // starting where that run ends, so the digits and the pipe stand
-        // still whatever the letter.
+        // THE CLOCK, UNCLIPPED, IN THE FIXED CELL — the timestamp as one run
+        // starting at the cell's left edge.
         if (clock_drawn) {
             const text_shape::ShapedRun time_run =
                 text_shape::shape_text_run(font, clock_time_text(app, audio));
-            const text_shape::ShapedRun letter_run =
-                text_shape::shape_text_run(
-                    font, std::string(1, app.active_tab_view));
-            const double run_x = static_cast<double>(cell_x);
             set_palette_source(cr, palette().ce_field_text);
-            text_shape::show_shaped_run(cr, time_run, run_x, baseline);
-            text_shape::show_shaped_run(cr, letter_run,
-                                        run_x + time_run.width_px, baseline);
+            text_shape::show_shaped_run(cr, time_run,
+                                        static_cast<double>(cell_x), baseline);
         }
         if (state_drawn && !state.empty()) {
             // The clock's face on THE CLOCK'S BASELINE (the block above), its
@@ -5134,15 +5137,15 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // and for its reason: on_redraw runs once per damage rect and this pass
     // runs whole under each, so a narrow rect (the playhead's) would otherwise
     // stamp the stash with bounds whose pixels it never redrew. Every trim
-    // write damages at least the viewport's lanes, the toolbar band's foot
+    // write damages at least the viewport's lanes, the tab strip's foot
     // through the waveform's bottom at the window's width, which hold this
     // lane whole (commit_trim_mutation, the sweep's and the drag's per-motion writes, the
     // maximizer, and the tab, load and load-in-place roads), so the frame that
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
-    // THE COLUMN'S AIR above the view bar (top lane 4, render.h's canvas
-    // column lanes): 5 W of the panel face under the band's last line
+    // THE COLUMN'S AIR above the view bar (top lane 5, render.h's canvas
+    // column lanes): 5 W of the panel face under the tab strip's page line
     // (METRICS §4.1), the lane's whole width inside the program's frame,
     // painted with the bar it heads.
     // The trim lane's own ground the same face, under the view bar, so the
@@ -5677,10 +5680,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // WHAT IS NOT HERE, and why it is not missing: an S/T · W/P view readout
     // and a "(read-only)" token. The icon row's view pairs show the view as
     // two lit buttons and its read-only toggle shows the lock, so letters would
-    // restate what that row says in its own vocabulary. THE A / B LETTER IS
-    // HERE, though, since 2026-10-01: the tab row that showed it is deleted,
-    // and the letter ends the clock cell, after the timestamp and the pipe
-    // (paint_bottom_row_buttons_and_clock owns the rule). The row carries no dirty mark: Save's grey is the mark
+    // restate what that row says in its own vocabulary — and the A / B tab
+    // is the tab strip's lit tab since 2026-10-18 (paint_tab_strip), its
+    // letter gone from the clock cell, which stood there from the tab row's
+    // deletion of 2026-10-01. The row carries no dirty mark: Save's grey is the mark
     // (architect 2026-10-05, plain_save_actionable).
     //
     // The row paints on EVERY frame class (loading, blank, loaded) like the
@@ -7800,7 +7803,12 @@ static bool floating_surface_stands(const AppState& app) {
 //     clip), the pressed face (redesign_button_pressed_face, worn only
 //     enabled) and the glyph index (redesign_button_glyph, which with the id
 //     names the drawing redesign_button_icon returns); the cases' tones are
-//     the palette's.
+//     the palette's;
+//   * THE TAB STRIP (paint_tab_strip, 2026-10-18): its lane; the lit tab
+//     (tab_strip_lit_index, which moves the layout); per tab the enabled bit
+//     (publish_button_face's stash, refreshed by a covering clip — the
+//     embossed label); the labels are compiled, their widths the face's,
+//     and a tab paints no pressed face.
 // NONE OF THEM IS A PAINT-TIME PUBLICATION of another surface or the
 // displayed basis that on_redraw's head promotes (re-derived by a call-graph
 // walk 2026-10-13: the roster predicates reach the promoted map only through
@@ -7860,6 +7868,13 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
         for (const IconRowDef& def : pair) add(def.id, pane);
         ++pane;
     }
+
+    fp.strip.lane = top_tab_strip_area(app);
+    fp.strip.lit  = tab_strip_lit_index(app);
+    for (std::size_t i = 0; i < kTabStripButtons.size(); ++i)
+        fp.strip.enabled[i] = redesign_button_enabled(
+            app, audio, audio.total_frames(), playback, target_render,
+            kTabStripButtons[i]);
     return fp;
 }
 
@@ -7867,9 +7882,9 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
 // (publishing) and the owed check (comparing) call. The cell's pixels,
 // enumerated from paint_bottom_strip and paint_bottom_row_buttons_and_clock:
 // the row content's face and the time field (the palette and the geometry,
-// the globals), the cell as published (AppState::clock_cell_rect), the run
-// (clock_time_text: the scanner or the cursor, the sample rate) and the tab
-// letter in the field's ink; and whether the row yields, when the cell is
+// the globals), the cell as published (AppState::clock_cell_rect) and the
+// run (clock_time_text: the scanner or the cursor, the sample rate) in the
+// field's ink; and whether the row yields, when the cell is
 // not the clock's at all (modal_owns_bottom_row, or the on-screen keyboard
 // standing over the row).
 GuiClockFingerprint GuiPaintHandler::clock_fingerprint() {
@@ -7878,7 +7893,6 @@ GuiClockFingerprint GuiPaintHandler::clock_fingerprint() {
         app.width, app.height, gui_scale_percent(), palette_generation()};
     fp.cell      = app.clock_cell_rect;
     fp.time_text = clock_time_text(app, audio);
-    fp.letter    = app.active_tab_view;
     fp.yields    = modal_owns_bottom_row(app) ||
                    onscreen_keyboard::stands(app, gui);
     return fp;
@@ -8024,9 +8038,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // the owed rect on deferred_basis_repaint_due (app_state.h) and the promote
     // is BLOCKED until that bit is honored, so the committing frame is by
     // construction one carrying the strip+waveform rect (since 2026-10-13 the
-    // viewport lanes' rect from the band's foot, the rows above owed a
+    // viewport lanes' rect from the tab strip's foot, the rows above owed a
     // fingerprint check, damage_window_top_rows; every item-basis surface lies
-    // below the band's foot). No input dispatches
+    // below the strip's foot). No input dispatches
     // mid-loop (single-threaded) and the whole frame still commits atomically
     // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
     // the last COMMITTED frame's geometry — that guarantee is unchanged.
@@ -8370,6 +8384,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, top_icon_row_area(app))) {
             paint_icon_row(cr);
         }
+        // THE TAB STRIP (2026-10-18) on the same terms: audio-independent,
+        // its two tabs claimed above the loading guard.
+        if (rects_intersect(exposed, top_tab_strip_area(app))) {
+            paint_tab_strip(cr);
+        }
         // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged) is one
         // exposure and one painter: paint_bottom_strip grounds the lane and
         // paints the button cluster + clock through its
@@ -8457,7 +8476,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      (render_center_lines), so the grid never stands without them,
         //      then THE STEREO DIVIDER'S ROWS (render_waveform_divider,
         //      2026-10-16).
-        //   3. the two redesigned top button rows, the
+        //   3. the two redesigned top button rows, the tab strip
+        //      (paint_tab_strip, 2026-10-18), the
         //      unified bottom row (its chrome, buttons, clock AND state cell
         //      in one painter) and the border under it (paint_bottom_border,
         //      2026-10-14),

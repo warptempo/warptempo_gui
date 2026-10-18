@@ -203,16 +203,19 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
     // different viewport / zoom / playhead, so render the plate synchronously
     // and publish the displayed fingerprint now instead of leaving it to the
-    // tick. ONE OWNER then covers what the sync rebuild does not, named for
-    // the pixels it erases: the CLOCK CELL, for the restored playhead. (It was
-    // TWO until 2026-08-29 — the second took the state lane for the RESOLVED
-    // READOUT, whose eligibility read the marker view; that readout retired
-    // whole with the one-day status bar and nothing this switch writes is a
-    // state string, so the call went with it.) THE CELL CARRIES THE A / B
-    // LETTER since 2026-10-01 (its head, paint_bottom_row_buttons_and_clock),
-    // so this one damage repaints the letter the switch changed too.
+    // tick. TWO OWNERS then cover what the sync rebuild does not, named for
+    // the pixels they erase: the CLOCK CELL, for the restored playhead, and
+    // THE TAB STRIP (2026-10-18), whose lit tab is the tab this switch
+    // changed — the strip stands above the viewport's lanes, which the
+    // rebuild damages, so its lane is damaged here (the per-tick comparator
+    // would catch the lit bit a tick later; the switch's own frame shows it).
+    // (The clock cell carried the A / B letter from 2026-10-01 until the
+    // strip; a second owner took the state lane for the RESOLVED READOUT
+    // until 2026-08-29, when that readout retired with the one-day status
+    // bar.)
     viewport.kick_waveform_sync();
     viewport.invalidate_clock_area();
+    viewport.invalidate_rect(top_tab_strip_area(app));
 }
 
 // THE COLUMN ENTRY — the absolute form of the deleted `p` toggle (architect

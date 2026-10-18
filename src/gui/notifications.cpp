@@ -65,7 +65,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     // edge keeps the panel's margin just inside the program frame's one-line
     // sunken edge. It is anchored on the trim lane and not on the icon row,
     // so whatever stands between the band's cases and the trim lane — the
-    // canvas column's air — the card meets the bar the same way at every
+    // tab strip (2026-10-18) and the canvas column's air — the card meets the bar the same way at every
     // scale. No chrome spec field: no vocabulary needs another anchor (the
     // note among ChromeSpec's fields).
     // The card's INTERNAL pad is a different number and a different concept —

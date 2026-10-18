@@ -111,8 +111,9 @@ struct ToolbarChord {
     // and the arm stays because it is the toggles' own reading: armed, the
     // selected radio reads press, release exactly as a toggle does, its
     // pressed face held under the tip. THE ICON ROW'S TWO VIEW
-    // PAIRS are the flag's one user (architect 2026-10-14: Source / Target and
-    // Warp / Phase Reset, each member its own absolute chord); the walk lamp,
+    // PAIRS (architect 2026-10-14: Source / Target and Warp / Phase Reset,
+    // each member its own absolute chord) and THE TAB STRIP'S TWO TABS
+    // (architect 2026-10-18, both Ctrl+Tab) are the flag's users; the walk lamp,
     // read-only, history and Cumulative are TOGGLES and press through in both
     // directions, which is why this is a flag and not `selected` alone. The
     // consume is GENERIC — keyed on the flag plus the lamp, with no id list
@@ -124,15 +125,19 @@ struct ToolbarChord {
     // own handler already makes a press on the axis's current value a no-op, so dispatching
     // would be harmless rather than wrong. The flag keeps the lift on the lit
     // button a plain consumed nothing, the radio's own reading, rather than
-    // leaning on the act's idempotence. (It once kept the CLAIM too, for a
+    // leaning on the act's idempotence. THE TWO TABS NEED IT OUTRIGHT
+    // (2026-10-18): their chord, Ctrl+Tab, TOGGLES, so the lit tab's lift
+    // dispatched would switch AWAY from the tab pressed — the flag is what
+    // makes the lit tab swallow its press, plain, shifted or held. (It once kept the CLAIM too, for a
     // face the bitmap crops could not show — a pressed interior over a lit
     // button; the faces are painted now and compose the two,
     // paint_roster_case.)
     bool           radio;
-    // (EVERY ROW PAINTS A PRESSED INTERIOR — the icon row's and the bottom
-    // row's click face — so there is no click-face column: the tab row's two
-    // tabs, the one surface that showed nothing new on a press, are deleted
-    // (2026-10-01), and row 1's anchors carry no chord row at all. The face
+    // (EVERY CASE ROW PAINTS A PRESSED INTERIOR — the icon row's and the
+    // bottom row's click face — and THE TAB STRIP'S TWO TABS PAINT NONE
+    // (2026-10-18: Cool Edit's Organizer tabs show no pressed face), which
+    // is a membership, redesign_button_is_tab, rather than a column here;
+    // row 1's anchors carry no chord row at all. The face
     // tracks the pointer through the arm's `inside` bit — the paint reads
     // redesign_button_pressed_face, app_state.h.)
     // REPEATS: a held press on this button synthesizes its own chord over and
@@ -177,7 +182,8 @@ struct ToolbarChord {
 };
 
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER — every CHORD-DISPATCHING button
-// in the redesign — the icon row and the bottom row — in one table. The flags above
+// in the redesign — the icon row, the tab strip and the bottom row — in one
+// table. The flags above
 // are the
 // only axes the rows differ on, so they share one press body and one release
 // body (arm_redesign_press / finish_chrome_press_release) instead of
@@ -227,6 +233,23 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false, false,  true},   // Ctrl+Shift+Z
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true,  false},   // Ctrl+Alt+R (+Shift)
+    // THE TAB STRIP (architect 2026-10-18, lane 4 under the band, Cool
+    // Edit's Organizer tabs): BOTH TABS CARRY THE SAME CHORD, Ctrl+Tab,
+    // Switch Tab's — "it's ctrl+tab, so long press or shift press does
+    // history walk" — and both are RADIOS: with two tabs the toggle IS the
+    // direct select, and the flag makes the LIT tab's lift a consumed
+    // nothing (plain, shifted or held) where the chord would switch away.
+    // THEY ADMIT SHIFT (redesign_button_shift_admits): the other tab's
+    // shift-click and its glass long press OR the shift into the row's ctrl
+    // and dispatch Ctrl+Shift+Tab, the paired march, the press's own road
+    // as Switch Tab's — a modified press spells its button's own key under
+    // those modifiers. A ctrl press on a tab is refused at the band gate
+    // (the chord already carries its ctrl). They dispatch in every state,
+    // the `h` view included (Ctrl+Tab on its allowlist), and do not repeat:
+    // the long press is the shift. (The Breeze tab row's two rows of
+    // 2026-08 to 2026-10-01 carried the same chord and flags; git history.)
+    {RedesignButton::TabA,       GuiKeys::Tab, true,  false, false, true},    // Ctrl+Tab
+    {RedesignButton::TabB,       GuiKeys::Tab, true,  false, false, true},    // Ctrl+Tab
     // (THE EDIT FLAG BUTTON — bare Return on a button, the flag editor's third
     // road — stood in the bottom row's verb group from 2026-08-27 and in the
     // icon row for the evening of 2026-09-29, when the architect DELETED it:
@@ -913,13 +936,15 @@ bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
     return true;
 }
 
-// Does the roster button at this index paint a pressed interior? Every chord
-// row does (the struct's note), so the answer is "it has a chord row": false
-// for the three anchors alone. The damage gate for the arm's writers (a face
-// that is never painted owes no erase).
+// Does the roster button at this index paint a pressed interior? Every case
+// row does (the struct's note), so the answer is "it has a chord row and is
+// no tab": false for the three anchors and the tab strip's two tabs
+// (redesign_button_is_tab, 2026-10-18). The damage gate for the arm's
+// writers (a face that is never painted owes no erase).
 bool roster_index_click_face(int index) {
     for (const ToolbarChord& tc : kToolbarChords) {
-        if (redesign_button_index(tc.id) == index) return true;
+        if (redesign_button_index(tc.id) == index)
+            return !redesign_button_is_tab(tc.id);
     }
     return false;
 }
@@ -6109,6 +6134,21 @@ void GuiInputHandler::on_button_press(GuiMouseButton button, int x, int y,
     // (THE ICON ROW'S BODY IS claim_button_row_press, above the veils: the
     // render player's veil reaches it too.)
     if (rect_contains(top_icon_row_area(app), x, y)) {
+        claim_button_row_press();
+        return;
+    }
+    // THE TAB STRIP (architect 2026-10-18, lane 4 under the band): the same
+    // body — its two tabs are roster buttons, each resolving against the
+    // rect the strip's painter published (paint_tab_strip: the lit tab's
+    // grown box, the other's footprint), the lit one's press swallowed at
+    // the lift (the radio column). EVERYTHING ELSE IN THE LANE IS CHROME,
+    // INERT TO EVERY SURFACE — the recess, the gaps, the page line — as the
+    // program frame's columns and the stereo divider are (2026-10-16): a
+    // press there claims nothing and is consumed here. Under the render
+    // player and the picker the veils above consume the press first (the
+    // tabs grey there, redesign_button_enabled's head); under a prompt, a
+    // dialog editor or the progress modal the modal gates above swallow it.
+    if (rect_contains(top_tab_strip_area(app), x, y)) {
         claim_button_row_press();
         return;
     }

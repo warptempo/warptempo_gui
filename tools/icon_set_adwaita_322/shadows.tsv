@@ -51,7 +51,6 @@ ChangesPrevent	changes-prevent	rect5961-79	floor shadow
 BboxPrev	go-first	path6460-6-4-4-1 path6460-6-4-4-3-5 path6460-6-4-4-1-9 path6460-6-4-4-3-5-5	floor shadow (4: bar and arrow)
 BboxNext	go-last	g4226 g4222	floor shadow (2 groups: bar and arrow)
 TabDetach	preferences-system-windows	rect4667-1-5-6-2	blurred halo behind each window (one rect, two uses)
-TabDetachB	preferences-system-windows	rect4667-1-5-6-2	blurred halo behind each window (one rect, two uses)
 SettingsConfigure	preferences-system	path6896 path3562	floor shadow (2); the screwdriver's shading on the wrench (rect7166, path7356) kept
 Folder	folder	g5806	floor shadow
 AudioXWav	audio-x-generic	path8186 path8188 path8190	floor shadow (3)

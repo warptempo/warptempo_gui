@@ -328,7 +328,7 @@ struct WaveformCache {
 // width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
 // y, `origin_y`) through the top strip's bottom (the canvas's top frame row's
 // foot) — the ruler lane, the marker lane and the frame row, 90 device rows
-// at 300 % where the whole strip from row 0 was 345. Every cue pixel is
+// at 300 % where the whole strip from row 0 is 408. Every cue pixel is
 // inside the marker lane's rows BY THE PAINTERS' OWN CLIPS, not by a bound on
 // the font: in paint_cues (render.cpp) every label's face box and its text,
 // shadow and ink alike, are painted under a clip of the label's span
@@ -873,7 +873,7 @@ private:
     // on_redraw paint passes. Each renders one strip/layer; on_redraw keeps
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
-    // THE RULER LANE (top lane 6): Cool Edit's flipped ruler — its ground and
+    // THE RULER LANE (top lane 7): Cool Edit's flipped ruler — its ground and
     // bottom line, the timestamp ladder's ticks and digits and the playhead's
     // head (the `playhead_stem` role) — and the MARKER LANE'S panel face under the cues the flag
     // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
@@ -910,6 +910,12 @@ private:
     // after them touches their lanes, the flag cache being transparent there.
     void paint_menu_row(cairo_t* cr);
     void paint_icon_row(cairo_t* cr);
+    // THE TAB STRIP (top lane 4, architect 2026-10-18; cool_edit_paint.h's
+    // paint_ce_tab_strip owns the picture): the two tabs, TabA and TabB,
+    // PUBLISHED like the rows above (publish_button_face, the painted box
+    // each tab's press target), the lit one the active tab; called beside
+    // them on its own exposure.
+    void paint_tab_strip(cairo_t* cr);
     // THE PROGRAM'S FRAME (2026-10-10; the law and the geometry at render.h's
     // program_frame_rect): THE RING (program_frame_rect, one sunken line in
     // the chrome's Shadow and Hilight, mitred), painted with the rows on

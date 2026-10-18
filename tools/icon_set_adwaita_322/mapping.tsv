@@ -52,7 +52,6 @@ NetworkWiredDisconnected	network-wired-disconnected	network-wired-disconnected.s
 PreviewRenderOn	applications-multimedia	applications-multimedia.svg	296	50	48	48	-
 SettingsConfigure	preferences-system	preferences-system.svg	296.062	49.9963	48	48	-
 TabDetach	preferences-system-windows	preferences-system-windows.svg	296	50	48	48	-
-TabDetachB	preferences-system-windows	preferences-system-windows.svg	296	50	48	48	tab-b
 ValueDrag	format-text-direction-rtl	format-text-direction-rtl.svg	296	50	48	48	-
 VcsCommit	go-top	navigation-icons.svg	276	50	48	48	-
 VcsPull	go-bottom	navigation-icons.svg	106	50	48	48	-

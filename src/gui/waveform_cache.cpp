@@ -1207,9 +1207,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //   bit too and defers while it stands, and the clear below is what makes
     //   the frame this honor schedules the FIRST promote-eligible one. The rect
     //   is the same one every stage site queues — since 2026-10-13 the
-    //   viewport lanes' rect from the band's foot, the rows above it owed a
+    //   viewport lanes' rect from the tab strip's foot (the band's until
+    //   2026-10-18), the rows above it owed a
     //   fingerprint check (damage_window_top_rows, viewport.cpp), every
-    //   item-basis surface lying below the band's foot — and it
+    //   item-basis surface lying below the strip's foot — and it
     //   goes into the global damage list (and, on the Wayland cpu build, both
     //   shm buffers' pending lists; invalidate_region), so whatever frame comes next carries it in its
     //   damage union — an interleaved narrow request coalesces INTO it rather
@@ -1646,7 +1647,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //
     // THE LAG, in the order the loop actually runs it: a nudge press mutates the
     // store and queues its own strip+waveform damage (the viewport lanes' rect
-    // from the band's foot since 2026-10-13, the rows above owed a fingerprint
+    // from the band's foot since 2026-10-13, the tab strip's since 2026-10-18,
+    // the rows above owed a fingerprint
     // check, damage_window_top_rows); THE FRAME PAINTS
     // BEFORE THE NEXT TICK (the run loop services the compositor's frame
     // callback, and this rebuild lives in on_tick — the same

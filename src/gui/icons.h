@@ -12,10 +12,11 @@
 // TO THE SET'S SCALABLE RULE (2026-10-18: "it's already very high res, so we
 // can ship it plain and have it scaled by the gui scale and the button
 // casing"), that file alone (the volume dial's bitmap knob stays ruled out,
-// docs/engineering/closed_questions.md); three seats CHANGED by the same tool
-// and recorded under the licence in the set's README: TabDetachB by element
-// order, History's clock with its digits outlined, and Value Drag's pen with
-// its arrow removed (2026-10-18) — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
+// docs/engineering/closed_questions.md); two seats CHANGED by the same tool
+// and recorded under the licence in the set's README: History's clock with
+// its digits outlined, and Value Drag's pen with its arrow removed
+// (2026-10-18; TabDetachB, Switch Tab's tab-B glyph by element order, left
+// the set the same day) — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
 // (architect 2026-10-15, "we'll go with none": a drop shadow is the live
 // glyph's raised fiction, and Cool Edit's flat bitmaps never had one — the
 // approved list tools/icon_set_adwaita_322/shadows.tsv); hard-coded (the `icons` device key and the Settings Icons row were
@@ -181,13 +182,11 @@ enum class Icon {
     // THE MARKER WALK AND THE TAB SWITCH.
     BboxPrev,            // Previous Marker (Shift+Tab)
     BboxNext,            // Next Marker (Tab)
-    TabDetach,           // Switch Tab (Ctrl+Tab) on tab A: the upper left
-                         // window in front
-    TabDetachB,          // Switch Tab on tab B (architect 2026-10-12): the
-                         // same two windows with the lower right one in
-                         // front, so the front window is the tab shown
-                         // (redesign_button_icon); a changed file of the
-                         // set (element order alone), its README
+    TabDetach,           // Switch Tab (Ctrl+Tab) in both tabs (architect
+                         // 2026-10-18: "use the original, not the
+                         // modified" — the tab strip names the tab; the
+                         // tab-B copy with the other window in front,
+                         // TabDetachB, stood 2026-10-12 to 2026-10-18)
     SettingsConfigure,   // Settings (bare `;`)
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
     Folder,              // a folder row; Up a Folder (the render player,
@@ -223,7 +222,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 60;
+inline constexpr int kIconCount = 59;
 
 // THE FILE NAMES, the enumerators spelled in enum order: the set's
 // `<name>.svg` — or `<name>.png` for the one raster seat (Baton and its copy
@@ -245,7 +244,7 @@ inline constexpr const char* kIconNames[] = {
     "MediaPlaybackStop", "MediaPlaybackPause", "MediaSkipForward",
     "DialogCancel", "GoDown", "GoUp", "ChangesAllow", "ChangesPrevent",
     "BboxPrev",
-    "BboxNext", "TabDetach", "TabDetachB", "SettingsConfigure", "Folder", "AudioXWav",
+    "BboxNext", "TabDetach", "SettingsConfigure", "Folder", "AudioXWav",
     "MediaRepeatSingle", "DialogInformation", "DialogError", "WindowClose",
     "HelpWhatsthis",
     "GoJumpDeclaration", "AccessoriesTextEditor", "EditDelete", "ValueDrag",

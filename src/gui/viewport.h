@@ -29,7 +29,7 @@ enum class LandingKind { Walk, Restore };
 // THE WINDOW-TOP RECT [0, y1) AT THE WINDOW'S WIDTH, SPLIT AT THE VIEWPORT'S
 // LANES (2026-10-13): the rows from viewport_lanes_top_y down are damaged
 // now, and the rows above it — the caption, the menu row, the program
-// frame's top row, the toolbar band — are OWED to every paint target a check
+// frame's top row, the toolbar band, the tab strip — are OWED to every paint target a check
 // (GuiUpperRowsRecord::owed_y1, app_state.h), which the pre-paint hook pays
 // (GuiPaintHandler::settle_owed_lane_damage): the whole rect where the rows'
 // fingerprint has moved past what the target shows or a floating surface
@@ -39,8 +39,9 @@ enum class LandingKind { Walk, Restore };
 // the lane inventory), the viewport routes' top-strip damage, and the
 // waveform cache's four (the async publish, the synchronous rebuild, the
 // deferred basis repair and the flag cache's stage, waveform_cache.cpp).
-// THE SPLIT ROW IS CLEAN: nothing a lane paints crosses the toolbar band's
-// foot — the band ends there and the column's air and the folder overlay's
+// THE SPLIT ROW IS CLEAN: nothing a lane paints crosses the tab strip's
+// foot (the band's until 2026-10-18) — the strip ends there and the
+// column's air and the folder overlay's
 // band begin there — so the two halves paint exactly the pixels the one rect
 // did (the floating surfaces, which do cross it, take the whole rect).
 void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1);
@@ -503,8 +504,9 @@ struct Viewport {
     // Invalidation.
     //
     // THE VIEWPORT'S LANES (2026-10-13, ON SCREEN IS AS PAINTED): the rect
-    // runs, at the window's whole width, from the toolbar band's foot
-    // (viewport_lanes_top_y, app_state.h) through the waveform's bottom, and
+    // runs, at the window's whole width, from the tab strip's foot (the
+    // toolbar band's until 2026-10-18; viewport_lanes_top_y, app_state.h)
+    // through the waveform's bottom, and
     // holds every lane that DRAWS the viewport, the zoom or the cursor — the
     // column's air and the view bar (paint_trim: the trim window is the
     // span), the ruler (its ticks and digits, the cursor's head), the marker
@@ -513,8 +515,8 @@ struct Viewport {
     // playheads, the overlays) — with the floating surfaces over them and
     // the folder overlay's band, which starts at the same row. THE ROWS
     // ABOVE IT DRAW NONE OF THOSE: the caption, the menu row, the program
-    // frame's top row and the toolbar band paint the window's state, the
-    // project's name, the menus and the roster's faces. Some of those FACES
+    // frame's top row, the toolbar band and the tab strip paint the window's
+    // state, the project's name, the menus and the roster's faces. Some of those FACES
     // are predicates over the view (Full Zoom Out greys where the view
     // already frames what it would), and many more move with the acts that
     // reach this rect beside a viewport change (Undo / Redo and Save after

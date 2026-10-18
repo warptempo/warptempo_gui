@@ -31,8 +31,10 @@
 // column's own ring and columns, the main window's 5 W foot under it, and
 // under that the CONTROLS ROW on row 8's content rows (the modal dialog's,
 // paint_modal_dialog) — so EVERY LANE FROM THE VIEW BAR TO ROW 8 is under
-// it, and THE MENU ROW, THE ICON ROW AND THE COLUMN'S AIR UNDER THE BAND
-// STAND ABOVE IT, as the main window paints them, the menu and icon rows
+// it, and THE MENU ROW, THE ICON ROW, THE TAB STRIP (2026-10-18, its two
+// tabs dead and grey under the band, redesign_button_enabled's head) AND THE
+// COLUMN'S AIR UNDER IT STAND ABOVE IT, as the main window paints them, the
+// menu and icon rows
 // CARRYING THE `h` VIEW'S OWN PARTITION
 // (architect 2026-09-03 evening: "leave File open, because Quit should still
 // be enabled — everything else like what we do with history ... Leave that

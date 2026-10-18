@@ -4,7 +4,7 @@ adwaita-icon-theme 3.22.0, alone (architect 2026-10-14): every drawing is the 3.
 artwork at its 48 slot, nothing redrawn and nothing from any other release; gnome-icon-theme 2.28, the set before it,
 retired whole the same day. THE ONE EXCEPTION is the set's OWN FILE, AND IT IS A RASTER (architect 2026-10-18): Warp's
 baton, `Baton.png`, and its copy the program icon, `AppIcon.png`, NOT Adwaita's and NOT scalable — the architect's
-recorded exception to the set's scalable rule, this file alone (below, "The own file"). Three files are CHANGED from
+recorded exception to the set's scalable rule, this file alone (below, "The own file"). Two files are CHANGED from
 their drawings (below, "The changed files"). One file per `icons::Icon` enumerator (`src/gui/icons.h`), each named by
 its enumerator, THE SUFFIX SAYING THE KIND: `<Enumerator>.svg`, or `<Enumerator>.png` for the one raster seat.
 The set is hard-coded (`icons::kIconSet`, `adwaita-3.22`; the `icons` device key and the Settings Icons row were
@@ -83,15 +83,14 @@ Warp's from 2026-10-17 late evening to 2026-10-18, and the baton's first cutout,
 ## The changed files
 
 Every extracted file is changed in one respect, its drop shadows removed (2026-10-15, the section below, recorded here
-and in `tools/icon_set_adwaita_322/shadows.tsv`; the own file, above, is no extraction and has none). Three drawings
-carry a further change: two recorded under the licence with a dated notice in an XML comment at its head, the third
+and in `tools/icon_set_adwaita_322/shadows.tsv`; the own file, above, is no extraction and has none). Two drawings
+carry a further change: one recorded under the licence with a dated notice in an XML comment at its head, the other
 an element removed by `removed.tsv`, its record this section; every other file is the extraction alone. One file
-carries outlined lettering, the clock's digits (Liberation Sans Bold).
+carries outlined lettering, the clock's digits (Liberation Sans Bold). (`TabDetachB.svg`, `preferences-system-windows`
+with its element order changed so the lower-right window stood in front — Switch Tab's tab-B glyph from 2026-10-14 —
+LEFT THE SET 2026-10-18: the tab strip names the active tab, and Switch Tab wears `TabDetach.svg`, the drawing as
+extracted, in both tabs — "use the original, not the modified".)
 
-- `TabDetachB.svg` (2026-10-14) is `preferences-system-windows` with the element order changed alone: the lower-right
-  window copy `use5281` moved after the front window `g5270`, every coordinate unchanged — the same derivation 2.28's
-  TabDetachB had. Switch Tab wears `TabDetach.svg` on tab A and this file on tab B: the same two windows, the one in
-  front the tab shown.
 - `DocumentOpenRecent.svg` (2026-10-14; history's again since 2026-10-18, "go back to using the original git clock
   icon") is `document-open-recent` (the clock in `clocks.svg`, its yellow arrow turned counter-clockwise) with its 48
   clock-digit `<text>` elements replaced by the glyph outlines of the face the sheet names, Liberation Sans Bold, from
@@ -220,7 +219,6 @@ reference left dangling. The disabled face has no file of its own: the product b
 | BboxPrev | `go-first` | `path6460-6-4-4-1` `path6460-6-4-4-3-5` `path6460-6-4-4-1-9` `path6460-6-4-4-3-5-5` | floor shadow (4: bar and arrow) |
 | BboxNext | `go-last` | `g4226` `g4222` | floor shadow (2 groups: bar and arrow) |
 | TabDetach | `preferences-system-windows` | `rect4667-1-5-6-2` | blurred halo behind each window (one rect, two uses) |
-| TabDetachB | `preferences-system-windows` | `rect4667-1-5-6-2` | blurred halo behind each window (one rect, two uses) |
 | SettingsConfigure | `preferences-system` | `path6896` `path3562` | floor shadow (2); the screwdriver's shading on the wrench (rect7166, path7356) kept |
 | Folder | `folder` | `g5806` | floor shadow |
 | AudioXWav | `audio-x-generic` | `path8186` `path8188` `path8190` | floor shadow (3) |
@@ -299,7 +297,6 @@ shift is the product's, not the file's.
 | PreviewRenderOn | `applications-multimedia` | `applications-multimedia.svg` | 296, 50, 48, 48 | `b4551addc300f3ca7d6c5c9f22044c7db2dc227e3987877cb0b99de634508ed2` |  |
 | SettingsConfigure | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` |  |
 | TabDetach | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` |  |
-| TabDetachB | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` | DERIVED, below |
 | ValueDrag | `format-text-direction-rtl` | `format-text-direction-rtl.svg` | 296, 50, 48, 48 | `9adb14cb4bb35582ec9b3f8925ebd4f4278fd8571e420c0c7c97d4cbef584070` | NEW: Value Drag, the pen alone (architect 2026-10-18: "drop the arrows altogether"); REMOVED (removed.tsv): g7348 |
 | VcsCommit | `go-top` | `navigation-icons.svg` | 276, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
 | VcsPull | `go-bottom` | `navigation-icons.svg` | 106, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |

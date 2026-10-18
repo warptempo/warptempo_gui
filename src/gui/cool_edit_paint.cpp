@@ -229,6 +229,187 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     cairo_restore(cr);
 }
 
+// -- THE TAB STRIP (architect 2026-10-18; the rules at the declaration) ------
+
+namespace {
+
+// A ONE-LINE TOP-RIGHT CORNER BLOCK at (bx, by), `lw` square, mitred (this
+// file's head): `top` above the 45-degree diagonal from the block's outer
+// corner (its top right) to its inner one (its bottom left), `right` below
+// it, antialiased — paint_relief_frame's corner, one block.
+void mitre_top_right(cairo_t* cr, int bx, int by, int lw, GuiColor top,
+                     GuiColor right) {
+    cell(cr, bx, by, lw, lw, top);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    cairo_move_to(cr, bx + lw, by);
+    cairo_line_to(cr, bx + lw, by + lw);
+    cairo_line_to(cr, bx, by + lw);
+    cairo_close_path(cr);
+    set_palette_source(cr, right);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+// A FOOT BLOCK at (bx, by), `lw` square, split DOWN-RIGHT — the diagonal from
+// its top left to its bottom right — `column` above it, `below` under it,
+// antialiased (the active tab's two feet, the declaration).
+void foot_down_right(cairo_t* cr, int bx, int by, int lw, GuiColor column,
+                     GuiColor below) {
+    cell(cr, bx, by, lw, lw, below);
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_new_path(cr);
+    cairo_move_to(cr, bx, by);
+    cairo_line_to(cr, bx + lw, by);
+    cairo_line_to(cr, bx + lw, by + lw);
+    cairo_close_path(cr);
+    set_palette_source(cr, column);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
+} // namespace
+
+CeTabStripLayout ce_tab_strip_layout(
+    const GuiRect& lane, const GuiFont& font,
+    const std::array<const text_shape::ShapedRun*, kCeTabCount>& labels,
+    int active) {
+    const ProgramSpec& p = kProgramSpec;
+    const int lw     = program_line_px();
+    const int page_y = lane.y + tab_strip_recess_h_px();
+    const int top_i  = lane.y + scaled_px(p.tab_inactive_top_px);
+    const int top_a  = lane.y + scaled_px(p.tab_active_top_px);
+    const int pad_l  = scaled_px(p.tab_pad_left_px);
+    const int pad_r  = scaled_px(p.tab_pad_right_px);
+    // THE GAP IS LINES, NOT A ROUNDED LENGTH (program_spec.h's tab fields):
+    // the lit tab's growth takes one of them, so the tab line's run meets
+    // its left column and its shadow fills the other at every scale.
+    const int gap    = p.tab_gap_px * lw;
+    CeTabStripLayout out;
+    // The first footprint one line in from the page edge; the active tab's
+    // growth is the same line, so the first tab lit stands on the edge.
+    int x = lane.x + lw;
+    for (int i = 0; i < kCeTabCount; ++i) {
+        const std::size_t k = static_cast<std::size_t>(i);
+        // THE INK, NOT THE ADVANCE (Cool Edit's measure on his capture: the
+        // pads stand on the label's lit columns; text_shape.h's
+        // ink_right_px), each edge taken to its whole device column — make11's
+        // ink_cols at the live face.
+        const text_shape::ShapedRun& run = *labels[k];
+        const int i0 = static_cast<int>(std::nearbyint(text_shape::ink_left_px(run)));
+        const int i1 =
+            static_cast<int>(std::nearbyint(text_shape::ink_right_px(run)));
+        const int ink_w = std::max(0, i1 - i0);
+        const int wid = lw + pad_l + ink_w + pad_r + lw;
+        const bool lit = i == active;
+        out.tab[k] = lit ? GuiRect{x - lw, top_a, wid + 2 * lw,
+                                   page_y + lw - top_a}
+                         : GuiRect{x, top_i, wid, page_y - top_i};
+        out.label_x[k] = static_cast<double>(x + lw + pad_l - i0);
+        // The body under the top light row: 15 W unlit, 17 W lit.
+        const int body_y = (lit ? top_a : top_i) + lw;
+        out.baseline[k] =
+            redesign_baseline(font, static_cast<double>(body_y),
+                              static_cast<double>(page_y - body_y));
+        x += wid + gap;
+    }
+    return out;
+}
+
+void paint_ce_tab_strip(
+    cairo_t* cr, const GuiRect& lane, const CeTabStripLayout& layout,
+    const std::array<const text_shape::ShapedRun*, kCeTabCount>& labels,
+    int active, const std::array<bool, kCeTabCount>& enabled) {
+    if (lane.w <= 0 || lane.h <= 0) return;
+    const int lw = program_line_px();
+    const GuiPalette& p = palette();
+    const int recess_h = tab_strip_recess_h_px();
+    const int page_y = lane.y + recess_h;
+    cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    // THE GROUND: the recess, then the page's top light line.
+    cell(cr, lane.x, lane.y, lane.w, recess_h, p.ce_recess);
+    cell(cr, lane.x, page_y, lane.w, lane.h - recess_h, p.ce_hilight);
+    // THE TAB LINE, one run under the inactive tabs, a line past each end.
+    int run0 = lane.x + lane.w;
+    int run1 = lane.x;
+    for (int i = 0; i < kCeTabCount; ++i) {
+        if (i == active) continue;
+        const GuiRect& t = layout.tab[static_cast<std::size_t>(i)];
+        run0 = std::min(run0, t.x - lw);
+        run1 = std::max(run1, t.x + t.w + lw);
+    }
+    if (run1 > run0) cell(cr, run0, page_y, run1 - run0, lw, p.ce_tab_line);
+    const auto run_covers = [&](int col) { return col >= run0 && col < run1; };
+    for (int i = 0; i < kCeTabCount; ++i) {
+        const GuiRect& t = layout.tab[static_cast<std::size_t>(i)];
+        if (i != active) {
+            // THE BODY: one measured stop per W row of its 15, the rows
+            // tiling it exactly (kCaseRamp's rule).
+            const int body_y = t.y + lw;
+            const int g = page_y - body_y;
+            const int m = static_cast<int>(p.ce_tab_body.size());
+            for (int r = 0; r < m; ++r) {
+                const int y0 = static_cast<int>(
+                    std::nearbyint(static_cast<double>(r) * g / m));
+                const int y1 = static_cast<int>(
+                    std::nearbyint(static_cast<double>(r + 1) * g / m));
+                if (y1 > y0)
+                    cell(cr, t.x + lw, body_y + y0, t.w - 2 * lw, y1 - y0,
+                         p.ce_tab_body[static_cast<std::size_t>(r)]);
+            }
+            // THE EDGES: the light top row and left column, the dark right
+            // column, the top-right block mitred.
+            cell(cr, t.x, t.y, lw, t.h, p.ce_tab_light);
+            cell(cr, t.x, t.y, t.w - lw, lw, p.ce_tab_light);
+            cell(cr, t.x + t.w - lw, t.y + lw, lw, t.h - lw, p.ce_tab_dark);
+            mitre_top_right(cr, t.x + t.w - lw, t.y, lw, p.ce_tab_light,
+                            p.ce_tab_dark);
+            continue;
+        }
+        const int end = t.x + t.w;          // past the shadow column
+        const int mid_x = end - 2 * lw;     // the mid right column
+        const int shadow_x = end - lw;      // the drop shadow
+        // THE FACE through the page line (the tab merges into the page), the
+        // hilight left column through it too, the hilight top row, the mid
+        // right column under its mitred top-right block.
+        cell(cr, t.x, t.y, t.w - lw, t.h, p.face);
+        cell(cr, t.x, t.y, lw, t.h, p.ce_hilight);
+        cell(cr, t.x, t.y, t.w - 2 * lw, lw, p.ce_hilight);
+        cell(cr, mid_x, t.y + lw, lw, page_y - t.y - lw, p.ce_mid);
+        mitre_top_right(cr, mid_x, t.y, lw, p.ce_hilight, p.ce_mid);
+        // THE SHADOW, square: the recess in its top cell, the page-dark tone
+        // to the recess's last row, the page line under it.
+        cell(cr, shadow_x, t.y, lw, lw, p.ce_recess);
+        cell(cr, shadow_x, t.y + lw, lw, page_y - t.y - lw, p.ce_page_dark);
+        cell(cr, shadow_x, page_y, lw, lw,
+             run_covers(shadow_x) ? p.ce_tab_line : p.ce_hilight);
+        // THE TWO FEET, down-right: the mid column's foot over the face (the
+        // capture's face under it; the declaration's departure from the
+        // mock), and the hilight column's over the tab line arriving from the
+        // left, where one arrives.
+        foot_down_right(cr, mid_x, page_y, lw, p.ce_mid, p.face);
+        if (run_covers(t.x - 1))
+            foot_down_right(cr, t.x, page_y, lw, p.ce_hilight, p.ce_tab_line);
+    }
+    // THE LABELS, the lit tab's in the program text, an unlit tab's in its
+    // measured ink, a dead tab's embossed.
+    for (int i = 0; i < kCeTabCount; ++i) {
+        const std::size_t k = static_cast<std::size_t>(i);
+        const text_shape::ShapedRun& run = *labels[k];
+        if (!enabled[k]) {
+            show_embossed_run(cr, run, layout.label_x[k], layout.baseline[k]);
+            continue;
+        }
+        set_palette_source(cr, i == active ? p.ce_text : p.ce_tab_label);
+        text_shape::show_shaped_run(cr, run, layout.label_x[k],
+                                    layout.baseline[k]);
+    }
+    cairo_restore(cr);
+}
+
 // THE TRIANGLE'S COVERAGE STAMP (2026-10-13, a cost cut that paints the same
 // pixels: the tablet's profile of a pinch put 11 % of all CPU on the cues'
 // antialiased triangle fills, cairo's scan converter run twice per marker
