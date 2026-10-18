@@ -4879,8 +4879,9 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 // focus, which the cursor already rests on in practice); the rule, the
 // same-frame claim and the ordering it owes this state are at
 // GuiAbAudition::apply_working_zoom (ab_audition.h). There is no undo (nothing
-// authored) and the only damage is `c`'s own, beside the tab switch's and the
-// scanner's.
+// authored) and the only damage is `c`'s own, beside the tab switch's, the
+// scanner's and, while a rest stands, the clock cell's keep-alive damage every
+// tick (the owner is the run-loop tick body in main.cpp, 2026-10-18).
 //
 // THE PHASES are the four plays in order, and `phase` is non-Idle EXACTLY
 // WHILE THE ACT STANDS — from the press's arm of the first play's rest (a rest
