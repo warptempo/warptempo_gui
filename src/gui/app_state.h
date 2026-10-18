@@ -4946,13 +4946,13 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //     target preview updates (2026-10-18): the play after a switch waits for
 //     the switch's re-dispatch to land — its completion rebinds under the
 //     stopped device and clears no sequence — and is then attempted once.
-//   * CLEARED TO IDLE at FOUR OWNERS ACROSS EIGHT CALL SITES (re-derived by
+//   * CLEARED TO IDLE at FOUR OWNERS ACROSS NINE CALL SITES (re-derived by
 //     grepping every clear_audition_sequence call), so no interrupt path can
 //     forget it. A REST IS INTERRUPTED EXACTLY AS A PLAY IS: the two owners
 //     every interrupt route ends up in — the stop body and the user launch's
 //     entry — neither test for live playback (the stop body's clear sits
 //     AHEAD of its own nothing-to-do guard), so a stop or a launch that finds
-//     silence still ends the act. (The grep's NINTH and TENTH calls are not
+//     silence still ends the act. (The grep's TENTH and ELEVENTH calls are not
 //     owners and not interrupts, both the act's own machinery:
 //     GuiAbAudition::fire_if_due ends the REST it is about to launch, the
 //     FIRED edge above, and GuiAbAudition::launch_phase ends the PLAY it
@@ -4978,9 +4978,11 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         launch gate's own sentence. That arm is a CALLER here, like
 //         Shift+Space's own stop edge, and not a fifth owner.
 //     (2) THE USER LAUNCH ENTRIES — GuiPlaybackLifecycle::launch_playback_from,
-//         the view-end entry, and since 2026-09-17 car_toggle_playback, the
-//         head unit's play with the render player closed — each ahead of its
-//         delegation to the one launch body, refused or not
+//         the view-end entry, and since 2026-09-17 car_play_playback, the
+//         head unit's play with the render player closed (the clear sits in
+//         the play body, which car_toggle_playback's play arm delegates to;
+//         its stop arm takes owner (1)) — each ahead of its delegation to
+//         the one launch body, refused or not
 //         (2026-09-01; the launch body's own head from 2026-08-26 until then):
 //         every launch of the user's own transport begins a fresh session, so
 //         a scrub launched DURING ONE OF THE RESTS — or inside the sub-tick

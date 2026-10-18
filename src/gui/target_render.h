@@ -170,9 +170,10 @@ struct GuiTargetRender {
     // CAR'S OWN PLAY (GuiCarTransport::car_toggle, which asks this in exactly
     // Space's shape and for exactly Space's reason, ahead of the launch), THE
     // CAR'S SKIP TAIL (GuiCarTransport::car_play_after_step and the pending
-    // play its tick fires — the one reader that WAITS on this rather than
-    // refusing on it, is_updating() being how it tells settling from settled),
-    // the A/B
+    // play its tick fires — a reader that WAITS on this rather than refusing
+    // on it, is_updating() being how it tells settling from settled; the A/B
+    // audition's due rest is the other since 2026-10-18,
+    // GuiAbAudition::fire_if_due), the A/B
     // audition's press-time gate (GuiAbAudition, which asks it for the ACTIVE
     // tab before its first switch — since 2026-10-18 the other tab has no
     // preview yet, its switch dispatching one — and again at every launch)

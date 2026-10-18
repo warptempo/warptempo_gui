@@ -433,10 +433,10 @@ bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
     // clear having wiped whatever stood): the launch body finds the act
     // standing on this phase, and the body clears no sequence on this road
     // (launch_bounded_audition runs none; the user launches' clear is
-    // launch_playback_from's). The sequence is Idle at this line by both
-    // callers' construction — fire_if_due past its clear, its one caller
-    // since 2026-10-18 (start() arms the first play's rest instead) — so this
-    // is a write onto Idle, not a re-arm. Nothing between
+    // launch_playback_from's). The sequence is Idle at this line by
+    // fire_if_due's construction, its one caller since 2026-10-18, which
+    // clears the rest before calling (start() arms the first play's rest
+    // instead) — so this is a write onto Idle, not a re-arm. Nothing between
     // here and the launch body paints or dispatches, so the phase standing a
     // call earlier reaches no face and no fork. waiting = false is the whole
     // difference from arm_rest's write: the phase named here is SOUNDING, not
