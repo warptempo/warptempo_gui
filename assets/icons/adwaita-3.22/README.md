@@ -58,15 +58,16 @@ laptop sheets: "c1. ok to implement and install"). PROVENANCE: drawn with Google
 in the 48-unit frame (viewBox 0 0 48 48, no nested viewport). THE CLEANUP, the same evening: its three `<text>`
 numerals (0, 120, 240) deleted with their emptied group and its font attributes (the product's resvg draws no text);
 its ground-shadow ellipse deleted with the radial gradient that filled it (the set carries no drop shadow, below);
-every other element as drawn, Gemini's comments kept. THE TINT, variant C1 of a one-axis sheet: the five chrome
+the needle's dark offset copy and the hub's dark disc, the shadows they cast on the face, deleted from the tracked
+source the same evening by the same rule (architect: "follow the rule"; kept as mocked for the first landing); every
+other element as drawn, Gemini's other comments kept. THE TINT, variant C1 of a one-axis sheet: the five chrome
 gradients — the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap — re-tinted from Tango
 aluminium (hue 60–90, saturation 3–9 %, a faint warmth) to hue 210 at saturation 6 %, every stop's HLS lightness kept
 (a stop at lightness .02 or less, or .98 or more, stays grey). THE DRAWING: centre (24, 23); a chrome bezel r 20.5
 with a .8 stroke and a white specular ring inside it, an inner bevel ring and a dark recessed frame round the dark
 radial face r 16.2, a glass gloss over its upper part; a white scale arc and nine white majors with ten minors on a
 270° arc from −135° to +135°, its last 45° a red gradient arc with red ticks and a soft red glow; a tapered red needle
-at +52° from twelve o'clock with a bright ridge line and a dark offset copy under it at .45; a chrome hub cap over a
-dark offset disc at .45 (the needle's and the hub's dark copies are a part's shadow on the face, kept as mocked).
+at +52° from twelve o'clock with a bright ridge line; a chrome hub cap.
 No `<text>`, no filter, no CSS class, no font's outlines. LICENCE: above. Its tracked source is
 `tools/icon_set_adwaita_322/own/Speedometer.svg`; the tool copies it with a dated notice inserted as one XML comment
 after the root's start tag, every other byte verbatim (`mapping.tsv`'s `own` treatment). HISTORY: the architect's
@@ -141,7 +142,7 @@ from the shipped PNG, and the sheet's own crop at 7.7 from it (the crop clips th
 no reference there) — the one seat the tool prints for a look, accepted on the contact sheet. No file carries an `<image>`.
 `CameraPhoto.svg` (2026-10-15), rendered at 240 px through the same resvg 0.48.1: every ink pixel of rsvg's render
 drawn, the mean difference 0.3 of 255 (antialiased edges alone). The files of 2026-10-15 / 16 the same, mean difference
-to rsvg at 240 px: `Speedometer.svg` 0.37 (measured 2026-10-17 evening with the resvg 0.48.1 command line, premultiplied; 273 of rsvg's 34,710 ink pixels past 20 levels, at most 42, every one on an antialiased edge — the bezel's outer rim and the scale's ticks and arcs — nothing drawn lost; against Inkscape at 480 px max 51, 99.9th percentile 25, mean 0.29, the maxima on the red glow's gradient edge),
+to rsvg at 240 px: `Speedometer.svg` 0.37 (measured 2026-10-17 evening with the resvg 0.48.1 command line, premultiplied, and again after the two cast shadows' removal; 272 of rsvg's 34,710 ink pixels past 20 levels, at most 42, every one on an antialiased edge — the bezel's outer rim and the scale's ticks and arcs — nothing drawn lost; against Inkscape at 480 px max 51, 99.9th percentile 25, mean 0.29, the maxima on the red glow's gradient edge, the maximum unchanged after the removal),
 `NetworkWiredDisconnected.svg` 0.37, `EditFind.svg` 0.34, `ViewRestore.svg` 0.14, `AudioVolumeHigh.svg` 0.30.
 
 ## The drop shadows
@@ -167,7 +168,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | VcsPull | `go-bottom` | `g6324` | floor shadow |
 | AccessoriesDictionary | `accessories-dictionary` | `path2284` | floor shadow |
 | InputTablet | `input-tablet` | `path8537-6` `path23244-7` `path46799-7-4` | floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy |
-| Speedometer | the own file | — | no drop shadow (the ground-shadow ellipse removed before the file entered the tree, 2026-10-17 evening) |
+| Speedometer | the own file | — | no drop shadow (the ground-shadow ellipse removed before the file entered the tree, 2026-10-17 evening; the needle's and the hub's dark copies cast on the face removed from the tracked source the same evening, "follow the rule") |
 | CameraPhoto | `camera-photo` | `g9724` `g9730` | floor shadow (blurred); the lens's shadow cast on the foot |
 | ViewRestore | `view-restore` | `rect4667-1-5-6-45-3-7-0` | blurred halo behind each window (one rect, two instances) |
 | EditFind | `edit-find` | `g5595` | floor shadow under the handle (`path4263-5` and `path5575`, two blurred radials) |
@@ -217,7 +218,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | AccessoriesTextEditor | `accessories-text-editor` | `path9687` `path4331` `path2334` | blurred halo behind the pad; the pencil's shadows cast on the page |
 | EditDelete | `user-trash` | `path12888` `path12886` | floor shadow and the contact ellipse under the base |
 | ValueDrag | `object-flip-vertical` | `g10278` | floor shadow |
-| AppIcon | the own file | — | Speedometer's: no drop shadow |
+| AppIcon | the own file | — | Speedometer's: no drop shadow (the ground shadow and the two cast shadows out) |
 
 ## The shift
 
@@ -232,7 +233,7 @@ shift is the product's, not the file's.
 |---|---|---|---|---|---|
 | AccessoriesDictionary | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
 | AccessoriesTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| AppIcon | — | `own/Speedometer.svg` | — | `bf66c02e5a8ac51bcc0c44bfa7705f4e3e2a2887eff2c5a0e1644100a14de0f9` | OWN FILE, Speedometer's: the program icon (architect 2026-10-17 evening) |
+| AppIcon | — | `own/Speedometer.svg` | — | `28790b819d460fc4527ee3e4e1893db2318a09c889080a967a4a9d6a8e009609` | OWN FILE, Speedometer's: the program icon (architect 2026-10-17 evening) |
 | AudioVolumeHigh | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
 | AudioXWav | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
 | BboxNext | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
@@ -281,7 +282,7 @@ shift is the product's, not the file's.
 | NetworkWiredDisconnected | `network-wired-disconnected` | `network-wired-disconnected.svg` | 296, 50, 48, 48 | `4c9d212cedd9877315cc1e0b05685a582bea53d517ff798bf734e6be9639047e` | NEW: Session (architect 2026-10-15: shut off git and stay local) |
 | PreviewRenderOn | `applications-multimedia` | `applications-multimedia.svg` | 296, 50, 48, 48 | `b4551addc300f3ca7d6c5c9f22044c7db2dc227e3987877cb0b99de634508ed2` |  |
 | SettingsConfigure | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` |  |
-| Speedometer | — | `own/Speedometer.svg` | — | `bf66c02e5a8ac51bcc0c44bfa7705f4e3e2a2887eff2c5a0e1644100a14de0f9` | OWN FILE, not Adwaita's: Warp (architect 2026-10-17 evening), above |
+| Speedometer | — | `own/Speedometer.svg` | — | `28790b819d460fc4527ee3e4e1893db2318a09c889080a967a4a9d6a8e009609` | OWN FILE, not Adwaita's: Warp (architect 2026-10-17 evening), above |
 | TabDetach | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` |  |
 | TabDetachB | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` | DERIVED, below |
 | ValueDrag | `object-flip-vertical` | `object-flip-rotate.svg` | 76.0001, 300, 48, 48 | `cd9be5ee2271c9a797d49aa9749f70c4ad48f53768f651c166560baba865afa1` |  |

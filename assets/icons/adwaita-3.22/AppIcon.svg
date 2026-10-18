@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <!-- Speedometer and AppIcon: NOT from adwaita-icon-theme 3.22.0. Warp's glyph and the program icon, a speedometer (architect 2026-10-17 evening, "c1. ok to implement and install"): drawn with Google's Gemini at his prompt against a style sheet of Lapo Calamandrei's glossy Adwaita 3.22 drawings, the second of four drawings, in the 48-unit frame with no nested viewport. Cleaned the same evening: its three numerals (0, 120, 240) deleted with their empty group (the product's resvg draws no text), its ground-shadow ellipse deleted with its unused gradient; its chrome gradients (the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap) re-tinted from Tango aluminium (hue 60 to 90, saturation 3 to 9 %) to hue 210 at saturation 6 %, every stop's HLS lightness kept (variant C1); every other element as drawn, the needle's and the hub's dark copies on the face among them. The drawing: centre (24, 23), a chrome bezel r 20.5 with a .8 stroke round a dark face r 16.2 under a glass gloss; nine white majors and ten minors on a 270 degree arc from -135 to +135 degrees, its last 45 degrees a red gradient arc with a glow; a tapered red needle at +52 degrees from twelve o'clock with a bright ridge line; a chrome hub cap. The drawing is licensed under the GNU LGPL v3, the set's licence (architect 2026-10-15). Warp, and the program icon. -->
+  <!-- Speedometer and AppIcon: NOT from adwaita-icon-theme 3.22.0. Warp's glyph and the program icon, a speedometer (architect 2026-10-17 evening, "c1. ok to implement and install"): drawn with Google's Gemini at his prompt against a style sheet of Lapo Calamandrei's glossy Adwaita 3.22 drawings, the second of four drawings, in the 48-unit frame with no nested viewport. Cleaned the same evening: its three numerals (0, 120, 240) deleted with their empty group (the product's resvg draws no text), its ground-shadow ellipse deleted with its unused gradient; its chrome gradients (the outer bezel, its border, the inner bevel ring, the hub rim and the hub cap) re-tinted from Tango aluminium (hue 60 to 90, saturation 3 to 9 %) to hue 210 at saturation 6 %, every stop's HLS lightness kept (variant C1); the needle's and the hub's dark copies cast on the face removed the same evening by the set's shadow rule (architect, "follow the rule"); every other element as drawn. The drawing: centre (24, 23), a chrome bezel r 20.5 with a .8 stroke round a dark face r 16.2 under a glass gloss; nine white majors and ten minors on a 270 degree arc from -135 to +135 degrees, its last 45 degrees a red gradient arc with a glow; a tapered red needle at +52 degrees from twelve o'clock with a bright ridge line; a chrome hub cap. The drawing is licensed under the GNU LGPL v3, the set's licence (architect 2026-10-15). Warp, and the program icon. -->
   <defs>
     <!-- Outer Bezel Metallic Gradient -->
     <linearGradient id="outerBezel" x1="24" y1="2" x2="24" y2="44" gradientUnits="userSpaceOnUse">
@@ -146,8 +146,6 @@
 
   <!-- Speedometer Needle (Rotated +52 deg) -->
   <g transform="rotate(52 24 23)">
-    <!-- Needle Drop Shadow -->
-    <path d="M 22.8 23 L 23.65 10.2 A 0.45 0.45 0 0 1 24.55 10.2 L 25.4 23 Z" fill="#000000" fill-opacity="0.45" transform="translate(0.4, 0.5)" />
     <!-- Needle Body -->
     <path d="M 22.7 23 L 23.6 10.1 A 0.4 0.4 0 0 1 24.4 10.1 L 25.3 23 Z" fill="url(#needleGrad)" />
     <!-- Needle Center Ridge Highlight -->
@@ -155,7 +153,6 @@
   </g>
 
   <!-- Center Metallic Hub Cap -->
-  <circle cx="24" cy="23.5" r="3.4" fill="#000000" fill-opacity="0.45" />
   <circle cx="24" cy="23" r="3.1" fill="url(#hubRim)" />
   <circle cx="24" cy="23" r="2.75" fill="url(#hubCap)" />
 </svg>

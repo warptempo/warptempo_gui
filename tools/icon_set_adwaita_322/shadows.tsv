@@ -14,7 +14,7 @@ VcsCommit	go-top	path6460-6-4-4-0-5 path6460-6-4-4-3-55-3	floor shadow (2)
 VcsPull	go-bottom	g6324	floor shadow
 AccessoriesDictionary	accessories-dictionary	path2284	floor shadow
 InputTablet	input-tablet	path8537-6 path23244-7 path46799-7-4	floor shadow; the pen's shadow cast on the tablet; the squiggle's dark under-copy
-Speedometer	own	-	the own file: no drop shadow (the ground-shadow ellipse removed before the file entered the tree, 2026-10-17 evening)
+Speedometer	own	-	the own file: no drop shadow (the ground-shadow ellipse removed before the file entered the tree, 2026-10-17 evening; the needle's and the hub's dark copies cast on the face removed from the tracked source the same evening, "follow the rule")
 CameraPhoto	camera-photo	g9724 g9730	floor shadow (blurred); the lens's shadow cast on the foot
 ViewRestore	view-restore	rect4667-1-5-6-45-3-7-0	blurred halo behind each window (one rect, two instances)
 EditFind	edit-find	g5595	floor shadow under the handle (path4263-5 and path5575, two blurred radials)
@@ -64,4 +64,4 @@ GoJumpDeclaration	go-jump	g4690	floor shadow
 AccessoriesTextEditor	accessories-text-editor	path9687 path4331 path2334	blurred halo behind the pad; the pencil's shadows cast on the page
 EditDelete	user-trash	path12888 path12886	floor shadow and the contact ellipse under the base
 ValueDrag	object-flip-vertical	g10278	floor shadow
-AppIcon	own	-	the own file, Speedometer's: no drop shadow
+AppIcon	own	-	the own file, Speedometer's: no drop shadow (the ground shadow and the two cast shadows out)
