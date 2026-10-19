@@ -3198,7 +3198,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // which contains the field and so the baseline's ink by construction.
         // THE RECT FOLLOWS THE CELL BECAUSE IT IS BUILT FROM IT — the run's
         // start above is the cell's left edge and so is this box's, so the
-        // damage can never miss the painted digits or the letter. CEIL, NOT nearbyint:
+        // damage can never miss the painted digits. CEIL, NOT nearbyint:
         // cell_w is a fractional advance sum and this is a DAMAGE box, which
         // may be a hair too wide but never a hair too narrow.
         app.clock_cell_rect = GuiRect{
@@ -4201,7 +4201,7 @@ void GuiPaintHandler::paint_dropdown(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// -- THE RULER LANE (top lane 6) ---------------------------------------------
+// -- THE RULER LANE (top lane 7) ---------------------------------------------
 //
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes COOL EDIT'S LOOK
 // and REAPER'S GEOMETRY MODEL.
@@ -7652,7 +7652,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // (architect 2026-10-09, the third part, "accurate to the mock-up"; METRICS
 // §4.1, the mock of record's set 3; program_spec.h's column_margin_px and
 // column_foot_px, render.h's canvas-frame accessors.) ONE PAINTER for the
-// rows from the canvas's top frame row (top lane 8) through the column's
+// rows from the canvas's top frame row (top lane 9) through the column's
 // foot (bottom lane 3 since the border under row 8 took lane 1, 2026-10-14):
 // the panel's FACE across them, the program's columns
 // inside its frame (2026-10-10) — the margins beside the canvas, the frame
