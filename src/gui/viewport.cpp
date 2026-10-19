@@ -912,9 +912,9 @@ bool hold_derived_on_arrival(const AppState& app, const GuiAudio& audio) {
     if (visible <= 0) return false;
     const double q = painter_samples_per_pixel(app, audio, area);
     if (q <= 0.0) return false;
-    // The working zoom AS PAINTED (painted_at_working_zoom, its one owner,
-    // warp_frame_map_view.h, which carries why its compare is exact).
-    if (!painted_at_working_zoom(app, audio)) return false;
+    // The working zoom AS PAINTED, the landing owner's exact equality
+    // (land_subject carries why an exact compare is legitimate).
+    if (q != static_cast<double>(audio.working_column())) return false;
     // The centring's grid point, snapped and NOT clamped: outside the walls
     // it is a clamped centring and never arms.
     const int64_t centred = nearest_viewport_grid_point(
@@ -927,12 +927,10 @@ bool hold_derived_on_arrival(const AppState& app, const GuiAudio& audio) {
 void Viewport::center_viewport_on_playhead() {
     if (audio.total_frames() <= 0) return;
     // THE RESTING PLAYHEAD, ALWAYS: every caller centres with playback
-    // stopped — the `c` command's live recipe stops on both its arms, the
-    // marker jump's Center arm stops ahead of its land and the working-zoom
-    // nudge (centre_subject_after_nudge) stopped at its head (the marker
-    // nudge in its prologue, the playhead step before its step), while
-    // the `h` view (the command's mode arm and the diff-flag step's Center
-    // arm) has no playback at all — so no scanner is live to centre on.
+    // stopped — the `c` command's live recipe stops on both its arms and the
+    // marker jump's Center arm stops ahead of its land, while the `h` view
+    // (the command's mode arm and the diff-flag step's Center arm) has no
+    // playback at all — so no scanner is live to centre on.
     const int64_t target = app.playhead_cursor_sample;
     const int64_t visible = samples_visible(app, audio);
     const int64_t old_vp = app.viewport_start_sample;
@@ -986,25 +984,20 @@ void Viewport::invalidate_surface() {
 // THE NUDGE HOLDS ITS SUBJECT'S COLUMN WHILE THE HOLD POSTURE STANDS
 // (architect 2026-09-17 for the hold — "I like to see every delta when
 // nudging" — and 2026-09-23 for what chooses it). A Left/Right step that MOVED
-// SOMETHING calls this on its changed path, AT EVERY ZOOM BUT THE WORKING ZOOM
-// (where the nudge centres instead, 2026-10-18), when the press's
+// SOMETHING calls this on its changed path, AT EVERY ZOOM, when the press's
 // camera is NudgeCamera::HoldColumn, and the viewport is placed so the subject
 // — the resting cursor the step has just landed — paints in THE COLUMN IT
 // PAINTED IN BEFORE THE STEP, clamped into the waveform's first and last
-// columns. THE CAMERA IS THE POSTURE'S (nudge_posture_camera, app_state.h,
-// reading AppState::camera_hold, which an explicit centring arms; the two
-// nudges' nudge_camera answers Centre instead at the working zoom,
-// 2026-10-18, so a nudge reaches this only off it): with it dark the
+// columns. THE CAMERA IS THE POSTURE'S (nudge_camera, app_state.h, reading
+// AppState::camera_hold, which an explicit centring arms): with it dark the
 // step never calls this and follows the edge through the movement owner's own
 // keep-visible edge-align. (It was the Ctrl modifier's choice from 2026-09-22
 // to 2026-09-23, Ctrl+Left / Ctrl+Right and two buttons of their own; those
 // chords bind nothing now.) So an onscreen subject keeps its exact screen
 // column and the waveform slides under it by the nudge's own delta, and a
 // subject that was offscreen lands on the edge column on its side and stays
-// there on later nudges, the window walking with it. NOTHING CENTRES HERE:
-// `c` is the centring act and the working-zoom nudge centres through its own
-// method (centre_subject_after_nudge, below; architect 2026-10-18); this only
-// keeps the column the centring left.
+// there on later nudges, the window walking with it. NOTHING CENTRES: `c` is
+// the centring act, this only keeps the column the centring left.
 //
 // THE PRIOR PLACE IS A PARAMETER because the landing has already run: the
 // movement owner's keep-visible edge-align (reseat_playhead_to) may have
@@ -1029,8 +1022,7 @@ void Viewport::invalidate_surface() {
 // subject. FOUR CALLERS, re-derived by grep 2026-10-13 (three on 2026-09-25;
 // the drop road joined 2026-10-12), each on its hold arm:
 //   * THE MARKER NUDGE'S COMMIT TAIL (finish_position_nudge,
-//     position_nudge.cpp; off the working zoom alone since 2026-10-18)
-//     passes the PAINTED COLUMN — the focused marker's
+//     position_nudge.cpp) passes the PAINTED COLUMN — the focused marker's
 //     pre-write frame through painted_column_of_source_frame_on_basis over
 //     the displayed map and item_viewport_basis, the SAME painted basis its
 //     step anchored on (stepped_anchor_frame), so the column held is the one
@@ -1038,8 +1030,7 @@ void Viewport::invalidate_surface() {
 //     re-clamp, a target-map publish) has moved the live viewport ahead of
 //     the pixels (architect 2026-09-24, strictly as painted).
 //   * THE WAVEFORM-LANE PLAYHEAD STEP (GuiInputHandler::
-//     run_waveform_lane_playhead_step; off the working zoom alone since
-//     2026-10-18) passes the cursor's column before the
+//     run_waveform_lane_playhead_step) passes the cursor's column before the
 //     step on the PLATE basis the cursor pass paints it with
 //     (GuiPaintHandler::plate_viewport_basis; cold, the item basis, then the
 //     live viewport by its own contract), so a viewport job in flight
@@ -1073,9 +1064,7 @@ void Viewport::invalidate_surface() {
 // reaches this body only under the hold, which stands only at the working
 // zoom (architect 2026-09-28, the rule at Viewport::land_subject), where q is
 // the whole-frame working column and the held offset is a whole number of
-// frames — save the two nudges since 2026-10-18, which centre there instead
-// and reach this only where the hold outlives the working zoom (`c`'s clamped
-// level on a file too short for it; nudge_camera).
+// frames.
 void Viewport::hold_subject_column_after_nudge(int prior_column) {
     if (audio.total_frames() <= 0) return;
     const GuiRect area = waveform_area(app);
@@ -1094,37 +1083,6 @@ void Viewport::hold_subject_column_after_nudge(int prior_column) {
     app.viewport_start_sample = app.playhead_cursor_sample - offset;
     clamp_viewport_start(app, audio);
     if (app.viewport_start_sample != old_vp) finish_discrete_viewport_move();
-}
-
-// THE WORKING-ZOOM NUDGE CENTRES ITS SUBJECT (architect 2026-10-18: "Nudge
-// left, nudge right in working zoom should center. On the selected marker.";
-// ~14:00 the same day: "yes, playhead centers — left/right nudge always
-// center at working zoom"). A Left / Right step that MOVED SOMETHING calls
-// this on its changed path when the press's camera is NudgeCamera::Centre
-// (nudge_camera, app_state.h: at the working zoom as painted, whatever the
-// hold posture says). TWO CALLERS, the two nudges: the selected marker's
-// position nudge — the W twin in source view and the P twin's hop, through
-// their shared tail finish_position_nudge (f), position_nudge.cpp — and the
-// waveform lane's playhead step (GuiInputHandler::
-// run_waveform_lane_playhead_step, input_key_dispatch.cpp, live and in the
-// `h` view), on the same changed-path test as its hold. The viewport is
-// placed so the subject — the resting cursor the step has just landed, on the
-// nudged marker or alone, in the active domain — paints at the window's
-// centre: the centring's own placement
-// (center_viewport_on_playhead — centred_viewport_start, then
-// clamp_viewport_start, whose walls win at the song's two ends, then the
-// discrete move's tail when the start moved; the same three calls the
-// landing owner's Walk centre makes). THE ZOOM IS NEVER WRITTEN. THE HOLD BIT
-// IS NOT WRITTEN HERE: each nudge's dispatch reads it before the act and
-// writes it back after (AppState::camera_hold's first exemption), so the
-// nudge keeps the posture it found, and this centring ARMS NOTHING (the
-// closed line of 2026-09-24 — no automatic hold arm on arriving at the centre
-// by any road but a tab switch — stands). A walled press reaches no tail and
-// moves no camera; a held key's repeats and a held button's fires each run
-// the tail, so each centres. The undo / redo singleton restore is no nudge and
-// never calls this (nudge_posture_camera).
-void Viewport::centre_subject_after_nudge() {
-    center_viewport_on_playhead();
 }
 
 // Follow's page during playback (AppState::follow): when the scanner leaves the viewport, scroll
@@ -1201,8 +1159,7 @@ void Viewport::follow_scroll_if_needed() {
 // WALK — the Tab walk, always a single frame (the paired march's steps came
 // here until 2026-09-26, when each took bare `c`'s act instead):
 //   * AT THE WORKING ZOOM, AS PAINTED (architect 2026-09-28: the painted
-//     step q EQUALS the working column, audio.working_column() —
-//     painted_at_working_zoom, warp_frame_map_view.h, its one owner; `c`'s level
+//     step q EQUALS the working column, audio.working_column(); `c`'s level
 //     2.0 paints q = column exactly, and a rest a hair either side of it
 //     that rounds to the same sixteenth-frame grid point paints the same
 //     picture and walks like it) the subject is CENTRED, ON SCREEN OR NOT, the centring
@@ -1307,8 +1264,7 @@ void Viewport::follow_scroll_if_needed() {
 // centre unconditionally (center_viewport_on_playhead after the working
 // zoom); follow's page-in during playback (follow_scroll_if_needed, which
 // reads the scanner and keeps follow's suspension its own); the nudge's
-// cameras (the working-zoom nudge centres through its own method,
-// centre_subject_after_nudge, which arms nothing; 2026-10-18).
+// cameras.
 bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     if (hi < lo) std::swap(lo, hi);   // defensive; the callers pass in order
     const int     W  = waveform_area(app).w;
@@ -1322,10 +1278,15 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
     const bool on_screen =
         displayed_frame_on_screen(static_cast<double>(lo), vp, q, W) &&
         displayed_frame_on_screen(static_cast<double>(hi), vp, q, W);
-    // The walk's one zoom term: the working zoom AS PAINTED, through its one
-    // owner (painted_at_working_zoom, warp_frame_map_view.h, which carries
-    // why its compare is exact).
-    const bool at_working = painted_at_working_zoom(app, audio);
+    // The working-zoom read, inline by ruling: the walk's one zoom term. AS
+    // PAINTED, q against the working column, not the level against 2.0: a
+    // rest a hair either side of level 2 (spp under a 1/32 frame from the
+    // column, over or under) paints the working picture exactly and walks
+    // like it. AN EXACT EQUALITY IS
+    // LEGITIMATE HERE: q is on the sixteenth-frame grid (n/16, exact in a
+    // double) and the column is whole frames, so the painted working picture
+    // compares equal and every other picture, finer or coarser, does not.
+    const bool at_working = q == static_cast<double>(audio.working_column());
     bool centre = false;
     switch (kind) {
         case LandingKind::Walk:

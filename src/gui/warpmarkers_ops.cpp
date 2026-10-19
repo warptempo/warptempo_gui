@@ -1762,10 +1762,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
 // any more — through stepped_anchor_frame (the guarantee and its numeric rationale live
 // in the comment there), and its delta is CLAMPED into its own wall headroom, walls
 // exactly reachable — the unified wall policy, stated once at the head of
-// position_nudge.h. The camera term (nudge_camera's: the working zoom's
-// centring, else the hold posture's) is only passed through to
-// finish_position_nudge (its (f), position_nudge.h) and never changes the
-// step or the wall. Crossing a neighbor is legal and goes through the
+// position_nudge.h. The camera term (the hold posture's, nudge_camera) is
+// only passed through to finish_position_nudge (NudgeCamera::HoldColumn,
+// position_nudge.h) and never changes the step or the wall. Crossing a neighbor is legal and goes through the
 // reorder-and-remap below; the render boundary collapses an exact-frame tie to one
 // 1.00 owner.
 GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(

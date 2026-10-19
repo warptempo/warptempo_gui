@@ -2276,16 +2276,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // BARE ONLY, AND ONE STEP IN THE ACTIVE COLUMN'S UNIT (architect
     // 2026-09-21, the horizontal ladder retired on every column): Shift and
     // Ctrl spell nothing on Left / Right and fall to the strict-modifier tail
-    // in silence (chord_is_bound, gui_input.h). THE CAMERA, three answers
-    // (nudge_camera, app_state.h): AT THE WORKING ZOOM, AS PAINTED, Centre —
-    // the nudged marker lands centred in the window whatever the posture says
-    // (architect 2026-10-18: "Nudge left, nudge right in working zoom should
-    // center. On the selected marker."); at every other zoom the HOLD
-    // POSTURE'S (architect 2026-09-23), HoldColumn while an explicit
-    // centring's posture stands and FollowEdge otherwise. It is carried to the
-    // shared tail and changes nothing else the act does — it was Ctrl's
-    // choice for the day before 2026-09-23. Row 8's two arrow buttons
-    // synthesize this chord and take the same camera. The unit is
+    // in silence (chord_is_bound, gui_input.h). THE CAMERA IS THE HOLD
+    // POSTURE'S (architect 2026-09-23): nudge_camera (app_state.h) answers
+    // HoldColumn while an explicit centring's posture stands and FollowEdge
+    // otherwise, carried to the shared tail and changing nothing else the act
+    // does — it was Ctrl's choice for the day before. The unit is
     // horizontal_arrow_step's — one painted column on W and M, ONE HOP on the
     // phase-reset column — and it travels as a HorizontalArrowStep, its unit
     // beside its count, so the hop step reaches the same twin, prologue and
@@ -2303,7 +2298,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         playhead_in_marker_lane()) {
         const HorizontalArrowStep step = horizontal_arrow_step(
             key == GuiKeys::Left ? -1 : +1, app.active_markers_view);
-        const NudgeCamera camera = nudge_camera(app, audio);
+        const NudgeCamera camera = nudge_camera(app);
         const bool hold_before = app.camera_hold;
         // Both routes take the press's platform repeat bit: it is what makes a
         // HELD arrow one undo entry (Undo::coalesce_gesture).

@@ -361,10 +361,9 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // phase_reset_hop_step_frame under the LIVE map — the owner the iteration
 // cells land through — so Right then Left returns the reset to where it
 // started give or take a frame, and each step changes its seed window by
-// exactly one. The bare press alone reaches here: the camera term
-// (nudge_camera's: the working zoom's centring, else the hold posture's) is
-// only passed through to finish_position_nudge (its (f), position_nudge.h),
-// never a different step or a
+// exactly one. The bare press alone reaches here: the camera term (the hold
+// posture's, nudge_camera) is only passed through to finish_position_nudge
+// (NudgeCamera::HoldColumn, position_nudge.h), never a different step or a
 // different wall, and no modifier reaches here — the horizontal ladder
 // retired Shift, and Ctrl+Left / Ctrl+Right bind nothing since 2026-09-23. Every committed value is a
 // whole source frame. The warp twin takes the same road with one painted

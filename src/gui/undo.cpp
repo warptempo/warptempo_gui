@@ -1025,10 +1025,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     is the one AS PAINTED (strictly as painted, architect 2026-09-24):
     //     the cursor's pre-restore frame on the item basis, both read at this
     //     body's head. A restore that moved no cursor moves no camera and
-    //     keeps the bit. It holds the column at the working zoom too: the
-    //     restore is not a nudge, so the nudges' working-zoom centring
-    //     (architect 2026-10-18, nudge_camera) never reaches it, and it asks
-    //     the posture alone (nudge_posture_camera).
+    //     keeps the bit.
     //   * A RESTORE THAT CROSSED THE TAB OR THE AUDIO VIEW NEVER HOLDS THE
     //     COLUMN (architect 2026-09-29): the held column was painted in the
     //     view the restore left, so the arm reads the tab and the audio view
@@ -1091,10 +1088,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 // LAND: two-step placement basis, direct cursor write, NO viewport
                 // move, through the movement owner, which puts the hold out
                 // when it moves the cursor;
-                // the camera is read before it through the posture's
-                // two-answer fork (nudge_posture_camera, app_state.h — the
-                // rule above; the restore is not a nudge, so the nudges'
-                // working-zoom centring of 2026-10-18 never reaches it).
+                // the camera is read before it through the nudge's one owner
+                // of the fork (nudge_camera, app_state.h — the rule above).
                 // Playback is already stopped above, so land's
                 // scanner-inactive premise holds and the camera's subject is
                 // the cursor it seats.
@@ -1103,7 +1098,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
                 const bool crossed =
                     app.active_tab_view   != tab_before_restore ||
                     app.active_audio_view != audio_view_before_restore;
-                const NudgeCamera camera = nudge_posture_camera(app);
+                const NudgeCamera camera = nudge_camera(app);
                 land_playhead_on_marker(app, viewport.audio, viewport, t);
                 if (camera == NudgeCamera::HoldColumn && !crossed) {
                     // THE HOLD STANDS: the nudge's camera on the column the

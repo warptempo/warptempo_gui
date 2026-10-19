@@ -280,23 +280,6 @@ struct GuiRect;
 double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
                                  const GuiRect& area);
 
-// AT THE WORKING ZOOM, AS PAINTED — the one owner of the test (factored
-// 2026-10-18 out of its two inline spellings): the live painter step q
-// (painter_samples_per_pixel over waveform_area) EXACTLY the device's working
-// column (GuiAudio::working_column), q against the column and never the level
-// against 2.0, so a rest a hair either side of level 2 (spp under a 1/32 frame
-// from the column, over or under) paints the working picture exactly and
-// answers like it. AN EXACT EQUALITY IS LEGITIMATE HERE: q is on the
-// sixteenth-frame grid (n/16, exact in a double) and the column is whole
-// frames, so the painted working picture compares equal and every other
-// picture, finer or coarser, does not. Degenerate geometry (no strip width,
-// no zoom) answers false. Its three readers: the landing owner's walk
-// (Viewport::land_subject), the hold derived on arrival
-// (hold_derived_on_arrival, viewport.cpp) and the nudges' camera
-// (nudge_camera, app_state.h — the marker nudge and the waveform lane's
-// playhead step; architect 2026-10-18).
-bool painted_at_working_zoom(const AppState& app, const GuiAudio& audio);
-
 // THE QUANTIZATION ITSELF, for a samples-per-pixel the caller already holds:
 // THE SIXTEENTH-FRAME GRID (architect 2026-09-26), q = nearbyint(spp * 16) / 16,
 // 0.0 on a non-positive spp. painter_samples_per_pixel is this at the LIVE
