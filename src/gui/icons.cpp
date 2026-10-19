@@ -7,7 +7,6 @@
 #include <array>
 #include <cassert>
 #include <cmath>
-#include <future>
 #include <map>
 #include <memory>
 #include <utility>
@@ -18,7 +17,7 @@ namespace {
 // -- The loaded set and its rasters -------------------------------------------
 //
 // THE SET: per glyph, in enum order, its one parse and its body shift
-// (measured at the parse), loaded once by load_set before the window exists
+// (declared in the file or measured at the parse), loaded once by load_set before the window exists
 // and never changed after.
 //
 // THE CACHE: per (glyph, device px) the LIVE raster and, the first time a
@@ -40,7 +39,7 @@ struct Faces {
 
 struct LoadedSet {
     std::array<svg_icon::Document, kIconCount> docs;
-    std::array<std::pair<float, float>, kIconCount> shifts{};   // measured
+    std::array<std::pair<float, float>, kIconCount> shifts{};   // body shifts
     std::map<std::pair<int, int>, Faces>      rasters;
 };
 
@@ -100,24 +99,14 @@ std::optional<std::string> load_set() {
         auto doc = is_png ? svg_icon::parse_png(found_png->second)
                           : svg_icon::parse(found_svg->second);
         if (!doc) return label + file + ": " + doc.error();
+        // THE BODY-CENTERING SHIFT (icons.h's THE GLYPHS BODY-CENTERED): the
+        // file's declared one where it carries it (every builder SVG), else
+        // measured here (a dropped SVG, a PNG).
+        loaded.shifts[static_cast<size_t>(i)] =
+            doc->declared_shift ? *doc->declared_shift
+                                : svg_icon::body_center_shift(*doc);
         loaded.docs[static_cast<size_t>(i)] = std::move(*doc);
     }
-    // THE BODY-CENTERING SHIFTS (icons.h's THE GLYPHS BODY-CENTERED), measured
-    // after every parse has passed, ONE THREAD PER DOCUMENT (svg_icon.h's
-    // THREADS: an immutable tree, a render writing only its own surface; a
-    // PNG's measure reads its own decode alone), joined in enum order: ~0.7 s
-    // sequential, ~0.32 s parallel on the laptop (2026-10-19), bounded by the
-    // history clock's ~220 ms.
-    std::array<std::future<std::pair<float, float>>, kIconCount> measures;
-    for (int i = 0; i < kIconCount; ++i)
-        measures[static_cast<size_t>(i)] = std::async(
-            std::launch::async,
-            [&doc = loaded.docs[static_cast<size_t>(i)]] {
-                return svg_icon::body_center_shift(doc);
-            });
-    for (int i = 0; i < kIconCount; ++i)
-        loaded.shifts[static_cast<size_t>(i)] =
-            measures[static_cast<size_t>(i)].get();
     loaded_set() = std::move(loaded);
     return std::nullopt;
 }

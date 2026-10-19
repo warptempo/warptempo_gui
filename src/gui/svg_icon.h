@@ -29,8 +29,7 @@
 //
 // THREADS: a parsed tree is immutable and a render writes only the caller's
 // surface, so any thread may render any tree; the product parses and renders
-// on the main thread (every draw is the painter's), save the launch's body
-// measure, one thread per document (icons::load_set, 2026-10-19).
+// on the main thread alone (every draw is the painter's).
 //
 // GUI-ONLY, like icons.cpp: warptempo_cli never carries this TU nor resvg.
 
@@ -39,6 +38,7 @@
 #include <cstdint>
 #include <expected>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -55,16 +55,24 @@ namespace svg_icon {
 // one immutable tree or surface, which the last copy frees
 // (resvg_tree_destroy, cairo_surface_destroy). A re-raster at a new scale is
 // one more render of the same tree or one more resample of the same surface,
-// never a re-parse.
+// never a re-parse. `declared_shift` is an SVG's `data-body-shift`
+// attribute when its root tag carries one (parse; body_center_shift's head),
+// never a PNG's.
 struct Document {
-    std::shared_ptr<resvg_render_tree> tree;
-    std::shared_ptr<cairo_surface_t>   raster;
+    std::shared_ptr<resvg_render_tree>     tree;
+    std::shared_ptr<cairo_surface_t>       raster;
+    std::optional<std::pair<float, float>> declared_shift;
 };
 
-// Parse one file's whole bytes. THE ERROR ARM'S PRODUCER is a bundled file
-// resvg refuses (a build defect, caught at launch): "not well-formed SVG
-// (resvg error N)", N the library's own code; the caller prefixes the file. The options are resvg's defaults: every bundled drawing names
-// its own inks (icons.h's head).
+// Parse one file's whole bytes, and read the root tag's `data-body-shift`
+// into `declared_shift` (body_center_shift's head) by a plain scan of the
+// `<svg …>` start tag's bytes, before resvg sees them. THE ERROR ARM'S
+// PRODUCERS are a bundled file resvg refuses (a build defect, caught at
+// launch): "not well-formed SVG (resvg error N)", N the library's own code;
+// and an attribute that is not two numbers, "malformed data-body-shift" (the
+// builder writes it, so this is a build defect too); the caller prefixes the
+// file. The options are resvg's defaults: every bundled drawing names its own
+// inks (icons.h's head).
 std::expected<Document, std::string> parse(std::string_view bytes);
 
 // A PNG'S PARSE (architect 2026-10-18; the drop road's since 2026-10-19, the
@@ -110,13 +118,20 @@ cairo_surface_t* rasterise(const Document& doc, int px, double shift_x = 0.0,
 // copy's one-unit translate mean what they mean on every file.
 double unit_px(const Document& doc, int px);
 
-// THE BODY-CENTERING SHIFT (icons.h's THE GLYPHS BODY-CENTERED, measured at
-// launch, architect 2026-10-19): the (dx, dy) in the drawing's user units —
-// rasterise's shift_x / shift_y — that puts the bounding box of its pixels
-// with alpha >= 26/255 (0.1) at the frame's center, each rounded to 0.1 unit
-// (std::nearbyint on tenths). An SVG is measured on its own render at 240 px
-// (rasterise, unshifted; ~12 ms on average on the laptop, icons.h), a PNG on
-// its decoded raster at its native N (free: no render). A drawing with no such pixel takes (0, 0).
+// THE BODY-CENTERING SHIFT (icons.h's THE GLYPHS BODY-CENTERED, the three
+// cases): the (dx, dy) in the drawing's user units — rasterise's shift_x /
+// shift_y — that puts the bounding box of its pixels with alpha >= 26/255
+// (0.1) at the frame's center, each rounded to 0.1 unit (std::nearbyint on
+// tenths). THE BUILDER'S SVGs NEVER COME HERE: each carries the shift on its
+// root tag, `data-body-shift="dx dy"` (two numbers, one decimal each, a space
+// between, e.g. "2.6 -0.1" — tools/icon_set_adwaita_322/body_shift.py's
+// rsvg-convert measure at 240 px, the 2026-10-12 table's own method), which
+// parse reads and resvg ignores. This function measures the two remaining
+// cases at launch: an SVG WITHOUT the attribute (a dropped one, never the
+// builder's) on its own render at 240 px (rasterise, unshifted; ~12 ms on
+// average on the laptop), and a PNG on its decoded raster at its native N
+// (free: no render). The two measures agree within 0.1 unit on every builder
+// file (2026-10-19). A drawing with no such pixel takes (0, 0).
 std::pair<float, float> body_center_shift(const Document& doc);
 
 // THE EMBOSSED COPY — the disabled glyph (icons.h's THE DISABLED GLYPH,

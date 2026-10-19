@@ -7,7 +7,7 @@ the act's tooltip name in PascalCase — `Warp.png`, `Undo.svg`, `ReadOnlyLocked
 png … the goal is I can build and push after any icon change, without needing to consult"): a square PNG with alpha at
 256 px, named `<Act>.png`, dropped here replaces that act's glyph at the next launch on the laptop and at the next APK
 build on the tablet, with no generator, no table, no row in this README and no code change. WHERE BOTH FILES STAND THE
-PNG WINS, the Adwaita SVG staying beside it as the fallback until the architect calls the seat settled. Every drawing
+PNG WINS, the Adwaita SVG staying beside it as the fallback until the architect calls the seat settled. A dropped drawing
 is centered on its ink at the launch (below, "The shift"), so a drop needs no alignment either.
 
 WHERE NO PNG STANDS, the drawing is adwaita-icon-theme 3.22.0's (architect 2026-10-14): the 3.22.0 tarball's own
@@ -38,7 +38,7 @@ licence texts) are not read.
 The tarball ships its scalable artwork as SHEETS (`src/fullcolor/<sheet>.svg`, each carrying an icon's drawings at
 every size, often several icons), so every file here is EXTRACTED by `tools/icon_set_adwaita_322/` (`build_set.py`
 over `mapping.tsv`, its README the usage) and is that tool's byte-identical output (the tool writes no PNG and no
-link): the sheet PRUNED IN PLACE —
+link; its root tag carries the builder's `data-body-shift`, below, "The shift"): the sheet PRUNED IN PLACE —
 hidden layers, the editor's metadata and every element that puts no ink in the 48 slot are removed, every remaining
 element keeping its ancestors exactly; the slot NESTED as its own `<svg>` viewport inside a 48-unit root (an app
 icon with no 48 drawing nests its 256 slot, scaled by that viewport as the theme renders its 48 PNG); a mask or
@@ -237,72 +237,75 @@ reference left dangling. The disabled face has no file of its own: the product b
 
 ## The shift
 
-The product draws every glyph BODY-CENTERED in its seat (architect 2026-10-12), MEASURED AT LAUNCH since 2026-10-19
-(`svg_icon::body_center_shift`, `src/gui/icons.h`'s THE GLYPHS BODY-CENTERED): the alpha >= 0.1 bounds of each file —
-an SVG rendered by resvg at 240 px, a PNG on its own decode — give the user-unit translate that puts the ink's center
-at the frame's center. The files stay as the tool or the architect made them; the shift is the product's, not the
-file's. (The generated table and its generator, `tools/icon_center/`, 2026-10-12 to 2026-10-19, retired: the launch's
-measure agrees with it within a tenth of a unit on every file.)
-
+The product draws every glyph BODY-CENTERED in its seat (architect 2026-10-12; `src/gui/icons.h`'s THE GLYPHS
+BODY-CENTERED): the alpha >= 0.1 bounds of the drawing give the user-unit translate that puts its ink's center at the
+frame's center. EVERY SVG THE BUILDER WRITES CARRIES ITS SHIFT ON ITS ROOT TAG, `data-body-shift="dx dy"` (one decimal
+each), the builder's own measure (`tools/icon_set_adwaita_322/body_shift.py`: rsvg-convert at 240 px, the method the
+2026-10-12 table used, so the numbers are the ones judged then; the table's column below), read by the program from
+the tag before parsing, so the launch renders nothing to center them (architect 2026-10-19: the launch "used to be
+very snappy"). resvg ignores the attribute, and a symlinked repeat carries its file's. A dropped SVG without the
+attribute, and every PNG, is measured at the launch instead (`svg_icon::body_center_shift`; a PNG's measure is free),
+so a drop still needs no step; the two measures agree within 0.1 unit on every builder file. The shift is the
+product's: nothing else in a file is.
 
 ## The icons
 
 The extracted SVGs, `tools/icon_set_adwaita_322/`'s `README_table.md` (the links and the PNGs are not the tool's).
 
-| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | note |
-|---|---|---|---|---|---|
-| AddToSelection | `edit-select-all` | `paper-sheets.svg` | 1500, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
-| Cancel | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| CardNormal | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` |  |
-| Center | `edit-find` | `find.svg` | 300, 50, 48, 48 | `88e1be55349ba868dfc3a45152cb376e50a10d178fe57b422be59d47f20e7ae3` | NEW: Center (architect 2026-10-16: the magnifier finds the playhead) |
-| Close | `window-close` | `window-close.svg` | 296, 50, 48, 48 | `3145ee5b93477957dca1f8235c612e8eff2148227c95ffc53186c78b891a73b2` |  |
-| Cumulative | `accessories-calculator` | `accessories-calculator.svg` | 296, 50, 48, 48 | `aeafa0e25eb404c73da589337ddb6dfb1aeec8ab2663a7038702c9379de912fb` |  |
-| DeleteFolder | `user-trash` | `trash.svg` | 696, 50, 48, 48 | `940cae7ced59edf15322f1e92cfa1636dade79dff9ecdea5f3dff6b9bfcd72d1` |  |
-| DeleteMarkers | `list-remove` | `list-add-remove.svg` | 696, 50, 48, 48 | `c9c134fbc80a3342f28b595039c21e179f9775b1682ccdbf0272716092680d61` |  |
-| Disabled | `audio-volume-muted` | `audio-volume.svg` | 421, 335, 256, 256 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` |  |
-| Down | `go-down` | `navigation-icons.svg` | 186, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| DropMarker | `list-add` | `list-add-remove.svg` | 296, 50, 48, 48 | `c9c134fbc80a3342f28b595039c21e179f9775b1682ccdbf0272716092680d61` |  |
-| Flatten | `edit-clear-all` | `edit-clear-all.svg` | 296, 50, 48, 48 | `0e014a4f4050e704872ff34a0b9680d08a42063ff2c7b6e42b3c5d66fb27855d` | Flatten: the broom (architect 2026-10-14) |
-| FolderRow | `folder` | `folders.svg` | 296, 50, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
-| Follow | `start-here` | `start-here.svg` | 296, 50, 48, 48 | `92199123caea23275ed009708da8bad426d05b78d0c1808a44268ed7550a342f` |  |
-| FullZoomOut | `view-restore` | `view-fullscreen-restore.svg` | 696, 50, 48, 48 | `dd9a137b1779bd454c300d351e50ba2f1458c729cb2fc49e890173989409a688` | NEW: Full zoom out (architect 2026-10-16: the view shrunk back) |
-| GridIterations | `x-office-spreadsheet` | `paper-sheets.svg` | 1500, 354, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
-| HistoryView | `document-open-recent` | `clocks.svg` | 696.062, 355.996, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | History: the clock turned back again (architect 2026-10-18, "go back to using the original git clock icon"); TEXT TO OUTLINES: 48 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
-| Inherit | `insert-link` | `insert-link.svg` | 296, 50, 48, 48 | `5653605748193e1a61a7b59a7214b416dbdc48f6d7a0944f0a396487e7f8b29e` |  |
-| JumpToDefiningMarker | `go-jump` | `navigation-icons.svg` | 26, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| Left | `go-previous` | `navigation-icons.svg` | 536, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| LoadInPlace | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | Load in Place (architect 2026-10-14) |
-| Newer | `media-seek-forward` | `media-control-icons.svg` | 406, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| NextMarker | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| Older | `media-seek-backward` | `media-control-icons.svg` | 206, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| OpenProject | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` |  |
-| OpenTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` |  |
-| Pause | `media-playback-pause` | `media-control-icons.svg` | 256, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| PhaseReset | `camera-photo` | `camera-photo.svg` | 300, 50, 48, 48 | `ef5055cdc4061107476cab8265bebe6e7ddea7c257d844f3d2a54b477e9c194a` | NEW: Phase reset (architect 2026-10-15: the phase snapshot) |
-| Play | `media-playback-start` | `media-control-icons.svg` | 306, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| PlayerNext | `media-skip-forward` | `media-control-icons.svg` | 456, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| PlayerPrevious | `media-skip-backward` | `media-control-icons.svg` | 156, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| PlayRenders | `applications-multimedia` | `applications-multimedia.svg` | 296, 50, 48, 48 | `b4551addc300f3ca7d6c5c9f22044c7db2dc227e3987877cb0b99de634508ed2` |  |
-| PreviousMarker | `go-first` | `navigation-icons.svg` | 456, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| ReadOnlyLocked | `changes-prevent` | `changes.svg` | 296, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | NEW: Read-Only while locked (architect 2026-10-14) |
-| ReadOnlyUnlocked | `changes-allow` | `changes.svg` | 696, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | NEW: Read-Only while unlocked (architect 2026-10-14) |
-| Redo | `edit-redo` | `edit-undo-redo.svg` | 76, 300, 48, 48 | `f898c87c923e161e6a4e2b19ac605f4651fdb8bbbcfcc57f962258e5fd5c97f0` |  |
-| Render | `media-record` | `media-control-icons.svg` | 506, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| RepeatOne | `media-playlist-repeat` | `media-control-icons.svg` | 56, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| Revert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` |  |
-| Right | `go-next` | `navigation-icons.svg` | 776, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| Save | `document-save` | `cabinets.svg` | 696, 50, 48, 48 | `abefcd60460b10ac8be532acb78197132f8e90b3db97e6d3812c555914f0517f` | the floppy retired (architect 2026-10-14) |
-| SaveCommit | `go-top` | `navigation-icons.svg` | 276, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| SavePull | `go-bottom` | `navigation-icons.svg` | 106, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| SessionHistory | `network-wired-disconnected` | `network-wired-disconnected.svg` | 296, 50, 48, 48 | `4c9d212cedd9877315cc1e0b05685a582bea53d517ff798bf734e6be9639047e` | NEW: Session (architect 2026-10-15: shut off git and stay local) |
-| Settings | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` |  |
-| Source | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | NEW: Source (architect 2026-10-14) |
-| Stop | `media-playback-stop` | `media-control-icons.svg` | 356, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` |  |
-| SwitchTab | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` |  |
-| Target | `input-tablet` | `input-tablet.svg` | 20, 33, 256, 256 | `3859ab7e3e364780314bfe57d02a46f095266def59a87ef1803108bab00f4b0f` | NEW: Target (architect 2026-10-14) |
-| Tooltips | `help-browser` | `help-browser.svg` | 13, 37, 256, 256 | `86cde422bb8cd8bc966cddd4d14f8d5720f980c83a0feec78c7163122a414a57` |  |
-| Undo | `edit-undo` | `edit-undo-redo.svg` | 16, 300, 48, 48 | `f898c87c923e161e6a4e2b19ac605f4651fdb8bbbcfcc57f962258e5fd5c97f0` |  |
-| Up | `go-up` | `navigation-icons.svg` | 366, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` |  |
-| ValueDrag | `format-text-direction-rtl` | `format-text-direction-rtl.svg` | 296, 50, 48, 48 | `9adb14cb4bb35582ec9b3f8925ebd4f4278fd8571e420c0c7c97d4cbef584070` | NEW: Value Drag, the pen alone (architect 2026-10-18: "drop the arrows altogether"); REMOVED (removed.tsv): g7348 |
-| WaveformMagnification | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
-| WavRow | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` |  |
+| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | `data-body-shift` | note |
+|---|---|---|---|---|---|---|
+| AddToSelection | `edit-select-all` | `paper-sheets.svg` | 1500, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` | -0.1 1.0 |  |
+| Cancel | `process-stop` | `navigation-icons.svg` | 696, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | 0.5 -0.5 |  |
+| CardNormal | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` | 0.0 1.5 |  |
+| Center | `edit-find` | `find.svg` | 300, 50, 48, 48 | `88e1be55349ba868dfc3a45152cb376e50a10d178fe57b422be59d47f20e7ae3` | 0.9 0.4 | NEW: Center (architect 2026-10-16: the magnifier finds the playhead) |
+| Close | `window-close` | `window-close.svg` | 296, 50, 48, 48 | `3145ee5b93477957dca1f8235c612e8eff2148227c95ffc53186c78b891a73b2` | -0.7 0.7 |  |
+| Cumulative | `accessories-calculator` | `accessories-calculator.svg` | 296, 50, 48, 48 | `aeafa0e25eb404c73da589337ddb6dfb1aeec8ab2663a7038702c9379de912fb` | 0.0 1.1 |  |
+| DeleteFolder | `user-trash` | `trash.svg` | 696, 50, 48, 48 | `940cae7ced59edf15322f1e92cfa1636dade79dff9ecdea5f3dff6b9bfcd72d1` | 0.0 -0.5 |  |
+| DeleteMarkers | `list-remove` | `list-add-remove.svg` | 696, 50, 48, 48 | `c9c134fbc80a3342f28b595039c21e179f9775b1682ccdbf0272716092680d61` | -1.0 1.0 |  |
+| Disabled | `audio-volume-muted` | `audio-volume.svg` | 421, 335, 256, 256 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | -0.5 0.0 |  |
+| Down | `go-down` | `navigation-icons.svg` | 186, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 1.0 |  |
+| DropMarker | `list-add` | `list-add-remove.svg` | 296, 50, 48, 48 | `c9c134fbc80a3342f28b595039c21e179f9775b1682ccdbf0272716092680d61` | -1.0 1.0 |  |
+| Flatten | `edit-clear-all` | `edit-clear-all.svg` | 296, 50, 48, 48 | `0e014a4f4050e704872ff34a0b9680d08a42063ff2c7b6e42b3c5d66fb27855d` | 2.6 0.6 | Flatten: the broom (architect 2026-10-14) |
+| FolderRow | `folder` | `folders.svg` | 296, 50, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` | 0.5 1.0 |  |
+| Follow | `start-here` | `start-here.svg` | 296, 50, 48, 48 | `92199123caea23275ed009708da8bad426d05b78d0c1808a44268ed7550a342f` | 0.0 0.0 |  |
+| FullZoomOut | `view-restore` | `view-fullscreen-restore.svg` | 696, 50, 48, 48 | `dd9a137b1779bd454c300d351e50ba2f1458c729cb2fc49e890173989409a688` | -1.1 0.5 | NEW: Full zoom out (architect 2026-10-16: the view shrunk back) |
+| GridIterations | `x-office-spreadsheet` | `paper-sheets.svg` | 1500, 354, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` | -0.1 1.0 |  |
+| HistoryView | `document-open-recent` | `clocks.svg` | 696.062, 355.996, 48, 48 | `0411e9fe1933a5e6d6c5d6b577256542fdca27da0655d0db77eaffdcb1b7f7f2` | 0.1 1.0 | History: the clock turned back again (architect 2026-10-18, "go back to using the original git clock icon"); TEXT TO OUTLINES: 48 text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf |
+| Inherit | `insert-link` | `insert-link.svg` | 296, 50, 48, 48 | `5653605748193e1a61a7b59a7214b416dbdc48f6d7a0944f0a396487e7f8b29e` | 0.0 -5.0 |  |
+| JumpToDefiningMarker | `go-jump` | `navigation-icons.svg` | 26, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -1.0 0.5 |  |
+| Left | `go-previous` | `navigation-icons.svg` | 536, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | 0.0 -0.5 |  |
+| LoadInPlace | `edit-paste` | `copy-paste-tasks.svg` | 296, 50, 48, 48 | `858cc2773cbd07e48065bf5416d869f0a49d9eabd772556da7099e3e51524f92` | -0.5 1.5 | Load in Place (architect 2026-10-14) |
+| Newer | `media-seek-forward` | `media-control-icons.svg` | 406, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | -0.8 0.0 |  |
+| NextMarker | `go-last` | `navigation-icons.svg` | 856, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | 0.5 -0.5 |  |
+| Older | `media-seek-backward` | `media-control-icons.svg` | 206, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | -0.2 0.0 |  |
+| OpenProject | `document-open` | `folders.svg` | 1496, 350, 48, 48 | `410c37478763ca92ce06ed3fb49cf998f905aedab1d978b69ff579763ae4b2da` | 0.0 1.4 |  |
+| OpenTextEditor | `accessories-text-editor` | `accessories-text-editor.svg` | 296.062, 39.9963, 48, 48 | `f4ada0e92d0d721c4cdf5fabb99c6e5e2cdcbae3ace01ef716b3c0b8fc79524f` | -1.4 1.0 |  |
+| Pause | `media-playback-pause` | `media-control-icons.svg` | 256, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
+| PhaseReset | `camera-photo` | `camera-photo.svg` | 300, 50, 48, 48 | `ef5055cdc4061107476cab8265bebe6e7ddea7c257d844f3d2a54b477e9c194a` | 0.0 1.5 | NEW: Phase reset (architect 2026-10-15: the phase snapshot) |
+| Play | `media-playback-start` | `media-control-icons.svg` | 306, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | -1.0 0.0 |  |
+| PlayerNext | `media-skip-forward` | `media-control-icons.svg` | 456, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
+| PlayerPrevious | `media-skip-backward` | `media-control-icons.svg` | 156, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
+| PlayRenders | `applications-multimedia` | `applications-multimedia.svg` | 296, 50, 48, 48 | `b4551addc300f3ca7d6c5c9f22044c7db2dc227e3987877cb0b99de634508ed2` | 0.0 -0.3 |  |
+| PreviousMarker | `go-first` | `navigation-icons.svg` | 456, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 -0.5 |  |
+| ReadOnlyLocked | `changes-prevent` | `changes.svg` | 296, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | 1.4 0.5 | NEW: Read-Only while locked (architect 2026-10-14) |
+| ReadOnlyUnlocked | `changes-allow` | `changes.svg` | 696, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | -0.6 0.9 | NEW: Read-Only while unlocked (architect 2026-10-14) |
+| Redo | `edit-redo` | `edit-undo-redo.svg` | 76, 300, 48, 48 | `f898c87c923e161e6a4e2b19ac605f4651fdb8bbbcfcc57f962258e5fd5c97f0` | 0.0 -1.5 |  |
+| Render | `media-record` | `media-control-icons.svg` | 506, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
+| RepeatOne | `media-playlist-repeat` | `media-control-icons.svg` | 56, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 -1.5 |  |
+| Revert | `document-revert` | `paper-sheets.svg` | 1900, 654, 48, 48 | `1bf2aad02a3644760903ccc36c3a942b6b2a4f408752e7fd7c0dff981e1f1a8b` | 1.9 1.0 |  |
+| Right | `go-next` | `navigation-icons.svg` | 776, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | 0.0 -0.5 |  |
+| Save | `document-save` | `cabinets.svg` | 696, 50, 48, 48 | `abefcd60460b10ac8be532acb78197132f8e90b3db97e6d3812c555914f0517f` | 0.5 0.9 | the floppy retired (architect 2026-10-14) |
+| SaveCommit | `go-top` | `navigation-icons.svg` | 276, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 0.5 |  |
+| SavePull | `go-bottom` | `navigation-icons.svg` | 106, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 0.5 |  |
+| SessionHistory | `network-wired-disconnected` | `network-wired-disconnected.svg` | 296, 50, 48, 48 | `4c9d212cedd9877315cc1e0b05685a582bea53d517ff798bf734e6be9639047e` | 0.1 -0.5 | NEW: Session (architect 2026-10-15: shut off git and stay local) |
+| Settings | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` | -0.2 0.9 |  |
+| Source | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | 0.0 0.9 | NEW: Source (architect 2026-10-14) |
+| Stop | `media-playback-stop` | `media-control-icons.svg` | 356, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
+| SwitchTab | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` | 0.0 0.5 |  |
+| Target | `input-tablet` | `input-tablet.svg` | 20, 33, 256, 256 | `3859ab7e3e364780314bfe57d02a46f095266def59a87ef1803108bab00f4b0f` | 0.2 1.2 | NEW: Target (architect 2026-10-14) |
+| Tooltips | `help-browser` | `help-browser.svg` | 13, 37, 256, 256 | `86cde422bb8cd8bc966cddd4d14f8d5720f980c83a0feec78c7163122a414a57` | 0.6 0.5 |  |
+| Undo | `edit-undo` | `edit-undo-redo.svg` | 16, 300, 48, 48 | `f898c87c923e161e6a4e2b19ac605f4651fdb8bbbcfcc57f962258e5fd5c97f0` | 0.0 -1.5 |  |
+| Up | `go-up` | `navigation-icons.svg` | 366, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 1.0 |  |
+| ValueDrag | `format-text-direction-rtl` | `format-text-direction-rtl.svg` | 296, 50, 48, 48 | `9adb14cb4bb35582ec9b3f8925ebd4f4278fd8571e420c0c7c97d4cbef584070` | -7.6 0.7 | NEW: Value Drag, the pen alone (architect 2026-10-18: "drop the arrows altogether"); REMOVED (removed.tsv): g7348 |
+| WaveformMagnification | `audio-volume-high` | `audio-volume.svg` | 296, 50, 48, 48 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | -0.5 0.4 | NEW: Waveform magnification (architect 2026-10-16: the louder waveform) |
+| WavRow | `audio-x-generic` | `audio-x-generic.svg` | 296.062, 49.9963, 48, 48 | `c2d7906e7d19b021cabff60aea188b709c2eaa28c69eb7176bca365e9d45ac5d` | 0.8 1.9 |  |

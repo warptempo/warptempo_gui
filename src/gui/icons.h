@@ -290,47 +290,54 @@ inline constexpr const char* kIconNames[] = {
 };
 static_assert(std::size(kIconNames) == kIconCount);
 
-// THE GLYPHS BODY-CENTERED, MEASURED AT LAUNCH (architect 2026-10-12: every
-// glyph, no exceptions, "the simpler rule is just center all of them";
-// measured at the launch since 2026-10-19, so a dropped PNG needs no step).
-// Each glyph is drawn translated by (dx, dy) in the drawing's own user units
-// (every SVG a 48-unit root, a PNG's 48-unit frame; +x right, +y down),
-// composed into resvg's render transform or the PNG's filter
-// (svg_icon::rasterise) so it scales with the raster, the disabled copy's
-// light half one more unit on the same shift (draw_disabled). THE MEASURE
-// (svg_icon::body_center_shift): the body is the shipped file itself — an
-// Adwaita SVG shadow-less by construction (the head: every drop shadow removed
-// at the extraction, architect 2026-10-15), a PNG as he cut it — its alpha
-// >= 0.1 (>= 26/255) bounds give a bbox, and the shift puts the bbox center
-// at the frame's center, rounded to 0.1 unit. An SVG is measured on resvg's
-// render at 240 px (the product's own renderer; the retired generator's
-// rsvg-convert measure differed by at most a tenth of a unit on seven files,
-// accepted), a PNG on its decoded raster at its native size; a drawing with
-// no pixel at 0.1 takes shift 0. Done ONCE PER FILE, in load_set after its
-// parse, the shift stored beside the parsed document. ITS COST, measured on
-// the laptop (2026-10-19): ~12 ms per SVG on average, the blurs and masks
-// dominating (the history clock ~220 ms, the session cable ~90), a PNG's
-// free — ~0.7 s sequential, ~0.32 s parallel, bounded by the clock's ~220
-// ms: load_set measures the documents ONE THREAD EACH after every parse has
-// passed (svg_icon.h's THREADS).
+// THE GLYPHS BODY-CENTERED (architect 2026-10-12: every glyph, no
+// exceptions, "the simpler rule is just center all of them"). Each glyph is
+// drawn translated by (dx, dy) in the drawing's own user units (every SVG a
+// 48-unit root, a PNG's 48-unit frame; +x right, +y down), composed into
+// resvg's render transform or the PNG's filter (svg_icon::rasterise) so it
+// scales with the raster, the disabled copy's light half one more unit on the
+// same shift (draw_disabled). THE SHIFT: the body is the shipped file itself —
+// an Adwaita SVG shadow-less by construction (the head: every drop shadow
+// removed at the extraction, architect 2026-10-15), a PNG as he cut it — its
+// alpha >= 0.1 (>= 26/255) bounds give a bbox, and the shift puts the bbox
+// center at the frame's center, rounded to 0.1 unit; a drawing with no pixel
+// at 0.1 takes shift 0. THREE CASES, one per file in load_set:
+//   - A BUILDER SVG CARRIES ITS SHIFT IN THE FILE, the root tag's
+//     `data-body-shift="dx dy"` (two numbers, one decimal each, a space
+//     between, e.g. "2.6 -0.1"), measured by tools/icon_set_adwaita_322/
+//     body_shift.py with rsvg-convert at 240 px — the 2026-10-12 table's own
+//     method, so the numbers are the ones judged then — and read by
+//     svg_icon::parse from the tag's bytes before resvg sees them (resvg
+//     ignores the attribute). It travels with the file: a symlinked repeat
+//     carries it, no table, no name lookup (architect 2026-10-19: the launch
+//     "used to be very snappy"; ~0.3 s of measuring at every launch was felt
+//     on the laptop, the tablet slower still).
+//   - AN SVG WITHOUT THE ATTRIBUTE (a dropped one, never the builder's) is
+//     measured at the launch on resvg's render at 240 px
+//     (svg_icon::body_center_shift; ~12 ms on average on the laptop, the
+//     blurs and masks dominating). The two measures agree within 0.1 unit on
+//     every builder file (2026-10-19).
+//   - A PNG is measured at the launch on its decoded raster at its native
+//     size (body_center_shift; free, no render), so a dropped PNG needs no
+//     step.
 // Where a shifted drawing crosses the cell's edge it clips, accepted. The
-// shift is the product's, not the file's: the files stay as the extraction
-// tool or the architect made them.
+// shift is the product's: the builder writes it beside the drawing it
+// measured, and nothing else in a file is the product's.
 
 // THE LOAD, once, in gui_main before the window: the folder's files fetched
 // from the bundle (GuiPlatform::bundled_icon_files — the repository's
 // assets/icons/ on the laptop, the APK's icons/ assets on the tablet; READ IN
 // PLACE, never copied into the config folder: nobody authors an icon on the
 // device), then per enumerator in enum order `<name>.png` if present
-// (svg_icon::parse_png), else `<name>.svg` (svg_icon::parse), parsed, and
-// once every parse has passed each document measured on a thread of its own
-// (THE GLYPHS BODY-CENTERED, above: ~0.7 s sequential, ~0.32 s parallel on
-// the laptop, bounded by the history clock's ~220 ms), all before any draw — THE PNG WINS,
+// (svg_icon::parse_png), else `<name>.svg` (svg_icon::parse), parsed and its
+// body shift taken from the file or measured (THE GLYPHS BODY-CENTERED,
+// above), all before any draw — THE PNG WINS,
 // an SVG of the same name beside it unread (the Adwaita fallback left on
 // purpose, architect 2026-10-19); files of other names (the README, the
 // licence texts) ignored. THE ERROR ARM'S PRODUCERS: the bundle unreadable
-// (IO), neither file there, a file not well-formed SVG or not a PNG (a build
-// defect) — "icons: Warp.png: not a PNG", the first only, which gui_main
+// (IO), neither file there, a file not well-formed SVG, an SVG whose
+// data-body-shift is malformed, or a `.png` not a PNG (a build defect) —
+// "icons: Warp.png: not a PNG", the first only, which gui_main
 // prints and exits on (the validation doctrine's class (1)). A construct
 // resvg does not draw passes the load: an SVG's import sheet is that check
 // (svg_icon.h's error rule).

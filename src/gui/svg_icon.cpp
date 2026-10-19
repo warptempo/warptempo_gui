@@ -5,6 +5,7 @@
 #include <resvg.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -197,9 +198,51 @@ cairo_surface_t* resample_raster(cairo_surface_t* src, int px, double shift_x,
     return s;
 }
 
+// THE DECLARED SHIFT (svg_icon.h's body_center_shift head): the root tag's
+// `data-body-shift="dx dy"`, read by a plain scan of the bytes from the
+// first `<svg` to the next `>`. Absent: nullopt. Present: two numbers, one
+// space between, each rounded to the tenth as the launch's measure rounds
+// (so "2.6" is the very float body_center_shift would return); anything
+// else is false (the caller's "malformed" line).
+bool declared_shift(std::string_view bytes,
+                    std::optional<std::pair<float, float>>& out) {
+    out.reset();
+    const size_t tag = bytes.find("<svg");
+    if (tag == std::string_view::npos) return true;
+    const std::string_view head =
+        bytes.substr(tag, bytes.find('>', tag) - tag);
+    static constexpr std::string_view kAttr = "data-body-shift=\"";
+    const size_t at = head.find(kAttr);
+    if (at == std::string_view::npos) return true;
+    const size_t from = at + kAttr.size();
+    const size_t to = head.find('"', from);
+    if (to == std::string_view::npos) return false;
+    const std::string_view value = head.substr(from, to - from);
+    const size_t gap = value.find(' ');
+    if (gap == std::string_view::npos) return false;
+    double v[2] = {0.0, 0.0};
+    const std::string_view part[2] = {value.substr(0, gap),
+                                      value.substr(gap + 1)};
+    for (int k = 0; k < 2; ++k) {
+        const char* end = part[k].data() + part[k].size();
+        const auto r = std::from_chars(part[k].data(), end, v[k]);
+        if (part[k].empty() || r.ec != std::errc{} || r.ptr != end ||
+            !std::isfinite(v[k]))
+            return false;
+    }
+    const auto tenth = [](double x) {
+        return static_cast<float>(std::nearbyint(x * 10.0) / 10.0) + 0.0f;
+    };
+    out = std::pair{tenth(v[0]), tenth(v[1])};
+    return true;
+}
+
 } // namespace
 
 std::expected<Document, std::string> parse(std::string_view bytes) {
+    std::optional<std::pair<float, float>> shift;
+    if (!declared_shift(bytes, shift))
+        return std::unexpected(std::string("malformed data-body-shift"));
     // The options are resvg's defaults (96 dpi, no resources directory: a
     // bundled drawing references no file; no font database, the build has no
     // text), made per parse and freed with it: nothing global outlives a
@@ -220,7 +263,7 @@ std::expected<Document, std::string> parse(std::string_view bytes) {
                                std::to_string(code) + ")");
     return Document{std::shared_ptr<resvg_render_tree>(tree,
                                                        resvg_tree_destroy),
-                    nullptr};
+                    nullptr, shift};
 }
 
 std::expected<Document, std::string> parse_png(std::string_view bytes) {
@@ -268,7 +311,8 @@ std::expected<Document, std::string> parse_png(std::string_view bytes) {
     rgba_bytes_to_argb_words(data, n * n);
     cairo_surface_mark_dirty(s);
     return Document{nullptr,
-                    std::shared_ptr<cairo_surface_t>(s, cairo_surface_destroy)};
+                    std::shared_ptr<cairo_surface_t>(s, cairo_surface_destroy),
+                    std::nullopt};
 }
 
 double unit_px(const Document& doc, int px) {

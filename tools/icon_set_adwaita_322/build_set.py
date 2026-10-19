@@ -4,7 +4,8 @@ pruned 48-unit file from the row's sheet and slot, its drop shadows removed by s
 2026-10-15) and any other element the architect rules out by removed.tsv's (ValueDrag's arrow, 2026-10-18); the
 `text-to-outlines` treatment, HistoryView's (history's clock with the back arrow, again since 2026-10-18): its clock
 digits turned into Liberation Sans Bold outlines by text_to_paths.py at the build, with its dated changed-file comment
-at the head; the tarball's four licence texts; and README_table.md, each sheet with its sha256. THE TOOL WRITES SVGs AND
+at the head; THE BODY-CENTERING SHIFT measured on each written file and inserted on its root tag as `data-body-shift`
+(body_shift.py, architect 2026-10-19); the tarball's four licence texts; and README_table.md, each sheet with its sha256. THE TOOL WRITES SVGs AND
 THE LICENCE TEXTS ONLY — never a PNG (the architect's own drawings are dropped into the folder by hand, the drop road,
 icons.h's head) and never a symlink (a repeated drawing, AppIcon.png, BpmIterations.svg, CardCritical.svg and
 UpAFolder.svg, is a link the folder carries, with no row here: mapping.tsv names each canonical file once). Its
@@ -17,7 +18,7 @@ the crop clips the rim highlight's mask region).
 usage: python3 -I tools/icon_set_adwaita_322/build_set.py <tarball-root> <out-dir>"""
 import os, sys, hashlib, shutil, tempfile
 HERE=os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0,HERE)
-import extract as X, text_to_paths as TP
+import extract as X, text_to_paths as TP, body_shift as BS
 NOTES={'Source':'NEW: Source (architect 2026-10-14)','PhaseReset':'NEW: Phase reset (architect 2026-10-15: the phase snapshot)',
 'ReadOnlyUnlocked':'NEW: Read-Only while unlocked (architect 2026-10-14)','ReadOnlyLocked':'NEW: Read-Only while locked (architect 2026-10-14)',
 'LoadInPlace':'Load in Place (architect 2026-10-14)','Save':'the floppy retired (architect 2026-10-14)','Target':'NEW: Target (architect 2026-10-14)',
@@ -59,15 +60,16 @@ def main(root,out):
             n=TP.convert(p,p,TEXT_NOTICES[enum])
             note=(note+'; ' if note else '')+f'TEXT TO OUTLINES: {n} text elements (Liberation Sans Bold) replaced by glyph outlines from fonts/LiberationSans-Bold.ttf'
         else: assert treat=='-',treat
+        shift=BS.write(p)   # the body-centering attribute, last (body_shift.py)
         ok=(r['max_rgb_diff']<=1.5 and r['max_alpha_diff']<=3) or 0<=r['d_shipped_png']<=3.0
         bad+=not ok
-        rows.append((enum,name,sheet,slot,sha(f'{root}/src/fullcolor/{sheet}'),note))
+        rows.append((enum,name,sheet,slot,sha(f'{root}/src/fullcolor/{sheet}'),shift,note))
         ns=len(shadows[enum])+len(r['shadow_copies'])
-        print(f'{enum:24s} {name:28s} {"ok" if ok else "CHECK"}  shadows -{ns:<2d} removed -{len(gone)}  crop rgb {r["max_rgb_diff"]:5.1f} alpha {r["max_alpha_diff"]:5.1f}  shipped png d {r["d_shipped_png"]:5.1f}')
+        print(f'{enum:24s} {name:28s} {"ok" if ok else "CHECK"}  shift {shift[0]:5.1f} {shift[1]:5.1f}  shadows -{ns:<2d} removed -{len(gone)}  crop rgb {r["max_rgb_diff"]:5.1f} alpha {r["max_alpha_diff"]:5.1f}  shipped png d {r["d_shipped_png"]:5.1f}')
     with open(f'{out}/README_table.md','w') as f:
-        f.write('| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | note |\n|---|---|---|---|---|---|\n')
-        for enum,name,sheet,sl,hs,note in rows:
-            f.write(f'| {enum} | `{name}` | `{sheet}` | {", ".join("%g"%v for v in sl)} | `{hs}` | {note} |\n')
+        f.write('| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | `data-body-shift` | note |\n|---|---|---|---|---|---|---|\n')
+        for enum,name,sheet,sl,hs,sh,note in rows:
+            f.write(f'| {enum} | `{name}` | `{sheet}` | {", ".join("%g"%v for v in sl)} | `{hs}` | {sh[0]:.1f} {sh[1]:.1f} | {note} |\n')
     for t in TEXTS: shutil.copyfile(f'{root}/{t}',f'{out}/{t}-adwaita-icon-theme-3.22.0')
     shutil.rmtree(tmp); print(f'{len(rows)} files, {bad} to check')
 if __name__=='__main__':

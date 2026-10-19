@@ -27,8 +27,11 @@ composing with any treatment; one row today: ValueDrag's arrow group `g7348`, th
 (`prune_shadows`: each id must exist; every `<use>` of a removed element goes with it; a reference left to a removed
 element fails the build) before pruning the defs; `text_to_paths.py` turns the clock's digits
 (the `text-to-outlines` row) into Liberation Sans Bold outlines from `fonts/LiberationSans-Bold.ttf`;
-`build_set.py` drives both, writes the clock's dated notice, copies the
-licence texts and writes `README_table.md`, which the folder's README carries as its table. Each seat prints the shadow and other elements removed and the
+`body_shift.py` measures each written SVG's body-centering shift as the 2026-10-12 table did (rsvg-convert at 240
+px, the alpha >= 0.1 bounds, rounded to 0.1 unit) and inserts it on the root tag as `data-body-shift="dx dy"`, nothing
+else in the file touched — the product reads it instead of rendering at launch (architect 2026-10-19; resvg ignores
+it); `build_set.py` drives all three, writes the clock's dated notice, copies the
+licence texts and writes `README_table.md` (the shift its own column), which the folder's README carries as its table. Each seat prints the shadow and other elements removed and the
 check of its faithful drawing (nothing removed, written to the scratch folder alone) against the sheet cropped to the
 slot and against the theme's shipped 48 PNG. Every SVG of the output is byte-identical to the folder's file of the
 same name; compare with `cmp` — the folder's PNGs and links are not
