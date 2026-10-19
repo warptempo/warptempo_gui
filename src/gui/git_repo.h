@@ -185,9 +185,11 @@ enum class GuiGitFetch {
 // alone, whose forced checkout rewrites whatever the partial write left
 // (the checkout is not a cross-file transaction and is not made one,
 // architect 2026-09-28);
-// `IndexFailed` — the working tree written, the index NOT (step 2: libgit2
-// writes the index through a lock file, so a failed write leaves the old one
-// whole); `BranchFailed` — the working tree and the index written, the branch
+// `IndexFailed` — the working tree written, the whole-tree index replacement
+// (step 2) NOT completed: libgit2 writes the index through a lock file, so
+// the index is whole, but a successful step 1 already wrote the index for
+// the paths it checked out (checkout.c), so it may carry those updates
+// (2026-10-19); `BranchFailed` — the working tree and the index written, the branch
 // ref not moved (step 3).
 enum class GuiGitFastForward { Done, NotStarted, FilesFailed, IndexFailed,
                                BranchFailed };

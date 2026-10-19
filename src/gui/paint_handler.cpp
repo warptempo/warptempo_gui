@@ -6544,7 +6544,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // explicit act, so its Enter confirms it.
     // The load's one prompt body carries both `'` subjects (the player's entry
     // and the `h` view's walk member), so the two roads answer Enter alike,
-    // and the revert and the two pastes answer it as they do; the two
+    // and the revert and the phase reset paste answer it as they do; the two
     // three-way Save / Discard / Cancel prompts, which confirm no act already
     // asked for, the render player's Delete and the pull's confirmation
     // (PromptInitialFocus owns why) are what keep the last button. This is the

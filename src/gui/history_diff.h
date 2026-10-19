@@ -1462,15 +1462,17 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
 //   Unreadable    — a read failed before anything was written.
 //   FilesFailed   — the working tree was partly written; the index and the
 //                   branch did not move.
-//   IndexFailed   — the files are the upstream's; the index and the branch
-//                   did not move.
+//   IndexFailed   — the files are the upstream's; the whole-tree index
+//                   replacement did not complete (the checkout's own index
+//                   updates for its paths may already be written) and the
+//                   branch did not move.
 //   BranchFailed  — the files and the index are the upstream's; the branch
 //                   did not move.
 //   WouldNotLoad  — A RELOAD ONLY: the upstream's sidecar set for the open
 //                   piece fails the strict dry run the reopen would run
 //                   (`reopen_gate`); nothing was written.
 // Every arm but Pulled prints one stderr line; FilesFailed adds its recovery
-// on two more.
+// on one more.
 enum class GuiHistoryPullOutcome {
     Pulled,
     Moved,

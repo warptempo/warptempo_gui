@@ -3125,7 +3125,9 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
     // stderr; the same recovery applies). INDEX FAILED and BRANCH FAILED
     // left the files the upstream's, and what is left
     // is to bring the index and the branch along WITHOUT touching the working
-    // tree. With the index unwritten that is a MIXED reset — HEAD and the
+    // tree. With the whole-tree index replacement incomplete (the checkout's
+    // own index updates for its paths may already be persisted, so the index
+    // is neither the old one nor the upstream's) that is a MIXED reset — HEAD and the
     // index to the upstream, the files kept — since a soft reset would move
     // HEAD over the old index and show the pull as staged changes; with only
     // the branch unwritten, the index is already the upstream's tree and a
@@ -3142,8 +3144,10 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
     case GuiGitFastForward::IndexFailed:
         std::fprintf(stderr,
                      "warptempo_gui: Pull failed: the files were updated but "
-                     "the index and '%s' did not move; 'git reset %s' in the "
-                     "terminal finishes it, keeping the files (%s)\n",
+                     "the whole index was not replaced (the checkout may "
+                     "have updated part of it) and '%s' did not move; "
+                     "'git reset %s' in the terminal finishes it, keeping "
+                     "the files (%s)\n",
                      branch.c_str(), short_sha(to_sha).c_str(), diag.c_str());
         return GuiHistoryPullOutcome::IndexFailed;
     case GuiGitFastForward::BranchFailed:

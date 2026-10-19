@@ -4529,15 +4529,15 @@ enum class DialogTrigger {
 //                 subjects (the player's render entry and the `h` view's walk
 //                 member), since 2026-09-13 File → Revert's (architect:
 //                 "revert should be just the same as load … both should use
-//                 the same default, OK") and, since 2026-09-16, THE TWO
-//                 PROPAGATE PASTE CONFIRMATIONS (architect: "align — paste
+//                 the same default, OK") and, since 2026-09-16, THE
+//                 PHASE RESET PASTE CONFIRMATION (architect: "align — paste
 //                 should open on the equivalent of OK"). Each
 //                 prompt is already the deliberate second step of an explicit
 //                 act — the `'` press, the Revert row or its chord, the paste
 //                 chord or its Edit row — so the question itself is the safeguard and
 //                 its Enter confirms the act just asked for; the `'` roads
 //                 answer Enter the same way rather than opposite ways, and
-//                 the revert and the pastes answer it as they do.
+//                 the revert and the phase reset paste answer it as they do.
 enum class PromptInitialFocus { LastButton, FirstButton };
 
 // ONE ANSWER OF A PROMPT: `key` the char activate_response forks on (a
