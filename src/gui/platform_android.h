@@ -53,9 +53,9 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // exit_requested, redeliver_geometry) landed on both because gui_main's loop
 // is the one portable body driving either (the loop contract, platform.h). IT
 // LAST SHRANK ON 2026-10-08 (the theme files' member, below) and LAST GREW ON
-// 2026-10-06, twice: by bundled_icon_files (the icon set's SVG
-// files and its one PNG the build ships, read in place at launch: the repository's
-// assets/icons/<set>/ on the laptop, the APK's assets here — icons.h's
+// 2026-10-06, twice: by bundled_icon_files (the icons' SVG and PNG
+// files the build ships, read in place at launch: the repository's
+// assets/icons/ on the laptop, the APK's assets here — icons.h's
 // load_set) and by display_width_px (the display's horizontal
 // resolution, the working column's held width — working_column_frames,
 // app_state.h: the output's current mode on the laptop, the surface here),
@@ -155,14 +155,14 @@ public:
     static DeviceConfig device_config_defaults();
 
     // THE BUNDLED ICON SET'S FILES, the seam's own member (contract at
-    // platform_wayland.h): this backend answers the APK's `icons/<set>/`
-    // assets — the repository's `assets/icons/<set>/*.svg` and `*.png`, which
-    // build_apk.sh's asset step packs — listed and read through the
+    // platform_wayland.h): this backend answers the APK's `icons/` assets —
+    // the repository's `assets/icons/*.svg` and `*.png`, links dereferenced,
+    // which build_apk.sh's asset step packs — listed and read through the
     // activity's AAssetManager, reached off the backend's one file-scope
     // pointer (g_android_app), which android_main parks before gui_main asks,
     // the road device_config_defaults takes.
     static std::expected<std::map<std::string, std::string>, std::string>
-        bundled_icon_files(std::string_view set);
+        bundled_icon_files();
 
     // THE WINDOW TITLE HAS NO SURFACE ON ANDROID: the activity is fullscreen
     // and landscape-only with no system titlebar, so this setter stores

@@ -171,7 +171,7 @@ inline constexpr double kRowGapPx = 1.0;
 // button box until 2026-10-02, then the 22-px toolbar case for that day's
 // first hours), the panel's row gap, Windows' small 16-px icon (kRowIconPx
 // below). A folder row wears
-// icons::Icon::Folder and a wav row icons::Icon::AudioXWav. (The glyph-less
+// icons::Icon::FolderRow and a wav row icons::Icon::WavRow. (The glyph-less
 // TEXT kind went with the AV Sync Stats panel on 2026-09-30, and the UP kind,
 // which wore the folder glyph because it named a folder, with the player's
 // move inside `tmp/` on 2026-09-01.) The accessor keeps the name it had while

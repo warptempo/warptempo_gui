@@ -8,7 +8,7 @@
 // vocabulary's card seat, notification_stack_bound), newest on
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans, a class glyph at the left naming the class
-// (icons::Icon::DialogInformation / DialogError), and ONE PAD around both
+// (icons::Icon::CardNormal / CardCritical), and ONE PAD around both
 // (notification_pad_px below — the card's chrome reads one number on all
 // five of its distances, the text's right air adding the glyph's own inset
 // so it matches the air the eye sees left of the text, 2026-10-01), ON THE

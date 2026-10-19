@@ -3568,15 +3568,13 @@ int gui_main(const char* argument) {
         }
         device_config = *cfg;
     }
-    // THE ICON SET IS LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
-    // load_set): the live set read in place from the bundle and every
-    // drawing parsed before the window exists, so no paint meets a
-    // half-loaded set. A file that is not well-formed SVG (or, at the one
-    // raster seat, not a square PNG) is a build defect, the validation
-    // doctrine's class (1): the same road, one line naming the set, the file
-    // and the error, and no window.
-    if (const std::optional<std::string> err =
-            icons::load_set(icons::gui_live_icon_set())) {
+    // THE ICONS ARE LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
+    // load_set): assets/icons/ read in place from the bundle and every
+    // drawing parsed and measured before the window exists, so no paint
+    // meets a half-loaded set. A file that is not well-formed SVG or not a
+    // PNG is a build defect, the validation doctrine's class (1): the same
+    // road, one line naming the file and the error, and no window.
+    if (const std::optional<std::string> err = icons::load_set()) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
     }

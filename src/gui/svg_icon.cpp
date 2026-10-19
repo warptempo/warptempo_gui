@@ -30,7 +30,7 @@ void rgba_bytes_to_argb_words(unsigned char* data, int n) {
     }
 }
 
-// Standard base64 (RFC 4648, padded), for the raster seat's data URL.
+// Standard base64 (RFC 4648, padded), for a PNG's data URL.
 std::string base64(std::string_view in) {
     static constexpr char kAlphabet[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -120,7 +120,7 @@ AxisTaps axis_taps(int side, double k, double shift_src) {
     return t;
 }
 
-// THE RASTER SEAT'S SCALE (svg_icon.h's rasterise): the decoded N x N
+// A PNG'S SCALE (svg_icon.h's rasterise): the decoded N x N
 // premultiplied surface resampled into a new (px + margin_px)² ARGB32
 // surface, the drawing filling the px cell. Two passes in double —
 // horizontal into an N-row intermediate, then vertical — in a fixed
@@ -228,14 +228,16 @@ std::expected<Document, std::string> parse_png(std::string_view bytes) {
     // built without its PNG reader on purpose (android/deps/50_cairo.sh,
     // -Dpng=disabled), resvg is built with its raster-images feature on both
     // devices from the one pin (85_resvg.sh, CMakeLists.txt) and so decodes
-    // PNG, and no new library is wanted for one file (stb_image and lodepng
-    // not taken). The PNG's bytes are wrapped once in a minimal SVG — one
-    // <image> of the file's own W x H as a base64 data URL — and rendered ONCE
-    // at W x H with the identity transform: optimizeSpeed is nearest, and at
-    // identity every sample lands on a pixel centre, so the render IS the
-    // decoded image, premultiplied RGBA. resvg's own <image> resampling never
-    // scales the seat (at a 34x reduction it aliases like nearest neighbour):
-    // the scale is resample_raster's area filter.
+    // PNG, and no new library was wanted for it (stb_image and lodepng not
+    // taken). The PNG's bytes are wrapped once in a minimal SVG — one <image>
+    // of the file's own W x H as a base64 data URL, at the top-left of an
+    // N x N frame, N the longer side — and rendered ONCE at N x N with the
+    // identity transform: optimizeSpeed is nearest, and at identity every
+    // sample lands on a pixel centre, so the render IS the decoded image,
+    // premultiplied RGBA, transparent past a non-square image's short side.
+    // resvg's own <image> resampling never scales a PNG (at a 34x reduction it
+    // aliased like nearest neighbour): the scale is resample_raster's area
+    // filter.
     static constexpr char kSignature[] = "\x89PNG\r\n\x1a\n";
     if (bytes.size() < 24 ||
         bytes.substr(0, 8) != std::string_view(kSignature, 8) ||
@@ -243,26 +245,25 @@ std::expected<Document, std::string> parse_png(std::string_view bytes) {
         return std::unexpected(std::string("not a PNG"));
     const uint32_t w = be32(bytes, 16);
     const uint32_t h = be32(bytes, 20);
-    if (w != h || w == 0)
-        return std::unexpected("not a square PNG (" + std::to_string(w) +
-                               " x " + std::to_string(h) + ")");
-    const std::string side = std::to_string(w);
+    const uint32_t frame = std::max(w, h);
+    const std::string side = std::to_string(frame);
     const std::string svg =
         "<svg xmlns=\"http://www.w3.org/2000/svg\" "
         "xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"" + side +
-        "\" height=\"" + side + "\"><image width=\"" + side +
-        "\" height=\"" + side + "\" image-rendering=\"optimizeSpeed\" "
+        "\" height=\"" + side + "\"><image width=\"" + std::to_string(w) +
+        "\" height=\"" + std::to_string(h) +
+        "\" image-rendering=\"optimizeSpeed\" "
         "xlink:href=\"data:image/png;base64," + base64(bytes) + "\"/></svg>";
     auto wrapper = parse(svg);
     if (!wrapper) return std::unexpected(wrapper.error());
 
-    const int n = static_cast<int>(w);
+    const int n = static_cast<int>(frame);
     cairo_surface_t* s = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, n, n);
     assert(cairo_image_surface_get_stride(s) == 4 * n);
     cairo_surface_flush(s);
     unsigned char* data = cairo_image_surface_get_data(s);
     const resvg_transform identity{1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
-    resvg_render(wrapper->tree.get(), identity, w, w,
+    resvg_render(wrapper->tree.get(), identity, frame, frame,
                  reinterpret_cast<char*>(data));
     rgba_bytes_to_argb_words(data, n * n);
     cairo_surface_mark_dirty(s);
@@ -275,6 +276,42 @@ double unit_px(const Document& doc, int px) {
     const resvg_size size = resvg_get_image_size(doc.tree.get());
     return std::min(px / static_cast<double>(size.width),
                     px / static_cast<double>(size.height));
+}
+
+std::pair<float, float> body_center_shift(const Document& doc) {
+    // The measured surface and its user unit in px: a PNG's own decode (N
+    // px, N / 48 a unit), else the SVG's unshifted render at 240 px.
+    constexpr int kMeasurePx = 240;
+    cairo_surface_t* s = doc.raster ? doc.raster.get()
+                                    : rasterise(doc, kMeasurePx);
+    cairo_surface_flush(s);
+    const int w = cairo_image_surface_get_width(s);
+    const int h = cairo_image_surface_get_height(s);
+    const unsigned char* data = cairo_image_surface_get_data(s);
+    const int stride = cairo_image_surface_get_stride(s);
+    // THE BODY: alpha >= 0.1, i.e. >= 26 of 255 (0.1 · 255 = 25.5).
+    int x0 = w, x1 = -1, y0 = h, y1 = -1;
+    for (int y = 0; y < h; ++y) {
+        const auto* row = reinterpret_cast<const uint32_t*>(data + y * stride);
+        for (int x = 0; x < w; ++x) {
+            if (((row[x] >> 24) & 0xFF) < 26) continue;
+            x0 = std::min(x0, x);
+            x1 = std::max(x1, x);
+            y0 = std::min(y0, y);
+            y1 = std::max(y1, y);
+        }
+    }
+    const double unit = doc.raster ? w / 48.0 : unit_px(doc, kMeasurePx);
+    if (!doc.raster) cairo_surface_destroy(s);
+    if (x1 < 0) return {0.0f, 0.0f};
+    // The bbox's center (its pixel edges x0 and x1 + 1) to the frame's, in
+    // user units, rounded to the tenth.
+    const auto tenth = [](double v) {
+        return static_cast<float>(std::nearbyint(v * 10.0) / 10.0);
+    };
+    const double dx = (w / 2.0 - (x0 + x1 + 1) / 2.0) / unit;
+    const double dy = (h / 2.0 - (y0 + y1 + 1) / 2.0) / unit;
+    return {tenth(dx) + 0.0f, tenth(dy) + 0.0f};
 }
 
 cairo_surface_t* rasterise(const Document& doc, int px, double shift_x,

@@ -693,13 +693,14 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # paint road (canvas_sink.h's kGuiCanvasDrawList).
     target_compile_definitions(warptempo_gui PRIVATE
         WARPTEMPO_CANVAS_GL=${WARPTEMPO_CANVAS_GL})
-    # THE BUNDLED ICON SET'S SOURCE ON THE LAPTOP (architect 2026-10-06,
-    # icons.h's load_svg_set): the repository's own assets/icons/, its
-    # absolute path compiled in, since the laptop runs the executable from its
-    # build tree beside this source tree, each set a folder read in place
-    # (GuiPlatform::bundled_icon_files, platform_wayland.cpp). The APK packs
-    # the same files as assets instead (android/app/build_apk.sh), so the
-    # Android branch defines nothing.
+    # THE BUNDLED ICONS' SOURCE ON THE LAPTOP (architect 2026-10-06,
+    # icons.h's load_set): the repository's own assets/icons/, one flat
+    # folder since 2026-10-19, its absolute path compiled in, since the
+    # laptop runs the executable from its build tree beside this source tree,
+    # read in place at every launch (GuiPlatform::bundled_icon_files,
+    # platform_wayland.cpp) — so a dropped icon needs no rebuild here at all.
+    # The APK packs the same files as assets instead (android/app/build_apk.sh),
+    # so the Android branch defines nothing.
     target_compile_definitions(warptempo_gui PRIVATE
         WARPTEMPO_BUNDLED_ICONS_DIR="${CMAKE_SOURCE_DIR}/assets/icons")
     target_link_libraries(warptempo_gui PRIVATE

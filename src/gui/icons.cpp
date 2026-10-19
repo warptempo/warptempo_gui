@@ -7,6 +7,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <future>
 #include <map>
 #include <memory>
 #include <utility>
@@ -16,8 +17,9 @@ namespace {
 
 // -- The loaded set and its rasters -------------------------------------------
 //
-// THE SET: per glyph, in enum order, its one parse, loaded once by
-// load_set before the window exists and never changed after.
+// THE SET: per glyph, in enum order, its one parse and its body shift
+// (measured at the parse), loaded once by load_set before the window exists
+// and never changed after.
 //
 // THE CACHE: per (glyph, device px) the LIVE raster and, the first time a
 // disabled face asks, its DISABLED copy, Cool Edit's emboss of the live mask
@@ -38,7 +40,7 @@ struct Faces {
 
 struct LoadedSet {
     std::array<svg_icon::Document, kIconCount> docs;
-    std::array<std::pair<float, float>, kIconCount> shifts{};   // kIconShifts
+    std::array<std::pair<float, float>, kIconCount> shifts{};   // measured
     std::map<std::pair<int, int>, Faces>      rasters;
 };
 
@@ -78,34 +80,44 @@ void paint_raster(cairo_t* cr, cairo_surface_t* s, double x, double y) {
 
 } // namespace
 
-std::optional<std::string> load_set(std::string_view set) {
-    const std::string label = "icon set '" + std::string(set) + "': ";
-    auto bundle = GuiPlatform::bundled_icon_files(set);
+std::optional<std::string> load_set() {
+    const std::string label = "icons: ";
+    auto bundle = GuiPlatform::bundled_icon_files();
     if (!bundle) return label + bundle.error();
     LoadedSet loaded;
     for (int i = 0; i < kIconCount; ++i) {
-        // THE FILE NAME SAYS THE KIND (icons.h's kIconNames): `<name>.svg`,
-        // or `<name>.png` for the raster seat, exactly one of the two.
-        const std::string svg = std::string(kIconNames[i]) + ".svg";
+        // THE PNG WINS (icons.h's load_set, architect 2026-10-19):
+        // `<name>.png` if present, else `<name>.svg`; neither is missing.
         const std::string png = std::string(kIconNames[i]) + ".png";
-        const auto found_svg = bundle->find(svg);
+        const std::string svg = std::string(kIconNames[i]) + ".svg";
         const auto found_png = bundle->find(png);
-        const bool is_png = found_svg == bundle->end();
-        if (is_png && found_png == bundle->end())
+        const auto found_svg = bundle->find(svg);
+        const bool is_png = found_png != bundle->end();
+        if (!is_png && found_svg == bundle->end())
             return label + svg + ": missing";
-        if (!is_png && found_png != bundle->end())
-            return label + svg + " and " + png + ": two files for one glyph";
         const std::string& file = is_png ? png : svg;
         // Every file is parsed here, the error arm's one producer.
         auto doc = is_png ? svg_icon::parse_png(found_png->second)
                           : svg_icon::parse(found_svg->second);
         if (!doc) return label + file + ": " + doc.error();
         loaded.docs[static_cast<size_t>(i)] = std::move(*doc);
-        // The one set's shift table, matched by name (kIconShifts).
-        for (const IconShift& s : kIconShifts)
-            if (std::string_view(s.name) == kIconNames[i])
-                loaded.shifts[static_cast<size_t>(i)] = {s.dx, s.dy};
     }
+    // THE BODY-CENTERING SHIFTS (icons.h's THE GLYPHS BODY-CENTERED), measured
+    // after every parse has passed, ONE THREAD PER DOCUMENT (svg_icon.h's
+    // THREADS: an immutable tree, a render writing only its own surface; a
+    // PNG's measure reads its own decode alone), joined in enum order: ~0.7 s
+    // sequential, ~0.32 s parallel on the laptop (2026-10-19), bounded by the
+    // history clock's ~220 ms.
+    std::array<std::future<std::pair<float, float>>, kIconCount> measures;
+    for (int i = 0; i < kIconCount; ++i)
+        measures[static_cast<size_t>(i)] = std::async(
+            std::launch::async,
+            [&doc = loaded.docs[static_cast<size_t>(i)]] {
+                return svg_icon::body_center_shift(doc);
+            });
+    for (int i = 0; i < kIconCount; ++i)
+        loaded.shifts[static_cast<size_t>(i)] =
+            measures[static_cast<size_t>(i)].get();
     loaded_set() = std::move(loaded);
     return std::nullopt;
 }
@@ -130,7 +142,7 @@ void draw_disabled(cairo_t* cr, Icon icon, double x, double y,
         // conversion keeps (svg_icon.h's convert_to_display). THE LIGHT MASK
         // IS THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down
         // (architect 2026-10-15, "the glyph's own line thickness"), composed
-        // into the render transform beside the glyph's kIconShifts entry and
+        // into the render transform beside the glyph's body shift and
         // rasterised at that offset — exact antialiasing, never a shifted
         // raster, never rounded to a device px (1.25 px at 300 %, 0.58 at
         // 138) — onto a surface widened by the offset's ceiling so nothing it

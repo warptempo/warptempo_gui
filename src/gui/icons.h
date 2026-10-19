@@ -1,56 +1,61 @@
 #pragma once
 
-// THE ICON SET AND ITS ONE ROAD (architect 2026-10-06). An Icon is a GLYPH,
-// one per enumerator below, drawn from THE ONE SET (kIconSet below):
-// ADWAITA 3.22.0 ALONE (architect 2026-10-14), every drawing the
-// adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/ artwork at its 48
-// slot, extracted as a standalone 48-unit file by
+// THE ICONS AND THEIR ONE ROAD (architect 2026-10-06). An Icon is AN ACT'S
+// (OR A FACE'S) GLYPH, one per enumerator below, ONE FILE PER ENUMERATOR in
+// ONE FLAT FOLDER, assets/icons/, each file NAMED BY ITS ENUMERATOR, which is
+// named by the act (architect 2026-10-19; the folder's README the mapping,
+// the provenance and the licences). THE FOLDER IS THE DROP ROAD (architect
+// 2026-10-19: "simply drop a new icon with the right name … the goal is I can
+// build and push after any icon change, without needing to consult"): ANY
+// ENUMERATOR MAY BE A PNG — his own drawings, made with Google's Gemini and
+// cut out by him in GIMP, square with alpha at 256 px — and `<Name>.png`
+// WINS OVER `<Name>.svg`, the Adwaita SVG left beside it as the fallback until
+// he calls the seat settled. NOTHING STANDS BETWEEN THE DROP AND THE BUILD: no
+// generator, no table, no README row and no code change when a PNG replaces an
+// existing act's glyph (load_set below reads whichever file is there, and the
+// body-centering is measured at the launch, THE GLYPHS BODY-CENTERED below).
+// Where no PNG stands, the drawing is ADWAITA 3.22.0's (architect
+// 2026-10-14): the adwaita-icon-theme 3.22.0 tarball's own src/fullcolor/
+// artwork at its 48 slot, extracted as a standalone 48-unit file by
 // tools/icon_set_adwaita_322/, nothing redrawn and nothing from another
-// release — BUT ONE OWN FILE, A RASTER: Warp's baton (Icon::Baton) and its
-// copy the program icon (AppIcon), the architect's GIMP cutout of Gemini
-// Flash's drawing, a 2048 x 2048 PNG shipped plain — HIS RECORDED EXCEPTION
-// TO THE SET'S SCALABLE RULE (2026-10-18: "it's already very high res, so we
-// can ship it plain and have it scaled by the gui scale and the button
-// casing"), that file alone (the volume dial's bitmap knob stays ruled out,
-// docs/engineering/closed_questions.md); two seats CHANGED by the same tool
-// and recorded under the licence in the set's README: History's clock with
-// its digits outlined, and Value Drag's pen with its arrow removed
-// (2026-10-18; TabDetachB, Switch Tab's tab-B glyph by element order, left
-// the set the same day) — EVERY DROP SHADOW REMOVED STRUCTURALLY at the extraction
-// (architect 2026-10-15, "we'll go with none": a drop shadow is the live
-// glyph's raised fiction, and Cool Edit's flat bitmaps never had one — the
-// approved list tools/icon_set_adwaita_322/shadows.tsv); hard-coded (the `icons` device key and the Settings Icons row were
-// removed 2026-10-12, docs/engineering/closed_questions.md). One scalable
-// file per enumerator under assets/icons/<set>/ — the raster seat's a PNG,
-// the file name saying the kind (kIconNames) — (its README the mapping, the
-// provenance and the licences), PARSED AT LAUNCH through resvg, the one renderer of every set
-// (svg_icon.h: the wrapper, the error rule, why a set is checked at its
-// import, and the raster seat's decode and area filter), straight from the bundle — never copied into the config folder
-// (load_set, below) — and rasterised lazily per (glyph, device px) into
-// an ARGB32 surface that a draw copies at an integer device px, no
-// resample. THE INKS ARE THE DRAWINGS' OWN (gradients, strokes and
-// opacities included), never a theme role; a DISABLED glyph is Cool Edit's
-// emboss built from the live raster's mask and the drawing's own one-unit
-// translate (draw_disabled) — no file of its own.
+// release — two seats CHANGED by the same tool and recorded under the licence
+// in the folder's README: History's clock with its digits outlined, and Value
+// Drag's pen with its arrow removed (2026-10-18) — EVERY DROP SHADOW REMOVED
+// STRUCTURALLY at the extraction (architect 2026-10-15, "we'll go with none":
+// a drop shadow is the live glyph's raised fiction, and Cool Edit's flat
+// bitmaps never had one — the approved list
+// tools/icon_set_adwaita_322/shadows.tsv). Hard-coded (the `icons` device key
+// and the Settings Icons row were removed 2026-10-12,
+// docs/engineering/closed_questions.md). PARSED AT LAUNCH, an SVG through
+// resvg and a PNG decoded once by resvg and scaled by an area filter
+// (svg_icon.h: the wrapper, the error rule, why an SVG is checked at its
+// import, and the PNG's decode and filter), straight from the bundle — never
+// copied into the config folder (load_set, below) — and rasterised lazily per
+// (glyph, device px) into an ARGB32 surface that a draw copies at an integer
+// device px, no resample. THE INKS ARE THE DRAWINGS' OWN (gradients, strokes
+// and opacities included), never a theme role; a DISABLED glyph is Cool
+// Edit's emboss built from the live raster's mask and the drawing's own
+// one-unit translate (draw_disabled) — no file of its own.
 //
 // AT EVERY SCALE the glyph is drawn at gui_scale like every chrome length
 // (100 % is a curiosity, architect 2026-10-06): in the program's case the
-// drawing's square cell (every file a 48-unit root, the sheet's slot nested
-// in it as its own viewport; the raster's N px read as the same 48 units) fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20),
-// Cool Edit's own seat since 2026-10-09 ~10:25, program_spec.h's head — 60
-// device px at 300 %, 72 at 360); elsewhere its site's own scaled 16 (the
-// caption's icon, the list rows, the cards — Windows' small icon). The
-// window-frame glyphs
-// Windows drew in the button text — the caption's — are not drawings of the
-// set (paint_handler.cpp's caption glyph block).
+// drawing's square cell (every SVG a 48-unit root, the sheet's slot nested in
+// it as its own viewport; a PNG's longer side read as the same 48 units)
+// fills the case's glyph seat (icon_glyph_px, render.h: scaled_px(20), Cool
+// Edit's own seat since 2026-10-09 ~10:25, program_spec.h's head — 60 device
+// px at 300 %, 72 at 360); elsewhere its site's own scaled 16 (the caption's
+// icon, the list rows, the cards — Windows' small icon). The window-frame
+// glyphs Windows drew in the button text — the caption's — are not drawings
+// of the set (paint_handler.cpp's caption glyph block).
 //
 // THE PLACEMENT IS FIXED: in the program's case the cell sits at the case's
 // highlight line from its corner (icon_case_lead_px, render.h — Cool Edit's
 // (+1, +1), its 20-px bitmap's seat in its 23-W case, the product's 20-W
 // seat in the same 23, architect 2026-10-09), filling the seat
-// (icon_glyph_px), plus the pressed/checked shift (draw_cased below).
-// Nothing is centred on its ink: Windows never did (12 of the 15 STD strip
-// cells with odd ink dimensions sit at the fixed offset). The sites with no
+// (icon_glyph_px), plus the pressed/checked shift (draw_cased below). The
+// CELL is never moved for its ink (Windows never did: 12 of the 15 STD strip
+// cells with odd ink dimensions sit at the fixed offset); the DRAWING inside
+// it is body-centered (THE GLYPHS BODY-CENTERED, below). The sites with no
 // case — the list rows, the cards, the caption's icon, the player's row —
 // keep their own placements and draw the same cell.
 //
@@ -73,139 +78,170 @@
 
 namespace icons {
 
-// The glyphs, one per file of the set (assets/icons/<set>/, each file named
-// by its enumerator — kIconNames below). The enumerator names are the set's
-// file names and nothing more; each comment names the ACT the glyph serves,
-// and the set's README names the drawing it wears. An Icon is a GLYPH, not a
-// button, so several buttons may wear one, and the glyph a stateful button
-// wears in each state is redesign_button_icon's (paint_handler.cpp). THE SET
-// MAY WEAR ONE DRAWING FOR SEVERAL GLYPHS, the files byte-identical (each
-// set's README lists its repeats).
+// The glyphs, one per file of assets/icons/ (each file named by its
+// enumerator — kIconNames below). AN ICON IS AN ACT'S (OR A FACE'S) GLYPH,
+// ONE FILE PER ENUMERATOR, the enumerator the act's tooltip name in
+// PascalCase ("Toggle" dropped, the lamp carrying it; a stateful button's
+// faces suffixed — ReadOnlyUnlocked / ReadOnlyLocked; a face a site shows
+// that is no roster act named for its site — FolderRow, WavRow, CardNormal,
+// CardCritical, AppIcon) (architect 2026-10-19: "since the actions are
+// essentially complete, we should use the action name"); each comment names
+// the act and, where an Adwaita drawing stands, the drawing it wears (the
+// folder's README the table). A DRAWING WORN BY SEVERAL ACTS IS ONE FILE AND
+// SYMLINKS (kIconNames' comment); the glyph a stateful button wears in each
+// state is redesign_button_icon's (paint_handler.cpp).
 enum class Icon {
     // THE ICON ROW'S FIRST GROUP.
-    DocumentOpen,        // Open Project (and its shift twin, Revert) — the
+    OpenProject,         // Open Project (and its shift twin, Revert) — the
                          // set's document-open (architect 2026-10-07)
-    DocumentSave,        // Save — the set's document-save (architect
+    Save,                // Save — the set's document-save (architect
                          // 2026-10-14: the floppy retired)
-    EditUndo,            // Undo
-    EditRedo,            // Redo
-    MediaRecord,         // Render (and the iteration sweep: the tooltip
-                         // alone forks)
-    VcsCommit,           // Save's face in the history view and while the
-                         // checkpoint publishes
-    VcsPull,             // Save's face in the history view while GitHub is
-                         // ahead
+    Undo,                // Undo — the set's edit-undo
+    Redo,                // Redo — the set's edit-redo
+    Render,              // Render (and the iteration sweep: the tooltip
+                         // alone forks) — the set's media-record
+    SaveCommit,          // Save's face in the history view and while the
+                         // checkpoint publishes — the set's go-top
+    SavePull,            // Save's face in the history view while GitHub is
+                         // ahead — the set's go-bottom
     // THE VIEW PAIRS (architect 2026-10-14): the Source / Target pair (bare
     // 1 / 2) and the Warp / Phase-reset pair (bare 3 / 4), one glyph each.
-    AccessoriesDictionary, // Source — the primary source
-    InputTablet,         // Target — the authoring surface
-    Baton,               // Warp — the conductor's baton: the architect's
+    Source,              // Source — the set's accessories-dictionary, the
+                         // primary source
+    Target,              // Target — the set's input-tablet, the authoring
+                         // surface
+    Warp,                // Warp — the conductor's baton: the architect's
                          // GIMP cutout of Gemini Flash's drawing
                          // (2026-10-18; since ~14:15 Flash's redo at the
                          // set's outline weight, his pick B1 — the
                          // morning's outline-less cutout read thin beside
-                         // the outlined glyphs), a RASTER own file of the set
-                         // (Baton.png, 2048 x 2048), THE ONE EXCEPTION TO
-                         // THE SCALABLE RULE (the head; "the argon one is
-                         // too cartoony", the SVG batons not taken); the
-                         // set's README its provenance
-    CameraPhoto,         // Phase Reset — the set's camera-photo, the phase
+                         // the outlined glyphs), a PNG of the drop road
+                         // (Warp.png, 256 x 256 since 2026-10-19; "the argon
+                         // one is too cartoony", the SVG batons not taken);
+                         // the folder's README its provenance
+    PhaseReset,          // Phase Reset — the set's camera-photo, the phase
                          // snapshot: a reset re-grounds the synthesis phase
                          // to the source's at one frame and it decoheres
                          // from there (architect 2026-10-15)
     // THE VIEWPORT CONTROLS: Full Zoom Out, Center, the magnification
     // lamp (zoom.svg's three magnifiers retired 2026-10-16, "low contrast").
-    ViewRestore,         // Full Zoom Out (bare `0`) — the set's
+    FullZoomOut,         // Full Zoom Out (bare `0`) — the set's
                          // view-restore, the view shrunk back whole
                          // (architect 2026-10-16)
-    EditFind,            // Center on Focus (bare `c`) — the set's
+    Center,              // Center on Focus (bare `c`) — the set's
                          // edit-find, the magnifier that finds the playhead
                          // (architect 2026-10-16)
-    AudioVolumeHigh,     // Toggle Waveform Magnification — the set's
+    WaveformMagnification, // Toggle Waveform Magnification — the set's
                          // audio-volume-high, the loud speaker for the
                          // louder waveform (architect 2026-10-16; zoom.svg's
                          // three magnifiers retired, "low contrast")
     // THE SINGLE-MARKER VERBS.
-    ListAdd,             // Drop Marker (bare `s`)
-    ListRemove,          // Delete Markers (`Delete`)
-    ViewHidden,          // Toggle Disabled (`Ctrl+D`)
-    InsertLink,          // Toggle Inherit (`Ctrl+N`)
-    Merge,               // Flatten (`Ctrl+F`) — the set's edit-clear-all,
+    DropMarker,          // Drop Marker (bare `s`) — the set's list-add
+    DeleteMarkers,       // Delete Markers (`Delete`) — the set's list-remove
+    Disabled,            // Toggle Disabled (`Ctrl+D`) — the set's
+                         // audio-volume-muted
+    Inherit,             // Toggle Inherit (`Ctrl+N`) — the set's insert-link
+    Flatten,             // Flatten (`Ctrl+F`) — the set's edit-clear-all,
                          // the broom (architect 2026-10-14)
-    BlackSum,            // Toggle Cumulative (`u`)
-    GoJump,              // Toggle Follow (`f`)
-    MusicNote16th,       // BPM Iterations (Ctrl+B)
-    Mathmode,            // Toggle Grid Iterations (bare `i`)
-    PreviewRenderOn,     // Play Renders
-    DialogOkApply,       // Load in Place (the icon row and the render
+    Cumulative,          // Toggle Cumulative (`u`) — the set's
+                         // accessories-calculator
+    Follow,              // Toggle Follow (`f`) — the set's start-here
+    BpmIterations,       // BPM Iterations (Ctrl+B) — the set's
+                         // audio-x-generic, WavRow's drawing (a symlink)
+    GridIterations,      // Toggle Grid Iterations (bare `i`) — the set's
+                         // x-office-spreadsheet
+    PlayRenders,         // Play Renders — the set's applications-multimedia
+    LoadInPlace,         // Load in Place (the icon row and the render
                          // player's row): the walked version loaded into
                          // the editor in place. The set's edit-paste
                          // (architect 2026-10-14).
-    DocumentOpenRecent,  // Toggle History View (`h`) — the set's
+    HistoryView,         // Toggle History View (`h`) — the set's
                          // document-open-recent, the clock turned back (its
                          // digits Liberation Sans Bold outlines), history's
                          // again since 2026-10-18 (architect: "go back to
                          // using the original git clock icon"; the calendar
                          // 2026-10-17 late evening to 2026-10-18); a changed
                          // file of the set, its README
-    NetworkWiredDisconnected, // Toggle Session History (bare `g`, lit in
+    SessionHistory,      // Toggle Session History (bare `g`, lit in
                          // Session) — the set's network-wired-disconnected,
                          // the unplugged cable: local means git off (the
                          // architect: "local means shut off git and stay
                          // local, so disconnect internet", 2026-10-15)
-    EditSelect,          // Toggle Add to Selection
-    KeyframePrevious,    // Older checkpoint (`,`)
-    KeyframeNext,        // Newer checkpoint (`.`)
-    GoPrevious,          // Row 8's left arrow (bare Left)
-    GoNext,              // Row 8's right arrow (bare Right)
-    DocumentRevert,      // Revert (bare `v`): back to the viewed
+    AddToSelection,      // Toggle Add to Selection — the set's
+                         // edit-select-all
+    Older,               // Older checkpoint (`,`) — the set's
+                         // media-seek-backward
+    Newer,               // Newer checkpoint (`.`) — the set's
+                         // media-seek-forward
+    Left,                // Row 8's left arrow (bare Left) — the set's
+                         // go-previous
+    Right,               // Row 8's right arrow (bare Right) — the set's
+                         // go-next
+    Revert,              // Revert (bare `v`): back to the viewed
                          // checkpoint. The set's document-revert
                          // (architect 2026-10-07 ~17:00)
     // ROW 8'S TRANSPORT. PLAY AND STOP ARE ONE BUTTON'S TWO FACES
     // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
-    // pause state); the render player's own Play/Pause button wears
-    // MediaPlaybackPause while live.
-    MediaSkipBackward,   // the render player's Previous (row 8 has no skip since 2026-10-12)
-    MediaPlaybackStart,  // Play (the face while stopped)
-    MediaPlaybackStop,   // Stop (the face while an audition runs)
-    MediaPlaybackPause,  // Pause (the render player's row, while live)
-    MediaSkipForward,    // the render player's Next
-    DialogCancel,        // Render's mid-render Cancel face
-    GoDown,              // Row 8's down arrow (bare Down)
-    GoUp,                // Row 8's up arrow (bare Up)
+    // pause state); the render player's own Play/Pause button wears Pause
+    // while live.
+    PlayerPrevious,      // the render player's Previous (row 8 has no skip
+                         // since 2026-10-12) — the set's media-skip-backward
+    Play,                // Play (the face while stopped) — the set's
+                         // media-playback-start
+    Stop,                // Stop (the face while an audition runs) — the
+                         // set's media-playback-stop
+    Pause,               // Pause (the render player's row, while live) —
+                         // the set's media-playback-pause
+    PlayerNext,          // the render player's Next — the set's
+                         // media-skip-forward
+    Cancel,              // Render's mid-render Cancel face — the set's
+                         // process-stop
+    Down,                // Row 8's down arrow (bare Down) — the set's go-down
+    Up,                  // Row 8's up arrow (bare Up) — the set's go-up
     // THE READ-ONLY TOGGLE'S PADLOCK PAIR (architect 2026-10-14): the open
     // padlock while unlocked, the closed one while locked
     // (redesign_button_icon); its lit / sunken face still says locked, as
     // every toggle's does.
-    ChangesAllow,        // Toggle Read-Only while unlocked
-    ChangesPrevent,      // Toggle Read-Only while locked
+    ReadOnlyUnlocked,    // Toggle Read-Only while unlocked — changes-allow
+    ReadOnlyLocked,      // Toggle Read-Only while locked — changes-prevent
     // THE MARKER WALK AND THE TAB SWITCH.
-    BboxPrev,            // Previous Marker (Shift+Tab)
-    BboxNext,            // Next Marker (Tab)
-    TabDetach,           // Switch Tab (Ctrl+Tab) in both tabs (architect
+    PreviousMarker,      // Previous Marker (Shift+Tab) — the set's go-first
+    NextMarker,          // Next Marker (Tab) — the set's go-last
+    SwitchTab,           // Switch Tab (Ctrl+Tab) in both tabs — the set's
+                         // preferences-system-windows (architect
                          // 2026-10-18: "use the original, not the
                          // modified" — the tab strip names the tab; the
-                         // tab-B copy with the other window in front,
-                         // TabDetachB, stood 2026-10-12 to 2026-10-18)
-    SettingsConfigure,   // Settings (bare `;`)
+                         // tab-B copy with the other window in front
+                         // stood 2026-10-12 to 2026-10-18)
+    Settings,            // Settings (bare `;`) — the set's
+                         // preferences-system
     // THE LIST ROWS' TWO GLYPHS (the folder overlay, the project picker).
-    Folder,              // a folder row; Up a Folder (the render player,
-                         // architect 2026-10-10: the plain folder, enough to
-                         // tell it from the Highlight Previous arrow)
-    AudioXWav,           // a wav row
+    FolderRow,           // a folder row — the set's folder
+    WavRow,              // a wav row — the set's audio-x-generic
     // THE RENDER PLAYER'S ROW.
-    MediaRepeatSingle,   // Toggle Repeat One — one glyph in both states,
-                         // the lamp carrying the state
+    RepeatOne,           // Toggle Repeat One — one glyph in both states,
+                         // the lamp carrying the state; the set's
+                         // media-playlist-repeat
+    UpAFolder,           // Up a Folder (the render player) — the folder
+                         // row's drawing, a symlink to FolderRow.svg
+                         // (architect 2026-10-10: the plain folder, enough
+                         // to tell it from the Highlight Previous arrow)
     // THE NOTIFICATION CARDS' CLASS GLYPHS (notifications.h).
-    DialogInformation,   // a NORMAL card's glyph
-    DialogError,         // a CRITICAL card's glyph
-    WindowClose,         // Close (the render player)
-    HelpWhatsthis,       // Toggle Tooltips (bare backslash)
-    GoJumpDeclaration,   // Jump to Defining Marker (Ctrl+J; its shift twin
-                         // Ctrl+Shift+J, Copy Resolved Value, 2026-10-14)
-    AccessoriesTextEditor, // Open Text Editor (bare Enter) — the set's
-                           // accessories-text-editor (architect 2026-10-09)
-    EditDelete,          // Delete Folder (the render player)
+    CardNormal,          // a NORMAL card's glyph — the set's
+                         // dialog-information
+    CardCritical,        // a CRITICAL card's glyph — Cancel's drawing,
+                         // process-stop (a symlink)
+    Close,               // Close (the render player) — the set's
+                         // window-close
+    Tooltips,            // Toggle Tooltips (bare backslash) — the set's
+                         // help-browser
+    JumpToDefiningMarker, // Jump to Defining Marker (Ctrl+J; its shift twin
+                         // Ctrl+Shift+J, Copy Resolved Value, 2026-10-14) —
+                         // the set's go-jump
+    OpenTextEditor,      // Open Text Editor (bare Enter) — the set's
+                         // accessories-text-editor (architect 2026-10-09)
+    DeleteFolder,        // Delete Folder (the render player) — the set's
+                         // user-trash
     ValueDrag,           // Toggle Value Drag (bare `[`) — the pen, the
                          // drag it arms: the set's format-text-direction-rtl
                          // with its arrow and its shadows out, the nib at
@@ -213,96 +249,92 @@ enum class Icon {
                          // "drop the arrows altogether"; the double arrow of
                          // 2026-10-11 retired); a changed file of the set,
                          // its README
-    AppIcon,             // the caption's icon — Warp's baton, Baton.png
-                         // byte for byte, the program icon outside the
-                         // window too (architect 2026-10-18;
-                         // tools/app_icon/)
+    AppIcon,             // the caption's icon — Warp's baton, a symlink to
+                         // Warp.png, the program icon outside the window too
+                         // (a build product of this file since 2026-10-19:
+                         // android/app/build_apk.sh's launcher step, and the
+                         // Linux icon a link to it, docs/INSTALL.md)
 };
 
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 59;
+inline constexpr int kIconCount = 60;
 
-// THE FILE NAMES, the enumerators spelled in enum order: the set's
-// `<name>.svg` — or `<name>.png` for the one raster seat (Baton and its copy
-// AppIcon, the head's exception): THE FILE NAME SAYS THE KIND, exactly one
-// file per enumerator (load_set reads them). A misspelling is a missing file
-// at the next launch, which fails it.
+// THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
+// file in assets/icons/ is `<name>.png` if that file is there, else
+// `<name>.svg` (load_set: THE PNG WINS, architect 2026-10-19). A misspelling
+// is a missing file at the next launch, which fails it. THE REPEATS ARE
+// SYMLINKS (architect 2026-10-19: "repeats should use symlinks"), relative,
+// inside the folder, the canonical file the act that owns the drawing:
+// AppIcon.png -> Warp.png, BpmIterations.svg -> WavRow.svg, CardCritical.svg
+// -> Cancel.svg, UpAFolder.svg -> FolderRow.svg (the folder's README lists
+// them). Both bundle roads dereference a link (the laptop's
+// read_bundle_folder, platform_wayland.cpp; build_apk.sh's copy), so the
+// load reads a link as the file it names; a PNG dropped for a repeated act
+// replaces that act's glyph alone, the link's other wearer keeping the link.
 inline constexpr const char* kIconNames[] = {
-    "DocumentOpen", "DocumentSave", "EditUndo", "EditRedo", "MediaRecord",
-    "VcsCommit",
-    "VcsPull", "AccessoriesDictionary", "InputTablet", "Baton",
-    "CameraPhoto",
-    "ViewRestore", "EditFind", "AudioVolumeHigh", "ListAdd", "ListRemove",
-    "ViewHidden", "InsertLink", "Merge", "BlackSum", "GoJump",
-    "MusicNote16th", "Mathmode", "PreviewRenderOn",
-    "DialogOkApply", "DocumentOpenRecent", "NetworkWiredDisconnected",
-    "EditSelect",
-    "KeyframePrevious", "KeyframeNext", "GoPrevious", "GoNext",
-    "DocumentRevert", "MediaSkipBackward", "MediaPlaybackStart",
-    "MediaPlaybackStop", "MediaPlaybackPause", "MediaSkipForward",
-    "DialogCancel", "GoDown", "GoUp", "ChangesAllow", "ChangesPrevent",
-    "BboxPrev",
-    "BboxNext", "TabDetach", "SettingsConfigure", "Folder", "AudioXWav",
-    "MediaRepeatSingle", "DialogInformation", "DialogError", "WindowClose",
-    "HelpWhatsthis",
-    "GoJumpDeclaration", "AccessoriesTextEditor", "EditDelete", "ValueDrag",
+    "OpenProject", "Save", "Undo", "Redo", "Render", "SaveCommit",
+    "SavePull", "Source", "Target", "Warp", "PhaseReset",
+    "FullZoomOut", "Center", "WaveformMagnification", "DropMarker",
+    "DeleteMarkers", "Disabled", "Inherit", "Flatten", "Cumulative",
+    "Follow", "BpmIterations", "GridIterations", "PlayRenders",
+    "LoadInPlace", "HistoryView", "SessionHistory", "AddToSelection",
+    "Older", "Newer", "Left", "Right", "Revert", "PlayerPrevious", "Play",
+    "Stop", "Pause", "PlayerNext", "Cancel", "Down", "Up",
+    "ReadOnlyUnlocked", "ReadOnlyLocked", "PreviousMarker", "NextMarker",
+    "SwitchTab", "Settings", "FolderRow", "WavRow", "RepeatOne",
+    "UpAFolder", "CardNormal", "CardCritical", "Close", "Tooltips",
+    "JumpToDefiningMarker", "OpenTextEditor", "DeleteFolder", "ValueDrag",
     "AppIcon",
 };
 static_assert(std::size(kIconNames) == kIconCount);
 
-// THE ONE SET, a folder under assets/icons/ (the APK packs it,
-// android/app/build_apk.sh): Adwaita 3.22.0, hard-coded (architect
-// 2026-10-14).
-inline constexpr const char* kIconSet = "adwaita-3.22";
+// THE GLYPHS BODY-CENTERED, MEASURED AT LAUNCH (architect 2026-10-12: every
+// glyph, no exceptions, "the simpler rule is just center all of them";
+// measured at the launch since 2026-10-19, so a dropped PNG needs no step).
+// Each glyph is drawn translated by (dx, dy) in the drawing's own user units
+// (every SVG a 48-unit root, a PNG's 48-unit frame; +x right, +y down),
+// composed into resvg's render transform or the PNG's filter
+// (svg_icon::rasterise) so it scales with the raster, the disabled copy's
+// light half one more unit on the same shift (draw_disabled). THE MEASURE
+// (svg_icon::body_center_shift): the body is the shipped file itself — an
+// Adwaita SVG shadow-less by construction (the head: every drop shadow removed
+// at the extraction, architect 2026-10-15), a PNG as he cut it — its alpha
+// >= 0.1 (>= 26/255) bounds give a bbox, and the shift puts the bbox center
+// at the frame's center, rounded to 0.1 unit. An SVG is measured on resvg's
+// render at 240 px (the product's own renderer; the retired generator's
+// rsvg-convert measure differed by at most a tenth of a unit on seven files,
+// accepted), a PNG on its decoded raster at its native size; a drawing with
+// no pixel at 0.1 takes shift 0. Done ONCE PER FILE, in load_set after its
+// parse, the shift stored beside the parsed document. ITS COST, measured on
+// the laptop (2026-10-19): ~12 ms per SVG on average, the blurs and masks
+// dominating (the history clock ~220 ms, the session cable ~90), a PNG's
+// free — ~0.7 s sequential, ~0.32 s parallel, bounded by the clock's ~220
+// ms: load_set measures the documents ONE THREAD EACH after every parse has
+// passed (svg_icon.h's THREADS).
+// Where a shifted drawing crosses the cell's edge it clips, accepted. The
+// shift is the product's, not the file's: the files stay as the extraction
+// tool or the architect made them.
 
-// THE GLYPHS BODY-CENTERED (architect 2026-10-12: every glyph, no
-// exceptions, "the simpler rule is just center all of them"): each is drawn
-// translated by (dx, dy) in the drawing's own user units (every file a
-// 48-unit root, the raster seat's 48-unit frame; +x right, +y down), composed
-// into resvg's render transform or the raster's filter (svg_icon::rasterise)
-// so it scales with the raster, the disabled copy's light half one more unit
-// on the same shift (draw_disabled). THE BODY-CENTERING TEST: the body is the
-// shipped file itself, shadow-less by construction (the head: every drop
-// shadow removed at the extraction, architect 2026-10-15); its alpha >= 0.1
-// bounds at 240 px give a bbox whose center the shift puts at the canvas
-// centre. The table is GENERATED into icon_shifts.inc by
-// tools/icon_center/gen_icon_shifts.py (never hand-edited), in kIconNames
-// order. Where a shifted drawing crosses the canvas edge it clips, accepted.
-// The shift is the product's, not the file's:
-// the files are the extraction tool's output (three of them changed files and
-// one, the raster, the set's own, the set's README). The generator measures
-// the raster as the mock tool did: PIL's Lanczos to 240 px, the same bounds.
-struct IconShift {
-    const char* name;   // the enumerator's name, kIconNames' spelling
-    float       dx;
-    float       dy;
-};
-inline constexpr IconShift kIconShifts[] = {
-#include "icon_shifts.inc"
-};
-
-// THE SET (architect 2026-10-12): the one bundled set, loaded once at launch
-// (load_set, below).
-inline std::string_view gui_live_icon_set() { return kIconSet; }
-
-// THE SET'S LOAD, once, in gui_main before the window: `set`'s files fetched from the bundle
-// (GuiPlatform::bundled_icon_files — the repository's assets/icons/<set>/ on
-// the laptop, the APK's icons/<set>/ assets on the tablet; READ IN PLACE,
-// never copied into the config folder: nobody authors an icon set on the
-// device),
-// then every enumerator's `<name>.svg` (svg_icon::parse) or `<name>.png`
-// (svg_icon::parse_png, the raster seat) parsed in enum order before any draw
-// (files of other names, the README among them, ignored).
-// THE ERROR ARM'S PRODUCERS: the bundle unreadable (IO), a file missing, an
-// enumerator with both files, a file not well-formed SVG or not a square PNG
-// (a build defect) — "icon set 'adwaita-3.22': EditDelete.svg:
-// not well-formed SVG (resvg error 7)", the first only, which gui_main
+// THE LOAD, once, in gui_main before the window: the folder's files fetched
+// from the bundle (GuiPlatform::bundled_icon_files — the repository's
+// assets/icons/ on the laptop, the APK's icons/ assets on the tablet; READ IN
+// PLACE, never copied into the config folder: nobody authors an icon on the
+// device), then per enumerator in enum order `<name>.png` if present
+// (svg_icon::parse_png), else `<name>.svg` (svg_icon::parse), parsed, and
+// once every parse has passed each document measured on a thread of its own
+// (THE GLYPHS BODY-CENTERED, above: ~0.7 s sequential, ~0.32 s parallel on
+// the laptop, bounded by the history clock's ~220 ms), all before any draw — THE PNG WINS,
+// an SVG of the same name beside it unread (the Adwaita fallback left on
+// purpose, architect 2026-10-19); files of other names (the README, the
+// licence texts) ignored. THE ERROR ARM'S PRODUCERS: the bundle unreadable
+// (IO), neither file there, a file not well-formed SVG or not a PNG (a build
+// defect) — "icons: Warp.png: not a PNG", the first only, which gui_main
 // prints and exits on (the validation doctrine's class (1)). A construct
-// resvg does not draw passes the load: the set's import sheet is that check
+// resvg does not draw passes the load: an SVG's import sheet is that check
 // (svg_icon.h's error rule).
-std::optional<std::string> load_set(std::string_view set);
+std::optional<std::string> load_set();
 
 // THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale)
 // and on a flip of True Colors (GuiInputHandler::toggle_true_colors — the
@@ -327,7 +359,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // 808080 over a F8F8F8 copy one bitmap px right and down
 // (cool_edit_paint.h's kCeDisabledShadow / kCeDisabledLight, the measured
 // bytes and the bitmaps) — two tones, no dark copy. The product builds the
-// same thing mechanically, for every glyph of the set
+// same thing mechanically, for every glyph
 // (svg_icon::embossed_copy), AND ADDS A THIRD TONE OF ITS OWN, not Cool
 // Edit's (architect 2026-10-15 evening): THE INSET RIM, 505050
 // (kCeDisabledInset), on the silhouette's pixels the light copy does not
@@ -339,7 +371,7 @@ void draw(cairo_t* cr, Icon icon, double x, double y, double size_px);
 // light copy THE DRAWING ITSELF TRANSLATED BY ONE ICON UNIT right and down
 // (architect 2026-10-15, "the glyph's own line thickness": one of the file's
 // 48 user units, seat_px / 48 device px — 1.25 at 300 %, 0.58 at 138 —
-// universal), composed into the render transform as kIconShifts is and
+// universal), composed into the render transform as the body shift is and
 // RASTERISED AT THAT OFFSET with exact antialiasing, never a shifted raster
 // and never rounded to a device px; each mask's coverage kept, so
 // antialiased edges stay soft. Built the first time a disabled face asks and

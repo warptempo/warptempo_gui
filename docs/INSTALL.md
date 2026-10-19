@@ -43,12 +43,12 @@ sudo dnf install gcc gcc-c++ cmake pkgconf-pkg-config git fftw-devel \
 rustup-init   # then: rustup default stable
 ```
 
-The tablet side adds adb and the Android build's host tools; its fonts — Liberation Sans and Liberation Sans Bold — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
+The tablet side adds adb and the Android build's host tools, ImageMagick 7 among them (`magick`: the APK build renders the launcher icon from `assets/icons/AppIcon.png` at every build); its fonts — Liberation Sans and Liberation Sans Bold — are the repository's own (`fonts/`), which both the laptop's binary and the APK carry, so no font package is installed. On Arch:
 
 ```bash
-sudo pacman -S --needed android-tools meson ninja zip unzip
+sudo pacman -S --needed android-tools meson ninja zip unzip imagemagick
 rustup target add aarch64-linux-android   # the APK's resvg
-pacman -Q git libgit2 rustup android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip
+pacman -Q git libgit2 rustup android-tools cmake meson ninja fftw cairo harfbuzz wayland-protocols libxkbcommon pipewire-jack zip unzip imagemagick
 # every line shows a version; "was not found" names a package still to install
 rustup target list --installed
 # lists aarch64-linux-android
@@ -66,12 +66,12 @@ cmake --build build -j$(nproc)
 
 Leave `CMAKE_BUILD_TYPE` unset: the flags `-O3 -march=native -ffp-contract=off` are always on, and asserts stay live. A debug build goes in its own folder (`cmake -B build-debug -S . -DCMAKE_BUILD_TYPE=Debug`), never over `build/`. `-march=native` makes the binary fit this CPU alone, so build on the machine that runs it; `-ffp-contract=off` is what keeps a rebuilt binary rendering byte for byte what the last one did. What can still move the bytes, by a least significant bit here and there, is an upgrade of glibc or FFTW underneath: after one, re-render anything you mean to compare against. The CLI is opt-in; on a headless host with none of the GUI's packages, configure with `-DWARPTEMPO_BUILD_GUI=OFF -DWARPTEMPO_BUILD_CLI=ON`.
 
-There is no `make install`. The binary is self-contained; to put it on `$PATH` and register it with the application launcher (the `.desktop` names the project's own icon, `warptempo_gui`, the conductor's baton (the caption's icon and Warp's glyph, the icon set's one raster, a 256-px PNG made from it, under the set's licence), bare on transparency, installed into the hicolor theme beside it; delete the scalable SVG an earlier install put at `~/.local/share/icons/hicolor/scalable/apps/warptempo_gui.svg`, which would shadow the PNG). The `$PATH` entry is a SYMLINK to the build's binary, made once, so every rebuild is already the installed program; never copy the binary over it:
+There is no `make install`. The binary is self-contained; to put it on `$PATH` and register it with the application launcher (the `.desktop` names the project's own icon, `warptempo_gui`: the caption's icon, `assets/icons/AppIcon.png`, the glyph the Warp button wears (the conductor's baton), a 256-px PNG bare on transparency). Both the `$PATH` entry and the icon are SYMLINKS into this repository, made once, so every rebuild is already the installed program and every icon dropped into `assets/icons/` is already the installed icon (it follows each drop; your launcher may cache the old picture until it restarts); never copy the binary or the icon over them. Delete the scalable SVG an earlier install put at `~/.local/share/icons/hicolor/scalable/apps/warptempo_gui.svg`, which would shadow the PNG; the copied PNG an install before 2026-10-19 put at the 256x256 path is replaced by the link below:
 
 ```bash
 mkdir -p ~/.local/bin && ln -sfn "$PWD/build/warptempo_gui" ~/.local/bin/warptempo_gui
 install -Dm644 packaging/warptempo_gui.desktop ~/.local/share/applications/warptempo_gui.desktop
-install -Dm644 packaging/warptempo_gui.png ~/.local/share/icons/hicolor/256x256/apps/warptempo_gui.png
+mkdir -p ~/.local/share/icons/hicolor/256x256/apps && ln -sfn "$PWD/assets/icons/AppIcon.png" ~/.local/share/icons/hicolor/256x256/apps/warptempo_gui.png
 update-desktop-database ~/.local/share/applications
 ```
 
@@ -103,7 +103,7 @@ The per-device config is `$XDG_CONFIG_HOME/warptempo_gui/config` (`~/.config/war
 
 There are no color files: every caption and chrome is built into the program, and nothing is read from folders beside the config (the `chromes/` and `captions/` folders the color picker kept until 2026-10-14 are never read; delete them at will).
 
-The icons ship with the program and are never copied: the set (the Adwaita 3.22 drawings, and the baton Warp wears, its one raster) is read at every launch straight from the repository's `assets/icons/<set>/` on the laptop (as it stands at each launch) and from the APK on the tablet. A launch that cannot read them, or that finds a file that is not well-formed SVG (or, at the one raster seat, not a square PNG), stops at startup with one line naming the set, the file and what is wrong.
+The icons ship with the program and are never copied: one flat folder, `assets/icons/`, one file per button or face named by its act (`Warp.png`, `Undo.svg`; a drawing two acts share is one file and a symlink), read at every launch straight from the repository on the laptop (as it stands at each launch) and from the APK on the tablet. Where both `<Act>.png` and `<Act>.svg` stand, the PNG is drawn. To replace an act's glyph, drop a square PNG with alpha, 256 px, named `<Act>.png` into `assets/icons/`: it is the glyph at the next launch on the laptop and at the next APK build on the tablet, nothing else needed (the program centers every drawing on its ink at the launch). A launch that cannot read them, or that finds a file that is not well-formed SVG or not a PNG, stops at startup with one line naming the file and what is wrong.
 
 The first run writes it: on the laptop `gui_scale=138`, `projects_repo=github.com/warptempo/warptempo_projects`, `projects_path=$HOME/.warptempo/warptempo_projects/projects` (spelled out as an absolute path), `last_project=` blank, `caption=windows-storm` and `chrome=cool-edit-default` (the defaults: the title bar is Windows Storm and the program's colors are Cool Edit's own "Default"), and NO `role=` line: the program never chooses a device's role, so the first run then stops on the missing line, naming it. With the program not running, add `role=mirror` on the laptop (`role=author` is the tablet's, which `scripts/warptempo_sync setup` writes) and start it again. That `projects_path` is the example layout this file assumes: the projects clone at `~/.warptempo/warptempo_projects`, beside this repository. The clone is wherever `projects_path` says, one folder up. Change every key but `last_project` and `role` in the app (the Settings menu). A hand edit is for when the program is not running (it rewrites the whole file at every commit), and a line that breaks the grammar stops the program at startup, naming the line.
 

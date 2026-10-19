@@ -578,9 +578,9 @@ DeviceConfig GuiPlatform::device_config_defaults() {
 }
 
 // THE TABLET'S ICON BUNDLES ARE THE APK'S ASSET DIRECTORIES (contract at
-// platform_wayland.h's declaration): build_apk.sh copies each of the
-// repository's assets/icons/<set>/*.svg and *.png (the one raster seat,
-// icons.h) into assets/icons/<set>/, and one reader lists an asset directory
+// platform_wayland.h's declaration): build_apk.sh copies the repository's
+// assets/icons/*.svg and *.png (each symlink as the file it names, icons.h's
+// kIconNames) into assets/icons/, and one reader lists an asset directory
 // (AAssetManager_openDir lists FILES only) and reads every name ending one of
 // `suffixes` whole. The manager is the activity's, off the
 // file-scope pointer android_main parks before gui_main asks (the road
@@ -638,11 +638,11 @@ read_asset_dir(const std::string& dir_name,
 }
 
 // AAssetManager_openDir answers an EMPTY listing, not a failure, for a
-// directory the APK lacks, so a set missing from the package reaches the
-// load as missing files, the first named — the same hard fail.
+// directory the APK lacks, so icons missing from the package reach the load
+// as missing files, the first named — the same hard fail.
 std::expected<std::map<std::string, std::string>, std::string>
-GuiPlatform::bundled_icon_files(std::string_view set) {
-    return read_asset_dir("icons/" + std::string(set), {".svg", ".png"});
+GuiPlatform::bundled_icon_files() {
+    return read_asset_dir("icons", {".svg", ".png"});
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {

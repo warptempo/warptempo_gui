@@ -2343,7 +2343,7 @@ enum class RedesignButton {
     // out ("we should card the exit, because it is still one button
     // automatically affecting the other"), and it is refused with the lock's
     // own card now. Its glyph is
-    // MusicNote16th (icons.h).
+    // BpmIterations (icons.h).
     //
     // GRID ITERATION MODE IS A LAMP on bare `i`, reading the live bit its own
     // chord flips (iteration_mode_enabled), so the lamp and the mode cannot
@@ -2366,7 +2366,7 @@ enum class RedesignButton {
     // THE MODE LIVES IN TARGET VIEW ALONE since 2026-09-13: pressed
     // in source view the ON edge crosses to target first, a refused entry
     // stopping the whole press (the record is at the `i` arm,
-    // input_key_dispatch.cpp). Its glyph is Mathmode, the grid (icons.h).
+    // input_key_dispatch.cpp). Its glyph is GridIterations, the grid (icons.h).
     //
     // BOTH GREY IN THE `h` VIEW through the derived partition with nothing
     // hand-listed, which is what their chord rows buy: Ctrl+B and bare `i`
@@ -2477,8 +2477,8 @@ enum class RedesignButton {
     // TABS, where it was a per-tab slot, for a roster button that reports THE
     // ACTIVE TAB's read_only bit — a lit lamp when the tab is locked, unlit
     // when it is not, wearing the padlock pair (architect 2026-10-14): the
-    // open padlock (ChangesAllow) while unlocked, the closed one
-    // (ChangesPrevent) while locked (redesign_button_glyph).
+    // open padlock (ReadOnlyUnlocked) while unlocked, the closed one
+    // (ReadOnlyLocked) while locked (redesign_button_glyph).
     //
     // THE MOVE IS WHAT MAKES IT ITS CHORD, with no exception: bare `o`
     // toggles the ACTIVE tab's read-only and nothing else, and this button
@@ -2491,7 +2491,7 @@ enum class RedesignButton {
     IconReadOnly,
     // SETTINGS (architect 2026-09-29), right after the padlock and AHEAD of
     // the tooltip lamp (architect 2026-10-01: help comes after settings):
-    // bare `;`, the bare settings prompt, wearing SettingsConfigure. The
+    // bare `;`, the bare settings prompt, wearing Settings. The
     // button IS the key, so it greys exactly where
     // `;` refuses — a locked tab (the chord is off read_only_key_blocked's
     // allowlist), grid iterations (the iteration lock's gate inherits that
@@ -2504,7 +2504,7 @@ enum class RedesignButton {
     IconSettings,
     // ENABLE TOOLTIPS (architect 2026-09-29), the render-entry group's LAST
     // since 2026-10-01 (architect: help comes after settings): THE TOOLTIP
-    // LAMP on bare backslash, wearing HelpWhatsthis. A per-project session lamp in the magnification lamp's
+    // LAMP on bare backslash, wearing Tooltips. A per-project session lamp in the magnification lamp's
     // family — AppState::show_tooltips, DARK AT EVERY OPEN, outside undo, in no
     // settings vocabulary and not carried by `'` — and while it is DARK NO
     // TOOLTIP SHOWS ANYWHERE: the tooltip model's one wait writer
@@ -2559,7 +2559,7 @@ enum class RedesignButton {
     //
     // The lamp lights AWAY FROM HOME, which is the collapse's own rule across
     // all three: Git is the walk's default reading, so the lamp is LIT IN
-    // SESSION and it wears the Session glyph, NetworkWiredDisconnected — the
+    // SESSION and it wears the Session glyph, SessionHistory — the
     // unplugged cable since 2026-10-15, Session shutting off git (icons.h).
     //
     // It STANDS ONLY IN THE `h` VIEW since 2026-10-05 (the stand-ins) and
@@ -2625,7 +2625,7 @@ enum class RedesignButton {
     // vocabulary (bare `v`, the revert, is the other) — bare `'` is on the
     // mode's ALLOWLIST while the walk carries a member — so its face composes the mode, that admission's own accessor
     // and the LOCK, which the allowlist does not carry for it (the arm and the
-    // division are at redesign_button_enabled). It wears DialogOkApply
+    // division are at redesign_button_enabled). It wears LoadInPlace
     // (icons.h names each set's drawing), the glyph the render player's own
     // Load in place button wears too.
     IconLoadInPlace,
@@ -2838,7 +2838,7 @@ enum class RedesignButton {
     IconMarkerDrop, IconMarkerDelete, IconMarkerDisable, IconMarkerInherit,
     // JUMP TO DEFINING MARKER (architect 2026-09-29) — the verb group's FIFTH
     // member, after Toggle Inherit and ahead of Open Text Editor, wearing
-    // GoJumpDeclaration's jump arc. ITS CHORD IS CTRL+J (Shift+J until that
+    // JumpToDefiningMarker's jump arc. ITS CHORD IS CTRL+J (Shift+J until that
     // day; Shift+J binds nothing now), and its act is that key's exactly —
     // the existing jump body (jump_to_value_source): a `c` on the tab it
     // leaves, the switch to the other A/B tab, the single-select of the
@@ -2874,7 +2874,7 @@ enum class RedesignButton {
     // button. It should go between jump to defining marker and toggle add to
     // selection and the shortcut of course is enter") — the verb group's
     // SIXTH member, wearing the sets' accessories-text-editor
-    // (icons::Icon::AccessoriesTextEditor). ITS CHORD IS BARE Return and its
+    // (icons::Icon::OpenTextEditor). ITS CHORD IS BARE Return and its
     // act is that key's exactly — the addressed cell's editor opened on the
     // focused marker (the Return arm, input_handler.cpp), the payload's
     // canonical-line editor by default and a bound cell's editor where one is
@@ -3062,7 +3062,7 @@ enum class RedesignButton {
     // SWITCH TAB (architect 2026-09-29), the walk group's last until
     // 2026-10-18 and the nudge-and-play group's first since: CTRL+TAB, the
     // one-shot other-tab act, its table row carrying the ctrl, wearing
-    // TabDetach's two windows in both tabs (2026-10-18). It ADMITS SHIFT and
+    // SwitchTab's two windows in both tabs (2026-10-18). It ADMITS SHIFT and
     // nothing else: the shift-click
     // and the long press OR the shift into the row's ctrl and dispatch
     // CTRL+SHIFT+TAB, the paired march (so the tab switch has three pointer
@@ -17152,13 +17152,13 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         case RedesignButton::TransportPlayStop:
             return transport_session_live(a);
         // (SWITCH TAB WEARS ONE GLYPH IN BOTH TABS since 2026-10-18 —
-        // TabDetach, 3.22's preferences-system-windows as extracted,
+        // SwitchTab, 3.22's preferences-system-windows as extracted,
         // architect: "use the original, not the modified": the tab strip
         // says which tab is active, so the glyph no longer does. Its swap to
         // TabDetachB on tab B stood 2026-10-12 to 2026-10-18.)
         // THE READ-ONLY TOGGLE WEARS THE PADLOCK PAIR (architect 2026-10-14):
-        // the table's ChangesAllow (the open padlock) while the active tab is
-        // unlocked, ChangesPrevent (the closed one) while it is locked; its
+        // the table's ReadOnlyUnlocked (the open padlock) while the active tab is
+        // unlocked, ReadOnlyLocked (the closed one) while it is locked; its
         // lit face says the same bit (redesign_button_selected). The stash
         // carries it, so the per-tick comparator repaints the face on any
         // writer of the lock.
@@ -18092,8 +18092,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // kRenderCancelLabel "Cancel" — are DELETED producer-less with the row's
 // painter; the architect's same-day ruling kept media-record for BOTH of
 // Render's idle meanings, "the context makes it clear", so only the GLYPH
-// SWAPS say state on the row now: Save wears VcsCommit in the history view
-// and while a checkpoint publishes, Render wears DialogCancel mid-render —
+// SWAPS say state on the row now: Save wears SaveCommit in the history view
+// and while a checkpoint publishes, Render wears Cancel mid-render —
 // redesign_button_icon, paint_handler.cpp). The one hint string that still
 // carries the words reads "Save and Commit"; "Render
 // Iterations", the capital I the architect spelled

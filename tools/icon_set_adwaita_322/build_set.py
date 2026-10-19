@@ -1,14 +1,15 @@
-"""The Adwaita 3.22.0 icon set by enumerator (architect 2026-10-14): for every row of mapping.tsv, extract.py's
+"""The Adwaita 3.22.0 drawings by enumerator (architect 2026-10-14) into the flat icon folder, assets/icons/ (architect
+2026-10-19: one folder, each file named by its act — icons.h's kIconNames): for every row of mapping.tsv, extract.py's
 pruned 48-unit file from the row's sheet and slot, its drop shadows removed by shadows.tsv's ids (architect
-2026-10-15) and any other element the architect rules out by removed.tsv's (ValueDrag's arrow, 2026-10-18); THE SET'S
-ONE OWN FILE, the `own` treatment (architect 2026-10-18): own/<sheet>, Warp's baton, NOT Adwaita's and NOT scalable — a
-RASTER, his GIMP cutout of Gemini Flash's drawing, the one recorded exception to the set's scalable rule — COPIED
-VERBATIM, every byte (Baton.png and AppIcon.png both from it, no tarball check, no notice: a PNG carries none, the
-set's README is the record); the `text-to-outlines` treatment, DocumentOpenRecent's (history's clock with the back
-arrow, again since 2026-10-18): its clock digits turned into Liberation Sans Bold outlines by text_to_paths.py at the
-build, with its dated changed-file comment at the head (the derived TabDetachB, Switch Tab's tab-B glyph by element
-order, left the set 2026-10-18: Switch Tab wears TabDetach in both tabs); the tarball's four licence texts; and
-README_table.md, each sheet with its sha256.
+2026-10-15) and any other element the architect rules out by removed.tsv's (ValueDrag's arrow, 2026-10-18); the
+`text-to-outlines` treatment, HistoryView's (history's clock with the back arrow, again since 2026-10-18): its clock
+digits turned into Liberation Sans Bold outlines by text_to_paths.py at the build, with its dated changed-file comment
+at the head; the tarball's four licence texts; and README_table.md, each sheet with its sha256. THE TOOL WRITES SVGs AND
+THE LICENCE TEXTS ONLY — never a PNG (the architect's own drawings are dropped into the folder by hand, the drop road,
+icons.h's head) and never a symlink (a repeated drawing, AppIcon.png, BpmIterations.svg, CardCritical.svg and
+UpAFolder.svg, is a link the folder carries, with no row here: mapping.tsv names each canonical file once). Its
+output's SVGs are byte-identical to the folder's of the same name (compare with `cmp`; the folder's PNGs and links are
+not the tool's).
 One line per seat reports the shadow and other elements removed and the checks of the faithful drawing (nothing
 removed): identical to the sheet cropped to the slot (rgb <= 1.5, alpha <= 3 at 240 px),
 or within d <= 3.0 of the theme's shipped 48 PNG (user-trash's mesh pattern sits at 3.0 and its crop at 7.7, because
@@ -17,21 +18,21 @@ usage: python3 -I tools/icon_set_adwaita_322/build_set.py <tarball-root> <out-di
 import os, sys, hashlib, shutil, tempfile
 HERE=os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0,HERE)
 import extract as X, text_to_paths as TP
-NOTES={'AccessoriesDictionary':'NEW: Source (architect 2026-10-14)','CameraPhoto':'NEW: Phase reset (architect 2026-10-15: the phase snapshot)',
-'ChangesAllow':'NEW: Read-Only while unlocked (architect 2026-10-14)','ChangesPrevent':'NEW: Read-Only while locked (architect 2026-10-14)',
-'DialogOkApply':'Load in Place (architect 2026-10-14)','DocumentSave':'the floppy retired (architect 2026-10-14)','InputTablet':'NEW: Target (architect 2026-10-14)',
-'Merge':'Flatten: the broom (architect 2026-10-14)',
-'Baton':'OWN FILE, not Adwaita\'s, a RASTER: Warp, his GIMP cutout (architect 2026-10-18), above',
-'AppIcon':'OWN FILE, Baton\'s: the program icon (architect 2026-10-18)',
-'DocumentOpenRecent':'History: the clock turned back again (architect 2026-10-18, "go back to using the original git clock icon")',
-'ValueDrag':'NEW: Value Drag, the pen alone (architect 2026-10-18: "drop the arrows altogether")','NetworkWiredDisconnected':'NEW: Session (architect 2026-10-15: shut off git and stay local)',
-'EditFind':'NEW: Center (architect 2026-10-16: the magnifier finds the playhead)','ViewRestore':'NEW: Full zoom out (architect 2026-10-16: the view shrunk back)',
-'AudioVolumeHigh':'NEW: Waveform magnification (architect 2026-10-16: the louder waveform)'}
+NOTES={'Source':'NEW: Source (architect 2026-10-14)','PhaseReset':'NEW: Phase reset (architect 2026-10-15: the phase snapshot)',
+'ReadOnlyUnlocked':'NEW: Read-Only while unlocked (architect 2026-10-14)','ReadOnlyLocked':'NEW: Read-Only while locked (architect 2026-10-14)',
+'LoadInPlace':'Load in Place (architect 2026-10-14)','Save':'the floppy retired (architect 2026-10-14)','Target':'NEW: Target (architect 2026-10-14)',
+'Flatten':'Flatten: the broom (architect 2026-10-14)',
+'HistoryView':'History: the clock turned back again (architect 2026-10-18, "go back to using the original git clock icon")',
+'ValueDrag':'NEW: Value Drag, the pen alone (architect 2026-10-18: "drop the arrows altogether")','SessionHistory':'NEW: Session (architect 2026-10-15: shut off git and stay local)',
+'Center':'NEW: Center (architect 2026-10-16: the magnifier finds the playhead)','FullZoomOut':'NEW: Full zoom out (architect 2026-10-16: the view shrunk back)',
+'WaveformMagnification':'NEW: Waveform magnification (architect 2026-10-16: the louder waveform)'}
+# The notice is the file's own text, written into its head (its first word the file's name when it was written, kept so
+# the shipped bytes stand; the enumerator is HistoryView since 2026-10-19).
 DOCUMENT_OPEN_RECENT_NOTICE=(" DocumentOpenRecent: adwaita-icon-theme 3.22.0 document-open-recent (src/fullcolor/clocks.svg), CHANGED 2026-10-14 (LGPL-3 / CC BY-SA 3.0): "
  "its 48 clock-digit text elements replaced by the glyph outlines of the face they name, Liberation Sans Bold, from the repository's "
  "fonts/LiberationSans-Bold.ttf (the product's resvg draws no text); its drop shadows removed, as from every seat of the set "
  "(2026-10-15); every other element unchanged. ")
-TEXT_NOTICES={'DocumentOpenRecent':DOCUMENT_OPEN_RECENT_NOTICE}
+TEXT_NOTICES={'HistoryView':DOCUMENT_OPEN_RECENT_NOTICE}
 TEXTS=['COPYING','COPYING_LGPL','COPYING_CCBYSA3','AUTHORS']
 def sha(p): return hashlib.sha256(open(p,'rb').read()).hexdigest()
 def id_table(f):
@@ -51,12 +52,6 @@ def main(root,out):
     for line in lines[1:]:
         enum,name,sheet,x,y,w,h,treat=line.split('\t'); p=f'{out}/{enum}.svg'
         if enum not in shadows: sys.exit(f'{enum}: no row in shadows.tsv')
-        if treat=='own':
-            # THE FILE NAME SAYS THE KIND: the own file keeps its suffix (Baton.png), every byte verbatim.
-            assert not shadows[enum] and enum not in removed and sheet.endswith('.png'),enum
-            src=f'{HERE}/own/{sheet}'; shutil.copyfile(src,f'{out}/{enum}.png')
-            rows.append((enum,name,f'own/{sheet}',None,sha(src),NOTES.get(enum,'')))
-            print(f'{enum:24s} {"own/"+sheet:28s} own   copied verbatim'); continue
         slot=(float(x),float(y),float(w),float(h)); gone=removed.get(enum,[])
         r=X.extract(root,name,sheet,slot,p,tmp,shadows[enum]+gone); note=NOTES.get(enum,'')
         if gone: note=(note+'; ' if note else '')+f'REMOVED (removed.tsv): {" ".join(gone)}'
@@ -70,9 +65,9 @@ def main(root,out):
         ns=len(shadows[enum])+len(r['shadow_copies'])
         print(f'{enum:24s} {name:28s} {"ok" if ok else "CHECK"}  shadows -{ns:<2d} removed -{len(gone)}  crop rgb {r["max_rgb_diff"]:5.1f} alpha {r["max_alpha_diff"]:5.1f}  shipped png d {r["d_shipped_png"]:5.1f}')
     with open(f'{out}/README_table.md','w') as f:
-        f.write('| enumerator | 3.22 name | source sheet (src/fullcolor, or own/ beside this tool) | slot (x, y, w, h) | sheet sha256 | note |\n|---|---|---|---|---|---|\n')
+        f.write('| enumerator | 3.22 name | source sheet (src/fullcolor) | slot (x, y, w, h) | sheet sha256 | note |\n|---|---|---|---|---|---|\n')
         for enum,name,sheet,sl,hs,note in rows:
-            f.write(f'| {enum} | {"—" if sl is None else f"`{name}`"} | `{sheet}` | {"—" if sl is None else ", ".join("%g"%v for v in sl)} | `{hs}` | {note} |\n')
+            f.write(f'| {enum} | `{name}` | `{sheet}` | {", ".join("%g"%v for v in sl)} | `{hs}` | {note} |\n')
     for t in TEXTS: shutil.copyfile(f'{root}/{t}',f'{out}/{t}-adwaita-icon-theme-3.22.0')
     shutil.rmtree(tmp); print(f'{len(rows)} files, {bad} to check')
 if __name__=='__main__':

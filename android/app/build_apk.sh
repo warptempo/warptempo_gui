@@ -19,9 +19,9 @@
 #
 # Pipeline (the spike's, generalized; the Java steps are the sliver's, and
 # hasCode=true since it landed):
-#   0. debug keystore (keytool)         5. aapt2 compile (res/) + link
-#   1. assets (the six font files and       (manifest + res + assets)
-#      the icon sets)
+#   0. debug keystore (keytool)         5. the launcher icon rendered (magick)
+#   1. assets (the font files and the      into a staged res/; aapt2 compile
+#      icons)                                 + link (manifest + res + assets)
 #   2. cmake configure                  6. zip the .so (-0) + classes.dex in
 #   3. cmake build (the .so)            7. zipalign -P 16
 #   4. javac -> d8 (the Java sliver)    8. apksigner sign  9. verify
@@ -96,6 +96,11 @@ else
         -dname "CN=Android Debug,O=Android,C=US"
 fi
 
+# ImageMagick 7's magick renders the launcher icon at every build (step 5);
+# checked here, before any work, so a host without it stops at once.
+command -v magick >/dev/null \
+    || wt_die "magick not found: the launcher icon is rendered at every build -- install ImageMagick 7 (Arch: imagemagick)"
+
 rm -rf "$PKGDIR"
 mkdir -p "$ASSETS" "$STAGING/lib/$WT_ABI" "$CLASSES" "$DEXDIR"
 
@@ -125,30 +130,24 @@ for f in $FONT_FILES; do
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done
-# THE BUNDLED ICON SET (architect 2026-10-06; one set since 2026-10-12,
-# Adwaita 3.22 since 2026-10-14, icons.h's kIconSet): each folder under the
-# repository's assets/icons/ (assets/icons/adwaita-3.22/ alone) copied whole
-# -- every SVG and the one raster seat's PNG (Warp's baton and its copy
-# AppIcon, the architect's recorded exception of 2026-10-18, icons.h) --
-# into the package's assets/icons/<set>/, which aapt2 link's -A packs
-# (deflated) as the APK's `icons/<set>/` asset directory. The app reads them in
-# place at launch, never copying them out (icons.h's load_set;
-# GuiPlatform::bundled_icon_files, platform_android.cpp). An empty set folder is
-# a build defect and stops the script here.
-ICON_ROOT="$APPDIR/../../assets/icons"
-ICON_SETS=0
-for SET_DIR in "$ICON_ROOT"/*/; do
-    SET_NAME="$(basename "$SET_DIR")"
-    shopt -s nullglob
-    SET_FILES=("$SET_DIR"*.svg "$SET_DIR"*.png)
-    shopt -u nullglob
-    [ "${#SET_FILES[@]}" -gt 0 ] || wt_die "no .svg or .png files under $SET_DIR"
-    mkdir -p "$ASSETS/icons/$SET_NAME"
-    cp -f "${SET_FILES[@]}" "$ASSETS/icons/$SET_NAME/"
-    wt_say "assets: icon set $SET_NAME, ${#SET_FILES[@]} files"
-    ICON_SETS=$((ICON_SETS + 1))
-done
-[ "$ICON_SETS" -gt 0 ] || wt_die "no icon set under $ICON_ROOT"
+# THE BUNDLED ICONS (architect 2026-10-06; ONE FLAT FOLDER since 2026-10-19,
+# the drop road, icons.h's head): every `.svg` and `.png` of the repository's
+# assets/icons/ copied into the package's assets/icons/, which aapt2 link's -A
+# packs (deflated) as the APK's `icons/` asset directory -- a dropped PNG rides
+# the next build with no other step. A REPEAT IS A SYMLINK in the repository
+# (icons.h's kIconNames: AppIcon.png -> Warp.png and three more); cp -L copies
+# the file it names, so the APK holds regular files alone. The app reads them
+# in place at launch, never copying them out (icons.h's load_set;
+# GuiPlatform::bundled_icon_files, platform_android.cpp). An empty folder is a
+# build defect and stops the script here.
+ICON_DIR="$APPDIR/../../assets/icons"
+shopt -s nullglob
+ICON_FILES=("$ICON_DIR"/*.svg "$ICON_DIR"/*.png)
+shopt -u nullglob
+[ "${#ICON_FILES[@]}" -gt 0 ] || wt_die "no .svg or .png files under $ICON_DIR"
+mkdir -p "$ASSETS/icons"
+cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
+wt_say "assets: icons, ${#ICON_FILES[@]} files"
 
 # --- 2/3. configure + build ----------------------------------------------
 # WT_CANVAS is in the environment, so configure.sh reads the same canvas and
@@ -190,19 +189,51 @@ wt_say "d8 --min-api $WT_API"
 [ -f "$DEXDIR/classes.dex" ] || wt_die "d8 produced no classes.dex"
 wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 
-# --- 5. aapt2 compile + link ----------------------------------------------
+# --- 5. the launcher icon, then aapt2 compile + link -----------------------
 # res/ holds EXACTLY THE LAUNCHER ICON (the manifest's android:icon): the
-# adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml and its two PNG
-# layers per density, the conductor's baton, the caption's icon and Warp's
-# glyph (assets/icons/adwaita-3.22/AppIcon.png, architect 2026-10-18)
-# over flat white (architect 2026-10-17), written by
-# tools/app_icon/gen_app_icon.sh, rendered once and committed (that XML's head
-# comment states the sizes; nothing here renders). Every GUI pixel is painted
-# by cairo, the roster's icons included (the Adwaita 3.22 set's SVG assets above,
-# rasterised by resvg, and the one PNG, decoded by resvg and scaled by an area
-# filter, svg_icon.cpp; each copied by cairo); the app declares no
-# @string, no style, no res/values. aapt2 compile turns the
-# directory into res.zip, which link takes as a positional input.
+# adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml, tracked, and its two
+# PNG layers per density, RENDERED HERE AT EVERY BUILD (architect 2026-10-19:
+# the icon must follow a drop with no step -- the one-shot generator and its
+# committed PNGs retired) into a staged copy of res/ under the package tree,
+# which aapt2 compiles. THE DRAWING is assets/icons/AppIcon.png, Warp's glyph
+# through its symlink (icons.h's kIconNames; the conductor's baton since
+# 2026-10-18), read through the link. THE FRAMINGS (architect 2026-10-12, "two
+# framings is normal": Android's adaptive mask demands a full-bleed square,
+# Linux desktops take any shape -- the Linux icon is the bare drawing, a link
+# into the repository, docs/INSTALL.md): the FOREGROUND the drawing resized by
+# ImageMagick's Lanczos filter (the GUI's own filter family, svg_icon.cpp) to
+# the 52 dp art square (architect 2026-10-16, his pick off a 60 / 56 / 52 /
+# 48 / 44 / 40 dp series on the glass: the 64 dp art filled ~86 % of the
+# launcher's visible tile and nearly touched its corners), centered on the
+# transparent 108 dp canvas; the BACKGROUND that canvas WHITE, FLAT
+# (architect 2026-10-17: #FFFFFF, one color over the whole square, which the
+# launcher's mask cuts to its shape; Windows Storm's caption start #800080
+# from 2026-10-16 until then, the Cool Edit case's 20 face-ramp bands under
+# Midnight's Face from 2026-10-12 before it). Per density f, the 52 dp art
+# A = 52f px on the 108 dp canvas C = 108f px (ic_launcher.xml's head holds
+# the table and the safe-zone arithmetic). Byte-stable: -strip drops the
+# date chunks. Every GUI pixel is painted by cairo, the roster's icons
+# included (assets/icons/'s SVGs rasterised by resvg, its PNGs decoded by
+# resvg and scaled by an area filter, svg_icon.cpp; each copied by cairo); the
+# app declares no @string, no style, no res/values. aapt2 compile turns the
+# staged directory into res.zip, which link takes as a positional input.
+APP_ICON="$ICON_DIR/AppIcon.png"
+[ -f "$APP_ICON" ] || wt_die "missing $APP_ICON (the launcher icon's drawing, a link to Warp.png)"
+RES_STAGE="$PKGDIR/res"
+cp -r "$APPDIR/res" "$RES_STAGE"
+for row in mdpi:52:108 hdpi:78:162 xhdpi:104:216 xxhdpi:156:324 xxxhdpi:208:432; do
+    IFS=: read -r density art canvas <<< "$row"
+    dir="$RES_STAGE/mipmap-$density"
+    mkdir -p "$dir"
+    magick "$APP_ICON" -filter Lanczos -resize "${art}x${art}" \
+        -background none -gravity center -extent "${canvas}x${canvas}" -strip \
+        -define png:compression-level=9 -define png:compression-filter=5 \
+        "PNG32:$dir/ic_launcher_foreground.png"
+    magick -size "${canvas}x${canvas}" "xc:#FFFFFF" -strip \
+        -define png:compression-level=9 -define png:compression-filter=5 \
+        "PNG32:$dir/ic_launcher_background.png"
+    wt_say "launcher icon: mipmap-$density, art ${art} px on ${canvas} px"
+done
 # (targetSdk stays 34 rather than opting out of Android 15's edge-to-edge
 # enforcement with the windowOptOutEdgeToEdgeEnforcement theme attribute: the
 # compile step exists now, but that attribute also needs a res/values style,
@@ -214,7 +245,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # deliberately different and 00_env.sh states both: the runtime gates behaviour
 # on the stamped target, never on the jar the app was compiled against.
 wt_say "aapt2 compile (res/)"
-"$WT_BUILD_TOOLS/aapt2" compile --dir "$APPDIR/res" -o "$PKGDIR/res.zip"
+"$WT_BUILD_TOOLS/aapt2" compile --dir "$RES_STAGE" -o "$PKGDIR/res.zip"
 wt_say "aapt2 link"
 "$WT_BUILD_TOOLS/aapt2" link \
     -o "$PKGDIR/base.apk" \
