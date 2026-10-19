@@ -3305,9 +3305,11 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // THE HISTORY STAND-INS NAME NO LEADER (architect 2026-10-05): in the `h`
 // view a stand-in group paints in place of an authoring group and takes THAT
 // group's leader's gap (kIconRowHistoryStandIns, paint_handler.cpp, keys each
-// stand-in by the leader it replaces), so the companions are absent here and
-// the row's boundaries are the same in both states. The history opener leads
-// a group of one since then.
+// stand-in by the leader it replaces), so the companions are absent here. The
+// iteration group, which takes no stand-in, is hidden whole in the view
+// (architect 2026-10-19: the row has eight groups outside it and seven
+// inside; paint_icon_row owns the count). The history opener leads a group
+// of one since then.
 inline constexpr bool redesign_button_opens_icon_group(RedesignButton b) {
     switch (b) {
         // OPEN PROJECT LEADS SAVE'S GROUP, THE ROW'S FIRST (architect
@@ -7865,10 +7867,9 @@ struct AppState {
     // its own reason on stderr and the mode simply does not open.
     //
     // WHAT CLOSES IT, the whole list: bare `h` again; ANY LOAD-IN-PLACE — the
-    // `'` editor's three acts, its render-entry load, its
-    // load-in-place-from-a-commit (2026-08-04) and its LOCAL-tab load of a
-    // timeline state (2026-08-08), each of which rewrites the very state the
-    // frozen now side was measured against (the renders-side one cannot actually
+    // `'` act's two loads, the render-entry load and the
+    // load-in-place-from-a-commit (2026-08-04), each of which rewrites the very
+    // state the frozen now side was measured against (the renders-side one cannot actually
     // run from in here, and the closer inventory at close_history_mode,
     // input_key_dispatch.cpp, says why it still calls the closer);
     // THE COMMIT ACT, WHEN ITS SAVE LANDS (architect 2026-08-07, superseding the
@@ -12331,7 +12332,7 @@ inline void reset_displayed_target_basis(AppState& a) {
 // takes into the live fields — the source load's tab snapshots and the
 // Ctrl+Tab restore (each clamping a PARKED band on its way live), plus the
 // load-in-place family's re-clamp of the LIVE cursor against a domain its own
-// store replace may have moved (apply_recipe_in_place, all three acts' one
+// store replace may have moved (apply_recipe_in_place, the two loads' one
 // body; they clamp no parked band, having no business with one) — so an
 // arbitrary non-negative persisted int64 (the settings schema is
 // load-lenient on view scratch) rests in-domain BEFORE any translation
@@ -18223,7 +18224,8 @@ inline bool redesign_button_hover_zone(const AppState& a,
 // TWO NOTES THE ZONE KEEPS, both about the terms it deliberately does NOT
 // carry:
 //
-// SELECTED BUTTONS DO HOVER (for the tooltip), so the icon row's toggles — the Cumulative one included — and
+// SELECTED BUTTONS DO HOVER (for the tooltip), so the icon row's lamp toggles
+// (Follow, Waveform Magnification and Enable Tooltips among them) and
 // its view pairs' four radios are hoverable in both states, and a radio's already-selected press is refused in the ACTION — at
 // its lift (the chord table's `radio` flag, whose users are the view pairs'
 // four) — not in its hoverability.

@@ -1645,10 +1645,10 @@ void scan_history_walk(
     // Anything else (a missing sidecar, a parse refusal, an ambiguous
     // per-commit path resolution) leaves the walk here, counted; the parsed
     // stores the gate produced are discarded, but each eligible commit's
-    // SIDECAR SNAPSHOTS ARE KEPT — they are the walk's then sides in both
-    // readings, and the NEW sides too in the iterative one wherever its forward
-    // partner is a commit rather than the live state, so no delta ever
-    // reads git again. The run's one handle serves every candidate.
+    // SIDECAR SNAPSHOTS ARE KEPT — each is its own member's then side and the
+    // new side of the next-older member's delta (index 0 alone pairs against
+    // the live state instead), so no delta ever reads git again. The run's one
+    // handle serves every candidate.
     //
     // EACH ELIGIBLE MEMBER IS PUBLISHED THE MOMENT IT PASSES (2026-08-07): the
     // gate is the expensive step and it is per candidate, so handing the result
@@ -1712,8 +1712,10 @@ bool GuiHistoryDiff::init(const AppState&           app,
     store_generation_ = 0;
     cache_.clear();
 
-    // THE NOW SIDE, FROZEN HERE: every delta this session hands out is
-    // measured against these exact bytes. Three in-memory formats and no git.
+    // THE NOW SIDE, FROZEN HERE: index 0's delta (the live state against the
+    // newest checkpoint) is measured against these exact bytes; every older
+    // delta pairs two committed members (delta_at). Three in-memory formats
+    // and no git.
     now_ = build_history_now_side(app);
 
     // Every failure arm lands here: one stderr line, and the whole session
@@ -1790,7 +1792,7 @@ bool GuiHistoryDiff::init(const AppState&           app,
 
     // AN EMPTY WALK IS A LEGAL STANDING STATE (architect 2026-08-09), whether
     // the scan is still streaming or has FINISHED with nothing: the view opens
-    // at `0/0` over a blank Remote lane, and the blank lane is the honest
+    // at `0/0` over a blank lane, and the blank lane is the honest
     // display of a piece with no eligible checkpoint behind it. Both terminal
     // zeros — no commit touches the sidecars at all, and every touching commit
     // refusing the strict load — open exactly like the mid-scan window does, so

@@ -898,10 +898,11 @@ constexpr IconRowDef kIconRowButtons[] = {
 // LEFT IT FOR ROW 8 (architect 2026-10-11 ~02:40; they stood in Undo's and
 // Redo's slots from 2026-10-05): they take the Left / Right arrows' seats in
 // the nudge-and-play group there, the row's per-seat stand-ins
-// (kTransportHistoryStandIns). The zoom group and the render-entry group each
-// stand on the one member the view does not refuse in every session (Full
-// Zoom Out and, since 2026-10-12, Waveform Magnification; Enable Tooltips),
-// their others hidden (history_mode_hides_button, paint_icon_row's walk).
+// (kTransportHistoryStandIns). The zoom group stands on the two members the
+// view does not refuse in every session (Full Zoom Out and, since 2026-10-12,
+// Waveform Magnification) and the render-entry group on one (Enable
+// Tooltips), their others hidden (history_mode_hides_button, paint_icon_row's
+// walk).
 // The history opener and the view pairs are right-anchored and do not move
 // (kIconRowHistoryOpener).
 //
