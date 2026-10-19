@@ -232,8 +232,12 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 //     is the plain hilight — the lone tab-line cell Cool Edit's own rule
 //     leaves under the shadow, x 87 on the capture, ruled an artifact).
 //   A FOOTPRINT per tab, the first one W in from the page edge, each its
-//     label's INK width plus 13 W — its two edge columns, `tab_pad_left_px`
-//     before the ink and `tab_pad_right_px` after it — the footprints
+//     label's CELL — its shaped advance, width_px, never its ink — plus
+//     14 W: its two edge columns and `tab_pad_px` either side of the cell,
+//     so the cell is centered in it (architect 2026-10-18 ~20:20: a Windows
+//     tab control pads its text cell; Cool Edit's 6 / 5 on the ink is MS
+//     Sans Serif's trailing blank column, a bitmap face's width, never
+//     copied) — the footprints
 //     `tab_gap_px` apart (every length its own scaled_px part,
 //     program_spec.h's tab fields, architect 2026-10-18 ~19:55).
 //   AN INACTIVE TAB on its footprint from row 4 to the recess's last row
@@ -256,9 +260,13 @@ void show_ce_label(cairo_t* cr, const text_shape::ShapedRun& run, double x,
 //     F6F6F6 hover does not apply, program_spec.h's case_hot_face), the cap
 //     band centred by redesign_baseline in the tab's body under its top
 //     light row — 15 W inactive, 17 W active, so the active label lands one
-//     W higher by the rule alone — the first ink column `tab_pad_left_px`
-//     past the footprint's left column on both (the active tab's growth its
-//     extra W). A DEAD TAB — the render player or the picker standing —
+//     W higher by the rule alone — THE RUN'S ORIGIN AT THE CELL'S LEFT
+//     EDGE, `tab_pad_px` past the footprint's left column, lit or unlit,
+//     never shifted by the first glyph's bearing (the ink lands where the
+//     face's bearings put it): the lit frame grows ROUND THE FIXED LABEL,
+//     so its left pad reads one W more than its right, the raised frame's
+//     two-column right edge — Windows' own construction, Cool Edit's 7 / 5
+//     (2026-10-18 ~20:20). A DEAD TAB — the render player or the picker standing —
 //     wears Windows' DSS_DISABLED emboss on its label (show_embossed_run,
 //     the disabled-word rule, its light copy the hilight), its body and
 //     edges unchanged (architect 2026-10-18 ~19:05). A TAB HAS NO PRESSED
@@ -297,8 +305,8 @@ struct CeTabStripLayout {
     // Each tab's painted box: the lit tab its grown box through the page
     // line, an unlit tab its footprint from its top row to the recess's last.
     std::array<GuiRect, kCeTabCount> tab{};
-    // Each label's pen origin (its first ink `tab_pad_left_px` past the
-    // footprint's left column) and baseline.
+    // Each label's pen origin (its cell's left edge, `tab_pad_px` past the
+    // footprint's left column, lit or unlit) and baseline.
     std::array<double, kCeTabCount> label_x{};
     std::array<double, kCeTabCount> baseline{};
 };

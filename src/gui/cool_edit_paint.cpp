@@ -301,8 +301,7 @@ CeTabStripLayout ce_tab_strip_layout(
     const int page_y = lane.y + tab_strip_recess_h_px();
     const int top_i  = lane.y + scaled_px(p.tab_inactive_top_px);
     const int top_a  = lane.y + scaled_px(p.tab_active_top_px);
-    const int pad_l  = scaled_px(p.tab_pad_left_px);
-    const int pad_r  = scaled_px(p.tab_pad_right_px);
+    const int pad    = scaled_px(p.tab_pad_px);
     const int gap    = scaled_px(p.tab_gap_px);
     const int grow   = ce_tab_growth_px();
     CeTabStripLayout out;
@@ -312,21 +311,21 @@ CeTabStripLayout ce_tab_strip_layout(
     int x = lane.x + scaled_px(p.tab_lead_px);
     for (int i = 0; i < kCeTabCount; ++i) {
         const std::size_t k = static_cast<std::size_t>(i);
-        // THE INK, NOT THE ADVANCE (Cool Edit's measure on his capture: the
-        // pads stand on the label's lit columns; text_shape.h's
-        // ink_right_px), each edge taken to its whole device column — make11's
-        // ink_cols at the live face.
+        // THE CELL, NOT THE INK (architect 2026-10-18 ~20:20): the label's
+        // shaped advance, the chokepoint's measure as every label's, its own
+        // rounded part, the pad either side of it between the edge columns —
+        // so the cell is centered in the footprint.
         const text_shape::ShapedRun& run = *labels[k];
-        const int i0 = static_cast<int>(std::nearbyint(text_shape::ink_left_px(run)));
-        const int i1 =
-            static_cast<int>(std::nearbyint(text_shape::ink_right_px(run)));
-        const int ink_w = std::max(0, i1 - i0);
-        const int wid = lw + pad_l + ink_w + pad_r + lw;
+        const int cell_w = static_cast<int>(std::nearbyint(run.width_px));
+        const int wid = lw + pad + cell_w + pad + lw;
         const bool lit = i == active;
         out.tab[k] = lit ? GuiRect{x - grow, top_a, wid + 2 * grow,
                                    page_y + lw - top_a}
                          : GuiRect{x, top_i, wid, page_y - top_i};
-        out.label_x[k] = static_cast<double>(x + lw + pad_l - i0);
+        // The run's origin at the cell's left edge, the same lit or unlit —
+        // the lit frame grows round the fixed label — and never shifted by
+        // the first glyph's bearing: the ink lands where the face puts it.
+        out.label_x[k] = static_cast<double>(x + lw + pad);
         // The body under the top light row: 15 W unlit, 17 W lit.
         const int body_y = (lit ? top_a : top_i) + lw;
         out.baseline[k] =

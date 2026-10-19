@@ -134,24 +134,17 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y);
 // positioned glyphs on its own scaled font, so it is the ink show_shaped_run
 // puts down — the chokepoint's one-run property, said of ink.
 //
-// ITS CONSUMERS: row 8's STATE LINE (architect 2026-10-08): its first
+// ITS ONE CONSUMER is row 8's STATE LINE (architect 2026-10-08): its first
 // ink stands one field pad past the clock's field, the same air the field
 // stands in from the lane's edge (paint_bottom_row_buttons_and_clock), so
 // the line's origin is pulled back by this bearing — a placement off the
 // origin would read wider by whatever bearing the line's first glyph
-// carries; and THE TAB STRIP'S LABELS with ink_right_px below. Every other
-// layout wants a reserved CELL, which is `width_px`'s job. (A two-edged
-// InkExtents stood here 2026-08-30 .. 31 for the state cell then butted
-// against the monospace clock, retired with that layout.)
+// carries. Every other layout wants a reserved CELL, which is `width_px`'s
+// job — the tab strip's labels among them (2026-10-18 ~20:20, their pads on
+// the cell). (A two-edged InkExtents stood here 2026-08-30 .. 31 for the
+// state cell then butted against the monospace clock; only the left edge
+// has a reader.)
 double ink_left_px(const ShapedRun& run);
-// A RUN'S LAST INK, its right twin (2026-10-18): from the pen origin to the
-// right edge of its last lit pixel, the same measure on the same placement.
-// ITS ONE CONSUMER is THE TAB STRIP (cool_edit_paint.h's ce_tab_strip_layout):
-// a tab's width is its label's INK plus its pads, Cool Edit's own measure on
-// his capture (architect 2026-10-18; the tab's pads stand on the ink, never
-// on the advance). That is a tab sized off its own label, not the retired
-// ink-to-ink layout of the state text, which stays retired.
-double ink_right_px(const ShapedRun& run);
 
 // THE BYTE ADDRESS OF A SHAPED RUN: `byte_count + 1` pen offsets, in pixels
 // from the run's origin, one per byte BOUNDARY of the shaped string — index 0

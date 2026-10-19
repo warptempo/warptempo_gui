@@ -229,8 +229,8 @@ double ink_left_px(const ShapedRun& run) {
     // The contract is at the declaration: the paint's own placement at pen
     // origin (0, 0), measured on the run's own font. It places into a local
     // of its own, never the painter's buffer, so the two cannot alias
-    // whatever the call order; its consumers (the declaration) measure a
-    // single run, not worth sharing the buffer for.
+    // whatever the call order; its one consumer (row 8's state line, the
+    // declaration) measures a single run, not worth sharing the buffer for.
     if (run.glyphs.empty()) return 0.0;
     std::vector<cairo_glyph_t> placed;
     place_glyphs(run, 0.0, 0.0, placed);
@@ -239,18 +239,6 @@ double ink_left_px(const ShapedRun& run) {
                                     placed.data(),
                                     static_cast<int>(placed.size()), &ext);
     return ext.x_bearing;
-}
-
-double ink_right_px(const ShapedRun& run) {
-    // ink_left_px's measure, its right edge (the declaration).
-    if (run.glyphs.empty()) return 0.0;
-    std::vector<cairo_glyph_t> placed;
-    place_glyphs(run, 0.0, 0.0, placed);
-    cairo_text_extents_t ext;
-    cairo_scaled_font_glyph_extents(gui_outline_scaled_font(run.font),
-                                    placed.data(),
-                                    static_cast<int>(placed.size()), &ext);
-    return ext.x_bearing + ext.width;
 }
 
 std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {

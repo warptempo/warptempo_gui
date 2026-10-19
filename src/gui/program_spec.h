@@ -231,9 +231,18 @@ struct ProgramSpec {
     // then just make it two Windows pixels … we just follow the scaling. Hit
     // areas are defined by what's painted" — the tabs' press targets are the
     // painted boxes, ce_tab_strip_layout). Inside a tab's edge
-    // columns its label's INK stands `tab_pad_left_px` from the left column
-    // and `tab_pad_right_px` from the right (the active tab's growth adding
-    // its own W on each side: 7 / 5 on Cool Edit's capture). The painter
+    // columns THE LABEL'S CELL — its shaped advance, width_px, never its
+    // ink — stands `tab_pad_px` from each, so the cell is centered in the
+    // footprint, and the run is drawn from the cell's left edge (architect
+    // 2026-10-18 ~20:20, "agree on both"): Cool Edit's Organizer is a
+    // Windows tab control padding its text cell 6 px each side; the 6 / 5
+    // its capture reads on the INK is MS Sans Serif's bitmap glyph cells
+    // carrying their inter-letter space as one blank column on the right — a
+    // width of the bitmap face, never copied (HEIGHTS ARE MATCHED, NEVER
+    // WIDTHS). The lit tab's frame grows round the FIXED label — the same
+    // origin and cell lit or unlit — so its left pad reads one W more than
+    // its right, the raised frame's two-column right edge (mid inside the
+    // shadow), Windows' own construction and Cool Edit's 7 / 5. The painter
     // is cool_edit_paint.h's paint_ce_tab_strip, the tones
     // cool_edit_derive.h's (the tab table, kTabBodies).
     int  tab_recess_px;
@@ -243,8 +252,7 @@ struct ProgramSpec {
     int  tab_gap_px;
     int  tab_growth_px;
     int  tab_line_reach_px;
-    int  tab_pad_left_px;
-    int  tab_pad_right_px;
+    int  tab_pad_px;
     // THE COLUMN'S SIDE MARGIN (METRICS §4.1, Cool Edit's x = 202..207 of
     // face before the canvas frame's dark column at 208; the mock's FX0 = 6
     // and FX1 = WW − 7): this much face from each side of the window's client
@@ -395,8 +403,7 @@ inline constexpr ProgramSpec kProgramSpec = {
     .tab_gap_px            = 2,
     .tab_growth_px         = 1,
     .tab_line_reach_px     = 1,
-    .tab_pad_left_px       = 6,
-    .tab_pad_right_px      = 5,
+    .tab_pad_px            = 6,
     .column_margin_px      = 6,
     .column_foot_px        = 5,
     .grid_divisions        = 4,
@@ -489,7 +496,8 @@ static_assert(program_tab_strip_authored_h(kProgramSpec) == 21);
 // THE TAB STRIP'S ROWS (2026-10-18): an inactive tab is 16 W tall from its
 // top row to the recess's last — its light top row and a 15-row body — and
 // the active tab 18, its face running on through the page line; a tab's
-// width is its label's ink plus 13 W (the two edge columns and the pads).
+// width is its label's cell (its advance) plus 14 W (the two edge columns
+// and the two pads, 2026-10-18 ~20:20).
 static_assert(kProgramSpec.tab_recess_px - kProgramSpec.tab_inactive_top_px ==
               16);
 static_assert(kProgramSpec.tab_recess_px - kProgramSpec.tab_active_top_px ==
@@ -500,9 +508,7 @@ static_assert(kProgramSpec.tab_recess_px - kProgramSpec.tab_active_top_px ==
 static_assert(kProgramSpec.tab_growth_px == kProgramSpec.tab_lead_px &&
               kProgramSpec.tab_line_reach_px == kProgramSpec.tab_growth_px &&
               kProgramSpec.tab_gap_px == 2 * kProgramSpec.tab_growth_px);
-static_assert(1 + kProgramSpec.tab_pad_left_px + kProgramSpec.tab_pad_right_px +
-                  1 ==
-              13);
+static_assert(1 + 2 * kProgramSpec.tab_pad_px + 1 == 14);
 static_assert(program_stereo_divider_authored_h(kProgramSpec) == 3);
 // The column's foot mirrors its air — the product's own 5 W under the
 // canvas's bottom frame row against Cool Edit's 5 rows of face above the
