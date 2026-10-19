@@ -908,8 +908,9 @@ constexpr IconRowDef kIconRowButtons[] = {
 // Waveform Magnification; Enable Tooltips), their others hidden (history_mode_hides_button, paint_icon_row's walk). The history opener and the view pairs
 // are right-anchored and do not move (kIconRowHistoryOpener).
 //
-// THE COMPANIONS' GLYPHS: the CUMULATIVE toggle wears Cumulative, the
-// summation sigma (a cumulative delta is a sum over the walk's members).
+// THE COMPANIONS' GLYPHS: the CUMULATIVE toggle wears Cumulative, Adwaita's
+// accessories-calculator (a cumulative delta is a sum over the walk's
+// members).
 //
 // THE REPAINT: the mode's two edges, open_history_mode_fresh and
 // close_history_mode (input_key_dispatch.cpp), each end in full-window
@@ -974,8 +975,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // blue "Logging | Editing | Audio | Effects | Color" bar at the far right of
 // its menu row — reborn as the selectors; the bar's labelled buttons are gone
 // and the acts wear the architect's glyphs (icons.h: Source the dictionary,
-// Target the tablet, 2026-10-14; Warp the conductor's baton, the set's one
-// raster, 2026-10-18; Phase Reset the camera's phase snapshot, 2026-10-15).
+// Target the tablet, 2026-10-14; Warp the conductor's baton, his own PNG of the
+// drop road, 2026-10-18; Phase Reset the camera's phase snapshot, 2026-10-15).
 // THE BAND'S OWN METRICS, NONE NEW: the program's case
 // (render.h's program block), each pair's members abutting in their own pane
 // (its leader the pair's first at redesign_button_opens_icon_group), the
@@ -1042,8 +1043,9 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
             return redesign_button_glyph(app, b) == 2 ? icons::Icon::SavePull
                                                       : icons::Icon::SaveCommit;
         // RENDER'S MID-RENDER FACE (architect 2026-08-11): the CANCEL glyph
-        // while a render or sweep is live — Cancel, Marlett's close X
-        // (Close's drawing, icons.h). The condition and its
+        // while a render or sweep is live — Cancel, Adwaita's
+        // process-stop (its own file, Cancel.svg, which CardCritical links to;
+        // icons.h). The condition and its
         // contract are at redesign_button_glyph_swapped's Render arm, the
         // click's divergence at finish_chrome_press_release's Render arm.
         case RedesignButton::Render: return icons::Icon::Cancel;
@@ -6455,7 +6457,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the LOAD wears LoadInPlace — the very glyph the icon row's
         // button wears for the same act one surface over (icons.h names
         // each set's drawing) — and CLOSE wears
-        // Close, Marlett's close X (the
+        // Close, Adwaita's window-close (Close.svg; the
         // notification cards' dismiss was its other reader until the card's X
         // retired, 2026-10-01; a def is a glyph and several buttons are free
         // to wear one). The row is NINE GLYPH

@@ -3570,7 +3570,8 @@ int gui_main(const char* argument) {
     }
     // THE ICONS ARE LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
     // load_set): assets/icons/ read in place from the bundle and every
-    // drawing parsed and measured before the window exists, so no paint
+    // drawing parsed, its body shift read from the file or measured where the
+    // file declares none (icons.h), before the window exists, so no paint
     // meets a half-loaded set. A file that is not well-formed SVG or not a
     // PNG is a build defect, the validation doctrine's class (1): the same
     // road, one line naming the file and the error, and no window.

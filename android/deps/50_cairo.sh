@@ -19,10 +19,10 @@
 # (to -Dpng=enabled plus a staged libpng, ~200 KB) if anything here bites.
 #
 # Nothing in the product asks CAIRO to decode a PNG: the icons are resvg's
-# (svg_icon.cpp), and the one PNG the product does decode -- the icon set's
-# raster seat, Warp's baton (architect 2026-10-18, icons.h) -- is decoded by
-# resvg's own raster-images feature (85_resvg.sh), so the Android backend asks
-# cairo for nothing but the image surface and cairo-ft.
+# (svg_icon.cpp), and the PNGs the product does decode -- the icon drop road's,
+# any act's own 256-px drawing (architect 2026-10-19, icons.h) -- are decoded
+# by resvg's own raster-images feature (85_resvg.sh), so the Android backend
+# asks cairo for nothing but the image surface and cairo-ft.
 #
 # There is no -Dxml and no -Dwin32 option in 1.18.x; meson hard-errors on an
 # unknown option, so a recipe carried over from 1.16/autotools must drop them.
