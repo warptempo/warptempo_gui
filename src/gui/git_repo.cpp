@@ -4,6 +4,7 @@
 
 #include <git2.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <filesystem>
 #include <memory>
@@ -984,10 +985,8 @@ bool GuiGitRepo::paths_changed_between(const std::string&        from_sha,
 
 GuiGitFastForward GuiGitRepo::fast_forward(
         const std::string& branch, const std::string& from_sha,
-        const std::string& to_sha, const std::vector<std::string>& exclude,
-        const std::vector<std::string>& force, std::string& conflict_path,
+        const std::string& to_sha, const std::vector<std::string>& also,
         std::string& diag) {
-    conflict_path.clear();
     diag.clear();
     git_oid from_oid, to_oid;
     if (!parse_full_oid(from_sha, from_oid) || !parse_full_oid(to_sha, to_oid)) {
@@ -1004,65 +1003,29 @@ GuiGitFastForward GuiGitRepo::fast_forward(
         diag = last_error("could not read its tree");
         return GuiGitFastForward::NotStarted;
     }
-    std::vector<std::string> changed;
+    std::vector<std::string> paths;
     if (!paths_changed_between(from_sha, to_sha,
                                [](std::string_view) { return true; },
-                               changed)) {
+                               paths)) {
         diag = last_error("could not diff the two commits");
         return GuiGitFastForward::NotStarted;
     }
-    auto listed = [](const std::vector<std::string>& list,
-                     const std::string& p) {
-        for (const std::string& q : list) {
-            if (q == p) return true;
+    for (const std::string& p : also) {
+        if (std::find(paths.begin(), paths.end(), p) == paths.end()) {
+            paths.push_back(p);
         }
-        return false;
-    };
-    std::vector<std::string> safe;
-    for (const std::string& p : changed) {
-        if (!listed(exclude, p) && !listed(force, p)) safe.push_back(p);
     }
 
-    // (1) SAFE: libgit2 compares every named path's working-tree file and
-    // index entry against the baseline — the checked-out tree, `from_sha`'s —
-    // and refuses the WHOLE checkout, before writing anything, when one differs
-    // or an untracked file stands in the way. The notify callback names the
-    // first such path. Paths are literal (no pathspec matching). The refusal
-    // is libgit2's alone: the app maps it to Conflict and keeps no predicate.
-    if (!safe.empty()) {
+    // (1) FORCED (architect 2026-10-19): libgit2's GIT_CHECKOUT_FORCE makes
+    // every named path `to_sha`'s whatever the working tree holds — a
+    // modified file is rewritten, an untracked or ignored file in the way of
+    // an added path is overwritten (checkout.c's ADDED-with-workdir case
+    // takes UPDATE_BLOB under FORCE), a path `to_sha` deletes is removed even
+    // when edited. Paths are literal (no pathspec matching), so a path the
+    // list does not name is never touched.
+    if (!paths.empty()) {
         std::vector<char*> specs;
-        for (std::string& p : safe) specs.push_back(p.data());
-        git_checkout_options co;
-        git_checkout_options_init(&co, GIT_CHECKOUT_OPTIONS_VERSION);
-        co.checkout_strategy =
-            GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
-        co.paths.strings = specs.data();
-        co.paths.count   = specs.size();
-        co.notify_flags  = GIT_CHECKOUT_NOTIFY_CONFLICT;
-        co.notify_cb = [](git_checkout_notify_t, const char* path,
-                          const git_diff_file*, const git_diff_file*,
-                          const git_diff_file*, void* payload) -> int {
-            std::string& first = *static_cast<std::string*>(payload);
-            if (first.empty() && path != nullptr) first = path;
-            return 0;
-        };
-        co.notify_payload = &conflict_path;
-        const int rc = git_checkout_tree(
-            repo_, reinterpret_cast<const git_object*>(to_tree.get()), &co);
-        if (rc == GIT_ECONFLICT || (rc < 0 && !conflict_path.empty())) {
-            diag = last_error("the checkout met local changes");
-            return GuiGitFastForward::Conflict;
-        }
-        if (rc < 0) {
-            diag = last_error("the checkout failed");
-            return GuiGitFastForward::FilesFailed;
-        }
-    }
-    // (2) FORCED, whatever the working tree holds.
-    if (!force.empty()) {
-        std::vector<std::string> owned = force;
-        std::vector<char*>       specs;
-        for (std::string& p : owned) specs.push_back(p.data());
+        for (std::string& p : paths) specs.push_back(p.data());
         git_checkout_options co;
         git_checkout_options_init(&co, GIT_CHECKOUT_OPTIONS_VERSION);
         co.checkout_strategy =
@@ -1072,11 +1035,11 @@ GuiGitFastForward GuiGitRepo::fast_forward(
         if (git_checkout_tree(
                 repo_, reinterpret_cast<const git_object*>(to_tree.get()),
                 &co) < 0) {
-            diag = last_error("the forced checkout failed");
+            diag = last_error("the checkout failed");
             return GuiGitFastForward::FilesFailed;
         }
     }
-    // (3) THE INDEX IS THE NEW TREE, whole.
+    // (2) THE INDEX IS THE NEW TREE, whole.
     git_index* i_raw = nullptr;
     if (git_repository_index(&i_raw, repo_) < 0) {
         diag = last_error("could not open the index");
@@ -1088,7 +1051,7 @@ GuiGitFastForward GuiGitRepo::fast_forward(
         diag = last_error("could not write the index");
         return GuiGitFastForward::IndexFailed;
     }
-    // (4) THE BRANCH MOVES, only from the commit the pull was planned on —
+    // (3) THE BRANCH MOVES, only from the commit the pull was planned on —
     // libgit2's own guard (the matching create), no predicate of the app's.
     git_reference* moved = nullptr;
     const std::string ref = "refs/heads/" + branch;

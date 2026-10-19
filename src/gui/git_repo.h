@@ -176,23 +176,21 @@ enum class GuiGitFetch {
     Fetched, Unreachable, Refused, LocalFailed, Cancelled
 };
 
-// HOW A FAST-FORWARD ENDED (GuiGitRepo::fast_forward). `NotStarted` and
-// `Conflict` wrote nothing; the three failures after them stopped with the
-// branch where it was, each at its own step, and the caller's stderr names
-// the recovery for each (run_history_pull): `FilesFailed` — the working tree
-// partly written (step 1 or 2), an unknown subset; a failed step 1 leaves
-// the index untouched, while a step 2 that fails after step 1 succeeded
-// finds the index already carrying step 1's paths (libgit2's checkout writes
-// the index when it succeeds), whose files agree with it; either way the
-// recovery takes the files back to the index and pulls again (the checkout
-// is not a cross-file transaction and is not made one, architect
-// 2026-09-28);
-// `IndexFailed` — the working tree written, the index NOT (step 3: libgit2
+// HOW A FAST-FORWARD ENDED (GuiGitRepo::fast_forward). `NotStarted` wrote
+// nothing; the three failures after it stopped with the branch where it was,
+// each at its own step, and the caller's stderr names the recovery for each
+// (run_history_pull): `FilesFailed` — the working tree partly written (step
+// 1), an unknown subset, over the index as it stood (libgit2's checkout
+// writes the index only when it succeeds); the recovery is the pull again
+// alone, whose forced checkout rewrites whatever the partial write left
+// (the checkout is not a cross-file transaction and is not made one,
+// architect 2026-09-28);
+// `IndexFailed` — the working tree written, the index NOT (step 2: libgit2
 // writes the index through a lock file, so a failed write leaves the old one
 // whole); `BranchFailed` — the working tree and the index written, the branch
-// ref not moved (step 4).
-enum class GuiGitFastForward { Done, NotStarted, Conflict, FilesFailed,
-                               IndexFailed, BranchFailed };
+// ref not moved (step 3).
+enum class GuiGitFastForward { Done, NotStarted, FilesFailed, IndexFailed,
+                               BranchFailed };
 
 class GuiGitRepo {
 public:
@@ -338,25 +336,23 @@ public:
                              std::string&             diag);
 
     // FAST-FORWARD the checked-out `branch` from `from_sha` (its tip now) to
-    // `to_sha` (a descendant), NETWORK-FREE, in four steps:
-    //   1. every path the two trees differ on, but `exclude` and `force`, is
-    //      checked out SAFELY: a path whose working-tree file or index entry
-    //      differs from `from_sha`'s, or an untracked file in the way, refuses
-    //      the whole step before anything is written (Conflict, the first such
-    //      path in `conflict_path`);
-    //   2. every path in `force` is checked out FORCED, whatever the working
-    //      tree holds;
-    //   3. the index becomes `to_sha`'s tree, whole;
-    //   4. the branch ref moves, only if it still names `from_sha`.
-    // A path in `exclude` keeps its working-tree bytes (the index still takes
-    // the new tree's entry, so git sees the kept bytes as a change on top).
-    // No hook runs.
+    // `to_sha` (a descendant), NETWORK-FREE, in three steps:
+    //   1. every path the two trees differ on, and every path in `also`, is
+    //      checked out FORCED to `to_sha`'s bytes (architect 2026-10-19: the
+    //      pull is a forced fast-forward on both roles) — a working-tree
+    //      edit, a deleted file or an untracked (or ignored) file in the way
+    //      is overwritten, a path `to_sha` deletes is removed; every path
+    //      the two trees agree on and `also` does not name is left exactly
+    //      as the working tree holds it;
+    //   2. the index becomes `to_sha`'s tree, whole;
+    //   3. the branch ref moves, only if it still names `from_sha`.
+    // `also` is for paths the trees agree on that the caller still wants
+    // `to_sha`'s (the open piece's three sidecars on a reload,
+    // run_history_pull). No hook runs.
     GuiGitFastForward fast_forward(const std::string&              branch,
                                    const std::string&              from_sha,
                                    const std::string&              to_sha,
-                                   const std::vector<std::string>& exclude,
-                                   const std::vector<std::string>& force,
-                                   std::string&                    conflict_path,
+                                   const std::vector<std::string>& also,
                                    std::string&                    diag);
 
     // ---- THE COLD-START LOCK RECOVERY (2026-09-28). Normal use includes the app being killed (Android kills a

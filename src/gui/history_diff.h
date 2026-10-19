@@ -1410,13 +1410,19 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 // branch to the remote-tracking ref THE LAST CHECK FETCHED, synchronous on
 // the main thread and NETWORK-FREE (the ref is local; nothing is fetched
 // again). Fast-forward only: a branch that is not strictly behind refuses.
-// Two steps, a question between them when the pull changes the open piece
-// (GuiInputHandler::run_history_pull_press owns the question).
+// FORCED ON BOTH ROLES (architect 2026-10-19): every path the pull changes
+// becomes the upstream's whatever the working tree holds there, and every
+// path it does not change is left alone — on the author, Behind means the
+// other copy (GitHub) is the truth; on the mirror there is no work to save,
+// its tree being scratch. Two steps, a confirmation between them when the
+// pull changes the open piece (GuiInputHandler::run_history_pull_press owns
+// the question).
 
 // WHAT THE PRESS FOUND. `touches_open_piece` is whether the pull changes any
 // of the open piece's three sidecars (its directory's `<base><ext>`), the
-// question's one condition. The plan carries everything the pull needs, so it
-// can stand parked under the question.
+// question's one condition and the reload's: the pull that changes the open
+// piece reloads it. The plan carries everything the pull needs, so it can
+// stand parked under the question.
 struct GuiHistoryPullPlan {
     std::string repo_root;
     std::string project_directory;
@@ -1439,10 +1445,11 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
                                             GuiHistoryPullPlan&  plan,
                                             GuiGitHubStatus&     reading);
 
-// THE PULL ITSELF (GuiGitRepo::fast_forward's four steps). `reload` forces
-// all three of the open piece's sidecars to the pulled checkpoint's bytes;
-// otherwise (Keep) the three keep their working-tree bytes and every other
-// changed path is pulled. It re-reads the branch and the upstream first, so a
+// THE PULL ITSELF (GuiGitRepo::fast_forward's three steps): every path the
+// pull changes is forced to the upstream's bytes, and when the plan touches
+// the open piece all three of its sidecars are forced with them, so the
+// reopened screen is exactly the pulled checkpoint (THE RELOAD, below). It
+// re-reads the branch and the upstream first, so a
 // terminal commit or pull since the press refuses as Moved with nothing
 // written — AND HANDS BACK WHAT THE REFS NOW SHOW in `reading` (2026-09-28),
 // which the caller stores as the GitHub status
@@ -1453,17 +1460,13 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&   repo_root,
 //   Moved         — the branch or the upstream moved since the plan.
 //   Refused       — HEAD is no longer on main; nothing was written.
 //   Unreadable    — a read failed before anything was written.
-//   Conflict      — another path the pull changes has local changes (or an
-//                   untracked file in the way); nothing was written, and
-//                   `conflict_piece` names the piece folder (or the path).
 //   FilesFailed   — the working tree was partly written; the index and the
 //                   branch did not move.
-//   IndexFailed   — the files are the upstream's (the open piece's three as
-//                   Reload or Keep left them); the index and the branch did
-//                   not move.
+//   IndexFailed   — the files are the upstream's; the index and the branch
+//                   did not move.
 //   BranchFailed  — the files and the index are the upstream's; the branch
 //                   did not move.
-//   WouldNotLoad  — RELOAD ONLY: the upstream's sidecar set for the open
+//   WouldNotLoad  — A RELOAD ONLY: the upstream's sidecar set for the open
 //                   piece fails the strict dry run the reopen would run
 //                   (`reopen_gate`); nothing was written.
 // Every arm but Pulled prints one stderr line; FilesFailed adds its recovery
@@ -1473,15 +1476,14 @@ enum class GuiHistoryPullOutcome {
     Moved,
     Refused,
     Unreadable,
-    Conflict,
     FilesFailed,
     IndexFailed,
     BranchFailed,
     WouldNotLoad,
 };
 //
-// THE RELOAD'S REOPEN GATE (2026-09-28): a
-// Reload promises to reopen the pulled checkpoint, and the reopen is the
+// THE RELOAD'S REOPEN GATE (2026-09-28): a pull that changes the open piece
+// reopens the pulled checkpoint, and the reopen is the
 // Revert road, whose strict dry run can refuse — so the pull asks that dry run
 // FIRST, before it writes a file, the index or the ref. After the refs are
 // re-read, the upstream's sidecars for the open piece (whichever of the three
@@ -1490,13 +1492,11 @@ enum class GuiHistoryPullOutcome {
 // handed that folder: it answers what the reopen would refuse (the caller runs
 // source_load_dry_run against the live source with the sidecars read from the
 // folder — file_loader.h), or nothing. A refusal is WouldNotLoad with nothing
-// written, the refusal's diagnostic on stderr. Keep never asks it: it neither
-// writes the open piece's sidecars nor reopens anything, so the session and
-// its files stay what they were whatever the upstream holds.
+// written, the refusal's diagnostic on stderr. A pull that leaves the open
+// piece alone never asks it: it reopens nothing, so the session and the
+// piece's files stay what they were whatever the upstream holds.
 using GuiHistoryReopenGate = std::function<std::optional<GuiFailure>(
     const std::filesystem::path& sidecar_dir)>;
 GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
-                                       bool                        reload,
                                        const GuiHistoryReopenGate& reopen_gate,
-                                       std::string&                conflict_piece,
                                        GuiGitHubStatus&            reading);

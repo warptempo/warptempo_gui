@@ -1582,7 +1582,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //     exclude each other — bare `l` and the Play renders button are outside the
 //     mode's allowlist, and route_render_player_key consumes bare `h` — so the
 //     only LOAD_IN_PLACE_CONFIRM reachable under a standing visit is this one.
-//   * THE PULL'S QUESTION (PULL_CONFIRM, 2026-09-27), which is left standing
+//   * THE PULL'S CONFIRMATION (PULL_CONFIRM, 2026-09-27), which is left standing
 //     too: its plan is parked whole on AppState (pending_history_pull — the
 //     clone, the directory, the base name and both commits), so its answers
 //     need nothing the close takes, and the pull re-reads the refs at the act.
@@ -3081,9 +3081,10 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 //     and Diverged each card their sentence; OFFLINE ASKS GITHUB AGAIN
 //     (dispatch_github_check, architect 2026-09-28) and nothing else, the
 //     answer being what the next press acts on — silent in the view, whose
-//     row 8 shows the word, and a card outside it; BEHIND is the PULL
-//     (run_history_pull_press, its question when the pull changes the open
-//     piece).
+//     row 8 shows the word, and a card outside it; BEHIND is the PULL ON
+//     EITHER ROLE (run_history_pull_press, its OK / Cancel confirmation when
+//     the pull changes the open piece; the press owns the one road),
+//     reached before the role's gate below.
 //   - THE ROLE (architect 2026-10-10, device_is_mirror, app_state.h): A MIRROR
 //     TAKES NO COMMIT ROAD — up to date, it cards that GitHub has nothing
 //     newer (its chord is the pull road alone); AHEAD, a commit GitHub lacks
@@ -3585,11 +3586,15 @@ void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
 // strictly behind them — a terminal commit or pull since the check is
 // `Pull refused: this device has moved`, the status taking what the refs now
 // show. THE QUESTION IS ASKED ONLY WHEN THE PULL CHANGES THE OPEN PIECE, and
-// only here, by the key — never by an asynchronous arrival: "Reload this
-// piece from GitHub's newer checkpoint?", Reload / Keep / Cancel with passive
-// focus on Cancel (a three-way, not a confirmation — Reload discards the
-// session). A pull that leaves the open piece alone runs at once: the face
-// said Pull, and nothing on screen changes.
+// only here, by the key — never by an asynchronous arrival: "Pull GitHub's
+// newer checkpoint and reload this piece?", OK / Cancel with passive focus on
+// Cancel (architect 2026-10-19: one road, OK reloads — a confirmation whose
+// OK discards the session, so its Enter commits nothing). A pull that leaves
+// the open piece alone runs at once: the face said Pull, and nothing on
+// screen changes. THE ONE ROAD SERVES BOTH ROLES (architect 2026-10-19):
+// run_publish_chord's Behind arm reaches this press before its mirror gate,
+// so the mirror asks the same question, and on the mirror the question is
+// the only notice that a laptop session's unsaved edits are discarded.
 void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
     GuiHistoryPullPlan              plan;
     GuiGitHubStatus                 reading = app.github_status;
@@ -3622,50 +3627,48 @@ void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
         return;
     }
     if (!plan.touches_open_piece) {
-        execute_history_pull(plan, /*reload=*/false);
+        execute_history_pull(plan);
         return;
     }
     app.pending_history_pull = std::move(plan);
     playback_lifecycle.stop_playback_for_modal_open();
-    app.prompt.present("Reload this piece from GitHub's newer checkpoint?",
-                       kPromptReloadKeepCancel,
+    app.prompt.present("Pull GitHub's newer checkpoint and reload this piece?",
+                       kPromptOkCancel,
                        DialogTrigger::PULL_CONFIRM,
                        PromptInitialFocus::LastButton);
     viewport.invalidate_all();
 }
 
-void GuiInputHandler::answer_history_pull(bool reload) {
+void GuiInputHandler::answer_history_pull() {
     if (!app.pending_history_pull) return;
     const GuiHistoryPullPlan plan = std::move(*app.pending_history_pull);
     app.pending_history_pull.reset();
-    execute_history_pull(plan, reload);
+    execute_history_pull(plan);
 }
 
 void GuiInputHandler::cancel_history_pull() {
     app.pending_history_pull.reset();
 }
 
-// THE PULL ITSELF, and its report. RELOAD forces all three of the open
-// piece's sidecars to the pulled checkpoint and reopens the project through
-// the Revert road with no second question (the prompt was it), so undo and
-// unsaved edits go; KEEP moves the branch and every other file and leaves the
-// session exactly as it was — no `*`, row 8's mark meaning unsaved-to-disk and
-// the disk still holding the last save: the drift is a GIT fact, which the
-// next `h` shows as the delta against the pulled checkpoint and the next Save
-// and Commit records. EITHER WAY THE VIEW CLOSES (the walk and the head delta
-// just changed; every mutator closes the view, the rule that keeps
-// head_delta_empty static) and the walk is re-warmed through the funnel, HEAD
-// having moved. Success is silent; the status reads UpToDate.
+// THE PULL ITSELF, and its report. Every path the pull changes is forced to
+// GitHub's bytes (run_history_pull). A PULL THAT CHANGES THE OPEN PIECE — the
+// one the question confirmed — forces all three of its sidecars to the pulled
+// checkpoint and reopens the project through the Revert road with no second
+// question (the prompt was it), so undo and unsaved edits go; one that leaves
+// the open piece alone moves the branch and every other changed file and
+// leaves the session exactly as it was. EITHER WAY THE VIEW CLOSES (the walk
+// and the head delta just changed; every mutator closes the view, the rule
+// that keeps head_delta_empty static) and the walk is re-warmed through the
+// funnel, HEAD having moved. Success is silent; the status reads UpToDate.
 //
-// RELOAD IS GATED ON ITS OWN REOPEN (run_history_pull's reopen gate): the pull
-// hands this body the upstream's sidecars for the open piece, staged, and the
-// gate answers them with the Revert road's own two refusals — the project
+// THE RELOAD IS GATED ON ITS OWN REOPEN (run_history_pull's reopen gate): the
+// pull hands this body the upstream's sidecars for the open piece, staged, and
+// the gate answers them with the Revert road's own two refusals — the project
 // model, then the strict dry run against the live source with the sidecars
 // read from the staging (source_load_dry_run's sidecar-folder form, the EOF
 // walls included) — so a checkpoint the reopen would refuse is refused BEFORE
 // the pull writes anything, and the session stands as it was.
-void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
-                                           bool                      reload) {
+void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan) {
     const GuiHistoryReopenGate reopen_gate =
         [this](const std::filesystem::path& sidecar_dir)
         -> std::optional<GuiFailure> {
@@ -3676,17 +3679,16 @@ void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
         if (!project) return plain_failure(project.error());
         return source_load_dry_run(project->source, sidecar_dir);
     };
-    std::string                 conflict_piece;
     GuiGitHubStatus             reading = GuiGitHubStatus::Unchecked;
     const GuiHistoryPullOutcome outcome =
-        run_history_pull(plan, reload, reopen_gate, conflict_piece, reading);
+        run_history_pull(plan, reopen_gate, reading);
     switch (outcome) {
     case GuiHistoryPullOutcome::Pulled:
         app.github_status = GuiGitHubStatus::UpToDate;
         if (app.history_mode.active) close_history_mode();
         kick_history_prefetch();
         viewport.invalidate_all();
-        if (reload) revert_project(/*question_asked=*/true);
+        if (plan.touches_open_piece) revert_project(/*question_asked=*/true);
         return;
     // THE TWO DELAYED REFUSALS take what the refs show NOW (`reading`,
     // run_history_pull's re-read), as the press's immediate refusals do: the
@@ -3703,11 +3705,6 @@ void GuiInputHandler::execute_history_pull(const GuiHistoryPullPlan& plan,
         viewport.invalidate_all();
         notifications.notify(AppState::NotificationClass::Normal,
                              "GitHub refused this device");
-        return;
-    case GuiHistoryPullOutcome::Conflict:
-        notifications.notify(AppState::NotificationClass::Normal,
-                             "Pull refused: '" + conflict_piece +
-                                 "' has changes not committed");
         return;
     case GuiHistoryPullOutcome::Unreadable:
         notifications.notify(AppState::NotificationClass::Normal,

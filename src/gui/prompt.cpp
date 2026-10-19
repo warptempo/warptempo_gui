@@ -147,14 +147,15 @@ void GuiPrompt::activate_response(char k) {
     }
 
     if (trigger == DialogTrigger::PULL_CONFIRM) {
-        // THE PULL'S QUESTION (architect 2026-09-27): `r` Reload and `k` Keep
-        // run the parked plan through the input handler; Escape drops it. The
-        // prompt closes first either way, so the pull runs on the ordinary
-        // modal state (and Reload's reopen asks nothing more).
-        if (k == 'r' || k == 'k') {
+        // THE PULL'S CONFIRMATION (architect 2026-10-19): OK (`o`, its
+        // dispatch char) runs the parked plan through the input handler and
+        // reloads the piece; Escape drops it. The prompt closes first either
+        // way, so the pull runs on the ordinary modal state (and the reload's
+        // reopen asks nothing more).
+        if (k == 'o') {
             app.prompt.active = false;
             viewport.invalidate_all();
-            if (input != nullptr) input->answer_history_pull(k == 'r');
+            if (input != nullptr) input->answer_history_pull();
             return;
         }
         if (k == '\x1b') {

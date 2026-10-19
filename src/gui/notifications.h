@@ -179,9 +179,8 @@
 //     refused this device", "This device and GitHub have both moved" (stderr
 //     names the fix), "GitHub has not been checked"; the pull's synchronous
 //     refusals "Pull refused: this device has moved", "Pull refused:
-//     '<piece>' has changes not committed", "Pull refused: GitHub's
-//     checkpoint of this piece would not load" and "Pull failed: nothing was
-//     changed"; the role's two (2026-10-10), "This device is a mirror" and
+//     GitHub's checkpoint of this piece would not load" and "Pull failed:
+//     nothing was changed"; the role's two (2026-10-10), "This device is a mirror" and
 //     "GitHub has nothing newer"; and outside the view, where no face shows
 //     the head delta, "Nothing to commit" and "The checkpoints are still
 //     being read". UNDER `offline` THE CHORD ASKS GITHUB AGAIN (architect

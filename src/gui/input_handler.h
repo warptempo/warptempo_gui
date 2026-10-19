@@ -1879,12 +1879,12 @@ struct GuiInputHandler {
     // render_player_delete.
     void confirm_render_player_delete();
     void cancel_render_player_delete();
-    // THE PULL QUESTION'S THREE ANSWERS (architect 2026-09-27), called by
-    // GuiPrompt through its back-pointer when PULL_CONFIRM answers: Reload
-    // (`reload` true) and Keep run the parked plan
-    // (AppState::pending_history_pull) through run_history_pull; Cancel drops
-    // it and changes nothing.
-    void answer_history_pull(bool reload);
+    // THE PULL CONFIRMATION'S TWO ANSWERS (architect 2026-10-19), called by
+    // GuiPrompt through its back-pointer when PULL_CONFIRM answers: OK runs
+    // the parked plan (AppState::pending_history_pull) through
+    // run_history_pull and reloads the piece; Cancel drops it and changes
+    // nothing.
+    void answer_history_pull();
     void cancel_history_pull();
 
     // WHAT CLOSES BEFORE THE QUIT QUESTION, the editors' half (2026-08-28):
@@ -4649,10 +4649,11 @@ private:
     // THE PULL (architect 2026-09-27): the publish chord (Ctrl+Shift+S since
     // 2026-10-10, in either view) while the GitHub status reads Behind, on the
     // session that press read. The press plans it (plan_history_pull, local
-    // and synchronous), asks the question only when the pull changes the open
-    // piece, and runs it (execute_history_pull) at once otherwise.
+    // and synchronous), asks its OK / Cancel confirmation only when the pull
+    // changes the open piece, and runs it (execute_history_pull) at once
+    // otherwise — the one road on both roles.
     void run_history_pull_press(const GuiHistoryDiff& session);
-    void execute_history_pull(const GuiHistoryPullPlan& plan, bool reload);
+    void execute_history_pull(const GuiHistoryPullPlan& plan);
     void on_github_check_complete(GuiGitHubStatus status);
     void run_history_revert();
     // THE HEAD DELTA'S ONE MEASUREMENT SITE (2026-08-07). Called at the entry

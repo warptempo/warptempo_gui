@@ -197,9 +197,7 @@ GuiGitFetch GuiGitRepo::fetch_origin(const std::string& /*source_url*/,
 GuiGitFastForward GuiGitRepo::fast_forward(
         const std::string& /*branch*/, const std::string& /*from_sha*/,
         const std::string& /*to_sha*/,
-        const std::vector<std::string>& /*exclude*/,
-        const std::vector<std::string>& /*force*/,
-        std::string& /*conflict_path*/, std::string& diag) {
+        const std::vector<std::string>& /*also*/, std::string& diag) {
     say_no_git();
     diag = kNoGit;
     return GuiGitFastForward::NotStarted;

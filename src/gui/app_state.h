@@ -4352,12 +4352,12 @@ enum class DialogTrigger {
     // arm with nothing to fork on. It asks because that paste CLEARS the
     // destination blocks' existing resets.
     PASTE_CONFIRM,
-    // THE PULL'S QUESTION (architect 2026-09-27): "Reload this piece from
-    // GitHub's newer checkpoint?", Reload / Keep / Cancel with passive focus
-    // on Cancel (a three-way, not a confirmation — Reload discards the
-    // session). Raised by the publish chord, Ctrl+Shift+S, in either view
-    // (Ctrl+S in the `h` view until 2026-10-10), only when the pull changes
-    // the open piece; the plan waits at AppState::pending_history_pull.
+    // THE PULL'S CONFIRMATION (architect 2026-10-19): "Pull GitHub's newer
+    // checkpoint and reload this piece?", OK / Cancel with passive focus on
+    // Cancel (its OK discards the session). Raised by the publish chord,
+    // Ctrl+Shift+S, in either view and on either role, only when the pull
+    // changes the open piece; the plan waits at
+    // AppState::pending_history_pull.
     PULL_CONFIRM,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
     // place?", OK / Cancel. ONE PROMPT BODY, TWO SUBJECTS (architect
@@ -4408,8 +4408,8 @@ enum class DialogTrigger {
 // Tab / arrows / Enter / Space do anything; everything else is swallowed.
 // The answers are a PromptAnswer table (below): each answer's dispatch char
 // (`key`, what activate_response forks on), its button's PLAIN WORD
-// (`label` — "Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Reload",
-// "Keep", "Delete") and its ACCESS KEY (`access`).
+// (`label` — "Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Delete")
+// and its ACCESS KEY (`access`).
 //
 // THE DIALOG BUTTONS CARRY WINDOWS' UNDERLINED ACCESS KEYS (architect
 // 2026-10-10 ~16:05, "agree to make it windows strict"), exactly as the menu
@@ -4513,13 +4513,18 @@ enum class DialogTrigger {
 // which one; the BUTTON ORDER is untouched by either value, so Cancel stays
 // LAST on every prompt and fact (i)'s derivation holds whichever is chosen.
 //   LastButton  — the 2026-08-13 default and the escape sentinel, taken by
-//                 the three-way prompts alone: the unsaved-work prompt and
-//                 its save-failed rung (Save / Discard / Cancel, Retry /
-//                 Discard / Cancel) and, since 2026-09-27, the `h` view's
-//                 PULL QUESTION (Reload / Keep / Cancel, whose Reload
-//                 discards the session). Those are NOT confirmations of an act
-//                 already asked for — they interpose a question the user did
-//                 not raise — so their Enter must commit nothing.
+//                 the three-way prompts — the unsaved-work prompt and its
+//                 save-failed rung (Save / Discard / Cancel, Retry / Discard
+//                 / Cancel) — by the render player's Delete (its act destroys
+//                 files, DialogTrigger::DELETE_FOLDER_CONFIRM) and by THE
+//                 PULL CONFIRMATION (OK / Cancel since 2026-10-19, whose OK
+//                 discards the session). The three-ways and the pull
+//                 interpose a question the user did not raise — the pull's
+//                 press asked for a pull, not for the session's loss — so
+//                 their Enter must commit nothing. A DELIBERATE ASYMMETRY
+//                 with Revert's OK / Cancel below, which discards the session
+//                 too: the Revert row asks for exactly that loss, so its
+//                 question is a confirmation of the act just asked for.
 //   FirstButton — THE CONFIRMATIONS: the LOAD CONFIRMATION on both its
 //                 subjects (the player's render entry and the `h` view's walk
 //                 member), since 2026-09-13 File → Revert's (architect:
@@ -4554,8 +4559,6 @@ inline constexpr PromptAnswer kPromptSaveDiscardCancel[] = {
     {'s', "Save", 0}, {'d', "Discard", 0}, {'\x1b', "Cancel", -1}};
 inline constexpr PromptAnswer kPromptRetryDiscardCancel[] = {
     {'r', "Retry", 0}, {'d', "Discard", 0}, {'\x1b', "Cancel", -1}};
-inline constexpr PromptAnswer kPromptReloadKeepCancel[] = {
-    {'r', "Reload", 0}, {'k', "Keep", 0}, {'\x1b', "Cancel", -1}};
 inline constexpr PromptAnswer kPromptYesCancel[] = {
     {'y', "Yes", 0}, {'\x1b', "Cancel", -1}};
 inline constexpr PromptAnswer kPromptOkCancel[] = {
@@ -4586,7 +4589,6 @@ inline constexpr bool prompt_answers_valid(const PromptAnswer (&t)[N]) {
 inline constexpr bool kPromptAnswerTablesValid =
     prompt_answers_valid(kPromptSaveDiscardCancel) &&
     prompt_answers_valid(kPromptRetryDiscardCancel) &&
-    prompt_answers_valid(kPromptReloadKeepCancel) &&
     prompt_answers_valid(kPromptYesCancel) &&
     prompt_answers_valid(kPromptOkCancel) &&
     prompt_answers_valid(kPromptDeleteCancel);
@@ -9002,12 +9004,12 @@ struct AppState {
     GuiGitHubStatus github_status = GuiGitHubStatus::Unchecked;
 
     // THE PULL PARKED UNDER ITS QUESTION (architect 2026-09-27): a pull that
-    // changes the open piece asks "Reload this piece from GitHub's newer
-    // checkpoint?" (DialogTrigger::PULL_CONFIRM), and the plan the press made
-    // waits here for the answer — Reload and Keep run it
-    // (GuiInputHandler::answer_history_pull), Cancel drops it. Self-contained
-    // (it carries the clone, the directory and the base name), so a view
-    // closed under the question leaves nothing it needs behind.
+    // changes the open piece asks "Pull GitHub's newer checkpoint and reload
+    // this piece?" (DialogTrigger::PULL_CONFIRM, OK / Cancel since
+    // 2026-10-19), and the plan the press made waits here for the answer —
+    // OK runs it (GuiInputHandler::answer_history_pull), Cancel drops it.
+    // Self-contained (it carries the clone, the directory and the base name),
+    // so a view closed under the question leaves nothing it needs behind.
     std::optional<GuiHistoryPullPlan> pending_history_pull;
 
     // -- THE NOTIFICATION STACK (architect design 2026-08-29) -------------

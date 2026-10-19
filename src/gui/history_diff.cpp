@@ -2341,7 +2341,7 @@ const GuiHistoryCommitDelta* GuiHistoryLocalWalk::delta_at(
 // kept (the unnamed-remote fetch with its explicit refspec,
 // push_update_reference's rejection capture, github_status_from_refs,
 // make_scratch_dir, the repository lane, the cold-start lock recovery and
-// Reload's reopen gate) answers ordinary use: a kill, a power loss, two
+// the pull's reopen gate) answers ordinary use: a kill, a power loss, two
 // sessions of one process, a checkpoint that would not reload.
 // ---------------------------------------------------------------------------
 
@@ -2971,11 +2971,9 @@ GuiHistoryPullPlanVerdict plan_history_pull(const std::string&  repo_root,
 }
 
 GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
-                                       bool                        reload,
                                        const GuiHistoryReopenGate& reopen_gate,
-                                       std::string&                conflict_piece,
                                        GuiGitHubStatus&            reading) {
-    conflict_piece.clear();
+    const bool reload = plan.touches_open_piece;
     reading = GuiGitHubStatus::Unchecked;
     std::string               diag;
     std::optional<GuiGitRepo> repo = GuiGitRepo::open(plan.repo_root, diag);
@@ -3013,10 +3011,11 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
         return GuiHistoryPullOutcome::Moved;
     }
 
-    // RELOAD FORCES ALL THREE of the open piece's sidecars, including any the
-    // pull does not change, so the reopened screen is exactly the pulled
-    // checkpoint and never a mixture with the session's drift; KEEP excludes
-    // all three, so their working-tree bytes stay the session's.
+    // THE RELOAD FORCES ALL THREE of the open piece's sidecars, including any
+    // the pull does not change, so the reopened screen is exactly the pulled
+    // checkpoint the gate below judged, never a mixture with a sidecar saved
+    // since the last checkpoint. A pull that leaves the open piece alone adds
+    // nothing: its three are paths the pull does not change.
     const std::vector<std::string> open =
         checkpoint_paths(plan.project_directory, plan.base_name);
 
@@ -3098,58 +3097,33 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
         }
     }
     const std::vector<std::string> none;
-    std::string                    conflict_path;
     const GuiGitFastForward ff = repo->fast_forward(
-        branch, from_sha, to_sha, reload ? none : open, reload ? open : none,
-        conflict_path, diag);
+        branch, from_sha, to_sha, reload ? open : none, diag);
     switch (ff) {
     case GuiGitFastForward::Done:
         std::fprintf(stderr,
                      "warptempo_gui: Pulled '%s' to %s (%s)\n",
                      branch.c_str(), short_sha(to_sha).c_str(),
-                     reload ? "this piece reloaded" : "this piece kept");
+                     reload ? "this piece reloaded" : "this piece unchanged");
         return GuiHistoryPullOutcome::Pulled;
     case GuiGitFastForward::NotStarted:
         std::fprintf(stderr, "warptempo_gui: Pull failed: %s\n", diag.c_str());
         return GuiHistoryPullOutcome::Unreadable;
-    case GuiGitFastForward::Conflict: {
-        // THE PIECE IS NAMED BY ITS FOLDER — `projects/<piece>/...`'s second
-        // component — or, for a path outside the corpus, by the path itself.
-        const std::string path = conflict_path.empty() ? "?" : conflict_path;
-        std::string       piece = path;
-        if (path.compare(0, kProjectsPrefix.size(), kProjectsPrefix) == 0) {
-            const std::size_t end = path.find('/', kProjectsPrefix.size());
-            if (end != std::string::npos) {
-                piece = path.substr(kProjectsPrefix.size(),
-                                    end - kProjectsPrefix.size());
-            }
-        }
-        conflict_piece = piece;
-        std::fprintf(stderr,
-                     "warptempo_gui: Pull refused: '%s' has changes not "
-                     "committed; nothing was changed (%s)\n",
-                     path.c_str(), diag.c_str());
-        return GuiHistoryPullOutcome::Conflict;
-    }
     // EACH LATE FAILURE NAMES ITS RECOVERY ON STDERR, none run in-app (a step
     // that just failed on this clone is not retried behind the user's back).
-    // FILES FAILED (step 1 or 2) left an unknown subset of the working tree
-    // the upstream's with the branch unmoved — over an untouched index when
-    // step 1 failed, over an index already carrying step 1's paths (libgit2's
-    // checkout writes the index when it succeeds, and those files agree with
-    // it) when step 2 failed after it — so the recovery takes the files BACK
-    // to the index: on the laptop `git restore projects`
-    // in the clone and the pull again; on the tablet, which has no terminal,
-    // `warptempo_sync setup` from the laptop re-places the clone. THE PULL IS
-    // NOT MADE CRASH-TRANSACTIONAL (architect 2026-09-28): no journal, staged
-    // publication or pre-load recovery is built, so a kill, a power loss or a
-    // full disk mid-checkout can leave some paths the upstream's and the rest
-    // the old tip's — the window is a few small files, it is rare, and it has
-    // this recovery: under one device per movement the tablet is almost never
-    // behind, and the laptop, the device that pulls, holds no work of its
-    // own, so a restore and a second pull lose nothing (a kill leaves no
-    // stderr; the same recovery applies). INDEX FAILED and BRANCH FAILED left the files the upstream's
-    // (the open piece's three as Reload or Keep left them), and what is left
+    // FILES FAILED (step 1, the forced checkout) left an unknown subset of
+    // the working tree the upstream's with the index and the branch unmoved
+    // (libgit2's checkout writes the index only when it succeeds), and the
+    // recovery is THE PULL AGAIN on either device: the status still reads
+    // Behind, and the forced checkout rewrites every path the pull changes
+    // whatever the partial write left there (architect 2026-10-19). THE PULL
+    // IS NOT MADE CRASH-TRANSACTIONAL (architect 2026-09-28): no journal,
+    // staged publication or pre-load recovery is built, so a kill, a power
+    // loss or a full disk mid-checkout can leave some paths the upstream's
+    // and the rest the old tip's — the window is a few small files, it is
+    // rare, and it has this recovery (a kill leaves no
+    // stderr; the same recovery applies). INDEX FAILED and BRANCH FAILED
+    // left the files the upstream's, and what is left
     // is to bring the index and the branch along WITHOUT touching the working
     // tree. With the index unwritten that is a MIXED reset — HEAD and the
     // index to the upstream, the files kept — since a soft reset would move
@@ -3160,12 +3134,10 @@ GuiHistoryPullOutcome run_history_pull(const GuiHistoryPullPlan&   plan,
         std::fprintf(stderr,
                      "warptempo_gui: Pull failed: the files were partly "
                      "updated and '%s' did not move (%s)\n"
-                     "warptempo_gui:   on the laptop: 'git -C %s restore "
-                     "projects' in the terminal, then pull again "
-                     "(Ctrl+Shift+S)\n"
-                     "warptempo_gui:   on the tablet: re-place the clone "
-                     "with 'warptempo_sync setup' from the laptop\n",
-                     branch.c_str(), diag.c_str(), plan.repo_root.c_str());
+                     "warptempo_gui:   pull again (Ctrl+Shift+S): the "
+                     "forced checkout rewrites every file the pull "
+                     "changes\n",
+                     branch.c_str(), diag.c_str());
         return GuiHistoryPullOutcome::FilesFailed;
     case GuiGitFastForward::IndexFailed:
         std::fprintf(stderr,

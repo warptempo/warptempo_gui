@@ -103,9 +103,10 @@ struct GuiPrompt {
     // two targets ask the unsaved-work question.
     //
     // `question_asked` SKIPS THE QUESTION, for the one road that has asked its
-    // own already: the pull's Reload (architect 2026-09-27), whose prompt
-    // "Reload this piece from GitHub's newer checkpoint?" is the discard
-    // question, completes its Revert with no second one.
+    // own already: the pull's reload (architect 2026-09-27), whose
+    // confirmation "Pull GitHub's newer checkpoint and reload this piece?"
+    // (OK / Cancel since 2026-10-19) is the discard question, completes its
+    // Revert with no second one.
     void request_close(GuiCloseTarget target, bool question_asked = false);
     void activate_response(char k);
 

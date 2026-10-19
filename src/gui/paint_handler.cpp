@@ -5890,19 +5890,19 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   the box's interior THE FACE (a surface you only read, ModalBoxGround::
 //   Face; mock_modal_progress_v2.png's shape), the chrome's text color, and
 //   the answer buttons FLUSH RIGHT on the controls row in painted order, the
-//   last one's right edge the ring's outer edge. Each button wears its answer's PLAIN WORD
-//   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Reload", "Keep",
+//   last one's right edge the ring's outer edge. Each button wears its
+//   answer's PLAIN WORD ("Save", "Discard", "Cancel", "Retry", "Yes", "OK",
 //   "Delete") with Windows' UNDERLINED ACCESS KEY (architect 2026-10-10,
 //   Windows strict; OK and Cancel none) — the bracketed accelerators stay
 //   retired, PromptState owning the label rule and the key match. ONE BUTTON
 //   WEARS THE PASSIVE FOCUS FACE FROM THE RAISE (2026-08-13, superseding this
-//   block's "no default face: this prompt system has no Enter answer, so every button
-//   is plain") — the LAST, the Escape sentinel, on every prompt but THE FOUR
-//   CONFIRMATION RAISES — the load's two, File → Revert's and, since
-//   2026-09-16, the phase reset paste's — which are raised
-//   on their FIRST (PromptState's PromptInitialFocus owns the choice); Enter answers whichever it is, the
-//   assignment site is a few dozen lines into the body below and the whole
-//   supersession is at PromptState.
+//   block's "no default face: this prompt system has no Enter answer, so
+//   every button is plain") — the LAST, the Escape sentinel, on every prompt
+//   but THE FOUR CONFIRMATION RAISES — the load's two, File → Revert's and,
+//   since 2026-09-16, the phase reset paste's — which are raised on their
+//   FIRST (PromptState's PromptInitialFocus owns the choice); Enter answers
+//   whichever it is, the assignment site is a few dozen lines into the body
+//   below and the whole supersession is at PromptState.
 //   THE PROGRESS MODAL (2026-10-14, AppState::BatchProgress) — a prompt's
 //   shape with a sentence for its question: "Rendering X of Y..." on the box's
 //   first row on the face, and Cancel alone flush right on the controls row,
@@ -6019,8 +6019,8 @@ constexpr double kModalButtonGapPx    = 6.0;
 // was — and the 75 a MINIMUM WIDTH: a label whose pads and run need more
 // widens its button, as a Windows button sized to its text does, and the
 // label is CENTRED in its button as Windows centres a push button's text.
-// Every word button the product draws fits 75 (re-greped 2026-10-02: OK,
-// Cancel, Yes, Save, Discard, Retry, Reload, Keep, Delete — Discard the
+// Every word button the product draws fits 75 (re-greped 2026-10-19: OK,
+// Cancel, Yes, Save, Discard, Retry, Delete — Discard the
 // widest at about 56 with its pads at the 13-px face), so the row reads as
 // Windows' row of equal buttons. A glyph button is not this box: the render
 // player's nine are row 8's case, the program's (architect 2026-10-05,
@@ -6546,7 +6546,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // and the `h` view's walk member), so the two roads answer Enter alike,
     // and the revert and the two pastes answer it as they do; the two
     // three-way Save / Discard / Cancel prompts, which confirm no act already
-    // asked for, are what keep the last button. This is the
+    // asked for, the render player's Delete and the pull's confirmation
+    // (PromptInitialFocus owns why) are what keep the last button. This is the
     // ONE assignment site: it rides the same reset the
     // focus's other three edges ride, so a fresh prompt and a prompt replacing
     // a prompt are one case, and it runs HERE rather than at the reset because
