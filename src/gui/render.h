@@ -1809,8 +1809,9 @@ GuiRect bottom_column_foot_area(const AppState& a);
 // strip's ONLY lane since the relayout's commit B): the clock in its time
 // field and the state line on the ground beside it at the left pad
 // (architect 2026-10-02 / 2026-10-03 / 2026-10-05),
-// and the MARKER-VERB GROUP, the marker walk, the four cardinal arrows and
-// Play / Stop (the arrow group's last case) flush right, each Cool Edit's
+// and the MARKER-VERB GROUP, the step and walk (Down, Up, Previous Marker,
+// Next Marker) and the nudge and play (Switch Tab, Center, Left, Right and
+// Play / Stop, the last case; architect 2026-10-18) flush right, each Cool Edit's
 // group (its gripper, air, cases, air and end bar, the last with no end bar)
 // with two W of face between groups (program_spec.h's group fields, since
 // 2026-10-09; eight Windows px of bare ground between them from 2026-09-29;

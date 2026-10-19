@@ -891,9 +891,11 @@ private:
     // UNIFIED BOTTOM ROW's button cluster (bottom_row_area, over the border
     // under row 8 and the program frame's bottom row on the window's foot,
     // 2026-10-14: the clock cell and the STATE
-    // CELL left, then the marker verbs, the marker walk, the arrow four and
-    // Play / Stop (the arrow group's last case) flush right in their groups, declared below; in
-    // the `h` view Older / Newer stand in the arrows' seat, 2026-10-11).
+    // CELL left, then the marker verbs, the step and walk (Down, Up, Previous
+    // Marker, Next Marker) and the nudge and play (Switch Tab, Center, Left,
+    // Right and Play / Stop, the last case; architect 2026-10-18) flush right
+    // in their groups, declared below; in the `h` view Older / Newer stand in
+    // the Left / Right seats, 2026-10-11).
     // All three PUBLISH their buttons' hit rects into app.redesign_buttons —
     // the painter is the only place a shaped label's width exists, so the
     // pointer code reads the stash instead of re-shaping (the displayed-basis
@@ -943,8 +945,8 @@ private:
     // `h` walk line or the render's progress line at the normal face, clipped
     // short of the right block), then the right block packed against the
     // lane's edge — the MARKER-VERB GROUP (its membership is
-    // kMarkerVerbGroup's, in the .cpp), the marker walk, the arrow four and
-    // Play / Stop (the arrow group's last case) — each Cool Edit's group of
+    // kMarkerVerbGroup's, in the .cpp), the step and walk and the nudge and
+    // play with Play / Stop its last case (2026-10-18) — each Cool Edit's group of
     // gripper, air, the program's cases, air and end bar, the row's last
     // group with no end bar (2026-10-14), two W of face between groups
     // (program_spec.h's group fields; eight Windows px of bare ground between

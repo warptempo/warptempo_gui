@@ -1461,23 +1461,24 @@ struct GuiInputHandler {
     //   ROW 8, 8 + 4 + 5 + 2 = 19 — the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
     //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle
-    //   Value Drag since 2026-10-11), the walk
-    //   group's four (Previous Marker, Next Marker, Center, Switch Tab), the
-    //   four cardinal arrows with Play / Stop last (kTransportArrowGroup)
-    //   and the `h` view's Older /
-    //   Newer (kTransportHistoryStepGroup, architect 2026-10-11): 17 standing
+    //   Value Drag since 2026-10-11), the step-and-walk group's four (Down,
+    //   Up, Previous Marker, Next Marker — kTransportStepWalkGroup), the
+    //   nudge-and-play group's five with Play / Stop last (Switch Tab,
+    //   Center, Left, Right, Play — kTransportNudgePlayGroup; the two groups
+    //   regrouped by the architect 2026-10-18) and the `h` view's Older /
+    //   Newer (kTransportHistoryStandIns, architect 2026-10-11): 17 standing
     //   outside the view (the two publishing empty rects), and inside it
-    //   1 + 4 + 2 = 7 — the hide's survivors, Older / Newer in the
-    //   arrows' seat and the arrow group's five rects empty.
+    //   1 + 2 + 4 = 7 — the hide's survivors, Older / Newer in the Left /
+    //   Right seats, the pair's rects empty and Down, Up and Play hidden.
     // EVERY MEMBER PUBLISHES WHAT IT PAINTED on every frame the roster
     // paints — a real rect where it stands, the EMPTY RECT (which no point is
     // inside) where it does not, so no press, hover or tooltip reaches a
     // member off the screen. THE EMPTY RECTS, each at its owner: the icon
     // row's history stand-ins (kIconRowHistoryStandIns, paint_handler.cpp,
     // architect 2026-10-05) — outside the `h` view the four companions, inside
-    // it the two authoring groups they replace; row 8's stand-in
-    // (kTransportHistoryStepGroup, 2026-10-11) — outside the view Older /
-    // Newer, inside it the four arrows; THE `h` VIEW'S HIDE
+    // it the two authoring groups they replace; row 8's stand-ins
+    // (kTransportHistoryStandIns, 2026-10-11) — outside the view Older /
+    // Newer, inside it Left and Right; THE `h` VIEW'S HIDE
     // (architect 2026-10-07, history_mode_hides_button, input_pointer.cpp)
     // — inside the view every member of either row whose chord the view
     // refuses in every session; row 8 whole under a modal that owns the

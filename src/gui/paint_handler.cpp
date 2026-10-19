@@ -768,7 +768,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     // Pen's button-held drag), two boxes and two 2px gaps off the walk and no
     // separator moving. WORKING-ZOOM CENTER (bare `c`) stood
     // behind it until 2026-09-29, when the architect moved it to the bottom
-    // row's walk group (kTransportWalkGroup) — one box and one 2px gap off
+    // row (kTransportNudgePlayGroup since 2026-10-18) — one box and one 2px gap off
     // this walk, no separator moving. It wears view-restore, the view shrunk
     // back whole (architect 2026-10-16, icons.h).
     {RedesignButton::IconZoomFitBest,  icons::Icon::ViewRestore},
@@ -871,7 +871,7 @@ constexpr IconRowDef kIconRowButtons[] = {
 // 2026-10-05, so the row fits the tablet's 2304 device px at gui_scale 400):
 // WHILE THE `h` VIEW STANDS, the history group's four companions here (the
 // walk lamp, Cumulative, Revert and Load in Place; Older and Newer are row
-// 8's since 2026-10-11, kTransportHistoryStepGroup) paint in the
+// 8's since 2026-10-11, kTransportHistoryStandIns) paint in the
 // slots of the AUTHORING GROUPS THE VIEW GREYS WHOLE, and those groups'
 // members publish empty rects; outside the view the authoring groups stand
 // and the four publish empty rects. The opener (IconHistory) is not a
@@ -897,8 +897,8 @@ constexpr IconRowDef kIconRowButtons[] = {
 // case narrower in the view (two until 2026-10-14, when Copy Resolved
 // Value's button left it) — OLDER AND NEWER LEFT IT FOR ROW 8 (architect
 // 2026-10-11 ~02:40; they stood in Undo's and Redo's slots from 2026-10-05):
-// they take the Left / Right arrows' seat there, the row's stand-in
-// (kTransportHistoryStepGroup); THE ITERATION
+// they take the Left / Right arrows' seats in the nudge-and-play group
+// there, the row's per-seat stand-ins (kTransportHistoryStandIns); THE ITERATION
 // GROUP'S THREE take the two reading lamps, the walk source and the
 // cumulative reading, so that group stands one case narrower in the view
 // and the render-entry group right of it sits one case (31 Windows px)
@@ -2466,17 +2466,19 @@ void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
 //   between Toggle inherit and Add to selection until 2026-09-29; Copy was
 //   the icon row's from then until 2026-10-14, its act now the jump's shift
 //   twin, and Edit Flag was deleted);
-//   THE MARKER WALK (kTransportWalkGroup) — PREVIOUS MARKER (Shift+Tab, its
-//   ctrl press the paired march), NEXT MARKER (Tab, its shifted press
-//   Shift+Tab), CENTER (bare `c`, down from the icon row) and SWITCH TAB
-//   (Ctrl+Tab, its shifted press the paired march), since 2026-09-29;
-//   THE CARDINAL ARROWS (kTransportArrowGroup) — DOWN, UP, LEFT, RIGHT (bare
-//   Down/Up/Left/Right), a single line and not a d-pad, and THE ROW'S HOLD
-//   GESTURE: held past the hold beat they repeat their own chords at the
-//   compositor's key-repeat rate (the record at the arrows' chord-table rows,
+//   THE STEP AND THE WALK (kTransportStepWalkGroup, architect 2026-10-18) —
+//   DOWN and UP (bare Down/Up), PREVIOUS MARKER (Shift+Tab, its ctrl press
+//   the paired march) and NEXT MARKER (Tab, its shifted press Shift+Tab);
+//   THE NUDGE AND PLAY (kTransportNudgePlayGroup, architect 2026-10-18) —
+//   SWITCH TAB (Ctrl+Tab, its shifted press the paired march), CENTER (bare
+//   `c`, down from the icon row since 2026-09-29), LEFT and RIGHT (bare
+//   Left/Right). THE FOUR ARROWS, a single line and not a d-pad until
+//   2026-10-18 and two pairs since, are THE ROW'S HOLD GESTURE: held past
+//   the hold beat they repeat their own chords at the compositor's
+//   key-repeat rate (the record at the arrows' chord-table rows,
 //   input_pointer.cpp). The pressed interior is the ordinary arm's, and the
-//   hold has no cue of its own — and, THE GROUP'S LAST CASE CLOSING THE ROW,
-//   THE ONE PLAY/STOP BUTTON (bare Space, whose GLYPH and TOOLTIP swap on the
+//   hold has no cue of its own — and, THE LAST GROUP'S LAST CASE CLOSING THE
+//   ROW, THE ONE PLAY/STOP BUTTON (bare Space, whose GLYPH and TOOLTIP swap on the
 //   live audition bit — the reason this row's paint goes through
 //   redesign_button_icon; Shift+Space the A/B audition). The last button's
 //   right edge is one lane pad in from the lane's right edge. (The Go to
@@ -2491,12 +2493,13 @@ void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
 // Defining Marker and Open Text Editor — and publishes an empty rect, the
 // block closing up from
 // the right margin and the state line taking the room; the row in there is
-// ADD TO SELECTION alone, the walk group's four, and OLDER and NEWER: seven
-// cases in three groups (the two skips, Go to Start and Go to End, left the
-// row 2026-10-12; Home and End stay keys, the mode's own absolute jumps). THE STAND-IN (architect 2026-10-11,
-// kTransportHistoryStepGroup): in the view Older / Newer take the seat Left
-// and Right hold outside it, the four arrows publishing empty rects, and
-// outside it the two publish empty rects. THE STAND-INS DO NOT INHERIT THE
+// ADD TO SELECTION alone, the walk pair, and SWITCH TAB, CENTER, OLDER and
+// NEWER: seven cases in three groups (the two skips, Go to Start and Go to
+// End, left the row 2026-10-12; Home and End stay keys, the mode's own
+// absolute jumps). THE STAND-IN (architect 2026-10-11,
+// kTransportHistoryStandIns): in the view Older / Newer take the seats Left
+// and Right hold outside it, the nudge pair publishing empty rects (Up and
+// Down hidden), and outside it the two publish empty rects. THE STAND-INS DO NOT INHERIT THE
 // ARROWS' HOLD-REPEAT (architect 2026-10-11; kToolbarChords, input_pointer.cpp,
 // records why). Otherwise no member publishes a
 // zero rect except under a modal.
@@ -2526,10 +2529,10 @@ void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
 // one of them dead in every session, so none of them is painted in the view
 // (history_mode_hides_button) — while the LEFT / RIGHT chords are the mode's
 // own playhead step since 2026-09-26 (admitted; the hide predicate leaves
-// them be, kTransportHistoryStepGroup removing the arrow buttons from the
-// view, Older / Newer the painted, state-greyed pair there); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
+// them be, kTransportHistoryStandIns seating Older / Newer in their buttons'
+// places in the view, the painted, state-greyed pair there); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
 // being on that mode's allowlist now and the lamp producing the view's own
-// multi-selection; THE WALK GROUP'S FOUR stay lit, Tab/Shift+Tab being the
+// multi-selection; THE WALK PAIR, SWITCH TAB AND CENTER stay lit, Tab/Shift+Tab being the
 // mode's diff-flag cycle, `c` its centring and Ctrl+Tab on its allowlist
 // (Home / End, its own absolute jumps, are keys alone since 2026-10-12, the
 // two skip buttons gone; Play / Stop is the transport's one button and is not
@@ -2570,8 +2573,8 @@ void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
 // in target view". (The ARROWS had no in-view answer to paint at the time —
 // they were not painted in there at all under the cluster swap. In the view
 // the LEFT and RIGHT chords are the mode's own playhead step, live, but
-// kTransportHistoryStepGroup removes the arrow buttons there, Older / Newer
-// being the painted, state-greyed pair; UP and DOWN, whose bare chords the mode consumes, are not painted there
+// kTransportHistoryStandIns seats Older / Newer in their buttons' places
+// there, the painted, state-greyed pair; UP and DOWN, whose bare chords the mode consumes, are not painted there
 // since 2026-10-07 (history_mode_hides_button). Those are the partition's
 // own answers and no part of the always-on ruling, which is about the
 // RESTING face.)
@@ -2588,7 +2591,8 @@ void GuiPaintHandler::paint_tab_strip(cairo_t* cr) {
 
 // The painter's half of the row's roster: three groups, all in the right
 // block and painted left to right in the order the body lays them (the
-// marker group, walk, arrows with Play last); each table is declared beside its reasons.
+// marker group, the step and walk, the nudge and play with Play last; the
+// `h` view's stand-ins seated in the last); each table is declared beside its reasons.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
 // key off the same ids.
 struct TransportRowDef {
@@ -2658,80 +2662,110 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconAddToSelection,       icons::Icon::EditSelect},
     {RedesignButton::IconValueDrag,            icons::Icon::ValueDrag},
 };
-// THE MARKER-WALK GROUP (architect 2026-08-15), the right block's second
-// group between the verbs and the arrows — FOUR SINCE 2026-09-29 (architect),
-// in this order: PREVIOUS MARKER (Shift+Tab, BboxPrev; its ctrl press is the
-// paired march), NEXT MARKER (the walk: Tab, its shifted press Shift+Tab;
-// its camera the audio view's; BboxNext), CENTER (bare `c`, EditFind — the
-// magnifier that finds the playhead, architect 2026-10-16 — moved down from
-// the icon row's zoom group) and SWITCH TAB (Ctrl+Tab,
-// TabDetach; its shifted press is the paired march).
+// THE STEP-AND-WALK GROUP (architect 2026-10-18 ~21:40, regrouping row 8's
+// two right-hand groups: "Next marker, previous marker, up, down, separator",
+// read right to left), the right block's second group between the verbs and
+// the nudge-and-play group, in this order: DOWN and UP (bare Down / Up, the
+// value step — its ladder and hold-repeat at their chord rows,
+// input_pointer.cpp; GoDown / GoUp), PREVIOUS MARKER (Shift+Tab, BboxPrev;
+// its ctrl press is the paired march) and NEXT MARKER (the walk: Tab, its
+// shifted press Shift+Tab; its camera the audio view's; BboxNext). (Until 2026-10-18 the marker-walk group was Previous Marker, Next Marker,
+// Center and Switch Tab, and Down / Up led the arrow group behind it.)
 // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON since
-// that day (architect: "an artificial constraint; the tablet is the only
+// 2026-09-29 (architect: "an artificial constraint; the tablet is the only
 // real development surface now") — Previous Marker is Next Marker's Shift
 // form and Switch Tab its Ctrl form; Previous Marker had merged into the walk
 // on 2026-09-22 under the rule that it could not, and the walk's modified
 // presses stay. THE WALK PAIR WEARS THE ARROWS' OWN DRAWINGS (BboxPrev and
-// BboxNext are GoPrevious's and GoNext's, icons.h's shared pairs).
-constexpr TransportRowDef kTransportWalkGroup[] = {
+// BboxNext are GoPrevious's and GoNext's, icons.h's shared pairs). DOWN, UP,
+// LEFT, RIGHT ARE ONE CONSTRUCTION, the set's cyan arrow — GoDown / GoUp for
+// the verticals here, GoPrevious / GoNext for the horizontals in the last
+// group; the vertical pair keeps the architect's 2026-08-14 order, down
+// before up (which superseded the row's original vim order, h j k l).
+// IN THE `h` VIEW Down and Up are hidden (history_mode_hides_button), the
+// group standing as the walk pair alone.
+constexpr TransportRowDef kTransportStepWalkGroup[] = {
+    {RedesignButton::TransportDown,         icons::Icon::GoDown},
+    {RedesignButton::TransportUp,           icons::Icon::GoUp},
     {RedesignButton::TransportWalkPrevious, icons::Icon::BboxPrev},
     {RedesignButton::TransportWalk,         icons::Icon::BboxNext},
-    {RedesignButton::IconZoomOriginal,      icons::Icon::EditFind},
-    {RedesignButton::TransportSwitchTab,    icons::Icon::TabDetach},
 };
-// DOWN, UP, LEFT, RIGHT — the architect's order, 2026-08-14, superseding the
-// row's original vim order (h j k l = left / down / up / right) with no
-// reasoning offered and none needed. All four are one construction, the
-// set's cyan arrow — GoDown / GoUp for the verticals, GoPrevious / GoNext for
-// the horizontals (the last two shared with the marker walk's pair).
+// THE NUDGE-AND-PLAY GROUP (architect 2026-10-18 ~21:40: "play button, right
+// nudge, left nudge. Center, switch tabs, separator", read right to left),
+// THE ROW'S LAST: SWITCH TAB (Ctrl+Tab, TabDetach; its shifted press is the
+// paired march), CENTER (bare `c`, EditFind — the magnifier that finds the
+// playhead, architect 2026-10-16 — down from the icon row's zoom group since
+// 2026-09-29), LEFT and RIGHT (bare Left / Right, the nudge — the playhead
+// step; GoPrevious / GoNext, shared with the walk pair) and PLAY / STOP.
+// (Until 2026-10-18 Switch Tab and Center closed the marker-walk group and
+// this group was the four arrows with Play.)
 //
-// PLAY / STOP IS THE GROUP'S LAST MEMBER, abutting the right arrow with no
+// PLAY / STOP IS THE GROUP'S LAST MEMBER, abutting the right nudge with no
 // gripper, end bar or gap between them, and so closes the row at the far
 // right outside the `h` view (architect 2026-10-12, revising his own ruling
 // of the same morning that seated Play at the marker group's head, and
 // correcting the one-member group of the hours after it: "no division
-// between the Right arrow and Play"). With the skip buttons gone, Play /
-// Stop at the far right sits at the screen's edge, where Shift+Play, the A/B
-// audition, is quickest to reach; reaching across from the marker verbs to
-// stop a scrub is acceptable, because at working zoom his hand moves faster
-// than the scanner; the Go to Start / Go to End pair stays gone, Home and
-// End keeping their keys. Play and stop are ONE stateful button
-// (2026-08-15), so the table carries media-playback-START as its resting
-// glyph and the resolver swaps in media-playback-STOP while an audition runs
-// (redesign_button_icon — Save's and Render's own shape, and the reason this
-// row's paint goes through the resolver). The `h` view swaps the whole group
-// for the history step group, so Play does not stand there.
-constexpr TransportRowDef kTransportArrowGroup[] = {
-    {RedesignButton::TransportDown,        icons::Icon::GoDown},
-    {RedesignButton::TransportUp,          icons::Icon::GoUp},
-    {RedesignButton::TransportLeft,        icons::Icon::GoPrevious},
-    {RedesignButton::TransportRight,       icons::Icon::GoNext},
-    {RedesignButton::TransportPlayStop,    icons::Icon::MediaPlaybackStart},
+// between the Right arrow and Play"; kept by the 2026-10-18 regroup). With
+// the skip buttons gone, Play / Stop at the far right sits at the screen's
+// edge, where Shift+Play, the A/B audition, is quickest to reach; reaching
+// across from the marker verbs to stop a scrub is acceptable, because at
+// working zoom his hand moves faster than the scanner; the Go to Start / Go
+// to End pair stays gone, Home and End keeping their keys. Play and stop are
+// ONE stateful button (2026-08-15), so the table carries
+// media-playback-START as its resting glyph and the resolver swaps in
+// media-playback-STOP while an audition runs (redesign_button_icon — Save's
+// and Render's own shape, and the reason this row's paint goes through the
+// resolver). IN THE `h` VIEW the group is Switch Tab, Center, Older and
+// Newer: the nudge pair's seats are the history steps'
+// (kTransportHistoryStandIns, below) and Play is hidden
+// (history_mode_hides_button), so it does not stand there.
+constexpr TransportRowDef kTransportNudgePlayGroup[] = {
+    {RedesignButton::TransportSwitchTab,    icons::Icon::TabDetach},
+    {RedesignButton::IconZoomOriginal,      icons::Icon::EditFind},
+    {RedesignButton::TransportLeft,         icons::Icon::GoPrevious},
+    {RedesignButton::TransportRight,        icons::Icon::GoNext},
+    {RedesignButton::TransportPlayStop,     icons::Icon::MediaPlaybackStart},
 };
-// THE `h` VIEW'S STAND-IN ON THIS ROW — OLDER AND NEWER IN THE ARROWS' SEAT
-// (architect 2026-10-11 ~02:40): while the view stands this group paints in
-// the arrow group's place, Older where Left stands and Newer where Right
-// does (Up and Down are hidden there anyway, history_mode_hides_button), and
-// the arrow group's five members (Play / Stop among them) publish empty
-// rects; outside the view the arrows stand and these two publish empty rects.
-// Older / Newer take the final group's seat at the far right (since
-// 2026-10-12 the arrow group, Play included, is the row's last). The seat is
-// the row's MOST-USED ACTION'S — stepping left / right outside the
-// view, stepping older / newer in it — and the nudge pair has no seat in the
-// view at all ("I never use that … the nudge was for precision placement
-// and history view has no placement"); the marker walk stays the neighbor.
-// THE KEYS ARE UNCHANGED: `,` / `.` step the walk and bare Left / Right
-// stay the view's playhead step (handle_history_mode_key) — only the buttons
-// moved. They wear the glyphs they wore in the icon row's Undo slots
-// (2026-10-05 to 2026-10-11), the sets' keyframe pair.
+// THE `h` VIEW'S STAND-INS ON THIS ROW — OLDER AND NEWER IN THE NUDGE PAIR'S
+// SEATS (architect 2026-10-11 ~02:40, "Older / Newer in the arrows' seat";
+// the seat restated on the 2026-10-18 regroup): A PER-SEAT SWAP — while the
+// view stands Older paints in Left's seat and Newer in Right's, inside the
+// nudge-and-play group, and Left and Right publish empty rects; outside the
+// view the nudge pair stands and these two publish empty rects. Play, hidden
+// in the view, leaves Older / Newer the row's last cases. The seat is the
+// row's MOST-USED ACTION'S — stepping left / right outside the view,
+// stepping older / newer in it — and the nudge pair has no seat in the view
+// at all ("I never use that … the nudge was for precision placement and
+// history view has no placement"). THE KEYS ARE UNCHANGED: `,` / `.` step the
+// walk and bare Left / Right stay the view's playhead step
+// (handle_history_mode_key) — only the buttons moved. They wear the glyphs
+// they wore in the icon row's Undo slots (2026-10-05 to 2026-10-11), the
+// sets' keyframe pair. THIS TABLE IS THE SWAP'S ONE OWNER: the painter
+// seats a stand-in through transport_row_seated and publishes the absent
+// side's empty rects from it.
 // (The arrows' first mode twin, a kHistoryClusterGroup of four history
 // companions painted at the arrows' anchor 2026-08-14..18, went back to the
 // icon row with the 2026-08-18 relayout; this is a narrower swap, two for
 // the two arrows the view still painted.)
-constexpr TransportRowDef kTransportHistoryStepGroup[] = {
-    {RedesignButton::HistoryOlder,         icons::Icon::KeyframePrevious},
-    {RedesignButton::HistoryNewer,         icons::Icon::KeyframeNext},
+struct TransportStandIn {
+    RedesignButton  seat;      // the member whose seat it takes in the view
+    TransportRowDef stand_in;  // what paints there while the view stands
 };
+constexpr TransportStandIn kTransportHistoryStandIns[] = {
+    {RedesignButton::TransportLeft,
+     {RedesignButton::HistoryOlder, icons::Icon::KeyframePrevious}},
+    {RedesignButton::TransportRight,
+     {RedesignButton::HistoryNewer, icons::Icon::KeyframeNext}},
+};
+// WHAT PAINTS IN `def`'s SEAT: its stand-in while the `h` view stands, else
+// the member itself.
+static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
+                                                   bool history) {
+    if (history)
+        for (const TransportStandIn& s : kTransportHistoryStandIns)
+            if (s.seat == def.id) return s.stand_in;
+    return def;
+}
 
 // THE TIME FIELDS — ROW 8'S CLOCK AND THE RENDER PLAYER'S POSITION AND
 // LENGTH, ONE FIELD SHAPE UNDER EVERY CHROME: COOL EDIT'S DARK FIELD
@@ -3008,29 +3042,34 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // gripper, the dark time field, the end bar — with THE STATE LINE on the
     // free face past it (the block at the clock below) — then THE RIGHT
     // BLOCK, packed against the lane's right edge: the MARKER-VERB GROUP (its
-    // eight counted off kMarkerVerbGroup), the MARKER-WALK GROUP (Previous
-    // Marker, Next Marker, Center and Switch Tab, kTransportWalkGroup) and
-    // the CARDINAL ARROWS with Play / Stop last (↓ ↑ ← → Play,
-    // kTransportArrowGroup), each Cool Edit's group, two W of face between
-    // two. The whole block is measured first and laid left to right from
-    // there, so one expression owns the anchor and no group re-derives it.
+    // eight counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
+    // Previous Marker and Next Marker, kTransportStepWalkGroup) and the
+    // NUDGE-AND-PLAY GROUP with Play / Stop last (Switch Tab, Center, ← →
+    // Play, kTransportNudgePlayGroup; architect 2026-10-18), each Cool Edit's
+    // group, two W of face between two. The whole block is measured first and
+    // laid left to right from there, so one expression owns the anchor and no
+    // group re-derives it.
     // ITS TWO MODE TERMS are the `h` view's: the hide (architect 2026-10-07,
     // history_mode_hides_button) — a member hidden there publishes an empty
     // rect, the block is measured over the members that stand, and a group
     // hidden whole takes its gripper and end bar with it — and the stand-in
-    // (architect 2026-10-11, kTransportHistoryStepGroup): Older / Newer in
-    // the arrows' seat; every other button
+    // (architect 2026-10-11, kTransportHistoryStandIns): Older / Newer in
+    // the nudge pair's seats; every other button
     // on this row publishes a real rect on every frame, except under a modal
     // that owns the row (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
     // THE NUMBERS (Windows px, re-derived whenever a group gains or loses a
     // case; the case 23 since 2026-10-09 ~10:25, the verbs eight since Toggle
-    // Value Drag joined 2026-10-11, the arrows five with Play, the air Cool Edit's measured 6 before the
+    // Value Drag joined 2026-10-11, the step-and-walk group four and the
+    // nudge-and-play group five with Play since 2026-10-18 (the walk group
+    // four and the arrows five with Play before — the same sizes, so the
+    // regroup moved no number), the air Cool Edit's measured 6 before the
     // first case and 4 after the last since 2026-10-12, the last group's end
     // bar gone since 2026-10-14): a group of n is 5 + 6 + 23n + 4 + 6 =
     // 23n + 21, THE LAST 5 + 6 + 23n + 5 = 23n + 16, so the block is the 8
-    // verbs' 205, the walk's 113 and the arrows' 131 with two gaps of 2,
+    // verbs' 205, the step-and-walk group's 113 and the nudge-and-play
+    // group's 131 with two gaps of 2,
     // 453 W — on the tablet's 768 at 300 %, the lane W 1..766 inside the
     // program frame's columns (2026-10-10), starting at W 314, Play's case
     // ending at W 761 (device x 2285) and its 5 W of face W 762..766 (2286..
@@ -3039,10 +3078,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // Sans, 2026-10-13: 5.93 em of advances at its 11.357-W em — and its two
     // 5-W pads, a ~77-W field; 2026-10-10), the state line's first ink at W 106, clipped at
     // W 312 (~206 W of line). IN THE `h` VIEW (the hide, 2026-10-07; Play,
-    // Open Text Editor and Toggle Value Drag hidden there with the verbs)
-    // the block is 1 verb + 4 walk + Older / Newer in the arrows' seat
-    // (2026-10-11), the row's last group, in three groups, Play not
-    // standing, 44 + 113 + 62 + 4 = 223 W, the clip standing at W 542 (767 -
+    // Open Text Editor and Toggle Value Drag hidden there with the verbs,
+    // Down and Up with them) the block is 1 verb + the walk pair +
+    // Switch Tab, Center and Older / Newer in the nudge pair's seats
+    // (2026-10-11; regrouped 2026-10-18), the row's last group, in three
+    // groups, Play not standing, 44 + 67 + 108 + 4 = 223 W (44 + 113 + 62 + 4
+    // before the regroup — the same block), the clip standing at W 542 (767 -
     // 223 - 2), the line's room 436 W from its first ink at W 106. THE ROW
     // CARRIES NO COLLISION
     // RULE — none of the redesign does — and the crop-at-the-floor allowance
@@ -3077,35 +3118,33 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     int right_block_x = content.x + content.w;
     // THE THREE GROUPS IN PAINTED ORDER, each read off its own table, so a
     // box joining or leaving moves the block with no second edit.
-    // IN THE `h` VIEW the arrows' seat is the walk's two steps
-    // (kTransportHistoryStepGroup, its one owner): the group that does
-    // not stand publishes its members' empty rects here.
+    // IN THE `h` VIEW the nudge pair's seats are the walk's two steps
+    // (kTransportHistoryStandIns, its one owner, seated through
+    // transport_row_seated): the side that does not stand publishes its
+    // empty rects here.
     const bool history = app.history_mode.active;
     constexpr int kGroupCount = 3;
     const std::span<const TransportRowDef> groups[kGroupCount] = {
-        kMarkerVerbGroup, kTransportWalkGroup,
-        history ? std::span<const TransportRowDef>(
-                      kTransportHistoryStepGroup)
-                : std::span<const TransportRowDef>(kTransportArrowGroup)};
-    // EACH GROUP'S STANDING MEMBERS (the hide, below) and THE ROW'S LAST
-    // STANDING GROUP — the one with no end bar (the group block above): the
-    // arrows with Play outside the `h` view, Older / Newer in their seat
-    // inside it.
+        kMarkerVerbGroup, kTransportStepWalkGroup, kTransportNudgePlayGroup};
+    // EACH GROUP'S STANDING MEMBERS (the hide, below, asked of what the seat
+    // paints) and THE ROW'S LAST STANDING GROUP — the one with no end bar
+    // (the group block above): the nudge-and-play group in either state, Play
+    // its last case outside the `h` view and Older / Newer inside it.
     int standing[kGroupCount] = {};
     int last_group = -1;
     for (int gi = 0; gi < kGroupCount; ++gi) {
         for (const TransportRowDef& def : groups[gi])
-            if (!history_mode_hides_button(app, def.id)) ++standing[gi];
+            if (!history_mode_hides_button(
+                    app, transport_row_seated(def, history).id))
+                ++standing[gi];
         if (standing[gi] > 0) last_group = gi;
     }
     {
-        const std::span<const TransportRowDef> absent =
-            history ? std::span<const TransportRowDef>(kTransportArrowGroup)
-                    : std::span<const TransportRowDef>(
-                          kTransportHistoryStepGroup);
-        for (const TransportRowDef& def : absent)
+        for (const TransportStandIn& s : kTransportHistoryStandIns)
             (void)publish_button_face(cr, app, audio, playback,
-                                      target_render, def.id, GuiRect{});
+                                      target_render,
+                                      history ? s.seat : s.stand_in.id,
+                                      GuiRect{});
         // THE BLOCK'S WIDTH IS THE PAINTED GROUPS' (architect 2026-10-07): in
         // the `h` view a button whose chord the view refuses in every session
         // is not painted (history_mode_hides_button, input_pointer.cpp), so
@@ -3327,10 +3366,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // members' shape): no point is inside it, so no press, hover or
         // tooltip reaches it, and its bits refresh unconditionally
         // (publish_button_face) — the same rect the modal yield publishes
-        // for the whole row.
+        // for the whole row. Each seat paints what transport_row_seated
+        // answers: the member, or its stand-in in the `h` view.
         for (int gi = 0; gi < kGroupCount; ++gi) {
             bool group_open = false;
-            for (const TransportRowDef& def : groups[gi]) {
+            for (const TransportRowDef& seat : groups[gi]) {
+                const TransportRowDef& def =
+                    transport_row_seated(seat, history);
                 if (history_mode_hides_button(app, def.id)) {
                     (void)publish_button_face(cr, app, audio, playback,
                                               target_render, def.id,
@@ -5573,7 +5615,7 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // so this is emphatically not the scrapped second-toplevel model
 // (closed_questions.md carries that do-not-re-propose). WHILE ANY MODAL
 // STANDS ROW 8 YIELDS WHOLE: all SEVENTEEN buttons — the VERB GROUP'S EIGHT,
-// the marker walk group's four and the four arrows with Play — plus the
+// the step-and-walk group's four and the nudge-and-play group's five — plus the
 // clock's time field and the state line beside it stand down, nothing
 // negotiates for space, and the modal's controls take the content band they
 // left (paint_modal_dialog, every modal's controls row; the box is
@@ -5757,28 +5799,28 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // first; the zero rects take the rest).
     if (modal_owns_bottom_row(app) || onscreen_keyboard::stands(app, gui)) {
         // The right block's groups stand down together: the MARKER VERBS,
-        // the MARKER-WALK GROUP, the ARROWS with Play and the
-        // `h` view's Older / Newer in their seat. Each is a tenant of this
-        // lane like every other member, and the modal takes the lane whole:
-        // four tables, every button on the row.
+        // the STEP-AND-WALK GROUP, the NUDGE-AND-PLAY GROUP with Play and the
+        // `h` view's Older / Newer in the nudge pair's seats. Each is a
+        // tenant of this lane like every other member, and the modal takes
+        // the lane whole: four tables, every button on the row.
         for (const TransportRowDef& def : kMarkerVerbGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
                                 def.id,
                                 GuiRect{0, 0, 0, 0});
         }
-        for (const TransportRowDef& def : kTransportWalkGroup) {
+        for (const TransportRowDef& def : kTransportStepWalkGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
                                 def.id,
                                 GuiRect{0, 0, 0, 0});
         }
-        for (const TransportRowDef& def : kTransportArrowGroup) {
+        for (const TransportRowDef& def : kTransportNudgePlayGroup) {
             publish_button_face(cr, app, audio, playback, target_render,
                                 def.id,
                                 GuiRect{0, 0, 0, 0});
         }
-        for (const TransportRowDef& def : kTransportHistoryStepGroup) {
+        for (const TransportStandIn& s : kTransportHistoryStandIns) {
             publish_button_face(cr, app, audio, playback, target_render,
-                                def.id,
+                                s.stand_in.id,
                                 GuiRect{0, 0, 0, 0});
         }
         app.clock_cell_rect = GuiRect{0, 0, 0, 0};

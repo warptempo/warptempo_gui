@@ -278,7 +278,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // the rest of the row. It stays LIVE in the `h` view — `0` is on the
     // mode's allowlist — which the derived partition answers with nothing
     // hand-listed. (CENTER, bare `c`, stood beside it as the zoom pair until
-    // 2026-09-29, when its row moved to the bottom row's walk group below.)
+    // 2026-09-29, when its row moved to the bottom row's, below.)
     // THE STEPPED ZOOM BUTTONS
     // (bare `=` / `-`) WERE REMOVED 2026-09-25 (architect): zoom is on every
     // surface — the Ctrl+drag on the waveform, the two-finger pinch, the S
@@ -474,9 +474,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // entry's note above; and even reached, bare `,` and `.` are bound in
     // handle_history_mode_key alone, so there is nothing for them to fire.
     //
-    // NO HOLD-REPEAT, THOUGH THEY STAND IN THE ARROWS' SEAT (architect
-    // 2026-10-11): in the `h` view the two take the Left / Right arrows' place
-    // on row 8 (kTransportHistoryStepGroup) but not the arrows' `repeats`
+    // NO HOLD-REPEAT, THOUGH THEY STAND IN THE ARROWS' SEATS (architect
+    // 2026-10-11): in the `h` view the two take the Left / Right arrows' places
+    // on row 8 (kTransportHistoryStandIns) but not the arrows' `repeats`
     // column — these rows set none. They are shift-admitting, and a
     // non-repeating button's long press IS its shifted press, the jump to the
     // walk's end; a hold-repeat would collide with that long press (the
@@ -683,11 +683,14 @@ constexpr ToolbarChord kToolbarChords[] = {
     // (a toggle repeats onto itself), NO MODIFIER ADMITTED.
     {RedesignButton::IconValueDrag,
      GuiKeys::BracketLeft, false, false, false, false},                        // bare [
-    // THE MARKER-WALK GROUP (architect 2026-08-15), the row's right cluster
-    // behind a separator and ahead of the arrows — FOUR ROWS since 2026-09-29
-    // (architect): PREVIOUS MARKER, NEXT MARKER (the walk), CENTER and SWITCH
-    // TAB. It was the walk alone from 2026-09-23 (the two HOLD-COLUMN nudges
-    // stood beside it from 2026-09-22 and were deleted with their chords).
+    // THE MARKER-WALK GROUP'S OLD FOUR (architect 2026-08-15; four rows since
+    // 2026-09-29): PREVIOUS MARKER, NEXT MARKER (the walk), CENTER and SWITCH
+    // TAB, kept together here for the reader though row 8 paints them in two
+    // groups since 2026-10-18 (the walk pair behind Down / Up, Switch Tab and
+    // Center ahead of Left / Right — kTransportStepWalkGroup /
+    // kTransportNudgePlayGroup, paint_handler.cpp; the lookup is by id). It
+    // was the walk alone from 2026-09-23 (the two HOLD-COLUMN nudges stood
+    // beside it from 2026-09-22 and were deleted with their chords).
     //
     // PREVIOUS MARKER'S ROW CARRIES SHIFT+TAB AS ITS OWN BASE CHORD, Redo's
     // shape: a Shift- or Ctrl-modified chord may have its own dedicated
@@ -761,8 +764,10 @@ constexpr ToolbarChord kToolbarChords[] = {
     // ARE DELETED with their buttons and their chords, architect 2026-09-23:
     // the held column is a posture an explicit centring arms, read by the
     // bare arrows below, AppState::camera_hold.)
-    // The arrows, in their painted order since 2026-08-14 (the architect's:
-    // down, up, left, right, replacing the row's original vim order). The
+    // The arrows, in the architect's order of 2026-08-14 (down, up, left,
+    // right, replacing the row's original vim order), painted in two pairs
+    // since 2026-10-18 — Down / Up at the step-and-walk group's head, Left /
+    // Right in the nudge-and-play group (paint_handler.cpp). The
     // lookup is by id, so this order is for the reader alone. The eighth
     // column is `repeats`, which these four set — as do Undo / Redo since
     // 2026-09-13; the column IS the membership (the contract is at
@@ -1329,10 +1334,12 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // toggle; 2026-08-08 — bare `u`, the reading's own toggle), and it did not have
 // to move when the ROSTER later grew buttons for those same shapes either:
 // bare Home / End became the bottom row's SKIPS (2026-08-11), bare `c` the icon
-// row's Center button (2026-08-12; the bottom row's walk group's since
-// 2026-09-29), and bare Tab / Shift+Tab / Ctrl+Shift+Tab
-// the bottom row's MARKER-WALK GROUP (2026-08-15; Shift+Tab a dedicated
-// Previous Marker again since 2026-09-29). Every one of them is a chord
+// row's Center button (2026-08-12; the bottom row's since 2026-09-29, in the
+// nudge-and-play group since 2026-10-18), and bare Tab / Shift+Tab /
+// Ctrl+Shift+Tab the bottom row's walk buttons (2026-08-15; Shift+Tab a
+// dedicated Previous Marker again since 2026-09-29; Previous / Next Marker in
+// the step-and-walk group and Switch Tab, whose shifted press is the march,
+// in the nudge-and-play group since 2026-10-18). Every one of them is a chord
 // the MODE OWNS, which is exactly what makes this walk answer LIVE for its
 // button with nothing hand-listed — the same free derivation the walk's two
 // arrows, the Cumulative toggle and Revert already ride. (The membership is
@@ -1394,9 +1401,9 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   FULL ZOOM OUT AND CENTER since the 2026-08-12 relayout (bare `0` is the
 //   allowlist's own zoom admission and bare `c` is the mode's vocabulary —
 //   pure navigation, live with nothing hand-listed; Center on the bottom
-//   row's walk group since 2026-09-29, beside Previous Marker and Switch Tab,
-//   whose Shift+Tab and Ctrl+Shift+Tab are the mode's own and whose Ctrl+Tab
-//   is on its allowlist),
+//   row since 2026-09-29, beside Switch Tab since 2026-10-18 — Previous
+//   Marker's and Switch Tab's Shift+Tab and Ctrl+Shift+Tab being the mode's
+//   own and Ctrl+Tab on its allowlist),
 //   the load-editor opener (bare `'`, which in this mode loads THE
 //   VIEWED WALK'S MEMBER in place — the commit's sidecars on the Remote tab,
 //   the timeline state on the Local one since 2026-08-08, and live on both:
@@ -1410,25 +1417,27 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 //   and THE WALK'S TWO STEPS since 2026-08-05 — older (bare `,`) and newer
 //   (bare `.`), the mode's own vocabulary again, so this walk answers LIVE for
 //   them with nothing hand-listed,
-//   and TWO OF THE BOTTOM ROW'S MARKER-WALK GROUP since 2026-08-15 (bare Tab
-//   and Shift+Tab) — the mode's own vocabulary once more, so both answer LIVE
-//   for free and step the DIFF-FLAG cycle forward and back — WITH THE GROUP'S
-//   THIRD SINCE 2026-08-18 (Ctrl+Shift+Tab, the mode's own vocabulary too now:
+//   and THE BOTTOM ROW'S WALK since 2026-08-15 (bare Tab and Shift+Tab, Next
+//   and Previous Marker in the step-and-walk group since 2026-10-18) — the
+//   mode's own vocabulary once more, so both answer LIVE
+//   for free and step the DIFF-FLAG cycle forward and back — WITH THE MARCH
+//   SINCE 2026-08-18 (Ctrl+Shift+Tab, the mode's own vocabulary too now:
 //   it marches the pair over that same diff-flag cycle, "tab, ctrl+tab, tab"
 //   read against the lane in here, a round trip through the other tab since
 //   2026-09-26; it ran the reverse WALK-SOURCE cycle from
 //   2026-08-07 until the walk moved to the icon row's own radio pair, and was
-//   blocked for the hours between) — AND SINCE 2026-09-29 THE GROUP'S
+//   blocked for the hours between) — AND SINCE 2026-09-29 THE WALK'S
 //   DEDICATED ROADS: PREVIOUS MARKER (Shift+Tab, the mode's own, its ctrl
 //   press the mode's march) and SWITCH TAB (Ctrl+Tab, on the allowlist, its
-//   shifted press the mode's march), both LIVE for free,
+//   shifted press the mode's march; in the nudge-and-play group since
+//   2026-10-18), both LIVE for free,
 //   and THE BOTTOM ROW'S SKIPS and THE CENTER button (the
-//   walk group's third since 2026-09-29) on the same terms
+//   walk group's third from 2026-09-29 to 2026-10-18) on the same terms
 //   (bare Home / End are the mode's absolute jumps, bare `c` its own centring),
 //   and THE BOTTOM ROW'S LEFT / RIGHT CHORDS since 2026-09-26 (bare Left /
 //   Right, the mode's own playhead step, admitted; the hide predicate leaves
-//   them be, but kTransportHistoryStepGroup removes the arrow BUTTONS from
-//   this view, Older / Newer being the painted pair there),
+//   them be, but kTransportHistoryStandIns seats Older / Newer in the arrow
+//   BUTTONS' places in this view, the painted pair there),
 //   and THE CUMULATIVE TOGGLE since 2026-08-08 (bare `u`, the same vocabulary
 //   and the same free answer). Those three plus Revert are the roster's
 //   RESTING-DISABLED family — four of them, joined by the WALK LAMP on
@@ -1526,7 +1535,7 @@ bool editor_double_press_at(const DoubleClickCandidate& dc, int x, int y) {
 // which names this walk as the membership's derivation). A change here that
 // answers one of those six LIVE in the view is a change to that table too.
 // ROW 8 HAS ITS OWN SINCE 2026-10-11 (architect): in the view Older / Newer
-// stand in the Left / Right arrows' seat (kTransportHistoryStepGroup,
+// stand in the Left / Right arrows' seats (kTransportHistoryStandIns,
 // paint_handler.cpp) — a seat ruling, not this walk's: the arrows' chords
 // stay live in the view, only their buttons stand down there.
 //
@@ -1602,8 +1611,8 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // redesign_button_enabled's own (Older / Newer at the walk's walls, Save with
 // nothing to commit, a skip at the end) — is painted and greys as it always
 // did. (Left / Right are admitted by this predicate, their chords staying
-// live, but kTransportHistoryStepGroup removes the arrow BUTTONS in the view;
-// Older / Newer are the painted, state-greyed pair there.)
+// live, but kTransportHistoryStandIns seats Older / Newer in the arrow
+// BUTTONS' places in the view, the painted, state-greyed pair there.)
 //
 // THE SAME TABLE AS THE GREY, so the two can never disagree: hidden implies
 // greyed (a chord refused in every state is refused in this one), a chord
@@ -8302,9 +8311,9 @@ bool GuiInputHandler::arm_redesign_press(int x, int y, GuiInputState mods) {
         // view (history_mode_hides_button: an empty rect, which no press
         // reaches) — while the LEFT / RIGHT chords (its own playhead step since 2026-09-26, admitted;
         // the arrow buttons are not painted in the view, Older / Newer being
-        // the painted, state-greyed pair) and the
-        // marker-walk group's four (its diff-flag cycle, its centring, the
-        // admitted tab switch) take no partition grey. ADD TO SELECTION IS
+        // the painted, state-greyed pair) and the walk pair, Center and
+        // Switch Tab (the diff-flag cycle, the centring, the admitted tab
+        // switch) take no partition grey. ADD TO SELECTION IS
         // IN NEITHER LIST ANY MORE: the `h` view ADMITTED bare `k` on
         // 2026-09-17, the lamp producing that view's own multi-selection, and
         // its RESTING REFUSAL out of the iteration lock — carried from

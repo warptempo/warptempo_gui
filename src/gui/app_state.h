@@ -1997,14 +1997,18 @@ struct TrimBarPressSeed {
 // PAIRS' FOUR close the row flush right since 2026-10-01, two radio panes
 // since 2026-10-14), then the
 // bottom row's SEVENTEEN (re-counted 2026-10-12, when Go to Start and
-// Go to End left; nineteen with Older / Newer, which stand in the arrows' seat in
-// the `h` view, kTransportHistoryStepGroup) —
+// Go to End left; nineteen with Older / Newer, which stand in the Left / Right
+// seats in the `h` view, kTransportHistoryStandIns) —
 // the transport's one, the MARKER-VERB GROUP'S EIGHT (kMarkerVerbGroup,
-// paint_handler.cpp, owns that membership), the MARKER-WALK GROUP'S FOUR
-// (2026-08-15; Previous Marker, Next Marker, Center and Switch Tab since
-// 2026-09-29) and the four cardinal arrows, in enum order; the row PAINTS Play as the arrow
-// group's last case, at the right end (architect 2026-10-12), the enum keeping it first because
-// nothing reads the bottom row's enum order. It exists ONCE, here, because
+// paint_handler.cpp, owns that membership), the old marker-walk group's
+// four (Previous Marker, Next Marker, Center and Switch Tab) and the four
+// cardinal arrows, in enum order. THE ROW PAINTS ITS OWN ORDER (architect
+// 2026-10-18, the painter's tables kTransportStepWalkGroup and
+// kTransportNudgePlayGroup own both memberships): after the verbs, Down,
+// Up, Previous Marker, Next Marker; then Switch Tab, Center, Left, Right and
+// Play, the last case at the right end (architect 2026-10-12) — the enum
+// keeping its older order because nothing reads the bottom row's enum
+// order. It exists ONCE, here, because
 // it indexes
 // the painter's hit stash (AppState::redesign_buttons) and both readers key off
 // it; each domain then attaches its own attribute to these ids and to nothing
@@ -2030,8 +2034,8 @@ struct TrimBarPressSeed {
 // (2026-10-10, dropdown_title_access_key), never as a roster chord — and all
 // three are spelled at the menu claim rather than in the chord table.
 //
-// The enum ORDER is painted order but for the bottom row's Play / Stop
-// (above), and redesign_button_index depends on the
+// The enum ORDER is painted order but for the bottom row, whose painted order
+// is the painter's tables' (above), and redesign_button_index depends on the
 // values staying 0..kRedesignButtonCount-1 contiguous (the tick comparator in
 // main.cpp walks the range by index). The indices are DERIVED and never
 // serialized, so inserting a button mid-roster (as Settings was) or REORDERING
@@ -2579,8 +2583,8 @@ enum class RedesignButton {
     // you can STEP: the cumulative toggle (bare `u`), the revert act (bare `v`)
     // and the walk's older / newer steps (bare `,` and `.`). THE TWO STEPS ARE
     // ROW 8'S SINCE 2026-10-11 (architect ~02:40): in the `h` view they stand
-    // in the Left / Right arrows' seat, second group left of the transport,
-    // "reserved for the most used action" (kTransportHistoryStepGroup,
+    // in the Left / Right arrows' seats, inside the row's last group,
+    // "reserved for the most used action" (kTransportHistoryStandIns,
     // paint_handler.cpp); the other two stay the icon row's stand-ins.
     //
     // THEY GREY OUTSIDE THE `h` VIEW AND ARE LIVE INSIDE IT (2026-08-18), which
@@ -2648,12 +2652,16 @@ enum class RedesignButton {
     // detection. SEVENTEEN buttons in three groups, all FLUSH AT THE RIGHT
     // MARGIN with the CLOCK alone at the row's left pad (architect
     // 2026-09-29, the right-handed tablet's layout). The enum lists the
-    // marker group, the walk and the arrows in painted order, left to right,
-    // divided by separators, and THE ONE PLAY/STOP BUTTON (bare Space) before
-    // them, which the row PAINTS LAST, as the arrow group's fifth case at the
-    // far right (architect 2026-10-12: the Go to Start / Go to End pair left
-    // the row — Home / End keep their keys — and Play abuts the right arrow,
-    // Shift+Play being the A/B audition): THE
+    // marker group, the old walk group and the arrows (the painted order
+    // until 2026-10-18), and THE ONE PLAY/STOP BUTTON (bare Space) before
+    // them, which the row PAINTS LAST, at the far right (architect
+    // 2026-10-12: the Go to Start / Go to End pair left the row — Home / End
+    // keep their keys — and Play abuts the right arrow, Shift+Play being the
+    // A/B audition). THE PAINTED ORDER IS THE PAINTER'S SINCE 2026-10-18
+    // (architect, regrouping the two right-hand groups): the verbs, then
+    // Down, Up, Previous Marker, Next Marker (kTransportStepWalkGroup), then
+    // Switch Tab, Center, Left, Right, Play (kTransportNudgePlayGroup,
+    // paint_handler.cpp) — nothing reads this block's order: THE
     // MARKER GROUP'S SIX VERBS
     // (the four single-marker verbs of 2026-08-18: drop = bare `s`, delete =
     // Delete, disable = Ctrl+D, inherit = Ctrl+N; then JUMP TO DEFINING MARKER
@@ -2675,9 +2683,9 @@ enum class RedesignButton {
     //
     // NOTHING ON THIS ROW SWAPPED OR HID FROM 2026-08-18 UNTIL 2026-10-07
     // (the hide, below) and 2026-10-11 (the stand-in: in the `h` view OLDER
-    // and NEWER take the Left / Right arrows' seat, the arrows publishing
+    // and NEWER take the Left / Right arrows' seats, the pair publishing
     // empty rects — architect, "the nudge was for precision placement and
-    // history view has no placement"; kTransportHistoryStepGroup,
+    // history view has no placement"; kTransportHistoryStandIns,
     // paint_handler.cpp, its one owner). The four HISTORY
     // COMPANIONS took the arrows' four slots while the `h` view stood from
     // 2026-08-14 until then — one cluster of four painted at that anchor in
@@ -2965,11 +2973,15 @@ enum class RedesignButton {
     // whose allowlist does not name the chord (the derived partition and
     // history_mode_hides_button). It admits no modifier and does not repeat.
     IconValueDrag,
-    // THE MARKER-WALK GROUP (architect 2026-08-15, the row's right cluster,
-    // behind a separator and ahead of the four arrows) — FOUR SINCE 2026-09-29
-    // (architect), in painted order: PREVIOUS MARKER, NEXT MARKER, CENTER and
-    // SWITCH TAB. It was the walk alone from 2026-09-23, the two HOLD-COLUMN
-    // nudges beside it since 2026-09-22 having been deleted that day.
+    // THE MARKER-WALK GROUP'S OLD FOUR (architect 2026-08-15; four since
+    // 2026-09-29): PREVIOUS MARKER, NEXT MARKER, CENTER and SWITCH TAB, the
+    // group's painted order until 2026-10-18, when the architect regrouped
+    // row 8 — the walk pair behind Down / Up in the step-and-walk group,
+    // Switch Tab and Center leading the nudge-and-play group
+    // (kTransportStepWalkGroup / kTransportNudgePlayGroup, paint_handler.cpp,
+    // the memberships' owners). It was the walk alone from 2026-09-23, the
+    // two HOLD-COLUMN nudges beside it since 2026-09-22 having been deleted
+    // that day.
     //
     // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON
     // (architect 2026-09-29, dissolving the rule that it never does: "an
@@ -3035,8 +3047,9 @@ enum class RedesignButton {
     // march.
     TransportWalk,
     // CENTER (bare `c`, working-zoom center, wearing edit-find since
-    // 2026-10-16, icons.h) — in the
-    // walk group since 2026-09-29 (architect), MOVED from the icon row's
+    // 2026-10-16, icons.h) — on row 8 since 2026-09-29 (architect; the walk
+    // group's third until 2026-10-18, the nudge-and-play group's second
+    // since, behind Switch Tab), MOVED from the icon row's
     // viewport-class group where it stood beside Full zoom out from the
     // 2026-08-12 grand relayout. The id keeps its Icon* name, a roster id
     // naming the button and not the lane. Nothing but the seat moved: same
@@ -3046,7 +3059,8 @@ enum class RedesignButton {
     // `h` view, `c` being that mode's own vocabulary. Its act arms the hold
     // posture (AppState::camera_hold).
     IconZoomOriginal,
-    // SWITCH TAB (architect 2026-09-29), the group's last: CTRL+TAB, the
+    // SWITCH TAB (architect 2026-09-29), the walk group's last until
+    // 2026-10-18 and the nudge-and-play group's first since: CTRL+TAB, the
     // one-shot other-tab act, its table row carrying the ctrl, wearing
     // TabDetach's two windows in both tabs (2026-10-18). It ADMITS SHIFT and
     // nothing else: the shift-click
@@ -3074,7 +3088,7 @@ enum class RedesignButton {
 // row 4's enum block and SEVENTEEN in the bottom row's — 48. PAINTED, the
 // split is 3 + 2 + 24 + 19:
 // HistoryOlder and HistoryNewer, enumerated in row 4's block, paint in row 8
-// (kTransportHistoryStepGroup). Of
+// (kTransportHistoryStandIns). Of
 // those, FORTY-FIVE carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
@@ -3119,11 +3133,13 @@ inline constexpr int redesign_button_index(RedesignButton b) {
 // it, four when the least-movement walk joined later that day, three again
 // when it left on 2026-09-23, ONE later that day, when the two nudges
 // were deleted, and FOUR since 2026-09-29 — Previous Marker, Next Marker,
-// Center down from the icon row, and Switch Tab) and the four
+// Center down from the icon row, and Switch Tab; regrouped 2026-10-18 with
+// the arrows into the step-and-walk and nudge-and-play groups,
+// paint_handler.cpp) and the four
 // cardinal arrows (row 8's from 2026-08-11; tenants of the unified bottom row
-// since 2026-08-12), and THE WALK'S OLDER / NEWER, standing in the arrows'
-// seat in the `h` view alone (architect 2026-10-11 ~02:40,
-// kTransportHistoryStepGroup, paint_handler.cpp). The FOUR HISTORY
+// since 2026-08-12), and THE WALK'S OLDER / NEWER, standing in the Left /
+// Right seats in the `h` view alone (architect 2026-10-11 ~02:40,
+// kTransportHistoryStandIns, paint_handler.cpp). The FOUR HISTORY
 // COMPANIONS were members from 2026-08-14 until the same relayout took them
 // back up to the icon row. Named
 // once because its consumers are all about the ROW'S HOME STRIP rather than
@@ -15673,7 +15689,8 @@ inline bool redesign_button_enabled(const AppState& a,
                    marker_walk_step(a, audio, /*forward=*/false).marker >= 0;
         // CENTER MIRRORS NOTHING (2026-08-12): `c` always frames on a loaded
         // file. It stood in the icon row's zoom group beside Full zoom out
-        // until 2026-09-29 and is the bottom row's walk group's since; its
+        // until 2026-09-29 and is the bottom row's since (the walk group's
+        // until 2026-10-18, the nudge-and-play group's since); its
         // face did not move with it. It admits no modifier (no modified `c`
         // binds since 2026-10-14), so there is no twin to compose. FULL ZOOM
         // OUT MIRRORS ITS FORK UNDER THE
@@ -16152,10 +16169,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // stays lit since 2026-09-17, bare `k` being on the mode's allowlist
         // now. The LEFT / RIGHT chords are the mode's own playhead step since
         // 2026-09-26 (admitted; the hide predicate leaves them be, but
-        // kTransportHistoryStepGroup removes the arrow buttons in the view,
-        // Older / Newer being the painted, state-greyed pair).
-        // THE WALK GROUP'S FOUR stay lit, being the mode's own
-        // diff-flag cycle both ways, its `c` and the
+        // kTransportHistoryStandIns seats Older / Newer in Left / Right's
+        // seats in the nudge-and-play group in the view, the painted,
+        // state-greyed pair).
+        // PREVIOUS / NEXT MARKER (the step-and-walk group) and CENTER and
+        // SWITCH TAB (the nudge-and-play group; architect 2026-10-18) stay
+        // lit, being the mode's own diff-flag cycle both ways, its `c` and the
         // allowlisted Ctrl+Tab (Switch Tab's shifted press
         // carries the march that composes that cycle with a round trip
         // through the other tab, Switch Tab being never-grey); HOME AND END,
@@ -17004,9 +17023,10 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // between the Cumulative toggle going back up to the icon row and ADD
         // TO SELECTION arriving, which is the row's lamp now — its arm is
         // above with the other toggles, where a mode's lamp belongs): the
-        // walk group's three (Walk Previous, Walk, Switch Tab; the two skips
-        // left the roster 2026-10-12, Home and End being keys alone), the four
-        // arrows and the marker verbs are all acts
+        // walk's three (Walk Previous and Walk in the step-and-walk group,
+        // Switch Tab in the nudge-and-play group since 2026-10-18; the two
+        // skips left the roster 2026-10-12, Home and End being keys alone),
+        // the four arrows and the marker verbs are all acts
         // that complete, with no state to stay lit for — and so, since the
         // 2026-08-15 collapse, is the ONE PLAY/STOP BUTTON. It carried the
         // row's only lamp for the hours it was a RADIO PAIR, lit on
@@ -17297,7 +17317,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // the same day (architect), and they admit ctrl, below.)
 // (SWITCH TAB JOINED 2026-09-29 with Ctrl+Shift+Tab, THE PAIRED MARCH
 // (architect): a bottom-row button whose table row is Ctrl+Tab, the lift ORing the admitted shift into the row's ctrl. The long
-// press is the fingertip's road to the march from the walk group. A SHIFT-
+// press is the fingertip's road to the march from the bottom row. A SHIFT-
 // OR CTRL-MODIFIED CHORD MAY ALSO HAVE ITS OWN DEDICATED BUTTON since that
 // day (architect: "an artificial constraint; the tablet is the only real
 // development surface now") — Previous Marker carries Shift+Tab and Switch
@@ -17795,7 +17815,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // (first as the icon row's collapsed four, then as the bottom row's
         // swapped cluster) until the 2026-08-18 relayout, and are again since
         // 2026-10-05 — the icon row's history stand-ins until 2026-10-11,
-        // row 8's in the arrows' seat since (kTransportHistoryStepGroup), so
+        // row 8's in Left / Right's seats in the nudge-and-play group since
+        // (kTransportHistoryStandIns), so
         // the tooltip flips above them with the row.
         case RedesignButton::HistoryOlder:
             return {"Older (,)", "Press Shift for oldest."};

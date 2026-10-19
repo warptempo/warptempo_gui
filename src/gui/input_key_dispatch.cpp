@@ -1827,8 +1827,9 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // chord means one thing everywhere and only
     // what "Tab" DENOTES changes with the context: live markers outside, the
     // viewed checkpoint's diff flags in here. Claimed rather than left to the
-    // allowlist because that is how the marker-walk group's other two members
-    // (bare Tab and Shift+Tab) already answer, both for the key and for the
+    // allowlist because that is how the walk's two chords, bare Tab and
+    // Shift+Tab (Next and Previous Marker, the step-and-walk group's pair since
+    // 2026-10-18), already answer, both for the key and for the
     // roster face derived from this predicate.
     //
     // THE SPELLING IS THE LIVE MARCH'S EXACTLY — plain Tab with ctrl+shift, no
@@ -2125,7 +2126,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // could only flap against the wall it is already on.
     // THE TWO STEP BUTTONS ARE THESE KEYS (2026-08-05,
     // RedesignButton::HistoryOlder / HistoryNewer — row 8's since 2026-10-11,
-    // in the Left / Right arrows' seat in the view, which keeps bare Left /
+    // in the Left / Right arrows' seats in the view, which keeps bare Left /
     // Right as its playhead step below): they dispatch the
     // bare chords through on_key like every other button, so this is the one
     // body and a click at a wall is the same consumed nothing a key press is —

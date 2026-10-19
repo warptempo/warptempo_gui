@@ -194,8 +194,8 @@ namespace {
 // strip names the active tab) and THE STATE LINE on the face beside it
 // (2026-10-03),
 // and, packed against the right edge, the MARKER-VERB GROUP
-// (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the marker
-// walk, the cardinal arrows with Play / Stop last, each Cool Edit's
+// (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the step and
+// walk, the nudge and play with Play / Stop last (2026-10-18), each Cool Edit's
 // group of gripper, cases and end bar, the last with no end bar (2026-10-14)
 // — then THE BORDER UNDER ROW 8 (bottom_border_h_px(), the dock bar's six
 // rows again, 6 W, architect 2026-10-14) and THE PROGRAM FRAME'S BOTTOM ROW
@@ -964,8 +964,9 @@ GuiRect bottom_column_foot_area(const AppState& a) {
 // Cool Edit's DOCK BAR at its head and ROW 8 under it: the clock at the left
 // in its dark time field with THE STATE LINE on the face right of it, and,
 // packed against the right edge, the MARKER-VERB GROUP (kMarkerVerbGroup,
-// paint_handler.cpp, owns its membership), the marker walk, the four
-// cardinal arrows and Play / Stop (the arrow group's last case), each Cool
+// paint_handler.cpp, owns its membership), the step and walk (Down, Up,
+// Previous Marker, Next Marker) and the nudge and play (Switch Tab, Center,
+// Left, Right and Play / Stop, the last case; architect 2026-10-18), each Cool
 // Edit's group between its gripper and end bar, the row's last group with
 // no end bar (program_spec.h, 2026-10-14). It is BOTTOM LANE 2, between
 // the column's foot (lane 3, bottom_column_foot_area above, the canvas's
