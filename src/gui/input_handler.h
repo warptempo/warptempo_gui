@@ -460,10 +460,9 @@ void land_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
 // (file_loader.cpp), the column entry (select_active_markers_view) and the
 // Ctrl+Tab tab entry (switch_active_tab_view_to), both in active_views.cpp, and
 // THE LOAD-IN-PLACE FAMILY'S ONE SHARED TAIL (apply_recipe_in_place,
-// input_key_dispatch.cpp), which all three acts reach — the `'` render-entry
-// load (load_render_entry_in_place, joined 2026-07-30), the `h` view's commit
-// load (load_history_commit_in_place) and that view's LOCAL-tab load
-// (load_history_local_entry_in_place, 2026-08-08) — because a load-in-place
+// input_key_dispatch.cpp), which both acts reach — the `'` render-entry
+// load (load_render_entry_in_place, joined 2026-07-30) and the `h` view's commit
+// load (load_history_commit_in_place) — because a load-in-place
 // replaces the store under a resting playhead, which is an ENTRY into a new set
 // of markers exactly as a load is. No match leaves the selection exactly as the caller
 // left it — every caller clears first, so that means empty.
@@ -506,15 +505,12 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // input_pointer.cpp) asks them about a table of
 // chords. (A THIRD predicate, history_mode_admission_is_momentary, served the
 // 2026-08-12 collapse rule alone and is deleted with it, 2026-08-14.)
-//   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle), bare
-//     `u` (the CUMULATIVE reading's toggle, 2026-08-08), bare `,` / `.` (the
+//   * history_mode_owns_key — the mode's own keys: bare `h` (the toggle),
+//     bare `,` / `.` (the
 //     walk), bare Tab / Shift+Tab / IsoLeftTab (the diff-flag cycle, its
 //     camera the landing owner's, Viewport::land_subject),
-//     Ctrl+Shift+Tab (the PAIRED MARCH over that cycle, 2026-08-18 — the ONE
-//     ctrl-carrying claim), bare `g`
-//     (the WALK toggle over the two sources, the icon row's WALK LAMP's chord
-//     since 2026-08-18 — a radio pair's until the 2026-09-04 collapse, and
-//     Ctrl+Tab / Ctrl+Shift+Tab over row 3's repurposed tabs before that), bare
+//     Ctrl+Shift+Tab (the PAIRED MARCH over that cycle, 2026-08-18 — with
+//     Ctrl+Home / Ctrl+End, the ctrl-carrying claims), bare
 //     Home / End, bare `c` and bare Left / Right (the playhead step,
 //     2026-09-26, the marker lane's press refused over a focused diff
 //     flag). The definition carries the
@@ -537,7 +533,7 @@ void frame_span_into_view(AppState& app, const GuiAudio& audio,
 // (re-derived 2026-09-01) — the revert act's, on a subject standing on a
 // writable tab (history_revert_actionable — a selected diff flag, else the
 // focused one, and the lock since 2026-08-30), and the
-// load-in-place's, on the active walk carrying a member. THE COMMIT ACT'S TWO
+// load-in-place's, on the walk carrying a member. THE COMMIT ACT'S TWO
 // LEFT THIS LIST ON 2026-09-01 (architect: a gate's membership test is the
 // CHORD'S ALONE): Ctrl+S — head_delta_empty and history_checkpoint_in_flight —
 // was the instance he hit, a committed-and-current session being told the
@@ -1440,24 +1436,23 @@ struct GuiInputHandler {
     void sync_nav_drag_mode(GuiInputState mods);
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — row 1's
-    // three menu anchors, the icon row's twenty-four and row 8's nineteen
+    // three menu anchors, the icon row's twenty-two and row 8's nineteen
     // (the painter's tables in paint_handler.cpp own each membership; the
-    // counts re-derived from them 2026-10-17):
-    //   THE ICON ROW, 15 + 4 + 1 + 4 = 24 — the left walk's fifteen
+    // counts re-derived from them 2026-10-19):
+    //   THE ICON ROW, 15 + 2 + 1 + 4 = 22 — the left walk's fifteen
     //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
     //   Full Zoom Out, Waveform Magnification and Follow;
     //   BPM, Iteration and Flatten; Listen, the padlock, Settings and Enable
-    //   Tooltips), the history view's four stand-ins (Revert and Load in
-    //   Place in Undo's slots, the walk lamp and Cumulative in the iteration
-    //   group's — kIconRowHistoryStandIns), the history opener
+    //   Tooltips), the history view's two stand-ins (Revert and Load in
+    //   Place in Undo's slots — kIconRowHistoryStandIns), the history opener
     //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
     //   flush right in two panes (kIconRowViewPairs, Source / Target and
     //   Warp / Phase Reset since 2026-10-14) — 20
-    //   standing outside the `h` view (the four stand-ins publishing empty
-    //   rects) and 14 inside it (the stand-ins in, the two authoring groups
-    //   they replace out, and the view's hide leaving Open Project and
-    //   Save's group whole and Full Zoom Out and Waveform Magnification
-    //   (since 2026-10-12) and Enable Tooltips alone of theirs);
+    //   standing outside the `h` view (the two stand-ins publishing empty
+    //   rects) and 12 inside it (the stand-ins in, Undo's group out, and the
+    //   view's hide leaving Open Project and Save's group whole, Full Zoom
+    //   Out and Waveform Magnification (since 2026-10-12) and Enable Tooltips
+    //   alone of theirs, and the iteration group not at all);
     //   ROW 8, 8 + 4 + 5 + 2 = 19 — the MARKER-VERB GROUP's eight
     //   (kMarkerVerbGroup: Drop, Delete, Disable, Inherit, Jump to Defining
     //   Marker, Open Text Editor since 2026-10-09, Add to Selection, Toggle
@@ -1475,8 +1470,8 @@ struct GuiInputHandler {
     // inside) where it does not, so no press, hover or tooltip reaches a
     // member off the screen. THE EMPTY RECTS, each at its owner: the icon
     // row's history stand-ins (kIconRowHistoryStandIns, paint_handler.cpp,
-    // architect 2026-10-05) — outside the `h` view the four companions, inside
-    // it the two authoring groups they replace; row 8's stand-ins
+    // architect 2026-10-05) — outside the `h` view the two companions, inside
+    // it Undo's group they replace; row 8's stand-ins
     // (kTransportHistoryStandIns, 2026-10-11) — outside the view Older /
     // Newer, inside it Left and Right; THE `h` VIEW'S HIDE
     // (architect 2026-10-07, history_mode_hides_button, input_pointer.cpp)
@@ -3188,18 +3183,15 @@ private:
     // target view on the entry's dispatch tab and restored the
     // dispatch-moment camera, three things the user never asked for.)
     //
-    // THE WHOLE LOAD-IN-PLACE FAMILY SHARES THIS ONE BODY — THREE CALLERS,
-    // re-greped 2026-08-28: load_render_entry_in_place (a tmp/ entry),
-    // load_history_commit_in_place (a commit's sidecars) and
-    // load_history_local_entry_in_place (a state of this session's own
-    // undo/redo timeline, which joined on 2026-08-24, having hand-rolled the
-    // same sequence minus the live-playhead clamp and the basis reset). So the
-    // rule lives here rather than in three places, and the three acts differ
+    // THE WHOLE LOAD-IN-PLACE FAMILY SHARES THIS ONE BODY — TWO CALLERS,
+    // re-greped 2026-10-19: load_render_entry_in_place (a tmp/ entry) and
+    // load_history_commit_in_place (a commit's sidecars). So the
+    // rule lives here rather than in two places, and the acts differ
     // only in where their three pieces come from and in the tail each keeps.
     // "LOAD IN PLACE" IS ONE CONCEPT TOKEN (architect 2026-08-04): the act that
     // applies a saved state into the live session is named so on every
     // surface — prose "load a render in place", identifiers `load_in_place`
-    // (`IconLoadInPlace`, `PlayerButtonAct::LoadInPlace`, the three acts
+    // (`IconLoadInPlace`, `PlayerButtonAct::LoadInPlace`, the two acts
     // above) — because it IS a load (the source load's own applier, disk
     // untouched) and "in place" says the session stays. It is never shortened
     // to bare "load" where it names the act (bare "load" is the launch-time
@@ -3257,10 +3249,7 @@ private:
     // THREE CALLERS: load_render_entry_in_place and
     // load_history_commit_in_place (each of the parsed two columns, before
     // apply_recipe_in_place) and run_history_revert (of the markers the
-    // subject's REMOVED flags would restore, refusing the whole revert). The
-    // LOCAL-tab load is deliberately NOT a caller: its state is a snapshot of
-    // THIS session's own stores, which were proved at the load boundary and
-    // walled by every gesture since, so there is no foreign authoring in it.
+    // subject's REMOVED flags would restore, refusing the whole revert).
     std::optional<std::string> in_place_load_wall_defect(
         const std::vector<GuiWarpMarker>& warp,
         const std::vector<GuiPhaseResetMarker>& phase_resets) const;
@@ -3311,24 +3300,6 @@ private:
     // Gated on the mode standing: the sidecar base name is the session's.
     // Full behaviour paragraph at the definition.
     bool load_history_commit_in_place(std::size_t member);
-
-    // load_history_local_entry_in_place: the same act with A STATE OF THIS
-    // SESSION'S OWN UNDO/REDO TIMELINE as its source (architect 2026-08-08) —
-    // apply the walk member at index `member` (the VIEWED index, handed over
-    // by confirm_load_in_place in the same currency its commit sibling takes
-    // since 2026-09-17, so neither arm of the fork maps a number) as the new
-    // authoring baseline. Validate-before-mutate like both siblings: an index
-    // past the walk's member count, or one the walk cannot answer for, is one
-    // stderr line and a false return with nothing touched. It restores exactly what an undo
-    // entry carries — the two marker columns and the engine block — which since
-    // 2026-08-24 is exactly what its two sidecar-sourced siblings write as well,
-    // and since 2026-08-24 it writes them THROUGH the same body
-    // (apply_recipe_in_place above), so the three differ only in where the three
-    // pieces come from. It applies them ON TOP as ONE new undo entry
-    // rather than as a rollback, writes no disk and
-    // closes the mode as part of the act. Full behaviour paragraph at the
-    // definition.
-    bool load_history_local_entry_in_place(std::size_t member);
 
     // THE SWEEP'S TRIM WRITE (architect 2026-08-18 — the region IS the trim):
     // one ANCHOR and one MOVING end, both whole SOURCE frames already inside
@@ -4554,7 +4525,7 @@ private:
     //     displaying the diff span, so the act went producer-less.
     //     frame_history_view_whole_song was the full zoom out it fell through
     //     to on an empty delta, and that empty arm was its last caller — the
-    //     `,` / `.` step and the walk-or-reading switch stopped calling it on
+    //     `,` / `.` step stopped calling it on
     //     2026-08-08 and the ENTRY on 2026-08-18. THE MODE WRITES NO VIEWPORT
     //     ANYWHERE and now has no framing route of its own at all: the window
     //     is the USER'S from before `h` until after it.)
@@ -4562,33 +4533,21 @@ private:
     //     whole of it: a new session, a new commit walk, a now side captured at
     //     this instant, and the head delta measured once. ONE CALLER since
     //     2026-08-05 — bare `h` — the commit act having stopped re-entering when
-    //     it began closing the view instead. IT ALWAYS OPENS since 2026-09-04:
-    //     a bootstrap the REMOTE walk refuses lands the visit on the LOCAL one
-    //     (the fallback's ruling is at the owner), so the old bool answer had
-    //     no false left to report and is gone with it.
+    //     it began closing the view instead. A bootstrap that does not answer
+    //     opens nothing and cards its reason (the ruling is at the owner).
     //   * drop_lane_stash_across_history_edge empties the marker lane's
     //     published content — the two pointer stashes and the diff-flag list
-    //     their indices name — at every mode edge: the entry, the exit, each
-    //     walk step and each WALK-OR-READING SWITCH (four call sites, re-derived by
-    //     grep 2026-08-06). Its own comment carries the argument and is the
-    //     authoritative statement of the edge set.
-    //   * republish_history_lane_now REFILLS it in the same press, at ALL FOUR
-    //     edges (entry, step, reading switch, exit — the last one after the
+    //     their indices name — at every mode edge: the entry, the exit and each
+    //     walk step (three call sites, re-derived by grep 2026-10-19). Its own
+    //     comment carries the argument and is the authoritative statement of
+    //     the edge set.
+    //   * republish_history_lane_now REFILLS it in the same press, at ALL THREE
+    //     edges (entry, step, exit — the last one after the
     //     whole-struct reset, where the mode is down and the lane it publishes
     //     is the LIVE one). It is the view switch's own synchronous route, and it
     //     is what makes an edge swap the lane's content atomically instead of
     //     blanking it for a frame (architect 2026-08-07). The drop's comment
     //     carries both arguments.
-    //   * set_history_delta is the ONE switch owner for WHAT THE LANE SHOWS
-    //     (2026-08-05 as the two compare readings' owner, generalized
-    //     2026-08-07 to the (walk source, reading) PAIR): bare `g` STEPS THE
-    //     WALK through it (2026-08-18, the icon row's WALK LAMP's chord — a
-    //     radio pair's until 2026-09-04, and row 3's repurposed tabs selected
-    //     it directly before 2026-08-18) and bare
-    //     `u` FLIPS THE READING through it (2026-08-08,
-    //     when the reading left the row for row 4's own toggle). A switch is a MODE EDGE with the `,` / `.` step's own
-    //     shape, and the owner is idempotent, which is what makes a step onto
-    //     the walk already shown a consumed nothing at its call site.
     // THE COMMIT ACT'S GUI HALF is the last pair, and the act itself lives in
     // the diff module (commit_history_checkpoint, history_diff.h):
     //   * the PUBLISH CHORD'S ACT forks in front of it (run_publish_chord,
@@ -4632,8 +4591,6 @@ private:
     void open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();
     void republish_history_lane_now();
-    void set_history_delta(GuiHistoryWalkSource source,
-                           GuiHistoryCompare    compare);
     bool handle_history_mode_press(GuiMouseButton button, int x, int y,
                                    GuiInputState mods,
                                    const DoubleClickCandidate& dc_at_press);

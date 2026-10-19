@@ -575,8 +575,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the editor is what stopped it. It is answered by the silence every
         // unbound press gets. THE MODE BIT CHANGES NOTHING THIS GATE CAN SEE
         // (2026-09-01, U4) and is passed for uniformity with the other five
-        // readers: all seven of the view's shapes are PRINTABLE (`g`, `u`, `v`,
-        // `,`, `.` and the two shifted spellings), so the editor consumes them
+        // readers: all five of the view's shapes are PRINTABLE (`v`, `,`, `.`
+        // and the two shifted spellings), so the editor consumes them
         // as typed characters above this line and none of them ever reaches it.
         if (chord_is_bound(key, mods, app.history_mode.active))
             notifications.notify(AppState::NotificationClass::Normal,
@@ -831,13 +831,13 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // outside it, which is exactly what the two arms above were carved out
         // for; for a chord bound nowhere it would say the same false thing, so
         // that press takes the silence every unbound press takes. The view's
-        // OWN vocabulary never reaches this line at all — bare `g`, `u` and the
+        // OWN vocabulary never reaches this line at all — the
         // `,` / `.` pair are claimed by handle_history_mode_key, Ctrl+S is
         // admitted outright, and bare `'` and bare `v` take the fork above — so
         // admitting them to the inventory costs this gate nothing. THE MODE BIT
         // IS TRUE HERE BY CONSTRUCTION (2026-09-01, U4 — this arm runs only
         // while the view stands), so the inventory this gate asks is the WIDER
-        // one, the seven shapes included; that is the same answer it gave when
+        // one, the five shapes included; that is the same answer it gave when
         // the predicate was state-blind, and the sentence above is why it costs
         // nothing.
         if (chord_is_bound(key, mods, app.history_mode.active))
@@ -1031,8 +1031,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // either show an effect or a card, so an unbound key is identified by
         // its silence) dissolved both horns for the chords bound NOWHERE, and
         // THE MODE TERM (architect 2026-09-01, U4) dissolved them for the
-        // chords bound nowhere IN THIS STATE: the `h` view's own seven shapes —
-        // bare `g`, bare `u`, bare `v`, bare `,`, bare `.` and the two shifted
+        // chords bound nowhere IN THIS STATE: the `h` view's own five shapes —
+        // bare `v`, bare `,`, bare `.` and the two shifted
         // walk jumps — are the view's vocabulary and no part of a locked tab's,
         // so outside the view they now take the same silence a writable tab
         // gives them. His instance was bare `v`, the revert act, which this

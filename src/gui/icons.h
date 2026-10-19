@@ -143,9 +143,7 @@ enum class Icon {
     Inherit,             // Toggle Inherit (`Ctrl+N`) — the set's insert-link
     Flatten,             // Flatten (`Ctrl+F`) — the set's edit-clear-all,
                          // the broom (architect 2026-10-14)
-    Cumulative,          // Toggle Cumulative (`u`) — the set's
-                         // accessories-calculator
-    Follow,              // Toggle Follow (`f`) — the set's start-here
+    Follow,             // Toggle Follow (`f`) — the set's start-here
     BpmIterations,       // BPM Iterations (Ctrl+B) — the set's
                          // audio-x-generic, WavRow's drawing (a symlink)
     GridIterations,      // Toggle Grid Iterations (bare `i`) — the set's
@@ -162,12 +160,7 @@ enum class Icon {
                          // using the original git clock icon"; the calendar
                          // 2026-10-17 late evening to 2026-10-18); a changed
                          // file of the set, its README
-    SessionHistory,      // Toggle Session History (bare `g`, lit in
-                         // Session) — the set's network-wired-disconnected,
-                         // the unplugged cable: local means git off (the
-                         // architect: "local means shut off git and stay
-                         // local, so disconnect internet", 2026-10-15)
-    AddToSelection,      // Toggle Add to Selection — the set's
+    AddToSelection,     // Toggle Add to Selection — the set's
                          // edit-select-all
     Older,               // Older checkpoint (`,`) — the set's
                          // media-seek-backward
@@ -259,7 +252,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 60;
+inline constexpr int kIconCount = 58;
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
 // file in assets/icons/ is `<name>.png` if that file is there, else
@@ -277,9 +270,9 @@ inline constexpr const char* kIconNames[] = {
     "OpenProject", "Save", "Undo", "Redo", "Render", "SaveCommit",
     "SavePull", "Source", "Target", "Warp", "PhaseReset",
     "FullZoomOut", "Center", "WaveformMagnification", "DropMarker",
-    "DeleteMarkers", "Disabled", "Inherit", "Flatten", "Cumulative",
+    "DeleteMarkers", "Disabled", "Inherit", "Flatten",
     "Follow", "BpmIterations", "GridIterations", "PlayRenders",
-    "LoadInPlace", "HistoryView", "SessionHistory", "AddToSelection",
+    "LoadInPlace", "HistoryView", "AddToSelection",
     "Older", "Newer", "Left", "Right", "Revert", "PlayerPrevious", "Play",
     "Stop", "Pause", "PlayerNext", "Cancel", "Down", "Up",
     "ReadOnlyUnlocked", "ReadOnlyLocked", "PreviousMarker", "NextMarker",

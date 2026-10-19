@@ -11,7 +11,7 @@
 // The title (the formula, his example and the spelling at the declaration).
 std::string car_transport_title_line(const UndoHistory& history) {
     const int64_t u = static_cast<int64_t>(history.undo_stack.size());
-    // The live state's number in the session walk's counting: U + 1.
+    // The live state's number in the undo timeline's counting: U + 1.
     std::string s = std::to_string(u + 1);
     s += '_';
     if (!history.saved_valid) {

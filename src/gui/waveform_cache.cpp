@@ -1037,16 +1037,11 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     std::vector<HistoryDiffFlag>& out = app.history_mode.flags;
     out.clear();
 
-    // THE DISPLAYED DELTA IS THE SESSION'S (SOURCE, READING) PAIR, through the
-    // one accessor that forks on it (AppState::HistoryMode::displayed_delta):
-    // the COMMIT walk or the LOCAL one, read iteratively forward against the
-    // next-newer item or cumulatively against the frozen live now side. The
-    // lane's shapes, colours and text are identical in all four — green is the
-    // newer side everywhere — so nothing below this line knows which walk or
-    // which reading it is drawing, nor that the two readings coincide at the
-    // newest index of either.
+    // THE DISPLAYED DELTA IS THE VIEWED CHECKPOINT'S, read forward against the
+    // next-newer item (history_diff.h's head): green is the newer side
+    // everywhere, and nothing below this line knows which index it is drawing.
     const GuiHistoryCommitDelta* d =
-        app.history_mode.displayed_delta(app.history_compare());
+        app.history_mode.session.delta_at(app.history_mode.index);
     if (!d) return;
 
     // THE ACTIVE MARKERS VIEW PICKS THE COLUMN, exactly as it picks which store
@@ -1306,13 +1301,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const SuppressedBox suppressed = suppressed_flag_box(app);
     const int suppressed_cell = static_cast<int>(suppressed.cell);
 
-    // THE HISTORY MODE'S EIGHT INPUTS (contract at the FlagCache fields). The
+    // THE HISTORY MODE'S SIX INPUTS (contract at the FlagCache fields). The
     // GENERATION is the one that is not about the shown commit but about WHICH
     // SESSION is showing it: two visits open in the same shape and a close plus
     // a reopen can reach this check as one edge, so without it the new session's
-    // lane would keep blitting the old session's flags. THE COMPARE READING is
-    // the one that is about the shown commit but not about WHICH commit: one
-    // index has two deltas, and a switch moves no other field here. THE
+    // lane would keep blitting the old session's flags. THE
     // SELECTION HASH is the mode's own membership, through the LIVE lane's own
     // hash owner rather than a second one — the focus rides into it as that
     // function's second term, which is redundant beside the field above and
@@ -1322,11 +1315,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     const std::size_t        history_index  = app.history_mode.index;
     const int                history_focus  = app.history_mode.focus;
     const unsigned long long history_generation = app.history_mode.generation;
-    // The READING is the session's own bit since 2026-08-08 (it moved off
-    // HistoryMode onto AppState so a mode edge cannot reset it); the fingerprint
-    // term is unchanged in value space — the same two-valued reading, read
-    // through the one mapping owner.
-    const GuiHistoryCompare  history_compare    = app.history_compare();
     const uint64_t           history_sel_hash   = hash_selection(
                                  app.history_mode.selection,
                                  app.history_mode.focus);
@@ -1335,16 +1323,6 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // lane's whole content while moving no other field above it.
     const std::size_t        history_count      =
         app.history_mode.session.commit_count();
-    // THE WALK SOURCE AND THE LOCAL POSITION (2026-08-07). The
-    // source is what makes a tab switch across the two walks repaint at all —
-    // index, compare, focus and generation can every one of them be unchanged
-    // across it — and the local index is the other walk's own `,` / `.`, which
-    // moves no field above either. THE LOCAL WALK'S SIZE NEEDS NO FIELD: it is
-    // built from the two undo stacks' sizes, captured at the mode's entry and
-    // frozen for the visit (GuiHistoryLocalWalk's premise), so it cannot move
-    // while this cache lives.
-    const GuiHistoryWalkSource history_source = app.history_mode.source;
-    const std::size_t        history_local_index = app.history_mode.local_index;
 
     const bool matches =
         flag_cache.surface &&
@@ -1369,11 +1347,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         flag_cache.fp_history_index           == history_index &&
         flag_cache.fp_history_focus           == history_focus &&
         flag_cache.fp_history_generation      == history_generation &&
-        flag_cache.fp_history_compare         == history_compare &&
         flag_cache.fp_history_selection_hash  == history_sel_hash &&
-        flag_cache.fp_history_commit_count    == history_count &&
-        flag_cache.fp_history_source          == history_source &&
-        flag_cache.fp_history_local_index     == history_local_index;
+        flag_cache.fp_history_commit_count    == history_count;
 
     // THE ORIGIN NEEDS NO FIELD (FlagCache::origin_y): it moves with the
     // scale alone, which fp_gui_scale_percent keys. A tripwire, not a key —
@@ -1598,11 +1573,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.fp_history_index           = history_index;
     flag_cache.fp_history_focus           = history_focus;
     flag_cache.fp_history_generation      = history_generation;
-    flag_cache.fp_history_compare         = history_compare;
     flag_cache.fp_history_selection_hash  = history_sel_hash;
     flag_cache.fp_history_commit_count    = history_count;
-    flag_cache.fp_history_source          = history_source;
-    flag_cache.fp_history_local_index     = history_local_index;
 
     // Event-synchronized hit geometry, STAGE phase: these OFFSCREEN flags just
     // rebuilt, so stage the

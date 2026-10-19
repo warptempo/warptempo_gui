@@ -12,12 +12,12 @@
 // EVERY GIT ACT FAILS THROUGH THE PROGRAM'S EXISTING OUTCOMES, with no new UI
 // text. The root derivation is the one question the product asks first, and
 // this file answers it CouldNotAsk with this build's reason as libgit2's words
-// would ride — so the `h` view's entry refuses its commit walk with the one
-// stderr line it always prints ("History is unavailable: could not ask git
-// which clone holds <folder> (git is not available in this build)") and opens
-// on the local walk, Save greyed, the walk lamp greyed, no GitHub check
-// dispatched and no pull reachable (history_remote_walk_available, app_state.h,
-// gates all three). CouldNotAsk rather than NotAClone because it is the true
+// would ride — so the `h` view's entry refuses with the one stderr line it
+// always prints ("History is unavailable: could not ask git which clone holds
+// <folder> (git is not available in this build)") and that same sentence on a
+// card, opening nothing (open_history_mode_fresh, since 2026-10-19), and the
+// publish chord cards it too (run_publish_chord): no view, no GitHub check
+// dispatched and no pull reachable. CouldNotAsk rather than NotAClone because it is the true
 // answer: the folder may well be in a clone, and this build cannot ask.
 //
 // NO GuiGitRepo IS EVER CONSTRUCTED: open() refuses, and the constructor that

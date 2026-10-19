@@ -24,7 +24,7 @@ NOTES={'Source':'NEW: Source (architect 2026-10-14)','PhaseReset':'NEW: Phase re
 'LoadInPlace':'Load in Place (architect 2026-10-14)','Save':'the floppy retired (architect 2026-10-14)','Target':'NEW: Target (architect 2026-10-14)',
 'Flatten':'Flatten: the broom (architect 2026-10-14)',
 'HistoryView':'History: the clock turned back again (architect 2026-10-18, "go back to using the original git clock icon")',
-'ValueDrag':'NEW: Value Drag, the pen alone (architect 2026-10-18: "drop the arrows altogether")','SessionHistory':'NEW: Session (architect 2026-10-15: shut off git and stay local)',
+'ValueDrag':'NEW: Value Drag, the pen alone (architect 2026-10-18: "drop the arrows altogether")',
 'Center':'NEW: Center (architect 2026-10-16: the magnifier finds the playhead)','FullZoomOut':'NEW: Full zoom out (architect 2026-10-16: the view shrunk back)',
 'WaveformMagnification':'NEW: Waveform magnification (architect 2026-10-16: the louder waveform)'}
 # The notice is the file's own text, written into its head (its first word the file's name when it was written, kept so

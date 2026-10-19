@@ -4,7 +4,6 @@ Cancel	process-stop	navigation-icons.svg	696	50	48	48	-
 CardNormal	dialog-information	dialog-information.svg	296	50	48	48	-
 Center	edit-find	find.svg	300	50	48	48	-
 Close	window-close	window-close.svg	296	50	48	48	-
-Cumulative	accessories-calculator	accessories-calculator.svg	296	50	48	48	-
 DeleteFolder	user-trash	trash.svg	696	50	48	48	-
 DeleteMarkers	list-remove	list-add-remove.svg	696	50	48	48	-
 Disabled	audio-volume-muted	audio-volume.svg	421	335	256	256	-
@@ -42,7 +41,6 @@ Right	go-next	navigation-icons.svg	776	50	48	48	-
 Save	document-save	cabinets.svg	696	50	48	48	-
 SaveCommit	go-top	navigation-icons.svg	276	50	48	48	-
 SavePull	go-bottom	navigation-icons.svg	106	50	48	48	-
-SessionHistory	network-wired-disconnected	network-wired-disconnected.svg	296	50	48	48	-
 Settings	preferences-system	preferences-system.svg	296.062	49.9963	48	48	-
 Source	accessories-dictionary	accessories-dictionary.svg	296	50	48	48	-
 Stop	media-playback-stop	media-control-icons.svg	356	150	48	48	-

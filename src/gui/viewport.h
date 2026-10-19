@@ -215,10 +215,8 @@ struct Viewport {
     //    FAMILY, which reaches this through its ONE shared body since 2026-08-24
     //    (apply_recipe_in_place, input_key_dispatch.cpp — called by
     //    load_render_entry_in_place for the render player's load of a batch
-    //    cell,
-    //    load_history_commit_in_place for the `h` view's commit load, and
-    //    load_history_local_entry_in_place for that view's LOCAL walk, which
-    //    puts a state of the session's own undo/redo timeline back), and — since
+    //    cell, and
+    //    load_history_commit_in_place for the `h` view's commit load), and — since
     //    2026-08-25 — THE WARP STATUS/VALUE FAMILY: Ctrl+D
     //    (GuiWarpMarkersOps::toggle_disabled), Ctrl+N (toggle_inherits), Delete
     //    (delete_selected_marker) and the flag editor's payload commit

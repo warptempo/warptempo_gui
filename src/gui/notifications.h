@@ -108,9 +108,9 @@
 //     "Close the editor first"; kCheckpointPublishing (below — bare `h`, the
 //     publish chord, the save owner, the picker, File → Revert); "History
 //     is unavailable[: <reason>]" (the press that asks for git where the
-//     remote walk could not bootstrap — bare `g` at set_history_delta and the
-//     publish chord, Ctrl+Shift+S, at run_publish_chord — plus the failed-scan
-//     arrival; the entry opens on the local walk and raises none); the trim bar's "A trim
+//     bootstrap does not answer — bare `h` at open_history_mode_fresh since
+//     2026-10-19 and the publish chord, Ctrl+Shift+S, at run_publish_chord —
+//     plus the failed-scan arrival); the trim bar's "A trim
 //     bound must stay inside its partner" (the act's, never
 //     trim_bound_click_frame's); playback's kPlaybackDeviceUnavailableCard
 //     (playback_lifecycle.h — the one launch body, the two pre-launch gates
@@ -250,7 +250,7 @@
 //     pressed and whatever swallowed it (architect 2026-08-30, THE DEDUCTION
 //     RULE: "bound keys either show an effect or a card, so an unbound key is
 //     identified by its silence"), which retired the "<chord> is not bound"
-//     class whole; the `h` view's seven shapes are bound only while the view
+//     class whole; the `h` view's five shapes are bound only while the view
 //     stands (2026-09-01), the render player's and the picker's keys only
 //     inside their routers. THE UNBOUND POINTER PRESS goes with it: a
 //     modified press the waveform, the top strip or the folder overlay's
@@ -286,9 +286,8 @@
 //     recheck.
 //   * The loader's fatal exits (the adversarial class: stderr and exit 1);
 //     every QUESTION (the prompts and the dialog editors); the peaks-cache
-//     rebuild lines (audio.cpp, stderr — they self-heal); the `h` entry's
-//     fallback onto the local walk (its stderr line; the press that asks for
-//     git is what cards); and what is TRUE NOW — the two state strings.
+//     rebuild lines (audio.cpp, stderr — they self-heal); and what is TRUE
+//     NOW — the two state strings.
 //
 // THE WORDS ON A CARD (the product's text rules are stated once at
 // paint_handler.cpp's menu-row block; a card is a DESCRIPTION, sentence case):

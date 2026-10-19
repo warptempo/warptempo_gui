@@ -458,65 +458,42 @@ struct FlagCache {
     // While it stands this surface carries the shown commit's DELTA instead of
     // any live marker, so what it must contain is decided by: whether the mode
     // stands at all (entering and leaving both swap the whole lane), WHICH
-    // commit is shown (`,` / `.` step it), WHICH READING of it is shown (the two
-    // compare modes, the Cumulative toggle switching them), which diff flag holds the mode's
+    // commit is shown (`,` / `.` step it), which diff flag holds the mode's
     // focus and WHICH ARE SELECTED (colour swaps, exactly as the live selection
-    // hash is a field for the live lane), and WHICH SESSION those are indices
-    // into.
+    // hash is a field for the live lane), WHICH SESSION those are indices
+    // into, and how many members the walk holds.
     //
     // THE SESSION GENERATION IS ONE OF THEM BECAUSE THE OTHERS REPEAT. The
     // delta of a given commit is fixed for a session's lifetime, but a session
-    // is not: every visit opens on index 0 with a cleared focus and the
-    // iterative reading, so two sessions of the same piece are
-    // indistinguishable in the other four fields — and a
+    // is not: every visit opens on index 0 with a cleared focus, so two
+    // sessions of the same piece are
+    // indistinguishable in the other fields — and a
     // close and a reopen delivered in one dispatch batch reach this fingerprint
     // as a single edge, with `active` never observed false. The counter (bumped
     // by open_history_mode_fresh, the one entry owner, and carried across a
     // close) is what makes every visit its own fingerprint, so the previous
     // session's diff flags cannot be blitted on over the new one's.
     //
-    // AND THE COMPARE READING IS THE FIFTH (2026-08-05): a commit has TWO
-    // deltas — forward against the next-newer item, and against the frozen live
-    // now side — and every other field can be identical across a switch (same
-    // session, same index, focus cleared to the same -1). Without it the lane
-    // would keep blitting the reading the user just switched away from, and the
-    // two would cross-blit freely as he switched back and forth. (At the NEWEST
-    // index the two deltas coincide, so a switch there redraws the same lane;
-    // this field does not know that and does not need to.)
-    //
-    // AND THE MULTI-SELECTION IS THE SIXTH (2026-08-05): the mode's own selected
+    // AND THE MULTI-SELECTION IS ONE (2026-08-05): the mode's own selected
     // set brightens its flags exactly as the focus brightens one, so a click
     // that changes membership changes what this surface must contain — the live
     // lane's fp_selection_hash applied to the mode's own list. Hashed rather
     // than counted, since a range replace can leave the size untouched while
     // naming different flags.
     //
-    // AND THE WALK'S SIZE IS THE SEVENTH (2026-08-07, with the streaming
+    // AND THE WALK'S SIZE IS ONE (2026-08-07, with the streaming
     // prefetch): the walk GROWS under a live session, and the arrival that
     // matters most moves no other field here — a view opened before member 0
-    // arrives stands at index 0, focus -1, one generation, one reading, and an
+    // arrives stands at index 0, focus -1, one generation and an
     // EMPTY lane, and the delta it must now draw appears with nothing else
     // changing. Counted rather than hashed: membership only ever appends, so the
     // size is the whole of what can differ.
-    //
-    // AND THE WALK SOURCE IS THE EIGHTH, ITS POSITION THE NINTH (2026-08-07):
-    // the view reads TWO walks now, so which one is
-    // displayed is a content fact of its own — a switch between them can leave
-    // index, focus, generation, reading and count every one of them unchanged
-    // while the lane's whole content changes — and the LOCAL walk's `,` / `.`
-    // moves its own position field, which no other input here mirrors. The local
-    // walk's SIZE needs no field beside them: it is built from the two undo
-    // stacks' sizes, captured at entry and frozen for the visit, unlike the
-    // commit walk's streaming one.
     bool               fp_history_active     = false;
     std::size_t        fp_history_index      = 0;
     int                fp_history_focus      = -1;
     unsigned long long fp_history_generation = 0;
-    GuiHistoryCompare  fp_history_compare    = GuiHistoryCompare::Iterative;
     uint64_t           fp_history_selection_hash = 0;
     std::size_t        fp_history_commit_count   = 0;
-    GuiHistoryWalkSource fp_history_source   = GuiHistoryWalkSource::Commit;
-    std::size_t        fp_history_local_index    = 0;
 
     void destroy_surface() {
         if (surface) {
@@ -597,7 +574,7 @@ struct GuiPaintHandler {
     // AFTER maybe_enqueue_waveform_render so both layers (waveform,
     // flags) key off the same wf_cache.fp_* and snap together at the
     // waveform's completion swap. THE ONE AUTHORITATIVE FINGERPRINT FIELD LIST
-    // (27 fields, RE-DERIVED 2026-10-09 off the compare in
+    // (23 fields, RE-DERIVED 2026-10-19 off the compare in
     // maybe_rebuild_flag_cache — other sites state only a pointer here):
     //   - GEOMETRY, four fields off the displayed plate (wf_cache.fp_*):
     //     fp_vp_start, fp_vp_end, fp_target, fp_warp_frame_map_hash;
@@ -621,21 +598,15 @@ struct GuiPaintHandler {
     //     halves, fp_suppressed_box_index and fp_suppressed_box_cell (which
     //     marker, and which of its boxes this pass skips along with everything
     //     right of it);
-    //   - THE HISTORY MODE, NINE (four 2026-08-04, the fifth and sixth
-    //     2026-08-05, the seventh, eighth and ninth 2026-08-07):
+    //   - THE HISTORY MODE, SIX (four 2026-08-04, the selection hash
+    //     2026-08-05, the walk's size 2026-08-07):
     //     fp_history_active, fp_history_index, fp_history_focus,
-    //     fp_history_generation, fp_history_compare,
-    //     fp_history_selection_hash, fp_history_commit_count,
-    //     fp_history_source and fp_history_local_index — the `h` view replaces
+    //     fp_history_generation, fp_history_selection_hash and
+    //     fp_history_commit_count — the `h` view replaces
     //     the lane's whole content, so these decide it as completely as the five
     //     marker-driven fields decide the live one; the generation is what
     //     distinguishes two SESSIONS that agree on the others (a close and a
-    //     reopen this pass never sees between), the compare bit what
-    //     distinguishes ONE MEMBER'S TWO DELTAS (iterative forward against the
-    //     next-newer item, cumulative against the frozen now side), the SOURCE
-    //     what distinguishes THE TWO WALKS (the committed history and the
-    //     session's own STATE TIMELINE — the model is GuiHistoryLocalWalk's,
-    //     history_diff.h — whose positions are two different fields),
+    //     reopen this pass never sees between),
     //     and the selection hash what distinguishes two membership states of one
     //     shown delta (the mode's multi-selection, whose members wear the focus's
     //     own brightened face).

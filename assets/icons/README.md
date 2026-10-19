@@ -123,15 +123,16 @@ history), and since 2026-10-15 Phase Reset `camera-photo` (the phase
 snapshot: a reset re-grounds the synthesis phase to the source's at one frame, and it decoheres from there), its 48 slot (300, 50) — the sheet's 256 "hires" slot is never preferred over a 48
 drawing, which is tuned for the seats; Toggle History View `document-open-recent`, the clock turned back, history's
 again since 2026-10-18 (`x-office-calendar` the night of 2026-10-15 and 2026-10-17 late evening to 2026-10-18); Toggle
-Value Drag `format-text-direction-rtl`'s pen (2026-10-18, above); and Toggle Session History `network-wired-disconnected` (Session
-shuts off git and stays local: the cable unplugged, 2026-10-15); since 2026-10-16 Center `edit-find` (the magnifier
+Value Drag `format-text-direction-rtl`'s pen (2026-10-18, above); since 2026-10-16 Center `edit-find` (the magnifier
 finds the playhead; its 48 slot (300, 50), the sheet's other being edit-find-replace's), Full Zoom Out `view-restore`
 (the view shrunk back; the second 48 slot of `view-fullscreen-restore.svg`, (696.00012, 50.000008), proved against the
 shipped `view-restore.png` at d 0.65 where the first slot sits at 54.7) and Toggle Waveform Magnification
 `audio-volume-high` (the loud speaker for the louder waveform), zoom.svg's three magnifiers retired ("low contrast"); the
 Read-Only toggle the padlock pair, `changes-allow` unlocked and `changes-prevent` locked; Save `document-save` (the
 floppy retired); Flatten `edit-clear-all` (3.22's own broom); Load in Place `edit-paste`. CardCritical wears
-`process-stop`, as Cancel does (a link). Every seat's drawing is named in the table below.
+`process-stop`, as Cancel does (a link). Every seat's drawing is named in the table below. (Toggle Cumulative's
+`accessories-calculator` and Toggle Session History's `network-wired-disconnected` left the folder 2026-10-19 with
+their acts.)
 
 ## Findings
 
@@ -140,9 +141,6 @@ floppy retired); Flatten `edit-clear-all` (3.22's own broom); Load in Place `edi
   architect's own PNGs are his drawings, the drop road; an Adwaita SVG with a bitmap inside stays ruled out.)
 - `format-text-direction-ltr` is PNG-only in 3.22 (no scalable source) and is not a mirror of `-rtl`, so the two are
   no Source / Target pair; Value Drag wears `-rtl`'s pen alone (above).
-- `network-wired-disconnected` is VECTOR at its 48 slot (2026-10-16): its sheet carries no `<image>`, no `<pattern>` and
-  no `data:` URI, the extraction is the slot's crop exactly (rsvg, 240 px, max difference 0) and within d 1.0 of the
-  theme's shipped 48 PNG — the PNG is the theme's render of this drawing.
 - The clock's digits (`document-open-recent`) are `<text>`, which the product's resvg does not draw — hence
   HistoryView's outlines, above.
 - `find.svg` carries an `<image>` and a `<pattern>`, neither in edit-find's 48 slot nor in `Center.svg`. That file
@@ -160,7 +158,7 @@ no reference there) — the one seat the tool prints for a look, accepted on the
 `PhaseReset.svg` (2026-10-15), rendered at 240 px through the same resvg 0.48.1: every ink pixel of rsvg's render
 drawn, the mean difference 0.3 of 255 (antialiased edges alone). The files of 2026-10-15 / 16 the same, mean difference
 to rsvg at 240 px (the resvg 0.48.1 command line, premultiplied): `HistoryView.svg` 0.63,
-`SessionHistory.svg` 0.37, `Center.svg` 0.34, `FullZoomOut.svg` 0.14, `WaveformMagnification.svg` 0.30; and
+`Center.svg` 0.34, `FullZoomOut.svg` 0.14, `WaveformMagnification.svg` 0.30; and
 `ValueDrag.svg` (2026-10-18) 0.10. The baton's 2048-px PNG (2026-10-18): the product's decode (resvg 0.48.1 at
 identity) was byte-identical to PIL's premultiplied decode, and its Lanczos resample within 0.14 of 255 mean of PIL's
 `Image.LANCZOS` at 60 px (0.27 at 28, 0.34 at 22). A dropped PNG needs no import check: it is its own picture.
@@ -197,13 +195,11 @@ reference left dangling. The disabled face has no file of its own: the product b
 | Disabled | `audio-volume-muted` | `path11644` `path10707` | floor shadow (blurred core and the wide radial) |
 | Inherit | `insert-link` | `path4121` | floor shadow under the triangle |
 | Flatten | `edit-clear-all` | `path6017` | floor shadow |
-| Cumulative | `accessories-calculator` | `rect12531` | blurred halo behind the calculator |
 | Follow | `start-here` | — | no drop shadow |
 | GridIterations | `x-office-spreadsheet` | `g12362` | floor shadow |
 | PlayRenders | `applications-multimedia` | `path8036` | floor shadow under the note |
 | LoadInPlace | `edit-paste` | `rect5387` `rect5796` `path5674` `rect5984` | floor shadow (2); the clip's and the paper's shadows cast on the board |
 | HistoryView | `document-open-recent` | `use6074` `use6388-7-7` `g4531` `path7099` | floor shadow (two stacked instances of g6384: use6074 and use6388-7-7); the hands' and the arrow's shadows cast on the dial |
-| SessionHistory | `network-wired-disconnected` | `path7840` `rect7696` `path7678` | floor shadow under the plug; the blurred halo behind the wall plate; the cable's blurred shadow |
 | AddToSelection | `edit-select-all` | `g12362` | floor shadow |
 | Older | `media-seek-backward` | `g6598` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
 | Newer | `media-seek-forward` | `g5161` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
@@ -259,7 +255,6 @@ The extracted SVGs, `tools/icon_set_adwaita_322/`'s `README_table.md` (the links
 | CardNormal | `dialog-information` | `dialog-information.svg` | 296, 50, 48, 48 | `43752d57c0e5a94957279071458888afbefb187bc97e0184f39757d97cffb7c0` | 0.0 1.5 |  |
 | Center | `edit-find` | `find.svg` | 300, 50, 48, 48 | `88e1be55349ba868dfc3a45152cb376e50a10d178fe57b422be59d47f20e7ae3` | 0.9 0.4 | NEW: Center (architect 2026-10-16: the magnifier finds the playhead) |
 | Close | `window-close` | `window-close.svg` | 296, 50, 48, 48 | `3145ee5b93477957dca1f8235c612e8eff2148227c95ffc53186c78b891a73b2` | -0.7 0.7 |  |
-| Cumulative | `accessories-calculator` | `accessories-calculator.svg` | 296, 50, 48, 48 | `aeafa0e25eb404c73da589337ddb6dfb1aeec8ab2663a7038702c9379de912fb` | 0.0 1.1 |  |
 | DeleteFolder | `user-trash` | `trash.svg` | 696, 50, 48, 48 | `940cae7ced59edf15322f1e92cfa1636dade79dff9ecdea5f3dff6b9bfcd72d1` | 0.0 -0.5 |  |
 | DeleteMarkers | `list-remove` | `list-add-remove.svg` | 696, 50, 48, 48 | `c9c134fbc80a3342f28b595039c21e179f9775b1682ccdbf0272716092680d61` | -1.0 1.0 |  |
 | Disabled | `audio-volume-muted` | `audio-volume.svg` | 421, 335, 256, 256 | `0a1b5e6cc52d57eeb8e864b5d16e88bdb523da79b87e6bdaeff1599d83acbd9b` | -0.5 0.0 |  |
@@ -297,7 +292,6 @@ The extracted SVGs, `tools/icon_set_adwaita_322/`'s `README_table.md` (the links
 | Save | `document-save` | `cabinets.svg` | 696, 50, 48, 48 | `abefcd60460b10ac8be532acb78197132f8e90b3db97e6d3812c555914f0517f` | 0.5 0.9 | the floppy retired (architect 2026-10-14) |
 | SaveCommit | `go-top` | `navigation-icons.svg` | 276, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 0.5 |  |
 | SavePull | `go-bottom` | `navigation-icons.svg` | 106, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 0.5 |  |
-| SessionHistory | `network-wired-disconnected` | `network-wired-disconnected.svg` | 296, 50, 48, 48 | `4c9d212cedd9877315cc1e0b05685a582bea53d517ff798bf734e6be9639047e` | 0.1 -0.5 | NEW: Session (architect 2026-10-15: shut off git and stay local) |
 | Settings | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` | -0.2 0.9 |  |
 | Source | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | 0.0 0.9 | NEW: Source (architect 2026-10-14) |
 | Stop | `media-playback-stop` | `media-control-icons.svg` | 356, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |

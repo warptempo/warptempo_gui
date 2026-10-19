@@ -869,48 +869,41 @@ constexpr IconRowDef kIconRowButtons[] = {
 
 // THE HISTORY STAND-INS — THE ICON ROW'S ONE MODE SWAP (architect
 // 2026-10-05, so the row fits the tablet's 2304 device px at gui_scale 400):
-// WHILE THE `h` VIEW STANDS, the history group's four companions here (the
-// walk lamp, Cumulative, Revert and Load in Place; Older and Newer are row
-// 8's since 2026-10-11, kTransportHistoryStandIns) paint in the
-// slots of the AUTHORING GROUPS THE VIEW GREYS WHOLE, and those groups'
-// members publish empty rects; outside the view the authoring groups stand
-// and the four publish empty rects. The opener (IconHistory) is not a
-// companion and stands at its own slot in both states. Every other x is the
-// walk's plain accumulation over whichever members stand, and the keyboard
-// is untouched: only the row's picture changes, every chord answering
-// exactly as it did.
+// WHILE THE `h` VIEW STANDS, the history group's two companions here
+// (Revert and Load in Place; Older and Newer are row 8's since 2026-10-11,
+// kTransportHistoryStandIns) paint in the slots of an AUTHORING GROUP THE
+// VIEW GREYS WHOLE, and that group's members publish empty rects; outside
+// the view the authoring group stands and the two publish empty rects. The
+// opener (IconHistory) is not a companion and stands at its own slot in both
+// states. Every other x is the walk's plain accumulation over whichever
+// members stand, and the keyboard is untouched: only the row's picture
+// changes, every chord answering exactly as it did.
 //
-// WHICH GROUPS: each entry names the LEADER of the authoring group it
+// WHICH GROUP: each entry names the LEADER of the authoring group it
 // replaces (redesign_button_opens_icon_group), and the stand-in group takes
-// that leader's gap. The two are the groups every member of which the view
-// greys through the derived partition (history_mode_disables_button,
+// that leader's gap. The candidates are the groups every member of which the
+// view greys through the derived partition (history_mode_disables_button,
 // input_pointer.cpp — none of their chords is the mode's vocabulary or on its
 // allowlist): UNDO'S (Undo, Redo, Render — Ctrl+Z, Ctrl+Shift+Z,
-// Ctrl+Alt+R) and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F).
-// No other group is grey whole in the view: the zoom group keeps Full Zoom
-// Out (bare `0`) and the render-entry group the tooltip lamp (bare
-// backslash). A ruling that admits one of those six chords into the view
-// removes its group from this table.
+// Ctrl+Alt+R) and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). The
+// iteration group takes no stand-in, so it is HIDDEN WHOLE in the view
+// (every member's chord refused in every session, history_mode_hides_button),
+// its pane and groove dropped. No other group is grey whole in the view: the zoom group
+// keeps Full Zoom Out (bare `0`) and the render-entry group the tooltip lamp
+// (bare backslash).
 //
-// THE SLOTS: six, the four companions using four of them. UNDO'S THREE take
-// the view's two acts, Revert and Load in Place, so that group stands one
-// case narrower in the view (two until 2026-10-14, when Copy Resolved
-// Value's button left it) — OLDER AND NEWER LEFT IT FOR ROW 8 (architect
-// 2026-10-11 ~02:40; they stood in Undo's and Redo's slots from 2026-10-05):
-// they take the Left / Right arrows' seats in the nudge-and-play group
-// there, the row's per-seat stand-ins (kTransportHistoryStandIns); THE ITERATION
-// GROUP'S THREE take the two reading lamps, the walk source and the
-// cumulative reading, so that group stands one case narrower in the view
-// and the render-entry group right of it sits one case (31 Windows px)
-// further left there than outside — further still since 2026-10-07, the
-// zoom group and the render-entry group each standing on the one member the
-// view does not refuse in every session (Full Zoom Out and, since 2026-10-12,
-// Waveform Magnification; Enable Tooltips), their others hidden (history_mode_hides_button, paint_icon_row's walk). The history opener and the view pairs
-// are right-anchored and do not move (kIconRowHistoryOpener).
-//
-// THE COMPANIONS' GLYPHS: the CUMULATIVE toggle wears Cumulative, Adwaita's
-// accessories-calculator (a cumulative delta is a sum over the walk's
-// members).
+// THE SLOTS: UNDO'S THREE take the view's two acts, Revert and Load in
+// Place, so that group stands one case narrower in the view (two until
+// 2026-10-14, when Copy Resolved Value's button left it) — OLDER AND NEWER
+// LEFT IT FOR ROW 8 (architect 2026-10-11 ~02:40; they stood in Undo's and
+// Redo's slots from 2026-10-05): they take the Left / Right arrows' seats in
+// the nudge-and-play group there, the row's per-seat stand-ins
+// (kTransportHistoryStandIns). The zoom group and the render-entry group each
+// stand on the one member the view does not refuse in every session (Full
+// Zoom Out and, since 2026-10-12, Waveform Magnification; Enable Tooltips),
+// their others hidden (history_mode_hides_button, paint_icon_row's walk).
+// The history opener and the view pairs are right-anchored and do not move
+// (kIconRowHistoryOpener).
 //
 // THE REPAINT: the mode's two edges, open_history_mode_fresh and
 // close_history_mode (input_key_dispatch.cpp), each end in full-window
@@ -926,31 +919,20 @@ constexpr IconRowDef kIconRowHistoryActGroup[] = {
     // button wears for the same act.
     {RedesignButton::IconLoadInPlace,   icons::Icon::LoadInPlace},
 };
-constexpr IconRowDef kIconRowHistoryReadingGroup[] = {
-    // THE WALK LAMP (architect 2026-08-18 as a radio pair, one button since
-    // the 2026-09-04 collapse). It wears the LIT state's glyph,
-    // the Session glyph, because Git is the walk's default and the lamp
-    // reports Session — network-wired-disconnected since 2026-10-15
-    // (icons.h): Session shuts off git and stays local, the cable unplugged.
-    // The Git half's deep-history glyph left icons::Icon with that half.
-    {RedesignButton::SessionHistory,       icons::Icon::SessionHistory},
-    {RedesignButton::HistoryCumulative, icons::Icon::Cumulative},
-};
 struct IconRowStandIn {
     RedesignButton                replaces;   // the authoring group's leader
     std::span<const IconRowDef>   members;
 };
 constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
     {RedesignButton::Undo,    kIconRowHistoryActGroup},
-    {RedesignButton::IconBpm, kIconRowHistoryReadingGroup},
 };
 
 // THE HISTORY OPENER — RIGHT-ANCHORED (architect 2026-10-06): bare `h`, the
 // one history button that stands in every state, the toggle's same press
 // entering and leaving the view. A group of its own since 2026-08-18 ("place
 // a separator before the history button, and place cumulative/etc after the
-// history button") and alone since 2026-10-05, when its six companions went
-// to the stand-in slots above. IT TAKES NO PART IN THE LEFT WALK: it seats
+// history button") and alone since 2026-10-05, when its companions went
+// to the stand-in slots. IT TAKES NO PART IN THE LEFT WALK: it seats
 // flush against the view pairs' left, its pane one groove short of the
 // first view pane, and the left groups' limit stands one groove further left
 // again (paint_icon_row). THE REASON IS THE PEN: while the opener closed the
@@ -998,9 +980,9 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // the view pairs cover it whole — so a press, a hover and a tooltip land on
 // exactly the pixels on screen (on screen is as painted; paint_icon_row's
 // walks). The band holds every pane down to 558 Windows px of BAND width
-// outside the `h` view and 420 inside it, the window two program frame lines
-// wider (560 / 422 at 100 %; the width math at paint_icon_row, its one
-// statement, re-derived 2026-10-17), so neither host reaches the rule at its
+// outside the `h` view and 362 inside it, the window two program frame lines
+// wider (560 / 364 at 100 %; the width math at paint_icon_row, its one
+// statement, re-derived 2026-10-19), so neither host reaches the rule at its
 // scale: the tablet's 2304 device px hold the row in both states up to about
 // 410 % and the laptop's 1920 up to about 343 % (the
 // W arithmetic over the device width; each element's own rounding moves the
@@ -1852,8 +1834,8 @@ void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
 // then the SCALE segment `Scale: [-]<then token> [+]<now token>` when the
 // scale changed (both below) — so an absent segment leaves no separator
 // behind it and nothing leads or trails: `03/14 | GitHub: up to date |
-// Scale: [-]1.0 [+]1.1`, `03/14 | GitHub: behind`, `007/114`. The same shape
-// on BOTH walks. The scale segment speaks the lane's own sign vocabulary
+// Scale: [-]1.0 [+]1.1`, `03/14 | GitHub: behind`, `007/114`. The scale
+// segment speaks the lane's own sign vocabulary
 // through the lane's own spelling owner (history_diff_label), so this line
 // and the flags cannot come to bracket differently. (The "bottom-left corner" of the mode's record read
 // bottom-RIGHT from the 2026-08-12 unification, TOP-RIGHT while the status
@@ -1861,9 +1843,9 @@ void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
 // BOTTOM-CENTRE now, beside the clock — the same line, four surfaces.)
 //
 // THE LINE NAMES NO COMMIT (architect 2026-09-28): the short SHA left it, so
-// the position is the line's only reference to the member on either walk.
-// The member's NAME still has its one owner, HistoryMode::member_label
-// (app_state.h), which the `'` load confirmation reads — the line does not.
+// the position is the line's only reference to the member. The member's
+// NAME, its short SHA, is the `'` load confirmation's
+// (GuiInputHandler::history_load_in_place) — the line does not read it.
 //
 // THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect 2026-08-05,
 // superseding the arc's unchanged-token report): a value that both sides agree
@@ -1875,35 +1857,29 @@ void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
 // strict-load clean, and kept as the least-surprising shape rather than a
 // refusal.
 //
-// THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `x/y` reads the viewed
-// member's DISPLAYED NUMBER and the walk's count, so a Local tab counts the
-// session's own timeline states with the same two numbers in the same place.
-// THE COUNT RUNS UPWARD FROM THE PIECE'S PAST since 2026-09-17 — the oldest
+// THE POSITION (2026-08-07): `x/y` reads the viewed member's DISPLAYED NUMBER
+// and the walk's count. THE COUNT RUNS UPWARD FROM THE PIECE'S PAST since 2026-09-17 — the oldest
 // member is 1 and the newest is y — and the arithmetic that turns the walk's
 // index into that number has ONE OWNER, HistoryMode::member_number
 // (app_state.h). THE NUMBER IS ZERO-PADDED to the count's digit count
 // (architect 2026-09-28): `03/14`, `007/114`, `1/1`, `0/0` — the position
 // keeps one width while `,` / `.` walk, so the segments after it hold still.
 //
-// The reference is non-const because both walks COMPUTE THEIR DELTA LAZILY AND
-// CACHE IT (displayed_delta, app_state.h) — the composition itself writes
+// The reference is non-const because the walk COMPUTES ITS DELTA LAZILY AND
+// CACHES IT (GuiHistoryDiff::delta_at) — the composition itself writes
 // nothing.
 static std::string history_walk_line(AppState& app) {
     static constexpr const char* kSegmentSeparator = " | ";
-    const std::size_t count = app.history_mode.walk_count();
+    const std::size_t count = app.history_mode.session.commit_count();
     // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing at
     // all: a blank cell beside a blank lane says only that the cell has stopped
-    // working. ONE SPELLING FOR BOTH WALKS, and since 2026-08-08 only the
-    // COMMIT walk can reach it — its empty window, a visit opened before the
-    // prefetch has delivered member 0. The LOCAL walk is never empty while the
-    // mode stands: the one entry owner binds it before `active` goes up and its
-    // member count is U + R + 1, so a session that has authored nothing reads
-    // `1/1` — one state compared against itself. The zero arm therefore
-    // describes the commit side alone now, and it lives inside member_number
-    // with the counting it belongs to rather than as a test of this line's own.
+    // working — the empty window, a visit opened before the prefetch has
+    // delivered member 0, or a piece with no eligible checkpoint. The zero arm
+    // lives inside member_number with the counting it belongs to rather than
+    // as a test of this line's own.
     const std::string total = std::to_string(count);
     std::string line = std::to_string(
-        app.history_mode.member_number(app.history_mode.walk_index()));
+        app.history_mode.member_number(app.history_mode.index));
     if (line.size() < total.size())
         line.insert(0, total.size() - line.size(), '0');
     line += '/';
@@ -1912,29 +1888,28 @@ static std::string history_walk_line(AppState& app) {
     // moved ahead of the scale 2026-09-29): how this device stands against
     // GitHub as of the last check — `GitHub: checking...` / `up to date` /
     // `ahead` / `behind` / `diverged` / `offline` / `refused`
-    // (github_status_word) — in the line's own `Label: value` shape, on BOTH
-    // walks, because what Ctrl+S does in the view depends on it whichever walk
-    // is showing. It stands ahead of the scale because the state cell clips
+    // (github_status_word) — in the line's own `Label: value` shape, because
+    // what Ctrl+Shift+S does in the view depends on it. It stands ahead of
+    // the scale because the state cell clips
     // at the right block (paint_bottom_row_buttons_and_clock): where the line
     // is wider than the cell — a narrow window's; the tablet's in-view cell,
     // ~1097 device px at 300 % since the view hides row 8's dead buttons
     // (2026-10-07), holds `007/114 | GitHub: checking... | Scale: [-]1.0
     // [+]1.1` whole, ~752 px of Tahoma's advances — the cut falls on the
     // scale, which the diff lane also shows, and never on the word Ctrl+S
-    // forks on. A visit with no clone (the local fallback)
-    // has no segment, and neither has an Unchecked status. The position
-    // always precedes it (`0/0` at worst), so the separator is unconditional.
-    if (history_remote_walk_available(app)) {
-        if (const char* word = github_status_word(app.github_status)) {
-            line += kSegmentSeparator;
-            line += "GitHub: ";
-            line += word;
-        }
+    // forks on. An Unchecked status has no segment (every standing visit has
+    // a clone, open_history_mode_fresh opening nothing without one). The
+    // position always precedes it (`0/0` at worst), so the separator is
+    // unconditional.
+    if (const char* word = github_status_word(app.github_status)) {
+        line += kSegmentSeparator;
+        line += "GitHub: ";
+        line += word;
     }
     // THE SCALE SEGMENT, LAST: something always precedes it (the position,
     // `0/0` at worst), so the separator is unconditional.
     const GuiHistoryCommitDelta* d =
-        app.history_mode.displayed_delta(app.history_compare());
+        app.history_mode.session.delta_at(app.history_mode.index);
     // No unavailable-delta arm: walk membership is the strict whole-set load
     // (history_diff.h's gate, 2026-08-04), so every commit this line can name
     // has a real delta — the old `Ambiguous` token died with the display
@@ -2036,7 +2011,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // 2026-10-10): COOL EDIT'S TOOLBAR BAND since 2026-10-09 (the roster block
     // above), its groups the band's panes, the cases abutting within a pane,
     // a groove between two panes — TWENTY members in
-    // EIGHT groups outside the `h` view and FOURTEEN in eight inside it (the
+    // EIGHT groups outside the `h` view and TWELVE in seven inside it (the
     // width math below is the count's one statement), RE-COUNTED off the
     // roster enum, the painter's tables and the divider owner rather than
     // adjusted: OPEN PROJECT at the row's head (architect 2026-10-07, its
@@ -2066,20 +2041,21 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // (kIconRowHistoryOpener, where the reason is stated) one group gap left
     // of THE VIEW PAIRS, FLUSH AT THE ROW'S RIGHT EDGE since 2026-10-01, two
     // panes since 2026-10-14 (kIconRowViewPairs, where their provenance and
-    // the overflow rule are stated). IN THE `h` VIEW the history group's six
-    // companions stand in the slots of the toolbar group behind Save and of
-    // the iteration group (kIconRowHistoryStandIns, the swap's one owner).
+    // the overflow rule are stated). IN THE `h` VIEW the history group's two
+    // icon-row companions, Revert and Load in Place, stand in the slots of
+    // the toolbar group behind Save (kIconRowHistoryStandIns, the swap's one
+    // owner).
     //
     // ONE MODE SWAP AND ONE MODE HIDE (architect 2026-10-05 and 2026-10-07,
     // reversing 2026-08-14's "no more hiding/showing icons in top icon row"
-    // for the `h` view alone): the history stand-ins replace the two groups
-    // the view refuses whole (the companions publish empty rects outside the
-    // view, the replaced members inside it), and inside the view every other
-    // member whose chord it refuses in EVERY session is not painted
+    // for the `h` view alone): the history stand-ins replace Undo's group,
+    // which the view refuses whole (the companions publish empty rects
+    // outside the view, the replaced members inside it), and inside the view
+    // every other member whose chord it refuses in EVERY session is not painted
     // (history_mode_hides_button, input_pointer.cpp) — Follow behind Full
     // Zoom Out and the magnification lamp (which the view
     // admits since 2026-10-12, architect: he wants to magnify while walking
-    // history), and Listen, the
+    // history), the iteration group whole, and Listen, the
     // padlock and Settings ahead of Enable Tooltips — its neighbours closing
     // up and its group standing while any member does. What the view refuses
     // only BY STATE (Save with nothing to commit, Revert with no subject,
@@ -2099,19 +2075,19 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // band's dark right edge column. Outside the `h` view the LEFT WALK is
     // fifteen members in five panes,
     //   1 + 15·23 + 5·12 = 406,
-    // and inside it nine in five, 1 + 9·23 + 60 = 268 (Older and Newer
-    // row 8's since 2026-10-11; the magnification lamp joined the view's nine
-    // 2026-10-12); the RIGHT-ANCHORED
+    // and inside it seven in four, 1 + 7·23 + 48 = 210 (Older and Newer
+    // row 8's since 2026-10-11; the magnification lamp joined the view's
+    // members 2026-10-12); the RIGHT-ANCHORED
     // span — the edge column, the Warp / Phase pane (2 cases), its dark
     // column, the Source / Target pane (2 cases), its dark column, the
     // history opener's pane, the dark column the left panes stop at — is
     //   1 + 57 + 1 + 57 + 1 + 34 + 1 = 152
     // (two panes of two cost 12 more than one pane of four: the second pane's
     // side air and lines), so the band holds every pane when it is at least
-    // 558 Windows px wide outside the view (420 inside it); the band stands
+    // 558 Windows px wide outside the view (362 inside it); the band stands
     // one program frame line in from each side (2026-10-10,
     // program_frame_rect), so the WINDOW holds it from two frame lines more,
-    // 560 (422) at 100 % — the tablet's 768 at 300 % a band of 766 with a
+    // 560 (364) at 100 % — the tablet's 768 at 300 % a band of 766 with a
     // recess of 208 between. IN DEVICE PX, off the painted walk (each line one
     // relief line, each face and the glyph its own scaled_px): at the tablet's
     // 300 % (cases 69) 1218 + 456 of its band's 2298; at the laptop's 138 %
@@ -2233,13 +2209,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // terms (below); what the view refuses in EVERY session does not
         // stand in it since 2026-10-07 (history_mode_hides_button: the zoom
         // group behind Full Zoom Out and the magnification lamp, Listen, the
-        // read-only toggle, Settings), and the two groups it consumes WHOLE since 2026-10-05,
-        // the history companions standing in their slots
+        // read-only toggle, Settings, the iteration group whole), and Undo's
+        // group, which it consumes WHOLE, has the
+        // history companions standing in its slots since 2026-10-05
         // (kIconRowHistoryStandIns). The view pairs, Full Zoom Out, the
         // magnification lamp, the tooltip lamp and the history opener stay live, as do the history
         // COMPANIONS — each
         // on the derivation's own answer, which is not one reason but two:
-        // bare `u`, `,` and `.` are the mode's own VOCABULARY and answer live
+        // bare `,` and `.` are the mode's own VOCABULARY and answer live
         // whatever the session holds, while bare `v` and bare `'` are
         // ALLOWLIST admissions carrying a session term, so the walk answers
         // DEAD for Revert with no subject and for Load in place over a
@@ -2276,8 +2253,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         // THE FACE IS THE GLYPH'S ALONE (architect 2026-10-02, the AB set):
         // its disabled face, Cool Edit's emboss (icons::draw_disabled,
         // architect 2026-10-15), its case the face its state gives
-        // (paint_roster_case). A dead CHECKED button (the
-        // cumulative reading, say) stays checked: the mode cannot change that
+        // (paint_roster_case). A dead CHECKED button (the grid-iterations
+        // lamp on a locked tab, say) stays checked: the mode cannot change that
         // state, so hiding it would be a lie, and the greyed glyph says
         // "true, but not yours right now".
         // The press face is gated on the live bit rather than trusted: the

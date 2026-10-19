@@ -1985,13 +1985,13 @@ struct TrimBarPressSeed {
 // button the kdenlive rows carry, in painted order: row 1's THREE MENU ANCHORS
 // (File, Edit and Settings, re-greped 2026-09-09 against kDropdownMenus),
 // THE TAB STRIP'S TWO TABS (TabA and TabB, 2026-10-18, painted by
-// paint_tab_strip rather than a table of the painter's), row 4's TWENTY-FOUR
+// paint_tab_strip rather than a table of the painter's), row 4's TWENTY-TWO
 // view / mode / action buttons (OPEN PROJECT leading them since 2026-10-07,
 // the deleted toolbar row's four behind it since the 2026-08-12 relayout;
-// the HISTORY OPENER, ITS WALK LAMP and ITS FOUR
+// the HISTORY OPENER and ITS THREE
 // COMPANIONS follow since 2026-08-18, with LOAD IN PLACE at their tail since
-// 2026-09-01 — the four behind the opener standing in two greyed authoring
-// groups' slots, and only in the `h` view, since 2026-10-05
+// 2026-09-01 — Revert and Load in Place standing in Undo's greyed group's
+// slots, and only in the `h` view, since 2026-10-05
 // (kIconRowHistoryStandIns, paint_handler.cpp), the walk's OLDER / NEWER
 // row 8's since 2026-10-11 though the enum keeps them here — and THE VIEW
 // PAIRS' FOUR close the row flush right since 2026-10-01, two radio panes
@@ -2021,8 +2021,8 @@ struct TrimBarPressSeed {
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
 // below). ROW 1'S THREE MENU
 // ANCHORS ARE THE ROSTER'S NON-CHORD ENTRIES — File, Edit and Settings,
-// re-greped against kDropdownMenus and the chord table (45 chord rows + 3
-// anchors = 48 = kRedesignButtonCount, re-counted 2026-10-18; the count's
+// re-greped against kDropdownMenus and the chord table (43 chord rows + 3
+// anchors = 46 = kRedesignButtonCount, re-counted 2026-10-19; the count's
 // own statement is at kRedesignButtonCount below);
 // the count was TWO, File and
 // Settings, from 2026-08-13, when File took the slot the Quit button held
@@ -2160,10 +2160,11 @@ enum class RedesignButton {
     // render-entry group — Listen, THE READ-ONLY TOGGLE and, since
     // 2026-09-29, SETTINGS and ENABLE TOOLTIPS (in that order since
     // 2026-10-01: help comes after settings) — and THE HISTORY GROUP — the
-    // HISTORY OPENER leading its WALK LAMP, its four companions and (since
+    // HISTORY OPENER leading its three companions and (since
     // 2026-09-01) the LOAD IN PLACE, which left the render-entry group for
-    // it; since 2026-10-05 the six behind the opener stand only in the `h`
-    // view, in two greyed groups' slots, and since 2026-10-06 the opener
+    // it; since 2026-10-05 the four behind the opener stand only in the `h`
+    // view (Revert and Load in Place in Undo's greyed group's slots, Older
+    // and Newer in row 8's), and since 2026-10-06 the opener
     // stands right-anchored against the view pairs
     // (kIconRowHistoryOpener, paint_handler.cpp).
     //
@@ -2528,64 +2529,28 @@ enum class RedesignButton {
     // opened the view closes it. It held a separator-led group of exactly this
     // shape from 2026-08-04 until 2026-08-14, when the four companions left for
     // the bottom row and the opener joined the render-entry group in last
-    // place; this ruling puts both halves back where they were. IT IS SEVEN
-    // SINCE 2026-09-04 (the walk radios' collapse into one lamp), the LOAD IN
+    // place; this ruling puts both halves back where they were. IT IS FIVE
+    // SINCE 2026-10-19, the LOAD IN
     // PLACE having joined at the tail on 2026-09-01 (its own entry, below the
     // companions): the group is everything the `h` view can be driven by
     // from this row. SINCE 2026-10-05 (architect, the row fitting the
-    // tablet at gui_scale 400) ONLY THE OPENER STANDS IN EVERY STATE: the six
-    // behind it stand only in the view, in the slots of the two authoring
-    // groups the view greys whole (kIconRowHistoryStandIns, paint_handler.cpp,
-    // the swap's one owner, which also says which slot each takes), and
+    // tablet at gui_scale 400) ONLY THE OPENER STANDS IN EVERY STATE: the
+    // four behind it stand only in the view — Revert and Load in Place in
+    // the slots of Undo's group, which the view greys whole
+    // (kIconRowHistoryStandIns, paint_handler.cpp, the swap's one owner),
+    // Older and Newer in row 8's Left / Right seats — and
     // since 2026-10-06 the opener stands right-anchored, one groove left
     // of the view pairs (kIconRowHistoryOpener, paint_handler.cpp). This
     // enum keeps the group's order; the painted order is the painter's.
     IconHistory,
-    // The walk lamp, between the opener and the cumulative toggle, which is
-    // where the architect put the surface on 2026-08-18 ("add two radio buttons
-    // after history button, before cumulative"). It selects WHICH WALK the lane
-    // reads: Git is the committed checkpoint history, Session is this session's
-    // own undo/redo timeline read as states (GuiHistoryWalkSource, the model
-    // behind it, is unchanged — Commit | Local; only the surface moved here).
-    //
-    // It was a RADIO PAIR — HistoryWalkGit / HistoryWalkSession over one chord
-    // — until the architect collapsed the row's three pairs into three lamps on
-    // 2026-09-04. One button now, bare `g`, its chord's exact twin: the key is
-    // a TOGGLE over the two walks (the arm is at handle_history_mode_key) and
-    // the press flips the same axis through the same ONE switch owner
-    // set_history_delta, so the key and the button cannot come to mean
-    // different things. The `radio` flag the pair carried is gone with it — the
-    // half already lit was the only thing that flag protected here.
-    //
-    // The lamp lights AWAY FROM HOME, which is the collapse's own rule across
-    // all three: Git is the walk's default reading, so the lamp is LIT IN
-    // SESSION and it wears the Session glyph, SessionHistory — the
-    // unplugged cable since 2026-10-15, Session shutting off git (icons.h).
-    //
-    // It STANDS ONLY IN THE `h` VIEW since 2026-10-05 (the stand-ins) and
-    // its arm still answers DEAD outside it, the same answer its neighbours
-    // give — bare `g` is bound in exactly one place in the product and it is
-    // inside the view. Its arm is the companions' own at
-    // redesign_button_enabled, which states why it stays.
-    //
-    // ITS LAMP IS SCOPED TO THE VIEW, unlike the Cumulative toggle beside it,
-    // and the contrast is the state's own: the READING is a program-session
-    // preference that outlives every visit, while the WALK SOURCE is per-visit
-    // state reset to Commit at every entry — so a lit lamp outside the view
-    // would advertise a selection that is not a live fact. It is unlit out
-    // there whatever the last visit left (redesign_button_selected).
-    // NAMED FOR ITS LIT STATE, Toggle Session History, since 2026-10-16 (the
-    // tooltip table, redesign_button_tooltip).
-    SessionHistory,
-    // THE FOUR COMPANIONS, behind the walk lamp in the order they have always
-    // held
-    // — how the delta READS, what you can DO from inside the view, then where
-    // you can STEP: the cumulative toggle (bare `u`), the revert act (bare `v`)
-    // and the walk's older / newer steps (bare `,` and `.`). THE TWO STEPS ARE
+    // THE THREE COMPANIONS, behind the opener in the order they have always
+    // held — what you can DO from inside the view, then where you can STEP:
+    // the revert act (bare `v`) and the walk's older / newer steps (bare `,`
+    // and `.`). THE TWO STEPS ARE
     // ROW 8'S SINCE 2026-10-11 (architect ~02:40): in the `h` view they stand
     // in the Left / Right arrows' seats, inside the row's last group,
     // "reserved for the most used action" (kTransportHistoryStandIns,
-    // paint_handler.cpp); the other two stay the icon row's stand-ins.
+    // paint_handler.cpp); Revert stays the icon row's stand-in.
     //
     // THEY GREY OUTSIDE THE `h` VIEW AND ARE LIVE INSIDE IT (2026-08-18), which
     // is this row's own settled rule — what a mode refuses simply GREYS — and a
@@ -2609,15 +2574,12 @@ enum class RedesignButton {
     // that survived the 2026-08-18 revival: Revert's grey had been reversed as
     // a per-selection blink, the walls never mirrored because the n/N readout
     // said where the walk stood — and the 2026-08-30 ruling withdrew the
-    // blink argument for the one user it was made for. The CUMULATIVE toggle
-    // keeps its unconditional lamp, which outside the view composes
-    // disabled+selected — a combination the shared face expressions already
-    // handle.
-    HistoryCumulative, HistoryRevert, HistoryOlder, HistoryNewer,
+    // blink argument for the one user it was made for.
+    HistoryRevert, HistoryOlder, HistoryNewer,
     // THE LOAD IN PLACE CLOSES THE GROUP (architect 2026-09-01), off the
     // render-entry group two separators back: the act it runs from the icon
     // row is the `h` VIEW'S — the load confirmation on the viewed walk member
-    // — so the button sits with the view's other six, and OUTSIDE the view it
+    // — so the button sits with the view's other four, and OUTSIDE the view it
     // answers dead with them (and, since 2026-10-05, does not stand there). What it was doing over there was Play renders' own act
     // (bare `'` outside the view opens the render player), which is the
     // duplicate the move deletes: the player keeps ONE icon-row opener now.
@@ -3083,19 +3045,19 @@ enum class RedesignButton {
     // bare arrows (AppState::camera_hold, nudge_camera).)
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
-// THE ROSTER, re-derived by counting the enumerators above (2026-10-18):
-// THREE in row 1 (the menu anchors), TWO in the tab strip's, TWENTY-SIX in
-// row 4's enum block and SEVENTEEN in the bottom row's — 48. PAINTED, the
-// split is 3 + 2 + 24 + 19:
+// THE ROSTER, re-derived by counting the enumerators above (2026-10-19):
+// THREE in row 1 (the menu anchors), TWO in the tab strip's, TWENTY-FOUR in
+// row 4's enum block and SEVENTEEN in the bottom row's — 46. PAINTED, the
+// split is 3 + 2 + 22 + 19:
 // HistoryOlder and HistoryNewer, enumerated in row 4's block, paint in row 8
 // (kTransportHistoryStandIns). Of
-// those, FORTY-FIVE carry a chord in kToolbarChords
+// those, FORTY-THREE carry a chord in kToolbarChords
 // and THREE are the dropdown anchors (File, Edit and Settings), which is the
 // split the chord table's own static_assert checks. The count's succession
 // (every addition and deletion since the 2026-08-12 grand relayout) is in git
 // history; adding or deleting a button restates these numbers and nothing
 // else here.
-inline constexpr int kRedesignButtonCount = 48;
+inline constexpr int kRedesignButtonCount = 46;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -3247,9 +3209,10 @@ inline constexpr bool redesign_button_is_tab(RedesignButton b) {
 // 2026-09-29, SETTINGS and ENABLE TOOLTIPS, help after settings since
 // 2026-10-01 — the load-in-place left it on
 // 2026-09-01) and THE
-// HISTORY GROUP — the opener, its WALK LAMP, its four companions and that
-// load-in-place at the tail (the six standing only in the `h` view, in two
-// greyed groups' slots, since 2026-10-05; the opener alone right-anchored
+// HISTORY GROUP — the opener, its three companions and that
+// load-in-place at the tail (the four standing only in the `h` view since
+// 2026-10-05, Revert and Load in Place in Undo's greyed group's slots, Older
+// and Newer in row 8's since 2026-10-11; the opener alone right-anchored
 // one groove left of the view pairs since 2026-10-06) — and, FLUSH AT THE
 // ROW'S RIGHT EDGE, THE VIEW PAIRS, two groups: Source leading Target, then
 // Warp leading Phase Reset.
@@ -5843,8 +5806,8 @@ struct AppState {
     // SET BY ONE ROUTE — bare `k` / the bottom row's Add to selection button,
     // which toggles it both ways (handle_mode_keys, input_key_dispatch.cpp).
     // The button's lamp reads THIS bit, so the face and the mode cannot drift.
-    // SESSION SCRATCH, NEVER SERIALIZED, like shift_range_anchor beside it and
-    // history_cumulative: no sidecar key, no undo entry, no snapshot field.
+    // SESSION SCRATCH, NEVER SERIALIZED, like shift_range_anchor beside it:
+    // no sidecar key, no undo entry, no snapshot field.
     //
     // SCOPE: THE PAYLOAD BOX OF A FLAG HIT, AND NOTHING ELSE.
     // run_marker_click_act is the one act owner and it runs on a resolved
@@ -7977,8 +7940,8 @@ struct AppState {
     //   COMMIT-FACED SAVE (Ctrl+Shift+S since 2026-10-10, the act itself), SWITCH TAB
     //   (Ctrl+Tab, which the ALLOWLIST admits since
     //   2026-08-18 — a tab switch works in here like everywhere else), the
-    //   history button and the WALK LAMP
-    //   (bare `h` and bare `g`, the mode's OWN vocabulary, which the derivation
+    //   history button
+    //   (bare `h`, the mode's OWN vocabulary, which the derivation
     //   asks about
     //   first), the walk's two arrows (bare `,` / `.`, the same), the
     //   FILE anchor since 2026-08-13, whose one item is the Ctrl+Q this list
@@ -7991,12 +7954,10 @@ struct AppState {
     //   TWO OF THE LIT ARE SESSION-CONDITIONAL IN THEIR FACE, each one decision
     //   serving the key and the face: Save greys with an empty head delta (or a
     //   checkpoint in flight), and the
-    //   load-in-place opener greys on a walk with NO MEMBER — one term for both
-    //   walks since 2026-08-09, the act loading the VIEWED member and a blank
-    //   lane offering none. The Local walk cannot reach it on a live tab (U + R
-    //   + 1 members, bound before the mode goes up), so the REMOTE walk is where
-    //   it shows: a piece whose every checkpoint refuses the strict load opens
-    //   the view at `0/0`, and that button is the one greyed there.
+    //   load-in-place opener greys on a walk with NO MEMBER (2026-08-09), the
+    //   act loading the VIEWED member and a blank lane offering none: a piece
+    //   whose every checkpoint refuses the strict load opens the view at `0/0`,
+    //   and that button is the one greyed there.
     //   REVERT WAS A THIRD UNTIL 2026-08-15 — the revert key is still admitted
     //   only with a diff flag selected, so this partition still answers DEAD
     //   on an empty subject, but no face reads that answer any more: the
@@ -8024,53 +7985,20 @@ struct AppState {
     // zoom, playhead, trim, read_only) and share the warp store, the phase-reset
     // store and the engine settings, while the
     // delta's whole vocabulary is those two stores plus `scale` — so the
-    // walks, the frozen now side and the head delta describe the same piece on
+    // walk, the frozen now side and the head delta describe the same piece on
     // either tab.
-    // (The walk has its own lamp in row 4, and the READING is row 4's own
-    // Cumulative toggle, over a session bit that is not in this struct at all —
-    // AppState::history_cumulative, which is why nothing here names it.)
     //
-    // AND THERE ARE TWO WALKS TO SELECT BETWEEN SINCE 2026-08-07 (architect,
-    // "the local history feature will be helpful for understanding undo/redo
-    // history"): the COMMITTED history this mode was built on, and THE SESSION'S
-    // OWN UNDO/REDO TIMELINE read through the identical delta machinery — every
-    // state Ctrl+Z and Ctrl+Shift+Z can reach plus the live one, newest first
-    // since 2026-08-08 (GuiHistoryLocalWalk, history_diff.h, owns the model and
-    // the pairing derivation). The lane, the flags, the colours, the corner's `n/N`, the
-    // walk's `,` / `.` and the diff-flag cycle are all SOURCE-AGNOSTIC — they
-    // read the displayed delta and
-    // the active walk's position, never a named walk. (The trim bar's span and
-    // its framing double-click were on that list until 2026-08-18, when the bar
-    // went back to displaying the tab's own trim window in the view and the
-    // double-click went back to framing it: neither reads the delta at all
-    // now.) The corner itself is wholly source-agnostic since its SHA token
-    // left it (2026-09-28). TWO surfaces are not,
-    // and each says why at its own site: the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS
-    // wherever the active walk carries a member and FORKS ON THE
-    // SOURCE — its confirmation names the viewed member in the walk's own
-    // spelling (member_label below: a short SHA on the Remote tab, a member
-    // NUMBER on the Local one), and the act behind its OK is a different
-    // function per walk (the fork at confirm_load_in_place) — and
-    // SAVE-AND-COMMIT, whose reach
-    // and grey stay the commit walk's because the act publishes into the
-    // repository. THE REVERT ACT IS LIVE ON LOCAL FLAGS and deliberately so: it
-    // reads the painted flags' frames and then-side lines and knows nothing
-    // about where they came from, so selecting part of one undo event and
-    // putting just that part back is the feature working.
-    //
-    // ENTRY IS GATED ON THE COMMIT SIDE ALONE — the local walk RIDES the mode,
-    // it does not carry it — and on that side it is the HEADER and the scan
-    // ANSWERING, never the member count (2026-08-09): a piece the header cannot
-    // place, or one whose history could not be read, cannot be opened to read
-    // its undo stack, while a piece whose walk is merely EMPTY opens with the
-    // Local tab reading normally beside a blank Remote lane.
+    // THE VIEW READS ITERATIVELY OVER THE COMMITTED CHECKPOINTS ALONE
+    // (history_diff.h's head owns the reading). ENTRY IS GATED ON
+    // THE HEADER AND THE SCAN ANSWERING, never the member count (2026-08-09): a
+    // piece the header cannot place, or one whose history could not be read,
+    // does not open (open_history_mode_fresh cards the reason), while a piece
+    // whose walk is merely EMPTY opens at `0/0` over a blank lane.
     //
     // THE FIRST ADMITTED MUTATOR IS BARE `'` (architect 2026-08-04) — the mode's
     // own act, not an exception carved out of the allowlist's reasoning (the
     // second is Ctrl+Shift+S, further down, on the same reasoning). In the
-    // mode that act's subject CHANGES, AND IT CHANGES WITH THE WALK
-    // (2026-08-08, when the architect gave the Local walk the act his 2026-08-07
-    // ruling had it consume). SINCE 2026-08-29 IT ACTS ON THE VIEWED MEMBER
+    // mode that act's subject CHANGES. SINCE 2026-08-29 IT ACTS ON THE VIEWED MEMBER
     // WITH NO LIST AT ALL (architect: the history picker of the day before was
     // "overengineered; I don't really need it" — there is already a way to
     // step backwards and forwards, and the member the walk stands on is the
@@ -8078,16 +8006,13 @@ struct AppState {
     // "Load '<member label>' in place?" OK / Cancel with Enter answering OK —
     // the render player's own confirmation body, one prompt with two subjects
     // (DialogTrigger::LOAD_IN_PLACE_CONFIRM; the subject parked here is
-    // `pending_load_member` below) — and OK runs the walk's own act.
-    // ON THE REMOTE TAB that act loads THE VIEWED COMMIT's RECIPE — its marker
+    // `pending_load_member` below) — and OK runs the act: it loads THE VIEWED
+    // COMMIT's RECIPE — its marker
     // pair and engine block, the rest of its sidecar state read past (the rule
     // at apply_recipe_in_place, input_handler.h) — into the live session in
     // place (GuiInputHandler::load_history_commit_in_place — parse-gated by the
     // strict whole-file loaders, so a missing sidecar or a legacy format is one
-    // stderr line and one notification card with nothing touched).
-    // ON THE LOCAL TAB it loads THAT STATE of this session's timeline — the two
-    // marker columns and the engine block, all an undo entry carries
-    // (GuiInputHandler::load_history_local_entry_in_place). EITHER WAY it is
+    // stderr line and one notification card with nothing touched). It is
     // ONE cross-file undo entry ON TOP of the current state rather than a
     // rollback — so Ctrl+Z afterwards returns to the state from just before
     // the load — and no disk write anywhere. The mode closes as part of a
@@ -8188,30 +8113,6 @@ struct AppState {
     // mode's entry re-inits, so each visit measures against the state at that
     // visit.
     //
-    // THE SAME DERIVATION FREEZES BOTH UNDO STACKS, which is what the LOCAL walk
-    // rests on (2026-08-07; both stacks since 2026-08-08, when the walk grew to
-    // the whole undo/redo timeline): every route that could push, pop or evict an
-    // entry on either stack is an authoring route, so the two gates consume it or
-    // one of the three mutators closes the view as part of itself. The walk
-    // therefore captures both sizes once and indexes them for the visit —
-    // re-reading them on every ask as a BOUNDS PRECONDITION on the subscript it
-    // is about to perform, which is all that check is.
-    //
-    // IT IS EXCEPTIONLESS BY CONSTRUCTION: the premise shipped with one admitted
-    // producer — the S->T view switch's iteration-bracket push — and that push is
-    // DELETED with the ruling that iteration mode is target-legal, so entering
-    // target view changes no store (the record is at
-    // switch_active_audio_view_to, input_handler.cpp). The bit itself cannot
-    // move in here either: `i` is not on the keyboard allowlist and the icon
-    // row's iteration button greys with it. So the walk has NO producer to
-    // tolerate, and the derivation is the whole argument — no runtime check
-    // stands behind it. (A per-entry PUSH SERIAL, the walk verifying each
-    // captured position's identity on every read, lived for one day of that same
-    // date, written for the kCap-eviction corner the admitted push could reach.
-    // The architect DELETED it when that producer went: a producer-less
-    // mechanism, not a granularity change, in a feature-complete project. Do not
-    // re-propose it.)
-    //
     // WHAT THE FROZEN SIDE DOES DRIFT IN is the SETTINGS file's view state, and
     // the commit act is the one route that has to care. Both allowlists admit
     // routes that move it (membership re-derived 2026-08-12; the ruler drag
@@ -8243,87 +8144,13 @@ struct AppState {
     // exit (session and all, so the next entry pays a fresh commit walk).
     struct HistoryMode {
         bool        active = false;
-        // Index into the COMMIT walk, 0 = newest. `,` steps older (+1), `.`
-        // newer (-1), each clamping at its wall as a consumed no-op. It is the
-        // commit walk's alone since 2026-08-07 — the local walk keeps its own
-        // position in `local_index` below, and the two survive each other's
-        // visits within one session of the view.
+        // Index into the walk, 0 = newest. `,` steps older (+1), `.` newer
+        // (-1), each clamping at its wall as a consumed no-op. THE DISPLAYED
+        // DELTA is `session.delta_at(index)` — its readers, re-derived by grep
+        // 2026-10-19: the flag cache's rebuild (waveform_cache.cpp) and the
+        // WALK LINE (row 8's state cell, history_walk_line); the head delta
+        // below reads index 0 instead, and says why.
         std::size_t index  = 0;
-        // WHICH WALK THE LANE IS READING (architect 2026-08-07) — selected by
-        // the icon row's walk lamp on bare `g` since 2026-08-18, a pair of
-        // radios until the 2026-09-04 collapse (row 3's tabs carried it before
-        // 2026-08-18). GuiHistoryWalkSource (history_diff.h)
-        // owns the pair's definitions and the local walk's whole model; what
-        // lives here is the session's own state.
-        //
-        // COMMIT IS THE DEFAULT AT EVERY ENTRY, this plain member initializer
-        // applied by the whole-struct machinery at both edges exactly as the
-        // compare bit's is: a visit never inherits the last visit's walk.
-        //
-        // WITH ONE FORK, AND IT IS THE ENTRY OWNER'S (architect 2026-09-04): a
-        // visit whose REMOTE walk could not be bootstrapped opens on LOCAL,
-        // the fallback that makes `h` useful where there is no git at all.
-        // open_history_mode_fresh writes it beside local_index, an assignment
-        // the entry makes because only a run bootstrap can answer it; the
-        // switch owner then refuses every route back toward Commit for the
-        // visit's life (history_remote_walk_available).
-        //
-        // EACH SOURCE KEEPS ITS OWN POSITION across a switch, which is what makes
-        // the pair of walks two places rather than one place with a changing
-        // subject: read three checkpoints back, look at what your last two undo
-        // steps did, come back and you are still three checkpoints back.
-        GuiHistoryWalkSource source = GuiHistoryWalkSource::Commit;
-        // Index into the LOCAL walk, 0 = the NEWEST MEMBER — which since
-        // 2026-08-08 is the furthest FUTURE state, the far end of the redo
-        // stack, the walk being the whole undo/redo timeline read as states
-        // (GuiHistoryLocalWalk owns the model). Same two steps, same clamps,
-        // same clearing edges — everything the walk does reads the ACTIVE
-        // source's position through walk_index() below rather than naming either
-        // field.
-        //
-        // THE ENTRY POSITION IS THE ENTRY OWNER'S, NOT THIS INITIALIZER'S: the
-        // whole-struct reset lands 0 here, and open_history_mode_fresh then sets
-        // the LIVE member's index — where the session is standing — because only
-        // a bound walk knows what that index is. With no redo entries the two
-        // are the same number.
-        std::size_t local_index = 0;
-        // THE READING IS NOT A FIELD OF THIS STRUCT — it is AppState's own
-        // `history_cumulative` (architect 2026-08-08), which is exactly why it
-        // is not here: this struct is RESET WHOLE at both mode edges, and the
-        // reading has to survive that. The contract, the default and the
-        // session scope are stated at that field; the mapping onto
-        // GuiHistoryCompare is AppState::history_compare(), the one site that
-        // turns the bit into the delta machinery's vocabulary.
-        //
-        // WHAT THIS STRUCT STILL OWNS IS THE WALK SOURCE ABOVE, and the
-        // asymmetry is deliberate: the SOURCE resets to Commit at every entry
-        // (a per-visit fact — where you are looking) while the READING persists
-        // (a preference — how you want deltas read).
-        //
-        // A READING SWITCH IS STILL A MODE EDGE, exactly like a `,` / `.` step,
-        // and one owner does all of it (GuiInputHandler::set_history_delta,
-        // which takes the (source, reading) pair and writes both halves): clear
-        // the mode focus, drop the lane's published content, clear a resting
-        // region, REPUBLISH THE LANE SYNCHRONOUSLY (2026-08-07 — the arriving
-        // reading's flags stand before the press returns, so the swap shows no
-        // blank frame), damage the window. IT MOVES NO VIEWPORT (architect
-        // 2026-08-08, superseding the 2026-08-05 reset to full zoom out at this
-        // edge and at the step): the window is the user's while the view stands
-        // — and since 2026-08-18 that is EVERY edge, the entry's own framing
-        // having gone with the view's navigation state.
-        //
-        // EVERY READER OF THE DISPLAYED DELTA PASSES THE PAIR, and since
-        // 2026-08-07 they do so THROUGH ONE ACCESSOR (displayed_delta() below)
-        // rather than by naming both halves: the reading is a (source, compare)
-        // PAIR, and four call sites spelling that fork is four places for a
-        // Local tab to keep showing commit flags. Its readers, re-derived by
-        // grep on displayed_delta: the flag cache's rebuild (waveform_cache.cpp)
-        // and the WALK LINE (row 8's state cell) — it had two more until 2026-08-18,
-        // the mode's diff-span framing and paint_trim's diff-span substitution,
-        // both deleted with the trim bar's return to the ordinary framing. The
-        // ONE reader that deliberately does NOT is
-        // head_delta_empty below, which names the COMMIT walk's index 0 and the
-        // Cumulative reading explicitly, and says why.
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
         // NOT a marker index and touches no selection.
         //
@@ -8344,10 +8171,6 @@ struct AppState {
         // that rebuilds that list would otherwise leave the highlight on an
         // unrelated flag.
         //   - each `,` / `.` step (handle_history_mode_key)
-        //   - each WALK-OR-READING SWITCH (2026-08-05, set_history_delta):
-        //     the two
-        //     readings are two different lists, and since 2026-08-07 so are the
-        //     two walks, so it is the step's own reason at a different edge
         //   - each VIEW SWITCH, both axes (2026-08-04, when `t` / `p` / 1 / 2 /
         //     3 joined the keyboard allowlist): the lane paints only the ACTIVE
         //     COLUMN's half of a commit's delta, so W, P and M are different
@@ -8445,9 +8268,9 @@ struct AppState {
         // (open_history_mode_fresh) bumps on every entry, and the reason the
         // flag cache can tell one visit from the next.
         //
-        // (active, index, focus, compare) is not enough, and the gap is not a corner:
+        // (active, index, focus) is not enough, and the gap is not a corner:
         // A CLOSE AND A REOPEN THE PAINT NEVER SEES BETWEEN. Two sessions of the
-        // same piece land on index 0 with focus -1, the iterative reading and
+        // same piece land on index 0 with focus -1 and
         // `active` true — the ordinary shape both times — and the paint consults this fingerprint
         // once per frame, so a close and an open delivered in one dispatch batch
         // (an `h` off and an `h` on; or, since 2026-08-05, THE COMMIT ACT's own
@@ -8490,31 +8313,9 @@ struct AppState {
         // IT READS INDEX 0 ALWAYS, never the walk position: `,` and `.` step
         // what is DISPLAYED, while the act always commits on top of the newest
         // checkpoint, so stepping back to an older one must not offer to
-        // "re-commit" it.
-        //
-        // AND IT READS THE COMMIT WALK ALWAYS, which the LOCAL walk of
-        // 2026-08-07 changes nothing about: the act publishes a checkpoint into
-        // the repository, so "is there anything to checkpoint" is the live state
-        // against the newest COMMIT whatever walk the lane happens to be
-        // showing. Reading the undo stack here would grey the act on a session
-        // that had undone its way back to its own start while the repository
-        // still lacked every one of those changes. Its measurement site
-        // (measure_history_head_delta) therefore names `session` outright, and
-        // Save-and-Commit's reach and face are untouched by the source axis.
-        //
-        // AND IT NAMES THE CUMULATIVE DELTA EXPLICITLY, never the session's
-        // reading bit (AppState::history_cumulative — this is that bit's one
-        // deliberate non-reader): the act commits THE LIVE STATE, so "is there
-        // anything to checkpoint" is live-vs-newest whatever the lane happens to
-        // be displaying, and a `u` press must not move this face.
-        //
-        // SINCE THE ITERATIVE READING TURNED FORWARD (architect 2026-08-05) the
-        // two readings COINCIDE at index 0 — both are the newest checkpoint
-        // against the live now side — so the explicit naming currently picks the
-        // same delta the bit would. It is KEPT explicit anyway, because the
-        // coincidence is a property of the pairing rather than of this question:
-        // what this field asks is live-vs-newest by definition, and spelling it
-        // is what keeps that true if the pairing ever moves again.
+        // "re-commit" it. INDEX 0'S DELTA IS LIVE-VS-NEWEST BY THE READING'S
+        // FORWARD PAIRING (history_diff.h's head): the act commits THE LIVE
+        // STATE, so that is exactly the question.
         //
         // WHAT IT DELIBERATELY DOES NOT SEE (a recorded asymmetry, architect
         // 2026-08-05): the delta's vocabulary is the two marker columns plus
@@ -8596,86 +8397,30 @@ struct AppState {
         // owners themselves, the trim bar's double-click having gone back to
         // the ordinary span framing.
 
-        // THE TWO WALKS. `session` is the committed history (git, the strict
-        // load gate, the prefetch store); `local` is this session's own STATE
-        // TIMELINE — every state undo and redo can reach plus the live one —
-        // read through the same delta machinery, its membership and indexing
-        // owned by GuiHistoryLocalWalk (history_diff.h) and not restated here.
-        // Both are bound at the ONE
-        // entry owner and both measure against the SAME frozen now side — the
-        // local walk takes it from the session rather than capturing a second
-        // one (GuiHistoryDiff::now_side).
-        GuiHistoryDiff      session;
-        GuiHistoryLocalWalk local;
+        // THE WALK: the committed history (git, the strict load gate, the
+        // prefetch store), bound at the ONE entry owner and measured against
+        // the frozen now side it captures.
+        GuiHistoryDiff session;
 
-        // -- THE ACTIVE WALK, in three lines -------------------------------
-        //
-        // The three questions every walk-facing reader asks — how many members,
-        // where am I, and what does the lane show — answered once for the live
-        // source instead of forked at each site. What is NOT here is anything
-        // PER-VOCABULARY by intent: the `'` load's ACT forks on the source at
-        // its one confirm site (GuiInputHandler::confirm_load_in_place)
-        // because a different function loads each walk's member. WHAT IS
-        // SHARED is the member's SPELLING, member_label below — the one owner
-        // of how a member is named to the user on either walk, read by the
-        // confirmation's own question.
-
-        // How many members the ACTIVE walk carries — the `n/N` denominator.
-        std::size_t walk_count() const {
-            return source == GuiHistoryWalkSource::Local
-                       ? local.entry_count()
-                       : session.commit_count();
-        }
-
-        // Where the ACTIVE walk stands. The setter is the only writer either
-        // position field has outside the entry reset, so a step cannot move the
-        // wrong walk.
-        std::size_t walk_index() const {
-            return source == GuiHistoryWalkSource::Local ? local_index : index;
-        }
-
-        // A MEMBER'S DISPLAYED NUMBER, AND THE WALKS COUNT UPWARD FROM THE
+        // A MEMBER'S DISPLAYED NUMBER, AND THE WALK COUNTS UPWARD FROM THE
         // PIECE'S PAST (architect 2026-09-17: "it feels like the numbers count
-        // in reverse. If I drop two markers and hit `h` then `g`, I see 1/3; I
-        // would expect 3/3. Reverse the ordering — the first becomes last and
-        // the last becomes first — on both sides, git and session"). The
-        // OLDEST member reads 1 and the NEWEST reads N, on both walks, so the
-        // number grows the way the work did.
+        // in reverse ... Reverse the ordering — the first becomes last and
+        // the last becomes first"). The OLDEST member reads 1 and the NEWEST
+        // reads N, so the number grows the way the work did.
         //
-        // THE INTERNAL INDEX IS UNTOUCHED BY IT: 0 is still the NEWEST member
-        // on both walks, `,` still steps older (index + 1) and `.` newer, and
+        // THE INTERNAL INDEX IS UNTOUCHED BY IT: 0 is still the NEWEST member,
+        // `,` still steps older (index + 1) and `.` newer, and
         // every wall, jump, cache and pairing reads the index it always did.
         // What reverses is the DISPLAY's arithmetic alone — `N − member` — so
         // the counting direction is ONE EXPRESSION here rather than an
         // inversion of the walk.
         //
-        // ZERO ON AN EMPTY WALK, the commit walk's `0/0` and the one case with
-        // no member to number (the local walk is never empty). THREE READERS,
-        // greped 2026-09-17: the walk line (history_walk_line,
-        // paint_handler.cpp), member_label's LOCAL arm below — so the corner
-        // and the `'` confirmation cannot number one member two ways — and the
-        // local load's own success line on stderr
-        // (load_history_local_entry_in_place, which reads it before the close
-        // that resets this struct).
+        // ZERO ON AN EMPTY WALK, the `0/0` and the one case with no member to
+        // number. ONE READER, re-greped 2026-10-19: the walk line
+        // (history_walk_line, paint_handler.cpp).
         std::size_t member_number(std::size_t member) const {
-            const std::size_t count = walk_count();
+            const std::size_t count = session.commit_count();
             return count == 0 ? 0 : count - member;
-        }
-
-        // A MEMBER'S USER-FACING SPELLING, the ONE OWNER for both walks
-        // (2026-08-28, hoisted for the `'` load's own naming): on the LOCAL
-        // walk the member's displayed NUMBER — member_number above, the
-        // corner's own `n/N` arithmetic, the only name a local member has; on
-        // the COMMIT walk the seven-character SHA every user-facing line
-        // spells (short_sha, history_diff.h). Its reader is the `'`
-        // confirmation's question; the corner names no member since
-        // 2026-09-28 (its position is member_number's alone). Empty for an
-        // out-of-range commit index (sha_at's own answer), which is exactly
-        // the empty walk.
-        std::string member_label(std::size_t member) const {
-            if (source == GuiHistoryWalkSource::Local)
-                return std::to_string(member_number(member));
-            return short_sha(session.sha_at(member));
         }
 
         // THE `'` LOAD CONFIRMATION'S PARKED SUBJECT (architect 2026-08-29):
@@ -8696,67 +8441,8 @@ struct AppState {
         // BEFORE close_history_mode's whole-struct reset would drop this
         // field under a question still painted.
         std::optional<std::size_t> pending_load_member;
-        void set_walk_index(std::size_t to) {
-            if (source == GuiHistoryWalkSource::Local) local_index = to;
-            else                                       index       = to;
-        }
-
-        // THE DELTA THE LANE SHOWS — the ONE accessor for it (architect
-        // 2026-08-07's second walk made the reading a PAIR, and a pair spelled at
-        // four sites is four places to forget one of its halves). Non-const
-        // because both walks compute lazily and cache; the returned pointer is
-        // stable for the visit on either (each class's delta_at states its own
-        // contract). nullptr means "nothing to show" and every reader already
-        // draws that as the blank lane: an out-of-range index, an unavailable
-        // session, or an empty walk.
-        // `compare` is handed IN rather than read off this struct: the reading
-        // is a program-session preference on AppState (history_cumulative), and
-        // a nested struct cannot reach its enclosing object. Every caller spells
-        // it `app.history_mode.displayed_delta(app.history_compare())`, which is
-        // the one mapping owner doing the translation at each use.
-        const GuiHistoryCommitDelta* displayed_delta(GuiHistoryCompare compare) {
-            return source == GuiHistoryWalkSource::Local
-                       ? local.delta_at(local_index, compare)
-                       : session.delta_at(index, compare);
-        }
     };
     HistoryMode history_mode;
-
-    // THE CUMULATIVE READING'S BIT — how the history view's delta is read, and
-    // the ONE piece of that view's state that is NOT in HistoryMode above
-    // (architect 2026-08-08). It lives out here for the reason
-    // history_checkpoint_in_flight does: it OUTLIVES THE VIEW. HistoryMode is
-    // reset whole at both mode edges, so a field in there could not remember
-    // anything across a visit, and remembering is the point.
-    //
-    // OFF IS ITERATIVE — the viewed member against the NEXT-NEWER one, "what
-    // happened after this" — and ON IS CUMULATIVE, the member against the frozen
-    // live now side, "how does my session differ". Off at program start, which
-    // is this initializer.
-    //
-    // PROGRAM-SESSION SCOPED, and that is its whole contract: a mode exit and
-    // re-entry KEEPS it (superseding the 2026-08-05..08 rule that Iterative was
-    // the default at every entry — the reading is a preference now, and a
-    // preference the user re-sets on every visit is not one), and closing the
-    // program FORGETS it. It is NEVER SERIALIZED: not a settings key, not in the
-    // schema, not in a sidecar, not in the render fingerprint's settings terms —
-    // it changes no rendered bytes, only how a read-only lane groups them.
-    //
-    // ITS ONE WRITER is GuiInputHandler::set_history_delta, the switch owner
-    // the tab press and the `u` toggle share; its readers are
-    // AppState::history_compare() just below (the delta machinery's mapping) and
-    // redesign_button_selected (the Cumulative button's lamp, published in every
-    // view because the bit is true in every view).
-    bool history_cumulative = false;
-
-    // THE BIT IN THE DELTA MACHINERY'S OWN VOCABULARY — the ONE site that maps
-    // the session preference onto GuiHistoryCompare, so no caller spells the
-    // ternary and the two can never come to disagree about which way round the
-    // bit runs.
-    GuiHistoryCompare history_compare() const {
-        return history_cumulative ? GuiHistoryCompare::Cumulative
-                                  : GuiHistoryCompare::Iterative;
-    }
 
     // (WINDOW ACTIVATION'S MIRROR, `window_activated`, retired 2026-10-03:
     // its one reader was the folder overlay's highlighted row, whose inactive
@@ -13733,8 +13419,7 @@ inline void selection_consumed(AppState& a) {
 // per-tab toggle, so it is decided now rather than at record time), and GRID
 // ITERATIONS STANDING (architect 2026-09-10: "They just don't go in the undo
 // stack at all; they're considered transient by design" — so while the lamp is
-// lit the whole history is frozen, BOTH stacks and both tabs, exactly as the
-// `h` view freezes the local walk's two stacks while it stands). The mode term
+// lit the whole history is frozen, BOTH stacks and both tabs). The mode term
 // is the lock's (authoring_locked above) narrowed to its iteration half here,
 // because the read-only half is already this predicate's second term and
 // answers per TARGET tab rather than per active tab.
@@ -14080,47 +13765,19 @@ inline bool device_is_mirror(const AppState& a) {
     return a.device_config->role == GuiDeviceRole::Mirror;
 }
 
-// DID THIS VISIT'S REMOTE WALK BOOTSTRAP? — the ONE predicate for "git can be
-// asked about this piece", and the GUI's whole vocabulary for it (architect
-// 2026-09-04: a visit whose bootstrap refuses — a source in no clone, a clone
-// that is not the projects home — used to card the reason and open nothing).
-// LOCAL HISTORY IS THE FALLBACK now — the view opens on the session's own
-// undo/redo timeline — so what needs git is refused HERE and truthfully,
-// while everything the local walk supports works exactly as it does when `g`
-// chooses it.
-//
-// IT IS THE ENTRY'S STORED VERDICT AND NOTHING RUNS GIT TO ASK IT:
-// GuiHistoryDiff::init answers the bootstrap once per entry and keeps both the
-// answer and its reason, so this is a field read at any cadence a face wants.
-// A run that succeeds under a standing visit does not change it — the next `h`
-// bootstraps afresh.
-//
-// ITS READERS, re-greped on this name 2026-09-27 and paired act-to-face so
-// no glyph can disagree with its key: the WALK LAMP'S ACT
-// (GuiInputHandler::set_history_delta, which refuses a switch toward the
-// remote walk and cards the reason) and its FACE (redesign_button_enabled's
-// SessionHistory arm); the CHECKPOINT ACT (run_publish_chord, which
-// cards this fact as its OUTERMOST premise) and SAVE'S FACE through the two
-// predicates below; row 8's GitHub SEGMENT (history_walk_line), which stands
-// only on a visit that has a clone; and the FAILED-SCAN ARRIVAL
-// (on_history_prefetch_ready), which is the odd one out — it does not refuse
-// an act but CARVES A FALLBACK VISIT OUT of the closer that ends a visit whose
-// remote premise failed, such a visit never having had that premise. The
-// reason itself is the session's own
-// (history_mode.session.unavailable_reason(), whose display clause the cards
-// carry and whose kHistoryUnavailable prefix is the one composer).
-inline bool history_remote_walk_available(const AppState& a) {
-    return a.history_mode.session.available();
-}
+// (EVERY STANDING `h` VISIT HAS A CLONE since 2026-10-19: the entry opens
+// nothing when the bootstrap does not answer — open_history_mode_fresh cards
+// the reason — so `history_mode.active` is the whole of "git can be asked
+// about this piece" for the predicates below.)
 
-// IS SAVE THE PULL? (architect 2026-09-27) — inside the `h` view, on a visit
-// with a clone, while the GitHub status reads BEHIND: the publish chord
+// IS SAVE THE PULL? (architect 2026-09-27) — inside the `h` view, while the
+// GitHub status reads BEHIND: the publish chord
 // (Ctrl+Shift+S, 2026-10-10) fast-forwards to what the last check fetched
 // (GuiInputHandler::run_history_pull_press), and the Save button wears
 // IconVcsPull and "Pull (Ctrl+Shift+S)". The glyph's one
 // source (redesign_button_glyph's Save arm) and the pull's admission below.
 inline bool history_save_is_pull(const AppState& a) {
-    return a.history_mode.active && history_remote_walk_available(a) &&
+    return a.history_mode.active &&
            a.github_status == GuiGitHubStatus::Behind;
 }
 
@@ -14133,8 +13790,7 @@ inline bool history_pull_actionable(const AppState& a) {
 
 // WOULD THE SAVE-AND-COMMIT ACT ACT? — the checkpoint act's own session terms
 // in one word (architect 2026-09-01; the GitHub term 2026-09-27): the mode
-// standing on a visit with a clone to commit into (history_remote_walk_-
-// available — a visit on the local fallback has none), no checkpoint already
+// standing (on a clone to commit into, which every visit has), no checkpoint already
 // publishing (single in flight, a bit that OUTLIVES the view, which is why
 // this takes the whole AppState rather than the mode struct), and a GITHUB
 // STATUS THAT ADMITS A COMMIT: UP TO DATE with something to commit (the head
@@ -14172,8 +13828,8 @@ inline bool history_pull_actionable(const AppState& a) {
 // recheck's beside it, a face over the act's own subject refusal: live
 // session state, no data judged, outside the guard topology.
 inline bool history_checkpoint_actionable(const AppState& a) {
-    if (!a.history_mode.active || !history_remote_walk_available(a) ||
-        a.history_checkpoint_in_flight || device_is_mirror(a)) {
+    if (!a.history_mode.active || a.history_checkpoint_in_flight ||
+        device_is_mirror(a)) {
         return false;
     }
     if (a.github_status == GuiGitHubStatus::Ahead) {
@@ -14185,7 +13841,7 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 
 // WOULD THE PUBLISH CHORD ASK GITHUB AGAIN? (architect 2026-09-28; the
 // chord Ctrl+Shift+S since 2026-10-10) — inside the `h`
-// view, on a visit with a clone, with no checkpoint publishing, while the
+// view, with no checkpoint publishing, while the
 // GitHub status reads OFFLINE: the reading
 // may be minutes old (the hotspot coming up after the view opened), so the
 // chord and the Save button's lift DISPATCH THE CHECK (dispatch_github_check, its
@@ -14193,11 +13849,10 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // answer, and the next press acts on it. The face is live on these terms (a
 // face that advertises an act dispatches it) and greys under Checking like
 // every other status in flight. Read by Save's face; the act answers the same
-// status at its own fork (run_publish_chord), below the no-clone and
-// in-flight refusals this restates.
+// status at its own fork (run_publish_chord), below the in-flight refusal
+// this restates and the no-clone one a standing visit never meets.
 inline bool history_github_recheck_actionable(const AppState& a) {
-    return a.history_mode.active && history_remote_walk_available(a) &&
-           !a.history_checkpoint_in_flight &&
+    return a.history_mode.active && !a.history_checkpoint_in_flight &&
            a.github_status == GuiGitHubStatus::Offline;
 }
 
@@ -14225,7 +13880,7 @@ inline bool plain_save_actionable(const AppState& a) {
 }
 
 // THE WALK'S TWO WALLS, one predicate per direction (architect 2026-08-30):
-// `,` steps OLDER (index + 1) and `.` NEWER (index − 1) through the ACTIVE
+// `,` steps OLDER (index + 1) and `.` NEWER (index − 1) through the
 // walk, and each clamps at its end as a consumed no-op. THE SHIFT JUMP TAKES
 // THE SAME ANSWER by construction — Shift+`,` goes to the OLDEST member and
 // Shift+`.` to the NEWEST, and standing at a wall is the one state in which
@@ -14240,11 +13895,11 @@ inline bool plain_save_actionable(const AppState& a) {
 // tracking the index would have repainted the row per step — the argument
 // the ruling withdraws).
 inline bool history_walk_older_actionable(const AppState::HistoryMode& mode) {
-    const std::size_t count = mode.walk_count();
-    return count > 0 && mode.walk_index() + 1 < count;
+    const std::size_t count = mode.session.commit_count();
+    return count > 0 && mode.index + 1 < count;
 }
 inline bool history_walk_newer_actionable(const AppState::HistoryMode& mode) {
-    return mode.walk_index() > 0;
+    return mode.index > 0;
 }
 
 // WHERE A WALK PRESS LANDS — the destination itself, named ONCE for the act
@@ -14258,15 +13913,15 @@ inline bool history_walk_newer_actionable(const AppState::HistoryMode& mode) {
 // before the landing is.
 //
 // TWO READERS: the `,` / `.` arm (handle_history_mode_key,
-// input_key_dispatch.cpp), which WRITES this answer through set_walk_index,
+// input_key_dispatch.cpp), which WRITES this answer to the mode's index,
 // and the two arrows' shift line (redesign_button_tooltip's stateful
 // overload), which compares the plain and the shifted landing and drops the
 // line where they coincide — the two skips' shape, and the reason the hint
 // cannot drift from the act.
 inline std::size_t history_walk_step_landing(
         const AppState::HistoryMode& mode, bool older, bool shift) {
-    const std::size_t count = mode.walk_count();
-    const std::size_t here  = mode.walk_index();
+    const std::size_t count = mode.session.commit_count();
+    const std::size_t here  = mode.index;
     if (older) return shift ? count - 1 : here + 1;
     return shift ? 0 : here - 1;
 }
@@ -15174,14 +14829,14 @@ inline bool playback_launch_playable(const AppState& a,
 //     nothing else.
 //   * THE HISTORY FAMILY IS NOT ON THAT LIST and never was read-only-legal,
 //     which is worth stating because the faces can look alike: none of its
-//     chords is admitted by the allowlist. Bare `h`, `g`, `u`, `,` and `.` are
+//     chords is admitted by the allowlist. Bare `h`, `,` and `.` are
 //     blocked VACUOUSLY — nothing the lock protects is behind any of them
 //     (class (1) below) — and bare `v` the lock really does eat INSIDE THE
 //     VIEW. The clause is load-bearing since 2026-09-01: outside the view the
-//     seven history shapes are UNBOUND (chord_is_bound takes the standing mode
+//     five history shapes are UNBOUND (chord_is_bound takes the standing mode
 //     now), so a locked tab answers bare `v` out there with silence, exactly
 //     as a writable tab does. The OPENER is
-//     lit anyway on its own arm's terms; the WALK LAMP and the four
+//     lit anyway on its own arm's terms; the three
 //     COMPANIONS are greyed at rest all the same, by `a.history_mode.active`
 //     at their own arm below, which is a MODE fact and not the lock's.
 //   * WHY THE READ-ONLY SET IS NOT DERIVED BY WALKING kToolbarChords THROUGH
@@ -15191,8 +14846,8 @@ inline bool playback_launch_playable(const AppState& a,
 //     buttons below, in two classes, and no total is stated for either — the
 //     set moved twice on 2026-08-20 alone and both classes name their members
 //     right here. (1) THE HISTORY FAMILY'S CHORDS ARE BLOCKED VACUOUSLY: bare
-//     `h`, bare `g` (the walk lamp's), bare `u`, bare `,` and
-//     bare `.` sit on no allowlist entry, so the walk reads a grey for five
+//     `h`, bare `,` and
+//     bare `.` sit on no allowlist entry, so the walk reads a grey for three
 //     buttons the read-only lock has no say over. (The ITERATION lock does
 //     refuse bare `h` — two modal views are not composed — but not at this
 //     gate either: the refusal is the mode's own entry arm a dispatch above
@@ -15200,7 +14855,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     predicate iteration_lock_greys, which is where a walk of this gate
 //     would have found nothing at all.) Bare `h` never reaches the gate at all
 //     — handle_history_mode_key claims the toggle and returns from on_key
-//     ABOVE it — while the other four DO reach it on every press outside the
+//     ABOVE it — while the other two DO reach it on every press outside the
 //     view and bind nothing below it (handle_history_mode_key returns false
 //     while the mode is down), so their "blocked" refuses nothing either way.
 //     Knowing that means knowing on_key's dispatch ORDER, which no table
@@ -15560,7 +15215,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // IT HAS NO EXCEPTION SINCE 2026-08-30. From 2026-08-15 until then the
     // four HISTORY COMPANIONS were lifted over it INSIDE the view
     // (redesign_button_is_history_companion, deleted with the lift): three of
-    // the four the partition answers LIVE for free (the mode owns bare `u`,
+    // the four the partition answered LIVE for free (the mode owned bare `u`,
     // `,` and `.`), so the lift existed for REVERT alone, whose `v` the
     // mode admits only while a diff flag stands — a per-selection grey the
     // architect reversed as a face while leaving the chord's refusal exactly
@@ -15569,13 +15224,12 @@ inline bool redesign_button_enabled(const AppState& a,
     // this line and the allowlist's own admission, one decision for the chord
     // and the glyph.
     //
-    // THE FOUR ARE STILL GREY OUTSIDE THE VIEW and this line is not what says
-    // so (2026-08-18, with their return to the icon row): this whole test is
+    // THE COMPANIONS ARE STILL GREY OUTSIDE THE VIEW and this line is not what
+    // says so (2026-08-18, with their return to the icon row): this whole test is
     // inside `a.history_mode.active`, so it has no opinion about a button out
     // there at all. Their own arm below carries that answer and states why it
-    // owns it — and since 2026-08-30 the walk's two WALLS with it, and since
-    // 2026-09-04 the WALK LAMP'S OWN BOOTSTRAP TERM, all of which the
-    // partition cannot see (bare `,`, `.` and `g` are the mode's own
+    // owns it — and since 2026-08-30 the walk's two WALLS with it, which the
+    // partition cannot see (bare `,` and `.` are the mode's own
     // vocabulary and answer LIVE here whatever the walk turned out to be).
     if (a.history_mode.active && history_mode_disables_button(a, b)) {
         return false;
@@ -15592,7 +15246,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //
         // (THE VIEW PAIRS' SELECTORS answer at their own arm below, the
         // iteration lock's members since 2026-09-10.)
-        // (ROW 4 HAS FOUR EXCEPTIONS AGAIN SINCE
+        // (ROW 4 HAS EXCEPTIONS AGAIN SINCE
         // 2026-08-18 — the HISTORY COMPANIONS, whose keys are bound only inside
         // the `h` view and which grey at rest for that reason. They held the
         // same arm from 2026-08-05 (2026-08-08 for the Cumulative toggle) until
@@ -16524,25 +16178,25 @@ inline bool redesign_button_enabled(const AppState& a,
             return !active_view_state(a).read_only &&
                    !a.iteration_mode_enabled &&
                    a.active_markers_view != 'P';
-        // THE FIVE HISTORY BUTTONS ANSWER DEAD OUTSIDE THE `h` VIEW
+        // THE THREE HISTORY COMPANIONS ANSWER DEAD OUTSIDE THE `h` VIEW
         // (2026-08-18) — the ICON ROW's own settled rule, which is where they
         // live again since the roster relayout: what a mode refuses simply
         // GREYS, and their
-        // chords (bare `g` for the walk lamp, bare `u`, bare `v`, bare `,`
-        // and bare `.` for the four companions) are bound in exactly one place
-        // in the product and it is inside the view.
+        // chords (bare `v`, bare `,` and bare `.`) are bound in exactly one
+        // place in the product and it is inside the view.
         //
         // THE OWNER OF THAT RESTING GREY IS THIS ARM AND NOT THE DERIVED
         // PARTITION, deliberately, and the reason is that the partition CANNOT
         // ANSWER IT: the mode line at the top of this body runs only while
         // `a.history_mode.active`, so it has nothing at all to say about a
         // button outside the view — and asked inside it, history_mode_owns_key
-        // claims four of these five as the mode's OWN vocabulary and answers
+        // claims two of these three as the mode's OWN vocabulary and answers
         // LIVE, which is the reverse of the fact wanted here. One
-        // `a.history_mode.active` term states the resting half for all six.
+        // `a.history_mode.active` term states the resting half for all four
+        // (the Load in Place below included).
         //
         // IT IS A REVIVAL, and the ruling it revives is what a reader must not
-        // re-retire. The four companions ANSWERED PLAIN TRUE from 2026-08-15 to
+        // re-retire. The companions ANSWERED PLAIN TRUE from 2026-08-15 to
         // 2026-08-18, and that was right for the row they were on: the
         // 2026-08-14 move to the BOTTOM row put them in the cardinal arrows'
         // own slots under a cluster swap, so outside the view they were not
@@ -16552,9 +16206,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // face had to be honest again, and the arm is the one they held
         // 2026-08-05..15 (2026-08-08 for the Cumulative toggle), restored
         // verbatim in effect. SINCE 2026-10-05 THE PREMISE IS GONE AGAIN —
-        // they stand only inside the view, in the slots of the two authoring
-        // groups it greys whole (kIconRowHistoryStandIns, paint_handler.cpp),
-        // and publish empty rects outside it — so the resting half reaches no
+        // they stand only inside the view, Revert in the slots of the
+        // authoring group it greys whole (kIconRowHistoryStandIns,
+        // paint_handler.cpp) and Older / Newer in row 8's
+        // (kTransportHistoryStandIns), and publish empty rects outside it —
+        // so the resting half reaches no
         // pixel. IT STAYS because it is the chord's truth: the stash the press
         // claim and the drift comparator read then never holds a live bit for
         // a chord bound nowhere outside the view, and a ruling that stands a
@@ -16589,36 +16245,9 @@ inline bool redesign_button_enabled(const AppState& a,
         //     newest) lose nothing to the grey: at a wall the jump onto it
         //     moves nothing either, the predicates' own argument.
         //
-        // THE CUMULATIVE TOGGLE'S SELECTED FACE IS UNAFFECTED and was never
-        // scoped this way: the reading is a session preference
-        // (AppState::history_cumulative) that outlives every visit, so the lamp
-        // reports it wherever the button is painted — inside the view only,
-        // since 2026-10-05 (from 2026-08-18 it also composed DISABLED +
-        // SELECTED on every frame outside it, which the shared face
-        // expressions handle: a dead checked button stays checked, its glyph
-        // embossed (icons::draw_disabled)).
-        //
         // NO LOADING TERM IS NEEDED: the view cannot stand over a blank or
         // loading piece, so `false` is already this arm's answer there.
-        //
-        // THE WALK LAMP TAKES THE RESTING TERM (2026-08-18, for the radio pair
-        // this button replaced on 2026-09-04), for this same reason and with
-        // one difference worth naming: bare `g` IS the mode's own vocabulary,
-        // so the derived partition answers LIVE for it inside the view all by
-        // itself — what it cannot answer is the RESTING grey out here, the
-        // partition running only while `active`.
-        //
-        // AND THE WALK LAMP TAKES A SECOND TERM SINCE 2026-09-04, which its
-        // two neighbours do not: the axis it toggles has a half that needs
-        // GIT, so on a visit that opened with no remote walk to bootstrap
-        // (history_remote_walk_available) every admitted press would be
-        // refused, and the truthful-buttons ruling greys it. The KEY still
-        // cards the bootstrap's reason — the grey is the message for the
-        // button, the sentence is the key's.
-        case RedesignButton::SessionHistory:
-            return a.history_mode.active && history_remote_walk_available(a);
         case RedesignButton::HistoryRevert:
-        case RedesignButton::HistoryCumulative:
             return a.history_mode.active;
         case RedesignButton::HistoryOlder:
             return a.history_mode.active &&
@@ -16630,14 +16259,14 @@ inline bool redesign_button_enabled(const AppState& a,
         // 2026-09-01, moving it here from the render-entry group): the act the
         // icon row runs is the `h` view's load — the confirmation on the
         // VIEWED walk member — so the button is dead outside the view exactly
-        // as its seven new neighbours are, and the resting term is theirs.
+        // as its neighbours are, and the resting term is theirs.
         //
         // THE OTHER TWO TERMS ARE THE ACT'S OWN, both read off their owners:
-        //   * THE WALK MUST CARRY A MEMBER — mode.walk_count() > 0, the very
-        //     expression the `h` allowlist's `is_load_in_place` reads
+        //   * THE WALK MUST CARRY A MEMBER — session.commit_count() > 0, the
+        //     very expression the `h` allowlist's `is_load_in_place` reads
         //     (input_key_dispatch.cpp: "one decision refuses the key and greys
-        //     the icon row's load-in-place button"), through the accessor and
-        //     never a restated count. Inside the view the derived partition at
+        //     the icon row's load-in-place button"), never a restated count.
+        //     Inside the view the derived partition at
         //     the head of this body reaches the same answer by walking this
         //     button's chord through that allowlist; it is spelled here so the
         //     arm states the whole refusal in one place, and the two cannot
@@ -16651,7 +16280,7 @@ inline bool redesign_button_enabled(const AppState& a,
         //     for this button until the move.
         case RedesignButton::IconLoadInPlace:
             return a.history_mode.active &&
-                   a.history_mode.walk_count() > 0 &&
+                   a.history_mode.session.commit_count() > 0 &&
                    !active_view_state(a).read_only;
         case RedesignButton::Save:
         case RedesignButton::Undo:
@@ -16825,10 +16454,8 @@ inline bool redesign_button_enabled(const AppState& a,
 
 // THE TOGGLED-ON ("selected") FACE'S PREDICATE — row 4's
 // TOGGLES and its view pairs' four radios (architect 2026-10-14: two radio
-// pairs, one axis each) — the WALK LAMP, a radio pair until 2026-09-04;
-// follow, iteration,
-// read-only, history, and the CUMULATIVE reading, which came back to this row
-// with the history group on 2026-08-18. THE
+// pairs, one axis each) — follow, magnification, iteration, read-only,
+// history and the tooltip lamp. THE
 // BOTTOM ROW HAS EXACTLY ONE SUBJECT — ADD TO SELECTION, which landed there
 // later the same day, hours after the relayout had left the row lampless: the
 // Cumulative toggle was its one from 2026-08-14 until that relayout, and the
@@ -16905,8 +16532,7 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // glyph overlay anywhere. THE LAMP CAN COMPOSE WITH THE DEAD FACE in
         // the `h` view (a mode left on, then the view opened), which the
         // shared face expressions already handle: the disabled blend mixes
-        // fill and line toward the ground rather than dropping them, exactly
-        // as it does for the Cumulative toggle up in row 4.
+        // fill and line toward the ground rather than dropping them.
         case RedesignButton::IconAddToSelection: return a.add_to_selection;
         // THE VALUE DRAG LAMP (architect 2026-10-11), the same toggle pattern:
         // it reads THE ONE PREDICATE the posture reads (value_drag_armed: the
@@ -16930,34 +16556,6 @@ inline bool redesign_button_selected(const AppState& a, RedesignButton b) {
         // tooltips' presence cannot drift.
         case RedesignButton::IconTooltips:
             return a.show_tooltips;
-        // THE CUMULATIVE READING'S LAMP (2026-08-08), the same pattern over a
-        // bit that is NOT the mode's: history_cumulative is a program-session
-        // preference, so this reads true wherever the session left it.
-        // Publishing it unconditionally is the point — a mode term here would
-        // make the row lie about the reading the moment the view closed. SINCE
-        // 2026-08-18 THAT IS VISIBLE RATHER THAN THEORETICAL: the button is
-        // back in the ICON ROW, which paints every member in every state, so
-        // the lamp shows the session's reading outside the view too and
-        // composes with the button's own resting grey — DISABLED + SELECTED,
-        // dimmed by the shared blend rather than dropped, which is exactly
-        // what a true-but-not-yours-right-now state should look like. (From
-        // 2026-08-14 to 2026-08-18 it lived on the bottom row's swapped
-        // cluster, painted inside the `h` view alone and publishing an empty
-        // rect outside it, so this lamp reached no pixel out there at all.)
-        case RedesignButton::HistoryCumulative: return a.history_cumulative;
-        // THE WALK LAMP (2026-08-18 as a radio pair, one button since the
-        // 2026-09-04 collapse), lit AWAY FROM HOME like the two view lamps: Git
-        // is the walk's default reading, so the lamp reports SESSION and wears
-        // the shallow-history glyph. THE MODE TERM IS DELIBERATE, and it is the
-        // one thing that separates it from the Cumulative toggle directly
-        // above: the READING is a program-session preference that outlives
-        // every visit, so its lamp publishes unconditionally, while the WALK
-        // SOURCE is per-visit state reset to Commit at every entry — so a lit
-        // lamp outside the view would advertise a selection that is not a live
-        // fact. Out there it is unlit and dead, which is the honest face.
-        case RedesignButton::SessionHistory:
-            return a.history_mode.active &&
-                   a.history_mode.source == GuiHistoryWalkSource::Local;
         case RedesignButton::File:
         case RedesignButton::Edit:
         case RedesignButton::Settings:
@@ -17591,7 +17189,7 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconJumpToDefiningMar
 // every lamp-carried toggle here — re-greped 2026-09-16 against the arms whose
 // line 1 begins "Toggle " and which redesign_button_selected lights:
 // waveform magnification, grid iterations, read-only,
-// history view, history walk, cumulative and add to selection — and by the
+// history view and add to selection — and by the
 // render player's Repeat one. Until then those rows named a CONSTANT ACT while
 // the lamp carried the state — the read-only toggle's precedent of 2026-08-14 —
 // which read "Show trim region" (the since-deleted button's) over a lit lamp
@@ -17761,48 +17359,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // used for the mode, until 2026-09-01.
         case RedesignButton::IconHistory:
             return {"Toggle History View (H)", nullptr};
-        // THE WALK LAMP, one line: bare `g` toggles the axis and has no shifted
-        // twin. THE TEXT NAMES THE ACT since the 2026-09-04 collapse made this
-        // one button over a two-state axis — the two radios it replaced named
-        // their own walks, "Git (G)" for the committed checkpoint history and
-        // "Session (G)" for this session's own undo/redo timeline, and either
-        // word alone would lie half the time now. THE ACT IS "TOGGLE SESSION
-        // HISTORY" since 2026-10-16 (architect, agreed 2026-10-14): a lamp names
-        // its LIT state, and it lights in Session (the walk reading this
-        // session's own timeline; unlit, Git) — "Toggle History Walk" named
-        // the axis, and "walk" already means walking both tabs. WALK stays the
-        // tree's word for the axis (GuiHistoryWalkSource,
-        // history_walk_older_actionable); the Cumulative toggle beside it owns
-        // "reading". The hint shows over a
-        // DEAD button outside the `h` view, the tooltips-on-disabled ruling's
-        // own case (architect 2026-08-07), exactly as its four neighbours' do.
-        // IT IS THIS ONE STRING IN EVERY STATE: the stateful overload forked
-        // it inside the view until 2026-09-12, naming the bootstrap where a
-        // visit had opened on the local fallback, and that line went with the
-        // reason class — the button greys there and bare `g` cards the reason.
-        case RedesignButton::SessionHistory:
-            return {"Toggle Session History (G)", nullptr};
-        // THE CUMULATIVE TOGGLE, one line: the key toggles and has no shifted
-        // twin; the text names the toggle (the lamp rule at this table's
-        // head — it read "Cumulative (U)" until 2026-09-01). Like the three
-        // below it, this hint is reachable IN EVERY STATE
-        // again since 2026-08-18: the four came back to the ICON ROW, which
-        // paints every member always, so they carry a DEAD face outside the `h`
-        // view and this hint over it — which is exactly the tooltips-on-
-        // disabled ruling's own case (architect 2026-08-07, kdenlive's
-        // behaviour: a disabled icon still explains itself). It bought nothing
-        // for these four from 2026-08-15 to 2026-08-18, when they answered a
-        // plain `true` on the bottom row's swapped cluster and were painted
-        // inside the view alone.
-        case RedesignButton::HistoryCumulative:
-            return {"Toggle Cumulative (U)", nullptr};
         // THE WALK'S TWO STEPS, in the TWO-LINE form since 2026-08-07: their
         // shifted twins jump to the walk's walls, so the hint says so — the same
-        // rule the static_assert below states, met by two more buttons. The
-        // shift line deliberately does not name the member kind since
-        // 2026-08-08: the Local walk's members are states of the session's own
-        // undo/redo timeline, not checkpoints, so "checkpoint" would lie on half
-        // the surface these arrows serve.
+        // rule the static_assert below states, met by two more buttons.
         // The tooltips-on-disabled ruling (architect 2026-08-07, kdenlive's own
         // behavior: a disabled icon still explains itself) governs these where
         // they rest disabled, which since 2026-10-05 (when they stopped
@@ -18125,10 +17684,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 //   greying predicate's own reading; the other answered "Committing the
 //   checkpoint (Ctrl+S)" while a checkpoint published, ranked outermost. Both
 //   were a REASON and a STATE rather than a name, and the face already says
-//   the button is dead in each. The FACTS are untouched: the two keys still
-//   card the bootstrap's reason (bare `g` at the walk's one switch owner,
-//   the publish chord at run_publish_chord, each appending the clone-specific
-//   clause a constant line could never carry), and while a checkpoint
+//   the button is dead in each. The FACTS are untouched: the keys still
+//   card the bootstrap's reason (bare `h` at the entry owner, the publish
+//   chord at run_publish_chord, each appending the
+//   clone-specific clause a constant line could never carry), and while a checkpoint
 //   publishes both chords card kCheckpointPublishing — the publish chord at
 //   run_publish_chord, the ordinary save at GuiSaveOps::save's own arm since
 //   2026-09-24.)
