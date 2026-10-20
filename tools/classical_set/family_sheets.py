@@ -3,8 +3,10 @@
 no single sheet gets every family right). Each family is shown as BLOCKS, one per sliced sheet, its members side by
 side under the act names; the isolated acts one row per act, every version. THE RULES (architect 2026-10-19 ~22:50): an
 icon with an object besides the arrow goes with its object; A GROUP IS ALL OR NOTHING — a sheet whose group has ANY
-hidden member shows no block for that group; HIDDEN IS OMITTED, never shown. A member a sheet never drew (the two
-acts the 56-cell sheets before 2026-10-20 lack) is a dark blank tile in its block. Each block is labelled with its tag,
+hidden member shows no block for that group; HIDDEN IS OMITTED, never shown. A SHEET THAT NEVER DREW A MEMBER SHOWS NO
+BLOCK EITHER (architect 2026-10-20 ~15:20, "remove the hands without the transport button": the 10-19 sheets lack Transport
+Play / Stop, and a Hands block without the conductor's two hands cannot be judged as a family; the dark blank tile that
+stood for the missing member until then is retired). Each block is labelled with its tag,
 <prefix>-<HHMMSS> (the sheet's stamp), so a pick traces to <sliced folder>/<stamp>/<Act>.png.
 Inputs: the sliced folders (slice_sheets.py's <folder>/sliced/, one 14-digit stamp folder per sheet), each with a tag
 prefix; hide.json: {"tile": {"<tag>": ["<Act>", ...]}, "front": {"<Act>": ["<tag>", ...]}} — "tile" the members hidden
@@ -13,8 +15,10 @@ OUTDATED DRAWINGS ARE HIDDEN BY DRAFT (architect 2026-10-20 ~12:40, "everything 
 REDRAWN names, per act, the prompt draft in which the act's CURRENT drawing was first asked for — a different object,
 not a refinement of the same one — and a folder given as <prefix>=<folder>@<draft> (the draft its sheets were drawn
 from) hides every act redrawn after that draft, as if hide.json named it on each of its sheets. A refined act (the
-podiums' squat base, Revert's arrow touching the watch, Undo's even tail, Phase Reset's gilt edge, the post horn) keeps
+podiums' squat base, Undo's even tail, Phase Reset's gilt edge, the post horn) keeps
 every batch: an old sheet may already have drawn it the new way (Phase Reset's gilt slate was his pick off an old one).
+Revert is REDRAWN at draft 12 (architect 2026-10-20 ~15:15, his own prompt edit: the watch with a gold undo arrow — "most
+watches have the wrong arrow", the new sheets drawn for it), so the Watches family shows the draft-12 batches alone.
 EVERY TILE IS ONE SIZE, TILE_PX, on every page (architect 2026-10-20 ~13:50, "a uniform size, about the size of the
 flags, and use more pages as needed": the families are compared against each other, so a tile must not shrink with the
 family's width; a wide family flows onto more pages instead).
@@ -62,9 +66,11 @@ ISOLATED = ("single", "Isolated acts", [
 # and 8 lived in tmp/ before a51f45d0 — tmp/classical_set/NOTES.md): the starlings (7; the ball out in 10, no speckles
 # 79bf5052), the score sheets (9; Value Drag's two staves 10), the pigeon and the flag-and-arrow pairs (7; spelled by
 # position in 8), the record (8), the bare lens and the gold minus (7), Repeat One without its note (7). The 10-19
-# batch (gemini-new, gemini-new2) is draft 6; gemini-new4 the one-commit list of ~09:50 and gemini-new5 draft 10.
+# batch (gemini-new, gemini-new2) is draft 6; gemini-new4 the one-commit list of ~09:50, gemini-new5 draft 10, gemini-new6
+# draft 11 and gemini-new7 draft 12 (Revert's gold undo arrow beside the watch, his edit of ~14:30).
 REDRAWN = {"Left": 10, "Right": 10, "Up": 9, "Down": 9, "ValueDrag": 10, "JumpToDefiningMarker": 8,
-           "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "Center": 7, "FullZoomOut": 7, "RepeatOne": 7}
+           "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "Center": 7, "FullZoomOut": 7, "RepeatOne": 7,
+           "Revert": 12}
 
 SHORT = {"JumpToDefiningMarker": "Jump", "PreviousMarker": "PrevMarker", "PlayerPrevious": "PlayerPrev",
          "WaveformMagnification": "Magnification", "ReadOnlyLocked": "ReadOnly", "OpenTextEditor": "TextEditor",
@@ -104,7 +110,7 @@ def new_page(title, sub):
     return p, dr
 
 def family_pages(key, title, acts, blocks):
-    """blocks: list of (tag, dir, set_of_acts_blanked). Flow the blocks into rows."""
+    """blocks: list of (tag, dir); every block complete. Flow the blocks into rows."""
     n = len(acts)
     gap_t, gap_b, margin = 4, 22, 16
     px = TILE_PX
@@ -132,17 +138,14 @@ def family_pages(key, title, acts, blocks):
                 cx = x0 + ai * (px + gap_t) + px / 2
                 dr.text((cx - dr.textlength(lab, font=f) / 2, y0), lab, font=f, fill=DIM)
         y0 += 26
-        for i, (tag, d, blank) in enumerate(chunk):
+        for i, (tag, d) in enumerate(chunk):
             r, c = divmod(i, bpr)
             x0 = margin + c * (bw + gap_b)
             y = y0 + r * rowh
             dr.text((x0, y + 1), tag, font=font(17, True), fill=INK)
             for ai, a in enumerate(acts):
                 x = x0 + ai * (px + gap_t)
-                if a in blank:
-                    dr.rectangle([x, y + 22, x + px - 1, y + 22 + px - 1], fill=(0x48, 0x4E, 0x58))
-                else:
-                    p.paste(tile(d, a, px), (x, y + 22))
+                p.paste(tile(d, a, px), (x, y + 22))
         pages.append(p)
     return pages
 
@@ -199,8 +202,8 @@ def main():
             seq += 1
             pg.save(out / f"{seq:02d}_{name}_{i + 1}.png")
     for key, title, acts in FAMILIES:
-        blocks = [(t, d, {a for a in acts if not (d / f"{a}.png").exists()}) for t, d in S if not set(ht.get(t, [])) & set(acts)]
-        blocks = [b for b in blocks if len(b[2]) < len(acts)]   # a sheet that drew none of the family has no block
+        blocks = [(t, d) for t, d in S
+                  if not set(ht.get(t, [])) & set(acts) and all((d / f"{a}.png").exists() for a in acts)]
         save(family_pages(key, title, acts, blocks), key)
     key, title, acts = ISOLATED
     vis = {}
