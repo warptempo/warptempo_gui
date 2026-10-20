@@ -1033,13 +1033,14 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         // click's divergence at finish_chrome_press_release's Render arm.
         case RedesignButton::Render: return icons::Icon::Cancel;
         // THE COLLAPSED PLAY/STOP BUTTON (architect 2026-08-15): one button
-        // over bare Space, wearing media-playback-STOP while the TRANSPORT is
+        // over bare Space, wearing the editor's own STOP (TransportStop, its
+        // own enumerator since 2026-10-20, icons.h) while the TRANSPORT is
         // live — a plain audition, or an A/B audition sequence including its
-        // silent rests — and the table's media-playback-start otherwise. It is
+        // silent rests — and the table's TransportPlay otherwise. It is
         // RENDER-IS-CANCEL's shape applied to a toggle — and unlike Render it
         // needs no chord exception, because Space already toggles.
         case RedesignButton::TransportPlayStop:
-            return icons::Icon::Stop;
+            return icons::Icon::TransportStop;
         // THE READ-ONLY TOGGLE WHILE LOCKED (architect 2026-10-14): the closed
         // padlock; unlocked it wears the table's open one.
         case RedesignButton::IconReadOnly:
@@ -2691,11 +2692,12 @@ constexpr TransportRowDef kTransportStepWalkGroup[] = {
 // across from the marker verbs to stop a scrub is acceptable, because at
 // working zoom his hand moves faster than the scanner; the Go to Start / Go
 // to End pair stays gone, Home and End keeping their keys. Play and stop are
-// ONE stateful button (2026-08-15), so the table carries
-// media-playback-START as its resting glyph and the resolver swaps in
-// media-playback-STOP while an audition runs (redesign_button_icon — Save's
-// and Render's own shape, and the reason this row's paint goes through the
-// resolver). IN THE `h` VIEW the group is Switch Tab, Center, Older and
+// ONE stateful button (2026-08-15), so the table carries the editor's own
+// PLAY (TransportPlay; the pair its own since 2026-10-20, icons.h, the render
+// player keeping the set's media glyphs) as its resting glyph and the
+// resolver swaps in TransportStop while an audition runs
+// (redesign_button_icon — Save's and Render's own shape, and the reason this
+// row's paint goes through the resolver). IN THE `h` VIEW the group is Switch Tab, Center, Older and
 // Newer: the nudge pair's seats are the history steps'
 // (kTransportHistoryStandIns, below) and Play is hidden
 // (history_mode_hides_button), so it does not stand there.
@@ -2704,7 +2706,7 @@ constexpr TransportRowDef kTransportNudgePlayGroup[] = {
     {RedesignButton::IconZoomOriginal,      icons::Icon::Center},
     {RedesignButton::TransportLeft,         icons::Icon::Left},
     {RedesignButton::TransportRight,        icons::Icon::Right},
-    {RedesignButton::TransportPlayStop,     icons::Icon::Play},
+    {RedesignButton::TransportPlayStop,     icons::Icon::TransportPlay},
 };
 // THE `h` VIEW'S STAND-INS ON THIS ROW — OLDER AND NEWER IN THE NUDGE PAIR'S
 // SEATS (architect 2026-10-11 ~02:40, "Older / Newer in the arrows' seat";
@@ -3000,7 +3002,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
             cr, GuiRect{x, btn_y, btn_w, btn_h}, face.selected, pressed);
         // THE GLYPH IS THE STATE RESOLVER'S since 2026-08-15, as the band's
         // already was: this row hosts a stateful face — the collapsed
-        // PLAY/STOP button, which wears media-playback-stop while an audition
+        // PLAY/STOP button, which wears TransportStop while an audition
         // runs — so it goes through redesign_button_icon for EVERY button,
         // the band's own rule: the table icon is what the resolver returns
         // when a button has no override, so there is no membership to keep in
@@ -6393,8 +6395,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // is now the main window's triple with the pause face on the middle
         // button. The roster's transport button is
         // untouched — bare Space over the project's audio is one toggle with
-        // no pause state, so it keeps Play/Stop, and Stop keeps
-        // that one reader.
+        // no pause state, so it keeps a play / stop pair, its own since
+        // 2026-10-20 (TransportPlay / TransportStop, icons.h).
         glyph_button(AppState::PlayerButtonAct::PlayPause,
                      pause_face ? icons::Icon::Pause
                                 : icons::Icon::Play);

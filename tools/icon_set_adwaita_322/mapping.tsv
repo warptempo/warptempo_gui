@@ -43,10 +43,10 @@ SaveCommit	go-top	navigation-icons.svg	276	50	48	48	-
 SavePull	go-bottom	navigation-icons.svg	106	50	48	48	-
 Settings	preferences-system	preferences-system.svg	296.062	49.9963	48	48	-
 Source	accessories-dictionary	accessories-dictionary.svg	296	50	48	48	-
-Stop	media-playback-stop	media-control-icons.svg	356	150	48	48	-
 SwitchTab	preferences-system-windows	preferences-system-windows.svg	296	50	48	48	-
 Target	input-tablet	input-tablet.svg	20	33	256	256	-
 Tooltips	help-browser	help-browser.svg	13	37	256	256	-
+TransportStop	media-playback-stop	media-control-icons.svg	356	150	48	48	-
 Undo	edit-undo	edit-undo-redo.svg	16	300	48	48	-
 Up	go-up	navigation-icons.svg	366	50	48	48	-
 ValueDrag	format-text-direction-rtl	format-text-direction-rtl.svg	296	50	48	48	-

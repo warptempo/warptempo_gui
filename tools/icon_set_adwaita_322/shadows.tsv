@@ -35,9 +35,9 @@ Newer	media-seek-forward	g5161	the etched halo pair round the glyph (a dark ring
 Left	go-previous	path6460-6-4-4 path6460-6-4-4-3	floor shadow (2)
 Right	go-next	path6460-6-4-4-48 path6460-6-4-4-3-2	floor shadow (2)
 Revert	document-revert	g12362	floor shadow
+TransportStop	media-playback-stop	g5666	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
 PlayerPrevious	media-skip-backward	g4795	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
 Play	media-playback-start	g5075	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
-Stop	media-playback-stop	g5666	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
 Pause	media-playback-pause	g5996	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
 PlayerNext	media-skip-forward	g5937	the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %)
 Cancel	process-stop	g6501	floor shadow

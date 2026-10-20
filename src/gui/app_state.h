@@ -2673,11 +2673,12 @@ enum class RedesignButton {
     // PLAY AND STOP ARE ONE BUTTON WITH TWO FACES (architect 2026-08-15, at his
     // live look at the row): bare Space is ONE TOGGLE, so the roster carries
     // ONE member for it and the GLYPH and the TOOLTIP swap on whether the
-    // transport is LIVE — media-playback-start while stopped,
-    // media-playback-stop while a session runs. That fact is
-    // playhead_scanner_active (the GUI-side playback mirror) OR a standing A/B
-    // audition sequence, whose rests are silent frames INSIDE one transport
-    // session (architect 2026-08-26): the whole condition is spelled once at
+    // transport is LIVE — TransportPlay while stopped, TransportStop while
+    // a session runs (the editor's own pair since 2026-10-20, icons.h). That
+    // fact is playhead_scanner_active (the GUI-side playback mirror) OR a
+    // standing A/B audition sequence, whose rests are silent frames INSIDE
+    // one transport session (architect 2026-08-26): the whole condition is
+    // spelled once at
     // redesign_button_glyph_swapped. THE A/B TERM IS SHARED WITH THE FORK bare
     // Space takes (GuiPlaybackLifecycle::toggle_playback reads the same
     // `phase != Idle`), which is what keeps the face honest through the act's
@@ -16738,8 +16739,8 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // the hint is a face that follows the button (architect 2026-09-24).
         case RedesignButton::Render:
             return a.queue_running;
-        // THE TRANSPORT BUTTON wears media-playback-STOP while an audition
-        // runs; its table glyph is media-playback-start. THE A/B AUDITION IS
+        // THE TRANSPORT BUTTON wears TransportStop while an audition runs;
+        // its table glyph is TransportPlay (icons.h). THE A/B AUDITION IS
         // ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST (architect
         // 2026-08-26), rests included, so its standing phase is the second
         // term: without it the face would flip to Play and back for the few

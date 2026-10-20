@@ -173,16 +173,28 @@ enum class Icon {
     Revert,              // Revert (bare `v`): back to the viewed
                          // checkpoint. The set's document-revert
                          // (architect 2026-10-07 ~17:00)
-    // ROW 8'S TRANSPORT. PLAY AND STOP ARE ONE BUTTON'S TWO FACES
+    // ROW 8'S TRANSPORT: THE EDITOR'S PLAY / STOP, ONE BUTTON'S TWO FACES
     // (RedesignButton::TransportPlayStop: bare Space is one toggle with no
-    // pause state); the render player's own Play/Pause button wears Pause
-    // while live.
+    // pause state), A PAIR OF ITS OWN (architect 2026-10-20): the editor's
+    // toggle and the render player's transport wear different drawings, so
+    // a drop for the one (the conductor raising the baton, bringing both
+    // hands down) leaves the other's media glyphs standing. TransportPlay
+    // is a SYMLINK to the player's Play.svg until a drop (kIconNames'
+    // comment), parsed once more at the launch from the same bytes —
+    // accepted, the raster cache is per enumerator anyway; TransportStop
+    // owns its drawing outright, the render player wearing no stop.
+    TransportPlay,       // the editor's Play (the face while stopped) —
+                         // Play's drawing, a symlink
+    TransportStop,       // the editor's Stop (the face while an audition
+                         // runs) — the set's media-playback-stop, its own
+                         // file, no symlink
+    // THE RENDER PLAYER'S TRANSPORT, the set's media glyphs: its Play/Pause
+    // button wears Pause while live.
     PlayerPrevious,      // the render player's Previous (row 8 has no skip
                          // since 2026-10-12) — the set's media-skip-backward
-    Play,                // Play (the face while stopped) — the set's
-                         // media-playback-start
-    Stop,                // Stop (the face while an audition runs) — the
-                         // set's media-playback-stop
+    Play,                // the render player's Play (its Play/Pause button
+                         // at rest, and the playing row's glyph in its list)
+                         // — the set's media-playback-start
     Pause,               // Pause (the render player's row, while live) —
                          // the set's media-playback-pause
     PlayerNext,          // the render player's Next — the set's
@@ -252,7 +264,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 58;
+inline constexpr int kIconCount = 59;
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
 // file in assets/icons/ is `<name>.png` if that file is there, else
@@ -261,8 +273,8 @@ inline constexpr int kIconCount = 58;
 // SYMLINKS (architect 2026-10-19: "repeats should use symlinks"), relative,
 // inside the folder, the canonical file the act that owns the drawing:
 // AppIcon.png -> Warp.png, BpmIterations.svg -> WavRow.svg, CardCritical.svg
-// -> Cancel.svg, UpAFolder.svg -> FolderRow.svg (the folder's README lists
-// them). Both bundle roads dereference a link (the laptop's
+// -> Cancel.svg, UpAFolder.svg -> FolderRow.svg and TransportPlay.svg ->
+// Play.svg (the folder's README lists them). Both bundle roads dereference a link (the laptop's
 // read_bundle_folder, platform_wayland.cpp; build_apk.sh's copy), so the
 // load reads a link as the file it names; a PNG dropped for a repeated act
 // replaces that act's glyph alone, the link's other wearer keeping the link.
@@ -273,8 +285,9 @@ inline constexpr const char* kIconNames[] = {
     "DeleteMarkers", "Disabled", "Inherit", "Flatten",
     "Follow", "BpmIterations", "GridIterations", "PlayRenders",
     "LoadInPlace", "HistoryView", "AddToSelection",
-    "Older", "Newer", "Left", "Right", "Revert", "PlayerPrevious", "Play",
-    "Stop", "Pause", "PlayerNext", "Cancel", "Down", "Up",
+    "Older", "Newer", "Left", "Right", "Revert", "TransportPlay",
+    "TransportStop", "PlayerPrevious", "Play", "Pause", "PlayerNext",
+    "Cancel", "Down", "Up",
     "ReadOnlyUnlocked", "ReadOnlyLocked", "PreviousMarker", "NextMarker",
     "SwitchTab", "Settings", "FolderRow", "WavRow", "RepeatOne",
     "UpAFolder", "CardNormal", "CardCritical", "Close", "Tooltips",

@@ -14,7 +14,7 @@ THE TOOL WRITES SVGs AND THE LICENCE TEXTS ONLY: never a PNG — the architect's
 `assets/icons/` by hand (the drop road, architect 2026-10-19, `src/gui/icons.h`'s head; the `own` treatment that
 copied Warp's baton retired with it) — and never a symlink: a drawing several acts wear is ONE row, the canonical
 file, and the folder carries the others as links (`AppIcon.png` -> `Warp.png`, `BpmIterations.svg` -> `WavRow.svg`,
-`CardCritical.svg` -> `Cancel.svg`, `UpAFolder.svg` -> `FolderRow.svg`). `text-to-outlines` is the history clock's
+`CardCritical.svg` -> `Cancel.svg`, `UpAFolder.svg` -> `FolderRow.svg`, `TransportPlay.svg` -> `Play.svg`). `text-to-outlines` is the history clock's
 slot, `document-open-recent`, with its digits turned into Liberation Sans Bold outlines (HistoryView, history's again
 since 2026-10-18; its dated notice names the file as it was named when written, `DocumentOpenRecent`, kept so the
 bytes stand). (`tab-b`, which derived TabDetachB by element order for Switch Tab's tab-B face, left with that file

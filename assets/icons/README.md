@@ -24,7 +24,10 @@ inside this folder, the real file the act that owns the drawing:
 - `BpmIterations.svg` -> `WavRow.svg` (`audio-x-generic`; the BPM Iterations button keeps the note, the program icon
   until 2026-10-15);
 - `CardCritical.svg` -> `Cancel.svg` (`process-stop`);
-- `UpAFolder.svg` -> `FolderRow.svg` (`folder`; Up a Folder wears the folder row's drawing, architect 2026-10-10).
+- `UpAFolder.svg` -> `FolderRow.svg` (`folder`; Up a Folder wears the folder row's drawing, architect 2026-10-10);
+- `TransportPlay.svg` -> `Play.svg` (`media-playback-start`; the editor's Play / Stop toggle on row 8 is its own pair
+  since 2026-10-20, so a drop for it leaves the render player's Play standing; its stop face, `TransportStop.svg`,
+  owns `media-playback-stop` outright, the render player wearing no stop).
 
 A PNG dropped for one of a link's acts replaces that act's glyph alone. The set is hard-coded (the `icons` device key
 and the Settings Icons row were removed 2026-10-12). The program reads the files at launch, in place, through resvg
@@ -206,9 +209,9 @@ reference left dangling. The disabled face has no file of its own: the product b
 | Left | `go-previous` | `path6460-6-4-4` `path6460-6-4-4-3` | floor shadow (2) |
 | Right | `go-next` | `path6460-6-4-4-48` `path6460-6-4-4-3-2` | floor shadow (2) |
 | Revert | `document-revert` | `g12362` | floor shadow |
+| TransportStop | `media-playback-stop` | `g5666` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
 | PlayerPrevious | `media-skip-backward` | `g4795` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
 | Play | `media-playback-start` | `g5075` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
-| Stop | `media-playback-stop` | `g5666` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
 | Pause | `media-playback-pause` | `g5996` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
 | PlayerNext | `media-skip-forward` | `g5937` | the etched halo pair round the glyph (a dark ring and a light ring offset below, one blurred group at 50 %) |
 | Cancel | `process-stop` | `g6501` | floor shadow |
@@ -294,10 +297,10 @@ The extracted SVGs, `tools/icon_set_adwaita_322/`'s `README_table.md` (the links
 | SavePull | `go-bottom` | `navigation-icons.svg` | 106, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 0.5 |  |
 | Settings | `preferences-system` | `preferences-system.svg` | 296.062, 49.9963, 48, 48 | `66eab3c0045c5ed6f35bb9512e19d876b6012d585cd157d0de93a0b049f7bce9` | -0.2 0.9 |  |
 | Source | `accessories-dictionary` | `accessories-dictionary.svg` | 296, 50, 48, 48 | `86f5650828d5d4a3975dcbb834c1333304d5e4beeb7b6197c908764374f0ba6c` | 0.0 0.9 | NEW: Source (architect 2026-10-14) |
-| Stop | `media-playback-stop` | `media-control-icons.svg` | 356, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
 | SwitchTab | `preferences-system-windows` | `preferences-system-windows.svg` | 296, 50, 48, 48 | `72075ba85164fefc23d4296771d6c5db502fafb107a7cf327db049bfb33968ff` | 0.0 0.5 |  |
 | Target | `input-tablet` | `input-tablet.svg` | 20, 33, 256, 256 | `3859ab7e3e364780314bfe57d02a46f095266def59a87ef1803108bab00f4b0f` | 0.2 1.2 | NEW: Target (architect 2026-10-14) |
 | Tooltips | `help-browser` | `help-browser.svg` | 13, 37, 256, 256 | `86cde422bb8cd8bc966cddd4d14f8d5720f980c83a0feec78c7163122a414a57` | 0.6 0.5 |  |
+| TransportStop | `media-playback-stop` | `media-control-icons.svg` | 356, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
 | Undo | `edit-undo` | `edit-undo-redo.svg` | 16, 300, 48, 48 | `f898c87c923e161e6a4e2b19ac605f4651fdb8bbbcfcc57f962258e5fd5c97f0` | 0.0 -1.5 |  |
 | Up | `go-up` | `navigation-icons.svg` | 366, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 1.0 |  |
 | ValueDrag | `format-text-direction-rtl` | `format-text-direction-rtl.svg` | 296, 50, 48, 48 | `9adb14cb4bb35582ec9b3f8925ebd4f4278fd8571e420c0c7c97d4cbef584070` | -7.6 0.7 | NEW: Value Drag, the pen alone (architect 2026-10-18: "drop the arrows altogether"); REMOVED (removed.tsv): g7348 |
