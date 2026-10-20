@@ -1,0 +1,90 @@
+# The classical icon set: from a Gemini sheet to the drop road
+
+The classical set is the architect's own: Google's Gemini draws the whole set of acts on one sheet in the style of an
+input sheet, the sheet is cut and sliced into one 256-px PNG per act, he picks the drawings family by family, and the
+picks are dropped into `assets/icons/` (the drop road, `src/gui/icons.h`'s head). The tools live in
+`tools/classical_set/`; every script runs with `python3 -I` from the repository root and says what it does in its
+head. THE SHEETS ARE NOT KEPT: once the prompt is right they are reproducible, so nothing Gemini draws enters the
+repository — a family that needs redoing is redrawn on a whole new sheet and re-sliced. A NEW ACT IS ALWAYS DRAWN ON
+THE WHOLE SHEET, never alone: one item drawn alone comes out at a different outline weight from its siblings.
+
+## (a) The input style sheet
+
+`tools/classical_set/style_sheet.png` (committed; its record `style_sheet.txt`) is the image Gemini is given: twelve
+Adwaita 3.22 drawings on a 4 x 3 grid, flat light gray, no labels, no shadows, each object's OUTER OUTLINE inked
+near-black and thickened x1.5 while its interior lines keep their tonal color (Red Hat's Bluecurve the guide: firm
+ink round the silhouette, so the output reads at 48 px on the toolbar's gray-blue case). The treatment is
+`dark_outlines.py`: a tonal stroke with real length outside everything painted before it is an outer outline; one
+lying inside is an interior line; the per-tile calls the rule cannot make are recorded in its tables and in the
+sheet's record.
+
+Why these twelve: Gemini copies the input's drawings into its output set, so NO TILE MAY RESEMBLE AN ACT it is not
+meant to model. The clock, the padlocks, the broom, the wrench and GNOME's tan folder each bled into an act (Revert,
+Read-Only / Save / Folder, Flatten, Settings, Folder) and were replaced by drawings that relate to no act: the gold
+star (the model for the gold arrows' gold), the disc, the gamepad, the hard drive, the monitor and the globe. Five
+act drawings stay (Source's book, Target's tablet, Phase Reset's camera, the magnification speaker and Play Renders'
+film strip), with the calculator of a retired act.
+The act drawings are read from `assets/icons/`; the others are standalone SVGs in `tools/classical_set/style_src/`,
+each extracted from the adwaita-icon-theme 3.22.0 tarball at its 48 slot by `extract_style_tile.py` (the product's
+own extractor, `tools/icon_set_adwaita_322/extract.py`, its drop shadows removed by id). A replacement tile is a
+new row there, a new entry in `dark_outlines.py`'s `TILES`, and a look at the rebuilt sheet: twelve firm outlines,
+no interior line gone black, no shadow.
+
+## (b) The prompt
+
+`tools/classical_set/prompt.md` is paste-ready whole: attach `style_sheet.png`, ask for a 4K JPEG, paste the file.
+It asks for the WHOLE 57-cell sheet every time (8 x 8, the last row's seven cells empty, a numbered label under each
+icon, one flat #ECECEC ground). Words learned the hard way: never say "mirror image" (Gemini copies the drawing
+instead of mirroring it — say "the SAME object turned to face right"); a fade-out must be forbidden explicitly (NO
+fades into the background, nothing below a stand fading) or Gemini fades the foot of a stand or an arrow's tail.
+
+## (c) The slicer
+
+`slice_sheets.py` cuts each sheet with GIMP's own fuzzy select, headless (`gimp_fuzzy.py`): threshold 20 from the
+corner and from a ground point in every cell, then a second pass adding a seed in every enclosed pocket of ground
+(inside a ring, between an object and its arrow) — the architect's Shift-clicks. It reads the label rows and each
+row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label glyph boxes, crops each cell's ink
+at 44/48 fill and writes `<folder>/sliced/<stamp>/<Act>.png` — 256 x 256 RGBA, named by the act's enumerator
+(`src/gui/icons.h`'s `kIconNames`), drop-ready — beside the input JPEG, plus `sheet_cut.png` (the whole sheet cut,
+labels cleared, full resolution: the base for a manual fix in GIMP), `sheet_cut_raw.png` (GIMP's cut alone) and
+`contact.png` (the 57 on the Face gray). Every file it writes is an act: the 56-cell sheets drawn before
+2026-10-20 carried a silver Stop at cell 46 that no enumerator wears, so their later cells are one off the current
+list — such a sheet (no eighth label row) is refused unless `--legacy56` is given, which reads it by its own list and
+writes no file for cell 46. A `CLIPPED?` line names a cell whose ink continues just past its band's edge: so far
+it has always been a label piece pooled into the icon above it (outside the crop, left in `sheet_cut.png`) or a
+drawn border's dash, never a cut icon — but look at the contact sheet. `EMPTY` names a cell with no ink.
+`SLICE_REUSE=1` re-slices from an existing `sheet_cut_raw.png` without GIMP (a rule change, ~5 s a sheet).
+
+## (d) The family pages for the pick
+
+The architect picks FROM FAMILIES, not from whole sheets: a family's members must share shading and lighting.
+`family_sheets.py` lays every sliced sheet's block of each family side by side on 1920 x 1080 PNG pages, judged on
+the laptop only (never pushed to the tablet). The families: Arrows (Left, Right, Up, Down, Value Drag, Previous /
+Next Marker, Jump to Defining Marker), Undo and Redo, Watches (Revert, History View, Older, Newer), Transport keys
+(Play, Pause, Player Previous / Next, Repeat One, Load in Place, Close), Folders, read-only and save, Hands
+(Cancel, Add to Selection, Follow, and the conductor's Transport Play / Transport Stop — the cuffs must match), Paper
+and books (with Save Commit / Save Pull's podiums), Magnifying glasses (Full Zoom Out, Center), Card medallions; the
+other acts are isolated, one row per act with every version. An icon with an object besides the arrow goes with its
+object; a group is all or nothing. A `hide.json` beside the sheets (kept with them, never in the repository) names
+the members to hide per sheet — an input drawing copied verbatim, an isometric drawing — and a sheet whose group has
+ANY hidden member shows no block for that group; hidden is omitted, never shown. `act_strip.py` is the close-up: one
+act across every sheet.
+
+## (e) The drop
+
+Copy the picked `<Act>.png` into `assets/icons/` and build; `<Act>.png` wins over `<Act>.svg`, which stays as the
+fallback until the seat is called settled. A drawing several acts wear is ONE file and symlinks
+(`ln -s Warp.png AppIcon.png`). Nothing else: no table, no README row, no code change (`src/gui/icons.h`'s head).
+Nothing in `tools/classical_set/` writes there.
+
+## (f) Dependencies and the runs
+
+GIMP 3.2 with its python-fu batch interpreter (`gimp-console`), resvg (the product's pin), rsvg-convert, Python 3 with
+Pillow, numpy and lxml; the extracted adwaita-icon-theme 3.22.0 tarball (`tools/icon_set_adwaita_322/README.md`)
+for a new style tile.
+
+    python3 -I tools/classical_set/extract_style_tile.py <tarball-root> [Tile ...]      # a style tile into style_src/
+    python3 -I tools/classical_set/dark_outlines.py                                      # style_sheet.png (+ review copies in tmp/classical_style_work/)
+    python3 -I tools/classical_set/slice_sheets.py tmp/<sheets>/*.jpg                    # <sheets>/sliced/<stamp>/<Act>.png (--legacy56: a 56-cell sheet)
+    python3 -I tools/classical_set/family_sheets.py tmp/<pages> tmp/<sheets>/hide.json a=tmp/<sheets>/sliced
+    python3 -I tools/classical_set/act_strip.py tmp/<strip>.png <Act> a=tmp/<sheets>/sliced
