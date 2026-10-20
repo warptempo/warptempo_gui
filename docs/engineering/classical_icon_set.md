@@ -36,9 +36,11 @@ no interior line gone black, no shadow.
 It asks for the WHOLE 56-cell sheet every time (8 columns x 7 rows, a numbered label under each icon, one flat #ECECEC
 ground). Why 56 and no more (architect 2026-10-20): Gemini fills the grid it is given and never draws a partial last
 row — every sheet asked to carry one cell more came back packed into a full 8 x 7 with a cell dropped or merged — and
-packing more cells into the sheet costs each icon its resolution. So REDO IS NOT DRAWN: the prompt asks for Undo alone
-(noting its twin is made by mirroring it) and the slicer writes Redo.png as Undo.png flipped left to right ("Gemini
-already does that mostly anyway"). Words learned the hard way: never say "mirror image" (Gemini copies the drawing
+packing more cells into the sheet costs each icon its resolution. So PLAYER NEXT IS NOT DRAWN: the silver transport
+glyphs are lit straight from above (vertical gradients), so the slicer writes PlayerNext.png as PlayerPrevious.png flipped
+left to right and the light survives, the pair living only in the render player, driven from the car. REDO IS DRAWN: the
+gold arrows are lit from the top left, so a mirrored Redo would flip the light and the pair stands side by side on the
+toolbar. Words learned the hard way: never say "mirror image" (Gemini copies the drawing
 instead of mirroring it — say "the SAME object turned to face right"); a fade-out must be forbidden explicitly (NO
 fades into the background, nothing below a stand fading) or Gemini fades the foot of a stand or an arrow's tail.
 
@@ -51,14 +53,16 @@ row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label
 at 44/48 fill and writes `<folder>/sliced/<stamp>/<Act>.png` — 256 x 256 RGBA, named by the act's enumerator
 (`src/gui/icons.h`'s `kIconNames`), drop-ready — beside the input JPEG, plus `sheet_cut.png` (the whole sheet cut,
 labels cleared, full resolution: the base for a manual fix in GIMP), `sheet_cut_raw.png` (GIMP's cut alone) and
-`contact.png` (the cells on the Face gray, the mirrored Redo a tile of its own in an eighth row). Every file it
-writes is an act. After the cells, `Redo.png` is `Undo.png` flipped left to right (the same 256-px RGBA), written
-beside it. THERE ARE TWO 56-CELL LISTS: the sheets drawn before 2026-10-20 ~08:30 carried Redo at cell 34 and a silver
-Stop at cell 46 that no enumerator wears, so their cells after 33 and after 45 are off the current list — and being
-8 x 7 as well, nothing in a sheet tells it from a current one. `--legacy56` is the way to slice an old sheet: it reads
-it by its own list, writes no file for cell 46 and Redo as drawn (55 files); the default is the current list, Redo
-mirrored. A sheet from the 2026-10-20 morning prompt that asked for one cell more (packed into seven rows with a cell
-lost) slices WRONG and must not be fed in. A `CLIPPED?` line names a cell whose ink continues just past its band's edge: so far
+`contact.png` (the cells on the Face gray, each mirrored act a tile of its own in an eighth row). Every file it
+writes is an act. After the cells, `PlayerNext.png` is `PlayerPrevious.png` flipped left to right (the same 256-px
+RGBA), written beside it. THERE ARE THREE 56-CELL LISTS, all 8 x 7, so nothing in a sheet tells them apart and a flag
+picks the list: the default is the current prompt's (Redo at cell 34, Player Next not drawn, PlayerNext mirrored);
+`--redo-mirrored` reads the sheets of 2026-10-20 ~09:50 (the one commit efb39ea5: Redo absent, Player Next
+drawn at cell 47 — only `tmp/classical_set/gemini-new4/`'s sheets were drawn from it), writing Redo as Undo mirrored
+and nothing for PlayerNext; `--legacy56` reads the sheets of 2026-10-19 (a silver Stop at cell 46 that no enumerator
+wears, Redo and Player Next drawn), writes no file for cell 46 and nothing mirrored (55 files). A sheet fed the wrong
+list slices wrong after cell 33. A sheet from the 2026-10-20 morning prompt that asked for one cell more (packed into
+seven rows with a cell lost) slices WRONG and must not be fed in. A `CLIPPED?` line names a cell whose ink continues just past its band's edge: so far
 it has always been a label piece pooled into the icon above it (outside the crop, left in `sheet_cut.png`) or a
 drawn border's dash, never a cut icon — but look at the contact sheet. `EMPTY` names a cell with no ink.
 `SLICE_REUSE=1` re-slices from an existing `sheet_cut_raw.png` without GIMP (a rule change, ~5 s a sheet).
@@ -94,6 +98,6 @@ for a new style tile.
 
     python3 -I tools/classical_set/extract_style_tile.py <tarball-root> [Tile ...]      # a style tile into style_src/
     python3 -I tools/classical_set/dark_outlines.py                                      # style_sheet.png (+ review copies in tmp/classical_style_work/)
-    python3 -I tools/classical_set/slice_sheets.py tmp/<sheets>/*.jpg                    # <sheets>/sliced/<stamp>/<Act>.png (--legacy56: a sheet drawn before 2026-10-20 ~08:30)
+    python3 -I tools/classical_set/slice_sheets.py tmp/<sheets>/*.jpg                    # <sheets>/sliced/<stamp>/<Act>.png (--redo-mirrored | --legacy56: the two older lists)
     python3 -I tools/classical_set/family_sheets.py tmp/<pages> tmp/<sheets>/hide.json a=tmp/<sheets>/sliced
     python3 -I tools/classical_set/act_strip.py tmp/<strip>.png <Act> a=tmp/<sheets>/sliced

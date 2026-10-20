@@ -69,37 +69,40 @@ black text so I can identify it. Nothing else on the sheet.
 29. Jump to Defining Marker — jump back to the earlier marker that defines this value: the gold pennant flag of no. 21
     standing at the LEFT edge, and at the right a carrier pigeon in flight, its beak pointing LEFT, flying toward the flag
 30. Open Text Editor — edit the marker's text: a quill and inkwell beside a blank score page (no writing on it)
-31. Toggle Value Drag — drag a tempo value up or down freely: the SAME flat, straight-edged sheet of score paper as nos. 39
-    and 40 with TWO staves drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the
-    right (as no. 39), the LOWER staff's notes open wider and wider toward the right (as no. 40); the sheet itself a plain
+31. Toggle Value Drag — drag a tempo value up or down freely: the SAME flat, straight-edged sheet of score paper as nos. 40
+    and 41 with TWO staves drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the
+    right (as no. 40), the LOWER staff's notes open wider and wider toward the right (as no. 41); the sheet itself a plain
     rectangle, never pinched, curved or waisted
 32. Read-Only — editing locked: a closed GOLD padlock on a leather music case
 33. Undo — ONE curved GOLD UNDO ARROW, its tail a thick band of EVEN width with PARALLEL edges, never a tail that tapers
-    (its Redo twin is not drawn — it is made by mirroring this one)
-34. Toggle History View — show the checkpoint history: the antique pocket watch alone, open on its chain, no arrow
-35. Older — the previous checkpoint: the antique pocket watch with THE GOLD ARROW pointing left beside it
-36. Newer — the next checkpoint: the antique pocket watch with THE GOLD ARROW pointing right beside it
-37. Left — nudge left by a hair: a starling (Mozart's pet bird) standing and facing LEFT — a plain glossy dark bird, NO
+34. Redo — ONE curved GOLD REDO ARROW, the same thick parallel-edged band as no. 33 turned the other way, LIT FROM THE
+    SAME SIDE as no. 33 (the same highlight at the top left, the same shadow at the lower right — the two are drawn side
+    by side on one toolbar), never a tail that tapers
+35. Toggle History View — show the checkpoint history: the antique pocket watch alone, open on its chain, no arrow
+36. Older — the previous checkpoint: the antique pocket watch with THE GOLD ARROW pointing left beside it
+37. Newer — the next checkpoint: the antique pocket watch with THE GOLD ARROW pointing right beside it
+38. Left — nudge left by a hair: a starling (Mozart's pet bird) standing and facing LEFT — a plain glossy dark bird, NO
     gold speckles, no dust, no spots on its plumage — nothing else
-38. Right — nudge right by a hair: the SAME starling turned to face RIGHT, nothing else
-39. Up — speed up the tempo (accelerando): a flat, straight-edged sheet of score paper with one staff of notes drawn on it,
+39. Right — nudge right by a hair: the SAME starling turned to face RIGHT, nothing else
+40. Up — speed up the tempo (accelerando): a flat, straight-edged sheet of score paper with one staff of notes drawn on it,
     the notes spaced WIDE apart at the LEFT and crowding closer and closer together toward the RIGHT — the music getting
     faster across the page; the notes drawn ON the sheet, never floating; the sheet a plain rectangle
-40. Down — slow the tempo (ritardando): the SAME flat sheet of score paper, the notes crowded TIGHT at the LEFT and spacing
+41. Down — slow the tempo (ritardando): the SAME flat sheet of score paper, the notes crowded TIGHT at the LEFT and spacing
     wider and wider apart toward the RIGHT — the music slowing across the page
-41. Previous Marker — walk to the previous marker: the gold pennant flag of no. 21 at the LEFT, THE GOLD ARROW at the right
+42. Previous Marker — walk to the previous marker: the gold pennant flag of no. 21 at the LEFT, THE GOLD ARROW at the right
     pointing LEFT, its head touching the flag
-42. Next Marker — walk to the next marker: the gold pennant flag of no. 21 at the RIGHT, THE GOLD ARROW at the left
+43. Next Marker — walk to the next marker: the gold pennant flag of no. 21 at the RIGHT, THE GOLD ARROW at the left
     pointing RIGHT, its head touching the flag
-43. Switch Tab — switch between the two tabs: a closed leather notebook with two index tabs on its fore-edge, the
+44. Switch Tab — switch between the two tabs: a closed leather notebook with two index tabs on its fore-edge, the
     front tab gold — no plain white sheet
-THE RENDER PLAYER'S GLYPHS ARE SILVER, ONE FAMILY: the five transport glyphs (44–48), the check mark (6), the X (13) and
-Up a Folder's arrow (54) — brushed silver / pewter with the dark outline and the same gloss, every one the SAME shade, so
-they stand apart from the gold of the editor's acts. Not green, not red, not blue.
-44. Play — a bold silver triangle pointing right
-45. Pause — two bold silver bars
-46. Player Previous — skip to the previous render: a bold silver double-arrow left with a bar
-47. Player Next — skip to the next render: a bold silver double-arrow right with a bar
+THE RENDER PLAYER'S GLYPHS ARE SILVER, ONE FAMILY: the four drawn transport glyphs (45–48; Player Next is the mirrored
+fifth), the check mark (6), the X (13) and Up a Folder's arrow (54) — brushed silver / pewter with the dark outline and
+the same gloss, every one the SAME shade, so they stand apart from the gold of the editor's acts. Not green, not red,
+not blue.
+45. Play — a bold silver triangle pointing right
+46. Pause — two bold silver bars
+47. Player Previous — skip to the previous render: a bold silver double-arrow left with a bar (its Player Next twin is not
+    drawn — the slicer mirrors this one)
 48. Repeat One — repeat the one render: a circular silver arrow, nothing inside it
 49. Settings — a tuning key and a tuning fork crossed
 50. Toggle Tooltips — show help: an open programme booklet with a question mark

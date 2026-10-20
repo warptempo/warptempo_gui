@@ -2,12 +2,19 @@
 (architect 2026-10-19: "goal is fuzzy select with thresh 20, then manual fixes as needed. png output with alpha").
 Each sheet given is prompt.md's: the 56 acts of ORDER on 8 x 7 cells, left to right, top to bottom, a label under
 each drawn icon (architect 2026-10-20: Gemini fills the grid and never draws a partial last row, and more cells cost
-resolution, so Redo is not drawn: REDO.PNG IS UNDO.PNG MIRRORED LEFT TO RIGHT, written beside it after the cells). THE
-TWO 56-CELL LISTS: a sheet drawn before 2026-10-20 ~08:30 carried Redo at cell 34 and a silver Stop at cell 46 that no
-enumerator wears, so it is 8 x 7 too and the row count cannot tell it from a current one: it is sliced only with
---legacy56, which reads it by its own list (LEGACY56), writes no file for cell 46 and Redo as drawn — 55 files. A sheet
-from the prompt of 2026-10-20 morning (one cell more than ORDER, packed into seven rows with a cell lost) slices WRONG
-and must not be fed in. The slicer never writes a file that is not an act.
+resolution, so one act the toolbar or the player wears as a twin is not drawn: PLAYERNEXT.PNG IS PLAYERPREVIOUS.PNG
+FLIPPED LEFT TO RIGHT, written beside it after the cells — the silver transport glyphs are lit straight from above, so
+the mirror keeps their light; Redo is drawn, its gold arrow lit from the top left like Undo's, a mirror would flip the
+light). THE THREE LISTS THE SHEETS HAVE CARRIED — all 8 x 7, so nothing in a sheet tells them apart and the flag picks:
+  default      ORDER: Redo at cell 34, Player Next absent (the prompt of 2026-10-20 ~10:05); PlayerNext mirrored.
+  --redo-mirrored  ONEDAY: the prompt of 2026-10-20 ~09:50, the ONE COMMIT efb39ea5 (Redo absent, Player Next drawn at
+               cell 47; only tmp/classical_set/gemini-new4's sheets were drawn from it): Redo = Undo mirrored, no PlayerNext
+               file written (it is drawn); every cell after 33 is one off ORDER's.
+  --legacy56   LEGACY56: the sheets of 2026-10-19 (Stop at cell 46, no enumerator wears it; Redo at 34 and Player Next
+               drawn): 55 files, nothing mirrored.
+A sheet fed the wrong list slices wrong after its first differing cell (33). A sheet from the prompt of 2026-10-20
+morning (one cell more than any list, packed into seven rows with a cell lost) slices WRONG and must not be fed in. The
+slicer never writes a file that is not an act.
   1. GIMP pass 1 (gimp_fuzzy.py beside this file, headless): fuzzy select at threshold 20 from the top-left corner and
      from a ground-colored point inside each nominal cell of the sheet's own rows (a sheet drawn with cell-border lines
      walls the corner flood), cleared.
@@ -33,35 +40,39 @@ and must not be fed in. The slicer never writes a file that is not an act.
      each W/8 multiple (the 16:16 sheet's first gutter at 676, not 593: an icon's edge was landing in its neighbor's
      cell). -> <out>/sheet_cut.png (his manual-fix base, full resolution, alpha).
   5. THE CELLS: each icon's ink box (alpha >= 26, specks and edge border dashes dropped) centered in a square at 44/48
-     fill, LANCZOS to 256 -> <out>/<Act>.png, named by the act's enumerator (src/gui/icons.h's kIconNames); then
-     Redo.png = Undo.png flipped left to right (PIL FLIP_LEFT_RIGHT, the same 256-px RGBA) when the list has no Redo;
-     a contact.png of the cells on the Face gray for the check, the mirrored Redo a tile of its own in an eighth row.
+     fill, LANCZOS to 256 -> <out>/<Act>.png, named by the act's enumerator (src/gui/icons.h's kIconNames); then each act in
+     MIRRORS the list lacks is its source flipped left to right (PIL FLIP_LEFT_RIGHT, the same 256-px RGBA); a
+     contact.png of the cells on the Face gray for the check, each mirrored act a tile of its own in an eighth row.
 Inputs: the sheet JPEGs on the command line. Outputs: <out> = <the sheet's folder>/sliced/<the file's 14-digit stamp>/
 (--out <dir>: <dir>/sliced/<stamp>/), never in the repository; GIMP's job lists and the pass-1 cut in the sibling
 slice_work/. SLICE_REUSE=1 skips the GIMP passes where sheet_cut_raw.png exists (a re-slice after a rule change, ~5 s
 a sheet; ~30 s with GIMP). A 'CLIPPED?' line names a cell whose ink continues just past its band's edge: so far always
 a label piece pooled into the icon above it (outside the crop, left in sheet_cut.png) or a drawn border's dash, never a
 cut icon — but look. 'EMPTY' names a cell with no ink.
-Run: python3 -I tools/classical_set/slice_sheets.py [--legacy56] [--out dir] sheet.jpg ..."""
+Run: python3 -I tools/classical_set/slice_sheets.py [--redo-mirrored | --legacy56] [--out dir] sheet.jpg ..."""
 import os, sys, json, subprocess, numpy as np
 from collections import deque
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__)) + '/'
 T = 20; FILL = 44 / 48   # the ground color is each sheet's own corner pixel (the prompt says ECECEC; 212907 came out 226)
-ORDER = ['OpenProject', 'Save', 'SaveCommit', 'SavePull', 'Revert', 'LoadInPlace', 'Render', 'Cancel', 'PlayRenders', 'FolderRow', 'WavRow', 'DeleteFolder', 'Close',
-         'Source', 'Target', 'Warp', 'PhaseReset', 'FullZoomOut', 'Center', 'WaveformMagnification',
-         'DropMarker', 'DeleteMarkers', 'Disabled', 'Inherit', 'Flatten', 'Follow', 'GridIterations', 'AddToSelection', 'JumpToDefiningMarker', 'OpenTextEditor', 'ValueDrag', 'ReadOnlyLocked',
-         'Undo', 'HistoryView', 'Older', 'Newer',
-         'Left', 'Right', 'Up', 'Down', 'PreviousMarker', 'NextMarker', 'SwitchTab',
-         'Play', 'Pause', 'PlayerPrevious', 'PlayerNext', 'RepeatOne',
-         'Settings', 'Tooltips', 'CardNormal',
-         'BpmIterations', 'CardCritical', 'UpAFolder',
-         'TransportPlay', 'TransportStop']
+_CELLS = ['OpenProject', 'Save', 'SaveCommit', 'SavePull', 'Revert', 'LoadInPlace', 'Render', 'Cancel', 'PlayRenders', 'FolderRow', 'WavRow', 'DeleteFolder', 'Close',
+          'Source', 'Target', 'Warp', 'PhaseReset', 'FullZoomOut', 'Center', 'WaveformMagnification',
+          'DropMarker', 'DeleteMarkers', 'Disabled', 'Inherit', 'Flatten', 'Follow', 'GridIterations', 'AddToSelection', 'JumpToDefiningMarker', 'OpenTextEditor', 'ValueDrag', 'ReadOnlyLocked',
+          'Undo', 'HistoryView', 'Older', 'Newer',
+          'Left', 'Right', 'Up', 'Down', 'PreviousMarker', 'NextMarker', 'SwitchTab',
+          'Play', 'Pause', 'PlayerPrevious', 'PlayerNext', 'RepeatOne',
+          'Settings', 'Tooltips', 'CardNormal',
+          'BpmIterations', 'CardCritical', 'UpAFolder',
+          'TransportPlay', 'TransportStop']   # the 56 of the ONE-COMMIT list (Redo absent, Player Next drawn): the base of the other two
 COLS = 8; ROWS = 7
-assert len(ORDER) == COLS * ROWS
-_WITH_REDO = ORDER[:33] + ['Redo'] + ORDER[33:]   # a drawn Redo at cell 34, the sheets before 2026-10-20 ~08:30
-LEGACY56 = _WITH_REDO[:45] + [None] + _WITH_REDO[45:55]   # cell 46 the silver Stop (no act), no Transport pair
-assert len(LEGACY56) == COLS * ROWS and LEGACY56[33] == 'Redo' and LEGACY56[45] is None
+ONEDAY = _CELLS   # --redo-mirrored: the prompt of 2026-10-20 ~09:50
+ORDER = _CELLS[:33] + ['Redo'] + _CELLS[33:46] + _CELLS[47:]   # the current prompt: Redo drawn at cell 34, Player Next not drawn
+_WITH_REDO = _CELLS[:33] + ['Redo'] + _CELLS[33:]
+LEGACY56 = _WITH_REDO[:45] + [None] + _WITH_REDO[45:55]   # --legacy56: cell 46 the silver Stop (no act), no Transport pair
+MIRRORS = {'Redo': 'Undo', 'PlayerNext': 'PlayerPrevious'}   # an act no sheet of a list draws, made from its twin
+assert len(ORDER) == len(ONEDAY) == len(LEGACY56) == COLS * ROWS
+assert ORDER[33] == 'Redo' and 'PlayerNext' not in ORDER and ORDER[46] == 'PlayerPrevious' and ONEDAY[46] == 'PlayerNext'
+assert LEGACY56[33] == 'Redo' and LEGACY56[45] is None and 'PlayerNext' in LEGACY56
 
 def gimp(jobs, tag, work):
     jp = work + 'slice_jobs_%s.json' % tag; json.dump(jobs, open(jp, 'w'))
@@ -193,7 +204,8 @@ def slice_sheet(src, root, acts):
     def cell_bot(r, c):   # the cell's own label's top, no margin (the 8-px growth already clears above it): an icon's foot or handle tip may
         tops = [b[0] for b in own_boxes(r, c)]; return min(tops) if tops else bands[r][0]   # sit under a neighbor's taller two-line label's top
     arr = np.asarray(im).copy(); arr[..., 3] = alpha; clean = Image.fromarray(arr); clean.save(out + 'sheet_cut.png'); ink = alpha >= 26
-    contact = Image.new('RGBA', (COLS * 112, (len(bands) + ('Redo' not in acts)) * 112), (0x62, 0x6C, 0x7B, 255))   # the eighth row holds the mirrored Redo alone
+    made = [a for a in MIRRORS if a not in acts]   # the acts this list mirrors
+    contact = Image.new('RGBA', (COLS * 112, (len(bands) + bool(made)) * 112), (0x62, 0x6C, 0x7B, 255))   # the eighth row holds the mirrored acts
     for i, act in enumerate(acts):
         if act is None: continue   # a legacy sheet's silver Stop: no act, no file
         c, r = i % COLS, i // COLS; t0, t1 = cell_top(r, c), cell_bot(r, c)   # the icon band of a cell: from the label above it to its own
@@ -207,14 +219,16 @@ def slice_sheet(src, root, acts):
         crop = clean.crop(box); sq.paste(crop, ((side - crop.size[0]) // 2, (side - crop.size[1]) // 2))
         icon = sq.resize((256, 256), Image.LANCZOS); icon.save(out + act + '.png')
         g = icon.resize((96, 96), Image.LANCZOS); contact.paste(g, (c * 112 + 8, r * 112 + 8), g)
-    if 'Redo' not in acts:   # THE REDO TWIN (architect 2026-10-20): Undo.png flipped left to right, never drawn
-        redo = Image.open(out + 'Undo.png').transpose(Image.FLIP_LEFT_RIGHT); redo.save(out + 'Redo.png')
-        g = redo.resize((96, 96), Image.LANCZOS); contact.paste(g, (8, len(bands) * 112 + 8), g)
+    for k, act in enumerate(made):   # THE MIRRORED TWINS (architect 2026-10-20): the source's file flipped left to right, never drawn
+        twin = Image.open(out + MIRRORS[act] + '.png').transpose(Image.FLIP_LEFT_RIGHT); twin.save(out + act + '.png')
+        g = twin.resize((96, 96), Image.LANCZOS); contact.paste(g, (k * 112 + 8, len(bands) * 112 + 8), g)
     contact.save(out + 'contact.png'); print(stamp, '->', out)
 
 def main():
-    a = sys.argv[1:]; root = None; acts = LEGACY56 if '--legacy56' in a else ORDER
-    a = [x for x in a if x != '--legacy56']
+    a = sys.argv[1:]; root = None
+    if '--legacy56' in a and '--redo-mirrored' in a: sys.exit('--legacy56 and --redo-mirrored name two lists: give one')
+    acts = LEGACY56 if '--legacy56' in a else ONEDAY if '--redo-mirrored' in a else ORDER
+    a = [x for x in a if x not in ('--legacy56', '--redo-mirrored')]
     if a[:1] == ['--out']: root = os.path.abspath(a[1]); a = a[2:]
     if not a: sys.exit(__doc__)
     for src in a: slice_sheet(os.path.abspath(src), root, acts)
