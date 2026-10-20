@@ -30,8 +30,7 @@ black text so I can identify it. Nothing else on the sheet.
     beside it — the desk on a SQUAT, solid base, no thin stand or leg showing, nothing below it fading
 4. Save Pull — fetch the newer checkpoint down: the same score on the same squat podium desk with THE GOLD ARROW pointing
     down beside it
-5. Revert — back to the viewed checkpoint: the antique pocket watch with THE GOLD ARROW — the same thick, chunky arrow as
-    every other — bent into a curve round the watch and TOUCHING it, turning back (counter-clockwise)
+5. Revert — back to the viewed checkpoint: the antique pocket watch with A GOLD UNDO ARROW
 6. Load in Place — load the walked version into the editor, a big act that must be unmistakable: ONE bold CHECK MARK
     (a tick), silver with the dark outline, nothing else
 7. Render — perform the warp (the "record" act): a red wax seal pressed onto the score
