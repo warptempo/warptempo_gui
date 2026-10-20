@@ -28,15 +28,18 @@ DIM = (0xA8, 0xB0, 0xBC)
 # all or nothing — a sheet whose group has ANY hidden member shows no block for that group; hidden is omitted, never shown.
 # Up, Down and ValueDrag moved from Arrows to Paper and books 2026-10-20: the prompt draws them as a sheet of score paper
 # whose notes crowd or open across the page, no arrow and no hand (tools/classical_set/prompt.md, cells 31, 40, 41).
+# The starlings (Left, Right) are judged apart from the pigeon and the flags since 2026-10-20, and Drop Marker joined the
+# flag group from Paper and books: the flag is the marker, so the acts that carry it are judged together.
 FAMILIES = [
-    ("arrows", "Arrows", ["Left", "Right", "PreviousMarker", "NextMarker", "JumpToDefiningMarker"]),
+    ("starlings", "Starlings", ["Left", "Right"]),
+    ("flags", "Flags", ["DropMarker", "PreviousMarker", "NextMarker", "JumpToDefiningMarker"]),
     ("undo", "Undo and Redo", ["Undo", "Redo"]),
     ("watches", "Watches", ["Revert", "HistoryView", "Older", "Newer"]),
     ("transport", "Transport keys", ["Play", "Pause", "PlayerPrevious", "PlayerNext", "RepeatOne",
                                      "LoadInPlace", "Close"]),
     ("folder", "Folders, read-only and save", ["FolderRow", "UpAFolder", "ReadOnlyLocked", "Save"]),
     ("hands", "Hands", ["Cancel", "AddToSelection", "Follow", "TransportPlay", "TransportStop"]),   # the conductor's figures: the cuffs must match
-    ("paper", "Paper and books", ["OpenProject", "Source", "Target", "WavRow", "OpenTextEditor", "DropMarker",
+    ("paper", "Paper and books", ["OpenProject", "Source", "Target", "WavRow", "OpenTextEditor",
                                   "DeleteMarkers", "Inherit", "SwitchTab", "Tooltips", "Render", "SaveCommit",
                                   "SavePull", "Up", "Down", "ValueDrag"]),
     ("zoom", "Magnifying glasses", ["FullZoomOut", "Center"]),
