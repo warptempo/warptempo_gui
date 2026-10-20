@@ -15,6 +15,9 @@ not a refinement of the same one — and a folder given as <prefix>=<folder>@<dr
 from) hides every act redrawn after that draft, as if hide.json named it on each of its sheets. A refined act (the
 podiums' squat base, Revert's arrow touching the watch, Undo's even tail, Phase Reset's gilt edge, the post horn) keeps
 every batch: an old sheet may already have drawn it the new way (Phase Reset's gilt slate was his pick off an old one).
+EVERY TILE IS ONE SIZE, TILE_PX, on every page (architect 2026-10-20 ~13:50, "a uniform size, about the size of the
+flags, and use more pages as needed": the families are compared against each other, so a tile must not shrink with the
+family's width; a wide family flows onto more pages instead).
 Outputs: <outdir>/NN_<family>_<page>.png, 1920 x 1080 PNG, judged on the laptop only (never the tablet).
 Run: python3 -I tools/classical_set/family_sheets.py <outdir> <hide.json> <prefix>=<sliced folder>[@<draft>] ..."""
 import sys, json
@@ -25,6 +28,7 @@ R = Path(__file__).resolve().parent.parent.parent
 FONT = R / "fonts" / "LiberationSans-Regular.ttf"
 FONTB = R / "fonts" / "LiberationSans-Bold.ttf"
 W, H = 1920, 1080
+TILE_PX = 110   # the Flags page's tile of 2026-10-20 ~13:40, his "about the size of the flags"
 FACE = (0x62, 0x6C, 0x7B)
 BG = (0x30, 0x34, 0x3A)
 INK = (0xE8, 0xE8, 0xE8)
@@ -103,23 +107,12 @@ def family_pages(key, title, acts, blocks):
     """blocks: list of (tag, dir, set_of_acts_blanked). Flow the blocks into rows."""
     n = len(acts)
     gap_t, gap_b, margin = 4, 22, 16
-    # choose tile px: blocks per row bpr, tile px so that the page fits
-    best = None
-    for px in range(160, 60, -2):
-        bw = n * px + (n - 1) * gap_t
-        if bw > W - 2 * margin:
-            continue
-        bpr = (W - 2 * margin + gap_b) // (bw + gap_b)
-        rowh = 22 + px + 12
-        rows = (H - 56 - 26) // rowh
-        if rows < 1:
-            continue
-        per = bpr * rows
-        pages = -(-len(blocks) // per) if blocks else 1
-        score = (pages, -px)
-        if best is None or score < best[0]:
-            best = (score, px, bpr, rows, rowh, bw)
-    _, px, bpr, rows, rowh, bw = best
+    px = TILE_PX
+    bw = n * px + (n - 1) * gap_t
+    assert bw <= W - 2 * margin, f"{title}: {n} tiles at {px} px do not fit a page"
+    bpr = (W - 2 * margin + gap_b) // (bw + gap_b)   # blocks per row
+    rowh = 22 + px + 12
+    rows = (H - 56 - 26) // rowh
     per = bpr * rows
     pages = []
     for pi in range(0, max(1, len(blocks)), per):
@@ -154,35 +147,38 @@ def family_pages(key, title, acts, blocks):
     return pages
 
 def single_pages(title, acts, versions):
-    """versions: {act: [(tag, dir)]}; one act per run of rows."""
-    px, gap, margin = 96, 6, 16
+    """versions: {act: [(tag, dir)]}; one act per run of rows, the run continuing on the next page when it does not fit
+    (the act's name repeated with "continued"), so no page is left mostly empty."""
+    px, gap, margin = TILE_PX, 6, 16
     per_row = (W - 2 * margin + gap) // (px + gap)
     rowh = 18 + px + 8
-    pages, cur, y = [], None, None
-    def start(sub_n):
+    pages, p, dr, y = [], None, None, 0
+    def start():
+        nonlocal p, dr, y
+        if p is not None:
+            pages.append(p)
         p, dr = new_page(title, f"tiles at {px} px on the Face  ·  each row one act, every version")
-        return p, dr, 56
-    p = dr = None
+        y = 56
     for a in acts:
         vs = versions.get(a, [])
         if not vs:
             continue
-        nrows = -(-len(vs) // per_row)
-        need = 26 + nrows * rowh
-        if p is None or y + need > H - 8:
-            if p is not None:
-                pages.append(p)
-            p, dr, y = start(len(pages))
-        dr.text((margin, y), a, font=font(20, True), fill=INK)
-        y += 26
-        for i, (tag, d) in enumerate(vs):
-            r, c = divmod(i, per_row)
-            x = margin + c * (px + gap)
-            yy = y + r * rowh
-            f = font(13)
-            dr.text((x + px / 2 - dr.textlength(tag, font=f) / 2, yy), tag, font=f, fill=DIM)
-            p.paste(tile(d, a, px), (x, yy + 18))
-        y += nrows * rowh + 6
+        rows = [vs[i:i + per_row] for i in range(0, len(vs), per_row)]
+        for ri, row in enumerate(rows):
+            if p is None or y + 26 + rowh > H - 8:
+                start()
+                dr.text((margin, y), a + (" (continued)" if ri else ""), font=font(20, True), fill=INK)
+                y += 26
+            elif ri == 0:
+                dr.text((margin, y), a, font=font(20, True), fill=INK)
+                y += 26
+            for c, (tag, d) in enumerate(row):
+                x = margin + c * (px + gap)
+                f = font(13)
+                dr.text((x + px / 2 - dr.textlength(tag, font=f) / 2, y), tag, font=f, fill=DIM)
+                p.paste(tile(d, a, px), (x, y + 18))
+            y += rowh
+        y += 6
     if p is not None:
         pages.append(p)
     return pages
