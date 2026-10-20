@@ -9,8 +9,14 @@ acts the 56-cell sheets before 2026-10-20 lack) is a dark blank tile in its bloc
 Inputs: the sliced folders (slice_sheets.py's <folder>/sliced/, one 14-digit stamp folder per sheet), each with a tag
 prefix; hide.json: {"tile": {"<tag>": ["<Act>", ...]}, "front": {"<Act>": ["<tag>", ...]}} — "tile" the members hidden
 on a sheet (an input drawing copied verbatim, an isometric drawing), "front" the versions an isolated act shows first.
+OUTDATED DRAWINGS ARE HIDDEN BY DRAFT (architect 2026-10-20 ~12:40, "everything that isn't currently in prompt.md"):
+REDRAWN names, per act, the prompt draft in which the act's CURRENT drawing was first asked for — a different object,
+not a refinement of the same one — and a folder given as <prefix>=<folder>@<draft> (the draft its sheets were drawn
+from) hides every act redrawn after that draft, as if hide.json named it on each of its sheets. A refined act (the
+podiums' squat base, Revert's arrow touching the watch, Undo's even tail, Phase Reset's gilt edge, the post horn) keeps
+every batch: an old sheet may already have drawn it the new way (Phase Reset's gilt slate was his pick off an old one).
 Outputs: <outdir>/NN_<family>_<page>.png, 1920 x 1080 PNG, judged on the laptop only (never the tablet).
-Run: python3 -I tools/classical_set/family_sheets.py <outdir> <hide.json> <prefix>=<sliced folder> ..."""
+Run: python3 -I tools/classical_set/family_sheets.py <outdir> <hide.json> <prefix>=<sliced folder>[@<draft>] ..."""
 import sys, json
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -48,18 +54,29 @@ FAMILIES = [
 ISOLATED = ("single", "Isolated acts", [
     "BpmIterations", "Warp", "PhaseReset", "WaveformMagnification", "Settings", "PlayRenders", "DeleteFolder",
     "Disabled", "Flatten", "GridIterations"])
+# The act's current drawing and the draft that first asked for it (tools/classical_set/prompt.md's git history; drafts 7
+# and 8 lived in tmp/ before a51f45d0 — tmp/classical_set/NOTES.md): the starlings (7; the ball out in 10, no speckles
+# 79bf5052), the score sheets (9; Value Drag's two staves 10), the pigeon and the flag-and-arrow pairs (7; spelled by
+# position in 8), the record (8), the bare lens and the gold minus (7), Repeat One without its note (7). The 10-19
+# batch (gemini-new, gemini-new2) is draft 6; gemini-new4 the one-commit list of ~09:50 and gemini-new5 draft 10.
+REDRAWN = {"Left": 10, "Right": 10, "Up": 9, "Down": 9, "ValueDrag": 10, "JumpToDefiningMarker": 8,
+           "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "Center": 7, "FullZoomOut": 7, "RepeatOne": 7}
+
 SHORT = {"JumpToDefiningMarker": "Jump", "PreviousMarker": "PrevMarker", "PlayerPrevious": "PlayerPrev",
          "WaveformMagnification": "Magnification", "ReadOnlyLocked": "ReadOnly", "OpenTextEditor": "TextEditor",
          "GridIterations": "Grid", "AddToSelection": "AddToSel", "BpmIterations": "BpmIterations"}
 
 def sheets(specs):
-    """(tag, stamp folder) for every sheet of every <prefix>=<sliced folder> given."""
+    """(tag, stamp folder, outdated acts) for every sheet of every <prefix>=<sliced folder>[@<draft>] given; the
+    outdated acts those REDRAWN after the folder's draft (none when no draft is given)."""
     out = []
     for spec in specs:
         n, folder = spec.split("=", 1)
+        folder, _, draft = folder.partition("@")
+        old = {a for a, d in REDRAWN.items() if draft and int(draft) < d}
         for d in sorted(Path(folder).iterdir()):
             if d.is_dir() and len(d.name) == 14 and d.name.isdigit():
-                out.append((f"{n}-{d.name[8:]}", d))
+                out.append((f"{n}-{d.name[8:]}", d, old))
     return out
 
 _cache = {}
@@ -176,7 +193,9 @@ def main():
     out = Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
     hide = json.loads(Path(sys.argv[2]).read_text())
     ht, front = hide.get("tile", {}), hide.get("front", {})
-    S = sheets(sys.argv[3:])
+    S = [(t, d) for t, d, old in sheets(sys.argv[3:])]
+    for t, d, old in sheets(sys.argv[3:]):
+        ht[t] = sorted(set(ht.get(t, [])) | old)
     seq = 0
     def save(pages, name):
         nonlocal seq

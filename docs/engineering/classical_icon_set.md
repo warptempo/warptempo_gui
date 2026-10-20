@@ -97,7 +97,12 @@ the members to hide per sheet — an input drawing copied verbatim, an isometric
 ANY hidden member shows no block for that group; hidden is omitted, never shown. ALL FLAGS FLY RIGHT (architect
 2026-10-20: the pennant's cloth to the RIGHT of its pole, on every cell that carries it): `flag_side.py` finds each Flags
 tile's cloth and pole and adds every left-flying tile to the hide.json, so that sheet's Flags block is omitted (its
-head says how, and why not by the tallest dark run; a tile it cannot decide stays visible and is named). `act_strip.py`
+head says how, and why not by the tallest dark run; a tile it cannot decide stays visible and is named). OUTDATED
+DRAWINGS ARE HIDDEN BY DRAFT (architect 2026-10-20: "everything that isn't currently in prompt.md"): `family_sheets.py`'s
+`REDRAWN` names, per act, the prompt draft its current drawing was first asked in (a different object, never a
+refinement of the same one), and a sliced folder given as `<prefix>=<folder>@<draft>` hides every act redrawn after
+that draft, so an old batch keeps its unchanged acts and loses its superseded ones; a redrawn act's row in `REDRAWN`
+moves to the new draft when its line changes. `act_strip.py`
 is the close-up: one act across every sheet.
 
 ## (e) The drop
@@ -117,5 +122,5 @@ for a new style tile.
     python3 -I tools/classical_set/dark_outlines.py                                      # style_sheet.png (+ review copies in tmp/classical_style_work/)
     python3 -I tools/classical_set/slice_sheets.py tmp/<sheets>/*.jpg                    # <sheets>/sliced/<stamp>/<Act>.png (--redo-mirrored | --legacy56: the two older lists)
     python3 -I tools/classical_set/flag_side.py --hide tmp/<sheets>/hide.json a=tmp/<sheets>/sliced   # left-flying flags hidden
-    python3 -I tools/classical_set/family_sheets.py tmp/<pages> tmp/<sheets>/hide.json a=tmp/<sheets>/sliced
+    python3 -I tools/classical_set/family_sheets.py tmp/<pages> tmp/<sheets>/hide.json a=tmp/<sheets>/sliced@<draft>
     python3 -I tools/classical_set/act_strip.py tmp/<strip>.png <Act> a=tmp/<sheets>/sliced
