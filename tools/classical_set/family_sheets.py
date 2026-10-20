@@ -67,10 +67,12 @@ ISOLATED = ("single", "Isolated acts", [
 # 79bf5052), the score sheets (9; Value Drag's two staves 10), the pigeon and the flag-and-arrow pairs (7; spelled by
 # position in 8), the record (8), the bare lens and the gold minus (7), Repeat One without its note (7). The 10-19
 # batch (gemini-new, gemini-new2) is draft 6; gemini-new4 the one-commit list of ~09:50, gemini-new5 draft 10, gemini-new6
-# draft 11 and gemini-new7 draft 12 (Revert's gold undo arrow beside the watch, his edit of ~14:30).
+# draft 11 and gemini-new7 draft 12 (Revert's gold undo arrow beside the watch, his edit of ~14:30); draft 13 (~15:40) the
+# magnifying glasses over a sheet of score paper, the minus and the single note seen through the lens on the paper — an
+# empty lens shows the sheet's background, which the cut cannot remove, so every icon is opaque.
 REDRAWN = {"Left": 10, "Right": 10, "Up": 9, "Down": 9, "ValueDrag": 10, "JumpToDefiningMarker": 8,
-           "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "Center": 7, "FullZoomOut": 7, "RepeatOne": 7,
-           "Revert": 12}
+           "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "RepeatOne": 7,
+           "Revert": 12, "Center": 13, "FullZoomOut": 13}
 
 SHORT = {"JumpToDefiningMarker": "Jump", "PreviousMarker": "PrevMarker", "PlayerPrevious": "PlayerPrev",
          "WaveformMagnification": "Magnification", "ReadOnlyLocked": "ReadOnly", "OpenTextEditor": "TextEditor",

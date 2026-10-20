@@ -10,7 +10,8 @@ symbol in the same manner. Nothing from classical antiquity (no laurel wreaths, 
 on a grey-blue button, so each must read at a glance at that size, with STRONG CONTRAST against a mid-grey ground.
 EVERY ICON IS ONE SOLID, CLOSED OBJECT (or two touching): NO staff lines, bar lines, sound waves, dots, flakes or any
 thin line floating loose on the background — a staff may appear only drawn ON a sheet of score paper that is itself
-an object with an outline. Nothing thin, nothing detached.
+an object with an outline. Nothing thin, nothing detached. EVERY ICON IS OPAQUE: no see-through glass, lens or window
+showing the background through it — whatever stands behind a lens is drawn on the object itself.
 
 THE COLORS ARE CLASSICAL: gold and brass, ivory, ebony, walnut and dark leather, burgundy, parchment, a little deep
 blue — never neon, never orange or lime. ALL ARROWS ARE ONE SHAPE: a thick, chunky GOLD arrow with a dark outline and a
@@ -47,10 +48,12 @@ black text so I can identify it. Nothing else on the sheet.
 17. Phase Reset — a synchronization instant, an exact snap to the source at one moment: a black and white film clapperboard, the
     director's twin of the conductor's baton, with thin gold scrollwork painted along the slate's own edges — NOT a
     picture frame around it
-18. Full Zoom Out — show the whole piece: the same brass-rimmed magnifying glass as no. 19 with a bold GOLD MINUS SIGN
-    seen inside the lens, nothing else
-19. Center — center the view on the playhead: a magnifying glass — a brass-rimmed lens with a turned wooden handle —
-    alone, the lens empty (the same glass as no. 18)
+18. Full Zoom Out — show the whole piece: a magnifying glass — a brass-rimmed lens with a turned wooden handle — held
+    over a sheet of score paper, with a bold GOLD MINUS SIGN seen through the lens on the paper; the paper fills the whole
+    lens, so nothing of the background shows through the glass (the same glass and paper as no. 19)
+19. Center — center the view on the playhead: the same magnifying glass held over the same sheet of score paper, with a
+    SINGLE large quarter note seen through the lens on the paper; the paper fills the whole lens (the same glass and paper
+    as no. 18)
 20. Waveform Magnification — make the quiet waveform louder on screen: a brass horn bell, alone, no sound waves
 21. Drop Marker — place a marker at the playhead: a gold pennant flag on a short pole, the pennant's cloth flying to the
     RIGHT of its pole, planted on a sheet of score paper
@@ -114,6 +117,6 @@ not blue.
 54. Up a Folder — go up to the parent folder: the closed leather music portfolio of no. 10 with a SILVER arrow (the
     gold arrow's shape in silver) pointing up beside it
 55. Transport Play — start playback in the editor: the conductor's ONE hand in a white lace cuff, large, filling the cell,
-    RAISED high at the upbeat holding the baton straight up — no face, no body
+    RAISED high at the upbeat holding the baton straight up at 90 degrees — no face, no body, seen from behind the condutor
 56. Transport Stop — stop playback in the editor: the SAME cuffed hand, large, LOWERED flat, palm down, the baton held
-    level — no face, no body
+    level — no face, no body, seen from behind the condutor
