@@ -28,7 +28,14 @@ slicer never writes a file that is not an act.
      glyph, a pooled label line, or two labels touching across cells); the seven densest ±80-px windows of glyph centers
      (>= 20 glyphs, suppressing ±240 px round each — a loose fragment inside an icon, a repeat sign's dots, never chains
      two rows) are the seven label rows; each row is bounded by its members within 100 px of its
-     peak (a two-line label's second line is ~60 px under the first). ONLY THE GLYPH BOXES ARE CLEARED, each grown 8 px
+     peak (a two-line label's second line is ~60 px under the first). A LABEL GLYPH IS NEUTRAL INK (architect 2026-10-20:
+     the label text is black on the light ground; an icon part is colored, or a dark outline round a colored fill — Add to
+     Selection's gold plus stands high beside the hand, inside the window of the label row above, and the size rule alone
+     cleared it with the text): a component with COLOR_SHARE (2 %) or more of its ink pixels COLORED — chroma (max - min of
+     the JPEG's RGB) >= 40 — is an icon part and is NEVER cleared nor voting, whatever its size. Chroma, not HSV
+     saturation (JPEG noise on near-black text gives S ~ .12; its chroma stays ~1-2), and a share, not a mean (the plus
+     is a dark outline round a gold fill: the mean over its dark pixels is 7, the share 44-66 %; text's share is 0 on
+     every sheet). ONLY THE GLYPH BOXES ARE CLEARED, each grown 8 px
      — a row's icons may rise into the two-line label band above them (the 16:16 sheet's Down arrow under "33. Undo"),
      so a full-width clear cut their tops. A cell's icon band runs from under the cleared label boxes of the cell above
      it to the top of its own label's boxes, both read per cell (an icon may rise into a neighbor's two-line band or
@@ -54,6 +61,7 @@ import os, sys, json, subprocess, numpy as np
 from collections import deque
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__)) + '/'
+CHROMA_COLORED = 40; COLOR_SHARE = .02   # label_rows' neutral-ink line: label text has no pixel of chroma 40; a gold plus, a skin tone is a half colored
 T = 20; FILL = 44 / 48   # the ground color is each sheet's own corner pixel (the prompt says ECECEC; 212907 came out 226)
 _CELLS = ['OpenProject', 'Save', 'SaveCommit', 'SavePull', 'Revert', 'LoadInPlace', 'Render', 'Cancel', 'PlayRenders', 'FolderRow', 'WavRow', 'DeleteFolder', 'Close',
           'Source', 'Target', 'Warp', 'PhaseReset', 'FullZoomOut', 'Center', 'WaveformMagnification',
@@ -121,20 +129,31 @@ def runs(mask):
     if start is not None: out.append((start, len(mask)))
     return out
 
-def label_rows(ink):
+def color_share(rgb, ink, S, pts, box):
+    """The share of the quarter-scale component `pts` (box (ya, yb, xa, xb) in quarter cells)'s ink pixels whose JPEG chroma
+    (max - min of RGB) is >= CHROMA_COLORED: ~0 for label text, .4-.9 for an icon part with a colored fill."""
+    ya, yb, xa, xb = box; mm = np.zeros((yb - ya, xb - xa), bool)
+    for y, x in pts: mm[y - ya, x - xa] = True
+    full = np.kron(mm, np.ones((S, S), bool)) & ink[ya * S:yb * S, xa * S:xb * S]
+    px = rgb[ya * S:yb * S, xa * S:xb * S][full].astype(np.int16)
+    return float(((px.max(axis=1) - px.min(axis=1)) >= CHROMA_COLORED).mean()) if len(px) else 0.
+
+def label_rows(ink, rgb):
     """The label rows as (top, bottom, the glyph boxes to clear, the peak) in full-res y, read off the glyph-sized
-    components: the seven rows."""
+    NEUTRAL-INK components (rgb the sheet's JPEG): the seven rows."""
     S = 4; H, W = ink.shape; m = ink[:H // S * S, :W // S * S].reshape(H // S, S, W // S, S).any(axis=(1, 3)); h, w = m.shape
     seen = np.zeros_like(m); boxes = []
     for y0, x0 in zip(*np.nonzero(m)):
         if seen[y0, x0]: continue
-        q = deque([(y0, x0)]); seen[y0, x0] = True; ya, yb, xa, xb = y0, y0, x0, x0
+        q = deque([(y0, x0)]); seen[y0, x0] = True; ya, yb, xa, xb = y0, y0, x0, x0; pts = []
         while q:
-            y, x = q.popleft(); ya, yb, xa, xb = min(ya, y), max(yb, y), min(xa, x), max(xb, x)
+            y, x = q.popleft(); pts.append((y, x)); ya, yb, xa, xb = min(ya, y), max(yb, y), min(xa, x), max(xb, x)
             for ny in (y - 1, y, y + 1):
                 for nx in (x - 1, x, x + 1):
                     if 0 <= ny < h and 0 <= nx < w and m[ny, nx] and not seen[ny, nx]: seen[ny, nx] = True; q.append((ny, nx))
-        boxes.append((ya, yb + 1, xa, xb + 1))
+        box = (ya, yb + 1, xa, xb + 1)
+        if 3 <= box[1] - box[0] <= 40 and box[3] - box[2] <= 300 and color_share(rgb, ink, S, pts, box) >= COLOR_SHARE: continue   # colored: an icon part, never a label glyph whatever its size
+        boxes.append(box)
     glyphs = [b for b in boxes if 3 <= b[1] - b[0] <= 40 and b[3] - b[2] <= 300]   # a glyph, a pooled label line or two-line block, or two labels touching across cells
     votes = np.array([b[3] - b[2] >= 3 for b in glyphs])   # a dash of a drawn cell border (28 x 4 px) is glyph-sized too: the narrow never vote for a row or bound it, they are only cleared
     cy = np.array([(b[0] + b[1]) / 2 for b in glyphs])
@@ -174,8 +193,8 @@ def slice_sheet(src, root, acts):
         first = cell_seeds(src, ROWS); print(stamp, 'pass 1, cell seeds', len(first)); gimp([{'src': src, 'out': p1, 'seeds': first}], stamp + '_1', work)
         seeds = first + pockets(src, p1); print(stamp, 'pockets', len(seeds) - len(first))
         gimp([{'src': src, 'out': raw, 'seeds': seeds}], stamp + '_2', work)
-    im = Image.open(raw).convert('RGBA'); W, H = im.size; A = np.asarray(im)[..., 3]; ink = A >= 26
-    cw = W / COLS; alpha = A.copy(); bands = label_rows(ink); print(stamp, 'label rows', [(int(t), int(b)) for t, b, _, _ in bands])
+    rgb = np.asarray(Image.open(src).convert('RGB')); im = Image.open(raw).convert('RGBA'); W, H = im.size; A = np.asarray(im)[..., 3]; ink = A >= 26
+    cw = W / COLS; alpha = A.copy(); bands = label_rows(ink, rgb); print(stamp, 'label rows', [(int(t), int(b)) for t, b, _, _ in bands])
     for _, _, boxes, _ in bands:   # ONLY THE GLYPH BOXES are cleared, each grown 8 px: a row's icons may rise into the label band above them
         for y0, y1, x0, x1 in boxes: alpha[max(0, y0 - 8):y1 + 8, max(0, x0 - 8):x1 + 8] = 0
     def col_edges(r, n=COLS):   # the row's n + 1 cell edges (n its eight cells)

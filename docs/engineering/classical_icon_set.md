@@ -49,7 +49,7 @@ fades into the background, nothing below a stand fading) or Gemini fades the foo
 `slice_sheets.py` cuts each sheet with GIMP's own fuzzy select, headless (`gimp_fuzzy.py`): threshold 20 from the
 corner and from a ground point in every cell, then a second pass adding a seed in every enclosed pocket of ground
 (inside a ring, between an object and its arrow) — the architect's Shift-clicks. It reads the label rows and each
-row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label glyph boxes, crops each cell's ink
+row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label glyph boxes — and a glyph is NEUTRAL INK: a component with 2 % or more of its pixels colored (JPEG chroma >= 40) is an icon part, never cleared, whatever its size (Add to Selection's gold plus stands high beside the hand, inside the label row above's window, and was cleared with the text under the size rule alone) — crops each cell's ink
 at 44/48 fill and writes `<folder>/sliced/<stamp>/<Act>.png` — 256 x 256 RGBA, named by the act's enumerator
 (`src/gui/icons.h`'s `kIconNames`), drop-ready — beside the input JPEG, plus `sheet_cut.png` (the whole sheet cut,
 labels cleared, full resolution: the base for a manual fix in GIMP), `sheet_cut_raw.png` (GIMP's cut alone) and
