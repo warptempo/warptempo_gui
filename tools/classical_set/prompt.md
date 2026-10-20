@@ -69,8 +69,9 @@ black text so I can identify it. Nothing else on the sheet.
 29. Jump to Defining Marker — jump back to the earlier marker that defines this value: the gold pennant flag of no. 21
     standing at the LEFT edge, and at the right a carrier pigeon in flight, its beak pointing LEFT, flying toward the flag
 30. Open Text Editor — edit the marker's text: a quill and inkwell beside a blank score page (no writing on it)
-31. Toggle Value Drag — drag a tempo value up or down freely: the conductor's cuffed hand of nos. 40–41 gripping THE GOLD
-    ARROW double-headed, pointing up and down
+31. Toggle Value Drag — drag a tempo value up or down freely: a sheet of score paper with one staff of notes drawn on it,
+    the SAME sheet as nos. 40 and 41 split down the middle: on the left half the notes crowd closer and closer toward the
+    middle (as no. 40), on the right half they open wider and wider again (as no. 41)
 32. Read-Only — editing locked: a closed GOLD padlock on a leather music case
 33. Undo — ONE curved GOLD UNDO ARROW, its tail a thick band of EVEN width with PARALLEL edges, never a tail that tapers
 34. Redo — ONE curved GOLD REDO ARROW, the same band turned the other way, never a tail that tapers
@@ -80,9 +81,11 @@ black text so I can identify it. Nothing else on the sheet.
 38. Left — nudge left by a hair: a starling (Mozart's pet bird) facing LEFT, pushing a SMALL solid gold ball — no bigger
     than the bird's head — to the left with its head, nothing else
 39. Right — nudge right by a hair: the SAME starling and ball turned to face RIGHT, pushing the ball to the right
-40. Up — speed up the tempo (accelerando): a conductor's hand in a white lace cuff holding the baton, swept UPWARD, the
-    baton's tip at the top
-41. Down — slow the tempo (ritardando): the SAME cuffed hand and baton swept DOWNWARD, the baton's tip at the bottom
+40. Up — speed up the tempo (accelerando): a sheet of score paper with one staff of notes drawn on it, the notes spaced
+    WIDE apart at the LEFT and crowding closer and closer together toward the RIGHT — the music getting faster across
+    the page; the notes drawn ON the sheet, never floating
+41. Down — slow the tempo (ritardando): the SAME sheet of score paper, the notes crowded TIGHT at the LEFT and spacing
+    wider and wider apart toward the RIGHT — the music slowing across the page
 42. Previous Marker — walk to the previous marker: the gold pennant flag of no. 21 at the LEFT, THE GOLD ARROW at the right
     pointing LEFT, its head touching the flag
 43. Next Marker — walk to the next marker: the gold pennant flag of no. 21 at the RIGHT, THE GOLD ARROW at the left
