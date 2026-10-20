@@ -53,7 +53,8 @@ black text so I can identify it. Nothing else on the sheet.
 19. Center — center the view on the playhead: a magnifying glass — a brass-rimmed lens with a turned wooden handle —
     alone, the lens empty (the same glass as no. 18)
 20. Waveform Magnification — make the quiet waveform louder on screen: a brass horn bell, alone, no sound waves
-21. Drop Marker — place a marker at the playhead: a gold pennant flag on a short pole, planted on a sheet of score paper
+21. Drop Marker — place a marker at the playhead: a gold pennant flag on a short pole, the pennant's cloth flying to the
+    RIGHT of its pole, planted on a sheet of score paper
 22. Delete Markers — remove the selected markers: a copyist's erasing knife (a small penknife) scraping a note off a
     sheet of score paper
 23. Toggle Disabled — mute a marker (it stays but has no effect): a SIMPLE brass post horn — one plain curl of tube and a
@@ -67,7 +68,8 @@ black text so I can identify it. Nothing else on the sheet.
 28. Toggle Add to Selection — add to the selection rather than replace: a printer's pointing hand (a manicule, with
     its cuff) with a small gold plus sign beside the fingertip
 29. Jump to Defining Marker — jump back to the earlier marker that defines this value: the gold pennant flag of no. 21
-    standing at the LEFT edge, and at the right a carrier pigeon in flight, its beak pointing LEFT, flying toward the flag
+    (as no. 21, cloth to the right) standing at the LEFT edge, and at the right a carrier pigeon in flight, its beak
+    pointing LEFT, flying toward the flag
 30. Open Text Editor — edit the marker's text: a quill and inkwell beside a blank score page (no writing on it)
 31. Toggle Value Drag — drag a tempo value up or down freely: the SAME flat, straight-edged sheet of score paper as nos. 40
     and 41 with TWO staves drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the
@@ -89,10 +91,10 @@ black text so I can identify it. Nothing else on the sheet.
     faster across the page; the notes drawn ON the sheet, never floating; the sheet a plain rectangle
 41. Down — slow the tempo (ritardando): the SAME flat sheet of score paper, the notes crowded TIGHT at the LEFT and spacing
     wider and wider apart toward the RIGHT — the music slowing across the page
-42. Previous Marker — walk to the previous marker: the gold pennant flag of no. 21 at the LEFT, THE GOLD ARROW at the right
-    pointing LEFT, its head touching the flag
-43. Next Marker — walk to the next marker: the gold pennant flag of no. 21 at the RIGHT, THE GOLD ARROW at the left
-    pointing RIGHT, its head touching the flag
+42. Previous Marker — walk to the previous marker: the gold pennant flag of no. 21 (as no. 21, cloth to the right) at
+    the LEFT, THE GOLD ARROW at the right pointing LEFT, its head touching the flag
+43. Next Marker — walk to the next marker: the gold pennant flag of no. 21 (as no. 21, cloth to the right) at the
+    RIGHT, THE GOLD ARROW at the left pointing RIGHT, its head touching the flag
 44. Switch Tab — switch between the two tabs: a closed leather notebook with two index tabs on its fore-edge, the
     front tab gold — no plain white sheet
 THE RENDER PLAYER'S GLYPHS ARE SILVER, ONE FAMILY: the four drawn transport glyphs (45–48; Player Next is the mirrored

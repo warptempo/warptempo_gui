@@ -22,6 +22,10 @@ slicer never writes a file that is not an act.
      arrows), flat like the ground — the sheet's corner pixel — (mean within 6, the 95th percentile within 12 — a white
      page is 19 off and stays), at least 100 px, gets a seed at its own pixel nearest its centroid — his Shift-clicks.
   3. GIMP pass 2 with the pass-1 seeds plus the pocket seeds -> <out>/sheet_cut_raw.png (the sheet as GIMP cut it).
+     THE SECOND POCKET PASS (pockets2, 2026-10-20): the small enclosed pockets pass 2 left opaque (the light ground
+     between the starling's legs), found by structure, not flatness — the rule and its measurements at pockets2's
+     head — each seeded through GIMP's fuzzy select on the raw cut, which is rewritten; the seeds are recorded in
+     <out>/sheet_cut_raw.json, the marker that the raw cut carries the pass.
   4. THE LABELS: Gemini's rows are NOT equal (the label rows drift from a 540- to a 465-px pitch on one sheet), so the
      rows are read off the labels: the ink's 8-connected components at quarter scale, the glyph-sized ones (12–160 px
      tall — a two-line label pools into one block; one at least 12 px wide votes, a border dash is 4–8; <= 1200 wide — a
@@ -52,8 +56,9 @@ slicer never writes a file that is not an act.
      contact.png of the cells on the Face gray for the check, each mirrored act a tile of its own in an eighth row.
 Inputs: the sheet JPEGs on the command line. Outputs: <out> = <the sheet's folder>/sliced/<the file's 14-digit stamp>/
 (--out <dir>: <dir>/sliced/<stamp>/), never in the repository; GIMP's job lists and the pass-1 cut in the sibling
-slice_work/. SLICE_REUSE=1 skips the GIMP passes where sheet_cut_raw.png exists (a re-slice after a rule change, ~5 s
-a sheet; ~30 s with GIMP). A 'CLIPPED?' line names a cell whose ink continues just past its band's edge: so far always
+slice_work/. SLICE_REUSE=1 skips GIMP passes 1 and 2 where sheet_cut_raw.png exists (a re-slice after a rule change, ~5 s
+a sheet; ~30 s with GIMP), and the second pocket pass too where sheet_cut_raw.json records it (a raw cut without the
+record gets the pass: ~3 s to find the seeds, one GIMP run when there are any). A 'CLIPPED?' line names a cell whose ink continues just past its band's edge: so far always
 a label piece pooled into the icon above it (outside the crop, left in sheet_cut.png) or a drawn border's dash, never a
 cut icon — but look. 'EMPTY' names a cell with no ink.
 Run: python3 -I tools/classical_set/slice_sheets.py [--redo-mirrored | --legacy56] [--out dir] sheet.jpg ..."""
@@ -62,6 +67,7 @@ from collections import deque
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__)) + '/'
 CHROMA_COLORED = 40; COLOR_SHARE = .02   # label_rows' neutral-ink line: label text has no pixel of chroma 40; a gold plus, a skin tone is a half colored
+P2_MIN, P2_MEAN, P2_STROKE, P2_RIM, P2_FAR, P2_DIST = 20, 10, 200, .6, .8, (20, 64)   # pockets2's bounds, read off the 30 sheets of 2026-10-20
 T = 20; FILL = 44 / 48   # the ground color is each sheet's own corner pixel (the prompt says ECECEC; 212907 came out 226)
 _CELLS = ['OpenProject', 'Save', 'SaveCommit', 'SavePull', 'Revert', 'LoadInPlace', 'Render', 'Cancel', 'PlayRenders', 'FolderRow', 'WavRow', 'DeleteFolder', 'Close',
           'Source', 'Target', 'Warp', 'PhaseReset', 'FullZoomOut', 'Center', 'WaveformMagnification',
@@ -119,6 +125,64 @@ def pockets(src, pass1):
         P = np.array(pts); d = np.abs(rgb[P[:, 0], P[:, 1]] - ground).max(axis=1)
         if d.mean() > 6 or np.percentile(d, 95) > 12: continue
         c = P.mean(axis=0); k = int(np.argmin(((P - c) ** 2).sum(axis=1))); seeds.append([int(P[k, 1]), int(P[k, 0])])
+    return seeds
+
+def grow(m, k):
+    """m dilated k steps, 4-connected (the window carries a margin wider than k, so np.roll's wrap never reaches it)."""
+    for _ in range(k): m = m | np.roll(m, 1, 0) | np.roll(m, -1, 0) | np.roll(m, 1, 1) | np.roll(m, -1, 1)
+    return m
+
+def pockets2(src, raw):
+    """THE SECOND POCKET PASS (architect 2026-10-20: "add a post-processing step" for the light ground left between the
+    starling's legs — "many starling images have them"), on the full-resolution cut: the seeds of the enclosed ground
+    pockets pass 2 left opaque. WHY THE FIRST RULE MISSED THEM: not the size floor — the starling's pocket on 100905 is
+    145 px — but the flatness: a pocket a few dozen px across is mostly RIM, and the JPEG rings along the outline ink, so
+    its mean distance from the ground is 8.3 and its p95 16 (the first rule wants 6 and 12); its interior (two px in) is
+    6.2 / 9. A TIGHTER COLOR RULE CANNOT FIND IT: the lace cuff's holes (mean 4), the silver keys' highlights (2-6), the
+    clapperboard's white stripes (4-5) and the slate's chalk lines are as close to the ground as the pocket or closer. So
+    the pass is STRUCTURAL — a pocket is ground seen THROUGH the object, not a light mark painted on it. Each enclosed
+    opaque region with every pixel within T of the ground (as the GIMP cut reads it) is a pocket when:
+      size >= P2_MIN px (a speck in a lace hole or a bird's eye catchlight is smaller; a ring sliver of 20 is kept);
+      ground-colored: its per-channel mean offset NEUTRAL (spread <= 4 — the cream page, parchment, the gold are not),
+      its mean distance <= P2_MEAN and its interior's (two px in) <= P2_MEAN;
+      an AREA, not a stroke: one of >= P2_STROKE px has an interior (a slate's chalk line is 800 px and nowhere 5 thick);
+      its RIM (the 4 px round it) >= P2_RIM outline ink (every channel < 90): ground meets the silhouette's outline, while
+        a lace hole meets gray lace and a key's highlight gray metal;
+      its FAR RING (10-24 px out, the cut excluded) < P2_FAR ink: past the outline lies the object's own fill (the gold
+        bow, the orange legs), while a clapper stripe, a slate's chalk line and a black bird's eye sit inside black paint;
+      its DISTANCE to the cut within P2_DIST: >= 20 px, a whole object part (outline, fill, outline) between it and the
+        outside — a white baton or an edge stripe has one outline alone; <= 64 px, a hole through the object, never a
+        mark in the middle of a page or a medallion.
+    Each passes as one seed at its pixel nearest its centroid, the first pass's way."""
+    rgb = np.asarray(Image.open(src).convert('RGB')).astype(np.int16); A = np.asarray(Image.open(raw).convert('RGBA'))[..., 3]
+    g = rgb[2, 2]; d = np.abs(rgb - g).max(axis=2); outer = A < 255
+    near = outer.copy(); near[1:] |= outer[:-1]; near[:-1] |= outer[1:]; near[:, 1:] |= outer[:, :-1]; near[:, :-1] |= outer[:, 1:]
+    cand = (d <= T) & ~outer; H, W = cand.shape; seen = np.zeros_like(cand); seeds = []; M = P2_DIST[1] + 6
+    for y0, x0 in zip(*np.nonzero(cand)):
+        if seen[y0, x0]: continue
+        q = deque([(y0, x0)]); seen[y0, x0] = True; pts = []; touch = False
+        while q:
+            y, x = q.popleft(); pts.append((y, x)); touch |= bool(near[y, x])
+            for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if 0 <= ny < H and 0 <= nx < W and cand[ny, nx] and not seen[ny, nx]: seen[ny, nx] = True; q.append((ny, nx))
+        if touch or len(pts) < P2_MIN: continue
+        P = np.array(pts); off = (rgb[P[:, 0], P[:, 1]] - g).mean(axis=0); v = d[P[:, 0], P[:, 1]]
+        if off.max() - off.min() > 4 or v.mean() > P2_MEAN: continue
+        ya, xa = P.min(axis=0) - M; h, w = np.ptp(P[:, 0]) + 2 * M + 1, np.ptp(P[:, 1]) + 2 * M + 1
+        m = np.zeros((h, w), bool); m[P[:, 0] - ya, P[:, 1] - xa] = True
+        ys, xs = np.mgrid[ya:ya + h, xa:xa + w]; inb = (ys >= 0) & (ys < H) & (xs >= 0) & (xs < W)
+        a = np.zeros((h, w), np.int32); c = np.zeros((h, w, 3), np.int16); a[inb] = A[ys[inb], xs[inb]]; c[inb] = rgb[ys[inb], xs[inb]]
+        ink = c.max(axis=2) < 90; out = a < 128
+        e = m.copy()
+        for _ in range(2): e = e & np.roll(e, 1, 0) & np.roll(e, -1, 0) & np.roll(e, 1, 1) & np.roll(e, -1, 1)
+        if (e.any() and np.abs(c[e] - g).max(axis=1).mean() > P2_MEAN) or (len(P) >= P2_STROKE and not e.any()): continue
+        if ink[grow(m, 4) & ~m].mean() < P2_RIM: continue
+        d10 = grow(m, 10); far = grow(d10, 14) & ~d10 & ~out
+        if far.any() and ink[far].mean() >= P2_FAR: continue
+        k, r = 0, m
+        while k < P2_DIST[1] and not (r & out).any(): r = grow(r, 1); k += 1
+        if not P2_DIST[0] <= k <= P2_DIST[1] or not (r & out).any(): continue
+        cy, cx = P.mean(axis=0); i = int(np.argmin((P[:, 0] - cy) ** 2 + (P[:, 1] - cx) ** 2)); seeds.append([int(P[i, 1]), int(P[i, 0])])
     return seeds
 
 def runs(mask):
@@ -188,11 +252,19 @@ def slice_sheet(src, root, acts):
     out = os.path.join(root, 'sliced', stamp) + '/'; work = os.path.join(root, 'slice_work') + '/'
     os.makedirs(out, exist_ok=True); os.makedirs(work, exist_ok=True)
     p1 = work + 'slice_%s_pass1.png' % stamp; raw = out + 'sheet_cut_raw.png'
+    side = out + 'sheet_cut_raw.json'   # the raw cut's record: which passes it carries
     if os.environ.get('SLICE_REUSE') and os.path.exists(raw): print(stamp, 'reusing', raw)
     else:
         first = cell_seeds(src, ROWS); print(stamp, 'pass 1, cell seeds', len(first)); gimp([{'src': src, 'out': p1, 'seeds': first}], stamp + '_1', work)
         seeds = first + pockets(src, p1); print(stamp, 'pockets', len(seeds) - len(first))
         gimp([{'src': src, 'out': raw, 'seeds': seeds}], stamp + '_2', work)
+        if os.path.exists(side): os.remove(side)
+    done = json.load(open(side)) if os.path.exists(side) else {}
+    if 'pockets2' not in done:   # THE SECOND POCKET PASS on the raw cut, GIMP's fuzzy select from each seed as pass 2's pockets
+        more = pockets2(src, raw); print(stamp, 'pockets2', len(more), more)
+        if more:
+            p3 = work + 'slice_%s_pockets2.png' % stamp; gimp([{'src': raw, 'out': p3, 'seeds': more}], stamp + '_3', work); os.replace(p3, raw)
+        done['pockets2'] = more; json.dump(done, open(side, 'w'))
     rgb = np.asarray(Image.open(src).convert('RGB')); im = Image.open(raw).convert('RGBA'); W, H = im.size; A = np.asarray(im)[..., 3]; ink = A >= 26
     cw = W / COLS; alpha = A.copy(); bands = label_rows(ink, rgb); print(stamp, 'label rows', [(int(t), int(b)) for t, b, _, _ in bands])
     for _, _, boxes, _ in bands:   # ONLY THE GLYPH BOXES are cleared, each grown 8 px: a row's icons may rise into the label band above them

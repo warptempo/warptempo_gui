@@ -48,7 +48,20 @@ fades into the background, nothing below a stand fading) or Gemini fades the foo
 
 `slice_sheets.py` cuts each sheet with GIMP's own fuzzy select, headless (`gimp_fuzzy.py`): threshold 20 from the
 corner and from a ground point in every cell, then a second pass adding a seed in every enclosed pocket of ground
-(inside a ring, between an object and its arrow) — the architect's Shift-clicks. It reads the label rows and each
+(inside a ring, between an object and its arrow) — the architect's Shift-clicks — and THEN A SECOND POCKET PASS on the
+full-resolution cut (architect 2026-10-20, for the light ground left between the starling's legs): the first pass wants
+a pocket flat (mean within 6 of the ground, p95 within 12, >= 100 px), and a small pocket is mostly rim, where the JPEG
+rings along the outline ink (the 100905 starling's: 145 px, mean 8.3, p95 16). A tighter color match cannot find it —
+the lace cuff's holes, the silver keys' highlights and the clapperboard's white stripes sit as close to the ground — so
+the second pass is structural: an enclosed opaque ground-colored region (>= 20 px, neutral, mean within 10 and its
+interior's too, an area and not a stroke) whose 4-px rim is outline ink, whose ring 10–24 px out is NOT mostly ink (the
+object's own fill lies past the outline; a clapper stripe, a chalk line or a bird's eye sits inside black paint), and
+which lies 20–64 px from the cut (a whole object part between it and the outside — a white baton has one outline alone —
+but a hole through the object, never a mark mid-page). Each such pocket is seeded through the same GIMP fuzzy select
+(threshold 20, antialiased) on the raw cut; the seeds are recorded in `sheet_cut_raw.json` beside it, so a re-slice
+under `SLICE_REUSE=1` skips the pass where the raw cut already carries it (the raw cut's sidecar is the marker; a raw cut
+without one gets the pass, ~3 s to find the seeds plus one GIMP run). The bounds and their measurements are at
+`pockets2`'s head. It reads the label rows and each
 row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label glyph boxes — and a glyph is NEUTRAL INK: a component with 2 % or more of its pixels colored (JPEG chroma >= 40) is an icon part, never cleared, whatever its size (Add to Selection's gold plus stands high beside the hand, inside the label row above's window, and was cleared with the text under the size rule alone) — crops each cell's ink
 at 44/48 fill and writes `<folder>/sliced/<stamp>/<Act>.png` — 256 x 256 RGBA, named by the act's enumerator
 (`src/gui/icons.h`'s `kIconNames`), drop-ready — beside the input JPEG, plus `sheet_cut.png` (the whole sheet cut,
@@ -65,7 +78,7 @@ list slices wrong after cell 33. A sheet from the 2026-10-20 morning prompt that
 seven rows with a cell lost) slices WRONG and must not be fed in. A `CLIPPED?` line names a cell whose ink continues just past its band's edge: so far
 it has always been a label piece pooled into the icon above it (outside the crop, left in `sheet_cut.png`) or a
 drawn border's dash, never a cut icon — but look at the contact sheet. `EMPTY` names a cell with no ink.
-`SLICE_REUSE=1` re-slices from an existing `sheet_cut_raw.png` without GIMP (a rule change, ~5 s a sheet).
+`SLICE_REUSE=1` re-slices from an existing `sheet_cut_raw.png` without GIMP's first two passes (a rule change, ~5 s a sheet).
 
 ## (d) The family pages for the pick
 
@@ -81,8 +94,11 @@ score paper whose notes crowd or open across the page), Magnifying glasses (Full
 other acts are isolated, one row per act with every version. An icon with an object besides the arrow goes with its
 object; a group is all or nothing. A `hide.json` beside the sheets (kept with them, never in the repository) names
 the members to hide per sheet — an input drawing copied verbatim, an isometric drawing — and a sheet whose group has
-ANY hidden member shows no block for that group; hidden is omitted, never shown. `act_strip.py` is the close-up: one
-act across every sheet.
+ANY hidden member shows no block for that group; hidden is omitted, never shown. ALL FLAGS FLY RIGHT (architect
+2026-10-20: the pennant's cloth to the RIGHT of its pole, on every cell that carries it): `flag_side.py` finds each Flags
+tile's cloth and pole and adds every left-flying tile to the hide.json, so that sheet's Flags block is omitted (its
+head says how, and why not by the tallest dark run; a tile it cannot decide stays visible and is named). `act_strip.py`
+is the close-up: one act across every sheet.
 
 ## (e) The drop
 
@@ -100,5 +116,6 @@ for a new style tile.
     python3 -I tools/classical_set/extract_style_tile.py <tarball-root> [Tile ...]      # a style tile into style_src/
     python3 -I tools/classical_set/dark_outlines.py                                      # style_sheet.png (+ review copies in tmp/classical_style_work/)
     python3 -I tools/classical_set/slice_sheets.py tmp/<sheets>/*.jpg                    # <sheets>/sliced/<stamp>/<Act>.png (--redo-mirrored | --legacy56: the two older lists)
+    python3 -I tools/classical_set/flag_side.py --hide tmp/<sheets>/hide.json a=tmp/<sheets>/sliced   # left-flying flags hidden
     python3 -I tools/classical_set/family_sheets.py tmp/<pages> tmp/<sheets>/hide.json a=tmp/<sheets>/sliced
     python3 -I tools/classical_set/act_strip.py tmp/<strip>.png <Act> a=tmp/<sheets>/sliced
