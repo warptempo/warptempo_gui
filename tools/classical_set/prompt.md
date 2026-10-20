@@ -69,22 +69,23 @@ black text so I can identify it. Nothing else on the sheet.
 29. Jump to Defining Marker — jump back to the earlier marker that defines this value: the gold pennant flag of no. 21
     standing at the LEFT edge, and at the right a carrier pigeon in flight, its beak pointing LEFT, flying toward the flag
 30. Open Text Editor — edit the marker's text: a quill and inkwell beside a blank score page (no writing on it)
-31. Toggle Value Drag — drag a tempo value up or down freely: a sheet of score paper with one staff of notes drawn on it,
-    the SAME sheet as nos. 40 and 41 split down the middle: on the left half the notes crowd closer and closer toward the
-    middle (as no. 40), on the right half they open wider and wider again (as no. 41)
+31. Toggle Value Drag — drag a tempo value up or down freely: the SAME flat, straight-edged sheet of score paper as nos. 40
+    and 41 with TWO staves drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the
+    right (as no. 40), the LOWER staff's notes open wider and wider toward the right (as no. 41); the sheet itself a plain
+    rectangle, never pinched, curved or waisted
 32. Read-Only — editing locked: a closed GOLD padlock on a leather music case
 33. Undo — ONE curved GOLD UNDO ARROW, its tail a thick band of EVEN width with PARALLEL edges, never a tail that tapers
 34. Redo — ONE curved GOLD REDO ARROW, the same band turned the other way, never a tail that tapers
 35. Toggle History View — show the checkpoint history: the antique pocket watch alone, open on its chain, no arrow
 36. Older — the previous checkpoint: the antique pocket watch with THE GOLD ARROW pointing left beside it
 37. Newer — the next checkpoint: the antique pocket watch with THE GOLD ARROW pointing right beside it
-38. Left — nudge left by a hair: a starling (Mozart's pet bird) facing LEFT, pushing a SMALL solid gold ball — no bigger
-    than the bird's head — to the left with its head, nothing else
-39. Right — nudge right by a hair: the SAME starling and ball turned to face RIGHT, pushing the ball to the right
-40. Up — speed up the tempo (accelerando): a sheet of score paper with one staff of notes drawn on it, the notes spaced
-    WIDE apart at the LEFT and crowding closer and closer together toward the RIGHT — the music getting faster across
-    the page; the notes drawn ON the sheet, never floating
-41. Down — slow the tempo (ritardando): the SAME sheet of score paper, the notes crowded TIGHT at the LEFT and spacing
+38. Left — nudge left by a hair: a starling (Mozart's pet bird, dark with its gold speckles) standing and facing LEFT,
+    nothing else
+39. Right — nudge right by a hair: the SAME starling turned to face RIGHT, nothing else
+40. Up — speed up the tempo (accelerando): a flat, straight-edged sheet of score paper with one staff of notes drawn on it,
+    the notes spaced WIDE apart at the LEFT and crowding closer and closer together toward the RIGHT — the music getting
+    faster across the page; the notes drawn ON the sheet, never floating; the sheet a plain rectangle
+41. Down — slow the tempo (ritardando): the SAME flat sheet of score paper, the notes crowded TIGHT at the LEFT and spacing
     wider and wider apart toward the RIGHT — the music slowing across the page
 42. Previous Marker — walk to the previous marker: the gold pennant flag of no. 21 at the LEFT, THE GOLD ARROW at the right
     pointing LEFT, its head touching the flag
@@ -108,7 +109,7 @@ they stand apart from the gold of the editor's acts. Not green, not red, not blu
     twin of no. 52)
 55. Up a Folder — go up to the parent folder: the closed leather music portfolio of no. 10 with a SILVER arrow (the
     gold arrow's shape in silver) pointing up beside it
-56. Transport Play — start playback in the editor: the conductor's TWO HANDS alone in white lace cuffs, large, filling the
-    cell, both RAISED high at the upbeat, the right hand holding the baton up — no face, no body
-57. Transport Stop — stop playback in the editor: the SAME two cuffed hands, large, both LOWERED flat, palms down, the
-    baton held level — no face, no body
+56. Transport Play — start playback in the editor: the conductor's ONE hand in a white lace cuff, large, filling the cell,
+    RAISED high at the upbeat holding the baton straight up — no face, no body
+57. Transport Stop — stop playback in the editor: the SAME cuffed hand, large, LOWERED flat, palm down, the baton held
+    level — no face, no body
