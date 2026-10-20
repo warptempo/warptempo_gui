@@ -26,9 +26,10 @@ DIM = (0xA8, 0xB0, 0xBC)
 
 # Groups (architect 2026-10-19 ~22:50): an icon with an object besides the arrow goes with its object; a group is
 # all or nothing — a sheet whose group has ANY hidden member shows no block for that group; hidden is omitted, never shown.
+# Up, Down and ValueDrag moved from Arrows to Paper and books 2026-10-20: the prompt draws them as a sheet of score paper
+# whose notes crowd or open across the page, no arrow and no hand (tools/classical_set/prompt.md, cells 31, 40, 41).
 FAMILIES = [
-    ("arrows", "Arrows", ["Left", "Right", "Up", "Down", "ValueDrag", "PreviousMarker", "NextMarker",
-                          "JumpToDefiningMarker"]),
+    ("arrows", "Arrows", ["Left", "Right", "PreviousMarker", "NextMarker", "JumpToDefiningMarker"]),
     ("undo", "Undo and Redo", ["Undo", "Redo"]),
     ("watches", "Watches", ["Revert", "HistoryView", "Older", "Newer"]),
     ("transport", "Transport keys", ["Play", "Pause", "PlayerPrevious", "PlayerNext", "RepeatOne",
@@ -37,7 +38,7 @@ FAMILIES = [
     ("hands", "Hands", ["Cancel", "AddToSelection", "Follow", "TransportPlay", "TransportStop"]),   # the conductor's figures: the cuffs must match
     ("paper", "Paper and books", ["OpenProject", "Source", "Target", "WavRow", "OpenTextEditor", "DropMarker",
                                   "DeleteMarkers", "Inherit", "SwitchTab", "Tooltips", "Render", "SaveCommit",
-                                  "SavePull"]),
+                                  "SavePull", "Up", "Down", "ValueDrag"]),
     ("zoom", "Magnifying glasses", ["FullZoomOut", "Center"]),
     ("cards", "Card medallions", ["CardNormal", "CardCritical"]),
 ]

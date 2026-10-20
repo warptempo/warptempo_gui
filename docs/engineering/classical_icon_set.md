@@ -59,11 +59,12 @@ drawn border's dash, never a cut icon — but look at the contact sheet. `EMPTY`
 
 The architect picks FROM FAMILIES, not from whole sheets: a family's members must share shading and lighting.
 `family_sheets.py` lays every sliced sheet's block of each family side by side on 1920 x 1080 PNG pages, judged on
-the laptop only (never pushed to the tablet). The families: Arrows (Left, Right, Up, Down, Value Drag, Previous /
-Next Marker, Jump to Defining Marker), Undo and Redo, Watches (Revert, History View, Older, Newer), Transport keys
+the laptop only (never pushed to the tablet). The families: Arrows (Left, Right, Previous / Next Marker, Jump to
+Defining Marker), Undo and Redo, Watches (Revert, History View, Older, Newer), Transport keys
 (Play, Pause, Player Previous / Next, Repeat One, Load in Place, Close), Folders, read-only and save, Hands
 (Cancel, Add to Selection, Follow, and the conductor's Transport Play / Transport Stop — the cuffs must match), Paper
-and books (with Save Commit / Save Pull's podiums), Magnifying glasses (Full Zoom Out, Center), Card medallions; the
+and books (with Save Commit / Save Pull's podiums, and, since 2026-10-20, Up, Down and Value Drag, drawn as a sheet of
+score paper whose notes crowd or open across the page), Magnifying glasses (Full Zoom Out, Center), Card medallions; the
 other acts are isolated, one row per act with every version. An icon with an object besides the arrow goes with its
 object; a group is all or nothing. A `hide.json` beside the sheets (kept with them, never in the repository) names
 the members to hide per sheet — an input drawing copied verbatim, an isometric drawing — and a sheet whose group has
