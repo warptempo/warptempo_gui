@@ -79,8 +79,8 @@ black text so I can identify it. Nothing else on the sheet.
 35. Toggle History View — show the checkpoint history: the antique pocket watch alone, open on its chain, no arrow
 36. Older — the previous checkpoint: the antique pocket watch with THE GOLD ARROW pointing left beside it
 37. Newer — the next checkpoint: the antique pocket watch with THE GOLD ARROW pointing right beside it
-38. Left — nudge left by a hair: a starling (Mozart's pet bird, dark with its gold speckles) standing and facing LEFT,
-    nothing else
+38. Left — nudge left by a hair: a starling (Mozart's pet bird) standing and facing LEFT — a plain glossy dark bird, NO
+    gold speckles, no dust, no spots on its plumage — nothing else
 39. Right — nudge right by a hair: the SAME starling turned to face RIGHT, nothing else
 40. Up — speed up the tempo (accelerando): a flat, straight-edged sheet of score paper with one staff of notes drawn on it,
     the notes spaced WIDE apart at the LEFT and crowding closer and closer together toward the RIGHT — the music getting
