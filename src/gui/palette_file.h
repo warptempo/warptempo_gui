@@ -51,12 +51,10 @@
 //
 // TWO SOURCES FOR ONE STRUCT (architect 2026-10-07; 2026-10-08; recast
 // 2026-10-10): THE PALETTE colors the program AND, THROUGH COOL EDIT'S
-// TONES, EVERY CHROME ROLE BUT THE CAPTION AND THE SELECTION PAIR (architect
-// 2026-10-10: "the caption remains the only thing that's outside of Cool
-// Edit"; chrome_derive.h), and THE SCHEME colors the caption — its six keys,
-// or with none the compiled caption (kGuiCaptionOwn below) — and, since
-// architect 2026-10-21, the selection pair, the caption's Title and Title
-// Text (chrome_derive.h's kChromeRoles).
+// TONES, EVERY CHROME ROLE BUT THE CAPTION (architect 2026-10-10: "the
+// caption remains the only thing that's outside of Cool Edit";
+// chrome_derive.h), and THE SCHEME colors the caption — its six keys, or
+// with none the compiled caption (kGuiCaptionOwn below).
 // GuiPalette (render.h) keeps every member; install_palette (render.h) fills
 // the program members off this file's table (kGuiPaletteRoles) and the
 // chrome members off the theme's role table (kGuiThemeRoles) by the one
@@ -70,8 +68,8 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // selected cue label and the flag editor's field and selection band, the
-// chrome's selected pair — whose colors are the caption's Title and Title
-// Text since 2026-10-21, chrome_derive.h). So the palette's
+// chrome's selected pair — whose colors are themselves the palette's tones
+// since 2026-10-10, chrome_derive.h). So the palette's
 // program roles are exactly the ELEVEN below (the scheme's keys are the
 // caption's, not the program's): the waveform's canvas, ink and lit
 // outline; THE CANVAS'S GRID AND CENTER LINE, `grid` and `center`; THE CUES'

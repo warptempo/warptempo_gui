@@ -118,12 +118,18 @@
 // are no tone of Face: Cool Edit's E0E0E0 on every preset, never swapping
 // (§2d; kCeRulerTick, cool_edit_paint.h).
 //
-// THE SELECTION PAIR IS NO TONE OF THIS FILE (architect 2026-10-21: "make
-// the selection also follow the caption instead of following the waveform"):
-// the chrome's selection fill and text are the caption's Title and Title
-// Text (chrome_derive.h's kChromeRoles). The waveform's ink as the fill
-// (2026-10-10) and the program text's other member as its text (2026-10-16)
-// are retired (closed_questions.md).
+// THE SELECTED TEXT (architect 2026-10-16, on tablet mocks of his own
+// screenshots: "if all presets have both a light and dark font from Cool
+// Edit, then the selection should be opposite of the regular face"): the
+// chrome's selection fill is THE WAVEFORM'S INK (architect 2026-10-10) and
+// its text THE PROGRAM TEXT'S OTHER MEMBER — every Face has both, `text` and
+// `text_dark`, and the selection takes the one program_text does NOT pick,
+// on the same swap (text_swaps): `text_dark` where the Face keeps the light
+// text, `text` where it swaps (selected_text below). A ruling, not a
+// measurement: Cool Edit draws no text on its ink. The contrast it loses on
+// some presets' inks is accepted ("I can read at low contrast, it's more of
+// an aesthetic choice"; Grape, Lime and Tangerine's light text on its mint
+// ink judged and taken). (The ink at HLS L 0.10, 2026-10-10..16, retired.)
 
 namespace cool_edit_derive {
 
@@ -278,8 +284,10 @@ inline constexpr Tone kTones[] = {
     // every Face (chrome_derive.h), and THE PROGRAM'S TIME FIELDS' DIGITS at
     // every Face (`ce_field_text`: the field's ground is the dark `mid`, so
     // it never swaps) — and Cool Edit's swapped dark ink above the
-    // threshold, measured on Safari So Good (C1B791, its clock 312A10).
-    {"text",          0xEFF0F0, 0.086,  0.900, &GuiPalette::ce_field_text,
+    // threshold, measured on Safari So Good (C1B791, its clock 312A10). The
+    // chrome's selected text is the pair's other member (selected_text,
+    // architect 2026-10-16).
+    {"text",         0xEFF0F0, 0.086,  0.900, &GuiPalette::ce_field_text,
      ToneSource::Face, 0.2, 0.0},
     {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
      0.58, 0.32, 0xC1B791},
@@ -390,6 +398,13 @@ constexpr bool text_swaps(uint32_t face) {
 // threshold — the chrome's label, clock and card text (chrome_derive.h).
 constexpr uint32_t program_text(uint32_t face) {
     return tone_of(named_tone(text_swaps(face) ? "text_dark" : "text"), face, 0);
+}
+// THE SELECTED TEXT ON `face` (architect 2026-10-16, the head): the program
+// text's OTHER member, on the same swap — the dark ink where program_text
+// keeps the light one, the light ink where it swaps — the chrome's
+// `selected_text`, over the waveform's ink (chrome_derive.h).
+constexpr uint32_t selected_text(uint32_t face) {
+    return tone_of(named_tone(text_swaps(face) ? "text" : "text_dark"), face, 0);
 }
 // THE FIELD TEXT ON `face`: the light ink at every Face — the fields' ground
 // is the dark `mid`, which never swaps (the head).
@@ -505,6 +520,21 @@ static_assert([] {
         if (!within_one(label_ink(p.face), p.ink) ||
             !within_one(label_shadow(p.face), p.shadow))
             return false;
+    return true;
+}());
+
+// THE SELECTED TEXT IS THE PROGRAM TEXT'S OTHER MEMBER on every captured
+// Face: never the program text, and the pair the two text tones, one each.
+static_assert([] {
+    for (const TextPreset& p : kTextPresets) {
+        const uint32_t light = tone_of(named_tone("text"), p.face, 0);
+        const uint32_t dark = tone_of(named_tone("text_dark"), p.face, 0);
+        const uint32_t t = program_text(p.face);
+        const uint32_t sel = selected_text(p.face);
+        if (sel == t) return false;
+        if (!((t == light && sel == dark) || (t == dark && sel == light)))
+            return false;
+    }
     return true;
 }());
 

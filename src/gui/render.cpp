@@ -3267,10 +3267,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // has to be legible"), and THE SELECTED SUBSTRING takes the chrome's
     // SELECTED PAIR, `selected_text` on `selected_fill`, the ordinary
     // highlight — the pair that exists "precisely to avoid this problem" —
-    // part of the chrome, as every selection in the product is: the
-    // caption's Title Text on its Title (architect 2026-10-21, "make the
-    // selection also follow the caption instead of following the waveform";
-    // chrome_derive.h's kChromeRoles). AN INVALID
+    // part of the chrome, as every selection in the product is: the program
+    // text's other member on the waveform's ink (chrome_derive.h's
+    // kChromeRoles). AN INVALID
     // MARKER'S FIELD IS THE SAME FIELD, its text and caret the field's own
     // (architect 2026-10-11: "No flags change color when you select them …
     // the flag should be the indicator that it's invalid"; the bright

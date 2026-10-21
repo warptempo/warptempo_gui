@@ -73,17 +73,6 @@ constexpr bool keys_map_onto_their_roles(const GuiChromePick& p) {
     return true;
 }
 static_assert(keys_map_onto_their_roles(distinct_pick()));
-// THE SELECTION PAIR IS THE CAPTION'S TITLE AND TITLE TEXT (architect
-// 2026-10-21, chrome_derive.h's kChromeRoles): for the same distinct pick,
-// `selected_fill` holds the Title's word and `selected_text` the Title
-// Text's — the active caption's, never an inactive key's.
-static_assert([] {
-    const GuiChromePick p = distinct_pick();
-    const GuiThemeWords w =
-        chrome_derive::derive_chrome(default_palette_words(), p);
-    return w[theme_role_index("selected_fill")] == p.title_start &&
-           w[theme_role_index("selected_text")] == p.title_text;
-}());
 static_assert(keys_map_onto_their_roles([] {
     GuiChromePick p = distinct_pick();
     p.inactive_title_start.reset();

@@ -21,15 +21,15 @@
 // inside the body. The caption remains the only thing that's outside of Cool
 // Edit … even the font color, all of that would be inherited from Cool
 // Edit"; "whatever luminous rules we previously had are superseded by the
-// Cool Edit follow"): EVERY CHROME ROLE BUT THE CAPTION'S SIX AND THE
-// SELECTION PAIR IS A TONE OF THE LIVE PALETTE'S FACE — the panel's `face`
-// and the tones Cool Edit derives from it (cool_edit_derive.h's tones; the
-// per-role mapping is chrome_derive.h's, the one owner) — re-derived at
-// every install of the palette, so a new Face moves the chrome live. THE
-// CAPTION'S SIX ARE A SCHEME'S (palette_file.h's head: a scheme is the
-// caption alone since 2026-10-10), or, with no scheme keys live, the live
-// chrome's COMPILED CAPTION below; THE SELECTION PAIR is the caption's Title
-// and Title Text (architect 2026-10-21, chrome_derive.h).
+// Cool Edit follow"): EVERY CHROME ROLE BUT THE CAPTION'S SIX IS A TONE OF
+// THE LIVE PALETTE — the panel's `face` and the tones Cool Edit derives from
+// it, the waveform's ink, and the program text's two members, the selection
+// taking the other one (cool_edit_derive.h's tones; the per-role mapping is
+// chrome_derive.h's, the one owner) — re-derived at every install of the
+// palette, so a new Face or ink moves the chrome live. THE CAPTION'S SIX
+// ARE A SCHEME'S (palette_file.h's head: a scheme is the caption alone since
+// 2026-10-10), or, with no scheme keys live, the live chrome's COMPILED
+// CAPTION below.
 //
 // THE ROLES are the role table below — THE ONE ENUMERATION of the chrome's:
 // its name and the GuiPalette field it fills (render.h, whose palette block

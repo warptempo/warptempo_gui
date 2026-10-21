@@ -20,23 +20,19 @@
 // outside of Cool Edit … even the font color, all of that would be inherited
 // from Cool Edit"; "whatever luminous rules we previously had are superseded
 // by the Cool Edit follow. We follow Cool Edit's theming"). This header is
-// THE ONE OWNER OF EVERY CHROME ROLE'S SOURCE: the caption's six and THE
-// SELECTION PAIR are THE SCHEME'S (a scheme is the caption alone,
-// palette_file.h's kGuiChromeLines; the selection pair reads two of its six,
-// architect 2026-10-21), and every other role is A TONE OF THE LIVE
-// PALETTE'S FACE — the panel's `face` and the tones Cool Edit derives from
-// it — by Cool Edit's own arithmetic (cool_edit_derive.h, whose head has the
-// measurements and the proofs), re-derived at every install of the palette
-// (render.cpp's install family), so a new Face (the Settings Chrome row's
-// commit) moves the chrome live. The waveform's ink drives no chrome role
-// since 2026-10-21.
+// THE ONE OWNER OF EVERY CHROME ROLE'S SOURCE: the caption's six are THE
+// SCHEME'S (a scheme is the caption alone, palette_file.h's kGuiChromeLines),
+// and every other role is A TONE OF THE LIVE PALETTE — the panel's `face`,
+// the tones Cool Edit derives from it, the waveform's ink — by Cool Edit's
+// own arithmetic (cool_edit_derive.h, whose head has the measurements and
+// the proofs), re-derived at every install of the palette (render.cpp's
+// install family), so a new Face or ink (the Settings Chrome row's commit)
+// moves the chrome live.
 //
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's 21, each decided
 // once — the build proves every role is listed exactly once, the caption's
-// six from the scheme's keys and the selection pair from the scheme's Title
-// and Title Text, no other role from the scheme; palette_file.cpp proves
-// each scheme key moves the role its `role` column names, and the selection
-// pair the caption's two):
+// six from the scheme and no other role from it; palette_file.cpp proves
+// each scheme key moves the role its `role` column names):
 //   ground, light_3d, clock_ground       = the Face (Cool Edit's "Dockable
 //                                          Window 3D Color"; 3DLight the face,
 //                                          as Windows' own schemes record it)
@@ -57,22 +53,22 @@
 //                                          (cool_edit_derive::field_text: the
 //                                          field's ground is dark at every
 //                                          Face)
-//   selected_fill                        = the caption's Title (its start)
-//   selected_text                        = the caption's Title Text
-//                                          (architect 2026-10-21, on the
-//                                          product's own Default caption:
-//                                          "make the selection also follow
-//                                          the caption instead of following
-//                                          the waveform. And we would break
-//                                          the rule of the text inverting on
-//                                          selection, because white shows up
-//                                          better on that shade of brown" —
-//                                          the active caption's pair, the
-//                                          same under a focused or unfocused
-//                                          window; the waveform's ink,
-//                                          2026-10-10, and the program
-//                                          text's other member, 2026-10-16,
-//                                          retired, closed_questions.md)
+//   selected_fill                        = the waveform's ink (architect
+//                                          2026-10-10)
+//   selected_text                        = the program text's OTHER member
+//                                          (cool_edit_derive::selected_text:
+//                                          dark where the Face keeps the
+//                                          light text, light where it swaps;
+//                                          architect 2026-10-16, "the
+//                                          selection should be opposite of
+//                                          the regular face")
+//                                          (the caption's Title and Title
+//                                          Text as the pair lived one
+//                                          landing, 7e0b8d4e, 2026-10-21, and
+//                                          were reverted the same night: the
+//                                          wood in the flag editor's selected
+//                                          substring read as odd;
+//                                          closed_questions.md)
 //   card_ground                          = the Face
 //   card_frame                           = the `dark` tone (Cool Edit's box
 //                                          outline and the label's shadow)
@@ -92,13 +88,12 @@
 namespace chrome_derive {
 
 enum class Source {
-    Face, Hilight, Mid, Dark, Black, Text, FieldText,
+    Face, Hilight, Mid, Dark, Black, Text, FieldText, Ink, SelectedText,
     TitleStart, TitleEnd, TitleText,
     InactiveTitleStart, InactiveTitleEnd, InactiveTitleText,
-    SelectionFill, SelectionText,
 };
-// Whether a source is one of the scheme's six keys (the caption's own roles).
-constexpr bool is_scheme_key_source(Source s) {
+// Whether a source is the scheme's (the caption's six), else the palette's.
+constexpr bool is_scheme_source(Source s) {
     switch (s) {
         case Source::TitleStart:
         case Source::TitleEnd:
@@ -111,12 +106,6 @@ constexpr bool is_scheme_key_source(Source s) {
             return false;
     }
 }
-// Whether a source is the scheme's — its six keys, or the selection pair
-// that reads two of them (architect 2026-10-21) — else the palette's Face.
-constexpr bool is_scheme_source(Source s) {
-    return is_scheme_key_source(s) || s == Source::SelectionFill ||
-           s == Source::SelectionText;
-}
 struct ChromeRole {
     const char* role;
     Source      source;
@@ -128,8 +117,8 @@ inline constexpr ChromeRole kChromeRoles[] = {
     {"light_3d",                  Source::Face},
     {"shadow",                    Source::Mid},
     {"dk_shadow",                 Source::Black},
-    {"selected_fill",             Source::SelectionFill},
-    {"selected_text",             Source::SelectionText},
+    {"selected_fill",             Source::Ink},
+    {"selected_text",             Source::SelectedText},
     {"field_ground",              Source::Mid},
     {"field_text",                Source::FieldText},
     {"clock_ground",              Source::Face},
@@ -154,11 +143,10 @@ inline constexpr auto kChromeRoleIndex = [] {
 }();
 
 // EVERY CHROME ROLE IS DECIDED ONCE: each role of the table is listed
-// exactly once, each listed name is a role, the scheme's key sources are
-// exactly the scheme keys' roles (kGuiChromeLines' `role`), and the scheme's
-// sources are those six and the selection pair alone (2026-10-21) — so a
-// role added to the table is a build failure here until it is decided, and
-// no Face-derived role can be a scheme key's.
+// exactly once, each listed name is a role, and the scheme's sources are
+// exactly the scheme keys' roles (kGuiChromeLines' `role`) — so a role
+// added to the table is a build failure here until it is decided, and no
+// palette-derived role can be a scheme key's.
 constexpr bool every_chrome_role_decided() {
     for (const std::size_t i : kChromeRoleIndex)
         if (i >= kGuiThemeRoleCount) return false;
@@ -168,46 +156,46 @@ constexpr bool every_chrome_role_decided() {
             if (k == i) ++seen;
         if (seen != 1) return false;
     }
-    std::size_t scheme_sourced = 0;
     for (std::size_t i = 0; i < std::size(kChromeRoles); ++i) {
         bool keyed = false;
         for (const GuiChromeLine& l : kGuiChromeLines)
             if (std::string_view(l.role) == kChromeRoles[i].role) keyed = true;
-        if (keyed != is_scheme_key_source(kChromeRoles[i].source)) return false;
-        if (is_scheme_source(kChromeRoles[i].source)) ++scheme_sourced;
+        if (keyed != is_scheme_source(kChromeRoles[i].source)) return false;
     }
-    return scheme_sourced == kGuiChromeLineCount + 2;
+    return true;
 }
 static_assert(every_chrome_role_decided());
 
 // THE DERIVATION: every role off the program's live words (the palette's
-// face, through Cool Edit's tones) and the caption's six and the selection
-// pair off `caption`.
+// face and ink, through Cool Edit's tones) and the caption's six off
+// `caption`.
 constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program,
                                       const GuiChromePick& caption) {
     using namespace cool_edit_derive;
     constexpr std::size_t kFace = palette_role_index("face");
-    static_assert(kFace < kGuiPaletteRoleCount);
+    constexpr std::size_t kInk = palette_role_index("waveform_ink");
+    static_assert(kFace < kGuiPaletteRoleCount && kInk < kGuiPaletteRoleCount);
     const uint32_t face = program[kFace] & 0xFFFFFFu;
+    const uint32_t ink = program[kInk] & 0xFFFFFFu;
     GuiThemeWords w{};
     for (std::size_t i = 0; i < std::size(kChromeRoles); ++i) {
         uint32_t v = 0;
         switch (kChromeRoles[i].source) {
             case Source::Face:       v = face;                                  break;
-            case Source::Hilight:    v = tone_of(named_tone("hilight"), face, 0); break;
-            case Source::Mid:        v = tone_of(named_tone("mid"), face, 0);  break;
-            case Source::Dark:       v = tone_of(named_tone("dark"), face, 0); break;
+            case Source::Hilight:    v = tone_of(named_tone("hilight"), face, ink); break;
+            case Source::Mid:        v = tone_of(named_tone("mid"), face, ink); break;
+            case Source::Dark:       v = tone_of(named_tone("dark"), face, ink); break;
             case Source::Black:      v = 0x000000u;                             break;
             case Source::Text:       v = program_text(face);                    break;
             case Source::FieldText:  v = field_text(face);                      break;
+            case Source::Ink:        v = ink;                                   break;
+            case Source::SelectedText: v = selected_text(face);                 break;
             case Source::TitleStart:         v = caption.title_start;          break;
             case Source::TitleEnd:           v = caption.title_end;            break;
             case Source::TitleText:          v = caption.title_text;           break;
             case Source::InactiveTitleStart: v = caption.inactive_start();     break;
             case Source::InactiveTitleEnd:   v = caption.inactive_end();       break;
             case Source::InactiveTitleText:  v = caption.inactive_text();      break;
-            case Source::SelectionFill:      v = caption.title_start;          break;
-            case Source::SelectionText:      v = caption.title_text;           break;
         }
         w[kChromeRoleIndex[i]] = v & 0xFFFFFFu;
     }
@@ -216,8 +204,8 @@ constexpr GuiThemeWords derive_chrome(const GuiPaletteWords& program,
 
 // -- THE CHECKS ----------------------------------------------------------------
 
-// THE DEFAULT PALETTE (Cool Edit's "(Default Scheme)": Face 626C7B) under
-// the product's own Default caption (9B4B2C flat under FFFFFF, its inactive
+// THE DEFAULT PALETTE (Cool Edit's "(Default Scheme)": Face 626C7B, ink
+// 4BF3A7) under the product's own Default caption (9B4B2C flat under FFFFFF, its inactive
 // three following, palette_file.h): the chrome it paints, role by role.
 inline constexpr GuiThemeWords kDefaultCheck =
     derive_chrome(default_palette_words(), chrome_caption());
@@ -229,8 +217,8 @@ static_assert(kDefaultCheck[theme_role_index("dk_shadow")] == 0x000000);
 static_assert(kDefaultCheck[theme_role_index("label")] == 0xEFEFEF);
 static_assert(kDefaultCheck[theme_role_index("field_ground")] == 0x404750);
 static_assert(kDefaultCheck[theme_role_index("field_text")] == 0xEFEFEF);
-static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x9B4B2C);
-static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0xFFFFFF);
+static_assert(kDefaultCheck[theme_role_index("selected_fill")] == 0x4BF3A7);
+static_assert(kDefaultCheck[theme_role_index("selected_text")] == 0x0F1621);
 static_assert(kDefaultCheck[theme_role_index("card_ground")] == 0x626C7B);
 static_assert(kDefaultCheck[theme_role_index("card_text")] == 0xEFEFEF);
 static_assert(kDefaultCheck[theme_role_index("card_frame")] == 0x2A2F35);
@@ -240,8 +228,7 @@ static_assert(kDefaultCheck[theme_role_index("caption_inactive")] == 0x9B4B2C);
 static_assert(kDefaultCheck[theme_role_index("caption_inactive_text")] == 0xFFFFFF);
 // A LIGHT FACE SWAPS THE TEXT AND NOT THE FIELD'S (Arctic Freeze's C0C0C0,
 // METRICS_PRESETS_1010.md §3a): the label dark, the field text light — and
-// the selected text the caption's Title Text still, the Face moving no
-// member of the selection pair (2026-10-21).
+// the selected text the light member, the program text's other (2026-10-16).
 static_assert([] {
     GuiPaletteWords p = default_palette_words();
     p[palette_role_index("face")] = 0xC0C0C0;
@@ -250,11 +237,9 @@ static_assert([] {
            w[theme_role_index("card_text")] == 0x311919 &&
            w[theme_role_index("field_text")] == 0xF6F6F6 &&
            w[theme_role_index("field_ground")] == 0x7F7F7F &&
-           w[theme_role_index("selected_fill")] == 0x9B4B2C &&
-           w[theme_role_index("selected_text")] == 0xFFFFFF;
+           w[theme_role_index("selected_text")] == 0xF6F6F6;
 }());
-// THE INACTIVE CAPTION FOLLOWS while unpicked, and THE SELECTION PAIR IS THE
-// ACTIVE CAPTION'S, whatever the inactive keys say: Windows Storm's own six
+// THE INACTIVE CAPTION FOLLOWS while unpicked: Windows Storm's own six
 // (800080 → 388CB0 under FFFFFF; inactive 808080 → A8ACA8 under C0C0C0),
 // its inactive start and text unpicked.
 static_assert([] {
@@ -264,9 +249,7 @@ static_assert([] {
     const GuiThemeWords w = derive_chrome(default_palette_words(), p);
     return w[theme_role_index("caption_inactive")] == 0x800080 &&
            w[theme_role_index("caption_inactive_gradient")] == 0xA8ACA8 &&
-           w[theme_role_index("caption_inactive_text")] == 0xFFFFFF &&
-           w[theme_role_index("selected_fill")] == 0x800080 &&
-           w[theme_role_index("selected_text")] == 0xFFFFFF;
+           w[theme_role_index("caption_inactive_text")] == 0xFFFFFF;
 }());
 
 } // namespace chrome_derive

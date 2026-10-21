@@ -385,10 +385,8 @@ struct GuiPalette {
     GuiColor light_3d;        // COLOR_3DLIGHT
     GuiColor shadow;          // COLOR_3DSHADOW
     GuiColor dk_shadow;       // COLOR_3DDKSHADOW
-    GuiColor selected_fill;   // COLOR_HIGHLIGHT: the caption's Title
-    GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT: the caption's Title Text
-                              // (the pair the caption's, architect
-                              // 2026-10-21, chrome_derive.h)
+    GuiColor selected_fill;   // COLOR_HIGHLIGHT
+    GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_ground;    // COLOR_WINDOW
     GuiColor field_text;      // COLOR_WINDOWTEXT
     GuiColor clock_ground;    // the status bar's ButtonFace
@@ -542,10 +540,9 @@ struct GuiChromePick {
 // (2026-10-07): the eleven program colors as they
 // stand in the process, which the caller hands in explicitly — and THE
 // CHROME'S, DERIVED FROM THEM (2026-10-10, the chrome inherits Cool Edit:
-// every role but the caption's six and the selection pair a tone of the
-// palette's face, live_chrome_words, chrome_derive.h), the caption's six —
-// and the selection pair, its Title and Title Text (2026-10-21) — off
-// `chrome`, the scheme's keys, or with none the compiled caption
+// every role but the caption's six a tone of the palette's face or ink,
+// live_chrome_words, chrome_derive.h), the caption's six off `chrome`, the
+// scheme's keys, or with none the compiled caption
 // (chrome_caption(), palette_file.h). AT LAUNCH the palette the config's `chrome`
 // key names and the scheme its `caption` key names (2026-10-08; built-ins
 // alone since 2026-10-14, is_builtin_palette_name and is_builtin_scheme_name,
@@ -567,8 +564,7 @@ void install_palette(const std::array<uint32_t, 11>& program,
 // caption alone since 2026-10-10): the chrome's members re-derived off
 // live_chrome_words(the live program words, `chrome`)
 // (chrome_derive.h) and palette_generation bumped, the program's eleven
-// untouched — only the caption's six and the selection pair that reads two
-// of them (2026-10-21, chrome_derive.h) can move. THE LIVE ROAD beside
+// untouched — only the caption's six can move. THE LIVE ROAD beside
 // install_program_palette is the Settings rows' commit
 // (GuiSettingsEditor::install_color_preset, which runs that member's apply
 // shape after both; the color picker's until 2026-10-14). Why that shape is enough for
@@ -897,8 +893,7 @@ void install_true_colors(bool on);
 // shrinks with what is typed, the
 // segments to its right riding its edge in their resting look; and THE
 // SELECTED SUBSTRING IN THE CHROME'S SELECTED PAIR, `selected_text` on
-// `selected_fill`, the ordinary highlight — the caption's Title Text on its
-// Title since 2026-10-21 (chrome_derive.h). AN INVALID MARKER'S FIELD IS THE
+// `selected_fill`, the ordinary highlight. AN INVALID MARKER'S FIELD IS THE
 // SAME FIELD, its text and caret the field's own (architect 2026-10-11, the
 // selected invalid red retired: the flag is the indicator), its riding
 // segments in the resting invalid color. WHY THE FIELD PAIR: it is the
@@ -911,8 +906,8 @@ void install_true_colors(bool on);
 // light text on the panel's face, no fill and no box (SELECTED, above); the
 // open editor shows its whole text selected in the selected pair inside the
 // field — "a fully highlighted white text editor" under Windows 2000's pair,
-// the caption's Title Text on its Title (architect 2026-10-21, "white shows
-// up better on that shade of brown"; chrome_derive.h).
+// the ink (2026-10-10) under the program text's other member (2026-10-16;
+// chrome_derive.h).
 //
 // A REFUSED ENTER RECOLORS NOTHING (architect 2026-10-03: "a red outline and
 // the card is redundant"; the red frame retired from both editors): it
