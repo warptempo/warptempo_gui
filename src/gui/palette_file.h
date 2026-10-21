@@ -36,8 +36,9 @@
 //     chrome color came to inherit the palette's Cool Edit tones,
 //     chrome_derive.h), Windows' own word (COLOR_ACTIVECAPTION; the Appearance
 //     dialog's "scheme" for a set of them), and NO FACE (architect 2026-10-09
-//     ~21:20: the face is the product's one, gui_font.h): one of the 42
-//     Windows and Plus! schemes (kGuiChromeSchemes), the `caption` device key.
+//     ~21:20: the face is the product's one, gui_font.h): the product's own
+//     Default or one of the 42 Windows and Plus! schemes (kGuiChromeSchemes),
+//     the `caption` device key.
 // The two are independent: choosing one never touches the other, and
 // either applies under any chrome.
 // THE FAMILIES LANDED ARE WHAT EXISTS (architect 2026-10-14, "remove picker
@@ -50,10 +51,12 @@
 //
 // TWO SOURCES FOR ONE STRUCT (architect 2026-10-07; 2026-10-08; recast
 // 2026-10-10): THE PALETTE colors the program AND, THROUGH COOL EDIT'S
-// TONES, EVERY CHROME ROLE BUT THE CAPTION (architect 2026-10-10: "the
-// caption remains the only thing that's outside of Cool Edit";
-// chrome_derive.h), and THE SCHEME colors the caption — its six keys, or
-// with none the compiled caption (kGuiCaptionOwn below).
+// TONES, EVERY CHROME ROLE BUT THE CAPTION AND THE SELECTION PAIR (architect
+// 2026-10-10: "the caption remains the only thing that's outside of Cool
+// Edit"; chrome_derive.h), and THE SCHEME colors the caption — its six keys,
+// or with none the compiled caption (kGuiCaptionOwn below) — and, since
+// architect 2026-10-21, the selection pair, the caption's Title and Title
+// Text (chrome_derive.h's kChromeRoles).
 // GuiPalette (render.h) keeps every member; install_palette (render.h) fills
 // the program members off this file's table (kGuiPaletteRoles) and the
 // chrome members off the theme's role table (kGuiThemeRoles) by the one
@@ -67,8 +70,8 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // selected cue label and the flag editor's field and selection band, the
-// chrome's selected pair — whose colors are themselves the palette's tones
-// since 2026-10-10, chrome_derive.h). So the palette's
+// chrome's selected pair — whose colors are the caption's Title and Title
+// Text since 2026-10-21, chrome_derive.h). So the palette's
 // program roles are exactly the ELEVEN below (the scheme's keys are the
 // caption's, not the program's): the waveform's canvas, ink and lit
 // outline; THE CANVAS'S GRID AND CENTER LINE, `grid` and `center`; THE CUES'
@@ -108,7 +111,10 @@
 //
 // THE BUILT-IN SCHEMES (architect 2026-10-08 ~11:00–11:10: "the catalog's
 // schemes transcribed to the used keys and compiled in") — kGuiChromeSchemes
-// below, EVERY ENTRY OF docs/themes/catalog.json, GENERATED into
+// below: FIRST THE PRODUCT'S OWN DEFAULT (`default`, architect 2026-10-21;
+// hand-written beside the include, the one scheme that is no catalog entry —
+// the table's comment), then EVERY KEPT ENTRY OF docs/themes/catalog.json,
+// GENERATED into
 // chrome_schemes.inc by tools/theme_catalog/gen_theme_files.py (the
 // transcription's rules are its head's; regenerate, never hand-edit): each a
 // KEY (the catalog's verbatim — the `caption` key's word for it), a DISPLAY
@@ -120,15 +126,18 @@
 // generator's head). A SCHEME IS CAPTION-ONLY BY ITS KIND: choosing one
 // installs its six and leaves the program's eleven as they stand
 // (install_chrome_pick, at the Caption row's commit). THE CHROME'S OWN
-// SCHEME — the one its `own_scheme` names (chrome_spec.h: `windows-storm`) —
+// SCHEME — the one its `own_scheme` names (chrome_spec.h: `default`, the
+// product's own since architect 2026-10-21; Windows Storm 2026-10-12..21) —
 // CARRIES NO KEYS under that chrome (scheme_record): the compiled caption
 // exactly (kGuiCaptionOwn, the scheme's six by construction) — THE DEFAULT
-// CAPTION both first-run templates spell (`caption=windows-storm`,
+// CAPTION both first-run templates spell (`caption=default`,
 // kGuiDefaultSchemeKey; the key required since architect 2026-10-14, a
 // config naming no scheme until then taking it). THE
 // INACTIVE CAPTION'S THREE are each optional in a pick, an absent one
-// FOLLOWING the active caption's (GuiChromePick's accessors); every built-in
-// records them (the generator's head).
+// FOLLOWING the active caption's (GuiChromePick's accessors); every catalog
+// built-in records them (the generator's head), and the product's own
+// Default records none, so its inactive caption follows (the table's
+// comment).
 // THE BYTES ARE sRGB (architect 2026-10-08 ~05:15), as every authored
 // color's, and the tablet converts them at the painter's entry
 // (display_transform.h's head).
@@ -371,20 +380,40 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // architect 2026-10-14. The rows' Tab completion matches the built-in names
 // in the tables' own order, GuiSettingsEditor::complete_preset_value.)
 
-// THE BUILT-IN SCHEMES (the head) — every windows and windows-plus catalog
-// entry in the catalog's order, GENERATED (chrome_schemes.inc; never hand-edited): the key, the
-// display name ("Windows Rainy Day", "Plus Space" — the family's word,
-// then the catalog name in Title Case; the generator's head) and the six
-// caption keys' words, every inactive key present (a scheme records its inactive
-// caption, flat where it records no end). No face: a scheme carries none
-// (2026-10-09 ~21:20, the head; the catalog keeps each source's font as
-// its record).
+// THE BUILT-IN SCHEMES (the head) — the product's own Default first, then
+// every windows and windows-plus catalog entry in the catalog's order,
+// GENERATED (chrome_schemes.inc; never hand-edited): the key, the display
+// name ("Windows Rainy Day", "Plus Space" — the family's word, then the
+// catalog name in Title Case; the generator's head) and the six caption
+// keys' words, every inactive key present (a catalog scheme records its
+// inactive caption, flat where it records no end). No face: a scheme
+// carries none (2026-10-09 ~21:20, the head; the catalog keeps each
+// source's font as its record).
+// THE PRODUCT'S OWN CAPTION, `default`, "Default" (architect 2026-10-21
+// ~01:50, on a mock of a flat wood caption over today's chrome: "I like the
+// color for the caption … that already by itself conveys the idea"; the key
+// and the name his): Title and Title End 9B4B2C — flat for now, a gradient
+// being a data change here — under Title Text FFFFFF, and NO INACTIVE KEYS,
+// so the inactive caption FOLLOWS the active one (GuiChromePick's
+// accessors; his ruling on the wood caption: "a VST style like this wouldn't
+// show any difference; besides, it's moot on the tablet"). The brown is the
+// mean of the Gemini wood tile of the rolled-back wood chrome (git history
+// before 1cb8aa07), the Trilogy look carried by the caption alone. THE ONE
+// SCHEME THAT IS NO CATALOG ENTRY: the catalog is the record of imported
+// desktop themes and carries no product's own scheme (architect
+// 2026-10-11, tools/theme_catalog/gen_theme_files.py's head), so this row
+// is written here by hand, first in the table so the Caption row's Tab
+// completion (complete_preset_value, the table's order) offers it first.
+// It is the chrome's own scheme (chrome_spec.h's own_scheme), so
+// kGuiCaptionOwn below is it.
 struct GuiChromeScheme {
     const char*   key;
     const char*   display_name;
     GuiChromePick chrome;
 };
 inline constexpr GuiChromeScheme kGuiChromeSchemes[] = {
+    {"default", "Default",
+     {0x9B4B2C, 0x9B4B2C, 0xFFFFFF, std::nullopt, std::nullopt, std::nullopt}},
 #include "chrome_schemes.inc"
 };
 
@@ -395,8 +424,8 @@ constexpr const GuiChromeScheme* builtin_scheme(std::string_view name) {
     return nullptr;
 }
 // THE COMPILED CAPTION (theme_file.h's head): the chrome's own scheme's six
-// keys, read from the generated table (a compile error if the key names no
-// row). THE ONE RESOLVER — read by the derivation's live words
+// keys — the product's own Default's, its inactive three following — read
+// from the built-in table (a compile error if the key names no row). THE ONE RESOLVER — read by the derivation's live words
 // (live_chrome_words, chrome_derive.h).
 inline constexpr GuiChromePick kGuiCaptionOwn =
     builtin_scheme(kChromeSpecWin2000.own_scheme)->chrome;
@@ -410,8 +439,9 @@ inline constexpr const GuiChromePick& chrome_caption() {
 constexpr bool is_builtin_scheme_name(std::string_view name) {
     return builtin_scheme(name) != nullptr;
 }
-// THE DEFAULT CAPTION (the head): the chrome's own scheme, `windows-storm`
-// (chrome_spec.h's own_scheme) — the `caption=` value both first-run
+// THE DEFAULT CAPTION (the head): the chrome's own scheme, the product's own
+// `default` (chrome_spec.h's own_scheme; architect 2026-10-21) — the
+// `caption=` value both first-run
 // templates SPELL (GuiPlatform::device_config_defaults; every device key
 // required, architect 2026-10-14 — a config with no `caption` line took it
 // 2026-10-08..14). kGuiDefaultPaletteKey's twin.
@@ -434,7 +464,7 @@ inline constexpr const char* kPaletteGrammarReason =
     "must be a built-in chrome's key (cool-edit-default, "
     "cool-edit-midnight, ...)";
 inline constexpr const char* kSchemeGrammarReason =
-    "must be a built-in caption's key (windows-storm, windows-rainy-day, ...)";
+    "must be a built-in caption's key (default, windows-storm, ...)";
 
 // The eleven the built-in palette `name` names. Precondition:
 // is_builtin_palette_name(name), so this resolves and never refuses

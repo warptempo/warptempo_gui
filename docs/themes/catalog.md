@@ -3,11 +3,11 @@
 The program's colors come in two built-in kinds, each chosen on its own.
 
 - A **chrome** is one of Cool Edit Pro 2.1's own color presets. It colors the waveform and its canvas, the grid and center lines, the markers, the playhead, and the Panel Face that the toolbar, the panels round the waveform, the menus, the dialogs and the cards are all drawn from.
-- A **caption** is a Windows color scheme of the period, of which the title bar's colors alone are used: the title, its gradient end and its text, and the same three for a window without the focus.
+- A **caption** colors the title bar alone: the title, its gradient end and its text, and the same three for a window without the focus. It is the program's own Default, or a Windows color scheme of the period of which those colors alone are used.
 
 To choose one, open the Settings menu and pick Chrome or Caption: the Settings line opens on the key in use. Type another key from the lists below (Tab completes a typed beginning) and press OK or Enter: it applies at once and is kept for the next launch. Cancel or Esc leaves the colors as they were. A word that is no preset's key is refused.
 
-The defaults: the chrome Default (`cool-edit-default`) and the caption Windows Storm (`windows-storm`).
+The defaults: the chrome Default (`cool-edit-default`) and the caption Default (`default`).
 
 ## Chromes
 
@@ -43,7 +43,15 @@ Cool Edit Pro 2.1's twenty color presets, in Cool Edit's own order, as their tex
 
 ## Captions
 
-The 42 captions are the Windows color schemes of the period, grouped by where they come from.
+The 43 captions are the program's own, then the Windows color schemes of the period, grouped by where they come from.
+
+### The program's own
+
+The program's own caption, not a scheme of the period. Its title bar is one flat color, and a window without the focus draws it the same.
+
+| Caption | Key |
+|---|---|
+| Default (the default) | `default` |
 
 ### Windows
 
@@ -67,7 +75,7 @@ The Appearance schemes of Windows 95, 98, 2000 and Me. Most are Windows 2000's a
 | Windows Rainy Day | `windows-rainy-day` |
 | Windows Rose | `windows-rose` |
 | Windows Slate | `windows-slate` |
-| Windows Storm (the default) | `windows-storm` |
+| Windows Storm | `windows-storm` |
 | Windows Teal | `windows-teal` |
 | Windows Wheat | `windows-wheat` |
 | Windows Red, White, and Blue | `windows-red-white-and-blue` |

@@ -233,8 +233,9 @@ private:
     // the path completer's model on a closed list: the value side is a
     // PREFIX (byte compare, the names being ASCII) of the kind's compiled-in
     // preset names — Cool Edit's twenty for `chrome` (kGuiBuiltinPalettes'
-    // keys), the 42 Windows and Plus! schemes for `caption`
-    // (kGuiChromeSchemes' keys), palette_file.h — and the buffer advances by
+    // keys), the product's own `default` and the 42 Windows and Plus!
+    // schemes for `caption` (kGuiChromeSchemes' keys, the own one first since
+    // 2026-10-21), palette_file.h — and the buffer advances by
     // the matches' longest common prefix past it: a UNIQUE match completes
     // the name WITH NO TRAILING CHARACTER (a name is not a folder), an
     // ambiguous prefix stops at the common prefix (`caption=w` stops at

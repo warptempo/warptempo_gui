@@ -73,6 +73,17 @@ constexpr bool keys_map_onto_their_roles(const GuiChromePick& p) {
     return true;
 }
 static_assert(keys_map_onto_their_roles(distinct_pick()));
+// THE SELECTION PAIR IS THE CAPTION'S TITLE AND TITLE TEXT (architect
+// 2026-10-21, chrome_derive.h's kChromeRoles): for the same distinct pick,
+// `selected_fill` holds the Title's word and `selected_text` the Title
+// Text's — the active caption's, never an inactive key's.
+static_assert([] {
+    const GuiChromePick p = distinct_pick();
+    const GuiThemeWords w =
+        chrome_derive::derive_chrome(default_palette_words(), p);
+    return w[theme_role_index("selected_fill")] == p.title_start &&
+           w[theme_role_index("selected_text")] == p.title_text;
+}());
 static_assert(keys_map_onto_their_roles([] {
     GuiChromePick p = distinct_pick();
     p.inactive_title_start.reset();
@@ -146,8 +157,9 @@ static_assert(std::ranges::all_of(kGuiBuiltinPalettes,
 }));
 
 // THE CHROME'S OWN SCHEME IS THE COMPILED CAPTION BY CONSTRUCTION
-// (kGuiCaptionOwn reads the scheme's row of the generated table), so the
-// scheme that carries no keys (scheme_record) is no loss of a word.
+// (kGuiCaptionOwn reads the scheme's row of the built-in table, the
+// product's own hand-written Default since 2026-10-21), so the scheme that
+// carries no keys (scheme_record) is no loss of a word.
 
 // WINDOWS ME STANDARD IS WINDOWS 2000 STANDARD'S SIX (the catalog's
 // windows-me-standard, kept as an entry under Me's name; the generator
@@ -173,15 +185,22 @@ constexpr bool is_preset_key_spelling(std::string_view v) {
 }
 
 // THE BUILT-INS' KEYS AND DISPLAY NAMES ARE UNIQUE (the generator checks the
-// same), the keys in the key grammar, and every scheme records its inactive
-// caption (the struct's comment).
+// same over the catalog's), the keys in the key grammar, the chrome's own
+// scheme — the product's Default — the table's first row and recording no
+// inactive caption (it follows), and every catalog scheme recording its
+// inactive caption (the struct's comment).
 constexpr bool builtins_well_formed() {
+    if (!is_chrome_own_scheme(kGuiChromeSchemes[0].key)) return false;
     for (std::size_t i = 0; i < std::size(kGuiChromeSchemes); ++i) {
         const GuiChromeScheme& a = kGuiChromeSchemes[i];
         if (!is_preset_key_spelling(a.key)) return false;
-        if (!a.chrome.inactive_title_start || !a.chrome.inactive_title_end ||
-            !a.chrome.inactive_title_text)
-            return false;
+        const bool records_inactive = a.chrome.inactive_title_start &&
+                                      a.chrome.inactive_title_end &&
+                                      a.chrome.inactive_title_text;
+        const bool records_none = !a.chrome.inactive_title_start &&
+                                  !a.chrome.inactive_title_end &&
+                                  !a.chrome.inactive_title_text;
+        if (i == 0 ? !records_none : !records_inactive) return false;
         for (std::size_t j = i + 1; j < std::size(kGuiChromeSchemes); ++j)
             if (std::string_view(a.key) == kGuiChromeSchemes[j].key ||
                 std::string_view(a.display_name) ==

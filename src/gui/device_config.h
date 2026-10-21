@@ -23,14 +23,15 @@
 //                            successful open; blank until the first
 //   caption=<name>          THE CAPTION PRESET the title bar is painted in, its
 //                            six keys (the caption alone since 2026-10-10): a
-//                            built-in's key alone (`windows-storm`, the
+//                            built-in's key alone (`default`, the
+//                            product's own, `windows-storm` and the
 //                            catalog's others; is_builtin_scheme_name,
 //                            palette_file.h; a caption file's name until
 //                            2026-10-14), chosen by the Settings Caption
 //                            row; REQUIRED (architect 2026-10-14; absent
 //                            meant the chrome's own caption 2026-10-08..14),
 //                            the default SPELLED: both first-run templates
-//                            write `caption=windows-storm`
+//                            write `caption=default`
 //                            (kGuiDefaultSchemeKey, palette_file.h), the
 //                            chrome's own caption, the compiled caption
 //                            exactly (scheme_record). Named `scheme`
@@ -218,7 +219,7 @@
 // means something's wrong with the config or the setup" — `caption` and
 // `chrome` were the two that might be absent 2026-10-07..14, the absence
 // spelling the default; the default is SPELLED since, the writer emitting
-// every line and the first-run templates naming `caption=windows-storm` and
+// every line and the first-run templates naming `caption=default` and
 // `chrome=cool-edit-default`, so an absent line is the shared scanner's
 // missing-required-key refusal like any other, with no migration and no
 // launch-time repair — the planner edits the two devices' configs at the
@@ -275,7 +276,7 @@
 // read's (an empty value is refused); both backends' templates
 // (GuiPlatform::device_config_defaults) SPELL THE DEFAULTS into them
 // (architect 2026-10-14: every key required) — kGuiDefaultSchemeKey and
-// kGuiDefaultPaletteKey (palette_file.h), `windows-storm` and
+// kGuiDefaultPaletteKey (palette_file.h), `default` and
 // `cool-edit-default` — so the first-run file of either device names its
 // caption and its chrome. THE ROLE'S
 // DEFAULT IS CONSTRUCTION STATE AND WRITES NO LINE
@@ -318,7 +319,8 @@ struct DeviceConfig {
     std::string last_project;
     // THE SCHEME, the `caption` key's built-in name (2026-10-08 ~18:15):
     // required since 2026-10-14, so empty only before a read; the templates
-    // spell the default, `windows-storm` (kGuiDefaultSchemeKey).
+    // spell the default, `default` (kGuiDefaultSchemeKey; the product's own
+    // caption since architect 2026-10-21).
     std::string scheme;
     // THE PALETTE, the `chrome` key's built-in name (architect 2026-10-07):
     // required since 2026-10-14, so empty only before a read; the templates
@@ -619,7 +621,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a GUI one: the laptop wants 138 % and the projects clone's `projects/`
 // (`$HOME/.warptempo/warptempo_projects/projects`), the tablet
 // 300 % and its external files dir's `projects/`;
-// both stamp `caption=windows-storm` and `chrome=cool-edit-default` (the
+// both stamp `caption=default` and `chrome=cool-edit-default` (the
 // defaults spelled, every key required since 2026-10-14) and no role line
 // (the role is never invented, so the first run's read-back refuses on it —
 // the struct's role paragraph), kDefaultProjectsRepo and

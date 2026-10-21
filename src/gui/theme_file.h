@@ -21,15 +21,15 @@
 // inside the body. The caption remains the only thing that's outside of Cool
 // Edit … even the font color, all of that would be inherited from Cool
 // Edit"; "whatever luminous rules we previously had are superseded by the
-// Cool Edit follow"): EVERY CHROME ROLE BUT THE CAPTION'S SIX IS A TONE OF
-// THE LIVE PALETTE — the panel's `face` and the tones Cool Edit derives from
-// it, the waveform's ink, and the program text's two members, the selection
-// taking the other one (cool_edit_derive.h's tones;
-// the per-role mapping is chrome_derive.h's, the one owner) — re-derived at
-// every install of the palette, so a new Face or ink moves the
-// chrome live. THE CAPTION'S SIX ARE A SCHEME'S (palette_file.h's head: a
-// scheme is the caption alone since 2026-10-10), or, with no scheme keys
-// live, the live chrome's COMPILED CAPTION below.
+// Cool Edit follow"): EVERY CHROME ROLE BUT THE CAPTION'S SIX AND THE
+// SELECTION PAIR IS A TONE OF THE LIVE PALETTE'S FACE — the panel's `face`
+// and the tones Cool Edit derives from it (cool_edit_derive.h's tones; the
+// per-role mapping is chrome_derive.h's, the one owner) — re-derived at
+// every install of the palette, so a new Face moves the chrome live. THE
+// CAPTION'S SIX ARE A SCHEME'S (palette_file.h's head: a scheme is the
+// caption alone since 2026-10-10), or, with no scheme keys live, the live
+// chrome's COMPILED CAPTION below; THE SELECTION PAIR is the caption's Title
+// and Title Text (architect 2026-10-21, chrome_derive.h).
 //
 // THE ROLES are the role table below — THE ONE ENUMERATION of the chrome's:
 // its name and the GuiPalette field it fills (render.h, whose palette block
@@ -40,13 +40,15 @@
 // written against them; the values are no longer Windows'.
 //
 // THE COMPILED CAPTION (chrome_caption, palette_file.h): the caption the
-// default `caption=windows-storm` paints, the six caption keys of the chrome's own
-// scheme (chrome_spec.h's own_scheme), which since architect 2026-10-12 is
-// `windows-storm`. It is read straight from the generated built-in table
-// (chrome_schemes.inc), never retyped.
-// The imported catalog's other entries stay in the catalog as the tool's
-// RECORD; what ships of them is their caption keys alone, as the BUILT-IN
-// SCHEMES (palette_file.h's kGuiChromeSchemes, generated).
+// default `caption=default` paints, the six caption keys of the chrome's own
+// scheme (chrome_spec.h's own_scheme), which since architect 2026-10-21 is
+// the product's own `default` — 9B4B2C flat under FFFFFF, its inactive
+// three following (Windows Storm 2026-10-12..21). It is read straight from
+// the built-in table (kGuiChromeSchemes, whose first row it is, hand-written
+// beside the generated chrome_schemes.inc), never retyped.
+// The imported catalog's entries stay in the catalog as the tool's RECORD;
+// what ships of them is their caption keys alone, as the generated BUILT-IN
+// SCHEMES after the product's own (palette_file.h's kGuiChromeSchemes).
 // EVERY BYTE HERE IS AN sRGB RECORD (architect 2026-10-08 ~05:15): Windows'
 // scheme bytes are what those systems put into an sRGB frame buffer, as the
 // captures show them; the tablet converts each at the painter's entry

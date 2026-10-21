@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-# tools/theme_catalog/gen_theme_files.py — docs/themes/catalog.json -> THE BUILT-IN SCHEMES' GENERATED INCLUDES (below),
-# with the check of the compiled Windows 2000 caption against its catalog entry.
+# tools/theme_catalog/gen_theme_files.py — docs/themes/catalog.json -> THE CATALOG BUILT-IN SCHEMES' GENERATED INCLUDE
+# (below), with the check of Windows Me Standard's caption against Windows 2000 Standard's.
 # A SCHEME IS THE CAPTION ALONE (architect 2026-10-10: "the caption remains the only thing that's outside of Cool Edit";
 # "scheme files shrink to the caption's keys"): every other chrome color inherits the live palette's Cool Edit tones
 # (src/gui/chrome_derive.h), so what ships of a catalog entry is its six caption keys. The catalog stays the RECORD —
 # every entry's bytes with their provenance, its chrome, relief, selection, field and info roles among them — and the
-# SOURCE of each built-in scheme's caption; nothing else ships from it. The compiled caption is the chrome's own
-# scheme's row of the generated include (`windows-storm`, architect 2026-10-12; palette_file.h's kGuiCaptionOwn),
-# never retyped.
+# SOURCE of each catalog built-in scheme's caption; nothing else ships from it. The compiled caption is NOT this
+# script's: it is the chrome's own scheme, the product's own `default` (architect 2026-10-21), a hand-written row of
+# kGuiChromeSchemes in src/gui/palette_file.h beside this script's include and first in the table — never a catalog
+# entry (the NO PRODUCT'S OWN SCHEMES paragraph below); palette_file.h's kGuiCaptionOwn reads it. (The generated
+# `windows-storm` row was the compiled caption 2026-10-12..21.)
 #
 # THE CAPTION AN ENTRY NAMES (architect 2026-10-05), the six caption roles = the entry's recorded title colours
 # (roles.caption_roles, the one caption mapping: Windows' ActiveTitle / GradientActiveTitle / TitleText and the
@@ -36,7 +38,9 @@
 # picker's typed-name grammar, 2026-10-07..14; the check stays as the names' bound).
 # NO PRODUCT'S OWN SCHEMES (architect 2026-10-11 ~01:30, "Let's get rid of Cool Edit Pro ME as a Chrome … Those are
 # effectively the same now, now that Chrome only sets the caption"): the `warptempo` family's one entry and the second
-# include that listed its keys (chrome_schemes_product.inc, 2026-10-10) are gone; git history keeps them.
+# include that listed its keys (chrome_schemes_product.inc, 2026-10-10) are gone; git history keeps them. The catalog
+# is the record of imported desktop themes, so THE PRODUCT'S OWN DEFAULT CAPTION of 2026-10-21 (`default`) lives in
+# src/gui/palette_file.h, hand-written before this script's include, and NOT in the catalog or in this output.
 #
 # BYTE-STABLE: the keys in kGuiChromeLines' order (read off palette_file.h and checked against SCHEME_KEYS), the
 # schemes in the catalog's, uppercase hex, LF, no timestamp; run it twice and the include is identical. THE INCLUDE

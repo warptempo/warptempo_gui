@@ -7,11 +7,14 @@
 # THE PAGE: a short head (what a chrome and a caption are, how to choose one, the two defaults); then THE CHROMES, Cool
 # Edit Pro 2.1's twenty presets in Cool Edit's own order, read from the committed cool_edit_presets.txt through
 # gen_cool_edit_presets.py's own transcription (its head is the rule), each one line — its display name and its key;
-# then THE CAPTIONS, every catalog.json entry of gen_theme_files.py's KEPT_FAMILIES in the catalog's order (the
-# built-ins' own order), grouped by family, each one line — its display name (gen_theme_files.scheme_display_name)
-# and its key. Each section and family carries its provenance once and its small deviations; the defaults are marked,
-# read off the sources that own them: kGuiDefaultPaletteKey (src/gui/palette_file.h) and the chrome's own_scheme
-# (src/gui/chrome_spec.h, kGuiDefaultSchemeKey's source). No colors, no hex, no ground order, no display tiers, no
+# then THE CAPTIONS — first THE PROGRAM'S OWN, Default (architect 2026-10-21: the one built-in caption that is no
+# catalog entry, its key and display name read off its hand-written row at the head of kGuiChromeSchemes in
+# src/gui/palette_file.h), then every catalog.json entry of gen_theme_files.py's KEPT_FAMILIES in the catalog's order
+# (the built-ins' own order), grouped by family — each one line, its display name (gen_theme_files.
+# scheme_display_name for a catalog entry) and its key. Each section and family carries its provenance once and its
+# small deviations; the defaults are marked, read off the sources that own them: kGuiDefaultPaletteKey
+# (src/gui/palette_file.h) and the chrome's own_scheme (src/gui/chrome_spec.h, kGuiDefaultSchemeKey's source; the
+# program's own Default since 2026-10-21). No colors, no hex, no ground order, no display tiers, no
 # faces, no dates or rulings: catalog.json stays the RECORD of every entry's bytes and provenance, the KDE 3, CDE and
 # GNOME 2 families among them, none of which this page lists.
 #
@@ -47,6 +50,13 @@ def default_caption_key():
     return read_one(CHROME_SPEC_H, r'\.own_scheme\s*=\s*"([a-z0-9-]+)"', 'own_scheme')
 
 
+def own_caption():
+    """THE PROGRAM'S OWN CAPTION (the head): (key, display name), the first row of kGuiChromeSchemes, hand-written in
+    src/gui/palette_file.h before the generated include."""
+    return read_one(PALETTE_FILE_H, r'kGuiChromeSchemes\[\] = \{\s*\{"([a-z0-9-]+)", "([^"]+)"',
+                    'the own caption row of kGuiChromeSchemes')
+
+
 def head(chrome_name, chrome_key, caption_name, caption_key):
     return [
         '# Chromes and captions', '',
@@ -54,8 +64,9 @@ def head(chrome_name, chrome_key, caption_name, caption_key):
         '- A **chrome** is one of Cool Edit Pro 2.1\'s own color presets. It colors the waveform and its canvas, the '
         'grid and center lines, the markers, the playhead, and the Panel Face that the toolbar, the panels round the '
         'waveform, the menus, the dialogs and the cards are all drawn from.',
-        '- A **caption** is a Windows color scheme of the period, of which the title bar\'s colors alone are used: the '
-        'title, its gradient end and its text, and the same three for a window without the focus.', '',
+        '- A **caption** colors the title bar alone: the title, its gradient end and its text, and the same three for '
+        'a window without the focus. It is the program\'s own Default, or a Windows color scheme of the period of '
+        'which those colors alone are used.', '',
         'To choose one, open the Settings menu and pick Chrome or Caption: the Settings line opens on the key in use. '
         'Type another key from the lists below (Tab completes a typed beginning) and press OK or Enter: it applies at '
         'once and is kept for the next launch. Cancel or Esc leaves the colors as they were. A word that is no '
@@ -122,11 +133,21 @@ CAPTION_FAMILIES = {
 }
 
 
-def captions_section(cat, default_key):
+OWN_CAPTION_PROVENANCE = (
+    'The program\'s own caption, not a scheme of the period. Its title bar is one flat color, and a window without '
+    'the focus draws it the same.')
+
+
+def captions_section(cat, default_key, own_key, own_name):
     es = [e for e in cat['entries'] if e['family'] in schemes.KEPT_FAMILIES]
-    if default_key not in {e['key'] for e in es}: raise SystemExit(f'catalog_md: the default caption {default_key} is no scheme')
+    if own_key in {e['key'] for e in es}: raise SystemExit(f'catalog_md: the own caption {own_key} is a catalog key')
+    if default_key not in {e['key'] for e in es} | {own_key}:
+        raise SystemExit(f'catalog_md: the default caption {default_key} is no scheme')
     L = ['## Captions', '',
-         f'The {len(es)} captions are the Windows color schemes of the period, grouped by where they come from.', '']
+         f'The {len(es) + 1} captions are the program\'s own, then the Windows color schemes of the period, grouped '
+         'by where they come from.', '',
+         '### The program\'s own', '', OWN_CAPTION_PROVENANCE, '', '| Caption | Key |', '|---|---|',
+         f'| {own_name}{" (the default)" if own_key == default_key else ""} | `{own_key}` |', '']
     for fam in schemes.KEPT_FAMILIES:
         title, prov, notes = CAPTION_FAMILIES[fam]
         L += [f'### {title}', '', prov, ''] + [f'- {n}' for n in notes] + ['', '| Caption | Key |', '|---|---|']
@@ -142,10 +163,12 @@ def write_md(cat):
     caption_key = default_caption_key()
     chrome_name = next(name for name, _ in cool_edit.presets(cool_edit.SOURCE)
                        if cool_edit.preset_key(name) == chrome_key)
-    caption_name = next(schemes.scheme_display_name(e) for e in cat['entries'] if e['key'] == caption_key)
+    own_key, own_name = own_caption()
+    caption_name = own_name if caption_key == own_key else next(
+        schemes.scheme_display_name(e) for e in cat['entries'] if e['key'] == caption_key)
     L = head(chrome_name, chrome_key, caption_name, caption_key)
     L += chromes_section(chrome_key)
-    L += captions_section(cat, caption_key)
+    L += captions_section(cat, caption_key, own_key, own_name)
     while L and L[-1] == '': L.pop()
     with open(MD, 'w', newline='\n') as f: f.write('\n'.join(L) + '\n')
 

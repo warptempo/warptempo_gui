@@ -45,14 +45,15 @@
 // word (onscreen_keyboard.h's cap_word).
 
 struct ChromeSpec {
-    // THE CHROME'S OWN BUILT-IN SCHEME'S KEY (2026-10-08 ~11:10: the catalog
-    // key verbatim, `windows-storm`; palette_file.h's head): THE DEFAULT
-    // SCHEME, the `caption=` value both first-run templates spell
-    // (kGuiDefaultSchemeKey, palette_file.h; the key required since architect
-    // 2026-10-14, a config with no `caption` line taking it 2026-10-08..14),
-    // which carries no keys under this chrome — the
-    // compiled caption exactly. Storm since architect 2026-10-12 (it was
-    // `windows-2000-standard`). It names no palette: the default palette is
+    // THE CHROME'S OWN BUILT-IN SCHEME'S KEY (2026-10-08 ~11:10; palette_file.h's
+    // head): THE DEFAULT SCHEME, the `caption=` value both first-run
+    // templates spell (kGuiDefaultSchemeKey, palette_file.h; the key required
+    // since architect 2026-10-14, a config with no `caption` line taking it
+    // 2026-10-08..14), which carries no keys under this chrome — the
+    // compiled caption exactly. THE PRODUCT'S OWN `default` since architect
+    // 2026-10-21 (the one scheme that is no catalog entry, hand-written in
+    // palette_file.h's kGuiChromeSchemes; the catalog key `windows-storm`
+    // 2026-10-12..21, `windows-2000-standard` before). It names no palette: the default palette is
     // Cool Edit's one "Default" under every chrome (2026-10-16,
     // palette_file.h's head).
     const char*        own_scheme;
@@ -162,7 +163,7 @@ struct ChromeSpec {
 // flat toolbar — the 31 x 30 case under one etched pair — stood below the
 // menu row until the program's band took the lane, 2026-10-09; git history.)
 inline constexpr ChromeSpec kChromeSpecWin2000 = {
-    .own_scheme                   = "windows-storm",
+    .own_scheme                   = "default",
     .caption_height_px            = 18,
     .caption_icon_x_px            = 2,
     .caption_icon_y_px            = 1,

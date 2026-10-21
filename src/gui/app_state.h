@@ -3554,15 +3554,18 @@ struct SettingsPopupItem {
 // colors were compiled in (architect 2026-10-08, theme_file.h). No theme
 // file ships now: the catalog's entries are the built-in SCHEMES, compiled
 // from it by tools/theme_catalog/gen_theme_files.py, chosen by the Caption
-// row below: 42 since 2026-10-12 (103 until the KDE 3 and CDE families
-// were dropped) — chrome_schemes.inc's rows, one per catalog entry of the
-// windows (26) and windows-plus (16) families, the windows-2000 chrome's own `windows-storm` among them
-// rather than beside them (palette_file.h's kGuiChromeSchemes; the Caption
-// row is a line editor since 2026-10-14, its list removed — it listed the
-// own scheme first and the other 41 after it — and Tab completes a typed
-// prefix over the 42 keys in the table's order, GuiSettingsEditor::
-// complete_preset_value; the product's
-// own `cool-edit-pro-me` of 2026-10-10 removed 2026-10-11).
+// row below: 43 since 2026-10-21 — THE PRODUCT'S OWN `default` FIRST, the
+// windows-2000 chrome's own scheme and the one that is no catalog entry
+// (architect 2026-10-21, hand-written in palette_file.h's
+// kGuiChromeSchemes), then chrome_schemes.inc's 42 rows (103 until the KDE 3
+// and CDE families were dropped 2026-10-12), one per catalog entry of the
+// windows (26) and windows-plus (16) families, `windows-storm` among them
+// (the chrome's own 2026-10-12..21). The Caption row is a line editor since
+// 2026-10-14, its list removed — it listed the own scheme first and the
+// others after it — and Tab completes a typed prefix over the 43 keys in
+// the table's order, GuiSettingsEditor::complete_preset_value (the
+// product's earlier own `cool-edit-pro-me` of 2026-10-10 removed
+// 2026-10-11).
 //
 // `Chrome` STOOD 2026-10-07..10-10 (the vocabulary choice) and LEFT WITH ITS
 // KEY (architect 2026-10-10, chrome_spec.h's head): Windows 2000 is the one
