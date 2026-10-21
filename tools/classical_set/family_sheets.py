@@ -19,6 +19,11 @@ podiums' squat base, Undo's even tail, Phase Reset's gilt edge, the post horn) k
 every batch: an old sheet may already have drawn it the new way (Phase Reset's gilt slate was his pick off an old one).
 Revert is REDRAWN at draft 12 (architect 2026-10-20 ~15:15, his own prompt edit: the watch with a gold undo arrow — "most
 watches have the wrong arrow", the new sheets drawn for it), so the Watches family shows the draft-12 batches alone.
+DRAFT 14 (architect 2026-10-21, "agree to all") changes the set's MATERIALS to Mozart's fortepiano's — old brass for gold,
+polished steel for silver, bone for ivory, tan calf for dark leather, judged on ebony cases: A REFINEMENT, NOT A REDRAW,
+so no act is hidden for it alone. Its redrawn acts: Older (the arrow clear of the watch, lit from above) and Newer (no
+longer drawn: slice_sheets.py turns Older's arrow, so a Newer of any earlier sheet is a different drawing), Left and
+Right (the starling's iridescent plumage), and Background Sound, the new act at cell 37 (the umbrella).
 EVERY TILE IS ONE SIZE, TILE_PX, on every page (architect 2026-10-20 ~13:50, "a uniform size, about the size of the
 flags, and use more pages as needed": the families are compared against each other, so a tile must not shrink with the
 family's width; a wide family flows onto more pages instead).
@@ -48,7 +53,7 @@ FAMILIES = [
     ("starlings", "Starlings", ["Left", "Right"]),
     ("flags", "Flags", ["DropMarker", "PreviousMarker", "NextMarker", "JumpToDefiningMarker"]),
     ("undo", "Undo and Redo", ["Undo", "Redo"]),
-    ("watches", "Watches", ["Revert", "HistoryView", "Older", "Newer"]),
+    ("watches", "Watches", ["Revert", "HistoryView", "Older", "Newer"]),   # Newer the slicer's turned Older since draft 14
     ("transport", "Transport keys", ["Play", "Pause", "PlayerPrevious", "PlayerNext", "RepeatOne",
                                      "LoadInPlace", "Close"]),
     ("folder", "Folders, read-only and save", ["FolderRow", "UpAFolder", "ReadOnly", "Save"]),
@@ -61,7 +66,7 @@ FAMILIES = [
 ]
 ISOLATED = ("single", "Isolated acts", [
     "BpmIterations", "Warp", "PhaseReset", "WaveformMagnification", "Settings", "PlayRenders", "DeleteFolder",
-    "Disabled", "Flatten", "GridIterations"])
+    "Disabled", "Flatten", "GridIterations", "BackgroundSound"])
 # The act's current drawing and the draft that first asked for it (tools/classical_set/prompt.md's git history; drafts 7
 # and 8 lived in tmp/ before a51f45d0 — tmp/classical_set/NOTES.md): the starlings (7; the ball out in 10, no speckles
 # 79bf5052), the score sheets (9; Value Drag's two staves 10), the pigeon and the flag-and-arrow pairs (7; spelled by
@@ -69,10 +74,12 @@ ISOLATED = ("single", "Isolated acts", [
 # batch (gemini-new, gemini-new2) is draft 6; gemini-new4 the one-commit list of ~09:50, gemini-new5 draft 10, gemini-new6
 # draft 11 and gemini-new7 draft 12 (Revert's gold undo arrow beside the watch, his edit of ~14:30); draft 13 (~15:40) the
 # magnifying glasses over a sheet of score paper, the minus and the single note seen through the lens on the paper — an
-# empty lens shows the sheet's background, which the cut cannot remove, so every icon is opaque.
-REDRAWN = {"Left": 10, "Right": 10, "Up": 9, "Down": 9, "ValueDrag": 10, "JumpToDefiningMarker": 8,
+# empty lens shows the sheet's background, which the cut cannot remove, so every icon is opaque; draft 14 (2026-10-21) the
+# fortepiano's materials (no act redrawn for them), Older's arrow clear of the watch and Newer derived from it, the
+# starlings' iridescent plumage, and the umbrella of Background Sound, the new act at cell 37 where Newer was drawn.
+REDRAWN = {"Left": 14, "Right": 14, "Up": 9, "Down": 9, "ValueDrag": 10, "JumpToDefiningMarker": 8,
            "PreviousMarker": 8, "NextMarker": 8, "WavRow": 8, "RepeatOne": 7,
-           "Revert": 12, "Center": 13, "FullZoomOut": 13}
+           "Revert": 12, "Center": 13, "FullZoomOut": 13, "Older": 14, "Newer": 14, "BackgroundSound": 14}
 
 SHORT = {"JumpToDefiningMarker": "Jump", "PreviousMarker": "PrevMarker", "PlayerPrevious": "PlayerPrev",
          "WaveformMagnification": "Magnification", "OpenTextEditor": "TextEditor",

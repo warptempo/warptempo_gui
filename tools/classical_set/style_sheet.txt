@@ -1,5 +1,5 @@
 the twelve, row by row, left to right (no labels on the sheet; 4 columns):
-1  (no act) starred (the glossy gold star)
+1  (no act) starred (the glossy brass star)
 2  Source (accessories-dictionary)
 3  Target (input-tablet)
 4  PhaseReset (camera-photo)
@@ -12,6 +12,7 @@ the twelve, row by row, left to right (no labels on the sheet; 4 columns):
 11  (no act) applications-internet (the globe)
 12  (no act since 2026-10-19) accessories-calculator
 treatment: tools/classical_set/dark_outlines.py — each OBJECT'S OUTER OUTLINE (a tonal stroke with real length outside everything painted before it; a front object over a back one included) recolored to near-black ink (HLS L 0.12, saturation x0.5, opacity 1, gradient strokes every stop) and their stroke-width x1.5; interior lines, highlights and fills as drawn; open unfilled strokes (sound waves, cables) are lines, not outlines, and stay as drawn; a gradient stroke's faded stops keep their fade; where an outline path also rings holes the holes ink with it.
+tile 1: the star re-tinted from Tango's gold to OLD BRASS (2026-10-21) by one rule over its twelve yellows: hue -10 deg, saturation x0.55, lightness x0.72 + 0.07 (fef6b7 -> #dac284, edd400 -> #a0812e, 7a6300 -> #60481c); white glints and black as drawn
 tile 2: the ribbon left tonal (sewn to the book; inked, the narrow ribbon read black)
 tile 3: the tablet has NO outline in 3.22 (its edge is its gradient); a 1-unit ink stroke ADDED round its body (1.5 thick); the pen's own black outline as drawn, darkened by the rule
 tile 5: the disc's outline is ONE path (path4114) ringing the rim and the center hole, so the hole's edge inks with the rim (both are the silhouette); the play-side rings and glints stay as drawn

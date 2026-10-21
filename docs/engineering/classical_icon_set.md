@@ -20,27 +20,39 @@ sheet's record.
 
 Why these twelve: Gemini copies the input's drawings into its output set, so NO TILE MAY RESEMBLE AN ACT it is not
 meant to model. The clock, the padlocks, the broom, the wrench and GNOME's tan folder each bled into an act (Revert,
-Read-Only / Save / Folder, Flatten, Settings, Folder) and were replaced by drawings that relate to no act: the gold
-star (the model for the gold arrows' gold), the disc, the gamepad, the hard drive, the monitor and the globe. Five
+Read-Only / Save / Folder, Flatten, Settings, Folder) and were replaced by drawings that relate to no act: the star
+(the model for the brass arrows' metal), the disc, the gamepad, the hard drive, the monitor and the globe. Five
 act drawings stay (Source's book, Target's tablet, Phase Reset's camera, the magnification speaker and Play Renders'
 film strip), with the calculator of a retired act.
 The act drawings are read from `assets/icons/`; the others are standalone SVGs in `tools/classical_set/style_src/`,
 each extracted from the adwaita-icon-theme 3.22.0 tarball at its 48 slot by `extract_style_tile.py` (the product's
 own extractor, `tools/icon_set_adwaita_322/extract.py`, its drop shadows removed by id). A replacement tile is a
 new row there, a new entry in `dark_outlines.py`'s `TILES`, and a look at the rebuilt sheet: twelve firm outlines,
-no interior line gone black, no shadow.
+no interior line gone black, no shadow. THE STAR IS OLD BRASS (architect 2026-10-21, the set's materials below): Tango's
+glossy gold star is re-tinted in the treatment, never in its extracted file — `dark_outlines.py`'s `RECOLOR` maps its
+twelve yellows by one rule (`brass`: the hue toward brass, the saturation reduced, the lightness lowered), its white
+glints and black untouched, before the outline pass, so its outline inks from the brass.
 
 ## (b) The prompt
 
 `tools/classical_set/prompt.md` is paste-ready whole: attach `style_sheet.png`, ask for a 4K JPEG, paste the file.
 It asks for the WHOLE 56-cell sheet every time (8 columns x 7 rows, a numbered label under each icon, one flat #ECECEC
-ground). Why 56 and no more (architect 2026-10-20): Gemini fills the grid it is given and never draws a partial last
+ground). THE MATERIALS ARE MOZART'S FORTEPIANO'S (architect 2026-10-21, draft 14): OLD BRASS for every arrow, flag and
+case fitting (no gold anywhere), POLISHED STEEL for the render player's glyphs (no silver), BONE for white (no ivory),
+walnut, and tan calf leather for the portfolios and cases; the drawings are judged on the NEAR-BLACK EBONY button they
+will sit on, so the prompt asks a light body on every object. The sheet's own ground stays #ECECEC: the cut needs a
+flat light ground to take away. Why 56 and no more (architect 2026-10-20): Gemini fills the grid it is given and never draws a partial last
 row — every sheet asked to carry one cell more came back packed into a full 8 x 7 with a cell dropped or merged — and
-packing more cells into the sheet costs each icon its resolution. So PLAYER NEXT IS NOT DRAWN: the silver transport
+packing more cells into the sheet costs each icon its resolution. So PLAYER NEXT IS NOT DRAWN: the steel transport
 glyphs are lit straight from above (vertical gradients), so the slicer writes PlayerNext.png as PlayerPrevious.png flipped
 left to right and the light survives, the pair living only in the render player, driven from the car. REDO IS DRAWN: the
-gold arrows are lit from the top left, so a mirrored Redo would flip the light and the pair stands side by side on the
-toolbar. Words learned the hard way: never say "mirror image" (Gemini copies the drawing
+brass arrows are lit from the top left, so a mirrored Redo would flip the light and the pair stands side by side on the
+toolbar. NOR IS NEWER (architect 2026-10-21): cell 37 is the new act BACKGROUND SOUND (`BackgroundSound`, the umbrella),
+and Newer is DERIVED FROM OLDER — the watch cannot be mirrored (its digits would read backwards), so the slicer turns
+the arrow alone, and the prompt asks Older's arrow CLEAR of the watch (a gap of ground between them, or the two cannot
+be parted) and lit straight from above, so the flip keeps its light. Older and Newer are worn by the `h` view alone; the
+main screen's Left / Right and Previous / Next Marker keep their own drawings ("slight deviations in left/right add a
+nice touch on the main screen"). Words learned the hard way: never say "mirror image" (Gemini copies the drawing
 instead of mirroring it — say "the SAME object turned to face right"); a fade-out must be forbidden explicitly (NO
 fades into the background, nothing below a stand fading) or Gemini fades the foot of a stand or an arrow's tail.
 
@@ -66,15 +78,20 @@ row's columns off the sheet itself (Gemini's grid drifts), clears ONLY the label
 at 44/48 fill and writes `<folder>/sliced/<stamp>/<Act>.png` — 256 x 256 RGBA, named by the act's enumerator
 (`src/gui/icons.h`'s `kIconNames`), drop-ready — beside the input JPEG, plus `sheet_cut.png` (the whole sheet cut,
 labels cleared, full resolution: the base for a manual fix in GIMP), `sheet_cut_raw.png` (GIMP's cut alone) and
-`contact.png` (the cells on the Face gray, each mirrored act a tile of its own in an eighth row). Every file it
+`contact.png` (the cells on the Face gray, each made act — mirrored or turned — a tile of its own in an eighth row). Every file it
 writes is an act. After the cells, `PlayerNext.png` is `PlayerPrevious.png` flipped left to right (the same 256-px
-RGBA), written beside it. THERE ARE THREE 56-CELL LISTS, all 8 x 7, so nothing in a sheet tells them apart and a flag
-picks the list: the default is the current prompt's (Redo at cell 34, Player Next not drawn, PlayerNext mirrored);
-`--redo-mirrored` reads the sheets of 2026-10-20 ~09:50 (the one commit efb39ea5: Redo absent, Player Next
+RGBA), and `Newer.png` is `Older.png` with its arrow turned (`turned_twin`: of Older's alpha components the largest is
+the watch and the rest the arrow; the whole image is flipped and the original watch put back in its mirrored box, so
+the watch reads as drawn and the arrow points right on the right), both written beside their source. When Older's
+arrow touches its watch they are one component and cannot be parted: the slicer prints `TOUCHING Older: Newer not
+derived` and writes no Newer — the cue to redraw. THERE ARE FOUR 56-CELL LISTS, all 8 x 7, so nothing in a sheet tells
+them apart and a flag picks the list: the default is the current prompt's (draft 14: Redo at cell 34, Background Sound
+at cell 37, Player Next and Newer not drawn, PlayerNext mirrored, Newer turned); `--newer-drawn` reads the sheets of
+2026-10-20 ~10:05 to 2026-10-21 (Newer drawn at cell 37, PlayerNext mirrored); `--redo-mirrored` reads the sheets of 2026-10-20 ~09:50 (the one commit efb39ea5: Redo absent, Player Next
 drawn at cell 47 — only `tmp/classical_set/gemini-new4/`'s sheets were drawn from it), writing Redo as Undo mirrored
 and nothing for PlayerNext; `--legacy56` reads the sheets of 2026-10-19 (a silver Stop at cell 46 that no enumerator
 wears, Redo and Player Next drawn), writes no file for cell 46 and nothing mirrored (55 files). A sheet fed the wrong
-list slices wrong after cell 33. A sheet from the 2026-10-20 morning prompt that asked for one cell more (packed into
+list slices wrong after cell 33 (between the default and `--newer-drawn`, cell 37 alone is misnamed). A sheet from the 2026-10-20 morning prompt that asked for one cell more (packed into
 seven rows with a cell lost) slices WRONG and must not be fed in. A `CLIPPED?` line names a cell whose ink continues just past its band's edge: so far
 it has always been a label piece pooled into the icon above it (outside the crop, left in `sheet_cut.png`) or a
 drawn border's dash, never a cut icon — but look at the contact sheet. `EMPTY` names a cell with no ink.
@@ -86,7 +103,7 @@ The architect picks FROM FAMILIES, not from whole sheets: a family's members mus
 `family_sheets.py` lays every sliced sheet's block of each family side by side on 1920 x 1080 PNG pages, judged on
 the laptop only (never pushed to the tablet). The families: Starlings (Left, Right), Flags (Drop Marker, Previous / Next
 Marker, Jump to Defining Marker: the flag is the marker, so the acts that carry it are judged together, since
-2026-10-20), Undo and Redo, Watches (Revert, History View, Older, Newer), Transport keys
+2026-10-20), Undo and Redo, Watches (Revert, History View, Older, Newer — Newer the turned Older since draft 14), Transport keys
 (Play, Pause, Player Previous / Next, Repeat One, Load in Place, Close), Folders, read-only and save, Hands
 (Cancel, Add to Selection, Follow, and the conductor's Transport Play / Transport Stop — the cuffs must match), Paper
 and books (without Drop Marker, with Save Commit / Save Pull's podiums, and, since 2026-10-20, Up, Down and Value Drag, drawn as a sheet of
@@ -120,7 +137,7 @@ for a new style tile.
 
     python3 -I tools/classical_set/extract_style_tile.py <tarball-root> [Tile ...]      # a style tile into style_src/
     python3 -I tools/classical_set/dark_outlines.py                                      # style_sheet.png (+ review copies in tmp/classical_style_work/)
-    python3 -I tools/classical_set/slice_sheets.py tmp/<sheets>/*.jpg                    # <sheets>/sliced/<stamp>/<Act>.png (--redo-mirrored | --legacy56: the two older lists)
+    python3 -I tools/classical_set/slice_sheets.py tmp/<sheets>/*.jpg                    # <sheets>/sliced/<stamp>/<Act>.png (--newer-drawn | --redo-mirrored | --legacy56: the older lists)
     python3 -I tools/classical_set/flag_side.py --hide tmp/<sheets>/hide.json a=tmp/<sheets>/sliced   # left-flying flags hidden
     python3 -I tools/classical_set/family_sheets.py tmp/<pages> tmp/<sheets>/hide.json a=tmp/<sheets>/sliced@<draft>
     python3 -I tools/classical_set/act_strip.py tmp/<strip>.png <Act> a=tmp/<sheets>/sliced

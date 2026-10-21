@@ -2,17 +2,25 @@
 (architect 2026-10-19: "goal is fuzzy select with thresh 20, then manual fixes as needed. png output with alpha").
 Each sheet given is prompt.md's: the 56 acts of ORDER on 8 x 7 cells, left to right, top to bottom, a label under
 each drawn icon (architect 2026-10-20: Gemini fills the grid and never draws a partial last row, and more cells cost
-resolution, so one act the toolbar or the player wears as a twin is not drawn: PLAYERNEXT.PNG IS PLAYERPREVIOUS.PNG
-FLIPPED LEFT TO RIGHT, written beside it after the cells — the silver transport glyphs are lit straight from above, so
-the mirror keeps their light; Redo is drawn, its gold arrow lit from the top left like Undo's, a mirror would flip the
-light). THE THREE LISTS THE SHEETS HAVE CARRIED — all 8 x 7, so nothing in a sheet tells them apart and the flag picks:
-  default      ORDER: Redo at cell 34, Player Next absent (the prompt of 2026-10-20 ~10:05); PlayerNext mirrored.
+resolution, so an act the toolbar or the player wears as a twin is not drawn but made from its twin after the cells):
+  PLAYERNEXT.PNG IS PLAYERPREVIOUS.PNG FLIPPED LEFT TO RIGHT — the steel transport glyphs are lit straight from above, so
+    the mirror keeps their light; Redo is drawn, its brass arrow lit from the top left like Undo's, a mirror would flip
+    the light;
+  NEWER.PNG IS OLDER.PNG WITH ITS ARROW TURNED (architect 2026-10-21: cell 37 went to the new act Background Sound, the
+    umbrella) — the watch is NOT mirrored (its digits), the arrow moves to the other side and turns; the prompt asks
+    Older's arrow CLEAR of the watch and lit straight from above, so the flip keeps its light (turned_twin).
+THE FOUR LISTS THE SHEETS HAVE CARRIED — all 8 x 7, so nothing in a sheet tells them apart and the flag picks:
+  default      ORDER: the prompt of 2026-10-21 (draft 14): Redo at cell 34, Background Sound at cell 37, Player Next
+               and Newer absent; PlayerNext mirrored, Newer turned.
+  --newer-drawn  NEWER_DRAWN: the sheets of 2026-10-20 ~10:05 to 2026-10-21 (Newer drawn at cell 37, Player Next
+               absent); PlayerNext mirrored.
   --redo-mirrored  ONEDAY: the prompt of 2026-10-20 ~09:50, the ONE COMMIT efb39ea5 (Redo absent, Player Next drawn at
                cell 47; only tmp/classical_set/gemini-new4's sheets were drawn from it): Redo = Undo mirrored, no PlayerNext
-               file written (it is drawn); every cell after 33 is one off ORDER's.
+               file written (it is drawn); every cell after 33 is one off NEWER_DRAWN's.
   --legacy56   LEGACY56: the sheets of 2026-10-19 (Stop at cell 46, no enumerator wears it; Redo at 34 and Player Next
                drawn): 55 files, nothing mirrored.
-A sheet fed the wrong list slices wrong after its first differing cell (33). A sheet from the prompt of 2026-10-20
+A sheet fed the wrong list slices wrong from its first differing cell (between the first two cell 37 alone, misnamed;
+33 on against the others). A sheet from the prompt of 2026-10-20
 morning (one cell more than any list, packed into seven rows with a cell lost) slices WRONG and must not be fed in. The
 slicer never writes a file that is not an act.
   1. GIMP pass 1 (gimp_fuzzy.py beside this file, headless): fuzzy select at threshold 20 from the top-left corner and
@@ -52,8 +60,10 @@ slicer never writes a file that is not an act.
      cell). -> <out>/sheet_cut.png (his manual-fix base, full resolution, alpha).
   5. THE CELLS: each icon's ink box (alpha >= 26, specks and edge border dashes dropped) centered in a square at 44/48
      fill, LANCZOS to 256 -> <out>/<Act>.png, named by the act's enumerator (src/gui/icons.h's kIconNames); then each act in
-     MIRRORS the list lacks is its source flipped left to right (PIL FLIP_LEFT_RIGHT, the same 256-px RGBA); a
-     contact.png of the cells on the Face gray for the check, each mirrored act a tile of its own in an eighth row.
+     MIRRORS the list lacks is made from its source, the same 256-px RGBA: flipped left to right (PIL FLIP_LEFT_RIGHT),
+     or for TURNED (Newer) the arrow alone turned (turned_twin; 'TOUCHING Older: Newer not derived' when Older's arrow
+     touches its watch, no file written — the cue to redraw); a contact.png of the cells on the Face gray for the
+     check, each made act a tile of its own in an eighth row.
 Inputs: the sheet JPEGs on the command line. Outputs: <out> = <the sheet's folder>/sliced/<the file's 14-digit stamp>/
 (--out <dir>: <dir>/sliced/<stamp>/), never in the repository; GIMP's job lists and the pass-1 cut in the sibling
 slice_work/. SLICE_REUSE=1 skips GIMP passes 1 and 2 where sheet_cut_raw.png exists (a re-slice after a rule change, ~5 s
@@ -61,7 +71,7 @@ a sheet; ~30 s with GIMP), and the second pocket pass too where sheet_cut_raw.js
 record gets the pass: ~3 s to find the seeds, one GIMP run when there are any). A 'CLIPPED?' line names a cell whose ink continues just past its band's edge: so far always
 a label piece pooled into the icon above it (outside the crop, left in sheet_cut.png) or a drawn border's dash, never a
 cut icon — but look. 'EMPTY' names a cell with no ink.
-Run: python3 -I tools/classical_set/slice_sheets.py [--redo-mirrored | --legacy56] [--out dir] sheet.jpg ..."""
+Run: python3 -I tools/classical_set/slice_sheets.py [--newer-drawn | --redo-mirrored | --legacy56] [--out dir] sheet.jpg ..."""
 import os, sys, json, subprocess, numpy as np
 from collections import deque
 from PIL import Image
@@ -80,12 +90,19 @@ _CELLS = ['OpenProject', 'Save', 'SaveCommit', 'SavePull', 'Revert', 'LoadInPlac
           'TransportPlay', 'TransportStop']   # the 56 of the ONE-COMMIT list (Redo absent, Player Next drawn): the base of the other two
 COLS = 8; ROWS = 7
 ONEDAY = _CELLS   # --redo-mirrored: the prompt of 2026-10-20 ~09:50
-ORDER = _CELLS[:33] + ['Redo'] + _CELLS[33:46] + _CELLS[47:]   # the current prompt: Redo drawn at cell 34, Player Next not drawn
+NEWER_DRAWN = _CELLS[:33] + ['Redo'] + _CELLS[33:46] + _CELLS[47:]   # --newer-drawn: Redo drawn at cell 34, Player Next not drawn
+ORDER = NEWER_DRAWN[:36] + ['BackgroundSound'] + NEWER_DRAWN[37:]   # the current prompt (draft 14): cell 37 the umbrella, Newer not drawn
 _WITH_REDO = _CELLS[:33] + ['Redo'] + _CELLS[33:]
 LEGACY56 = _WITH_REDO[:45] + [None] + _WITH_REDO[45:55]   # --legacy56: cell 46 the silver Stop (no act), no Transport pair
-MIRRORS = {'Redo': 'Undo', 'PlayerNext': 'PlayerPrevious'}   # an act no sheet of a list draws, made from its twin
-assert len(ORDER) == len(ONEDAY) == len(LEGACY56) == COLS * ROWS
+# An act no sheet of a list draws, made from its twin after the cells: Redo (--redo-mirrored) and PlayerNext flipped left to
+# right; Newer, in TURNED, from Older by turned_twin (architect 2026-10-21: the watch keeps its digits, the arrow turns).
+MIRRORS = {'Redo': 'Undo', 'PlayerNext': 'PlayerPrevious', 'Newer': 'Older'}
+TURNED = {'Newer'}
+ARROW_MIN = 200   # turned_twin: px of alpha > 0 a part besides the watch needs to be the arrow (the cut's AA specks are 1-14 px; an arrow thousands)
+assert len(ORDER) == len(NEWER_DRAWN) == len(ONEDAY) == len(LEGACY56) == COLS * ROWS
 assert ORDER[33] == 'Redo' and 'PlayerNext' not in ORDER and ORDER[46] == 'PlayerPrevious' and ONEDAY[46] == 'PlayerNext'
+assert ORDER[35] == 'Older' and ORDER[36] == 'BackgroundSound' and 'Newer' not in ORDER and NEWER_DRAWN[36] == 'Newer'
+assert [a for a in ORDER if a not in NEWER_DRAWN] == ['BackgroundSound'] and ORDER[37:] == NEWER_DRAWN[37:]
 assert LEGACY56[33] == 'Redo' and LEGACY56[45] is None and 'PlayerNext' in LEGACY56
 
 def gimp(jobs, tag, work):
@@ -247,6 +264,36 @@ def ink_box(ink, x0, x1, y0, y1):
     if not rr or not cc: return None
     return x0 + cc[0][0], y0 + rr[0][0], x0 + cc[-1][1], y0 + rr[-1][1]
 
+def components(m):
+    """m's 8-connected components: (labels, sizes), label k + 1 for sizes[k]."""
+    H, W = m.shape; lab = np.zeros((H, W), np.int32); sizes = []
+    for y0, x0 in zip(*np.nonzero(m)):
+        if lab[y0, x0]: continue
+        n = len(sizes) + 1; q = deque([(y0, x0)]); lab[y0, x0] = n; c = 0
+        while q:
+            y, x = q.popleft(); c += 1
+            for ny in (y - 1, y, y + 1):
+                for nx in (x - 1, x, x + 1):
+                    if 0 <= ny < H and 0 <= nx < W and m[ny, nx] and not lab[ny, nx]: lab[ny, nx] = n; q.append((ny, nx))
+        sizes.append(c)
+    return lab, sizes
+
+def turned_twin(src):
+    """NEWER FROM OLDER (architect 2026-10-21): the watch is not mirrored — its digits would read backwards — but the arrow
+    moves to the other side and turns. Of src's (256 RGBA) alpha > 0 8-connected components the WATCH is the largest and
+    the ARROW everything else; the whole image is flipped left to right, the flipped watch's pixels cleared, and the
+    ORIGINAL watch (its own pixels and alpha alone) composited back over its flipped box (x' = W - (x + w), y kept). The
+    prompt asks the arrow lit straight from above, so its gradient survives the flip. None when no part besides the watch
+    reaches ARROW_MIN px: the arrow touches the watch, one component, and cannot be parted from it."""
+    a = np.asarray(Image.open(src).convert('RGBA')); W = a.shape[1]
+    lab, sizes = components(a[..., 3] > 0); k = int(np.argmax(sizes))
+    if not any(n >= ARROW_MIN for i, n in enumerate(sizes) if i != k): return None
+    watch = lab == k + 1; ys, xs = np.nonzero(watch); y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    out = a[:, ::-1].copy(); out[watch[:, ::-1]] = 0
+    layer = np.zeros_like(a); nx0 = W - x1
+    layer[y0:y1, nx0:nx0 + (x1 - x0)] = np.where(watch[y0:y1, x0:x1, None], a[y0:y1, x0:x1], 0)
+    return Image.alpha_composite(Image.fromarray(out), Image.fromarray(layer))
+
 def slice_sheet(src, root, acts):
     stamp = os.path.basename(src)[:14]; root = root or os.path.dirname(os.path.abspath(src))
     out = os.path.join(root, 'sliced', stamp) + '/'; work = os.path.join(root, 'slice_work') + '/'
@@ -295,8 +342,8 @@ def slice_sheet(src, root, acts):
     def cell_bot(r, c):   # the cell's own label's top, no margin (the 8-px growth already clears above it): an icon's foot or handle tip may
         tops = [b[0] for b in own_boxes(r, c)]; return min(tops) if tops else bands[r][0]   # sit under a neighbor's taller two-line label's top
     arr = np.asarray(im).copy(); arr[..., 3] = alpha; clean = Image.fromarray(arr); clean.save(out + 'sheet_cut.png'); ink = alpha >= 26
-    made = [a for a in MIRRORS if a not in acts]   # the acts this list mirrors
-    contact = Image.new('RGBA', (COLS * 112, (len(bands) + bool(made)) * 112), (0x62, 0x6C, 0x7B, 255))   # the eighth row holds the mirrored acts
+    made = [a for a in MIRRORS if a not in acts]   # the acts this list makes from their twins
+    contact = Image.new('RGBA', (COLS * 112, (len(bands) + bool(made)) * 112), (0x62, 0x6C, 0x7B, 255))   # the eighth row holds the made acts
     for i, act in enumerate(acts):
         if act is None: continue   # a legacy sheet's silver Stop: no act, no file
         c, r = i % COLS, i // COLS; t0, t1 = cell_top(r, c), cell_bot(r, c)   # the icon band of a cell: from the label above it to its own
@@ -310,16 +357,23 @@ def slice_sheet(src, root, acts):
         crop = clean.crop(box); sq.paste(crop, ((side - crop.size[0]) // 2, (side - crop.size[1]) // 2))
         icon = sq.resize((256, 256), Image.LANCZOS); icon.save(out + act + '.png')
         g = icon.resize((96, 96), Image.LANCZOS); contact.paste(g, (c * 112 + 8, r * 112 + 8), g)
-    for k, act in enumerate(made):   # THE MIRRORED TWINS (architect 2026-10-20): the source's file flipped left to right, never drawn
-        twin = Image.open(out + MIRRORS[act] + '.png').transpose(Image.FLIP_LEFT_RIGHT); twin.save(out + act + '.png')
-        g = twin.resize((96, 96), Image.LANCZOS); contact.paste(g, (k * 112 + 8, len(bands) * 112 + 8), g)
+    k = 0
+    for act in made:   # THE MADE TWINS (architect 2026-10-20, Newer 2026-10-21): flipped left to right, or the arrow turned; never drawn
+        source = out + MIRRORS[act] + '.png'
+        if not os.path.exists(source): print('  NO SOURCE', MIRRORS[act] + ':', act, 'not made'); continue   # its cell EMPTY
+        twin = turned_twin(source) if act in TURNED else Image.open(source).transpose(Image.FLIP_LEFT_RIGHT)
+        if twin is None: print('  TOUCHING %s: %s not derived' % (MIRRORS[act], act), stamp); continue
+        twin.save(out + act + '.png')
+        g = twin.resize((96, 96), Image.LANCZOS); contact.paste(g, (k * 112 + 8, len(bands) * 112 + 8), g); k += 1
     contact.save(out + 'contact.png'); print(stamp, '->', out)
 
 def main():
     a = sys.argv[1:]; root = None
-    if '--legacy56' in a and '--redo-mirrored' in a: sys.exit('--legacy56 and --redo-mirrored name two lists: give one')
-    acts = LEGACY56 if '--legacy56' in a else ONEDAY if '--redo-mirrored' in a else ORDER
-    a = [x for x in a if x not in ('--legacy56', '--redo-mirrored')]
+    lists = {'--newer-drawn': NEWER_DRAWN, '--redo-mirrored': ONEDAY, '--legacy56': LEGACY56}
+    given = [x for x in a if x in lists]
+    if len(given) > 1: sys.exit(' and '.join(given) + ' name %d lists: give one' % len(given))
+    acts = lists[given[0]] if given else ORDER
+    a = [x for x in a if x not in lists]
     if a[:1] == ['--out']: root = os.path.abspath(a[1]); a = a[2:]
     if not a: sys.exit(__doc__)
     for src in a: slice_sheet(os.path.abspath(src), root, acts)

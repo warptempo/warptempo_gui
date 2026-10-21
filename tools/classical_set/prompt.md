@@ -5,18 +5,22 @@ the same outline weight, the same gloss, the same proportions and sense of volum
 THE WORLD OF MOZART'S VIENNA, THE LATE 18TH CENTURY: every object is something a musician or copyist of that time would
 have known — orchestral instruments (violin, cello, oboe, horn, timpani, harp, fortepiano), the conductor's baton and
 podium, sheet music, the staff, notes, rests, clefs, bar lines, a metronome, a tuning fork, a music stand, a quill and
-inkwell, a wax seal, a pocket watch, a leather portfolio, a post horn, an opera house — or a plain gold or silver
+inkwell, a wax seal, a pocket watch, a leather portfolio, a post horn, an opera house — or a plain brass or polished-steel
 symbol in the same manner. Nothing from classical antiquity (no laurel wreaths, no marble busts or columns, no lyres). Draw every object FRONT-ON (head on). Bold, simple shapes with few elements and thick strokes: the icons will be shown at 48 x 48 pixels
-on a grey-blue button, so each must read at a glance at that size, with STRONG CONTRAST against a mid-grey ground.
+on a NEAR-BLACK EBONY button, so each must read at a glance at that size against a near-black ground: a light body, bright
+highlights and light edges carry the reading; no object may be black or near-black as a whole (its outline is dark, its body is not).
 EVERY ICON IS ONE SOLID, CLOSED OBJECT (or two touching): NO staff lines, bar lines, sound waves, dots, flakes or any
 thin line floating loose on the background — a staff may appear only drawn ON a sheet of score paper that is itself
 an object with an outline. Nothing thin, nothing detached. EVERY ICON IS OPAQUE: no see-through glass, lens or window
 showing the background through it — whatever stands behind a lens is drawn on the object itself.
 
-THE COLORS ARE CLASSICAL: gold and brass, ivory, ebony, walnut and dark leather, burgundy, parchment, a little deep
-blue — never neon, never orange or lime. ALL ARROWS ARE ONE SHAPE: a thick, chunky GOLD arrow with a dark outline and a
-gloss highlight — the same arrow, only turned, for left, right, up and down, and the same arrow beside a pennant flag,
-a watch or a podium where the list says so. Never a thin, pale, black or grey arrow.
+THE MATERIALS ARE THOSE OF MOZART'S OWN FORTEPIANO (Anton Walter, Vienna, about 1782) AND HIS ROOM: OLD BRASS — the
+instrument's lock plate and hinges, warm, hand-polished, a deep old brass, NOT gilt, NOT gold, NOT mirror-bright (NO GOLD
+ANYWHERE IN THE SET); POLISHED STEEL — its strings and tuning pins, a cool pale grey metal, not silver; BONE — its white
+keys, a warm off-white, not ivory; WALNUT — its case, a plain honey-brown wood; and beside them tan calf leather, burgundy,
+parchment and a little deep blue — never neon, never orange or lime. ALL ARROWS ARE ONE SHAPE: a thick, chunky BRASS
+arrow with a dark outline and a gloss highlight — the same arrow, only turned, for left, right, up and down, and the
+same arrow beside a pennant flag, a watch or a podium where the list says so. Never a thin, pale, black or grey arrow.
 
 Lay the 56 icons out on a grid of 8 columns by 7 rows of equal square cells, in the order listed, left to right, top
 to bottom. One icon per cell, centered, filling about 80 % of its cell, generous empty space between cells. The whole
@@ -25,37 +29,41 @@ lines, no cell borders. NO drop shadows, NO ground shadows, NO reflections under
 letters or numbers on any object. Under each cell, outside the icon, write its number and short label in small plain
 black text so I can identify it. Nothing else on the sheet.
 
-1. Open Project — open a piece: an open folio of sheet music
-2. Save — keep the piece: the score slipped into a leather portfolio or music case
-3. Save Commit — publish the checkpoint upward: the score on a conductor's podium desk with THE GOLD ARROW pointing up
+1. Open Project — open a piece: an open folio of sheet music STANDING UPRIGHT and seen front-on, its two pages spread
+    open toward the viewer and TALL — the open folio about as tall as it is wide, filling the cell top to bottom as the
+    music case of no. 2 does, never a flat, low book seen from above
+2. Save — keep the piece: a sheet of score paper NEATLY slipped into a tan calf-leather portfolio or music case, the
+    sheet SQUARE to the case — its edges parallel to the case's edges, standing straight up out of the opening at a right
+    angle, never tilted, never shoved in askew or at a slant; the case about as wide as it is tall, filling the cell
+3. Save Commit — publish the checkpoint upward: the score on a conductor's podium desk with THE BRASS ARROW pointing up
     beside it — the desk on a SQUAT, solid base, no thin stand or leg showing, nothing below it fading
-4. Save Pull — fetch the newer checkpoint down: the same score on the same squat podium desk with THE GOLD ARROW pointing
+4. Save Pull — fetch the newer checkpoint down: the same score on the same squat podium desk with THE BRASS ARROW pointing
     down beside it
-5. Revert — back to the viewed checkpoint: the antique pocket watch with A GOLD UNDO ARROW
+5. Revert — back to the viewed checkpoint: the antique brass-cased pocket watch with A BRASS UNDO ARROW
 6. Load in Place — load the walked version into the editor, a big act that must be unmistakable: ONE bold CHECK MARK
-    (a tick), silver with the dark outline, nothing else
+    (a tick), polished steel with the dark outline, nothing else
 7. Render — perform the warp (the "record" act): a red wax seal pressed onto the score
 8. Cancel — stop the running render: a conductor's raised palm
 9. Play Renders — audition the rendered files: a gramophone with its brass horn
-10. Folder — a folder in a file list: a closed leather music portfolio
+10. Folder — a folder in a file list: a closed tan calf-leather music portfolio
 11. Wav Row — an audio file in a file list: a black gramophone record (a flat disc) with a round parchment center label
 12. Delete Folder — throw a render folder away: crumpled score pages in a waste basket
-13. Close — close the player: ONE bold X (a cross), silver with the dark outline, nothing else
+13. Close — close the player: ONE bold X (a cross), polished steel with the dark outline, nothing else
 14. Source — the primary source, the original recording: a thick old score book with a red ribbon
 15. Target — the authoring surface, where the new tempo is written: a quill writing on a sheet of score paper
 16. Warp — the tempo change itself, the act the program is named for: a conductor's baton, bold, with a dark
     outline, a cork handle and a white shaft, pointing up and right
 17. Phase Reset — a synchronization instant, an exact snap to the source at one moment: a black and white film clapperboard, the
-    director's twin of the conductor's baton, with thin gold scrollwork painted along the slate's own edges — NOT a
+    director's twin of the conductor's baton, with thin brass scrollwork painted along the slate's own edges — NOT a
     picture frame around it
 18. Full Zoom Out — show the whole piece: a magnifying glass — a brass-rimmed lens with a turned wooden handle — held
-    over a sheet of score paper, with a bold GOLD MINUS SIGN seen through the lens on the paper; the paper fills the whole
+    over a sheet of score paper, with a bold BRASS MINUS SIGN seen through the lens on the paper; the paper fills the whole
     lens, so nothing of the background shows through the glass (the same glass and paper as no. 19)
 19. Center — center the view on the playhead: the same magnifying glass held over the same sheet of score paper, with a
     SINGLE large quarter note seen through the lens on the paper; the paper fills the whole lens (the same glass and paper
     as no. 18)
 20. Waveform Magnification — make the quiet waveform louder on screen: a brass horn bell, alone, no sound waves
-21. Drop Marker — place a marker at the playhead: a gold pennant flag on a short pole, the pennant's cloth flying to the
+21. Drop Marker — place a marker at the playhead: a brass pennant flag on a short pole, the pennant's cloth flying to the
     RIGHT of its pole, planted on a sheet of score paper
 22. Delete Markers — remove the selected markers: a copyist's erasing knife (a small penknife) scraping a note off a
     sheet of score paper
@@ -68,8 +76,8 @@ black text so I can identify it. Nothing else on the sheet.
 26. Toggle Follow — the view follows the playhead during playback: a page-turner's hand turning a score page
 27. Toggle Grid Iterations — render every cell of a grid of variants: a chessboard, 6 x 6 squares in a wooden frame, seen from the front, no pieces
 28. Toggle Add to Selection — add to the selection rather than replace: a printer's pointing hand (a manicule, with
-    its cuff) with a small gold plus sign beside the fingertip
-29. Jump to Defining Marker — jump back to the earlier marker that defines this value: the gold pennant flag of no. 21
+    its cuff) with a small brass plus sign beside the fingertip
+29. Jump to Defining Marker — jump back to the earlier marker that defines this value: the brass pennant flag of no. 21
     (as no. 21, cloth to the right) standing at the LEFT edge, and at the right a carrier pigeon in flight, its beak
     pointing LEFT, flying toward the flag
 30. Open Text Editor — edit the marker's text: a quill and inkwell beside a blank score page (no writing on it)
@@ -77,45 +85,50 @@ black text so I can identify it. Nothing else on the sheet.
     and 41 with TWO staves drawn on it, one above the other: the UPPER staff's notes crowd closer and closer toward the
     right (as no. 40), the LOWER staff's notes open wider and wider toward the right (as no. 41); the sheet itself a plain
     rectangle, never pinched, curved or waisted
-32. Read-Only — editing locked: a closed GOLD padlock on a leather music case
-33. Undo — ONE curved GOLD UNDO ARROW, its tail a thick band of EVEN width with PARALLEL edges, never a tail that tapers
-34. Redo — ONE curved GOLD REDO ARROW, the same thick parallel-edged band as no. 33 turned the other way, LIT FROM THE
+32. Read-Only — editing locked: a closed BRASS padlock on a tan calf-leather music case
+33. Undo — ONE curved BRASS UNDO ARROW, its tail a thick band of EVEN width with PARALLEL edges, never a tail that tapers
+34. Redo — ONE curved BRASS REDO ARROW, the same thick parallel-edged band as no. 33 turned the other way, LIT FROM THE
     SAME SIDE as no. 33 (the same highlight at the top left, the same shadow at the lower right — the two are drawn side
     by side on one toolbar), never a tail that tapers
-35. Toggle History View — show the checkpoint history: the antique pocket watch alone, open on its chain, no arrow
-36. Older — the previous checkpoint: the antique pocket watch with THE GOLD ARROW pointing left beside it
-37. Newer — the next checkpoint: the antique pocket watch with THE GOLD ARROW pointing right beside it
-38. Left — nudge left by a hair: a starling (Mozart's pet bird) standing and facing LEFT — a plain glossy dark bird, NO
-    gold speckles, no dust, no spots on its plumage — nothing else
+35. Toggle History View — show the checkpoint history: the antique brass-cased pocket watch alone, open on its chain, no arrow
+36. Older — the previous checkpoint: the antique brass-cased pocket watch with THE BRASS ARROW pointing left beside it, at
+    the LEFT; THE ARROW STANDS CLEAR OF THE WATCH with a gap of plain ground between its head and the watch's rim, nothing
+    touching, and the arrow is lit straight from above (its highlight along its top edge, its shadow along its bottom edge)
+37. Background Sound — a soothing sound (rain) played in the background while one works: an OPEN UMBRELLA seen front-on,
+    held upright, ONE closed object — a canopy of burgundy silk with bone-colored tips at its rib ends, a turned walnut
+    handle below and a brass ferrule at its top; no rain, no drops, nothing detached, nothing below the handle fading
+38. Left — nudge left by a hair: a starling (Mozart's pet bird) standing and facing LEFT — a glossy bird with the
+    starling's own green-and-purple iridescent sheen on its plumage and its yellow bill, so it reads on a dark ground; NO
+    speckles, no dust, no spots on its plumage — nothing else
 39. Right — nudge right by a hair: the SAME starling turned to face RIGHT, nothing else
 40. Up — speed up the tempo (accelerando): a flat, straight-edged sheet of score paper with one staff of notes drawn on it,
     the notes spaced WIDE apart at the LEFT and crowding closer and closer together toward the RIGHT — the music getting
     faster across the page; the notes drawn ON the sheet, never floating; the sheet a plain rectangle
 41. Down — slow the tempo (ritardando): the SAME flat sheet of score paper, the notes crowded TIGHT at the LEFT and spacing
     wider and wider apart toward the RIGHT — the music slowing across the page
-42. Previous Marker — walk to the previous marker: the gold pennant flag of no. 21 (as no. 21, cloth to the right) at
-    the LEFT, THE GOLD ARROW at the right pointing LEFT, its head touching the flag
-43. Next Marker — walk to the next marker: the gold pennant flag of no. 21 (as no. 21, cloth to the right) at the
-    RIGHT, THE GOLD ARROW at the left pointing RIGHT, its head touching the flag
-44. Switch Tab — switch between the two tabs: a closed leather notebook with two index tabs on its fore-edge, the
-    front tab gold — no plain white sheet
-THE RENDER PLAYER'S GLYPHS ARE SILVER, ONE FAMILY: the four drawn transport glyphs (45–48; Player Next is the mirrored
-fifth), the check mark (6), the X (13) and Up a Folder's arrow (54) — brushed silver / pewter with the dark outline and
-the same gloss, every one the SAME shade, so they stand apart from the gold of the editor's acts. Not green, not red,
-not blue.
-45. Play — a bold silver triangle pointing right
-46. Pause — two bold silver bars
-47. Player Previous — skip to the previous render: a bold silver double-arrow left with a bar (its Player Next twin is not
+42. Previous Marker — walk to the previous marker: the brass pennant flag of no. 21 (as no. 21, cloth to the right) at
+    the LEFT, THE BRASS ARROW at the right pointing LEFT, its head touching the flag
+43. Next Marker — walk to the next marker: the brass pennant flag of no. 21 (as no. 21, cloth to the right) at the
+    RIGHT, THE BRASS ARROW at the left pointing RIGHT, its head touching the flag
+44. Switch Tab — switch between the two tabs: a closed tan calf-leather notebook with two index tabs on its fore-edge, the
+    front tab brass — no plain white sheet
+THE RENDER PLAYER'S GLYPHS ARE POLISHED STEEL, ONE FAMILY: the four drawn transport glyphs (45–48; Player Next is the
+mirrored fifth), the check mark (6), the X (13) and Up a Folder's arrow (54) — polished steel, a cool pale grey metal with
+the dark outline and the same gloss, every one the SAME shade, so they stand apart from the brass of the editor's acts.
+Not silver-white, not green, not red, not blue.
+45. Play — a bold polished-steel triangle pointing right
+46. Pause — two bold polished-steel bars
+47. Player Previous — skip to the previous render: a bold polished-steel double-arrow left with a bar (its Player Next twin is not
     drawn — the slicer mirrors this one)
-48. Repeat One — repeat the one render: a circular silver arrow, nothing inside it
+48. Repeat One — repeat the one render: a circular polished-steel arrow, nothing inside it
 49. Settings — a tuning key and a tuning fork crossed
 50. Toggle Tooltips — show help: an open programme booklet with a question mark
 51. Card Normal — the notification card's information glyph: a bold blue "i" on a round parchment medallion
 52. BPM Iterations — render the tempo sweep over a run: a wooden pyramid metronome, its pendulum mid-swing on the front face
 53. Card Critical — the notification card's error glyph: a bold red "!" on the same round parchment medallion (the
     twin of no. 51)
-54. Up a Folder — go up to the parent folder: the closed leather music portfolio of no. 10 with a SILVER arrow (the
-    gold arrow's shape in silver) pointing up beside it
+54. Up a Folder — go up to the parent folder: the closed tan calf-leather music portfolio of no. 10 with a POLISHED-STEEL
+    arrow (the brass arrow's shape in steel) pointing up beside it
 55. Transport Play — start playback in the editor: the conductor's ONE hand in a white lace cuff, large, filling the cell,
     RAISED high at the upbeat holding the baton straight up at 90 degrees — no face, no body, seen from behind the condutor
 56. Transport Stop — stop playback in the editor: the SAME cuffed hand, large, LOWERED flat, palm down, the baton held

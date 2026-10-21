@@ -9,6 +9,9 @@ Flatten, the wrench in Settings, GNOME's tan folder in Folder; each was replaced
 The sheet carries no labels and no shadows (every drop shadow removed at the extraction or in the product's files).
 
 THE TREATMENT, on parsed COPIES (sources never touched):
+0. RECOLOR: a tile's own colors remapped at the parse, before everything below (RECOLOR, by tile): the star (tile 1, the
+   model for the arrows' metal) goes from Tango's gold to OLD BRASS (architect 2026-10-21: the set's materials are Mozart's
+   fortepiano's, NO GOLD anywhere), its source left verbatim.
 1. CANDIDATES: every drawable whose stroke is a tonal outline — a solid or gradient stroke whose darkest opaque stop has
    HLS lightness <= L_MAX and whose effective opacity (the opacity chain x stroke-opacity) >= OP_MIN. White / light
    highlights and faint shading strokes fall out by those two numbers.
@@ -54,7 +57,7 @@ AS = HERE + 'style_src/'
 # tiles 1, 5-8 and 11 relate to no act (architect 2026-10-20: the clock, the padlocks, the wrench, the broom and the tan
 # folder they replaced were copied into the output set).
 TILES = [
-    (AS + 'Starred.svg', '(no act) starred (the glossy gold star)'),
+    (AS + 'Starred.svg', '(no act) starred (the glossy brass star)'),
     (A + 'Source.svg', 'Source (accessories-dictionary)'),
     (A + 'Target.svg', 'Target (input-tablet)'),
     (A + 'PhaseReset.svg', 'PhaseReset (camera-photo)'),
@@ -77,8 +80,28 @@ ADD_OUTLINE = {
 # A part drawn as a bare stroke with no outline gets an ink UNDERLAY: a copy of it painted just before it, its
 # stroke-width widened by this many user units (x1.5 when thick), so one outline-width of ink shows each side.
 ADD_UNDERLAY = {}
+# THE STAR IN OLD BRASS (architect 2026-10-21): every yellow fill and gradient stop of style_src/Starred.svg by ONE rule —
+# the hue BRASS_DH degrees toward brass (Tango's 49-54 to 39-44), the saturation x BRASS_S, the lightness L' = a.L + b —
+# so its lightest stop fef6b7 reads as a warm pale brass (dac284), its body edd400 as old brass (a0812e) and its darkest
+# 7a6300 as deep old brass (60481c): the settled brass tile's mean 5B4024 lifted to a readable icon tone. White glints and
+# black stay; the outline is inked from the brass by step 3.
+BRASS_DH, BRASS_S, BRASS_L = 10, 0.55, (0.72, 0.07)
+STAR_YELLOWS = ('#edd400', '#ffef65', '#fef6b7', '#eed404', '#e0b700', '#c4a000',   # its fills
+                '#fce94f', '#fcf085', '#fef4a9', '#fdf4a4', '#f2c500', '#7a6300')   # its stops (and c4a000)
+
+
+def brass(hexc):
+    h, l, s = colorsys.rgb_to_hls(*(int(hexc[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+    r, g, b = colorsys.hls_to_rgb((h - BRASS_DH / 360) % 1, BRASS_L[0] * l + BRASS_L[1], s * BRASS_S)
+    return '#%02x%02x%02x' % tuple(int(round(x * 255)) for x in (r, g, b))
+
+
+RECOLOR = {0: {c: brass(c) for c in STAR_YELLOWS}}   # tile index -> {source hex: new hex}
 KEY = [None]
 NOTES = {
+    0: 'the star re-tinted from Tango\'s gold to OLD BRASS (2026-10-21) by one rule over its twelve yellows: hue -%d deg, '
+       'saturation x%.2f, lightness x%.2f + %.2f (fef6b7 -> %s, edd400 -> %s, 7a6300 -> %s); white glints and black as '
+       'drawn' % (BRASS_DH, BRASS_S, BRASS_L[0], BRASS_L[1], brass('#fef6b7'), brass('#edd400'), brass('#7a6300')),
     1: 'the ribbon left tonal (sewn to the book; inked, the narrow ribbon read black)',
     2: 'the tablet has NO outline in 3.22 (its edge is its gradient); a 1-unit ink stroke ADDED round its body '
        '(1.5 thick); the pen\'s own black outline as drawn, darkened by the rule',
@@ -162,11 +185,26 @@ def fnum(v, d=1.0):
         return d
 
 
+def recolor(root, table):
+    """Every hex color in a fill, stroke, stop-color or style attribute found in table replaced by its value."""
+    if not table:
+        return
+    pat = re.compile(r'#[0-9a-fA-F]{6}\b')
+    for e in root.iter():
+        if not isinstance(e.tag, str):
+            continue
+        for k in ('style', 'fill', 'stroke', 'stop-color'):
+            v = e.get(k)
+            if v and '#' in v:
+                e.set(k, pat.sub(lambda m: table.get(m.group(0).lower(), m.group(0)), v))
+
+
 class Doc:
-    def __init__(self, path):
+    def __init__(self, path, table=None):
         parser = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=True, remove_comments=True)
         self.tree = etree.parse(path, parser)
         self.root = self.tree.getroot()
+        recolor(self.root, table)
         self.ids = {e.get('id'): e for e in self.root.iter() if isinstance(e.tag, str) and e.get('id')}
         self.draw = []
         self._walk(self.root, {}, 1.0, False)
@@ -418,15 +456,15 @@ def run():
     for idx, (src, _) in enumerate(TILES):
         src = os.path.realpath(src)
         KEY[0] = idx
-        res = classify(Doc(src), idx)
+        res = classify(Doc(src, RECOLOR.get(idx)), idx)
         for kind, thick, dbg in (('dark', False, False), ('thick', True, False), ('class', False, True)):
-            doc = Doc(src)
+            doc = Doc(src, RECOLOR.get(idx))
             apply(doc, res, thick, dbg)
             sv = d + '%02d_%s.svg' % (idx, kind); png = d + '%02d_%s.png' % (idx, kind)
             doc.tree.write(sv)
             subprocess.run(['resvg', sv, png, '-w', '480', '-h', '480'], check=True, stderr=subprocess.DEVNULL)
             outs[kind].append(png)
-        doc = Doc(src)
+        doc = Doc(src, RECOLOR.get(idx))
         rows = []
         for i, (outer, frac, pi, opx) in sorted(res.items()):
             el = doc.draw[i][0]
