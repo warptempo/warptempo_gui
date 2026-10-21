@@ -2477,9 +2477,8 @@ enum class RedesignButton {
     // THE READ-ONLY TOGGLE (2026-08-14), the padlock's new home: it left the
     // TABS, where it was a per-tab slot, for a roster button that reports THE
     // ACTIVE TAB's read_only bit — a lit lamp when the tab is locked, unlit
-    // when it is not, wearing the padlock pair (architect 2026-10-14): the
-    // open padlock (ReadOnlyUnlocked) while unlocked, the closed one
-    // (ReadOnlyLocked) while locked (redesign_button_glyph).
+    // when it is not, wearing the one ReadOnly padlock in both states
+    // (architect 2026-10-21; the pair of 2026-10-14 reversed).
     //
     // THE MOVE IS WHAT MAKES IT ITS CHORD, with no exception: bare `o`
     // toggles the ACTIVE tab's read-only and nothing else, and this button
@@ -16765,14 +16764,11 @@ inline int redesign_button_glyph(const AppState& a, RedesignButton b) {
         // architect: "use the original, not the modified": the tab strip
         // says which tab is active, so the glyph no longer does. Its swap to
         // TabDetachB on tab B stood 2026-10-12 to 2026-10-18.)
-        // THE READ-ONLY TOGGLE WEARS THE PADLOCK PAIR (architect 2026-10-14):
-        // the table's ReadOnlyUnlocked (the open padlock) while the active tab is
-        // unlocked, ReadOnlyLocked (the closed one) while it is locked; its
-        // lit face says the same bit (redesign_button_selected). The stash
-        // carries it, so the per-tick comparator repaints the face on any
-        // writer of the lock.
-        case RedesignButton::IconReadOnly:
-            return active_view_state(a).read_only;
+        // (THE READ-ONLY TOGGLE WEARS ONE GLYPH, ReadOnly, in both states
+        // since 2026-10-21 — the lock is the lamp's lit / sunken face alone,
+        // redesign_button_selected, as every toggle's; the padlock pair of
+        // 2026-10-14 reversed, architect: the padlock "is not supposed to
+        // have an open and closed state".)
         default:
             return false;
     }

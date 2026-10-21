@@ -43,8 +43,7 @@ PlayerNext	media-skip-forward	g5937	the etched halo pair round the glyph (a dark
 Cancel	process-stop	g6501	floor shadow
 Down	go-down	path6460-6-4-4-0 path6460-6-4-4-3-55	floor shadow (2)
 Up	go-up	path6460-6-4-4-0-5-8 path6460-6-4-4-3-55-3-3	floor shadow (2)
-ReadOnlyUnlocked	changes-allow	rect5961	floor shadow
-ReadOnlyLocked	changes-prevent	rect5961-79	floor shadow
+ReadOnly	changes-prevent	rect5961-79	floor shadow
 PreviousMarker	go-first	path6460-6-4-4-1 path6460-6-4-4-3-5 path6460-6-4-4-1-9 path6460-6-4-4-3-5-5	floor shadow (4: bar and arrow)
 NextMarker	go-last	g4226 g4222	floor shadow (2 groups: bar and arrow)
 SwitchTab	preferences-system-windows	rect4667-1-5-6-2	blurred halo behind each window (one rect, two uses)

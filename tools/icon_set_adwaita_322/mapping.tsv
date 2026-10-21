@@ -31,8 +31,7 @@ PlayerNext	media-skip-forward	media-control-icons.svg	456	150	48	48	-
 PlayerPrevious	media-skip-backward	media-control-icons.svg	156	150	48	48	-
 PlayRenders	applications-multimedia	applications-multimedia.svg	296	50	48	48	-
 PreviousMarker	go-first	navigation-icons.svg	456	50	48	48	-
-ReadOnlyLocked	changes-prevent	changes.svg	296	50	48	48	-
-ReadOnlyUnlocked	changes-allow	changes.svg	696	50	48	48	-
+ReadOnly	changes-prevent	changes.svg	296	50	48	48	-
 Redo	edit-redo	edit-undo-redo.svg	76	300	48	48	-
 Render	media-record	media-control-icons.svg	506	150	48	48	-
 RepeatOne	media-playlist-repeat	media-control-icons.svg	56	150	48	48	-

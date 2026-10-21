@@ -2,7 +2,7 @@
 
 ONE FLAT FOLDER, ONE FILE PER `icons::Icon` ENUMERATOR (`src/gui/icons.h`), EACH NAMED BY ITS ACT (architect
 2026-10-19: "since the actions are essentially complete, we should use the action name"): `<Act>.png` or `<Act>.svg`,
-the act's tooltip name in PascalCase — `Warp.png`, `Undo.svg`, `ReadOnlyLocked.svg`. THIS FOLDER IS THE DROP ROAD
+the act's tooltip name in PascalCase — `Warp.png`, `Undo.svg`, `ReadOnly.svg`. THIS FOLDER IS THE DROP ROAD
 (architect 2026-10-19: "simply drop a new icon with the right name, and if both a png and svg exist, the GUI favors the
 png … the goal is I can build and push after any icon change, without needing to consult"): a square PNG with alpha at
 256 px, named `<Act>.png`, dropped here replaces that act's glyph at the next launch on the laptop and at the next APK
@@ -131,7 +131,7 @@ finds the playhead; its 48 slot (300, 50), the sheet's other being edit-find-rep
 (the view shrunk back; the second 48 slot of `view-fullscreen-restore.svg`, (696.00012, 50.000008), proved against the
 shipped `view-restore.png` at d 0.65 where the first slot sits at 54.7) and Toggle Waveform Magnification
 `audio-volume-high` (the loud speaker for the louder waveform), zoom.svg's three magnifiers retired ("low contrast"); the
-Read-Only toggle the padlock pair, `changes-allow` unlocked and `changes-prevent` locked; Save `document-save` (the
+Read-Only toggle the one padlock `changes-prevent` in both states (2026-10-21; the `changes-allow` pair of 2026-10-14 retired); Save `document-save` (the
 floppy retired); Flatten `edit-clear-all` (3.22's own broom); Load in Place `edit-paste`. CardCritical wears
 `process-stop`, as Cancel does (a link). Every seat's drawing is named in the table below. (Toggle Cumulative's
 `accessories-calculator` and Toggle Session History's `network-wired-disconnected` left the folder 2026-10-19 with
@@ -217,8 +217,7 @@ reference left dangling. The disabled face has no file of its own: the product b
 | Cancel | `process-stop` | `g6501` | floor shadow |
 | Down | `go-down` | `path6460-6-4-4-0` `path6460-6-4-4-3-55` | floor shadow (2) |
 | Up | `go-up` | `path6460-6-4-4-0-5-8` `path6460-6-4-4-3-55-3-3` | floor shadow (2) |
-| ReadOnlyUnlocked | `changes-allow` | `rect5961` | floor shadow |
-| ReadOnlyLocked | `changes-prevent` | `rect5961-79` | floor shadow |
+| ReadOnly | `changes-prevent` | `rect5961-79` | floor shadow |
 | PreviousMarker | `go-first` | `path6460-6-4-4-1` `path6460-6-4-4-3-5` `path6460-6-4-4-1-9` `path6460-6-4-4-3-5-5` | floor shadow (4: bar and arrow) |
 | NextMarker | `go-last` | `g4226` `g4222` | floor shadow (2 groups: bar and arrow) |
 | SwitchTab | `preferences-system-windows` | `rect4667-1-5-6-2` | blurred halo behind each window (one rect, two uses) |
@@ -285,8 +284,7 @@ The extracted SVGs, `tools/icon_set_adwaita_322/`'s `README_table.md` (the links
 | PlayerPrevious | `media-skip-backward` | `media-control-icons.svg` | 156, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
 | PlayRenders | `applications-multimedia` | `applications-multimedia.svg` | 296, 50, 48, 48 | `b4551addc300f3ca7d6c5c9f22044c7db2dc227e3987877cb0b99de634508ed2` | 0.0 -0.3 |  |
 | PreviousMarker | `go-first` | `navigation-icons.svg` | 456, 50, 48, 48 | `c4750deb87d0b477ccb60aeda9276cae6fdec2fa467c995d3ec6e4def7c127dd` | -0.5 -0.5 |  |
-| ReadOnlyLocked | `changes-prevent` | `changes.svg` | 296, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | 1.4 0.5 | NEW: Read-Only while locked (architect 2026-10-14) |
-| ReadOnlyUnlocked | `changes-allow` | `changes.svg` | 696, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | -0.6 0.9 | NEW: Read-Only while unlocked (architect 2026-10-14) |
+| ReadOnly | `changes-prevent` | `changes.svg` | 296, 50, 48, 48 | `f33d7f5e7945f2c772cca61ca2177ecb28080926a1f53a8b2cbbb63581b8d217` | 1.4 0.5 | NEW: Read-Only, one padlock in both states (architect 2026-10-21) |
 | Redo | `edit-redo` | `edit-undo-redo.svg` | 76, 300, 48, 48 | `f898c87c923e161e6a4e2b19ac605f4651fdb8bbbcfcc57f962258e5fd5c97f0` | 0.0 -1.5 |  |
 | Render | `media-record` | `media-control-icons.svg` | 506, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 0.0 |  |
 | RepeatOne | `media-playlist-repeat` | `media-control-icons.svg` | 56, 150, 48, 48 | `253ef37680b01b4be919bade07de9d6190f7258e14b53d2ba15d49d62f5d9fcc` | 0.0 -1.5 |  |

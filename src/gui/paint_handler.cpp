@@ -855,11 +855,10 @@ constexpr IconRowDef kIconRowButtons[] = {
     // outside the `h` view having been Play renders' own; the two that stay
     // keep his order and Listen still opens the group.
     {RedesignButton::IconListen, icons::Icon::PlayRenders},
-    // The read-only toggle wears the open padlock here, while unlocked, and
-    // the closed one while locked (architect 2026-10-14,
-    // redesign_button_icon); its lit / sunken face says read-only too, as
+    // The read-only toggle wears the one ReadOnly padlock in both states
+    // (architect 2026-10-21); its lit / sunken face says read-only, as
     // every toggle's does.
-    {RedesignButton::IconReadOnly,       icons::Icon::ReadOnlyUnlocked},
+    {RedesignButton::IconReadOnly,       icons::Icon::ReadOnly},
     // SETTINGS (architect 2026-09-29), right after the padlock and ahead of
     // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
     // `;`, the settings prompt, wearing Settings —
@@ -1051,10 +1050,6 @@ icons::Icon redesign_button_icon(const AppState& app, RedesignButton b,
         // needs no chord exception, because Space already toggles.
         case RedesignButton::TransportPlayStop:
             return icons::Icon::TransportStop;
-        // THE READ-ONLY TOGGLE WHILE LOCKED (architect 2026-10-14): the closed
-        // padlock; unlocked it wears the table's open one.
-        case RedesignButton::IconReadOnly:
-            return icons::Icon::ReadOnlyLocked;
         default:
             return table_icon;
     }

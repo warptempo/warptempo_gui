@@ -21,7 +21,7 @@ import os, sys, hashlib, shutil, tempfile
 HERE=os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0,HERE)
 import extract as X, text_to_paths as TP, body_shift as BS
 NOTES={'Source':'NEW: Source (architect 2026-10-14)','PhaseReset':'NEW: Phase reset (architect 2026-10-15: the phase snapshot)',
-'ReadOnlyUnlocked':'NEW: Read-Only while unlocked (architect 2026-10-14)','ReadOnlyLocked':'NEW: Read-Only while locked (architect 2026-10-14)',
+'ReadOnly':'NEW: Read-Only, one padlock in both states (architect 2026-10-21)',
 'LoadInPlace':'Load in Place (architect 2026-10-14)','Save':'the floppy retired (architect 2026-10-14)','Target':'NEW: Target (architect 2026-10-14)',
 'Flatten':'Flatten: the broom (architect 2026-10-14)',
 'HistoryView':'History: the clock turned back again (architect 2026-10-18, "go back to using the original git clock icon")',

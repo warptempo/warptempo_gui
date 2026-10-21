@@ -71,7 +71,7 @@ P2_MIN, P2_MEAN, P2_STROKE, P2_RIM, P2_FAR, P2_DIST = 20, 10, 200, .6, .8, (20, 
 T = 20; FILL = 44 / 48   # the ground color is each sheet's own corner pixel (the prompt says ECECEC; 212907 came out 226)
 _CELLS = ['OpenProject', 'Save', 'SaveCommit', 'SavePull', 'Revert', 'LoadInPlace', 'Render', 'Cancel', 'PlayRenders', 'FolderRow', 'WavRow', 'DeleteFolder', 'Close',
           'Source', 'Target', 'Warp', 'PhaseReset', 'FullZoomOut', 'Center', 'WaveformMagnification',
-          'DropMarker', 'DeleteMarkers', 'Disabled', 'Inherit', 'Flatten', 'Follow', 'GridIterations', 'AddToSelection', 'JumpToDefiningMarker', 'OpenTextEditor', 'ValueDrag', 'ReadOnlyLocked',
+          'DropMarker', 'DeleteMarkers', 'Disabled', 'Inherit', 'Flatten', 'Follow', 'GridIterations', 'AddToSelection', 'JumpToDefiningMarker', 'OpenTextEditor', 'ValueDrag', 'ReadOnly',
           'Undo', 'HistoryView', 'Older', 'Newer',
           'Left', 'Right', 'Up', 'Down', 'PreviousMarker', 'NextMarker', 'SwitchTab',
           'Play', 'Pause', 'PlayerPrevious', 'PlayerNext', 'RepeatOne',

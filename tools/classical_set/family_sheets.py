@@ -51,7 +51,7 @@ FAMILIES = [
     ("watches", "Watches", ["Revert", "HistoryView", "Older", "Newer"]),
     ("transport", "Transport keys", ["Play", "Pause", "PlayerPrevious", "PlayerNext", "RepeatOne",
                                      "LoadInPlace", "Close"]),
-    ("folder", "Folders, read-only and save", ["FolderRow", "UpAFolder", "ReadOnlyLocked", "Save"]),
+    ("folder", "Folders, read-only and save", ["FolderRow", "UpAFolder", "ReadOnly", "Save"]),
     ("hands", "Hands", ["Cancel", "AddToSelection", "Follow", "TransportPlay", "TransportStop"]),   # the conductor's figures: the cuffs must match
     ("paper", "Paper and books", ["OpenProject", "Source", "Target", "WavRow", "OpenTextEditor",
                                   "DeleteMarkers", "Inherit", "SwitchTab", "Tooltips", "Render", "SaveCommit",
@@ -75,7 +75,7 @@ REDRAWN = {"Left": 10, "Right": 10, "Up": 9, "Down": 9, "ValueDrag": 10, "JumpTo
            "Revert": 12, "Center": 13, "FullZoomOut": 13}
 
 SHORT = {"JumpToDefiningMarker": "Jump", "PreviousMarker": "PrevMarker", "PlayerPrevious": "PlayerPrev",
-         "WaveformMagnification": "Magnification", "ReadOnlyLocked": "ReadOnly", "OpenTextEditor": "TextEditor",
+         "WaveformMagnification": "Magnification", "OpenTextEditor": "TextEditor",
          "GridIterations": "Grid", "AddToSelection": "AddToSel", "BpmIterations": "BpmIterations"}
 
 def sheets(specs):

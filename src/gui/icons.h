@@ -82,7 +82,7 @@ namespace icons {
 // enumerator — kIconNames below). AN ICON IS AN ACT'S (OR A FACE'S) GLYPH,
 // ONE FILE PER ENUMERATOR, the enumerator the act's tooltip name in
 // PascalCase ("Toggle" dropped, the lamp carrying it; a stateful button's
-// faces suffixed — ReadOnlyUnlocked / ReadOnlyLocked; a face a site shows
+// faces suffixed — SavePull, TransportStop; a face a site shows
 // that is no roster act named for its site — FolderRow, WavRow, CardNormal,
 // CardCritical, AppIcon) (architect 2026-10-19: "since the actions are
 // essentially complete, we should use the action name"); each comment names
@@ -203,12 +203,11 @@ enum class Icon {
                          // process-stop
     Down,                // Row 8's down arrow (bare Down) — the set's go-down
     Up,                  // Row 8's up arrow (bare Up) — the set's go-up
-    // THE READ-ONLY TOGGLE'S PADLOCK PAIR (architect 2026-10-14): the open
-    // padlock while unlocked, the closed one while locked
-    // (redesign_button_icon); its lit / sunken face still says locked, as
+    // THE READ-ONLY TOGGLE'S ONE PADLOCK, worn in both states (architect
+    // 2026-10-21: "it's not supposed to have an open and closed state"; the
+    // pair of 2026-10-14 reversed): its lit / sunken face says locked, as
     // every toggle's does.
-    ReadOnlyUnlocked,    // Toggle Read-Only while unlocked — changes-allow
-    ReadOnlyLocked,      // Toggle Read-Only while locked — changes-prevent
+    ReadOnly,            // Toggle Read-Only — changes-prevent
     // THE MARKER WALK AND THE TAB SWITCH.
     PreviousMarker,      // Previous Marker (Shift+Tab) — the set's go-first
     NextMarker,          // Next Marker (Tab) — the set's go-last
@@ -264,7 +263,7 @@ enum class Icon {
 // Roster size, the names' and the load's count (load_set parses one
 // document per enumerator). Keep it equal to the enumerator count above; a
 // glyph joining or leaving restates this number.
-inline constexpr int kIconCount = 59;
+inline constexpr int kIconCount = 58;
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
 // file in assets/icons/ is `<name>.png` if that file is there, else
@@ -288,7 +287,7 @@ inline constexpr const char* kIconNames[] = {
     "Older", "Newer", "Left", "Right", "Revert", "TransportPlay",
     "TransportStop", "PlayerPrevious", "Play", "Pause", "PlayerNext",
     "Cancel", "Down", "Up",
-    "ReadOnlyUnlocked", "ReadOnlyLocked", "PreviousMarker", "NextMarker",
+    "ReadOnly", "PreviousMarker", "NextMarker",
     "SwitchTab", "Settings", "FolderRow", "WavRow", "RepeatOne",
     "UpAFolder", "CardNormal", "CardCritical", "Close", "Tooltips",
     "JumpToDefiningMarker", "OpenTextEditor", "DeleteFolder", "ValueDrag",
