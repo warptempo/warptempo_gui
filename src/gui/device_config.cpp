@@ -51,7 +51,8 @@ namespace {
 // "make it a tuneable config temporarily … for all tuneable fields"):
 // `bevel_light` and `bevel_dark` APPENDED after `role`, where the tuning
 // phases' keys have always stood, each required like every key and each
-// leaving when he settles its value.
+// leaving when he settles its value. `tile_scale` (2026-10-20 night, the
+// tiles' downscale) follows them, the same phase's.
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -61,6 +62,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "role",
     "bevel_light",
     "bevel_dark",
+    "tile_scale",
 };
 } // namespace
 
@@ -130,6 +132,8 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             s += format_bevel_percent(cfg.bevel_light);
         } else if (k == "bevel_dark") {
             s += format_bevel_percent(cfg.bevel_dark);
+        } else if (k == "tile_scale") {
+            s += format_bevel_percent(cfg.tile_scale);
         }
         s += '\n';
     }
@@ -244,6 +248,17 @@ std::expected<DeviceConfig, std::string> read_device_config(
             }
             (key == "bevel_light" ? out.bevel_light : out.bevel_dark) =
                 static_cast<int>(v);
+            return {};
+        }
+        // THE TILE SCALE KEY (2026-10-20 night, materials.h's head): the
+        // same canonical integer spelling, the range the one owner's
+        // (is_tile_scale_percent, device_config.h).
+        if (key == "tile_scale") {
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v) || !is_tile_scale_percent(v)) {
+                return bad_value(ln, key, value, kTileScaleGrammarReason);
+            }
+            out.tile_scale = static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

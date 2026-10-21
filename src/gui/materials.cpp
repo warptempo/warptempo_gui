@@ -62,6 +62,7 @@ struct State {
     std::array<Tile, kGuiMaterialCount>    tiles;
     int                                    bevel_light = 100;
     int                                    bevel_dark  = 100;
+    int                                    tile_scale  = 50;
     int                                    client_w    = 0;
     GuiMaterialRegion                      region = GuiMaterialRegion::Lower;
     // THE TONE TABLE (set_tone_face): a flat word and its key.
@@ -357,7 +358,8 @@ std::optional<std::string> load() {
     for (Tile& t : s.tiles) t = Tile{};
     auto bundle = GuiPlatform::bundled_tile_files();
     if (!bundle) return "tiles: " + bundle.error();
-    const double k = gui_scale_percent() / 300.0;
+    // gui_scale / 300 x tile_scale / 100 (the head's SCALE paragraph).
+    const double k = gui_scale_percent() / 300.0 * s.tile_scale / 100.0;
     const int upper_h = caption_row_h_px() + menu_row_h_px() +
                         program_frame_line_px() + icon_row_h_px();
     for (int i = 0; i < kGuiMaterialCount; ++i) {
@@ -400,6 +402,8 @@ void set_bevel(int light_percent, int dark_percent) {
     s.bevel_dark  = dark_percent;
     drop_baked();
 }
+
+void set_tile_scale(int percent) { state().tile_scale = percent; }
 
 void drop_baked() {
     State& s = state();

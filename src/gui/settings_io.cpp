@@ -393,6 +393,9 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
         return format_bevel_percent(app.device_config->bevel_light);
     if (key == "bevel_dark" && app.device_config != nullptr)
         return format_bevel_percent(app.device_config->bevel_dark);
+    // THE TILE SCALE (2026-10-20 night), the same road.
+    if (key == "tile_scale" && app.device_config != nullptr)
+        return format_bevel_percent(app.device_config->tile_scale);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

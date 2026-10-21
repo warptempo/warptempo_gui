@@ -3590,6 +3590,9 @@ struct SettingsPopupItem {
 // BEHIND A SEPARATOR, their own group, each a line editor like every row,
 // its commit the device keys' body (commit_device_setting) applied live at
 // the OK, no card; they leave with their keys when he settles the values.
+// `Tile Scale` (architect 2026-10-20 ~23:35, the tiles' downscale, key
+// `tile_scale`) follows Bevel Dark in the same group, the same way (the
+// materials reloaded at the new scale).
 //
 // `True Colors` IS THE LAST ROW (architect 2026-10-08 ~05:35, his "show true
 // colors / sRGB color conversion", Windows' own "True Color" word): the sRGB
@@ -3606,8 +3609,8 @@ struct SettingsPopupItem {
 // THE ACCESS KEYS (architect 2026-10-10; the rule at
 // dropdown_title_access_key): &Title, &Notes, &URL, Co&ver, &GUI Scale,
 // Projects &Repository, Projects &Path, &Waveform (2026-10-20; &Chrome and
-// C&aption 2026-10-14..10-20), &Bevel Light and Bevel &Dark (2026-10-20
-// evening) and True
+// C&aption 2026-10-14..10-20), &Bevel Light, Bevel &Dark (2026-10-20
+// evening), Tile &Scale (2026-10-20 night) and True
 // C&olors — the O of Colors, not the planner's E of True: bare `e` is the
 // left mouse button at the platform boundary (kLeftClickKey, gui_input.h),
 // so an E row could never answer its own letter while the menu stands.
@@ -3622,6 +3625,7 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Waveform",            0,  "waveform",      true},
     {"Bevel Light",         0,  "bevel_light",   true},
     {"Bevel Dark",          6,  "bevel_dark",    false},
+    {"Tile Scale",          5,  "tile_scale",    false},
     {"True Colors",        6,  nullptr,         false,
      SettingsPopupAct::TrueColors},
 };

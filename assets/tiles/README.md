@@ -22,8 +22,9 @@ launch, naming the file. Files of other names (this README) are not read.
 THE ROAD: the program reads the files at launch, in place — on the laptop from this folder (its path compiled in,
 `CMakeLists.txt`'s `WARPTEMPO_BUNDLED_TILES_DIR`), on the tablet from the APK's `tiles/` assets
 (`android/app/build_apk.sh`) — decodes each through its own resvg pin (`svg_icon::raster_info` and `raster_region`,
-the icons' data-URL detour, PNG and JPEG alike) and draws it at `gui_scale / 300` with the icons' Lanczos-3 area filter
-(the tablet's 300 % takes the master 1:1). Only the part kept is rendered: the woods' strip (the master's whole scaled
+the icons' data-URL detour, PNG and JPEG alike) and draws it at `gui_scale / 300 x tile_scale / 100` (the `tile_scale` device key, default 50, the Settings
+menu's Tile Scale row) with the icons' Lanczos-3 area filter, downscaled like the icons (architect 2026-10-20
+~23:35). Only the part kept is rendered: the woods' strip (the master's whole scaled
 width by the upper region's height, from its vertical centre), the metals' and the case's centre crops (mirror-tiled
 on screen). Each material's FACE is its kept tile's mean color, and every tone a painter puts down on it is Cool
 Edit's tone rule on that Face, painted on every material as the tone itself, a flat opaque stroke with no grain

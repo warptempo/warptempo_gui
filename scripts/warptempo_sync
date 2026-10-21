@@ -155,7 +155,8 @@ shopt -s nocaseglob
 #      first start refuses without it), a waveform= line added with the default
 #      (waveform=cool-edit-default) where the file has none, and the two bevel
 #      lines (bevel_light=100, bevel_dark=100, the wood chrome's tuning keys of
-#      2026-10-20) likewise -- every key is
+#      2026-10-20) and the tile_scale=50 line (the tiles' downscale, 2026-10-20
+#      night) likewise -- every key is
 #      required since 2026-10-14; a line already there is kept --, and every
 #      line of a retired key the app refuses to start with is removed -- sync_path,
 #      the thirteen colour keys that left 2026-10-04 when every colour became
@@ -205,6 +206,7 @@ WAVEFORM_LINE="waveform=cool-edit-default"
 # the waveform line's rule.
 BEVEL_LIGHT_LINE="bevel_light=100"
 BEVEL_DARK_LINE="bevel_dark=100"
+TILE_SCALE_LINE="tile_scale=50"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
 # migration; src/gui/device_config.h records each): sync_path, struck; the
@@ -1106,26 +1108,27 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v waveform="$WAVEFORM_LINE" -v bevel_light="$BEVEL_LIGHT_LINE" -v bevel_dark="$BEVEL_DARK_LINE" -v retired="${RETIRED_KEYS[*]}" '
+        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v waveform="$WAVEFORM_LINE" -v bevel_light="$BEVEL_LIGHT_LINE" -v bevel_dark="$BEVEL_DARK_LINE" -v tile_scale="$TILE_SCALE_LINE" -v retired="${RETIRED_KEYS[*]}" '
             BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1 }
             /^projects_repo=/ { print repo; had = 1; next }
             /^role=/          { print role; had_role = 1; next }
             /^waveform=/      { had_waveform = 1 }
             /^bevel_light=/   { had_bevel_light = 1 }
             /^bevel_dark=/    { had_bevel_dark = 1 }
+            /^tile_scale=/    { had_tile_scale = 1 }
             (substr($0, 1, index($0, "=")) in gone) { next }
                               { print }
-            END               { if (had == 0) print repo; if (had_waveform == 0) print waveform; if (had_role == 0) print role; if (had_bevel_light == 0) print bevel_light; if (had_bevel_dark == 0) print bevel_dark }' "$old_cfg" > "$new_cfg"
+            END               { if (had == 0) print repo; if (had_waveform == 0) print waveform; if (had_role == 0) print role; if (had_bevel_light == 0) print bevel_light; if (had_bevel_dark == 0) print bevel_dark; if (had_tile_scale == 0) print tile_scale }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role and its two bevel weights and has no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset, its role and its two bevel weights, its tile scale and has no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a waveform line ($WAVEFORM_LINE where none stands), the bevel lines ($BEVEL_LIGHT_LINE, $BEVEL_DARK_LINE where none stands), and no line of a retired key (${RETIRED_KEYS[*]})"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a waveform line ($WAVEFORM_LINE where none stands), the bevel and tile lines ($BEVEL_LIGHT_LINE, $BEVEL_DARK_LINE, $TILE_SCALE_LINE where none stands), and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $WAVEFORM_LINE, $BEVEL_LIGHT_LINE and $BEVEL_DARK_LINE where none stands, and no line of a retired key"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $WAVEFORM_LINE, $BEVEL_LIGHT_LINE, $BEVEL_DARK_LINE and $TILE_SCALE_LINE where none stands, and no line of a retired key"
     fi
     printf '\n'
 

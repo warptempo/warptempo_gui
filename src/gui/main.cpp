@@ -3597,6 +3597,7 @@ int gui_main(const char* argument) {
     // missing tile or one that is neither a PNG nor a JPEG is a drop defect:
     // the blunt terminal line naming the file, and no window.
     materials::set_bevel(device_config.bevel_light, device_config.bevel_dark);
+    materials::set_tile_scale(device_config.tile_scale);
     if (const std::optional<std::string> err = materials::load()) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;

@@ -52,7 +52,7 @@ struct GuiInputHandler;
 // parallel writers). commit() routes the typed key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
 //    waveform and, since 2026-10-20 evening, the wood chrome's two tuning
-//    keys bevel_light and bevel_dark (live at the OK, no card, as the
+//    keys bevel_light, bevel_dark and tile_scale (live at the OK, no card, as the
 //    waveform key) — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
@@ -201,7 +201,7 @@ struct GuiSettingsEditor {
 
 private:
     // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
-    // `waveform=`, `bevel_light=` and `bevel_dark=` — in one body (the head's
+    // `waveform=`, `bevel_light=`, `bevel_dark=` and `tile_scale=` — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the

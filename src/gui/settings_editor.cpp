@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -944,7 +945,7 @@ void GuiSettingsEditor::commit() {
 // project is opened first — a rename-by-hand case, accepted. `waveform`
 // (architect 2026-10-14, as `chrome` until 2026-10-20): AT ONCE, live, no
 // card — its arm below; `bevel_light` and `bevel_dark` (2026-10-20 evening,
-// the wood chrome's tuning phase) the same, their arm after it. (`theme`, in force at once with the palette
+// the wood chrome's tuning phase) the same, their arm after it, and `tile_scale` (2026-10-20 night) after those. (`theme`, in force at once with the palette
 // repainted whole, had an arm here 2026-10-03..10-08, `icons` and `font`
 // 2026-10-09..10-12 and `caption` 2026-10-14..10-20; each left with its
 // key.) The commit is the OK's or Enter's, as on every row (the choice
@@ -1039,6 +1040,36 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         live = static_cast<int>(v);
         materials::set_bevel(app.device_config->bevel_light,
                              app.device_config->bevel_dark);
+        viewport.invalidate_all();
+        (void)persist();
+        applied();
+        return true;
+    }
+
+    // THE TILE SCALE KEY (architect 2026-10-20 ~23:35, the tiles'
+    // downscale; materials.h's head): [10, 100] under its one grammar owner
+    // (is_tile_scale_percent, device_config.h), APPLIED LIVE AT THE COMMIT as
+    // gui_scale is — the files read again at the new scale, the palette
+    // reinstalled off the Faces measured there (apply_gui_scale's road), NO
+    // CARD. The files loaded at launch, so a failure here is the bundle
+    // changed under the running process: its line, and the hard fail.
+    if (key == "tile_scale") {
+        int64_t v = 0;
+        if (!parse_authored_frame(value, v) || !is_tile_scale_percent(v)) {
+            reject(kTileScaleGrammarReason);
+            return true;
+        }
+        if (static_cast<int>(v) == app.device_config->tile_scale) {
+            unchanged();
+            return true;
+        }
+        app.device_config->tile_scale = static_cast<int>(v);
+        materials::set_tile_scale(app.device_config->tile_scale);
+        if (const std::optional<std::string> err = materials::load()) {
+            std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+            std::exit(1);
+        }
+        install_palette(program_palette_words());
         viewport.invalidate_all();
         (void)persist();
         applied();

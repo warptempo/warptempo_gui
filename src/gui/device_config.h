@@ -68,6 +68,19 @@
 //                            both templates writing 100; the keys leave
 //                            when he settles the values, which become
 //                            constants
+//   tile_scale=<percent>   THE TILES' DOWNSCALE (architect 2026-10-20
+//                            ~23:35: "the icons are still downscaled at
+//                            300%, which makes them look sharp. the wood
+//                            and metal look upscaled … we should downscale
+//                            the wood/metal a similar amount"), a TUNING
+//                            key like the bevels: an integer [10, 100],
+//                            default 50; every material's master is drawn
+//                            at gui_scale / 300 x tile_scale / 100
+//                            (materials.h's head), with a Settings row
+//                            applied live at the OK (the materials
+//                            reloaded at the new scale), both templates
+//                            writing 50; it leaves when he settles the
+//                            value
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
@@ -265,8 +278,9 @@
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`, `Projects Repository`,
-// `Projects Path`, `Waveform`, and since 2026-10-20 evening `Bevel Light`
-// and `Bevel Dark` (the two bevel keys' rows, a tuning phase's) — the
+// `Projects Path`, `Waveform`, and since 2026-10-20 evening `Bevel Light`,
+// `Bevel Dark` (the two bevel keys' rows, a tuning phase's) and, since
+// 2026-10-20 night, `Tile Scale` — the
 // `waveform` key's row, a line editor
 // like the rest (`Chrome` until 2026-10-20, the row of the same key under
 // its old name since 2026-10-14; the `Caption` row stood
@@ -339,6 +353,9 @@ struct DeviceConfig {
     // templates' and the construction state's.
     int         bevel_light = 100;
     int         bevel_dark  = 100;
+    // THE TILES' DOWNSCALE (2026-10-20, the head's list): required; 50 the
+    // templates' and the construction state's.
+    int         tile_scale  = 50;
 };
 
 // THE BEVEL KEYS' RANGE — the one owner, the reader's and the settings
@@ -352,6 +369,16 @@ inline constexpr const char* kBevelGrammarReason =
     "must be an integer in [0, 400] in canonical spelling";
 // The canonical spelling of a bevel percent, the scale's (plain digits).
 std::string format_bevel_percent(int percent);
+
+// THE TILE SCALE KEY'S RANGE — the one owner, the reader's and the settings
+// editor's: an integer percent in [10, 100] (100 the master at gui_scale / 300
+// as before 2026-10-20 ~23:35, 50 the default), the scale's canonical
+// spelling (format_bevel_percent's digits).
+inline constexpr bool is_tile_scale_percent(int64_t v) {
+    return v >= 10 && v <= 100;
+}
+inline constexpr const char* kTileScaleGrammarReason =
+    "must be an integer in [10, 100] in canonical spelling";
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -626,8 +653,8 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE device-key body, which serves five keys —
 // `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=`
-// (`chrome=` until 2026-10-20) and since 2026-10-20 evening `bevel_light=`
-// and `bevel_dark=` (GuiSettingsEditor::commit_device_setting,
+// (`chrome=` until 2026-10-20) and since 2026-10-20 evening `bevel_light=`,
+// `bevel_dark=` and `tile_scale=` (GuiSettingsEditor::commit_device_setting,
 // settings_editor.cpp; the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
 // 2026-10-07..10-10, `caption=`'s 2026-10-14..10-20; the color

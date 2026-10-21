@@ -27,10 +27,20 @@
 // ONE THAT IS NOT A PNG OR A JPEG IS THE LAUNCH'S HARD FAIL naming the file
 // (materials::load, gui_main's one stderr line and no window).
 //
-// THE SCALE (ruled 2026-10-20 ~18:55): each master is drawn at gui_scale /
-// 300 — the tablet's 300 % takes it 1:1, the laptop's 138 % downscales it —
-// so the grain reads the same per Windows px on every device, and a denser
-// device scales up from the master; never a per-device tile. ONCE AT LAUNCH
+// THE SCALE (ruled 2026-10-20 ~18:55, retold ~23:35): each master is drawn at
+// gui_scale / 300 x tile_scale / 100 — the `tile_scale` key (percent, [10,
+// 100], default 50; a tuning key with a Settings row, live at the OK) — so
+// the grain reads the same per Windows px on every device; never a per-device
+// tile. THE TILES ARE DOWNSCALED LIKE THE ICONS (architect 2026-10-20 ~23:35:
+// "the icons are still downscaled at 300%, which makes them look sharp. the
+// wood and metal look upscaled … we should downscale the wood/metal a similar
+// amount, so that at 300% they are still downscaled"): the first drawing, at
+// gui_scale / 300 alone, took the tablet's 300 % 1:1, and the placeholder
+// masters carry about half their pixel count in real detail (a 2x Lanczos
+// round trip changes them by under 1 % RMSE), so they read soft; at 50 % the
+// same detail is drawn on half the pixels and the grain halves in size. A
+// strip narrower than the window mirror-repeats, as an outgrown window
+// always has. ONCE AT LAUNCH
 // (and again at a gui_scale commit, which re-reads the files): ONLY THE
 // REGION KEPT IS EVER RENDERED, and the masters never stay resident.
 //   WOOD and WOOD_DARK: A STRIP the scaled master's whole width by the upper
@@ -152,15 +162,19 @@ namespace materials {
 // it (a fill inside one period is a plain blit; a fill across a seam takes
 // cairo's general road) — a metal's crop kMetalCropH tall (its vertical
 // flips along the horizontal brushing), the case's kCaseCropW x kCaseCropH,
-// room for every seat's own patch (paint_case_face). RESIDENT AT 300 % (the
-// tablet), each ARGB32: the wood strip 2560 x 216 (2.2 MB) and the void's, a
-// metal crop 2560 x 384 (3.9 MB), the case 1024 x 512 (2.1 MB) — each base
-// once, plus an as-drawn copy where the window converts (display_transform.h)
-// and the cases' squares ~17 KB a seat and face; every line a flat stroke
-// since 2026-10-20 ~22:50 (the wood's from ~22:30) and baked no more: about
-// 14 MB of bases on the tablet, 29 MB at most with every as-drawn copy (68
-// before), about 12 MB on the laptop's 138 % (52 before; no as-drawn copies,
-// the strips 1 MB, a metal crop the scaled master's whole 2524-px width).
+// room for every seat's own patch (paint_case_face). THESE ARE LIMITS: the
+// crops read their sizes from the scaled master (materials.cpp's crop_of), and
+// the case's per-seat patches (side <= 20 W) fit the crop or fold past it
+// (paint_case_face's fold). The masters are 5488 x 3056, so at the tablet's
+// 300 % and the default 50 % the scaled master is 2744 x 1528, still wider
+// than kTileCropW, and RESIDENT, each ARGB32, nothing moved from the 1:1
+// drawing: the wood strip 2560 x 216 (2.2 MB) and the void's, a metal crop
+// 2560 x 384 (3.9 MB), the case 1024 x 512 (2.1 MB) — about 14 MB of bases,
+// 29 MB at most with every as-drawn copy (display_transform.h), the cases'
+// squares ~17 KB a seat and face; on the laptop's 138 % and 50 % the scaled
+// master is 1262 x 704, narrower than its 1920-px window: the woods' strips
+// (1262 x 216, 1.1 MB each) mirror-repeat, a metal crop is 1262 x 384 (1.9
+// MB), about 7 MB of bases (12 MB at 100 %, the 2524-px crops).
 inline constexpr int kTileCropW  = 2560;
 inline constexpr int kMetalCropH = 384;
 inline constexpr int kCaseCropW  = 1024;
@@ -181,6 +195,9 @@ uint32_t face(GuiMaterial m);
 // THE BEVEL KEYS (the head), in percent: every baked copy dropped, the
 // next paint rebaking what it asks for.
 void set_bevel(int light_percent, int dark_percent);
+// THE TILE SCALE KEY (the head's SCALE paragraph), in percent [10, 100]: it
+// takes effect at the next load().
+void set_tile_scale(int percent);
 // TRUE COLORS (display_transform.h): every baked copy holds window bytes, so
 // a flip of the switch drops them all (install_true_colors' apply shape).
 void drop_baked();
