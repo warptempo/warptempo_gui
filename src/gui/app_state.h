@@ -3584,12 +3584,20 @@ struct SettingsPopupItem {
 // the 42 Windows and Plus! schemes, and LEFT WITH ITS KEY (architect
 // 2026-10-20, "remove all other themes — both chrome and caption").
 //
+// `Bevel Light` AND `Bevel Dark` (architect 2026-10-20, the wood chrome's
+// tuning phase: "make it a tuneable config temporarily … for all tuneable
+// fields"), the two bevel keys' rows (device_config.h), AFTER Waveform
+// BEHIND A SEPARATOR, their own group, each a line editor like every row,
+// its commit the device keys' body (commit_device_setting) applied live at
+// the OK, no card; they leave with their keys when he settles the values.
+//
 // `True Colors` IS THE LAST ROW (architect 2026-10-08 ~05:35, his "show true
 // colors / sRGB color conversion", Windows' own "True Color" word): the sRGB
 // conversion's toggle, CHECKED while it is on — at every launch — and
 // unchecked by a press only for a screenshot whose bytes are the colors as
 // typed (the ruling at display_transform.h's head). A command row in the
-// same group as Waveform, no separator between them. Its state is
+// same group as the bevel rows, no separator between them (Waveform's group
+// until 2026-10-20). Its state is
 // Windows' menu check mark in the popup's check-mark column
 // (dropdown_item_checked; the dropdown painter); its release flips the bit
 // (GuiInputHandler::toggle_true_colors) and cards nothing; it grays as every
@@ -3598,7 +3606,8 @@ struct SettingsPopupItem {
 // THE ACCESS KEYS (architect 2026-10-10; the rule at
 // dropdown_title_access_key): &Title, &Notes, &URL, Co&ver, &GUI Scale,
 // Projects &Repository, Projects &Path, &Waveform (2026-10-20; &Chrome and
-// C&aption 2026-10-14..10-20) and True
+// C&aption 2026-10-14..10-20), &Bevel Light and Bevel &Dark (2026-10-20
+// evening) and True
 // C&olors — the O of Colors, not the planner's E of True: bare `e` is the
 // left mouse button at the platform boundary (kLeftClickKey, gui_input.h),
 // so an E row could never answer its own letter while the menu stands.
@@ -3611,6 +3620,8 @@ inline constexpr SettingsPopupItem kSettingsPopupItems[] = {
     {"Projects Repository", 9,  "projects_repo", false},
     {"Projects Path",       9,  "projects_path", false},
     {"Waveform",            0,  "waveform",      true},
+    {"Bevel Light",         0,  "bevel_light",   true},
+    {"Bevel Dark",          6,  "bevel_dark",    false},
     {"True Colors",        6,  nullptr,         false,
      SettingsPopupAct::TrueColors},
 };

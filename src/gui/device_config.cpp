@@ -19,7 +19,8 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (SIX keys since 2026-10-20, `caption` gone
+// REQUIRED SET, every one of them (EIGHT keys since 2026-10-20 evening, the
+// two bevel keys appended, below; six that afternoon, `caption` gone
 // and `chrome` renamed `waveform`; seven 2026-10-12, `icons` and `font`
 // gone; nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
 // `chrome` gone; nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09,
@@ -45,6 +46,12 @@ namespace {
 // 2026-10-20; `role` is APPENDED after it (2026-10-10). (`theme` stood
 // 2026-10-03..10-08, `icons` and `font` 2026-10-09 to 2026-10-12, the
 // header's record.)
+//
+// THE BEVEL KEYS (architect 2026-10-20, the wood chrome's tuning phase:
+// "make it a tuneable config temporarily … for all tuneable fields"):
+// `bevel_light` and `bevel_dark` APPENDED after `role`, where the tuning
+// phases' keys have always stood, each required like every key and each
+// leaving when he settles its value.
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -52,6 +59,8 @@ constexpr const char* kDeviceConfigKeys[] = {
     "last_project",
     "waveform",
     "role",
+    "bevel_light",
+    "bevel_dark",
 };
 } // namespace
 
@@ -59,6 +68,10 @@ std::string format_gui_scale_percent(int percent) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", percent);
     return std::string(buf);
+}
+
+std::string format_bevel_percent(int percent) {
+    return format_gui_scale_percent(percent);
 }
 
 std::filesystem::path device_config_path() {
@@ -113,6 +126,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
                                                    : kDeviceRoleMirror;
+        } else if (k == "bevel_light") {
+            s += format_bevel_percent(cfg.bevel_light);
+        } else if (k == "bevel_dark") {
+            s += format_bevel_percent(cfg.bevel_dark);
         }
         s += '\n';
     }
@@ -215,6 +232,18 @@ std::expected<DeviceConfig, std::string> read_device_config(
             } else {
                 return bad_value(ln, key, value, kDeviceRoleGrammarReason);
             }
+            return {};
+        }
+        // THE BEVEL KEYS (2026-10-20, the wood chrome's tuning phase): the
+        // scale's canonical integer spelling, the range the one owner's
+        // (is_bevel_percent, device_config.h).
+        if (key == "bevel_light" || key == "bevel_dark") {
+            int64_t v = 0;
+            if (!parse_authored_frame(value, v) || !is_bevel_percent(v)) {
+                return bad_value(ln, key, value, kBevelGrammarReason);
+            }
+            (key == "bevel_light" ? out.bevel_light : out.bevel_dark) =
+                static_cast<int>(v);
             return {};
         }
         return warptempo_parse::prefix_line_error(

@@ -5,9 +5,10 @@ laptop builds its own (`CMakeLists.txt`), the tablet's libraries are cross-built
 `android/prebuilt/` (`android/deps/`, each source tarball pinned by sha256 in `android/deps/common.sh`, provenance in
 `android/NOTES.md` §6) and the APK is installed on one tablet only. The licence texts live in each pinned source; this
 file is the list. Libraries the laptop's binary loads from the system at run time (cairo, HarfBuzz, FreeType, fftw,
-Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. The faces and the icons are data, not
-code: `fonts/README.md` and `assets/icons/README.md` (the icons, the launcher's drawing among them: `AppIcon.png`, Warp's
-glyph through its symlink) carry their provenance and licence texts. The face is compiled into `warptempo_gui` (and packed into the APK): Liberation Sans and Liberation Sans Bold
+Wayland, xkbcommon, JACK, libgit2) are the distribution's and are not listed. The faces, the icons and the materials'
+tiles are data, not code: `fonts/README.md`, `assets/icons/README.md` (the icons, the launcher's drawing among them:
+`AppIcon.png`, Warp's glyph through its symlink) and `assets/tiles/README.md` (the wood chrome's tiles, 2026-10-20)
+carry their provenance and licence texts. The face is compiled into `warptempo_gui` (and packed into the APK): Liberation Sans and Liberation Sans Bold
 (2.1.5; SIL Open Font License 1.1, the text in `fonts/LICENSE-Liberation-OFL.txt`, since 2026-10-09, the product's only face since
 2026-10-12); the repository distributes no binary.
 
@@ -15,7 +16,7 @@ glyph through its symlink) carry their provenance and licence texts. The face is
 
 | Library | Version | Licence |
 |---|---|---|
-| resvg's C API (`resvg-capi`, the icon renderer, `src/gui/svg_icon.cpp`), with resvg and usvg | 0.48.1 | Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`; © 2017 the Resvg Authors) |
+| resvg's C API (`resvg-capi`, the icon renderer and the tiles' PNG and JPEG decoder, `src/gui/svg_icon.cpp`), with resvg and usvg | 0.48.1 | Apache-2.0 OR MIT (`LICENSE-APACHE`, `LICENSE-MIT`; © 2017 the Resvg Authors) |
 | its 37 crates (below) | Cargo.lock at the pin | MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, Zlib, 0BSD, Unlicense, each crate's own |
 | the Rust standard library inside `libresvg.a` (core, alloc, std and their crates) | rustc 1.99.0 | MIT OR Apache-2.0 |
 

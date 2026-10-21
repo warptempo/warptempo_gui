@@ -759,6 +759,13 @@ GuiPlatform::bundled_icon_files() {
         std::filesystem::path(WARPTEMPO_BUNDLED_ICONS_DIR), {".svg", ".png"});
 }
 
+// The tiles: assets/tiles/, every `.png` and `.jpg` (materials.h's load).
+std::expected<std::map<std::string, std::string>, std::string>
+GuiPlatform::bundled_tile_files() {
+    return read_bundle_folder(
+        std::filesystem::path(WARPTEMPO_BUNDLED_TILES_DIR), {".png", ".jpg"});
+}
+
 bool GuiPlatform::init(int width, int height, const char* title) {
     // THE PRODUCT'S FACES, INSTALLED BEFORE ANYTHING ELSE (architect
     // 2026-10-02, gui_font.h): the bytes compiled into this executable

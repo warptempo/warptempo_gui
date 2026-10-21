@@ -25,11 +25,13 @@
 //     editor whose Tab completes a typed prefix against the built-in names
 //     (GuiSettingsEditor::complete_preset_value) and whose commit installs
 //     the preset live (install_program_palette below).
-//   THE FACE — the panel's one color, every chrome role's source — IS A
-//     CONSTANT, Cool Edit's DEFAULT preset's 626C7B under every waveform
-//     preset (cool_edit_derive.h's kDefaultFace; a palette role,
-//     each preset's own, 2026-10-09..10-20), so the chrome's words are
-//     COMPILED (kGuiChromeWords, chrome_derive.h) and no preset moves them.
+//   THE FACE — the panel's one color, every chrome role's source — IS THE
+//     METAL'S, the MetalDark tile's mean under every waveform preset (the
+//     wood chrome, materials.h, 2026-10-20 evening; Cool Edit's DEFAULT
+//     preset's 626C7B, cool_edit_derive.h's kDefaultFace, that afternoon; a
+//     palette role, each preset's own, 2026-10-09..10-20), so the chrome's
+//     words are derived off it (gui_chrome_words, chrome_derive.h) and no
+//     preset moves them.
 //   THE CAPTION — the title bar's six colors — IS A CONSTANT, Windows
 //     Storm's (kGuiCaptionOwn below; architect 2026-10-12): the 42 built-in
 //     Windows and Plus! schemes (the `caption` device key, its Settings row,
@@ -42,14 +44,15 @@
 // whole; a hand-edited file is adversarial territory.
 //
 // TWO SOURCES FOR ONE STRUCT: THE PALETTE colors the waveform, and THE
-// COMPILED CHROME every chrome role — Cool Edit's tones off the constant
-// Face (and the DEFAULT preset's ink for the selection fill,
-// chrome_derive.h) and the caption's six constants (architect 2026-10-10:
-// "the caption remains the only thing that's outside of Cool Edit").
-// GuiPalette (render.h) keeps every member; install_palette (render.h) fills
-// the program members off this file's table (kGuiPaletteRoles), the panel's
-// `face` member and THE COOL EDIT BLOCK off the constant Face, and the chrome
-// members off the theme's role table (kGuiThemeRoles) by the compiled words,
+// CHROME every chrome role — Cool Edit's tones off the metal's Face (and the
+// DEFAULT preset's ink for the selection fill, chrome_derive.h) and the
+// caption's six constants (architect 2026-10-10: "the caption remains the
+// only thing that's outside of Cool Edit"; unread since the caption became
+// the wood, 2026-10-20). GuiPalette (render.h) keeps every member;
+// install_palette (render.h) fills the program members off this file's table
+// (kGuiPaletteRoles), the panel's `face` member and THE COOL EDIT BLOCK off
+// the metal's Face, and the chrome members off the theme's role table
+// (kGuiThemeRoles) by the derived words,
 // so every painter reads palette() as before and no painter knows which
 // source a color came from.
 //
@@ -181,7 +184,8 @@ constexpr std::size_t palette_role_index(std::string_view name) {
 // member, defined in render.cpp beside install_palette, render.h): `words`
 // written into GuiPalette's palette members, the plate's two inks re-baked,
 // THE DISABLED CUE'S FADED TRIANGLES re-mixed from the new cue and invalid
-// colors toward the constant Face (cool_edit_derive.h's disabled_* mixes)
+// colors toward the lane's Face (the MetalVeryDark tile's mean since
+// 2026-10-20, materials.h; cool_edit_derive.h's disabled_* mixes)
 // and palette_generation bumped. THE CHROME, THE FACE AND EVERY PANEL TONE
 // OFF IT DO NOT MOVE (architect 2026-10-20: the preset sets the waveform's
 // colors alone) — but THE VIEW BAR'S SPAN, the waveform's ink in miniature,
@@ -235,7 +239,7 @@ inline constexpr GuiBuiltinPalette kGuiBuiltinPalettes[] = {
 // the others now) — the `waveform=` value both first-run templates SPELL
 // (GuiPlatform::device_config_defaults; every device key required,
 // architect 2026-10-14). ITS INK IS ALSO THE CHROME'S SELECTION FILL under
-// every preset (kGuiChromeWords, chrome_derive.h; architect 2026-10-20).
+// every preset (gui_chrome_words, chrome_derive.h; architect 2026-10-20).
 inline constexpr const char* kGuiDefaultPaletteKey = "cool-edit-default";
 
 // The built-in palette keyed `name`, byte for byte, or nullptr.
@@ -259,8 +263,10 @@ constexpr bool is_builtin_palette_name(std::string_view name) {
 // THE CAPTION'S SIX, COMPILED (the head; architect 2026-10-12, Windows 95
 // Plus!'s Storm, the catalog's bytes as the generated table carried them
 // 2026-10-12..10-20): the active title's start, gradient end and text, the
-// inactive title's three. THE ONE RESOLVER — read by the compiled chrome
-// words (kGuiChromeWords, chrome_derive.h). The wood chrome replaces it.
+// inactive title's three. THE ONE RESOLVER — read by the chrome's words
+// (gui_chrome_words, chrome_derive.h), which fill the caption's six roles;
+// NO PAINTER READS THOSE since 2026-10-20 (the wood chrome: the caption is
+// the Wood material, its title the wood's gold, materials.h).
 inline constexpr GuiChromePick kGuiCaptionOwn = {
     .title_start          = 0x800080,
     .title_end            = 0x388CB0,

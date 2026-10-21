@@ -8,6 +8,7 @@
 #include "gui_font.h"
 #include "folder_overlay.h"
 #include "icons.h"
+#include "materials.h"
 #include "onscreen_keyboard.h"
 #include "render.h"
 #include "text_editor.h"
@@ -495,10 +496,19 @@ ButtonBoxFace paint_button_box(cairo_t* cr, const GuiRect& r, bool lamp,
 // a dead checked button still reads checked (the roster's rule at
 // paint_icon_row), only its glyph embossed (icons::draw_cased_disabled).
 // NO HOT FACE: Cool Edit's toolbar has none (program_spec.h's
-// case_hot_face). Answers the glyph's shift.
+// case_hot_face). `seat` names the case's seat for the case tile's per-seat
+// patch (paint_ce_case): the roster button's id on the two rows, the render
+// player's slot past kPlayerCaseSeatBase. Answers the glyph's shift.
 ButtonBoxFace paint_roster_case(cairo_t* cr, const GuiRect& r, bool lamp,
-                                bool pressed) {
-    return ButtonBoxFace{paint_ce_case(cr, r, lamp || pressed)};
+                                bool pressed, uint32_t seat) {
+    return ButtonBoxFace{paint_ce_case(cr, r, lamp || pressed, seat)};
+}
+// THE RENDER PLAYER'S SEATS, past every roster id (the player's row has no
+// roster ids of its own: its slot i is seat kPlayerCaseSeatBase + i).
+constexpr uint32_t kPlayerCaseSeatBase = 0x10000;
+// A ROSTER BUTTON'S SEAT, its id.
+uint32_t roster_case_seat(RedesignButton id) {
+    return static_cast<uint32_t>(id);
 }
 
 // THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
@@ -1280,9 +1290,20 @@ void show_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
     set_palette_source(cr, ink);
     text_shape::show_shaped_run(cr, run, x, baseline);
     if (label != nullptr)
-        paint_cell_rect(cr,
-                        access_underline_rect(run, label, access, x, baseline),
-                        ink);
+        paint_ink_rect(cr,
+                       access_underline_rect(run, label, access, x, baseline),
+                       ink);
+}
+// THE WOOD'S WORDS (architect 2026-10-20, the wood chrome; materials.h's
+// constants): the menu row's label in BRUSHED GOLD over its ONE-DEVICE-PX
+// SHADOW at (+1, +1) — the shadow's copy first, its underline with it, then
+// the gold at its place, each show_access_run's.
+void show_wood_access_run(cairo_t* cr, const text_shape::ShapedRun& run,
+                          const char* label, int access, double x,
+                          double baseline) {
+    show_access_run(cr, run, label, access, x + 1.0, baseline + 1.0,
+                    hex(kWoodTextShadow));
+    show_access_run(cr, run, label, access, x, baseline, hex(kWoodTextInk));
 }
 // The same in THE DISABLED EMBOSS (show_embossed_run's two copies, render.h):
 // the Hilight copy one relief line right and down, its line with it, then
@@ -1402,9 +1423,9 @@ constexpr CaptionGlyphPoint kCaptionCloseOutline[2][4] = {
 void paint_caption_glyph(cairo_t* cr, std::span<const CaptionGlyphRect> glyph,
                          int gx, int gy, int u, GuiColor ink) {
     for (const CaptionGlyphRect& r : glyph)
-        paint_cell_rect(cr, GuiRect{gx + r.x * u, gy + r.y * u, r.w * u,
-                                    r.h * u},
-                        ink);
+        paint_ink_rect(cr, GuiRect{gx + r.x * u, gy + r.y * u, r.w * u,
+                                   r.h * u},
+                       ink);
 }
 
 // Close (the rule above) in the cell at (gx, gy), unit u, in `ink`: the two
@@ -1503,19 +1524,16 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     const GuiRect row = top_caption_row_area(app);
     if (row.w <= 0 || row.h <= 0) return;
     cairo_save(cr);
+    // THE UPPER REGION (materials.h): the caption is wood.
+    const GuiMaterialScope wood(GuiMaterialRegion::Upper);
 
-    // THE GROUND: the active roles while the window has the focus, the
-    // inactive ones without it (GuiPlatform::caption_active — always active
-    // on the tablet), through the one gradient painter.
-    const GuiPalette& pal = palette();
-    const bool active = gui.caption_active();
+    // THE GROUND: THE WOOD AS DRAWN, active and inactive alike (architect
+    // 2026-10-20 ~20:40: "a VST style like this … wouldn't show any
+    // difference. Besides, it's moot on the tablet"; the active and inactive
+    // caption roles' gradient 2026-10-05..10-20).
     const std::array<GuiRect, kCaptionButtonCount> rects =
         caption_button_rects(row);
-    paint_caption_gradient(cr, row,
-                           active ? pal.caption_active
-                                  : pal.caption_inactive,
-                           active ? pal.caption_active_gradient
-                                  : pal.caption_inactive_gradient);
+    paint_material_rect(cr, row, GuiMaterial::Wood);
 
     // THE APP'S ICON at the spec's seat ((2, 1) under win2000), 16 x 16: the
     // set's AppIcon (icons.h), no case, at the caption's own placement.
@@ -1533,10 +1551,13 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     // on rows 5..12 of the 18 at 100 %, ReactOS's own seat on its captures
     // (2026-10-06). THE ROOM runs from the spec's caption_title_x_px to its
     // caption_title_trail_px short of Minimise: the title at the room's
-    // left, in the caption's text role. TOO LONG FOR THE ROOM it is CUT AT A
+    // left. TOO LONG FOR THE ROOM it is CUT AT A
     // CODEPOINT and ends in Windows' "..." (DrawText's end ellipsis), the
     // longest prefix whose own run and the ellipsis's fit; a room too narrow
-    // for even the ellipsis paints no title.
+    // for even the ellipsis paints no title. THE INK IS THE WOOD'S BRUSHED
+    // GOLD over its one-device-px shadow at (+1, +1), active and inactive
+    // alike (materials.h's kWoodTextInk / kWoodTextShadow, 2026-10-20; the
+    // caption's text role until then).
     const GuiFont font = gui_font(GuiFace::Bold);
     const std::string title = caption_title(app);
     const int title_x = row.x + scaled_px(spec.caption_title_x_px);
@@ -1549,13 +1570,15 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
     const auto show_title = [&](const text_shape::ShapedRun& head,
                                 const text_shape::ShapedRun* tail) {
         const double x = title_x;
-        // The caption's text role (surface_text, render.h: Windows'
-        // CaptionText pair).
-        set_palette_source(cr, surface_text(active ? GuiSurface::CaptionActive
-                                                   : GuiSurface::CaptionInactive));
-        text_shape::show_shaped_run(cr, head, x, baseline);
-        if (tail)
-            text_shape::show_shaped_run(cr, *tail, x + head.width_px, baseline);
+        // The shadow's copy one device px right and down, then the gold.
+        for (const auto& [off, ink] :
+             {std::pair{1.0, kWoodTextShadow}, std::pair{0.0, kWoodTextInk}}) {
+            set_palette_source(cr, hex(ink));
+            text_shape::show_shaped_run(cr, head, x + off, baseline + off);
+            if (tail)
+                text_shape::show_shaped_run(cr, *tail, x + off + head.width_px,
+                                            baseline + off);
+        }
     };
     text_shape::ShapedRun run = text_shape::shape_text_run(font, title);
     if (run.width_px <= room) {
@@ -1593,6 +1616,9 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         // A box the clip does not reach is skipped (clip_meets).
         if (!clip_meets(cr, b)) continue;
         const bool pushed = caption_button_pushed(app, i);
+        // THE CASE REGION (architect 2026-10-20 ~20:15): the box's face and
+        // its soft relief the case tile, its tones off the Case Face.
+        const GuiMaterialScope on_case(GuiMaterialRegion::Case);
         const ButtonBoxFace box =
             paint_button_box(cr, b, /*lamp=*/false, pushed,
                              ButtonFamily::Toolbar);
@@ -1675,14 +1701,18 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
     // Windows' etched pair, a rebar's band border, stood here that morning).
 
     cairo_save(cr);
+    // THE UPPER REGION (materials.h, 2026-10-20): the menu row is wood, its
+    // open title's sunken box the wood's own tones.
+    const GuiMaterialScope wood(GuiMaterialRegion::Upper);
 
     // THE GROUND IS THE CONTENT GROUND, the icon row's own (architect
     // 2026-10-01: the menu row takes the icon row's ground), one fill over
-    // the whole lane. It has one value focused and unfocused, so this row no
-    // longer darkens on the window's focus loss.
+    // the whole lane — the WOOD as drawn since 2026-10-20. It has one value
+    // focused and unfocused, so this row no longer darkens on the window's
+    // focus loss.
     {
         const GuiColor ground = palette().ground;
-        set_palette_source(cr, ground);
+        set_surface_source(cr, ground);
         cairo_rectangle(cr, row.x, row.y, row.w, row.h);
         cairo_fill(cr);
     }
@@ -1781,15 +1811,17 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
         // row block above): the band's text seat (label_baseline, above).
         // THE ACCESS KEY'S UNDERLINE rides the label in every face — at
         // rest, pushed in under the open title, embossed when dead
-        // (access_underline_rect).
+        // (access_underline_rect). A LIVE LABEL IS THE WOOD'S BRUSHED GOLD
+        // over its one-device-px shadow (architect 2026-10-20,
+        // show_wood_access_run; the label role until then).
         const double label_x = static_cast<double>(x + pad_l + push);
         const double label_y = label_baseline + push;
         if (!face.enabled && !open_anchor) {
             show_embossed_access_run(cr, run, def.label, def.access, label_x,
                                      label_y);
         } else {
-            show_access_run(cr, run, def.label, def.access, label_x, label_y,
-                            palette().label);
+            show_wood_access_run(cr, run, def.label, def.access, label_x,
+                                 label_y);
         }
 
         x += btn_w;
@@ -2138,8 +2170,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE LANE IS COOL EDIT'S BAND (render.h's program block): no border of
-    // its own beyond the band's own lines.
+    // its own beyond the band's own lines. THE UPPER REGION (materials.h,
+    // 2026-10-20): its panes, grooves and edge columns the wood, its void —
+    // the recess where no pane stands — the dark wood; its cases the case
+    // tile's (paint_roster_case).
     cairo_save(cr);
+    const GuiMaterialScope wood(GuiMaterialRegion::Upper);
 
     // THE BAND'S GROUND — the dark outline, the recess, the light last line:
     // the band where no pane stands (paint_ce_band_ground). The panes and the
@@ -2268,7 +2304,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const ButtonBoxFace box = paint_roster_case(
-            cr, GuiRect{bx, btn_y, btn_w, btn_h}, face.selected, pressed);
+            cr, GuiRect{bx, btn_y, btn_w, btn_h}, face.selected, pressed,
+            roster_case_seat(def.id));
 
         // THE GLYPH at the case's (+1, +1) lines, in the drawing's own
         // colours — or,
@@ -2752,12 +2789,13 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // THE TIME FIELDS — ROW 8'S CLOCK AND THE RENDER PLAYER'S POSITION AND
 // LENGTH, ONE FIELD SHAPE UNDER EVERY CHROME: COOL EDIT'S DARK FIELD
 // (architect 2026-10-09, the program is Cool Edit; METRICS §5.4,
-// paint_ce_time_field) — its field-dark line on the top and left, the mid
-// tone inside, its field-light line on the bottom and right, all three the
-// palette's Face-derived tones, the digits the never-swapping light text
-// (`ce_field_text`, Face-derived since 2026-10-10 — EFEFEF on the default
-// Face for Cool Edit's measured EFF0F0; the chrome's time-field roles,
-// clock_ground and clock_text, are unread by the program) — kProgramSpec.field_h_px tall
+// paint_ce_time_field) — its field-dark line on the top and left and its
+// field-light line on the bottom and right, the metal's tones, BLACK inside
+// and the digits AMBER (the wood chrome's, materials.h's kTimeFieldGround
+// and kTimeFieldDigits, 2026-10-20; Cool Edit's `mid` under its
+// never-swapping light text, `ce_field_text`, 2026-10-10..10-20; the
+// chrome's time-field roles, clock_ground and clock_text, are unread by the
+// program) — kProgramSpec.field_h_px tall
 // (17 W), CENTRED ON THE CASE'S ROWS (a half-row tie toward the top, the cap
 // rule's own), its run in THE BODY FACE (gui_font.h; no period field used a
 // monospace face), its cap band centred in the field by redesign_baseline.
@@ -2999,7 +3037,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const bool pressed =
             face.enabled && redesign_button_pressed_face(app, def.id);
         const ButtonBoxFace box = paint_roster_case(
-            cr, GuiRect{x, btn_y, btn_w, btn_h}, face.selected, pressed);
+            cr, GuiRect{x, btn_y, btn_w, btn_h}, face.selected, pressed,
+            roster_case_seat(def.id));
         // THE GLYPH IS THE STATE RESOLVER'S since 2026-08-15, as the band's
         // already was: this row hosts a stateful face — the collapsed
         // PLAY/STOP button, which wears TransportStop while an audition
@@ -3305,7 +3344,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         if (clock_drawn) {
             const text_shape::ShapedRun time_run =
                 text_shape::shape_text_run(font, clock_time_text(app, audio));
-            set_palette_source(cr, palette().ce_field_text);
+            // THE WOOD CHROME'S AMBER on the field's black (materials.h's
+            // kTimeFieldDigits, 2026-10-20).
+            set_palette_source(cr, hex(kTimeFieldDigits));
             text_shape::show_shaped_run(cr, time_run,
                                         static_cast<double>(cell_x), baseline);
         }
@@ -4384,12 +4425,14 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // read): the column's margins beside them stay the panel's face, as the
     // view bar's do. THE MARKER LANE'S PANEL FACE is laid here
     // too, before the flag blit, the lane's ground under every cue (the flag
-    // cache paints the cues alone).
+    // cache paints the cues alone) — A RECESS, THE METAL_VERY_DARK AS DRAWN
+    // (materials.h, 2026-10-20), the margins beside the ruler the metal's
+    // face as the view bar's are.
     const GuiPalette& pal = palette();
     const int ground_h = ruler_ground_h_px();
     const int lw       = program_line_px();
     paint_cell_rect(cr, lane, pal.face);
-    if (marker.w > 0 && marker.h > 0) paint_cell_rect(cr, marker, pal.face);
+    paint_material_rect(cr, marker, GuiMaterial::MetalVeryDark);
 
     // THE DISPLAYED BASIS, not the live viewport: the ruler must agree with the
     // pixels actually on screen, so it reads the same plate epoch the playheads
@@ -4437,7 +4480,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // (paint_relief_frame, cool_edit_paint.h's diagonal rule). The ground and
     // the frame read the LIVE area, as the canvas's own frame does
     // (paint_canvas_column_frame); the walk below reads the plate's width.
-    paint_cell_rect(cr, GuiRect{cx, lane.y, area.w, ground_h}, pal.ce_mid);
+    // THE GROUND IS A RECESS, the MetalVeryDark as drawn (materials.h,
+    // 2026-10-20; the `ce_mid` tone until then), its frame the metal's tones.
+    paint_material_rect(cr, GuiRect{cx, lane.y, area.w, ground_h},
+                        GuiMaterial::MetalVeryDark);
     cairo_save(cr);
     cairo_rectangle(cr, lane.x, lane.y, lane.w, ground_h + lw);
     cairo_clip(cr);
@@ -5176,10 +5222,12 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // column's margins beside the bar's frame (render_trim_flags spans the
     // canvas's columns and its two frame columns alone, 2026-10-09) read as
     // the panel.
+    // THE AIR IS A RECESS, the MetalVeryDark as drawn (materials.h,
+    // 2026-10-20); the trim lane's ground the metal's face, the margins.
     const GuiRect trim_row = top_trim_row_area(app);
     {
         const GuiRect air = top_column_air_area(app);
-        if (air.w > 0 && air.h > 0) paint_cell_rect(cr, air, palette().face);
+        paint_material_rect(cr, air, GuiMaterial::MetalVeryDark);
         if (trim_row.w > 0 && trim_row.h > 0)
             paint_cell_rect(cr, trim_row, palette().face);
     }
@@ -6841,7 +6889,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    FIELDS since 2026-10-05, the POSITION and then the LENGTH, each
         //    centred on the case's rows with its run on the field's own
         //    seat, Cool Edit's dark field and its ink (paint_ce_time_field,
-        //    `ce_field_text`) — the fields row 8's clock is, said twice. ONE RECT ROUND BOTH IS PUBLISHED (dlg.clock) for the
+        //    kTimeFieldDigits) — the fields row 8's clock is, said twice. ONE RECT ROUND BOTH IS PUBLISHED (dlg.clock) for the
         //    tick's per-position damage, beside the scrub's, and the two CLIP
         //    at the lane's right pad on a narrow window. --
         const int sr = audio.sample_rate();
@@ -6865,7 +6913,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 // kTimeShape's block).
                 const text_shape::ShapedRun run = text_shape::shape_text_run(
                     cfont, format_timestamp(seconds_of(shown[i])));
-                set_palette_source(cr, palette().ce_field_text);
+                // Row 8's clock's amber (kTimeFieldDigits, 2026-10-20).
+                set_palette_source(cr, hex(kTimeFieldDigits));
                 text_shape::show_shaped_run(
                     cr, run,
                     static_cast<double>(field_x + field_w - field_pad) -
@@ -7183,7 +7232,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 palette().dk_shadow);
         const ButtonBoxFace box =
             player_up
-                ? paint_roster_case(cr, r, plan[i].lit, pressed)
+                ? paint_roster_case(cr, r, plan[i].lit, pressed,
+                                    kPlayerCaseSeatBase +
+                                        static_cast<uint32_t>(i))
                 : paint_button_box(cr, r, plan[i].lit, pressed,
                                    ButtonFamily::Push);
         if (plan[i].glyph) {
@@ -7350,8 +7401,9 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // program frame's columns on its bottom row, the frame round it and the
     // modal family's border, when a dialog editor's stack stands on it,
     // above it. (The taskbar overlay's raised Hilight line on its top,
-    // 2026-10-10 to 2026-10-14, is gone with the overlay.)
-    set_palette_source(cr, palette().ground);
+    // 2026-10-10 to 2026-10-14, is gone with the overlay.) A SURFACE: the
+    // metal as drawn (materials.h, 2026-10-20).
+    set_surface_source(cr, palette().ground);
     cairo_rectangle(cr, surf.x, surf.y, surf.w, surf.h);
     cairo_fill(cr);
 
@@ -7741,6 +7793,11 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
         cairo_clip(cr);
     }
     paint_cell_rect(cr, face, p.face);
+    // THE COLUMN'S FOOT under the ring's bottom line is A RECESS, the
+    // MetalVeryDark as drawn (materials.h, 2026-10-20) — the column's air's
+    // twin below the canvas — the margins beside the wells the metal's face.
+    paint_material_rect(cr, GuiRect{foot.x, foot.y + lw, foot.w, foot.h - lw},
+                        GuiMaterial::MetalVeryDark);
     // THE TWO WELLS' RINGS (the stereo divider, render.h's waveform_divider;
     // architect 2026-10-16): the upper from the top frame row through its
     // light bottom line, the divider's first rows; the lower from its dark
@@ -8025,6 +8082,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // (The monospace grid measure that opened every frame is gone with the face
     // — row 7. Nothing in the product measures text outside a shaping pass now,
     // and every such pass owns its own font selection.)
+
+    // THE WOOD'S STRIP CENTRES ON THE CLIENT (materials.h's head): its width
+    // handed over every paint, before any surface asks for its source.
+    materials::set_client_width(app.width);
 
     // THE FLAG STASH PROMOTES WITH THE FLAG SURFACE (architect 2026-09-24,
     // strictly as-painted; the contract is at AppState::flag_hit_rects). The

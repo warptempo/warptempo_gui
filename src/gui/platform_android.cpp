@@ -644,6 +644,13 @@ GuiPlatform::bundled_icon_files() {
     return read_asset_dir("icons", {".svg", ".png"});
 }
 
+// The tiles, the same road (a tile missing from the package the load's
+// missing file, materials.h).
+std::expected<std::map<std::string, std::string>, std::string>
+GuiPlatform::bundled_tile_files() {
+    return read_asset_dir("tiles", {".png", ".jpg"});
+}
+
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     app_ = g_android_app;
     if (!app_) {

@@ -25,9 +25,11 @@
 // THE FACE — the panel's one Face and the tones Cool Edit derives from it,
 // the default preset's waveform ink, and the program text's two members, the
 // selection taking the other one (cool_edit_derive.h's tones; the per-role
-// mapping is chrome_derive.h's, the one owner) — COMPILED since 2026-10-20
-// (kGuiChromeWords, chrome_derive.h: the Face is one constant and no preset
-// moves the chrome). THE CAPTION'S SIX ARE THE COMPILED CAPTION BELOW.
+// mapping is chrome_derive.h's, the one owner) — off THE METAL'S FACE since
+// 2026-10-20 (gui_chrome_words, chrome_derive.h: the MetalDark tile's mean,
+// materials.h, and no preset moves the chrome; a surface role painted as its
+// region's material). THE CAPTION'S SIX ARE THE COMPILED CAPTION BELOW,
+// unread by any painter since the caption became the wood (2026-10-20).
 //
 // THE ROLES are the role table below — THE ONE ENUMERATION of the chrome's:
 // its name and the GuiPalette field it fills (render.h, whose palette block
@@ -100,7 +102,7 @@ constexpr std::size_t theme_role_index(std::string_view name) {
 }
 
 // THE CHROME'S WORDS, in the role table's order — what the derivation
-// answers (kGuiChromeWords, chrome_derive.h) and install_palette reads.
+// answers (gui_chrome_words, chrome_derive.h) and install_palette reads.
 using GuiThemeWords = std::array<uint32_t, kGuiThemeRoleCount>;
 
 // (THE ONE COLOUR GRAMMAR — `#rrggbb` or one of Windows' twenty always-solid

@@ -1,5 +1,6 @@
 #include "cool_edit_paint.h"
 
+#include "materials.h"   // the case's tile, the time field's constants
 #include "text_shape.h"
 
 #include <algorithm>
@@ -13,48 +14,14 @@
 
 namespace {
 
-void cell(cairo_t* cr, int x, int y, int w, int h, uint32_t word) {
-    paint_cell_rect(cr, GuiRect{x, y, w, h}, hex(word));
-}
+// One cell of a surface tone (paint_cell_rect: its region's material).
 void cell(cairo_t* cr, int x, int y, int w, int h, GuiColor c) {
     paint_cell_rect(cr, GuiRect{x, y, w, h}, c);
 }
 
-// Each channel's byte between a and b at t, rounded to its byte.
-GuiColor lerp_color(const GuiColor& a, const GuiColor& b, double t) {
-    const auto ch = [t](double ca, double cb) {
-        return std::nearbyint((ca + (cb - ca) * t) * 255.0) / 255.0;
-    };
-    return GuiColor{ch(a.r, b.r), ch(a.g, b.g), ch(a.b, b.b)};
-}
-
-// The shadow ramp's tone at step i of n (its two ends exact).
-GuiColor shadow_at(int i, int n) {
-    const double t = n > 1 ? static_cast<double>(i) / (n - 1) : 0.0;
-    return lerp_color(palette().ce_case_shadow_first,
-                      palette().ce_case_shadow_last, t);
-}
-
-// The seat's face over the g x g square at (x, y): stop i on the seat's W
-// row i, its device rows the rounded edges i·g/20 to (i+1)·g/20 (the
-// ramp's rule, cool_edit_paint.h).
-void paint_face_ramp(cairo_t* cr, int x, int y, int g) {
-    const auto& ramp = palette().ce_case_ramp;
-    const int m = static_cast<int>(ramp.size());
-    for (int i = 0; i < m; ++i) {
-        const int y0 = static_cast<int>(
-            std::nearbyint(static_cast<double>(i) * g / m));
-        const int y1 = static_cast<int>(
-            std::nearbyint(static_cast<double>(i + 1) * g / m));
-        if (y1 > y0)
-            cell(cr, x, y + y0, g, y1 - y0,
-                 ramp[static_cast<std::size_t>(i)]);
-    }
-}
-
 } // namespace
 
-int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
+int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down, uint32_t seat) {
     if (r.w <= 0 || r.h <= 0) return 0;
     const int lw = program_line_px();
     const int g  = r.w - 3 * lw;   // the glyph seat: the case less its lines
@@ -65,36 +32,33 @@ int paint_ce_case(cairo_t* cr, const GuiRect& r, bool down) {
         // on the bottom row and right column, MITRED at its top-right and
         // bottom-left corner blocks (the head's diagonal rule: a two-tone
         // ring, as the chrome's sunken edges are, accepted 2026-10-09); 808080
-        // inside the black, square (one tone, its partner the face); the
-        // ramp on the seat one line further in.
+        // inside the black, square (one tone, its partner the face) — every
+        // one a constant, flat (no constant is a tone of the surface
+        // chokepoint, the 808080 painted as ink) — and the ramp on the seat
+        // one line further in, the CASE TILE's (materials::paint_case_face).
         paint_relief_frame(cr, r, hex(kCeRingOuter), hex(kCeRingLight));
-        cell(cr, r.x + lw, r.y + lw, lw + g, lw, kCeRingMid);
-        cell(cr, r.x + lw, r.y + lw, lw, lw + g, kCeRingMid);
-        paint_face_ramp(cr, r.x + 2 * lw, r.y + 2 * lw, g);
+        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw + g, lw},
+                       hex(kCeRingMid));
+        paint_ink_rect(cr, GuiRect{r.x + lw, r.y + lw, lw, lw + g},
+                       hex(kCeRingMid));
+        materials::paint_case_face(cr, r, true, seat);
         cairo_restore(cr);
         return lw;
     }
-    paint_face_ramp(cr, r.x + lw, r.y + lw, g);
-    // THE HIGHLIGHT / SHADOW RING inside the black line, MITRED at its
-    // top-right and bottom-left corner blocks (the head's diagonal rule):
-    // the highlight's square L, the shadow's first tone over it as the
-    // mitred L — Cool Edit's measured ADAEAF junction pixel is exactly the
-    // two tones' half-and-half, the diagonal at one capture px — then the
-    // shadow's ramp over the ring's straight runs, each step one device row
-    // or column, the corner blocks left as the mitre drew them.
-    paint_relief_frame(cr, GuiRect{r.x, r.y, r.w - lw, r.h - lw},
-                       palette().ce_case_highlight,
-                       palette().ce_case_shadow_first);
-    for (int i = 0; i < g; ++i) {
-        const GuiColor s = shadow_at(i, g);
-        cell(cr, r.x + lw + g, r.y + lw + i, lw, 1, s);
-        cell(cr, r.x + lw + i, r.y + lw + g, 1, lw, s);
-    }
-    // The shadow's own corner (one tone, square), then the black line on
-    // the right and bottom (one tone, square).
-    cell(cr, r.x + lw + g, r.y + lw + g, lw, lw, palette().ce_case_corner);
-    cell(cr, r.x + 2 * lw + g, r.y, lw, r.h, kCeCaseOuter);
-    cell(cr, r.x, r.y + 2 * lw + g, r.w, lw, kCeCaseOuter);
+    // THE FACE RAMP AND THE HIGHLIGHT / SHADOW RING inside the black line —
+    // the ring MITRED at its top-right and bottom-left corner blocks (the
+    // head's diagonal rule: Cool Edit's measured ADAEAF junction pixel is
+    // exactly the two tones' half-and-half, the diagonal at one capture px),
+    // the shadow's ramp over the ring's straight runs, each step one device
+    // row or column, and the shadow's own corner — ONE BAKED SQUARE OF THE
+    // CASE TILE, each tone the tile scaled by it, at the seat's own patch
+    // (materials::paint_case_face, its construction pixel by pixel); then
+    // the black line on the right and bottom (one tone, square, flat).
+    materials::paint_case_face(cr, r, false, seat);
+    paint_ink_rect(cr, GuiRect{r.x + 2 * lw + g, r.y, lw, r.h},
+                   hex(kCeCaseOuter));
+    paint_ink_rect(cr, GuiRect{r.x, r.y + 2 * lw + g, r.w, lw},
+                   hex(kCeCaseOuter));
     cairo_restore(cr);
     return 0;
 }
@@ -187,14 +151,14 @@ void paint_ce_gripper(cairo_t* cr, int x, int case_y, int case_h) {
         cairo_line_to(cr, b, e);
         cairo_line_to(cr, a, e - lw);
         cairo_close_path(cr);
-        set_palette_source(cr, p.ce_hilight);
+        set_surface_source(cr, p.ce_hilight);
         cairo_fill(cr);
         cairo_move_to(cr, b, t + lw);
         cairo_line_to(cr, c, t + 2 * lw);
         cairo_line_to(cr, c, e + lw);
         cairo_line_to(cr, b, e);
         cairo_close_path(cr);
-        set_palette_source(cr, p.ce_mid);
+        set_surface_source(cr, p.ce_mid);
         cairo_fill(cr);
     };
     cairo_save(cr);
@@ -223,7 +187,9 @@ void paint_ce_time_field(cairo_t* cr, const GuiRect& f) {
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cell(cr, f.x, f.y, f.w, f.h, p.ce_mid);
+    // THE GROUND BLACK (the wood chrome's, materials.h's kTimeFieldGround,
+    // 2026-10-20; Cool Edit's `mid` until then), as ink: a constant, flat.
+    paint_ink_rect(cr, f, hex(kTimeFieldGround));
     // The field-dark / field-light ring, MITRED (the head's rule).
     paint_relief_frame(cr, f, p.ce_field_dark, p.ce_field_light);
     cairo_restore(cr);
@@ -247,7 +213,7 @@ void mitre_top_right(cairo_t* cr, int bx, int by, int lw, GuiColor top,
     cairo_line_to(cr, bx + lw, by + lw);
     cairo_line_to(cr, bx, by + lw);
     cairo_close_path(cr);
-    set_palette_source(cr, right);
+    set_surface_source(cr, right);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -266,7 +232,7 @@ void foot_bottom_right(cairo_t* cr, int bx, int by, int lw, GuiColor column,
     cairo_line_to(cr, bx + lw, by);
     cairo_line_to(cr, bx + lw, by + lw);
     cairo_close_path(cr);
-    set_palette_source(cr, column);
+    set_surface_source(cr, column);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -285,7 +251,7 @@ void foot_bottom_left(cairo_t* cr, int bx, int by, int lw, GuiColor column,
     cairo_line_to(cr, bx + lw, by);
     cairo_line_to(cr, bx, by + lw);
     cairo_close_path(cr);
-    set_palette_source(cr, column);
+    set_surface_source(cr, column);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -366,20 +332,10 @@ void paint_ce_tab_strip(
     for (int i = 0; i < kCeTabCount; ++i) {
         const GuiRect& t = layout.tab[static_cast<std::size_t>(i)];
         if (i != active) {
-            // THE BODY: one measured stop per W row of its 15, the rows
-            // tiling it exactly (kCaseRamp's rule).
+            // THE BODY: the Face, the metal as drawn (2026-10-20, the wood
+            // chrome: Cool Edit's measured 15-row gradient retired).
             const int body_y = t.y + lw;
-            const int g = page_y - body_y;
-            const int m = static_cast<int>(p.ce_tab_body.size());
-            for (int r = 0; r < m; ++r) {
-                const int y0 = static_cast<int>(
-                    std::nearbyint(static_cast<double>(r) * g / m));
-                const int y1 = static_cast<int>(
-                    std::nearbyint(static_cast<double>(r + 1) * g / m));
-                if (y1 > y0)
-                    cell(cr, t.x + lw, body_y + y0, t.w - 2 * lw, y1 - y0,
-                         p.ce_tab_body[static_cast<std::size_t>(r)]);
-            }
+            cell(cr, t.x + lw, body_y, t.w - 2 * lw, page_y - body_y, p.face);
             // THE EDGES: the light top row and left column, the dark right
             // column, the top-right block mitred.
             cell(cr, t.x, t.y, lw, t.h, p.ce_tab_light);
@@ -420,7 +376,7 @@ void paint_ce_tab_strip(
             foot_bottom_right(cr, t.x, page_y, lw, p.ce_hilight, p.ce_tab_line);
     }
     // THE LABELS, the lit tab's in the program text, an unlit tab's in its
-    // measured ink, a dead tab's embossed.
+    // measured ink (kCeTabLabel), a dead tab's embossed.
     for (int i = 0; i < kCeTabCount; ++i) {
         const std::size_t k = static_cast<std::size_t>(i);
         const text_shape::ShapedRun& run = *labels[k];
@@ -428,7 +384,7 @@ void paint_ce_tab_strip(
             show_embossed_run(cr, run, layout.label_x[k], layout.baseline[k]);
             continue;
         }
-        set_palette_source(cr, i == active ? p.ce_text : p.ce_tab_label);
+        set_palette_source(cr, i == active ? p.ce_text : hex(kCeTabLabel));
         text_shape::show_shaped_run(cr, run, layout.label_x[k],
                                     layout.baseline[k]);
     }

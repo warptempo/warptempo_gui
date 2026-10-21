@@ -387,6 +387,12 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // byte-exact rule 2026-10-14 until the key became required.)
     if (key == "waveform" && app.device_config != nullptr)
         return app.device_config->waveform;
+    // THE BEVEL KEYS (2026-10-20, the wood chrome's tuning phase): through the
+    // config's own serializer, as the scale.
+    if (key == "bevel_light" && app.device_config != nullptr)
+        return format_bevel_percent(app.device_config->bevel_light);
+    if (key == "bevel_dark" && app.device_config != nullptr)
+        return format_bevel_percent(app.device_config->bevel_dark);
 
     const SettingDescriptor* desc = nullptr;
     for (const auto& d : kSettingsOrder) {

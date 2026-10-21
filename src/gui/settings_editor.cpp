@@ -9,6 +9,7 @@
 #include "text_editor.h"
 #include "undo.h"
 #include "palette_file.h"      // the waveform row's presets (palette_record)
+#include "materials.h"         // the bevel rows' live rebake (set_bevel)
 
 #include "settings_file.h"   // warptempo_settings::validate_gui_setting
 #include "frame_format.h"      // parse_authored_frame (the gui_scale arm)
@@ -942,7 +943,8 @@ void GuiSettingsEditor::commit() {
 // project's own name reads as "already open" until a relaunch or a different
 // project is opened first — a rename-by-hand case, accepted. `waveform`
 // (architect 2026-10-14, as `chrome` until 2026-10-20): AT ONCE, live, no
-// card — its arm below. (`theme`, in force at once with the palette
+// card — its arm below; `bevel_light` and `bevel_dark` (2026-10-20 evening,
+// the wood chrome's tuning phase) the same, their arm after it. (`theme`, in force at once with the palette
 // repainted whole, had an arm here 2026-10-03..10-08, `icons` and `font`
 // 2026-10-09..10-12 and `caption` 2026-10-14..10-20; each left with its
 // key.) The commit is the OK's or Enter's, as on every row (the choice
@@ -1018,6 +1020,31 @@ bool GuiSettingsEditor::commit_device_setting(const std::string& key,
         return true;
     }
 
+    // THE BEVEL KEYS (architect 2026-10-20, the wood chrome's tuning phase:
+    // "make it a tuneable config temporarily … for all tuneable fields"):
+    // the scale's canonical integer spelling and the range's one owner
+    // (is_bevel_percent, device_config.h), APPLIED LIVE AT THE COMMIT as the
+    // waveform key is — the materials' baked copies dropped and the window
+    // repainted, every surface rebaking at its next paint (materials.h's
+    // set_bevel), so NO CARD: the bevels on screen are the answer.
+    if (key == "bevel_light" || key == "bevel_dark") {
+        int64_t v = 0;
+        if (!parse_authored_frame(value, v) || !is_bevel_percent(v)) {
+            reject(kBevelGrammarReason);
+            return true;
+        }
+        int& live = key == "bevel_light" ? app.device_config->bevel_light
+                                         : app.device_config->bevel_dark;
+        if (static_cast<int>(v) == live) { unchanged(); return true; }
+        live = static_cast<int>(v);
+        materials::set_bevel(app.device_config->bevel_light,
+                             app.device_config->bevel_dark);
+        viewport.invalidate_all();
+        (void)persist();
+        applied();
+        return true;
+    }
+
     std::string* live    = nullptr;
     bool (*grammar)(const std::string&) = nullptr;
     const char* reason   = nullptr;
@@ -1059,7 +1086,8 @@ void GuiSettingsEditor::install_waveform_preset(
         const std::array<uint32_t, 10>& words) {
     // The shape and why it is enough are at install_program_palette's
     // declaration (palette_file.h). NO CHROME ROLE MOVES (2026-10-20: the
-    // chrome is compiled, chrome_derive.h's kGuiChromeWords), so the damage
+    // chrome is the metal's Face's, chrome_derive.h's gui_chrome_words, which
+    // no preset reaches), so the damage
     // is the client's alone — every color the preset sets paints in the
     // well, the lanes and what enters the well, never on the restored
     // laptop's sizing frame outside the client.

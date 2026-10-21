@@ -25,6 +25,7 @@
 #include "device_config.h"
 #include "palette_file.h"  // the chromes and captions folders' launch reads
 #include "icons.h"         // the icon set's launch load
+#include "materials.h"     // the wood chrome's tiles' launch load
 #include "waveform_worker.h"
 #include "file_loader.h"
 #include "flag_editor.h"
@@ -3589,17 +3590,28 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
+    // THE TILES ARE LOADED AT THAT SCALE, ONCE, before the palette that reads
+    // the metal's Face (architect 2026-10-20, the wood chrome; materials.h's
+    // head): the bevel keys first, then every material's tile read from the
+    // bundle, decoded and drawn at gui_scale / 300, its Face measured. A
+    // missing tile or one that is neither a PNG nor a JPEG is a drop defect:
+    // the blunt terminal line naming the file, and no window.
+    materials::set_bevel(device_config.bevel_light, device_config.bevel_dark);
+    if (const std::optional<std::string> err = materials::load()) {
+        std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
+        return 1;
+    }
     // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
     // preset the config's `waveform` key names (a built-in, one of Cool
     // Edit's presets) for the waveform's colors — the key REQUIRED (architect
     // 2026-10-14: the read refuses an absent line, so there is no default to
     // resolve here) — THE LIVE WORDS' SEED (2026-10-07: resolved here
     // through palette_record and handed to the install explicitly —
-    // render.h's install_palette); the panel's Face, every chrome color and
-    // the caption compiled in (2026-10-20: chrome_derive.h's
-    // kGuiChromeWords; the caption a `caption` key's scheme until that day);
-    // installed once, before the first paint. Every painter reads it through
-    // palette() (render.h's palette block).
+    // render.h's install_palette); the panel's Face and every chrome color
+    // off the metal's Face, the caption compiled in (2026-10-20:
+    // chrome_derive.h's gui_chrome_words; the caption a `caption` key's
+    // scheme until that day); installed once, before the first paint. Every
+    // painter reads it through palette() (render.h's palette block).
     install_palette(palette_record(device_config.waveform));
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,

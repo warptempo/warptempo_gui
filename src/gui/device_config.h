@@ -10,7 +10,7 @@
 #include <string_view>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Six keys live here and nowhere else,
+// piece (architect 2026-08-27). Eight keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -55,6 +55,19 @@
 //                            road; a harmless redundancy and a sanity
 //                            check ("the tablet should never pull [but to
 //                            recover], and the laptop should never push")
+//   bevel_light=<percent>  THE WOOD CHROME'S TWO BEVEL WEIGHTS (architect
+//   bevel_dark=<percent>     2026-10-20: "make it a tuneable config
+//                            temporarily … for all tuneable fields"), a
+//                            TUNING PHASE: an integer [0, 400], 100 Cool
+//                            Edit's tone rule exactly; every LIGHTER-than-
+//                            Face tone's per-channel factor f on a material
+//                            becomes 1 + (f − 1)·p / 100 with p the light
+//                            key, every darker one's the same with the dark
+//                            key (materials.h's head); each with a Settings
+//                            row, applied live at OK (the materials rebake),
+//                            both templates writing 100; the keys leave
+//                            when he settles the values, which become
+//                            constants
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
 // the tuning phases' keys stood at the end from 2026-09-23 until the last of
@@ -65,7 +78,9 @@
 // 2026-10-08 ~18:15, the chrome's colors before the program's; `role` APPENDED after
 // `palette` 2026-10-10; `icons` and `font` stood 2026-10-09 to 2026-10-12;
 // `scheme` and `palette` renamed `caption` and `chrome` 2026-10-13; `caption`
-// gone and `chrome` renamed `waveform` in its place 2026-10-20, below);
+// gone and `chrome` renamed `waveform` in its place 2026-10-20, below; the
+// two bevel keys APPENDED after `role` that evening, a tuning phase's keys
+// at the end as the 2026-09 phases' stood);
 // the list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -215,7 +230,7 @@
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
 // program-written — the first run stamps it from the backend's own template and
 // every later commit rewrites it — so any violation is a hand edit, which the
-// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the six
+// two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the eight
 // keys and each at most once, EVERY KEY REQUIRED (architect 2026-10-12,
 // deferred, his "yes" 2026-10-14: "if one of these lines is not in place, it
 // means something's wrong with the config or the setup" — the two color
@@ -250,7 +265,9 @@
 //
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): the
 // Settings dropdown carries `GUI Scale`, `Projects Repository`,
-// `Projects Path` and `Waveform` — the `waveform` key's row, a line editor
+// `Projects Path`, `Waveform`, and since 2026-10-20 evening `Bevel Light`
+// and `Bevel Dark` (the two bevel keys' rows, a tuning phase's) — the
+// `waveform` key's row, a line editor
 // like the rest (`Chrome` until 2026-10-20, the row of the same key under
 // its old name since 2026-10-14; the `Caption` row stood
 // 2026-10-14..10-20, a `Chrome` row of the retired
@@ -318,7 +335,23 @@ struct DeviceConfig {
     std::string waveform;
     // THE ROLE (architect 2026-10-10): required, so Unset only before a read.
     GuiDeviceRole role = GuiDeviceRole::Unset;
+    // THE BEVEL WEIGHTS (2026-10-20, the head's list): required; 100 the
+    // templates' and the construction state's.
+    int         bevel_light = 100;
+    int         bevel_dark  = 100;
 };
+
+// THE BEVEL KEYS' RANGE — the one owner, the reader's and the settings
+// editor's (the scale's shape): an integer percent in [0, 400] — 0 a flat
+// material, 100 the tone rule exactly, 400 four times its departure from
+// the Face (a tuning range, the head's list).
+inline constexpr bool is_bevel_percent(int64_t v) {
+    return v >= 0 && v <= 400;
+}
+inline constexpr const char* kBevelGrammarReason =
+    "must be an integer in [0, 400] in canonical spelling";
+// The canonical spelling of a bevel percent, the scale's (plain digits).
+std::string format_bevel_percent(int percent);
 
 // The repository a device is STAMPED WITH when it has never named one — the
 // first-run template's `projects_repo=` value on both backends. It moved here
@@ -591,9 +624,10 @@ std::expected<DeviceConfig, std::string> read_device_config(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
 // (re-grepped 2026-10-14):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
-// the settings editor's ONE device-key body, which serves three keys —
-// `projects_repo=`, `projects_path=` and, since 2026-10-14, `waveform=`
-// (`chrome=` until 2026-10-20) (GuiSettingsEditor::commit_device_setting,
+// the settings editor's ONE device-key body, which serves five keys —
+// `projects_repo=`, `projects_path=`, since 2026-10-14 `waveform=`
+// (`chrome=` until 2026-10-20) and since 2026-10-20 evening `bevel_light=`
+// and `bevel_dark=` (GuiSettingsEditor::commit_device_setting,
 // settings_editor.cpp; the path arm joined 2026-09-02;
 // the theme's stood 2026-10-03..10-08, the vocabulary `chrome`'s
 // 2026-10-07..10-10, `caption=`'s 2026-10-14..10-20; the color

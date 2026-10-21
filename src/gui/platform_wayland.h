@@ -102,6 +102,18 @@ public:
     static std::expected<std::map<std::string, std::string>, std::string>
         bundled_icon_files();
 
+    // THE BUNDLED TILES' FILES (architect 2026-10-20, the wood chrome;
+    // materials.h's head) — the materials of assets/tiles/, one flat drop
+    // folder, as a map from FILE NAME (`<Material>.png` or `<Material>.jpg`,
+    // materials.h's kGuiMaterialNames) to the file's whole bytes, every file
+    // of the folder whose name ends `.png` or `.jpg`: bundled_icon_files'
+    // road and rules exactly, the path compiled in
+    // (WARPTEMPO_BUNDLED_TILES_DIR, CMakeLists.txt), the APK's `tiles/`
+    // assets on the tablet. Read by materials::load alone, at the launch and
+    // at a gui_scale commit.
+    static std::expected<std::map<std::string, std::string>, std::string>
+        bundled_tile_files();
+
     // THE WINDOW TITLE IS THE CLASSIC APPLICATION FORM (architect 2026-08-01):
     // "K551 - warptempo_gui". This setter is its ONLY writer — set_title itself
     // is private below so the composition cannot be bypassed by an inline string

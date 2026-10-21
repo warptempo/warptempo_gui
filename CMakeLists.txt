@@ -175,6 +175,11 @@ set(WARPTEMPO_GUI_SOURCES
     # cross-built static one (android/deps/85_resvg.sh) on Android.
     src/gui/icons.cpp
     src/gui/svg_icon.cpp
+    # GUI-ONLY, for svg_icon.cpp's reason: the wood chrome's materials
+    # (2026-10-20, materials.h) — the tiles read from the bundle, decoded and
+    # scaled through svg_icon's road, baked per tone and painted as the
+    # chrome's surfaces.
+    src/gui/materials.cpp
     src/gui/render.cpp
     # THE PROGRAM'S PAINTERS (2026-10-09): Cool Edit's band, row 8 and its
     # case, the same under every chrome (cool_edit_paint.h).
@@ -704,6 +709,12 @@ if(WARPTEMPO_BUILD_GUI AND NOT ANDROID)
     # so the Android branch defines nothing.
     target_compile_definitions(warptempo_gui PRIVATE
         WARPTEMPO_BUNDLED_ICONS_DIR="${CMAKE_SOURCE_DIR}/assets/icons")
+    # THE BUNDLED TILES' SOURCE ON THE LAPTOP (architect 2026-10-20, the wood
+    # chrome; materials.h's head): the repository's own assets/tiles/, the
+    # icons' road exactly (GuiPlatform::bundled_tile_files) — a dropped tile
+    # needs no rebuild here; the APK packs the same files as assets.
+    target_compile_definitions(warptempo_gui PRIVATE
+        WARPTEMPO_BUNDLED_TILES_DIR="${CMAKE_SOURCE_DIR}/assets/tiles")
     target_link_libraries(warptempo_gui PRIVATE
         ${FFTW3_THREADS_LIB}
         ${FFTW3_LIBRARIES}

@@ -18,11 +18,13 @@
 // WHERE IT RUNS, the one list (re-grep `display_transform::` to re-derive it):
 // set_palette_source and set_waveform_source (render.cpp — every role paint,
 // the text's ink included); the words the painters write by hand (render.cpp:
-// paint_checker_rect's two cells, paint_caption_gradient's ramp, and the
-// waveform plate's two inks, converted on the GUI thread as
-// waveform_plate_inks hands them to the job, so the worker writes them
-// as they come); the icon rasters (icons.cpp, through
-// svg_icon::convert_to_display). THE CONVERSION IS AT THE
+// paint_checker_rect's two cells and the waveform plate's two inks,
+// converted on the GUI thread as waveform_plate_inks hands them to the job,
+// so the worker writes them as they come); the icon rasters (icons.cpp,
+// through svg_icon::convert_to_display); THE MATERIALS' BAKED COPIES AND
+// CASES (materials.cpp, at each bake — every chrome surface since
+// 2026-10-20, set_surface_source's road; the caption gradient's ramp stood
+// here 2026-10-08..10-20). THE CONVERSION IS AT THE
 // SOURCE, never a frame-level pass: the window buffer is copied byte for
 // byte, every flat color is exact, and an antialiased edge or a ramp's
 // in-between level is the renderer's blend of converted colors (render.h's

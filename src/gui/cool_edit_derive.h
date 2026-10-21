@@ -19,11 +19,16 @@
 // The program's panel — the toolbar band, the dock
 // bar, row 8 and, in later parts, the canvas column's frames — takes ONE
 // color, the Face (Cool Edit's "Dockable Window 3D Color", its scheme key
-// `Face`): kDefaultFace below, 626C7B, under every waveform preset since
-// 2026-10-20 (a palette role, each preset's own, 2026-10-09..10-20), and
-// every other tone the panel puts down is derived from it HERE, the one
-// owner. The tones below stay functions of a Face — the rule and its proofs
-// over Cool Edit's captured Faces are the record — evaluated on that one.
+// `Face`), and every other tone the panel puts down is derived from it HERE,
+// the one owner. THE FACES ARE THE MATERIALS' SINCE 2026-10-20 (architect,
+// the wood chrome; materials.h): each tile's mean color is its Face, and
+// every tone below is evaluated on THE FACE OF THE MATERIAL IT STANDS ON —
+// the chrome's roles and the palette's Cool Edit block on the metal's
+// (render.cpp's fill_program_palette), a surface's tone on its region's
+// tile, painted as that tile scaled per channel by tone / Face. (The Face
+// was each preset's own, a palette role, 2026-10-09..10-20 and kDefaultFace
+// below, 626C7B, for that day.) The tones stay functions of a Face — the
+// rule and its proofs over Cool Edit's captured Faces are the record.
 //
 // THE RULE IS THE ONE THE MEASURER PROVED (tmp/research/cool_edit/
 // METRICS.md §2.1, five presets captured at the same pixel positions —
@@ -57,8 +62,8 @@
 // for a generated block of tones): every measured tone stands in the table below as the record, and
 // those the painters read carry a GuiPalette member (the COOL EDIT BLOCK,
 // render.h's palette struct), filled at every install of the program's words
-// (fill_program_palette, render.cpp) off the one Face (kDefaultFace below;
-// a preset's own Face moved them all live 2026-10-09..10-20).
+// (fill_program_palette, render.cpp) off the metal's Face (2026-10-20; a
+// preset's own Face moved them all live 2026-10-09..10-20).
 // The toolbar band and row 8 read eight: the recess, the mid, the dark, the
 // hilight, the time field's two lines and its digits (the never-swapping
 // `text`), and the panel label's pair (the label's swap below, its two
@@ -69,9 +74,9 @@
 // WAVEFORM'S INK rather than the face, the view bar's span bevels
 // (ToneSource::Ink below; their proof over Cool Edit's five presets); THE
 // TAB STRIP (2026-10-18) the recess, the hilight, the mid and the
-// Organizer's four — tab_light, tab_dark, tab_line and page_dark — beside
-// its inactive body and label, which are no tone but a measured table
-// (kTabBodies below).
+// Organizer's four — tab_light, tab_dark, tab_line and page_dark (its
+// inactive body and label a measured table 2026-10-18..10-20, retired with
+// the tiles, below).
 //
 // THE BUTTON CASE FOLLOWS FACE TOO (architect 2026-10-10, reopening
 // 2026-10-09's "the buttons did not change color with the preset": the fit's
@@ -105,10 +110,11 @@
 // ground is the dark `mid` at every Face (§2a, §3a) — so the field text is
 // `text` at every Face (field_text below). THE CHROME WEARS THEM
 // (chrome_derive.h): the label, the clock text and the card text the swapping
-// text, the field text the never-swapping one — and so does THE PROGRAM'S
-// OWN TIME FIELD (row 8's clock, the render player's two fields: the
-// `ce_field_text` member, architect 2026-10-10, "whatever Cool Edit seems to
-// be doing as far as the dark text, we do that as well").
+// text, the field text the never-swapping one. (THE PROGRAM'S OWN TIME
+// FIELD — row 8's clock, the render player's two fields — wore it too as the
+// `ce_field_text` member 2026-10-10..10-20, "whatever Cool Edit seems to be
+// doing as far as the dark text, we do that as well"; the wood chrome's
+// amber on black since, materials.h.)
 //
 // THE PANEL LABEL AND ITS OWN SWAP (2026-10-10, the same ruling; §2c, §2e,
 // §3a, §3c): the label's ink on a dark Face is `label`, L' = .244·L + .750
@@ -136,11 +142,11 @@
 
 namespace cool_edit_derive {
 
-// THE DEFAULT FACE, Cool Edit's own default scheme's — THE ONE FACE THE
-// PRODUCT PAINTS since 2026-10-20 (architect: the waveform preset sets the
-// waveform's colors alone, palette_file.h's head; until then the Face was
-// each preset's own, a palette role): the panel's ground, every tone below
-// and, through them, every chrome role (chrome_derive.h).
+// THE DEFAULT FACE, Cool Edit's own default scheme's — the Face every proof
+// below is measured on (the tones' default bytes), and THE ONE FACE THE
+// PRODUCT PAINTED for the day of 2026-10-20 before the tiles (the materials'
+// Faces since, materials.h; each preset's own, a palette role, until that
+// morning).
 inline constexpr uint32_t kDefaultFace = 0x626C7B;
 
 // -- THE HLS ROUND TRIP (Python's colorsys, ported) ----------------------------
@@ -287,13 +293,13 @@ inline constexpr Tone kTones[] = {
     // THE PROGRAM TEXT (2026-10-10, the head's text tones): the clock's,
     // "Files"' and the field digits' light ink on a dark Face — the chrome's
     // label, clock and card text below the swap and its field text at
-    // every Face (chrome_derive.h), and THE PROGRAM'S TIME FIELDS' DIGITS at
-    // every Face (`ce_field_text`: the field's ground is the dark `mid`, so
-    // it never swaps) — and Cool Edit's swapped dark ink above the
+    // every Face (chrome_derive.h; THE PROGRAM'S TIME FIELDS' DIGITS wore it
+    // as `ce_field_text` 2026-10-10..10-20, the wood chrome's amber since,
+    // materials.h) — and Cool Edit's swapped dark ink above the
     // threshold, measured on Safari So Good (C1B791, its clock 312A10). The
     // chrome's selected text is the pair's other member (selected_text,
     // architect 2026-10-16).
-    {"text",          0xEFF0F0, 0.086,  0.900, &GuiPalette::ce_field_text,
+    {"text",          0xEFF0F0, 0.086,  0.900, nullptr,
      ToneSource::Face, 0.2, 0.0},
     {"text_dark",     0x312A10, 0.160,  0.025, nullptr, ToneSource::Face,
      0.58, 0.32, 0xC1B791},
@@ -594,9 +600,11 @@ inline constexpr CaseTone kCaseHighlight = {0.02150, 0.97950, 1.18600, 0xFDFEFF}
 inline constexpr CaseTone kCaseShadowFirst = {-0.00100, 0.37000, 0.08200, 0x5D5E5E};
 inline constexpr CaseTone kCaseShadowLast  = {0.00650, 0.29850, 0.08200, 0x4C4D4D};
 inline constexpr CaseTone kCaseCorner      = {0.00450, 0.29500, 0.08100, 0x4B4C4C};
-// The GuiPalette members the case fills (the ramp's array and the four
-// lines), counted by palette_file.cpp's coverage check.
-inline constexpr std::size_t kCaseMemberCount = kCaseRamp.size() + 4;
+// THE CASE WEARS THESE ON ITS OWN TILE since 2026-10-20 (architect, the wood
+// chrome): every tone above taken off THE CASE TILE'S FACE, each the case
+// tile scaled per channel by tone / Face, baked per seat
+// (materials::paint_case_face) — no GuiPalette member holds them (the
+// twenty-four that did, off the panel's Face, 2026-10-10..10-20, left).
 
 constexpr bool within_two(uint32_t x, uint32_t y) {
     for (int shift = 0; shift <= 16; shift += 8) {
@@ -625,7 +633,7 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 
 // -- THE TAB STRIP'S INACTIVE TAB (architect 2026-10-18 ~19:05, "agree") -------
 
-// AN INACTIVE TAB'S BODY AND LABEL ARE A PER-PRESET MEASURED TABLE, NOT A
+// AN INACTIVE TAB'S BODY AND LABEL WERE A PER-PRESET MEASURED TABLE, NOT A
 // RULE. Cool Edit fills an inactive Organizer tab's body with a 15-row
 // vertical gradient off the Face and sets its label in an ink of its own
 // (METRICS §2.3: 8C9AB0 … 616B7A and CECFD1 on the default Face; the hover
@@ -644,63 +652,17 @@ static_assert(case_tone(kCaseShadowFirst, 0xC0C0C0) == 0x5E5E5E &&
 // Periwinkle, Safari So Good, Seattle Blues) its dark ink fits no
 // derivation, so the table carries the label for every row, one rule.
 // HIS RULING: THE TABLE — each preset's captured bytes, exact (18 rows, one
-// per distinct Face of the twenty built-in palettes, 2026-10-18..10-20).
-// ONE ROW SINCE 2026-10-20: THE FACE IS ONE, kDefaultFace, under every
-// waveform preset (architect 2026-10-20, the preset sets the waveform's
-// colors alone — palette_file.h's head), so the table keeps Default's row
-// alone (the seventeen others are git history) and the lookup's one Face is
-// proven to have it (below), no error arm. The table itself retires with the
-// wood chrome's tiles. The row: the Face, the 15 body bytes top row
-// first — row i fills the body's W row i as kCaseRamp's stops fill the
-// glyph seat, never resampled (cool_edit_paint.h's paint_ce_tab_strip) —
-// and the inactive label's ink. Hand-typed from RESULTS.md, every byte
-// checked against it; the record is this comment and git history (tmp/ is
-// untracked), as the case ramp's.
-struct TabBody {
-    uint32_t                 face;
-    std::array<uint32_t, 15> rows;
-    uint32_t                 label;
-};
-inline constexpr TabBody kTabBodies[] = {
-    {0x626C7B, {0x8C9AB0, 0x8997AC, 0x8694A8, 0x8390A4, 0x7F8DA1, 0x7C899D,  // Default
-                0x798699, 0x768295, 0x737F91, 0x707C8D, 0x6D7889, 0x6A7585,
-                0x677181, 0x646E7E, 0x616B7A}, 0xCECFD1},
-};
-// THE BODY IS THE TAB'S 15 W UNDER ITS TOP LIGHT ROW (program_spec.h's tab
-// fields: 16 W tall, one light row and the body).
-static_assert(std::tuple_size_v<decltype(TabBody::rows)> ==
-              static_cast<std::size_t>(kProgramSpec.tab_recess_px -
-                                       kProgramSpec.tab_inactive_top_px - 1));
-// ONE ROW PER FACE.
-static_assert([] {
-    for (std::size_t i = 0; i < std::size(kTabBodies); ++i)
-        for (std::size_t j = i + 1; j < std::size(kTabBodies); ++j)
-            if (kTabBodies[i].face == kTabBodies[j].face) return false;
-    return true;
-}());
-// THE ROW OF `face`. The one Face the product paints, kDefaultFace, has a row
-// (the static_assert below reads it), so a miss is unconstructible: no
-// error arm.
-constexpr const TabBody& tab_body(uint32_t face) {
-    for (const TabBody& t : kTabBodies)
-        if (t.face == face) return t;
-    std::unreachable();
-}
-// DEFAULT'S ROW IS METRICS §2.3's CAPTURE, BYTE FOR BYTE: the rest gradient
-// and the label CECFD1 on the default Face.
-static_assert([] {
-    constexpr std::array<uint32_t, 15> kMetrics = {
-        0x8C9AB0, 0x8997AC, 0x8694A8, 0x8390A4, 0x7F8DA1, 0x7C899D,
-        0x798699, 0x768295, 0x737F91, 0x707C8D, 0x6D7889, 0x6A7585,
-        0x677181, 0x646E7E, 0x616B7A};
-    const TabBody& d = tab_body(kDefaultFace);
-    return d.rows == kMetrics && d.label == 0xCECFD1;
-}());
-// The GuiPalette members the inactive tab fills (the body's array and the
-// label) and THE ACTIVE TAB'S LABEL, the program text (program_text above,
-// `ce_text`), counted by palette_file.cpp's coverage check.
-inline constexpr std::size_t kTabMemberCount =
-    std::tuple_size_v<decltype(TabBody::rows)> + 2;
+// per distinct Face of the twenty built-in palettes, 2026-10-18..10-20; one
+// row, Default's, for that day). RETIRED WITH THE TILES (architect
+// 2026-10-20, the wood chrome: "kTabBodies RETIRED, the tab body is the
+// metal like every tone"): an inactive tab's body is the MetalDark material
+// as drawn (materials.h), and its label keeps Default's measured ink, CECFD1
+// (cool_edit_paint.h's kCeTabLabel, the tab labels keeping their light
+// tones); the table and its record are git history.
+// THE GuiPalette MEMBER THE STRIP READS: THE ACTIVE TAB'S LABEL, the program
+// text (program_text above, `ce_text`), counted by palette_file.cpp's
+// coverage check.
+inline constexpr std::size_t kTabMemberCount = 1;
 
 // -- THE DISABLED CUE'S FADED LOOK (architect 2026-10-10 ~12:20) ---------------
 
@@ -711,9 +673,11 @@ inline constexpr std::size_t kTabMemberCount =
 // THE PANEL'S FACE, "an opacity look … not actually opaque" — three DERIVED
 // SOLID COLORS (the palette composites nothing at paint time; each a
 // precomputed per-channel mix, round(a + t·(b − a)), filled at every install
-// of the program's words so a new `cue` or `invalid_label` moves them live,
-// the Face the one constant since 2026-10-20; render.cpp's
-// fill_program_palette):
+// of the program's words so a new `cue` or `invalid_label` moves them live;
+// render.cpp's fill_program_palette). THE FACE THEY FADE TOWARD IS THE
+// LANE'S since 2026-10-20 — the MetalVeryDark tile's mean, the recess every
+// cue stands on (materials.h), the cue's shadow that face's own
+// `cue_shadow` tone — the label's rest tone still the metal's `hilight`:
 //   the TRIANGLE   the live triangle's color (the `cue` red, or the invalid
 //                  color of an invalid cue or a history REMOVED flag,
 //                  2026-10-11) 45 % toward the Face;
@@ -744,14 +708,15 @@ constexpr uint32_t mix_toward(uint32_t from, uint32_t to, double t) {
 constexpr uint32_t disabled_triangle(uint32_t triangle, uint32_t face) {
     return mix_toward(triangle, face, kDisabledTriangleMix);
 }
-// The cue shadow of `face`, faded toward it.
-constexpr uint32_t disabled_cue_shadow(uint32_t face) {
-    return mix_toward(tone_of(named_tone("cue_shadow"), face, 0), face,
+// The cue shadow of the lane's `lane` Face, faded toward it.
+constexpr uint32_t disabled_cue_shadow(uint32_t lane) {
+    return mix_toward(tone_of(named_tone("cue_shadow"), lane, 0), lane,
                       kDisabledShadowMix);
 }
-// The resting label tone of `face`, faded toward it.
-constexpr uint32_t disabled_cue_label(uint32_t face) {
-    return mix_toward(tone_of(named_tone("hilight"), face, 0), face,
+// The resting label tone of the panel's `face` (its `hilight`), faded toward
+// the lane's `lane` Face.
+constexpr uint32_t disabled_cue_label(uint32_t face, uint32_t lane) {
+    return mix_toward(tone_of(named_tone("hilight"), face, 0), lane,
                       kDisabledLabelMix);
 }
 // The GuiPalette members these fill (the faded cue triangle, the faded

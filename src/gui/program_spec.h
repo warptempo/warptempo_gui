@@ -10,8 +10,10 @@
 // (windows-2000 today, Windows XP's to come). This header is the one owner of the
 // program's lengths, in Windows px, read by the lane table (main.cpp), the
 // accessors (render.h's program block) and the painters (cool_edit_paint.h);
-// its colors are the palette's Face role and the tones Cool Edit derives
-// from it (cool_edit_derive.h) beside the painter's own constants.
+// its colors are the panel's Face and the tones Cool Edit derives from it
+// (cool_edit_derive.h) beside the painter's own constants — every surface
+// tone painted as its region's MATERIAL since 2026-10-20 (the wood chrome,
+// materials.h: the band wood, the cases the case tile, the rest metal).
 //
 // NO PROPORTIONAL FIT (architect 2026-10-09 ~10:25, "I'd like to see it at
 // 20"): every one of Cool Edit's measurements (tmp/research/cool_edit/
@@ -243,7 +245,8 @@ struct ProgramSpec {
     // its right, the raised frame's two-column right edge (mid inside the
     // shadow), Windows' own construction and Cool Edit's 7 / 5. The painter
     // is cool_edit_paint.h's paint_ce_tab_strip, the tones
-    // cool_edit_derive.h's (the tab table, kTabBodies).
+    // cool_edit_derive.h's on the metal (materials.h, 2026-10-20; the
+    // inactive body's measured tab table, kTabBodies, 2026-10-18..10-20).
     int  tab_recess_px;
     int  tab_inactive_top_px;
     int  tab_active_top_px;

@@ -24,14 +24,20 @@
 // every other role is A TONE OF THE FACE — the panel's one Face, the tones
 // Cool Edit derives from it, and for the selection fill the DEFAULT
 // preset's waveform ink — by Cool Edit's own arithmetic (cool_edit_derive.h,
-// whose head has the measurements and the proofs). THE CHROME IS COMPILED
-// since 2026-10-20 (architect: the waveform preset sets the waveform's
-// colors alone; "as far as the Chrome, yes, that can go right away"): the
-// Face is the constant kDefaultFace and the ink the default palette's, so
-// the words are one constant, kGuiChromeWords below, which no preset moves
-// (from 2026-10-10 until then they were re-derived from the live palette's
-// Face and ink at every install, the Settings Chrome row's commit moving the
-// chrome live, and the caption's six were a picked scheme's).
+// whose head has the measurements and the proofs). NO PRESET MOVES THE
+// CHROME since 2026-10-20 (architect: the waveform preset sets the
+// waveform's colors alone; "as far as the Chrome, yes, that can go right
+// away"): THE FACE IS THE METAL'S — the MetalDark tile's mean, measured at
+// the tiles' load (materials.h, the wood chrome, the same day; the constant
+// kDefaultFace that morning) — and the ink the default palette's, so the
+// words are gui_chrome_words below over that Face, re-derived at every
+// install (from 2026-10-10 until then they followed the live palette's Face
+// and ink, the Settings Chrome row's commit moving the chrome live, and the
+// caption's six were a picked scheme's). EVERY SURFACE ROLE IS A TONE, and
+// a tone painted as a surface is its region's material (materials.h), so
+// these words are the flat bytes the surface chokepoint knows each tone by;
+// the text, the field text and the card text are ink, painted flat. THE
+// CAPTION'S SIX ARE UNREAD since the caption became the wood (2026-10-20).
 //
 // THE PER-ROLE TABLE (kChromeRoles below; the role table's 21, each decided
 // once — the build proves every role is listed exactly once, the caption's
@@ -204,8 +210,10 @@ static_assert(palette_role_index("waveform_ink") < kGuiPaletteRoleCount);
 
 // -- THE CHECKS ----------------------------------------------------------------
 
-// THE COMPILED CHROME (Cool Edit's "(Default Scheme)": Face 626C7B, ink
-// 4BF3A7, under Windows Storm's caption): the chrome it paints, role by role.
+// THE DERIVATION ON COOL EDIT'S "(Default Scheme)" (Face 626C7B, ink 4BF3A7,
+// under Windows Storm's caption), role by role — the chrome the product
+// painted for the day of 2026-10-20 before the tiles, kept as the rule's
+// proof.
 inline constexpr GuiThemeWords kDefaultCheck =
     derive_chrome(cool_edit_derive::kDefaultFace, kDefaultInk, chrome_caption());
 static_assert(kDefaultCheck[theme_role_index("ground")] == 0x626C7B);
@@ -248,9 +256,13 @@ static_assert([] {
 
 } // namespace chrome_derive
 
-// THE CHROME'S WORDS — THE ONE CONSTANT install_palette reads (render.cpp):
-// the derivation over the one Face and the default preset's ink, under the
-// compiled caption (the head; architect 2026-10-20).
-inline constexpr GuiThemeWords kGuiChromeWords =
-    chrome_derive::derive_chrome(cool_edit_derive::kDefaultFace,
-                                 chrome_derive::kDefaultInk, chrome_caption());
+// THE CHROME'S WORDS — what install_palette reads (render.cpp): the
+// derivation over THE METAL'S FACE, the MetalDark tile's mean (materials.h;
+// architect 2026-10-20, the wood chrome: "the pull-downs, cards and dialogs
+// read as metal"), and the default preset's ink, under the compiled caption
+// (the head). (The one constant kGuiChromeWords over kDefaultFace stood for
+// the day of 2026-10-20 before the tiles; kDefaultCheck above is its record.)
+constexpr GuiThemeWords gui_chrome_words(uint32_t face) {
+    return chrome_derive::derive_chrome(face, chrome_derive::kDefaultInk,
+                                        chrome_caption());
+}

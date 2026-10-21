@@ -50,8 +50,10 @@ struct GuiInputHandler;
 // the third editable device key, retired whole 2026-08-28 with the in-app
 // render player). It funnels each key into the SAME code its gesture uses (no
 // parallel writers). commit() routes the typed key through:
-// 1. The device keys other than the scale — projects_repo, projects_path
-//    and waveform — in ONE body,
+// 1. The device keys other than the scale — projects_repo, projects_path,
+//    waveform and, since 2026-10-20 evening, the wood chrome's two tuning
+//    keys bevel_light and bevel_dark (live at the OK, no card, as the
+//    waveform key) — in ONE body,
 //    commit_device_setting: the key's own grammar
 //    owner in device_config.h (palette_file.h for the waveform key)
 //    decides (a refused commit and its card), the
@@ -198,8 +200,8 @@ struct GuiSettingsEditor {
     bool autocomplete_value();
 
 private:
-    // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=` and
-    // `waveform=` — in one body (the head's
+    // THE DEVICE KEYS' COMMIT — `projects_repo=`, `projects_path=`,
+    // `waveform=`, `bevel_light=` and `bevel_dark=` — in one body (the head's
     // item 1). Returns true when `key` is one of them, the commit then fully
     // handled inside (applied + deactivated, no-op-deactivated, or
     // refused with a card); false otherwise, so commit() goes on to the

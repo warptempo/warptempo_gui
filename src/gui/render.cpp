@@ -9,7 +9,8 @@
 #include "palette_file.h"   // kGuiPaletteRoles
 #include "cool_edit_derive.h"  // the Cool Edit block's tones off the face
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
-#include "chrome_derive.h"  // live_chrome_words (the chrome off the palette)
+#include "chrome_derive.h"  // gui_chrome_words (the chrome off the metal's Face)
+#include "materials.h"      // the surface chokepoint's materials
 #include "value_format.h"
 #include "warp_frame_map_view.h"
 
@@ -154,7 +155,7 @@ static inline double frame_to_paint_sample(
 
 void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
-    set_palette_source(cr, palette().ground);
+    set_surface_source(cr, palette().ground);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
     cairo_restore(cr);
@@ -355,6 +356,13 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out) {
 
 void paint_cell_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
     if (r.w <= 0 || r.h <= 0) return;
+    set_surface_source(cr, c);
+    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
+    cairo_fill(cr);
+}
+
+void paint_ink_rect(cairo_t* cr, const GuiRect& r, GuiColor c) {
+    if (r.w <= 0 || r.h <= 0) return;
     set_palette_source(cr, c);
     cairo_rectangle(cr, r.x, r.y, r.w, r.h);
     cairo_fill(cr);
@@ -423,7 +431,7 @@ void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
     cairo_line_to(cr, x0 + lw, y1);
     cairo_line_to(cr, x0, y1);
     cairo_close_path(cr);
-    set_palette_source(cr, top_left);
+    set_surface_source(cr, top_left);
     cairo_fill(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
     cairo_move_to(cr, x1, y0);
@@ -433,7 +441,7 @@ void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
     cairo_line_to(cr, x1 - lw, y1 - lw);
     cairo_line_to(cr, x1 - lw, y0 + lw);
     cairo_close_path(cr);
-    set_palette_source(cr, bottom_right);
+    set_surface_source(cr, bottom_right);
     cairo_fill(cr);
     cairo_restore(cr);
 }
@@ -561,11 +569,11 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
         const double o = k * lw, i = (k + 1.0) * lw;
         poly({{o, o}, {w - o, o}, {w - i, i}, {i, i}, {i, h - p},
               {mid, h - i}, {mid, h - o}, {o, h - p}});
-        set_palette_source(cr, light);
+        set_surface_source(cr, light);
         cairo_fill(cr);
         poly({{w - o, o}, {w - o, h - p}, {mid, h - o}, {mid, h - i},
               {w - i, h - p}, {w - i, i}});
-        set_palette_source(cr, dark);
+        set_surface_source(cr, dark);
         cairo_fill(cr);
     };
     cairo_save(cr);
@@ -576,7 +584,7 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
     line(1.0, pal.light_3d, pal.shadow);
     const double f = 2.0 * lw;
     poly({{f, f}, {w - f, f}, {w - f, h - p}, {mid, h - f}, {f, h - p}});
-    set_palette_source(cr, pal.ground);
+    set_surface_source(cr, pal.ground);
     cairo_fill(cr);
     cairo_pop_group_to_source(cr);
     cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
@@ -584,109 +592,11 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
     cairo_restore(cr);
 }
 
-// -- THE CAPTION'S GRADIENT (architect 2026-10-05) ---------------------------
-//
-// THE ONE GRADIENT IN THE PRODUCT: a theme that records a gradient end
-// (Windows 98's and 2000's GradientActiveTitle / GradientInactiveTitle) draws
-// its caption from the start colour at the left to the end at the right,
-// linear per channel, across the whole caption rect the painter hands in —
-// under the icon and the buttons too, ReactOS's span (painting.c's
-// GRADIENT_FILL_RECT_H over the full caption), where Windows 2000 holds the
-// icon cell at the start colour and the buttons' stretch at the end (a
-// recorded departure, docs/engineering/win2000_deviations.md).
-//
-// SMOOTH 24-BIT (architect 2026-10-06): each channel of each device column x
-// is round(s + (e - s) * x / (w - 1)) — the start at the first column, the
-// end at the last — every row alike, no dither and no quantisation:
-// ReactOS's caption on the architect's capture, GreGradientFill at 32-bit
-// colour (rounded linear ramps matched 589 of its 592 columns, the other
-// three one level off), as Windows 2000 itself drew at 24 and 32 bits
-// ("Dithering is performed in 16-, 8-, 4-, and 1-bpp mode", GradientFill's
-// documentation). The cell is the device px, the scalable chrome's.
-//
-// A FLAT CAPTION (end equal to start — a scheme that records no gradient
-// end; none since the compiled caption, Windows Storm's, is the one,
-// 2026-10-20) IS ONE SOLID FILL OF THE EXACT COLOUR.
-//
-// OPAQUE AND NOTHING BLENDED AT PAINT TIME: each cell is one opaque rounded
-// ramp value, written as words into an image (argb32_opaque_word's road, the
-// plate's precedent) and laid on the caption whole. The image is kept
-// between paints and rebuilt only when the caption's size, either colour or
-// the conversion state moves (the picture reads nothing else; a gui_scale
-// change moves the size; True Colors flips the conversion,
-// install_true_colors), since the top strip's damage repaints the caption
-// often and its ramp seldom changes.
-namespace {
-struct CaptionGradientImage {
-    cairo_surface_t* surface = nullptr;
-    int              w = 0, h = 0;
-    uint32_t         start = 0, end = 0;
-    bool             converted = false;   // display_transform::active()
-};
-CaptionGradientImage g_caption_gradient;
-} // namespace
-
-void paint_caption_gradient(cairo_t* cr, const GuiRect& r, GuiColor start,
-                            GuiColor end) {
-    if (r.w <= 0 || r.h <= 0) return;
-    const uint32_t start_word = argb32_opaque_word(start);
-    const uint32_t end_word   = argb32_opaque_word(end);
-    if (start_word == end_word) {
-        paint_cell_rect(cr, r, start);
-        return;
-    }
-    CaptionGradientImage& img = g_caption_gradient;
-    const bool converted = display_transform::active();
-    if (!img.surface || img.w != r.w || img.h != r.h ||
-        img.start != start_word || img.end != end_word ||
-        img.converted != converted) {
-        if (img.surface) cairo_surface_destroy(img.surface);
-        img = CaptionGradientImage{
-            cairo_image_surface_create(CAIRO_FORMAT_ARGB32, r.w, r.h), r.w,
-            r.h, start_word, end_word, converted};
-        cairo_surface_flush(img.surface);
-        unsigned char* data = cairo_image_surface_get_data(img.surface);
-        const int stride = cairo_image_surface_get_stride(img.surface);
-        const double s[3] = {start.r * 255.0, start.g * 255.0, start.b * 255.0};
-        const double e[3] = {end.r * 255.0, end.g * 255.0, end.b * 255.0};
-        // One row of rounded ramp words, then every row a copy of it. Each
-        // level rounds by std::nearbyint, the tree's one rounding (a level
-        // is not a grid point; this is symmetry with svg_icon's
-        // embossed_copy, not a pixel). It parts from std::lround only on an
-        // exact half, which takes the even level: no compiled theme's pair
-        // lands on one at the two devices' full-width
-        // captions (1920 and 2304 device px), so those ramps are unchanged;
-        // other widths (the restored laptop's) can meet one, one level apart.
-        // THE RAMP IS sRGB LEVELS, as ReactOS wrote them into its own
-        // (sRGB) frame buffer: each column's rounded level is an authored
-        // color like any other and is converted for the window at the
-        // painter's entry (display_transform::display_rgb), never the two
-        // ends converted and the ramp run between them.
-        std::vector<uint32_t> row(static_cast<size_t>(r.w));
-        for (int x = 0; x < r.w; ++x) {
-            const double t = r.w > 1 ? static_cast<double>(x) / (r.w - 1)
-                                     : 0.0;
-            uint32_t rgb = 0;
-            for (int c = 0; c < 3; ++c) {
-                const long v = static_cast<long>(
-                    std::nearbyint(s[c] + (e[c] - s[c]) * t));
-                rgb |= static_cast<uint32_t>(std::clamp(v, 0L, 255L))
-                       << (16 - 8 * c);
-            }
-            row[static_cast<size_t>(x)] =
-                UINT32_C(0xFF000000) | display_transform::display_rgb(rgb);
-        }
-        for (int y = 0; y < r.h; ++y)
-            std::memcpy(data + y * stride, row.data(),
-                        static_cast<size_t>(r.w) * sizeof(uint32_t));
-        cairo_surface_mark_dirty(img.surface);
-    }
-    cairo_save(cr);
-    cairo_set_source_surface(cr, img.surface, r.x, r.y);
-    cairo_rectangle(cr, r.x, r.y, r.w, r.h);
-    cairo_fill(cr);
-    cairo_restore(cr);
-}
+// (THE CAPTION'S GRADIENT — Windows Storm's smooth 24-bit start-to-end ramp
+// across the whole caption, ReactOS's span, paint_caption_gradient with its
+// cached image, 2026-10-05..10-20 — IS GONE with the wood chrome, architect
+// 2026-10-20: the caption IS the wood, active and inactive alike,
+// paint_caption_row laying the Wood material as drawn (materials.h).)
 
 // -- THE SIZING FRAME (architect 2026-10-05; the rule at the declaration) ----
 
@@ -2098,11 +2008,15 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         // THE OPAQUE FACE BOX, the overlap rule's, under every segment
         // whatever its state: A SELECTED SEGMENT TAKES NO FILL (architect
         // 2026-10-09 ~23:30, render.h's SELECTED row), its text alone
-        // changing color.
+        // changing color. The box is THE LANE'S OWN GROUND, the
+        // MetalVeryDark recess as drawn (materials.h, 2026-10-20), anchored
+        // at the client's corner as the lane's is, so a box reads as the
+        // lane it occludes.
         for (const auto& sp : spans)
-            paint_cell_rect(cr, GuiRect{sp.first, lane.y, sp.second - sp.first,
+            paint_material_rect(cr,
+                                GuiRect{sp.first, lane.y, sp.second - sp.first,
                                         fill_h},
-                            pal.face);
+                                GuiMaterial::MetalVeryDark);
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
             const double tx = static_cast<double>(
@@ -2793,6 +2707,9 @@ void set_palette_source(cairo_t* cr, GuiColor c) {
     const GuiColor d = display_color(c);
     cairo_set_source_rgb(cr, d.r, d.g, d.b);
 }
+void set_surface_source(cairo_t* cr, GuiColor c) {
+    if (!materials::set_source(cr, c)) set_palette_source(cr, c);
+}
 void set_waveform_source(cairo_t* cr, GuiColor c) {
     const GuiColor d = display_color(c);
     cairo_set_source_rgb(cr, d.r, d.g, d.b);
@@ -2817,8 +2734,6 @@ GuiColor surface_text(GuiSurface surface) {
     // The table and its readers are at the declaration (render.h).
     const GuiPalette& pal = palette();
     switch (surface) {
-    case GuiSurface::CaptionActive:   return pal.caption_active_text;
-    case GuiSurface::CaptionInactive: return pal.caption_inactive_text;
     case GuiSurface::ListRow:         return pal.field_text;
     case GuiSurface::ListRowLit:      return pal.selected_text;
     }
@@ -2836,64 +2751,57 @@ const GuiPaletteWords& program_palette_words() { return g_program_words; }
 namespace {
 // THE WAVEFORM'S TEN into the installed struct and the plate's two baked
 // inks off the same words — with THE COOL EDIT BLOCK, every tone of which
-// but the span's two bevels is a tone of the ONE FACE (cool_edit_derive.h's
-// kDefaultFace, 2026-10-20), so a new preset moves the waveform's roles, the
-// span's bevels and the disabled cue's faded triangles alone. The panel
-// tones are re-derived at every install all the same — the same bytes each
-// time, one loop for the block.
+// but the span's two bevels is a tone of THE METAL'S FACE (the MetalDark
+// tile's mean, materials.h; architect 2026-10-20, the wood chrome — the one
+// constant kDefaultFace 2026-10-20 until the tiles), so a new preset moves
+// the waveform's roles, the span's bevels and the disabled cue's faded
+// triangles alone. The panel tones are re-derived at every install all the
+// same — the same bytes each time the tiles stand, one loop for the block.
 void fill_program_palette(const GuiPaletteWords& w) {
     g_program_words = w;
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         g_palette.*(kGuiPaletteRoles[i].member) = hex(w[i]);
-    // THE PANEL'S FACE (2026-10-20: the one constant, no longer the
-    // preset's) and THE COOL EDIT BLOCK, derived from it by Cool Edit's own
-    // rule (cool_edit_derive.h). The view bar's span bevels derive from the
-    // waveform's ink instead (ToneSource::Ink), so a new ink moves them live.
-    constexpr uint32_t kFace = cool_edit_derive::kDefaultFace;
+    // THE PANEL'S FACE, the metal's (materials.h's TONE RULE: every chrome
+    // tone derives from the material it stands on, the chrome's roles from
+    // the MetalDark Face), and THE COOL EDIT BLOCK, derived from it by Cool
+    // Edit's own rule (cool_edit_derive.h). The view bar's span bevels
+    // derive from the waveform's ink instead (ToneSource::Ink), so a new ink
+    // moves them live. THE RECESS'S FACE — the MetalVeryDark tile's mean,
+    // the ground every cue stands on — is the cues' own: the triangles'
+    // shadow is its `cue_shadow` tone (a tone a painter puts down on that
+    // material), and the disabled cue fades toward it (2026-10-20).
+    const uint32_t face = materials::face(GuiMaterial::MetalDark);
+    const uint32_t lane = materials::face(GuiMaterial::MetalVeryDark);
     static constexpr std::size_t kInk = palette_role_index("waveform_ink");
-    g_palette.face = hex(kFace);
+    g_palette.face = hex(face);
     for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
         if (t.member != nullptr)
             g_palette.*(t.member) =
-                hex(cool_edit_derive::tone_of(t, kFace, w[kInk]));
+                hex(cool_edit_derive::tone_of(t, face, w[kInk]));
+    const uint32_t cue_shadow = cool_edit_derive::tone_of(
+        cool_edit_derive::named_tone("cue_shadow"), lane, 0);
+    g_palette.ce_cue_shadow = hex(cue_shadow);
+    materials::set_tone_face(face);
     // The panel label's pair, swapping past its own threshold (2026-10-10).
-    g_palette.ce_label = hex(cool_edit_derive::label_ink(kFace));
-    g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(kFace));
-    // The button case, tinted by the face (2026-10-10, the per-row fit).
-    {
-        using namespace cool_edit_derive;
-        for (std::size_t i = 0; i < kCaseRamp.size(); ++i)
-            g_palette.ce_case_ramp[i] = hex(case_tone(kCaseRamp[i], kFace));
-        g_palette.ce_case_highlight = hex(case_tone(kCaseHighlight, kFace));
-        g_palette.ce_case_shadow_first =
-            hex(case_tone(kCaseShadowFirst, kFace));
-        g_palette.ce_case_shadow_last =
-            hex(case_tone(kCaseShadowLast, kFace));
-        g_palette.ce_case_corner = hex(case_tone(kCaseCorner, kFace));
-    }
-    // The tab strip's inactive body and label, the Face's measured row
-    // (2026-10-18, cool_edit_derive.h's kTabBodies — the one Face's row),
-    // and the active label, the program text.
-    {
-        using namespace cool_edit_derive;
-        const TabBody& t = tab_body(kFace);
-        for (std::size_t i = 0; i < t.rows.size(); ++i)
-            g_palette.ce_tab_body[i] = hex(t.rows[i]);
-        g_palette.ce_tab_label = hex(t.label);
-        g_palette.ce_text = hex(program_text(kFace));
-    }
+    g_palette.ce_label = hex(cool_edit_derive::label_ink(face));
+    g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(face));
+    // The active tab's label, the program text (the inactive tabs' measured
+    // bodies and label retired with the tiles, 2026-10-20: the body is the
+    // metal, the label cool_edit_paint.h's kCeTabLabel).
+    g_palette.ce_text = hex(cool_edit_derive::program_text(face));
     // The disabled cue's faded triangles, shadow and label (2026-10-10):
-    // the triangles the preset's cue and invalid colors toward the Face.
+    // the triangles the preset's cue and invalid colors, the shadow and the
+    // resting label's tone, each toward the lane's Face.
     {
         using namespace cool_edit_derive;
         static constexpr std::size_t kCue = palette_role_index("cue");
         static constexpr std::size_t kInvalid =
             palette_role_index("invalid_label");
-        g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], kFace));
+        g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], lane));
         g_palette.ce_off_invalid =
-            hex(disabled_triangle(w[kInvalid], kFace));
-        g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(kFace));
-        g_palette.ce_off_label = hex(disabled_cue_label(kFace));
+            hex(disabled_triangle(w[kInvalid], lane));
+        g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(lane));
+        g_palette.ce_off_label = hex(disabled_cue_label(face, lane));
     }
     static constexpr std::size_t kOutline =
         palette_role_index("waveform_outline");
@@ -2906,30 +2814,35 @@ void fill_program_palette(const GuiPaletteWords& w) {
 void install_palette(const GuiPaletteWords& program) {
     // The waveform's fields are filled off `program`, THE LIVE WORDS the
     // caller resolved (render.h: the launch's palette_record of the
-    // `waveform` key), the Face and its block off the constant, then the
-    // chrome's off THE COMPILED WORDS (kGuiChromeWords, chrome_derive.h:
-    // the one Face, the default preset's ink, the compiled caption — no
+    // `waveform` key), the Face and its block off the metal's tile, then the
+    // chrome's off THE SAME FACE (gui_chrome_words, chrome_derive.h: the
+    // metal's Face, the default preset's ink, the compiled caption — no
     // preset moves them, so they are filled here alone), the tables covering
     // the struct exactly (palette_file.cpp), so a role cannot be valued and
-    // not painted.
+    // not painted. THE TILES ARE LOADED FIRST (materials::load, gui_main and
+    // the scale's chokepoint, which call this again after each load).
     fill_program_palette(program);
+    const GuiThemeWords chrome =
+        gui_chrome_words(materials::face(GuiMaterial::MetalDark));
     for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
-        g_palette.*(kGuiThemeRoles[i].member) = hex(kGuiChromeWords[i]);
+        g_palette.*(kGuiThemeRoles[i].member) = hex(chrome[i]);
     ++g_palette_generation;
 }
 
 void install_program_palette(const GuiPaletteWords& words) {
     // The contract and the apply shape the caller owes are at the
     // declaration (palette_file.h): the waveform's roles, the span's bevels
-    // and the faded triangles move; the chrome's compiled words stand.
+    // and the faded triangles move; the chrome's words stand.
     fill_program_palette(words);
     ++g_palette_generation;
 }
 
 void install_true_colors(bool on) {
     // The contract, the caches it rebuilds and the apply shape the caller
-    // owes are at the declaration (render.h).
+    // owes are at the declaration (render.h): the materials' baked copies
+    // hold window bytes, dropped here and rebaked at their next ask.
     display_transform::set_true_colors(on);
+    materials::drop_baked();
     ++g_palette_generation;
 }
 
@@ -3502,10 +3415,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             const int x0 = cursor_x + gap;
             const int w  = pad_l + seg_w + pad_r;
             // The face box over the gap and the segment, as the resting
-            // label's one box covers its gaps.
+            // label's one box covers its gaps — the lane's own recess as
+            // drawn (paint_cues' box, 2026-10-20).
             const int fx = std::max(cursor_x, face_x0);
-            paint_cell_rect(cr, GuiRect{fx, lane.y, x0 + w - fx, fill_h},
-                            pal.face);
+            paint_material_rect(cr, GuiRect{fx, lane.y, x0 + w - fx, fill_h},
+                                GuiMaterial::MetalVeryDark);
             const double tx = static_cast<double>(x0 + pad_l);
             // The resting label's ink: the faded inert label, else an invalid
             // marker's invalid color, else the panel's light tone

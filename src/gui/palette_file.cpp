@@ -42,14 +42,16 @@ constexpr bool palette_members_disjoint() {
 }
 static_assert(palette_members_disjoint());
 // THE COOL EDIT BLOCK'S DERIVED TONES (cool_edit_derive.h, filled off the
-// constant Face and the palette's ink, render.cpp) are the struct's third
+// metal's Face and the palette's ink, render.cpp) are the struct's third
 // part — the table's painted tones and the panel label's swapping pair:
 // distinct, and neither a chrome role's member nor a palette role's nor the
-// face — and the button case's members (kCaseMemberCount, the ramp's array
-// and four lines), the tab strip's body, inactive label and active label
-// (kTabMemberCount, 2026-10-18) and the disabled cue's four faded colors
-// (kDisabledCueMemberCount) after them; and THE PANEL'S `face` itself, one
-// member, the constant Face (2026-10-20; a palette role 2026-10-09..10-20).
+// face — and the tab strip's active label (kTabMemberCount; its inactive
+// body and label 2026-10-18..10-20) and the disabled cue's four faded
+// colors (kDisabledCueMemberCount) after them; and THE PANEL'S `face`
+// itself, one member, the metal's Face (2026-10-20, materials.h; a palette
+// role 2026-10-09..10-20). (The button case's twenty-four members left with
+// the tiles, 2026-10-20: the case is the Case tile's,
+// materials::paint_case_face.)
 constexpr bool cool_edit_tones_disjoint() {
     std::array<GuiColor GuiPalette::*,
                cool_edit_derive::kPaintedToneCount +
@@ -76,7 +78,6 @@ static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount + 1 /* face */ +
                cool_edit_derive::kPaintedToneCount +
                std::size(cool_edit_derive::kLabelPairMembers) +
-               cool_edit_derive::kCaseMemberCount +
                cool_edit_derive::kTabMemberCount +
                cool_edit_derive::kDisabledCueMemberCount) *
                   sizeof(GuiColor));
