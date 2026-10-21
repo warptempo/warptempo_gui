@@ -25,9 +25,8 @@
 // every tone below is evaluated on THE FACE OF THE MATERIAL IT STANDS ON —
 // the chrome's roles and the palette's Cool Edit block on the metal's
 // (render.cpp's fill_program_palette), a surface's tone on its region's
-// tile, painted as that tile scaled per channel by tone / Face or, on a flat
-// material (the wood, materials.h's kGuiMaterialLineStyle), as the tone's
-// own solid. (The Face
+// tile, painted as the tone's own solid, a flat opaque stroke (every
+// material's lines, 2026-10-20 ~22:50; materials.h). (The Face
 // was each preset's own, a palette role, 2026-10-09..10-20 and kDefaultFace
 // below, 626C7B, for that day.) The tones stay functions of a Face — the
 // rule and its proofs over Cool Edit's captured Faces are the record.

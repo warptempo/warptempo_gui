@@ -117,10 +117,9 @@ struct TrimRange {
 // caption became the wood (2026-10-20), the roles kept in the table.
 // THE CHROME'S SURFACES ARE MATERIALS (architect 2026-10-20, the wood
 // chrome; materials.h owns the rule): every tone a chrome surface puts down —
-// a ground, a relief line — is painted through set_surface_source as its
-// region's tile scaled per channel by tone / that tile's Face, or, on a
-// FLAT material (the wood since 2026-10-20 ~22:30, kGuiMaterialLineStyle),
-// as the tone itself, a flat opaque stroke, so the rules
+// a ground, a relief line — is painted through set_surface_source as the
+// tone itself, a flat opaque stroke on every material (architect 2026-10-20
+// ~22:50; the wood's since ~22:30), the Face alone the tile as drawn, so the rules
 // below name TONES and the material is the region's (Wood above the program
 // frame's top row and in the band, MetalDark below, MetalVeryDark in the
 // recesses, the Case tile in the cases and the caption's buttons).
@@ -170,8 +169,7 @@ struct TrimRange {
 // a selection, not a button face. Every colour is a solid fill of integer
 // cells — EXCEPT THE CHROME'S SURFACES, WHICH ARE MATERIALS since 2026-10-20
 // (architect, the wood chrome; materials.h): a baked tile, opaque, nothing
-// blended at paint time, the tile scaled per channel by its tone at the
-// bake (a flat material's lines the tone's own solid, kGuiMaterialLineStyle),
+// blended at paint time, every line the tone's own solid (2026-10-20 ~22:50),
 // the case's measured ramps (cool_edit_derive.h's kCaseRamp) baked
 // into its tile per row. (The color picker's hue ring and SV triangle,
 // 2026-10-07..14, were the one place the product painted colors that were
@@ -2560,9 +2558,8 @@ void render_waveform_divider(GuiCanvasSink& sink, const GuiRect& area);
 // design, are retired, architect 2026-10-02: every caller names its family.)
 // None of them fills the face: a caller fills first and frames after.
 // EVERY LINE AND FACE THEY LAY IS A SURFACE (set_surface_source): a tone of
-// the region's material, its tile scaled by the tone or, on a flat material
-// (the wood, 2026-10-20 ~22:30), the tone's own solid (materials.h's
-// kGuiMaterialLineStyle), a mitre's diagonal the two sources.
+// the region's material, the tone's own solid (2026-10-20 ~22:50;
+// materials.h), a mitre's diagonal the two sources.
 void paint_relief_frame(cairo_t* cr, const GuiRect& r, GuiColor top_left,
                         GuiColor bottom_right);
 void paint_relief_soft_raised(cairo_t* cr, const GuiRect& r);

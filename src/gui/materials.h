@@ -42,8 +42,8 @@
 //     kMetalCrop / kCaseCrop device px at most, MIRROR-TILED (flipped at
 //     every repeat; the brushing is horizontal, so no seam shows), anchored
 //     at the client's corner.
-// RESIDENT, per material: the scaled crop in sRGB (the base) and the baked
-// copies the painters asked for, below (the report's arithmetic at
+// RESIDENT, per material: the scaled crop in sRGB (the base) and its
+// as-drawn copy where the window converts (the report's arithmetic at
 // kMetalCrop's comment).
 //
 // THE REGIONS: WHICH MATERIAL A SURFACE IS. WOOD — the caption (its gradient
@@ -72,28 +72,24 @@
 // PAINTER PUTS DOWN ON A MATERIAL IS COOL EDIT'S TONE RULE (cool_edit_derive.h:
 // kTones' HLS L' = a·L + b, the hue and saturation kept; the case's own
 // measured ramp, kCaseRamp and its lines) APPLIED TO THAT MATERIAL'S FACE, and
-// is painted BY ITS MATERIAL'S LINE STYLE (kGuiMaterialLineStyle; architect
-// 2026-10-20 ~22:30, "b": the wood's edges a painted stroke, the metals'
-// luminance with the brushing through): TILE — THE MATERIAL'S TILE SCALED PER
-// CHANNEL BY tone / Face, so the tile's mean lands exactly on the rule's tone
-// and the grain rides on it (a pure luma scale clips a red wood's highlight
-// to orange) — the metals and the case; FLAT — the rule's tone itself, one
-// opaque solid source (the Face's mean scaled by the same factors) — the
-// wood. The material's own Face tone is the tile AS DRAWN under either
-// style; the wood's tones derive from the Wood Face, the void is WoodDark as
-// drawn, the metals' tones from the MetalDark Face, a recess MetalVeryDark
-// as drawn, the case's from the Case Face. ONE PATTERN PER (MATERIAL, TONE)
-// ACTUALLY USED ON A TILE-STYLE MATERIAL, baked on its first use (a flat tone
-// bakes nothing); the painters' colors reach it through set_surface_source
-// (render.h), which knows each flat tone by its bytes (the tone table,
-// set_tone_face) — so the painters keep their palette members and only the
-// chokepoint swaps a solid source for the pattern or the flat stroke. NO
+// a FLAT STROKE (architect 2026-10-20 ~22:50, "yes yes" off two whole-window
+// mocks, after the wood's ~22:30: the grain rides no line on any material):
+// the rule's tone itself, one opaque solid source (the material's Face mean
+// scaled per channel by tone / Face, the factors the rule's, so a red wood's
+// highlight does not clip to orange). The material's own Face tone is the
+// tile AS DRAWN; the wood's tones derive from the Wood Face, the void is
+// WoodDark as drawn, the metals' tones from the MetalDark Face, a recess
+// MetalVeryDark as drawn, the case's from the Case Face (its RAMP, its face,
+// the tile always; only its lines are flat). The only copy ever baked is a
+// tile as drawn; the painters' colors reach the strokes through
+// set_surface_source (render.h), which knows each flat tone by its bytes (the
+// tone table, set_tone_face) — so the painters keep their palette members and
+// only the chokepoint swaps a solid source for the flat stroke. NO
 // PAINT-TIME ALPHA, nothing composited: an antialiased edge stays the
-// renderer's (a mitre's diagonal is the two sources, a flat stroke against a
-// flat stroke or the tile). THE CHROME'S DERIVED ROLES (chrome_derive.h)
-// derive from the METAL Face by the existing rules (install_palette), so the
-// pull-downs, cards and dialogs read as metal, the text's swaps following
-// that Face.
+// renderer's (a mitre's diagonal is the two flat sources). THE CHROME'S
+// DERIVED ROLES (chrome_derive.h) derive from the METAL Face by the existing
+// rules (install_palette), so the pull-downs, cards and dialogs read as
+// metal, the text's swaps following that Face.
 //
 // THE BEVELS ARE TUNABLE (architect 2026-10-20 ~20:30, "make it a tuneable
 // config temporarily … for all tuneable fields"): the device keys
@@ -101,7 +97,7 @@
 // device_config.h), each with a Settings row, applied live at OK — every
 // LIGHTER-than-Face tone's per-channel factor f becomes 1 + (f − 1)·p / 100
 // with p the light key, every DARKER one the same with the dark key, on every
-// material and under either line style (set_bevel).
+// material (set_bevel).
 
 enum class GuiMaterial { Wood, WoodDark, MetalDark, MetalVeryDark, Case };
 inline constexpr int kGuiMaterialCount = 5;
@@ -109,39 +105,16 @@ inline constexpr int kGuiMaterialCount = 5;
 inline constexpr const char* kGuiMaterialNames[kGuiMaterialCount] = {
     "Wood", "WoodDark", "MetalDark", "MetalVeryDark", "Case"};
 
-// THE LINE STYLE OF A MATERIAL: how a tone that is NOT its Face is painted
-// on it (the head's TONE RULE). FLAT — the rule's tone itself, one opaque
-// solid source, no grain (the Face's mean scaled by the tone's factors, the
-// bevel keys with it); TILE — the material's tile scaled per channel, the
-// grain riding through the line. The Face itself is the tile as drawn under
-// either style.
-enum class GuiMaterialLines { Flat, Tile };
-// PER MATERIAL, in the enum's order (architect 2026-10-20 ~22:30, "b", off
-// tmp/wood_mock/bevel/wood_rules_sheet.png): on the Trilogy panel
-// (tmp/wood_mock/interface-trilogy.jpg) the metal's bevels are luminance with
-// the brushing through them, but THE WOOD'S EDGES ARE A PAINTED STROKE —
-// opaque, no grain. So the WOOD is FLAT (the Upper region's lines: the menu
-// row's open title, the band's panes, grooves, grippers and end bars) and
-// WOOD_DARK with it (only ever painted as drawn, the void); MetalDark,
-// MetalVeryDark and the Case keep THE TILE (the Case's lines are its
-// measured highlight, shadow ramp and corner, paint_case_face; its ramp is
-// its face, the tile always). Moving a material is this table alone.
-inline constexpr GuiMaterialLines kGuiMaterialLineStyle[kGuiMaterialCount] = {
-    GuiMaterialLines::Flat,   // Wood
-    GuiMaterialLines::Flat,   // WoodDark
-    GuiMaterialLines::Tile,   // MetalDark
-    GuiMaterialLines::Tile,   // MetalVeryDark
-    GuiMaterialLines::Tile};  // Case
-
 // THE REGION A SURFACE STANDS IN (the head's map), the current one a scope's
 // (GuiMaterialScope): which material a flat tone resolves to.
 //   Upper  the Face the Wood as drawn, `recess` WoodDark as drawn, every other
-//          tone the Wood's rule as a flat stroke (kGuiMaterialLineStyle) —
+//          tone the Wood's rule as a flat stroke —
 //          the caption, the menu row, the band;
 //   Lower  the Face MetalDark as drawn, `recess` MetalVeryDark as drawn,
-//          every other tone MetalDark's rule — THE DEFAULT, every chrome
-//          surface no scope names;
-//   Case   the Face the Case as drawn, every tone the Case's rule — the
+//          every other tone MetalDark's rule as a flat stroke — THE DEFAULT,
+//          every chrome surface no scope names;
+//   Case   the Face the Case as drawn, every tone the Case's rule as a flat
+//          stroke — the
 //          caption's three buttons (the cases themselves are
 //          paint_case_face's).
 // A recess that is no `recess` tone — the column's air and foot, the ruler's
@@ -174,13 +147,12 @@ namespace materials {
 // room for every seat's own patch (paint_case_face). RESIDENT AT 300 % (the
 // tablet), each ARGB32: the wood strip 2560 x 216 (2.2 MB) and the void's, a
 // metal crop 2560 x 384 (3.9 MB), the case 1024 x 512 (2.1 MB) — each base
-// once and a baked copy per (tile-style material, tone) in use (the as-drawn
-// copy too where the window converts, display_transform.h), the cases'
-// squares ~17 KB a seat and face; the wood's three line tones (hilight, mid,
-// dark) FLAT since 2026-10-20 ~22:30 and baked no more: about 68 MB in all on
-// the tablet (75 before), about 52 MB on the laptop's 138 % (55 before; no
-// as-drawn copies, the strips 1 MB, a metal crop the scaled master's whole
-// 2524-px width).
+// once, plus an as-drawn copy where the window converts (display_transform.h)
+// and the cases' squares ~17 KB a seat and face; every line a flat stroke
+// since 2026-10-20 ~22:50 (the wood's from ~22:30) and baked no more: about
+// 14 MB of bases on the tablet, 29 MB at most with every as-drawn copy (68
+// before), about 12 MB on the laptop's 138 % (52 before; no as-drawn copies,
+// the strips 1 MB, a metal crop the scaled master's whole 2524-px width).
 inline constexpr int kTileCropW  = 2560;
 inline constexpr int kMetalCropH = 384;
 inline constexpr int kCaseCropW  = 1024;
@@ -226,10 +198,9 @@ void set_material_source(cairo_t* cr, GuiMaterial m);
 
 // THE CASE (the head's CASE; cool_edit_paint.h's paint_ce_case): Cool
 // Edit's measured case — the ramp, its highlight, its shadow ramp and
-// corner, kCaseRamp and its lines — derived from the CASE tile's Face, each
-// tone the case tile scaled per channel (the ramp always; the lines by the
-// Case's kGuiMaterialLineStyle, the tile today, a flat stroke under Flat),
-// baked once per (seat, face): REST
+// corner, kCaseRamp and its lines — derived from the CASE tile's Face, the
+// ramp the case tile scaled per channel, the lines flat strokes of the Face's
+// mean (2026-10-20 ~22:50), baked once per (seat, face): REST
 // the whole square inside the black line (`r`'s first w − lw rows and
 // columns), DOWN the ramp alone inside the constant rings. PER-SEAT VARIATION
 // (his "nice little touch", Cool Edit's own slightly different cases): each
