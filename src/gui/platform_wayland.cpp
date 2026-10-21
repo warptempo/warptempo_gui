@@ -1,7 +1,7 @@
 #include "platform_wayland.h"
 
 #include "gui_font.h"
-#include "palette_file.h"    // kGuiDefaultSchemeKey, kGuiDefaultPaletteKey: the template's defaults
+#include "palette_file.h"    // kGuiDefaultPaletteKey: the template's default
 #include "render.h"          // kMinWindowWidthPx / kMinWindowHeightPx
 
 #include <wayland-client.h>
@@ -698,11 +698,10 @@ DeviceConfig GuiPlatform::device_config_defaults() {
     }
     cfg.projects_repo = kDefaultProjectsRepo;
     cfg.last_project  = "";
-    // THE DEFAULTS SPELLED (architect 2026-10-14: every key required):
-    // `caption=windows-storm` and `chrome=cool-edit-default`, the tablet's
-    // template the same (palette_file.h owns both names).
-    cfg.scheme        = kGuiDefaultSchemeKey;
-    cfg.palette       = kGuiDefaultPaletteKey;
+    // THE DEFAULT SPELLED (architect 2026-10-14: every key required):
+    // `waveform=cool-edit-default`, the tablet's template the same
+    // (palette_file.h owns the name).
+    cfg.waveform      = kGuiDefaultPaletteKey;
     // NO ROLE (architect 2026-10-10): the program never invents one, so the
     // stamped file's read-back refuses on the required `role` key and the
     // hand adds `role=mirror` here (GuiDeviceRole, device_config.h).
@@ -2016,10 +2015,6 @@ void GuiPlatform::invalidate_region(int x, int y, int w, int h) {
     // The app declares CLIENT-area rects; the lists hold surface rects, the
     // frame added back (frame_px_, the header).
     invalidate_surface_rect(x + frame_px_, y + frame_px_, w, h);
-}
-
-void GuiPlatform::invalidate_surface() {
-    invalidate_surface_rect(0, 0, width_, height_);
 }
 
 void GuiPlatform::invalidate_surface_rect(int x, int y, int w, int h) {

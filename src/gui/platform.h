@@ -47,17 +47,17 @@
 // the set, so a reopen costs one AAudio stream start (its one transient), the
 // accepted price.
 //
-// THE TWO DAMAGE CALLS (2026-10-09): invalidate_region takes a CLIENT rect —
-// the GUI's whole geometry, the window's band outside it — so no GUI damage
-// ever reaches the sizing frame (the restored laptop's, or a band a chrome
-// keeps on the maximized window on both devices, window_frame_maximized);
-// invalidate_surface damages the WHOLE SURFACE, the band with it. The band
-// paints in the chrome's roles, so the one GUI event that changes them with
-// the window standing — a live chrome pick, the Settings Chrome or Caption
-// row's install (GuiSettingsEditor::install_color_preset) — asks for it; every other
-// repaint of the band rides the backend's own full damage (a configure or a
-// window adoption). Both
-// backends implement the pair alike.
+// THE ONE DAMAGE CALL: invalidate_region takes a CLIENT rect — the GUI's
+// whole geometry, the window's band outside it — so no GUI damage ever
+// reaches the sizing frame (the restored laptop's, or a band a chrome keeps
+// on the maximized window on both devices, window_frame_maximized). The band
+// paints in the chrome's roles, which are compiled (2026-10-20,
+// chrome_derive.h's kGuiChromeWords) and so never change with the window
+// standing: every repaint of the band rides the backend's own full damage (a
+// configure or a window adoption). (invalidate_surface, the WHOLE SURFACE's
+// damage, stood beside it 2026-10-09..10-20 for the one GUI event that
+// changed the chrome's roles live, a chrome pick.) Both backends implement
+// it alike.
 //
 // THE CANVAS FRAME (2026-10-13, the GPU canvas; canvas_sink.h owns the rule):
 // set_canvas_frame(list) names the GUI's one process-wide draw list

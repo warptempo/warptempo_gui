@@ -604,9 +604,9 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRect& box) {
 // ("Dithering is performed in 16-, 8-, 4-, and 1-bpp mode", GradientFill's
 // documentation). The cell is the device px, the scalable chrome's.
 //
-// A FLAT CAPTION (end equal to start — a theme that records no gradient
-// end, the generator's flat-caption rule, tools/theme_catalog/
-// gen_theme_files.py) IS ONE SOLID FILL OF THE EXACT COLOUR.
+// A FLAT CAPTION (end equal to start — a scheme that records no gradient
+// end; none since the compiled caption, Windows Storm's, is the one,
+// 2026-10-20) IS ONE SOLID FILL OF THE EXACT COLOUR.
 //
 // OPAQUE AND NOTHING BLENDED AT PAINT TIME: each cell is one opaque rounded
 // ramp value, written as words into an image (argb32_opaque_word's road, the
@@ -2806,12 +2806,9 @@ namespace {
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
     WaveformPlateInks g_plate_inks{};
-    // THE LIVE WORDS (render.h's program_palette_words): the eleven as
+    // THE LIVE WORDS (render.h's program_palette_words): the ten as
     // the install family last wrote them.
     GuiPaletteWords   g_program_words{};
-    // THE LIVE CHROME PICK (render.h's live_chrome_pick): the caption keys
-    // as the install family last wrote them.
-    std::optional<GuiChromePick> g_chrome_pick;
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
@@ -2835,66 +2832,68 @@ WaveformPlateInks waveform_plate_inks() {
                                  g_plate_inks.outline_rgb)};
 }
 const GuiPaletteWords& program_palette_words() { return g_program_words; }
-const std::optional<GuiChromePick>& live_chrome_pick() { return g_chrome_pick; }
 
 namespace {
-// THE PROGRAM'S ELEVEN into the installed struct and the plate's two baked
-// inks off the same words — the install family's first shared half (the
-// chrome's members, derived from these words, are the other's; the
-// generation is each member's own bump).
+// THE WAVEFORM'S TEN into the installed struct and the plate's two baked
+// inks off the same words — with THE COOL EDIT BLOCK, every tone of which
+// but the span's two bevels is a tone of the ONE FACE (cool_edit_derive.h's
+// kDefaultFace, 2026-10-20), so a new preset moves the waveform's roles, the
+// span's bevels and the disabled cue's faded triangles alone. The panel
+// tones are re-derived at every install all the same — the same bytes each
+// time, one loop for the block.
 void fill_program_palette(const GuiPaletteWords& w) {
     g_program_words = w;
     for (std::size_t i = 0; i < kGuiPaletteRoleCount; ++i)
         g_palette.*(kGuiPaletteRoles[i].member) = hex(w[i]);
-    // THE COOL EDIT BLOCK, derived from the panel's face by Cool Edit's own
-    // rule (cool_edit_derive.h), so a new Face moves every tone live.
-    // The view bar's span bevels derive from the waveform's ink instead
-    // (ToneSource::Ink), so a new ink moves them live too.
-    static constexpr std::size_t kFace = palette_role_index("face");
+    // THE PANEL'S FACE (2026-10-20: the one constant, no longer the
+    // preset's) and THE COOL EDIT BLOCK, derived from it by Cool Edit's own
+    // rule (cool_edit_derive.h). The view bar's span bevels derive from the
+    // waveform's ink instead (ToneSource::Ink), so a new ink moves them live.
+    constexpr uint32_t kFace = cool_edit_derive::kDefaultFace;
     static constexpr std::size_t kInk = palette_role_index("waveform_ink");
-    static_assert(kFace < kGuiPaletteRoleCount);
+    g_palette.face = hex(kFace);
     for (const cool_edit_derive::Tone& t : cool_edit_derive::kTones)
         if (t.member != nullptr)
             g_palette.*(t.member) =
-                hex(cool_edit_derive::tone_of(t, w[kFace], w[kInk]));
+                hex(cool_edit_derive::tone_of(t, kFace, w[kInk]));
     // The panel label's pair, swapping past its own threshold (2026-10-10).
-    g_palette.ce_label = hex(cool_edit_derive::label_ink(w[kFace]));
-    g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(w[kFace]));
+    g_palette.ce_label = hex(cool_edit_derive::label_ink(kFace));
+    g_palette.ce_label_shadow = hex(cool_edit_derive::label_shadow(kFace));
     // The button case, tinted by the face (2026-10-10, the per-row fit).
     {
         using namespace cool_edit_derive;
         for (std::size_t i = 0; i < kCaseRamp.size(); ++i)
-            g_palette.ce_case_ramp[i] = hex(case_tone(kCaseRamp[i], w[kFace]));
-        g_palette.ce_case_highlight = hex(case_tone(kCaseHighlight, w[kFace]));
+            g_palette.ce_case_ramp[i] = hex(case_tone(kCaseRamp[i], kFace));
+        g_palette.ce_case_highlight = hex(case_tone(kCaseHighlight, kFace));
         g_palette.ce_case_shadow_first =
-            hex(case_tone(kCaseShadowFirst, w[kFace]));
+            hex(case_tone(kCaseShadowFirst, kFace));
         g_palette.ce_case_shadow_last =
-            hex(case_tone(kCaseShadowLast, w[kFace]));
-        g_palette.ce_case_corner = hex(case_tone(kCaseCorner, w[kFace]));
+            hex(case_tone(kCaseShadowLast, kFace));
+        g_palette.ce_case_corner = hex(case_tone(kCaseCorner, kFace));
     }
     // The tab strip's inactive body and label, the Face's measured row
-    // (2026-10-18, cool_edit_derive.h's kTabBodies — every built-in's Face
-    // has one, palette_file.cpp's proof), and the active label, the program
-    // text.
+    // (2026-10-18, cool_edit_derive.h's kTabBodies — the one Face's row),
+    // and the active label, the program text.
     {
         using namespace cool_edit_derive;
-        const TabBody& t = tab_body(w[kFace]);
+        const TabBody& t = tab_body(kFace);
         for (std::size_t i = 0; i < t.rows.size(); ++i)
             g_palette.ce_tab_body[i] = hex(t.rows[i]);
         g_palette.ce_tab_label = hex(t.label);
-        g_palette.ce_text = hex(program_text(w[kFace]));
+        g_palette.ce_text = hex(program_text(kFace));
     }
-    // The disabled cue's faded triangles, shadow and label (2026-10-10).
+    // The disabled cue's faded triangles, shadow and label (2026-10-10):
+    // the triangles the preset's cue and invalid colors toward the Face.
     {
         using namespace cool_edit_derive;
         static constexpr std::size_t kCue = palette_role_index("cue");
         static constexpr std::size_t kInvalid =
             palette_role_index("invalid_label");
-        g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], w[kFace]));
+        g_palette.ce_off_cue = hex(disabled_triangle(w[kCue], kFace));
         g_palette.ce_off_invalid =
-            hex(disabled_triangle(w[kInvalid], w[kFace]));
-        g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(w[kFace]));
-        g_palette.ce_off_label = hex(disabled_cue_label(w[kFace]));
+            hex(disabled_triangle(w[kInvalid], kFace));
+        g_palette.ce_off_cue_shadow = hex(disabled_cue_shadow(kFace));
+        g_palette.ce_off_label = hex(disabled_cue_label(kFace));
     }
     static constexpr std::size_t kOutline =
         palette_role_index("waveform_outline");
@@ -2902,48 +2901,28 @@ void fill_program_palette(const GuiPaletteWords& w) {
                   kOutline < kGuiPaletteRoleCount);
     g_plate_inks = WaveformPlateInks{w[kInk], w[kOutline]};
 }
-// THE CHROME'S MEMBERS off the live words (live_chrome_words,
-// chrome_derive.h: every role but the caption's six a tone of the program's
-// live face or ink, 2026-10-10, the caption the scheme's keys or the live
-// chrome's compiled caption) — the install family's other shared half, run
-// after the program's whenever either moves. No face moves with it: a
-// scheme carries none (2026-10-09 ~21:20; the face is gui_font.h's one).
-void fill_chrome_palette(const std::optional<GuiChromePick>& chrome) {
-    g_chrome_pick = chrome;
-    const GuiThemeWords w =
-        live_chrome_words(g_program_words, chrome);
-    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
-        g_palette.*(kGuiThemeRoles[i].member) = hex(w[i]);
-}
 } // namespace
 
-void install_palette(const GuiPaletteWords& program,
-                     const std::optional<GuiChromePick>& chrome) {
-    // The program's fields are filled off `program`, THE LIVE WORDS the
+void install_palette(const GuiPaletteWords& program) {
+    // The waveform's fields are filled off `program`, THE LIVE WORDS the
     // caller resolved (render.h: the launch's palette_record of the
-    // `chrome` key, beside the scheme_record of the `caption` key), then the
-    // chrome's derived from them with the scheme's keys (live_chrome_words,
-    // chrome_derive.h, which never misses), the two tables covering the
-    // struct exactly (palette_file.cpp), so a role cannot be valued and not
-    // painted.
+    // `waveform` key), the Face and its block off the constant, then the
+    // chrome's off THE COMPILED WORDS (kGuiChromeWords, chrome_derive.h:
+    // the one Face, the default preset's ink, the compiled caption — no
+    // preset moves them, so they are filled here alone), the tables covering
+    // the struct exactly (palette_file.cpp), so a role cannot be valued and
+    // not painted.
     fill_program_palette(program);
-    fill_chrome_palette(chrome);
-    ++g_palette_generation;
-}
-
-void install_chrome_pick(const std::optional<GuiChromePick>& chrome) {
-    // The contract is at the declaration (render.h); the apply shape is the
-    // caller's (GuiSettingsEditor::install_color_preset).
-    fill_chrome_palette(chrome);
+    for (std::size_t i = 0; i < kGuiThemeRoleCount; ++i)
+        g_palette.*(kGuiThemeRoles[i].member) = hex(kGuiChromeWords[i]);
     ++g_palette_generation;
 }
 
 void install_program_palette(const GuiPaletteWords& words) {
     // The contract and the apply shape the caller owes are at the
-    // declaration (palette_file.h): the chrome re-derived from the new
-    // words under the live caption.
+    // declaration (palette_file.h): the waveform's roles, the span's bevels
+    // and the faded triangles move; the chrome's compiled words stand.
     fill_program_palette(words);
-    fill_chrome_palette(g_chrome_pick);
     ++g_palette_generation;
 }
 

@@ -4,7 +4,7 @@
 #include "settings_file.h"     // warptempo_settings::scan_key_value_file
 #include "frame_format.h"      // parse_authored_frame
 #include "parse_text_util.h"   // warptempo_parse::prefix_line_error
-#include "palette_file.h"      // is_builtin_palette_name, is_builtin_scheme_name and their reasons
+#include "palette_file.h"      // is_builtin_palette_name and its reason
 
 #include <cstddef>
 #include <cstdio>
@@ -19,8 +19,9 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (SEVEN keys since 2026-10-12, `icons` and
-// `font` gone; nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
+// REQUIRED SET, every one of them (SIX keys since 2026-10-20, `caption` gone
+// and `chrome` renamed `waveform`; seven 2026-10-12, `icons` and `font`
+// gone; nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
 // `chrome` gone; nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09,
 // `icons` appended; seven 2026-10-08, `theme` gone; the
 // count's succession, up to seventeen with the tuning phases of
@@ -32,19 +33,16 @@ namespace {
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). ONE LIST SERVES BOTH, the writer's
 // order and the scanner's presence check (architect 2026-10-14, every key
-// required): from 2026-10-07 to 2026-10-14 a second, required list stood
-// beside it less `caption` and `chrome`, whose absence spelled the default;
-// the default is spelled in the line since, so no key can be written and not
-// demanded. `role` (2026-10-10) was the first appended key to be required:
-// "if one of these lines is not in place, it means something's wrong with
-// the config or the setup" (architect), the rule every key follows now.
+// required), so no key can be written and not demanded. `role` (2026-10-10)
+// was the first appended key to be required: "if one of these lines is not
+// in place, it means something's wrong with the config or the setup"
+// (architect), the rule every key follows now.
 //
-// THE KINDS' KEYS RENAMED (architect 2026-10-11 ~03:05, go 2026-10-13): the
-// key `caption` (formerly `scheme`) FOLLOWS last_project, the caption's six,
-// and the key `chrome` (formerly `palette`; the OLD `chrome` key, retired
-// 2026-10-10, returns with this meaning) FOLLOWS THAT, the program's colors
-// after the caption's; `role` is APPENDED after it (2026-10-10). The struct's
-// members keep their old names, `scheme` and `palette`. (`theme` stood
+// THE KINDS' KEYS RENAMED (architect 2026-10-11 ~03:05, go 2026-10-13; and
+// 2026-10-20): `waveform` (`palette` until 2026-10-13, then `chrome` until
+// 2026-10-20, renamed for what it sets) FOLLOWS last_project, where the
+// `caption` key (formerly `scheme`) stood before it until it left
+// 2026-10-20; `role` is APPENDED after it (2026-10-10). (`theme` stood
 // 2026-10-03..10-08, `icons` and `font` 2026-10-09 to 2026-10-12, the
 // header's record.)
 constexpr const char* kDeviceConfigKeys[] = {
@@ -52,8 +50,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_repo",
     "projects_path",
     "last_project",
-    "caption",
-    "chrome",
+    "waveform",
     "role",
 };
 } // namespace
@@ -85,9 +82,8 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
     std::string s;
     for (const char* key : kDeviceConfigKeys) {
         // EVERY KEY WRITES ITS LINE but an unset role (architect
-        // 2026-10-14: the caption and the chrome, which wrote none while
-        // unset 2026-10-07..14, are required and always named).
-        // AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
+        // 2026-10-14: the color keys, which wrote none while unset
+        // 2026-10-07..14, are required and always named). AN UNSET ROLE WRITES NO LINE (2026-10-10): the first-run template
         // alone carries it, and the program never invents a role — the
         // read-back then refuses on the required key (device_config.h).
         if (std::string_view(key) == "role" &&
@@ -110,12 +106,9 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "last_project") {
             // The folder name verbatim, blank until the first successful open.
             s += cfg.last_project;
-        } else if (k == "caption") {
+        } else if (k == "waveform") {
             // The built-in's key verbatim (palette_file.h's key grammar).
-            s += cfg.scheme;
-        } else if (k == "chrome") {
-            // The built-in's key verbatim (palette_file.h's key grammar).
-            s += cfg.palette;
+            s += cfg.waveform;
         } else if (k == "role") {
             // The role's word (kDeviceRoleAuthor / kDeviceRoleMirror).
             s += cfg.role == GuiDeviceRole::Author ? kDeviceRoleAuthor
@@ -192,29 +185,23 @@ std::expected<DeviceConfig, std::string> read_device_config(
             out.last_project = value;
             return {};
         }
-        // THE CAPTION (2026-10-08) AND THE CHROME (2026-10-07; both words
-        // 2026-10-13): A BUILT-IN'S KEY ALONE since 2026-10-14 (architect,
-        // "remove picker and preset file road": the preset files are gone),
-        // each under its one grammar owner (is_builtin_scheme_name,
-        // is_builtin_palette_name, palette_file.h) — any other word, a former
-        // file's name included, the ordinary bad-value hard fail with no
-        // migration. An EMPTY value is refused like any other non-name, and
-        // an ABSENT line is the scanner's missing-required-key refusal
-        // (architect 2026-10-14: every key required, the default spelled —
-        // `caption=windows-storm`, `chrome=cool-edit-default`). An old
-        // `scheme=` or `palette=` line is the unknown key below.
-        if (key == "caption") {
-            if (!is_builtin_scheme_name(value)) {
-                return bad_value(ln, key, value, kSchemeGrammarReason);
-            }
-            out.scheme = value;
-            return {};
-        }
-        if (key == "chrome") {
+        // THE WAVEFORM PRESET (2026-10-07 as `palette`, `chrome` 2026-10-13,
+        // `waveform` 2026-10-20): A BUILT-IN'S KEY ALONE since 2026-10-14
+        // (architect, "remove picker and preset file road": the preset files
+        // are gone), under its one grammar owner (is_builtin_palette_name,
+        // palette_file.h) — any other word, a former file's name included,
+        // the ordinary bad-value hard fail with no migration. An EMPTY value
+        // is refused like any other non-name, and an ABSENT line is the
+        // scanner's missing-required-key refusal (architect 2026-10-14: every
+        // key required, the default spelled — `waveform=cool-edit-default`).
+        // An old `palette=`, `chrome=`, `scheme=` or `caption=` line is the
+        // unknown key below (the `caption` key's arm stood here
+        // 2026-10-08..10-20).
+        if (key == "waveform") {
             if (!is_builtin_palette_name(value)) {
                 return bad_value(ln, key, value, kPaletteGrammarReason);
             }
-            out.palette = value;
+            out.waveform = value;
             return {};
         }
         // THE ROLE (architect 2026-10-10): one of the two words, required

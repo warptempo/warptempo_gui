@@ -3531,8 +3531,8 @@ int gui_main(const char* argument) {
     // (NO colors.conf LOAD HERE ANY MORE. The colors were 23 mutable globals
     // filled from ~/.config/warptempo_gui/colors.conf by load_color_config()
     // at exactly this point; that system retired 2026-08-02. The palette is
-    // installed below, after the config is read and the chrome chosen
-    // (install_palette); the record is at the palette block, render.h.)
+    // installed below, after the config is read and the waveform preset
+    // known (install_palette); the record is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
     // Its keys (kDeviceConfigKeys, device_config.cpp) describe the MACHINE,
@@ -3557,8 +3557,8 @@ int gui_main(const char* argument) {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     // (The chromes and captions folders were read ahead of it 2026-10-07..14,
-    // the preset files the color picker wrote; every preset is compiled in
-    // since, palette_file.h's head.)
+    // the preset files the color picker wrote; every color is compiled in
+    // since, the waveform's presets among them, palette_file.h's head.)
     DeviceConfig device_config;
     {
         auto cfg = load_device_config(GuiPlatform::device_config_defaults());
@@ -3589,24 +3589,18 @@ int gui_main(const char* argument) {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): THE SCHEME the
-    // config's `caption` key names (a built-in; 2026-10-08 ~18:15) —
-    // its six caption keys (the caption alone since 2026-10-10), or none for
-    // THE LIVE CHROME'S OWN SCHEME, which paints the chrome's compiled caption
-    // (scheme_record; chrome_caption, palette_file.h), every other chrome color
-    // derived from the palette's Cool Edit tones (live_chrome_words,
-    // chrome_derive.h); and the palette the config's `chrome` key
-    // names (a built-in, one of Cool Edit's presets)
-    // for the program's — both keys REQUIRED (architect 2026-10-14: the
-    // read refuses an absent line, so there is no default to resolve here) —
-    // THE LIVE WORDS' SEED (2026-10-07: resolved here
+    // THE PALETTE RIDES THE SAME ROAD (architect 2026-10-03): the waveform
+    // preset the config's `waveform` key names (a built-in, one of Cool
+    // Edit's presets) for the waveform's colors — the key REQUIRED (architect
+    // 2026-10-14: the read refuses an absent line, so there is no default to
+    // resolve here) — THE LIVE WORDS' SEED (2026-10-07: resolved here
     // through palette_record and handed to the install explicitly —
-    // render.h's install_palette) — the scheme resolved against the chrome
-    // set above;
+    // render.h's install_palette); the panel's Face, every chrome color and
+    // the caption compiled in (2026-10-20: chrome_derive.h's
+    // kGuiChromeWords; the caption a `caption` key's scheme until that day);
     // installed once, before the first paint. Every painter reads it through
     // palette() (render.h's palette block).
-    install_palette(palette_record(device_config.palette),
-                    scheme_record(device_config.scheme));
+    install_palette(palette_record(device_config.waveform));
 
     // WHICH PROJECT OPENS FIRST — the project model's two roads (startup_source,
     // project_model.h): the argument, which must be a project's source under

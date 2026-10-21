@@ -152,14 +152,15 @@ shopt -s nocaseglob
 #   5. the tablet's settings file (files/warptempo_gui/config): the projects_repo
 #      line is made to read github.com/warptempo/warptempo_projects, the role
 #      line role=author (the tablet authors; the key is required, so the app's
-#      first start refuses without it), a caption= and a chrome= line added with
-#      the defaults (caption=windows-storm, chrome=cool-edit-default) where the
-#      file has none -- every key is required since 2026-10-14, and an app of
-#      before that day wrote neither; a line already there is kept --, and every
+#      first start refuses without it), a waveform= line added with the default
+#      (waveform=cool-edit-default) where the file has none -- every key is
+#      required since 2026-10-14; a line already there is kept --, and every
 #      line of a retired key the app refuses to start with is removed -- sync_path,
-#      and the thirteen colour keys that left 2026-10-04 when every colour became
-#      a role of a theme file (theme_level and the twelve program colour keys,
-#      RETIRED_KEYS below; src/gui/device_config.h); every other line is kept.
+#      the thirteen colour keys that left 2026-10-04 when every colour became
+#      a role of a theme file (theme_level and the twelve program colour keys),
+#      and caption and chrome, which left 2026-10-20 (the caption schemes
+#      removed, chrome renamed waveform; RETIRED_KEYS below;
+#      src/gui/device_config.h); every other line is kept.
 #   6. the audio, exactly as `warptempo_sync tt all`.
 #   7. the directories adb made are opened to the app (below), and the app started.
 #   Run twice it does the same again: the clone is fresh each time and the tracked
@@ -193,22 +194,24 @@ GITHUB_CLONE_URL="https://github.com/warptempo/warptempo_projects.git"
 ORIGIN_URL="ssh://git@ssh.github.com:443/warptempo/warptempo_projects.git"
 PROJECTS_REPO_LINE="projects_repo=github.com/warptempo/warptempo_projects"
 ROLE_LINE="role=author"
-# THE DEFAULT CAPTION AND CHROME, spelled (every device key required since
-# 2026-10-14; src/gui/palette_file.h's kGuiDefaultSchemeKey and
-# kGuiDefaultPaletteKey): added only where the tablet's file has no line.
-CAPTION_LINE="caption=windows-storm"
-CHROME_LINE="chrome=cool-edit-default"
+# THE DEFAULT WAVEFORM PRESET, spelled (every device key required since
+# 2026-10-14; src/gui/palette_file.h's kGuiDefaultPaletteKey): added only where
+# the tablet's file has no line.
+WAVEFORM_LINE="waveform=cool-edit-default"
 # THE RETIRED KEYS setup's correction removes from the tablet's settings file
 # (step 5), each one the app now refuses to start with (unknown-key fatal, no
-# migration; src/gui/device_config.h records each): sync_path, struck; and the
+# migration; src/gui/device_config.h records each): sync_path, struck; the
 # thirteen colour keys that left 2026-10-04 when every colour became a role of a
 # theme file -- theme_level (the dropped dark level) and the twelve program
-# colour keys.
+# colour keys; and caption and chrome, which left 2026-10-20 (the caption's
+# built-in schemes removed; chrome renamed waveform, whose default line step 5
+# adds in its place).
 RETIRED_KEYS=(sync_path theme_level
               waveform_ink waveform_canvas waveform_outline
               flag_face flag_face_selected flag_label flag_label_selected
               invalid_face invalid_face_selected invalid_label
-              playhead_head playhead_stem)
+              playhead_head playhead_stem
+              caption chrome)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 
 die() { printf 'warptempo_sync: %s\n' "$1" >&2; exit 1; }
@@ -1078,9 +1081,9 @@ apply_setup() {
         put_as_app "$TABLET_KEY.pub" "$APPCFG/deploy_key.pub" 644 || die "the deploy key's .pub did not arrive intact"
     fi
 
-    # 5. THE SETTINGS FILE: projects_repo and role made right, caption and chrome
-    # given their defaults where absent, the retired keys' lines gone
-    # (sync_path and the thirteen colour keys, RETIRED_KEYS), the rest kept.
+    # 5. THE SETTINGS FILE: projects_repo and role made right, waveform given
+    # its default where absent, the retired keys' lines gone (sync_path, the
+    # thirteen colour keys, caption and chrome: RETIRED_KEYS), the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
     # file), or `warptempo_sync-absent`; a failed or unmarked reading stops setup
@@ -1095,25 +1098,24 @@ apply_setup() {
         *)          die "the tablet's settings file came back incomplete: it was left as it was" ;;
     esac
     if [[ -s "$old_cfg" ]]; then
-        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v caption="$CAPTION_LINE" -v chrome="$CHROME_LINE" -v retired="${RETIRED_KEYS[*]}" '
+        awk -v repo="$PROJECTS_REPO_LINE" -v role="$ROLE_LINE" -v waveform="$WAVEFORM_LINE" -v retired="${RETIRED_KEYS[*]}" '
             BEGIN             { n = split(retired, r, " "); for (i = 1; i <= n; i++) gone[r[i] "="] = 1 }
             /^projects_repo=/ { print repo; had = 1; next }
             /^role=/          { print role; had_role = 1; next }
-            /^caption=/       { had_caption = 1 }
-            /^chrome=/        { had_chrome = 1 }
+            /^waveform=/      { had_waveform = 1 }
             (substr($0, 1, index($0, "=")) in gone) { next }
                               { print }
-            END               { if (had == 0) print repo; if (had_caption == 0) print caption; if (had_chrome == 0) print chrome; if (had_role == 0) print role }' "$old_cfg" > "$new_cfg"
+            END               { if (had == 0) print repo; if (had_waveform == 0) print waveform; if (had_role == 0) print role }' "$old_cfg" > "$new_cfg"
         if cmp -s "$old_cfg" "$new_cfg"; then
-            head_step "leave the tablet's settings file: it already names the projects repository, its caption, its chrome and its role and has no line of a retired key"
+            head_step "leave the tablet's settings file: it already names the projects repository, its waveform preset and its role and has no line of a retired key"
         else
-            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a caption and a chrome line ($CAPTION_LINE, $CHROME_LINE where none stands), and no line of a retired key (${RETIRED_KEYS[*]})"
+            head_step "rewrite the tablet's settings file: $PROJECTS_REPO_LINE, $ROLE_LINE, a waveform line ($WAVEFORM_LINE where none stands), and no line of a retired key (${RETIRED_KEYS[*]})"
             put_as_app "$new_cfg" "$APPCFG/config" 666 || die "the settings file did not arrive intact"
         fi
         sed 's/^/    /' "$new_cfg"
     else
         # Only the plan reaches this: the real pass started the app above until it wrote one.
-        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $CAPTION_LINE and $CHROME_LINE where none stands, and no line of a retired key"
+        head_step "rewrite the settings file the app's first start writes, where it must: $PROJECTS_REPO_LINE, $ROLE_LINE, $WAVEFORM_LINE where none stands, and no line of a retired key"
     fi
     printf '\n'
 

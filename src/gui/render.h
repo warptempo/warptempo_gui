@@ -97,33 +97,35 @@ struct TrimRange {
 // -- Palette ---------------------------------------------------------------
 //
 // THE GUI'S COLORS ARE ROLES AND NOTHING ELSE (architect 2026-10-04; the
-// split 2026-10-07; the chrome's inheritance 2026-10-10): THE PALETTE holds
-// every color the PROGRAM draws in the well or on a thing that enters it
-// (the waveform's canvas, ink and outline, the canvas's grid and center
-// line, the cues' two colors and the invalid color, the playhead and
-// the scanner, the panel's face; palette_file.h's head owns the rule that
-// parts program from chrome), and THE CHROME'S ROLES — the chrome and its
-// relief, the time fields' own pair, the cards' three, the selected and
-// field pairs, the caption — ARE INHERITED FROM IT, every one but the
-// caption's six a tone of the palette's face or ink by Cool Edit's own
-// arithmetic (architect 2026-10-10: "we follow Cool Edit's theming";
-// chrome_derive.h's head, the per-role table), THE CAPTION'S SIX a
-// SCHEME'S. The chrome's roles and their order are the role table
-// (kGuiThemeRoles, theme_file.h).
-// The program's roles are kGuiPaletteRoles and the compiled built-in
+// split 2026-10-07; the chrome's inheritance 2026-10-10; the chrome compiled
+// 2026-10-20): THE PALETTE holds every color the PROGRAM draws in the well
+// or on a thing that enters it (the waveform's canvas, ink and outline, the
+// canvas's grid and center line, the cues' two colors and the invalid
+// color, the playhead and the scanner; palette_file.h's head owns the rule
+// that parts program from chrome) — the WAVEFORM PRESET, the one choice of
+// color left; THE PANEL'S FACE is one constant (cool_edit_derive.h's
+// kDefaultFace, Cool Edit's default 626C7B), and THE CHROME'S ROLES — the
+// chrome and its relief, the time fields' own pair, the cards' three, the
+// selected and field pairs, the caption — ARE INHERITED FROM IT, every one
+// but the caption's six a tone of the Face (or, the selection fill, the
+// default preset's ink) by Cool Edit's own arithmetic (architect 2026-10-10:
+// "we follow Cool Edit's theming"; chrome_derive.h's head, the per-role
+// table, its words one constant), THE CAPTION'S SIX THE COMPILED CAPTION
+// (palette_file.h's kGuiCaptionOwn: Windows Storm's, architect 2026-10-12).
+// The chrome's roles and their order are the role table (kGuiThemeRoles,
+// theme_file.h).
+// The palette's roles are kGuiPaletteRoles and the compiled built-in
 // palettes Cool Edit's presets, kGuiBuiltinPalettes (palette_file.h); the
-// active palette is the device config's `chrome` — a built-in's key, chosen
-// by the Settings Chrome row (architect 2026-10-14; files from a `chromes/`
-// folder were read 2026-10-07..14), the first-run default Cool Edit's
-// "Default" under every chrome (2026-10-16); the active SCHEME, the
-// caption's six keys, is its `caption` — a built-in's key, chosen by the
-// Settings Caption row, the first-run default the live chrome's own, which
-// carries no keys and paints the chrome's COMPILED CAPTION (palette_file.h's
-// kGuiCaptionOwn: Windows Storm's, architect 2026-10-12). There is
+// active palette is the device config's `waveform` — a built-in's key,
+// chosen by the Settings Waveform row (architect 2026-10-14 and 2026-10-20;
+// files from a `chromes/` folder were read 2026-10-07..14), the first-run
+// default Cool Edit's "Default" (2026-10-16). (The preset set the Face, and
+// through it the whole window, 2026-10-09..10-20, and the 42 caption schemes
+// were a second choice, the `caption` key, 2026-10-08..10-20.) There is
 // NO LEVEL (architect 2026-10-04): a dark look, like any look made official,
 // would be a chrome variant of its own (2026-10-08). The app computes no
 // color but COOL EDIT'S: the program's panel tones derived from the
-// palette's `face` (cool_edit_derive.h, the COOL EDIT BLOCK) and, through
+// one Face (cool_edit_derive.h, the COOL EDIT BLOCK) and, through
 // the same tones, the chrome's roles (chrome_derive.h).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — or, since 2026-10-09, ONE OF THE PROGRAM'S
@@ -277,8 +279,8 @@ struct TrimRange {
 //                 in the label — and the sizing frame round a
 //                 restored laptop window is the quartet and the ground
 //                 (paint_window_sizing_frame);
-//   THE PALETTE   the program's ELEVEN (palette_file.h, 2026-10-07; eleven
-//                 since 2026-10-11): the waveform's canvas, ink and outline
+//   THE PALETTE   the waveform preset's TEN (palette_file.h, 2026-10-07; ten
+//                 since 2026-10-20): the waveform's canvas, ink and outline
 //                 (ROW 6, below; the ink also the view bar's span, its
 //                 bevels derived from it); THE CANVAS'S TWO LINES, Cool
 //                 Edit's — `grid` under the waveform and `center` on each
@@ -293,11 +295,12 @@ struct TrimRange {
 //                 the canvas, nothing else (THE PLAYHEAD, below); the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
-//                 (architect 2026-10-09); and THE
-//                 PANEL'S `face` (2026-10-09: the program's band, dock bar,
-//                 row 8 and the canvas column's lanes — Cool Edit's — every
-//                 other panel tone derived from it, the COOL EDIT BLOCK,
-//                 cool_edit_derive.h).
+//                 (architect 2026-10-09);
+//   face          THE PANEL'S FACE (2026-10-09: the program's band, dock
+//                 bar, row 8 and the canvas column's lanes — Cool Edit's —
+//                 every other panel tone derived from it, the COOL EDIT
+//                 BLOCK, cool_edit_derive.h): the one constant kDefaultFace
+//                 since 2026-10-20 (a palette role until then).
 // THE CARD FACE IS THE PERIOD'S TOOLTIP (architect 2026-10-04, reversing the
 // card on the ground of 2026-10-03): the tooltip, both of its lines (no dimmed
 // second line: Windows' ink, no dims), and every notification card stand on
@@ -367,12 +370,12 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
 // The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES —
-// derived from the live palette and the live scheme's caption since
-// 2026-10-10 (chrome_derive.h) — and the active palette's program roles, one
+// compiled off the one Face and the compiled caption since 2026-10-20
+// (chrome_derive.h's kGuiChromeWords) — and the active palette's roles, one
 // field each — the chrome's in kGuiThemeRoles' order (theme_file.h), the
-// program's in kGuiPaletteRoles' (palette_file.h), and THE COOL EDIT BLOCK
-// derived from the program's `face` (cool_edit_derive.h's painted tones,
-// 2026-10-09) — the three tables covering the struct exactly
+// palette's in kGuiPaletteRoles' (palette_file.h), the panel's `face`, and
+// THE COOL EDIT BLOCK derived from that Face (cool_edit_derive.h's painted
+// tones, 2026-10-09) — the tables covering the struct exactly
 // (palette_file.cpp's static_asserts); the mapping above says what each
 // paints. Every field is a solid byte triple.
 struct GuiPalette {
@@ -399,8 +402,8 @@ struct GuiPalette {
     GuiColor caption_inactive;           // COLOR_INACTIVECAPTION
     GuiColor caption_inactive_gradient;  // COLOR_GRADIENTINACTIVECAPTION
     GuiColor caption_inactive_text;      // COLOR_INACTIVECAPTIONTEXT
-    // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
-    // palette_file.h).
+    // THE PROGRAM'S OWN ELEMENTS — THE PALETTE, the waveform preset
+    // (kGuiPaletteRoles, palette_file.h).
     GuiColor waveform_canvas;
     GuiColor waveform_ink;
     GuiColor waveform_outline;
@@ -413,7 +416,8 @@ struct GuiPalette {
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, the program is Cool Edit):
     // Cool Edit's Face, the ground of the toolbar band, the dock bar and row
-    // 8 under every chrome.
+    // 8 — the one constant (cool_edit_derive.h's kDefaultFace) under every
+    // waveform preset since 2026-10-20.
     GuiColor face;
     // THE COOL EDIT BLOCK (cool_edit_derive.h's kTones, the painted ones):
     // the panel's tones, each DERIVED from `face` — the view bar's span
@@ -448,7 +452,7 @@ struct GuiPalette {
     GuiColor ce_tab_line;
     GuiColor ce_page_dark;
     // THE TAB STRIP'S BODIES AND LABELS (2026-10-18; cool_edit_derive.h's
-    // tab table, kTabBodies, a measured row per preset Face, not a tone of
+    // tab table, kTabBodies, the one Face's measured row, not a tone of
     // the table above): the inactive tab's 15-row body, one stop per W row,
     // and its label's ink; and THE PROGRAM TEXT (program_text: the light ink,
     // the dark past the swap), the active tab's label.
@@ -478,9 +482,9 @@ struct GuiPalette {
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
 // state in render.cpp, written by the install family below alone:
 // install_palette at its ONE application point, gui_main's startup, before
-// the window exists; and install_program_palette and install_chrome_pick,
-// the Settings Chrome and Caption rows' live road. Before the first install it is construction state
-// (black), never painted.
+// the window exists; install_program_palette, the Settings Waveform row's
+// live road; and install_true_colors. Before the first install it is
+// construction state (black), never painted.
 const GuiPalette& palette();
 
 // THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-09): each
@@ -502,20 +506,19 @@ enum class GuiSurface {
 };
 GuiColor surface_text(GuiSurface surface);
 
-// A SCHEME'S KEYS — THE CAPTION ALONE since 2026-10-10 (architect
-// 2026-10-10: "the caption remains the only thing that's outside of Cool
-// Edit"; "scheme files shrink to the caption's keys"; every other chrome
-// role inherits the palette's Cool Edit tones, chrome_derive.h): the title's
-// start, end and text, and the inactive caption's three — palette_file.h
-// owns their table (kGuiChromeLines: the three of the block and the three
-// inactive, each optional in a pick), chrome_derive.h the
-// mapping onto the caption's roles. "WE SHOULD NEVER HAVE A TOGGLE"
-// (2026-10-08): the caption's text is a picked word, never a rule's
-// white-or-black. THE INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while
-// absent ("on the tablet I'm not even going to fill them out; there is no
-// inactive state there") — the inactive_* accessors below resolve them.
-// A SCHEME CARRIES NO FACE: the face is the product's one (gui_font.h's
-// gui_live_face_set).
+// THE CAPTION'S SIX (architect 2026-10-10: "the caption remains the only
+// thing that's outside of Cool Edit"; every other chrome role inherits Cool
+// Edit's tones, chrome_derive.h): the title's start, end and text, and the
+// inactive caption's three — ONE INSTANCE, the compiled caption
+// (palette_file.h's kGuiCaptionOwn, Windows Storm's; the 42 picked schemes
+// it was one of left 2026-10-20), chrome_derive.h the mapping onto the
+// caption's roles. "WE SHOULD NEVER HAVE A TOGGLE" (2026-10-08): the
+// caption's text is a recorded word, never a rule's white-or-black. THE
+// INACTIVE CAPTION'S THREE FOLLOW THE ACTIVE ONES while absent ("on the
+// tablet I'm not even going to fill them out; there is no inactive state
+// there") — the inactive_* accessors below resolve them; the compiled
+// caption records all six. IT CARRIES NO FACE: the face is the product's one
+// (gui_font.h's gui_live_face_set).
 struct GuiChromePick {
     uint32_t                title_start    = 0;   // 0xRRGGBB, sRGB, each
     uint32_t                title_end      = 0;
@@ -535,67 +538,37 @@ struct GuiChromePick {
     constexpr bool operator==(const GuiChromePick&) const = default;
 };
 
-// Install every color: THE PROGRAM'S off `program`, THE LIVE WORDS
-// (2026-10-07): the eleven program colors as they
-// stand in the process, which the caller hands in explicitly — and THE
-// CHROME'S, DERIVED FROM THEM (2026-10-10, the chrome inherits Cool Edit:
-// every role but the caption's six a tone of the palette's face or ink,
-// live_chrome_words, chrome_derive.h), the caption's six off `chrome`, the
-// scheme's keys, or with none the compiled caption
-// (chrome_caption(), palette_file.h). AT LAUNCH the palette the config's `chrome`
-// key names and the scheme its `caption` key names (2026-10-08; built-ins
-// alone since 2026-10-14, is_builtin_palette_name and is_builtin_scheme_name,
-// both keys required: gui_main resolves them with palette_record and
-// scheme_record, palette_file.h, and passes the two).
+// Install every color: THE WAVEFORM'S off `program`, the waveform preset's
+// ten (2026-10-07; the device config's `waveform` key names the preset at
+// launch — a built-in's key, is_builtin_palette_name, gui_main resolving it
+// with palette_record, palette_file.h) — and THE CHROME'S, THE PANEL'S FACE
+// AND EVERY COOL EDIT TONE OFF IT, COMPILED (2026-10-20: the one Face,
+// cool_edit_derive.h's kDefaultFace, and kGuiChromeWords, chrome_derive.h,
+// the caption's six the compiled caption's), so no preset moves them.
 // THE LIVE WORDS ARE THE TRUTH WHILE THE PROCESS RUNS: the config's
-// `chrome` and `caption` keys name THE ACTIVE PRESETS and give the words at
-// launch; the Settings Chrome and Caption rows' commit installs a preset's
-// words live and writes its key (GuiSettingsEditor::commit_device_setting,
-// architect 2026-10-14). This resolves and never refuses. It bumps
-// palette_generation below, the flag cache's fingerprint term, and the
-// plate's two baked inks (waveform_plate_inks) move with it. The words type
-// is palette_file.h's. `chrome` is the scheme's keys (GuiChromePick above),
-// none for the live chrome's own scheme.
-void install_palette(const std::array<uint32_t, 11>& program,
-                     const std::optional<GuiChromePick>& chrome);
+// `waveform` key names THE ACTIVE PRESET and gives the words at launch; the
+// Settings Waveform row's commit installs a preset's words live and writes
+// its key (GuiSettingsEditor::commit_device_setting, architect 2026-10-14).
+// This resolves and never refuses. It bumps palette_generation below, the
+// flag cache's fingerprint term, and the plate's two baked inks
+// (waveform_plate_inks) move with it. The words type is palette_file.h's.
+// (The caption's six were a picked scheme's — a `caption` key, its row and
+// a second argument here, with install_chrome_pick and live_chrome_pick
+// beside — 2026-10-08..10-20.)
+void install_palette(const std::array<uint32_t, 10>& program);
 
-// THE INSTALL FAMILY'S CAPTION MEMBER (2026-10-08, the chrome knob; the
-// caption alone since 2026-10-10): the chrome's members re-derived off
-// live_chrome_words(the live program words, `chrome`)
-// (chrome_derive.h) and palette_generation bumped, the program's eleven
-// untouched — only the caption's six can move. THE LIVE ROAD beside
-// install_program_palette is the Settings rows' commit
-// (GuiSettingsEditor::install_color_preset, which runs that member's apply
-// shape after both; the color picker's until 2026-10-14). Why that shape is enough for
-// the chrome: the chrome's colors bake into one cached thing, the flag cache
-// (a disabled flag's ground), keyed by the generation; the caption's ramp
-// image keys its two words itself (paint_caption_gradient); no icon raster
-// carries a role (icons.h's head); every other chrome painter reads
-// palette() each frame (re-checked 2026-10-09).
-void install_chrome_pick(const std::optional<GuiChromePick>& chrome);
-
-// THE LIVE CHROME PICK AS INSTALLED — the caption keys the install family
-// last wrote (install_palette's or install_chrome_pick's `chrome`), carried
-// as given under every chrome — THE LIVE SCHEME, as program_palette_words is THE LIVE
-// PALETTE, file-scope for the same reason. Its readers: the Settings rows'
-// commit (the other kind's words passed through unchanged, and the chrome's
-// before-and-after compare, GuiSettingsEditor::install_color_preset).
-const std::optional<GuiChromePick>& live_chrome_pick();
-
-// THE LIVE WORDS AS INSTALLED — the program's eleven the install family
+// THE LIVE WORDS AS INSTALLED — the waveform's ten the install family
 // last wrote (install_palette's `program`, or install_program_palette's
 // `words`), in kGuiPaletteRoles' order (palette_file.h's GuiPaletteWords;
 // spelled as its array type here because palette_file.h includes this
-// header, which static_asserts the 11 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
+// header, which static_asserts the 10 against its table). They live beside the installed struct, FILE-SCOPE IN render.cpp
 // AND NOT ON AppState (2026-10-07): AppState is rebuilt at every project
 // reopen (gui_main's loop) while the installed palette is not — so a reopen
-// keeps them. ITS READER: the Settings rows' commit
-// (GuiSettingsEditor::install_color_preset — the Caption row passes them
-// through unchanged, and the chrome's before-and-after compare reads them).
-const std::array<uint32_t, 11>& program_palette_words();
+// keeps them.
+const std::array<uint32_t, 10>& program_palette_words();
 
 // (THE INSTALL FAMILY'S SECOND MEMBER, install_program_palette — the
-// program's eleven alone, the Chrome row's live road — is declared in
+// waveform's ten alone, the Waveform row's live road — is declared in
 // palette_file.h beside the words it takes and defined in render.cpp beside
 // install_palette.)
 

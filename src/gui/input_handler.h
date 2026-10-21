@@ -2827,8 +2827,9 @@ private:
     // (THE CHOICE EDITOR'S KEYS AND POINTER — handle_settings_choice_key,
     // claim_settings_choice_press, finish_settings_choice_release and
     // settings_choice_motion, 2026-10-07 to 2026-10-14 — went with the choice
-    // editor, architect 2026-10-14: the Chrome and Caption rows are line
-    // editors, their help Tab's completion.)
+    // editor, architect 2026-10-14: the Chrome and Caption rows became line
+    // editors, their help Tab's completion — the Waveform row alone since
+    // 2026-10-20.)
 
     // -- THE PICKER (architect 2026-08-28; bodies in
     //    input_key_dispatch.cpp) ---------------------------------------------

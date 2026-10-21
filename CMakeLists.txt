@@ -202,14 +202,15 @@ set(WARPTEMPO_GUI_SOURCES
     # describes the panel in front of the user rather than the piece.
     src/gui/device_config.cpp
     # THE CHROME'S COLORS (2026-10-04; compiled in since 2026-10-08): the
-    # role table and each chrome's compiled theme, no files.
+    # role table, no files.
     # GUI-ONLY like the config: the CLI paints nothing.
     src/gui/theme_file.cpp
-    # THE COMPILED-IN PRESETS (2026-10-07; the schemes 2026-10-08; compiled
-    # in alone since 2026-10-14): the program's role table (eleven roles
-    # since 2026-10-11), the built-in palettes (Cool Edit's twenty presets,
-    # the one default `cool-edit-default`) and schemes, and the lookups the
-    # device config and the Settings Chrome and Caption rows read. GUI-ONLY.
+    # THE WAVEFORM PRESETS (2026-10-07; compiled in alone since 2026-10-14;
+    # the waveform's alone, the caption schemes gone, since 2026-10-20): the
+    # palette's role table (ten roles), the built-in palettes (Cool Edit's
+    # twenty presets, the one default `cool-edit-default`), the compiled
+    # caption, and the lookups the device config and the Settings Waveform
+    # row read. GUI-ONLY.
     src/gui/palette_file.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
