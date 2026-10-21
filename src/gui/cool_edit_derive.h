@@ -602,9 +602,11 @@ inline constexpr CaseTone kCaseShadowFirst = {-0.00100, 0.37000, 0.08200, 0x5D5E
 inline constexpr CaseTone kCaseShadowLast  = {0.00650, 0.29850, 0.08200, 0x4C4D4D};
 inline constexpr CaseTone kCaseCorner      = {0.00450, 0.29500, 0.08100, 0x4B4C4C};
 // THE CASE WEARS THESE ON ITS OWN TILE since 2026-10-20 (architect, the wood
-// chrome): every tone above taken off THE CASE TILE'S FACE, each the case
-// tile scaled per channel by tone / Face, baked per seat
-// (materials::paint_case_face) — no GuiPalette member holds them (the
+// chrome): every tone above taken on THE DEFAULT FACE and scaled per channel
+// so the rest case's interior mean is THE CASE TILE'S MEAN (2026-10-20
+// ~23:10, "yes"; materials.cpp's derive_case_tones — taken on the tile's
+// mean itself until then), the ramp the case tile scaled per row, baked per
+// seat (materials::paint_case_face) — no GuiPalette member holds them (the
 // twenty-four that did, off the panel's Face, 2026-10-10..10-20, left).
 
 constexpr bool within_two(uint32_t x, uint32_t y) {

@@ -32,8 +32,9 @@
 // lane's on the MetalDark (the tab strip's recess the MetalVeryDark as
 // drawn) — and THE BUTTON CASE'S face ramp,
 // highlight, shadow ramp and corner (the per-row case tones,
-// cool_edit_derive.h's head with the fit's worst errors) are the CASE tile's,
-// off that tile's Face (materials::paint_case_face). THE CONSTANTS below are
+// cool_edit_derive.h's head with the fit's worst errors) are the CASE tile's:
+// Default's own case scaled per channel so its interior mean is that tile's
+// mean (2026-10-20 ~23:10; materials::paint_case_face). THE CONSTANTS below are
 // what Cool Edit draws whatever its preset — the case's black outline and the
 // pressed and checked rings, the ruler's ink and the view bar's field — and
 // the wood chrome's own (materials.h: the time fields' black and amber),
@@ -82,8 +83,14 @@
 // OWN CORNER (kCaseCorner) at the bottom-right inside the black line. Where
 // the highlight meets the shadow Cool Edit's measured ADAEAF is the two
 // tones' half-and-half — the mitre, drawn as the diagonal (the head's rule),
-// so no tone stands for it. Every tone off THE CASE TILE'S FACE, the tile
-// scaled per channel by it, baked per seat (materials::paint_case_face).
+// so no tone stands for it. EVERY TONE KEEPS THE CASE TILE'S BRIGHTNESS
+// (architect 2026-10-20 ~23:10, "yes"): taken on the DEFAULT Face, then
+// scaled per channel by the tile's mean over the Default ramp's mean, so the
+// rest case's interior mean is the tile's — the ramp the tile scaled by each
+// row's tone, the lines flat — baked per seat (materials::paint_case_face;
+// the arithmetic at materials.cpp's derive_case_tones). (Taken on the tile's
+// mean as if it were the panel's Face 2026-10-20 until ~23:10: the ramp ran
+// far lighter, its top rows reaching white.)
 // THE BLACK LINE on the right and bottom, 000000 on every captured Face.
 inline constexpr uint32_t kCeCaseOuter = 0x000000;
 // THE PRESSED AND CHECKED RINGS (METRICS §1.5, constant over all five

@@ -143,7 +143,8 @@ struct TrimRange {
 // PAINTER CONSTANTS (cool_edit_paint.h: Cool Edit's measured bytes that do
 // not follow its preset — the case's black outline and down rings, the
 // disabled glyph's two tones, the view bar's black field, the ruler's ticks and digits and their black shadow;
-// the case's ramps derive from the Case tile's Face, materials::paint_case_face)
+// the case's tones Default's own scaled to the Case tile's mean since
+// 2026-10-20 ~23:10, materials::paint_case_face)
 // — or THE WOOD CHROME'S CONSTANTS (materials.h: the caption's and the menu
 // row's gold over its shadow, the time fields' black and amber) — or THE
 // MATERIALS' BAKED TILES (set_surface_source) — or THE ICON SET'S
@@ -482,7 +483,8 @@ struct GuiPalette {
     // cool_edit_paint.h's kCeTabLabel. THE BUTTON CASE's twenty-four
     // members — its ramp, highlight, shadow ends and corner off the Face
     // 2026-10-10..10-20 — left the same day: the case is the Case tile's,
-    // its tones off that tile's Face, materials::paint_case_face.)
+    // its tones Default's own scaled to that tile's mean (2026-10-20
+    // ~23:10), materials::paint_case_face.)
     GuiColor ce_text;
     // THE DISABLED CUE'S FADED LOOK (2026-10-10; cool_edit_derive.h's
     // disabled_* mixes toward the Face): the triangle of the `cue` red, the
@@ -1199,8 +1201,10 @@ constexpr int kMinWindowHeightPx = 480;
 //     DrawFrameControl's DFC_CAPTION: EDGE_RAISED with BF_SOFT, and
 //     EDGE_SUNKEN with BF_SOFT while pressed (paint_button_box's TOOLBAR
 //     family, the SOFT edges; the reference's white outer line and 3DLight
-//     inner one agree) ON THE CASE MATERIAL, its tones the Case Face's
-//     (architect 2026-10-20 ~20:15, the region Case, materials.h), its glyph
+//     inner one agree) ON THE CASE MATERIAL (architect 2026-10-20 ~20:15,
+//     the region Case, materials.h), its lines THE CASE'S OWN — the light
+//     ones the case's highlight, the dark its shadow's first tone, Default's
+//     case scaled to the Case tile's mean (2026-10-20 ~23:10) — its glyph
 //     Marlett's character in the label
 //     (paint_handler.cpp's caption glyph block: Minimise, Maximise and
 //     Restore authored cells — ReactOS's 7-wide Minimise and Restore — and
@@ -1381,7 +1385,12 @@ inline int relief_line_px() {
 // the
 // two two-tone corners MITRED (paint_relief_sunken_outer over
 // paint_relief_frame, the program's diagonal rule at cool_edit_paint.h's
-// head).
+// head). THE LINE TAKES THE MATERIAL OF THE REGION IT STANDS BESIDE
+// (architect 2026-10-20 ~23:10, "yes"; materials.h's REGIONS): the top row
+// and the columns alongside the upper region — the ring's top down to the
+// band's last row — the WOOD's flat tones, from the band's foot down the
+// metal's; one ring, split by clip at the band's foot, its mitres kept
+// (paint_program_frame).
 // THE GEOMETRY (main.cpp's lane table; one geometry for paint and hit): the
 // ring's TOP ROW is a top lane of its own between the menu row and the band,
 // its BOTTOM ROW a bottom lane of its own, and its two COLUMNS stand on the

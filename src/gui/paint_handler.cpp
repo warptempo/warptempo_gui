@@ -1617,7 +1617,8 @@ void GuiPaintHandler::paint_caption_row(cairo_t* cr) {
         if (!clip_meets(cr, b)) continue;
         const bool pushed = caption_button_pushed(app, i);
         // THE CASE REGION (architect 2026-10-20 ~20:15): the box's face and
-        // its soft relief the case tile, its tones off the Case Face.
+        // its soft relief the case tile, its lines the case's own highlight
+        // and shadow (2026-10-20 ~23:10, materials.h's Case region).
         const GuiMaterialScope on_case(GuiMaterialRegion::Case);
         const ButtonBoxFace box =
             paint_button_box(cr, b, /*lamp=*/false, pushed,
@@ -1843,10 +1844,29 @@ void GuiPaintHandler::paint_menu_row(cairo_t* cr) {
 // floating surfaces cover it where they stand (the keyboard and the modal
 // family's box stand inside it since 2026-10-14). The outer damage clip
 // bounds it; the ring is a handful of rects, so it is not exposure-gated.
+// THE LINE TAKES THE MATERIAL OF THE REGION IT STANDS BESIDE (architect
+// 2026-10-20 ~23:10, "yes"; materials.h's REGIONS): the one ring painted
+// twice, each pass clipped to its part — THE TOP ROW AND THE COLUMNS
+// ALONGSIDE THE UPPER REGION, from the ring's top to the band's foot
+// (top_icon_row_area's last row), in the WOOD's flat tones; from the band's
+// foot down in the metal's. No new geometry: the clip splits the one ring,
+// so each mitred corner keeps its diagonal inside its own pass.
 void GuiPaintHandler::paint_program_frame(cairo_t* cr) {
     const GuiRect ring = program_frame_rect(app);
     if (ring.w <= 0 || ring.h <= 0) return;
-    paint_relief_sunken_outer(cr, ring);
+    const GuiRect band = top_icon_row_area(app);
+    const int foot = std::clamp(band.y + band.h, ring.y, ring.y + ring.h);
+    const auto pass = [&](int y0, int y1, GuiMaterialRegion region) {
+        if (y1 <= y0) return;
+        cairo_save(cr);
+        cairo_rectangle(cr, ring.x, y0, ring.w, y1 - y0);
+        cairo_clip(cr);
+        const GuiMaterialScope scope(region);
+        paint_relief_sunken_outer(cr, ring);
+        cairo_restore(cr);
+    };
+    pass(ring.y, foot, GuiMaterialRegion::Upper);
+    pass(foot, ring.y + ring.h, GuiMaterialRegion::Lower);
 }
 
 // (THE BOTTOM OVERLAYS' PAINTER — paint_bottom_overlays, the taskbar line in

@@ -48,6 +48,15 @@ struct Tile {
     Baked                drawn;         // the as-drawn copy, baked on first use
 };
 
+// THE CASE'S TONES (derive_case_tones; materials.h's CASE): Cool Edit's
+// measured case on the Default Face, every tone scaled per channel to the
+// case tile — the lines as words, the ramp as each W row's factors on the
+// tile.
+struct CaseTones {
+    uint32_t highlight = 0, shadow_first = 0, shadow_last = 0, corner = 0;
+    std::array<std::array<double, 3>, cool_edit_derive::kCaseRamp.size()> ramp{};
+};
+
 struct State {
     bool                                   loaded = false;
     std::array<Tile, kGuiMaterialCount>    tiles;
@@ -58,6 +67,8 @@ struct State {
     // THE TONE TABLE (set_tone_face): a flat word and its key.
     std::vector<std::pair<uint32_t, int>>  tones;
     int                                    recess_key = kAsDrawn;
+    // THE CASE'S TONES, derived at every load (derive_case_tones).
+    CaseTones                              case_tones;
     // THE CASES, by (seat, down, side, line).
     std::map<std::tuple<uint32_t, bool, int, int>, Surface> cases;
 };
@@ -159,9 +170,25 @@ Baked& baked(GuiMaterial m) {
 // client's columns from the client's top row, every other tile from the
 // client's corner — user space being the client's on every road that paints
 // chrome (the flag cache translates to it).
+// ON THE CASE (the caption's three buttons, the Case region) a tone that is
+// not the Face is THE CASE'S OWN LINE (2026-10-20 ~23:10, derive_case_tones):
+// a tone lighter than the Face (its HLS L on the Default Face above the
+// Default Face's) the case's highlight, a darker one the shadow's first tone
+// — the hilight and the mid of the soft relief — the bevel keys over it.
 void set_tone_source(cairo_t* cr, GuiMaterial m, int key) {
     if (key != kAsDrawn) {
         const Tile& t = tile(m);
+        if (m == GuiMaterial::Case) {
+            using namespace cool_edit_derive;
+            const Tone& tone = kTones[static_cast<size_t>(key)];
+            const bool lighter = hls_of(tone_of(tone, kDefaultFace, 0)).l >
+                                 hls_of(kDefaultFace).l;
+            const CaseTones& ct = state().case_tones;
+            const uint32_t line = lighter ? ct.highlight : ct.shadow_first;
+            set_palette_source(
+                cr, hex(scaled_pixel(t.face, tone_factors(line, t.face))));
+            return;
+        }
         set_palette_source(cr, hex(scaled_pixel(t.face, key_factors(t, key))));
         return;
     }
@@ -237,15 +264,63 @@ std::pair<int, int> seat_offset(uint32_t seat, int room_x, int room_y) {
     return {ox, oy};
 }
 
+// THE CASE KEEPS THE TILE'S BRIGHTNESS (architect 2026-10-20 ~23:10, "yes"):
+// Cool Edit's measured case — kCaseRamp, kCaseHighlight, kCaseShadowFirst /
+// Last and kCaseCorner (cool_edit_derive.h) — is taken on THE DEFAULT FACE
+// (kDefaultFace, 626C7B: Default's own case, D below), never on the tile's
+// mean as if it were the panel's Face (that ramp ran far lighter than its
+// Face, so the cases' top rows reached white and the tile set no brightness;
+// 2026-10-20 until ~23:10). THEN EVERY TONE IS SCALED PER CHANNEL BY ONE
+// FACTOR PER CHANNEL,
+//     F_c = M_c / mean_i D_i,c        (c = R, G, B; i the ramp's 20 stops)
+// with M the case tile's mean (its Face): the rest case's interior — the
+// ramp's rows inside the black line, each stop ONE W ROW of the 20-W seat, so
+// the area-weighted mean is the stops' plain mean (the device rows'
+// rounding, nearbyint(i·g/20), left out: one factor per channel at every
+// scale) — then has the tile's mean. THE LINES (the highlight, the shadow's
+// two ends, the corner) are the words F·D rounded and clamped, flat strokes
+// with the bevel keys over them (tone_factors); THE RAMP is the tile under
+// each row scaled by that row's tone over the tile's mean, F·D_i / M =
+// D_i / mean D, exact and clear of the bevel keys (they apply to the case's
+// lines). The pressed and checked face wears the same ramp with the same
+// factors, so a pressed case stays darker than a resting one, its light
+// lines gone, as in Cool Edit. The caption's three buttons (the Case region,
+// set_tone_source) take the same lines.
+CaseTones derive_case_tones(uint32_t tile_mean) {
+    using namespace cool_edit_derive;
+    std::array<double, 3> mean{};
+    for (const CaseTone& t : kCaseRamp) {
+        const uint32_t d = case_tone(t, kDefaultFace);
+        for (int c = 0; c < 3; ++c)
+            mean[static_cast<size_t>(c)] += static_cast<double>(channel(d, c));
+    }
+    for (double& m : mean) m /= static_cast<double>(kCaseRamp.size());
+    std::array<double, 3> f{};
+    for (int c = 0; c < 3; ++c)
+        f[static_cast<size_t>(c)] = static_cast<double>(channel(tile_mean, c)) /
+                                    std::max(mean[static_cast<size_t>(c)], 1.0);
+    CaseTones ct;
+    const auto line = [&](const CaseTone& t) {
+        return scaled_pixel(case_tone(t, kDefaultFace), f);
+    };
+    ct.highlight    = line(kCaseHighlight);
+    ct.shadow_first = line(kCaseShadowFirst);
+    ct.shadow_last  = line(kCaseShadowLast);
+    ct.corner       = line(kCaseCorner);
+    for (std::size_t i = 0; i < kCaseRamp.size(); ++i) {
+        const uint32_t d = case_tone(kCaseRamp[i], kDefaultFace);
+        for (int c = 0; c < 3; ++c)
+            ct.ramp[i][static_cast<size_t>(c)] =
+                static_cast<double>(channel(d, c)) /
+                std::max(mean[static_cast<size_t>(c)], 1.0);
+    }
+    return ct;
+}
+
 // THE CASE'S TONE AT ONE PIXEL of the face's square (cool_edit_paint.h's
 // paint_ce_case, its faces: the construction the flat case drew, read pixel
 // by pixel), as weighted tones — a mitre's diagonal pixel the two tones'
-// half-and-half, the antialiased diagonal's coverage there. `x`, `y` from
-// the case's corner; `lw` its line; `g` its glyph seat.
-struct CaseTones {
-    uint32_t                 highlight, shadow_first, shadow_last, corner;
-    std::array<uint32_t, 20> ramp;
-};
+// half-and-half, the antialiased diagonal's coverage there — or a ramp row.
 uint32_t lerp_word(uint32_t a, uint32_t b, double t) {
     uint32_t out = 0;
     for (int c = 0; c < 3; ++c) {
@@ -255,14 +330,16 @@ uint32_t lerp_word(uint32_t a, uint32_t b, double t) {
     }
     return out;
 }
-uint32_t ramp_row(const CaseTones& t, int row, int g) {
+// The ramp's stop on the seat's device row `row` (cool_edit_paint.h's FACE
+// RAMP: stop i on [nearbyint(i·g/20), nearbyint((i+1)·g/20))).
+int ramp_row(const CaseTones& t, int row, int g) {
     const int m = static_cast<int>(t.ramp.size());
     for (int i = 0; i < m; ++i) {
         const int y1 = static_cast<int>(
             std::nearbyint(static_cast<double>(i + 1) * g / m));
-        if (row < y1) return t.ramp[static_cast<size_t>(i)];
+        if (row < y1) return i;
     }
-    return t.ramp.back();
+    return m - 1;
 }
 uint32_t shadow_step(const CaseTones& t, int i, int g) {
     const double u = g > 1 ? static_cast<double>(i) / (g - 1) : 0.0;
@@ -308,6 +385,7 @@ std::optional<std::string> load() {
         t.h = c.h;
         t.face = mean_of(t.base.get());
     }
+    s.case_tones = derive_case_tones(tile(GuiMaterial::Case).face);
     s.loaded = true;
     return std::nullopt;
 }
@@ -412,26 +490,20 @@ void paint_case_face(cairo_t* cr, const GuiRect& r, bool down, uint32_t seat) {
     auto it = s.cases.find(key);
     if (it == s.cases.end()) {
         Tile& t = tile(GuiMaterial::Case);
-        using namespace cool_edit_derive;
-        CaseTones ct{};
-        ct.highlight    = case_tone(kCaseHighlight, t.face);
-        ct.shadow_first = case_tone(kCaseShadowFirst, t.face);
-        ct.shadow_last  = case_tone(kCaseShadowLast, t.face);
-        ct.corner       = case_tone(kCaseCorner, t.face);
-        for (std::size_t i = 0; i < kCaseRamp.size(); ++i)
-            ct.ramp[i] = case_tone(kCaseRamp[i], t.face);
+        // THE TONES (derive_case_tones): the Default case scaled to the tile.
+        const CaseTones& ct = s.case_tones;
         // The tone (or the mitre's two) at the square's pixel (x, y), x and
-        // y from the case's corner — paint_ce_case's construction — and
-        // whether it is a LINE (the highlight, the shadow ramp, the corner)
-        // or the ramp, the case's face.
+        // y from the case's corner — paint_ce_case's construction — when it
+        // is a LINE (the highlight, the shadow ramp, the corner), or the
+        // RAMP's stop (`ramp` ≥ 0), the case's face.
         struct At {
             uint32_t first, second;
             double   weight;
-            bool     line;
+            int      ramp;
         };
         const auto tones_at = [&](int x, int y) -> At {
-            const auto line = [](uint32_t w) { return At{w, w, 1.0, true}; };
-            const auto ramp = [](uint32_t w) { return At{w, w, 1.0, false}; };
+            const auto line = [](uint32_t w) { return At{w, w, 1.0, -1}; };
+            const auto ramp = [](int i) { return At{0, 0, 1.0, i}; };
             if (down) return ramp(ramp_row(ct, y - 2 * lw, g));
             const int e = a - lw;   // the shadow's line, row and column
             // The mitre's two blocks: the light tone above the diagonal
@@ -440,7 +512,7 @@ void paint_case_face(cairo_t* cr, const GuiRect& r, bool down, uint32_t seat) {
             const auto mitre = [&](int u, int v) {
                 if (u + v + 2 <= lw) return line(ct.highlight);
                 if (u + v >= lw) return line(ct.shadow_first);
-                return At{ct.highlight, ct.shadow_first, 0.5, true};
+                return At{ct.highlight, ct.shadow_first, 0.5, -1};
             };
             if (x >= e && y < lw) return mitre(x - e, y);
             if (x < lw && y >= e) return mitre(x, y - e);
@@ -451,7 +523,8 @@ void paint_case_face(cairo_t* cr, const GuiRect& r, bool down, uint32_t seat) {
             return ramp(ramp_row(ct, y - lw, g));
         };
         // THE CASE'S LINES ARE FLAT (2026-10-20 ~22:50): a line scales the
-        // Face's mean, not the tile's pixel; the ramp rides the tile.
+        // Face's mean, not the tile's pixel, the bevel keys with it; the ramp
+        // rides the tile by its stop's exact factors (derive_case_tones).
         const auto [ox, oy] = seat_offset(seat, t.w - side, t.h - side);
         Surface out(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, side, side));
         cairo_surface_flush(t.base.get());
@@ -476,14 +549,21 @@ void paint_case_face(cairo_t* cr, const GuiRect& r, bool down, uint32_t seat) {
                 const uint32_t base = reinterpret_cast<const uint32_t*>(
                     src + ty * sstride)[tx];
                 const At p = tones_at(at + x, at + y);
-                const std::array<double, 3> f0 = tone_factors(p.first, t.face);
-                const std::array<double, 3> f1 = tone_factors(p.second, t.face);
-                std::array<double, 3> f{};
-                for (std::size_t c = 0; c < 3; ++c)
-                    f[c] = f0[c] * p.weight + f1[c] * (1.0 - p.weight);
-                const uint32_t under = p.line ? t.face : base;
-                drow[x] = 0xFF000000u |
-                          display_transform::display_rgb(scaled_pixel(under, f));
+                uint32_t rgb = 0;
+                if (p.ramp >= 0) {
+                    rgb = scaled_pixel(base,
+                                       ct.ramp[static_cast<size_t>(p.ramp)]);
+                } else {
+                    const std::array<double, 3> f0 =
+                        tone_factors(p.first, t.face);
+                    const std::array<double, 3> f1 =
+                        tone_factors(p.second, t.face);
+                    std::array<double, 3> f{};
+                    for (std::size_t c = 0; c < 3; ++c)
+                        f[c] = f0[c] * p.weight + f1[c] * (1.0 - p.weight);
+                    rgb = scaled_pixel(t.face, f);
+                }
+                drow[x] = 0xFF000000u | display_transform::display_rgb(rgb);
             }
         }
         cairo_surface_mark_dirty(out.get());

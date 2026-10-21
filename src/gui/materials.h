@@ -57,7 +57,10 @@
 // cue labels' face boxes with it), the column's foot; METAL_DARK —
 // EVERYTHING ELSE THAT IS CHROME: the tabs (Cool Edit's measured tab bodies
 // retired, the body the metal like every tone), the column's margins, the
-// dock bar, row 8, the border under it, the program frame's line, the
+// dock bar, row 8, the border under it, the program frame's line from the
+// band's foot down (THE FRAME LINE TAKES THE MATERIAL OF THE REGION IT STANDS
+// BESIDE, architect 2026-10-20 ~23:10: its top row and its columns alongside
+// the menu row and the band the WOOD's flat tones, paint_program_frame), the
 // pull-downs, cards and tooltip, the modal box and its controls row, the
 // render player, the on-screen keyboard, the dialog fields, the laptop's
 // sizing frame. UNTOUCHED: the well and everything the palette draws (the
@@ -79,8 +82,11 @@
 // highlight does not clip to orange). The material's own Face tone is the
 // tile AS DRAWN; the wood's tones derive from the Wood Face, the void is
 // WoodDark as drawn, the metals' tones from the MetalDark Face, a recess
-// MetalVeryDark as drawn, the case's from the Case Face (its RAMP, its face,
-// the tile always; only its lines are flat). The only copy ever baked is a
+// MetalVeryDark as drawn — EXCEPT THE CASE (2026-10-20 ~23:10, "yes"):
+// Cool Edit's measured case on the DEFAULT Face, every tone scaled per
+// channel so the rest case's interior mean is the Case tile's mean (its RAMP
+// the tile always, only its lines flat; paint_case_face below, the
+// arithmetic at materials.cpp's derive_case_tones). The only copy ever baked is a
 // tile as drawn; the painters' colors reach the strokes through
 // set_surface_source (render.h), which knows each flat tone by its bytes (the
 // tone table, set_tone_face) — so the painters keep their palette members and
@@ -109,12 +115,14 @@ inline constexpr const char* kGuiMaterialNames[kGuiMaterialCount] = {
 // (GuiMaterialScope): which material a flat tone resolves to.
 //   Upper  the Face the Wood as drawn, `recess` WoodDark as drawn, every other
 //          tone the Wood's rule as a flat stroke —
-//          the caption, the menu row, the band;
+//          the caption, the menu row, the band, and the program frame's line
+//          beside them (2026-10-20 ~23:10);
 //   Lower  the Face MetalDark as drawn, `recess` MetalVeryDark as drawn,
 //          every other tone MetalDark's rule as a flat stroke — THE DEFAULT,
 //          every chrome surface no scope names;
-//   Case   the Face the Case as drawn, every tone the Case's rule as a flat
-//          stroke — the
+//   Case   the Face the Case as drawn, every other tone THE CASE'S OWN LINE
+//          as a flat stroke — a lighter-than-Face tone the case's highlight,
+//          a darker one its shadow's first tone (2026-10-20 ~23:10) — the
 //          caption's three buttons (the cases themselves are
 //          paint_case_face's).
 // A recess that is no `recess` tone — the column's air and foot, the ruler's
@@ -198,9 +206,15 @@ void set_material_source(cairo_t* cr, GuiMaterial m);
 
 // THE CASE (the head's CASE; cool_edit_paint.h's paint_ce_case): Cool
 // Edit's measured case — the ramp, its highlight, its shadow ramp and
-// corner, kCaseRamp and its lines — derived from the CASE tile's Face, the
-// ramp the case tile scaled per channel, the lines flat strokes of the Face's
-// mean (2026-10-20 ~22:50), baked once per (seat, face): REST
+// corner, kCaseRamp and its lines — KEEPS THE TILE'S BRIGHTNESS (architect
+// 2026-10-20 ~23:10, "yes"): derived on the DEFAULT Face as Default's own
+// case, then every tone scaled per channel by one factor per channel, F_c =
+// the Case tile's mean over the Default ramp's mean, so the rest case's
+// interior mean (the ramp's rows, area-weighted) is the tile's mean; the
+// pressed and checked ramp the same factors (materials.cpp's
+// derive_case_tones, the arithmetic). The ramp the case tile scaled per row
+// by its tone over the tile's mean, the lines flat strokes of the Face's
+// mean (2026-10-20 ~22:50) under the bevel keys, baked once per (seat, face): REST
 // the whole square inside the black line (`r`'s first w − lw rows and
 // columns), DOWN the ramp alone inside the constant rings. PER-SEAT VARIATION
 // (his "nice little touch", Cool Edit's own slightly different cases): each

@@ -3,10 +3,11 @@
 THE WOOD CHROME'S MATERIALS (architect 2026-10-20: "get the code right, then decide which tile"): ONE FLAT FOLDER, ONE
 FILE PER MATERIAL, NAMED BY ITS ROLE (`src/gui/materials.h`, `kGuiMaterialNames`):
 
-- `Wood` — the caption, the menu row and the toolbar band (its panes, grooves and edge columns);
+- `Wood` — the caption, the menu row and the toolbar band (its panes, grooves and edge columns), and the program
+  frame's line beside them (its top row and its columns down to the band's foot);
 - `WoodDark` — the band's void, its stretch where no pane stands;
 - `MetalDark` — every other chrome surface: the tabs, the column's margins, the dock bar, row 8, the border under it,
-  the program frame's line, the pull-downs, cards and tooltip, the modal box and its controls row, the render player,
+  the program frame's line below the band, the pull-downs, cards and tooltip, the modal box and its controls row, the render player,
   the on-screen keyboard, the dialog fields, the laptop's sizing frame;
 - `MetalVeryDark` — every recess below the band: the tab strip's ground, the column's air, the ruler's and the marker
   lane's ground, the column's foot;
@@ -27,7 +28,9 @@ width by the upper region's height, from its vertical centre), the metals' and t
 on screen). Each material's FACE is its kept tile's mean color, and every tone a painter puts down on it is Cool
 Edit's tone rule on that Face, painted on every material as the tone itself, a flat opaque stroke with no grain
 (architect 2026-10-20 ~22:50: the lines of the wood, the metals and the cases alike; `materials.h`'s head). Only a
-Face tone is the tile as drawn, and the case's ramp its tile scaled per row.
+Face tone is the tile as drawn, and the case's ramp its tile scaled per row. THE CASE KEEPS ITS TILE'S BRIGHTNESS
+(architect 2026-10-20 ~23:10): Cool Edit's case is taken on its Default Face and scaled per channel so the resting
+case's interior mean is the `Case` tile's mean.
 
 ## Provenance and licence
 
